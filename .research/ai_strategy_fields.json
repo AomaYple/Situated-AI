@@ -1,0 +1,226 @@
+﻿[
+    {
+        "Field":  "will_form_power_bloc",
+        "Comment":  "If this trigger evaluates to true for any active strategy, the AI will try to form a power bloc Empty trigger counts as evaluating false in this specific case"
+    },
+    {
+        "Field":  "will_incorporate_state",
+        "Comment":  "If this trigger evaluates to true for any active strategy, the AI will incorporate scope:target_state if it can afford it and if it\u0027s the highest value valid candidate Empty trigger counts as evaluating false in this specific case Capitals bypass this and start incorporating immediately if possible Using this in a different strategy is inclusive, only one needs to return true root = country, scope:target_state = the state being considered"
+    },
+    {
+        "Field":  "undesirable_infamy_level",
+        "Comment":  "The AI will avoid getting this much infamy unless it\u0027s a wargoal it really wants Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "unacceptable_infamy_level",
+        "Comment":  "The AI will never deliberately add wargoals that will bring its infamy this high Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "ideological_opinion_effect_mult",
+        "Comment":  "How much is the AI\u0027s diplomatic acceptance, etc affected by government ideological differences Using a different value in a strategy will function multiplicatively"
+    },
+    {
+        "Field":  "revolution_aversion",
+        "Comment":  "Chance each day that the AI will stop enacting a law that is going to spark a civil war (1 aversion should translate into ~25% chance of avoiding a civil war) Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "min_law_chance_to_pass",
+        "Comment":  "If base chance for law to pass is below this, don\u0027t enact it Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "negotiation_chance",
+        "Comment":  "The chance that the AI will negotiate with an IG when trying to enact a specific law, 1 = 100% Using this value in other strategies will function additively root = country scope:law = law type being enacted scope:interest_group = IG to negotiate with scope:amenability = IG amenability to negotiation divided by MAX_AMENABILITY (ie, if MAX_AMENABILITY is 100 and IG amenability is 50, this value will be 0.5) scope:advance_chance = Chance to advance law enactment scope:stall_chance = Chance for law enactment to stall"
+    },
+    {
+        "Field":  "max_progressiveness",
+        "Comment":  "How progressive is the AI willing to be when passing laws Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "max_regressiveness",
+        "Comment":  "How regressive is the AI willing to be when passing laws Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "diplomatic_play_support",
+        "Comment":  "Added to willingness to support a country in diplomatic plays Using this value in other strategies will function additively root = supporting country doing the AI evaluation scope:country = country we\u0027re evaluating support for (either initiator or target) scope:enemy_country = the opposing side\u0027s leader scope:diplomatic_play_type = the type of diplomatic play scope:is_initiator = bool, set to true if evaluating support for initiator, false if target NOTE: You need to include a description when adding values here so there are correct tooltips, this is different from most of ai strategy data!"
+    },
+    {
+        "Field":  "diplomatic_play_neutrality",
+        "Comment":  "Added to base neutrality in diplomatic plays Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "diplomatic_play_boldness",
+        "Comment":  "Added to base boldness in diplomatic plays Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "wargoal_maneuvers_fraction",
+        "Comment":  "How many maneuvers are we OK with using up in the initial phase to add more wargoals Using this value in other strategies will function additively (values below 0 or above 1 have no further effect)"
+    },
+    {
+        "Field":  "change_law_chance",
+        "Comment":  "Chance each update that the AI is willing to start changing a law (1 = 1%) Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "pro_interest_groups",
+        "Comment":  "Which IGs should the AI try to put in power Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "anti_interest_groups",
+        "Comment":  "Which IGs should the AI try to avoid putting in power Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "institution_scores",
+        "Comment":  "Which institutions should the AI prefer to invest in Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "obligation_value",
+        "Comment":  "How much value does the AI place on an obligation from another country? Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "interest_group_government_weight",
+        "Comment":  "How much does the AI want to include a particular interest group in their government? Positive values will act as a multiplier (ie 5 means AI will assign a 5x value to this IG) Negative values will act as a divisor (ie -5 means AI will assign a 0.2x value to this IG) The AI will still only consider the most legitimate government constellations, as set by define REFORM_GOVERNMENT_NUM_OPTIONS_TO_CHECK Using this value in other strategies will function additively root = country scope:interest_group = IG"
+    },
+    {
+        "Field":  "state_value",
+        "Comment":  "How much does the AI desire a state owned by another country Using this value in other strategies will function additively root = country scope:target_state = state scope:target_country = state owner NOTE: You need to include a description when adding values here so there are correct tooltips, this is different from most of ai strategy data!"
+    },
+    {
+        "Field":  "treaty_port_value",
+        "Comment":  "How much does the AI desire a state owned by another country Using this value in other strategies will function additively root = country scope:target_state = state scope:target_country = state owner"
+    },
+    {
+        "Field":  "subject_value",
+        "Comment":  "How much does the AI desire another country as their subject Using this value in other strategies will function additively root is the AI doing the evaluation, scope:target_country is prospective subject"
+    },
+    {
+        "Field":  "become_subject_value",
+        "Comment":  "How much does the AI desire becoming another country\u0027s subject Using this value in other strategies will function additively root is the AI doing the evaluation, scope:overlord is prospective overlord"
+    },
+    {
+        "Field":  "recklessness",
+        "Comment":  "Recklessness multiplies the AI\u0027s estimation of its own strength, so at recklessness 2 it believes its forces to be twice as strong as they actually are The AI wants to have at least parity in what it believes its own forces to be and what the enemy forces are, so at recklessness 2 it\u0027s OK with only having 50% of the enemy strength Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "aggression",
+        "Comment":  "How likely is the AI to start a diplomatic play against another country if their attitude allows for it Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "wanted_construction_output",
+        "Comment":  "How much construction output should the AI aim for Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "strategic_region_stance_type_scores",
+        "Comment":  ""
+    },
+    {
+        "Field":  "max_active_stances",
+        "Comment":  "Maximum number of strategic regions where the AI can have an active (non-none) stance Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "economic_vs_government_spending_balance",
+        "Comment":  "How much does the AI want to prioritize economic construction vs government spending? Having a value above 0 here makes the AI less willing to spend on government expenses and more willing to take on debt to build production buildings Values below 0 have the opposite effect and thus also increase AI government spending +0.1 = +10% higher acceptable debt threshold for economic construction / +10% stricter budget requirements for government expenses Acceptable debt threshold for economic construction is capped at CONSTRUCTION_DEBT_PAUSE Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "wanted_army_size",
+        "Comment":  "How many levels of barracks with non-marine units should the AI have Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "wanted_marines",
+        "Comment":  "How many  levels of barracks with marine units should the AI have Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "target_marine_formation_size",
+        "Comment":  "Target number of units per marine formation"
+    },
+    {
+        "Field":  "wanted_navy_size",
+        "Comment":  "How many levels of naval administration should the AI have Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "wanted_num_supply_ships",
+        "Comment":  "How many supply ships should the AI want to have Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "ship_construction_output_multiplier",
+        "Comment":  "How much ship construction does the AI want (as a multiplier on the maintenance that would be required to upkeep their desired navy) Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "ship_group_weights",
+        "Comment":  "Set the weights for ship groups, this determines the ratio that the AI aims to have of each, and thus what ship classes it adds to fleets Using this value in other strategies will function additively root = country"
+    },
+    {
+        "Field":  "max_ship_design_complexity",
+        "Comment":  "Maximum total modification levels the AI will use when designing ships Higher values mean the AI is willing to bear more expensive, complex ship designs Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "wanted_naval_fortification_levels",
+        "Comment":  "How many levels of naval fortification should the AI have in a state Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "combat_unit_group_weights",
+        "Comment":  "Set the weights for combat unit groups, this determines the ratio that the AI aims to have of each, and thus what unit types it adds to formations Using this value in other strategies will function additively root = country scope:military_formation = military formation"
+    },
+    {
+        "Field":  "conscript_battalion_ratio",
+        "Comment":  "How many conscript battalions should the AI aim to have for each regular battalion in a formation? root = country scope:military_formation = military formation Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "nationalization_desire",
+        "Comment":  "What\u0027s the base AI desire to nationalize/privatize buildings Compares against NATIONALIZATION_DESIRE_NATIONALIZE_THRESHOLD \u0026 NATIONALIZATION_DESIRE_PRIVATIZE_THRESHOLD defines Using this value in other strategies will function additively A default value of 0 means the AI will tend to privatize most buildings"
+    },
+    {
+        "Field":  "building_group_weights",
+        "Comment":  "Add a multiplier to the score AI assigns to particular building groups (default 1) Using this value in other strategies will result in several multiplications"
+    },
+    {
+        "Field":  "subsidies",
+        "Comment":  "Which buildings should the AI subsidize Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "war_subsidies",
+        "Comment":  "Specifying values here will override subsidy priorities while at war Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "goods_stances",
+        "Comment":  "How should the AI plan for production and trade of specific goods Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "colonial_interest_ratio",
+        "Comment":  "How many of its interests should the AI dedicate to regions with unrecognized and decentralized powers Using a different value in a strategy will override this value"
+    },
+    {
+        "Field":  "liberate_country_scores",
+        "Comment":  "How much does the AI want to liberate a specific tag, added to the wargoal score calculation for liberate_country Using this value in other strategies will function additively root = liberator scope:target = oppressor"
+    },
+    {
+        "Field":  "strategic_region_scores",
+        "Comment":  "How important is it that the AI maintains an interest in a specific strategic region (added on top of region value calculations set in defines) Using this value in other strategies will function additively"
+    },
+    {
+        "Field":  "secret_goal_scores",
+        "Comment":  "How likely should the AI be to have a particular strategic desire towards another country Trigger is used for filtering, so if it fails score will always be 0 from this strategy Using this value in other strategies will function additively scope:target_country = target country The options are None, Protect, Comply, Befriend, Reconcile, Conquer, Dominate, Defy, Antagonize"
+    },
+    {
+        "Field":  "treaty_category_scores",
+        "Comment":  ""
+    },
+    {
+        "Field":  "wargoal_scores",
+        "Comment":  "How much should the AI value a wargoal against another country/state Using this value in other strategies will function additively scope:target_country = wargoal target country scope:target_state = wargoal target state (if any)"
+    },
+    {
+        "Field":  "strait_scores",
+        "Comment":  "Determines which strait settings the AI will use, highest score Using this value in other strategies will function additively root = country scope:strait = the strait scope:first_state = the first state controlling the strait scope:second_state = the second state controlling the strait scope:is_sole_controller = yes/no depending on whether country controls both sides of the strait"
+    },
+    {
+        "Field":  "fleet_compositions",
+        "Comment":  "A fleet composition describes a role a fleet can take (e.g. main_battle_fleet, raid_fleet): what kind of ships it should be made of and what missions it should pursue. The AI will try to match each of the country\u0027s existing fleets to the role they best fit. All numeric fields accept script values, so weights can be tuned from country scope.  ship_group_weights:   Per ship group desire for this role. Across all available roles, weights are summed per   group, and each role\u0027s share becomes its target ratio of the country\u0027s total ships in   that group. Existing fleets are scored against every role\u0027s target ratios and assigned to   the role they fit best, so these weights drive both \"how should the country\u0027s ships be   split across roles\" and \"which fleet plays which role\".  mission_type_weights:   Multiplier applied when a fleet in this role picks which mission to pursue. 1.0 is   neutral, higher biases the fleet toward that mission, 0.0 disables it for this role.   IMPORTANT: if the block is present, any mission type not listed is treated as 0, so the   list gates which missions this role will take. Omit the whole block to leave every   mission neutral.  min_ships_wanted:   Soft floor on fleet size used during role-fit scoring. Fleets smaller than this take a   penalty when matched to this role; it does not disqualify them and is not a hard cap.  potential:   Country-scoped trigger. If it fails the role is dropped entirely, so no fleet will be   assigned to it.  replace_key:   Optional key of another composition that this one should replace when both are collected   from the country\u0027s active strategies. Use it in a country-specific strategy to override a   default role (e.g. a custom raid_fleet with replace_key = raid_fleet swaps out the one   defined here). Without a replace_key the composition is added alongside the existing set."
+    },
+    {
+        "Field":  "possible",
+        "Comment":  "Trigger for whether this strategy can be randomly allocated to a country"
+    },
+    {
+        "Field":  "weight",
+        "Comment":  "Chance that this strategy will be randomly allocated to a country"
+    }
+]
