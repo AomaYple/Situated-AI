@@ -1,28 +1,45 @@
 # 13 · common 全量键名索引
 
-> 对 `game\common\` 下**全部 136 个子目录、3,099 个 .txt 文件**做机械提取，
-> 得到 **25,790 个顶层定义键**。本文回答「**什么东西定义在哪个目录**」。
+> 对 `game\common\` 下**全部 136 个子目录**做机械提取，共 **25,790 个顶层定义键**。
+> 本文回答「**什么东西定义在哪个目录**」。
 
-**提取口径**
+## 提取口径
 
 ```text
-规则：行首无缩进（^）、排除以 # 开头的注释行、匹配 `键名 = {`
-键名字符集：不含空白与 = 的任意字符（含连字符 -）
+文件数：递归统计 .txt（Get-ChildItem -Recurse）
+键数：  行首无缩进（^）、排除以 # 开头的注释行、匹配 `键名 = {`
+        键名字符集 = 不含空白与 = 的任意字符（含连字符 -）
 ```
 
-## 勘误：早期版本漏计了含连字符的键
+## 勘误记录（两处，均已修正）
 
-本文早期版本用枚举字符类提取键名，**静默漏掉了含连字符 `-` 的键**。
-实测全库共 **32 个**含连字符的顶层键，分布在 4 个目录：
+### 勘误 1：漏计含连字符的键
 
-| 目录 | 含连字符的键数 | 修正前 | 修正后 |
+早期版本用**枚举字符类**提取键名，**静默漏掉了含连字符 `-` 的键**。
+全库共 **32 个**含连字符的顶层键，分布在 4 个目录：
+
+| 目录 | 含连字符键数 | 修正前 | 修正后 |
 |---|---:|---:|---:|
 | `character_templates` | 27 | 1,983 | **2,011** |
 | `production_methods` | 3 | 433 | **436** |
 | `technology` | 1 | 183 | **184** |
 | `power_bloc_names` | 1 | 199 | **200** |
 
-> **教训：解析 PDX 键名不要假设字符集。** 用取反字符组而非枚举字符类。
+### 勘误 2：`.txt` 文件数用了非递归统计
+
+早期版本统计 `.txt` 数量时**未加 `-Recurse`**，导致**含子目录的目录全部算错**，共 **5 个**：
+
+| 目录 | 错误值 | 正确值 | 差异 |
+|---|---:|---:|---|
+| `history` | 0 | **1,152** | 子目录达 22 个 |
+| `coat_of_arms` | 0 | **23** | 文件在 `coat_of_arms\` 子目录下 |
+| `technology` | 0 | **4** | 含 `eras\` 子目录 |
+| `defines` | 6 | **9** | 含 `jomini\` 子目录 |
+| `terrain_manipulators` | 1 | **2** | — |
+
+> **这两个勘误的共同教训：解析 PDX 数据不要假设字符集，也不要假设文件都平铺在同一层。**
+> 注意：本表「顶层键」一列始终是缩进 0 口径；若按「含嵌套块」统计会得到更大的数字，
+> 引用时必须写明口径。
 
 ## 全部 136 个目录
 
@@ -42,7 +59,7 @@
 | `character_roles` | 3 | 10 | character_roles.md | character_role_ruler, character_role_heir, character_role_general, character_role_admiral, character_role_executive, character_role_magnate |
 | `character_templates` | 210 | 2011 | — | default, character_template_colonial_governor_plantation, character_template_colonial_governor_local, character_template_colonial_governor_extraction, character_template_colonial_governor_business, character_template_colonial_governor_military |
 | `character_traits` | 5 | 121 | character_traits.md | alcoholic, opium_addiction, cocaine_addiction, cancer, tuberculosis, grifter |
-| `coat_of_arms` | 0 | 1701 | — | NULL, sub_ENG_coa, sub_SCO_coa, sub_IRE_coa, sub_FRA_coa, sub_GBR |
+| `coat_of_arms` | 23 | 1701 | — | NULL, sub_ENG_coa, sub_SCO_coa, sub_IRE_coa, sub_FRA_coa, sub_GBR |
 | `cohesion_levels` | 1 | 5 | — | cohesion_level_very_low, cohesion_level_low, cohesion_level_moderate, cohesion_level_high, cohesion_level_very_high |
 | `combat_unit_experience_levels` | 1 | 5 | — | no_veterancy, veterancy1, veterancy2, veterancy3, veterancy4 |
 | `combat_unit_groups` | 1 | 4 | — | combat_unit_group_infantry, combat_unit_group_artillery, combat_unit_group_cavalry, combat_unit_group_marines |
@@ -62,7 +79,7 @@
 | `customizable_localization` | 28 | 480 | — | stepping_down_reason, personality_traits_loc, ordered_personality_traits_loc, custom_insult_loc, wedding_son_daughter, air_ace_adjective_loc |
 | `decisions` | 34 | 60 | — | revive_olympic_games_decision, lowlands_land_reclamation, abolish_tangena_ordeal, establish_pact_with_nafusis, russia_offer_circassia_recognition, antarctica_expedition |
 | `decrees` | 1 | 11 | — | decree_road_maintenance, decree_violent_suppression, decree_emergency_relief, decree_promote_social_mobility, decree_promote_national_values, decree_encourage_manufacturing_industry |
-| `defines` | 6 | 49 | — | NAI, NAudio, NGame, NJominiMap, NCountry, NPolitics |
+| `defines` | 9 | 49 | — | NAI, NAudio, NGame, NJominiMap, NCountry, NPolitics |
 | `diplomatic_actions` | 48 | 55 | diplomatic_action.md | increase_relations, damage_relations, expel_diplomats, redeem_obligation, violate_sovereignty, trade_states |
 | `diplomatic_catalyst_categories` | 1 | 35 | diplomatic_catalyst_categories.md | cc_cooldown_long, cc_cooldown_regular, cc_cooldown_short, cc_historical_relationship, cc_diplomatic_relevance, cc_market_opened |
 | `diplomatic_catalysts` | 3 | 77 | diplomatic_catalysts.md | catalyst_historical_relationship, catalyst_became_relevant, catalyst_became_irrelevant, catalyst_gained_land_border, catalyst_lost_land_border, catalyst_relations_level_increased |
@@ -84,7 +101,7 @@
 | `goods` | 1 | 53 | goods.md | ammunition, small_arms, artillery, tanks, aeroplanes, manowars |
 | `government_types` | 10 | 444 | — | gov_decentralized_sultanate, gov_chiefdom, gov_colonial_administration_gov_in_chief, gov_colonial_administration, gov_colonial_administration_spa, gov_crown_colony_india |
 | `harvest_condition_types` | 2 | 22 | harvest_condition_types.md | drought, flood, frost, wildfire, hailstorm, locust_swarm |
-| `history` | 0 | 22 | — | AI, BUILDINGS, CHARACTERS, CONSCRIPTION, COUNTRIES, CULTURES |
+| `history` | 1152 | 22 | — | AI, BUILDINGS, CHARACTERS, CONSCRIPTION, COUNTRIES, CULTURES |
 | `ideologies` | 6 | 172 | — | ideology_paternalistic, ideology_laissez_faire, ideology_interventionist, ideology_individualist, ideology_hierarchic, ideology_oligarchic |
 | `institutions` | 1 | 7 | institutions.md | institution_colonial_affairs, institution_social_security, institution_workplace_safety, institution_schools, institution_police, institution_health_system |
 | `interest_group_traits` | 8 | 99 | — | ig_trait_patriotic_fervor, ig_trait_veteran_consultation, ig_trait_materiel_waste, ig_trait_elan_vital, ig_trait_newly_created_army, ig_trait_self_strengthening |
@@ -153,9 +170,9 @@
 | `strait_definitions` | 1 | 12 | strait_definitions.md | canal_panama, canal_suez, canal_kiel, strait_gibraltar, strait_bosporus, strait_bab_el_mandeb |
 | `strategic_regions` | 7 | 142 | strategic_regions.md | region_nile_basin, region_north_africa, region_west_africa, region_equatorial_africa, region_southern_africa, region_east_africa |
 | `subject_types` | 1 | 9 | — | subject_type_protectorate, subject_type_puppet, subject_type_tributary, subject_type_vassal, subject_type_dominion, subject_type_colony |
-| `technology` | 0 | 184 | — | era_1, era_2, era_3, era_4, era_5, sericulture |
+| `technology` | 4 | 184 | — | era_1, era_2, era_3, era_4, era_5, sericulture |
 | `terrain` | 1 | 25 | — | plains, ocean, lakes, river, forest, hills |
-| `terrain_manipulators` | 1 | 14 | — | farmland_rye, pasture, plantation, farmland_rice, farmland_millet, farmland_wheat |
+| `terrain_manipulators` | 2 | 14 | — | farmland_rye, pasture, plantation, farmland_rice, farmland_millet, farmland_wheat |
 | `themes` | 1 | 60 | themes.md | gui_skin_base, main_menu_image_base, papermap_base, table_base, papermap_object_divider, papermap_object_compass |
 | `travel_network` | 1 | 2 | — | nodes, connections |
 | `treaty_articles` | 34 | 34 | treaty_articles.md | alliance, defensive_pact, guarantee_independence, support_independence, take_on_debt, money_transfer |
