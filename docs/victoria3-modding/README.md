@@ -14,7 +14,7 @@
 | 用户数据 | `C:\Users\28905\Documents\Paradox Interactive\Victoria 3` |
 | 本地 mod 目录 | `...\Victoria 3\mod\`（当前为空） |
 | 已订阅 mod | 23 个（全部已解剖，见 `12`） |
-| 官方 `.md` 文档 | 92 篇（镜像于 `.research/`，不进版本控制） |
+| 官方 `.md` 文档 | 92 篇（逐字镜像于 `research/official-docs/`，已纳入版本控制） |
 
 ## 文档索引（21 篇）
 

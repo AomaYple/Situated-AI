@@ -53,15 +53,27 @@ Victoria 3 的 AI 相关 mod 开发项目。
 
 [`tools/`](tools/) —— 可复现知识库中全部统计数据的 PDX 脚本解析工具链（PowerShell）。
 
-## 本地未提交内容
+## 目录结构
 
-以下目录已在 `.gitignore` 中排除，**仅存在于本机**：
+```
+Situated AI/
+├─ docs/victoria3-modding/   21 篇 mod 开发知识库（约 1.4 MB）
+├─ research/                 调研资料（含 92 篇官方 .md 的逐字镜像）
+├─ tools/                    可复现全部统计的 PDX 提取脚本
+├─ README.md  LICENSE  .gitignore
+```
+
+以下目录在 `.gitignore` 中排除，**仅存在于本机**：
 
 | 目录 | 内容 | 排除原因 |
 |---|---|---|
-| `.research/` | 92 篇官方 `.md` 的镜像（230 KB） | 属 Paradox 版权内容 |
-| `tools/out/` | 提取出的大型 JSON（约 3 MB） | 可由 `tools/` 脚本重新生成 |
+| `tools/out/` | 提取出的大型 JSON（约 3.3 MB） | 可由 `tools/dump_*.ps1` 重新生成 |
+| `tools/frag/` | 渲染出的 Markdown 片段（165 KB） | 可由 `tools/make_frags.ps1` 重新生成 |
+| `tools/docparts/` | 分块撰写的正文草稿（56 KB） | 内容已 100% 拼入 `docs/` 下成稿 |
 | `.dsh/` | 本机 TLS 配置 | 机器相关 |
+
+> `research/` **已纳入版本控制**。其中 `research/official-docs/` 是游戏自带官方 `.md`
+> 的逐字镜像，属 Paradox 版权内容，公开分发前请自行评估。
 
 ## 授权
 
