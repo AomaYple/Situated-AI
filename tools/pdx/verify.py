@@ -214,10 +214,11 @@ CLAIMS: list[Claim] = [
     Claim("env.dlc", "01-环境与版本.md", "game/dlc 下有 17 个 DLC",
           "dlc_count", "", 17,
           "编号 001–018，缺 dlc005。doc 01 与 doc 19 早期误写为 18"),
-    Claim("env.common_txt", "08-目录全量清单.md", "common 有 3024 个 .txt",
-          "dir_txt_files", "", 3024, "注意：3099 是含 .md 的全部文件数"),
-    Claim("env.common_all", "08-目录全量清单.md", "common 共 3099 个文件",
-          "dir_all_files", "", 3099),
+    Claim("env.common_txt", "08-目录全量清单.md", "common 有 3026 个 .txt",
+          "dir_txt_files", "", 3026,
+          "1.14.2 时为 3024，1.14.3 新增 2 个。注意 3101 是含 .md 的全部文件数"),
+    Claim("env.common_all", "08-目录全量清单.md", "common 共 3101 个文件",
+          "dir_all_files", "", 3101, "1.14.2 时为 3099"),
     Claim("env.md_total", "07-官方文档索引.md", "游戏自带 92 篇官方 .md",
           "md_files", "", 92),
 
@@ -281,8 +282,8 @@ CLAIMS: list[Claim] = [
 
     # ── defines / 修饰符（doc 05）──────────────────────
     Claim("def.nai_count", "05-defines与修饰符.md",
-          "NAI 有 1013 个参数", "defines_params", "00_ai.txt:NAI", 1013,
-          "含块头共 1014 行大写赋值，减去 NAI = { 本身"),
+          "NAI 有 1017 个参数", "defines_params", "00_ai.txt:NAI", 1017,
+          "1.14.2 时为 1013，1.14.3 增至 1017（+4）；文件 1307 行 → 1311 行"),
     Claim("def.blocks", "05-defines与修饰符.md", "defines 共 75 个顶层命名空间块",
           "defines_blocks", "", 75),
     Claim("def.namespaces", "05-defines与修饰符.md", "defines 共 50 个去重命名空间",
