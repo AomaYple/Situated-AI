@@ -294,8 +294,10 @@ CLAIMS: list[Claim] = [
           "早期缩进法误得 6121；实测 68/68 文件带 BOM 且存在缩进的顶层键"),
 
     # ── 脚本系统（doc 04）──────────────────────────────
-    Claim("scr.on_actions", "04-脚本系统.md", "on_actions 有 263 个键",
-          "dir_entries", "on_actions", 263),
+    Claim("scr.on_actions", "04-脚本系统.md", "on_actions 有 264 个键",
+          "dir_entries", "on_actions", 264,
+          "doc 04 早期记 263（其中 00_code_on_actions.txt 记 218，实为 219）。"
+          "漏掉的是 on_diplo_play_overlord_protects_subject，位于该文件第 4321 行、缩进 0"),
 
     # ── history（doc 18）───────────────────────────────
     Claim("hist.wrappers", "18-history初始状态系统.md",

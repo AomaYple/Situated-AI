@@ -285,15 +285,38 @@ def _analyse_dlc(root: Path) -> list[DlcInfo]:
     return out
 
 
+def _scriptable_files(root: Path) -> list:
+    """收集某个内容根下**需要深度解析**的文件。
+
+    只取 ``SCRIPTABLE_DIRS`` 下、扩展名属 ``SCRIPTABLE_SUFFIXES`` 的文件。
+    ``gfx/``、``sound/``、``dlc/`` 等资产目录只做清单统计，不解析 ——
+    目标不是读遍游戏，而是**提取所有与 mod 开发有关的信息**。
+    """
+    out = []
+    for f in walk_files(root):
+        try:
+            rel = f.path.relative_to(root)
+        except ValueError:
+            continue
+        if config.is_scriptable(rel.parts, f.suffix):
+            out.append(f)
+    return out
+
+
 def game_analysis(*, verbose: bool = False) -> GameAnalysis:
-    """对游戏本体做全量分析。整棵树只解析一次。"""
+    """对游戏本体做分析。整棵树只遍历一次，只深度解析 mod 相关文件。"""
     ga = GameAnalysis(version=config.game_version())
     common_root = config.GAME / "common"
 
-    # ── 一次遍历：解析全部 .txt ─────────────────────────
-    all_txt = list(walk_files(config.GAME, suffix=".txt"))
+    # ── 一次遍历：只解析可脚本化的文件 ───────────────────
+    targets: list[tuple[str, object]] = []
+    for name, root in CONTENT_ROOTS.items():
+        if not root.is_dir():
+            continue
+        for f in _scriptable_files(root):
+            targets.append((name, f))
     if verbose:
-        print(f"  [游戏] 待解析 .txt：{len(all_txt):,} 个")
+        print(f"  [游戏] 待解析的 mod 相关文件：{len(targets):,} 个")
 
     per_common: dict[str, DirExtract] = {}
     per_script: dict[str, DirExtract] = {}
@@ -304,49 +327,58 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
     # 那样会让目录数从 136 变成 135，是个真实踩过的错。
     for child in sorted(p for p in common_root.iterdir() if p.is_dir()):
         per_common[child.name] = DirExtract(name=child.name, path=child)
-    for name in SCRIPT_DIRS:
+    for name in config.SCRIPTABLE_DIRS:
+        if name == "common":
+            continue
         d = config.GAME / name
         if d.is_dir():
             per_script[name] = DirExtract(name=name, path=d)
 
-    for i, f in enumerate(all_txt, 1):
+    for i, (root_name, f) in enumerate(targets, 1):
         try:
             pf = parse_cached(f.path)
         except Exception as exc:
             ga.parse_errors.append((str(f.path), f"未捕获异常: {exc}"))
             continue
 
+        root = CONTENT_ROOTS[root_name]
+        try:
+            rel = f.path.relative_to(root)
+        except ValueError:
+            continue
+
+        # 原版是否使用功能前缀（含 jomini / clausewitz 层）
         for a in pf.top_assignments:
             if a.prefix:
                 ga.vanilla_prefixes[a.prefix] += 1
 
-        try:
-            rel = f.path.relative_to(common_root)
-            is_common = True
-        except ValueError:
-            is_common = False
-            rel = f.path.relative_to(config.GAME)
+        # 只有 game 层参与目录级提取；jomini/clausewitz 只计前缀
+        if root_name != "game":
+            continue
 
-        if is_common:
-            if len(rel.parts) == 1:
+        top = rel.parts[0] if rel.parts else ""
+        if top == "common":
+            # 散装文件（common/xxx.txt 直接放在 common 根下，不属于任何子目录）
+            # 注意 rel 是相对 GAME 的，所以散装文件形如 ("common", "xxx.txt")，
+            # 判据是 parts[1] 是不是目录，**不能**用 len(rel.parts) 判断。
+            if len(rel.parts) < 2 or not (common_root / rel.parts[1]).is_dir():
                 loose_common += 1
                 continue
-            name = rel.parts[0]
+            name = rel.parts[1]
             res = per_common.get(name)
             if res is None:
                 res = DirExtract(name=name, path=common_root / name)
                 per_common[name] = res
             extract_file(pf, res)
-        elif rel.parts and rel.parts[0] in SCRIPT_DIRS:
-            name = rel.parts[0]
-            res = per_script.get(name)
+        elif top in config.SCRIPTABLE_DIRS:
+            res = per_script.get(top)
             if res is None:
-                res = DirExtract(name=name, path=config.GAME / name)
-                per_script[name] = res
+                res = DirExtract(name=top, path=config.GAME / top)
+                per_script[top] = res
             extract_file(pf, res)
 
-        if verbose and i % 1500 == 0:
-            print(f"    已解析 {i:,}/{len(all_txt):,} …")
+        if verbose and i % 1000 == 0:
+            print(f"    已解析 {i:,}/{len(targets):,} …")
 
     ga.common = dict(sorted(per_common.items()))
     ga.scripts = dict(sorted(per_script.items()))
@@ -535,6 +567,8 @@ def _extract_to_dict(e: DirExtract) -> dict[str, Any]:
         "文件": e.files,
         "顶层条目数": e.unique_entries,
         "条目": sorted(e.entries),
+        "@变量数": len(e.variables),
+        "@变量": sorted(e.variables),
         "字段数": len(e.fields),
         "字段": {k: sorted(v) for k, v in sorted(e.fields.items())},
         "字段使用次数": dict(e.field_usage.most_common()),

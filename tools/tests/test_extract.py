@@ -103,6 +103,44 @@ class TestExtractFile(unittest.TestCase):
         self.assertGreaterEqual(res.max_depth, 3)
 
 
+class TestVariableSeparation(unittest.TestCase):
+    """``@变量`` 是脚本变量，不是数据条目 —— 必须分开计数。
+
+    这条规则来自真实错误：`coat_of_arms` 目录里有大量 ``@坐标`` 定义，
+    混入 entries 会让条目数虚高。
+    """
+
+    def _extract(self, text: str) -> DirExtract:
+        res = DirExtract(name="x", path=Path("."))
+        extract_file(parse_text(text, "synthetic"), res)
+        return res
+
+    def test_variable_not_counted_as_entry(self):
+        res = self._extract("@offset_x = 0.5\nreal_entry = { a = 1 }")
+        self.assertEqual(list(res.entries), ["real_entry"])
+        self.assertEqual(list(res.variables), ["@offset_x"])
+
+    def test_unique_entries_excludes_variables(self):
+        res = self._extract("@a = 1\n@b = 2\nentry = { }")
+        self.assertEqual(res.unique_entries, 1)
+
+    def test_variables_counted_separately(self):
+        res = self._extract("@a = 1\n@b = 2\n@c = 3")
+        self.assertEqual(len(res.variables), 3)
+        self.assertEqual(res.unique_entries, 0)
+
+    def test_variable_has_no_fields(self):
+        """@变量 即使值是块，也不该把子键记成「字段」。"""
+        res = self._extract("@v = { x = 1 }")
+        self.assertNotIn("@v", res.fields)
+        self.assertEqual(res.unique_entries, 0)
+
+    def test_summary_reports_variables(self):
+        res = self._extract("@a = 1\nentry = { }")
+        self.assertIn("@变量", res.summary())
+        self.assertEqual(res.summary()["@变量"], 1)
+
+
 class TestExtractDir(unittest.TestCase):
     def test_merges_across_files(self):
         with Sandbox({

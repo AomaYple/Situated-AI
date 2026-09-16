@@ -32,6 +32,9 @@ class DirExtract:
     files: int = 0
     #: 顶层条目名 → 出现次数（正常情况下都是 1）
     entries: Counter = field(default_factory=Counter)
+    #: ``@变量`` 名 → 出现次数。**不计入 entries** —— 它们是脚本变量而非数据条目。
+    #: `coat_of_arms` 目录里有大量这种定义，混入会让条目数虚高。
+    variables: Counter = field(default_factory=Counter)
     #: 条目名 → 该条目内出现过的字段集合
     fields: dict[str, set[str]] = field(default_factory=dict)
     #: 各字段被使用的次数
@@ -58,6 +61,7 @@ class DirExtract:
             "目录": self.name,
             "文件": self.files,
             "顶层条目": self.unique_entries,
+            "@变量": len(self.variables),
             "字段数": len(self.fields),
             "带前缀条目": sum(self.prefixed.values()),
             "带BOM文件": self.bom_files,
@@ -82,6 +86,11 @@ def extract_file(pf: ParsedFile, result: DirExtract) -> None:
         result.errors.append((Path(pf.path), err))
 
     for a in pf.top_assignments:
+        # @变量：脚本变量，不是数据条目 —— 单独计数，不混入 entries
+        if a.is_variable:
+            result.variables[a.key] += 1
+            continue
+
         if a.prefix:
             result.prefixed[f"{a.prefix}:{a.key}"] += 1
         else:

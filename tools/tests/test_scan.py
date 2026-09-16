@@ -172,20 +172,22 @@ class TestRealGameTree(unittest.TestCase):
         n = sum(1 for p in common.iterdir() if p.is_dir())
         self.assertEqual(n, 136)
 
-    def test_common_txt_count_is_3024(self):
-        """common 下 .txt 共 3024 个。
+    def test_common_txt_count(self):
+        """common 下 .txt 数。
 
-        注意区分：**3024 是 .txt 数**，而 3099 是 common 的**全部文件数**
-        （3024 个 .txt + 75 个 .md）。这两个数字极易混淆，
-        doc 08 与 doc 13 用的是不同口径。
+        注意区分：**.txt 数**与 **全部文件数**是两个口径，
+        极易混淆（doc 08 与 doc 13 用的就不是同一个）。
+
+        本值随游戏版本变化：1.14.2 是 3024，1.14.3 是 3026。
+        改这个数字前请先确认游戏版本，不要为了让测试通过而改。
         """
         from pdx.config import GAME
         n = count_files(GAME / "common", ".txt")
-        self.assertEqual(n, 3024)
+        self.assertEqual(n, 3026)
 
-    def test_common_total_file_count_is_3099(self):
+    def test_common_total_file_count(self):
         from pdx.config import GAME
-        self.assertEqual(count_files(GAME / "common"), 3099)
+        self.assertEqual(count_files(GAME / "common"), 3101)
 
     def test_common_md_count_is_75(self):
         from pdx.config import GAME
