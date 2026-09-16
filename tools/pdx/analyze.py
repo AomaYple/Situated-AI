@@ -35,14 +35,16 @@ from __future__ import annotations
 import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from . import config
 from .cache import parse_cached
 from .extract import DirExtract, extract_file
 from .mods import ModInfo, aggregate_prefixes, analyse_all
 from .scan import DirStats, stats_for, walk_files
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 #: 参与分析的内容根
 CONTENT_ROOTS: dict[str, Path] = {
@@ -211,12 +213,12 @@ def _read_root_file(path: Path) -> RootFile:
             if ln.strip().startswith("name")
         ]
     elif path.name == "paths.settings":
-        rf.summary["映射"] = dict(
-            (parts[0].strip(), parts[1].strip().strip('"'))
+        rf.summary["映射"] = {
+            parts[0].strip(): parts[1].strip().strip('"')
             for ln in rf.text.splitlines()
             if "=" in ln
             for parts in [ln.split("=", 1)]
-        )
+        }
     return rf
 
 
@@ -376,7 +378,6 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
                 res = DirExtract(name=top, path=config.GAME / top)
                 per_script[top] = res
             extract_file(pf, res)
-
         if verbose and i % 1000 == 0:
             print(f"    已解析 {i:,}/{len(targets):,} …")
 
@@ -395,7 +396,6 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
         if verbose:
             s = ga.roots[name]
             print(f"  [{name}] {s.files:,} 文件 / {s.size_mb:,} MB")
-
     # ── 本地化 ─────────────────────────────────────────
     ga.localization = _analyse_localization(config.GAME)
     if verbose:
@@ -408,7 +408,6 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
             str(f.path.relative_to(config.GAME)).replace("\\", "/")
             for f in walk_files(gui_root, suffix=".gui")
         )
-
     # ── 根级配置文件 ───────────────────────────────────
     for f in walk_files(config.GAME):
         if f.path.parent != config.GAME:
@@ -421,7 +420,7 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
     if ps:
         ga.paths = dict(ps.summary.get("映射", {}))
 
-    # ── DLC ────────────────────────────────────────────
+    # ── DLC ────────────────────────────────────────
     ga.dlcs = _analyse_dlc(config.GAME)
     if verbose:
         n_script = sum(1 for d in ga.dlcs if d.has_script_dir)
@@ -435,7 +434,6 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
             ga.official_docs[
                 str(f.path.relative_to(root)).replace("\\", "/")
             ] = f.size
-
     if verbose and loose_common:
         print(f"  注：common 根下有 {loose_common} 个散装 .txt")
     return ga
@@ -522,10 +520,14 @@ class CrossAnalysis:
         }
 
 
-def cross_analysis(
-    ga: GameAnalysis, ma: ModsAnalysis, *, verbose: bool = False
-) -> CrossAnalysis:
-    """交叉分析：哪些原版条目被哪些 mod 改动过。"""
+def cross_analysis(ma: ModsAnalysis, *, verbose: bool = False) -> CrossAnalysis:
+    """交叉分析：哪些原版条目被哪些 mod 改动过。
+
+    刻意**不收** ``GameAnalysis``：早先签名里有 ``ga``，但函数体从未读过
+    它 —— 原版条目是从 ``config.GAME`` 下按相对路径直接解析的，
+    不依赖游戏本体分析的中间结果。挂一个用不上的参数只会误导调用方
+    以为两者有依赖关系。
+    """
     ca = CrossAnalysis()
     for m in ma.mods:
         target = m.target
@@ -704,8 +706,8 @@ def write_reports(
 
 def render_game_markdown(ga: GameAnalysis) -> str:
     """游戏本体报告。"""
-    L: list[str] = []
-    add = L.append
+    out: list[str] = []
+    add = out.append
     add("# Victoria 3 游戏本体全量分析")
     add("")
     add("> 由 `tools/pdx/analyze.py` 自动生成，请勿手工编辑。")
@@ -784,13 +786,13 @@ def render_game_markdown(ga: GameAnalysis) -> str:
     add("> 实测全部 DLC 均不自带 `common/` 等脚本目录，只含 `gfx`/`sound`/`music` 资产。")
     add("")
 
-    return "\n".join(L)
+    return "\n".join(out)
 
 
 def render_mods_markdown(ma: ModsAnalysis, ca: CrossAnalysis) -> str:
     """mod 报告。"""
-    L: list[str] = []
-    add = L.append
+    out: list[str] = []
+    add = out.append
     add("# Victoria 3 Mod 全量分析")
     add("")
     add("> 由 `tools/pdx/analyze.py` 自动生成，请勿手工编辑。")
@@ -857,6 +859,6 @@ def render_mods_markdown(ma: ModsAnalysis, ca: CrossAnalysis) -> str:
         add("**无冲突** —— 没有任何原版路径被两个及以上 mod 覆盖。")
     add("")
 
-    return "\n".join(L)
+    return "\n".join(out)
 
 

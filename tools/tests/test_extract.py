@@ -8,19 +8,19 @@
 from __future__ import annotations
 
 import shutil
-import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from pdx.extract import (  # noqa: E402
-    DirExtract, extract_dir, extract_file, extract_tree, global_usage,
+from pdx.extract import (
+    DirExtract,
+    extract_dir,
+    extract_file,
+    extract_tree,
+    global_usage,
 )
-from pdx.parser import parse_text  # noqa: E402
+from pdx.parser import parse_text
 
 BASE = Path(__file__).resolve().parents[2] / ".testtmp" / "extract"
-
 
 class Sandbox:
     """在受控目录里建文件树。刻意不用 tempfile（沙箱限制见 test_scan）。"""
@@ -44,10 +44,9 @@ class Sandbox:
     def __exit__(self, *exc) -> None:
         shutil.rmtree(self.root, ignore_errors=True)
 
-
 class TestExtractFile(unittest.TestCase):
     def _extract(self, text: str) -> DirExtract:
-        res = DirExtract(name="x", path=Path("."))
+        res = DirExtract(name="x", path=Path())
         extract_file(parse_text(text, "synthetic"), res)
         return res
 
@@ -102,7 +101,6 @@ class TestExtractFile(unittest.TestCase):
         res = self._extract("a = { b = { c = { d = 1 } } }")
         self.assertGreaterEqual(res.max_depth, 3)
 
-
 class TestVariableSeparation(unittest.TestCase):
     """``@变量`` 是脚本变量，不是数据条目 —— 必须分开计数。
 
@@ -111,7 +109,7 @@ class TestVariableSeparation(unittest.TestCase):
     """
 
     def _extract(self, text: str) -> DirExtract:
-        res = DirExtract(name="x", path=Path("."))
+        res = DirExtract(name="x", path=Path())
         extract_file(parse_text(text, "synthetic"), res)
         return res
 
@@ -139,7 +137,6 @@ class TestVariableSeparation(unittest.TestCase):
         res = self._extract("@a = 1\nentry = { }")
         self.assertIn("@变量", res.summary())
         self.assertEqual(res.summary()["@变量"], 1)
-
 
 class TestExtractDir(unittest.TestCase):
     def test_merges_across_files(self):
@@ -184,7 +181,6 @@ class TestExtractDir(unittest.TestCase):
         with Sandbox({"d/bad.txt": "a = {\n"}) as root:
             self.assertFalse(extract_dir(root / "d").is_clean)
 
-
 class TestExtractTree(unittest.TestCase):
     def test_per_subdir_keys(self):
         with Sandbox({
@@ -202,7 +198,6 @@ class TestExtractTree(unittest.TestCase):
         }) as root:
             total = global_usage(extract_tree(root / "tree").values())
         self.assertEqual(total["shared"], 2)
-
 
 class TestRealGameCounts(unittest.TestCase):
     """集成测试：与知识库中已核实的数字对齐。
@@ -251,7 +246,6 @@ class TestRealGameCounts(unittest.TestCase):
         res = extract_dir(self.common / "static_modifiers")
         self.assertEqual(res.files, 68)
         self.assertEqual(res.bom_files, 68, "实测该目录 68/68 全部带 BOM")
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

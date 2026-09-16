@@ -22,16 +22,18 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Callable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from . import config
+from .cache import parse_cached
 from .extract import extract_dir
 from .mods import aggregate_prefixes, analyse_all, vanilla_prefix_count
-from .cache import parse_cached
-from .parser import PREFIXES
 from .scan import count_files
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
 
 
 # ── 数据结构 ────────────────────────────────────────────────
@@ -96,7 +98,7 @@ def _defines_params(target: str) -> int:
     return -1
 
 
-def _defines_blocks(target: str) -> int:
+def _defines_blocks(_target: str) -> int:
     """defines 目录下的命名空间块总数。
 
     只数**命名空间块**（大写开头、非 ``@变量``、是块）。
@@ -109,7 +111,7 @@ def _defines_blocks(target: str) -> int:
     return total
 
 
-def _defines_namespaces(target: str) -> int:
+def _defines_namespaces(_target: str) -> int:
     """defines 目录下去重的命名空间名数量。"""
     names: set[str] = set()
     for f in (config.GAME / "common" / "defines").rglob("*.txt"):
@@ -122,16 +124,33 @@ def _prefix_in_mods(target: str) -> int:
     return aggregate_prefixes(analyse_all()).get(target, 0)
 
 
+def _mods_prefix_total(_target: str) -> int:
+    """全部 mod 使用功能前缀的总次数。"""
+    return sum(aggregate_prefixes(analyse_all()).values())
+
+
+def _vanilla_prefix_total(_target: str) -> int:
+    """原版脚本使用功能前缀的**总次数**（实测应为 0）。
+
+    这是本项目最核心的结论之一 —— ``INJECT:`` / ``REPLACE:`` 这套机制
+    是引擎**专供 mod** 的。它曾被写进多篇文档却从未被任何断言核验：
+    :func:`pdx.mods.vanilla_prefix_count` 早就写好了，也注册进了
+    ``_CHECKS``，但**没有任何 claim 引用它**，于是 ``run_verify``
+    长期报「37/37 全绿」，而这条结论实际上无人看守。
+    """
+    return sum(vanilla_prefix_count().values())
+
+
 def _prefix_in_vanilla(target: str) -> int:
     """某个功能前缀在原版中的使用次数（实测应为 0）。"""
     return vanilla_prefix_count().get(target, 0)
 
 
-def _mods_total(target: str) -> int:
+def _mods_total(_target: str) -> int:
     return len(analyse_all())
 
 
-def _history_wrappers(target: str) -> int:
+def _history_wrappers(_target: str) -> int:
     """history 目录下出现过的顶层包装块种类数。"""
     base = config.GAME / "common" / "history"
     names: set[str] = set()
@@ -140,7 +159,7 @@ def _history_wrappers(target: str) -> int:
     return len(names)
 
 
-def _md_files(target: str) -> int:
+def _md_files(_target: str) -> int:
     """游戏自带的官方 .md 总数。
 
     必须跨三个内容根统计 —— 实测 ``game`` 树 91 篇 + ``jomini`` 树 1 篇
@@ -161,7 +180,7 @@ def _file_top_keys(target: str) -> int:
     return len(pf.top_keys)
 
 
-def _dlc_count(target: str) -> int:
+def _dlc_count(_target: str) -> int:
     """``game/dlc/`` 下的 DLC 目录数。
 
     实测 **17**（编号 001–018，其中缺 ``dlc005``）。
@@ -171,7 +190,7 @@ def _dlc_count(target: str) -> int:
     return sum(1 for p in base.iterdir() if p.is_dir()) if base.is_dir() else 0
 
 
-def _common_dir_count(target: str) -> int:
+def _common_dir_count(_target: str) -> int:
     """``common/`` 下的子目录数。
 
     实测 **136**。注意不能靠「有哪些目录含有 .txt」来数 ——
@@ -192,6 +211,8 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "defines_namespaces": _defines_namespaces,
     "prefix_in_mods": _prefix_in_mods,
     "prefix_in_vanilla": _prefix_in_vanilla,
+    "mods_prefix_total": _mods_prefix_total,
+    "vanilla_prefix_total": _vanilla_prefix_total,
     "mods_total": _mods_total,
     "history_wrappers": _history_wrappers,
     "md_files": _md_files,
@@ -204,7 +225,16 @@ _CHECKS: dict[str, Callable[[str], object]] = {
 # ── 断言注册表 ──────────────────────────────────────────────
 #: 依赖外部数据的检查（需扫描全部 mod / 整个 game 树）较慢，
 #: 由 ``slow`` 标记区分，便于快速模式下跳过。
-SLOW_KINDS = frozenset({"prefix_in_mods", "prefix_in_vanilla", "mods_total", "md_files"})
+SLOW_KINDS = frozenset(
+    {
+        "prefix_in_mods",
+        "prefix_in_vanilla",
+        "mods_prefix_total",
+        "vanilla_prefix_total",
+        "mods_total",
+        "md_files",
+    }
+)
 
 
 CLAIMS: list[Claim] = [
@@ -307,6 +337,18 @@ CLAIMS: list[Claim] = [
     # ── mod 分析（doc 12）──────────────────────────────
     Claim("mod.total", "12-真实mod解剖与改造面地图.md", "订阅了 23 个 Workshop mod",
           "mods_total", "", 23),
+
+    # ── 引擎级功能前缀（doc 02 / doc 14，本项目最核心的结论之一）──
+    #: 这条长期缺席：函数写好了、注册了，却没有 claim 引用它，
+    #: 导致 run_verify 报「全绿」而该结论实际上无人看守。
+    Claim("pfx.vanilla_zero", "02-Mod结构与加载.md",
+          "原版脚本零使用功能前缀（INJECT/REPLACE 等专供 mod）",
+          "vanilla_prefix_total", "", 0,
+          "范围限定为 config.is_scriptable 认可的文件，与全量分析其余部分一致"),
+    Claim("pfx.mods_total", "02-Mod结构与加载.md",
+          "全部 mod 共使用 2737 次功能前缀", "mods_prefix_total", "", 2737,
+          "六个前缀之和：REPLACE_OR_CREATE 1116 / INJECT 740 / TRY_INJECT 440 / "
+          "REPLACE 221 / TRY_REPLACE 174 / INJECT_OR_CREATE 46"),
 ]
 
 
@@ -341,6 +383,88 @@ def summarize(results: list[CheckResult]) -> dict[str, object]:
         "失败": len(results) - passed,
         "失败分布": dict(by_doc),
     }
+
+
+# ── 产物核验 ────────────────────────────────────────────────
+def _prod_dir_entries(game: dict, _mods: dict, _cross: dict, target: str) -> object:
+    return game.get("common", {}).get(target, {}).get("顶层条目数")
+
+
+def _prod_common_dirs(game: dict, _mods: dict, _cross: dict, _target: str) -> object:
+    return game.get("概览", {}).get("common 目录数")
+
+
+def _prod_dlc(game: dict, _mods: dict, _cross: dict, _target: str) -> object:
+    return game.get("概览", {}).get("DLC")
+
+
+def _prod_md(game: dict, _mods: dict, _cross: dict, _target: str) -> object:
+    return game.get("概览", {}).get("官方md")
+
+
+def _prod_vanilla_prefix(game: dict, _mods: dict, _cross: dict, _target: str) -> object:
+    return game.get("概览", {}).get("原版前缀使用")
+
+
+def _prod_mods_total(_game: dict, mods: dict, _cross: dict, _target: str) -> object:
+    return mods.get("概览", {}).get("mod 数")
+
+
+#: 断言类型 → 从**已落盘的产物**里取值。
+#:
+#: 为什么要有这一层：``CLAIMS`` 检查的是「游戏里到底有多少」，
+#: 这里检查的是「分析产物有没有把它写对」。两者是不同的问题，
+#: 但**必须共用同一份期望值**。
+#:
+#: 历史上 ``tools/check_outputs.py`` 自己维护了一套写死的期望值，
+#: 结果它的 ``on_actions = 263`` 与 ``CLAIMS`` 里的 264 长期冲突，
+#: 而且因为它跑在 pytest 管辖之外，谁也没发现。
+#: 现在两个检查都从 ``CLAIMS`` 取数，冲突在结构上不可能再出现。
+#:
+#: 用具名函数而不是 lambda：一来 linter 不会抱怨「未使用的形参」，
+#: 二来这四个形参的统一签名本身就是「产物取值器」这个协议的一部分。
+_PRODUCT_GETTERS: dict[str, Callable[[dict, dict, dict, str], object]] = {
+    "dir_entries": _prod_dir_entries,
+    "common_dir_count": _prod_common_dirs,
+    "dlc_count": _prod_dlc,
+    "md_files": _prod_md,
+    "prefix_in_vanilla": _prod_vanilla_prefix,
+    "mods_total": _prod_mods_total,
+}
+
+
+def product_kinds() -> frozenset[str]:
+    """能被产物核验覆盖的断言类型。"""
+    return frozenset(_PRODUCT_GETTERS)
+
+
+def verify_products(
+    game: dict, mods: dict, cross: dict, claims: list[Claim] | None = None
+) -> list[CheckResult]:
+    """核验已落盘的分析产物是否与断言注册表一致。
+
+    只检查 ``_PRODUCT_GETTERS`` 里有映射的类型；其余类型会以 ``error``
+    标注为「产物中没有对应字段」，而**不是假装通过** ——
+    静默跳过是让检查表腐烂的最快方式。
+    """
+    out: list[CheckResult] = []
+    for claim in claims if claims is not None else CLAIMS:
+        getter = _PRODUCT_GETTERS.get(claim.kind)
+        if getter is None:
+            out.append(
+                CheckResult(claim, None, False, f"产物中没有对应字段（{claim.kind}）")
+            )
+            continue
+        try:
+            actual = getter(game, mods, cross, claim.target)
+        except (KeyError, TypeError, AttributeError) as exc:
+            out.append(CheckResult(claim, None, False, f"{type(exc).__name__}: {exc}"))
+            continue
+        if actual is None:
+            out.append(CheckResult(claim, None, False, "产物中该字段缺失"))
+            continue
+        out.append(CheckResult(claim, actual, actual == claim.expected))
+    return out
 
 
 # ── 覆盖率扫描 ──────────────────────────────────────────────

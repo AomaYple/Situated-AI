@@ -1,4 +1,4 @@
-"""从 PDX 文件提取结构化信息。
+﻿"""从 PDX 文件提取结构化信息。
 
 这是取代原先 ``dump_*.ps1`` 与 ``make_frags.ps1`` 的核心层。所有提取都
 走 :mod:`pdx.parser`，因此自动获得 BOM 剥离、引号感知注释、花括号深度
@@ -16,11 +16,15 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import TYPE_CHECKING
 
 from .cache import parse_cached
-from .model import Assignment, Block, ParsedFile
 from .scan import walk_files
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from .model import Block, ParsedFile
 
 
 @dataclass(slots=True)
@@ -81,7 +85,7 @@ def extract_file(pf: ParsedFile, result: DirExtract) -> None:
     result.files += 1
     if pf.had_bom:
         result.bom_files += 1
-    result.max_depth = max(result.max_depth, pf.max_depth())
+    result.max_depth = max(result.max_depth, pf.max_depth)
     for err in pf.errors:
         result.errors.append((Path(pf.path), err))
 

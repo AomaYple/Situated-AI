@@ -1,0 +1,310 @@
+# Victoria 3 工具链测试套件审查报告
+
+审查对象：`tools/pdx/`（13 模块，1584 语句）、`tools/tests/`（11 测试文件）
+实测环境：Python 3.14.7 / pytest 9.1.1 / 游戏目录与本机 mod 均可用
+
+---
+
+## 1. 现有测试清单
+
+实测 `pytest -p no:cacheprovider --collect-only -q` = **270 用例**；全量运行 **226 passed / 44 deselected，364 subtests passed，76.0s**（含 10 个 benchmark）。
+
+| 文件 | 用例数 | 覆盖功能点 | 标记 | 需真实游戏 |
+|---|---:|---|---|---|---|
+| `test_lexer.py` | 35 | 括号/运算符 8 个、引号感知注释、字符串转义与未闭合、原子字符集（连字符/点/冒号/@/$）、BOM、行号列号、CRLF、畸形输入不死循环（`test_lexer.py:177-181`） | unittest，**无标签** | 否 |
+| `test_parser.py` | 24 | BOM 4 坑、注释深度漂移、连字符/点键、`c:SWE` 非前缀、6 前缀、缩进无关的顶层判定、内联列表、空值、括号不平衡容错 | 无标签；`TestKnownCounts` 仅靠 `skipTest`（`test_parser.py:193`） | 部分（6 个目录计数） |
+| `test_properties.py` | 13 | hypothesis 不变量：键全回收、确定性、任意输入不抛、BOM 不泄漏、注释不产键、标量往返、前缀必拆、缩进无关 | `pytest.mark.property` | 否 |
+| `test_scan.py` | 24 | `walk_files` 递归/后缀/大小写、`stats_for` 深/浅、后缀直方图、`subdir_stats` 排序、`count_files/total_size/find_by_name` | 无标签；`TestRealGameTree` 用 `unittest.SkipTest`（`:167`） | 是（6 个用例） |
+| `test_extract.py` | 28 | 文件级条目/字段/字段用量、嵌套字段不收集、前缀分流、`@变量` 分离（5 例）、目录合并、`extract_tree`、`global_usage` | 无标签，同上 `:232` | 是（3 个用例） |
+| `test_snapshot.py` | 18 | 6 个域齐备、版本记录、136 目录、67 defines、11 语言、17 DLC、两次构建逐字节一致、列表有序去重、序列化往返、`compare` 5 种变更、`diff_summary` | 无标签，同上 `:25` | 是（12 个用例） |
+| `test_analyze.py` | 42 | 游戏本体 16 项断言（136 目录、8 个目录条目数、`on_actions=264`…）、视图 3、mod 9、交叉 3、序列化 6、渲染单元 4 | `pytest.mark.integration`（`test_analyze.py:31`）+ `skipif` | 是（除 `TestRenderingUnit`） |
+| `test_verify.py` | 25 | Claim 结构 6、`check()` 成败/未知 kind/异常捕获、`run_claims` 快慢模式、`summarize`、`find_unregistered_claims` 4 | `pytest.mark.integration`（`test_verify.py:22`） | 部分是 |
+| `test_benchmarks.py` | 10 | lexer ×3（小/中/边角）、parser ×3、真实文件 ×3、`extract_dir` 端到端 ×1 | `benchmark`+`slow`（`test_benchmarks.py:38`） | 部分 |
+| `test_golden.py` | 7 | 5 份产物的字节数+sha256、非空、UTF-8 无 BOM、两次写盘逐字节一致、产物分离、可读回、不污染正式目录 | `integration`+`regression`+`slow`（`test_golden.py:36`） | 是 |
+| `test_lexer_differential.py` | 44 | 37 个手写边界 + 语料抽样 120 + 语料全量 + token 总量 + 4 组模糊，全部与 `_oracle_lexer` 逐 `(kind,value,line,col)` 比对 | `unit` / `integration` / `slow` | 部分是 |
+
+用例最多的三类：差分（44）、集成分析（42）、词法单元（35）。`_oracle_lexer.py` 本身无测试。
+
+---
+
+## 2. 覆盖盲区
+
+### 2.1 实测覆盖率全貌
+
+```
+tools\pdx\defines.py     117 stmts  35 miss  70%   ← 最低
+tools\pdx\extract.py      88      15     83%
+tools\pdx\mods.py        124      21     83%
+tools\pdx\snapshot.py    162      25     85%
+tools\pdx\cache.py        26       3     88%
+tools\pdx\config.py       48       6     88%
+tools\pdx\model.py        92       9     90%
+tools\pdx\verify.py      128      12     91%
+tools\pdx\analyze.py     499      40     92%
+tools\pdx\parser.py      105       7     93%
+tools\pdx\scan.py        104       7     93%
+tools\pdx\lexer.py        87       0    100%
+TOTAL                   1584     180     89%
+```
+（注释剥离后为 89%；按 `# pragma: no cover` 的 `lexer.py:59`、`model.py:41` 仍被计为已覆盖，实际有效覆盖略低于此值。「单元测试真实覆盖率」未单独测量——本次全量跑含 integration，故 89% 是**含真实游戏数据**的上界。）
+
+### 2.2 逐模块未覆盖清单（按缺口严重度）
+
+**`defines.py` 70% —— 唯一被系统性漏测的模块**
+- 全部 4 个 `to_dict`/属性方法无任何调用：`Param.to_dict` `defines.py:51-57`、`Namespace.param_names` `:71`、`Namespace.count` `:75`、`Namespace.to_dict` `:79-88`。这意味着**落盘 JSON 的形态完全没被测**。
+- `DefinesReport.unique_namespaces` `:106`、`total_params` `:110`、`get()` `:113`、`summary()` `:116` 未被直接断言（`summary` 走的是 `extract_all_defines` 之外路径）。
+- **`overlay()` `defines.py:194-222` 整函数 0 覆盖**——包括「原版不存在（新建）」`::208` 与「与原版合并」两条分支、`mine & existing` / `mine - existing` 差集逻辑。
+- `extract_all_defines()` `:186-191` 0 覆盖（含 jomini 层）。
+- `_classify` 的三分类只在 integration 里被间接跑到：空块 → 既非标量也非列表的 `NESTED_BLOCK` 分支 `:139` 是否被真实数据触发未确认；`v is None` 的兜底 `:143` 未覆盖。
+- `extract_defines` 的 `root.is_dir()` 假分支 `:156`、`a.key[:1].isupper()` 假分支 `:170` 未覆盖。
+
+**`extract.py` 83%**
+- `all_top_keys()` `extract.py:131-136`（仅在 `test_lexer_differential` 的 `_BOUNDARY` 注释里出现，非断言）与 `all_field_names()` `:139-147` **零覆盖**。
+- `extract_tree` 空目录/非目录 → `:125`、`extract_file` 里 `a.prefix` 假分支 `:97`（该分支在 `test_prefixed_*` 里其实走到了，但 `res.fields` 分支 `:99-103` 对 prefixed 条目是否建立字段未断言）。
+- `parse_cached` 抛异常兜底 `:114-116` 未覆盖。
+
+**`mods.py` 83%**
+- `read_metadata` 的 JSON 损坏 / OSError 兜底 `mods.py:85-86` 未覆盖（`test_` 中无损坏 metadata.json 用例）。
+- `analyse_mod` 的 `relative_to` ValueError `:111-112`、`_scan_prefixes` 的两个 `except Exception` `:141-142` `:156-157` 未覆盖。
+- `vanilla_prefix_count()` `:193-209` **零直接测试**（只有 integration 通过 `verify` 间接跑，且其断言是「总和为 0」，等于没验证计数正确性）。
+- `discover_mods(include_local=False, include_workshop=False)` 参数组合 `:166-177` 未覆盖。
+
+**`model.py` 90% —— 且缺口全是公开 API**
+- `ParseError` `model.py:17-23` **是事实上的死代码**：全仓库仅被 imported（`__init__.py:14`、`parser.py:24`），无任何 raise、无任何测试。
+- `Block.first()`（仅在 `test_parser.py:148` 被间接用）、`Block.all()` `:67-68`、`ParsedFile.data_keys()` `:142-144`、`variables()` `:150-152`、`prefixed()` `:154-156` 均无独立断言。
+- `Scalar.unquoted` 的「带引号但长度 <2」分支 `:39` 未覆盖。
+
+**`parser.py` 93%**
+- `_Parser.expect()` `parser.py:71-78` **零调用**——错误分支死代码；`parser.py:74-77` 的报错文本从未产生，即「期望 X 实际是 Y」这条诊断信息没有任何测试。
+- `parse_statement` 的兜底 `:136-138` 未覆盖。
+- **STRING 作为键**的分支 `:124-126`（`"quoted key" = 1`）未覆盖；`:125` 的 `len<2` 兜底不可能达到。
+
+**`verify.py` 91%**
+- 注册表里有 `file_top_keys` `verify.py:158-161` 这个 kind，**`CLAIMS` 中没有任何一条使用它** `:210-310`（死 kind）。
+- `_defines_params` 找不到命名空间时的 `-1` 边界 `:96` 无断言。
+- `_prefix_in_mods` `:122`、`_prefix_in_vanilla` `:127`、`_mods_total` `:131` 每次调用都重跑 `analyse_all()`；`_defines_blocks` `:107` / `_defines_namespaces` `:115` 用 `rglob` 绕过 `scan.walk_files`，与项目「统计口径集中」的原则相悖，也无测试保证两者一致。
+- `check()` 的 `except Exception` `:320-321` 只在 `test_check_error_is_captured_not_raised` 里被测。
+
+**`snapshot.py` 85%**
+- `Snapshot.load()` `snapshot.py:187-190` **零覆盖**（`test_snapshot.py:86-92` 用的是 `json.loads`，不是 `load`）；`list_snapshots()` `:286-289`、`snapshot_path()` `:292-293` 零覆盖；`version_label` `:194`、`counts()` `:197-202` 零覆盖。
+- `Change.is_empty` `:243-244`、`line()` 只有 `+` 无 `-` 的分支 `:249-252` 未覆盖。
+- `_walk_scriptable` 的 ValueError `:54-55`、`_localization_keys` 的 OSError `:119-120`、`_dlc_snapshot` 非目录 `:141`、`_checksum_and_paths` 缺文件分支 `:152/159` 全未覆盖。
+- `build(verbose=True)` 的 6 个 print 分支 `:209/213/217/221/225` 未覆盖。
+
+**`analyze.py` 92%**
+- `_read_root_file` 的「后缀是图片」`analyze.py:198-200` 与「OSError → binary」`:203-205` 未覆盖（含 `kind="binary"` 语义）。
+- `_analyse_localization` 的 `loc.is_dir()` 假分支 `:232`、OSError `:238-239` 未覆盖。
+- `_analyse_dlc` 的 `base.is_dir()` 假分支 `:261`、描述符 OSError `:277-278`、`.dlc` 循环 break 后的行 `:283` 未覆盖。
+- `_scriptable_files` 的 ValueError `:299-300`、`_subdirs` 的 OSError `:443-444` 未覆盖。
+- `RootFile`/`DlcInfo` 为普通 `@dataclass`（`:78`、`:89`）而其余模型用 `slots=True`（`model.py:26`、`analyze.py:107`），不一致。
+- `classify()` `:69` 覆盖良好，但 `FILE_CLASSES` 里「模型」类（`:64`）从无测试用例。
+
+**`cache.py` 88% —— 且**没有任何一条「缓存透明性」测试****
+- `parse_cached` 的命中路径 `cache.py:34-36` 无测试；`get()` `:43-45`、`put()` `:48-49`、`stats()` `:58-59` **零覆盖**。
+- 关键盲区：**全仓库没有任何测试断言 `parse_cached(p) == parse_file(p)`**。缓存是实现级记忆化，一旦 `parse_file` 语义变化而缓存返回旧对象（或反之），现有测试全绿。
+
+**`scan.py` 93%**
+- 三处 `OSError` 容错 `scan.py:73-75`、`:95-96`、`:122-123` 未覆盖——「沙箱拒绝个别条目」这条设计承诺无测试。
+- `stats_for(deep=False)` 的目录分支 `:90-91` 只在浅树里测了 1 个目录，`DirStats.by_suffix` 在 `deep=False` 下**故意为空**这一行为无断言。
+- `find_by_name` 的 `sorted()` 副作用（`:157`）无断言。
+
+**`lexer.py` 100%** —— 唯一无缺口模块，差分测试覆盖到位。
+
+**`config.py` 88%**
+- `is_scriptable` 的 `not rel_parts` `config.py:133`、`top in IGNORED_DIRS` `:136` **无测试**（且 `IGNORED_DIRS`/`ASSET_DIRS` 常量本身无用例）。
+- `ensure_dirs()` `:145-148` 零覆盖。
+- `game_version()` 的 OSError 兜底 `:163-164` 零覆盖。
+- 路径硬编码：`config.py:19` `C:\Program Files (x86)\...`、`:34` `C:\Users\28905\Documents\...`。`:4-8` 自称可用 `V3_ROOT` 等环境变量覆盖，但**没有任何测试验证环境变量路径生效**，也没有测试验证 `REPO`（`:50`）指向正确。
+
+### 2.3 分支级盲区汇总（覆盖率会明显偏低的函数）
+
+| 函数 | 位置 | 未覆盖内容 |
+|---|---|---|
+| `defines.overlay` | `defines.py:194` | 全函数 |
+| `defines.extract_all_defines` | `:186` | 全函数 |
+| `defines.Param.to_dict` / `Namespace.to_dict` | `:51` / `:79` | 全函数 |
+| `extract.all_top_keys` / `all_field_names` | `extract.py:131` / `:139` | 全函数 |
+| `cache.get` / `put` / `stats` | `cache.py:43/48/58` | 全函数 |
+| `snapshot.Snapshot.load` / `list_snapshots` / `snapshot_path` / `counts` / `version_label` | `snapshot.py:187/286/292/197/194` | 全函数 |
+| `mods.vanilla_prefix_count` | `mods.py:193` | 全函数（仅间接） |
+| `model.ParseError` | `model.py:17` | 死代码 |
+| `parser._Parser.expect` | `parser.py:71` | 死代码 |
+| `scan.stats_for(deep=False)` 的 size 累计 | `scan.py:92-94` | 有断言但 `by_suffix` 语义未测 |
+| `analyze._read_root_file` binary 分支 | `analyze.py:198-205` | 空输入/坏输入 |
+| `config.is_scriptable` 早退分支 | `config.py:133-138` | 边界值 |
+| `defines._classify` 空块 | `defines.py:136-139` | 边界值 |
+| `verify._defines_params` 缺命名空间 | `verify.py:96` | 边界值 `-1` |
+| `verify._file_top_keys` | `:158` | 无 claim 引用 |
+
+---
+
+## 3. 建议补充的测试种类（可执行清单）
+
+标注：**工具** = 已装 / 需装；**用例数** = 估算。
+
+| # | 测试种类 | 要测什么 | 放哪 | 库/插件 | 用例数 | 现成工具 |
+|---|---|---|---|---|---:|---|
+| 1 | **缓存透明性** | `parse_cached(p).to_dict()==parse_file(p)`、二次命中 `stats()["命中"]==1`、`clear()` 后重解析、`get()` 未命中返回 `None`、同路径不同写法（`Path` vs `str`、相对 vs 绝对）不应重复解析 | 新 `test_cache.py` | 已装 pytest | 8-10 | `pdx/cache.py:29-59` 全部 API |
+| 2 | **文档一致性（重点）** | 把 `docs/victoria3-modding/*.md` 中标注【提取】的表格单元格数字与 `verify._CHECKS` 的真实结果比对；并断言 `find_unregistered_claims()` 的输出**不超过冻结基线**（`data_regression`），新增未登记数字即失败 | 新 `test_docs_consistency.py` | pytest-regressions（已装） | 40（每条 claim 一个参数化）+ 20（文档基线） | **已实证可抓到漂移**，见下 |
+| 3 | **契约/schema 测试** | `to_game_dict/to_mods_dict/to_cross_dict`、`DirExtract.summary()`、`DefinesReport.summary()`、`Snapshot.to_dict()` 的键集与值类型；再断言 `write_reports` 落盘的 JSON 满足同一 schema | 新 `test_contracts.py` | **jsonschema**（需装，纯 Python 无编译依赖）；**不建议 pydantic**（`requirements.txt:32` 已声明「数据模型用 dataclass 已达目的」，引入运行时校验层与现有 dataclass 模型重复） | 25 | schema 用 dict 手写或从 dataclass 反射生成 |
+| 4 | **CLI 端到端（subprocess）** | `run_analyze.py --no-mods --no-write --quiet` 退出码 0；`run_verify.py --fast --json <tmp>` 退出码 0 且 JSON 结构合法；`run_snapshot.py list/diff/verify` 三分支；`run_index.py --dry-run`；`check_outputs.py` 期望值 | 新 `test_cli.py` | 标准库 `subprocess` + `sys.executable`（**不要写死 `.venv\Scripts\python.exe`**） | 12-15 | `tools/` 下 7 个入口脚本**目前零测试** |
+| 5 | **差分测试（已有模式的推广）** | ① `verify._defines_blocks`（`rglob`）vs `extract.extract_dir` 口径一致性；② `snapshot._scriptable_names` vs `extract.all_top_keys` 对同一目录必须给出相同键集；③ `analyze.game_analysis` 的 common 提取 vs `extract.extract_tree`；④ `_localization_keys` vs `_analyse_localization` 的语言/键计数 | 新 `test_differential_internal.py` | pytest + hypothesis（已装） | 15 | 模式照抄 `test_lexer_differential.py:33-50` 的 `_diff` 思路 |
+| 6 | **变异测试** | 对 `lexer.py`/`parser.py`/`model.py`（低耦合、已 100%/93%/90% 覆盖）先跑，再扩到 `extract.py`/`defines.py` | 新配置 | **结论**：`mutmut` 3.8.0 支持 Py3.10–3.15（classifier 已列 3.14），但**强制要求 `fork`，官方文档明确 Windows 必须进 WSL**；`cosmic-ray` 8.7.0 `requires_python>=3.9` 但 classifier 只列到 **3.13**，3.14 与 Windows 均**未确认**（其 README 有 Windows badge）。→ Windows 原生下**两者都无把握**，建议走 WSL 用 mutmut，或先只对 `lexer.py` 试 cosmic-ray | — | [mutmut PyPI](https://pypi.org/project/mutmut/) / [cosmic-ray PyPI](https://pypi.org/project/cosmic-ray/) |
+| 7 | **变形/幂等测试** | 同一输入的 5 种等价变形必须给出同一结果：加/去 BOM、CRLF↔LF、tab↔4 空格、`\n` 前后加空行、注释插入（非引号内）；`parse_text` 二次调用对象不共享 | 扩 `test_properties.py` | hypothesis（已装） | 10 | hypothesis `@example` + 自写 transform 策略 |
+| 8 | **并发/线程安全** | `cache._CACHE` 在 `ThreadPoolExecutor` 下 8 线程并发 `parse_cached` 同一批文件，结果集与串行一致、无异常；`cache.py:13` 声称「不加锁也安全」需被验证 | 新 `test_concurrency.py` | 标准库 `concurrent.futures` | 4-5 | `cache.py:13` 的论断目前无证据 |
+| 9 | **性能回归门禁** | `pytest-benchmark` 已有 10 例但基线存 `.benchmarks/`（`.gitignore:32` 已排除），**无门禁**。建议：① 纳入基线文件到版本库（或单独的 `benchmarks.json`）；② 用 `--benchmark-compare-fail=mean:20%` 做阈值失败 | 改 `test_benchmarks.py` + CI | pytest-benchmark（已装） | 3 条门禁 | `test_benchmarks.py:19-23` 已写用法但未落地 |
+| 10 | **静态检查即测试** | ruff 的 E/F/W/I/UP/B 规则集作为用例 | 新 `test_lint.py` | **pytest-ruff** 或 `subprocess ruff check`；ruff 需装 | 2-5 | 当前**完全没有 ruff 配置** |
+| 11 | **doctest** | `pdx/` 中 `>>>` 示例（如有）；`analyze.py:19-20`、`defines.py:20-21` 的用法片段可提为 doctest | `--doctest-modules` 或 `test_doctests.py` | pytest 内置 | 5-10 | 现无 `--doctest-modules` |
+| 12 | **模糊测试增强** | ① 语料全量喂给 **parser**（现仅 lexer 有全量差分）；② 生成器保证语法合法（balanced braces）做「解析→重序列化→再解析」等价；③ 超长行/超深嵌套（>1000 层）栈耗尽 | 扩 `test_lexer_differential.py` 或新 `test_fuzz_parser.py` | hypothesis（已装） | 6 | `parser.py:158` 的递归 `max_depth` 是潜在栈风险，无测试 |
+| 13 | **多版本/环境变量测试** | `V3_ROOT`/`V3_USERDIR`/`V3_WORKSHOP` 注入后 `config.GAME/LOCAL_MODS/WORKSHOP` 正确；`config.py:19/34` 的硬编码默认值不被误用 | 新 `test_config.py` | pytest `monkeypatch.setenv` + `importlib.reload` | 8 | `config.py:4-8` 的承诺无测试 |
+| 14 | **游戏不可用路径测试** | 模拟 `GAME` 不存在时：`game_analysis()`、`snapshot.build()`、`verify.run_claims()` 的行为；`conftest.py:32-43` 的自动 skip 逻辑本身 | 新 `test_no_game.py` | `monkeypatch.setattr(config, "GAME", Path("Z:/nope"))` | 6 | 现仅靠 `Z:/` 字面量散测（`test_scan.py:74` 等 4 处） |
+| 15 | **mod 元数据边界** | 损坏 JSON、缺字段、`multiplayer_synchronized` 非 bool、`.metadata` 之外同名目录、`native` 类型 mod | 扩 `test_mods`（新文件） | pytest-datadir（已装，可放 fixture 文件） | 10 | `mods.py:78-102` 是 0 直接测试 |
+| 16 | **快照往返与 CLI** | `Snapshot.load(snap.write())` 等价（现存缺口）；`compare` 的对称性 `compare(a,b).added == compare(b,a).removed`；`FORMAT` 版本不匹配时的行为 | 扩 `test_snapshot.py` | pytest | 8 | `snapshot.py:187` 零覆盖 |
+| 17 | **覆盖率门禁** | `--cov=pdx --cov-fail-under=90`，并对低覆盖模块单独加严：`defines.py` / `extract.py` / `mods.py` ≥95%，`lexer.py`=100% | `pyproject.toml` + CI | pytest-cov（已装） | — | 当前无任何门禁 |
+
+### 3.1 文档一致性测试的实证价值（最高优先级）
+
+我实际跑了一遍交叉核对，**已确认 4 处真实漂移**，这些数字在文档里是错的、而测试全绿：
+
+| 文档:行 | 文档写的 | 代码/断言的真值 | 证据 |
+|---|---|---|---|
+| `docs/victoria3-modding/03-AI系统.md:13`、`:548` | NAI **1013** 项 | **1017** | `verify.py:284-286`（claim `def.nai_count`，1.14.2→1.14.3 从 1013 增到 1017） |
+| `docs/victoria3-modding/04-脚本系统.md:56`、`:366`、`:3020` | on_actions **263** | **264** | `verify.py:298-301`（claim `scr.on_actions`，note 已写「早期记 263，实为 264」） |
+| `docs/victoria3-modding/05-defines与修饰符.md:4658`、`:5027` | static_modifiers **6121** | **6128** | `verify.py:293-295`（note：「早期缩进法误得 6121」） |
+| `docs/victoria3-modding/08-目录全量清单.md:188` | `common` `.txt:3024` / 3,099 文件 | **3026** / **3101** | `verify.py:217-221`、`test_scan.py:186`、`:190` |
+
+即：**`verify` 把数字修正了，但文档正文没同步**——「文档里的数字变成可执行检查」这个目标只完成了一半（检查代码，没检查文档）。建议测试形态：对每条 `Claim` 断言其 `expected` 必须以「千分位或原样」出现在 `Claim.doc` 指向的文件中（5 条不满足，见下），加上 `find_unregistered_claims()` 结果用 `data_regression` 冻结（当前 **20 篇文档、817 处**未登记数字，是真基线而非 0）。
+
+注意：`env.common_txt`(3026)、`env.common_all`(3101)、`chr.templates`(2011)、`def.nai_count`(1017)、`def.static`(6128) 这 5 条已登记断言的期望值**在其出处文档中根本不存在**——可直接作为该测试的首批失败用例。
+
+### 3.2 关于「覆盖率尽可能高」的现实排序
+
+按「投入产出比」排序：**#2 文档一致性 → #1 缓存透明性 → #5 内部差分 → #3 契约 → #4 CLI → 补 `defines`/`extract`/`cache`/`snapshot` 单元用例 → #6 变异 → 其余**。
+
+`defines.py` 从 70%→95% 只需约 30 个用例（全是合成输入，不碰游戏）；`extract.py`/`mods.py` 各约 15 个。这三块补完，全包覆盖率可从 89% 提到 **95%+**。
+
+---
+
+## 4. 工程配置问题
+
+### 4.1 `pytest.ini` → `pyproject.toml`：应该迁，且顺带修 3 个问题
+
+迁移本身收益中等（配置项数量不多），但**现在有 3 个与配置文件直接相关的缺陷**，迁移时应一并修：
+
+1. **文档与实现不符**：`pytest.ini:47-50` 描述「pytest.ini 已用 `--basetemp` 固定到 `.pytest-tmp/`」，但 `addopts`（`pytest.ini:9-14`）里**没有 `--basetemp`**。实际 `tmp_path` 仍走系统 Temp（本次运行未报 PermissionError，说明沙箱限制已变，该注释已过期）。要么删注释，要么真的加上。
+2. **超时重复**：`--timeout=300` 在 `addopts:13` 与 `timeout = 300`（`pytest.ini:27`）各写一次，后者被前者覆盖，是冗余。
+3. **`--timeout-method=thread`**（`pytest.ini:14`）在 Windows 上对卡死的 C 层循环无效；且 `test_lexer_differential.py:157-161` 的 hypothesis 用例设了 `deadline=None`，与全局 300s 超时叠加时行为未验证。
+
+建议结构：根 `pyproject.toml` 放 `[tool.pytest.ini_options]`（`testpaths=["tools/tests"]`）、`[tool.coverage.run]`（`source=["tools/pdx"]`、`omit` 测试自身）、`[tool.coverage.report]`（`fail_under=90`、`exclude_lines` 涵盖 `pragma: no cover`/`if TYPE_CHECKING`）、`[tool.ruff]`、`[tool.mypy]`。`pytest.ini` 删除。
+
+### 4.2 `requirements.txt` → `pyproject.toml` + 可编辑安装：应该换，且 `sys.path` 补丁有 27 处
+
+**现状问题**
+- `requirements.txt` **严重不完整**：实际安装的 `pytest-cov`、`pytest-benchmark`、`pytest-timeout`、`pytest-randomly`、`pytest-regressions`、`pytest-mock`、`pytest-subtests`、`pytest-datadir`、`hypothesis`、`lark`、`typer` **全部不在 `requirements.txt` 里**；反过来 `requirements.txt:24-27` 说「未采用 lark」，但 `lark 1.3.1` 已安装。这份文件的注释（`requirements.txt:11-13` 提到「31.7s vs 23.2s」）也在描述一个已经不存在的测试结构（实测 76s，benchmark 占大头）。
+- 「所有脚本用 `sys.path.insert` 补丁」：实测 **27 处**——`tools/*.py` 7 处、`tools/diag/*.py` 7 处、`tools/prof/prof_e2e.py:46`、`tools/tests/*.py` 12 处（含 `conftest.py:23`）。每处都是 `sys.path.insert(0, ...)` + `# noqa: E402`，属于同一个 hack 复制 12 遍。且 `sys.path` 插入顺序决定 `import pdx` 解析到哪份代码，在多环境（venv/系统 Python）下是隐患。
+
+**最规范改法**
+1. 新建 `tools/pyproject.toml`：
+   - `[project]` name=`pdx`, version, `requires-python=">=3.11"`, `[project.optional-dependencies] test=[...]`（把上面缺的 11 个包全部登记，并**锁主版本**）。
+   - `[build-system]` setuptools + `[tool.setuptools.packages.find] include=["pdx*"]`。
+   - `[project.scripts]`：`v3-analyze = "pdx.cli:main"`（需先把 `tools/run_*.py` 的 `main()` 收敛进包，否则脚本仍在包外，装不进去）。
+2. `.venv\Scripts\python.exe -m pip install -e tools` → 之后 **27 处 `sys.path.insert` 全部删除**，测试里直接 `import pdx`，`conftest.py:23-26` 只剩两行 import。
+3. 入口脚本改为 `pdx.cli` 子命令（`typer` 已装，`requirements.txt` 未登记），或至少把 `tools/*.py` 留在原处但不再需要 path 补丁（因为 `pdx` 已可导入）。
+4. `requirements.txt` 保留为 `-e ./tools[test]` 一行（或直接删）。
+
+**不建议**：把所有 CLI 都改成 `pip install` 的 console script 之前先做 1-2；否则 27 处补丁删一半更乱。
+
+### 4.3 缺失的工程配置（逐项）
+
+| 项 | 现状 | 建议 |
+|---|---|---|
+| **ruff** | **完全缺失**（无 `ruff.toml`/`pyproject` 段/`.ruff.toml`） | `[tool.ruff]`：`line-length=100`、`target-version="py311"`、`select=["E","F","W","I","UP","B","SIM","PTH","RET","ARG"]`；`per-file-ignores` 给 `tools/tests/*` 放开 `ARG`（fixture 形参） |
+| **mypy** | 缺失（无 `mypy.ini`/配置；代码已有完整类型注解与 `from __future__ import annotations`，是**低成本高收益**） | `[tool.mypy]` `strict=true` 起步可先 `disallow_untyped_defs=true` + `warn_unused_ignores`；`tools/pdx` 是纯逻辑包，几乎无第三方无 stub 依赖，容易过 |
+| **pre-commit** | 缺失（无 `.pre-commit-config.yaml`） | hooks：`ruff`(带 `--fix`)、`ruff-format`、`mypy`、`pytest -m "not slow and not integration"` |
+| **coverage 配置** | 仅有 `.gitignore:35-36` 与一个**陈旧的 `.coverage`**（仓库根，53248 B，2026-09-16 23:09，未在 .gitignore 生效范围外——`/.coverage` 已忽略，是残留） | 迁到 `[tool.coverage.*]`，删陈旧 `.coverage` |
+| **CI** | **完全缺失**（无 `.github/`，无任何 CI 配置） | 最小 CI：`ruff` + `mypy` + `pytest -m "not integration and not benchmark"` + `--cov-fail-under`。**注意 integration 需游戏目录**，CI 上会自动 skip（`conftest.py:32-43` 已实现），这正好验证了该机制 |
+| **`.testtmp_measure.py`** | 仓库根有游离脚本，无测试、未 gitignore | 归档或删除 |
+| **编辑器/格式** | 无 `ruff-format` 或 `black`（缩进风格靠人工维持，`model.py` 与 `analyze.py` 的 dataclass 风格已不一致） | 统一 `ruff-format` |
+
+### 4.4 测试标记体系是否合理
+
+**基本合理，但有 4 个缺口：**
+
+1. **一半的测试文件没有 marker**：`test_lexer.py`、`test_parser.py`、`test_scan.py`、`test_extract.py`、`test_snapshot.py` 完全无标记，只有 `unittest.SkipTest` 靠游戏在不在硬跳过（`test_scan.py:167`、`test_extract.py:232`、`test_snapshot.py:25`）。后果：`conftest.py:32-43` 的自动 skip 机制对**这 3 个文件的集成用例无效**（它们不在 `integration` 关键字里），换机器时会变成 skip 而不是 fail——不统一。建议：给这 3 处 `setUpClass` 换成 `pytest.mark.integration` + 类的 `skipif`，与 `test_analyze.py:31` 的风格统一。
+2. **`unit` 标记只用在 1 个文件**（`test_lexer_differential.py:30`），其余单元测试无标记，导致「只跑单元测试」这个最常见的需求无法用 `-m unit` 表达。建议全量标注 `unit`，并把 `addopts` 加 `-m "not slow"` 作为默认。
+3. **缺 `docs`/`cli`/`static` 标记**：文档一致性（#2）、CLI（#4）、ruff（#10）三类新测试若不新增标记，会混进默认运行并拖慢反馈。建议新增 `contract`、`docs`、`cli`、`fuzz` 四个标记并同步 `pytest.ini:17-23` 的 `markers` 段（`--strict-markers` 已开，`pytest.ini:11`，所以新 marker 必须登记否则报错——这点设计是对的）。
+4. **`pytest-randomly` 默认开启（`pytest.ini:29-32`）但没有验证过它抓到过任何隐式依赖**，且 `test_verify.py:152-159` 的 session fixture 与 `test_analyze.py:247` 的跨 fixture 依赖在随机顺序下的行为值得专门跑一轮固定种子验证。另：`pytest-randomly` 会重排 hypothesis 的 seed，`test_properties.py:13` 提到的 `--hypothesis-seed=0` 复现路径与随机化插件存在交互，**未确认**是否互相干扰。
+
+---
+
+## 5. 测试代码本身的坏味道
+
+### 5.1 重复的 fixture / 辅助函数
+
+| 位置 | 问题 |
+|---|---|
+| `test_analyze.py:39-52` vs `conftest.py:83-98` | `ga` / `ma` / `ca` 三个 session fixture **逐字重复定义**。`test_analyze.py` 不依赖 `conftest.py` 的版本，等于 conftest 里的那三个只服务 `test_golden.py:63`。任一处改了忘记同步就会静默分叉 |
+| `test_scan.py:22-55` `TempTree` vs `test_extract.py:25-45` `Sandbox` | 两个类做同一件事（按 spec 建树 + `rmtree` 清理），实现 ~90% 相同，连注释都互相引用（`test_extract.py:26` 写「刻意不用 tempfile（沙箱限制见 test_scan）」）。且 `test_scan.py:30` 用 `BASE = parents[2]/".testtmp"`，`test_extract.py:22` 用 `parents[2]/".testtmp"/"extract"`，路径基准不一致 |
+| `test_analyze.py:33-35`、`test_verify.py:24-26`、`test_benchmarks.py:40-42` | `_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir())` **写 3 遍**；`test_scan.py:163-167`、`test_extract.py:229-233`、`test_snapshot.py:24-25` 又用 `unittest.SkipTest` 写了 3 遍。共 **6 种**「游戏在不在」的判定方式 |
+| `_sha256` `test_golden.py:45-50` | 手写分块 sha256；`hashlib.file_digest`（Py3.11+）是一行 |
+| `test_lexer.py:20-26` `kinds()`/`values()`、`test_extract.py:49-52` 与 `:113-116` 两个同名 `_extract()` | `test_extract.py` 里**同一个 `_extract` 辅助函数定义了两遍**（`:49` 在 `TestExtractFile`、`:113` 在 `TestVariableSeparation`），完全相同 |
+| `test_lexer_differential.py:33-50` `_diff` | 唯一写得好的辅助函数（失败时输出首个分歧点上下文），但只在 lexer 用；parser 需要同样的东西 |
+
+### 5.2 硬编码路径与硬编码数字
+
+- `Z:/definitely/not/here`（`test_scan.py:74`）、`Z:/nope`（`test_scan.py:123`、`test_extract.py:171`、`test_verify.py:148`）：在**非 Windows 或存在 Z 盘的机器上语义反转**（会真的去扫描 Z 盘）。应用 `tmp_path` 下不存在的子目录。
+- `.testtmp`（`test_scan.py:30`、`test_extract.py:22`）：绕过 pytest 的 `tmp_path`，自己造 `_seq` 计数器（`test_scan.py:31`、`test_extract.py:30`）。注释理由（`test_scan.py:25-28`：沙箱拒绝 chmod 与写入）在当前环境已不成立——本次运行 `tmp_path` 相关测试全部通过，无 PermissionError。应回收为 `tmp_path`，并删掉 `pytest.ini:47-50` 的过时说明。
+- **游戏版本相关数字**：`test_scan.py:173`(136)、`:186`(3026)、`:190`(3101)、`:194`(75)、`test_extract.py:213-226`(12 个目录)、`test_parser.py:179-186`(6 个目录)、`test_snapshot.py:41/54/57/60`(136/67/11/17)、`test_analyze.py:66/81-90/104/112/115`、`test_verify.py:184-194`(9 条)。**同一批数字在 6 个文件里各写一遍**，与 `verify.CLAIMS`（`verify.py:210-310`）重复维护。升级游戏时要改 6 处；`test_scan.py:181-183` 的注释已经在教人「改这个数字前请先确认游戏版本」——这正是应该收敛到 `verify.CLAIMS` 单一来源的信号。
+
+### 5.3 断言太弱（只断言「不抛异常」或恒真）
+
+| 位置 | 问题 |
+|---|---|
+| `test_properties.py:75-79` `test_never_raises_on_arbitrary_input` | 注释直接写「不抛即通过」，唯一断言是 `isinstance(pf.top_keys, list)`——`top_keys` 由 `model.py:134-136` 保证是 list，**恒真** |
+| `test_properties.py:80-83` `test_arbitrary_input_terminates` | 只有 `parse_text(blob)`，**零断言**，函数体就是调用 |
+| `test_lexer_differential.py:138-149` `test_语料token总量记录` | 自述「这条断言本身很弱（只查非空）」，实际 `assert total > 1_000_000`；打印的信息不进任何产物。应改为 `data_regression` 冻结 per-file token 数或至少冻结总量 |
+| `test_lexer.py:96-98` `test_unterminated_string_does_not_hang` | 只断言「存在一个 STRING token」，不断言其值/行列号（`'s = "unclosed'` 的期望值是可算的） |
+| `test_lexer.py:174-175` `test_stray_operator_produces_token` | 同上，`any(t.kind == OP)` 不检查 value（`"=="` 应产出 `("==",)`） |
+| `test_lexer.py:177-181` `test_no_infinite_loop_on_odd_input` | 只断言最后一个 token 是 EOF，不断言中间产出（`"?"`、`"\\"`、`"\x00"` 各自应有确定的 ATOM 序列） |
+| `test_verify.py:139-145` `test_known_values_are_excluded` | 名不副实：传了 `known_values={136,92}`，却只断言 `all(isinstance(v, str) for v in flat)`——**没有验证任何东西被排除**，是恒真断言 |
+| `test_verify.py:128-131` `test_returns_mapping` | 只断言 `isinstance(out, dict)` |
+| `test_extract.py:243-248` `test_all_common_dirs_parse_without_crash` | 断言 `res.files == len(list(child.rglob("*.txt")))`——这是**用另一个计数器核对同一件事**，不验证解析质量；`res.errors` 完全没查（真正该断言的是「全部 is_clean 或错误集合冻结」） |
+| `test_analyze.py:75-77` `test_total_entries_plausible` | `assert total > 25000`，实测已 27000+，阈值形同虚设 |
+| `test_analyze.py:94-98` `test_no_variables_in_entries` | 恒真：`extract.py:90-92` 已把 `@` 开头的键 `continue` 掉，`entries` 里不可能出现 `@`。这条检查无信息量 |
+| `test_analyze.py:152-154` `test_field_usage_nonempty` | `len(usage) > 100`，弱下界 |
+| `test_benchmarks.py:138-139` | `assert result.unique_entries > 6000`（真值 6128），弱下界且与 `test_verify.py:184` 的真值断言重复 |
+| `test_scan.py:154-156` `TestTextSuffixes` | 只查 4 个扩展名在 `TEXT_SUFFIXES` 里，不查 `binary_files` 的补集语义 |
+| `test_golden.py:78-81`、`:84-88` | 「非空」「能解码」类断言，正常路径不会失败，属于**只在崩溃时才有信号**的断言（可以有，但不能是唯一的产物保障——所以 `test_artifact_digests` 才是主力，这点设计是对的） |
+| `test_extract.py:101-103` `test_max_depth_tracked` | `assertGreaterEqual(res.max_depth, 3)`，对 `"a = { b = { c = { d = 1 } } }"` 实际应该**恰等于 3**，用下界掩盖了 off-by-one |
+
+### 5.4 测试之间的隐式依赖
+
+- `test_verify.py:152-159` `fast_results`（session fixture）与 `TestRealClaims`（`:162`）：`TestRealClaims` 的**全部 3 个用例都从同一个 fixture 读结果**，因此 `test_summary_all_pass`（`:174-177`）与 `test_fast_claims_all_pass`（`:164-167`）**断言的是同一件事**（都是「没有失败项」），是重复覆盖。更实质的问题：fixture 在 `conftest`/模块级 `run_claims(include_slow=False)` 时已经读过磁盘状态，若某个用例通过 `cache.put` 污染了 `pdx.cache`，后续用例看到的是污染后的值——而 `pytest-randomly` 恰恰会打乱顺序。
+- `test_golden.py:41-42`：`_OFFICIAL_OUT = config.OUT` 在**导入时**捕获，注释（`:38-40`）说明是为了绕开 monkeypatch 的全局副作用。这是「测试之间隐式共享模块级状态」的自我防御，但它同时也意味着：**若同一 session 内别的测试先改了 `config.OUT` 再收集本模块，冻结值就错了**。这个风险没有被任何测试覆盖。
+- `test_benchmarks.py:129-136`：在 benchmark 函数内部调 `pdx.cache.clear()`，**清的是进程级全局缓存**。若 benchmark 与其它测试同 session 运行（`pytest-benchmark` 默认在常规运行时也在场，只是不计时），会清掉别的测试依赖的缓存，使 `cache.stats()` 的命中/未命中统计不可预期。
+- `test_analyze.py:247-253` `test_markdown_renders(ga, ma, ca)` 依次请求 3 个 session fixture，构造了 `ca` 对 `ga`+`ma` 的链式依赖；这条链在 pytest-randomly 下若 `ca` 先于 `ga` 初始化（不会发生，但若将来 `ma` 被改成 function scope 就会），行为会变。
+
+### 5.5 session 级 fixture 的副作用
+
+- `conftest.py:47-67` `corpus_files` / `:70-79` `corpus_texts`：session 级把**约 4,400 个文件的全文**读进内存（`corpus_texts` 返回 `list[tuple[str,str]]`）。内存占用未测量，但在 CI 上跑 `test_lexer_differential.py::test_真实语料_全量` 时是常驻峰值。建议改为惰性生成器（`Iterator`），差分测试逐文件消费，不缓存全文。
+- `conftest.py:83-98` `ga`/`ma`/`ca`：`game_analysis()` 约 21s、`mods_analysis()` 与 `cross_analysis()` 另计（`test_analyze.py:3-7` 的注释只提到 21s，实测整轮 76s）。这些 fixture 在 skip 场景下**仍会被实例化**吗？——`test_analyze.py:56` 的 `@_needs_game` 是在**用例**上，fixture 依赖 `ga` 的用例被 skip 时不会请求 fixture，这点是对的；但 `test_golden.py:63` 的 `artifacts` fixture（function scope）依赖 session 级 `ga`，而 `test_golden.py:36` 的 `pytestmark` 含 `slow` 但**不含 skipif**——只靠 `conftest.py:32-43` 的 `integration` 关键字跳过。若 `GAME_OK` 判定与实际不符（例如 `GAME/common` 存在但 `GAME/dlc` 不存在），`test_golden.py` 会在没有游戏数据时**报错而非 skip**。
+- `test_benchmarks.py:93-102` `samples`（class scope）：用 `read_bytes().decode("utf-8-sig")` 手动解码，与 `parser.parse_file`（`parser.py:176-182`）的读取逻辑重复且不一致（后者有 `UnicodeDecodeError` 兜底，前者没有）。若样本文件非 UTF-8，benchmark 会抛异常而非 skip。另外该 fixture 是**实例方法**，触发 pytest 的 class-scoped fixture 弃用警告（本次运行见 `1 warning`）。
+
+### 5.6 其它
+
+- `test_golden.py:78`、`:84`、`:91`、`:104`、`:117`、`:128` 与 `test_lexer_differential.py` 的 4 个中文测试名（`:104`、`:121`、`:139`、`:163`）：中文函数名合法但导致 pytest 输出在 GBK 控制台下乱码（本次运行中 `test_lexer_differential.py` 的 parametrize id 显示为 `test_??????[????????]`），CI 日志会不可读。建议保留中文但确保 console 编码，或改用 ASCII 名 + 中文 docstring。
+- `tools/check_outputs.py:22` 用 `global ok` 累加结果：这是**唯一在测「产物数字」的脚本、却完全不在 pytest 的管辖范围内**；且 `check_outputs.py:40` 的 `on_actions` 期望值是 **263**，与 `verify.py:298`（264）和 `test_analyze.py:89`（264）**冲突**——一个陈旧断言漂在测试体系之外。
+- `test_parser.py:5-6` 与 `test_lexer.py:187-188` 的 docstring/`__main__` 块仍指向 `unittest discover` 用法，与 `pytest.ini` 的实际入口不一致（风格残留）。
+- `README.md` 未提及任何测试命令；`tools/README.md:129` 写「**106 个单元测试 + 35 条断言核验**」，实测 **270 个用例 / 39 条 claim**。这是又一个可由 #2 文档一致性测试捕获的漂移点。
+
+---
+
+## 附：本次审查的实测命令与结果
+
+```
+pytest --collect-only -q                      → 270 tests collected
+pytest --cov=pdx --cov-report=term-missing    → 226 passed, 44 deselected, 364 subtests, 76.0s
+                                                 TOTAL 1584 stmts, 180 miss, 89%
+find_unregistered_claims()                    → 20 篇文档 / 817 处未登记数字
+claim.expected 是否出现在 claim.doc 中         → 5/39 不出现（真实漂移）
+```

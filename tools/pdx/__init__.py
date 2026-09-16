@@ -11,15 +11,15 @@ parser   语法分析：递归下降，产出 AST
 config   路径与常量
 """
 
-from .model import Assignment, Block, Scalar, ParseError, ParsedFile
+from .model import Assignment, Block, ParsedFile, ParseError, Scalar
 from .parser import parse_file, parse_text
 
 __all__ = [
     "Assignment",
     "Block",
-    "Scalar",
     "ParseError",
     "ParsedFile",
+    "Scalar",
     "parse_file",
     "parse_text",
 ]

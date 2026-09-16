@@ -20,8 +20,9 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .config import GAME, LOCAL_MODS, WORKSHOP
+from . import config
 from .cache import parse_cached
+from .parser import TOLERATED_ERRORS
 from .scan import walk_files
 
 METADATA_REL = Path(".metadata") / "metadata.json"
@@ -87,9 +88,17 @@ def read_metadata(root: Path) -> dict:
 
 
 def analyse_mod(root: Path, *, vanilla: Path | None = None) -> ModInfo:
-    """分析一个 mod 目录。``vanilla`` 为游戏 ``game/`` 目录，用于判定覆盖。"""
-    vanilla = vanilla or GAME
-    info = ModInfo(root=root, steam_id=root.name if root.parent == WORKSHOP else "")
+    """分析一个 mod 目录。``vanilla`` 为游戏 ``game/`` 目录，用于判定覆盖。
+
+    注意默认值必须**在调用时**读 ``config.GAME``，不能写成
+    ``from .config import GAME`` + ``vanilla or GAME`` —— 那样会在
+    import 期就把路径绑定死，之后 monkeypatch ``config.GAME`` 无效，
+    测试只能连带 patch 一堆别的属性（踩过）。
+    """
+    vanilla = vanilla or config.GAME
+    info = ModInfo(
+        root=root, steam_id=root.name if root.parent == config.WORKSHOP else ""
+    )
 
     meta = read_metadata(root)
     if meta:
@@ -110,7 +119,7 @@ def analyse_mod(root: Path, *, vanilla: Path | None = None) -> ModInfo:
             rel = f.path.relative_to(root)
         except ValueError:
             continue
-        if mdir in f.path.parents or rel.parts and rel.parts[0] == ".metadata":
+        if mdir in f.path.parents or (rel.parts and rel.parts[0] == ".metadata"):
             continue
 
         info.files += 1
@@ -160,7 +169,7 @@ def _scan_prefixes(
             )
         else:
             bucket = info.added_entries
-        bucket[rel_str.split("/")[0]] += 1
+        bucket[rel_str.split("/", maxsplit=1)[0]] += 1
 
 
 def discover_mods(
@@ -168,11 +177,13 @@ def discover_mods(
 ) -> list[Path]:
     """列出所有 mod 根目录。"""
     roots: list[Path] = []
-    if include_workshop and WORKSHOP.is_dir():
-        roots += sorted(p for p in WORKSHOP.iterdir() if p.is_dir())
-    if include_local and LOCAL_MODS.is_dir():
+    if include_workshop and config.WORKSHOP.is_dir():
+        roots += sorted(p for p in config.WORKSHOP.iterdir() if p.is_dir())
+    if include_local and config.LOCAL_MODS.is_dir():
         roots += sorted(
-            p for p in LOCAL_MODS.iterdir() if p.is_dir() and not p.name.startswith(".")
+            p
+            for p in config.LOCAL_MODS.iterdir()
+            if p.is_dir() and not p.name.startswith(".")
         )
     return roots
 
@@ -191,17 +202,37 @@ def aggregate_prefixes(mods: list[ModInfo]) -> Counter:
 
 
 def vanilla_prefix_count(vanilla: Path | None = None) -> Counter:
-    """统计**原版**使用功能前缀的次数。
+    """统计**原版脚本文件**使用功能前缀的次数。
 
-    实测为 0 —— 这套机制是专供 mod 的。这项检查用来防止结论被
-    悄悄推翻：如果哪天原版开始使用，这里会立刻反映出来。
+    实测为 0 —— 这套机制是专供 mod 的。这项检查用来防止结论被悄悄
+    推翻：如果哪天原版开始使用，这里会立刻反映出来。
+
+    范围
+    ----
+    只扫 :func:`pdx.config.is_scriptable` 认可的文件，与全量分析其余
+    部分保持一致。
+
+    **这是修正，不是为提速而放宽口径。** 早先这里对整个 ``game/`` 树做
+    ``walk_files(suffix=".txt")``，把 ``config.ASSET_DIRS`` 里明确定为
+    「只统计、不解析」的资产文件也一起解析了。实测 3,756 个 ``.txt``
+    中有 **374 个**属于资产目录，其中
+    ``gfx/map/map_object_data/generated/rainforest_generator_3.txt``
+    单个就有 24.5 MB。冷缓存跑完整轮要 **42.5 秒**（而一次
+    ``game_analysis`` 才 17 秒），结果恒为空 —— 既慢，又与项目自己
+    声明的分析范围自相矛盾。
     """
-    vanilla = vanilla or GAME
+    root = vanilla or config.GAME
     total: Counter = Counter()
-    for f in walk_files(vanilla, suffix=".txt"):
+    for f in walk_files(root, suffix=".txt"):
+        try:
+            rel = f.path.relative_to(root)
+        except ValueError:  # pragma: no cover - walk_files 的产出必然在 root 下
+            continue
+        if not config.is_scriptable(rel.parts, f.suffix):
+            continue
         try:
             pf = parse_cached(f.path)
-        except Exception:
+        except TOLERATED_ERRORS:
             continue
         for a in pf.top_assignments:
             if a.prefix:

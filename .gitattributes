@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────
+# 行尾与文件类型规范
+#
+# 不加这个文件时，`core.autocrlf=true`（Windows 上的常见默认）会让
+# 每次 git add 都弹「LF will be replaced by CRLF」警告，并且同一个文件
+# 在不同机器上检出成不同的行尾 —— 对 Python 来说这不只是噪声：
+# 它会让 `git diff` 出现整文件级别的假差异，也会让基于内容哈希的
+# 校验（如黄金回归）在换机器后莫名其妙地失败。
+# ─────────────────────────────────────────────────────────────
+
+# 默认策略：由 git 自动判定文本，文本一律以 LF 入库
+* text=auto eol=lf
+
+# ── 明确的文本类型 ─────────────────────────────────────────
+*.py      text eol=lf
+*.md      text eol=lf
+*.txt     text eol=lf
+*.toml    text eol=lf
+*.ini     text eol=lf
+*.cfg     text eol=lf
+*.json    text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.csv     text eol=lf
+*.ps1     text eol=crlf
+
+# ── 二进制类型（禁止任何行尾转换）──────────────────────────
+*.prof    binary
+*.pyisession binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.gif     binary
+*.webp    binary
+*.dds     binary
+*.tga     binary
+*.ico     binary
+*.xlsx    binary
+*.pptx    binary
+
+# ── diff 策略 ──────────────────────────────────────────────
+# 游戏数据类 JSON 体积极大（8 MB+），默认不展开
+tools/out/**      -diff
+research/**       -diff
+
+# ── GitHub 语言统计 ────────────────────────────────────────
+# research/ 是游戏官方文档的逐字镜像，不算本仓库的代码贡献
+research/**                  linguist-vendored
+tools/tests/test_golden/**   linguist-generated

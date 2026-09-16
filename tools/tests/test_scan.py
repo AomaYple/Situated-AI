@@ -1,4 +1,4 @@
-"""扫描模块测试。
+﻿"""扫描模块测试。
 
 用临时目录构造可控的文件树，避免测试结果依赖游戏安装。
 另有一组集成测试跑真实游戏目录，安装不存在时自动跳过。
@@ -6,16 +6,19 @@
 
 from __future__ import annotations
 
+import contextlib
 import shutil
-import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from pdx.scan import (  # noqa: E402
-    TEXT_SUFFIXES, count_files, find_by_name, stats_for, subdir_stats,
-    total_size, walk_files,
+from pdx.scan import (
+    TEXT_SUFFIXES,
+    count_files,
+    find_by_name,
+    stats_for,
+    subdir_stats,
+    total_size,
+    walk_files,
 )
 
 
@@ -49,10 +52,8 @@ class TempTree:
         return self.root
 
     def __exit__(self, *exc) -> None:
-        try:
+        with contextlib.suppress(OSError):
             shutil.rmtree(self.root, ignore_errors=True)
-        except OSError:
-            pass  # 沙箱可能拒绝删除，不影响测试结论
 
 
 class TestWalkFiles(unittest.TestCase):
@@ -82,7 +83,6 @@ class TestWalkFiles(unittest.TestCase):
         with TempTree({"A.TXT": "x"}) as root:
             f = next(iter(walk_files(root)))
         self.assertEqual(f.suffix, ".txt")
-
 
 class TestStats(unittest.TestCase):
     def test_counts_and_size(self):
@@ -128,7 +128,6 @@ class TestStats(unittest.TestCase):
             names = [s.name for s in subdir_stats(root)]
         self.assertEqual(names, ["a", "b", "c"])
 
-
 class TestHelpers(unittest.TestCase):
     def test_count_files(self):
         with TempTree({"a.txt": "x", "b.txt": "y", "c.md": "z"}) as root:
@@ -149,12 +148,10 @@ class TestHelpers(unittest.TestCase):
             hits = find_by_name(root, ["readme", "changelog"])
         self.assertEqual(len(hits), 2)
 
-
 class TestTextSuffixes(unittest.TestCase):
     def test_contains_core_extensions(self):
         for ext in (".txt", ".md", ".gui", ".yml"):
             self.assertIn(ext, TEXT_SUFFIXES)
-
 
 class TestRealGameTree(unittest.TestCase):
     """集成测试：对真实游戏目录做结构断言。"""
@@ -204,7 +201,6 @@ class TestRealGameTree(unittest.TestCase):
         text = (GAME / "checksum_manifest.txt").read_text(encoding="utf-8-sig")
         for d in ("common", "events", "map_data", "gui", "localization"):
             self.assertIn(f"name = {d}", text)
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

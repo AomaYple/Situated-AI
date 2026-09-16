@@ -1,4 +1,4 @@
-"""PDX 脚本语法分析器：递归下降，产出 AST。
+﻿"""PDX 脚本语法分析器：递归下降，产出 AST。
 
 顶层判定完全依赖**花括号深度**，不依赖缩进 —— 这是正确的做法，也是本次
 会话中修正 6121→6128 那类错误的关键。
@@ -21,7 +21,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .lexer import ATOM, EOF, LBRACE, OP, RBRACE, STRING, Token, tokenize
-from .model import Assignment, Block, ParseError, ParsedFile, Scalar
+from .model import Assignment, Block, ParsedFile, Scalar
 
 #: 引擎级功能前缀。键名前带这些前缀时，语义是「对已存在条目做注入/替换」
 #: 而不是重新定义。已确认存在于 victoria3.exe 的字符串表中。
@@ -35,6 +35,28 @@ PREFIXES: tuple[str, ...] = (
 )
 
 _PREFIX_SET = frozenset(PREFIXES)
+
+#: 块结束的两种 token。提成模块级常量，而不是在热路径里写
+#: ``kind in (RBRACE, EOF)`` —— 后者每次求值都要新建一个元组。
+_TERMINATORS = (RBRACE, EOF)
+
+#: 可以作为语句或值开头的两种 token。同上，提到模块级。
+_WORDLIKE = (ATOM, STRING)
+
+#: 解析单个文件时**可以合理容忍**的异常。
+#:
+#: 刻意*不*含 ``Exception`` —— 宽泛捕获会把代码 bug（打错属性名、
+#: 类型不匹配）降级成「这个文件没解析成功」，是最难查的一类问题：
+#: 它让错误静默地变成合法输出，还顺带让回归测试保持绿色。
+#:
+#: * ``OSError``            文件读不了（权限、被删、路径过长）
+#: * ``RecursionError``     嵌套深度超出 Python 递归上限的病态文件
+#: * ``UnicodeDecodeError`` 非 UTF-8 且替换解码也失败的极端情况
+TOLERATED_ERRORS: tuple[type[BaseException], ...] = (
+    OSError,
+    RecursionError,
+    UnicodeDecodeError,
+)
 
 
 def _split_prefix(word: str) -> tuple[str | None, str]:
@@ -51,78 +73,138 @@ def _split_prefix(word: str) -> tuple[str | None, str]:
 
 
 class _Parser:
-    def __init__(self, tokens: list[Token], path: str) -> None:
+    """递归下降解析器。
+
+    性能要点
+    --------
+    全量分析要对 3,782 个文件、约 560 万个 token 跑这里，热路径上任何一处
+    多余开销都会被放大成秒级。三处刻意的写法（都经基准量化验证）：
+
+    1. ``cur`` 是**普通属性**而不是 ``@property``。特性读要走一次描述符
+       协议加一次 Python 函数调用；每消费一个 token 要读它好几次，
+       这是最大的一笔按-token 计费的开销。改用属性后由 :meth:`advance`
+       负责同步。
+    2. :meth:`parse_value` **内联**进了 :meth:`parse_statement`。它原先
+       被调用 139 万次，而函数体只有四个分支 —— 调用本身比干活还贵。
+    3. ``errors.append`` 预先取出来存成 ``self._err``，省掉报错时的一次
+       属性查找。
+
+    另：早先这里还有个 ``expect()`` 方法和一个 ``path`` 属性，两者全项目
+    零调用（覆盖率报告里长期挂着未覆盖行），已删除。
+    """
+
+    __slots__ = ("_err", "cur", "depth", "errors", "max_depth", "pos", "tokens")
+
+    def __init__(self, tokens: list[Token]) -> None:
         self.tokens = tokens
         self.pos = 0
-        self.path = path
+        #: 当前 token。由 :meth:`advance` 维护，不通过下标实时取。
+        self.cur = tokens[0]
         self.errors: list[str] = []
+        self._err = self.errors.append
+        #: 当前花括号深度与见过的最大深度。
+        #: 记录在这里，而不是事后遍历 AST —— 后者要为每个文件把整棵树
+        #: 再递归走一遍（全量分析下是 58 万次块访问的纯重复劳动）。
+        self.depth = 0
+        self.max_depth = 0
 
     # ── token 辅助 ─────────────────────────────────────────
-    @property
-    def cur(self) -> Token:
-        return self.tokens[self.pos]
-
     def advance(self) -> Token:
-        tok = self.tokens[self.pos]
+        """返回当前 token 并前进一个。
+
+        刻意维护 ``self.cur`` 而不是每次读 ``self.tokens[self.pos]``：
+        ``tokens`` 必定以 EOF 收尾，且 EOF 不再前进，
+        所以 ``self.pos`` 永远落在合法下标内。
+        """
+        tok = self.cur
         if tok.kind != EOF:
             self.pos += 1
+            self.cur = self.tokens[self.pos]
         return tok
-
-    def expect(self, kind: str) -> Token | None:
-        if self.cur.kind == kind:
-            return self.advance()
-        self.errors.append(
-            f"第 {self.cur.line} 行：期望 {kind}，实际是 "
-            f"{self.cur.kind} {self.cur.value!r}"
-        )
-        return None
 
     # ── 语法 ──────────────────────────────────────────────
     def parse_root(self) -> Block:
         root = Block(line=1)
+        items = root.items
         while self.cur.kind != EOF:
             before = self.pos
-            item = self.parse_statement(top_level=True)
+            item = self.parse_statement()
             if item is not None:
-                root.items.append(item)
+                items.append(item)
             if self.pos == before:  # 防御：绝不空转
                 self.advance()
         return root
 
     def parse_block(self, line: int) -> Block:
+        depth = self.depth + 1
+        self.depth = depth
+        # 不用 max()：热路径上它会多一次属性读，if 更快
+        if depth > self.max_depth:  # noqa: PLR1730
+            self.max_depth = depth
+
         block = Block(line=line)
-        while self.cur.kind not in (RBRACE, EOF):
+        items = block.items
+        while True:
+            kind = self.cur.kind
+            if kind in _TERMINATORS:
+                break
             before = self.pos
-            item = self.parse_statement(top_level=False)
+            item = self.parse_statement()
             if item is not None:
-                block.items.append(item)
+                items.append(item)
             if self.pos == before:
                 self.advance()
         if self.cur.kind == RBRACE:
             self.advance()
         else:
-            self.errors.append(f"第 {line} 行开始的块没有闭合的花括号")
+            self._err(f"第 {line} 行开始的块没有闭合的花括号")
+
+        self.depth = depth - 1
         return block
 
-    def parse_statement(self, top_level: bool):
-        tok = self.cur
+    def parse_statement(self):
+        """解析一条语句。``parse_value`` 已内联，见类文档。
 
-        if tok.kind == LBRACE:
+        刻意**不带**「是否顶层」参数 —— 早先有个 ``top_level`` 形参，
+        但函数体从未读过它。顶层与块内的区别完全由调用方
+        （:meth:`parse_root` / :meth:`parse_block`）通过花括号深度决定。
+        """
+        tok = self.cur
+        kind = tok.kind
+
+        if kind == LBRACE:
             self.advance()
             return self.parse_block(tok.line)
 
-        if tok.kind == RBRACE:
+        if kind == RBRACE:
             # 多余的右括号：上层会处理，这里不消费，避免吞掉
             return None
 
-        if tok.kind in (ATOM, STRING):
+        if kind in _WORDLIKE:
             self.advance()
             # 下一个是运算符 → 赋值；否则是裸标量（列表元素）
             if self.cur.kind == OP:
                 op = self.advance().value
-                value = self.parse_value()
-                if tok.kind == STRING:
-                    key = tok.value[1:-1] if len(tok.value) >= 2 else tok.value
+
+                # ── 内联的 parse_value ──────────────────────
+                vtok = self.cur
+                vkind = vtok.kind
+                if vkind == LBRACE:
+                    self.advance()
+                    value = self.parse_block(vtok.line)
+                elif vkind == STRING:
+                    self.advance()
+                    value = Scalar(text=vtok.value, quoted=True, line=vtok.line)
+                elif vkind == ATOM:
+                    self.advance()
+                    value = Scalar(text=vtok.value, quoted=False, line=vtok.line)
+                else:
+                    # 空值：``key =`` 后面直接换行或遇到右括号
+                    value = None
+
+                if kind == STRING:
+                    raw = tok.value
+                    key = raw[1:-1] if len(raw) >= 2 else raw
                     prefix = None
                 else:
                     prefix, key = _split_prefix(tok.value)
@@ -130,25 +212,11 @@ class _Parser:
                     key=key, op=op, value=value, prefix=prefix, line=tok.line
                 )
             return Scalar(
-                text=tok.value, quoted=(tok.kind == STRING), line=tok.line
+                text=tok.value, quoted=(kind == STRING), line=tok.line
             )
 
         # 无法识别：消费掉，避免死循环
         self.advance()
-        return None
-
-    def parse_value(self):
-        tok = self.cur
-        if tok.kind == LBRACE:
-            self.advance()
-            return self.parse_block(tok.line)
-        if tok.kind == STRING:
-            self.advance()
-            return Scalar(text=tok.value, quoted=True, line=tok.line)
-        if tok.kind == ATOM:
-            self.advance()
-            return Scalar(text=tok.value, quoted=False, line=tok.line)
-        # 空值：``key =`` 后面直接换行或遇到右括号
         return None
 
 
@@ -158,10 +226,14 @@ def parse_text(text: str, path: str = "<text>") -> ParsedFile:
     if had_bom:
         text = text[1:]
     tokens = tokenize(text)
-    parser = _Parser(tokens, path)
+    parser = _Parser(tokens)
     root = parser.parse_root()
     return ParsedFile(
-        path=path, root=root, had_bom=had_bom, errors=parser.errors
+        path=path,
+        root=root,
+        had_bom=had_bom,
+        errors=parser.errors,
+        max_depth=parser.max_depth,
     )
 
 

@@ -10,7 +10,10 @@ import os
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
 
 #: 文本类扩展名（可解析、可用文本工具处理）
 TEXT_SUFFIXES = frozenset(

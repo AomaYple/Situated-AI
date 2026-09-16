@@ -1,0 +1,253 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+# ─────────────────────────────────────────────────────────────
+# Victoria 3 mod 开发研究工具链
+#
+# 本文件是**唯一**的工程配置源：
+#   项目元数据 / 依赖 / 打包 / pytest / ruff / mypy / coverage
+# 不再需要 pytest.ini、requirements.txt、setup.py、setup.cfg。
+#
+# 安装（开发模式，之后所有 sys.path 补丁都可以删掉）：
+#     .venv\Scripts\python.exe -m pip install -e ".[dev]"
+# ─────────────────────────────────────────────────────────────
+
+[project]
+name = "situated-ai-v3tools"
+version = "0.2.0"
+description = "Victoria 3 mod 开发研究工具链：PDX 脚本全量分析与信息提取"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "AomaYple", email = "2890599214@qq.com" }]
+keywords = ["victoria3", "paradox", "modding", "pdx", "clausewitz"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Games/Entertainment :: Simulation",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+# 运行期依赖：只保留「标准库确实没有对应能力」的，每条写明用途。
+dependencies = [
+    "typer>=0.27",      # 命令行参数解析。取代 5 个脚本里重复的 argparse 样板
+    "rich>=15.0",       # 终端表格与格式化输出。取代手写字符串对齐
+]
+
+[project.optional-dependencies]
+# 测试与静态检查。一次装齐，避免后续「这个库没装」的反复。
+dev = [
+    # ── 测试框架与插件 ────────────────────────────────────
+    "pytest>=9.0",
+    "pytest-cov>=7.0",          # 覆盖率
+    "pytest-benchmark>=5.3",    # 性能基准与回归门禁
+    "pytest-timeout>=2.4",      # 卡死的测试必须失败而非永久挂住
+    "pytest-randomly>=5.0",     # 随机化执行顺序，暴露用例间隐式依赖
+    "pytest-regressions>=2.11", # 黄金回归（冻结产物指纹）
+    "pytest-mock>=3.15",        # mock 的 fixture 化封装
+    "pytest-subtests>=0.15",    # 一个用例内的多组子断言
+    "pytest-datadir>=1.8",      # 测试数据目录
+    "pytest-xdist>=3.8",        # 并行执行
+    "hypothesis>=6.168",        # 属性测试与模糊测试
+
+    # ── 性能剖析 ──────────────────────────────────────────
+    "pyinstrument>=5.1",        # 采样式剖析器，输出调用树
+
+    # ── 静态检查 ──────────────────────────────────────────
+    "ruff>=0.16",               # 代码检查 + 格式化（取代 flake8/isort/black）
+    "mypy>=1.14",               # 类型检查
+
+    # ── 开发流程 ──────────────────────────────────────────
+    "pre-commit>=4.0",          # 提交前自动跑 ruff/mypy
+]
+
+[project.scripts]
+# 单一入口，取代 tools/ 下原先 7 个各自为政的脚本。
+# 改动本段后需要重新 `pip install -e .`，否则 .venv/Scripts 下不会生成 v3.exe。
+# 不装入口点也能用：`python -m pdx.cli` 等价。
+v3 = "pdx.cli:app"
+
+[tool.setuptools]
+# 包源码在 tools/ 下（仓库既是「研究资料库」也是「工具源码库」，
+# 因此没有采用 src/ 布局 —— 那样会让 tools/ 与 src/ 两份代码并存）。
+package-dir = { "" = "tools" }
+packages = ["pdx"]
+
+# ─────────────────────────────────────────────────────────────
+# pytest
+# ─────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tools/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+    "--timeout=300",
+    "--timeout-method=thread",
+]
+# 说明：不设 --basetemp。pytest 的 tmp_path 在本机已可用，
+# 默认落在系统 Temp 下即可，无需固定。
+
+markers = [
+    "unit: 单元测试，不依赖游戏安装",
+    "integration: 集成测试，需要真实游戏目录（无游戏时自动跳过）",
+    "property: 属性测试与变形测试（hypothesis）",
+    "regression: 回归测试，比对固化的指纹",
+    "contract: 契约测试，校验输出结构不被破坏",
+    "docs: 文档一致性测试，校验文档里的数字与实际提取结果一致",
+    "cli: 命令行端到端测试（subprocess 真跑）",
+    "slow: 耗时较长（超过数秒）",
+    "benchmark: 性能基准",
+]
+
+[tool.coverage.run]
+source = ["pdx"]
+branch = true
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+# 覆盖率门禁 —— 防止回退，不是拿来好看的。
+#
+# 口径说明：这里开的是**分支覆盖率**（``branch = true``），与「语句覆盖率」
+# 不可直接比较。实测语句覆盖率 89% 时，分支覆盖率是 86.98% —— 数字变低
+# 不代表测试变差，而是分母里多了「只走了一个方向的分支」。
+#
+# 当前实测 86.98%，门槛先钉在 86%。补完测试矩阵后逐步上调，目标 95%。
+fail_under = 86
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",
+]
+
+[tool.coverage.html]
+directory = "tools/out/coverage"
+
+# ─────────────────────────────────────────────────────────────
+# ruff —— 代码检查与格式化
+# ─────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    ".venv",
+    "tools/out",
+    "tools/frag",
+    "tools/docparts",
+    "tools/reports",
+    # research/ 是游戏官方文档的逐字镜像，不是我们的代码
+    "research",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle 错误
+    "W",    # pycodestyle 警告
+    "F",    # pyflakes
+    "I",    # isort：导入排序
+    "N",    # pep8-naming
+    "UP",   # pyupgrade：用新语法替换旧写法
+    "B",    # flake8-bugbear：常见陷阱
+    "A",    # flake8-builtins：遮蔽内置名
+    "C4",   # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+    "LOG",  # flake8-logging
+    "G",    # flake8-logging-format
+    "PIE",  # flake8-pie
+    "PT",   # flake8-pytest-style
+    "RET",  # flake8-return
+    "RSE",  # flake8-raise
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "TCH",  # flake8-type-checking
+    "ARG",  # flake8-unused-arguments
+    "PTH",  # flake8-use-pathlib
+    "ERA",  # eradicate：注释掉的代码
+    "PL",   # pylint
+    "RUF",  # ruff 自有规则
+]
+ignore = [
+    "PLR0913",  # 参数过多：dataclass 与 CLI 函数情有可原
+    "PLR2004",  # 魔法数字：本项目的「魔法数字」都是游戏实测值，有注释
+    "PLR0912",  # 分支过多
+    "PLR0915",  # 语句过多
+    "PLR0911",  # return 过多
+    "E501",     # 行长由 formatter 负责
+    "SIM108",   # 三元表达式并非总是更清晰
+
+    # ── 中文技术写作的必然豁免 ────────────────────────────
+    # 本项目所有文档、注释、报错信息都是中文，必然出现全角标点
+    # （）：「」、【】、—— 等。这三条规则把它们判为「易混淆的 Unicode
+    # 字符」，在英文代码库里是对的，在中文代码库里是纯噪声：
+    # 实测 848 条告警全部是中文标点，没有一条是真的字符混用。
+    "RUF001",   # 字符串里的易混淆 Unicode 字符
+    "RUF002",   # 文档字符串里的易混淆 Unicode 字符
+    "RUF003",   # 注释里的易混淆 Unicode 字符
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 测试文件的刻意选择：
+#   PT009  沿用 unittest 风格的 self.assertXxx —— 改成裸 assert 是独立的大
+#          改造，收益是风格统一，风险是碰 179 处断言，性价比不划算
+#   PLC2401/N802 中文测试函数名（test_缓存命中返回同一对象）比拼音可读得多，
+#          失败时 pytest 直接把中文名打出来，定位比英文名更快
+#   RUF012 测试里的类属性是 fixture 风格的常量，加 ClassVar 只是噪声
+#   ARG001/ARG002 pytest fixture 的形参由框架注入，必然「未使用」
+#   N806   fixture 里用 GAME/CONFIG 这类大写局部名指代常量，是有意为之
+"tools/tests/*" = [
+    "PT009", "PLC2401", "N802", "RUF012",
+    "ARG001", "ARG002", "N806",
+    "PLR2004", "S101", "PT011", "PLC0415",
+]
+# 诊断脚本是一次性排障存档，允许粗糙
+"tools/diag/*" = ["T201", "ARG001", "PLR2004", "PLC0415", "RUF015"]
+# 算法实现里的位运算与短路是刻意的
+"tools/pdx/lexer.py" = ["PLR2004"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pdx"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
+# ─────────────────────────────────────────────────────────────
+# mypy —— 类型检查
+# ─────────────────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.11"
+files = ["tools/pdx", "tools/tests"]
+# 渐进式收紧：先保证「不出现新错误」，再逐步加严。
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+no_implicit_optional = true
+strict_equality = true
+check_untyped_defs = true
+disallow_untyped_defs = false   # 目标：逐步收紧到 true
+disallow_incomplete_defs = false
+show_error_codes = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = ["tools.diag.*"]
+ignore_errors = true

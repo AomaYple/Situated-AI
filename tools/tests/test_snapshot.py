@@ -9,13 +9,9 @@
 from __future__ import annotations
 
 import json
-import sys
 import unittest
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from pdx import config, snapshot  # noqa: E402
+from pdx import config, snapshot
 
 
 class TestSnapshotShape(unittest.TestCase):
@@ -59,7 +55,6 @@ class TestSnapshotShape(unittest.TestCase):
     def test_dlc_count_is_17(self):
         self.assertEqual(len(self.snap.sections["dlc"]), 17)
 
-
 class TestDeterminism(unittest.TestCase):
     """确定性是 diff 可用的前提。"""
 
@@ -90,7 +85,6 @@ class TestDeterminism(unittest.TestCase):
         back = json.loads(text)
         self.assertEqual(back["格式版本"], snapshot.FORMAT)
         self.assertEqual(back["版本"], s.version)
-
 
 class TestCompare(unittest.TestCase):
     """比对逻辑本身。"""
@@ -143,7 +137,6 @@ class TestCompare(unittest.TestCase):
         line = snapshot.compare(a, b)[0].line()
         self.assertIn("[x]", line)
         self.assertIn("+2", line)
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

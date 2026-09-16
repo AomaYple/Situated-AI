@@ -21,13 +21,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Iterable
+from typing import TYPE_CHECKING, Any
 
 from . import config
 from .cache import parse_cached
 from .defines import extract_defines
 from .scan import walk_files
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+    from pathlib import Path
 
 SNAPSHOT_DIR = config.OUT / "snapshots"
 
@@ -185,7 +188,7 @@ class Snapshot:
         )
 
     @classmethod
-    def load(cls, path: Path) -> "Snapshot":
+    def load(cls, path: Path) -> Snapshot:
         d = json.loads(path.read_text(encoding="utf-8"))
         return cls(version=d.get("版本", {}), sections=d.get("域", {}))
 

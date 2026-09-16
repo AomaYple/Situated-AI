@@ -6,24 +6,24 @@
 
 from __future__ import annotations
 
-import sys
 import unittest
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from pdx.lexer import (  # noqa: E402
-    ATOM, EOF, LBRACE, OP, RBRACE, STRING, tokenize,
+from pdx.lexer import (
+    ATOM,
+    EOF,
+    LBRACE,
+    OP,
+    RBRACE,
+    STRING,
+    tokenize,
 )
 
 
 def kinds(text: str) -> list[str]:
     return [t.kind for t in tokenize(text) if t.kind != EOF]
 
-
 def values(text: str) -> list[str]:
     return [t.value for t in tokenize(text) if t.kind != EOF]
-
 
 class TestBraces(unittest.TestCase):
     def test_single_block(self):
@@ -35,7 +35,6 @@ class TestBraces(unittest.TestCase):
 
     def test_adjacent_braces_no_whitespace(self):
         self.assertEqual(values("a={b=1}"), ["a", "=", "{", "b", "=", "1", "}"])
-
 
 class TestOperators(unittest.TestCase):
     def test_all_operators(self):
@@ -51,7 +50,6 @@ class TestOperators(unittest.TestCase):
 
     def test_operators_not_greedy_across_space(self):
         self.assertEqual(values("a = = b"), ["a", "=", "=", "b"])
-
 
 class TestComments(unittest.TestCase):
     def test_line_comment_removed(self):
@@ -71,32 +69,30 @@ class TestComments(unittest.TestCase):
     def test_multiple_comments(self):
         self.assertEqual(values("# a\nb = 1 # c\n# d"), ["b", "=", "1"])
 
-
 class TestStrings(unittest.TestCase):
     def test_simple_string(self):
-        t = [x for x in tokenize('s = "hello"') if x.kind == STRING][0]
+        t = next(x for x in tokenize('s = "hello"') if x.kind == STRING)
         self.assertEqual(t.value, '"hello"')
 
     def test_string_with_spaces(self):
-        t = [x for x in tokenize('s = "a b c"') if x.kind == STRING][0]
+        t = next(x for x in tokenize('s = "a b c"') if x.kind == STRING)
         self.assertEqual(t.value, '"a b c"')
 
     def test_string_with_braces(self):
-        t = [x for x in tokenize('s = "{ }"') if x.kind == STRING][0]
+        t = next(x for x in tokenize('s = "{ }"') if x.kind == STRING)
         self.assertEqual(t.value, '"{ }"')
 
     def test_string_with_equals(self):
-        t = [x for x in tokenize('s = "a=b"') if x.kind == STRING][0]
+        t = next(x for x in tokenize('s = "a=b"') if x.kind == STRING)
         self.assertEqual(t.value, '"a=b"')
 
     def test_escaped_quote(self):
-        t = [x for x in tokenize(r's = "a\"b"') if x.kind == STRING][0]
+        t = next(x for x in tokenize(r's = "a\"b"') if x.kind == STRING)
         self.assertEqual(t.value, r'"a\"b"')
 
     def test_unterminated_string_does_not_hang(self):
         toks = tokenize('s = "unclosed')
         self.assertTrue(any(t.kind == STRING for t in toks))
-
 
 class TestAtoms(unittest.TestCase):
     def test_hyphen_in_atom(self):
@@ -117,15 +113,13 @@ class TestAtoms(unittest.TestCase):
     def test_dollar_parameter(self):
         self.assertEqual(values("$PARAM$ = 1"), ["$PARAM$", "=", "1"])
 
-
 class TestBOM(unittest.TestCase):
     def test_bom_is_skipped(self):
         self.assertEqual(values("\ufeffa = 1"), ["a", "=", "1"])
 
     def test_bom_not_part_of_atom(self):
-        t = [x for x in tokenize("\ufeffabc = 1") if x.kind == ATOM][0]
+        t = next(x for x in tokenize("\ufeffabc = 1") if x.kind == ATOM)
         self.assertEqual(t.value, "abc")
-
 
 class TestLineTracking(unittest.TestCase):
     def _idents(self, text: str) -> list[str]:
@@ -153,7 +147,7 @@ class TestLineTracking(unittest.TestCase):
 
     def test_line_start_resets_after_newline(self):
         toks = tokenize("aaa = 1\nb = 2")
-        b = [t for t in toks if t.value == "b"][0]
+        b = next(t for t in toks if t.value == "b")
         self.assertEqual(b.col, 1)
 
     def test_col_tracks_position(self):
@@ -162,7 +156,6 @@ class TestLineTracking(unittest.TestCase):
         self.assertEqual(by_val["abc"].col, 1)
         self.assertEqual(by_val["="].col, 5)
         self.assertEqual(by_val["1"].col, 7)
-
 
 class TestRobustness(unittest.TestCase):
     def test_empty_input(self):
@@ -182,7 +175,6 @@ class TestRobustness(unittest.TestCase):
 
     def test_crlf_handled(self):
         self.assertEqual(values("a = 1\r\nb = 2"), ["a", "=", "1", "b", "=", "2"])
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

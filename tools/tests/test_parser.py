@@ -8,14 +8,10 @@
 
 from __future__ import annotations
 
-import sys
 import unittest
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from pdx import parse_text  # noqa: E402
-from pdx.parser import PREFIXES  # noqa: E402
+from pdx import parse_text
+from pdx.parser import PREFIXES
 
 
 class TestBOM(unittest.TestCase):
@@ -33,7 +29,6 @@ class TestBOM(unittest.TestCase):
     def test_bom_does_not_leak_into_key(self):
         pf = parse_text("\ufefffoo = { }")
         self.assertNotIn("\ufeff", pf.top_keys[0])
-
 
 class TestComments(unittest.TestCase):
     """坑 2：注释必须引号感知，且必须在括号计数之前剥离。"""
@@ -59,7 +54,6 @@ real_key = { a = 1 }
         self.assertEqual(pf.top_keys, ["real_key"])
         self.assertEqual(pf.errors, [])
 
-
 class TestKeys(unittest.TestCase):
     """坑 3：键名字符集不能枚举 —— 存在含连字符的键。"""
 
@@ -79,7 +73,6 @@ class TestKeys(unittest.TestCase):
         self.assertEqual(a.key, "c:SWE")
         self.assertEqual(a.op, "?=")
 
-
 class TestPrefixes(unittest.TestCase):
     """坑 4：6 个引擎级功能前缀。"""
 
@@ -94,7 +87,6 @@ class TestPrefixes(unittest.TestCase):
 
     def test_prefix_list_is_exactly_six(self):
         self.assertEqual(len(PREFIXES), 6)
-
 
 class TestTopLevelDetection(unittest.TestCase):
     """坑 5：顶层判定必须用花括号深度，不能用缩进。"""
@@ -118,7 +110,6 @@ class TestTopLevelDetection(unittest.TestCase):
         pf = parse_text("a = {\n    b = 1\n\tc = 2\n}\n")
         self.assertEqual(pf.top_keys, ["a"])
         self.assertEqual(sorted(pf.top_assignments[0].value.keys()), ["b", "c"])
-
 
 class TestValues(unittest.TestCase):
     def test_inline_list_of_scalars(self):
@@ -147,7 +138,6 @@ class TestValues(unittest.TestCase):
         inner = pf.top_assignments[0].value
         self.assertIsNone(inner.first("a").value)
 
-
 class TestRobustness(unittest.TestCase):
     """不追求全对全错：畸形输入要尽量保留可用数据。"""
 
@@ -167,7 +157,6 @@ class TestRobustness(unittest.TestCase):
     def test_only_comments(self):
         pf = parse_text("# nothing\n# here\n")
         self.assertEqual(pf.top_keys, [])
-
 
 class TestKnownCounts(unittest.TestCase):
     """集成测试：用已知正确的数字验证整条解析管线。
@@ -200,7 +189,6 @@ class TestKnownCounts(unittest.TestCase):
                 for f in (common / name).rglob("*.txt"):
                     keys.update(parse_file(f).top_keys)
                 self.assertEqual(len(keys), want, f"{name} 键数不符")
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

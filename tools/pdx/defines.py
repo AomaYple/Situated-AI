@@ -25,12 +25,16 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from . import config
 from .cache import parse_cached
-from .model import Assignment, Block, Scalar
+from .model import Block, Scalar
+from .parser import parse_text
 from .scan import walk_files
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 #: 参数值的三种形态
 SCALAR = "标量"
@@ -196,8 +200,6 @@ def overlay(vanilla: DefinesReport, mod_text: str) -> dict[str, object]:
 
     用于「写 mod 前先确认覆盖范围」，避免盲目复制整份原版文件。
     """
-    from .parser import parse_text
-
     pf = parse_text(mod_text, "<mod>")
     result: list[dict[str, object]] = []
     for a in pf.top_assignments:

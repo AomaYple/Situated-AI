@@ -11,7 +11,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterator, Union
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class ParseError(Exception):
@@ -46,11 +49,11 @@ class Scalar:
 class Block:
     """花括号块。``items`` 里可以混合赋值、匿名子块与裸标量（列表）。"""
 
-    items: list["Node"] = field(default_factory=list)
+    items: list[Node] = field(default_factory=list)
     line: int = 0
 
     # ── 遍历辅助 ───────────────────────────────────────────
-    def assignments(self) -> Iterator["Assignment"]:
+    def assignments(self) -> Iterator[Assignment]:
         for it in self.items:
             if isinstance(it, Assignment):
                 yield it
@@ -58,13 +61,13 @@ class Block:
     def keys(self) -> list[str]:
         return [a.key for a in self.assignments()]
 
-    def first(self, key: str) -> "Assignment | None":
+    def first(self, key: str) -> Assignment | None:
         for a in self.assignments():
             if a.key == key:
                 return a
         return None
 
-    def all(self, key: str) -> list["Assignment"]:
+    def all(self, key: str) -> list[Assignment]:
         return [a for a in self.assignments() if a.key == key]
 
     def scalars(self) -> Iterator[Scalar]:
@@ -83,7 +86,7 @@ class Assignment:
 
     key: str
     op: str
-    value: Union[Block, Scalar, None]
+    value: Block | Scalar | None
     prefix: str | None = None
     line: int = 0
 
@@ -116,7 +119,7 @@ class Assignment:
         return f"{self.prefix}:{self.key}" if self.prefix else self.key
 
 
-Node = Union[Assignment, Block, Scalar]
+Node = Assignment | Block | Scalar
 
 
 @dataclass(slots=True)
@@ -128,6 +131,12 @@ class ParsedFile:
     encoding: str = "utf-8-sig"
     had_bom: bool = False
     errors: list[str] = field(default_factory=list)
+    #: 最大花括号嵌套深度，用于完整性自检。
+    #:
+    #: **由解析器在解析时记录**，不是事后遍历 AST 算出来的 ——
+    #: 后者要为每个文件把整棵树再递归走一遍，而深度在解析过程中本来就已知。
+    #: 语义与旧实现一致：根为 0，每进一层块加 1，匿名块同样计入。
+    max_depth: int = 0
 
     # ── 便捷视图 ───────────────────────────────────────────
     @property
@@ -154,17 +163,3 @@ class ParsedFile:
     def prefixed(self) -> list[Assignment]:
         """带功能前缀的顶层赋值。"""
         return [a for a in self.root.assignments() if a.prefix]
-
-    def max_depth(self) -> int:
-        """最大花括号嵌套深度，用于完整性自检。"""
-
-        def walk(block: Block, depth: int) -> int:
-            best = depth
-            for it in block.items:
-                if isinstance(it, Assignment) and isinstance(it.value, Block):
-                    best = max(best, walk(it.value, depth + 1))
-                elif isinstance(it, Block):
-                    best = max(best, walk(it, depth + 1))
-            return best
-
-        return walk(self.root, 0)
