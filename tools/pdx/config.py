@@ -55,6 +55,13 @@ RESEARCH = REPO / "research"
 
 #: 中间产物目录（已 gitignore）
 OUT = REPO / "tools" / "out"
+
+#: 分析产物的**分仓**目录 —— 游戏本体与 mod 分开存放，互不混杂
+OUT_GAME = OUT / "game"
+OUT_MODS = OUT / "mods"
+OUT_CROSS = OUT / "cross"
+
+#: 人可读报告目录
 REPORTS = REPO / "tools" / "reports"
 
 #: Steam App ID
@@ -68,8 +75,8 @@ PDX_SUFFIXES = (".txt",)
 
 
 def ensure_dirs() -> None:
-    """确保输出目录存在。"""
-    for d in (OUT, REPORTS):
+    """确保全部输出目录存在。"""
+    for d in (OUT, OUT_GAME, OUT_MODS, OUT_CROSS, REPORTS):
         d.mkdir(parents=True, exist_ok=True)
 
 

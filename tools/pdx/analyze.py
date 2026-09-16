@@ -1,0 +1,828 @@
+"""全量分析：把游戏本体与 mod 本体的全部可提取信息一次性产出。
+
+「全量」的含义
+--------------
+**不挑目录、不抽样**。具体覆盖：
+
+游戏本体
+    * 三个内容根（``game`` / ``jomini`` / ``clausewitz``）的逐目录统计
+    * ``common/`` 下每个数据目录的**条目与字段**级提取
+    * ``events/`` 等其余可解析目录的条目级提取
+    * ``localization/`` 的语言、文件与键名
+    * ``gui/`` 的界面文件清单
+    * 根级配置文件（校验和清单、路径映射）
+    * DLC 描述符与结构
+    * 官方 ``.md`` 文档清单
+    * 原版是否使用功能前缀（预期为 0）
+
+mod 本体
+    * 元数据、文件清单、顶层条目
+    * **覆盖**（与原版同相对路径）与**新增**的区分
+    * 功能前缀使用与样例
+    * 各类型文件分布（脚本 / 本地化 / 图形 / 界面 / 音频）
+    * 改动了哪些原版目录与条目
+
+交叉
+    * 每个目录被多少 mod 触及
+    * 被改动的原版**条目级**清单
+    * 同一原版路径被多个 mod 覆盖的**冲突检测**
+
+性能说明：整个游戏树只解析一次（见 :mod:`pdx.cache`）。
+"""
+
+from __future__ import annotations
+
+import json
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from . import config
+from .cache import parse_cached
+from .extract import DirExtract, extract_file
+from .mods import ModInfo, aggregate_prefixes, analyse_all
+from .scan import DirStats, stats_for, walk_files
+
+#: 参与分析的内容根
+CONTENT_ROOTS: dict[str, Path] = {
+    "game": config.GAME,
+    "jomini": config.JOMINI,
+    "clausewitz": config.CLAUSEWITZ,
+}
+
+#: 除 common 外，还值得做条目级提取的目录（相对各内容根）
+SCRIPT_DIRS = ("events", "history", "gui", "map_data", "notifications", "interface")
+
+#: mod 常见文件类型的归类
+FILE_CLASSES: dict[str, tuple[str, ...]] = {
+    "脚本": (".txt",),
+    "本地化": (".yml", ".yaml"),
+    "界面": (".gui",),
+    "图形": (".dds", ".tga", ".png", ".jpg", ".jpeg", ".webp", ".bmp"),
+    "音频": (".wav", ".ogg", ".mp3", ".bank", ".fsb", ".flac"),
+    "模型": (".mesh", ".asset", ".anim", ".bin"),
+    "文档": (".md",),
+}
+
+
+def classify(suffix: str) -> str:
+    for name, exts in FILE_CLASSES.items():
+        if suffix in exts:
+            return name
+    return "其他"
+
+
+# ── 数据结构 ────────────────────────────────────────────────
+@dataclass
+class RootFile:
+    """根级配置文件的内容摘要。"""
+
+    name: str
+    size: int
+    kind: str                      # text / binary
+    summary: dict[str, Any] = field(default_factory=dict)
+    text: str = ""                 # 仅对小型文本文件保留
+
+
+@dataclass
+class DlcInfo:
+    """一个 DLC 的结构与描述符。"""
+
+    name: str
+    path: Path
+    descriptor: dict[str, str] = field(default_factory=dict)
+    top_entries: list[str] = field(default_factory=list)
+    files: int = 0
+    size: int = 0
+    by_class: Counter = field(default_factory=Counter)
+
+    @property
+    def has_script_dir(self) -> bool:
+        """DLC 是否自带 ``common/`` 等脚本目录（实测全部为否）。"""
+        return any(t in ("common", "events", "gui") for t in self.top_entries)
+
+
+@dataclass
+class GameAnalysis:
+    """游戏本体的完整画像。"""
+
+    version: dict[str, str] = field(default_factory=dict)
+    roots: dict[str, DirStats] = field(default_factory=dict)
+    top_dirs: dict[str, list[DirStats]] = field(default_factory=dict)
+    #: common 下每个数据目录
+    common: dict[str, DirExtract] = field(default_factory=dict)
+    #: 其他脚本目录：``"events" -> DirExtract``
+    scripts: dict[str, DirExtract] = field(default_factory=dict)
+    #: 本地化：``语言 -> {文件数, 键数}``
+    localization: dict[str, dict[str, int]] = field(default_factory=dict)
+    #: GUI 文件清单
+    gui_files: list[str] = field(default_factory=list)
+    #: 根级配置文件
+    root_files: dict[str, RootFile] = field(default_factory=dict)
+    #: 校验和清单里列出的目录
+    checksummed: list[str] = field(default_factory=list)
+    #: 路径映射
+    paths: dict[str, str] = field(default_factory=dict)
+    #: DLC
+    dlcs: list[DlcInfo] = field(default_factory=list)
+    #: 官方 .md：相对路径 -> 字节数
+    official_docs: dict[str, int] = field(default_factory=dict)
+    #: 原版功能前缀使用（预期为空）
+    vanilla_prefixes: Counter = field(default_factory=Counter)
+    parse_errors: list[tuple[str, str]] = field(default_factory=list)
+
+    # ── 汇总 ────────────────────────────────────────────
+    @property
+    def total_files(self) -> int:
+        return sum(s.files for s in self.roots.values())
+
+    @property
+    def total_size(self) -> int:
+        return sum(s.size for s in self.roots.values())
+
+    @property
+    def total_entries(self) -> int:
+        return sum(e.unique_entries for e in self.common.values()) + sum(
+            e.unique_entries for e in self.scripts.values()
+        )
+
+    def all_keys(self) -> dict[str, list[str]]:
+        """``目录名 -> 排序后的全部条目名``（含 common 与 scripts）。"""
+        out = {n: sorted(e.entries) for n, e in self.common.items()}
+        out.update({n: sorted(e.entries) for n, e in self.scripts.items()})
+        return out
+
+    def all_fields(self) -> dict[str, list[str]]:
+        out: dict[str, list[str]] = {}
+        for name, e in list(self.common.items()) + list(self.scripts.items()):
+            merged: set[str] = set()
+            for fset in e.fields.values():
+                merged |= fset
+            out[name] = sorted(merged)
+        return out
+
+    def field_usage(self) -> Counter:
+        total: Counter = Counter()
+        for e in list(self.common.values()) + list(self.scripts.values()):
+            total.update(e.field_usage)
+        return total
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "版本": self.version,
+            "内容根": {
+                k: {"文件": v.files, "目录": v.dirs, "MB": v.size_mb}
+                for k, v in self.roots.items()
+            },
+            "文件总计": self.total_files,
+            "体积MB": round(self.total_size / 1048576, 1),
+            "common 目录数": len(self.common),
+            "common 条目数": sum(e.unique_entries for e in self.common.values()),
+            "其他脚本目录": {k: v.unique_entries for k, v in self.scripts.items()},
+            "本地化语言数": len(self.localization),
+            "GUI 文件": len(self.gui_files),
+            "根级配置": len(self.root_files),
+            "DLC": len(self.dlcs),
+            "官方md": len(self.official_docs),
+            "原版前缀使用": sum(self.vanilla_prefixes.values()),
+            "解析错误": len(self.parse_errors),
+        }
+
+
+# ── 游戏本体分析 ────────────────────────────────────────────
+def _read_root_file(path: Path) -> RootFile:
+    """读取一个根级配置文件并给出摘要。"""
+    rf = RootFile(name=path.name, size=path.stat().st_size, kind="text")
+    suffix = path.suffix.lower()
+    if suffix in (".tga", ".png", ".dds"):
+        rf.kind = "binary"
+        return rf
+    try:
+        rf.text = path.read_text(encoding="utf-8-sig", errors="replace")
+    except OSError:
+        rf.kind = "binary"
+        return rf
+
+    if path.name == "checksum_manifest.txt":
+        rf.summary["目录"] = [
+            ln.split("=", 1)[1].strip()
+            for ln in rf.text.splitlines()
+            if ln.strip().startswith("name")
+        ]
+    elif path.name == "paths.settings":
+        rf.summary["映射"] = dict(
+            (parts[0].strip(), parts[1].strip().strip('"'))
+            for ln in rf.text.splitlines()
+            if "=" in ln
+            for parts in [ln.split("=", 1)]
+        )
+    return rf
+
+
+def _analyse_localization(root: Path) -> dict[str, dict[str, int]]:
+    """统计每个语言目录的文件数与键数。
+
+    语言由文件**首行的 ``l_xx:``** 决定，而不是目录名 ——
+    ``localization/modifiers/`` 这种目录名并不是语言码。
+    """
+    out: dict[str, dict[str, int]] = defaultdict(lambda: {"文件": 0, "键": 0})
+    loc = root / "localization"
+    if not loc.is_dir():
+        return {}
+    for f in walk_files(loc):
+        if f.suffix not in (".yml", ".yaml"):
+            continue
+        try:
+            text = f.path.read_text(encoding="utf-8-sig", errors="replace")
+        except OSError:
+            continue
+        lang = "?"
+        keys = 0
+        for line in text.splitlines():
+            s = line.strip()
+            if not s or s.startswith("#"):
+                continue
+            if s.endswith(":") and s.startswith("l_"):
+                lang = s[:-1]
+                continue
+            if ":" in s and not s.startswith("l_"):
+                keys += 1
+        out[lang]["文件"] += 1
+        out[lang]["键"] += keys
+    return dict(out)
+
+
+def _analyse_dlc(root: Path) -> list[DlcInfo]:
+    """分析 ``game/dlc/`` 下的每个 DLC。"""
+    out: list[DlcInfo] = []
+    base = root / "dlc"
+    if not base.is_dir():
+        return out
+    for d in sorted(p for p in base.iterdir() if p.is_dir()):
+        info = DlcInfo(name=d.name, path=d)
+        info.top_entries = sorted(
+            p.name for p in d.iterdir() if p.is_dir()
+        ) + sorted(
+            p.name for p in d.iterdir() if p.is_file()
+        )
+        for f in walk_files(d):
+            info.files += 1
+            info.size += f.size
+            info.by_class[classify(f.suffix)] += 1
+        # 描述符：同目录下的 .dlc（PDX 格式）
+        for desc in d.glob("*.dlc"):
+            try:
+                txt = desc.read_text(encoding="utf-8-sig", errors="replace")
+            except OSError:
+                continue
+            for line in txt.splitlines():
+                if "=" in line:
+                    k, _, v = line.partition("=")
+                    info.descriptor[k.strip()] = v.strip().strip('"')
+            break
+        out.append(info)
+    return out
+
+
+def game_analysis(*, verbose: bool = False) -> GameAnalysis:
+    """对游戏本体做全量分析。整棵树只解析一次。"""
+    ga = GameAnalysis(version=config.game_version())
+    common_root = config.GAME / "common"
+
+    # ── 一次遍历：解析全部 .txt ─────────────────────────
+    all_txt = list(walk_files(config.GAME, suffix=".txt"))
+    if verbose:
+        print(f"  [游戏] 待解析 .txt：{len(all_txt):,} 个")
+
+    per_common: dict[str, DirExtract] = {}
+    per_script: dict[str, DirExtract] = {}
+    loose_common = 0
+
+    # 先为**每一个**子目录建好空结果。
+    # 不能等遇到 .txt 才创建 —— `scripted_modifiers` 目录下只有 .md 没有 .txt，
+    # 那样会让目录数从 136 变成 135，是个真实踩过的错。
+    for child in sorted(p for p in common_root.iterdir() if p.is_dir()):
+        per_common[child.name] = DirExtract(name=child.name, path=child)
+    for name in SCRIPT_DIRS:
+        d = config.GAME / name
+        if d.is_dir():
+            per_script[name] = DirExtract(name=name, path=d)
+
+    for i, f in enumerate(all_txt, 1):
+        try:
+            pf = parse_cached(f.path)
+        except Exception as exc:
+            ga.parse_errors.append((str(f.path), f"未捕获异常: {exc}"))
+            continue
+
+        for a in pf.top_assignments:
+            if a.prefix:
+                ga.vanilla_prefixes[a.prefix] += 1
+
+        try:
+            rel = f.path.relative_to(common_root)
+            is_common = True
+        except ValueError:
+            is_common = False
+            rel = f.path.relative_to(config.GAME)
+
+        if is_common:
+            if len(rel.parts) == 1:
+                loose_common += 1
+                continue
+            name = rel.parts[0]
+            res = per_common.get(name)
+            if res is None:
+                res = DirExtract(name=name, path=common_root / name)
+                per_common[name] = res
+            extract_file(pf, res)
+        elif rel.parts and rel.parts[0] in SCRIPT_DIRS:
+            name = rel.parts[0]
+            res = per_script.get(name)
+            if res is None:
+                res = DirExtract(name=name, path=config.GAME / name)
+                per_script[name] = res
+            extract_file(pf, res)
+
+        if verbose and i % 1500 == 0:
+            print(f"    已解析 {i:,}/{len(all_txt):,} …")
+
+    ga.common = dict(sorted(per_common.items()))
+    ga.scripts = dict(sorted(per_script.items()))
+    for res in list(ga.common.values()) + list(ga.scripts.values()):
+        for path, err in res.errors:
+            ga.parse_errors.append((str(path), err))
+
+    # ── 各内容根与一级目录 ─────────────────────────────
+    for name, root in CONTENT_ROOTS.items():
+        if not root.is_dir():
+            continue
+        ga.roots[name] = stats_for(root)
+        ga.top_dirs[name] = _subdirs(root)
+        if verbose:
+            s = ga.roots[name]
+            print(f"  [{name}] {s.files:,} 文件 / {s.size_mb:,} MB")
+
+    # ── 本地化 ─────────────────────────────────────────
+    ga.localization = _analyse_localization(config.GAME)
+    if verbose:
+        print(f"  [本地化] {len(ga.localization)} 种语言")
+
+    # ── GUI 文件清单 ───────────────────────────────────
+    gui_root = config.GAME / "gui"
+    if gui_root.is_dir():
+        ga.gui_files = sorted(
+            str(f.path.relative_to(config.GAME)).replace("\\", "/")
+            for f in walk_files(gui_root, suffix=".gui")
+        )
+
+    # ── 根级配置文件 ───────────────────────────────────
+    for f in walk_files(config.GAME):
+        if f.path.parent != config.GAME:
+            continue
+        ga.root_files[f.path.name] = _read_root_file(f.path)
+    man = ga.root_files.get("checksum_manifest.txt")
+    if man:
+        ga.checksummed = list(man.summary.get("目录", []))
+    ps = ga.root_files.get("paths.settings")
+    if ps:
+        ga.paths = dict(ps.summary.get("映射", {}))
+
+    # ── DLC ────────────────────────────────────────────
+    ga.dlcs = _analyse_dlc(config.GAME)
+    if verbose:
+        n_script = sum(1 for d in ga.dlcs if d.has_script_dir)
+        print(f"  [DLC] {len(ga.dlcs)} 个，其中自带脚本目录的 {n_script} 个")
+
+    # ── 官方 .md ───────────────────────────────────────
+    for root in CONTENT_ROOTS.values():
+        if not root.is_dir():
+            continue
+        for f in walk_files(root, suffix=".md"):
+            ga.official_docs[
+                str(f.path.relative_to(root)).replace("\\", "/")
+            ] = f.size
+
+    if verbose and loose_common:
+        print(f"  注：common 根下有 {loose_common} 个散装 .txt")
+    return ga
+
+
+def _subdirs(root: Path) -> list[DirStats]:
+    try:
+        names = sorted(p for p in root.iterdir() if p.is_dir())
+    except OSError:
+        return []
+    return [stats_for(p) for p in names]
+
+
+# ── mod 分析 ────────────────────────────────────────────────
+@dataclass
+class ModsAnalysis:
+    mods: list[ModInfo] = field(default_factory=list)
+    prefixes: Counter = field(default_factory=Counter)
+    path_conflicts: dict[str, list[str]] = field(default_factory=dict)
+    #: mod 目标 -> 各类型文件数
+    by_class: dict[str, Counter] = field(default_factory=dict)
+    #: mod 目标 -> 本地化语言 -> 文件数
+    localization: dict[str, Counter] = field(default_factory=dict)
+
+    @property
+    def total_files(self) -> int:
+        return sum(m.files for m in self.mods)
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "mod 数": len(self.mods),
+            "文件总计": self.total_files,
+            "前缀总计": sum(self.prefixes.values()),
+            "被多个 mod 覆盖的原版路径": sum(
+                1 for v in self.path_conflicts.values() if len(v) > 1
+            ),
+        }
+
+
+def mods_analysis(*, verbose: bool = False) -> ModsAnalysis:
+    """对全部 mod 做全量分析。"""
+    ma = ModsAnalysis()
+    ma.mods = analyse_all()
+    ma.prefixes = aggregate_prefixes(ma.mods)
+
+    for m in ma.mods:
+        target = m.target
+        cls: Counter = Counter()
+        loc: Counter = Counter()
+        for f in walk_files(m.root):
+            rel = f.path.relative_to(m.root)
+            if rel.parts and rel.parts[0] == ".metadata":
+                continue
+            cls[classify(f.suffix)] += 1
+            if f.suffix in (".yml", ".yaml") and "localization" in rel.parts:
+                idx = rel.parts.index("localization")
+                if idx + 1 < len(rel.parts):
+                    loc[rel.parts[idx + 1]] += 1
+        ma.by_class[target] = cls
+        ma.localization[target] = loc
+
+        for rel in m.overrides:
+            ma.path_conflicts.setdefault(rel, []).append(target)
+
+        if verbose:
+            print(f"  [{target}] {m.name or '(无名)':<38} "
+                  f"覆盖 {len(m.overrides):>4}  新增 {len(m.additions):>5}")
+    return ma
+
+
+# ── 交叉分析 ────────────────────────────────────────────────
+@dataclass
+class CrossAnalysis:
+    dir_touched_by: Counter = field(default_factory=Counter)
+    changed_entries: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    mod_prefixes: dict[str, Counter] = field(default_factory=dict)
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "被 mod 触及的目录数": len(self.dir_touched_by),
+            "被改动的原版条目数": sum(
+                len(v) for v in self.changed_entries.values()
+            ),
+        }
+
+
+def cross_analysis(
+    ga: GameAnalysis, ma: ModsAnalysis, *, verbose: bool = False
+) -> CrossAnalysis:
+    """交叉分析：哪些原版条目被哪些 mod 改动过。"""
+    ca = CrossAnalysis()
+    for m in ma.mods:
+        target = m.target
+        ca.mod_prefixes[target] = Counter(m.prefixes)
+        for rel in m.overrides:
+            top = rel.split("/")[0]
+            ca.dir_touched_by[top] += 1
+
+            src = m.root / rel
+            dst = config.GAME / rel
+            if src.suffix != ".txt" or not dst.is_file():
+                continue
+            try:
+                mf = parse_cached(src)
+                vf = parse_cached(dst)
+            except Exception:
+                continue
+            vanilla_keys = set(vf.top_keys)
+            bucket = ca.changed_entries.setdefault(top, {})
+            for a in mf.top_assignments:
+                if a.key in vanilla_keys or a.prefix:
+                    bucket.setdefault(a.key, []).append(target)
+            if verbose:
+                print(f"  [{target}] {rel}")
+    return ca
+
+
+# ── 序列化 ──────────────────────────────────────────────────
+def _dir_to_dict(d: DirStats) -> dict[str, Any]:
+    return {
+        "目录": d.name, "文件": d.files, "子目录": d.dirs, "MB": d.size_mb,
+        "文本文件": d.text_files, "二进制文件": d.binary_files,
+        "扩展名分布": dict(d.by_suffix.most_common()),
+    }
+
+
+def _extract_to_dict(e: DirExtract) -> dict[str, Any]:
+    return {
+        "文件": e.files,
+        "顶层条目数": e.unique_entries,
+        "条目": sorted(e.entries),
+        "字段数": len(e.fields),
+        "字段": {k: sorted(v) for k, v in sorted(e.fields.items())},
+        "字段使用次数": dict(e.field_usage.most_common()),
+        "功能前缀": dict(e.prefixed),
+        "带BOM文件": e.bom_files,
+        "最大深度": e.max_depth,
+        "解析错误": [{"文件": str(p), "消息": m} for p, m in e.errors],
+    }
+
+
+def to_game_dict(ga: GameAnalysis) -> dict[str, Any]:
+    """游戏本体的完整数据。**不含任何 mod 内容。**"""
+    return {
+        "概览": ga.summary(),
+        "内容根": {k: _dir_to_dict(v) for k, v in ga.roots.items()},
+        "一级目录": {
+            k: [_dir_to_dict(d) for d in v] for k, v in ga.top_dirs.items()
+        },
+        "common": {k: _extract_to_dict(v) for k, v in ga.common.items()},
+        "其他脚本目录": {k: _extract_to_dict(v) for k, v in ga.scripts.items()},
+        "本地化": ga.localization,
+        "GUI文件": ga.gui_files,
+        "根级配置": {
+            k: {"字节": v.size, "类型": v.kind, "摘要": v.summary}
+            for k, v in ga.root_files.items()
+        },
+        "校验和目录": ga.checksummed,
+        "路径映射": ga.paths,
+        "DLC": [
+            {
+                "名称": d.name,
+                "文件": d.files,
+                "MB": round(d.size / 1048576, 2),
+                "顶层条目": d.top_entries,
+                "类型分布": dict(d.by_class),
+                "描述符": d.descriptor,
+                "自带脚本目录": d.has_script_dir,
+            }
+            for d in ga.dlcs
+        ],
+        "官方文档": ga.official_docs,
+        "原版功能前缀": dict(ga.vanilla_prefixes),
+        "解析错误": [{"文件": p, "消息": m} for p, m in ga.parse_errors],
+    }
+
+
+def to_mods_dict(ma: ModsAnalysis) -> dict[str, Any]:
+    """全部 mod 的完整数据。**不含游戏本体内容。**"""
+    return {
+        "概览": ma.summary(),
+        "各mod": [
+            {
+                **m.summary(),
+                "顶层条目": m.top_entries,
+                "覆盖的文件": m.overrides,
+                "新增的文件": m.additions,
+                "功能前缀": dict(m.prefixes),
+                "前缀样例": [
+                    {"前缀": p, "键": k, "文件": f}
+                    for p, k, f in m.prefix_samples[:200]
+                ],
+                "改动的原版目录": dict(m.touched_vanilla),
+                "新增条目所在目录": dict(m.added_entries),
+                "文件类型分布": dict(ma.by_class.get(m.target, {})),
+                "本地化语言": dict(ma.localization.get(m.target, {})),
+            }
+            for m in ma.mods
+        ],
+        "全部功能前缀": dict(ma.prefixes),
+        "路径冲突": {
+            k: sorted(set(v)) for k, v in ma.path_conflicts.items() if len(v) > 1
+        },
+    }
+
+
+def to_cross_dict(ca: CrossAnalysis) -> dict[str, Any]:
+    """交叉数据。引用两侧，但自身独立成文件。"""
+    return {
+        "概览": ca.summary(),
+        "目录被触及次数": dict(ca.dir_touched_by.most_common()),
+        "被改动的原版条目": {
+            k: {ek: sorted(set(ev)) for ek, ev in v.items()}
+            for k, v in ca.changed_entries.items()
+        },
+    }
+
+
+# ── 报告 ────────────────────────────────────────────────────
+#: 输出**分开存放**：游戏本体与 mod 各自独立成文件，互不混杂。
+#: 目录常量集中在 :mod:`pdx.config`，便于统一调整。
+GAME_OUT = config.OUT_GAME
+MODS_OUT = config.OUT_MODS
+CROSS_OUT = config.OUT_CROSS
+
+
+def write_reports(
+    ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis
+) -> dict[str, Path]:
+    """落盘。游戏本体、mod、交叉三者**分别存放**。"""
+    for d in (GAME_OUT, MODS_OUT, CROSS_OUT, config.REPORTS):
+        d.mkdir(parents=True, exist_ok=True)
+
+    def dump(obj: Any, path: Path) -> None:
+        path.write_text(
+            json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    out: dict[str, Path] = {}
+
+    g = GAME_OUT / "游戏本体.json"
+    dump(to_game_dict(ga), g)
+    out["游戏本体 JSON"] = g
+
+    m = MODS_OUT / "mod.json"
+    dump(to_mods_dict(ma), m)
+    out["mod JSON"] = m
+
+    if ca.dir_touched_by or ca.changed_entries:
+        c = CROSS_OUT / "交叉.json"
+        dump(to_cross_dict(ca), c)
+        out["交叉 JSON"] = c
+
+    p = config.REPORTS / "游戏本体分析.md"
+    p.write_text(render_game_markdown(ga), encoding="utf-8")
+    out["游戏本体报告"] = p
+
+    p = config.REPORTS / "mod分析.md"
+    p.write_text(render_mods_markdown(ma, ca), encoding="utf-8")
+    out["mod 报告"] = p
+
+    return out
+
+
+def render_game_markdown(ga: GameAnalysis) -> str:
+    """游戏本体报告。"""
+    L: list[str] = []
+    add = L.append
+    add("# Victoria 3 游戏本体全量分析")
+    add("")
+    add("> 由 `tools/pdx/analyze.py` 自动生成，请勿手工编辑。")
+    add("> 本文件只含**游戏本体**内容，mod 相关内容见 `mod分析.md`。")
+    add("")
+
+    v = ga.version
+    add("## 一、概览")
+    add("")
+    add("| 项目 | 值 |")
+    add("|---|---|")
+    add(f"| 版本 | **{v.get('caligula_branch', '?')}** |")
+    add(f"| Clausewitz | `{v.get('clausewitz_branch', '?')}` |")
+    add(f"| 文件总计 | **{ga.total_files:,}** |")
+    add(f"| 体积 | **{ga.total_size / 1048576:,.1f} MB** |")
+    add(f"| `common` 目录数 | **{len(ga.common)}** |")
+    add(f"| `common` 条目总数 | **{sum(e.unique_entries for e in ga.common.values()):,}** |")
+    add(f"| 本地化语言 | **{len(ga.localization)}** |")
+    add(f"| GUI 文件 | **{len(ga.gui_files)}** |")
+    add(f"| DLC | **{len(ga.dlcs)}** |")
+    add(f"| 官方 `.md` | **{len(ga.official_docs)}** |")
+    add(f"| 原版功能前缀使用 | **{sum(ga.vanilla_prefixes.values())}**（应为 0，该机制专供 mod） |")
+    add(f"| 解析错误 | **{len(ga.parse_errors)}** |")
+    add("")
+
+    add("## 二、内容根")
+    add("")
+    add("| 根 | 文件 | 目录 | MB | 文本 | 二进制 |")
+    add("|---|---:|---:|---:|---:|---:|")
+    for k, s in sorted(ga.roots.items()):
+        add(f"| `{k}` | {s.files:,} | {s.dirs:,} | {s.size_mb:,.1f} | {s.text_files:,} | {s.binary_files:,} |")
+    add("")
+
+    add("## 三、联机校验和范围")
+    add("")
+    add("来自 `game/checksum_manifest.txt` —— 只有这些目录参与校验：")
+    add("")
+    for d in ga.checksummed:
+        add(f"- `{d}`")
+    add("")
+    add("> 改动这些目录会影响联机兼容性；改 `gfx/`、`sound/`、`music/`、`fonts/` 则不会。")
+    add("")
+
+    add("## 四、common 各目录（按条目数排序）")
+    add("")
+    add("| 目录 | 文件 | 条目 | 字段 | 带BOM | 错误 |")
+    add("|---|---:|---:|---:|---:|---:|")
+    for name, e in sorted(ga.common.items(), key=lambda kv: -kv[1].unique_entries):
+        add(f"| `{name}` | {e.files} | {e.unique_entries:,} | {len(e.fields)} | {e.bom_files} | {len(e.errors)} |")
+    add("")
+
+    if ga.scripts:
+        add("## 五、其他脚本目录")
+        add("")
+        add("| 目录 | 文件 | 条目 |")
+        add("|---|---:|---:|")
+        for name, e in sorted(ga.scripts.items()):
+            add(f"| `{name}` | {e.files} | {e.unique_entries:,} |")
+        add("")
+
+    add("## 六、本地化")
+    add("")
+    add("| 语言 | 文件 | 键 |")
+    add("|---|---:|---:|")
+    for lang, st in sorted(ga.localization.items(), key=lambda kv: -kv[1]["键"]):
+        add(f"| `{lang}` | {st['文件']:,} | {st['键']:,} |")
+    add("")
+
+    add("## 七、DLC")
+    add("")
+    add("| DLC | 文件 | MB | 自带脚本目录 |")
+    add("|---|---:|---:|:--:|")
+    for d in ga.dlcs:
+        add(f"| `{d.name}` | {d.files:,} | {d.size / 1048576:.2f} | {'是' if d.has_script_dir else '否'} |")
+    add("")
+    add("> 实测全部 DLC 均不自带 `common/` 等脚本目录，只含 `gfx`/`sound`/`music` 资产。")
+    add("")
+
+    return "\n".join(L)
+
+
+def render_mods_markdown(ma: ModsAnalysis, ca: CrossAnalysis) -> str:
+    """mod 报告。"""
+    L: list[str] = []
+    add = L.append
+    add("# Victoria 3 Mod 全量分析")
+    add("")
+    add("> 由 `tools/pdx/analyze.py` 自动生成，请勿手工编辑。")
+    add("> 本文件只含 **mod** 内容，游戏本体相关内容见 `游戏本体分析.md`。")
+    add("")
+
+    add("## 一、概览")
+    add("")
+    add(f"- mod 数：**{len(ma.mods)}**")
+    add(f"- 文件总计：**{ma.total_files:,}**")
+    add(f"- 功能前缀总计：**{sum(ma.prefixes.values()):,}**")
+    add("")
+
+    add("## 二、功能前缀分布")
+    add("")
+    add("引擎内置的键级覆盖机制。原版一处不用，全部来自 mod。")
+    add("")
+    add("| 前缀 | 次数 |")
+    add("|---|---:|")
+    for k, n in ma.prefixes.most_common():
+        add(f"| `{k}:` | {n:,} |")
+    add("")
+
+    add("## 三、各 mod")
+    add("")
+    add("| 目标 | 名称 | 文件 | 覆盖原版 | 新增 | 前缀 | 支持版本 |")
+    add("|---|---|---:|---:|---:|---:|---|")
+    for m in ma.mods:
+        add(f"| `{m.target}` | {m.name or '—'} | {m.files:,} | {len(m.overrides):,} "
+            f"| {len(m.additions):,} | {sum(m.prefixes.values()):,} "
+            f"| {m.supported_game_version or '—'} |")
+    add("")
+
+    add("## 四、文件类型分布")
+    add("")
+    add("| 目标 | " + " | ".join(FILE_CLASSES) + " |")
+    add("|---" * (len(FILE_CLASSES) + 1) + "|")
+    for m in ma.mods:
+        cls = ma.by_class.get(m.target, Counter())
+        cells = " | ".join(str(cls.get(k, 0)) for k in FILE_CLASSES)
+        add(f"| `{m.target}` | {cells} |")
+    add("")
+
+    add("## 五、交叉：被 mod 触及的原版目录")
+    add("")
+    if ca.dir_touched_by:
+        add("| 目录 | 被多少个 mod 覆盖过 |")
+        add("|---|---:|")
+        for k, n in ca.dir_touched_by.most_common():
+            add(f"| `{k}` | {n} |")
+    else:
+        add("（无覆盖行为）")
+    add("")
+
+    add("## 六、路径冲突检测")
+    add("")
+    conflicts = {k: v for k, v in ma.path_conflicts.items() if len(v) > 1}
+    if conflicts:
+        add("| 原版路径 | 覆盖它的 mod |")
+        add("|---|---|")
+        for path, mods in sorted(conflicts.items()):
+            add(f"| `{path}` | {', '.join(sorted(set(mods)))} |")
+    else:
+        add("**无冲突** —— 没有任何原版路径被两个及以上 mod 覆盖。")
+    add("")
+
+    return "\n".join(L)
+
+

@@ -248,7 +248,7 @@ tests = {
 
 ## 6. `game\dlc\` —— DLC 结构
 
-**【实测】** 18 个 DLC 目录。样本 `dlc001_preorder`：
+**【实测】** **17 个** DLC 目录（编号 `dlc001`–`dlc018`，其中**缺 `dlc005`**）。样本 `dlc001_preorder`：
 
 ```text
 dlc001_preorder\

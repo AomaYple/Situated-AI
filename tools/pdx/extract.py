@@ -18,8 +18,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Iterator
 
+from .cache import parse_cached
 from .model import Assignment, Block, ParsedFile
-from .parser import parse_file
 from .scan import walk_files
 
 
@@ -101,7 +101,7 @@ def extract_dir(path: Path) -> DirExtract:
         return result
     for entry in walk_files(path, suffix=".txt"):
         try:
-            pf = parse_file(entry.path)
+            pf = parse_cached(entry.path)
         except Exception as exc:  # 单文件失败不应中断整轮
             result.errors.append((entry.path, f"未捕获异常: {exc}"))
             continue

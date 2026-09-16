@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .config import GAME, LOCAL_MODS, WORKSHOP
-from .parser import parse_file
+from .cache import parse_cached
 from .scan import walk_files
 
 METADATA_REL = Path(".metadata") / "metadata.json"
@@ -137,7 +137,7 @@ def _scan_prefixes(
 ) -> None:
     """统计一个 mod 文件里的顶层条目：区分「改原版」与「新增」。"""
     try:
-        pf = parse_file(path)
+        pf = parse_cached(path)
     except Exception:
         return
 
@@ -151,7 +151,7 @@ def _scan_prefixes(
         # 归类到「改了原版条目」还是「新增条目」
         if vanilla_file.is_file():
             try:
-                vpf = parse_file(vanilla_file)
+                vpf = parse_cached(vanilla_file)
                 vanilla_keys = set(vpf.top_keys)
             except Exception:
                 vanilla_keys = set()
@@ -200,7 +200,7 @@ def vanilla_prefix_count(vanilla: Path | None = None) -> Counter:
     total: Counter = Counter()
     for f in walk_files(vanilla, suffix=".txt"):
         try:
-            pf = parse_file(f.path)
+            pf = parse_cached(f.path)
         except Exception:
             continue
         for a in pf.top_assignments:

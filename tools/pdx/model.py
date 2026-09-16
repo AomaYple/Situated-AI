@@ -92,6 +92,25 @@ class Assignment:
         return isinstance(self.value, Block)
 
     @property
+    def is_variable(self) -> bool:
+        """是否为 ``@变量`` 定义，而非数据条目。
+
+        PDX 里 ``@name = 12`` 是脚本变量（用于公式），语义上**不是**
+        一条数据库条目。``00_defines.txt`` 顶部就有 22 个这样的定义，
+        把它们混进命名空间计数会让 75 变成 97。
+        """
+        return self.key.startswith("@")
+
+    @property
+    def is_namespace(self) -> bool:
+        """是否为命名空间块：大写字母开头、非变量、且是块。"""
+        return (
+            not self.is_variable
+            and self.is_block
+            and self.key[:1].isupper()
+        )
+
+    @property
     def full_key(self) -> str:
         """带前缀的完整键名，例如 ``REPLACE:foo``。"""
         return f"{self.prefix}:{self.key}" if self.prefix else self.key
@@ -113,12 +132,24 @@ class ParsedFile:
     # ── 便捷视图 ───────────────────────────────────────────
     @property
     def top_keys(self) -> list[str]:
-        """顶层键名（不含前缀）。"""
+        """顶层键名（不含前缀）。**包含** ``@变量``，如实反映文件内容。"""
         return [a.key for a in self.root.assignments()]
 
     @property
     def top_assignments(self) -> list[Assignment]:
         return list(self.root.assignments())
+
+    def data_keys(self) -> list[str]:
+        """顶层键名，**排除** ``@变量``。统计数据条目时应用这个。"""
+        return [a.key for a in self.root.assignments() if not a.is_variable]
+
+    def namespace_blocks(self) -> list[Assignment]:
+        """命名空间块：大写开头、非变量、是块。用于 defines 统计。"""
+        return [a for a in self.root.assignments() if a.is_namespace]
+
+    def variables(self) -> list[Assignment]:
+        """``@变量`` 定义。"""
+        return [a for a in self.root.assignments() if a.is_variable]
 
     def prefixed(self) -> list[Assignment]:
         """带功能前缀的顶层赋值。"""
