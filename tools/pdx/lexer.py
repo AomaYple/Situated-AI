@@ -56,28 +56,37 @@ _OPERATORS = ("?=", "==", "!=", ">=", "<=", "=", ">", "<")
 #: 而原实现只认这几个字符，用 ``\s`` 会悄悄改变切分结果。
 _WS = " \t\r\n\f\v"
 
-#: 主扫描正则。各分支的**顺序即优先级**，与旧实现的判断顺序一一对应。
+#: 主扫描正则。各分支的**顺序即优先级**。
 #:
-#: * ``ws``      空白与 BOM。BOM 放这里是因为旧实现在主循环里显式跳过它
+#: * ``ws``      空白与 BOM
 #: * ``comment`` ``#`` 到行尾（**不含**换行符）
 #: * ``string``  字符串主体 + 收尾。收尾单独放进 ``quote`` 组，见下
-#: * ``atom``    键名 / 数字 / 其他原子。字符集刻意与旧实现一致：
-#:               不排除 BOM（旧实现的原子循环也不排除它）
-#: * ``other``   兜底单字符。旧实现对孤立的 ``?`` ``!`` 就是这样处理的
+#: * ``atom``    键名 / 数字 / 其他原子
+#: * ``other``   兜底单字符（孤立的 ``?`` ``!``）
 #:
-#: **``quote`` 组为什么必须存在**：字符串的三种收尾（吃到闭引号、
-#: 撞上换行、到文件尾）需要区别对待，因为只有「撞上换行」那种情形
-#: 会推进行号。而闭引号是被**消费**掉的，所以事后看 ``text[end-1]``
-#: 无法区分「闭引号」与「转义引号 ``\"``」——
+#: **字符串可以跨行。** 这是 2026-09 覆盖面审计时修正的一处**真实语义错误**：
+#: 最初实现遇到字符串里的换行就当作「未闭合」终止，注释里还写着
+#: 「原版不该出现，容错为到此为止」—— 那个判断是错的。
+#:
+#: 证据：``gfx/map/map_object_data/lakes.txt`` 里
+#: ``transform="4311.17 … 11.37``（第 10 行开引号）一直延续到第 25 行才闭合。
+#: 按「可跨行」重算，该文件花括号完美配平（最终深度 0）；按旧规则则会
+#: 让闭引号开启一段新的"字符串"、把中间的 ``}`` 全吞掉，导致 20 个
+#: gfx/.asset 文件报「块没有闭合」。
+#:
+#: 之所以长期没暴露，是因为旧的分析范围恰好不含 gfx 与 .asset ——
+#: 扩大范围才把这个潜在缺陷翻出来。
+#:
+#: **``quote`` 组为什么必须存在**：闭引号是被**消费**掉的，事后看
+#: ``text[end-1]`` 无法区分「闭引号」与「转义引号 ``\"``」——
 #: ``"abc"\n`` 与 ``"a\"\n`` 的末字符都是 ``"``，前者已闭合、后者没有。
-#: 差分测试正是靠 ``"TextureImporter"\n`` 这个真实样本抓出了这个错误。
 _TOKEN_RE = re.compile(
     rf"""
       (?P<ws>[{_WS}\ufeff]+)
     | (?P<comment>\#[^\n]*)
     | (?P<lbrace>\{{)
     | (?P<rbrace>\}})
-    | (?P<string>"(?:\\[\s\S]|[^"\\\n])*(?P<quote>"|(?=\n)|\\?$))
+    | (?P<string>"(?:\\[\s\S]|\\$|[^"\\])*(?P<quote>"|$))
     | (?P<op>\?=|==|!=|>=|<=|=|>|<)
     | (?P<atom>[^{_WS}{{}}#"=!<>?]+)
     | (?P<other>[\s\S])
@@ -154,7 +163,6 @@ def tokenize(text: str) -> list[Token]:
     """
     tokens: list[Token] = []
     append = tokens.append
-    n = len(text)
     line = 1
     line_start = 0
     start = 0  # 上一个匹配的结尾，也就是这一个的起点
@@ -179,21 +187,15 @@ def tokenize(text: str) -> list[Token]:
         col = start - line_start + 1
 
         if index == _G_STRING:
-            # 只有「未闭合且撞上换行」才推进行号。
+            # 字符串可以跨行（见 _TOKEN_RE 的说明），因此它自己也可能推进
+            # 行号 —— 空白分支不再是唯一会改 line 的地方。
             #
-            # 旧实现是在把 token 写出去**之前**推进的，所以 token 自己带的是
-            # 自增后的行号；紧接着主循环又对这个换行自增一次。两处都要复刻，
-            # 否则差分测试会在行号上失败。
-            #
-            # 判据必须看 ``quote`` 组：闭引号是被消费掉的，事后看
-            # ``text[end-1]`` 无法区分闭引号与转义引号 ——
-            # ``"abc"\n`` 与 ``"a\"\n`` 的末字符都是 ``"``。
-            if match.group(_G_QUOTE) != '"' and end < n and text[end] == "\n":
-                line += 1
-                append(Token(STRING, text[start:end], line, col))
-                line_start = end + 1
-            else:
-                append(Token(STRING, text[start:end], line, col))
+            # token 的 line 记的是**起始**行，所以在更新之前取。
+            token_line = line
+            if text.find("\n", start, end) >= 0:
+                line += text.count("\n", start, end)
+                line_start = text.rfind("\n", start, end) + 1
+            append(Token(STRING, text[start:end], token_line, col))
         elif index == _G_LBRACE:
             append(Token(LBRACE, "{", line, col))
         elif index == _G_RBRACE:

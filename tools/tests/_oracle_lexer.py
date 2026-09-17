@@ -87,7 +87,22 @@ def oracle_tokenize(text: str) -> list[OracleToken]:
             continue
 
         if ch == '"':
+            # ── 2026-09 修订：字符串**可以跨行** ──────────────────
+            #
+            # 这里原本是「遇到换行就当作未闭合、截断到行尾」。那个行为已被
+            # 证据推翻：``gfx/map/map_object_data/lakes.txt`` 第 10 行
+            # ``transform="4311.17 … 11.37`` 一直延续到第 25 行才闭合，
+            # 且按「可跨行」重算该文件花括号完美配平；按旧规则则会让闭引号
+            # 开启一段新的"字符串"，把中间的 ``}`` 全吞掉。
+            #
+            # 之所以长期没人发现，是因为旧的分析范围恰好不含 gfx 与 .asset，
+            # 扩大范围才把这个潜在缺陷翻出来。
+            #
+            # 本文件是「参照实现」，参照的是**正确语义**而不是历史 bug ——
+            # 因此同步修订，并把 token 的行号统一定为字符串**起始**行
+            # （旧行为把自增后的行号写进 token，那是截断语义的副产物）。
             start = i
+            start_line = line
             i += 1
             while i < n:
                 c = text[i]
@@ -97,12 +112,17 @@ def oracle_tokenize(text: str) -> list[OracleToken]:
                 if c == '"':
                     i += 1
                     break
-                if c == "\n":
-                    line += 1
-                    line_start = i + 1
-                    break
                 i += 1
-            tokens.append(OracleToken(STRING, text[start:i], line, col))
+            span = text[start:i]
+            # 行号按**整个跨度**里的换行数推进，而不是在循环里逐个累加。
+            # 两者在「转义换行」（``"x\<换行>y"``）上会分道扬镳：循环里
+            # ``i += 2`` 把那个换行一并跳过、不计数，而它确实是一个换行。
+            # 统一按跨度统计，语义才自洽。
+            newlines = span.count("\n")
+            if newlines:
+                line += newlines
+                line_start = start + span.rfind("\n") + 1
+            tokens.append(OracleToken(STRING, span, start_line, col))
             continue
 
         if ch in _OP_START:

@@ -40,6 +40,7 @@ from typing import TYPE_CHECKING, Any
 from . import config
 from .cache import parse_cached
 from .extract import DirExtract, extract_file
+from .localization import LocalizationReport, extract_localization
 from .mods import ModInfo, aggregate_prefixes, analyse_all
 from .scan import DirStats, FileEntry, stats_for, walk_files
 
@@ -116,8 +117,15 @@ class GameAnalysis:
     common: dict[str, DirExtract] = field(default_factory=dict)
     #: 其他脚本目录：``"events" -> DirExtract``
     scripts: dict[str, DirExtract] = field(default_factory=dict)
-    #: 本地化：``语言 -> {文件数, 键数}``
+    #: 本地化：``语言 -> {文件, 键出现次数, 去重键}``
     localization: dict[str, dict[str, int]] = field(default_factory=dict)
+    #: 本地化的**完整键名清单**（14 万+ 键）。
+    #:
+    #: 与上面那个 ``localization`` 的区别：那个只有计数，这个有键名本身。
+    #: 键名是 mod 作者最需要的信息之一（"这个键存不存在"、"汉化要覆盖哪些键"），
+    #: 此前只数了个数、一个键都没记 —— 覆盖面审计里最大的一处遗漏。
+    #: 因为体量大，它单独落一个产物文件，不塞进主 JSON。
+    localization_detail: LocalizationReport | None = None
     #: GUI 文件清单
     gui_files: list[str] = field(default_factory=list)
     #: 根级配置文件
@@ -397,7 +405,12 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
             s = ga.roots[name]
             print(f"  [{name}] {s.files:,} 文件 / {s.size_mb:,} MB")
     # ── 本地化 ─────────────────────────────────────────
+    # 两件事分开做：``_analyse_localization`` 给出各语言的计数（快，
+    # 只看行数），``extract_localization`` 给出**完整键名清单**（慢一些，
+    # 实测 3.8 秒 / 14.5 万键）。后者此前完全没有，是覆盖面审计发现的
+    # 最大一处遗漏 —— 本地化对 mod 来说是最常用的东西。
     ga.localization = _analyse_localization(config.GAME)
+    ga.localization_detail = extract_localization(config.GAME)
     if verbose:
         print(f"  [本地化] {len(ga.localization)} 种语言")
 
@@ -693,6 +706,14 @@ def write_reports(
         c = CROSS_OUT / "交叉.json"
         dump(to_cross_dict(ca), c)
         out["交叉 JSON"] = c
+
+    # 本地化的完整键名清单单独一个文件：14 万+ 键、数 MB，
+    # 塞进主 JSON 会让那份 8 MB 的文件翻倍，而查询键名的人
+    # 本来就不需要同时看 common 目录的字段表。
+    if ga.localization_detail is not None:
+        loc = GAME_OUT / "本地化.json"
+        dump(ga.localization_detail.to_dict(), loc)
+        out["本地化 JSON"] = loc
 
     p = config.REPORTS / "游戏本体分析.md"
     p.write_text(render_game_markdown(ga), encoding="utf-8")

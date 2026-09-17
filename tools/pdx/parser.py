@@ -1,4 +1,4 @@
-﻿"""PDX 脚本语法分析器：递归下降，产出 AST。
+"""PDX 脚本语法分析器：递归下降，产出 AST。
 
 顶层判定完全依赖**花括号深度**，不依赖缩进 —— 这是正确的做法，也是本次
 会话中修正 6121→6128 那类错误的关键。
@@ -229,6 +229,17 @@ def parse_text(text: str, path: str = "<text>") -> ParsedFile:
     tokens = tokenize(text)
     parser = _Parser(tokens)
     root = parser.parse_root()
+
+    # 字符串可以跨行，因此「没有闭引号」不再等同于「到行尾结束」——
+    # 它表示整个文件在字符串中间就断了。这种情况必须显式报出来：
+    # 旧实现会静默把它截断到行尾，产出一份看起来正常、实际错位的数据。
+    #
+    # 判据只对**末尾**那个 token 成立：未闭合的引号字符串必然一直吃到文件尾。
+    # 长度检查是必须的 —— 空文件只有 EOF 一个 token（这里踩过 IndexError）。
+    if len(tokens) >= 2:
+        last = tokens[-2]
+        if last.kind == STRING and not last.value.endswith('"'):
+            parser._err("文件结束时仍有一个引号字符串没有闭合")
     return ParsedFile(
         path=path,
         root=root,
