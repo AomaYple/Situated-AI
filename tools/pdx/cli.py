@@ -45,7 +45,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
-from pdx import analyze, config, defines, snapshot, verify
+from pdx import analyze, config, defines, engine_log, snapshot, verify
 from pdx.console import enable_utf8_stdio
 from pdx.extract import extract_dir
 from pdx.parser import TOLERATED_ERRORS
@@ -816,6 +816,83 @@ def verify_cmd(
 
     if failed:
         raise typer.Exit(EXIT_FAILED)
+
+
+# ── crosscheck（引擎交叉验证）───────────────────────────────
+@app.command("crosscheck")
+def crosscheck_cmd(
+    json_out: Annotated[
+        Path | None, typer.Option("--json", help="把核对结果写入该 JSON 文件")
+    ] = None,
+) -> None:
+    """用游戏自己的日志交叉验证我们的解析。
+
+    这是本工具链里**唯一一次由外部背书的核对**。其余所有测试的比对对象
+    都是我们自己写的实现（差分测试的预言机、黄金基线），两份实现可以
+    一起错。引擎日志给的是第三方口径：
+
+    * 它从哪些目录按什么扩展名枚举文件 —— 对「全量」的直接检验
+    * 它报错时所在的文件与行号 —— 对行号与结构检验
+    * 它在某行看到的文本键 —— 对 token 识别与行号检验
+
+    前提：本机**运行过游戏**，从而 ``Documents/Paradox Interactive/Victoria 3/logs``
+    下有日志。没有日志时本命令报前置条件缺失（退出码 2），不假装通过。
+
+    注意日志里的游戏版本可能与当前安装不一致 —— 命令会把它打出来，
+    版本不符时结论要打折。
+    """
+    claims, version = engine_log.parse_logs()
+    if not claims:
+        _fail(
+            f"找不到引擎日志：{engine_log.default_log_dir()}（需要先运行过一次游戏）"
+        )
+
+    report = engine_log.cross_check(claims, log_version=version)
+    s = report.summary()
+
+    table = Table(title=f"引擎交叉验证（日志版本 {version or '未记录'}）", show_lines=False)
+    table.add_column("指标")
+    table.add_column("值", justify="right", style="cyan")
+    for k, v in s.items():
+        table.add_row(str(k), str(v))
+    console.print(table)
+
+    gaps = report.coverage_gaps
+    if gaps:
+        console.print("\n[red]覆盖面缺口：[/]")
+        for d, e, n, hit, t in gaps:
+            console.print(f"  ❌ {d}  {e}   引擎枚举 {n}，我们解析 {hit}（共 {t}）")
+
+    bad_tokens = report.token_mismatches
+    if bad_tokens:
+        console.print("\n[red]token 行号不一致：[/]")
+        for rel, line, tok, got in bad_tokens[:20]:
+            console.print(f"  ❌ {rel}:{line}  {tok!r}  我们给出 {got}")
+
+    if json_out is not None:
+        _write_json(
+            json_out,
+            {
+                "日志版本": version,
+                "概览": s,
+                "覆盖面": [
+                    {"目录": d, "扩展名": e, "引擎枚举": n, "我们解析": hit, "文件数": t}
+                    for (d, e), (n, hit, t) in sorted(report.coverage.items())
+                ],
+                "token核对": [
+                    {"文件": rel, "行": line, "token": tok, "我们的行": got}
+                    for rel, line, tok, got in report.tokens
+                ],
+                "位置核对": [
+                    {"文件": rel, "行": line, "判定": why}
+                    for rel, line, why in report.locations
+                ],
+            },
+        )
+
+    if gaps or bad_tokens:
+        raise typer.Exit(EXIT_FAILED)
+    console.print("\n[green]与引擎日志完全一致 ✅[/]")
 
 
 # ── check-outputs ───────────────────────────────────────────

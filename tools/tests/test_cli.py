@@ -49,13 +49,13 @@ def _invoke(*args: str):
 def test_help_exit0() -> None:
     r = _invoke("--help")
     assert r.exit_code == 0, r.output
-    for cmd in ("analyze", "defines", "index", "snapshot", "verify", "check-outputs", "show"):
+    for cmd in ("analyze", "defines", "index", "snapshot", "verify", "crosscheck", "check-outputs", "show"):
         assert cmd in r.output, f"--help 里没有列出 {cmd}"
 
 
 @pytest.mark.parametrize(
     "cmd",
-    ["analyze", "defines", "index", "snapshot", "verify", "check-outputs", "show"],
+    ["analyze", "defines", "index", "snapshot", "verify", "crosscheck", "check-outputs", "show"],
 )
 def test_每个子命令的help都可用(cmd: str) -> None:
     r = _invoke(cmd, "--help")
@@ -110,6 +110,27 @@ def test_verify_json_落盘(tmp_path) -> None:
     summary = data["summary"]
     assert summary["总数"] > 0
     assert summary["失败"] == 0
+
+
+# ── crosscheck（引擎交叉验证）────────────────────────────────
+@_needs_game
+def test_crosscheck_与引擎日志一致() -> None:
+    """唯一由外部背书的核对：清单来自引擎日志，不是我们自己的目录表。"""
+    from pdx import engine_log
+
+    if not engine_log.parse_logs()[0]:
+        pytest.skip("本机没有引擎日志（需要运行过一次游戏）")
+    r = _invoke("crosscheck")
+    assert r.exit_code == 0, r.output
+    assert "覆盖面缺口" in r.output
+
+
+def test_crosscheck_无日志时返回2(tmp_path, monkeypatch) -> None:
+    """日志不是仓库的一部分，缺失是正常情况 —— 必须报前置条件缺失而非假装通过。"""
+    monkeypatch.setattr(cli.engine_log, "default_log_dir", lambda: tmp_path / "nope")
+    r = _invoke("crosscheck")
+    assert r.exit_code == 2, r.output
+    assert "找不到引擎日志" in r.output
 
 
 # ── check-outputs ───────────────────────────────────────────
