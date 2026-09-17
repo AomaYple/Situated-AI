@@ -381,10 +381,17 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
                 per_common[name] = res
             extract_file(pf, res)
         elif top in config.SCRIPTABLE_DIRS:
-            res = per_script.get(top)
+            # DLC 下按 ``dlc/<名称>`` 分桶 —— 全糊进一个 "dlc" 会丢掉
+            # 「是哪个 DLC 定义的」这个关键信息。
+            key = (
+                f"dlc/{rel.parts[1]}"
+                if top == "dlc" and len(rel.parts) > 1
+                else top
+            )
+            res = per_script.get(key)
             if res is None:
-                res = DirExtract(name=top, path=config.GAME / top)
-                per_script[top] = res
+                res = DirExtract(name=key, path=config.GAME / key)
+                per_script[key] = res
             extract_file(pf, res)
         if verbose and i % 1000 == 0:
             print(f"    已解析 {i:,}/{len(targets):,} …")
@@ -422,10 +429,17 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
             for f in walk_files(gui_root, suffix=".gui")
         )
     # ── 根级配置文件 ───────────────────────────────────
-    for f in walk_files(config.GAME):
-        if f.path.parent != config.GAME:
+    # **三个内容根都要看**，不能只读 game 的 —— jomini 与 clausewitz 的根下
+    # 也有 PDX 文件（``settings_layout.txt`` / ``compound_settings.txt``），
+    # 此前完全没被读到。键名带上内容根前缀以免同名互相覆盖。
+    for label, root in CONTENT_ROOTS.items():
+        if not root.is_dir():
             continue
-        ga.root_files[f.path.name] = _read_root_file(f.path)
+        for f in walk_files(root):
+            if f.path.parent != root:
+                continue
+            key = f.path.name if label == "game" else f"{label}/{f.path.name}"
+            ga.root_files[key] = _read_root_file(f.path)
     man = ga.root_files.get("checksum_manifest.txt")
     if man:
         ga.checksummed = list(man.summary.get("目录", []))

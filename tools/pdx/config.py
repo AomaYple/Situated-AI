@@ -112,6 +112,10 @@ SCRIPTABLE_DIRS: tuple[str, ...] = (
     "sound",         # 环境音、音频参数组与上限
     "content_source",# 地图物件生成器（.txt 与 gfx 下的生成结果配套）
     "fonts",         # 字体注册表 fonts.font
+    # DLC 目录本身是个**小内容根**：``dlc/<名称>/{gfx,music,sound}/``。
+    # 实测 17 个 DLC 下有 83 个 .txt 与 514 个 .asset，全是 PDX 脚本，
+    # 此前因为顶层目录名是 dlc 而被整体跳过。
+    "dlc",
 )
 
 #: ① 需要**深度解析**的文件扩展名
