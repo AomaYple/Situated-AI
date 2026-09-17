@@ -61,14 +61,6 @@ def _is_lang_line(key: str) -> bool:
 SUFFIXES = (".yml", ".yaml")
 
 
-@dataclass(slots=True)
-class LocFile:
-    """一个本地化文件的提取结果。"""
-
-    rel: str
-    lang: str
-    keys: list[str]
-    size: int
 
 
 @dataclass(slots=True)

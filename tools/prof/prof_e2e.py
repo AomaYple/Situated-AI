@@ -199,7 +199,19 @@ def stages(
     top: int = typer.Option(25, help="每个表显示的函数行数"),
     only: str = typer.Option("", help="只剖析名字含该子串的阶段"),
 ) -> None:
-    """逐阶段冷缓存剖析，定位到具体函数。"""
+    """逐阶段冷缓存剖析，定位到具体函数。
+
+    ⚠️ **读结果时必须知道的局限**：每个阶段都在冷缓存下单独跑，因此
+    ``write_reports`` 会把「重新解析全部文件」也计入 —— 真实流水线里
+    它跑在 ``game_analysis`` 之后，缓存是热的。实测差距很大::
+
+        阶段隔离下 write_reports   42.6 秒
+        真实流水线里 write_reports  5.4 秒
+
+    也就是说：这个命令适合定位**解析类**阶段的内部热点，
+    不适合判断某个阶段在整条流水线里的实际占比。
+    要看真实占比用 ``full``。
+    """
     results: list[StageProfile] = []
     for name, fn in _pipeline():
         if only and only not in name:

@@ -136,23 +136,8 @@ def extract_tree(root: Path) -> dict[str, DirExtract]:
     return out
 
 
-def all_top_keys(root: Path) -> dict[str, list[str]]:
-    """``目录名 -> 排序后的顶层条目名列表``。机器可读版的全量索引。"""
-    out: dict[str, list[str]] = {}
-    for name, res in extract_tree(root).items():
-        out[name] = sorted(res.entries)
-    return out
 
 
-def all_field_names(root: Path) -> dict[str, list[str]]:
-    """``目录名 -> 该目录下出现过的全部字段名``。"""
-    out: dict[str, list[str]] = {}
-    for name, res in extract_tree(root).items():
-        merged: set[str] = set()
-        for fset in res.fields.values():
-            merged |= fset
-        out[name] = sorted(merged)
-    return out
 
 
 def global_usage(extracts: Iterable[DirExtract]) -> Counter:

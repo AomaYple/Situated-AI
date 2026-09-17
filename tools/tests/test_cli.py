@@ -208,6 +208,80 @@ def test_snapshot_diff_缺快照时返回2() -> None:
     assert r.exit_code == 2, "快照不存在属于前置条件缺失，应为 2"
 
 
+# ── snapshot（cli.py 里最大的未覆盖区）──────────────────────
+@_needs_game
+@pytest.mark.slow
+def test_snapshot_创建_自检_差分_全链路() -> None:
+    """一条链路覆盖三个子命令：create -> verify -> diff。
+
+    snapshot create 要跑一遍完整分析（约 30 秒），所以三个子命令合在一个
+    用例里跑，避免重复付费。用带前缀的临时快照名，跑完删掉。
+    """
+    from pdx import snapshot
+
+    label = "cli-test-tmp"
+    paths = snapshot.list_snapshots()
+    for p in paths:
+        if p.stem.startswith(label):
+            p.unlink(missing_ok=True)
+    try:
+        r = _invoke("snapshot", "create", "--label", label)
+        assert r.exit_code == 0, r.output
+
+        # 自检：同环境重复构建必须逐字节相同
+        r = _invoke("snapshot", "verify")
+        assert r.exit_code == 0, r.output
+
+        # 差分：自己跟自己比，必须"完全一致"且退出码 0
+        r = _invoke("snapshot", "diff", label, label)
+        assert r.exit_code == 0, r.output
+        assert "一致" in r.output
+    finally:
+        for p in snapshot.list_snapshots():
+            if p.stem.startswith(label):
+                p.unlink(missing_ok=True)
+
+
+@_needs_game
+def test_snapshot_list_输出快照表() -> None:
+    r = _invoke("snapshot", "list")
+    assert r.exit_code == 0, r.output
+
+
+# ── defines 的其余分支 ──────────────────────────────────────
+@_needs_game
+def test_defines_overlay_预览覆盖范围(tmp_path) -> None:
+    """--overlay 是「写 mod 前先看清会覆盖什么」的入口，此前零覆盖。"""
+    mod = tmp_path / "mymod.txt"
+    mod.write_text("NAI = { SOME_EXISTING = 1  MY_NEW_ONE = 2 }\n", encoding="utf-8")
+    r = _invoke("defines", "--overlay", str(mod))
+    assert r.exit_code == 0, r.output
+    assert "NAI" in r.output
+
+
+@_needs_game
+def test_defines_默认摘要() -> None:
+    r = _invoke("defines")
+    assert r.exit_code == 0, r.output
+
+
+# ── index 真正写盘的那条路 ──────────────────────────────────
+@_needs_game
+@pytest.mark.slow
+def test_index_写盘后内容自洽() -> None:
+    """--dry-run 已测过；这条走真实写盘路径，并确认产物首行与统计对得上。"""
+    target = config.DOCS / "13-common全量键名索引.md"
+    before = target.read_bytes()
+    try:
+        r = _invoke("index")
+        assert r.exit_code == 0, r.output
+        text = target.read_text(encoding="utf-8")
+        assert text.startswith("# 13 · common 全量键名索引")
+        assert "数据版本" in text, "生成的索引必须带版本溯源"
+    finally:
+        target.write_bytes(before)
+
+
 # ── analyze（慢，只跑最省的一种组合）────────────────────────
 @_needs_game
 @pytest.mark.slow

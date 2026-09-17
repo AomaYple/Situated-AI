@@ -200,10 +200,6 @@ def is_scriptable(rel_parts: tuple[str, ...], suffix: str) -> bool:
     return suffix in SCRIPTABLE_SUFFIXES
 
 
-def ensure_dirs() -> None:
-    """确保全部输出目录存在。"""
-    for d in (OUT, OUT_GAME, OUT_MODS, OUT_CROSS, REPORTS):
-        d.mkdir(parents=True, exist_ok=True)
 
 
 def game_version() -> dict[str, str]:

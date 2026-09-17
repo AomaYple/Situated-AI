@@ -243,10 +243,6 @@ class Change:
     added: list[str] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
 
-    @property
-    def is_empty(self) -> bool:
-        return not self.added and not self.removed
-
     def line(self) -> str:
         parts = []
         if self.added:

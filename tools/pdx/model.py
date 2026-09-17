@@ -155,9 +155,6 @@ class ParsedFile:
     def top_assignments(self) -> list[Assignment]:
         return list(self.root.assignments())
 
-    def data_keys(self) -> list[str]:
-        """顶层键名，**排除** ``@变量``。统计数据条目时应用这个。"""
-        return [a.key for a in self.root.assignments() if not a.is_variable]
 
     def namespace_blocks(self) -> list[Assignment]:
         """命名空间块：大写开头、非变量、是块。用于 defines 统计。"""

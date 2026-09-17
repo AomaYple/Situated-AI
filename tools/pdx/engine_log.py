@@ -226,16 +226,67 @@ def _scriptable_set(root: Path, dir_rel: str, suffix: str) -> tuple[int, int]:
     return len(paths), parsed
 
 
+def build_override_map() -> dict[str, Path]:
+    """建立「原版相对路径 -> 实际生效的文件」映射。
+
+    为什么必须有这个
+    ----------------
+    引擎是**在装了 mod 的状态下**运行的。mod 覆盖某个文件后，引擎读的是
+    mod 的版本、报的也是 mod 里的行号；而我们一直在读原版文件 ——
+    于是同一行号指向完全不同的内容。
+
+    实测（2026-09）：4 条「不一致」全部是这类，而且行数差得很明显::
+
+        gui/military_formation_panel.gui        原版 8098 行 / mod 7767 行
+        gui/panel_military.gui                  原版 1223 行 / mod 1182 行
+        common/ai_strategies/00_default_strategy.txt
+                                                原版 9362 行 / mod 8739 行
+
+    这不是解析器错，是核对工具错 —— 它没考虑覆盖关系。
+
+    取哪个 mod
+    ----------
+    多个 mod 覆盖同一文件时，**引擎按加载顺序取最后一个**。本函数只按
+    mod 名排序取一个，因此结果对「多个 mod 争同一文件」的情形是**近似**的。
+    真正的加载顺序要从 playset 读，本工具链尚未解析它 —— 这一点如实标注，
+    不假装精确。
+    """
+    mapping: dict[str, Path] = {}
+    roots: list[Path] = []
+    if config.WORKSHOP.is_dir():
+        roots.append(config.WORKSHOP)
+    if config.LOCAL_MODS.is_dir():
+        roots.append(config.LOCAL_MODS)
+    for base in roots:
+        for mod in sorted(base.iterdir()):
+            if not mod.is_dir():
+                continue
+            for f in mod.rglob("*"):
+                if not f.is_file():
+                    continue
+                rel = f.relative_to(mod)
+                if len(rel.parts) >= 2 and rel.parts[0] in config.SCRIPTABLE_DIRS:
+                    mapping.setdefault(rel.as_posix(), f)
+    return mapping
+
+
 def cross_check(
     claims: list[EngineClaim],
     root: Path | None = None,
     log_version: str = "",
+    overrides: dict[str, Path] | None = None,
 ) -> CrossCheckReport:
-    """把引擎断言与我们这边的实际行为逐条核对。"""
+    """把引擎断言与我们这边的实际行为逐条核对。
+
+    ``overrides`` 为「原版路径 -> 生效文件」映射；不传则自动建立。
+    传 ``{}`` 可强制只读原版 —— 在引擎于无 mod 状态下跑过时用得上。
+    """
     # 同上，避免 import 期的依赖链变长
     from .lexer import tokenize  # noqa: PLC0415
 
     root = root or config.GAME
+    if overrides is None:
+        overrides = build_override_map()
     report = CrossCheckReport(
         counts=Counter(c.kind for c in claims), log_version=log_version
     )
@@ -244,9 +295,13 @@ def cross_check(
     # 标注成 ``list[Token]`` 而不是裸 ``list`` —— 后者会让下游全部退化成 Any。
     token_cache: dict[str, list[Token]] = {}
 
+    def resolve(rel: str) -> Path:
+        """把原版相对路径解析成**引擎实际会读的那个文件**。"""
+        return overrides.get(rel) or (root / rel)
+
     def tokens_of(rel: str) -> list[Token]:
         if rel not in token_cache:
-            path = root / rel
+            path = resolve(rel)
             try:
                 token_cache[rel] = tokenize(
                     path.read_text(encoding="utf-8-sig", errors="replace")
@@ -261,7 +316,7 @@ def cross_check(
             report.coverage[(c.dir_rel, c.suffix)] = (total, parsed, total)
 
         elif c.kind == "script_location":
-            if not (root / c.file_rel).is_file():
+            if not resolve(c.file_rel).is_file():
                 report.locations.append((c.file_rel, c.line, "文件不存在"))
                 continue
             lines = {t.line for t in tokens_of(c.file_rel)}
@@ -270,7 +325,7 @@ def cross_check(
             )
 
         elif c.kind == "token_at":
-            if not (root / c.file_rel).is_file():
+            if not resolve(c.file_rel).is_file():
                 report.tokens.append((c.file_rel, c.line, c.token, None))
                 continue
             found: int | None = next(

@@ -129,8 +129,12 @@ class DefinesReport:
         }
 
 
-def _classify(block: Block) -> tuple[str, list[Param]]:
-    """判定块内每个参数的形态。"""
+def _classify(block: Block) -> list[Param]:
+    """判定块内每个参数的形态。
+
+    返回值原先是个 ``(str, list[Param])`` 元组，但那个字符串**恒为空**，
+    调用方也从没读过它 —— 是重构留下的残骸，已去掉。
+    """
     params: list[Param] = []
     for a in block.assignments():
         v = a.value
@@ -144,8 +148,9 @@ def _classify(block: Block) -> tuple[str, list[Param]]:
         elif isinstance(v, Scalar):
             params.append(Param(a.key, SCALAR, value=v.text, line=a.line))
         else:
+            # 空值：``KEY =`` 后面什么都没有
             params.append(Param(a.key, SCALAR, value="", line=a.line))
-    return "", params
+    return params
 
 
 def extract_defines(root: Path | None = None) -> DefinesReport:
@@ -176,7 +181,7 @@ def extract_defines(root: Path | None = None) -> DefinesReport:
             if not a.key[:1].isupper():
                 continue
 
-            _, params = _classify(a.value)
+            params = _classify(a.value)
             ns = Namespace(name=a.key, file=rel, line=a.line, params=params)
             report.namespaces.append(ns)
             report.per_file[rel] += 1
