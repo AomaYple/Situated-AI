@@ -226,7 +226,8 @@ def parse_text(text: str, path: str = "<text>") -> ParsedFile:
     had_bom = text.startswith("\ufeff")
     if had_bom:
         text = text[1:]
-    tokens = tokenize(text)
+    comments: list[tuple[int, str]] = []
+    tokens = tokenize(text, comments)
     parser = _Parser(tokens)
     root = parser.parse_root()
 
@@ -245,6 +246,7 @@ def parse_text(text: str, path: str = "<text>") -> ParsedFile:
         root=root,
         had_bom=had_bom,
         errors=parser.errors,
+        comments=comments,
         max_depth=parser.max_depth,
     )
 

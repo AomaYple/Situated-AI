@@ -131,6 +131,13 @@ class ParsedFile:
     encoding: str = "utf-8-sig"
     had_bom: bool = False
     errors: list[str] = field(default_factory=list)
+    #: 文件里的全部 ``#`` 注释，``(行号, 原文)`` 按出现顺序。
+    #:
+    #: 注释此前被整体丢弃，但原版脚本里的注释往往是对字段**唯一的说明**
+    #: （官方 .md 覆盖不到的字段只能看它）。保留它等于把官方写在旁边的
+    #: 文档一起留下来。由 :func:`pdx.lexer.tokenize` 顺带收集，
+    #: token 流本身不受影响。
+    comments: list[tuple[int, str]] = field(default_factory=list)
     #: 最大花括号嵌套深度，用于完整性自检。
     #:
     #: **由解析器在解析时记录**，不是事后遍历 AST 算出来的 ——

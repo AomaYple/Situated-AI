@@ -44,10 +44,11 @@ from .localization import LocalizationReport, extract_localization
 
 # Assignment / Scalar / Block 必须在**运行期**导入：dump_node 用 isinstance
 # 区分节点类型，放进 TYPE_CHECKING 会在运行时 NameError（已踩过）。
-from .model import Assignment, Block, Scalar
+from .model import Assignment, Block, ParsedFile, Scalar
 from .mods import ModInfo, aggregate_prefixes, analyse_all
 from .parser import TOLERATED_ERRORS
 from .scan import DirStats, FileEntry, stats_for, walk_files
+from .tabular import extract_tables
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -655,20 +656,56 @@ def dump_node(node: Any) -> Any:
     return None  # pragma: no cover - Node 联合类型已穷尽
 
 
+def build_entry_index(pf: ParsedFile, prev_line: int = 0) -> dict[str, Any]:
+    """为一个已解析文件建立 ``条目 -> {行, 注释}`` 的位置索引。
+
+    注释关联规则：归给**它下方最近的那个条目**，也就是「上一条目之后、
+    本条目前面」的注释行。这是 PDX 文件的书写惯例 —— 说明写在被说明的
+    条目上方。与条目同行的行尾注释也归它。
+
+    为什么单独建索引而不塞进数据里：数据部分要保持纯净（它就是游戏数据的
+    还原），行号与注释属于**元信息**，混进去会让每个嵌套节点都背上额外字段。
+    """
+    by_line: dict[int, list[str]] = {}
+    for lineno, raw in pf.comments:
+        text = raw.lstrip("#").strip()
+        if text:
+            by_line.setdefault(lineno, []).append(text)
+
+    out: dict[str, Any] = {}
+    last = prev_line
+    for a in pf.top_assignments:
+        key = f"{a.prefix}:{a.key}" if a.prefix else a.key
+        leading = [
+            text
+            for ln in range(last + 1, a.line + 1)
+            for text in by_line.get(ln, [])
+        ]
+        out[key] = {"行": a.line, "注释": leading} if leading else {"行": a.line}
+        last = a.line
+    return out
+
+
 def to_data_dict() -> dict[str, Any]:
     """把全部分析过的脚本内容**还原成结构化数据**。
 
     与 ``游戏本体.json`` 的分工：
     * ``游戏本体.json`` 记的是**统计**（每个目录多少条目、多少字段、哪些键）
-    * 本产物记的是**内容**（每个条目的字段、值、嵌套结构）
+    * 本产物记的是**内容**（每个条目的字段、值、嵌套结构、位置与注释）
 
     两者都需要：统计用来做断言与文档，内容用来真正写 mod。
+
+    返回 ``{"数据": …, "索引": …}`` 两层：``数据`` 是纯净的游戏数据还原，
+    ``索引`` 是每个条目的行号与上方注释。分开是为了让查询数据的人
+    不必过滤元信息。
     """
     data: dict[str, dict[str, Any]] = {}
+    index: dict[str, dict[str, Any]] = {}
     for name, root in CONTENT_ROOTS.items():
         if not root.is_dir():
             continue
         bucket: dict[str, Any] = {}
+        idx: dict[str, Any] = {}
         for f in _scriptable_files(root):
             try:
                 pf = parse_cached(f.path)
@@ -682,11 +719,13 @@ def to_data_dict() -> dict[str, Any]:
                 # ``variation`` 出现 383 次），自己写的那份会把它们压掉。
                 # 这个 bug 正是「修了 dump_node 却在调用处又绕过去」造成的。
                 bucket[key] = dump_node(pf.root)
+                idx[key] = build_entry_index(pf)
             except RecursionError:  # pragma: no cover - 病态嵌套
                 continue
         if bucket:
             data[name] = bucket
-    return data
+            index[name] = idx
+    return {"数据": data, "索引": index}
 
 
 def _dir_to_dict(d: DirStats) -> dict[str, Any]:
@@ -806,10 +845,19 @@ def write_reports(
     for d in (GAME_OUT, MODS_OUT, CROSS_OUT, config.REPORTS):
         d.mkdir(parents=True, exist_ok=True)
 
-    def dump(obj: Any, path: Path) -> None:
-        path.write_text(
-            json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+    def dump(obj: Any, path: Path, *, compact: bool = False) -> None:
+        """落盘 JSON。
+
+        ``compact=True`` 用无空白的紧凑格式。游戏数据产物有 **12 万条目**，
+        缩进版 122 MB、紧凑版 52 MB —— 差了 70 MB 的纯空白，
+        写盘还多花约 7 秒。它是给程序读的数据文件，不是给人读的报告；
+        要看内容用 ``jq`` 或查询工具。其余产物仍用缩进，保留可读与可 diff。
+        """
+        if compact:
+            text = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+        else:
+            text = json.dumps(obj, ensure_ascii=False, indent=2)
+        path.write_text(text, encoding="utf-8")
 
     out: dict[str, Path] = {}
 
@@ -829,10 +877,30 @@ def write_reports(
     # 本地化的完整键名清单单独一个文件：14 万+ 键、数 MB，
     # 塞进主 JSON 会让那份 8 MB 的文件翻倍，而查询键名的人
     # 本来就不需要同时看 common 目录的字段表。
-    # 结构化游戏数据：每个条目的字段、值、嵌套结构。
+    # 表格类数据。全库只有 map_data/adjacencies.csv 一个，但它定义
+    # **海峡与陆地连通性**，mod 改地图边界时必动 —— 此前它既不是 PDX
+    # 脚本、也没有专用读取器，落在所有范围之外。不是 PDX 语法，
+    # 因此单独一个产物。
+    tables = {name: extract_tables(root) for name, root in CONTENT_ROOTS.items()}
+    if any(r.tables for r in tables.values()):
+        tb = GAME_OUT / "表格数据.json"
+        dump(
+            {
+                "概览": {k: r.summary() for k, r in tables.items()},
+                "表格": {
+                    k: {tb_.rel: tb_.to_dict() for tb_ in r.tables}
+                    for k, r in tables.items()
+                    if r.tables
+                },
+            },
+            tb,
+        )
+        out["表格数据 JSON"] = tb
+
+    # 结构化游戏数据：每个条目的字段、值、嵌套结构、位置与注释。
     # 与主 JSON 的分工 —— 那个记统计，这个记内容。
     data = GAME_OUT / "游戏数据.json"
-    dump(to_data_dict(), data)
+    dump(to_data_dict(), data, compact=True)
     out["游戏数据 JSON"] = data
 
     if ga.localization_detail is not None:

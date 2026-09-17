@@ -131,11 +131,23 @@ class Token:
         return f"Token({self.kind}, {self.value!r}, {self.line}:{self.col})"
 
 
-def tokenize(text: str) -> list[Token]:
+def tokenize(
+    text: str, comments: list[tuple[int, str]] | None = None
+) -> list[Token]:
     """把 PDX 文本切成 token 列表，末尾带一个 EOF。
 
     ``text`` 应已由调用方以 ``utf-8-sig`` 读取，BOM 已被剥离。
     若仍残留 BOM，这里会把它当普通字符吞掉，避免污染首个键名。
+
+    注释收集
+    --------
+    ``comments`` 传入列表时，**顺带**把每处注释以 ``(行号, 原文)`` 追加进去。
+    它只影响这一个可选出参，**token 流完全不变** —— 因此差分测试仍然
+    比对的是同一套东西，不必为取注释再改一次语义。
+
+    为什么要收集：原版脚本里的 ``#`` 注释往往是对字段**唯一的说明**
+    （官方 ``.md`` 覆盖不到的字段只能看它）。此前注释被整体丢弃，
+    等于把官方写在旁边的文档一起扔了。
 
     性能取舍
     --------
@@ -181,6 +193,8 @@ def tokenize(text: str) -> list[Token]:
 
         # ── 注释：吞到行尾。引号感知由 string 分支优先匹配来保证 ──
         if index == _G_COMMENT:
+            if comments is not None:
+                comments.append((line, text[start:end]))
             start = end
             continue
 
