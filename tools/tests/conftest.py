@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 #: 游戏内容层是否可用（mod 相关文件都在 game/ 下）
 GAME_OK = (config.GAME / "common").is_dir()
 
+
 def pytest_collection_modifyitems(config, items):
     """游戏不在本机时，自动跳过所有 integration 测试。
 
@@ -40,6 +41,7 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "integration" in item.keywords:
             item.add_marker(skip)
+
 
 # ── 真实语料 ────────────────────────────────────────────────
 @pytest.fixture(scope="session")
@@ -64,6 +66,7 @@ def corpus_files() -> list[Path]:
                 out.append(f.path)
     return sorted(out)
 
+
 @pytest.fixture(scope="session")
 def corpus_texts(corpus_files: list[Path]) -> list[tuple[str, str]]:
     """语料文本，``(路径, 内容)``。只读一次，session 内共享。"""
@@ -75,16 +78,19 @@ def corpus_texts(corpus_files: list[Path]) -> list[tuple[str, str]]:
             continue
     return out
 
+
 # ── 全量分析结果（整轮只跑一次）────────────────────────────
 @pytest.fixture(scope="session")
 def ga():
     """游戏本体分析结果。"""
     return analyze.game_analysis()
 
+
 @pytest.fixture(scope="session")
 def ma():
     """mod 分析结果。"""
     return analyze.mods_analysis()
+
 
 @pytest.fixture(scope="session")
 def ca(ga, ma):

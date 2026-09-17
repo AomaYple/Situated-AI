@@ -24,9 +24,7 @@ class TestSnapshotShape(unittest.TestCase):
         cls.snap = snapshot.build()
 
     def test_has_all_sections(self):
-        for sec in (
-            "common_entries", "fields", "defines", "localization", "dlc", "config"
-        ):
+        for sec in ("common_entries", "fields", "defines", "localization", "dlc", "config"):
             with self.subTest(section=sec):
                 self.assertIn(sec, self.snap.sections)
 
@@ -56,6 +54,7 @@ class TestSnapshotShape(unittest.TestCase):
 
     def test_dlc_count_is_17(self):
         self.assertEqual(len(self.snap.sections["dlc"]), 17)
+
 
 class TestDeterminism(unittest.TestCase):
     """确定性是 diff 可用的前提。"""
@@ -87,6 +86,7 @@ class TestDeterminism(unittest.TestCase):
         back = json.loads(text)
         self.assertEqual(back["格式版本"], snapshot.FORMAT)
         self.assertEqual(back["版本"], s.version)
+
 
 class TestCompare(unittest.TestCase):
     """比对逻辑本身。"""
@@ -139,6 +139,7 @@ class TestCompare(unittest.TestCase):
         line = snapshot.compare(a, b)[0].line()
         self.assertIn("[x]", line)
         self.assertIn("+2", line)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

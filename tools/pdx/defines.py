@@ -48,8 +48,8 @@ class Param:
 
     name: str
     kind: str
-    value: str = ""            # 标量时是字面量；列表/块时是元素个数说明
-    elements: int = 0          # 列表元素数或子键数
+    value: str = ""  # 标量时是字面量；列表/块时是元素个数说明
+    elements: int = 0  # 列表元素数或子键数
     line: int = 0
 
     def to_dict(self) -> dict[str, object]:
@@ -123,9 +123,7 @@ class DefinesReport:
             "参数总数": self.total_params,
             "@变量数": len(self.variables),
             "涉及文件": len(self.per_file),
-            "跨文件重复的命名空间": {
-                k: v for k, v in self.namespace_files.items() if len(v) > 1
-            },
+            "跨文件重复的命名空间": {k: v for k, v in self.namespace_files.items() if len(v) > 1},
         }
 
 
@@ -212,18 +210,26 @@ def overlay(vanilla: DefinesReport, mod_text: str) -> dict[str, object]:
             continue
         target = vanilla.get(a.key)
         if not target:
-            result.append({"命名空间": a.key, "状态": "原版不存在（新建）",
-                           "覆盖参数": [], "新增参数": a.value.keys()})
+            result.append(
+                {
+                    "命名空间": a.key,
+                    "状态": "原版不存在（新建）",
+                    "覆盖参数": [],
+                    "新增参数": a.value.keys(),
+                }
+            )
             continue
         existing = set()
         for ns in target:
             existing.update(ns.param_names)
         mine = set(a.value.keys())
-        result.append({
-            "命名空间": a.key,
-            "状态": "与原版合并",
-            "覆盖参数": sorted(mine & existing),
-            "新增参数": sorted(mine - existing),
-            "原版参数数": len(existing),
-        })
+        result.append(
+            {
+                "命名空间": a.key,
+                "状态": "与原版合并",
+                "覆盖参数": sorted(mine & existing),
+                "新增参数": sorted(mine - existing),
+                "原版参数数": len(existing),
+            }
+        )
     return {"命名空间数": len(result), "明细": result}

@@ -42,13 +42,13 @@ if TYPE_CHECKING:
 class Claim:
     """一条待核对的断言。"""
 
-    id: str                     # 唯一标识
-    doc: str                    # 出处文档（文件名）
-    text: str                   # 断言内容的人类可读描述
-    kind: str                   # 检查类型
-    target: str                 # 目标（目录名 / 文件 / 命名空间等）
-    expected: object            # 期望值
-    note: str = ""              # 补充说明（口径等）
+    id: str  # 唯一标识
+    doc: str  # 出处文档（文件名）
+    text: str  # 断言内容的人类可读描述
+    kind: str  # 检查类型
+    target: str  # 目标（目录名 / 文件 / 命名空间等）
+    expected: object  # 期望值
+    note: str = ""  # 补充说明（口径等）
 
 
 @dataclass(slots=True)
@@ -120,6 +120,57 @@ def _defines_namespaces(_target: str) -> int:
     return len(names)
 
 
+def _block_param_kinds(blk: Block) -> tuple[int, int, int]:
+    """命名空间块内的 ``(标量, 内联列表, 嵌套块)`` 三项计数。
+
+    口径与 doc 05 §0.3 一一对应：
+    * 标量 —— 深度 1 的 ``KEY = value``
+    * 内联列表 —— 深度 1 的 ``KEY = { a b c }``，**同一行闭合**
+    * 嵌套块 —— 深度 1 的 ``KEY = {``，**跨多行**
+
+    区分后两者靠「块内的裸标量是否都落在同一行」：跨行的键值对一定是
+    嵌套块，而只含裸标量且只占一行的才是内联列表。注释在词法阶段已剥离，
+    所以不会把注释里的花括号算进来（那是早期 PowerShell 版最大的坑）。
+    """
+    scal = inline = nested = 0
+    for a in blk.assignments():
+        if not isinstance(a.value, Block):
+            scal += 1
+            continue
+        scalars = list(a.value.scalars())
+        if list(a.value.assignments()) or len({s.line for s in scalars}) > 1:
+            nested += 1
+        else:
+            inline += 1
+    return scal, inline, nested
+
+
+def _defines_param_total(_target: str) -> int:
+    """defines 全部命名空间块内的参数条目总数（标量 + 内联列表 + 嵌套块）。
+
+    doc 05 最大的两张表（§2.1 文件总览、§2.2 逐块明细）都由这个口径汇总，
+    此前只有「块数 75 / 命名空间 50」进了断言表，总数与逐块值无人看守 ——
+    结果 1.14.3 给 ``NMilitary`` 加了 1 个参数、给 ``NDiplomacy`` 加了 39 个，
+    文档里的 3434 却一直没动。这条就是为那类漂移加的。
+    """
+    total = 0
+    for f in (config.GAME / "common" / "defines").rglob("*.txt"):
+        for a in parse_cached(f).namespace_blocks():
+            assert isinstance(a.value, Block)
+            total += sum(_block_param_kinds(a.value))
+    return total
+
+
+def _defines_param_names(_target: str) -> int:
+    """defines 全部命名空间块内**去重**后的参数名数量。"""
+    names: set[str] = set()
+    for f in (config.GAME / "common" / "defines").rglob("*.txt"):
+        for a in parse_cached(f).namespace_blocks():
+            assert isinstance(a.value, Block)
+            names.update(x.key for x in a.value.assignments())
+    return len(names)
+
+
 def _prefix_in_mods(target: str) -> int:
     """某个功能前缀在全部 mod 中的使用次数。"""
     return aggregate_prefixes(analyse_all()).get(target, 0)
@@ -151,6 +202,16 @@ def _mods_total(_target: str) -> int:
     return len(analyse_all())
 
 
+def _mods_files(_target: str) -> int:
+    """全部 mod 的内容文件总数（``metadata.json`` 不计）。
+
+    为什么要单列：doc 12 与索引页关于「23 个 mod 一共有多少文件」的说法
+    长期停在 3,046，而实测是 4,777 —— 这个数字没进断言表，
+    所以它漂了多久都没人知道。
+    """
+    return sum(m.files for m in analyse_all())
+
+
 def _history_wrappers(_target: str) -> int:
     """history 目录下出现过的顶层包装块种类数。"""
     base = config.GAME / "common" / "history"
@@ -173,6 +234,50 @@ def _md_files(_target: str) -> int:
         if root.is_dir()
         for _ in root.rglob("*.md")
     )
+
+
+def _official_docs() -> list[tuple[str, int]]:
+    """全部官方 ``.md``，``(键, 字节数)``；键形如 ``game/common/x/x.md``。
+
+    键**带内容根前缀** —— 三个内容根下可能有同名相对路径，只写相对路径
+    会互相覆盖、篇数悄悄变少（与 :func:`pdx.analyze.game_analysis` 同口径）。
+    """
+    out: list[tuple[str, int]] = []
+    for name, root in (
+        ("game", config.GAME),
+        ("jomini", config.JOMINI),
+        ("clausewitz", config.CLAUSEWITZ),
+    ):
+        if not root.is_dir():
+            continue
+        for p in root.rglob("*.md"):
+            try:
+                out.append((f"{name}/{p.relative_to(root).as_posix()}", p.stat().st_size))
+            except OSError:
+                continue
+    return out
+
+
+def _md_total_bytes(_target: str) -> int:
+    """全部官方 ``.md`` 的字节总数。
+
+    存在的理由：doc 07 的总字节数曾长期等于**镜像**（1.14.2）的值，
+    而本体已随 1.14.3 增长 —— 只钉「篇数 92」是看不出这种漂移的。
+    """
+    return sum(size for _key, size in _official_docs())
+
+
+def _md_max_bytes(_target: str) -> int:
+    """最大的官方 ``.md`` 的字节数（实测为 ``treaty_articles.md``）。
+
+    这条钉住的是**单篇文档的尺寸**。它踩过一次真坑：doc 07 把这个数写成
+    镜像里的 25,364（1.14.2），而本体 1.14.3 已是 28,171 —— 该篇新增的
+    ``scope:other_country`` / ``requirement_to_maintain`` 等规则镜像里没有，
+    照镜像写条约 mod 会漏。内容一致性另由 ``tools/tests/test_docs_mirror.py``
+    用 sha256 逐篇比对本体看守。
+    """
+    sizes = [size for _key, size in _official_docs()]
+    return max(sizes) if sizes else 0
 
 
 def _file_top_keys(target: str) -> int:
@@ -210,13 +315,18 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "defines_params": _defines_params,
     "defines_blocks": _defines_blocks,
     "defines_namespaces": _defines_namespaces,
+    "defines_param_total": _defines_param_total,
+    "defines_param_names": _defines_param_names,
     "prefix_in_mods": _prefix_in_mods,
     "prefix_in_vanilla": _prefix_in_vanilla,
     "mods_prefix_total": _mods_prefix_total,
     "vanilla_prefix_total": _vanilla_prefix_total,
     "mods_total": _mods_total,
+    "mods_files": _mods_files,
     "history_wrappers": _history_wrappers,
     "md_files": _md_files,
+    "md_total_bytes": _md_total_bytes,
+    "md_max_bytes": _md_max_bytes,
     "file_top_keys": _file_top_keys,
     "dlc_count": _dlc_count,
     "common_dir_count": _common_dir_count,
@@ -233,123 +343,358 @@ SLOW_KINDS = frozenset(
         "mods_prefix_total",
         "vanilla_prefix_total",
         "mods_total",
+        "mods_files",
         "md_files",
+        "md_total_bytes",
+        "md_max_bytes",
     }
 )
 
 
 CLAIMS: list[Claim] = [
     # ── 环境 ────────────────────────────────────────────
-    Claim("env.common_dirs", "08-目录全量清单.md", "common 有 136 个子目录",
-          "dir_subdirs", "", 136),
-    Claim("env.dlc", "01-环境与版本.md", "game/dlc 下有 17 个 DLC",
-          "dlc_count", "", 17,
-          "编号 001–018，缺 dlc005。doc 01 与 doc 19 早期误写为 18"),
-    Claim("env.common_txt", "08-目录全量清单.md", "common 有 3026 个 .txt",
-          "dir_txt_files", "", 3026,
-          "1.14.2 时为 3024，1.14.3 新增 2 个。注意 3101 是含 .md 的全部文件数"),
-    Claim("env.common_all", "08-目录全量清单.md", "common 共 3101 个文件",
-          "dir_all_files", "", 3101, "1.14.2 时为 3099"),
-    Claim("env.md_total", "07-官方文档索引.md", "游戏自带 92 篇官方 .md",
-          "md_files", "", 92),
-
+    Claim(
+        "env.common_dirs", "08-目录全量清单.md", "common 有 136 个子目录", "dir_subdirs", "", 136
+    ),
+    Claim(
+        "env.dlc",
+        "01-环境与版本.md",
+        "game/dlc 下有 17 个 DLC",
+        "dlc_count",
+        "",
+        17,
+        "编号 001–018，缺 dlc005。doc 01 与 doc 19 早期误写为 18",
+    ),
+    Claim(
+        "env.common_txt",
+        "08-目录全量清单.md",
+        "common 有 3026 个 .txt",
+        "dir_txt_files",
+        "",
+        3026,
+        "1.14.2 时为 3024，1.14.3 新增 2 个。注意 3101 是含 .md 的全部文件数",
+    ),
+    Claim(
+        "env.common_all",
+        "08-目录全量清单.md",
+        "common 共 3101 个文件",
+        "dir_all_files",
+        "",
+        3101,
+        "1.14.2 时为 3099",
+    ),
+    Claim("env.md_total", "07-官方文档索引.md", "游戏自带 92 篇官方 .md", "md_files", "", 92),
+    Claim(
+        "docs.total_bytes",
+        "07-官方文档索引.md",
+        "92 篇官方 .md 总字节数",
+        "md_total_bytes",
+        "",
+        232980,
+        "1.14.2 时为 230,173（doc 07 曾长期写着这个镜像值）",
+    ),
+    Claim(
+        "docs.max_bytes",
+        "07-官方文档索引.md",
+        "最大官方 .md treaty_articles.md 的字节数",
+        "md_max_bytes",
+        "",
+        28171,
+        "镜像曾停在 1.14.2 的 25,364 B / 604 行；本体 1.14.3 为 28,171 B / 648 行。"
+        "内容一致性由 test_docs_mirror.py 用 sha256 逐篇比对本体看守",
+    ),
     # ── 经济与生产（doc 14）────────────────────────────
-    Claim("eco.buildings", "14-经济与生产系统.md", "buildings 有 115 个",
-          "dir_entries", "buildings", 115),
-    Claim("eco.pm", "14-经济与生产系统.md", "production_methods 有 436 个",
-          "dir_entries", "production_methods", 436,
-          "早期缩进法误得 433，漏掉 3 个含连字符的键"),
-    Claim("eco.pmg", "14-经济与生产系统.md", "production_method_groups 有 197 个",
-          "dir_entries", "production_method_groups", 197),
-    Claim("eco.bg", "14-经济与生产系统.md", "building_groups 有 69 个",
-          "dir_entries", "building_groups", 69),
-    Claim("eco.goods", "14-经济与生产系统.md", "goods 有 53 个",
-          "dir_entries", "goods", 53),
-    Claim("eco.companies", "14-经济与生产系统.md", "company_types 有 221 个",
-          "dir_entries", "company_types", 221),
-
+    Claim(
+        "eco.buildings",
+        "14-经济与生产系统.md",
+        "buildings 有 115 个",
+        "dir_entries",
+        "buildings",
+        115,
+    ),
+    Claim(
+        "eco.pm",
+        "14-经济与生产系统.md",
+        "production_methods 有 436 个",
+        "dir_entries",
+        "production_methods",
+        436,
+        "早期缩进法误得 433，漏掉 3 个含连字符的键",
+    ),
+    Claim(
+        "eco.pmg",
+        "14-经济与生产系统.md",
+        "production_method_groups 有 197 个",
+        "dir_entries",
+        "production_method_groups",
+        197,
+    ),
+    Claim(
+        "eco.bg",
+        "14-经济与生产系统.md",
+        "building_groups 有 69 个",
+        "dir_entries",
+        "building_groups",
+        69,
+    ),
+    Claim("eco.goods", "14-经济与生产系统.md", "goods 有 53 个", "dir_entries", "goods", 53),
+    Claim(
+        "eco.companies",
+        "14-经济与生产系统.md",
+        "company_types 有 221 个",
+        "dir_entries",
+        "company_types",
+        221,
+    ),
     # ── 政治人口（doc 15）──────────────────────────────
-    Claim("pol.laws", "15-政治人口与社会.md", "laws 有 138 个",
-          "dir_entries", "laws", 138),
-    Claim("pol.ig", "15-政治人口与社会.md", "interest_groups 有 8 个",
-          "dir_entries", "interest_groups", 8),
-    Claim("pol.ig_traits", "15-政治人口与社会.md", "interest_group_traits 有 99 个",
-          "dir_entries", "interest_group_traits", 99),
-    Claim("pol.ideologies", "15-政治人口与社会.md", "ideologies 有 172 个",
-          "dir_entries", "ideologies", 172),
-    Claim("pol.gov", "15-政治人口与社会.md", "government_types 有 444 个",
-          "dir_entries", "government_types", 444),
-    Claim("pol.cultures", "15-政治人口与社会.md", "cultures 有 317 个",
-          "dir_entries", "cultures", 317),
-    Claim("pol.disc", "15-政治人口与社会.md", "discrimination_traits 有 324 个",
-          "dir_entries", "discrimination_traits", 324),
-    Claim("pol.amend", "15-政治人口与社会.md", "amendments 有 67 个",
-          "dir_entries", "amendments", 67),
-
+    Claim("pol.laws", "15-政治人口与社会.md", "laws 有 138 个", "dir_entries", "laws", 138),
+    Claim(
+        "pol.ig",
+        "15-政治人口与社会.md",
+        "interest_groups 有 8 个",
+        "dir_entries",
+        "interest_groups",
+        8,
+    ),
+    Claim(
+        "pol.ig_traits",
+        "15-政治人口与社会.md",
+        "interest_group_traits 有 99 个",
+        "dir_entries",
+        "interest_group_traits",
+        99,
+    ),
+    Claim(
+        "pol.ideologies",
+        "15-政治人口与社会.md",
+        "ideologies 有 172 个",
+        "dir_entries",
+        "ideologies",
+        172,
+    ),
+    Claim(
+        "pol.gov",
+        "15-政治人口与社会.md",
+        "government_types 有 444 个",
+        "dir_entries",
+        "government_types",
+        444,
+    ),
+    Claim(
+        "pol.cultures", "15-政治人口与社会.md", "cultures 有 317 个", "dir_entries", "cultures", 317
+    ),
+    Claim(
+        "pol.disc",
+        "15-政治人口与社会.md",
+        "discrimination_traits 有 324 个",
+        "dir_entries",
+        "discrimination_traits",
+        324,
+    ),
+    Claim(
+        "pol.amend", "15-政治人口与社会.md", "amendments 有 67 个", "dir_entries", "amendments", 67
+    ),
     # ── 角色科技（doc 17）──────────────────────────────
-    Claim("chr.templates", "17-角色科技与呈现.md", "character_templates 有 2011 个",
-          "dir_entries", "character_templates", 2011,
-          "早期缩进法误得 1983，漏掉 27 个含连字符的键"),
-    Claim("chr.traits", "17-角色科技与呈现.md", "character_traits 有 121 个",
-          "dir_entries", "character_traits", 121),
-    Claim("chr.tech", "17-角色科技与呈现.md", "technology 有 184 个",
-          "dir_entries", "technology", 184),
-    Claim("chr.concepts", "17-角色科技与呈现.md", "game_concepts 有 612 个",
-          "dir_entries", "game_concepts", 612),
-
+    Claim(
+        "chr.templates",
+        "17-角色科技与呈现.md",
+        "character_templates 有 2011 个",
+        "dir_entries",
+        "character_templates",
+        2011,
+        "早期缩进法误得 1983，漏掉 27 个含连字符的键",
+    ),
+    Claim(
+        "chr.traits",
+        "17-角色科技与呈现.md",
+        "character_traits 有 121 个",
+        "dir_entries",
+        "character_traits",
+        121,
+    ),
+    Claim(
+        "chr.tech", "17-角色科技与呈现.md", "technology 有 184 个", "dir_entries", "technology", 184
+    ),
+    Claim(
+        "chr.concepts",
+        "17-角色科技与呈现.md",
+        "game_concepts 有 612 个",
+        "dir_entries",
+        "game_concepts",
+        612,
+    ),
     # ── 外交军事（doc 16）──────────────────────────────
-    Claim("dip.actions", "16-外交军事与地图.md", "diplomatic_actions 有 55 个",
-          "dir_entries", "diplomatic_actions", 55),
-    Claim("dip.treaty", "16-外交军事与地图.md", "treaty_articles 有 34 个",
-          "dir_entries", "treaty_articles", 34),
-    Claim("dip.wargoal", "16-外交军事与地图.md", "war_goal_types 有 39 个",
-          "dir_entries", "war_goal_types", 39),
-    Claim("dip.state_traits", "16-外交军事与地图.md", "state_traits 有 239 个",
-          "dir_entries", "state_traits", 239),
-    Claim("dip.strategic", "16-外交军事与地图.md", "strategic_regions 有 142 个",
-          "dir_entries", "strategic_regions", 142),
-    Claim("dip.ships", "16-外交军事与地图.md", "ship_modifications 有 259 个",
-          "dir_entries", "ship_modifications", 259),
-
+    Claim(
+        "dip.actions",
+        "16-外交军事与地图.md",
+        "diplomatic_actions 有 55 个",
+        "dir_entries",
+        "diplomatic_actions",
+        55,
+    ),
+    Claim(
+        "dip.treaty",
+        "16-外交军事与地图.md",
+        "treaty_articles 有 34 个",
+        "dir_entries",
+        "treaty_articles",
+        34,
+    ),
+    Claim(
+        "dip.wargoal",
+        "16-外交军事与地图.md",
+        "war_goal_types 有 39 个",
+        "dir_entries",
+        "war_goal_types",
+        39,
+    ),
+    Claim(
+        "dip.state_traits",
+        "16-外交军事与地图.md",
+        "state_traits 有 239 个",
+        "dir_entries",
+        "state_traits",
+        239,
+    ),
+    Claim(
+        "dip.strategic",
+        "16-外交军事与地图.md",
+        "strategic_regions 有 142 个",
+        "dir_entries",
+        "strategic_regions",
+        142,
+    ),
+    Claim(
+        "dip.ships",
+        "16-外交军事与地图.md",
+        "ship_modifications 有 259 个",
+        "dir_entries",
+        "ship_modifications",
+        259,
+    ),
     # ── defines / 修饰符（doc 05）──────────────────────
-    Claim("def.nai_count", "05-defines与修饰符.md",
-          "NAI 有 1017 个参数", "defines_params", "00_ai.txt:NAI", 1017,
-          "1.14.2 时为 1013，1.14.3 增至 1017（+4）；文件 1307 行 → 1311 行"),
-    Claim("def.blocks", "05-defines与修饰符.md", "defines 共 75 个顶层命名空间块",
-          "defines_blocks", "", 75),
-    Claim("def.namespaces", "05-defines与修饰符.md", "defines 共 50 个去重命名空间",
-          "defines_namespaces", "", 50),
-    Claim("def.modtypes", "05-defines与修饰符.md", "modifier_type_definitions 有 2364 个",
-          "dir_entries", "modifier_type_definitions", 2364),
-    Claim("def.static", "05-defines与修饰符.md", "static_modifiers 有 6128 个",
-          "dir_entries", "static_modifiers", 6128,
-          "早期缩进法误得 6121；实测 68/68 文件带 BOM 且存在缩进的顶层键"),
-
+    Claim(
+        "def.nai_count",
+        "05-defines与修饰符.md",
+        "NAI 有 1017 个参数",
+        "defines_params",
+        "00_ai.txt:NAI",
+        1017,
+        "1.14.2 时为 1013，1.14.3 增至 1017（+4）；文件 1307 行 → 1311 行",
+    ),
+    Claim(
+        "def.blocks",
+        "05-defines与修饰符.md",
+        "defines 共 75 个顶层命名空间块",
+        "defines_blocks",
+        "",
+        75,
+    ),
+    Claim(
+        "def.namespaces",
+        "05-defines与修饰符.md",
+        "defines 共 50 个去重命名空间",
+        "defines_namespaces",
+        "",
+        50,
+    ),
+    Claim(
+        "def.param_total",
+        "05-defines与修饰符.md",
+        "defines 共 3488 个参数条目",
+        "defines_param_total",
+        "",
+        3488,
+        "标量 3313 + 内联列表 172 + 嵌套块 3。1.14.2 时为 3434；"
+        "1.14.3 给 NMilitary +1、NDiplomacy +39，§2.1/§2.2 两张表已按 1.14.3 重算",
+    ),
+    Claim(
+        "def.param_names",
+        "05-defines与修饰符.md",
+        "defines 共 3481 个去重参数名",
+        "defines_param_names",
+        "",
+        3481,
+        "1.14.2 时为 3427；跨块重复出现 7 次",
+    ),
+    Claim(
+        "def.modtypes",
+        "05-defines与修饰符.md",
+        "modifier_type_definitions 有 2364 个",
+        "dir_entries",
+        "modifier_type_definitions",
+        2364,
+    ),
+    Claim(
+        "def.static",
+        "05-defines与修饰符.md",
+        "static_modifiers 有 6128 个",
+        "dir_entries",
+        "static_modifiers",
+        6128,
+        "早期缩进法误得 6121；实测 68/68 文件带 BOM 且存在缩进的顶层键",
+    ),
     # ── 脚本系统（doc 04）──────────────────────────────
-    Claim("scr.on_actions", "04-脚本系统.md", "on_actions 有 264 个键",
-          "dir_entries", "on_actions", 264,
-          "doc 04 早期记 263（其中 00_code_on_actions.txt 记 218，实为 219）。"
-          "漏掉的是 on_diplo_play_overlord_protects_subject，位于该文件第 4321 行、缩进 0"),
-
+    Claim(
+        "scr.on_actions",
+        "04-脚本系统.md",
+        "on_actions 有 264 个键",
+        "dir_entries",
+        "on_actions",
+        264,
+        "doc 04 早期记 263（其中 00_code_on_actions.txt 记 218，实为 219）。"
+        "漏掉的是 on_diplo_play_overlord_protects_subject，位于该文件第 4321 行、缩进 0",
+    ),
     # ── history（doc 18）───────────────────────────────
-    Claim("hist.wrappers", "18-history初始状态系统.md",
-          "history 有 22 种顶层包装块", "history_wrappers", "", 22),
-
+    Claim(
+        "hist.wrappers",
+        "18-history初始状态系统.md",
+        "history 有 22 种顶层包装块",
+        "history_wrappers",
+        "",
+        22,
+    ),
     # ── mod 分析（doc 12）──────────────────────────────
-    Claim("mod.total", "12-真实mod解剖与改造面地图.md", "订阅了 23 个 Workshop mod",
-          "mods_total", "", 23),
-
+    Claim(
+        "mod.total",
+        "12-真实mod解剖与改造面地图.md",
+        "订阅了 23 个 Workshop mod",
+        "mods_total",
+        "",
+        23,
+    ),
+    Claim(
+        "mod.files",
+        "12-真实mod解剖与改造面地图.md",
+        "23 个 Workshop mod 共 4777 个内容文件",
+        "mods_files",
+        "",
+        4777,
+        "不含各 mod 的 metadata.json（每 mod 1 个，共 23 个）；"
+        "去重后为 4,750 个相对路径。doc 12 与索引页曾长期写作 3,046",
+    ),
     # ── 引擎级功能前缀（doc 02 / doc 14，本项目最核心的结论之一）──
     #: 这条长期缺席：函数写好了、注册了，却没有 claim 引用它，
     #: 导致 run_verify 报「全绿」而该结论实际上无人看守。
-    Claim("pfx.vanilla_zero", "02-Mod结构与加载.md",
-          "原版脚本零使用功能前缀（INJECT/REPLACE 等专供 mod）",
-          "vanilla_prefix_total", "", 0,
-          "范围限定为 config.is_scriptable 认可的文件，与全量分析其余部分一致"),
-    Claim("pfx.mods_total", "02-Mod结构与加载.md",
-          "全部 mod 共使用 2737 次功能前缀", "mods_prefix_total", "", 2737,
-          "六个前缀之和：REPLACE_OR_CREATE 1116 / INJECT 740 / TRY_INJECT 440 / "
-          "REPLACE 221 / TRY_REPLACE 174 / INJECT_OR_CREATE 46"),
+    Claim(
+        "pfx.vanilla_zero",
+        "02-Mod结构与加载.md",
+        "原版脚本零使用功能前缀（INJECT/REPLACE 等专供 mod）",
+        "vanilla_prefix_total",
+        "",
+        0,
+        "范围限定为 config.is_scriptable 认可的文件，与全量分析其余部分一致",
+    ),
+    Claim(
+        "pfx.mods_total",
+        "02-Mod结构与加载.md",
+        "全部 mod 共使用 2737 次功能前缀",
+        "mods_prefix_total",
+        "",
+        2737,
+        "六个前缀之和：REPLACE_OR_CREATE 1116 / INJECT 740 / TRY_INJECT 440 / "
+        "REPLACE 221 / TRY_REPLACE 174 / INJECT_OR_CREATE 46",
+    ),
 ]
 
 
@@ -417,6 +762,11 @@ class DocDrift:
         )
 
 
+def _in_dotted_number(line: str, pos: int) -> bool:
+    """``pos`` 处的数字是否属于一个点分数字串（``1.14.2`` / ``2.6`` / ``2,532.4``）。"""
+    return any(m.start() <= pos < m.end() for m in _DOTTED_NUM_RE.finditer(line))
+
+
 def anchors_of(claim: Claim) -> list[str]:
     """从断言描述里抽出可用于在文档中定位的锚点词。"""
     out: list[str] = []
@@ -429,9 +779,25 @@ def anchors_of(claim: Claim) -> list[str]:
     return out
 
 
-#: 独立的数字。两侧不能紧邻字母/下划线 —— 否则 ``dlc018_ep2`` 里的
-#: ``018``、``1.14.2`` 里的 ``14`` 都会被当成数量断言（实测这是最大的误报源）。
-_STANDALONE_NUM_RE = re.compile(r"(?<![A-Za-z0-9_])(\d[\d,]*)(?![A-Za-z0-9_])")
+#: 独立的数字。两侧不能紧邻字母、下划线或连字符，否则这些都会被当成数量：
+#:   ``dlc018_ep2`` 里的 ``018``、``1.14.2`` 里的 ``14``（实测最大的误报源）
+#:   ``19-game根级文件与工具链.md`` 里的 ``19`` —— 那是**文档编号**不是数量
+#:   （索引页新增扫描后立刻撞上的一处误报）。
+_STANDALONE_NUM_RE = re.compile(r"(?<![A-Za-z0-9_-])(\d[\d,]*)(?![A-Za-z0-9_-])")
+
+#: **点分数字串**：版本号 ``1.14.2``、章节号 ``2.6``、小数 ``2,532.4``。
+#:
+#: 整段跳过，不做逐个数判断。理由有两条：
+#:
+#: * 章节号里的 ``2.6`` 会撞进小期望值（``interest_groups`` 期望 8）的容差 ——
+#:   实测是一处稳定误报。
+#: * 靠「紧邻点号就排除」写不干净：``17,172.9`` 里 ``\d[\d,]*`` 会回溯成 ``17``，
+#:   于是 ``(?=\.\d)`` 失效、``17`` 照样被当成候选（实测踩过）。
+#:   先按**整串**取跨度再排除，才不受回溯影响。
+#:
+#: 注意句末的 ``27,722.`` 不匹配（点号后面不是数字），应当保留 ——
+#: 那是真数量。
+_DOTTED_NUM_RE = re.compile(r"\d[\d,]*(?:\.\d+)+")
 
 
 def find_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
@@ -439,15 +805,20 @@ def find_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
 
     这是把「文档里的数字会不会过期」变成可自动检查的关键一步。
 
-    判定规则（三条都是被误报逼出来的）：
+    判定规则（四条都是被误报与漏报逼出来的）：
 
     1. 以断言描述里的**英文标识符**为锚点（``on_actions`` / ``NAI`` / ``laws``），
-       只看含锚点的行 —— 否则 264 这种数字在两千行文档里到处都可能出现，
-       写错了也照样"通过"。
+       只看锚点**在作用范围内**的行 —— 否则 264 这种数字在两千行文档里
+       到处都可能出现，写错了也照样"通过"。
     2. 数字必须**独立成词**。``dlc018_*`` 里的 018、版本号 1.14.2 里的 14
        都不是数量。
-    3. 只取锚点之后**第一个**独立数字。表格行里往往并列好几个指标
-       （条目数 / 文件数 / 行数），语义槽位是「紧接着锚点的那个」。
+    3. 同一行里量级接近期望值的**任意一个**独立数字都算候选（不是只取第一个）——
+       表格行 ``| NAI | 1 | 1013 |`` 里第一个数字是文件数 1（实测漏报过 9 处）。
+    4. **「作用范围」= 本行 + 本行所属章节的标题链**（见 :func:`_section_context`）。
+       这是补第 4 条规则的原因：``05`` 的 ``### 3.3 全部 1013 个参数名`` 是
+       **标题行本身**，标题里没有 ``NAI`` 这个词，于是它在旧规则下永远不被扫到 ——
+       而它的上一级标题 ``## 3. NAI 命名空间块`` 里有。只看「本行含锚点」
+       会漏掉"章节标题级"的漂移，那是文档里最显眼的位置。
 
     仍会有少量误报 —— 同一行里既有"条目数"又有"文件数"时，
     静态文本无法判断哪个是断言要的那个。因此这个函数是**给人看的线索**，
@@ -459,41 +830,102 @@ def find_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
         return out
 
     cache: dict[str, list[str]] = {}
+    ctx_cache: dict[str, list[str]] = {}
+
+    def lines_of(name: str) -> list[str]:
+        if name not in cache:
+            path = docs_dir / name
+            cache[name] = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+        return cache[name]
+
+    def context_of(name: str) -> list[str]:
+        """每一行的**章节标题链**（本行是标题时含本行）。"""
+        if name not in ctx_cache:
+            ctx_cache[name] = _section_context(lines_of(name))
+        return ctx_cache[name]
+
     for claim in CLAIMS:
         if not isinstance(claim.expected, int) or not claim.expected:
             continue
-        if claim.doc not in cache:
-            path = docs_dir / claim.doc
-            cache[claim.doc] = (
-                path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
-            )
-        lines = cache[claim.doc]
-        if not lines:
-            continue
-
-        anchors = anchors_of(claim)
-        if not anchors:
-            continue
-        tolerance = max(2, claim.expected // 100)
-        expected_str = f"{claim.expected:,}"
-
-        for n, line in enumerate(lines, start=1):
-            if not any(a in line for a in anchors):
+        # 出处文档 + **索引页**。
+        #
+        # 索引页（docs/README.md）此前不在扫描范围内，于是它成了盲区：
+        # 实测正文改对之后，索引页里仍然写着 263 / 1013 —— 而那正是
+        # 读者第一眼看到的地方。
+        for doc_name in (claim.doc, *_ALWAYS_SCANNED):
+            lines = lines_of(doc_name)
+            if not lines:
                 continue
-            # 期望值已经出现在这一行 —— 说明文档是对的
-            if expected_str in line or str(claim.expected) in line:
+
+            anchors = anchors_of(claim)
+            if not anchors:
                 continue
-            # 找出这一行里量级接近期望值的独立数字；有就说明多半是漂移。
-            #
-            # 不能只看锚点后的**第一个**数字：表格行 `| NAI | 1 | 1013 |`
-            # 里第一个数字是文件数 1，真正的参数数在后面（实测漏报过 9 处）。
-            for hit in _STANDALONE_NUM_RE.finditer(line):
-                value = int(hit.group(1).replace(",", ""))
-                if value in _COMMON_NOISE:
+            context = context_of(doc_name)
+            tolerance = max(2, claim.expected // 100)
+            expected_str = f"{claim.expected:,}"
+
+            for n, line in enumerate(lines, start=1):
+                # 锚点在本行，或在本行所属章节的标题链里（见规则 4）
+                if not any(a in line or a in context[n - 1] for a in anchors):
                     continue
-                if 0 < abs(value - claim.expected) <= tolerance:
-                    out.append(DocDrift(claim, claim.doc, n, line, value))
-                    break
+                # 期望值已经出现在这一行 —— 说明文档是对的
+                if expected_str in line or str(claim.expected) in line:
+                    continue
+                # 找出这一行里量级接近期望值的独立数字；有就说明多半是漂移。
+                #
+                # 不能只看锚点后的**第一个**数字：表格行 `| NAI | 1 | 1013 |`
+                # 里第一个数字是文件数 1，真正的参数数在后面（实测漏报过 9 处）。
+                for hit in _STANDALONE_NUM_RE.finditer(line):
+                    if _in_dotted_number(line, hit.start()):
+                        continue
+                    value = int(hit.group(1).replace(",", ""))
+                    if value in _COMMON_NOISE:
+                        continue
+                    if 0 < abs(value - claim.expected) <= tolerance:
+                        out.append(DocDrift(claim, doc_name, n, line, value))
+                        break
+    return out
+
+
+#: **每个断言都要额外扫一遍**的文档。
+#:
+#: ``docs/README.md`` 是索引页 —— 读者第一眼看到的地方，也是此前
+#: 漂移扫描的盲区：正文改对之后它仍写着旧值（实测 263 / 1013 两处）。
+_ALWAYS_SCANNED: tuple[str, ...] = ("README.md",)
+
+#: ATX 标题：``## 3. `NAI` 命名空间块``。
+_HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
+
+
+def _section_context(lines: list[str]) -> list[str]:
+    """每行的**锚点作用文本**：正文行就是本行，标题行额外附带各级祖先标题。
+
+    为什么需要它：``05-defines与修饰符.md`` 里
+    ``### 3.3 全部 1013 个参数名`` 是**标题行本身**，标题里没有 ``NAI``，
+    于是「本行必须含锚点」的旧规则永远扫不到它 —— 而它的上一级标题
+    ``## 3. `NAI` 命名空间块`` 里有。这类「章节标题级漂移」正好落在
+    读者最先看到的位置，却是检测器的盲区（实测潜伏了很久）。
+
+    为什么**只**放宽标题行，不放宽正文行：试过让整节都继承锚点，
+    命中数从 12 涨到 36，绝大多数是「同一节里另外一个指标的同行数字」
+    （``production_method_groups`` 那一节里的 ``| texture | 196 |``）。
+    检测器的价值全在**精确**上 —— 一次误报就要人去人工排除，
+    报得多了就没人看了。标题行数量少、语义强，放宽它是安全的。
+    """
+    out: list[str] = []
+    #: 当前生效的各级标题，下标 = 层级 - 1
+    stack: list[str] = []
+    for line in lines:
+        m = _HEADING_RE.match(line)
+        if m:
+            level = len(m.group(1))
+            del stack[level - 1 :]
+            while len(stack) < level - 1:
+                stack.append("")
+            stack.append(m.group(2))
+            out.append(f"{line} {' '.join(stack)}")
+        else:
+            out.append(line)
     return out
 
 
@@ -518,12 +950,31 @@ def _prod_md(game: dict, _mods: dict, _cross: dict, _target: str) -> object:
     return game.get("概览", {}).get("官方md")
 
 
+def _prod_md_sizes(game: dict, _mods: dict, _cross: dict, _target: str) -> dict:
+    """产物里的逐篇官方 ``.md`` 字节表。"""
+    return game.get("官方文档") or {}
+
+
+def _prod_md_total_bytes(game: dict, _mods: dict, _cross: dict, target: str) -> object:
+    sizes = _prod_md_sizes(game, _mods, _cross, target)
+    return sum(sizes.values()) if sizes else None
+
+
+def _prod_md_max_bytes(game: dict, _mods: dict, _cross: dict, target: str) -> object:
+    sizes = _prod_md_sizes(game, _mods, _cross, target)
+    return max(sizes.values()) if sizes else None
+
+
 def _prod_vanilla_prefix(game: dict, _mods: dict, _cross: dict, _target: str) -> object:
     return game.get("概览", {}).get("原版前缀使用")
 
 
 def _prod_mods_total(_game: dict, mods: dict, _cross: dict, _target: str) -> object:
     return mods.get("概览", {}).get("mod 数")
+
+
+def _prod_mods_files(_game: dict, mods: dict, _cross: dict, _target: str) -> object:
+    return mods.get("概览", {}).get("文件总计")
 
 
 #: 断言类型 → 从**已落盘的产物**里取值。
@@ -544,8 +995,11 @@ _PRODUCT_GETTERS: dict[str, Callable[[dict, dict, dict, str], object]] = {
     "common_dir_count": _prod_common_dirs,
     "dlc_count": _prod_dlc,
     "md_files": _prod_md,
+    "md_total_bytes": _prod_md_total_bytes,
+    "md_max_bytes": _prod_md_max_bytes,
     "prefix_in_vanilla": _prod_vanilla_prefix,
     "mods_total": _prod_mods_total,
+    "mods_files": _prod_mods_files,
 }
 
 
@@ -567,9 +1021,7 @@ def verify_products(
     for claim in claims if claims is not None else CLAIMS:
         getter = _PRODUCT_GETTERS.get(claim.kind)
         if getter is None:
-            out.append(
-                CheckResult(claim, None, False, f"产物中没有对应字段（{claim.kind}）")
-            )
+            out.append(CheckResult(claim, None, False, f"产物中没有对应字段（{claim.kind}）"))
             continue
         try:
             actual = getter(game, mods, cross, claim.target)
@@ -606,9 +1058,7 @@ def find_unregistered_claims(
 
     for doc in sorted(docs_dir.glob("*.md")):
         hits: list[tuple[int, str]] = []
-        for n, line in enumerate(
-            doc.read_text(encoding="utf-8").splitlines(), start=1
-        ):
+        for n, line in enumerate(doc.read_text(encoding="utf-8").splitlines(), start=1):
             for m in _NUM_RE.finditer(line):
                 raw = (m.group(1) or m.group(2)).replace(",", "")
                 try:

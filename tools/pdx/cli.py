@@ -140,14 +140,10 @@ def _write_json(path: Path, payload: Any) -> None:
     """写 JSON 并回报字节数。失败即终止，绝不「写了但没说」。"""
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     except OSError as exc:
         _fail(f"无法写入 {path}：{type(exc).__name__}: {exc}")
-    console.print(
-        f"[green]已写入[/] {escape(_relative(path))}  ({path.stat().st_size:,} 字节)"
-    )
+    console.print(f"[green]已写入[/] {escape(_relative(path))}  ({path.stat().st_size:,} 字节)")
 
 
 def _describe(value: object) -> tuple[str, str]:
@@ -328,9 +324,7 @@ def defines_cmd(
 
     # 直接读 namespace_files 而不是 summary()["跨文件重复的命名空间"]：
     # 后者的静态类型是 object，用它就得 cast 或绕过类型检查。
-    duplicates = {
-        name: files for name, files in game.namespace_files.items() if len(files) > 1
-    }
+    duplicates = {name: files for name, files in game.namespace_files.items() if len(files) > 1}
     if duplicates:
         dup_table = Table(
             title="跨文件重复的命名空间（引擎按块名合并的直接证据）", show_lines=False
@@ -381,9 +375,7 @@ def defines_cmd(
                 if param.kind == defines.SCALAR:
                     params.add_row(escape(param.name), "", escape(param.value))
                 else:
-                    params.add_row(
-                        escape(param.name), escape(param.kind), f"×{param.elements}"
-                    )
+                    params.add_row(escape(param.name), escape(param.kind), f"×{param.elements}")
             console.print(params)
 
     if json_out is not None:
@@ -477,7 +469,7 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
 
 ### 勘误 2：早期版本漏计文件首键（BOM）与缩进的顶层键
 
-`common` 下 3,024 个 `.txt` 中 **3,000 个带 UTF-8 BOM**，且部分文件的顶层键**带前导空格**。
+`common` 下 3,026 个 `.txt` 中 **3,002 个带 UTF-8 BOM**，且部分文件的顶层键**带前导空格**。
 用「行首无缩进」判定顶层的做法会漏掉它们。实测 `static_modifiers` 因此少算 7 个：
 
 | 目录 | 修正前 | 修正后 |
@@ -552,9 +544,7 @@ def _load_snapshot(path: Path) -> snapshot.Snapshot:
 
 @snapshot_app.command("create")
 def snap_create(
-    label: Annotated[
-        str | None, typer.Option("--label", help="快照名（默认为游戏版本号）")
-    ] = None,
+    label: Annotated[str | None, typer.Option("--label", help="快照名（默认为游戏版本号）")] = None,
 ) -> None:
     """生成当前版本快照，写入 tools/out/snapshots/。"""
     _require_game()
@@ -606,9 +596,7 @@ def snap_list() -> None:
                 escape(f"{type(exc).__name__}: {exc}"),
             )
             continue
-        total = sum(
-            len(names) for body in snap.sections.values() for names in body.values()
-        )
+        total = sum(len(names) for body in snap.sections.values() for names in body.values())
         table.add_row(
             escape(path.name),
             escape(snap.version_label),
@@ -623,9 +611,7 @@ def snap_diff(
     older: Annotated[str, typer.Argument(help="旧快照名（不含 .json）")],
     newer: Annotated[str, typer.Argument(help="新快照名")],
     detail: Annotated[bool, typer.Option("--detail", help="列出增删明细")] = False,
-    json_out: Annotated[
-        Path | None, typer.Option("--json", help="把差异写入该 JSON 文件")
-    ] = None,
+    json_out: Annotated[Path | None, typer.Option("--json", help="把差异写入该 JSON 文件")] = None,
 ) -> None:
     """比对两份快照，列出字段与条目的增删。
 
@@ -713,9 +699,7 @@ def snap_verify() -> None:
     db = json.dumps(second.to_dict(), ensure_ascii=False, indent=1, sort_keys=True)
 
     if da == db:
-        total = sum(
-            len(names) for body in first.sections.values() for names in body.values()
-        )
+        total = sum(len(names) for body in first.sections.values() for names in body.values())
         console.print("[green]✅ 两次构建结果完全一致 —— 快照是确定性的[/]")
         console.print(f"   域 {len(first.sections)} 个，条目总计 {total:,}")
         return
@@ -729,15 +713,9 @@ def snap_verify() -> None:
 # ── verify ──────────────────────────────────────────────────
 @app.command("verify")
 def verify_cmd(
-    fast: Annotated[
-        bool, typer.Option("--fast", help="跳过需要全库扫描的检查")
-    ] = False,
-    json_out: Annotated[
-        Path | None, typer.Option("--json", help="把结果写入该 JSON 文件")
-    ] = None,
-    only: Annotated[
-        str | None, typer.Option("--only", help="只跑 id 含该子串的断言")
-    ] = None,
+    fast: Annotated[bool, typer.Option("--fast", help="跳过需要全库扫描的检查")] = False,
+    json_out: Annotated[Path | None, typer.Option("--json", help="把结果写入该 JSON 文件")] = None,
+    only: Annotated[str | None, typer.Option("--only", help="只跑 id 含该子串的断言")] = None,
 ) -> None:
     """核对知识库文档里的数量断言（游戏本体口径）。
 
@@ -843,9 +821,7 @@ def crosscheck_cmd(
     """
     claims, version = engine_log.parse_logs()
     if not claims:
-        _fail(
-            f"找不到引擎日志：{engine_log.default_log_dir()}（需要先运行过一次游戏）"
-        )
+        _fail(f"找不到引擎日志：{engine_log.default_log_dir()}（需要先运行过一次游戏）")
 
     report = engine_log.cross_check(claims, log_version=version)
     s = report.summary()
@@ -884,8 +860,7 @@ def crosscheck_cmd(
                     for rel, line, tok, got in report.tokens
                 ],
                 "位置核对": [
-                    {"文件": rel, "行": line, "判定": why}
-                    for rel, line, why in report.locations
+                    {"文件": rel, "行": line, "判定": why} for rel, line, why in report.locations
                 ],
             },
         )

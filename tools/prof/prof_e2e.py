@@ -15,8 +15,8 @@
 * ``pyinstrument``            调用树，直接看出时间花在哪条路径上
 * ``typer`` / ``rich``        命令行与表格渲染
 
-与 ``tools/diag/`` 的区别：``diag/`` 是一次性排障脚本的存档，
-``prof/`` 是可重复运行、产出可对比报告的正式工具。
+``prof/`` 是可重复运行、产出可对比报告的正式工具（历史上与之对照的
+``tools/diag/`` 一次性排障脚本已删除）。
 """
 
 from __future__ import annotations
@@ -116,9 +116,7 @@ def _write_prof(name: str, pr: cProfile.Profile) -> Path:
 
 def _report(stage: StageProfile, top: int) -> None:
     console.rule(f"[bold]{stage.label}[/]  {stage.elapsed:.2f} 秒")
-    console.print(
-        _stats_table(stage.profile, top, f"{stage.label} —— 按累计耗时排序")
-    )
+    console.print(_stats_table(stage.profile, top, f"{stage.label} —— 按累计耗时排序"))
     path = _write_prof(stage.label, stage.profile)
     console.print(f"[dim]原始剖析数据：{path.relative_to(config.REPO)}\n")
 
@@ -301,8 +299,7 @@ def prefixaudit() -> None:
     root = config.GAME
     everything = list(walk_files(root, suffix=".txt"))
     outside = [
-        f for f in everything
-        if not config.is_scriptable(f.path.relative_to(root).parts, f.suffix)
+        f for f in everything if not config.is_scriptable(f.path.relative_to(root).parts, f.suffix)
     ]
 
     # 这些文件**不该**被解析；只统计它们的规模，不打开

@@ -3,8 +3,8 @@
 > ⚠️ **版本提示**：本文的数量统计与「零使用 / 未使用」类结论**采集于 1.14.2**，而本机游戏已升级到 **1.14.3**，这些结论尚未逐条重测。
 > 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.3）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
 
-> **适用版本**：Victoria 3 **1.14.2 (Ice Tea)**
-> 版本依据：`launcher\launcher-settings.json` → `"version": "1.14.2 (Ice Tea)"`、`"rawVersion": "1.14.2"`；`caligula_branch.txt` → `release/1.14.2`；`clausewitz_branch.txt` → `caligula/release/1.14.x`
+> **适用版本**：Victoria 3 **1.14.3 (Ice Tea)**（本文的模块结构统计已重测到 1.14.3；个别标注为 1.14.2 的结论为历史采集值）
+> 版本依据：`launcher\launcher-settings.json` → `"version": "1.14.3 (Ice Tea)"`、`"rawVersion": "1.14.3"`；`caligula_branch.txt` → `release/1.14.3`；`clausewitz_branch.txt` → `caligula/release/1.14.x`
 > **内容根（下文简称 `GAME`）**：`C:\Program Files (x86)\Steam\steamapps\common\Victoria 3\game`
 > **安装根**：`C:\Program Files (x86)\Steam\steamapps\common\Victoria 3`
 
@@ -31,20 +31,32 @@
 | 【提取】 | 由脚本从实际游戏文件机械提取，附文件路径（+ 行号） |
 | 【注释】 | 摘录原版文件内的开发者注释 |
 | 【文档】 | 原版随游戏附带的 `.md` 说明文件 |
-| 【Wiki】 | Victoria 3 官方 Wiki（版本页标注 verified for 1.13，早于本机 1.14.2） |
+| 【Wiki】 | Victoria 3 官方 Wiki（版本页标注 verified for 1.13，早于采集时点的 1.14.2） |
 | 【推断】 | 基于上述证据的推论，未直接验证 |
 | **【未确认】** | 本地文件无法确证，需实机或引擎日志验证 |
 
 ### 0.2 提取脚本
 
-下列脚本位于工作区 `tools\`，可随时复跑核对：
+下列命令在工作区可随时复跑核对（工具链为 Python 实现，见 `tools/README.md`）：
 
-| 脚本 | 作用 |
+| 命令 | 作用 |
 |---|---|
-| `extract_defines.ps1` | defines 花括号深度解析器（块 / 参数 / 嵌套块） |
-| `dump_precise.ps1` | 精确分类导出为 `tools\out\defines_precise.json` |
-| `dump_misc.ps1` | game_rules / modifier types / static modifiers 导出 |
-| `make_frags.ps1`、`make_gamerules.ps1` | 生成本文附录中的机械清单 |
+| `v3 defines --ns NAI` | 展开某个 defines 命名空间的全部参数 |
+| `v3 defines --json <路径>` | 把提取结果落盘为 JSON |
+| `v3 defines --overlay <文件>` | 预览一段 mod defines 会覆盖哪些原版参数 |
+| `v3 analyze` | 全量分析，落盘 `tools/out/` 下的全部产物 |
+
+> 早期这些工作由 5 个 PowerShell 脚本完成（`extract_defines.ps1` /
+> `dump_precise.ps1` / `dump_misc.ps1` / `make_frags.ps1` / `make_gamerules.ps1`），
+> 它们**已全部退休**：PowerShell 的编码陷阱与无法写测试两点让它不可维护。
+
+> ⚠️ **§2.1 / §2.2 / §2.5 / §2.6 与 §1.6 的表格已按 1.14.3 重算。**
+> 这几张表原先由那批 PowerShell 脚本产出，数值停留在 1.14.2：
+> 1.14.3 给 `NMilitary` 增加了 1 个参数、给 `NDiplomacy` 增加了 39 个，
+> 于是 `00_defines.txt` 之后所有块的**起始行号整体后移 40 行**、
+> 参数总数从 3434 涨到 **3488**。现在这些数字由仓库内的解析器
+> （`pdx.parser`，口径见 §0.3）重新生成，并由 `v3 verify` 的
+> `def.param_total` / `def.param_names` 两条断言钉住。
 
 ### 0.3 计数口径（重要）
 
@@ -67,11 +79,11 @@
 
 | 指标 | 数值 | 来源 |
 |---|---|---|
-| `common\defines\` 下 `.txt` 文件数 | **9**（根目录 6 + `jomini\` 子目录 3） | 【提取】`Get-ChildItem -Recurse` |
+| `common\defines\` 下 `.txt` 文件数 | **9**（根目录 6 + `jomini\` 子目录 3） | 【提取】递归枚举 `common\defines\` |
 | 顶层命名空间块总数 | **75** | 【提取】§2.2 |
 | 去重后命名空间数 | **50** | 【提取】§1.6 |
-| 参数条目总数 | **3434**（标量 3263 + 内联列表 168 + 嵌套块 3） | 【提取】§2.1 汇总 |
-| 去重后参数名数 | **3427** | 【提取】 |
+| 参数条目总数 | **3488**（标量 3313 + 内联列表 172 + 嵌套块 3） | 【提取】§2.1 汇总 |
+| 去重后参数名数 | **3481**（有 7 次跨块重复出现） | 【提取】 |
 
 > **解析器口径提示**：`00_shaders.txt` 第 1-2 行是 PDX 的另一种写法——`NShadersCommon =` 与 `{` 分行。全库 9 个 defines 文件中**只有这一处**采用该写法（脚本已逐文件校验：其余文件均无"行尾为 `=`"的情况）。本文的解析器已处理该情形，行号一律为**物理行号**。
 
@@ -210,7 +222,7 @@ NPops = {
 | 规则 | 校验结果 | 依据 |
 |---|---|---|
 | 顶层块名必须以 `N` 开头 | **75 / 75 符合，0 例外** | 【提取】脚本校验 `$ns.StartsWith('N')` |
-| 参数名应为全大写 `SNAKE_CASE` | **3427 个去重参数名中仅 4 个例外**，且全部在同一个文件 | 【提取】 |
+| 参数名应为全大写 `SNAKE_CASE` | **3481 个去重参数名中仅 4 个例外**，且全部在同一个文件 | 【提取】 |
 | 命名空间命名风格 | `N` + 大驼峰英文（`NAI`、`NCountry`、`NEconomy`、`NPowerBlocs`…） | §1.6 |
 
 4 个例外（`GAME\common\defines\00_audio.txt`，用于拼接音频事件路径 `MAP_LENS_<map_mode_key>`）：
@@ -240,16 +252,16 @@ MAP_LENS_military_lens
 | `NCoasts` | 1 | 6 | 00_graphics.txt |
 | `NCountry` | 1 | 44 | 00_defines.txt |
 | `NDebug` | 1 | 3 | 00_defines.txt |
-| `NDiplomacy` | 1 | 367 | 00_defines.txt |
+| `NDiplomacy` | 1 | 406 | 00_defines.txt |
 | `NEconomy` | 1 | 294 | 00_defines.txt |
 | `NEdgeOfWorld` | 1 | 19 | 00_shaders.txt |
 | `NEvents` | 1 | 3 | 00_defines.txt |
 | `NFogOfWar` | 1 | 23 | jomini/fog_of_war.txt |
 | `NFortifications` | 1 | 5 | 00_graphics.txt |
 | `NFrontend` | 1 | 3 | 00_graphics.txt |
+| `NGUI` | 24 | 189 | 00_interfaces.txt |
 | `NGame` | 1 | 6 | 00_defines.txt |
 | `NGraphics` | 1 | 136 | 00_graphics.txt |
-| `NGUI` | 24 | 189 | 00_interfaces.txt |
 | `NGuiFlag` | 1 | 3 | 00_shaders.txt |
 | `NHarvestConditions` | 1 | 2 | 00_defines.txt |
 | `NJominiEars` | 1 | 2 | 00_graphics.txt |
@@ -258,17 +270,17 @@ MAP_LENS_military_lens
 | `NJominiMapGraphics` | 1 | 11 | 00_graphics.txt |
 | `NLenses` | 1 | 9 | 00_interfaces.txt |
 | `NMapCoa` | 1 | 11 | 00_shaders.txt |
-| `NMapMode` | 1 | 89 | 00_graphics.txt |
-| `NMapmodeStripes` | 1 | 6 | 00_shaders.txt |
+| `NMapMode` | 1 | 97 | 00_graphics.txt |
 | `NMapName` | 1 | 8 | 00_graphics.txt |
-| `NMilitary` | 1 | 168 | 00_defines.txt |
+| `NMapmodeStripes` | 1 | 6 | 00_shaders.txt |
+| `NMilitary` | 1 | 169 | 00_defines.txt |
 | `NNavy` | 1 | 98 | 00_graphics.txt |
 | `NPolitics` | 1 | 208 | 00_defines.txt |
-| `NPops` | 2 | 225 | 00_defines.txt |
+| `NPops` | 2 | 227 | 00_defines.txt |
 | `NPortrait` | 1 | 5 | 00_graphics.txt |
 | `NPowerBlocCoa` | 1 | 21 | 00_graphics.txt |
-| `NPowerBlocs` | 1 | 24 | 00_defines.txt |
 | `NPowerBlocStatueCamera` | 1 | 7 | 00_graphics.txt |
+| `NPowerBlocs` | 1 | 24 | 00_defines.txt |
 | `NProvinceHighlight` | 1 | 4 | 00_graphics.txt |
 | `NRivers` | 1 | 6 | jomini/rivers.txt |
 | `NRoutes` | 1 | 9 | 00_graphics.txt |
@@ -424,16 +436,16 @@ NCountry = {
 
 | 文件（相对 `common\defines\`） | 顶层块数 | 标量参数 | 内联列表 | 嵌套块 | 条目合计 |
 |---|---|---|---|---|---|
-| `00_ai.txt` | 1 | 1013 | 0 | 0 | **1013** |
+| `00_ai.txt` | 1 | 1017 | 0 | 0 | **1017** |
 | `00_audio.txt` | 1 | 23 | 0 | 0 | **23** |
-| `00_defines.txt` | 19 | 1632 | 5 | 0 | **1637** |
-| `00_graphics.txt` | 19 | 365 | 117 | 2 | **484** |
+| `00_defines.txt` | 19 | 1674 | 5 | 0 | **1679** |
+| `00_graphics.txt` | 19 | 369 | 121 | 2 | **492** |
 | `00_interfaces.txt` | 27 | 161 | 40 | 0 | **201** |
 | `00_shaders.txt` | 5 | 35 | 5 | 0 | **40** |
 | `jomini/00_tooltips.txt` | 1 | 6 | 0 | 1 | **7** |
 | `jomini/fog_of_war.txt` | 1 | 22 | 1 | 0 | **23** |
 | `jomini/rivers.txt` | 1 | 6 | 0 | 0 | **6** |
-| **合计** | **75** | **3263** | **168** | **3** | **3434** |
+| **合计** | **75** | **3313** | **172** | **3** | **3488** |
 
 【提取】
 
@@ -450,39 +462,39 @@ NCountry = {
 | `00_defines.txt` | `NCountry` | 17 | 44 | 0 | 0 | 44 |
 | `00_defines.txt` | `NPolitics` | 64 | 208 | 0 | 0 | 208 |
 | `00_defines.txt` | `NEconomy` | 358 | 293 | 1 | 0 | 294 |
-| `00_defines.txt` | `NMilitary` | 728 | 168 | 0 | 0 | 168 |
-| `00_defines.txt` | `NDiplomacy` | 941 | 367 | 0 | 0 | 367 |
-| `00_defines.txt` | `NPowerBlocs` | 1377 | 24 | 0 | 0 | 24 |
-| `00_defines.txt` | `NPops` | 1404 | 205 | 4 | 0 | 209 |
-| `00_defines.txt` | `NPops` | 1773 | 16 | 0 | 0 | 16 |
-| `00_defines.txt` | `NEvents` | 1800 | 3 | 0 | 0 | 3 |
-| `00_defines.txt` | `NTechnology` | 1806 | 4 | 0 | 0 | 4 |
-| `00_defines.txt` | `NCharacters` | 1814 | 103 | 0 | 0 | 103 |
-| `00_defines.txt` | `NBattle` | 1974 | 66 | 0 | 0 | 66 |
-| `00_defines.txt` | `NWar` | 2062 | 76 | 0 | 0 | 76 |
-| `00_defines.txt` | `NTravelNetwork` | 2143 | 34 | 0 | 0 | 34 |
-| `00_defines.txt` | `NHarvestConditions` | 2188 | 2 | 0 | 0 | 2 |
-| `00_defines.txt` | `NText` | 2193 | 6 | 0 | 0 | 6 |
-| `00_defines.txt` | `NDebug` | 2203 | 3 | 0 | 0 | 3 |
-| `00_graphics.txt` | `NMapMode` | 1 | 34 | 55 | 0 | 89 |
-| `00_graphics.txt` | `NMapName` | 153 | 7 | 0 | 1 | 8 |
-| `00_graphics.txt` | `NJominiMapGraphics` | 183 | 11 | 0 | 0 | 11 |
-| `00_graphics.txt` | `NJominiGraphics` | 198 | 3 | 0 | 0 | 3 |
-| `00_graphics.txt` | `NJominiEars` | 204 | 2 | 0 | 0 | 2 |
-| `00_graphics.txt` | `NGraphics` | 209 | 105 | 31 | 0 | 136 |
-| `00_graphics.txt` | `NFrontend` | 413 | 3 | 0 | 0 | 3 |
-| `00_graphics.txt` | `NCamera` | 419 | 14 | 4 | 0 | 18 |
-| `00_graphics.txt` | `NCities` | 446 | 25 | 3 | 0 | 28 |
-| `00_graphics.txt` | `NFortifications` | 492 | 5 | 0 | 0 | 5 |
-| `00_graphics.txt` | `NCoasts` | 500 | 6 | 0 | 0 | 6 |
-| `00_graphics.txt` | `NRoutes` | 509 | 6 | 2 | 1 | 9 |
-| `00_graphics.txt` | `NPortrait` | 527 | 5 | 0 | 0 | 5 |
-| `00_graphics.txt` | `NProvinceHighlight` | 535 | 4 | 0 | 0 | 4 |
-| `00_graphics.txt` | `NTravelNetwork` | 544 | 9 | 0 | 0 | 9 |
-| `00_graphics.txt` | `NPowerBlocCoa` | 557 | 7 | 14 | 0 | 21 |
-| `00_graphics.txt` | `NPowerBlocStatueCamera` | 587 | 7 | 0 | 0 | 7 |
-| `00_graphics.txt` | `NNavy` | 597 | 96 | 2 | 0 | 98 |
-| `00_graphics.txt` | `NShipViewer` | 712 | 16 | 6 | 0 | 22 |
+| `00_defines.txt` | `NMilitary` | 728 | 169 | 0 | 0 | 169 |
+| `00_defines.txt` | `NDiplomacy` | 942 | 406 | 0 | 0 | 406 |
+| `00_defines.txt` | `NPowerBlocs` | 1417 | 24 | 0 | 0 | 24 |
+| `00_defines.txt` | `NPops` | 1444 | 207 | 4 | 0 | 211 |
+| `00_defines.txt` | `NPops` | 1813 | 16 | 0 | 0 | 16 |
+| `00_defines.txt` | `NEvents` | 1840 | 3 | 0 | 0 | 3 |
+| `00_defines.txt` | `NTechnology` | 1846 | 4 | 0 | 0 | 4 |
+| `00_defines.txt` | `NCharacters` | 1854 | 103 | 0 | 0 | 103 |
+| `00_defines.txt` | `NBattle` | 2014 | 66 | 0 | 0 | 66 |
+| `00_defines.txt` | `NWar` | 2102 | 76 | 0 | 0 | 76 |
+| `00_defines.txt` | `NTravelNetwork` | 2183 | 34 | 0 | 0 | 34 |
+| `00_defines.txt` | `NHarvestConditions` | 2228 | 2 | 0 | 0 | 2 |
+| `00_defines.txt` | `NText` | 2233 | 6 | 0 | 0 | 6 |
+| `00_defines.txt` | `NDebug` | 2243 | 3 | 0 | 0 | 3 |
+| `00_graphics.txt` | `NMapMode` | 1 | 38 | 59 | 0 | 97 |
+| `00_graphics.txt` | `NMapName` | 157 | 7 | 0 | 1 | 8 |
+| `00_graphics.txt` | `NJominiMapGraphics` | 187 | 11 | 0 | 0 | 11 |
+| `00_graphics.txt` | `NJominiGraphics` | 202 | 3 | 0 | 0 | 3 |
+| `00_graphics.txt` | `NJominiEars` | 208 | 2 | 0 | 0 | 2 |
+| `00_graphics.txt` | `NGraphics` | 213 | 105 | 31 | 0 | 136 |
+| `00_graphics.txt` | `NFrontend` | 417 | 3 | 0 | 0 | 3 |
+| `00_graphics.txt` | `NCamera` | 423 | 14 | 4 | 0 | 18 |
+| `00_graphics.txt` | `NCities` | 450 | 25 | 3 | 0 | 28 |
+| `00_graphics.txt` | `NFortifications` | 496 | 5 | 0 | 0 | 5 |
+| `00_graphics.txt` | `NCoasts` | 504 | 6 | 0 | 0 | 6 |
+| `00_graphics.txt` | `NRoutes` | 513 | 6 | 2 | 1 | 9 |
+| `00_graphics.txt` | `NPortrait` | 531 | 5 | 0 | 0 | 5 |
+| `00_graphics.txt` | `NProvinceHighlight` | 539 | 4 | 0 | 0 | 4 |
+| `00_graphics.txt` | `NTravelNetwork` | 548 | 9 | 0 | 0 | 9 |
+| `00_graphics.txt` | `NPowerBlocCoa` | 561 | 7 | 14 | 0 | 21 |
+| `00_graphics.txt` | `NPowerBlocStatueCamera` | 591 | 7 | 0 | 0 | 7 |
+| `00_graphics.txt` | `NNavy` | 601 | 96 | 2 | 0 | 98 |
+| `00_graphics.txt` | `NShipViewer` | 716 | 16 | 6 | 0 | 22 |
 | `00_interfaces.txt` | `NLenses` | 1 | 9 | 0 | 0 | 9 |
 | `00_interfaces.txt` | `NGUI` | 13 | 1 | 0 | 0 | 1 |
 | `00_interfaces.txt` | `NGUI` | 17 | 48 | 15 | 0 | 63 |
@@ -523,9 +535,9 @@ NCountry = {
 
 ### 2.3 `00_ai.txt` —— AI 专用 defines（详见 §3）
 
-整个文件**只有一个**顶层命名空间块 `NAI`，起始于第 1 行，包含 **1017** 个参数，全部为标量，无内联列表、无嵌套块。文件共 1307 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
+整个文件**只有一个**顶层命名空间块 `NAI`，起始于第 1 行，包含 **1017** 个参数，全部为标量，无内联列表、无嵌套块。文件共 1311 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
 
-结构明细见 §3.1，全部 1013 个参数名见 §3.3。
+结构明细见 §3.1，全部 1017 个参数名见 §3.3。
 
 ### 2.4 `00_audio.txt`
 
@@ -550,51 +562,51 @@ NCountry = {
 | 3 | `NCountry` | 17 | 1 | 44 |
 | 4 | `NPolitics` | 64 | 1 | 208 |
 | 5 | `NEconomy` | 358 | 1 | 294 |
-| 6 | `NMilitary` | 728 | 1 | 168 |
-| 7 | `NDiplomacy` | 941 | 1 | 367 |
-| 8 | `NPowerBlocs` | 1377 | 1 | 24 |
-| 9 | `NPops` | 1404, 1773 | **2** | 209 + 16 = 225 |
-| 10 | `NEvents` | 1800 | 1 | 3 |
-| 11 | `NTechnology` | 1806 | 1 | 4 |
-| 12 | `NCharacters` | 1814 | 1 | 103 |
-| 13 | `NBattle` | 1974 | 1 | 66 |
-| 14 | `NWar` | 2062 | 1 | 76 |
-| 15 | `NTravelNetwork` | 2143 | 1 | 34 |
-| 16 | `NHarvestConditions` | 2188 | 1 | 2 |
-| 17 | `NText` | 2193 | 1 | 6 |
-| 18 | `NDebug` | 2203 | 1 | 3 |
-| | **合计** | | **19 块** | **1637** |
+| 6 | `NMilitary` | 728 | 1 | 169 |
+| 7 | `NDiplomacy` | 942 | 1 | 406 |
+| 8 | `NPowerBlocs` | 1417 | 1 | 24 |
+| 9 | `NPops` | 1444, 1813 | **2** | 211 + 16 = 227 |
+| 10 | `NEvents` | 1840 | 1 | 3 |
+| 11 | `NTechnology` | 1846 | 1 | 4 |
+| 12 | `NCharacters` | 1854 | 1 | 103 |
+| 13 | `NBattle` | 2014 | 1 | 66 |
+| 14 | `NWar` | 2102 | 1 | 76 |
+| 15 | `NTravelNetwork` | 2183 | 1 | 34 |
+| 16 | `NHarvestConditions` | 2228 | 1 | 2 |
+| 17 | `NText` | 2233 | 1 | 6 |
+| 18 | `NDebug` | 2243 | 1 | 3 |
+| | **合计** | | **19 块** | **1679** |
 
 【提取】——这 18 个命名空间与官方 Wiki [Defines](https://vic3.paradoxwikis.com/Defines) 的 §2 小节列表**完全一致**，可作为交叉验证。
 
-规模最大的三块：`NDiplomacy`（367）、`NEconomy`（294）、`NPops`（225）、`NPolitics`（208）。
+规模最大的四块：`NDiplomacy`（406）、`NEconomy`（294）、`NPops`（211）、`NPolitics`（208）。
 
 ### 2.6 `00_graphics.txt`
 
-19 个块，484 个条目（其中 117 条是 `KEY = { r g b a }` 形式的内联颜色列表，2 条是跨行嵌套块）。
+19 个块，492 个条目（其中 121 条是 `KEY = { r g b a }` 形式的内联颜色列表，2 条是跨行嵌套块）。
 
 | 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |
 |---|---|---|---|---|---|
-| `NMapMode` | 1 | 34 | 55 | 0 | 89 |
-| `NMapName` | 153 | 7 | 0 | 1 | 8 |
-| `NJominiMapGraphics` | 183 | 11 | 0 | 0 | 11 |
-| `NJominiGraphics` | 198 | 3 | 0 | 0 | 3 |
-| `NJominiEars` | 204 | 2 | 0 | 0 | 2 |
-| `NGraphics` | 209 | 105 | 31 | 0 | 136 |
-| `NFrontend` | 413 | 3 | 0 | 0 | 3 |
-| `NCamera` | 419 | 14 | 4 | 0 | 18 |
-| `NCities` | 446 | 25 | 3 | 0 | 28 |
-| `NFortifications` | 492 | 5 | 0 | 0 | 5 |
-| `NCoasts` | 500 | 6 | 0 | 0 | 6 |
-| `NRoutes` | 509 | 6 | 2 | 1 | 9 |
-| `NPortrait` | 527 | 5 | 0 | 0 | 5 |
-| `NProvinceHighlight` | 535 | 4 | 0 | 0 | 4 |
-| `NTravelNetwork` | 544 | 9 | 0 | 0 | 9 |
-| `NPowerBlocCoa` | 557 | 7 | 14 | 0 | 21 |
-| `NPowerBlocStatueCamera` | 587 | 7 | 0 | 0 | 7 |
-| `NNavy` | 597 | 96 | 2 | 0 | 98 |
-| `NShipViewer` | 712 | 16 | 6 | 0 | 22 |
-| | | **365** | **117** | **2** | **484** |
+| `NMapMode` | 1 | 38 | 59 | 0 | 97 |
+| `NMapName` | 157 | 7 | 0 | 1 | 8 |
+| `NJominiMapGraphics` | 187 | 11 | 0 | 0 | 11 |
+| `NJominiGraphics` | 202 | 3 | 0 | 0 | 3 |
+| `NJominiEars` | 208 | 2 | 0 | 0 | 2 |
+| `NGraphics` | 213 | 105 | 31 | 0 | 136 |
+| `NFrontend` | 417 | 3 | 0 | 0 | 3 |
+| `NCamera` | 423 | 14 | 4 | 0 | 18 |
+| `NCities` | 450 | 25 | 3 | 0 | 28 |
+| `NFortifications` | 496 | 5 | 0 | 0 | 5 |
+| `NCoasts` | 504 | 6 | 0 | 0 | 6 |
+| `NRoutes` | 513 | 6 | 2 | 1 | 9 |
+| `NPortrait` | 531 | 5 | 0 | 0 | 5 |
+| `NProvinceHighlight` | 539 | 4 | 0 | 0 | 4 |
+| `NTravelNetwork` | 548 | 9 | 0 | 0 | 9 |
+| `NPowerBlocCoa` | 561 | 7 | 14 | 0 | 21 |
+| `NPowerBlocStatueCamera` | 591 | 7 | 0 | 0 | 7 |
+| `NNavy` | 601 | 96 | 2 | 0 | 98 |
+| `NShipViewer` | 716 | 16 | 6 | 0 | 22 |
+| | | **369** | **121** | **2** | **492** |
 
 【提取】注意 `NCamera` 与 Jomini 层的 `NCamera` 合并（§1.7 证据 1）；`NNavy` 是本文件第二大块。
 
@@ -665,12 +677,12 @@ Jomini 内容根另有 15 个未被 game 层接管的 defines 文件（`00_adapt
 | 项目 | 值 |
 |---|---|
 | 文件 | `GAME\common\defines\00_ai.txt` |
-| 文件大小 / 行数 | 147,337 字节 / **1307 行** |
+| 文件大小 / 行数 | 147,603 字节 / **1311 行** |
 | 顶层命名空间块 | **1 个：`NAI`**（第 1 行） |
-| 参数总数 | **1013**（全部标量；内联列表 0；嵌套块 0） |
-| 去重参数名数 | **1013**（无重复键） |
+| 参数总数 | **1017**（全部标量；内联列表 0；嵌套块 0） |
+| 去重参数名数 | **1017**（无重复键） |
 | 文件内 `= {` 出现次数 | **1 次**（仅第 1 行） |
-| 判空校验 | 独立脚本按「缩进赋值行」计数同样得到 1013，与解析器结果一致 |
+| 判空校验 | 解析器按「块内深度 1 的 `KEY = value`」计数得到 1017，与顶层块口径一致 |
 
 【提取】
 
@@ -799,7 +811,7 @@ Jomini 内容根另有 15 个未被 game 层接管的 defines 文件（`00_adapt
 
 ---
 
-### 3.3 全部 1013 个参数名
+### 3.3 全部 1017 个参数名
 
 下表由脚本从 `GAME\common\defines\00_ai.txt` 按**文件中的原始出现顺序**机械导出（第 2 行至第 1310 行），两列排版。全部 1017 个，无遗漏、无编造；`NAI` 块内**无重复键**（脚本校验：1017 条 → 1017 个去重名）。
 
@@ -1841,7 +1853,7 @@ NAVAL_HQ_IMPORTANCE_MIN_SCORE
 | `00_defines.txt` | `NMilitary` | `AI_FIND_FLEET_EXPECTED_DISTANCE` |
 | `00_interfaces.txt` | `NGUI` | `AI_STRATEGIC_REGION_STANCE_TYPE_ICON_FONT` |
 | `00_interfaces.txt` | `NGUI` | `AI_STRATEGIC_REGION_STANCE_TYPE_ICON_OFFSET` |
-**结论**：想在 `00_ai.txt` 之外找 AI 调参点，"键名含 AI"这条线索几乎无效（只有 4 条，且 2 条是 UI 图标）。真正与 AI 决策相关的参数大量分布在 `NDiplomacy`（367 条）、`NEconomy`（294 条）、`NPolitics`（208 条）等块中，但**命名不含 `AI` 字样**（例如 `NDiplomacy` 的 `COUNTRY_TIER_HEGEMONY_PRESTIGE = 50`）。做 AI mod 时应以 `00_ai.txt` 的 `NAI` 块为主战场，其余按语义人工排查。【提取 + 推断】
+**结论**：想在 `00_ai.txt` 之外找 AI 调参点，"键名含 AI"这条线索几乎无效（只有 4 条，且 2 条是 UI 图标）。真正与 AI 决策相关的参数大量分布在 `NDiplomacy`（406 条）、`NEconomy`（294 条）、`NPolitics`（208 条）等块中，但**命名不含 `AI` 字样**（例如 `NDiplomacy` 的 `COUNTRY_TIER_HEGEMONY_PRESTIGE = 50`）。做 AI mod 时应以 `00_ai.txt` 的 `NAI` 块为主战场，其余按语义人工排查。【提取 + 推断】
 
 ---
 
@@ -4658,34 +4670,50 @@ country_soldiers_voting_power_add
 | 维度 | 实测 |
 |---|---|
 | 文件数 | **68** |
-| 条目（静态修饰符）总数 | **6121**（口径见下） |
+| 条目（静态修饰符）总数 | **6128**（口径见下） |
 | 每个文件的顶层条目 | 1 ~ 634 不等 |
 | 目录内 `.md` 说明文件 | **0**（`static_modifiers` 不像 `modifier_type_definitions` / `game_rules` 那样带说明文档） |
 | 文件结构一致性 | **68 / 68 个文件都以 `key = {` 开头**（脚本逐文件校验首行） |
 
-> **计数口径说明（独立复核记录）**
+> **计数口径说明（三次复核记录）**
 >
-> 本节早期版本写作 **6125**，该数字**未能复现**。经独立复核，**6121** 可由以下口径精确复现：
+> 本节先后写过 **6125** 与 **6121**，**两个都是错的**。正确值是 **6128**。
 >
-> ```text
-> 规则：行首无缩进（^）、排除以 # 开头的注释行、匹配 `键名 = {`
-> 结果：6121 个唯一键；总出现次数亦为 6121（无重复定义）
-> ```
+> 错因是判据选错了：两次都拿**缩进**当"是否顶层"的依据，而缩进在 PDX
+> 脚本里**没有语义** —— 官方文件混用 tab / 2 空格 / 4 空格 / 完全不缩进。
+> 顶层与否只能看**花括号深度**。
 >
-> 不同口径会得出不同数字，**这正是最容易被数错之处**：
+> 用「行首无缩进」数会**静默漏掉 7 个确实顶层的键**：
 >
-> | 口径 | 数量 |
-> |---|---|
-> | 缩进 0 + 排除注释 + `= {` | **6121** |
-> | 上述 + 特殊键 `icon`（赋值语句，非块） | 6122 |
-> | 不限缩进（会混入嵌套键） | 6129 |
-> | 用 `^[A-Za-z_]` 开头（**静默漏掉 3 个数字开头的键**） | 6118 |
+> | 文件:行 | 键 | 行首 |
+> |---|---|---|
+> | `02_event_modifiers.txt:427` | `modifier_great_salt_lake_mapped` | 1 空格 |
+> | `02_event_modifiers.txt:432` | `modifier_surveying_suez` | 1 空格 |
+> | `02_event_modifiers.txt:437` | `modifier_surveying_panama` | 2 空格 |
+> | `02_event_modifiers.txt:442` | `modifier_failed_expedition` | 1 空格 |
+> | `content_1_modifiers.txt:1210` | `modifier_objectors_conscription_law` | 1 空格 |
+> | `content_1_modifiers.txt:1215` | `modifier_objectors_conscription_bad_law` | 1 空格 |
+> | `00_ip3_04_modifiers.txt:62` | `negotiation_pushing_for_law` | 1 空格 |
 >
-> **两个具体陷阱**：
+> 6121 + 7 = **6128**。反向为空 —— 顶格但非顶层的键一个也没有，
+> 说明「缩进口径」是「深度口径」的真子集，只会少不会多。
+>
+> 四种口径对照：
+>
+> | 口径 | 数量 | 判定 |
+> |---|---:|---|
+> | **花括号深度为 0** | **6128** | ✅ 正确 |
+> | 行首无缩进 | 6121 | ❌ 漏掉上表 7 个 |
+> | 不限缩进、不数深度 | 6129 | ❌ 混入 1 个嵌套键 |
+> | 用 `^[A-Za-z_]` 开头 | 6118 | ❌ 另漏 3 个数字开头的键 |
+>
+> **三个具体陷阱**：
 >
 > 1. **有 3 个静态修饰符以数字开头** —— `1848_popular_radical`、`1848_reactionary_enactment`、
 >    `1848_institution_speed`（均在 `content_1_modifiers.txt`）。用 `^[A-Za-z_]` 类正则会漏掉它们。
 > 2. **`icon` 是赋值而非块**（`icon = gfx/...dds`），容易被误计或漏计。
+> 3. **有 7 个顶层键带缩进** —— 见上表。这一类最隐蔽：总数只差 7，
+>    不逐个核对根本看不出来。
 
 【提取】
 
@@ -4764,7 +4792,7 @@ base_values = {
 | 要点 | 说明 |
 |---|---|
 | 顶层块名即「修饰符名」 | 全局唯一，脚本用这个名字引用 |
-| `icon` 可选但强烈建议写 | 6087 / 6121 个条目都写了；不写则 UI 上可能无图标 |
+| `icon` 可选但强烈建议写 | 6087 / 6128 个条目都写了；不写则 UI 上可能无图标 |
 | **不含时长** | 定义里**没有** `days` / `months`；持续时间在**施加时**由脚本给出（见 §6.4） |
 | 值可以是负数 | `building_throughput_add = -0.1` |
 | 同一修饰符可含多个不同作用域的键 | 例如同时含 `country_*` 与 `state_*`（§5.1 的流动规则决定它们如何向下传播） |
@@ -4977,30 +5005,24 @@ add_modifier = { # academics polstr
 | 8 | **`game_data.type_set` 的合法取值** | `modifier_types.md` 举例 `cultural_acceptance`，但原版 0 使用；完整取值表未知。 |
 | 9 | **`decimals` / `percent` / `color` 缺省值** | 原版有 31 个键不写 `decimals`、1479 个不写 `percent`，证明有默认值，但具体值未确证。 |
 | 10 | **`scripted_modifiers` 是否仍被引擎解析** | 全库 0 引用（§7.2）。 |
-| 11 | **wiki 的 verified 版本是 1.13，本机是 1.14.2** | 本文所有 Wiki 引用均标注，并与本机实测交叉核对；发现一处**过时/不符**：Wiki 的 `00_defines` 示例注释称 `INCORPORATION_TIME_NO_MATCH` 的 base game 值为 20，实测为 **25**（`00_defines.txt` 第 57 行）。 |
+| 11 | **wiki 的 verified 版本是 1.13，采集时点本机是 1.14.2** | 本文所有 Wiki 引用均标注，并与本机实测交叉核对；发现一处**过时/不符**：Wiki 的 `00_defines` 示例注释称 `INCORPORATION_TIME_NO_MATCH` 的 base game 值为 20，实测为 **25**（`00_defines.txt` 第 57 行）。 |
 | 12 | **mod 中新增 define 键是否完全无效** | 推断为无效（键由 C++ 硬编码），但未见官方明文说明。 |
 
 ---
 
 ## 9. 复现方法
 
-本文全部机械清单可在工作区复跑。脚本位于 `tools\`：
+本文全部机械清单可在工作区复跑：
 
-| 脚本 | 作用 |
-|---|---|
-| `tools\extract_defines.ps1` | defines 块/参数解析器（函数库，`Invoke-Expression` 载入） |
-| `tools\dump_precise.ps1` | 精确分类并导出 `tools\out\defines_precise.json` |
-| `tools\dump_misc.ps1` | 导出 `modifier_types.json`、`static_modifiers.json` |
-| `tools\make_frags.ps1` | 生成 §1.6 / §2.2 / §3.2 / §3.3 / §5.3 / §5.4 / §6.5 / §6.6 的表 |
-| `tools\make_gamerules.ps1` | 生成 §4.5–§4.8 的表 |
-
-复跑方式（PowerShell 5.1；本机沙箱为 ConstrainedLanguage，脚本已按该限制编写）：
-
-```powershell
-$s = "C:\Users\28905\projects\Situated AI\tools\dump_precise.ps1"
-Invoke-Expression (Get-Content -LiteralPath $s -Raw -Encoding UTF8)
-Export-DefinesPrecise
+```text
+v3 defines                  # 摘要：命名空间块数、参数总数
+v3 defines --ns NAI         # 展开 NAI 的全部 1,017 个参数
+v3 defines --json out.json  # 落盘完整结构
+v3 analyze                  # 全量分析（含 game_rules / 修饰符 / 静态修饰符）
 ```
+
+> 早期由 5 个 PowerShell 脚本完成同样的事，它们**已全部退休** ——
+> 退休原因见 `tools/README.md` 末尾「为什么全 Python 化」。
 
 注意事项（踩过的坑，写给后来者）：
 
@@ -5008,9 +5030,8 @@ Export-DefinesPrecise
 |---|---|
 | `NAME =` 与 `{` 分行 | `00_shaders.txt` 第 1-2 行是这种写法；朴素的行内 `= {` 正则匹配会漏掉整个 `NShadersCommon` 块。 |
 | 行号 | 若为处理上一条而合并行，必须保留**物理行号**，否则所有行号整体偏移。 |
-| PS 5.1 读文件 | `Get-Content` 不带 `-Encoding UTF8` 会按 ANSI（GBK）解码含中文的脚本，导致解析错误。 |
-| ConstrainedLanguage | `[pscustomobject]@{}`、`New-Object System.Text.UTF8Encoding`、`[System.IO.File]::*`、`HashSet` 均被禁用；改用 `New-Object -TypeName PSObject -Property`、`Set-Content -Encoding UTF8`。 |
-| BOM | PS 5.1 的 `Set-Content/Add-Content -Encoding UTF8` 在**新建**文件时会写 BOM；向**非空**文件追加时不会。 |
+| 读文件编码 | 早期用 PowerShell `Get-Content` 不带 `-Encoding UTF8`，会按 ANSI（GBK）解码含中文的脚本，导致解析错误。Python 侧固定用 `utf-8-sig`，自动剥离 BOM，这一类问题不再存在。 |
+| BOM | 原版 `common/` 下 3,026 个 `.txt` 有 3,002 个带 BOM。编码名用 `utf-8-sig` 即可自动处理，否则首键会被污染成 `\ufefffoo`。 |
 
 ---
 
@@ -5020,13 +5041,13 @@ Export-DefinesPrecise
 |---|---|
 | Victoria 3 defines 在哪？ | `GAME\common\defines\`（9 个 `.txt`）；另有 Jomini 层 `...\Victoria 3\jomini\common\defines\`（18 个文件） |
 | 命名空间长什么样？ | 顶层块一律 `N` + 大驼峰，如 `NAI`、`NCountry`、`NEconomy`；共 **50** 个去重命名空间、**75** 个顶层块 |
-| AI define 在哪个块？ | **`NAI`，且只有一个块，共 1017 个参数，全部扁平**（`00_ai.txt`，1307 行，147 KB） |
-| 00_defines.txt 有哪些块？ | 19 个块 / 18 个命名空间；最大的是 `NDiplomacy`(367)、`NEconomy`(294)、`NPops`(225，分 2 块) |
+| AI define 在哪个块？ | **`NAI`，且只有一个块，共 1017 个参数，全部扁平**（`00_ai.txt`，1311 行，148 KB） |
+| 00_defines.txt 有哪些块？ | 19 个块 / 18 个命名空间；最大的是 `NDiplomacy`(406)、`NEconomy`(294)、`NPops`(211，分 2 块) |
 | 怎么覆盖原版 define？ | 在 `<mod>\common\defines\` 新建 `01_xxx.txt`，**只写** `NXXX = { KEY = 新值 }`；**不要**复制整个原版文件 |
 | 为什么不用复制整个文件？ | 引擎按「命名空间块名合并、参数名覆盖」解析（证据：`NCamera` 跨文件合并、`NPops`×2、`NGUI`×24） |
 | 什么时候才必须整体重写？ | 只有「跨内容根且相对路径完全相同」时（如原版 `game\common\defines\jomini\fog_of_war.txt` 接管 `jomini\common\defines\jomini\fog_of_war.txt`） |
 | game_rules 有多少条？ | **15** 条规则、**38** 个 setting、**67** 条 flag 条目（**47** 个去重 flag 键） |
 | 修饰符类型有多少？ | **2364** 个，分布在 15 个文件；前缀 `country_`(1095) / `state_`(571) / `building_`(300) 决定作用域流动 |
-| 静态修饰符有多少？ | **6121** 个，分布在 **68** 个文件；唯一特殊键是 `icon` |
+| 静态修饰符有多少？ | **6128** 个，分布在 **68** 个文件；唯一特殊键是 `icon` |
 | scripted_modifiers 呢？ | 1.14.2 中**只有一份 `.md` 文档，零定义、零引用** |
 

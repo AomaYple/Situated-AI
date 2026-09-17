@@ -35,15 +35,12 @@ from pdx.scan import walk_files
 
 pytestmark = [pytest.mark.unit, pytest.mark.contract]
 
-_needs_game = pytest.mark.skipif(
-    not (config.GAME / "common").is_dir(), reason="游戏目录不可用"
-)
+_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 #: 会被 PDX 解析器处理的扩展名。**这是判断「是否脚本」的唯一依据** ——
 #: 不按目录名判断，因为同一个目录里可能既有脚本也有二进制。
 PDX_SUFFIXES = frozenset(
-    {".txt", ".asset", ".gui", ".font", ".settings", ".profile",
-     ".shortcuts", ".layout", ".info"}
+    {".txt", ".asset", ".gui", ".font", ".settings", ".profile", ".shortcuts", ".layout", ".info"}
 )
 
 #: 许可证类文件名。实测 ``clausewitz/imgui_fonts/20/LICENSE.txt`` 就在一个
@@ -53,8 +50,8 @@ _LICENSE_NAME_HINTS = ("license", "licence", "copying", "ofl", "notice", "eula")
 #: 由**专用提取器**处理、因此不走 PDX 解析器的文件类型。
 #: 每条都写明为什么不能用 PDX 解析器 —— 它们不是花括号语法。
 DEDICATED_EXTRACTORS: dict[str, str] = {
-    ".yml": "本地化：`key:版本 \"值\"` 行式格式，见 pdx.localization。"
-            "实测交给 PDX 解析器会得到 0 键 0 错误，即静默解析失败",
+    ".yml": '本地化：`key:版本 "值"` 行式格式，见 pdx.localization。'
+    "实测交给 PDX 解析器会得到 0 键 0 错误，即静默解析失败",
     ".dlc": "DLC 描述符：`key=value` 平铺，见 analyze._analyse_dlc",
     ".json": "应用配置与 DLC 元数据，JSON 格式",
     ".csv": "分号分隔的表格（如 map_data/adjacencies.csv），非花括号语法",
@@ -62,8 +59,9 @@ DEDICATED_EXTRACTORS: dict[str, str] = {
 }
 
 #: 与 mod 开发无关的目录。判据是「mod 改它没有意义或不被加载」。
-IRRELEVANT_DIRS = frozenset({"licenses", "binaries", "launcher",
-                             "platform_specific_game_data", "soundtrack"})
+IRRELEVANT_DIRS = frozenset(
+    {"licenses", "binaries", "launcher", "platform_specific_game_data", "soundtrack"}
+)
 
 #: 内容根的根级文件（``checksum_manifest.txt`` / ``paths.settings`` 等），
 #: 由 ``analyze._read_root_file`` 单独处理。

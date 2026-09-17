@@ -71,17 +71,13 @@ def variable_keys(pf: ParsedFile) -> set[str]:
 # 后者是把类型检查关掉，前者是多了一条真实的断言。
 def scalar_of(a: Assignment) -> Scalar:
     """取出赋值右侧的标量，形状不符即断言失败。"""
-    assert isinstance(a.value, Scalar), (
-        f"期望标量值，实得 {type(a.value).__name__}（键 {a.key!r}）"
-    )
+    assert isinstance(a.value, Scalar), f"期望标量值，实得 {type(a.value).__name__}（键 {a.key!r}）"
     return a.value
 
 
 def block_of(a: Assignment) -> Block:
     """取出赋值右侧的块，形状不符即断言失败。"""
-    assert isinstance(a.value, Block), (
-        f"期望块值，实得 {type(a.value).__name__}（键 {a.key!r}）"
-    )
+    assert isinstance(a.value, Block), f"期望块值，实得 {type(a.value).__name__}（键 {a.key!r}）"
     return a.value
 
 

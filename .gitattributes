@@ -22,7 +22,6 @@
 *.yml     text eol=lf
 *.yaml    text eol=lf
 *.csv     text eol=lf
-*.ps1     text eol=crlf
 
 # ── 二进制类型（禁止任何行尾转换）──────────────────────────
 *.prof    binary
@@ -39,11 +38,11 @@
 *.pptx    binary
 
 # ── diff 策略 ──────────────────────────────────────────────
-# 游戏数据类 JSON 体积极大（8 MB+），默认不展开
-tools/out/**      -diff
-research/**       -diff
+# 游戏数据类 JSON 体积极大（最大的单份 54 MB），默认不展开
+tools/out/**               -diff
+research/official-docs/**  -diff
 
 # ── GitHub 语言统计 ────────────────────────────────────────
-# research/ 是游戏官方文档的逐字镜像，不算本仓库的代码贡献
-research/**                  linguist-vendored
+# research/official-docs/ 是游戏官方文档的逐字镜像，不算本仓库的代码贡献
+research/official-docs/**    linguist-vendored
 tools/tests/test_golden/**   linguist-generated

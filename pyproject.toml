@@ -36,7 +36,7 @@ classifiers = [
 
 # 运行期依赖：只保留「标准库确实没有对应能力」的，每条写明用途。
 dependencies = [
-    "typer>=0.27",      # 命令行参数解析。取代 5 个脚本里重复的 argparse 样板
+    "typer>=0.27",      # 命令行参数解析。取代 7 个入口脚本里重复的 argparse 样板
     "rich>=15.0",       # 终端表格与格式化输出。取代手写字符串对齐
 ]
 
@@ -98,9 +98,11 @@ addopts = [
     # pytest 默认**串行**；装上 xdist 只是提供能力，必须显式传 -n 才并行。
     #
     # 这里的取值是实测出来的，不是拍的：
-    #     串行                    149.5 秒
-    #     -n auto --dist loadscope  92.4 秒   （-38%）
+    #     串行                    314.2 秒
+    #     -n auto --dist loadscope  132.8 秒   （-58%）
     #
+    # 口径：整套测试（含基准用例与 15 MB 级的黄金回归写盘），
+    # Windows 本机、`--no-cov`、连续两次运行取墙钟时间。
     # ``--dist loadscope`` 让同一个测试模块固定落在同一个 worker。这是必要的：
     # 本项目多个模块共用 session 级 fixture（ga/ma/ca 会跑一遍 16 秒的全量分析），
     # 而 **xdist 的 worker 之间不共享解析缓存**，每个 worker 都要各自重跑。
@@ -150,13 +152,14 @@ omit = ["*/tests/*"]
 # 不可直接比较。数字变低不代表测试变差，而是分母里多了
 # 「只走了一个方向的分支」。
 #
-# 当前实测 87.1%，门槛钉在 86%。原始目标 95%。
+# 当前实测 87.7%，门槛钉在 86%。原始目标 95%。
 #
 # 已知的主要缺口（都是「重路径」，需要真跑游戏数据，故未覆盖）：
-#   cli.py      61%  snapshot create/diff、analyze --profile 等分支
-#   defines.py  67%  overlay() 整函数与若干 to_dict 从未被调用
-#   extract.py  82%  异常兜底分支
-#   analyze.py  90%  verbose 分支与个别容错路径
+#   cli.py        73%  snapshot create/diff、analyze --profile 等分支
+#   engine_log.py 77%  日志消息种类的冷门分支
+#   mods.py       78%  mod 目录异常的兜底分支
+#   tabular.py    80%  CSV 列数不齐等边界
+# 其余模块均在 86% 以上；defines.py / cache.py 已 100%。
 fail_under = 86
 show_missing = true
 skip_covered = false
@@ -180,11 +183,10 @@ target-version = "py311"
 extend-exclude = [
     ".venv",
     "tools/out",
-    "tools/frag",
-    "tools/docparts",
     "tools/reports",
-    # research/ 是游戏官方文档的逐字镜像，不是我们的代码
-    "research",
+    # research/official-docs/ 是游戏官方文档的逐字镜像，不是我们的代码；
+    # research/ 根下若出现自有产物则仍需检查，故不整目录排除。
+    "research/official-docs",
 ]
 
 [tool.ruff.lint]
@@ -239,18 +241,16 @@ ignore = [
 # 测试文件的刻意选择：
 #   PT009  沿用 unittest 风格的 self.assertXxx —— 改成裸 assert 是独立的大
 #          改造，收益是风格统一，风险是碰 179 处断言，性价比不划算
-#   PLC2401/N802 中文测试函数名（test_缓存命中返回同一对象）比拼音可读得多，
-#          失败时 pytest 直接把中文名打出来，定位比英文名更快
+#   PLC2401/N802/N803 中文测试函数名与 fixture 形参名（test_镜像逐字节一致(镜像文件)）
+#          比拼音可读得多，失败时 pytest 直接把中文名打出来，定位比英文名更快
 #   RUF012 测试里的类属性是 fixture 风格的常量，加 ClassVar 只是噪声
 #   ARG001/ARG002 pytest fixture 的形参由框架注入，必然「未使用」
 #   N806   fixture 里用 GAME/CONFIG 这类大写局部名指代常量，是有意为之
 "tools/tests/*" = [
-    "PT009", "PLC2401", "N802", "RUF012",
+    "PT009", "PLC2401", "N802", "N803", "RUF012",
     "ARG001", "ARG002", "N806",
     "PLR2004", "S101", "PT011", "PLC0415",
 ]
-# 诊断脚本是一次性排障存档，允许粗糙
-"tools/diag/*" = ["T201", "ARG001", "PLR2004", "PLC0415", "RUF015"]
 # 算法实现里的位运算与短路是刻意的
 "tools/pdx/lexer.py" = ["PLR2004"]
 

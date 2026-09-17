@@ -53,14 +53,14 @@ _LANG_RE = re.compile(r"^\s*(l_[A-Za-z0-9_]+)\s*:\s*$")
 #: 版本号可缺省，值可以没有引号（实测存在）。
 _ENTRY_RE = re.compile(r"^\s*([^\s:#][^:]*?)\s*:\s*(\d+)?\s*(.*)$")
 
+
 #: 这些"键"是文件头的语言声明而不是数据条目
 def _is_lang_line(key: str) -> bool:
     return key.startswith("l_")
 
+
 #: 本地化文件的扩展名
 SUFFIXES = (".yml", ".yaml")
-
-
 
 
 @dataclass(slots=True)
@@ -217,8 +217,7 @@ def extract_localization(root: Path | None = None) -> LocalizationReport:
     }
 
     report.entries = {
-        k: LocEntry(key=k, langs=tuple(sorted(langs_of[k])), files=per_file[k])
-        for k in per_file
+        k: LocEntry(key=k, langs=tuple(sorted(langs_of[k])), files=per_file[k]) for k in per_file
     }
     report.by_category = category_keys
     return report

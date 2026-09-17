@@ -36,9 +36,7 @@ pytestmark = pytest.mark.cli
 
 runner = CliRunner()
 
-_needs_game = pytest.mark.skipif(
-    not (config.GAME / "common").is_dir(), reason="游戏目录不可用"
-)
+_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 
 def _invoke(*args: str):
@@ -49,7 +47,16 @@ def _invoke(*args: str):
 def test_help_exit0() -> None:
     r = _invoke("--help")
     assert r.exit_code == 0, r.output
-    for cmd in ("analyze", "defines", "index", "snapshot", "verify", "crosscheck", "check-outputs", "show"):
+    for cmd in (
+        "analyze",
+        "defines",
+        "index",
+        "snapshot",
+        "verify",
+        "crosscheck",
+        "check-outputs",
+        "show",
+    ):
         assert cmd in r.output, f"--help 里没有列出 {cmd}"
 
 
@@ -328,8 +335,9 @@ class TestSubprocess:
         库里的 ``enable_utf8_stdio()`` 就是为这一条存在的；
         ``rich`` 替代不了它 —— 实测 ``Console().print("✅")`` 同样会炸。
         """
-        p = self._run("verify", "--fast", "--only", "env.common_dirs",
-                      env_extra={"PYTHONIOENCODING": "gbk"})
+        p = self._run(
+            "verify", "--fast", "--only", "env.common_dirs", env_extra={"PYTHONIOENCODING": "gbk"}
+        )
         assert p.returncode == 0, f"GBK 下崩溃了：{p.stderr[:400]}"
         assert "UnicodeEncodeError" not in p.stderr
 
@@ -351,8 +359,13 @@ class TestSubprocess:
                 "请运行 pip install -e . 重新生成（改了 pyproject 后必须重装）"
             )
         p = subprocess.run(
-            [str(exe), "--help"], capture_output=True, text=True,
-            encoding="utf-8", errors="replace", timeout=120, check=False,
+            [str(exe), "--help"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=120,
+            check=False,
         )
         assert p.returncode == 0, p.stderr
         assert "analyze" in p.stdout

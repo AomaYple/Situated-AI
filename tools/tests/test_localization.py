@@ -46,9 +46,7 @@ def test_版本号不属于键名() -> None:
 
 
 def test_值与引号不影响键名() -> None:
-    _, keys = parse_loc_text(
-        'l_english:\n A:0 "x"\n B:0 "has : colon"\n C:0 no_quotes\n'
-    )
+    _, keys = parse_loc_text('l_english:\n A:0 "x"\n B:0 "has : colon"\n C:0 no_quotes\n')
     assert keys == ["A", "B", "C"]
 
 
@@ -89,7 +87,7 @@ def test_没有语言头时不猜语言() -> None:
         ("buildings_l_english", "buildings"),
         ("law_l_simp_chinese", "law"),
         ("a_b_c_l_french", "a_b_c"),
-        ("languages", "languages"),          # 不带 _l_xx 后缀
+        ("languages", "languages"),  # 不带 _l_xx 后缀
         ("trigger_localization_l_english", "trigger_localization"),
     ],
 )

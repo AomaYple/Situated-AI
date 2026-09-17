@@ -1,0 +1,40 @@
+# 提交前自动跑静态检查。
+#
+# 为什么用 `repo: local` + `language: system` 而不是社区的 ruff/mypy 镜像：
+# 本项目的 ruff 与 mypy 版本由 pyproject.toml 的 `dev` extra 钉住，
+# 再让 pre-commit 去拉一份自己的副本会出现「pre-commit 过了、手动跑却失败」
+# 的分歧。这里直接调用 .venv 里已装好的那两个，与手动执行**完全同一份二进制**。
+# 附带好处：不需要联网拉 hook 仓库。
+#
+# 启用：`.venv\Scripts\pre-commit.exe install`
+# 手动全跑：`.venv\Scripts\pre-commit.exe run --all-files`
+#
+# 测试套件**不**放进来 —— 全量跑一次要 5 分钟，那是 CI / 提交前手动做的事，
+# 不是每次 commit 都该付的成本。
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff（代码检查）
+        entry: .venv/Scripts/ruff.exe check --force-exclude
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff（格式化）
+        entry: .venv/Scripts/ruff.exe format --force-exclude
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: mypy
+        name: mypy（类型检查）
+        # mypy 的配置全在 pyproject.toml 的 [tool.mypy] 里，这里不传路径，
+        # 让它按配置自己决定检查范围（传了路径反而会覆盖 files/exclude）。
+        entry: .venv/Scripts/mypy.exe
+        language: system
+        types: [python]
+        pass_filenames: false
+        require_serial: true

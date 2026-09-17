@@ -209,12 +209,8 @@ class _Parser:
                     prefix = None
                 else:
                     prefix, key = _split_prefix(tok.value)
-                return Assignment(
-                    key=key, op=op, value=value, prefix=prefix, line=tok.line
-                )
-            return Scalar(
-                text=tok.value, quoted=(kind == STRING), line=tok.line
-            )
+                return Assignment(key=key, op=op, value=value, prefix=prefix, line=tok.line)
+            return Scalar(text=tok.value, quoted=(kind == STRING), line=tok.line)
 
         # 无法识别：消费掉，避免死循环
         self.advance()

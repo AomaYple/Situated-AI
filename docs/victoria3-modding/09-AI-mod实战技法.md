@@ -197,12 +197,12 @@
 | 外交 | `max_active_stances` / `strategic_region_scores` / `undesirable_infamy_level` / `wargoal_scores` / `treaty_category_scores` | strategy |
 | 军事 | `wanted_army_size` / `wanted_navy_size` / `wanted_marines` / `ship_group_weights` / `combat_unit_group_weights` | strategy |
 | 机构 | `institution_scores` | strategy |
-| PM 评分 / 外交阈值 / 各类机制 | 1,013 个 `NAI` 参数 | `common\defines\00_ai.txt` |
+| PM 评分 / 外交阈值 / 各类机制 | 1,017 个 `NAI` 参数 | `common\defines\00_ai.txt` |
 | AI 中间值 | 12 个脚本值 | `common\script_values\ai_script_values.txt` |
 
 ## 5. 真实 AI mod 覆盖了哪些 `NAI` 参数
 
-**【实测】** 解剖 `Kuromi's AI` 的 `common\defines\kai_ai.txt`（67 行），其中 `NAI = { ... }` 块**只覆盖了 31 个参数**（全库有 1,013 个）。
+**【实测】** 解剖 `Kuromi's AI` 的 `common\defines\kai_ai.txt`（67 行），其中 `NAI = { ... }` 块**只覆盖了 31 个参数**（全库有 1,017 个）。
 
 > **这本身就是重要信息**：一个成熟的 AI mod 并没有大改参数，而是**精准打击少数关键项**。
 
@@ -244,7 +244,7 @@
 
 ### 5.1 对本文档的启示
 
-这 31 个参数可以作为**起点清单**：先在这批参数上做实验，比漫无目的地翻 1,013 个参数高效得多。
+这 31 个参数可以作为**起点清单**：先在这批参数上做实验，比漫无目的地翻 1,017 个参数高效得多。
 
 > 注意：`kai_ai.txt` 只包含 `NAI` 一个块。这说明 **defines 覆盖是按「块 + 参数」粒度生效的**，不是整文件替换 —— 你只需写出要改的参数即可。
 

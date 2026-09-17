@@ -44,6 +44,7 @@ class Sandbox:
     def __exit__(self, *exc) -> None:
         shutil.rmtree(self.root, ignore_errors=True)
 
+
 class TestExtractFile(unittest.TestCase):
     def _extract(self, text: str) -> DirExtract:
         res = DirExtract(name="x", path=Path())
@@ -101,6 +102,7 @@ class TestExtractFile(unittest.TestCase):
         res = self._extract("a = { b = { c = { d = 1 } } }")
         self.assertGreaterEqual(res.max_depth, 3)
 
+
 class TestVariableSeparation(unittest.TestCase):
     """``@变量`` 是脚本变量，不是数据条目 —— 必须分开计数。
 
@@ -138,12 +140,15 @@ class TestVariableSeparation(unittest.TestCase):
         self.assertIn("@变量", res.summary())
         self.assertEqual(res.summary()["@变量"], 1)
 
+
 class TestExtractDir(unittest.TestCase):
     def test_merges_across_files(self):
-        with Sandbox({
-            "d/one.txt": "a = { x = 1 }",
-            "d/two.txt": "b = { y = 2 }",
-        }) as root:
+        with Sandbox(
+            {
+                "d/one.txt": "a = { x = 1 }",
+                "d/two.txt": "b = { y = 2 }",
+            }
+        ) as root:
             res = extract_dir(root / "d")
         self.assertEqual(sorted(res.entries), ["a", "b"])
         self.assertEqual(res.files, 2)
@@ -181,23 +186,29 @@ class TestExtractDir(unittest.TestCase):
         with Sandbox({"d/bad.txt": "a = {\n"}) as root:
             self.assertFalse(extract_dir(root / "d").is_clean)
 
+
 class TestExtractTree(unittest.TestCase):
     def test_per_subdir_keys(self):
-        with Sandbox({
-            "tree/alpha/a.txt": "a1 = { }",
-            "tree/beta/b.txt": "b1 = { }",
-        }) as root:
+        with Sandbox(
+            {
+                "tree/alpha/a.txt": "a1 = { }",
+                "tree/beta/b.txt": "b1 = { }",
+            }
+        ) as root:
             out = extract_tree(root / "tree")
         self.assertEqual(sorted(out), ["alpha", "beta"])
         self.assertEqual(list(out["alpha"].entries), ["a1"])
 
     def test_global_usage(self):
-        with Sandbox({
-            "tree/x/a.txt": "e = { shared = 1 }",
-            "tree/y/b.txt": "e = { shared = 2 }",
-        }) as root:
+        with Sandbox(
+            {
+                "tree/x/a.txt": "e = { shared = 1 }",
+                "tree/y/b.txt": "e = { shared = 2 }",
+            }
+        ) as root:
             total = global_usage(extract_tree(root / "tree").values())
         self.assertEqual(total["shared"], 2)
+
 
 class TestRealGameCounts(unittest.TestCase):
     """集成测试：与知识库中已核实的数字对齐。
@@ -225,6 +236,7 @@ class TestRealGameCounts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from pdx.config import GAME
+
         if not (GAME / "common").is_dir():
             raise unittest.SkipTest("游戏目录不可用")
         cls.common = GAME / "common"
@@ -248,6 +260,7 @@ class TestRealGameCounts(unittest.TestCase):
         res = extract_dir(self.common / "static_modifiers")
         self.assertEqual(res.files, 68)
         self.assertEqual(res.bom_files, 68, "实测该目录 68/68 全部带 BOM")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

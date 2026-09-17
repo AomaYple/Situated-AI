@@ -23,6 +23,7 @@ from pdx.lexer import tokenize
 
 pytestmark = pytest.mark.unit
 
+
 def _fields(token) -> tuple[str, str, int, int]:
     """取 token 的四元组。
 
@@ -46,10 +47,11 @@ def _diff(text: str, path: str = "<str>") -> list[str]:
         if w != g:
             lo = max(0, i - 3)
             msgs.append(f"  首个分歧 @ token #{i}")
-            msgs.append(f"    期望 {want[lo:i + 1]}")
-            msgs.append(f"    实际 {got[lo:i + 1]}")
+            msgs.append(f"    期望 {want[lo : i + 1]}")
+            msgs.append(f"    实际 {got[lo : i + 1]}")
             break
     return msgs
+
 
 # ── 手写边界用例：逐条对应词法器里每个分支 ─────────────────
 _BOUNDARY = {
@@ -102,11 +104,13 @@ _BOUNDARY = {
     "值为空引号对": 'a = "" ""',
 }
 
+
 @pytest.mark.parametrize("name", sorted(_BOUNDARY))
 def test_边界用例与预言机一致(name: str) -> None:
     """每个词法分支都要和预言机逐 token 对齐。"""
     text = _BOUNDARY[name]
     assert _diff(text, name) == [], f"用例《{name}》与预言机不一致"
+
 
 # ── 真实语料 ────────────────────────────────────────────────
 @pytest.mark.integration
@@ -123,6 +127,7 @@ def test_真实语料_抽样与预言机一致(corpus_texts) -> None:
     sample = corpus_texts[::step]
     for path, text in sample:
         assert _diff(text, path) == [], f"{path} 与预言机不一致"
+
 
 @pytest.mark.integration
 @pytest.mark.slow
@@ -142,6 +147,7 @@ def test_真实语料_全量与预言机一致(corpus_texts) -> None:
                 break
     assert not bad, "以下文件与预言机不一致：\n" + "\n".join(bad)
 
+
 @pytest.mark.integration
 def test_语料token总量记录(corpus_texts) -> None:
     """记录真实语料的 token 规模，作为性能讨论的量化依据。
@@ -155,9 +161,11 @@ def test_语料token总量记录(corpus_texts) -> None:
     print(f"\n真实语料 token 总数：{total:,}（{len(corpus_texts):,} 个文件）")
     assert total > 1_000_000
 
+
 # ── 模糊测试 ────────────────────────────────────────────────
 #: PDX 脚本里真实出现的字符，外加刻意加入的"有毒"字符
-_ALPHABET = list('abcXYZ019 \t\n\r{}[]<>="\'#@$%^&*()+-_.,:;!?/\\|~`\ufeff\u00a0')
+_ALPHABET = list("abcXYZ019 \t\n\r{}[]<>=\"'#@$%^&*()+-_.,:;!?/\\|~`\ufeff\u00a0")
+
 
 @settings(
     max_examples=400,
@@ -169,20 +177,44 @@ def test_模糊_任意文本与预言机一致(text: str) -> None:
     """随机字符序列：新实现不得在任何输入上偏离预言机。"""
     assert _diff(text) == []
 
+
 @settings(max_examples=200, deadline=None)
 @given(st.text(max_size=300))
 def test_模糊_任意Unicode与预言机一致(text: str) -> None:
     """全 Unicode 范围，含代理对之外的任意码位。"""
     assert _diff(text) == []
 
+
 @settings(max_examples=150, deadline=None)
 @given(
     st.lists(
         st.sampled_from(
             [
-                "{", "}", "=", "?=", "==", "!=", ">", "<", ">=", "<=",
-                '"', "\\", "#", "\n", " ", "\t", "a", "1", ":", "-", ".",
-                "\ufeff", '"x"', "#c\n", '"a\\"b"',
+                "{",
+                "}",
+                "=",
+                "?=",
+                "==",
+                "!=",
+                ">",
+                "<",
+                ">=",
+                "<=",
+                '"',
+                "\\",
+                "#",
+                "\n",
+                " ",
+                "\t",
+                "a",
+                "1",
+                ":",
+                "-",
+                ".",
+                "\ufeff",
+                '"x"',
+                "#c\n",
+                '"a\\"b"',
             ]
         ),
         max_size=120,
@@ -191,6 +223,7 @@ def test_模糊_任意Unicode与预言机一致(text: str) -> None:
 def test_模糊_结构片段拼接与预言机一致(parts: list[str]) -> None:
     """把 token 级别的片段随机拼接 —— 比纯随机文本更容易撞出边界。"""
     assert _diff("".join(parts)) == []
+
 
 @settings(max_examples=100, deadline=None)
 @given(st.text(alphabet=_ALPHABET, max_size=600))

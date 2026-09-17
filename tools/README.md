@@ -20,6 +20,10 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\python.exe -m pip install -e ".[dev]"
 ```
 
+> 注意：`powershell` 这个代码块标记只是**语法高亮**用；整条工具链本身
+> 已不含任何 PowerShell 脚本，命令在 cmd / pwsh / bash 下都能跑
+> （把 `.venv\Scripts\` 换成 `.venv/bin/` 即可）。
+
 装好之后 `pdx` 可被任意目录下的 Python 导入（不再需要 `sys.path` 补丁），
 并生成 `v3` 入口。**不装也能跑**：`python -m pdx.cli` 完全等价。
 
@@ -38,7 +42,10 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `mods.py` | Workshop 与本地 mod 分析 |
 | `analyze.py` | 全量分析（游戏本体 / mod / 交叉，**分开存储**） |
 | `snapshot.py` | 版本快照与两份快照的 diff |
-| `verify.py` | 断言注册表，把文档里的数字变成可执行检查 |
+| `verify.py` | 断言注册表，把文档里的数字变成可执行检查；产物核验与文档漂移扫描 |
+| `localization.py` | 本地化专用提取（`.yml` 是行式格式，**不是** PDX 花括号语法） |
+| `tabular.py` | 表格类数据（`.csv`），分隔符靠 `csv.Sniffer` 嗅探 |
+| `engine_log.py` | 从游戏日志抽外部真值：枚举清单、脚本位置、token 位置 |
 | `console.py` | stdout/stderr 的 UTF-8 兜底（**必须在构造 rich Console 之前调用**） |
 | `cli.py` | 唯一的命令行入口，`v3` 的全部子命令 |
 
@@ -55,23 +62,21 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--detail` / `--json PATH` |
 | `v3 verify` | `run_verify.py` | 核对文档里的数量断言：`--fast` `--json PATH` `--only ID` |
+| `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
 | `v3 check-outputs` | `check_outputs.py` | 核验**已落盘产物**是否与断言注册表一致 |
 | `v3 show` | `show_outputs.py` | 转储产物的结构与规模 |
 
-```powershell
-$py = ".venv\Scripts\python.exe"
-$v3 = ".venv\Scripts\v3.exe"      # 或：& $py -m pdx.cli
-
-& $v3 analyze                     # 全量分析，落盘报告
-& $v3 analyze --no-mods --quiet   # 只分析游戏本体，不打印进度
-& $v3 analyze --profile           # 附 pyinstrument 调用树
-& $v3 verify --fast               # 只跑不需要全库扫描的断言
-& $v3 check-outputs               # 核验产物（需先 analyze）
-& $v3 defines --ns NAI            # 展开某个 defines 命名空间
-& $v3 index --dry-run             # 只统计，不写文档
-& $v3 snapshot diff A B --detail  # 比对两份快照
-& $v3 show                        # 产物里到底有什么
-& $v3 <子命令> --help             # 每个子命令都有中文帮助
+```text
+.venv\Scripts\v3.exe analyze                     # 全量分析，落盘报告
+.venv\Scripts\v3.exe analyze --no-mods --quiet   # 只分析游戏本体，不打印进度
+.venv\Scripts\v3.exe analyze --profile           # 附 pyinstrument 调用树
+.venv\Scripts\v3.exe verify --fast               # 只跑不需要全库扫描的断言
+.venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
+.venv\Scripts\v3.exe defines --ns NAI            # 展开某个 defines 命名空间
+.venv\Scripts\v3.exe index --dry-run             # 只统计，不写文档
+.venv\Scripts\v3.exe snapshot diff A B --detail  # 比对两份快照
+.venv\Scripts\v3.exe show                        # 产物里到底有什么
+.venv\Scripts\v3.exe <子命令> --help             # 每个子命令都有中文帮助
 ```
 
 ### 退出码
@@ -93,14 +98,14 @@ $v3 = ".venv\Scripts\v3.exe"      # 或：& $py -m pdx.cli
 
 ## 测试
 
-```powershell
-& $py -m pytest                    # 配置在 pyproject.toml 的 [tool.pytest.ini_options]
-& $py -m pytest -m "not slow"      # 跳过慢用例
-& $py -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
+```text
+python -m pytest                    # 配置在 pyproject.toml 的 [tool.pytest.ini_options]
+python -m pytest -m "not slow"      # 跳过慢用例
+python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-285 个用例（`pytest --collect-only` 实测），全部对应**实际踩过的坑**，
-不是凭空构造：
+423 条用例（`pytest --collect-only` 实测；420 通过 / 3 按条件跳过），
+全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
 |---|---|
@@ -112,22 +117,43 @@ $v3 = ".venv\Scripts\v3.exe"      # 或：& $py -m pdx.cli
 | `test_snapshot.py` / `test_verify.py` | 快照确定性与断言注册表口径 |
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
+| `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
+| `test_cache.py` | 缓存透明性：`parse_cached` 必须恒等于 `parse_file` |
+| `test_coverage.py` | **覆盖面契约**：每个文件必须归入四类之一，落不进就失败 |
+| `test_data_dump.py` | 结构化转储：必须能取到**值**而不只是字段名 |
+| `test_defines.py` | defines 提取：参数形态、命名空间合并、覆盖预览 |
+| `test_docs_consistency.py` | 文档数字与断言表的一致性（防文档过期） |
+| `test_docs_mirror.py` | `research/official-docs/` 的时效性：篇目集合、**逐字节 sha256**、无多余文件 |
+| `test_localization.py` | `.yml` 本地化：语言覆盖、键去重、BOM 处理 |
+| `test_engine_crosscheck.py` | 用游戏日志当**外部真值**核对解析 |
 
-CLI 自身目前没有 pytest 覆盖（`tools/tests/TEST_SUITE_REVIEW.md` 第 4 项计划补
-`test_cli.py`，届时用 `subprocess` 跑 `python -m pdx.cli`）。
+### 跑基准要加 `-n0`
+
+`pytest-benchmark` 在 xdist 开启时会**自动禁用自己**，而本项目默认并行
+（`-n auto`）。因此不带 `-n0` 时基准会被静默跳过 —— 实测踩过：
+
+```text
+python -m pytest tools/tests/test_benchmarks.py --benchmark-only -n0
+```
 
 ## 输出产物
 
 **分开存放** —— 游戏本体与 mod 互不混杂：
 
 ```
-tools/out/game/游戏本体.json      游戏本体全量数据（约 7.9 MB）
+tools/out/game/游戏本体.json      统计口径：条目、字段、使用频次（约 8.5 MB）
+tools/out/game/游戏数据.json      内容口径：字段、值、嵌套结构、行号与注释（约 54 MB）
+tools/out/game/本地化.json        14.5 万个本地化键（约 6.3 MB）
+tools/out/game/表格数据.json      adjacencies.csv 等表格类数据
 tools/out/mods/mod.json          mod 全量数据（约 650 KB）
 tools/out/cross/交叉.json         两者的覆盖关系
-tools/out/snapshots/*.json       版本快照
+tools/out/snapshots/*.json       版本快照（升级时 diff 出字段增删）
 tools/reports/游戏本体分析.md      人可读报告
 tools/reports/mod分析.md          人可读报告
 ```
+
+> 上面的 MB / KB 按 1024 进制。精确值由黄金回归（`tools/tests/test_golden.py`）
+> 冻结为逐产物的「字节数 + sha256」，改动一个字节就会失败。
 
 `tools/out/` 已 gitignore（随时可由 `v3 analyze` 重建）；
 `tools/reports/` **入库** —— 两份报告是研究成果的一部分，改动它们应当出现在 diff 里。
@@ -138,7 +164,7 @@ tools/reports/mod分析.md          人可读报告
 
 ```
 1. 用花括号深度判断顶层        —— 官方文件混用 tab / 空格 / 无缩进
-2. 剥离 BOM                    —— common 下 3,026 个 .txt 有 3,000 个带 BOM
+2. 剥离 BOM                    —— common 下 3,026 个 .txt 有 3,002 个带 BOM
 3. 注释剥离要引号感知          —— 字符串里可能含 #
 4. 键名字符集用「非空白非等号」  —— 存在含连字符的键（全库 32 个）
 5. 识别 6 个功能前缀           —— INJECT: / REPLACE: 等，且**只 mod 用**
@@ -153,24 +179,35 @@ tools/reports/mod分析.md          人可读报告
 
 `pdx` 包本身不埋点，剖析用独立脚本跑：
 
-```powershell
-& $py tools/prof/prof_e2e.py full          # 整条流水线（冷缓存）+ 调用树
-& $py tools/prof/prof_e2e.py stages        # 逐阶段冷缓存剖析
-& $py tools/prof/prof_e2e.py walkaudit     # 文件系统被重复遍历的程度
-& $py tools/prof/prof_e2e.py prefixaudit   # 功能前缀扫描的范围与耗时
+```text
+.venv\Scripts\python.exe tools/prof/prof_e2e.py full          # 整条流水线（冷缓存）+ 调用树
+.venv\Scripts\python.exe tools/prof/prof_e2e.py stages        # 逐阶段冷缓存剖析
+.venv\Scripts\python.exe tools/prof/prof_e2e.py walkaudit     # 文件系统被重复遍历的程度
+.venv\Scripts\python.exe tools/prof/prof_e2e.py prefixaudit   # 功能前缀扫描的范围与耗时
 ```
 
 阶段序列与 `v3 analyze` 保持一致，因此剖析结果可以直接用来解释 `analyze` 的耗时。
 
-## 沙箱环境注意事项
+## 控制台编码
 
-在 DSH 沙箱里开发本工具链时遇到并已规避的问题：
+中文 Windows 的控制台是 GBK 代码页，`print("✅")` 会抛 `UnicodeEncodeError`
+—— **重定向到管道时同样会抛**。入口处统一调 `pdx.console.enable_utf8_stdio()`。
 
-| 问题 | 规避方式 |
+`rich` 替代不了它：实测 `Console().print("✅")` 在 GBK 下一样抛。
+
+## 已知边界
+
+工具链能回答：某个类型有哪些字段、取值什么形态、定义在哪个文件第几行、
+本地化键存不存在、某个目录有哪些条目。
+
+**不能**回答（信息不在文件里，不是功能没做）：
+
+| 答不了的问题 | 为什么 |
 |---|---|
-| 控制台是 GBK 代码页，`print` emoji 会抛 `UnicodeEncodeError`（**重定向到管道时同样会抛**） | 入口处统一调 `pdx.console.enable_utf8_stdio()`；rich 替代不了它，实测 `Console().print("✅")` 一样抛 |
-| `tempfile` 创建的目录权限受限，沙箱拒绝写入 | 测试改用工作区内的自管临时目录 |
-| pip 在沙箱里曾不可用 | 现已可用，依赖写进 `pyproject.toml`，不再需要 `requirements.txt` |
+| 两个 mod 改同一条目谁生效 | 取决于运行期加载顺序，脚本里没有 |
+| 某字段的合法取值范围 | 只有引擎知道；二进制里有候选词表但未开采 |
+| 同名条目里哪个最终生效 | 引擎的合并规则，未知 |
+| 平衡性与 AI 实际表现 | 要跑游戏才知道 |
 
 ## 为什么全 Python 化
 
@@ -182,5 +219,6 @@ tools/reports/mod分析.md          人可读报告
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：285 个用例 + 39 条断言核验
-（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 35 条）。
+Python 版把上述问题都变成了**可测试的代码**：423 条用例 + 41 条断言核验
+（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 35 条），
+外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。

@@ -89,9 +89,9 @@ class RootFile:
 
     name: str
     size: int
-    kind: str                      # text / binary
+    kind: str  # text / binary
     summary: dict[str, Any] = field(default_factory=dict)
-    text: str = ""                 # 仅对小型文本文件保留
+    text: str = ""  # 仅对小型文本文件保留
 
 
 @dataclass
@@ -188,8 +188,7 @@ class GameAnalysis:
         return {
             "版本": self.version,
             "内容根": {
-                k: {"文件": v.files, "目录": v.dirs, "MB": v.size_mb}
-                for k, v in self.roots.items()
+                k: {"文件": v.files, "目录": v.dirs, "MB": v.size_mb} for k, v in self.roots.items()
             },
             "文件总计": self.total_files,
             "体积MB": round(self.total_size / 1048576, 1),
@@ -277,9 +276,7 @@ def _analyse_dlc(root: Path) -> list[DlcInfo]:
         return out
     for d in sorted(p for p in base.iterdir() if p.is_dir()):
         info = DlcInfo(name=d.name, path=d)
-        info.top_entries = sorted(
-            p.name for p in d.iterdir() if p.is_dir()
-        ) + sorted(
+        info.top_entries = sorted(p.name for p in d.iterdir() if p.is_dir()) + sorted(
             p.name for p in d.iterdir() if p.is_file()
         )
         for f in walk_files(d):
@@ -389,11 +386,7 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
         elif top in config.SCRIPTABLE_DIRS:
             # DLC 下按 ``dlc/<名称>`` 分桶 —— 全糊进一个 "dlc" 会丢掉
             # 「是哪个 DLC 定义的」这个关键信息。
-            key = (
-                f"dlc/{rel.parts[1]}"
-                if top == "dlc" and len(rel.parts) > 1
-                else top
-            )
+            key = f"dlc/{rel.parts[1]}" if top == "dlc" and len(rel.parts) > 1 else top
             res = per_script.get(key)
             if res is None:
                 res = DirExtract(name=key, path=config.GAME / key)
@@ -460,13 +453,14 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
         print(f"  [DLC] {len(ga.dlcs)} 个，其中自带脚本目录的 {n_script} 个")
 
     # ── 官方 .md ───────────────────────────────────────
-    for root in CONTENT_ROOTS.values():
+    # 键带内容根前缀（``game/…`` / ``jomini/…``）：只写相对路径时，
+    # 不同内容根下的同名相对路径会**互相覆盖**，篇数悄悄变少而无人察觉。
+    for name, root in CONTENT_ROOTS.items():
         if not root.is_dir():
             continue
         for f in walk_files(root, suffix=".md"):
-            ga.official_docs[
-                str(f.path.relative_to(root)).replace("\\", "/")
-            ] = f.size
+            doc_rel = str(f.path.relative_to(root)).replace("\\", "/")
+            ga.official_docs[f"{name}/{doc_rel}"] = f.size
     if verbose and loose_common:
         print(f"  注：common 根下有 {loose_common} 个散装 .txt")
     return ga
@@ -500,9 +494,7 @@ class ModsAnalysis:
             "mod 数": len(self.mods),
             "文件总计": self.total_files,
             "前缀总计": sum(self.prefixes.values()),
-            "被多个 mod 覆盖的原版路径": sum(
-                1 for v in self.path_conflicts.values() if len(v) > 1
-            ),
+            "被多个 mod 覆盖的原版路径": sum(1 for v in self.path_conflicts.values() if len(v) > 1),
         }
 
 
@@ -533,8 +525,10 @@ def mods_analysis(*, verbose: bool = False) -> ModsAnalysis:
             ma.path_conflicts.setdefault(rel_str, []).append(target)
 
         if verbose:
-            print(f"  [{target}] {m.name or '(无名)':<38} "
-                  f"覆盖 {len(m.overrides):>4}  新增 {len(m.additions):>5}")
+            print(
+                f"  [{target}] {m.name or '(无名)':<38} "
+                f"覆盖 {len(m.overrides):>4}  新增 {len(m.additions):>5}"
+            )
     return ma
 
 
@@ -548,9 +542,7 @@ class CrossAnalysis:
     def summary(self) -> dict[str, Any]:
         return {
             "被 mod 触及的目录数": len(self.dir_touched_by),
-            "被改动的原版条目数": sum(
-                len(v) for v in self.changed_entries.values()
-            ),
+            "被改动的原版条目数": sum(len(v) for v in self.changed_entries.values()),
         }
 
 
@@ -636,14 +628,9 @@ def dump_node(node: Any) -> Any:
         items = node.items
         if all(isinstance(i, Assignment) for i in items):
             assignments = [i for i in items if isinstance(i, Assignment)]
-            keys = [
-                f"{a.prefix}:{a.key}" if a.prefix else a.key for a in assignments
-            ]
+            keys = [f"{a.prefix}:{a.key}" if a.prefix else a.key for a in assignments]
             if len(set(keys)) == len(keys):
-                return {
-                    k: dump_node(a.value)
-                    for k, a in zip(keys, assignments, strict=True)
-                }
+                return {k: dump_node(a.value) for k, a in zip(keys, assignments, strict=True)}
         # 含裸标量、匿名块，或**存在重复键** —— 顺序与重数都有意义，用列表
         out: list[Any] = []
         for item in items:
@@ -676,11 +663,7 @@ def build_entry_index(pf: ParsedFile, prev_line: int = 0) -> dict[str, Any]:
     last = prev_line
     for a in pf.top_assignments:
         key = f"{a.prefix}:{a.key}" if a.prefix else a.key
-        leading = [
-            text
-            for ln in range(last + 1, a.line + 1)
-            for text in by_line.get(ln, [])
-        ]
+        leading = [text for ln in range(last + 1, a.line + 1) for text in by_line.get(ln, [])]
         out[key] = {"行": a.line, "注释": leading} if leading else {"行": a.line}
         last = a.line
     return out
@@ -730,8 +713,12 @@ def to_data_dict() -> dict[str, Any]:
 
 def _dir_to_dict(d: DirStats) -> dict[str, Any]:
     return {
-        "目录": d.name, "文件": d.files, "子目录": d.dirs, "MB": d.size_mb,
-        "文本文件": d.text_files, "二进制文件": d.binary_files,
+        "目录": d.name,
+        "文件": d.files,
+        "子目录": d.dirs,
+        "MB": d.size_mb,
+        "文本文件": d.text_files,
+        "二进制文件": d.binary_files,
         "扩展名分布": dict(d.by_suffix.most_common()),
     }
 
@@ -758,16 +745,13 @@ def to_game_dict(ga: GameAnalysis) -> dict[str, Any]:
     return {
         "概览": ga.summary(),
         "内容根": {k: _dir_to_dict(v) for k, v in ga.roots.items()},
-        "一级目录": {
-            k: [_dir_to_dict(d) for d in v] for k, v in ga.top_dirs.items()
-        },
+        "一级目录": {k: [_dir_to_dict(d) for d in v] for k, v in ga.top_dirs.items()},
         "common": {k: _extract_to_dict(v) for k, v in ga.common.items()},
         "其他脚本目录": {k: _extract_to_dict(v) for k, v in ga.scripts.items()},
         "本地化": ga.localization,
         "GUI文件": ga.gui_files,
         "根级配置": {
-            k: {"字节": v.size, "类型": v.kind, "摘要": v.summary}
-            for k, v in ga.root_files.items()
+            k: {"字节": v.size, "类型": v.kind, "摘要": v.summary} for k, v in ga.root_files.items()
         },
         "校验和目录": ga.checksummed,
         "路径映射": ga.paths,
@@ -800,10 +784,7 @@ def to_mods_dict(ma: ModsAnalysis) -> dict[str, Any]:
                 "覆盖的文件": m.overrides,
                 "新增的文件": m.additions,
                 "功能前缀": dict(m.prefixes),
-                "前缀样例": [
-                    {"前缀": p, "键": k, "文件": f}
-                    for p, k, f in m.prefix_samples[:200]
-                ],
+                "前缀样例": [{"前缀": p, "键": k, "文件": f} for p, k, f in m.prefix_samples[:200]],
                 "改动的原版目录": dict(m.touched_vanilla),
                 "新增条目所在目录": dict(m.added_entries),
                 "文件类型分布": dict(ma.by_class.get(m.target, {})),
@@ -812,9 +793,7 @@ def to_mods_dict(ma: ModsAnalysis) -> dict[str, Any]:
             for m in ma.mods
         ],
         "全部功能前缀": dict(ma.prefixes),
-        "路径冲突": {
-            k: sorted(set(v)) for k, v in ma.path_conflicts.items() if len(v) > 1
-        },
+        "路径冲突": {k: sorted(set(v)) for k, v in ma.path_conflicts.items() if len(v) > 1},
     }
 
 
@@ -824,8 +803,7 @@ def to_cross_dict(ca: CrossAnalysis) -> dict[str, Any]:
         "概览": ca.summary(),
         "目录被触及次数": dict(ca.dir_touched_by.most_common()),
         "被改动的原版条目": {
-            k: {ek: sorted(set(ev)) for ek, ev in v.items()}
-            for k, v in ca.changed_entries.items()
+            k: {ek: sorted(set(ev)) for ek, ev in v.items()} for k, v in ca.changed_entries.items()
         },
     }
 
@@ -838,9 +816,7 @@ MODS_OUT = config.OUT_MODS
 CROSS_OUT = config.OUT_CROSS
 
 
-def write_reports(
-    ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis
-) -> dict[str, Path]:
+def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict[str, Path]:
     """落盘。游戏本体、mod、交叉三者**分别存放**。"""
     for d in (GAME_OUT, MODS_OUT, CROSS_OUT, config.REPORTS):
         d.mkdir(parents=True, exist_ok=True)
@@ -953,7 +929,9 @@ def render_game_markdown(ga: GameAnalysis) -> str:
     add("| 根 | 文件 | 目录 | MB | 文本 | 二进制 |")
     add("|---|---:|---:|---:|---:|---:|")
     for k, s in sorted(ga.roots.items()):
-        add(f"| `{k}` | {s.files:,} | {s.dirs:,} | {s.size_mb:,.1f} | {s.text_files:,} | {s.binary_files:,} |")
+        add(
+            f"| `{k}` | {s.files:,} | {s.dirs:,} | {s.size_mb:,.1f} | {s.text_files:,} | {s.binary_files:,} |"
+        )
     add("")
 
     add("## 三、联机校验和范围")
@@ -971,7 +949,9 @@ def render_game_markdown(ga: GameAnalysis) -> str:
     add("| 目录 | 文件 | 条目 | 字段 | 带BOM | 错误 |")
     add("|---|---:|---:|---:|---:|---:|")
     for name, e in sorted(ga.common.items(), key=lambda kv: -kv[1].unique_entries):
-        add(f"| `{name}` | {e.files} | {e.unique_entries:,} | {len(e.fields)} | {e.bom_files} | {len(e.errors)} |")
+        add(
+            f"| `{name}` | {e.files} | {e.unique_entries:,} | {len(e.fields)} | {e.bom_files} | {len(e.errors)} |"
+        )
     add("")
 
     if ga.scripts:
@@ -997,8 +977,10 @@ def render_game_markdown(ga: GameAnalysis) -> str:
     add("|---|---:|---:|:--:|")
     # 同样避开 d：本函数上半部分用 d 表示目录名字符串
     for dlc in ga.dlcs:
-        add(f"| `{dlc.name}` | {dlc.files:,} | {dlc.size / 1048576:.2f} | "
-            f"{'是' if dlc.has_script_dir else '否'} |")
+        add(
+            f"| `{dlc.name}` | {dlc.files:,} | {dlc.size / 1048576:.2f} | "
+            f"{'是' if dlc.has_script_dir else '否'} |"
+        )
     add("")
     add("> 实测全部 DLC 均不自带 `common/` 等脚本目录，只含 `gfx`/`sound`/`music` 资产。")
     add("")
@@ -1038,9 +1020,11 @@ def render_mods_markdown(ma: ModsAnalysis, ca: CrossAnalysis) -> str:
     add("| 目标 | 名称 | 文件 | 覆盖原版 | 新增 | 前缀 | 支持版本 |")
     add("|---|---|---:|---:|---:|---:|---|")
     for m in ma.mods:
-        add(f"| `{m.target}` | {m.name or '—'} | {m.files:,} | {len(m.overrides):,} "
+        add(
+            f"| `{m.target}` | {m.name or '—'} | {m.files:,} | {len(m.overrides):,} "
             f"| {len(m.additions):,} | {sum(m.prefixes.values()):,} "
-            f"| {m.supported_game_version or '—'} |")
+            f"| {m.supported_game_version or '—'} |"
+        )
     add("")
 
     add("## 四、文件类型分布")
@@ -1077,5 +1061,3 @@ def render_mods_markdown(ma: ModsAnalysis, ca: CrossAnalysis) -> str:
     add("")
 
     return "\n".join(out)
-
-

@@ -32,18 +32,22 @@ from pdx.parser import parse_text
 
 pytestmark = [pytest.mark.benchmark, pytest.mark.slow]
 
-_needs_game = pytest.mark.skipif(
-    not (config.GAME / "common").is_dir(), reason="游戏目录不可用"
-)
+_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 #: 代表中小型 PDX 文件规模
-SMALL = "root = {\n" + "\n".join(
-    f"\tkey_{i} = {{ a = 1  b = {i}  c = {{ d = 2 }} }}" for i in range(50)
-) + "\n}\n"
+SMALL = (
+    "root = {\n"
+    + "\n".join(f"\tkey_{i} = {{ a = 1  b = {i}  c = {{ d = 2 }} }}" for i in range(50))
+    + "\n}\n"
+)
 
-MEDIUM = "root = {\n" + "\n".join(
-    f"\tkey_{i} = {{ a = 1  b = {i}  c = {{ d = {i}  e = \"x#{i}\" }} }}" for i in range(500)
-) + "\n}\n"
+MEDIUM = (
+    "root = {\n"
+    + "\n".join(
+        f'\tkey_{i} = {{ a = 1  b = {i}  c = {{ d = {i}  e = "x#{i}" }} }}' for i in range(500)
+    )
+    + "\n}\n"
+)
 
 #: 含各类边角语法，用于保证基准测的是真实路径
 TRICKY = (
@@ -58,6 +62,7 @@ TRICKY = (
     "# comment with { braces }\n"
 )
 
+
 class TestLexerBenchmarks:
     def test_tokenize_small(self, benchmark):
         benchmark(tokenize, SMALL)
@@ -68,6 +73,7 @@ class TestLexerBenchmarks:
     def test_tokenize_tricky(self, benchmark):
         benchmark(tokenize, TRICKY)
 
+
 class TestParserBenchmarks:
     def test_parse_small(self, benchmark):
         benchmark(parse_text, SMALL)
@@ -77,6 +83,7 @@ class TestParserBenchmarks:
 
     def test_parse_tricky(self, benchmark):
         benchmark(parse_text, TRICKY)
+
 
 @_needs_game
 class TestRealFileBenchmarks:
@@ -90,8 +97,7 @@ class TestRealFileBenchmarks:
             common / "defines" / "00_defines.txt",
             common / "buildings" / "00_buildings.txt",
         ]
-        return [(p.name, p.read_bytes().decode("utf-8-sig"))
-                for p in picks if p.is_file()]
+        return [(p.name, p.read_bytes().decode("utf-8-sig")) for p in picks if p.is_file()]
 
     def test_tokenize_real(self, benchmark, samples):
         if not samples:
@@ -112,6 +118,7 @@ class TestRealFileBenchmarks:
             pytest.skip("样本文件不存在")
         benchmark(lambda: [parse_text(t) for _, t in samples])
 
+
 @_needs_game
 class TestPipelineBenchmarks:
     """端到端：解析整个 static_modifiers 目录。"""
@@ -123,7 +130,7 @@ class TestPipelineBenchmarks:
         target = config.GAME / "common" / "static_modifiers"
 
         def run():
-            clear()            # 强制真实解析，避免缓存命中掩盖成本
+            clear()  # 强制真实解析，避免缓存命中掩盖成本
             return extract_dir(target)
 
         result = benchmark(run)

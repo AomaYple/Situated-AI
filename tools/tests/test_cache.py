@@ -83,9 +83,9 @@ def test_不同路径不互相污染(tmp_path) -> None:
 def test_命中率统计正确(tmp_path) -> None:
     p = tmp_path / "a.txt"
     p.write_text(_SAMPLE, encoding="utf-8")
-    cache.parse_cached(p)          # 未命中
-    cache.parse_cached(p)          # 命中
-    cache.parse_cached(p)          # 命中
+    cache.parse_cached(p)  # 未命中
+    cache.parse_cached(p)  # 命中
+    cache.parse_cached(p)  # 命中
     assert cache.stats() == {"条目": 1, "命中": 2, "未命中": 1}
 
 
@@ -150,5 +150,5 @@ def test_缓存不改变全语料的聚合结果(corpus_texts) -> None:
 
     cache.clear()
     cold = aggregate()
-    warm = aggregate()          # 这一遍几乎全命中
+    warm = aggregate()  # 这一遍几乎全命中
     assert cold == warm

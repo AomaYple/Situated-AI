@@ -26,9 +26,8 @@ from pdx import analyze, config
 
 pytestmark = pytest.mark.integration
 
-_needs_game = pytest.mark.skipif(
-    not (config.GAME / "common").is_dir(), reason="游戏目录不可用"
-)
+_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
+
 
 # ── session 级共享结果 ──────────────────────────────────────
 @pytest.fixture(scope="session")
@@ -36,13 +35,16 @@ def ga():
     """游戏本体分析结果（整轮只跑一次）。"""
     return analyze.game_analysis()
 
+
 @pytest.fixture(scope="session")
 def ma():
     return analyze.mods_analysis()
 
+
 @pytest.fixture(scope="session")
 def ca(ga, ma):
     return analyze.cross_analysis(ma)
+
 
 # ── 游戏本体 ────────────────────────────────────────────────
 @_needs_game
@@ -126,6 +128,7 @@ class TestGameAnalysis:
         for k in ("文件总计", "体积MB", "common 目录数", "官方md"):
             assert k in s
 
+
 # ── 辅助视图 ────────────────────────────────────────────────
 @_needs_game
 class TestGameViews:
@@ -143,6 +146,7 @@ class TestGameViews:
     def test_field_usage_nonempty(self, ga):
         usage = ga.field_usage()
         assert len(usage) > 100
+
 
 # ── mod ─────────────────────────────────────────────────────
 @_needs_game
@@ -186,6 +190,7 @@ class TestModsAnalysis:
             assert isinstance(path, str)
             assert len(mods) >= 1
 
+
 # ── 交叉 ────────────────────────────────────────────────────
 @_needs_game
 class TestCrossAnalysis:
@@ -200,6 +205,7 @@ class TestCrossAnalysis:
 
     def test_mod_prefixes_recorded(self, ca):
         assert len(ca.mod_prefixes) > 0
+
 
 # ── 序列化与渲染 ────────────────────────────────────────────
 @_needs_game
@@ -240,6 +246,7 @@ class TestSerialization:
         assert "mod" in g  # 交叉引用提示
         assert "游戏本体" in m
 
+
 # ── 渲染细节（用合成数据，不需要游戏）──────────────────────
 class TestRenderingUnit:
     """渲染函数的单元测试 —— 用最小合成对象，跑得快。"""
@@ -255,9 +262,7 @@ class TestRenderingUnit:
         assert "联机校验和" in text
 
     def test_mods_markdown_minimal(self):
-        text = analyze.render_mods_markdown(
-            analyze.ModsAnalysis(), analyze.CrossAnalysis()
-        )
+        text = analyze.render_mods_markdown(analyze.ModsAnalysis(), analyze.CrossAnalysis())
         assert "# Victoria 3 Mod 全量分析" in text
         assert "无冲突" in text
 

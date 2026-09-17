@@ -136,10 +136,6 @@ def extract_tree(root: Path) -> dict[str, DirExtract]:
     return out
 
 
-
-
-
-
 def global_usage(extracts: Iterable[DirExtract]) -> Counter:
     """跨目录汇总某个字段名被用到的总次数（判断字段是否真的在用）。"""
     total: Counter = Counter()

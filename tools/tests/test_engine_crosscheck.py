@@ -89,12 +89,8 @@ def test_token行号与引擎一致(report) -> None:
     这条能抓住行号漂移类错误（BOM、注释剥离、跨行字符串都会影响它）。
     """
     bad = report.token_mismatches
-    assert not bad, (
-        f"{len(bad)} 条 token 行号与引擎不一致：\n"
-        + "\n".join(
-            f"  {rel}:{line}  token={tok!r}  我们给出 {got}"
-            for rel, line, tok, got in bad[:15]
-        )
+    assert not bad, f"{len(bad)} 条 token 行号与引擎不一致：\n" + "\n".join(
+        f"  {rel}:{line}  token={tok!r}  我们给出 {got}" for rel, line, tok, got in bad[:15]
     )
 
 
@@ -104,9 +100,8 @@ def test_引擎报的脚本位置都在文件里(report) -> None:
     缺失通常意味着文件被删（mod 卸载）或日志是旧版本的。
     """
     missing = [loc for loc in report.locations if loc[2] == "该行无 token"]
-    assert not missing, (
-        f"{len(missing)} 个引擎报的位置在我们这边切不出任何 token：\n"
-        + "\n".join(f"  {rel}:{line}" for rel, line, _ in missing[:15])
+    assert not missing, f"{len(missing)} 个引擎报的位置在我们这边切不出任何 token：\n" + "\n".join(
+        f"  {rel}:{line}" for rel, line, _ in missing[:15]
     )
 
 
@@ -119,9 +114,7 @@ def test_引擎位置的文件大多存在(report) -> None:
     if not total:
         pytest.skip("没有位置类断言")
     missing = sum(1 for _, _, why in report.locations if why == "文件不存在")
-    assert missing <= total * 0.3, (
-        f"{missing}/{total} 个引擎位置指向不存在的文件，比例过高"
-    )
+    assert missing <= total * 0.3, f"{missing}/{total} 个引擎位置指向不存在的文件，比例过高"
 
 
 # ── 日志解析本身 ────────────────────────────────────────────
@@ -144,9 +137,7 @@ def test_抽到了可用的断言() -> None:
     """
     _needs_logs()
     kinds = {c.kind for c in _CLAIMS}
-    assert kinds & {"enumeration", "script_location", "token_at"}, (
-        f"一类断言都没抽到：{kinds}"
-    )
+    assert kinds & {"enumeration", "script_location", "token_at"}, f"一类断言都没抽到：{kinds}"
 
 
 def test_覆盖映射能解析出被mod覆盖的文件() -> None:

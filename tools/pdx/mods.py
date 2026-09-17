@@ -102,9 +102,7 @@ def analyse_mod(root: Path, *, vanilla: Path | None = None) -> ModInfo:
     测试只能连带 patch 一堆别的属性（踩过）。
     """
     vanilla = vanilla or config.GAME
-    info = ModInfo(
-        root=root, steam_id=root.name if root.parent == config.WORKSHOP else ""
-    )
+    info = ModInfo(root=root, steam_id=root.name if root.parent == config.WORKSHOP else "")
 
     meta = read_metadata(root)
     if meta:
@@ -147,9 +145,7 @@ def analyse_mod(root: Path, *, vanilla: Path | None = None) -> ModInfo:
     return info
 
 
-def _scan_prefixes(
-    path: Path, rel_str: str, vanilla: Path, info: ModInfo
-) -> None:
+def _scan_prefixes(path: Path, rel_str: str, vanilla: Path, info: ModInfo) -> None:
     """统计一个 mod 文件里的顶层条目：区分「改原版」与「新增」。"""
     try:
         pf = parse_cached(path)
@@ -170,26 +166,20 @@ def _scan_prefixes(
                 vanilla_keys = set(vpf.top_keys)
             except Exception:
                 vanilla_keys = set()
-            bucket = (
-                info.touched_vanilla if a.key in vanilla_keys else info.added_entries
-            )
+            bucket = info.touched_vanilla if a.key in vanilla_keys else info.added_entries
         else:
             bucket = info.added_entries
         bucket[rel_str.split("/", maxsplit=1)[0]] += 1
 
 
-def discover_mods(
-    *, include_local: bool = True, include_workshop: bool = True
-) -> list[Path]:
+def discover_mods(*, include_local: bool = True, include_workshop: bool = True) -> list[Path]:
     """列出所有 mod 根目录。"""
     roots: list[Path] = []
     if include_workshop and config.WORKSHOP.is_dir():
         roots += sorted(p for p in config.WORKSHOP.iterdir() if p.is_dir())
     if include_local and config.LOCAL_MODS.is_dir():
         roots += sorted(
-            p
-            for p in config.LOCAL_MODS.iterdir()
-            if p.is_dir() and not p.name.startswith(".")
+            p for p in config.LOCAL_MODS.iterdir() if p.is_dir() and not p.name.startswith(".")
         )
     return roots
 

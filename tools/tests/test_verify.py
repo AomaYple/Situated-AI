@@ -18,9 +18,8 @@ from pdx import config, verify
 
 pytestmark = pytest.mark.integration
 
-_needs_game = pytest.mark.skipif(
-    not (config.GAME / "common").is_dir(), reason="游戏目录不可用"
-)
+_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
+
 
 # ── 单元层：不依赖真实数据 ──────────────────────────────────
 class TestClaimStructure:
@@ -51,6 +50,7 @@ class TestClaimStructure:
 
     def test_claim_count_plausible(self):
         assert len(verify.CLAIMS) >= 30
+
 
 class TestCheckOutcome:
     """用合成断言验证 check() 的成败判定，不碰真实数据。"""
@@ -87,6 +87,7 @@ class TestCheckOutcome:
         c = verify.Claim("t", "x.md", "描述", "dir_subdirs", "", -1)
         assert verify.check(c).line().startswith("❌")
 
+
 class TestRunClaims:
     def test_fast_mode_skips_slow_kinds(self):
         results = verify.run_claims(include_slow=False)
@@ -99,6 +100,7 @@ class TestRunClaims:
     def test_custom_claim_list(self):
         claims = [verify.Claim("a", "x.md", "d", "dir_subdirs", "", 136)]
         assert len(verify.run_claims(claims)) == 1
+
 
 class TestSummarize:
     def test_counts(self):
@@ -117,7 +119,72 @@ class TestSummarize:
         s = verify.summarize(verify.run_claims(claims))
         assert s["失败"] == 0
 
-class TestCoverageScan:
+
+class TestDriftDetectorPrimitives:
+    """漂移检测器的两个底层原语。
+
+    它们各自对应一次**实际漏报或误报**，所以单独钉住 ——
+    这两个 bug 都不会让别的测试变红，只会让检测器悄悄失灵。
+    """
+
+    def test_点分数字串被整段排除(self):
+        """版本号 / 章节号 / 小数不能当成数量候选。
+
+        误报实例：``### 2.6 实战提示`` 里的 6 落在 ``interest_groups``
+        （期望 8）的容差内，成了稳定误报。
+        """
+        line = "1.14.2 / 2.6 / 2,532.4 / 17,172.9"
+        hits = [
+            m
+            for m in verify._STANDALONE_NUM_RE.finditer(line)
+            if not verify._in_dotted_number(line, m.start())
+        ]
+        assert hits == [], [m.group(0) for m in hits]
+
+    def test_句末点号后的数字仍然保留(self):
+        """``27,722.`` 里的点号是句号不是小数点，必须保留。
+
+        用「紧邻点号就排除」的写法会误杀它 —— 那正是没用那种写法的原因。
+        """
+        line = "game 全树文件数 **27,722**. 另有 25,364 与 28171"
+        kept = [
+            m.group(1)
+            for m in verify._STANDALONE_NUM_RE.finditer(line)
+            if not verify._in_dotted_number(line, m.start())
+        ]
+        assert kept == ["27,722", "25,364", "28171"], kept
+
+    def test_标题行继承祖先标题的锚点(self):
+        """标题行要能靠**上级标题**里的锚点被扫到。
+
+        漏报实例：``05-defines与修饰符.md`` 的
+        ``### 3.3 全部 1013 个参数名`` —— 标题本身不含 ``NAI``，
+        旧规则（只看本行）永远扫不到它，于是它一直躺着。
+        """
+        lines = [
+            "# 文档",
+            "",
+            "## 3. `NAI` 命名空间块",
+            "",
+            "### 3.3 全部 1013 个参数名",
+            "",
+            "正文一行 1013",
+        ]
+        ctx = verify._section_context(lines)
+        assert "NAI" in ctx[4], "标题行应继承祖先标题里的锚点"
+        assert "NAI" not in ctx[5], "正文行不继承锚点（否则误报会暴增）"
+        assert "NAI" in ctx[2]
+
+    def test_正文行不继承标题锚点(self):
+        """放宽范围只限标题行。
+
+        反例：让整节继承锚点后，命中数从 12 涨到 36，绝大多数是
+        「同一节里另一个指标的同行数字」。
+        """
+        lines = ["## production_method_groups 一节", "", "| `texture` | 196 |"]
+        ctx = verify._section_context(lines)
+        assert "production_method_groups" not in ctx[2]
+
     def test_returns_mapping(self):
         out = verify.find_unregistered_claims()
         assert isinstance(out, dict)
@@ -130,14 +197,13 @@ class TestCoverageScan:
 
     def test_known_values_are_excluded(self):
         """已登记的期望值不应被当成未登记断言报出来。"""
-        out = verify.find_unregistered_claims(
-            known_values={136, 92}, docs_dir=config.DOCS
-        )
+        out = verify.find_unregistered_claims(known_values={136, 92}, docs_dir=config.DOCS)
         flat = [val for hits in out.values() for _, val in hits]
         assert all(isinstance(v, str) for v in flat)
 
     def test_missing_dir_yields_empty(self):
         assert verify.find_unregistered_claims(docs_dir=Path("Z:/nope")) == {}
+
 
 # ── 集成层：真实跑一遍 ──────────────────────────────────────
 @pytest.fixture(scope="session")
@@ -149,8 +215,24 @@ def fast_results():
     """
     return verify.run_claims(include_slow=False)
 
+
 @_needs_game
 class TestRealClaims:
+    def test_官方文档的三条字节断言可核对(self):
+        """官方 ``.md`` 的篇数 / 总字节 / 最大单篇必须能实测出来。
+
+        这三条登记为 ``slow``（全库扫描类），快速模式会跳过它们 ——
+        但实测只需扫 92 个 ``.md``，毫秒级。在这里直接跑一遍，
+        否则新加的 ``docs.total_bytes`` / ``docs.max_bytes`` 会长期无人看守。
+
+        背景：doc 07 曾把**镜像**（1.14.2）的总字节与最大文档尺寸
+        当成游戏本体的值写进正文，只钉「篇数 92」是发现不了的。
+        """
+        for cid in ("env.md_total", "docs.total_bytes", "docs.max_bytes"):
+            claim = next(c for c in verify.CLAIMS if c.id == cid)
+            r = verify.check(claim)
+            assert r.ok, f"{cid}: 期望 {claim.expected}，实得 {r.actual}"
+
     def test_fast_claims_all_pass(self, fast_results):
         bad = [r for r in fast_results if not r.ok]
         detail = "\n".join(r.line() for r in bad)
@@ -166,6 +248,7 @@ class TestRealClaims:
         assert s["失败"] == 0
         assert s["通过"] == s["总数"]
 
+
 @_needs_game
 class TestKnownAssertions:
     """把关键断言的结果单独钉住，便于定位回归。"""
@@ -180,6 +263,8 @@ class TestKnownAssertions:
         "def.static": 6128,
         "scr.on_actions": 264,
         "hist.wrappers": 22,
+        "docs.total_bytes": 232980,
+        "docs.max_bytes": 28171,
     }
 
     def test_known_values(self):

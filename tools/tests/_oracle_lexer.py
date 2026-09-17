@@ -139,7 +139,7 @@ def oracle_tokenize(text: str) -> list[OracleToken]:
         start = i
         while i < n:
             c = text[i]
-            if c in _WHITESPACE or c in "{}#\"" or c in _OP_START:
+            if c in _WHITESPACE or c in '{}#"' or c in _OP_START:
                 break
             i += 1
         if i == start:

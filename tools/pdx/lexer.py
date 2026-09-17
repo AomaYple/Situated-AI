@@ -131,9 +131,7 @@ class Token:
         return f"Token({self.kind}, {self.value!r}, {self.line}:{self.col})"
 
 
-def tokenize(
-    text: str, comments: list[tuple[int, str]] | None = None
-) -> list[Token]:
+def tokenize(text: str, comments: list[tuple[int, str]] | None = None) -> list[Token]:
     """把 PDX 文本切成 token 列表，末尾带一个 EOF。
 
     ``text`` 应已由调用方以 ``utf-8-sig`` 读取，BOM 已被剥离。

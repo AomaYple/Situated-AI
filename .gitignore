@@ -6,13 +6,10 @@
 # ─────────────────────────────────────────────────────────────
 
 # ── 机器相关配置 ───────────────────────────────────────────
-# 本机 TLS 配置（含证书包，换机器即失效）
-/.dsh/
-
 
 # ── Python 虚拟环境 ────────────────────────────────────────
 # 本地开发环境，体积大且机器相关，不入库。
-# 依赖请记录到 requirements.txt（如果以后需要第三方包）。
+# 依赖请记录到 pyproject.toml 的 [project.dependencies]（本仓库的唯一配置源）。
 /.venv/
 .venv/
 __pycache__/
@@ -21,9 +18,9 @@ __pycache__/
 .pytest_cache/
 .pip-tmp/
 
-# pytest 在系统 Temp 不可写时会把 basetemp 落到仓库根目录，名字随机（pytest-cache-files-*）。
-# pytest.ini 已用 --basetemp 固定到 .pytest-tmp/，这里再兜一层，
-# 防止某次被强杀的运行留下无法删除的残留污染 git status。
+# pytest 的 tmp_path 落在系统 Temp 下（见 pyproject.toml 的「不设 --basetemp」）。
+# 但 pytest 在系统 Temp 不可写时会把 basetemp 落到仓库根目录，名字形如
+# pytest-cache-files-*，这里兜一层，防止某次被强杀的运行留下无法删除的残留。
 pytest-cache-files-*/
 
 # hypothesis 的属性测试数据库（记录反例，机器相关）
@@ -36,26 +33,14 @@ pytest-cache-files-*/
 .coverage
 .coverage.*
 
-# 单元测试的临时工作目录（测试自行创建与清理）
-/.testtmp/
-/.testtmp_*/
-
-
 # ── tools/ 的中间产物 ──────────────────────────────────────
-# 提取出的大型 JSON（约 9 MB），由 tools/ 下的 Python 工具重新生成
+# 提取出的大型 JSON（全部产物合计约 109 MB），由 v3 analyze 重新生成
 /tools/out/
 
 # 性能剖析的原始数据（cProfile .prof 是二进制、pyinstrument session 是 JSON），
 # 体积大且与机器相关。报告的结论请写进文档，原始数据不入库。
 /tools/prof/out/
 
-# 由 make_frags.ps1 从 tools/out/*.json 渲染出的 Markdown 片段
-/tools/frag/
-
-# 分块撰写的正文草稿。注意：这不是「可重新生成的产物」，
-# 而是 assemble_doc.ps1 的输入；其内容已 100% 拼入 docs/ 下的成稿，
-# 因此排除不会丢失任何信息（已验证 14/14 段全部命中成稿）。
-/tools/docparts/
 
 
 # 注意：tools/reports/ **已入库**。

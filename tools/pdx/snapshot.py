@@ -85,9 +85,7 @@ def _field_names(root: Path, top: str = "common") -> dict[str, list[str]]:
             if a.is_variable or not isinstance(a.value, Block):
                 continue
             key = f"{rel.parts[1]}/{a.key}"
-            out.setdefault(key, set()).update(
-                s.key for s in a.value.assignments()
-            )
+            out.setdefault(key, set()).update(s.key for s in a.value.assignments())
     return {k: sorted(v) for k, v in sorted(out.items())}
 
 
@@ -144,9 +142,7 @@ def _dlc_snapshot() -> dict[str, list[str]]:
     if not base.is_dir():
         return out
     for d in sorted(p for p in base.iterdir() if p.is_dir()):
-        out[d.name] = _sorted_names(
-            [p.name for p in d.iterdir()] if d.is_dir() else []
-        )
+        out[d.name] = _sorted_names([p.name for p in d.iterdir()] if d.is_dir() else [])
     return out
 
 

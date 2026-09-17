@@ -67,8 +67,8 @@ TEXTUAL_SUFFIXES = frozenset(
 class EngineClaim:
     """从引擎日志里抽出的一条断言。"""
 
-    kind: str          # enumeration / script_location / token_at
-    detail: str        # 人类可读描述
+    kind: str  # enumeration / script_location / token_at
+    detail: str  # 人类可读描述
     dir_rel: str = ""  # kind == enumeration
     suffix: str = ""
     file_rel: str = ""  # kind == script_location / token_at
@@ -287,9 +287,7 @@ def cross_check(
     root = root or config.GAME
     if overrides is None:
         overrides = build_override_map()
-    report = CrossCheckReport(
-        counts=Counter(c.kind for c in claims), log_version=log_version
-    )
+    report = CrossCheckReport(counts=Counter(c.kind for c in claims), log_version=log_version)
 
     # 同一文件会被多条断言引用，缓存 token 流避免重复切分。
     # 标注成 ``list[Token]`` 而不是裸 ``list`` —— 后者会让下游全部退化成 Any。
@@ -303,9 +301,7 @@ def cross_check(
         if rel not in token_cache:
             path = resolve(rel)
             try:
-                token_cache[rel] = tokenize(
-                    path.read_text(encoding="utf-8-sig", errors="replace")
-                )
+                token_cache[rel] = tokenize(path.read_text(encoding="utf-8-sig", errors="replace"))
             except TOLERATED_ERRORS:  # pragma: no cover
                 token_cache[rel] = []
         return token_cache[rel]
@@ -329,11 +325,7 @@ def cross_check(
                 report.tokens.append((c.file_rel, c.line, c.token, None))
                 continue
             found: int | None = next(
-                (
-                    t.line
-                    for t in tokens_of(c.file_rel)
-                    if t.line == c.line and c.token in t.value
-                ),
+                (t.line for t in tokens_of(c.file_rel) if t.line == c.line and c.token in t.value),
                 None,
             )
             report.tokens.append((c.file_rel, c.line, c.token, found))

@@ -18,8 +18,19 @@ if TYPE_CHECKING:
 #: 文本类扩展名（可解析、可用文本工具处理）
 TEXT_SUFFIXES = frozenset(
     {
-        ".txt", ".md", ".gui", ".yml", ".yaml", ".csv", ".json",
-        ".settings", ".profile", ".font", ".info", ".asset", ".html",
+        ".txt",
+        ".md",
+        ".gui",
+        ".yml",
+        ".yaml",
+        ".csv",
+        ".json",
+        ".settings",
+        ".profile",
+        ".font",
+        ".info",
+        ".asset",
+        ".html",
     }
 )
 
@@ -131,9 +142,7 @@ def subdir_stats(root: Path, *, deep: bool = True) -> list[DirStats]:
     out: list[DirStats] = []
     try:
         with os.scandir(root) as it:
-            names = sorted(
-                e.name for e in it if e.is_dir(follow_symlinks=False)
-            )
+            names = sorted(e.name for e in it if e.is_dir(follow_symlinks=False))
     except OSError:
         return out
     for name in names:

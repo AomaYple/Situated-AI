@@ -2,10 +2,10 @@
 
 为什么用指纹而不是整份文件
 --------------------------
-:func:`pdx.analyze.write_reports` 的产物合计约 9 MB，其中
-``游戏本体.json`` 一份就有 8.3 MB。把这种体积的文本塞进 git 会让仓库
-迅速劣化，因此这里记录每个产物的 ``(字节数, sha256)`` —— 同样能保证
-"改一个字节就失败"，但仓库只增加几百字节。
+:func:`pdx.analyze.write_reports` 的产物合计 **73,235,718 字节（约 70 MiB）**，
+其中 ``游戏数据.json`` 一份就有 **56,893,083 字节（约 54 MiB）**。把这种体积的
+文本塞进 git 会让仓库迅速劣化，因此这里记录每个产物的 ``(字节数, sha256)`` ——
+同样能保证"改一个字节就失败"，但仓库只增加几百字节。
 
 本测试走的是**真实写盘路径**（``write_reports`` 本身），不是自己重新
 序列化一遍。否则测试和实现会各自演化，测的就不是真正交付的东西了。
@@ -41,12 +41,14 @@ pytestmark = [pytest.mark.integration, pytest.mark.regression, pytest.mark.slow]
 _OFFICIAL_OUT = config.OUT
 _OFFICIAL_REPORTS = config.REPORTS
 
+
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
 
 def _write_to(out: Path, ga, ma, ca, monkeypatch) -> dict[str, Path]:
     """让 write_reports 落到临时目录，返回真实产物路径。"""
@@ -56,10 +58,12 @@ def _write_to(out: Path, ga, ma, ca, monkeypatch) -> dict[str, Path]:
     monkeypatch.setattr(analyze.config, "REPORTS", out / "reports")
     return analyze.write_reports(ga, ma, ca)
 
+
 @pytest.fixture
 def artifacts(tmp_path, ga, ma, ca, monkeypatch) -> dict[str, Path]:
     """跑一次真实写盘。"""
     return _write_to(tmp_path, ga, ma, ca, monkeypatch)
+
 
 def test_artifact_digests(artifacts, data_regression) -> None:
     """每个产物的字节数与 sha256 必须与冻结值一致。"""
@@ -70,16 +74,19 @@ def test_artifact_digests(artifacts, data_regression) -> None:
     assert digests, "至少要有产物"
     data_regression.check(digests)
 
+
 def test_全部产物都非空(artifacts) -> None:
     for name, p in artifacts.items():
         assert p.is_file(), f"{name} 未落盘"
         assert p.stat().st_size > 0, f"{name} 是空文件"
+
 
 def test_报告是合法UTF8且无乱码(artifacts) -> None:
     for name, p in artifacts.items():
         raw = p.read_bytes()
         assert not raw.startswith(b"\xef\xbb\xbf"), f"{name} 不应带 BOM"
         raw.decode("utf-8")  # 解码失败即失败
+
 
 def test_重复分析结果逐字节一致(tmp_path, ga, ma, ca, monkeypatch) -> None:
     """确定性：同一份数据写两次必须完全一样。
@@ -93,6 +100,7 @@ def test_重复分析结果逐字节一致(tmp_path, ga, ma, ca, monkeypatch) ->
     for name in a:
         assert _sha256(a[name]) == _sha256(b[name]), f"{name} 两次结果不同"
 
+
 def test_产物之间不互相混杂(artifacts) -> None:
     """游戏本体、mod、交叉三类产物必须**分文件存放**。
 
@@ -105,6 +113,7 @@ def test_产物之间不互相混杂(artifacts) -> None:
     roots = {p.parent.name for p in artifacts.values()}
     assert len(roots) >= 3, f"产物应分属至少 3 个目录，实际 {roots}"
 
+
 def test_落盘后能被原样读回(artifacts) -> None:
     """JSON 产物必须能被 json 反序列化，Markdown 必须是文本。"""
     for name, p in artifacts.items():
@@ -114,6 +123,7 @@ def test_落盘后能被原样读回(artifacts) -> None:
             assert isinstance(obj, dict), f"{name} 顶层应为对象"
         else:
             assert text.lstrip().startswith("#"), f"{name} 应是 Markdown"
+
 
 def test_不污染正式产物目录(artifacts) -> None:
     """测试不应改写 tools/out/ 与 tools/reports/ 里的正式产物。

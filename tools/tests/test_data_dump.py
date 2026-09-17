@@ -25,9 +25,7 @@ from pdx.parser import parse_text
 
 pytestmark = pytest.mark.unit
 
-_needs_game = pytest.mark.skipif(
-    not (config.GAME / "common").is_dir(), reason="游戏目录不可用"
-)
+_needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
 
 
 def _value_of(text: str, key: str):
@@ -95,6 +93,7 @@ def test_重复键在顶层也保留() -> None:
     assert keys.count("x") == 2, "解析器本身不该去重"
     # 产物侧：一个文件块里出现重复键时同样要保序保数
     from pdx.analyze import dump_node as dn
+
     block = pf.root
     got = dn(block)
     assert got == [{"x": "1"}, {"x": "2"}]
@@ -143,9 +142,7 @@ def test_产物规模与条目数相称() -> None:
     """防止「产物在但内容空」这种假通过。"""
     data = to_data_dict()["数据"]
     files = sum(len(v) for v in data.values())
-    entries = sum(
-        len(body) for root in data.values() for body in root.values()
-    )
+    entries = sum(len(body) for root in data.values() for body in root.values())
     assert files > 5_000, f"只覆盖 {files} 个文件"
     assert entries > 30_000, f"只收录 {entries} 个顶层条目"
 
@@ -163,9 +160,7 @@ def test_文件层级的重复键也不被压掉() -> None:
     key = "gfx/portraits/accessory_variations/european.txt"
     body = data["game"][key]
     assert isinstance(body, list), "顶层有重复键时必须退回保序列表"
-    names = [
-        next(iter(x)) for x in body if isinstance(x, dict)
-    ]
+    names = [next(iter(x)) for x in body if isinstance(x, dict)]
     assert names.count("variation") > 300, (
         f"variation 只保留了 {names.count('variation')} 个，重复键被压掉了"
     )
@@ -174,6 +169,7 @@ def test_文件层级的重复键也不被压掉() -> None:
 # ── 位置索引与注释 ──────────────────────────────────────────
 def test_条目索引记录行号() -> None:
     from pdx.analyze import build_entry_index
+
     pf = parse_text("\n\na = 1\n\nb = 2\n", "<t>")
     idx = build_entry_index(pf)
     assert idx["a"]["行"] == 3
@@ -183,9 +179,8 @@ def test_条目索引记录行号() -> None:
 def test_注释归给下方最近的条目() -> None:
     """PDX 的书写惯例：说明写在被说明的条目上方。"""
     from pdx.analyze import build_entry_index
-    pf = parse_text(
-        "# 属于 a 的说明\na = 1\n\n# 属于 b 的说明\n# 第二行\nb = 2\n", "<t>"
-    )
+
+    pf = parse_text("# 属于 a 的说明\na = 1\n\n# 属于 b 的说明\n# 第二行\nb = 2\n", "<t>")
     idx = build_entry_index(pf)
     assert idx["a"]["注释"] == ["属于 a 的说明"]
     assert idx["b"]["注释"] == ["属于 b 的说明", "第二行"]
@@ -194,6 +189,7 @@ def test_注释归给下方最近的条目() -> None:
 def test_没有注释时索引里不带注释字段() -> None:
     """不塞空列表 —— 索引有 7.7 万条目，空字段也是体积。"""
     from pdx.analyze import build_entry_index
+
     idx = build_entry_index(parse_text("a = 1\n", "<t>"))
     assert idx["a"] == {"行": 1}
 
@@ -201,6 +197,7 @@ def test_没有注释时索引里不带注释字段() -> None:
 def test_词法器收集注释但不改变token流() -> None:
     """注释收集是**可选出参**，token 流必须一字不变。"""
     from pdx.lexer import tokenize
+
     text = 'a = "x # 不是注释" # 真注释\nb = 2\n'
     plain = [(t.kind, t.value, t.line, t.col) for t in tokenize(text)]
     comments: list[tuple[int, str]] = []
@@ -211,6 +208,7 @@ def test_词法器收集注释但不改变token流() -> None:
 
 def test_字符串里的井号不算注释() -> None:
     from pdx.lexer import tokenize
+
     comments: list[tuple[int, str]] = []
     tokenize('a = "x # y"\n', comments)
     assert comments == []

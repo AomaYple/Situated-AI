@@ -29,10 +29,10 @@ pytestmark = pytest.mark.property
 # ── 文档生成 ────────────────────────────────────────────────
 #: 只用最保守的字符集 —— 本文件的目的是检验**不变性**，
 #: 不是检验词法边界（那由 test_lexer_differential.py 负责）。
-_KEY = st.text(alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_",
-               min_size=1, max_size=8)
-_VAL = st.text(alphabet="abcdefghijklmnopqrstuvwxyz0123456789_.-",
-               min_size=1, max_size=8)
+_KEY = st.text(
+    alphabet="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", min_size=1, max_size=8
+)
+_VAL = st.text(alphabet="abcdefghijklmnopqrstuvwxyz0123456789_.-", min_size=1, max_size=8)
 
 
 @st.composite
@@ -97,9 +97,7 @@ def _add_full_line_comments(doc: str) -> str:
 
 def _add_trailing_comments(doc: str) -> str:
     """给每个非空行加行尾注释。"""
-    return "\n".join(
-        (ln + "  # 说明") if ln.strip() else ln for ln in doc.split("\n")
-    )
+    return "\n".join((ln + "  # 说明") if ln.strip() else ln for ln in doc.split("\n"))
 
 
 def _add_trailing_whitespace(doc: str) -> str:
@@ -120,8 +118,7 @@ PRESERVING = {
 }
 
 
-@settings(max_examples=150, deadline=None,
-          suppress_health_check=[HealthCheck.too_slow])
+@settings(max_examples=150, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(doc=pdx_docs())
 def test_语义保持变换不改变解析结果(doc: str) -> None:
     """9 种变换，任意一种施加后语义指纹都必须一致。"""
@@ -150,9 +147,7 @@ def test_新增变量定义不改变数据条目(doc: str, extra: list[str]) -> 
     曾被误计成命名空间，把块数从 75 变成 97。
     """
     before = parse_text(doc, "<m>")
-    after = parse_text(
-        doc + "\n".join(f"@{k} = 1" for k in extra) + "\n", "<m>"
-    )
+    after = parse_text(doc + "\n".join(f"@{k} = 1" for k in extra) + "\n", "<m>")
     assert entry_keys(after) == entry_keys(before)
     assert variable_keys(after) >= variable_keys(before)
 
@@ -205,9 +200,9 @@ def test_按行切分后拼接的键序等于各段键序之并(doc: str) -> Non
         return
     joined = parse_text(head + tail, "<j>")
     assert not joined.errors
-    assert [a.key for a in joined.root.assignments()] == [
-        a.key for a in ph.root.assignments()
-    ] + [a.key for a in pt.root.assignments()]
+    assert [a.key for a in joined.root.assignments()] == [a.key for a in ph.root.assignments()] + [
+        a.key for a in pt.root.assignments()
+    ]
 
 
 @settings(max_examples=80, deadline=None)

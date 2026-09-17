@@ -175,8 +175,7 @@ def test_同名命名空间跨文件被记录(tmp_path) -> None:
 
     证据：``NCamera`` 在 jomini 与 game 两个不同文件名下各声明一次。
     """
-    _tree(tmp_path, {"a.txt": "NShared = { A = 1 }\n",
-                     "b.txt": "NShared = { B = 2 }\n"})
+    _tree(tmp_path, {"a.txt": "NShared = { A = 1 }\n", "b.txt": "NShared = { B = 2 }\n"})
     r = extract_defines(tmp_path)
     assert r.namespace_files["NShared"] == ["a.txt", "b.txt"]
     assert r.summary()["跨文件重复的命名空间"] == {"NShared": ["a.txt", "b.txt"]}
@@ -191,10 +190,17 @@ def test_目录不存在时返回空报告(tmp_path) -> None:
 # ── overlay：整函数此前从未被调用 ───────────────────────────
 def _vanilla() -> DefinesReport:
     return DefinesReport(
-        namespaces=[Namespace("NAI", "00_ai.txt", 1, [
-            Param("exist_a", SCALAR, value="1"),
-            Param("exist_b", SCALAR, value="2"),
-        ])]
+        namespaces=[
+            Namespace(
+                "NAI",
+                "00_ai.txt",
+                1,
+                [
+                    Param("exist_a", SCALAR, value="1"),
+                    Param("exist_b", SCALAR, value="2"),
+                ],
+            )
+        ]
     )
 
 

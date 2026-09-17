@@ -107,11 +107,7 @@ class Assignment:
     @property
     def is_namespace(self) -> bool:
         """是否为命名空间块：大写字母开头、非变量、且是块。"""
-        return (
-            not self.is_variable
-            and self.is_block
-            and self.key[:1].isupper()
-        )
+        return not self.is_variable and self.is_block and self.key[:1].isupper()
 
     @property
     def full_key(self) -> str:
@@ -154,7 +150,6 @@ class ParsedFile:
     @property
     def top_assignments(self) -> list[Assignment]:
         return list(self.root.assignments())
-
 
     def namespace_blocks(self) -> list[Assignment]:
         """命名空间块：大写开头、非变量、是块。用于 defines 统计。"""

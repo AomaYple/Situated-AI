@@ -22,8 +22,10 @@ from pdx.lexer import (
 def kinds(text: str) -> list[str]:
     return [t.kind for t in tokenize(text) if t.kind != EOF]
 
+
 def values(text: str) -> list[str]:
     return [t.value for t in tokenize(text) if t.kind != EOF]
+
 
 class TestBraces(unittest.TestCase):
     def test_single_block(self):
@@ -35,6 +37,7 @@ class TestBraces(unittest.TestCase):
 
     def test_adjacent_braces_no_whitespace(self):
         self.assertEqual(values("a={b=1}"), ["a", "=", "{", "b", "=", "1", "}"])
+
 
 class TestOperators(unittest.TestCase):
     def test_all_operators(self):
@@ -50,6 +53,7 @@ class TestOperators(unittest.TestCase):
 
     def test_operators_not_greedy_across_space(self):
         self.assertEqual(values("a = = b"), ["a", "=", "=", "b"])
+
 
 class TestComments(unittest.TestCase):
     def test_line_comment_removed(self):
@@ -68,6 +72,7 @@ class TestComments(unittest.TestCase):
 
     def test_multiple_comments(self):
         self.assertEqual(values("# a\nb = 1 # c\n# d"), ["b", "=", "1"])
+
 
 class TestStrings(unittest.TestCase):
     def test_simple_string(self):
@@ -94,6 +99,7 @@ class TestStrings(unittest.TestCase):
         toks = tokenize('s = "unclosed')
         self.assertTrue(any(t.kind == STRING for t in toks))
 
+
 class TestAtoms(unittest.TestCase):
     def test_hyphen_in_atom(self):
         self.assertEqual(values("pm_a-b = 1"), ["pm_a-b", "=", "1"])
@@ -113,6 +119,7 @@ class TestAtoms(unittest.TestCase):
     def test_dollar_parameter(self):
         self.assertEqual(values("$PARAM$ = 1"), ["$PARAM$", "=", "1"])
 
+
 class TestBOM(unittest.TestCase):
     def test_bom_is_skipped(self):
         self.assertEqual(values("\ufeffa = 1"), ["a", "=", "1"])
@@ -121,19 +128,14 @@ class TestBOM(unittest.TestCase):
         t = next(x for x in tokenize("\ufeffabc = 1") if x.kind == ATOM)
         self.assertEqual(t.value, "abc")
 
+
 class TestLineTracking(unittest.TestCase):
     def _idents(self, text: str) -> list[str]:
         """只取标识符类原子（字母开头），排除数字与符号。"""
-        return [
-            t.value for t in tokenize(text)
-            if t.kind == ATOM and t.value[:1].isalpha()
-        ]
+        return [t.value for t in tokenize(text) if t.kind == ATOM and t.value[:1].isalpha()]
 
     def _lines(self, text: str) -> list[int]:
-        return [
-            t.line for t in tokenize(text)
-            if t.kind == ATOM and t.value[:1].isalpha()
-        ]
+        return [t.line for t in tokenize(text) if t.kind == ATOM and t.value[:1].isalpha()]
 
     def test_line_numbers(self):
         self.assertEqual(self._lines("a = 1\nb = 2\nc = 3"), [1, 2, 3])
@@ -157,6 +159,7 @@ class TestLineTracking(unittest.TestCase):
         self.assertEqual(by_val["="].col, 5)
         self.assertEqual(by_val["1"].col, 7)
 
+
 class TestRobustness(unittest.TestCase):
     def test_empty_input(self):
         self.assertEqual([t.kind for t in tokenize("")], [EOF])
@@ -175,6 +178,7 @@ class TestRobustness(unittest.TestCase):
 
     def test_crlf_handled(self):
         self.assertEqual(values("a = 1\r\nb = 2"), ["a", "=", "1", "b", "=", "2"])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

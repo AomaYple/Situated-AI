@@ -84,11 +84,10 @@ class TestWalkFiles(unittest.TestCase):
             f = next(iter(walk_files(root)))
         self.assertEqual(f.suffix, ".txt")
 
+
 class TestStats(unittest.TestCase):
     def test_counts_and_size(self):
-        with TempTree(
-            {"a.txt": "12345", "b.md": "123", "sub/c.txt": "1"}
-        ) as root:
+        with TempTree({"a.txt": "12345", "b.md": "123", "sub/c.txt": "1"}) as root:
             st = stats_for(root)
         self.assertEqual(st.files, 3)
         self.assertEqual(st.size, 9)
@@ -128,6 +127,7 @@ class TestStats(unittest.TestCase):
             names = [s.name for s in subdir_stats(root)]
         self.assertEqual(names, ["a", "b", "c"])
 
+
 class TestHelpers(unittest.TestCase):
     def test_count_files(self):
         with TempTree({"a.txt": "x", "b.txt": "y", "c.md": "z"}) as root:
@@ -148,10 +148,12 @@ class TestHelpers(unittest.TestCase):
             hits = find_by_name(root, ["readme", "changelog"])
         self.assertEqual(len(hits), 2)
 
+
 class TestTextSuffixes(unittest.TestCase):
     def test_contains_core_extensions(self):
         for ext in (".txt", ".md", ".gui", ".yml"):
             self.assertIn(ext, TEXT_SUFFIXES)
+
 
 class TestRealGameTree(unittest.TestCase):
     """集成测试：对真实游戏目录做结构断言。"""
@@ -161,12 +163,14 @@ class TestRealGameTree(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from pdx.config import GAME
+
         cls.game = GAME
         if not cls.game.is_dir():
             raise unittest.SkipTest("游戏目录不可用")
 
     def test_common_has_136_subdirs(self):
         from pdx.config import GAME
+
         common = GAME / "common"
         n = sum(1 for p in common.iterdir() if p.is_dir())
         self.assertEqual(n, 136)
@@ -181,28 +185,34 @@ class TestRealGameTree(unittest.TestCase):
         改这个数字前请先确认游戏版本，不要为了让测试通过而改。
         """
         from pdx.config import GAME
+
         n = count_files(GAME / "common", ".txt")
         self.assertEqual(n, 3026)
 
     def test_common_total_file_count(self):
         from pdx.config import GAME
+
         self.assertEqual(count_files(GAME / "common"), 3101)
 
     def test_common_md_count_is_75(self):
         from pdx.config import GAME
+
         self.assertEqual(count_files(GAME / "common", ".md"), 75)
 
     def test_game_root_files_present(self):
         from pdx.config import GAME
+
         for name in ("checksum_manifest.txt", "paths.settings"):
             with self.subTest(name=name):
                 self.assertTrue((GAME / name).is_file())
 
     def test_checksum_manifest_lists_five_dirs(self):
         from pdx.config import GAME
+
         text = (GAME / "checksum_manifest.txt").read_text(encoding="utf-8-sig")
         for d in ("common", "events", "map_data", "gui", "localization"):
             self.assertIn(f"name = {d}", text)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -35,8 +35,10 @@ ident_ext = st.text(
     max_size=12,
 ).filter(lambda s: s.strip() and not s.startswith("-"))
 
+
 def _mk(keys: list[str]) -> str:
     return "\n".join(f"{k} = {{ x = 1 }}" for k in keys) + "\n"
+
 
 class TestInvariants:
     """无论输入是什么都必须成立的性质。"""
@@ -68,7 +70,7 @@ class TestInvariants:
     @settings(max_examples=300, suppress_health_check=[HealthCheck.too_slow])
     def test_never_raises_on_arbitrary_input(self, blob):
         """任意文本都不能让解析器抛异常 —— 游戏文件里有畸形数据。"""
-        pf = parse_text(blob)          # 不抛即通过
+        pf = parse_text(blob)  # 不抛即通过
         assert isinstance(pf.top_keys, list)
 
     @given(st.text(max_size=300))
@@ -90,7 +92,7 @@ class TestInvariants:
         pf = parse_text(body + "\n")
         assert pf.top_keys == []
 
-    @given(ident, st.integers(min_value=-10**6, max_value=10**6))
+    @given(ident, st.integers(min_value=-(10**6), max_value=10**6))
     def test_scalar_value_roundtrip(self, key, value):
         """标量赋值必须原样保留。"""
         pf = parse_text(f"{key} = {value}\n")
@@ -113,8 +115,10 @@ class TestInvariants:
         pf = parse_text(f"outer = {{\n{inner}\n}}\n")
         assert pf.top_keys == ["outer"]
 
-    @given(st.lists(ident, min_size=1, max_size=6, unique=True),
-           st.sampled_from(["  ", "\t", "    ", ""]))
+    @given(
+        st.lists(ident, min_size=1, max_size=6, unique=True),
+        st.sampled_from(["  ", "\t", "    ", ""]),
+    )
     def test_indentation_is_irrelevant(self, keys, indent):
         """顶层键无论缩进多少都必须被找到 —— 缩进在 PDX 里无语义。"""
         text = "\n".join(f"{indent}{k} = {{ }}" for k in keys) + "\n"
@@ -129,6 +133,7 @@ class TestInvariants:
         assert sorted(set(pf.top_keys)) == sorted(set(keys))
         for a in pf.top_assignments:
             assert a.is_block
+
 
 class TestRoundTrip:
     """序列化后再解析应当等价。"""

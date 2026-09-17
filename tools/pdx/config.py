@@ -14,11 +14,7 @@ import os
 from pathlib import Path
 
 #: 游戏安装根目录
-ROOT = Path(
-    os.environ.get(
-        "V3_ROOT", r"C:\Program Files (x86)\Steam\steamapps\common\Victoria 3"
-    )
-)
+ROOT = Path(os.environ.get("V3_ROOT", r"C:\Program Files (x86)\Steam\steamapps\common\Victoria 3"))
 
 #: 游戏内容层（mod 覆盖的目标）
 GAME = ROOT / "game"
@@ -52,6 +48,11 @@ REPO = Path(__file__).resolve().parents[2]
 #: 文档与资料目录
 DOCS = REPO / "docs" / "victoria3-modding"
 RESEARCH = REPO / "research"
+
+#: 游戏自带官方 ``.md`` 在本仓库的**逐字节镜像**（保留原始相对路径）。
+#: 由 ``tools/tests/test_docs_mirror.py`` 在装有游戏的环境下看守其时效性 ——
+#: 游戏升级后镜像会静默过期，而照过期镜像写 mod 会漏掉新规则（真实踩过）。
+OFFICIAL_DOCS_MIRROR = RESEARCH / "official-docs"
 
 #: 中间产物目录（已 gitignore）
 OUT = REPO / "tools" / "out"
@@ -96,22 +97,22 @@ PDX_SUFFIXES = (".txt",)
 
 #: ① 需要**深度解析**的目录（相对各内容根）
 SCRIPTABLE_DIRS: tuple[str, ...] = (
-    "common",        # 数据定义主体，136 个子目录
-    "events",        # 事件脚本
-    "gui",           # 界面布局
-    "map_data",      # 地图脚本部分（州区域、邻接等）
-    "interface",     # 消息类型
-    "notifications", # 通知定义
+    "common",  # 数据定义主体，136 个子目录
+    "events",  # 事件脚本
+    "gui",  # 界面布局
+    "map_data",  # 地图脚本部分（州区域、邻接等）
+    "interface",  # 消息类型
+    "notifications",  # 通知定义
     "data_binding",  # GUI 数据绑定宏
-    "input_profile", # 输入配置
+    "input_profile",  # 输入配置
     "dlc_metadata",  # DLC 元数据定义
-    "tools",         # 官方开发工具配置（脚本化测试框架等）
+    "tools",  # 官方开发工具配置（脚本化测试框架等）
     # ── 覆盖面审计后补入（都是 PDX 脚本，此前被误当资产跳过）──
-    "gfx",           # 肖像设置 / 地图物件 / 城市数据 / 模型与实体定义
-    "music",         # 音乐轨道与播放器分类
-    "sound",         # 环境音、音频参数组与上限
-    "content_source",# 地图物件生成器（.txt 与 gfx 下的生成结果配套）
-    "fonts",         # 字体注册表 fonts.font
+    "gfx",  # 肖像设置 / 地图物件 / 城市数据 / 模型与实体定义
+    "music",  # 音乐轨道与播放器分类
+    "sound",  # 环境音、音频参数组与上限
+    "content_source",  # 地图物件生成器（.txt 与 gfx 下的生成结果配套）
+    "fonts",  # 字体注册表 fonts.font
     # DLC 目录本身是个**小内容根**：``dlc/<名称>/{gfx,music,sound}/``。
     # 实测 17 个 DLC 下有 83 个 .txt 与 514 个 .asset，全是 PDX 脚本，
     # 此前因为顶层目录名是 dlc 而被整体跳过。
@@ -124,14 +125,14 @@ SCRIPTABLE_DIRS: tuple[str, ...] = (
 
 #: ① 需要**深度解析**的文件扩展名
 SCRIPTABLE_SUFFIXES: tuple[str, ...] = (
-    ".txt",        # PDX 脚本
-    ".gui",        # 界面布局（同样是花括号语法）
-    ".asset",      # 模型 / 实体 / 动画定义。**同为 PDX 语法**：
-                   # 实测 construction_entities.asset 解析出 7 个顶层键、
-                   # 嵌套 4 层、0 语法错误，连 @[表达式] 都能正确处理
-    ".font",       # 字体注册表（fonts/fonts.font，19 个顶层键）
+    ".txt",  # PDX 脚本
+    ".gui",  # 界面布局（同样是花括号语法）
+    ".asset",  # 模型 / 实体 / 动画定义。**同为 PDX 语法**：
+    # 实测 construction_entities.asset 解析出 7 个顶层键、
+    # 嵌套 4 层、0 语法错误，连 @[表达式] 都能正确处理
+    ".font",  # 字体注册表（fonts/fonts.font，19 个顶层键）
     ".shortcuts",  # 快捷键绑定
-    ".layout",     # 界面布局变体
+    ".layout",  # 界面布局变体
     ".settings",
     ".profile",
 )
@@ -198,8 +199,6 @@ def is_scriptable(rel_parts: tuple[str, ...], suffix: str) -> bool:
     if is_excluded(rel_parts):
         return False
     return suffix in SCRIPTABLE_SUFFIXES
-
-
 
 
 def game_version() -> dict[str, str]:
