@@ -80,7 +80,7 @@ app = typer.Typer(
 #: 口径）加「JSON 本身坏了」组成。刻意不含 ``Exception``：那会把代码 bug
 #: （属性名打错、类型不符）降级成「产物缺失」，是最难查的一类问题 ——
 #: 它让错误静默地变成合法输出。
-_READ_ERRORS = (*TOLERATED_ERRORS, json.JSONDecodeError)
+_READ_ERRORS: tuple[type[BaseException], ...] = (*TOLERATED_ERRORS, json.JSONDecodeError)
 
 
 def _fail(message: str, code: int = EXIT_USAGE) -> NoReturn:
@@ -744,6 +744,13 @@ def verify_cmd(
     claims = verify.CLAIMS
     if only:
         claims = [c for c in claims if only in c.id]
+        if not claims:
+            # 不能筛出空列表就「全部通过」退出 0 —— 那样 --only 拼错一个字母
+            # 会静默报成功，是最容易骗过 CI 的一类假绿灯。
+            _fail(
+                f"没有 id 含 {only!r} 的断言"
+                f"（注册表共 {len(verify.CLAIMS)} 条；用 v3 verify 不带 --only 查看全部）"
+            )
 
     results = verify.run_claims(claims, include_slow=not fast)
     failed = [r for r in results if not r.ok]

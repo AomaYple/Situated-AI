@@ -59,3 +59,35 @@ def entry_keys(pf: ParsedFile) -> set[str]:
 def variable_keys(pf: ParsedFile) -> set[str]:
     """``@变量`` 键集合。"""
     return {a.key for a in pf.root.assignments() if a.is_variable}
+
+
+# ── 类型收窄助手 ────────────────────────────────────────────
+# ``Assignment.value`` 的类型是 ``Block | Scalar | None``，直接访问
+# ``.text`` 或 ``.keys()`` 在类型检查下不合法 —— 而「它到底是不是标量」
+# 恰恰是测试该断言的东西。
+#
+# 这两个助手把「断言形状」和「取出来用」合成一步：拿不到期望形状就**测试失败**，
+# 而不是静默地访问到一个碰巧存在的属性。比加 ``# type: ignore`` 强得多 ——
+# 后者是把类型检查关掉，前者是多了一条真实的断言。
+def scalar_of(a: Assignment) -> Scalar:
+    """取出赋值右侧的标量，形状不符即断言失败。"""
+    assert isinstance(a.value, Scalar), (
+        f"期望标量值，实得 {type(a.value).__name__}（键 {a.key!r}）"
+    )
+    return a.value
+
+
+def block_of(a: Assignment) -> Block:
+    """取出赋值右侧的块，形状不符即断言失败。"""
+    assert isinstance(a.value, Block), (
+        f"期望块值，实得 {type(a.value).__name__}（键 {a.key!r}）"
+    )
+    return a.value
+
+
+def first_assignment(pf: ParsedFile, key: str | None = None) -> Assignment:
+    """取第一个顶层赋值（或指定键的第一个赋值），取不到即断言失败。"""
+    for a in pf.root.assignments():
+        if key is None or a.key == key:
+            return a
+    raise AssertionError(f"没有找到顶层赋值 {key!r}")

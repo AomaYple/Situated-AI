@@ -189,6 +189,7 @@ class _Parser:
                 # ── 内联的 parse_value ──────────────────────
                 vtok = self.cur
                 vkind = vtok.kind
+                value: Block | Scalar | None
                 if vkind == LBRACE:
                     self.advance()
                     value = self.parse_block(vtok.line)

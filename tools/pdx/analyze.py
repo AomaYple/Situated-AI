@@ -41,7 +41,7 @@ from . import config
 from .cache import parse_cached
 from .extract import DirExtract, extract_file
 from .mods import ModInfo, aggregate_prefixes, analyse_all
-from .scan import DirStats, stats_for, walk_files
+from .scan import DirStats, FileEntry, stats_for, walk_files
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -311,7 +311,7 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
     common_root = config.GAME / "common"
 
     # ── 一次遍历：只解析可脚本化的文件 ───────────────────
-    targets: list[tuple[str, object]] = []
+    targets: list[tuple[str, FileEntry]] = []
     for name, root in CONTENT_ROOTS.items():
         if not root.is_dir():
             continue
@@ -495,8 +495,9 @@ def mods_analysis(*, verbose: bool = False) -> ModsAnalysis:
         ma.by_class[target] = cls
         ma.localization[target] = loc
 
-        for rel in m.overrides:
-            ma.path_conflicts.setdefault(rel, []).append(target)
+        # 注意别复用 rel —— 上面那个 rel 是 Path，这里是 str
+        for rel_str in m.overrides:
+            ma.path_conflicts.setdefault(rel_str, []).append(target)
 
         if verbose:
             print(f"  [{target}] {m.name or '(无名)':<38} "
@@ -780,8 +781,10 @@ def render_game_markdown(ga: GameAnalysis) -> str:
     add("")
     add("| DLC | 文件 | MB | 自带脚本目录 |")
     add("|---|---:|---:|:--:|")
-    for d in ga.dlcs:
-        add(f"| `{d.name}` | {d.files:,} | {d.size / 1048576:.2f} | {'是' if d.has_script_dir else '否'} |")
+    # 同样避开 d：本函数上半部分用 d 表示目录名字符串
+    for dlc in ga.dlcs:
+        add(f"| `{dlc.name}` | {dlc.files:,} | {dlc.size / 1048576:.2f} | "
+            f"{'是' if dlc.has_script_dir else '否'} |")
     add("")
     add("> 实测全部 DLC 均不自带 `common/` 等脚本目录，只含 `gfx`/`sound`/`music` 资产。")
     add("")

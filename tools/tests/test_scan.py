@@ -1,4 +1,4 @@
-﻿"""扫描模块测试。
+"""扫描模块测试。
 
 用临时目录构造可控的文件树，避免测试结果依赖游戏安装。
 另有一组集成测试跑真实游戏目录，安装不存在时自动跳过。
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -25,23 +26,22 @@ from pdx.scan import (
 class TempTree:
     """搭建临时文件树的上下文管理器。
 
-    刻意**不用** ``tempfile``：它创建目录时会设置受限权限（0o700），
-    而沙箱既拒绝 chmod、也拒绝向那种目录写入 —— 实测持续 PermissionError。
-    改用普通目录，自己管清理。
-    """
+    用标准库 :mod:`tempfile` 申请目录 —— 目录名由操作系统保证**全局唯一**，
+    因此在 pytest-xdist 的并行 worker 之间也不会撞名。
 
-    BASE = Path(__file__).resolve().parents[2] / ".testtmp"
-    _seq = 0
+    早先这里是「类变量计数器 + 固定前缀」的自家实现。那在单进程下没问题，
+    但 worker 之间计数器各自从 0 开始，两个 worker 会同时占用 ``t0001``，
+    互相看到对方建的文件 —— 这个隔离缺陷正是并行跑测试时暴露出来的。
+    当时避开 tempfile 的理由（沙箱按 ``mkdir`` 的 0o700 模式施加 ACL）
+    已不成立。
+    """
 
     def __init__(self, spec: dict[str, str | bytes]) -> None:
         self.spec = spec
         self.root: Path = Path()
 
     def __enter__(self) -> Path:
-        TempTree._seq += 1
-        self.BASE.mkdir(parents=True, exist_ok=True)
-        self.root = self.BASE / f"t{TempTree._seq:04d}"
-        self.root.mkdir(parents=True, exist_ok=True)
+        self.root = Path(tempfile.mkdtemp(prefix="v3-scan-"))
         for rel, content in self.spec.items():
             p = self.root / rel
             p.parent.mkdir(parents=True, exist_ok=True)
@@ -155,6 +155,8 @@ class TestTextSuffixes(unittest.TestCase):
 
 class TestRealGameTree(unittest.TestCase):
     """集成测试：对真实游戏目录做结构断言。"""
+
+    game: Path
 
     @classmethod
     def setUpClass(cls):

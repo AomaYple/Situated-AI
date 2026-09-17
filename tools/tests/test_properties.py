@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import pytest
+from _helpers import scalar_of
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -95,8 +96,7 @@ class TestInvariants:
         pf = parse_text(f"{key} = {value}\n")
         a = pf.top_assignments[0]
         assert a.key == key
-        assert a.value is not None
-        assert a.value.text == str(value)
+        assert scalar_of(a).text == str(value)
 
     @given(ident, st.sampled_from(PREFIXES))
     def test_prefix_always_split(self, key, prefix):

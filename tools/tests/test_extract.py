@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -20,21 +21,20 @@ from pdx.extract import (
 )
 from pdx.parser import parse_text
 
-BASE = Path(__file__).resolve().parents[2] / ".testtmp" / "extract"
 
 class Sandbox:
-    """在受控目录里建文件树。刻意不用 tempfile（沙箱限制见 test_scan）。"""
+    """在受控目录里建文件树。
 
-    _seq = 0
+    用 :mod:`tempfile` 而不是自建计数器命名 —— 后者在 pytest-xdist 的
+    并行 worker 之间会撞名，详见 ``test_scan.TempTree`` 的说明。
+    """
 
     def __init__(self, spec: dict[str, str]) -> None:
         self.spec = spec
         self.root = Path()
 
     def __enter__(self) -> Path:
-        Sandbox._seq += 1
-        self.root = BASE / f"e{Sandbox._seq:04d}"
-        self.root.mkdir(parents=True, exist_ok=True)
+        self.root = Path(tempfile.mkdtemp(prefix="v3-extract-"))
         for rel, content in self.spec.items():
             p = self.root / rel
             p.parent.mkdir(parents=True, exist_ok=True)
@@ -219,6 +219,8 @@ class TestRealGameCounts(unittest.TestCase):
         "static_modifiers": 6128,
         "character_templates": 2011,
     }
+
+    common: Path
 
     @classmethod
     def setUpClass(cls):

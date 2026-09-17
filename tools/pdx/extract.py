@@ -1,4 +1,4 @@
-﻿"""从 PDX 文件提取结构化信息。
+"""从 PDX 文件提取结构化信息。
 
 这是取代原先 ``dump_*.ps1`` 与 ``make_frags.ps1`` 的核心层。所有提取都
 走 :mod:`pdx.parser`，因此自动获得 BOM 剥离、引号感知注释、花括号深度
@@ -19,12 +19,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .cache import parse_cached
+
+# Block 必须在运行期导入：extract_file 里用 isinstance(a.value, Block) 做分支，
+# 这比走 a.is_block 属性更直接，也让静态检查能收窄 a.value 的类型。
+from .model import Block
 from .scan import walk_files
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
-    from .model import Block, ParsedFile
+    from .model import ParsedFile
 
 
 @dataclass(slots=True)
@@ -100,7 +104,7 @@ def extract_file(pf: ParsedFile, result: DirExtract) -> None:
         else:
             result.entries[a.key] += 1
 
-        if a.is_block:
+        if isinstance(a.value, Block):
             fset = result.fields.setdefault(a.key, set())
             for fname in _collect_fields(a.value):
                 fset.add(fname)

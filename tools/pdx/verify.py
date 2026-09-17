@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING
 from . import config
 from .cache import parse_cached
 from .extract import extract_dir
+from .model import Block
 from .mods import aggregate_prefixes, analyse_all, vanilla_prefix_count
 from .scan import count_files
 
@@ -93,7 +94,7 @@ def _defines_params(target: str) -> int:
     fname, _, ns = target.partition(":")
     pf = parse_cached(config.GAME / "common" / "defines" / fname)
     for a in pf.top_assignments:
-        if a.key == ns and a.is_block:
+        if a.key == ns and isinstance(a.value, Block):
             return len(list(a.value.assignments()))
     return -1
 
@@ -383,6 +384,121 @@ def summarize(results: list[CheckResult]) -> dict[str, object]:
         "失败": len(results) - passed,
         "失败分布": dict(by_doc),
     }
+
+
+# ── 文档一致性 ──────────────────────────────────────────────
+#: 从断言描述里抽锚点词时，这些词太通用，不能当作定位依据。
+#: 例如「common 有 136 个子目录」里的 ``common`` 在全库出现上千次，
+#: 单靠它在文档里找「common + 136」会撞上无关的行。
+_GENERIC_ANCHORS = frozenset(
+    {"common", "mod", "mods", "defines", "history", "有", "个", "共", "全部"}
+)
+
+#: 锚点词的形态：拉丁字母/数字/下划线组成、长度 ≥3。
+#: 刻意不收录中文词 —— 中文分词是另一个量级的问题，而本项目的
+#: 数量断言几乎都以英文标识符开头（``on_actions`` / ``NAI`` / ``laws``）。
+_ANCHOR_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]{2,}")
+
+
+@dataclass(slots=True)
+class DocDrift:
+    """文档正文与断言表不一致的一处。"""
+
+    claim: Claim
+    doc: str
+    line: int
+    text: str
+    found: int
+
+    def describe(self) -> str:
+        return (
+            f"{self.doc}:{self.line} 写着 {self.found}，"
+            f"断言表期望 {self.claim.expected} —— {self.text.strip()[:80]}"
+        )
+
+
+def anchors_of(claim: Claim) -> list[str]:
+    """从断言描述里抽出可用于在文档中定位的锚点词。"""
+    out: list[str] = []
+    for token in _ANCHOR_RE.findall(claim.text):
+        low = token.lower()
+        if low in _GENERIC_ANCHORS or token in _GENERIC_ANCHORS:
+            continue
+        if token not in out:
+            out.append(token)
+    return out
+
+
+#: 独立的数字。两侧不能紧邻字母/下划线 —— 否则 ``dlc018_ep2`` 里的
+#: ``018``、``1.14.2`` 里的 ``14`` 都会被当成数量断言（实测这是最大的误报源）。
+_STANDALONE_NUM_RE = re.compile(r"(?<![A-Za-z0-9_])(\d[\d,]*)(?![A-Za-z0-9_])")
+
+
+def find_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
+    """扫描文档，找出「锚点词 + 数字」与断言表对不上的地方。
+
+    这是把「文档里的数字会不会过期」变成可自动检查的关键一步。
+
+    判定规则（三条都是被误报逼出来的）：
+
+    1. 以断言描述里的**英文标识符**为锚点（``on_actions`` / ``NAI`` / ``laws``），
+       只看含锚点的行 —— 否则 264 这种数字在两千行文档里到处都可能出现，
+       写错了也照样"通过"。
+    2. 数字必须**独立成词**。``dlc018_*`` 里的 018、版本号 1.14.2 里的 14
+       都不是数量。
+    3. 只取锚点之后**第一个**独立数字。表格行里往往并列好几个指标
+       （条目数 / 文件数 / 行数），语义槽位是「紧接着锚点的那个」。
+
+    仍会有少量误报 —— 同一行里既有"条目数"又有"文件数"时，
+    静态文本无法判断哪个是断言要的那个。因此这个函数是**给人看的线索**，
+    不是自动改文档的依据。
+    """
+    docs_dir = docs_dir or config.DOCS
+    out: list[DocDrift] = []
+    if not docs_dir.is_dir():
+        return out
+
+    cache: dict[str, list[str]] = {}
+    for claim in CLAIMS:
+        if not isinstance(claim.expected, int) or not claim.expected:
+            continue
+        if claim.doc not in cache:
+            path = docs_dir / claim.doc
+            cache[claim.doc] = (
+                path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+            )
+        lines = cache[claim.doc]
+        if not lines:
+            continue
+
+        anchors = anchors_of(claim)
+        if not anchors:
+            continue
+        tolerance = max(2, claim.expected // 100)
+        expected_str = f"{claim.expected:,}"
+
+        for n, line in enumerate(lines, start=1):
+            if not any(a in line for a in anchors):
+                continue
+            # 期望值已经出现在这一行 —— 说明文档是对的
+            if expected_str in line or str(claim.expected) in line:
+                continue
+            # 找出这一行里量级接近期望值的独立数字；有就说明多半是漂移。
+            #
+            # 不能只看锚点后的**第一个**数字：表格行 `| NAI | 1 | 1013 |`
+            # 里第一个数字是文件数 1，真正的参数数在后面（实测漏报过 9 处）。
+            for hit in _STANDALONE_NUM_RE.finditer(line):
+                value = int(hit.group(1).replace(",", ""))
+                if value in _COMMON_NOISE:
+                    continue
+                if 0 < abs(value - claim.expected) <= tolerance:
+                    out.append(DocDrift(claim, claim.doc, n, line, value))
+                    break
+    return out
+
+
+#: 这些数字在文档里作为版本号、年份、行号等出现，与数量断言无关。
+_COMMON_NOISE = frozenset({1142, 1143, 2023, 2024, 2025, 2026})
 
 
 # ── 产物核验 ────────────────────────────────────────────────

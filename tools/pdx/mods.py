@@ -19,6 +19,7 @@ import json
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from . import config
 from .cache import parse_cached
@@ -76,15 +77,20 @@ class ModInfo:
         }
 
 
-def read_metadata(root: Path) -> dict:
-    """读 mod 的 ``.metadata/metadata.json``。字段与官方格式一致。"""
+def read_metadata(root: Path) -> dict[str, Any]:
+    """读 mod 的 ``.metadata/metadata.json``。字段与官方格式一致。
+
+    顶层是数组或标量的 JSON 也会被挡掉 —— 返回 ``{}`` 而不是把
+    非字典对象交给调用方，否则 ``meta.get`` 会在运行时炸。
+    """
     path = root / METADATA_REL
     if not path.is_file():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8-sig"))
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
         return {}
+    return data if isinstance(data, dict) else {}
 
 
 def analyse_mod(root: Path, *, vanilla: Path | None = None) -> ModInfo:

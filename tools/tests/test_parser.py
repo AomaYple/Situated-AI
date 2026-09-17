@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import unittest
 
+from _helpers import block_of, first_assignment, scalar_of
+
 from pdx import parse_text
 from pdx.parser import PREFIXES
 
@@ -40,7 +42,7 @@ class TestComments(unittest.TestCase):
     def test_hash_inside_string_is_not_comment(self):
         pf = parse_text('a = "value # not a comment"\n')
         self.assertEqual(pf.top_keys, ["a"])
-        self.assertEqual(pf.top_assignments[0].value.unquoted, "value # not a comment")
+        self.assertEqual(scalar_of(first_assignment(pf)).unquoted, "value # not a comment")
 
     def test_braces_inside_commented_block_do_not_drift_depth(self):
         """官方 00_flag_definitions.txt 有 21 行注释内含花括号。"""
@@ -109,23 +111,23 @@ class TestTopLevelDetection(unittest.TestCase):
     def test_mixed_tabs_and_spaces(self):
         pf = parse_text("a = {\n    b = 1\n\tc = 2\n}\n")
         self.assertEqual(pf.top_keys, ["a"])
-        self.assertEqual(sorted(pf.top_assignments[0].value.keys()), ["b", "c"])
+        self.assertEqual(sorted(block_of(first_assignment(pf)).keys()), ["b", "c"])
 
 class TestValues(unittest.TestCase):
     def test_inline_list_of_scalars(self):
         pf = parse_text("traits = { a b c }\n")
-        blk = pf.top_assignments[0].value
+        blk = block_of(first_assignment(pf))
         self.assertEqual([s.text for s in blk.scalars()], ["a", "b", "c"])
 
     def test_quoted_string_preserved(self):
         pf = parse_text('icon = "gfx/interface/icons/a.dds"\n')
-        v = pf.top_assignments[0].value
+        v = scalar_of(first_assignment(pf))
         self.assertTrue(v.quoted)
         self.assertEqual(v.unquoted, "gfx/interface/icons/a.dds")
 
     def test_empty_block(self):
         pf = parse_text("a = { }\n")
-        self.assertEqual(len(pf.top_assignments[0].value), 0)
+        self.assertEqual(len(block_of(first_assignment(pf))), 0)
 
     def test_empty_value(self):
         """``key =`` 后面直接闭合块 —— 值确实为空，可判定。
@@ -135,8 +137,10 @@ class TestValues(unittest.TestCase):
         因此不为此行为设断言。见 parser.py 的「已知限制」。
         """
         pf = parse_text("block = {\n  a =\n}\n")
-        inner = pf.top_assignments[0].value
-        self.assertIsNone(inner.first("a").value)
+        inner = block_of(first_assignment(pf))
+        inner_a = inner.first("a")
+        assert inner_a is not None
+        self.assertIsNone(inner_a.value)
 
 class TestRobustness(unittest.TestCase):
     """不追求全对全错：畸形输入要尽量保留可用数据。"""

@@ -15,6 +15,8 @@ from pdx import config, snapshot
 
 
 class TestSnapshotShape(unittest.TestCase):
+    snap: snapshot.Snapshot
+
     @classmethod
     def setUpClass(cls):
         if not (config.GAME / "common").is_dir():

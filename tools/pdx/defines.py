@@ -203,7 +203,7 @@ def overlay(vanilla: DefinesReport, mod_text: str) -> dict[str, object]:
     pf = parse_text(mod_text, "<mod>")
     result: list[dict[str, object]] = []
     for a in pf.top_assignments:
-        if not a.is_block or a.is_variable:
+        if a.is_variable or not isinstance(a.value, Block):
             continue
         target = vanilla.get(a.key)
         if not target:

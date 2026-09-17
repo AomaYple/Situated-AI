@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any
 from . import config
 from .cache import parse_cached
 from .defines import extract_defines
+from .model import Block
 from .scan import walk_files
 
 if TYPE_CHECKING:
@@ -81,7 +82,7 @@ def _field_names(root: Path, top: str = "common") -> dict[str, list[str]]:
     for f, rel in _walk_scriptable(root, top):
         pf = parse_cached(f.path)
         for a in pf.top_assignments:
-            if a.is_variable or not a.is_block:
+            if a.is_variable or not isinstance(a.value, Block):
                 continue
             key = f"{rel.parts[1]}/{a.key}"
             out.setdefault(key, set()).update(
