@@ -79,6 +79,27 @@ def test_任意深度都能还原() -> None:
     assert _value_of(text, "a") == {"b": {"c": {"d": {"e": "1"}}}}
 
 
+def test_重复键不被覆盖() -> None:
+    """PDX 允许同级重复键，实测全库有 1,299 个顶层条目如此。
+
+    直接建成字典会静默覆盖成最后一个 —— 那是实打实的信息丢失。
+    检测到重复时退回保序列表，重数与顺序都保住。
+    """
+    got = _value_of("a = { b = 1  b = 2  b = 3 }\n", "a")
+    assert got == [{"b": "1"}, {"b": "2"}, {"b": "3"}], "三个 b 必须都在"
+
+
+def test_重复键在顶层也保留() -> None:
+    pf = parse_text("x = 1\nx = 2\n", "<t>")
+    keys = [a.key for a in pf.top_assignments]
+    assert keys.count("x") == 2, "解析器本身不该去重"
+    # 产物侧：一个文件块里出现重复键时同样要保序保数
+    from pdx.analyze import dump_node as dn
+    block = pf.root
+    got = dn(block)
+    assert got == [{"x": "1"}, {"x": "2"}]
+
+
 def test_列表里嵌套块() -> None:
     got = _value_of("a = { x = { y = 1 }  z = { w = 2 } }\n", "a")
     assert got == {"x": {"y": "1"}, "z": {"w": "2"}}
@@ -91,7 +112,10 @@ def test_列表里嵌套块() -> None:
 def test_产物含值而不只是字段名() -> None:
     """核心断言：随便挑一个条目，必须能看到**值**。"""
     data = to_data_dict()
-    rec = data["game"]["common/buildings/08_monuments.txt"]["building_angkor_wat"]
+    body = data["game"]["common/buildings/08_monuments.txt"]
+    # 文件顶层正常时是字典
+    assert isinstance(body, dict)
+    rec = body["building_angkor_wat"]
     # 字段名存在
     assert "building_group" in rec
     # **值**存在 —— 这正是此前缺失的东西
@@ -124,6 +148,27 @@ def test_产物规模与条目数相称() -> None:
     )
     assert files > 5_000, f"只覆盖 {files} 个文件"
     assert entries > 30_000, f"只收录 {entries} 个顶层条目"
+
+
+@_needs_game
+@pytest.mark.integration
+@pytest.mark.slow
+def test_文件层级的重复键也不被压掉() -> None:
+    """实测 european.txt 顶层有 383 个同名的 variation。
+
+    这条防的是一个具体的 bug：dump_node 里做了重复检测，但 to_data_dict
+    在文件层级**又自己写了一遍字典推导式**绕过了它，于是顶层重复照样被压。
+    """
+    data = to_data_dict()
+    key = "gfx/portraits/accessory_variations/european.txt"
+    body = data["game"][key]
+    assert isinstance(body, list), "顶层有重复键时必须退回保序列表"
+    names = [
+        next(iter(x)) for x in body if isinstance(x, dict)
+    ]
+    assert names.count("variation") > 300, (
+        f"variation 只保留了 {names.count('variation')} 个，重复键被压掉了"
+    )
 
 
 @_needs_game

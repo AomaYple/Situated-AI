@@ -616,20 +616,36 @@ def dump_node(node: Any) -> Any:
 
     体积实测：与源文件基本同量级（1.68 MB 源 → 1.59 MB 数据），
     全部可解析文本约 45 MB，转储约 42 MB。
+
+    重复键
+    ------
+    PDX **允许同级出现重复键**，而且真实文件里大量使用 —— 实测全库有
+    ``gfx/portraits/accessory_variations/european.txt`` 里 ``variation``
+    一个键在同一层出现 **383 次**，全库共 1,299 个顶层条目存在重复。
+    若直接建成字典，这些都会被静默覆盖成最后一个，是实打实的信息丢失。
+
+    因此：**只有当键全不重复时才用字典**，一旦检测到重复就退回保序列表
+    （每项是单键字典）。判据来自实测数据，不是理论洁癖。
     """
     if node is None:
         return None
     if isinstance(node, Scalar):
         return node.text
     if isinstance(node, Block):
-        if all(isinstance(i, Assignment) for i in node.items):
-            return {
-                (f"{a.prefix}:{a.key}" if a.prefix else a.key): dump_node(a.value)
-                for a in node.assignments()
-            }
-        # 含裸标量或匿名块 —— 顺序有意义，用列表保序
+        items = node.items
+        if all(isinstance(i, Assignment) for i in items):
+            assignments = [i for i in items if isinstance(i, Assignment)]
+            keys = [
+                f"{a.prefix}:{a.key}" if a.prefix else a.key for a in assignments
+            ]
+            if len(set(keys)) == len(keys):
+                return {
+                    k: dump_node(a.value)
+                    for k, a in zip(keys, assignments, strict=True)
+                }
+        # 含裸标量、匿名块，或**存在重复键** —— 顺序与重数都有意义，用列表
         out: list[Any] = []
-        for item in node.items:
+        for item in items:
             if isinstance(item, Assignment):
                 key = f"{item.prefix}:{item.key}" if item.prefix else item.key
                 out.append({key: dump_node(item.value)})
@@ -661,10 +677,11 @@ def to_data_dict() -> dict[str, Any]:
             rel = f.path.relative_to(root)
             key = "/".join(rel.parts)
             try:
-                bucket[key] = {
-                    (f"{a.prefix}:{a.key}" if a.prefix else a.key): dump_node(a.value)
-                    for a in pf.top_assignments
-                }
+                # **复用 dump_node**，不要在这里另写一遍字典推导式：
+                # 文件顶层同样可能有重复键（实测 european.txt 里
+                # ``variation`` 出现 383 次），自己写的那份会把它们压掉。
+                # 这个 bug 正是「修了 dump_node 却在调用处又绕过去」造成的。
+                bucket[key] = dump_node(pf.root)
             except RecursionError:  # pragma: no cover - 病态嵌套
                 continue
         if bucket:
