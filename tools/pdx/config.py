@@ -116,6 +116,10 @@ SCRIPTABLE_DIRS: tuple[str, ...] = (
     # 实测 17 个 DLC 下有 83 个 .txt 与 514 个 .asset，全是 PDX 脚本，
     # 此前因为顶层目录名是 dlc 而被整体跳过。
     "dlc",
+    # ``jomini/jomini/`` 是个**嵌套内容根**，里面只有 ``gui/``。
+    # 因为是二级目录，``is_scriptable`` 按 rel_parts[0] 判定时看不到它，
+    # 于是 jomini_encyclopedia.gui 一直落在范围外。
+    "jomini",
 )
 
 #: ① 需要**深度解析**的文件扩展名
