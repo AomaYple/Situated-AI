@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -241,14 +242,22 @@ class TestSubprocess:
         """``[project.scripts]`` 装出来的 ``v3`` 必须真能跑。
 
         这条能抓到「改了 pyproject 但没重新 pip install -e .」这类问题。
-        """
-        import shutil
 
-        exe = shutil.which("v3")
+        入口点直接照着**当前解释器所在的 Scripts 目录**找，不走 ``PATH`` ——
+        虚拟环境通常不激活就调 pytest，这时 ``shutil.which("v3")`` 找不到，
+        测试会永远静默跳过，等于没有这条检查（实测踩过）。
+        """
+        scripts = Path(sys.executable).parent
+        candidates = [scripts / "v3.exe", scripts / "v3"]
+        exe = next((c for c in candidates if c.is_file()), None)
         if exe is None:
-            pytest.skip("v3 入口点未安装（pip install -e . 可生成）")
+            pytest.fail(
+                f"v3 入口点不存在于 {scripts}；"
+                "请运行 pip install -e . 重新生成（改了 pyproject 后必须重装）"
+            )
         p = subprocess.run(
-            [exe, "--help"], capture_output=True, text=True,
+            [str(exe), "--help"], capture_output=True, text=True,
             encoding="utf-8", errors="replace", timeout=120, check=False,
         )
         assert p.returncode == 0, p.stderr
+        assert "analyze" in p.stdout

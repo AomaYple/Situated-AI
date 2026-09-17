@@ -95,3 +95,5 @@ $RECYCLE.BIN/
 # 公开分发前请自行评估。
 #
 # 注意：*.log 被忽略，但游戏日志位于用户数据目录（本仓库之外），不受影响。
+.commitmsg*
+.commitmsg

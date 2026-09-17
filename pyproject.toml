@@ -94,9 +94,31 @@ addopts = [
     "--tb=short",
     "--timeout=300",
     "--timeout-method=thread",
+    # ── 并行（pytest-xdist）────────────────────────────────
+    # pytest 默认**串行**；装上 xdist 只是提供能力，必须显式传 -n 才并行。
+    #
+    # 这里的取值是实测出来的，不是拍的：
+    #     串行                    149.5 秒
+    #     -n auto --dist loadscope  92.4 秒   （-38%）
+    #
+    # ``--dist loadscope`` 让同一个测试模块固定落在同一个 worker。这是必要的：
+    # 本项目多个模块共用 session 级 fixture（ga/ma/ca 会跑一遍 16 秒的全量分析），
+    # 而 **xdist 的 worker 之间不共享解析缓存**，每个 worker 都要各自重跑。
+    # 按模块分组能把这份重复压到最小。
+    #
+    # 需要串行（例如要读完整的失败上下文）时传 ``-n0`` 覆盖。
+    "-n",
+    "auto",
+    "--dist",
+    "loadscope",
 ]
 # 说明：不设 --basetemp。pytest 的 tmp_path 在本机已可用，
 # 默认落在系统 Temp 下即可，无需固定。
+#
+# 注：并行曾经不可用 —— 测试里的临时目录工具用「类变量计数器 + 固定前缀」
+# 命名，而 worker 是独立进程、计数器各自从 0 开始，两个 worker 会撞同一个
+# 目录。换用 tempfile.mkdtemp 后（它在操作系统层面保证唯一）才真正可用；
+# 这个隔离缺陷正是并行时才暴露出来的。
 
 markers = [
     "unit: 单元测试，不依赖游戏安装",
