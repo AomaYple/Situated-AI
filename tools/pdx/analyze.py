@@ -41,7 +41,12 @@ from . import config
 from .cache import parse_cached
 from .extract import DirExtract, extract_file
 from .localization import LocalizationReport, extract_localization
+
+# Assignment / Scalar / Block 必须在**运行期**导入：dump_node 用 isinstance
+# 区分节点类型，放进 TYPE_CHECKING 会在运行时 NameError（已踩过）。
+from .model import Assignment, Block, Scalar
 from .mods import ModInfo, aggregate_prefixes, analyse_all
+from .parser import TOLERATED_ERRORS
 from .scan import DirStats, FileEntry, stats_for, walk_files
 
 if TYPE_CHECKING:
@@ -584,6 +589,89 @@ def cross_analysis(ma: ModsAnalysis, *, verbose: bool = False) -> CrossAnalysis:
 
 
 # ── 序列化 ──────────────────────────────────────────────────
+def dump_node(node: Any) -> Any:
+    """把一个 AST 节点还原成纯数据（嵌套 dict / list / 字符串）。
+
+    这是「**记录信息**」与「**记录名字**」的分界线。
+
+    此前产物对每个条目只记了**第一层字段名**，例如 ``building_angkor_wat``
+    只留下 15 个名字：``['background', 'building_group', 'potential', …]``。
+    而原文件里是::
+
+        building_group = bg_monuments
+        potential = { state_region = s:STATE_CAMBODIA }
+        city_gfx_interactions = { clear_size_area = yes  size = 5 }
+
+    值、嵌套结构、列表元素全都没有 —— mod 作者无法据此回答
+    「这个字段默认值是多少」「这个块里能写什么」。那不是信息，是目录。
+
+    表示法约定
+    ----------
+    * 块内有具名赋值 → ``{"键": 值, …}``（键带功能前缀，如 ``REPLACE:foo``）
+    * 块内全是裸标量 → ``["a", "b", "c"]``（PDX 的列表写法）
+    * 混合 → 保留**顺序**的列表，具名赋值表示为单键 dict
+    * 标量 → 字符串原样（不做类型推断：``yes`` / ``1`` / ``foo`` 在语法层
+      没有区别，语义由使用处决定）
+    * 空值（``key =`` 后直接换行）→ ``None``
+
+    体积实测：与源文件基本同量级（1.68 MB 源 → 1.59 MB 数据），
+    全部可解析文本约 45 MB，转储约 42 MB。
+    """
+    if node is None:
+        return None
+    if isinstance(node, Scalar):
+        return node.text
+    if isinstance(node, Block):
+        if all(isinstance(i, Assignment) for i in node.items):
+            return {
+                (f"{a.prefix}:{a.key}" if a.prefix else a.key): dump_node(a.value)
+                for a in node.assignments()
+            }
+        # 含裸标量或匿名块 —— 顺序有意义，用列表保序
+        out: list[Any] = []
+        for item in node.items:
+            if isinstance(item, Assignment):
+                key = f"{item.prefix}:{item.key}" if item.prefix else item.key
+                out.append({key: dump_node(item.value)})
+            else:
+                out.append(dump_node(item))
+        return out
+    return None  # pragma: no cover - Node 联合类型已穷尽
+
+
+def to_data_dict() -> dict[str, Any]:
+    """把全部分析过的脚本内容**还原成结构化数据**。
+
+    与 ``游戏本体.json`` 的分工：
+    * ``游戏本体.json`` 记的是**统计**（每个目录多少条目、多少字段、哪些键）
+    * 本产物记的是**内容**（每个条目的字段、值、嵌套结构）
+
+    两者都需要：统计用来做断言与文档，内容用来真正写 mod。
+    """
+    data: dict[str, dict[str, Any]] = {}
+    for name, root in CONTENT_ROOTS.items():
+        if not root.is_dir():
+            continue
+        bucket: dict[str, Any] = {}
+        for f in _scriptable_files(root):
+            try:
+                pf = parse_cached(f.path)
+            except TOLERATED_ERRORS:  # pragma: no cover - 与主流程同口径
+                continue
+            rel = f.path.relative_to(root)
+            key = "/".join(rel.parts)
+            try:
+                bucket[key] = {
+                    (f"{a.prefix}:{a.key}" if a.prefix else a.key): dump_node(a.value)
+                    for a in pf.top_assignments
+                }
+            except RecursionError:  # pragma: no cover - 病态嵌套
+                continue
+        if bucket:
+            data[name] = bucket
+    return data
+
+
 def _dir_to_dict(d: DirStats) -> dict[str, Any]:
     return {
         "目录": d.name, "文件": d.files, "子目录": d.dirs, "MB": d.size_mb,
@@ -724,6 +812,12 @@ def write_reports(
     # 本地化的完整键名清单单独一个文件：14 万+ 键、数 MB，
     # 塞进主 JSON 会让那份 8 MB 的文件翻倍，而查询键名的人
     # 本来就不需要同时看 common 目录的字段表。
+    # 结构化游戏数据：每个条目的字段、值、嵌套结构。
+    # 与主 JSON 的分工 —— 那个记统计，这个记内容。
+    data = GAME_OUT / "游戏数据.json"
+    dump(to_data_dict(), data)
+    out["游戏数据 JSON"] = data
+
     if ga.localization_detail is not None:
         loc = GAME_OUT / "本地化.json"
         dump(ga.localization_detail.to_dict(), loc)
