@@ -1,11 +1,16 @@
 # 13 · common 全量键名索引
 
-> 对 `game\common\` 下**全部 136 个子目录**做机械提取，共 **27,585 个顶层条目**。
+> 对 `game\common\` 下**全部 136 个子目录**做机械提取，共 **27,624 个顶层条目**。
 > 本文回答「**什么东西定义在哪个目录**」。
+
+> 数据版本：Victoria 3 `release/1.14.3`
+> （`caligula_rev = bf52e8efe8f4…`）。
+> 本文**每次运行 `v3 index` 都会整体重新生成**，因此其中的数字始终对应当前安装，
+> 不存在「文档数字过期」的问题 —— 这也是它与其他主题文档的区别。
 
 ## 提取口径
 
-本索引由 `tools/pdx` 包生成（`tools/run_index.py`），口径如下：
+本索引由 `v3 index` 生成（实现见 `tools/pdx/cli.py`），口径如下：
 
 ```text
 顶层判定   花括号深度 == 0，**与缩进无关**
@@ -89,7 +94,7 @@
 | `diplomatic_actions` | 48 | 55 | diplomatic_action.md | add_power_bloc_culture, chartered_company, colonization_rights, colony, crown_land, da_appoint_colonial_governor |
 | `diplomatic_catalyst_categories` | 1 | 35 | diplomatic_catalyst_categories.md | cc_ai_strategy_change, cc_alliance_broken, cc_alliance_formed, cc_autonomy_change, cc_bankruptcy, cc_cooldown_long |
 | `diplomatic_catalysts` | 3 | 77 | diplomatic_catalysts.md | catalyst_alliance_broken, catalyst_alliance_formed, catalyst_alliance_with_rival, catalyst_allies_in_play, catalyst_autonomy_change_imposed, catalyst_autonomy_increase_denied |
-| `diplomatic_plays` | 1 | 52 | diplomatic_plays.md | dp_annex_subject, dp_annex_war, dp_balkan_war, dp_ban_slavery, dp_conquer_state, dp_contain_threat |
+| `diplomatic_plays` | 1 | 53 | diplomatic_plays.md | dp_annex_subject, dp_annex_war, dp_balkan_war, dp_ban_slavery, dp_conquer_state, dp_contain_threat |
 | `discrimination_trait_groups` | 3 | 89 | discrimination_trait_groups.md | heritage_group_abrahamic, heritage_group_african, heritage_group_central_asian, heritage_group_east_asian, heritage_group_eastern, heritage_group_european |
 | `discrimination_traits` | 4 | 324 | discrimination_traits.md | heritage_abyssinian, heritage_afghan, heritage_african_diaspora, heritage_african_settler, heritage_afro_arab, heritage_ainu |
 | `dna_data` | 584 | 583 | dna_data.md | dna_abd_al_rahmani, dna_abdelkader_ibn_muhieddine, dna_abdul_hamid_ii, dna_abdulkerim_nadir_pasha, dna_abraham_lincoln, dna_abu_bakr_ii |
@@ -122,7 +127,7 @@
 | `liberty_desire_levels` | 1 | 3 | — | ld_level_high, ld_level_low, ld_level_moderate |
 | `map_interaction_types` | 1 | 32 | — | activate_conscription_center, build_building, build_special_building, create_formation, deploy_military_formation_to_front, deploy_military_formation_to_sea_node |
 | `map_notification_types` | 1 | 23 | — | map_notification_average_sol_decreased, map_notification_average_sol_increased, map_notification_building_expanded, map_notification_building_foreign_investment, map_notification_building_foreign_investment_made, map_notification_building_foreign_investment_made_privatization |
-| `messages` | 8 | 472 | — | aberdeen_act_notification, acquired_technology_notification, acre_dispute_failure, acre_dispute_success, afghanistan_assistance_request_accepted, afghanistan_assistance_request_rejected |
+| `messages` | 8 | 473 | — | aberdeen_act_notification, acquired_technology_notification, acre_dispute_failure, acre_dispute_success, afghanistan_assistance_request_accepted, afghanistan_assistance_request_rejected |
 | `military_formation_flags` | 1 | 30 | formation_flags.md | army_01, army_02, army_03, army_04, army_05, army_06 |
 | `mobilization_option_groups` | 1 | 6 | mobilization_option_groups.md | medic_support, reconnaissance, special_weapons, supplements, supplies, transport |
 | `mobilization_options` | 1 | 18 | mobilization_options.md | mobilization_option_aerial_recon, mobilization_option_balloon_recon, mobilization_option_basic_supplies, mobilization_option_chemical_weapons, mobilization_option_chocolate, mobilization_option_extra_supplies |
@@ -133,7 +138,7 @@
 | `objective_subgoal_categories` | 1 | 5 | categories.md | sgcat_economic_dominance, sgcat_egalitarian_society, sgcat_great_game, sgcat_hegemon, sgcat_tutorial |
 | `objective_subgoals` | 5 | 86 | subgoals.md | sg_achieve_sovereignty, sg_acquire_chinese_concessions, sg_acquire_korean_protectorate, sg_african_colonies, sg_capacity_deficit, sg_change_production_method |
 | `objectives` | 2 | 5 | objectives.md | objective_economic_dominance, objective_egalitarian_society, objective_great_game, objective_hegemon, objective_tutorial |
-| `on_actions` | 6 | 263 | _on_actions.md | austrian_monarchy_yearly_events, bp1_misc_yearly_events, british_dictate_yearly_events, carlist_war_battle_score, colonial_claims_check, coup_aftermath_half_yearly_events |
+| `on_actions` | 6 | 264 | _on_actions.md | austrian_monarchy_yearly_events, bp1_misc_yearly_events, british_dictate_yearly_events, carlist_war_battle_score, colonial_claims_check, coup_aftermath_half_yearly_events |
 | `opinion_modifiers` | 1 | 6 | opinion_modifiers.md | interest_marker, opinion_friendly_nation, opinion_no_decay_test, opinion_rivals_initiator, opinion_rivals_recipient, opinion_unfriendly_nation |
 | `parties` | 12 | 12 | — | agrarian_party, anarchist_party, communist_party, conservative_party, fascist_party, free_trade_party |
 | `political_lobbies` | 1 | 4 | political_lobbies.md | lobby_anti_country, lobby_anti_overlord, lobby_pro_country, lobby_pro_overlord |
@@ -154,7 +159,7 @@
 | `production_methods` | 15 | 436 | production_methods.md | automatic_irrigation_building_banana_plantation, automatic_irrigation_building_cotton_plantation, automatic_irrigation_building_dye_plantation, automatic_irrigation_building_opium_plantation, automatic_irrigation_building_rubber_plantation, automatic_irrigation_building_silk_plantation |
 | `proposal_types` | 1 | 10 | — | proposal_break_pact, proposal_break_pact_call_in_obligation, proposal_break_pact_owe_obligation, proposal_diplomatic_action, proposal_diplomatic_action_call_in_obligation, proposal_diplomatic_action_owe_obligation |
 | `religions` | 1 | 17 | — | animist, atheist, catholic, confucian, gelugpa, hindu |
-| `script_values` | 29 | 458 | script_values.md | absolute_state_daimyo_loyalty, acceptance_status_1, acceptance_status_2, acceptance_status_3, acceptance_status_4, acceptance_status_5 |
+| `script_values` | 30 | 479 | script_values.md | absolute_state_daimyo_loyalty, acceptance_status_1, acceptance_status_2, acceptance_status_3, acceptance_status_4, acceptance_status_5 |
 | `scripted_buttons` | 50 | 218 | scripted_buttons.md | CHI_deport_missionaries_button, acre_dispute_button, amazon_border_treaty_button_1, amazon_border_treaty_button_2, army_git_good_button, austrian_neo_absolutism_abolish_crown_land_autonomy_button |
 | `scripted_effects` | 40 | 721 | — | JAP_character_generate_choshu_daimyo, JAP_character_generate_hikone_daimyo, JAP_character_generate_kaga_daimyo, JAP_character_generate_kishu_daimyo, JAP_character_generate_matsumae_daimyo, JAP_character_generate_mito_daimyo |
 | `scripted_guis` | 4 | 23 | scripted_guis.md | annex_subject_liberty_desire_sgui, debug_kill_character_sgui, debug_movement_activism_down_sgui, debug_movement_activism_up_sgui, je_acw_reincoprorate_states_sgui, je_colonize_korea_states_sgui |
@@ -162,7 +167,7 @@
 | `scripted_modifiers` | 0 | 0 | scripted_modifiers.md | — |
 | `scripted_progress_bars` | 14 | 42 | scripted_progress_bars.md | austrian_neo_absolutism_constitutional_pressure_progress_bar, balkan_league_timeout_bar, bavarocracy_progress_bar, bulgaria_military_progress_bar, communism_1_progress_bar, control_eastern_crisis_bar |
 | `scripted_rules` | 1 | 18 | — | can_form_power_bloc, can_impose_law_default, can_join_side_in_diplomatic_play, can_lead_power_bloc, can_sign_treaty_with, can_start_diplomatic_plays_against |
-| `scripted_triggers` | 25 | 736 | — | academics_clothes_pop_trigger, accepted_cultural_minority_check_character_scope, african_clothes_pop_trigger, african_clothes_trigger, african_diaspora_clothes_trigger, african_diaspora_pop_clothes_trigger |
+| `scripted_triggers` | 25 | 749 | — | academics_clothes_pop_trigger, accepted_cultural_minority_check_character_scope, african_clothes_pop_trigger, african_clothes_trigger, african_diaspora_clothes_trigger, african_diaspora_pop_clothes_trigger |
 | `ship_groups` | 1 | 4 | ship_groups.md | ship_group_capital_ships, ship_group_cruisers, ship_group_supply_ships, ship_group_torpedo_craft |
 | `ship_modification_slots` | 1 | 7 | ship_modification_slots.md | ship_mod_slot_armor, ship_mod_slot_guns, ship_mod_slot_propulsion, ship_mod_slot_range, ship_mod_slot_utility_1, ship_mod_slot_utility_2 |
 | `ship_modifications` | 2 | 259 | ship_modifications.md | ship_mod_aircraft_carrier_armor_high, ship_mod_aircraft_carrier_armor_light, ship_mod_aircraft_carrier_armor_medium, ship_mod_aircraft_carrier_guns_high, ship_mod_aircraft_carrier_guns_light, ship_mod_aircraft_carrier_guns_medium |
@@ -182,7 +187,7 @@
 | `themes` | 1 | 60 | themes.md | gui_skin_ap1, gui_skin_base, gui_skin_ep2, gui_skin_ip2, gui_skin_ip3, gui_skin_ip4 |
 | `travel_network` | 1 | 2 | — | connections, nodes |
 | `treaty_articles` | 34 | 34 | treaty_articles.md | abandon_piracy, acquire_monopoly_for_company, alliance, amend_succession, defensive_pact, foreign_investment_rights |
-| `trigger_localization` | 3 | 1681 | trigger_localization.md | active_lens, active_lens_option, add_to_temporary_list, age, aggressive_diplomatic_plays_permitted, ai_army_comparison_equal |
+| `trigger_localization` | 4 | 1683 | trigger_localization.md | active_lens, active_lens_option, add_to_temporary_list, age, aggressive_diplomatic_plays_permitted, ai_army_comparison_equal |
 | `tutorial_lesson_chains` | 1 | 3 | tutorial_lesson_chains.md | lesson_chain_intro, lesson_chain_journal_guides, lesson_chain_pops |
 | `tutorial_lessons` | 32 | 66 | tutorial_lesson.md | colonization_law_passed_complete, economic_dominance, economic_dominance_complete, egalitarian_society, egalitarian_society_complete, expand_goods_production_complete |
 | `war_goal_types` | 39 | 39 | war_goal_types.md | annex_country, ban_slavery, break_enforced_treaties, colonization_rights, conquer_state, contain_threat |

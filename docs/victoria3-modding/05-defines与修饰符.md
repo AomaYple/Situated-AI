@@ -1,5 +1,8 @@
 # Victoria 3 Mod 开发知识库 · 05 defines 与修饰符
 
+> ⚠️ **版本提示**：本文的数量统计与「零使用 / 未使用」类结论**采集于 1.14.2**，而本机游戏已升级到 **1.14.3**，这些结论尚未逐条重测。
+> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.3）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
+
 > **适用版本**：Victoria 3 **1.14.2 (Ice Tea)**
 > 版本依据：`launcher\launcher-settings.json` → `"version": "1.14.2 (Ice Tea)"`、`"rawVersion": "1.14.2"`；`caligula_branch.txt` → `release/1.14.2`；`clausewitz_branch.txt` → `caligula/release/1.14.x`
 > **内容根（下文简称 `GAME`）**：`C:\Program Files (x86)\Steam\steamapps\common\Victoria 3\game`

@@ -444,6 +444,11 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
 > 对 `game\\common\\` 下**全部 {len(dirs)} 个子目录**做机械提取，共 **{total_entries:,} 个顶层条目**。
 > 本文回答「**什么东西定义在哪个目录**」。
 
+> 数据版本：Victoria 3 `{config.game_version().get("caligula_branch", "?")}`
+> （`caligula_rev = {config.game_version().get("caligula_rev", "?")[:12]}…`）。
+> 本文**每次运行 `v3 index` 都会整体重新生成**，因此其中的数字始终对应当前安装，
+> 不存在「文档数字过期」的问题 —— 这也是它与其他主题文档的区别。
+
 ## 提取口径
 
 本索引由 `v3 index` 生成（实现见 `tools/pdx/cli.py`），口径如下：

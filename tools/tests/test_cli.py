@@ -107,7 +107,8 @@ def test_verify_json_落盘(tmp_path) -> None:
     assert out.is_file()
     data = json.loads(out.read_text(encoding="utf-8"))
     summary = data["summary"]
-    assert summary["总数"] > 0 and summary["失败"] == 0
+    assert summary["总数"] > 0
+    assert summary["失败"] == 0
 
 
 # ── check-outputs ───────────────────────────────────────────
