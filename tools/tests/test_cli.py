@@ -30,7 +30,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from pdx import cli, config
+from pdx import cli, config, verify
 
 pytestmark = pytest.mark.cli
 
@@ -307,6 +307,53 @@ def test_verify_不存在的_only_返回失败() -> None:
     """``--only`` 拼错时不能静默「全部通过」退出 0。"""
     r = _invoke("verify", "--only", "no-such-claim-id")
     assert r.exit_code == 2, r.output
+
+
+# ── verify --from-snapshot（不读游戏，CI 走这条）───────────
+def test_from_snapshot_不读游戏也能核验() -> None:
+    """这条**不需要游戏** —— 它就是精简快照入库的理由。
+
+    注意这里刻意不加 ``@_needs_game``：CI 上没有游戏，而这条必须能跑。
+    """
+    r = _invoke("verify", "--from-snapshot")
+    assert r.exit_code == 0, r.output
+    assert "快照核验" in r.output
+    assert "快照覆盖" in r.output, "应说明快照覆盖了多少条，别让人以为全查过了"
+
+
+def test_from_snapshot_只有时不存在的_id_返回用法错误() -> None:
+    r = _invoke("verify", "--from-snapshot", "--only", "no-such-claim-id")
+    assert r.exit_code == 2, r.output
+
+
+def test_from_snapshot_没有快照时给出可操作的提示(tmp_path, monkeypatch) -> None:
+    """仓库里没有精简快照时必须**明确失败并告诉怎么办**，而不是静默通过。"""
+    monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
+    r = _invoke("verify", "--from-snapshot")
+    assert r.exit_code == 2, r.output
+    assert "snapshot create --compact" in r.output, f"提示里应给出重建命令：{r.output}"
+
+
+def test_from_snapshot_快照缺域时大声失败(tmp_path, monkeypatch) -> None:
+    """快照在、但域是空的 —— 每条都报「快照里没有对应域」，退出码 1。
+
+    刻意**不**静默跳过：一份缺域的残缺快照应当吵，而不是让 CI 报绿。
+    """
+    from pdx import snapshot as _snap
+
+    empty = _snap.Snapshot(version={"caligula_branch": "test"}, sections={}, compact=True)
+    empty.write(tmp_path / "x.compact.json")
+    monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
+    r = _invoke("verify", "--from-snapshot")
+    assert r.exit_code == 1, r.output
+    assert "快照里没有对应域或条目" in r.output
+
+
+def test_from_snapshot_筛出的断言都不被快照覆盖时报错() -> None:
+    """``--only`` 筛到一批「快照注定覆盖不了」的断言时，要报错而不是报 0 通过。"""
+    r = _invoke("verify", "--from-snapshot", "--only", "pfx.")
+    assert r.exit_code == 2, r.output
+    assert "_SNAPSHOT_GETTERS" in r.output, f"提示应指向取值器表：{r.output}"
 
 
 # ── index 真正写盘的那条路 ──────────────────────────────────

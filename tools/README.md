@@ -61,7 +61,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` `--tables [--write]` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
-| `v3 verify` | `run_verify.py` | 核对文档里的数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--json PATH` |
+| `v3 verify` | `run_verify.py` | 核对文档里的数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用） |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
 | `v3 check-outputs` | `check_outputs.py` | 核验**已落盘产物**是否与断言注册表一致 |
 | `v3 show` | `show_outputs.py` | 转储产物的结构与规模 |
@@ -71,6 +71,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe analyze --no-mods --quiet   # 只分析游戏本体，不打印进度
 .venv\Scripts\v3.exe analyze --profile           # 附 pyinstrument 调用树
 .venv\Scripts\v3.exe verify --fast               # 只跑不需要全库扫描的断言
+.venv\Scripts\v3.exe verify --from-snapshot      # 不读游戏，用入库快照核验（CI 用）
 .venv\Scripts\v3.exe verify --unregistered       # 列出文档里尚未登记的数量断言
 .venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
 .venv\Scripts\v3.exe defines --ns NAI            # 展开某个 defines 命名空间
@@ -105,7 +106,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-446 条用例（`pytest --collect-only` 实测；443 通过 / 3 按条件跳过），
+457 条用例（`pytest --collect-only` 实测；454 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -220,21 +221,43 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 中文 Windows 的控制台是 GBK 代码页，`print("✅")` 会抛 `UnicodeEncodeError`
 —— **重定向到管道时同样会抛**。入口处统一调 `pdx.console.enable_utf8_stdio()`。
 
-`rich` 替代不了它：实测 `Console().print("✅")` 在 GBK 下一样抛。
+`rich` 替代不了它：实测三种写法（`print(..., file=gbk 流)`、
+`Console(file=gbk 流)`、`Console(..., legacy_windows=False)`）**全部**抛。
 
 ## 已知边界
 
-工具链能回答：某个类型有哪些字段、取值什么形态、定义在哪个文件第几行、
-本地化键存不存在、某个目录有哪些条目。
+### 为什么不再自称「全量」
 
-**不能**回答（信息不在文件里，不是功能没做）：
+「全量解析」这个说法只在**文件维度**成立，而且是可证伪的：136 个 `common\`
+子目录逐文件覆盖、每类文件归属由测试强制、并由引擎日志的 `pre-enumerating`
+清单外部背书（72 个枚举组合覆盖 71，零缺口）。
+
+但**信息维度**的「所有与 mod 开发相关的信息」没有边界，因此无法证伪 ——
+它既不能被完成，也不能被证明完成。继续用「全量」会让读者把
+「没被提取到」误当成「不存在」。
+
+所以本仓库改为只声明**能回答哪些任务**：
+
+| 能回答（有实测依据） | 例子 |
+|---|---|
+| 某类条目有哪些字段、取值什么形态 | 建筑 41 个字段及取值样例 |
+| 某条目定义在哪个文件第几行 | `on_actions` 264 个键各自的 `文件:行号` |
+| 某个键存不存在、被引用几次 | 本地化键存在性与语言覆盖；AI 策略字段的引用点 |
+| 某个目录有哪些条目 | 136 个目录的顶层键名全索引 |
+| **两个版本之间，Paradox 增删了什么** | `v3 snapshot diff`（结构域逐项比对） |
+
+**不能**回答 —— 信息不在文件里，不是功能没做：
 
 | 答不了的问题 | 为什么 |
 |---|---|
 | 两个 mod 改同一条目谁生效 | 取决于运行期加载顺序，脚本里没有 |
-| 某字段的合法取值范围 | 只有引擎知道；二进制里有候选词表但未开采 |
+| 某字段的合法取值范围 | 只有引擎知道；二进制里有候选词表但**尚未开采** |
 | 同名条目里哪个最终生效 | 引擎的合并规则，未知 |
 | 平衡性与 AI 实际表现 | 要跑游戏才知道 |
+
+> 上表第二行标了「尚未开采」而不是「做不到」：`victoria3.exe` 里有
+> **17,821 个标识符**，其中 **16,535 个从未在任何脚本里出现** ——
+> 那批词很可能包含字段枚举与合法取值。这是已知范围内最值得做的下一步。
 
 ## 为什么全 Python 化
 
@@ -246,7 +269,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：446 条用例 + 63 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：457 条用例 + 63 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 44 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
@@ -254,3 +277,9 @@ Python 版把上述问题都变成了**可测试的代码**：446 条用例 + 63
 > 断言表测对了不等于文档写对了 —— 正文里可能仍躺着旧值，而断言表照样全绿。
 > 有漂移时退出码同样是 1，所以在 CI / pre-commit 上也会被拦住。
 > 确认是「口径不同、文档没错」的登记在 `pdx.verify.KNOWN_METRIC_MIXUPS`（附理由）。
+>
+> **没有游戏的机器（CI）怎么办**：63 条断言全要读游戏本体，而入库的
+> **精简快照**里带着各目录条目名、defines 命名空间与 DLC 清单，
+> 够核验其中约一半 —— 跑 `v3 verify --from-snapshot` 即可，它**不读游戏**。
+> 它证明「断言注册表仍与当时记录的真值一致」，不证明「游戏里现在是这个数」；
+> 两者合起来才完整，所以 CI 上跑前者、本地跑后者。

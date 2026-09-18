@@ -67,3 +67,13 @@ jobs:
         # 上一步已经覆盖 `docs` / `contract` / `property` 这些标记；
         # 唯二被排除的是 integration（无游戏）与要显式传 -n0 的 benchmark。
         run: python -m pytest -m "not integration"
+
+      - name: v3 verify —— 用入库快照核验一半断言
+        # 63 条断言全部要读游戏本体，CI 上没有游戏，所以 test_verify 会被跳过。
+        # 但入库的精简快照（tools/out/snapshots/*.compact.json，约 4.9 MiB）
+        # 里带着各目录条目名、defines 命名空间与 DLC 清单，够核验其中约一半。
+        # 这条**不读游戏**，因此能在 CI 上真跑 —— 它就是精简快照入库的理由。
+        #
+        # 它证明「断言注册表仍与当时记录的真值一致」，不证明「游戏里现在还是
+        # 这个数」（那要游戏本体，只能在本地 `v3 verify`）。两者合起来才完整。
+        run: v3 verify --from-snapshot

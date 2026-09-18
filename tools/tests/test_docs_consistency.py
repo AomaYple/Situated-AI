@@ -104,6 +104,28 @@ def test_合成文档里写对的值不会被报(tmp_path: Path) -> None:
     assert not hits, [d.describe() for d in hits]
 
 
+def test_范围声明没有被悄悄改回全量() -> None:
+    """仓库**刻意不再自称「全量」**，这条守住那个决定。
+
+    背景：「全量解析」只在文件维度成立且可证伪（136 个目录逐文件覆盖，
+    有引擎日志背书）；而「所有与 mod 开发相关的信息」没有边界、无法证伪 ——
+    继续那样说会让读者把「没提取到」误当成「不存在」。
+
+    测的是**承诺的措辞本身**，不是「某个词有没有出现」：
+    想改回全量的人会先看到这条失败，从而读到 `tools/README.md` 的
+    「已知边界」一节。刻意不去禁词 —— README 正是**引用了**那句无边界的
+    说法来否定它，禁词会把正确的写法也一起禁掉（第一版就这么错过）。
+    """
+    boundary = (config.REPO / "tools" / "README.md").read_text(encoding="utf-8")
+    assert "为什么不再自称「全量」" in boundary, "tools/README.md 的边界说明被删了"
+    assert "能回答哪些任务" in boundary, "边界一节必须正面列出「能回答什么」"
+    assert "不能**回答" in boundary, "边界一节必须列出「不能回答什么」"
+
+    root = (config.REPO / "README.md").read_text(encoding="utf-8")
+    assert "不说自己「全量」" in root, "根 README 应显式声明不说「全量」"
+    assert "已知边界" in root, "根 README 应把读者指向边界一节"
+
+
 def test_每条断言的出处文档都存在() -> None:
     """``claim.doc`` 必须指向真实存在的文档。
 

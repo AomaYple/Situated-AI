@@ -32,6 +32,7 @@ from .extract import extract_dir
 from .model import Block
 from .mods import aggregate_prefixes, analyse_all, vanilla_prefix_count
 from .scan import count_files
+from .snapshot import SNAPSHOT_DIR, Snapshot
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -1261,6 +1262,139 @@ _PRODUCT_GETTERS: dict[str, Callable[[dict, dict, dict, str], object]] = {
 def product_kinds() -> frozenset[str]:
     """能被产物核验覆盖的断言类型。"""
     return frozenset(_PRODUCT_GETTERS)
+
+
+# ── 无游戏环境下的核验：用**入库的精简快照**当真值 ──────────
+#: 断言类型 → 从快照的某个域里取值。
+#:
+#: 为什么需要这一层：`run_claims` 全部要读游戏本体，而 **CI 上没有游戏**，
+#: 于是那 63 条断言在 CI 上一条都不跑（`test_verify.py` 被自动跳过）。
+#: 而入库的精简快照（`tools/out/snapshots/*.compact.json`，约 4.9 MiB）
+#: 里带着 common 各目录的条目名、defines 命名空间、DLC 清单 —— 足够核验其中一批。
+#:
+#: ⚠️ **它证明什么、不证明什么**（写清楚，否则又是自我安慰）：
+#:
+#: * 证明：断言注册表**仍然与当时记录的真值一致**。有人改了 `CLAIMS`
+#:   却没同步快照，这里立刻会响 —— 这正是 CI 该管的事。
+#: * **不**证明：游戏里「现在」还是这个数。那要读游戏本体，是 `run_claims`
+#:   的职责，只有装了游戏的机器才能做。
+#:
+#: 两者合起来才完整：本地跑 `v3 verify`（真值来自游戏），
+#: CI 跑 `v3 verify --from-snapshot`（真值来自入库快照）。
+
+
+def _snap_dir_entries(snap: Snapshot, target: str) -> object:
+    """``common/<target>`` 的顶层条目数 = 该目录在快照里的条目名个数。"""
+    entries = snap.sections.get("common_entries", {}).get(target)
+    return len(entries) if entries is not None else None
+
+
+def _snap_common_dirs(snap: Snapshot, _target: str) -> object:
+    """``common/`` 的子目录数 = 快照里出现的目录数。"""
+    section = snap.sections.get("common_entries")
+    return len(section) if section is not None else None
+
+
+def _snap_dlc(snap: Snapshot, _target: str) -> object:
+    section = snap.sections.get("dlc")
+    return len(section) if section is not None else None
+
+
+def _snap_game_defines(snap: Snapshot) -> dict[str, list[str]]:
+    """只取 **game 层**的 defines 命名空间。
+
+    快照的 ``defines`` 域刻意把 game 与 jomini 两层都收进来（键形如
+    ``game/NAI``、``jomini/NAI``），而 ``def.*`` 系列断言的口径是
+    ``game/common/defines`` 一个目录 —— 不过滤就会把 jomini 的
+    13 个命名空间、79 个参数算进去（实测 63 vs 50、3567 vs 3488）。
+    """
+    section = snap.sections.get("defines") or {}
+    return {k: v for k, v in section.items() if k.startswith("game/")}
+
+
+def _snap_defines_param_total(snap: Snapshot, _target: str) -> object:
+    """defines 参数总数。快照按「层/命名空间」合并，但合并不改变参数总数。"""
+    section = _snap_game_defines(snap)
+    return sum(len(v) for v in section.values()) if section else None
+
+
+def _snap_defines_param_names(snap: Snapshot, _target: str) -> object:
+    """去重后的参数名数 —— 跨命名空间的并集。"""
+    section = _snap_game_defines(snap)
+    if not section:
+        return None
+    names: set[str] = set()
+    for params in section.values():
+        names.update(params)
+    return len(names)
+
+
+def _snap_defines_namespaces(snap: Snapshot, _target: str) -> object:
+    """去重命名空间数 —— 键形如 ``game/NAI``，去掉层前缀再取并集。"""
+    section = _snap_game_defines(snap)
+    if not section:
+        return None
+    return len({k.partition("/")[2] for k in section})
+
+
+_SNAPSHOT_GETTERS: dict[str, Callable[[Snapshot, str], object]] = {
+    "dir_entries": _snap_dir_entries,
+    "dir_subdirs": _snap_common_dirs,
+    "common_dir_count": _snap_common_dirs,
+    "dlc_count": _snap_dlc,
+    "defines_param_total": _snap_defines_param_total,
+    "defines_param_names": _snap_defines_param_names,
+    "defines_namespaces": _snap_defines_namespaces,
+}
+
+
+def snapshot_kinds() -> frozenset[str]:
+    """能被入库快照核验覆盖的断言类型。"""
+    return frozenset(_SNAPSHOT_GETTERS)
+
+
+def latest_compact_snapshot() -> Snapshot | None:
+    """仓库里最新的一份**精简快照**；一份都没有时返回 ``None``。
+
+    只认 ``*.compact.json`` —— 完整快照不入库，而且体积大一个数量级。
+    """
+    if not SNAPSHOT_DIR.is_dir():
+        return None
+    paths = sorted(SNAPSHOT_DIR.glob("*.compact.json"))
+    if not paths:
+        return None
+    try:
+        return Snapshot.load(paths[-1])
+    except (OSError, ValueError):
+        return None
+
+
+def verify_from_snapshot(
+    snap: Snapshot | None = None, claims: list[Claim] | None = None
+) -> list[CheckResult]:
+    """用入库的精简快照核验能被它覆盖的那部分断言。
+
+    覆盖不到的断言类型**不出现在结果里**（用 :func:`snapshot_kinds` 查范围），
+    而不是报成失败 —— 这条路的定位就是「无游戏时能查多少查多少」。
+    """
+    snap = snap or latest_compact_snapshot()
+    if snap is None:
+        return []
+    out: list[CheckResult] = []
+    for claim in claims if claims is not None else CLAIMS:
+        getter = _SNAPSHOT_GETTERS.get(claim.kind)
+        if getter is None:
+            continue
+        try:
+            actual = getter(snap, claim.target)
+        except (KeyError, TypeError, AttributeError) as exc:
+            out.append(CheckResult(claim, None, False, f"{type(exc).__name__}: {exc}"))
+            continue
+        if actual is None:
+            out.append(CheckResult(claim, None, False, "快照里没有对应域或条目"))
+            continue
+        out.append(CheckResult(claim, actual, actual == claim.expected))
+    return out
 
 
 def verify_products(

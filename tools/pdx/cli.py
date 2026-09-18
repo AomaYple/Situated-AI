@@ -791,6 +791,70 @@ def snap_verify() -> None:
 
 
 # ── verify ──────────────────────────────────────────────────
+def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_drift: bool) -> None:
+    """``v3 verify --from-snapshot``：不读游戏，用入库的精简快照核验。
+
+    抽成独立函数而不是塞在 ``verify_cmd`` 里，是为了让「无游戏也能跑」
+    这条路径足够显眼 —— 它是 CI 上唯一能真正核对断言的入口。
+    """
+    snap = verify.latest_compact_snapshot()
+    if snap is None:
+        _fail(
+            "仓库里没有精简快照（tools/out/snapshots/*.compact.json）。"
+            "在装有游戏的机器上跑 `v3 snapshot create --compact` 生成一份 —— 它是入库的。"
+        )
+
+    selected = [c for c in claims if not only or only in c.id]
+    if only and not selected:
+        _fail(f"没有 id 含 {only!r} 的断言（注册表共 {len(verify.CLAIMS)} 条）")
+
+    results = verify.verify_from_snapshot(snap, selected)
+    if not results:
+        _fail("没有任何断言能被快照覆盖 —— 检查 pdx.verify._SNAPSHOT_GETTERS")
+
+    table = Table(
+        title=f"快照核验（{len(results)} 条，快照 {snap.version_label}）", show_lines=False
+    )
+    table.add_column("", width=2, justify="center")
+    table.add_column("ID", style="dim")
+    table.add_column("断言")
+    table.add_column("快照", style="cyan")
+    table.add_column("期望", justify="right")
+    for r in results:
+        table.add_row(
+            "✅" if r.ok else "❌",
+            escape(r.claim.id),
+            escape(r.claim.text),
+            escape(str(r.actual)),
+            escape(str(r.claim.expected)),
+        )
+    console.print(table)
+
+    failed = [r for r in results if not r.ok]
+    covered = len(results)
+    console.print(
+        f"通过 {covered - len(failed)} / {covered}    失败 {len(failed)}"
+        f"    [dim]（快照覆盖 {covered}/{len(verify.CLAIMS)} 条；"
+        f"其余需读游戏本体，本地跑 v3 verify）[/]"
+    )
+    for r in failed:
+        console.print(
+            f"[red]❌[/] [{escape(r.claim.id)}] 期望 {escape(str(r.claim.expected))} "
+            f"快照 {escape(str(r.actual))}  {escape(r.error)}"
+        )
+
+    drift = [] if no_drift else verify.unknown_doc_drift()
+    if drift:
+        console.rule("[red]文档正文与断言表脱节[/]")
+        for d in drift:
+            console.print(f"[red]❌[/] {escape(d.describe())}")
+    elif not no_drift:
+        console.print("[green]文档正文与断言表一致[/]")
+
+    if failed or drift:
+        raise typer.Exit(EXIT_FAILED)
+
+
 @app.command("verify")
 def verify_cmd(
     fast: Annotated[bool, typer.Option("--fast", help="跳过需要全库扫描的检查")] = False,
@@ -801,6 +865,10 @@ def verify_cmd(
     ] = False,
     unregistered: Annotated[
         bool, typer.Option("--unregistered", help="列出文档里**尚未登记**的数量断言后退出")
+    ] = False,
+    from_snapshot: Annotated[
+        bool,
+        typer.Option("--from-snapshot", help="不读游戏，用**入库的精简快照**核验（CI 用）"),
     ] = False,
 ) -> None:
     """核对知识库文档里的数量断言（游戏本体口径）。
@@ -815,7 +883,17 @@ def verify_cmd(
     早在 T0 阶段这两者就号称共用一套逻辑，但 ``find_doc_drift`` 事实上一路
     只被测试调用，``v3 verify`` 从未跑过它，于是「工具报全绿、文档已过期」
     这个最要命的失效模式一直敞着。现在真的接上了（``--no-drift`` 可跳过）。
+
+    ``--from-snapshot`` 是**给 CI 用的**：那里没有游戏，全部实测断言都会被
+    跳过，而精简快照（已入库、约 4.9 MiB）里带着 common 各目录的条目名、
+    defines 命名空间与 DLC 清单，足以核验其中约一半。它证明的是「断言注册表
+    仍与当时记录的真值一致」，**不**证明「游戏里现在还是这个数」。
     """
+    if from_snapshot:
+        _verify_from_snapshot(claims=verify.CLAIMS, only=only, no_drift=no_drift)
+        return
+
+    _require_game()
     claims = verify.CLAIMS
     if unregistered:
         # 覆盖率扫描：文档里还有哪些「数量」没进断言表。
