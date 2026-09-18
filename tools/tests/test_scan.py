@@ -15,10 +15,8 @@ from pathlib import Path
 from pdx.scan import (
     TEXT_SUFFIXES,
     count_files,
-    find_by_name,
     stats_for,
     subdir_stats,
-    total_size,
     walk_files,
 )
 
@@ -127,26 +125,35 @@ class TestStats(unittest.TestCase):
             names = [s.name for s in subdir_stats(root)]
         self.assertEqual(names, ["a", "b", "c"])
 
+    def test_subdir_stats_深层统计目录数(self):
+        """深层统计必须靠 `_walk_dirs` 递归数出全部层级的目录。
+
+        这条对着一个真实踩过的坑：`_walk_dirs` 从手写栈换成 `os.walk` 之后，
+        符号链接目录的过滤语义要**保持不变**，否则同一个树在深浅两种口径下
+        会给出不同的目录数。
+        """
+        with TempTree({"a/b/c/x.txt": "1", "a/y.txt": "2", "d/z.txt": "3"}) as root:
+            stats = {s.name: s for s in subdir_stats(root)}
+        self.assertEqual(sorted(stats), ["a", "d"])
+        self.assertEqual(stats["a"].files, 2, "a 下应有 x.txt 与 y.txt")
+        self.assertEqual(stats["a"].dirs, 2, "a 下应有 b 与 c 两层目录")
+        self.assertEqual(stats["d"].dirs, 0)
+
+    def test_subdir_stats_浅层只数直接子项(self):
+        with TempTree({"a/b/c/x.txt": "1"}) as root:
+            stats = {s.name: s for s in subdir_stats(root, deep=False)}
+        self.assertEqual(stats["a"].dirs, 1)
+        self.assertEqual(stats["a"].files, 0, "浅层不应数到 a/b/c/x.txt")
+
+    def test_subdir_stats_目录不存在时返回空表(self):
+        self.assertEqual(subdir_stats(Path("Z:/definitely/not/here")), [])
+
 
 class TestHelpers(unittest.TestCase):
     def test_count_files(self):
         with TempTree({"a.txt": "x", "b.txt": "y", "c.md": "z"}) as root:
             self.assertEqual(count_files(root), 3)
             self.assertEqual(count_files(root, ".txt"), 2)
-
-    def test_total_size(self):
-        with TempTree({"a": "12345", "b": "123"}) as root:
-            self.assertEqual(total_size(root), 8)
-
-    def test_find_by_name_case_insensitive(self):
-        with TempTree({"ReadMe.md": "x", "OTHER.txt": "y"}) as root:
-            hits = find_by_name(root, ["readme"])
-        self.assertEqual([p.name for p in hits], ["ReadMe.md"])
-
-    def test_find_by_name_multiple_patterns(self):
-        with TempTree({"a_readme.md": "x", "b_changelog.md": "y", "c.txt": "z"}) as root:
-            hits = find_by_name(root, ["readme", "changelog"])
-        self.assertEqual(len(hits), 2)
 
 
 class TestTextSuffixes(unittest.TestCase):

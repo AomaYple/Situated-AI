@@ -951,6 +951,52 @@ def _in_dotted_number(line: str, pos: int) -> bool:
     return any(m.start() <= pos < m.end() for m in _DOTTED_NUM_RE.finditer(line))
 
 
+#: 漂移检测器的已知**度量口径错配**。
+#:
+#: 这些行的共同点是：同一行里并列了好几个不同口径的指标（条目数 / 文件数 /
+#: 被引用次数），静态文本无法判断断言要的是哪一个。逐条实测确认过
+#: 「文档其实是对的」，因此登记为已知项而不是改文档。
+#:
+#: 每一条都必须写清理由 —— 没有理由的豁免就是放任漂移。
+#:
+#: **键是 ``(断言 id, 文档里出现的数字)``，不是行号。** 早先用
+#: ``文件名:行号`` 做键，结果给文档加两行版本提示就整份清单失效 ——
+#: 那是清单设计的问题，不是文档的问题。断言 id 唯一，配上数字足以定位，
+#: 且天然抗行号漂移。
+#:
+#: 放在**本模块**而不是测试文件里：``v3 verify`` 与测试都要用它来区分
+#: 「真漂移」与「口径不同」，两边各维护一份必然会分叉。
+KNOWN_METRIC_MIXUPS: dict[tuple[str, int], str] = {
+    ("eco.goods", 52): "52 是 goods 作为字段被引用的次数，不是 goods 条目数（条目数为 53）",
+    ("eco.goods", 51): "51 是另一处引用次数，与 goods 条目数无关",
+    ("pol.cultures", 316): "316 描述的是某字段列表长度，与 cultures 目录条目数（317）不同口径",
+    ("chr.concepts", 609): "609 是单个文件 00_game_concepts.txt 内的条目数，目录合计为 612",
+    ("dip.treaty", 35): "35 是 treaty_articles 的**文件数**，条目数为 34；实测两者确实不同",
+    ("dip.treaty", 33): "33 是某字段被使用的条目数，不是目录条目总数",
+    ("dip.wargoal", 40): "40 是 war_goal_types 的**文件数**，条目数为 39；实测两者确实不同",
+    ("dip.wargoal", 41): "41 指的是官方 .md 里 settings 列表的条目数，非游戏数据条目数",
+}
+
+
+def drift_key(d: DocDrift) -> tuple[str, int]:
+    """漂移项的稳定标识：``(断言 id, 文档里出现的数字)``。
+
+    刻意**不含行号** —— 给文档加两行版本提示就会让整份已知清单失效，
+    那是清单设计的问题，不是文档的问题。
+    """
+    return (d.claim.id, d.found)
+
+
+def unknown_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
+    """**未被登记为已知口径错配**的漂移 —— 也就是真正需要修的那些。
+
+    :func:`find_doc_drift` 返回的是原始信号（含已知的口径不同），
+    本函数在其上减掉 :data:`KNOWN_METRIC_MIXUPS`。``v3 verify`` 用这个判退出码，
+    测试也用它做断言 —— 两边同一套判据。
+    """
+    return [d for d in find_doc_drift(docs_dir) if drift_key(d) not in KNOWN_METRIC_MIXUPS]
+
+
 def anchors_of(claim: Claim) -> list[str]:
     """从断言描述里抽出可用于在文档中定位的锚点词。"""
     out: list[str] = []

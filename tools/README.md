@@ -61,7 +61,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` `--tables [--write]` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
-| `v3 verify` | `run_verify.py` | 核对文档里的数量断言：`--fast` `--json PATH` `--only ID` |
+| `v3 verify` | `run_verify.py` | 核对文档里的数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--json PATH` |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
 | `v3 check-outputs` | `check_outputs.py` | 核验**已落盘产物**是否与断言注册表一致 |
 | `v3 show` | `show_outputs.py` | 转储产物的结构与规模 |
@@ -71,6 +71,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe analyze --no-mods --quiet   # 只分析游戏本体，不打印进度
 .venv\Scripts\v3.exe analyze --profile           # 附 pyinstrument 调用树
 .venv\Scripts\v3.exe verify --fast               # 只跑不需要全库扫描的断言
+.venv\Scripts\v3.exe verify --unregistered       # 列出文档里尚未登记的数量断言
 .venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
 .venv\Scripts\v3.exe defines --ns NAI            # 展开某个 defines 命名空间
 .venv\Scripts\v3.exe index --dry-run             # 只统计，不写文档
@@ -104,7 +105,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-439 条用例（`pytest --collect-only` 实测；436 通过 / 3 按条件跳过），
+446 条用例（`pytest --collect-only` 实测；443 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -143,11 +144,11 @@ python -m pytest tools/tests/test_benchmarks.py --benchmark-only -n0
 **分开存放** —— 游戏本体与 mod 互不混杂：
 
 ```
-tools/out/game/游戏本体.json      统计口径：条目、字段、使用频次（约 8.5 MB）
+tools/out/game/游戏本体.json      统计口径：条目、字段、使用频次（约 8.2 MB）
 tools/out/game/游戏数据.json      内容口径：字段、值、嵌套结构、行号与注释（约 54 MB）
-tools/out/game/本地化.json        14.5 万个本地化键（约 6.3 MB）
+tools/out/game/本地化.json        14.5 万个本地化键（约 6.1 MB）
 tools/out/game/表格数据.json      adjacencies.csv 等表格类数据
-tools/out/mods/mod.json          mod 全量数据（约 650 KB）
+tools/out/mods/mod.json          mod 全量数据（约 640 KB）
 tools/out/cross/交叉.json         两者的覆盖关系
 tools/reports/游戏本体分析.md      人可读报告
 tools/reports/mod分析.md          人可读报告
@@ -158,8 +159,8 @@ tools/reports/mod分析.md          人可读报告
 另有**独立**的一条线：
 
 ```
-tools/out/snapshots/<版本>.compact.json   精简快照，约 5 MB（**入库**，跨机器可 diff）
-tools/out/snapshots/<版本>.json           完整快照，约 41 MB（gitignore，本机深挖用）
+tools/out/snapshots/<版本>.compact.json   精简快照，约 4.9 MiB（**入库**，跨机器可 diff）
+tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignore，本机深挖用）
 ```
 
 > 上面的 MB / KB 按 1024 进制。精确值由黄金回归（`tools/tests/test_golden.py`）
@@ -168,9 +169,9 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MB（gitignore
 > ⚠️ **快照分两种，只有精简版入库**：完整快照 73% 的体积是本地化键清单
 > （11 种语言 × 14.5 万键），而「Paradox 增删了哪些字段与条目」只需要结构域。
 > 精简版保留 `common_entries` / `fields` / `defines` / `dlc` / `config` 五个域，
-> 只把 `localization` 换成「键数 + sha256」，因此 **5 MB 就能随仓库分发**，
+> 只把 `localization` 换成「键数 + sha256」，因此 **不到 5 MiB 就能随仓库分发**，
 > 让 `v3 snapshot diff` 在别人的克隆里也能跑。
-> 想知道**具体**改了哪些本地化键，才需要那份 41 MB 的完整快照。
+> 想知道**具体**改了哪些本地化键，才需要那份约 39 MiB 的完整快照。
 >
 > 两者**形状相同**，`compare` 对谁都能用；但**别拿精简版与完整版对 diff** ——
 > 那会把整个本地化域报成「全删 + 全增」。文件里有 `精简` 标记，可据此判断。
@@ -245,6 +246,11 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MB（gitignore
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：439 条用例 + 63 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：446 条用例 + 63 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 44 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
+
+> `v3 verify` 同时跑**文档正文的数字漂移扫描**（`verify.unknown_doc_drift`）：
+> 断言表测对了不等于文档写对了 —— 正文里可能仍躺着旧值，而断言表照样全绿。
+> 有漂移时退出码同样是 1，所以在 CI / pre-commit 上也会被拦住。
+> 确认是「口径不同、文档没错」的登记在 `pdx.verify.KNOWN_METRIC_MIXUPS`（附理由）。

@@ -30,7 +30,7 @@
 Python 只在**每个 token** 上执行一次循环体。
 
 正确性由 ``tools/tests/test_lexer_differential.py`` 保证：它把本节实现与
-优化前的逐字符版本（``_oracle_lexer.py``）在全部 4,400 个真实文件上逐
+优化前的逐字符版本（``_oracle_lexer.py``）在全部 6,250 个真实文件上逐
 token 比对 ``(kind, value, line, col)``。**未闭合引号导致的行号双重自增**
 这类古怪行为也被刻意复刻，见 ``_scan_string``。
 """

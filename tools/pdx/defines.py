@@ -263,19 +263,6 @@ DOC_TABLES: tuple[str, ...] = (
 )
 
 
-def _kind_counts(block: Block) -> tuple[int, int, int]:
-    """块内的 ``(标量, 内联列表, 嵌套块)`` 计数，口径见 :func:`_classify`。"""
-    scal = inline = nested = 0
-    for p in _classify(block):
-        if p.kind == SCALAR:
-            scal += 1
-        elif p.kind == INLINE_LIST:
-            inline += 1
-        else:
-            nested += 1
-    return scal, inline, nested
-
-
 def doc_table_rows() -> dict[str, list[str]]:
     """生成 doc 05 五张表的**数据行**（含合计行），键为表头首行。
 

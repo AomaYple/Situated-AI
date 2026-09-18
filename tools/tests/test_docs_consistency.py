@@ -4,66 +4,54 @@
 ------------
 这是四份逐文件审计里排第一的发现：**文档写的是 1.14.2 的数字，而游戏早已
 升到 1.14.3**。更糟的是没有任何测试能发现它 —— ``tools/pdx/verify.py``
-的 39 条断言早就把新值测对了，但断言表与文档正文**永不共振**，
+的断言早就把新值测对了，但断言表与文档正文**永不共振**，
 ``v3 verify`` 一路报「全绿」，文档里却躺着几十个过期数字。
 
 本文件把两者接起来：断言表说「``on_actions`` 有 264 个键」，
 那就到它声称的出处文档里去找这一行；找不到 264、却找到量级接近的
 263，就是漂移。
 
-判定规则见 :func:`pdx.verify.find_doc_drift` 的文档。它同时是
-``v3 verify`` 的底层实现，所以**命令行与测试用的是同一套逻辑**，
-不会出现"测试过了但工具没发现"的分歧。
+判定规则见 :func:`pdx.verify.find_doc_drift` 的文档。**``v3 verify`` 现在
+真的会跑它**（``verify.unknown_doc_drift``，失败即退出码 1），所以命令行与
+测试用的是同一套判据，不会出现「测试过了但工具没发现」的分歧。
+
+> 早先这句「同时是 v3 verify 的底层实现」是**假的** —— 那时
+> ``find_doc_drift`` 只被本文件调用，``v3 verify`` 从未跑过漂移扫描，
+> 于是「工具全绿、文档过期」这个最要命的失效模式一直敞着。
+> 现在两边共用 ``verify.unknown_doc_drift`` 与 ``verify.KNOWN_METRIC_MIXUPS``。
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from pdx import config, verify
 
 pytestmark = pytest.mark.docs
 
-#: 检测器的已知**度量口径错配**。
-#:
-#: 这些行的共同点是：同一行里并列了好几个不同口径的指标（条目数 / 文件数 /
-#: 被引用次数），静态文本无法判断断言要的是哪一个。逐条实测确认过
-#: 「文档其实是对的」，因此登记为已知项而不是改文档。
-#:
-#: 每一条都必须写清理由 —— 没有理由的豁免就是放任漂移。
-#:
-#: **键是 ``(断言 id, 文档里出现的数字)``，不是行号。** 早先用
-#: ``文件名:行号`` 做键，结果给文档加两行版本提示就整份清单失效 ——
-#: 那是清单设计的问题，不是文档的问题。断言 id 唯一，配上数字足以定位，
-#: 且天然抗行号漂移。
-_KNOWN_METRIC_MIXUPS: dict[tuple[str, int], str] = {
-    ("eco.goods", 52): "52 是 goods 作为字段被引用的次数，不是 goods 条目数（条目数为 53）",
-    ("eco.goods", 51): "51 是另一处引用次数，与 goods 条目数无关",
-    ("pol.cultures", 316): "316 描述的是某字段列表长度，与 cultures 目录条目数（317）不同口径",
-    ("chr.concepts", 609): "609 是单个文件 00_game_concepts.txt 内的条目数，目录合计为 612",
-    ("dip.treaty", 35): "35 是 treaty_articles 的**文件数**，条目数为 34；实测两者确实不同",
-    ("dip.treaty", 33): "33 是某字段被使用的条目数，不是目录条目总数",
-    ("dip.wargoal", 40): "40 是 war_goal_types 的**文件数**，条目数为 39；实测两者确实不同",
-    ("dip.wargoal", 41): "41 指的是官方 .md 里 settings 列表的条目数，非游戏数据条目数",
-}
-
-
-def _key(d: verify.DocDrift) -> tuple[str, int]:
-    return (d.claim.id, d.found)
+#: 已知度量口径错配的清单**在 `pdx.verify` 里** —— 命令行与测试共用一份。
+#: 本地别名只为让下面的用例读起来短一些。
+_KNOWN_METRIC_MIXUPS = verify.KNOWN_METRIC_MIXUPS
+_key = verify.drift_key
 
 
 def test_没有新增的文档数字漂移() -> None:
     """文档里凡是「锚点 + 数量」的地方，要么与断言表一致，要么在已知清单里。
 
     这是本文件的核心。任何**新**出现的漂移都会在这里失败，
-    并直接指出 文件:行号 与两个数字。
+    并直接指出 文件:行号 与两个数字。判据与 ``v3 verify`` 完全相同。
     """
-    unexpected = [d for d in verify.find_doc_drift() if _key(d) not in _KNOWN_METRIC_MIXUPS]
+    unexpected = verify.unknown_doc_drift()
     assert not unexpected, (
         f"发现 {len(unexpected)} 处新的文档数字漂移：\n"
         + "\n".join("  " + d.describe() for d in unexpected)
         + "\n\n请把文档里的数字改成实测值；若确认是口径不同，"
-        "登记到 _KNOWN_METRIC_MIXUPS 并写明理由。"
+        "登记到 pdx.verify.KNOWN_METRIC_MIXUPS 并写明理由。"
     )
 
 
@@ -75,7 +63,45 @@ def test_已知口径错配清单没有失效() -> None:
     """
     found = {_key(d) for d in verify.find_doc_drift()}
     stale = sorted(set(_KNOWN_METRIC_MIXUPS) - found)
-    assert not stale, f"以下已知项已不再命中，请从 _KNOWN_METRIC_MIXUPS 中删除：{stale}"
+    assert not stale, f"以下已知项已不再命中，请从 pdx.verify.KNOWN_METRIC_MIXUPS 中删除：{stale}"
+
+
+def test_命令行的判据与测试同源() -> None:
+    """``v3 verify`` 用的必须是 ``unknown_doc_drift``，不能各写一套。
+
+    这条防的是「测试全绿但工具没发现」—— 那正是这个仓库最要命的失效模式，
+    而且**真实发生过**：``find_doc_drift`` 曾经只被测试调用，
+    ``v3 verify`` 一路报全绿而文档已经过期。
+    """
+    assert verify.unknown_doc_drift() == [
+        d for d in verify.find_doc_drift() if verify.drift_key(d) not in _KNOWN_METRIC_MIXUPS
+    ]
+
+
+def test_合成文档里的漂移确实会被抓到(tmp_path: Path) -> None:
+    """把「检测器真的能失败」也测了 —— 否则它只是个永远返回空表的装饰品。
+
+    造一份只含 ``on_actions`` 断言出处文档的目录，正文里写 263（真值 264），
+    断言 ``unknown_doc_drift`` 能报出来。
+    """
+    claim = next(c for c in verify.CLAIMS if c.id == "scr.on_actions")
+    (tmp_path / claim.doc).write_text(
+        f"# 合成文档\n\n{claim.text.split()[0]} 有 263 个键\n", encoding="utf-8"
+    )
+    hits = verify.unknown_doc_drift(tmp_path)
+    assert any(d.claim.id == claim.id and d.found == 263 for d in hits), (
+        f"合成文档里的 263 没被抓到，检测器可能已失效：{[d.describe() for d in hits]}"
+    )
+
+
+def test_合成文档里写对的值不会被报(tmp_path: Path) -> None:
+    """反向：写对了就不该报。防止检测器退化成「凡有数字皆漂移」。"""
+    claim = next(c for c in verify.CLAIMS if c.id == "scr.on_actions")
+    (tmp_path / claim.doc).write_text(
+        f"# 合成文档\n\n{claim.text.split()[0]} 有 {claim.expected} 个键\n", encoding="utf-8"
+    )
+    hits = [d for d in verify.unknown_doc_drift(tmp_path) if d.claim.id == claim.id]
+    assert not hits, [d.describe() for d in hits]
 
 
 def test_每条断言的出处文档都存在() -> None:

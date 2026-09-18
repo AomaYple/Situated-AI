@@ -15,6 +15,16 @@
 ``SCRIPTABLE_DIRS`` 中，所以那 2,176 个文件从来没有被真正读过内容，
 只被数了个数。
 
+**也不是 YAML**，所以不能用 PyYAML 之类的成熟解析器（实测过）::
+
+    >>> yaml.safe_load('l_english:\\n COLON:0 ":"\\n')
+    yaml.scanner.ScannerError: while scanning a simple key
+      could not find expected ':'
+
+YAML 要求映射写成 ``键: 值``（冒号后必须有空格），而这里大量存在
+``COLON:0 ":"`` 这种**冒号紧跟版本号**的写法 —— 对 YAML 来说那是一整个
+标量，不是键值对。Paradox 的 ``.yml`` 是自家格式，只能自己按行读。
+
 这里的口径
 ----------
 * **语言**由文件里的 ``l_xx:`` 行决定，不由目录名 —— ``localization/modifiers/``

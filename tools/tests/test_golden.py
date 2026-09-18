@@ -2,7 +2,7 @@
 
 为什么用指纹而不是整份文件
 --------------------------
-:func:`pdx.analyze.write_reports` 的产物合计 **73,235,718 字节（约 70 MiB）**，
+:func:`pdx.analyze.write_reports` 的产物合计 **72,610,313 字节（约 69 MiB）**，
 其中 ``游戏数据.json`` 一份就有 **56,893,083 字节（约 54 MiB）**。把这种体积的
 文本塞进 git 会让仓库迅速劣化，因此这里记录每个产物的 ``(字节数, sha256)`` ——
 同样能保证"改一个字节就失败"，但仓库只增加几百字节。
@@ -79,6 +79,21 @@ def test_全部产物都非空(artifacts) -> None:
     for name, p in artifacts.items():
         assert p.is_file(), f"{name} 未落盘"
         assert p.stat().st_size > 0, f"{name} 是空文件"
+
+
+def test_产物一律_LF_换行(artifacts) -> None:
+    """产物里不能出现 CRLF。
+
+    这是个**跨平台确定性**问题，不是风格问题：``Path.write_text`` 不传
+    ``newline=""`` 时按平台翻译换行，Windows 写 CRLF、Linux 写 LF，
+    同一份数据两边**字节数就不同** —— 而黄金回归冻结的正是逐字节 sha256。
+    那会让冻结值退化成「Windows 专属值」，CI（Linux）上根本对不上。
+
+    实测踩过：``v3 analyze`` 在 Windows 上把两份报告写成 CRLF，
+    与 ``.gitattributes`` 的 ``eol=lf`` 打架，每次跑完工作树都脏。
+    """
+    bad = [name for name, p in artifacts.items() if b"\r\n" in p.read_bytes()]
+    assert not bad, f"以下产物带 CRLF（检查 write_text 是否漏了 newline='\\n'）：{bad}"
 
 
 def test_报告是合法UTF8且无乱码(artifacts) -> None:

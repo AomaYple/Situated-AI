@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING, Any
 
 from . import config
 from .cache import parse_cached
-from .extract import DirExtract, extract_file
+from .extract import DirExtract, extract_file, global_usage
 from .localization import LocalizationReport, extract_localization
 
 # Assignment / Scalar / Block 必须在**运行期**导入：dump_node 用 isinstance
@@ -47,7 +47,7 @@ from .localization import LocalizationReport, extract_localization
 from .model import Assignment, Block, ParsedFile, Scalar
 from .mods import ModInfo, aggregate_prefixes, analyse_all
 from .parser import TOLERATED_ERRORS
-from .scan import DirStats, FileEntry, stats_for, walk_files
+from .scan import DirStats, FileEntry, stats_for, subdir_stats, walk_files
 from .tabular import extract_tables
 
 if TYPE_CHECKING:
@@ -179,10 +179,13 @@ class GameAnalysis:
         return out
 
     def field_usage(self) -> Counter:
-        total: Counter = Counter()
-        for e in list(self.common.values()) + list(self.scripts.values()):
-            total.update(e.field_usage)
-        return total
+        """全局字段使用次数。
+
+        直接用 :func:`pdx.extract.global_usage` —— 这个属性此前把它
+        原地重写了一遍（同样是遍历 ``field_usage`` 累加），
+        而 ``global_usage`` 因为「没人用」差点被当成死代码删掉。
+        """
+        return global_usage([*self.common.values(), *self.scripts.values()])
 
     def summary(self) -> dict[str, Any]:
         return {
@@ -467,11 +470,12 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
 
 
 def _subdirs(root: Path) -> list[DirStats]:
-    try:
-        names = sorted(p for p in root.iterdir() if p.is_dir())
-    except OSError:
-        return []
-    return [stats_for(p) for p in names]
+    """root 下每个直接子目录的统计。
+
+    直接用 :func:`pdx.scan.subdir_stats`：它做的就是这件事，
+    而这里此前把同一段逻辑（排序 + 逐个 ``stats_for``）又写了一遍。
+    """
+    return subdir_stats(root)
 
 
 # ── mod 分析 ────────────────────────────────────────────────
@@ -833,7 +837,11 @@ def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict
             text = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
         else:
             text = json.dumps(obj, ensure_ascii=False, indent=2)
-        path.write_text(text, encoding="utf-8")
+        # newline="\n" 是**必须**的：不传时 Python 按平台翻译换行，Windows 上
+        # 写出 CRLF、Linux 上写出 LF，于是同一份数据在两边的**字节数不同** ——
+        # 而黄金回归冻结的正是逐字节 sha256。那会让「冻结值」变成
+        # 「Windows 专属值」，CI（Linux）上根本对不上，还查不出来。
+        path.write_text(text, encoding="utf-8", newline="\n")
 
     out: dict[str, Path] = {}
 
@@ -885,11 +893,11 @@ def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict
         out["本地化 JSON"] = loc
 
     p = config.REPORTS / "游戏本体分析.md"
-    p.write_text(render_game_markdown(ga), encoding="utf-8")
+    p.write_text(render_game_markdown(ga), encoding="utf-8", newline="\n")
     out["游戏本体报告"] = p
 
     p = config.REPORTS / "mod分析.md"
-    p.write_text(render_mods_markdown(ma, ca), encoding="utf-8")
+    p.write_text(render_mods_markdown(ma, ca), encoding="utf-8", newline="\n")
     out["mod 报告"] = p
 
     return out

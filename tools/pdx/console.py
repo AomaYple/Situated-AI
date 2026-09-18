@@ -13,10 +13,12 @@ emoji（``✅`` / ``❌``）与大量中文标点。GBK 表示不了这些码位
 为什么不能靠 rich
 -----------------
 rich 确实会为「老式 Windows 控制台」做降级，但那条分支依赖 ``isatty()``：
-stdout 被重定向成管道时它走普通写入路径，异常照样冒出来。实测（GBK 重定向）::
+stdout 被重定向成管道时它走普通写入路径，异常照样冒出来。实测三种写法
+（输出流是 GBK 编码的 ``TextIOWrapper``）**全部**抛 ``UnicodeEncodeError``::
 
-    Console().print("✅")
-    UnicodeEncodeError: 'gbk' codec can't encode character '\\u2705'
+    print("✅", file=gbk_stream)
+    Console(file=gbk_stream).print("✅")
+    Console(file=gbk_stream, legacy_windows=False).print("✅")
 
 结论：rich 是**格式层**，编码兜底必须在它之前、在进程入口处做一次。
 这也是本模块存在的唯一理由 —— 原先 7 个入口脚本各自抄了一份同样的

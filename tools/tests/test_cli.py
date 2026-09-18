@@ -272,6 +272,43 @@ def test_defines_默认摘要() -> None:
     assert r.exit_code == 0, r.output
 
 
+# ── verify 的三个分支（漂移扫描 / 未登记扫描 / 关掉漂移）────
+@_needs_game
+@pytest.mark.slow
+def test_verify_默认包含漂移扫描() -> None:
+    """``v3 verify`` 必须真的跑文档漂移扫描。
+
+    这条守的是一个**真实发生过的**失效：``find_doc_drift`` 曾经只被测试调用，
+    ``v3 verify`` 一路报「全绿」而文档里躺着几十个过期数字。
+    现在默认跑，且结果会打在输出里。
+    """
+    r = _invoke("verify", "--fast")
+    assert r.exit_code == 0, r.output
+    assert "文档正文" in r.output, "verify 的输出里必须体现漂移扫描的结果"
+
+
+@_needs_game
+@pytest.mark.slow
+def test_verify_no_drift_跳过漂移扫描() -> None:
+    r = _invoke("verify", "--fast", "--no-drift")
+    assert r.exit_code == 0, r.output
+    assert "文档正文" not in r.output, "--no-drift 时不应再输出漂移结论"
+
+
+@_needs_game
+def test_verify_unregistered_列出未登记断言() -> None:
+    """``--unregistered`` 是排查工具，退出码必须是 0（不是门禁）。"""
+    r = _invoke("verify", "--unregistered")
+    assert r.exit_code == 0, r.output
+
+
+@_needs_game
+def test_verify_不存在的_only_返回失败() -> None:
+    """``--only`` 拼错时不能静默「全部通过」退出 0。"""
+    r = _invoke("verify", "--only", "no-such-claim-id")
+    assert r.exit_code == 2, r.output
+
+
 # ── index 真正写盘的那条路 ──────────────────────────────────
 @_needs_game
 @pytest.mark.slow

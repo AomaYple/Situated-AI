@@ -78,8 +78,17 @@ class DirExtract:
         }
 
 
-def _collect_fields(block: Block) -> Iterator[str]:
-    """产出某个条目块**内部**出现过的赋值键（只看第一层）。"""
+def entry_fields(block: Block) -> Iterator[str]:
+    """产出某个条目块**内部**出现过的赋值键（只看第一层）。
+
+    这是「什么算一个字段」的**唯一定义**，公开出来供其他模块复用
+    （:mod:`pdx.snapshot` 就需要同一份清单）。
+
+    规则本身只有一条 —— 取块内 ``assignments()`` 的键、只看第一层 ——
+    但它是会变的口径：早期版本按缩进判断层级，漏掉了顶格写的子键
+    （``ethnicities`` 因此少算 7 个）。让每个调用方各写一遍，就等于
+    把这条已经踩过的坑复制若干份。
+    """
     for a in block.assignments():
         yield a.key
 
@@ -106,7 +115,7 @@ def extract_file(pf: ParsedFile, result: DirExtract) -> None:
 
         if isinstance(a.value, Block):
             fset = result.fields.setdefault(a.key, set())
-            for fname in _collect_fields(a.value):
+            for fname in entry_fields(a.value):
                 fset.add(fname)
                 result.field_usage[fname] += 1
 
@@ -124,16 +133,6 @@ def extract_dir(path: Path) -> DirExtract:
             continue
         extract_file(pf, result)
     return result
-
-
-def extract_tree(root: Path) -> dict[str, DirExtract]:
-    """提取 root 下每个直接子目录。"""
-    out: dict[str, DirExtract] = {}
-    if not root.is_dir():
-        return out
-    for child in sorted(p for p in root.iterdir() if p.is_dir()):
-        out[child.name] = extract_dir(child)
-    return out
 
 
 def global_usage(extracts: Iterable[DirExtract]) -> Counter:

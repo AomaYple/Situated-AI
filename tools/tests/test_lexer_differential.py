@@ -5,7 +5,7 @@
 拿**优化前的实现**当作预言机（见 :mod:`_oracle_lexer`），在真实语料上
 把两者的 token 流逐项比对。这比"我读代码觉得一样"强得多：
 
-* 真实语料有 4,400 个文件、数百万 token，覆盖官方脚本的全部古怪写法
+* 真实语料有 6,250 个文件、数百万 token，覆盖官方脚本的全部古怪写法
 * 比对的是 ``(kind, value, line, col)`` 四元组，连行列号都必须一致
 * hypothesis 再补上人为构造的边界输入（未闭合引号、孤立反斜杠、BOM 等）
 
@@ -132,7 +132,7 @@ def test_真实语料_抽样与预言机一致(corpus_texts) -> None:
 @pytest.mark.integration
 @pytest.mark.slow
 def test_真实语料_全量与预言机一致(corpus_texts) -> None:
-    """慢速：全部 4,400 个真实文件，逐 token 比对。
+    """慢速：全部 6,250 个真实文件，逐 token 比对。
 
     这是最重要的一条 —— 数百万 token 全过一遍，才敢说改写没动语义。
     """

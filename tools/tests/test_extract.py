@@ -16,7 +16,6 @@ from pdx.extract import (
     DirExtract,
     extract_dir,
     extract_file,
-    extract_tree,
     global_usage,
 )
 from pdx.parser import parse_text
@@ -187,26 +186,17 @@ class TestExtractDir(unittest.TestCase):
             self.assertFalse(extract_dir(root / "d").is_clean)
 
 
-class TestExtractTree(unittest.TestCase):
-    def test_per_subdir_keys(self):
-        with Sandbox(
-            {
-                "tree/alpha/a.txt": "a1 = { }",
-                "tree/beta/b.txt": "b1 = { }",
-            }
-        ) as root:
-            out = extract_tree(root / "tree")
-        self.assertEqual(sorted(out), ["alpha", "beta"])
-        self.assertEqual(list(out["alpha"].entries), ["a1"])
-
+class TestGlobalUsage(unittest.TestCase):
     def test_global_usage(self):
+        """跨目录汇总字段使用次数 —— 这是 ``analyze.GameAnalysis.field_usage`` 的实现。"""
         with Sandbox(
             {
                 "tree/x/a.txt": "e = { shared = 1 }",
                 "tree/y/b.txt": "e = { shared = 2 }",
             }
         ) as root:
-            total = global_usage(extract_tree(root / "tree").values())
+            extracts = [extract_dir(root / "tree" / name) for name in ("x", "y")]
+            total = global_usage(extracts)
         self.assertEqual(total["shared"], 2)
 
 

@@ -140,7 +140,9 @@ def _write_json(path: Path, payload: Any) -> None:
     """写 JSON 并回报字节数。失败即终止，绝不「写了但没说」。"""
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
+        )
     except OSError as exc:
         _fail(f"无法写入 {path}：{type(exc).__name__}: {exc}")
     console.print(f"[green]已写入[/] {escape(_relative(path))}  ({path.stat().st_size:,} 字节)")
@@ -577,7 +579,9 @@ def index_cmd(
         return
 
     try:
-        OUT_INDEX_DOC.write_text(text, encoding="utf-8")
+        # newline="\n"：见 analyze.dump 的注释 —— 否则文档在 Windows 上写成
+        # CRLF，与 .gitattributes 的 eol=lf 打架，每次 `v3 index` 都弄脏工作树。
+        OUT_INDEX_DOC.write_text(text, encoding="utf-8", newline="\n")
     except OSError as exc:
         _fail(f"无法写入 {OUT_INDEX_DOC}：{type(exc).__name__}: {exc}")
     console.print(
@@ -613,8 +617,8 @@ def snap_create(
 ) -> None:
     """生成当前版本快照，写入 tools/out/snapshots/。
 
-    默认是**完整快照**（约 41 MB，本地用，不入库）。
-    ``--compact`` 产出**精简快照**（约 4.4 MB）：结构域原样保留，
+    默认是**完整快照**（约 39 MiB，本地用，不入库）。
+    ``--compact`` 产出**精简快照**（约 4.9 MiB）：结构域原样保留，
     只把 ``localization`` 的 14 万条键名换成「键数 + sha256」——
     小到可以随仓库分发，让「升级前后 diff 出字段增删」在别的机器上也能做。
     """
@@ -792,6 +796,12 @@ def verify_cmd(
     fast: Annotated[bool, typer.Option("--fast", help="跳过需要全库扫描的检查")] = False,
     json_out: Annotated[Path | None, typer.Option("--json", help="把结果写入该 JSON 文件")] = None,
     only: Annotated[str | None, typer.Option("--only", help="只跑 id 含该子串的断言")] = None,
+    no_drift: Annotated[
+        bool, typer.Option("--no-drift", help="跳过文档正文的数字漂移扫描")
+    ] = False,
+    unregistered: Annotated[
+        bool, typer.Option("--unregistered", help="列出文档里**尚未登记**的数量断言后退出")
+    ] = False,
 ) -> None:
     """核对知识库文档里的数量断言（游戏本体口径）。
 
@@ -799,8 +809,35 @@ def verify_cmd(
     check-outputs 查「落盘的产物有没有写对」。两者共用同一份断言注册表
     ``verify.CLAIMS``，因此不可能再出现「脚本期望值与注册表冲突」那种
     结构性分歧。有断言失败时退出码为 1。
+
+    **本命令同时跑文档正文的漂移扫描**（:func:`pdx.verify.find_doc_drift`）——
+    断言表测对了不等于文档写对了：文档里可能仍躺着旧值，而断言表照样全绿。
+    早在 T0 阶段这两者就号称共用一套逻辑，但 ``find_doc_drift`` 事实上一路
+    只被测试调用，``v3 verify`` 从未跑过它，于是「工具报全绿、文档已过期」
+    这个最要命的失效模式一直敞着。现在真的接上了（``--no-drift`` 可跳过）。
     """
     claims = verify.CLAIMS
+    if unregistered:
+        # 覆盖率扫描：文档里还有哪些「数量」没进断言表。
+        # 它是**排查工具**不是门禁 —— 输出刻意宽松（宁可多报），退出码 0。
+        found = verify.find_unregistered_claims()
+        if not found:
+            console.print("[green]文档里没有未登记的数量断言[/]")
+            return
+        table = Table(title=f"{len(found)} 篇文档里有未登记的数量", show_lines=False)
+        table.add_column("文档", style="dim")
+        table.add_column("行", justify="right")
+        table.add_column("原文", overflow="fold")
+        for name, hits in sorted(found.items()):
+            for line_no, text in hits[:20]:
+                table.add_row(escape(name), str(line_no), escape(text.strip()[:90]))
+        console.print(table)
+        console.print(
+            "[yellow]这些数字未必是错的[/] —— 只是没进断言表，因此没有看守。"
+            "值得钉住的请登记到 pdx.verify.CLAIMS。"
+        )
+        return
+
     if only:
         claims = [c for c in claims if only in c.id]
         if not claims:
@@ -846,6 +883,24 @@ def verify_cmd(
             if claim.note:
                 console.print(f"   备注：{escape(claim.note)}")
 
+    # ── 文档正文的数字漂移 ──────────────────────────────
+    # 用 unknown_doc_drift：已登记为「口径不同、文档其实没错」的那些不算失败。
+    drift = [] if (no_drift or only) else verify.unknown_doc_drift()
+    if not no_drift and not only:
+        if drift:
+            console.rule("[red]文档正文与断言表脱节[/]")
+            for d in drift:
+                console.print(f"[red]❌[/] {escape(d.describe())}")
+            console.print(
+                f"[yellow]共 {len(drift)} 处[/]。若确认是「口径不同、文档没错」，"
+                f"登记到 pdx.verify.KNOWN_METRIC_MIXUPS 并写明理由；否则请改文档。[/]"
+            )
+        else:
+            console.print(
+                f"[green]文档正文与断言表一致[/]（{len(verify.KNOWN_METRIC_MIXUPS)} 处"
+                f"已登记的口径错配不计）"
+            )
+
     if json_out is not None:
         _write_json(
             json_out,
@@ -865,10 +920,21 @@ def verify_cmd(
                     }
                     for r in results
                 ],
+                "文档漂移": [
+                    {
+                        "id": d.claim.id,
+                        "doc": d.doc,
+                        "line": d.line,
+                        "found": d.found,
+                        "expected": d.claim.expected,
+                        "text": d.text.strip(),
+                    }
+                    for d in drift
+                ],
             },
         )
 
-    if failed:
+    if failed or drift:
         raise typer.Exit(EXIT_FAILED)
 
 

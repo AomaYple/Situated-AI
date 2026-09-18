@@ -39,13 +39,13 @@ pytest-cache-files-*/
 .coverage.*
 
 # ── tools/ 的中间产物 ──────────────────────────────────────
-# 提取出的大型 JSON（全部产物合计约 109 MB），由 v3 analyze 重新生成。
+# 提取出的大型 JSON（tools/out 全树约 114 MB），由 v3 analyze 重新生成。
 /tools/out/*
 
 # ⚠️ **版本快照分两种，只有精简版入库**：
 #
-#   完整快照  tools/out/snapshots/<版本>.json          约 41 MB   ← 忽略
-#   精简快照  tools/out/snapshots/<版本>.compact.json  约 5 MB    ← **入库**
+#   完整快照  tools/out/snapshots/<版本>.json          约 39 MiB  ← 忽略
+#   精简快照  tools/out/snapshots/<版本>.compact.json  约 4.9 MiB ← **入库**
 #
 # 完整快照 73% 的体积是本地化键清单（11 种语言 × 14.5 万键），而「Paradox 增删了
 # 哪些字段与条目」只需要结构域 —— 精简版保留全部结构域，只把本地化换成

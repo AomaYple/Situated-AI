@@ -194,8 +194,12 @@ class TestCompactSnapshot(unittest.TestCase):
             p = Path(td) / "s.json"
             self.snap.write(p)
             back = snapshot.Snapshot.load(p)
+            raw = p.read_bytes()
         self.assertTrue(back.compact)
         self.assertEqual(back.sections, self.snap.sections)
+        # 精简快照是**入库**的，而 .gitattributes 规定 eol=lf ——
+        # 写成 CRLF 会让 Windows 与 Linux 生成的快照字节不同、diff 整份报差异。
+        self.assertNotIn(b"\r\n", raw, "快照里出现了 CRLF：write() 漏了 newline='\\n'")
 
     def test_同一个域可以自己跟自己比(self):
         """形状与完整版相同，因此 compare 对它照常可用。"""

@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any
 from . import config
 from .cache import parse_cached
 from .defines import extract_defines
+from .extract import entry_fields
 from .model import Block
 from .scan import walk_files
 
@@ -78,6 +79,10 @@ def _field_names(root: Path, top: str = "common") -> dict[str, list[str]]:
     """``目录/条目 -> 该条目块内出现过的字段名``。
 
     这是「某类型支持哪些字段」的完整清单，字段增删都能被发现。
+
+    字段的判定复用 :func:`pdx.extract.entry_fields` —— 本模块**不做**
+    自己的遍历规则（这里保留自己的目录遍历，是因为快照要覆盖全部
+    ``SCRIPTABLE_SUFFIXES``，而 ``extract_dir`` 只管 ``.txt``）。
     """
     out: dict[str, set[str]] = {}
     for f, rel in _walk_scriptable(root, top):
@@ -86,7 +91,7 @@ def _field_names(root: Path, top: str = "common") -> dict[str, list[str]]:
             if a.is_variable or not isinstance(a.value, Block):
                 continue
             key = f"{rel.parts[1]}/{a.key}"
-            out.setdefault(key, set()).update(s.key for s in a.value.assignments())
+            out.setdefault(key, set()).update(entry_fields(a.value))
     return {k: sorted(v) for k, v in sorted(out.items())}
 
 
@@ -183,9 +188,13 @@ class Snapshot:
 
     def write(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
+        # newline="\n"：快照会入库（精简版），而 .gitattributes 规定 eol=lf。
+        # 不传这个参数的话，Windows 上生成的快照与 Linux 上的**字节不同**，
+        # 跨平台 diff 会整份报差异。
         path.write_text(
             json.dumps(self.to_dict(), ensure_ascii=False, indent=1, sort_keys=True),
             encoding="utf-8",
+            newline="\n",
         )
 
     @classmethod
@@ -230,7 +239,7 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     ``compact=True`` 产出**精简快照**：结构域（``common_entries`` / ``fields`` /
     ``defines`` / ``dlc`` / ``config``）原样保留 —— 它们才是「Paradox 增删了
     哪些字段与条目」的答案 —— 只把 ``localization`` 换成计数 + 指纹，
-    体积从 ~41 MB 降到 ~4.4 MB，**小到足以入库**。
+    体积从 ~39 MiB 降到 ~4.9 MiB，**小到足以入库**。
 
     两个模式**形状相同**（都是 ``域 -> 名称 -> 字符串列表``），因此
     :func:`compare` 对两者都能用；但**不要拿精简版与完整版对 diff** ——
