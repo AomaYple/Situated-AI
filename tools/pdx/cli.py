@@ -45,7 +45,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
-from pdx import analyze, config, defines, engine_log, snapshot, verify
+from pdx import analyze, config, defines, doc_tables, docgen, engine_log, snapshot, verify
 from pdx.console import enable_utf8_stdio
 from pdx.extract import extract_dir
 from pdx.parser import TOLERATED_ERRORS, parse_file
@@ -294,42 +294,18 @@ def defines_cmd(
         Path | None,
         typer.Option("--overlay", help="预览该 mod defines 文件会覆盖哪些原版参数"),
     ] = None,
-    tables: Annotated[
-        bool,
-        typer.Option("--tables", help="重算 doc 05 的 5 张统计表（默认只核对，不写）"),
-    ] = False,
-    write: Annotated[
-        bool,
-        typer.Option("--write", help="与 --tables 同用：把重算结果写回文档"),
-    ] = False,
 ) -> None:
     """提取 defines 的命名空间与参数（游戏层 + Jomini 层）。
 
     默认只打摘要。--ns NAI 展开某个命名空间（即旧脚本的 --ai）；
-    --overlay 预览一段 mod defines 的覆盖与新增范围；--json 落盘完整结构；
-    --tables 重算 docs/victoria3-modding/05-defines与修饰符.md 里那 5 张
-    由本工具生成的表（不加 --write 则只报告各表有多少行会变）。
+    --overlay 预览一段 mod defines 的覆盖与新增范围；--json 落盘完整结构。
     命名空间不存在时退出码为 2 —— 旧脚本返回 1，与「检查未通过」撞车。
+
+    > 早先这里还有一个 ``--tables``，用来重算 doc 05 的统计表。
+    > 它已并入 **``v3 tables``** —— 那个命令同时覆盖 doc 05 与 doc 19，
+    > 而且**默认就是核对**（不一致即退出码 1），因此能进 CI。
     """
     _require_game()
-
-    if tables:
-        try:
-            replaced = defines.patch_doc_tables(write=write)
-        except (LookupError, ValueError, OSError) as exc:
-            _fail(f"重算 doc 05 的表格失败：{type(exc).__name__}: {exc}")
-        t = Table(title="doc 05 表格重算", show_lines=False)
-        t.add_column("表头")
-        t.add_column("数据行", justify="right", style="cyan")
-        for header, n in replaced.items():
-            t.add_row(escape(header[:56]), str(n))
-        console.print(t)
-        console.print(
-            f"[green]已写回[/] {escape(_relative(config.DOCS / '05-defines与修饰符.md'))}"
-            if write
-            else "[yellow]未加 --write：只核对，未改文档[/]"
-        )
-        return
 
     reports = defines.extract_all_defines()
     game = reports["game"]
@@ -790,6 +766,60 @@ def snap_verify() -> None:
     raise typer.Exit(EXIT_FAILED)
 
 
+# ── tables（文档里由工具生成的表格）──────────────────────────
+@app.command("tables")
+def tables_cmd(
+    write: Annotated[bool, typer.Option("--write", help="重算并写回文档")] = False,
+) -> None:
+    """重算文档里**由工具生成**的表格（doc 05 的 defines 表、doc 19 的根目录与路径表）。
+
+    不带 ``--write`` 时是**核对**：逐行比对文档现值与生成结果，
+    有任何不一致就退出码 1 —— 这样它能进 CI / pre-commit，
+    而不是又一个「要记得手动跑」的脚本。
+
+    为什么需要它：这些表原先由一批已退休的 PowerShell 脚本产出，
+    之后再没人重跑过，于是 doc 05 的 5 张表**整整落后了一个游戏版本**
+    （参数总数 3434 应当变 3488），doc 19 的根目录文件数也从 12 漂到 13。
+
+    替换规则见 :mod:`pdx.doc_tables`：只动数据行，表头、分隔线与散文一律不碰；
+    散文列与行的顺序按文档保留。
+    """
+    if write:
+        try:
+            done = docgen.write_all()
+        except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+            _fail(f"重算表格失败：{type(exc).__name__}: {exc}")
+        table = Table(title="已重算的表格", show_lines=False)
+        table.add_column("文档 · 表")
+        table.add_column("数据行", justify="right", style="cyan")
+        for name, n in done.items():
+            table.add_row(escape(name), str(n))
+        console.print(table)
+        return
+
+    try:
+        diff = docgen.check_all()
+    except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+        _fail(f"核对表格失败：{type(exc).__name__}: {exc}")
+
+    if not diff:
+        console.print(
+            f"[green]全部 {sum(len(t.specs) for t in docgen.targets())} 张生成表都与文档一致[/]"
+        )
+        return
+
+    table = Table(title=f"{len(diff)} 行与生成结果不一致", show_lines=False)
+    table.add_column("文档", style="dim")
+    table.add_column("行", justify="right")
+    table.add_column("文档现值", overflow="fold")
+    table.add_column("生成值", overflow="fold")
+    for doc_name, line_no, actual, expected in diff[:30]:
+        table.add_row(escape(doc_name), str(line_no), escape(actual[:70]), escape(expected[:70]))
+    console.print(table)
+    console.print("[yellow]跑 `v3 tables --write` 可按生成结果修正[/]")
+    raise typer.Exit(EXIT_FAILED)
+
+
 # ── verify ──────────────────────────────────────────────────
 def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_drift: bool) -> None:
     """``v3 verify --from-snapshot``：不读游戏，用入库的精简快照核验。
@@ -810,7 +840,10 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
 
     results = verify.verify_from_snapshot(snap, selected)
     if not results:
-        _fail("没有任何断言能被快照覆盖 —— 检查 pdx.verify._SNAPSHOT_GETTERS")
+        _fail(
+            "没有任何断言能被快照覆盖 —— 检查 pdx.verify._SNAPSHOT_GETTERS。"
+            f"目前能覆盖的类型：{sorted(verify.snapshot_kinds())}"
+        )
 
     table = Table(
         title=f"快照核验（{len(results)} 条，快照 {snap.version_label}）", show_lines=False

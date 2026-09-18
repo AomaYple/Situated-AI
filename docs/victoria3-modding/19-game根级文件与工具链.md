@@ -75,7 +75,13 @@ name = paths_checksummed.settings
 
 ## 3. `paths.settings` —— 路径间接层（**改 gfx/地图必读**）
 
-**【实测】** 这个文件把「逻辑名」映射到「实际目录」，共 **39 条映射**，分 4 组。
+**【实测】** 这个文件把「逻辑名」映射到「实际目录」，共 **39 条映射**，分 3 组
+（外加不映射到目录的 `paths_checksummed.settings`，见 §3.4）。
+
+> 下面三张表**由 `v3 tables` 从 `paths.settings` 生成**，一行对应文件里的一条映射。
+> 早先 `flatmap_textures` 与 `colormap_textures` 被合并写成一行（两者确实
+> 指向同一个 `gfx/map/textures`）—— 那省了一行，但**查不出「是真同路径还是
+> 只是排版合并」**。现在一行一条，两个键各自成行、路径相同。
 
 ### 3.1 地图与图形
 
@@ -91,7 +97,8 @@ name = paths_checksummed.settings
 | `map_masks` | `gfx/map/masks` |
 | `post_effects` | `gfx/map/post_effects` |
 | `gfx_environment_file` | `gfx/map/environment/environment.txt` |
-| `flatmap_textures` / `colormap_textures` | `gfx/map/textures` |
+| `flatmap_textures` | `gfx/map/textures` |
+| `colormap_textures` | `gfx/map/textures` |
 | `mappainting_textures` | `gfx/map/map_painting` |
 | `city_data` | `gfx/map/city_data/city_types` |
 | `city_vfx` | `gfx/map/city_data/city_vfx` |
@@ -101,7 +108,8 @@ name = paths_checksummed.settings
 | `game_road_data` | `gfx/map/spline_network/game_road_data.txt` |
 | `line_assets_path` | `gfx/lines` |
 | `spline_network_file` | `gfx/map/spline_network/spline_network.splnet` |
-| `spline_types` / `spline_styles` | `gfx/map/spline_network/spline_types` / `spline_styles` |
+| `spline_types` | `gfx/map/spline_network/spline_types` |
+| `spline_styles` | `gfx/map/spline_network/spline_styles` |
 | `terrain_effects_settings_file` | `gfx/map/dynamic_masks/terrain_effects.settings` |
 
 ### 3.2 内容源与编辑器

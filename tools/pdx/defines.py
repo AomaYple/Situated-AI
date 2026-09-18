@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING
 
 from . import config
 from .cache import parse_cached
+from .doc_tables import TableSpec
 from .model import Block, Scalar
 from .parser import parse_text
 from .scan import walk_files
@@ -353,37 +354,21 @@ def doc_table_rows() -> dict[str, list[str]]:
     return rows
 
 
-def patch_doc_tables(doc: Path | None = None, *, write: bool = False) -> dict[str, int]:
-    """把 doc 05 的 5 张表重算并（可选）写回。
+def doc_table_specs() -> list[TableSpec]:
+    """doc 05 那 5 张表的登记表（供 ``v3 tables`` 统一驱动）。
 
-    返回 ``{表头: 替换的行数}``。**只动数据行** —— 表头、分隔线、说明文字
-    一律不碰，所以文档里那些解释口径的散文不会被生成器覆盖掉。
-
-    行数不匹配时**直接报错而不写盘**：那说明文档的表结构被人改过
-    （加了一列、或多了一张同表头的表），此时宁可失败也不要写坏它。
+    生成逻辑仍在本模块（它拥有 defines 的提取口径），但**替换算法**
+    交给 :mod:`pdx.doc_tables` —— 同一套机制也用在 doc 19 上。
     """
-    doc = doc or (config.DOCS / "05-defines与修饰符.md")
     rows = doc_table_rows()
-    lines = doc.read_text(encoding="utf-8").splitlines(keepends=True)
-
-    replaced: dict[str, int] = {}
-    for header in DOC_TABLES:
-        start = next((n for n, ln in enumerate(lines) if ln.startswith(header)), None)
-        if start is None:
-            raise LookupError(f"doc 05 里找不到表头：{header}")
-        n = start + 2  # 跳过表头与 `|---|` 分隔线
-        used = 0
-        want = rows[header]
-        while n < len(lines) and lines[n].lstrip().startswith("|"):
-            if used >= len(want):
-                raise ValueError(f"{header} 的表格行比生成的多，文档结构可能已变")
-            lines[n] = want[used] + "\n"
-            used += 1
-            n += 1
-        if used != len(want):
-            raise ValueError(f"{header} 的表格行 {used} != 生成 {len(want)}")
-        replaced[header] = used
-
-    if write:
-        doc.write_text("".join(lines), encoding="utf-8", newline="\n")
-    return replaced
+    specs: list[TableSpec] = []
+    for n, header in enumerate(DOC_TABLES, start=1):
+        # 用默认参数把 header 绑进闭包 —— 直接在 lambda 里捕获会拿到循环末值
+        specs.append(
+            TableSpec(
+                name=f"doc05 表{n}",
+                header=header,
+                rows=lambda h=header: list(rows[h]),  # type: ignore[misc]
+            )
+        )
+    return specs

@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import config, defines
+from pdx import config, defines, doc_tables
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,15 +49,15 @@ def test_五张表的表头都在文档里() -> None:
 
 def test_生成器不写盘(文档副本: Path) -> None:
     before = 文档副本.read_text(encoding="utf-8")
-    replaced = defines.patch_doc_tables(文档副本, write=False)
+    replaced = doc_tables.patch_doc(文档副本, defines.doc_table_specs(), write=False)
     assert len(replaced) == len(defines.DOC_TABLES)
     assert 文档副本.read_text(encoding="utf-8") == before, "write=False 却改了文件"
 
 
 def test_生成是幂等的(文档副本: Path) -> None:
-    defines.patch_doc_tables(文档副本, write=True)
+    doc_tables.patch_doc(文档副本, defines.doc_table_specs(), write=True)
     once = 文档副本.read_text(encoding="utf-8")
-    defines.patch_doc_tables(文档副本, write=True)
+    doc_tables.patch_doc(文档副本, defines.doc_table_specs(), write=True)
     assert 文档副本.read_text(encoding="utf-8") == once, "跑两次结果不同"
 
 
@@ -91,5 +91,5 @@ def test_表头被改动时报错而不是静默跳过(tmp_path: Path) -> None:
     """生成器的失败必须是响的 —— 静默跳过正是它上一轮腐烂的原因。"""
     broken = tmp_path / "broken.md"
     broken.write_text("# 没有表格的文档\n", encoding="utf-8")
-    with pytest.raises(LookupError):
-        defines.patch_doc_tables(broken, write=False)
+    with pytest.raises(doc_tables.TableNotFoundError):
+        doc_tables.patch_doc(broken, defines.doc_table_specs(), write=False)

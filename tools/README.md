@@ -58,8 +58,9 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | 子命令 | 取代 | 作用 |
 |---|---|---|
 | `v3 analyze` | `run_analyze.py` | 全量分析并落盘：`--no-mods` `--no-cross` `--no-write` `--quiet` `--profile` |
-| `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` `--tables [--write]` |
+| `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
+| `v3 tables` | （新增） | 重算文档里**由工具生成**的表格（doc 05 的 defines 表、doc 19 的根目录与 `paths.settings` 表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
 | `v3 verify` | `run_verify.py` | 核对文档里的数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用） |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
@@ -73,6 +74,8 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe verify --fast               # 只跑不需要全库扫描的断言
 .venv\Scripts\v3.exe verify --from-snapshot      # 不读游戏，用入库快照核验（CI 用）
 .venv\Scripts\v3.exe verify --unregistered       # 列出文档里尚未登记的数量断言
+.venv\Scripts\v3.exe tables                      # 核对生成表（不一致即退出 1）
+.venv\Scripts\v3.exe tables --write              # 按生成结果修正文档里的表
 .venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
 .venv\Scripts\v3.exe defines --ns NAI            # 展开某个 defines 命名空间
 .venv\Scripts\v3.exe index --dry-run             # 只统计，不写文档
@@ -106,7 +109,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-457 条用例（`pytest --collect-only` 实测；454 通过 / 3 按条件跳过），
+471 条用例（`pytest --collect-only` 实测；468 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -118,6 +121,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_analyze.py` / `test_golden.py` | 产物结构与指纹回归（产物被改坏要立刻失败） |
 | `test_snapshot.py` / `test_verify.py` | 快照确定性、精简快照的结构等价性、断言注册表口径 |
 | `test_defines_tables.py` | doc 05 那 5 张统计表的**生成链**：表头还在、生成是幂等的、文档现值 == 生成结果 |
+| `test_doc_tables.py` | **通用**的生成表机制：合成文档测整表替换/按键合并/行数变长/同表头多张；登记表完整性；10 张表与文档一致 |
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
 | `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
@@ -269,7 +273,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：457 条用例 + 63 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：471 条用例 + 63 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 44 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
