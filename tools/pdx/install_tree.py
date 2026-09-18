@@ -84,18 +84,25 @@ def _tree_row(stats: DirStats) -> TreeRow:
         direct = sum(1 for p in stats.path.iterdir() if p.is_file())
     except OSError:
         direct = 0
-    # 同计数时按后缀名字典序 —— `most_common` 的并列顺序取决于插入顺序，
-    # 那会随文件系统遍历次序变化，于是同一棵树能生成两份不同的 Top5。
-    # 更糟的是**截断位置**也会跟着变：并列第 5 名选谁全看运气。
-    ranked = sorted(stats.by_suffix.items(), key=lambda kv: (-kv[1], kv[0]))
-    top = tuple((s, n) for s, n in ranked[:_TOP_N] if s)
+    # 两件事的顺序要紧，实测踩过：
+    #   1. **先滤掉无扩展名**（``""`` 桶，如 ``fonts/SpoqaHanSansNeo/LICENSE``），
+    #      再截断到 Top5。反过来做，无扩展名会白占一个名额 ——
+    #      ``game\fonts`` 因此少列了真实的 ``.pdf:1``，而口径说明还写着
+    #      「无扩展名的文件不进这一列」。
+    #   2. **同计数时按后缀名字典序**排。``most_common`` 的并列顺序取决于
+    #      插入顺序，那会随文件系统遍历次序变化 —— 同一棵树能生成两份不同的
+    #      Top5，连**截断位置**都跟着变（并列第 5 名选谁全看运气）。
+    ranked = sorted(
+        ((s, n) for s, n in stats.by_suffix.items() if s),
+        key=lambda kv: (-kv[1], kv[0]),
+    )
     return TreeRow(
         name=stats.name,
         files=stats.files,
         direct_files=direct,
         dirs=stats.dirs,
         size=stats.size,
-        top_suffixes=top,
+        top_suffixes=tuple(ranked[:_TOP_N]),
     )
 
 
@@ -424,7 +431,7 @@ def doc_table_specs() -> list[TableSpec | KeyedTableSpec]:
     做哪些、不做哪些（都写明白，免得下一个人以为漏了）：
 
     * **做**：§1、§2.1、§2.2、§3×2、§6、§7、§8×2、§9.1、§9.2、§10×2、
-      §11×2、§12×2、§13、§14、§15 —— 共 19 张（全部落在**游戏安装目录**内）。
+      §11×2、§12×2、§13、§14、§15 —— 共 21 张（全部落在**游戏安装目录**内）。
     * **不做 §16（用户数据目录）** —— 这是本轮唯一一处「能算但刻意不算」，
       理由值得写下来：那里装的是**运行期状态**而不是游戏内容。
       实测两次相隔不长的扫描：``logs\\`` 文件数都是 72，字节数却从

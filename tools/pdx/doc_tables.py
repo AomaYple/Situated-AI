@@ -134,7 +134,11 @@ def patch_doc(
         want = (
             spec.rows()
             if isinstance(spec, TableSpec)
-            else _merge_rows(spec, [_split_row(ln) for ln in lines[start + 2 : end]])
+            else _merge_rows(
+                spec,
+                [_split_row(ln) for ln in lines[start + 2 : end]],
+                width=len(_split_row(lines[start])),
+            )
         )
         if not want:
             raise TableMalformedError(f"表 {spec.name!r} 生成了 0 行 —— 多半是游戏目录不可用")
@@ -206,7 +210,7 @@ def _group_cells(norm: str, generated: dict[str, dict[int, str]]) -> dict[int, s
     return None
 
 
-def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]]) -> list[str]:
+def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]], *, width: int = 0) -> list[str]:
     """按键把生成的单元格并进文档现有的行。
 
     两条默认规则，都是为了**不夺走文档作者的信息**：
@@ -221,8 +225,16 @@ def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]]) -> list[str]:
     :class:`KeyedTableSpec` 的说明。
     """
     generated: dict[str, dict[int, str]] = {}
+    #: 规范化键 → 生成器给的**原始键文本**。追加新行时必须把键写回去 ——
+    #: 少了它，新行会渲染成一整行「待补」，连名字都没有（实测：给 doc 08 §9.1
+    #: 加一个 common 子目录，生成的是 `| —— **待补** | —— **待补** | 1 | 0 | … |`），
+    #: 而且**下一轮认不出这行是自己刚写的**，于是每跑一次 `--write` 就再追加一条，
+    #: 表格永远报红。
+    key_text: dict[str, str] = {}
     for key, spec_cells in spec.cells():
-        generated[_norm_key(key)] = spec_cells
+        norm = _norm_key(key)
+        generated[norm] = spec_cells
+        key_text[norm] = key
 
     out: list[str] = []
     seen: set[str] = set()
@@ -255,13 +267,25 @@ def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]]) -> list[str]:
     if spec.append_new:
         for norm, cells in generated.items():
             if norm not in seen:
-                out.append(_render([], cells))
+                # 键列也要生成：文档里的键一律带反引号（``| `common` |``），
+                # 照这个写法补上，新行才是「一行完整的数据」而不是一行问号。
+                #
+                # 还要按**表头宽度**补齐：生成器只知道它有值的列，不补的话
+                # 新行会比表头短一截（实测 6 列的表追加出 5 列的行），
+                # Markdown 渲染出来缺格，而作者也看不出该补哪一列。
+                new_cells: dict[int, str] = {spec.key_column: f"`{key_text[norm]}`", **cells}
+                out.append(_render([], new_cells, min_width=width))
     return out
 
 
-def _render(row: list[str], generated: dict[int, str]) -> str:
-    """把生成的单元格并进一行，未提供的列保留 ``row`` 的原文。"""
-    width = max([len(row), *(i + 1 for i in generated)], default=1)
+def _render(row: list[str], generated: dict[int, str], *, min_width: int = 0) -> str:
+    """把生成的单元格并进一行，未提供的列保留 ``row`` 的原文。
+
+    ``min_width`` 是**表头的列数**：追加的新行没有原文可保留，
+    只有补齐到表头宽度才是一行结构完整的 Markdown；缺的格填
+    :data:`NEW_CELL`，提示作者这里需要人来补。
+    """
+    width = max([len(row), min_width, *(i + 1 for i in generated)], default=1)
     cells = [row[i] if i < len(row) else "" for i in range(width)]
     for idx, text in generated.items():
         cells[idx] = text
@@ -297,7 +321,11 @@ def check_doc(
         want = (
             spec.rows()
             if isinstance(spec, TableSpec)
-            else _merge_rows(spec, [_split_row(ln) for ln in lines[start + 2 : end]])
+            else _merge_rows(
+                spec,
+                [_split_row(ln) for ln in lines[start + 2 : end]],
+                width=len(_split_row(lines[start])),
+            )
         )
         n = start + 2
         for expected in want:

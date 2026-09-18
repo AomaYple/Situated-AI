@@ -45,6 +45,12 @@ def _doc(tmp_path: Path, body: str) -> Path:
 HEAD_LINE = "| 名称 | 数值 |"
 HEAD = HEAD_LINE + "\n|---|---:|\n"
 
+#: 三列表（键 / 数值 / 散文）。「新键追加」的用例必须用三列表 ——
+#: 只有存在散文列时，NEW_CELL 才有意义。曾经拿两列的表头配三列的数据行，
+#: 于是断言「新行里应当出现待补」永远不成立，测试却看不出自己错了。
+HEAD3_LINE = "| 名称 | 数值 | 说明 |"
+HEAD3 = HEAD3_LINE + "\n|---|---:|---|\n"
+
 
 @_unit
 def test_整表替换只动数据行(tmp_path: Path) -> None:
@@ -98,12 +104,31 @@ def test_按键合并保留散文与行序(tmp_path: Path) -> None:
 
 @_unit
 def test_新键会追加并标注待补(tmp_path: Path) -> None:
-    p = _doc(tmp_path, f"{HEAD}| `a.txt` | 1 | 说明甲 |\n")
+    """新行必须**带名字**，且再跑一次不能又追加一条。
+
+    这条原先只断言「文本里出现了 NEW_CELL」—— 那太弱了：生成器把**键列**
+    也填成「待补」时它照样通过，于是追加出来的是一行没有名字的垃圾
+    （实测产出 `| —— **待补** | —— **待补** | 3 |`），而且下一轮认不出
+    这行是自己写的，`--write` 跑几次就追加几条，表格永远红。
+    """
+    p = _doc(tmp_path, f"{HEAD3}| `a.txt` | 1 | 说明甲 |\n")
     spec = doc_tables.KeyedTableSpec(
-        name="t", header=HEAD_LINE, cells=lambda: [("a.txt", {1: "1"}), ("c.txt", {1: "3"})]
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.txt", {1: "1"}), ("c.txt", {1: "3"})]
     )
     doc_tables.patch_doc(p, [spec], write=True)
-    assert doc_tables.NEW_CELL in p.read_text(encoding="utf-8"), "新行应提示人来补说明列"
+    text = p.read_text(encoding="utf-8")
+
+    assert "| `c.txt` | 3 |" in text, f"新行的键必须写进去，实际：\n{text}"
+    assert doc_tables.NEW_CELL in text, "新行应提示人来补说明列（说明列是散文）"
+
+    # 幂等：再跑两次，行数不能增长
+    for _ in range(2):
+        doc_tables.patch_doc(p, [spec], write=True)
+    rows = [ln for ln in p.read_text(encoding="utf-8").splitlines() if ln.startswith("| `")]
+    assert len(rows) == 2, f"追加不幂等，行数变成了 {len(rows)}：{rows}"
+    # 新行必须与表头**同宽**（3 列）—— 短一截的行在 Markdown 里会缺格，
+    # 而作者也看不出该补哪一列。
+    assert rows[1].count("|") == 4, f"新行列数与表头不一致：{rows[1]}"
 
 
 @_unit

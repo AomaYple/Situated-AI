@@ -104,7 +104,7 @@ def build_manifest() -> dict[str, object]:
             "sha256": hashlib.sha256(raw).hexdigest(),
         }
     return {
-        "说明": "游戏自带官方 .md 的清单与指纹。原文不入库，见 tools/README.md 的「官方文档镜像」。",
+        "说明": "游戏自带官方 .md 的清单与指纹。原文不入库，见 tools/README.md 的「官方文档清单」。",
         "来源": " ".join(f"{n}={b}" for n, b in _ROOTS),
         "版本": config.game_version(),
         "篇数": len(entries),

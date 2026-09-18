@@ -280,3 +280,90 @@ def test_哈希扫描本身有效() -> None:
     ]
     # 短哈希（文档里也用 ``bf52e8ef…`` 这种省略写法）不该被当成完整修订号
     assert _HEX40.findall("`bf52e8ef…`") == []
+
+
+# ── 字节数：文档里「文件名 + 字节」的表格行 ───────────────────
+def _table_header_of(lines: list[str], n: int) -> list[str] | None:
+    """第 ``n`` 行（1 基）所属表格的表头单元格。往上最近的「下一行是分隔线」的行。"""
+    for j in range(n - 2, max(-1, n - 60), -1):
+        if lines[j].startswith("|") and j + 1 < len(lines) and lines[j + 1].startswith("|-"):
+            return [c.strip() for c in lines[j].strip().strip("|").split("|")]
+    return None
+
+
+def _file_size_index() -> dict[str, set[int]]:
+    """``文件名 → {字节数, …}``，覆盖游戏三个内容根 + binaries + Workshop。
+
+    **刻意不含用户数据目录**：那里的 ``pdx_settings.json``、``logs\\*`` 是
+    运行期状态，一直在变，钉它等于给自己找一个永远报红的检查
+    （doc 08 §16 不纳入生成器，也是同一个理由）。
+    """
+    index: dict[str, set[int]] = {}
+    for base in (
+        config.GAME,
+        config.JOMINI,
+        config.CLAUSEWITZ,
+        config.ROOT / "binaries",
+        config.WORKSHOP,
+    ):
+        if not base.is_dir():
+            continue
+        for p in base.rglob("*"):
+            try:
+                if p.is_file():
+                    index.setdefault(p.name, set()).add(p.stat().st_size)
+            except OSError:
+                continue
+    return index
+
+
+@pytest.mark.integration
+def test_文档里声明的文件字节数必须与真实文件一致() -> None:
+    """按**表头里「字节」所在的列号**核对每一行。
+
+    这条是被三次误报磨出来的，也真抓到了东西：doc 08 的 ``victoria3.exe``
+    （97,128,568 → 97,292,920）、doc 03 的三个原版 ``ai_strategies`` 文件、
+    doc 17 的 ``00_trigger_localization.txt``（294,479 → 294,446）——
+    都是 1.14.3 更新改过、而文档没跟着改的字节数。
+
+    两个前车之鉴（决定了实现方式）：
+
+    * 不能假定「第 2 列就是字节」——doc 04/05 的第 2 列是**条目数**，
+      照那个写会假报一片；
+    * 也不能固定取第 2 列 —— doc 17 的表是 ``| 文件 | 定义数 | 字节 |``。
+      所以要**按表头定位列号**。
+    """
+    if not config.GAME.is_dir():
+        pytest.skip("游戏目录不可用")
+    index = _file_size_index()
+    assert len(index) > 10_000, f"只索引到 {len(index)} 个文件名，游戏树可能没读到"
+
+    checked = 0
+    bad: list[str] = []
+    for md in sorted(config.DOCS.glob("*.md")):
+        lines = md.read_text(encoding="utf-8").splitlines()
+        for n, line in enumerate(lines, start=1):
+            if not line.startswith("|"):
+                continue
+            row = [c.strip() for c in line.strip().strip("|").split("|")]
+            header = _table_header_of(lines, n)
+            if not header:
+                continue
+            cols = [i for i, h in enumerate(header) if h in {"字节", "B"}]
+            if not cols or cols[0] >= len(row):
+                continue
+            name = row[0].strip("`").strip()
+            if "/" in name or "\\" in name:
+                continue
+            digits = re.sub(r"[^\d]", "", row[cols[0]])
+            sizes = index.get(name)
+            # <100 的多半是别的量；找不到同名文件说明它不在游戏树里（如 mod 文件）
+            if not digits or not sizes or int(digits) < 100:
+                continue
+            checked += 1
+            if int(digits) not in sizes:
+                actual = ", ".join(f"{s:,}" for s in sorted(sizes)[:3])
+                bad.append(f"{md.name}:{n} `{name}` 文档 {int(digits):,} → 实际 {actual}")
+    print(f"\n核对了 {checked} 行声明为字节数的表格行")
+    assert checked >= 50, f"只核对了 {checked} 行 —— 表头定位可能退化了"
+    assert not bad, "文档里的字节数与真实文件不符：\n  " + "\n  ".join(bad)

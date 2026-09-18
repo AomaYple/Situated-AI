@@ -118,7 +118,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-489 条用例（`pytest --collect-only` 实测；486 通过 / 3 按条件跳过），
+490 条用例（`pytest --collect-only` 实测；487 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -139,7 +139,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_conftest.py` | 「没有游戏就自动跳过集成用例」这条机制本身（子进程真跑一次收集） |
 | `test_data_dump.py` | 结构化转储：必须能取到**值**而不只是字段名 |
 | `test_defines.py` | defines 提取：参数形态、命名空间合并、覆盖预览 |
-| `test_docs_consistency.py` | 文档数字与断言表的一致性（防文档过期）；**修订哈希与本体比对**（数字漂移扫描抓不到哈希，这里是补上的盲区） |
+| `test_docs_consistency.py` | 文档数字与断言表的一致性（防文档过期）；**修订哈希与本体比对**、**逐行核对文档里声明的文件字节数**（都是数字漂移扫描抓不到的角度） |
 | `test_docs_mirror.py` | 官方 `.md` 清单的时效性：篇目集合、**逐篇 sha256**、镜像无多余文件；以及「跑不了的比对不该弄脏退出码」这条门禁语义 |
 | `test_localization.py` | `.yml` 本地化：语言覆盖、键去重、BOM 处理 |
 | `test_engine_crosscheck.py` | 用游戏日志当**外部真值**核对解析 |
@@ -313,7 +313,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：489 条用例 + 81 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：490 条用例 + 81 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 62 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

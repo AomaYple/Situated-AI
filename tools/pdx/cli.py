@@ -790,7 +790,7 @@ def mirror_check() -> None:
 
     没有游戏（或没有本地镜像）时对应的那条**跳过而非判失败**：
     一条跑不了的检查不该把退出码弄脏，否则这个门禁在任何 CI 上都是红的。
-    两条都跑不了才算「什么都没查成」，此时也退出 1 —— 免得空过。
+    两条都跑不了才算「什么都没查成」，此时退出 2（前置条件缺失）—— 免得空过。
     """
     if not docs_mirror.load_manifest():
         _fail(f"读不到 {docs_mirror.MANIFEST_NAME} —— 先跑 `v3 mirror write`")
@@ -869,7 +869,8 @@ def mirror_write(
 def tables_cmd(
     write: Annotated[bool, typer.Option("--write", help="重算并写回文档")] = False,
 ) -> None:
-    """重算文档里**由工具生成**的表格（doc 05 的 defines 表、doc 19 的根目录与路径表）。
+    """重算文档里**由工具生成**的表格（doc 05 的 defines 表、doc 08 的目录统计表、
+    doc 19 的根目录与路径表）。
 
     不带 ``--write`` 时是**核对**：逐行比对文档现值与生成结果，
     有任何不一致就退出码 1 —— 这样它能进 CI / pre-commit，
