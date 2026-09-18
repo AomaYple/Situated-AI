@@ -25,6 +25,7 @@ doc 19 的 game 根目录文件表与 ``paths.settings`` 映射表。它们的�
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -74,6 +75,22 @@ class KeyedTableSpec:
     * 文档里有、生成结果里没有的行会被**删掉**（说明那个文件真的没了）。
 
     ``key_column`` 是键所在的列下标（默认 0）。
+
+    三个开关用来覆盖上面最后两条默认行为 —— 都是被 doc 08 逼出来的：
+
+    * ``allow_drop``：允许「文档里有、生成结果里没有」的行被删掉。默认
+      **不允许，未匹配的行原样保留** —— 静默删行是最危险的一种失败，实测踩过：
+      doc 08 的 §3 把几个 DLL 合并成一行（``| `fmodL.dll` / `fmodstudio.dll` | … |``），
+      「一文件一行」的生成器认不出这个键，于是把它们全删了，表格短了 5 行，
+      后面每一行的散文都跟着错位。**错的散文比错的数字更难发现。**
+      键集合确实权威（文件没了就该删行）的表再显式开它。
+    * ``append_new``：生成结果里多出来的键**不追加**。用于**节选**表：
+      doc 08 的 §3 只列「体积最大的几个原生依赖」，若把 binaries 下 40 个文件
+      全追加进去，节选就不再是节选。
+
+    合并行（一行里塞多个条目）**不需要额外开关**：键里的 `` / `` / ``、`` /
+    ``, `` 会被拆开逐个匹配，全部匹配上就按同样的分隔符把生成值拼回去 ——
+    作者的分组意图得以保留，而数字仍然是算出来的。
     """
 
     name: str
@@ -81,6 +98,8 @@ class KeyedTableSpec:
     cells: Callable[[], list[tuple[str, dict[int, str]]]]
     key_column: int = 0
     occurrence: int = 0
+    append_new: bool = True
+    allow_drop: bool = False
 
 
 def _split_row(line: str) -> list[str]:
@@ -156,33 +175,87 @@ def _norm_key(text: str) -> str:
     return text.strip().strip("`").strip()
 
 
+#: 合并行里各条目之间的分隔符。按**长到短**匹配（``" / "`` 先于 ``", "``），
+#: 否则 ``"a / b"`` 会被 ``", "`` 抢走一半。
+_GROUP_SEPS: tuple[str, ...] = (" / ", "、", ", ")
+
+
+def _group_cells(norm: str, generated: dict[str, dict[int, str]]) -> dict[int, str] | None:
+    """把「一行多个条目」的键拆开逐个查表，再按原分隔符拼回来。
+
+    doc 08 的 §3 就是这么写的：``| `fmodL.dll` / `fmodstudioL.dll` | 2,301,952 / … |``。
+    生成器按单个文件名给键，直接查表永远查不到 —— 旧行为是**把这行删掉**，
+    于是表格短了几行、后面所有行的散文都错位。
+
+    要求每个拆分出来的键都查得到，且它们给出的列下标集合一致；
+    否则返回 ``None``（调用方保留原行，绝不猜）。
+    """
+    for sep in _GROUP_SEPS:
+        if sep not in norm:
+            continue
+        parts = [_norm_key(p) for p in norm.split(sep)]
+        if len(parts) < 2 or not all(parts):
+            continue
+        subs = [generated.get(p) for p in parts]
+        if any(s is None for s in subs):
+            return None
+        idxs = {frozenset(s) for s in subs if s is not None}
+        if len(idxs) != 1:
+            return None  # 各条目的生成列不一致 —— 拼起来会缺格
+        return {i: sep.join(str(s[i]) for s in subs if s is not None) for i in idxs.pop()}
+    return None
+
+
 def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]]) -> list[str]:
     """按键把生成的单元格并进文档现有的行。
 
-    两条规则，都是为了**不夺走文档作者的信息**：
+    两条默认规则，都是为了**不夺走文档作者的信息**：
 
     * **未生成的列保留原文** —— 那些是散文，工具不该覆盖；
     * **行的顺序沿用文档** —— doc 19 的根目录文件表按语义排（先配置文件、
       后素材），生成器按文件名排会把它打乱。只有文档里没有的**新键**
       才追加到末尾（工具不拥有的列填「待补」，提示人来写说明）。
+
+    ``allow_drop`` / ``append_new`` 两个开关分别控制「删掉未匹配的行」与
+    「追加新键」，供**键集合权威**与**节选**两类表使用 —— 见
+    :class:`KeyedTableSpec` 的说明。
     """
     generated: dict[str, dict[int, str]] = {}
-    for key, cells in spec.cells():
-        generated[_norm_key(key)] = cells
+    for key, spec_cells in spec.cells():
+        generated[_norm_key(key)] = spec_cells
 
     out: list[str] = []
     seen: set[str] = set()
+    dropped: list[str] = []
     for row in existing:
         if len(row) <= spec.key_column:
             continue
         norm = _norm_key(row[spec.key_column])
-        if norm not in generated:
-            continue  # 生成结果里没有它 —— 那个文件真的没了
+        cells: dict[int, str] | None = generated.get(norm)
+        if cells is None:
+            cells = _group_cells(norm, generated)  # 合并行：拆开逐个查，再拼回去
+        if cells is None:
+            # 生成结果里没有它。默认**原样保留**：静默删行会让整张表错位，
+            # 而错位的散文比错的数字更难发现。确实该删的表用 allow_drop 显式声明。
+            if not spec.allow_drop:
+                out.append("| " + " | ".join(row) + " |")
+            else:
+                dropped.append(norm)
+            continue
         seen.add(norm)
-        out.append(_render(row, generated[norm]))
-    for norm, cells in generated.items():
-        if norm not in seen:
-            out.append(_render([], cells))
+        out.append(_render(row, cells))
+    if dropped:
+        # 只有显式开了 allow_drop 才会走到这里；把删掉的东西打出来，
+        # 免得「表短了几行」这种事只能靠肉眼发现。
+        print(
+            f"[doc_tables] {spec.name}: 删除了 {len(dropped)} 行 —— "
+            f"{dropped[:5]}{' …' if len(dropped) > 5 else ''}",
+            file=sys.stderr,
+        )
+    if spec.append_new:
+        for norm, cells in generated.items():
+            if norm not in seen:
+                out.append(_render([], cells))
     return out
 
 

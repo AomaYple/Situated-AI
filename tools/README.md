@@ -46,6 +46,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `doc_tables.py` | **通用**的「文档里由工具生成的 markdown 表」机制：整表替换 / 按键合并 / 同表头多张 |
 | `docgen.py` | 生成表的**唯一登记处**：跑哪些文档、哪些表、怎么核对与写回 |
 | `game_root.py` | 游戏根级文件、`paths.settings` 路径映射、校验和目标；产出 doc 19 的生成表 |
+| `install_tree.py` | 安装树的逐目录统计（文件数 / 目录数 / 体积 / 扩展名分布）与版本指纹；产出 doc 08 的生成表 |
 | `docs_mirror.py` | 官方 `.md` 的**清单与指纹**（原文不入库，见下「官方文档清单」） |
 | `localization.py` | 本地化专用提取（`.yml` 是行式格式，**不是** PDX 花括号语法） |
 | `tabular.py` | 表格类数据（`.csv`），分隔符靠 `csv.Sniffer` 嗅探 |
@@ -64,7 +65,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 analyze` | `run_analyze.py` | 全量分析并落盘：`--no-mods` `--no-cross` `--no-write` `--quiet` `--profile` |
 | `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
-| `v3 tables` | （新增） | 重算文档里**由工具生成**的表格（doc 05 的 defines 表、doc 19 的根目录与 `paths.settings` 表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
+| `v3 tables` | （新增） | 重算文档里**由工具生成**的 31 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
 | `v3 verify` | `run_verify.py` | 核对文档里的数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用） |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
@@ -117,7 +118,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-484 条用例（`pytest --collect-only` 实测；481 通过 / 3 按条件跳过），
+489 条用例（`pytest --collect-only` 实测；486 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -129,7 +130,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_analyze.py` / `test_golden.py` | 产物结构与指纹回归（产物被改坏要立刻失败） |
 | `test_snapshot.py` / `test_verify.py` | 快照确定性、精简快照的结构等价性、断言注册表口径 |
 | `test_defines_tables.py` | doc 05 那 5 张统计表的**生成链**：表头还在、生成是幂等的、文档现值 == 生成结果 |
-| `test_doc_tables.py` | **通用**的生成表机制：合成文档测整表替换/按键合并/行数变长/同表头多张；登记表完整性；10 张表与文档一致 |
+| `test_doc_tables.py` | **通用**的生成表机制：合成文档测整表替换/按键合并/行数变长/同表头多张/合并行/绝不静默删行；登记表完整性；31 张表与文档一致 |
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
 | `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
@@ -138,7 +139,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_conftest.py` | 「没有游戏就自动跳过集成用例」这条机制本身（子进程真跑一次收集） |
 | `test_data_dump.py` | 结构化转储：必须能取到**值**而不只是字段名 |
 | `test_defines.py` | defines 提取：参数形态、命名空间合并、覆盖预览 |
-| `test_docs_consistency.py` | 文档数字与断言表的一致性（防文档过期） |
+| `test_docs_consistency.py` | 文档数字与断言表的一致性（防文档过期）；**修订哈希与本体比对**（数字漂移扫描抓不到哈希，这里是补上的盲区） |
 | `test_docs_mirror.py` | 官方 `.md` 清单的时效性：篇目集合、**逐篇 sha256**、镜像无多余文件；以及「跑不了的比对不该弄脏退出码」这条门禁语义 |
 | `test_localization.py` | `.yml` 本地化：语言覆盖、键去重、BOM 处理 |
 | `test_engine_crosscheck.py` | 用游戏日志当**外部真值**核对解析 |
@@ -312,8 +313,8 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：484 条用例 + 63 条断言核验
-（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 44 条），
+Python 版把上述问题都变成了**可测试的代码**：489 条用例 + 81 条断言核验
+（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 62 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
 > `v3 verify` 同时跑**文档正文的数字漂移扫描**（`verify.unknown_doc_drift`）：
@@ -321,7 +322,7 @@ Python 版把上述问题都变成了**可测试的代码**：484 条用例 + 63
 > 有漂移时退出码同样是 1，所以在 CI / pre-commit 上也会被拦住。
 > 确认是「口径不同、文档没错」的登记在 `pdx.verify.KNOWN_METRIC_MIXUPS`（附理由）。
 >
-> **没有游戏的机器（CI）怎么办**：63 条断言全要读游戏本体，而入库的
+> **没有游戏的机器（CI）怎么办**：81 条断言全要读游戏本体，而入库的
 > **精简快照**里带着各目录条目名、defines 命名空间与 DLC 清单，
 > 够核验其中约一半 —— 跑 `v3 verify --from-snapshot` 即可，它**不读游戏**。
 > 它证明「断言注册表仍与当时记录的真值一致」，不证明「游戏里现在是这个数」；

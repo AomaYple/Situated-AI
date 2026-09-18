@@ -11,6 +11,9 @@
 #
 # 测试套件**不**放进来 —— 全量跑一次要 5 分钟，那是 CI / 提交前手动做的事，
 # 不是每次 commit 都该付的成本。
+#
+# ⚠️ 下面的 entry 写的是 Windows 下的 `.venv/Scripts/`，因此这套 hook 只在
+# Windows 本地可用；跨平台的同一套检查由 `.github/workflows/ci.yml` 承担。
 
 repos:
   - repo: local

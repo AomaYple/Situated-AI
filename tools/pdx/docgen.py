@@ -3,10 +3,11 @@
 为什么单独一个模块
 ------------------
 生成逻辑分散在各领域模块里（defines 的 5 张表在 :mod:`pdx.defines`，
-game 根目录与 ``paths.settings`` 在 :mod:`pdx.game_root`），但**登记表**
+game 根目录与 ``paths.settings`` 在 :mod:`pdx.game_root`，
+安装树与各目录统计在 :mod:`pdx.install_tree`），但**登记表**
 必须只有一份 —— 否则「哪些表是生成的」会散落在 CLI、测试与文档三处，
 而漏掉一处就意味着那张表回到无人重跑的状态（doc 05 就是这么落后了一个
-游戏版本的）。
+游戏版本的；doc 08 则整整漂了 8 处，包括两个写错的版本修订哈希）。
 
 本模块依赖各领域模块，反过来不成立；:mod:`pdx.defines` 依赖
 :mod:`pdx.doc_tables` 但不依赖本模块，所以没有循环导入。
@@ -17,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from . import config, defines, game_root
+from . import config, defines, game_root, install_tree
 from .doc_tables import KeyedTableSpec, TableSpec, check_doc, patch_doc
 
 if TYPE_CHECKING:
@@ -46,6 +47,10 @@ def targets() -> tuple[DocTarget, ...]:
         DocTarget(
             path=config.DOCS / "19-game根级文件与工具链.md",
             specs=tuple(game_root.doc_table_specs()),
+        ),
+        DocTarget(
+            path=config.DOCS / "08-目录全量清单.md",
+            specs=tuple(install_tree.doc_table_specs()),
         ),
     )
 

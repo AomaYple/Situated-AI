@@ -3,7 +3,7 @@
 为什么单独一个文件（而不是并进 ``test_defines_tables.py``）
 ----------------------------------------------------------
 上一轮只覆盖 doc 05。这一轮把替换算法抽成了 :mod:`pdx.doc_tables` 并推广到
-doc 19，**通用机制本身**也必须被测 —— 它现在同时托着 9 张表，
+doc 19 与 doc 08，**通用机制本身**也必须被测 —— 它现在同时托着 31 张表，
 一个回归会让全部 9 张一起烂掉，而它们的共同症状是「文档悄悄过期、没人发现」。
 
 三层各测一次：
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 #: 合成文档那几条**不需要游戏** —— 它们是通用机制的单元测试。
 #: 早先整个文件打了 module 级 ``integration``，于是 CI 上连它们也一起跳过，
-#: 而它们恰恰是最该在 CI 上跑的部分（通用机制一回归就是 9 张表一起烂）。
+#: 而它们恰恰是最该在 CI 上跑的部分（通用机制一回归就是 31 张表一起烂）。
 _unit = pytest.mark.unit
 
 #: 要读游戏本体的用例：打 ``integration``（conftest 在无游戏时自动跳过）
@@ -161,8 +161,8 @@ def test_每张登记的表都能在文档里找到() -> None:
 @_unit
 def test_登记表非空() -> None:
     targets = docgen.targets()
-    assert len(targets) >= 2, "至少应登记 doc 05 与 doc 19"
-    assert sum(len(t.specs) for t in targets) >= 10
+    assert len(targets) >= 3, "至少应登记 doc 05、doc 08 与 doc 19"
+    assert sum(len(t.specs) for t in targets) >= 30
 
 
 # ── 3. 生成结果非空（要读游戏，故需游戏）────────────────────
@@ -223,6 +223,84 @@ def test_paths_settings_分组覆盖全部映射() -> None:
     assert not declared - actual, (
         f"文档里这些映射在 paths.settings 里已不存在：{sorted(declared - actual)}"
     )
+
+
+# ── 5. 合并行与「绝不静默删行」────────────────────────────────
+@_unit
+def test_合并行按分隔符拆开逐个查表(tmp_path: Path) -> None:
+    """``| `a.dll` / `b.dll` | 10 / 20 |`` 这种一行多条目也要能更新。
+
+    doc 08 的 §3 就是这么写的。旧行为是**查不到就把整行删掉** ——
+    实测表格短了 5 行、后面所有行的散文跟着错位。错的散文比错的数字更难发现。
+    """
+    doc = tmp_path / "d.md"
+    doc.write_text(
+        "| 文件 | 字节 | 用途说明 |\n|---|---|---|\n"
+        "| `a.dll` / `b.dll` | 1 / 2 | 两个一组 |\n"
+        "| `c.dll` | 3 | 单个 |\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    spec = doc_tables.KeyedTableSpec(
+        name="t",
+        header="| 文件 | 字节 | 用途说明 |",
+        cells=lambda: [("a.dll", {1: "10"}), ("b.dll", {1: "20"}), ("c.dll", {1: "30"})],
+        append_new=False,
+    )
+    doc_tables.patch_doc(doc, [spec], write=True)
+    rows = [ln for ln in doc.read_text(encoding="utf-8").splitlines() if ln.startswith("| `")]
+    assert rows[0] == "| `a.dll` / `b.dll` | 10 / 20 | 两个一组 |", rows[0]
+    assert rows[1] == "| `c.dll` | 30 | 单个 |", rows[1]
+
+
+@_unit
+def test_查不到的键默认保留而不是删掉(tmp_path: Path) -> None:
+    """未匹配的行**原样保留** —— 删行会让整张表错位。
+
+    这是默认行为，不是可选项：把「未匹配」解释成「该删」是这类生成器
+    最容易犯、也最难发现的错。
+    """
+    doc = tmp_path / "d.md"
+    doc.write_text(
+        "| 文件 | 字节 | 用途说明 |\n|---|---|---|\n"
+        "| `unknown.bin` | 1 | 作者自己加的一行 |\n"
+        "| `a.dll` | 2 | 正常的 |\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    spec = doc_tables.KeyedTableSpec(
+        name="t",
+        header="| 文件 | 字节 | 用途说明 |",
+        cells=lambda: [("a.dll", {1: "20"})],
+        append_new=False,
+    )
+    doc_tables.patch_doc(doc, [spec], write=True)
+    text = doc.read_text(encoding="utf-8")
+    assert "`unknown.bin` | 1 | 作者自己加的一行" in text, text
+    assert "`a.dll` | 20 | 正常的" in text, text
+
+
+@_unit
+def test_显式开_allow_drop_才会删行(tmp_path: Path) -> None:
+    doc = tmp_path / "d.md"
+    doc.write_text(
+        "| 文件 | 字节 | 用途说明 |\n|---|---|---|\n"
+        "| `gone.txt` | 1 | 已经没了 |\n"
+        "| `a.dll` | 2 | 还在 |\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    spec = doc_tables.KeyedTableSpec(
+        name="t",
+        header="| 文件 | 字节 | 用途说明 |",
+        cells=lambda: [("a.dll", {1: "20"})],
+        append_new=False,
+        allow_drop=True,
+    )
+    doc_tables.patch_doc(doc, [spec], write=True)
+    text = doc.read_text(encoding="utf-8")
+    assert "gone.txt" not in text, "allow_drop=True 时该行应当被删掉"
+    assert "`a.dll` | 20 | 还在" in text
 
 
 if __name__ == "__main__":  # pragma: no cover

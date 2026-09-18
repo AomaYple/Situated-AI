@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -217,3 +218,65 @@ def test_漂移检测覆盖了足够多的断言() -> None:
     ]
     print(f"\n参与漂移扫描的断言：{len(checkable)} / {len(verify.CLAIMS)} 条")
     assert len(checkable) >= 25, f"只有 {len(checkable)} 条参与扫描，锚点抽取可能退化了"
+
+
+# ── 哈希：数字漂移扫描的盲区 ─────────────────────────────────
+#: 40 位十六进制串 = 本仓库会写进文档的修订哈希形态。
+_HEX40 = re.compile(r"\b[0-9a-f]{40}\b")
+
+
+def _docs_and_indexes() -> list[Path]:
+    """所有应当被核对的 markdown：知识库正文 + 两份 README。"""
+    return [
+        *sorted(config.DOCS.glob("*.md")),
+        config.REPO / "README.md",
+        config.REPO / "tools" / "README.md",
+    ]
+
+
+@pytest.mark.integration
+def test_文档里的修订哈希必须与本体一致() -> None:
+    """**补上数字漂移扫描的盲区。**
+
+    这条是被真实事故逼出来的：doc 08 的两处修订哈希停在 1.14.3 之前的
+    ``6c9b008f…`` / ``f57eec9a…``，而本体早已是 ``bf52e8ef…`` / ``1ce8c96b…``。
+    漂移扫描对它**完全无感** —— ``_STANDALONE_NUM_RE`` 要求数字两侧不是
+    字母数字，而哈希是**一整个**字母数字串，永远匹配不到；它又没有回归到
+    任何一条断言上，于是两个错值在那里躺了一整个游戏版本，
+    而那一节还自称「判断当前装的是哪个版本的**最权威依据**」。
+
+    做法很直白：文档里出现的每一个 40 位十六进制串，都必须等于本机
+    ``caligula_rev.txt`` / ``clausewitz_rev.txt`` 里的值之一。
+    写了哈希却对不上，只能是抄错了或者抄旧了。
+    """
+    if not (config.ROOT / "caligula_rev.txt").is_file():
+        pytest.skip("游戏目录不可用")
+    known = {v for v in config.game_version().values() if v}
+    assert len(known) >= 2, f"读到的版本指纹不完整：{known}"
+
+    bad: list[str] = []
+    for md in _docs_and_indexes():
+        if not md.is_file():
+            continue
+        for n, line in enumerate(md.read_text(encoding="utf-8").splitlines(), start=1):
+            bad.extend(
+                f"{md.name}:{n} 写着 {h} —— 本体里没有这个修订号\n    {line.strip()[:100]}"
+                for h in _HEX40.findall(line)
+                if h not in known
+            )
+    assert not bad, "文档里有对不上本体的修订哈希：\n  " + "\n  ".join(bad)
+
+
+def test_哈希扫描本身有效() -> None:
+    """上一条测试的**元测试**：确保它真的会抓错，而不是永远绿。
+
+    一条「扫全库、从不失败」的检查比没有检查更糟：它会让人以为有看守。
+    """
+    assert _HEX40.findall("| 修订 | `bf52e8efe8f45334a3fbd421cc9e06d51077c045` |") == [
+        "bf52e8efe8f45334a3fbd421cc9e06d51077c045"
+    ]
+    assert _HEX40.findall("`6c9b008f4beb17850ee29bfb162bdbdeb3a450ce`") == [
+        "6c9b008f4beb17850ee29bfb162bdbdeb3a450ce"
+    ]
+    # 短哈希（文档里也用 ``bf52e8ef…`` 这种省略写法）不该被当成完整修订号
+    assert _HEX40.findall("`bf52e8ef…`") == []

@@ -319,6 +319,71 @@ def _common_dir_count(_target: str) -> int:
     return sum(1 for p in base.iterdir() if p.is_dir()) if base.is_dir() else 0
 
 
+def _tree_path(target: str) -> Path:
+    """把 ``"game/gfx"`` / ``"binaries"`` 这样的键解析成安装树里的真实路径。
+
+    键以**内容根名**开头（``game`` / ``jomini`` / ``clausewitz``）或直接用
+    安装根下的一级目录名。刻意不接受绝对路径：断言表里出现 ``C:\\...``
+    就会把仓库钉死在一台机器上。
+    """
+    head, _, tail = target.partition("/")
+    base = {
+        "game": config.GAME,
+        "jomini": config.JOMINI,
+        "clausewitz": config.CLAUSEWITZ,
+    }.get(head, config.ROOT / head)
+    return base / tail if tail else base
+
+
+def _tree_files(target: str) -> int:
+    """安装树里某个目录的**递归文件数**。
+
+    这条断言服务的对象在 doc 08：那份文档里 19 张表的数字现在由
+    ``v3 tables`` 生成，但**章节标题**（``## 13. game\\gfx\\（19,162 文件 …）``）
+    与 §17 汇总表仍是手写的 —— 生成器管不到散文，只能靠断言钉住。
+    实测这些标题整整落后了一个游戏版本（``gfx`` 少了 1 个文件、
+    ``binaries`` 少了 0.15 MB）。
+    """
+    path = _tree_path(target)
+    return sum(1 for p in path.rglob("*") if p.is_file()) if path.is_dir() else 0
+
+
+def _tree_dirs(target: str) -> int:
+    """安装树里某个目录的**递归子目录数**（不含自身）。"""
+    path = _tree_path(target)
+    return sum(1 for p in path.rglob("*") if p.is_dir()) if path.is_dir() else 0
+
+
+def _tree_subdirs(target: str) -> int:
+    """安装树里某个目录的**直接**子目录数（不递归）。
+
+    与 :func:`_tree_dirs` 是两个口径，doc 08 里两个都在用：
+    「``game\\`` 下有 19 个一级目录」（直接）与「game 全树 1,986 个目录」（递归）。
+    混用会让数字差两个数量级，所以分成两个 kind 而不是加个开关参数。
+    """
+    path = _tree_path(target)
+    return sum(1 for p in path.iterdir() if p.is_dir()) if path.is_dir() else 0
+
+
+def _tree_bytes(target: str) -> int:
+    """安装树里某个目录的**递归字节数**。
+
+    钉字节而不是 MB：MB 是展示格式（四舍五入到两位小数），
+    换一种舍入规则就会假报；字节数是唯一没有歧义的那个量。
+    """
+    path = _tree_path(target)
+    if not path.is_dir():
+        return 0
+    total = 0
+    for p in path.rglob("*"):
+        try:
+            if p.is_file():
+                total += p.stat().st_size
+        except OSError:
+            continue
+    return total
+
+
 _CHECKS: dict[str, Callable[[str], object]] = {
     "dir_entries": _dir_entries,
     "dir_txt_files": _dir_txt_files,
@@ -342,6 +407,10 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "file_top_keys": _file_top_keys,
     "dlc_count": _dlc_count,
     "common_dir_count": _common_dir_count,
+    "tree_files": _tree_files,
+    "tree_dirs": _tree_dirs,
+    "tree_subdirs": _tree_subdirs,
+    "tree_bytes": _tree_bytes,
 }
 
 
@@ -880,6 +949,139 @@ CLAIMS: list[Claim] = [
         "INJECT_OR_CREATE",
         46,
     ),
+    # ── doc 08 的安装树规模 ────────────────────────────────
+    # 这些数在 doc 08 里出现在**章节标题**与 §17 汇总表里 —— 两处都是散文，
+    # `v3 tables` 管不到。而它们实测漂过：`gfx` 19,162 → 19,163、
+    # `binaries` 260.80 → 260.95 MB、`victoria3.exe` 97,128,568 → 97,292,920。
+    # 断言描述里的英文标识符就是漂移扫描的**锚点**（标题行里的 `gfx` 等），
+    # 所以 text 必须带上目录名，否则锚点抽不出来、这条断言等于没登记。
+    Claim(
+        "tree.game",
+        "08-目录全量清单.md",
+        "game 全树递归文件数（不含安装根下的松散文件）",
+        "tree_files",
+        "game",
+        27725,
+    ),
+    Claim("tree.game_dirs", "08-目录全量清单.md", "game 全树子目录数", "tree_dirs", "game", 1986),
+    Claim(
+        "tree.game_bytes",
+        "08-目录全量清单.md",
+        "game 全树的字节总数（等价 17,055.90 MB）",
+        "tree_bytes",
+        "game",
+        17884407624,
+    ),
+    Claim(
+        "tree.binaries_files",
+        "08-目录全量清单.md",
+        "binaries 目录文件数",
+        "tree_files",
+        "binaries",
+        40,
+    ),
+    Claim(
+        "tree.binaries_bytes",
+        "08-目录全量清单.md",
+        "binaries 目录字节总数（等价 260.95 MB）",
+        "tree_bytes",
+        "binaries",
+        273630477,
+    ),
+    Claim(
+        "tree.clausewitz_files",
+        "08-目录全量清单.md",
+        "clausewitz 目录文件数",
+        "tree_files",
+        "clausewitz",
+        753,
+    ),
+    Claim(
+        "tree.jomini_files", "08-目录全量清单.md", "jomini 目录文件数", "tree_files", "jomini", 493
+    ),
+    Claim(
+        "tree.launcher_files",
+        "08-目录全量清单.md",
+        "launcher 目录文件数",
+        "tree_files",
+        "launcher",
+        12,
+    ),
+    Claim(
+        "tree.psgd_files",
+        "08-目录全量清单.md",
+        "platform_specific_game_data 目录文件数",
+        "tree_files",
+        "platform_specific_game_data",
+        2,
+    ),
+    Claim(
+        "tree.gfx_files",
+        "08-目录全量清单.md",
+        "game/gfx 目录文件数（1.14.3 更新新增了 1 个 .dds）",
+        "tree_files",
+        "game/gfx",
+        19163,
+    ),
+    Claim(
+        "tree.gfx_bytes",
+        "08-目录全量清单.md",
+        "game/gfx 目录字节总数（等价 9,690.14 MB）",
+        "tree_bytes",
+        "game/gfx",
+        10160852245,
+    ),
+    Claim(
+        "tree.events_files",
+        "08-目录全量清单.md",
+        "game/events 目录文件数",
+        "tree_files",
+        "game/events",
+        328,
+    ),
+    Claim(
+        "tree.localization_files",
+        "08-目录全量清单.md",
+        "game/localization 目录文件数",
+        "tree_files",
+        "game/localization",
+        1877,
+    ),
+    Claim(
+        "tree.gui_files", "08-目录全量清单.md", "game/gui 目录文件数", "tree_files", "game/gui", 207
+    ),
+    Claim(
+        "tree.map_data_files",
+        "08-目录全量清单.md",
+        "game/map_data 目录文件数",
+        "tree_files",
+        "game/map_data",
+        28,
+    ),
+    Claim(
+        "tree.dlc_files",
+        "08-目录全量清单.md",
+        "game/dlc 目录文件数",
+        "tree_files",
+        "game/dlc",
+        2747,
+    ),
+    Claim(
+        "tree.game_level1",
+        "08-目录全量清单.md",
+        "game 一级目录数（直接子目录，不递归）",
+        "tree_subdirs",
+        "game",
+        19,
+    ),
+    Claim(
+        "tree.gfx_subdirs",
+        "08-目录全量清单.md",
+        "game/gfx 一级子目录数（doc 08 §13 那张表就是这么多行）",
+        "tree_subdirs",
+        "game/gfx",
+        19,
+    ),
 ]
 
 
@@ -1150,6 +1352,13 @@ TEXT_SCAN_EXEMPT: dict[str, str] = {
     "def.file_graphics": "锚点 'graphics' 在 doc 05 里出现几十次，期望值 19 → 误报 16 处",
     "def.file_interfaces": "同上",
     "def.file_shaders": "锚点 'shaders' 在 doc 05 里出现上百次，期望值 5 → 误报 89 处",
+    # 这两条是 doc 08 的「一级目录数」。锚点只能是 `game` / `gfx` —— 而 doc 08
+    # 是逐目录清单，`game` 在它里面出现上百次，期望值又只有 19，容差 ±2 于是
+    # 撞上「占 `game\` 全树 17 GB」里的 17（实测 2 处稳定误报）。
+    # 它们要钉的那个数字（§17 的「一级目录数 19」）**由生成表看守**：
+    # §8 与 §13 的表各有 19 行，行数就是目录数，`v3 tables` 每次都会核对。
+    "tree.game_level1": "锚点 'game' 在 doc 08 里太通用（实测误报 2 处）；由 §8 生成表的行数看守",
+    "tree.gfx_subdirs": "同上，锚点 'gfx'；由 §13 生成表的行数看守",
 }
 
 

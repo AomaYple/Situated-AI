@@ -53,7 +53,7 @@ Victoria 3 的 AI 相关 mod 开发项目。
 
 ```powershell
 .venv\Scripts\python.exe -m pip install -e ".[dev]"   # 一次性安装
-.venv\Scripts\v3.exe analyze --quiet                  # 全量分析并落盘（约 28 秒）
+.venv\Scripts\v3.exe analyze --quiet                  # 全量分析并落盘（本机约 35 秒）
 .venv\Scripts\v3.exe verify --fast                    # 核对文档里的数量断言
 .venv\Scripts\v3.exe crosscheck                       # 用游戏日志交叉验证解析正确性
 ```
@@ -92,17 +92,21 @@ mod 相关信息，游戏升级后 `v3 snapshot diff` 一次就能看出 Paradox
 | 转录正确性 | 与引擎日志里报告的 `文件:行号` 逐条比对（token 行号 100% 一致） |
 | 产物不变性 | 黄金回归冻结全部产物的 sha256，改一个字节即失败 |
 
-63 条数量断言分两处核验：本地跑 `v3 verify`（真值来自游戏本体），
-CI 跑 `v3 verify --from-snapshot`（真值来自**入库的精简快照**，覆盖其中约一半）。
+81 条数量断言分两处核验：本地跑 `v3 verify`（真值来自游戏本体），
+CI 跑 `v3 verify --from-snapshot`（真值来自**入库的精简快照**，覆盖其中 33 条）。
 两条路径共用同一份断言注册表与同一个漂移扫描，不会出现「测试过了但工具没发现」。
+
+文档里那些**由工具生成**的表格（31 张：doc 05 的 defines 表、doc 08 的目录统计表、
+doc 19 的根目录与路径表）走另一条路：`v3 tables` 直接重算并逐行比对，
+不一致就退出码 1 —— 所以它们不可能过期，也不该手改。
 
 ### 实测
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **484 条**用例（481 通过 / 3 按条件跳过） |
+| 测试 | **489 条**用例（486 通过 / 3 按条件跳过） |
 | 覆盖率 | **约 87%**（门禁 86%，由 pyproject 强制；xdist 下末位有 ±0.2% 抖动） |
-| 端到端 | 约 28 秒 |
+| 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | 6,250 个 PDX 文件 + 1,877 个本地化文件 |
 | 范围声明 | **不说「全量」** —— 文件维度可证伪（136 个 `common\` 子目录逐文件覆盖，有引擎日志背书），但「所有相关信息」没有边界、无法证伪。本仓库只声明**能回答哪些任务**，见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」 |
 
@@ -110,14 +114,14 @@ CI 跑 `v3 verify --from-snapshot`（真值来自**入库的精简快照**，覆
 
 ```
 Situated AI/
-├─ docs/victoria3-modding/   21 篇 mod 开发知识库
+├─ docs/victoria3-modding/   20 篇 mod 开发知识库 + 本索引
 ├─ docs/audits/              测试套件审计报告（重构前的历史快照）
 ├─ research/
 │   ├─ official-docs/        92 篇游戏自带官方 .md 的逐字镜像（**不入库**，用 `v3 mirror write` 重建）
 │   └─ official-docs.manifest.json  镜像清单：路径 / 字节 / 行数 / sha256（**入库**，Paradox 版权内容不在其中）
 ├─ tools/
-│   ├─ pdx/                  工具链核心包（21 个模块；解析部分纯标准库，cli.py 用 typer + rich）
-│   ├─ tests/                测试（25 个测试文件 / 484 条用例）
+│   ├─ pdx/                  工具链核心包（22 个模块；解析部分纯标准库，cli.py 用 typer + rich）
+│   ├─ tests/                测试（25 个测试文件 / 489 条用例）
 │   ├─ prof/                 性能剖析
 │   ├─ out/                  分析产物（已 gitignore）
 │   └─ reports/              人可读报告（**入库**）
