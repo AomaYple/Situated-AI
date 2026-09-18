@@ -198,7 +198,7 @@
 | 军事 | `wanted_army_size` / `wanted_navy_size` / `wanted_marines` / `ship_group_weights` / `combat_unit_group_weights` | strategy |
 | 机构 | `institution_scores` | strategy |
 | PM 评分 / 外交阈值 / 各类机制 | 1,017 个 `NAI` 参数 | `common\defines\00_ai.txt` |
-| AI 中间值 | 12 个脚本值 | `common\script_values\ai_script_values.txt` |
+| AI 中间值 | 33 个脚本值（其中 19 个被 `00_default_strategy.txt` 引用） | `common\script_values\ai_script_values.txt` |
 
 ## 5. 真实 AI mod 覆盖了哪些 `NAI` 参数
 
@@ -240,7 +240,7 @@
 | | `PRODUCTION_METHOD_STICKINESS_DOWNGRADE` | `0.95` |
 | **军事编制** | `MILITARY_UNITS_PER_FORMATION_ARMY` | `125` |
 
-**规律**：**10 个集中在生产方式（PM）评分** —— 印证了 §2.2 的判断，PM 系统是 AI 经济表现的关键杠杆，且只能靠 defines 调。
+**规律**：**9 个集中在生产方式（PM）评分** —— 印证了 §2.2 的判断，PM 系统是 AI 经济表现的关键杠杆，且只能靠 defines 调。
 
 ### 5.1 对本文档的启示
 

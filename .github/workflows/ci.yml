@@ -1,0 +1,69 @@
+# 持续集成。
+#
+# 为什么现在才有：仓库在 2026-09 的那轮测试套件审计里就列出了「CI 完全缺失」，
+# 但当时工具链还没收敛（7 个散装入口脚本、配置分散在 pytest.ini /
+# requirements.txt）。现在配置全部集中在 pyproject.toml，才谈得上在 CI 上复现。
+#
+# ⚠️ **为什么这里没有覆盖率门禁**
+# `[tool.coverage.report] fail_under = 86` 是在**装有游戏本体**的机器上定的：
+# 全量分析、黄金回归、引擎日志交叉验证都要读真实游戏文件。CI runner 上没有
+# 游戏，这些集成用例会被 conftest 自动 skip，覆盖率会远低于 86%，
+# 门禁必然误报。因此 CI 只跑「不依赖游戏」的那部分（约 300 条），
+# 覆盖率门禁留在本地 —— 这不是遗漏，是刻意的分工。
+#
+# ⚠️ **`-m "not integration"` 会在没有游戏时自动扩展成「跳过更多」**
+# conftest 的 `pytest_collection_modifyitems` 会把带 integration 标记的用例
+# 全部加上 skip。这条机制此前是坏的（形参 `config` 遮蔽了 `pdx.config` 模块，
+# 在没有游戏的机器上直接 INTERNALERROR）—— 也就是说**这份 CI 配置正是发现并
+# 验证该修复的手段**。`tools/tests/test_conftest.py` 现在守着它。
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 同一分支连着推两次时，取消掉还在跑的那次
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 覆盖声明范围（requires-python = ">=3.11"）的下界与本地开发版本。
+        # 中间版本（3.12 / 3.13）不再单列 —— mypy 已按 python_version=3.11
+        # 的 typeshed 校验过 API 可用性，多跑一遍收益有限。
+        python-version: ["3.11", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: 安装（含 dev 依赖）
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: ruff —— 代码检查
+        run: ruff check .
+
+      - name: ruff —— 格式检查
+        run: ruff format --check .
+
+      - name: mypy —— 类型检查
+        run: mypy
+
+      - name: pytest —— 不依赖游戏的用例
+        # 上一步已经覆盖 `docs` / `contract` / `property` 这些标记；
+        # 唯二被排除的是 integration（无游戏）与要显式传 -n0 的 benchmark。
+        run: python -m pytest -m "not integration"

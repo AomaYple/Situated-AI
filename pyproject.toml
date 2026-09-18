@@ -50,9 +50,7 @@ dev = [
     "pytest-timeout>=2.4",      # 卡死的测试必须失败而非永久挂住
     "pytest-randomly>=5.0",     # 随机化执行顺序，暴露用例间隐式依赖
     "pytest-regressions>=2.11", # 黄金回归（冻结产物指纹）
-    "pytest-mock>=3.15",        # mock 的 fixture 化封装
     "pytest-subtests>=0.15",    # 一个用例内的多组子断言
-    "pytest-datadir>=1.8",      # 测试数据目录
     "pytest-xdist>=3.8",        # 并行执行
     "hypothesis>=6.168",        # 属性测试与模糊测试
 
@@ -141,6 +139,7 @@ markers = [
 ]
 
 [tool.coverage.run]
+# 口径：只统计**装进包里**的代码（pdx），不含 tools/prof 与 tools/tests。
 source = ["pdx"]
 branch = true
 omit = ["*/tests/*"]
@@ -182,8 +181,11 @@ line-length = 100
 target-version = "py311"
 extend-exclude = [
     ".venv",
-    "tools/out",
-    "tools/reports",
+    # 下面三个目录当前**一个 .py 都没有**（tools/out 是 JSON 产物、
+    # tools/reports 与 research/official-docs 全是 .md），而 ruff 本来
+    # 就不检查非 Python 文件 —— 这两条目前是空转。留着的原因见各条注释。
+    "tools/out",          # 产物目录，将来若落脚本也不该被 lint
+    "tools/reports",      # 自动生成的 Markdown 报告
     # research/official-docs/ 是游戏官方文档的逐字镜像，不是我们的代码；
     # research/ 根下若出现自有产物则仍需检查，故不整目录排除。
     "research/official-docs",
@@ -246,13 +248,17 @@ ignore = [
 #   RUF012 测试里的类属性是 fixture 风格的常量，加 ClassVar 只是噪声
 #   ARG001/ARG002 pytest fixture 的形参由框架注入，必然「未使用」
 #   N806   fixture 里用 GAME/CONFIG 这类大写局部名指代常量，是有意为之
+#   S101   断言就是测试的正文；bandit 的 S 规则集并未启用，此项为前瞻
+#   PT011  pytest.raises 不带 match= 是有意的：这里只关心「抛了没抛」
+#   PLC0415 少量用例在函数体内 import（如 subprocess 起 CLI），便于局部化
 "tools/tests/*" = [
     "PT009", "PLC2401", "N802", "N803", "RUF012",
     "ARG001", "ARG002", "N806",
-    "PLR2004", "S101", "PT011", "PLC0415",
+    "S101", "PT011", "PLC0415",
 ]
+# 注：这里**不再**列 lexer.py 的 PLR2004 —— 全局 ignore 里已经有了，
+# 重复列一条永远不会生效（实测确认过）。
 # 算法实现里的位运算与短路是刻意的
-"tools/pdx/lexer.py" = ["PLR2004"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["pdx"]
@@ -268,6 +274,9 @@ docstring-code-format = true
 # ─────────────────────────────────────────────────────────────
 [tool.mypy]
 python_version = "3.11"
+# 覆盖范围：解析器包 + 测试。
+# **不含 `tools/prof/`** —— 那是一次性的剖析脚本，只在本地手跑、不进 CI；
+# 但它仍受 ruff 约束（ruff 扫全仓），不是完全无人看管。
 files = ["tools/pdx", "tools/tests"]
 # 渐进式收紧：先保证「不出现新错误」，再逐步加严。
 warn_unused_configs = true

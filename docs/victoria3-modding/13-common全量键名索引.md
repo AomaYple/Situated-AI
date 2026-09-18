@@ -1,6 +1,7 @@
 # 13 · common 全量键名索引
 
-> 对 `game\common\` 下**全部 136 个子目录**做机械提取，共 **27,624 个顶层条目**。
+> 对 `game\common\` 下**全部 136 个子目录** + 根下 **1 个散装 `.txt`**
+> 做机械提取，共 **27,628 个顶层条目**。
 > 本文回答「**什么东西定义在哪个目录**」。
 
 > 数据版本：Victoria 3 `release/1.14.3`
@@ -19,6 +20,12 @@
 键名字符集  非空白、非花括号、非等号、非引号（因此支持连字符）
 @变量      不计入条目
 ```
+
+**逐目录统计 + 根下散装文件**：本索引按 `common\` 的 136 个子目录逐个提取，
+合计 **3,025 个文件**；`common\` 根下另有 **1 个散装 `.txt`**
+（achievement_groups.txt）不在任何子目录里，列在本文末尾。
+所以「本索引 3,025 个文件」与「`common` 全树 3,026 个 `.txt`」
+差的就是这 1 个 —— 两者都对，只是口径不同，**不要为了对齐而互相改**。
 
 ## 勘误记录
 
@@ -191,3 +198,13 @@
 | `tutorial_lesson_chains` | 1 | 3 | tutorial_lesson_chains.md | lesson_chain_intro, lesson_chain_journal_guides, lesson_chain_pops |
 | `tutorial_lessons` | 32 | 66 | tutorial_lesson.md | colonization_law_passed_complete, economic_dominance, economic_dominance_complete, egalitarian_society, egalitarian_society_complete, expand_goods_production_complete |
 | `war_goal_types` | 39 | 39 | war_goal_types.md | annex_country, ban_slavery, break_enforced_treaties, colonization_rights, conquer_state, contain_threat |
+
+## `common\` 根下的散装文件（1 个）
+
+这些 `.txt` 不在任何子目录里，上面的逐目录表覆盖不到，单独列出：
+
+| 文件 | 顶层条目 | 顶层键 |
+|---|---:|---|
+| `achievement_groups.txt` | 4 | `group`, `group`, `group`, `group` |
+
+> 键名重复是**如实反映**，不是 bug：PDX 允许同级重复键，而 `parse_file(...).top_keys` 如实返回全部出现。

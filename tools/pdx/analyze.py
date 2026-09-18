@@ -850,9 +850,6 @@ def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict
         dump(to_cross_dict(ca), c)
         out["交叉 JSON"] = c
 
-    # 本地化的完整键名清单单独一个文件：14 万+ 键、数 MB，
-    # 塞进主 JSON 会让那份 8 MB 的文件翻倍，而查询键名的人
-    # 本来就不需要同时看 common 目录的字段表。
     # 表格类数据。全库只有 map_data/adjacencies.csv 一个，但它定义
     # **海峡与陆地连通性**，mod 改地图边界时必动 —— 此前它既不是 PDX
     # 脚本、也没有专用读取器，落在所有范围之外。不是 PDX 语法，
@@ -879,6 +876,9 @@ def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict
     dump(to_data_dict(), data, compact=True)
     out["游戏数据 JSON"] = data
 
+    # 本地化的完整键名清单单独一个文件：14 万+ 键、数 MB，
+    # 塞进主 JSON 会让那份 8 MB 的文件翻倍，而查询键名的人
+    # 本来就不需要同时看 common 目录的字段表。
     if ga.localization_detail is not None:
         loc = GAME_OUT / "本地化.json"
         dump(ga.localization_detail.to_dict(), loc)
@@ -1040,10 +1040,21 @@ def render_mods_markdown(ma: ModsAnalysis, ca: CrossAnalysis) -> str:
     add("## 五、交叉：被 mod 触及的原版目录")
     add("")
     if ca.dir_touched_by:
-        add("| 目录 | 被多少个 mod 覆盖过 |")
-        add("|---|---:|")
+        # 表头必须写清口径：`dir_touched_by` 数的是「被覆盖的**文件**数」
+        # （跨 mod 累加，同一文件被两个 mod 覆盖算两次），不是 mod 数。
+        # 早先写成「被多少个 mod 覆盖过」，于是出现「gfx 被 51 个 mod 覆盖」
+        # 这种与全库只有 23 个 mod 自相矛盾的数字（实测 gfx 只涉及 3 个 mod）。
+        add("| 目录 | 被覆盖的原版文件数<sup>①</sup> | 涉及的 mod 数<sup>②</sup> |")
+        add("|---|---:|---:|")
         for k, n in ca.dir_touched_by.most_common():
-            add(f"| `{k}` | {n} |")
+            n_mods = sum(
+                1 for m in ma.mods if any(p == k or p.startswith(f"{k}/") for p in m.overrides)
+            )
+            add(f"| `{k}` | {n} | {n_mods} |")
+        add("")
+        add("> ① 跨 mod 累加，同一文件被两个 mod 覆盖算两次；**不含新增文件**。")
+        add("> ② 在该目录下有覆盖行为的 mod 个数（去重）。两者量级不同，勿混用 ——")
+        add("> 例如 `gfx` 是「51 个文件被覆盖、涉及 3 个 mod」。")
     else:
         add("（无覆盖行为）")
     add("")

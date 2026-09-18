@@ -16,7 +16,7 @@ C:\...\common\Victoria 3\
 |---|---|---|---|
 | `clausewitz\` | fonts / gfx / gui / imgui_fonts / input_profile / localization / tools | 46 / **547** / 68 / 2 / 19 / 68 / 1 | 另含 `compound_settings.txt`(1,110 B)、`cw_flow_graphs.anchor` |
 | `jomini\` | common / gfx / gui / jomini / localization / notifications | 25 / 134 / 99 / 1 / **231** / 2 | 另含 `settings_layout.txt`(1,229 B) |
-| `game\` | 20 个目录 | **27,722** | 见 `08-目录全量清单.md` |
+| `game\` | **19 个一级目录**（另有 13 个根级松散文件） | **27,725** | 见 `08-目录全量清单.md` |
 
 ## 2. `jomini\common\` —— 18 个 defines 命名空间
 
@@ -24,7 +24,7 @@ C:\...\common\Victoria 3\
 
 ```text
 jomini\common\
-├─ coat_of_arms\        （含 coat_of_arms\、options\、template_lists\，各带 readme.txt）
+├─ coat_of_arms\        （内层再分 coat_of_arms\、options\、template_lists\，各带一份 readme —— 其中一份名为 read_me.txt）
 ├─ defines\
 ├─ named_colors\
 ├─ script_values\       （含 _script_values.info，3,745 B）
@@ -121,13 +121,13 @@ clausewitz\fonts\
 
 ## 5. `jomini\common\coat_of_arms\` —— 纹章系统的三份 readme
 
-**【实测】** 该目录带三份 `readme.txt`：
+**【实测】** 该目录带三份 readme（路径注意 `coat_of_arms` 是**两层同名目录**）：
 
 | 文件 | 字节 |
 |---|---|
-| `coat_of_arms\read_me.txt` | 71 |
-| `options\readme.txt` | 242 |
-| `template_lists\readme.txt` | 1,153 |
+| `coat_of_arms\coat_of_arms\read_me.txt` | 71 |
+| `coat_of_arms\options\readme.txt` | 242 |
+| `coat_of_arms\template_lists\readme.txt` | 1,153 |
 
 > 这三份是纹章系统的官方说明。结合 `game\common\coat_of_arms\`（23 文件）
 > 与 `12-真实mod解剖与改造面地图.md` §3.5（真实 mod 逐文件替换 44 个 pattern），
@@ -137,7 +137,7 @@ clausewitz\fonts\
 
 | 问题 | 结论 |
 |---|---|
-| mod 能否提供 `jomini\` 或 `clausewitz\` 目录？ | **未确认** —— 23 个 mod 的顶层目录只有 `common/events/gfx/gui/localization/map_data/music/sound/fonts/dlc/dlc_metadata`，**无一使用 `jomini/` 或 `clausewitz/`** |
+| mod 能否提供 `jomini\` 或 `clausewitz\` 目录？ | **未确认** —— 23 个 mod 的**内容目录**只有 `common/events/gfx/gui/localization/map_data/music/sound/fonts/dlc/dlc_metadata`（另有 `.metadata/` 以及 `.idea/`、`.git/` 等编辑器目录），**无一使用 `jomini/` 或 `clausewitz/`** |
 | defines 参数能否跨层覆盖？ | **【推断】可以**（defines 按命名空间索引，与文件路径无关），但**未实测** |
 | 本地化能否覆盖 jomini 层的键？ | **【实测】可以**（见 §4） |
 
@@ -147,7 +147,7 @@ clausewitz\fonts\
 |---|---|
 | mod 提供 `jomini\` 目录是否被加载 | **未确认** |
 | mod 覆盖 `NJomini*` 命名空间 defines 是否生效 | **未确认** |
-| `jomini\jomini\` 目录（1 个文件）的内容 | **未读** |
-| `clausewitz\tools\`（1 个文件）的内容 | **未读** |
-| 三份 coat_of_arms readme 的具体内容 | **未读** |
-| `jomini\common\script_values\_script_values.info` | **未读**（3745 B，疑似官方说明） |
+| `jomini\jomini\gui\encyclopedia\jomini_encyclopedia.gui`（4,731 B） | 已读：教科书窗口的 GUI 定义（`window = { name = "jomini_encyclopedia" using = editor_window … }`，色板用 Ubuntu 终端配色）。**与 mod 开发基本无关** |
+| `clausewitz\tools\pdx_node_editor.settings`（8,670 B） | 已读：节点编辑器的窗口布局设置，**与 mod 开发无关** |
+| 三份 coat_of_arms readme 的具体内容 | **未读**（官方纹章说明，路径见 §5） |
+| `jomini\common\script_values\_script_values.info` | **未读**（3,745 B，疑似官方说明） |

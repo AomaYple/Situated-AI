@@ -2,10 +2,19 @@
 
 用法::
 
-    v3prof full                    # 整条流水线跑一次，回答「总共花在哪」
-    v3prof stages --top 25         # 逐阶段冷缓存剖析，定位到具体函数
-    v3prof walkaudit               # 文件系统被重复遍历了多少次
-    v3prof prefixaudit             # 原版功能前缀扫描的范围与耗时
+    python tools/prof/prof_e2e.py full              # 整条流水线跑一次，回答「总共花在哪」
+    python tools/prof/prof_e2e.py stages --top 25   # 逐阶段冷缓存剖析，定位到具体函数
+    python tools/prof/prof_e2e.py walkaudit         # 文件系统被重复遍历了多少次
+    python tools/prof/prof_e2e.py prefixaudit       # 原版功能前缀扫描的范围与耗时
+
+> 没有 ``v3prof`` 这个入口：``[project.scripts]`` 只声明了 ``v3``，
+> 而且 ``tools/`` 下只有 ``pdx`` 是安装的包，``tools/prof`` 不在其中。
+> 想直接跑就用上面的完整路径。
+
+⚠️ **``full`` / ``stages`` / ``walkaudit`` 会重跑整条分析流水线，
+> 因此会覆盖已入库的 ``tools/reports/*.md`` 与 ``tools/out/**``。**
+> 这不是只读的剖析 —— 跑完 ``git status`` 会脏，黄金回归冻结的
+> ``tools/reports/`` 指纹也可能变（正常应逐字节相同；不同就说明有非确定性 bug）。
 
 设计原则
 --------
@@ -292,9 +301,14 @@ def prefixaudit() -> None:
 
     这一项曾是个隐形的时间黑洞：``vanilla_prefix_count`` 按扩展名
     ``.txt`` 扫遍了整个 ``game/`` 树，把 ``config.ASSET_DIRS`` 里
-    明确定为「只统计、不解析」的资产文件也解析了。实测 3,756 个
-    ``.txt`` 中有 374 个属资产目录，其中单个 24.5 MB 的生成文件就要
-    8.5 秒 —— 而结果恒为空。修好范围后这里会显示为 0 个越界文件。
+    明确定为「只统计、不解析」的资产文件也解析了 —— 其中单个
+    24.4 MiB 的生成文件就要几秒，而结果恒为空。
+
+    修好之后**仍然会列出范围外的文件**，这是对的、不是回归：
+    实测 ``game/`` 全树 3,756 个 ``.txt`` 里有 **84 个** 不满足
+    ``config.is_scriptable``（另有 101 个落在 ``ASSET_DIRS`` 之下，
+    两者是不同口径）。它们**只统计体积、绝不打开**，
+    所以「越界解析」是 0 而「范围外文件」不是 0。
     """
     root = config.GAME
     everything = list(walk_files(root, suffix=".txt"))
@@ -314,14 +328,14 @@ def prefixaudit() -> None:
     table.add_column("指标")
     table.add_column("值", justify="right", style="cyan")
     table.add_row("扫描范围内的 .txt", f"{len(everything) - len(outside):,}")
-    table.add_row("范围外的资产 .txt（已排除）", f"{len(outside):,}")
+    table.add_row("范围外、只统计不打开", f"{len(outside):,}")
     table.add_row("排除掉的体积", f"{waste_bytes / 1048576:.1f} MB")
     table.add_row("冷缓存耗时", f"{elapsed:.2f} 秒")
     table.add_row("命中的前缀", f"{dict(result) or '（无，符合预期）'}")
     console.print(table)
 
     if outside:
-        console.print("\n[bold]被排除的资产文件（按体积前 10）[/]")
+        console.print("\n[bold]范围外的文件（按体积前 10，只看不解析）[/]")
         big = Table(show_lines=False)
         big.add_column("MB", justify="right", style="red")
         big.add_column("路径", style="green", overflow="fold")

@@ -19,25 +19,33 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import analyze, config
+from pdx import analyze
+from pdx import config as pdx_config
 from pdx.scan import walk_files
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 #: 游戏内容层是否可用（mod 相关文件都在 game/ 下）
-GAME_OK = (config.GAME / "common").is_dir()
+GAME_OK = (pdx_config.GAME / "common").is_dir()
 
 
 def pytest_collection_modifyitems(config, items):
     """游戏不在本机时，自动跳过所有 integration 测试。
 
-    参数名必须是 ``config`` —— pluggy 按 hookspec 的形参名注入，
-    改成 ``config_`` 会直接抛 ``PluginValidationError``。
+    ⚠️ **形参必须叫 ``config``** —— pluggy 按 hookspec 的形参名注入，
+    pytest 会把**自己的 ``Config`` 对象**塞进来，于是这个形参**遮蔽**
+    ``pdx.config`` 模块。因此本模块把包内配置导入为 ``pdx_config``。
+
+    这个坑在装了游戏的机器上**永远不会暴露**：函数在执行到 ``config.GAME``
+    之前就 ``if GAME_OK: return`` 了。只有在 CI / 新克隆这类没有游戏的环境里
+    才会炸成 ``INTERNALERROR: 'Config' object has no attribute 'GAME'`` ——
+    也就是说，**整套测试「换台机器就自动跳过集成用例」的设计全靠这一行**，
+    而它此前是坏的。``tools/tests/test_conftest.py`` 专门看守它。
     """
     if GAME_OK:
         return
-    skip = pytest.mark.skip(reason=f"游戏目录不可用：{config.GAME}")
+    skip = pytest.mark.skip(reason=f"游戏目录不可用：{pdx_config.GAME}")
     for item in items:
         if "integration" in item.keywords:
             item.add_marker(skip)
@@ -46,7 +54,7 @@ def pytest_collection_modifyitems(config, items):
 # ── 真实语料 ────────────────────────────────────────────────
 @pytest.fixture(scope="session")
 def corpus_files() -> list[Path]:
-    """游戏本体中所有需要深度解析的文件（约 4,400 个）。
+    """游戏本体中所有需要深度解析的文件（实测 **6,250** 个）。
 
     这是差分测试与模糊测试的**真实输入来源** —— 用真实语料而不是
     自造样本，才能覆盖官方脚本里那些古怪写法。
@@ -54,7 +62,7 @@ def corpus_files() -> list[Path]:
     if not GAME_OK:
         return []
     out: list[Path] = []
-    for root in (config.GAME, config.JOMINI, config.CLAUSEWITZ):
+    for root in (pdx_config.GAME, pdx_config.JOMINI, pdx_config.CLAUSEWITZ):
         if not root.is_dir():
             continue
         for f in walk_files(root):
@@ -62,7 +70,7 @@ def corpus_files() -> list[Path]:
                 rel = f.path.relative_to(root)
             except ValueError:
                 continue
-            if config.is_scriptable(rel.parts, f.suffix):
+            if pdx_config.is_scriptable(rel.parts, f.suffix):
                 out.append(f.path)
     return sorted(out)
 

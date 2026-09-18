@@ -48,7 +48,7 @@ from rich.table import Table
 from pdx import analyze, config, defines, engine_log, snapshot, verify
 from pdx.console import enable_utf8_stdio
 from pdx.extract import extract_dir
-from pdx.parser import TOLERATED_ERRORS
+from pdx.parser import TOLERATED_ERRORS, parse_file
 
 # 必须在构造 Console 之前调用 —— 理由见 pdx/console.py 的模块文档：
 # rich 替代不了编码兜底，GBK 重定向下它自己就会抛 UnicodeEncodeError。
@@ -425,15 +425,41 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
             f"| `{directory.name}` | {result.files} | {len(keys)} | {md or '—'} | {sample} |"
         )
 
+    # `common\` 根下散装的 .txt（实测只有 achievement_groups.txt 一个）。
+    # 它们不属于任何子目录，所以逐目录表覆盖不到 —— 但**必须收录**，
+    # 否则「全量键名索引」名不副实（那些键在正文里一处都查不到）。
+    # 同时把「子目录合计」与「全树合计」的差额写进文档，免得
+    # 「本索引 3,025 个文件」与「common 全树 3,026 个 .txt」被当成矛盾。
+    loose_files = sorted(common.glob("*.txt"))
+    loose_rows: list[str] = []
+    for path in loose_files:
+        keys = sorted(parse_file(path).top_keys)
+        total_entries += len(keys)
+        loose_rows.append(
+            f"| `{path.name}` | {len(keys)} | {', '.join(f'`{k}`' for k in keys) or '—'} |"
+        )
+    all_txt = total_files + len(loose_files)
+
     stats = {
         "目录数": len(dirs),
         "文件总数": total_files,
         "条目总数": total_entries,
     }
 
+    tail = ""
+    if loose_rows:
+        tail = (
+            f"\n## `common\\` 根下的散装文件（{len(loose_files)} 个）\n\n"
+            "这些 `.txt` 不在任何子目录里，上面的逐目录表覆盖不到，单独列出：\n\n"
+            "| 文件 | 顶层条目 | 顶层键 |\n|---|---:|---|\n" + "\n".join(loose_rows) + "\n"
+            "\n> 键名重复是**如实反映**，不是 bug：PDX 允许同级重复键，"
+            "而 `parse_file(...).top_keys` 如实返回全部出现。\n"
+        )
+
     head = f"""# 13 · common 全量键名索引
 
-> 对 `game\\common\\` 下**全部 {len(dirs)} 个子目录**做机械提取，共 **{total_entries:,} 个顶层条目**。
+> 对 `game\\common\\` 下**全部 {len(dirs)} 个子目录** + 根下 **{len(loose_files)} 个散装 `.txt`**
+> 做机械提取，共 **{total_entries:,} 个顶层条目**。
 > 本文回答「**什么东西定义在哪个目录**」。
 
 > 数据版本：Victoria 3 `{config.game_version().get("caligula_branch", "?")}`
@@ -453,6 +479,12 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
 @变量      不计入条目
 ```
 
+**逐目录统计 + 根下散装文件**：本索引按 `common\\` 的 {len(dirs)} 个子目录逐个提取，
+合计 **{total_files:,} 个文件**；`common\\` 根下另有 **{len(loose_files)} 个散装 `.txt`**
+（{", ".join(p.name for p in loose_files) or "无"}）不在任何子目录里，列在本文末尾。
+所以「本索引 {total_files:,} 个文件」与「`common` 全树 {all_txt:,} 个 `.txt`」
+差的就是这 {len(loose_files)} 个 —— 两者都对，只是口径不同，**不要为了对齐而互相改**。
+
 ## 勘误记录
 
 ### 勘误 1：早期版本漏计含连字符的键
@@ -469,7 +501,7 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
 
 ### 勘误 2：早期版本漏计文件首键（BOM）与缩进的顶层键
 
-`common` 下 3,026 个 `.txt` 中 **3,002 个带 UTF-8 BOM**，且部分文件的顶层键**带前导空格**。
+`common` 下 {all_txt:,} 个 `.txt` 中 **3,002 个带 UTF-8 BOM**，且部分文件的顶层键**带前导空格**。
 用「行首无缩进」判定顶层的做法会漏掉它们。实测 `static_modifiers` 因此少算 7 个：
 
 | 目录 | 修正前 | 修正后 |
@@ -489,7 +521,7 @@ def _build_index_doc() -> tuple[str, dict[str, int]]:
 | 目录 | .txt 文件 | 顶层条目 | 官方文档 | 条目示例（前 6 个） |
 |---|---:|---:|---|---|
 """
-    return head + "\n".join(rows) + "\n", stats
+    return head + "\n".join(rows) + "\n" + tail, stats
 
 
 @app.command("index")

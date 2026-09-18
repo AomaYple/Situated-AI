@@ -12,8 +12,8 @@
 
 | 子目录 | 文件数 | **顶层包装块** | 主要效果 |
 |---|---|---|---|
-| `countries` | 444 | `COUNTRIES` | `add_amendment`、`set_ruling_interest_groups`、`set_institution_investment_level`、`set_export_tariff_level`、`set_import_tariff_level`、`add_journal_entry`、`add_modifier`、`set_global_variable`、`set_variable` |
-| `population` | 373 | `POPULATION` | —（**未确认**具体效果，未采样到） |
+| `countries` | 444 | `COUNTRIES` | `add_amendment`、`set_ruling_interest_groups`、`set_institution_investment_level`、`set_export_tariff_level`、`set_import_tariff_level`、`add_journal_entry`、`add_modifier`、`set_global_variable`、`set_variable`、`create_diplomatic_pact` |
+| `population` | 373 | `POPULATION` | `effect_starting_pop_wealth_*`、`effect_starting_pop_literacy_*`（与 `countries` 同一套预置效果）【实测】 |
 | `characters` | 262 | `CHARACTERS` | `create_character`、`set_career_length`、`add_career_length`、`add_journal_entry`、`add_modifier`、`set_variable` |
 | `pops` | 17 | `POPS` | `create_pop` |
 | `buildings` | 16 | `BUILDINGS` | `create_building`、`add_ownership` |
@@ -121,7 +121,11 @@ COUNTRIES = {
 ```
 
 > **注意**：这里用的是 `effect_starting_*` 系列**预置效果**（引擎内置的成套初始化），
-> 而不是逐项写法律/科技。这大幅简化了国家定义。
+> 不必逐项写法律/科技。这大幅简化了国家定义 —— **但它并不排斥逐项效果**：
+> 444 个国家文件里有 **217 个（49%）**在预置效果之外还逐项写了
+> `add_amendment`(26)、`set_institution_investment_level`(60)、
+> `set_import_tariff_level`(66)、`set_export_tariff_level`(6)、
+> `set_ruling_interest_groups`(2)、`create_diplomatic_pact`(1)。【实测】
 
 可用效果（**【实测】** 提取到的效果名）：
 
@@ -184,7 +188,7 @@ POPS = {
 > 每个 POP 只写 `culture` + `size`，**职业（pop_type）由引擎按建筑就业自动推导**
 > —— 这与 `history\buildings` 定义的建筑数量联动。
 
-### 3.5 `buildings` —— 初始建筑（16 文件，按地区分，209 KB）
+### 3.5 `buildings` —— 初始建筑（16 文件，按地区分，合计 1,015 KiB；最大单文件 205 KiB）
 
 **【实测】** 结构最复杂的一个：
 
@@ -246,7 +250,7 @@ GOVERNMENT = {
 | `set_ruling_party` | 设为执政党 |
 | `add_momentum` | 增加动量（政党支持度趋势） |
 
-### 3.7 `military_formations` —— 初始军队编制（10 文件，97 KB）
+### 3.7 `military_formations` —— 初始军队编制（10 文件，`.txt` 合计 171 KiB；最大单文件 95 KiB）
 
 **【实测】** 定义具体的军团及其下属单位：
 
@@ -270,7 +274,7 @@ MILITARY_FORMATIONS = {
 
 | 字段 | 说明 |
 |---|---|
-| `type` | `army` / （海军类型**未确认**） |
+| `type` | `army`（204 处）/ `fleet`（53 处）—— **两种都实测存在**；海军条目的下级用 `ship = { type = ship_type:… count = … }`（89 处），陆军用 `combat_unit = { … }` |
 | `hq_region` | 所属战略区域（`sr:` 前缀） |
 | `name` | 部队名（可本地化） |
 | `combat_unit` | 下属单位块：`type` + `state_region`（驻扎州）+ `count` |
@@ -327,7 +331,7 @@ TREATIES = {
 | `binding_period` | 约束期（可为 `{ years = N }`） |
 | `articles_to_create` | 条款列表（`article = <条款键>`，对应 `common\treaty_articles\`） |
 
-> 注意：**条约名可以复用**（两个 Holy Alliance 条约同名 `treaty_name_holy_alliance`）。
+> 注意：**条约名可以复用**（**三个**条约同名 `treaty_name_holy_alliance`：RUS/AUS、PRU/AUS、PRU/RUS）。
 
 ### 3.10 `power_blocs` —— 权力集团
 
@@ -439,7 +443,7 @@ GLOBAL = {
 | `military_deployments` | `MILITARY_DEPLOYMENTS` | 初始军队部署 |
 | `production_methods` | `PRODUCTION_METHODS` | 生产方式初始状态 |
 | `trade` | `TRADE` | 初始贸易路线 |
-| `population` | `POPULATION` | 人口（与 `pops` 的区别**未确认**） |
+| `population` | `POPULATION` | 按国家给**初始人口属性**（`effect_starting_pop_wealth_*` / `_literacy_*`）；与 `pops` 的差别是「改属性 vs 造人口」【实测】 |
 
 ## 4. 在 mod 中改开局
 
@@ -460,7 +464,7 @@ BUILDINGS = {
 			region_state:SWE = {
 				create_building = {
 					building = "building_university"
-					activate_production_methods = { "pm_university_standard" }
+					activate_production_methods = { "pm_scholastic_education" "pm_religious_academia" }
 					add_ownership = {
 						country = { country = "c:SWE" levels = 1 }
 					}
@@ -470,6 +474,15 @@ BUILDINGS = {
 	}
 }
 ```
+
+> ⚠️ **生产方式名必须是真实存在的 PM**：`building_university` 的 PM 组是
+> `pmg_base_building_university` / `pmg_university_academia`，合法 PM 为
+> `pm_scholastic_education`、`pm_philosophy_department`、
+> `pm_analytical_philosophy_department`、`pm_religious_academia`、
+> `pm_secular_academia`。上面两个取自原版
+> （`common\history\buildings\00_west_europe.txt`）。
+> 【实测】**全 `game` 树搜 `university_standard` 零命中** —— 这类"看起来很像"
+> 的名字在 PDX 脚本里不会报错，只会静默失效。
 
 ### 4.3 实战示例：开局给所有国家加修正符
 

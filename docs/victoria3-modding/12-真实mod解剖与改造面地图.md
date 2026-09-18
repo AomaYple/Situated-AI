@@ -180,7 +180,7 @@ gfx\coat_of_arms\patterns\         →  44 个 pattern_*.dds / pattern_*.tga
 ```text
 .metadata\metadata.json      139 B      ← 元数据
 thumbnail.png                825,698 B  ← 启动器缩略图
-fonts\fonts.font             22,757 B   ← 字体注册表
+fonts\fonts.font             26,824 B   ← 字体注册表
 fonts\luoliti\luoliti.ttf    10,822,676 B ← 实际字体文件
 ```
 

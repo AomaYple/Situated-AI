@@ -24,6 +24,10 @@
 *.csv     text eol=lf
 
 # ── 二进制类型（禁止任何行尾转换）──────────────────────────
+#
+# 前瞻规则：当前仓库里**一个都没有**（168 个跟踪文件的扩展名只有
+# .md/.py/.yml/.yaml/.toml 与无扩展名）。留着是为了将来真把素材或
+# Excel 塞进来时不会被行尾转换破坏 —— 这类破坏一旦发生就不可逆。
 *.prof    binary
 *.pyisession binary
 *.png     binary
@@ -38,8 +42,9 @@
 *.pptx    binary
 
 # ── diff 策略 ──────────────────────────────────────────────
-# 游戏数据类 JSON 体积极大（最大的单份 54 MB），默认不展开
-tools/out/**               -diff
+# research/official-docs/ 是逐字镜像，diff 只会是整文件噪声，不展开。
+# 注意这里**没有** `tools/out/** -diff` —— 该目录在 .gitignore 里，
+# git 不跟踪它，规则永远不会命中（曾经有这条，属空转）。
 research/official-docs/**  -diff
 
 # ── GitHub 语言统计 ────────────────────────────────────────

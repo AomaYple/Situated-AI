@@ -692,8 +692,62 @@ CLAIMS: list[Claim] = [
         "mods_prefix_total",
         "",
         2737,
-        "六个前缀之和：REPLACE_OR_CREATE 1116 / INJECT 740 / TRY_INJECT 440 / "
-        "REPLACE 221 / TRY_REPLACE 174 / INJECT_OR_CREATE 46",
+        "六个前缀之和见下面 6 条分项断言（2716 之外的旧注释把 REPLACE 与 "
+        "TRY_REPLACE 写反过，已删掉那串手抄分项，改用断言本身表达）",
+    ),
+    # ── 六个前缀的**分项** ────────────────────────────────
+    # 为什么要有分项：此前只有总数进了断言表，于是 doc 02 §5.1 那张分项表
+    # 里的 1,115 / 737 / 439 长期过期（真值 1,116 / 740 / 440），
+    # 而总数断言照样全绿 —— 漂移检测只认「锚点 + 数字」，抓不到表格里的分项。
+    # 这 6 条同时把原先**注册了却无人引用**的 `prefix_in_mods` 检查用起来。
+    Claim(
+        "pfx.replace_or_create",
+        "02-Mod结构与加载.md",
+        "REPLACE_OR_CREATE 前缀在 mod 中使用 1116 次",
+        "prefix_in_mods",
+        "REPLACE_OR_CREATE",
+        1116,
+    ),
+    Claim(
+        "pfx.inject",
+        "02-Mod结构与加载.md",
+        "INJECT 前缀在 mod 中使用 740 次",
+        "prefix_in_mods",
+        "INJECT",
+        740,
+        "注意 `INJECT:` 与 `INJECT_OR_CREATE:` 是两个不同前缀，别用子串匹配",
+    ),
+    Claim(
+        "pfx.try_inject",
+        "02-Mod结构与加载.md",
+        "TRY_INJECT 前缀在 mod 中使用 440 次",
+        "prefix_in_mods",
+        "TRY_INJECT",
+        440,
+    ),
+    Claim(
+        "pfx.try_replace",
+        "02-Mod结构与加载.md",
+        "TRY_REPLACE 前缀在 mod 中使用 221 次",
+        "prefix_in_mods",
+        "TRY_REPLACE",
+        221,
+    ),
+    Claim(
+        "pfx.replace",
+        "02-Mod结构与加载.md",
+        "REPLACE 前缀在 mod 中使用 174 次",
+        "prefix_in_mods",
+        "REPLACE",
+        174,
+    ),
+    Claim(
+        "pfx.inject_or_create",
+        "02-Mod结构与加载.md",
+        "INJECT_OR_CREATE 前缀在 mod 中使用 46 次",
+        "prefix_in_mods",
+        "INJECT_OR_CREATE",
+        46,
     ),
 ]
 

@@ -16,7 +16,12 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
-.pip-tmp/
+
+# 静态检查工具的缓存。mypy 与 ruff 会各自在缓存目录里写一个 `.gitignore`
+# （内容为 `*`）把自己藏起来，所以不写这两条也不会被提交 —— 但那是工具的
+# 实现细节，不是本仓库的意图；工具换版本、或缓存目录被拷到别处时就会漏。
+/.mypy_cache/
+/.ruff_cache/
 
 # pytest 的 tmp_path 落在系统 Temp 下（见 pyproject.toml 的「不设 --basetemp」）。
 # 但 pytest 在系统 Temp 不可写时会把 basetemp 落到仓库根目录，名字形如
@@ -34,7 +39,12 @@ pytest-cache-files-*/
 .coverage.*
 
 # ── tools/ 的中间产物 ──────────────────────────────────────
-# 提取出的大型 JSON（全部产物合计约 109 MB），由 v3 analyze 重新生成
+# 提取出的大型 JSON（全部产物合计约 109 MB），由 v3 analyze 重新生成。
+#
+# ⚠️ **版本快照也在这一层下面**（`tools/out/snapshots/*.json`，单份约 41 MB），
+# 所以它**不随仓库分发** —— 新克隆的仓库里没有任何基线快照，
+# `v3 snapshot diff` 无从比起。快照的用途是「同一个工作副本跨版本比对」；
+# 要长期保留请自行拷到仓库外。详见 tools/README.md 的「输出产物」一节。
 /tools/out/
 
 # 性能剖析的原始数据（cProfile .prof 是二进制、pyinstrument session 是 JSON），
@@ -44,7 +54,7 @@ pytest-cache-files-*/
 
 
 # 注意：tools/reports/ **已入库**。
-# 它们是分析产物，但篇幅小（约 330 行）、且是「数量真值的单一来源」，
+# 它们是分析产物，但篇幅小（两份合计约 350 行）、且是「数量真值的单一来源」，
 # 入库才能让文档一致性测试在无游戏环境下也有据可查。
 
 
@@ -80,5 +90,7 @@ $RECYCLE.BIN/
 # 公开分发前请自行评估。
 #
 # 注意：*.log 被忽略，但游戏日志位于用户数据目录（本仓库之外），不受影响。
+#
+# 提交信息草稿（`git commit -F` 用的临时文件）。`.commitmsg*` 已覆盖
+# `.commitmsg` 本身与 `.commitmsg.txt` 这类变体，无需再列一条。
 .commitmsg*
-.commitmsg

@@ -13,7 +13,7 @@
 
 ## 2. 关键结论：不需要 `descriptor.mod`
 
-**【实测】** 对 `binaries\victoria3.exe`（92.6 MB）做字符串检索：
+**【实测】** 对 `binaries\victoria3.exe`（**97,292,920 字节 ≈ 92.79 MiB**）做字符串检索：
 
 | 字符串 | 结果 |
 |---|---|
@@ -29,7 +29,26 @@
 
 ## 3. `metadata.json` 完整字段
 
-**【实测】** 两个真实样本（格式完全一致）：
+**【实测】** 对**全部 23 个 mod** 的 `.metadata\metadata.json` 取顶层字段并集
+（不是只看两个样本 —— 早先只据两个样本写成「8 个字段」，漏了出现频率较低的两个）：
+
+| 字段 | 出现次数 | 类型 | 说明 |
+|---|---:|---|---|
+| `name` | 23 / 23 | string | mod 显示名（启动器中可见） |
+| `id` | 23 / 23 | string | mod 唯一标识，习惯用反向域名式命名（如 `kai.kuromi`） |
+| `version` | 23 / 23 | string | mod 自身版本 |
+| `supported_game_version` | 23 / 23 | string | 支持的游戏版本，**支持通配符**（实测样本用 `1.13.*`） |
+| `short_description` | 23 / 23 | string | 简介 |
+| `tags` | 23 / 23 | array | 标签 |
+| `relationships` | 23 / 23 | array | mod 间关系（如依赖） |
+| `game_custom_data` | 22 / 23 | object | 游戏自定义数据；唯一被用到的子键是 `multiplayer_synchronized`（bool），**多人同步标记** |
+| `picture` | 4 / 23 | string | 启动器里的封面文件名（实测取值 `thumbnail.png` / `thumbnail.jpg`，相对 mod 根） |
+| `game_id` | 2 / 23 | string | 目标游戏标识（实测取值均为 `victoria3`） |
+
+也就是说：**7 个字段是必需的**（前 7 行），其余 3 个可选 —— 23 个 mod 里有
+1 个连 `game_custom_data` 都没写（该 mod 的 `multiplayer_synchronized` 因此缺省）。
+
+下面是两个真实样本（字段取值的形态参考）。
 
 `Kuromi's AI`（`steamId 3227982912`）：
 
@@ -48,18 +67,7 @@
 }
 ```
 
-`牛奶汉化`（`steamId 2880069248`）字段名完全相同，但值为空串，说明**所有字段都允许留空**。
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `name` | string | mod 显示名（启动器中可见） |
-| `id` | string | mod 唯一标识，习惯用反向域名式命名（如 `kai.kuromi`） |
-| `version` | string | mod 自身版本 |
-| `supported_game_version` | string | 支持的游戏版本，**支持通配符**（实测样本用 `1.13.*`） |
-| `short_description` | string | 简介 |
-| `tags` | array | 标签 |
-| `relationships` | array | mod 间关系（如依赖） |
-| `game_custom_data.multiplayer_synchronized` | bool | 多人游戏同步标记 |
+`牛奶汉化`（`steamId 2880069248`）字段名完全相同，但**多个字段留空**：`id` / `version` / `supported_game_version` / `short_description` 是空串，`tags` / `relationships` 是空数组，`multiplayer_synchronized` 为 `true`，而 `name` 仍写着「牛奶汉化」。也就是说**只有 `name` 是实质必填的**，其余都允许留空。【实测】
 
 > `supported_game_version` 是给启动器做兼容性提示用的，**不会阻止加载**。
 
@@ -106,9 +114,9 @@ TRY_INJECT:law_concordat = { ... }         # 注入，目标不存在时不报�
 
 | 前缀 | 次数 | 语义（由行为推断） |
 |---|---:|---|
-| `REPLACE_OR_CREATE:` | **1,115** | 存在则整体替换，不存在则新建 |
-| `INJECT:` | **737** | 向已存在条目**注入/合并字段**（不整体替换） |
-| `TRY_INJECT:` | **439** | 同 `INJECT`，目标不存在时不报错 |
+| `REPLACE_OR_CREATE:` | **1,116** | 存在则整体替换，不存在则新建 |
+| `INJECT:` | **740** | 向已存在条目**注入/合并字段**（不整体替换） |
+| `TRY_INJECT:` | **440** | 同 `INJECT`，目标不存在时不报错 |
 | `TRY_REPLACE:` | **221** | 同 `REPLACE`，目标不存在时不报错 |
 | `REPLACE:` | **174** | 整体替换已存在条目 |
 | `INJECT_OR_CREATE:` | **46** | 存在则注入，不存在则新建 |
@@ -164,7 +172,7 @@ TRY_INJECT:law_concordat = { ... }         # 注入，目标不存在时不报�
 
 ### 5.1.2 原版本体完全不用它 —— 但引擎确实内置了它
 
-**【实测】** 对整个 `game\` 树（27,722 个文件）做同样扫描：
+**【实测】** 对整个 `game\` 树（27,725 个文件）做同样扫描：
 
 ```text
 原版 .txt 文件中命中总数 = 0
@@ -173,7 +181,7 @@ TRY_INJECT:law_concordat = { ... }         # 注入，目标不存在时不报�
 **原版一处都没用过这套前缀**，全部 2,700+ 次使用都来自第三方 mod。
 
 > ⚠️ **重要更正**：本文档早期版本据此推断「该机制缺乏自证，语义只能靠行为反推」。
-> 后续对 `binaries\victoria3.exe`（92.6 MB）做**二进制字符串检索**，
+> 后续对 `binaries\victoria3.exe`（97,292,920 字节）做**二进制字符串检索**，
 > 找到了**决定性证据** —— 六个前缀的关键字与对应的**内部枚举名**成组连续存在于可执行文件中：
 >
 > ```text
@@ -205,7 +213,7 @@ INJECT_OR_CREATE  →  REPLACE_OR_CREATE  →  TRY_INJECT
 | 限制 | 说明 | 来源 |
 |---|---|---|
 | **只能作用于文件顶层块** | 无法只往某个已有子块里加一条（例如不能只给某 PM 的 `building_modifiers` 追加一项） | 【推断】 |
-| **并非所有目录都支持** | 实测 `travel_network` 不支持；本机 42 个 `common\` 子目录出现过该用法 | 【实测】 |
+| **并非所有目录都支持** | **42 个** `common\` 子目录出现过该用法（见 §5.1.1）；**未在本机观察到反例** —— 早期版本曾写「实测 `travel_network` 不支持」，但 23 个 mod 里**没有任何一个**有 `common\travel_network\` 目录，该结论既无法复现也无法否证，故降级为「未确认」 | 【推断】 |
 
 
 ### 5.2 传统机制：同键名覆盖 / 整文件替换
@@ -249,7 +257,7 @@ some_modded_on_action = {
 | 多个 mod 对同一条目分别 `INJECT:` 的合并顺序 | **未确认** |
 
 
-**【实测】文件名层面的覆盖**：`Kuromi's AI` 直接提供了自己的 `common\ai_strategies\00_default_strategy.txt`（183,606 B），替换原版同名文件（191,574 B）。这说明**整文件替换**也是有效手段。
+**【实测】文件名层面的覆盖**：`Kuromi's AI` 直接提供了自己的 `common\ai_strategies\00_default_strategy.txt`（183,606 B），替换原版同名文件（1.14.3 为 **199,110 B**）。这说明**整文件替换**也是有效手段。
 
 ## 6. 加载顺序与启用状态
 

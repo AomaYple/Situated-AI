@@ -104,7 +104,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-423 条用例（`pytest --collect-only` 实测；420 通过 / 3 按条件跳过），
+425 条用例（`pytest --collect-only` 实测；422 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -120,6 +120,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
 | `test_cache.py` | 缓存透明性：`parse_cached` 必须恒等于 `parse_file` |
 | `test_coverage.py` | **覆盖面契约**：每个文件必须归入四类之一，落不进就失败 |
+| `test_conftest.py` | 「没有游戏就自动跳过集成用例」这条机制本身（子进程真跑一次收集） |
 | `test_data_dump.py` | 结构化转储：必须能取到**值**而不只是字段名 |
 | `test_defines.py` | defines 提取：参数形态、命名空间合并、覆盖预览 |
 | `test_docs_consistency.py` | 文档数字与断言表的一致性（防文档过期） |
@@ -147,13 +148,25 @@ tools/out/game/本地化.json        14.5 万个本地化键（约 6.3 MB）
 tools/out/game/表格数据.json      adjacencies.csv 等表格类数据
 tools/out/mods/mod.json          mod 全量数据（约 650 KB）
 tools/out/cross/交叉.json         两者的覆盖关系
-tools/out/snapshots/*.json       版本快照（升级时 diff 出字段增删）
 tools/reports/游戏本体分析.md      人可读报告
 tools/reports/mod分析.md          人可读报告
 ```
 
+上面 8 项由 `v3 analyze` **一次**产出（也就是黄金回归冻结的那 8 份）。
+
+另有**独立**的一条线：
+
+```
+tools/out/snapshots/*.json       版本快照，由 v3 snapshot create 生成（约 41 MB/份）
+```
+
 > 上面的 MB / KB 按 1024 进制。精确值由黄金回归（`tools/tests/test_golden.py`）
 > 冻结为逐产物的「字节数 + sha256」，改动一个字节就会失败。
+>
+> ⚠️ 快照同样落在 `/tools/out/` 之下，因此**不随仓库分发**：新克隆的仓库里
+> 一份快照都没有，`v3 snapshot diff` 无从比起。它的用途是「同一条工作副本
+> 跨版本比对」—— 游戏升级前先 `v3 snapshot create --label 1.14.3`，
+> 升级后再建一份、然后 diff。要长期留存请自行拷到仓库外。
 
 `tools/out/` 已 gitignore（随时可由 `v3 analyze` 重建）；
 `tools/reports/` **入库** —— 两份报告是研究成果的一部分，改动它们应当出现在 diff 里。
@@ -188,6 +201,12 @@ tools/reports/mod分析.md          人可读报告
 
 阶段序列与 `v3 analyze` 保持一致，因此剖析结果可以直接用来解释 `analyze` 的耗时。
 
+> ⚠️ **`full` / `stages` / `walkaudit` 会重跑整条分析流水线，覆盖已入库的
+> `tools/reports/*.md` 与 `tools/out/**`。** 它们不是只读命令：
+> 跑完 `git status` 会脏。产物应当逐字节相同（黄金回归冻结了 sha256），
+> 若真变了就说明有非确定性 bug —— 这反而是个有用的信号。
+> 只有 `prefixaudit` 是纯读的。
+
 ## 控制台编码
 
 中文 Windows 的控制台是 GBK 代码页，`print("✅")` 会抛 `UnicodeEncodeError`
@@ -219,6 +238,6 @@ tools/reports/mod分析.md          人可读报告
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：423 条用例 + 41 条断言核验
-（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 35 条），
+Python 版把上述问题都变成了**可测试的代码**：425 条用例 + 50 条断言核验
+（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 37 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
