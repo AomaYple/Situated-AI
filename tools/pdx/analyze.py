@@ -325,12 +325,12 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
     common_root = config.GAME / "common"
 
     # ── 一次遍历：只解析可脚本化的文件 ───────────────────
-    targets: list[tuple[str, FileEntry]] = []
-    for name, root in CONTENT_ROOTS.items():
-        if not root.is_dir():
-            continue
-        for f in _scriptable_files(root):
-            targets.append((name, f))
+    targets: list[tuple[str, FileEntry]] = [
+        (name, f)
+        for name, root in CONTENT_ROOTS.items()
+        if root.is_dir()
+        for f in _scriptable_files(root)
+    ]
     if verbose:
         print(f"  [游戏] 待解析的 mod 相关文件：{len(targets):,} 个")
 

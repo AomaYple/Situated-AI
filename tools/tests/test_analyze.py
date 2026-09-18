@@ -198,7 +198,7 @@ class TestCrossAnalysis:
         assert len(ca.dir_touched_by) > 0
 
     def test_changed_entries_have_mod_lists(self, ca):
-        for _top, entries in ca.changed_entries.items():
+        for entries in ca.changed_entries.values():
             for key, mods in entries.items():
                 assert isinstance(key, str)
                 assert len(mods) >= 1

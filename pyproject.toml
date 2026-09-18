@@ -219,6 +219,11 @@ select = [
     "ERA",  # eradicate：注释掉的代码
     "PL",   # pylint
     "RUF",  # ruff 自有规则
+    # 后加的两组：PERF 专门抓「手写但标准写法更快更清楚」的模式
+    # （实测本仓只有 2 处：一处手写 append 循环可用列表推导、
+    # 一处只取 values 却用了 items）；FURB 是现代化的进一步建议，实测 0 告警。
+    "PERF", # perflint
+    "FURB", # refurb
 ]
 ignore = [
     "PLR0913",  # 参数过多：dataclass 与 CLI 函数情有可原
