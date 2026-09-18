@@ -141,5 +141,95 @@ class TestCompare(unittest.TestCase):
         self.assertIn("+2", line)
 
 
+class TestCompactSnapshot(unittest.TestCase):
+    """精简快照：体积小到可入库，但必须仍能回答「字段增删」这个核心问题。"""
+
+    snap: snapshot.Snapshot
+
+    @classmethod
+    def setUpClass(cls):
+        if not (config.GAME / "common").is_dir():
+            raise unittest.SkipTest("游戏目录不可用")
+        cls.snap = snapshot.build(compact=True)
+
+    def test_用指纹域替代键清单(self):
+        """本地化只留「键数 + sha256」，不带 14 万条键名。"""
+        self.assertIn("localization_digest", self.snap.sections)
+        self.assertNotIn("localization", self.snap.sections)
+        digest = self.snap.sections["localization_digest"]
+        self.assertEqual(len(digest), 11)  # 11 种语言
+        for lang, entry in digest.items():
+            with self.subTest(lang=lang):
+                self.assertEqual(len(entry), 2)
+                self.assertTrue(entry[0].endswith("键"))
+                self.assertTrue(entry[1].startswith("sha256:"))
+
+    def test_结构域完整保留(self):
+        """「Paradox 增删了哪些字段」靠的是这几个域，一个都不能少。"""
+        for sec in ("common_entries", "fields", "defines", "dlc", "config"):
+            with self.subTest(section=sec):
+                self.assertIn(sec, self.snap.sections)
+        self.assertEqual(len(self.snap.sections["common_entries"]), 136)
+        self.assertGreater(len(self.snap.sections["fields"]), 20_000)
+
+    def test_与完整快照的结构域一致(self):
+        """精简只应影响本地化那一个域 —— 其余域必须逐字节等同。"""
+        full = snapshot.build()
+        for sec in ("common_entries", "fields", "defines", "dlc", "config"):
+            with self.subTest(section=sec):
+                self.assertEqual(self.snap.sections[sec], full.sections[sec])
+
+    def test_标记了精简位(self):
+        """`精简` 标记要落进文件 —— 否则 diff 时无法判断两边是否同口径。"""
+        self.assertTrue(self.snap.compact)
+        self.assertTrue(self.snap.to_dict()["精简"])
+        self.assertFalse(snapshot.build().to_dict()["精简"])
+
+    def test_往返保住精简标记(self):
+        """``load(write(x))`` 必须等价 —— 曾经 ``load`` 会丢掉这个标记。"""
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "s.json"
+            self.snap.write(p)
+            back = snapshot.Snapshot.load(p)
+        self.assertTrue(back.compact)
+        self.assertEqual(back.sections, self.snap.sections)
+
+    def test_同一个域可以自己跟自己比(self):
+        """形状与完整版相同，因此 compare 对它照常可用。"""
+        self.assertEqual(snapshot.compare(self.snap, self.snap), [])
+
+
+class TestCommittedCompactSnapshot(unittest.TestCase):
+    """入库的那份精简快照必须真的在、且能被读出来。
+
+    它是仓库里**唯一**随版本控制分发的基线 —— 别的地方删了它不会有任何
+    症状，直到某天有人想 diff 才发现「新克隆的仓库里一份基线都没有」。
+    这条不依赖游戏安装，所以在 CI 上也会跑。
+    """
+
+    def test_至少有一份精简快照入库(self):
+        tracked = sorted(snapshot.SNAPSHOT_DIR.glob("*.compact.json"))
+        self.assertTrue(
+            tracked,
+            "tools/out/snapshots/ 下没有 *.compact.json —— "
+            "跑 `v3 snapshot create --compact` 生成一份（它是入库的）",
+        )
+
+    def test_精简快照能被读出来且标记正确(self):
+        for path in sorted(snapshot.SNAPSHOT_DIR.glob("*.compact.json")):
+            with self.subTest(快照=path.name):
+                snap = snapshot.Snapshot.load(path)
+                self.assertTrue(snap.compact)
+                self.assertIn("localization_digest", snap.sections)
+                self.assertNotIn("localization", snap.sections)
+                self.assertTrue(snap.version.get("caligula_branch"))
+                # 结构域是它的全部价值所在，缺一个就白存了
+                for sec in ("common_entries", "fields", "defines", "dlc", "config"):
+                    self.assertIn(sec, snap.sections)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

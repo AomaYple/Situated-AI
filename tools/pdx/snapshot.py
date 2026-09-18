@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -169,11 +170,14 @@ def _checksum_and_paths() -> dict[str, list[str]]:
 class Snapshot:
     version: dict[str, str] = field(default_factory=dict)
     sections: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    #: 是否为**精简快照**（本地化只留计数与指纹，见 :func:`build`）。
+    compact: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "格式版本": FORMAT,
             "版本": self.version,
+            "精简": self.compact,
             "域": {k: dict(v) for k, v in sorted(self.sections.items())},
         }
 
@@ -187,7 +191,11 @@ class Snapshot:
     @classmethod
     def load(cls, path: Path) -> Snapshot:
         d = json.loads(path.read_text(encoding="utf-8"))
-        return cls(version=d.get("版本", {}), sections=d.get("域", {}))
+        return cls(
+            version=d.get("版本", {}),
+            sections=d.get("域", {}),
+            compact=bool(d.get("精简", False)),
+        )
 
     @property
     def version_label(self) -> str:
@@ -202,11 +210,35 @@ class Snapshot:
         }
 
 
-def build(*, verbose: bool = False) -> Snapshot:
-    """生成当前游戏版本的快照。"""
-    snap = Snapshot(version=config.game_version())
+def _localization_digest(root: Path) -> dict[str, list[str]]:
+    """精简快照用：每个语言的**键数 + 键名指纹**，不带 14 万条键名清单。
+
+    完整快照里 ``localization`` 一个域就占 30 MB（11 种语言 × 14.5 万键），
+    是整份快照 73% 的体积。而「Paradox 有没有改本地化键」这个问题，
+    用「键数 + sha256」就能回答；具体改了哪些键，回到本机那份完整快照去查。
+    """
+    out: dict[str, list[str]] = {}
+    for lang, keys in _localization_keys(root).items():
+        digest = hashlib.sha256("\n".join(keys).encode("utf-8")).hexdigest()
+        out[lang] = [f"{len(keys)} 键", f"sha256:{digest}"]
+    return out
+
+
+def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
+    """生成当前游戏版本的快照。
+
+    ``compact=True`` 产出**精简快照**：结构域（``common_entries`` / ``fields`` /
+    ``defines`` / ``dlc`` / ``config``）原样保留 —— 它们才是「Paradox 增删了
+    哪些字段与条目」的答案 —— 只把 ``localization`` 换成计数 + 指纹，
+    体积从 ~41 MB 降到 ~4.4 MB，**小到足以入库**。
+
+    两个模式**形状相同**（都是 ``域 -> 名称 -> 字符串列表``），因此
+    :func:`compare` 对两者都能用；但**不要拿精简版与完整版对 diff** ——
+    那会把整个 ``localization`` 域报成「全删 + 全增」。
+    """
+    snap = Snapshot(version=config.game_version(), compact=compact)
     if verbose:
-        print(f"  版本: {snap.version_label}")
+        print(f"  版本: {snap.version_label}  精简: {compact}")
 
     snap.sections["common_entries"] = _scriptable_names(config.GAME, "common")
     if verbose:
@@ -220,9 +252,16 @@ def build(*, verbose: bool = False) -> Snapshot:
     if verbose:
         print(f"  defines 命名空间: {len(snap.sections['defines'])}")
 
-    snap.sections["localization"] = _localization_keys(config.GAME)
-    if verbose:
-        print(f"  本地化语言: {len(snap.sections['localization'])}")
+    if compact:
+        snap.sections["localization_digest"] = _localization_digest(config.GAME)
+        if verbose:
+            print(
+                f"  本地化指纹: {len(snap.sections['localization_digest'])} 种语言（键清单已省略）"
+            )
+    else:
+        snap.sections["localization"] = _localization_keys(config.GAME)
+        if verbose:
+            print(f"  本地化语言: {len(snap.sections['localization'])}")
 
     snap.sections["dlc"] = _dlc_snapshot()
     snap.sections["config"] = _checksum_and_paths()

@@ -40,12 +40,22 @@ pytest-cache-files-*/
 
 # ── tools/ 的中间产物 ──────────────────────────────────────
 # 提取出的大型 JSON（全部产物合计约 109 MB），由 v3 analyze 重新生成。
+/tools/out/*
+
+# ⚠️ **版本快照分两种，只有精简版入库**：
 #
-# ⚠️ **版本快照也在这一层下面**（`tools/out/snapshots/*.json`，单份约 41 MB），
-# 所以它**不随仓库分发** —— 新克隆的仓库里没有任何基线快照，
-# `v3 snapshot diff` 无从比起。快照的用途是「同一个工作副本跨版本比对」；
-# 要长期保留请自行拷到仓库外。详见 tools/README.md 的「输出产物」一节。
-/tools/out/
+#   完整快照  tools/out/snapshots/<版本>.json          约 41 MB   ← 忽略
+#   精简快照  tools/out/snapshots/<版本>.compact.json  约 5 MB    ← **入库**
+#
+# 完整快照 73% 的体积是本地化键清单（11 种语言 × 14.5 万键），而「Paradox 增删了
+# 哪些字段与条目」只需要结构域 —— 精简版保留全部结构域，只把本地化换成
+# 「键数 + sha256」。这样跨版本 diff 在**别人的机器上**也能做。
+#
+# 下面三行是「只放行精简快照」的写法：git 不会进入被忽略的目录，
+# 所以必须先把目录本身放开，再逐层排除。
+!/tools/out/snapshots/
+/tools/out/snapshots/*
+!/tools/out/snapshots/*.compact.json
 
 # 性能剖析的原始数据（cProfile .prof 是二进制、pyinstrument session 是 JSON），
 # 体积大且与机器相关。报告的结论请写进文档，原始数据不入库。

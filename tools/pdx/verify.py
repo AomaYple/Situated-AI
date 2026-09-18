@@ -23,6 +23,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from . import config
@@ -190,12 +191,22 @@ def _vanilla_prefix_total(_target: str) -> int:
     ``_CHECKS``，但**没有任何 claim 引用它**，于是 ``run_verify``
     长期报「37/37 全绿」，而这条结论实际上无人看守。
     """
-    return sum(vanilla_prefix_count().values())
+    return sum(_vanilla_counter().values())
 
 
 def _prefix_in_vanilla(target: str) -> int:
-    """某个功能前缀在原版中的使用次数（实测应为 0）。"""
-    return vanilla_prefix_count().get(target, 0)
+    """某个功能前缀在原版中的使用次数（实测应为 0）。
+
+    ``vanilla_prefix_count()`` 要扫全棵 ``game/`` 树，而下面登记了 6 条
+    分项断言 —— 不缓存的话就是 6 遍全树扫描。这里按「整份 counter」缓存一次。
+    """
+    return _vanilla_counter().get(target, 0)
+
+
+@lru_cache(maxsize=1)
+def _vanilla_counter() -> Counter:
+    """原版前缀计数的**单次**结果，供 ``vanilla_prefix_total`` 与 6 条分项共享。"""
+    return Counter(vanilla_prefix_count())
 
 
 def _mods_total(_target: str) -> int:
@@ -605,7 +616,7 @@ CLAIMS: list[Claim] = [
         "defines_param_total",
         "",
         3488,
-        "标量 3313 + 内联列表 172 + 嵌套块 3。1.14.2 时为 3434；"
+        "标量 3313 + 内联列表 175 + 嵌套块 0。1.14.2 时为 3434；"
         "1.14.3 给 NMilitary +1、NDiplomacy +39，§2.1/§2.2 两张表已按 1.14.3 重算",
     ),
     Claim(
@@ -644,6 +655,125 @@ CLAIMS: list[Claim] = [
         264,
         "doc 04 早期记 263（其中 00_code_on_actions.txt 记 218，实为 219）。"
         "漏掉的是 on_diplo_play_overlord_protects_subject，位于该文件第 4321 行、缩进 0",
+    ),
+    # ── defines 各文件的顶层块数（doc 05 §2.1）────────────
+    # 这 6 条用 `file_top_keys` 检查类型 —— 它早就注册好了却无人引用。
+    # 钉的是 doc 05 §2.1「文件总览」表的「顶层块数」列，那一列此前
+    # 完全没有看守，整张表因此落后了一个游戏版本（见 def.param_total）。
+    Claim(
+        "def.file_ai",
+        "05-defines与修饰符.md",
+        "00_ai.txt 有 1 个顶层块",
+        "file_top_keys",
+        "common/defines/00_ai.txt",
+        1,
+    ),
+    Claim(
+        "def.file_audio",
+        "05-defines与修饰符.md",
+        "00_audio.txt 有 1 个顶层块",
+        "file_top_keys",
+        "common/defines/00_audio.txt",
+        1,
+    ),
+    Claim(
+        "def.file_defines",
+        "05-defines与修饰符.md",
+        "00_defines.txt 有 41 个顶层键",
+        "file_top_keys",
+        "common/defines/00_defines.txt",
+        41,
+        "= 19 个命名空间块 + 22 个 `@变量`。本断言数的是**文件顶层键**（含 @变量），"
+        "doc 05 §2.1 那一列写的是「顶层块数 19」；两个数都对，口径不同。"
+        "命名空间块总数见 def.blocks（75）",
+    ),
+    Claim(
+        "def.file_graphics",
+        "05-defines与修饰符.md",
+        "00_graphics.txt 有 19 个顶层块",
+        "file_top_keys",
+        "common/defines/00_graphics.txt",
+        19,
+    ),
+    Claim(
+        "def.file_interfaces",
+        "05-defines与修饰符.md",
+        "00_interfaces.txt 有 27 个顶层块",
+        "file_top_keys",
+        "common/defines/00_interfaces.txt",
+        27,
+        "27 个块里有 24 个叫 NGUI（同名重复块），如实保留",
+    ),
+    Claim(
+        "def.file_shaders",
+        "05-defines与修饰符.md",
+        "00_shaders.txt 有 5 个顶层块",
+        "file_top_keys",
+        "common/defines/00_shaders.txt",
+        5,
+        "该文件第 1-2 行是 `NShadersCommon =` 与 `{` 分行，解析器必须能处理",
+    ),
+    # ── common 子目录数的**独立口径交叉验证** ──────────────
+    Claim(
+        "env.common_dirs_direct",
+        "08-目录全量清单.md",
+        "直接枚举 common 得到 136 个子目录",
+        "common_dir_count",
+        "",
+        136,
+        "与 env.common_dirs 是**两条独立实现**：那条走 extract_dir 的扫描口径，"
+        "这条直接 iterdir。两者必须给出同一个数，否则说明扫描把某个目录吞了",
+    ),
+    # ── 六个前缀在**原版**的用量：逐个为 0（doc 02 §5.1.2）──
+    # 此前只有总和为 0 被看守；分项为 0 才是 doc 02 那张表的完整主张。
+    Claim(
+        "pfx.vanilla_inject",
+        "02-Mod结构与加载.md",
+        "原版零使用 INJECT 前缀",
+        "prefix_in_vanilla",
+        "INJECT",
+        0,
+        "6 条分项共享一次全树扫描（_vanilla_counter 有 lru_cache）",
+    ),
+    Claim(
+        "pfx.vanilla_replace",
+        "02-Mod结构与加载.md",
+        "原版零使用 REPLACE 前缀",
+        "prefix_in_vanilla",
+        "REPLACE",
+        0,
+    ),
+    Claim(
+        "pfx.vanilla_replace_or_create",
+        "02-Mod结构与加载.md",
+        "原版零使用 REPLACE_OR_CREATE 前缀",
+        "prefix_in_vanilla",
+        "REPLACE_OR_CREATE",
+        0,
+    ),
+    Claim(
+        "pfx.vanilla_try_replace",
+        "02-Mod结构与加载.md",
+        "原版零使用 TRY_REPLACE 前缀",
+        "prefix_in_vanilla",
+        "TRY_REPLACE",
+        0,
+    ),
+    Claim(
+        "pfx.vanilla_try_inject",
+        "02-Mod结构与加载.md",
+        "原版零使用 TRY_INJECT 前缀",
+        "prefix_in_vanilla",
+        "TRY_INJECT",
+        0,
+    ),
+    Claim(
+        "pfx.vanilla_inject_or_create",
+        "02-Mod结构与加载.md",
+        "原版零使用 INJECT_OR_CREATE 前缀",
+        "prefix_in_vanilla",
+        "INJECT_OR_CREATE",
+        0,
     ),
     # ── history（doc 18）───────────────────────────────
     Claim(
@@ -901,6 +1031,8 @@ def find_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
     for claim in CLAIMS:
         if not isinstance(claim.expected, int) or not claim.expected:
             continue
+        if claim.id in TEXT_SCAN_EXEMPT:
+            continue
         # 出处文档 + **索引页**。
         #
         # 索引页（docs/README.md）此前不在扫描范围内，于是它成了盲区：
@@ -949,6 +1081,29 @@ _ALWAYS_SCANNED: tuple[str, ...] = ("README.md",)
 
 #: ATX 标题：``## 3. `NAI` 命名空间块``。
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
+
+
+#: **不参与「文档正文数字漂移」扫描**的断言。
+#:
+#: 与「抽不出锚点」是**两个不同的原因**，所以分开列：
+#:
+#: 这里的每一条**都有锚点**，但锚点是从文件名碎片里抽出来的
+#: （``txt`` / ``shaders`` / ``graphics``），这些词在 doc 05 里满篇都是，
+#: 而期望值又很小（1、5、19），容差 ±2 会命中几十上百处无关数字 ——
+#: 实测一次就报了 222 处，把真信号彻底淹没。
+#:
+#: 它们的证据在**由工具生成的表格**里而不是散文里，因此看守交给
+#: ``tools/tests/test_defines_tables.py``：那个测试直接比对
+#: 「文档现值 vs `pdx.defines.doc_table_rows()` 的输出」，比文本扫描强得多
+#: （文本扫描只能发现「某个数字不对」，那个测试能发现**哪一行**不对）。
+TEXT_SCAN_EXEMPT: dict[str, str] = {
+    "def.file_ai": "锚点退化成 'txt'，doc 05 里到处是；由 test_defines_tables.py 看守",
+    "def.file_audio": "同上",
+    "def.file_defines": "同上",
+    "def.file_graphics": "锚点 'graphics' 在 doc 05 里出现几十次，期望值 19 → 误报 16 处",
+    "def.file_interfaces": "同上",
+    "def.file_shaders": "锚点 'shaders' 在 doc 05 里出现上百次，期望值 5 → 误报 89 处",
+}
 
 
 def _section_context(lines: list[str]) -> list[str]:

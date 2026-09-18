@@ -79,6 +79,18 @@ class Namespace:
     def count(self) -> int:
         return len(self.params)
 
+    @property
+    def counts(self) -> dict[str, int]:
+        """按形态分组的参数计数（``{标量: n, 内联列表: n, 嵌套块: n}``）。
+
+        doc 05 的 §2.1/§2.2/§2.5/§2.6 四张表都要这三项，
+        口径统一由 :func:`_classify` 决定，不在这里重算。
+        """
+        out = {SCALAR: 0, INLINE_LIST: 0, NESTED_BLOCK: 0}
+        for p in self.params:
+            out[p.kind] = out.get(p.kind, 0) + 1
+        return out
+
     def to_dict(self) -> dict[str, object]:
         d: dict[str, object] = {
             "命名空间": self.name,
@@ -233,3 +245,158 @@ def overlay(vanilla: DefinesReport, mod_text: str) -> dict[str, object]:
             }
         )
     return {"命名空间数": len(result), "明细": result}
+
+
+# ── doc 05 的表格：由本模块生成，而不是手抄 ──────────────────
+#: doc 05 里**由本模块生成**的 5 张表。键是表头首行（用于定位），值是该表的数据行。
+#:
+#: 为什么要有这个：这 5 张表原先由一批已退休的 PowerShell 脚本产出，之后再没人
+#: 重跑过 —— 于是它们整整落后了一个游戏版本（1.14.3 给 NMilitary +1、
+#: NDiplomacy +39 个参数，总数 3434 应当变 3488，而文档里一直写着 3434）。
+#: 现在口径只有一处（:func:`_classify`），表格可以随时重算。
+DOC_TABLES: tuple[str, ...] = (
+    "| Namespace | Blocks | Params | File(s) |",
+    "| 文件（相对 `common\\defines\\`） | 顶层块数 | 标量参数 | 内联列表 | 嵌套块 | 条目合计 |",
+    "| File | Namespace block | Line | Scalar | Inline list | Nested | Total |",
+    "| # | 命名空间 | 块起始行 | 该命名空间的块数 | 参数合计 |",
+    "| 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |",
+)
+
+
+def _kind_counts(block: Block) -> tuple[int, int, int]:
+    """块内的 ``(标量, 内联列表, 嵌套块)`` 计数，口径见 :func:`_classify`。"""
+    scal = inline = nested = 0
+    for p in _classify(block):
+        if p.kind == SCALAR:
+            scal += 1
+        elif p.kind == INLINE_LIST:
+            inline += 1
+        else:
+            nested += 1
+    return scal, inline, nested
+
+
+def doc_table_rows() -> dict[str, list[str]]:
+    """生成 doc 05 五张表的**数据行**（含合计行），键为表头首行。
+
+    与 :data:`DOC_TABLES` 一一对应；找不到某个表时由调用方报错，
+    不静默跳过 —— 静默跳过正是这类生成器腐烂的方式。
+    """
+    report = extract_defines()
+    by_file: dict[str, list[Namespace]] = {}
+    for ns in report.namespaces:
+        by_file.setdefault(ns.file, []).append(ns)
+
+    rows: dict[str, list[str]] = {h: [] for h in DOC_TABLES}
+
+    # §1.6 —— 按命名空间名聚合（同名多块累加）
+    agg: dict[str, list[Namespace]] = {}
+    for ns in report.namespaces:
+        agg.setdefault(ns.name, []).append(ns)
+    for name in sorted(agg):
+        group = agg[name]
+        params = sum(ns.count for ns in group)
+        files = ", ".join(sorted({ns.file for ns in group}))
+        rows[DOC_TABLES[0]].append(f"| `{name}` | {len(group)} | {params} | {files} |")
+
+    # §2.1 —— 逐文件
+    tb = ts = ti = tn = 0
+    for rel in sorted(by_file):
+        b = len(by_file[rel])
+        s = i = n = 0
+        for ns in by_file[rel]:
+            s += ns.counts[SCALAR]
+            i += ns.counts[INLINE_LIST]
+            n += ns.counts[NESTED_BLOCK]
+        tb += b
+        ts += s
+        ti += i
+        tn += n
+        rows[DOC_TABLES[1]].append(f"| `{rel}` | {b} | {s} | {i} | {n} | **{s + i + n}** |")
+    rows[DOC_TABLES[1]].append(
+        f"| **合计** | **{tb}** | **{ts}** | **{ti}** | **{tn}** | **{ts + ti + tn}** |"
+    )
+
+    # §2.2 —— 逐块
+    for ns in report.namespaces:
+        s = ns.counts[SCALAR]
+        i = ns.counts[INLINE_LIST]
+        n = ns.counts[NESTED_BLOCK]
+        rows[DOC_TABLES[2]].append(
+            f"| `{ns.file}` | `{ns.name}` | {ns.line} | {s} | {i} | {n} | {s + i + n} |"
+        )
+
+    # §2.5 / §2.6 —— 单文件的两张表
+    for header, rel in ((DOC_TABLES[3], "00_defines.txt"), (DOC_TABLES[4], "00_graphics.txt")):
+        groups: dict[str, list[Namespace]] = {}
+        for ns in by_file.get(rel, []):
+            groups.setdefault(ns.name, []).append(ns)
+        total_blocks = total_params = 0
+        for idx, (name, group) in enumerate(groups.items(), start=1):
+            line_list = ", ".join(str(ns.line) for ns in group)
+            counts = [ns.count for ns in group]
+            total_blocks += len(group)
+            total_params += sum(counts)
+            if header == DOC_TABLES[3]:
+                if len(group) == 1:
+                    rows[header].append(f"| {idx} | `{name}` | {line_list} | 1 | {counts[0]} |")
+                else:
+                    plus = " + ".join(str(p) for p in counts)
+                    rows[header].append(
+                        f"| {idx} | `{name}` | {line_list} | **{len(group)}** | "
+                        f"{plus} = {sum(counts)} |"
+                    )
+            else:
+                s = i = n = 0
+                for ns in group:
+                    s += ns.counts[SCALAR]
+                    i += ns.counts[INLINE_LIST]
+                    n += ns.counts[NESTED_BLOCK]
+                rows[header].append(f"| `{name}` | {line_list} | {s} | {i} | {n} | {s + i + n} |")
+        if header == DOC_TABLES[3]:
+            rows[header].append(f"| | **合计** | | **{total_blocks} 块** | **{total_params}** |")
+        else:
+            s = i = n = 0
+            for ns in by_file.get(rel, []):
+                s += ns.counts[SCALAR]
+                i += ns.counts[INLINE_LIST]
+                n += ns.counts[NESTED_BLOCK]
+            rows[header].append(f"| | | **{s}** | **{i}** | **{n}** | **{s + i + n}** |")
+
+    return rows
+
+
+def patch_doc_tables(doc: Path | None = None, *, write: bool = False) -> dict[str, int]:
+    """把 doc 05 的 5 张表重算并（可选）写回。
+
+    返回 ``{表头: 替换的行数}``。**只动数据行** —— 表头、分隔线、说明文字
+    一律不碰，所以文档里那些解释口径的散文不会被生成器覆盖掉。
+
+    行数不匹配时**直接报错而不写盘**：那说明文档的表结构被人改过
+    （加了一列、或多了一张同表头的表），此时宁可失败也不要写坏它。
+    """
+    doc = doc or (config.DOCS / "05-defines与修饰符.md")
+    rows = doc_table_rows()
+    lines = doc.read_text(encoding="utf-8").splitlines(keepends=True)
+
+    replaced: dict[str, int] = {}
+    for header in DOC_TABLES:
+        start = next((n for n, ln in enumerate(lines) if ln.startswith(header)), None)
+        if start is None:
+            raise LookupError(f"doc 05 里找不到表头：{header}")
+        n = start + 2  # 跳过表头与 `|---|` 分隔线
+        used = 0
+        want = rows[header]
+        while n < len(lines) and lines[n].lstrip().startswith("|"):
+            if used >= len(want):
+                raise ValueError(f"{header} 的表格行比生成的多，文档结构可能已变")
+            lines[n] = want[used] + "\n"
+            used += 1
+            n += 1
+        if used != len(want):
+            raise ValueError(f"{header} 的表格行 {used} != 生成 {len(want)}")
+        replaced[header] = used
+
+    if write:
+        doc.write_text("".join(lines), encoding="utf-8", newline="\n")
+    return replaced

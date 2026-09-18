@@ -65,11 +65,19 @@
 | 术语 | 定义 |
 |---|---|
 | **顶层命名空间块** | 文件中花括号深度 0→1、形如 `Nxxx = { ... }` 的块 |
-| **标量参数** | 块内深度 1 的 `KEY = value`，值在同一行结束（如 `BASE_AGGRESSION = 10`） |
-| **内联列表参数** | 块内深度 1 的 `KEY = { a b c }`，同一行闭合（如 `HIGHLIGHT_COLOR = { 1 1 1 0.5 }`） |
-| **嵌套块** | 块内深度 1 的 `KEY = {`，跨多行（如 `TOOLTIP_TINT_RGBA = {` 换行后跟若干行） |
+| **标量参数** | 块内深度 1 的 `KEY = value`，值是标量（含 `KEY =` 空值） |
+| **内联列表参数** | 块内深度 1 的 `KEY = { a b c }`，**块内只有裸值、没有任何 `KEY = value`** |
+| **嵌套块** | 块内深度 1 的 `KEY = { ... }`，**块内含有 `KEY = value` 赋值** |
 
 「参数」在无特别说明时 = 标量 + 内联列表 + 嵌套块三者之和。
+
+> **口径补记（1.14.3 重算时修正）**：内联列表与嵌套块的界线是**块里有没有赋值**，
+> 而**不是**「是否写在同一行」。早先按行数区分，于是把跨行书写的
+> `KEY = { a b c }`（值仍是纯列表）记成了嵌套块 —— 那是排版差异，不是语义差异；
+> `jomini/00_tooltips.txt` 的 `NTooltip` 正是这种写法。
+> 现在这条界线由 `pdx.defines._classify` 单点决定，且下面 5 张表全部由
+> **`v3 defines --tables --write`** 生成，不再手抄（它们此前因为无人重跑，
+> 整整落后了一个游戏版本）。
 
 > **关于表格表头语言**：本文正文为中文，但**由脚本机械生成的表头保持英文**（如 `Namespace block`、`Leading prefix`、`File`、`Entries`）——因为这些表是脚本直接落盘的，改成中文会引入手写环节、破坏"机械提取"的可追溯性。表内数据（命名空间名、参数名、文件名、计数）与语言无关，不影响使用。
 
@@ -82,7 +90,7 @@
 | `common\defines\` 下 `.txt` 文件数 | **9**（根目录 6 + `jomini\` 子目录 3） | 【提取】递归枚举 `common\defines\` |
 | 顶层命名空间块总数 | **75** | 【提取】§2.2 |
 | 去重后命名空间数 | **50** | 【提取】§1.6 |
-| 参数条目总数 | **3488**（标量 3313 + 内联列表 172 + 嵌套块 3） | 【提取】§2.1 汇总 |
+| 参数条目总数 | **3488**（标量 3313 + 内联列表 175 + 嵌套块 0） | 【提取】§2.1 汇总 |
 | 去重后参数名数 | **3481**（有 7 次跨块重复出现） | 【提取】 |
 
 > **解析器口径提示**：`00_shaders.txt` 第 1-2 行是 PDX 的另一种写法——`NShadersCommon =` 与 `{` 分行。全库 9 个 defines 文件中**只有这一处**采用该写法（脚本已逐文件校验：其余文件均无"行尾为 `=`"的情况）。本文的解析器已处理该情形，行号一律为**物理行号**。
@@ -439,13 +447,13 @@ NCountry = {
 | `00_ai.txt` | 1 | 1017 | 0 | 0 | **1017** |
 | `00_audio.txt` | 1 | 23 | 0 | 0 | **23** |
 | `00_defines.txt` | 19 | 1674 | 5 | 0 | **1679** |
-| `00_graphics.txt` | 19 | 369 | 121 | 2 | **492** |
+| `00_graphics.txt` | 19 | 369 | 123 | 0 | **492** |
 | `00_interfaces.txt` | 27 | 161 | 40 | 0 | **201** |
 | `00_shaders.txt` | 5 | 35 | 5 | 0 | **40** |
-| `jomini/00_tooltips.txt` | 1 | 6 | 0 | 1 | **7** |
+| `jomini/00_tooltips.txt` | 1 | 6 | 1 | 0 | **7** |
 | `jomini/fog_of_war.txt` | 1 | 22 | 1 | 0 | **23** |
 | `jomini/rivers.txt` | 1 | 6 | 0 | 0 | **6** |
-| **合计** | **75** | **3313** | **172** | **3** | **3488** |
+| **合计** | **75** | **3313** | **175** | **0** | **3488** |
 
 【提取】
 
@@ -477,7 +485,7 @@ NCountry = {
 | `00_defines.txt` | `NText` | 2233 | 6 | 0 | 0 | 6 |
 | `00_defines.txt` | `NDebug` | 2243 | 3 | 0 | 0 | 3 |
 | `00_graphics.txt` | `NMapMode` | 1 | 38 | 59 | 0 | 97 |
-| `00_graphics.txt` | `NMapName` | 157 | 7 | 0 | 1 | 8 |
+| `00_graphics.txt` | `NMapName` | 157 | 7 | 1 | 0 | 8 |
 | `00_graphics.txt` | `NJominiMapGraphics` | 187 | 11 | 0 | 0 | 11 |
 | `00_graphics.txt` | `NJominiGraphics` | 202 | 3 | 0 | 0 | 3 |
 | `00_graphics.txt` | `NJominiEars` | 208 | 2 | 0 | 0 | 2 |
@@ -487,7 +495,7 @@ NCountry = {
 | `00_graphics.txt` | `NCities` | 450 | 25 | 3 | 0 | 28 |
 | `00_graphics.txt` | `NFortifications` | 496 | 5 | 0 | 0 | 5 |
 | `00_graphics.txt` | `NCoasts` | 504 | 6 | 0 | 0 | 6 |
-| `00_graphics.txt` | `NRoutes` | 513 | 6 | 2 | 1 | 9 |
+| `00_graphics.txt` | `NRoutes` | 513 | 6 | 3 | 0 | 9 |
 | `00_graphics.txt` | `NPortrait` | 531 | 5 | 0 | 0 | 5 |
 | `00_graphics.txt` | `NProvinceHighlight` | 539 | 4 | 0 | 0 | 4 |
 | `00_graphics.txt` | `NTravelNetwork` | 548 | 9 | 0 | 0 | 9 |
@@ -527,7 +535,7 @@ NCountry = {
 | `00_shaders.txt` | `NMapmodeStripes` | 20 | 6 | 0 | 0 | 6 |
 | `00_shaders.txt` | `NEdgeOfWorld` | 29 | 14 | 5 | 0 | 19 |
 | `00_shaders.txt` | `NGuiFlag` | 56 | 3 | 0 | 0 | 3 |
-| `jomini/00_tooltips.txt` | `NTooltip` | 2 | 6 | 0 | 1 | 7 |
+| `jomini/00_tooltips.txt` | `NTooltip` | 2 | 6 | 1 | 0 | 7 |
 | `jomini/fog_of_war.txt` | `NFogOfWar` | 1 | 22 | 1 | 0 | 23 |
 | `jomini/rivers.txt` | `NRivers` | 2 | 6 | 0 | 0 | 6 |
 
@@ -583,12 +591,12 @@ NCountry = {
 
 ### 2.6 `00_graphics.txt`
 
-19 个块，492 个条目（其中 121 条是 `KEY = { r g b a }` 形式的内联颜色列表，2 条是跨行嵌套块）。
+19 个块，492 个条目（其中 123 条是 `KEY = { r g b a }` 形式的纯值列表；**0 条嵌套块** —— defines 层是完全扁平的，这也是它与其他 `common\` 数据目录最大的结构差别）。
 
 | 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |
 |---|---|---|---|---|---|
 | `NMapMode` | 1 | 38 | 59 | 0 | 97 |
-| `NMapName` | 157 | 7 | 0 | 1 | 8 |
+| `NMapName` | 157 | 7 | 1 | 0 | 8 |
 | `NJominiMapGraphics` | 187 | 11 | 0 | 0 | 11 |
 | `NJominiGraphics` | 202 | 3 | 0 | 0 | 3 |
 | `NJominiEars` | 208 | 2 | 0 | 0 | 2 |
@@ -598,7 +606,7 @@ NCountry = {
 | `NCities` | 450 | 25 | 3 | 0 | 28 |
 | `NFortifications` | 496 | 5 | 0 | 0 | 5 |
 | `NCoasts` | 504 | 6 | 0 | 0 | 6 |
-| `NRoutes` | 513 | 6 | 2 | 1 | 9 |
+| `NRoutes` | 513 | 6 | 3 | 0 | 9 |
 | `NPortrait` | 531 | 5 | 0 | 0 | 5 |
 | `NProvinceHighlight` | 539 | 4 | 0 | 0 | 4 |
 | `NTravelNetwork` | 548 | 9 | 0 | 0 | 9 |
@@ -606,7 +614,7 @@ NCountry = {
 | `NPowerBlocStatueCamera` | 591 | 7 | 0 | 0 | 7 |
 | `NNavy` | 601 | 96 | 2 | 0 | 98 |
 | `NShipViewer` | 716 | 16 | 6 | 0 | 22 |
-| | | **369** | **121** | **2** | **492** |
+| | | **369** | **123** | **0** | **492** |
 
 【提取】注意 `NCamera` 与 Jomini 层的 `NCamera` 合并（§1.7 证据 1）；`NNavy` 是本文件第二大块。
 

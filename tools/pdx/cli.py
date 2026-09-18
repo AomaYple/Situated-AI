@@ -292,14 +292,43 @@ def defines_cmd(
         Path | None,
         typer.Option("--overlay", help="预览该 mod defines 文件会覆盖哪些原版参数"),
     ] = None,
+    tables: Annotated[
+        bool,
+        typer.Option("--tables", help="重算 doc 05 的 5 张统计表（默认只核对，不写）"),
+    ] = False,
+    write: Annotated[
+        bool,
+        typer.Option("--write", help="与 --tables 同用：把重算结果写回文档"),
+    ] = False,
 ) -> None:
     """提取 defines 的命名空间与参数（游戏层 + Jomini 层）。
 
     默认只打摘要。--ns NAI 展开某个命名空间（即旧脚本的 --ai）；
-    --overlay 预览一段 mod defines 的覆盖与新增范围；--json 落盘完整结构。
+    --overlay 预览一段 mod defines 的覆盖与新增范围；--json 落盘完整结构；
+    --tables 重算 docs/victoria3-modding/05-defines与修饰符.md 里那 5 张
+    由本工具生成的表（不加 --write 则只报告各表有多少行会变）。
     命名空间不存在时退出码为 2 —— 旧脚本返回 1，与「检查未通过」撞车。
     """
     _require_game()
+
+    if tables:
+        try:
+            replaced = defines.patch_doc_tables(write=write)
+        except (LookupError, ValueError, OSError) as exc:
+            _fail(f"重算 doc 05 的表格失败：{type(exc).__name__}: {exc}")
+        t = Table(title="doc 05 表格重算", show_lines=False)
+        t.add_column("表头")
+        t.add_column("数据行", justify="right", style="cyan")
+        for header, n in replaced.items():
+            t.add_row(escape(header[:56]), str(n))
+        console.print(t)
+        console.print(
+            f"[green]已写回[/] {escape(_relative(config.DOCS / '05-defines与修饰符.md'))}"
+            if write
+            else "[yellow]未加 --write：只核对，未改文档[/]"
+        )
+        return
+
     reports = defines.extract_all_defines()
     game = reports["game"]
 
@@ -577,17 +606,32 @@ def _load_snapshot(path: Path) -> snapshot.Snapshot:
 @snapshot_app.command("create")
 def snap_create(
     label: Annotated[str | None, typer.Option("--label", help="快照名（默认为游戏版本号）")] = None,
+    compact: Annotated[
+        bool,
+        typer.Option("--compact", help="精简模式：本地化只留计数与指纹，体积约 1/9，可入库"),
+    ] = False,
 ) -> None:
-    """生成当前版本快照，写入 tools/out/snapshots/。"""
+    """生成当前版本快照，写入 tools/out/snapshots/。
+
+    默认是**完整快照**（约 41 MB，本地用，不入库）。
+    ``--compact`` 产出**精简快照**（约 4.4 MB）：结构域原样保留，
+    只把 ``localization`` 的 14 万条键名换成「键数 + sha256」——
+    小到可以随仓库分发，让「升级前后 diff 出字段增删」在别的机器上也能做。
+    """
     _require_game()
-    snap = snapshot.build(verbose=True)
+    snap = snapshot.build(compact=compact, verbose=True)
     target = label or snap.version_label.replace("/", "-")
+    if compact:
+        target = f"{target}.compact"
     path = snapshot.snapshot_path(target)
     snap.write(path)
 
     counts = snap.counts()
     console.print(f"[green]已写入[/] {escape(_relative(path))}")
-    console.print(f"域 {len(snap.sections)} 个，条目总计 {sum(counts.values()):,}")
+    console.print(
+        f"域 {len(snap.sections)} 个，条目总计 {sum(counts.values()):,}，"
+        f"字节 {path.stat().st_size:,}"
+    )
 
     table = Table(show_lines=False)
     table.add_column("域")

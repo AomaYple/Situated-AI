@@ -115,6 +115,8 @@ _NO_ANCHOR_CLAIMS: dict[str, str] = {
     "def.param_total": "同上，'defines' 太通用；它写在 §0.4 的纯中文表格里"
     "（`| 参数条目总数 | **3488** |`），没有可定位的英文标识符",
     "def.param_names": "同上，'defines' 太通用",
+    "env.common_dirs_direct": "描述里只有 'common'，全库出现上千次；"
+    "它由 v3 verify 实测核验，且与 env.common_dirs 互为**独立口径**的交叉验证",
     "env.md_total": "锚点只能是 '.md'，长度不足且到处出现",
     "docs.total_bytes": "doc 07 的总字节数写在一张纯中文表格里（`| 总字节数 | **232,980** |`），"
     "没有任何可定位的英文标识符；它由 v3 verify 实测核验，"
@@ -134,6 +136,24 @@ def test_抽不出锚点的断言集合没有扩大() -> None:
     )
     stale = sorted(set(_NO_ANCHOR_CLAIMS) - unable)
     assert not stale, f"以下断言现在已能抽出锚点，请从 _NO_ANCHOR_CLAIMS 移除：{stale}"
+
+
+def test_主动豁免清单都是真存在的断言() -> None:
+    """``verify.TEXT_SCAN_EXEMPT`` 不能指向已删除或改名的断言。
+
+    这是「有锚点、但锚点退化」的那一类：锚点是从文件名碎片
+    （`txt` / `shaders` / `graphics`）里抽出来的，配上很小的期望值，
+    扫描会命中几十上百处无关数字 —— 实测一次报了 222 处，
+    把真信号彻底淹没。它们由 `test_defines_tables.py` 直接比对
+    生成器输出看守，比文本扫描强得多。
+
+    豁免必须写明理由，且必须真的还在断言表里 —— 否则清单会腐烂成空头名单。
+    """
+    ids = {c.id for c in verify.CLAIMS}
+    missing = sorted(set(verify.TEXT_SCAN_EXEMPT) - ids)
+    assert not missing, f"TEXT_SCAN_EXEMPT 指向不存在的断言：{missing}"
+    for cid, reason in verify.TEXT_SCAN_EXEMPT.items():
+        assert reason.strip(), f"{cid} 的豁免没写理由"
 
 
 def test_漂移检测覆盖了足够多的断言() -> None:

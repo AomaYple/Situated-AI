@@ -58,9 +58,9 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | 子命令 | 取代 | 作用 |
 |---|---|---|
 | `v3 analyze` | `run_analyze.py` | 全量分析并落盘：`--no-mods` `--no-cross` `--no-write` `--quiet` `--profile` |
-| `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` |
+| `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` `--tables [--write]` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
-| `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--detail` / `--json PATH` |
+| `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
 | `v3 verify` | `run_verify.py` | 核对文档里的数量断言：`--fast` `--json PATH` `--only ID` |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
 | `v3 check-outputs` | `check_outputs.py` | 核验**已落盘产物**是否与断言注册表一致 |
@@ -104,7 +104,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-425 条用例（`pytest --collect-only` 实测；422 通过 / 3 按条件跳过），
+439 条用例（`pytest --collect-only` 实测；436 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -114,7 +114,8 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_scan.py` | 递归计数、后缀过滤、真实游戏树的结构断言 |
 | `test_extract.py` | 字段只收第一层、前缀归类、跨文件合并、已知条目数 |
 | `test_analyze.py` / `test_golden.py` | 产物结构与指纹回归（产物被改坏要立刻失败） |
-| `test_snapshot.py` / `test_verify.py` | 快照确定性与断言注册表口径 |
+| `test_snapshot.py` / `test_verify.py` | 快照确定性、精简快照的结构等价性、断言注册表口径 |
+| `test_defines_tables.py` | doc 05 那 5 张统计表的**生成链**：表头还在、生成是幂等的、文档现值 == 生成结果 |
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
 | `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
@@ -157,16 +158,22 @@ tools/reports/mod分析.md          人可读报告
 另有**独立**的一条线：
 
 ```
-tools/out/snapshots/*.json       版本快照，由 v3 snapshot create 生成（约 41 MB/份）
+tools/out/snapshots/<版本>.compact.json   精简快照，约 5 MB（**入库**，跨机器可 diff）
+tools/out/snapshots/<版本>.json           完整快照，约 41 MB（gitignore，本机深挖用）
 ```
 
 > 上面的 MB / KB 按 1024 进制。精确值由黄金回归（`tools/tests/test_golden.py`）
 > 冻结为逐产物的「字节数 + sha256」，改动一个字节就会失败。
 >
-> ⚠️ 快照同样落在 `/tools/out/` 之下，因此**不随仓库分发**：新克隆的仓库里
-> 一份快照都没有，`v3 snapshot diff` 无从比起。它的用途是「同一条工作副本
-> 跨版本比对」—— 游戏升级前先 `v3 snapshot create --label 1.14.3`，
-> 升级后再建一份、然后 diff。要长期留存请自行拷到仓库外。
+> ⚠️ **快照分两种，只有精简版入库**：完整快照 73% 的体积是本地化键清单
+> （11 种语言 × 14.5 万键），而「Paradox 增删了哪些字段与条目」只需要结构域。
+> 精简版保留 `common_entries` / `fields` / `defines` / `dlc` / `config` 五个域，
+> 只把 `localization` 换成「键数 + sha256」，因此 **5 MB 就能随仓库分发**，
+> 让 `v3 snapshot diff` 在别人的克隆里也能跑。
+> 想知道**具体**改了哪些本地化键，才需要那份 41 MB 的完整快照。
+>
+> 两者**形状相同**，`compare` 对谁都能用；但**别拿精简版与完整版对 diff** ——
+> 那会把整个本地化域报成「全删 + 全增」。文件里有 `精简` 标记，可据此判断。
 
 `tools/out/` 已 gitignore（随时可由 `v3 analyze` 重建）；
 `tools/reports/` **入库** —— 两份报告是研究成果的一部分，改动它们应当出现在 diff 里。
@@ -238,6 +245,6 @@ tools/out/snapshots/*.json       版本快照，由 v3 snapshot create 生成（
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：425 条用例 + 50 条断言核验
-（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 37 条），
+Python 版把上述问题都变成了**可测试的代码**：439 条用例 + 63 条断言核验
+（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 44 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
