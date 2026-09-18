@@ -43,6 +43,10 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `analyze.py` | 全量分析（游戏本体 / mod / 交叉，**分开存储**） |
 | `snapshot.py` | 版本快照与两份快照的 diff |
 | `verify.py` | 断言注册表，把文档里的数字变成可执行检查；产物核验与文档漂移扫描 |
+| `doc_tables.py` | **通用**的「文档里由工具生成的 markdown 表」机制：整表替换 / 按键合并 / 同表头多张 |
+| `docgen.py` | 生成表的**唯一登记处**：跑哪些文档、哪些表、怎么核对与写回 |
+| `game_root.py` | 游戏根级文件、`paths.settings` 路径映射、校验和目标；产出 doc 19 的生成表 |
+| `docs_mirror.py` | 官方 `.md` 的**清单与指纹**（原文不入库，见下「官方文档清单」） |
 | `localization.py` | 本地化专用提取（`.yml` 是行式格式，**不是** PDX 花括号语法） |
 | `tabular.py` | 表格类数据（`.csv`），分隔符靠 `csv.Sniffer` 嗅探 |
 | `engine_log.py` | 从游戏日志抽外部真值：枚举清单、脚本位置、token 位置 |
@@ -66,6 +70,8 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
 | `v3 check-outputs` | `check_outputs.py` | 核验**已落盘产物**是否与断言注册表一致 |
 | `v3 show` | `show_outputs.py` | 转储产物的结构与规模 |
+| `v3 mirror check` | （新增） | 官方 `.md` 清单 vs 本机本体 / 本地镜像，**只读**，有差异退出码 1 |
+| `v3 mirror write` | （新增） | 重生成清单（要游戏）；`--sync` 顺便把原文拷到本机 `research/official-docs/` |
 
 ```text
 .venv\Scripts\v3.exe analyze                     # 全量分析，落盘报告
@@ -74,6 +80,8 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe verify --fast               # 只跑不需要全库扫描的断言
 .venv\Scripts\v3.exe verify --from-snapshot      # 不读游戏，用入库快照核验（CI 用）
 .venv\Scripts\v3.exe verify --unregistered       # 列出文档里尚未登记的数量断言
+.venv\Scripts\v3.exe mirror check                # 官方 .md 清单 vs 本体/本地镜像（只读）
+.venv\Scripts\v3.exe mirror write --sync         # 重生成清单并把原文拷到本机（不入库）
 .venv\Scripts\v3.exe tables                      # 核对生成表（不一致即退出 1）
 .venv\Scripts\v3.exe tables --write              # 按生成结果修正文档里的表
 .venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
@@ -89,8 +97,8 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | 码 | 含义 |
 |---:|---|
 | 0 | 成功 |
-| 1 | 检查未通过（`verify` / `check-outputs` / `snapshot verify`） |
-| 2 | 用法错误，或前置条件缺失（游戏目录、产物、快照文件不存在） |
+| 1 | 检查未通过（`verify` / `check-outputs` / `snapshot verify` / `tables` / `mirror check`） |
+| 2 | 用法错误，或前置条件缺失（游戏目录、产物、快照文件、清单不存在；`mirror check` 两条比对都没跑成） |
 
 约定：**不存在「吞掉异常然后返回 0」的路径**。需要容错时只捕
 `pdx.parser.TOLERATED_ERRORS` 这类精确异常集合，并且必须把失败原因打出来。
@@ -109,7 +117,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-471 条用例（`pytest --collect-only` 实测；468 通过 / 3 按条件跳过），
+484 条用例（`pytest --collect-only` 实测；481 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -131,7 +139,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_data_dump.py` | 结构化转储：必须能取到**值**而不只是字段名 |
 | `test_defines.py` | defines 提取：参数形态、命名空间合并、覆盖预览 |
 | `test_docs_consistency.py` | 文档数字与断言表的一致性（防文档过期） |
-| `test_docs_mirror.py` | `research/official-docs/` 的时效性：篇目集合、**逐字节 sha256**、无多余文件 |
+| `test_docs_mirror.py` | 官方 `.md` 清单的时效性：篇目集合、**逐篇 sha256**、镜像无多余文件；以及「跑不了的比对不该弄脏退出码」这条门禁语义 |
 | `test_localization.py` | `.yml` 本地化：语言覆盖、键去重、BOM 处理 |
 | `test_engine_crosscheck.py` | 用游戏日志当**外部真值**核对解析 |
 
@@ -183,6 +191,36 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 
 `tools/out/` 已 gitignore（随时可由 `v3 analyze` 重建）；
 `tools/reports/` **入库** —— 两份报告是研究成果的一部分，改动它们应当出现在 diff 里。
+
+## 官方文档清单
+
+`research/official-docs.manifest.json`（约 17 KB，**入库**）记着游戏自带 **92 篇**官方 `.md` 的
+路径 / 字节数 / 行数 / sha256，外加生成时的游戏版本。原文本身**不入库**。
+
+**为什么原文不入库**：那 230 KB 是 Paradox 的版权内容，而本仓库是 Apache-2.0 公开仓库。
+镜像本来只有两条用途，其中真正被用的是第一条：
+
+| 用途 | 现在由谁承载 |
+|---|---|
+| 检测「Paradox 改了官方文档」 | **清单**（文件名、字节数、sha256 都是事实，不是创作内容） |
+| 让没有游戏的人也能读原文 | 知识库正文本身（重点已转述，并标注了原文缺陷） |
+
+**换掉镜像反而更强**：以前只有「镜像 vs 本体」一条路，只有手里有镜像才能查；
+现在拿入库的清单比对本机本体即可，**任意克隆都能查**（`v3 mirror check`）。
+
+> **为什么需要它**：真实踩过一次 —— `treaty_articles.md` 的镜像停在 1.14.2
+> （25,364 B / 604 行），而 1.14.3 本体已增至 28,171 B / 648 行（新增
+> `scope:other_country`、`requirement_to_maintain` 等规则）。**照旧镜像写条约 mod 会漏掉这些规则**，
+> 而当时没有任何断言会响。`test_docs_mirror.py` 现在守着这条。
+
+> ⚠️ **诚实说明**：`git rm --cached` 只能把原文从**当前树**移除，那 92 篇仍在仓库历史里。
+> 要彻底清除需重写历史（`git filter-repo`），属单独决定，本次没做 —— 所以 README 的「授权」
+> 一节保留了这条说明，而不是假装版权问题已经解决。
+
+`v3 mirror check` 的两条比对**各自独立跳过**：没有游戏就跳过「清单 vs 本体」，
+没有本地镜像就跳过「清单 vs 镜像」。**跳过不算失败**（旧实现里跳过只是不打印，
+那 92 条「删除」照样进了退出码判断，于是没装游戏的机器上这个门禁永远是红的）；
+但两条都跑不成时退出码 2 —— 免得空过。
 
 ## 解析器的五条铁律
 
@@ -249,6 +287,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 某个键存不存在、被引用几次 | 本地化键存在性与语言覆盖；AI 策略字段的引用点 |
 | 某个目录有哪些条目 | 136 个目录的顶层键名全索引 |
 | **两个版本之间，Paradox 增删了什么** | `v3 snapshot diff`（结构域逐项比对） |
+| **官方 `.md` 有没有被 Paradox 改过** | `v3 mirror check`（清单 vs 本机本体，逐篇 sha256） |
 
 **不能**回答 —— 信息不在文件里，不是功能没做：
 
@@ -273,7 +312,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：471 条用例 + 63 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：484 条用例 + 63 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 44 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

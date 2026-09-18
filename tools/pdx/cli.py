@@ -32,6 +32,7 @@ subparsers 的脚本、2 个裸脚本（``show_outputs.py`` 连 ``main()`` 都�
 from __future__ import annotations
 
 import json
+import shutil
 import time
 
 # Path 必须能**在运行期**导入：typer 用 ``inspect.signature(eval_str=True)``
@@ -45,7 +46,17 @@ from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
-from pdx import analyze, config, defines, doc_tables, docgen, engine_log, snapshot, verify
+from pdx import (
+    analyze,
+    config,
+    defines,
+    doc_tables,
+    docgen,
+    docs_mirror,
+    engine_log,
+    snapshot,
+    verify,
+)
 from pdx.console import enable_utf8_stdio
 from pdx.extract import extract_dir
 from pdx.parser import TOLERATED_ERRORS, parse_file
@@ -764,6 +775,93 @@ def snap_verify() -> None:
     for change in snapshot.compare(first, second)[:20]:
         console.print(escape(change.line()))
     raise typer.Exit(EXIT_FAILED)
+
+
+# ── mirror（官方文档清单与本地镜像）──────────────────────────
+mirror_app = typer.Typer(help="官方 .md 的清单与本地镜像。", no_args_is_help=True)
+app.add_typer(mirror_app, name="mirror")
+
+
+@mirror_app.command("check")
+def mirror_check() -> None:
+    """核对清单：与本机游戏比对，并与本地镜像比对。
+
+    **不修改任何文件**。有差异时退出码 1 —— 因此能当门禁。
+
+    没有游戏（或没有本地镜像）时对应的那条**跳过而非判失败**：
+    一条跑不了的检查不该把退出码弄脏，否则这个门禁在任何 CI 上都是红的。
+    两条都跑不了才算「什么都没查成」，此时也退出 1 —— 免得空过。
+    """
+    if not docs_mirror.load_manifest():
+        _fail(f"读不到 {docs_mirror.MANIFEST_NAME} —— 先跑 `v3 mirror write`")
+
+    checked = 0
+    bad: list[str] = []
+
+    if (config.GAME / "common").is_dir():
+        checked += 1
+        against_game = docs_mirror.diff_against_game()
+        if against_game:
+            console.rule("[red]清单与本机游戏不一致[/]")
+            bad.extend(against_game)
+        else:
+            console.print("[green]清单与本机游戏完全一致[/]")
+    else:
+        console.print("[yellow]游戏目录不可用：跳过「清单 vs 本体」[/]")
+
+    if config.OFFICIAL_DOCS_MIRROR.is_dir():
+        checked += 1
+        against_mirror = docs_mirror.diff_mirror()
+        if against_mirror:
+            console.rule("[red]本地镜像与清单不一致[/]")
+            bad.extend(against_mirror)
+        else:
+            console.print("[green]本地镜像与清单完全一致[/]")
+    else:
+        console.print("[yellow]本地镜像不存在：跳过「清单 vs 镜像」[/]")
+
+    for line in bad[:20]:
+        console.print(f"[red]❌[/] {escape(line)}")
+    if len(bad) > 20:
+        console.print(f"[red]…还有 {len(bad) - 20} 条[/]")
+
+    if bad:
+        raise typer.Exit(EXIT_FAILED)
+    if not checked:
+        _fail("既没有游戏也没有本地镜像 —— 两条比对都没跑成")
+
+
+@mirror_app.command("write")
+def mirror_write(
+    sync: Annotated[bool, typer.Option("--sync", help="顺便把本地镜像从游戏重拷一份")] = False,
+) -> None:
+    """重新生成清单（要游戏）；``--sync`` 同时重建本地镜像。
+
+    清单入库（约 17 KB），镜像不入库（Paradox 版权内容）。
+    见 :mod:`pdx.docs_mirror` 的模块文档 —— 那里也写明了
+    「移出版本控制 ≠ 从历史里清除」这个限制。
+    """
+    _require_game()
+    path = docs_mirror.write_manifest()
+    data = docs_mirror.load_manifest()
+    console.print(
+        f"[green]已写入[/] {escape(_relative(path))}  "
+        f"{data.get('篇数')} 篇，{path.stat().st_size:,} 字节"
+    )
+
+    if sync:
+        root = config.OFFICIAL_DOCS_MIRROR
+        copied = 0
+        for key, src in docs_mirror.iter_docs():
+            dst = root / key
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, dst)
+            copied += 1
+        console.print(f"[green]已同步本地镜像[/] {copied} 篇 → {escape(_relative(root))}")
+
+    console.print(
+        "[dim]清单里的字节/行数变了的话，记得同步 07-官方文档索引.md（v3 verify 会核对）[/]"
+    )
 
 
 # ── tables（文档里由工具生成的表格）──────────────────────────

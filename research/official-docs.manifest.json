@@ -1,0 +1,473 @@
+{
+ "文档": {
+  "game/common/acceptance_statuses/readme.md": {
+   "sha256": "8ee55a273bdabefc7e4c5337adb685d00b9e9f4d51477377e778b1030e54e07f",
+   "字节": 3957,
+   "行数": 112
+  },
+  "game/common/ai_strategic_region_stance_types/ai_strategic_region_stance_types.md": {
+   "sha256": "fda74acba8a7f0f06ad356475654bac48adbb570ada9f8429d2d0ac093f9db7a",
+   "字节": 268,
+   "行数": 8
+  },
+  "game/common/amendments/amendments.md": {
+   "sha256": "fb8c4c7574ae97aa9378e6bc112d12a1bb1656b2363f49d6e03c5e65aa19d9e8",
+   "字节": 1977,
+   "行数": 57
+  },
+  "game/common/battle_conditions/battle_condition.md": {
+   "sha256": "414dd67f51dec0c025cf962d7637aa57467b3aec69ccb6f8c25b60512f19e773",
+   "字节": 2944,
+   "行数": 66
+  },
+  "game/common/buildings/buildings.md": {
+   "sha256": "505a51262ae1b118a6d30f305b8ab4169e78666eadffd996a7d2524d614b9097",
+   "字节": 6967,
+   "行数": 99
+  },
+  "game/common/character_roles/character_roles.md": {
+   "sha256": "f36a7ee6e02e455ca386e95b190627d8b288566b831fc839e4e62ecbb67fe354",
+   "字节": 3134,
+   "行数": 41
+  },
+  "game/common/character_traits/character_traits.md": {
+   "sha256": "b69e6e4370ff0e0f206b31d3a3733bed7f20292f7170492026ce191c0eba1cbc",
+   "字节": 1919,
+   "行数": 42
+  },
+  "game/common/commander_orders/orders.md": {
+   "sha256": "1a8f26c530016c66c3239c932ba3d0d8e1fb1c2d043208240fd012ae30850b9e",
+   "字节": 2091,
+   "行数": 57
+  },
+  "game/common/company_charter_types/company_charter_types.md": {
+   "sha256": "91e2fdffd4acf7baaa2613d04fad63e1e9e02bf0390bea9b7a22c65e2817bd99",
+   "字节": 528,
+   "行数": 12
+  },
+  "game/common/company_types/companies.md": {
+   "sha256": "bd126517ea752994b6062ff3e93b1df323a3f625043d013071eb05f1868b200c",
+   "字节": 2673,
+   "行数": 67
+  },
+  "game/common/diplomatic_actions/diplomatic_action.md": {
+   "sha256": "9f146dd9e108d9753747efb1bf0671a18e19e728f6916a1fcd58c4d0b76fb69c",
+   "字节": 10779,
+   "行数": 146
+  },
+  "game/common/diplomatic_catalyst_categories/diplomatic_catalyst_categories.md": {
+   "sha256": "78e600a747975c37305d112f10d17af640679770f5f52a2efd28bac236286449",
+   "字节": 703,
+   "行数": 17
+  },
+  "game/common/diplomatic_catalysts/diplomatic_catalysts.md": {
+   "sha256": "6308072304e55cb3f31e2adb3c9b2e7e490e05d26619943bc16baaf66512d832",
+   "字节": 2630,
+   "行数": 49
+  },
+  "game/common/diplomatic_plays/diplomatic_plays.md": {
+   "sha256": "0c534621315b5490404993cdf5932a2d29901d53d01b63af11bf7a7fea1ec336",
+   "字节": 1097,
+   "行数": 37
+  },
+  "game/common/discrimination_trait_groups/discrimination_trait_groups.md": {
+   "sha256": "5412c94f8bef2c99a3249c9389d7f6f861d62ffc13674a6d82a89a0692c615ac",
+   "字节": 318,
+   "行数": 16
+  },
+  "game/common/discrimination_traits/discrimination_traits.md": {
+   "sha256": "5261879fe113cf204a8b62326983ce7e072db52c3e7d9e49238e3f4b3d3e2c78",
+   "字节": 642,
+   "行数": 23
+  },
+  "game/common/dna_data/dna_data.md": {
+   "sha256": "2d4890af65bdf266ae0d912156bb9ea3e3ac3802156eb2d961d19bab212c2a8e",
+   "字节": 351,
+   "行数": 11
+  },
+  "game/common/dynamic_country_names/dynamic_country_names.md": {
+   "sha256": "73f8ba749623388a9092edbfaed1e2a8a996d5f323e076c26c72f43753892a29",
+   "字节": 570,
+   "行数": 13
+  },
+  "game/common/dynamic_treaty_names/readme.md": {
+   "sha256": "932465d94f43b0eb30b7783851c2051a9b9cdeb771774b9f39a720af7b7bbf64",
+   "字节": 1596,
+   "行数": 43
+  },
+  "game/common/game_rules/game_rules.md": {
+   "sha256": "6ac072f024f138f1ade0c8efb9632cb66b658717bbca48389ca5b34734262aa1",
+   "字节": 1972,
+   "行数": 26
+  },
+  "game/common/genes/genes.md": {
+   "sha256": "e25ed6de18c7c8005e0423929248acd0aae2575f0872293e4cd3da0bbe72d3e6",
+   "字节": 1019,
+   "行数": 21
+  },
+  "game/common/geographic_regions/geographic_regions.md": {
+   "sha256": "5cf41f03bf2928d8610b64b71d1e166117d5b977c39a87bf9cce7c1dafa23297",
+   "字节": 547,
+   "行数": 14
+  },
+  "game/common/goods/goods.md": {
+   "sha256": "08e04c52b4d6bf3b10dd5cae087a28fe6a24066ced4289d42c4fcb5c77ad847d",
+   "字节": 2053,
+   "行数": 21
+  },
+  "game/common/harvest_condition_types/harvest_condition_types.md": {
+   "sha256": "122d64aecbb70d29aa86c27efff9fab0d549e1d0ab559c91c65b9506a977e8fe",
+   "字节": 1559,
+   "行数": 58
+  },
+  "game/common/history/military_formations/military_formations.md": {
+   "sha256": "3bcaf77a663842ce7acdd2e826b32b7bd6b92650b2d7999e8ef9642c0c0e5c35",
+   "字节": 477,
+   "行数": 5
+  },
+  "game/common/institutions/institutions.md": {
+   "sha256": "46af14929737c90f3003f613c1427ae7c861189ae1c866208dceba7a44e2a12b",
+   "字节": 406,
+   "行数": 5
+  },
+  "game/common/interest_tier_types/interest_tier_types.md": {
+   "sha256": "0708011d8c65c949ba2acb1d26a3cd7c7c3d0b4a929bffb927fd759f4916d558",
+   "字节": 3136,
+   "行数": 72
+  },
+  "game/common/journal_entries/journal_entries.md": {
+   "sha256": "1032c0dac08d502d49380e05929912fa94ba3a3a6f2a6279b480d58ea7272323",
+   "字节": 17123,
+   "行数": 444
+  },
+  "game/common/laws/readme.md": {
+   "sha256": "2e172974c75e5a544777f0a21099019043ca0164d499927786e10572b8956a0c",
+   "字节": 1497,
+   "行数": 34
+  },
+  "game/common/military_formation_flags/formation_flags.md": {
+   "sha256": "3183ea1dd0299a124140b1200cb22e1ac14fbf611b3efcedff4fa9d63b4fdda8",
+   "字节": 163,
+   "行数": 4
+  },
+  "game/common/mobilization_option_groups/mobilization_option_groups.md": {
+   "sha256": "cd6d259efd4e019c8b87a9a21afb066b7174217ed307538c8bd4ef372d33bc86",
+   "字节": 215,
+   "行数": 7
+  },
+  "game/common/mobilization_options/mobilization_options.md": {
+   "sha256": "5a424f091e616aa1afd688cc2f4e7da8aa8c5a86a35e0ea7ed5a880f6d2e540c",
+   "字节": 2709,
+   "行数": 98
+  },
+  "game/common/modifier_type_definitions/modifier_types.md": {
+   "sha256": "debebe9643218d5204f9315f696f141c8aae0acd5e8182bccdbab38db0fcc873",
+   "字节": 2216,
+   "行数": 27
+  },
+  "game/common/naval_battle_conditions/naval_battle_conditions.md": {
+   "sha256": "baea32e9776737ffae4252ce540cc350fe4eaf08307b0d010b01590493d7b450",
+   "字节": 1250,
+   "行数": 49
+  },
+  "game/common/naval_mission_types/naval_mission_types.md": {
+   "sha256": "6cad564241af3999580e254faa2e5140e5078fe2e9a7dac4ee69d0aa61c6e127",
+   "字节": 1848,
+   "行数": 37
+  },
+  "game/common/objective_subgoal_categories/categories.md": {
+   "sha256": "1a2086a490a56267972b5529f2d1eea3082bf773f13724e159906e088e84a65a",
+   "字节": 263,
+   "行数": 4
+  },
+  "game/common/objective_subgoals/subgoals.md": {
+   "sha256": "6844a30e2e1144e012c3ff017006de0a0fd272bd44d044e9091fda8b7233e1ee",
+   "字节": 1341,
+   "行数": 17
+  },
+  "game/common/objectives/objectives.md": {
+   "sha256": "8cd9974ca6db72b095eed56e0232809a739160446fca1b9f2e25a3fe5a473d47",
+   "字节": 329,
+   "行数": 9
+  },
+  "game/common/on_actions/_on_actions.md": {
+   "sha256": "c50e80fc29d126f3ec83733b3f0ece4a645265cc478098df68f3681a9b0730bc",
+   "字节": 5067,
+   "行数": 128
+  },
+  "game/common/opinion_modifiers/opinion_modifiers.md": {
+   "sha256": "bc32d8b228007b87f7078c065bb171b7d6d8f7b8dda25bdb96ea7bfd1efd8dcc",
+   "字节": 340,
+   "行数": 10
+  },
+  "game/common/political_lobbies/political_lobbies.md": {
+   "sha256": "53bf45deceed6b371087febff61a59cf44605c322d94f5249b13a2e51d86c74b",
+   "字节": 2593,
+   "行数": 53
+  },
+  "game/common/political_lobby_appeasement/political_lobby_appeasement.md": {
+   "sha256": "cbbb1a49e471d5f95dc6521deaa65560b353ac77b79909b5a0d5280e1153a0a5",
+   "字节": 246,
+   "行数": 7
+  },
+  "game/common/political_movement_categories/political_movement_categories.md": {
+   "sha256": "322fae4a140f13d49578666ef822ff39e9a8754c7143ab0cf0c56efc17806eaa",
+   "字节": 984,
+   "行数": 21
+  },
+  "game/common/political_movement_pop_support/political_movement_pop_support.md": {
+   "sha256": "5a51676e546f65b647691be1c9a815a002e10ae2a7aeb77d1962272861393d1d",
+   "字节": 234,
+   "行数": 8
+  },
+  "game/common/political_movements/political_movements.md": {
+   "sha256": "4842b165656f0741cc0baad97b2d82836f9097f64ce5b43ca4559c9d733e22c6",
+   "字节": 5981,
+   "行数": 140
+  },
+  "game/common/pop_types/pop_types.md": {
+   "sha256": "973fc65ff8886bf4e96f0f4a3a302b50b930d5b7ddd2dbf4f475a1426d624608",
+   "字节": 1745,
+   "行数": 28
+  },
+  "game/common/power_bloc_identities/power_bloc_identities.md": {
+   "sha256": "3184b2826a3213f508b88e92e709883972081077b292e19655a719ded657ab1d",
+   "字节": 1202,
+   "行数": 13
+  },
+  "game/common/power_bloc_names/power_bloc_names.md": {
+   "sha256": "499ca24f4c3e63742491b09c8309b4ea66dd12b3364de5397b9efc5cd3ab0e80",
+   "字节": 249,
+   "行数": 8
+  },
+  "game/common/power_bloc_principle_groups/power_bloc_principle_groups.md": {
+   "sha256": "8cb69aa8fd6aae5bdaf2d82da16bba2eb29c20c8a471fb304f379100c819b605",
+   "字节": 552,
+   "行数": 13
+  },
+  "game/common/power_bloc_principles/power_bloc_principles.md": {
+   "sha256": "8c2c7cbf27a1d65de90b55fbae04504a72764690bde1a5b0cff161b28780c7cc",
+   "字节": 1001,
+   "行数": 13
+  },
+  "game/common/prestige_goods/prestige_goods.md": {
+   "sha256": "4693b717d32e943d8405713054cf3ddee718cf77c3b5699b76751bf79424b87d",
+   "字节": 398,
+   "行数": 11
+  },
+  "game/common/production_method_groups/production_method_groups.md": {
+   "sha256": "4386f70b8e06e4a8655af6a60043df611b6585fadb0e7f6bf46e829ddddfa865",
+   "字节": 707,
+   "行数": 10
+  },
+  "game/common/production_methods/production_methods.md": {
+   "sha256": "906be7cb48e840ee525c61713332bca99821697bd8560358628831a21d7c4473",
+   "字节": 2818,
+   "行数": 55
+  },
+  "game/common/script_values/script_values.md": {
+   "sha256": "66431f8e32c467a4b224b87a939189ee26c75ff1c6837f4966c6046cc67725a6",
+   "字节": 4007,
+   "行数": 143
+  },
+  "game/common/scripted_buttons/scripted_buttons.md": {
+   "sha256": "bb1028f7b843e43dc42473968307ad340e2960099cc50e6907f3cff9a47c2d4d",
+   "字节": 1059,
+   "行数": 37
+  },
+  "game/common/scripted_guis/scripted_guis.md": {
+   "sha256": "60aa0ad8ce00bea13d85b6e7624a8d9beeb17db300b439bcf22deefc368b691c",
+   "字节": 2340,
+   "行数": 48
+  },
+  "game/common/scripted_modifiers/scripted_modifiers.md": {
+   "sha256": "84f2dc3b0450f7a1cdab8c1acada51d8ce7182e411142bbbf6cd28bd2a82a3af",
+   "字节": 192,
+   "行数": 14
+  },
+  "game/common/scripted_progress_bars/scripted_progress_bars.md": {
+   "sha256": "9f0fbb5b5c3dafd72c19dd967dad2801544c730b3cbe2950bd3214dd49933bff",
+   "字节": 1305,
+   "行数": 40
+  },
+  "game/common/ship_groups/ship_groups.md": {
+   "sha256": "1c6c4cc6f9e773ecc35a538990de1c1d96ab88f8ccbfde552e21a91ac06d33c8",
+   "字节": 171,
+   "行数": 8
+  },
+  "game/common/ship_modification_slots/ship_modification_slots.md": {
+   "sha256": "b42532c41894c368cef110f379295821aac73880b5719868eb243a5993bf7140",
+   "字节": 119,
+   "行数": 7
+  },
+  "game/common/ship_modifications/ship_modifications.md": {
+   "sha256": "48b2f29e5a9006ad55f53e94803634b7f306d829e9908fafc0d9ce7707baae18",
+   "字节": 766,
+   "行数": 22
+  },
+  "game/common/ship_name_definitions/ship_name_definitions.md": {
+   "sha256": "92b43100ba2c35a5ac1abe9294465d4f577ba30c6f8924962e98c66651c62fea",
+   "字节": 9487,
+   "行数": 262
+  },
+  "game/common/ship_types/ship_types.md": {
+   "sha256": "8210f30735c6286e7538c090a7fd766e0473b283df2629fbb3d0671d08f826c7",
+   "字节": 1815,
+   "行数": 52
+  },
+  "game/common/ship_veterancy_levels/ship_veterancy_levels.md": {
+   "sha256": "3df4b1fb3994f55abd0e19ba321f3fb275cde20aa0d0315ccbefc38612b3f157",
+   "字节": 793,
+   "行数": 18
+  },
+  "game/common/social_classes/readme.md": {
+   "sha256": "f861a9f7953b59e6daafad72da526ace79243e47a47785c8d179ff4c56456458",
+   "字节": 5950,
+   "行数": 165
+  },
+  "game/common/social_hierarchies/readme.md": {
+   "sha256": "537eb57ac08f78168d5ca5ee3ea5aff4ebfdc94b02d4f5982d6d11bde4eacef0",
+   "字节": 2896,
+   "行数": 82
+  },
+  "game/common/strait_definitions/strait_definitions.md": {
+   "sha256": "8560c78f14112847021940487cf7b5c01e8ea695ed5f1f049bab4024a4503c73",
+   "字节": 418,
+   "行数": 15
+  },
+  "game/common/strategic_regions/strategic_regions.md": {
+   "sha256": "4f7efcbd7d0736c3bca46bc721d74294df272fd011ae367499026598e6b000c4",
+   "字节": 733,
+   "行数": 11
+  },
+  "game/common/technology/eras/eras.md": {
+   "sha256": "277a5c4b41854784860add8dcd42d85de7f8871e39cf080eacb9e62124cdd5d6",
+   "字节": 246,
+   "行数": 6
+  },
+  "game/common/themes/themes.md": {
+   "sha256": "2b16e2d5efadd7a4f80a499a890822fb03ded3198587f243fbecb08b101da689",
+   "字节": 1766,
+   "行数": 32
+  },
+  "game/common/treaty_articles/treaty_articles.md": {
+   "sha256": "7ba225c3de5ec9d31c1efd0a8c615b36ad6c9b86cf15c3fbb7aa16e9186f80bf",
+   "字节": 28171,
+   "行数": 648
+  },
+  "game/common/trigger_localization/trigger_localization.md": {
+   "sha256": "8dcbd6b27d9eaa2428e8fb60bfe24fbf260e85b50e2236813f662f0e9295b9f1",
+   "字节": 5364,
+   "行数": 149
+  },
+  "game/common/tutorial_lesson_chains/tutorial_lesson_chains.md": {
+   "sha256": "fd31a473d72d421f34609da0a077400a4ef738d3ed1faa222d198e4def4b8e3c",
+   "字节": 800,
+   "行数": 14
+  },
+  "game/common/tutorial_lessons/tutorial_lesson.md": {
+   "sha256": "7463427295e6d780c7105eaa586bc73d5412a0cc4d46c6703c62d7e0a201fcae",
+   "字节": 5290,
+   "行数": 72
+  },
+  "game/common/war_goal_types/war_goal_types.md": {
+   "sha256": "c458d3addb6822bb9c9656cc2a453f15e733add0055f08a3a2657f6a67156fd1",
+   "字节": 15869,
+   "行数": 302
+  },
+  "game/dlc_metadata/dlc_metadata.md": {
+   "sha256": "5e12dff7c70353226911213aa1fa480d05636c8139d769fb322323fb7891fe6b",
+   "字节": 1158,
+   "行数": 29
+  },
+  "game/gfx/map/city_data/city_centerpiece/city_centerpiece.md": {
+   "sha256": "2502a07472464930f7076d580ab2bfef3618b0c2647eed9cbceda790ad0d41fa",
+   "字节": 4127,
+   "行数": 86
+  },
+  "game/gfx/map/fleet_dioramas/fleet_diorama.md": {
+   "sha256": "047c540520b46c7076f2f928f500feed60ae621ad63dd2d72d3ed8e013514079",
+   "字节": 2262,
+   "行数": 50
+  },
+  "game/gfx/map/fleet_entities/fleet_entities.md": {
+   "sha256": "cba16f379c67db7d202461185aae83765f3c05199da5bc51e5cc19bd59b2e28a",
+   "字节": 3716,
+   "行数": 99
+  },
+  "game/gfx/map/map_modes/map_modes.md": {
+   "sha256": "8a43dca70f99979f0d704243e52abeb2edd4575ea417042e7798c741aff2691f",
+   "字节": 448,
+   "行数": 11
+  },
+  "game/gfx/map/power_block_statues/accessories/accessories.md": {
+   "sha256": "4b45dd14610abb595f4a2cf2a2b7aa15048c22e3638ac3e3c637bc58d471bf3e",
+   "字节": 121,
+   "行数": 5
+  },
+  "game/gfx/map/power_block_statues/heroes/heroes.md": {
+   "sha256": "272fcb500fb9f2b3bc56fae1efc64e1f4383d3f89e5c9241ad94de89daaef363",
+   "字节": 845,
+   "行数": 31
+  },
+  "game/gfx/map/power_block_statues/pedestals/pedestals.md": {
+   "sha256": "ed73e9afbfcf2d5f4f7ef5e08764bed4eede2166cecd317bbcf781b2be20a861",
+   "字节": 414,
+   "行数": 13
+  },
+  "game/gfx/map/spline_network/military_route_graphics/00_example.md": {
+   "sha256": "78be9e2e9a3c3a5e93c8f913649f3fa48b174a22322fa6b44a4b98731fd13707",
+   "字节": 2577,
+   "行数": 45
+  },
+  "game/gfx/map/spline_network/route_graphics/00_example.md": {
+   "sha256": "174efccd2d218cfde006df2eb49c5e386eea3899be2922a4333ea937bb5cc284",
+   "字节": 2076,
+   "行数": 40
+  },
+  "game/gui/scripted_widgets/scripted_widgets.md": {
+   "sha256": "a25c0706115c71ecab5b29d80ca4bbe28a1c98f563e5dc34ca471b0b5496d0c1",
+   "字节": 622,
+   "行数": 8
+  },
+  "game/input_profile/input_profile.md": {
+   "sha256": "0ea2536dc3e1d2373b8ccaa7d6c7a942bb55608f98124eabef4ebd2202c41d23",
+   "字节": 5832,
+   "行数": 236
+  },
+  "game/map_data/state_regions/state_regions.md": {
+   "sha256": "118b7f87213c2d28c6b3de13b1e277720065a50ac271dd0d9574cfbed4de73ed",
+   "字节": 3420,
+   "行数": 64
+  },
+  "game/music/music.md": {
+   "sha256": "d857965653ba1724e83f56cfc2095d161ab134200499c647af1974ea39c6a105",
+   "字节": 1995,
+   "行数": 43
+  },
+  "game/sound/audio_settings.md": {
+   "sha256": "e0cb9096b3360816a2d9b29ec0278399433fe395eff9ce779d2dd59a917265f2",
+   "字节": 945,
+   "行数": 7
+  },
+  "game/tools/scripted_tests/scripted_tests.md": {
+   "sha256": "b6f73a1af508cddb292497ace982bd3f09c14c247ffb884661be49834f6f5157",
+   "字节": 2676,
+   "行数": 48
+  },
+  "jomini/common/audio_persistent_objects.md": {
+   "sha256": "b264f3774c786b5da3711eb3d92c294f3f55b8a70004b098834c03369a3d4a8d",
+   "字节": 805,
+   "行数": 21
+  }
+ },
+ "来源": "game=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game jomini=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\jomini clausewitz=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\clausewitz",
+ "版本": {
+  "caligula_branch": "release/1.14.3",
+  "caligula_rev": "bf52e8efe8f45334a3fbd421cc9e06d51077c045",
+  "clausewitz_branch": "caligula/release/1.14.x",
+  "clausewitz_rev": "1ce8c96bac918c929f55b3722e6006f447ab5cc0"
+ },
+ "篇数": 92,
+ "说明": "游戏自带官方 .md 的清单与指纹。原文不入库，见 tools/README.md 的「官方文档镜像」。"
+}

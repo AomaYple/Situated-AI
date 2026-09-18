@@ -100,8 +100,8 @@ CI 跑 `v3 verify --from-snapshot`（真值来自**入库的精简快照**，覆
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **471 条**用例（468 通过 / 3 按条件跳过） |
-| 覆盖率 | **87.2%**（门禁 86%） |
+| 测试 | **484 条**用例（481 通过 / 3 按条件跳过） |
+| 覆盖率 | **约 87%**（门禁 86%，由 pyproject 强制；xdist 下末位有 ±0.2% 抖动） |
 | 端到端 | 约 28 秒 |
 | 解析规模 | 6,250 个 PDX 文件 + 1,877 个本地化文件 |
 | 范围声明 | **不说「全量」** —— 文件维度可证伪（136 个 `common\` 子目录逐文件覆盖，有引擎日志背书），但「所有相关信息」没有边界、无法证伪。本仓库只声明**能回答哪些任务**，见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」 |
@@ -112,10 +112,12 @@ CI 跑 `v3 verify --from-snapshot`（真值来自**入库的精简快照**，覆
 Situated AI/
 ├─ docs/victoria3-modding/   21 篇 mod 开发知识库
 ├─ docs/audits/              测试套件审计报告（重构前的历史快照）
-├─ research/official-docs/   92 篇游戏自带官方 .md 的逐字镜像（Paradox 版权，见「授权」）
+├─ research/
+│   ├─ official-docs/        92 篇游戏自带官方 .md 的逐字镜像（**不入库**，用 `v3 mirror write` 重建）
+│   └─ official-docs.manifest.json  镜像清单：路径 / 字节 / 行数 / sha256（**入库**，Paradox 版权内容不在其中）
 ├─ tools/
-│   ├─ pdx/                  工具链核心包（17 个模块；解析部分纯标准库，cli.py 用 typer + rich）
-│   ├─ tests/                测试（25 个测试文件 / 471 条用例）
+│   ├─ pdx/                  工具链核心包（21 个模块；解析部分纯标准库，cli.py 用 typer + rich）
+│   ├─ tests/                测试（25 个测试文件 / 484 条用例）
 │   ├─ prof/                 性能剖析
 │   ├─ out/                  分析产物（已 gitignore）
 │   └─ reports/              人可读报告（**入库**）
@@ -146,7 +148,12 @@ Situated AI/
 [Apache-2.0](LICENSE)
 
 > `research/official-docs/` 是游戏自带官方 `.md` 的**逐字镜像**，属 Paradox 版权内容。
-> 仓库以 Apache-2.0 授权，但该目录不在此授权范围内 —— 公开分发前请自行评估。
+> 该目录**不纳入版本控制**（`.gitignore` 已忽略）：仓库里只有 `research/official-docs.manifest.json`，
+> 记的是每篇的**路径 / 字节数 / 行数 / sha256**，不含正文。要在本机重建镜像用 `v3 mirror write --sync`，
+> 核对清单与本机游戏、清单与本地镜像是否一致用 `v3 mirror check`。
+>
+> **历史包袱（诚实说明）**：这 92 篇曾一度入库，`git rm --cached` 只能把它们从**当前树**移除，
+> 旧提交里仍有逐字副本。要彻底清除需重写历史的 `git filter-repo`，属单独决定，本次没做。
 
 ---
 
