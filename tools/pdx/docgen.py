@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from . import config, defines, doc17, game_root, install_tree, modifiers, usage
+from . import config, defines, doc15, doc17, game_root, install_tree, localization, modifiers, usage
 from .doc_tables import KeyedTableSpec, TableSpec, check_doc, patch_doc
 
 if TYPE_CHECKING:
@@ -72,6 +72,17 @@ def targets() -> tuple[DocTarget, ...]:
             # doc 17 整族（25 张表里接了 24 张）—— 口径有四种，故单独一个模块。
             path=config.DOCS / "17-角色科技与呈现.md",
             specs=tuple(doc17.doc_table_specs()),
+        ),
+        DocTarget(
+            # doc 06（本地化与界面资源）：安装树那四张表在 install_tree，
+            # 两张本地化表在 localization —— 同一棵树的两面，口径各自写在模块里。
+            path=config.DOCS / "06-本地化与界面资源.md",
+            specs=tuple(install_tree.doc06_table_specs()) + tuple(localization.doc_table_specs()),
+        ),
+        DocTarget(
+            # doc 15（政治人口与社会）：§0 的 25 目录总览 + 四节里的六张表。
+            path=config.DOCS / "15-政治人口与社会.md",
+            specs=tuple(doc15.doc_table_specs()),
         ),
     )
 

@@ -49,6 +49,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from . import config
+from .doc_tables import KeyedTableSpec
 from .parser import TOLERATED_ERRORS
 from .scan import walk_files
 
@@ -241,3 +242,94 @@ def _category_of(stem: str) -> str:
     """
     m = re.search(r"_l_[A-Za-z0-9_]+$", stem)
     return stem[: m.start()] if m else stem
+
+
+# ──────────────────────────────────────────────────────────────
+# doc 06 的两张机械表（本地化侧）
+# ──────────────────────────────────────────────────────────────
+
+
+def language_header_counts(root: Path | None = None) -> Counter[str]:
+    """``localization/`` 全树 ``.yml`` 的**首行语言声明** → 文件数。
+
+    口径是**首行**而不是「文件里出现过哪些 ``l_xx:``」：一个文件理论上可以有
+    多段语言声明（实测都只有一段），按后者数会重复计入。实测 1,877 个文件
+    各归入 11 种语言之一，合计正好等于文件总数 —— 这条恒等式由
+    ``tools/tests/test_doc06.py`` 看守。
+    """
+    base = (root or config.GAME) / "localization"
+    counter: Counter[str] = Counter()
+    if not base.is_dir():
+        return counter
+    for path in sorted(base.rglob("*.yml")):
+        try:
+            first = path.read_text(encoding="utf-8-sig", errors="replace").split("\n", 1)[0]
+        except OSError:  # pragma: no cover - 权限/占用等极端情况
+            continue
+        counter[first.strip()] += 1
+    return counter
+
+
+#: ``[...]`` 绑定（数据函数链）—— 供将来若要重新定义「函数频次」口径时使用。
+#: **本模块当前不用它生成表格**：doc 06 §1.5.5 那张表的口径复现不出来，
+#: 见 :data:`NOT_GENERATED` 的理由。
+_BRACKET_RE = re.compile(r"\[([^\[\]]*)\]")
+
+#: 引号串（``'concept_x'`` / ``"gfx/..."``）—— 先剥掉，否则里面的词会被当成函数名。
+_QUOTED_RE = re.compile(r"'[^']*'|\"[^\"]*\"")
+
+#: 链上的一个标识符：后面跟 ``(`` / ``.`` / ``|``，或位于这一段末尾。
+_CHAIN_TOKEN_RE = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*(?=[\(\.\|]|$)")
+
+#: 全大写 = 作用域常量（``SCOPE`` / ``ROOT`` / ``COUNTRY`` …），不是函数。
+_SCOPE_CONST_RE = re.compile(r"^[A-Z][A-Z_0-9]*$")
+
+
+def data_function_counts(root: Path | None = None) -> Counter[str]:
+    """``[...]`` 里出现的数据函数 / 作用域链接 → 次数（英文库全量）。
+
+    **这张表刻意不进生成器**（见 :data:`NOT_GENERATED`）：文档现值采集于 1.14.2，
+    而四种合理口径 —— 段内任意标识符、仅链首、`grep -c` 式行计数、
+    括号调用 —— 没有一种能复现它（``GetName`` 实测 17,888 / 14,106 / 9，
+    文档写 8,491；``Self`` 在前三种口径下分别是 0 / 769 / 9，文档写 1,082）。
+    口径说不清的表不该假装能重算，故保留为**人工维护**并在此留下可复算的实现，
+    供下一个人重新定义口径时直接用。
+    """
+    base = (root or config.GAME) / "localization" / "english"
+    counter: Counter[str] = Counter()
+    if not base.is_dir():
+        return counter
+    for path in sorted(base.rglob("*.yml")):
+        text = path.read_text(encoding="utf-8-sig", errors="replace")
+        for raw in _BRACKET_RE.findall(text):
+            span = _QUOTED_RE.sub(" ", raw)
+            for m in _CHAIN_TOKEN_RE.finditer(span):
+                token = m.group(1)
+                if len(token) < 2 or _SCOPE_CONST_RE.match(token):
+                    continue
+                counter[token] += 1
+    return counter
+
+
+#: 本篇**刻意不生成**的表 —— 每条都要写明理由（`tools/tests/test_inventory.py`
+#: 的欠债余额最终只应该剩下这一类）。
+NOT_GENERATED: dict[str, str] = {
+    "| 函数 | 次数 | 函数 | 次数 |": (
+        "§1.5.5 数据函数频次：原口径不可复现（四种合理口径都对不上，见 "
+        "`data_function_counts` 的说明），需要先重新定义口径才能生成"
+    ),
+}
+
+
+def doc_table_specs() -> list[KeyedTableSpec]:
+    """doc 06 本地化侧的生成表（登记进 :func:`pdx.docgen.targets`）。"""
+    return [
+        KeyedTableSpec(
+            name="doc06 语言首行头文件数",
+            header="| 首行头（=语言代码） | 文件数 | 中文名 | 备注 |",
+            cells=lambda: [
+                (header, {1: f"{n:,}"}) for header, n in sorted(language_header_counts().items())
+            ],
+            append_new=False,
+        ),
+    ]

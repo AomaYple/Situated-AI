@@ -17,10 +17,15 @@ doc 17 是**口径最杂**的一篇：字段出现次数、逐文件定义数、
 
 from __future__ import annotations
 
-import shutil
 from typing import TYPE_CHECKING
 
 import pytest
+from _table_guards import (
+    assert_doc_matches_generated,
+    assert_every_row_claimed,
+    assert_unique_names,
+    assert_write_free_and_idempotent,
+)
 
 from pdx import config, doc17, doc_tables
 
@@ -45,70 +50,19 @@ def _skip_if_no_game() -> None:
         pytest.skip("游戏目录不可用")
 
 
-def _doc_rows(header: str, occurrence: int) -> list[list[str]]:
-    """文档里第 ``occurrence`` 张该表的数据行（拆成单元格）。"""
-    lines = DOC.read_text(encoding="utf-8").splitlines()
-    hits = [n for n, ln in enumerate(lines) if ln.startswith(header)]
-    assert occurrence < len(hits), f"{header!r} 只出现 {len(hits)} 次"
-    start = hits[occurrence]
-    out: list[list[str]] = []
-    n = start + 2
-    while n < len(lines) and lines[n].startswith("|"):
-        out.append(doc_tables.split_row(lines[n]))
-        n += 1
-    return out
-
-
 def test_文档里的表就是生成器的输出() -> None:
-    """**核心**：文档现值必须等于重新生成的结果。
-
-    失败说明有人手改了表 —— 下次 `v3 tables --write` 会把它覆盖掉。
-    """
+    """**核心**：文档现值必须等于重新生成的结果。"""
     _skip_if_no_game()
-    diff = doc_tables.check_doc(DOC, doc17.doc_table_specs())
-    assert not diff, (
-        f"doc 17 有 {len(diff)} 行与生成器不一致（跑 `v3 tables --write` 可修）：\n"
-        + "\n".join(
-            f"  {name} 第 {ln} 行\n    文档: {a}\n    生成: {b}" for name, ln, a, b in diff[:6]
-        )
-    )
+    assert_doc_matches_generated(DOC, doc17.doc_table_specs())
 
 
 def test_每一行都有人认领() -> None:
     """**防静默过期**：每一张表里的每一行，都要被某条 spec 的键覆盖到。
 
-    为什么必须有这条：这些表多为**节选/枚举**表（``append_new=False``），
-    生成器对「文档里有、生成结果里没有」的行**原样保留且不警告** ——
-    理由很正当（作者自己加的说明行也是这样）。可代价是：键写错一个反引号、
-    或者某个取值从游戏里消失，那一行的数字就永远停在原处，而门禁全绿。
-
-    判定与生成器同源：键都过一遍 :func:`pdx.doc_tables.norm_key`，
-    且按 ``(表头, occurrence)`` 分组 —— 一张表可以由多条 spec 各管一半
-    （左右两栏、块内字段 + 顶层字段）。
+    判定细节见 :mod:_table_guards —— 它是 doc 06 / 15 / 17 共用的那套。
     """
     _skip_if_no_game()
-    specs = doc17.doc_table_specs()
-    groups: dict[tuple[str, int], set[str]] = {}
-    for spec in specs:
-        assert isinstance(spec, doc_tables.KeyedTableSpec)
-        keys = {doc_tables.norm_key(k) for k, _cells in spec.cells()}
-        assert keys, f"{spec.name} 没生成任何键 —— 多半是目录写错或游戏不可用"
-        groups.setdefault((spec.header, spec.occurrence), set()).update(keys)
-
-    orphans: list[str] = []
-    for (header, occurrence), covered in groups.items():
-        key_cols = sorted(
-            {s.key_column for s in specs if s.header == header and s.occurrence == occurrence}
-        )
-        for row in _doc_rows(header, occurrence):
-            # 一张表可能有多条 spec、各自以不同的列为键（两栏并排的分布表）——
-            # 每行只要被其中**任一**键列认领即可。只试第 0 列会把右栏的行全判成孤儿。
-            if any(len(row) > col and doc_tables.norm_key(row[col]) in covered for col in key_cols):
-                continue
-            orphans.append(f"{header[:40]}… {row}")
-    assert not orphans, "这些行没有任何 spec 认领（数字会静默过期）：\n  " + "\n  ".join(
-        orphans[:10]
-    )
+    assert_every_row_claimed(DOC, doc17.doc_table_specs())
 
 
 def test_分布表声明的取值没有过期() -> None:
@@ -155,23 +109,9 @@ def test_文件名模式划分完备() -> None:
 
 def test_生成器不写盘且幂等(tmp_path: Path) -> None:
     _skip_if_no_game()
-    copy = tmp_path / DOC.name
-    shutil.copyfile(DOC, copy)
-    before = copy.read_text(encoding="utf-8")
-    spec_list = doc17.doc_table_specs()
-    replaced = doc_tables.patch_doc(copy, spec_list, write=False)
-    assert len(replaced) == len(spec_list), "有 spec 没跑到（表名重复会互相覆盖）"
-    assert copy.read_text(encoding="utf-8") == before, "write=False 却改了文件"
-    doc_tables.patch_doc(copy, spec_list, write=True)
-    once = copy.read_text(encoding="utf-8")
-    doc_tables.patch_doc(copy, spec_list, write=True)
-    assert copy.read_text(encoding="utf-8") == once, "跑两次结果不同"
-
-
-def test_表名唯一() -> None:
-    """表名是 `patch_doc` 返回值与告警里的标识，重名会让「跑了几张」看不出来。"""
-    names = [s.name for s in doc17.doc_table_specs()]
-    assert len(names) == len(set(names)), f"表名重复：{names}"
+    specs = doc17.doc_table_specs()
+    assert_unique_names(specs)
+    assert_write_free_and_idempotent(DOC, specs, tmp_path)
 
 
 def test_表头被改动时报错而不是静默跳过(tmp_path: Path) -> None:

@@ -77,15 +77,15 @@ STAT_HINT = (
 
 #: **未看守的机械表数量上限**。这是「欠债余额」：只许减少，不许增加。
 #:
-#: 进度 125 → 82 → 58：doc 05 的两张「假脚本化」表、doc 04/16 的「用了多少次」各一张、
+#: 进度 125 → 82 → 58 → 44：doc 05 的两张「假脚本化」表、doc 04/16 的「用了多少次」各一张、
 #: doc 14 整族 20 张字段表、doc 16 整族 23 张「键 → 计数」表、
-#: **doc 17 整族 24 张**（25 张里只剩「基因分组」那张：数量列是作者分组的结果，
-#: 其中一行还是近似值 `~95`）。生成表总数 31 → 77 → 107。
+#: doc 17 整族 24 张（25 张里只剩「基因分组」，已记入 :data:`NOT_GENERATED`）、
+#: **doc 06 的 5 张 + doc 15 的 7 张**（另有 doc 06 的函数频次表记入 :data:`NOT_GENERATED`）。
+#: 生成表总数 31 → 77 → 107 → 119。
 #:
-#: 基线 125 来自 2026-09 的全仓盘点（用**本文件自己的判据**量的；
-#: 早先一份临时脚本按略宽的判据量到 126，两者差在 ``NON_STAT`` 的宽窄）。
-#: 做完一批就把这个数往下调 —— 调低是进度，**调高必须在提交信息里说明理由**。
-UNGUARDED_TABLE_BUDGET = 58
+#: 余额的**终点**不是 0，而是 :data:`NOT_GENERATED` 的条数 —— 那里面每一条都写明了
+#: 「为什么不能机械生成」。做完一批就把这个数往下调；**调高必须在提交信息里说明理由**。
+UNGUARDED_TABLE_BUDGET = 44
 
 #: 散文数字（表格之外）的现状，同样只许减少。见模块 docstring 的口径。
 #:
@@ -196,7 +196,36 @@ def _is_guarded(path: Path, header: str) -> bool:
     )
 
 
+#: **刻意不生成**的表：``(文档名, 表头前缀) → 理由``。
+#:
+#: 这是欠债余额的**终点形态** —— 余额降到只剩这些条目就算做完了，
+#: 所以每一条都必须能回答「为什么不能机械生成」。加进来之前先问自己：
+#: 是**口径说不清**，还是**数字根本不该由工具拥有**？
+#: 「懒得做」不是理由，也不该出现在这里。
+NOT_GENERATED: dict[tuple[str, str], str] = {
+    (
+        "06-本地化与界面资源.md",
+        "| 函数 | 次数 | 函数 | 次数 |",
+    ): "§1.5.5 数据函数频次：原口径复现不出（四种合理口径都对不上，见 pdx.localization"
+    ".data_function_counts 的实测对比），需要先重新定义口径",
+    (
+        "17-角色科技与呈现.md",
+        "| 组 | 键 | 数量 |",
+    ): "§8.3 基因分组：`数量` 列是作者分组的结果，`gene_*` 那一行还是近似值 `~95`，"
+    "机械生成会把「分成哪几组」这个判断也顶掉",
+}
+
+
+def _is_not_generated(doc: str, header: str) -> bool:
+    return any(doc == d and header.startswith(h) for d, h in NOT_GENERATED)
+
+
 def _count_unguarded_tables() -> tuple[int, list[str]]:
+    """``(未看守的表数, 前若干条示例)``。
+
+    「刻意不生成」的表（:data:`NOT_GENERATED`）**不算欠债** —— 它们的理由已经写下来了，
+    余额的目标就是「只剩这些」。
+    """
     generated = _generated_headers()
     unguarded: list[str] = []
     for path in sorted(config.DOCS.glob("*.md")):
@@ -208,6 +237,8 @@ def _count_unguarded_tables() -> tuple[int, list[str]]:
             if not rows or _is_guarded(path, header):
                 continue
             if _is_guarded_by_spec(headers, index, generated, path.name):
+                continue
+            if _is_not_generated(path.name, header):
                 continue
             if _stat_columns(header, rows):
                 unguarded.append(f"{path.name}:{lineno} {header[:70]}")

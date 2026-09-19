@@ -43,12 +43,11 @@ from typing import TYPE_CHECKING
 from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec, norm_key
-from .model import Block, Scalar
 from .usage import (
-    _entry_blocks,
-    _iter_all_blocks,
     _rows,
+    definition_rows,
     field_occurrences,
+    field_value_counts,
     file_definition_counts,
     nested_field_occurrences,
 )
@@ -148,14 +147,6 @@ def _doc17_field_specs() -> list[KeyedTableSpec]:
 # ────────────────────────── 口径 2：逐文件定义数 ──────────────────────────
 
 
-def _def_rows(dir_rel: str, col: int) -> Callable[[], list[tuple[str, dict[int, str]]]]:
-    def rows() -> list[tuple[str, dict[int, str]]]:
-        counts = file_definition_counts(dir_rel)
-        return [(name, {col: f"{n:,}"}) for name, n in sorted(counts.items())]
-
-    return rows
-
-
 def _subdir_rows(
     root_rel: str, files_col: int, defs_col: int
 ) -> Callable[[], list[tuple[str, dict[int, str]]]]:
@@ -215,32 +206,9 @@ def _includes_rows() -> list[tuple[str, dict[int, str]]]:
 
 # ────────────────────────── 口径 3：取值分布 ──────────────────────────
 
-
-def value_counter(dir_rel: str, field: str, *, deep: bool) -> Counter[str]:
-    """某字段的取值分布。
-
-    ``deep=False`` 只数**顶层条目块**的字段（消息、警报都是这种形状）；
-    ``deep=True`` 数**任意深度**的赋值 —— 自定义 loc 有 8 处 ``type`` 写在嵌套块里，
-    只数顶层会得到 376 而不是 384，而文档那张表用的正是 384 那个口径。
-    """
-    counter: Counter[str] = Counter()
-    base = config.GAME / dir_rel
-    if not base.is_dir():
-        return counter
-    for path in sorted(p for p in base.rglob("*.txt") if p.is_file()):
-        pf = parse_cached(path)
-        # ``deep`` 用**全部块**（已含顶层）；浅口径只数顶层条目块。
-        blocks = list(_iter_all_blocks(pf)) if deep else list(_entry_blocks(pf))
-        for block in blocks:
-            for a in block.assignments():
-                if a.key != field:
-                    continue
-                v = a.value
-                if isinstance(v, Block):
-                    counter["<块>"] += 1
-                elif isinstance(v, Scalar):
-                    counter[v.unquoted.strip()] += 1
-    return counter
+#: 取值分布的实现已经通用化到 :func:`pdx.usage.field_value_counts`
+#: （doc 15 的「态度值」与「好感度取值」用的是同一套），这里只保留 doc 17 的名字。
+value_counter = field_value_counts
 
 
 def _value_rows(
@@ -549,13 +517,13 @@ def doc_table_specs() -> list[KeyedTableSpec]:
         KeyedTableSpec(
             name="doc17 coat_of_arms 逐文件",
             header="| 文件 | 定义数 | 作用 |",
-            cells=_def_rows("common/coat_of_arms/coat_of_arms", 1),
+            cells=definition_rows("common/coat_of_arms/coat_of_arms", 1),
             append_new=False,
         ),
         KeyedTableSpec(
             name="doc17 messages 逐文件",
             header="| 文件 | 定义数 | 内容 |",
-            cells=_def_rows("common/messages", 1),
+            cells=definition_rows("common/messages", 1),
             append_new=False,
         ),
         # 取值分布（口径 3）

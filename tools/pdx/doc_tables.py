@@ -195,6 +195,26 @@ def norm_key(text: str) -> str:
 _GROUP_SEPS: tuple[str, ...] = (" / ", "、", ", ")
 
 
+def key_parts(text: str) -> list[str]:
+    """一行里的多个条目：``| `a` / `b` |`` → ``["a", "b"]``。
+
+    单个条目时返回单元素列表（即 ``[norm_key(text)]``）。
+    每个部分都各自过一遍 :func:`norm_key` —— 合并行的写法是
+    ``| `fmodL.dll` / `fmodstudio.dll` |``，只对整个单元格剥一次反引号会剩下
+    内层的那些（``'.shader`'`` 这种半截键），从而一行都匹配不上。
+
+    生成器的合并行机制与测试的「每一行都有人认领」都用它，**判定必须同源**。
+    """
+    norm = norm_key(text)
+    for sep in _GROUP_SEPS:
+        if sep not in norm:
+            continue
+        parts = [norm_key(p) for p in norm.split(sep)]
+        if len(parts) > 1 and all(parts):
+            return parts
+    return [norm]
+
+
 def _group_cells(norm: str, generated: dict[str, dict[int, str]]) -> dict[int, str] | None:
     """把「一行多个条目」的键拆开逐个查表，再按原分隔符拼回来。
 
@@ -208,8 +228,8 @@ def _group_cells(norm: str, generated: dict[str, dict[int, str]]) -> dict[int, s
     for sep in _GROUP_SEPS:
         if sep not in norm:
             continue
-        parts = [norm_key(p) for p in norm.split(sep)]
-        if len(parts) < 2 or not all(parts):
+        parts = key_parts(norm)
+        if len(parts) < 2:
             continue
         subs = [generated.get(p) for p in parts]
         if any(s is None for s in subs):
@@ -346,7 +366,14 @@ def _warn(table: str, what: str, keys: list[str], *, hint: str = "") -> None:
 
 
 #: 单元格里的数字段（可能带千位分隔符）
-_NUM_IN_CELL = re.compile(r"\d[\d,]*")
+#: 单元格里的数字段（可能带千位分隔符 —— 逗号**或空格**）。
+#:
+#: 空格是后补的：doc 06 的几张表把千位分隔符写成空格（``1 013`` / ``10 252``），
+#: 而生成器写逗号。不认空格时 ``**11 294**`` 会被当成**两个**数字段，
+#: 落进「不是恰好一个数字」的分支 → 整格替换 → **加粗被抹掉**
+#: （实测：doc 06 的 `.dds` 那一行）。
+_NUM_PAT = r"\d[\d,]*(?: \d{3})*"
+_NUM_IN_CELL = re.compile(_NUM_PAT)
 
 
 def _merge_cell(old: str, new: str) -> str:
@@ -355,6 +382,9 @@ def _merge_cell(old: str, new: str) -> str:
     ``**77**（可重复）`` + 新值 ``80`` → ``**80**（可重复）``：
     强调与括注都是作者的，生成器只拥有那个数字。
     旧格里只有数字（或没有数字）时才整格替换。
+
+    千位分隔符的风格由**生成器**决定（一律逗号），作者写在数字两边的
+    文字与强调一律保留 —— ``**11 294**`` + ``11,294`` → ``**11,294**``。
     """
     old_s = old.strip()
     if not old_s:
@@ -365,13 +395,27 @@ def _merge_cell(old: str, new: str) -> str:
     new_num: str = str(m_new.group(0))
 
     # 形式一：「N / M」—— 分子归生成器，**分母是作者的**（如「239 个条目里 239 个」）
-    slash = re.fullmatch(r"(.*?)(\d[\d,]*)(\s*/\s*\d[\d,]*.*)", old_s)
+    slash = re.fullmatch(rf"(.*?)({_NUM_PAT})(\s*/\s*{_NUM_PAT}.*)", old_s)
     if slash:
         return slash.group(1) + new_num + slash.group(3) if slash.group(2) != new_num else old_s
 
     # 形式二：整格恰好一个数字段、两边的文字都归作者（``**77**（可重复）``）
     olds = _NUM_IN_CELL.findall(old_s)
     if len(olds) != 1 or len(_NUM_IN_CELL.findall(new)) != 1:
+        # 形式三：生成的是**纯数字**、且旧格**以数字开头** → 只换那一个数字。
+        #
+        # 这一条是被 doc 15 逼出来的：``8（在 `03_` 里）`` 有两个数字段（8 与 03），
+        # 走「整格替换」会把作者的括注抹掉 —— 而且**值没变时也抹**
+        # （每次 `--write` 都掉一次，属于「夺走作者信息」）。
+        # 加了这个判据后 ``8（在 `03_` 里）`` → ``9（在 `03_` 里）``。
+        #
+        # 为什么要求「生成值必须是纯数字」：doc 08 的体积列形如
+        # ``17,055.76 MB``，生成器给的是**整格文本** ``17,056 MB`` ——
+        # 那种情况必须整格替换，否则会拼出 ``17,056.76 MB``（实测撞过，418 行）。
+        if re.fullmatch(r"[\d,]+", new.strip()):
+            head = _NUM_IN_CELL.match(old_s)
+            if head is not None:
+                return old_s[: head.start()] + new.strip() + old_s[head.end() :]
         return new
     if str(olds[0]) == new_num:
         return old_s  # 数字没变 → 连排版一起保留

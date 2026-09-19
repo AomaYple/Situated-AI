@@ -29,10 +29,10 @@ from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec
 from .extract import entry_fields
-from .model import Block, ParsedFile
+from .model import Block, ParsedFile, Scalar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Collection, Iterator
 
     from .model import Assignment
 
@@ -167,6 +167,72 @@ def file_definition_counts(dir_rel: str) -> dict[str, int]:
         pf = parse_cached(path)
         out[path.name] = sum(1 for a in pf.top_assignments if not a.is_variable)
     return out
+
+
+def definition_rows(dir_rel: str, col: int) -> Callable[[], list[tuple[str, dict[int, str]]]]:
+    """``文件名 → 顶层定义数`` 的行工厂（文档里那族「逐文件定义数」表共用）。"""
+
+    def rows() -> list[tuple[str, dict[int, str]]]:
+        counts = file_definition_counts(dir_rel)
+        return [(name, {col: f"{n:,}"}) for name, n in sorted(counts.items())]
+
+    return rows
+
+
+def field_value_counts(dir_rel: str, field: str, *, deep: bool = False) -> Counter[str]:
+    """某字段的**取值分布**（值 → 出现次数）。
+
+    ``deep=False`` 只数**顶层条目块**的字段（消息、警报、特质都是这种形状）；
+    ``deep=True`` 数**任意深度**的赋值 —— 自定义 loc 有 8 处 ``type`` 写在嵌套块里，
+    只数顶层会得到 376 而不是 384，而文档那张表用的正是 384 那个口径。
+    """
+    counter: Counter[str] = Counter()
+    base = config.GAME / dir_rel
+    if not base.is_dir():
+        return counter
+    for path in sorted(p for p in base.rglob("*.txt") if p.is_file()):
+        pf = parse_cached(path)
+        # ``deep`` 用**全部块**（已含顶层）；浅口径只数顶层条目块。
+        blocks = list(_iter_all_blocks(pf)) if deep else list(_entry_blocks(pf))
+        for block in blocks:
+            for a in block.assignments():
+                if a.key != field:
+                    continue
+                v = a.value
+                if isinstance(v, Block):
+                    counter["<块>"] += 1
+                elif isinstance(v, Scalar):
+                    counter[v.unquoted.strip()] += 1
+    return counter
+
+
+def value_census(dir_rel: str, values: Collection[str]) -> Counter[str]:
+    """**键无关**的取值普查：给定取值集合，数它们作为赋值出现了多少次。
+
+    与 :func:`field_value_counts` 的区别是它**不看键名** —— doc 15 的
+    「五档态度」就是这种形状：``lawgroup_xxx = approve`` 里的键有 26 种，
+    但取值只有 5 种，作者关心的是这 5 种各占多少。
+
+    只数 ``=`` 赋值，不数 ``>=`` / ``<`` 这类比较：``law_stance = { value >= approve }``
+    里的 ``approve`` 是**比较对象**，不是一次态度声明。
+    """
+    wanted = set(values)
+    counter: Counter[str] = Counter()
+    base = config.GAME / dir_rel
+    if not base.is_dir():
+        return counter
+    for path in sorted(p for p in base.rglob("*.txt") if p.is_file()):
+        pf = parse_cached(path)
+        for block in _iter_all_blocks(pf):
+            for a in block.assignments():
+                if a.op != "=":
+                    continue
+                v = a.value
+                if isinstance(v, Scalar):
+                    text = v.unquoted.strip()
+                    if text in wanted:
+                        counter[text] += 1
+    return counter
 
 
 def _rows(counter: Counter[str], col: int) -> list[tuple[str, dict[int, str]]]:
@@ -363,9 +429,12 @@ def doc_table_specs() -> list[KeyedTableSpec]:
 
 
 __all__ = [
+    "definition_rows",
     "doc_table_specs",
     "field_file_counts",
     "field_occurrences",
+    "field_value_counts",
     "file_definition_counts",
     "nested_field_occurrences",
+    "value_census",
 ]

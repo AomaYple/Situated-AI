@@ -457,5 +457,68 @@ def test_合并行不套N分之M规则(tmp_path: Path) -> None:
     assert "| `a.dll` / `b.dll` | 10 / 20 | 两个一组 |" in p.read_text(encoding="utf-8")
 
 
+@_unit
+def test_空格分隔的千位也认作一个数字段(tmp_path: Path) -> None:
+    """``**11 294**`` + ``11,294`` → ``**11,294**`` —— 加粗必须活下来。
+
+    doc 06 的几张表把千位分隔符写成**空格**，而生成器一律写逗号。
+    不把「空格分组」认成一个数字段的话，``**11 294**`` 会被当成两个数字，
+    落进「不是恰好一个数字」的分支 → 整格替换 → **加粗被抹掉**（实测撞过）。
+    """
+    p = _doc(tmp_path, f"{HEAD3}| `a.dds` | **11 294** | UI 贴图 |\n")
+    spec = doc_tables.KeyedTableSpec(
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.dds", {1: "11,294"})], append_new=False
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert "| `a.dds` | **11,294** | UI 贴图 |" in p.read_text(encoding="utf-8")
+
+
+@_unit
+def test_数字格里的括注含数字时也能保留(tmp_path: Path) -> None:
+    """``8（在 `03_` 里）`` 更新成 ``9`` → ``9（在 `03_` 里）``。
+
+    这一格有**两个**数字段（8 与 03），走「整格替换」会把作者的括注抹掉 ——
+    而且值没变时也抹（每次 ``--write`` 都掉一次）。判据是：生成值是**纯数字**、
+    且旧格**以数字开头**时，只换那一个数字。
+
+    反例（不能这么做）：doc 08 的体积列 ``17,055.76 MB``，生成器给的是整格文本
+    ``17,056 MB`` —— 只换第一个数字会拼出 ``17,056.76 MB``（实测撞过 418 行）。
+    所以那条判据要求生成值必须是纯数字。
+    """
+    p = _doc(tmp_path, f"{HEAD3}| `a.txt` | 8（在 `03_` 里） | 说明甲 |\n")
+    spec = doc_tables.KeyedTableSpec(
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.txt", {1: "9"})], append_new=False
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert "| `a.txt` | 9（在 `03_` 里） | 说明甲 |" in p.read_text(encoding="utf-8")
+
+
+@_unit
+def test_同一格里数字没变就不动它(tmp_path: Path) -> None:
+    """``8（在 `03_` 里）`` 与生成值 ``8`` 数字相同 —— 整格原样保留。"""
+    body = f"{HEAD3}| `a.txt` | 8（在 `03_` 里） | 说明甲 |\n"
+    p = _doc(tmp_path, body)
+    spec = doc_tables.KeyedTableSpec(
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.txt", {1: "8"})], append_new=False
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert p.read_text(encoding="utf-8") == body
+
+
+@_unit
+def test_整格文本仍然整格替换(tmp_path: Path) -> None:
+    """``17,055.76 MB`` + ``17,056 MB`` → ``17,056 MB``（**不是** ``17,056.76 MB``）。
+
+    这是上面那条「只换一个数字」的边界的反面：生成值里带单位时是整格文本，
+    必须整格替换。实测这条规则修掉过 doc 08 的 418 行损坏。
+    """
+    p = _doc(tmp_path, f"{HEAD3}| `a.dat` | 17,055.76 MB | 体积 |\n")
+    spec = doc_tables.KeyedTableSpec(
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.dat", {1: "17,056 MB"})], append_new=False
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert "| `a.dat` | 17,056 MB | 体积 |" in p.read_text(encoding="utf-8")
+
+
 if __name__ == "__main__":  # pragma: no cover
     sys.exit(pytest.main([__file__, "-v"]))

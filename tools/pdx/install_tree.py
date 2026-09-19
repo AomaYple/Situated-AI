@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING
 
 from . import config, scan
 from .doc_tables import KeyedTableSpec, TableMalformedError, TableSpec
+from .scan import stats_for
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -547,8 +548,52 @@ def doc_table_specs() -> list[TableSpec | KeyedTableSpec]:
     ]
 
 
+def doc06_table_specs() -> list[KeyedTableSpec]:
+    """doc 06（本地化与界面资源）里那三张「子目录 → 文件数」表 + 一张扩展名分布。
+
+    与 doc 08 用的是同一套 :func:`rows_of` / :func:`fmt_count` —— 两张文档
+    统计的是同一棵安装树，口径必须共享，否则「doc 06 说 207、doc 08 说别的」
+    这种矛盾迟早出现。
+
+    这四张表的表头与 doc 08 的那几张**只差最后一个词**（``说明`` / ``内容`` /
+    ``用途说明``），所以每张都写清表头全文，不靠 occurrence 区分。
+    """
+    return [
+        _spec_dir_table(
+            "doc06 localization 子目录",
+            "| 子目录 | 文件数（实测） | 说明 |",
+            config.GAME / "localization",
+            _COL_FILES,
+        ),
+        _spec_dir_table(
+            "doc06 gui 子目录",
+            "| 子目录 | 文件数 | 说明 |",
+            config.GAME / "gui",
+            _COL_FILES,
+        ),
+        _spec_dir_table(
+            "doc06 gfx 子目录",
+            "| 子目录 | 文件数 | 内容 |",
+            config.GAME / "gfx",
+            _COL_FILES,
+        ),
+        # 扩展名分布：doc 06 §6.1 是**节选**（17 行，带「主要用途」散文），
+        # 完整版在 doc 08 §13。所以只按行更新数字，不追加、不删行。
+        KeyedTableSpec(
+            name="doc06 gfx 扩展名分布（节选）",
+            header="| 扩展名 | 数量 | 主要用途 |",
+            cells=lambda: [
+                (suffix, {1: fmt_count(n)})
+                for suffix, n in sorted(stats_for(config.GAME / "gfx").by_suffix.items())
+            ],
+            append_new=False,
+        ),
+    ]
+
+
 __all__ = [
     "TreeRow",
+    "doc06_table_specs",
     "doc_table_specs",
     "fmt_count",
     "fmt_mb",
