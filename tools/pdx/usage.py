@@ -69,6 +69,27 @@ def _entry_blocks(pf: ParsedFile) -> list[Block]:
     return [b for b in map(_as_entry_block, pf.top_assignments) if b is not None]
 
 
+def _iter_all_blocks(node: Block | ParsedFile) -> Iterator[Block]:
+    """**任意深度**的块，**含顶层**，``@变量`` 不算。
+
+    与 :func:`_iter_keyed_blocks` 的区别：那个要配对的键，这个只要块。
+    与 :func:`_entry_blocks` 的区别：那个只到顶层。
+
+    ``含顶层`` 这一条是踩出来的：doc 17 的取值分布表要「全部 ``type =`` 赋值」，
+    第一版写成 ``_entry_blocks(pf) + list(所有嵌套块)`` —— 顶层块被**数了两遍**，
+    于是 `country` 189 变成 378、`character` 105 变成 210，
+    而错得这么整齐（全是两倍）在 diff 里反倒像「口径变了」而不是 bug。
+    """
+    items = node.top_assignments if isinstance(node, ParsedFile) else node.assignments()
+    for a in items:
+        if a.is_variable:
+            continue
+        v = a.value
+        if isinstance(v, Block):
+            yield v
+            yield from _iter_all_blocks(v)
+
+
 def _collect(dir_rel: str, *, within: str | None, per_file: bool) -> Counter[str]:
     """``dir_rel`` 下要统计的块的字段。
 
@@ -107,6 +128,45 @@ def field_occurrences(dir_rel: str, *, within: str | None = None) -> Counter[str
 def field_file_counts(dir_rel: str, *, within: str | None = None) -> Counter[str]:
     """字段名 → **用到它的文件数**（同文件内重复只算一次）。"""
     return _collect(dir_rel, within=within, per_file=True)
+
+
+def nested_field_occurrences(dir_rel: str, parent: str) -> Counter[str]:
+    """``parent`` 块的**子字段**，键写成 ``parent.子字段``。
+
+    存在的理由：doc 17 的 `modifier_types` 字段表把两种层级写在同一张表里 ——
+    ``game_data`` 是顶层字段，而 ``game_data.ai_value`` / ``game_data.tags``
+    是它**内部**的子字段。前者用 :func:`field_occurrences` 数得到，
+    后者数不到（它们不是条目的字段）。点号键让两者共存于一张表。
+    """
+    counter: Counter[str] = Counter()
+    base = config.GAME / dir_rel
+    if not base.is_dir():
+        return counter
+    for path in sorted(p for p in base.rglob("*.txt") if p.is_file()):
+        pf = parse_cached(path)
+        for key, block in _iter_keyed_blocks(pf):
+            if key != parent:
+                continue
+            for a in block.assignments():
+                counter[f"{parent}.{a.key}"] += 1
+    return counter
+
+
+def file_definition_counts(dir_rel: str) -> dict[str, int]:
+    """文件名 → **顶层定义数**（``@变量`` 不计）。
+
+    口径写死在这里：``@变量`` 是文件级宏、不是定义，算进去会让
+    `messages\\00_messages.txt` 一类的数字多出几行。游戏自身的文档
+    也把「定义数」与「文件行数」分得很开。
+    """
+    out: dict[str, int] = {}
+    base = config.GAME / dir_rel
+    if not base.is_dir():
+        return out
+    for path in sorted(p for p in base.rglob("*.txt") if p.is_file()):
+        pf = parse_cached(path)
+        out[path.name] = sum(1 for a in pf.top_assignments if not a.is_variable)
+    return out
 
 
 def _rows(counter: Counter[str], col: int) -> list[tuple[str, dict[int, str]]]:
@@ -306,4 +366,6 @@ __all__ = [
     "doc_table_specs",
     "field_file_counts",
     "field_occurrences",
+    "file_definition_counts",
+    "nested_field_occurrences",
 ]

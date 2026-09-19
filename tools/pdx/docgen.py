@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from . import config, defines, game_root, install_tree, modifiers, usage
+from . import config, defines, doc17, game_root, install_tree, modifiers, usage
 from .doc_tables import KeyedTableSpec, TableSpec, check_doc, patch_doc
 
 if TYPE_CHECKING:
@@ -67,6 +67,11 @@ def targets() -> tuple[DocTarget, ...]:
         DocTarget(
             path=config.DOCS / "16-外交军事与地图.md",
             specs=tuple(s for s in usage.doc_table_specs() if "doc16" in s.name),
+        ),
+        DocTarget(
+            # doc 17 整族（25 张表里接了 24 张）—— 口径有四种，故单独一个模块。
+            path=config.DOCS / "17-角色科技与呈现.md",
+            specs=tuple(doc17.doc_table_specs()),
         ),
     )
 

@@ -373,7 +373,7 @@ def test_子集型表不出声(tmp_path: Path, capsys: pytest.CaptureFixture[str
 def test_加粗的键也能匹配上(tmp_path: Path) -> None:
     """``| **`x`** | 5 |`` 里的加粗不该挡住匹配。
 
-    doc 16 有大量加粗的键。``_norm_key`` 不剥星号时那些行**永远匹配不上**，
+    doc 16 有大量加粗的键。``norm_key`` 不剥星号时那些行**永远匹配不上**，
     于是数字**永远不会被更新**（静默过期），而盘点还认为整张表「已看守」。
     """
     p = _doc(tmp_path, f"{HEAD3}| **`a.txt`** | 1 | 说明甲 |\n")

@@ -103,7 +103,7 @@ class KeyedTableSpec:
     allow_drop: bool = False
 
 
-def _split_row(line: str) -> list[str]:
+def split_row(line: str) -> list[str]:
     """``| a | b |`` → ``['a', 'b']``（去首尾空单元格与两端空白）。"""
     stripped = line.strip()
     stripped = stripped.removeprefix("|")
@@ -137,8 +137,8 @@ def patch_doc(
             if isinstance(spec, TableSpec)
             else _merge_rows(
                 spec,
-                [_split_row(ln) for ln in lines[start + 2 : end]],
-                width=len(_split_row(lines[start])),
+                [split_row(ln) for ln in lines[start + 2 : end]],
+                width=len(split_row(lines[start])),
                 raw=[ln.rstrip("\n") for ln in lines[start + 2 : end]],
             )
         )
@@ -171,7 +171,7 @@ def _find_header(lines: list[str], doc: Path, spec: TableSpec | KeyedTableSpec) 
     return hits[spec.occurrence]
 
 
-def _norm_key(text: str) -> str:
+def norm_key(text: str) -> str:
     """比对键时用的规范形式：去掉空白、Markdown 反引号**与加粗星号**。
 
     doc 19 的键列写的是 ``| `checksum_manifest.txt` |``，而生成器给的是
@@ -181,6 +181,11 @@ def _norm_key(text: str) -> str:
     ``*`` 是后补的：doc 16 有大量**加粗的键**（``| **`usage_limit`** |``），
     不剥星号时那些行永远匹配不上 —— 于是它们的数字**永远不会被更新**
     （静默过期），而盘点还认为整张表「已看守」。
+
+    **公开**（不再是 ``_norm_key``）：表的键在文档里常写成 ``| `player_subject` |``，
+    而计数器给的键是不带反引号的值 —— 取值函数必须用同一个规范化函数去查计数器，
+    否则**每行都查不到、全写 0**，而 ``append_new=False`` 的表连警告都不打
+    （doc 17 实测：整列变 0，靠 `v3 tables` 的 diff 才发现）。
     """
     return text.strip().strip("`*").strip()
 
@@ -203,7 +208,7 @@ def _group_cells(norm: str, generated: dict[str, dict[int, str]]) -> dict[int, s
     for sep in _GROUP_SEPS:
         if sep not in norm:
             continue
-        parts = [_norm_key(p) for p in norm.split(sep)]
+        parts = [norm_key(p) for p in norm.split(sep)]
         if len(parts) < 2 or not all(parts):
             continue
         subs = [generated.get(p) for p in parts]
@@ -244,7 +249,7 @@ def _merge_rows(
     #: 表格永远报红。
     key_text: dict[str, str] = {}
     for key, spec_cells in spec.cells():
-        norm = _norm_key(key)
+        norm = norm_key(key)
         generated[norm] = spec_cells
         key_text[norm] = key
 
@@ -255,7 +260,7 @@ def _merge_rows(
     for row in existing:
         if len(row) <= spec.key_column:
             continue
-        norm = _norm_key(row[spec.key_column])
+        norm = norm_key(row[spec.key_column])
         cells: dict[int, str] | None = generated.get(norm)
         grouped = False
         if cells is None:
@@ -445,8 +450,8 @@ def check_doc(
             if isinstance(spec, TableSpec)
             else _merge_rows(
                 spec,
-                [_split_row(ln) for ln in lines[start + 2 : end]],
-                width=len(_split_row(lines[start])),
+                [split_row(ln) for ln in lines[start + 2 : end]],
+                width=len(split_row(lines[start])),
                 raw=[ln.rstrip("\n") for ln in lines[start + 2 : end]],
             )
         )
