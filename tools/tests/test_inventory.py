@@ -77,10 +77,13 @@ STAT_HINT = (
 
 #: **未看守的机械表数量上限**。这是「欠债余额」：只许减少，不许增加。
 #:
+#: 进度 125 → 105：doc 05 的两张「假脚本化」表、doc 04/16 的「用了多少次」各一张、
+#: doc 14 整族 18 张字段表。生成表总数 31 → 54。
+#:
 #: 基线 125 来自 2026-09 的全仓盘点（用**本文件自己的判据**量的；
 #: 早先一份临时脚本按略宽的判据量到 126，两者差在 ``NON_STAT`` 的宽窄）。
 #: 做完一批就把这个数往下调 —— 调低是进度，**调高必须在提交信息里说明理由**。
-UNGUARDED_TABLE_BUDGET = 125
+UNGUARDED_TABLE_BUDGET = 105
 
 #: 散文数字（表格之外）的现状，同样只许减少。见模块 docstring 的口径。
 UNGUARDED_PROSE_BUDGET = 114
@@ -129,13 +132,44 @@ def _stat_columns(header: str, rows: list[list[str]]) -> list[str]:
     return out
 
 
-def _generated_headers() -> set[tuple[str, str]]:
-    return {(t.name, s.header) for t in docgen.targets() for s in t.specs}
+def _generated_headers() -> dict[str, list[tuple[str, int]]]:
+    """``文档名 → [(表头, occurrence), …]``。
+
+    **必须带上 occurrence**：一条 spec 只覆盖**同表头的第 N 张**表。
+    doc 14 里有好几张表头都是 ``| 字段 | 实测次数 | 说明 |``，而生成器只管其中一张 ——
+    只按表头文本判「已看守」会把其余几张也算成有人管，于是盘点**少报**，
+    给出虚假的「快做完了」。实测第一版就是这么错的（125 一下掉到 116，
+    而实际只接了 3 张）。
+    """
+    out: dict[str, list[tuple[str, int]]] = {}
+    for t in docgen.targets():
+        for s in t.specs:
+            out.setdefault(t.name, []).append((s.header, getattr(s, "occurrence", 0)))
+    return out
 
 
-def _is_guarded(path: Path, header: str, generated: set[tuple[str, str]]) -> bool:
-    if any(path.name == name and header.startswith(h[:24]) for name, h in generated):
-        return True
+def _is_guarded_by_spec(
+    headers: list[str], index: int, generated: dict[str, list[tuple[str, int]]], doc: str
+) -> bool:
+    """第 ``index`` 张表是否落在某条 spec 的射程内。
+
+    判定必须与 :func:`pdx.doc_tables._find_header` **同源**：那个函数用
+    ``ln.startswith(spec.header)`` 找候选、再按 ``occurrence`` 取第 N 个。
+    所以这里也按 ``startswith`` 逐条 spec 数匹配位置，而不是按「精确表头」数 ——
+    两者在**表头互为前缀**时会得出不同的序号。实测踩过：
+    ``| 令牌 | 形式 | 实测次数 |`` 是 ``| 令牌 | 形式 | 实测次数 | 说明 |``
+    的前缀，文档里两张表，按精确表头数只有 1 个候选（序号 0），
+    按 ``startswith`` 数有 2 个（序号 0、1）—— 于是生成器认第 2 张、
+    而盘点认第 1 张，同一张表一边说已看守、一边说没看守。
+    """
+    for spec_header, occurrence in generated.get(doc, []):
+        hits = [i for i, h in enumerate(headers) if h.startswith(spec_header[:24])]
+        if occurrence < len(hits) and hits[occurrence] == index:
+            return True
+    return False
+
+
+def _is_guarded(path: Path, header: str) -> bool:
     # 字节列由 test_docs_consistency 逐行核对
     if "字节" in header or "| B |" in header:
         return True
@@ -152,8 +186,12 @@ def _count_unguarded_tables() -> tuple[int, list[str]]:
     for path in sorted(config.DOCS.glob("*.md")):
         if path.name in FULLY_GENERATED_DOCS:
             continue
-        for lineno, header, rows in _tables(path):
-            if not rows or _is_guarded(path, header, generated):
+        tables = _tables(path)
+        headers = [h for _ln, h, _rows in tables]
+        for index, (lineno, header, rows) in enumerate(tables):
+            if not rows or _is_guarded(path, header):
+                continue
+            if _is_guarded_by_spec(headers, index, generated, path.name):
                 continue
             if _stat_columns(header, rows):
                 unguarded.append(f"{path.name}:{lineno} {header[:70]}")

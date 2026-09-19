@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from . import config, defines, game_root, install_tree, modifiers
+from . import config, defines, game_root, install_tree, modifiers, usage
 from .doc_tables import KeyedTableSpec, TableSpec, check_doc, patch_doc
 
 if TYPE_CHECKING:
@@ -54,6 +54,19 @@ def targets() -> tuple[DocTarget, ...]:
         DocTarget(
             path=config.DOCS / "08-目录全量清单.md",
             specs=tuple(install_tree.doc_table_specs()),
+        ),
+        DocTarget(
+            # doc 04 / 14 / 16 的「用了多少次」类表（它们还没有各自的领域模块）
+            path=config.DOCS / "04-脚本系统.md",
+            specs=tuple(s for s in usage.doc_table_specs() if "doc04" in s.name),
+        ),
+        DocTarget(
+            path=config.DOCS / "14-经济与生产系统.md",
+            specs=tuple(s for s in usage.doc_table_specs() if "doc14" in s.name),
+        ),
+        DocTarget(
+            path=config.DOCS / "16-外交军事与地图.md",
+            specs=tuple(s for s in usage.doc_table_specs() if "doc16" in s.name),
         ),
     )
 
