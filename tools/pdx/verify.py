@@ -961,7 +961,7 @@ CLAIMS: list[Claim] = [
         "game 全树递归文件数（不含安装根下的松散文件）",
         "tree_files",
         "game",
-        27724,
+        27723,
     ),
     Claim("tree.game_dirs", "08-目录全量清单.md", "game 全树子目录数", "tree_dirs", "game", 1986),
     Claim(
@@ -970,7 +970,7 @@ CLAIMS: list[Claim] = [
         "game 全树的字节总数（等价 17,055.76 MB）",
         "tree_bytes",
         "game",
-        17884258546,
+        17884255692,
     ),
     Claim(
         "tree.binaries_files",
@@ -1021,7 +1021,7 @@ CLAIMS: list[Claim] = [
         "game/gfx 目录文件数",
         "tree_files",
         "game/gfx",
-        19162,
+        19161,
     ),
     Claim(
         "tree.gfx_bytes",
@@ -1029,7 +1029,7 @@ CLAIMS: list[Claim] = [
         "game/gfx 目录字节总数（等价 9,690.00 MB）",
         "tree_bytes",
         "game/gfx",
-        10160703167,
+        10160700313,
     ),
     Claim(
         "tree.events_files",

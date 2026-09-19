@@ -16,7 +16,7 @@ C:\...\common\Victoria 3\
 |---|---|---|---|
 | `clausewitz\` | fonts / gfx / gui / imgui_fonts / input_profile / localization / tools | 46 / **547** / 68 / 2 / 19 / 68 / 1 | 另含 `compound_settings.txt`(1,110 B)、`cw_flow_graphs.anchor` |
 | `jomini\` | common / gfx / gui / jomini / localization / notifications | 25 / 134 / 99 / 1 / **231** / 2 | 另含 `settings_layout.txt`(1,229 B) |
-| `game\` | **19 个一级目录**（另有 13 个根级松散文件） | **27,724** | 见 `08-目录全量清单.md` |
+| `game\` | **19 个一级目录**（另有 13 个根级松散文件） | **27,723** | 见 `08-目录全量清单.md` |
 
 ## 2. `jomini\common\` —— 18 个 defines 命名空间
 

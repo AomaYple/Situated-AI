@@ -14,7 +14,7 @@
 |---|---|
 | 游戏版本 | **Victoria 3 1.14.3 (Ice Tea)**，Clausewitz `caligula/release/1.14.x` |
 | Steam App ID | `529340` |
-| 安装目录 | `C:\Program Files (x86)\Steam\steamapps\common\Victoria 3`（28,970 文件 / 17,172.8 MB） |
+| 安装目录 | `C:\Program Files (x86)\Steam\steamapps\common\Victoria 3`（28,969 文件 / 17,172.8 MB） |
 | 用户数据 | `C:\Users\28905\Documents\Paradox Interactive\Victoria 3` |
 | 本地 mod 目录 | `...\Victoria 3\mod\`（当前为空） |
 | 已订阅 mod | 23 个（全部已解剖，见 `12`） |

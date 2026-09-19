@@ -239,6 +239,7 @@ def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]], *, width: int =
     out: list[str] = []
     seen: set[str] = set()
     dropped: list[str] = []
+    unmatched: list[str] = []
     for row in existing:
         if len(row) <= spec.key_column:
             continue
@@ -251,6 +252,7 @@ def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]], *, width: int =
             # 而错位的散文比错的数字更难发现。确实该删的表用 allow_drop 显式声明。
             if not spec.allow_drop:
                 out.append("| " + " | ".join(row) + " |")
+                unmatched.append(norm)
             else:
                 dropped.append(norm)
             continue
@@ -259,10 +261,26 @@ def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]], *, width: int =
     if dropped:
         # 只有显式开了 allow_drop 才会走到这里；把删掉的东西打出来，
         # 免得「表短了几行」这种事只能靠肉眼发现。
-        print(
-            f"[doc_tables] {spec.name}: 删除了 {len(dropped)} 行 —— "
-            f"{dropped[:5]}{' …' if len(dropped) > 5 else ''}",
-            file=sys.stderr,
+        _warn(spec.name, "删除了", dropped)
+    if unmatched and spec.append_new:
+        # 只在**声称枚举全部条目**的表上出声（``append_new=True``）。
+        #
+        # 为什么必须出声：游戏升级删掉某个目录时，它的行会带着旧数字留在表里，
+        # 而 `v3 tables` 照样报「全部一致」—— 那是最难发现的一类失效
+        # （表格看着完整、数字却已经死了）。
+        #
+        # 为什么限定范围：``append_new=False`` 的表**本来就只覆盖子集**
+        # （节选表、只更新几行的版本指纹表），未匹配是设计使然。
+        # 实测给全部表都出声会稳定报三张表的十几行 —— 那种噪声会训练人
+        # 忽略这条提示，比不出声更糟。
+        #
+        # 只提示、不报错：文档里作者自己加的说明行也会走到这里，
+        # 报错会把正常的作者改动变成门禁红灯。
+        _warn(
+            spec.name,
+            "未匹配、已原样保留",
+            unmatched,
+            hint="（游戏升级删了目录，还是文档里多了一行说明？）",
         )
     if spec.append_new:
         for norm, cells in generated.items():
@@ -276,6 +294,18 @@ def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]], *, width: int =
                 new_cells: dict[int, str] = {spec.key_column: f"`{key_text[norm]}`", **cells}
                 out.append(_render([], new_cells, min_width=width))
     return out
+
+
+def _warn(table: str, what: str, keys: list[str], *, hint: str = "") -> None:
+    """把生成器「没能覆盖的行」打到 stderr。
+
+    为什么不抛异常：这两种情况都可能是**正常**的（作者在表里加了一行说明、
+    或者确实该删的表开了 ``allow_drop``）。它们需要的是被人看见，
+    而不是把门禁卡死 —— 一个动不动就红的检查会很快被忽略。
+    """
+    shown = ", ".join(keys[:5])
+    more = f" …（共 {len(keys)} 行）" if len(keys) > 5 else ""
+    print(f"[doc_tables] {table}: {what} {len(keys)} 行 —— {shown}{more}{hint}", file=sys.stderr)
 
 
 def _render(row: list[str], generated: dict[int, str], *, min_width: int = 0) -> str:

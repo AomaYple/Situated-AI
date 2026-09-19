@@ -328,5 +328,45 @@ def test_显式开_allow_drop_才会删行(tmp_path: Path) -> None:
     assert "`a.dll` | 20 | 还在" in text
 
 
+@_unit
+def test_未匹配行在枚举型表上会出声(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """声称枚举全部条目的表，遇到解释不了的行必须提示。
+
+    不然就是最难发现的一类失效：游戏升级删掉某个目录，它的行带着旧数字留在
+    表里，而 `v3 tables` 照样报「全部一致」—— 表格看着完整、数字却已经死了。
+    """
+    p = _doc(
+        tmp_path,
+        f"{HEAD3}| `a.txt` | 1 | 说明甲 |\n| `vanished-dir` | 2 | 这个目录没了 |\n",
+    )
+    spec = doc_tables.KeyedTableSpec(
+        name="enum", header=HEAD3_LINE, cells=lambda: [("a.txt", {1: "1"})]
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    err = capsys.readouterr().err
+    assert "未匹配" in err, f"没有出声，stderr={err!r}"
+    assert "vanished-dir" in err, f"没点名是哪一行，stderr={err!r}"
+    # 行仍然保留（默认不删）
+    assert "`vanished-dir` | 2 | 这个目录没了" in p.read_text(encoding="utf-8")
+
+
+@_unit
+def test_子集型表不出声(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """只覆盖子集的表（节选、只更新几行）未匹配是设计使然，不该报。
+
+    实测给全部表都出声会稳定报三张表的十几行 —— 那种噪声会训练人忽略这条
+    提示，比不出声更糟。
+    """
+    p = _doc(tmp_path, f"{HEAD3}| `a.txt` | 1 | 说明甲 |\n| `作者加的一行` | 2 | 说明 |\n")
+    spec = doc_tables.KeyedTableSpec(
+        name="subset",
+        header=HEAD3_LINE,
+        cells=lambda: [("a.txt", {1: "1"})],
+        append_new=False,
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert "未匹配" not in capsys.readouterr().err
+
+
 if __name__ == "__main__":  # pragma: no cover
     sys.exit(pytest.main([__file__, "-v"]))
