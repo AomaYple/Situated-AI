@@ -2333,6 +2333,22 @@ CLAIMS: list[Claim] = [
         4,
     ),
     Claim(
+        "script.ai_script_values_lines_doc04",
+        "04-脚本系统.md",
+        "ai_script_values 的行数（doc 04 §4.6 与 doc 03 §4 描述的是同一个文件）",
+        "doc03_ai_script_values",
+        "lines",
+        703,
+    ),
+    Claim(
+        "script.ai_script_values_keys_doc04",
+        "04-脚本系统.md",
+        "ai_script_values 的顶层键数（§4.6 那张表只列了其中 18 个重点键）",
+        "doc03_ai_script_values",
+        "top_keys",
+        33,
+    ),
+    Claim(
         "eco.pm_hyphen_dirs",
         "14-经济与生产系统.md",
         "全 common 里含连字符的顶层键总数（character_templates 27 + PM 3 + 2 个各 1）",
