@@ -431,6 +431,13 @@ PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
     ("04-脚本系统.md", 361): "§9.5 取证数字：`show_as_tooltip` 的用法次数"
     "（复算：`v3 evidence show_as_tooltip`），同 49/98/160 那一类",
     (
+        "README.md",
+        161,
+    ): "索引页「最关键的结论 #1」的引擎侧取证：`victoria3.exe` 里 "
+    "`<键名>_cw_duplicate_compat` 重名策略名的个数（复算："
+    "`v3 evidence --exe-grep _cw_duplicate_compat`）—— 与 doc 04 的 161 同源同性质"
+    "（读的是**这一份二进制**里有哪些名字，属线索层而非承诺）",
+    (
         "06-本地化与界面资源.md",
         0,
     ): "前言与 §1 的**命中数为 0**（`£`+字母、`$Nbsp$`、`$NEWLINE$`、行尾裸 `|`/`>` 等）"
