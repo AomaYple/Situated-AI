@@ -48,16 +48,23 @@ from rich.table import Table
 
 from pdx import (
     analyze,
+    cache,
     config,
+    covgate,
     defines,
     doc_tables,
     docgen,
     docs_mirror,
     engine_log,
+    evidence,
     exe_strings,
+    lockfile,
     snapshot,
+    tables_offline,
+    unknowns,
     verify,
 )
+from pdx import mods as mods_mod
 from pdx.console import enable_utf8_stdio
 from pdx.extract import extract_dir
 from pdx.parser import TOLERATED_ERRORS, parse_file
@@ -606,7 +613,7 @@ def snap_create(
     """生成当前版本快照，写入 tools/out/snapshots/。
 
     默认是**完整快照**（约 39 MiB，本地用，不入库）。
-    ``--compact`` 产出**精简快照**（约 4.9 MiB）：结构域原样保留，
+    ``--compact`` 产出**精简快照**（约 5.1 MiB）：结构域原样保留，
     只把 ``localization`` 的 14 万条键名换成「键数 + sha256」——
     小到可以随仓库分发，让「升级前后 diff 出字段增删」在别的机器上也能做。
     """
@@ -948,6 +955,14 @@ def refresh_cmd(
 @app.command("tables")
 def tables_cmd(
     write: Annotated[bool, typer.Option("--write", help="重算并写回文档")] = False,
+    offline: Annotated[
+        bool,
+        typer.Option(
+            "--offline",
+            help="不读游戏：拿**入库快照**里记录的表内容核对文档（CI 用；可配 --write）",
+        ),
+    ] = False,
+    only: Annotated[str, typer.Option("--only", help="只处理文档名含该子串的目标")] = "",
 ) -> None:
     """重算文档里**由工具生成**的表格（doc 05 的 defines 表、doc 08 的目录统计表、
     doc 19 的根目录与路径表）。
@@ -962,7 +977,19 @@ def tables_cmd(
 
     替换规则见 :mod:`pdx.doc_tables`：只动数据行，表头、分隔线与散文一律不碰；
     散文列与行的顺序按文档保留。
+
+    **``--offline``**：算表要读游戏，CI 上没有游戏 —— 于是「表格被手改」
+    一直没人守。快照里现在带着**每张表当时的数据行**，所以离线可以比对，
+    也可以 ``--write`` 把表恢复成最后一次已知正确的样子。
+    它证明的是「表与入库快照一致」，**不是**「表与现在的游戏一致」
+    （后者仍是 `v3 refresh` 的活）。口径见 :mod:`pdx.tables_offline`。
     """
+    if offline:
+        _tables_offline(write=write, only=only)
+        return
+    if only:
+        _fail("--only 只在 --offline 下有意义（在线核对是逐表与生成结果比对）")
+
     if write:
         try:
             done = docgen.write_all()
@@ -997,6 +1024,65 @@ def tables_cmd(
     console.print(table)
     console.print("[yellow]跑 `v3 tables --write` 可按生成结果修正[/]")
     raise typer.Exit(EXIT_FAILED)
+
+
+def _tables_offline(*, write: bool, only: str) -> None:
+    """``v3 tables --offline``：只读快照与文档，不读游戏。"""
+    recorded = tables_offline.load_tables()
+    if not recorded:
+        _fail(
+            "快照里没有生成表记录（域 doc_tables）—— 在装有游戏的机器上跑 "
+            "`v3 snapshot create --compact` 重建一份（它是入库的）"
+        )
+
+    if write:
+        try:
+            done = tables_offline.restore(recorded, only=only)
+        except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+            _fail(f"按快照恢复表格失败：{type(exc).__name__}: {exc}")
+        if not done:
+            console.print("[green]全部生成表都与快照记录一致，无需改动[/]")
+            return
+        table = Table(title=f"已按快照恢复 {len(done)} 张表", show_lines=False)
+        table.add_column("表")
+        table.add_column("数据行", justify="right", style="cyan")
+        for key, n in sorted(done.items()):
+            table.add_row(escape(key), str(n))
+        console.print(table)
+        return
+
+    try:
+        diffs, missing, orphans = tables_offline.compare(recorded, only=only)
+    except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+        _fail(f"离线核对表格失败：{type(exc).__name__}: {exc}")
+
+    if diffs:
+        table = Table(title=f"{len(diffs)} 行与快照记录不一致", show_lines=False)
+        table.add_column("表", style="dim")
+        table.add_column("行", justify="right")
+        table.add_column("文档现值", overflow="fold")
+        table.add_column("快照记录", overflow="fold")
+        for d in diffs[:30]:
+            table.add_row(
+                escape(d.key), str(d.line), escape(d.actual[:60]), escape(d.expected[:60])
+            )
+        console.print(table)
+        console.print("[yellow]跑 `v3 tables --offline --write` 可按快照恢复[/]")
+        raise typer.Exit(EXIT_FAILED)
+
+    covered = len(recorded) - len(orphans)
+    console.print(f"[green]快照里记录的 {covered} 张生成表都与文档一致[/]")
+    if missing:
+        console.print(
+            f"[yellow]另有 {len(missing)} 张登记在案的表不在快照里（多半是新增规格）—— "
+            f"本机跑 `v3 refresh` 后重建快照即可：{escape(', '.join(missing[:5]))}"
+            f"{' …' if len(missing) > 5 else ''}[/]"
+        )
+    if orphans:
+        console.print(
+            f"[yellow]快照里有 {len(orphans)} 张表已不在登记表里（规格被删或改名）："
+            f"{escape(', '.join(orphans[:5]))}{' …' if len(orphans) > 5 else ''}[/]"
+        )
 
 
 # ── verify ──────────────────────────────────────────────────
@@ -1112,7 +1198,7 @@ def verify_cmd(
     这个最要命的失效模式一直敞着。现在真的接上了（``--no-drift`` 可跳过）。
 
     ``--from-snapshot`` 是**给 CI 用的**：那里没有游戏，全部实测断言都会被
-    跳过，而精简快照（已入库、约 4.9 MiB）里带着 common 各目录的条目名、
+    跳过，而精简快照（已入库、约 5.1 MiB）里带着 common 各目录的条目名、
     defines 命名空间与 DLC 清单，足以核验其中约一半。它证明的是「断言注册表
     仍与当时记录的真值一致」，**不**证明「游戏里现在还是这个数」。
 
@@ -1445,6 +1531,319 @@ def strings_cmd(
         console.print(f"\n未使用候选（前 {min(limit, len(rows))} / {len(rows):,}）：")
         for name in rows[:limit]:
             console.print(f"  {escape(name)}")
+
+
+@app.command("lock")
+def lock_cmd(
+    write: bool = typer.Option(False, "--write", help="按当前环境重写 requirements.lock"),
+) -> None:
+    """依赖锁：把本机解析出来的依赖版本组合写成可核对的文件。
+
+    `pyproject.toml` 里全是下限（`typer>=0.27`）—— 下限保证装得上，
+    **不保证装出来是同一套**：CI 与本地、今天与三个月后解析出的
+    pytest / ruff / hypothesis 版本可能不同，于是「代码一行没改却一边红」
+    就会发生。这个命令沿 `Requires-Dist` 展开本机已安装的闭包，
+    `--write` 写成 `requirements.lock`；不带参数时与锁**对账**（有差异退出码 1）。
+
+    为什么不引 pip-tools / uv：那是又一个要装、要维护、要联网解析的工具，
+    而本仓库只有 15 条直接依赖，标准库的 `importlib.metadata` 就够了。
+    口径与边界（含「标记保守求值」这条）见 `pdx.lockfile`。
+    """
+    actual = lockfile.resolve()
+    if write:
+        count = lockfile.write(actual)
+        console.print(f"[green]已写入 {lockfile.LOCK_FILE}：{count} 条[/]")
+        return
+
+    locked = lockfile.read()
+    if not locked:
+        _fail(f"读不到 {lockfile.LOCK_FILE}（或它不是本工具生成的）—— 先跑 `v3 lock --write`")
+
+    drift = lockfile.compare(actual, locked)
+    if not drift:
+        console.print(f"[green]{lockfile.LOCK_FILE} 与当前环境一致（{len(locked)} 条）[/]")
+        return
+
+    table = Table(title=f"锁与环境有 {len(drift)} 处不一致", show_lines=False)
+    table.add_column("包")
+    table.add_column("类别")
+    table.add_column("锁", style="dim")
+    table.add_column("当前", style="cyan")
+    for d in drift:
+        table.add_row(
+            escape(d.name), escape(d.kind), escape(d.locked or "—"), escape(d.actual or "—")
+        )
+    console.print(table)
+    console.print("[yellow]确认过是有意升级/降级后，跑 `v3 lock --write` 更新锁[/]")
+    raise typer.Exit(EXIT_FAILED)
+
+
+@app.command("cov")
+def cov_cmd(
+    check_only: bool = typer.Option(False, "--check-only", help="只读上次的数据，不重跑测试"),
+    top: int = typer.Option(0, "--top", help="只列出覆盖率最低的 N 个模块（0 = 全列）"),
+) -> None:
+    """跑覆盖率门禁：整体 86% 之外，再按**核心模块**逐条核对下限。
+
+    为什么整体门禁不够：删掉 200 行 `cli.py` 的测试、再给某个小模块补 200 行
+    测试，总数可以纹丝不动，而最要紧的那几个模块（解析器、断言注册表、
+    归属标记、表格生成）已经悄悄退化了。口径与下限见 `pdx.covgate`。
+
+    `--check-only` 读上次 `v3 cov` 写下的 `tools/out/cov.json`（不重跑，秒级）；
+    带覆盖率跑整套测试约 5 分钟，因此这条**不进 CI**（CI 上没有游戏，
+    覆盖率口径完全不同，理由见 `.github/workflows/ci.yml` 的文件头注释）。
+    """
+    if not check_only:
+        code = covgate.run_pytest()
+        if code != 0:
+            console.print(f"[yellow]pytest 退出码 {code} —— 先让测试全绿再看覆盖率[/]")
+
+    rows = covgate.load_coverage()
+    if not rows:
+        _fail(f"读不到覆盖率数据（{covgate.COV_JSON}）—— 先跑一次 `v3 cov`（不带 --check-only）")
+
+    if top:
+        rows = sorted(rows, key=lambda r: r.percent)[:top]
+
+    table = Table(title="模块覆盖率（分支）", show_lines=False)
+    table.add_column("模块")
+    table.add_column("覆盖率", justify="right", style="cyan")
+    table.add_column("下限", justify="right")
+    table.add_column("语句", justify="right", style="dim")
+    table.add_column("", width=2, justify="center")
+    for row in rows:
+        floor = row.floor
+        table.add_row(
+            escape(row.module),
+            f"{row.percent:.1f}%",
+            "—" if floor is None else f"{floor:.0f}%",
+            f"{row.statements:,}",
+            "" if floor is None else ("✅" if row.ok else "❌"),
+        )
+    console.print(table)
+
+    failed = covgate.check(rows)
+    gone = covgate.missing_floors(rows)
+    overall = covgate.total_percent(rows)
+    floor_overall = covgate.overall_floor()
+    below_overall = overall + 1e-9 < floor_overall
+    console.print(
+        f"整体 {overall:.2f}%    低于下限 {len(failed)} 个模块"
+        f"    [dim]（整体下限 {floor_overall:.0f}% 读自 pyproject.toml，"
+        f"模块下限表 {len(covgate.FLOORS)} 个，见 pdx.covgate）[/]"
+    )
+    if below_overall:
+        console.print(f"  [red]❌ 整体 {overall:.2f}% < {floor_overall:.0f}%[/]")
+    for row in failed:
+        console.print(f"  [red]❌ {escape(row.module)}：{row.percent:.1f}% < {row.floor:.0f}%[/]")
+    if gone:
+        console.print(
+            f"[yellow]下限表里这些模块这次没有数据（改名或删了？）：{escape(', '.join(gone))}[/]"
+        )
+    if failed or below_overall:
+        raise typer.Exit(EXIT_FAILED)
+
+
+@app.command("cache")
+def cache_cmd(
+    clear: bool = typer.Option(False, "--clear", help="清空磁盘缓存"),
+    show_entries: bool = typer.Option(False, "--list", help="列出最旧的若干条目"),
+) -> None:
+    """解析缓存的状态与清理。
+
+    全量分析、`v3 tables`、`v3 verify` 都要解析 6 千个脚本文件；内存缓存只管
+    一次进程内的重复，**跨进程（`pytest -n auto` 的 16 个 worker、每次重跑）
+    靠的是磁盘层**。缓存放在系统临时目录，按仓库路径分桶，不往仓库里塞文件。
+
+    键 = `sha256(路径 + mtime + 大小 + 引擎指纹)`：源文件变了、解析器代码变了，
+    旧条目自动失效，不需要谁记得清缓存。口径见 `pdx.cache` 模块文档。
+    """
+    mem = cache.stats()
+    disk = cache.disk_counts()
+    table = Table(title="解析缓存", show_lines=False)
+    table.add_column("层")
+    table.add_column("指标")
+    table.add_column("值", justify="right", style="cyan")
+    table.add_row("内存", "条目", f"{mem['条目']:,}")
+    table.add_row("内存", "命中 / 未命中", f"{mem['命中']:,} / {mem['未命中']:,}")
+    table.add_row("磁盘", "可命中条目", f"{disk['条目']:,}")
+    table.add_row("磁盘", "分片 / 占用", f"{disk['分片']} / {disk['字节'] / 1048576:.1f} MB")
+    table.add_row("磁盘", "状态", cache.describe_state())
+    console.print(table)
+
+    if show_entries:
+        for path, mtime, size in sorted(cache.disk_entries(), key=lambda item: item[1])[:20]:
+            console.print(
+                f"  {time.strftime('%Y-%m-%d %H:%M', time.localtime(mtime))}  "
+                f"{size / 1024:8.1f} KB  {escape(str(path))}"
+            )
+
+    if clear:
+        removed = cache.clear_disk()
+        console.print(f"[green]已清空磁盘缓存：{removed} 个分片[/]")
+
+
+@app.command("evidence")
+def evidence_cmd(
+    keys: Annotated[list[str] | None, typer.Argument(help="要查证的键名，可给多个")] = None,
+    mods: bool = typer.Option(False, "--mods/--no-mods", help="是否也扫本机 mod（③ 类证据）"),
+    samples: bool = typer.Option(True, "--samples/--no-samples", help="是否列出原版样例"),
+    exe_grep: str = typer.Option("", "--exe-grep", help="改查 exe 标识符里含该子串的一族名字"),
+    directory: str = typer.Option("", "--dir", help="① 类只扫这个子树，如 common/scripted_lists"),
+    values: bool = typer.Option(False, "--values/--no-values", help="列出该键的标量取值分布"),
+) -> None:
+    """查一个键名的四类证据：原版用法 / 官方 md / MOD 实践 / exe 字面量。
+
+    doc 04 §13 那 28 项 **【未确认】** 里，相当一部分本地就有证据，只是散在
+    四个地方。这个命令把它们一次摆出来，口径写在 `pdx.evidence`：
+
+    ① 原版用法（`.txt`/`.gui` 过解析器，**注释不算用法**）
+       键与**值**分开统计：`orphan` 是键，`character_event` 是值（`type = ...`）
+    ② 官方 md 的篇名与行号，并区分「反引号/赋值」与「英文散文里恰好有这个单词」
+    ③ 本机 mod 的使用次数（**本机快照**，不能写成断言）
+    ④ `victoria3.exe` 里有没有这个字面量，以及它前后的邻居串（表内聚集）
+
+    `--exe-grep` 换一个问法：引擎里有哪些同族名字（例如 `scripted` 一族）。
+    ⚠️ ④ 只是线索：邻居里混着同节的无关字面量，"引擎里有" 不等于 "语法合法"。
+    没有游戏本体时 ①②④ 为空，命令仍成功（退出码 0）。
+    """
+    if exe_grep:
+        hits = exe_strings.match_identifiers(exe_grep)
+        console.print(f"exe 里含 [cyan]{escape(exe_grep)}[/] 的标识符（{len(hits)} 个）：")
+        for name in hits:
+            console.print(f"  {escape(name)}")
+        return
+    if not keys:
+        _fail("至少要给一个键名，例如 `v3 evidence is_shown_in_lobby`")
+
+    reports = evidence.gather(
+        keys, mods=mods, root=(config.GAME / directory) if directory else None
+    )
+    for ev in reports:
+        console.print(f"\n[bold cyan]{escape(ev.key)}[/] —— {escape(ev.summary)}")
+        v = ev.vanilla
+        if v.total:
+            by_dir = "、".join(f"{d}×{n}" for d, n in v.by_dir.most_common(4))
+            parents = "、".join(f"{p}×{n}" for p, n in v.parents.most_common(4))
+            forms = "、".join(f"{f}×{n}" for f, n in v.forms.most_common(3))
+            console.print(f"  ① 目录：{escape(by_dir)}")
+            console.print(f"    父键：{escape(parents)}")
+            console.print(f"    形态：{escape(forms)}")
+            if values and v.scalar_values:
+                listed = "、".join(f"{k}×{n}" for k, n in v.scalar_values.most_common(12))
+                console.print(f"    取值（{len(v.scalar_values)} 种）：{escape(listed)}")
+            if samples:
+                for s in v.samples:
+                    console.print(f"    · [dim]{escape(s.where)}[/] {escape(s.text)}")
+        if v.values:
+            parents = "、".join(f"{p}×{n}" for p, n in v.value_parents.most_common(4))
+            console.print(f"  ① 作为值：{v.values} 处，出现在：{escape(parents)}")
+            if samples:
+                for s in v.value_samples:
+                    console.print(f"    · [dim]{escape(s.where)}[/] {escape(s.text)}")
+        if ev.docs:
+            code = ev.documented
+            for hit in code[:4]:
+                console.print(f"  ② [{hit.kind}] [dim]{escape(hit.where)}[/] {escape(hit.text)}")
+            if len(code) > 4:
+                console.print(f"     （另有 {len(code) - 4} 处）")
+            if ev.prose:
+                console.print(f"     （散文命中 {ev.prose} 处，不算「文档提到该键」）")
+        if ev.mods:
+            listed = "、".join(f"{m}×{n}" for m, n in ev.mods[:5])
+            console.print(f"  ③ mod：{escape(listed)}")
+        elif mods:
+            console.print("  ③ mod：本机 mod 里 0 处")
+        exe_state = "有" if ev.exe_exact else "无"
+        console.print(f"  ④ exe 字面量：{exe_state}")
+        if ev.exe_prev or ev.exe_next:
+            if ev.exe_prev:
+                console.print(f"     前：{escape(' '.join(ev.exe_prev))}")
+            if ev.exe_next:
+                console.print(f"     后：{escape(' '.join(ev.exe_next))}")
+
+
+@app.command("prefixes")
+def prefixes_cmd(
+    directory: Annotated[
+        str | None, typer.Argument(help="只看某个目录，例如 common/scripted_triggers")
+    ] = None,
+    top: int = typer.Option(12, "--top", "-n", help="最多列多少个目录"),
+) -> None:
+    """本机 mod 的**功能前缀按目录**用量 —— 「这个目录能不能带前缀」的证据。
+
+    原版自己零使用功能前缀（`pdx.mods.vanilla_prefix_count`），所以 doc 04 §1
+    那张表里「能否用 `REPLACE:` 之类的前缀」只能看 mod 实践。这个命令就是
+    那 12 个 **【未确认】** 单元格的复算路径。
+
+    ⚠️ 结果取决于本机装了哪些 mod（**本机快照**），不是游戏版本属性。
+    没有 mod 时输出空表。
+    """
+    by_dir = mods_mod.prefix_usage_by_dir()
+    if not by_dir:
+        console.print("[yellow]没有发现任何 mod（workshop 与本地 mod 目录都为空）[/]")
+        return
+    if directory:
+        counter = by_dir.get(directory)
+        if not counter:
+            console.print(f"[yellow]{escape(directory)} 下没有任何带前缀的条目[/]")
+            return
+        table = Table(title=f"{directory} 的功能前缀（本机快照）", show_lines=False)
+        table.add_column("前缀")
+        table.add_column("次数", justify="right", style="cyan")
+        for prefix, count in counter.most_common():
+            table.add_row(escape(prefix), str(count))
+        console.print(table)
+        return
+
+    table = Table(title="各目录的功能前缀用量（本机 mod 快照）", show_lines=False)
+    table.add_column("目录")
+    table.add_column("前缀总计", justify="right", style="cyan")
+    table.add_column("明细", style="dim")
+    for rel_dir, counter in sorted(by_dir.items(), key=lambda item: -sum(item[1].values()))[:top]:
+        detail = "、".join(f"{p}×{n}" for p, n in counter.most_common(5))
+        table.add_row(escape(rel_dir), str(sum(counter.values())), escape(detail))
+    console.print(table)
+
+
+@app.command("unverified")
+def unverified_cmd(
+    doc: str | None = typer.Option(None, "--doc", "-d", help="只看某篇，例如 04"),
+    show_context: bool = typer.Option(True, "--context/--no-context", help="是否带上下文"),
+) -> None:
+    """列出文档里所有 **【未确认】** 项 —— 待验证清单的可复算版本。
+
+    这些标记是**承诺**：凡是文档没证据的地方都必须标出来，不能凭印象断言。
+    这个命令把承诺变成可数、可定位的清单（doc 04 §13 的 U 编号就是它的
+    人工整理版），免得「还有多少没验证」只能靠人翻。
+
+    没有未确认项时退出码 0；有则打印清单（退出码 0 —— 它是**清单**不是门禁，
+    真正的门禁是 `v3 verify` 与 pytest）。
+    """
+    items = unknowns.unverified_items(doc=doc)
+    if not items:
+        scope = f"（doc {doc}）" if doc else ""
+        console.print(f"[green]没有 【未确认】 项{scope}[/]")
+        return
+
+    by_doc: dict[str, list[unknowns.Unverified]] = {}
+    for item in items:
+        by_doc.setdefault(item.doc, []).append(item)
+
+    table = Table(title=f"【未确认】清单（{len(items)} 处 / {len(by_doc)} 篇）", show_lines=False)
+    table.add_column("文档")
+    table.add_column("行", justify="right", style="cyan")
+    table.add_column("章节", style="dim")
+    table.add_column("上下文" if show_context else "内容")
+    for name, group in sorted(by_doc.items()):
+        for item in group:
+            table.add_row(
+                escape(name),
+                str(item.line),
+                escape(item.section),
+                escape(item.context if show_context else item.text),
+            )
+    console.print(table)
 
 
 @app.command("show")

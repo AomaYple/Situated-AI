@@ -3428,7 +3428,7 @@ def product_kinds() -> frozenset[str]:
 #:
 #: 为什么需要这一层：`run_claims` 全部要读游戏本体，而 **CI 上没有游戏**，
 #: 于是那 63 条断言在 CI 上一条都不跑（`test_verify.py` 被自动跳过）。
-#: 而入库的精简快照（`tools/out/snapshots/*.compact.json`，约 4.9 MiB）
+#: 而入库的精简快照（`tools/out/snapshots/*.compact.json`，约 5.1 MiB）
 #: 里带着 common 各目录的条目名、defines 命名空间、DLC 清单 —— 足够核验其中一批。
 #:
 #: ⚠️ **它证明什么、不证明什么**（写清楚，否则又是自我安慰）：

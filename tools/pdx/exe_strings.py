@@ -28,13 +28,14 @@
 from __future__ import annotations
 
 import re
+from collections import deque
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from . import config
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Collection, Iterator
     from pathlib import Path
 
 #: 可打印 ASCII 串（长度 ≥4）。4 是长度下界：3 个字符里噪音远多于线索。
@@ -114,11 +115,76 @@ def unused_identifiers() -> list[str]:
     return sorted(exe_identifiers() - script_identifiers())
 
 
+def match_identifiers(needle: str, *, limit: int = 40) -> list[str]:
+    """exe 标识符里**含** ``needle`` 的那些（大小写不敏感，升序）。
+
+    用来查「引擎里有哪一族同名字段」：``--exe-grep scripted`` 会给出
+    ``jomini_scripted_list_templates`` / ``scripted_effect`` /
+    ``scripted_button_cooldowns`` 之类 —— 这正是 doc 04 §13 里
+    「调用语法是什么」这类问题的**引擎侧线索**。
+    """
+    low = needle.lower()
+    hits = sorted(i for i in exe_identifiers() if low in i.lower())
+    return hits[:limit]
+
+
+def identifier_neighbors(
+    keys: Collection[str], *, span: int = 8
+) -> dict[str, list[tuple[str, ...]]]:
+    """每个键在 exe 字节流里的**邻近标识符**（前后各 ``span`` 个）。
+
+    为什么需要它
+    ----------
+    :func:`exe_identifiers` 返回的是 ``frozenset`` —— 顺序丢了。而 PE 里的
+    字符串常量**按数据表聚集**：一个字段名旁边往往就是同一张表的其它字段名。
+    于是「这个键有哪些兄弟键」这个问题可以变成一次字节扫描。
+
+    ⚠️ 依然是**线索不是结论**：邻居里混着同节的无关字面量（版本号、编译器符号）。
+    中心词本身不在 exe 里时返回空列表。
+
+    一次扫描处理全部 ``keys``（97 MB 只读一遍）。
+    """
+    wanted = {k for k in keys if k.isascii() and k}
+    out: dict[str, list[tuple[str, ...]]] = {k: [] for k in wanted}
+    if not wanted or span <= 0:
+        return out
+    path = exe_path()
+    if not path.is_file():
+        return out
+
+    data = path.read_bytes()
+    window: deque[str] = deque(maxlen=span)
+    pending: tuple[str, deque[str]] | None = None  # 命中后正在收集的后继
+    for raw in _ASCII_RUN.finditer(data):
+        if not _IDENTIFIER.fullmatch(raw.group()):
+            continue
+        word = raw.group().decode("ascii")
+        if pending is not None:
+            key, after = pending
+            after.append(word)
+            if len(after) >= span:
+                out[key].append(tuple(after))
+                pending = None
+        elif word in wanted:
+            out[word].append(tuple(window))
+            pending = (word, deque())
+        window.append(word)
+
+    # 收尾：文件末尾附近命中、后继没凑满 span 的那一次
+    if pending is not None:
+        key, after = pending
+        if after:
+            out[key].append(tuple(after))
+    return out
+
+
 __all__ = [
     "SCRIPT_SUFFIXES",
     "exe_identifiers",
     "exe_path",
+    "identifier_neighbors",
     "identifier_stats",
+    "match_identifiers",
     "script_identifiers",
     "unused_identifiers",
 ]

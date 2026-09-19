@@ -14,6 +14,18 @@
 #
 # ⚠️ 下面的 entry 写的是 Windows 下的 `.venv/Scripts/`，因此这套 hook 只在
 # Windows 本地可用；跨平台的同一套检查由 `.github/workflows/ci.yml` 承担。
+#
+# 与 CI 的对应关系（**别让两边漂开**）
+# ----------------------------------
+#   ruff check        ↔ ci.yml 的「ruff —— 代码检查」
+#   ruff format       ↔ ci.yml 的「ruff —— 格式检查」
+#   mypy              ↔ ci.yml 的「mypy —— 类型检查」
+#   v3 verify --from-snapshot ↔ ci.yml 的同名步骤（本文件第 4 个 hook）
+#   pytest            ← 有意不放（耗时）
+#
+# 最后一条是这轮补上的：它**离线可跑**（只读入库的精简快照与文档，不读游戏），
+# 却是最容易在提交时漏掉的一环 —— 改了文档里的数字或断言注册表而没重跑，
+# 本地全绿、CI 直接红。放进 hook 后提交前就会拦下。
 
 repos:
   - repo: local
@@ -40,4 +52,14 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+        require_serial: true
+
+      - id: v3-verify-offline
+        name: v3 verify（用入库快照核验，不读游戏）
+        # pass_filenames: false —— 这条检查的是**整个仓库**的一致性，
+        # 与本次改了哪几个文件无关（改文档、改断言注册表、改快照都算）。
+        entry: .venv/Scripts/v3.exe verify --from-snapshot
+        language: system
+        pass_filenames: false
+        always_run: true
         require_serial: true

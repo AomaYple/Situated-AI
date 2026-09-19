@@ -495,7 +495,7 @@ def _rows(counter: Counter[str], col: int) -> list[tuple[str, dict[int, str]]]:
     于是生成出「``| `x` | 18 | 18 |``」这种双重计数，肉眼看还以为是排版问题。
 
     排序：计数降序、同值按名称升序（确定性）。只在**追加新行**时用到 ——
-    已存在的行由 :func:`pdx.doc_tables._merge_rows` 保持文档原序。
+    已存在的行由 :func:`pdx.doc_tables.merge_rows` 保持文档原序。
     """
     return [
         (key, {col: f"{n:,}"}) for key, n in sorted(counter.items(), key=lambda kv: (-kv[1], kv[0]))

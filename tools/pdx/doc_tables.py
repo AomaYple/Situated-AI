@@ -135,7 +135,7 @@ def patch_doc(
         want = (
             spec.rows()
             if isinstance(spec, TableSpec)
-            else _merge_rows(
+            else merge_rows(
                 spec,
                 [split_row(ln) for ln in lines[start + 2 : end]],
                 width=len(split_row(lines[start])),
@@ -241,7 +241,7 @@ def _group_cells(norm: str, generated: dict[str, dict[int, str]]) -> dict[int, s
     return None
 
 
-def _merge_rows(
+def merge_rows(
     spec: KeyedTableSpec,
     existing: list[list[str]],
     *,
@@ -492,7 +492,7 @@ def check_doc(
         want = (
             spec.rows()
             if isinstance(spec, TableSpec)
-            else _merge_rows(
+            else merge_rows(
                 spec,
                 [split_row(ln) for ln in lines[start + 2 : end]],
                 width=len(split_row(lines[start])),
@@ -510,3 +510,40 @@ def check_doc(
             out.append((spec.name, n + 1, lines[n], "<生成结果里没有这一行>"))
             n += 1
     return out
+
+
+def current_rows(doc: Path, spec: TableSpec | KeyedTableSpec) -> list[str]:
+    """文档里**现在**写着的表格数据行（不含表头与分隔线）。"""
+    lines = doc.read_text(encoding="utf-8").splitlines()
+    start = _find_header(lines, doc, spec)
+    end = start + 2
+    while end < len(lines) and lines[end].startswith("|"):
+        end += 1
+    return lines[start + 2 : end]
+
+
+def write_rows(doc: Path, spec: TableSpec | KeyedTableSpec, rows: Sequence[str]) -> int:
+    """把 ``rows`` 写进文档里该表的位置（行数可增可减），返回写入行数。
+
+    `v3 tables --offline --write` 用它：**离线**（不读游戏）按快照里记录的
+    行把文档恢复成「当时算出来的样子」。表头、分隔线与表格前后的散文一律不动 ——
+    与 :func:`patch_doc` 同一套约定。
+    """
+    lines = doc.read_text(encoding="utf-8").splitlines(keepends=True)
+    start = _find_header(lines, doc, spec)
+    end = start + 2
+    while end < len(lines) and lines[end].lstrip().startswith("|"):
+        end += 1
+    lines[start + 2 : end] = [row.rstrip("\n") + "\n" for row in rows]
+    doc.write_text("".join(lines), encoding="utf-8", newline="\n")
+    return len(rows)
+
+
+def spec_key(doc_name: str, spec: TableSpec | KeyedTableSpec) -> str:
+    """快照里用的表标识：``文档名::表名``（``occurrence`` 已含在表名里时也不冲突）。
+
+    必须**稳定**：它是「文档里的表」与「快照里的行」之间唯一的对接口，
+    改一次格式就等于把旧快照里的记录全部作废。
+    """
+    suffix = f"#{spec.occurrence}" if spec.occurrence else ""
+    return f"{doc_name}::{spec.name}{suffix}"

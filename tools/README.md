@@ -82,6 +82,13 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 strings` | （新增） | 开采 `victoria3.exe` 的字符串：引擎里有、脚本里没用的标识符（`--limit` / `--no-list`）。原先那两个数是没留口径的一次性采集值，现在可随时重算 |
 | `v3 refresh` | （新增） | **游戏升级后的一条命令**：`tables --write` + `verify --fix`，再核一遍并列出机器改不了的剩余项（`--dry-run` 只报告）。跑完全绿说明没有任何需要人改的东西 |
 | `v3 mirror write` | （新增） | 重生成清单（要游戏）；`--sync` 顺便把原文拷到本机 `research/official-docs/` |
+| `v3 tables --offline` | （新增） | **不读游戏**核对那张表的另一条路：快照里记着每张生成表当时的数据行，这条只比文档与快照（CI 用；`--write` 可按快照恢复）。它证明「表与入库快照一致」，不证明「表与现在的游戏一致」 |
+| `v3 evidence` | （新增） | 查一个键名的**四类证据**：原版用法（键与值分开统计，注释不算用法）/ 官方 md 命中 / 本机 mod 用法 / `victoria3.exe` 字面量与邻居。`--exe-grep` 查一族名字，`--dir` 收窄到某目录，`--values` 列取值分布 |
+| `v3 unverified` | （新增） | 列出文档里全部 **【未确认】** 项（可 `-d 04` 只看一篇）—— 把「还剩多少没验证」从记忆变成可数的事实 |
+| `v3 prefixes` | （新增） | 本机 mod 的**功能前缀按目录**用量：doc 04 §1 那张「能否覆盖同名键」的表就是拿它作证的（本机快照，不是版本属性） |
+| `v3 cache` | （新增） | 解析缓存的状态与清理。全量任务要解析 6 千个文件，内存缓存只管进程内，**跨进程靠磁盘层**（`--clear` 清空，键含 mtime 与解析器指纹） |
+| `v3 cov` | （新增） | 覆盖率门禁：整体 86% 之外再按**核心模块**逐条核对下限（`--check-only` 只读上次数据）。整体数字会掩盖「大模块退化、小模块补测」 |
+| `v3 lock` | （新增） | 依赖锁：展开本机已安装的依赖闭包与 `requirements.lock` 对账（`--write` 重写）。`pyproject.toml` 全是下限，下限不保证装出来是同一套 |
 
 ```text
 .venv\Scripts\v3.exe analyze                     # 全量分析，落盘报告
@@ -94,6 +101,12 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe mirror write --sync         # 重生成清单并把原文拷到本机（不入库）
 .venv\Scripts\v3.exe tables                      # 核对生成表（不一致即退出 1）
 .venv\Scripts\v3.exe tables --write              # 按生成结果修正文档里的表
+.venv\Scripts\v3.exe tables --offline            # 不读游戏，拿入库快照核对生成表（CI 用）
+.venv\Scripts\v3.exe evidence after orphan       # 查键名的四类证据
+.venv\Scripts\v3.exe unverified -d 04            # 文档里还有哪些【未确认】
+.venv\Scripts\v3.exe prefixes                    # 本机 mod 的功能前缀按目录用量
+.venv\Scripts\v3.exe cov                         # 覆盖率门禁（含核心模块下限）
+.venv\Scripts\v3.exe lock                        # 依赖锁与当前环境对账
 .venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
 .venv\Scripts\v3.exe defines --ns NAI            # 展开某个 defines 命名空间
 .venv\Scripts\v3.exe index --dry-run             # 只统计，不写文档
@@ -127,7 +140,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-589 条用例（`pytest --collect-only` 实测），
+660 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -192,7 +205,7 @@ tools/reports/mod分析.md          人可读报告
 另有**独立**的一条线：
 
 ```
-tools/out/snapshots/<版本>.compact.json   精简快照，约 4.9 MiB（**入库**，跨机器可 diff）
+tools/out/snapshots/<版本>.compact.json   精简快照，约 5.1 MiB（**入库**，跨机器可 diff）
 tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignore，本机深挖用）
 ```
 
@@ -337,7 +350,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：589 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：660 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

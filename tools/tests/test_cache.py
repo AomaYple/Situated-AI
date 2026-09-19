@@ -42,6 +42,31 @@ def _fresh_cache():
     cache.clear()
 
 
+def _reset_disk_state() -> None:
+    """模拟「另一个进程」：内存缓存与分片视图都丢掉，只剩磁盘上的文件。"""
+    cache.clear()
+    cache._state.shards.clear()
+    cache._state.dirty.clear()
+    cache._state.parsed_total = 0
+    cache._state.seq = 0
+
+
+@pytest.fixture
+def disk_dir(tmp_path, monkeypatch):
+    """把磁盘缓存指到临时目录，别动本机那份真缓存。
+
+    同时**清掉 xdist worker 标记**：整套测试默认并行跑，而 worker 进程按设计
+    只读不写（见 `cache.flush`），不清掉的话「写盘」相关的用例全都测不到东西。
+    需要验证「worker 不写」的用例自己把变量设回去。
+    """
+    target = tmp_path / "cache"
+    monkeypatch.setattr(cache, "cache_dir", lambda: target)
+    monkeypatch.delenv(cache.WORKER_ENV, raising=False)
+    _reset_disk_state()
+    yield target
+    _reset_disk_state()
+
+
 def test_缓存命中返回同一对象(tmp_path) -> None:
     p = tmp_path / "a.txt"
     p.write_text(_SAMPLE, encoding="utf-8")
@@ -152,3 +177,107 @@ def test_缓存不改变全语料的聚合结果(corpus_texts) -> None:
     cold = aggregate()
     warm = aggregate()  # 这一遍几乎全命中
     assert cold == warm
+
+
+# ────────────────────────── 磁盘层 ──────────────────────────
+
+
+def test_磁盘层跨进程可用(tmp_path, disk_dir) -> None:
+    """第一遍写盘、第二遍（模拟新进程）应当**不再解析**就从磁盘拿到结果。"""
+    p = tmp_path / "a.txt"
+    p.write_text(_SAMPLE, encoding="utf-8")
+    first = cache.parse_cached(p)
+    assert cache.flush(force=True) == 1, "强制 flush 应写出一个分片"
+
+    _reset_disk_state()
+    second = cache.parse_cached(p)
+    assert cache._state.parsed_total == 0, "这一遍不应真的解析文件"
+    assert signature(second) == signature(first)
+
+
+def test_源文件一变缓存就失效(tmp_path, disk_dir) -> None:
+    """键里带 mtime 与 size，所以改写文件后必须重新解析。"""
+    p = tmp_path / "a.txt"
+    p.write_text("alpha = 1\n", encoding="utf-8")
+    cache.parse_cached(p)
+    cache.flush(force=True)
+    _reset_disk_state()
+
+    p.write_text("beta = 2\n", encoding="utf-8")
+    pf = cache.parse_cached(p)
+    assert {x.key for x in pf.top_assignments} == {"beta"}
+    assert cache._state.parsed_total == 1, "内容变了就该重新解析"
+
+
+def test_坏分片不影响解析(tmp_path, disk_dir) -> None:
+    """缓存文件损坏只是未命中，绝不能让解析失败。"""
+    p = tmp_path / "a.txt"
+    p.write_text(_SAMPLE, encoding="utf-8")
+    cache.parse_cached(p)
+    cache.flush(force=True)
+
+    shard = next(disk_dir.glob("shard-*.bin"))
+    shard.write_bytes(b"not a pickle at all")
+    _reset_disk_state()
+
+    pf = cache.parse_cached(p)
+    assert pf.top_keys, "坏缓存之后仍应解析出内容"
+    assert cache._state.parsed_total == 1
+
+
+def test_环境变量可关闭磁盘层(tmp_path, disk_dir, monkeypatch) -> None:
+    """``V3_PARSE_CACHE=0`` 时只走内存层，也不写盘。"""
+    monkeypatch.setenv(cache.CACHE_ENV, "0")
+    p = tmp_path / "a.txt"
+    p.write_text(_SAMPLE, encoding="utf-8")
+    cache.parse_cached(p)
+    assert cache.flush(force=True) == 0
+    assert not list(disk_dir.glob("shard-*.bin"))
+    assert cache.disk_counts()["条目"] == 0
+
+
+def test_小任务默认不写盘(tmp_path, disk_dir) -> None:
+    """低于阈值的一次解析不值得付写盘成本（实测见 ``cache.flush`` 的说明）。"""
+    p = tmp_path / "a.txt"
+    p.write_text(_SAMPLE, encoding="utf-8")
+    cache.parse_cached(p)
+    assert cache.flush() == 0, "解析量低于阈值时不该写盘"
+
+
+def test_xdist的worker只读不写(tmp_path, disk_dir, monkeypatch) -> None:
+    """16 个 worker 各写一遍同一批分片会把整套测试拖垮（实测 4 分钟 → 20 分钟以上）。"""
+    monkeypatch.setenv(cache.WORKER_ENV, "gw3")
+    p = tmp_path / "a.txt"
+    p.write_text(_SAMPLE, encoding="utf-8")
+    cache.parse_cached(p)
+    assert cache.flush(force=True) == 0, "worker 进程不该写盘"
+    assert not list(disk_dir.glob("shard-*.bin"))
+    assert cache.describe_state().startswith("只读")
+
+
+def test_清理磁盘缓存(tmp_path, disk_dir) -> None:
+    p = tmp_path / "a.txt"
+    p.write_text(_SAMPLE, encoding="utf-8")
+    cache.parse_cached(p)
+    cache.flush(force=True)
+    assert cache.disk_counts()["条目"] == 1
+
+    assert cache.clear_disk() == 1
+    assert cache.disk_counts() == {"分片": 0, "条目": 0, "字节": 0}
+
+
+def test_分片函数跨进程稳定() -> None:
+    """分片号必须可复现 —— 用内置 ``hash()`` 会带进程随机化，那是隐蔽的 bug。"""
+    assert cache._shard_of("game/events/foo.txt") == cache._shard_of("game/events/foo.txt")
+    assert 0 <= cache._shard_of("x") < cache.SHARDS
+
+
+def test_磁盘统计与清空对得上(tmp_path, disk_dir) -> None:
+    for i in range(3):
+        p = tmp_path / f"f{i}.txt"
+        p.write_text(f"k{i} = {i}\n", encoding="utf-8")
+        cache.parse_cached(p)
+    cache.flush(force=True)
+    counts = cache.disk_counts()
+    assert counts["条目"] == 3
+    assert counts["分片"] == len({cache._shard_of(str(tmp_path / f"f{i}.txt")) for i in range(3)})

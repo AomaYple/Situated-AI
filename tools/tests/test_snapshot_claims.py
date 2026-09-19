@@ -6,7 +6,7 @@
 ``integration`` 标记，在 CI 上被 conftest 自动跳过。于是「断言表是否仍然
 与记录的真值一致」这件事，在 CI 上**完全没人看**。
 
-精简快照（``tools/out/snapshots/*.compact.json``，约 4.9 MiB，**入库**）
+精简快照（``tools/out/snapshots/*.compact.json``，约 5.1 MiB，**入库**）
 带着 common 各目录的条目名、defines 命名空间与 DLC 清单，足以覆盖其中
 约一半断言。这就是本文件跑的东西 —— 它**不需要游戏**，所以 CI 上会跑。
 

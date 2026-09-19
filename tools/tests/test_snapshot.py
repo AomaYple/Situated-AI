@@ -13,6 +13,14 @@ import unittest
 
 from pdx import config, snapshot
 
+#: **不参与「列表已排序」判定**的域。
+#:
+#: ``doc_tables`` 存的是**生成表的数据行**（`文档名::表名 → [行文本, …]`）：
+#: 行的顺序**就是表格的顺序**（按语义排、按体积排……），排序会把表打乱；
+#: 重复行也合法（两张表出现同样的行很常见）。它是快照里唯一「顺序本身是数据」
+#: 的域，所以这里显式豁免而不是把断言放宽到所有域。
+_ORDERED_SECTIONS = frozenset({"doc_tables"})
+
 
 class TestSnapshotShape(unittest.TestCase):
     snap: snapshot.Snapshot
@@ -74,6 +82,8 @@ class TestDeterminism(unittest.TestCase):
     def test_lists_are_sorted(self):
         s = snapshot.build()
         for sec, body in s.sections.items():
+            if sec in _ORDERED_SECTIONS:
+                continue
             for name, names in list(body.items())[:50]:
                 with self.subTest(section=sec, name=name):
                     self.assertEqual(names, sorted(names), "列表未排序")

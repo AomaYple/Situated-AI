@@ -219,6 +219,19 @@ class Snapshot:
         }
 
 
+def _doc_tables_snapshot() -> dict[str, list[str]]:
+    """生成表的内容：``{文档名::表名: [数据行, …]}``。
+
+    为什么要进快照：169 张生成表是文档里**大部分数字**的来源，而它们只有
+    装了游戏才算得出来。把「当时算出来的行」记进入库的精简快照后，
+    CI（没有游戏）就能回答「文档里的表还是当时生成的那份吗」——
+    `v3 tables --offline` 只做比对，不假装能离线重算。
+    """
+    from . import docgen  # noqa: PLC0415 - docgen 依赖各领域模块，导入期较重
+
+    return docgen.render_all()
+
+
 def _localization_digest(root: Path) -> dict[str, list[str]]:
     """精简快照用：每个语言的**键数 + 键名指纹**，不带 14 万条键名清单。
 
@@ -239,7 +252,7 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     ``compact=True`` 产出**精简快照**：结构域（``common_entries`` / ``fields`` /
     ``defines`` / ``dlc`` / ``config``）原样保留 —— 它们才是「Paradox 增删了
     哪些字段与条目」的答案 —— 只把 ``localization`` 换成计数 + 指纹，
-    体积从 ~39 MiB 降到 ~4.9 MiB，**小到足以入库**。
+    体积从 ~39 MiB 降到 ~5.1 MiB，**小到足以入库**。
 
     两个模式**形状相同**（都是 ``域 -> 名称 -> 字符串列表``），因此
     :func:`compare` 对两者都能用；但**不要拿精简版与完整版对 diff** ——
@@ -274,6 +287,9 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
 
     snap.sections["dlc"] = _dlc_snapshot()
     snap.sections["config"] = _checksum_and_paths()
+    snap.sections["doc_tables"] = _doc_tables_snapshot()
+    if verbose:
+        print(f"  生成表: {len(snap.sections['doc_tables'])} 张")
     return snap
 
 

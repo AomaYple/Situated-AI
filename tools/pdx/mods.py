@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 from collections import Counter
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from . import config
@@ -50,6 +50,8 @@ class ModInfo:
     additions: list[str] = field(default_factory=list)
     #: 功能前缀统计
     prefixes: Counter = field(default_factory=Counter)
+    #: 每个脚本目录用到的功能前缀：``{"common/scripted_triggers": Counter({...})}``
+    prefix_dirs: dict[str, Counter] = field(default_factory=dict)
     #: 带前缀的示例：(前缀, 键, 相对路径)
     prefix_samples: list[tuple[str, str, str]] = field(default_factory=list)
     #: 每个数据目录改动的原版条目数
@@ -153,9 +155,11 @@ def _scan_prefixes(path: Path, rel_str: str, vanilla: Path, info: ModInfo) -> No
         return
 
     vanilla_file = vanilla / rel_str
+    rel_dir = str(PurePosixPath(rel_str).parent)
     for a in pf.top_assignments:
         if a.prefix:
             info.prefixes[a.prefix] += 1
+            info.prefix_dirs.setdefault(rel_dir, Counter())[a.prefix] += 1
             if len(info.prefix_samples) < 400:
                 info.prefix_samples.append((a.prefix, a.key, rel_str))
 
@@ -195,6 +199,25 @@ def aggregate_prefixes(mods: list[ModInfo]) -> Counter:
     for m in mods:
         total.update(m.prefixes)
     return total
+
+
+def prefix_usage_by_dir(mods: list[ModInfo] | None = None) -> dict[str, Counter]:
+    """每个脚本目录用到的功能前缀 —— 「这个目录能不能带前缀」的 mod 侧证据。
+
+    它回答的是 doc 04 §1 那张表里 12 个 **【未确认】** 单元格：原版自己
+    零使用功能前缀（:func:`vanilla_prefix_count`），所以「谁能带前缀」只能看
+    mod 实践。返回 ``{"common/scripted_triggers": Counter({"REPLACE": 12, ...})}``。
+
+    ⚠️ **本机快照**：结果取决于本机装了哪些 mod（``v3 prefixes`` 复算），
+    不是游戏版本属性，任何文档都不该把它写成断言。
+
+    不传 ``mods`` 时现算（约 10 秒；调用方已有 ``analyse_all()`` 结果时请传入）。
+    """
+    out: dict[str, Counter] = {}
+    for info in mods if mods is not None else analyse_all():
+        for rel_dir, counter in info.prefix_dirs.items():
+            out.setdefault(rel_dir, Counter()).update(counter)
+    return out
 
 
 def vanilla_prefix_count(vanilla: Path | None = None) -> Counter:

@@ -45,7 +45,7 @@ pytest-cache-files-*/
 # ⚠️ **版本快照分两种，只有精简版入库**：
 #
 #   完整快照  tools/out/snapshots/<版本>.json          约 39 MiB  ← 忽略
-#   精简快照  tools/out/snapshots/<版本>.compact.json  约 4.9 MiB ← **入库**
+#   精简快照  tools/out/snapshots/<版本>.compact.json  约 5.1 MiB ← **入库**
 #
 # 完整快照 73% 的体积是本地化键清单（11 种语言 × 14.5 万键），而「Paradox 增删了
 # 哪些字段与条目」只需要结构域 —— 精简版保留全部结构域，只把本地化换成
@@ -67,8 +67,13 @@ pytest-cache-files-*/
 # 它们**不该入库**（下一个人不需要、而且里面往往钉着当时的中间结论）。
 # 实测踩过：`git add -A` 把 `tools/_m10.txt`（提交信息草稿）一起提交了，
 # 只能 `--amend` + 强推补救。这类前缀约定本来只在脑子里，写进忽略规则才靠得住。
+#
+# `.md` 是后补的：取证中间产物常写成 markdown（一张表就能装下 27 条结论），
+# 而原先只挡了 `.py` 与 `.txt` —— 实测 `tools/_doc06_evidence.md` 直接暴露在
+# `git status` 里，只差一次 `git add -A` 就被提交。
 /tools/_*.py
 /tools/_*.txt
+/tools/_*.md
 
 
 

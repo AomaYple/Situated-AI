@@ -34,7 +34,16 @@ from . import (
     modifiers,
     usage,
 )
-from .doc_tables import KeyedTableSpec, TableSpec, check_doc, patch_doc
+from .doc_tables import (
+    KeyedTableSpec,
+    TableSpec,
+    check_doc,
+    current_rows,
+    merge_rows,
+    patch_doc,
+    spec_key,
+    split_row,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -155,4 +164,36 @@ def write_all() -> dict[str, int]:
     return out
 
 
-__all__ = ["DocTarget", "check_all", "targets", "write_all"]
+def render_all() -> dict[str, list[str]]:
+    """把**每一张**生成表算成数据行，返回 ``{表标识: [行文本, …]}``。
+
+    用途是让快照带上「这批表当时长什么样」：CI 上没有游戏，算不出这些行，
+    但**可以**拿入库快照里的这份记录回头核对文档是否被手改过
+    （``v3 tables --offline``）。这跟 `v3 verify --from-snapshot` 是同一个思路：
+    真值入一份精简快照，离线只做比对，不假装能重算。
+    """
+    out: dict[str, list[str]] = {}
+    for target in targets():
+        for spec in target.specs:
+            key = spec_key(target.name, spec)
+            try:
+                out[key] = _render_one(target.path, spec)
+            except Exception as exc:  # 单张表取不到不该让快照整体失败
+                out[key] = [f"<未取到：{type(exc).__name__}: {exc}>"]
+    return out
+
+
+def _render_one(doc: Path, spec: TableSpec | KeyedTableSpec) -> list[str]:
+    """算出单张表的数据行。``KeyedTableSpec`` 要读文档现值来保留散文列。"""
+    if isinstance(spec, TableSpec):
+        return spec.rows()
+    existing = current_rows(doc, spec)
+    return merge_rows(
+        spec,
+        [split_row(ln) for ln in existing],
+        width=len(split_row(spec.header)),
+        raw=existing,
+    )
+
+
+__all__ = ["DocTarget", "check_all", "render_all", "targets", "write_all"]

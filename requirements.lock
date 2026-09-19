@@ -1,0 +1,51 @@
+# 由 `v3 lock --write` 生成 —— 手改会被 `v3 lock`（不带参数）对账时报出来。
+#
+# 口径：从 pyproject.toml 的直接依赖出发，沿 Requires-Dist 展开本机已安装的闭包。
+# 它描述的是**这台机器解析出来的版本组合**，含平台相关依赖（如 Windows 上的 colorama）。
+# `v3 lock`（不带参数）会拿它与当前环境对账；不一致时先想清楚再 `--write`。
+# 解释器：Python 3.14.7
+
+annotated-doc==0.0.5
+ast-serialize==0.11.2
+attrs==26.1.0
+cfgv==3.5.0
+colorama==0.4.6
+coverage==7.16.1
+distlib==0.4.3
+execnet==2.1.2
+filelock==3.32.7
+hypothesis==6.168.0
+identify==2.6.19
+iniconfig==2.3.0
+librt==0.15.0
+markdown-it-py==4.2.0
+mdurl==0.1.2
+mypy==2.3.1
+mypy-extensions==1.1.0
+nodeenv==1.10.0
+packaging==26.3
+pathspec==1.1.1
+platformdirs==4.11.9
+pluggy==1.6.0
+pre-commit==4.6.2
+py-cpuinfo2==10.1.1
+pygments==2.21.0
+pyinstrument==5.1.3
+pytest==9.1.1
+pytest-benchmark==5.3.0
+pytest-cov==7.1.0
+pytest-datadir==1.8.0
+pytest-randomly==5.0.0
+pytest-regressions==2.11.0
+pytest-subtests==0.15.0
+pytest-timeout==2.4.0
+pytest-xdist==3.8.0
+python-discovery==1.6.0
+pyyaml==6.0.3
+rich==15.0.0
+ruff==0.16.7
+shellingham==1.5.4
+sortedcontainers==2.4.0
+typer==0.27.2
+typing-extensions==4.16.0
+virtualenv==21.7.10
