@@ -60,9 +60,6 @@ CONTENT_ROOTS: dict[str, Path] = {
     "clausewitz": config.CLAUSEWITZ,
 }
 
-#: 除 common 外，还值得做条目级提取的目录（相对各内容根）
-SCRIPT_DIRS = ("events", "history", "gui", "map_data", "notifications", "interface")
-
 #: mod 常见文件类型的归类
 FILE_CLASSES: dict[str, tuple[str, ...]] = {
     "脚本": (".txt",),

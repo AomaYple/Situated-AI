@@ -101,7 +101,6 @@ _G_COMMENT = _G["comment"]
 _G_LBRACE = _G["lbrace"]
 _G_RBRACE = _G["rbrace"]
 _G_STRING = _G["string"]
-_G_QUOTE = _G["quote"]
 _G_OP = _G["op"]
 
 

@@ -34,11 +34,14 @@ USERDIR = Path(
 #: 本地 mod 目录
 LOCAL_MODS = USERDIR / "mod"
 
-#: Steam Workshop 内容目录
+#: Steam App ID（Victoria 3）
+APP_ID = 529340
+
+#: Steam Workshop 内容目录（默认路径里的 App ID 由上面的常量拼出 —— 原先两处各写一遍）
 WORKSHOP = Path(
     os.environ.get(
         "V3_WORKSHOP",
-        r"C:\Program Files (x86)\Steam\steamapps\workshop\content\529340",
+        rf"C:\Program Files (x86)\Steam\steamapps\workshop\content\{APP_ID}",
     )
 )
 
@@ -64,9 +67,6 @@ OUT_CROSS = OUT / "cross"
 
 #: 人可读报告目录
 REPORTS = REPO / "tools" / "reports"
-
-#: Steam App ID
-APP_ID = 529340
 
 #: 参与联机校验和的目录（来自 game/checksum_manifest.txt）
 CHECKSUMMED = ("common", "events", "map_data", "gui", "localization")

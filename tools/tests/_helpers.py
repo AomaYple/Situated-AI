@@ -46,11 +46,6 @@ def signature(pf: ParsedFile) -> object:
     return node_signature(pf.root)
 
 
-def top_signature(pf: ParsedFile) -> list[tuple[str, str, str]]:
-    """只需顶层时的轻量指纹：``(前缀, 键, 运算符)`` 列表。"""
-    return [(a.prefix or "", a.key, a.op) for a in pf.root.assignments()]
-
-
 def entry_keys(pf: ParsedFile) -> set[str]:
     """数据条目键集合（排除 ``@变量``）。"""
     return {a.key for a in pf.root.assignments() if not a.is_variable}
