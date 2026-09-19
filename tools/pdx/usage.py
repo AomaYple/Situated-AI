@@ -18,17 +18,22 @@
 * **次数** = 该键作为字段**出现**的总次数（跨文件累加，同一个文件里出现两次算两次）；
 * **文件数** = 用到该键的**文件个数**（同一个文件里出现两次只算一个）。
   两者不可互换 —— 实测同一张表里两种口径差得很远。
+
+另有一组**文件级**口径（:func:`file_key_name_count` /
+:func:`file_key_name_count_by_line` / :func:`file_line_count`）——
+doc 03 §4 那一节的四个数字靠它们复算，见 :func:`ai_script_values_key_stats`。
 """
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from typing import TYPE_CHECKING
 
 from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec
-from .extract import entry_fields
+from .extract import entry_fields, extract_dir
 from .model import Assignment, Block, ParsedFile, Scalar
 
 if TYPE_CHECKING:
@@ -340,6 +345,107 @@ def _walk_all_blocks(node: Block | ParsedFile) -> Iterator[Block]:
             yield from _walk_all_blocks(it)
 
 
+# ── 文件级口径（doc 03 §4 的四个数字）────────────────────────
+#: 行正则口径：``^`` **必须**锚定行首 —— 不锚定（或写成 ``\s*键\s*=`` 的 search）
+#: 会把 ``limit = { has_law_or_variant = … }`` 这类**行中间**的键也算进来。
+#: 键名字符类只含字母/数字/下划线：``c:KRA`` / ``scope:target_country`` 这类
+#: 带 ``:`` 的键，行正则**永远**匹配不到（AST 能）。
+_LINE_KEY_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=")
+
+
+def file_key_name_count(path: Path, *, any_depth: bool) -> int:
+    """一个文件里**赋值的去重键名**个数（``@变量`` 不计）。
+
+    ``any_depth=False`` 只数**顶层**赋值（花括号深度 0）；
+    ``any_depth=True`` 递归到**每一个块**里（:meth:`pdx.model.Block.assignments`）。
+
+    为什么递归要用 AST 而不是行正则（doc 03 §4 实测 75 vs 64，差的 11 个）：
+
+    * **行中间的键**（6 个）：``limit = { has_law_or_variant = … }`` ——
+      键名不在行首，锚定的行正则看不见；
+    * **用比较符赋值的键**（4 个）：``gdp < 100000`` / ``liberty_desire > 25`` ——
+      行正则只认 ``=``，AST 的 ``Assignment.op`` 是 ``<`` / ``>``；
+    * **键名带 ``:`` 的键**（1 个）：``scope:target_country`` —— 行正则字符类不含 ``:``。
+
+    ``@变量`` 与行正则口径保持一致地排除：那个正则的字符类不含 ``@``，
+    本来也匹配不到 ``@foo = 5``。两个口径要能对着看，就不能一个含 ``@``、一个不含。
+
+    ⚠️ 别为此新写解析器 —— 走 :func:`pdx.cache.parse_cached`（同一路径只解析一次）。
+    """
+    pf = parse_cached(path)
+    keys = {a.key for a in pf.top_assignments if not a.is_variable}
+    if any_depth:
+        for block in _walk_all_blocks(pf):
+            keys.update(a.key for a in block.assignments() if not a.is_variable)
+    return len(keys)
+
+
+def file_key_name_count_by_line(path: Path) -> int:
+    """按**行正则**数一个文件里的去重键名个数（``any_depth=True`` 的对照口径）。
+
+    正则写死为 ``^\\s*[A-Za-z_][A-Za-z0-9_]*\\s*=``：**锚定行首**（见
+    :data:`_LINE_KEY_RE`），不做引号/注释处理 —— 这正是它比 AST 少数个键的原因。
+    两者一起用才有意义：差得多说明文件里有内联写法或比较符赋值。
+    """
+    if not path.is_file():
+        return 0
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    return len({m.group(1) for line in text.splitlines() if (m := _LINE_KEY_RE.match(line))})
+
+
+def file_line_count(path: Path) -> int:
+    """文件行数（``splitlines`` 口径，与 ``Get-Content | Measure-Object -Line`` 同解）。
+
+    **不**用 ``read_text().count("\\n")``：末尾没有换行的文件会少算一行，
+    而「682 行 vs 703 行」这种数字差一行在文档里看不出来。
+    """
+    if not path.is_file():
+        return 0
+    return len(path.read_text(encoding="utf-8-sig", errors="replace").splitlines())
+
+
+#: doc 03 §4 的文件（AI 专用脚本值）。
+AI_SCRIPT_VALUES_FILE = "common/script_values/ai_script_values.txt"
+
+
+def ai_script_values_key_stats() -> dict[str, int]:
+    """doc 03 §4 那四个数字**一次算全**（1.14.3 实测 703 / 33 / 75 / 64）。
+
+    * ``lines`` —— 行数（703）；
+    * ``top_keys`` —— 顶层去重键名（33，1.14.2 时文档写 18）；
+    * ``ast_keys`` —— AST 任意深度去重键名（75）；
+    * ``line_regex_keys`` —— 行正则同口径去重键名（64）。
+
+    四个都留着而不是只留一个：文档里那句话同时用到「行数 + 顶层键数」与
+    「任意深度键数」，两处口径不同（33 vs 75），只给一个数没法复算另一处。
+    游戏目录不在时全 0（与 :func:`pdx.game_root.checksum_targets` 同一个约定）。
+    """
+    path = config.GAME / AI_SCRIPT_VALUES_FILE
+    if not path.is_file():
+        return dict.fromkeys(("lines", "top_keys", "ast_keys", "line_regex_keys"), 0)
+    return {
+        "lines": file_line_count(path),
+        "top_keys": file_key_name_count(path, any_depth=False),
+        "ast_keys": file_key_name_count(path, any_depth=True),
+        "line_regex_keys": file_key_name_count_by_line(path),
+    }
+
+
+def stance_type_count() -> int:
+    """`common/ai_strategic_region_stance_types` 的**顶层块数**（实测 4）。
+
+    doc 03 §5 的「共 4 个立场」(`stance_none` / `_conquer_region` /
+    `_protect_region` / `_colonize_region`)。口径与
+    :func:`pdx.verify._dir_blocks` 完全相同（:func:`pdx.extract.extract_dir`
+    的 ``unique_entries``：顶层块数，``@变量`` 不计）——
+    文档那句与 `v3 verify` 的 `dir_blocks` 断言是同一个量，不该有两套实现。
+
+    这个目录只有 2 个文件（1 个 `.txt` + 1 个 `.md`），所以「4 个立场」不能按
+    文件数理解：立场全在同一个 `.txt` 里。
+    """
+    return extract_dir(config.GAME / "common/ai_strategic_region_stance_types").unique_entries
+
+
 def word_file_counts(dir_rel: str, words: Collection[str]) -> Counter[str]:
     """给定一批词 → **文本里出现过它的文件数**（不看结构）。
 
@@ -626,6 +732,8 @@ def doc_table_specs() -> list[KeyedTableSpec]:
 
 
 __all__ = [
+    "AI_SCRIPT_VALUES_FILE",
+    "ai_script_values_key_stats",
     "all_field_occurrences",
     "definition_rows",
     "doc_table_specs",
@@ -633,7 +741,11 @@ __all__ = [
     "field_occurrences",
     "field_value_counts",
     "file_definition_counts",
+    "file_key_name_count",
+    "file_key_name_count_by_line",
+    "file_line_count",
     "nested_field_occurrences",
+    "stance_type_count",
     "value_census",
     "word_file_counts",
     "word_stats",

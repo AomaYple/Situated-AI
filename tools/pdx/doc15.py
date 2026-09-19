@@ -19,6 +19,12 @@ doc 15 的 §0 是一张 **25 个目录 × 2 列**的总览表（`.txt` 数与�
 * **`laws` 的文件名前缀表**：`00_` / `01_` / `02_` 是**类别序号**，
   实测 9 + 8 + 8 = 25 恰好等于该目录的 `.txt` 数 —— 文档原写 `01_` 9 个，
   与同一节的「25 个 `.txt`」自相矛盾；这是本模块改出来的第一处订正。
+
+除表格外，本模块还放三个**只读提取函数**（:func:`ideology_field_split` /
+:func:`lobby_appeasement_usable` / :func:`religion_heritage_values`）——
+它们对应的数字写在散文里、不在任何表里，因此一直没人看守：
+`ideologies` 的 26 个法律组、`political_lobby_appeasement` 的 15 个可用条目、
+`religions` 的 7 个 heritage 取值。三者的口径各不相同，逐个写在函数里。
 """
 
 from __future__ import annotations
@@ -194,6 +200,60 @@ def _law_rows() -> Callable[[], list[tuple[str, dict[int, str]]]]:
     return lambda: _rows(field_occurrences("common/laws"), 1)
 
 
+# ── 三段散在散文里的数字 ────────────────────────────────────
+# 这三处的数字都**不在表里**（写在 §11 / §14.6 的正文中），所以一直没人看守。
+# 口径各自不同，且都踩过一次「看着像 A、其实是 B」，故逐个写下来。
+def ideology_field_split() -> tuple[int, int, int]:
+    """`common/ideologies` 顶层条目字段的三段拆分：``(总数, lawgroup_*, 其余)``。
+
+    实测 **(35, 26, 9)**：35 个字段名，其中 26 个是 `lawgroup_*`（也就是
+    26 个法律组的态度行），剩下 9 个是框架字段。
+
+    ⚠️ **第三个数字 9 不是「值形态是标量」的个数**。那 9 个里只有 **4 个**是标量
+    （`icon` / `priority` / `show_in_list` / `character_ideology`），另外 **5 个是块**
+    （`country_trigger`、`interest_group_leader_trigger` / `_weight`、
+    `non_interest_group_leader_trigger` / `_weight`）。按「值形态是标量」实现会得 4，
+    而 4 与 9 都很像「合理的字段数」—— 错的那版**不会报错**，只会让文档里那句话
+    和 `laws` 的 26 个法律组对不上账。9 = 35 − 26，是**前缀的补集**。
+    """
+    counter = field_occurrences("common/ideologies")
+    lawgroups = sum(1 for key in counter if key.startswith("lawgroup_"))
+    return len(counter), lawgroups, len(counter) - lawgroups
+
+
+def lobby_appeasement_usable() -> int:
+    """`common/political_lobby_appeasement` 里 ``is_always_usable = yes`` 的条目数。
+
+    实测 **15**（该目录只有 1 个文件、**49 个顶层块**，其中 49 个都写了
+    ``duration_to_show``、15 个写了 ``is_always_usable``，取值全是 ``yes``）。
+
+    ⚠️ 别用 :func:`pdx.verify._dir_field_count` 那类「字段**种类**」口径：这里
+    只有 2 种字段（`duration_to_show` / `is_always_usable`），得到的是 2 而不是 15。
+    49 与 15 是**条目数**，字段种类数跟它们不是一个量。
+    """
+    return field_value_counts("common/political_lobby_appeasement", "is_always_usable").get(
+        "yes", 0
+    )
+
+
+def religion_heritage_values() -> list[str]:
+    """`common/religions` 里 ``heritage`` 用到的**去重取值**（实测 7 个，已排序）。
+
+    返回的是文件里的**原样取值**，带 `heritage_` 前缀：
+    `heritage_christian` / `_dharmic` / `_indigenous` / `_islamic` / `_jewish` /
+    `_materialist` / `_taoic`。文档正文把它写成不带前缀的
+    ``christian / islamic / jewish / dharmic / taoic / indigenous / materialist``
+    —— 那是同一批值的简写，不是另一种口径。
+
+    口径：:func:`pdx.usage.field_value_counts`（顶层条目块的字段），
+    顶层宗教块 **17 个**（`dir_entries` 口径）。**注意第 8 个传承已存在**：
+    `discrimination_traits/03_religious_heritages.txt` 定义了 8 个 `heritage_*` 特质，
+    第 8 个 `heritage_humanist` **没有任何原版宗教引用**，所以这里只有 7 个取值 ——
+    「8」是**特质定义数**、「7」是**被用到的取值数**，两个数都对，混着说才自相矛盾。
+    """
+    return sorted(field_value_counts("common/religions", "heritage"))
+
+
 def doc_table_specs() -> list[KeyedTableSpec]:
     """doc 15 的七张表（登记进 :func:`pdx.docgen.targets`）。"""
     return [
@@ -245,4 +305,9 @@ def doc_table_specs() -> list[KeyedTableSpec]:
     ]
 
 
-__all__ = ["doc_table_specs"]
+__all__ = [
+    "doc_table_specs",
+    "ideology_field_split",
+    "lobby_appeasement_usable",
+    "religion_heritage_values",
+]

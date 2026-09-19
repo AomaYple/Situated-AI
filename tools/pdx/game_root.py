@@ -10,6 +10,10 @@
 现在把「读它们」这件事抽成一处，快照与文档表格共用同一个解析结果，
 于是**两者不可能再给出不同的数字**。
 
+``checksum_manifest.txt`` 还有一层：它**不是花括号语法**（裸标记行 +
+``name = xxx`` 键值行），PDX 解析器对它只会得到一堆裸标量 —— 所以那 5 个目录
+与 1 个文件只能按行分组建模，见 :func:`checksum_targets_grouped`。
+
 只读、无副作用；不依赖游戏可用（目录不在时返回空表）。
 """
 
@@ -30,6 +34,10 @@ _PATH_LINE_RE = re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*"([^"]*)"')
 
 #: ``checksum_manifest.txt`` 里的 ``name = xxx``
 _NAME_LINE_RE = re.compile(r"^\s*name\s*=\s*(\S+)")
+
+#: ``checksum_manifest.txt`` 的**段落标记**：独占一行的裸 ``directory`` / ``file``。
+#: 这不是花括号语法 —— 标记行后面跟一组 ``name = …`` 键值行，直到下一个标记。
+_MARKER_LINE_RE = re.compile(r"^\s*(directory|file)\s*$")
 
 
 @dataclass(slots=True, frozen=True)
@@ -99,17 +107,50 @@ def _parse_path_lines(path: Path) -> list[tuple[str, str]]:
     return out
 
 
-def checksum_targets() -> list[str]:
-    """``checksum_manifest.txt`` 列出的校验对象（目录名与文件名混排）。"""
+def checksum_targets_grouped() -> tuple[list[str], list[str]]:
+    """``checksum_manifest.txt`` 的校验对象，**按标记分组**：``(目录, 文件)``。
+
+    实测 ``(["common", "events", "map_data", "gui", "localization"],
+    ["paths_checksummed.settings"])`` —— 5 个目录 + 1 个文件，
+    与 :data:`pdx.config.CHECKSUMMED` 的 5 个目录同集（那一份是**写死**的常量）。
+
+    ⚠️ **这个文件不是花括号语法**，所以 :func:`pdx.cache.parse_cached` 帮不上忙：
+    它是「裸标记行 + 键值行」的平铺格式，实测 ``parse_cached`` 得到
+    **11 条赋值 + 6 个裸标量**（5 个 ``directory`` / 1 个 ``file``，
+    没有键、只有值），而 :func:`pdx.usage.file_definition_counts` 那类
+    「顶层块」口径会得到 **0** —— **0 不报错**，只是让 doc 19 §2 的表格
+    静默空掉。所以这里**按行解析**，复用同一文件的 :data:`_NAME_LINE_RE`。
+
+    标记行决定归属：``name`` 行只有跟在某个标记后面才知道自己是目录还是文件。
+    """
     path = config.GAME / "checksum_manifest.txt"
+    directories: list[str] = []
+    files: list[str] = []
     if not path.is_file():
-        return []
-    out: list[str] = []
+        return directories, files
+    bucket: list[str] | None = None
     for line in path.read_text(encoding="utf-8-sig", errors="replace").splitlines():
+        marker = _MARKER_LINE_RE.match(line)
+        if marker:
+            bucket = directories if marker.group(1) == "directory" else files
+            continue
         m = _NAME_LINE_RE.match(line)
-        if m:
-            out.append(m.group(1))
-    return out
+        if m and bucket is not None:
+            bucket.append(m.group(1))
+    return directories, files
+
+
+def checksum_targets() -> list[str]:
+    """``checksum_manifest.txt`` 列出的校验对象（目录在前、文件在后）。
+
+    实现**只有一份**：本函数就是 :func:`checksum_targets_grouped` 的两个列表拼起来。
+    早先这里是一段独立的「见到 ``name =`` 就收」的行扫描 —— 同一份文件两种读法，
+    正是本模块开头说的那类漂移的来源（「读它们这件事抽成一处」）。
+    拼出来的顺序与文件内顺序一致（文件里 5 个目录在前、1 个文件在后），
+    所以 doc 19 §2 那张表的行序没变。
+    """
+    directories, files = checksum_targets_grouped()
+    return [*directories, *files]
 
 
 # ── doc 19 的生成表 ────────────────────────────────────────

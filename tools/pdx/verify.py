@@ -31,7 +31,35 @@ from .ai import semantic_counts, shape_counts, strategy_field_count
 from .cache import parse_cached
 from .defines import layer_diff
 from .doc04 import event_definition_count
+from .doc14 import (
+    buy_package_entry_count,
+    buy_package_goods_categories,
+    hyphen_key_dir_counts,
+    wealth_1_goods_categories,
+)
+from .doc15 import ideology_field_split, lobby_appeasement_usable, religion_heritage_values
+from .doc16 import (
+    group_dirs_without_md,
+    group_file_counts,
+    pact_undocumented_keys,
+    state_region_word_counts,
+    strategic_region_field_counts,
+    war_goal_kind_diff,
+)
+from .doc17 import (
+    block_item_count,
+    block_prefix_count,
+    field_occurrence,
+    files_without_defs,
+    gene_block_names,
+    gene_definition_count,
+    loc_suffix_count,
+    overview_key_count,
+    overview_txt_count,
+)
+from .doc18 import country_effect_file_count
 from .extract import extract_dir
+from .game_root import checksum_targets_grouped
 from .localization import texticon_counts, yml_unique_name_count
 from .model import Block
 from .modifiers import digit_leading_entries, indented_top_entries, modifier_type_suffixes
@@ -39,11 +67,13 @@ from .mods import aggregate_prefixes, analyse_all, vanilla_prefix_count
 from .scan import count_files
 from .snapshot import SNAPSHOT_DIR, Snapshot
 from .usage import (
+    ai_script_values_key_stats,
     count_key_assignments,
     field_missing,
     field_occurrences,
     field_value_counts,
     file_definition_counts,
+    stance_type_count,
 )
 
 if TYPE_CHECKING:
@@ -181,6 +211,227 @@ def _file_bytes(target: str) -> int:
     """安装树里单个文件的字节数（doc 08 的 ``achievement_groups.txt`` = 4,277 B）。"""
     path = _tree_path(target)
     return path.stat().st_size if path.is_file() else 0
+
+
+def _file_definitions(target: str) -> int:
+    """``<目录>:<文件名>`` —— 该文件的顶层定义数（doc 16 的「48 个 .txt 里那个有 3 个」）。
+
+    「48 个文件里某一个有几个定义」这种句子，靠目录合计是看不出来的 ——
+    合计对得上、分布错了照样是错的。
+    """
+    dir_rel, _, name = target.partition(":")
+    return file_definition_counts(dir_rel).get(name, -1)
+
+
+def _doc16_group_files(target: str) -> int:
+    """doc 16 §0 那 33 个目录的分组计数（``target`` = ``dirs`` / ``files`` / ``txt`` / ``md``）。
+
+    目录清单是**作者选定**的一组（外交 9 + 军事 17 + 地图 7），
+    ``common\\`` 下 136 个一级目录里没有任何自然谓词能圈出这 33 个 ——
+    所以清单写在 :data:`pdx.doc16.DOC16_DIRS`，这里只做计数。
+    """
+    return group_file_counts(target)
+
+
+def _doc16_group_no_md(_target: str) -> int:
+    """那 33 个目录里**没有官方 ``.md``** 的个数（doc 16 的 10）。"""
+    return len(group_dirs_without_md())
+
+
+def _md_block_undocumented(_target: str) -> int:
+    """官方 `.md` 的 ``pact`` 块里**没列**、而游戏数据里在用的字段数（doc 16 的 21）。
+
+    这是**唯一**一处「官方文档 vs 实际数据」的字段差集，所以不假装通用：
+    口径见 :func:`pdx.doc16.pact_undocumented_keys`（官方 md 的块必须按行数花括号，
+    直接喂解析器会凭空多出 ``source_country`` / ``target_country`` / ``mutual``，
+    还会漏掉 ``second_country_gets_income_transfer``）。
+    """
+    return len(pact_undocumented_keys())
+
+
+def _md_bullet_diff(_target: str) -> int:
+    """官方 ``war_goal_types.md`` 的 kind 列表**漏掉**的数据取值个数（doc 16 的 6）。
+
+    官方 md 的 L79 自己提到 ``kind = release_as_subject``，而它的
+    ``List of Kinds`` 里没有这一个 —— 文档自相矛盾，数据以 33 个取值为准。
+    """
+    return len(war_goal_kind_diff())
+
+
+def _doc16_strategic_field(target: str) -> int:
+    """``common/strategic_regions`` 里某个字段出现的次数（doc 16 的 34 / 36）。
+
+    与 ``dir_field_count``（去重键名数）是两个口径：这里数的是**出现次数**
+    （每个区域每键最多一次，所以本例恰好同值 —— 但换目录就会分岔）。
+    ⚠️ 目录是 ``common\\strategic_regions``，**不是** ``map_data\\state_regions``：
+    后者里没有这个目录（``states`` 142 那句一直被人记错来源）。
+    """
+    return strategic_region_field_counts().get(target, -1)
+
+
+def _state_region_words(target: str) -> int:
+    """``map_data/state_regions`` 里某个词带**词界**的文本出现次数。
+
+    doc 16 的「``traits =`` 出现在 517 个条目里、``state_traits =`` 出现 0 次」。
+    ⚠️ 不能用 ``usage.word_stats``（子串口径）：``state_traits =`` 会被并进 ``traits``
+    的次数里，而这句正文的**全部意义**就是这两个词不是一回事。
+    """
+    _dir, _, word = target.partition(":")
+    return state_region_word_counts().get(word, -1)
+
+
+# ── doc 03 / 14 / 15 / 18 / 19 那一批（2026-09）────────────────────────
+def _doc03_ai_script_values(target: str) -> int:
+    """`ai_script_values.txt` 的四个口径：``lines`` / ``top_keys`` / ``ast_keys`` / ``line_regex_keys``。
+
+    doc 03 §4 那句「任意缩进的键共 N 个」是**行正则去重键名**口径
+    （``line_regex_keys``）——它当初是在 1.14.2 上数的，1.14.3 重测为 64；
+    按结构解析（``ast_keys``）是 75，差的那 11 个写在行中间 / 用比较符赋值 / 键名带 ``:``。
+    行数（``lines``）与顶层键（``top_keys``）也在同一句里，一起钉住。
+    """
+    return ai_script_values_key_stats()[target]
+
+
+def _doc14_hyphen_keys(target: str) -> int:
+    """含连字符的顶层键数：``target`` 为空取全 ``common/`` 合计，否则取该目录。
+
+    doc 14 §4.2 说 PM 里有 3 个（``pm_ammonia-soda_process`` …）；
+    同一份数据在别的目录更多 —— ``character_templates`` 有 27 个（人名里的连字符），
+    合计 4 个目录 32 个。这两个数一起钉，是为了防止下一个人把「PM 里 3 个」
+    推广成「只有 PM 有」。
+    """
+    counts = hyphen_key_dir_counts()
+    return sum(counts.values()) if not target else counts.get(target, -1)
+
+
+def _doc14_buy_packages(target: str) -> int:
+    """doc 14 §7.3 的三个口径：``wealth_1``（该包的类别数）/ ``categories``（全部类别去重）/ ``entries``（包数）。"""
+    return {
+        "wealth_1": wealth_1_goods_categories,
+        "categories": buy_package_goods_categories,
+        "entries": buy_package_entry_count,
+    }[target]()
+
+
+def _doc15_ideology_fields(target: str) -> int:
+    """doc 15 §4.3 的三个数：``all``（深度1 去重 35）/ ``lawgroup``（26）/ ``other``（9）。
+
+    ``other`` 是**不以 lawgroup_ 开头**的字段名个数，文档管它叫「标量字段」——
+    其实那 9 个里只有 4 个是标量、5 个是块，所以这里的 target 刻意叫 ``other``。
+    """
+    total, lawgroup, rest = ideology_field_split()
+    return {"all": total, "lawgroup": lawgroup, "other": rest}[target]
+
+
+def _doc15_lobby_usable(_target: str) -> int:
+    """doc 15 §7.5 的「49 个理由里只有 15 个标了 ``is_always_usable = yes``」。"""
+    return lobby_appeasement_usable()
+
+
+def _doc15_heritage_values(_target: str) -> int:
+    """``common/religions`` 里 ``heritage`` 的**去重取值**个数（doc 15 §14.6 的 7）。
+
+    ⚠️ 不是「8」：8 是 ``03_religious_heritages.txt`` 里定义的特质数，
+    第 8 个 ``heritage_humanist`` 没有任何宗教引用它。
+    """
+    return len(religion_heritage_values())
+
+
+def _doc18_country_effects(_target: str) -> int:
+    """``common/history/countries`` 里写了 ``add_*`` / ``set_*`` 效果的文件数（doc 18 的 217）。
+
+    ⚠️ 必须**任意深度**：``add_amendment`` 一类写在嵌套块里，只数深度 1 会得 0。
+    """
+    return country_effect_file_count()
+
+
+def _doc19_checksum_targets(target: str) -> int:
+    """``checksum_manifest.txt`` 里的校验对象数（doc 19 §2 的「5 个目录 + 1 个文件」）。
+
+    ⚠️ 这个文件**不是花括号语法**（裸 ``directory`` / ``file`` 标记行 + ``name =``），
+    走 ``parse_cached`` 会静默得 0 —— 必须按行解析，见 :func:`pdx.game_root.checksum_targets_grouped`。
+    """
+    dirs, files = checksum_targets_grouped()
+    return len(dirs) if target == "dirs" else len(files)
+
+
+# ── doc 17 那一批（2026-09）──────────────────────────────────────────
+def _doc17_overview(target: str) -> int:
+    """§0 总览的两个合计：``txt``（955 个 ``.txt``）/ ``keys``（11,705 个顶层定义键）。"""
+    return overview_txt_count() if target == "txt" else overview_key_count()
+
+
+def _doc17_loc_suffix(target: str) -> int:
+    """``concepts_l_english.yml`` 里某一行的数值列（``concept_x`` 1037 / ``concept_x_desc`` 614）。"""
+    return loc_suffix_count(target)
+
+
+def _doc17_gene_blocks(_target: str) -> int:
+    """``common/genes`` 的**不重复顶层块名**数（doc 17 的 5；9 是出现次数）。"""
+    return len(gene_block_names())
+
+
+def _doc17_gene_definitions(_target: str) -> int:
+    """``common/genes`` 的顶层块**出现次数**（doc 17 的 9 处定义）。"""
+    return gene_definition_count()
+
+
+def _doc17_block_prefix(target: str) -> int:
+    """``<文件>|<块>|<前缀>`` —— 块内以该前缀开头的**去重**键名数。
+
+    doc 17 的两个数共用它：``ethnicity_template`` 里 ``gene_`` 93 个、
+    ``morph_genes`` 里 ``gene_`` 97 个（模板缺的那 4 个就是 97 − 93）。
+    """
+    path, _, rest = target.partition("|")
+    block, _, prefix = rest.partition("|")
+    return block_prefix_count(path, block, prefix)
+
+
+def _doc17_block_items(target: str) -> int:
+    """``<文件>|<块>|<blocks|items>`` —— 块的出现次数 / 块内赋值条数。
+
+    doc 17 的 ``ethnicities`` 块：317 个块、343 条 ``权重 = 族群`` 条目。
+    """
+    path, _, rest = target.partition("|")
+    block, _, which = rest.partition("|")
+    blocks, items = block_item_count(path, block)
+    return blocks if which == "blocks" else items
+
+
+def _doc17_field_occurrence(target: str) -> int:
+    """``<目录>:<字段>`` —— 该字段的出现次数（``flag_definition`` 1,407 / ``includes`` 2）。"""
+    dir_rel, _, field = target.partition(":")
+    return field_occurrence(dir_rel, field)
+
+
+def _doc17_files_without_defs(target: str) -> int:
+    """顶层定义数为 0 的文件数（``common/dna_data`` 的 ``00_dna.txt``）。"""
+    return files_without_defs(target)
+
+
+def _doc17_dna_per_file(_target: str) -> int:
+    """``dna_data`` 里「有定义的文件各有多少个顶层定义」的**取值个数**。
+
+    doc 17 §x 那句「583 个各有 1 个顶层定义」—— 有定义的文件取值集合是 {1}，
+    所以这个数就是 **1**。换成「最常见的定义数」也能得到 1，但取值个数
+    顺带证明了「全都有且只有 1 个」这件事（不是平均出来的 1）。
+    """
+    return len({n for n in file_definition_counts("common/dna_data").values() if n})
+
+
+def _within_field_count(target: str) -> int:
+    """``<目录>:<块>`` —— 该块内出现过的字段名个数（doc 17 的 3；空块名取整个条目）。
+
+    doc 17 §14.4 的两句：``customizable_localization`` 的定义层 6 个字段、
+    其中 ``text`` 块内部 3 个（``localization_key`` / ``trigger`` / ``fallback``）。
+    """
+    dir_rel, _, block = target.partition(":")
+    return len(field_occurrences(f"common/{dir_rel}", within=block or None))
+
+
+def _stance_types(_target: str) -> int:
+    """``common/ai_strategic_region_stance_types`` 的立场数（doc 03 §5 的 4）。"""
+    return stance_type_count()
 
 
 def _dir_md_files(target: str) -> int:
@@ -687,6 +938,32 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "texticon_definitions": _texticon_definitions,
     "loc_yml_unique_names": _loc_yml_unique_names,
     "file_bytes": _file_bytes,
+    "file_definitions": _file_definitions,
+    "doc16_group_files": _doc16_group_files,
+    "doc16_group_no_md": _doc16_group_no_md,
+    "md_block_undocumented": _md_block_undocumented,
+    "md_bullet_diff": _md_bullet_diff,
+    "dir_field_occurrences": _doc16_strategic_field,
+    "state_region_words": _state_region_words,
+    "doc03_ai_script_values": _doc03_ai_script_values,
+    "doc14_hyphen_keys": _doc14_hyphen_keys,
+    "doc14_buy_packages": _doc14_buy_packages,
+    "doc15_ideology_fields": _doc15_ideology_fields,
+    "doc15_lobby_usable": _doc15_lobby_usable,
+    "doc15_heritage_values": _doc15_heritage_values,
+    "doc18_country_effects": _doc18_country_effects,
+    "doc19_checksum_targets": _doc19_checksum_targets,
+    "doc17_overview": _doc17_overview,
+    "doc17_loc_suffix": _doc17_loc_suffix,
+    "doc17_gene_blocks": _doc17_gene_blocks,
+    "doc17_gene_definitions": _doc17_gene_definitions,
+    "doc17_block_prefix": _doc17_block_prefix,
+    "doc17_block_items": _doc17_block_items,
+    "doc17_field_occurrence": _doc17_field_occurrence,
+    "doc17_files_without_defs": _doc17_files_without_defs,
+    "doc17_dna_per_file": _doc17_dna_per_file,
+    "within_field_count": _within_field_count,
+    "stance_types": _stance_types,
     "tree_bytes": _tree_bytes,
 }
 
@@ -1892,6 +2169,475 @@ CLAIMS: list[Claim] = [
         "game/common/achievement_groups.txt",
         4277,
     ),
+    # ── doc 16 的散文数字（2026-09 那一轮补的看守）──────────────────────
+    Claim(
+        "dip.group_dirs",
+        "16-外交军事与地图.md",
+        "GAME 下本篇覆盖的一级目录数（外交 9 + 军事 17 + 地图 7）",
+        "doc16_group_files",
+        "dirs",
+        33,
+        note="目录清单是作者选定的，写在 pdx.doc16.DOC16_DIRS —— common 下 136 个目录里"
+        "没有自然谓词能圈出这 33 个",
+    ),
+    Claim(
+        "dip.group_files",
+        "16-外交军事与地图.md",
+        "GAME 下这 33 个目录的全部文件数",
+        "doc16_group_files",
+        "files",
+        205,
+    ),
+    Claim(
+        "dip.group_txt",
+        "16-外交军事与地图.md",
+        "那 33 个目录的 .txt 数",
+        "doc16_group_files",
+        "txt",
+        182,
+    ),
+    Claim(
+        "dip.group_md",
+        "16-外交军事与地图.md",
+        "GAME 下这 33 个目录里的官方 .md 数",
+        "doc16_group_files",
+        "md",
+        23,
+    ),
+    Claim(
+        "dip.group_no_md",
+        "16-外交军事与地图.md",
+        "那 33 个目录里完全没有官方 .md 的个数（含 terrain_manipulators）",
+        "doc16_group_no_md",
+        "",
+        10,
+    ),
+    Claim(
+        "dip.actions_txt",
+        "16-外交军事与地图.md",
+        "diplomatic_actions 目录下的脚本文件数（另有 1 个官方 .md）",
+        "dir_txt_files",
+        "diplomatic_actions",
+        48,
+    ),
+    Claim(
+        "dip.action_subject_files",
+        "16-外交军事与地图.md",
+        "43_subjects_handle_states 里定义的行动对象数（该文件含 3 个）",
+        "file_definitions",
+        "common/diplomatic_actions:43_subjects_handle_states.txt",
+        3,
+    ),
+    Claim(
+        "dip.pact_undocumented",
+        "16-外交军事与地图.md",
+        "官方 diplomatic_action.md 的 pact 块没列、而游戏数据在用的字段数（maintenance_paid_by 等）",
+        "md_block_undocumented",
+        "",
+        21,
+        note="官方 md 的块必须按行数花括号；直接喂解析器会凭空多出 source_country/target_country/mutual",
+    ),
+    Claim(
+        "dip.wargoal_kind_diff",
+        "16-外交军事与地图.md",
+        "官方 war_goal_types.md 的 kind 列表漏掉的数据取值个数（release_as_subject 等）",
+        "md_bullet_diff",
+        "",
+        6,
+    ),
+    Claim(
+        "dip.strategic_capital_province",
+        "16-外交军事与地图.md",
+        "common/strategic_regions 里写了 capital_province 的区域数（海洋区域不写）",
+        "dir_field_occurrences",
+        "capital_province",
+        34,
+    ),
+    Claim(
+        "dip.strategic_map_color",
+        "16-外交军事与地图.md",
+        "common/strategic_regions 里写了 map_color 的区域数（海洋区域不写）",
+        "dir_field_occurrences",
+        "map_color",
+        36,
+    ),
+    Claim(
+        "dip.state_region_traits",
+        "16-外交军事与地图.md",
+        "map_data/state_regions 里 traits 这个词（带词界）的出现次数",
+        "state_region_words",
+        "state_regions:traits",
+        517,
+        note="是**出现次数**口径（按块数是 514：STATE_ZANZIBAR / STATE_TOMSK / STATE_TUVA "
+        "各写了两个 traits 块）",
+    ),
+    Claim(
+        "dip.state_region_state_traits",
+        "16-外交军事与地图.md",
+        "map_data/state_regions 里 state_traits 这个词（带词界）的出现次数",
+        "state_region_words",
+        "state_regions:state_traits",
+        0,
+        note="键名是 traits 不是 state_traits —— 这条断言的意义就是「一次都没有」，"
+        "所以它只做数值核对（漂移扫描跳过 0）",
+    ),
+    Claim(
+        "dip.state_traits_fields",
+        "16-外交军事与地图.md",
+        "common/state_traits 的顶层字段数（icon / modifier / 两个科技列表）",
+        "dir_field_count",
+        "state_traits",
+        4,
+    ),
+    # ── docs 03/14/15/18/19 的散文数字（2026-09 那一轮补的看守）──────────
+    Claim(
+        "ai.script_values_lines",
+        "03-AI系统.md",
+        "ai_script_values 的行数（1.14.2 时是 682）",
+        "doc03_ai_script_values",
+        "lines",
+        703,
+    ),
+    Claim(
+        "ai.script_values_top_keys",
+        "03-AI系统.md",
+        "ai_script_values 的顶层键数（1.14.2 时是 18）",
+        "doc03_ai_script_values",
+        "top_keys",
+        33,
+    ),
+    Claim(
+        "ai.script_values_ast_keys",
+        "03-AI系统.md",
+        "ai_script_values 里按结构解析去重的键名数（行中间 / 比较符 / 带冒号的键都算）",
+        "doc03_ai_script_values",
+        "ast_keys",
+        75,
+    ),
+    Claim(
+        "ai.script_values_line_keys",
+        "03-AI系统.md",
+        "ai_script_values 里行正则去重的键名数（1.14.2 时是 49）",
+        "doc03_ai_script_values",
+        "line_regex_keys",
+        64,
+        note="文档那句「任意缩进的键共 N 个」用的就是这个口径 —— 1.14.3 重测为 64，"
+        "与 AST 口径的 75 差 11 个，差额成因写在文档里",
+    ),
+    Claim(
+        "ai.stance_types_doc03",
+        "03-AI系统.md",
+        "AI 战场立场数（stance_colonize_region、stance_protect_region 等 4 个）",
+        "stance_types",
+        "",
+        4,
+    ),
+    Claim(
+        "eco.pm_hyphen_dirs",
+        "14-经济与生产系统.md",
+        "全 common 里含连字符的顶层键总数（character_templates 27 + PM 3 + 2 个各 1）",
+        "doc14_hyphen_keys",
+        "",
+        32,
+        note="doc 14 只说了 PM 里的 3 个；另外 27 个在人名目录 character_templates 里 ——"
+        "这正是 doc 17 曾「多算 1983 / 漏 27」的那个坑",
+    ),
+    Claim(
+        "eco.pm_hyphen_keys",
+        "14-经济与生产系统.md",
+        "PM 键名里含连字符的个数（pm_ammonia-soda_process、pm_coal-fired_plant）",
+        "doc14_hyphen_keys",
+        "production_methods",
+        3,
+    ),
+    Claim(
+        "eco.pm_hyphen_names",
+        "14-经济与生产系统.md",
+        "character_templates 里含连字符的顶层键数（人名里的连字符）",
+        "doc14_hyphen_keys",
+        "character_templates",
+        27,
+    ),
+    Claim(
+        "eco.buy_package_wealth1",
+        "14-经济与生产系统.md",
+        "买包财富档里类别最少的那个（wealth_1 只有 4 个类别）",
+        "doc14_buy_packages",
+        "wealth_1",
+        4,
+    ),
+    Claim(
+        "eco.buy_package_categories",
+        "14-经济与生产系统.md",
+        "全部买包里 popneed 类别去重后的个数（与 pop_needs 的 15 个定义同集）",
+        "doc14_buy_packages",
+        "categories",
+        15,
+    ),
+    Claim(
+        "eco.buy_package_entries",
+        "14-经济与生产系统.md",
+        "买包条目数（99 个财富档）",
+        "doc14_buy_packages",
+        "entries",
+        99,
+    ),
+    Claim(
+        "eco.buy_package_fields",
+        "14-经济与生产系统.md",
+        "buy_packages 的顶层字段数（只有 goods 与 political_strength 两个）",
+        "dir_field_count",
+        "buy_packages",
+        2,
+    ),
+    Claim(
+        "pol.ideology_fields",
+        "15-政治人口与社会.md",
+        "ideologies 里深度 1 键去重数（35 个字段名）",
+        "doc15_ideology_fields",
+        "all",
+        35,
+    ),
+    Claim(
+        "pol.ideology_lawgroups",
+        "15-政治人口与社会.md",
+        "ideologies 里 lawgroup_* 字段数（对应 law_groups 的 26 个组）",
+        "doc15_ideology_fields",
+        "lawgroup",
+        26,
+    ),
+    Claim(
+        "pol.ideology_other_fields",
+        "15-政治人口与社会.md",
+        "ideologies 里不以 lawgroup_ 开头的字段数（文档管它们叫「标量字段」）",
+        "doc15_ideology_fields",
+        "other",
+        9,
+        note="那 9 个里只有 4 个是标量、5 个是块 —— 所以这里叫 other 而不是 scalar",
+    ),
+    Claim(
+        "pol.lobby_usable",
+        "15-政治人口与社会.md",
+        "游说理由里标了 is_always_usable 的个数（另有 34 个根本没写该键）",
+        "doc15_lobby_usable",
+        "",
+        15,
+    ),
+    Claim(
+        "pol.religion_heritage_values",
+        "15-政治人口与社会.md",
+        "原版宗教实际用到的传承取值数（heritage_materialist 等 7 个）",
+        "doc15_heritage_values",
+        "",
+        7,
+        note="8 是 discrimination_traits 里定义的特质数：第 8 个 heritage_humanist 无人引用",
+    ),
+    Claim(
+        "hist.country_effects_doc18",
+        "18-history初始状态系统.md",
+        "common/history/countries 里写了 add_* / set_* 效果的文件数（444 个里的 217 个）",
+        "doc18_country_effects",
+        "",
+        217,
+        note="必须任意深度：add_amendment 一类写在嵌套块里，只数深度 1 会得 0",
+    ),
+    Claim(
+        "env.checksum_dirs",
+        "19-game根级文件与工具链.md",
+        "checksum_manifest 里参与校验和的目录数（含全部子目录）",
+        "doc19_checksum_targets",
+        "dirs",
+        5,
+        note="该清单不是花括号语法，走 parse_cached 会静默得 0",
+    ),
+    Claim(
+        "env.checksum_files",
+        "19-game根级文件与工具链.md",
+        "checksum_manifest.txt 里参与校验和的单文件数（paths_checksummed.settings）",
+        "doc19_checksum_targets",
+        "files",
+        1,
+    ),
+    # ── doc 17 的散文数字（2026-09 那一轮补的看守）──────────────────────
+    Claim(
+        "chr.overview_txt_doc17",
+        "17-角色科技与呈现.md",
+        "§0 那 29 个目录的 .txt 数（1.14.2 时是 954）",
+        "doc17_overview",
+        "txt",
+        955,
+    ),
+    Claim(
+        "chr.overview_keys_doc17",
+        "17-角色科技与呈现.md",
+        "§0 那 29 个目录的顶层定义键合计（1.14.2 时是 11,673）",
+        "doc17_overview",
+        "keys",
+        11705,
+    ),
+    Claim(
+        "chr.loc_concept_x",
+        "17-角色科技与呈现.md",
+        "概念本地化里裸 concept_x 键的个数（§14.4 那张表的头一行）",
+        "doc17_loc_suffix",
+        "concept_x",
+        1037,
+    ),
+    Claim(
+        "chr.loc_concept_x_desc",
+        "17-角色科技与呈现.md",
+        "概念本地化里 concept_x_desc 键的个数（比概念数多 2）",
+        "doc17_loc_suffix",
+        "concept_x_desc",
+        614,
+    ),
+    Claim(
+        "chr.gene_block_names",
+        "17-角色科技与呈现.md",
+        "common/genes 里不重复的顶层块名数（含 morph_genes 的子块不算）",
+        "doc17_gene_blocks",
+        "",
+        5,
+        note="勘误表里那个 6 是 1.14.2 的旧值：多算了 gene_face_dacals（morph_genes 的子块）",
+    ),
+    Claim(
+        "chr.gene_definitions",
+        "17-角色科技与呈现.md",
+        "common/genes 里顶层块的出现次数（9 处定义）",
+        "doc17_gene_definitions",
+        "",
+        9,
+    ),
+    Claim(
+        "chr.template_genes",
+        "17-角色科技与呈现.md",
+        "ethnicity_template 里出现过的 gene_* 键数（morph_genes 全集 97 减去缺的 4 个）",
+        "doc17_block_prefix",
+        "common/ethnicities/00_ethnicities_templates.txt|ethnicity_template|gene_",
+        93,
+    ),
+    Claim(
+        "chr.morph_genes",
+        "17-角色科技与呈现.md",
+        "morph_genes 里的 gene_* 键数（全集 97）",
+        "doc17_block_prefix",
+        "common/genes/01_genes_morph.txt|morph_genes|gene_",
+        97,
+    ),
+    Claim(
+        "chr.culture_ethnicity_blocks",
+        "17-角色科技与呈现.md",
+        "00_cultures.txt 里 ethnicities 块的出现次数（317 个块）",
+        "doc17_block_items",
+        "common/cultures/00_cultures.txt|ethnicities|blocks",
+        317,
+        note="docs 17 早期写的「这个块共 1,346 个 token」没有任何自然口径 ——"
+        "改成可复算的「317 个块 / 343 条条目」",
+    ),
+    Claim(
+        "chr.culture_ethnicity_items",
+        "17-角色科技与呈现.md",
+        "00_cultures 的 ethnicities 块里的赋值条数（343 条 权重 = 族群）",
+        "doc17_block_items",
+        "common/cultures/00_cultures.txt|ethnicities|items",
+        343,
+    ),
+    Claim(
+        "chr.flag_definition_items",
+        "17-角色科技与呈现.md",
+        "flag_definitions 里 flag_definition 条目的个数（每个 TA 列表 432 + 1 个列表）",
+        "doc17_field_occurrence",
+        "common/flag_definitions:flag_definition",
+        1407,
+    ),
+    Claim(
+        "chr.flag_definition_includes",
+        "17-角色科技与呈现.md",
+        "flag_definitions 里 includes 赋值的处数（2 处）",
+        "doc17_field_occurrence",
+        "common/flag_definitions:includes",
+        2,
+    ),
+    Claim(
+        "chr.dna_files_without_defs",
+        "17-角色科技与呈现.md",
+        "dna_data 里顶层定义为 0 的文件数（00_dna.txt 整块被注释）",
+        "doc17_files_without_defs",
+        "common/dna_data",
+        1,
+    ),
+    Claim(
+        "chr.dna_per_file",
+        "17-角色科技与呈现.md",
+        "dna_data 里有定义的文件各自的定义数取值个数（全都是 1）",
+        "doc17_dna_per_file",
+        "",
+        1,
+    ),
+    Claim(
+        "chr.dna_fields",
+        "17-角色科技与呈现.md",
+        "dna_data 的顶层字段数（portrait_info 与 enabled 两个）",
+        "dir_field_count",
+        "dna_data",
+        2,
+    ),
+    Claim(
+        "chr.customizable_fields",
+        "17-角色科技与呈现.md",
+        "customizable_localization 定义层的字段数（6 个）",
+        "within_field_count",
+        "customizable_localization:",
+        6,
+    ),
+    Claim(
+        "chr.customizable_text_fields",
+        "17-角色科技与呈现.md",
+        "customizable_localization 里 text 块内部的字段数（localization_key / trigger / fallback）",
+        "within_field_count",
+        "customizable_localization:text",
+        3,
+    ),
+    Claim(
+        "chr.named_colors_blocks",
+        "17-角色科技与呈现.md",
+        "named_colors 的顶层块处数（4 个文件各 1 个 colors = {）",
+        "dir_blocks",
+        "named_colors",
+        4,
+    ),
+    Claim(
+        "chr.tech_definitions",
+        "17-角色科技与呈现.md",
+        "technology/technologies 的顶层科技定义数（178 是 1.14.2 旧值）",
+        "dir_blocks",
+        "technology/technologies",
+        179,
+    ),
+    Claim(
+        "chr.tech_production",
+        "17-角色科技与呈现.md",
+        "10_production.txt 的顶层定义数",
+        "file_top_keys",
+        "common/technology/technologies/10_production.txt",
+        57,
+    ),
+    Claim(
+        "chr.tech_military",
+        "17-角色科技与呈现.md",
+        "20_military.txt 的顶层定义数",
+        "file_top_keys",
+        "common/technology/technologies/20_military.txt",
+        58,
+    ),
+    Claim(
+        "chr.tech_society",
+        "17-角色科技与呈现.md",
+        "30_society.txt 的顶层定义数",
+        "file_top_keys",
+        "common/technology/technologies/30_society.txt",
+        64,
+    ),
 ]
 
 
@@ -1991,6 +2737,8 @@ KNOWN_METRIC_MIXUPS: dict[tuple[str, int], str] = {
     ("loc.texticon_doc06", 436): "436 是同一份 `gui/*.gui` 数据的**另一种口径**（任意缩进的 "
     "`texticon = {`，而断言表的 432 是文档 §1.3 明写的行首顶格口径）；doc 06 §x 那张 "
     "「GUI 定义用」的表用的正是 436 —— 两个数都对，不是漂移",
+    ("dip.actions_txt", 49): "49 是 `diplomatic_actions\\` 里**含官方 `.md`** 的文件数，"
+    "断言表的 48 只数 `.txt`；doc 16 §2.1 的小标题用的就是 49（两个口径都写在文档里）",
 }
 
 
@@ -2219,6 +2967,42 @@ TEXT_SCAN_EXEMPT: dict[str, str] = {
     "pol.pop_needs_fields_doc15": "锚点 'pop_needs' 与 9 / 52 / 15 等相邻数字相撞",
     "chr.atlas_blocks_doc17": "锚点 'atlases' 与 5 / 17 等相邻计数同量级",
     "chr.roles_doc17": "锚点 'character_roles' 与 10 / 14 两个口径纠缠",
+    # ── doc 16 那一批（2026-09）────────────────────────────────────────────
+    #
+    # 这四条的数字都在**生成表或清单表**里（§0 的 33 行、§4.x 的字段表），
+    # 而锚点要么是那一节的目录名（`state_traits` 在该节出现几十次），要么是
+    # 官方文档名——表里同量级的相邻计数太多，文本扫描分不清是哪一个。
+    # 它们的判据也不在正文里：`md_block_undocumented` / `md_bullet_diff` 比的是
+    # **官方 .md 与游戏数据**，正文写错一个数字并不能说明这个差集错了。
+    "dip.state_traits_fields": "锚点 'state_traits' 在 doc 16 里满篇都是，期望 4 → 误报 35 处；"
+    "该表的字段清单另有 §4.2 的生成表看守",
+    "dip.group_no_md": "锚点 'terrain_manipulators' 与 §0 表里 8 / 9 / 11 等同量级数字相撞 → 误报 3 处",
+    "dip.pact_undocumented": "锚点 'pact' / 'diplomatic_action' 与 §2 表的 19 / 22 等相撞 → 误报 3 处",
+    "dip.wargoal_kind_diff": "锚点 'war_goal_types' 与 §7.1 表的 5 / 8 等相撞 → 误报 2 处",
+    # ── docs 03/14/15/17 那一批（2026-09）────────────────────────────────
+    #
+    # 这几条的锚点都是**目录名或高频字段名**，而期望值都不大 ——
+    # 同一节里另有同量级的计数（相邻目录的文件数、相邻行的编号），
+    # 静态文本分不清是哪一个。它们的数字多半**已经在生成表里**逐行核对
+    # （`v3 tables`），或者由上面那些口径更窄的断言一起钉住。
+    "chr.customizable_text_fields": "锚点 'customizable_localization' 覆盖整节，期望 3 → 误报 18 处；"
+    "该表由 doc 17 的字段表生成器逐行看守",
+    "chr.customizable_fields": "同上（期望 6）",
+    "eco.buy_package_fields": "锚点 'buy_packages' 与该节 99 / 1 / 9 等同量级数字相撞 → 误报 13 处",
+    "eco.buy_package_categories": "锚点 'popneed_' 与逐类计数相撞 → 误报 1 处",
+    "chr.gene_block_names": "锚点 'genes' 与 8 / 9 / 97 等同量级数字相撞 → 误报 10 处",
+    "chr.gene_definitions": "同上（期望 9）",
+    "pol.ideology_other_fields": "锚点 'ideologies' 与 8 / 26 / 35 / 172 纠缠 → 误报 4 处",
+    "pol.ideology_lawgroups": "锚点 'law_groups' 与 25 / 26 两个口径相撞 → 误报 1 处",
+    "chr.dna_fields": "锚点 'dna_data' 与 1 / 583 / 584 等同量级数字相撞 → 误报 4 处",
+    "chr.named_colors_blocks": "锚点 'named_colors' 与该节的列表序号 3. 相撞 → 误报 2 处",
+    "chr.tech_production": "锚点 'technologies' 与相邻两个文件的 58 / 64 相撞 → 误报 2 处",
+    "chr.tech_military": "同上（期望 58）",
+    "chr.tech_society": "同上（期望 64）",
+    "chr.flag_definition_includes": "期望值只有 2，容差 ±1 会命中同节的 1 / 3 —— "
+    "锚点 'includes' 在这份文档里与列表编号纠缠；同一句的 1,407 已有独立断言",
+    "chr.template_genes": "锚点 'ethnicity_template' 与同节的近似值 `~95` 相撞 → 误报 1 处；"
+    "97 那条（chr.morph_genes）在同一句里逐字写着",
 }
 
 

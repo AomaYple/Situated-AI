@@ -189,6 +189,12 @@ _NO_ANCHOR_CLAIMS: dict[str, str] = {
     "内容时效性另由 test_docs_mirror.py 用 sha256 逐篇比对本体看守",
     "hist.wrappers": "描述里只有 'history'，全库出现上千次",
     "pfx.mods_total": "描述里只有 'mod'，全库出现上千次",
+    "chr.overview_keys_doc17": "描述「29 个目录的顶层定义键合计」纯中文；期望值 11,705 的容差是 ±117，"
+    "而 doc 17 里另有若干 11,6xx 的逐目录键数 —— 文本扫描只会把它们全报成漂移。"
+    "这个数字本来就由 test_doc_overview.py 独立看守（它解析 §0 表的 29 行再求和）",
+    "eco.buy_package_entries": "描述「买包条目数」纯中文；唯一可用的锚点 'buy_packages' "
+    "在该节与 1 / 2 / 15 等同量级数字相撞（同批断言已进 TEXT_SCAN_EXEMPT），"
+    "而它本身与 eco.buy_package_categories / wealth1 / fields 互为交叉验证",
 }
 
 

@@ -32,6 +32,11 @@ doc 17 就是那个时点：**25 张**表里有 24 张可以脚本化，而它�
 自定义 loc 的 `type` 取值表用「全部 ``type =`` 赋值」口径（384 处）与
 字段表的「顶层条目」口径（376 处）**记了同一个字段**，两个数并不相等 ——
 这也是为什么同一张表里的数字必须逐表声明口径。
+
+除了表，本篇还有一批**散落在正文里的单个数字**（§0 的 29 目录合计、`genes`
+的块名数、`technology` 的逐文件定义数…）。它们的失效方式和表不一样：
+表会被 `v3 tables` 重算，正文不会 —— 只能靠人眼。所以这里另有一节
+**点状查询**（口径 5），把每个数字的口径写在函数里，让正文与它可对照。
 """
 
 from __future__ import annotations
@@ -43,7 +48,10 @@ from typing import TYPE_CHECKING
 from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec, norm_key
+from .extract import extract_dir
+from .model import Block
 from .usage import (
+    _iter_keyed_blocks,
     _rows,
     definition_rows,
     field_occurrences,
@@ -54,6 +62,7 @@ from .usage import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 
 # ────────────────────────── 口径 1：字段出现次数 ──────────────────────────
@@ -478,6 +487,260 @@ def _modifier_prefix_rows(keys: tuple[str, ...], col: int) -> list[tuple[str, di
     return out
 
 
+# ────────────────────────── 口径 5：§0 总览与点状查询 ──────────────────────────
+#
+# 这一节回答的是**散在正文里的单个数字**（不是整张表）。它们的共同坑是
+# 「口径写在正文、代码里没有」—— 数字过期时没人能复算，只能靠人眼重数，
+# 而人眼重数正是本篇出过最多错的地方（91 vs 433、1,681 vs 1,037、178 vs 179）。
+
+#: doc 17 §0「一页总览」的 29 个目录，**顺序 = 文档行序**（作者按主题排的，别按名字排）。
+#:
+#: 这是 §0 那两个合计（**955 个 `.txt` / 11,705 个顶层定义键**）唯一的目录清单 ——
+#: 再抄一份必然分叉，而分叉的现象就是「表里 29 行相加 ≠ 头条」：
+#: `tools/tests/test_doc_overview.py` 正是拿头条与逐行各算一遍来抓它。
+#: §0 那张表**没有生成器**（「官方 `.md`」与「一句话用途」两列是作者的判断），
+#: 所以这里只提供计数，不去动表里的单元格。
+OVERVIEW_DIRS: tuple[str, ...] = (
+    "character_templates",
+    "character_traits",
+    "character_roles",
+    "character_interactions",
+    "dna_data",
+    "genes",
+    "ethnicities",
+    "coat_of_arms",
+    "flag_definitions",
+    "dynamic_country_names",
+    "dynamic_treaty_names",
+    "dynamic_country_map_colors",
+    "named_colors",
+    "power_bloc_coa_pieces",
+    "power_bloc_map_textures",
+    "culture_graphics",
+    "technology",
+    "game_concepts",
+    "messages",
+    "alert_types",
+    "alert_groups",
+    "map_interaction_types",
+    "map_notification_types",
+    "labels",
+    "console_command_macros",
+    "customizable_localization",
+    "effect_localization",
+    "trigger_localization",
+    "modifier_type_definitions",
+)
+
+
+def _overview_paths(dir_name: str) -> list[Path]:
+    """§0 里一个目录的 `.txt`（**递归**：`technology` 一行写的是 ``3 + `eras/`1``）。"""
+    base = config.GAME / "common" / dir_name
+    return sorted(p for p in base.rglob("*.txt") if p.is_file()) if base.is_dir() else []
+
+
+def _overview_counts() -> tuple[int, int]:
+    """``(§0 的 .txt 数, 顶层定义键数)`` —— 一次遍历同时给出两个数。
+
+    两个函数共用它，是为了让「文件数」与「键数」永远出自**同一份目录清单**
+    （`:data:`OVERVIEW_DIRS``）与**同一次递归**。
+    """
+    files = 0
+    keys = 0
+    for dir_name in OVERVIEW_DIRS:
+        paths = _overview_paths(dir_name)
+        files += len(paths)
+        for path in paths:
+            keys += sum(
+                1
+                for a in parse_cached(path).top_assignments
+                if not a.is_variable and isinstance(a.value, Block)
+            )
+    return files, keys
+
+
+def overview_txt_count() -> int:
+    """doc 17 §0 与头条的 **955**：29 个目录的 `.txt` 数（**递归**）。
+
+    递归是必须的：`technology` 那 4 个文件里有 1 个在 `eras\\` 子目录下，
+    只数直接子项会少 1 —— 而「954」正是 1.14.2 的旧值，容易与这个坑混淆。
+
+    `.md` **不算**。篇首勘误表里那句「1,010 = 早期把 `.md` 也计入了」不成立：
+    这 29 个目录下的官方 `.md` 只有 9 个，含 `.md` 是 **964**，1,010 任何口径都复现不出。
+    """
+    return _overview_counts()[0]
+
+
+def overview_key_count() -> int:
+    """doc 17 §0 与头条的 **11,705**：29 个目录的**顶层定义键出现次数**。
+
+    口径与 §0 表、`test_doc_overview` 一致，三条缺一不可：
+
+    * ``@变量`` 不计（它们是文件级宏，不是定义）；
+    * **只数 ``键 = { … }`` 形状的顶层块**，标量赋值不算；
+    * **按出现次数计，不去重** —— `genes` 因此是 9（去重块名只有 5 个，
+      见 :func:`gene_block_names`），§0 表里那一行才写成「5 个块名（9 处定义）」。
+
+    实测在这 29 个目录上顶格**标量赋值为 0 个**，所以「只数块」与
+    「全部非 `@` 赋值」两种口径同值 —— 换个目录就未必了。
+    """
+    return _overview_counts()[1]
+
+
+def loc_suffix_count(key: str) -> int:
+    """`concepts_l_english.yml` 里某一类 ``concept_*`` 键的数量。
+
+    口径就是 :func:`loc_suffix_rows`（五类互斥且完备，合计 2,191），
+    这里只按**行身份**取一行的数值列。键要过一遍 ``strip("`")``：
+    表里的键带反引号（``\\`concept_x\\```）。
+
+    ⚠️ 复数那一行的键是
+    ``\\`concept_x\\` + \\`s\\`（复数，如 \\`concept_countries\\`）``，
+    整串 strip 之后**不等于** ``concept_x`` —— 所以 ``concept_x`` 拿到的是
+    **1,037**，而不是「含复数的 1,289」。
+
+    找不存在的键**抛 KeyError**（不返回 0）：这张表没有「文档有、原版未使用」
+    那种合法零值，静默返回 0 只会让写错的键名看起来「数出来了」。
+    """
+    want = key.strip("`")
+    rows = loc_suffix_rows()
+    for row_key, cells in rows:
+        if row_key.strip("`") == want:
+            return int(cells[1].replace(",", ""))
+    known = "、".join(f"`{row_key.strip('`')}`" for row_key, _cells in rows)
+    raise KeyError(f"{key!r} 不是 concept 键后缀分类里的一行；可用的是：{known}")
+
+
+def gene_block_names() -> list[str]:
+    """`common/genes` 的**顶层块名**（去重、升序）—— 1.14.3 是 **5 个**。
+
+    5 个名字、**9 处定义**（`accessory_genes` ×3、`special_genes` ×3）。
+    两者不可互换：§0 表那一行写「5 个块名（9 处定义）」、合计按 9 计入；
+    勘误表原先写的 6 是 1.14.2 的旧账。
+
+    ⚠️ `gene_face_dacals` **不在这里** —— 它是 ``01_genes_morph.txt`` 里
+    `morph_genes` 的**子块**（深度 1）。§6.2 那张「顶层块」表曾多列了它一行，
+    多出来的那一行正好把块名数从 5 顶成 6。
+    """
+    return sorted(extract_dir(config.GAME / "common/genes").entries)
+
+
+def gene_definition_count() -> int:
+    """`common/genes` 顶层块的**出现次数**（`dir_blocks` 口径）—— **9**。
+
+    与 :func:`gene_block_names` 是同一份数据的两种口径（9 处 vs 5 个名字）。
+    """
+    return sum(file_definition_counts("common/genes", blocks_only=True).values())
+
+
+def block_prefix_count(path_rel: str, block: str, prefix: str) -> int:
+    """一个文件里、某个块内**以 ``prefix`` 开头的去重键名**个数。
+
+    块定位复用 :func:`pdx.usage._iter_keyed_blocks`（**任意深度**），
+    所以同名的块若出现多次，它们的键**合并去重**后再数。
+
+    去重与否会差 1：`00_ethnicities_templates.txt` 的 `ethnicity_template`
+    里 `gene_forehead_roundness` 写了两遍 —— 出现 94 次、**去重 93 个**，
+    而正文那句「93 个 `gene_*`」用的是去重口径。
+
+    ``prefix`` 是 ``str.startswith`` 判据（不是正则）；`@变量` 也是赋值、
+    一样参与匹配（它们以 ``@`` 开头，用 ``gene_`` 这类前缀取不到）。
+    文件不存在返回 **0**，与 :func:`pdx.usage.field_occurrences` 对空目录的行为一致。
+    """
+    path = config.GAME / path_rel
+    if not path.is_file():
+        return 0
+    seen: set[str] = set()
+    for key, blk in _iter_keyed_blocks(parse_cached(path)):
+        if key == block:
+            seen.update(a.key for a in blk.assignments() if a.key.startswith(prefix))
+    return len(seen)
+
+
+def block_item_count(path_rel: str, block: str) -> tuple[int, int]:
+    """``(块的出现次数, 块内赋值条数)`` —— **返回值就是这个顺序**。
+
+    用于 `common/cultures/00_cultures.txt` 的 `ethnicities`：``(317, 343)``。
+    正文「317 个 `ethnicities = { … }` 块 / 343 条 `权重 = 族群` 条目」就是这两个数。
+
+    ⚠️ 第一项是**块的出现次数**，不是「子块数」：那 317 个块里的 343 条赋值
+    **全是标量**（``1 = caucasian`` 形状），子块 0 个 ——
+    写成「317 个子块」会让人以为块里还嵌着块。权重取值实测只有 ``{1, 2, 3, 5, 10}``
+    （其中 1 有 329 条）。
+
+    正文原先那句「共 1,346 个 token」**没有任何自然口径能复现**
+    （唯一凑得出 1,346 的分解是 1,029 + 317，像是手写 tokenizer 少算一格），
+    已改成上面两个可复算的数。
+    """
+    path = config.GAME / path_rel
+    if not path.is_file():
+        return (0, 0)
+    blocks = 0
+    items = 0
+    for key, blk in _iter_keyed_blocks(parse_cached(path)):
+        if key == block:
+            blocks += 1
+            items += sum(1 for _ in blk.assignments())
+    return (blocks, items)
+
+
+def field_occurrence(dir_rel: str, field: str) -> int:
+    """某目录里某字段的**出现次数** —— :func:`pdx.usage.field_occurrences` 的薄包装。
+
+    口径写在 :mod:`pdx.usage`：只数**顶层条目块内部**的字段、跨文件累加、
+    不按文件去重。`common/flag_definitions` 的 ``flag_definition`` 因此是
+    **1,407**（TAG 顶层块里的条目数）、``includes`` 是 **2**。
+
+    ⚠️ 同一个词可以在两种层级上：`flag_definition` 既是 TAG 块里的**字段**
+    （1,407），又是那张表的**块名**（块内字段要传 ``within="flag_definition"``）——
+    指错就得 0，而且不报错。
+
+    字段不存在返回 **0**（``Counter`` 语义），这不是错误：doc 17 那几张字段表里
+    本来就有「文档有、原版未使用」的行（值 0），见 ``_DOC17_FIELD_TABLES`` 的 ``zero_keys``。
+    """
+    return field_occurrences(dir_rel)[field]
+
+
+def files_without_defs(dir_rel: str) -> int:
+    """目录里**顶层定义数为 0** 的文件个数 —— `common/dna_data` 是 **1**。
+
+    `dna_data` 的 584 个 `.txt` 里 583 个各有 1 个顶层定义，唯一例外是
+    `00_dna.txt`：7,966 B **整块被注释**，首行逐字是 ``#test_oscar_wilde = {``。
+    所以正文那句「每个文件只有 1 个顶层定义，共 583 个定义」里
+    **「只有 1 个」不成立、583 成立**。
+    """
+    return sum(1 for n in file_definition_counts(dir_rel).values() if n == 0)
+
+
+def tech_counts() -> dict[str, int]:
+    """doc 17 §13 的科技计数（1.14.3）。每个键都是**可复算**的一项：
+
+    * ``technologies`` —— `technology\\technologies\\` 的顶层定义（`dir_blocks` 口径）：**179**
+    * ``eras`` —— `technology\\eras\\` 的顶层定义：**5**
+    * ``definitions`` —— `technology\\`（含两个子目录）的**去重条目名**数：**184**
+      （= 179 + 5；`v3 verify` 的 `chr.tech` 断言用的就是这个口径）
+    * ``<文件名>`` —— 逐文件顶层定义：`10_production.txt` **57** / `20_military.txt` **58** /
+      `30_society.txt` **64**
+    * ``category.<值>`` —— `category` 字段取值分布：**57 / 58 / 64**（与逐文件数逐项相等）
+    * ``era.<值>`` —— `era` 字段取值分布：**39 / 38 / 41 / 38 / 23**
+
+    1.14.3 里这三套数**完全一致（都是 179）**。正文曾写「顶层定义 178、
+    分布 179，差 1 未确认」—— 那是把 **1.14.2 的定义数**与 **1.14.3 的分布**
+    并排比较：1.14.3 新增 1 项科技后三处同步变成 179，**「差 1 之谜」不存在**。
+    """
+    out: dict[str, int] = {}
+    files = file_definition_counts("common/technology/technologies", blocks_only=True)
+    out["technologies"] = sum(files.values())
+    out["eras"] = sum(file_definition_counts("common/technology/eras", blocks_only=True).values())
+    out["definitions"] = extract_dir(config.GAME / "common/technology").unique_entries
+    out.update(sorted(files.items()))
+    for field in ("category", "era"):
+        values = field_value_counts("common/technology/technologies", field)
+        for value, n in sorted(values.items()):
+            out[f"{field}.{value}"] = n
+    return out
+
+
 # ────────────────────────── 登记 ──────────────────────────
 
 
@@ -566,10 +829,21 @@ def doc_table_specs() -> list[KeyedTableSpec]:
 
 __all__ = [
     "DIST_TABLES",
+    "OVERVIEW_DIRS",
+    "block_item_count",
+    "block_prefix_count",
     "color_rows",
     "doc_table_specs",
+    "field_occurrence",
+    "files_without_defs",
+    "gene_block_names",
+    "gene_definition_count",
+    "loc_suffix_count",
     "loc_suffix_keys",
     "loc_suffix_rows",
+    "overview_key_count",
+    "overview_txt_count",
+    "tech_counts",
     "template_rows",
     "value_counter",
 ]
