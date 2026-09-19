@@ -128,6 +128,16 @@ def test_README里的用例数与实际收集一致() -> None:
     assert f"{collected} 条用例" in tools, f"tools/README 写的用例数与实测（{collected}）不一致"
 
 
+def test_CI配置里的断言条数与现算一致() -> None:
+    """CI 工作流注释里也有一处「N 条断言全部要读游戏本体」—— 同样是手写的机械数字。
+
+    （它曾经写着 63，而断言表已经是 231 条。）
+    """
+    ci = (config.REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    needle = f"{_claims()} 条断言里 {_offline()} 条能用入库的离线真值核验"
+    assert needle in ci, f"CI 配置里的断言条数与现算不一致（应为 {needle!r}）"
+
+
 def test_toolsREADME的exe标识符数字与现算一致() -> None:
     """`v3 strings` 给的两个数也要现算。
 
