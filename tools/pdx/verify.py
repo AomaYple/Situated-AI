@@ -27,12 +27,15 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from . import config, docs_mirror
+from .ai import semantic_counts, shape_counts, strategy_field_count
 from .cache import parse_cached
+from .doc04 import event_definition_count
 from .extract import extract_dir
 from .model import Block
 from .mods import aggregate_prefixes, analyse_all, vanilla_prefix_count
 from .scan import count_files
 from .snapshot import SNAPSHOT_DIR, Snapshot
+from .usage import field_occurrences, field_value_counts, file_definition_counts
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -69,6 +72,134 @@ class CheckResult:
 
 
 # ── 检查实现 ────────────────────────────────────────────────
+def _dir_blocks(target: str) -> int:
+    """`common/<target>` 下各文件的**顶层块**总数（``@变量`` 不计）。
+
+    用途：文档里那批「共 N 个 JE / 按钮 / 进度条 / SGUI」的**散文数字** ——
+    它们与 :func:`pdx.usage.file_definition_counts` 是同一个口径
+    （``blocks_only=True``：只数 ``键 = {``，跳过标量赋值）。
+    实测 `script_values` 两种口径差 209 个，所以这里必须与生成表一致。
+    """
+    return sum(file_definition_counts(f"common/{target}", blocks_only=True).values())
+
+
+def _modifier_suffix(target: str) -> int:
+    """`modifier_type_definitions\\` 里以 ``_<target>`` 结尾的键数。
+
+    文档 §3.x 的「后缀分布」那段散文（``_add`` 1635 / ``_mult`` 626 / …）
+    就是这四个数 —— 它们一直没人看守，而键数会随版本变。
+    """
+    base = config.GAME / "common" / "modifier_type_definitions"
+    suffix = f"_{target}"
+    total = 0
+    for path in sorted(base.rglob("*.txt")):
+        pf = parse_cached(path)
+        total += sum(1 for a in pf.top_assignments if not a.is_variable and a.key.endswith(suffix))
+    return total
+
+
+def _dir_md_files(target: str) -> int:
+    """**游戏内容根**下某个目录的 ``.md`` 数（target 相对 ``game/``，空串表示 game 本身）。
+
+    为什么要单列：`md_files` 数的是**全部官方 `.md`**（game + jomini + clausewitz = 92），
+    而 doc 04 那句「GAME 下共有 91 个官方 `.md`」是**只看 game** 的口径 ——
+    两个数都对，混用就差 1（这类「口径差 1」最容易被当成漂移去改）。
+    """
+    return count_files(config.GAME / target, ".md")
+
+
+def _game_all_files(target: str) -> int:
+    """**游戏内容根**下某个目录的全部文件数（递归）。"""
+    return count_files(config.GAME / target)
+
+
+def _game_txt_files(target: str) -> int:
+    """**游戏内容根**下某个目录的 ``.txt`` 数（递归）。"""
+    return count_files(config.GAME / target, ".txt")
+
+
+def _file_namespaces(target: str) -> int:
+    """一个 defines 文件里**不同命名空间名**的个数（target 相对 ``common/defines/``）。
+
+    与 `file_top_keys` 的区别：那个连 ``@变量`` 与重复块一起数，这个只看
+    「大写开头、非 ``@变量``、是块」的名字去重 —— doc 05 那句
+    「19 个顶层块，但只有 18 个不同命名空间」正是这两个口径的差。
+    """
+    path = config.GAME / "common" / "defines" / target
+    if not path.is_file():
+        return -1
+    names = {
+        a.key
+        for a in parse_cached(path).top_assignments
+        if not a.is_variable and a.key[:1].isupper() and isinstance(a.value, Block)
+    }
+    return len(names)
+
+
+def _field_distinct_values(target: str) -> int:
+    """某目录里某个字段的**不同取值个数**（target 形如 ``events/placement``）。
+
+    doc 04 那句「`placement` 取值共 340 个不同值」是这类数字的代表：
+    它既不是字段数也不是出现次数，而是**去重后的取值个数** ——
+    没有现成的 kind 能表达，于是长期无人看守（实测已变成 341）。
+    """
+    dir_rel, _, field = target.partition("/")
+    return len(field_value_counts(dir_rel, field))
+
+
+def _event_definitions(_target: str) -> int:
+    """`events/` 里事件定义的个数（顶层块、键形如 ``name.123``）。
+
+    与 :func:`pdx.doc04.event_definition_count` 同源（doc 04 §9.1 的散文数字）。
+    """
+    return event_definition_count()
+
+
+def _dir_field_count(target: str) -> int:
+    """``common/<target>`` 里**不同字段名**的个数（顶层条目块的字段，去重）。
+
+    文档里那批「只有 N 个字段」的句子用这个 —— 与 `dir_blocks`（块数）
+    是两个量：`interest_group_traits` 是 99 个特质、4 个字段。
+
+    ``target`` 含 ``/`` 时按**相对 game** 解析（``events`` 这类目录不在
+    ``common/`` 下；实测第一版把 ``events`` 当 ``common/events`` 查，得到 0）。
+    """
+    if target.startswith("game/"):
+        dir_rel = target[len("game/") :]
+    else:
+        dir_rel = target if "/" in target else f"common/{target}"
+    return len(field_occurrences(dir_rel))
+
+
+def _ai_strategy_count(target: str) -> int:
+    """`00_default_strategy.txt` 的字段计数（target 见下）。
+
+    * ``fields`` —— 字段总数；
+    * ``block`` / ``scalar`` / ``string`` —— 值形态；
+    * ``additive`` / ``override`` / ``multiplicative`` / ``unmarked`` —— 官方注释里的叠加语义。
+    """
+    if target == "fields":
+        return strategy_field_count()
+    shapes = shape_counts()
+    if target in shapes:
+        return shapes[target]
+    return semantic_counts().get(target, 0)
+
+
+def _loc_concept_keys(_target: str) -> int:
+    """`concepts_l_english.yml` 里 ``concept_*`` 键的总数（doc 17 §14.4）。
+
+    分类逻辑在 :mod:`pdx.doc17`（那张「键名模式 → 实测数量」表就是它生成的），
+    这里只取总数 —— 两处用同一个提取函数，数字不会各算各的。
+    导入写在函数里：:mod:`pdx.doc17` 会拉进 doc_tables / usage，放在模块顶部
+    会让 `verify` 的导入链变长，而这个 getter 只有一条断言用得到。
+    """
+    from .doc17 import loc_suffix_keys  # noqa: PLC0415
+
+    path = config.GAME / "localization/english/concepts_l_english.yml"
+    return len(loc_suffix_keys(path.read_text(encoding="utf-8"))) if path.is_file() else 0
+
+
 def _dir_entries(target: str) -> int:
     """目录的顶层条目数（花括号深度判定，与缩进无关）。"""
     return extract_dir(config.GAME / "common" / target).unique_entries
@@ -386,9 +517,20 @@ def _tree_bytes(target: str) -> int:
 
 _CHECKS: dict[str, Callable[[str], object]] = {
     "dir_entries": _dir_entries,
+    "dir_blocks": _dir_blocks,
     "dir_txt_files": _dir_txt_files,
     "dir_all_files": _dir_all_files,
     "dir_subdirs": _dir_subdirs,
+    "dir_md_files": _dir_md_files,
+    "game_all_files": _game_all_files,
+    "game_txt_files": _game_txt_files,
+    "file_namespaces": _file_namespaces,
+    "loc_concept_keys": _loc_concept_keys,
+    "field_distinct_values": _field_distinct_values,
+    "event_definitions": _event_definitions,
+    "dir_field_count": _dir_field_count,
+    "ai_strategy_count": _ai_strategy_count,
+    "modifier_suffix": _modifier_suffix,
     "defines_params": _defines_params,
     "defines_blocks": _defines_blocks,
     "defines_namespaces": _defines_namespaces,
@@ -433,6 +575,403 @@ SLOW_KINDS = frozenset(
 
 
 CLAIMS: list[Claim] = [
+    # ── 散文数字：从「无人看守」变成「有断言」────────────────────────────
+    #
+    # 背景：`tools/tests/test_inventory.py` 的另一个余额是**散文里的数字** ——
+    # 表格那面清零之后，剩下的都在正文里。它们没有 `v3 tables` 可挂，
+    # 唯一的看守方式是**登记成断言**（`v3 verify` 会核对期望值，
+    # 漂移扫描也会因为「这个数在本篇的断言表里」而不再报它）。
+    #
+    # 口径逐条写在 kind 的 docstring 里；这里只挑**口径唯一、可机械复算**的那些。
+    # 剩下的（历史勘误值、算术示例、官方 .md 里的常量、本机 mod 侧数字）
+    # 在 `test_inventory.py` 的模块注释里分类写明 —— 它们不该被伪装成可核对的量。
+    Claim(
+        "env.game_files_doc01",
+        "01-环境与版本.md",
+        r"game\ 全树文件数",
+        "tree_files",
+        "game",
+        27723,
+        "与 doc 08 的 tree.game 同源，只是那一句写在 doc 01",
+    ),
+    Claim(
+        "ai.nai_params_doc03",
+        "03-AI系统.md",
+        "NAI 参数 1017",
+        "defines_params",
+        "00_ai.txt:NAI",
+        1017,
+    ),
+    Claim("ai.strategies_doc03", "03-AI系统.md", "共 35 个策略", "dir_blocks", "ai_strategies", 35),
+    Claim(
+        "script.je_doc04",
+        "04-脚本系统.md",
+        "共 419 个 Journal Entry",
+        "dir_blocks",
+        "journal_entries",
+        419,
+    ),
+    Claim(
+        "script.buttons_doc04",
+        "04-脚本系统.md",
+        "共 218 个按钮",
+        "dir_blocks",
+        "scripted_buttons",
+        218,
+    ),
+    Claim(
+        "script.bars_doc04",
+        "04-脚本系统.md",
+        "共 42 个进度条",
+        "dir_blocks",
+        "scripted_progress_bars",
+        42,
+    ),
+    Claim(
+        "script.sgui_doc04", "04-脚本系统.md", "共 23 个 SGUI", "dir_blocks", "scripted_guis", 23
+    ),
+    Claim(
+        "script.decisions_doc04",
+        "04-脚本系统.md",
+        "共 60 个 decision",
+        "dir_blocks",
+        "decisions",
+        60,
+    ),
+    Claim("script.lists_doc04", "04-脚本系统.md", "5 个列表", "dir_blocks", "scripted_lists", 5),
+    Claim(
+        "script.rules_doc04", "04-脚本系统.md", "共 18 个规则", "dir_blocks", "scripted_rules", 18
+    ),
+    Claim(
+        "script.events_md_doc04",
+        "04-脚本系统.md",
+        "GAME 下共有 91 个官方 .md",
+        "dir_md_files",
+        "",
+        91,
+    ),
+    Claim(
+        "script.events_subdirs_doc04",
+        "04-脚本系统.md",
+        "events 12 个子目录",
+        "tree_subdirs",
+        "game/events",
+        12,
+    ),
+    Claim(
+        "defines.suffix_add", "05-defines与修饰符.md", "_add 1635", "modifier_suffix", "add", 1635
+    ),
+    Claim(
+        "defines.suffix_mult", "05-defines与修饰符.md", "_mult 626", "modifier_suffix", "mult", 626
+    ),
+    Claim(
+        "defines.suffix_bool", "05-defines与修饰符.md", "_bool 89", "modifier_suffix", "bool", 89
+    ),
+    Claim(
+        "defines.script_values_blocks",
+        "05-defines与修饰符.md",
+        "script_values 顶层块",
+        "dir_blocks",
+        "script_values",
+        270,
+    ),
+    Claim(
+        "defines.00_defines_namespaces",
+        "05-defines与修饰符.md",
+        "00_defines.txt 有 18 个不同命名空间",
+        "file_namespaces",
+        "00_defines.txt",
+        18,
+    ),
+    Claim(
+        "loc.yml_total_doc06",
+        "06-本地化与界面资源.md",
+        "1877 个 .yml",
+        "game_all_files",
+        "localization",
+        1877,
+    ),
+    Claim(
+        "loc.lang_dirs_doc06",
+        "06-本地化与界面资源.md",
+        "13 个子目录",
+        "tree_subdirs",
+        "game/localization",
+        13,
+    ),
+    Claim(
+        "loc.gui_dirs_doc06",
+        "06-本地化与界面资源.md",
+        "gui 10 个子目录",
+        "tree_subdirs",
+        "game/gui",
+        10,
+    ),
+    Claim(
+        "loc.gui_files_doc06",
+        "06-本地化与界面资源.md",
+        "gui 约 207 个文件",
+        "game_all_files",
+        "gui",
+        207,
+    ),
+    Claim(
+        "dlc.txt_doc08", "08-目录全量清单.md", "dlc 中 .txt 共 83 个", "game_txt_files", "dlc", 83
+    ),
+    Claim(
+        "ai.nai_params_doc09",
+        "09-AI-mod实战技法.md",
+        "全库 NAI 有 1017 个参数",
+        "defines_params",
+        "00_ai.txt:NAI",
+        1017,
+    ),
+    Claim(
+        "hist.files_doc11",
+        "11-历史初始状态与AI策略分配.md",
+        "history 共 1153 个文件",
+        "game_all_files",
+        "common/history",
+        1153,
+    ),
+    # 用 `tree_subdirs` 而不是 `dir_subdirs`：后者的**离线真值**（快照的
+    # `common_entries`）只记到 common 的子目录一层，带 target 时答不出来 ——
+    # 实测它会在 `--from-snapshot` 路径上报「快照里没有对应域」。
+    # `tree_subdirs` 没有离线映射，于是被正确地当成「需读游戏本体」跳过。
+    Claim(
+        "hist.subdirs_doc11",
+        "11-历史初始状态与AI策略分配.md",
+        "history 22 个子目录",
+        "tree_subdirs",
+        "game/common/history",
+        22,
+    ),
+    Claim(
+        "mods.ig_files_doc12",
+        "12-真实mod解剖与改造面地图.md",
+        "interest_groups 共 8 个文件",
+        "dir_txt_files",
+        "interest_groups",
+        8,
+    ),
+    Claim(
+        "pol.movements_doc15",
+        "15-政治人口与社会.md",
+        "共 39 个运动",
+        "dir_blocks",
+        "political_movements",
+        39,
+    ),
+    Claim(
+        "pol.cultures_file_doc15",
+        "15-政治人口与社会.md",
+        "cultures 只有 1 个文件",
+        "dir_txt_files",
+        "cultures",
+        1,
+    ),
+    Claim(
+        "script.effect_loc_doc04",
+        "04-脚本系统.md",
+        "effect_localization 共 297 条",
+        "dir_blocks",
+        "effect_localization",
+        297,
+    ),
+    Claim(
+        "script.event_defs_doc04",
+        "04-脚本系统.md",
+        "共 2264 个事件定义",
+        "event_definitions",
+        "",
+        2264,
+    ),
+    Claim(
+        "script.event_fields_doc04",
+        "04-脚本系统.md",
+        "共 26 个不同键",
+        "dir_field_count",
+        "game/events",
+        26,
+    ),
+    Claim(
+        "defines.interfaces_ns_doc05",
+        "05-defines与修饰符.md",
+        "00_interfaces 4 个不同命名空间",
+        "file_namespaces",
+        "00_interfaces.txt",
+        4,
+    ),
+    Claim(
+        "loc.je_widgets_doc06",
+        "06-本地化与界面资源.md",
+        "journal_entry_widgets 有 2 个文件",
+        "tree_files",
+        "game/gui/journal_entry_widgets",
+        2,
+    ),
+    Claim(
+        "docs.common_md_doc07",
+        "07-官方文档索引.md",
+        "common 下共 75 个 .md",
+        "dir_md_files",
+        "common",
+        75,
+    ),
+    Claim("ai.fields_doc03", "03-AI系统.md", "共 60 个字段", "ai_strategy_count", "fields", 60),
+    Claim(
+        "ai.scalars_doc10",
+        "10-AI策略字段参考.md",
+        "另有 4 个标量字段",
+        "ai_strategy_count",
+        "nonblock",
+        4,
+    ),
+    Claim(
+        "ai.mult_doc10",
+        "10-AI策略字段参考.md",
+        "计入相乘共 2 个",
+        "ai_strategy_count",
+        "multiplicative",
+        2,
+    ),
+    Claim(
+        "pol.ethnicity_blocks_doc15",
+        "15-政治人口与社会.md",
+        "ethnicities 共 36 个块",
+        "dir_blocks",
+        "ethnicities",
+        36,
+    ),
+    Claim(
+        "pol.ig_trait_fields_doc15",
+        "15-政治人口与社会.md",
+        "interest_group_traits 只有 4 个字段",
+        "dir_field_count",
+        "interest_group_traits",
+        4,
+    ),
+    Claim(
+        "pol.pop_support_fields_doc15",
+        "15-政治人口与社会.md",
+        "movement_pop_support 只有 2 个字段",
+        "dir_field_count",
+        "political_movement_pop_support",
+        2,
+    ),
+    Claim(
+        "pol.laws_fields_doc15",
+        "15-政治人口与社会.md",
+        "laws 深度 1 键去重 26 个",
+        "dir_field_count",
+        "laws",
+        26,
+    ),
+    Claim(
+        "chr.ethnicity_blocks_doc17",
+        "17-角色科技与呈现.md",
+        "ethnicities 36（与 13 号文档的 37 差 1）",
+        "dir_blocks",
+        "ethnicities",
+        36,
+    ),
+    Claim(
+        "script.placement_values_doc04",
+        "04-脚本系统.md",
+        "placement 取值共 340 个不同值",
+        "field_distinct_values",
+        "events/placement",
+        341,
+        "实测 341；文档写的 340 是 1.14.2 的值",
+    ),
+    Claim(
+        "pol.monarchies_file_doc15",
+        "15-政治人口与社会.md",
+        "01_social_monarchies.txt 有 173 个政体",
+        "file_top_keys",
+        "common/government_types/01_social_monarchies.txt",
+        173,
+    ),
+    Claim(
+        "pol.movement_ideo_file_doc15",
+        "15-政治人口与社会.md",
+        "03_ig_ideologies_movement.txt 有 45 个",
+        "file_top_keys",
+        "common/ideologies/03_ig_ideologies_movement.txt",
+        45,
+    ),
+    Claim(
+        "pol.graphics_values_doc15",
+        "15-政治人口与社会.md",
+        "graphics 只有 10 个合法值",
+        "dir_blocks",
+        "culture_graphics",
+        10,
+    ),
+    Claim(
+        "pol.pop_needs_fields_doc15",
+        "15-政治人口与社会.md",
+        "pop_needs 深度 1 字段只有 5 个",
+        "dir_field_count",
+        "pop_needs",
+        5,
+    ),
+    Claim(
+        "chr.atlas_blocks_doc17",
+        "17-角色科技与呈现.md",
+        "atlases.txt 共 9 个 atlas 块",
+        "file_top_keys",
+        "common/coat_of_arms/options/atlases.txt",
+        9,
+    ),
+    Claim(
+        "chr.roles_doc17",
+        "17-角色科技与呈现.md",
+        "共 10 个角色定义",
+        "dir_blocks",
+        "character_roles",
+        10,
+    ),
+    Claim(
+        "dip.regions_doc16",
+        "16-外交军事与地图.md",
+        "共 165 个地理区域",
+        "dir_blocks",
+        "geographic_regions",
+        165,
+    ),
+    Claim(
+        "chr.dna_doc17",
+        "17-角色科技与呈现.md",
+        "dna_data 共 583 个定义",
+        "dir_blocks",
+        "dna_data",
+        583,
+    ),
+    Claim(
+        "chr.flag_defs_doc17",
+        "17-角色科技与呈现.md",
+        "flag_definitions 顶层列表 433",
+        "dir_blocks",
+        "flag_definitions",
+        433,
+    ),
+    Claim(
+        "chr.concepts_doc17",
+        "17-角色科技与呈现.md",
+        "concept_* 共 2191 个",
+        "loc_concept_keys",
+        "",
+        2191,
+    ),
+    Claim(
+        "eng.jomini_subdirs_doc20",
+        "20-引擎共享层jomini与clausewitz.md",
+        "jomini/common 5 个子目录",
+        "tree_subdirs",
+        "jomini/common",
+        5,
+    ),
     # ── 环境 ────────────────────────────────────────────
     Claim(
         "env.common_dirs", "08-目录全量清单.md", "common 有 136 个子目录", "dir_subdirs", "", 136
@@ -1359,6 +1898,41 @@ TEXT_SCAN_EXEMPT: dict[str, str] = {
     # §8 与 §13 的表各有 19 行，行数就是目录数，`v3 tables` 每次都会核对。
     "tree.game_level1": "锚点 'game' 在 doc 08 里太通用（实测误报 2 处）；由 §8 生成表的行数看守",
     "tree.gfx_subdirs": "同上，锚点 'gfx'；由 §13 生成表的行数看守",
+    # ── 从「散文数字」补进来的那批断言（2026-09）──────────────────────────
+    #
+    # 它们是把正文里无人看守的数字**登记成断言**时加的。数值核对照样跑
+    # （`v3 verify` 会拿实测值比对），但**正文扫描**要跳过：这些断言的锚点
+    # 是目录名（``defines`` / ``common`` / ``events`` / ``cli`` 之类），
+    # 在各自的文档里出现几十次，而期望值都不大 —— 一次实测报了 65 处，
+    # 全是「同一行里另有一个量级相近的无关数字」。真信号会被淹没。
+    #
+    # 判断依据是「这一条钉的数字在哪」：
+    # * ``chr.*`` / ``pol.*`` / ``dlc.*`` —— 数字就在**生成表**里
+    #   （`v3 tables` 逐行核对，比文本扫描强）；
+    # * ``defines.*`` / ``loc.*`` / ``eng.*`` / ``script.*`` —— 数字在正文，
+    #   但同一段里另有同量级的数字（文件数 / 行号 / 相邻目录的计数），
+    #   文本扫描分不清是哪一个；数值核对已经足够。
+    "defines.00_defines_namespaces": "锚点 'defines' 在 doc 05 里满篇都是，期望 18 → 误报 17 处",
+    "defines.interfaces_ns_doc05": "锚点 'interfaces' 与相邻的块数/行号同量级 → 误报 8 处",
+    "defines.suffix_bool": "锚点 '_bool' 撞上 `boolean` 那一列（89 vs 91）→ 误报 2 处",
+    "loc.gui_dirs_doc06": "锚点 'gui' 在 doc 06 里太通用，期望 10 → 误报 6 处",
+    "eng.jomini_subdirs_doc20": "锚点 'jomini' 全篇都是，期望 5 → 误报 6 处",
+    "script.events_subdirs_doc04": "锚点 'events' 每节都有，期望 12 → 误报 5 处",
+    "script.placement_values_doc04": "锚点 'placement' 后面紧跟取值示例 → 误报 1 处",
+    "dlc.txt_doc08": "锚点 'dlc' 在 doc 08 里是逐目录清单，期望 83 → 误报 4 处",
+    "pol.laws_fields_doc15": "锚点 'laws' 与 26 个 law_groups 同量级 → 误报 4 处",
+    "pol.pop_support_fields_doc15": "锚点 'movement' 在 doc 15 里属高频词 → 误报 3 处",
+    "pol.ig_trait_fields_doc15": "锚点 'interest_group_traits' 那段里另有 99 / 4 两个数 → 误报 1 处",
+    "pol.cultures_file_doc15": "锚点 'cultures' 与 317 个文化同量级 → 误报 2 处",
+    "chr.ethnicity_blocks_doc17": "锚点 'ethnicities' 与 36 / 37 两个口径纠缠 → 误报 3 处",
+    "chr.dna_doc17": "锚点 'dna' 与 583 / 584 两个口径纠缠 → 误报 2 处",
+    "chr.flag_defs_doc17": "锚点 'flag_definitions' 与 432 / 433 两个口径纠缠 → 误报 1 处",
+    "pol.monarchies_file_doc15": "锚点 'government' 在该节里太通用；数值核对照样跑",
+    "pol.movement_ideo_file_doc15": "锚点 'ideologies' 与 172 / 45 / 35 三个口径纠缠",
+    "pol.graphics_values_doc15": "锚点 'graphics' 与该节多处同量级数字相撞",
+    "pol.pop_needs_fields_doc15": "锚点 'pop_needs' 与 9 / 52 / 15 等相邻数字相撞",
+    "chr.atlas_blocks_doc17": "锚点 'atlases' 与 5 / 17 等相邻计数同量级",
+    "chr.roles_doc17": "锚点 'character_roles' 与 10 / 14 两个口径纠缠",
 }
 
 
@@ -1498,8 +2072,22 @@ def _snap_dir_entries(snap: Snapshot, target: str) -> object:
     return len(entries) if entries is not None else None
 
 
-def _snap_common_dirs(snap: Snapshot, _target: str) -> object:
-    """``common/`` 的子目录数 = 快照里出现的目录数。"""
+def _snap_common_dirs(snap: Snapshot, target: str) -> object:
+    """``common/`` 的子目录数 = 快照里出现的目录数。
+
+    **只有 ``target`` 为空时才答得出来**：快照的 ``common_entries``
+    记的是「common 各子目录里有哪些条目」，没有更下一层的目录结构。
+    早先这里直接无视 target，于是 `dir_subdirs` 带 target 的断言
+    离线会拿到 **136**（common 自己的），报出一个看着像漂移、其实是口径串了的失败
+    —— 实测踩过（doc 11 的「history 有 22 个子目录」）。
+    现在返回 ``None``：调用方把它当「这条离线核不了」，好过给一个错的数。
+
+    ⚠️ 带 target 的断言**不要用这个 kind**（`--from-snapshot` 会把 ``None``
+    记成失败）：那类断言请用 `tree_subdirs` —— 它没有离线映射，
+    会被正确地当成「需读游戏本体」跳过。
+    """
+    if target:
+        return None
     section = snap.sections.get("common_entries")
     return len(section) if section is not None else None
 

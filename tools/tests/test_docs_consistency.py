@@ -157,6 +157,23 @@ def test_断言id唯一() -> None:
 #: 显式列出而不是「抽不到就跳过」—— 否则哪天锚点抽取退化了，
 #: 大片断言会静默退出检查而没人发现。下面每条都写明为什么无法定位。
 _NO_ANCHOR_CLAIMS: dict[str, str] = {
+    "ai.fields_doc03": "描述「共 60 个字段」里只有中文；数字在同一节的小标题上",
+    "ai.mult_doc10": "描述「计入相乘共 2 个」纯中文；它在一条 `>` 引用块里",
+    "ai.scalars_doc10": "描述「另有 4 个标量字段」纯中文，同上",
+    "ai.strategies_doc03": "描述「共 35 个策略」纯中文；策略清单在下一行才出现",
+    "chr.roles_doc17": "描述「共 10 个角色定义」纯中文；目录名不在描述里",
+    "dip.regions_doc16": "描述「共 165 个地理区域」纯中文（目录名 geographic_regions 未写进描述）",
+    "docs.common_md_doc07": "描述里只有 '.md'，长度不足且到处出现",
+    "hist.files_doc11": "描述「共 1153 个文件」纯中文，'history' 在上一行的标题里",
+    "hist.subdirs_doc11": "描述「history 22 个子目录」里的 'history' 全库出现上千次",
+    "loc.lang_dirs_doc06": "描述「13 个子目录」纯中文；'localization' 未写进描述",
+    "pol.movements_doc15": "描述「共 39 个运动」纯中文；目录名未写进描述",
+    "script.bars_doc04": "描述「共 42 个进度条」纯中文；目录名未写进描述",
+    "script.buttons_doc04": "描述「共 218 个按钮」纯中文；目录名未写进描述",
+    "script.event_defs_doc04": "描述「共 2264 个事件定义」纯中文；'events' 太通用",
+    "script.event_fields_doc04": "描述「共 26 个不同键」纯中文，没有可定位的标识符",
+    "script.lists_doc04": "描述「5 个列表」纯中文；目录名未写进描述",
+    "script.rules_doc04": "描述「共 18 个规则」纯中文；目录名未写进描述",
     "env.common_dirs": "描述里只有 'common'，全库出现上千次",
     "env.common_all": "同上，'common' 太通用",
     "def.blocks": "描述里只有 'defines'，全库出现上千次",

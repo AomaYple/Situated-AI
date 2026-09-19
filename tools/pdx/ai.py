@@ -71,14 +71,19 @@ _NAI_PREFIXES: tuple[str, ...] = (
 #: 字段字段（60 个）所在的包装块。
 _AI_STRATEGY_FILE = "common/ai_strategies/00_default_strategy.txt"
 
-#: 叠加语义的四类判据 —— ``(文档行键, 判据)``。顺序即优先级（一个字段只进一类）。
-_SEMANTICS: tuple[tuple[str, Callable[[str], bool]], ...] = (
-    ("**相加 additive**", lambda c: "additively" in c),
+#: 叠加语义的四类判据 —— ``(短键, 文档行键, 判据)``。顺序即优先级（一个字段只进一类）。
+#: **短键**（``additive`` / ``override`` / …）是给 `v3 verify` 的 target 用的；
+#: 文档行键才是往表格里写的文字。两者分开是踩出来的：早先把行键当短键用，
+#: `semantic_counts()["multiplicative"]` 永远是 0，而断言表还以为自己在核对。
+_SEMANTICS: tuple[tuple[str, str, Callable[[str], bool]], ...] = (
+    ("additive", "**相加 additive**", lambda c: "additively" in c),
     (
+        "override",
         "**覆盖 override**",
         lambda c: "Using a different value in a strategy will override this value" in c,
     ),
     (
+        "multiplicative",
         "**相乘 multiplicative**",
         lambda c: "will function multiplicatively" in c or "several multiplications" in c,
     ),
@@ -123,38 +128,64 @@ def _strategy_fields() -> list[tuple[str, str, object]]:
     return out
 
 
-def semantic_rows() -> list[tuple[str, dict[int, str]]]:
-    """doc 10 §0：四类叠加语义各多少个字段。"""
-    fields = _strategy_fields()
+#: 形态分类的 target → 文档里那一行的键。
+_SHAPE_LABEL: dict[str, str] = {
+    "block": "script value 块",
+    "scalar": "枚举标量",
+    "string": "字符串",
+}
+
+
+def strategy_field_count() -> int:
+    """`00_default_strategy.txt` 里的字段总数（实测 60）。"""
+    return len(_strategy_fields())
+
+
+def shape_counts() -> dict[str, int]:
+    """值形态 → 个数（``block`` / ``scalar`` / ``string``）。
+
+    ``nonblock`` = ``scalar + string``：文档 §0 那句「另有 4 个标量字段」
+    数的是**非块**字段（含 `icon` 那个字符串），不是「枚举标量」那一类 ——
+    两者差 1，正是「口径差 1」最容易被误当成漂移的地方。
+    """
+    counts = {"block": 0, "scalar": 0, "string": 0}
+    for _key, _c, value in _strategy_fields():
+        if isinstance(value, Block):
+            counts["block"] += 1
+        elif isinstance(value, Scalar) and value.quoted:
+            counts["string"] += 1
+        else:
+            counts["scalar"] += 1
+    counts["nonblock"] = counts["scalar"] + counts["string"]
+    return counts
+
+
+def semantic_counts() -> dict[str, int]:
+    """官方注释里的叠加语义 → 个数（含 ``unmarked``）。"""
     counted: Counter[str] = Counter()
-    for _key, comment, _value in fields:
-        for label, match in _SEMANTICS:
+    for _key, comment, _value in _strategy_fields():
+        for short, _label, match in _SEMANTICS:
             if match(comment):
-                counted[label] += 1
+                counted[short] += 1
                 break
         else:
-            counted["未标注"] += 1
+            counted["unmarked"] += 1
+    return dict(counted)
+
+
+def semantic_rows() -> list[tuple[str, dict[int, str]]]:
+    """doc 10 §0：四类叠加语义各多少个字段。"""
+    counted = semantic_counts()
     return [
-        *((label, {1: str(counted[label])}) for label, _m in _SEMANTICS),
-        ("未标注", {1: str(counted["未标注"])}),
+        *((label, {1: str(counted[short])}) for short, label, _m in _SEMANTICS),
+        ("未标注", {1: str(counted["unmarked"])}),
     ]
 
 
 def shape_rows() -> list[tuple[str, dict[int, str]]]:
     """doc 10 §1：60 个字段的**值形态**（块 / 枚举标量 / 字符串）。"""
-    blocks = enums = strings = 0
-    for _key, _c, value in _strategy_fields():
-        if isinstance(value, Block):
-            blocks += 1
-        elif isinstance(value, Scalar) and value.quoted:
-            strings += 1
-        else:
-            enums += 1
-    return [
-        ("script value 块", {1: str(blocks)}),
-        ("枚举标量", {1: str(enums)}),
-        ("字符串", {1: str(strings)}),
-    ]
+    counts = shape_counts()
+    return [(label, {1: str(counts[kind])}) for kind, label in _SHAPE_LABEL.items()]
 
 
 def doc_table_specs() -> list[KeyedTableSpec]:
@@ -185,6 +216,9 @@ __all__ = [
     "doc_table_specs",
     "nai_prefix_counts",
     "nai_prefix_rows",
+    "semantic_counts",
     "semantic_rows",
+    "shape_counts",
     "shape_rows",
+    "strategy_field_count",
 ]
