@@ -33,6 +33,7 @@ from . import config, defines
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec
 from .model import Block, Scalar
+from .usage import ai_script_values_key_stats, ai_script_values_referenced
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -188,13 +189,56 @@ def shape_rows() -> list[tuple[str, dict[int, str]]]:
     return [(label, {1: str(counts[kind])}) for kind, label in _SHAPE_LABEL.items()]
 
 
+def nai_param_count() -> int:
+    """``common/defines/00_ai.txt`` 里 ``NAI`` 命名空间块的参数数（实测 **1,017**）。
+
+    与 ``v3 verify`` 的 ``defines_params``（target ``00_ai.txt:NAI``）同一个量 ——
+    文档里 doc 03 §3.3 与 doc 09 §4 都引用它，所以口径写在 ``pdx.defines`` 那一层，
+    这里只是薄包装（不重复实现计数规则）。
+    """
+    report = defines.extract_defines(config.GAME / "common" / "defines")
+    return sum(ns.count for ns in report.get("NAI"))
+
+
+#: doc 09 §4 那张「领域 → 对应字段」的表头。
+FIELD_MAP_TABLE = "| 领域 | 对应字段 | 所在位置 |"
+
+
+def doc09_field_rows() -> list[tuple[str, dict[int, str]]]:
+    """doc 09 §4 里**机械可算的两行**（其余行是作者写的字段清单，不动）。
+
+    * ``PM 评分 / 外交阈值 / 各类机制`` → ``00_ai.txt`` 的 ``NAI`` 参数数；
+    * ``AI 中间值`` → 脚本值顶层键数 + 其中被默认策略文件引用的个数。
+
+    这两行原先手写、且各配了一条断言 —— 但断言只能报「不一致」，改还是要人改；
+    接进生成器之后 ``v3 tables --write`` 直接算对。
+    """
+    stats = ai_script_values_key_stats()
+    return [
+        ("PM 评分 / 外交阈值 / 各类机制", {1: f"{nai_param_count():,} 个 `NAI` 参数"}),
+        (
+            "AI 中间值",
+            {
+                1: f"{stats['top_keys']} 个脚本值"
+                f"（其中 {ai_script_values_referenced()} 个被 `00_default_strategy.txt` 引用）"
+            },
+        ),
+    ]
+
+
 def doc_table_specs() -> list[KeyedTableSpec]:
-    """doc 03 一张 + doc 10 两张（名字前缀区分归属，由 docgen 分发）。"""
+    """doc 03 一张 + doc 09 一张 + doc 10 两张（名字前缀区分归属，由 docgen 分发）。"""
     return [
         KeyedTableSpec(
             name="doc03 NAI 参数前缀 Top25",
             header="| 前缀 | 数量 | 领域 |",
             cells=nai_prefix_rows,
+            append_new=False,
+        ),
+        KeyedTableSpec(
+            name="doc09 领域对应字段",
+            header=FIELD_MAP_TABLE,
+            cells=doc09_field_rows,
             append_new=False,
         ),
         KeyedTableSpec(

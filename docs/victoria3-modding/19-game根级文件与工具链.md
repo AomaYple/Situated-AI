@@ -51,7 +51,7 @@ file
 name = paths_checksummed.settings
 ```
 
-**即：参与校验和的只有 5 个目录（含全部子目录）+ 1 个文件：**
+**即：参与校验和的只有 5<!--claim:env.checksum_dirs--> 个目录（含全部子目录）+ 1 个文件：**
 
 | 校验对象 |
 |---|

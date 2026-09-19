@@ -27,6 +27,7 @@ from . import (
     doc16,
     doc17,
     doc18,
+    docs_mirror,
     game_root,
     install_tree,
     localization,
@@ -107,7 +108,13 @@ def targets() -> tuple[DocTarget, ...]:
             specs=tuple(s for s in usage.doc_table_specs() if "doc16" in s.name)
             + tuple(doc16.doc_table_specs()),
         ),
-        # 散落的单表文档：doc 03 / 10（AI）、doc 11 / 18 / 20（子目录文件数）。
+        DocTarget(
+            # doc 07（官方文档索引）：§0 那张统计总览 —— 8 行全部由**入库清单**现算，
+            # 不需要游戏（这也是它第一次进生成器）。
+            path=config.DOCS / "07-官方文档索引.md",
+            specs=tuple(docs_mirror.doc_table_specs()),
+        ),
+        # 散落的单表文档：doc 03 / 09 / 10（AI）、doc 11 / 18 / 20（子目录文件数）。
         # 它们各只有一两张表，为每篇建一个模块是过度设计 —— 按名字前缀分发给各自的目标。
         *(
             DocTarget(
@@ -116,6 +123,7 @@ def targets() -> tuple[DocTarget, ...]:
             )
             for doc, num in (
                 ("03-AI系统", "03"),
+                ("09-AI-mod实战技法", "09"),
                 ("10-AI策略字段参考", "10"),
                 ("11-历史初始状态与AI策略分配", "11"),
                 ("18-history初始状态系统", "18"),

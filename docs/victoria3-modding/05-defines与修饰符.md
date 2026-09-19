@@ -163,7 +163,7 @@ GOVERNMENT_MONEY_SPENDING_ENABLED = yes   # If this is set to no, the AI for gov
 HIGHLIGHT_COLOR = { 1 1 1 0.5 }
 HEAT_MAP_COLOR_FROM = { 0.9  0.9  0.1  0.3 }
 ```
-来源：`GAME\common\defines\00_graphics.txt`（`NMapMode` 块）。这类内联列表参数全库共 **175** 条（1.14.2 时是 168；口径见 §0.3）。【提取】
+来源：`GAME\common\defines\00_graphics.txt`（`NMapMode` 块）。这类内联列表参数全库共 **175**<!--claim:def.inline_list_total--> 条（1.14.2 时是 168；口径见 §0.3）。【提取】
 
 **4）嵌套块**（跨多行）
 
@@ -624,7 +624,7 @@ NCountry = {
 
 ### 2.7 `00_interfaces.txt`
 
-27 个块，但只有 **4<!--claim:defines.interfaces_ns_doc05--> 个不同命名空间**——`NGUI` 在同一个文件里出现了 **24 次**（这是 §1.7 证据 2 的第二个来源）。
+27<!--claim:def.file_interfaces--> 个块，但只有 **4<!--claim:defines.interfaces_ns_doc05--> 个不同命名空间**——`NGUI` 在同一个文件里出现了 **24 次**（这是 §1.7 证据 2 的第二个来源）。
 
 | 命名空间块 | 出现次数 | 各块起始行 | 合计条目 |
 |---|---|---|---|

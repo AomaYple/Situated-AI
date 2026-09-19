@@ -157,23 +157,13 @@ def test_断言id唯一() -> None:
 #: 显式列出而不是「抽不到就跳过」—— 否则哪天锚点抽取退化了，
 #: 大片断言会静默退出检查而没人发现。下面每条都写明为什么无法定位。
 _NO_ANCHOR_CLAIMS: dict[str, str] = {
-    "loc.lang_dirs_doc06": "描述「13 个子目录」纯中文；'localization' 未写进描述",
-    "script.lists_doc04": "描述「5 个列表」纯中文；目录名未写进描述",
-    "env.common_all": "同上，'common' 太通用",
-    "def.namespaces": "同上，'defines' 太通用",
-    "def.param_names": "同上，'defines' 太通用",
-    "env.common_dirs_direct": "描述里只有 'common'，全库出现上千次；"
-    "它由 v3 verify 实测核验，且与 env.common_dirs 互为**独立口径**的交叉验证",
-    "docs.total_bytes": "doc 07 的总字节数写在一张纯中文表格里（`| 总字节数 | **232,980** |`），"
-    "没有任何可定位的英文标识符；它由 v3 verify 实测核验，"
+    "script.lists_doc04": "描述「5 个列表」纯中文；目录名未写进描述（该数字在 doc 04 §0.2 生成表里）",
+    "env.common_all": "同上，'common' 太通用（该数字在 doc 08 生成表里）",
+    "def.namespaces": "同上，'defines' 太通用（该数字在 doc 05 §0.4 生成表里）",
+    "def.param_names": "同上，'defines' 太通用（同上）",
+    "docs.total_bytes": "doc 07 的总字节数在 §0 生成表里（从入库清单现算），没有可定位的英文标识符；"
     "内容时效性另由 test_docs_mirror.py 用 sha256 逐篇比对本体看守",
-    "pfx.mods_total": "描述里只有 'mod'，全库出现上千次",
-    "chr.overview_keys_doc17": "描述「29 个目录的顶层定义键合计」纯中文；期望值 11,705 的容差是 ±117，"
-    "而 doc 17 里另有若干 11,6xx 的逐目录键数 —— 文本扫描只会把它们全报成漂移。"
-    "这个数字本来就由 test_doc_overview.py 独立看守（它解析 §0 表的 29 行再求和）",
-    "eco.buy_package_entries": "描述「买包条目数」纯中文；唯一可用的锚点 'buy_packages' "
-    "在该节与 1 / 2 / 15 等同量级数字相撞（同批断言已进 TEXT_SCAN_EXEMPT），"
-    "而它本身与 eco.buy_package_categories / wealth1 / fields 互为交叉验证",
+    "pfx.mods_total": "描述里只有 'mod'，全库出现上千次；统计对象是本机 mod，机器相关",
 }
 
 

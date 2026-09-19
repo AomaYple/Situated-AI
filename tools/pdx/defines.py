@@ -664,6 +664,49 @@ def doc_table_specs() -> list[TableSpec | KeyedTableSpec]:
                 key_column=1,
                 append_new=False,
             ),
+            KeyedTableSpec(
+                name="doc05 全局规模",
+                header=GLOBAL_SCALE_TABLE,
+                cells=global_scale_rows,
+                append_new=False,
+            ),
         ]
     )
     return specs
+
+
+#: doc 05 §0.4 那张「全局规模」的表头。
+GLOBAL_SCALE_TABLE = "| 指标 | 数值 | 来源 |"
+
+
+def global_scale_rows() -> list[tuple[str, dict[int, str]]]:
+    """§0.4 的规模行 —— 原先 5 行全手写，其中 3 行有断言看守（仍要人改）。
+
+    改成生成表之后「75 块 / 50 命名空间 / 3488 条目 / 3481 参数名」都由
+    ``v3 tables --write`` 直接算对；「重复 7 次」也不再是手算的差。
+    三类形态的合计走 :attr:`Namespace.counts`（= :func:`_classify`，口径只有一份）。
+    """
+    report = extract_defines(config.GAME / "common" / "defines")
+    names = {p.name for ns in report.namespaces for p in ns.params}
+    scal = sum(ns.counts[SCALAR] for ns in report.namespaces)
+    inline = sum(ns.counts[INLINE_LIST] for ns in report.namespaces)
+    nested = sum(ns.counts[NESTED_BLOCK] for ns in report.namespaces)
+    root = config.GAME / "common" / "defines"
+    base = len([p for p in root.glob("*.txt") if p.is_file()])
+    sub = len([p for p in root.rglob("*.txt") if p.is_file() and p.parent != root])
+    return [
+        (
+            "`common\\defines\\` 下 `.txt` 文件数",
+            {1: f"**{base + sub}**（根目录 {base} + `jomini\\` 子目录 {sub}）"},
+        ),
+        ("顶层命名空间块总数", {1: f"**{len(report.namespaces)}**"}),
+        ("去重后命名空间数", {1: f"**{len(report.unique_namespaces)}**"}),
+        (
+            "参数条目总数",
+            {1: f"**{report.total_params}**（标量 {scal} + 内联列表 {inline} + 嵌套块 {nested}）"},
+        ),
+        (
+            "去重后参数名数",
+            {1: f"**{len(names)}**（有 {report.total_params - len(names)} 次跨块重复出现）"},
+        ),
+    ]

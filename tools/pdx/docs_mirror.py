@@ -27,12 +27,10 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from . import config
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from .doc_tables import KeyedTableSpec
 
 #: 清单文件名（放在 research/ 下，与镜像目录平级）
 MANIFEST_NAME = "official-docs.manifest.json"
@@ -145,6 +143,51 @@ def entries(data: dict[str, object] | None = None) -> dict[str, dict[str, object
     """
     raw = (load_manifest() if data is None else data).get("文档")
     return raw if isinstance(raw, dict) else {}
+
+
+def doc_table_specs() -> list[KeyedTableSpec]:
+    """doc 07 §0 那张「统计总览」——**全部由入库清单现算**（不需要游戏）。
+
+    这张表原先 8 行全是手写的，其中 4 行有断言看守（篇数 / 总字节 / 最大字节 …），
+    但「断言看守」只能告诉你数字**不一致**，仍要人去改；改成生成表之后，
+    `v3 tables --write` 直接把它算对。顺带把 4 个此前没人管的行
+    （总行数 / 平均字节 / 最小文档 / 两档大小分布）也纳入看守。
+    """
+    return [
+        KeyedTableSpec(
+            name="doc07 官方文档统计",
+            header=OVERVIEW_HEADER,
+            cells=overview_rows,
+        )
+    ]
+
+
+#: doc 07 §0 那张表的表头（同文档里没有第二个同表头的表）。
+OVERVIEW_HEADER = "| 指标 | 数值 |"
+
+
+def overview_rows() -> list[tuple[str, dict[int, str]]]:
+    """§0 的 8 行：篇数 / 总字节 / 总行数 / 平均 / 最小 / 最大 / 两档分布。"""
+    docs = entries()
+    if not docs:
+        raise FileNotFoundError("官方文档清单不存在或为空 —— 先跑 `v3 mirror write`")
+    # 清单是 JSON，值是 ``object``；这里显式收窄成 int（清单由本模块写，字段是稳定的）
+    sizes = sorted((int(str(v["字节"])), k) for k, v in docs.items())
+    total_bytes = sum(s for s, _ in sizes)
+    total_lines = sum(int(str(v["行数"])) for v in docs.values())
+    count = len(docs)
+    small, big = sizes[0], sizes[-1]
+    return [
+        ("文档总数", {1: f"**{count:,}**"}),
+        ("总字节数", {1: f"**{total_bytes:,}**"}),
+        ("总行数", {1: f"**{total_lines:,}**"}),
+        ("平均字节数", {1: f"{total_bytes / count:,.1f}"}),
+        ("最小文档", {1: f"{small[0]:,} B（`{Path(small[1]).name}`）"}),
+        ("最大文档", {1: f"{big[0]:,} B（`{Path(big[1]).name}`）"}),
+        ("小于 600 B 的文档", {1: f"{sum(1 for s, _ in sizes if s < 600)} 个"}),
+        ("≥ 5,000 B 的文档", {1: f"{sum(1 for s, _ in sizes if s >= 5000)} 个"}),
+        ("≥ 10,000 B 的文档", {1: f"{sum(1 for s, _ in sizes if s >= 10000)} 个"}),
+    ]
 
 
 def diff_against_game(data: dict[str, object] | None = None) -> list[str]:

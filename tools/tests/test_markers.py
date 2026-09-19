@@ -19,15 +19,64 @@ from pdx import config, markers, verify
 
 #: 标记覆盖率的下限（只许涨，不许跌）。
 #:
-#: 迁移完成时 231 条断言里有 **198** 条拿到标记。剩下的不是遗漏：
-#: * 数字只在**表格**里（14 条）—— 表格归 `v3 tables`，打标记会被整表重写抹掉；
-#: * 数字在正文里但**形态不同**（如「占 `game\\` 全树 17 GB」对应 17,172,819,xxx 字节）；
-#: * 数字在**代码块**里（那是引用原文，不是我们的叙述）；
-#: * 以及少数几处同一行有多个同值数字、需要人判断绑哪一个。
-#: 它们仍由锚点漂移扫描看守（豁免表里每条都写了理由）。
+#: 迁移完成时 231 条断言里有 198 条拿到标记；随后把三张手写表接进生成器
+#: （doc 07 §0 官方文档统计、doc 05 §0.4 全局规模、doc 09 §4 领域对应字段），
+#: 又补了 12 处正文标记 → **210 / 234**。
 #:
 #: **这个数字只能涨**：新加的可复算数字应当顺手加标记，而不是让覆盖率慢慢烂回去。
-MARKER_FLOOR = 198
+MARKER_FLOOR = 210
+
+#: **刻意不打标记**的断言：``claim_id → 理由``。三类，每一条都已经有人看守：
+#:
+#: * **生成表拥有**：数字在由 ``v3 tables`` 生成的表里 —— 标记会被整表重写抹掉，
+#:   那里不该有标记；表格每次重算就是它们的看守。
+#: * **本机 mod 快照**：统计对象是本机订阅的 Workshop mod（机器相关），
+#:   对应的表在 ``NOT_GENERATED`` 里，换台机器就变。
+#: * **数值不在正文**：断言按**字节**钉（唯一没有歧义的量），正文写的是 MB，
+#:   正文里没有这个数、自然没有位置挂标记。
+MARKER_NOT_NEEDED: dict[str, str] = {
+    # ── 生成表拥有 ───────────────────────────────────────
+    "script.lists_doc04": "doc 04 §0.2 目录规模表由 v3 tables 生成",
+    "defines.script_values_blocks": "同上（该表的一行）",
+    "env.common_txt": "doc 08 的 common 主表由 v3 tables 生成",
+    "env.common_all": "同上",
+    "tree.game": "doc 08 的全局总数表由 v3 tables 生成",
+    "tree.game_dirs": "同上",
+    "docs.total_bytes": "doc 07 §0 统计总览由 v3 tables 生成（从入库清单现算）",
+    "def.namespaces": "doc 05 §0.4 全局规模表由 v3 tables 生成",
+    "def.param_names": "同上",
+    "ai.script_values_doc09": "doc 09 §4 领域对应字段表由 v3 tables 生成",
+    "ai.strategy_refs_doc09": "同上",
+    # ── 本机 mod 快照（机器相关）─────────────────────────
+    "pfx.mods_total": "统计本机 23 个 Workshop mod 的前缀用量（NOT_GENERATED 那张表）",
+    "pfx.replace_or_create": "同上",
+    "pfx.inject": "同上",
+    "pfx.try_inject": "同上",
+    "pfx.try_replace": "同上",
+    "pfx.replace": "同上",
+    "pfx.inject_or_create": "同上",
+    # ── 数值不在正文里 ───────────────────────────────────
+    "tree.game_bytes": "doc 08 正文写 17,055.76 MB，断言按字节钉；正文没有这个数",
+    "tree.binaries_bytes": "同上（260.95 MB）",
+    "tree.gfx_bytes": "同上（9,690.00 MB）",
+}
+
+
+def test_没有标记的断言都有理由() -> None:
+    """覆盖率不是靠「尽量多打标记」，而是靠**每个没标记的都答得出为什么**。
+
+    两个方向都查：有断言没标记又没登记 → 红；登记了却已经拿到标记 → 红（清单腐烂）。
+    """
+    bound = {cid for ids in verify.marker_ids_by_doc().values() for cid in ids}
+    unmarked = {c.id for c in verify.CLAIMS if isinstance(c.expected, int) and c.id not in bound}
+    missing = sorted(unmarked - set(MARKER_NOT_NEEDED))
+    assert not missing, (
+        "以下断言既没有归属标记、也没有登记理由：\n  "
+        + "\n  ".join(missing)
+        + "\n给它加标记，或写进 MARKER_NOT_NEEDED 说明为什么不需要。"
+    )
+    stale = sorted(set(MARKER_NOT_NEEDED) - unmarked)
+    assert not stale, f"以下断言已经拿到标记（或已删除），请从 MARKER_NOT_NEEDED 移除：{stale}"
 
 
 def test_标记都指向存在的断言() -> None:

@@ -86,6 +86,9 @@ def test_五档态度的合计与散文一致() -> None:
     _skip()
     total = sum(int(r[1].replace(",", "")) for r in doc_rows(DOC, "| 态度值 | 次数 |", 0))
     text = DOC.read_text(encoding="utf-8")
+    # 归属标记会插在数字与量词之间（`3,753<!--claim:…--> 处`）—— 解析前先剥掉，
+    # 否则这条断言挂在**标记的存在**上，而不是数字对不对上（实测踩过）。
+    text = re.sub(r"<!--claim:[A-Za-z0-9_.]+-->", "", text)
     m = re.search(r"合计\s*([\d,]+)\s*处", text)
     assert m, "找不到「合计 N 处」那句话 —— 散文被改过？"
     assert int(m.group(1).replace(",", "")) == total, (

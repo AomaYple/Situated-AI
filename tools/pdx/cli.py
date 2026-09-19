@@ -865,6 +865,85 @@ def mirror_write(
     )
 
 
+# ── refresh（游戏升级后的一条命令维护）──────────────────────
+@app.command("refresh")
+def refresh_cmd(
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="只报告会改什么，不写盘")] = False,
+) -> None:
+    """**游戏升级后的一条命令**：重算生成表 + 按归属标记改写正文数字，再报剩下的红点。
+
+    等价于 ``v3 tables --write`` + ``v3 verify --fix``，但按顺序做完再核一遍，
+    把「机器能改的」一次改完，只把**机器改不了的**列出来给人：
+
+    * 无标记的数字（数字不在正文里 / 在表格里 / 形态不同）；
+    * 判断类内容（叙述、历史对照句 —— 登记在 ``PROSE_NOT_COMPUTED``）；
+    * 断言失败（真值变了但口径也需要人看一眼的那几条）。
+
+    为什么要有它：这两步原先要人记得按顺序跑，而**忘记跑 = 文档静默过期**，
+    正是这个仓库反复踩的坑（doc 04 的 682 行活了整整一个版本、README 的
+    164/226 停了两轮）。跑完退出码 0 表示全绿；否则 1，并列出剩余项。
+    """
+    console.rule("[bold]1/3 重算生成表[/]")
+    if dry_run:
+        try:
+            table_drift = docgen.check_all()
+        except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+            _fail(f"核对表格失败：{type(exc).__name__}: {exc}")
+        if table_drift:
+            console.print(f"  [yellow]--dry-run：{len(table_drift)} 行与生成结果不一致[/]")
+            for doc, line, now, want in table_drift[:20]:
+                console.print(f"  {escape(doc)}:{line} 现值 {escape(now)} → 生成值 {escape(want)}")
+        else:
+            console.print("  [green]生成表与文档一致，无需改写[/]")
+    else:
+        try:
+            written = docgen.write_all()
+        except (doc_tables.TableNotFoundError, doc_tables.TableMalformedError, OSError) as exc:
+            _fail(f"重算表格失败：{type(exc).__name__}: {exc}")
+        rows = sum(written.values())
+        console.print(f"  [green]重算 {len(written)} 张表 / {rows} 行[/]（内容没变的表不会改盘）")
+
+    console.rule("[bold]2/3 按归属标记改写正文数字[/]")
+    if dry_run:
+        pending = verify.fix_markers(write=False)
+        console.print(f"  [yellow]--dry-run：{len(pending)} 处需要改[/]")
+        for item in pending[:20]:
+            console.print(f"  {escape(item.describe())}")
+    else:
+        fixes = verify.fix_markers(write=True)
+        if fixes:
+            for item in fixes[:40]:
+                console.print(f"  [cyan]{escape(item.describe())}[/]")
+            console.print(f"  共改写 [bold]{len(fixes)}[/] 处")
+        else:
+            console.print("  [green]标记处的数字全都与断言一致[/]")
+
+    console.rule("[bold]3/3 核验剩下的[/]")
+    marker_issues = verify.check_markers()
+    drift = verify.unknown_doc_drift()
+    results = verify.run_claims(verify.CLAIMS, include_slow=True)
+    failed = [r for r in results if not r.ok]
+    console.print(
+        f"  断言 {len(results) - len(failed)} / {len(results)} 通过"
+        f" · 标记问题 {len(marker_issues)} · 正文漂移 {len(drift)}"
+    )
+    for issue in marker_issues[:10]:
+        console.print(f"  [red]❌[/] {escape(issue.describe())}")
+    for d in drift[:10]:
+        console.print(f"  [red]❌[/] {escape(d.describe())}")
+    for r in failed[:10]:
+        console.print(
+            f"  [red]❌[/] [{escape(r.claim.id)}] 期望 {escape(str(r.claim.expected))} 实得 {escape(str(r.actual))}"
+        )
+    if failed or drift or marker_issues:
+        console.print(
+            "[yellow]剩下的机器改不了[/] —— 上面每条都指到了具体行；"
+            "判断类内容见 `test_inventory.PROSE_NOT_COMPUTED`。"
+        )
+        raise typer.Exit(EXIT_FAILED)
+    console.print("[green]全部一致：表格、正文数字、断言。没有需要人改的东西。[/]")
+
+
 # ── tables（文档里由工具生成的表格）──────────────────────────
 @app.command("tables")
 def tables_cmd(
