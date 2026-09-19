@@ -67,7 +67,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
 | `v3 tables` | （新增） | 重算文档里**由工具生成**的 31 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
-| `v3 verify` | `run_verify.py` | 核对文档里的数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用） |
+| `v3 verify` | `run_verify.py` | 核对文档里的数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用**入库的离线真值**：精简快照 + 官方文档清单） |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
 | `v3 check-outputs` | `check_outputs.py` | 核验**已落盘产物**是否与断言注册表一致 |
 | `v3 show` | `show_outputs.py` | 转储产物的结构与规模 |
@@ -118,7 +118,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-492 条用例（`pytest --collect-only` 实测；489 通过 / 3 按条件跳过），
+498 条用例（`pytest --collect-only` 实测；495 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -140,6 +140,8 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_data_dump.py` | 结构化转储：必须能取到**值**而不只是字段名 |
 | `test_defines.py` | defines 提取：参数形态、命名空间合并、覆盖预览 |
 | `test_docs_consistency.py` | 文档数字与断言表的一致性（防文档过期）；**修订哈希与本体比对**、**逐行核对文档里声明的文件字节数**（都是数字漂移扫描抓不到的角度） |
+| `test_doc_overview.py` | doc 16/17 两张 §0 总览表（62 行的机械量）：逐行核对 `.txt` / 字节 / 键数，并断言头条声明与表格合计同源。口径按文档自己声明的（字节只算 `.txt`；键数按顶层**块**的出现次数，不是去重后的键名数） |
+| `test_quote_audit.py` | 重算 README 授权节那组「正文逐字引用官方原文」的实测数并比对 —— 它第一次运行就抓到 README 的分母算错（只统计了有命中的 10 篇，于是占比被抬高） |
 | `test_docs_mirror.py` | 官方 `.md` 清单的时效性：篇目集合、**逐篇 sha256**、镜像无多余文件；以及「跑不了的比对不该弄脏退出码」这条门禁语义 |
 | `test_localization.py` | `.yml` 本地化：语言覆盖、键去重、BOM 处理 |
 | `test_engine_crosscheck.py` | 用游戏日志当**外部真值**核对解析 |
@@ -313,7 +315,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：492 条用例 + 81 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：498 条用例 + 81 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 62 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
@@ -322,7 +324,8 @@ Python 版把上述问题都变成了**可测试的代码**：492 条用例 + 81
 > 有漂移时退出码同样是 1，所以在 CI / pre-commit 上也会被拦住。
 > 确认是「口径不同、文档没错」的登记在 `pdx.verify.KNOWN_METRIC_MIXUPS`（附理由）。
 >
-> **没有游戏的机器（CI）怎么办**：81 条断言全要读游戏本体，而入库的
+> **没有游戏的机器（CI）怎么办**：81 条断言里 36 条能用**入库的离线真值**核验
+> （精简快照 33 条 + 官方文档清单 3 条），其余 45 条要读游戏本体，而入库的
 > **精简快照**里带着各目录条目名、defines 命名空间与 DLC 清单，
 > 够核验其中约一半 —— 跑 `v3 verify --from-snapshot` 即可，它**不读游戏**。
 > 它证明「断言注册表仍与当时记录的真值一致」，不证明「游戏里现在是这个数」；

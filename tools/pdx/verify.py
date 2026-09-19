@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
-from . import config
+from . import config, docs_mirror
 from .cache import parse_cached
 from .extract import extract_dir
 from .model import Block
@@ -1557,9 +1557,46 @@ _SNAPSHOT_GETTERS: dict[str, Callable[[Snapshot, str], object]] = {
 }
 
 
+# ── 第二份离线真值：入库的官方文档清单 ──────────────────────
+#: 官方 ``.md`` 的**清单**（``research/official-docs.manifest.json``，已入库）
+#: 里带着每篇的字节数 —— 那正好是 ``md_files`` / ``md_total_bytes`` /
+#: ``md_max_bytes`` 三条断言要的真值，而且**不需要游戏**。
+#:
+#: 为什么单独一份而不是塞进快照：快照是「某一版游戏的结构域」，清单是
+#: 「官方文档的指纹」，两者的更新时机与用途都不同（见 ``v3 mirror``）。
+#: 但它们同属「入库的离线真值」，所以由同一个 ``--from-snapshot`` 路径消费 ——
+#: 对 CI 而言「真值从哪来」不重要，重要的是**不用装游戏**。
+def _manifest_docs() -> dict[str, dict[str, object]]:
+    return docs_mirror.entries()
+
+
+def _man_md_files(_target: str) -> object:
+    docs = _manifest_docs()
+    return len(docs) if docs else None
+
+
+def _man_md_total_bytes(_target: str) -> object:
+    docs = _manifest_docs()
+    sizes = [int(str(m["字节"])) for m in docs.values()]
+    return sum(sizes) if sizes else None
+
+
+def _man_md_max_bytes(_target: str) -> object:
+    docs = _manifest_docs()
+    sizes = [int(str(m["字节"])) for m in docs.values()]
+    return max(sizes) if sizes else None
+
+
+_MANIFEST_GETTERS: dict[str, Callable[[str], object]] = {
+    "md_files": _man_md_files,
+    "md_total_bytes": _man_md_total_bytes,
+    "md_max_bytes": _man_md_max_bytes,
+}
+
+
 def snapshot_kinds() -> frozenset[str]:
-    """能被入库快照核验覆盖的断言类型。"""
-    return frozenset(_SNAPSHOT_GETTERS)
+    """**无游戏时**能被离线真值核验覆盖的断言类型（快照 ∪ 官方文档清单）。"""
+    return frozenset(_SNAPSHOT_GETTERS) | frozenset(_MANIFEST_GETTERS)
 
 
 def latest_compact_snapshot() -> Snapshot | None:
@@ -1581,26 +1618,39 @@ def latest_compact_snapshot() -> Snapshot | None:
 def verify_from_snapshot(
     snap: Snapshot | None = None, claims: list[Claim] | None = None
 ) -> list[CheckResult]:
-    """用入库的精简快照核验能被它覆盖的那部分断言。
+    """用**入库的离线真值**核验能被它覆盖的那部分断言。
+
+    两份真值，先查快照、再查官方文档清单：
+
+    * 精简快照（``tools/out/snapshots/*.compact.json``）—— 目录条目名、
+      defines 命名空间、DLC 清单；
+    * 官方文档清单（``research/official-docs.manifest.json``）—— 92 篇 ``.md``
+      的篇数与逐篇字节数。
 
     覆盖不到的断言类型**不出现在结果里**（用 :func:`snapshot_kinds` 查范围），
     而不是报成失败 —— 这条路的定位就是「无游戏时能查多少查多少」。
     """
     snap = snap or latest_compact_snapshot()
-    if snap is None:
-        return []
     out: list[CheckResult] = []
     for claim in claims if claims is not None else CLAIMS:
         getter = _SNAPSHOT_GETTERS.get(claim.kind)
-        if getter is None:
-            continue
         try:
-            actual = getter(snap, claim.target)
+            if getter is not None:
+                if snap is None:
+                    continue
+                actual: object = getter(snap, claim.target)
+                missing = "快照里没有对应域或条目"
+            else:
+                man_getter = _MANIFEST_GETTERS.get(claim.kind)
+                if man_getter is None:
+                    continue
+                actual = man_getter(claim.target)
+                missing = "官方文档清单不存在或为空（跑 `v3 mirror write`）"
         except (KeyError, TypeError, AttributeError) as exc:
             out.append(CheckResult(claim, None, False, f"{type(exc).__name__}: {exc}"))
             continue
         if actual is None:
-            out.append(CheckResult(claim, None, False, "快照里没有对应域或条目"))
+            out.append(CheckResult(claim, None, False, missing))
             continue
         out.append(CheckResult(claim, actual, actual == claim.expected))
     return out

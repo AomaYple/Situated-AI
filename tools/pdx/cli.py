@@ -921,16 +921,22 @@ def tables_cmd(
 
 # ── verify ──────────────────────────────────────────────────
 def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_drift: bool) -> None:
-    """``v3 verify --from-snapshot``：不读游戏，用入库的精简快照核验。
+    """``v3 verify --from-snapshot``：不读游戏，用**入库的离线真值**核验。
+
+    两份真值：精简快照（目录条目、defines、DLC 清单）与官方文档清单
+    （92 篇 ``.md`` 的篇数与逐篇字节数）。后者是新加的 —— 官方文档那几条断言
+    本来就不需要游戏，白丢在 CI 覆盖之外没有道理。
 
     抽成独立函数而不是塞在 ``verify_cmd`` 里，是为了让「无游戏也能跑」
     这条路径足够显眼 —— 它是 CI 上唯一能真正核对断言的入口。
     """
     snap = verify.latest_compact_snapshot()
     if snap is None:
-        _fail(
-            "仓库里没有精简快照（tools/out/snapshots/*.compact.json）。"
-            "在装有游戏的机器上跑 `v3 snapshot create --compact` 生成一份 —— 它是入库的。"
+        # 不再直接退出：官方文档清单是第二份离线真值，没有快照时它照样能核验。
+        console.print(
+            "[yellow]没有精简快照（tools/out/snapshots/*.compact.json）—— "
+            "只核验官方文档清单那几条。在装有游戏的机器上跑 "
+            "`v3 snapshot create --compact` 可补上一份（它是入库的）。[/]"
         )
 
     selected = [c for c in claims if not only or only in c.id]
@@ -940,12 +946,14 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
     results = verify.verify_from_snapshot(snap, selected)
     if not results:
         _fail(
-            "没有任何断言能被快照覆盖 —— 检查 pdx.verify._SNAPSHOT_GETTERS。"
+            "没有任何断言能被离线真值覆盖 —— 检查 pdx.verify 的 "
+            "_SNAPSHOT_GETTERS / _MANIFEST_GETTERS。"
             f"目前能覆盖的类型：{sorted(verify.snapshot_kinds())}"
         )
 
     table = Table(
-        title=f"快照核验（{len(results)} 条，快照 {snap.version_label}）", show_lines=False
+        title=f"离线核验（{len(results)} 条，快照 {snap.version_label if snap else '无'}）",
+        show_lines=False,
     )
     table.add_column("", width=2, justify="center")
     table.add_column("ID", style="dim")
@@ -966,7 +974,7 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
     covered = len(results)
     console.print(
         f"通过 {covered - len(failed)} / {covered}    失败 {len(failed)}"
-        f"    [dim]（快照覆盖 {covered}/{len(verify.CLAIMS)} 条；"
+        f"    [dim]（离线真值覆盖 {covered}/{len(verify.CLAIMS)} 条；"
         f"其余需读游戏本体，本地跑 v3 verify）[/]"
     )
     for r in failed:
@@ -1000,7 +1008,10 @@ def verify_cmd(
     ] = False,
     from_snapshot: Annotated[
         bool,
-        typer.Option("--from-snapshot", help="不读游戏，用**入库的精简快照**核验（CI 用）"),
+        typer.Option(
+            "--from-snapshot",
+            help="不读游戏，用**入库的离线真值**（精简快照 + 官方文档清单）核验（CI 用）",
+        ),
     ] = False,
 ) -> None:
     """核对知识库文档里的数量断言（游戏本体口径）。

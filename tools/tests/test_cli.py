@@ -317,8 +317,12 @@ def test_from_snapshot_不读游戏也能核验() -> None:
     """
     r = _invoke("verify", "--from-snapshot")
     assert r.exit_code == 0, r.output
-    assert "快照核验" in r.output
-    assert "快照覆盖" in r.output, "应说明快照覆盖了多少条，别让人以为全查过了"
+    assert "离线核验" in r.output
+    assert "离线真值覆盖" in r.output, "应说明覆盖了多少条，别让人以为全查过了"
+    # 官方文档清单是第二份离线真值：没有游戏也能多核验那 3 条。
+    # 断言用 **id**（表格里显示的就是 id，不是取值器类型名）。
+    for cid in ("env.md_total", "docs.total_bytes", "docs.max_bytes"):
+        assert cid in r.output, f"{cid} 来自入库清单，应当也能核验：{r.output}"
 
 
 def test_from_snapshot_只有时不存在的_id_返回用法错误() -> None:
@@ -326,12 +330,19 @@ def test_from_snapshot_只有时不存在的_id_返回用法错误() -> None:
     assert r.exit_code == 2, r.output
 
 
-def test_from_snapshot_没有快照时给出可操作的提示(tmp_path, monkeypatch) -> None:
-    """仓库里没有精简快照时必须**明确失败并告诉怎么办**，而不是静默通过。"""
+def test_from_snapshot_没有快照时仍核验清单并提示补快照(tmp_path, monkeypatch) -> None:
+    """没有快照**不再整体失败** —— 官方文档清单照样能核验。
+
+    旧行为是一见没有快照就退出码 2，于是那 3 条不需要游戏的断言也跟着丢。
+    现在改成：照常核验清单那几条，并在输出里提示怎么补一份快照。
+    仍然不能静默通过 —— 提示必须在。
+    """
     monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
     r = _invoke("verify", "--from-snapshot")
-    assert r.exit_code == 2, r.output
+    assert r.exit_code == 0, r.output
     assert "snapshot create --compact" in r.output, f"提示里应给出重建命令：{r.output}"
+    assert "env.md_total" in r.output, f"清单那几条应当照常核验：{r.output}"
+    assert "通过 3 / 3" in r.output, f"清单恰好覆盖 3 条：{r.output}"
 
 
 def test_from_snapshot_快照缺域时大声失败(tmp_path, monkeypatch) -> None:
@@ -354,6 +365,7 @@ def test_from_snapshot_筛出的断言都不被快照覆盖时报错() -> None:
     r = _invoke("verify", "--from-snapshot", "--only", "pfx.")
     assert r.exit_code == 2, r.output
     assert "_SNAPSHOT_GETTERS" in r.output, f"提示应指向取值器表：{r.output}"
+    assert "_MANIFEST_GETTERS" in r.output, f"也要提到清单那份取值器：{r.output}"
 
 
 # ── index 真正写盘的那条路 ──────────────────────────────────

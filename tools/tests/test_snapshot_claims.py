@@ -76,11 +76,21 @@ def test_没有取值器是死的() -> None:
     assert not dead, f"这些快照取值器没有任何断言引用，应删除或补上断言：{dead}"
 
 
-def test_没有快照时返回空表而不是抛(tmp_path, monkeypatch) -> None:
-    """没有快照时必须能安静地退回「查不了」，而不是崩掉 CI。"""
+def test_没有快照时仍然核验官方文档清单(tmp_path, monkeypatch) -> None:
+    """没有快照不等于「什么都不能查」—— 官方文档清单是第二份离线真值。
+
+    改这条测试的原因：原先 ``verify_from_snapshot`` 一见没有快照就整体返回空表，
+    于是 ``md_files`` / ``md_total_bytes`` / ``md_max_bytes`` 三条明明**不需要游戏**
+    的断言也跟着一起丢了，CI 覆盖率白少 3 条。
+    """
     monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
     assert verify.latest_compact_snapshot() is None
-    assert verify.verify_from_snapshot(None) == []
+    results = verify.verify_from_snapshot(None)
+    kinds = {r.claim.kind for r in results}
+    assert kinds == {"md_files", "md_total_bytes", "md_max_bytes"}, (
+        f"没有快照时应当只剩清单那三条，实际 {sorted(kinds)}"
+    )
+    assert all(r.ok for r in results), [r.line() for r in results if not r.ok]
 
 
 def test_完整快照不算数(tmp_path, monkeypatch) -> None:
