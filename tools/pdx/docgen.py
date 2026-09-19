@@ -18,7 +18,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from . import config, defines, doc15, doc17, game_root, install_tree, localization, modifiers, usage
+from . import (
+    config,
+    defines,
+    doc04,
+    doc15,
+    doc17,
+    game_root,
+    install_tree,
+    localization,
+    modifiers,
+    usage,
+)
 from .doc_tables import KeyedTableSpec, TableSpec, check_doc, patch_doc
 
 if TYPE_CHECKING:
@@ -83,6 +94,12 @@ def targets() -> tuple[DocTarget, ...]:
             # doc 15（政治人口与社会）：§0 的 25 目录总览 + 四节里的六张表。
             path=config.DOCS / "15-政治人口与社会.md",
             specs=tuple(doc15.doc_table_specs()),
+        ),
+        DocTarget(
+            # doc 04（脚本系统）：scripted_* / events / journal_entries / effect_localization
+            # 四块共 15 张表。含 6 张字段表 + 2 张命名形态 + JE 分组两栏。
+            path=config.DOCS / "04-脚本系统.md",
+            specs=tuple(doc04.doc_table_specs()),
         ),
     )
 

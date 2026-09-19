@@ -15,6 +15,7 @@ doc 17 那批实测撞出过全部三种，于是有了 :func:`assert_every_row_
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -75,14 +76,20 @@ def assert_every_row_claimed(doc: Path, specs: Iterable[TableSpec | KeyedTableSp
             {s.key_column for s in keyed if (s.header, s.occurrence) == (header, occurrence)}
         )
         for row in doc_rows(doc, header, occurrence):
+            # 没有数字的行不可能「数字静默过期」—— 混合表里那些纯散文行
+            # （doc 04 对照表的「规则键」「否定后缀」两行）是作者写的，不要求被认领。
+            if not any(re.search(r"\d", cell) for cell in row):
+                continue
             # 一张表可能有多条 spec、各以不同的列为键 —— 每行被其中任一键列认领即可。
-            # 合并行（``| `a` / `b` |``）由生成器的合并行机制处理，
-            # 所以判据是「每个部分都被认领」，用同一个 `key_parts` 拆。
+            # 判定顺序与生成器一致：**先整键**，再拆合并行（``| `a` / `b` |``）。
+            # 反过来会把「键本身被认领、但键里有 ` / ` 散文」的行误报成孤儿
+            # （doc 04 的「以 `_effect` / `_effects` 结尾」就是这种，实测被误报）。
             for col in key_cols:
                 if len(row) <= col:
                     continue
-                parts = doc_tables.key_parts(row[col])
-                if parts and all(p in covered for p in parts):
+                if doc_tables.norm_key(row[col]) in covered or all(
+                    p in covered for p in doc_tables.key_parts(row[col])
+                ):
                     break
             else:
                 orphans.append(f"{header[:40]}… {row}")

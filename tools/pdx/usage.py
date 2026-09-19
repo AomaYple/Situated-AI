@@ -152,12 +152,17 @@ def nested_field_occurrences(dir_rel: str, parent: str) -> Counter[str]:
     return counter
 
 
-def file_definition_counts(dir_rel: str) -> dict[str, int]:
+def file_definition_counts(dir_rel: str, *, blocks_only: bool = False) -> dict[str, int]:
     """文件名 → **顶层定义数**（``@变量`` 不计）。
 
     口径写死在这里：``@变量`` 是文件级宏、不是定义，算进去会让
     `messages\\00_messages.txt` 一类的数字多出几行。游戏自身的文档
     也把「定义数」与「文件行数」分得很开。
+
+    ``blocks_only=True`` 只数 ``键 = { … }`` 形式的**块**，跳过标量赋值
+    （``键 = 5``）。这一条是被 doc 04 逼出来的：`common/script_values/` 里
+    块 270 个、赋值 479 个 —— 差的那 209 个是标量，而文档那句「共 264 个顶层键」
+    用的是**块**口径。口径不同不是错，不写清楚才是。
     """
     out: dict[str, int] = {}
     base = config.GAME / dir_rel
@@ -165,15 +170,21 @@ def file_definition_counts(dir_rel: str) -> dict[str, int]:
         return out
     for path in sorted(p for p in base.rglob("*.txt") if p.is_file()):
         pf = parse_cached(path)
-        out[path.name] = sum(1 for a in pf.top_assignments if not a.is_variable)
+        out[path.name] = sum(
+            1
+            for a in pf.top_assignments
+            if not a.is_variable and (isinstance(a.value, Block) or not blocks_only)
+        )
     return out
 
 
-def definition_rows(dir_rel: str, col: int) -> Callable[[], list[tuple[str, dict[int, str]]]]:
+def definition_rows(
+    dir_rel: str, col: int, *, blocks_only: bool = False
+) -> Callable[[], list[tuple[str, dict[int, str]]]]:
     """``文件名 → 顶层定义数`` 的行工厂（文档里那族「逐文件定义数」表共用）。"""
 
     def rows() -> list[tuple[str, dict[int, str]]]:
-        counts = file_definition_counts(dir_rel)
+        counts = file_definition_counts(dir_rel, blocks_only=blocks_only)
         return [(name, {col: f"{n:,}"}) for name, n in sorted(counts.items())]
 
     return rows

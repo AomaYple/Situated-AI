@@ -50,6 +50,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `usage.py` | 「某目录里各键/字段用了多少次」的通用统计（**出现次数**与**文件数**两种口径）+ doc 04 / 14 / 16 那族表的规格 |
 | `doc17.py` | doc 17（角色、科技与呈现）整族的机械表：**四种口径**（字段出现次数、逐文件定义数、取值分布、文本级统计）与那批两栏并排的分布表 |
 | `doc15.py` | doc 15（政治人口与社会）的七张表：§0 的 25 目录总览、`laws` 前缀与字段、IG 门槛取值、`ideologies` 逐文件与五档态度、歧视特质四类分布 |
+| `doc04.py` | doc 04（脚本系统）的 19 张表：`scripted_*` 字段与命名形态、`$PARAM$` 计数、JE 分组两栏、`events` 字段/`type`/`placement`、目录规模表（两列都是公式） |
 | `modifiers.py` | `static_modifiers\` 的逐文件统计（条目数 / 单块最大键数）；产出 doc 05 §6.5 的生成表 |
 | `docs_mirror.py` | 官方 `.md` 的**清单与指纹**（原文不入库，见下「官方文档清单」） |
 | `localization.py` | 本地化专用提取（`.yml` 是行式格式，**不是** PDX 花括号语法）；产出 doc 06 的语言首行头统计，并记下那张**刻意不生成**的数据函数频次表（原口径复现不出） |
@@ -69,7 +70,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 analyze` | `run_analyze.py` | 全量分析并落盘：`--no-mods` `--no-cross` `--no-write` `--quiet` `--profile` |
 | `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
-| `v3 tables` | （新增） | 重算文档里**由工具生成**的 119 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表、doc 04/14/15/16/17 那几族统计表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
+| `v3 tables` | （新增） | 重算文档里**由工具生成**的 139 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表、doc 04/06/14/15/16/17 那几族统计表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
 | `v3 verify` | `run_verify.py` | 核对文档里的数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用**入库的离线真值**：精简快照 + 官方文档清单） |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
@@ -122,7 +123,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-538 条用例（`pytest --collect-only` 实测），
+546 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -135,7 +136,8 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_snapshot.py` / `test_verify.py` | 快照确定性、精简快照的结构等价性、断言注册表口径 |
 | `test_defines_tables.py` | doc 05 那 5 张统计表的**生成链**：表头还在、生成是幂等的、文档现值 == 生成结果 |
 | `test_doc17.py` | doc 17 那 24 张表的生成链，重点是**静默过期**：除「文档现值 == 生成结果」外，还断言**每一行都被某条 spec 认领**（键写错/取值消失时那张表看着完好、数字却已死）、分布表声明的取值集合没过期、概念键分类互斥完备、文件名模式划分完备。实测它抓出过「右栏键列写错 → 一整栏从未被写过」 |
-| `test_doc_tables.py` | **通用的**生成表机制：合成文档测整表替换/按键合并/行数变长/同表头多张/合并行/绝不静默删行/未匹配行会出声；以及「别夺走作者信息」那一族（加粗键能匹配、值没变连排版一起留、已有空格不填待补、单元格括注与「N/M」分母保留、**合并行每段各自剥反引号**、**空格千位也算一个数字段**、**纯数字只换数字本身**）；登记表完整性；119 张表与文档一致 |
+| `test_doc_tables.py` | **通用的**生成表机制：合成文档测整表替换/按键合并/行数变长/同表头多张/合并行/绝不静默删行/未匹配行会出声；以及「别夺走作者信息」那一族（加粗键能匹配、值没变连排版一起留、已有空格不填待补、单元格括注与「N/M」分母保留、**合并行每段各自剥反引号**、**空格千位也算一个数字段**、**纯数字只换数字本身**）；登记表完整性；139 张表与文档一致 |
+| `test_doc04.py` | doc 04 的生成链，另守三处易错口径：`script_values` 的「顶层键」是**块**口径（块 270 / 赋值 479）、`$PARAM$` **不数注释里的用法**、JE 分组两栏声明的取值集合没过期；以及「`placement` 六类分得掉全部取值」「事件字段表覆盖全部 26 个字段」 |
 | `test_doc06.py` / `test_doc15.py` | doc 06 / 15 的生成链。除共用的两条（文档 == 生成结果、每一行都有人认领）外各守住本篇特有的恒等式：doc 06 的「语言表合计 == 全树 `.yml` 数」「三张目录表行数 == 子目录数」「扩展名表的每段都还在树里」；doc 15 的「`laws` 前缀划分完备」「§0 目录清单与代码一致」「五档态度合计 == 散文里的合计」「118 + 196 + 10 == 目录定义数（前两行是总数与子集，不是互斥分组）」 |
 | `_table_guards.py` | 三个文档共用的生成表看守：`assert_doc_matches_generated` / `assert_every_row_claimed` / `assert_write_free_and_idempotent` / `assert_unique_names` |
 | `test_repo_hygiene.py` | 源文件不带 CRLF —— Windows 上 `write_text` 漏了 `newline="\n"` 会把整份文件重写成 CRLF，而 `.gitattributes` 的 `eol=lf` 把 `git status` 掩盖成「干净」 |
@@ -324,7 +326,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：521 条用例 + 81 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：546 条用例 + 81 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 62 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
