@@ -25,6 +25,7 @@ doc 19 的 game 根目录文件表与 ``paths.settings`` 映射表。它们的�
 
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -138,6 +139,7 @@ def patch_doc(
                 spec,
                 [_split_row(ln) for ln in lines[start + 2 : end]],
                 width=len(_split_row(lines[start])),
+                raw=[ln.rstrip("\n") for ln in lines[start + 2 : end]],
             )
         )
         if not want:
@@ -170,13 +172,17 @@ def _find_header(lines: list[str], doc: Path, spec: TableSpec | KeyedTableSpec) 
 
 
 def _norm_key(text: str) -> str:
-    """比对键时用的规范形式：去掉空白与 Markdown 反引号。
+    """比对键时用的规范形式：去掉空白、Markdown 反引号**与加粗星号**。
 
     doc 19 的键列写的是 ``| `checksum_manifest.txt` |``，而生成器给的是
     ``checksum_manifest.txt`` —— 不做规范化就一行都匹配不上，
     整张表的散文列会被填成「待补」（实测撞过：37 行全部不匹配）。
+
+    ``*`` 是后补的：doc 16 有大量**加粗的键**（``| **`usage_limit`** |``），
+    不剥星号时那些行永远匹配不上 —— 于是它们的数字**永远不会被更新**
+    （静默过期），而盘点还认为整张表「已看守」。
     """
-    return text.strip().strip("`").strip()
+    return text.strip().strip("`*").strip()
 
 
 #: 合并行里各条目之间的分隔符。按**长到短**匹配（``" / "`` 先于 ``", "``），
@@ -210,7 +216,13 @@ def _group_cells(norm: str, generated: dict[str, dict[int, str]]) -> dict[int, s
     return None
 
 
-def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]], *, width: int = 0) -> list[str]:
+def _merge_rows(
+    spec: KeyedTableSpec,
+    existing: list[list[str]],
+    *,
+    width: int = 0,
+    raw: list[str] | None = None,
+) -> list[str]:
     """按键把生成的单元格并进文档现有的行。
 
     两条默认规则，都是为了**不夺走文档作者的信息**：
@@ -245,19 +257,39 @@ def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]], *, width: int =
             continue
         norm = _norm_key(row[spec.key_column])
         cells: dict[int, str] | None = generated.get(norm)
+        grouped = False
         if cells is None:
             cells = _group_cells(norm, generated)  # 合并行：拆开逐个查，再拼回去
+            grouped = cells is not None
         if cells is None:
             # 生成结果里没有它。默认**原样保留**：静默删行会让整张表错位，
             # 而错位的散文比错的数字更难发现。确实该删的表用 allow_drop 显式声明。
             if not spec.allow_drop:
-                out.append("| " + " | ".join(row) + " |")
+                # 原样输出**原文**：从单元格重拼会把 `| |` 写成 `|  |`
+                out.append(raw[len(out)] if raw is not None else "| " + " | ".join(row) + " |")
                 unmatched.append(norm)
             else:
                 dropped.append(norm)
             continue
         seen.add(norm)
-        out.append(_render(row, cells))
+        # 已存在的行有三个「别动」的理由（都踩过）：
+        #   1. **不填空单元格** —— 作者常故意留空末尾列（doc 16 有 89 行写成
+        #      `| key | 18 | ✅ | |`），填成「—— **待补**」是替作者加话；
+        #   2. **不补齐表头宽度** —— 同理会把 3 列的行改写成 4 列；
+        #   3. **值没变就整行原样输出** —— 否则 `| |` 会被重拼成 `|  |`，
+        #      89 行的纯空格差异把真正的改动淹掉（实测）。
+        # 只有**追加的新行**才补宽度与空列（见下），因为新行没有原文可依。
+        # 合并行**不套 _merge_cell**：那里的「 / 」是两个条目的分隔符，
+        # 不是「N 分之 M」。套上去会把 `10 / 20` 变成 `10 / 2`（实测被测试抓到）。
+        merged = (
+            dict(cells)
+            if grouped
+            else {i: _merge_cell(row[i] if i < len(row) else "", text) for i, text in cells.items()}
+        )
+        if raw is not None and _same_cells(row, merged):
+            out.append(raw[len(out)])  # 值没变 → 整行原样（含空格与加粗）
+        else:
+            out.append(_render(row, merged))
     if dropped:
         # 只有显式开了 allow_drop 才会走到这里；把删掉的东西打出来，
         # 免得「表短了几行」这种事只能靠肉眼发现。
@@ -292,7 +324,7 @@ def _merge_rows(spec: KeyedTableSpec, existing: list[list[str]], *, width: int =
                 # 新行会比表头短一截（实测 6 列的表追加出 5 列的行），
                 # Markdown 渲染出来缺格，而作者也看不出该补哪一列。
                 new_cells: dict[int, str] = {spec.key_column: f"`{key_text[norm]}`", **cells}
-                out.append(_render([], new_cells, min_width=width))
+                out.append(_render([], new_cells, min_width=width, fill_missing=True))
     return out
 
 
@@ -308,20 +340,80 @@ def _warn(table: str, what: str, keys: list[str], *, hint: str = "") -> None:
     print(f"[doc_tables] {table}: {what} {len(keys)} 行 —— {shown}{more}{hint}", file=sys.stderr)
 
 
-def _render(row: list[str], generated: dict[int, str], *, min_width: int = 0) -> str:
+#: 单元格里的数字段（可能带千位分隔符）
+_NUM_IN_CELL = re.compile(r"\d[\d,]*")
+
+
+def _merge_cell(old: str, new: str) -> str:
+    """把新数字写进旧单元格，**保留数字之外的文字**。
+
+    ``**77**（可重复）`` + 新值 ``80`` → ``**80**（可重复）``：
+    强调与括注都是作者的，生成器只拥有那个数字。
+    旧格里只有数字（或没有数字）时才整格替换。
+    """
+    old_s = old.strip()
+    if not old_s:
+        return new
+    m_new = _NUM_IN_CELL.search(new)
+    if m_new is None:
+        return new  # 新值里没数字 —— 没什么可保留的
+    new_num: str = str(m_new.group(0))
+
+    # 形式一：「N / M」—— 分子归生成器，**分母是作者的**（如「239 个条目里 239 个」）
+    slash = re.fullmatch(r"(.*?)(\d[\d,]*)(\s*/\s*\d[\d,]*.*)", old_s)
+    if slash:
+        return slash.group(1) + new_num + slash.group(3) if slash.group(2) != new_num else old_s
+
+    # 形式二：整格恰好一个数字段、两边的文字都归作者（``**77**（可重复）``）
+    olds = _NUM_IN_CELL.findall(old_s)
+    if len(olds) != 1 or len(_NUM_IN_CELL.findall(new)) != 1:
+        return new
+    if str(olds[0]) == new_num:
+        return old_s  # 数字没变 → 连排版一起保留
+    m = _NUM_IN_CELL.search(old_s)
+    assert m is not None
+    return old_s[: m.start()] + new_num + old_s[m.end() :]
+
+
+def _same_cells(row: list[str], generated: dict[int, str]) -> bool:
+    """生成值与文档现值是否**逐格相同**（忽略空白与加粗记号）。
+
+    用途是「值没变就别动这一行」：Markdown 里 ``| |`` 与 ``|  |`` 渲染相同，
+    但 diff 里是两行差异。忽略加粗是因为生成器不写强调，而强调是装饰、
+    不是内容 —— 真要保留强调，就该连值一起不变。
+    """
+
+    def norm(s: str) -> str:
+        return s.replace("*", "").strip()
+
+    return all(norm(text) == norm(row[i] if i < len(row) else "") for i, text in generated.items())
+
+
+def _render(
+    row: list[str],
+    generated: dict[int, str],
+    *,
+    min_width: int = 0,
+    fill_missing: bool = False,
+) -> str:
     """把生成的单元格并进一行，未提供的列保留 ``row`` 的原文。
 
-    ``min_width`` 是**表头的列数**：追加的新行没有原文可保留，
-    只有补齐到表头宽度才是一行结构完整的 Markdown；缺的格填
-    :data:`NEW_CELL`，提示作者这里需要人来补。
+    ``min_width`` 是**表头的列数**；``fill_missing`` 决定空单元格要不要填
+    :data:`NEW_CELL`。两者都**只给追加的新行用**：
+
+    * 新行没有原文可依，不补齐到表头宽度就会缺格，而作者也看不出该补哪一列；
+    * 已存在的行**不能填**：作者有意留空的单元格很常见
+      （doc 16 有 69 行写成 ``| `key` | 18 | ✅ | |``，第四列本来就是空的），
+      填上「待补」等于**替作者加话** —— 实测就是这么误伤 69 行的。
     """
     width = max([len(row), min_width, *(i + 1 for i in generated)], default=1)
     cells = [row[i] if i < len(row) else "" for i in range(width)]
     for idx, text in generated.items():
         cells[idx] = text
-    for i in range(width):
-        if i not in generated and not cells[i]:
-            cells[i] = NEW_CELL
+    if fill_missing:
+        for i in range(width):
+            if i not in generated and not cells[i]:
+                cells[i] = NEW_CELL
     return "| " + " | ".join(cells) + " |"
 
 
@@ -355,6 +447,7 @@ def check_doc(
                 spec,
                 [_split_row(ln) for ln in lines[start + 2 : end]],
                 width=len(_split_row(lines[start])),
+                raw=[ln.rstrip("\n") for ln in lines[start + 2 : end]],
             )
         )
         n = start + 2

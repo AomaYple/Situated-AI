@@ -368,5 +368,94 @@ def test_子集型表不出声(tmp_path: Path, capsys: pytest.CaptureFixture[str
     assert "未匹配" not in capsys.readouterr().err
 
 
+# ── 6. 「别夺走作者信息」的四条细则（都是实测撞出来的）────────
+@_unit
+def test_加粗的键也能匹配上(tmp_path: Path) -> None:
+    """``| **`x`** | 5 |`` 里的加粗不该挡住匹配。
+
+    doc 16 有大量加粗的键。``_norm_key`` 不剥星号时那些行**永远匹配不上**，
+    于是数字**永远不会被更新**（静默过期），而盘点还认为整张表「已看守」。
+    """
+    p = _doc(tmp_path, f"{HEAD3}| **`a.txt`** | 1 | 说明甲 |\n")
+    spec = doc_tables.KeyedTableSpec(
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.txt", {1: "9"})], append_new=False
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert "| **`a.txt`** | 9 | 说明甲 |" in p.read_text(encoding="utf-8")
+
+
+@_unit
+def test_值没变的行连排版一起保留(tmp_path: Path) -> None:
+    """``| k | 5 | ❌ | |`` 不该被重拼成 ``| k | 5 | ❌ |  |``。
+
+    Markdown 渲染一样，但 diff 里是两行差异 —— 实测 89 行的纯空格差异
+    把真正的改动淹掉了。
+    """
+    body = f"{HEAD3}| **`a.txt`** | 5 | ❌ | |\n"
+    p = _doc(tmp_path, body)
+    spec = doc_tables.KeyedTableSpec(
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.txt", {1: "5"})], append_new=False
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert p.read_text(encoding="utf-8") == body, "值没变却改了排版"
+
+
+@_unit
+def test_已有的空单元格不会被填成待补(tmp_path: Path) -> None:
+    """作者故意留空的末尾列不该被写成「—— **待补**」。
+
+    实测误伤过 69 行 —— 那是**替作者加话**，不是补全。
+    """
+    p = _doc(tmp_path, f"{HEAD3}| `a.txt` | 1 | |\n")
+    spec = doc_tables.KeyedTableSpec(
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.txt", {1: "9"})], append_new=False
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    text = p.read_text(encoding="utf-8")
+    assert doc_tables.NEW_CELL not in text, text
+    # 不断言尾部空格：**值变了的行**会被重拼（``| |`` → ``|  |``），
+    # 那是重拼的必然结果；要紧的是空单元格没被写成「待补」。
+    assert "| `a.txt` | 9 |" in text, text
+
+
+@_unit
+def test_单元格里的括注被保留(tmp_path: Path) -> None:
+    """``**77**（可重复）`` 更新成 ``**80**（可重复）`` —— 只换数字。"""
+    p = _doc(tmp_path, f"{HEAD3}| `a.txt` | **77**（可重复） | 说明甲 |\n")
+    spec = doc_tables.KeyedTableSpec(
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.txt", {1: "80"})], append_new=False
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert "| `a.txt` | **80**（可重复） | 说明甲 |" in p.read_text(encoding="utf-8")
+
+
+@_unit
+def test_N分之M的分母被保留(tmp_path: Path) -> None:
+    """``**239 / 239**``（239 个条目里 239 个）→ 只换分子。"""
+    p = _doc(tmp_path, f"{HEAD3}| `a.txt` | **239 / 239** | 说明甲 |\n")
+    spec = doc_tables.KeyedTableSpec(
+        name="t", header=HEAD3_LINE, cells=lambda: [("a.txt", {1: "240"})], append_new=False
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert "| `a.txt` | **240 / 239** | 说明甲 |" in p.read_text(encoding="utf-8")
+
+
+@_unit
+def test_合并行不套N分之M规则(tmp_path: Path) -> None:
+    """``| `a` / `b` | 10 / 20 |`` 里的 ``/`` 是**条目分隔符**，不是「10 分之 20」。
+
+    套用「保留分母」的规则会把它改成 ``10 / 2``（实测被本文件的原有用例抓到）。
+    """
+    p = _doc(tmp_path, f"{HEAD3}| `a.dll` / `b.dll` | 1 / 2 | 两个一组 |\n")
+    spec = doc_tables.KeyedTableSpec(
+        name="t",
+        header=HEAD3_LINE,
+        cells=lambda: [("a.dll", {1: "10"}), ("b.dll", {1: "20"})],
+        append_new=False,
+    )
+    doc_tables.patch_doc(p, [spec], write=True)
+    assert "| `a.dll` / `b.dll` | 10 / 20 | 两个一组 |" in p.read_text(encoding="utf-8")
+
+
 if __name__ == "__main__":  # pragma: no cover
     sys.exit(pytest.main([__file__, "-v"]))

@@ -47,6 +47,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `docgen.py` | 生成表的**唯一登记处**：跑哪些文档、哪些表、怎么核对与写回 |
 | `game_root.py` | 游戏根级文件、`paths.settings` 路径映射、校验和目标；产出 doc 19 的生成表 |
 | `install_tree.py` | 安装树的逐目录统计（文件数 / 目录数 / 体积 / 扩展名分布）与版本指纹；产出 doc 08 的生成表 |
+| `usage.py` | 「某目录里各键/字段用了多少次」的通用统计（**出现次数**与**文件数**两种口径）+ 各文档那族表的规格 |
 | `modifiers.py` | `static_modifiers\` 的逐文件统计（条目数 / 单块最大键数）；产出 doc 05 §6.5 的生成表 |
 | `docs_mirror.py` | 官方 `.md` 的**清单与指纹**（原文不入库，见下「官方文档清单」） |
 | `localization.py` | 本地化专用提取（`.yml` 是行式格式，**不是** PDX 花括号语法） |
@@ -119,7 +120,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-498 条用例（`pytest --collect-only` 实测；495 通过 / 3 按条件跳过），
+507 条用例（`pytest --collect-only` 实测；504 通过 / 3 按条件跳过），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -131,7 +132,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_analyze.py` / `test_golden.py` | 产物结构与指纹回归（产物被改坏要立刻失败） |
 | `test_snapshot.py` / `test_verify.py` | 快照确定性、精简快照的结构等价性、断言注册表口径 |
 | `test_defines_tables.py` | doc 05 那 5 张统计表的**生成链**：表头还在、生成是幂等的、文档现值 == 生成结果 |
-| `test_doc_tables.py` | **通用**的生成表机制：合成文档测整表替换/按键合并/行数变长/同表头多张/合并行/绝不静默删行/未匹配行会出声；登记表完整性；33 张表与文档一致 |
+| `test_doc_tables.py` | **通用**的生成表机制：合成文档测整表替换/按键合并/行数变长/同表头多张/合并行/绝不静默删行/未匹配行会出声；以及四条「别夺走作者信息」（加粗键能匹配、值没变连排版一起留、已有空格不填待补、单元格括注与「N/M」分母保留）；登记表完整性；77 张表与文档一致 |
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
 | `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
@@ -317,7 +318,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：498 条用例 + 81 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：507 条用例 + 81 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 62 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

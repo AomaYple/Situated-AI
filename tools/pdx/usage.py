@@ -196,6 +196,78 @@ def _doc14_specs() -> list[KeyedTableSpec]:
     return out
 
 
+#: doc 16 那族「键 → 计数」表 —— 每个 `common\` 目录一张。
+#:
+#: ``(表头, occurrence, 目录, 块名, 口径)``。三个值得写下来的发现：
+#:
+#: * **口径不是统一的**：285/329/351 三张确实是「有多少个文件用到它」，
+#:   其余二十张的数值**只可能是出现次数** —— 例如 `ship_groups` 整个目录
+#:   只有 2 个文件，而表里写着 4。实测拿两种口径各比一遍文档，
+#:   出现次数那一栏逐行相符、文件数那一栏几乎全错。
+#: * 那些表的**列名原本是错的**（写着「文件数/使用文件数」），已改为「出现次数」。
+#:   列名一改，`_find_header` 的候选集就变了，所以 occurrence 是改完之后重解的。
+#: * `occurrence` 用**模拟 `_find_header`** 反解出来的：先枚举 ``startswith`` 的候选，
+#:   再取序号，最后断言它落在目标行 —— 不靠人眼数（数错会把 A 目录的次数写进 B 目录）。
+_DOC16_KEY_TABLES: tuple[tuple[str, int, str, str, str], ...] = (
+    ("| 键 | 文件数 | 类型 | 说明 / 与官方文档的关系 |", 0, "diplomatic_actions", "", "files"),
+    ("| 键 | 文件数 | 官方文档 | 说明 |", 0, "diplomatic_actions", "ai", "files"),
+    ("| 键 | 文件数 | 文档 | 说明 |", 0, "diplomatic_actions", "pact", "files"),
+    ("| 键 | 出现次数 | 实测取值 |", 0, "proposal_types", "", "occur"),
+    ("| 键 | 出现次数 | 文档 | 说明 |", 0, "acceptance_statuses", "", "occur"),
+    ("| 键 | 出现次数 | 类型 | 说明 |", 0, "war_goal_types", "", "occur"),
+    ("| 键 | 出现次数 | 类型 | 说明 |", 1, "combat_unit_types", "", "occur"),
+    ("| 键 | 出现次数 | 说明 |", 0, "combat_unit_groups", "", "occur"),
+    ("| 键 | 出现次数 | 说明 |", 1, "combat_unit_experience_levels", "", "occur"),
+    ("| 键 | 出现次数 | 文档 | 说明 |", 1, "ship_types", "", "occur"),
+    ("| 键 | 出现次数 | 文档 |", 2, "ship_groups", "", "occur"),
+    ("| 键 | 出现次数 | 文档 |", 3, "ship_modification_slots", "", "occur"),
+    ("| 键 | 出现次数 | 文档 |", 4, "ship_veterancy_levels", "", "occur"),
+    ("| 键 | 出现次数 | 类型 | 子键（实测） |", 0, "commander_ranks", "", "occur"),
+    ("| 键 | 出现次数 | 文档 | 说明 |", 2, "mobilization_options", "", "occur"),
+    ("| 键 | 出现次数 | 文档 | 说明 |", 3, "battle_conditions", "", "occur"),
+    ("| 键 | 出现次数 | 文档 | 类型 | 说明 |", 0, "naval_battle_conditions", "", "occur"),
+    ("| 键 | 出现次数 | 文档 | 说明 |", 4, "naval_mission_types", "", "occur"),
+    ("| 键 | 出现次数 | 文档 | 说明 |", 5, "strategic_regions", "", "occur"),
+    ("| 键 | 出现次数 | 类型 | 说明 |", 2, "state_traits", "", "occur"),
+    ("| 键 | 出现次数 | 在顶部模板里 | 说明 |", 0, "terrain", "", "occur"),
+    ("| 键 | 出现次数 | 说明 |", 2, "terrain_manipulators", "", "occur"),
+    ("| 键 | 出现次数 | 文档 | 说明 |", 6, "geographic_regions", "", "occur"),
+)
+
+
+def _key_rows_factory(
+    dir_rel: str, block_name: str, caliber: str
+) -> Callable[[], list[tuple[str, dict[int, str]]]]:
+    """把「哪个目录、哪个块、哪种口径」烘进一个无参函数。"""
+
+    def rows() -> list[tuple[str, dict[int, str]]]:
+        counter = (
+            field_file_counts(dir_rel, within=block_name or None)
+            if caliber == "files"
+            else field_occurrences(dir_rel, within=block_name or None)
+        )
+        return _rows(counter, 1)
+
+    return rows
+
+
+def _doc16_specs() -> list[KeyedTableSpec]:
+    """doc 16 各目录的「键 → 计数」表。"""
+    out: list[KeyedTableSpec] = []
+    for n, (header, occ, d, b, caliber) in enumerate(_DOC16_KEY_TABLES, start=1):
+        out.append(
+            KeyedTableSpec(
+                name=f"doc16 表{n} {d}",
+                header=header,
+                cells=_key_rows_factory(f"common/{d}", b, caliber),
+                occurrence=occ,
+                # 节选表：只列文档里出现过的键
+                append_new=False,
+            )
+        )
+    return out
+
+
 def doc_table_specs() -> list[KeyedTableSpec]:
     """这一族表的登记表。
 
@@ -214,19 +286,19 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             # 官方文档没提过的行，而它们的说明列只能填「待补」。
             append_new=False,
         ),
-        # doc 14 的整族（§2~§15）：见下面的 _doc14_specs()
-        *_doc14_specs(),
-        # doc 16 §4 地图类 · `state_traits`：每个州特性里的 `modifier` 块用到了
-        # 哪些修正键、各多少次。**不是** `war_goal_types` —— 那里根本没有
-        # `modifier` 块，写错目录会生成 0 行（`test_生成结果非空` 当场失败，
-        # 实测就是这么抓到的：先在 travel_network 上撞了一次，又在这里撞一次）。
+        # doc 16 §4 · `state_traits`：州特性里的 `modifier` 块用到的 32 种修正。
+        # **不是** `war_goal_types` —— 那里根本没有 `modifier` 块，写错会生成 0 行
+        # （`test_生成结果非空` 当场失败，实测抓过两次）。
         KeyedTableSpec(
             name="doc16 state_traits modifier 修正次数",
             header="| 修正 | 次数 | 作用方向 |",
             cells=lambda: _rows(field_occurrences("common/state_traits", within="modifier"), 1),
-            # 节选表：只列「实际用到」的修正
             append_new=False,
         ),
+        # doc 14 的整族（§2~§15）：见下面的 _doc14_specs()
+        *_doc14_specs(),
+        # doc 16 的整族：见下面的 _doc16_specs()
+        *_doc16_specs(),
     ]
 
 
