@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING
 
 from . import config
 from .cache import parse_cached
+from .doc_tables import TableSpec
 from .model import Block, ParsedFile
 from .usage import _walk_all_blocks
 
@@ -128,6 +129,38 @@ def country_effect_file_count() -> int:
     return sum(
         1 for path in _country_files() if any(_effect_keys(parse_cached(path), _FILE_PREFIXES))
     )
+
+
+def effect_file_counts() -> Counter[str]:
+    """效果名 → **出现在几个国家文件里**（同一文件里写两次只算 1）。
+
+    与 :func:`country_effect_occurrences` 是同一批数据的两种口径：
+    「有多少个国家文件用了它」与「它一共出现了几次」。
+    doc 18 §3.2 原先那张「可用效果」表是**手挑的 10 个**，
+    于是漏掉了用得最广的 `add_ruling_interest_group`（151 个文件）——
+    改成由本函数生成之后，「漏了谁」这件事在结构上不可能再发生。
+    """
+    counter: Counter[str] = Counter()
+    for path in _country_files():
+        counter.update(set(_effect_keys(parse_cached(path), _OCCURRENCE_PREFIXES)))
+    return counter
+
+
+#: §3.2 那张完整效果表的表头（**由 v3 tables 生成**）。
+EFFECT_TABLE_HEADER = "| 效果 | 出现的国家文件数 |"
+
+
+def effect_rows() -> list[str]:
+    """§3.2 完整效果表的全部数据行（按文件数降序，同数按名字）。"""
+    counts = effect_file_counts()
+    return [
+        f"| `{name}` | {n} |" for name, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
+
+def doc_table_specs() -> list[TableSpec]:
+    """doc 18 的生成表：§3.2 的完整效果清单。"""
+    return [TableSpec(name="doc18 效果文件数", header=EFFECT_TABLE_HEADER, rows=effect_rows)]
 
 
 __all__ = [

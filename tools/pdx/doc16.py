@@ -45,7 +45,7 @@ from typing import TYPE_CHECKING
 
 from . import config
 from .cache import parse_cached
-from .doc_tables import KeyedTableSpec, norm_key
+from .doc_tables import KeyedTableSpec, TableSpec, norm_key
 from .model import Block
 from .usage import (
     all_field_occurrences,
@@ -598,6 +598,50 @@ def state_regions_with_traits() -> int:
     return total
 
 
+#: §4.2.1 那张「17 个 state_regions 文件的 traits 使用量」的表头。
+#:
+#: 它是**两栏并排**的排版（左右各一组「文件 / traits= / state region 数」），
+#: 所以只能走整表生成（``TableSpec``），不能按键更新某一列。
+#: 这张表此前是手写的：内容 30 个数全靠人工，实测已经错了 1 个
+#: （``99_seas.txt`` 的州数写着 104，实为 106）—— 手写的机械表就该变成生成的。
+STATE_REGION_TABLE = "| 文件 | traits= | state region 数 | | 文件 | traits= | state region 数 |"
+
+
+def _state_region_per_file() -> list[tuple[str, int, int]]:
+    """``[(文件名, traits 出现次数, 顶层州块数), …]``，按文件内顺序（自然序）。"""
+    base = config.GAME / _STATE_REGION_DIR
+    if not base.is_dir():
+        raise FileNotFoundError(f"目录不存在：{base}")
+    pattern = re.compile(r"\btraits\b")
+    out: list[tuple[str, int, int]] = []
+    for path in sorted(b for b in base.glob("*.txt") if b.is_file()):
+        text = path.read_text(encoding="utf-8-sig", errors="replace")
+        blocks = sum(
+            1
+            for a in parse_cached(path).top_assignments
+            if not a.is_variable and isinstance(a.value, Block)
+        )
+        out.append((path.name, len(pattern.findall(text)), blocks))
+    return out
+
+
+def state_region_rows() -> list[str]:
+    """§4.2.1 那张表的全部数据行（两栏并排，左栏多一行时空出右栏）。"""
+    per_file = _state_region_per_file()
+    half = (len(per_file) + 1) // 2
+    left, right = per_file[:half], per_file[half:]
+    rows: list[str] = []
+    for i, (name, traits, regions) in enumerate(left):
+        cells = [f"`{name}`", str(traits), str(regions)]
+        if i < len(right):
+            rname, rtraits, rregions = right[i]
+            cells += ["", f"`{rname}`", str(rtraits), str(rregions)]
+        else:
+            cells += ["", "", "", ""]
+        rows.append("| " + " | ".join(cells) + " |")
+    return rows
+
+
 def action_file_definition_counts() -> dict[str, int]:
     """``common/diplomatic_actions/`` 的**逐文件顶层定义数**（``@变量`` 不计）。
 
@@ -630,7 +674,7 @@ def _spec(
     )
 
 
-def doc_table_specs() -> list[KeyedTableSpec]:
+def doc_table_specs() -> list[TableSpec | KeyedTableSpec]:
     """doc 16 剩下的八张表（10 条 spec：两张两栏并排的左右各一条）。"""
     return [
         _spec("doc16 scope 记号", "| 记号 | 出现次数 | 出现文件数 |", marker_rows),
@@ -673,6 +717,11 @@ def doc_table_specs() -> list[KeyedTableSpec]:
             # `v3 tables` 照样报「一致」（那几张表的键一个都匹配不上 → 原样保留），
             # 只有「每一行都有人认领」会把它抓出来 —— 实测就是这么发现的。
             occurrence=3,
+        ),
+        TableSpec(
+            name="doc16 state_regions 逐文件",
+            header=STATE_REGION_TABLE,
+            rows=state_region_rows,
         ),
     ]
 

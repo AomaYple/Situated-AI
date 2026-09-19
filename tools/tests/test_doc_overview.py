@@ -202,6 +202,66 @@ def test_doc17_头条与总览表同源() -> None:
     )
 
 
+def test_doc16_附录九的文件数与字节数与实测一致() -> None:
+    """§9 那个 ```text 块（33 个目录 × txt/md/字节）的逐行看守。
+
+    为什么是**测试**而不是生成器：它是**代码块**不是 Markdown 表，
+    而 ``v3 tables`` 的替换机制只认「表头 + 分隔线 + 数据行」。
+    换载体（改成表格）会动到这份文档的排版风格，而这里要的只是「它不会悄悄过期」——
+    逐行重算并比对同样能做到，且与 §0 走同一套口径。
+
+    约定（文档自己的写法）：``txt=N md=M bytes_txt=B``；
+    目录里有子目录时写成 ``N(+M)`` / ``B(+C)`` —— 实测只有
+    ``terrain_manipulators`` 是这种（2 个文件里 1 个在 ``provinces\\``）。
+    """
+    _require_game()
+    lines = (config.DOCS / "16-外交军事与地图.md").read_text(encoding="utf-8").splitlines()
+    start = next(
+        (i for i, x in enumerate(lines) if x.startswith("## 9. 附：本范围文件数与字节数")), None
+    )
+    assert start is not None, "找不到 doc 16 §9 的标题 —— 结构被改过？"
+    fence = next((i for i in range(start, len(lines)) if lines[i].startswith("```")), None)
+    assert fence is not None, "§9 的代码块起始围栏没了"
+    rows: list[str] = []
+    for line in lines[fence + 1 :]:
+        if line.startswith("```"):
+            break
+        rows.append(line)
+    assert len(rows) == 33, f"§9 应当是 33 行，实际 {len(rows)}"
+
+    pat = re.compile(
+        r"^(\S+)\s+txt=(\d+)(?:\(\+(\d+)\))?\s+md=(\d+)\s+bytes_txt=(\d+)(?:\(\+(\d+)\))?$"
+    )
+    bad: list[str] = []
+    for line in rows:
+        m = pat.match(line)
+        if not m:
+            bad.append(f"这一行解析不了（格式被改过？）：{line!r}")
+            continue
+        name, txt, txt_sub, md, size, size_sub = (
+            m.group(1),
+            int(m.group(2)),
+            int(m.group(3) or 0),
+            int(m.group(4)),
+            int(m.group(5)),
+            int(m.group(6) or 0),
+        )
+        base = _dir(name)
+        top = [p for p in base.iterdir() if p.is_file()] if base.is_dir() else []
+        sub = [p for p in base.rglob("*") if p.is_file() and p.parent != base]
+        got = (
+            len([p for p in top if p.suffix == ".txt"]),
+            len([p for p in sub if p.suffix == ".txt"]),
+            len([p for p in top + sub if p.suffix == ".md"]),
+            sum(p.stat().st_size for p in top if p.suffix == ".txt"),
+            sum(p.stat().st_size for p in sub if p.suffix == ".txt"),
+        )
+        want = (txt, txt_sub, md, size, size_sub)
+        if want != got:
+            bad.append(f"{name}: 文档 {want} → 实测 {got}")
+    assert not bad, "doc 16 §9 的文件数/字节数与实测不符：\n  " + "\n  ".join(bad)
+
+
 def test_doc08_官方文档篇数与清单一致() -> None:
     """顺带钉住 doc 08 头条里的官方 `.md` 篇数与**入库清单**一致。
 

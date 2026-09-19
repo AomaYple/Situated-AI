@@ -46,6 +46,7 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from . import config
@@ -303,6 +304,41 @@ def gui_sprite_lines(root: Path | None = None) -> int:
             continue
         total += sum(1 for line in text.splitlines() if line.lstrip().startswith("spriteType ="))
     return total
+
+
+#: `GetCustom('键')` —— 自定义 loc 的**数据函数**调用（写在 `.yml` 的文本里）。
+_GETCUSTOM_RE = re.compile(r"GetCustom\(\s*'([^']*)'")
+
+
+@lru_cache(maxsize=1)
+def getcustom_stats() -> dict[str, int]:
+    """原版 ``.yml`` 里 ``GetCustom('键')`` 的调用统计：``{calls, keys, files}``。
+
+    实测（1.14.3，``game`` 内容根）：**14,071 次调用 / 356 个不同键 / 602 个文件**。
+
+    为什么要有这个函数：doc 17 §18.4 原先写的是「实测全库共 **442** 处调用」，
+    而那个数**三种口径都复现不出**（``.yml`` 全文 14,071、只算 ``english/`` 567、
+    ``.txt`` 里 0 次）—— 根源是「全库」从来没定义过。现在口径写进代码：
+    扫 ``game`` 下**全部** ``.yml``，三个量一起给出；正文要引用哪个都有据可依。
+    """
+    base = config.GAME
+    calls = 0
+    keys: set[str] = set()
+    files = 0
+    for path in sorted(base.rglob("*.yml")):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8-sig", errors="replace")
+        except OSError:  # pragma: no cover - 权限/占用等极端情况
+            continue
+        found = _GETCUSTOM_RE.findall(text)
+        if not found:
+            continue
+        files += 1
+        calls += len(found)
+        keys.update(found)
+    return {"calls": calls, "keys": len(keys), "files": files}
 
 
 #: ``gui/*.gui`` 里 texticon 定义的判据 —— **行首顶格**的 ``texticon = {``。

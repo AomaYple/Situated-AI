@@ -446,6 +446,28 @@ def stance_type_count() -> int:
     return extract_dir(config.GAME / "common/ai_strategic_region_stance_types").unique_entries
 
 
+def ai_script_values_referenced() -> int:
+    """`ai_script_values.txt` 的顶层键里，有多少个被 `00_default_strategy.txt` 引用。
+
+    实测 **19 / 33**（doc 09 §4 那张表最后一行：「33 个脚本值（其中 19 个被
+    ``00_default_strategy.txt`` 引用）」）。口径是**文本引用**：
+    `ai_strategies\\` 目录里那个默认策略文件出现了这个键名就算 ——
+    不要求它出现在某个特定字段下（策略文件里同一批键会被多处引用）。
+    """
+    keys = {
+        a.key
+        for a in parse_cached(
+            config.GAME / "common/script_values/ai_script_values.txt"
+        ).top_assignments
+        if not a.is_variable
+    }
+    strategy = config.GAME / "common/ai_strategies/00_default_strategy.txt"
+    if not keys or not strategy.is_file():
+        return 0
+    text = strategy.read_text(encoding="utf-8-sig", errors="replace")
+    return sum(1 for key in keys if key in text)
+
+
 def word_file_counts(dir_rel: str, words: Collection[str]) -> Counter[str]:
     """给定一批词 → **文本里出现过它的文件数**（不看结构）。
 

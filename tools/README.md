@@ -74,7 +74,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
 | `v3 tables` | （新增） | 重算文档里**由工具生成**的 164 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表、doc 04/06/14/15/16/17 那几族统计表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
-| `v3 verify` | `run_verify.py` | 核对文档里的 **135 条**数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用**入库的离线真值**：精简快照 + 官方文档清单） |
+| `v3 verify` | `run_verify.py` | 核对文档里的 **231 条**数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用**入库的离线真值**：精简快照 + 官方文档清单） |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
 | `v3 check-outputs` | `check_outputs.py` | 核验**已落盘产物**是否与断言注册表一致 |
 | `v3 show` | `show_outputs.py` | 转储产物的结构与规模 |
@@ -125,7 +125,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-577 条用例（`pytest --collect-only` 实测），
+578 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -330,8 +330,8 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：577 条用例 + 226 条断言核验
-（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 206 条），
+Python 版把上述问题都变成了**可测试的代码**：580 条用例 + 231 条断言核验
+（`v3 verify`，其中 `--fast` 跑不需要全库扫描的 208 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
 > `v3 verify` 同时跑**文档正文的数字漂移扫描**（`verify.unknown_doc_drift`）：
@@ -339,7 +339,7 @@ Python 版把上述问题都变成了**可测试的代码**：577 条用例 + 22
 > 有漂移时退出码同样是 1，所以在 CI / pre-commit 上也会被拦住。
 > 确认是「口径不同、文档没错」的登记在 `pdx.verify.KNOWN_METRIC_MIXUPS`（附理由）。
 >
-> **没有游戏的机器（CI）怎么办**：226 条断言里 39 条能用**入库的离线真值**核验
+> **没有游戏的机器（CI）怎么办**：231 条断言里 39 条能用**入库的离线真值**核验
 > （精简快照 35 条 + 官方文档清单 4 条），其余 187 条要读游戏本体，而入库的
 > **精简快照**里带着各目录条目名、defines 命名空间与 DLC 清单，
 > 够核验其中约一半 —— 跑 `v3 verify --from-snapshot` 即可，它**不读游戏**。

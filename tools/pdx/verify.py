@@ -67,7 +67,12 @@ from .doc17 import (
 from .doc18 import country_effect_file_count
 from .extract import extract_dir
 from .game_root import checksum_targets_grouped, paths_settings
-from .localization import gui_sprite_lines, texticon_counts, yml_unique_name_count
+from .localization import (
+    getcustom_stats,
+    gui_sprite_lines,
+    texticon_counts,
+    yml_unique_name_count,
+)
 from .model import Block
 from .modifiers import digit_leading_entries, indented_top_entries, modifier_type_suffixes
 from .mods import aggregate_prefixes, analyse_all, vanilla_prefix_count
@@ -75,6 +80,7 @@ from .scan import count_files
 from .snapshot import SNAPSHOT_DIR, Snapshot
 from .usage import (
     ai_script_values_key_stats,
+    ai_script_values_referenced,
     count_key_assignments,
     field_missing,
     field_occurrences,
@@ -497,6 +503,20 @@ def _fallback_yes(_target: str) -> int:
 def _gui_sprite_lines(_target: str) -> int:
     """``gui/`` 下以 ``spriteType =`` 开头的行数（doc 06 的 552）。"""
     return gui_sprite_lines()
+
+
+def _getcustom_stats(target: str) -> int:
+    """原版 `.yml` 里 ``GetCustom('键')`` 的调用统计（``calls`` / ``keys`` / ``files``）。
+
+    doc 17 §18.4 原先写的「全库共 442 处」三种口径都复现不出 —— 见
+    :func:`pdx.localization.getcustom_stats`（口径已写成代码：``game`` 下全部 `.yml`）。
+    """
+    return getcustom_stats()[target]
+
+
+def _ai_script_values_referenced(_target: str) -> int:
+    """`ai_script_values` 的顶层键里被 `00_default_strategy.txt` 引用的个数（doc 09 的 19）。"""
+    return ai_script_values_referenced()
 
 
 def _dir_md_files(target: str) -> int:
@@ -1019,6 +1039,8 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "flag_comment_braces": _flag_comment_braces,
     "fallback_yes": _fallback_yes,
     "gui_sprite_lines": _gui_sprite_lines,
+    "getcustom_stats": _getcustom_stats,
+    "ai_script_values_referenced": _ai_script_values_referenced,
     "file_line_count": _file_line_count,
     "defines_kind_total": _defines_kind_total,
     "paths_settings_mappings": _paths_settings_mappings,
@@ -1040,6 +1062,9 @@ SLOW_KINDS = frozenset(
         "md_files",
         "md_total_bytes",
         "md_max_bytes",
+        # 要遍历整个 game 内容根的 .yml（实测 ~4 秒）—— 放进「慢」那一组，
+        # `v3 verify --fast` 才不会被它拖住。
+        "getcustom_stats",
     }
 )
 
@@ -2857,6 +2882,47 @@ CLAIMS: list[Claim] = [
         "",
         16,
         note="文档原先把 16 挂在两个文件名后面；那两个文件里各只有 1 处，16 是全目录的数",
+    ),
+    Claim(
+        "chr.getcustom_calls",
+        "17-角色科技与呈现.md",
+        "原版 .yml 里 GetCustom('键') 的调用次数（文档原写 442，口径未定义）",
+        "getcustom_stats",
+        "calls",
+        14071,
+        note="口径 = game 内容根下全部 .yml；另外两种口径是 567（只算 english/）与 0（.txt）",
+    ),
+    Claim(
+        "chr.getcustom_keys",
+        "17-角色科技与呈现.md",
+        "这些 GetCustom 调用用到的不同键数",
+        "getcustom_stats",
+        "keys",
+        356,
+    ),
+    Claim(
+        "chr.getcustom_files",
+        "17-角色科技与呈现.md",
+        "出现 GetCustom 调用的 .yml 文件数",
+        "getcustom_stats",
+        "files",
+        602,
+    ),
+    Claim(
+        "ai.script_values_doc09",
+        "09-AI-mod实战技法.md",
+        "ai_script_values 的顶层键数（doc 09 §4 那张表最后一行）",
+        "doc03_ai_script_values",
+        "top_keys",
+        33,
+    ),
+    Claim(
+        "ai.strategy_refs_doc09",
+        "09-AI-mod实战技法.md",
+        "其中被 00_default_strategy.txt 引用的个数（源码里是文本引用）",
+        "ai_script_values_referenced",
+        "",
+        19,
     ),
 ]
 

@@ -127,18 +127,57 @@ COUNTRIES = {
 > `set_import_tariff_level`(66)、`set_export_tariff_level`(6)、
 > `set_ruling_interest_groups`(2)、`create_diplomatic_pact`(1)。【实测】
 
-可用效果（**【实测】** 提取到的效果名）：
+可用效果（**【实测】** 提取到的效果名）：下表是作者挑的常用项，**完整清单见紧接着的第二张表**
+（那张由 `v3 tables` 从 444 个国家文件生成，按「有多少个国家文件用了它」排序 ——
+手挑的清单会漏掉用得最广的那个，实测就漏过 `add_ruling_interest_group`）。
 
 | 效果 | 作用 |
 |---|---|
 | `add_amendment` | 添加修正案 |
+| `add_ruling_interest_group` | 添加执政利益集团（**用得最广**） |
 | `set_ruling_interest_groups` | 设定执政利益集团 |
 | `set_institution_investment_level` | 设定机构投资等级 |
 | `set_export_tariff_level` / `set_import_tariff_level` | 设定进出口关税 |
+| `set_tax_level` | 设定税率 |
 | `add_journal_entry` | 添加日志条目 |
 | `add_modifier` | 添加修正符 |
+| `add_technology_researched` | 直接给已研究科技 |
+| `add_taxed_goods` | 给商品加税 |
 | `create_diplomatic_pact` | 建立外交条约 |
 | `set_global_variable` / `set_variable` | 设置变量 |
+
+**完整的可用效果清单（按「出现在几个国家文件里」排序，`v3 tables` 生成）**：
+
+| 效果 | 出现的国家文件数 |
+|---|---|
+| `add_ruling_interest_group` | 151 |
+| `add_technology_researched` | 81 |
+| `add_journal_entry` | 46 |
+| `set_institution_investment_level` | 46 |
+| `add_taxed_goods` | 33 |
+| `set_import_tariff_level` | 30 |
+| `set_tax_level` | 27 |
+| `set_variable` | 23 |
+| `add_amendment` | 21 |
+| `add_modifier` | 21 |
+| `set_interest_group_name` | 17 |
+| `set_next_election_date` | 17 |
+| `add_company` | 6 |
+| `set_company_establishment_date` | 6 |
+| `set_company_state_region` | 6 |
+| `set_export_tariff_level` | 5 |
+| `add_ideology` | 4 |
+| `add_primary_culture` | 4 |
+| `set_market_capital` | 3 |
+| `add_owned_country` | 2 |
+| `set_capital` | 2 |
+| `set_immune_to_revolutions` | 2 |
+| `set_ruling_interest_groups` | 2 |
+| `add_devastation` | 1 |
+| `create_diplomatic_pact` | 1 |
+| `set_global_variable` | 1 |
+| `set_ig_trait` | 1 |
+| `set_state_religion` | 1 |
 
 ### 3.3 `characters` —— 历史人物（262 文件）
 

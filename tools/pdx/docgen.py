@@ -26,6 +26,7 @@ from . import (
     doc15,
     doc16,
     doc17,
+    doc18,
     game_root,
     install_tree,
     localization,
@@ -125,8 +126,8 @@ def targets() -> tuple[DocTarget, ...]:
 
 
 def _misc_specs() -> list[TableSpec | KeyedTableSpec]:
-    """那几篇「只有一两张表」的文档的规格合集（AI + 目录文件数）。"""
-    return [*ai.doc_table_specs(), *install_tree.doc_misc_specs()]
+    """那几篇「只有一两张表」的文档的规格合集（AI + 目录文件数 + doc 18 效果表）。"""
+    return [*ai.doc_table_specs(), *install_tree.doc_misc_specs(), *doc18.doc_table_specs()]
 
 
 def check_all() -> list[tuple[str, int, str, str]]:
