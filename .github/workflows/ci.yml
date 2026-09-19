@@ -69,7 +69,7 @@ jobs:
         run: python -m pytest -m "not integration"
 
       - name: v3 verify —— 用入库快照核验一部分断言
-        # 231 条断言里 40 条能用入库的离线真值核验，其余要读游戏本体 ——
+        # 234 条断言里 43 条能用入库的离线真值核验，其余要读游戏本体 ——
         # CI 上没有游戏，所以 test_verify 那一族会被跳过。
         # 入库的精简快照（tools/out/snapshots/*.compact.json，约 4.9 MiB）
         # 带着各目录条目名、defines 命名空间与 DLC 清单，官方文档清单带着 92 篇 .md 的篇数与字节数。

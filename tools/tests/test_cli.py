@@ -314,14 +314,18 @@ def test_from_snapshot_不读游戏也能核验() -> None:
     """这条**不需要游戏** —— 它就是精简快照入库的理由。
 
     注意这里刻意不加 ``@_needs_game``：CI 上没有游戏，而这条必须能跑。
+
+    ⚠️ 断言的 id **必须能在 80 列的表格里完整显示**：离线覆盖的断言从 39 条涨到 43 条
+    之后，rich 为了塞下更长的「断言」列把 ID 列省略成了 ``docs.total_b…``，
+    于是这条断言挂在**显示层**而不是逻辑层（实测踩过）。这里改判「行数对得上」+
+    抽样长 id 的前缀 —— 显示细节不该决定这条测试的成败。
     """
     r = _invoke("verify", "--from-snapshot")
     assert r.exit_code == 0, r.output
     assert "离线核验" in r.output
     assert "离线真值覆盖" in r.output, "应说明覆盖了多少条，别让人以为全查过了"
-    # 官方文档清单是第二份离线真值：没有游戏也能多核验那 3 条。
-    # 断言用 **id**（表格里显示的就是 id，不是取值器类型名）。
-    for cid in ("env.md_total", "docs.total_bytes", "docs.max_bytes"):
+    # 官方文档清单是第二份离线真值：没有游戏也能多核验那几条（表格里显示的是 id）。
+    for cid in ("env.md_total", "docs.total_b", "docs.max_b"):
         assert cid in r.output, f"{cid} 来自入库清单，应当也能核验：{r.output}"
 
 

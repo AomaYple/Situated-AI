@@ -949,6 +949,24 @@ def _tree_bytes(target: str) -> int:
     return total
 
 
+def _game_version_field(target: str) -> object:
+    """游戏版本指纹里的某个字段（``caligula_rev`` / ``caligula_branch`` …）。
+
+    doc 01 那张「版本指纹」表里的四个值 —— 它们是**判断游戏精确版本最可靠的依据**
+    （``caligula_rev.txt`` 之类的文件在安装根目录下）。
+
+    为什么值得单独钉住：**这是唯一一条「游戏一升级就立刻变红」的断言**。
+    其余 230 条都只在自己关心的那个量变化时才响 —— 如果某次更新没碰到任何已断言的
+    数字，``v3 verify`` 会全绿，你就不会知道游戏变了。有了这条指纹，
+    升级后第一眼就能看到「版本从 A 变成 B」，从而知道该去跑
+    ``v3 snapshot diff``（结构漂移）与 ``v3 tables --write``（表格重算）。
+
+    ⚠️ 定义必须放在 ``_CHECKS`` **之前**：那个字典是模块级字面量，引用后面才定义的
+    函数会在导入时直接 NameError（实测踩过）。
+    """
+    return config.game_version().get(target)
+
+
 _CHECKS: dict[str, Callable[[str], object]] = {
     "dir_entries": _dir_entries,
     "dir_blocks": _dir_blocks,
@@ -1028,6 +1046,7 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "gui_sprite_lines": _gui_sprite_lines,
     "getcustom_stats": _getcustom_stats,
     "ai_script_values_referenced": _ai_script_values_referenced,
+    "game_version_field": _game_version_field,
     "file_line_count": _file_line_count,
     "defines_kind_total": _defines_kind_total,
     "paths_settings_mappings": _paths_settings_mappings,
@@ -2912,6 +2931,37 @@ CLAIMS: list[Claim] = [
         "",
         19,
     ),
+    # ── 版本指纹（**唯一一条「游戏一升级就变红」的断言**）──────────────────
+    #
+    # 其余 230 条只在各自的量变化时才响；如果某次更新没碰到任何已断言的数字，
+    # `v3 verify` 会全绿，你就不知道游戏变了。这条指纹专门解决那件事：
+    # 升级后第一眼看到「caligula_rev 从 A 变成 B」，就知道该去跑
+    # `v3 snapshot diff`（结构漂移）与 `v3 tables --write`（表格重算）。
+    Claim(
+        "env.caligula_rev",
+        "01-环境与版本.md",
+        "caligula_rev 修订指纹（判断游戏精确版本最可靠的依据）",
+        "game_version_field",
+        "caligula_rev",
+        "bf52e8efe8f45334a3fbd421cc9e06d51077c045",
+        note="CI 上由入库快照的「版本」域核验 —— 与本地同一条断言",
+    ),
+    Claim(
+        "env.caligula_branch",
+        "01-环境与版本.md",
+        "caligula_branch 分支名",
+        "game_version_field",
+        "caligula_branch",
+        "release/1.14.3",
+    ),
+    Claim(
+        "env.clausewitz_rev",
+        "01-环境与版本.md",
+        "clausewitz_rev 修订指纹",
+        "game_version_field",
+        "clausewitz_rev",
+        "1ce8c96bac918c929f55b3722e6006f447ab5cc0",
+    ),
 ]
 
 
@@ -3441,6 +3491,15 @@ def _snap_defines_param_total(snap: Snapshot, _target: str) -> object:
     return sum(len(v) for v in section.values()) if section else None
 
 
+def _snap_game_version(snap: Snapshot, target: str) -> object:
+    """版本指纹也能用**入库快照**核验（CI 上没游戏时要的就是这个）。
+
+    ``版本`` 是快照的**顶层**字段（与 ``域`` 平级），不在 ``sections`` 里 ——
+    第一版写成 ``snap.sections.get("版本")``，离线跑出 3 条「快照里没有对应域」。
+    """
+    return snap.version.get(target)
+
+
 def _snap_defines_param_names(snap: Snapshot, _target: str) -> object:
     """去重后的参数名数 —— 跨命名空间的并集。"""
     section = _snap_game_defines(snap)
@@ -3468,6 +3527,7 @@ _SNAPSHOT_GETTERS: dict[str, Callable[[Snapshot, str], object]] = {
     "defines_param_total": _snap_defines_param_total,
     "defines_param_names": _snap_defines_param_names,
     "defines_namespaces": _snap_defines_namespaces,
+    "game_version_field": _snap_game_version,
 }
 
 
