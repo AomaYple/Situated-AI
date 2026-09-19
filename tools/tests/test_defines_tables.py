@@ -18,8 +18,9 @@ import shutil
 from typing import TYPE_CHECKING
 
 import pytest
+from _table_guards import assert_every_row_claimed
 
-from pdx import config, defines, doc_tables
+from pdx import config, defines, doc_tables, modifiers
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -102,3 +103,16 @@ def test_表头被改动时报错而不是静默跳过(tmp_path: Path) -> None:
     broken.write_text("# 没有表格的文档\n", encoding="utf-8")
     with pytest.raises(doc_tables.TableNotFoundError):
         doc_tables.patch_doc(broken, defines.doc_table_specs(), write=False)
+
+
+def test_每一行都有人认领() -> None:
+    """doc 05 的全部生成表（含后补的六张证据 / 单文件 / game_rule 表）逐行有人认领。
+
+    这一条守的是「L 类」表特有的失效：那几张表里有**行号列**（作者维护），
+    其余列由工具重算 —— 一旦键写错（比如把「出现次数」那一行的键写成
+    「各块起始行」里的内容），数字列就会**静默停在旧值**，而
+    `v3 tables` 照样报「一致」（未匹配的行原样保留）。
+    """
+    if not (config.GAME / "common" / "defines").is_dir():
+        pytest.skip("游戏目录不可用")
+    assert_every_row_claimed(DOC, [*defines.doc_table_specs(), *modifiers.doc_table_specs()])

@@ -29,12 +29,14 @@ from typing import TYPE_CHECKING
 
 from . import config
 from .cache import parse_cached
-from .doc_tables import TableSpec
+from .doc_tables import KeyedTableSpec, TableSpec
 from .model import Block, Scalar
 from .parser import parse_text
 from .scan import walk_files
+from .usage import _iter_all_blocks
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
 #: 参数值的三种形态
@@ -385,16 +387,196 @@ def prefix_rows() -> list[str]:
     ]
 
 
-def doc_table_specs() -> list[TableSpec]:
+# ── doc 05 的另外六张表（证据章与 jomini 小节）──────────────────
+#
+# §1.7 的「证据」表、§2.7~§2.9 的单文件表、§4.4 的 game_rule 表都属于同一族：
+# 行是**结构已知**的（命名空间块、文件、游戏规则），数字由 :func:`extract_defines`
+# 与 game_rules 解析给出。用 :class:`KeyedTableSpec` 而不是整表替换 ——
+# 这几张表里有**行号列**（「各块起始行」「起始行」），行号是**时点快照**：
+# 行号列由文档作者维护（生成器不碰），其余数字列随游戏版本重算。
+# 这是 L 类表的处理方式：行号锚定的部分**明确排除在生成范围之外**，
+# 而不是把整张表判成「不该生成」。
+
+#: 行号列在本模块的六张表里出现的位置（生成器**不写**这些列）。
+_LINE_COLUMNS: frozenset[str] = frozenset({"各块起始行", "起始行"})
+
+
+def _by_file(rel: str) -> list[Namespace]:
+    """某个文件（相对 `common/defines/`）里的命名空间块，保持出现顺序。
+
+    ⚠️ 不能用 ``DefinesReport.get()`` —— 那个按**命名空间名**取，
+    传文件名进去只会得到空列表（实测就是这么让两张表的合计变成 0 的，
+    而 0 行会被 ``patch_doc`` 当成「表坏了」直接报错，不会静默写坏文档）。
+    """
+    return [ns for ns in extract_defines().namespaces if ns.file == rel]
+
+
+def _grouped(rel: str) -> dict[str, list[Namespace]]:
+    """某个文件里 ``命名空间名 → 块列表``（保持出现顺序）。"""
+    out: dict[str, list[Namespace]] = {}
+    for ns in _by_file(rel):
+        out.setdefault(ns.name, []).append(ns)
+    return out
+
+
+def _counts(group: Iterable[Namespace]) -> dict[str, int]:
+    s = i = n = 0
+    for ns in group:
+        s += ns.counts[SCALAR]
+        i += ns.counts[INLINE_LIST]
+        n += ns.counts[NESTED_BLOCK]
+    return {"标量": s, "内联列表": i, "嵌套": n, "合计": s + i + n}
+
+
+def repeated_namespace_rows() -> list[tuple[str, dict[int, str]]]:
+    """§1.7 证据 2：同一文件里重复出现的命名空间块。
+
+    只填**出现次数**（第 2 列）——「各块参数数」那一列里写着行号
+    （``第 1404 行 209 条``），属 :data:`_LINE_COLUMNS` 那一类，作者维护。
+    """
+    out: list[tuple[str, dict[int, str]]] = []
+    for rel, limit in (("00_defines.txt", 2), ("00_interfaces.txt", 2)):
+        out.extend(
+            # 键**照抄文档单元格**（它写的是带 `GAME\common\defines\` 前缀的全路径）——
+            # 只写文件名的话那一行没人认领，而「出现次数」永远不会被更新。
+            (f"`GAME\\common\\defines\\{rel}`", {2: f"**{len(group)}**"})
+            for group in _grouped(rel).values()
+            if len(group) >= limit
+        )
+    return out
+
+
+def tooltip_layer_rows() -> list[tuple[str, dict[int, str]]]:
+    """§1.7 证据 3：三层 `00_tooltips.txt` 的键数与那个参数值。
+
+    第 1 行是**编译进二进制**的那一层（本机读不到），照原样写「未知【未确认】」；
+    后两行分别取 jomini 内容根与 game 内容根（:func:`extract_all_defines`）。
+    """
+    layers = extract_all_defines()
+    out: list[tuple[str, dict[int, str]]] = [
+        (
+            "`cw/jomini/modules/tooltip_manager/data/common/defines/jomini/00_tooltips.txt`",
+            {2: "未知【未确认】", 3: "未知【未确认】"},
+        )
+    ]
+    for key, label in (
+        ("jomini", "`...\\jomini\\common\\defines\\jomini\\00_tooltips.txt`"),
+        ("game", "`GAME\\common\\defines\\jomini\\00_tooltips.txt`"),
+    ):
+        report = layers.get(key)
+        for ns in report.namespaces if report is not None else []:
+            if ns.name != "NTooltip":
+                continue
+            value = next(
+                (p.value for p in ns.params if p.name.startswith("MOUSE_MOVE_DISTANCE")), "?"
+            )
+            # 文件里写的是 ``= 10.0f;`` —— 分号是 PDX 的语句终结符，不是值的一部分。
+            # 文档引的是 ``10.0f``，所以这里去掉它（第一版直接把 `;` 带进了文档）。
+            out.append((label, {2: str(ns.count), 3: f"`{value.rstrip(';')}`"}))
+    return out
+
+
+def interfaces_rows() -> list[tuple[str, dict[int, str]]]:
+    """§2.7 `00_interfaces.txt`：每个命名空间的出现次数与条目合计。
+
+    「各块起始行」是行号列（作者维护）；末行是没有键的**合计行**，
+    键写成空串 —— 不认领它的话，「每一行都有人认领」会把它报成孤儿。
+    """
+    groups = _grouped("00_interfaces.txt")
+    out: list[tuple[str, dict[int, str]]] = []
+    total = 0
+    for name, group in groups.items():
+        counts = _counts(group)
+        total += counts["合计"]
+        count_text = f"**{len(group)}**" if len(group) > 1 else str(len(group))
+        out.append((f"`{name}`", {1: count_text, 3: str(counts["合计"])}))
+    out.append(("", {3: f"**{total}**"}))
+    return out
+
+
+def shaders_rows() -> list[tuple[str, dict[int, str]]]:
+    """§2.8 `00_shaders.txt`：每个命名空间块的标量 / 内联列表 / 合计。"""
+    groups = _grouped("00_shaders.txt")
+    out: list[tuple[str, dict[int, str]]] = []
+    totals = {"标量": 0, "内联列表": 0}
+    for name, group in groups.items():
+        counts = _counts(group)
+        totals["标量"] += counts["标量"]
+        totals["内联列表"] += counts["内联列表"]
+        out.append(
+            (
+                f"`{name}`",
+                {2: str(counts["标量"]), 3: str(counts["内联列表"]), 4: str(counts["合计"])},
+            )
+        )
+    out.append(
+        (
+            "",
+            {
+                2: f"**{totals['标量']}**",
+                3: f"**{totals['内联列表']}**",
+                4: f"**{totals['标量'] + totals['内联列表']}**",
+            },
+        )
+    )
+    return out
+
+
+def jomini_file_rows() -> list[tuple[str, dict[int, str]]]:
+    """§2.9 `jomini\\` 三个文件：标量 / 内联列表 / 嵌套 / 合计。"""
+    out: list[tuple[str, dict[int, str]]] = []
+    for rel in ("jomini/00_tooltips.txt", "jomini/fog_of_war.txt", "jomini/rivers.txt"):
+        for group in _grouped(rel).values():
+            c = _counts(group)
+            out.append(
+                (
+                    f"`{rel}`",
+                    {
+                        3: str(c["标量"]),
+                        4: str(c["内联列表"]),
+                        5: str(c["嵌套"]),
+                        6: str(c["合计"]),
+                    },
+                )
+            )
+    return out
+
+
+def game_rule_rows() -> list[tuple[str, dict[int, str]]]:
+    """§4.4 15 条 game_rule 的 **flag 条目数**（第 4 列）。
+
+    ``default`` 与「非默认 setting」两列是设置名（散文），只更新最后那一列。
+    口径：该规则块里**任意深度**的 ``flag =`` 赋值个数（实测合计 67，
+    与 §4.3 那张指标表的「`flag = ` 条目 67」对得上）。
+    """
+    base = config.GAME / "common" / "game_rules"
+    out: list[tuple[str, dict[int, str]]] = []
+    for path in sorted(base.rglob("*.txt")):
+        pf = parse_cached(path)
+        for top in pf.top_assignments:
+            if top.is_variable or not isinstance(top.value, Block):
+                continue
+            flags = sum(
+                1
+                for block in [top.value, *_iter_all_blocks(top.value)]
+                for a in block.assignments()
+                if a.key == "flag"
+            )
+            out.append((f"`{top.key}`", {4: f"**{flags}**" if flags else str(flags)}))
+    return out
+
+
+def doc_table_specs() -> list[TableSpec | KeyedTableSpec]:
     """doc 05 的表的登记表（供 ``v3 tables`` 统一驱动）。
 
     生成逻辑仍在本模块（它拥有 defines 的提取口径），但**替换算法**
     交给 :mod:`pdx.doc_tables` —— 同一套机制也用在 doc 08 / doc 19 上。
 
-    包含 :data:`PREFIX_TABLE` —— 它此前是一张「无人重跑」的手抄表。
+    包含 :data:`PREFIX_TABLE` —— 它此前是一张「无人重跑」的手抄表；
+    以及本模块后补的六张表（§1.7 / §2.7 / §2.8 / §2.9 / §4.4）。
     """
     rows = doc_table_rows()
-    specs: list[TableSpec] = [
+    specs: list[TableSpec | KeyedTableSpec] = [
         TableSpec(
             name=f"doc05 表{n}",
             header=header,
@@ -404,4 +586,46 @@ def doc_table_specs() -> list[TableSpec]:
         for n, header in enumerate(DOC_TABLES, start=1)
     ]
     specs.append(TableSpec(name="doc05 参数前缀分组", header=PREFIX_TABLE, rows=prefix_rows))
+    specs.extend(
+        [
+            KeyedTableSpec(
+                name="doc05 重复命名空间块",
+                header="| 文件 | 重复的命名空间 | 出现次数 | 各块参数数 |",
+                cells=repeated_namespace_rows,
+                append_new=False,
+            ),
+            KeyedTableSpec(
+                name="doc05 三层 tooltips",
+                header="| 层 | 路径 | `NTooltip` 键数 | `MOUSE_MOVE_DISTANCE_TO_UPDATE_TOOLTIP_POSITION` |",
+                cells=tooltip_layer_rows,
+                key_column=1,
+                append_new=False,
+            ),
+            KeyedTableSpec(
+                name="doc05 interfaces 命名空间",
+                header="| 命名空间块 | 出现次数 | 各块起始行 | 合计条目 |",
+                cells=interfaces_rows,
+                append_new=False,
+            ),
+            KeyedTableSpec(
+                name="doc05 shaders 命名空间",
+                header="| 命名空间块 | 起始行 | 标量 | 内联列表 | 合计 |",
+                cells=shaders_rows,
+                append_new=False,
+            ),
+            KeyedTableSpec(
+                name="doc05 jomini 三文件",
+                header="| 文件 | 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |",
+                cells=jomini_file_rows,
+                append_new=False,
+            ),
+            KeyedTableSpec(
+                name="doc05 game_rule flag 数",
+                header="| # | game_rule key | default | 非默认 setting | flag 条目数 |",
+                cells=game_rule_rows,
+                key_column=1,
+                append_new=False,
+            ),
+        ]
+    )
     return specs

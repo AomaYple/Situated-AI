@@ -77,18 +77,16 @@ STAT_HINT = (
 
 #: **未看守的机械表数量上限**。这是「欠债余额」：只许减少，不许增加。
 #:
-#: 进度 125 → 82 → 58 → 44 → 29 → 19 → **7**：doc 05 的两张「假脚本化」表、
+#: 进度 125 → 82 → 58 → 44 → 29 → 19 → 7 → **0**：doc 05 的两张「假脚本化」表、
 #: doc 04/16 的「用了多少次」各一张、doc 14 整族 21 张、doc 16 整族 33 张、doc 17 整族 24 张、
 #: doc 06 的 5 张 + doc 15 的 7 张、doc 04 的 15 张（另加 4 张原先没被判成统计表的汇总表）、
-#: **doc 03/10/11/18/20 的 6 张 + doc 14 的 2 张令牌表**。
-#: 生成表总数 31 → 77 → 107 → 119 → 139 → 149 → **157**。
+#: doc 03/10/11/18/20 的 6 张 + doc 14 的 2 张令牌表、**doc 05 剩下的 7 张**。
+#: 生成表总数 31 → 77 → 107 → 119 → 139 → 149 → 157 → **164**。
 #:
-#: 余额的**终点**不是 0，而是 :data:`NOT_GENERATED` 的条数 —— 那里面每一条都写明了
-#: 「为什么不能机械生成」。做完一批就把这个数往下调；**调高必须在提交信息里说明理由**。
-#:
-#: 现在只剩 doc 05 的 7 张 —— 它们与 defines 的**行号**绑着
-#: （「各块起始行」「首现位置」这类列，改一行就全废），是最后要逐张定性的。
-UNGUARDED_TABLE_BUDGET = 7
+#: **0 就是终点**：剩下的都在 :data:`NOT_GENERATED` 里，每一条都写明了
+#: 「为什么不能机械生成」。这个数再涨回来就意味着**新长出了一张没人管的表** ——
+#: 那正是这条预算要拦住的事。
+UNGUARDED_TABLE_BUDGET = 0
 
 #: 散文数字（表格之外）的现状，同样只许减少。见模块 docstring 的口径。
 #:
@@ -323,14 +321,47 @@ def test_未看守的散文数字不超过预算() -> None:
     )
 
 
+def _scan_counts() -> tuple[int, int, int]:
+    """``(扫到的表总数, 由生成器看守的, 命中的「刻意不生成」条目)``。
+
+    这三个数用来证明**盘点本身在工作** —— 它们与「欠债余额」是两回事：
+    余额可以是 0（那是终点），但「扫到了多少张表」永远不该是 0。
+    """
+    generated = _generated_headers()
+    total = guarded = excluded = 0
+    for path in sorted(config.DOCS.glob("*.md")):
+        if path.name in FULLY_GENERATED_DOCS:
+            continue
+        tables = _tables(path)
+        headers = [h for _ln, h, _rows in tables]
+        for index, (_lineno, header, rows) in enumerate(tables):
+            if not rows:
+                continue
+            total += 1
+            if _is_guarded_by_spec(headers, index, generated, path.name):
+                guarded += 1
+            elif _is_not_generated(path.name, header):
+                excluded += 1
+    return total, guarded, excluded
+
+
 def test_盘点自身能跑出非零结果() -> None:
     """**元测试**：确保盘点真的在数东西，而不是恒为 0。
 
     一条「扫全仓、永远返回 0」的检查会让人以为已经清零了 ——
     比没有检查更糟（本仓库在哈希那件事上刚踩过同类的坑）。
+
+    注意这里**不**断言「未看守的表 > 0」：余额的终点就是 0
+    （剩下的都在 :data:`NOT_GENERATED` 里、各有理由）。要证明的是
+    **扫描本身没退化** —— 所以看的是「扫到多少张表」「其中多少张有人管」。
     """
-    n, _ = _count_unguarded_tables()
-    assert n > 0, "盘点返回 0 张未看守表 —— 解析多半退化了，不是真的做完了"
+    total, guarded, excluded = _scan_counts()
+    assert total > 100, f"只扫到 {total} 张表 —— 解析多半退化了"
+    assert guarded > 0, "没有任何表被生成器看守 —— 规格登记多半断了"
+    assert excluded == len(NOT_GENERATED), (
+        f"排除清单有 {len(NOT_GENERATED)} 条，但只命中 {excluded} 张表 —— "
+        f"表头改过？清单指向了不存在的表？"
+    )
     assert _count_unguarded_prose() > 0, "散文数字盘点返回 0 —— 同上"
     assert _stat_columns("| 目录 | 文件数 | 说明 |", [["a", "3", "x"], ["b", "4", "y"]]), (
         "列判定退化了"

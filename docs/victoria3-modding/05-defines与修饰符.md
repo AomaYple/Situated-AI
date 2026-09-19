@@ -332,6 +332,10 @@ MAP_LENS_military_lens
 
 #### 证据 2：同一文件内同名块重复出现
 
+> 📌 **本表与下面几张「单文件」表的行号列**（「各块起始行」「起始行」）是**时点快照**，
+> 由作者维护：行号由排版决定，改一行就全废，所以**不纳入 `v3 tables` 的生成范围**。
+> 其余数字列（出现次数、标量 / 内联列表 / 嵌套 / 合计）每次 `v3 tables` 都会重算。
+
 | 文件 | 重复的命名空间 | 出现次数 | 各块参数数 |
 |---|---|---|---|
 | `GAME\common\defines\00_defines.txt` | `NPops` | **2** | 第 1404 行 209 条；第 1773 行 16 条 |
@@ -356,8 +360,8 @@ MAP_LENS_military_lens
 | 层 | 路径 | `NTooltip` 键数 | `MOUSE_MOVE_DISTANCE_TO_UPDATE_TOOLTIP_POSITION` |
 |---|---|---|---|
 | cw/jomini 模块数据（编译进二进制，本机不可直接读取） | `cw/jomini/modules/tooltip_manager/data/common/defines/jomini/00_tooltips.txt` | 未知【未确认】 | 未知【未确认】 |
-| jomini 内容根（磁盘可读） | `...\jomini\common\defines\jomini\00_tooltips.txt` | 8 | `20.0f` |
-| game 内容根（磁盘可读） | `GAME\common\defines\jomini\00_tooltips.txt` | 8 | `10.0f` |
+| jomini 内容根（磁盘可读） | `...\jomini\common\defines\jomini\00_tooltips.txt` | 7 | `20.0f` |
+| game 内容根（磁盘可读） | `GAME\common\defines\jomini\00_tooltips.txt` | 7 | `10.0f` |
 
 两个可读文件的**键名集合完全相同（双向差集均为空）**，唯一实质差异就是上面那个值从 `20.0f` 变成 `10.0f`。【提取】
 
@@ -636,6 +640,8 @@ NCountry = {
 
 ### 2.8 `00_shaders.txt`
 
+> 📌 本节的「起始行」同 §1.7 的说明：行号列是快照，其余列由 `v3 tables` 重算。
+
 5 个块，40 个条目。
 
 | 命名空间块 | 起始行 | 标量 | 内联列表 | 合计 |
@@ -664,7 +670,7 @@ NShadersCommon =
 
 | 文件 | 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |
 |---|---|---|---|---|---|---|
-| `jomini/00_tooltips.txt` | `NTooltip` | 2 | 6 | 0 | 1 | 7 |
+| `jomini/00_tooltips.txt` | `NTooltip` | 2 | 6 | 1 | 0 | 7 |
 | `jomini/fog_of_war.txt` | `NFogOfWar` | 1 | 22 | 1 | 0 | 23 |
 | `jomini/rivers.txt` | `NRivers` | 2 | 6 | 0 | 0 | 6 |
 
