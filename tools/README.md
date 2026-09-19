@@ -72,13 +72,14 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 analyze` | `run_analyze.py` | 全量分析并落盘：`--no-mods` `--no-cross` `--no-write` `--quiet` `--profile` |
 | `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
-| `v3 tables` | （新增） | 重算文档里**由工具生成**的 164 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表、doc 04/06/14/15/16/17 那几族统计表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
+| `v3 tables` | （新增） | 重算文档里**由工具生成**的 166 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几族统计表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
 | `v3 verify` | `run_verify.py` | 核对文档里的 **231 条**数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用**入库的离线真值**：精简快照 + 官方文档清单） |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
 | `v3 check-outputs` | `check_outputs.py` | 核验**已落盘产物**是否与断言注册表一致 |
 | `v3 show` | `show_outputs.py` | 转储产物的结构与规模 |
 | `v3 mirror check` | （新增） | 官方 `.md` 清单 vs 本机本体 / 本地镜像，**只读**，有差异退出码 1 |
+| `v3 strings` | （新增） | 开采 `victoria3.exe` 的字符串：引擎里有、脚本里没用的标识符（`--limit` / `--no-list`）。原先那两个数是没留口径的一次性采集值，现在可随时重算 |
 | `v3 mirror write` | （新增） | 重生成清单（要游戏）；`--sync` 顺便把原文拷到本机 `research/official-docs/` |
 
 ```text
@@ -125,7 +126,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-578 条用例（`pytest --collect-only` 实测），
+581 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -317,8 +318,13 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 平衡性与 AI 实际表现 | 要跑游戏才知道 |
 
 > 上表第二行标了「尚未开采」而不是「做不到」：`victoria3.exe` 里有
-> **17,821 个标识符**，其中 **16,535 个从未在任何脚本里出现** ——
-> 那批词很可能包含字段枚举与合法取值。这是已知范围内最值得做的下一步。
+> **55,143 个标识符形状的串**，其中 **31,334 个从未在 `.txt` / `.gui` / `.yml` 里出现**
+> （`v3 strings` 现算，口径见 `pdx.exe_strings`）—— 那批词很可能包含字段枚举与合法取值。
+> 这是已知范围内最值得做的下一步。
+>
+> 早先这里写的是 17,821 / 16,535：那是一次性采集值，**口径没留、脚本没留**，
+> 与 doc 04 §4.6 那个「682 行」同病。现在这两个数由 `v3 strings` 从 exe 现算，
+> `tools/tests/test_repo_numbers.py` 会核对它们没被改错。
 
 ## 为什么全 Python 化
 
@@ -330,7 +336,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：580 条用例 + 231 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：581 条用例 + 231 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 208 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

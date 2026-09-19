@@ -32,7 +32,7 @@ import sys
 
 import pytest
 
-from pdx import config, docgen, verify
+from pdx import config, docgen, exe_strings, verify
 
 DOCS = sorted(config.DOCS.glob("*.md"))
 TEST_FILES = sorted((config.REPO / "tools" / "tests").glob("test_*.py"))
@@ -126,3 +126,22 @@ def test_README里的用例数与实际收集一致() -> None:
         f"README 写的用例数与实测（{collected}）不一致 —— 跑 `pytest --collect-only -q` 核对后改 README"
     )
     assert f"{collected} 条用例" in tools, f"tools/README 写的用例数与实测（{collected}）不一致"
+
+
+def test_toolsREADME的exe标识符数字与现算一致() -> None:
+    """`v3 strings` 给的两个数也要现算。
+
+    它们原先（17,821 / 16,535）是一批**没留口径的一次性采集值** ——
+    换一个游戏版本就没人能重算，与 doc 04 §4.6 那个「682 行」同病。
+    现在口径在 :mod:`pdx.exe_strings`，这条盯住 README 别写回旧数。
+    """
+    if not exe_strings.exe_path().is_file():
+        pytest.skip("没有游戏本体（binaries/victoria3.exe）—— 这一条只在装了游戏的机器上判定")
+    stats = exe_strings.identifier_stats()
+    tools = (config.REPO / "tools" / "README.md").read_text(encoding="utf-8")
+    assert f"**{stats['exe']:,} 个标识符形状的串**" in tools, (
+        f"tools/README 的「exe 标识符数」与现算（{stats['exe']:,}）不一致"
+    )
+    assert f"**{stats['unused']:,} 个从未在" in tools, (
+        f"tools/README 的「未使用数」与现算（{stats['unused']:,}）不一致"
+    )

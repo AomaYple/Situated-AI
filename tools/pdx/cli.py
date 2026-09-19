@@ -54,6 +54,7 @@ from pdx import (
     docgen,
     docs_mirror,
     engine_log,
+    exe_strings,
     snapshot,
     verify,
 )
@@ -1286,6 +1287,40 @@ def check_outputs_cmd() -> None:
 
 
 # ── show ────────────────────────────────────────────────────
+@app.command("strings")
+def strings_cmd(
+    limit: int = typer.Option(40, "--limit", "-n", help="最多列出多少个未使用的标识符"),
+    show_list: bool = typer.Option(True, "--list/--no-list", help="是否列出候选清单"),
+) -> None:
+    """开采 `victoria3.exe` 的字符串：引擎里有、脚本里没用的标识符。
+
+    这是 `tools/README.md`「已知边界」里那个下一步的**可复算版本**：
+    原先正文里的两个数字（17,821 / 16,535）是一次性采集值，口径没留、脚本没留。
+    口径见 `pdx.exe_strings`（扫可打印 ASCII 串 → 取标识符形状 → 与脚本词表作差）。
+
+    它给的是**线索**而不是结论：候选里混着编译器与 CRT 符号，哪些是 PDX 的
+    字段枚举要人看。文件不存在时退出码 2。
+    """
+    if not exe_strings.exe_path().is_file():
+        console.print(f"[red]找不到 {escape(str(exe_strings.exe_path()))}[/] —— 需要游戏本体")
+        raise typer.Exit(2)
+
+    stats = exe_strings.identifier_stats()
+    table = Table(title="victoria3.exe 字符串开采", show_lines=False)
+    table.add_column("指标")
+    table.add_column("值", justify="right", style="cyan")
+    table.add_row("exe 里的标识符形状串", f"{stats['exe']:,}")
+    table.add_row("脚本里出现过的词", f"{stats['script']:,}")
+    table.add_row("未在脚本里出现过", f"{stats['unused']:,}")
+    console.print(table)
+
+    if show_list:
+        rows = exe_strings.unused_identifiers()
+        console.print(f"\n未使用候选（前 {min(limit, len(rows))} / {len(rows):,}）：")
+        for name in rows[:limit]:
+            console.print(f"  {escape(name)}")
+
+
 @app.command("show")
 def show_cmd() -> None:
     """转储已落盘产物的结构与规模。
