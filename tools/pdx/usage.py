@@ -88,13 +88,14 @@ def _iter_all_blocks(node: Block | ParsedFile) -> Iterator[Block]:
             yield from _iter_all_blocks(v)
 
 
-def _collect(dir_rel: str, *, within: str | None, per_file: bool) -> Counter[str]:
+def _collect(dir_rel: str, *, within: str | tuple[str, ...] | None, per_file: bool) -> Counter[str]:
     """``dir_rel`` 下要统计的块的字段。
 
     * ``within=None`` —— 只数**顶层条目块**的字段（如 ``common/buildings/``
       里 115 个建筑各自的字段）。嵌套块不是条目，不参与；
     * ``within="modifier"`` —— 数**任意深度**上名为 ``modifier`` 的块的字段
-      （doc 16 的战争目标是 ``war_goal = { modifier = { … } }`` 这种形状）。
+      （doc 16 的战争目标是 ``war_goal = { modifier = { … } }`` 这种形状）；
+    * ``within=("a", "b")`` —— 数这几个块名**合起来**的字段。
     """
     base = config.GAME / dir_rel
     if not base.is_dir():
@@ -104,8 +105,11 @@ def _collect(dir_rel: str, *, within: str | None, per_file: bool) -> Counter[str
         pf = parse_cached(path)
         if within is None:
             blocks = _entry_blocks(pf)
-        else:
+        elif isinstance(within, str):
             blocks = [b for key, b in _iter_keyed_blocks(pf) if key == within]
+        else:
+            wanted = set(within)
+            blocks = [b for key, b in _iter_keyed_blocks(pf) if key in wanted]
         seen: set[str] = set()
         for b in blocks:
             for key in entry_fields(b):
@@ -118,12 +122,19 @@ def _collect(dir_rel: str, *, within: str | None, per_file: bool) -> Counter[str
     return total
 
 
-def field_occurrences(dir_rel: str, *, within: str | None = None) -> Counter[str]:
-    """字段名 → **出现次数**（跨文件累加）。"""
+def field_occurrences(dir_rel: str, *, within: str | tuple[str, ...] | None = None) -> Counter[str]:
+    """字段名 → **出现次数**（跨文件累加）。
+
+    ``within`` 给**块名**（或一组块名）：只数这些块内部的字段，不数别的。
+    传一组是后补的：doc 14 的「档位」表数的是
+    ``building_modifiers`` + ``state_modifiers`` + ``country_modifiers``
+    **三种块合起来**的次数（实测 302 + 149 + 61 = 512，正是文档写的 512）——
+    只认一种块名会让那张表少算一半，而**少算的数字照样写进文档**。
+    """
     return _collect(dir_rel, within=within, per_file=False)
 
 
-def field_file_counts(dir_rel: str, *, within: str | None = None) -> Counter[str]:
+def field_file_counts(dir_rel: str, *, within: str | tuple[str, ...] | None = None) -> Counter[str]:
     """字段名 → **用到它的文件数**（同文件内重复只算一次）。"""
     return _collect(dir_rel, within=within, per_file=True)
 
@@ -341,40 +352,53 @@ def _rows(counter: Counter[str], col: int) -> list[tuple[str, dict[int, str]]]:
 
 #: doc 14 的「字段 / 令牌 实测次数」表 —— §2~§15 每个目录各一张。
 #:
-#: ``(表头, occurrence, 次数列, 目录)``。occurrence 是**精确表头**在文档里的出现次序，
+#: ``(表头, occurrence, 次数列, 目录, 块名)``。occurrence 是**精确表头**在文档里的出现次序，
 #: 必须数准：:func:`pdx.doc_tables._find_header` 按次序取表，数错就会把 A 目录的次数
 #: 写进 B 目录的表 —— 而那种错**不报错**，只是写错地方。
-#: 这 20 条映射逐条核对过：每条算出来的行号都落在该目录自己的章节里（实测 0 处不符）。
-_DOC14_FIELD_TABLES: tuple[tuple[str, int, int, str], ...] = (
-    ("| 字段 | 实测次数 | 说明 |", 0, 1, "buildings"),
-    ("| 字段 | 实测次数 | 说明 |", 1, 1, "production_methods"),
-    ("| 字段 | 实测次数 | 说明 |", 2, 1, "goods"),
-    ("| 字段 | 实测次数 | 说明 |", 3, 1, "company_types"),
-    ("| 字段 | 实测次数 | 说明 |", 4, 1, "pop_needs"),
-    ("| 字段 | 实测次数 | 说明 |", 5, 1, "decrees"),
-    ("| 字段 | 实测次数 | 说明 |", 6, 1, "harvest_condition_types"),
-    ("| 字段 | 实测次数 | 首现位置 | 语义（据用法推断） |", 0, 1, "buildings"),
-    ("| 字段 | 实测次数 | 首现位置 | 语义（据用法推断） |", 1, 1, "building_groups"),
-    ("| 字段 | 实测次数 | 首现位置 | 语义 |", 0, 1, "production_methods"),
-    ("| 字段 | 实测次数 | 首现位置 | 语义 |", 1, 1, "company_types"),
-    ("| 字段 | 实测次数 | 含义（逐字来自文件头注释） |", 0, 1, "building_groups"),
-    ("| 字段 | 实测次数 | `.md` | 说明 |", 0, 1, "production_method_groups"),
-    ("| 字段 | 实测次数 | `prestige_goods.md` | 说明 |", 0, 1, "prestige_goods"),
-    ("| 字段 | 实测次数 | 来源 | 说明 |", 0, 1, "pop_needs"),
-    ("| 字段 | `.md` | 实测次数 | 说明 |", 0, 2, "company_charter_types"),
-    ("| 字段 | 深度 | 实测次数 | 说明 |", 0, 2, "buy_packages"),
-    ("| 字段 | 深度 | 实测次数 | 说明 |", 1, 2, "dynamic_company_names"),
-    # travel_network（§15）的两张「令牌 | 形式 | 实测次数」表**不在这里**：
-    # ``common/travel_network/naval_network.txt`` 里只有 ``nodes`` / ``connections``
-    # 两个**令牌列表**，没有 ``key = value`` 形式的字段 —— 拿字段计数去生成
-    # 会得到 0 行（``test_生成结果非空`` 当场就会失败，实测就是这么发现的）。
-    # 它们的口径是「令牌 × 出现形式」，需要另写一套分析，仍留在欠债余额里。
-    ("| 档位 | 实测次数 | 缩放基准 |", 0, 1, "production_methods"),
+#: 这 21 条映射逐条核对过：每条算出来的行号都落在该目录自己的章节里（实测 0 处不符）。
+#:
+#: ``块名`` 那两处是**后补的**（doc 14 的这两张表原先一直在静默过期）：
+#: `pop_needs` 的 `goods` / `weight` 在 ``entry = { … }`` 里，
+#: `production_methods` 的四个「档位」在 ``building_modifiers`` / ``state_modifiers`` /
+#: ``country_modifiers`` 里 —— 都不在顶层条目层，按「条目字段」数会得到 0 行。
+#: 那张表照样摆在文档里、数字照样不动，**只有「每一行都有人认领」会发现**。
+_DOC14_FIELD_TABLES: tuple[tuple[str, int, int, str, str | tuple[str, ...] | None], ...] = (
+    ("| 字段 | 实测次数 | 说明 |", 0, 1, "buildings", None),
+    ("| 字段 | 实测次数 | 说明 |", 1, 1, "production_methods", None),
+    ("| 字段 | 实测次数 | 说明 |", 2, 1, "goods", None),
+    ("| 字段 | 实测次数 | 说明 |", 3, 1, "company_types", None),
+    ("| 字段 | 实测次数 | 说明 |", 4, 1, "pop_needs", "entry"),
+    ("| 字段 | 实测次数 | 说明 |", 5, 1, "decrees", None),
+    ("| 字段 | 实测次数 | 说明 |", 6, 1, "harvest_condition_types", None),
+    ("| 字段 | 实测次数 | 首现位置 | 语义（据用法推断） |", 0, 1, "buildings", None),
+    ("| 字段 | 实测次数 | 首现位置 | 语义（据用法推断） |", 1, 1, "building_groups", None),
+    ("| 字段 | 实测次数 | 首现位置 | 语义 |", 0, 1, "production_methods", None),
+    ("| 字段 | 实测次数 | 首现位置 | 语义 |", 1, 1, "company_types", None),
+    ("| 字段 | 实测次数 | 含义（逐字来自文件头注释） |", 0, 1, "building_groups", None),
+    ("| 字段 | 实测次数 | `.md` | 说明 |", 0, 1, "production_method_groups", None),
+    ("| 字段 | 实测次数 | `prestige_goods.md` | 说明 |", 0, 1, "prestige_goods", None),
+    ("| 字段 | 实测次数 | 来源 | 说明 |", 0, 1, "pop_needs", None),
+    ("| 字段 | `.md` | 实测次数 | 说明 |", 0, 2, "company_charter_types", None),
+    ("| 字段 | 深度 | 实测次数 | 说明 |", 0, 2, "buy_packages", None),
+    ("| 字段 | 深度 | 实测次数 | 说明 |", 1, 2, "dynamic_company_names", None),
+    # travel_network（§15）的两张「令牌 | 形式 | 实测次数」表在 `doc_table_specs()` 里
+    # 单独登记（口径是「任意深度 + 匿名块」，不是「条目字段」）。
+    (
+        "| 档位 | 实测次数 | 缩放基准 |",
+        0,
+        1,
+        "production_methods",
+        ("building_modifiers", "state_modifiers", "country_modifiers"),
+    ),
 )
 
 
-def _field_rows_factory(dir_rel: str, col: int) -> Callable[[], list[tuple[str, dict[int, str]]]]:
-    """把「哪个目录、第几列」烘进一个无参函数。
+def _field_rows_factory(
+    dir_rel: str,
+    col: int,
+    within: str | tuple[str, ...] | None = None,
+) -> Callable[[], list[tuple[str, dict[int, str]]]]:
+    """把「哪个目录、哪个块、第几列」烘进一个无参函数。
 
     不用 ``lambda dd=d, cc=col: …`` 那种默认参数式捕获 —— 实测 mypy 推不出
     它的类型（``Cannot infer type of lambda``）。:mod:`pdx.game_root` 里的
@@ -382,7 +406,7 @@ def _field_rows_factory(dir_rel: str, col: int) -> Callable[[], list[tuple[str, 
     """
 
     def rows() -> list[tuple[str, dict[int, str]]]:
-        return _rows(field_occurrences(dir_rel), col)
+        return _rows(field_occurrences(dir_rel, within=within), col)
 
     return rows
 
@@ -390,7 +414,7 @@ def _field_rows_factory(dir_rel: str, col: int) -> Callable[[], list[tuple[str, 
 def _doc14_specs() -> list[KeyedTableSpec]:
     """doc 14 各目录的字段表 —— 同一形状，逐表指定目录与列号。"""
     out: list[KeyedTableSpec] = []
-    for n, (header, occ, col, d) in enumerate(_DOC14_FIELD_TABLES, start=1):
+    for n, (header, occ, col, d, within) in enumerate(_DOC14_FIELD_TABLES, start=1):
         out.append(
             KeyedTableSpec(
                 # 名字必须**唯一**：`patch_doc` 的返回值以表名为键，重名会互相覆盖 ——
@@ -400,7 +424,7 @@ def _doc14_specs() -> list[KeyedTableSpec]:
                 # 所以直接用序号编名字。
                 name=f"doc14 表{n} {d}",
                 header=header,
-                cells=_field_rows_factory(f"common/{d}", col),
+                cells=_field_rows_factory(f"common/{d}", col, within),
                 occurrence=occ,
                 # 节选表：只列官方 `.md` 声明过的字段
                 append_new=False,
@@ -481,6 +505,31 @@ def _doc16_specs() -> list[KeyedTableSpec]:
     return out
 
 
+def travel_network_token_rows() -> list[tuple[str, dict[int, str]]]:
+    """doc 14 §15.3：`naval_network.txt` 的**令牌**计数（``province=x93C3BC`` 形式）。
+
+    这一张与 doc 16 §4.6 那张是同一个文件的两种问法：doc 16 问「有哪些键」
+    （8 个，含顶层的 `nodes`/`connections`），doc 14 问的是 `nodes`/`connections`
+    两个块**内部**的令牌（`province`/`x`/`y`/`type` 与 `from`/`to`）。
+
+    口径：`all_field_occurrences`（任意深度 + 匿名块），
+    再按文档的行顺序取出这四个令牌 —— `x` / `y` 那一行在文档里是**合并行**、
+    值写作「—」（作者没数），这里照 6,641 填上（两个数字实测相等）。
+    """
+    counter = all_field_occurrences("common/travel_network")
+    return [
+        ("`province`", {2: f"{counter['province']:,}"}),
+        ("`x` / `y`", {2: f"{counter['x']:,}"}),
+        ("`type`", {2: f"{counter['type']:,}"}),
+    ]
+
+
+def travel_network_connection_rows() -> list[tuple[str, dict[int, str]]]:
+    """doc 14 §15.3 的 `connections` 块令牌表（`from` / `to`）。"""
+    counter = all_field_occurrences("common/travel_network")
+    return [("`from`", {2: f"{counter['from']:,}"}), ("`to`", {2: f"{counter['to']:,}"})]
+
+
 def doc_table_specs() -> list[KeyedTableSpec]:
     """这一族表的登记表。
 
@@ -488,6 +537,28 @@ def doc_table_specs() -> list[KeyedTableSpec]:
     文档里那几列常常紧挨着出现、只差一个字，指错列不会报错、只会写错地方。
     """
     return [
+        # doc 14 §15.3 `travel_network\naval_network.txt` 的两张令牌表。
+        # 它们的口径是「任意深度 + 匿名块」（`nodes = { { province = … } }`），
+        # 不是 `field_occurrences` 那种「顶层条目块的字段」—— 见
+        # `all_field_occurrences` 的说明。表头是**前缀关系**：
+        # `| 令牌 | 形式 | 实测次数 |` 同时匹配 4 列那张，所以那张用 occurrence=0、
+        # 这张 3 列的用 occurrence=1（`_find_header` 按 `startswith` 数候选）。
+        KeyedTableSpec(
+            name="doc14 travel_network 节点令牌",
+            header="| 令牌 | 形式 | 实测次数 | 说明 |",
+            cells=travel_network_token_rows,
+            key_column=0,
+            occurrence=0,
+            append_new=False,
+        ),
+        KeyedTableSpec(
+            name="doc14 travel_network 连接令牌",
+            header="| 令牌 | 形式 | 实测次数 |",
+            cells=travel_network_connection_rows,
+            key_column=0,
+            occurrence=1,
+            append_new=False,
+        ),
         # doc 04 §journal_entries：172 个 JE 文件里各字段出现了多少次。
         # 表是 | 字段 | 官方 md 行 | 原版使用次数 | md 说明 | → 次数在**第 2 列**。
         KeyedTableSpec(

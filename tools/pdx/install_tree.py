@@ -591,9 +591,81 @@ def doc06_table_specs() -> list[KeyedTableSpec]:
     ]
 
 
+#: doc 11 那张表把「只有 1 个文件的 12 个子目录」**合成了一行**（值写「各 1」）。
+#:
+#: 那一行的键是**整格文本**（`` `a` · `b` · … ``），所以必须照抄它、值由工具给 ——
+#: 否则那 12 个子目录会被当成「文档里没有的新键」追加成 12 行
+#: （每行还给散文列填上「待补」），把表格撑成两倍长。实测第一版就是这么错的。
+_HISTORY_SINGLES: tuple[str, ...] = (
+    "conscription",
+    "cultures",
+    "global",
+    "government_setup",
+    "lobbies",
+    "military_deployments",
+    "political_movements",
+    "power_blocs",
+    "production_methods",
+    "states",
+    "trade",
+    "treaties",
+)
+
+
+def _history_overview_rows() -> list[tuple[str, dict[int, str]]]:
+    """doc 11 的 11 行：10 个具名子目录 + 1 行合并的「各 N」。"""
+    stats = {s.name: s.files for s in rows_of(config.GAME / "common" / "history")}
+    singles = set(_HISTORY_SINGLES)
+    rows = [(name, {1: fmt_count(n)}) for name, n in stats.items() if name not in singles]
+    counts = {stats.get(name, 0) for name in _HISTORY_SINGLES}
+    if len(counts) == 1:  # 全都一样 → 沿用文档的「各 N」写法
+        value = f"各 {counts.pop()}"
+    else:  # 不一样了 → 逐个列出来，别让「各 N」变成假话
+        value = "、".join(f"`{n}` {fmt_count(stats.get(n, 0))}" for n in _HISTORY_SINGLES)
+    merged = " · ".join(f"`{n}`" for n in _HISTORY_SINGLES)
+    rows.append((merged, {1: value}))
+    return rows
+
+
+def doc_misc_specs() -> list[KeyedTableSpec]:
+    """散落在几篇文档里的「子目录 → 文件数」表（doc 11 / 18 / 20）。
+
+    与 doc 06 / doc 08 共用 :func:`rows_of` —— 统计的是同一棵树，
+    口径只有一份。名字前缀写明属于哪一篇，:func:`pdx.docgen.targets` 按前缀分发。
+
+    * **doc 11 / 18** 都是 `common\\history\\` 的全貌表（一个 11 行、一个 22 行）——
+      同一批数字的两张表，所以更要共用同一个来源：一处改了另一处不会漂。
+      doc 11 那行合并写法见 :data:`_HISTORY_SINGLES`。
+    * **doc 20** 是 `clausewitz\\` 的 7 个子目录。键写成 ``gfx\\``（带反斜杠），
+      与文档单元格一致。
+    """
+    return [
+        KeyedTableSpec(
+            name="doc11 history 子目录",
+            header="| 子目录 | 文件数 | 作用 |",
+            cells=_history_overview_rows,
+        ),
+        _spec_dir_table(
+            "doc18 history 子目录",
+            "| 子目录 | 文件数 | **顶层包装块** | 主要效果 |",
+            config.GAME / "common" / "history",
+            _COL_FILES,
+        ),
+        KeyedTableSpec(
+            name="doc20 clausewitz 子目录",
+            header="| 子目录 | 文件数 | 内容 |",
+            cells=lambda: [
+                (f"{s.name}\\", {1: fmt_count(s.files)}) for s in rows_of(config.CLAUSEWITZ)
+            ],
+            append_new=False,
+        ),
+    ]
+
+
 __all__ = [
     "TreeRow",
     "doc06_table_specs",
+    "doc_misc_specs",
     "doc_table_specs",
     "fmt_count",
     "fmt_mb",

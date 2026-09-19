@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from . import (
+    ai,
     config,
     defines,
     doc04,
@@ -105,7 +106,27 @@ def targets() -> tuple[DocTarget, ...]:
             specs=tuple(s for s in usage.doc_table_specs() if "doc16" in s.name)
             + tuple(doc16.doc_table_specs()),
         ),
+        # 散落的单表文档：doc 03 / 10（AI）、doc 11 / 18 / 20（子目录文件数）。
+        # 它们各只有一两张表，为每篇建一个模块是过度设计 —— 按名字前缀分发给各自的目标。
+        *(
+            DocTarget(
+                path=config.DOCS / f"{doc}.md",
+                specs=tuple(s for s in (_misc_specs()) if s.name.startswith(f"doc{num} ")),
+            )
+            for doc, num in (
+                ("03-AI系统", "03"),
+                ("10-AI策略字段参考", "10"),
+                ("11-历史初始状态与AI策略分配", "11"),
+                ("18-history初始状态系统", "18"),
+                ("20-引擎共享层jomini与clausewitz", "20"),
+            )
+        ),
     )
+
+
+def _misc_specs() -> list[TableSpec | KeyedTableSpec]:
+    """那几篇「只有一两张表」的文档的规格合集（AI + 目录文件数）。"""
+    return [*ai.doc_table_specs(), *install_tree.doc_misc_specs()]
 
 
 def check_all() -> list[tuple[str, int, str, str]]:
