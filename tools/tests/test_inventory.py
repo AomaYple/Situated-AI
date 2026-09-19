@@ -116,14 +116,19 @@ STAT_HINT = (
 #: 那正是这条预算要拦住的事。
 UNGUARDED_TABLE_BUDGET = 0
 
-#: 散文数字（表格之外）的现状，同样只许减少。见模块 docstring 的口径。
+#: **无人看守的散文数字数量上限**（表格之外）。见模块 docstring 的口径。
 #:
-#: 进度 133（基线）→ 115 → **61**：末一轮把 74 个「口径唯一、可机械复算」的散文数字
-#: **登记成了 `v3 verify` 断言**（断言表 81 → 135 条），于是它们从「无人看守」
-#: 变成「每次核验」。剩下这 61 个不是待办，而是六类**不该被伪装成可核对的量**的数字，
-#: 分类与判断依据写在本文件顶部的模块 docstring 里。
-#: 要再往下调只有一个办法：给某一类想出**可复算的口径**，然后补断言。
-UNGUARDED_PROSE_BUDGET = 61
+#: 进度 133（基线）→ 115 → 61 → 57 → 49 → 34：前两轮把「口径唯一、可机械复算」的散文数字
+#: **登记成了 `v3 verify` 断言**（断言表 81 → 135 → 141 → 151 条），于是它们从「无人看守」
+#: 变成「每次核验」。**doc 05/06/08** 那一批又移出 15 个（jomini 未接管文件 15、
+#: 无 ``decimals`` 的键 31、``_factor`` 5、其它尾段 9、数字开头 3、带缩进 7、
+#: ``fonts.font`` 的 53 个 ``languages``、texticon 432、``.yml`` 去重名 1,855 …）。
+#:
+#: **0 就是终点**，但它的含义要说清：终点不是「散文里一个数字都没有」，而是
+#: **剩下每个没被断言看守的数字都在 :data:`PROSE_NOT_COMPUTED` 里写明了理由** ——
+#: 这个预算只数「既没有断言、也没有理由」的那些，而且**必须正好等于**实际个数
+#: （见 :func:`test_剩下的散文数字都写明了理由`：它是承诺，不是上限）。
+UNGUARDED_PROSE_BUDGET = 34
 
 
 def _tables(path: Path) -> list[tuple[int, str, list[list[str]]]]:
@@ -277,6 +282,115 @@ def _is_not_generated(doc: str, header: str) -> bool:
     return any(doc == d and header.startswith(h) for d, h in NOT_GENERATED)
 
 
+#: **刻意不生成、也不登记断言**的散文数字：``(文档名, 数字) → 理由``。
+#:
+#: 这是散文那面欠债余额的**终点形态** —— 余额降到只剩这些条目就算做完了。
+#: 与 :data:`NOT_GENERATED` 同一套标准：每一条都得能回答「为什么这个数字不该由工具算」，
+#: 「懒得做」不是理由。
+#:
+#: **键是数字本身，不是行号。** 行号会随文档增删漂移，而盘点本身也是按
+#: 「同一文档里还有哪些数字没人管」来数数的 —— 同一个数字在一份文档里出现几次
+#: 只算一笔账，所以登记一次就够。
+#:
+#: 三类理由（与模块 docstring 的六类对应，这里只挑真正的**不该算**）：
+#:
+#: * **另一台机器**：统计对象是本机订阅的 Workshop mod（doc 02 / 06 / 12 / 14 / README），
+#:   换台机器、退订一个 mod 就变 —— 与 :data:`NOT_GENERATED` 里那几张表同一个理由；
+#: * **原文如此**：引用官方 `.md` 里写的常量或清单（doc 04 的 4 条、doc 07 的 512 / 41 / 20），
+#:   是引用而不是测量；要核对只能核官方文件的 sha256（另有测试）；
+#: * **算例与勘误**：算术推演的结果、以及「本节曾写错成什么」（doc 04 / 05 / 07 / 17），
+#:   它们存在的意义就是记录推导过程与历史错误，**天生没有期望值**。
+PROSE_NOT_COMPUTED: dict[tuple[str, int], str] = {
+    ("02-Mod结构与加载.md", 42): "§5.1.1「共 42 个 `common\\` 子目录出现该机制」—— 与本篇那张"
+    "已列入 NOT_GENERATED 的表**同一份数据**（本机 23 个 Workshop mod 的 `INJECT:` 分布）",
+    ("02-Mod结构与加载.md", 23): "§6.1 启动器 `enabledMods` 的项数 —— 这是**本机订阅状态**，"
+    "不是仓库事实；换机器就变",
+    ("02-Mod结构与加载.md", 1): "§2.2「23 个 mod 里有 1 个连 `game_custom_data` 都没写」—— "
+    "本机 mod 侧计数（与上面那两条同一份数据）",
+    ("04-脚本系统.md", 15): "§script value 的**算例**：`add=5 → multiply=4 → max=10 → add=5` "
+    "推演出 15（不是 25）—— 算的是书写顺序，不是从游戏数据里数出来的量",
+    (
+        "04-脚本系统.md",
+        4,
+    ): '§decisions 的**勘误**：官方 `.md` 自称 "3 fundamental things" 却列了 4 条。'
+    "该数字数的是**官方文档的条目**（doc 07 那一类：原文如此），且它正是用来指出原文自相矛盾的地方 —— "
+    "生成它反而抹掉了这处勘误",
+    (
+        "05-defines与修饰符.md",
+        6125,
+    ): "§static_modifiers 的**勘误记录**：「本节先后写过 6125 与 6121，"
+    "两个都是错的」—— 这两个数的意义就是记录**曾经错过的值**，天生不可能有期望值"
+    "（正确值 6128 已有断言看守）",
+    ("05-defines与修饰符.md", 6121): "同上一条，同一次勘误里的第二个错误值",
+    (
+        "06-本地化与界面资源.md",
+        18,
+    ): "§A「mod 中与原版同名的文件共 18 个」—— 统计对象是本机 mod 目录",
+    ("07-官方文档索引.md", 15): "与 doc 04 的 15 同一个算例（`max=10` 在最后一次 `add` 之前生效）",
+    ("07-官方文档索引.md", 20): "§OOB 引用官方 `1836_oob.md` 里的国家清单 —— **原文如此**："
+    "该文档是史实编制清单，国家数由 Paradox 写定，不是游戏数据里的量",
+    ("07-官方文档索引.md", 41): "同上，官方文档里 `## ` 驻地/舰队标题的个数 —— 引用而非测量",
+    ("07-官方文档索引.md", 512): "§4.9.2 引用官方 `audio_settings.md`：`max_audio_channels` "
+    "未指定时默认 **512** —— **FMOD 的默认值，原文如此**，不在游戏数据里",
+    (
+        "12-真实mod解剖与改造面地图.md",
+        4,
+    ): "§5「本机最小的完整 mod，只有 4 个文件」—— 本机 workshop 内容",
+    (
+        "14-经济与生产系统.md",
+        0,
+    ): "§5.5「本机 23 个 mod 中 `common\\production_method_groups\\` 下有 0 个文件」"
+    "—— 本机 mod 侧统计（数字碰巧是 0 也一样会变）",
+    ("README.md", 4750): "索引页 §3「对 23 个 mod 共 4,750 个相对路径」—— 本机 mod 侧统计",
+}
+
+
+def _unguarded_prose() -> dict[str, set[int]]:
+    """``文档名 → 既没有断言看守的散文数字``（含已在 :data:`PROSE_NOT_COMPUTED` 登记理由的）。
+
+    为什么要返回**明细**而不只是个数：余额的终点形态不是「个数为 0」，
+    而是「剩下的每一个都答得出为什么」—— 所以既要能数个数，也要能核对
+    登记清单有没有指向不存在的数字（登记表烂掉必须报出来，见
+    :func:`test_剩下的散文数字都写明了理由`）。
+    """
+    from pdx import verify
+
+    bold = re.compile(r"\*\*([\d][\d,]*)\*\*")
+    cnt = re.compile(r"(共|合计|总计|有)\s*\*{0,2}([\d][\d,]*)\s*个")
+    claim_values: dict[str, set[int]] = {}
+    for c in verify.CLAIMS:
+        if isinstance(c.expected, int):
+            claim_values.setdefault(c.doc, set()).add(c.expected)
+
+    out: dict[str, set[int]] = {}
+    for md in sorted(config.DOCS.glob("*.md")):
+        if md.name in FULLY_GENERATED_DOCS:
+            # 整体由 `v3 index` 生成的文档（doc 13）连正文都是产物 ——
+            # 它里面的数字与表格那面的处理一致，不计入余额。
+            continue
+        prose = "\n".join(
+            ln
+            for ln in md.read_text(encoding="utf-8").splitlines()
+            if not ln.lstrip().startswith("|")
+        )
+        nums = {int(x.replace(",", "")) for x in bold.findall(prose)}
+        nums |= {int(x.replace(",", "")) for _k, x in cnt.findall(prose)}
+        left = nums - claim_values.get(md.name, set())
+        if left:
+            out[md.name] = left
+    return out
+
+
+def _count_unguarded_prose() -> int:
+    """**还没写明理由**的散文数字个数（在 :data:`PROSE_NOT_COMPUTED` 登记过的不算欠债）。"""
+    return sum(
+        1
+        for doc, nums in _unguarded_prose().items()
+        for n in nums
+        if (doc, n) not in PROSE_NOT_COMPUTED
+    )
+
+
 def _count_unguarded_tables() -> tuple[int, list[str]]:
     """``(未看守的表数, 前若干条示例)``。
 
@@ -302,34 +416,6 @@ def _count_unguarded_tables() -> tuple[int, list[str]]:
     return len(unguarded), unguarded
 
 
-def _count_unguarded_prose() -> int:
-    """散文里「不等于本文件任何断言期望值」的不同数字个数。"""
-    from pdx import verify
-
-    bold = re.compile(r"\*\*([\d][\d,]*)\*\*")
-    cnt = re.compile(r"(共|合计|总计|有)\s*\*{0,2}([\d][\d,]*)\s*个")
-    claim_values: dict[str, set[int]] = {}
-    for c in verify.CLAIMS:
-        if isinstance(c.expected, int):
-            claim_values.setdefault(c.doc, set()).add(c.expected)
-
-    total = 0
-    for md in sorted(config.DOCS.glob("*.md")):
-        if md.name in FULLY_GENERATED_DOCS:
-            # 整体由 `v3 index` 生成的文档（doc 13）连正文都是产物 ——
-            # 它里面的数字与表格那面的处理一致，不计入余额。
-            continue
-        prose = "\n".join(
-            ln
-            for ln in md.read_text(encoding="utf-8").splitlines()
-            if not ln.lstrip().startswith("|")
-        )
-        nums = {int(x.replace(",", "")) for x in bold.findall(prose)}
-        nums |= {int(x.replace(",", "")) for _k, x in cnt.findall(prose)}
-        total += len(nums - claim_values.get(md.name, set()))
-    return total
-
-
 def test_未看守的机械表不超过预算() -> None:
     """**欠债余额只许减少。**
 
@@ -346,11 +432,50 @@ def test_未看守的机械表不超过预算() -> None:
 
 
 def test_未看守的散文数字不超过预算() -> None:
-    """散文数字那面的同一个余额。"""
+    """散文数字那面的同一个余额：只数**既没断言、也没理由**的那些。"""
     n = _count_unguarded_prose()
+    detail = "\n  ".join(
+        f"{doc}: {sorted(nums)}"
+        for doc, nums in sorted(_unguarded_prose().items())
+        if any((doc, x) not in PROSE_NOT_COMPUTED for x in nums)
+    )
     assert n <= UNGUARDED_PROSE_BUDGET, (
         f"散文里无人看守的不同数字从 {UNGUARDED_PROSE_BUDGET} 涨到了 {n} —— "
-        f"新增数字时请补断言，或说明为什么允许它涨"
+        f"新增数字时请补断言，或在 PROSE_NOT_COMPUTED 里写明为什么它不该由工具算。\n"
+        f"明细：\n  {detail}"
+    )
+
+
+def test_剩下的散文数字都写明了理由() -> None:
+    """**终点判据**：剩下每个无人看守的散文数字都在登记表里。
+
+    两个方向都在查，但它们**不是同一时刻生效**的：
+
+    * **不能有数字没登记** —— 预算 > 0 时（一轮做到一半）要求「未登记个数
+      正好等于 :data:`UNGUARDED_PROSE_BUDGET`」：预算是**承诺**而不是上限，
+      写着 34 就该是 34。等它降到 0，这条自动变成「一个都不能少」。
+    * **登记表不能指向空处**（任何时刻都查）—— 登记了却已经不在文档里的数字，
+      说明表在腐烂（数字改对了、段落删了）。留着它，这份清单就从「理由清单」
+      退化成「免责清单」。
+    """
+    left = _unguarded_prose()
+    registered = {(doc, n) for doc, nums in left.items() for n in nums}
+    missing = sorted(registered - set(PROSE_NOT_COMPUTED))
+    detail = "\n  ".join(f"{d} 的 {n}" for d, n in missing)
+    assert len(missing) == UNGUARDED_PROSE_BUDGET, (
+        f"未写明理由的散文数字有 {len(missing)} 个，而预算是 {UNGUARDED_PROSE_BUDGET} —— "
+        f"做完一批就把它调下来（它同时是进度记录）。\n明细：\n  {detail}"
+    )
+    if UNGUARDED_PROSE_BUDGET == 0:
+        assert not missing, (
+            f"还有散文数字既没有断言、也没有理由（预算已降到 0，本该一个不剩）：\n  {detail}"
+            "\n要么补断言（能复算就复算），要么在 PROSE_NOT_COMPUTED 里写明理由。"
+        )
+    stale = sorted(set(PROSE_NOT_COMPUTED) - registered)
+    assert not stale, (
+        "PROSE_NOT_COMPUTED 里登记了文档中已不存在的数字（多半是数字改对了、段落删了）：\n  "
+        + "\n  ".join(f"{d} 的 {n} —— {PROSE_NOT_COMPUTED[(d, n)][:40]}…" for d, n in stale)
+        + "\n请删掉这些条目：登记表一旦可以指向空处，它就只是免责声明。"
     )
 
 
@@ -395,7 +520,12 @@ def test_盘点自身能跑出非零结果() -> None:
         f"排除清单有 {len(NOT_GENERATED)} 条，但只命中 {excluded} 张表 —— "
         f"表头改过？清单指向了不存在的表？"
     )
-    assert _count_unguarded_prose() > 0, "散文数字盘点返回 0 —— 同上"
+    prose_left = sum(len(v) for v in _unguarded_prose().values())
+    assert prose_left >= len(PROSE_NOT_COMPUTED), (
+        f"扫到的无人看守散文数字只有 {prose_left} 个，却登记了 {len(PROSE_NOT_COMPUTED)} 条理由 —— "
+        f"散文解析多半退化了（登记表那面由 test_剩下的散文数字都写明了理由 核对）"
+    )
+    assert prose_left > 0, "散文数字盘点返回 0 —— 同上"
     assert _stat_columns("| 目录 | 文件数 | 说明 |", [["a", "3", "x"], ["b", "4", "y"]]), (
         "列判定退化了"
     )

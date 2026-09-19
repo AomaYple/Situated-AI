@@ -29,13 +29,22 @@ from typing import TYPE_CHECKING
 from . import config, docs_mirror
 from .ai import semantic_counts, shape_counts, strategy_field_count
 from .cache import parse_cached
+from .defines import layer_diff
 from .doc04 import event_definition_count
 from .extract import extract_dir
+from .localization import texticon_counts, yml_unique_name_count
 from .model import Block
+from .modifiers import digit_leading_entries, indented_top_entries, modifier_type_suffixes
 from .mods import aggregate_prefixes, analyse_all, vanilla_prefix_count
 from .scan import count_files
 from .snapshot import SNAPSHOT_DIR, Snapshot
-from .usage import field_occurrences, field_value_counts, file_definition_counts
+from .usage import (
+    count_key_assignments,
+    field_missing,
+    field_occurrences,
+    field_value_counts,
+    file_definition_counts,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -96,6 +105,82 @@ def _modifier_suffix(target: str) -> int:
         pf = parse_cached(path)
         total += sum(1 for a in pf.top_assignments if not a.is_variable and a.key.endswith(suffix))
     return total
+
+
+def _modifier_suffix_other(target: str) -> int:
+    """尾段**不在**``target``（逗号分隔）里的修饰符键数 —— doc 05 那句「另有 9 个」。
+
+    「其它」是个否定口径，所以判据写在 target 里而不是函数名里：
+    将来若版本新增 ``_foo`` 一族，「已知尾段」清单要跟着改，
+    改的地方应当和数字在同一行（断言表），而不是散在实现里。
+    """
+    known = {s.strip() for s in target.split(",") if s.strip()}
+    return sum(n for suffix, n in modifier_type_suffixes().items() if suffix not in known)
+
+
+def _static_digit_entries(_target: str) -> int:
+    """``static_modifiers`` 里以**数字开头**的顶层键数（doc 05 的 3 个 ``1848_*``）。"""
+    return len(digit_leading_entries())
+
+
+def _static_indented_entries(_target: str) -> int:
+    """``static_modifiers`` 里**行首带缩进**的顶层键数（doc 05 的 7 个）。
+
+    缩进在 PDX 里没有语义 —— 所以「顶层」由解析器的花括号深度判定，
+    缩进必须回原文看那一行（两个口径缺一不可，见
+    :func:`pdx.modifiers.indented_top_entries`）。
+    """
+    return len(indented_top_entries())
+
+
+def _field_missing(target: str) -> int:
+    """``<目录>:<字段>`` —— 目录里**没写**该字段的顶层条目数。
+
+    doc 05 的「原版有 31 个键完全没写 ``decimals``、1479 个没写 ``percent``」。
+    """
+    dir_rel, _, field = target.partition(":")
+    return field_missing(f"common/{dir_rel}", field)
+
+
+def _file_nested_key_count(target: str) -> int:
+    """``<相对 game 的文件>:<键>`` —— 该键在文件里**任意深度**被赋值的次数。
+
+    doc 06 的「``fonts.font`` 里共 53 个 ``languages`` 块」：它们藏在
+    ``fontfiles`` 里面，不是顶层键，而缩进没有语义（行正则会多算 1 个 —— 注释里也有这个词）。
+    """
+    rel, _, key = target.partition(":")
+    path = config.GAME / rel
+    return count_key_assignments(path, key) if path.is_file() else 0
+
+
+def _texticon_definitions(_target: str) -> int:
+    """``gui/*.gui`` 里 ``^texticon = {`` 的行数（doc 06 的 432）。
+
+    口径见 :data:`pdx.localization.TEXTICON_RE`：文档自己写明了这条判据，
+    而同一份数据在「任意缩进」口径下是 436、解析器顶层块口径下是 437。
+    """
+    return sum(texticon_counts().values())
+
+
+def _loc_yml_unique_names(_target: str) -> int:
+    """``localization`` 下 ``.yml`` 按**文件名去重**后的个数（doc 06 的 1,855）。"""
+    return yml_unique_name_count()
+
+
+def _defines_untaken(_target: str) -> int:
+    """Jomini 层里**未被 game 层接管**的 defines 文件数（doc 05 的 15）。
+
+    不能拿 ``extract_all_defines`` 的 ``per_file`` 相减：那个只收
+    「含大写命名空间块」的文件，会漏掉整块被注释的
+    ``00_audio_persistent_objects.txt``（得 14）。见 :func:`pdx.defines.layer_diff`。
+    """
+    return len(layer_diff()[1])
+
+
+def _file_bytes(target: str) -> int:
+    """安装树里单个文件的字节数（doc 08 的 ``achievement_groups.txt`` = 4,277 B）。"""
+    path = _tree_path(target)
+    return path.stat().st_size if path.is_file() else 0
 
 
 def _dir_md_files(target: str) -> int:
@@ -496,6 +581,44 @@ def _tree_subdirs(target: str) -> int:
     return sum(1 for p in path.iterdir() if p.is_dir()) if path.is_dir() else 0
 
 
+def _tree_level1_txt(target: str) -> int:
+    """安装树里某个目录**直接**放着的 ``.txt`` 数（不递归）。
+
+    doc 04 §9.1 那句「``events\\`` 根目录 **130** 个 ``.txt``」就是它。
+    为什么不能拿 ``tree_files``（递归 328）代替：那两个数答的是不同问题，
+    「根目录少了、子目录多了」这种**搬家**会被总数掩盖 —— 而 doc 04 正是
+    按「根目录 / 12 个子目录」分层描述的。
+    """
+    path = _tree_path(target)
+    if not path.is_dir():
+        return 0
+    return sum(1 for p in path.iterdir() if p.is_file() and p.suffix == ".txt")
+
+
+def _tree_subdir_files(target: str) -> int:
+    """安装树里某个目录的**直接子目录**下的递归文件数（不含该目录自己的文件）。
+
+    与 :func:`_tree_level1_txt` 配对：doc 04 §9.1 的
+    ``130（根目录 .txt）+ 198（12 个子目录）= 328``（递归总数，另有断言看守）。
+    三个口径分别钉住，搬文件才藏不住。
+    """
+    path = _tree_path(target)
+    if not path.is_dir():
+        return 0
+    return sum(1 for sub in path.iterdir() if sub.is_dir() for p in sub.rglob("*") if p.is_file())
+
+
+def _dir_level1_files(target: str) -> int:
+    """``common/<target>`` 下**直接**放着的文件数（不递归）。
+
+    doc 08 §x 的「``common\\`` 另有 **1 个直接文件**：``achievement_groups.txt``」
+    —— ``dir_all_files`` 是递归口径（会把 136 个子目录里的几万个文件都算进来），
+    数不出「散在 common 根下的那几个」。
+    """
+    base = config.GAME / "common" / target
+    return sum(1 for p in base.iterdir() if p.is_file()) if base.is_dir() else 0
+
+
 def _tree_bytes(target: str) -> int:
     """安装树里某个目录的**递归字节数**。
 
@@ -552,6 +675,18 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "tree_files": _tree_files,
     "tree_dirs": _tree_dirs,
     "tree_subdirs": _tree_subdirs,
+    "tree_level1_txt": _tree_level1_txt,
+    "tree_subdir_files": _tree_subdir_files,
+    "dir_level1_files": _dir_level1_files,
+    "defines_untaken": _defines_untaken,
+    "modifier_suffix_other": _modifier_suffix_other,
+    "static_digit_entries": _static_digit_entries,
+    "static_indented_entries": _static_indented_entries,
+    "field_missing": _field_missing,
+    "file_nested_key_count": _file_nested_key_count,
+    "texticon_definitions": _texticon_definitions,
+    "loc_yml_unique_names": _loc_yml_unique_names,
+    "file_bytes": _file_bytes,
     "tree_bytes": _tree_bytes,
 }
 
@@ -1621,6 +1756,142 @@ CLAIMS: list[Claim] = [
         "game/gfx",
         19,
     ),
+    Claim(
+        "tree.common_level1_files",
+        "08-目录全量清单.md",
+        "common 根目录下的直接文件数（只有 achievement_groups.txt）",
+        "dir_level1_files",
+        "",
+        1,
+    ),
+    Claim(
+        "script.events_root_txt",
+        "04-脚本系统.md",
+        "events 根目录直接放着的 .txt 数",
+        "tree_level1_txt",
+        "game/events",
+        130,
+    ),
+    Claim(
+        "script.events_subdir_files",
+        "04-脚本系统.md",
+        "events 的 12 个子目录里的文件数（不含根目录自己那 130 个）",
+        "tree_subdir_files",
+        "game/events",
+        198,
+    ),
+    Claim(
+        "dip.plays_file_doc16",
+        "16-外交军事与地图.md",
+        "common/diplomatic_plays 的文件数（只有 00_diplomatic_plays.txt）",
+        "dir_txt_files",
+        "diplomatic_plays",
+        1,
+    ),
+    Claim(
+        "dip.subject_types_file_doc16",
+        "16-外交军事与地图.md",
+        "common/subject_types 的文件数（单一文件，所以只能整文件覆盖）",
+        "dir_txt_files",
+        "subject_types",
+        1,
+    ),
+    # ── docs 05/06/08 的散文数字（2026-09 那一轮补的看守）────────────────
+    Claim(
+        "def.jomini_untaken",
+        "05-defines与修饰符.md",
+        "jomini 层另有 15 个未被 game 层接管的 defines 文件（00_adaptive_music 等）",
+        "defines_untaken",
+        "",
+        15,
+        note="按**文件相对路径**做差，不按「解析出命名空间的文件」——后者会漏掉整块被注释的"
+        " 00_audio_persistent_objects.txt，得 14",
+    ),
+    Claim(
+        "def.suffix_factor",
+        "05-defines与修饰符.md",
+        "修饰符键以 _factor 结尾的个数",
+        "modifier_suffix",
+        "factor",
+        5,
+    ),
+    Claim(
+        "def.suffix_other",
+        "05-defines与修饰符.md",
+        "修饰符键里尾段不是 add/mult/bool/factor 的个数（strata、support 等各 1 个）",
+        "modifier_suffix_other",
+        "add,mult,bool,factor",
+        9,
+    ),
+    Claim(
+        "def.static_digit_leading",
+        "05-defines与修饰符.md",
+        "以数字开头的顶层修饰符键个数（1848_popular_radical、1848_reactionary_enactment）",
+        "static_digit_entries",
+        "",
+        3,
+        note="锚点只能用键名本身：写 `static_modifiers` 会撞上那一节里 5 / 6 等同量级数字",
+    ),
+    Claim(
+        "def.static_indented",
+        "05-defines与修饰符.md",
+        "行首带缩进的顶层修饰符键个数（含 modifier_great_salt_lake_mapped 等 7 个；"
+        "缩进在脚本语言里没有语义，只能回原文看那一行）",
+        "static_indented_entries",
+        "",
+        7,
+        note="锚点只能用键名本身：写 `static_modifiers` 会撞上那一节里 5 / 6 等同量级数字",
+    ),
+    Claim(
+        "def.modtypes_missing_decimals",
+        "05-defines与修饰符.md",
+        "原版修饰符键里完全没写 decimals 的个数",
+        "field_missing",
+        "modifier_type_definitions:decimals",
+        31,
+    ),
+    Claim(
+        "def.modtypes_missing_percent",
+        "05-defines与修饰符.md",
+        "原版修饰符键里完全没写 percent 的个数",
+        "field_missing",
+        "modifier_type_definitions:percent",
+        1479,
+    ),
+    Claim(
+        "loc.font_languages_doc06",
+        "06-本地化与界面资源.md",
+        "fonts.font 里 languages 块的个数（藏在 fontfiles 里，不是顶层键）",
+        "file_nested_key_count",
+        "fonts/fonts.font:languages",
+        53,
+    ),
+    Claim(
+        "loc.texticon_doc06",
+        "06-本地化与界面资源.md",
+        "两个 .gui 里 ^texticon = { 的行数（文档 §1.3 自己写明的判据）",
+        "texticon_definitions",
+        "",
+        432,
+        note="同一份数据还有 436（任意缩进）与 437（解析器顶层块）两个口径，"
+        "doc 06 §x 用的就是 436 —— 那处已在 KNOWN_METRIC_MIXUPS 登记",
+    ),
+    Claim(
+        "loc.yml_unique_names_doc06",
+        "06-本地化与界面资源.md",
+        "localization 下 .yml 按文件名去重后的个数（1,877 个文件、22 个重名）",
+        "loc_yml_unique_names",
+        "",
+        1855,
+    ),
+    Claim(
+        "tree.common_loose_bytes",
+        "08-目录全量清单.md",
+        "common 根目录那个直接文件 achievement_groups.txt 的字节数",
+        "file_bytes",
+        "game/common/achievement_groups.txt",
+        4277,
+    ),
 ]
 
 
@@ -1717,6 +1988,9 @@ KNOWN_METRIC_MIXUPS: dict[tuple[str, int], str] = {
     ("dip.treaty", 33): "33 是某字段被使用的条目数，不是目录条目总数",
     ("dip.wargoal", 40): "40 是 war_goal_types 的**文件数**，条目数为 39；实测两者确实不同",
     ("dip.wargoal", 41): "41 指的是官方 .md 里 settings 列表的条目数，非游戏数据条目数",
+    ("loc.texticon_doc06", 436): "436 是同一份 `gui/*.gui` 数据的**另一种口径**（任意缩进的 "
+    "`texticon = {`，而断言表的 432 是文档 §1.3 明写的行首顶格口径）；doc 06 §x 那张 "
+    "「GUI 定义用」的表用的正是 436 —— 两个数都对，不是漂移",
 }
 
 
@@ -1836,6 +2110,18 @@ def find_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
                 continue
             context = context_of(doc_name)
             tolerance = max(2, claim.expected // 100)
+            # 容差不能大于**量本身**：期望 1 时窗口是 ``0 < |v-1| <= 2``，
+            # 也就是 0 / 2 / 3 全算「量级接近」，于是任何带锚点、又恰好不含
+            # 「1」的行（``| 2 | `achievements` | 9 | 0 |``）都成了候选 ——
+            # 实测一条期望 1 的断言在 doc 08 报了 13 处、doc 16 报了 8 处，
+            # 全是无关的相邻计数。期望 2 同理（窗口会盖住 1 与 3）。
+            #
+            # 夹到 ``expected - 1`` 之后，期望 1 的容差是 0：漂移扫描对它
+            # **不再产出信号**（数值核验照跑，见 ``v3 verify``）。
+            # 这是有意的取舍：一个「只有 1 个文件」的断言，正文里写 2 也
+            # 未必是漂移（可能说的是另一件事），静态文本分不清 ——
+            # 与其报一堆噪声淹没真信号，不如让它只在数值那面看守。
+            tolerance = min(tolerance, max(0, claim.expected - 1))
             expected_str = f"{claim.expected:,}"
 
             for n, line in enumerate(lines, start=1):

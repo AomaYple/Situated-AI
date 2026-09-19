@@ -33,6 +33,7 @@ from .model import Assignment, Block, ParsedFile, Scalar
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Iterator
+    from pathlib import Path
 
 
 def _iter_keyed_blocks(node: Block | ParsedFile) -> Iterator[tuple[str, Block]]:
@@ -224,6 +225,44 @@ def field_value_counts(dir_rel: str, field: str, *, deep: bool = False) -> Count
                 elif isinstance(v, Scalar):
                     counter[v.unquoted.strip()] += 1
     return counter
+
+
+def field_missing(dir_rel: str, field: str) -> int:
+    """目录里**没写**某个字段的顶层条目数（doc 05 的「31 个键没写 ``decimals``」）。
+
+    与 :func:`field_value_counts` 是一对：那个数「写了什么值」，这个数「谁没写」。
+    不能拿「条目数 − 取值出现次数」相减 —— 后者数的是**出现次数**，
+    同一个键里写两次会重复计入（本目录没有这种键，但口径不牢）。
+    """
+    missing = 0
+    base = config.GAME / dir_rel
+    if not base.is_dir():
+        return 0
+    for path in sorted(p for p in base.rglob("*.txt") if p.is_file()):
+        pf = parse_cached(path)
+        for a in pf.top_assignments:
+            if a.is_variable or not isinstance(a.value, Block):
+                continue
+            if not any(f == field for f in entry_fields(a.value)):
+                missing += 1
+    return missing
+
+
+def count_key_assignments(path: Path, key: str) -> int:
+    """一个文件里某个键**在任意深度**被赋值的次数。
+
+    用途：doc 06 的「``fonts.font`` 里共 53 个 ``languages`` 块」—— 那些块不是
+    顶层键（在 ``fontfiles`` 里面），而缩进在 PDX 里没有语义，所以只能按 AST 递归数。
+
+    ⚠️ 不能改用行正则：``fonts.font`` 第 1 行的注释里就有一个 ``languages``，
+    纯文本计数会得到 **54**。
+    """
+    total = 0
+    pf = parse_cached(path)
+    total += sum(1 for a in pf.top_assignments if a.key == key)
+    for block in _walk_all_blocks(pf):
+        total += sum(1 for a in block.assignments() if a.key == key)
+    return total
 
 
 def value_census(dir_rel: str, values: Collection[str]) -> Counter[str]:

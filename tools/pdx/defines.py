@@ -213,6 +213,29 @@ def extract_all_defines() -> dict[str, DefinesReport]:
     }
 
 
+def layer_diff() -> tuple[list[str], list[str]]:
+    """``(被 game 层接管的, 未被接管的)`` —— Jomini 层 defines 文件的**相对路径**差集。
+
+    为什么不能用 :func:`extract_all_defines` 的 ``per_file`` 相减：那个只收
+    「含大写命名空间块」的文件，而 ``jomini/00_audio_persistent_objects.txt``
+    整个命名空间块被注释掉了、只剩一个小写键 —— 于是差集给出 **14**，
+    而实际未被接管的是 **15** 个（doc 05 §1.4 那句就是 15）。
+    文件清单本身是机械事实，就该按**文件**比，不按「解析出了什么」比。
+
+    口径按相对路径而不是 basename：两层各有一个 ``fog_of_war.txt``，
+    按名字比会把它算成「已接管」。
+    """
+
+    def rels(base: Path) -> set[str]:
+        if not base.is_dir():
+            return set()
+        return {e.path.relative_to(base).as_posix() for e in walk_files(base, suffix=".txt")}
+
+    game = rels(config.GAME / "common" / "defines")
+    jomini = rels(config.JOMINI / "common" / "defines")
+    return sorted(jomini & game), sorted(jomini - game)
+
+
 def overlay(vanilla: DefinesReport, mod_text: str) -> dict[str, object]:
     """预览一段 mod defines 文本会覆盖哪些原版参数。
 

@@ -270,8 +270,59 @@ def language_header_counts(root: Path | None = None) -> Counter[str]:
     return counter
 
 
-#: ``[...]`` 绑定（数据函数链）—— 供将来若要重新定义「函数频次」口径时使用。
-#: **本模块当前不用它生成表格**：doc 06 §1.5.5 那张表的口径复现不出来，
+def yml_unique_name_count(root: Path | None = None) -> int:
+    """``localization/`` 下 ``.yml`` **按文件名去重**后的个数（doc 06 的 1,855）。
+
+    与 1,877 是同一批文件的两种口径，**两个都对**：1,877 是递归文件数
+    （已有断言看守），1,855 是名字去重数 —— 差的 22 个是 11 种语言的
+    ``core_l_<lang>.yml`` 与 ``modifiers_l_<lang>.yml`` 各存在两份
+    （分别在 ``<lang>/`` 与 ``<lang>/frontend/``、``modifiers/``）。
+    本地化替换是**按文件名**生效的，所以「有多少个可被替换的名字」比文件数更贴近 mod 用法。
+    """
+    base = (root or config.GAME) / "localization"
+    if not base.is_dir():
+        return 0
+    return len({p.name for p in base.rglob("*.yml")})
+
+
+#: ``gui/*.gui`` 里 texticon 定义的判据 —— **行首顶格**的 ``texticon = {``。
+#:
+#: 文档（doc 06 §1.3）自己写明了这条判据，所以把它做成常量：
+#: 同一份数据在三种口径下分别是 **432**（本判据）/ 436（任意缩进）/
+#: 437（解析器的顶层块）——「哪个数才是文档说的那个」必须可查，
+#: 不能靠调用方各写一遍正则。
+TEXTICON_RE = re.compile(r"^texticon = \{")
+
+
+def texticon_counts(root: Path | None = None) -> Counter[str]:
+    """``gui/*.gui`` 里 texticon 定义数（文件名 → 行数）。
+
+    为什么**必须**走文本正则、不能走解析器：``gui/texticons.gui`` 里有
+    一个 ``}texticon = {``（前一个块的收尾与下一个顶层键写在同一行），
+    还有 4 个「缩进 2 格但确实是顶层」的块 —— 解析器给出 437，
+    与文档那句 432 对不上，而 437 反而不是文档要说明的东西（文档要说明的是
+    「texticon 是顶层键」这件事，用行首顶格的行来数最直白）。
+
+    doc 06 自己在两处写了两个口径的数（§1.3 的 432 与 §x 的 436），
+    两者都「对」——这里保留文档明写的那个，436 那处由断言表的
+    ``KNOWN_METRIC_MIXUPS`` 登记为已知口径差。
+    """
+    base = (root or config.GAME) / "gui"
+    counter: Counter[str] = Counter()
+    if not base.is_dir():
+        return counter
+    for path in sorted(base.glob("*.gui")):
+        try:
+            text = path.read_text(encoding="utf-8-sig", errors="replace")
+        except OSError:  # pragma: no cover - 权限/占用等极端情况
+            continue
+        hits = sum(1 for line in text.splitlines() if TEXTICON_RE.match(line))
+        if hits:
+            counter[path.name] = hits
+    return counter
+
+
+#: ``[...]`` 绑定（数据函数链）—— 供将来若要重新定义「函数频次」口径时使用。#: **本模块当前不用它生成表格**：doc 06 §1.5.5 那张表的口径复现不出来，
 #: 见 :data:`NOT_GENERATED` 的理由。
 _BRACKET_RE = re.compile(r"\[([^\[\]]*)\]")
 

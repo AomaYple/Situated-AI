@@ -20,11 +20,15 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from typing import TYPE_CHECKING
 
 from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec, TableSpec
-from .model import Block
+from .model import Assignment, Block
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 #: doc 05 §6.5 的表头
 STATIC_TABLE = "| File | Entries | Max entries in one modifier |"
@@ -115,6 +119,77 @@ def modifier_type_prefixes() -> Counter[str]:
             if not a.is_variable:
                 counter[a.key.split("_", 1)[0] + "_"] += 1
     return counter
+
+
+def modifier_type_suffixes() -> Counter[str]:
+    r"""`modifier_type_definitions\` 里键名**尾段**（最后一个下划线之后）→ 键数。
+
+    与 :func:`modifier_type_prefixes` 成对：doc 05 §3.x 那段「后缀分布」
+    （``_add`` 1635 / ``_mult`` 626 / ``_bool`` 89 / ``_factor`` 5，另有 **9** 个键
+    以别的词结尾）就是这一张表的两半 —— 只是那 9 个一直没有看守。
+
+    尾段而不是「以 ``_x`` 结尾」：两种切法在本目录实测完全等价
+    （每个键都含下划线），但 ``rpartition`` 对没有下划线的键也不会崩 ——
+    它会返回键名本身，正好落进「其它尾段」那一类。
+    """
+    counter: Counter[str] = Counter()
+    base = config.GAME / "common" / "modifier_type_definitions"
+    for path in sorted(base.rglob("*.txt")):
+        pf = parse_cached(path)
+        for a in pf.top_assignments:
+            if not a.is_variable:
+                counter[a.key.rpartition("_")[2]] += 1
+    return counter
+
+
+def _static_top_blocks() -> list[tuple[Path, Assignment]]:
+    """`static_modifiers` 里全部**顶层块**赋值 ``(文件, 赋值)``。"""
+    base = config.GAME / "common" / "static_modifiers"
+    return [
+        (path, a)
+        for path in sorted(base.rglob("*.txt"))
+        for a in parse_cached(path).top_assignments
+        if not a.is_variable and isinstance(a.value, Block)
+    ]
+
+
+def digit_leading_entries() -> list[tuple[str, int, str]]:
+    """`static_modifiers` 里**以数字开头**的顶层键 ``(键名, 行号, 文件名)``。
+
+    doc 05 §6.x 的「有 3 个静态修饰符以数字开头」（``1848_popular_radical`` …）。
+    键名本身就是证据，所以返回明细、个数由调用方 ``len`` —— 顺带让
+    「数字开头的键名合法」这件事在代码里留下实例，而不是只留一个 3。
+
+    为什么值得单列：PDX 脚本里键名允许以数字开头，而多数 mod 工具会按
+    标识符规则把它判成非法 —— 这 3 个就是反例（全在
+    ``content_1_modifiers.txt``）。
+    """
+    return [
+        (str(a.key), int(a.line), path.name)
+        for path, a in _static_top_blocks()
+        if str(a.key)[:1].isdigit()
+    ]
+
+
+def indented_top_entries() -> list[tuple[str, int, str]]:
+    """`static_modifiers` 里**行首带缩进**的顶层键 ``(键名, 行号, 文件名)``。
+
+    doc 05 §6.2 的「有 7 个顶层键带缩进」—— 缩进在 PDX 里**没有语义**，
+    所以「顶层」只能由解析器的花括号深度判定，缩进则必须回原文看第 ``line`` 行。
+
+    ⚠️ 两个口径缺一不可：只看缩进会把条目内的 ``icon = …`` 也算进来
+    （实测 2 处，在 ``00_ip2_03_modifiers.txt``），只看深度则一个都找不到。
+    """
+    out: list[tuple[str, int, str]] = []
+    cache: dict[Path, list[str]] = {}
+    for path, a in _static_top_blocks():
+        if path not in cache:
+            cache[path] = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = cache[path]
+        line = int(a.line)
+        if 1 <= line <= len(lines) and lines[line - 1][:1] in (" ", "\t"):
+            out.append((str(a.key), line, path.name))
+    return out
 
 
 def prefix_rows_keyed() -> list[tuple[str, dict[int, str]]]:
