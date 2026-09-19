@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING
 from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec
-from .extract import entry_fields, extract_dir
+from .extract import entry_fields
 from .model import Assignment, Block, ParsedFile, Scalar
 
 if TYPE_CHECKING:
@@ -431,21 +431,6 @@ def ai_script_values_key_stats() -> dict[str, int]:
     }
 
 
-def stance_type_count() -> int:
-    """`common/ai_strategic_region_stance_types` 的**顶层块数**（实测 4）。
-
-    doc 03 §5 的「共 4 个立场」(`stance_none` / `_conquer_region` /
-    `_protect_region` / `_colonize_region`)。口径与
-    :func:`pdx.verify._dir_blocks` 完全相同（:func:`pdx.extract.extract_dir`
-    的 ``unique_entries``：顶层块数，``@变量`` 不计）——
-    文档那句与 `v3 verify` 的 `dir_blocks` 断言是同一个量，不该有两套实现。
-
-    这个目录只有 2 个文件（1 个 `.txt` + 1 个 `.md`），所以「4 个立场」不能按
-    文件数理解：立场全在同一个 `.txt` 里。
-    """
-    return extract_dir(config.GAME / "common/ai_strategic_region_stance_types").unique_entries
-
-
 def ai_script_values_referenced() -> int:
     """`ai_script_values.txt` 的顶层键里，有多少个被 `00_default_strategy.txt` 引用。
 
@@ -767,7 +752,6 @@ __all__ = [
     "file_key_name_count_by_line",
     "file_line_count",
     "nested_field_occurrences",
-    "stance_type_count",
     "value_census",
     "word_file_counts",
     "word_stats",

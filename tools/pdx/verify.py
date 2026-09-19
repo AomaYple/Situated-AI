@@ -59,7 +59,6 @@ from .doc17 import (
     files_without_defs,
     flag_comment_brace_lines,
     gene_block_names,
-    gene_definition_count,
     loc_suffix_count,
     overview_key_count,
     overview_txt_count,
@@ -87,7 +86,6 @@ from .usage import (
     field_value_counts,
     file_definition_counts,
     file_line_count,
-    stance_type_count,
 )
 
 if TYPE_CHECKING:
@@ -422,11 +420,6 @@ def _doc17_gene_blocks(_target: str) -> int:
     return len(gene_block_names())
 
 
-def _doc17_gene_definitions(_target: str) -> int:
-    """``common/genes`` 的顶层块**出现次数**（doc 17 的 9 处定义）。"""
-    return gene_definition_count()
-
-
 def _doc17_block_prefix(target: str) -> int:
     """``<文件>|<块>|<前缀>`` —— 块内以该前缀开头的**去重**键名数。
 
@@ -478,11 +471,6 @@ def _within_field_count(target: str) -> int:
     """
     dir_rel, _, block = target.partition(":")
     return len(field_occurrences(f"common/{dir_rel}", within=block or None))
-
-
-def _stance_types(_target: str) -> int:
-    """``common/ai_strategic_region_stance_types`` 的立场数（doc 03 §5 的 4）。"""
-    return stance_type_count()
 
 
 def _stance_total(_target: str) -> int:
@@ -1027,14 +1015,12 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "doc17_overview": _doc17_overview,
     "doc17_loc_suffix": _doc17_loc_suffix,
     "doc17_gene_blocks": _doc17_gene_blocks,
-    "doc17_gene_definitions": _doc17_gene_definitions,
     "doc17_block_prefix": _doc17_block_prefix,
     "doc17_block_items": _doc17_block_items,
     "doc17_field_occurrence": _doc17_field_occurrence,
     "doc17_files_without_defs": _doc17_files_without_defs,
     "doc17_dna_per_file": _doc17_dna_per_file,
     "within_field_count": _within_field_count,
-    "stance_types": _stance_types,
     "stance_total": _stance_total,
     "flag_comment_braces": _flag_comment_braces,
     "fallback_yes": _fallback_yes,
@@ -2411,9 +2397,10 @@ CLAIMS: list[Claim] = [
         "ai.stance_types_doc03",
         "03-AI系统.md",
         "AI 战场立场数（stance_colonize_region、stance_protect_region 等 4 个）",
-        "stance_types",
-        "",
+        "dir_entries",
+        "ai_strategic_region_stance_types",
         4,
+        note="立场全在同一个 .txt 里，所以不能按文件数理解；口径就是 extract_dir 的顶层条目数",
     ),
     Claim(
         "script.ai_script_values_lines_doc04",
@@ -2603,8 +2590,8 @@ CLAIMS: list[Claim] = [
         "chr.gene_definitions",
         "17-角色科技与呈现.md",
         "common/genes 里顶层块的出现次数（9 处定义）",
-        "doc17_gene_definitions",
-        "",
+        "dir_blocks",
+        "genes",
         9,
     ),
     Claim(

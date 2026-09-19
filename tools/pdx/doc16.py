@@ -51,7 +51,6 @@ from .usage import (
     all_field_occurrences,
     field_occurrences,
     field_value_counts,
-    file_definition_counts,
     word_file_counts,
     word_stats,
 )
@@ -138,7 +137,20 @@ def dir_file_counts(dir_rel: str) -> dict[str, int]:
 
     目录不存在时**抛异常**而不是返回 0：这个函数是 §0 那 33 行数字的来源，
     静默返回 0 会让整行数字在文档里留在原处、只在总数上少几个。
+
+    ⚠️ 别拿「定义数字典的 ``len()``」当递归 ``.txt`` 数：:func:`pdx.usage.file_definition_counts`
+    的键是**文件名**，只有在目录里没有重名文件时才与文件数相等。本目录实测两者
+    都是 48，但那不是惯例 —— 要文件数就用这里。
     """
+    base = config.GAME / dir_rel
+    if not base.is_dir():
+        raise FileNotFoundError(f"目录不存在：{base}")
+    files = [p for p in base.rglob("*") if p.is_file()]
+    return {
+        "txt": sum(1 for p in files if p.suffix == ".txt"),
+        "md": sum(1 for p in files if p.suffix == ".md"),
+        "files": len(files),
+    }
     base = config.GAME / dir_rel
     if not base.is_dir():
         raise FileNotFoundError(f"目录不存在：{base}")
@@ -562,7 +574,7 @@ def state_region_word_counts() -> Counter[str]:
     ``traits`` —— 而这两个数**分开**正是那条结论成立的证据。
 
     ⚠️ 517 是「**出现次数**」，不是「有多少个州有特性」：实测只有 **514** 个顶层州块
-    写了 ``traits``（见 :func:`state_regions_with_traits`），多出来的 3 处是
+    写了 ``traits``（按州块数一遍即可复算），多出来的 3 处是
     ``STATE_ZANZIBAR`` / ``STATE_TOMSK`` / ``STATE_TUVA`` 各写了**两个** ``traits`` 块。
     """
     base = config.GAME / _STATE_REGION_DIR
@@ -575,27 +587,6 @@ def state_region_word_counts() -> Counter[str]:
         for word, pattern in patterns.items():
             counter[word] += len(pattern.findall(text))
     return counter
-
-
-def state_regions_with_traits() -> int:
-    """``map_data/state_regions/`` 里**写了 `traits` 块的州区域个数**（实测 514）。
-
-    与 :func:`state_region_word_counts` 的 517 是同一份数据的两种口径，
-    差在「一个州写了两个 ``traits`` 块」这件事上（实测 3 个州如此）。
-    这个函数数的是**州块**，所以它才是「有多少个州有州特性」。
-    """
-    base = config.GAME / _STATE_REGION_DIR
-    if not base.is_dir():
-        raise FileNotFoundError(f"目录不存在：{base}")
-    total = 0
-    for path in sorted(p for p in base.rglob("*.txt") if p.is_file()):
-        pf = parse_cached(path)
-        for a in pf.top_assignments:
-            if a.is_variable or not isinstance(a.value, Block):
-                continue
-            if any(sub.key == "traits" for sub in a.value.assignments()):
-                total += 1
-    return total
 
 
 #: §4.2.1 那张「17 个 state_regions 文件的 traits 使用量」的表头。
@@ -640,20 +631,6 @@ def state_region_rows() -> list[str]:
             cells += ["", "", "", ""]
         rows.append("| " + " | ".join(cells) + " |")
     return rows
-
-
-def action_file_definition_counts() -> dict[str, int]:
-    """``common/diplomatic_actions/`` 的**逐文件顶层定义数**（``@变量`` 不计）。
-
-    直接转发 :func:`pdx.usage.file_definition_counts`，口径与理由都在那里。
-    实测 48 个键、``43_subjects_handle_states.txt`` = **3**；该目录递归
-    ``.txt`` 数也是 **48**（另有 1 个官方 `.md`，见 :func:`dir_file_counts`）。
-
-    ⚠️ 字典键是**文件名**（不是相对路径）—— ``len(...)`` 等于「递归 `.txt` 数」
-    **只有在目录里没有重名文件时才成立**。本目录实测两者都是 48，但别把这条
-    当成惯例：要那个数请用 ``dir_file_counts("common/diplomatic_actions")["txt"]``。
-    """
-    return file_definition_counts(_DIPLOMATIC_DIR)
 
 
 def _spec(
@@ -730,7 +707,7 @@ __all__ = [
     "DOC16_DIRS",
     "DOC16_GROUPS",
     "NOT_GENERATED",
-    "action_file_definition_counts",
+    "STATE_REGION_TABLE",
     "dir_file_counts",
     "doc_table_specs",
     "group_dirs_without_md",
@@ -739,8 +716,8 @@ __all__ = [
     "md_block_keys",
     "md_bullet_values",
     "pact_undocumented_keys",
+    "state_region_rows",
     "state_region_word_counts",
-    "state_regions_with_traits",
     "strategic_region_field_counts",
     "subject_field_rows",
     "travel_network_rows",

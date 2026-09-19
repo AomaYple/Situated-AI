@@ -625,14 +625,6 @@ def gene_block_names() -> list[str]:
     return sorted(extract_dir(config.GAME / "common/genes").entries)
 
 
-def gene_definition_count() -> int:
-    """`common/genes` 顶层块的**出现次数**（`dir_blocks` 口径）—— **9**。
-
-    与 :func:`gene_block_names` 是同一份数据的两种口径（9 处 vs 5 个名字）。
-    """
-    return sum(file_definition_counts("common/genes", blocks_only=True).values())
-
-
 def flag_comment_brace_lines() -> int:
     """`00_flag_definitions.txt` 里**注释段含花括号**的行数 —— **21**。
 
@@ -874,7 +866,6 @@ __all__ = [
     "field_occurrence",
     "files_without_defs",
     "gene_block_names",
-    "gene_definition_count",
     "loc_suffix_count",
     "loc_suffix_keys",
     "loc_suffix_rows",
