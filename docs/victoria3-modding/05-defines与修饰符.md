@@ -712,110 +712,110 @@ Jomini 内容根另有 15 个未被 game 层接管的 defines 文件（`00_adapt
 
 | Leading prefix | Param count |
 |---|---|
-| `DIPLO_*` | 209 |
+| `DIPLO_*` | 210 |
 | `PRODUCTION_*` | 89 |
 | `MONEY_*` | 45 |
 | `AI_*` | 34 |
 | `GOAL_*` | 33 |
-| `FLEET_*` | 30 |
 | `AUTONOMOUS_*` | 30 |
+| `FLEET_*` | 30 |
 | `UNIFICATION_*` | 30 |
-| `MOBILIZATION_*` | 24 |
 | `CHANGE_*` | 24 |
+| `MOBILIZATION_*` | 24 |
 | `GOVERNMENT_*` | 23 |
 | `POWER_*` | 17 |
 | `NAVAL_*` | 16 |
 | `OWNER_*` | 15 |
-| `DIPLOMATIC_*` | 13 |
 | `COMPANY_*` | 13 |
+| `DIPLOMATIC_*` | 13 |
 | `FRONT_*` | 12 |
-| `RAID_*` | 11 |
-| `SHIP_*` | 11 |
 | `CONSTRUCTION_*` | 11 |
 | `MIN_*` | 11 |
-| `PROTECT_*` | 10 |
-| `TRADE_*` | 10 |
+| `RAID_*` | 11 |
+| `SHIP_*` | 11 |
 | `BLOCKADE_*` | 10 |
 | `DEFEND_*` | 10 |
+| `PROTECT_*` | 10 |
+| `TRADE_*` | 10 |
 | `TREATIES_*` | 10 |
 | `HQ_*` | 9 |
 | `INVADE_*` | 9 |
 | `PIRACY_*` | 9 |
-| `SUPPLY_*` | 8 |
 | `LAND_*` | 8 |
-| `NATIONALIZATION_*` | 8 |
 | `MILITARY_*` | 8 |
-| `WAGE_*` | 8 |
+| `NATIONALIZATION_*` | 8 |
 | `NUM_*` | 8 |
+| `SUPPLY_*` | 8 |
+| `WAGE_*` | 8 |
 | `CONSUMPTION_*` | 7 |
-| `WAR_*` | 7 |
-| `REFORM_*` | 7 |
 | `RECRUITABLE_*` | 7 |
-| `CONSCRIPTION_*` | 6 |
-| `HUNT_*` | 6 |
-| `DISBAND_*` | 6 |
+| `REFORM_*` | 7 |
+| `WAR_*` | 7 |
 | `COLONY_*` | 6 |
+| `CONSCRIPTION_*` | 6 |
+| `DISBAND_*` | 6 |
+| `HUNT_*` | 6 |
+| `SELL_*` | 6 |
 | `TREATY_*` | 6 |
-| `SUBSIDIZE_*` | 5 |
+| `IDEOLOGICAL_*` | 5 |
 | `IMPOSE_*` | 5 |
 | `PORT_*` | 5 |
 | `RAISE_*` | 5 |
+| `SUBSIDIZE_*` | 5 |
 | `VIOLATE_*` | 5 |
-| `IDEOLOGICAL_*` | 5 |
-| `INTERCEPT_*` | 4 |
-| `START_*` | 4 |
-| `REGIME_*` | 4 |
 | `ESCORT_*` | 4 |
-| `MAX_*` | 4 |
-| `SELL_*` | 4 |
 | `INSTITUTION_*` | 4 |
-| `STRAIT_*` | 3 |
+| `INTERCEPT_*` | 4 |
+| `MAX_*` | 4 |
+| `REGIME_*` | 4 |
+| `START_*` | 4 |
+| `COLONIZATION_*` | 3 |
 | `INFLUENCE_*` | 3 |
 | `LOWER_*` | 3 |
 | `REJECTED_*` | 3 |
-| `COLONIZATION_*` | 3 |
-| `PRIVATEER_*` | 2 |
-| `DECLARE_*` | 2 |
-| `INCORPORATE_*` | 2 |
-| `COUNTRY_*` | 2 |
-| `UNUSED_*` | 2 |
+| `STRAIT_*` | 3 |
+| `STRATEGIC_*` | 3 |
 | `ATTITUDE_*` | 2 |
 | `BASELINE_*` | 2 |
+| `COMMANDER_*` | 2 |
+| `COUNTRY_*` | 2 |
+| `DECLARE_*` | 2 |
+| `HIGH_*` | 2 |
+| `INCORPORATE_*` | 2 |
+| `LOW_*` | 2 |
+| `PRIVATEER_*` | 2 |
+| `SEA_*` | 2 |
 | `TECH_*` | 2 |
 | `TRANSPORT_*` | 2 |
-| `STRATEGIC_*` | 2 |
-| `SEA_*` | 2 |
-| `COMMANDER_*` | 2 |
-| `LOW_*` | 2 |
-| `HIGH_*` | 2 |
-| `EXILE_*` | 1 |
-| `COMFORTABLE_*` | 1 |
-| `EXPEL_*` | 1 |
-| `PROJECT_*` | 1 |
-| `SENT_*` | 1 |
-| `LEAVE_*` | 1 |
-| `ENEMY_*` | 1 |
-| `TRANSIT_*` | 1 |
-| `DESIRED_*` | 1 |
-| `RETIRE_*` | 1 |
-| `CONTAINMENT_*` | 1 |
-| `DEFAULT_*` | 1 |
-| `MARINE_*` | 1 |
-| `TICKS_*` | 1 |
-| `STRATEGY_*` | 1 |
-| `TAX_*` | 1 |
-| `OBLIGATION_*` | 1 |
+| `UNUSED_*` | 2 |
+| `AUTHORITY_*` | 1 |
 | `BASE_*` | 1 |
 | `BUILDING_*` | 1 |
-| `SUPPRESSION_*` | 1 |
+| `COMFORTABLE_*` | 1 |
+| `CONTAINMENT_*` | 1 |
+| `DEFAULT_*` | 1 |
+| `DESIRED_*` | 1 |
 | `DID_*` | 1 |
+| `ENEMY_*` | 1 |
+| `EXILE_*` | 1 |
+| `EXPEL_*` | 1 |
 | `FRIENDLY_*` | 1 |
-| `SECRET_*` | 1 |
-| `UNITS_*` | 1 |
-| `OBSOLETE_*` | 1 |
+| `LEAVE_*` | 1 |
+| `MARINE_*` | 1 |
 | `NODE_*` | 1 |
+| `OBLIGATION_*` | 1 |
+| `OBSOLETE_*` | 1 |
+| `PROJECT_*` | 1 |
 | `PROMOTION_*` | 1 |
-| `AUTHORITY_*` | 1 |
+| `RETIRE_*` | 1 |
+| `SECRET_*` | 1 |
+| `SENT_*` | 1 |
+| `STRATEGY_*` | 1 |
+| `SUPPRESSION_*` | 1 |
+| `TAX_*` | 1 |
+| `TICKS_*` | 1 |
+| `TRANSIT_*` | 1 |
+| `UNITS_*` | 1 |
 
 ---
 
@@ -4834,7 +4834,8 @@ add_modifier = { # academics polstr
 
 ### 6.5 文件与条目统计（68 个文件）
 
-「最大条目数」指该文件内单个静态修饰符所含的修饰符键数量（不含 `icon`）。
+「最大条目数」指该文件内单个静态修饰符所含的**全部键**数量，**含 `icon`**（即块内键数最多的那个块的键数）。
+> ⚠️ 这句原先写的是「不含 `icon`」，与列里的数据**矛盾** —— 按「含」算 68/68 行相符，按「不含」只相符 1/68。已按数据如实改写；该表现在由 `v3 tables` 生成，说明与数字不会再各自漂移。
 
 | File | Entries | Max entries in one modifier |
 |---|---|---|
@@ -4871,13 +4872,13 @@ add_modifier = { # academics polstr
 | `08_religion_standard_of_living.txt` | 34 | 2 |
 | `09_movement_modifiers.txt` | 1 | 2 |
 | `10_culture_cultural_acceptance_modifiers.txt` | 634 | 2 |
+| `11_culture_fervor_target_modifiers.txt` | 634 | 2 |
+| `12_diplomatic_modifiers.txt` | 1 | 2 |
+| `99_global_je_test.txt` | 3 | 3 |
 | `101_modifiers.txt` | 52 | 3 |
 | `104_modifiers.txt` | 173 | 4 |
 | `105_modifiers.txt` | 162 | 4 |
 | `106_modifiers.txt` | 47 | 9 |
-| `11_culture_fervor_target_modifiers.txt` | 634 | 2 |
-| `12_diplomatic_modifiers.txt` | 1 | 2 |
-| `99_global_je_test.txt` | 3 | 3 |
 | `agitators_1_modifiers.txt` | 83 | 4 |
 | `agitators_2_modifiers.txt` | 191 | 6 |
 | `agitators_3_modifiers.txt` | 29 | 6 |
@@ -4889,12 +4890,12 @@ add_modifier = { # academics polstr
 | `brazil_2_modifiers.txt` | 74 | 7 |
 | `brazil_3_modifiers.txt` | 2 | 4 |
 | `bulgarian_modifiers.txt` | 9 | 7 |
-| `content_1_modifiers.txt` | 275 | 10 |
+| `content_1_modifiers.txt` | 278 | 10 |
 | `content_2_modifiers.txt` | 145 | 5 |
-| `content_204_modifiers.txt` | 119 | 6 |
 | `content_3_modifiers.txt` | 117 | 7 |
-| `content_304_modifiers.txt` | 129 | 9 |
 | `content_4_modifiers.txt` | 144 | 7 |
+| `content_204_modifiers.txt` | 119 | 6 |
+| `content_304_modifiers.txt` | 129 | 9 |
 | `cuban_modifiers.txt` | 17 | 10 |
 | `japan_single_fire_events_modifiers.txt` | 27 | 5 |
 | `libya_modifiers.txt` | 1 | 6 |

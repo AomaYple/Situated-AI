@@ -45,12 +45,21 @@ def test_五张表的表头都在文档里() -> None:
     text = DOC.read_text(encoding="utf-8")
     missing = [h for h in defines.DOC_TABLES if h not in text]
     assert not missing, f"doc 05 里找不到这些表头，生成器会直接报错：{missing}"
+    # 参数前缀分组表曾是一张「号称脚本生成、实际无人重跑」的手抄表（漂了 3 处），
+    # 现在也是生成表 —— 表头必须在文档里找得到。
+    assert defines.PREFIX_TABLE in text, (
+        f"doc 05 里找不到 {defines.PREFIX_TABLE!r} —— 前缀分组表被移走了？"
+    )
 
 
 def test_生成器不写盘(文档副本: Path) -> None:
     before = 文档副本.read_text(encoding="utf-8")
-    replaced = doc_tables.patch_doc(文档副本, defines.doc_table_specs(), write=False)
-    assert len(replaced) == len(defines.DOC_TABLES)
+    specs = defines.doc_table_specs()
+    replaced = doc_tables.patch_doc(文档副本, specs, write=False)
+    # 断言「每条 spec 都改到了」，而不是跟 DOC_TABLES 比长度 ——
+    # 后者只数得起 defines 那 5 张，前缀分组表不在其中（它在同一模块里生成，
+    # 但不属于 DOC_TABLES 那组逐文件/逐命名空间的统计）。
+    assert len(replaced) == len(specs)
     assert 文档副本.read_text(encoding="utf-8") == before, "write=False 却改了文件"
 
 

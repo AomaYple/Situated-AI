@@ -47,6 +47,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `docgen.py` | 生成表的**唯一登记处**：跑哪些文档、哪些表、怎么核对与写回 |
 | `game_root.py` | 游戏根级文件、`paths.settings` 路径映射、校验和目标；产出 doc 19 的生成表 |
 | `install_tree.py` | 安装树的逐目录统计（文件数 / 目录数 / 体积 / 扩展名分布）与版本指纹；产出 doc 08 的生成表 |
+| `modifiers.py` | `static_modifiers\` 的逐文件统计（条目数 / 单块最大键数）；产出 doc 05 §6.5 的生成表 |
 | `docs_mirror.py` | 官方 `.md` 的**清单与指纹**（原文不入库，见下「官方文档清单」） |
 | `localization.py` | 本地化专用提取（`.yml` 是行式格式，**不是** PDX 花括号语法） |
 | `tabular.py` | 表格类数据（`.csv`），分隔符靠 `csv.Sniffer` 嗅探 |
@@ -65,7 +66,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 analyze` | `run_analyze.py` | 全量分析并落盘：`--no-mods` `--no-cross` `--no-write` `--quiet` `--profile` |
 | `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
-| `v3 tables` | （新增） | 重算文档里**由工具生成**的 31 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
+| `v3 tables` | （新增） | 重算文档里**由工具生成**的 33 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
 | `v3 verify` | `run_verify.py` | 核对文档里的数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用**入库的离线真值**：精简快照 + 官方文档清单） |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
@@ -130,7 +131,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_analyze.py` / `test_golden.py` | 产物结构与指纹回归（产物被改坏要立刻失败） |
 | `test_snapshot.py` / `test_verify.py` | 快照确定性、精简快照的结构等价性、断言注册表口径 |
 | `test_defines_tables.py` | doc 05 那 5 张统计表的**生成链**：表头还在、生成是幂等的、文档现值 == 生成结果 |
-| `test_doc_tables.py` | **通用**的生成表机制：合成文档测整表替换/按键合并/行数变长/同表头多张/合并行/绝不静默删行/未匹配行会出声；登记表完整性；31 张表与文档一致 |
+| `test_doc_tables.py` | **通用**的生成表机制：合成文档测整表替换/按键合并/行数变长/同表头多张/合并行/绝不静默删行/未匹配行会出声；登记表完整性；33 张表与文档一致 |
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
 | `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
@@ -141,6 +142,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_defines.py` | defines 提取：参数形态、命名空间合并、覆盖预览 |
 | `test_docs_consistency.py` | 文档数字与断言表的一致性（防文档过期）；**修订哈希与本体比对**、**逐行核对文档里声明的文件字节数**（都是数字漂移扫描抓不到的角度） |
 | `test_doc_overview.py` | doc 16/17 两张 §0 总览表（62 行的机械量）：逐行核对 `.txt` / 字节 / 键数，并断言头条声明与表格合计同源。口径按文档自己声明的（字节只算 `.txt`；键数按顶层**块**的出现次数，不是去重后的键名数） |
+| `test_inventory.py` | **全仓机械数字的欠债余额**：统计「含统计量列、无人看守」的表与「无人看守的散文数字」，**只许减少**；附元测试保证盘点真的在数东西（不是恒为 0） |
 | `test_quote_audit.py` | 重算 README 授权节那组「正文逐字引用官方原文」的实测数并比对 —— 它第一次运行就抓到 README 的分母算错（只统计了有命中的 10 篇，于是占比被抬高） |
 | `test_docs_mirror.py` | 官方 `.md` 清单的时效性：篇目集合、**逐篇 sha256**、镜像无多余文件；以及「跑不了的比对不该弄脏退出码」这条门禁语义 |
 | `test_localization.py` | `.yml` 本地化：语言覆盖、键去重、BOM 处理 |

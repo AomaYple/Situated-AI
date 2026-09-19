@@ -354,21 +354,54 @@ def doc_table_rows() -> dict[str, list[str]]:
     return rows
 
 
+#: doc 05 §3.2 的表头：``NAI`` 参数按命名前缀分组。
+#:
+#: 这张表**曾经号称「脚本直接落盘的」而实际无人重跑** —— doc 05 §1 里写着
+#: 「由脚本机械生成的表头保持英文（如 ``Namespace block``、``Leading prefix``）」，
+#: 但产出它的 PowerShell 脚本早已退休，表还留在文档里。实测漂了 3 处
+#: （``DIPLO_*`` 209→210、``SELL_*`` 4→6、``STRATEGIC_*`` 2→3，合计 1,013→1,017）。
+#: 现在接进 :mod:`pdx.docgen`，那句声明才重新成立。
+PREFIX_TABLE = "| Leading prefix | Param count |"
+
+#: 无下划线的参数归到这一组（实测 NAI 里没有这种，但留着以防原版改名）
+NO_PREFIX = "（无前缀）"
+
+
+def prefix_rows() -> list[str]:
+    """``NAI`` 命名空间的参数按「第一个下划线之前」聚类的计数。
+
+    口径：``AI_FOO`` → ``AI_*``；无下划线的归 :data:`NO_PREFIX`。
+    排序：计数降序，同计数按前缀名升序 —— **确定性**排序。
+    文档原先的并列顺序是随机的（``FLEET_*`` 30 排在 ``AUTONOMOUS_*`` 30 之前），
+    照抄那个顺序会让每次重算都产生无意义的 diff。
+    """
+    groups: Counter[str] = Counter()
+    for ns in extract_defines().get("NAI"):
+        for p in ns.params:
+            groups[f"{p.name.split('_', 1)[0]}_*" if "_" in p.name else NO_PREFIX] += 1
+    return [
+        f"| `{name}` | {n:,} |"
+        for name, n in sorted(groups.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
+
 def doc_table_specs() -> list[TableSpec]:
-    """doc 05 那 5 张表的登记表（供 ``v3 tables`` 统一驱动）。
+    """doc 05 的表的登记表（供 ``v3 tables`` 统一驱动）。
 
     生成逻辑仍在本模块（它拥有 defines 的提取口径），但**替换算法**
-    交给 :mod:`pdx.doc_tables` —— 同一套机制也用在 doc 19 上。
+    交给 :mod:`pdx.doc_tables` —— 同一套机制也用在 doc 08 / doc 19 上。
+
+    包含 :data:`PREFIX_TABLE` —— 它此前是一张「无人重跑」的手抄表。
     """
     rows = doc_table_rows()
-    specs: list[TableSpec] = []
-    for n, header in enumerate(DOC_TABLES, start=1):
-        # 用默认参数把 header 绑进闭包 —— 直接在 lambda 里捕获会拿到循环末值
-        specs.append(
-            TableSpec(
-                name=f"doc05 表{n}",
-                header=header,
-                rows=lambda h=header: list(rows[h]),  # type: ignore[misc]
-            )
+    specs: list[TableSpec] = [
+        TableSpec(
+            name=f"doc05 表{n}",
+            header=header,
+            # 用默认参数把 header 绑进闭包 —— 直接在 lambda 里捕获会拿到循环末值
+            rows=lambda h=header: list(rows[h]),  # type: ignore[misc]
         )
+        for n, header in enumerate(DOC_TABLES, start=1)
+    ]
+    specs.append(TableSpec(name="doc05 参数前缀分组", header=PREFIX_TABLE, rows=prefix_rows))
     return specs

@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from . import config, defines, game_root, install_tree
+from . import config, defines, game_root, install_tree, modifiers
 from .doc_tables import KeyedTableSpec, TableSpec, check_doc, patch_doc
 
 if TYPE_CHECKING:
@@ -42,7 +42,10 @@ def targets() -> tuple[DocTarget, ...]:
     return (
         DocTarget(
             path=config.DOCS / "05-defines与修饰符.md",
-            specs=tuple(defines.doc_table_specs()),
+            # 两份来源拼在一起：defines 的表在前，modifiers 的表在后。
+            # 合成一个 DocTarget 而不是登记两份同路径的 target —— 后者会让
+            # `write_all` 对同一份文档写两遍（第一遍改过行号，第二遍得从头再找表）。
+            specs=tuple(defines.doc_table_specs()) + tuple(modifiers.doc_table_specs()),
         ),
         DocTarget(
             path=config.DOCS / "19-game根级文件与工具链.md",
