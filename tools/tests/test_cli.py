@@ -333,16 +333,21 @@ def test_from_snapshot_只有时不存在的_id_返回用法错误() -> None:
 def test_from_snapshot_没有快照时仍核验清单并提示补快照(tmp_path, monkeypatch) -> None:
     """没有快照**不再整体失败** —— 官方文档清单照样能核验。
 
-    旧行为是一见没有快照就退出码 2，于是那 3 条不需要游戏的断言也跟着丢。
+    旧行为是一见没有快照就退出码 2，于是那几条不需要游戏的断言也跟着丢。
     现在改成：照常核验清单那几条，并在输出里提示怎么补一份快照。
     仍然不能静默通过 —— 提示必须在。
+
+    条数**不写死**：它等于「走官方文档清单那几条断言」的个数
+    （``_MANIFEST_GETTERS`` 里那几种类型），加一条 md 断言就该跟着涨 ——
+    写死 3 的结果是每加一条相关的断言都要来改一次测试。
     """
     monkeypatch.setattr(verify, "SNAPSHOT_DIR", tmp_path)
     r = _invoke("verify", "--from-snapshot")
     assert r.exit_code == 0, r.output
     assert "snapshot create --compact" in r.output, f"提示里应给出重建命令：{r.output}"
     assert "env.md_total" in r.output, f"清单那几条应当照常核验：{r.output}"
-    assert "通过 3 / 3" in r.output, f"清单恰好覆盖 3 条：{r.output}"
+    n = sum(1 for c in verify.CLAIMS if c.kind in verify._MANIFEST_GETTERS)
+    assert f"通过 {n} / {n}" in r.output, f"清单恰好覆盖 {n} 条：{r.output}"
 
 
 def test_from_snapshot_快照缺域时大声失败(tmp_path, monkeypatch) -> None:

@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING
 from . import config, docs_mirror
 from .ai import semantic_counts, shape_counts, strategy_field_count
 from .cache import parse_cached
-from .defines import layer_diff
+from .defines import kind_counts, layer_diff
 from .doc04 import event_definition_count
 from .doc14 import (
     buy_package_entry_count,
@@ -37,7 +37,12 @@ from .doc14 import (
     hyphen_key_dir_counts,
     wealth_1_goods_categories,
 )
-from .doc15 import ideology_field_split, lobby_appeasement_usable, religion_heritage_values
+from .doc15 import (
+    ideology_field_split,
+    lobby_appeasement_usable,
+    religion_heritage_values,
+    stance_total,
+)
 from .doc16 import (
     group_dirs_without_md,
     group_file_counts,
@@ -49,8 +54,10 @@ from .doc16 import (
 from .doc17 import (
     block_item_count,
     block_prefix_count,
+    fallback_yes_count,
     field_occurrence,
     files_without_defs,
+    flag_comment_brace_lines,
     gene_block_names,
     gene_definition_count,
     loc_suffix_count,
@@ -59,8 +66,8 @@ from .doc17 import (
 )
 from .doc18 import country_effect_file_count
 from .extract import extract_dir
-from .game_root import checksum_targets_grouped
-from .localization import texticon_counts, yml_unique_name_count
+from .game_root import checksum_targets_grouped, paths_settings
+from .localization import gui_sprite_lines, texticon_counts, yml_unique_name_count
 from .model import Block
 from .modifiers import digit_leading_entries, indented_top_entries, modifier_type_suffixes
 from .mods import aggregate_prefixes, analyse_all, vanilla_prefix_count
@@ -73,6 +80,7 @@ from .usage import (
     field_occurrences,
     field_value_counts,
     file_definition_counts,
+    file_line_count,
     stance_type_count,
 )
 
@@ -211,6 +219,43 @@ def _file_bytes(target: str) -> int:
     """安装树里单个文件的字节数（doc 08 的 ``achievement_groups.txt`` = 4,277 B）。"""
     path = _tree_path(target)
     return path.stat().st_size if path.is_file() else 0
+
+
+def _file_line_count(target: str) -> int:
+    """安装树里某个文件的**行数**（``splitlines`` 口径）。
+
+    doc 05 的「``00_ai.txt`` 共 1311 行」、doc 06 的「``modifiers_l_english.yml``
+    全长只有 3 行」、doc 19 的「``paths_checksummed.settings`` 只有 3 行」、
+    以及 doc 04 与索引页引用的「``checksum_manifest.txt`` 共 22 行」——
+    这类句子原先**一条都没人看守**：散文盘点只认「共 N 个」与纯粗体，
+    写成「共 N 行」的从口径里漏掉了（doc 04 §4.6 的 682 就是这么活下来的）。
+    """
+    path = _tree_path(target)
+    return file_line_count(path) if path.is_file() else 0
+
+
+def _defines_kind_total(target: str) -> int:
+    """defines 全部命名空间里某一类参数的合计（``target`` = 标量 / 内联列表 / 嵌套块）。
+
+    doc 05 §1.2 那句「这类内联列表参数全库共 N 条」原先没人看守，
+    而 §0.3 的合计行是生成表 —— 正文与表格因此可以各自漂移。
+    """
+    idx = {"标量": 0, "内联列表": 1, "嵌套块": 2}[target]
+    total = 0
+    for f in (config.GAME / "common" / "defines").rglob("*.txt"):
+        for a in parse_cached(f).namespace_blocks():
+            assert isinstance(a.value, Block)
+            total += _block_param_kinds(a.value)[idx]
+    return total
+
+
+def _paths_settings_mappings(_target: str) -> int:
+    """``paths.settings`` 的映射条目数（doc 19 的 39 条）。
+
+    正文那句「共 39 条映射，分 3 组」里的 39 就是它；三张分表由 ``v3 tables``
+    生成，但**合计**原先只在正文里，没有看守（早期工具里写的是 32）。
+    """
+    return len(paths_settings())
 
 
 def _file_definitions(target: str) -> int:
@@ -434,6 +479,26 @@ def _stance_types(_target: str) -> int:
     return stance_type_count()
 
 
+def _stance_total(_target: str) -> int:
+    """`ideologies` 五档态度的总出现次数（doc 15 的「合计 3,753 处」）。"""
+    return stance_total()
+
+
+def _flag_comment_braces(_target: str) -> int:
+    """`00_flag_definitions.txt` 里注释段含花括号的行数（doc 17 的 21）。"""
+    return flag_comment_brace_lines()
+
+
+def _fallback_yes(_target: str) -> int:
+    """`customizable_localization` 里 ``fallback = yes`` 的处数（doc 17 的 16）。"""
+    return fallback_yes_count()
+
+
+def _gui_sprite_lines(_target: str) -> int:
+    """``gui/`` 下以 ``spriteType =`` 开头的行数（doc 06 的 552）。"""
+    return gui_sprite_lines()
+
+
 def _dir_md_files(target: str) -> int:
     """**游戏内容根**下某个目录的 ``.md`` 数（target 相对 ``game/``，空串表示 game 本身）。
 
@@ -592,26 +657,12 @@ def _defines_namespaces(_target: str) -> int:
 def _block_param_kinds(blk: Block) -> tuple[int, int, int]:
     """命名空间块内的 ``(标量, 内联列表, 嵌套块)`` 三项计数。
 
-    口径与 doc 05 §0.3 一一对应：
-    * 标量 —— 深度 1 的 ``KEY = value``
-    * 内联列表 —— 深度 1 的 ``KEY = { a b c }``，**同一行闭合**
-    * 嵌套块 —— 深度 1 的 ``KEY = {``，**跨多行**
-
-    区分后两者靠「块内的裸标量是否都落在同一行」：跨行的键值对一定是
-    嵌套块，而只含裸标量且只占一行的才是内联列表。注释在词法阶段已剥离，
-    所以不会把注释里的花括号算进来（那是早期 PowerShell 版最大的坑）。
+    口径**只有一份实现**：:func:`pdx.defines.kind_counts`（界线是「块里有没有赋值」）。
+    这里此前自己写了一套「同一行闭合才算内联列表」的判法，与 doc 05 §0.3 的
+    口径补记不一致 —— 两种判法在 1.14.3 差 3 个参数（172 vs 175），
+    而合计 3488 相同，所以那个分歧一直没被发现（分项没人钉）。
     """
-    scal = inline = nested = 0
-    for a in blk.assignments():
-        if not isinstance(a.value, Block):
-            scal += 1
-            continue
-        scalars = list(a.value.scalars())
-        if list(a.value.assignments()) or len({s.line for s in scalars}) > 1:
-            nested += 1
-        else:
-            inline += 1
-    return scal, inline, nested
+    return kind_counts(blk)
 
 
 def _defines_param_total(_target: str) -> int:
@@ -964,6 +1015,13 @@ _CHECKS: dict[str, Callable[[str], object]] = {
     "doc17_dna_per_file": _doc17_dna_per_file,
     "within_field_count": _within_field_count,
     "stance_types": _stance_types,
+    "stance_total": _stance_total,
+    "flag_comment_braces": _flag_comment_braces,
+    "fallback_yes": _fallback_yes,
+    "gui_sprite_lines": _gui_sprite_lines,
+    "file_line_count": _file_line_count,
+    "defines_kind_total": _defines_kind_total,
+    "paths_settings_mappings": _paths_settings_mappings,
     "tree_bytes": _tree_bytes,
 }
 
@@ -2654,6 +2712,152 @@ CLAIMS: list[Claim] = [
         "common/technology/technologies/30_society.txt",
         64,
     ),
+    # ── 「共 N 行 / N 处 / N 条」那一批（2026-09 放宽盘点口径时补的）────────
+    #
+    # 这十条原先谁都不管：散文盘点只认「共 N 个」与纯粗体，写成「共 N 行」的
+    # 从口径里漏了出去（doc 04 §4.6 的「共 682 行」就是这么活了整整一个版本）。
+    Claim(
+        "def.ai_file_lines",
+        "05-defines与修饰符.md",
+        "00_ai.txt 的行数（唯一一个顶层命名空间的 defines 文件）",
+        "file_line_count",
+        "game/common/defines/00_ai.txt",
+        1311,
+    ),
+    Claim(
+        "def.inline_list_total",
+        "05-defines与修饰符.md",
+        "defines 全库的内联列表参数合计（同一行闭合的 KEY = { a b c }）",
+        "defines_kind_total",
+        "内联列表",
+        175,
+        note="文档原写 168（1.14.2 的值），而 §0.3 的合计行一直写着 175 —— 正文与表格各漂各的",
+    ),
+    Claim(
+        "env.checksum_lines",
+        "04-脚本系统.md",
+        "checksum_manifest.txt 的行数（完整内容就是那 6 个校验对象）",
+        "file_line_count",
+        "game/checksum_manifest.txt",
+        22,
+    ),
+    Claim(
+        "env.checksum_lines_readme",
+        "README.md",
+        "checksum_manifest.txt 的行数（索引页用它说明「校验和只覆盖 5 个目录」）",
+        "file_line_count",
+        "game/checksum_manifest.txt",
+        22,
+    ),
+    Claim(
+        "env.paths_checksummed_lines",
+        "19-game根级文件与工具链.md",
+        "paths_checksummed.settings 的行数（全文只有 3 行）",
+        "file_line_count",
+        "game/paths_checksummed.settings",
+        3,
+    ),
+    Claim(
+        "env.paths_settings_mappings",
+        "19-game根级文件与工具链.md",
+        "paths.settings 的映射条目数（分 3 组）",
+        "paths_settings_mappings",
+        "",
+        39,
+        note="三张分组表由 v3 tables 生成，但「39 条」这个合计原先只在正文里（早期工具写的是 32）",
+    ),
+    Claim(
+        "loc.modifiers_yml_lines",
+        "06-本地化与界面资源.md",
+        "modifiers_l_english.yml 的行数（原版也是只写要改的键）",
+        "file_line_count",
+        "game/localization/modifiers/modifiers_l_english.yml",
+        3,
+    ),
+    Claim(
+        "loc.modifiers_v2_yml_lines",
+        "06-本地化与界面资源.md",
+        "modifiers_v2_l_english.yml 的行数",
+        "file_line_count",
+        "game/localization/modifiers/modifiers_v2_l_english.yml",
+        12,
+    ),
+    Claim(
+        "loc.gui_sprite_lines_doc06",
+        "06-本地化与界面资源.md",
+        "gui 下以 spriteType = 开头的行数（文档原写 553）",
+        "gui_sprite_lines",
+        "",
+        552,
+        note="口径必须是「行首」：spriteType 作为子串出现 640 次，多出来的写在行中间或注释里",
+    ),
+    Claim(
+        "eco.company_charter_types",
+        "14-经济与生产系统.md",
+        "company_charter_types 的定义数（单文件，只有 5 个）",
+        "dir_entries",
+        "company_charter_types",
+        5,
+    ),
+    Claim(
+        "eco.dynamic_company_names",
+        "14-经济与生产系统.md",
+        "dynamic_company_names 的定义数（单文件，10 个）",
+        "dir_entries",
+        "dynamic_company_names",
+        10,
+    ),
+    Claim(
+        "pol.md_total_doc15",
+        "15-政治人口与社会.md",
+        "官方 .md 的篇数（game + jomini + clausewitz 三个内容根）",
+        "md_files",
+        "",
+        92,
+    ),
+    Claim(
+        "pol.stance_total",
+        "15-政治人口与社会.md",
+        "ideologies 五档态度的总出现次数（1.14.2 时是 3,745）",
+        "stance_total",
+        "",
+        3753,
+    ),
+    Claim(
+        "dip.combat_unit_types_file",
+        "16-外交军事与地图.md",
+        "00_land_combat_unit_types.txt 单文件里的对象数",
+        "file_definitions",
+        "common/combat_unit_types:00_land_combat_unit_types.txt",
+        19,
+        note="同一句还提到本机 mod 的「共 19 处 INJECT」—— 那是机器相关的数，与这里同值纯属巧合",
+    ),
+    Claim(
+        "chr.genes_color_lines",
+        "17-角色科技与呈现.md",
+        "00_genes_color.txt 的行数（文档原写 19）",
+        "file_line_count",
+        "game/common/genes/00_genes_color.txt",
+        17,
+    ),
+    Claim(
+        "chr.flag_comment_braces",
+        "17-角色科技与呈现.md",
+        "00_flag_definitions.txt 里注释段含花括号的行数（不剥注释会让顶层键从 433 掉到 91）",
+        "flag_comment_braces",
+        "",
+        21,
+        note="只数 `{` 会得 13：有些被注释掉的块只留下收尾的 `}`",
+    ),
+    Claim(
+        "chr.fallback_yes_lines",
+        "17-角色科技与呈现.md",
+        "customizable_localization 里 fallback = yes 的处数（全目录）",
+        "fallback_yes",
+        "",
+        16,
+        note="文档原先把 16 挂在两个文件名后面；那两个文件里各只有 1 处，16 是全目录的数",
+    ),
 ]
 
 
@@ -3019,6 +3223,23 @@ TEXT_SCAN_EXEMPT: dict[str, str] = {
     "锚点 'includes' 在这份文档里与列表编号纠缠；同一句的 1,407 已有独立断言",
     "chr.template_genes": "锚点 'ethnicity_template' 与同节的近似值 `~95` 相撞 → 误报 1 处；"
     "97 那条（chr.morph_genes）在同一句里逐字写着",
+    # ── 「共 N 行 / 条 / 处」那一批（2026-09 放宽盘点口径时补的）───────────
+    #
+    # 这批断言的锚点**只能是文件名或目录名**，而期望值都很小（3 / 5 / 12 / 16 / 21 …），
+    # 容差 ±2 于是命中同一节里成片的相邻计数（表格里的行号、相邻文件的定义数）。
+    # 它们的证据在**文件本身**（行数、处数）而不是正文里：数值核验已经逐条跑过，
+    # 文本扫描在这里只剩下噪声 —— 实测这 11 条一共报 68 处，没有一处是真漂移。
+    "env.checksum_lines": "锚点 'checksum_manifest' 与 doc 04 满篇的脚本行数相撞 → 误报 9 处",
+    "loc.modifiers_yml_lines": "锚点 'modifiers_l_english' 与 §0 表的相邻计数相撞 → 误报 14 处",
+    "loc.modifiers_v2_yml_lines": "同上（期望 12）→ 误报 7 处",
+    "chr.genes_color_lines": "锚点 '00_genes_color' 与 §6.3 的逐文件行数相撞 → 误报 11 处",
+    "chr.flag_comment_braces": "锚点 '00_flag_definitions' 与 §0 的 91 / 433 / 21 三个数字纠缠 → 误报 11 处",
+    "chr.fallback_yes_lines": "锚点 '99_br_custom_loc' 与同节的 18 / 16 相撞 → 误报 2 处",
+    "dip.combat_unit_types_file": "锚点 '00_land_combat_unit_types' 与 §x 的 19 / 21 相撞 → 误报 6 处",
+    "eco.company_charter_types": "锚点 'company_charter_types' 与 §x 的 5 / 4 / 6 相撞 → 误报 4 处",
+    "eco.dynamic_company_names": "锚点 'dynamic_company_names' 与同节的 10 / 12 相撞 → 误报 2 处",
+    "def.ai_file_lines": "锚点 '00_ai' 与「第 2 行至第 1310 行」相撞 → 误报 1 处",
+    "loc.gui_sprite_lines_doc06": "锚点 'spriteType' 与同节的 553 / 550 相撞 → 误报 1 处",
 }
 
 

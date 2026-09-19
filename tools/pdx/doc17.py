@@ -633,6 +633,43 @@ def gene_definition_count() -> int:
     return sum(file_definition_counts("common/genes", blocks_only=True).values())
 
 
+def flag_comment_brace_lines() -> int:
+    """`00_flag_definitions.txt` 里**注释段含花括号**的行数 —— **21**。
+
+    它是「必须先剥离注释再数花括号深度」那件事的**证据**：不剥注释会让该目录的
+    顶层键从 433 掉到 91（本篇第一个被推翻的数字）。口径 = 「行内第一个 ``#``
+    之后的部分含 ``{`` 或 ``}``」——只数 ``{`` 会得 13，因为有些被注释掉的块
+    只留下收尾的 ``}``（实测踩过）。
+    """
+    path = config.GAME / "common" / "flag_definitions" / "00_flag_definitions.txt"
+    if not path.is_file():
+        return 0
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    return sum(
+        1
+        for line in text.splitlines()
+        if "#" in line and ("{" in line.split("#", 1)[1] or "}" in line.split("#", 1)[1])
+    )
+
+
+def fallback_yes_count() -> int:
+    """`customizable_localization` 里 ``fallback = yes`` 的处数 —— 全目录 **16**。
+
+    纯文本口径：这些赋值写在 ``text`` 块**内部**，比字段口径更深，所以
+    :func:`pdx.usage.field_value_counts` 数不到（返回空）。
+    文档原先把 16 挂在两个文件名后面，读起来像「这两个文件里共 16 处」——
+    实测那两个文件各只有 1 处，16 是**全目录**的数。
+    """
+    base = config.GAME / "common" / "customizable_localization"
+    if not base.is_dir():
+        return 0
+    return sum(
+        p.read_text(encoding="utf-8-sig", errors="replace").count("fallback = yes")
+        for p in sorted(base.rglob("*.txt"))
+        if p.is_file()
+    )
+
+
 def block_prefix_count(path_rel: str, block: str, prefix: str) -> int:
     """一个文件里、某个块内**以 ``prefix`` 开头的去重键名**个数。
 

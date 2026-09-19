@@ -285,6 +285,26 @@ def yml_unique_name_count(root: Path | None = None) -> int:
     return len({p.name for p in base.rglob("*.yml")})
 
 
+def gui_sprite_lines(root: Path | None = None) -> int:
+    """``gui/`` 下**以** ``spriteType =`` **开头**的行数（doc 06 的 552）。
+
+    口径必须是「行首」：``spriteType`` 作为**子串**在 ``gui/`` 里出现 640 次，
+    多出来的那些写在行中间或注释里（引用、赋值示例）。文档原写 553，
+    1.14.3 实测 552。
+    """
+    base = (root or config.GAME) / "gui"
+    if not base.is_dir():
+        return 0
+    total = 0
+    for path in sorted(p for p in base.rglob("*") if p.is_file()):
+        try:
+            text = path.read_text(encoding="utf-8-sig", errors="replace")
+        except OSError:  # pragma: no cover - 权限/占用等极端情况
+            continue
+        total += sum(1 for line in text.splitlines() if line.lstrip().startswith("spriteType ="))
+    return total
+
+
 #: ``gui/*.gui`` 里 texticon 定义的判据 —— **行首顶格**的 ``texticon = {``。
 #:
 #: 文档（doc 06 §1.3）自己写明了这条判据，所以把它做成常量：

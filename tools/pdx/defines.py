@@ -166,6 +166,21 @@ def _classify(block: Block) -> list[Param]:
     return params
 
 
+def kind_counts(block: Block) -> tuple[int, int, int]:
+    """块内 ``(标量, 内联列表, 嵌套块)`` 三项计数 —— **这条口径的唯一实现**。
+
+    内联列表与嵌套块的界线是「块里**有没有赋值**」，**不是**「跨不跨行」——
+    这条口径写在 doc 05 §0.3 的「口径补记」里。此前 ``pdx.verify`` 那侧另有一套
+    「同一行闭合才算内联列表」的判法，两者在 1.14.3 差 **3** 个参数
+    （172 vs 175）：跨多行但只含裸值的块，一边算内联、一边算嵌套。
+    合计（3488）两种判法一致，所以这个分歧**不会自己暴露** —— 只有把分项钉住才会。
+
+    公开出来供其他模块复用：口径只能有一份实现，否则两个数会永远差一点点。
+    """
+    counts = Counter(p.kind for p in _classify(block))
+    return counts[SCALAR], counts[INLINE_LIST], counts[NESTED_BLOCK]
+
+
 def extract_defines(root: Path | None = None) -> DefinesReport:
     """提取一个 defines 目录下的全部命名空间与参数。
 

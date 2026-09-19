@@ -163,7 +163,7 @@ GOVERNMENT_MONEY_SPENDING_ENABLED = yes   # If this is set to no, the AI for gov
 HIGHLIGHT_COLOR = { 1 1 1 0.5 }
 HEAT_MAP_COLOR_FROM = { 0.9  0.9  0.1  0.3 }
 ```
-来源：`GAME\common\defines\00_graphics.txt`（`NMapMode` 块）。全库共 168 条。【提取】
+来源：`GAME\common\defines\00_graphics.txt`（`NMapMode` 块）。这类内联列表参数全库共 **175** 条（1.14.2 时是 168；口径见 §0.3）。【提取】
 
 **4）嵌套块**（跨多行）
 

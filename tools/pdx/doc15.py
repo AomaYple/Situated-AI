@@ -236,9 +236,18 @@ def lobby_appeasement_usable() -> int:
     )
 
 
+def stance_total() -> int:
+    """`ideologies` 里五档态度的**总出现次数**（doc 15 的「合计 3,753 处」）。
+
+    与 §4 那张逐档表同一份 counter（:func:`_stance_rows` 就是它的逐行展开），
+    所以这个合计与那 5 行永远自洽 —— 文档里那个数原先没人看守，
+    而 1.14.2 → 1.14.3 就动过（3,745 → 3,753）。
+    """
+    return sum(value_census("common/ideologies", _STANCES).values())
+
+
 def religion_heritage_values() -> list[str]:
     """`common/religions` 里 ``heritage`` 用到的**去重取值**（实测 7 个，已排序）。
-
     返回的是文件里的**原样取值**，带 `heritage_` 前缀：
     `heritage_christian` / `_dharmic` / `_indigenous` / `_islamic` / `_jewish` /
     `_materialist` / `_taoic`。文档正文把它写成不带前缀的
