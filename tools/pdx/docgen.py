@@ -23,6 +23,7 @@ from . import (
     defines,
     doc04,
     doc15,
+    doc16,
     doc17,
     game_root,
     install_tree,
@@ -76,10 +77,6 @@ def targets() -> tuple[DocTarget, ...]:
             specs=tuple(s for s in usage.doc_table_specs() if "doc14" in s.name),
         ),
         DocTarget(
-            path=config.DOCS / "16-外交军事与地图.md",
-            specs=tuple(s for s in usage.doc_table_specs() if "doc16" in s.name),
-        ),
-        DocTarget(
             # doc 17 整族（25 张表里接了 24 张）—— 口径有四种，故单独一个模块。
             path=config.DOCS / "17-角色科技与呈现.md",
             specs=tuple(doc17.doc_table_specs()),
@@ -100,6 +97,13 @@ def targets() -> tuple[DocTarget, ...]:
             # 四块共 15 张表。含 6 张字段表 + 2 张命名形态 + JE 分组两栏。
             path=config.DOCS / "04-脚本系统.md",
             specs=tuple(doc04.doc_table_specs()),
+        ),
+        DocTarget(
+            # doc 16 剩下的八张「统计单位不是字段」的表（文本级 / 任意深度）。
+            # 前面那 23 张在 usage.py 的 doc16 规格里。
+            path=config.DOCS / "16-外交军事与地图.md",
+            specs=tuple(s for s in usage.doc_table_specs() if "doc16" in s.name)
+            + tuple(doc16.doc_table_specs()),
         ),
     )
 

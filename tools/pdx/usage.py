@@ -29,12 +29,10 @@ from . import config
 from .cache import parse_cached
 from .doc_tables import KeyedTableSpec
 from .extract import entry_fields
-from .model import Block, ParsedFile, Scalar
+from .model import Assignment, Block, ParsedFile, Scalar
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Iterator
-
-    from .model import Assignment
 
 
 def _iter_keyed_blocks(node: Block | ParsedFile) -> Iterator[tuple[str, Block]]:
@@ -246,6 +244,84 @@ def value_census(dir_rel: str, values: Collection[str]) -> Counter[str]:
     return counter
 
 
+def all_field_occurrences(dir_rel: str) -> Counter[str]:
+    """字段名 → 出现次数，**含顶层、任意深度、含匿名块**。
+
+    与 :func:`field_occurrences` 的区别：那个只数**顶层条目块**的字段，
+    这个把顶层赋值与 ``{ { … } { … } }`` 这种**匿名块**里的字段一起数。
+
+    存在的理由：doc 16 的 `travel_network\\naval_network.txt` 是程序导出的文件 ——
+    结构是 ``nodes = { { province = 1 x = … } … }``，
+    ``nodes`` / ``connections`` 在**顶层**，而 ``province`` / ``from`` 在**匿名块**里。
+    只数顶层会得到 2 个键，只数「有名字的块」会得到 6 个 —— 都不是那张表。
+
+    ⚠️ 匿名块藏在**别的块里面**（``nodes`` 块里才是那一堆 ``{ … }``），
+    所以递归必须在**每一层**都检查 ``items`` 里的裸块 —— 只在文件顶层找一次
+    会得到和「只数顶层」一样的结果（实测就是这么错了第一版）。
+    """
+    counter: Counter[str] = Counter()
+    base = config.GAME / dir_rel
+    if not base.is_dir():
+        return counter
+    for path in sorted(p for p in base.rglob("*.txt") if p.is_file()):
+        pf = parse_cached(path)
+        for a in pf.top_assignments:
+            if not a.is_variable:
+                counter[a.key] += 1
+        for block in _walk_all_blocks(pf):
+            for a in block.assignments():
+                counter[a.key] += 1
+    return counter
+
+
+def _walk_all_blocks(node: Block | ParsedFile) -> Iterator[Block]:
+    """任意深度的所有块：赋值的值 + ``items`` 里裸着的匿名块。"""
+    items = node.top_assignments if isinstance(node, ParsedFile) else node.items
+    for it in items:
+        if isinstance(it, ParsedFile):  # pragma: no cover - 只为类型收窄
+            continue
+        if isinstance(it, Assignment):
+            if it.is_variable or not isinstance(it.value, Block):
+                continue
+            yield it.value
+            yield from _walk_all_blocks(it.value)
+        elif isinstance(it, Block):
+            yield it
+            yield from _walk_all_blocks(it)
+
+
+def word_file_counts(dir_rel: str, words: Collection[str]) -> Counter[str]:
+    """给定一批词 → **文本里出现过它的文件数**（不看结构）。
+
+    用途：doc 16 的 `flags` / `settings` / `ai.*` 那几张表统计的是
+    「有多少个文件用了这个值」，而不是「它作为某个字段的取值出现了几次」——
+    两者在**一个文件里出现两次**时才会分岔（实测 `can_be_renegotiated` 就是：
+    出现 27 次、只在 26 个文件里）。
+    """
+    counter: Counter[str] = Counter()
+    texts = _dir_texts(dir_rel)
+    for word in words:
+        counter[word] = sum(1 for text in texts if word in text)
+    return counter
+
+
+def word_stats(dir_rel: str, word: str) -> tuple[int, int]:
+    """``(出现次数, 出现文件数)`` —— 纯文本计数，不看结构。"""
+    texts = _dir_texts(dir_rel)
+    return sum(text.count(word) for text in texts), sum(1 for text in texts if word in text)
+
+
+def _dir_texts(dir_rel: str) -> list[str]:
+    base = config.GAME / dir_rel
+    if not base.is_dir():
+        return []
+    return [
+        p.read_text(encoding="utf-8-sig", errors="replace")
+        for p in sorted(base.rglob("*.txt"))
+        if p.is_file()
+    ]
+
+
 def _rows(counter: Counter[str], col: int) -> list[tuple[str, dict[int, str]]]:
     """``(键, {列下标: 文本})``。
 
@@ -440,6 +516,7 @@ def doc_table_specs() -> list[KeyedTableSpec]:
 
 
 __all__ = [
+    "all_field_occurrences",
     "definition_rows",
     "doc_table_specs",
     "field_file_counts",
@@ -448,4 +525,6 @@ __all__ = [
     "file_definition_counts",
     "nested_field_occurrences",
     "value_census",
+    "word_file_counts",
+    "word_stats",
 ]
