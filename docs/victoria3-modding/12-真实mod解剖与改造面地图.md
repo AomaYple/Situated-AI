@@ -1,6 +1,6 @@
 # 12 · 真实 mod 解剖与改造面地图
 
-> 本文对**本机已订阅的全部 23 个 Steam Workshop mod** 做机械解剖，回答一个核心问题：
+> 本文对**本机已订阅的全部 23<!--claim:mod.total--> 个 Steam Workshop mod** 做机械解剖，回答一个核心问题：
 > **「实际上，mod 都改了什么？」** —— 这比任何理论文档都更贴近实战。
 > 全部数据来自对 `workshop\content\529340\` 的实际扫描（**【实测】**）。
 
@@ -27,7 +27,7 @@
 
 ## 2. 最关键发现：**新增 ≫ 覆盖**
 
-**【实测】** 跨 23 个 mod 共 **4,777 个内容文件**（各 mod 的 `metadata.json` 不计入），
+**【实测】** 跨 23 个 mod 共 **4,777<!--claim:mod.files--> 个内容文件**（各 mod 的 `metadata.json` 不计入），
 去重后是 **4,750 个相对路径**：
 
 ```text
@@ -123,7 +123,7 @@ common\pop_types\  →  academics, aristocrats, bureaucrats, capitalists, clergy
 
 > **规律**：`common\pop_types\` 是**每个 POP 一个文件**，改人口机制要逐个替换。
 
-### 3.3 `2918521358` Ultra Historical Politics —— 覆盖全部 8 个利益集团
+### 3.3 `2918521358` Ultra Historical Politics —— 覆盖全部 8<!--claim:mods.ig_files_doc12--> 个利益集团
 
 ```text
 common\interest_groups\  →  00_armed_forces, 00_devout, 00_industrialists,

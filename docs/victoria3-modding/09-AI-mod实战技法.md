@@ -202,7 +202,7 @@
 
 ## 5. 真实 AI mod 覆盖了哪些 `NAI` 参数
 
-**【实测】** 解剖 `Kuromi's AI` 的 `common\defines\kai_ai.txt`（67 行），其中 `NAI = { ... }` 块**只覆盖了 31 个参数**（全库有 1,017 个）。
+**【实测】** 解剖 `Kuromi's AI` 的 `common\defines\kai_ai.txt`（67 行），其中 `NAI = { ... }` 块**只覆盖了 31 个参数**（全库有 1,017<!--claim:ai.nai_params_doc09--> 个）。
 
 > **这本身就是重要信息**：一个成熟的 AI mod 并没有大改参数，而是**精准打击少数关键项**。
 

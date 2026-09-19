@@ -20,7 +20,7 @@ C:\...\common\Victoria 3\
 
 ## 2. `jomini\common\` —— 18 个 defines 命名空间
 
-**【实测】** `jomini\common\` 下有 5 个子目录 + 1 个说明文件：
+**【实测】** `jomini\common\` 下有 5<!--claim:eng.jomini_subdirs_doc20--> 个子目录 + 1 个说明文件：
 
 ```text
 jomini\common\

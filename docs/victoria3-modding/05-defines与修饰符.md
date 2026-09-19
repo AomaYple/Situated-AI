@@ -52,9 +52,9 @@
 
 > ⚠️ **§2.1 / §2.2 / §2.5 / §2.6 与 §1.6 的表格已按 1.14.3 重算。**
 > 这几张表原先由那批 PowerShell 脚本产出，数值停留在 1.14.2：
-> 1.14.3 给 `NMilitary` 增加了 1 个参数、给 `NDiplomacy` 增加了 39 个，
+> 1.14.3 给 `NMilitary` 增加了 1<!--claim:def.file_ai--> 个参数、给 `NDiplomacy` 增加了 39 个，
 > 于是 `00_defines.txt` 之后所有块的**起始行号整体后移 40 行**、
-> 参数总数从 3434 涨到 **3488**。现在这些数字由仓库内的解析器
+> 参数总数从 3434 涨到 **3488**<!--claim:def.param_total-->。现在这些数字由仓库内的解析器
 > （`pdx.parser`，口径见 §0.3）重新生成，并由 `v3 verify` 的
 > `def.param_total` / `def.param_names` 两条断言钉住。
 
@@ -75,7 +75,7 @@
 > 而**不是**「是否写在同一行」。早先按行数区分，于是把跨行书写的
 > `KEY = { a b c }`（值仍是纯列表）记成了嵌套块 —— 那是排版差异，不是语义差异；
 > `jomini/00_tooltips.txt` 的 `NTooltip` 正是这种写法。
-> 现在这条界线由 `pdx.defines._classify` 单点决定，且下面 5 张表全部由
+> 现在这条界线由 `pdx.defines._classify` 单点决定，且下面 5<!--claim:def.file_shaders--> 张表全部由
 > **`v3 tables --write`** 生成，不再手抄（它们此前因为无人重跑，
 > 整整落后了一个游戏版本）。
 
@@ -97,7 +97,7 @@
 
 ---
 
-## 1. defines 系统
+## 1<!--claim:def.file_audio-->. defines 系统
 
 ### 1.1 用途
 
@@ -119,7 +119,7 @@ defines 是**引擎侧（C++）读取的全局静态常量**，用于调节那�
 | **jomini** | `...\Victoria 3\jomini\common\defines\` | 18（含 `jomini\`、`graphic\` 两处子目录） |
 | clausewitz | `...\Victoria 3\clausewitz\` | 0（该目录下无 `common\defines`）【提取】 |
 
-`jomini\common\defines\` 的完整文件清单（18 个）：`00_adaptive_music.txt`、`00_audio_persistent_objects.txt`、`music_player_defines.txt`、`graphic\00_coa.txt`、`jomini\00_tooltips.txt`、`jomini\adjacencies.txt`、`jomini\camera.txt`、`jomini\fog_of_war.txt`、`jomini\icons.txt`、`jomini\mapeditor.txt`、`jomini\modifiers.txt`、`jomini\multiplayer.txt`、`jomini\portraits.txt`、`jomini\rivers.txt`、`jomini\settings.txt`、`jomini\social.txt`、`jomini\text_coloring.txt`、`jomini\text_formatting.txt`。【提取】
+`jomini\common\defines\` 的完整文件清单（18<!--claim:defines.00_defines_namespaces--> 个）：`00_adaptive_music.txt`、`00_audio_persistent_objects.txt`、`music_player_defines.txt`、`graphic\00_coa.txt`、`jomini\00_tooltips.txt`、`jomini\adjacencies.txt`、`jomini\camera.txt`、`jomini\fog_of_war.txt`、`jomini\icons.txt`、`jomini\mapeditor.txt`、`jomini\modifiers.txt`、`jomini\multiplayer.txt`、`jomini\portraits.txt`、`jomini\rivers.txt`、`jomini\settings.txt`、`jomini\social.txt`、`jomini\text_coloring.txt`、`jomini\text_formatting.txt`。【提取】
 
 **子目录会被递归加载**——这是覆盖机制的关键，见 §1.7。
 
@@ -461,7 +461,7 @@ NCountry = {
 
 【提取】
 
-### 2.2 全部 75 个顶层命名空间块
+### 2.2 全部 75<!--claim:def.blocks--> 个顶层命名空间块
 
 「Line」为该块在所属文件中的**物理起始行号**。
 
@@ -547,7 +547,7 @@ NCountry = {
 
 ### 2.3 `00_ai.txt` —— AI 专用 defines（详见 §3）
 
-整个文件**只有一个**顶层命名空间块 `NAI`，起始于第 1 行，包含 **1017** 个参数，全部为标量，无内联列表、无嵌套块。文件共 1311 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
+整个文件**只有一个**顶层命名空间块 `NAI`，起始于第 1 行，包含 **1017**<!--claim:def.nai_count--> 个参数，全部为标量，无内联列表、无嵌套块。文件共 1311<!--claim:def.ai_file_lines--> 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
 
 结构明细见 §3.1，全部 1017 个参数名见 §3.3。
 
@@ -565,7 +565,7 @@ NCountry = {
 
 ### 2.5 `00_defines.txt` —— 主 defines 文件
 
-19 个顶层块，但只有 **18 个不同命名空间**——`NPops` 在同一文件内出现了 **2 次**（第 1404 行、第 1773 行），这是 §1.7 证据 2 的来源之一。
+19<!--claim:def.file_graphics--> 个顶层块，但只有 **18 个不同命名空间**——`NPops` 在同一文件内出现了 **2 次**（第 1404 行、第 1773 行），这是 §1.7 证据 2 的来源之一。
 
 | # | 命名空间 | 块起始行 | 该命名空间的块数 | 参数合计 |
 |---|---|---|---|---|
@@ -624,7 +624,7 @@ NCountry = {
 
 ### 2.7 `00_interfaces.txt`
 
-27 个块，但只有 **4 个不同命名空间**——`NGUI` 在同一个文件里出现了 **24 次**（这是 §1.7 证据 2 的第二个来源）。
+27 个块，但只有 **4<!--claim:defines.interfaces_ns_doc05--> 个不同命名空间**——`NGUI` 在同一个文件里出现了 **24 次**（这是 §1.7 证据 2 的第二个来源）。
 
 | 命名空间块 | 出现次数 | 各块起始行 | 合计条目 |
 |---|---|---|---|
@@ -678,7 +678,7 @@ NShadersCommon =
 
 这 3 个文件是 game 内容根对 Jomini 层同名文件的**整体接管**文件（见 §1.7 证据 3）。它们的相对路径 `common/defines/jomini/*.txt` 必须与 Jomini 层完全一致才能生效。
 
-Jomini 内容根另有 15 个未被 game 层接管的 defines 文件（`00_adaptive_music.txt`、`00_audio_persistent_objects.txt`、`music_player_defines.txt`、`graphic/00_coa.txt`、`jomini/adjacencies.txt`、`jomini/camera.txt`、`jomini/icons.txt`、`jomini/mapeditor.txt`、`jomini/modifiers.txt`、`jomini/multiplayer.txt`、`jomini/portraits.txt`、`jomini/settings.txt`、`jomini/social.txt`、`jomini/text_coloring.txt`、`jomini/text_formatting.txt`），它们通过跨文件合并机制生效。【提取】
+Jomini 内容根另有 15<!--claim:def.jomini_untaken--> 个未被 game 层接管的 defines 文件（`00_adaptive_music.txt`、`00_audio_persistent_objects.txt`、`music_player_defines.txt`、`graphic/00_coa.txt`、`jomini/adjacencies.txt`、`jomini/camera.txt`、`jomini/icons.txt`、`jomini/mapeditor.txt`、`jomini/modifiers.txt`、`jomini/multiplayer.txt`、`jomini/portraits.txt`、`jomini/settings.txt`、`jomini/social.txt`、`jomini/text_coloring.txt`、`jomini/text_formatting.txt`），它们通过跨文件合并机制生效。【提取】
 
 ---
 
@@ -2153,7 +2153,7 @@ has_game_rule = high_ai_aggression
 
 【文档】来源：`GAME\common\modifier_type_definitions\modifier_types.md`
 
-**实测前缀分布**（2364 个键，按第一个下划线前切分）——与上述规则完全吻合：
+**实测前缀分布**（2364<!--claim:def.modtypes--> 个键，按第一个下划线前切分）——与上述规则完全吻合：
 
 | 前缀 | 键数 | 流动含义（据上文推断） |
 |---|---|---|
@@ -2173,7 +2173,7 @@ has_game_rule = high_ai_aggression
 
 【提取】
 
-**后缀分布**同样有强规律：`_add` **1635**、`_mult` **626**、`_bool` **89**、`_factor` 5，另有 9 个键各以其它词结尾（`_support`、`_strata`、`_time`、`_cost`、`_guns`、`_literacy`、`_impact`、`_likelihood`、`_type`，各 1 个）。合计 2364。【提取】——即「加法修正 / 乘法修正 / 布尔开关」三分天下。
+**后缀分布**同样有强规律：`_add` **1635**<!--claim:defines.suffix_add-->、`_mult` **626**<!--claim:defines.suffix_mult-->、`_bool` **89**<!--claim:defines.suffix_bool-->、`_factor` 5<!--claim:def.suffix_factor-->，另有 9<!--claim:def.suffix_other--> 个键各以其它词结尾（`_support`、`_strata`、`_time`、`_cost`、`_guns`、`_literacy`、`_impact`、`_likelihood`、`_type`，各 1 个）。合计 2364。【提取】——即「加法修正 / 乘法修正 / 布尔开关」三分天下。
 
 ### 5.2 字段参考
 
@@ -2194,7 +2194,7 @@ has_game_rule = high_ai_aggression
 
 【提取 + 文档】
 
-字段是否必填【未确认】——原版有 31 个键完全没写 `decimals`、1479 个键没写 `percent`，说明二者至少有默认值。建议 mod 显式写出 `decimals` / `color` / `percent` 以避免显示异常。
+字段是否必填【未确认】——原版有 31<!--claim:def.modtypes_missing_decimals--> 个键完全没写 `decimals`、1479<!--claim:def.modtypes_missing_percent--> 个键没写 `percent`，说明二者至少有默认值。建议 mod 显式写出 `decimals` / `color` / `percent` 以避免显示异常。
 
 ### 5.3 规模与文件分布
 
@@ -3150,7 +3150,7 @@ unit_defense_water_add
 unit_defense_water_mult
 ```
 
-#### `05_power_bloc_modifier_types.txt` -- 41 keys
+#### `05_power_bloc_modifier_types.txt` -- 41<!--claim:def.file_defines--> keys
 
 ```text
 power_bloc_leader_can_make_subjects_bool
@@ -4691,13 +4691,13 @@ country_soldiers_voting_power_add
 
 > **计数口径说明（三次复核记录）**
 >
-> 本节先后写过 **6125** 与 **6121**，**两个都是错的**。正确值是 **6128**。
+> 本节先后写过 **6125** 与 **6121**，**两个都是错的**。正确值是 **6128**<!--claim:def.static-->。
 >
 > 错因是判据选错了：两次都拿**缩进**当"是否顶层"的依据，而缩进在 PDX
 > 脚本里**没有语义** —— 官方文件混用 tab / 2 空格 / 4 空格 / 完全不缩进。
 > 顶层与否只能看**花括号深度**。
 >
-> 用「行首无缩进」数会**静默漏掉 7 个确实顶层的键**：
+> 用「行首无缩进」数会**静默漏掉 7<!--claim:def.static_indented--> 个确实顶层的键**：
 >
 > | 文件:行 | 键 | 行首 |
 > |---|---|---|
@@ -4723,7 +4723,7 @@ country_soldiers_voting_power_add
 >
 > **三个具体陷阱**：
 >
-> 1. **有 3 个静态修饰符以数字开头** —— `1848_popular_radical`、`1848_reactionary_enactment`、
+> 1. **有 3<!--claim:def.static_digit_leading--> 个静态修饰符以数字开头** —— `1848_popular_radical`、`1848_reactionary_enactment`、
 >    `1848_institution_speed`（均在 `content_1_modifiers.txt`）。用 `^[A-Za-z_]` 类正则会漏掉它们。
 > 2. **`icon` 是赋值而非块**（`icon = gfx/...dds`），容易被误计或漏计。
 > 3. **有 7 个顶层键带缩进** —— 见上表。这一类最隐蔽：总数只差 7，

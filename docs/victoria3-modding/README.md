@@ -103,7 +103,7 @@ TRY_REPLACE:company_xxx = { ... }
 
 ### 2. 联机校验和只覆盖 5 个目录
 
-`game\checksum_manifest.txt`（仅 22 行）明确：只有 `common/`、`events/`、`map_data/`、`gui/`、`localization/` 参与校验。
+`game\checksum_manifest.txt`（仅 22<!--claim:env.checksum_lines_readme--> 行）明确：只有 `common/`、`events/`、`map_data/`、`gui/`、`localization/` 参与校验。
 **改 `gfx/`、`sound/`、`music/`、`fonts/` 不影响校验和** → 纯视觉/音频 mod 天然联机友好。
 
 ### 3. 新增文件 ≫ 覆盖原版

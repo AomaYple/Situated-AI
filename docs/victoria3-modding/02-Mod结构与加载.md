@@ -23,7 +23,7 @@
 | `supported_game_version` | 找到 |
 | `multiplayer_synchronized` | 找到 |
 
-**【实测】** 全部 23 个 Workshop mod 中，`.mod` 与 `descriptor.mod` 文件数量为 **0**。
+**【实测】** 全部 23 个 Workshop mod 中，`.mod` 与 `descriptor.mod` 文件数量为 **0**<!--claim:pfx.vanilla_replace--><!--claim:pfx.vanilla_replace_or_create--><!--claim:pfx.vanilla_try_replace--><!--claim:pfx.vanilla_try_inject--><!--claim:pfx.vanilla_inject_or_create--><!--claim:pfx.vanilla_zero-->。
 
 > **结论**：Victoria 3 使用 Paradox Launcher v2 的 `.metadata/metadata.json` 格式。网上仍流传的旧式 `descriptor.mod` + `<mod名>.mod` 写法已不被游戏本体引用。
 
@@ -134,7 +134,7 @@ TRY_INJECT:law_concordat = { ... }         # 注入，目标不存在时不报�
 | `2897378189` UH Research · `Ultra_RE_country_ranks.txt:6` | `INJECT:great_power = {` |
 
 > ⚠️ **这套机制在游戏自带的 92 份官方 `.md` 中完全没有记载**
-> （全树搜索 `INJECT:` / `REPLACE:` 命中数为 **0**）。
+> （全树搜索 `INJECT:` / `REPLACE:` 命中数为 **0**<!--claim:pfx.vanilla_inject-->）。
 > 它是从真实 mod 的行为中反推出来的。
 
 **为什么这极其重要**：它解释了 `12-真实mod解剖与改造面地图.md` 中那个反直觉的现象 ——

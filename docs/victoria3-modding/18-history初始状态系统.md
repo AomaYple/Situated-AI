@@ -7,7 +7,7 @@
 
 ## 1. 全貌
 
-**【实测】** `common\history\` 下 **22 个子目录 / 1,153 个文件**，根目录无松散文件。
+**【实测】** `common\history\` 下 **22<!--claim:hist.wrappers--> 个子目录 / 1,153 个文件**，根目录无松散文件。
 每个子目录的文件都用**一个大写包装块**包裹 —— 这是识别它属于哪个系统的标志：
 
 | 子目录 | 文件数 | **顶层包装块** | 主要效果 |
@@ -122,7 +122,7 @@ COUNTRIES = {
 
 > **注意**：这里用的是 `effect_starting_*` 系列**预置效果**（引擎内置的成套初始化），
 > 不必逐项写法律/科技。这大幅简化了国家定义 —— **但它并不排斥逐项效果**：
-> 444 个国家文件里有 **217 个（49%）**在预置效果之外还逐项写了
+> 444 个国家文件里有 **217<!--claim:hist.country_effects_doc18--> 个（49%）**在预置效果之外还逐项写了
 > `add_amendment`(26)、`set_institution_investment_level`(60)、
 > `set_import_tariff_level`(66)、`set_export_tariff_level`(6)、
 > `set_ruling_interest_groups`(2)、`create_diplomatic_pact`(1)。【实测】

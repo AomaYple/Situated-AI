@@ -4,7 +4,7 @@
 > `game\dlc\` 结构、`platform_specific_game_data\` 日志配置。
 > 全部 **【实测】**。
 
-## 1. `game\` 根目录 13 个文件
+## 1<!--claim:env.checksum_files-->. `game\` 根目录 13 个文件
 
 | 文件 | 字节 | 作用 |
 |---|---|---|
@@ -73,9 +73,9 @@ name = paths_checksummed.settings
 
 > **对应 mod 元数据**：`metadata.json` 里的 `game_custom_data.multiplayer_synchronized` 就是这个机制的用户侧声明。
 
-## 3. `paths.settings` —— 路径间接层（**改 gfx/地图必读**）
+## 3<!--claim:env.paths_checksummed_lines-->. `paths.settings` —— 路径间接层（**改 gfx/地图必读**）
 
-**【实测】** 这个文件把「逻辑名」映射到「实际目录」，共 **39 条映射**，分 3 组
+**【实测】** 这个文件把「逻辑名」映射到「实际目录」，共 **39<!--claim:env.paths_settings_mappings--> 条映射**，分 3 组
 （外加不映射到目录的 `paths_checksummed.settings`，见 §3.4）。
 
 > 下面三张表**由 `v3 tables` 从 `paths.settings` 生成**，一行对应文件里的一条映射。

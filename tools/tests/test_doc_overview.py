@@ -181,7 +181,10 @@ def test_doc17_头条与总览表同源() -> None:
     当时合计 1,965,504，而头条写着 1,962,504，两者从来没对上过。
     """
     _require_game()
-    text = (config.DOCS / "17-角色科技与呈现.md").read_text(encoding="utf-8")
+    raw = (config.DOCS / "17-角色科技与呈现.md").read_text(encoding="utf-8")
+    # 归属标记（``<!--claim:…-->``）会插在数字与量词之间，解析前先剥掉 ——
+    # 它是给人看的绑定信息，不该影响正文的**文字**匹配。
+    text = re.sub(r"<!--claim:[A-Za-z0-9_.]+-->", "", raw)
     m = re.search(r"共 \*\*(\d[\d,]*) 个 \.txt 文件 / ([\d,]+) 个顶层定义键\*\*", text)
     assert m, "找不到 doc 17 的头条声明 —— 措辞被改过？"
     head_txt = int(m.group(1).replace(",", ""))

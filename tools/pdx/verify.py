@@ -72,6 +72,7 @@ from .localization import (
     texticon_counts,
     yml_unique_name_count,
 )
+from .markers import MarkerFix, all_markers, apply_fixes, marker_ids_by_doc
 from .model import Block
 from .modifiers import digit_leading_entries, indented_top_entries, modifier_type_suffixes
 from .mods import aggregate_prefixes, analyse_all, vanilla_prefix_count
@@ -2999,19 +3000,14 @@ def _in_dotted_number(line: str, pos: int) -> bool:
 #: 放在**本模块**而不是测试文件里：``v3 verify`` 与测试都要用它来区分
 #: 「真漂移」与「口径不同」，两边各维护一份必然会分叉。
 KNOWN_METRIC_MIXUPS: dict[tuple[str, int], str] = {
-    ("eco.goods", 52): "52 是 goods 作为字段被引用的次数，不是 goods 条目数（条目数为 53）",
-    ("eco.goods", 51): "51 是另一处引用次数，与 goods 条目数无关",
-    ("pol.cultures", 316): "316 描述的是某字段列表长度，与 cultures 目录条目数（317）不同口径",
-    ("chr.concepts", 609): "609 是单个文件 00_game_concepts.txt 内的条目数，目录合计为 612",
-    ("dip.treaty", 35): "35 是 treaty_articles 的**文件数**，条目数为 34；实测两者确实不同",
-    ("dip.treaty", 33): "33 是某字段被使用的条目数，不是目录条目总数",
-    ("dip.wargoal", 40): "40 是 war_goal_types 的**文件数**，条目数为 39；实测两者确实不同",
-    ("dip.wargoal", 41): "41 指的是官方 .md 里 settings 列表的条目数，非游戏数据条目数",
-    ("loc.texticon_doc06", 436): "436 是同一份 `gui/*.gui` 数据的**另一种口径**（任意缩进的 "
-    "`texticon = {`，而断言表的 432 是文档 §1.3 明写的行首顶格口径）；doc 06 §x 那张 "
-    "「GUI 定义用」的表用的正是 436 —— 两个数都对，不是漂移",
-    ("dip.actions_txt", 49): "49 是 `diplomatic_actions\\` 里**含官方 `.md`** 的文件数，"
-    "断言表的 48 只数 `.txt`；doc 16 §2.1 的小标题用的就是 49（两个口径都写在文档里）",
+    # **迁移到归属标记后，这张表清空了** —— 它原先的 10 条全是「同一行并列了
+    # 好几个口径、静态文本分不清断言要的是哪一个」（如 doc 06 的 texticon
+    # 432/436、doc 16 的 47/48、doc 12 的 prefix 计数）。
+    #
+    # 标记把「猜」换成了「绑定」：数字后面直接写明它属于哪条断言，于是这些
+    # 纠缠不再是问题 —— 绑定过的断言根本不参与锚点扫描（见 find_doc_drift）。
+    # 表还留着，是因为**没有标记的那些**断言仍可能遇到同类纠缠：
+    # 新增条目时请写清「文档其实是对的，两个数字各是什么口径」。
 }
 
 
@@ -3032,6 +3028,60 @@ def unknown_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
     测试也用它做断言 —— 两边同一套判据。
     """
     return [d for d in find_doc_drift(docs_dir) if drift_key(d) not in KNOWN_METRIC_MIXUPS]
+
+
+# ── 归属标记的体检与修复 ────────────────────────────────────
+@dataclass(slots=True)
+class MarkerIssue:
+    """一处标记问题。"""
+
+    doc: str
+    line: int
+    id: str
+    detail: str
+
+    def describe(self) -> str:
+        return f"{self.doc}:{self.line} <!--claim:{self.id}--> —— {self.detail}"
+
+
+def check_markers(docs_dir: Path | None = None) -> list[MarkerIssue]:
+    """标记体检（两条，都不需要游戏）。
+
+    * **孤儿标记**：``<!--claim:x-->`` 指向的断言不存在（断言被删/改了 id，
+      而文档里的标记没跟着改）—— 标记一旦指向空处，它就只是装饰；
+    * **数字不符**：标记前的数字与断言期望值不一致 —— ``v3 verify --fix`` 可修。
+
+    「有标记的断言不再参与锚点漂移扫描」这条规则也在这里生效
+    （见 :func:`find_doc_drift`）：绑定比扫描精确，两套同时跑只会互相打脸。
+    """
+    by_id = {c.id: c for c in CLAIMS}
+    out: list[MarkerIssue] = []
+    for m in all_markers(docs_dir):
+        claim = by_id.get(m.id)
+        if claim is None:
+            out.append(MarkerIssue(m.doc, m.line, m.id, "没有这条断言（断言被删或 id 写错）"))
+            continue
+        if isinstance(claim.expected, int) and claim.expected != m.value:
+            out.append(
+                MarkerIssue(
+                    m.doc,
+                    m.line,
+                    m.id,
+                    f"标记处写着 {m.value}，断言期望 {claim.expected}（跑 `v3 verify --fix` 可修）",
+                )
+            )
+    return out
+
+
+def fix_markers(docs_dir: Path | None = None, *, write: bool = False) -> list[MarkerFix]:
+    """按断言期望值改写标记处的数字。
+
+    ``write=False`` 时只算出改动清单 —— 与 ``--fix`` 共用同一条实现，
+    免得「检查说会改 A、实际改了 B」。
+    """
+    expected = {c.id: c.expected for c in CLAIMS if isinstance(c.expected, int)}
+    fixes, _checked = apply_fixes(docs_dir or config.DOCS, expected, write=write)
+    return fixes
 
 
 def anchors_of(claim: Claim) -> list[str]:
@@ -3111,10 +3161,18 @@ def find_doc_drift(docs_dir: Path | None = None) -> list[DocDrift]:
             ctx_cache[name] = _section_context(lines_of(name))
         return ctx_cache[name]
 
+    #: 已经被**归属标记**钉住的 ``(文档, 断言)`` 对 —— 它们不需要启发式扫描：
+    #: 标记直接说明「这个数字属于哪条断言」，比「锚点词 + 量级接近」精确得多。
+    #: 于是 ``TEXT_SCAN_EXEMPT`` / ``KNOWN_METRIC_MIXUPS`` 里那些「锚点太通用」
+    #: 的豁免可以随迁移逐条删掉（见 pdx.markers）。
+    bound = marker_ids_by_doc(docs_dir)
+
     for claim in CLAIMS:
         if not isinstance(claim.expected, int) or not claim.expected:
             continue
         if claim.id in TEXT_SCAN_EXEMPT:
+            continue
+        if claim.id in bound.get(claim.doc, set()):
             continue
         # 出处文档 + **索引页**。
         #
@@ -3192,107 +3250,15 @@ _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 #: 「文档现值 vs `pdx.defines.doc_table_rows()` 的输出」，比文本扫描强得多
 #: （文本扫描只能发现「某个数字不对」，那个测试能发现**哪一行**不对）。
 TEXT_SCAN_EXEMPT: dict[str, str] = {
-    "def.file_ai": "锚点退化成 'txt'，doc 05 里到处是；由 test_defines_tables.py 看守",
-    "def.file_audio": "同上",
-    "def.file_defines": "同上",
-    "def.file_graphics": "锚点 'graphics' 在 doc 05 里出现几十次，期望值 19 → 误报 16 处",
-    "def.file_interfaces": "同上",
-    "def.file_shaders": "锚点 'shaders' 在 doc 05 里出现上百次，期望值 5 → 误报 89 处",
-    # 这两条是 doc 08 的「一级目录数」。锚点只能是 `game` / `gfx` —— 而 doc 08
-    # 是逐目录清单，`game` 在它里面出现上百次，期望值又只有 19，容差 ±2 于是
-    # 撞上「占 `game\` 全树 17 GB」里的 17（实测 2 处稳定误报）。
-    # 它们要钉的那个数字（§17 的「一级目录数 19」）**由生成表看守**：
-    # §8 与 §13 的表各有 19 行，行数就是目录数，`v3 tables` 每次都会核对。
-    "tree.game_level1": "锚点 'game' 在 doc 08 里太通用（实测误报 2 处）；由 §8 生成表的行数看守",
-    "tree.gfx_subdirs": "同上，锚点 'gfx'；由 §13 生成表的行数看守",
-    # ── 从「散文数字」补进来的那批断言（2026-09）──────────────────────────
-    #
-    # 它们是把正文里无人看守的数字**登记成断言**时加的。数值核对照样跑
-    # （`v3 verify` 会拿实测值比对），但**正文扫描**要跳过：这些断言的锚点
-    # 是目录名（``defines`` / ``common`` / ``events`` / ``cli`` 之类），
-    # 在各自的文档里出现几十次，而期望值都不大 —— 一次实测报了 65 处，
-    # 全是「同一行里另有一个量级相近的无关数字」。真信号会被淹没。
-    #
-    # 判断依据是「这一条钉的数字在哪」：
-    # * ``chr.*`` / ``pol.*`` / ``dlc.*`` —— 数字就在**生成表**里
-    #   （`v3 tables` 逐行核对，比文本扫描强）；
-    # * ``defines.*`` / ``loc.*`` / ``eng.*`` / ``script.*`` —— 数字在正文，
-    #   但同一段里另有同量级的数字（文件数 / 行号 / 相邻目录的计数），
-    #   文本扫描分不清是哪一个；数值核对已经足够。
-    "defines.00_defines_namespaces": "锚点 'defines' 在 doc 05 里满篇都是，期望 18 → 误报 17 处",
-    "defines.interfaces_ns_doc05": "锚点 'interfaces' 与相邻的块数/行号同量级 → 误报 8 处",
-    "defines.suffix_bool": "锚点 '_bool' 撞上 `boolean` 那一列（89 vs 91）→ 误报 2 处",
-    "loc.gui_dirs_doc06": "锚点 'gui' 在 doc 06 里太通用，期望 10 → 误报 6 处",
-    "eng.jomini_subdirs_doc20": "锚点 'jomini' 全篇都是，期望 5 → 误报 6 处",
-    "script.events_subdirs_doc04": "锚点 'events' 每节都有，期望 12 → 误报 5 处",
-    "script.placement_values_doc04": "锚点 'placement' 后面紧跟取值示例 → 误报 1 处",
-    "dlc.txt_doc08": "锚点 'dlc' 在 doc 08 里是逐目录清单，期望 83 → 误报 4 处",
-    "pol.laws_fields_doc15": "锚点 'laws' 与 26 个 law_groups 同量级 → 误报 4 处",
-    "pol.pop_support_fields_doc15": "锚点 'movement' 在 doc 15 里属高频词 → 误报 3 处",
-    "pol.ig_trait_fields_doc15": "锚点 'interest_group_traits' 那段里另有 99 / 4 两个数 → 误报 1 处",
-    "pol.cultures_file_doc15": "锚点 'cultures' 与 317 个文化同量级 → 误报 2 处",
-    "chr.ethnicity_blocks_doc17": "锚点 'ethnicities' 与 36 / 37 两个口径纠缠 → 误报 3 处",
-    "chr.dna_doc17": "锚点 'dna' 与 583 / 584 两个口径纠缠 → 误报 2 处",
-    "chr.flag_defs_doc17": "锚点 'flag_definitions' 与 432 / 433 两个口径纠缠 → 误报 1 处",
-    "pol.monarchies_file_doc15": "锚点 'government' 在该节里太通用；数值核对照样跑",
-    "pol.movement_ideo_file_doc15": "锚点 'ideologies' 与 172 / 45 / 35 三个口径纠缠",
-    "pol.graphics_values_doc15": "锚点 'graphics' 与该节多处同量级数字相撞",
-    "pol.pop_needs_fields_doc15": "锚点 'pop_needs' 与 9 / 52 / 15 等相邻数字相撞",
-    "chr.atlas_blocks_doc17": "锚点 'atlases' 与 5 / 17 等相邻计数同量级",
-    "chr.roles_doc17": "锚点 'character_roles' 与 10 / 14 两个口径纠缠",
-    # ── doc 16 那一批（2026-09）────────────────────────────────────────────
-    #
-    # 这四条的数字都在**生成表或清单表**里（§0 的 33 行、§4.x 的字段表），
-    # 而锚点要么是那一节的目录名（`state_traits` 在该节出现几十次），要么是
-    # 官方文档名——表里同量级的相邻计数太多，文本扫描分不清是哪一个。
-    # 它们的判据也不在正文里：`md_block_undocumented` / `md_bullet_diff` 比的是
-    # **官方 .md 与游戏数据**，正文写错一个数字并不能说明这个差集错了。
-    "dip.state_traits_fields": "锚点 'state_traits' 在 doc 16 里满篇都是，期望 4 → 误报 35 处；"
-    "该表的字段清单另有 §4.2 的生成表看守",
-    "dip.group_no_md": "锚点 'terrain_manipulators' 与 §0 表里 8 / 9 / 11 等同量级数字相撞 → 误报 3 处",
-    "dip.pact_undocumented": "锚点 'pact' / 'diplomatic_action' 与 §2 表的 19 / 22 等相撞 → 误报 3 处",
-    "dip.wargoal_kind_diff": "锚点 'war_goal_types' 与 §7.1 表的 5 / 8 等相撞 → 误报 2 处",
-    # ── docs 03/14/15/17 那一批（2026-09）────────────────────────────────
-    #
-    # 这几条的锚点都是**目录名或高频字段名**，而期望值都不大 ——
-    # 同一节里另有同量级的计数（相邻目录的文件数、相邻行的编号），
-    # 静态文本分不清是哪一个。它们的数字多半**已经在生成表里**逐行核对
-    # （`v3 tables`），或者由上面那些口径更窄的断言一起钉住。
-    "chr.customizable_text_fields": "锚点 'customizable_localization' 覆盖整节，期望 3 → 误报 18 处；"
-    "该表由 doc 17 的字段表生成器逐行看守",
-    "chr.customizable_fields": "同上（期望 6）",
-    "eco.buy_package_fields": "锚点 'buy_packages' 与该节 99 / 1 / 9 等同量级数字相撞 → 误报 13 处",
-    "eco.buy_package_categories": "锚点 'popneed_' 与逐类计数相撞 → 误报 1 处",
-    "chr.gene_block_names": "锚点 'genes' 与 8 / 9 / 97 等同量级数字相撞 → 误报 10 处",
-    "chr.gene_definitions": "同上（期望 9）",
-    "pol.ideology_other_fields": "锚点 'ideologies' 与 8 / 26 / 35 / 172 纠缠 → 误报 4 处",
-    "pol.ideology_lawgroups": "锚点 'law_groups' 与 25 / 26 两个口径相撞 → 误报 1 处",
-    "chr.dna_fields": "锚点 'dna_data' 与 1 / 583 / 584 等同量级数字相撞 → 误报 4 处",
-    "chr.named_colors_blocks": "锚点 'named_colors' 与该节的列表序号 3. 相撞 → 误报 2 处",
-    "chr.tech_production": "锚点 'technologies' 与相邻两个文件的 58 / 64 相撞 → 误报 2 处",
-    "chr.tech_military": "同上（期望 58）",
-    "chr.tech_society": "同上（期望 64）",
-    "chr.flag_definition_includes": "期望值只有 2，容差 ±1 会命中同节的 1 / 3 —— "
-    "锚点 'includes' 在这份文档里与列表编号纠缠；同一句的 1,407 已有独立断言",
-    "chr.template_genes": "锚点 'ethnicity_template' 与同节的近似值 `~95` 相撞 → 误报 1 处；"
-    "97 那条（chr.morph_genes）在同一句里逐字写着",
-    # ── 「共 N 行 / 条 / 处」那一批（2026-09 放宽盘点口径时补的）───────────
-    #
-    # 这批断言的锚点**只能是文件名或目录名**，而期望值都很小（3 / 5 / 12 / 16 / 21 …），
-    # 容差 ±2 于是命中同一节里成片的相邻计数（表格里的行号、相邻文件的定义数）。
-    # 它们的证据在**文件本身**（行数、处数）而不是正文里：数值核验已经逐条跑过，
-    # 文本扫描在这里只剩下噪声 —— 实测这 11 条一共报 68 处，没有一处是真漂移。
-    "env.checksum_lines": "锚点 'checksum_manifest' 与 doc 04 满篇的脚本行数相撞 → 误报 9 处",
-    "loc.modifiers_yml_lines": "锚点 'modifiers_l_english' 与 §0 表的相邻计数相撞 → 误报 14 处",
-    "loc.modifiers_v2_yml_lines": "同上（期望 12）→ 误报 7 处",
-    "chr.genes_color_lines": "锚点 '00_genes_color' 与 §6.3 的逐文件行数相撞 → 误报 11 处",
-    "chr.flag_comment_braces": "锚点 '00_flag_definitions' 与 §0 的 91 / 433 / 21 三个数字纠缠 → 误报 11 处",
-    "chr.fallback_yes_lines": "锚点 '99_br_custom_loc' 与同节的 18 / 16 相撞 → 误报 2 处",
-    "dip.combat_unit_types_file": "锚点 '00_land_combat_unit_types' 与 §x 的 19 / 21 相撞 → 误报 6 处",
-    "eco.company_charter_types": "锚点 'company_charter_types' 与 §x 的 5 / 4 / 6 相撞 → 误报 4 处",
-    "eco.dynamic_company_names": "锚点 'dynamic_company_names' 与同节的 10 / 12 相撞 → 误报 2 处",
-    "def.ai_file_lines": "锚点 '00_ai' 与「第 2 行至第 1310 行」相撞 → 误报 1 处",
-    "loc.gui_sprite_lines_doc06": "锚点 'spriteType' 与同节的 553 / 550 相撞 → 误报 1 处",
+    # 迁移到**归属标记**之后，这张表几乎空了：59 条里有 58 条的断言现在带标记，
+    # 而带标记的断言根本不再参与锚点扫描（标记是精确绑定，扫描是启发式猜测）。
+    # 判定规则：**先问这条断言的数字有没有标记** —— 有就不需要豁免，
+    # 没有才需要在这里写清楚「为什么扫描它会满屏误报」。
+    "def.file_interfaces": "锚点 'interfaces' 与相邻的块数/行号同量级 → 误报 8 处；"
+    "该数字在生成表里（doc 05 §2.x 的 interfaces 块表），另见 test_defines_tables.py",
+    "ai.script_values_doc09": "该数字在 §4 的**表**里（正文没有），而同一节正文里的 31 是"
+    "「Kuromi's AI 覆盖的 NAI 参数数」—— 期望 33 的容差 ±2 正好罩住它（误报 1 处）。"
+    "数值核验照跑；要让它也有标记，得先把 §4 那张表改成生成表",
 }
 
 

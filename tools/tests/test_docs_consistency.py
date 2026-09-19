@@ -157,37 +157,16 @@ def test_断言id唯一() -> None:
 #: 显式列出而不是「抽不到就跳过」—— 否则哪天锚点抽取退化了，
 #: 大片断言会静默退出检查而没人发现。下面每条都写明为什么无法定位。
 _NO_ANCHOR_CLAIMS: dict[str, str] = {
-    "ai.fields_doc03": "描述「共 60 个字段」里只有中文；数字在同一节的小标题上",
-    "ai.mult_doc10": "描述「计入相乘共 2 个」纯中文；它在一条 `>` 引用块里",
-    "ai.scalars_doc10": "描述「另有 4 个标量字段」纯中文，同上",
-    "ai.strategies_doc03": "描述「共 35 个策略」纯中文；策略清单在下一行才出现",
-    "chr.roles_doc17": "描述「共 10 个角色定义」纯中文；目录名不在描述里",
-    "dip.regions_doc16": "描述「共 165 个地理区域」纯中文（目录名 geographic_regions 未写进描述）",
-    "docs.common_md_doc07": "描述里只有 '.md'，长度不足且到处出现",
-    "hist.files_doc11": "描述「共 1153 个文件」纯中文，'history' 在上一行的标题里",
-    "hist.subdirs_doc11": "描述「history 22 个子目录」里的 'history' 全库出现上千次",
     "loc.lang_dirs_doc06": "描述「13 个子目录」纯中文；'localization' 未写进描述",
-    "pol.movements_doc15": "描述「共 39 个运动」纯中文；目录名未写进描述",
-    "script.bars_doc04": "描述「共 42 个进度条」纯中文；目录名未写进描述",
-    "script.buttons_doc04": "描述「共 218 个按钮」纯中文；目录名未写进描述",
-    "script.event_defs_doc04": "描述「共 2264 个事件定义」纯中文；'events' 太通用",
-    "script.event_fields_doc04": "描述「共 26 个不同键」纯中文，没有可定位的标识符",
     "script.lists_doc04": "描述「5 个列表」纯中文；目录名未写进描述",
-    "script.rules_doc04": "描述「共 18 个规则」纯中文；目录名未写进描述",
-    "env.common_dirs": "描述里只有 'common'，全库出现上千次",
     "env.common_all": "同上，'common' 太通用",
-    "def.blocks": "描述里只有 'defines'，全库出现上千次",
     "def.namespaces": "同上，'defines' 太通用",
-    "def.param_total": "同上，'defines' 太通用；它写在 §0.4 的纯中文表格里"
-    "（`| 参数条目总数 | **3488** |`），没有可定位的英文标识符",
     "def.param_names": "同上，'defines' 太通用",
     "env.common_dirs_direct": "描述里只有 'common'，全库出现上千次；"
     "它由 v3 verify 实测核验，且与 env.common_dirs 互为**独立口径**的交叉验证",
-    "env.md_total": "锚点只能是 '.md'，长度不足且到处出现",
     "docs.total_bytes": "doc 07 的总字节数写在一张纯中文表格里（`| 总字节数 | **232,980** |`），"
     "没有任何可定位的英文标识符；它由 v3 verify 实测核验，"
     "内容时效性另由 test_docs_mirror.py 用 sha256 逐篇比对本体看守",
-    "hist.wrappers": "描述里只有 'history'，全库出现上千次",
     "pfx.mods_total": "描述里只有 'mod'，全库出现上千次",
     "chr.overview_keys_doc17": "描述「29 个目录的顶层定义键合计」纯中文；期望值 11,705 的容差是 ±117，"
     "而 doc 17 里另有若干 11,6xx 的逐目录键数 —— 文本扫描只会把它们全报成漂移。"
@@ -199,15 +178,26 @@ _NO_ANCHOR_CLAIMS: dict[str, str] = {
 
 
 def test_抽不出锚点的断言集合没有扩大() -> None:
-    """锚点抽取是漂移检测的地基；能抽出的断言不该无故变少。"""
-    unable = {c.id for c in verify.CLAIMS if c.expected != 0 and not verify.anchors_of(c)}
+    """锚点抽取是漂移检测的地基；能抽出的断言不该无故变少。
+
+    **带归属标记的断言不在此列**：它们由标记精确绑定，跟锚点扫描无关 ——
+    迁移之后这张清单从 30 条缩到 10 条，消失的那些都拿到了标记。
+    """
+    bound = {cid for ids in verify.marker_ids_by_doc().values() for cid in ids}
+    unable = {
+        c.id
+        for c in verify.CLAIMS
+        if c.expected != 0 and not verify.anchors_of(c) and c.id not in bound
+    }
     new = sorted(unable - set(_NO_ANCHOR_CLAIMS))
     assert not new, (
-        f"以下断言抽不出锚点，无法参与文档漂移扫描：{new}\n"
-        "请把描述改得更具体（含英文标识符），或登记到 _NO_ANCHOR_CLAIMS 并说明理由。"
+        f"以下断言抽不出锚点、也没有归属标记，无法参与文档看守：{new}\n"
+        "请把描述改得更具体（含英文标识符）、给它加标记，或登记到 _NO_ANCHOR_CLAIMS 并说明理由。"
     )
     stale = sorted(set(_NO_ANCHOR_CLAIMS) - unable)
-    assert not stale, f"以下断言现在已能抽出锚点，请从 _NO_ANCHOR_CLAIMS 移除：{stale}"
+    assert not stale, (
+        f"以下断言现在已能抽出锚点（或已带标记），请从 _NO_ANCHOR_CLAIMS 移除：{stale}"
+    )
 
 
 def test_主动豁免清单都是真存在的断言() -> None:

@@ -1014,6 +1014,10 @@ def verify_cmd(
             help="不读游戏，用**入库的离线真值**（精简快照 + 官方文档清单）核验（CI 用）",
         ),
     ] = False,
+    fix: Annotated[
+        bool,
+        typer.Option("--fix", help="把带归属标记的数字改写成断言期望值（只改标记处，写盘）"),
+    ] = False,
 ) -> None:
     """核对知识库文档里的数量断言（游戏本体口径）。
 
@@ -1032,7 +1036,31 @@ def verify_cmd(
     跳过，而精简快照（已入库、约 4.9 MiB）里带着 common 各目录的条目名、
     defines 命名空间与 DLC 清单，足以核验其中约一半。它证明的是「断言注册表
     仍与当时记录的真值一致」，**不**证明「游戏里现在还是这个数」。
+
+    **``--fix``**：正文里带归属标记的数字（``205<!--claim:dip.group_files-->``）
+    会被改写成断言期望值。它只碰**带标记的那一个数字**，包裹（``**`` / 反引号）
+    与空格原样保留，因此不是「猜着改文本」，而是「按归属改」。不带 ``--fix``
+    时同一套逻辑只报告不改 —— 两者共用一条实现，免得「说会改 A、实际改了 B」。
     """
+    if fix:
+        changes = verify.fix_markers(write=True)
+        if not changes:
+            console.print("[green]带标记的数字全都与断言一致，无需改动[/]")
+            return
+        table = Table(title=f"按断言改写 {len(changes)} 处", show_lines=False)
+        table.add_column("文档", style="dim")
+        table.add_column("行", justify="right")
+        table.add_column("断言", style="dim")
+        table.add_column("旧", justify="right")
+        table.add_column("新", justify="right", style="green")
+        for ch in changes:
+            table.add_row(
+                escape(ch.doc), str(ch.line), escape(ch.id), escape(ch.old), escape(ch.new)
+            )
+        console.print(table)
+        console.print("改完请重跑 `v3 verify`（不带 --fix）确认全绿。")
+        return
+
     if from_snapshot:
         _verify_from_snapshot(claims=verify.CLAIMS, only=only, no_drift=no_drift)
         return
@@ -1105,6 +1133,22 @@ def verify_cmd(
             if claim.note:
                 console.print(f"   备注：{escape(claim.note)}")
 
+    # ── 归属标记的体检 ─────────────────────────────────
+    # 与漂移扫描分工：标记是**精确绑定**（这个数字属于哪条断言），
+    # 漂移扫描是**启发式**（锚点 + 量级），只管没有标记的断言。
+    marker_issues = [] if only else verify.check_markers()
+    if marker_issues:
+        console.rule("[red]归属标记有问题[/]")
+        for issue in marker_issues[:30]:
+            console.print(f"[red]❌[/] {escape(issue.describe())}")
+        if len(marker_issues) > 30:
+            console.print(f"   …共 {len(marker_issues)} 处")
+    elif not only:
+        console.print(
+            f"[green]归属标记全部对上[/]（{len(verify.all_markers())} 处，"
+            f"数字不符时用 `v3 verify --fix`）"
+        )
+
     # ── 文档正文的数字漂移 ──────────────────────────────
     # 用 unknown_doc_drift：已登记为「口径不同、文档其实没错」的那些不算失败。
     drift = [] if (no_drift or only) else verify.unknown_doc_drift()
@@ -1118,10 +1162,9 @@ def verify_cmd(
                 f"登记到 pdx.verify.KNOWN_METRIC_MIXUPS 并写明理由；否则请改文档。[/]"
             )
         else:
-            console.print(
-                f"[green]文档正文与断言表一致[/]（{len(verify.KNOWN_METRIC_MIXUPS)} 处"
-                f"已登记的口径错配不计）"
-            )
+            mixups = len(verify.KNOWN_METRIC_MIXUPS)
+            extra = f"（{mixups} 处已登记的口径错配不计）" if mixups else "（无已登记的口径错配）"
+            console.print(f"[green]文档正文与断言表一致[/]{extra}")
 
     if json_out is not None:
         _write_json(
@@ -1153,10 +1196,14 @@ def verify_cmd(
                     }
                     for d in drift
                 ],
+                "标记问题": [
+                    {"doc": i.doc, "line": i.line, "id": i.id, "detail": i.detail}
+                    for i in marker_issues
+                ],
             },
         )
 
-    if failed or drift:
+    if failed or drift or marker_issues:
         raise typer.Exit(EXIT_FAILED)
 
 
