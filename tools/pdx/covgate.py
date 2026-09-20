@@ -80,13 +80,29 @@ class ModuleCoverage:
 
 
 def run_pytest(*, extra: Iterable[str] = ()) -> int:
-    """跑整套测试并写覆盖率 JSON，返回 pytest 退出码。"""
+    """跑整套测试并写覆盖率 JSON，返回 pytest 退出码。
+
+    **为什么显式给 `-n 4`**：`addopts` 里的默认是 `-n auto`，而本机 16 核下
+    "覆盖率 + `-n auto`" 恰好是最差的组合 —— 每个 worker 都要自己写 coverage
+    数据、还要各自重跑那份 16 秒的全量分析（xdist 的 worker 不共享解析缓存）。
+    实测同一台机器、同一套测试：
+
+    | 配置 | 墙钟 | 结果 |
+    |---|---|---|
+    | 覆盖率 + `-n auto`（默认） | 376 秒 | 偶发红：worker `INTERNALERROR`、负载敏感用例假红 |
+    | 覆盖率 + `-n 4` | 185 秒 | 841 通过 / 8 跳过 / 0 失败 |
+
+    （`pyproject.toml` 里那条 "-n auto 比串行快 58%" 的实测口径是 `--no-cov`，
+    与这里不矛盾：不开覆盖率时多 worker 才划算。）
+    """
     COV_JSON.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
         sys.executable,
         "-m",
         "pytest",
         "-q",
+        "-n",
+        "4",
         f"--cov-report=json:{COV_JSON}",
         "--cov",
         *extra,
