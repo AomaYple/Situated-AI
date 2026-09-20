@@ -1,0 +1,7 @@
+# 调用候选 2：scripted_modifier = 名字
+zzprobe_mod_call_2 = {
+	ai_chance = {
+		base = 10
+		scripted_modifier = zzprobe_modifier
+	}
+}

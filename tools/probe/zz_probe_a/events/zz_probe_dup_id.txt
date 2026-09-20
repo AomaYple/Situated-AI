@@ -1,0 +1,10 @@
+# P3：**重名 namespace**（`test` 是原版已有的 namespace，见 events/test_events.txt）。
+# 日志会告诉我们引擎是「合并 namespace」还是「报错」。
+namespace = test
+
+test.99999 = {
+	type = country_event
+	title = zzprobe_ev1_title
+	desc = zzprobe_ev1_desc
+	option = { name = zzprobe_ev1_opt }
+}

@@ -1,0 +1,3 @@
+zzprobe_p5_c4 = {
+	add_treasury = 5
+}

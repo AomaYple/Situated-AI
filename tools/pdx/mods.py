@@ -176,8 +176,17 @@ def _scan_prefixes(path: Path, rel_str: str, vanilla: Path, info: ModInfo) -> No
         bucket[rel_str.split("/", maxsplit=1)[0]] += 1
 
 
+#: 本仓库**自己的探针 mod** 的目录名前缀（见 `tools/probe/`）。
+#:
+#: 它们不算「本机装了哪些 mod」：装进 mod 目录只是为了跑一次游戏实测
+#: （`v3 experiment install`）。不排除的话，「本机 23 个 mod」这类统计、
+#: 黄金回归指纹与 `v3 verify` 的 mod 侧断言都会随「探针装没装」而变 ——
+#: 实测踩过：装完探针，`test_golden` 的产物指纹与 `refresh --dry-run` 立刻红。
+PROBE_PREFIX = "zz_probe_"
+
+
 def discover_mods(*, include_local: bool = True, include_workshop: bool = True) -> list[Path]:
-    """列出所有 mod 根目录。"""
+    """列出所有 mod 根目录（**不含本仓库自己的探针 mod**，见 :data:`PROBE_PREFIX`）。"""
     roots: list[Path] = []
     if include_workshop and config.WORKSHOP.is_dir():
         roots += sorted(p for p in config.WORKSHOP.iterdir() if p.is_dir())
@@ -185,7 +194,7 @@ def discover_mods(*, include_local: bool = True, include_workshop: bool = True) 
         roots += sorted(
             p for p in config.LOCAL_MODS.iterdir() if p.is_dir() and not p.name.startswith(".")
         )
-    return roots
+    return [r for r in roots if not r.name.startswith(PROBE_PREFIX)]
 
 
 def analyse_all(**kwargs) -> list[ModInfo]:

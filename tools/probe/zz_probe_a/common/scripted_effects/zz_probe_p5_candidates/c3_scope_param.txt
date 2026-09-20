@@ -1,0 +1,3 @@
+zzprobe_p5_c3 = {
+	$SCOPE$ = { add_treasury = 5 }
+}

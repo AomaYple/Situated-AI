@@ -1,0 +1,5 @@
+# P11：与 zz_probe_a 抢同一个键，用 REPLACE_OR_CREATE 且值不同。
+# 国库结果 → +111 = A（INJECT）生效；+222 = B（REPLACE_OR_CREATE）生效；+333 = 叠加。
+REPLACE_OR_CREATE:zzprobe_shared = {
+	add_treasury = 222
+}

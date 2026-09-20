@@ -1,0 +1,7 @@
+# 调用候选 1：把模板名当键名
+zzprobe_mod_call_1 = {
+	ai_chance = {
+		base = 10
+		zzprobe_modifier = yes
+	}
+}

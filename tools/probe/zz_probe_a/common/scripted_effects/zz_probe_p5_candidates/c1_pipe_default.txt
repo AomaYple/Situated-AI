@@ -1,0 +1,3 @@
+zzprobe_p5_c1 = {
+	add_treasury = $AMOUNT|0$
+}

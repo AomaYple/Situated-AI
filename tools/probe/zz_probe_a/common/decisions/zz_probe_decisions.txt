@@ -1,0 +1,30 @@
+# 探针主决议：点一次，把能自动判定的实验全跑一遍。
+#
+# 判读三处（互相独立）：
+#   1) 国库：`debug_success` 被本 mod **不带前缀**重定义过（原版 +50000，本 mod +1）
+#      → +50000 = 原版赢；+1 = 本 mod 替换；+50001 = 两者都跑；报错 = 重定义被拒
+#   2) 事件窗口：三个事件各带一个待验证字段（after / is_popup / orphan）
+#   3) 日志：Documents\Paradox Interactive\Victoria 3\logs\ 里 grep `zzprobe`
+zzprobe_run_all = {
+	is_shown = { always = yes }
+	possible = { always = yes }
+	when_taken = {
+		debug_success = yes
+		zzprobe_control_effect = yes
+		zzprobe_shared = yes
+		add_journal_entry = { type = zzprobe_je }
+		trigger_event = { id = zzprobe.1 days = 2 }
+		trigger_event = { id = zzprobe.2 days = 3 }
+		trigger_event = { id = zzprobe.3 days = 4 }
+	}
+	ai_chance = { base = 0 }
+}
+
+# P10：同一个 loc 键在 zz_probe_a 的两个文件里各写了一次（`:0` 与 `:1`）。
+# 标题显示哪一句 → 版本号是否参与优先级。
+zzprobe_loc_version_probe = {
+	is_shown = { always = yes }
+	possible = { always = yes }
+	when_taken = { add_treasury = 0 }
+	ai_chance = { base = 0 }
+}

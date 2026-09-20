@@ -1,0 +1,4 @@
+# 调用候选 1
+zzprobe_list_call_1 = {
+	scripted_list = zzprobe_list
+}

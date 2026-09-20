@@ -1,0 +1,18 @@
+# P2：**不带任何前缀**重定义原版 scripted_effect。
+# 原版定义：common/scripted_effects/0000_debug_effects.txt:1（add_treasury = 50000）
+# 这是「裸同名键」唯一的实测样本 —— 原版自己 0 个跨文件同名实例。
+debug_success = {
+	add_treasury = 1
+}
+
+# 对照效果：证明「决议 → scripted_effect」这条链路本身是通的（+1）
+zzprobe_control_effect = {
+	add_treasury = 1
+}
+
+# P11：双 mod 同名键 —— zz_probe_b 用**同样的前缀**抢同一个键、值不同。
+# 两个 mod 都用 REPLACE_OR_CREATE，才能干净地测「谁后加载谁赢」：
+# 国库 +111 = A 赢；+222 = B 赢；+333 = 叠加（说明不是整体替换）。
+REPLACE_OR_CREATE:zzprobe_shared = {
+	add_treasury = 111
+}

@@ -1,0 +1,4 @@
+# P1：`has_game_rule` 的**块形式**是否存在（官方 md 无、原版 0 处）
+zzprobe_g1 = {
+	has_game_rule = { name = zzprobe_rule value = yes }
+}

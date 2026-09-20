@@ -1,0 +1,7 @@
+# 调用候选 3：放进 modifier = { }
+zzprobe_mod_call_3 = {
+	ai_chance = {
+		base = 10
+		modifier = { zzprobe_modifier = yes }
+	}
+}

@@ -1,0 +1,12 @@
+{
+  "name": "ZZ Probe A",
+  "id": "",
+  "version": "1.0",
+  "supported_game_version": "1.14.3",
+  "short_description": "自动探针 A —— 跑一次游戏收工（见 tools/probe/README.md）",
+  "tags": [],
+  "relationships": [],
+  "game_custom_data": {
+    "multiplayer_synchronized": false
+  }
+}

@@ -1,0 +1,7 @@
+# scripted_modifier 的**定义**形态（原版 0 个实例，只有官方 md 的示例）
+zzprobe_modifier = {
+	if = {
+		limit = { always = yes }
+		factor = 0.2
+	}
+}

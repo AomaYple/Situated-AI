@@ -1,0 +1,30 @@
+# P8：事件三个待验证字段（after / show_as_tooltip / is_popup / orphan）
+namespace = zzprobe
+
+zzprobe.1 = {
+	type = country_event
+	title = zzprobe_ev1_title
+	desc = zzprobe_ev1_desc
+	after = { add_treasury = 100 }
+	option = {
+		name = zzprobe_ev1_opt
+		show_as_tooltip = { add_treasury = 1000 }
+		add_treasury = 1
+	}
+}
+
+zzprobe.2 = {
+	type = country_event
+	title = zzprobe_ev2_title
+	desc = zzprobe_ev2_desc
+	is_popup = yes
+	option = { name = zzprobe_ev2_opt }
+}
+
+zzprobe.3 = {
+	type = country_event
+	title = zzprobe_ev3_title
+	desc = zzprobe_ev3_desc
+	orphan = yes
+	option = { name = zzprobe_ev3_opt }
+}

@@ -1,0 +1,4 @@
+# 调用候选 2
+zzprobe_list_call_2 = {
+	zzprobe_list = yes
+}

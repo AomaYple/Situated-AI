@@ -1,0 +1,10 @@
+# P9：scripted_button 的 `selected` / `cooldown`（官方 md 未记载）
+# 观察：按钮是否出现、是否呈现「已选中」状态、冷却是否生效。
+zzprobe_button = {
+	name = zzprobe_button
+	desc = zzprobe_button_desc
+	selected = { always = yes }
+	visible = { always = yes }
+	cooldown = { days = 1 }
+	effect = { add_treasury = 1 }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "ZZ Probe B",
+  "id": "",
+  "version": "1.0",
+  "supported_game_version": "1.14.3",
+  "short_description": "自动探针 B（同名键顺序）",
+  "tags": [],
+  "relationships": [],
+  "game_custom_data": {
+    "multiplayer_synchronized": false
+  }
+}

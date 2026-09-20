@@ -60,6 +60,7 @@ from pdx import (
     engine_log,
     evidence,
     exe_strings,
+    experiments,
     lockfile,
     snapshot,
     tables_offline,
@@ -1546,6 +1547,95 @@ def strings_cmd(
         console.print(f"\n未使用候选（前 {min(limit, len(rows))} / {len(rows):,}）：")
         for name in rows[:limit]:
             console.print(f"  {escape(name)}")
+
+
+@app.command("experiment")
+def experiment_cmd(
+    action: Annotated[
+        str,
+        typer.Argument(help="plan（打印清单）/ install / uninstall / collect"),
+    ] = "plan",
+    only: Annotated[
+        list[str] | None, typer.Option("--only", help="只处理某些实验编号，如 --only P2 --only P11")
+    ] = None,
+    target: Annotated[
+        Path | None, typer.Option("--target", help="安装目标（默认本机 mod 目录）")
+    ] = None,
+    force: bool = typer.Option(False, "--force", help="install 时覆盖已存在的探针目录"),
+) -> None:
+    """游戏实测探针：一次启动收工。
+
+    知识库里还剩一批「只能进游戏才能定」的问题（引擎的加载语义、运行期字段行为、
+    调用语法 —— 见 `04-脚本系统.md` §13.1 的四条配方）。这个命令把探针 mod、
+    操作清单、日志收割做成一条流水线：
+
+    ```text
+    v3 experiment plan        # 打印操作清单（点什么、看什么、回传什么）
+    v3 experiment install     # 把 tools/probe/ 的两个探针 mod 装进本机 mod 目录
+    （启动游戏一次，按清单点两个决议，退出）
+    v3 experiment collect     # 收割 logs/，按实验编号归位证据
+    v3 experiment uninstall   # 移除探针
+    ```
+
+    判定优先走日志（`-debug_mode` 会把未知键/重复定义/scope 错误写进去），
+    只有三处需要肉眼：国库数字、是否弹窗、决议标题的 loc 文案。
+    `install` 只写**本机 mod 目录**（不是仓库），`collect` 只读日志。
+    """
+    name = action.strip().lower()
+    if name == "plan":
+        console.print(escape(experiments.plan(target)))
+        return
+
+    if name == "install":
+        try:
+            paths = experiments.install(target, mods=only, force=force)
+        except OSError as exc:
+            _fail(f"安装探针失败：{type(exc).__name__}: {exc}")
+        table = Table(title="探针已就位（在启动器里启用它们）", show_lines=False)
+        table.add_column("mod")
+        table.add_column("路径", style="dim")
+        for path in paths:
+            table.add_row(escape(path.name), escape(str(path)))
+        console.print(table)
+        console.print("接下来跑 `v3 experiment plan` 照清单做。")
+        return
+
+    if name == "uninstall":
+        removed = experiments.uninstall(target, mods=only or None)
+        if not removed:
+            console.print("[yellow]本机 mod 目录里没有探针，无需移除[/]")
+            return
+        for path in removed:
+            console.print(f"已移除 {escape(str(path))}")
+        return
+
+    if name == "collect":
+        report = experiments.collect()
+        table = Table(title=f"探针日志收割（扫了 {report.files_scanned} 个文件）", show_lines=False)
+        table.add_column("实验", style="cyan")
+        table.add_column("来源", style="dim")
+        table.add_column("证据", overflow="fold")
+        for finding in report.findings[:60]:
+            table.add_row(
+                escape(finding.experiment), escape(finding.source), escape(finding.line[:110])
+            )
+        console.print(table)
+        grouped = report.by_experiment()
+        console.print(
+            f"命中 {len(report.findings)} 行，覆盖 {len(grouped)} 个实验编号；"
+            f"实验清单共 {len(experiments.EXPERIMENTS)} 个。"
+        )
+        for hint in report.hints:
+            console.print(f"[yellow]{escape(hint)}[/]")
+        for miss in report.missing:
+            console.print(f"[yellow]{escape(miss)}[/]")
+        console.print(
+            "[dim]把这张表（或整份输出）贴回来即可；"
+            "需要肉眼看的三处见 `v3 experiment plan` 末尾。[/]"
+        )
+        return
+
+    _fail(f"不认识的 action：{action!r} —— 可用：plan / install / uninstall / collect")
 
 
 @app.command("lock")

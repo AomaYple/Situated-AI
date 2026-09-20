@@ -1,0 +1,114 @@
+# P7：JE 字段语义 —— 骨架逐字复制自 common/journal_entries/00_abolish_monarchy.txt，
+# 只改键名并注入三个待验证字段。
+zzprobe_je = {
+	icon = "gfx/interface/icons/event_icons/event_portrait.dds"
+
+	# ↓ P7：三个「md 未列、原版在用」的字段
+	is_shown_in_lobby = { always = yes }
+	should_update_on_player_command = yes
+	display_progressbar_as_months = yes
+	group = je_group_internal_affairs
+
+	on_monthly_pulse = {
+		effect = {
+			if = {
+				limit = {
+					NOT = { country_has_monarchy_law = yes }
+					NOT = {
+						any_civil_war = {
+							civil_war_progress >= 0.75
+							is_civil_war_type = revolution
+						}
+					}
+					NOT = {
+						any_interest_group = {
+							law_stance = {
+								law = law_type:law_monarchy
+								value > neutral
+							}
+							is_powerful = yes
+						}
+					}
+				}
+				change_variable = {
+					name = abolishing_monarchy_var
+					add = 1
+				}
+			}
+		}
+	}
+
+	complete = {
+		scope:journal_entry = {
+			is_goal_complete = yes
+		}
+		NOT = { country_has_monarchy_law = yes }
+		NOT = {
+			any_civil_war = {
+				civil_war_progress >= 0.75
+				is_civil_war_type = revolution
+			}
+		}
+		NOT = {
+			any_interest_group = {
+				law_stance = {
+					law = law_type:law_monarchy
+					value > neutral
+				}
+				is_powerful = yes
+			}
+		}
+	}
+
+	immediate = {
+		ig:ig_landowners ?= {
+			save_scope_as = landowners_ig
+		}
+	}
+
+	on_complete = {
+		set_variable = stamped_out_monarchy_var
+		trigger_event = {
+			id = 1848.2
+		}
+		if = {
+			limit = { has_journal_entry = je_warlord_china }
+			chi_add_1_fragile_unity = yes
+			set_variable = china_warlord_abolished_monarchy
+		}
+	}
+
+	event_outcome_completed_desc = {
+		first_valid = {
+			triggered_desc = {
+				desc = event_effects_1848.2_tt
+			}
+		}
+	}
+
+	invalid = {
+		NOR = {
+			is_enacting_law = law_type:law_presidential_republic
+			is_enacting_law = law_type:law_parliamentary_republic
+			is_enacting_law = law_type:law_council_republic
+			has_law_or_variant = law_type:law_presidential_republic
+			has_law_or_variant = law_type:law_parliamentary_republic
+			has_law_or_variant = law_type:law_council_republic
+		}
+	}
+
+	current_value = {
+		value = root.var:abolishing_monarchy_var
+	}
+
+	goal_add_value = {
+		add = 60
+	}
+
+	progressbar = yes
+
+	weight = 100
+		
+	should_be_pinned_by_default_uninvolved_or_context = no
+	
+}

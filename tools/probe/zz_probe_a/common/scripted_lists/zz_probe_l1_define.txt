@@ -1,0 +1,4 @@
+# scripted_list 的定义形态（原版 5 个定义、0 个调用点）
+zzprobe_list = {
+	base = country
+}

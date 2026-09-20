@@ -93,6 +93,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 assets` | （新增） | DDS 头普查（格式 / 尺寸 / mipmap，`--json` 落盘）。doc 06 §6.3 那三个结论此前是「一次性扫描」，现在这条命令可复算，那张表也已交给 `v3 tables` 生成 |
 | `v3 csv <路径>` | （新增） | 非 PDX 表格（`.csv` / `.tsv`）的**逐列取值分布**，`-c 列名` 详列某列。doc 06 关于 `adjacencies.csv` 的结论由此可复算 |
 | `v3 strings --families` | （新增） | 把未使用的 exe 标识符按**同后缀 / 同前缀**聚族（`--by suffix\|prefix --min N`）：实测 `*_command` 233 个、`*_cw_duplicate_compat` 161 个 —— PDX 字段名往往成族出现 |
+| `v3 experiment` | （新增） | **游戏实测探针**：`plan` 打印「一次启动收工」的操作清单、`install` 把 `tools/probe/` 的两个探针 mod 装进本机 mod 目录、`collect` 收割 `logs/` 并按实验编号归位证据、`uninstall` 移除。覆盖 P1–P11（裸同名键、双 mod 顺序、`scripted_modifier`/`scripted_list` 调用语法、`$PARAM$` 候选、进度条自定义样式、JE/事件/按钮字段语义、本地化 `:数字`、重名 namespace） |
 
 ```text
 .venv\Scripts\v3.exe analyze                     # 全量分析，落盘报告
@@ -113,6 +114,9 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe assets                      # DDS 头普查（格式/尺寸/mipmap）
 .venv\Scripts\v3.exe csv map_data/adjacencies.csv -c Type   # 某列有哪些取值
 .venv\Scripts\v3.exe strings --families --min 20 # 未使用的 exe 标识符按族看
+.venv\Scripts\v3.exe experiment plan             # 游戏实测探针：操作清单
+.venv\Scripts\v3.exe experiment install          # 装探针 mod（写本机 mod 目录）
+.venv\Scripts\v3.exe experiment collect          # 游戏退出后收割 logs/
 .venv\Scripts\v3.exe cov                         # 覆盖率门禁（含核心模块下限）
 .venv\Scripts\v3.exe lock                        # 依赖锁与当前环境对账
 .venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
@@ -148,7 +152,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-735 条用例（`pytest --collect-only` 实测），
+774 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -190,6 +194,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_install_hygiene.py` | 游戏目录里**不许有非游戏文件**：看图工具的 `.XnViewSort` / `.dmp` 缓存、`Thumbs.db` 会让「安装树」那族断言集体报红（实测踩过），这里直接点名并给处置建议 |
 | `test_cli_more.py` / `test_cli_new_commands.py` | CLI 的补充覆盖：新命令 + 剩余分支（`csv` / `assets` / `backlog` / `mirror check` / `refresh --dry-run` / 快照 diff…）。`cli.py` 是全包最大模块，这些分支**零成本可测**，没理由留着 |
 | `test_lockfile.py` | 依赖锁：直接依赖一条不少、渲染与解析往返、标记求值保守（不认识的标记当作成立） |
+| `test_experiments.py` | 游戏实测探针包：**探针脚本必须能被自家解析器读通**（探针自己写错＝用户白跑一趟）、实验清单点名的文件都存在、日志收割能按编号归位、安装/卸载不误删 |
 
 ### 跑基准要加 `-n0`
 
@@ -416,7 +421,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：735 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：774 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
