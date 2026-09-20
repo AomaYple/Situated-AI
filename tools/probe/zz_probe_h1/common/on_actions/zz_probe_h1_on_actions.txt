@@ -7,6 +7,11 @@
 #    `on_actions` → 纯追加；这个钩子**天然是国别作用域**（root = 国家），
 #    不需要 `every_country`。
 #
+# ⚠️ **本文件里的每个 tag 都必须在这里定义**（`on_actions = { … }` 只认 on_action
+#    定义，不认 scripted_effects 里的效果名）：把 `zz_probe_h1_start` 定义到效果文件里
+#    的后果是 `No on_action scripted with tag … cannot link`，钩子静默失效（实测踩过）。
+#    所以：逻辑写在 `zz_probe_h1_effects.txt`（裸效果），包装写在这里。
+#
 # ⚠️ 自报格式的两条实测教训：
 #   1. 取值只能用原版证明可用的 loc 命令：`[THIS.GetCountry.GetNameNoFormatting]`
 #      （`[This.GetTag]` 不是合法命令，引擎会替换成 `ERROR:[This.GetTag]`）；
@@ -22,6 +27,11 @@ on_game_started_after_lobby = {
 
 on_monthly_pulse_country = {
 	on_actions = { zz_probe_h1_monthly }
+}
+
+# 开局钩子的**包装**：on_action 必须定义在 on_actions 文件里，效果体在效果文件里。
+zz_probe_h1_start = {
+	effect = { zz_probe_h1_boot = yes }
 }
 
 # root = 国家

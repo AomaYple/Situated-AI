@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -237,7 +238,50 @@ def test_生成的文件能被本仓库的解析器读懂(tmp_path: Path) -> Non
         "ai_strategy_sitai_probe_noloc",
         "ai_strategy_sitai_probe_fourth",
     }
-    assert effects == {"zz_probe_h1_assign", "zz_probe_h1_start"}
+    assert effects == {"zz_probe_h1_assign", "zz_probe_h1_boot"}
+
+
+def test_效果文件里不能出现on_action包装() -> None:
+    """`scripted_effects` 里只能有**裸效果列表**。
+
+    写成 on_action 那种 `effect = { … }` 包装，引擎会去调一个叫 `effect` 的效果 →
+    `Unknown effect effect`，整个定义作废，而 on_action 那头只会报
+    `No on_action scripted with tag … cannot link`。实测后果：分组一次都没跑，
+    DOSE 行全是 CTRL，整局白跑 —— 所以这条必须在单元测试里挡住。
+    """
+    for variant in h1_probe.VARIANTS:
+        lines = [
+            line.strip()
+            for line in h1_probe.effects_text(variant).splitlines()
+            if not line.strip().startswith("#")
+        ]
+        assert "effect = {" not in lines, variant
+    # 效果文件里定义的是效果，on_action 的包装在另一个文件里
+    parsed = parse_text(h1_probe.effects_text("natural"), path="effects")
+    assert {a.key for a in parsed.top_assignments} == {"zz_probe_h1_assign", "zz_probe_h1_boot"}
+
+
+def test_on_actions引用的tag都在同一文件里定义() -> None:
+    """`on_actions = { … }` 只认 **on_action 定义**，不认 scripted_effects 里的效果名。
+
+    引擎对此的报错是 `No on_action scripted with tag … cannot link`，而且只写进
+    error.log，脚本侧毫无感觉 —— 钩子静默失效。这条把「引用 ⊆ 定义」钉住。
+    """
+    text = h1_probe.on_actions_text(_db())
+    # 注释里也写着 `on_actions = { … }`（就是解释这条规则的那段），先按行去掉注释
+    code = "\n".join(line for line in text.splitlines() if not line.strip().startswith("#"))
+    defined = set(re.findall(r"(?m)^(\w+) = \{", code))
+    referenced: set[str] = set()
+    for match in re.finditer(r"on_actions = \{([^}]*)\}", code):
+        referenced |= set(match.group(1).split())
+    assert referenced, "一个钩子都没挂上，测的是空跑"
+    assert referenced <= defined, f"没定义的 tag：{sorted(referenced - defined)}"
+    # 包装必须调效果文件里真实存在的效果
+    assert "zz_probe_h1_boot = yes" in text
+    effects = {
+        a.key for a in parse_text(h1_probe.effects_text("natural"), path="e").top_assignments
+    }
+    assert "zz_probe_h1_boot" in effects
 
 
 def test_无loc牌与第四槽牌不带本地化引用() -> None:

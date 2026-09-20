@@ -191,26 +191,32 @@ def effects_text(variant: str) -> str:
     h3: list[str] = []
     for tag, form in zip(H3_TARGETS, ("block", "bare"), strict=False):
         body = (
-            "\t\t\tadd_ai_strategy = { type = political id = ai_strategy_egalitarian_agenda }"
+            "\t\tadd_ai_strategy = { type = political id = ai_strategy_egalitarian_agenda }"
             if form == "block"
-            else "\t\t\tadd_ai_strategy = ai_strategy_egalitarian_agenda"
+            else "\t\tadd_ai_strategy = ai_strategy_egalitarian_agenda"
         )
         h3.append(
-            f"\t\tc:{tag} ?= {{\n"
-            f'\t\t\tdebug_log = "ZZPROBE H3;TRY;{form};{tag}"\n'
+            f"\tc:{tag} ?= {{\n"
+            f'\t\tdebug_log = "ZZPROBE H3;TRY;{form};{tag}"\n'
             f"{body}\n"
-            f'\t\t\tdebug_log = "ZZPROBE H3;DONE;{form};{tag}"\n'
-            f"\t\t}}"
+            f'\t\tdebug_log = "ZZPROBE H3;DONE;{form};{tag}"\n'
+            f"\t}}"
         )
     h3_block = "\n".join(h3)
 
     return (
         f"{GEN_HEADER}"
-        f"# ① 随机分组：`random_list` 25/25/25/25 → 四组。组间**唯一**差异是探针牌的权重。\n"
-        f"#    幂等（`{DOSE_VAR_PREFIX}assigned` 标记）：两个 on_game_started 钩子都会调它，\n"
-        f"#    重复调用是常态。\n"
-        f"# ② 开局写一行 RUN 标记：分析器靠它切分「哪次启动的数据」（日志轮转会把多次启动\n"
-        f"#    的行混在同一个目录里）。\n"
+        f"# ⚠️ **本文件里只能有裸效果列表**（scripted_effects 的语法）：写成 on_action 那种\n"
+        f"#    `effect = {{ … }}` 包装会被引擎读成「调一个叫 effect 的效果」→\n"
+        f"#    `Unknown effect effect`，整个定义作废，而 on_action 那头只会报\n"
+        f"#    `No on_action scripted with tag … cannot link`（实测踩过：分组一次都没跑，\n"
+        f"#    DOSE 行全是 CTRL）。钩子/包装在 `zz_probe_h1_on_actions.txt` 里。\n"
+        f"#\n"
+        f"# ① `zz_probe_h1_assign`：随机分组，`random_list` 25/25/25/25 → 四组。\n"
+        f"#    组间**唯一**差异是探针牌的权重。幂等（`{DOSE_VAR_PREFIX}assigned` 标记）：\n"
+        f"#    两个 on_game_started 钩子都会调它，重复调用是常态。\n"
+        f"# ② `zz_probe_h1_boot`：开局写一行 RUN 标记（分析器靠它切分「哪次启动的数据」——\n"
+        f"#    日志轮转会把多次启动的行混在同一个目录里）+ 跑 H3 语法测试。\n"
         f"# ③ H3：`add_ai_strategy` 的两种候选语法各试一个国家。exe 里有这个标识符，\n"
         f"#    但原版脚本 0 处使用 —— 语法只能实测。TRY 打出来、DONE 没打出来 = 这个语法被拒。\n"
         f"zz_probe_h1_assign = {{\n"
@@ -225,12 +231,10 @@ def effects_text(variant: str) -> str:
         f"\t}}\n"
         f"}}\n"
         f"\n"
-        f"zz_probe_h1_start = {{\n"
-        f"\teffect = {{\n"
-        f"\t\tzz_probe_h1_assign = yes\n"
-        f'\t\tdebug_log = "ZZPROBE H1;RUN;{variant}"\n'
+        f"zz_probe_h1_boot = {{\n"
+        f"\tzz_probe_h1_assign = yes\n"
+        f'\tdebug_log = "ZZPROBE H1;RUN;{variant}"\n'
         f"{h3_block}\n"
-        f"\t}}\n"
         f"}}\n"
     )
 
@@ -311,6 +315,11 @@ def on_actions_text(vanilla: Iterable[ai_surface.Card]) -> str:
         f"#    `on_actions` → 纯追加；这个钩子**天然是国别作用域**（root = 国家），\n"
         f"#    不需要 `every_country`。\n"
         f"#\n"
+        f"# ⚠️ **本文件里的每个 tag 都必须在这里定义**（`on_actions = {{ … }}` 只认 on_action\n"
+        f"#    定义，不认 scripted_effects 里的效果名）：把 `zz_probe_h1_start` 定义到效果文件里\n"
+        f"#    的后果是 `No on_action scripted with tag … cannot link`，钩子静默失效（实测踩过）。\n"
+        f"#    所以：逻辑写在 `zz_probe_h1_effects.txt`（裸效果），包装写在这里。\n"
+        f"#\n"
         f"# ⚠️ 自报格式的两条实测教训：\n"
         f"#   1. 取值只能用原版证明可用的 loc 命令：`[THIS.GetCountry.GetNameNoFormatting]`\n"
         f"#      （`[This.GetTag]` 不是合法命令，引擎会替换成 `ERROR:[This.GetTag]`）；\n"
@@ -326,6 +335,11 @@ def on_actions_text(vanilla: Iterable[ai_surface.Card]) -> str:
         f"\n"
         f"on_monthly_pulse_country = {{\n"
         f"\ton_actions = {{ zz_probe_h1_monthly }}\n"
+        f"}}\n"
+        f"\n"
+        f"# 开局钩子的**包装**：on_action 必须定义在 on_actions 文件里，效果体在效果文件里。\n"
+        f"zz_probe_h1_start = {{\n"
+        f"\teffect = {{ zz_probe_h1_boot = yes }}\n"
         f"}}\n"
         f"\n"
         f"# root = 国家\n"

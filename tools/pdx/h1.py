@@ -452,16 +452,26 @@ def format_report(result: Result) -> str:
         for dose in DOSE_ORDER:
             cell = cells[dose]
             row.append(f"{cell.rate:.0%} ({cell.hits}/{cell.observations})")
-        implied = cells["HIGH"].implied_rival_weight()
-        row.append("—" if implied is None else f"≈{implied:.0f}")
+        # 等效竞争权重：优先用最高有数据的那一档反推（份额越贴近 1，反推越稳）。
+        # 自然变体里通常只有 CTRL 有数据 —— 那时它也是唯一能用的估计。
+        implied = next(
+            (
+                (dose, value)
+                for dose in reversed(DOSE_ORDER)
+                if (value := cells[dose].implied_rival_weight()) is not None
+            ),
+            None,
+        )
+        row.append("—" if implied is None else f"≈{implied[1]:.0f}（{implied[0]}）")
         row.append(_verdict(cells))
         rows.append(row)
     lines += _table(["槽", *DOSE_ORDER, "等效竞争权重", "HIGH vs CTRL"], rows)
     lines += [
         "",
         (
-            "> 等效竞争权重 = 用 HIGH 组份额反推「同槽其它牌加起来等效多少权重」"
-            "（`S = W(1-p)/p`）—— 要给多大的权重才能稳拿这个槽，看这一列。"
+            "> 等效竞争权重 = 用某档份额反推「同槽其它牌加起来等效多少权重」"
+            "（`S = W(1-p)/p`），括号里是用了哪一档 —— 要给多大的权重才能稳拿这个槽，看这一列。"
+            "只有 CTRL 有数据时（自然变体、分组没生效）它照样是有效估计，只是误差更大。"
         ),
         "",
     ]
