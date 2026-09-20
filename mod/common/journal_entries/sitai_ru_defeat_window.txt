@@ -1,0 +1,26 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 改革窗口 JE（俄罗斯 · 战败求存）：判据驱动 —— 只有压力够大才开。
+# 为什么用 JE：原版有 18 张牌直接读 has_journal_entry（01a L 节），
+# 于是「开一个 JE」= 同时喂给原版自己的 18 张牌，不占任何槽位（F5）。
+
+je_sitai_ru_reform_window = {
+	icon = "gfx/interface/icons/event_icons/event_portrait.dds"
+	group = je_group_internal_affairs
+
+	is_shown_when_inactive = {
+		c:RUS ?= this
+		has_variable = sitai_ru_defeat_memory
+	}
+
+	possible = {
+		has_variable = sitai_ru_defeat_memory
+		legitimacy <= 50
+	}
+
+	complete = {
+		legitimacy >= 75
+	}
+
+	weight = 100
+}

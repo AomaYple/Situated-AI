@@ -1,0 +1,19 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 战败求存 · 冲击记账（A 级：真实世界状态 —— 变量 + 修正，不占任何槽位）。
+# 调用方：阶段 3 的 A/B 实验（B 组施加冲击）。本档案刻意**不绑 on_action**：
+# 原版 on_war_end 只给 scope:actor / scope:target，不带胜负（00_code_on_actions.txt:7043），
+# 挂错会把战胜方也记成战败 —— 「谁算战败」的判定留待实验给结论。
+# 变量 sitai_ru_defeat_memory；压力修正 sitai_ru_defeat_pressure。
+
+sitai_ru_defeat_shock = {
+	set_variable = {
+		name = sitai_ru_defeat_memory
+		value = 1
+		days = 3650
+	}
+	add_modifier = {
+		name = sitai_ru_defeat_pressure
+		years = 10
+	}
+}

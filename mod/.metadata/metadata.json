@@ -1,0 +1,12 @@
+{
+  "name": "SITAI 处境档案 · 俄罗斯 · 战败求存",
+  "id": "sitai.ru_defeat",
+  "version": "0.1.0",
+  "supported_game_version": "1.14.3",
+  "short_description": "战败之后 AI 照旧走原来的路 —— 贵族照旧在朝、合法性不塌、财政不受罚，于是「战败 → 改革」这条因果在原版里根本不存在。档案不替 AI 决定改什么，只把战败记成账、把压力落成真实的合法性/贵族/财政变化，剩下的交给原版已经挂着的那 18 张读 has_journal_entry 的牌。",
+  "tags": [],
+  "relationships": [],
+  "game_custom_data": {
+    "multiplayer_synchronized": false
+  }
+}

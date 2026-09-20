@@ -1,0 +1,189 @@
+# 档案数据源 · 俄罗斯 单国「战败求存」（阶段 3 最小闭环）
+#
+# 口径（P9 单一数据源 / P10 每个数字有依据 / F10 生成器优先）：
+#
+#   * 产物（`mod/` 下的脚本、本地化、档案文档）**全部由 `v3 modgen` 从本文件生成**，
+#     手改产物没有用 —— 下次生成会被覆盖，闸门 ④ 也会报红；
+#   * **每一张表都必须带非空 `why`**（数字、判据、文案一律如此）：空 `why` 由
+#     `v3 modgen` 当场报错、闸门 ⑤ 复核 —— 这是 P10 从"纪律"变成"可执行检查"的那一步；
+#   * 数字一律写成 `amount = N`（同表内配 `why`），缩写形式只有一个来源，
+#     `why_report()` 与闸门 ⑤ 才能机械地枚举"每个数字 + 它的依据"。
+#
+# 为什么是 TOML：Python 3.11+ 标准库自带 `tomllib`，不新增依赖（P4），
+# 而它同时有「表」与「数组」两种结构，正好表达"一组带依据的条目"。
+#
+# 本档案只做一件事：把**战败**变成真实世界状态（A 级：变量 + 修正 + JE），
+# 让原版自己的权重公式转向改革。**一张牌都不递**（见 `[cards]`）。
+
+schema_version = 1
+
+[archive]
+id = "ru_defeat"
+title = "俄罗斯 · 战败求存"
+country = "RUS"
+# 档案对哪个引擎版本有效（写进 mod 元数据的 supported_game_version）。
+# 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
+# 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
+game_version = "1.14.3"
+why = "战败之后 AI 照旧走原来的路 —— 贵族照旧在朝、合法性不塌、财政不受罚，于是「战败 → 改革」这条因果在原版里根本不存在。档案不替 AI 决定改什么，只把战败记成账、把压力落成真实的合法性/贵族/财政变化，剩下的交给原版已经挂着的那 18 张读 has_journal_entry 的牌。"
+
+# ── ① 节奏杠杆：温和档 NAI 覆盖 ─────────────────────────────
+# 阶段 2 实测的结论：B 级（喂输入）单独用几乎无效 —— 原版重抽是十年尺度。
+# 所以节奏覆盖不是可选装饰，是"喂进去的输入能被读到时"的前提（发现 2/4）。
+[tempo]
+block = "NAI"
+why = "不覆盖节奏的话，战败压力写进去了也没人重抽 —— 政治槽实测 1.05%/国家·月，等于十年尺度（exec/阶段2-结果.md 发现 2）。本档案只覆盖 NAI 块的**两个键**，不复制原版 00_ai.txt（KB 05 §1.7 的按「块 + 参数」覆盖，阶段 2 的 storm 变体实测生效）。⚠️ **作用域是全局**：defines 没有单国写法，这两个键一改，**所有国家**的 AI 重抽节奏都变 —— 这是有意的（目标本来就是让每个国家都能随世界重新推导），但必须写在明面上：它不是「俄罗斯专属效果」，也不能拿它去解释单国差分。"
+
+[[tempo.keys]]
+key = "CHANGE_STRATEGY_THRESHOLD"
+amount = 40
+why = "原版 100 点：周通道每周 20% 概率 +1 点 → 0.20×52.14/12 ≈ 0.87 点/月 → 攒够 100 点要 ≈115 个月 ≈ 9.6 年（阶段 2 订正过口径）。取 40 是为了把重抽拉到「数年一次」：与下面那 30% 配对后 ≈1.30 点/月 → 40/1.30 ≈ 30.7 个月 ≈ 2.6 年。不取风暴档（门槛 1 / 周概率 100）—— 那是实验设置，每周改主意在观感上是反复无常，而 G4 要的是「世界活了」（阶段 2 发现 4 末尾的警告）。"
+
+[[tempo.keys]]
+key = "CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE"
+amount = 30
+why = "原版 20（1 = 1%）。与门槛 40 一起决定重抽周期（见上一条的算式）。两个键要一起动：只降门槛会让等待时间仍由周通道决定，只提概率则门槛不变、效果被门槛吃掉。30 是「温和档」的取值 —— 阶段 3 执行文档 §设计·节奏 给的 ≈40/≈30 一组。"
+
+# ── ② 战败记忆：真实世界状态的第一步 ────────────────────────
+[memory]
+variable = "sitai_ru_defeat_memory"
+effect = "sitai_ru_defeat_shock"
+why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown/possible 读它，于是「战败过」这件事变成可查的世界状态（阶段 1 已证：牌直接读 has_variable / has_journal_entry）。谁把战败判成战败，本档案不猜：原版 on_war_end 只给 scope:actor / scope:target，不带胜负（00_code_on_actions.txt:7043），挂错会把战胜方也记成战败 —— 这个判定留给阶段 3 的 A/B 实验（B 组由探针施加冲击）。"
+
+[[memory.params]]
+key = "value"
+amount = 1
+why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次战败」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 00_code_on_actions.txt:7046）。"
+
+[[memory.params]]
+key = "days"
+amount = 3650
+why = "10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。对照原版给 recently_had_war 的是 days = 1825（5 年，00_code_on_actions.txt:7048）—— 战败比「打过仗」更该留得久，故取两倍。"
+
+# ── ③ 压力：真实的合法性 / 贵族 / 财政变化（A 级）────────────
+[pressure]
+name = "sitai_ru_defeat_pressure"
+icon = "gfx/interface/icons/timed_modifier_icons/modifier_statue_negative.dds"
+why = "压力必须是真的世界状态，不是我们的私有计数器 —— 只有真实变化才会进原版自己的公式（01a D 节：A 级被严重低估，战败后贵族失势、合法性下降、财政崩溃都可以真实发生）。三条字段都照原版同族用法取档位，见各条 why。"
+
+[[pressure.params]]
+key = "years"
+amount = 10
+why = "与 sitai_ru_defeat_memory 的 days = 3650 对齐。原版 add_modifier 用 years 的写法见 00_movement_effects.txt:1-7（add_modifier = { name = … years = 20 }）。"
+
+[[pressure.effects]]
+key = "country_legitimacy_base_add"
+amount = -20
+why = "合法性下降是改革窗口的开窗判据（JE 的 possible 读 legitimacy <= 50）。原版同字段的档位是 ±5 / ±10 / ±20 / ±50（00_code_static_modifiers.txt:322-353 一连串），取 -20 = 塌一档：俄罗斯开局合法性多在 60–80，-20 足以把多数局面推过 50 那条线，又不至于让政府立刻失去执政能力。"
+
+[[pressure.effects]]
+key = "interest_group_ig_landowners_pol_str_mult"
+amount = -0.15
+why = "贵族失势 —— 这是「战败 → 改革阻力下降」的那一环。原版同字段的档位：±0.03（00_ip3_04_modifiers.txt:334）、±0.10、±0.25（00_ip4_04_modifiers.txt:12 的 modifier_regency_landowners）。取 -0.15 落在中档：方向明确（贵族政治力量 -15%），又不把贵族一次打垮 —— 一次打垮会让议会算术失去张力。"
+
+[[pressure.effects]]
+key = "country_loan_interest_rate_add"
+amount = 0.2
+why = "财政恶化取原版最小的正档：00_code_static_modifiers.txt:12 就是 +0.2。战败赔款抬高借债成本，而不是直接没收国库 —— 反目标里写着「不让 AI 获得任何数值作弊」，也不想让俄罗斯当场破产（那样测出来的差分来自破产机制，不是来自战败）。"
+
+# ── ④ 改革窗口 JE：把「处境」喂进原版的最短路径 ──────────────
+[journal_entry]
+name = "je_sitai_ru_reform_window"
+group = "je_group_internal_affairs"
+icon = "gfx/interface/icons/event_icons/event_portrait.dds"
+why = "为什么用 JE 而不是我们自己的牌：阶段 1 实测原版有 18 张牌直接读 has_journal_entry（01a L 节高频输入表），也就是说**开一个 JE = 同时喂给 18 张原版牌**，不占任何槽位（F5：能改世界就不占槽）。icon 与 group 都沿用原版内部事务那一族（je_corn_laws 用同一个 icon 与 group，见 00_corn_laws.txt:2-4）。"
+
+[[journal_entry.fields]]
+key = "weight"
+amount = 100
+why = "JE 列表拥挤时的保留优先级。与原版 je_corn_laws 的 weight = 100 同档（00_corn_laws.txt:79）—— 改革窗口是处境级 JE，不该被小 JE 挤掉。"
+
+[[journal_entry.conditions]]
+gate = "is_shown_when_inactive"
+key = "c:RUS"
+op = "?="
+arg = "this"
+why = "档案是**单国**的（阶段 3 执行文档：主角俄罗斯单国）。c:AUS ?= this 是原版写法（05_metternich.txt:8），问号的语义是「作用域存在才比」，比裸 = 稳。"
+
+[[journal_entry.conditions]]
+gate = "is_shown_when_inactive"
+key = "has_variable"
+arg = "sitai_ru_defeat_memory"
+why = "没被记过战败的国家连这条 JE 都不该看见 —— 「和平期占槽率 ≈ 0」这条出口判据靠它：不施加冲击的局里，这行判据为假，整条 JE 不出现。"
+
+[[journal_entry.conditions]]
+gate = "possible"
+key = "has_variable"
+arg = "sitai_ru_defeat_memory"
+why = "开窗的第一个条件：确实战败过。is_shown 与 possible 都写一遍是有意的 —— 前者管「看不看得见」，后者管「开不开」，原版 je_corn_laws 也是两处各写一套（00_corn_laws.txt:6-31）。"
+
+[[journal_entry.conditions]]
+gate = "possible"
+key = "legitimacy"
+op = "<="
+amount = 50
+why = "开窗的第二个条件：压力够大。50 是原版反复出现的合法性分界（00_liberalism.txt:54、02_peru_bolivia.txt:39 都用 government_legitimacy >= 50 表示「政府站得住」）。与 -20 的合法性修正配对：战败后多数局面会落到线下，窗口由此打开。"
+
+[[journal_entry.conditions]]
+gate = "complete"
+key = "legitimacy"
+op = ">="
+amount = 75
+why = "关窗的门：国家重新站稳，窗口自己关上（不是「改革完成」—— 改什么由 AI 与原版牌池决定，本档案不替它选法律）。75 也是原版用过的档：00_meiji_restoration.txt:314 的 legitimacy >= 75。"
+
+# ── ⑤ 本地化：面板三行（G3）的文案 ─────────────────────────
+# 键名与游戏里的约定一致：JE 标题 = JE 名、说明 = <JE 名>_reason（见原版
+# localization/simp_chinese/ip3_misc_01_l_simp_chinese.yml:549 的 je_metternich /
+# je_metternich_reason）；静态修正的键名 = 修正名本身（ip4_misc_01_l_simp_chinese.yml:87
+# 的 modifier_regency_landowners）。两处都按原版口径，不自创后缀。
+
+[[localization]]
+key = "je_sitai_ru_reform_window"
+english = "Defeat and Survival: A Window for Reform"
+simp_chinese = "战败求存：改革窗口"
+why = "G3 要求试玩者能复述「当前目标 + 主因」。标题只写目标（改革窗口）与来由（战败求存），不写机制。"
+
+[[localization]]
+key = "je_sitai_ru_reform_window_reason"
+english = "The war is lost, and the bill has come due. The aristocracy that marched us into it has lost its grip, the crown's authority has broken, and the treasury borrows at ruinous rates.\\n\\nA window is open: while the old guard is weak and the government's legitimacy is shaken, reform is possible. It closes again once the state stands firm."
+simp_chinese = "仗打输了，账单到了。把国家带进这场战争的贵族失去了对朝堂的掌控，王权的威信已经破裂，国库只能以高昂的利息借债。\\n\\n窗口已经打开：旧势力虚弱、政府合法性动摇之时，改革是可能的。等国家重新站稳，这扇窗就会关上。"
+why = "三行解释里的「最大压力与阻力」写在这里（P11 可观测）：压力 = 贵族失势 + 合法性坍塌 + 财政恶化，阻力 = 「等国家重新站稳」—— 与 complete 的 legitimacy >= 75 是同一条判据的两种说法，数值改了文案也要改。"
+
+[[localization]]
+key = "sitai_ru_defeat_pressure"
+english = "Aftermath of the Defeat"
+simp_chinese = "战败余波"
+why = "静态修正的名字（键 = 修正名）。玩家在修正列表里看到的就是这一行，所以写「战败余波」而不是机制名。原版同族写法见 ip4_misc_01_l_simp_chinese.yml:87。"
+
+# ── ⑥ 递牌：本档案一张都不递 ───────────────────────────────
+[cards]
+why = "本档案**刻意为空**（F5：能用 A 级表达的绝不占槽）。战败 → 压力的链路已经由变量 + 修正 + JE 表达完，而 JE 会被原版那 18 张读 has_journal_entry 的牌读到 —— 意图位移由原版自己的牌池产生，不需要我们再占一个槽。递牌是「整条路线要换」时才用的手段（C 级，政治槽 S≈33：权重 10 就吃掉 23% 的份额，阶段 2 价格表）。要加牌时写 [[cards.items]]（字段见 modgen 的 card_text 与闸门 ③）。"
+
+# ── ⑦ 声明式引用：闸门 ② 逐条核对 ──────────────────────────
+# 变量/修正/JE/图标/本地化键这些**带名字的引用**由闸门 ② 从产物里自动抽出来核对；
+# 剩下这类「原版词汇表」的引用没法从形状上认出来（legitimacy 与被我们定义的键长得一样），
+# 所以在这里逐条声明 —— 每条都要能指到原版里真实用它的地方。
+[[references]]
+kind = "trigger"
+name = "legitimacy"
+why = "JE 的开窗/关窗判据（legitimacy <= 50 / >= 75）。原版用法：00_meiji_restoration.txt:314、00_sikh_empire.txt:20。"
+
+[[references]]
+kind = "trigger"
+name = "has_variable"
+why = "记忆变量的读法。原版用法：00_corn_laws.txt:7 等 795 处（阶段 1 统计 has_variable 被 13 张牌直接读）。"
+
+[[references]]
+kind = "effect"
+name = "set_variable"
+why = "写记忆变量。原版用法：00_code_on_actions.txt:7046（on_war_end 给 recently_had_war 记 5 年）。"
+
+[[references]]
+kind = "effect"
+name = "add_modifier"
+why = "把静态修正挂到国家上。原版用法：00_movement_effects.txt:2（add_modifier = { name = … years = 20 }）。"
+
+[[references]]
+kind = "country_tag"
+name = "RUS"
+why = "JE 的单国门（c:RUS ?= this）。原版用法：country_definitions 里的 RUS。"

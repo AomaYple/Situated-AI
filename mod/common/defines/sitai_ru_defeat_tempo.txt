@@ -1,0 +1,11 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 节奏杠杆（**全局作用域**：俄罗斯 · 战败求存 只是它的来源档案）：只覆盖 NAI 块的 2 个键，
+# 不复制原版 00_ai.txt（KB 05 §1.7 的按「块 + 参数」覆盖；阶段 2 的 storm 变体实测生效）。
+# ⚠️ defines 没有单国写法：这两个键一改，**所有国家**的 AI 重抽节奏都变 —— 别把它当成单国效果。
+# 覆盖范围就是下面这几个键 —— 原版别的参数一个都不抄。
+
+NAI = {
+	CHANGE_STRATEGY_THRESHOLD = 40
+	CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE = 30
+}

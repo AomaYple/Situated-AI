@@ -354,3 +354,56 @@ def test_监视器跳过被占用的文件(tmp_path: Path, monkeypatch: pytest.M
 def test_无loc牌与第四槽牌不带本地化引用() -> None:
     assert "icon =" not in h1_probe.noloc_card_text()
     assert f"type = {h1_probe.FOURTH_TYPE}" in h1_probe.fourth_card_text()
+
+
+# ── 进程探测与"同名目录"边界（这两处原先是未覆盖代码）──────────
+
+
+def _fake_run(stdout: str, seen: list[list[str]]) -> object:
+    """假 subprocess.run：记下命令、回一个带 stdout 的对象。"""
+
+    def run(cmd: list[str], **_kw: object) -> object:
+        seen.append(cmd)
+        from types import SimpleNamespace
+
+        return SimpleNamespace(stdout=stdout)
+
+    return run
+
+
+def test_游戏进程探测_认得出进程名(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[list[str]] = []
+    monkeypatch.setattr(
+        h1_probe.subprocess, "run", _fake_run("victoria3.exe  1234 Console  1  100 K", seen)
+    )
+    assert h1_probe._game_running() is True
+    seen.clear()
+    monkeypatch.setattr(h1_probe.subprocess, "run", _fake_run("没有这个进程", seen))
+    assert h1_probe._game_running() is False
+    # 非 Windows 分支走 pgrep（本机是 nt，必须显式改 os.name 才走得到）
+    monkeypatch.setattr(h1_probe.os, "name", "posix")
+    assert h1_probe._game_running() is False
+    assert seen[-1][0] == "pgrep"
+
+
+def test_游戏进程探测_命令不可用时出声(monkeypatch: pytest.MonkeyPatch) -> None:
+    def boom(*_a: object, **_kw: object) -> object:
+        raise OSError(2, "找不到 tasklist")
+
+    monkeypatch.setattr(h1_probe.subprocess, "run", boom)
+    with pytest.raises(RuntimeError, match="查不到游戏进程"):
+        h1_probe._game_running()
+
+
+def test_监视器与归档都跳过同名目录(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`*.log` 也可能匹配到**目录**：那不是日志，跳过而不是崩。"""
+    monkeypatch.setattr(config, "USERDIR", tmp_path)
+    logs = tmp_path / "logs"
+    (logs / "weird.log").mkdir(parents=True)  # 同名目录
+    (logs / "debug.log").write_text("x", encoding="utf-8")
+    _dest, _rounds, copied, skipped = h1_probe.watch(
+        "watch-4", log_dir=logs, interval=0.0, sleep=lambda _s: None, running=lambda: True
+    )
+    assert (copied, skipped) == (1, 0)
+    _dest2, moved, skipped2 = h1_probe.archive_logs("watch-5", log_dir=logs)
+    assert (moved, skipped2) == (1, 0)

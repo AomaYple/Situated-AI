@@ -59,6 +59,8 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tabular.py` | 表格类数据（`.csv`），分隔符靠 `csv.Sniffer` 嗅探 |
 | `engine_log.py` | 从游戏日志抽外部真值：枚举清单、脚本位置、token 位置 |
 | `console.py` | stdout/stderr 的 UTF-8 兜底（**必须在构造 rich Console 之前调用**） |
+| `modgen.py` | **数据源 → mod 产物**的生成器（阶段 3）：把 `mod/data/*.toml` 编译成脚本 + 本地化 + 档案文档。每个数字必须带 `why`，空 `why` 当场报错；产物一律由它生成，**不许手写** |
+| `modguard.py` | **五道闸门**（阶段 3）：键/路径与原版不相交、引用完整性、稀释预算（按阶段 2 的三槽价格表）、往返净度、生成可复现 + `why` 非空 |
 | `cli.py` | 唯一的命令行入口，`v3` 的全部子命令 |
 
 ## 命令行 `v3`
@@ -94,6 +96,8 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 csv <路径>` | （新增） | 非 PDX 表格（`.csv` / `.tsv`）的**逐列取值分布**，`-c 列名` 详列某列。doc 06 关于 `adjacencies.csv` 的结论由此可复算 |
 | `v3 strings --families` | （新增） | 把未使用的 exe 标识符按**同后缀 / 同前缀**聚族（`--by suffix\|prefix --min N`）：实测 `*_command` 233 个、`*_cw_duplicate_compat` 161 个 —— PDX 字段名往往成族出现 |
 | `v3 experiment` | （新增） | **游戏实测探针**：`plan` 打印「一次启动收工」的操作清单、`install` 把 `tools/probe/` 的两个探针 mod 装进本机 mod 目录、`collect` 收割 `logs/` 并按实验编号归位证据、`uninstall` 移除。覆盖 P1–P11（裸同名键、双 mod 顺序、`scripted_modifier`/`scripted_list` 调用语法、`$PARAM$` 候选、进度条自定义样式、JE/事件/按钮字段语义、本地化 `:数字`、重名 namespace） |
+| `v3 modgen` | （阶段 3 新增） | **数据源 → mod 产物**：`--write` 落盘并清理被取代的旧文件、`--check` 核对盘上产物是否被手改或过期、`--why` 列出每个数字与它的依据。产物在 `mod/`（原版目录树的镜像），改产物没用 |
+| `v3 modguard` | （阶段 3 新增） | **五道闸门**：`--only` 逐道跑（编号或键名）。任一不过即非零退出，前置条件缺失（没有游戏）按用法错误处理 —— **跳过的检查不算通过** |
 
 ```text
 .venv\Scripts\v3.exe analyze                     # 全量分析，落盘报告
@@ -118,6 +122,8 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe experiment install          # 装探针 mod（写本机 mod 目录）
 .venv\Scripts\v3.exe experiment collect          # 游戏退出后收割 logs/
 .venv\Scripts\v3.exe cov                         # 覆盖率门禁（含核心模块下限）
+.venv\Scripts\v3.exe modgen --write              # 数据源 → mod 产物（改完 TOML 必跑）
+.venv\Scripts\v3.exe modguard                    # 五道闸门（全过才进游戏）
 .venv\Scripts\v3.exe lock                        # 依赖锁与当前环境对账
 .venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
 .venv\Scripts\v3.exe defines --ns NAI            # 展开某个 defines 命名空间
@@ -152,7 +158,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-859 条用例（`pytest --collect-only` 实测），
+931 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -195,6 +201,8 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_cli_more.py` / `test_cli_new_commands.py` | CLI 的补充覆盖：新命令 + 剩余分支（`csv` / `assets` / `backlog` / `mirror check` / `refresh --dry-run` / 快照 diff…）。`cli.py` 是全包最大模块，这些分支**零成本可测**，没理由留着 |
 | `test_lockfile.py` | 依赖锁：直接依赖一条不少、渲染与解析往返、标记求值保守（不认识的标记当作成立） |
 | `test_experiments.py` | 游戏实测探针包：**探针脚本必须能被自家解析器读通**（探针自己写错＝用户白跑一趟）、实验清单点名的文件都存在、日志收割能按编号归位、安装/卸载不误删 |
+| `test_modgen.py` | 生成器：数据源解析、**空 `why` 当场报错**（P10 的机械检查）、两次生成逐字节一致、游戏侧文件带 BOM 而文档不带、平铺在 `sitai_` 命名空间、生成物能被自家解析器读懂、写盘清理被取代的旧文件、数据源与产物往返一致 |
+| `test_modguard.py` | 五道闸门各自的**通过路径与失败路径**：与原版同名键/路径相撞/非平铺/命名空间越界、缺本地化键/缺图标/引用不存在的修正或变量/defines 参数改名、超预算或无 `possible` 门的牌、往返丢字段、空 `why`、CLI 的退出码。原版侧用**合成的假游戏目录**，不依赖真实安装 |
 
 ### 跑基准要加 `-n0`
 
@@ -421,7 +429,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：859 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：931 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

@@ -1,0 +1,5 @@
+﻿l_simp_chinese:
+# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+ je_sitai_ru_reform_window:0 "战败求存：改革窗口"
+ je_sitai_ru_reform_window_reason:0 "仗打输了，账单到了。把国家带进这场战争的贵族失去了对朝堂的掌控，王权的威信已经破裂，国库只能以高昂的利息借债。\n\n窗口已经打开：旧势力虚弱、政府合法性动摇之时，改革是可能的。等国家重新站稳，这扇窗就会关上。"
+ sitai_ru_defeat_pressure:0 "战败余波"

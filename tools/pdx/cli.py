@@ -66,6 +66,8 @@ from pdx import (
     h1,
     h1_probe,
     lockfile,
+    modgen,
+    modguard,
     snapshot,
     tables_offline,
     tabular,
@@ -2278,6 +2280,159 @@ def h1_probe_cmd(
             f"已部署到 [bold]{dest}[/]，`content_load.json` 只留这一个 mod（原列表已备份）"
         )
         console.print("接着：启动游戏 → 开一局 1836 新游戏 → 至少跑 3 个月 → 退出 → `v3 h1`。")
+
+
+@app.command("modgen")
+def modgen_cmd(
+    write: Annotated[
+        bool,
+        typer.Option("--write", help="把数据源编译成 mod/ 下的产物（写盘 + 清理被取代的旧文件）"),
+    ] = False,
+    check: Annotated[
+        bool,
+        typer.Option("--check", help="核对盘上产物与数据源一致（被手改 / 过期 / 多余即退出码 1）"),
+    ] = False,
+    why: Annotated[bool, typer.Option("--why", help="只列出每个数字与它的依据（P10）")] = False,
+) -> None:
+    """把结构化数据源编译成 mod 产物：脚本 + 本地化 + 档案文档。
+
+    P3「引擎脚本由 Python 生成，人只改数据源」的落点。数据源在 `mod/data/*.toml`，
+    产物在 `mod/`（原版目录树的镜像）。**改产物没有用** —— 每个生成文件头都写着
+    这句话，闸门 ⑤ 也会把与生成结果不一致的产物点出来。
+
+    三种用法：
+
+    ```text
+    v3 modgen             # 只编译并打摘要（不写盘）
+    v3 modgen --write     # 落盘，并清掉被取代的旧文件
+    v3 modgen --check     # 核对盘上产物 = 生成结果（手改/过期/多余即退出码 1）
+    v3 modgen --why       # 每个数字 + 它的依据（空 why 在编译期就会报错）
+    ```
+
+    数据源不合法的两种情形都在这里**当场**报错（退出码 2）：结构/类型不对、
+    以及任何一张表缺 `why` —— 后者是 P10 的机械检查，不是靠人记得。
+    """
+    if write and check:
+        _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
+    try:
+        archives = modgen.load_all()
+        built = modgen.build_all(archives)
+    except modgen.DataError as exc:
+        _fail(f"数据源不合法：{exc}")
+
+    if why:
+        for archive in archives:
+            console.rule(f"{archive.title}（{archive.source}）")
+            console.print(
+                Markdown(
+                    "**每个数字与它的依据**\n\n"
+                    + modgen.why_report(archive)
+                    + "\n\n**每张表的依据**\n\n"
+                    + modgen.why_tables(archive)
+                )
+            )
+        return
+
+    if write:
+        try:
+            written = modgen.write(built)
+        except OSError as exc:
+            _fail(f"写盘失败：{type(exc).__name__}: {exc}")
+        table = Table(title=f"已写入 {len(written)} 个产物", show_lines=False)
+        table.add_column("产物", style="cyan")
+        table.add_column("字节", justify="right")
+        table.add_column("BOM", justify="center")
+        for path in written:
+            rel = _relative(path)
+            table.add_row(
+                escape(rel),
+                f"{path.stat().st_size:,}",
+                "✓" if path.read_bytes().startswith(b"\xef\xbb\xbf") else "",
+            )
+        console.print(table)
+        console.print(
+            "游戏侧文件（.txt / .yml）带 UTF-8 BOM 写入；文档与元数据不带。"
+            "接着跑 [bold]v3 modguard[/]——五道闸门全过才进游戏（冻结文档 §5）。"
+        )
+        return
+
+    if check:
+        problems = modgen.check(built)
+        if problems:
+            table = Table(title=f"{len(problems)} 处与数据源不一致", show_lines=False)
+            table.add_column("问题", overflow="fold")
+            for line in problems[:30]:
+                table.add_row(escape(line))
+            console.print(table)
+            console.print("[yellow]跑 `v3 modgen --write` 重新生成（产物不许手改）[/]")
+            raise typer.Exit(EXIT_FAILED)
+        console.print(f"[green]盘上 {len(built.files)} 个产物与数据源逐字节一致 ✅[/]")
+        return
+
+    console.print(escape(modgen.summary(built)))
+    console.print("[dim]--write 落盘 / --check 核对 / --why 列依据[/]")
+
+
+@app.command("modguard")
+def modguard_cmd(
+    only: Annotated[
+        str,
+        typer.Option(
+            "--only",
+            help="只跑某一道闸门（编号 1–5，或键名 keys/refs/dilution/roundtrip/determinism）",
+        ),
+    ] = "",
+) -> None:
+    """五道闸门：键/路径不相交、引用完整性、稀释预算、往返净度、生成可复现。
+
+    这是冻结文档 §5 里「每次生成后 / 每阶段结束」要跑的那套检查，逐条对应：
+
+    ```text
+    ① keys        键与路径与原版零交集（含 F7 命名空间与平铺不建子目录）
+    ② refs        我们引用的每个变量/JE/修正/图标/本地化键/defines 参数都存在
+    ③ dilution    递牌按阶段 2 的价格表定价，超预算即红（本档案 0 张牌）
+    ④ roundtrip   生成 → 按 PDX 语法解析回来 → 与数据源逐条一致
+    ⑤ determinism 两次生成逐字节一致 + 每个 why 非空 + 盘上产物确实由生成器产出
+    ```
+
+    退出码：0 全过；1 有闸门不过（**不许进游戏**）；2 前置条件缺失
+    （原版目录不可用、数据源不合法、`--only` 拼错）。
+
+    **缺前置条件不算通过**：没有游戏时 ①/② 需要读原版，它们报退出码 2 而不是
+    静默跳过 —— 跳过会被当成绿灯，这是这类门禁最危险的失效方式（P13）。
+    """
+    try:
+        ctx = modguard.context()
+        report = modguard.run(ctx, only)
+    except modgen.DataError as exc:
+        _fail(f"数据源不合法：{exc}")
+    except ValueError as exc:
+        _fail(f"{exc}")
+    except OSError as exc:
+        _fail(f"读产物/原版失败：{type(exc).__name__}: {exc}")
+
+    table = Table(title=f"闸门（{len(report.findings)} 道）", show_lines=False)
+    table.add_column("", width=2, justify="center")
+    table.add_column("闸门")
+    table.add_column("结论", overflow="fold")
+    for finding in report.findings:
+        mark = "✅" if finding.ok else ("⚠️" if finding.precondition else "❌")
+        table.add_row(mark, escape(finding.title), escape(finding.headline))
+    console.print(table)
+
+    for finding in report.findings:
+        if not finding.ok:
+            console.print(f"\n[bold]{escape(finding.title)}[/]")
+            for line in finding.details:
+                console.print(f"  {escape(line)}")
+
+    if report.missing_precondition:
+        blockers = [f.headline for f in report.findings if f.precondition]
+        _fail("前置条件缺失：" + "；".join(blockers))
+    if not report.ok:
+        console.print("[red]有闸门不过 —— 按上面的明细修完再跑一次[/]")
+        raise typer.Exit(EXIT_FAILED)
+    console.print("[green]五道闸门全过 ✅[/]")
 
 
 @app.command("backlog")
