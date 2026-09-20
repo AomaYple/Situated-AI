@@ -43,6 +43,7 @@ from typing import Annotated, Any, NoReturn
 
 import typer
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.markup import escape
 from rich.table import Table
 
@@ -62,6 +63,8 @@ from pdx import (
     evidence,
     exe_strings,
     experiments,
+    h1,
+    h1_probe,
     lockfile,
     snapshot,
     tables_offline,
@@ -2112,6 +2115,138 @@ def ai_surface_cmd(
         f"原版子系统开关 {len(defines.enabled_switches)} 个 / `AI_*` 条目 {len(defines.ai_keys)} 个。"
     )
     console.print("跑 `v3 ai-surface --write` 生成 `docs/design/02-可执行面.md`。")
+
+
+# ── h1（阶段 2：H1 生死门的实验结果）────────────────────────
+@app.command("h1")
+def h1_cmd(
+    logs: Annotated[
+        Path | None, typer.Option("--logs", help="日志目录（默认用户目录下的 logs）")
+    ] = None,
+    json_out: Annotated[bool, typer.Option("--json", help="输出机器可读的 JSON")] = False,
+) -> None:
+    """H1 实验：**改权重能否推动 AI 策略落点**（阶段 2 的 G1 生死门）。
+
+    探针（`v3 h1-probe` 生成，装在 `tools/probe/zz_probe_h1/`）每月给每个国家写几行：
+
+    ```text
+    ZZPROBE H1;RUN;storm                              ← 本次启动的变体（用来切分多次启动）
+    ZZPROBE H1;DOSE;HIGH;Russia                       ← 随机分到的剂量组
+    ZZPROBE H1;POLI;sitai_probe_reform;Russia         ← 政治槽当前落点
+    ZZPROBE H1;ADMI;agricultural_expansion;Russia     ← 行政槽
+    ZZPROBE H1;DIPL;maintain_power_balance;Russia     ← 外交槽
+    ```
+
+    分组是**随机**的（探针里 `random_list` 25/25/25/25），组间唯一差异是我们那张牌的
+    `weight`（对照 10 / 低 50 / 中 100 / 高 250）—— 所以这是一次**随机对照试验**：
+    高剂量组的命中率显著高于对照组，就证明"权重能推动落点"（G1 通过）。
+
+    报告同时给出**三个槽位各自的剂量反应**与**重抽节奏**：后者决定"喂输入去改变原版
+    概率"这条路线在战役尺度上有没有用（政治槽实测 ≈1%/国家·月，即十年尺度才重抽）。
+
+    统计用 Wilson 区间（小样本友好），判定口径是**区间不重叠**。
+    """
+    result = h1.analyze(logs)
+    if json_out:
+        payload = {
+            "variant": result.variant,
+            "runs": list(result.runs),
+            "samples": len(result.samples),
+            "tags": result.tags,
+            "months": result.months,
+            "unpaired": result.unpaired,
+            "fourth_hits": result.fourth_hits,
+            "noloc_hits": result.noloc_hits,
+            "h3_events": list(result.h3_events),
+            "groups": {
+                dose: {
+                    "weight": h1.DOSE_WEIGHT.get(dose),
+                    "observations": group.observations,
+                    "probe_hits": group.probe_hits,
+                    "rate": group.rate,
+                    "wilson": group.wilson(),
+                    "countries": len(group.countries),
+                }
+                for dose, group in result.groups.items()
+            },
+            "by_slot": {
+                slot: {
+                    dose: {
+                        "observations": cell.observations,
+                        "hits": cell.hits,
+                        "rate": cell.rate,
+                        "wilson": cell.wilson(),
+                        "implied_rival_weight": cell.implied_rival_weight(),
+                    }
+                    for dose, cell in cells.items()
+                }
+                for slot, cells in result.by_slot.items()
+            },
+            "tempo": {
+                slot: {
+                    "observations": tempo.observations,
+                    "pairs": tempo.pairs,
+                    "changes": tempo.changes,
+                    "rate": tempo.rate,
+                    "top": [list(item) for item in tempo.top],
+                }
+                for slot, tempo in result.tempo.items()
+            },
+        }
+        console.print_json(json.dumps(payload, ensure_ascii=False))
+        return
+    if not result.samples:
+        console.print(
+            "[yellow]日志里没有 H1 的观测行[/] —— 检查三件事：探针是否启用、"
+            "是否进了一局游戏、日志目录是否是本机用户目录。"
+        )
+    console.print(Markdown(h1.format_report(result)))
+
+
+# ── h1-probe（阶段 2：探针本身是生成的，不是手写的）────────────
+@app.command("h1-probe")
+def h1_probe_cmd(
+    variant: Annotated[
+        str, typer.Option("--variant", "-v", help="natural（引擎真实节奏）| storm（每周重抽）")
+    ] = "natural",
+    deploy: Annotated[
+        bool, typer.Option("--deploy", help="同步进用户 mod 目录，并把 content_load.json 只留它")
+    ] = False,
+    archive: Annotated[
+        str | None, typer.Option("--archive", help="先把现有日志挪进归档目录（给个标签）")
+    ] = None,
+) -> None:
+    """生成 H1 探针（**不要手改探针文件**，改 `tools/pdx/h1_probe.py`）。
+
+    生成的理由：日志链要按 `type` 枚举原版全部 34 张牌（手写会随版本漂移，
+    而漂移的表现是"某槽永远落进兜底桶"这种静默失真）；剂量阶梯又同时出现在牌文件
+    与分析器里，只能有一个来源。
+
+    两个变体：
+
+    * `natural` —— 引擎的真实重抽节奏。回答"原版节奏有多快"。
+    * `storm` —— 用独立小文件覆盖 `NAI` 的 `CHANGE_STRATEGY_THRESHOLD` 与
+      `CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE`（KB 05 §1.7 证明可按「块+参数」覆盖），
+      每周都可能重抽。回答"权重能不能推动落点"（大样本）与"mod 能不能接管重抽节奏"。
+    """
+    if archive:
+        dest, moved, skipped = h1_probe.archive_logs(archive)
+        console.print(f"日志已归档：[bold]{dest}[/]（挪走 {moved} 个文件）")
+        if skipped:
+            console.print(
+                f"[yellow]有 {skipped} 个日志挪不动[/] —— 游戏还开着时日志被独占，"
+                "请先退出游戏再归档。"
+            )
+    built = h1_probe.build(variant=variant)
+    written = h1_probe.write(variant=variant)
+    console.print(h1_probe.summary(built))
+    console.print(f"已写入 [bold]{len(written)}[/] 个文件 → {h1_probe.PROBE_DIR}")
+    if deploy:
+        dest = h1_probe.deploy(variant=variant)
+        console.print(
+            f"已部署到 [bold]{dest}[/]，`content_load.json` 只留这一个 mod（原列表已备份）"
+        )
+        console.print("接着：启动游戏 → 开一局 1836 新游戏 → 至少跑 3 个月 → 退出 → `v3 h1`。")
 
 
 @app.command("backlog")

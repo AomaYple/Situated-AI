@@ -1,0 +1,12 @@
+{
+  "name": "ZZ Probe H1",
+  "id": "",
+  "version": "1.0",
+  "supported_game_version": "1.14.3",
+  "short_description": "H1 生死门：随机分组 + 剂量反应，验证「改权重能否推动 AI 策略落点」",
+  "tags": [],
+  "relationships": [],
+  "game_custom_data": {
+    "multiplayer_synchronized": false
+  }
+}

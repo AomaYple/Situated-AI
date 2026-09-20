@@ -1,0 +1,232 @@
+﻿# ⚠️ 本文件由 `v3 h1-probe` 生成（tools/pdx/h1_probe.py）—— 改这里没用，改生成器。
+# H1 的触发与自报（**纯新增字段**，不覆盖原版任何字段）。
+#
+# ① 分组：`on_game_started` / `on_game_started_after_lobby` 的原版字段是 `effect`，
+#    我们只加原版没有的 `on_actions` 字段 → 按字段合并，原版行为一字不动。
+# ② 月度自报：`on_monthly_pulse_country` 的原版字段是 `events` + `effect`，没有
+#    `on_actions` → 纯追加；这个钩子**天然是国别作用域**（root = 国家），
+#    不需要 `every_country`。
+#
+# ⚠️ 自报格式的两条实测教训：
+#   1. 取值只能用原版证明可用的 loc 命令：`[THIS.GetCountry.GetNameNoFormatting]`
+#      （`[This.GetTag]` 不是合法命令，引擎会替换成 `ERROR:[This.GetTag]`）；
+#   2. 分隔符**不能用 `|`**：会被 loc 解析器当控制符，每条日志附带一条
+#      `Data error in loc string`（刷屏 + 加速日志轮转）。用 `;`。
+on_game_started = {
+	on_actions = { zz_probe_h1_start }
+}
+
+on_game_started_after_lobby = {
+	on_actions = { zz_probe_h1_start }
+}
+
+on_monthly_pulse_country = {
+	on_actions = { zz_probe_h1_monthly }
+}
+
+# root = 国家
+zz_probe_h1_monthly = {
+	effect = {
+		if = {
+			limit = { has_variable = sitai_probe_dose_low }
+			debug_log = "ZZPROBE H1;DOSE;LOW;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_variable = sitai_probe_dose_mid }
+			debug_log = "ZZPROBE H1;DOSE;MID;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_variable = sitai_probe_dose_high }
+			debug_log = "ZZPROBE H1;DOSE;HIGH;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else = {
+			debug_log = "ZZPROBE H1;DOSE;CTRL;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+
+		if = {
+			limit = { has_strategy = ai_strategy_sitai_probe_reform }
+			debug_log = "ZZPROBE H1;POLI;sitai_probe_reform;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_sitai_probe_noloc }
+			debug_log = "ZZPROBE H1;POLI;sitai_probe_noloc;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_sitai_probe_fourth }
+			debug_log = "ZZPROBE H1;POLI;sitai_probe_fourth;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_conservative_agenda }
+			debug_log = "ZZPROBE H1;POLI;conservative_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_egalitarian_agenda }
+			debug_log = "ZZPROBE H1;POLI;egalitarian_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_great_reforms }
+			debug_log = "ZZPROBE H1;POLI;great_reforms;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_maintain_mandate_of_heaven }
+			debug_log = "ZZPROBE H1;POLI;maintain_mandate_of_heaven;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_meiji_restoration }
+			debug_log = "ZZPROBE H1;POLI;meiji_restoration;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_nationalist_agenda }
+			debug_log = "ZZPROBE H1;POLI;nationalist_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_progressive_agenda }
+			debug_log = "ZZPROBE H1;POLI;progressive_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_reactionary_agenda }
+			debug_log = "ZZPROBE H1;POLI;reactionary_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_tanzimat_reforms }
+			debug_log = "ZZPROBE H1;POLI;tanzimat_reforms;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_default }
+			debug_log = "ZZPROBE H1;POLI;default;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else = {
+			debug_log = "ZZPROBE H1;POLI;none;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+
+		if = {
+			limit = { has_strategy = ai_strategy_sitai_probe_admin }
+			debug_log = "ZZPROBE H1;ADMI;sitai_probe_admin;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_agricultural_expansion }
+			debug_log = "ZZPROBE H1;ADMI;agricultural_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_colonial_extraction }
+			debug_log = "ZZPROBE H1;ADMI;colonial_extraction;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_industrial_expansion }
+			debug_log = "ZZPROBE H1;ADMI;industrial_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_montenegro_admin }
+			debug_log = "ZZPROBE H1;ADMI;montenegro_admin;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_placate_population }
+			debug_log = "ZZPROBE H1;ADMI;placate_population;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_plantation_economy }
+			debug_log = "ZZPROBE H1;ADMI;plantation_economy;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_resource_expansion }
+			debug_log = "ZZPROBE H1;ADMI;resource_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_default }
+			debug_log = "ZZPROBE H1;ADMI;default;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else = {
+			debug_log = "ZZPROBE H1;ADMI;none;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+
+		if = {
+			limit = { has_strategy = ai_strategy_sitai_probe_diplo }
+			debug_log = "ZZPROBE H1;DIPL;sitai_probe_diplo;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_anti_imperialism }
+			debug_log = "ZZPROBE H1;DIPL;anti_imperialism;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_armed_isolationism }
+			debug_log = "ZZPROBE H1;DIPL;armed_isolationism;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_colonial_expansion }
+			debug_log = "ZZPROBE H1;DIPL;colonial_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_economic_imperialism }
+			debug_log = "ZZPROBE H1;DIPL;economic_imperialism;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_maintain_power_balance }
+			debug_log = "ZZPROBE H1;DIPL;maintain_power_balance;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_prussia_of_the_balkans }
+			debug_log = "ZZPROBE H1;DIPL;prussia_of_the_balkans;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_restore_natural_borders }
+			debug_log = "ZZPROBE H1;DIPL;restore_natural_borders;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_socialism_in_one_country }
+			debug_log = "ZZPROBE H1;DIPL;socialism_in_one_country;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_subject_break_free }
+			debug_log = "ZZPROBE H1;DIPL;subject_break_free;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_subject_maintain_autonomy }
+			debug_log = "ZZPROBE H1;DIPL;subject_maintain_autonomy;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_subject_overlord_compliance }
+			debug_log = "ZZPROBE H1;DIPL;subject_overlord_compliance;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_subject_strengthen_self }
+			debug_log = "ZZPROBE H1;DIPL;subject_strengthen_self;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_territorial_expansion }
+			debug_log = "ZZPROBE H1;DIPL;territorial_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_unify_china }
+			debug_log = "ZZPROBE H1;DIPL;unify_china;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_unify_ethiopia }
+			debug_log = "ZZPROBE H1;DIPL;unify_ethiopia;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_unify_germany }
+			debug_log = "ZZPROBE H1;DIPL;unify_germany;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_unify_italy }
+			debug_log = "ZZPROBE H1;DIPL;unify_italy;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_world_revolution }
+			debug_log = "ZZPROBE H1;DIPL;world_revolution;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_default }
+			debug_log = "ZZPROBE H1;DIPL;default;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else = {
+			debug_log = "ZZPROBE H1;DIPL;none;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+
+		# 第四槽（B7）：只有真被抽中才会打这一行。
+		if = {
+			limit = { has_strategy = ai_strategy_sitai_probe_fourth }
+			debug_log = "ZZPROBE H1;FOURTH;active;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+	}
+}

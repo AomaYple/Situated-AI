@@ -1,0 +1,13 @@
+﻿l_simp_chinese:
+ zzprobe_h1_assign:0 "【H1 探针】随机分组"
+ zzprobe_h1_assign_desc:0 "把全世界国家随机分成 4 组（对照 / 低 / 中 / 高），给我们的探针牌不同权重。幂等，点多次也只分一次。"
+ ai_strategy_sitai_probe_reform:0 "探针：改革议程"
+ ai_strategy_sitai_probe_reform_desc:0 "H1 用的探针牌。权重由分组决定：对照 10 / 低 50 / 中 100 / 高 250。"
+ ai_strategy_sitai_probe_noloc:0 "探针：无本地化牌"
+ ai_strategy_sitai_probe_noloc_desc:0 "故意不带本地化与图标，用来观察引擎的抱怨方式。"
+ ai_strategy_sitai_probe_admin:0 "探针：农业扩张（行政槽）"
+ ai_strategy_sitai_probe_admin_desc:0 "行政槽的剂量加权探针牌，权重阶梯与主牌相同。用来测行政槽的牌池竞争与重抽节奏。"
+ ai_strategy_sitai_probe_diplo:0 "探针：均势（外交槽）"
+ ai_strategy_sitai_probe_diplo_desc:0 "外交槽的剂量加权探针牌，权重阶梯与主牌相同。用来测外交槽的牌池竞争与重抽节奏。"
+ ai_strategy_sitai_probe_fourth:0 "探针：第四槽候选"
+ ai_strategy_sitai_probe_fourth_desc:0 "type 用了引擎不存在的值，用来验证槽位是不是固定的三个。"

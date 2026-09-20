@@ -1,0 +1,26 @@
+﻿# ⚠️ 本文件由 `v3 h1-probe` 生成（tools/pdx/h1_probe.py）—— 改这里没用，改生成器。
+# 剂量加权牌（diplomatic 槽）。四个随机分组唯一的差异就是这个 `weight`：CTRL 10、LOW 50、MID 100、HIGH 250。
+# 分组变量不被任何其它系统读取，所以组间差异只可能来自权重。
+ai_strategy_sitai_probe_diplo = {
+	icon = "gfx/interface/icons/ai_strategy_icons/maintain_power_balance.dds"
+	type = diplomatic
+	possible = { always = yes }
+
+	weight = {
+		value = 10
+		if = {
+			limit = { has_variable = sitai_probe_dose_low }
+			add = 40
+		}
+		if = {
+			limit = { has_variable = sitai_probe_dose_mid }
+			add = 90
+		}
+		if = {
+			limit = { has_variable = sitai_probe_dose_high }
+			add = 240
+		}
+	}
+
+	unacceptable_infamy_level = { value = 50 }
+}

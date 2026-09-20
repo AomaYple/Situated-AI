@@ -1,0 +1,39 @@
+﻿# ⚠️ 本文件由 `v3 h1-probe` 生成（tools/pdx/h1_probe.py）—— 改这里没用，改生成器。
+# ① 随机分组：`random_list` 25/25/25/25 → 四组。组间**唯一**差异是探针牌的权重。
+#    幂等（`sitai_probe_dose_assigned` 标记）：两个 on_game_started 钩子都会调它，
+#    重复调用是常态。
+# ② 开局写一行 RUN 标记：分析器靠它切分「哪次启动的数据」（日志轮转会把多次启动
+#    的行混在同一个目录里）。
+# ③ H3：`add_ai_strategy` 的两种候选语法各试一个国家。exe 里有这个标识符，
+#    但原版脚本 0 处使用 —— 语法只能实测。TRY 打出来、DONE 没打出来 = 这个语法被拒。
+zz_probe_h1_assign = {
+	every_country = {
+		if = {
+			limit = { NOT = { has_variable = sitai_probe_dose_assigned } }
+			set_variable = { name = sitai_probe_dose_assigned value = 1 }
+			random_list = {
+				25 = { set_variable = { name = sitai_probe_dose_low value = 1 } }
+				25 = { set_variable = { name = sitai_probe_dose_mid value = 1 } }
+				25 = { set_variable = { name = sitai_probe_dose_high value = 1 } }
+				25 = { }
+			}
+		}
+	}
+}
+
+zz_probe_h1_start = {
+	effect = {
+		zz_probe_h1_assign = yes
+		debug_log = "ZZPROBE H1;RUN;natural"
+		c:HED ?= {
+			debug_log = "ZZPROBE H3;TRY;block;HED"
+			add_ai_strategy = { type = political id = ai_strategy_egalitarian_agenda }
+			debug_log = "ZZPROBE H3;DONE;block;HED"
+		}
+		c:CYL ?= {
+			debug_log = "ZZPROBE H3;TRY;bare;CYL"
+			add_ai_strategy = ai_strategy_egalitarian_agenda
+			debug_log = "ZZPROBE H3;DONE;bare;CYL"
+		}
+	}
+}

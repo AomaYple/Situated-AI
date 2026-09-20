@@ -1,0 +1,10 @@
+﻿# 备用触发点：万一 on_game_started 在读档/进入游戏时不触发，点一下这个决议即可分组。
+# 幂等：已分过组的国家不会被重新分组。
+zzprobe_h1_assign = {
+	is_shown = { always = yes }
+	possible = { always = yes }
+	when_taken = {
+		zz_probe_h1_assign = yes
+	}
+	ai_chance = { value = 0 }
+}

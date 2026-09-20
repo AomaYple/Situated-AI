@@ -1,0 +1,13 @@
+﻿l_english:
+ zzprobe_h1_assign:0 "H1 probe: randomize groups"
+ zzprobe_h1_assign_desc:0 "Splits every country into 4 groups (control/low/mid/high) with different weights for the probe card. Idempotent."
+ ai_strategy_sitai_probe_reform:0 "Probe: reform agenda"
+ ai_strategy_sitai_probe_reform_desc:0 "H1 probe card. Weight by group: control 10 / low 50 / mid 100 / high 250."
+ ai_strategy_sitai_probe_noloc:0 "Probe: no-loc card"
+ ai_strategy_sitai_probe_noloc_desc:0 "Deliberately missing localization and icon, to observe how the engine complains."
+ ai_strategy_sitai_probe_admin:0 "Probe: agricultural expansion (administrative)"
+ ai_strategy_sitai_probe_admin_desc:0 "Dose-weighted probe card in the administrative slot, same weight ladder as the main card."
+ ai_strategy_sitai_probe_diplo:0 "Probe: power balance (diplomatic)"
+ ai_strategy_sitai_probe_diplo_desc:0 "Dose-weighted probe card in the diplomatic slot, same weight ladder as the main card."
+ ai_strategy_sitai_probe_fourth:0 "Probe: fourth-slot candidate"
+ ai_strategy_sitai_probe_fourth_desc:0 "Uses a type value the engine does not know, to test whether slots are fixed at three."

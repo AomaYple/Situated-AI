@@ -1,0 +1,11 @@
+﻿# ⚠️ 本文件由 `v3 h1-probe` 生成（tools/pdx/h1_probe.py）—— 改这里没用，改生成器。
+# B10：故意**不带 loc / icon** 的牌，用来观察引擎的抱怨方式（或是否安静接受）。
+# 权重 1（远低于原版中位数 10）→ 即使被抽中也几乎不影响世界。
+ai_strategy_sitai_probe_noloc = {
+	type = political
+	possible = { always = yes }
+
+	weight = { value = 1 }
+
+	pro_interest_groups = { ig_intelligentsia }
+}
