@@ -4,6 +4,13 @@
 > `game\dlc\` 结构、`platform_specific_game_data\` 日志配置。
 > 全部 **【实测】**。
 
+> **版本提示（精确清单）**：本机游戏是 **1.14.3 (Ice Tea)**（版本指纹 `env.caligula_rev` = `bf52e8efe8f45334a3fbd421cc9e06d51077c045`、`env.caligula_branch` = `release/1.14.3`，两条断言本次 `v3 verify` 已核验）。原先那句笼统的「统计采集于 1.14.2」按类拆开：
+> - **已是 1.14.3 —— 表格已重算**：本篇 **5 张**表（`doc19 根目录文件`、`doc19 校验对象`、§3.1–§3.3 的 `paths.settings` 三张）由 `v3 tables` 生成；本次 `v3 tables` 核对「全部 169 张生成表都与文档一致」。
+> - **已是 1.14.3 —— 断言已核验**：本篇 **4 条** `env.*` 断言（`env.checksum_files`、`env.paths_settings_mappings`、`env.paths_checksummed_lines` 等）随 `v3 verify` 现场重扫，本次 **234/234 通过**（含本篇）。
+> - **已复测的「未读 / 未使用」类结论**（1.14.3 实测值，逐条见 §9）：§9 前四条「未读」文件本轮**全部读全**（`compound_settings.txt` **3,804 B / 302 行**、`settings_layout.txt` **3,290 B / 201 行**、`texture_converter_settings.json` **23,193 B / 1,016 行**、`map_editor_status.txt` **1,810,300 B / 125,788 行**）；§6 的 DLC 计数 = **17 个 `.dlc` + 17 个 `.dlc.json`**，其中 **11 个 DLC 同 stem 两份并存**（§6.2 原文只举了 `dlc001.dlc` 与 `dlc001_preorder.dlc.json` 这一对跨 stem 的例子）。
+> - **未复测（明确列出）**：§4 的 `game\tools\` 逐目录内容、§5 的 `platform_specific_game_data\` 日志配置、§8 的启动参数与日志分流表（均为 1.14.2 采集的正文结论，本轮未逐条重测）。
+> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.3）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
+
 ## 1<!--claim:env.checksum_files-->. `game\` 根目录 13 个文件
 
 | 文件 | 字节 | 作用 |
@@ -347,11 +354,13 @@ checksum = "3a59f318633b40ff609df0719da2b2fc"
 
 ## 9. 未确认项
 
-| 项 | 状态 |
-|---|---|
-| `compound_settings.txt`（3.8 KB）的具体字段 | **未读** |
-| `settings_layout.txt`（3.3 KB）的结构 | **未读** |
-| `texture_converter_settings.json` 的转换规则 | **未读** |
-| `map_editor_status.txt`（1.8 MB）的用途 | **未读** |
-| mod 能否提供 `content_source\`、`tools\` 目录 | **未确认**（23 个 mod 均未使用） |
-| `.dlc` 与 `.dlc.json` 同时存在时哪个生效 | **未确认** |
+> 证据口径与四条实测配方见 `04-脚本系统.md` §13.1（A 脚本化测试 / B 调试日志 / C 最小 MOD / D 双 MOD 冲突）。
+
+| # | 未确认内容 | 本地证据（可复算） | 状态 |
+|---|---|---|---|
+| 1 | `compound_settings.txt`（3.8 KB）的具体字段 | **已答（本轮读全）**：**3,804 B / 302 行**，内容 = **图形预设档位表**。顶层是 `setting = { name = "quality" gui_name = "SETTING_QUALITY" category = "Graphics" enum_entry = { low / medium / high } }`（`:1-16`），档位下再嵌具体项：`setting = { name = "anti_aliasing" … "low" = { value = "DISABLED" } "medium" = { value = "MSAAx2" } "high" = { value = "MSAAx4" } }`（`:18-31`）。逐项复算：`setting = {` **20 处**、`name =` **23 处**、`enum_entry = {` **3 处** | 已答 |
+| 2 | `settings_layout.txt`（3.3 KB）的结构 | **已答（本轮读全）**：**3,290 B / 201 行**，内容 = **设置界面的「页 → 分类 → 选项顺序」声明**。`page = { name = "SETTINGS_PAGE_GRAPHICS" category = { category = "Graphics" # Must match category name in code（`:4` 逐字） name = "SETTINGS_CATEGORY_SCREEN" order = { "display_mode" "resolution" … } } … }`（`:1-45`）。逐项复算：`page = {` **4 个**、`category = {` **18 个** | 已答 |
+| 3 | `texture_converter_settings.json` 的转换规则 | **已答（本轮读全）**：**23,193 B / 1,016 行**，是**通道级合成规则表**（`.png` → `.dds`）：每个条目含 `base_directory` / `name`（如 `"Standard"`）/ `outputs[]`，每个 output 有 `"channel_count": 4`、`"name": "_diffuse"`、`"trim": true`，其 `inputs[]` 逐通道声明 `{"input_channel": "red", "map": "diffuse", "output_channel": "red"}`（`:9-13`）——例如 `blue` 通道取 `opacity` 映射到输出的 `alpha`（`:24-28`） | 已答 |
+| 4 | `map_editor_status.txt`（1.8 MB）的用途 | **已答（本轮读全）**：**1,810,300 B / 125,788 行**，是**地图编辑器的完成状态标记表**。四个顶层键各占一段：`"map_content_editor"`（`:1`）、`"map_object_editor"`（`:41668`）、`"mask_painter"`（`:83335`）、`"spline_tool"`（`:125002`），每个下面形如 `completed = { 0 = no 4776613 = no … }`；全文 `=no` 行共 **125,724** 条 | 已答 |
+| 5 | 【未确认】mod 能否提供 `content_source\`、`tools\` 目录 | ③ 本机 23 个 mod 的顶层条目里 `content_source/`、`tools/` 各 **0 个**（本机快照，复算：`pdx.mods.analyse_all()` 的 `top_entries`）；① 这两个路径是**游戏自己的资源根**，由 `game\paths.settings` 声明：`:26` `map_object_masks = "content_source/map_objects/masks"`、`:27` `map_object_generators = "content_source/map_objects/generators"`、`:29` `map_editor_status_file = "tools/mapeditor/map_editor_status.txt"`（该表本身由 `v3 tables` 生成） | 待实测 → 配方 C |
+| 6 | 【未确认】`.dlc` 与 `.dlc.json` 同时存在时哪个生效 | ① 本机 `game\dlc\` 共 **17 个 `.dlc` + 17 个 `.dlc.json`**，其中 **11 个 DLC 是同 stem 两份并存**（`dlc007_ap1` … `dlc018_ep2`）；两者**字段不重叠** —— `.dlc` 侧 `name` / `path` / `steam_id` / `pops_id` / `mp_synced` / `affects_save_compatibility` / `localizable_name` / `checksum`（`dlc018_ep2.dlc:1-8` 逐字），`.dlc.json` 侧 `id` / `displayName` / `category` / `description` / `thumbnailPath` / `thirdPartyContent`（`dlc018_ep2.dlc.json:1-21`）；③ 本机真有 mod 两份都提供：`牛奶汉化`（SteamId `2880069248`）的 `dlc\dlc_milk\` 下 `dlc_milk.dlc`（8 行）+ `dlc_milk.dlc.json`（21 行）；④ `v3 evidence --exe-grep .dlc` → **0 个**标识符 | 待实测 → 配方 B |

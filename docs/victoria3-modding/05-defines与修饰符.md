@@ -1,6 +1,10 @@
 # Victoria 3 Mod 开发知识库 · 05 defines 与修饰符
 
-> ⚠️ **版本提示**：本文的数量统计与「零使用 / 未使用」类结论**采集于 1.14.2**，而本机游戏已升级到 **1.14.3**，这些结论尚未逐条重测。
+> ⚠️ **版本提示（精确清单）**：本机游戏是 **1.14.3 (Ice Tea)**（版本指纹见下一段三条）。原先那句「数量统计与零使用类结论采集于 1.14.2」现在按类拆开：
+> - **已是 1.14.3 —— 表格已重算**：§2.1 / §2.2 / §2.5 / §2.6 / §1.6 共 **5 张表**由 `v3 tables --write` 重算回写（§0.3 的口径补记），§0.4 的 **9 / 75 / 50 / 3488 / 3481** 与之同源；参数总数 3488 由 `def.param_total`、`def.param_names` 两条断言钉住。
+> - **已是 1.14.3 —— 断言已核验**：本文 **25 条** `def.*` / `defines.*` 断言由 `v3 verify` 现场重扫，本次 **25/25 通过**（含 `def.modtypes` 2364、`def.static` 6128、`def.nai_count` 1017、`def.file_*` 6 条）。
+> - **已复测的「零使用 / 无实例」类结论**（1.14.3 实测值，命令见 §8 表）：`apply_modifier` → 原版键 **0 处**；`has_game_rule` → **0 处**；`type_set` → **0 处**；`scripted_modifier` → **0 处**且 exe 无该字面量。
+> - **未复测（明确列出）**：§5.2 的 `game_data.type_set` **合法取值集合**（本地 0 实例，无从复测）、§1.4 的引擎 define 默认值/取值范围（本地无声明）、§8 第 12 条（mod 新增键是否无效）、§6.6 的「32 个未声明 `icon` 的静态修饰符」。
 > 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.3）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
 
 > **适用版本**：Victoria 3 **1.14.3 (Ice Tea)**（本文的模块结构统计已重测到 1.14.3；个别标注为 1.14.2 的结论为历史采集值）
@@ -5006,22 +5010,26 @@ add_modifier = { # academics polstr
 
 ## 8. 未确认项汇总
 
-以下事项**无法**从本机文件确证，需实机测试或引擎日志验证。列出以免误用：
+下面每一条都**查过了**：表格的「本地证据」列写明查到什么（含 `文件:行号` 与复算命令），
+「状态」列说明它是否还开着（`【未确认】` + 缺口 / 取证配方，配方定义见
+`04-脚本系统.md` §13.1）。**已答的条目不再带标记**，但仍留在表里 ——
+清单的价值是「问题有没有答案」，不是「还剩几行字」。
+本机 mod 侧的数字一律是**本机快照**（`v3 prefixes` / `pdx.mods.analyse_all()` 复算），不是版本属性。
 
-| # | 未确认项 | 目前掌握的信息 |
-|---|---|---|
-| 1 | **mod 的 defines 文件能否放在 `common/defines/` 的子目录**（如 `common/defines/jomini/`）来覆盖子目录下的原版文件 | 原版自己在 `GAME\common\defines\jomini\` 放了 3 个文件覆盖 Jomini 层；但那是内容根之间的机制，mod 层是否同理未验证。**建议**：要覆盖 `NTooltip` / `NFogOfWar` / `NRivers` 这类，先在根目录用大前缀文件试，不行再复制子目录结构。 |
-| 2 | **子目录文件与根目录文件之间的加载先后顺序** | 只知道「按文件名排序」（Wiki），但 `jomini/00_tooltips.txt` 与 `00_ai.txt` 谁先加载无法确证。 |
-| 3 | **mod defines 文件与原版文件同名时**是「整文件替换」还是「按键合并」 | Wiki 明确说 mod 侧**不需要**覆盖整个文件（按键合并）；但证据 3 显示**内容根之间**同名相对路径是整体接管。同名 mod 文件的行为未实测。**建议**：mod 永远用不同文件名 + 大前缀。 |
-| 4 | **`@` 变量的作用域是否跨文件** | 已知原版在同一文件内（含块外顶层定义、块内定义、块内引用）使用正常。跨文件是否可用未验证。**建议**：mod 里直接写数值。 |
-| 5 | **引擎 define 的默认值/最大最小值** | defines 没有声明类型或范围；越界值的行为未知（可能夹取、可能崩溃）。 |
-| 6 | **`has_game_rule` 的块形式**（`has_game_rule = { name = ... value = ... }`）是否存在 | 原版 0 使用；仅触发器本地化文件里有同名条目。**建议**：只用标量形式。 |
-| 7 | **`apply_modifier` 在 game_rules 中是否仍有效** | 原版 1.14.2 零使用；`game_rules.md` 有记载。 |
-| 8 | **`game_data.type_set` 的合法取值** | `modifier_types.md` 举例 `cultural_acceptance`，但原版 0 使用；完整取值表未知。 |
-| 9 | **`decimals` / `percent` / `color` 缺省值** | 原版有 31 个键不写 `decimals`、1479 个不写 `percent`，证明有默认值，但具体值未确证。 |
-| 10 | **`scripted_modifiers` 是否仍被引擎解析** | 全库 0 引用（§7.2）。 |
-| 11 | **wiki 的 verified 版本是 1.13，采集时点本机是 1.14.2** | 本文所有 Wiki 引用均标注，并与本机实测交叉核对；发现一处**过时/不符**：Wiki 的 `00_defines` 示例注释称 `INCORPORATION_TIME_NO_MATCH` 的 base game 值为 20，实测为 **25**（`00_defines.txt` 第 57 行）。 |
-| 12 | **mod 中新增 define 键是否完全无效** | 推断为无效（键由 C++ 硬编码），但未见官方明文说明。 |
+| # | 未确认项 | 本地证据（可复算） | 状态 |
+| --- | --- | --- | --- |
+| 1 | **mod 的 defines 文件能否放在 `common/defines/` 的子目录**（如 `common/defines/jomini/`）来覆盖子目录下的原版文件 | 原版自己在 `GAME\common\defines\jomini\` 放了 **3 个**文件（§0.4：根目录 6 + 子目录 3），但那是**内容根之间**的机制（§1.7 证据 3）；mod 层：本机 23 个 mod 里 **12 个**带 `common/defines/`，**12 个文件全部落在根目录、0 个用子目录**（复算：递归枚举 `<mod>\common\defines` 后看相对路径是否含分隔符） | 【未确认】本地无证据（无 mod 层实例）→ 配方 C。**建议**不变：先在根目录用大前缀文件试 |
+| 2 | **子目录文件与根目录文件之间的加载先后顺序** | §1.7 证据 3 证明的排序只发生在**内容根之间**（`cw/jomini` → `jomini` → `game` 共享同一相对路径 `common/defines/jomini/00_tooltips.txt`，`NTooltip` 7 键、`MOUSE_MOVE_DISTANCE_TO_UPDATE_TOOLTIP_POSITION` 20.0f → 10.0f）；mod 层 **0 个子目录实例**（同第 1 条）→ 无对照 | 【未确认】本地无证据 → 配方 C |
+| 3 | **mod defines 文件与原版文件同名时**是「整文件替换」还是「按键合并」 | 本机 12 个 mod defines 文件**没有一个**与原版 9 个文件同名（复算同第 1 条，按文件名取交集 = ∅）；Wiki 说的是**按键合并**（§1.7 证据 4），而 §1.7 证据 3 的「整体接管」只覆盖内容根之间 | 【未确认】本地无证据 → 配方 C。**建议**不变：mod 永远用不同文件名 + 大前缀 |
+| 4 | **`@` 变量的作用域是否跨文件** | `common/defines/` + `jomini/common/defines/` 共 **27 个 `.txt`**：`@` **定义 28 个**（`00_defines.txt` 24 + `00_graphics.txt` 4）、**引用 43 处**（18 + 25），**跨文件引用 = 0 处**（复算：逐行去掉 `#` 注释后正则 `@([A-Za-z_]\w*)`，按其后是否紧跟 `=` 分定义/引用）。例：`@opacity` 定义在 `00_graphics.txt:5`、`@birthrate_transition_slope` 定义在 `00_defines.txt:1787` | 【未确认】本地无证据（「原版不跨文件用」≠「不支持」）→ 配方 C |
+| 5 | **引擎 define 的默认值/最大最小值** | defines 本身不声明类型或范围（§0.3 的口径只按**形状**分类：标量 / 内联列表 / 嵌套块）；同族另一例的取值分布已量化：`v3 evidence decimals percent color --dir common/modifier_type_definitions --values` → `decimals` **2333 处 / 3 种取值**、`percent` **885 处 / 2 种**、`color` **2364 处 / 3 种** | 【未确认】本地无证据 → 配方 A/B |
+| 6 | **`has_game_rule` 的块形式**（`has_game_rule = { name = ... value = ... }`）是否存在 | **1.14.3 复测**：`v3 evidence has_game_rule` → 原版键 **0 处**、官方 md **0 处**、exe 有字面量（邻近串 `GameRule` / `CGameRuleDatabase` / `CGameRuleSettingDatabase` / `SETTING`）。§4.9 的观察不变 | 【未确认】本地无证据 → 配方 C。**建议**不变：只用标量形式 |
+| 7 | **`apply_modifier` 在 game_rules 中是否仍有效** | **1.14.3 复测**：`v3 evidence apply_modifier` → 原版键 **0 处**；官方 md **1 处赋值**，`common/game_rules/game_rules.md:5` 逐字：`apply_modifier = category:modifier_key	# Apply a modifier to characters matching a specific category. Valid are player, ai, and all. E.G., player:very_easy`；exe 有字面量。§4.3 表的「0」不变 | 【未确认】本地无证据 → 配方 A/B |
+| 8 | **`game_data.type_set` 的合法取值** | **1.14.3 复测**：`v3 evidence type_set --values` → 原版键 **0 处**；官方 md **1 处赋值**，`common/modifier_type_definitions/modifier_types.md:25` 逐字 `type_set = { cultural_acceptance }`（上方 `:24` 的注释：`# the modifier typesets this type belongs to, used in code to perform bespoke operations (such as updating cultural community acceptance deltas when a country enacts a law with a modifier entry of this type)`）；exe 有字面量 | 【未确认】本地无证据（原版 0 实例，取值全集无从枚举）→ 配方 A |
+| 9 | **`decimals` / `percent` / `color` 缺省值** | 数量侧已由断言钉住（1.14.3）：`modifier_type_definitions` 共 **2364** 个键，`decimals` **2333** 处 → **31** 个没写（`def.modtypes_missing_decimals`）、`percent` **885** 处 → **1479** 个没写（`def.modtypes_missing_percent`）、`color` **2364** 处 → 0 个没写。取值分布：`decimals` {1×1349, 0×966, 2×18}、`percent` {yes×824, no×61}、`color` {good×1776, neutral×306, bad×282}（`v3 evidence … --values`） | 【未确认】本地无证据（**缺省值**本身无声明；只能证明「有默认值」）→ 配方 A |
+| 10 | **`scripted_modifiers` 是否仍被引擎解析** | **1.14.3 复测**：`v3 evidence scripted_modifier` → 原版键 **0 处**、官方 md **0 处**、exe **无该字面量**（`v3 evidence --exe-grep scripted_modifier` → 0 个）；同族里存在的是 Jomini 模板数据库 —— `v3 evidence --exe-grep scripted` → `CJominiScriptedModifierTemplateDatabase`（还有 `jomini_scripted_effect_templates`、`jomini_scripted_list_templates` 等同族串）。§7.2 的「0 定义 / 0 引用」不变 | 【未确认】本地无证据 → 配方 C |
+| 11 | **wiki 的 verified 版本是 1.13，采集时点本机是 1.14.2** | 本机指纹已更新：`env.caligula_branch` = `release/1.14.3`、`env.caligula_rev` = `bf52e8e…`（本次 `v3 verify` 已核验），另有头部「版本依据」三条；§1.7 证据 4 已把该 Wiki 页标注为 verified for 1.13，并给出实测反例：`INCORPORATION_TIME_NO_MATCH` 实测 **25**（`00_defines.txt`），Wiki 示例注释写 "Base game 20 years" | 已答（版本差异已量化，见 §0.1 的【Wiki】行与 §1.7 证据 4） |
+| 12 | **mod 中新增 define 键是否完全无效** | define **键名确实编译进二进制**：`v3 evidence --exe-grep INCORPORATION_TIME_NO_MATCH` → exe 里存在该标识符（1 个）；§0.4 的 **3488** 个参数全部来自原版 9 个文件。**没有**「新增键被读取」的本地实例 | 【未确认】本地无证据 → 配方 C |
 
 ---
 

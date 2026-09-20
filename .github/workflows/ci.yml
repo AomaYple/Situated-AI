@@ -80,7 +80,7 @@ jobs:
         run: v3 verify --from-snapshot
 
       - name: v3 tables --offline —— 用入库快照核验生成表
-        # 169 张生成表是文档里大部分数字的来源，而**算**它们要读游戏 ——
+        # 171 张生成表是文档里大部分数字的来源，而**算**它们要读游戏 ——
         # 于是「表格被手改、或改了生成器却忘了重跑」在 CI 上一直没人守。
         # 现在快照里带着每张表当时的数据行（域 doc_tables），这条只读快照与文档。
         #
@@ -94,4 +94,47 @@ jobs:
       # 游戏的机器上覆盖。上一版曾误把它写进来，是因为把它与
       # `v3 verify --from-snapshot` 混为一谈：那时快照里**没有**表格内容，
       # 也算不出那些表 —— 这轮把表格内容也记进了快照，才有了 `--offline` 这条。
+
+  lock:
+    # 依赖锁这条**单开一个 job，固定 windows-latest**。
+    #
+    # 为什么不在上面的矩阵里：`requirements.lock` 是**本机（Windows）解析出来的闭包**，
+    # 含平台相关依赖（如 `colorama`）。拿它去 ubuntu 上装，等于把「A 平台的解析结果」
+    # 当成「B 平台的承诺」—— 那是最容易被误读成「锁坏了」的一类失败。
+    # 固定在 Windows 上跑，锁与平台一致，这条才有意义。
+    #
+    # 它验的是三件事：锁**装得上**（`pip install -r`）、装的确实是锁
+    # （`pip install -e . --no-deps` 不触发重新解析）、
+    # 以及装出来的环境与锁**逐条一致**（`v3 lock`）。
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 只跑锁生成时的解释器版本（3.14）—— 换版本解析结果会变，
+        # 那是「锁该重生成」的信号，不是这条 CI 该背的锅。
+        python-version: ["3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: 按 requirements.lock 安装
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock
+          python -m pip install -e . --no-deps
+
+      - name: v3 lock —— 装出来的环境与锁逐条一致
+        # `v3 lock` 不带参数时是对账：本机闭包 vs 锁，有差异即退出码 1。
+        # pyproject 里全是下限，下限保证装得上、不保证装出来是同一套 ——
+        # 这条把「同一套」变成可验证的。
+        run: v3 lock
+
+      - name: pytest —— 在锁定的环境里跑不依赖游戏的用例
+        run: python -m pytest -m "not integration"
 

@@ -53,7 +53,15 @@ _CHAIN_ID_RE = re.compile(r"<!--claim:([A-Za-z0-9_.]+)-->")
 
 
 def parse_chain(chain: str) -> list[str]:
-    """``<!--claim:a--><!--claim:b-->`` → ``["a", "b"]``（供迁移脚本复用）。"""
+    """``<!--claim:a--><!--claim:b-->`` → ``["a", "b"]``（供迁移脚本复用）。
+
+    >>> parse_chain("<!--claim:dip.group_files-->")
+    ['dip.group_files']
+    >>> parse_chain("<!--claim:a--><!--claim:b-->")
+    ['a', 'b']
+    >>> parse_chain("没有标记")
+    []
+    """
     return _CHAIN_ID_RE.findall(chain)
 
 
@@ -112,7 +120,15 @@ def marker_ids_by_doc(docs_dir: Path | None = None) -> dict[str, set[str]]:
 
 
 def format_value(value: int, raw: str) -> str:
-    """按现值风格格式化新值：本来有千分位就继续用千分位。"""
+    """按现值风格格式化新值：本来有千分位就继续用千分位。
+
+    >>> format_value(205, "205")
+    '205'
+    >>> format_value(12345, "12,345")
+    '12,345'
+    >>> format_value(12345, "205")
+    '12345'
+    """
     return f"{value:,}" if "," in raw else str(value)
 
 

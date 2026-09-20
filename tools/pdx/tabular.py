@@ -16,9 +16,12 @@
 from __future__ import annotations
 
 import csv
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from . import config
+from .doc_tables import TableSpec
 from .parser import TOLERATED_ERRORS
 from .scan import walk_files
 
@@ -106,6 +109,70 @@ def parse_table_text(text: str) -> tuple[str, list[str], list[list[str]]]:
         return delimiter, [], []
     columns = [c.strip() for c in rows[0]]
     return delimiter, columns, [list(r) for r in rows[1:]]
+
+
+@dataclass(frozen=True, slots=True)
+class ColumnStat:
+    """一列的取值分布（`v3 csv` 用）。"""
+
+    name: str
+    distinct: int
+    blanks: int
+    top: tuple[tuple[str, int], ...]
+
+
+def column_stats(table: Table, *, top: int = 5) -> list[ColumnStat]:
+    """逐列统计：不同取值数、空值数、出现最多的几个取值。
+
+    为什么要它：doc 06 §4.4 关于 `adjacencies.csv` 的几条结论（``Type`` 只有 14 种取值、
+    ``Through`` 全是 ``-1``、``adjacency_rule_name`` 全是空串）此前是**一次性脚本**的
+    产物。把「一列有哪些取值」变成命令之后，这类结论就能随时复算。
+    """
+    out: list[ColumnStat] = []
+    for index, name in enumerate(table.columns):
+        counter: Counter[str] = Counter()
+        blanks = 0
+        for row in table.rows:
+            value = row[index].strip() if index < len(row) else ""
+            if value:
+                counter[value] += 1
+            else:
+                blanks += 1
+        out.append(
+            ColumnStat(
+                name=name,
+                distinct=len(counter),
+                blanks=blanks,
+                top=tuple(counter.most_common(top)),
+            )
+        )
+    return out
+
+
+#: 生成表在文档里的表头（doc 06 §4.4）。
+ADJACENCIES_TABLE_HEADER = "| adjacencies 列 | 不同取值 | 空值 |"
+
+
+def _adjacencies_rows() -> list[str]:
+    path = config.GAME / "map_data" / "adjacencies.csv"
+    if not path.is_file():
+        return []
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    delimiter, columns, rows = parse_table_text(text)
+    sheet = Table(
+        rel="map_data/adjacencies.csv", delimiter=delimiter, columns=columns, rows=rows, size=0
+    )
+    return [f"| `{s.name}` | {s.distinct} | {s.blanks} |" for s in column_stats(sheet, top=1)]
+
+
+def doc_table_specs() -> list[TableSpec]:
+    """doc 06 §4.4 的 `adjacencies.csv` 列分布表 —— 让那几条结论的数字可复算。
+
+    实测（1.14.3）：241 个数据行 × 10 列；`Type` 14 种取值、`Through` 只有 `-1`、
+    `adjacency_rule_name` 全为空串、`Comment` 空 34 行。此前这些是 PowerShell
+    一次性脚本的产物，现在由 `v3 tables` 每次核对（复算命令：`v3 csv`）。
+    """
+    return [TableSpec("doc06 adjacencies 列分布", ADJACENCIES_TABLE_HEADER, _adjacencies_rows)]
 
 
 def extract_tables(root: Path) -> TableReport:

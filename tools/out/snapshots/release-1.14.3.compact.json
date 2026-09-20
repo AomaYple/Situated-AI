@@ -32479,6 +32479,39 @@
     "| `state_atheism.txt` | 10 | 2 |",
     "| `unification.txt` | 3 | 2 |"
    ],
+   "06-本地化与界面资源.md::doc06 DDS 头普查": [
+    "| `.dds` 文件（`game/gfx/**`） | 11,294 |",
+    "| ├ 可解析头 | 11,293 |",
+    "| └ 头过短/非法 | 1 |",
+    "| mipmap 级数 = 1 | 775 |",
+    "| mipmap 级数 = 0 | 534 |",
+    "| 多级 mipmap（>1） | 9,984 |",
+    "| 缺 `DDSD_MIPMAPCOUNT` 标志 | 957 |",
+    "| 宽高均为 2 的幂 | 7,304 |",
+    "| 宽高非 2 的幂 | 3,989（35%） |",
+    "| ├ 其中带多级 mipmap | 3,560 |",
+    "| 格式 DXT5 | 5,583 |",
+    "| 格式 未压缩 32bit | 4,943 |",
+    "| 格式 DXT1 | 689 |",
+    "| 格式 DX10:98（BC7_UNORM_SRGB） | 38 |",
+    "| 格式 DX10:99（BC7_UNORM） | 18 |",
+    "| 格式 DXT3 | 16 |",
+    "| 格式 未压缩 24bit | 4 |",
+    "| 格式 DX10:95（BC6H_UF16） | 1 |",
+    "| 格式 DX10:78（BC5_UNORM） | 1 |"
+   ],
+   "06-本地化与界面资源.md::doc06 adjacencies 列分布": [
+    "| `From` | 227 | 0 |",
+    "| `To` | 224 | 0 |",
+    "| `Type` | 14 | 0 |",
+    "| `Through` | 1 | 0 |",
+    "| `start_x` | 230 | 0 |",
+    "| `start_y` | 221 | 0 |",
+    "| `stop_x` | 227 | 0 |",
+    "| `stop_y` | 228 | 0 |",
+    "| `adjacency_rule_name` | 0 | 241 |",
+    "| `Comment` | 60 | 34 |"
+   ],
    "06-本地化与界面资源.md::doc06 gfx 子目录": [
     "| `coat_of_arms` | 1,013 | 纹章图案与底色 |",
     "| `compound_nodes` | 162 | 粒子复合节点 |",
@@ -32956,7 +32989,7 @@
     "| ROOT | `C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3` | 实测存在 |",
     "| GAME | `…\\Victoria 3\\game` | 实测存在 |",
     "| 用户数据 | `C:\\Users\\28905\\Documents\\Paradox Interactive\\Victoria 3` | 实测存在 |",
-    "| Workshop | `C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\529340` | 用户环境事实（本次未统计，标注「未确认」） |"
+    "| Workshop | `C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\529340` | 用户环境事实：**23 个子目录 / 4,800 文件 / 3,763.69 MB（本机快照，§18 第 2 条）**；换台机器就变 |"
    ],
    "09-AI-mod实战技法.md::doc09 领域对应字段": [
     "| 建造 | `wanted_construction_output` | strategy |",
@@ -33998,7 +34031,7 @@
     "| `first_not` | 404 | ✅ | |",
     "| `none` | 67 | ❌ | **`.md` 未记载** |",
     "| `none_not` | 58 | ❌ | **`.md` 未记载** |",
-    "| `show_children` | 1 | ❌ | **`.md` 未记载**。仅 `01_scripted_triggers_localization.txt` 的 `country_can_form_power_bloc` 一处 |"
+    "| `show_children` | 1 | ❌ | **`.md` 未记载**。仅 `00_trigger_localization.txt:7917` 的 `country_can_form_power_bloc` 一处（**更正**：原写 `01_scripted_triggers_localization.txt`；复算：`v3 evidence show_children`） |"
    ],
    "17-角色科技与呈现.md::doc17 字段表14 common/modifier_type_definitions": [
     "| `color` | ✅ | 2,364 | `# determines whether the modifier value should be considered positive, negative, or neutral when displaying entries of this type (can also be used for boolean type modifiers where it determines the icon)` |",

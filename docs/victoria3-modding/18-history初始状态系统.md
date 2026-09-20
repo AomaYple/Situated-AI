@@ -5,6 +5,13 @@
 > 这是**所有 mod 都要碰的核心系统**，也是 `11-历史初始状态与AI策略分配.md` 的完整展开。
 > 全部内容 **【实测】**。
 
+> **版本提示（精确清单）**：本机游戏是 **1.14.3 (Ice Tea)**（版本指纹 `env.caligula_rev` = `bf52e8efe8f45334a3fbd421cc9e06d51077c045`、`env.caligula_branch` = `release/1.14.3`，两条断言本次 `v3 verify` 已核验）。原先那句笼统的「统计采集于 1.14.2」按类拆开：
+> - **已是 1.14.3 —— 表格已重算**：本篇 **2 张**表（`doc18 history 子目录`、`doc18 效果文件数`）由 `v3 tables` 生成；本次 `v3 tables` 核对「全部 169 张生成表都与文档一致」。
+> - **已是 1.14.3 —— 断言已核验**：本篇 **2 条** `hist.*` 断言（`hist.wrappers`、`hist.country_effects_doc18`）随 `v3 verify` 现场重扫，本次 **234/234 通过**（含本篇）。
+> - **已复测的「未采样 / 未整理」类结论**（1.14.3 实测值，逐条见 §5）：六个单文件目录的深度 1/2 键**已全部采样**（含 `government_setup` **深度 1 键 = 0 个**这一反直觉结果）；`effect_starting_*` 完整清单 = **22 个键 / 22 处**、分布在 `common\scripted_effects\` 的 **4 个文件**里。
+> - **未复测（明确列出）**：§3.1–§3.14 各节的**行数与逐文件字节数**（1.14.2 采集，如 §3.1 的 476 KB、§3.3 的 262 文件）；§4.2 / §4.3 示例里引用的 PM 名与修正符名（未逐个回查原版定义）。
+> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.3）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
+
 ## 1. 全貌
 
 **【实测】** `common\history\` 下 **22<!--claim:hist.wrappers--> 个子目录 / 1,153 个文件**，根目录无松散文件。
@@ -536,10 +543,12 @@ GLOBAL = {
 
 ## 5. 未确认项
 
-| 项 | 状态 |
-|---|---|
-| `population` 与 `pops` 的分工 | **未确认** |
-| 各 history 目录的**执行顺序**（仅知 `global` 最后） | **未确认** |
-| `conscription`、`cultures`、`government_setup`、`military_deployments`、`production_methods`、`trade` 的具体字段 | **未采样** |
-| 多处对同一国家/州写入的合并规则 | **未确认** |
-| `effect_starting_*` 预置效果的完整清单 | **未整理**（猜测在 `common\scripted_effects\`，待查） |
+> 证据口径与四条实测配方见 `04-脚本系统.md` §13.1（A 脚本化测试 / B 调试日志 / C 最小 MOD / D 双 MOD 冲突）。
+
+| # | 未确认内容 | 本地证据（可复算） | 状态 |
+|---|---|---|---|
+| 1 | `population` 与 `pops` 的分工 | **已答（见 §3.15 末行与 §1 表）**，正文逐字：「按国家给**初始人口属性**（`effect_starting_pop_wealth_*` / `_literacy_*`）；与 `pops` 的差别是「改属性 vs 造人口」【实测】」。计数侧：`population` **373 文件**（每个文件一个 `c:<TAG>` 块，见 §1 表）、`pops` **17 文件**（按 `s:STATE_*` 分块），两张表的文件数由 `v3 tables` 的 `doc18 history 子目录` 生成 | 已答 |
+| 2 | 【未确认】各 history 目录的**执行顺序**（仅知 `global` 最后） | ① 22 个子目录各有一个大写包装块（`v3 tables` 的 `doc18 history 子目录` 表逐行可复算）；② 官方 md **91 篇全扫只有 1 处**提到 history —— `common/buildings/buildings.md:5` 的 `buildable` 注释（与顺序无关）；③ 本机 23 个 mod 的 history 改动都是新增文件（本机快照）。`global` 最后是 §3.13 的正文结论，其余 21 个的相对顺序**无本地声明** | 待实测 → 配方 B |
+| 3 | `conscription`、`cultures`、`government_setup`、`military_deployments`、`production_methods`、`trade` 的具体字段 | **已答（本轮机械采样，深度 1 / 2）**：六个目录**都没有固定字段名**，深度 1 全是「作用域键」——`conscription`（**1,044 B**）深度 1 = `every_country`×1、深度 2 = `if`/`else_if`；`cultures`（**3,344 B**）深度 1 = `every_country`×1 + `cu:<culture>`×**64**，如 `cu:british` → `set_fervor`；**`government_setup`（641 B）深度 1 键 = 0 个**（全文只有被注释的 `try_form_government_with` 示例，1.14.3 无任何 live 用法）；`military_deployments`（**2,521 B**）深度 1 = **11 个** `c:<TAG>`、深度 2 = `random_scope_general`；`production_methods`（**1,638 B**）深度 1 = **9 个**作用域键（8 个 `c:` + `s:STATE_ILE_DE_FRANCE`）、深度 2 = `activate_production_method`；`trade`（**1,898 B**）深度 1 = **16 种** `s:STATE_*`（共 17 个块）、深度 2 = `region_state:<TAG>` | 已答 |
+| 4 | 【未确认】多处对同一国家/州写入的合并规则 | 与 `11-历史初始状态与AI策略分配.md` §7 第 1 条同源：本机 23 个 mod 的**内容路径零重叠**（本机快照，复算 `pdx.mods.analyse_all()` 的 `overrides`/`additions`），因此「两个文件写同一个 `c:TAG`」在本地**没有实例**；§4.1 给的规避做法（改 `history\global\` 兜底，最后执行）不变 | 待实测 → 配方 C |
+| 5 | `effect_starting_*` 预置效果的完整清单 | **已答**：全 `game\` 树按前缀扫描 = **22 个键 / 22 处**，全部定义在 `common\scripted_effects\`，分四组 —— `00_political_setup.txt` **5 个**（`effect_starting_politics_liberal` `:3`、`_conservative` `:20`、`_reactionary` `:47`、`_traditional` `:74`、`_princely_state` `:117`）；`00_starting_inventions.txt` **7 个**（`effect_starting_technology_tier_1_tech` `:4` … `tier_7_tech` `:144`）；`00_starting_pop_literacy.txt` **6 个**（`_very_high` `:7`、`_high` `:64`、`_middling` `:121`、`_low` `:178`、`_very_low` `:235`、`_baseline` `:292`）；`00_starting_pop_wealth.txt` **4 个**（`_very_high` `:6`、`_high` `:44`、`_medium` `:82`、`_low` `:120`） | 已答 |

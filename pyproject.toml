@@ -15,7 +15,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "situated-ai-v3tools"
-version = "0.2.0"
+version = "0.3.0"
 description = "Victoria 3 mod 开发研究工具链：PDX 脚本全量分析与信息提取"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -63,6 +63,7 @@ dev = [
 
     # ── 开发流程 ──────────────────────────────────────────
     "pre-commit>=4.0",          # 提交前自动跑 ruff/mypy
+    "mutmut>=3.8",              # 变异测试（按需手动跑，配置见 [tool.mutmut]）
 ]
 
 [project.scripts]
@@ -275,6 +276,25 @@ quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
 docstring-code-format = true
+
+# ─────────────────────────────────────────────────────────────
+# mutmut —— 变异测试（**不进 pytest**，按需手动跑）
+#
+# 为什么单独一个工具：变异测试要「改一处源码 → 跑一遍测试 → 看有没有红」，
+# 一轮下来是几十次全套测试。放进 CI 等于每次提交都跑几十分钟，
+# 放进 pytest 更是自相矛盾（测试里再跑测试）。它的用法是**定期体检**：
+#
+#     .venv\Scripts\python.exe -m mutmut run     # 跑一遍，看存活率
+#     .venv\Scripts\python.exe -m mutmut results # 存活下来的变异体
+#
+# 先只挑**纯函数、无游戏依赖**的两个模块：变异测试的价值在于
+# 「测试能不能发现语义改变」，而依赖真实游戏数据的模块会让每次变异都
+# 因为环境差异而失败（那种红不代表测试强）。
+# ─────────────────────────────────────────────────────────────
+[tool.mutmut]
+paths_to_mutate = ["tools/pdx/lexer.py", "tools/pdx/markers.py"]
+tests_dir = "tools/tests"
+runner = "python -m pytest -x -q -p no:randomly --no-header -m 'not integration and not benchmark'"
 
 # ─────────────────────────────────────────────────────────────
 # mypy —— 类型检查

@@ -104,7 +104,13 @@ class KeyedTableSpec:
 
 
 def split_row(line: str) -> list[str]:
-    """``| a | b |`` → ``['a', 'b']``（去首尾空单元格与两端空白）。"""
+    """``| a | b |`` → ``['a', 'b']``（去首尾空单元格与两端空白）。
+
+    >>> split_row("| 名字 | 数量 |")
+    ['名字', '数量']
+    >>> split_row("| `a` | 1 |")
+    ['`a`', '1']
+    """
     stripped = line.strip()
     stripped = stripped.removeprefix("|")
     stripped = stripped.removesuffix("|")
@@ -186,6 +192,11 @@ def norm_key(text: str) -> str:
     而计数器给的键是不带反引号的值 —— 取值函数必须用同一个规范化函数去查计数器，
     否则**每行都查不到、全写 0**，而 ``append_new=False`` 的表连警告都不打
     （doc 17 实测：整列变 0，靠 `v3 tables` 的 diff 才发现）。
+
+    >>> norm_key("`checksum_manifest.txt`")
+    'checksum_manifest.txt'
+    >>> norm_key("**`usage_limit`**")
+    'usage_limit'
     """
     return text.strip().strip("`*").strip()
 

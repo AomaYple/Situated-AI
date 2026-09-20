@@ -36,11 +36,28 @@ if TYPE_CHECKING:
 #: 标记词。用全角方括号是刻意的：正文里的半角 ``[未确认]`` 不会被误算。
 MARKER = "【未确认】"
 
+#: **元陈述**：这句话本身在*说明*标记约定（「无法确认的一律标注 **【未确认】**」），
+#: 不是在*使用*标记。不排掉它们，清单里就会混进假条目 ——
+#: 实测有 4 处：doc 04 的约定句与 §13 导语、doc 06 的约定句、索引页的说明。
+#:
+#: 判据：标记前后 24 个字符内出现「标注 / 标为 / 列出 / 一律 / 统一 / 全部 / 所有」
+#: 这类**说明性动词**。真正的条目是「某字段的语义 **【未确认】**」这种句型，
+#: 不含上述动词（`test_unknowns_covgate.py` 里正反两面的例子都钉住了）。
+_META_NEAR = re.compile(
+    r"(?:标注|标为|列出|一律|统一|全部|所有)[^。；\n]{0,24}【未确认】"
+    r"|【未确认】[^。；\n]{0,10}(?:项|条目)"
+)
+
 #: 文档标题行（``## 12. xxx`` / ``### 12.1 xxx``）。
 _HEADING = re.compile(r"^#{1,6}\s+(.*\S)\s*$")
 
 #: 上下文截断长度。
 CONTEXT_LIMIT = 120
+
+
+def is_meta_statement(line: str) -> bool:
+    """这一行是不是在**说明**标记约定，而不是在使用标记。"""
+    return bool(_META_NEAR.search(line))
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,7 +107,7 @@ def scan_doc(path: Path) -> list[Unverified]:
         head = _HEADING.match(raw)
         if head:
             section = head.group(1)
-        if MARKER not in raw:
+        if MARKER not in raw or is_meta_statement(raw):
             continue
         out.append(
             Unverified(
@@ -138,6 +155,7 @@ __all__ = [
     "counts_by_doc",
     "doc_files",
     "docs_dir",
+    "is_meta_statement",
     "scan_doc",
     "unverified_items",
 ]

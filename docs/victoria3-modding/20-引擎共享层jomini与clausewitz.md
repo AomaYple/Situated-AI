@@ -3,6 +3,13 @@
 > Victoria 3 的内容有**三层**：`clausewitz\`（引擎底层）→ `jomini\`（通用框架）→ `game\`（游戏内容）。
 > mod 主要作用于 `game\`，但另两层也含可被覆盖的数据。本文补齐这一盲区。**【实测】**
 
+> **版本提示（精确清单）**：本机游戏是 **1.14.3 (Ice Tea)**（版本指纹 `env.caligula_rev` = `bf52e8efe8f45334a3fbd421cc9e06d51077c045`、`env.caligula_branch` = `release/1.14.3`，两条断言本次 `v3 verify` 已核验）。原先那句笼统的「统计采集于 1.14.2」按类拆开：
+> - **已是 1.14.3 —— 表格已重算**：本篇 **1 张**表（`doc20 clausewitz 子目录`）由 `v3 tables` 生成；本次 `v3 tables` 核对**全部 169 张生成表都与文档一致**。
+> - **已是 1.14.3 —— 断言已核验**：本篇 **1 条** `eng.*` 断言随 `v3 verify` 现场重扫，本次 **234/234 通过**（含本篇）、**210 处**归属标记全部对上。
+> - **已复测的数字**（1.14.3 现场实测，原为 1.14.2 采集）：`clausewitz` 七个一级子目录 = `fonts` 46 / `gfx` 547 / `gui` 68 / `imgui_fonts` 2 / `input_profile` 19 / `localization` 68 / `tools` 1（七项合计 753）；`jomini` 六个一级子目录 = `common` 25 / `gfx` 134 / `gui` 99 / `jomini` 1 / `localization` 231 / `notifications` 2（六项合计 493）；`jomini\common\` = 5 个子目录 + 1 个 `.md`；`jomini\common\defines\` = 18 个文件 —— 四项与 §1 / §2 / §3 表逐一相符。
+> - **未复测（明确列出）**：§5 三份 readme 的**字节数**（内容本轮已读全，见 §7）、§4 的 `jomini\localization\` 键覆盖实例（`MODIFIER_DESCRIPTION_ENTRY`）、§1 表里 `game\` 的 27,723（该数字由 `08-目录全量清单.md` 的生成表看守）。
+> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.3）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
+
 ## 1. 三层架构
 
 ```text
@@ -143,11 +150,13 @@ clausewitz\fonts\
 
 ## 7. 未确认项
 
-| 项 | 状态 |
-|---|---|
-| mod 提供 `jomini\` 目录是否被加载 | **未确认** |
-| mod 覆盖 `NJomini*` 命名空间 defines 是否生效 | **未确认** |
-| `jomini\jomini\gui\encyclopedia\jomini_encyclopedia.gui`（4,731 B） | 已读：教科书窗口的 GUI 定义（`window = { name = "jomini_encyclopedia" using = editor_window … }`，色板用 Ubuntu 终端配色）。**与 mod 开发基本无关** |
-| `clausewitz\tools\pdx_node_editor.settings`（8,670 B） | 已读：节点编辑器的窗口布局设置，**与 mod 开发无关** |
-| 三份 coat_of_arms readme 的具体内容 | **未读**（官方纹章说明，路径见 §5） |
-| `jomini\common\script_values\_script_values.info` | **未读**（3,745 B，疑似官方说明） |
+> 证据口径与四条实测配方见 `04-脚本系统.md` §13.1（A 脚本化测试 / B 调试日志 / C 最小 MOD / D 双 MOD 冲突）。
+
+| # | 未确认内容 | 本地证据（可复算） | 状态 |
+|---|---|---|---|
+| 1 | 【未确认】mod 提供 `jomini\` 目录是否被加载 | ③ 本机 23 个 mod 的**顶层条目**里 `jomini/`、`clausewitz/` 各 **0 个**（本机快照，复算：`pdx.mods.analyse_all()` 的 `top_entries`，即 §6 那张内容目录清单的来源）；② 官方 md **91 篇全扫 0 处**提到 `jomini`/`clausewitz`；④ exe 里有 **40 个**含 `jomini` 的标识符（`CJominiCustomTextDatabase`、`CJominiLineDatabase`、`CJominiNamedValueDatabase`…，复算：`v3 evidence --exe-grep jomini`）→ 引擎认识 jomini 层，但「mod 目录会不会被加载」本地无实例 | 待实测 → 配方 C |
+| 2 | 【未确认】mod 覆盖 `NJomini*` 命名空间 defines 是否生效 | ① `jomini\common\defines\jomini\settings.txt:1` 逐字 `NJominiSettings = {`（该文件是 §2.1 那 18 个 defines 文件之一，命名空间定义在 **Jomini 层**、不在 `game\`）；④ exe 有 `NJominiSettings`、`NJominiPortraits` 两个字面量，邻居是 `JOMINI_SETTINGS_RECOMMENDED`、`CPortraitDecalDatabase` 一族（复算：`v3 evidence NJominiSettings NJominiPortraits`）；③ 本机 23 个 mod 在 `common/defines/` 下 **0 个** `NJomini*` 键（本机快照） | 待实测 → 配方 C |
+| 3 | `jomini\jomini\gui\encyclopedia\jomini_encyclopedia.gui`（4,731 B） | **已答**：教科书窗口的 GUI 定义（`window = { name = "jomini_encyclopedia" using = editor_window … }`，色板用 Ubuntu 终端配色）——**与 mod 开发基本无关**，原表结论不变 | 已答 |
+| 4 | `clausewitz\tools\pdx_node_editor.settings`（8,670 B） | **已答**：节点编辑器的窗口布局设置——**与 mod 开发无关**，原表结论不变 | 已答 |
+| 5 | 三份 coat_of_arms readme 的具体内容 | **已答（本轮读全）**：`coat_of_arms\coat_of_arms\read_me.txt` **1 行**，逐字 `# Here you will put prescripted coat of arms and coat of arms templates`；`coat_of_arms\options\readme.txt` **9 行**，规定 atlas 只允许两种尺寸（`tile_size = { 512 512 }` + `nr_of_tiles = 4`；`tile_size = { 256 256 }` + `nr_of_tiles = 16`）；`coat_of_arms\template_lists\readme.txt` **68 行、全部是注释**，给出 5 类 list 的语法示例（`coat_of_arms_template_lists`、`textured_emblem_texture_lists`、`colored_emblem_texture_lists`、`pattern_texture_lists`、`color_lists`）——⚠️ 示例**全部被注释**，不构成实际用法（口径同 `04-脚本系统.md` §13.1） | 已答 |
+| 6 | `jomini\common\script_values\_script_values.info` | **已答（本轮读全）**：**113 行**官方说明，两节 `== Static values ==`（`:5`）与 `== Formulas ==`（`:12`），另分 `=== Execution order ===`（`:61`）、`=== Inlining ===`（`:72`）、`=== Chaining ===`（`:84`）、`== Ranges ==`（`:94`）、`== Lists ==`（`:100`）、`== Scoping ==`（`:105`）；公式算子逐字列出：`add` / `subtract` / `multiply` / `divide` / `modulo` / `value` / `max` / `min` / `round` / `ceiling` / `floor` / `if` / `else_if` / `else` / `fixed_range` / `integer_range` | 已答 |

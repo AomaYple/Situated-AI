@@ -48,6 +48,8 @@ from rich.table import Table
 
 from pdx import (
     analyze,
+    assets,
+    backlog,
     cache,
     config,
     covgate,
@@ -61,6 +63,7 @@ from pdx import (
     lockfile,
     snapshot,
     tables_offline,
+    tabular,
     unknowns,
     verify,
 )
@@ -1503,15 +1506,19 @@ def check_outputs_cmd() -> None:
 def strings_cmd(
     limit: int = typer.Option(40, "--limit", "-n", help="最多列出多少个未使用的标识符"),
     show_list: bool = typer.Option(True, "--list/--no-list", help="是否列出候选清单"),
+    families: bool = typer.Option(False, "--families/--no-families", help="改按命名族聚类看"),
+    by: str = typer.Option("suffix", "--by", help="族按后缀还是前缀聚：suffix / prefix"),
+    min_size: int = typer.Option(8, "--min", help="族至少多少个成员才列出"),
 ) -> None:
     """开采 `victoria3.exe` 的字符串：引擎里有、脚本里没用的标识符。
 
-    这是 `tools/README.md`「已知边界」里那个下一步的**可复算版本**：
-    原先正文里的两个数字（17,821 / 16,535）是一次性采集值，口径没留、脚本没留。
-    口径见 `pdx.exe_strings`（扫可打印 ASCII 串 → 取标识符形状 → 与脚本词表作差）。
+    这条**不是**「下一步」了，而是已经在用的线索来源：`v3 evidence --exe-grep`
+    按名字族取证、`--families` 按后缀/前缀聚类（PDX 字段名往往成族出现 ——
+    实测 `*_command` 233 个、`*_cw_duplicate_compat` 161 个、`*_mult` 72 个）。
 
-    它给的是**线索**而不是结论：候选里混着编译器与 CRT 符号，哪些是 PDX 的
-    字段枚举要人看。文件不存在时退出码 2。
+    口径见 `pdx.exe_strings`（扫可打印 ASCII 串 → 取标识符形状 → 与脚本词表作差）。
+    它给的是**线索**而不是结论：候选里混着编译器与 CRT 符号（`SDL_` / `map_K*` 这种
+    一眼能排除），哪些是 PDX 的字段枚举要人看。文件不存在时退出码 2。
     """
     if not exe_strings.exe_path().is_file():
         console.print(f"[red]找不到 {escape(str(exe_strings.exe_path()))}[/] —— 需要游戏本体")
@@ -1525,6 +1532,14 @@ def strings_cmd(
     table.add_row("脚本里出现过的词", f"{stats['script']:,}")
     table.add_row("未在脚本里出现过", f"{stats['unused']:,}")
     console.print(table)
+
+    if families:
+        picked = exe_strings.identifier_families(by=by, min_size=min_size, limit=limit)
+        console.print(f"\n按{'后缀' if by == 'suffix' else '前缀'}聚出的族（≥{min_size} 个成员）：")
+        for token, names in picked:
+            shown = "、".join(names[:3])
+            console.print(f"  [cyan]{len(names):5d}[/]  {escape(token)}  [dim]{escape(shown)}…[/]")
+        return
 
     if show_list:
         rows = exe_strings.unused_identifiers()
@@ -1708,10 +1723,12 @@ def evidence_cmd(
     没有游戏本体时 ①②④ 为空，命令仍成功（退出码 0）。
     """
     if exe_grep:
-        hits = exe_strings.match_identifiers(exe_grep)
+        hits = exe_strings.match_identifiers(exe_grep, limit=0)
         console.print(f"exe 里含 [cyan]{escape(exe_grep)}[/] 的标识符（{len(hits)} 个）：")
-        for name in hits:
+        for name in hits[:200]:
             console.print(f"  {escape(name)}")
+        if len(hits) > 200:
+            console.print(f"  [dim]…（共 {len(hits)} 个，只列前 200）[/]")
         return
     if not keys:
         _fail("至少要给一个键名，例如 `v3 evidence is_shown_in_lobby`")
@@ -1804,6 +1821,128 @@ def prefixes_cmd(
         detail = "、".join(f"{p}×{n}" for p, n in counter.most_common(5))
         table.add_row(escape(rel_dir), str(sum(counter.values())), escape(detail))
     console.print(table)
+
+
+@app.command("assets")
+def assets_cmd(
+    json_out: Annotated[
+        Path | None, typer.Option("--json", help="把普查结果写成 JSON（工作区相对路径）")
+    ] = None,
+    examples: bool = typer.Option(True, "--examples/--no-examples", help="列出非 2 的幂的样例"),
+) -> None:
+    """DDS 头普查：`game/gfx/**/*.dds` 的格式、尺寸与 mipmap。
+
+    这三行结论此前来自**一次没留下脚本的全量扫描**（doc 06 §6.3）——
+    也就是「下一个人无法复算」。现在口径写在 `pdx.assets`：读每个文件前 128 字节头，
+    判据全部来自头内字段（mipmap 取 offset 28、标志位 `0x20000`、`fourCC` 取 84…）。
+
+    ⚠️ 结果描述的是**本机这一份安装**，随 DLC 与美术更新而变；文档引用时
+    应写成「本机快照 + 复算命令」。没有游戏时输出空表并成功退出。
+    """
+    result = assets.census()
+    table = Table(title=f"DDS 头普查（{escape(result.root)}）", show_lines=False)
+    table.add_column("指标")
+    table.add_column("值", justify="right", style="cyan")
+    for row in assets.format_rows(result):
+        cells = [c.strip() for c in row.strip("|").split("|")]
+        table.add_row(escape(cells[0]), escape(cells[1]))
+    console.print(table)
+    if examples and result.examples:
+        console.print("非 2 的幂样例：" + escape("；".join(result.examples)))
+    if json_out is not None:
+        _write_json(json_out, result.summary())
+        console.print(f"已写入 {escape(str(json_out))}")
+
+
+@app.command("csv")
+def csv_cmd(
+    rel: Annotated[str, typer.Argument(help="游戏目录下的相对路径，如 map_data/adjacencies.csv")],
+    column: Annotated[str, typer.Option("--column", "-c", help="只详列这一列的取值")] = "",
+    limit: int = typer.Option(20, "--limit", "-n", help="--column 时最多列多少个取值"),
+) -> None:
+    """非 PDX 语法表格（`.csv` / `.tsv`）的取值分布。
+
+    回答的是「这一列到底有哪些取值」这类问题 —— doc 06 §4.4 关于 `adjacencies.csv`
+    的几条结论（`Type` 只有若干种取值、`Through` 全是 `-1`…）此前同样是一次性脚本的
+    产物，现在可随时复算（口径见 `pdx.tabular`）。文件不存在时退出码 2。
+    """
+    path = (config.GAME / rel).resolve()
+    _require_file(path, f"表格文件 {rel}", "路径按游戏目录算，例如 map_data/adjacencies.csv")
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    delimiter, columns, rows = tabular.parse_table_text(text)
+    sheet = tabular.Table(
+        rel=rel, delimiter=delimiter, columns=columns, rows=rows, size=path.stat().st_size
+    )
+    console.print(
+        f"[bold]{escape(rel)}[/] 分隔符 {escape(repr(delimiter))}  "
+        f"列 {len(columns)}  数据行 {len(rows):,}"
+    )
+
+    stats = tabular.column_stats(sheet, top=limit)
+    if column:
+        picked = [s for s in stats if s.name == column]
+        if not picked:
+            _fail(f"没有列 {column!r}；该表有：{', '.join(columns)}")
+        stat = picked[0]
+        console.print(
+            f"列 [cyan]{escape(stat.name)}[/]：不同取值 {stat.distinct}，空值 {stat.blanks}"
+        )
+        for value, count in stat.top:
+            console.print(f"  {escape(value)} × {count}")
+        return
+
+    out = Table(title="逐列取值分布", show_lines=False)
+    out.add_column("列")
+    out.add_column("不同取值", justify="right", style="cyan")
+    out.add_column("空值", justify="right", style="dim")
+    out.add_column("最常见", style="dim")
+    for stat in stats:
+        common = "、".join(f"{v}×{n}" for v, n in stat.top[:3])
+        out.add_row(escape(stat.name), str(stat.distinct), str(stat.blanks), escape(common))
+    console.print(out)
+
+
+@app.command("backlog")
+def backlog_cmd(
+    doc: str | None = typer.Option(None, "--doc", "-d", help="只看某篇，例如 14"),
+    list_items: bool = typer.Option(False, "--list", help="逐条列出还开着的条目"),
+    limit: int = typer.Option(30, "--limit", "-n", help="--list 时最多列多少条"),
+) -> None:
+    """还开着的「未确认 / 待办」条目 —— 把两套计数合成一个数字。
+
+    知识库里有**两层**未解决项：
+
+    * `v3 unverified`：带 `【未确认】` 标记的行 —— 那是承诺（没证据就必须标）；
+    * 各篇末尾的「未确认项 / 待办 / 下一步」章节 —— 旧格式下**不带标记**，
+      标记数与章节条目数长期各说各话。
+
+    这个命令按章节里表格的**状态列**判定还开不开（`已答 / 已解决 / …` 即已关；
+    列表项没有状态列，一律算开着），给出一个可复算的总数。
+    ⚠️ 标记项大多也列在章节里，所以 **unverified ⊆ backlog**，两个数字不要相加。
+    """
+    if doc and not backlog.open_items(doc):
+        console.print(f"[green]doc {escape(doc)} 没有还开着的条目[/]")
+        return
+
+    opened, closed = backlog.totals(doc)
+    counts = backlog.counts_by_doc()
+    if doc:
+        counts = {k: v for k, v in counts.items() if k.startswith(doc) or doc in k}
+
+    table = Table(title=f"还开着的条目：{opened}（已关 {closed}）", show_lines=False)
+    table.add_column("文档")
+    table.add_column("未关", justify="right", style="cyan")
+    table.add_column("章节", style="dim")
+    secs = backlog.sections()
+    for name, n in counts.items():
+        table.add_row(escape(name), str(n), escape("；".join(secs.get(name, []))[:60]))
+    console.print(table)
+
+    if list_items:
+        rows = backlog.open_items(doc)
+        console.print(f"\n前 {min(limit, len(rows))} / {len(rows)} 条：")
+        for item in rows[:limit]:
+            console.print(f"  [dim]{escape(item.where)}[/] {escape(item.text[:96])}")
 
 
 @app.command("unverified")

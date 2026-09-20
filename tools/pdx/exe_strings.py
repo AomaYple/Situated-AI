@@ -122,10 +122,14 @@ def match_identifiers(needle: str, *, limit: int = 40) -> list[str]:
     ``jomini_scripted_list_templates`` / ``scripted_effect`` /
     ``scripted_button_cooldowns`` 之类 —— 这正是 doc 04 §13 里
     「调用语法是什么」这类问题的**引擎侧线索**。
+
+    ``limit=0`` 表示不截断（要真实条数时用它，例如 ``*_cw_duplicate_compat`` 那一族）。
+    ⚠️ 早先 ``v3 evidence --exe-grep`` 把条数印成 `len(hits)`，而 hits 是**截断后**的
+    40 条 —— 于是文档里的「161 个」用那条命令复算不出来。现在由调用方传 ``limit=0``。
     """
     low = needle.lower()
     hits = sorted(i for i in exe_identifiers() if low in i.lower())
-    return hits[:limit]
+    return hits if limit <= 0 else hits[:limit]
 
 
 def identifier_neighbors(
@@ -178,10 +182,44 @@ def identifier_neighbors(
     return out
 
 
+def identifier_families(
+    *, by: str = "suffix", min_size: int = 5, limit: int = 30
+) -> list[tuple[str, list[str]]]:
+    """把**未在脚本里出现过**的标识符按「同后缀 / 同前缀」聚成族。
+
+    为什么按族看：31,334 个未使用标识符里绝大多数是编译器与 CRT 符号，
+    逐个看没有意义；而 PDX 自己的字段名往往**成族出现** ——
+    实测 ``*_cw_duplicate_compat`` 一族有 161 个成员，一眼就能看出
+    「引擎里有一张按键名配置的重名策略表」（doc 04 §12.4 的证据就是这么来的）。
+
+    * ``by="suffix"``：按最后一个 ``_`` 之后的部分聚（找 ``_compat`` / ``_cmd`` 这类）；
+    * ``by="prefix"``：按第一个 ``_`` 之前的部分聚（找 ``code_`` / ``get_`` 这类）。
+
+    只保留成员数 ≥ ``min_size``、族名长度 ≥ 3 的族，按成员数降序。
+    ⚠️ **线索不是结论**：族里混着同节的无关字面量，哪些是 PDX 字段名要人看。
+    """
+    if by not in {"suffix", "prefix"}:
+        raise ValueError("by 只能是 'suffix' 或 'prefix'")
+
+    groups: dict[str, list[str]] = {}
+    for name in unused_identifiers():
+        parts = name.split("_")
+        if len(parts) < 2:
+            continue
+        token = parts[-1] if by == "suffix" else parts[0]
+        if len(token) < 3:
+            continue
+        groups.setdefault(token, []).append(name)
+    picked = [(token, sorted(names)) for token, names in groups.items() if len(names) >= min_size]
+    picked.sort(key=lambda item: (-len(item[1]), item[0]))
+    return picked[:limit]
+
+
 __all__ = [
     "SCRIPT_SUFFIXES",
     "exe_identifiers",
     "exe_path",
+    "identifier_families",
     "identifier_neighbors",
     "identifier_stats",
     "match_identifiers",

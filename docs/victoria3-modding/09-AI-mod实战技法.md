@@ -2,6 +2,10 @@
 
 > 本文从真实 AI mod（`Kuromi's AI`，steamId `3227982912`，本机已安装）的作者自述中提炼**可复用的技法**，并与本知识库中的结构分析相互印证。
 > 技法本身是通用的；具体数值是该作者的选择，不应照搬。
+> ⚠️ **版本跨度（精确清单）**：本文数字分两类，来源与时效各不相同 ——
+> **(1) 已由 `v3 verify` 在 1.14.3 核验**（本文那 3 条断言）：`ai.nai_params_doc09` 1017、`ai.script_values_doc09` 33、`ai.strategy_refs_doc09` 19。
+> **(2) 其余数字全部是「本机 `Kuromi's AI` 快照」，与游戏版本无关**（换台机器、mod 作者更新一版就变），本轮已按 1.14.3 的安装逐项复算：`changelog.md` 10,027 B / 169 行；`kai_ai.txt` 6,698 B / 67 行（顶层块只有 `NAI` 一个、其下参数 31 个）；三个 `kai_*_strategies.txt` 依次 9,218 B / 315 行、852 B / 55 行、10,359 B / 646 行。
+> 本文**没有**仍挂在 1.14.2 的「零使用 / 未使用」类结论 —— 全文不依赖「原版零使用某键」这种判断。
 
 ## 1. 先建立正确的心智模型
 
@@ -250,7 +254,12 @@
 
 ## 6. 下一步可做的事
 
-- [ ] 精读 `Kuromi's AI` 的 `changelog.md`（10 KB），对照版本演进看哪些改动被回滚
-- [ ] 反编译/阅读其 `kai_ai.txt`（6.7 KB），看它到底覆盖了哪些 `NAI` 参数
-- [ ] 对照其 `kai_*_strategies.txt`，看自定义策略的完整写法
-- [ ] 建立本项目自己的最小 AI mod 骨架并实测加载
+> 本节列出全文的待办项。与早期版本（四条无证据的复选框）的区别：**每一项都写明「本地已有什么证据」与「还缺什么」**，
+> 已经做完的条目改为「已答」并去掉标记；编号沿用原文。证据口径与四条实测配方见 `04-脚本系统.md` §13.1。
+
+| # | 未确认内容 | 本地证据（可复算） | 状态 |
+|---|---|---|---|
+| 1 | 精读 `Kuromi's AI` 的 `changelog.md`（10 KB），对照版本演进看哪些改动被回滚 | **已答**：`changelog.md` 实测 10,027 B / 169 行，含 7 个版本段（`## Version 6.0` / `7.0` / `7.1` / `7.2` / `7.3` / `7.4` / `7.5`，逐字见 `changelog.md:5`、`:23`、`:31`、`:49`、`:73`、`:99`、`:153`）。按 `revert` 逐行检索命中 3 行：`:45`（防止政府行政退回无纸化 PM）、`:129`（日本不再倒回幕府）都不是回滚 mod 自身改动，**只有 `:47` 是明确的数值回滚** —— 逐字 `Lowered AI's desire for white peace from 2 to 1 per week. This reverts it to 1.12 level.`（复算：`Select-String -Path <mod>\changelog.md -Pattern "revert"`） | 已答 |
+| 2 | 反编译/阅读其 `kai_ai.txt`（6.7 KB），看它到底覆盖了哪些 `NAI` 参数 | **已答（见 §5）**：文件实测 6,698 B / 67 行，顶层块**只有 `NAI` 一个**，其下参数 31 个（31 个互不重复）—— 与 §5 表格列的 31 行逐条对应（复算：读 `common\defines\kai_ai.txt`，按顶层块名与块内 `大写键 = 值` 计数） | 已答（见 §5） |
+| 3 | 对照其 `kai_*_strategies.txt`，看自定义策略的完整写法 | **已答**：三个文件与顶层块计数 —— `kai_admin_strategies.txt` 9,218 B / 315 行 / 6 个块（全部 `REPLACE:`）、`kai_diplomatic_strategies.txt` 852 B / 55 行 / 8 个块（全部 `INJECT:`）、`kai_political_strategies.txt` 10,359 B / 646 行 / 8 个块（`REPLACE:` 1 + `INJECT:` 7）。写法 = **功能前缀 + 原版同名策略键**，逐字实例见 `kai_admin_strategies.txt:1` `REPLACE:ai_strategy_agricultural_expansion = {` 与 `kai_diplomatic_strategies.txt:1` `INJECT:ai_strategy_maintain_power_balance = {`；顶层字段集合也已取全（admin：`icon`/`type`/`weight`/`possible`/`building_group_weights`/`goods_stances`；diplomatic：`unacceptable_infamy_level`/`undesirable_infamy_level`；political 15 种，含 `pro_interest_groups`/`anti_interest_groups`/`change_law_chance`/`max_progressiveness`/`institution_scores` 等）。前缀机制本身见 `04-脚本系统.md` §12.4 | 已答 |
+| 4 | 【未确认】建立本项目自己的最小 AI mod 骨架并实测加载 | 本机用户 mod 目录 `C:\Users\28905\Documents\Paradox Interactive\Victoria 3\mod\` 存在但**为 0 项**；仓库内 `*.mod` / `descriptor.mod` **0 个**（复算：`Get-ChildItem -Recurse -Include *.mod,descriptor.mod | Measure-Object`）；`tools\out\mods\` 下只有工具产物 `mod.json`，不是骨架 —— 既没有现成骨架，也没有任何一次实际加载记录 | 本地无证据 → 配方 C |

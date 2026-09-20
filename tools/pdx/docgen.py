@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from . import (
     ai,
+    assets,
     config,
     defines,
     doc04,
@@ -32,6 +33,7 @@ from . import (
     install_tree,
     localization,
     modifiers,
+    tabular,
     usage,
 )
 from .doc_tables import (
@@ -95,9 +97,13 @@ def targets() -> tuple[DocTarget, ...]:
         ),
         DocTarget(
             # doc 06（本地化与界面资源）：安装树那四张表在 install_tree，
-            # 两张本地化表在 localization —— 同一棵树的两面，口径各自写在模块里。
+            # 两张本地化表在 localization，DDS 头普查在 assets —— 同一棵树的三面，
+            # 口径各自写在模块里。
             path=config.DOCS / "06-本地化与界面资源.md",
-            specs=tuple(install_tree.doc06_table_specs()) + tuple(localization.doc_table_specs()),
+            specs=tuple(install_tree.doc06_table_specs())
+            + tuple(localization.doc_table_specs())
+            + tuple(assets.doc_table_specs())
+            + tuple(tabular.doc_table_specs()),
         ),
         DocTarget(
             # doc 15（政治人口与社会）：§0 的 25 目录总览 + 四节里的六张表。
@@ -143,7 +149,7 @@ def targets() -> tuple[DocTarget, ...]:
 
 
 def _misc_specs() -> list[TableSpec | KeyedTableSpec]:
-    """那几篇「只有一两张表」的文档的规格合集（AI + 目录文件数 + doc 18 效果表）。"""
+    """那几篇「只有一两张表」的文档的规格合集（AI + 目录文件数 + doc 18 效果表 + doc 06 的 DDS 普查）。"""
     return [*ai.doc_table_specs(), *install_tree.doc_misc_specs(), *doc18.doc_table_specs()]
 
 

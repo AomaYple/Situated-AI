@@ -2,6 +2,11 @@
 
 > 本文区分三类信息：**【实测】**= 从本机文件直接读到；**【官方】**= 游戏自带 `.md`/注释原文；**【推断】**= 由证据推导，尚未直接验证。请以标注为准。
 
+> **版本提示（精确清单）**：本机游戏是 **1.14.3 (Ice Tea)**，`binaries\victoria3.exe` = **97,292,920 B**。本文没有 1.14.2 的遗留值 ——
+> - **已是 1.14.3**：六个前缀的原版**零使用**断言 `pfx.vanilla_*` **7 条**（含总和 `pfx.vanilla_zero`）每次 `v3 verify` 都重扫全树，本次 **7/7 通过**；本机 mod 的前缀用量（总计 **2,737** 次、逐前缀 `REPLACE_OR_CREATE` 1116 / `INJECT` 740 / `TRY_INJECT` 440 / `TRY_REPLACE` 221 / `REPLACE` 174 / `INJECT_OR_CREATE` 46）由 `pfx.mods_total` 等 6 条断言钉住，本次全绿。
+> - **本轮现场复算**：§5.1.1 的目录分布 = `v3 prefixes -n 60`，输出 **43 行**；它与 §5.1.1 表的唯一差异是 `technology/technologies`(58) 与 `technology/eras`(3) 在该表里被合并成 `technology` 一行，故正文写 **42** 个目录。
+> - **唯一已知漂移（已消解）**：`v3 verify` 的 `tree.game` 曾报 **27,725**（比本文的 27,723 多 2），根因是游戏目录里被外部程序丢进两个**非游戏文件**（看图工具的 `.XnViewSort` 索引与一个 `.dmp` 缓存，2026-09-20 09:02 生成）。把它们移出游戏目录后断言恢复到 **27,723**。这类文件现在由 `tools/tests/test_install_hygiene.py` 自动点名。
+
 ## 1. 两种 mod 形态
 
 | 形态 | 位置 | 标识文件 | 本机现状 |
@@ -249,12 +254,12 @@ some_modded_on_action = {
 
 ### 5.3 未确认项
 
-| 项 | 状态 |
-|---|---|
-| 六个前缀的**权威语义**（当前为行为推断） | **未确认** |
-| 前缀是否对**所有**数据目录都有效 | **未确认**（观测集中在 `common\` 下） |
-| 不带前缀的同名键 与 `REPLACE:` 的差异 | **未确认** |
-| 多个 mod 对同一条目分别 `INJECT:` 的合并顺序 | **未确认** |
+| # | 未确认内容 | 本地证据（可复算） | 状态 |
+| --- | --- | --- | --- |
+| U1 | 六个前缀的**权威语义**（原先只有行为推断） | **机制性质已答**：六个关键字与内部枚举名成组存在于 exe（§5.1.2）——`v3 evidence --exe-grep Inject` → `Inject` / `InjectOrCreate` / `TryInject`；`v3 evidence --exe-grep Replace` → `Replace` / `ReplaceOrCreate` / `TryReplace`。⚠️ 该口径只认**标识符形状**的整串（带冒号的 `INJECT:` 形态不入此列，见 §5.1.2 的原始串检索）。**逐条语义**仍只有行为推断：§5.1 的语义列 + 本机 23 mod 2,737 次实践（`pfx.mods_total` 已核验） | 【未确认】逐条语义本地无证据 → 配方 C |
+| U2 | 前缀是否对**所有**数据目录都有效 | 本机 23 个 mod 在 **43 个** `common/` 目录下用过前缀（`v3 prefixes -n 60`；§5.1.1 表把 `technology/technologies`(58)+`technology/eras`(3) 合并为 `technology` 一行，故该表写 42）；原版 **0** 次（§5.1.2，`pfx.vanilla_zero` 已核验）；§5.1.4 记「未观察到反例」 | 【未确认】本地无证据（「未观察到反例」≠「所有目录都有效」）→ 配方 C |
+| U3 | 不带前缀的同名键 与 `REPLACE:` 的差异 | 原版**跨文件重名 = 0**（doc 04 §12.2）；本机 23 个 mod **全部走功能前缀**（`v3 prefixes`）；exe 里有 `replace_cw_duplicate_compat`（`v3 evidence --exe-grep Replace`）→ 重名策略是**按键名逐项配置**的。同 **doc 04 §13.2 U1** | 【未确认】本地无证据 → 配方 C |
+| U4 | 多个 mod 对同一条目分别 `INJECT:` 的合并顺序 | **本机就有实例**：**34 个**条目被 ≥2 个 mod 用前缀碰过，涉及 10 个 mod，`INJECT:great_power` / `unrecognized_power` / `unrecognized_regional_power` 各被 **4** 个 mod 碰过（复算：对 23 个 mod 的 `.txt` 逐行匹配行首 `前缀:键名 =`，再按键去重；总处数 2,736 与 `pfx.mods_total` 的 2,737 差 1 处，属字符类边界）。exe 侧另有 **161** 个 `<键名>_cw_duplicate_compat` 策略名（`v3 evidence --exe-grep _cw_duplicate_compat`，该命令默认只列前 40 条，见 `pdx.exe_strings.match_identifiers(limit=40)`） | 【未确认】待实测 → 配方 D（可直接拿 `INJECT:great_power` 那 4 个 mod 交换加载顺序对照） |
 
 
 **【实测】文件名层面的覆盖**：`Kuromi's AI` 直接提供了自己的 `common\ai_strategies\00_default_strategy.txt`（183,606 B），替换原版同名文件（1.14.3 为 **199,110 B**）。这说明**整文件替换**也是有效手段。

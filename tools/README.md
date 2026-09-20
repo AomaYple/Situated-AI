@@ -72,7 +72,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 analyze` | `run_analyze.py` | 全量分析并落盘：`--no-mods` `--no-cross` `--no-write` `--quiet` `--profile` |
 | `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
-| `v3 tables` | （新增） | 重算文档里**由工具生成**的 169 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表、doc 03/04/05/06/07/09/10/11/14/15/16/17/18/20 那几族统计表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
+| `v3 tables` | （新增） | 重算文档里**由工具生成**的 171 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表、doc 03/04/05/06/07/09/10/11/14/15/16/17/18/20 那几族统计表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
 | `v3 snapshot create/list/diff/verify` | `run_snapshot.py` | 版本快照：`--label` / `--compact`（精简，可入库） / `--detail` / `--json PATH` |
 | `v3 verify` | `run_verify.py` | 核对文档里的 **234 条**数量断言**并扫描文档正文的数字漂移**：`--fast` `--only ID` `--no-drift` `--unregistered` `--from-snapshot`（无游戏时用**入库的离线真值**：精简快照 + 官方文档清单）**`--fix`（把带归属标记的数字改写成断言期望值）** |
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
@@ -88,7 +88,11 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 prefixes` | （新增） | 本机 mod 的**功能前缀按目录**用量：doc 04 §1 那张「能否覆盖同名键」的表就是拿它作证的（本机快照，不是版本属性） |
 | `v3 cache` | （新增） | 解析缓存的状态与清理。全量任务要解析 6 千个文件，内存缓存只管进程内，**跨进程靠磁盘层**（`--clear` 清空，键含 mtime 与解析器指纹） |
 | `v3 cov` | （新增） | 覆盖率门禁：整体 86% 之外再按**核心模块**逐条核对下限（`--check-only` 只读上次数据）。整体数字会掩盖「大模块退化、小模块补测」 |
-| `v3 lock` | （新增） | 依赖锁：展开本机已安装的依赖闭包与 `requirements.lock` 对账（`--write` 重写）。`pyproject.toml` 全是下限，下限不保证装出来是同一套 |
+| `v3 lock` | （新增） | 依赖锁：展开本机已安装的依赖闭包与 `requirements.lock` 对账（`--write` 重写）。`pyproject.toml` 全是下限，下限不保证装出来是同一套；CI 另有一个 Windows job 专门**按锁安装**再对账 |
+| `v3 backlog` | （新增） | 还开着的「未确认 / 待办」条目**合成一个数字**（按章节里表格的状态列判定）。它与 `v3 unverified` 是两层：标记项 ⊆ 章节条目，**不要相加** |
+| `v3 assets` | （新增） | DDS 头普查（格式 / 尺寸 / mipmap，`--json` 落盘）。doc 06 §6.3 那三个结论此前是「一次性扫描」，现在这条命令可复算，那张表也已交给 `v3 tables` 生成 |
+| `v3 csv <路径>` | （新增） | 非 PDX 表格（`.csv` / `.tsv`）的**逐列取值分布**，`-c 列名` 详列某列。doc 06 关于 `adjacencies.csv` 的结论由此可复算 |
+| `v3 strings --families` | （新增） | 把未使用的 exe 标识符按**同后缀 / 同前缀**聚族（`--by suffix\|prefix --min N`）：实测 `*_command` 233 个、`*_cw_duplicate_compat` 161 个 —— PDX 字段名往往成族出现 |
 
 ```text
 .venv\Scripts\v3.exe analyze                     # 全量分析，落盘报告
@@ -104,7 +108,11 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe tables --offline            # 不读游戏，拿入库快照核对生成表（CI 用）
 .venv\Scripts\v3.exe evidence after orphan       # 查键名的四类证据
 .venv\Scripts\v3.exe unverified -d 04            # 文档里还有哪些【未确认】
+.venv\Scripts\v3.exe backlog --list              # 还开着的条目（含各篇待办章节）
 .venv\Scripts\v3.exe prefixes                    # 本机 mod 的功能前缀按目录用量
+.venv\Scripts\v3.exe assets                      # DDS 头普查（格式/尺寸/mipmap）
+.venv\Scripts\v3.exe csv map_data/adjacencies.csv -c Type   # 某列有哪些取值
+.venv\Scripts\v3.exe strings --families --min 20 # 未使用的 exe 标识符按族看
 .venv\Scripts\v3.exe cov                         # 覆盖率门禁（含核心模块下限）
 .venv\Scripts\v3.exe lock                        # 依赖锁与当前环境对账
 .venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
@@ -140,7 +148,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-660 条用例（`pytest --collect-only` 实测），
+735 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -175,6 +183,13 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_docs_mirror.py` | 官方 `.md` 清单的时效性：篇目集合、**逐篇 sha256**、镜像无多余文件；以及「跑不了的比对不该弄脏退出码」这条门禁语义 |
 | `test_localization.py` | `.yml` 本地化：语言覆盖、键去重、BOM 处理 |
 | `test_engine_crosscheck.py` | 用游戏日志当**外部真值**核对解析 |
+| `test_backlog.py` / `test_unknowns_covgate.py` | 「还剩多少没解决」这两套计数的口径：`backlog` 只数**条目表**（取证手册、配方表不算）、子标题继承父节、状态列写「已答」算已关；`unknowns` 跳过**元陈述**（「无法确认的一律标注【未确认】」是在说明约定，不是在使用标记） |
+| `test_tables_offline.py` | `v3 tables --offline`：比对、**只动数据行**的恢复、快照缺表算「缺」不算「错」、反向（规格被删）也要报出来 |
+| `test_audit_leftovers.py` | 审计报告 17 条建议里最后落地的五项：ruff 作为用例、doctest、八线程并发解析、解析吞吐宽松门禁、mutmut 配置有效性 |
+| `test_degraded_paths.py` | **降级路径**：把 `config.GAME` 指到空临时目录，跑各模块的「没有游戏 / 文件坏了 / 输入为空」分支（CI 上真的走这条路） |
+| `test_install_hygiene.py` | 游戏目录里**不许有非游戏文件**：看图工具的 `.XnViewSort` / `.dmp` 缓存、`Thumbs.db` 会让「安装树」那族断言集体报红（实测踩过），这里直接点名并给处置建议 |
+| `test_cli_more.py` / `test_cli_new_commands.py` | CLI 的补充覆盖：新命令 + 剩余分支（`csv` / `assets` / `backlog` / `mirror check` / `refresh --dry-run` / 快照 diff…）。`cli.py` 是全包最大模块，这些分支**零成本可测**，没理由留着 |
+| `test_lockfile.py` | 依赖锁：直接依赖一条不少、渲染与解析往返、标记求值保守（不认识的标记当作成立） |
 
 ### 跑基准要加 `-n0`
 
@@ -184,6 +199,32 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```text
 python -m pytest tools/tests/test_benchmarks.py --benchmark-only -n0
 ```
+
+### 变异测试：按需跑，不进 CI
+
+审计报告第 6 条建议「变异测试」的落地方式与其他项不同 —— 它按定义要
+**改一处源码 → 跑一遍测试 → 看有没有红**，一轮几十次全套测试。
+放进 CI 等于每次提交跑几十分钟，放进 pytest 更是自相矛盾（测试里再跑测试）。
+所以它的用法是**定期体检**，配置写在 `pyproject.toml` 的 `[tool.mutmut]`：
+
+```text
+.venv\Scripts\python.exe -m mutmut run       # 跑一遍，看存活率
+.venv\Scripts\python.exe -m mutmut results   # 列出存活下来的变异体
+```
+
+先只覆盖 `lexer.py` 与 `markers.py` 两个**纯函数、无游戏依赖**的模块：
+依赖真实游戏数据的模块会让每次变异都因环境差异而失败，
+那种红不代表测试强，只代表环境在动。
+
+### 性能门禁是「宽松下限」而不是数字比对
+
+审计报告第 9 条建议「性能回归门禁」。本项目采取的是：基准用例照跑
+（`test_benchmarks.py`，回归即失败），另有一条**宽松的吞吐下限**
+（`test_audit_leftovers.py`：解析吞吐 > 1,000 行/秒，实测比它快一个数量级），
+以及一份入库存档的基准记录 `tools/benchmarks/parse_baseline.json`。
+
+为什么不卡死数字：CI 与本机的 CPU 差几倍，卡死只会制造噪音。
+宽松下限抓的是「引入 O(n²)」「每次都重读整棵树」这类**真退化**。
 
 ## 输出产物
 
@@ -362,7 +403,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 4 | CI 用锁安装 | `requirements.lock` 已在本地对账（`v3 lock`） | CI 仍从 `pyproject.toml` 的下限现解析；改成从锁安装需要一次跨平台验证 |
 
 > 这四块**都不影响当前可用性**：知识库里每条结论要么有证据、要么明确标着
-> 「未确认 + 取证配方」，工具链的门禁（断言 234 条、生成表 169 张、覆盖率、
+> 「未确认 + 取证配方」，工具链的门禁（断言 234 条、生成表 171 张、覆盖率、
 > 依赖锁、离线核验）全绿。
 
 ## 为什么全 Python 化
@@ -375,7 +416,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：660 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：735 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
@@ -390,7 +431,7 @@ Python 版把上述问题都变成了**可测试的代码**：660 条用例 + 23
 > 它证明「断言注册表仍与当时记录的真值一致」，不证明「游戏里现在是这个数」；
 > 两者合起来才完整，所以 CI 上跑前者、本地跑后者。
 >
-> **生成表也有离线那一条**：169 张表要读游戏才算得出来，于是「表被手改、或改了
+> **生成表也有离线那一条**：171 张表要读游戏才算得出来，于是「表被手改、或改了
 > 生成器却忘了重跑」在 CI 上一直没人守。现在精简快照里带着每张表当时的数据行
 > （域 `doc_tables`），`v3 tables --offline` 只读快照与文档即可逐行核对
 > （`--write` 可按快照恢复）。CI 与 pre-commit 都跑这一条
