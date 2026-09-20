@@ -47,6 +47,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from pdx import (
+    ai_surface,
     analyze,
     assets,
     backlog,
@@ -2039,6 +2040,78 @@ def csv_cmd(
         common = "、".join(f"{v}×{n}" for v, n in stat.top[:3])
         out.add_row(escape(stat.name), str(stat.distinct), str(stat.blanks), escape(common))
     console.print(out)
+
+
+# ── ai-surface（原版 AI 意图层的可执行面）────────────────────
+@app.command("ai-surface")
+def ai_surface_cmd(
+    write: Annotated[
+        bool, typer.Option("--write", help="生成/更新 docs/design/02-可执行面.md")
+    ] = False,
+    check: Annotated[
+        bool, typer.Option("--check", help="核对文档与生成结果是否一致（退出码 1 = 已被手改）")
+    ] = False,
+    top: Annotated[int, typer.Option("--top", "-n", help="输入清单最多列多少条")] = 60,
+) -> None:
+    """原版 AI 意图层的**可执行面**：有哪些牌、牌在读什么、面有多大。
+
+    这是 mod 阶段 1 的产物生成器，回答三个问题（全部**枚举**自原版文件，不手抄）：
+
+    1. **有哪些牌**：`common/ai_strategies/*.txt` 里每张 `ai_strategy_*` 的槽位（`type =`）、
+       权重基准、条件数、有无 `possible` 门、牌面上的字段数；
+    2. **牌在读什么**：牌的 `weight` / `possible` 里出现的**触发器**与**脚本值引用** ——
+       这张清单就是「可喂输入清单」：原版 AI 自己会读的量，我们移动它就能影响概率；
+    3. **面有多大**：`common/defines/00_ai.txt` 的 `NAI` 块规模、`*_ENABLED` 原版子系统开关、
+       以及 `STRATEGY_RANDOM_FACTOR` 这类直接决定"随机性"的全局旋钮。
+
+    产物 `docs/design/02-可执行面.md` **由本命令生成，勿手改**；`--check` 就是防手改的闸门
+    （不一致退出码 1，可进 CI）。
+    """
+    if check:
+        problem = ai_surface.check_doc(top=top)
+        if problem:
+            _fail(problem)
+        console.print(f"[green]{escape(ai_surface.DOC_REL)} 与生成结果一致 ✅[/]")
+        return
+
+    if write:
+        path = ai_surface.write_doc(top=top)
+        cards = ai_surface.read_cards()
+        inputs = ai_surface.collect_inputs(cards)
+        console.print(
+            f"[green]已写入 {escape(str(path))}[/]：{len(cards)} 张牌 / {len(inputs)} 个不同的输入"
+        )
+        return
+
+    cards = ai_surface.read_cards()
+    inputs = ai_surface.collect_inputs(cards)
+    hits = ai_surface.factor_report(inputs)
+    defines = ai_surface.read_defines()
+
+    slots: dict[str, int] = {}
+    for card in cards:
+        slots[card.slot] = slots.get(card.slot, 0) + 1
+    table = Table(title=f"原版 AI 牌面：{len(cards)} 张", show_lines=False)
+    table.add_column("槽位")
+    table.add_column("张数", justify="right", style="cyan")
+    for slot, n in sorted(slots.items()):
+        table.add_row(escape(slot), str(n))
+    console.print(table)
+
+    console.print(f"\n被牌读到的不同输入：**{len(inputs)}** 个，前 {min(top, len(inputs))} 个：")
+    for item in inputs[:top]:
+        console.print(f"  [cyan]{item.cards:3d}[/]x {escape(item.name)}  [dim]({item.kind})[/]")
+
+    console.print("\n候选账本因子 → 原版读点：")
+    for hit in hits:
+        mark = "[green]✅[/]" if hit.hits else "[yellow]❌[/]"
+        console.print(f"  {mark} {escape(hit.factor.name)}：{escape(hit.verdict)}")
+
+    console.print(
+        f"\ndefines 面：`00_ai.txt` {defines.lines} 行 / NAI 块 {defines.nai_keys} 键 / "
+        f"原版子系统开关 {len(defines.enabled_switches)} 个 / `AI_*` 条目 {len(defines.ai_keys)} 个。"
+    )
+    console.print("跑 `v3 ai-surface --write` 生成 `docs/design/02-可执行面.md`。")
 
 
 @app.command("backlog")
