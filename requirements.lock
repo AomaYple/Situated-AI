@@ -27,8 +27,11 @@ mutmut==3.8.0
 mypy==2.3.1
 mypy-extensions==1.1.0
 nodeenv==1.10.0
+numpy==2.5.3
+opencv-python-headless==5.0.0.93
 packaging==26.3
 pathspec==1.1.1
+pillow==12.3.0
 platformdirs==4.11.9
 pluggy==1.6.0
 pre-commit==4.6.2

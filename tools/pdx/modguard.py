@@ -94,7 +94,15 @@ REFERENCE_KINDS: dict[str, str] = {
     "trigger": "原版触发器名（在 journal_entries / scripted_triggers / on_actions 里出现过）",
     "effect": "原版效果名（在 scripted_effects / journal_entries 里出现过）",
     "country_tag": "国家 tag（country_definitions 里的顶层键）",
+    "modifier_field": "修正字段名（在 static_modifiers 里被赋过值）",
 }
+
+#: `modifier_field` 的池子：原版哪些目录里的字段名算数。
+#:
+#: 为什么单列这一类：闸门 ② 别的检查都只看**名字**（变量/JE/修正/图标），而修正**字段**
+#: 的名字写错一个字母是完全静默的 —— 修正照样挂上去，什么也不发生。有了这一类，
+#: P10 的「数值必须引原版同类用法」就从纪律变成可执行检查。
+MODIFIER_FIELD_DIR = "common/static_modifiers"
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,6 +198,29 @@ def _vanilla_vocabulary(game: Path) -> set[str]:
                     out.add(item.key)
                     if isinstance(item.value, Block):
                         stack.append(item.value)
+    return out
+
+
+def modifier_fields(game: Path) -> set[str]:
+    """原版 `static_modifiers` 里被赋过值的**字段名**（含嵌套块里的）。
+
+    与 :func:`_vanilla_vocabulary` 同一套解析口径，只换目录 —— 差别在于这里收的是
+    "修正体里写了哪些字段"，于是闸门 ② 能回答"我们写的这个字段原版真的存在吗"。
+    原版 `00_code_static_modifiers.txt` 的 `base_values` 也是顶层修正，一并收进来。
+    """
+    base = game / MODIFIER_FIELD_DIR
+    if not base.is_dir():
+        return set()
+    out: set[str] = set()
+    for path in sorted(base.rglob("*.txt")):
+        stack: list[Block] = [parse_cached(path).root]
+        while stack:
+            block = stack.pop()
+            for item in block.assignments():
+                if isinstance(item.value, Block):
+                    stack.append(item.value)
+                else:
+                    out.add(item.key)
     return out
 
 
@@ -398,6 +429,7 @@ def gate_refs(ctx: Context) -> Finding:
     # ⑦ 声明式引用：原版词汇表
     vocabulary = _vanilla_vocabulary(ctx.game)
     tags = vanilla_keys(ctx.game / "common" / "country_definitions")
+    fields = modifier_fields(ctx.game)
     declared = 0
     for archive in ctx.archives:
         for ref in archive.references:
@@ -407,14 +439,20 @@ def gate_refs(ctx: Context) -> Finding:
                     f"不认识的引用类别 {ref.kind!r}（{ref.name}）—— 可用：{sorted(REFERENCE_KINDS)}"
                 )
                 continue
-            pool = tags if ref.kind == "country_tag" else vocabulary
+            pool = {
+                "trigger": vocabulary,
+                "effect": vocabulary,
+                "country_tag": tags,
+                "modifier_field": fields,
+            }[ref.kind]
             if ref.name not in pool:
                 problems.append(
                     f"原版里找不到这个{REFERENCE_KINDS[ref.kind].split('（')[0]}：{ref.name}"
                     f"（数据源 references 里声明的）"
                 )
     notes.append(
-        f"声明式引用：核对 {declared} 条（原版词汇表 {len(vocabulary)} 个键、国家 tag {len(tags)} 个）"
+        f"声明式引用：核对 {declared} 条（原版词汇表 {len(vocabulary)} 个键、"
+        f"国家 tag {len(tags)} 个、修正字段 {len(fields)} 个）"
     )
 
     details = [*notes, *[f"❌ {p}" for p in problems]]
@@ -637,6 +675,7 @@ __all__ = [
     "DEFINITION_DIRS",
     "GATES",
     "MAX_CARD_SHARE",
+    "MODIFIER_FIELD_DIR",
     "OVERRIDE_BLOCKS",
     "REFERENCE_KINDS",
     "RUNNERS",
@@ -655,6 +694,7 @@ __all__ = [
     "gate_refs",
     "gate_roundtrip",
     "loc_keys",
+    "modifier_fields",
     "resolve",
     "run",
     "vanilla_keys",

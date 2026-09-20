@@ -234,7 +234,7 @@ def effects_text(variant: str) -> str:
     )
 
 
-def _log_chain(short: str, names: Iterable[str]) -> str:
+def log_chain(short: str, names: Iterable[str]) -> str:
     """一个槽位的自报链：我们的牌 → 原版该槽全部牌 → 默认牌 → 兜底 `none`。"""
     lines: list[str] = []
     for index, name in enumerate(names):
@@ -263,17 +263,22 @@ def _log_chain(short: str, names: Iterable[str]) -> str:
     return "\n".join(lines)
 
 
+def vanilla_chain_cards(vanilla: Iterable[ai_surface.Card], slot: str) -> list[str]:
+    """**原版**同槽的牌名（按名字排序，去重）。
+
+    单独拆出来是因为并非每个探针都装着我们自己的牌：阶段 3 的 A/B 探针只读不写，
+    它的自报链里出现 `ai_strategy_sitai_probe_*` 就等于在问"有没有一张根本不存在的牌"
+    （实测：不加这条限制，链里会混进 H1 的三张牌）。
+    """
+    return sorted({card.name for card in vanilla if card.slot == slot})
+
+
 def chain_cards(vanilla: Iterable[ai_surface.Card], slot: str) -> list[str]:
     """某槽位自报链上的牌：我们的牌在前，原版同槽的牌按名字排序跟在后面。"""
-    names: list[str] = []
-    for card in vanilla:
-        if card.slot == slot and card.name not in names:
-            names.append(card.name)
-    names.sort()
     ours = [SLOT_CARDS[slot][0]]
     if slot == "political":
         ours += [NOLOC_CARD, FOURTH_CARD]
-    return [*ours, *names]
+    return [*ours, *vanilla_chain_cards(vanilla, slot)]
 
 
 def on_actions_text(vanilla: Iterable[ai_surface.Card]) -> str:
@@ -298,7 +303,7 @@ def on_actions_text(vanilla: Iterable[ai_surface.Card]) -> str:
     )
     doses = "\n".join(dose_lines)
 
-    chains = [_log_chain(SLOT_SHORT[slot], chain_cards(cards, slot)) for slot in SLOTS]
+    chains = [log_chain(SLOT_SHORT[slot], chain_cards(cards, slot)) for slot in SLOTS]
 
     return (
         f"{GEN_HEADER}"
@@ -465,6 +470,11 @@ def _game_running(process: str = GAME_PROCESS) -> bool:
     return process in (done.stdout or "")
 
 
+#: 公开别名：`pdx.ab_auto` 的前置断言（"断言 0 个游戏进程"）要用它 ——
+#: 同一个进程查询只能有一份实现（P9），但下游不该去碰私有名。
+game_running = _game_running
+
+
 def watch(
     tag: str,
     *,
@@ -593,6 +603,8 @@ __all__ = [
     "deploy",
     "effects_text",
     "fourth_card_text",
+    "game_running",
+    "log_chain",
     "metadata_text",
     "noloc_card_text",
     "on_actions_text",

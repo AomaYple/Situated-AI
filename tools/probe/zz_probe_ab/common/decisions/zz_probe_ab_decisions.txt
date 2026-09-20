@@ -1,0 +1,10 @@
+﻿# ⚠️ 本文件由 `v3 ab-probe` 生成（tools/pdx/ab_probe.py）—— 改这里没用，改生成器。
+# 统一起点：**只点一个**。点它 = 武装阶梯（第 1–12 月 A、第 13 月起 B、第 37 月起 B2）。
+# 再点一次 = 清零重跑（同一存档里重来一遍，不必退回主菜单）。
+zzprobe_ab_apply = {
+	# 对任何玩家可见：玩家要演**旁观者**，让俄罗斯保持 AI 控制
+	is_shown = { always = yes }
+	possible = { always = yes }
+	when_taken = { c:RUS ?= { zz_probe_ab_arm = yes } }
+	ai_chance = { value = 0 }
+}

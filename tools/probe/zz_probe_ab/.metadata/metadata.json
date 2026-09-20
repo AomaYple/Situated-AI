@@ -1,0 +1,12 @@
+{
+  "name": "ZZ Probe AB",
+  "id": "",
+  "version": "3.0",
+  "supported_game_version": "1.14.3",
+  "short_description": "阶段 3 A/B 探针：点一次决议武装臂阶梯（A→B→B2），第 13 月自动施加冲击、第 37 月自动追加改革侧输入",
+  "tags": [],
+  "relationships": [],
+  "game_custom_data": {
+    "multiplayer_synchronized": false
+  }
+}

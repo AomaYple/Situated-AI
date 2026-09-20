@@ -97,6 +97,24 @@ name = "has_variable"
 why = "测：这条引用在原版哪里用过"
 """
 
+#: 追加到 :data:`MINIMAL` 后面的"第二处理段"（可选表 `[reform_inputs]`）。
+#: 单独一份常量：`MINIMAL` 保持"只有一处处理"的形状，两条路径都要有用例。
+REFORM_INPUTS = """
+[reform_inputs]
+name = "sitai_t1_reform_inputs"
+effect = "sitai_t1_reform_input"
+icon = "gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds"
+why = "测：改革侧输入为什么单独一份"
+[[reform_inputs.params]]
+key = "years"
+amount = 10
+why = "测：为什么是 10 年"
+[[reform_inputs.effects]]
+key = "country_legitimacy_base_add"
+amount = 5
+why = "测：为什么取 +5"
+"""
+
 
 def _write_source(tmp_path: Path, text: str = MINIMAL, name: str = "t1.toml") -> Path:
     base = tmp_path / "data"
@@ -115,7 +133,7 @@ def test_解析真实档案的关键条目() -> None:
     """第一份档案（俄罗斯 · 战败求存）必须能被解析出它该有的东西。
 
     这条同时钉住"设计意图没被改掉"：变量名、修正名、JE 名、两个节奏键、
-    以及"一张牌都不递"（F5）。
+    第二处理段（B2 的改革侧输入），以及"一张牌都不递"（F5）。
     """
     archive = modgen.load_data(modgen.DATA_DIR / "ru_defeat.toml")
     assert archive.id == "ru_defeat"
@@ -129,8 +147,48 @@ def test_解析真实档案的关键条目() -> None:
         "CHANGE_STRATEGY_THRESHOLD",
         "CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE",
     }
+    # 第二处理段（B2）：与冲击分成两个效果/两个修正，实验才分得出是哪一处起了作用
+    assert archive.inputs is not None
+    assert archive.inputs.effect == "sitai_ru_reform_input"
+    assert archive.inputs.name == "sitai_ru_reform_inputs"
+    assert {p.key for p in archive.inputs.effects} == {
+        "interest_group_ig_industrialists_pol_str_mult",
+        "interest_group_ig_intelligentsia_pol_str_mult",
+    }
     assert archive.cards == (), "本档案刻意不递牌（F5：A 级已表达完整条链路）"
-    assert len(archive.localization) == 3
+    assert len(archive.localization) == 4
+
+
+def test_没有reform_inputs的档案照样编译(tmp_path: Path) -> None:
+    """`[reform_inputs]` 是可选表：没有第二处理段的档案不该被迫写一张空表。"""
+    archive = _archive(tmp_path)
+    assert archive.inputs is None
+    built = modgen.build(archive)
+    assert archive.inputs_file not in built.files
+    assert "没有第二处理段" in built.files[archive.doc_file]
+    assert modgen.facts(archive) == modgen.readback(built.files)
+
+
+def test_有reform_inputs时多出效果与修正两条事实(tmp_path: Path) -> None:
+    archive = _archive(tmp_path, MINIMAL + REFORM_INPUTS)
+    assert archive.inputs is not None
+    built = modgen.build(archive)
+    facts = dict(modgen.facts(archive))
+    assert facts["effects.sitai_t1_reform_input.add_modifier.name"] == "sitai_t1_reform_inputs"
+    assert facts["modifier.sitai_t1_reform_inputs.country_legitimacy_base_add"] == "5"
+    assert modgen.readback(built.files) == modgen.facts(archive)
+    # 效果文件里两个效果并存；第二处修正自己一个文件（清掉一个不影响另一个）
+    effect_text = built.files[archive.effect_file]
+    assert "sitai_t1_shock = {" in effect_text
+    assert "sitai_t1_reform_input = {" in effect_text
+    assert "add_modifier = {\n\t\tname = sitai_t1_reform_inputs" in effect_text
+    assert built.files[archive.inputs_file].count("sitai_t1_reform_inputs = {") == 1
+
+
+def test_reform_inputs缺why照样报错(tmp_path: Path) -> None:
+    text = (MINIMAL + REFORM_INPUTS).replace('why = "测：改革侧输入为什么单独一份"', "")
+    with pytest.raises(modgen.DataError, match="没有 why"):
+        _archive(tmp_path, text)
 
 
 def test_真实档案的每个数字都有依据() -> None:

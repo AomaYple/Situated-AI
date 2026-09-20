@@ -1,0 +1,11 @@
+﻿# ⚠️ 本文件由 `v3 ab-probe` 生成（tools/pdx/ab_probe.py）—— 改这里没用，改生成器。
+# 原版 italy.txt 的收敛覆盖：把 last_date 拉到开局几天内 + 清空 tests。
+# 为什么必须覆盖：引擎会跑 tools/scripted_tests/ 下的**每一份**套件，
+# 只要还有一份在跑，-scripted_tests 这一局就不会收工，
+# 「跑到第 N 月就杀进程」的自动化会一直被拖住。
+# ⚠️ 不改游戏安装目录：mod 提供的套件会被读到（阶段 3 实测，见 exec/阶段3-归档清点.md §三）。
+
+last_date = "1836.1.5"
+
+tests = {
+}

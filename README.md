@@ -125,8 +125,8 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **931 条**用例（923 通过 / 8 按条件跳过） |
-| 覆盖率 | **88.0%**（`v3 cov` 实测；门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
+| 测试 | **1138 条**用例（1128 通过 / 10 按条件跳过） |
+| 覆盖率 | **88.07%**（`v3 cov` 实测；门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | 6,250 个 PDX 文件 + 1,877 个本地化文件 |
 | 范围声明 | **不说「全量」** —— 文件维度可证伪（136 个 `common\` 子目录逐文件覆盖，有引擎日志背书），但「所有相关信息」没有边界、无法证伪。本仓库只声明**能回答哪些任务**，见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」 |
@@ -141,8 +141,8 @@ Situated AI/
 │   ├─ official-docs/        92 篇游戏自带官方 .md 的逐字镜像（**不入库**，用 `v3 mirror write` 重建）
 │   └─ official-docs.manifest.json  镜像清单：路径 / 字节 / 行数 / sha256（**入库**，Paradox 版权内容不在其中）
 ├─ tools/
-│   ├─ pdx/                  工具链核心包（47 个模块；解析部分纯标准库，cli.py 用 typer + rich）
-│   ├─ tests/                测试（54 个测试文件 / 931 条用例）
+│   ├─ pdx/                  工具链核心包（50 个模块；解析部分纯标准库，cli.py 用 typer + rich）
+│   ├─ tests/                测试（58 个测试文件 / 1138 条用例）
 │   ├─ prof/                 性能剖析
 │   ├─ out/                  分析产物（已 gitignore）
 │   └─ reports/              人可读报告（**入库**）
@@ -183,7 +183,7 @@ Situated AI/
 |---|---|
 | `v3 tables --offline` + 快照的 `doc_tables` 域 | CI 上（没有游戏）也能守住 171 张生成表 |
 | `v3 cache`（解析磁盘缓存） | 全树解析 65 秒 → 读回 2.8 秒；16 个 xdist worker 共享，且 worker 只读不写 |
-| `v3 cov`（覆盖率门禁） | 整体 86% 之外，再给 9 个核心模块各设下限 —— 整体数字会掩盖「大模块退化、小模块补测」 |
+| `v3 cov`（覆盖率门禁） | 整体 86% 之外，再给 11 个核心模块各设下限 —— 整体数字会掩盖「大模块退化、小模块补测」 |
 | `v3 lock` + `requirements.lock` | `pyproject.toml` 全是下限，下限不保证装出来是同一套 |
 
 **还剩什么**（都不影响当前可用性，详见 [`tools/README.md`](tools/README.md) 的「阶段性收尾」）：
@@ -191,8 +191,8 @@ Situated AI/
 1. **进游戏实测** —— 51 处里约 35 处只能实测（裸同名覆盖语义、跨 mod 优先级、
    `scripted_list`/`scripted_modifier` 调用语法、若干字段语义）；配方已写好在
    doc 04 §13.1，`game\tools\scripted_tests` 与 `-debug_mode` 日志是现成入口。
-2. 两项一次性普查脚本化（doc 06 的 DDS 头普查 11,293 个文件、`adjacencies.csv` 全表枚举）。
-3. 覆盖率重路径（`cli.py` 64%、`localization` 74%、`engine_log` 77% 等）。
+2. 两项一次性普查脚本化（doc 06 的 DDS 头普查 11,294 个文件、`adjacencies.csv` 全表枚举）。
+3. 覆盖率重路径（`cli.py` 60.9%、`experiments` 64.2%、`engine_log` 65.4% 等 —— 都是要真开一次游戏 / 真跑游戏数据的路径；`localization` / `mods` / `tabular` 这一轮已补到 88–94%）。
 4. CI 改为从 `requirements.lock` 安装（现在锁只在本地对账）。
 
 ## 授权

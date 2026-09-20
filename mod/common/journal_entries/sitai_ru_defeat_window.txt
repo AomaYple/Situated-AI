@@ -15,7 +15,7 @@ je_sitai_ru_reform_window = {
 
 	possible = {
 		has_variable = sitai_ru_defeat_memory
-		legitimacy <= 50
+		legitimacy <= 75
 	}
 
 	complete = {

@@ -29,5 +29,5 @@ zz_probe_h1_assign = {
 
 zz_probe_h1_boot = {
 	zz_probe_h1_assign = yes
-	debug_log = "ZZPROBE H1;RUN;storm"
+	debug_log = "ZZPROBE H1;RUN;natural"
 }

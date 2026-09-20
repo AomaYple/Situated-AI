@@ -30,6 +30,7 @@ P3 说「引擎脚本由 Python 生成，人只改数据源」，F10 说「生�
 ===============================  ==========================================
 ``common/scripted_effects/``      冲击记账效果（变量 + 挂修正）
 ``common/static_modifiers/``      压力修正（真实的合法性/贵族/财政变化）
+``common/static_modifiers/``      （可选）改革侧输入修正（`[reform_inputs]`，B2 处理段）
 ``common/journal_entries/``       改革窗口 JE（判据驱动）
 ``common/defines/``               节奏杠杆（按块 + 参数覆盖 ``NAI``）
 ``common/ai_strategies/``         递牌（本档案为空，F5）
@@ -207,6 +208,24 @@ class Pressure:
 
 
 @dataclass(frozen=True, slots=True)
+class Inputs:
+    """改革侧输入：**第二个「效果 + 修正」对**（可选表 `[reform_inputs]`）。
+
+    为什么档案需要第二个修正（而不是往 `[pressure]` 里再塞两条字段）：
+    阶段 3 的 A/B 阶梯要在**一局之内**分开施加两处理 —— B 段只加冲击、B2 段再追加
+    改革侧输入。挤进同一个修正就没有"只加冲击"的那一段，B 与 B2 的差分也就无从谈起
+    （执行文档的失败长相要求两层分开报，前提是两处输入能分开施加）。
+    """
+
+    name: str
+    effect: str
+    icon: str
+    why: str
+    params: tuple[Param, ...]
+    effects: tuple[Param, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class JournalEntry:
     """改革窗口 JE。"""
 
@@ -268,6 +287,7 @@ class Archive:
     references: tuple[Reference, ...]
     numbers: tuple[Number, ...]
     whys: tuple[tuple[str, str], ...]
+    inputs: Inputs | None = None
 
     @property
     def effect_file(self) -> str:
@@ -276,6 +296,10 @@ class Archive:
     @property
     def modifier_file(self) -> str:
         return f"common/static_modifiers/{FILE_PREFIX}{self.id}_pressure.txt"
+
+    @property
+    def inputs_file(self) -> str:
+        return f"common/static_modifiers/{FILE_PREFIX}{self.id}_reform_inputs.txt"
 
     @property
     def journal_file(self) -> str:
@@ -511,6 +535,20 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
         conditions=conditions,
     )
 
+    # `[reform_inputs]` 是**可选**表：老档案（只有冲击一处处理）照样编译。
+    # 缺省不是"静默降级"——产物清单与档案文档都会写明这一份档案有没有第二处理段。
+    inputs: Inputs | None = None
+    if "reform_inputs" in data:
+        inputs_raw = _require_table(data["reform_inputs"], f"{source}:reform_inputs")
+        inputs = Inputs(
+            name=_require_text(inputs_raw, "name", "reform_inputs"),
+            effect=_require_text(inputs_raw, "effect", "reform_inputs"),
+            icon=_require_text(inputs_raw, "icon", "reform_inputs"),
+            why=_why(inputs_raw, "reform_inputs"),
+            params=_params(inputs_raw, "params", "reform_inputs"),
+            effects=_params(inputs_raw, "effects", "reform_inputs"),
+        )
+
     localization: list[Localization] = []
     for index, item in enumerate(_require_seq(data, "localization", "localization")):
         where = f"localization[{index}]"
@@ -582,6 +620,7 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
         references=references,
         numbers=numbers,
         whys=whys,
+        inputs=inputs,
     )
     _check_namespace(parsed)
     return parsed
@@ -599,6 +638,9 @@ def _check_namespace(archive: Archive) -> None:
         "pressure.name": archive.pressure.name,
         "journal_entry.name": archive.journal_entry.name,
     }
+    if archive.inputs is not None:
+        named["reform_inputs.name"] = archive.inputs.name
+        named["reform_inputs.effect"] = archive.inputs.effect
     for card in archive.cards:
         named[f"cards.{card.name}"] = card.name
     bad = [f"{k}={v!r}" for k, v in named.items() if not NAMESPACE_RE.match(v)]
@@ -661,7 +703,7 @@ def _comment(*lines: str) -> list[Node]:
 
 
 def effects_text(archive: Archive) -> str:
-    """冲击记账效果：写记忆变量 + 挂压力修正。"""
+    """冲击记账效果：写记忆变量 + 挂压力修正（有第二处理段时再附一个效果）。"""
     memory = archive.memory
     set_variable: Node = (
         "set_variable",
@@ -685,6 +727,55 @@ def effects_text(archive: Archive) -> str:
             f"变量 {memory.variable}；压力修正 {archive.pressure.name}。",
         ),
         (memory.effect, [set_variable, add_modifier]),
+    ]
+    inputs = archive.inputs
+    if inputs is not None:
+        lines += [
+            "",
+            *_comment(
+                f"改革侧输入（A 级：同样是真实世界状态）：{inputs.why}",
+                "为什么单独一个效果：实验的 B 段只施加冲击、B2 段才追加这一处 ——",
+                "两处合并在一个效果里就分不出是哪一处起了作用（执行文档：两层分开报）。",
+                f"修正 {inputs.name}；效果名 {inputs.effect}（不绑 on_action，由实验显式调用）。",
+            ),
+            (
+                inputs.effect,
+                [
+                    (
+                        "add_modifier",
+                        [
+                            f"name = {inputs.name}",
+                            *(f"{p.key} = {num(p.amount)}" for p in inputs.params),
+                        ],
+                    )
+                ],
+            ),
+        ]
+    return "\n".join(_flatten(lines))
+
+
+def inputs_text(archive: Archive) -> str:
+    """改革侧输入修正：把原版自己的读入抬起来（不递牌，仍走 A 级）。
+
+    只有数据源里有 `[reform_inputs]` 时才生成 —— 调用方要先看
+    :attr:`Archive.inputs` 是不是 ``None``（生成器不猜）。
+    """
+    inputs = archive.inputs
+    if inputs is None:  # pragma: no cover - 调用方按 Archive.inputs 分支，这里只兜底
+        raise DataError(f"档案 {archive.id} 没有 [reform_inputs]，不该走到这里")
+    lines: list[Node] = [
+        GEN_HEADER,
+        "",
+        *_comment(
+            f"改革侧输入（A 级）：{inputs.why}",
+            f"每条字段的依据见 {FILE_PREFIX}{archive.id}.md（由 why_report 生成）。",
+            "⚠️ 这一份**不是**冲击本身：它是实验的第二处理段（B2）才挂的东西 ——",
+            "写进 [pressure] 会让「只加冲击」的那一段消失。",
+        ),
+        (
+            inputs.name,
+            [f"icon = {inputs.icon}", *(f"{p.key} = {num(p.amount)}" for p in inputs.effects)],
+        ),
     ]
     return "\n".join(_flatten(lines))
 
@@ -835,6 +926,21 @@ def doc_text(archive: Archive) -> str:
         f"| `{archive.modifier_file}` | 压力修正（真实的合法性 / 贵族 / 财政变化） |",
         f"| `{archive.journal_file}` | 改革窗口 JE（判据驱动） |",
         f"| `{archive.defines_file}` | 节奏杠杆（覆盖 `{archive.tempo.block}` 块） |",
+        *(
+            [
+                (
+                    f"| `{archive.inputs_file}` | 改革侧输入修正（第二处理段 B2 才挂；"
+                    f"`{archive.inputs.effect}` 施加） |"
+                )
+            ]
+            if archive.inputs is not None
+            else [
+                (
+                    "| —— | 本档案没有第二处理段（数据源里没有 `[reform_inputs]`）："
+                    "实验只有「加冲击 / 不加冲击」两段 |"
+                )
+            ]
+        ),
         *(f"| `{archive.loc_file(lang)}` | {lang} 文案 |" for lang in sorted(LANGUAGES)),
         "| `.metadata/metadata.json` | mod 元数据（启动器读；不带 BOM） |",
         "",
@@ -877,6 +983,8 @@ def build(archive: Archive) -> Built:
         archive.doc_file: doc_text(archive),
         METADATA_REL: metadata_text(archive),
     }
+    if archive.inputs is not None:
+        files[archive.inputs_file] = inputs_text(archive)
     for lang in sorted(LANGUAGES):
         files[archive.loc_file(lang)] = loc_text(archive, lang)
     for card in archive.cards:
@@ -1062,6 +1170,14 @@ def facts(archive: Archive) -> list[tuple[str, str]]:
     out.extend(
         (f"defines.{archive.tempo.block}.{p.key}", num(p.amount)) for p in archive.tempo.keys
     )
+    if archive.inputs is not None:
+        inputs = archive.inputs
+        out.append((f"effects.{inputs.effect}.add_modifier.name", inputs.name))
+        out.extend(
+            (f"effects.{inputs.effect}.add_modifier.{p.key}", num(p.amount)) for p in inputs.params
+        )
+        out.append((f"modifier.{inputs.name}.icon", inputs.icon))
+        out.extend((f"modifier.{inputs.name}.{p.key}", num(p.amount)) for p in inputs.effects)
     for card in archive.cards:
         out.append((f"card.{card.name}.slot", card.slot))
         out.append((f"card.{card.name}.weight", num(card.weight)))
@@ -1256,6 +1372,7 @@ __all__ = [
     "Clause",
     "Condition",
     "DataError",
+    "Inputs",
     "JournalEntry",
     "Localization",
     "Memory",
@@ -1274,6 +1391,7 @@ __all__ = [
     "doc_text",
     "effects_text",
     "facts",
+    "inputs_text",
     "journal_text",
     "load_all",
     "load_data",

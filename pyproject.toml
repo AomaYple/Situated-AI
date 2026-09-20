@@ -38,6 +38,20 @@ classifiers = [
 dependencies = [
     "typer>=0.27",      # 命令行参数解析。取代 7 个入口脚本里重复的 argparse 样板
     "rich>=15.0",       # 终端表格与格式化输出。取代手写字符串对齐
+
+    # ── 游戏自动化（`v3` 之外的第三个能力面：把游戏真的跑起来）──────
+    # 为什么这三个是运行期依赖、而不是 dev：它们被 `pdx.game_auto` **直接 import**，
+    # 也就是"自动化测试 Victoria 3"这条能力本身的实现，不是测试期工具。
+    # 增量很小：本机实测 Pillow 7.2 MB + numpy 12.7 MB + opencv 43.8 MB（headless 轮子）。
+    "Pillow>=11.0",     # game_auto.py：PNG 编解码 + 截图对象（模板匹配的输入/输出）
+    "numpy>=2.1",       # game_auto.py：把截图与模板当成像素数组（PIL↔cv2 的桥）
+    "opencv-python-headless>=4.10",
+                        # game_auto.py：`cv2.matchTemplate` 做归一化互相关。
+                        # 选 **headless** 而不是 `opencv-python`：我们只用匹配，
+                        # 不用 `imshow`/`waitKey`，而 headless 轮子不带 GUI 依赖
+                        # （少一层 GTK/Qt 的隐式依赖，也不会和游戏的窗口抢东西）。
+                        # 为什么不手写：滑动窗口互相关自己实现只会更慢更容易错，
+                        # 而"用成熟库"是本仓 P4 明确要求的。
 ]
 
 [project.optional-dependencies]
@@ -300,7 +314,27 @@ runner = "python -m pytest -x -q -p no:randomly --no-header -m 'not integration 
 # mypy —— 类型检查
 # ─────────────────────────────────────────────────────────────
 [tool.mypy]
-python_version = "3.11"
+# ⚠️ 3.12 而不是 3.11（`requires-python = ">=3.11"`）—— 这是被**桩文件**逼出来的一步，
+# 起因与代价都写清楚，免得后人以为是随手抬的：
+#
+# 起因：`pdx.game_auto` 直接 import numpy（截图/模板是像素数组）与 cv2（模板匹配）。
+# numpy 2.5 的 `__init__.pyi` 用了 PEP 695 的 `type X = …` 语句（第 737 行起），
+# 那要求 `python_version >= 3.12`；钉在 3.11 时 mypy 会**在解析桩文件时就语法报错**
+# 并直接中止整个检查：`errors prevented further checking`。也就是"不检查"，
+# 比"按 3.12 检查"更糟。
+#
+# 试过但**不管用**的两条（都实测过，别再试）：
+#   * `[[tool.mypy.overrides]] follow_imports = "skip"` —— 2.3.1 在 skip 模式下
+#     照样解析桩文件，照样中止；加 `--ignore-missing-imports` 也无用。
+#   * 逐模块 `python_version` —— mypy 直接拒绝：
+#     `Per-module sections should only specify per-module flags (python_version)`。
+#
+# 代价：mypy 不再替我们拦「3.12 才有的语法」。
+# 兜底不靠它：`requires-python = ">=3.11"` 与 classifiers 里的 3.11 由
+# **CI 跑真实解释器**兜底（3.11 上 import 就会炸），ruff 的
+# `target-version = "py311"` 也仍然只按 3.11 给建议。
+# 实测口径变更的爆炸半径：全仓 111 个文件在 3.12 下 **0 个新错误**。
+python_version = "3.12"
 # 覆盖范围：解析器包 + 测试。
 # **不含 `tools/prof/`** —— 那是一次性的剖析脚本，只在本地手跑、不进 CI；
 # 但它仍受 ruff 约束（ruff 扫全仓），不是完全无人看管。

@@ -1,0 +1,51 @@
+﻿# ⚠️ 本文件由 `v3 ab-probe` 生成（tools/pdx/ab_probe.py）—— 改这里没用，改生成器。
+# ⚠️ **本文件里只能有裸效果列表**（scripted_effects 的语法）：写成 on_action 那种
+#    `effect = { … }` 包装会被引擎读成「调一个叫 effect 的效果」→
+#    `Unknown effect effect`，整个定义作废而 on_action 那头只报
+#    `No on_action scripted with tag … cannot link`（阶段 2 实测：分组一次没跑、
+#    白跑一整局）。钩子/包装在 `zz_probe_ab_on_actions.txt` 里。
+#
+# ① `zz_probe_ab_arm`：**点一次决议**武装整条阶梯（由决议调用，作用于俄罗斯）。
+#    可重复调用 —— 每点一次就把月份与阶段清零重跑（同一存档里重跑一局的做法）。
+# ② `zz_probe_ab_ladder`：每月走一格。**幂等**是硬要求：`sitai_probe_ab_stage` 单调递增，
+#    每个效果只施加一次；不拿「有没有那个修正」当判据（会被别的系统碰到）。
+# ③ `sitai_ru_defeat_shock` / `sitai_ru_reform_input` 在**真 mod**里（`v3 modgen` 生成），
+#    探针只调用它们 —— 这样实验用的世界状态与档案本身是同一份定义。
+zz_probe_ab_arm = {
+	debug_log = "ZZPROBE AB;RUN;A"
+	# 月份从 0 起数：武装之后的下一次月度脉冲才是第 1 月。
+	set_variable = { name = sitai_probe_ab_month value = 0 }
+	set_variable = { name = sitai_probe_ab_stage value = 1 }
+}
+
+zz_probe_ab_ladder = {
+	# 没被武装过的国家一行都不动（决议是唯一的开关）。
+	if = {
+		limit = { has_variable = sitai_probe_ab_stage }
+		change_variable = { name = sitai_probe_ab_month add = 1 }
+
+		# A 臂（第 1–12 月）：对照组，什么都不做 —— 没有分支就是它。
+
+		# 第 13 月起 → 处理①：战败冲击（变量 + 压力修正）
+		if = {
+			limit = {
+				var:sitai_probe_ab_stage <= 1
+				var:sitai_probe_ab_month >= 13
+			}
+			set_variable = { name = sitai_probe_ab_stage value = 2 }
+			debug_log = "ZZPROBE AB;RUN;B"
+			sitai_ru_defeat_shock = yes
+		}
+
+		# 第 37 月起 → 处理②：追加改革侧输入（工业家/知识界政治力量）
+		if = {
+			limit = {
+				var:sitai_probe_ab_stage <= 2
+				var:sitai_probe_ab_month >= 37
+			}
+			set_variable = { name = sitai_probe_ab_stage value = 3 }
+			debug_log = "ZZPROBE AB;RUN;B2"
+			sitai_ru_reform_input = yes
+		}
+	}
+}

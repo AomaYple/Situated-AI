@@ -48,6 +48,9 @@ from rich.markup import escape
 from rich.table import Table
 
 from pdx import (
+    ab,
+    ab_auto,
+    ab_probe,
     ai_surface,
     analyze,
     assets,
@@ -2433,6 +2436,271 @@ def modguard_cmd(
         console.print("[red]有闸门不过 —— 按上面的明细修完再跑一次[/]")
         raise typer.Exit(EXIT_FAILED)
     console.print("[green]五道闸门全过 ✅[/]")
+
+
+@app.command("ab-probe")
+def ab_probe_cmd(
+    deploy: Annotated[
+        bool, typer.Option("--deploy", help="同步探针与真 mod 进用户 mod 目录并只启用它们")
+    ] = False,
+) -> None:
+    """生成阶段 3 的 A/B 探针（**不要手改探针文件**，改 `tools/pdx/ab_probe.py`）。
+
+    两局点的是**同一个决议**，唯一差异是角色：A = 决议什么都不做，B = 决议调用真 mod 的
+    `sitai_ru_defeat_shock`。自报只盯主角国家（俄罗斯），每月记三个槽位落点 +
+    改革窗口 JE + 冲击变量 + 6 条改革相关法律 —— **行为层与策略层分开记**，
+    因为阶段 3 的失败长相写死了「只有策略层动 = H2 不成立」。
+    """
+    built = ab_probe.build()
+    ab_probe.write()
+    console.print(ab_probe.summary(built))
+    if deploy:
+        dest = ab_probe.deploy()
+        console.print(f"已部署 [bold]{dest}[/]（连同真 mod 一起启用，原列表已备份）")
+        console.print(
+            "接着：启动游戏 → 选俄罗斯开 1836 → 点【A】或【B】→ 不做任何操作 → 跑 6-8 年 → 退出。"
+        )
+
+
+@app.command("ab-auto")
+def ab_auto_cmd(
+    arm: Annotated[str, typer.Option("--arm", help="这一臂的归档标签（也是记录里的小节名）")] = (
+        "ladder"
+    ),
+    months: Annotated[int, typer.Option("--months", help="目标观测月数（到点杀进程）")] = 60,
+    expect: Annotated[
+        str, typer.Option("--expect", help="预期跑到哪一臂：A | B | B2（默认 B2 = 阶梯跑满）")
+    ] = "B2",
+    repeat: Annotated[int, typer.Option("--repeat", help="臂队列长度（G2 要求两次同向 → 2）")] = 1,
+    interval: Annotated[float, typer.Option("--interval", help="轮询间隔秒数")] = (
+        ab_auto.POLL_INTERVAL
+    ),
+    max_polls: Annotated[int, typer.Option("--max-polls", help="轮询次数上限（防呆）")] = (
+        ab_auto.MAX_POLLS
+    ),
+    plan: Annotated[
+        bool, typer.Option("--plan", help="只打印臂队列与端口接线情况，不动游戏也不写记录")
+    ] = False,
+    record: Annotated[
+        Path,
+        typer.Option("--record", help="实验记录文件（默认 docs/design/exec/阶段3-实验记录.md）"),
+    ] = ab_auto.RECORD_PATH,
+) -> None:
+    """阶段 3 的自动实验编排：启动 → 轮询 → 到点杀进程 → 归档 → 分析 → 写记录。
+
+    **它自己不碰游戏本体**：启动/杀进程由 `game_auto`（并行轨）实现，通过
+    :class:`pdx.ab_auto.Ports` 注入；没接上时**当场报错**（P13：不静默跳过）。
+
+    进度的口径是**探针自己报的月度块**（`v3 ab` 去重后的观测数），不是墙钟 ——
+    游戏暂停着的时候墙钟照走、月度块不走。
+
+    ```text
+    v3 ab-auto --plan                    # 只看队列与接线（安全）
+    v3 ab-auto --arm ladder-1 --months 60 --expect B2 --repeat 2
+    ```
+
+    每一臂的结果会**追加**进 `docs/design/exec/阶段3-实验记录.md`（报告全文进折叠块），
+    某臂没达标就地停下（后面的臂不跑，见 `QueueReport.stopped_early`）。
+    """
+    arms = [
+        ab_auto.Arm(
+            name=f"{arm}-{index + 1}" if repeat > 1 else arm,
+            months=months,
+            expect=expect,
+            note=f"第 {index + 1} / {repeat} 局（G2 要的是两次同向）" if repeat > 1 else "",
+        )
+        for index in range(max(1, repeat))
+    ]
+    ports = ab_auto.default_ports()
+    table = Table(title=f"臂队列（{len(arms)} 局）", show_lines=False)
+    table.add_column("臂")
+    table.add_column("目标月数", justify="right")
+    table.add_column("预期", justify="center")
+    table.add_column("备注")
+    for item in arms:
+        table.add_row(escape(item.name), str(item.months), item.expect, escape(item.note))
+    console.print(table)
+    console.print(f"日志目录：[bold]{ports.log_dir}[/]　记录：[bold]{ab_auto.RECORD_PATH}[/]")
+    console.print(
+        "接线：进程查询 ✅（`h1_probe.game_running`）；启动/杀进程 "
+        "**未接**（传给 `ab_auto.Ports` 的 `start` / `stop`，由 `game_auto` 提供）"
+    )
+    if plan:
+        console.print("[dim]--plan：什么都没跑、什么都没写。[/]")
+        return
+    try:
+        report = ab_auto.run_queue(
+            arms,
+            ports_for=lambda _arm: ports,
+            path=record,
+            interval=interval,
+            max_polls=max_polls,
+        )
+    except ab_auto.OrchestratorError as exc:
+        _fail(f"编排中断：{exc}")
+    console.print(Markdown(ab_auto.format_queue(report)))
+    if not report.ok:
+        raise typer.Exit(EXIT_FAILED)
+
+
+# ── ab（阶段 3：A/B 实验的差分，H2）──────────────────────────
+@app.command("ab")
+def ab_cmd(
+    logs: Annotated[
+        Path | None, typer.Option("--logs", help="日志目录（默认用户目录下的 logs）")
+    ] = None,
+    json_out: Annotated[bool, typer.Option("--json", help="输出机器可读的 JSON")] = False,
+    health_only: Annotated[
+        bool,
+        typer.Option(
+            "--health",
+            help="只跑**开局自检**（RUN / 玩家 / 观测 / 角色 / SHOCK / 报错；任一不过退出码 1）",
+        ),
+    ] = False,
+) -> None:
+    """A/B 实验：**真实冲击能不能改行为**（阶段 3 的 H2）。
+
+    探针（`v3 ab-probe` 生成）每月只给主角国家（俄罗斯）写几行：
+
+    ```text
+    ZZPROBE AB;RUN;A                          ← 开局标记：A=对照、B=处理（点哪个决议就写哪个）
+    ZZPROBE AB;PLAYER;yes;俄罗斯               ← 玩家是谁（开错国家时用来自检）
+    ZZPROBE AB;SHOCK;yes;俄罗斯                ← 冲击变量在不在（B 组点完决议后应为 yes）
+    ZZPROBE AB;JE;active;俄罗斯                ← 行为层①：改革窗口
+    ZZPROBE AB;LAW;law_serfdom;俄罗斯          ← 行为层②：当月生效的那条法律
+    ZZPROBE AB;POLI;reactionary_agenda;俄罗斯  ← 策略层：三个槽位落点
+    ```
+
+    报告**先行为层、再策略层**，两层分开报 —— 执行文档把失败长相写死了：
+    **只有策略层动 = H2 不成立（意图层是薄壳）**，那时该停下重估目标，不是加代码。
+    同一个角色的多次启动会被合并；两个角色都要有观测才谈得上差分。
+
+    判定分档（`Result.verdict`）：行为层有差分 → `g2_preliminary`（还要**两次同向**才定论）；
+    只有策略层动 → `h2_shell`；都没有 → `no_diff`；缺一组 → `insufficient`。
+    """
+    result = ab.analyze(logs)
+    if health_only:
+        # 开局自检（P13）：探针没跑、开错国家、冲击没生效这些失败在脚本侧毫无报错，
+        # 只有日志里的自报行能看出来 —— 这一条让它们在一分钟内红，而不是跑完才发现。
+        items = ab.health(result, log_dir=logs)
+        console.print(Markdown(ab.format_health(items)))
+        if not all(item.ok for item in items):
+            raise typer.Exit(EXIT_FAILED)
+        return
+    if json_out:
+        payload = {
+            "runs": list(result.runs),
+            "verdict": result.verdict,
+            "verdict_text": ab.verdict_text(result),
+            "months": result.months,
+            "tags": list(result.tags),
+            "unpaired": result.unpaired,
+            "player": result.player,
+            "subject": result.subject,
+            "behaviour_changed": result.behaviour_changed,
+            "strategy_changed": result.strategy_changed,
+            "segments": [
+                {
+                    "index": segment.index,
+                    "declared": segment.declared,
+                    "role": segment.role,
+                    "blocks": segment.blocks,
+                    "months": segment.months,
+                }
+                for segment in result.segments
+            ],
+            "roles": {
+                role: {
+                    "segments": behaviour.segments,
+                    "observations": behaviour.observations,
+                    "tags": list(behaviour.tags),
+                    "shock_yes": behaviour.shock_yes,
+                    "shock_rate": behaviour.shock_rate,
+                    "input_yes": behaviour.input_yes,
+                    "input_rate": behaviour.input_rate,
+                    "je_active": behaviour.je_active,
+                    "je_share": behaviour.je_share,
+                    "je_first": behaviour.je_first,
+                    "first_law": behaviour.first_law,
+                    "law_change": behaviour.law_change,
+                    "law_change_to": behaviour.law_change_to,
+                    "bands": [
+                        {"band": band.band, "months": band.months, "share": band.share}
+                        for band in behaviour.bands
+                    ],
+                    "laws": [
+                        {
+                            "law": stat.law,
+                            "months": stat.months,
+                            "share": stat.share,
+                            "first_month": stat.first_month,
+                        }
+                        for stat in behaviour.laws
+                    ],
+                }
+                for role, behaviour in result.roles.items()
+            },
+            "slots": {
+                role: {
+                    slot: {
+                        "observations": dist.observations,
+                        "most_common": list(dist.most_common) if dist.most_common else None,
+                        "counts": [list(item) for item in dist.counts],
+                    }
+                    for slot, dist in dists.items()
+                }
+                for role, dists in result.slots.items()
+            },
+            "behaviour_diffs": [
+                {
+                    "name": diff.name,
+                    "a": diff.a,
+                    "b": diff.b,
+                    "changed": diff.changed,
+                }
+                for diff in result.behaviour_diffs
+            ],
+            "strategy_diffs": [
+                {
+                    "name": diff.name,
+                    "a": diff.a,
+                    "b": diff.b,
+                    "changed": diff.changed,
+                    "note": diff.note,
+                }
+                for diff in result.strategy_diffs
+            ],
+            # 第二对照（B → B2，改革侧输入步）：与 ① / ② 同形状，单独一组键 ——
+            # 混进上面两组就分不出"哪一处处理起了作用"。
+            "input_behaviour_diffs": [
+                {
+                    "name": diff.name,
+                    "a": diff.a,
+                    "b": diff.b,
+                    "changed": diff.changed,
+                }
+                for diff in result.input_behaviour_diffs
+            ],
+            "input_strategy_diffs": [
+                {
+                    "name": diff.name,
+                    "a": diff.a,
+                    "b": diff.b,
+                    "changed": diff.changed,
+                    "note": diff.note,
+                }
+                for diff in result.input_strategy_diffs
+            ],
+            "verdict_roles": list(ab.VERDICT_ROLES),
+        }
+        console.print_json(json.dumps(payload, ensure_ascii=False))
+        return
+    if not result.samples:
+        console.print(
+            "[yellow]日志里没有 AB 的观测行[/] —— 检查三件事：A/B 探针是否启用、"
+            "是否进过一局游戏、`--logs` 是否指对了目录。"
+        )
+    console.print(Markdown(ab.format_report(result)))
 
 
 @app.command("backlog")

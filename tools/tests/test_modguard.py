@@ -149,11 +149,20 @@ def _write(path: Path, text: str) -> None:
 def _fake_game(tmp_path: Path) -> Path:
     """按原版目录结构造一份最小的"游戏"。
 
-    每一块都对应闸门 ② 的一个解析来源：修正池、JE 池、分组、词汇表、
-    国家 tag、defines 命名空间、以及两个真实存在的图标文件。
+    每一块都对应闸门 ② 的一个解析来源：修正池（含**字段名**）、JE 池、分组、词汇表、
+    国家 tag、defines 命名空间、以及三个真实存在的图标文件。
     """
     game = tmp_path / "game"
-    _write(game / "common" / "static_modifiers" / "00_vanilla.txt", "vanilla_pressure = {\n}\n")
+    _write(
+        game / "common" / "static_modifiers" / "00_vanilla.txt",
+        "vanilla_pressure = {\n"
+        "\tcountry_legitimacy_base_add = -10\n"
+        "\tinterest_group_ig_landowners_pol_str_mult = 0.25\n"
+        "\tcountry_loan_interest_rate_add = 0.2\n"
+        "\tinterest_group_ig_industrialists_pol_str_mult = 0.5\n"
+        "\tinterest_group_ig_intelligentsia_pol_str_mult = 0.5\n"
+        "}\n",
+    )
     _write(game / "common" / "journal_entries" / "00_vanilla.txt", "je_vanilla = {\n}\n")
     _write(
         game / "common" / "journal_entry_groups" / "00_groups.txt",
@@ -178,6 +187,7 @@ def _fake_game(tmp_path: Path) -> Path:
     _write(game / "common" / "ai_strategies" / "00_vanilla_strategy.txt", "ai_strategy_x = {\n}\n")
     for icon in (
         "gfx/interface/icons/timed_modifier_icons/modifier_statue_negative.dds",
+        "gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds",
         "gfx/interface/icons/event_icons/event_portrait.dds",
     ):
         path = game / icon
@@ -378,6 +388,41 @@ def test_闸门二在原版找不到声明式引用时变红(tmp_path: Path) -> 
     finding = modguard.gate_refs(_context(tmp_path, text=text))
     assert not finding.ok
     assert any("原版里找不到" in line for line in finding.details)
+
+
+def test_闸门二核对修正字段名(tmp_path: Path) -> None:
+    """`modifier_field`：P10 的「数值必须引原版同类用法」要能被机器查。
+
+    修正字段名写错一个字母是完全静默的 —— 修正照样挂上去，什么也不发生。
+    """
+    good = (
+        MINIMAL
+        + """
+[[references]]
+kind = "modifier_field"
+name = "country_legitimacy_base_add"
+why = "测：这个字段原版里用过"
+"""
+    )
+    finding = modguard.gate_refs(_context(tmp_path, text=good))
+    assert finding.ok, finding.details
+    assert any("修正字段" in line for line in finding.details)
+
+    bad = good.replace(
+        'country_legitimacy_base_add"\nwhy = "测：这个字段原版里用过',
+        'country_legitmacy_base_add"\nwhy = "测：拼错一个字母',
+    )
+    finding = modguard.gate_refs(_context(tmp_path, text=bad))
+    assert not finding.ok
+    assert any("修正字段名" in line for line in finding.details)
+
+
+def test_修正字段池只收被赋值的字段(tmp_path: Path) -> None:
+    """池子 = 原版 `static_modifiers` 里**被赋过值**的字段名（含嵌套块里的）。"""
+    game = _fake_game(tmp_path)
+    fields = modguard.modifier_fields(game)
+    assert "country_legitimacy_base_add" in fields
+    assert "vanilla_pressure" not in fields, "修正名本身不是字段名"
 
 
 def test_闸门二在JE引用缺失时变红(tmp_path: Path) -> None:
