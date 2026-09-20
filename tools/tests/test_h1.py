@@ -216,3 +216,62 @@ def test_wilson区间边界() -> None:
     assert h1.wilson_interval(0, 0) == (0.0, 0.0)
     assert h1.wilson_interval(0, 10)[0] == 0.0
     assert h1.wilson_interval(10, 10)[1] == 1.0
+
+
+# ── 开局自检（P13：探针挂载点写错时脚本侧毫无报错，必须自动红）──────
+
+
+def _healthy_text(*, groups: tuple[str, ...] = ("CTRL", "LOW", "MID", "HIGH")) -> str:
+    # 80 条观测 = 四组各 20：高于"观测在流动"的下限（50），也高于单组份额下限（10%）
+    rows = [(f"C{i:02d}", groups[i % len(groups)], "conservative_agenda") for i in range(80)]
+    return "\n".join(
+        [f"{_HEAD.format(sec=1)}ZZPROBE H1;RUN;storm", _block(1, rows, admi="x", dipl="y")]
+    )
+
+
+def test_开局自检_正常局全绿() -> None:
+    text = _healthy_text()
+    items = h1.health(h1.analyze_text(text), text=text)
+    assert all(item.ok for item in items), [item.detail for item in items if not item.ok]
+    assert "可以继续跑" in h1.format_health(items)
+
+
+def test_开局自检_分组没跑会红() -> None:
+    """真事：第一版探针的 on_action 定义放错文件 → 分组一次没跑、DOSE 全是 CTRL。"""
+    text = _healthy_text(groups=("CTRL",))
+    items = h1.health(h1.analyze_text(text), text=text)
+    failed = [item.name for item in items if not item.ok]
+    assert "四组随机分组都跑了" in failed
+    assert "现在就停下" in h1.format_health(items)
+
+
+def test_开局自检_没有RUN标记会红() -> None:
+    text = _healthy_text().replace("ZZPROBE H1;RUN;storm\n", "")
+    items = h1.health(h1.analyze_text(text), text=text)
+    assert not next(item for item in items if item.name.startswith("RUN")).ok
+
+
+def test_开局自检_我们的报错行进红名单() -> None:
+    text = _healthy_text() + (
+        "\n[10:00:01][jomini_effect.cpp:542]: Unknown effect effect at "
+        "common/scripted_effects/zz_probe_h1_effects.txt:25\n"
+    )
+    items = h1.health(h1.analyze_text(text), text=text)
+    bad = next(item for item in items if "报错" in item.name)
+    assert not bad.ok
+    assert "Unknown effect" in bad.detail
+
+
+def test_开局自检_原版噪音不算我们的报错() -> None:
+    text = _healthy_text() + (
+        "\n[10:00:01][jomini_script_system.cpp:247]: Error: is_incorporated trigger "
+        "[ Wrong scope for trigger: none, expected state ]\n"
+    )
+    items = h1.health(h1.analyze_text(text), text=text)
+    assert all(item.ok for item in items)
+
+
+def test_开局自检_观测太少会红() -> None:
+    text = f"{_HEAD.format(sec=1)}ZZPROBE H1;RUN;storm"
+    items = h1.health(h1.analyze_text(text), text=text)
+    assert not next(item for item in items if item.name == "观测在流动").ok

@@ -27,16 +27,22 @@ mod 目录，并把 `content_load.json` 只留这一个 mod（原列表有备份
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import subprocess
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pdx import ai_surface, config, experiments
+from pdx import ai_surface, config, experiments, h1
 from pdx.h1 import DOSE_ORDER, DOSE_WEIGHT, SLOT_SHORT, SLOTS
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from pathlib import Path
+
+#: 游戏进程名（用于"跟着游戏跑"的快照器）。
+GAME_PROCESS = "victoria3"
 
 #: 探针 mod 目录名（`zz_` 前缀 → 排在原版之后；`_h1` → 实验编号）。
 PROBE_MOD = "zz_probe_h1"
@@ -45,19 +51,21 @@ PROBE_MOD = "zz_probe_h1"
 PROBE_DIR = config.REPO / "tools" / "probe" / PROBE_MOD
 
 #: 生成的探针牌：槽位 → (牌名, 文件名, 图标)。
+#: **牌名从 `h1.PROBE_CARDS` 派生**（P9：词干只有一处定义；
+#: 分析器认的标签与生成器写的牌名必须永远一致）。
 SLOT_CARDS: dict[str, tuple[str, str, str]] = {
     "political": (
-        "ai_strategy_sitai_probe_reform",
+        "ai_strategy_" + h1.PROBE_CARDS["political"],
         "zz_probe_h1_pol.txt",
         "progressive_agenda.dds",
     ),
     "administrative": (
-        "ai_strategy_sitai_probe_admin",
+        "ai_strategy_" + h1.PROBE_CARDS["administrative"],
         "zz_probe_h1_adm.txt",
         "agricultural_expansion.dds",
     ),
     "diplomatic": (
-        "ai_strategy_sitai_probe_diplo",
+        "ai_strategy_" + h1.PROBE_CARDS["diplomatic"],
         "zz_probe_h1_dip.txt",
         "maintain_power_balance.dds",
     ),
@@ -74,11 +82,11 @@ SLOT_FIELDS: dict[str, str] = {
     "diplomatic": "\tunacceptable_infamy_level = { value = 50 }",
 }
 
-#: 无本地化 / 无图标牌（B10）：权重 1，远低于原版中位数 10。
-NOLOC_CARD = "ai_strategy_sitai_probe_noloc"
+#: 无本地化 / 无图标牌（B10）：权重 1，远低于原版中位数 10。名字同样从 `h1` 派生。
+NOLOC_CARD = "ai_strategy_" + h1.NOLOC_CARD
 
 #: 第四槽候选（B7）：`type` 用原版不存在的值。
-FOURTH_CARD = "ai_strategy_sitai_probe_fourth"
+FOURTH_CARD = "ai_strategy_" + h1.FOURTH_CARD
 
 #: 第四槽候选的 `type` 值。
 FOURTH_TYPE = "sitai_fourth"
@@ -444,6 +452,69 @@ def deploy(
     return dest
 
 
+def _game_running(process: str = GAME_PROCESS) -> bool:
+    """游戏进程还在不在（Windows 用 tasklist，其它平台用 pgrep）。"""
+    if os.name == "nt":
+        cmd = ["tasklist", "/FI", f"IMAGENAME eq {process}.exe", "/NH"]
+    else:
+        cmd = ["pgrep", "-x", process]
+    try:
+        done = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
+    except (OSError, subprocess.SubprocessError) as exc:  # pragma: no cover - 环境依赖
+        raise RuntimeError(f"查不到游戏进程（{cmd[0]} 不可用）：{exc}") from exc
+    return process in (done.stdout or "")
+
+
+def watch(
+    tag: str,
+    *,
+    log_dir: Path | None = None,
+    interval: float = 40.0,
+    max_minutes: float = 240.0,
+    process: str = GAME_PROCESS,
+    sleep: Callable[[float], None] = time.sleep,
+    running: Callable[[], bool] | None = None,
+) -> tuple[Path, int, int, int]:
+    """跟着游戏跑，**按版本**把变化过的日志快照进归档目录。
+
+    为什么这必须是命令而不是"我临时写个循环"（P3）：日志按 512KB 轮转、会删最老的，
+    长跑不做版本化快照就会丢早期月份 —— 阶段 2 实测，自然局只剩最近约 4 个月，
+    而风暴局的并集（113 个文件）才拿回完整 26 个月。分析器按
+    (启动段, 时间戳, 国名) 去重，所以并集可以直接读。
+
+    返回 ``(归档路径, 轮数, 复制数, 跳过数)``；游戏退出即收工。
+    """
+    base = log_dir or config.USERDIR / "logs"
+    dest = config.USERDIR / "v3probe-logs-archive" / tag
+    dest.mkdir(parents=True, exist_ok=True)
+    is_running = running or (lambda: _game_running(process))
+    seen: dict[str, tuple[int, int]] = {}
+    rounds = 0
+    copied = 0
+    skipped = 0
+    max_rounds = max(1, int(max_minutes * 60 / max(interval, 1.0)))
+    while rounds < max_rounds and is_running():
+        rounds += 1
+        for path in sorted(base.glob("*.log")) if base.is_dir() else []:
+            if not path.is_file():
+                continue
+            stat = path.stat()
+            signature = (stat.st_size, stat.st_mtime_ns)
+            if seen.get(path.name) == signature:
+                continue
+            seen[path.name] = signature
+            target = dest / f"s{rounds:04d}-{path.name}"
+            try:
+                shutil.copy2(path, target)
+            except OSError:
+                skipped += 1
+            else:
+                copied += 1
+        if rounds < max_rounds:
+            sleep(interval)
+    return dest, rounds, copied, skipped
+
+
 def archive_logs(tag: str, *, log_dir: Path | None = None) -> tuple[Path, int, int]:
     """把当前日志整体挪进归档目录，返回 (归档路径, 挪走数, 被占用数)。
 
@@ -505,6 +576,7 @@ __all__ = [
     "DOSE_VAR_PREFIX",
     "FOURTH_CARD",
     "FOURTH_TYPE",
+    "GAME_PROCESS",
     "GEN_HEADER",
     "H3_RESULT",
     "NOLOC_CARD",
@@ -526,5 +598,6 @@ __all__ = [
     "on_actions_text",
     "slot_card_text",
     "summary",
+    "watch",
     "write",
 ]

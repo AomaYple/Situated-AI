@@ -47,18 +47,23 @@ SLOT_SHORT = {"political": "POLI", "administrative": "ADMI", "diplomatic": "DIPL
 #: 日志短标签 → 槽位。
 SHORT_SLOT = {short: slot for slot, short in SLOT_SHORT.items()}
 
-#: 我们的政治槽探针牌（出现在 POLI 行里，不含 `ai_strategy_` 前缀）。
-PROBE_CARD = "sitai_probe_reform"
+#: 探针牌的**词干**（唯一数据源，P9）：标签 = `sitai_probe_<词干>`，
+#: 引擎里的完整牌名 = `ai_strategy_<标签>`（由 `h1_probe` 派生）。
+#: 槽位 → 词干；`political` 是主牌。
+PROBE_STEMS = {
+    "political": "reform",
+    "administrative": "admin",
+    "diplomatic": "diplo",
+}
+
+#: 槽位 → 我们的探针牌标签（出现在 POLI/ADMI/DIPL 行里，不含 `ai_strategy_` 前缀）。
+PROBE_CARDS = {slot: f"sitai_probe_{stem}" for slot, stem in PROBE_STEMS.items()}
+
+#: 我们的政治槽探针牌（主牌；G1 判定用的就是它）。
+PROBE_CARD = PROBE_CARDS["political"]
 
 #: 无本地化 / 无图标牌（B10）。
 NOLOC_CARD = "sitai_probe_noloc"
-
-#: 槽位 → 我们的探针牌标签（生成器里的牌名去掉 `ai_strategy_` 前缀）。
-PROBE_CARDS = {
-    "political": PROBE_CARD,
-    "administrative": "sitai_probe_admin",
-    "diplomatic": "sitai_probe_diplo",
-}
 
 #: 第四槽候选（B7）。
 FOURTH_CARD = "sitai_probe_fourth"
@@ -372,6 +377,134 @@ def analyze(log_dir: Path | None = None) -> Result:
     return analyze_text("\n".join(chunks))
 
 
+#: 开局自检的门槛：四组各占多少才算"分组真的跑了"（理论上 25%）。
+#: 取 10% 是因为开局头一个月样本少、且分组是 25/25/25/25 的二项抽样。
+HEALTH_MIN_GROUP_SHARE = 0.10
+
+#: 开局自检最少要看到多少条观测（低于这个数说明游戏还没跑起来）。
+HEALTH_MIN_OBSERVATIONS = 50
+
+#: 日志里出现这些字样、且同一行提到我们的命名空间 = 我们的文件出错了。
+#: 这份清单来自阶段 2 的真实教训：挂载点写错时脚本侧毫无感觉，
+#: 只有 error.log 里一行 `Unknown effect` / `cannot link`。
+HEALTH_ERROR_MARKERS = (
+    "Unknown effect",
+    "cannot link",
+    "Unknown strategy",
+    "Failed to find country",
+    "Data error in loc string",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class HealthItem:
+    """一条自检项。"""
+
+    name: str
+    ok: bool
+    detail: str
+
+
+def health(
+    result: Result, *, log_dir: Path | None = None, text: str | None = None
+) -> tuple[HealthItem, ...]:
+    """**开局自检**：这一局的数据到底有没有在正常产生（P13 失败要出声）。
+
+    为什么必须有它：阶段 2 第一版探针把 on_action 定义放错了文件，
+    分组一次都没跑（DOSE 全是 CTRL），而**脚本侧毫无报错** ——
+    整局白跑，直到人去翻 error.log 才发现。把这类失败变成"开局一分钟内红"。
+    """
+    items: list[HealthItem] = []
+
+    # ① RUN 标记：开局钩子到底有没有触发
+    # `unknown` 是"有观测行但没见过 RUN 行"的占位段 —— 那正是钩子没触发的长相。
+    declared = [run for run in result.runs if run != "unknown"]
+    items.append(
+        HealthItem(
+            name="RUN 标记（开局钩子触发）",
+            ok=bool(declared),
+            detail=(
+                f"读到 {len(declared)} 条：{'、'.join(declared)}"
+                if declared
+                else "一条都没有（只有观测行）"
+            ),
+        )
+    )
+
+    # ② 观测在流动
+    observations = len(result.samples)
+    items.append(
+        HealthItem(
+            name="观测在流动",
+            ok=observations >= HEALTH_MIN_OBSERVATIONS,
+            detail=f"{observations} 条（下限 {HEALTH_MIN_OBSERVATIONS}）",
+        )
+    )
+
+    # ③ 四个剂量组都在（分组真的执行了）
+    shares = {
+        dose: (result.groups[dose].observations / observations if observations else 0.0)
+        for dose in DOSE_ORDER
+    }
+    missing = [dose for dose, share in shares.items() if share < HEALTH_MIN_GROUP_SHARE]
+    layout = "、".join(f"{dose} {share:.0%}" for dose, share in shares.items())
+    items.append(
+        HealthItem(
+            name="四组随机分组都跑了",
+            ok=bool(observations) and not missing,
+            detail=layout + (f"（缺 {'、'.join(missing)}）" if missing else ""),
+        )
+    )
+
+    # ④ 三个槽位都在自报
+    absent = [SLOT_SHORT[slot] for slot in SLOTS if not result.tempo[slot].observations]
+    items.append(
+        HealthItem(
+            name="三个槽位都在自报",
+            ok=not absent,
+            detail="；".join(
+                f"{SLOT_SHORT[slot]} {result.tempo[slot].observations}" for slot in SLOTS
+            )
+            + (f"（缺 {'、'.join(absent)}）" if absent else ""),
+        )
+    )
+
+    # ⑤ 日志里没有"我们的文件出错了"
+    body = text
+    if body is None:
+        chunks = [p.read_text(encoding="utf-8", errors="replace") for p in log_files(log_dir)]
+        body = "\n".join(chunks)
+    bad = [
+        line.strip()
+        for line in body.splitlines()
+        if any(marker in line for marker in HEALTH_ERROR_MARKERS)
+        and ("zz_probe" in line or "sitai_probe" in line)
+    ]
+    items.append(
+        HealthItem(
+            name="error.log 里没有我们的报错",
+            ok=not bad,
+            detail="干净" if not bad else f"{len(bad)} 条，例如：{bad[0][:120]}",
+        )
+    )
+    return tuple(items)
+
+
+def format_health(items: tuple[HealthItem, ...]) -> str:
+    """把自检结果排成一张人读的表 + 结论。"""
+    rows = [["✅" if item.ok else "❌", item.name, item.detail] for item in items]
+    lines = ["### 开局自检", "", *_table(["", "检查项", "实测"], rows), ""]
+    failed = [item for item in items if not item.ok]
+    lines.append(
+        "**结论**：✅ 这一局的数据在正常产生，可以继续跑"
+        if not failed
+        else "**结论**：❌ "
+        + "；".join(item.name for item in failed)
+        + " —— 现在就停下，别白跑一局"
+    )
+    return "\n".join(lines)
+
+
 def _table(headers: list[str], rows: list[list[str]]) -> list[str]:
     """Markdown 表（rich 会渲染成真表格）。"""
     return [
@@ -525,21 +658,28 @@ __all__ = [
     "DOSE_ORDER",
     "DOSE_WEIGHT",
     "FOURTH_CARD",
+    "HEALTH_ERROR_MARKERS",
+    "HEALTH_MIN_GROUP_SHARE",
+    "HEALTH_MIN_OBSERVATIONS",
     "NOLOC_CARD",
     "PROBE_CARD",
     "PROBE_CARDS",
+    "PROBE_STEMS",
     "SHORT_SLOT",
     "SLOTS",
     "SLOT_SHORT",
     "Cell",
     "Group",
+    "HealthItem",
     "Parsed",
     "Result",
     "Sample",
     "Tempo",
     "analyze",
     "analyze_text",
+    "format_health",
     "format_report",
+    "health",
     "log_files",
     "parse_lines",
     "wilson_interval",

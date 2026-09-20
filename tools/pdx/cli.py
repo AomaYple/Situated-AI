@@ -2124,6 +2124,13 @@ def h1_cmd(
         Path | None, typer.Option("--logs", help="日志目录（默认用户目录下的 logs）")
     ] = None,
     json_out: Annotated[bool, typer.Option("--json", help="输出机器可读的 JSON")] = False,
+    health_only: Annotated[
+        bool,
+        typer.Option(
+            "--health",
+            help="只跑**开局自检**（开局一分钟内判断这一局的数据有没有在正常产生）",
+        ),
+    ] = False,
 ) -> None:
     """H1 实验：**改权重能否推动 AI 策略落点**（阶段 2 的 G1 生死门）。
 
@@ -2147,6 +2154,14 @@ def h1_cmd(
     统计用 Wilson 区间（小样本友好），判定口径是**区间不重叠**。
     """
     result = h1.analyze(logs)
+    if health_only:
+        # 开局自检（P13）：探针挂载点写错时脚本侧**毫无报错**，只有 error.log 有痕迹 ——
+        # 阶段 2 因此白跑过一整局。这条让它在一分钟内红，而不是跑完才发现。
+        items = h1.health(result, log_dir=logs)
+        console.print(Markdown(h1.format_health(items)))
+        if not all(item.ok for item in items):
+            raise typer.Exit(1)
+        return
     if json_out:
         payload = {
             "variant": result.variant,
@@ -2215,6 +2230,11 @@ def h1_probe_cmd(
     archive: Annotated[
         str | None, typer.Option("--archive", help="先把现有日志挪进归档目录（给个标签）")
     ] = None,
+    watch: Annotated[
+        str | None,
+        typer.Option("--watch", help="跟着游戏跑：按版本快照日志（给个标签），游戏退出即收工"),
+    ] = None,
+    interval: Annotated[float, typer.Option("--interval", help="快照间隔秒数（默认 40）")] = 40.0,
 ) -> None:
     """生成 H1 探针（**不要手改探针文件**，改 `tools/pdx/h1_probe.py`）。
 
@@ -2229,6 +2249,17 @@ def h1_probe_cmd(
       `CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE`（KB 05 §1.7 证明可按「块+参数」覆盖），
       每周都可能重抽。回答"权重能不能推动落点"（大样本）与"mod 能不能接管重抽节奏"。
     """
+    if watch:
+        # 日志按 512KB 轮转、会删最老的：长跑不做版本化快照就会丢早期月份
+        # （阶段 2 实测：自然局只剩最近约 4 个月）。这条跟着游戏跑到它退出。
+        dest, rounds, copied, skipped = h1_probe.watch(watch, interval=interval)
+        console.print(
+            f"快照收工：[bold]{dest}[/]（{rounds} 轮 / 复制 {copied} 个"
+            + (f" / 跳过 {skipped} 个被占用" if skipped else "")
+            + "）"
+        )
+        console.print(f'分析并集：`v3 h1 --logs "{dest}"`')
+        return
     if archive:
         dest, moved, skipped = h1_probe.archive_logs(archive)
         console.print(f"日志已归档：[bold]{dest}[/]（挪走 {moved} 个文件）")

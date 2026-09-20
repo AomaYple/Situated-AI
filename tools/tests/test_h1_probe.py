@@ -285,6 +285,72 @@ def test_on_actions引用的tag都在同一文件里定义() -> None:
     assert "zz_probe_h1_boot" in effects
 
 
+def test_牌名词干只有一处定义() -> None:
+    """P9：分析器认的标签与生成器写的牌名必须来自同一个词干表。
+
+    分两处写过的后果很具体：改一处忘一处 → 自报链认不出自己的牌，
+    整局数据变成"我们的牌从没被抽中"。
+    """
+    for slot, (name, _file, _icon) in h1_probe.SLOT_CARDS.items():
+        assert name == "ai_strategy_" + h1.PROBE_CARDS[slot]
+    assert h1_probe.NOLOC_CARD == "ai_strategy_" + h1.NOLOC_CARD
+    assert h1_probe.FOURTH_CARD == "ai_strategy_" + h1.FOURTH_CARD
+    # 生成物里出现的也必须是这一份
+    text = h1_probe.build(variant="storm", game=_EMPTY_GAME).files
+    assert h1.PROBE_CARD in text["common/on_actions/zz_probe_h1_on_actions.txt"]
+
+
+def test_监视器按版本快照日志(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """P3：跟着游戏跑的快照器是**命令**，不是临时脚本（日志轮转会删掉早期月份）。"""
+    monkeypatch.setattr(config, "USERDIR", tmp_path)
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    log = logs / "debug.log"
+    log.write_text("第一版\n", encoding="utf-8")
+    state = {"rounds": 0}
+
+    def fake_running() -> bool:
+        state["rounds"] += 1
+        if state["rounds"] == 2:  # 第二轮之前日志变了 → 应该有第二份快照
+            log.write_text("第一版\n第二版\n", encoding="utf-8")
+        return state["rounds"] <= 3
+
+    dest, rounds, copied, skipped = h1_probe.watch(
+        "watch-1", log_dir=logs, interval=0.0, sleep=lambda _s: None, running=fake_running
+    )
+    assert rounds == 3
+    assert copied == 2, "变化过的文件才该再复制一份"
+    assert skipped == 0
+    names = sorted(p.name for p in dest.iterdir())
+    assert names == ["s0001-debug.log", "s0002-debug.log"]
+
+
+def test_监视器在游戏退出后收工(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(config, "USERDIR", tmp_path)
+    (tmp_path / "logs").mkdir()
+    dest, rounds, copied, _skipped = h1_probe.watch(
+        "watch-2", log_dir=tmp_path / "logs", sleep=lambda _s: None, running=lambda: False
+    )
+    assert (rounds, copied) == (0, 0)
+    assert dest.is_dir()
+
+
+def test_监视器跳过被占用的文件(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(config, "USERDIR", tmp_path)
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "debug.log").write_text("x", encoding="utf-8")
+
+    def fake_copy(_src: object, _dst: object) -> None:
+        raise PermissionError(32, "另一个程序正在使用此文件")
+
+    monkeypatch.setattr(h1_probe.shutil, "copy2", fake_copy)
+    _dest, _rounds, copied, skipped = h1_probe.watch(
+        "watch-3", log_dir=logs, interval=0.0, sleep=lambda _s: None, running=lambda: True
+    )
+    assert (copied, skipped) == (0, 1)
+
+
 def test_无loc牌与第四槽牌不带本地化引用() -> None:
     assert "icon =" not in h1_probe.noloc_card_text()
     assert f"type = {h1_probe.FOURTH_TYPE}" in h1_probe.fourth_card_text()
