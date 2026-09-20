@@ -1,4 +1,10 @@
-# scripted_list 的定义形态（原版 5 个定义、0 个调用点）
+﻿# U15 的**定义**形态：`base` + `conditions`（原版 5 个定义都是这两字段）。
+# 2026-09-20 实测：本文件被引擎正常读取（同目录的 l2/l3 都报了错），即定义形态合法。
+# 顺带实测到一条引擎行为：**`common/<库>/` 的子目录不会被枚举** ——
+# 早先这几个候选放在 zz_probe_p5_candidates/ 之类的子目录里，引擎连读都没读。
 zzprobe_list = {
 	base = country
+	conditions = {
+		always = yes
+	}
 }

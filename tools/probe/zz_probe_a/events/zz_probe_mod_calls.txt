@@ -1,0 +1,45 @@
+﻿# P4：`scripted_modifier` 的调用候选 —— 放进**真实的 ai_chance** 里，
+# 让引擎在真上下文里判它们（加载期不报错 ≠ 该语法成立）。
+# 三个事件各带一种候选；日志里报 Unexpected token 的那条即不成立。
+namespace = zzprobe
+
+zzprobe.11 = {
+	type = country_event
+	title = zzprobe_ev1_title
+	desc = zzprobe_ev1_desc
+	option = {
+		name = zzprobe_ev1_opt
+		ai_chance = {
+			base = 10
+			zzprobe_modifier = yes
+		}
+	}
+}
+
+zzprobe.12 = {
+	type = country_event
+	title = zzprobe_ev1_title
+	desc = zzprobe_ev1_desc
+	option = {
+		name = zzprobe_ev1_opt
+		ai_chance = {
+			base = 10
+			scripted_modifier = zzprobe_modifier
+		}
+	}
+}
+
+zzprobe.13 = {
+	type = country_event
+	title = zzprobe_ev1_title
+	desc = zzprobe_ev1_desc
+	option = {
+		name = zzprobe_ev1_opt
+		ai_chance = {
+			base = 10
+			modifier = {
+				zzprobe_modifier = yes
+			}
+		}
+	}
+}

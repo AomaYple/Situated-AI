@@ -1,0 +1,27 @@
+﻿# P24：`weight_multiplier` 是否合法（官方 md 承认、原版 5 处全被注释）。
+#
+# 官方 md（common/on_actions/_on_actions.md）把它记在 **on_action 自己**的字段位置，
+# 逐字：`weight_multiplier = { # Used to manipulate the weight of this on_action if it is
+# a candidate in a random_on_actions list`，体内是 `base` / `modifier = { add = …
+# trigger_conditions = yes }`；`events` 表则是**裸事件 id 列表**，条目支持 `delay`。
+#
+# 上一版探针把 `weight_multiplier` 塞进 `events` 表里的事件条目 →
+#   [jomini_onaction.cpp:290]: Invalid event id 1000 At: common/on_actions/zz_probe_on_actions.txt:12
+# 即 `base = 1000` 被当成事件 id 读了 —— 形状错，不是字段的锅。
+on_monthly_pulse = {
+	on_actions = { zzprobe_monthly }
+}
+
+zzprobe_monthly = {
+	# 按 md 的形状写：加载期**不报错** = 该字段被接受
+	weight_multiplier = {
+		base = 1000
+	}
+
+	# 裸 id 列表（原版 00_code_on_actions.txt 的 on_monthly_pulse_country 同形）：
+	# 每月脉冲都触发 zzprobe.10 → 说明 on_action 链路通了（与 weight_multiplier 无关，
+	# 后者只影响「被 random_on_actions 抽中」的权重）。
+	events = {
+		zzprobe.10
+	}
+}

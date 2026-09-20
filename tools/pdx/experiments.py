@@ -99,44 +99,54 @@ EXPERIMENTS: tuple[Experiment, ...] = (
         "官方 md 提到、原版零使用的写法是否合法",
         "`has_game_rule` 块形式 / `apply_modifier` / `type_set` 等写法引擎认不认？",
         (
-            "zz_probe_risky/common/scripted_triggers/zz_probe_p1_candidates/t1_has_game_rule_block.txt",
-            "zz_probe_risky/common/scripted_triggers/zz_probe_p1_candidates/t2_has_game_rule_scalar.txt",
-            "zz_probe_a/common/game_rules/zz_probe_game_rules.txt",
+            "zz_probe_risky/common/scripted_triggers/zz_probe_p1_t1.txt",
+            "zz_probe_risky/common/scripted_triggers/zz_probe_p1_t2.txt",
+            "zz_probe_risky/common/scripted_triggers/zz_probe_p1_t3.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_r_selftest.txt",
+            "zz_probe_risky/common/on_actions/zz_probe_r_on_actions.txt",
+            "zz_probe_a/common/game_rules/zz_probe_rules_v2.txt",
+            "zz_probe_a/common/game_rules/zz_probe_rules_v3.txt",
         ),
         "日志",
-        "每个候选一个文件：日志里对某个候选报 unknown/invalid，就说明该写法不被接受；"
-        "没报错的那个是合法写法（对照组 t2 是原版在用的标量形式）。",
+        "自检效果对三个候选各求值一次，把 `ZZPROBE P1 block_form=…` / `scalar=…` / "
+        "`custom_setting=…` 写进日志；⚠️ `has_game_rule = <X>` 的 X 是**设置名**而不是规则名"
+        "（原版：规则 `free_construction` 下的设置 `free_construction_unscaled`），"
+        "上一轮拿规则名当参数，引擎报 `Invalid database object`，判定被污染。",
         risky=True,
     ),
     Experiment(
         "P4",
         "`scripted_modifier` / `scripted_list` 的调用语法",
-        "官方 md 只给定义形态、原版 0 个调用点 —— 三种候选写法哪个被接受？",
+        "官方 md 只给定义形态、原版 0 个调用点 —— 候选写法哪个被接受？",
         (
             "zz_probe_risky/common/scripted_modifiers/zz_probe_s1_define.txt",
-            "zz_probe_risky/common/scripted_modifiers/zz_probe_s2_call_direct.txt",
-            "zz_probe_risky/common/scripted_modifiers/zz_probe_s3_call_scripted_modifier.txt",
-            "zz_probe_risky/common/scripted_modifiers/zz_probe_s4_call_modifier_block.txt",
+            "zz_probe_risky/events/zz_probe_r_ai_chance.txt",
+            "zz_probe_a/events/zz_probe_mod_calls.txt",
             "zz_probe_risky/common/scripted_lists/zz_probe_l1_define.txt",
             "zz_probe_risky/common/scripted_lists/zz_probe_l2_call_direct.txt",
             "zz_probe_risky/common/scripted_lists/zz_probe_l3_call_key.txt",
         ),
         "日志",
-        "定义文件一定合法；三个调用候选里，日志没报错的那个即正确语法（都不合法也是一种结论）。",
+        "定义形态合法已实测；调用候选放在**事件的 ai_chance** 里 —— 那是会做加载期校验的位置。"
+        "已实测：`scripted_modifier = 名字` 被拒（`unknown command 'scripted_modifier' for MTTH`，"
+        "见 `zz_probe_mod_calls.txt:27`）；另外几个候选尚无报错，结论见 `[P4]` 那一轮日志。"
+        "scripted_list 的两个调用候选实测**都被拒**（Unexpected token）。",
         risky=True,
     ),
     Experiment(
         "P5",
         "`$PARAM$` 的默认值与 scope 传参",
-        "`$X$` 支不支持默认值？能不能传 scope 对象？",
+        "`$X$` 支不支持默认值（`|` / `=`）？能不能传 scope 对象？省略参数会怎样？",
         (
-            "zz_probe_risky/common/scripted_effects/zz_probe_p5_candidates/c1_pipe_default.txt",
-            "zz_probe_risky/common/scripted_effects/zz_probe_p5_candidates/c2_equals_default.txt",
-            "zz_probe_risky/common/scripted_effects/zz_probe_p5_candidates/c3_scope_param.txt",
-            "zz_probe_risky/common/scripted_effects/zz_probe_p5_candidates/c4_plain.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_p5_c1.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_p5_c2.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_p5_c3.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_p5_c4.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_r_selftest.txt",
         ),
         "日志",
-        "四个候选各一个文件；日志对哪个报错，哪个写法就不成立（c4 是已知合法的对照）。",
+        "每个候选都调用两次（显式传参一次、省略参数一次），效果体里的 `debug_log` 打出"
+        "`$AMOUNT$` 实际被替换成什么（grep `ZZPROBE P5`）；国库差值可交叉验证（全跑通 +21M）。",
         risky=True,
     ),
     Experiment(
@@ -182,10 +192,14 @@ EXPERIMENTS: tuple[Experiment, ...] = (
         (
             "zz_probe_a/localization/simp_chinese/zz_probe_l_simp_chinese.yml",
             "zz_probe_a/localization/simp_chinese/zz_probe_l_version_probe.yml",
+            "zz_probe_risky/common/decisions/zz_probe_r_decisions.txt",
+            "zz_probe_risky/localization/simp_chinese/zz_probe_r_l_simp_chinese.yml",
         ),
         "肉眼 + 日志",
-        "同一个 loc 键在两个文件里分别写成 `:0` 与 `:1`：第二个决议的**标题**显示哪一句，"
-        "就说明版本号是否参与优先级。",
+        "版本号：同一个 loc 键在两个文件里分别写成 `:0` 与 `:1`，游戏里显示的是 `:0` 那句"
+        "（实测已答）。块标量：zz_probe_risky 的两个决议**只差描述文案的写法** ——"
+        "`|`（字面量）应显示两行、`>`（折叠）应显示一行；两个都不成行即说明不支持。",
+        risky=True,
     ),
     Experiment(
         "P3",
@@ -196,13 +210,51 @@ EXPERIMENTS: tuple[Experiment, ...] = (
         "文件在 `test` namespace 下定义了 `test.99999`：日志报错 = namespace 不能跨文件续写；"
         "不报错 = 可以（此时再看原版 `test.1` 是否仍正常）。",
     ),
+    Experiment(
+        "P22",
+        "建筑字段：`can_build` / `owners` / `replaces_company`",
+        "官方 md 未提、原版零使用的建筑字段引擎认不认？",
+        ("zz_probe_a/common/buildings/zz_probe_buildings.txt",),
+        "日志",
+        "三个字段写在同一个建筑条目里，加载期逐个报 `Unexpected token: <字段>` = 该写法不被接受；"
+        "同一文件里的对照字段（如 `ignore_stateregion_max_level`）无报错 = 被接受。",
+    ),
+    Experiment(
+        "P25",
+        "`common/<库>/` 的子目录是否被枚举",
+        "把定义放进 `common/scripted_effects/子目录/` 里，引擎会读到吗？",
+        (
+            "zz_probe_risky/common/scripted_effects/zz_probe_subdir_probe/never_loaded.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_r_selftest.txt",
+        ),
+        "日志",
+        "自检效果调用子目录里的 `zzprobe_subdir_never`：报 `Unknown effect zzprobe_subdir_never` "
+        "= 子目录没被枚举（旧结论成立）；出现 `ZZPROBE SUBDIR LOADED` = 子目录其实会被读"
+        "（推翻旧结论）。",
+        risky=True,
+    ),
 )
 
-#: 需要**肉眼**记录的三处（其余由日志判定）。
+#: 需要**肉眼**记录的地方（其余由日志判定）。
 EYEBALL: tuple[tuple[str, str], ...] = (
     ("国库", "点主决议前后的国库数字（判定 P2 / P11，以及 P8 的 after 与 show_as_tooltip）"),
     ("窗口", "是否有事件窗口强制弹出（判定 P8 的 is_popup），以及选项点下去后国库再变多少"),
     ("决议标题", "第二个决议的标题是「无版本号」还是「带版本号 1」那一句（判定 P10）"),
+    ("月度事件", "跑满一个月后，通知栏/弹窗里有没有 zzprobe.10（判定 P24 的 weight_multiplier）"),
+    (
+        "进度条",
+        (
+            "zzprobe_je 与 zzprobe_je_control 的进度条：显示「月」还是数值"
+            "（判定 P7 的 display_progressbar_as_months，两个 JE 只差这三个字段）"
+        ),
+    ),
+    (
+        "块标量",
+        (
+            "zz_probe_risky 的两个【ZZ 探针】决议：描述分别是 `|` 与 `>` 块标量，"
+            "前者应占两行、后者应折成一行（判定 P17）"
+        ),
+    ),
 )
 
 
@@ -347,12 +399,18 @@ MARKERS = ("zzprobe", "zz_probe")
 
 #: 引擎报错的关键词 → 归类提示。
 ERROR_HINTS: tuple[tuple[str, str], ...] = (
+    ("unexpected token", "引擎不接受这个写法（加载期硬报错）"),
+    ("unknown effect", "该效果没被加载：定义文件没读到，或名字写错"),
+    ("unknown trigger", "该触发器没被加载：定义文件没读到，或名字写错"),
     ("unknown key", "未知键：该写法不被这个位置接受"),
+    ("unknown command", "未知命令：该字段不被这个上下文接受"),
     ("unknown", "未知：该键/值不被识别"),
     ("invalid", "非法：写法被拒绝"),
     ("duplicate", "重复：同名键冲突被发现"),
+    ("will not be created", "同名键先到先得：后写的不会生效"),
     ("already defined", "重复定义：同名键冲突被发现"),
     ("redefin", "重复定义：同名键冲突被发现"),
+    ("wrong type", "取到了空值/错类型（常见于变量没创建）"),
     ("scope", "scope 相关：多半是 root scope 不对"),
     ("error", "错误：看原文"),
 )
@@ -383,10 +441,18 @@ def _experiment_of(line: str) -> str:
         return "P2"
     if "zzprobe_shared" in low:
         return "P11"
+    if "subdir loaded" in low or "zzprobe_subdir_never" in low:
+        return "P25"
     if "scripted_modifier" in low or "scripted_list" in low:
         return "P4"
     if "zzprobe_p5" in low:
         return "P5"
+    if "localization_reader" in low or "missing quoted string" in low:
+        return "P10"
+    if "unknown modifier" in low or "zzprobe_r_ai_chance" in low:
+        return "P4"
+    if "can_build" in low or "replaces_company" in low or "zz_probe_buildings" in low:
+        return "P22"
     if "zzprobe_made_up_style" in low:
         return "P6"
     if "zzprobe_je" in low:
@@ -399,7 +465,7 @@ def _experiment_of(line: str) -> str:
         return "P10"
     if "test.99999" in low:
         return "P3"
-    if "zzprobe_rule" in low or "has_game_rule" in low:
+    if "zzprobe_rule" in low or "has_game_rule" in low or "block_form" in low:
         return "P1"
     return "?"
 
@@ -477,11 +543,20 @@ def install(
     return out
 
 
-def uninstall(target: Path | None = None, *, mods: Iterable[str] | None = None) -> list[Path]:
-    """把探针 mod 从用户 mod 目录移除，返回被移除的路径。"""
+def uninstall(
+    target: Path | None = None, *, mods: Iterable[str] | None = None, risky: bool = False
+) -> list[Path]:
+    """把探针 mod 从用户 mod 目录移除，返回被移除的路径。
+
+    ``risky=True`` 时连 `zz_probe_risky` 一起移除 —— `launch --risky` 会装上它，
+    卸载时必须能对上，否则本机 mod 目录会留一个探针残留。
+    """
     dest = target or TARGET_DIR
+    names = list(mods) if mods else list(PROBE_MODS)
+    if risky and RISKY_MOD not in names:
+        names.append(RISKY_MOD)
     removed: list[Path] = []
-    for name in mods or PROBE_MODS:
+    for name in names:
         path = dest / name
         if path.is_dir():
             shutil.rmtree(path)
@@ -496,28 +571,32 @@ def plan(target: Path | None = None) -> str:
         "探针实验：一次游戏启动收工",
         "=" * 40,
         "",
-        "0. 先跑 `v3 experiment install`（把两个探针 mod 复制到本机 mod 目录）：",
-        f"   {dest}",
+        "0. 一条命令搞定：`v3 experiment launch --risky`",
+        "   —— 它把探针 mod 复制到本机 mod 目录、只启用探针、备份原来的启用列表，",
+        "      再以 -debug_mode 直接起游戏（全程不用点启动器）：",
+        f"      {dest}",
         "",
-        "1. 启动器里**只启用**这两个 mod（ZZ Probe A / ZZ Probe B），顺序先 A 后 B；",
-        "   其余 mod 全部关掉（避免别的 mod 影响探针键）。",
+        "1. 进游戏（读档或新开档都行）：`on_game_started` 会自动跑一次语法自检，",
+        "   结论按 `ZZPROBE …` 写进 logs；再跑满一个月可顺带判 P24。",
         "",
-        "2. 以 **-debug_mode** 启动游戏，开一个**新档**（1836 任意国家，别读旧存档）。",
+        "2. 打开决议面板，点【探针】主决议（**点之前记下国库**）；",
+        "   万一自检没自动跑，再点一下 zz_probe_risky 的【跑语法自检】决议。",
         "",
-        "3. 打开决议面板，点【探针】那两个决议（先后无所谓，但**点之前记下国库**）。",
+        "3. 事件会在 2/3/4 天后弹出；把看到的都记下来。",
         "",
-        "4. 事件会在 2/3/4 天后弹出；把看到的都记下来。",
+        "4. 退出游戏（让日志落盘），然后依次跑：",
+        "      v3 experiment collect     # 按实验编号归位全部证据",
+        "      v3 experiment restore     # 还原原来的 mod 启用列表",
+        "      v3 experiment uninstall   # 移除探针 mod",
         "",
-        "5. 退出游戏（让日志落盘），然后跑 `v3 experiment collect`。",
-        "",
-        "要记录的三处（其余交给日志）：",
+        "要肉眼记录的几处（其余交给日志）：",
     ]
     lines += [f"   - {name}：{how}" for name, how in EYEBALL]
     lines += [
         "",
-        "注意：P1 / P4 / P5 是**故意写错的语法候选**（在 zz_probe_risky 里，默认不启用）——",
-        "它们只用来问引擎「认不认」，可能在加载阶段就让游戏退出。要跑它们用：",
-        "   v3 experiment launch --risky   （这一趟不用点任何东西，看日志即可）",
+        "注意：P1 / P4 / P5 / P25 是**故意写错的语法候选**（在 zz_probe_risky 里，",
+        "默认不随 `launch` 启用）—— 只用来问引擎「认不认」，要问就加 `--risky`。",
+        "那一趟的判定由自检效果用 `debug_log` 写进日志，基本不用点任何东西。",
         "",
         "实验清单（编号 → 问题 → 判读）：",
     ]

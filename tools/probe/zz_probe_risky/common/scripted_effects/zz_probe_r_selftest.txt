@@ -1,0 +1,62 @@
+﻿# 自检效果：一次跑完「必须进游戏才能判」的候选，判定直接写进 logs（grep ZZPROBE）。
+#
+# 为什么要 debug_log：原版自己在 common/scripted_effects、common/on_actions 里就用它
+# （例：00_code_on_actions.txt:7353 `debug_log = "Objective completed"`），
+# 于是「效果有没有跑、$参数$ 被替换成什么」都能自动读，不必再肉眼盯国库。
+#
+# ⚠️ 2026-09-20 第三轮的教训（已避开）：上一版在 if/else 链里调用了一个
+# **没被加载的效果**（子目录探针 zzprobe_subdir_never），引擎紧接着报
+#   [jomini_effect.cpp:981]: Else/else_if not following an if or else_if at …zz_probe_r_selftest.txt:23
+# 并在同一秒崩溃（crashes/…/minidump.dmp）。现在：
+#   1. 不再调用任何未定义的东西（P25 的判定已由那一轮的 `Unknown effect` 日志拿到）；
+#   2. 判定一律用「两条 if + NOT」代替 else，链式结构少一个可变量。
+zzprobe_r_selftest = {
+	debug_log = "ZZPROBE SELFTEST begin"
+
+	# P5：调用点（四个候选的定义现在都是已知合法的纯参数形态）
+	zzprobe_p5_c1 = { AMOUNT = 1000000 }
+	zzprobe_p5_c2 = { AMOUNT = 2000000 }
+	zzprobe_p5_c3 = { SCOPE = root }
+	zzprobe_p5_c4 = yes
+
+	# 控制项：用一个**已知合法**的触发器（zz_probe_a 的 zzprobe_trigger_always）
+	# 走一遍同样的 limit → debug_log 管线 —— 它若不出 TRUE，说明是自检管线坏了。
+	if = {
+		limit = { zzprobe_trigger_always }
+		debug_log = "ZZPROBE control_trigger=TRUE"
+	}
+	if = {
+		limit = { NOT = { zzprobe_trigger_always } }
+		debug_log = "ZZPROBE control_trigger=FALSE"
+	}
+
+	# P1：has_game_rule 的块形式 vs 原版在用的标量形式。
+	# 块形式若不成立，limit 求值本身就会在日志里报错（那正是结论）。
+	if = {
+		limit = { zzprobe_g1 }
+		debug_log = "ZZPROBE P1 block_form=TRUE"
+	}
+	if = {
+		limit = { NOT = { zzprobe_g1 } }
+		debug_log = "ZZPROBE P1 block_form=FALSE"
+	}
+	if = {
+		limit = { zzprobe_g2 }
+		debug_log = "ZZPROBE P1 scalar=TRUE"
+	}
+	if = {
+		limit = { NOT = { zzprobe_g2 } }
+		debug_log = "ZZPROBE P1 scalar=FALSE"
+	}
+	# 第三项：MOD 自定义设置名（zz_probe_a 的 zzprobe_on）能否被 has_game_rule 查到
+	if = {
+		limit = { zzprobe_g3 }
+		debug_log = "ZZPROBE P1 custom_setting=TRUE"
+	}
+	if = {
+		limit = { NOT = { zzprobe_g3 } }
+		debug_log = "ZZPROBE P1 custom_setting=FALSE"
+	}
+
+	debug_log = "ZZPROBE SELFTEST end"
+}

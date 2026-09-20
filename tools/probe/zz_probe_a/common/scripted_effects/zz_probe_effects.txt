@@ -1,4 +1,4 @@
-# P2：**不带任何前缀**重定义原版 scripted_effect。
+﻿# P2：**不带任何前缀**重定义原版 scripted_effect。
 # 原版定义：common/scripted_effects/0000_debug_effects.txt:1（add_treasury = 50000）
 # 这是「裸同名键」唯一的实测样本 —— 原版自己 0 个跨文件同名实例。
 debug_success = {

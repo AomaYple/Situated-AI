@@ -1,0 +1,26 @@
+﻿l_simp_chinese:
+ zzprobe_r_selftest_decision:0 "ZZ 探针：跑一次语法自检"
+ # P17-A：字面量块标量 `|` —— 期望面板里显示**两行**
+ zzprobe_r_selftest_decision_desc:0 |
+  描述第一行（字面量 |）
+  描述第二行（字面量 |）
+ zzprobe_r_folded_decision:0 "ZZ 探针：折叠块标量对照"
+ # P17-B：折叠块标量 `>` —— 期望把换行折成空格，面板里显示**一行**
+ zzprobe_r_folded_decision_desc:0 >
+  描述第一行（折叠 >）
+  描述第二行（折叠 >）
+ zzprober_1_title:0 "探针 ai_chance 对照"
+ zzprober_1_desc:0 "已知合法形状：base + modifier(trigger, factor)。"
+ zzprober_1_opt:0 "好"
+ zzprober_2_title:0 "探针 ai_chance 候选 1"
+ zzprober_2_desc:0 "模板名直接当 ai_chance 的键。"
+ zzprober_2_opt:0 "好"
+ zzprober_3_title:0 "探针 ai_chance 候选 2"
+ zzprober_3_desc:0 "scripted_modifier = 名字。"
+ zzprober_3_opt:0 "好"
+ zzprober_4_title:0 "探针 ai_chance 候选 3"
+ zzprober_4_desc:0 "放进 modifier = { }，模板名当键。"
+ zzprober_4_opt:0 "好"
+ zzprober_5_title:0 "探针 ai_chance 候选 4"
+ zzprober_5_desc:0 "放进 modifier = { }，scripted_modifier = 名字。"
+ zzprober_5_opt:0 "好"

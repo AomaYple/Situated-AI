@@ -1,4 +1,7 @@
-# 调用候选 2
+﻿# U15 调用候选 2：把列表名当键（`zzprobe_list = yes`）
+# 实测结论：**被拒** ——
+#   [pdx_persistent_reader.cpp:268]: Error: "Unexpected token: zzprobe_list, near line: 3"
+#   in file: "common/scripted_lists/zz_probe_l3_call_key.txt"
 zzprobe_list_call_2 = {
 	zzprobe_list = yes
 }

@@ -1,3 +1,0 @@
-zzprobe_p5_c2 = {
-	add_treasury = $AMOUNT=0$
-}

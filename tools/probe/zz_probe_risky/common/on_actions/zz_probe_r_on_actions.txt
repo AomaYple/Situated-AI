@@ -1,0 +1,8 @@
+﻿# 自动触发点：进游戏（含读档）时跑一次自检 —— 形状抄原版 00_code_on_actions.txt:6。
+# on_game_started 与 on_monthly_pulse 都是**独立顶层键**，探针 A 只占了 on_monthly_pulse，
+# 所以这里写 on_game_started 不会被「同名键先到先得」吃掉。
+on_game_started = {
+	effect = {
+		zzprobe_r_selftest = yes
+	}
+}

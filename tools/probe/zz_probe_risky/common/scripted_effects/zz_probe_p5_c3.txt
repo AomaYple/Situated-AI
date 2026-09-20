@@ -1,0 +1,7 @@
+﻿# P5 候选 3：把参数当 scope 用（`$SCOPE$ = { … }`）
+zzprobe_p5_c3 = {
+	$SCOPE$ = {
+		add_treasury = 5000000
+	}
+	debug_log = "ZZPROBE P5C3 scope=[$SCOPE$]"
+}

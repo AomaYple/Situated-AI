@@ -1,4 +1,7 @@
-# scripted_modifier 的**定义**形态（原版 0 个实例，只有官方 md 的示例）
+﻿# U14 的**定义**形态（原版 0 个实例，只有官方 md 的模板体示例）。
+# 调用候选已移到 events/zz_probe_r_ai_chance.txt —— 放在这里时引擎不校验块内容，
+# 四个候选（模板名当键 / scripted_modifier = 名字 / 塞进 modifier）全都一声不响，
+# 什么都判不出来；放进事件的 ai_chance 才会得到加载期的判定。
 zzprobe_modifier = {
 	if = {
 		limit = { always = yes }

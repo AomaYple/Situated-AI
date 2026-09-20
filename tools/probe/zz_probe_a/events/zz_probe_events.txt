@@ -1,4 +1,4 @@
-# P8：事件三个待验证字段（after / show_as_tooltip / is_popup / orphan）
+﻿# P8：事件三个待验证字段（after / show_as_tooltip / is_popup / orphan）
 namespace = zzprobe
 
 zzprobe.1 = {
@@ -27,4 +27,28 @@ zzprobe.3 = {
 	desc = zzprobe_ev3_desc
 	orphan = yes
 	option = { name = zzprobe_ev3_opt }
+}
+
+# P12：is_popup 对照 —— 两个事件同点触发，只有 .4 带 is_popup。
+zzprobe.4 = {
+	type = country_event
+	title = zzprobe_ev4_title
+	desc = zzprobe_ev4_desc
+	is_popup = yes
+	option = { name = zzprobe_ev4_opt }
+}
+
+zzprobe.5 = {
+	type = country_event
+	title = zzprobe_ev5_title
+	desc = zzprobe_ev5_desc
+	option = { name = zzprobe_ev5_opt }
+}
+
+# P24 的落点：由 zzprobe_monthly 这个 on_action 触发（带 weight_multiplier）。
+zzprobe.10 = {
+	type = country_event
+	title = zzprobe_ev10_title
+	desc = zzprobe_ev10_desc
+	option = { name = zzprobe_ev10_opt }
 }

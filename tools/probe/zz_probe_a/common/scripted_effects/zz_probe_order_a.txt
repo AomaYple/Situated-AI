@@ -1,0 +1,5 @@
+﻿# P19：同 mod 内两个文件写**同一个键**（文件名 a < b，按扫描顺序 a 先）。
+# 主决议调用 zzprobe_order：+3M 表示 a 胜、+4M 表示 b 胜、+7M 表示叠加。
+REPLACE_OR_CREATE:zzprobe_order = {
+	add_treasury = 3000000
+}

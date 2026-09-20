@@ -26,6 +26,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -98,6 +99,9 @@ def test_README里的用例数与实际收集一致() -> None:
     """
     if not config.GAME.is_dir():
         pytest.skip("无游戏：收集结果与本机口径不同，这一条只在装了游戏的机器上判定")
+    # 子进程的输出编码必须显式钉成 UTF-8：本机 locale 是 GBK 时，pytest 会按 GBK
+    # 打印中文用例名，而这边按 UTF-8 解码 —— 直接 UnicodeDecodeError（实测踩过）。
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
     result = subprocess.run(
         [
             sys.executable,
@@ -113,6 +117,7 @@ def test_README里的用例数与实际收集一致() -> None:
         capture_output=True,
         text=True,
         encoding="utf-8",
+        env=env,
         cwd=str(config.REPO),
         check=False,
     )

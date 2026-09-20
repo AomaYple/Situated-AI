@@ -1,0 +1,23 @@
+﻿# P21：`apply_modifier` 在 game_rules 里是否仍有效。
+# 形状照原版 common/game_rules/00_game_rules.txt：rule = { default = 设置名 设置名 = { … } }。
+# 上一版我写成 rule = { settings = { … } }，被引擎拒（Unexpected token），那是形状错、不是字段的锅。
+#
+# ⚠️ 2026-09-20 第三轮又踩一条：这个规则当时**没能注册进数据库** ——
+#   Error: has_game_rule trigger [ Invalid database object 'zzprobe_rule' ]
+# 查原版才知道两件事：
+#   1. `has_game_rule = <X>` 里的 X 是**设置名**（settings 里的键），不是规则名！
+#      原版写法：规则 `free_construction` 下的设置 `free_construction_unscaled`，
+#      脚本里就写 `has_game_rule = free_construction_unscaled`。
+#   2. 原版的设置体里都带 `flag = <名字>` —— 设置名与 flag 名在原版是同名。
+# 所以这里补上 flag，并把 `apply_modifier` 挪到单独一个规则（zz_probe_rules_v3.txt），
+# 免得一个存疑字段把整条规则的注册带崩。
+zzprobe_rule = {
+	default = zzprobe_on
+
+	zzprobe_on = {
+		flag = zzprobe_on
+	}
+
+	zzprobe_off = {
+	}
+}

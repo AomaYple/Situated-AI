@@ -1,0 +1,14 @@
+﻿# P5 候选 1：竖线默认值 `$AMOUNT|默认值$` —— **实测不成立**（2026-09-20 第三轮，加载期）：
+#
+#   [jomini_script_argument.cpp:217]: Compiling source for zzprobe_p5_c1 failed for
+#   missing arguments: AMOUNT|3000000. At common/scripted_effects/zz_probe_p5_c1.txt:6
+#
+# 引擎把 `AMOUNT|3000000` **整个当成参数名** —— `$X|默认$` 不是「带默认值的参数」，
+# 调用方必须提供名为 `AMOUNT|3000000` 的实参，否则这个效果编译不过。
+# 结论已回填 docs/victoria3-modding/04-脚本系统.md（U6）。
+#
+# 所以这里改回**已知合法**的纯参数形态：探针保持可跑，判定留在上面的引用里。
+zzprobe_p5_c1 = {
+	add_treasury = $AMOUNT$
+	debug_log = "ZZPROBE P5C1 amount=[$AMOUNT$]"
+}

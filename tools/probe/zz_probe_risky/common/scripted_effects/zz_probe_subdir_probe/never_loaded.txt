@@ -1,0 +1,11 @@
+﻿# P25 的反证文件：**故意**放进 `common/scripted_effects/` 的子目录里。
+# 2026-09-20 实测推断「common/<库>/ 的子目录不被枚举」——证据是当时放在
+# zz_probe_p5_candidates/ 等子目录里的文件既没被读（无 BOM 提醒），
+# 调用时还报 `Unknown effect`。这里用自报方式再钉一次：
+#   selftest 调用 zzprobe_subdir_never → 日志里
+#   报 Unknown effect = 子目录确实没被枚举（旧结论成立）；
+#   出现 "ZZPROBE SUBDIR LOADED" = 子目录其实会被读（推翻旧结论）。
+zzprobe_subdir_never = {
+	add_treasury = 9000000
+	debug_log = "ZZPROBE SUBDIR LOADED"
+}

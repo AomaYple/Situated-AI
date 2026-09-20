@@ -1583,12 +1583,12 @@ def experiment_cmd(
     v3 experiment collect     # 收割 logs/，按实验编号归位证据
     v3 experiment restore     # 还原原来的 mod 启用列表
     v3 experiment uninstall   # 移除探针
-    `
+    ```
 
     launch 凭什么能「一键」：**启用哪些 mod** 由用户目录的 content_load.json
-    决定（启动器写、游戏读），**调试模式**就是给 ictoria3.exe 加 -debug_mode
+    决定（启动器写、游戏读），**调试模式**就是给 `victoria3.exe` 加 `-debug_mode`
     （游戏自带 launcher-settings.json 里那条「以调试模式打开游戏」用的就是它）。
-    所以它先备份那份 json、只写上两个探针，再直接起 exe —— 不用点启动器。``
+    所以它先备份那份 json、只写上两个探针，再直接起 exe —— 不用点启动器。
 
     判定优先走日志（`-debug_mode` 会把未知键/重复定义/scope 错误写进去），
     只有三处需要肉眼：国库数字、是否弹窗、决议标题的 loc 文案。
@@ -1614,7 +1614,9 @@ def experiment_cmd(
         return
 
     if name == "uninstall":
-        removed = experiments.uninstall(target, mods=only or None)
+        # `--risky` 要跟着走：launch --risky 会把 zz_probe_risky 一起装上，
+        # 卸载时不带它就会留一个「探针残留」在本机 mod 目录（实测踩过）。
+        removed = experiments.uninstall(target, mods=only or None, risky=risky)
         if not removed:
             console.print("[yellow]本机 mod 目录里没有探针，无需移除[/]")
             return
@@ -1641,9 +1643,11 @@ def experiment_cmd(
             f"[green]游戏已启动（pid {proc.pid}，调试模式{'开' if not no_debug else '关'}）[/]"
         )
         console.print(
-            "照 3 experiment plan 的清单做：开新档 → 记国库 → 点两个探针决议 → 等事件 → 退出。"
+            "照 `v3 experiment plan` 的清单做：开新档 → 记国库 → 点两个探针决议 → 等事件 → 退出。"
         )
-        console.print("退出后跑 3 experiment collect，然后 3 experiment restore 还原 mod 列表。")
+        console.print(
+            "退出后跑 `v3 experiment collect`，然后 `v3 experiment restore` 还原 mod 列表。"
+        )
         return
 
     if name == "restore":

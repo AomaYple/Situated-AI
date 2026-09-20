@@ -2129,7 +2129,27 @@ has_game_rule = high_ai_aggression
 | 观察到的语法 | `has_game_rule = <setting_key>`（单参数） |
 | `has_game_rule = { ... }` 块形式 | 全游戏仅 1 处命中，位于 `common\trigger_localization\00_trigger_localization.txt` 第 4489 行——那是 **trigger 的提示文本定义**，不是使用语法。【提取】 |
 
-> 块形式（`has_game_rule = { name = ... value = ... }`）是否存在【未确认】——原版未使用；建议只写标量形式。
+> **【已答，2026-09-20 探针实测】块形式不存在，只有标量形式** —— 而且**参数是「设置名」不是「规则名」**：
+>
+> * 标量（原版在用）：`has_game_rule = free_construction_unscaled` → 加载期**零报错**；
+>   注意 `free_construction_unscaled` 是**规则 `free_construction` 下的设置名**（`00_game_rules.txt:52`），
+>   不是规则名 —— 用规则名当参数会被引擎拒：
+>   `Error: has_game_rule trigger [ Invalid database object 'zzprobe_rule' ]`；
+> * 块形式（`has_game_rule = { name = … value = yes }`）→ **非法**，两条引擎原文：
+>
+>   ```text
+>   [pdx_persistent_reader.cpp:268]: Error: "Unknown trigger type: value, near line: 5"
+>     in file: "common/scripted_triggers/zz_probe_p1_t1.txt" near line: 5
+>   [jomini_trigger.cpp:224]: PostValidate of trigger 'has_game_rule' returned false
+>     at common/scripted_triggers/zz_probe_p1_t1.txt:5
+>   Error: has_game_rule trigger [ Invalid database object '{' ]
+>   ```
+>
+>   —— 引擎把整个块当成参数，先拿 `{` 去查数据库对象、再把块内的 `value` 当触发器键解析。
+>   所以**只能写标量**；块形式是本条【未确认】的答案，不是「没人试过」。
+> * MOD 自己新增的设置也可以被查到：探针里新增规则 `zzprobe_rule`（设置 `zzprobe_on`，
+>   带 `flag = zzprobe_on`）后 `has_game_rule = zzprobe_on` **加载期零报错**。
+> * 复算：`v3 experiment launch --risky` 的 `[P1]`（探针 `zz_probe_p1_t1/t2/t3.txt`）。
 
 ### 4.10 做 game rule mod 的注意点
 
@@ -2138,7 +2158,7 @@ has_game_rule = high_ai_aggression
 | 1 | **三份本地化键缺一不可**：`rule_<key>`、`setting_<key>`、`setting_<key>_desc`（§4.2 已在本地化文件验证） |
 | 2 | flag 只是开关名；**效果要自己在脚本里用 `has_game_rule` 实现**，写 flag 不会自动产生效果 |
 | 3 | 原版只在 `common\game_rules\00_game_rules.txt` 定义规则；mod 想**新增**规则需要新文件（如 `01_mymod_rules.txt`），想**改默认值**则只需重写该规则块——game_rules 采用与本数据库一致的"同名键后加载覆盖"语义【推断】 |
-| 4 | `apply_modifier = player:very_easy` 形式文档有载，但原版 1.14.2 **零使用**；可用性【未确认】 |
+| 4 | `apply_modifier = player:very_easy` 形式文档有载，但原版 1.14.2 **零使用**；**1.14.3 探针实测**：`rule = { default = <设置名>  <设置名> = { flag = <名字>  apply_modifier = player:very_easy } }` 这个形状**语法被接受**（加载期无 Unexpected token/PostValidate 报错），但引擎随后报 `[gamedatabase.h:781]: Failed to cache an item for Static Modifiers! Key: very_easy` —— **`very_easy` 不是一个静态修正键**（官方 md 的示例键在 1.14.3 里查不到）。结论：`apply_modifier = <类别>:<静态修正键>`，`类别` 取值 player / ai / all，`键`必须是 `common/static_modifiers/` 里真实存在的键。复算：探针 `zz_probe_a/common/game_rules/zz_probe_rules_v3.txt` |
 | 5 | `flag` 名不要与生产方式 key 冲突的写法混用；`disable_pm_*` / `force_pm_*` 必须精确对应 `common\production_methods\` 里的 key |
 
 ---
@@ -5023,11 +5043,11 @@ add_modifier = { # academics polstr
 | 3 | **mod defines 文件与原版文件同名时**是「整文件替换」还是「按键合并」 | 本机 12 个 mod defines 文件**没有一个**与原版 9 个文件同名（复算同第 1 条，按文件名取交集 = ∅）；Wiki 说的是**按键合并**（§1.7 证据 4），而 §1.7 证据 3 的「整体接管」只覆盖内容根之间 | 【未确认】本地无证据 → 配方 C。**建议**不变：mod 永远用不同文件名 + 大前缀 |
 | 4 | **`@` 变量的作用域是否跨文件** | `common/defines/` + `jomini/common/defines/` 共 **27 个 `.txt`**：`@` **定义 28 个**（`00_defines.txt` 24 + `00_graphics.txt` 4）、**引用 43 处**（18 + 25），**跨文件引用 = 0 处**（复算：逐行去掉 `#` 注释后正则 `@([A-Za-z_]\w*)`，按其后是否紧跟 `=` 分定义/引用）。例：`@opacity` 定义在 `00_graphics.txt:5`、`@birthrate_transition_slope` 定义在 `00_defines.txt:1787` | 【未确认】本地无证据（「原版不跨文件用」≠「不支持」）→ 配方 C |
 | 5 | **引擎 define 的默认值/最大最小值** | defines 本身不声明类型或范围（§0.3 的口径只按**形状**分类：标量 / 内联列表 / 嵌套块）；同族另一例的取值分布已量化：`v3 evidence decimals percent color --dir common/modifier_type_definitions --values` → `decimals` **2333 处 / 3 种取值**、`percent` **885 处 / 2 种**、`color` **2364 处 / 3 种** | 【未确认】本地无证据 → 配方 A/B |
-| 6 | **`has_game_rule` 的块形式**（`has_game_rule = { name = ... value = ... }`）是否存在 | **1.14.3 复测**：`v3 evidence has_game_rule` → 原版键 **0 处**、官方 md **0 处**、exe 有字面量（邻近串 `GameRule` / `CGameRuleDatabase` / `CGameRuleSettingDatabase` / `SETTING`）。§4.9 的观察不变 | 【未确认】本地无证据 → 配方 C。**建议**不变：只用标量形式 |
-| 7 | **`apply_modifier` 在 game_rules 中是否仍有效** | **1.14.3 复测**：`v3 evidence apply_modifier` → 原版键 **0 处**；官方 md **1 处赋值**，`common/game_rules/game_rules.md:5` 逐字：`apply_modifier = category:modifier_key	# Apply a modifier to characters matching a specific category. Valid are player, ai, and all. E.G., player:very_easy`；exe 有字面量。§4.3 表的「0」不变 | 【未确认】本地无证据 → 配方 A/B |
+| 6 | **`has_game_rule` 的块形式**（`has_game_rule = { name = ... value = ... }`）是否存在 | **已答（2026-09-20 探针实测）**：**不存在**。引擎逐字：`Unknown trigger type: value, near line: 5`（`common/scripted_triggers/zz_probe_p1_t1.txt`）+ `PostValidate of trigger 'has_game_rule' returned false` + `Error: has_game_rule trigger [ Invalid database object '{' ]` —— 块被整个当成参数；标量形式（原版在用）零报错。**另修正一条**：参数是**设置名**（settings 里的键）而非规则名，用规则名会报 `Invalid database object '<规则名>'`。详见 §4.9 | **已答**：只写标量 + 设置名 |
+| 7 | **`apply_modifier` 在 game_rules 中是否仍有效** | **1.14.3 复测**：`v3 evidence apply_modifier` → 原版键 **0 处**；官方 md **1 处赋值**，`common/game_rules/game_rules.md:5` 逐字：`apply_modifier = category:modifier_key	# Apply a modifier to characters matching a specific category. Valid are player, ai, and all. E.G., player:very_easy`；exe 有字面量。**2026-09-20 探针实测**：按 md 形状写进 `common/game_rules/`，**语法被接受**（无 token/PostValidate 报错），但引擎报 `Failed to cache an item for Static Modifiers! Key: very_easy` → **`very_easy` 不是真实静态修正键**，md 的示例值在本版本无效 | **已答**：语法 ✅、值必须是 `common/static_modifiers/` 里存在的键（md 示例值 ❌） |
 | 8 | **`game_data.type_set` 的合法取值** | **1.14.3 复测**：`v3 evidence type_set --values` → 原版键 **0 处**；官方 md **1 处赋值**，`common/modifier_type_definitions/modifier_types.md:25` 逐字 `type_set = { cultural_acceptance }`（上方 `:24` 的注释：`# the modifier typesets this type belongs to, used in code to perform bespoke operations (such as updating cultural community acceptance deltas when a country enacts a law with a modifier entry of this type)`）；exe 有字面量 | 【未确认】本地无证据（原版 0 实例，取值全集无从枚举）→ 配方 A |
 | 9 | **`decimals` / `percent` / `color` 缺省值** | 数量侧已由断言钉住（1.14.3）：`modifier_type_definitions` 共 **2364** 个键，`decimals` **2333** 处 → **31** 个没写（`def.modtypes_missing_decimals`）、`percent` **885** 处 → **1479** 个没写（`def.modtypes_missing_percent`）、`color` **2364** 处 → 0 个没写。取值分布：`decimals` {1×1349, 0×966, 2×18}、`percent` {yes×824, no×61}、`color` {good×1776, neutral×306, bad×282}（`v3 evidence … --values`） | 【未确认】本地无证据（**缺省值**本身无声明；只能证明「有默认值」）→ 配方 A |
-| 10 | **`scripted_modifiers` 是否仍被引擎解析** | **1.14.3 复测**：`v3 evidence scripted_modifier` → 原版键 **0 处**、官方 md **0 处**、exe **无该字面量**（`v3 evidence --exe-grep scripted_modifier` → 0 个）；同族里存在的是 Jomini 模板数据库 —— `v3 evidence --exe-grep scripted` → `CJominiScriptedModifierTemplateDatabase`（还有 `jomini_scripted_effect_templates`、`jomini_scripted_list_templates` 等同族串）。§7.2 的「0 定义 / 0 引用」不变 | 【未确认】本地无证据 → 配方 C |
+| 10 | **`scripted_modifiers` 是否仍被引擎解析** | **1.14.3 复测**：`v3 evidence scripted_modifier` → 原版键 **0 处**、官方 md **0 处**、exe **无该字面量**（`v3 evidence --exe-grep scripted_modifier` → 0 个）；同族里存在的是 Jomini 模板数据库 —— `v3 evidence --exe-grep scripted` → `CJominiScriptedModifierTemplateDatabase`。**2026-09-20 探针实测**：`common/scripted_modifiers/` 里的**定义会被解析**（照 md 的模板体写 → 无报错），**调用形态**见 `04-脚本系统.md` §7.3：把模板名当键会被引擎识别（引擎会去解析该模板），`scripted_modifier = 名字` / `modifier = { 名字 = yes }` / `modifier = { scripted_modifier = 名字 }` 三种写法全被拒 | **部分已答**：定义 ✅、调用点 = 模板名当键（模板体形状仍【未确认】） |
 | 11 | **wiki 的 verified 版本是 1.13，采集时点本机是 1.14.2** | 本机指纹已更新：`env.caligula_branch` = `release/1.14.3`、`env.caligula_rev` = `bf52e8e…`（本次 `v3 verify` 已核验），另有头部「版本依据」三条；§1.7 证据 4 已把该 Wiki 页标注为 verified for 1.13，并给出实测反例：`INCORPORATION_TIME_NO_MATCH` 实测 **25**（`00_defines.txt`），Wiki 示例注释写 "Base game 20 years" | 已答（版本差异已量化，见 §0.1 的【Wiki】行与 §1.7 证据 4） |
 | 12 | **mod 中新增 define 键是否完全无效** | define **键名确实编译进二进制**：`v3 evidence --exe-grep INCORPORATION_TIME_NO_MATCH` → exe 里存在该标识符（1 个）；§0.4 的 **3488** 个参数全部来自原版 9 个文件。**没有**「新增键被读取」的本地实例 | 【未确认】本地无证据 → 配方 C |
 

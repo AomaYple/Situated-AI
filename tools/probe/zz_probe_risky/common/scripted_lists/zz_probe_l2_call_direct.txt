@@ -1,4 +1,7 @@
-# 调用候选 1
+﻿# U15 调用候选 1：`scripted_list = 名字`
+# 实测结论：**被拒**（加载期硬报错）——
+#   [pdx_persistent_reader.cpp:268]: Error: "Unexpected token: scripted_list, near line: 3"
+#   in file: "common/scripted_lists/zz_probe_l2_call_direct.txt"
 zzprobe_list_call_1 = {
 	scripted_list = zzprobe_list
 }

@@ -1,0 +1,6 @@
+﻿# P1 第三项：**MOD 自己新增的**设置能不能被 `has_game_rule` 查到。
+# 设置名 `zzprobe_on`（flag 同名）定义在 zz_probe_a 的 zz_probe_rules_v2.txt。
+# 上一轮用规则名当参数，引擎报 Invalid database object —— 这一轮用的是设置名。
+zzprobe_g3 = {
+	has_game_rule = zzprobe_on
+}

@@ -13,6 +13,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from pdx import experiments
@@ -22,6 +24,9 @@ pytestmark = pytest.mark.unit
 
 _TXT = sorted(experiments.PROBE_DIR.rglob("*.txt"))
 _YML = sorted(experiments.PROBE_DIR.rglob("*.yml"))
+
+#: `键:版本 "值"` 形状（版本号可选）
+_LOC_LINE = re.compile(r'^\s*\S+:\d*\s+"')
 
 
 def test_探针包存在且非空() -> None:
@@ -35,9 +40,7 @@ def test_探针脚本能被解析器读通(path) -> None:
     """用仓库自己的解析器验证：没有解析错误、顶层键非空。"""
     parsed = parse_cached(path)
     assert not parsed.errors, f"{path.name} 有解析错误：{parsed.errors[:2]}"
-    assert parsed.top_keys or path.name.startswith(("c1", "c2", "c3", "c4")), (
-        f"{path.name} 一个顶层键都没有"
-    )
+    assert parsed.top_keys, f"{path.name} 一个顶层键都没有"
 
 
 @pytest.mark.parametrize("path", _YML, ids=lambda p: p.name)
@@ -45,12 +48,25 @@ def test_探针本地化是行式格式(path) -> None:
     """`.yml` 不走 PDX 解析器 —— 检查它至少符合 `key:版本 "值"` 的行式结构。
 
     读的时候用 `utf-8-sig`：探针的 loc 文件**带 BOM**（引擎要求，见下一条）。
+    P17 的 A/B 探针故意用块标量（`|` / `>` 后跟缩进的多行）—— 那几行按 YAML 规则
+    跳过，不参与「行式结构」判定。
     """
     text = path.read_text(encoding="utf-8-sig")
     assert text.startswith("l_"), "第一行必须是语言头（l_simp_chinese / l_english）"
+    in_block = False
     for line in text.splitlines()[1:]:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
+            continue
+        if in_block:
+            # 块标量续行 = 缩进更深、且本身不是新的 `键:版本 "值"` 行
+            looks_like_key = bool(_LOC_LINE.match(line))
+            if looks_like_key or not line.startswith("  "):
+                in_block = False
+            else:
+                continue
+        if stripped.endswith(("|", ">")):
+            in_block = True
             continue
         assert ":" in stripped, f"不像本地化行：{stripped[:40]}"
         assert '"' in stripped, f"缺引号：{stripped[:40]}"
@@ -73,14 +89,16 @@ def test_实验编号唯一且元数据齐全() -> None:
         assert e.probe, f"{e.id} 没有探针文件"
 
 
-def test_探针本地化必须带BOM() -> None:
-    """引擎实测会报 Missing UTF8 BOM 并在那之后退出 —— 探针的 .yml 必须带 BOM。
+def test_探针文件必须带BOM() -> None:
+    """探针的每个 `.txt` / `.yml` 都要带 UTF-8 BOM。
 
-    这条同时也是 doc 06「本地化文件必须 UTF-8 with BOM」的独立实证：
-    引擎自己的报错原文是 [localize.cpp:1974] ... should be in in utf-8-bom encoding。
+    `.yml` 是**硬要求**（引擎实测 `Missing UTF8 BOM` 之后退出，doc 06 的独立实证）；
+    `.txt` 是**建议**（引擎报 `lexer.cpp:285 … will try to use it anyways`，非致命）。
+    探针一律带上，好处是每趟实验的日志里不再混着十几条 BOM 提醒。
     """
-    for yml in sorted(experiments.PROBE_DIR.rglob("*.yml")):
-        assert yml.read_bytes().startswith(b"\xef\xbb\xbf"), f"{yml.name} 少了 UTF-8 BOM"
+    for path in sorted(experiments.PROBE_DIR.rglob("*")):
+        if path.suffix in {".txt", ".yml"}:
+            assert path.read_bytes().startswith(b"\xef\xbb\xbf"), f"{path.name} 少了 UTF-8 BOM"
 
 
 def test_两个探针mod都有metadata() -> None:
@@ -154,12 +172,27 @@ def test_安装与卸载(tmp_path) -> None:
     assert not any(p.exists() for p in removed)
 
 
-def test_清单里写清了三处肉眼观察() -> None:
+def test_risky探针也能一键卸载(tmp_path) -> None:
+    """`launch --risky` 会把 zz_probe_risky 一起装上，卸载就必须能连它一起移除。
+
+    实测踩过：`uninstall --risky` 当时不认这个参数，本机 mod 目录留了个探针残留。
+    """
+    installed = experiments.install(tmp_path, risky=True)
+    assert experiments.RISKY_MOD in [p.name for p in installed]
+    removed = experiments.uninstall(tmp_path, risky=True)
+    assert experiments.RISKY_MOD in [p.name for p in removed]
+    assert not any(p.exists() for p in removed)
+    assert not (tmp_path / experiments.RISKY_MOD).exists()
+
+
+def test_清单里写清了肉眼观察项() -> None:
     names = " ".join(name for name, _how in experiments.EYEBALL)
     assert "国库" in names
     assert "窗口" in names
     assert "决议" in names
-    assert len(experiments.EYEBALL) == 3
+    assert "进度条" in names
+    assert "块标量" in names
+    assert len(experiments.EYEBALL) == 6
 
 
 def test_plan_文本包含全部实验与收尾命令() -> None:

@@ -1,8 +1,0 @@
-# P1：`apply_modifier` 在 game_rules 里是否仍有效（官方 md 有、原版 0 处）
-zzprobe_rule = {
-	settings = {
-		zzprobe_rule_setting = {
-			apply_modifier = player:very_easy
-		}
-	}
-}

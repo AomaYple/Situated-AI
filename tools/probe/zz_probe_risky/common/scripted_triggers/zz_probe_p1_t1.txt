@@ -1,0 +1,6 @@
+﻿# P1 候选：`has_game_rule` 的**块形式**（原版 0 处、官方 md 0 处）。
+# 用**原版设置名**当参数，避开「自定义规则没注册」这个干扰项
+# （上一轮用自定义键，引擎报 `Invalid database object 'zzprobe_rule'`，判定被污染）。
+zzprobe_g1 = {
+	has_game_rule = { name = free_construction_unscaled value = yes }
+}

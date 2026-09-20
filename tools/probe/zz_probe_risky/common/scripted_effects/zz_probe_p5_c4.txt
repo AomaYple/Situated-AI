@@ -1,0 +1,5 @@
+﻿# P5 对照项：不带任何参数（已知合法，用来证明调用链路本身是通的）
+zzprobe_p5_c4 = {
+	add_treasury = 6000000
+	debug_log = "ZZPROBE P5C4 plain"
+}

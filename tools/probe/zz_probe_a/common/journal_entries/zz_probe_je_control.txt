@@ -1,12 +1,11 @@
-﻿# P7：JE 字段语义 —— 骨架逐字复制自 common/journal_entries/00_abolish_monarchy.txt，
+﻿# P14：**对照组** —— 与 zzprobe_je 同时挂上，唯一差别是三个字段都没有。
+# 并排比较进度条：带 display_progressbar_as_months 的那个应显示「月」而不是数值。
+# 原文说明： —— 骨架逐字复制自 common/journal_entries/00_abolish_monarchy.txt，
 # 只改键名并注入三个待验证字段。
-zzprobe_je = {
+zzprobe_je_control = {
 	icon = "gfx/interface/icons/event_icons/event_portrait.dds"
 
 	# ↓ P7：三个「md 未列、原版在用」的字段
-	is_shown_in_lobby = { always = yes }
-	should_update_on_player_command = yes
-	display_progressbar_as_months = yes
 	group = je_group_internal_affairs
 
 	on_monthly_pulse = {

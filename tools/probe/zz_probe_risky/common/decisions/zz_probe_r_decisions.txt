@@ -1,0 +1,24 @@
+﻿# 备用触发点：万一 on_game_started 在读档时不触发，手动点一次也能把自检跑完。
+# 顺带验证 doc 04 记的那条：**决策**的 ai_chance 用的是 `value`，不是事件的 `base`
+# （原文 common/decisions/000_decisions_help.txt:42、:123）。
+zzprobe_r_selftest_decision = {
+	is_shown = { always = yes }
+	possible = { always = yes }
+	when_taken = {
+		zzprobe_r_selftest = yes
+	}
+	ai_chance = { value = 0 }
+}
+
+# P17 A/B：两个决议只差**描述文案的 YAML 写法** ——
+#   `|`（字面量块标量）应保留换行 → 面板里显示两行；
+#   `>`（折叠块标量）应把换行折成空格 → 面板里显示一行。
+# 原版 0 处用块标量，所以「引擎认不认」一直没定；这次看两个描述各占几行即可。
+zzprobe_r_folded_decision = {
+	is_shown = { always = yes }
+	possible = { always = yes }
+	when_taken = {
+		zzprobe_r_selftest = yes
+	}
+	ai_chance = { value = 0 }
+}

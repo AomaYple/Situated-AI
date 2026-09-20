@@ -100,6 +100,26 @@ game\common\ai_strategies\00_default_strategy.txt
 <mod>\common\ai_strategies\00_default_strategy.txt
 ```
 
+> **【实测】数据文件必须**平铺**在 `common\<库>\` 下，塞进子目录等于没写**
+> （2026-09-20，探针 mod `zz_probe_risky`）：
+>
+> 1. 把 4 个 `$PARAM$` 候选效果放进 `common/scripted_effects/zz_probe_p5_candidates/`，
+>    决议里调用它们时引擎报
+>    `[jomini_effect.cpp:542]: Unknown effect zzprobe_p5_c1 at common/decisions/zz_probe_decisions.txt:19`
+>    —— 定义**根本没被加载**；
+> 2. 同期放在同目录**平级**的文件全都收到 `lexer.cpp:285 … should be in utf8-bom encoding`
+>    提醒（说明被读了），子目录里的 6 个文件**一条提醒都没有** —— 旁证「连读都没读」；
+> 3. 旁证：原版 8 个常用 `common\` 库目录（`scripted_effects` / `scripted_triggers` /
+>    `scripted_lists` / `decisions` / `journal_entries` / `on_actions` / `scripted_buttons` /
+>    `scripted_modifiers`）**0 个子目录**，本机 20 多个 mod 也 **0 个**；
+> 4. 引擎自己的枚举日志写得明白：`virtualfilesystem.cpp:420: Starting pre-enumerating
+>    'common/scripted_lists'(.txt, , 0)` —— 末位参数是 `0`（不递归）。
+>
+> 复算：`v3 experiment plan` 的 `[P25]`；再次实测用
+> `zz_probe_risky/common/scripted_effects/zz_probe_subdir_probe/never_loaded.txt`
+> 那个反证文件（自检效果会调用它，日志报 `Unknown effect` = 子目录确实没被枚举）。
+> ⚠️ 注意：这条只针对**数据文件**；`gfx\`、`gui\` 里的资源按路径引用，不受影响。
+
 ## 5. 覆盖 vs 新增
 
 ### 5.1 头等重要：数据功能前缀（`INJECT:` / `REPLACE:` 等）
@@ -223,7 +243,7 @@ INJECT_OR_CREATE  →  REPLACE_OR_CREATE  →  TRY_INJECT
 
 ### 5.2 传统机制：同键名覆盖 / 整文件替换
 
-> **2026-09-20 实测补两条**（探针 mod + 一次真实游戏会话，3 experiment）：
+> **2026-09-20 实测补两条**（探针 mod + 一次真实游戏会话，`v3 experiment`）：
 > 1. **裸同名键（不带前缀）＝ 先到先得**：在新增文件里重定义原版键，引擎逐字报
 >    Duplicated key debug_success will not be created from file: …/zz_probe_effects.txt:4
 >    —— 后写的那份**不会被创建**，不合并、不报错；国库只涨了原版的 50,000。
@@ -231,6 +251,21 @@ INJECT_OR_CREATE  →  REPLACE_OR_CREATE  →  TRY_INJECT
 >    B（+2M）前面，实测只有 A 生效，且日志对那个键**没有**重复警告 ——
 >    说明 REPLACE_OR_CREATE 只对「已存在的条目」做替换，**不会让后写的 mod 覆盖先写的 mod**。
 >    这一条修正了本文早期对前缀语义的简化说法（见 §5.1 的语义列）。
+> 3. **同一个 mod、同一个文件里写重了也是先到先得**：探针文件把 5 个事件误写了两遍，
+>    引擎报 `Duplicated event ID 'zzprobe.10' found. New Location:
+>    'events/zz_probe_events.txt:49', Previous Location: 'events/zz_probe_events.txt:73'`
+>    —— 只有**先出现**的那份生效（同键规则在文件内、跨文件、跨 mod 三个层级一致）。
+> 4. **on_action 的事件表只能写 `namespace.id`**：写成数字 id 会报
+>    `[jomini_onaction.cpp:290]: Invalid event id 1000 At: common/on_actions/zz_probe_on_actions.txt:12`。
+> 5. **同一个 on_action 不能出现两个 `effect` 块** —— 下面那条官方 md 规则的**实测复现**：
+>    探针给原版已有的 `on_game_started` 又写了一个 `effect`，引擎报
+>    `[jomini_onaction.cpp:124]: There is more than one 'effect' defined using most recent:common/on_actions/zz_probe_r_on_actions.txt:5`
+>    —— 引擎取「最近的那份」（mod 排在后），**原版那份被丢掉**。往原版 on_action 里加效果要
+>    用下面的官方转调配方（`on_actions = { 自己的 on_action }`），不要直接再写 `effect`。
+> 6. **`weight_multiplier` 是 on_action 自己的字段**：塞进 `events = { id = { … } }` 里会被当成
+>    事件 id 读（`Invalid event id 1000`）；而 `events` 表本身是**裸事件 id 列表**
+>    （原版 `00_code_on_actions.txt:124` 起；`weight_multiplier` 见官方 `_on_actions.md`，
+>    它只影响「被 `random_on_actions` 抽中」的权重）。
 
 **【官方】** `game\common\on_actions\_on_actions.md` 明确说明了合并规则（这是全部数据文件共通的模式）：
 

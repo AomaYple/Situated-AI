@@ -1,0 +1,6 @@
+﻿# P1 对照项：`has_game_rule` 标量形式 + 原版**设置名**（原版 18 个文件在用）。
+# ⚠️ 参数是「设置名」（settings 里的键）而不是「规则名」：
+# 原版规则 `free_construction` 下的设置 `free_construction_unscaled`，脚本里直接写设置名。
+zzprobe_g2 = {
+	has_game_rule = free_construction_unscaled
+}

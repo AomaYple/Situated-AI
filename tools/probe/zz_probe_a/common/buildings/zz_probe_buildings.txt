@@ -1,0 +1,31 @@
+﻿# P26：照原版 building_food_industry 复制、改名，并把 doc 14 里那几个「原版 0 次」的字段塞进去。
+# 引擎在加载时会对不认识的键报 unknown key（带文件与行号），于是这一份文件就能一次问清一批字段。
+zzprobe_building = {
+	# ↓ P26：doc 14 里「官方 md 有、原版 0 次」的字段 —— 引擎报 unknown key 即「不被识别」
+	ignore_stateregion_max_level = yes
+	can_build = yes
+	owners = { zzprobe_owner }
+	replaces_company = zzprobe_company
+	building_group = bg_light_industry
+	icon = "gfx/interface/icons/building_icons/food_industry.dds"
+	city_type = city
+	levels_per_mesh = 50
+
+	ai_nationalization_desire = -0.25 # AI is generally fine with privatizing consumer goods industries
+
+	unlocking_technologies = {
+		manufacturies
+	}
+
+	production_method_groups = {
+		pmg_base_building_food_industry
+		pmg_canning
+		pmg_distillery
+		pmg_automation_building_food_industry
+	}
+
+	required_construction = construction_cost_high
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_light_industry.dds"
+}

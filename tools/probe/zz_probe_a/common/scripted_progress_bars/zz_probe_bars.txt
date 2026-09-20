@@ -1,4 +1,4 @@
-# P6：进度条**自定义样式名**是否被接受。
+﻿# P6：进度条**自定义样式名**是否被接受。
 # 原版只有 default / default_green / default_bad / double_sided_* 这些，
 # 且都在 exe 里有字面量。这里写一个引擎里肯定没有的名字，看日志是否报未知键。
 zzprobe_bar = {

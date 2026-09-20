@@ -1,0 +1,26 @@
+﻿l_english:
+ zzprobe_r_selftest_decision:0 "ZZ Probe: run syntax self-test"
+ # P17-A: literal block scalar `|` -- expect TWO lines in the panel
+ zzprobe_r_selftest_decision_desc:0 |
+  Line 1 (literal |)
+  Line 2 (literal |)
+ zzprobe_r_folded_decision:0 "ZZ Probe: folded-scalar control"
+ # P17-B: folded block scalar `>` -- expect ONE line (newline folded to space)
+ zzprobe_r_folded_decision_desc:0 >
+  Line 1 (folded >)
+  Line 2 (folded >)
+ zzprober_1_title:0 "Probe ai_chance control"
+ zzprober_1_desc:0 "Known-valid shape: base + modifier(trigger, factor)."
+ zzprober_1_opt:0 "Ok"
+ zzprober_2_title:0 "Probe ai_chance candidate 1"
+ zzprober_2_desc:0 "Template name as a key directly under ai_chance."
+ zzprober_2_opt:0 "Ok"
+ zzprober_3_title:0 "Probe ai_chance candidate 2"
+ zzprober_3_desc:0 "scripted_modifier = name."
+ zzprober_3_opt:0 "Ok"
+ zzprober_4_title:0 "Probe ai_chance candidate 3"
+ zzprober_4_desc:0 "Inside modifier = { }, template name as key."
+ zzprober_4_opt:0 "Ok"
+ zzprober_5_title:0 "Probe ai_chance candidate 4"
+ zzprober_5_desc:0 "Inside modifier = { }, scripted_modifier = name."
+ zzprober_5_opt:0 "Ok"

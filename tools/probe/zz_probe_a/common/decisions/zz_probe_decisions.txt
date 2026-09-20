@@ -1,10 +1,14 @@
-# 探针主决议：点一次，把能自动判定的实验全跑一遍。
+﻿# 探针主决议：点一次，把能自动判定的实验全跑一遍。
 #
 # 判读三处（互相独立）：
 #   1) 国库：`debug_success` 被本 mod **不带前缀**重定义过（原版 +50000，本 mod +1）
 #      → +50000 = 原版赢；+1 = 本 mod 替换；+50001 = 两者都跑；报错 = 重定义被拒
 #   2) 事件窗口：三个事件各带一个待验证字段（after / is_popup / orphan）
 #   3) 日志：Documents\Paradox Interactive\Victoria 3\logs\ 里 grep `zzprobe`
+#
+# P5 的四个 `$PARAM$` 候选**不在这里**调用 —— 它们的定义在 zz_probe_risky 里，
+# 调用点也随之搬到了那里（common/scripted_effects/zz_probe_r_selftest.txt），
+# 这样默认的 `v3 experiment launch`（不带 --risky）不会报 Unknown effect。
 zzprobe_run_all = {
 	is_shown = { always = yes }
 	possible = { always = yes }
@@ -13,10 +17,22 @@ zzprobe_run_all = {
 		zzprobe_control_effect = yes
 		zzprobe_shared = yes
 		add_journal_entry = { type = zzprobe_je }
+		add_journal_entry = { type = zzprobe_je_control }   # P14 对照
+		zzprobe_order = yes                                  # P19 同 mod 内同名键
+		# 两个 JE 的 current_value 引用 `abolishing_monarchy_var`，而它只在
+		# 「没有君主制法律」时才由 JE 自己创建。变量不存在时引擎**每帧**报
+		# `Value of wrong type … Got value of type 'none'`（实测 8 分钟 1772 条，
+		# 把 error.log 刷到 500 KB 并触发滚动）—— 这里先把它建出来，日志才干净。
+		set_variable = { name = abolishing_monarchy_var value = 1 }
+		trigger_event = { id = zzprobe.4 days = 2 }          # P12 带 is_popup
+		trigger_event = { id = zzprobe.5 days = 2 }          # P12 不带（对照）
 		trigger_event = { id = zzprobe.1 days = 2 }
 		trigger_event = { id = zzprobe.2 days = 3 }
 		trigger_event = { id = zzprobe.3 days = 4 }
 	}
+	# ⚠️ 故意留着的**非法**写法：决策的 ai_chance 不认 `base`（认 `value`，见
+	# common/decisions/000_decisions_help.txt:42），加载期必定报 Unexpected token。
+	# 这是 doc 04「决策 ai_chance 与事件不同」那条结论的可复现证据，别删。
 	ai_chance = { base = 0 }
 }
 

@@ -1,0 +1,16 @@
+﻿# P21 的第二条：`apply_modifier = player:very_easy` 单独放一个规则里测 ——
+# 上一轮把它和 `has_game_rule` 的对照项混在同一条规则里，规则没注册成功时
+# 分不清是「形状错」「flag 缺失」还是「apply_modifier 非法」。
+# 官方 md 原文（common/game_rules/game_rules.md:5）：
+#   apply_modifier = category:modifier_key  # Valid are player, ai, and all. E.G., player:very_easy
+zzprobe_rule_am = {
+	default = zzprobe_am_on
+
+	zzprobe_am_on = {
+		flag = zzprobe_am_on
+		apply_modifier = player:very_easy
+	}
+
+	zzprobe_am_off = {
+	}
+}

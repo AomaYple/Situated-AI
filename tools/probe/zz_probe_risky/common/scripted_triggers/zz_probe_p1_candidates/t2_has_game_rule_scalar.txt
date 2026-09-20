@@ -1,4 +1,0 @@
-# 对照：标量形式（原版在用）
-zzprobe_g2 = {
-	has_game_rule = zzprobe_rule
-}

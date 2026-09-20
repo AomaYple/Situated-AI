@@ -1,0 +1,14 @@
+﻿# P5 候选 2：等号默认值 `$AMOUNT=默认值$` —— **实测不成立**（2026-09-20 第三轮，加载期）：
+#
+#   [jomini_script_argument.cpp:83]: Missing $ to end argument around
+#   common/scripted_effects/zz_probe_p5_c2.txt:3
+#   [jomini_scriptvalue.h:391]: Badly read script value $AMOUNT at ...:3
+#   [jomini_effect.cpp:542]: Unknown effect = at common/scripted_effects/zz_probe_p5_c2.txt:3
+#   [jomini_eventtarget.cpp:694]: Failed to find a valid event target link '$AMOUNT' at ...:3
+#
+# `=` 不被识别为默认值分隔符：整个赋值被解析坏（连 `$` 都不配对）。
+# 结论已回填 docs/victoria3-modding/04-脚本系统.md（U6）。
+zzprobe_p5_c2 = {
+	add_treasury = $AMOUNT$
+	debug_log = "ZZPROBE P5C2 amount=[$AMOUNT$]"
+}

@@ -1,0 +1,85 @@
+﻿# U14：`scripted_modifier` 的**调用候选** —— 放进**事件选项**的 ai_chance。
+#
+# 上一版把 `ai_chance` 放在事件顶层 → 引擎逐字报
+#   [pdx_persistent_reader.cpp:268]: Error: "Unexpected token: ai_chance, near line: 11"
+#   in file: "events/zz_probe_r_ai_chance.txt" near line: 17
+# 五个事件全中 —— 事件侧的 `ai_chance` 属于**选项**，不属于事件体（原版 1848.txt:44 即如此）。
+# 现在按原版形状放进 option。
+namespace = zzprober
+
+# 对照：原版在用的合法形状
+zzprober.1 = {
+	type = country_event
+	title = zzprober_1_title
+	desc = zzprober_1_desc
+	option = {
+		name = zzprober_1_opt
+		ai_chance = {
+			base = 10
+			modifier = {
+				trigger = { always = yes }
+				factor = 2
+			}
+		}
+	}
+}
+
+# 候选 1：模板名直接当 ai_chance 的键
+zzprober.2 = {
+	type = country_event
+	title = zzprober_2_title
+	desc = zzprober_2_desc
+	option = {
+		name = zzprober_2_opt
+		ai_chance = {
+			base = 10
+			zzprobe_modifier = yes
+		}
+	}
+}
+
+# 候选 2：`scripted_modifier = 名字`
+zzprober.3 = {
+	type = country_event
+	title = zzprober_3_title
+	desc = zzprober_3_desc
+	option = {
+		name = zzprober_3_opt
+		ai_chance = {
+			base = 10
+			scripted_modifier = zzprobe_modifier
+		}
+	}
+}
+
+# 候选 3：放进 `modifier = { }`，模板名当键
+zzprober.4 = {
+	type = country_event
+	title = zzprober_4_title
+	desc = zzprober_4_desc
+	option = {
+		name = zzprober_4_opt
+		ai_chance = {
+			base = 10
+			modifier = {
+				zzprobe_modifier = yes
+			}
+		}
+	}
+}
+
+# 候选 4：`modifier = { scripted_modifier = 名字 }`
+zzprober.5 = {
+	type = country_event
+	title = zzprober_5_title
+	desc = zzprober_5_desc
+	option = {
+		name = zzprober_5_opt
+		ai_chance = {
+			base = 10
+			modifier = {
+				scripted_modifier = zzprobe_modifier
+			}
+		}
+	}
+}
