@@ -138,6 +138,27 @@ def test_八线程并发解析与串行一致(tmp_path) -> None:
 # ────────────────────────── 13：性能回归门禁 ──────────────────────────
 
 
+#: 吞吐门禁的样本规模：200 块 × 4 行 ≈ 800 行，单次解析 ≈0.05 秒。
+_BENCH_BLOCKS = 200
+
+#: 重复次数（取**最小值**）。墙钟会被并行 worker 抢成假红 —— 实测出现过一次
+#: 4 秒的调度停顿，把吞吐从 1.5 万行/秒打成 183 行/秒；取最小值后，要红就得
+#: 三次都被抢，那已经是机器坏了而不是被测代码退化。
+#:
+#: 为什么不改成 CPU 时间：Windows 上 `time.process_time()` 按调度时钟滴答
+#: （≈15.6ms）更新，而单次解析比一个滴答还快 —— 实测直接读出 0.0，
+#: 门禁会被**架空**（分母取 1e-6 → 永远通过）。那比假红更糟。
+_BENCH_REPEATS = 5
+
+
+def _parse_wall_seconds(path: Path) -> float:
+    """解析一次花掉的墙钟秒数（每次都清缓存，确保测的是真解析）。"""
+    cache.clear()
+    start = time.perf_counter()
+    parse_file(path)
+    return time.perf_counter() - start
+
+
 @pytest.mark.slow
 def test_解析吞吐不低于下限(tmp_path) -> None:
     """解析吞吐的**宽松**门禁：明显退化时红，机器抖动时不红。
@@ -145,20 +166,22 @@ def test_解析吞吐不低于下限(tmp_path) -> None:
     为什么不用基准数字比：CI 与本机的 CPU 差几倍，卡死数字只会制造噪音。
     这里用一个比实测慢一个数量级的下限（实测约 1.5 万行/秒，下限设 1 千），
     够抓住「引入 O(n²) 或每次解析都重读整棵树」这类真退化。
+
+    口径：**墙钟、取多次最小值**（见 :data:`_BENCH_REPEATS` 里为什么不是 CPU 时间）。
     """
     body = "".join(
-        f"block_{i} = {{\n    a = {i}\n    b = {{ c = {i} d = yes }}\n}}\n" for i in range(200)
+        f"block_{i} = {{\n    a = {i}\n    b = {{ c = {i} d = yes }}\n}}\n"
+        for i in range(_BENCH_BLOCKS)
     )
     path = tmp_path / "big.txt"
     path.write_text(body, encoding="utf-8")
     total_lines = len(body.splitlines())
 
     cache.clear()
-    start = time.perf_counter()
     parsed = parse_file(path)
-    elapsed = time.perf_counter() - start
     assert parsed.top_keys, "得真解析出东西，否则测的是空跑"
-    rate = total_lines / max(elapsed, 1e-6)
+    best = min(_parse_wall_seconds(path) for _ in range(_BENCH_REPEATS))
+    rate = total_lines / max(best, 1e-6)
     assert rate > 1_000, f"解析吞吐只有 {rate:,.0f} 行/秒（下限 1,000）—— 检查是否引入了重复解析"
 
 
