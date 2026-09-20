@@ -53,6 +53,8 @@ FLOORS: dict[str, float] = {
     "pdx/markers.py": 93.0,  # 95.5%
     "pdx/verify.py": 91.0,  # 93.5%
     "pdx/cache.py": 92.0,  # 94.0%
+    "pdx/h1.py": 93.0,  # 95.8%（阶段 2 的分析器：解析 + 统计 + 报告）
+    "pdx/h1_probe.py": 95.0,  # 98.9%（阶段 2 的探针生成器）
 }
 
 #: 门禁使用的覆盖率 JSON（`v3 cov` 每次覆盖写）。
