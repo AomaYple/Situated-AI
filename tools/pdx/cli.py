@@ -626,7 +626,7 @@ def snap_create(
     """生成当前版本快照，写入 tools/out/snapshots/。
 
     默认是**完整快照**（约 39 MiB，本地用，不入库）。
-    ``--compact`` 产出**精简快照**（约 5.1 MiB）：结构域原样保留，
+    ``--compact`` 产出**精简快照**（约 6.0 MiB）：结构域原样保留，
     只把 ``localization`` 的 14 万条键名换成「键数 + sha256」——
     小到可以随仓库分发，让「升级前后 diff 出字段增删」在别的机器上也能做。
     """
@@ -1211,7 +1211,7 @@ def verify_cmd(
     这个最要命的失效模式一直敞着。现在真的接上了（``--no-drift`` 可跳过）。
 
     ``--from-snapshot`` 是**给 CI 用的**：那里没有游戏，全部实测断言都会被
-    跳过，而精简快照（已入库、约 5.1 MiB）里带着 common 各目录的条目名、
+    跳过，而精简快照（已入库、约 6.0 MiB）里带着 common 各目录的条目名、
     defines 命名空间与 DLC 清单，足以核验其中约一半。它证明的是「断言注册表
     仍与当时记录的真值一致」，**不**证明「游戏里现在还是这个数」。
 
@@ -2060,6 +2060,10 @@ def ai_surface_cmd(
         bool, typer.Option("--check", help="核对文档与生成结果是否一致（退出码 1 = 已被手改）")
     ] = False,
     top: Annotated[int, typer.Option("--top", "-n", help="输入清单最多列多少条")] = 60,
+    offline: Annotated[
+        bool,
+        typer.Option("--offline", help="离线：原版 AI 面改读入库精简快照（CI 用），不读游戏本体"),
+    ] = False,
 ) -> None:
     """原版 AI 意图层的**可执行面**：有哪些牌、牌在读什么、面有多大。
 
@@ -2074,39 +2078,64 @@ def ai_surface_cmd(
 
     产物 `docs/design/02-可执行面.md` **由本命令生成，勿手改**；`--check` 就是防手改的闸门
     （不一致退出码 1，可进 CI）。
+
+    `--offline`：上面三件事改从**入库精简快照**的 `ai_surface` 域读（生成快照时由
+    同一个模块写进去），因此没有游戏本体的机器（CI）也能跑 `--check`。它证明的仍是
+    「文档与**入库快照**一致」，不是「与现在的游戏一致」（后者要本机 `--write`）。
+    快照缺失或缺这一域时报**前置条件缺失**（退出码 2），不是通过。
     """
     # 前置条件先挡一道（P13：缺前置条件要**明确报错**，不是抛 traceback）。
     # 本命令的三件事全部枚举自原版文件，没有游戏本体时它连第一条都做不了 ——
     # 实测过：不挡的话 `--check` 会在读 `common/defines/00_ai.txt` 时抛
     # `FileNotFoundError` 并把整个 traceback 打到用户脸上。
     # 与 `v3 modguard` / `v3 tables` 同一口径：报"前置条件缺失"，退出码 2。
-    if not config.GAME.is_dir():
+    if offline:
+        try:
+            ai_surface.read_offline()
+        except ai_surface.OfflineUnavailableError as exc:
+            _fail(str(exc))
+    elif not config.GAME.is_dir():
         _fail(
             f"前置条件缺失：找不到原版目录 {config.GAME}（可用环境变量 V3_ROOT 指定）"
             " —— 本命令的三件事全部枚举自原版 ai_strategies / defines，"
-            "没有游戏本体时不可用"
+            "没有游戏本体时不可用；没有游戏的机器请用 `--offline`（读入库快照）"
         )
 
     if check:
-        problem = ai_surface.check_doc(top=top)
+        try:
+            problem = ai_surface.check_doc(top=top, offline=offline)
+        except ai_surface.OfflineUnavailableError as exc:
+            _fail(str(exc))
         if problem:
             _fail(problem)
         console.print(f"[green]{escape(ai_surface.DOC_REL)} 与生成结果一致 ✅[/]")
+        if offline:
+            index = ai_surface.offline_source()
+            source = index.describe() if index is not None else "?"
+            console.print(
+                f"[dim]离线模式：原版 AI 面来自{escape(source)} —— 证明的是"
+                "「文档与入库快照一致」，不是「与现在的游戏一致」。[/]"
+            )
         return
 
-    if write:
-        path = ai_surface.write_doc(top=top)
+    if offline:
+        cards, defines = ai_surface.read_offline()
+    else:
         cards = ai_surface.read_cards()
-        inputs = ai_surface.collect_inputs(cards)
+        defines = ai_surface.read_defines()
+    inputs = ai_surface.collect_inputs(cards)
+
+    if write:
+        try:
+            path = ai_surface.write_doc(top=top, offline=offline)
+        except ai_surface.OfflineUnavailableError as exc:
+            _fail(str(exc))
         console.print(
             f"[green]已写入 {escape(str(path))}[/]：{len(cards)} 张牌 / {len(inputs)} 个不同的输入"
         )
         return
 
-    cards = ai_surface.read_cards()
-    inputs = ai_surface.collect_inputs(cards)
     hits = ai_surface.factor_report(inputs)
-    defines = ai_surface.read_defines()
 
     slots: dict[str, int] = {}
     for card in cards:
@@ -2397,6 +2426,13 @@ def modguard_cmd(
             help="只跑某一道闸门（编号 1–5，或键名 keys/refs/dilution/roundtrip/determinism）",
         ),
     ] = "",
+    offline: Annotated[
+        bool,
+        typer.Option(
+            "--offline",
+            help="离线：①② 的原版真值改读入库精简快照（CI 用），不读游戏本体",
+        ),
+    ] = False,
 ) -> None:
     """五道闸门：键/路径不相交、引用完整性、稀释预算、往返净度、生成可复现。
 
@@ -2410,14 +2446,20 @@ def modguard_cmd(
     ⑤ determinism 两次生成逐字节一致 + 每个 why 非空 + 盘上产物确实由生成器产出
     ```
 
-    退出码：0 全过；1 有闸门不过（**不许进游戏**）；2 前置条件缺失
-    （原版目录不可用、数据源不合法、`--only` 拼错）。
+    `--offline`：①② 的原版真值改读**入库精简快照**
+    （`tools/out/snapshots/*.compact.json`），于是没有游戏本体的机器（CI）也能
+    真跑这两道闸门 —— 不是跳过它们。输出里逐项写明「本项由快照核验」，快照没
+    覆盖到的项单列成**「离线未覆盖」并注明不算通过**（未覆盖不报红，否则 CI
+    永远红；但也绝不算过，否则"没查"会被读成"通过"）。③④⑤ 本来就不读游戏。
 
-    **缺前置条件不算通过**：没有游戏时 ①/② 需要读原版，它们报退出码 2 而不是
-    静默跳过 —— 跳过会被当成绿灯，这是这类门禁最危险的失效方式（P13）。
+    退出码：0 全过（或全过且只余"离线未覆盖"项）；1 有闸门不过（**不许进游戏**）；
+    2 前置条件缺失（原版目录不可用、快照缺失或缺域、数据源不合法、`--only` 拼错）。
+
+    **缺前置条件不算通过**：没有游戏、也没要离线时 ①/② 报退出码 2 而不是静默
+    跳过 —— 跳过会被当成绿灯，这是这类门禁最危险的失效方式（P13）。
     """
     try:
-        ctx = modguard.context()
+        ctx = modguard.context(offline=offline)
         report = modguard.run(ctx, only)
     except modgen.DataError as exc:
         _fail(f"数据源不合法：{exc}")
@@ -2435,11 +2477,24 @@ def modguard_cmd(
         table.add_row(mark, escape(finding.title), escape(finding.headline))
     console.print(table)
 
+    # 离线时**过也要有明细**：哪一项由快照核验、哪些没覆盖，都写在明细里
+    # （P13：绿也得让人看得出"绿在哪"）。
     for finding in report.findings:
-        if not finding.ok:
-            console.print(f"\n[bold]{escape(finding.title)}[/]")
-            for line in finding.details:
-                console.print(f"  {escape(line)}")
+        if finding.ok and not offline:
+            continue
+        console.print(f"\n[bold]{escape(finding.title)}[/]")
+        for line in finding.details:
+            console.print(f"  {escape(line)}")
+
+    if offline:
+        console.print(
+            "[dim]离线模式：①/② 的原版真值来自入库精简快照（版本见各闸门明细）；"
+            "③/④/⑤ 本来就不读游戏。[/]"
+        )
+    if report.uncovered:
+        console.print(
+            f"[yellow]⚠️ 离线未覆盖 {len(report.uncovered)} 项（**不算通过**）—— 明细见上面各闸门[/]"
+        )
 
     if report.missing_precondition:
         blockers = [f.headline for f in report.findings if f.precondition]

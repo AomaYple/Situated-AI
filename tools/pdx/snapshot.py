@@ -24,7 +24,7 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from . import config
+from . import ai_surface, config, vanilla_index
 from .cache import parse_cached
 from .defines import extract_defines
 from .extract import entry_fields
@@ -252,11 +252,17 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     ``compact=True`` 产出**精简快照**：结构域（``common_entries`` / ``fields`` /
     ``defines`` / ``dlc`` / ``config``）原样保留 —— 它们才是「Paradox 增删了
     哪些字段与条目」的答案 —— 只把 ``localization`` 换成计数 + 指纹，
-    体积从 ~39 MiB 降到 ~5.1 MiB，**小到足以入库**。
+    体积从 ~39 MiB 降到 ~6.0 MiB，**小到足以入库**。
 
     两个模式**形状相同**（都是 ``域 -> 名称 -> 字符串列表``），因此
     :func:`compare` 对两者都能用；但**不要拿精简版与完整版对 diff** ——
     那会把整个 ``localization`` 域报成「全删 + 全增」。
+
+    另外无条件写入**离线通道**要用的那几个域（``vanilla_keys`` / ``vocabulary``
+    / ``modifier_fields`` / ``mod_paths`` / ``icon_paths`` / ``ai_surface``）：
+    闸门 ①② 与 ``v3 ai-surface --check`` 在没游戏的机器上靠它们才跑得起来
+    （G-EXIT-2）。内容由 :mod:`pdx.vanilla_index` 与 :mod:`pdx.ai_surface`
+    产出 —— 与它们**在线**现算时用的是同一批函数，所以两条路的池子同源。
     """
     snap = Snapshot(version=config.game_version(), compact=compact)
     if verbose:
@@ -290,6 +296,18 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     snap.sections["doc_tables"] = _doc_tables_snapshot()
     if verbose:
         print(f"  生成表: {len(snap.sections['doc_tables'])} 张")
+
+    # ── 离线通道（G-EXIT-2）的原料 ──
+    # 闸门 ①② 与 `v3 ai-surface --check` 要回答「这个名字原版里有没有」，而
+    # CI runner 上没有游戏。这几域让它们能改用「当时记下来的原版真值」，
+    # 且与在线路径共用同一批抽取函数（`pdx.vanilla_index` / `pdx.ai_surface`）
+    # —— 不是另抄一份清单。
+    snap.sections.update(vanilla_index.snapshot_sections(config.GAME))
+    snap.sections[ai_surface.SECTION] = ai_surface.snapshot_section(config.GAME)
+    if verbose:
+        for name in (*vanilla_index.SECTIONS, ai_surface.SECTION):
+            body = snap.sections[name]
+            print(f"  {name}: {len(body)} 项 / {sum(len(v) for v in body.values()):,} 条")
     return snap
 
 

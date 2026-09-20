@@ -23,6 +23,11 @@
   不是"看起来没问题"；
 * **缺前置条件不等于通过**（P13）：原版目录不可用时 ①/② 报"前置条件缺失"
   （退出码 2），而不是静默跳过 —— 跳过会被当成绿灯；
+* **离线通道**（``--offline``）：①/② 的原版真值改读**入库精简快照**
+  （:mod:`pdx.vanilla_index`），于是没有游戏的机器（CI）也能真跑这两道闸门。
+  离线时逐项打印「本项由快照核验」，快照没覆盖到的项单独列成
+  **「离线未覆盖」并注明不算通过** —— 未覆盖不报红（否则 CI 永远红），
+  但也绝不算过（否则"没查"会被读成"通过"）；
 * **③ 的价格表来自阶段 2 实测**（`exec/阶段2-结果.md`：政治 S≈33 / 外交 S≈107 /
   行政 S≈690），不在这里重新拟合：换版本要重跑探针，而不是在这里改数字。
 """
@@ -32,13 +37,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from pdx import config, defines, modgen
-from pdx.cache import parse_cached
-from pdx.model import Block
+from pdx import config, modgen, vanilla_index
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from pathlib import Path
+
+    from pdx.vanilla_index import VanillaIndex
 
 #: 三槽的等效竞争权重（阶段 2 实测，`01a` N 节）。
 #:
@@ -118,17 +123,26 @@ class Finding:
     details: tuple[str, ...] = ()
     #: 前置条件缺失（没有游戏 / 没有产物）：CLI 按退出码 2 处理，不是"通过"。
     precondition: bool = False
+    #: 离线未覆盖的项（快照没覆盖到 ⇒ **不算通过**，也不报红；见模块文档）。
+    uncovered: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class Context:
-    """一次闸门运行的输入。"""
+    """一次闸门运行的输入。
+
+    ``vanilla`` 是①② 的原版真值来源（游戏本体或入库快照）；``None`` 表示两条
+    来源都没有 ⇒ ①② 报"前置条件缺失"（退出码 2）。``offline`` 只记录"是否
+    显式要求离线"，用来把报错措辞说准。
+    """
 
     archives: tuple[modgen.Archive, ...]
     built: modgen.Built
     root: Path
     game: Path
     data_dir: Path
+    vanilla: VanillaIndex | None = None
+    offline: bool = False
 
     @property
     def has_game(self) -> bool:
@@ -149,34 +163,46 @@ class Report:
     def missing_precondition(self) -> bool:
         return any(f.precondition for f in self.findings)
 
+    @property
+    def uncovered(self) -> tuple[str, ...]:
+        """离线未覆盖的全部项（**不算通过**：CI 上要看得见，但不报红）。"""
+        return tuple(item for f in self.findings for item in f.uncovered)
+
 
 def context(
     *,
     data_dir: Path | None = None,
     root: Path | None = None,
     game: Path | None = None,
+    offline: bool = False,
 ) -> Context:
-    """读数据源并编译一次，供各道闸门共用（避免每道闸门各读一遍）。"""
+    """读数据源并编译一次，供各道闸门共用（避免每道闸门各读一遍）。
+
+    ``offline=True`` 时原版真值**只认入库快照**（即使本机装了游戏）——
+    否则"离线通道"在本机永远走游戏那条路，等于从没测过 CI 要跑的那条。
+    """
     base = data_dir or modgen.DATA_DIR
     archives = modgen.load_all(base)
+    game_root = game or config.GAME
     return Context(
         archives=archives,
         built=modgen.build_all(archives),
         root=root or modgen.PRODUCT_DIR,
-        game=game or config.GAME,
+        game=game_root,
         data_dir=base,
+        vanilla=vanilla_index.load(offline=offline, game=game_root),
+        offline=offline,
     )
 
 
 # ── 原版侧的小工具 ──────────────────────────────────────────
 def vanilla_keys(directory: Path) -> set[str]:
-    """某个原版目录下全部 `.txt` 的**顶层键**（用仓库自己的解析器，带缓存）。"""
-    if not directory.is_dir():
-        return set()
-    out: set[str] = set()
-    for path in sorted(directory.rglob("*.txt")):
-        out.update(parse_cached(path).top_keys)
-    return out
+    """某个原版目录下全部 `.txt` 的**顶层键**（用仓库自己的解析器，带缓存）。
+
+    实现在 :mod:`pdx.vanilla_index`：那份实现同时给ゲート的**离线**通道用，
+    两处各写一份迟早会出现「在线池与离线池不是同一个集合」（G-EXIT-2）。
+    """
+    return vanilla_index.vanilla_keys(directory)
 
 
 def _vanilla_vocabulary(game: Path) -> set[str]:
@@ -187,17 +213,7 @@ def _vanilla_vocabulary(game: Path) -> set[str]:
     """
     out: set[str] = set()
     for rel in VOCABULARY_DIRS:
-        base = game / rel
-        if not base.is_dir():
-            continue
-        for path in sorted(base.rglob("*.txt")):
-            stack: list[Block] = [parse_cached(path).root]
-            while stack:
-                block = stack.pop()
-                for item in block.assignments():
-                    out.add(item.key)
-                    if isinstance(item.value, Block):
-                        stack.append(item.value)
+        out |= vanilla_index.vocabulary_dir(game / rel)
     return out
 
 
@@ -208,20 +224,7 @@ def modifier_fields(game: Path) -> set[str]:
     "修正体里写了哪些字段"，于是闸门 ② 能回答"我们写的这个字段原版真的存在吗"。
     原版 `00_code_static_modifiers.txt` 的 `base_values` 也是顶层修正，一并收进来。
     """
-    base = game / MODIFIER_FIELD_DIR
-    if not base.is_dir():
-        return set()
-    out: set[str] = set()
-    for path in sorted(base.rglob("*.txt")):
-        stack: list[Block] = [parse_cached(path).root]
-        while stack:
-            block = stack.pop()
-            for item in block.assignments():
-                if isinstance(item.value, Block):
-                    stack.append(item.value)
-                else:
-                    out.add(item.key)
-    return out
+    return vanilla_index.modifier_field_names(game / MODIFIER_FIELD_DIR)
 
 
 def definition_names(files: Mapping[str, str]) -> dict[str, set[str]]:
@@ -267,12 +270,102 @@ def _ref_name(value: str) -> str:
     return value.removeprefix("=")
 
 
-def _fail(gate: str, title: str, headline: str, details: Sequence[str]) -> Finding:
-    return Finding(gate=gate, title=title, ok=False, headline=headline, details=tuple(details))
+def _fail(
+    gate: str, title: str, headline: str, details: Sequence[str], uncovered: Sequence[str] = ()
+) -> Finding:
+    return Finding(
+        gate=gate,
+        title=title,
+        ok=False,
+        headline=headline,
+        details=tuple(details),
+        uncovered=tuple(uncovered),
+    )
 
 
-def _pass(gate: str, title: str, headline: str, details: Sequence[str] = ()) -> Finding:
-    return Finding(gate=gate, title=title, ok=True, headline=headline, details=tuple(details))
+def _pass(
+    gate: str,
+    title: str,
+    headline: str,
+    details: Sequence[str] = (),
+    uncovered: Sequence[str] = (),
+) -> Finding:
+    return Finding(
+        gate=gate,
+        title=title,
+        ok=True,
+        headline=headline,
+        details=tuple(details),
+        uncovered=tuple(uncovered),
+    )
+
+
+def _vanilla_index(ctx: Context) -> VanillaIndex | None:
+    """闸门 ①② 的原版真值来源（显式给的优先）。
+
+    **显式没给**且这台机器有游戏本体时，按改造前的口径现读游戏 —— 手工构造
+    ``Context``（用例里很常见）不该因为新增了一个字段就从"照常跑"变成
+    "前置条件缺失"。真正的"两条来源都没有"仍然由 :func:`_vanilla_missing`
+    报成前置条件缺失（退出码 2），不是静默通过。
+    """
+    if ctx.vanilla is not None:
+        return ctx.vanilla
+    if ctx.has_game:
+        return vanilla_index.load(offline=False, game=ctx.game)
+    return None
+
+
+def _vanilla_missing(ctx: Context, gate: str, title: str, needed: Sequence[str]) -> Finding:
+    """①② 的前置条件缺失（P13：缺料既不算过，也不许静默跳过）。
+
+    两种情况都归到这里：**两条真值来源都没有**（没游戏、也没要求离线），
+    以及**要了离线但快照答不了**（没有快照文件，或快照里缺这次要用的域）——
+    后者若当成"未覆盖"放过去，CI 会在一个过期的快照上常年亮绿灯。
+    """
+    index = ctx.vanilla
+    if index is None:
+        headline = (
+            f"前置条件缺失：离线模式要读入库精简快照，但 {config.OUT / 'snapshots'} 下"
+            "一份都没有 —— 在装了游戏的机器上跑 `v3 snapshot create --compact`（它入库）"
+            if ctx.offline
+            else f"前置条件缺失：找不到原版目录 {ctx.game}（可用环境变量 V3_ROOT 指定）"
+        )
+    else:
+        headline = (
+            f"前置条件缺失：{index.describe()} 缺离线闸门要用的域 "
+            f"{'、'.join(index.missing_sections(needed))} —— "
+            "用 `v3 snapshot create --compact` 重建快照"
+        )
+    return Finding(gate=gate, title=title, ok=False, headline=headline, precondition=True)
+
+
+def _offline_note(index: VanillaIndex) -> str:
+    """离线时的来源声明：**每一项**原版读点都由它核验（P13）。"""
+    return f"📸 离线：原版真值来自{index.describe()} —— 本道闸门的原版读点逐项由该快照核验"
+
+
+def _uncovered_details(uncovered: Sequence[str]) -> list[str]:
+    """快照没覆盖到的项：单列，且写明**不算通过**。"""
+    if not uncovered:
+        return []
+    lines = [f"⬜ 离线未覆盖（**不算通过**，共 {len(uncovered)} 项）："]
+    lines.extend(f"   · {item}" for item in uncovered)
+    return lines
+
+
+def _offline_suffix(index: VanillaIndex, uncovered: Sequence[str]) -> str:
+    """结论行上的离线标记 —— CI 日志里只看表格也能看出"这是快照说的"。"""
+    if not index.offline:
+        return ""
+    text = f"（离线：原版真值来自快照 {index.version or '?'}"
+    if uncovered:
+        text += f"；{len(uncovered)} 项未覆盖、不算通过"
+    return text + "）"
+
+
+def _pool_count(pool: Mapping[str, set[str]] | set[str] | None) -> str:
+    """池子大小（``len``）；快照没覆盖时打印"未覆盖"而不是一个假的 0。"""
+    return "未覆盖" if pool is None else str(len(pool))
 
 
 # ── ① 键 / 路径与原版不相交 ─────────────────────────────────
@@ -285,19 +378,22 @@ def gate_keys(ctx: Context) -> Finding:
       与原版顶层键取交集，交集必须为空 —— 除非登记在 :data:`OVERRIDE_BLOCKS`；
     * **命名空间与平铺**：文件名 `sitai_*`、深度恰好是"原版目录 + 文件名"，
       不自建子目录（1.14.3 实测子目录不被引擎枚举）。
+
+    离线（`--offline`）：前两件事的**原版侧**改读入库快照里的真值
+    （:data:`pdx.vanilla_index.SECTION_KEYS` / ``SECTION_PATHS``）—— 交给
+    :class:`pdx.vanilla_index.VanillaIndex` 判断，快照覆盖不到的路径单列成
+    「离线未覆盖」。第三件事本来就只看我们自己的产物，离线照跑。
     """
     _, key, title = GATES[0]
-    if not ctx.has_game:
-        return Finding(
-            gate=key,
-            title=title,
-            ok=False,
-            headline=f"前置条件缺失：找不到原版目录 {ctx.game}（可用环境变量 V3_ROOT 指定）",
-            precondition=True,
-        )
+    index = _vanilla_index(ctx)
+    if index is None or index.missing_sections(vanilla_index.KEYS_GATE_SECTIONS):
+        return _vanilla_missing(ctx, key, title, vanilla_index.KEYS_GATE_SECTIONS)
 
     problems: list[str] = []
     notes: list[str] = []
+    uncovered: list[str] = []
+    if index.offline:
+        notes.append(_offline_note(index))
 
     # ── 路径（含平铺与命名空间）──
     # 游戏侧文件（.txt / .yml）必须落在「原版目录 + 文件名」两层里；文档（.md）
@@ -312,7 +408,10 @@ def gate_keys(ctx: Context) -> Finding:
     for rel in game_side:
         if len(rel.split("/")) != 3:
             problems.append(f"不是「原版目录 + 文件名」两层的平铺结构：{rel}（F7：不自建子目录）")
-        if (ctx.game / rel).exists():
+        clash = index.path_exists(rel)
+        if clash is None:
+            uncovered.append(f"路径撞车检查：game/{rel}（快照未覆盖 {rel.rsplit('/', 1)[0]}/）")
+        elif clash:
             problems.append(f"路径与原版相撞：game/{rel} 已存在")
     notes.append(
         f"产物 {len(ctx.built.paths)} 个：游戏侧 {len(game_side)} 个（两层平铺）、"
@@ -323,22 +422,34 @@ def gate_keys(ctx: Context) -> Finding:
     ours = definition_names(ctx.built.files)
     overrides: list[str] = []
     for kind, names in sorted(ours.items()):
-        clash = names & vanilla_keys(ctx.game / DEFINITION_DIRS[kind])
-        allowed = {n for n in clash if n in OVERRIDE_BLOCKS}
+        pool = index.keys(DEFINITION_DIRS[kind])
+        if pool is None:
+            uncovered.append(f"{kind} 键名池（快照未覆盖 {DEFINITION_DIRS[kind]}/）")
+            continue
+        # ⚠️ 这里别复用上面那个 ``clash``（它在路径那一段是 ``bool | None``，
+        # 复用会让 mypy 把集合运算判成类型错，也让读者以为是同一个量）。
+        overlap = names & pool
+        allowed = {n for n in overlap if n in OVERRIDE_BLOCKS}
         problems.extend(
             f"{kind} 键与原版重名：{name}（原版 {DEFINITION_DIRS[kind]} 里已有）"
-            for name in sorted(clash - allowed)
+            for name in sorted(overlap - allowed)
         )
         overrides.extend(f"{kind} {name}：{OVERRIDE_BLOCKS[name]}" for name in sorted(allowed))
         notes.append(
-            f"{kind}：我们 {len(names)} 个键，与原版交集 {len(clash)} 个（登记覆盖 {len(allowed)} 个）"
+            f"{kind}：我们 {len(names)} 个键，与原版交集 {len(overlap)} 个（登记覆盖 {len(allowed)} 个）"
         )
 
-    details = [*notes, *[f"❌ {p}" for p in problems]]
+    details = [*notes, *_uncovered_details(uncovered), *[f"❌ {p}" for p in problems]]
     details.extend(f"ℹ️ 登记在案的覆盖：{o}" for o in overrides)
     if problems:
-        return _fail(key, title, f"{len(problems)} 处与原版相交（不许进游戏）", details)
-    return _pass(key, title, "路径、键、命名空间、平铺四项全过：与原版零交集", details)
+        return _fail(key, title, f"{len(problems)} 处与原版相交（不许进游戏）", details, uncovered)
+    return _pass(
+        key,
+        title,
+        "路径、键、命名空间、平铺四项全过：与原版零交集" + _offline_suffix(index, uncovered),
+        details,
+        uncovered,
+    )
 
 
 # ── ② 引用完整性 ────────────────────────────────────────────
@@ -350,19 +461,21 @@ def gate_refs(ctx: Context) -> Finding:
       从产物里自动抽出来，逐个解析；
     * **形状上认不出来的引用**（`legitimacy`、`set_variable` 这类原版词汇）——
       由数据源的 `[[references]]` 逐条声明，这里拿原版语料核对。
+
+    离线（`--offline`）：全部**原版侧**的池子（修正 / JE / 分组 / 图标 /
+    defines 参数 / 词汇表 / 国家 tag / 修正字段）改读入库快照，判定逻辑一字
+    不改；快照覆盖不到的项单列成「离线未覆盖」。
     """
     _, key, title = GATES[1]
-    if not ctx.has_game:
-        return Finding(
-            gate=key,
-            title=title,
-            ok=False,
-            headline=f"前置条件缺失：找不到原版目录 {ctx.game}（可用环境变量 V3_ROOT 指定）",
-            precondition=True,
-        )
+    index = _vanilla_index(ctx)
+    if index is None or index.missing_sections(vanilla_index.REFS_GATE_SECTIONS):
+        return _vanilla_missing(ctx, key, title, vanilla_index.REFS_GATE_SECTIONS)
 
     problems: list[str] = []
     notes: list[str] = []
+    uncovered: list[str] = []
+    if index.offline:
+        notes.append(_offline_note(index))
     facts = _facts_map(ctx.built.files)
     ours = definition_names(ctx.built.files)
     langs = loc_keys(ctx.built.files)
@@ -378,51 +491,69 @@ def gate_refs(ctx: Context) -> Finding:
 
     # ② 修正 / JE / 组：自家 ∪ 原版
     modifier_refs = {facts[path] for path in facts if path.endswith(".add_modifier.name")}
-    vanilla_modifiers = vanilla_keys(ctx.game / DEFINITION_DIRS["modifier"])
-    problems.extend(
-        f"引用了不存在的静态修正：{name}（自家产物与原版 static_modifiers 里都没有）"
-        for name in sorted(modifier_refs - ours["modifier"] - vanilla_modifiers)
-    )
+    vanilla_modifiers = index.keys(DEFINITION_DIRS["modifier"])
+    if vanilla_modifiers is None:
+        uncovered.append(f"静态修正池（快照未覆盖 {DEFINITION_DIRS['modifier']}/）")
+    else:
+        problems.extend(
+            f"引用了不存在的静态修正：{name}（自家产物与原版 static_modifiers 里都没有）"
+            for name in sorted(modifier_refs - ours["modifier"] - vanilla_modifiers)
+        )
     groups = {value for path, value in facts.items() if path.endswith(".group")}
-    vanilla_groups = vanilla_keys(ctx.game / "common/journal_entry_groups")
-    problems.extend(f"引用了不存在的 JE 分组：{name}" for name in sorted(groups - vanilla_groups))
+    vanilla_groups = index.keys("common/journal_entry_groups")
+    if vanilla_groups is None:
+        uncovered.append("JE 分组池（快照未覆盖 common/journal_entry_groups/）")
+    else:
+        problems.extend(
+            f"引用了不存在的 JE 分组：{name}" for name in sorted(groups - vanilla_groups)
+        )
     notes.append(
-        f"修正：引用 {len(modifier_refs)} 个（原版池 {len(vanilla_modifiers)} 个）；"
-        f"JE 分组：引用 {len(groups)} 个（原版 {len(vanilla_groups)} 个）"
+        f"修正：引用 {len(modifier_refs)} 个（原版池 {_pool_count(vanilla_modifiers)} 个）；"
+        f"JE 分组：引用 {len(groups)} 个（原版 {_pool_count(vanilla_groups)} 个）"
     )
 
     # ③ 递牌引用的 JE 必须存在（本档案为空，但闸门要能回答"加了牌之后呢"）
     je_refs = {
         _ref_name(value) for path, value in facts.items() if path.endswith(".has_journal_entry")
     }
-    ours_je = ours["journal_entry"] | vanilla_keys(ctx.game / DEFINITION_DIRS["journal_entry"])
-    problems.extend(f"牌引用了一个不存在的 JE：{name}" for name in sorted(je_refs - ours_je))
+    vanilla_je = index.keys(DEFINITION_DIRS["journal_entry"])
+    if vanilla_je is None:
+        uncovered.append(f"JE 池（快照未覆盖 {DEFINITION_DIRS['journal_entry']}/）")
+    else:
+        ours_je = ours["journal_entry"] | vanilla_je
+        problems.extend(f"牌引用了一个不存在的 JE：{name}" for name in sorted(je_refs - ours_je))
 
     # ④ 图标：路径必须在自家产物或原版里真实存在
     icons = {facts[path] for path in facts if path.endswith(".icon")}
-    problems.extend(
-        f"引用了不存在的图标：{icon}"
-        for icon in sorted(icons)
-        if not ((ctx.root / icon).is_file() or (ctx.game / icon).is_file())
-    )
+    for icon in sorted(icons):
+        if (ctx.root / icon).is_file():
+            continue
+        exists = index.icon_exists(icon)
+        if exists is None:
+            uncovered.append(f"图标 {icon}（快照未覆盖 {icon.rsplit('/', 1)[0]}/）")
+        elif not exists:
+            problems.append(f"引用了不存在的图标：{icon}")
     notes.append(f"图标：引用 {len(icons)} 个（全部落到真实文件）")
 
     # ⑤ defines 参数：键名必须在原版的同一个块里存在（阶段 2 的教训：改名即静默失效）
-    report = defines.extract_defines(ctx.game / "common" / "defines")
+    params = index.defines_params()
     checked = 0
-    for path in sorted(facts):
-        parts = path.split(".")
-        if len(parts) != 3 or parts[0] != "defines":
-            continue
-        block_name, param = parts[1], parts[2]
-        names = {p.name for ns in report.get(block_name) for p in ns.params}
-        checked += 1
-        if param not in names:
-            problems.append(
-                f"defines 参数不存在：{block_name}.{param}（原版 {block_name} 块里没有这个名字，"
-                "属于死配置 —— 阶段 2 的实测教训是「每版本核对键名」）"
-            )
-    notes.append(f"defines 参数：核对 {checked} 个（原版 {len(report.namespaces)} 个命名空间块）")
+    if params is None:
+        uncovered.append("defines 参数池（快照里没有 defines 域）")
+    else:
+        for path in sorted(facts):
+            parts = path.split(".")
+            if len(parts) != 3 or parts[0] != "defines":
+                continue
+            block_name, param = parts[1], parts[2]
+            names = params.get(block_name, set())
+            checked += 1
+            if param not in names:
+                problems.append(
+                    f"defines 参数不存在：{block_name}.{param}（原版 {block_name} 块里没有这个名字，"
+                    "属于死配置 —— 阶段 2 的实测教训是「每版本核对键名」）"
+                )
+    notes.append(f"defines 参数：核对 {checked} 个（原版 {_pool_count(params)} 个命名空间）")
 
     # ⑥ 本地化：JE 与修正都必须有文案，且每种语言都要有
     needed = set(ours["journal_entry"]) | ours["modifier"]
@@ -433,9 +564,9 @@ def gate_refs(ctx: Context) -> Finding:
     )
 
     # ⑦ 声明式引用：原版词汇表
-    vocabulary = _vanilla_vocabulary(ctx.game)
-    tags = vanilla_keys(ctx.game / "common" / "country_definitions")
-    fields = modifier_fields(ctx.game)
+    vocabulary = index.vocabulary()
+    tags = index.tags()
+    fields = index.modifier_fields()
     declared = 0
     for archive in ctx.archives:
         for ref in archive.references:
@@ -451,20 +582,35 @@ def gate_refs(ctx: Context) -> Finding:
                 "country_tag": tags,
                 "modifier_field": fields,
             }[ref.kind]
+            if pool is None:
+                uncovered.append(f"声明式引用 {ref.name}（{ref.kind} 池未覆盖）")
+                continue
             if ref.name not in pool:
                 problems.append(
                     f"原版里找不到这个{REFERENCE_KINDS[ref.kind].split('（')[0]}：{ref.name}"
                     f"（数据源 references 里声明的）"
                 )
     notes.append(
-        f"声明式引用：核对 {declared} 条（原版词汇表 {len(vocabulary)} 个键、"
-        f"国家 tag {len(tags)} 个、修正字段 {len(fields)} 个）"
+        f"声明式引用：核对 {declared} 条（原版词汇表 {_pool_count(vocabulary)} 个键、"
+        f"国家 tag {_pool_count(tags)} 个、修正字段 {_pool_count(fields)} 个）"
     )
 
-    details = [*notes, *[f"❌ {p}" for p in problems]]
+    details = [*notes, *_uncovered_details(uncovered), *[f"❌ {p}" for p in problems]]
     if problems:
-        return _fail(key, title, f"{len(problems)} 处引用解析不到（缺引用即红）", details)
-    return _pass(key, title, f"引用全部解析得到：{len(notes)} 类逐个核过，零缺失", details)
+        return _fail(
+            key,
+            title,
+            f"{len(problems)} 处引用解析不到（缺引用即红）",
+            details,
+            uncovered,
+        )
+    return _pass(
+        key,
+        title,
+        f"引用全部解析得到：{len(notes)} 类逐个核过，零缺失" + _offline_suffix(index, uncovered),
+        details,
+        uncovered,
+    )
 
 
 # ── ③ 稀释预算 ──────────────────────────────────────────────
@@ -697,6 +843,9 @@ def format_report(report: Report) -> str:
             continue
         lines += ["", f"**{finding.title} —— 明细**", ""]
         lines += [f"* {line}" for line in finding.details]
+    if report.uncovered:
+        lines += ["", f"**离线未覆盖（不算通过，{len(report.uncovered)} 项）**", ""]
+        lines += [f"* {item}" for item in report.uncovered]
     lines += ["", "**总判定**：" + ("五道闸门全过 ✅" if report.ok else "未通过 ❌（不许进游戏）")]
     return "\n".join(lines)
 

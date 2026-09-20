@@ -3428,7 +3428,7 @@ def product_kinds() -> frozenset[str]:
 #:
 #: 为什么需要这一层：`run_claims` 全部要读游戏本体，而 **CI 上没有游戏**，
 #: 于是那 63 条断言在 CI 上一条都不跑（`test_verify.py` 被自动跳过）。
-#: 而入库的精简快照（`tools/out/snapshots/*.compact.json`，约 5.1 MiB）
+#: 而入库的精简快照（`tools/out/snapshots/*.compact.json`，约 6.0 MiB）
 #: 里带着 common 各目录的条目名、defines 命名空间、DLC 清单 —— 足够核验其中一批。
 #:
 #: ⚠️ **它证明什么、不证明什么**（写清楚，否则又是自我安慰）：
@@ -3573,18 +3573,29 @@ def snapshot_kinds() -> frozenset[str]:
     return frozenset(_SNAPSHOT_GETTERS) | frozenset(_MANIFEST_GETTERS)
 
 
+def latest_compact_snapshot_path() -> Path | None:
+    """仓库里最新一份**精简快照**的路径；一份都没有时返回 ``None``。
+
+    「哪份快照算数」只有这一处定义：:func:`latest_compact_snapshot`（读内容）
+    与离线闸门（:mod:`pdx.vanilla_index`，要在输出里写明真值来自哪个文件）
+    都走它 —— 两处各写一份 glob，迟早会出现「verify 认、闸门不认」。
+    """
+    if not SNAPSHOT_DIR.is_dir():
+        return None
+    paths = sorted(SNAPSHOT_DIR.glob("*.compact.json"))
+    return paths[-1] if paths else None
+
+
 def latest_compact_snapshot() -> Snapshot | None:
     """仓库里最新的一份**精简快照**；一份都没有时返回 ``None``。
 
     只认 ``*.compact.json`` —— 完整快照不入库，而且体积大一个数量级。
     """
-    if not SNAPSHOT_DIR.is_dir():
-        return None
-    paths = sorted(SNAPSHOT_DIR.glob("*.compact.json"))
-    if not paths:
+    path = latest_compact_snapshot_path()
+    if path is None:
         return None
     try:
-        return Snapshot.load(paths[-1])
+        return Snapshot.load(path)
     except (OSError, ValueError):
         return None
 

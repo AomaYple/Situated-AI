@@ -12,6 +12,19 @@
 产物：``docs/design/02-可执行面.md``（由 ``v3 ai-surface --write`` 生成，**勿手改**）。
 人工判断（哪些因子进第一版、失败模式清单、H1 设计）写在
 ``docs/design/exec/阶段1-结果.md`` 里，与本模块无关。
+
+离线通道（``--offline``，G-EXIT-2）
+-----------------------------------
+本模块的三件事全部**枚举**自原版文件，而 CI runner 上没有游戏 ⇒ 原先
+``--check`` 在 CI 上只能报「前置条件缺失」。现在加一条读入库快照的路：
+
+* **编码**（:func:`snapshot_section`）：生成快照时把每张牌与 defines 面记进
+  ``域.ai_surface``（与在线读的是同一批函数）；
+* **解码**（:func:`read_offline`）：离线时按记录重建 :class:`Card` /
+  :class:`DefinesSurface`，再调用**同一个** :func:`render` ——
+
+所以「离线结论与在线一致」不是靠人工比对，而是同一条渲染路径。它证明的仍是
+「文档与**入库快照**一致」，不是「与现在的游戏一致」（那要本机 ``--write``）。
 """
 
 from __future__ import annotations
@@ -19,10 +32,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from pdx import config
+from pdx import config, vanilla_index
 from pdx.cache import parse_cached
 from pdx.model import Assignment, Block, Node, Scalar
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
 
 #: 策略文件所在目录（相对 ``game/``）。
 STRATEGY_DIR = Path("common") / "ai_strategies"
@@ -35,6 +52,15 @@ DOC_PATH = Path("docs") / "design" / "02-可执行面.md"
 
 #: 便于 CLI / 测试引用的路径字符串。
 DOC_REL = DOC_PATH.as_posix()
+
+#: 快照里存原版 AI 面的域（由 :func:`snapshot_section` 写入）。
+SECTION = "ai_surface"
+
+#: 快照域里牌记录的键前缀（``cards/<牌名>``）。
+CARD_PREFIX = "cards/"
+
+#: 快照域里 defines 面记录的键。
+DEFINES_KEY = "defines"
 
 #: 牌面上属于「元数据」而非行为参数的字段。
 META_FIELDS = frozenset({"icon", "type", "weight", "possible"})
@@ -524,26 +550,7 @@ def build(game: Path | None = None, *, top: int = 60) -> str:
     return render(cards, inputs, hits, defines, top=top)
 
 
-def write_doc(*, game: Path | None = None, repo: Path | None = None, top: int = 60) -> Path:
-    """生成并写盘，返回写入路径。"""
-    base = repo or config.REPO
-    text = build(game, top=top)
-    target = base / DOC_PATH
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(text, encoding="utf-8", newline="\n")
-    return target
-
-
-def check_doc(*, game: Path | None = None, repo: Path | None = None, top: int = 60) -> str:
-    """核对文档与生成结果；一致返回空串，否则返回差异说明。"""
-    base = repo or config.REPO
-    target = base / DOC_PATH
-    if not target.is_file():
-        return f"缺少 {DOC_REL} —— 先跑 `v3 ai-surface --write`"
-    current = target.read_text(encoding="utf-8")
-    expected = build(game, top=top)
-    if current == expected:
-        return ""
+def _first_diff(current: str, expected: str) -> str:
     cur_lines = current.splitlines()
     exp_lines = expected.splitlines()
     for idx, (a, b) in enumerate(zip(cur_lines, exp_lines, strict=False), start=1):
@@ -552,24 +559,219 @@ def check_doc(*, game: Path | None = None, repo: Path | None = None, top: int = 
     return f"{DOC_REL}: 行数不同（文档 {len(cur_lines)} 行，生成 {len(exp_lines)} 行）"
 
 
+# ── 离线通道（`--offline`）：读入库快照，不读游戏 ───────────────
+class OfflineUnavailableError(RuntimeError):
+    """离线通道不可用：仓库里没有入库快照，或快照里没有 ``ai_surface`` 域。
+
+    调用方（CLI）把它转成**退出码 2**（前置条件缺失）—— 缺料不是通过（P13）。
+    """
+
+
+def _encode_card(card: Card) -> list[str]:
+    """一张牌 → 快照记录（``键=值`` 逐条，排序去重）。"""
+    base = "" if card.weight_base is None else f"{card.weight_base:g}"
+    items = [
+        f"file={card.file}",
+        f"line={card.line}",
+        f"possible={'yes' if card.has_possible else 'no'}",
+        f"slot={card.slot}",
+        f"terms={card.weight_terms}",
+        f"weight_base={base}",
+    ]
+    items += [f"field={name}" for name in card.fields]
+    items += [f"weight_input={name}" for name in card.weight_inputs]
+    items += [f"possible_input={name}" for name in card.possible_inputs]
+    items += [f"field_input={name}" for name in card.field_inputs]
+    return sorted(set(items))
+
+
+def _encode_defines(surface: DefinesSurface) -> list[str]:
+    """defines 面 → 快照记录。
+
+    ``switch`` / ``notable`` 带**序号前缀**：它们在文档里是按原顺序打印的
+    （``00_ai.txt`` 块内顺序 / :data:`NOTABLE_DEFINES` 的顺序），而快照的域
+    一律要求「列表已排序」—— 用序号把顺序本身也记下来，两边都不破。
+    """
+    items = [f"lines={surface.lines}", f"nai_keys={surface.nai_keys}"]
+    items += [f"ai_key={name}" for name in surface.ai_keys]
+    items += [f"switch={i:04d}:{name}" for i, name in enumerate(surface.enabled_switches)]
+    items += [f"notable={i:04d}:{name}" for i, name in enumerate(surface.notable)]
+    return sorted(set(items))
+
+
+def snapshot_section(game: Path | None = None) -> dict[str, list[str]]:
+    """把原版 AI 面**编码**成快照域（供 :func:`pdx.snapshot.build` 调用）。
+
+    没有游戏（或 ``00_ai.txt`` 不在）时返回**空域**而不是半份记录：空域让离线
+    侧报「快照太旧 / 前置条件缺失」，而不是拿一份假真值去核对（P13）。
+    """
+    root = game or config.GAME
+    if not (root / STRATEGY_DIR).is_dir() or not (root / DEFINES_FILE).is_file():
+        return {}
+    out: dict[str, list[str]] = {DEFINES_KEY: _encode_defines(read_defines(game))}
+    for card in read_cards(game):
+        out[CARD_PREFIX + card.name] = _encode_card(card)
+    return dict(sorted(out.items()))
+
+
+def _split_records(items: Iterable[str]) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for item in items:
+        key, _, value = item.partition("=")
+        out.setdefault(key, []).append(value)
+    return out
+
+
+def _one(record: Mapping[str, list[str]], key: str) -> str:
+    values = record.get(key)
+    return values[0] if values else ""
+
+
+def _indexed(values: Iterable[str]) -> tuple[str, ...]:
+    """``0000:NAME`` → 按序号还原成原来的顺序。"""
+    pairs = []
+    for item in values:
+        order, _, name = item.partition(":")
+        pairs.append((int(order), name))
+    return tuple(name for _order, name in sorted(pairs))
+
+
+def _float_or_none(text: str) -> float | None:
+    return float(text) if text else None
+
+
+def cards_from_snapshot(section: Mapping[str, list[str]]) -> list[Card]:
+    """快照域 → 牌列表（字段口径与 :func:`read_cards` 逐个对应）。"""
+    cards: list[Card] = []
+    for name, items in sorted(section.items()):
+        if not name.startswith(CARD_PREFIX) or name == DEFINES_KEY:
+            continue
+        record = _split_records(items)
+        cards.append(
+            Card(
+                name=name.removeprefix(CARD_PREFIX),
+                slot=_one(record, "slot"),
+                file=_one(record, "file"),
+                line=int(_one(record, "line") or 0),
+                weight_base=_float_or_none(_one(record, "weight_base")),
+                weight_terms=int(_one(record, "terms") or 0),
+                has_possible=_one(record, "possible") == "yes",
+                fields=tuple(record.get("field", [])),
+                weight_inputs=tuple(record.get("weight_input", [])),
+                possible_inputs=tuple(record.get("possible_input", [])),
+                field_inputs=tuple(record.get("field_input", [])),
+            )
+        )
+    return cards
+
+
+def defines_from_snapshot(section: Mapping[str, list[str]]) -> DefinesSurface:
+    """快照域 → defines 面。"""
+    record = _split_records(section.get(DEFINES_KEY, []))
+    return DefinesSurface(
+        nai_keys=int(_one(record, "nai_keys") or 0),
+        enabled_switches=_indexed(record.get("switch", [])),
+        ai_keys=tuple(record.get("ai_key", [])),
+        notable=_indexed(record.get("notable", [])),
+        lines=int(_one(record, "lines") or 0),
+    )
+
+
+def offline_source() -> vanilla_index.VanillaIndex | None:
+    """离线来源（入库精简快照）；仓库里没有快照时返回 ``None``。"""
+    return vanilla_index.snapshot_index()
+
+
+def read_offline(
+    index: vanilla_index.VanillaIndex | None = None,
+) -> tuple[list[Card], DefinesSurface]:
+    """从入库快照读回原版 AI 面（不读游戏）。
+
+    读不到时抛 :class:`OfflineUnavailableError`，由 CLI 转成退出码 2 ——
+    **不是**静默通过：假装查过比不查更糟（P13）。
+    """
+    source = index if index is not None else offline_source()
+    if source is None:
+        snapshots = config.OUT / "snapshots"
+        raise OfflineUnavailableError(
+            f"前置条件缺失：离线模式要读入库的精简快照，但 {snapshots} 下一份都没有 —— "
+            "在装了游戏的机器上跑 `v3 snapshot create --compact` 生成一份（它入库）"
+        )
+    section = source.ai_surface()
+    if not section:
+        raise OfflineUnavailableError(
+            f"前置条件缺失：{source.describe()} 里没有 {SECTION} 域（快照是在这条通道"
+            "就位之前生成的）—— 用 `v3 snapshot create --compact` 重建一份"
+        )
+    return cards_from_snapshot(section), defines_from_snapshot(section)
+
+
+def build_offline(*, index: vanilla_index.VanillaIndex | None = None, top: int = 60) -> str:
+    """用入库快照里的原版 AI 面渲染全文（与 :func:`build` 同一个 :func:`render`）。"""
+    cards, surface = read_offline(index)
+    inputs = collect_inputs(cards)
+    return render(cards, inputs, factor_report(inputs), surface, top=top)
+
+
+def write_doc(
+    *, game: Path | None = None, repo: Path | None = None, top: int = 60, offline: bool = False
+) -> Path:
+    """生成并写盘，返回写入路径（``offline=True`` 时真值来自入库快照）。"""
+    base = repo or config.REPO
+    text = build_offline(top=top) if offline else build(game, top=top)
+    target = base / DOC_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8", newline="\n")
+    return target
+
+
+def check_doc(
+    *, game: Path | None = None, repo: Path | None = None, top: int = 60, offline: bool = False
+) -> str:
+    """核对文档与生成结果；一致返回空串，否则返回差异说明。
+
+    ``offline=True`` 时按**入库快照**重建再比（CI 上没有游戏）—— 判定逻辑
+    与在线完全同一段代码，只有真值来源不同。
+    """
+    base = repo or config.REPO
+    target = base / DOC_PATH
+    if not target.is_file():
+        return f"缺少 {DOC_REL} —— 先跑 `v3 ai-surface --write`"
+    current = target.read_text(encoding="utf-8")
+    expected = build_offline(top=top) if offline else build(game, top=top)
+    if current == expected:
+        return ""
+    return _first_diff(current, expected)
+
+
 __all__ = [
+    "CARD_PREFIX",
+    "DEFINES_KEY",
     "DOC_PATH",
     "DOC_REL",
     "FACTORS",
+    "SECTION",
     "STRATEGY_DIR",
     "Card",
     "DefinesSurface",
     "Factor",
     "FactorHit",
     "InputUse",
+    "OfflineUnavailableError",
     "build",
+    "build_offline",
     "card_from",
+    "cards_from_snapshot",
     "check_doc",
     "collect_inputs",
+    "defines_from_snapshot",
     "factor_report",
+    "offline_source",
     "read_cards",
     "read_defines",
+    "read_offline",
     "render",
+    "snapshot_section",
     "strategy_files",
     "write_doc",
 ]

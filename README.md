@@ -78,7 +78,7 @@ mod 相关信息，游戏升级后 `v3 snapshot diff` 一次就能看出 Paradox
 | 形态 | 命令 | 体积 | 是否入库 |
 |---|---|---:|---|
 | 完整快照 | `v3 snapshot create` | 约 39 MiB | 否（本机深挖用，含 14.5 万条本地化键） |
-| **精简快照** | `v3 snapshot create --compact` | 约 5.1 MiB | **是** —— 只留结构域，本地化换成「键数 + sha256」 |
+| **精简快照** | `v3 snapshot create --compact` | 约 6.0 MiB | **是** —— 只留结构域，本地化换成「键数 + sha256」 |
 
 精简快照入库的意义：**跨版本 diff 在别人的机器上也能做**，而不只是本机。
 

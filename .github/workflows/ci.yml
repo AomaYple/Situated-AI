@@ -71,7 +71,7 @@ jobs:
       - name: v3 verify —— 用入库快照核验一部分断言
         # 234 条断言里 43 条能用入库的离线真值核验，其余要读游戏本体 ——
         # CI 上没有游戏，所以 test_verify 那一族会被跳过。
-        # 入库的精简快照（tools/out/snapshots/*.compact.json，约 5.1 MiB）
+        # 入库的精简快照（tools/out/snapshots/*.compact.json，约 6.0 MiB）
         # 带着各目录条目名、defines 命名空间与 DLC 清单，官方文档清单带着 92 篇 .md 的篇数与字节数。
         # 这条**不读游戏**，因此能在 CI 上真跑 —— 它就是精简快照入库的理由。
         #
@@ -95,12 +95,25 @@ jobs:
         # 或改了数据源却忘了重新生成，这里立刻红。
         run: v3 modgen --check
 
-      # 注：`v3 modguard`（五道闸门）与 `v3 ai-surface --check` **仍然不在这里**。
-      # 闸门 ①② 要与原版键名/字段池取交集，`ai-surface` 要枚举原版 ai_strategies，
-      # 两者都得有游戏本体 ⇒ 在 CI 上只能报「前置条件缺失」退出 2
-      # （`ai-surface` 原先还会抛 traceback，已按 P13 改成退出 2）。
-      # 阶段 4 的 G-EXIT-2 正在给它们加"读入库快照"的 `--offline` 通道；
-      # 通道就位后这两条会一起进 CI，届时把这段注释删掉。
+      - name: v3 modguard --offline —— 五道闸门（原版真值走入库快照）
+        # 阶段 4 的 G-EXIT-2：闸门 ①② 要与原版键名 / 修正字段池取交集，
+        # 原先因此只能在本机跑（CI 上会以「前置条件缺失」退出 2）。
+        # `--offline` 让这两道闸门改读入库精简快照里的 6 个域
+        # （`vanilla_keys` / `vocabulary` / `modifier_fields` / `mod_paths` /
+        # `icon_paths` / `ai_surface`），于是**无游戏环境也能真跑**。
+        #
+        # 三条口径（都在 `pdx.vanilla_index` 的模块文档里写死了）：
+        #   * 快照缺域 ⇒ 该闸门**报未覆盖并退出 2**，绝不静默通过（P13）；
+        #   * 未覆盖的那一项**列在闸门明细里**，不会被算成"通过"；
+        #   * 它证明的是「产物与**入库快照**一致」，不是「与现在的游戏一致」——
+        #     后者仍是本机 `v3 modguard` 的活。两条合起来才完整。
+        run: v3 modguard --offline
+
+      - name: v3 ai-surface --check --offline —— 可执行面（同一份快照）
+        # 同一口径：`ai-surface` 的三件事全部枚举自原版 ai_strategies / defines，
+        # 离线时改读快照里的 `ai_surface` 域，并**复用同一个 render()** ——
+        # 所以两边渲染出来的文本逐字节相同（不是存了一份文档文本）。
+        run: v3 ai-surface --check --offline
 
       # 注：不带 `--offline` 的 `v3 tables`（重算表格）**仍然不在这里** ——
       # 它要读游戏本体才能算出内容，CI 上会以「前置条件缺失」退出 2。

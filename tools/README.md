@@ -295,7 +295,7 @@ tools/reports/mod分析.md          人可读报告
 另有**独立**的一条线：
 
 ```
-tools/out/snapshots/<版本>.compact.json   精简快照，约 5.1 MiB（**入库**，跨机器可 diff）
+tools/out/snapshots/<版本>.compact.json   精简快照，约 6.0 MiB（**入库**，跨机器可 diff）
 tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignore，本机深挖用）
 ```
 
@@ -305,7 +305,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 > ⚠️ **快照分两种，只有精简版入库**：完整快照 73% 的体积是本地化键清单
 > （11 种语言 × 14.5 万键），而「Paradox 增删了哪些字段与条目」只需要结构域。
 > 精简版保留 `common_entries` / `fields` / `defines` / `dlc` / `config` 五个域，
-> 只把 `localization` 换成「键数 + sha256」，因此 **不到 5 MiB 就能随仓库分发**，
+> 只把 `localization` 换成「键数 + sha256」，因此 **6 MiB 上下就能随仓库分发**，
 > 让 `v3 snapshot diff` 在别人的克隆里也能跑。
 > 想知道**具体**改了哪些本地化键，才需要那份约 39 MiB 的完整快照。
 >
