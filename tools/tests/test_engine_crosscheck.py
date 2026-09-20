@@ -42,6 +42,11 @@ def _needs_logs() -> None:
         pytest.skip(f"引擎日志不可用：{engine_log.default_log_dir()}")
     if not (config.GAME / "common").is_dir():
         pytest.skip("游戏目录不可用")
+    if engine_log.probe_session():
+        pytest.skip(
+            "本次日志来自**探针会话**（v3 experiment launch 只加载了两个探针 mod）—— "
+            "外部真值里的 mod 集与常规不同，比对必然假红。跑一次常规游戏即可恢复。"
+        )
 
 
 @pytest.fixture(scope="module")

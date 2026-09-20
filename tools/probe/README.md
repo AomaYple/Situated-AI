@@ -106,7 +106,9 @@ Missing UTF8 BOM in 'localization/.../zz_probe_l_english.yml'（error.log），
 | **P7 JE 三字段** | 字段都被接受；引擎固定找 `<JE键>_reason` / `<JE键>_goal` 两条 loc | `Journal entry is missing loc for zzprobe_je_reason!` |
 | **P9 按钮** | `desc` 是 loc 键；`selected` / `cooldown` 被接受 | `Unrecognized loc key zzprobe_button_desc` |
 | **P1 `apply_modifier`** | 我写的 `game_rules` 形状**非法**（候选本身写错了，不是字段的锅） | `Error: "Unexpected token: zzprobe_rule_setting"` in `zz_probe_game_rules.txt` |
-| **额外事实** | 本地化 `.yml` **必须**带 UTF-8 BOM（硬要求）；脚本 `.txt` 也**建议**带（非致命） | `Missing UTF8 BOM in '…'` / `lexer.cpp:285 … will try to use it anyways` |
+| **额外事实 1** | 本地化 `.yml` **必须**带 UTF-8 BOM（硬要求）；脚本 `.txt` 也**建议**带（非致命） | `Missing UTF8 BOM in '…'` / `lexer.cpp:285 … will try to use it anyways` |
+| **额外事实 2** | **决策的 `ai_chance` 里不能写 `base`**（与事件不同！我按事件的写法抄，被引擎拒） | `Error: "Unexpected token: base" in "common/decisions/zz_probe_decisions.txt" near line: 20` |
+| **额外事实 3** | 决策照样能点（上面那条只是让 `ai_chance` 块被忽略）—— 即**非致命** | 两个决议都正常出现在面板里并可点 |
 
 两条操作性教训（都已修进工具）：
 

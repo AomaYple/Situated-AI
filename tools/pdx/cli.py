@@ -1553,9 +1553,7 @@ def strings_cmd(
 def experiment_cmd(
     action: Annotated[
         str,
-        typer.Argument(
-            help="plan / install / uninstall / collect / launch（一键启动）/ restore"
-        ),
+        typer.Argument(help="plan / install / uninstall / collect / launch（一键启动）/ restore"),
     ] = "plan",
     only: Annotated[
         list[str] | None, typer.Option("--only", help="只处理某些实验编号，如 --only P2 --only P11")
@@ -1632,16 +1630,16 @@ def experiment_cmd(
             backup = experiments.set_enabled_mods(paths, path=content_load)
         except OSError as exc:
             _fail(f"准备启动失败：{type(exc).__name__}: {exc}")
-        console.print(
-            f"启用列表已改成只有探针（原列表备份在 {escape(str(backup or '（无）'))}）："
-        )
+        console.print(f"启用列表已改成只有探针（原列表备份在 {escape(str(backup or '（无）'))}）：")
         for path in paths:
             console.print(f"  {escape(str(path))}")
         try:
             proc = experiments.launch(debug=not no_debug)
         except (OSError, FileNotFoundError) as exc:
             _fail(f"启动游戏失败：{type(exc).__name__}: {exc}")
-        console.print(f"[green]游戏已启动（pid {proc.pid}，调试模式{'开' if not no_debug else '关'}）[/]")
+        console.print(
+            f"[green]游戏已启动（pid {proc.pid}，调试模式{'开' if not no_debug else '关'}）[/]"
+        )
         console.print(
             "照 3 experiment plan 的清单做：开新档 → 记国库 → 点两个探针决议 → 等事件 → 退出。"
         )

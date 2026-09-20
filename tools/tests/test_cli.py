@@ -127,6 +127,8 @@ def test_crosscheck_与引擎日志一致() -> None:
 
     if not engine_log.parse_logs()[0]:
         pytest.skip("本机没有引擎日志（需要运行过一次游戏）")
+    if engine_log.probe_session():
+        pytest.skip("日志来自探针会话（只加载了两个探针 mod），外部真值的 mod 集不同")
     r = _invoke("crosscheck")
     assert r.exit_code == 0, r.output
     assert "覆盖面缺口" in r.output

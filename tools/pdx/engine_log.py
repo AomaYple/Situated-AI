@@ -120,6 +120,29 @@ def default_log_dir() -> Path:
     return config.USERDIR / "logs"
 
 
+def probe_session(log_dir: Path | None = None) -> bool:
+    """当前日志是不是**探针会话**（只加载了 `tools/probe/` 那两个 mod）。
+
+    为什么要判它：`cross_check` 的整条逻辑是「拿游戏自己的日志当外部真值」——
+    而日志里的位置与枚举清单**取决于那次会话加载了哪些 mod**。跑过
+    `v3 experiment launch` 之后，日志描述的是「只有两个探针 mod」的世界，
+    与仓库分析的「23 个 workshop mod」世界对不上，比对必然假红。
+    实测踩过：探针会话之后 `test_token行号与引擎一致` 报 16 条不一致，
+    而失败原因与解析器毫无关系。
+    """
+    base = log_dir or default_log_dir()
+    if not base.is_dir():
+        return False
+    for path in sorted(base.glob("*.log")):
+        try:
+            head = path.read_text(encoding="utf-8", errors="replace")[:200_000]
+        except OSError:  # pragma: no cover - 权限/占用等极端情况
+            continue
+        if "zz_probe" in head or "ZZ Probe" in head:
+            return True
+    return False
+
+
 def parse_logs(log_dir: Path | None = None) -> tuple[list[EngineClaim], str]:
     """从引擎日志里抽出全部可用断言，返回 ``(断言列表, 日志版本)``。
 
