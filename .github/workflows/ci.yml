@@ -88,6 +88,20 @@ jobs:
         # 不证明「表与**现在的游戏**一致」—— 后者仍是本机 `v3 refresh` 的活。
         run: v3 tables --offline
 
+      - name: v3 modgen --check —— 产物与数据源逐字节一致
+        # 这条**不读游戏**（实测：把 `V3_ROOT` 指到不存在的路径，退出码仍是 0）——
+        # 它只比对 `mod/data/*.toml` 与盘上产物的字节，因此能在 CI 上真跑。
+        # 守的是 P3「仓库里不存在手写的游戏侧产物」：谁手改了 `mod/` 下的产物，
+        # 或改了数据源却忘了重新生成，这里立刻红。
+        run: v3 modgen --check
+
+      # 注：`v3 modguard`（五道闸门）与 `v3 ai-surface --check` **仍然不在这里**。
+      # 闸门 ①② 要与原版键名/字段池取交集，`ai-surface` 要枚举原版 ai_strategies，
+      # 两者都得有游戏本体 ⇒ 在 CI 上只能报「前置条件缺失」退出 2
+      # （`ai-surface` 原先还会抛 traceback，已按 P13 改成退出 2）。
+      # 阶段 4 的 G-EXIT-2 正在给它们加"读入库快照"的 `--offline` 通道；
+      # 通道就位后这两条会一起进 CI，届时把这段注释删掉。
+
       # 注：不带 `--offline` 的 `v3 tables`（重算表格）**仍然不在这里** ——
       # 它要读游戏本体才能算出内容，CI 上会以「前置条件缺失」退出 2。
       # 它与 `v3 verify` 一样属于本地门禁，由 `pytest -m integration` 在装有

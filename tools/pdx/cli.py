@@ -2075,6 +2075,18 @@ def ai_surface_cmd(
     产物 `docs/design/02-可执行面.md` **由本命令生成，勿手改**；`--check` 就是防手改的闸门
     （不一致退出码 1，可进 CI）。
     """
+    # 前置条件先挡一道（P13：缺前置条件要**明确报错**，不是抛 traceback）。
+    # 本命令的三件事全部枚举自原版文件，没有游戏本体时它连第一条都做不了 ——
+    # 实测过：不挡的话 `--check` 会在读 `common/defines/00_ai.txt` 时抛
+    # `FileNotFoundError` 并把整个 traceback 打到用户脸上。
+    # 与 `v3 modguard` / `v3 tables` 同一口径：报"前置条件缺失"，退出码 2。
+    if not config.GAME.is_dir():
+        _fail(
+            f"前置条件缺失：找不到原版目录 {config.GAME}（可用环境变量 V3_ROOT 指定）"
+            " —— 本命令的三件事全部枚举自原版 ai_strategies / defines，"
+            "没有游戏本体时不可用"
+        )
+
     if check:
         problem = ai_surface.check_doc(top=top)
         if problem:

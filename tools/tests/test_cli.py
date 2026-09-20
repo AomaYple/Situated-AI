@@ -160,6 +160,21 @@ def test_check_outputs_有产物时通过() -> None:
     assert r.exit_code == 0, r.output
 
 
+# ── ai-surface ──────────────────────────────────────────────
+def test_ai_surface_没有游戏时返回2(tmp_path, monkeypatch) -> None:
+    """P13：本命令的三件事全部枚举自原版文件 —— 没有游戏必须报前置条件缺失。
+
+    实测过不挡的后果：`--check` 在读 `common/defines/00_ai.txt` 时抛
+    `FileNotFoundError`，把 traceback 打到用户脸上（退出码 1），
+    与 `v3 modguard` / `v3 tables` 的"缺前置条件是 2、不是失败"口径不一致。
+    """
+    monkeypatch.setattr(cli.config, "GAME", tmp_path / "nope")
+    r = _invoke("ai-surface", "--check")
+    assert r.exit_code == 2, r.output
+    assert "前置条件缺失" in r.output
+    assert "V3_ROOT" in r.output, "提示要给出可操作的下一步（怎么指定游戏根目录）"
+
+
 # ── show ────────────────────────────────────────────────────
 @_needs_game
 def test_show_能转储产物结构() -> None:
