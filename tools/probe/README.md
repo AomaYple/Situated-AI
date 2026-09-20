@@ -89,6 +89,31 @@ Missing UTF8 BOM in 'localization/.../zz_probe_l_english.yml'（error.log），
   不写游戏安装目录；已存在时**不覆盖**（除非 `--force`）；
 * 收工后 `v3 experiment uninstall` 一条命令移除；本目录仍在仓库里，随时可重装。
 
+## 2026-09-20 首次实跑的结果
+
+一次会话（`experiment launch` → 点两个决议 → 跑 5 天 → 退出 → `collect`）拿到：
+
+| 编号 | 结论 | 引擎日志原文（节选） |
+|---|---|---|
+| **P2 裸同名键** | **先到先得**：后写的同键定义**不会被创建**，不合并、不报错 | `Duplicated key debug_success will not be created from file: common/scripted_effects/zz_probe_effects.txt:4` |
+| **P11 双 mod 抢同一个键** | **先加载者胜**：A（+1M）生效、B（+2M）未生效；`REPLACE_OR_CREATE` 不会让后写的 mod 覆盖先写的 | 该键**没有**重复警告（说明是合法替换操作） |
+| **P6 进度条样式** | **不接受自定义样式名**（硬报错） | `Error: "Unexpected token: zzprobe_made_up_style"` in `zz_probe_bars.txt` |
+| **P8 `orphan`** | 声明「这个事件不该被触发」；有调用者就警告 | `Event zzprobe.3 is scripted as an orphan, but has callers` |
+| **P8 `after`** | 效果**确实执行** | 国库 +2M 到账 |
+| **P8 `show_as_tooltip`** | 效果**不执行**（只生成 tooltip） | 国库**没有** +10M 跳变 |
+| **P3 重名 namespace** | **可以跨文件续写** | `Event test.99999 is orphaned`（只提示无调用者） |
+| **P10 本地化 `:数字`** | `:1` 没覆盖 `:0`（与「先到先得」一致；版本号本身是否参与优先级仍未单选确认） | 游戏内文本显示 `:0` 那句 |
+| **P7 JE 三字段** | 字段都被接受；引擎固定找 `<JE键>_reason` / `<JE键>_goal` 两条 loc | `Journal entry is missing loc for zzprobe_je_reason!` |
+| **P9 按钮** | `desc` 是 loc 键；`selected` / `cooldown` 被接受 | `Unrecognized loc key zzprobe_button_desc` |
+| **P1 `apply_modifier`** | 我写的 `game_rules` 形状**非法**（候选本身写错了，不是字段的锅） | `Error: "Unexpected token: zzprobe_rule_setting"` in `zz_probe_game_rules.txt` |
+| **额外事实** | 本地化 `.yml` **必须**带 UTF-8 BOM（硬要求）；脚本 `.txt` 也**建议**带（非致命） | `Missing UTF8 BOM in '…'` / `lexer.cpp:285 … will try to use it anyways` |
+
+两条操作性教训（都已修进工具）：
+
+1. **金额必须 M 级**：国库只显示 M，`+111` 这种小数根本读不出来 —— 探针里的钱现在都是 10⁵–10⁷；
+2. **故意写错的候选会让游戏起不来**：第一次启动直接死在加载阶段，所以它们被拆到
+   `zz_probe_risky`，默认不启用（`launch --risky` 单独跑，那一趟不用点任何东西）。
+
 ## 覆盖不到的部分
 
 * **GUI 侧**（`scripted_list` 在 `.gui` 里的引用方式、界面绑定）：探针只测脚本侧，

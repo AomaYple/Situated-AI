@@ -223,6 +223,15 @@ INJECT_OR_CREATE  →  REPLACE_OR_CREATE  →  TRY_INJECT
 
 ### 5.2 传统机制：同键名覆盖 / 整文件替换
 
+> **2026-09-20 实测补两条**（探针 mod + 一次真实游戏会话，3 experiment）：
+> 1. **裸同名键（不带前缀）＝ 先到先得**：在新增文件里重定义原版键，引擎逐字报
+>    Duplicated key debug_success will not be created from file: …/zz_probe_effects.txt:4
+>    —— 后写的那份**不会被创建**，不合并、不报错；国库只涨了原版的 50,000。
+> 2. **两个 mod 用同一种前缀抢同一个键时，也是先加载者胜**：A（+1M）在启用列表里排在
+>    B（+2M）前面，实测只有 A 生效，且日志对那个键**没有**重复警告 ——
+>    说明 REPLACE_OR_CREATE 只对「已存在的条目」做替换，**不会让后写的 mod 覆盖先写的 mod**。
+>    这一条修正了本文早期对前缀语义的简化说法（见 §5.1 的语义列）。
+
 **【官方】** `game\common\on_actions\_on_actions.md` 明确说明了合并规则（这是全部数据文件共通的模式）：
 
 > You can declare data for on-actions in multiple files, however, **you cannot have multiple triggers or effect blocks for a given named on-action**. In particular, you cannot append an effect block directly to an on_action which already has an effect block, as this creates a conflict.

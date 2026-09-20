@@ -5,11 +5,11 @@ zzprobe.1 = {
 	type = country_event
 	title = zzprobe_ev1_title
 	desc = zzprobe_ev1_desc
-	after = { add_treasury = 100 }
+	after = { add_treasury = 2000000 }
 	option = {
 		name = zzprobe_ev1_opt
-		show_as_tooltip = { add_treasury = 1000 }
-		add_treasury = 1
+		show_as_tooltip = { add_treasury = 10000000 }
+		add_treasury = 1000000
 	}
 }
 

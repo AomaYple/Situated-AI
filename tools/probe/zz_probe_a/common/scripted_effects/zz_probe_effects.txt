@@ -5,14 +5,15 @@ debug_success = {
 	add_treasury = 1
 }
 
-# 对照效果：证明「决议 → scripted_effect」这条链路本身是通的（+1）
+# 对照效果：证明「决议 → scripted_effect」这条链路本身是通的
+# ⚠️ 金额必须是 M 级：国库只显示 M，小额根本读不出来（实测踩过）
 zzprobe_control_effect = {
-	add_treasury = 1
+	add_treasury = 1000000
 }
 
 # P11：双 mod 同名键 —— zz_probe_b 用**同样的前缀**抢同一个键、值不同。
 # 两个 mod 都用 REPLACE_OR_CREATE，才能干净地测「谁后加载谁赢」：
 # 国库 +111 = A 赢；+222 = B 赢；+333 = 叠加（说明不是整体替换）。
 REPLACE_OR_CREATE:zzprobe_shared = {
-	add_treasury = 111
+	add_treasury = 1000000
 }

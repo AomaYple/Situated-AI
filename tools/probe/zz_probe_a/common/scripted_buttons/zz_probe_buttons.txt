@@ -6,5 +6,5 @@ zzprobe_button = {
 	selected = { always = yes }
 	visible = { always = yes }
 	cooldown = { days = 1 }
-	effect = { add_treasury = 1 }
+	effect = { add_treasury = 500000 }
 }
