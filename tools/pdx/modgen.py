@@ -40,6 +40,17 @@ P3 说「引擎脚本由 Python 生成，人只改数据源」，F10 说「生�
 ===============================  ==========================================
 
 > **文档（`.md`）不在往返净度的范围内**：它是给人看的，由闸门 ⑤ 的可复现性守着。
+
+数据源 schema v1（阶段 4 · 第一步）
+-----------------------------------
+* 一份数据源 = 一份**档案**：必填 `archive / memory / pressure / journal_entry / cards /
+  localization / references`，可选 `reform_inputs`（第二处理段）与 `tempo`（节奏杠杆）；
+* **`[tempo]` 与 `.metadata/metadata.json` 是 mod 级产物**：`defines` 没有单国写法，
+  所以 `[tempo]` 全仓只允许**一份**（0 份或 2 份都当场报错）；元数据由**全部档案合成一份**
+  （一份 mod 只有一个 `id` 与一个 `supported_game_version`，因此档案之间的 `game_version`
+  必须一致）；
+* **加一个处境 = 加一份 `mod/data/*.toml`**：既有档案的产物逐字节不变
+  （``build_all`` 的组合规则保证这条，用例钉着它）。
 """
 
 from __future__ import annotations
@@ -179,7 +190,11 @@ class Condition(Clause):
 
 @dataclass(frozen=True, slots=True)
 class Tempo:
-    """节奏杠杆：覆盖某个 defines 块下的若干参数。"""
+    """节奏杠杆：覆盖某个 defines 块下的若干参数。
+
+    **mod 级表**：`defines` 没有单国写法，所以 `[tempo]` 全仓只允许一份
+    （见 :func:`build_all` 的检查）；第二份档案不该复制一遍。
+    """
 
     block: str
     why: str
@@ -277,7 +292,7 @@ class Archive:
     country: str
     game_version: str
     why: str
-    tempo: Tempo
+    tempo: Tempo | None
     memory: Memory
     pressure: Pressure
     journal_entry: JournalEntry
@@ -307,6 +322,12 @@ class Archive:
 
     @property
     def defines_file(self) -> str:
+        """节奏杠杆的产物路径。
+
+        名字仍带**声明它的那份档案**的 id（`sitai_<id>_tempo.txt`）—— 它是全局的，
+        档案只是它的来源（见 :func:`defines_text` 的注释头）。没有 `[tempo]` 的档案
+        不产出这个文件，所以 :func:`archive_files` 只在 `tempo is not None` 时收它。
+        """
         return f"common/defines/{FILE_PREFIX}{self.id}_tempo.txt"
 
     @property
@@ -319,6 +340,22 @@ class Archive:
     def card_file(self, card: Card) -> str:
         slug = card.name.removeprefix("ai_strategy_")
         return f"common/ai_strategies/{slug}.txt"
+
+
+def archive_files(archive: Archive) -> tuple[str, ...]:
+    """这份档案**自己的**产物路径（不含 mod 级产物）。
+
+    闸门 ④ 用它把"从产物反解出来的事实"按档案切开 —— 多档案时拿全产物并集去比，
+    会把别家档案的事实算成"多出"。
+    """
+    out = [archive.effect_file, archive.modifier_file, archive.journal_file, archive.doc_file]
+    if archive.tempo is not None:
+        out.append(archive.defines_file)
+    if archive.inputs is not None:
+        out.append(archive.inputs_file)
+    out.extend(archive.loc_file(lang) for lang in sorted(LANGUAGES))
+    out.extend(archive.card_file(card) for card in archive.cards)
+    return tuple(out)
 
 
 @dataclass(frozen=True, slots=True)
@@ -492,17 +529,21 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
     numbers, whys = audit(data)
 
     archive = _require_table(data.get("archive"), f"{source}:archive")
-    tempo_raw = _require_table(data.get("tempo"), f"{source}:tempo")
     memory_raw = _require_table(data.get("memory"), f"{source}:memory")
     pressure_raw = _require_table(data.get("pressure"), f"{source}:pressure")
     journal_raw = _require_table(data.get("journal_entry"), f"{source}:journal_entry")
     cards_raw = _require_table(data.get("cards"), f"{source}:cards")
 
-    tempo = Tempo(
-        block=_require_text(tempo_raw, "block", "tempo"),
-        why=_why(tempo_raw, "tempo"),
-        keys=_params(tempo_raw, "keys", "tempo"),
-    )
+    # `[tempo]` 是**可选**的 mod 级表（schema v1）：第二份档案不该复制一遍全局 defines。
+    # "恰好一份"这条由 build_all 在全仓范围上判 —— 单份数据源看不出这件事。
+    tempo: Tempo | None = None
+    if "tempo" in data:
+        tempo_raw = _require_table(data["tempo"], f"{source}:tempo")
+        tempo = Tempo(
+            block=_require_text(tempo_raw, "block", "tempo"),
+            why=_why(tempo_raw, "tempo"),
+            keys=_params(tempo_raw, "keys", "tempo"),
+        )
     memory = Memory(
         variable=_require_text(memory_raw, "variable", "memory"),
         effect=_require_text(memory_raw, "effect", "memory"),
@@ -825,8 +866,14 @@ def journal_text(archive: Archive) -> str:
 
 
 def defines_text(archive: Archive) -> str:
-    """节奏杠杆：按「块 + 参数」覆盖，**不复制**原版 defines 文件。"""
+    """节奏杠杆：按「块 + 参数」覆盖，**不复制**原版 defines 文件。
+
+    只有声明了 `[tempo]` 的那份档案会产出这个文件（mod 级表，全仓一份）——
+    调用方要先看 :attr:`Archive.tempo` 是不是 ``None``（生成器不猜）。
+    """
     tempo = archive.tempo
+    if tempo is None:  # pragma: no cover - 调用方按 Archive.tempo 分支，这里只兜底
+        raise DataError(f"档案 {archive.id} 没有 [tempo]，不该走到这里")
     lines: list[Node] = [
         GEN_HEADER,
         "",
@@ -889,19 +936,33 @@ def loc_text(archive: Archive, lang: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def metadata_text(archive: Archive) -> str:
-    """`descriptor` 用的元数据（JSON，**不带 BOM** —— 读它的是启动器）。"""
-    payload = {
-        "name": f"SITAI 处境档案 · {archive.title}",
-        "id": f"{NAMESPACE_PREFIX.rstrip('_')}.{archive.id}",
+def metadata_payload(archives: Sequence[Archive]) -> dict[str, object]:
+    """mod 级元数据的内容 —— **唯一来源**（:func:`metadata_text` 与事实表都读它）。
+
+    一份 mod 只有一份元数据，所以它必须由**全部**档案导出，而不是某一份档案的私产：
+
+    * ``name`` / ``short_description``：把各档案的标题与 `why` 连起来
+      （单档案时与阶段 3 的产物**逐字节一致**，闸门 ⑤ 守着这条）；
+    * ``id``：各档案 id 按字典序用 `-` 连接（单档案时就是 `sitai.<id>`）；
+    * ``supported_game_version``：取第一个档案的版本 —— 不一致由 :func:`build_all` 拦下。
+    """
+    if not archives:
+        raise DataError("没有档案就没有元数据（空产物不是成功）")
+    return {
+        "name": "SITAI 处境档案 · " + "、".join(a.title for a in archives),
+        "id": f"{NAMESPACE_PREFIX.rstrip('_')}.{'-'.join(sorted(a.id for a in archives))}",
         "version": MOD_VERSION,
-        "supported_game_version": archive.game_version,
-        "short_description": archive.why,
+        "supported_game_version": archives[0].game_version,
+        "short_description": "\n\n".join(a.why for a in archives),
         "tags": [],
         "relationships": [],
         "game_custom_data": {"multiplayer_synchronized": False},
     }
-    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+
+def metadata_text(archives: Sequence[Archive]) -> str:
+    """`descriptor` 用的元数据（JSON，**不带 BOM** —— 读它的是启动器）。"""
+    return json.dumps(metadata_payload(archives), ensure_ascii=False, indent=2) + "\n"
 
 
 def doc_text(archive: Archive) -> str:
@@ -925,7 +986,11 @@ def doc_text(archive: Archive) -> str:
         f"| `{archive.effect_file}` | 冲击记账效果（写 `{archive.memory.variable}` + 挂 `{archive.pressure.name}`） |",
         f"| `{archive.modifier_file}` | 压力修正（真实的合法性 / 贵族 / 财政变化） |",
         f"| `{archive.journal_file}` | 改革窗口 JE（判据驱动） |",
-        f"| `{archive.defines_file}` | 节奏杠杆（覆盖 `{archive.tempo.block}` 块） |",
+        *(
+            [(f"| `{archive.defines_file}` | 节奏杠杆（覆盖 `{archive.tempo.block}` 块） |")]
+            if archive.tempo is not None
+            else ["| —— | 本档案不声明 `[tempo]`（全仓一份的 mod 级表，由另一份数据源声明） |"]
+        ),
         *(
             [
                 (
@@ -973,16 +1038,48 @@ def doc_text(archive: Archive) -> str:
 
 
 # ── 编译 ────────────────────────────────────────────────────
-def build(archive: Archive) -> Built:
-    """把一份档案编译成 ``relpath → 文本``（相对产物根）。"""
+def _check_tempo(archives: Sequence[Archive]) -> None:
+    """`[tempo]` 是全仓一份的 **mod 级**表：0 份或 2 份都当场报错（schema v1）。
+
+    为什么 0 份也报错：`defines` 是全局的，"整份 mod 不带节奏段"是个**设计决定**
+    （节奏覆盖是"喂进去的输入能被读到"的前提，见 `mod/data/ru_defeat.toml` 的
+    `[tempo].why`），不能靠"少了一个文件"来隐式表达（P13：不许静默降级）。
+    """
+    owners = [archive for archive in archives if archive.tempo is not None]
+    if not owners:
+        raise DataError(
+            "没有任何数据源声明 [tempo]：defines 是全局的，节奏杠杆全仓只允许一份 —— "
+            "整份 mod 要不要节奏段必须显式写出来，不能靠少一个产物来表达"
+        )
+    if len(owners) > 1:
+        raise DataError(
+            "这些数据源都声明了 [tempo]："
+            + "、".join(archive.source for archive in owners)
+            + " —— defines 没有单国写法，全仓只允许一份（改哪一份而不是两份都留）"
+        )
+
+
+def _check_game_version(archives: Sequence[Archive]) -> None:
+    """一份 mod 只有一个 `supported_game_version`：档案之间不一致就是数据源在骗人。"""
+    versions = sorted({archive.game_version for archive in archives})
+    if len(versions) > 1:
+        raise DataError(
+            "这些数据源的 game_version 不一致："
+            + "、".join(versions)
+            + " —— 元数据只有一份，钉住的引擎版本只能有一个（改数据源，不是改这里）"
+        )
+
+
+def _build_one(archive: Archive) -> Built:
+    """单份档案**自己的**产物（不含 mod 级的 `.metadata/metadata.json`）。"""
     files: dict[str, str] = {
         archive.effect_file: effects_text(archive),
         archive.modifier_file: modifier_text(archive),
         archive.journal_file: journal_text(archive),
-        archive.defines_file: defines_text(archive),
         archive.doc_file: doc_text(archive),
-        METADATA_REL: metadata_text(archive),
     }
+    if archive.tempo is not None:
+        files[archive.defines_file] = defines_text(archive)
     if archive.inputs is not None:
         files[archive.inputs_file] = inputs_text(archive)
     for lang in sorted(LANGUAGES):
@@ -992,17 +1089,35 @@ def build(archive: Archive) -> Built:
     return Built(archive_ids=(archive.id,), files=files, numbers=archive.numbers)
 
 
+def build(archive: Archive) -> Built:
+    """把**一份**档案编译成 ``relpath → 文本``（相对产物根）。
+
+    就是 ``build_all([archive])`` 的简写 —— 两条路径共用同一套组合规则，
+    免得"单档案构建"与"多档案构建"悄悄分叉。
+    """
+    return build_all([archive])
+
+
 def build_all(archives: Sequence[Archive]) -> Built:
     """把多份档案合成一次构建。
 
-    产物路径冲突 = 两份档案写了同一个文件 —— 当场报错：静默覆盖会让
-    "哪份档案在起作用"变成无解的问题。
+    三件事在这里一次做完（都是"单份数据源看不出、必须全仓看"的检查）：
+
+    * 产物路径冲突 = 两份档案写了同一个文件 —— 当场报错：静默覆盖会让
+      "哪份档案在起作用"变成无解的问题；
+    * `[tempo]` 恰好一份、档案之间 `game_version` 一致（schema v1，见模块文档）；
+    * mod 级元数据**最后**合成一份（它读的是全部档案）。
     """
+    if not archives:
+        raise DataError("一份档案都没有：产物不能凭空生成（数据源目录是空的？）")
+    _check_tempo(archives)
+    _check_game_version(archives)
+
     files: dict[str, str] = {}
     numbers: list[Number] = []
     ids: list[str] = []
     for archive in archives:
-        built = build(archive)
+        built = _build_one(archive)
         clash = sorted(set(built.files) & set(files))
         if clash:
             raise DataError(
@@ -1012,6 +1127,7 @@ def build_all(archives: Sequence[Archive]) -> Built:
         files.update(built.files)
         numbers.extend(built.numbers)
         ids.append(archive.id)
+    files[METADATA_REL] = metadata_text(archives)
     return Built(archive_ids=tuple(ids), files=files, numbers=tuple(numbers))
 
 
@@ -1131,11 +1247,23 @@ def why_tables(archive: Archive) -> str:
 
 
 # ── 事实表与反解（闸门 ④ 的两端）────────────────────────────
+def metadata_facts(archives: Sequence[Archive]) -> list[tuple[str, str]]:
+    """mod 级元数据的事实表（路径与 :func:`readback` 读出来的三条一致）。"""
+    payload = metadata_payload(archives)
+    return sorted(
+        (f"metadata.{key}", str(payload.get(key, "")))
+        for key in ("id", "version", "supported_game_version")
+    )
+
+
 def facts(archive: Archive) -> list[tuple[str, str]]:
     """数据源 → 扁平事实表 ``(路径, 值)``。
 
     路径用点号串起结构（``modifier.<名>.<字段>``），值一律是字符串 —— 于是
     "数据源"与"从产物反解出来的东西"可以直接做集合比对（闸门 ④）。
+
+    **单档案口径**：`metadata.*` 走 :func:`metadata_facts`（单档案时与旧的
+    `sitai.<id>` 写法逐字节一致），`[tempo]` 只有声明了它的档案才有这几条。
     """
     out: list[tuple[str, str]] = [
         (f"effects.{archive.memory.effect}.set_variable.name", archive.memory.variable),
@@ -1143,9 +1271,7 @@ def facts(archive: Archive) -> list[tuple[str, str]]:
         (f"modifier.{archive.pressure.name}.icon", archive.pressure.icon),
         (f"journal_entry.{archive.journal_entry.name}.icon", archive.journal_entry.icon),
         (f"journal_entry.{archive.journal_entry.name}.group", archive.journal_entry.group),
-        ("metadata.id", f"{NAMESPACE_PREFIX.rstrip('_')}.{archive.id}"),
-        ("metadata.version", MOD_VERSION),
-        ("metadata.supported_game_version", archive.game_version),
+        *metadata_facts([archive]),
     ]
     out.extend(
         (f"effects.{archive.memory.effect}.set_variable.{p.key}", num(p.amount))
@@ -1167,9 +1293,10 @@ def facts(archive: Archive) -> list[tuple[str, str]]:
         (f"journal_entry.{archive.journal_entry.name}.{c.gate}.{c.key}", c.fact())
         for c in archive.journal_entry.conditions
     )
-    out.extend(
-        (f"defines.{archive.tempo.block}.{p.key}", num(p.amount)) for p in archive.tempo.keys
-    )
+    if archive.tempo is not None:
+        out.extend(
+            (f"defines.{archive.tempo.block}.{p.key}", num(p.amount)) for p in archive.tempo.keys
+        )
     if archive.inputs is not None:
         inputs = archive.inputs
         out.append((f"effects.{inputs.effect}.add_modifier.name", inputs.name))
@@ -1381,6 +1508,7 @@ __all__ = [
     "Pressure",
     "Reference",
     "Tempo",
+    "archive_files",
     "audit",
     "build",
     "build_all",
@@ -1396,6 +1524,8 @@ __all__ = [
     "load_all",
     "load_data",
     "loc_text",
+    "metadata_facts",
+    "metadata_payload",
     "metadata_text",
     "modifier_text",
     "num",

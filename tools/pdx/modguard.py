@@ -239,12 +239,18 @@ def definition_names(files: Mapping[str, str]) -> dict[str, set[str]]:
 
 
 def loc_keys(files: Mapping[str, str]) -> dict[str, set[str]]:
-    """产物里各语言的本地化键。"""
+    """产物里各语言的本地化键 —— **按语言累加**，不是"最后一个文件赢"。
+
+    多档案时每种语言会有多个 `.yml`（一份档案一个）。原先的覆盖式赋值
+    （``out[lang] = set(...)``）在单档案下看不出问题，两档案时会**整批丢掉**
+    先读那份档案的键 —— 症状是闸门 ② 报"english 缺本地化键：je_sitai_ru_…"，
+    而那个键明明在 `sitai_ru_defeat_l_english.yml` 里。判据错，不是产物错。
+    """
     out: dict[str, set[str]] = {}
     for rel, text in files.items():
         parts = rel.split("/")
         if len(parts) == 3 and parts[0] == "localization":
-            out[parts[1]] = set(modgen.parse_loc_text(text))
+            out.setdefault(parts[1], set()).update(modgen.parse_loc_text(text))
     return out
 
 
@@ -530,27 +536,51 @@ def gate_dilution(ctx: Context) -> Finding:
 
 # ── ④ 往返净度 ──────────────────────────────────────────────
 def gate_roundtrip(ctx: Context) -> Finding:
-    """④ 生成 → 按 PDX 语法解析回来 → 与数据源逐条比对（无丢失字段）。"""
+    """④ 生成 → 按 PDX 语法解析回来 → 与数据源逐条比对（无丢失字段）。
+
+    **多档案口径（schema v1）：按档案切分再比。** 每条档案只拿**它自己的**产物去反解 ——
+    拿全产物并集去比会把别家档案的事实算成"多出"（阶段 4 实测：两份档案互报
+    extra 30 / 31 条、missing 各 1 条），那是**判据错**，不是产物错。
+    mod 级元数据是**合成**的（一份 mod 只有一份），所以单独比一次。
+    """
     _, key, title = GATES[3]
-    try:
-        back = modgen.readback(ctx.built.files)
-    except modgen.DataError as exc:
-        return _fail(key, title, "产物解析失败（生成物语法有错）", [str(exc)])
+    files = ctx.built.files
 
     details: list[str] = []
     problems: list[str] = []
+
     for archive in ctx.archives:
-        want = modgen.facts(archive)
+        own = {rel: files[rel] for rel in modgen.archive_files(archive) if rel in files}
+        try:
+            back = modgen.readback(own)
+        except modgen.DataError as exc:
+            return _fail(key, title, f"产物解析失败（{archive.id} 的生成物语法有错）", [str(exc)])
+        # 元数据不在这条档案的产物里（它被合成进 METADATA_REL）⇒ 比之前先摘掉
+        want = [item for item in modgen.facts(archive) if not item[0].startswith("metadata.")]
         missing = [item for item in want if item not in back]
         extra = [item for item in back if item not in want]
         details.append(
             f"{archive.id}：数据源 {len(want)} 条事实 / 产物反解 {len(back)} 条，"
-            f"缺 {len(missing)}、多 {len(extra)}"
+            f"缺 {len(missing)}、多 {len(extra)}（只比这条档案自己的 {len(own)} 个产物）"
         )
         problems.extend(f"{archive.id} 产物里读不到：{path} = {value}" for path, value in missing)
         problems.extend(
             f"{archive.id} 产物里多出数据源没写的：{path} = {value}" for path, value in extra
         )
+
+    meta_want = modgen.metadata_facts(ctx.archives)
+    try:
+        meta_back = modgen.readback({modgen.METADATA_REL: files[modgen.METADATA_REL]})
+    except modgen.DataError as exc:
+        return _fail(key, title, "mod 级元数据解析失败（生成物语法有错）", [str(exc)])
+    meta_missing = [item for item in meta_want if item not in meta_back]
+    meta_extra = [item for item in meta_back if item not in meta_want]
+    details.append(
+        f"mod 级元数据（{len(ctx.archives)} 份档案合成）：{len(meta_want)} 条事实 / "
+        f"产物反解 {len(meta_back)} 条，缺 {len(meta_missing)}、多 {len(meta_extra)}"
+    )
+    problems.extend(f"元数据里读不到：{path} = {value}" for path, value in meta_missing)
+    problems.extend(f"元数据里多出数据源没写的：{path} = {value}" for path, value in meta_extra)
 
     if problems:
         return _fail(key, title, f"{len(problems)} 条事实在往返中丢失或多出", [*details, *problems])

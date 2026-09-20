@@ -179,7 +179,10 @@ def _fake_game(tmp_path: Path) -> Path:
         game / "common" / "scripted_triggers" / "00_triggers.txt",
         "legitimacy = {\n}\nhas_variable = {\n}\n",
     )
-    _write(game / "common" / "country_definitions" / "00_countries.txt", "RUS = {\n}\n")
+    # 国家 tag：**数据源里声明过的每一个都要在这里**。闸门 ② 会拿产物里出现的 tag 去
+    # 原版池里找 —— 少了哪个就报"原版里找不到这个国家 tag：X"（阶段 4 加第二份档案时
+    # 真踩过：夹具只有 RUS，于是 tr_defeat 被正确地判红，修的是夹具而不是闸门）。
+    _write(game / "common" / "country_definitions" / "00_countries.txt", "RUS = {\n}\nTUR = {\n}\n")
     _write(
         game / "common" / "defines" / "00_ai.txt",
         "NAI = {\n\tCHANGE_STRATEGY_THRESHOLD = 100\n\tCHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE = 20\n}\n",

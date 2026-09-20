@@ -97,6 +97,19 @@ name = "has_variable"
 why = "测：这条引用在原版哪里用过"
 """
 
+#: `MINIMAL` 里的 `[tempo]` 段（**逐字**复制）。
+#: 阶段 4 起 `[tempo]` 是可选的 **mod 级**表：全仓只允许一份，所以第二份档案
+#: 必须能整段不带它 —— 这条常量就是"摘掉它"的那个手术刀。
+TEMPO_BLOCK = """[tempo]
+block = "NAI"
+why = "测：为什么要接管节奏"
+[[tempo.keys]]
+key = "CHANGE_STRATEGY_THRESHOLD"
+amount = 40
+why = "测：为什么是 40"
+
+"""
+
 #: 追加到 :data:`MINIMAL` 后面的"第二处理段"（可选表 `[reform_inputs]`）。
 #: 单独一份常量：`MINIMAL` 保持"只有一处处理"的形状，两条路径都要有用例。
 REFORM_INPUTS = """
@@ -128,6 +141,45 @@ def _archive(tmp_path: Path, text: str = MINIMAL) -> modgen.Archive:
     return modgen.load_data(_write_source(tmp_path, text))
 
 
+def _second_source(
+    *,
+    tempo: bool = False,
+    game_version: str = "1.14.3",
+) -> str:
+    """第二份档案的数据源：**同一套结构、换一套名字**（G-EXIT-1 的"只加数据行"）。
+
+    默认**不带** `[tempo]` —— 阶段 4 起它是全仓一份的 mod 级表，
+    第二份档案不该复制一遍；`tempo=True` 用来造"两份都声明"的失败路径。
+    """
+    text = MINIMAL if tempo else MINIMAL.replace(TEMPO_BLOCK, "")
+    for old, new in (
+        ('id = "t1"', 'id = "t2"'),
+        ('title = "测试档案"', 'title = "第二档案"'),
+        ('country = "RUS"', 'country = "AUS"'),
+        ('game_version = "1.14.3"', f'game_version = "{game_version}"'),
+        ('name = "RUS"', 'name = "AUS"'),
+        ("sitai_t1", "sitai_t2"),
+    ):
+        text = text.replace(old, new)
+    return text
+
+
+def _two_archives(
+    tmp_path: Path,
+    *,
+    tempo: bool = False,
+    game_version: str = "1.14.3",
+    second_id: str = "t2",
+) -> tuple[modgen.Archive, ...]:
+    """写两份数据源并编译成档案（a.toml = MINIMAL，b.toml = 换名的第二份）。"""
+    _write_source(tmp_path, MINIMAL, name="a.toml")
+    text = _second_source(tempo=tempo, game_version=game_version)
+    if second_id != "t2":
+        text = text.replace('id = "t2"', f'id = "{second_id}"')
+    _write_source(tmp_path, text, name="b.toml")
+    return modgen.load_all(tmp_path / "data")
+
+
 # ── 数据源解析 ──────────────────────────────────────────────
 def test_解析真实档案的关键条目() -> None:
     """第一份档案（俄罗斯 · 战败求存）必须能被解析出它该有的东西。
@@ -143,6 +195,7 @@ def test_解析真实档案的关键条目() -> None:
     assert archive.pressure.name == "sitai_ru_defeat_pressure"
     assert archive.journal_entry.name == "je_sitai_ru_reform_window"
     assert archive.journal_entry.group == "je_group_internal_affairs"
+    assert archive.tempo is not None, "第一份档案必须声明 [tempo]（它是 mod 级表）"
     assert {p.key for p in archive.tempo.keys} == {
         "CHANGE_STRATEGY_THRESHOLD",
         "CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE",
@@ -293,12 +346,16 @@ def test_两次写盘逐字节一致(tmp_path: Path) -> None:
     assert files_a, "一个文件都没写出来"
 
 
-def test_多份档案的产物路径冲突要报错(tmp_path: Path) -> None:
-    """两份档案写同一个产物路径 = 谁在起作用变成无解的问题，必须当场红。"""
+def test_两份档案同id时产物路径冲突要报错(tmp_path: Path) -> None:
+    """同 id 的两份档案写同一批产物路径 = 谁在起作用变成无解的问题，必须当场红。
+
+    这份输入刻意绕过前面几道检查（名字各不相同、只有一份 tempo），
+    为的是让"路径冲突"这条兜底真的被走到 —— 它现在是最后一道防线。
+    """
     _write_source(tmp_path, MINIMAL, name="a.toml")
-    _write_source(tmp_path, MINIMAL, name="b.toml")
+    _write_source(tmp_path, _second_source().replace('id = "t2"', 'id = "t1"'), name="b.toml")
     archives = modgen.load_all(tmp_path / "data")
-    assert len(archives) == 2
+    assert [archive.id for archive in archives] == ["t1", "t1"]
     with pytest.raises(modgen.DataError, match="同一个产物路径"):
         modgen.build_all(archives)
 
@@ -346,6 +403,7 @@ def test_生成物能被自家解析器读懂(tmp_path: Path) -> None:
     assert top_keys["scripted_effects"] == {archive.memory.effect}
     assert top_keys["static_modifiers"] == {archive.pressure.name}
     assert top_keys["journal_entries"] == {archive.journal_entry.name}
+    assert archive.tempo is not None
     assert top_keys["defines"] == {archive.tempo.block}
 
 
@@ -470,3 +528,76 @@ def test_编号格式化不产生浮点噪声() -> None:
     assert modgen.num(0.2) == "0.2"
     assert modgen.num(-0.15) == "-0.15"
     assert modgen.num(10.0) == "10"
+
+
+# ── 多档案第一步：schema v1（`[tempo]` 可选）与 mod 级元数据 ──
+def test_第二份档案只加数据行就能编译(tmp_path: Path) -> None:
+    """G-EXIT-1 的机械形式：两份数据源 → 一次构建 → 产物齐、mod 级产物只一份。"""
+    a, b = _two_archives(tmp_path)
+    built = modgen.build_all([a, b])
+    assert set(built.archive_ids) == {"t1", "t2"}
+    for archive in (a, b):
+        for rel in modgen.archive_files(archive):
+            assert rel in built.files, f"{archive.id} 少了 {rel}"
+    # mod 级产物各一份：defines 由声明 tempo 的那份产出，metadata 由两份合成
+    defines = [rel for rel in built.files if rel.startswith("common/defines/")]
+    assert defines == [a.defines_file], defines
+    assert [rel for rel in built.files if rel == modgen.METADATA_REL] == [modgen.METADATA_REL]
+    assert b.tempo is None, "第二份档案不该复制一遍 [tempo]（它是 mod 级表）"
+
+
+def test_加第二份档案不改第一份的产物(tmp_path: Path) -> None:
+    """加档案**只增不改**：既有档案的产物必须逐字节不变（唯一例外是 mod 级元数据）。"""
+    a, b = _two_archives(tmp_path)
+    one = modgen.build_all([a])
+    two = modgen.build_all([a, b])
+    for rel, text in one.files.items():
+        if rel == modgen.METADATA_REL:
+            continue
+        assert two.files[rel] == text, f"加第二份档案改动了 {rel}"
+    assert set(two.files) == (
+        set(modgen.archive_files(a)) | set(modgen.archive_files(b)) | {modgen.METADATA_REL}
+    )
+
+
+def test_单档案的两个入口共用一套组合规则(tmp_path: Path) -> None:
+    """`build(a)` 就是 `build_all([a])` —— 免得两条路径悄悄分叉。"""
+    a = _archive(tmp_path)
+    assert modgen.build(a).files == modgen.build_all([a]).files
+
+
+def test_mod级元数据汇总两份档案(tmp_path: Path) -> None:
+    """一份 mod = 一份元数据：标题、身份、描述都由**全部**档案导出。"""
+    a, b = _two_archives(tmp_path)
+    payload = json.loads(modgen.build_all([a, b]).files[modgen.METADATA_REL])
+    assert payload["id"] == "sitai.t1-t2", "档案 id 按字典序用 `-` 连接"
+    assert "测试档案" in payload["name"]
+    assert "第二档案" in payload["name"]
+    assert payload["short_description"].count("测：这份档案修什么毛病") == 2
+    assert payload["supported_game_version"] == "1.14.3"
+
+
+def test_没有档案声明tempo报错(tmp_path: Path) -> None:
+    """`defines` 是全局的：整份 mod 没有节奏段这件事必须显式，不能靠少一个产物表达。"""
+    archive = _archive(tmp_path, MINIMAL.replace(TEMPO_BLOCK, ""))
+    assert archive.tempo is None
+    with pytest.raises(modgen.DataError, match=r"没有任何数据源声明 \[tempo\]"):
+        modgen.build_all([archive])
+
+
+def test_两份档案都声明tempo报错(tmp_path: Path) -> None:
+    """两份都写 `[tempo]` → 报错并**点名两个文件**（否则谁生效取决于加载顺序）。"""
+    a, b = _two_archives(tmp_path, tempo=True)
+    assert a.tempo is not None
+    assert b.tempo is not None
+    with pytest.raises(modgen.DataError, match="只允许一份") as excinfo:
+        modgen.build_all([a, b])
+    assert "a.toml" in str(excinfo.value)
+    assert "b.toml" in str(excinfo.value)
+
+
+def test_游戏版本不一致报错(tmp_path: Path) -> None:
+    """一份 mod 只有一个 `supported_game_version`：不一致说明数据源在骗人。"""
+    a, b = _two_archives(tmp_path, game_version="1.15.3")
+    with pytest.raises(modgen.DataError, match="game_version"):
+        modgen.build_all([a, b])
