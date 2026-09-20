@@ -42,8 +42,11 @@ def test_探针脚本能被解析器读通(path) -> None:
 
 @pytest.mark.parametrize("path", _YML, ids=lambda p: p.name)
 def test_探针本地化是行式格式(path) -> None:
-    """`.yml` 不走 PDX 解析器 —— 检查它至少符合 `key:版本 "值"` 的行式结构。"""
-    text = path.read_text(encoding="utf-8")
+    """`.yml` 不走 PDX 解析器 —— 检查它至少符合 `key:版本 "值"` 的行式结构。
+
+    读的时候用 `utf-8-sig`：探针的 loc 文件**带 BOM**（引擎要求，见下一条）。
+    """
+    text = path.read_text(encoding="utf-8-sig")
     assert text.startswith("l_"), "第一行必须是语言头（l_simp_chinese / l_english）"
     for line in text.splitlines()[1:]:
         stripped = line.strip()
@@ -68,6 +71,16 @@ def test_实验编号唯一且元数据齐全() -> None:
         assert e.how, f"{e.id} 没写判读方法"
         assert e.read in {"日志", "肉眼", "肉眼 + 日志"}, e.read
         assert e.probe, f"{e.id} 没有探针文件"
+
+
+def test_探针本地化必须带BOM() -> None:
+    """引擎实测会报 Missing UTF8 BOM 并在那之后退出 —— 探针的 .yml 必须带 BOM。
+
+    这条同时也是 doc 06「本地化文件必须 UTF-8 with BOM」的独立实证：
+    引擎自己的报错原文是 [localize.cpp:1974] ... should be in in utf-8-bom encoding。
+    """
+    for yml in sorted(experiments.PROBE_DIR.rglob("*.yml")):
+        assert yml.read_bytes().startswith(b"\xef\xbb\xbf"), f"{yml.name} 少了 UTF-8 BOM"
 
 
 def test_两个探针mod都有metadata() -> None:

@@ -16,12 +16,22 @@
 ## 三步用法
 
 ```powershell
-.venv\Scripts\v3.exe experiment plan        # 打印操作清单（照做即可）
-.venv\Scripts\v3.exe experiment install     # 把 zz_probe_a / zz_probe_b 装进本机 mod 目录
-#  —— 启动器里启用这两个 mod（先 A 后 B），以 -debug_mode 开一局新档，点两个探针决议，退出 ——
+.venv\Scripts\v3.exe experiment launch      # 一键：装探针 → 只启用探针 → 以 -debug_mode 启动
+#  —— 开新档、记国库、点两个探针决议、等事件、退出 ——
 .venv\Scripts\v3.exe experiment collect     # 收割 logs/，按实验编号归位证据
+.venv\Scripts\v3.exe experiment restore     # 还原原来的 mod 启用列表
 .venv\Scripts\v3.exe experiment uninstall   # 收工后移除
-```
+`
+
+launch 为什么能一键：**启用哪些 mod** 由用户目录的 content_load.json 决定
+（启动器写、游戏读），**调试模式**就是给 ictoria3.exe 加 -debug_mode
+（游戏自带 launcher-settings.json 里「以调试模式打开游戏」用的就是这个参数）。
+它先备份那份 json，再只写上两个探针，然后直接起 exe —— 全程不用点启动器。
+
+> ⚠️ **语法候选单独一个 mod（zz_probe_risky）**：那些候选是**故意写错**的，
+> 可能让游戏在加载阶段直接退出（实测踩过：第一次启动就死在加载期）。
+> 默认不启用；要问「引擎认不认这些写法」时用 3 experiment launch --risky
+> 单独起一次 —— 那一趟**不用点任何东西**，看日志即可。``
 
 判定优先走日志：`-debug_mode` 下引擎会把**未知键 / 重复定义 / scope 错误**写进
 `logs/`，这比肉眼看行为可靠。只有三处必须肉眼：
@@ -62,7 +72,13 @@ zz_probe_a/                  主探针：一个决议跑完大部分实验
 ├─ events/                     after / is_popup / orphan + 重名 namespace
 └─ localization/               中英文文案 + 版本号观察点
 zz_probe_b/                  只为「双 mod 同名键顺序」存在（一个键）
-```
+zz_probe_risky/              故意写错的语法候选（默认不启用，见上）
+`
+
+⚠️ **本地化文件必须带 UTF-8 BOM**：第一次一键启动时游戏报
+Missing UTF8 BOM in 'localization/.../zz_probe_l_english.yml'（error.log），
+随后退出。探针的 .yml 现在都带 BOM，	est_experiments.py 有用例钉住这条 ——
+它同时是 doc 06 那条结论的**独立实证**。``
 
 **一个候选一个文件**是刻意的：语法错会让整个文件失效，混在一起就分不清是谁坏。
 

@@ -1,4 +1,4 @@
-l_simp_chinese:
+﻿l_simp_chinese:
  zzprobe_run_all:0 "【探针】跑一遍全部实验（点这个）"
  zzprobe_run_all_desc:0 "点完看三处：国库数字、弹出的窗口、退出后的日志报告。"
  zzprobe_loc_version_probe:0 "【探针】版本号观察点 —— 你看到的是这一句（无版本号）"

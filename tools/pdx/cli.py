@@ -1553,7 +1553,9 @@ def strings_cmd(
 def experiment_cmd(
     action: Annotated[
         str,
-        typer.Argument(help="plan（打印清单）/ install / uninstall / collect"),
+        typer.Argument(
+            help="plan / install / uninstall / collect / launch（一键启动）/ restore"
+        ),
     ] = "plan",
     only: Annotated[
         list[str] | None, typer.Option("--only", help="只处理某些实验编号，如 --only P2 --only P11")
@@ -1562,6 +1564,13 @@ def experiment_cmd(
         Path | None, typer.Option("--target", help="安装目标（默认本机 mod 目录）")
     ] = None,
     force: bool = typer.Option(False, "--force", help="install 时覆盖已存在的探针目录"),
+    no_debug: bool = typer.Option(False, "--no-debug", help="launch 时不加 -debug_mode"),
+    risky: bool = typer.Option(
+        False, "--risky", help="launch 时连「语法候选」探针一起启用（可能让游戏起不来）"
+    ),
+    content_load: Annotated[
+        Path | None, typer.Option("--content-load", help="content_load.json 路径（默认用户目录）")
+    ] = None,
 ) -> None:
     """游戏实测探针：一次启动收工。
 
@@ -1571,11 +1580,17 @@ def experiment_cmd(
 
     ```text
     v3 experiment plan        # 打印操作清单（点什么、看什么、回传什么）
-    v3 experiment install     # 把 tools/probe/ 的两个探针 mod 装进本机 mod 目录
-    （启动游戏一次，按清单点两个决议，退出）
+    v3 experiment launch      # 一键：装探针 → 只启用探针 → 以 -debug_mode 启动游戏
+    （开新档、点两个决议、退出）
     v3 experiment collect     # 收割 logs/，按实验编号归位证据
+    v3 experiment restore     # 还原原来的 mod 启用列表
     v3 experiment uninstall   # 移除探针
-    ```
+    `
+
+    launch 凭什么能「一键」：**启用哪些 mod** 由用户目录的 content_load.json
+    决定（启动器写、游戏读），**调试模式**就是给 ictoria3.exe 加 -debug_mode
+    （游戏自带 launcher-settings.json 里那条「以调试模式打开游戏」用的就是它）。
+    所以它先备份那份 json、只写上两个探针，再直接起 exe —— 不用点启动器。``
 
     判定优先走日志（`-debug_mode` 会把未知键/重复定义/scope 错误写进去），
     只有三处需要肉眼：国库数字、是否弹窗、决议标题的 loc 文案。
@@ -1607,6 +1622,38 @@ def experiment_cmd(
             return
         for path in removed:
             console.print(f"已移除 {escape(str(path))}")
+        return
+
+    if name in {"launch", "start"}:
+        try:
+            # launch 时**强制刷新**探针目录：不覆盖的话，改了探针源码却装着旧副本，
+            # 实验会白跑（实测踩过：给 loc 补了 BOM，游戏里报的还是旧的 Missing BOM）。
+            paths = experiments.install(target, mods=only, force=True, risky=risky)
+            backup = experiments.set_enabled_mods(paths, path=content_load)
+        except OSError as exc:
+            _fail(f"准备启动失败：{type(exc).__name__}: {exc}")
+        console.print(
+            f"启用列表已改成只有探针（原列表备份在 {escape(str(backup or '（无）'))}）："
+        )
+        for path in paths:
+            console.print(f"  {escape(str(path))}")
+        try:
+            proc = experiments.launch(debug=not no_debug)
+        except (OSError, FileNotFoundError) as exc:
+            _fail(f"启动游戏失败：{type(exc).__name__}: {exc}")
+        console.print(f"[green]游戏已启动（pid {proc.pid}，调试模式{'开' if not no_debug else '关'}）[/]")
+        console.print(
+            "照 3 experiment plan 的清单做：开新档 → 记国库 → 点两个探针决议 → 等事件 → 退出。"
+        )
+        console.print("退出后跑 3 experiment collect，然后 3 experiment restore 还原 mod 列表。")
+        return
+
+    if name == "restore":
+        done = experiments.restore_content_load(path=content_load)
+        if done:
+            console.print("[green]content_load.json 已还原成启动探针之前的那份[/]")
+        else:
+            console.print("[yellow]没有找到备份（没跑过 launch 就不用还原）[/]")
         return
 
     if name == "collect":

@@ -1,4 +1,4 @@
-l_english:
+﻿l_english:
  zzprobe_run_all:0 "ZZ PROBE: run all experiments"
  zzprobe_run_all_desc:0 "Watch treasury, popups, then collect the log report."
  zzprobe_loc_version_probe:0 "ZZ PROBE version probe (no version)"

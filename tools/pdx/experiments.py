@@ -25,7 +25,9 @@
 
 from __future__ import annotations
 
+import json
 import shutil
+import subprocess
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -38,8 +40,15 @@ if TYPE_CHECKING:
 #: 探针包在仓库里的位置（入库的源）。
 PROBE_DIR = config.REPO / "tools" / "probe"
 
-#: 两个探针 mod 的目录名（A 主探针；B 只为「双 mod 同名键顺序」存在）。
+#: 默认启用的两个探针 mod（A 主探针；B 只为「双 mod 同名键顺序」存在）。
 PROBE_MODS = ("zz_probe_a", "zz_probe_b")
+
+#: 「语法候选」探针 —— **故意写错**，用来问引擎认不认那些写法。
+#:
+#: 单独一个 mod 是因为实测踩过：第一次一键启动时游戏在加载阶段直接退出
+#: （日志只停在本地化那几行）。候选语法是**可能致命**的，不能与交互部分同居一个 mod
+#: —— 否则一个写错的候选就会让整场实验跑不成。要用它时显式 `--risky`。
+RISKY_MOD = "zz_probe_risky"
 
 #: 安装目标：用户 mod 目录。
 TARGET_DIR = config.LOCAL_MODS
@@ -58,6 +67,8 @@ class Experiment:
     probe: tuple[str, ...]
     read: str  # 日志 / 肉眼
     how: str
+    #: 是否属于「故意写错的语法候选」（在 zz_probe_risky 里，需 launch --risky）
+    risky: bool = False
 
 
 #: 全部实验。`probe` 是相对 `tools/probe/` 的路径，`how` 是判读方法。
@@ -88,42 +99,45 @@ EXPERIMENTS: tuple[Experiment, ...] = (
         "官方 md 提到、原版零使用的写法是否合法",
         "`has_game_rule` 块形式 / `apply_modifier` / `type_set` 等写法引擎认不认？",
         (
-            "zz_probe_a/common/scripted_triggers/zz_probe_p1_candidates/t1_has_game_rule_block.txt",
-            "zz_probe_a/common/scripted_triggers/zz_probe_p1_candidates/t2_has_game_rule_scalar.txt",
+            "zz_probe_risky/common/scripted_triggers/zz_probe_p1_candidates/t1_has_game_rule_block.txt",
+            "zz_probe_risky/common/scripted_triggers/zz_probe_p1_candidates/t2_has_game_rule_scalar.txt",
             "zz_probe_a/common/game_rules/zz_probe_game_rules.txt",
         ),
         "日志",
         "每个候选一个文件：日志里对某个候选报 unknown/invalid，就说明该写法不被接受；"
         "没报错的那个是合法写法（对照组 t2 是原版在用的标量形式）。",
+        risky=True,
     ),
     Experiment(
         "P4",
         "`scripted_modifier` / `scripted_list` 的调用语法",
         "官方 md 只给定义形态、原版 0 个调用点 —— 三种候选写法哪个被接受？",
         (
-            "zz_probe_a/common/scripted_modifiers/zz_probe_s1_define.txt",
-            "zz_probe_a/common/scripted_modifiers/zz_probe_s2_call_direct.txt",
-            "zz_probe_a/common/scripted_modifiers/zz_probe_s3_call_scripted_modifier.txt",
-            "zz_probe_a/common/scripted_modifiers/zz_probe_s4_call_modifier_block.txt",
-            "zz_probe_a/common/scripted_lists/zz_probe_l1_define.txt",
-            "zz_probe_a/common/scripted_lists/zz_probe_l2_call_direct.txt",
-            "zz_probe_a/common/scripted_lists/zz_probe_l3_call_key.txt",
+            "zz_probe_risky/common/scripted_modifiers/zz_probe_s1_define.txt",
+            "zz_probe_risky/common/scripted_modifiers/zz_probe_s2_call_direct.txt",
+            "zz_probe_risky/common/scripted_modifiers/zz_probe_s3_call_scripted_modifier.txt",
+            "zz_probe_risky/common/scripted_modifiers/zz_probe_s4_call_modifier_block.txt",
+            "zz_probe_risky/common/scripted_lists/zz_probe_l1_define.txt",
+            "zz_probe_risky/common/scripted_lists/zz_probe_l2_call_direct.txt",
+            "zz_probe_risky/common/scripted_lists/zz_probe_l3_call_key.txt",
         ),
         "日志",
         "定义文件一定合法；三个调用候选里，日志没报错的那个即正确语法（都不合法也是一种结论）。",
+        risky=True,
     ),
     Experiment(
         "P5",
         "`$PARAM$` 的默认值与 scope 传参",
         "`$X$` 支不支持默认值？能不能传 scope 对象？",
         (
-            "zz_probe_a/common/scripted_effects/zz_probe_p5_candidates/c1_pipe_default.txt",
-            "zz_probe_a/common/scripted_effects/zz_probe_p5_candidates/c2_equals_default.txt",
-            "zz_probe_a/common/scripted_effects/zz_probe_p5_candidates/c3_scope_param.txt",
-            "zz_probe_a/common/scripted_effects/zz_probe_p5_candidates/c4_plain.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_p5_candidates/c1_pipe_default.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_p5_candidates/c2_equals_default.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_p5_candidates/c3_scope_param.txt",
+            "zz_probe_risky/common/scripted_effects/zz_probe_p5_candidates/c4_plain.txt",
         ),
         "日志",
         "四个候选各一个文件；日志对哪个报错，哪个写法就不成立（c4 是已知合法的对照）。",
+        risky=True,
     ),
     Experiment(
         "P6",
@@ -202,6 +216,113 @@ class Finding:
 
     def describe(self) -> str:
         return f"[{self.experiment}] {self.source}: {self.line}"
+
+
+# ────────────────────────── 启动游戏（一键）──────────────────────────
+#
+# 机制（实测出来的，不是猜的）：
+#   * **启用哪些 mod** 由用户目录的 `content_load.json` 决定，结构是
+#     `{"enabledMods": [{"path": "<mod 根目录>"}, …], "disabledDLC": [], "enabledUGC": []}`
+#     —— 启动器写它、游戏读它。所以「只启用探针」＝改这个文件，不需要点 GUI。
+#   * **调试模式** 是给 `binaries/victoria3.exe` 加 `-debug_mode`：
+#     游戏自带的 `launcher/launcher-settings.json` 里，「Open game in Debug Mode」
+#     那条 `alternativeExecutables` 的 `exeArgs` 就是 `["-gdpr-compliant", "-debug_mode"]`。
+#
+# 因此一键启动 = 备份 content_load.json → 只写两个探针 → 直接起 exe。
+
+#: 游戏读的「启用了哪些 mod」文件。
+CONTENT_LOAD = config.USERDIR / "content_load.json"
+
+#: 备份后缀（`restore` 靠它还原原来那套 mod）。
+BACKUP_SUFFIX = ".v3probe-backup"
+
+#: 游戏可执行文件（相对安装根）。
+GAME_EXE_REL = ("binaries", "victoria3.exe")
+
+#: 正常启动参数（与启动器一致）。
+BASE_ARGS = ("-gdpr-compliant",)
+
+#: 调试模式附加参数。
+DEBUG_ARG = "-debug_mode"
+
+
+def game_exe() -> Path:
+    """`binaries/victoria3.exe`。"""
+    return config.ROOT.joinpath(*GAME_EXE_REL)
+
+
+def read_content_load(path: Path | None = None) -> dict[str, object]:
+    """读 `content_load.json`（不存在或坏掉时给一个空骨架）。"""
+    target = path or CONTENT_LOAD
+    if not target.is_file():
+        return {"enabledMods": [], "disabledDLC": [], "enabledUGC": []}
+    try:
+        data: dict[str, object] = json.loads(target.read_text(encoding="utf-8-sig"))
+    except ValueError:  # pragma: no cover - 坏文件交给 writer 覆盖
+        return {"enabledMods": [], "disabledDLC": [], "enabledUGC": []}
+    for key in ("enabledMods", "disabledDLC", "enabledUGC"):
+        data.setdefault(key, [])
+    return data
+
+
+def enabled_mod_paths(path: Path | None = None) -> list[str]:
+    """当前启用的 mod 路径（原样返回，不解析）。"""
+    mods = read_content_load(path)["enabledMods"]
+    assert isinstance(mods, list)
+    return [str(m.get("path", "")) for m in mods]
+
+
+def set_enabled_mods(
+    mod_paths: Iterable[Path | str], *, path: Path | None = None, backup: bool = True
+) -> Path | None:
+    """把启用列表**只**设成给定的这些 mod，返回备份路径。
+
+    备份只做一次：第二次调用不会用「只剩探针」的内容覆盖掉真正的备份。
+    """
+    target = path or CONTENT_LOAD
+    backup_path = target.with_name(target.name + BACKUP_SUFFIX)
+    if backup and target.is_file() and not backup_path.is_file():
+        shutil.copy2(target, backup_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    data = read_content_load(target)
+    data["enabledMods"] = [{"path": str(p)} for p in mod_paths]
+    target.write_text(
+        json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+        newline="\n",
+    )
+    return backup_path if backup_path.is_file() else None
+
+
+def restore_content_load(*, path: Path | None = None) -> bool:
+    """把 `content_load.json` 还原成备份（返回是否真的还原了）。"""
+    target = path or CONTENT_LOAD
+    backup_path = target.with_name(target.name + BACKUP_SUFFIX)
+    if not backup_path.is_file():
+        return False
+    shutil.copy2(backup_path, target)
+    backup_path.unlink()
+    return True
+
+
+def launch_command(*, debug: bool = True) -> list[str]:
+    """拼出游戏启动命令（与启动器的 debug 变体一致）。"""
+    args = [str(game_exe()), *BASE_ARGS]
+    if debug:
+        args.append(DEBUG_ARG)
+    return args
+
+
+def launch(*, debug: bool = True) -> subprocess.Popen:
+    """启动游戏（分离进程，不等待）；工作目录设为安装根。"""
+    exe = game_exe()
+    if not exe.is_file():
+        raise FileNotFoundError(f"找不到游戏可执行文件：{exe}")
+    return subprocess.Popen(
+        launch_command(debug=debug),
+        cwd=str(config.ROOT),
+        close_fds=True,
+    )
 
 
 @dataclass(slots=True)
@@ -324,7 +445,11 @@ def collect(log_dir: Path | None = None, *, extra_dirs: Iterable[Path] = ()) -> 
 
 
 def install(
-    target: Path | None = None, *, mods: Iterable[str] | None = None, force: bool = False
+    target: Path | None = None,
+    *,
+    mods: Iterable[str] | None = None,
+    force: bool = False,
+    risky: bool = False,
 ) -> list[Path]:
     """把探针 mod 复制进用户 mod 目录，返回装好的路径。
 
@@ -333,8 +458,11 @@ def install(
     """
     dest = target or TARGET_DIR
     dest.mkdir(parents=True, exist_ok=True)
+    names = list(mods) if mods else list(PROBE_MODS)
+    if risky and RISKY_MOD not in names:
+        names.append(RISKY_MOD)
     out: list[Path] = []
-    for name in mods or PROBE_MODS:
+    for name in names:
         src = PROBE_DIR / name
         if not src.is_dir():
             raise FileNotFoundError(f"探针源不存在：{src}（跑 `v3 experiment plan` 看说明）")
@@ -385,7 +513,14 @@ def plan(target: Path | None = None) -> str:
         "要记录的三处（其余交给日志）：",
     ]
     lines += [f"   - {name}：{how}" for name, how in EYEBALL]
-    lines += ["", "实验清单（编号 → 问题 → 判读）："]
+    lines += [
+        "",
+        "注意：P1 / P4 / P5 是**故意写错的语法候选**（在 zz_probe_risky 里，默认不启用）——",
+        "它们只用来问引擎「认不认」，可能在加载阶段就让游戏退出。要跑它们用：",
+        "   v3 experiment launch --risky   （这一趟不用点任何东西，看日志即可）",
+        "",
+        "实验清单（编号 → 问题 → 判读）：",
+    ]
     for e in EXPERIMENTS:
         lines += [
             f"   [{e.id}] {e.title}",
@@ -410,6 +545,7 @@ __all__ = [
     "MARKERS",
     "PROBE_DIR",
     "PROBE_MODS",
+    "RISKY_MOD",
     "TARGET_DIR",
     "Experiment",
     "Finding",

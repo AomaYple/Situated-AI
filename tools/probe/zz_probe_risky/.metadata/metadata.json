@@ -1,0 +1,12 @@
+{
+  "name": "ZZ Probe Risky",
+  "id": "",
+  "version": "1.0",
+  "supported_game_version": "1.14.3",
+  "short_description": "只装语法候选的探针 —— 故意写错，用来问引擎「认不认」",
+  "tags": [],
+  "relationships": [],
+  "game_custom_data": {
+    "multiplayer_synchronized": false
+  }
+}
