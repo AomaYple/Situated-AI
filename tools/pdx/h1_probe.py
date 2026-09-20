@@ -86,8 +86,12 @@ FOURTH_TYPE = "sitai_fourth"
 #: 剂量变量前缀（`sitai_probe_dose_low` …）。
 DOSE_VAR_PREFIX = "sitai_probe_dose_"
 
-#: `add_ai_strategy` 语法测试（H3）的目标国家：两个都不太可能有平等主义议程。
-H3_TARGETS = ("HED", "CYL")
+#: `add_ai_strategy` 语法测试（H3）已在 2026-09-20 的 storm 局里**结案**：
+#: `add_ai_strategy = { type = … id = … }` 与 `add_ai_strategy = <牌名>` 两种写法
+#: 引擎都报 `Unknown effect add_ai_strategy` —— exe 里有这个标识符（控制台/内部名），
+#: 但它**不是脚本效果**。"直接指定 AI 策略"这条路封死，只剩权重 / `possible` / 节奏三根杠杆。
+#: 结论记在 `docs/design/exec/阶段2-结果.md` 与 `docs/design/backlog.md`。
+H3_RESULT = "add_ai_strategy 不是脚本效果（两种语法都是 Unknown effect）"
 
 #: storm 变体覆盖的 defines（块名 → {键: 值}）。
 STORM_DEFINES: dict[str, dict[str, object]] = {
@@ -180,29 +184,13 @@ def fourth_card_text() -> str:
 
 
 def effects_text(variant: str) -> str:
-    """随机分组（RCT 的分配）+ 开局自报 + H3 语法测试。"""
+    """随机分组（RCT 的分配）+ 开局 RUN 标记。"""
     assign_lines: list[str] = []
     for dose in DOSE_ORDER[1:]:
         var = DOSE_VAR_PREFIX + dose.lower()
         assign_lines.append(f"\t\t\t\t25 = {{ set_variable = {{ name = {var} value = 1 }} }}")
     assign_lines.append("\t\t\t\t25 = { }")
     assignments = "\n".join(assign_lines)
-
-    h3: list[str] = []
-    for tag, form in zip(H3_TARGETS, ("block", "bare"), strict=False):
-        body = (
-            "\t\tadd_ai_strategy = { type = political id = ai_strategy_egalitarian_agenda }"
-            if form == "block"
-            else "\t\tadd_ai_strategy = ai_strategy_egalitarian_agenda"
-        )
-        h3.append(
-            f"\tc:{tag} ?= {{\n"
-            f'\t\tdebug_log = "ZZPROBE H3;TRY;{form};{tag}"\n'
-            f"{body}\n"
-            f'\t\tdebug_log = "ZZPROBE H3;DONE;{form};{tag}"\n'
-            f"\t}}"
-        )
-    h3_block = "\n".join(h3)
 
     return (
         f"{GEN_HEADER}"
@@ -215,10 +203,10 @@ def effects_text(variant: str) -> str:
         f"# ① `zz_probe_h1_assign`：随机分组，`random_list` 25/25/25/25 → 四组。\n"
         f"#    组间**唯一**差异是探针牌的权重。幂等（`{DOSE_VAR_PREFIX}assigned` 标记）：\n"
         f"#    两个 on_game_started 钩子都会调它，重复调用是常态。\n"
-        f"# ② `zz_probe_h1_boot`：开局写一行 RUN 标记（分析器靠它切分「哪次启动的数据」——\n"
-        f"#    日志轮转会把多次启动的行混在同一个目录里）+ 跑 H3 语法测试。\n"
-        f"# ③ H3：`add_ai_strategy` 的两种候选语法各试一个国家。exe 里有这个标识符，\n"
-        f"#    但原版脚本 0 处使用 —— 语法只能实测。TRY 打出来、DONE 没打出来 = 这个语法被拒。\n"
+        f"# ② `zz_probe_h1_boot`：开局写一行 RUN 标记 —— 分析器靠它切分「哪次启动的数据」\n"
+        f"#    （日志轮转会把多次启动的行混在同一个目录里）。\n"
+        f"#\n"
+        f"# H3（`add_ai_strategy` 语法）已结案并从探针里移除：{H3_RESULT}。\n"
         f"zz_probe_h1_assign = {{\n"
         f"\tevery_country = {{\n"
         f"\t\tif = {{\n"
@@ -234,7 +222,6 @@ def effects_text(variant: str) -> str:
         f"zz_probe_h1_boot = {{\n"
         f"\tzz_probe_h1_assign = yes\n"
         f'\tdebug_log = "ZZPROBE H1;RUN;{variant}"\n'
-        f"{h3_block}\n"
         f"}}\n"
     )
 
@@ -519,7 +506,7 @@ __all__ = [
     "FOURTH_CARD",
     "FOURTH_TYPE",
     "GEN_HEADER",
-    "H3_TARGETS",
+    "H3_RESULT",
     "NOLOC_CARD",
     "PROBE_DIR",
     "PROBE_MOD",

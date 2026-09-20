@@ -8,10 +8,10 @@
 # ① `zz_probe_h1_assign`：随机分组，`random_list` 25/25/25/25 → 四组。
 #    组间**唯一**差异是探针牌的权重。幂等（`sitai_probe_dose_assigned` 标记）：
 #    两个 on_game_started 钩子都会调它，重复调用是常态。
-# ② `zz_probe_h1_boot`：开局写一行 RUN 标记（分析器靠它切分「哪次启动的数据」——
-#    日志轮转会把多次启动的行混在同一个目录里）+ 跑 H3 语法测试。
-# ③ H3：`add_ai_strategy` 的两种候选语法各试一个国家。exe 里有这个标识符，
-#    但原版脚本 0 处使用 —— 语法只能实测。TRY 打出来、DONE 没打出来 = 这个语法被拒。
+# ② `zz_probe_h1_boot`：开局写一行 RUN 标记 —— 分析器靠它切分「哪次启动的数据」
+#    （日志轮转会把多次启动的行混在同一个目录里）。
+#
+# H3（`add_ai_strategy` 语法）已结案并从探针里移除：add_ai_strategy 不是脚本效果（两种语法都是 Unknown effect）。
 zz_probe_h1_assign = {
 	every_country = {
 		if = {
@@ -29,15 +29,5 @@ zz_probe_h1_assign = {
 
 zz_probe_h1_boot = {
 	zz_probe_h1_assign = yes
-	debug_log = "ZZPROBE H1;RUN;natural"
-	c:HED ?= {
-		debug_log = "ZZPROBE H3;TRY;block;HED"
-		add_ai_strategy = { type = political id = ai_strategy_egalitarian_agenda }
-		debug_log = "ZZPROBE H3;DONE;block;HED"
-	}
-	c:CYL ?= {
-		debug_log = "ZZPROBE H3;TRY;bare;CYL"
-		add_ai_strategy = ai_strategy_egalitarian_agenda
-		debug_log = "ZZPROBE H3;DONE;bare;CYL"
-	}
+	debug_log = "ZZPROBE H1;RUN;storm"
 }

@@ -503,17 +503,21 @@ def format_report(result: Result) -> str:
 
     h3_try = [e for e in result.h3_events if e.startswith("TRY;")]
     h3_done = [e for e in result.h3_events if e.startswith("DONE;")]
-    lines += [
+    extras = [
         "### 4. 附带读数",
         "",
         f"* 第四槽（B7）：{'⚠️ 出现 ' + str(result.fourth_hits) + ' 次 —— 需要复查' if result.fourth_hits else '未出现（与预期一致：槽位固定三个）'}",
         f"* 无 loc 牌（B10）：被抽中 {result.noloc_hits} 次（权重 1；>0 即证明引擎接受无 loc/icon 的牌）",
-        (
+    ]
+    if result.h3_events:
+        # H3 已于 2026-09-20 结案（add_ai_strategy 不是脚本效果），探针里不再发这些行；
+        # 只有读旧日志时才会走到这里。
+        extras.append(
             f"* `add_ai_strategy`（H3）：TRY {len(h3_try)} 条 / DONE {len(h3_done)} 条"
             + ("（TRY 之后没有 DONE = 该语法被引擎拒）" if len(h3_done) < len(h3_try) else "")
-        ),
-        "",
-    ]
+        )
+    extras.append("")
+    lines += extras
     return "\n".join(lines)
 
 

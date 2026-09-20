@@ -115,16 +115,17 @@ def test_日志链按槽位分组_不串槽() -> None:
     ]
 
 
-def test_分组效果含四路随机与H3两种语法() -> None:
+def test_分组效果含四路随机与开局标记() -> None:
     text = h1_probe.effects_text("storm")
     assert text.count("25 = {") == 4
     for dose in h1.DOSE_ORDER[1:]:
         assert f"{h1_probe.DOSE_VAR_PREFIX}{dose.lower()} value = 1" in text
-    assert "add_ai_strategy = { type = political id = ai_strategy_egalitarian_agenda }" in text
-    assert "ai_strategy_egalitarian_agenda\n" in text
     assert "ZZPROBE H1;RUN;storm" in text
-    assert "ZZPROBE H3;TRY;block;" in text
-    assert "ZZPROBE H3;DONE;bare;" in text
+    # H3 已结案：add_ai_strategy 不是脚本效果，探针的**代码**里不该再留这个测试
+    # （注释里会提它 —— 那是在记录结论，所以按行去掉注释再查）
+    code = "\n".join(line for line in text.splitlines() if not line.strip().startswith("#"))
+    assert "add_ai_strategy" not in code
+    assert "add_ai_strategy" in h1_probe.H3_RESULT
 
 
 def test_defines只写NAI与两个键() -> None:
