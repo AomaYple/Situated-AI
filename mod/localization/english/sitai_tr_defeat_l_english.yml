@@ -1,0 +1,6 @@
+﻿l_english:
+# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+ je_sitai_tr_reform_window:0 "Defeat and Survival: A Window for Reform"
+ je_sitai_tr_reform_window_reason:0 "The war is lost, and the bill has come due. The aristocracy that marched us into it has lost its grip, the crown's authority has broken, and the treasury borrows at ruinous rates.\n\nA window is open: while the old guard is weak and the government's legitimacy is shaken, reform is possible. It closes again once the state stands firm."
+ sitai_tr_defeat_pressure:0 "Aftermath of the Defeat"
+ sitai_tr_reform_inputs:0 "Reformers Gain Influence"

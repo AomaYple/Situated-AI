@@ -1,0 +1,31 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 战败求存 · 冲击记账（A 级：真实世界状态 —— 变量 + 修正，不占任何槽位）。
+# 调用方：阶段 3 的 A/B 实验（B 组施加冲击）。本档案刻意**不绑 on_action**：
+# 原版 on_war_end 只给 scope:actor / scope:target，不带胜负（00_code_on_actions.txt:7043），
+# 挂错会把战胜方也记成战败 —— 「谁算战败」的判定留待实验给结论。
+# 变量 sitai_tr_defeat_memory；压力修正 sitai_tr_defeat_pressure。
+
+sitai_tr_defeat_shock = {
+	set_variable = {
+		name = sitai_tr_defeat_memory
+		value = 1
+		days = 3650
+	}
+	add_modifier = {
+		name = sitai_tr_defeat_pressure
+		years = 10
+	}
+}
+
+# 改革侧输入（A 级：同样是真实世界状态）：**实验手段**（与 [pressure] 同一定位）：它是「改革派牌读得到的那两个输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。真正的正式版设计应当是**真实触发 + 因果链**（战败 → 割地赔款 → 工业化/识字率的真实位移 → IG 势力自然变化），而不是直接改政治力量；这条已记进 backlog，本档案的实验定位也写在 阶段3-结果.md 与 阶段3-归档清点.md 里。为什么走 A 级而不是递牌：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（03_political_strategies.txt:528-544），改世界状态就等于改它的输入，不占任何槽位（F5）。　【骨架·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；它是「加一处境 = 加一份数据源」（G-EXIT-1）的证明件，不是一份经过校准的档案设计。
+# 为什么单独一个效果：实验的 B 段只施加冲击、B2 段才追加这一处 ——
+# 两处合并在一个效果里就分不出是哪一处起了作用（执行文档：两层分开报）。
+# 修正 sitai_tr_reform_inputs；效果名 sitai_tr_reform_input（不绑 on_action，由实验显式调用）。
+
+sitai_tr_reform_input = {
+	add_modifier = {
+		name = sitai_tr_reform_inputs
+		years = 10
+	}
+}
