@@ -17,8 +17,7 @@
 from __future__ import annotations
 
 import os
-import subprocess
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pytest
@@ -815,20 +814,16 @@ class TestLaunch:
         monkeypatch.setattr(ga.subprocess, "Popen", fake_popen)
         assert ga.launch(wait=False) == 0
         assert seen["command"] == [str(fake_exe), ga.SCRIPTED_TESTS_ARG]
-        # 用户口径的第一条：**起游戏时既不占屏也不抢焦点** ⇒ 默认带"显示但不激活"。
-        # ⚠️ 曾经用过 `SW_SHOWMINNOACTIVE`（真·最小化），实测会让游戏**当场崩**：
-        # `crashes\victoria3_01260821_215742\exception.txt` = C0000005，栈在
-        # `nvoglv64.dll`（NVIDIA OpenGL）—— 冒烟起游戏不能把窗口最小化，这条有崩溃证据。
-        info = seen["kwargs"]["startupinfo"]  # type: ignore[index]
-        assert isinstance(info, subprocess.STARTUPINFO)
-        assert info.dwFlags & subprocess.STARTF_USESHOWWINDOW
-        assert info.wShowWindow == ga.SW_SHOWNOACTIVATE
-        assert seen["kwargs"]["cwd"] == str(ga.config.ROOT)  # type: ignore[index]
-        assert seen["kwargs"]["close_fds"] is True  # type: ignore[index]
+        # 启动就是**普通启动**（用户口径："直接用之前那套测试的怎么启动就怎么启动"）：
+        # 不带任何窗口样式变体。三种变体都实测过并已删：创建时最小化（游戏**崩**，
+        # 栈在 nvoglv64.dll）、显示但不激活（照样铺满屏幕）、出现后再最小化（不是用户要的）。
+        assert "startupinfo" not in cast("dict[str, object]", seen["kwargs"])
+        kwargs = cast("dict[str, object]", seen["kwargs"])
+        assert kwargs["cwd"] == str(ga.config.ROOT)
+        assert kwargs["close_fds"] is True
 
-    def test_显式要求抢前台时就不带_startupinfo(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_启动不碰任何窗口样式(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """显式断言：`Popen` 只收到 `cwd` / `close_fds`，没有 `startupinfo`。"""
         fake_exe = tmp_path / "victoria3.exe"
         fake_exe.write_bytes(b"MZ")
         monkeypatch.setattr(ga.experiments, "launch_command", FakeLaunchCommand(fake_exe))
@@ -840,8 +835,8 @@ class TestLaunch:
             return object()
 
         monkeypatch.setattr(ga.subprocess, "Popen", fake_popen)
-        assert ga.launch(wait=False, activate=True) == 0
-        assert seen["kwargs"]["startupinfo"] is None  # type: ignore[index]
+        assert ga.launch(wait=False) == 0
+        assert set(cast("dict[str, object]", seen["kwargs"])) == {"cwd", "close_fds"}
 
     def test_不带自动化开关时就不加(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         fake_exe = tmp_path / "victoria3.exe"
@@ -1184,7 +1179,7 @@ class TestRunCommand:
         out = capsys.readouterr().out
         assert "speed_ok" in out
         assert "闭环完成" in out
-        assert "后台等待启动" in out, "要看得见'等启动时没有占屏'这件事"
+        assert "闭环完成" in out
 
     def test_run_默认会还前台并切速度(self, monkeypatch: pytest.MonkeyPatch) -> None:
         seen: dict[str, object] = {}
@@ -1399,6 +1394,15 @@ class TestSessionFlow:
         monkeypatch.setattr(ga, "save_shot", lambda _img, _tag: None)
         monkeypatch.setattr(ga, "click_match", lambda _h, _m, **_kw: calls.append("click_observe"))
         monkeypatch.setattr(ga, "lobby_visible", lambda _h, **_kw: None)
+        # `_step_observe` 现在在里面**有界等**按钮出现（"启动忙完"只是启发式，实测假阳性过两次），
+        # 所以这里把 `wait_for_lobby` 也钉住 —— 单测不该真的转 30 秒。
+        monkeypatch.setattr(
+            ga,
+            "wait_for_lobby",
+            lambda _h, **_kw: ga.Match(
+                name="btn_observe", x=864, y=1055, score=0.98, scale=1.0, box=(755, 1037, 973, 1073)
+            ),
+        )
         monkeypatch.setattr(
             ga, "speed_candidates", lambda _h, **_kw: [("模板匹配 (1851, 52)", (1851, 52))]
         )
@@ -1513,17 +1517,47 @@ class TestBootSettle:
         monkeypatch.setattr(ga, "TICK_LOG", log)
         monkeypatch.setattr(ga, "_process_pids", lambda: list(pids))
 
-    def test_进程在且日志安静就算忙完(
+    def test_日志写过又安静下来才算忙完(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        log = tmp_path / "t.log"
+        """必须先看到**引擎真的在写**（至少一次 size 变化），再谈"安静"。
+
+        为什么这么严：实测踩过假阳性 —— 逐 tick 文件 0 字节、启动 8.7 秒就判"忙完"，
+        于是提前借前台去点「观察」，按钮根本没出现。这里用一个"第一轮写一次、
+        之后不动"的 sleeper 复现真实形状（启动期写日志 → 忙完 → 安静）。
+        """
+        # 用**规范文件名**：`wait_for_boot_settle` 默认盯的是日志目录下的
+        # `BOOT_LOGS`（tick 文件 + debug 日志），名字不对就永远读不到。
+        log = tmp_path / ga.BOOT_LOGS[0]
         log.write_text("Processing Tick: 1836.1.1\n", encoding="utf-8")
         self._patch(monkeypatch, log, [1234])
         clock = FakeClock()
-        result = ga.wait_for_boot_settle(timeout=60.0, clock=clock, sleeper=clock.advance)
+        rounds = {"n": 0}
+
+        def write_once(seconds: float) -> None:
+            clock.advance(seconds)
+            rounds["n"] += 1
+            if rounds["n"] == 1:
+                # 注意：**长度要变**（判据是 size 变化；等长重写是看不见的，真实日志只会变长）
+                log.write_text("Processing Tick: 1836.1.2\n" + "x" * 64, encoding="utf-8")
+
+        # `minimum` 是"至少启动这么久"的实测护栏（默认 120 秒，实测到大厅约 137 秒）；
+        # 这条用例测的是"写过又安静"这条逻辑本身，所以把护栏调到 0，别让它等两分钟。
+        result = ga.wait_for_boot_settle(timeout=60.0, minimum=0.0, clock=clock, sleeper=write_once)
         assert result.settled is True
         assert result.processes == 1
-        assert result.log_bytes == log.stat().st_size
+
+    def test_日志从来没变过就不算忙完(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """日志一直不动 ⇒ **不能**判忙完（这正是实机踩到的那个假阳性）。"""
+        log = tmp_path / ga.BOOT_LOGS[0]
+        log.write_text("", encoding="utf-8")
+        self._patch(monkeypatch, log, [1234])
+        clock = FakeClock()
+        result = ga.wait_for_boot_settle(timeout=20.0, clock=clock, sleeper=clock.advance)
+        assert result.settled is False
+        assert "没看到日志推进过" in result.why
 
     def test_没有进程就不算忙完(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         log = tmp_path / "t.log"
@@ -1558,11 +1592,16 @@ class TestCaptureCostAndGuards:
     """抓图的两条硬口径：**只抓需要的区域** + **不是前台就报错**（P2 + P13）。"""
 
     def test_不是前台就拒绝抓图(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """`ImageGrab` 抓的是屏幕：被遮挡时拿到的是上层窗口的像素，据此判定会静默出错。"""
+        """`ImageGrab` 抓的是屏幕：**那块像素不属于这个窗口**时宁可报错也不猜。
+
+        判据是"采样点上压着的窗口是不是它"（`WindowFromPoint`）—— 不是"它是不是前台"：
+        看一眼界面不需要焦点，用前台当判据会把等待逼进借前台期间（实测 ⇒ 用户黑屏几十秒）。
+        """
         monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
-        monkeypatch.setattr(ga, "_foreground_window", lambda: 999)
-        monkeypatch.setattr(ga, "_window_title", lambda _h: "DeepSeek Harness")
-        with pytest.raises(ga.CaptureFailedError, match="前台"):
+        monkeypatch.setattr(ga, "_client_origin", lambda _h: (0, 0))
+        monkeypatch.setattr(ga.win32gui, "WindowFromPoint", lambda _pt: 999)
+        monkeypatch.setattr(ga.win32gui, "GetAncestor", lambda _h, _flag: 999)
+        with pytest.raises(ga.CaptureFailedError, match="像素"):
             ga._grab(4242)
 
     def test_ROI_只抓那一块(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1570,7 +1609,7 @@ class TestCaptureCostAndGuards:
 
         monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
         monkeypatch.setattr(ga, "_client_origin", lambda _h: (100, 50))
-        monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+        monkeypatch.setattr(ga.win32gui, "WindowFromPoint", lambda _pt: 4242)
         seen: dict[str, object] = {}
 
         def fake_grab(*, bbox: tuple[int, int, int, int], all_screens: bool) -> Image.Image:

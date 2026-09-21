@@ -150,7 +150,25 @@ def _real_foreground_click(hwnd: int, x: int, y: int) -> dict[str, Any]:
 
 
 def main() -> int:
+    # 控制台可能是 GBK（实测：打印 "❌" 会 UnicodeEncodeError 并把 finally 里的
+    # 还前台也一起带崩）。探针自己把标准输出钉成 UTF-8，别让编码问题伪装成流程问题。
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
     ga.ALLOW_REAL_INPUT = True  # 探针是显式入口：允许借前台（只为定位按钮）
+    if "--launch" in sys.argv:
+        # 自带前置：**后台启动**（`activate=False`）→ 用便宜信号等启动忙完（不抓图、不占屏）。
+        # 为什么不让调用方先起游戏：这样"从 0 到结论"是一条可复现的命令，中间少一个人工步骤。
+        ga.assert_no_game_running()
+        print("后台启动游戏（不抢前台）……")
+        ga.launch(scripted_tests=True, activate=False, timeout=180.0)
+        print("等启动忙完（只看进程 + 日志大小）……")
+        settle = ga.wait_for_boot_settle(timeout=300.0)
+        print(f"  {settle.why}（settled={settle.settled}）")
+        if not settle.settled:
+            print("❌ 启动没忙完就超时了 —— 不做点击实验")
+            return 4
     hwnd = ga.find_window()
     if not hwnd:
         print("❌ 找不到游戏窗口 —— 先起游戏（`v3 game launch`）并等它停在选国家界面")
@@ -171,8 +189,12 @@ def main() -> int:
         print(f"❌ 定位失败：{type(exc).__name__}: {exc}")
         return 3
     finally:
+        # 还前台走**同一条库缝隙**（`_set_foreground` 内部 `Window.activate()`），
+        # 不直接调 `win32gui.SetForegroundWindow` —— 后者实测会抛
+        # `pywintypes.error: (0, 'SetForegroundWindow', 'No error message is available')`，
+        # 在 finally 里抛出来会把真正的失败原因盖掉。
         if previous and previous != hwnd:
-            win32gui.SetForegroundWindow(previous)
+            ga._set_foreground(previous)
         time.sleep(0.5)
 
     report: dict[str, Any] = {"observe_point": point, "baseline_tick": baseline.tick}

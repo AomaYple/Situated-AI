@@ -380,6 +380,6 @@ pretty = true
 # 没有类型标注、也没有 `py.typed` 的第三方库 —— 明确列出来，别用全局
 # `ignore_missing_imports` 把"我们自己写错导入名"也一起放过。
 [[tool.mypy.overrides]]
-module = ["pydirectinput", "pygetwindow", "win32gui"]
+module = ["pydirectinput", "pygetwindow", "win32gui", "win32con"]
 ignore_missing_imports = true
 

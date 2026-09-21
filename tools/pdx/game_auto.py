@@ -51,6 +51,7 @@ import cv2
 import numpy as np
 import pydirectinput as directinput
 import pygetwindow as gw
+import win32con
 import win32gui
 from PIL import Image, ImageGrab
 
@@ -132,8 +133,23 @@ WINDOW_SHOW_SETTLE = 1.0
 #   ② 逐 tick 真值文件 `dedicated_server.log` 的**大小**多久没变。
 # ⚠️ ② 是**启发式**、不是判据：暂停时这文件本来就不写（实测），所以"没变"只能当
 #    "可以去看一眼了"，**真正的判据永远是界面本身**（借到前台之后的那次匹配）。
-BOOT_QUIET = 8.0
+#: "安静"窗口。**实测值**：8 秒会假阳性（日志 0 字节、启动 8.7 秒就判忙完 ⇒ 提前借前台
+#: 去点「观察」，按钮还没出现）；启动期引擎一直在写日志，20 秒的安静已经足够接近
+#: "载入结束"，而多等的这 12 秒换掉一次白借前台。
+BOOT_QUIET = 20.0
 BOOT_POLL = 1.0
+
+#: 启动期盯着看的日志（相对游戏日志目录）：逐 tick 真值 + 启动期一直在写的 debug 日志。
+#: 为什么要两个：只盯逐 tick 文件时实测出现过**假阳性**（0 字节、8.7 秒就判"忙完"）。
+BOOT_LOGS = ("dedicated_server.log", "debug.log")
+
+#: 启动至少要过这么久（秒）才允许判"忙完"。**实测值**：官方流水线从进程启动到选国家
+#: 界面约 137 秒；只靠"日志安静"会在 8.7 秒 / 20 秒两次假阳性（提前借前台 ⇒ 白占屏幕）。
+BOOT_MIN_SECONDS = 120.0
+
+#: 借到前台之后等「观察」出现的上限（秒）。**必须短**：这段时间用户的屏幕被占住；
+#: 前面已经用"完全不碰屏幕"的信号等过一轮，所以这里通常几秒内就命中。
+LOOK_TIMEOUT = 45.0
 
 # 找按钮时抓图的间隔**自适应**（P2「频率自己负责」）：第一次马上抓，
 # 没找到就逐步放慢到上限，不在固定 2 秒上一直整屏抓。
@@ -162,6 +178,8 @@ ALLOW_REAL_INPUT = False
 #: （NVIDIA OpenGL 驱动）。那一次还让 `find_window()` 找不到窗口（它要求窗口可见），
 #: 整条流程卡死。要"不占屏"只能靠**不点击**那条路（见 `docs/design/backlog.md` B32），
 #: 不是靠最小化。
+#: `GetAncestor` 的取值：取顶层窗口。win32con 里也有（GA_ROOT）。
+GA_ROOT = 2
 SW_SHOWNOACTIVATE = 4
 #: `ShowWindow` 用：最小化（跑完之后把窗口缩下去，桌面还给用户）。
 SW_MINIMIZE = 6
@@ -607,6 +625,53 @@ def _show_no_activate(hwnd: int) -> None:
     win32gui.ShowWindow(hwnd, SW_SHOWNOACTIVATE)
 
 
+def _owns_pixels(hwnd: int, origin_x: int, origin_y: int, width: int, height: int) -> bool:
+    """客户区那几个采样点上压着的窗口，是不是（属于）``hwnd``？
+
+    这是 :func:`_grab` 的判据。为什么不用"必须前台"：**看一眼界面不需要焦点** —— 只要
+    窗口露在最上面，`ImageGrab` 拿到的就是它的像素。用前台当判据会把"等待"逼进借前台
+    期间，实测后果是**用户黑屏几十秒**（载入画面全屏盖住桌面）。采四个角而不是一个点：
+    窗口可能被别的小窗口压住一角。
+    """
+    inset_x = max(1, width // 10)
+    inset_y = max(1, height // 10)
+    points = (
+        (origin_x + inset_x, origin_y + inset_y),
+        (origin_x + width - inset_x, origin_y + inset_y),
+        (origin_x + inset_x, origin_y + height - inset_y),
+        (origin_x + width - inset_x, origin_y + height - inset_y),
+    )
+    for x, y in points:
+        under = int(win32gui.WindowFromPoint((x, y)))
+        if not under:
+            return False
+        if under == hwnd or int(win32gui.GetAncestor(under, GA_ROOT)) == hwnd:
+            continue
+        return False
+    return True
+
+
+def raise_without_activate(hwnd: int) -> bool:
+    """把窗口提到 Z 序最前但**不激活**（焦点仍归用户）。
+
+    这是"看一眼界面"的配套动作：露在最上面 ⇒ 抓图拿得到；不激活 ⇒ 不抢用户焦点，
+    也**不占用户的等待时间**。
+    """
+    try:
+        win32gui.SetWindowPos(
+            hwnd,
+            win32con.HWND_TOP,
+            0,
+            0,
+            0,
+            0,
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE,
+        )
+    except Exception:
+        return False
+    return True
+
+
 def _set_cursor(x: int, y: int) -> None:
     directinput.moveTo(int(x), int(y))
 
@@ -637,13 +702,12 @@ def _grab(hwnd: int, roi: tuple[float, float, float, float] | None = None) -> Im
     width, height = _client_size(hwnd)
     if width <= 0 or height <= 0:
         raise CaptureFailedError(f"客户区尺寸非法: {width}x{height}（窗口最小化了？）")
-    front = _foreground_window()
-    if front != hwnd:
-        raise CaptureFailedError(
-            f"抓图要求目标就是前台窗口：hwnd={hwnd} 现在不是前台（前台={front}"
-            f"，标题={_window_title(front)!r}）；被遮挡时 ImageGrab 拿到的是上层窗口的像素"
-        )
     origin_x, origin_y = _client_origin(hwnd)
+    if not _owns_pixels(hwnd, origin_x, origin_y, width, height):
+        raise CaptureFailedError(
+            f"抓图要求那块像素**确实属于** hwnd={hwnd}：现在压在上面的是别的窗口"
+            "（ImageGrab 抓的是屏幕，拿被遮挡的像素判界面会得到静默错误的结论）"
+        )
     left, top, right, bottom = roi or (0.0, 0.0, 1.0, 1.0)
     x0 = origin_x + int(left * width)
     y0 = origin_y + int(top * height)
@@ -732,6 +796,14 @@ def ensure_foreground(hwnd: int, *, attempts: int = 5, force: bool = False) -> N
             "没有授权就抢前台：这会把用户正在用的窗口挤到后面。"
             "要走点击阶段就显式打开 —— CLI 用 `python -m pdx.game_auto run`，"
             "代码里传 `force=True`，或在 `borrow_foreground()` 里做。"
+        )
+    if _is_iconic(hwnd):
+        # **最小化的窗口激活不了**（实测：`background=True` 起游戏后第一次借前台直接
+        # ForegroundLostError）。所以先把窗口还原成普通窗口，再谈置前 ——
+        # 这一条也是"默认后台启动"必须配套的动作。
+        _restore(hwnd)
+        wait_until(
+            lambda: not _is_iconic(hwnd), timeout=WINDOW_SHOW_SETTLE, interval=CONDITION_POLL
         )
     for _ in range(max(1, attempts)):
         # **不看库调用的返回值**：`activate()` 在 Windows 前台锁定下会静默失败，
@@ -1066,24 +1138,26 @@ def launch(
     debug: bool = True,
     extra_args: tuple[str, ...] = (),
     wait: bool = True,
-    activate: bool = False,
     timeout: float = WINDOW_TIMEOUT,
 ) -> int:
     """以调试模式起游戏（可选带官方自动化开关），返回窗口句柄。
 
-    复用 :mod:`pdx.experiments` 的启动命令 —— 那是"怎么起游戏"的**唯一**出处
-    （``content_load.json`` 决定启用哪些 mod，``-debug_mode`` 决定调试模式）。
+    **启动方式就用之前那套探针/测试的那一套**（用户口径："直接用之前那套测试的怎么启动
+    就怎么启动"）：``experiments.launch_command()`` + ``-scripted_tests`` + 普通
+    ``Popen``，**不碰任何窗口样式**。为什么把自创的变体全部删掉 —— 都实测过：
 
-    ``activate=False``（默认）时给子进程带上 ``STARTUPINFO.wShowWindow =
-    SW_SHOWNOACTIVATE``：**显示出来但不激活、不抢前台** —— 用户口径就是
-    "先**后台**启动游戏"。
+    * ``SW_SHOWMINNOACTIVE``（创建时就最小化）：游戏**当场崩** ——
+      ``crashes\\victoria3_01260821_215742\\exception.txt`` 是
+      ``Unhandled Exception C0000005 (EXCEPTION_ACCESS_VIOLATION)``，栈在
+      ``nvoglv64.dll``（NVIDIA OpenGL 在 0 尺寸窗口上初始化失败）；
+    * ``SW_SHOWNOACTIVATE``（显示但不激活）：窗口照常铺满屏幕盖在最上面，
+      用户当场指出"发现还是直接前台启动了"；
+    * "窗口出现后再最小化"：能缩下去（实测安全），但用户看到的是"游戏一闪就没了"，
+      也不是他要的。
 
-    ⚠️ **不许改成"真·最小化"**（``SW_SHOWMINNOACTIVE``）：实测会让游戏**当场崩** ——
-    ``crashes\\victoria3_01260821_215742\\exception.txt`` 是
-    ``Unhandled Exception C0000005 (EXCEPTION_ACCESS_VIOLATION)``，栈落在
-    ``nvoglv64.dll``（NVIDIA OpenGL）；而且最小化/隐藏的窗口对 :func:`find_window`
-    不可见（它要求 ``IsWindowVisible``），于是"起完等窗口"会一直等不到。
-    要旧行为（正常大小 + 抢前台）就传 ``activate=True``。
+    ⇒ 结论：**启动这一步不加戏**，普通启动最稳、窗口正常出现；"不打扰用户"由后面的
+    两步保证：**等待全程不占前台**（:func:`_step_look` + 像素归属抓图），
+    **只有那三下点击借前台**（:func:`borrow_foreground`，约 1 秒）。
 
     ⚠️ **已知缺口（未修，故意留白不如记下来）**：``wait=False`` 时返回 ``0``，
     而 ``0`` 同时是 :func:`find_window` 的"没找到"哨兵 —— 调用方分不清
@@ -1098,12 +1172,19 @@ def launch(
     command.extend(extra_args)
     if not Path(command[0]).is_file():
         raise GameAutoError(f"找不到游戏可执行文件：{command[0]}")
-    startupinfo = None
-    if not activate:
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        startupinfo.wShowWindow = SW_SHOWNOACTIVATE
-    subprocess.Popen(command, cwd=str(config.ROOT), close_fds=True, startupinfo=startupinfo)
+    subprocess.Popen(command, cwd=str(config.ROOT), close_fds=True)
+    if not wait:
+        return 0
+    return wait_for_window(timeout=timeout)
+
+    assert_no_game_running()
+    command = experiments.launch_command(debug=debug)
+    if scripted_tests:
+        command.append(SCRIPTED_TESTS_ARG)
+    command.extend(extra_args)
+    if not Path(command[0]).is_file():
+        raise GameAutoError(f"找不到游戏可执行文件：{command[0]}")
+    subprocess.Popen(command, cwd=str(config.ROOT), close_fds=True)
     if not wait:
         return 0
     return wait_for_window(timeout=timeout)
@@ -1170,53 +1251,67 @@ def wait_for_boot_settle(
     timeout: float = LOBBY_TIMEOUT,
     quiet: float = BOOT_QUIET,
     interval: float = BOOT_POLL,
+    minimum: float = BOOT_MIN_SECONDS,
     log: Path | None = None,
     clock: object = None,
     sleeper: object = None,
 ) -> BootSettle:
-    """等"启动期忙完了"：**进程在** + **逐 tick 真值文件连续 ``quiet`` 秒没长**。
+    """等"启动期忙完了"：**进程在** + **启动日志真的在写、然后连续 ``quiet`` 秒没再变**。
 
     为什么不看像素：抓图只能抓**前台**窗口，而起游戏不许占用户的前台（拿被遮挡的像素
     判界面会得出静默错误的结论，P5）。而日志 ``size`` 是**免费**的（一次 ``stat``）——
     这就是 P2 的"事件驱动 + 频率自己负责"：等待期不烧 CPU、不抓整屏、不猜。
 
-    ⚠️ 已知边界（实测）：暂停时这个文件**本来就不写**，所以"没长"**不能**证明
-    "界面已经到选择国家"；它只说明"可以去看一眼了"。所以本函数返回的
-    :class:`BootSettle` 只是**去借前台的理由**，真正的判据是借到之后那一次匹配。
+    ⚠️ **实测踩过（2026-09-21）**：只看"逐 tick 文件没变"会**假阳性** —— 那次
+    ``dedicated_server.log = 0 字节``、启动才 8.7 秒就判"忙完"，于是提前借前台去点
+    「观察」，按钮当然还没出现（`TemplateNotFoundError`）。所以现在必须先看到
+    **至少一次 size 变化**（证明引擎真的在写日志、在推进启动），再谈"安静"。
+    看的是两个文件：逐 tick 的 ``dedicated_server.log`` 与启动期一直在写的 ``debug.log``。
+
+    ⚠️ 另一条已知边界（实测）：暂停时逐 tick 文件**本来就不写**，所以"安静"**不能**证明
+    "界面已经到选择国家"；它只说明"可以去看一眼了"。真正的判据是借到前台之后那一次匹配。
     """
     tick_clock: Clock = cast("Clock", _resolve(clock, _monotonic, "clock"))
     pause: Sleeper = cast("Sleeper", _resolve(sleeper, _sleep, "sleeper"))
-    path = log or TICK_LOG
+    paths = (log,) if log is not None else tuple(TICK_LOG.parent / name for name in BOOT_LOGS)
     started = tick_clock()
-    last_size = _log_size(path)
+    sizes = tuple(_log_size(item) for item in paths)
     last_change = started
+    progressed = False
     processes = 0
     while tick_clock() - started < timeout:
         processes = len(_process_pids())
-        size = _log_size(path)
+        now_sizes = tuple(_log_size(item) for item in paths)
         now = tick_clock()
-        if size != last_size:
-            last_size = size
+        if now_sizes != sizes:
+            sizes = now_sizes
             last_change = now
+            progressed = True
         quiet_for = now - last_change
-        if processes and quiet_for >= quiet:
+        if now - started >= minimum and processes and progressed and quiet_for >= quiet:
+            detail = "、".join(
+                f"{item.name}={size}" for item, size in zip(paths, now_sizes, strict=True)
+            )
             return BootSettle(
                 True,
                 now - started,
-                size,
+                max(now_sizes),
                 quiet_for,
                 processes,
-                f"进程 {processes} 个；{path.name} = {size} 字节，已连续 {quiet_for:.1f} 秒没变",
+                f"进程 {processes} 个；{detail}；已连续 {quiet_for:.1f} 秒没变",
             )
         pause(interval)
     quiet_for = tick_clock() - last_change
+    last_size = max(sizes)
+    detail = "、".join(f"{item.name}={size}" for item, size in zip(paths, sizes, strict=True))
     return BootSettle(
         False,
         tick_clock() - started,
         last_size,
         quiet_for,
         processes,
-        f"超时：进程 {processes} 个；{path.name} = {last_size} 字节，最后安静 {quiet_for:.1f} 秒",
+        f"超时：进程 {processes} 个；{detail}；最后安静 {quiet_for:.1f} 秒"
+        + ("（**没看到日志推进过** ⇒ 引擎可能还没开始写）" if not progressed else ""),
     )
 
 
@@ -1538,11 +1633,20 @@ def borrow_foreground(
         visit.seconds = _monotonic() - started
 
 
-def _step_observe(hwnd: int, *, threshold: float, settle_timeout: float) -> dict[str, object]:
-    """① 点「观察」，再**等界面真的切走**（判据 = 按钮消失或时间开始走，不睡固定秒数）。"""
-    frame = screenshot(hwnd)  # 这一步要留档（一次性整屏），不是热路径
-    match = locate(frame, "btn_observe", threshold=threshold, roi=BOTTOM_ROI)
-    save_shot(frame, "10-lobby")
+def _step_look(hwnd: int, *, threshold: float, lobby_timeout: float = LOOK_TIMEOUT) -> Match:
+    """① 在**借用期内**确认「观察」出现（有界，默认 :data:`LOOK_TIMEOUT` 秒）。
+
+    ⚠️ **不许在等待阶段置顶窗口**：实测那样会让游戏窗口压住 9 个屏幕采样点里的 7 个，
+    用户看到的就是"还是前台"（即使 `GetForegroundWindow()` 仍是他的窗口）。
+    所以本函数只管"已经在前台时看一眼"，长时间等待交给**完全不碰屏幕**的
+    :func:`wait_for_boot_settle`。等不到就抛错（P13），不猜。
+    """
+    return wait_for_lobby(hwnd, timeout=lobby_timeout, threshold=threshold)
+
+
+def _step_observe(hwnd: int, match: Match, *, settle_timeout: float) -> dict[str, object]:
+    """① 点「观察」（**只在借用期内**）；界面有没有切走**借用期外**再验（抓图不占前台）。"""
+    save_shot(screenshot(hwnd), "10-lobby")  # 证据：整屏一张（一次性，不是热路径）
     click_match(hwnd, match, give_back=False)
     settled = wait_until(
         lambda: lobby_visible(hwnd) is None or tick_mark().readable,
@@ -1604,6 +1708,7 @@ def start_background_session(
     threshold: float = DEFAULT_THRESHOLD,
     key_timeout: float = 8.0,
     run_timeout: float = RUN_TIMEOUT,
+    lobby_timeout: float = LOBBY_TIMEOUT,
     settle_timeout: float = MAP_SETTLE_TIMEOUT,
     give_back: bool = True,
     restore_for_actions: bool = True,
@@ -1646,15 +1751,19 @@ def start_background_session(
     notes: dict[str, object] = {}
     attempts = 0
 
-    # ① 一次前台访问：观察 → 5 档速度 → 空格
+    # ① **后台**等并确认大厅（不占前台）—— 用户口径："只有在需要点击时切换到前台"
+    match = _step_look(hwnd, threshold=threshold, lobby_timeout=lobby_timeout)
+    notes["observe"] = match.describe()
+
+    # ② **借前台只做三下**：点观察 → 点 5 档速度 → 按空格（约 1 秒，之后立刻还）
     with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
         borrows += 1
         if restore_for_actions:
-            # 起游戏是"最小化显示、不激活"⇒ 要点击先让它可见（优先显示但不给焦点）
+            # 起游戏是"显示但不激活"（或最小化）⇒ 点击前确保它可见
             notes["window_shown"] = ensure_visible_for_capture(hwnd)
         else:
             notes["window_shown"] = "按调用方要求不恢复窗口"
-        notes.update(_step_observe(hwnd, threshold=threshold, settle_timeout=settle_timeout))
+        notes.update(_step_observe(hwnd, match, settle_timeout=settle_timeout))
         if not skip_speed:
             attempts = 1
             notes.update(_step_speed(hwnd, speed_xy=speed_xy, threshold=threshold, index=0))
@@ -1662,7 +1771,19 @@ def start_background_session(
         notes["unpause"] = f"按了 {unpause_key}（扫描码）"
     borrow_seconds += visit.seconds
 
-    # ② 后台验证：时间有没有真的开始走（只读日志，不占前台）
+    # ② **立刻回后台**：空格按完就把游戏缩下去（用户口径第 ④ 步"空格后切回后台"）。
+    #    放在验证之前 —— 验证只读日志，不需要窗口可见；屏幕占用时间越短越好。
+    minimized = False
+    if minimize_after and not _is_iconic(hwnd):
+        _minimize(hwnd)
+        minimized = bool(
+            wait_until(
+                lambda: _is_iconic(hwnd), timeout=WINDOW_SHOW_SETTLE, interval=CONDITION_POLL
+            )
+        )
+    notes["minimized"] = "已缩回后台" if minimized else "窗口没有缩下去（按调用方要求或最小化失败）"
+
+    # ③ 后台验证：时间有没有真的开始走（只读日志，不占前台）
     advance = _wait_running(before, timeout=key_timeout)
     if advance is None:
         with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
@@ -1678,7 +1799,7 @@ def start_background_session(
             "先看 dedicated_server.log 有没有 tick 行，别急着改坐标"
         )
 
-    # ③ 速率：在**后台**量（不占前台）；不够就再借一次、只点下一个候选位置
+    # ④ 速率：在**后台**量（不占前台）；不够就再借一次、只点下一个候选位置
     rate = 0.0 if skip_speed else measure_rate(measure_seconds)
     while not skip_speed and rate < min_rate and attempts < speed_attempts:
         with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
@@ -1688,21 +1809,13 @@ def start_background_session(
         attempts += 1
         rate = measure_rate(measure_seconds)
 
-    # ④ 回到后台跑：默认缩下去，并**实测**"缩下去还在不在推进"
+    # ⑤ 后台跑：窗口已经缩下去了 ⇒ 验证"**缩着也在推进**"（这是必须实测的一条，
+    #    有些游戏一缩下去就不渲染/不推进）。验不过立刻恢复原样，结论如实写进返回值。
     background = background_ok(hwnd, seconds=background_seconds)
-    minimized = False
-    if minimize_after and background.advanced:
-        # 用户口径的最后一步：切回来之后把游戏缩下去，桌面还给用户。
-        # 但"最小化之后还会不会继续模拟"必须**验**而不是假设 —— 有些游戏一缩下去就
-        # 不渲染/不推进。验不过就立刻恢复原样，并把结论如实写进返回值（不静默）。
-        _minimize(hwnd)
-        minimized_advance = background_ok(hwnd, seconds=background_seconds)
-        if minimized_advance.advanced:
-            minimized = True
-            background = minimized_advance
-        else:
-            _show_no_activate(hwnd)
-            background = background_ok(hwnd, seconds=background_seconds)
+    if minimized and not background.advanced:
+        _show_no_activate(hwnd)
+        minimized = False
+        background = background_ok(hwnd, seconds=background_seconds)
     return {
         "hwnd": hwnd,
         "unpause": notes.get("unpause", "（没做）"),
@@ -1716,6 +1829,7 @@ def start_background_session(
         "lobby_settled": notes.get("lobby_settled", ""),
         "foreground_restored": notes.get("foreground_restored", "（每次借用后都还了）"),
         "window_shown": notes.get("window_shown", ""),
+        "minimized_note": notes.get("minimized", ""),
         "borrows": borrows,
         "borrow_seconds": round(borrow_seconds, 3),
         "minimized": minimized,
@@ -1832,11 +1946,13 @@ def main(argv: list[str] | None = None) -> int:
         # → 在后台量速率并继续跑。前台访问次数与总时长都在返回值里（borrows / borrow_seconds）。
         hwnd = launch(
             scripted_tests=not bool(args.no_scripted_tests),
-            activate=bool(args.activate),
             timeout=float(args.lobby_timeout),
         )
+        # 加载期间**完全不碰窗口**：只用进程 + 日志这些免费信号等（至少
+        # `BOOT_MIN_SECONDS` 秒，实测到选国家界面约 137 秒）。用户口径原话：
+        # "启动之后，因为游戏加载，不要碰窗口，加载完成后再切换前台点击"。
         settle = wait_for_boot_settle(timeout=float(args.lobby_timeout))
-        print(f"后台等待启动：{settle.why}")
+        print(f"加载等待（不碰窗口）：{settle.why}")
         speed_xy: tuple[int, int] | None = None
         if args.speed_xy:
             left, _, right = str(args.speed_xy).partition(",")
