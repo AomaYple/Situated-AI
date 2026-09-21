@@ -1762,7 +1762,12 @@ def _step_look(hwnd: int, *, threshold: float, lobby_timeout: float = LOOK_TIMEO
 
 
 def _step_observe(
-    hwnd: int, match: Match, *, settle_timeout: float, nosteal: bool = False
+    hwnd: int,
+    match: Match,
+    *,
+    settle_timeout: float,
+    nosteal: bool = False,
+    force: bool = False,
 ) -> dict[str, object]:
     """① 点「观察」；界面有没有切走随后再验。
 
@@ -1770,9 +1775,9 @@ def _step_observe(
     """
     save_shot(screenshot(hwnd), "10-lobby")  # 证据：整屏一张（一次性，不是热路径）
     if nosteal:
-        click_client_nosteal(hwnd, match.x, match.y)
+        click_client_nosteal(hwnd, match.x, match.y, force=force)
     else:
-        click_match(hwnd, match, give_back=False)
+        click_match(hwnd, match, give_back=False, force=force)
     settled = wait_until(
         lambda: lobby_visible(hwnd) is None or tick_mark().readable,
         timeout=settle_timeout,
@@ -1799,14 +1804,15 @@ def _step_speed(
     threshold: float,
     index: int,
     nosteal: bool = False,
+    force: bool = False,
 ) -> dict[str, object]:
     """② 点速度档（用户口径就是 **5 档**）；点哪个位置由**候选序列**决定，不赌某一个点。"""
     candidates = speed_candidates(hwnd, speed_xy=speed_xy, threshold=threshold)
     label, point = candidates[min(index, len(candidates) - 1)]
     if nosteal:
-        click_client_nosteal(hwnd, point[0], point[1])
+        click_client_nosteal(hwnd, point[0], point[1], force=force)
     else:
-        click_client(hwnd, point[0], point[1], give_back=False)
+        click_client(hwnd, point[0], point[1], give_back=False, force=force)
     return {"speed_source": label, "speed_xy": f"{point[0]},{point[1]}"}
 
 
@@ -1898,13 +1904,17 @@ def start_background_session(
     # ② **不抢前台**做完三下（首选路线，实机两次复现）：观察 → 5 档速度 → 空格。
     #    用户的前台窗口全程不变；真要点不动才回落到借前台（见 ③）。
     hwnd = _live_window(hwnd)
-    notes.update(_step_observe(hwnd, match, settle_timeout=settle_timeout, nosteal=True))
+    notes.update(
+        _step_observe(hwnd, match, settle_timeout=settle_timeout, nosteal=True, force=force)
+    )
     if not skip_speed:
         attempts = 1
         notes.update(
-            _step_speed(hwnd, speed_xy=speed_xy, threshold=threshold, index=0, nosteal=True)
+            _step_speed(
+                hwnd, speed_xy=speed_xy, threshold=threshold, index=0, nosteal=True, force=force
+            )
         )
-    press_key_at(hwnd, unpause_key)
+    press_key_at(hwnd, unpause_key, force=force)
     notes["unpause"] = f"按了 {unpause_key}（扫描码，未抢前台）"
     with suppress(CaptureFailedError):
         save_shot(screenshot(hwnd), "12-after-space")
@@ -1918,7 +1928,7 @@ def start_background_session(
             if restore_for_actions:
                 notes["window_shown"] = ensure_visible_for_capture(hwnd)
             notes["fallback"] = "不抢前台没点动 ⇒ 借前台重做「观察」"
-            notes.update(_step_observe(hwnd, match, settle_timeout=settle_timeout))
+            notes.update(_step_observe(hwnd, match, settle_timeout=settle_timeout, force=force))
         borrow_seconds += visit.seconds
 
     # ② **立刻切回后台**：借用的 `finally` 已经把前台还给用户了（用户口径第 ④ 步）。
@@ -1962,7 +1972,14 @@ def start_background_session(
         # 只在"观察没点动"的回落里才可能非零。
         hwnd = _live_window(hwnd)
         notes.update(
-            _step_speed(hwnd, speed_xy=speed_xy, threshold=threshold, index=attempts, nosteal=True)
+            _step_speed(
+                hwnd,
+                speed_xy=speed_xy,
+                threshold=threshold,
+                index=attempts,
+                nosteal=True,
+                force=force,
+            )
         )
         attempts += 1
         rate = measure_rate(measure_seconds)
