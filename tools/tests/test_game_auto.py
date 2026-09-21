@@ -1362,10 +1362,10 @@ class TestBorrowForeground:
 
 
 class TestSessionFlow:
-    """收敛版闭环：**一次**前台访问里做完"观察 → 5 档速度 → 空格"，然后回后台验证。
+    """闭环：**首选不抢前台**做完"观察 → 5 档速度 → 空格"，失效才回落借前台，然后后台验证。
 
-    这条用例把用户口径的**顺序**和**借用次数**钉住：顺序错了（比如先按空格再切速度）
-    或者借了好几次（用户会看到反复闪动）都要红。
+    这条用例把用户口径的**顺序**、**借用次数**与**回落条件**钉住：
+    顺序错了（比如先按空格再切速度）或者动不动就借前台（用户会看到闪动）都要红。
     """
 
     def _patch(self, monkeypatch: pytest.MonkeyPatch, calls: list[str], borrows: list[int]) -> None:
@@ -1381,12 +1381,6 @@ class TestSessionFlow:
                 calls.append("give_back")
 
         monkeypatch.setattr(ga, "borrow_foreground", fake_borrow)
-
-        def show(_h: int) -> str:
-            calls.append("show")
-            return "显示出来"
-
-        monkeypatch.setattr(ga, "ensure_visible_for_capture", show)
         monkeypatch.setattr(ga, "screenshot", lambda _h, **_kw: textured())
         monkeypatch.setattr(
             ga,
@@ -1396,8 +1390,25 @@ class TestSessionFlow:
             ),
         )
         monkeypatch.setattr(ga, "save_shot", lambda _img, _tag: None)
-        monkeypatch.setattr(ga, "click_match", lambda _h, _m, **_kw: calls.append("click_observe"))
-        # 播放键的回落路径走 `locate_optional`（找不到不算致命，速率才是最终判据）
+        # **首选路线**：不抢前台点击 / 不抢前台按键
+        monkeypatch.setattr(
+            ga, "click_client_nosteal", lambda _h, x, y, **_kw: calls.append(f"click:{x},{y}")
+        )
+        monkeypatch.setattr(ga, "press_key_at", lambda _h, key, **_kw: calls.append(f"press:{key}"))
+        # **回落路线**（借前台那条）
+        monkeypatch.setattr(
+            ga, "click_match", lambda _h, _m, **_kw: calls.append("click_foreground")
+        )
+        monkeypatch.setattr(ga, "click_client", lambda _h, x, _y, **_kw: calls.append(f"fg:{x}"))
+        monkeypatch.setattr(ga, "press_key", lambda key, **_kw: calls.append(f"press_fg:{key}"))
+
+        def show(_h: int) -> str:
+            calls.append("show")
+            return "显示"
+
+        monkeypatch.setattr(ga, "ensure_visible_for_capture", show)
+        monkeypatch.setattr(ga, "lobby_visible", lambda _h, **_kw: None)
+        # 回落路径找播放键走 `locate_optional`（找不到不算致命，速率才是最终判据）
         monkeypatch.setattr(
             ga,
             "locate_optional",
@@ -1405,9 +1416,6 @@ class TestSessionFlow:
                 name="btn_play", x=1851, y=52, score=0.99, scale=1.0, box=(1840, 40, 1862, 64)
             ),
         )
-        monkeypatch.setattr(ga, "lobby_visible", lambda _h, **_kw: None)
-        # `_step_observe` 现在在里面**有界等**按钮出现（"启动忙完"只是启发式，实测假阳性过两次），
-        # 所以这里把 `wait_for_lobby` 也钉住 —— 单测不该真的转 30 秒。
         monkeypatch.setattr(
             ga,
             "wait_for_lobby",
@@ -1418,10 +1426,6 @@ class TestSessionFlow:
         monkeypatch.setattr(
             ga, "speed_candidates", lambda _h, **_kw: [("模板匹配 (1851, 52)", (1851, 52))]
         )
-        monkeypatch.setattr(
-            ga, "click_client", lambda _h, x, _y, **_kw: calls.append(f"click_speed:{x}")
-        )
-        monkeypatch.setattr(ga, "press_key", lambda key, **_kw: calls.append(f"press:{key}"))
         monkeypatch.setattr(ga, "tick_mark", lambda *_a, **_k: ga.TickMark("1836.1.1", 0.0))
         monkeypatch.setattr(ga, "_minimize", lambda _h: calls.append("minimize"))
         monkeypatch.setattr(ga, "_show_no_activate", lambda _h: calls.append("show_no_activate"))
@@ -1440,9 +1444,7 @@ class TestSessionFlow:
             ),
         )
 
-    def test_一次借用做完三件事且顺序是观察_速度_空格(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_首选路线不抢前台且顺序是观察_速度_空格(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: list[str] = []
         borrows: list[int] = []
         self._patch(monkeypatch, calls, borrows)
@@ -1450,13 +1452,30 @@ class TestSessionFlow:
 
         result = ga.start_background_session(4242, force=True)
 
-        assert calls[:5] == ["borrow", "show", "click_observe", "click_speed:1851", "press:space"]
-        assert calls[5] == "give_back", "空格之后立刻切回后台（用户口径第 ④ 步）"
-        assert "minimize" in calls, "回后台之后把窗口缩下去"
-        assert borrows == [4242], "默认只借一次前台"
-        assert result["borrows"] == 1
+        assert calls[:3] == ["click:864,1055", "click:1851,52", "press:space"]
+        assert "minimize" in calls, "验证完把窗口缩回后台"
+        assert borrows == [], "首选路线不该借前台（实测：不抢前台也能点中）"
+        assert result["borrows"] == 0
         assert result["speed_ok"] is True
         assert result["speed_days_per_second"] == 3.0
+
+    def test_观察没生效才回落借前台(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """首选路线点不动（按钮还在）⇒ 借一次前台重做「观察」，并把回落写进现场。"""
+        calls: list[str] = []
+        borrows: list[int] = []
+        self._patch(monkeypatch, calls, borrows)
+        monkeypatch.setattr(ga, "measure_rate", lambda *_a, **_k: 3.0)
+        # 让"界面切走"这一判据**判不出来**（wait_until 给 False）⇒ 走回落分支。
+        # 为什么不用调用计数模拟：`_step_observe` 的判据是
+        # `lobby_visible(...) is None or tick_mark().readable`，tick 一可读就短路成"切走"，
+        # 计数法根本模拟不出"没生效"。
+        monkeypatch.setattr(ga, "wait_until", lambda *_a, **_k: False)
+
+        result = ga.start_background_session(4242, force=True)
+
+        assert borrows == [4242], "首选失效时借一次前台"
+        assert calls.count("click_foreground") == 1, "回落后用借前台那条路点「观察」"
+        assert "借前台重做" in str(result.get("fallback", "")), result.get("fallback")
 
     def test_速率不够只再借一次点速度(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: list[str] = []
@@ -1467,14 +1486,13 @@ class TestSessionFlow:
 
         result = ga.start_background_session(4242, force=True)
 
-        assert borrows == [4242, 4242], "第二次只为了补点速度"
-        assert calls.count("click_observe") == 1, "观察只点一次"
+        assert borrows == [4242], "补点速度那一次才借前台"
+        assert calls.count("click:864,1055") == 1, "观察只点一次"
         assert calls.count("press:space") == 1, "空格也只按一次"
-        assert calls.count("click_speed:1851") == 2
         assert result["speed_attempts"] == 2
         assert result["speed_ok"] is True
 
-    def test_空格没被接受就再借一次点播放键(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_空格没被接受就借一次点播放键(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: list[str] = []
         borrows: list[int] = []
         self._patch(monkeypatch, calls, borrows)
@@ -1493,7 +1511,7 @@ class TestSessionFlow:
 
         result = ga.start_background_session(4242, force=True)
 
-        assert borrows == [4242, 4242]
+        assert borrows == [4242], "回落找播放键时才借前台"
         assert "播放键" in str(result["unpause"])
 
     def test_两步都不动就报错不交半个结果(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1516,7 +1534,7 @@ class TestSessionFlow:
 
         result = ga.start_background_session(4242, skip_speed=True, force=True)
 
-        assert not [c for c in calls if c.startswith("click_speed")]
+        assert not [c for c in calls if c.startswith(("click:1851", "fg:1851"))]
         assert result["speed_ok"] is True
         assert result["speed_source"] == "跳过（skip_speed）"
         assert result["speed_attempts"] == 0

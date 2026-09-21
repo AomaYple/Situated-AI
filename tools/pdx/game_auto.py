@@ -552,6 +552,12 @@ def _monotonic() -> float:
     return time.monotonic()
 
 
+def press_key_at(hwnd: int, key: str, *, force: bool = False) -> None:
+    """把**键盘焦点**给游戏（不动前台）之后按一次键 —— "不抢前台"路线的按键口径。"""
+    _raise_and_focus(hwnd)
+    press_key(key, force=force)
+
+
 def press_key(key: str, *, force: bool = False) -> None:
     """按一次**真实**键（扫描码，`pydirectinput`）—— 和点击共用同一道输入闸门。
 
@@ -1058,6 +1064,50 @@ def _wait_cursor_at(x: int, y: int, *, timeout: float = 1.0) -> bool:
             return True
         _sleep(0.01)
     return False
+
+
+def _raise_and_focus(hwnd: int) -> None:
+    """把窗口露在最上面 + 把**键盘**焦点给它（**不动前台窗口**）。"""
+    raise_without_activate(hwnd)
+    with suppress(Exception):  # 拿不到键盘焦点也继续（调用方按**状态变化**验收）
+        win32gui.SetFocus(hwnd)
+
+
+def _click_at_client(hwnd: int, x: int, y: int) -> None:
+    """在客户区 `(x, y)` 投一次**真实**左键（等光标真的到位，不用固定 sleep）。"""
+    origin_x, origin_y = _client_origin(hwnd)
+    directinput.moveTo(origin_x + x, origin_y + y)
+    _wait_cursor_at(origin_x + x, origin_y + y)
+    directinput.click()
+
+
+def click_client_nosteal(hwnd: int, x: int, y: int, *, force: bool = False) -> None:
+    """**不抢前台**地点一下客户区 ``(x, y)`` —— 实测可行（2026-09-21 两次复现）。
+
+    做法三步（探针 `tools/probe/bg_click_lib.py`，判据是**状态变化**不是像素差）：
+
+    1. `raise_without_activate`：把窗口露在**最上面**但不激活；
+    2. `SetFocus`：**键盘**焦点给游戏（前台窗口仍是用户的）；
+    3. 真实输入 `moveTo` + `click`。
+
+    实测证据：界面确实切走了（"离开大厅"），5 秒后复查仍是切走状态，且
+    `foreground_stayed_with_user=True` —— 用户的前台窗口**全程没被抢**。
+
+    ⚠️ 与"消息注入"那条死路的区别（别再混为一谈）：`PostMessage` / `SendMessage`
+    三种变体实测无效（引擎读**原始输入状态**）；这条路投的是**真实输入**，
+    只是**没有把前台抢过来**。
+
+    ⚠️ 代价（必须知道）：`SetFocus` 期间**键盘**输入会进游戏，所以只在确实要点击/按键的
+    那一瞬用它；前台一直没变，因此不需要"还焦点"。要最稳（例如游戏版本变了不认这条路）
+    就回落到 :func:`click_client`（借前台）。
+    """
+    if not _input_allowed(force):
+        raise RealInputBlockedError(
+            "没有授权就投真实鼠标输入：这会让用户的鼠标自己动起来。"
+            "显式入口请打开 `ALLOW_REAL_INPUT`，或在 `borrow_foreground()` 里做。"
+        )
+    _raise_and_focus(hwnd)
+    _click_at_client(hwnd, x, y)
 
 
 def click_match(hwnd: int, match: Match, *, give_back: bool = True, force: bool = False) -> None:
@@ -1711,10 +1761,18 @@ def _step_look(hwnd: int, *, threshold: float, lobby_timeout: float = LOOK_TIMEO
     return wait_for_lobby(hwnd, timeout=lobby_timeout, threshold=threshold)
 
 
-def _step_observe(hwnd: int, match: Match, *, settle_timeout: float) -> dict[str, object]:
-    """① 点「观察」（**只在借用期内**）；界面有没有切走**借用期外**再验（抓图不占前台）。"""
+def _step_observe(
+    hwnd: int, match: Match, *, settle_timeout: float, nosteal: bool = False
+) -> dict[str, object]:
+    """① 点「观察」；界面有没有切走随后再验。
+
+    ``nosteal=True`` 走**不抢前台**那条路（实测可行）；默认走借前台那条（回落）。
+    """
     save_shot(screenshot(hwnd), "10-lobby")  # 证据：整屏一张（一次性，不是热路径）
-    click_match(hwnd, match, give_back=False)
+    if nosteal:
+        click_client_nosteal(hwnd, match.x, match.y)
+    else:
+        click_match(hwnd, match, give_back=False)
     settled = wait_until(
         lambda: lobby_visible(hwnd) is None or tick_mark().readable,
         timeout=settle_timeout,
@@ -1725,6 +1783,9 @@ def _step_observe(hwnd: int, match: Match, *, settle_timeout: float) -> dict[str
         save_shot(screenshot(hwnd), "11-after-observe")
     return {
         "observe": match.describe(),
+        # **机器可读的标志**：调用方按它决定要不要回落；文案只给人看。
+        # （踩过：原来让调用方去匹配"没切走"这几个字，措辞一变回落就永远不触发。）
+        "lobby_settled_ok": bool(settled),
         "lobby_settled": "大厅界面已切走（按钮消失 / 时间开始走）"
         if settled
         else f"{settle_timeout:.0f} 秒内「观察」按钮还在 —— 这一下可能点空了",
@@ -1737,11 +1798,15 @@ def _step_speed(
     speed_xy: tuple[int, int] | None,
     threshold: float,
     index: int,
+    nosteal: bool = False,
 ) -> dict[str, object]:
     """② 点速度档（用户口径就是 **5 档**）；点哪个位置由**候选序列**决定，不赌某一个点。"""
     candidates = speed_candidates(hwnd, speed_xy=speed_xy, threshold=threshold)
     label, point = candidates[min(index, len(candidates) - 1)]
-    click_client(hwnd, point[0], point[1], give_back=False)
+    if nosteal:
+        click_client_nosteal(hwnd, point[0], point[1])
+    else:
+        click_client(hwnd, point[0], point[1], give_back=False)
     return {"speed_source": label, "speed_xy": f"{point[0]},{point[1]}"}
 
 
@@ -1830,24 +1895,31 @@ def start_background_session(
     match = _step_look(hwnd, threshold=threshold, lobby_timeout=lobby_timeout)
     notes["observe"] = match.describe()
 
-    # ② **借前台只做三下**：点观察 → 点 5 档速度 → 按空格（约 1 秒，之后立刻还）
+    # ② **不抢前台**做完三下（首选路线，实机两次复现）：观察 → 5 档速度 → 空格。
+    #    用户的前台窗口全程不变；真要点不动才回落到借前台（见 ③）。
     hwnd = _live_window(hwnd)
-    with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
-        borrows += 1
-        if restore_for_actions:
-            # 起游戏是"显示但不激活"（或最小化）⇒ 点击前确保它可见
-            notes["window_shown"] = ensure_visible_for_capture(hwnd)
-        else:
-            notes["window_shown"] = "按调用方要求不恢复窗口"
-        notes.update(_step_observe(hwnd, match, settle_timeout=settle_timeout))
-        if not skip_speed:
-            attempts = 1
-            notes.update(_step_speed(hwnd, speed_xy=speed_xy, threshold=threshold, index=0))
-        press_key(unpause_key)
-        notes["unpause"] = f"按了 {unpause_key}（扫描码）"
-        with suppress(CaptureFailedError):
-            save_shot(screenshot(hwnd), "12-after-space")
-    borrow_seconds += visit.seconds
+    notes.update(_step_observe(hwnd, match, settle_timeout=settle_timeout, nosteal=True))
+    if not skip_speed:
+        attempts = 1
+        notes.update(
+            _step_speed(hwnd, speed_xy=speed_xy, threshold=threshold, index=0, nosteal=True)
+        )
+    press_key_at(hwnd, unpause_key)
+    notes["unpause"] = f"按了 {unpause_key}（扫描码，未抢前台）"
+    with suppress(CaptureFailedError):
+        save_shot(screenshot(hwnd), "12-after-space")
+
+    # ③ **回落**：万一"不抢前台"这条路在别的版本/界面下不认，就借一次前台重做"观察"。
+    #    判据是**布尔标志**，不是文案（文案随时会改）。
+    if notes.get("lobby_settled_ok") is False:
+        hwnd = _live_window(hwnd)
+        with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
+            borrows += 1
+            if restore_for_actions:
+                notes["window_shown"] = ensure_visible_for_capture(hwnd)
+            notes["fallback"] = "不抢前台没点动 ⇒ 借前台重做「观察」"
+            notes.update(_step_observe(hwnd, match, settle_timeout=settle_timeout))
+        borrow_seconds += visit.seconds
 
     # ② **立刻切回后台**：借用的 `finally` 已经把前台还给用户了（用户口径第 ④ 步）。
     #    ⚠️ 这里**先不缩窗口**：验证阶段万一要回头看播放键，缩下去就抓不到图了（实测踩过
@@ -1929,6 +2001,7 @@ def start_background_session(
         "foreground_restored": notes.get("foreground_restored", "（每次借用后都还了）"),
         "window_shown": notes.get("window_shown", ""),
         "minimized_note": notes.get("minimized", ""),
+        "fallback": notes.get("fallback", "（没回落：首选路线生效）"),
         "borrows": borrows,
         "borrow_seconds": round(borrow_seconds, 3),
         "minimized": minimized,

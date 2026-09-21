@@ -46,6 +46,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -61,14 +62,44 @@ import win32process
 
 from pdx import game_auto as ga
 
-#: 点完之后给游戏多少秒才看日志（观察者局一开始就跑，实测几秒内就有 tick）。
-TICK_WINDOW = 10.0
+#: 点完之后等多久才下结论。**实测值 90 秒**：点中「观察」之后世界要载入，闭环那次记录到
+#: "首次可读 tick"用了 **45.0 秒**（`running: [dedicated_server.log（首次可读）]
+#: -> 1836.1.1.6 (45.0s) 推进`）。原来给 10 秒 ⇒ 连**阳性对照**都测不出 tick，
+#: 判据没被验过、实验只能判废（判废是对的，但根因是窗口太短，不是点击无效）。
+TICK_WINDOW = 90.0
 #: 日志里 tick 行的采样间隔。
 TICK_POLL = 0.5
 
 
 def _safe_foreground() -> int:
     return ga._foreground_window()
+
+
+def _lobby_state(hwnd: int) -> str:
+    """现在是"还在大厅 / 已经切走 / 看不到"。
+
+    ⚠️ 为什么不用 tick 当判据（实测踩过）：**观察者局开始是暂停的**，光点「观察」不会写
+    tick —— 闭环那次"首次可读 tick 45.0s"其实发生在**按空格之后**。拿 tick 判"点击有没有
+    生效"，连**阳性对照**都会失败（真前台点一次也没 tick），实验只能判废。
+    改用**状态变化**：点中「观察」⇒ 界面切走 ⇒ 底部那个按钮消失。
+    "看不到"（抓图失败）**不能**当成"切走了"，必须单独区分，否则又是一个假阳性。
+    """
+    try:
+        image = ga.screenshot(hwnd, roi=ga.BOTTOM_ROI)
+    except ga.CaptureFailedError:
+        return "unknown"
+    found = ga.locate_optional(image, "btn_observe", threshold=ga.DEFAULT_THRESHOLD, first_hit=True)
+    return "lobby" if found is not None else "left"
+
+
+def _left_lobby(hwnd: int, seconds: float) -> bool:
+    """等界面**真的切走**（观察按钮消失）—— 条件等待，等到就立刻返回。"""
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if _lobby_state(hwnd) == "left":
+            return True
+        time.sleep(TICK_POLL)
+    return False
 
 
 def _tick_seen(before: ga.TickMark, seconds: float) -> ga.Advance:
@@ -149,7 +180,31 @@ def _real_foreground_click(hwnd: int, x: int, y: int) -> dict[str, Any]:
     return {"borrowed": True, "foreground_restored": _safe_foreground() == previous}
 
 
+def kill_game() -> list[int]:
+    """杀掉 victoria3，返回杀掉的 PID —— 探针也要**自己收尾**（失败路径不能留进程）。"""
+    pids = ga._process_pids()
+    for pid in pids:
+        subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, check=False)
+    return pids
+
+
 def main() -> int:
+    """跑实验，**无论成败都收尾**：杀游戏 + 还前台 + 桌面采样（与 flow_with_cleanup 同口径）。"""
+    previous = ga._foreground_window()
+    try:
+        return _run()
+    finally:
+        killed = kill_game()
+        time.sleep(2)
+        if previous:
+            ga._set_foreground(previous)
+        print(
+            f"\n[收尾] 杀掉 victoria3：{killed or '（没有）'}；前台还给 {previous}；"
+            f"现在前台 = {ga._foreground_window()}"
+        )
+
+
+def _run() -> int:
     # 控制台可能是 GBK（实测：打印 "❌" 会 UnicodeEncodeError 并把 finally 里的
     # 还前台也一起带崩）。探针自己把标准输出钉成 UTF-8，别让编码问题伪装成流程问题。
     for stream in (sys.stdout, sys.stderr):
@@ -162,7 +217,7 @@ def main() -> int:
         # 为什么不让调用方先起游戏：这样"从 0 到结论"是一条可复现的命令，中间少一个人工步骤。
         ga.assert_no_game_running()
         print("后台启动游戏（不抢前台）……")
-        ga.launch(scripted_tests=True, activate=False, timeout=180.0)
+        ga.launch(scripted_tests=True, timeout=180.0)
         print("等启动忙完（只看进程 + 日志大小）……")
         settle = ga.wait_for_boot_settle(timeout=300.0)
         print(f"  {settle.why}（settled={settle.settled}）")
@@ -181,8 +236,12 @@ def main() -> int:
     previous = _safe_foreground()
     ga.ensure_foreground(hwnd, force=True)
     try:
-        shot = ga.screenshot(hwnd, roi=ga.BOTTOM_ROI)
-        match = ga.locate(shot, "btn_observe")
+        # 必须用 ind_in_roi：它会把**裁剪图内**的坐标平移回客户区。
+        # 直接 screenshot(roi=…) + locate 拿到的是相对坐标（实测踩过：打出 (864,83)，
+        # 而按钮其实在 (864,1055) ⇒ 两条路线都点空、还差点误判成"后台点击无效"）。
+        match = ga.find_in_roi(hwnd, "btn_observe", roi=ga.BOTTOM_ROI)
+        if match is None:
+            raise ga.TemplateNotFoundError("没在底部条里找到「观察」按钮")
         point = (match.x, match.y)
         print(f"✅ 定位到「观察」按钮：客户区坐标 {point}，分数 {match.score:.3f}")
     except Exception as exc:
@@ -204,30 +263,43 @@ def main() -> int:
     print(f"  置顶但不激活：{_raise_without_activate(hwnd)}")
     time.sleep(0.5)
     report["library_route"] = _attach_and_click(hwnd, *point)
-    advance = _tick_seen(baseline, TICK_WINDOW)
-    report["library_route"]["tick"] = advance.describe()
-    report["library_route"]["clicked"] = advance.advanced
-    print(f"  判据：{advance.describe()} → {'✅ 点击生效' if advance.advanced else '❌ 没有 tick'}")
+    left = _left_lobby(hwnd, TICK_WINDOW)
+    report["library_route"]["left_lobby"] = left
+    report["library_route"]["state_after"] = _lobby_state(hwnd)
+    print(f"  判据（界面切走）：{'✅ 离开了大厅' if left else '❌ 还停在大厅'}")
+    print(
+        f"  证据：attached={report['library_route'].get('attached')} "
+        f"set_focus={report['library_route'].get('set_focus')} "
+        f"前台仍是用户窗口={report['library_route'].get('foreground_stayed_with_user')}"
+    )
+    if left:
+        # **稳定复检**：动画/提示条也可能让按钮一瞬间找不到 ⇒ 等 5 秒再看一次。
+        time.sleep(5.0)
+        again = _lobby_state(hwnd)
+        report["library_route"]["state_after_5s"] = again
+        left = again == "left"
+        print(f"  5 秒后复查：{again}（要还是 'left' 才算稳）")
 
-    if advance.advanced:
+    if left:
         print("\n🎉 库路线**成功**：不抢前台也能点到游戏")
         report["verdict"] = "library-route-works"
     else:
         # ③ 对照组：真前台点一次，验证"判据本身是对的"
         print("\n[2/2] 对照组：真·借前台点一次（判据的阳性对照）")
         report["control_route"] = _real_foreground_click(hwnd, *point)
-        control = _tick_seen(baseline, TICK_WINDOW)
-        report["control_route"]["tick"] = control.describe()
-        report["control_route"]["clicked"] = control.advanced
-        print(
-            f"  判据：{control.describe()} → {'✅ 点击生效' if control.advanced else '❌ 没有 tick'}"
-        )
-        if control.advanced:
+        control = _left_lobby(hwnd, TICK_WINDOW)
+        report["control_route"]["left_lobby"] = control
+        report["control_route"]["state_after"] = _lobby_state(hwnd)
+        print(f"  判据（界面切走）：{'✅ 离开了大厅' if control else '❌ 还停在大厅'}")
+        if control:
             report["verdict"] = "library-route-fails-control-succeeds"
             print("\n结论：后台点击（库路线）**不生效**，而前台点击生效 —— 判据有效，结论可信")
         else:
             report["verdict"] = "judge-invalid"
-            print("\n⚠️ 对照组也没 tick ⇒ **判据本身没被验过**，本次实验作废（不许当结论用）")
+            print(
+                "\n⚠️ 对照组也没让界面切走 ⇒ **判据本身没被验过**，本次实验作废"
+                "（先查：窗口有没有露在最上面？抓图是不是拿到了游戏自己的像素？）"
+            )
 
     out = Path(__file__).resolve().parents[1] / "out" / "auto" / "bg_click_lib.json"
     out.parent.mkdir(parents=True, exist_ok=True)
