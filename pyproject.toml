@@ -62,6 +62,17 @@ dependencies = [
                         # `SendMessage` 三种变体引擎一律不认（它读原始输入），换库也一样；
                         # ② 控制台 —— scancode 版键盘试过 4 个候选键仍未能唤起控制台
                         # （判据是"命令会写的文件有没有变"，见 tools/probe/console_key_test.py）。
+    "pygetwindow>=0.0.9",
+                        # game_auto.py：**窗口**枚举 / 标题 / 激活（`Window.activate()`
+                        # 内部自己做 `AttachThreadInput` + 置顶）/ 最小化 / 还原。
+                        # 为什么换掉手写 ctypes（P3 + 用户口径"不要使用其他代码例如 win32，
+                        # 完全使用 python"）：这段 Win32 细节原本是我们自己拼的
+                        # `EnumWindows` + 回调 + `AttachThreadInput`，属于典型的重复造轮子（P4）。
+    "pywin32>=306",
+                        # game_auto.py：补 `pygetwindow` 没暴露的几个**只读量** ——
+                        # 客户区坐标（`ClientToScreen`，点击坐标必须加这个原点）、类名、
+                        # 是否最小化（`IsIconic`）、`ShowWindow(SW_SHOWNOACTIVATE)`。
+                        # 只用只读/显示这几支，不再自己声明 `argtypes` 与位图结构体。
 ]
 
 [project.optional-dependencies]
@@ -133,11 +144,14 @@ addopts = [
     #
     # 需要串行（例如要读完整的失败上下文）时传 ``-n0`` 覆盖。
     #
-    # ⚠️ **跑基准必须加 -n0**：pytest-benchmark 在 xdist 开启时会
+    # ⚠️ **跑基准必须把 addopts 清掉**：pytest-benchmark 在 xdist 开启时会
     # **自动禁用自己**（它无法在多个 worker 上做有意义的计时）。
     # 后果是 ``--benchmark-only`` 会直接报错，而不带该参数时基准被
     # 静默跳过 —— 实测踩过：启用并行后所有基准其实一直在跳过。
-    #     pytest tools/tests/test_benchmarks.py --benchmark-only -n0
+    # 注意 ``-n0`` **不管用**（xdist 插件仍算"开着"，实测报
+    # "Can't have both --benchmark-only and --benchmark-disable"），
+    # 要清 addopts：
+    #     pytest tools/tests/test_benchmarks.py -o addopts="" --benchmark-only
     "-n",
     "auto",
     "--dist",
@@ -366,6 +380,6 @@ pretty = true
 # 没有类型标注、也没有 `py.typed` 的第三方库 —— 明确列出来，别用全局
 # `ignore_missing_imports` 把"我们自己写错导入名"也一起放过。
 [[tool.mypy.overrides]]
-module = ["pydirectinput"]
+module = ["pydirectinput", "pygetwindow", "win32gui"]
 ignore_missing_imports = true
 

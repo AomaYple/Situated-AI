@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import os
 import subprocess
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
@@ -55,36 +55,6 @@ def paste(base: Image.Image, template: Path, left: int, top: int) -> tuple[int, 
         patch = handle.convert("RGB")
     base.paste(patch, (left, top))
     return (left + patch.width // 2, top + patch.height // 2)
-
-
-class FakeWindow:
-    """一个"永远抢不到前台"的 user32 替身。"""
-
-    def __init__(self, foreground: int) -> None:
-        self.foreground = foreground
-        self.attached: list[tuple[int, int, bool]] = []
-
-    def GetForegroundWindow(self) -> int:
-        return self.foreground
-
-    def GetWindowThreadProcessId(self, _hwnd: object, _pid: object) -> int:
-        return 4242
-
-    def AttachThreadInput(self, first: int, second: int, flag: bool) -> int:
-        self.attached.append((first, second, flag))
-        return 1
-
-    def ShowWindow(self, *_args: object) -> int:
-        return 1
-
-    def BringWindowToTop(self, *_args: object) -> int:
-        return 1
-
-    def SetForegroundWindow(self, *_args: object) -> int:
-        return 0
-
-    def SetFocus(self, *_args: object) -> int:
-        return 0
 
 
 @pytest.fixture
@@ -476,31 +446,39 @@ class TestWaitUntilRunning:
 class TestForeground:
     def test_已经是前台就直接过(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(ga, "_foreground_window", lambda: 777)
+        monkeypatch.setattr(ga, "_set_foreground", lambda _h: pytest.fail("已经是前台，不该再抢"))
         ga.ensure_foreground(777)  # 不抛就是过
 
     def test_抢不到必须报错而不是照点(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """这正是当初把"点击无效"误判成"坐标不准"的那个坑。"""
-        monkeypatch.setattr(ga, "_user32", FakeWindow(foreground=1234))
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)  # 显式入口：允许借前台
+        monkeypatch.setattr(ga, "_set_foreground", lambda _h: False)
         monkeypatch.setattr(ga, "_foreground_window", lambda: 1234)
         monkeypatch.setattr(ga, "_window_title", lambda _h: "Edge")
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        monkeypatch.setattr(ga, "FOREGROUND_SETTLE", 0.0)
         with pytest.raises(ga.ForegroundLostError, match="抢不到前台"):
             ga.ensure_foreground(777, attempts=2)
 
-    def test_强激活路径确实用了_AttachThreadInput(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        fake = FakeWindow(foreground=1234)
-        order: list[int] = []
+    def test_判据是前台窗口不是库的返回值(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`activate()` 不抛异常 ≠ 抢到了：Windows 前台锁定会**静默失败**。
 
-        def foreground() -> int:
-            order.append(1)
-            # 第一次假装还没抢到，第二次（SetForegroundWindow 之后）假装抢到了
-            return 1234 if len(order) == 1 else 777
-
-        monkeypatch.setattr(ga, "_user32", fake)
-        monkeypatch.setattr(ga, "_foreground_window", foreground)
+        所以这里让库调用"成功"、而 `GetForegroundWindow()` 始终不是游戏 —— 必须报错。
+        """
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)
+        monkeypatch.setattr(ga, "_set_foreground", lambda _h: True)
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 1234)
+        monkeypatch.setattr(ga, "_window_title", lambda _h: "DeepSeek Harness")
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
-        ga.ensure_foreground(777, attempts=3)
-        assert [entry[2] for entry in fake.attached] == [True, False]
+        monkeypatch.setattr(ga, "FOREGROUND_SETTLE", 0.0)
+        with pytest.raises(ga.ForegroundLostError, match="抢不到前台"):
+            ga.ensure_foreground(777, attempts=1)
+
+    def test_没授权就借前台必须拒绝(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", False)
+        monkeypatch.setattr(ga, "_set_foreground", lambda _h: pytest.fail("不许碰真实窗口"))
+        with pytest.raises(ga.RealInputBlockedError):
+            ga.ensure_foreground(777)
 
 
 class TestClick:
@@ -515,20 +493,29 @@ class TestClick:
     ) -> None:
         from types import SimpleNamespace
 
+        at: dict[str, tuple[int, int]] = {"xy": (0, 0)}
+
         def move_to(x: int, y: int) -> None:
             moved.append((x, y))
+            at["xy"] = (x, y)
             events.append("cursor")
 
         def click() -> None:
             events.append("mouse")
 
-        monkeypatch.setattr(ga, "directinput", SimpleNamespace(moveTo=move_to, click=click))
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)  # 显式入口才允许投真实输入
+        monkeypatch.setattr(
+            ga,
+            "directinput",
+            # `position()` 是"等光标真的到了"那条条件等待的判据（不再用固定 sleep）。
+            SimpleNamespace(moveTo=move_to, click=click, position=lambda: at["xy"]),
+        )
 
     def test_客户区坐标要加上窗口原点(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """窗口不在 (0,0) 时，客户区坐标 ≠ 屏幕坐标 —— 这里必须换算。"""
         moved: list[tuple[int, int]] = []
         events: list[str] = []
-        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: None)
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd, **_kw: None)
         monkeypatch.setattr(ga, "_client_origin", lambda _hwnd: (100, 50))
         self._patch_input(monkeypatch, moved, events)
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
@@ -540,7 +527,7 @@ class TestClick:
 
     def test_窗口在原点时坐标不变(self, monkeypatch: pytest.MonkeyPatch) -> None:
         moved: list[tuple[int, int]] = []
-        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: None)
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd, **_kw: None)
         monkeypatch.setattr(ga, "_client_origin", lambda _hwnd: (0, 0))
         self._patch_input(monkeypatch, moved, [])
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
@@ -550,7 +537,7 @@ class TestClick:
     def test_先抢前台再点(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: list[str] = []
         moved: list[tuple[int, int]] = []
-        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: calls.append("fg"))
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd, **_kw: calls.append("fg"))
         monkeypatch.setattr(ga, "_client_origin", lambda _hwnd: (0, 0))
         self._patch_input(monkeypatch, moved, calls)
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
@@ -563,12 +550,14 @@ class TestClick:
 
 class TestScreenshot:
     def test_全黑画面被挡住(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(ga, "_grab", lambda _hwnd: Image.new("RGB", (100, 100), (0, 0, 0)))
+        monkeypatch.setattr(
+            ga, "_grab", lambda _hwnd, _roi=None: Image.new("RGB", (100, 100), (0, 0, 0))
+        )
         with pytest.raises(ga.CaptureFailedError, match="纯色"):
             ga.screenshot(1)
 
     def test_有内容就放行(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(ga, "_grab", lambda _hwnd: textured(100, 100))
+        monkeypatch.setattr(ga, "_grab", lambda _hwnd, _roi=None: textured(100, 100))
         assert ga.screenshot(1).size == (100, 100)
 
 
@@ -738,7 +727,7 @@ class TestBackground:
         ticks = TickLog(tmp_path / "t.log", "1836.9.20")
         monkeypatch.setattr(ga, "TICK_LOG", ticks.path)
         monkeypatch.setattr(ga, "other_window", lambda _exclude: 55)
-        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: None)
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd, **_kw: None)
         monkeypatch.setattr(ga, "_foreground_window", lambda: 55)
         monkeypatch.setattr(ga, "_sleep", lambda _s: ticks.set("1836.11.11"))
 
@@ -757,7 +746,7 @@ class TestBackground:
     ) -> None:
         monkeypatch.setattr(ga, "TICK_LOG", tmp_path / "t.log")
         monkeypatch.setattr(ga, "other_window", lambda _exclude: 55)
-        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: None)
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd, **_kw: None)
         monkeypatch.setattr(ga, "_foreground_window", lambda: 777)  # 还是游戏
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
         with pytest.raises(ga.ForegroundLostError, match="让出去"):
@@ -826,7 +815,10 @@ class TestLaunch:
         monkeypatch.setattr(ga.subprocess, "Popen", fake_popen)
         assert ga.launch(wait=False) == 0
         assert seen["command"] == [str(fake_exe), ga.SCRIPTED_TESTS_ARG]
-        # 用户口径的第一条：**起游戏时不能抢前台** ⇒ 默认带 SW_SHOWNOACTIVATE 的 startupinfo。
+        # 用户口径的第一条：**起游戏时既不占屏也不抢焦点** ⇒ 默认带"显示但不激活"。
+        # ⚠️ 曾经用过 `SW_SHOWMINNOACTIVE`（真·最小化），实测会让游戏**当场崩**：
+        # `crashes\victoria3_01260821_215742\exception.txt` = C0000005，栈在
+        # `nvoglv64.dll`（NVIDIA OpenGL）—— 冒烟起游戏不能把窗口最小化，这条有崩溃证据。
         info = seen["kwargs"]["startupinfo"]  # type: ignore[index]
         assert isinstance(info, subprocess.STARTUPINFO)
         assert info.dwFlags & subprocess.STARTF_USESHOWWINDOW
@@ -917,13 +909,14 @@ class TestWaitForLobby:
     def test_等到了就返回匹配(self, monkeypatch: pytest.MonkeyPatch) -> None:
         lobby = textured()
         paste(lobby, OBSERVE_TPL, 755, 1037)
-        monkeypatch.setattr(ga, "screenshot", lambda _hwnd: lobby)
+        # 现在抓图是"只抓底部 ROI"，所以桩要接受 roi 形参（返回的图就当它已经是那一块）
+        monkeypatch.setattr(ga, "screenshot", lambda _hwnd, **_kw: lobby)
         clock = FakeClock()
         found = ga.wait_for_lobby(1, timeout=5.0, clock=clock, sleeper=clock.advance)
         assert found.name == "btn_observe"
 
     def test_抓图一直失败也要报出最后原因(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        def boom(_hwnd: int) -> Image.Image:
+        def boom(_hwnd: int, **_kw: object) -> Image.Image:
             raise ga.CaptureFailedError("加载中")
 
         monkeypatch.setattr(ga, "screenshot", boom)
@@ -1027,19 +1020,24 @@ class TestClickGiveBack:
     def _patch(self, monkeypatch: pytest.MonkeyPatch, restored: list[int]) -> None:
         from types import SimpleNamespace
 
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)  # 显式入口才允许投真实输入
         monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
-        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: None)
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd, **_kw: None)
         monkeypatch.setattr(ga, "_client_origin", lambda _hwnd: (0, 0))
-        monkeypatch.setattr(ga, "_set_cursor", lambda _x, _y: None)
-        monkeypatch.setattr(ga, "_mouse_click", lambda: None)
         monkeypatch.setattr(ga, "_sleep", lambda _seconds: None)
+
+        # 还前台走的是成熟库那条缝（`_set_foreground`，内部 `Window.activate()`），
+        # 不再是我们手写的 `user32.SetForegroundWindow` —— 打桩点跟着换。
+        def remember(handle: int) -> bool:
+            restored.append(handle)
+            return True
+
+        monkeypatch.setattr(ga, "_set_foreground", remember)
         monkeypatch.setattr(
             ga,
-            "_user32",
-            # `wintypes.HWND` 是 c_void_p 子类：`int()` 会去解析它指向的字节，
-            # 所以这里取 `.value`（句柄值本身）。
+            "directinput",
             SimpleNamespace(
-                SetForegroundWindow=lambda handle: restored.append(handle.value),
+                moveTo=lambda _x, _y: None, click=lambda: None, position=lambda: (0, 0)
             ),
         )
 
@@ -1062,6 +1060,19 @@ class TestClickGiveBack:
         monkeypatch.setattr(ga, "_foreground_window", lambda: 1)  # 就是 hwnd=1
         ga.click_client(1, 10, 20)
         assert restored == [], "前台本来就是游戏，没有「还」这回事"
+
+    def test_没授权就点必须当场拒绝(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """忘了打桩的用例会走到这里 —— 必须**报错**，绝不能真的动用户的鼠标。
+
+        实测踩过（2026-09-21）：`TestClickGiveBack` 当时还在给 `_set_cursor`/`_mouse_click`
+        打桩，可那两个函数早换成了 `pydirectinput` ⇒ 三条用例各点了一次**真实鼠标**，
+        把用户正在用的窗口挤到后面。用户当场发现"没开游戏也会这样"。
+        """
+        restored: list[int] = []
+        self._patch(monkeypatch, restored)
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", False)
+        with pytest.raises(ga.RealInputBlockedError):
+            ga.click_client(1, 10, 20)
 
 
 class TestSpeedRate:
@@ -1117,15 +1128,19 @@ class TestSpeedCandidates:
         def boom(*_a: object, **_k: object) -> object:
             raise ga.TemplateNotFoundError("没有 btn_speed")
 
+        # 抓图也要打桩：这一步现在**只抓右上角那一块**，而"游戏不在前台"时抓图会报错
+        # （真实截图只是探针/实机路径上的事，单测不该碰真窗口）。
+        monkeypatch.setattr(ga, "screenshot", lambda _hwnd, **_kw: textured())
         monkeypatch.setattr(ga, "locate", boom)
         assert ga.speed_widget_xy(1) is None
 
 
 class TestRunCommand:
-    """`python -m pdx.game_auto run` 必须走**收敛版闭环**（不只是老的 run_until_running）。
+    """`python -m pdx.game_auto run` 必须走**后台优先的收敛闭环**。
 
-    `main()` 以前完全没有用例（核查报告点名过），这里把它钉住：起游戏 → 等大堂 →
-    `start_background_session`（观察 / 速度 / 解暂停 / 还前台），并且把开关透传下去。
+    流程口径（用户 2026-09-21）：后台起游戏 → 后台等启动忙完（只看进程/日志）→
+    **一次前台访问**里做完"观察 / 5 档速度 / 空格"→ 立刻还前台 → 后台量速率。
+    `main()` 以前完全没有用例（核查报告点名过），这里把它钉住。
     """
 
     def _stub(self, monkeypatch: pytest.MonkeyPatch, seen: dict[str, object]) -> None:
@@ -1133,9 +1148,14 @@ class TestRunCommand:
         monkeypatch.setattr(ga, "launch", lambda **_kw: 4242)
         monkeypatch.setattr(
             ga,
-            "wait_for_lobby",
-            lambda _h, **_kw: ga.Match(
-                name="btn_observe", x=864, y=1055, score=1.0, scale=1.0, box=(755, 1037, 973, 1073)
+            "wait_for_boot_settle",
+            lambda **_kw: ga.BootSettle(
+                settled=True,
+                waited=12.0,
+                log_bytes=4096,
+                quiet_seconds=8.0,
+                processes=1,
+                why="进程 1 个；日志 4096 字节",
             ),
         )
         monkeypatch.setattr(
@@ -1143,7 +1163,13 @@ class TestRunCommand:
             "start_background_session",
             lambda hwnd, **kw: (
                 seen.update({"hwnd": hwnd, **kw})
-                or {"speed_ok": True, "speed_days_per_second": 2.5, "background": "推进"}
+                or {
+                    "speed_ok": True,
+                    "speed_days_per_second": 2.5,
+                    "borrows": 1,
+                    "borrow_seconds": 1.2,
+                    "background": "推进",
+                }
             ),
         )
 
@@ -1158,6 +1184,7 @@ class TestRunCommand:
         out = capsys.readouterr().out
         assert "speed_ok" in out
         assert "闭环完成" in out
+        assert "后台等待启动" in out, "要看得见'等启动时没有占屏'这件事"
 
     def test_run_默认会还前台并切速度(self, monkeypatch: pytest.MonkeyPatch) -> None:
         seen: dict[str, object] = {}
@@ -1166,6 +1193,7 @@ class TestRunCommand:
         assert seen["skip_speed"] is False
         assert seen["give_back"] is True
         assert seen["speed_xy"] is None
+        assert seen["force"] is True, "显式入口才允许注入真实输入（不靠改模块开关）"
 
     def test_run_可以显式给速度坐标(self, monkeypatch: pytest.MonkeyPatch) -> None:
         seen: dict[str, object] = {}
@@ -1185,3 +1213,421 @@ class TestRunCommand:
         err = capsys.readouterr().err
         assert "失败" in err
         assert "GameRunningError" in err
+
+
+class TestEnsureVisible:
+    """最小化启动之后，要点击时怎么把窗口"显示出来又不抢前台"。
+
+    这条是用户口径的关键接缝：①起游戏不占屏 ⇒ 但②要点击 ⇒ 中间必须有一次"显示"，
+    而显示**不该顺手把焦点抢走**（除非 `SW_SHOWNOACTIVATE` 解不开最小化，那时才
+    `SW_RESTORE` 并**立刻把前台还回去**）。
+    """
+
+    def _patch_user32(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        iconic_first: bool,
+        iconic_after_show: bool,
+        shown: list[str],
+        foreground_calls: list[int],
+    ) -> None:
+        """打桩点跟着实现走：现在这些动作都在**成熟库缝隙**上（`_is_iconic` /
+        `_show_no_activate` / `_restore` / `_set_foreground`），不再是我们手写的 `user32`。"""
+        state = {"iconic": iconic_first}
+
+        def show_no_activate(_hwnd: object) -> None:
+            shown.append("show_no_activate")
+            state["iconic"] = iconic_after_show
+
+        def restore(_hwnd: object) -> None:
+            shown.append("restore")
+            state["iconic"] = False
+
+        monkeypatch.setattr(ga, "_is_iconic", lambda _hwnd: state["iconic"])
+        monkeypatch.setattr(ga, "_show_no_activate", show_no_activate)
+        monkeypatch.setattr(ga, "_restore", restore)
+
+        def remember_foreground(handle: int) -> bool:
+            foreground_calls.append(handle)
+            return True
+
+        monkeypatch.setattr(ga, "_set_foreground", remember_foreground)
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+        monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        monkeypatch.setattr(ga, "WINDOW_SHOW_SETTLE", 0.0)
+
+    def test_没最小化就什么都不做(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        shown: list[str] = []
+        self._patch_user32(
+            monkeypatch,
+            iconic_first=False,
+            iconic_after_show=False,
+            shown=shown,
+            foreground_calls=[],
+        )
+        assert "本来就不是最小化" in ga.ensure_visible_for_capture(1)
+        assert shown == []
+
+    def test_最小化时显示但不抢前台(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        shown: list[str] = []
+        fg: list[int] = []
+        self._patch_user32(
+            monkeypatch,
+            iconic_first=True,
+            iconic_after_show=False,
+            shown=shown,
+            foreground_calls=fg,
+        )
+        note = ga.ensure_visible_for_capture(1)
+        assert shown == ["show_no_activate"], "先试不激活的显示"
+        assert fg == [], "没抢前台就不该动前台"
+        assert "没有抢前台" in note
+
+    def test_不激活解不开最小化时才恢复并立刻还前台(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        shown: list[str] = []
+        fg: list[int] = []
+        self._patch_user32(
+            monkeypatch, iconic_first=True, iconic_after_show=True, shown=shown, foreground_calls=fg
+        )
+        note = ga.ensure_visible_for_capture(1)
+        assert shown == ["show_no_activate", "restore"]
+        assert fg == [4242], "restore() 会激活窗口 ⇒ 必须立刻把前台还回去"
+        assert "还回去" in note
+
+
+# ────────────────────────── 前台借用：后台优先的最后一道保证 ──────────────────────────
+
+
+class TestBorrowForeground:
+    """`borrow_foreground` 是**唯一**碰前台的入口（用户口径：只在需要点击时切前台）。
+
+    它必须是结构性的，不能靠"每个调用点记得还"：进了必还、出借用期输入立刻收紧。
+    """
+
+    def _patch(self, monkeypatch: pytest.MonkeyPatch, foreground: list[int]) -> None:
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)
+        monkeypatch.setattr(ga, "_foreground_window", lambda: foreground[-1])
+        monkeypatch.setattr(
+            ga,
+            "ensure_foreground",
+            lambda hwnd, **_kw: foreground.append(hwnd),  # 借 = 游戏变成前台
+        )
+
+        def remember(handle: int) -> bool:
+            foreground.append(handle)
+            return True
+
+        monkeypatch.setattr(ga, "_set_foreground", remember)
+        monkeypatch.setattr(
+            ga, "directinput", SimpleNamespace(press=lambda _key: foreground.append(-1))
+        )
+
+    def test_借了必还并把时长记账(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        foreground = [777]
+        self._patch(monkeypatch, foreground)
+        with ga.borrow_foreground(4242) as visit:
+            assert visit.previous == 777
+            assert ga._INPUT_GATE.borrow_depth == 1, "借用期内输入必须自动放行"
+            ga.press_key("space")  # 借用期内的按键不该被闸门拦下
+        assert foreground[-1] == 777, "退出时**一定**要把前台还给原来那个窗口"
+        assert visit.restored is True
+        assert visit.seconds >= 0.0
+        assert ga._INPUT_GATE.borrow_depth == 0, "出了借用期，借用深度必须归零"
+
+    def test_没授权就借前台必须拒绝(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", False)
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _h, **_kw: pytest.fail("不许碰窗口"))
+        with pytest.raises(ga.RealInputBlockedError), ga.borrow_foreground(4242):
+            pass
+
+    def test_可以显式要求不还(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """探针要连着做几步时可以不还，但这必须是**显式**的（默认一定还）。"""
+        foreground = [777]
+        self._patch(monkeypatch, foreground)
+        with ga.borrow_foreground(4242, give_back=False) as visit:
+            assert foreground[-1] == 4242
+        assert foreground[-1] == 4242, "显式关掉才允许留在游戏上"
+        assert visit.restored is True
+
+    def test_嵌套借用退出后仍然收紧(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        foreground = [777]
+        self._patch(monkeypatch, foreground)
+        with ga.borrow_foreground(4242):
+            with ga.borrow_foreground(4242):
+                assert ga._INPUT_GATE.borrow_depth == 2
+            assert ga._INPUT_GATE.borrow_depth == 1, "外层还在借用期内"
+        assert ga._INPUT_GATE.borrow_depth == 0
+
+
+class TestSessionFlow:
+    """收敛版闭环：**一次**前台访问里做完"观察 → 5 档速度 → 空格"，然后回后台验证。
+
+    这条用例把用户口径的**顺序**和**借用次数**钉住：顺序错了（比如先按空格再切速度）
+    或者借了好几次（用户会看到反复闪动）都要红。
+    """
+
+    def _patch(self, monkeypatch: pytest.MonkeyPatch, calls: list[str], borrows: list[int]) -> None:
+        from contextlib import contextmanager
+
+        @contextmanager
+        def fake_borrow(hwnd: int, **_kw: object):
+            borrows.append(hwnd)
+            calls.append("borrow")
+            try:
+                yield ga.ForegroundVisit(previous=777, seconds=0.5, restored=True)
+            finally:
+                calls.append("give_back")
+
+        monkeypatch.setattr(ga, "borrow_foreground", fake_borrow)
+
+        def show(_h: int) -> str:
+            calls.append("show")
+            return "显示出来"
+
+        monkeypatch.setattr(ga, "ensure_visible_for_capture", show)
+        monkeypatch.setattr(ga, "screenshot", lambda _h, **_kw: textured())
+        monkeypatch.setattr(
+            ga,
+            "locate",
+            lambda *_a, **_k: ga.Match(
+                name="btn_observe", x=864, y=1055, score=0.98, scale=1.0, box=(755, 1037, 973, 1073)
+            ),
+        )
+        monkeypatch.setattr(ga, "save_shot", lambda _img, _tag: None)
+        monkeypatch.setattr(ga, "click_match", lambda _h, _m, **_kw: calls.append("click_observe"))
+        monkeypatch.setattr(ga, "lobby_visible", lambda _h, **_kw: None)
+        monkeypatch.setattr(
+            ga, "speed_candidates", lambda _h, **_kw: [("模板匹配 (1851, 52)", (1851, 52))]
+        )
+        monkeypatch.setattr(
+            ga, "click_client", lambda _h, x, _y, **_kw: calls.append(f"click_speed:{x}")
+        )
+        monkeypatch.setattr(ga, "press_key", lambda key, **_kw: calls.append(f"press:{key}"))
+        monkeypatch.setattr(ga, "tick_mark", lambda *_a, **_k: ga.TickMark("1836.1.1", 0.0))
+        monkeypatch.setattr(ga, "_minimize", lambda _h: calls.append("minimize"))
+        monkeypatch.setattr(ga, "_show_no_activate", lambda _h: calls.append("show_no_activate"))
+        monkeypatch.setattr(
+            ga,
+            "wait_until_running",
+            lambda *_a, **_k: ga.Advance(
+                advanced=True, before="1836.1.1", after="1836.1.8", seconds=1.0, source="log"
+            ),
+        )
+        monkeypatch.setattr(
+            ga,
+            "background_ok",
+            lambda *_a, **_k: ga.Advance(
+                advanced=True, before="1836.1.8", after="1836.2.1", seconds=20.0, source="log"
+            ),
+        )
+
+    def test_一次借用做完三件事且顺序是观察_速度_空格(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[str] = []
+        borrows: list[int] = []
+        self._patch(monkeypatch, calls, borrows)
+        monkeypatch.setattr(ga, "measure_rate", lambda *_a, **_k: 3.0)
+
+        result = ga.start_background_session(4242, force=True)
+
+        assert calls[:5] == ["borrow", "show", "click_observe", "click_speed:1851", "press:space"]
+        assert calls[5] == "give_back", "空格之后立刻切回后台（用户口径第 ④ 步）"
+        assert "minimize" in calls, "回后台之后把窗口缩下去"
+        assert borrows == [4242], "默认只借一次前台"
+        assert result["borrows"] == 1
+        assert result["speed_ok"] is True
+        assert result["speed_days_per_second"] == 3.0
+
+    def test_速率不够只再借一次点速度(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+        borrows: list[int] = []
+        self._patch(monkeypatch, calls, borrows)
+        rates = iter([1.0, 3.0])
+        monkeypatch.setattr(ga, "measure_rate", lambda *_a, **_k: next(rates))
+
+        result = ga.start_background_session(4242, force=True)
+
+        assert borrows == [4242, 4242], "第二次只为了补点速度"
+        assert calls.count("click_observe") == 1, "观察只点一次"
+        assert calls.count("press:space") == 1, "空格也只按一次"
+        assert calls.count("click_speed:1851") == 2
+        assert result["speed_attempts"] == 2
+        assert result["speed_ok"] is True
+
+    def test_空格没被接受就再借一次点播放键(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+        borrows: list[int] = []
+        self._patch(monkeypatch, calls, borrows)
+        monkeypatch.setattr(ga, "measure_rate", lambda *_a, **_k: 3.0)
+        attempts = {"n": 0}
+
+        def running(*_a: object, **_k: object) -> ga.Advance:
+            attempts["n"] += 1
+            if attempts["n"] == 1:
+                raise ga.NotRunningError("第一次没动")
+            return ga.Advance(
+                advanced=True, before="1836.1.1", after="1836.1.8", seconds=1.0, source="log"
+            )
+
+        monkeypatch.setattr(ga, "wait_until_running", running)
+
+        result = ga.start_background_session(4242, force=True)
+
+        assert borrows == [4242, 4242]
+        assert "播放键" in str(result["unpause"])
+
+    def test_两步都不动就报错不交半个结果(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+        borrows: list[int] = []
+        self._patch(monkeypatch, calls, borrows)
+        monkeypatch.setattr(ga, "measure_rate", lambda *_a, **_k: 3.0)
+
+        def stuck(*_a: object, **_k: object) -> ga.Advance:
+            raise ga.NotRunningError("没动")
+
+        monkeypatch.setattr(ga, "wait_until_running", stuck)
+        with pytest.raises(ga.NotRunningError, match="时间没有推进"):
+            ga.start_background_session(4242, force=True, run_timeout=1.0)
+
+    def test_skip_speed_时不动速度档(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+        borrows: list[int] = []
+        self._patch(monkeypatch, calls, borrows)
+
+        result = ga.start_background_session(4242, skip_speed=True, force=True)
+
+        assert not [c for c in calls if c.startswith("click_speed")]
+        assert result["speed_ok"] is True
+        assert result["speed_source"] == "跳过（skip_speed）"
+        assert result["speed_attempts"] == 0
+
+
+class TestBootSettle:
+    """启动期用**便宜信号**等（进程 + 日志大小），不抓图、不占屏（P2）。"""
+
+    def _patch(self, monkeypatch: pytest.MonkeyPatch, log: Path, pids: list[int]) -> None:
+        monkeypatch.setattr(ga, "TICK_LOG", log)
+        monkeypatch.setattr(ga, "_process_pids", lambda: list(pids))
+
+    def test_进程在且日志安静就算忙完(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        log = tmp_path / "t.log"
+        log.write_text("Processing Tick: 1836.1.1\n", encoding="utf-8")
+        self._patch(monkeypatch, log, [1234])
+        clock = FakeClock()
+        result = ga.wait_for_boot_settle(timeout=60.0, clock=clock, sleeper=clock.advance)
+        assert result.settled is True
+        assert result.processes == 1
+        assert result.log_bytes == log.stat().st_size
+
+    def test_没有进程就不算忙完(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        log = tmp_path / "t.log"
+        log.write_text("x", encoding="utf-8")
+        self._patch(monkeypatch, log, [])
+        clock = FakeClock()
+        result = ga.wait_for_boot_settle(timeout=5.0, clock=clock, sleeper=clock.advance)
+        assert result.settled is False
+        assert "超时" in result.why
+
+    def test_日志一直在长就继续等(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        log = tmp_path / "t.log"
+        log.write_text("", encoding="utf-8")
+        self._patch(monkeypatch, log, [1234])
+        clock = FakeClock()
+
+        def growing(seconds: float) -> None:
+            clock.advance(seconds)
+            log.write_text("x" * int(clock.now * 10), encoding="utf-8")
+
+        result = ga.wait_for_boot_settle(timeout=5.0, clock=clock, sleeper=growing)
+        assert result.settled is False, "日志还在长 ⇒ 启动还没忙完"
+
+    def test_日志读不到不假装是零(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        self._patch(monkeypatch, tmp_path / "没有这个文件.log", [1234])
+        clock = FakeClock()
+        result = ga.wait_for_boot_settle(timeout=3.0, clock=clock, sleeper=clock.advance)
+        assert result.log_bytes == -1
+
+
+class TestCaptureCostAndGuards:
+    """抓图的两条硬口径：**只抓需要的区域** + **不是前台就报错**（P2 + P13）。"""
+
+    def test_不是前台就拒绝抓图(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`ImageGrab` 抓的是屏幕：被遮挡时拿到的是上层窗口的像素，据此判定会静默出错。"""
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 999)
+        monkeypatch.setattr(ga, "_window_title", lambda _h: "DeepSeek Harness")
+        with pytest.raises(ga.CaptureFailedError, match="前台"):
+            ga._grab(4242)
+
+    def test_ROI_只抓那一块(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(ga, "_client_origin", lambda _h: (100, 50))
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+        seen: dict[str, object] = {}
+
+        def fake_grab(*, bbox: tuple[int, int, int, int], all_screens: bool) -> Image.Image:
+            seen["bbox"] = bbox
+            return Image.new("RGB", (bbox[2] - bbox[0], bbox[3] - bbox[1]), (9, 9, 9))
+
+        monkeypatch.setattr(ga, "ImageGrab", SimpleNamespace(grab=fake_grab))
+        image = ga._grab(4242, ga.BOTTOM_ROI)
+        assert seen["bbox"] == (100, 50 + 972, 2020, 50 + 1080), "底部条：只有整屏的 1/10"
+        assert image.size == (1920, 108)
+
+
+class TestSingleHitFastPath:
+    """命中就停：轮询"按钮在不在"不需要跨尺度最优（P2），但这必须是**显式开关**（P5）。"""
+
+    @needs_templates
+    def test_命中就停只跑一次匹配(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls = {"n": 0}
+        real = ga.cv2.matchTemplate
+
+        def counting(image: Any, templ: Any, method: int) -> Any:
+            calls["n"] += 1
+            return real(image, templ, method)
+
+        monkeypatch.setattr(ga.cv2, "matchTemplate", counting)
+        base = textured(400, 300, seed=11)
+        template = np.array(base.crop((100, 100, 140, 140)))
+        image = np.array(base)
+
+        quick = ga.match_template(
+            image, template, name="t", scales=ga.DEFAULT_SCALES, first_hit=True
+        )
+        assert quick is not None
+        assert quick.scale == 1.0
+        assert calls["n"] == 1, "first_hit=True 时命中即返回"
+
+        calls["n"] = 0
+        ga.match_template(image, template, name="t", scales=ga.DEFAULT_SCALES)
+        assert calls["n"] == len(ga.DEFAULT_SCALES), "默认口径不变：所有尺度都试"
+
+    def test_模板只读一次盘(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        textured(20, 20, seed=3).save(tmp_path / "t.png")
+        ga.clear_template_cache()
+        first = ga.load_template("t", tmp_path)
+        (tmp_path / "t.png").unlink()  # 盘上删掉也不该再读
+        assert ga.load_template("t", tmp_path) is first
+
+
+class TestPressKeyGate:
+    """按键和点击共用一道闸门：没授权就**报错**，绝不把用户正在打的字送进游戏。"""
+
+    def test_没授权就必须拒绝(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", False)
+        monkeypatch.setattr(
+            ga, "directinput", SimpleNamespace(press=lambda _k: pytest.fail("真按键"))
+        )
+        with pytest.raises(ga.RealInputBlockedError):
+            ga.press_key("space")
