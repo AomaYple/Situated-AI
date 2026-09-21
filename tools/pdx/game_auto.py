@@ -117,15 +117,31 @@ WINDOW_TIMEOUT = 180.0
 RUN_TIMEOUT = 90.0
 POLL_INTERVAL = 2.0
 
-#: 速度档 V（扇形最右扇区）的**实测客户区坐标**（1920x1080、简体中文，
-#: 见 `docs/design/exec/自动化范式.md` §4.3）。⚠️ 它没走模板匹配，所以分辨率 /
-#: UI 缩放 / 界面语言一变就失效（backlog B34）—— 传 `speed_xy=None` 可以跳过这一步。
+#: 速度档 V 在**速度表盘模板**里的相对位置（模板 `ui/btn_speed.png` 的左下为原点）。
+#:
+#: 这个数不是拍的：模板是按客户区 `(1700,18)-(1858,86)` 裁的，而**实测能点中 V 档**的
+#: 那一点是 `(1851,52)`（范式文档 §4.3），于是相对位置 = `(1851-1700)/158, (52-18)/68`
+#: = `(0.956, 0.500)`。反算校验：模板在 1.0 尺度上匹配到 box=(1700,18,1858,86) 时，
+#: 算出来的点**正好是 (1851,52)** —— 见 `tools/probe/calibrate_speed_template.py` 的输出。
+#:
+#: 为什么不直接写死 `(1851,52)`：那个点只在"这一台机器、这一种分辨率/UI 缩放/界面语言"
+#: 下成立；而"表盘在哪"由模板匹配回答之后，V 档的位置就跟着走。实测把画面缩到 90% / 110%
+#: 再匹配，分数仍有 0.969 / 0.970，算出的点也跟着平移。
+SPEED_V_REL = (0.956, 0.500)
+
+#: 兜底用的**硬编码坐标**（客户区，1920x1080 简体中文）。现在只有显式传
+#: `speed_xy=SPEED_V_XY` 时才会走它 —— 默认路径是模板匹配（见 `speed_widget_xy`）。
+#: ⚠️ 分辨率 / UI 缩放 / 界面语言一变就失效（backlog B34）。
 SPEED_V_XY = (1851, 52)
 
 #: 判定"速度确实切到 V 档"的**速率下限**（天/秒）。V 档按 §4.3 的实测是
 #: 「50 秒推进 5 个月」≈ 3 天/秒；取 1.5 是留一半余量（机器快慢、前线加载都会影响）。
 #: 低于它的常见原因：那一下点空了（实机踩过，只有 0.5 天/秒）。
 SPEED_V_MIN_RATE = 1.5
+
+#: 点了但速率不够时，在算出来的点周围试的**水平抖动**（像素）。命中偏差往往只有几像素，
+#: 抖动一圈比"整段重来"便宜得多，也让这步**自纠**而不是自认失败。
+SPEED_JITTER_PX = (0, -6, 6, -12, 12)
 
 
 # ────────────────────────── 异常 ──────────────────────────
@@ -1128,10 +1144,62 @@ def measure_rate(seconds: float = 8.0) -> float:
     return round((end_day - start_day) / seconds, 3)
 
 
+def speed_widget_xy(hwnd: int, *, threshold: float = DEFAULT_THRESHOLD) -> tuple[int, int] | None:
+    """速度表盘 V 档的位置：**能模板匹配就用模板，匹配不上返回 ``None``**（由调用方回落）。
+
+    ⚠️ **为什么这里必须允许失败**：表盘会跟着「运行 / 暂停」「当前是哪一档」变色 ——
+    2026-09-21 实测：暂停态收的模板拿去匹配运行态，分数只有 **0.327**；连中央那枚
+    看起来像纯装饰的齿轮，跨状态也只有 **0.551**（它会随整体亮度变）。所以**没有**一个
+    "整块表盘"的模板能同时覆盖两种状态，模板只能当**首选**，不能当唯一依据。
+
+    返回的是**客户区坐标**；找不到时给 ``None``，绝不让调用方拿到一个乱猜的点。
+
+    抓图失败（窗口最小化 / 界面还没画出来）也算"定位不到" —— 调用方会用**速率兜底**，
+    所以这里吞掉它不会造成假成功；反过来，让一个抓图异常把整局带崩才是真问题。
+    """
+    try:
+        match = locate(screenshot(hwnd), "btn_speed", threshold=threshold, roi=TOP_RIGHT_ROI)
+    except (TemplateNotFoundError, CaptureFailedError, OSError):
+        return None
+    width = match.box[2] - match.box[0]
+    height = match.box[3] - match.box[1]
+    return (
+        round(match.box[0] + SPEED_V_REL[0] * width),
+        round(match.box[1] + SPEED_V_REL[1] * height),
+    )
+
+
+def speed_candidates(
+    hwnd: int, *, speed_xy: tuple[int, int] | None, threshold: float
+) -> list[tuple[str, tuple[int, int]]]:
+    """把"该往哪儿点"排成一个**候选序列**：先模板（匹配得上时）、再实测坐标、再小幅抖动。
+
+    这就是这一步的收敛做法 —— **不赌某一个点**，而是"点一个 → 量速率 → 不够就换下一个"，
+    最多试 `SPEED_JITTER_PX` 那么多个位置，最后把**真实速率**如实报出来。
+    """
+    out: list[tuple[str, tuple[int, int]]] = []
+    if speed_xy is not None:
+        out.append((f"显式坐标 {speed_xy}", speed_xy))
+        out.extend(
+            (f"显式坐标 {j:+d}px", (speed_xy[0] + j, speed_xy[1])) for j in SPEED_JITTER_PX if j
+        )
+        return out
+
+    found = speed_widget_xy(hwnd, threshold=threshold)
+    if found is not None:
+        out.append((f"模板匹配 {found}", found))
+    out.extend(
+        (f"实测坐标 {SPEED_V_XY[0] + j},{SPEED_V_XY[1]}", (SPEED_V_XY[0] + j, SPEED_V_XY[1]))
+        for j in SPEED_JITTER_PX
+    )
+    return out
+
+
 def start_background_session(
     hwnd: int,
     *,
-    speed_xy: tuple[int, int] | None = SPEED_V_XY,
+    speed_xy: tuple[int, int] | None = None,
+    skip_speed: bool = False,
     min_rate: float = SPEED_V_MIN_RATE,
     speed_attempts: int = 3,
     measure_seconds: float = 8.0,
@@ -1147,14 +1215,16 @@ def start_background_session(
     用户口径（2026-09-21）：允许切到前台，但要在一次里做完三件事、然后切回来：
 
     1. 点「观察」进观察者模式；
-    2. 把速度切到档 V（默认坐标 `SPEED_V_XY`，客户区坐标）；
+    2. 把速度切到档 V —— **先模板匹配找到表盘**（`speed_widget_xy`），再按相对位置点 V；
+       只在显式传了 `speed_xy` 时才用写死的坐标兜底；
     3. 解除暂停 —— **先试空格**（`pydirectinput` 的扫描码版；老的合成虚拟键实测无效），
        用逐 tick 日志判它到底有没有生效；没生效就**回落到点播放键**（那条实测有效）；
     4. 把前台还给**原来那个窗口**；
-    5. 用 `background_ok()` 证明"前台不是游戏时它仍在推进"。
+    5. 用 `background_ok()` 证明"前台不是游戏时它仍在推进"，并把**量到的速率**写进返回值。
 
-    全程只在最外面借一次前台（三次点击各自 `give_back=False`），所以用户的焦点**只闪一下**，
-    而不是闪三下。任何一步失败都抛异常，不返回半个结果。
+    顺序上**先解暂停再切速度**：暂停时日期不走，也就没法用速率验证速度。
+    全程只在最外面借一次前台（各次点击都 `give_back=False`），用户的焦点只闪一下。
+    任何一步失败都抛异常，不返回半个结果。
     """
     previous = _foreground_window()
     before = tick_mark()
@@ -1162,6 +1232,7 @@ def start_background_session(
     used_key = False
     rate = 0.0
     attempts = 0
+    speed_source = "跳过（skip_speed）"
 
     ensure_foreground(hwnd)
     try:
@@ -1189,14 +1260,19 @@ def start_background_session(
                 else wait_until_readable(timeout=run_timeout)  # type: ignore[assignment]
             )
 
-        # ② 速度档：点 → **量速率** → 不够再点。
+        # ② 速度档：按**候选序列**逐个试，每试一个就量一次速率。
         #    为什么不能只点一下就算了：2026-09-21 实机点了一次 V 档坐标，界面看不出异常，
         #    速率却只有 0.5 天/秒（V 档按 §4.3 实测 ≈3 天/秒）—— 点空了也没有任何提示。
+        #    为什么允许多个候选：表盘会随「运行/暂停 + 当前档」变色，**没有任何模板能同时覆盖
+        #    两种状态**（实测：暂停态模板匹配运行态只有 0.327），所以模板只能当首选、不能当唯一。
         #    也正因为要量速率，顺序必须是"先解暂停再切速度"（暂停时日期不走）。
-        if speed_xy is not None:
-            for _ in range(speed_attempts):
+        if not skip_speed:
+            for label, point in speed_candidates(hwnd, speed_xy=speed_xy, threshold=threshold)[
+                :speed_attempts
+            ]:
                 attempts += 1
-                click_client(hwnd, speed_xy[0], speed_xy[1], give_back=False)
+                speed_source = label
+                click_client(hwnd, point[0], point[1], give_back=False)
                 rate = measure_rate(measure_seconds)
                 if rate >= min_rate:
                     break
@@ -1209,6 +1285,7 @@ def start_background_session(
         "hwnd": hwnd,
         "unpause": "空格（扫描码）" if used_key else "播放键（空格没被接受）",
         "running": advance.describe(),
+        "speed_source": speed_source,
         "speed_attempts": attempts,
         "speed_days_per_second": rate,
         "speed_ok": rate >= min_rate,

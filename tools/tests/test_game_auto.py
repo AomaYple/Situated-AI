@@ -1062,3 +1062,36 @@ class TestSpeedRate:
         monkeypatch.setattr(ga, "tick_mark", lambda *_a, **_k: ga.TickMark(tick="", mtime=0.0))
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
         assert ga.measure_rate(5.0) == 0.0
+
+
+class TestSpeedCandidates:
+    """找速度档的**候选序列**：模板只能当首选 —— 表盘会随「运行/暂停 + 当前档」变色，
+    实测暂停态模板匹配运行态只有 0.327，所以必须有回落，而且每个候选都要靠速率验证。"""
+
+    def test_显式坐标优先且带抖动(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ga, "speed_widget_xy", lambda *_a, **_k: (999, 999))
+        found = ga.speed_candidates(1, speed_xy=(100, 200), threshold=0.75)
+        assert found[0] == ("显式坐标 (100, 200)", (100, 200))
+        assert {point[0] for _label, point in found} == {100 + j for j in ga.SPEED_JITTER_PX}
+        assert all(point[1] == 200 for _label, point in found)
+
+    def test_模板匹配不到时回落到实测坐标(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ga, "speed_widget_xy", lambda *_a, **_k: None)
+        found = ga.speed_candidates(1, speed_xy=None, threshold=0.75)
+        assert all(not label.startswith("模板匹配") for label, _ in found)
+        assert found[0][1] == ga.SPEED_V_XY
+
+    def test_模板匹配到就排在第一个(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ga, "speed_widget_xy", lambda *_a, **_k: (500, 60))
+        found = ga.speed_candidates(1, speed_xy=None, threshold=0.75)
+        assert found[0] == ("模板匹配 (500, 60)", (500, 60))
+        assert found[1][1] == ga.SPEED_V_XY, "模板后面仍要留着实测坐标兜底"
+
+    def test_模板不存在时不是抛异常而是回落(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """模板文件被删/没装时 `locate` 会抛 —— 这一步必须吞掉它并回落，不能把整局带崩。"""
+
+        def boom(*_a: object, **_k: object) -> object:
+            raise ga.TemplateNotFoundError("没有 btn_speed")
+
+        monkeypatch.setattr(ga, "locate", boom)
+        assert ga.speed_widget_xy(1) is None
