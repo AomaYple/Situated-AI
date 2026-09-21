@@ -52,6 +52,16 @@ dependencies = [
                         # （少一层 GTK/Qt 的隐式依赖，也不会和游戏的窗口抢东西）。
                         # 为什么不手写：滑动窗口互相关自己实现只会更慢更容易错，
                         # 而"用成熟库"是本仓 P4 明确要求的。
+    "pydirectinput>=1.0.4",
+                        # game_auto.py：鼠标**注入**（`moveTo` + `click`）。它内部同样是
+                        # `SendInput`，选它不是为了"更强的注入"，而是为了**别再自己拼
+                        # `SetCursorPos` + `mouse_event` 那段 Win32 细节**，并把
+                        # `FAILSAFE` / `PAUSE` 这两个开关交给库管（我们只负责关掉它们）。
+                        # 无第三方依赖（实测 `pip show` 的 Requires 为空）。
+                        # ⚠️ 它**不解决**两台事：① 后台点击 —— 实测 `PostMessage` /
+                        # `SendMessage` 三种变体引擎一律不认（它读原始输入），换库也一样；
+                        # ② 控制台 —— scancode 版键盘试过 4 个候选键仍未能唤起控制台
+                        # （判据是"命令会写的文件有没有变"，见 tools/probe/console_key_test.py）。
 ]
 
 [project.optional-dependencies]
@@ -351,4 +361,11 @@ disallow_untyped_defs = false   # 目标：逐步收紧到 true
 disallow_incomplete_defs = false
 show_error_codes = true
 pretty = true
+
+
+# 没有类型标注、也没有 `py.typed` 的第三方库 —— 明确列出来，别用全局
+# `ignore_missing_imports` 把"我们自己写错导入名"也一起放过。
+[[tool.mypy.overrides]]
+module = ["pydirectinput"]
+ignore_missing_imports = true
 

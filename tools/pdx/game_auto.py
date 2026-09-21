@@ -50,9 +50,17 @@ from typing import TYPE_CHECKING, cast
 
 import cv2
 import numpy as np
+import pydirectinput as directinput
 from PIL import Image
 
 from . import config, experiments
+
+#: `pydirectinput` 的两个开关必须由我们定死：
+#: * `FAILSAFE`：鼠标移到屏幕角落就抛异常中断 —— 自动化里这是**随机失败源**，关掉；
+#: * `PAUSE`：库默认每次调用后 sleep 0.1 秒 —— 一次点击要调 `moveTo` + `click` 两次，
+#:   留着它每点一下多花 0.2 秒，且与调用方自己的 `settle` 重复。
+directinput.FAILSAFE = False
+directinput.PAUSE = 0.0
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -712,27 +720,34 @@ def locate_optional(
 def click_client(hwnd: int, x: int, y: int, *, settle: float = 0.2, give_back: bool = True) -> None:
     """在客户区 ``(x, y)`` 处做一次**真前台左键点击**；点完把前台**还回去**。
 
-    走 ``SetCursorPos`` + ``mouse_event``：本模块**只走这一条路**，两条"别的路"的口径不同：
+    **鼠标注入走成熟库 `pydirectinput`**（`moveTo` + `click`），不再自己拼
+    `SetCursorPos` + `mouse_event`：它内部用的也是 `SendInput`，但由库维护
+    （含 `FAILSAFE` / `PAUSE` 这两个该由库管的开关），我们不再自己维护这段 Win32 细节。
 
-    * **合成键盘**（``keybd_event`` / ``SendInput``）**实测无效** —— 用 tick 判据验过，
-      见模块文档第 3 条；
-    * **后台点击（不进系统输入队列）实测无效** —— 2026-09-21 用三种变体各试一次：
-      ``PostMessage(WM_LBUTTONDOWN/UP)``、``SendMessage``、``SendMessage`` + 先发
-      ``WM_ACTIVATE``/``WM_SETFOCUS``；判据不是"像素差"（大厅界面**自己在动**，3 秒不动
+    两条"别的路"的口径（都实测过，别重试）：
+
+    * **合成键盘**（`keybd_event` / 虚拟键 `SendInput`）**实测无效** —— 用 tick 判据验过；
+      换成 **scancode 版**（`pydirectinput`，源码里确实带 `KEYEVENTF_SCANCODE`）**也没能唤起
+      控制台**（4 个候选键各试一次，判据是"控制台命令执行后会写的文件有没有变"）——
+      但那次**不能区分**"键被忽略"与"这个界面本来就不让开控制台"，故记作**未证实**而不是判死，
+      见 `tools/probe/console_key_test.py`；
+    * **后台点击（不进系统输入队列）实测无效** —— 2026-09-21 三种变体各试一次：
+      `PostMessage(WM_LBUTTONDOWN/UP)`、`SendMessage`、`SendMessage` + 先发
+      `WM_ACTIVATE`/`WM_SETFOCUS`；判据不是"像素差"（大厅界面**自己在动**，3 秒不动
       两张截图也不同 —— 这个假阳性我踩过），而是**目标按钮还在不在**：三种变体点完
       「观察」按钮的匹配分数**一模一样**（0.855），界面没有切走。
-      原因与合成键盘同源：引擎读的是**原始输入状态**（光标位置 + 按键状态），不是窗口消息。
+      引擎读的是**原始输入状态**（光标位置 + 按键状态），不是窗口消息，这一条与用什么库无关。
 
-    所以"点一次"这件事只能**借前台**。借了就要还：``give_back=True`` 时点完立刻把
+    所以"点一次"这件事只能**借前台**。借了就要还：`give_back=True` 时点完立刻把
     原先的前台窗口设回去（用户看到的是约 1 秒的焦点闪动，而不是鼠标被夺走）。
     """
     previous = _foreground_window() if give_back else 0
     ensure_foreground(hwnd)
     try:
         origin_x, origin_y = _client_origin(hwnd)
-        _set_cursor(origin_x + x, origin_y + y)
+        directinput.moveTo(origin_x + x, origin_y + y)
         _sleep(0.15)
-        _mouse_click()
+        directinput.click()
         _sleep(settle)
     finally:
         if previous and previous != hwnd:

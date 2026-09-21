@@ -503,37 +503,55 @@ class TestForeground:
 
 
 class TestClick:
+    """点击的注入走成熟库 `pydirectinput`（`moveTo` + `click`），所以这里打的是它的桩。
+
+    换库的理由与"它能不能解决后台点击"无关（那条已被实测判死，见 `click_client` 的 docstring）——
+    只是这段 Win32 细节该由库维护，不该我们自己拼 `SetCursorPos` + `mouse_event`。
+    """
+
+    def _patch_input(
+        self, monkeypatch: pytest.MonkeyPatch, moved: list[tuple[int, int]], events: list[str]
+    ) -> None:
+        from types import SimpleNamespace
+
+        def move_to(x: int, y: int) -> None:
+            moved.append((x, y))
+            events.append("cursor")
+
+        def click() -> None:
+            events.append("mouse")
+
+        monkeypatch.setattr(ga, "directinput", SimpleNamespace(moveTo=move_to, click=click))
+
     def test_客户区坐标要加上窗口原点(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """窗口不在 (0,0) 时，客户区坐标 ≠ 屏幕坐标 —— 这里必须换算。"""
         moved: list[tuple[int, int]] = []
         events: list[str] = []
         monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: None)
         monkeypatch.setattr(ga, "_client_origin", lambda _hwnd: (100, 50))
-        monkeypatch.setattr(ga, "_set_cursor", lambda x, y: moved.append((x, y)))
-        monkeypatch.setattr(ga, "_mouse_click", lambda: events.append("click"))
+        self._patch_input(monkeypatch, moved, events)
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
 
         ga.click_client(1, 10, 20)
 
         assert moved == [(110, 70)]
-        assert events == ["click"]
+        assert events == ["cursor", "mouse"]
 
     def test_窗口在原点时坐标不变(self, monkeypatch: pytest.MonkeyPatch) -> None:
         moved: list[tuple[int, int]] = []
         monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: None)
         monkeypatch.setattr(ga, "_client_origin", lambda _hwnd: (0, 0))
-        monkeypatch.setattr(ga, "_set_cursor", lambda x, y: moved.append((x, y)))
-        monkeypatch.setattr(ga, "_mouse_click", lambda: None)
+        self._patch_input(monkeypatch, moved, [])
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
         ga.click_client(1, 864, 1055)
         assert moved == [(864, 1055)]
 
     def test_先抢前台再点(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: list[str] = []
+        moved: list[tuple[int, int]] = []
         monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: calls.append("fg"))
         monkeypatch.setattr(ga, "_client_origin", lambda _hwnd: (0, 0))
-        monkeypatch.setattr(ga, "_set_cursor", lambda _x, _y: calls.append("cursor"))
-        monkeypatch.setattr(ga, "_mouse_click", lambda: calls.append("mouse"))
+        self._patch_input(monkeypatch, moved, calls)
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
         ga.click_client(1, 0, 0)
         assert calls == ["fg", "cursor", "mouse"]
