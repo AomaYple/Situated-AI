@@ -122,6 +122,11 @@ POLL_INTERVAL = 2.0
 #: UI 缩放 / 界面语言一变就失效（backlog B34）—— 传 `speed_xy=None` 可以跳过这一步。
 SPEED_V_XY = (1851, 52)
 
+#: 判定"速度确实切到 V 档"的**速率下限**（天/秒）。V 档按 §4.3 的实测是
+#: 「50 秒推进 5 个月」≈ 3 天/秒；取 1.5 是留一半余量（机器快慢、前线加载都会影响）。
+#: 低于它的常见原因：那一下点空了（实机踩过，只有 0.5 天/秒）。
+SPEED_V_MIN_RATE = 1.5
+
 
 # ────────────────────────── 异常 ──────────────────────────
 #
@@ -1091,14 +1096,50 @@ def run_until_running(
     }
 
 
+def tick_day(tick: str) -> float | None:
+    """把 ``1836.1.12.12`` 折成"第几天"（够算速率就行，不做精确日历）。读不到返回 ``None``。"""
+    parts = tick.split(".")
+    if len(parts) < 3:
+        return None
+    try:
+        year, month, day = int(parts[0]), int(parts[1]), int(parts[2])
+    except ValueError:
+        return None
+    return (year - 1836) * 365.25 + (month - 1) * 30.44 + (day - 1)
+
+
+def measure_rate(seconds: float = 8.0) -> float:
+    """量"游戏时间推进得多快"，单位**天/秒**（读不到 tick 时返回 ``0.0``）。
+
+    为什么要它：速度档点没点中，**只能靠速率证明**。实机踩过一次 —— 点了一下 V 档坐标，
+    界面看不出异常，速率却只有 0.5 天/秒（V 档按 §4.3 实测 ≈3 天/秒），也就是那一下点空了
+    却毫无提示。所以"切速度"必须带上这个判据，并把测出来的速率写进返回值。
+    """
+    start = tick_mark()
+    if not start.readable:
+        return 0.0
+    start_day = tick_day(start.tick)
+    if start_day is None:
+        return 0.0
+    _sleep(seconds)
+    end_day = tick_day(tick_mark().tick)
+    if end_day is None or seconds <= 0:
+        return 0.0
+    return round((end_day - start_day) / seconds, 3)
+
+
 def start_background_session(
     hwnd: int,
     *,
     speed_xy: tuple[int, int] | None = SPEED_V_XY,
+    min_rate: float = SPEED_V_MIN_RATE,
+    speed_attempts: int = 3,
+    measure_seconds: float = 8.0,
     unpause_key: str = "space",
     threshold: float = DEFAULT_THRESHOLD,
     key_timeout: float = 8.0,
     run_timeout: float = RUN_TIMEOUT,
+    settle: float = 3.0,
     background_seconds: float = 20.0,
 ) -> dict[str, object]:
     """**借一次前台，把开局做完，再把前台还回去**，之后游戏在后台自己跑。
@@ -1119,6 +1160,8 @@ def start_background_session(
     before = tick_mark()
     advance: Advance
     used_key = False
+    rate = 0.0
+    attempts = 0
 
     ensure_foreground(hwnd)
     try:
@@ -1126,9 +1169,7 @@ def start_background_session(
         observe = locate(screen, "btn_observe", threshold=threshold)
         save_shot(screen, "10-lobby")
         click_match(hwnd, observe, give_back=False)
-
-        if speed_xy is not None:
-            click_client(hwnd, speed_xy[0], speed_xy[1], give_back=False)
+        _sleep(settle)  # 大厅 → 地图有一次界面切换；UI 没定型时点击会落空
 
         # ① 先试空格（扫描码），判据是逐 tick 日志 —— 不认就回落到播放键
         directinput.press(unpause_key)
@@ -1147,6 +1188,18 @@ def start_background_session(
                 if before.readable
                 else wait_until_readable(timeout=run_timeout)  # type: ignore[assignment]
             )
+
+        # ② 速度档：点 → **量速率** → 不够再点。
+        #    为什么不能只点一下就算了：2026-09-21 实机点了一次 V 档坐标，界面看不出异常，
+        #    速率却只有 0.5 天/秒（V 档按 §4.3 实测 ≈3 天/秒）—— 点空了也没有任何提示。
+        #    也正因为要量速率，顺序必须是"先解暂停再切速度"（暂停时日期不走）。
+        if speed_xy is not None:
+            for _ in range(speed_attempts):
+                attempts += 1
+                click_client(hwnd, speed_xy[0], speed_xy[1], give_back=False)
+                rate = measure_rate(measure_seconds)
+                if rate >= min_rate:
+                    break
     finally:
         if previous and previous != hwnd:
             _user32.SetForegroundWindow(wintypes.HWND(previous))
@@ -1156,6 +1209,9 @@ def start_background_session(
         "hwnd": hwnd,
         "unpause": "空格（扫描码）" if used_key else "播放键（空格没被接受）",
         "running": advance.describe(),
+        "speed_attempts": attempts,
+        "speed_days_per_second": rate,
+        "speed_ok": rate >= min_rate,
         "foreground_restored": previous if previous and previous != hwnd else "（本来就是游戏）",
         "background": background.describe(),
         "tick": tick_mark().tick,

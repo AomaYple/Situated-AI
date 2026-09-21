@@ -1038,3 +1038,27 @@ class TestClickGiveBack:
         monkeypatch.setattr(ga, "_foreground_window", lambda: 1)  # 就是 hwnd=1
         ga.click_client(1, 10, 20)
         assert restored == [], "前台本来就是游戏，没有「还」这回事"
+
+
+class TestSpeedRate:
+    """切速度这件事**只能靠速率证明**：实机踩过"点了但没生效、界面看不出异常"。"""
+
+    def test_tick_折成天数(self) -> None:
+        assert ga.tick_day("1836.1.1") == 0.0
+        assert ga.tick_day("1836.1.12.12") == pytest.approx(11.0)
+        assert ga.tick_day("1837.1.1") == pytest.approx(365.25)
+        assert ga.tick_day("读不到") is None
+        assert ga.tick_day("") is None
+
+    def test_量速率(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        marks = iter(
+            [ga.TickMark(tick="1836.1.1", mtime=0.0), ga.TickMark(tick="1836.1.11", mtime=0.0)]
+        )
+        monkeypatch.setattr(ga, "tick_mark", lambda *_a, **_k: next(marks))
+        monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        assert ga.measure_rate(10.0) == pytest.approx(1.0), "10 天 / 10 秒 = 1 天/秒"
+
+    def test_读不到_tick_时速率为零(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ga, "tick_mark", lambda *_a, **_k: ga.TickMark(tick="", mtime=0.0))
+        monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        assert ga.measure_rate(5.0) == 0.0
