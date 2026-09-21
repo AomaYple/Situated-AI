@@ -1957,11 +1957,13 @@ def start_background_session(
     # ④ 速率：在**后台**量（不占前台）；不够就再借一次、只点下一个候选位置
     rate = 0.0 if skip_speed else measure_rate(measure_seconds)
     while not skip_speed and rate < min_rate and attempts < speed_attempts:
+        # 补点速度**也不用借前台**：首选路线是"窗口露在最上面 + 键盘焦点 + 真实点击"，
+        # 实测点得动（实机：第一次没到 5 档、第二次点中 ⇒ 2.5 天/秒）。于是 `borrows`
+        # 只在"观察没点动"的回落里才可能非零。
         hwnd = _live_window(hwnd)
-        with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
-            borrows += 1
-            notes.update(_step_speed(hwnd, speed_xy=speed_xy, threshold=threshold, index=attempts))
-        borrow_seconds += visit.seconds
+        notes.update(
+            _step_speed(hwnd, speed_xy=speed_xy, threshold=threshold, index=attempts, nosteal=True)
+        )
         attempts += 1
         rate = measure_rate(measure_seconds)
 

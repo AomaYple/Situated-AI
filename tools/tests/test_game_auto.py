@@ -1486,9 +1486,10 @@ class TestSessionFlow:
 
         result = ga.start_background_session(4242, force=True)
 
-        assert borrows == [4242], "补点速度那一次才借前台"
+        assert borrows == [], "补点速度也走不抢前台 ⇒ 一次前台都不用借"
         assert calls.count("click:864,1055") == 1, "观察只点一次"
         assert calls.count("press:space") == 1, "空格也只按一次"
+        assert calls.count("click:1851,52") == 2, "速度点了两次（第一次没到 5 档）"
         assert result["speed_attempts"] == 2
         assert result["speed_ok"] is True
 
