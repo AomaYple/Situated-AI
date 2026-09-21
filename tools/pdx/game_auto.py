@@ -42,8 +42,8 @@ import re
 import subprocess
 import sys
 import time
-from contextlib import contextmanager
-from dataclasses import dataclass
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -51,8 +51,10 @@ import cv2
 import numpy as np
 import pydirectinput as directinput
 import pygetwindow as gw
+import win32api
 import win32con
 import win32gui
+import win32process
 from PIL import Image, ImageGrab
 
 from . import config, experiments
@@ -158,7 +160,10 @@ CAPTURE_INTERVAL_MAX = 2.0
 CAPTURE_INTERVAL_GROWTH = 1.6
 
 #: 点了「观察」之后，等界面切到地图的上限（判据是"按钮消失 / 时间开始走"，不是睡固定秒数）。
-MAP_SETTLE_TIMEOUT = 30.0
+#: 点完「观察」之后等**世界载入**的上限（秒）。**实测教训**：原来给 30 秒，结果点完观察
+#: 世界还在载入，8 秒的 tick 判定必然失败、回落去找播放键又撞上加载画面 ⇒ 整局误报失败。
+#: 观实机截图（`tools/out/auto/10-lobby.png`）：那一刻大厅确实在，说明点击没错，错在**等太短**。
+MAP_SETTLE_TIMEOUT = 120.0
 
 #: 是否允许碰**真实**的窗口与输入。默认 **False**：只有显式入口（CLI / 探针脚本）才把它打开。
 #:
@@ -605,9 +610,32 @@ def _set_foreground(hwnd: int) -> bool:
     库调用不抛异常 **不等于** 成功了（Windows 前台锁定会静默失败），所以判据是
     ``GetForegroundWindow()``，不是返回值 —— 见 :func:`ensure_foreground`。
     """
-    try:
+    with suppress(gw.PyGetWindowException, OSError):
         _window(hwnd).activate()
-    except (gw.PyGetWindowException, OSError):
+    if _foreground_window() == hwnd:
+        return True
+    # 兜底：Windows 前台锁定会**静默拒绝**后台进程的置前请求（实测：前台一度是 0，
+    # 于是 5 次重试全失败 ⇒ 整轮误报 ForegroundLostError）。pywin32 暴露了
+    # AttachThreadInput，接上目标线程的输入队列再置前，成功率明显更高。
+    try:
+        target_tid, _pid = win32process.GetWindowThreadProcessId(hwnd)
+        me = win32api.GetCurrentThreadId()
+        attached = bool(target_tid) and bool(win32process.AttachThreadInput(me, target_tid, True))
+        try:
+            win32gui.SetWindowPos(
+                hwnd,
+                win32con.HWND_TOP,
+                0,
+                0,
+                0,
+                0,
+                win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE,
+            )
+            win32gui.SetForegroundWindow(hwnd)
+        finally:
+            if attached:
+                win32process.AttachThreadInput(me, target_tid, False)
+    except Exception:
         return False
     return _foreground_window() == hwnd
 
@@ -845,6 +873,29 @@ def screenshot(hwnd: int, roi: tuple[float, float, float, float] | None = None) 
     return image
 
 
+def _roi_offset(hwnd: int, roi: tuple[float, float, float, float]) -> tuple[int, int]:
+    """ROI 裁剪图左上角在**客户区**里的偏移。
+
+    为什么必须有它：抓图改成"只抓 ROI"之后，匹配出来的坐标是**裁剪图内**的相对坐标。
+    实测踩过这个坑（2026-09-21 实机）：`btn_observe` 匹配到 `(864, 83)`（裁剪图内），
+    直接拿去点击 ⇒ 打在屏幕顶部，而按钮其实在底部 `y≈1053`，于是"点了没反应"。
+    """
+    width, height = _client_size(hwnd)
+    left, top, _right, _bottom = roi
+    return (int(left * width), int(top * height))
+
+
+def _shift_match(match: Match, dx: int, dy: int) -> Match:
+    """把裁剪图内的匹配坐标平移回客户区坐标（`box` 一起平移，避免"改了 x 忘了 box"）。"""
+    x0, y0, x1, y1 = match.box
+    return replace(
+        match,
+        x=match.x + dx,
+        y=match.y + dy,
+        box=(x0 + dx, y0 + dy, x1 + dx, y1 + dy),
+    )
+
+
 def find_in_roi(
     hwnd: int,
     name: str,
@@ -863,7 +914,11 @@ def find_in_roi(
         image = screenshot(hwnd, roi=roi)
     except CaptureFailedError:
         return None
-    return locate_optional(image, name, threshold=threshold, first_hit=True)
+    found = locate_optional(image, name, threshold=threshold, first_hit=True)
+    if found is None:
+        return None
+    dx, dy = _roi_offset(hwnd, roi)
+    return _shift_match(found, dx, dy)
 
 
 def save_shot(image: Image.Image, tag: str) -> Path:
@@ -1352,7 +1407,9 @@ def wait_for_lobby(
             else locate_optional(image, "btn_observe", threshold=threshold, first_hit=True)
         )
         if found is not None:
-            return found
+            # 坐标是**裁剪图内**的 ⇒ 加回 ROI 偏移才是客户区坐标（否则点击会打到别处）
+            dx, dy = _roi_offset(hwnd, BOTTOM_ROI)
+            return _shift_match(found, dx, dy)
         if auto_show and not shown and tick_clock() - started > 20.0:
             shown = True
             if _is_iconic(hwnd):  # pragma: no cover - 实机分支
@@ -1633,6 +1690,16 @@ def borrow_foreground(
         visit.seconds = _monotonic() - started
 
 
+def _live_window(hwnd: int) -> int:
+    """取**当前**的游戏窗口句柄；找不到就退回传入的那个（不假装知道）。
+
+    为什么需要：Victoria 3 在启动过程中会**销毁并重建窗口**（实测：launch 返回的
+    1901988 在借前台时已失效，当前窗口是 198050）。拿过期句柄去激活只会得到
+    ForegroundLostError，而那个报错看起来像抢不到前台，把人引向错误的方向。
+    """
+    return find_window() or hwnd
+
+
 def _step_look(hwnd: int, *, threshold: float, lobby_timeout: float = LOOK_TIMEOUT) -> Match:
     """① 在**借用期内**确认「观察」出现（有界，默认 :data:`LOOK_TIMEOUT` 秒）。
 
@@ -1653,6 +1720,9 @@ def _step_observe(hwnd: int, match: Match, *, settle_timeout: float) -> dict[str
         timeout=settle_timeout,
         interval=CONDITION_POLL,
     )
+    # **留证**：点完之后界面到底变成什么样 —— 失败时不用再从零猜（实测吃过这个亏）。
+    with suppress(CaptureFailedError):
+        save_shot(screenshot(hwnd), "11-after-observe")
     return {
         "observe": match.describe(),
         "lobby_settled": "大厅界面已切走（按钮消失 / 时间开始走）"
@@ -1706,7 +1776,9 @@ def start_background_session(
     measure_seconds: float = 8.0,
     unpause_key: str = "space",
     threshold: float = DEFAULT_THRESHOLD,
-    key_timeout: float = 8.0,
+    # 空格之后的第一次判定给足时间：世界可能还在载入。实测 8 秒太短（点完观察 8 秒内
+    # 没有 tick 是**正常**的），45 秒才够"载入完 + 解暂停 + 写出第一行 tick"。
+    key_timeout: float = 45.0,
     run_timeout: float = RUN_TIMEOUT,
     lobby_timeout: float = LOBBY_TIMEOUT,
     settle_timeout: float = MAP_SETTLE_TIMEOUT,
@@ -1745,6 +1817,9 @@ def start_background_session(
 
     任何一步失败都抛异常，不返回半个结果（P13）。
     """
+    # ⚠️ **句柄可能在启动过程中被重建**（实测：launch 拿到 1901988，借前台时已经是
+    # 198050）⇒ 每次借用前都重新解析一次，别拿着过期句柄去激活。
+    hwnd = _live_window(hwnd)
     before = tick_mark()
     borrows = 0
     borrow_seconds = 0.0
@@ -1756,6 +1831,7 @@ def start_background_session(
     notes["observe"] = match.describe()
 
     # ② **借前台只做三下**：点观察 → 点 5 档速度 → 按空格（约 1 秒，之后立刻还）
+    hwnd = _live_window(hwnd)
     with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
         borrows += 1
         if restore_for_actions:
@@ -1769,39 +1845,47 @@ def start_background_session(
             notes.update(_step_speed(hwnd, speed_xy=speed_xy, threshold=threshold, index=0))
         press_key(unpause_key)
         notes["unpause"] = f"按了 {unpause_key}（扫描码）"
+        with suppress(CaptureFailedError):
+            save_shot(screenshot(hwnd), "12-after-space")
     borrow_seconds += visit.seconds
 
-    # ② **立刻回后台**：空格按完就把游戏缩下去（用户口径第 ④ 步"空格后切回后台"）。
-    #    放在验证之前 —— 验证只读日志，不需要窗口可见；屏幕占用时间越短越好。
+    # ② **立刻切回后台**：借用的 `finally` 已经把前台还给用户了（用户口径第 ④ 步）。
+    #    ⚠️ 这里**先不缩窗口**：验证阶段万一要回头看播放键，缩下去就抓不到图了（实测踩过
+    #    ——`TemplateNotFoundError` 就是这么来的）。缩窗口放到验证之后（见 ⑤）。
     minimized = False
-    if minimize_after and not _is_iconic(hwnd):
-        _minimize(hwnd)
-        minimized = bool(
-            wait_until(
-                lambda: _is_iconic(hwnd), timeout=WINDOW_SHOW_SETTLE, interval=CONDITION_POLL
-            )
-        )
-    notes["minimized"] = "已缩回后台" if minimized else "窗口没有缩下去（按调用方要求或最小化失败）"
 
     # ③ 后台验证：时间有没有真的开始走（只读日志，不占前台）
     advance = _wait_running(before, timeout=key_timeout)
     if advance is None:
+        hwnd = _live_window(hwnd)
         with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
             borrows += 1
-            playing = locate(screenshot(hwnd, roi=TOP_RIGHT_ROI), "btn_play", threshold=threshold)
-            click_match(hwnd, playing, give_back=False)
+            ensure_visible_for_capture(hwnd)  # 窗口可能已被缩下去：抓图前先让它可见
+            playing = locate_optional(
+                screenshot(hwnd, roi=TOP_RIGHT_ROI), "btn_play", threshold=threshold
+            )
+            if playing is not None:
+                click_match(hwnd, playing, give_back=False)
+                notes["unpause"] = f"{unpause_key} 没被接受 ⇒ 改用播放键"
+            else:
+                notes["unpause"] = f"{unpause_key} 没被接受，且右上角没找到播放键（可能还在载入）"
         borrow_seconds += visit.seconds
-        notes["unpause"] = f"{unpause_key} 没被接受 ⇒ 改用播放键"
-        advance = _wait_running(before, timeout=run_timeout)
+        if playing is not None:
+            advance = _wait_running(before, timeout=run_timeout)
     if advance is None:
+        # 兜底也要**如实报**（P13），但把证据一起带上，省得下次又从零猜。
+        log_hint = tick_mark()
+        trail = "；".join(f"{key}={value}" for key, value in sorted(notes.items()))
         raise NotRunningError(
             f"{run_timeout:.0f} 秒内时间没有推进（空格与播放键都试过）—— "
-            "先看 dedicated_server.log 有没有 tick 行，别急着改坐标"
+            f"日志现在读到 {log_hint.tick or '<读不到>'}；现场：{trail}；"
+            "证据帧：tools/out/auto/10-lobby.png / 11-after-observe.png / 12-after-space.png"
         )
 
     # ④ 速率：在**后台**量（不占前台）；不够就再借一次、只点下一个候选位置
     rate = 0.0 if skip_speed else measure_rate(measure_seconds)
     while not skip_speed and rate < min_rate and attempts < speed_attempts:
+        hwnd = _live_window(hwnd)
         with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
             borrows += 1
             notes.update(_step_speed(hwnd, speed_xy=speed_xy, threshold=threshold, index=attempts))
@@ -1812,10 +1896,25 @@ def start_background_session(
     # ⑤ 后台跑：窗口已经缩下去了 ⇒ 验证"**缩着也在推进**"（这是必须实测的一条，
     #    有些游戏一缩下去就不渲染/不推进）。验不过立刻恢复原样，结论如实写进返回值。
     background = background_ok(hwnd, seconds=background_seconds)
-    if minimized and not background.advanced:
-        _show_no_activate(hwnd)
-        minimized = False
-        background = background_ok(hwnd, seconds=background_seconds)
+
+    # ⑤ 验证完了才缩窗口：这是"把桌面还给用户"的最后一步，也是一次**实测**
+    #    （有些游戏一缩下去就不推进；验不过立刻恢复原样并如实写进返回值）。
+    if minimize_after and not _is_iconic(hwnd):
+        _minimize(hwnd)
+        minimized = bool(
+            wait_until(
+                lambda: _is_iconic(hwnd), timeout=WINDOW_SHOW_SETTLE, interval=CONDITION_POLL
+            )
+        )
+        if minimized:
+            after_min = background_ok(hwnd, seconds=background_seconds)
+            if after_min.advanced:
+                background = after_min
+            else:
+                _show_no_activate(hwnd)
+                minimized = False
+                background = background_ok(hwnd, seconds=background_seconds)
+    notes["minimized"] = "已缩回后台" if minimized else "窗口没有缩下去（按调用方要求或最小化失败）"
     return {
         "hwnd": hwnd,
         "unpause": notes.get("unpause", "（没做）"),

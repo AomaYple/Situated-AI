@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 #: 真模板（入库的小 PNG）。用例用它们贴进合成画面，走**完整**的匹配路径，
 #: 而不是把 locate 也换成假的 —— 那样就只剩同义反复了。
 OBSERVE_TPL = ga.UI_DIR / "btn_observe.png"
+#: 「观察」模板的高度（合成画面里要用它反推坐标；读不到就给一个保守值）
+OBSERVE_TPL_HEIGHT = 36
 PLAY_TPL = ga.UI_DIR / "btn_play.png"
 
 needs_templates = pytest.mark.skipif(
@@ -906,6 +908,8 @@ class TestWaitForLobby:
         paste(lobby, OBSERVE_TPL, 755, 1037)
         # 现在抓图是"只抓底部 ROI"，所以桩要接受 roi 形参（返回的图就当它已经是那一块）
         monkeypatch.setattr(ga, "screenshot", lambda _hwnd, **_kw: lobby)
+        # 现在要算 ROI 偏移 ⇒ 客户区尺寸也要打桩（否则会去碰真窗口）
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
         clock = FakeClock()
         found = ga.wait_for_lobby(1, timeout=5.0, clock=clock, sleeper=clock.advance)
         assert found.name == "btn_observe"
@@ -1393,6 +1397,14 @@ class TestSessionFlow:
         )
         monkeypatch.setattr(ga, "save_shot", lambda _img, _tag: None)
         monkeypatch.setattr(ga, "click_match", lambda _h, _m, **_kw: calls.append("click_observe"))
+        # 播放键的回落路径走 `locate_optional`（找不到不算致命，速率才是最终判据）
+        monkeypatch.setattr(
+            ga,
+            "locate_optional",
+            lambda *_a, **_k: ga.Match(
+                name="btn_play", x=1851, y=52, score=0.99, scale=1.0, box=(1840, 40, 1862, 64)
+            ),
+        )
         monkeypatch.setattr(ga, "lobby_visible", lambda _h, **_kw: None)
         # `_step_observe` 现在在里面**有界等**按钮出现（"启动忙完"只是启发式，实测假阳性过两次），
         # 所以这里把 `wait_for_lobby` 也钉住 —— 单测不该真的转 30 秒。
@@ -1620,6 +1632,40 @@ class TestCaptureCostAndGuards:
         image = ga._grab(4242, ga.BOTTOM_ROI)
         assert seen["bbox"] == (100, 50 + 972, 2020, 50 + 1080), "底部条：只有整屏的 1/10"
         assert image.size == (1920, 108)
+
+
+class TestRoiCoordinateShift:
+    """**回归**：只抓 ROI 之后，匹配坐标必须加回裁剪偏移。
+
+    实机踩过（2026-09-21）：`btn_observe` 在裁剪图里匹配到 `(864, 83)`，直接拿去点击 ⇒
+    打在屏幕顶部，而按钮其实在底部 `y≈1053` ⇒ 表现为"点了没反应"，还差点被误判成
+    "后台点击无效"。
+    """
+
+    @needs_templates
+    def test_底部_roi_匹配出来的坐标要平移回客户区(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        lobby = textured(1920, 108)  # 裁剪图：只有底部那一条
+        paste(lobby, OBSERVE_TPL, 755, 29)  # 在这条里贴在 (755, 29)
+
+        def fake(roi: tuple[float, float, float, float]) -> Image.Image:
+            return lobby
+
+        monkeypatch.setattr(ga, "screenshot", lambda _h, roi=None, **_kw: fake(roi))
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+
+        found = ga.find_in_roi(1, "btn_observe", roi=ga.BOTTOM_ROI)
+
+        assert found is not None
+        assert found.y > 900, f"按钮在底部，坐标却算成了 {found.y} —— ROI 偏移没加回去"
+        assert found.y == 29 + int(0.90 * 1080) + OBSERVE_TPL_HEIGHT // 2
+        assert found.box[1] == 29 + int(0.90 * 1080)
+
+    def test_坐标平移不动别的字段(self) -> None:
+        original = ga.Match(name="x", x=10, y=20, score=0.9, scale=1.0, box=(5, 15, 25, 35))
+        moved = ga._shift_match(original, 100, 900)
+        assert (moved.x, moved.y) == (110, 920)
+        assert moved.box == (105, 915, 125, 935)
+        assert (moved.name, moved.score, moved.scale) == ("x", 0.9, 1.0)
 
 
 class TestSingleHitFastPath:
