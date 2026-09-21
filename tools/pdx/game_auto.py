@@ -117,6 +117,11 @@ WINDOW_TIMEOUT = 180.0
 RUN_TIMEOUT = 90.0
 POLL_INTERVAL = 2.0
 
+#: 速度档 V（扇形最右扇区）的**实测客户区坐标**（1920x1080、简体中文，
+#: 见 `docs/design/exec/自动化范式.md` §4.3）。⚠️ 它没走模板匹配，所以分辨率 /
+#: UI 缩放 / 界面语言一变就失效（backlog B34）—— 传 `speed_xy=None` 可以跳过这一步。
+SPEED_V_XY = (1851, 52)
+
 
 # ────────────────────────── 异常 ──────────────────────────
 #
@@ -1082,6 +1087,77 @@ def run_until_running(
         "observe_match": observe.describe(),
         "running": advance.describe(),
         "probe_month_lines": len(probe_months()),
+        "tick": tick_mark().tick,
+    }
+
+
+def start_background_session(
+    hwnd: int,
+    *,
+    speed_xy: tuple[int, int] | None = SPEED_V_XY,
+    unpause_key: str = "space",
+    threshold: float = DEFAULT_THRESHOLD,
+    key_timeout: float = 8.0,
+    run_timeout: float = RUN_TIMEOUT,
+    background_seconds: float = 20.0,
+) -> dict[str, object]:
+    """**借一次前台，把开局做完，再把前台还回去**，之后游戏在后台自己跑。
+
+    用户口径（2026-09-21）：允许切到前台，但要在一次里做完三件事、然后切回来：
+
+    1. 点「观察」进观察者模式；
+    2. 把速度切到档 V（默认坐标 `SPEED_V_XY`，客户区坐标）；
+    3. 解除暂停 —— **先试空格**（`pydirectinput` 的扫描码版；老的合成虚拟键实测无效），
+       用逐 tick 日志判它到底有没有生效；没生效就**回落到点播放键**（那条实测有效）；
+    4. 把前台还给**原来那个窗口**；
+    5. 用 `background_ok()` 证明"前台不是游戏时它仍在推进"。
+
+    全程只在最外面借一次前台（三次点击各自 `give_back=False`），所以用户的焦点**只闪一下**，
+    而不是闪三下。任何一步失败都抛异常，不返回半个结果。
+    """
+    previous = _foreground_window()
+    before = tick_mark()
+    advance: Advance
+    used_key = False
+
+    ensure_foreground(hwnd)
+    try:
+        screen = screenshot(hwnd)
+        observe = locate(screen, "btn_observe", threshold=threshold)
+        save_shot(screen, "10-lobby")
+        click_match(hwnd, observe, give_back=False)
+
+        if speed_xy is not None:
+            click_client(hwnd, speed_xy[0], speed_xy[1], give_back=False)
+
+        # ① 先试空格（扫描码），判据是逐 tick 日志 —— 不认就回落到播放键
+        directinput.press(unpause_key)
+        try:
+            advance = (
+                wait_until_running(before, timeout=key_timeout)
+                if before.readable
+                else wait_until_readable(timeout=key_timeout)  # type: ignore[assignment]
+            )
+            used_key = True
+        except NotRunningError:
+            playing = locate(screenshot(hwnd), "btn_play", threshold=threshold, roi=TOP_RIGHT_ROI)
+            click_match(hwnd, playing, give_back=False)
+            advance = (
+                wait_until_running(before, timeout=run_timeout)
+                if before.readable
+                else wait_until_readable(timeout=run_timeout)  # type: ignore[assignment]
+            )
+    finally:
+        if previous and previous != hwnd:
+            _user32.SetForegroundWindow(wintypes.HWND(previous))
+
+    background = background_ok(hwnd, seconds=background_seconds)
+    return {
+        "hwnd": hwnd,
+        "unpause": "空格（扫描码）" if used_key else "播放键（空格没被接受）",
+        "running": advance.describe(),
+        "foreground_restored": previous if previous and previous != hwnd else "（本来就是游戏）",
+        "background": background.describe(),
         "tick": tick_mark().tick,
     }
 
