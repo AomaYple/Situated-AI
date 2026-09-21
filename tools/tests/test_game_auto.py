@@ -977,3 +977,46 @@ class TestLive:
         hwnd = ga.find_window()
         assert hwnd, "游戏没在跑 —— 先跑 test_闭环到时间在推进"
         assert ga.background_ok(hwnd, seconds=15.0).advanced is True
+
+
+class TestClickGiveBack:
+    """点一次要借前台（引擎读原始输入，窗口消息一律不认），但**借了必须还**。"""
+
+    def _patch(self, monkeypatch: pytest.MonkeyPatch, restored: list[int]) -> None:
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd: None)
+        monkeypatch.setattr(ga, "_client_origin", lambda _hwnd: (0, 0))
+        monkeypatch.setattr(ga, "_set_cursor", lambda _x, _y: None)
+        monkeypatch.setattr(ga, "_mouse_click", lambda: None)
+        monkeypatch.setattr(ga, "_sleep", lambda _seconds: None)
+        monkeypatch.setattr(
+            ga,
+            "_user32",
+            # `wintypes.HWND` 是 c_void_p 子类：`int()` 会去解析它指向的字节，
+            # 所以这里取 `.value`（句柄值本身）。
+            SimpleNamespace(
+                SetForegroundWindow=lambda handle: restored.append(handle.value),
+            ),
+        )
+
+    def test_点完把前台还回去(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        restored: list[int] = []
+        self._patch(monkeypatch, restored)
+        ga.click_client(1, 10, 20)
+        assert restored == [4242], "点完必须把原来的前台窗口设回去"
+
+    def test_可以要求不还(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """连着点几下时不必每下都还（还了反而要重新强激活）—— 显式关掉才不还。"""
+        restored: list[int] = []
+        self._patch(monkeypatch, restored)
+        ga.click_client(1, 10, 20, give_back=False)
+        assert restored == []
+
+    def test_前台本来就是游戏时不还(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        restored: list[int] = []
+        self._patch(monkeypatch, restored)
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 1)  # 就是 hwnd=1
+        ga.click_client(1, 10, 20)
+        assert restored == [], "前台本来就是游戏，没有「还」这回事"

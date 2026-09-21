@@ -709,28 +709,39 @@ def locate_optional(
     )
 
 
-def click_client(hwnd: int, x: int, y: int, *, settle: float = 0.2) -> None:
-    """在客户区 ``(x, y)`` 处做一次**真前台左键点击**。
+def click_client(hwnd: int, x: int, y: int, *, settle: float = 0.2, give_back: bool = True) -> None:
+    """在客户区 ``(x, y)`` 处做一次**真前台左键点击**；点完把前台**还回去**。
 
     走 ``SetCursorPos`` + ``mouse_event``：本模块**只走这一条路**，两条"别的路"的口径不同：
 
     * **合成键盘**（``keybd_event`` / ``SendInput``）**实测无效** —— 用 tick 判据验过，
       见模块文档第 3 条；
-    * ``PostMessage`` 本模块**从未使用**（全仓零调用、用例零覆盖）。"后台点击无效"
-      这个说法**没有被独立复算过**（哪一局 / 前台状态 / 判据都没留档），
-      故按 `docs/design/exec/自动化范式.md` 的口径标为**【待实测】**，不当作结论用。
+    * **后台点击（不进系统输入队列）实测无效** —— 2026-09-21 用三种变体各试一次：
+      ``PostMessage(WM_LBUTTONDOWN/UP)``、``SendMessage``、``SendMessage`` + 先发
+      ``WM_ACTIVATE``/``WM_SETFOCUS``；判据不是"像素差"（大厅界面**自己在动**，3 秒不动
+      两张截图也不同 —— 这个假阳性我踩过），而是**目标按钮还在不在**：三种变体点完
+      「观察」按钮的匹配分数**一模一样**（0.855），界面没有切走。
+      原因与合成键盘同源：引擎读的是**原始输入状态**（光标位置 + 按键状态），不是窗口消息。
+
+    所以"点一次"这件事只能**借前台**。借了就要还：``give_back=True`` 时点完立刻把
+    原先的前台窗口设回去（用户看到的是约 1 秒的焦点闪动，而不是鼠标被夺走）。
     """
+    previous = _foreground_window() if give_back else 0
     ensure_foreground(hwnd)
-    origin_x, origin_y = _client_origin(hwnd)
-    _set_cursor(origin_x + x, origin_y + y)
-    _sleep(0.15)
-    _mouse_click()
-    _sleep(settle)
+    try:
+        origin_x, origin_y = _client_origin(hwnd)
+        _set_cursor(origin_x + x, origin_y + y)
+        _sleep(0.15)
+        _mouse_click()
+        _sleep(settle)
+    finally:
+        if previous and previous != hwnd:
+            _user32.SetForegroundWindow(wintypes.HWND(previous))
 
 
-def click_match(hwnd: int, match: Match) -> None:
+def click_match(hwnd: int, match: Match, *, give_back: bool = True) -> None:
     """点一个已经匹配好的位置。"""
-    click_client(hwnd, match.x, match.y)
+    click_client(hwnd, match.x, match.y, give_back=give_back)
 
 
 # ────────────────────────── 日志真值 ──────────────────────────
