@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -825,7 +826,30 @@ class TestLaunch:
         monkeypatch.setattr(ga.subprocess, "Popen", fake_popen)
         assert ga.launch(wait=False) == 0
         assert seen["command"] == [str(fake_exe), ga.SCRIPTED_TESTS_ARG]
-        assert seen["kwargs"] == {"cwd": str(ga.config.ROOT), "close_fds": True}
+        # 用户口径的第一条：**起游戏时不能抢前台** ⇒ 默认带 SW_SHOWNOACTIVATE 的 startupinfo。
+        info = seen["kwargs"]["startupinfo"]  # type: ignore[index]
+        assert isinstance(info, subprocess.STARTUPINFO)
+        assert info.dwFlags & subprocess.STARTF_USESHOWWINDOW
+        assert info.wShowWindow == ga.SW_SHOWNOACTIVATE
+        assert seen["kwargs"]["cwd"] == str(ga.config.ROOT)  # type: ignore[index]
+        assert seen["kwargs"]["close_fds"] is True  # type: ignore[index]
+
+    def test_显式要求抢前台时就不带_startupinfo(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        fake_exe = tmp_path / "victoria3.exe"
+        fake_exe.write_bytes(b"MZ")
+        monkeypatch.setattr(ga.experiments, "launch_command", FakeLaunchCommand(fake_exe))
+        monkeypatch.setattr(ga, "_process_pids", list)
+        seen: dict[str, object] = {}
+
+        def fake_popen(command: list[str], **kwargs: object) -> object:
+            seen["kwargs"] = kwargs
+            return object()
+
+        monkeypatch.setattr(ga.subprocess, "Popen", fake_popen)
+        assert ga.launch(wait=False, activate=True) == 0
+        assert seen["kwargs"]["startupinfo"] is None  # type: ignore[index]
 
     def test_不带自动化开关时就不加(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         fake_exe = tmp_path / "victoria3.exe"
@@ -1095,3 +1119,69 @@ class TestSpeedCandidates:
 
         monkeypatch.setattr(ga, "locate", boom)
         assert ga.speed_widget_xy(1) is None
+
+
+class TestRunCommand:
+    """`python -m pdx.game_auto run` 必须走**收敛版闭环**（不只是老的 run_until_running）。
+
+    `main()` 以前完全没有用例（核查报告点名过），这里把它钉住：起游戏 → 等大堂 →
+    `start_background_session`（观察 / 速度 / 解暂停 / 还前台），并且把开关透传下去。
+    """
+
+    def _stub(self, monkeypatch: pytest.MonkeyPatch, seen: dict[str, object]) -> None:
+        monkeypatch.setattr(ga, "assert_no_game_running", lambda: None)
+        monkeypatch.setattr(ga, "launch", lambda **_kw: 4242)
+        monkeypatch.setattr(
+            ga,
+            "wait_for_lobby",
+            lambda _h, **_kw: ga.Match(
+                name="btn_observe", x=864, y=1055, score=1.0, scale=1.0, box=(755, 1037, 973, 1073)
+            ),
+        )
+        monkeypatch.setattr(
+            ga,
+            "start_background_session",
+            lambda hwnd, **kw: (
+                seen.update({"hwnd": hwnd, **kw})
+                or {"speed_ok": True, "speed_days_per_second": 2.5, "background": "推进"}
+            ),
+        )
+
+    def test_run_走收敛版并透传开关(self, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+        seen: dict[str, object] = {}
+        self._stub(monkeypatch, seen)
+        code = ga.main(["run", "--skip-speed", "--keep-foreground"])
+        assert code == 0
+        assert seen["hwnd"] == 4242
+        assert seen["skip_speed"] is True
+        assert seen["give_back"] is False
+        out = capsys.readouterr().out
+        assert "speed_ok" in out
+        assert "闭环完成" in out
+
+    def test_run_默认会还前台并切速度(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen: dict[str, object] = {}
+        self._stub(monkeypatch, seen)
+        assert ga.main(["run"]) == 0
+        assert seen["skip_speed"] is False
+        assert seen["give_back"] is True
+        assert seen["speed_xy"] is None
+
+    def test_run_可以显式给速度坐标(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen: dict[str, object] = {}
+        self._stub(monkeypatch, seen)
+        assert ga.main(["run", "--speed-xy", "1800,40"]) == 0
+        assert seen["speed_xy"] == (1800, 40)
+
+    def test_失败时退出码是一(self, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+        """任何一步失败都退 1，不打印"完成"（P13）。"""
+
+        def boom(**_kw: object) -> int:
+            raise ga.GameRunningError("已经有 victoria3 在跑")
+
+        monkeypatch.setattr(ga, "launch", boom)
+        monkeypatch.setattr(ga, "assert_no_game_running", lambda: None)
+        assert ga.main(["run"]) == 1
+        err = capsys.readouterr().err
+        assert "失败" in err
+        assert "GameRunningError" in err

@@ -117,6 +117,12 @@ WINDOW_TIMEOUT = 180.0
 RUN_TIMEOUT = 90.0
 POLL_INTERVAL = 2.0
 
+#: `STARTUPINFO.wShowWindow` 的取值（来自 `winuser.h`）。
+#: `SW_SHOWNOACTIVATE`（4）= 照常显示但**不激活** —— 起游戏时用它，才不会把用户的焦点顶掉。
+SW_SHOWNOACTIVATE = 4
+#: `ShowWindow` 用：最小化。点完之后把游戏缩下去，桌面就还给用户了。
+SW_MINIMIZE = 6
+
 #: 速度档 V 在**速度表盘模板**里的相对位置（模板 `ui/btn_speed.png` 的左下为原点）。
 #:
 #: 这个数不是拍的：模板是按客户区 `(1700,18)-(1858,86)` 裁的，而**实测能点中 V 档**的
@@ -913,6 +919,7 @@ def launch(
     debug: bool = True,
     extra_args: tuple[str, ...] = (),
     wait: bool = True,
+    activate: bool = False,
     timeout: float = WINDOW_TIMEOUT,
 ) -> int:
     """以调试模式起游戏（可选带官方自动化开关），返回窗口句柄。
@@ -920,12 +927,16 @@ def launch(
     复用 :mod:`pdx.experiments` 的启动命令 —— 那是"怎么起游戏"的**唯一**出处
     （``content_load.json`` 决定启用哪些 mod，``-debug_mode`` 决定调试模式）。
 
+    ``activate=False``（默认）时给子进程带上 ``STARTUPINFO.wShowWindow =
+    SW_SHOWNOACTIVATE``：**窗口照常出现，但不抢前台** —— 自动化不该在"刚起游戏"这一步
+    就把用户的焦点顶掉。实测（2026-09-21）：默认启动会把前台抢走，用户直接指出
+    "你没有先后台启动"。要旧行为就传 ``activate=True``。
+
     ⚠️ **已知缺口（未修，故意留白不如记下来）**：``wait=False`` 时返回 ``0``，
     而 ``0`` 同时是 :func:`find_window` 的"没找到"哨兵 —— 调用方分不清
     "没等窗口"与"没找到窗口"。正确修法是返回 ``int | None``（``None`` = 没等），
     但那会改掉公开返回类型并要同步改 ``tools/tests/test_game_auto.py`` 里两处
-    ``== 0`` 断言，而该文件在本次收口时已移交他人独占，故**登记为缺口**而不是硬改。
-    当前调用点（``run_until_running`` / CLI）都只用 ``wait=True``，不受影响。
+    ``== 0`` 断言。当前调用点都用 ``wait=True``，不受影响。
     """
     assert_no_game_running()
     command = experiments.launch_command(debug=debug)
@@ -934,7 +945,12 @@ def launch(
     command.extend(extra_args)
     if not Path(command[0]).is_file():
         raise GameAutoError(f"找不到游戏可执行文件：{command[0]}")
-    subprocess.Popen(command, cwd=str(config.ROOT), close_fds=True)
+    startupinfo = None
+    if not activate:
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = SW_SHOWNOACTIVATE
+    subprocess.Popen(command, cwd=str(config.ROOT), close_fds=True, startupinfo=startupinfo)
     if not wait:
         return 0
     return wait_for_window(timeout=timeout)
@@ -1208,21 +1224,29 @@ def start_background_session(
     key_timeout: float = 8.0,
     run_timeout: float = RUN_TIMEOUT,
     settle: float = 3.0,
+    give_back: bool = True,
+    minimize_after: bool = True,
     background_seconds: float = 20.0,
 ) -> dict[str, object]:
     """**借一次前台，把开局做完，再把前台还回去**，之后游戏在后台自己跑。
 
-    用户口径（2026-09-21）：允许切到前台，但要在一次里做完三件事、然后切回来：
+    ⚠️ **用户口径（2026-09-21，原样照做，别改）**：允许切到前台，但只借一次、借完必须还：
 
-    1. 点「观察」进观察者模式；
-    2. 把速度切到档 V —— **先模板匹配找到表盘**（`speed_widget_xy`），再按相对位置点 V；
-       只在显式传了 `speed_xy` 时才用写死的坐标兜底；
-    3. 解除暂停 —— **先试空格**（`pydirectinput` 的扫描码版；老的合成虚拟键实测无效），
-       用逐 tick 日志判它到底有没有生效；没生效就**回落到点播放键**（那条实测有效）；
-    4. 把前台还给**原来那个窗口**；
-    5. 用 `background_ok()` 证明"前台不是游戏时它仍在推进"，并把**量到的速率**写进返回值。
+    1. **先"后台启动"**：起游戏时**不能抢前台** —— 见 :func:`launch` 的 ``activate=False``
+       （`SW_SHOWNOACTIVATE`）。用户原话："你没有先后台启动"。
+    2. 借前台，一次做完三件事：点「观察」→ 速度调到 **5（V 档）** → 按**空格**；
+    3. **切回来**：把前台还给**原来那个窗口**；
+    4. 让游戏**在后台跑**：默认还会把窗口**最小化**（`minimize_after`），并**验证最小化后
+       仍在推进**；验不过就恢复原样，并把结论如实写进 `minimized`。
 
-    顺序上**先解暂停再切速度**：暂停时日期不走，也就没法用速率验证速度。
+    细节与判据：
+    * 空格用 `pydirectinput`（**扫描码**；老的合成虚拟键实测无效），判据是逐 tick 日志；
+      空格不被接受就回落到点播放键；
+    * 速度档**只能用"点完量速率"来证明**：表盘随「运行/暂停 + 当前档」变色，没有任何模板
+      能同时覆盖两种状态（实测暂停态模板匹配运行态只有 0.327），所以走 `speed_candidates()`
+      的候选序列，逐个点、逐个量；最终速率写进 `speed_days_per_second` / `speed_ok`；
+    * 顺序必须是**先解暂停再切速度**（暂停时日期不走，速率量不出来）。
+
     全程只在最外面借一次前台（各次点击都 `give_back=False`），用户的焦点只闪一下。
     任何一步失败都抛异常，不返回半个结果。
     """
@@ -1277,10 +1301,23 @@ def start_background_session(
                 if rate >= min_rate:
                     break
     finally:
-        if previous and previous != hwnd:
+        if give_back and previous and previous != hwnd:
             _user32.SetForegroundWindow(wintypes.HWND(previous))
 
     background = background_ok(hwnd, seconds=background_seconds)
+    minimized = False
+    if minimize_after and background.advanced:
+        # 用户的第 ③④ 步：切回来之后**把游戏缩下去**，桌面还给用户。
+        # 但"最小化之后还会不会继续模拟"必须**验**而不是假设 —— 有些游戏一缩下去就不渲染/
+        # 不推进。验不过就立刻恢复原样，并把结论如实写进返回值（不静默）。
+        _user32.ShowWindow(wintypes.HWND(hwnd), SW_MINIMIZE)
+        minimized_advance = background_ok(hwnd, seconds=background_seconds)
+        if minimized_advance.advanced:
+            minimized = True
+            background = minimized_advance
+        else:
+            _user32.ShowWindow(wintypes.HWND(hwnd), SW_SHOWNOACTIVATE)
+            background = background_ok(hwnd, seconds=background_seconds)
     return {
         "hwnd": hwnd,
         "unpause": "空格（扫描码）" if used_key else "播放键（空格没被接受）",
@@ -1290,6 +1327,7 @@ def start_background_session(
         "speed_days_per_second": rate,
         "speed_ok": rate >= min_rate,
         "foreground_restored": previous if previous and previous != hwnd else "（本来就是游戏）",
+        "minimized": minimized,
         "background": background.describe(),
         "tick": tick_mark().tick,
     }
@@ -1325,11 +1363,33 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("status", help="只读：报告 tick / 探针月度行 / 时间是否在推进")
     sub.add_parser("check", help="断言当前没有 victoria3 在跑")
 
-    run_parser = sub.add_parser("run", help="完整闭环：起游戏→等选国家→点观察→解除暂停")
+    run_parser = sub.add_parser(
+        "run",
+        help="完整闭环（收敛版）：起游戏→等选国家→点观察→切速度V→解暂停→还前台→后台继续跑",
+    )
     run_parser.add_argument(
         "--no-scripted-tests", action="store_true", help="不带官方 -scripted_tests 开关"
     )
     run_parser.add_argument("--lobby-timeout", type=float, default=LOBBY_TIMEOUT)
+    run_parser.add_argument(
+        "--skip-speed", action="store_true", help="不切速度档（只观察 + 解暂停）"
+    )
+    run_parser.add_argument(
+        "--keep-foreground",
+        action="store_true",
+        help="点完不把前台还给原来的窗口（默认会还，用户焦点只闪一下）",
+    )
+    run_parser.add_argument(
+        "--keep-window",
+        action="store_true",
+        help="跑起来后不把游戏窗口最小化（默认最小化，桌面还给用户）",
+    )
+    run_parser.add_argument(
+        "--activate",
+        action="store_true",
+        help="起游戏时照常抢前台（默认不抢 —— 用户口径是「先后台启动」）",
+    )
+    run_parser.add_argument("--speed-xy", default="", help="显式指定速度档 V 的客户区坐标 X,Y")
 
     cap_parser = sub.add_parser("capture", help="抓游戏窗口到 PNG（收模板/留证据用）")
     cap_parser.add_argument("out", help="输出 PNG 路径")
@@ -1371,14 +1431,28 @@ def main(argv: list[str] | None = None) -> int:
             print(background_ok(hwnd, seconds=float(args.seconds)).describe())
             return 0
 
-        # 只剩 "run"
-        result = run_until_running(
+        # 只剩 "run"：**收敛版闭环** —— 起游戏 → 等选国家 → 借一次前台做完三件事
+        # （点观察 / 切速度 V / 解暂停）→ 把前台还回去 → 后台继续跑，并把速率一并报出来。
+        hwnd = launch(
             scripted_tests=not bool(args.no_scripted_tests),
-            lobby_timeout=float(args.lobby_timeout),
+            activate=bool(args.activate),
+            timeout=float(args.lobby_timeout),
         )
-        print("闭环完成，证据：")
+        lobby = wait_for_lobby(hwnd, timeout=float(args.lobby_timeout))
+        speed_xy: tuple[int, int] | None = None
+        if args.speed_xy:
+            left, _, right = str(args.speed_xy).partition(",")
+            speed_xy = (int(left), int(right))
+        result = start_background_session(
+            hwnd,
+            speed_xy=speed_xy,
+            skip_speed=bool(args.skip_speed),
+            give_back=not bool(args.keep_foreground),
+            minimize_after=not bool(args.keep_window),
+        )
+        print(f"闭环完成（大堂匹配：{lobby.describe()}），证据：")
         for key, value in result.items():
-            print(f"  {key:18s}: {value}")
+            print(f"  {key:22s}: {value}")
         return 0
 
     except GameAutoError as exc:
