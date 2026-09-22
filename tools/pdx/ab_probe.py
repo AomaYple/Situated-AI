@@ -883,14 +883,20 @@ def build(*, game: Path | None = None, target: ProbeTarget | None = None) -> Bui
     return Built(files=files)
 
 
-def write(*, root: Path | None = None, game: Path | None = None) -> list[Path]:
+def write(
+    *,
+    root: Path | None = None,
+    game: Path | None = None,
+    archive_id: str | None = None,
+) -> list[Path]:
     """写进仓库里的探针目录（游戏侧文件带 UTF-8 BOM，loc 与套件都必须带）。
 
     原版 `tools/scripted_tests/*.txt` 实测带 BOM（含 `scripted_tests.md` 之外的 5 个套件），
     所以这里与 `common/` 一视同仁 —— BOM 是游戏侧文本的默认口径。
     """
     base = root or PROBE_DIR
-    built = build(game=game)
+    # `archive_id=None` = 数据源里的第一份（`load_target` 的默认口径）。
+    built = build(game=game, target=load_target(archive_id))
     written: list[Path] = []
     for rel, text in sorted(built.files.items()):
         path = base / rel
@@ -906,10 +912,14 @@ def deploy(
     root: Path | None = None,
     target: Path | None = None,
     game: Path | None = None,
+    archive_id: str | None = None,
 ) -> Path:
-    """生成 → 同步进用户 mod 目录 → 连同真 mod 一起启用。"""
-    write(root=root, game=game)
-    chosen = load_target()
+    """生成 → 同步进用户 mod 目录 → 连同真 mod 一起启用。
+
+    ``archive_id`` 选**盯哪一份档案**（阶段 5 起有多份；不给就是数据源里的第一份）。
+    """
+    write(root=root, game=game, archive_id=archive_id)
+    chosen = load_target(archive_id)
     source = root or PROBE_DIR
     dest_root = target or experiments.TARGET_DIR
     dest = dest_root / PROBE_MOD

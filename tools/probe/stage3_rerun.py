@@ -62,7 +62,7 @@ def ours() -> Path:
 MONTH_DAYS = 30.44
 
 
-def deploy(*, with_probe: bool = True) -> str:
+def deploy(*, with_probe: bool = True, archive_id: str | None = None) -> str:
     """装本地 mod 并改写 `content_load.json`；返回一句人读的说明。
 
     **先备份**（只备一次：反复跑时不会被"已改过的版本"覆盖掉真正的原始配置）。
@@ -85,7 +85,7 @@ def deploy(*, with_probe: bool = True) -> str:
         # ⚠️ 用 `ab_probe.write` 而**不是** `ab_probe.deploy`：后者会调
         # `experiments.set_enabled_mods()` 自己改写 `content_load.json`，而这里要保住
         # 用户原来那 23 条 Workshop 配置（本脚本自己写那个文件，只启用本地 mod）。
-        ab_probe.write(root=PROBE)
+        ab_probe.write(root=PROBE, archive_id=archive_id)
         paths.append(PROBE)
     payload = {
         "enabledMods": [{"path": str(path)} for path in paths],
@@ -273,6 +273,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--analyze-only", action="store_true", help="只分析已有日志，不起游戏")
     parser.add_argument("--keep-installed", action="store_true", help="跑完不还原 mod 配置")
     parser.add_argument(
+        "--archive",
+        default="",
+        help="探针盯哪一份档案（默认 = mod/data 里的第一份；阶段 5 每批各跑一次）",
+    )
+    parser.add_argument(
         "--no-probe",
         action="store_true",
         help="**只装真 mod、不装探针** —— 测「和平期占槽率 ≈ 0」时必须这样（见 deploy 的说明）",
@@ -302,7 +307,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.fresh_logs:
         moved_logs = quarantine_logs()
         print(f"已把 {len(moved_logs)} 个旧日志挪去临时目录（这一局的读数只可能来自这一局）")
-    print(deploy(with_probe=not bool(args.no_probe)))
+    print(deploy(with_probe=not bool(args.no_probe), archive_id=args.archive or None))
     report: dict[str, object] = {}
     failure = ""
     previous = ga._foreground_window()
