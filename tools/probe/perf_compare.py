@@ -59,6 +59,15 @@ RUN_TAIL_SECONDS = 60.0
 #: data to profiling.log"*，成功时写 *"Tick task logging enabled, output: profiling.log"*。
 CONSOLE_ACTION = "log_ticktask_performance"
 
+#: `run_console_action` 的**变体名** —— exe 明文里有三个，帮助文本分别是：
+#: * `--run_console_action` ⇒ *"runs as early as possible."*
+#: * `--run_console_action_main` ⇒ *"runs once the game has been initialized."* ← **要这个**
+#: * `--run_console_action_clausewitz` ⇒ *"runs once Clausewitz has been initialized."*
+#:
+#: ⚠️ 用不带 `_main` 的那个会让**进程当场退出**（实测 `WindowNotFoundError`），
+#: 因为"尽早跑"发生在游戏初始化之前。`_main` 才是"等游戏起来再跑"。
+CONSOLE_ACTION_VARIANT = "run_console_action_main"
+
 LOGS = DOCS / "logs"
 
 PROBE_DIR = MODS_DIR / "zz_sitai_perf"
@@ -117,12 +126,20 @@ def _quarantine_logs() -> list[str]:
     为什么：`debug.log` 按大小轮转，上一局的尾巴会留在 `debug.1.log`… 里。
     `_mounted_evidence()` 读的是"日志里有没有 Mounted Data"，跨会话残留会让
     **第二局的取证里混进第一局的挂载记录** —— 那正是"原版局看起来也挂了 mod"的假象。
+
+    ⚠️ **被占用的文件要跳过、不报错**（2026-09-23 实测）：上一次跑批留下过一个进程
+    （`-run_console_action` 那一族的副作用），它握着 `ai.log` 的句柄 ⇒
+    `shutil.move` 抛 `PermissionError: [WinError 32]`，整局还没开始就崩。
+    跳过是安全的：被判据用到的是 `debug.log` / `system.log`，那两个不常被长期占用。
     """
     target = Path(tempfile.gettempdir()) / "v3_quarantine_perflogs"
+    target.mkdir(parents=True, exist_ok=True)
     moved: list[str] = []
     for path in sorted(LOGS.glob("*.log")):
-        target.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(path), str(target / path.name))
+        try:
+            shutil.move(str(path), str(target / path.name))
+        except (PermissionError, OSError):
+            continue  # 被别的进程占着 —— 跳过，别让收尾动作把整局带崩
         moved.append(path.name)
     return moved
 
@@ -190,10 +207,14 @@ def run_once(label: str, months: float) -> dict[str, object]:
     moved = _quarantine_logs()
     print(f"\n===== {label}：起游戏（只挂本地 mod）=====")
     print(f"  已挪走 {len(moved)} 个旧日志（取证只可能来自这一局）")
-    # ⚠️ **命令行打开计时也行不通**（2026-09-23 实测）：`-run_console_action=` **会让进程当场退出**
-    # （`WindowNotFoundError: 180 秒内没等到 'Victoria 3' 窗口`）—— 与 `阶段4-性能仪表侦察.md`
-    # 里"跑完即退"那句一致。所以这条路也判死，本函数的计时触发方式**仍未解决**（backlog B64）。
-    console_arg = f"-run_console_action={CONSOLE_ACTION}"
+    # 用命令行打开逐任务计时。**关键是变体名**（exe 明文里有三个变体）：
+    #   `--run_console_action`       runs as early as possible
+    #   `--run_console_action_main`  **runs once the game has been initialized** ← 要的是这个
+    #   `--run_console_action_clausewitz`  runs once Clausewitz has been initialized
+    # ⚠️ 用**不带 `_main`** 的那一个会让进程当场退出（实测 `WindowNotFoundError`）；
+    # 带 `_main` 的那个才"等游戏初始化完再跑"，而 `log_ticktask_performance` 一旦打开就
+    # **持续写** `profiling.log`（exe 明文：*"Tick task logging enabled, output: profiling.log"*）。
+    console_arg = f"-{CONSOLE_ACTION_VARIANT}={CONSOLE_ACTION}"
     print(f"  启动参数：{console_arg}")
     hwnd, previous = ga.launch_to_foreground(
         timeout=float(ga.WINDOW_TIMEOUT), extra_args=(console_arg,)
