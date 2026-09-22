@@ -205,6 +205,29 @@ english = "Reformers Gain Influence"
 simp_chinese = "改革派抬头"
 why = "第二处修正同样要文案，否则它挂在国家上时在修正列表里是一行空名（闸门 ② 也会点名缺键）。写「改革派抬头」而不是「工业家/知识界政治力量 +50%」：玩家看到的应当是处境，不是我们的字段名。"
 
+# ── ⑥b 面板三行（P11 / G3）：拆成三个键，缺哪一行当场可见 ─────
+# 为什么拆开而不是写在 `_reason` 里：G3 的判据是**试玩者能复述「当前目标 + 主因」**，
+# 而散文式说明把"目标"与"主因"揉在一起 —— 复述不出来的时候**分不清是哪一行没写清**。
+# 三行都要写（`[panel]` 是个**整体**：缺一行就报错），每行各带 `why`。
+# 键名由生成器派生：`<JE 名>_goal` / `_pressure` / `_last_change`。
+[panel]
+why = "**为什么这三行要放在一起**：它们是 G3 判据的三个组成部分（当前目标 / 最大压力与阻力 / 上次改主意的原因），少了任何一行，试玩者都复述不出「目标 + 主因」。放同一张表是为了让「缺行」当场可见（生成器要求三行齐全），而不是散在 JE 说明里靠人记得写全。"
+
+[panel.goal]
+english = "Current goal: while the window is open, push through the reform that the old order has been blocking."
+simp_chinese = "当前目标：趁窗口开着，把旧势力一直拦着的那项改革推过去。"
+why = "第一行 = **当前目标**。写「推过去」而不是「废除农奴制」：改哪条法由 AI 与原版牌池决定，本档案不替它选（§0「让 AI 自己推导」）；写「旧势力拦着的那项」是让玩家知道它为什么一直没动。"
+
+[panel.pressure]
+english = "Biggest pressure and resistance: pressure — the aristocracy has lost its grip, the crown's legitimacy is shaken, the treasury borrows dear; resistance — the state standing firm on its own again."
+simp_chinese = "最大压力与阻力：压力 = 贵族失势 + 王权威信破裂 + 借债成本高昂；阻力 = 等国家重新自己站稳。"
+why = "第二行 = **最大压力与阻力**。压力项与 `[pressure.effects]` 的三条字段一一对应（贵族 / 合法性 / 利率），阻力项与 `complete = { legitimacy >= 75 }` 是同一条判据的两种说法 —— 数值改了这行也要改（P9：改一处、三处同步）。"
+
+[panel.last_change]
+english = "Why it changed its mind: because losing the war was written into the books — the defeat is what moved the inputs the AI reads."
+simp_chinese = "上次改主意的原因：因为战败被记进了账 —— 是这场败仗挪动了 AI 读到的那些输入。"
+why = "第三行 = **上次改主意的原因**。这一行是 G3 里最容易被跳过、却最关键的一行：没有它，玩家只能看到「它在改革」，看不到「**为什么是现在**」。写「被记进了账」是让因果链读得出来（§0.1 派生义务：目标函数表要显式、可审）。"
+
 # ── ⑦ 递牌：本档案一张都不递 ───────────────────────────────
 [cards]
 why = "本档案**刻意为空**（F5：能用 A 级表达的绝不占槽）。战败 → 压力的链路已经由变量 + 修正 + JE 表达完，而 JE 会被原版那 18 张读 has_journal_entry 的牌读到 —— 意图位移由原版自己的牌池产生，不需要我们再占一个槽。递牌是「整条路线要换」时才用的手段（C 级，政治槽 S≈33：权重 10 就吃掉 23% 的份额，阶段 2 价格表）。要加牌时写 [[cards.items]]（字段见 modgen 的 card_text 与闸门 ③）。"

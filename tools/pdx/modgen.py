@@ -296,6 +296,22 @@ class Localization:
     values: dict[str, str]
 
 
+#: P11「面板三行」的三个槽位（`key` = 数据源里的键，`suffix` = 本地化键的后缀）。
+#:
+#: 为什么要有这一组（而不是把三行揉进 JE 的 `_reason` 里）：G3 的判据是
+#: **试玩者能复述「当前目标 + 主因」**，而一份散文式说明里，"目标"与"主因"是混在一起的
+#: —— 复述不出来的时候，我们**分不清是哪一行没写清楚**。拆成三个键之后：
+#:
+#: * 每个键都能单独被核对（`v3 modgen --check` 会逐键比字数）；
+#: * 缺哪一行当场看得见（三种行都有 `why`，闸门 ⑤ 按表检查）；
+#: * 将来做脚本化 GUI（阶段 6 的"必要时"）时，三个键可以直接接到三行控件上。
+PANEL_LINES: tuple[tuple[str, str], ...] = (
+    ("goal", "goal"),
+    ("pressure", "pressure"),
+    ("last_change", "last_change"),
+)
+
+
 @dataclass(frozen=True, slots=True)
 class Card:
     """一张递牌（C 级）。本档案为空，闸门 ③ 按价格表给它定价。"""
@@ -338,6 +354,9 @@ class Archive:
     numbers: tuple[Number, ...]
     whys: tuple[tuple[str, str], ...]
     inputs: Inputs | None = None
+    #: P11 的三行解释：``(槽位, 本地化键, why)``。**可空** —— 没写 `[panel]` 的档案
+    #: 不生成这三个键（缺省不是"生成一个空行"，见 :data:`PANEL_LINES`）。
+    panel: tuple[tuple[str, str, str], ...] = ()
 
     @property
     def effect_file(self) -> str:
@@ -471,6 +490,11 @@ def audit(raw: object, path: str = "") -> tuple[tuple[Number, ...], tuple[tuple[
 
     一次收全再报错（而不是遇到第一个就抛）：数据源缺依据时，作者要的是一份
     "哪几处缺"的清单，不是一条一条试。
+
+    ⚠️ 口径是**每张非根表都要有 why**，容器表（如 `[panel]`）也不例外 ——
+    容器表的 `why` 回答的是「**为什么这几行要放在一起**」，那不是噪声：
+    它能挡住"随手往容器里塞第四行"这种漂移。**不要**为容器开例外：
+    开一次例外，以后每张新表都会问"我算不算容器"（2026-09-22 试过，退回）。
     """
     numbers: list[Number] = []
     whys: list[tuple[str, str]] = []
@@ -682,6 +706,9 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
         conditions=conditions,
         signals=_signals(journal_raw, source),
     )
+    journal_name = journal.name
+    # `[panel]`（可选表，三行解释 P11）在后面与 `localization` 一起解析 ——
+    # 键名由 JE 名派生（`<je 名>_goal` 等），所以必须在 journal 之后。
 
     # `[reform_inputs]` 是**可选**表：老档案（只有冲击一处处理）照样编译。
     # 缺省不是"静默降级"——产物清单与档案文档都会写明这一份档案有没有第二处理段。
@@ -720,6 +747,32 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
                 key=_require_text(entry, "key", where), why=_why(entry, where), values=values
             )
         )
+
+    # `[panel]` 是**可选**表：三行解释（P11）。缺省 = 不生成那三个键。
+    # 每行既要文案（进 `localization`）又要 `why`（P10）⇒ 在这里一起收，
+    # 文案走的仍是同一个 `localization` 列表（单一数据源，P9）。
+    panel: list[tuple[str, str, str]] = []
+    if "panel" in data:
+        panel_raw = _require_table(data["panel"], f"{source}:panel")
+        for slot, suffix in PANEL_LINES:
+            if slot not in panel_raw:
+                raise DataError(
+                    f"{source}:panel 缺 `{slot}` —— 三行解释要么三行都写，要么整表不写"
+                    f"（可用槽位：{[name for name, _ in PANEL_LINES]}）"
+                )
+            line = _require_table(panel_raw[slot], f"{source}:panel.{slot}")
+            key = f"{journal_name}_{suffix}"
+            line_values: dict[str, str] = {}
+            for lang in LANGUAGES:
+                text = line.get(lang)
+                if not isinstance(text, str) or not text.strip():
+                    raise DataError(f"{source}:panel.{slot} 缺 {lang} 文案")
+                if '"' in text:
+                    raise DataError(f"{source}:panel.{slot} 的 {lang} 文案里有裸双引号")
+                line_values[lang] = text
+            line_why = _why(line, f"{source}:panel.{slot}")
+            localization.append(Localization(key=key, why=line_why, values=line_values))
+            panel.append((slot, key, line_why))
 
     cards: list[Card] = []
     for index, item in enumerate(_entries(cards_raw, "items", "cards")):
@@ -769,6 +822,7 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
         numbers=numbers,
         whys=whys,
         inputs=inputs,
+        panel=tuple(panel),
     )
     _check_namespace(parsed)
     return parsed
@@ -1154,6 +1208,23 @@ def doc_text(archive: Archive) -> str:
         "|---|---|---|",
         *(f"| `{c.gate}` | `{c.render()}` | {c.why} |" for c in archive.journal_entry.conditions),
         "",
+        "## 面板三行（P11 / G3）",
+        "",
+        *(
+            [
+                "| 行 | 本地化键 | 为什么是这一行 |",
+                "|---|---|---|",
+                *(f"| {slot} | `{key}` | {why} |" for slot, key, why in archive.panel),
+                "",
+                (
+                    "> 为什么拆成三个键而不是揉进 `_reason`：G3 判的是**试玩者能复述**"
+                    "「当前目标 + 主因」，揉在一起就分不清是哪一行没写清楚。缺行当场可见。"
+                ),
+            ]
+            if archive.panel
+            else ["> 本档案**没有** `[panel]`（三行解释）—— 缺省不生成那三个键。"]
+        ),
+        "",
         "## 声明式引用（闸门 ② 逐条核对）",
         "",
         "| 类别 | 名字 | 为什么 |",
@@ -1438,6 +1509,10 @@ def facts(archive: Archive) -> list[tuple[str, str]]:
         (f"journal_entry.{archive.journal_entry.name}.on_complete.set_strategy", p.arg)
         for p in archive.journal_entry.signals.clear_strategy
     )
+    # ⚠️ 三行解释（P11）**不进事实表**：它们的键名由 JE 名 + 固定后缀派生
+    # （`<je 名>_goal` 等），值则由 `localization.*` 那一组事实覆盖 ——
+    # 再记一份就是同一个事实写两遍（P9）。它能被核对的部分（键存在 + 文案齐 + why 非空）
+    # 由闸门 ② 与 ⑤ 分别负责。
     if archive.tempo is not None:
         out.extend(
             (f"defines.{archive.tempo.block}.{p.key}", num(p.amount)) for p in archive.tempo.keys

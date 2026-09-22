@@ -145,6 +145,27 @@ why = "测：窗口一关递回去"
 """
 
 
+#: 追加到 :data:`MINIMAL` 后面的"面板三行"（可选表 `[panel]`，P11 的三行解释）。
+#: 2026-09-22 新增：G3 判的是**试玩者能复述「当前目标 + 主因」**，而揉进 `_reason`
+#: 的散文里看不出"缺哪一行" ⇒ 拆成三个键，缺行当场报错。
+PANEL = """
+[panel]
+why = "测：为什么这三行要放在一起"
+[panel.goal]
+english = "Goal line."
+simp_chinese = "目标行。"
+why = "测：第一行为什么是当前目标"
+[panel.pressure]
+english = "Pressure line."
+simp_chinese = "压力行。"
+why = "测：第二行为什么是压力与阻力"
+[panel.last_change]
+english = "Last change line."
+simp_chinese = "上次改主意的原因行。"
+why = "测：第三行为什么是上次改主意的原因"
+"""
+
+
 def _write_source(tmp_path: Path, text: str = MINIMAL, name: str = "t1.toml") -> Path:
     base = tmp_path / "data"
     base.mkdir(parents=True, exist_ok=True)
@@ -225,7 +246,14 @@ def test_解析真实档案的关键条目() -> None:
         "interest_group_ig_intelligentsia_pol_str_mult",
     }
     assert archive.cards == (), "本档案刻意不递牌（F5：A 级已表达完整条链路）"
-    assert len(archive.localization) == 4
+    # 4 条基础文案 + **3 行面板**（P11 的三行解释，键名由 JE 名派生）
+    assert len(archive.localization) == 7
+    assert [slot for slot, _key, _why in archive.panel] == ["goal", "pressure", "last_change"]
+    assert [key for _slot, key, _why in archive.panel] == [
+        "je_sitai_ru_reform_window_goal",
+        "je_sitai_ru_reform_window_pressure",
+        "je_sitai_ru_reform_window_last_change",
+    ]
 
 
 def test_没有reform_inputs的档案照样编译(tmp_path: Path) -> None:
@@ -581,6 +609,52 @@ def test_信号表缺依据要报错(tmp_path: Path) -> None:
     bad = SIGNALS.replace('why = "测：为什么必须递牌（世界状态改不了已挂着的牌）"\n', "")
     with pytest.raises(modgen.DataError, match="没有 why"):
         _archive(tmp_path, MINIMAL + bad)
+
+
+# ── 面板三行（`[panel]`，P11 / G3）──────────────────────────
+
+
+def test_缺省不生成三行键(tmp_path: Path) -> None:
+    """没有 `[panel]` 的档案**不生成**那三个键（缺省 = 不写，不是"写三行空的"）。"""
+    archive = _archive(tmp_path)
+    assert archive.panel == ()
+    built = modgen.build(archive)
+    loc = built.files[next(rel for rel in built.files if rel.endswith("_l_english.yml"))]
+    for slot, _suffix in modgen.PANEL_LINES:
+        assert f"{archive.journal_entry.name}_{slot}" not in loc
+    assert "没有** `[panel]`" in built.files[archive.doc_file]
+
+
+def test_三行必须齐全(tmp_path: Path) -> None:
+    """`[panel]` 是**整体**：缺一行就报错 —— 三行解释缺任何一行，G3 都复述不出来。
+
+    这条是这一格存在的理由：把三行拆成三个键，就是为了让"缺哪一行"当场可见
+    （揉进 `_reason` 里时，缺行是看不出来的）。
+    """
+    bad = MINIMAL + PANEL.replace("[panel.last_change]", "[panel.not_a_slot]")
+    with pytest.raises(modgen.DataError, match="缺 `last_change`"):
+        _archive(tmp_path, bad)
+
+
+def test_三行键名由JE名派生并写进本地化与文档(tmp_path: Path) -> None:
+    archive = _archive(tmp_path, MINIMAL + PANEL)
+    built = modgen.build(archive)
+    name = archive.journal_entry.name
+    loc = built.files[next(rel for rel in built.files if rel.endswith("_l_english.yml"))]
+    for _slot, suffix in modgen.PANEL_LINES:
+        assert f"{name}_{suffix}:0" in loc
+    doc = built.files[archive.doc_file]
+    assert "面板三行" in doc
+    for slot, key, why in archive.panel:
+        assert key in doc
+        assert why in doc, f"{slot} 的依据要进档案文档（P10：人读的那一份要能逐条查）"
+
+
+def test_三行文案里不许有裸双引号(tmp_path: Path) -> None:
+    """`.yml` 的值用双引号包裹，引擎对转义的支持没有实测证据 ⇒ 直接拒绝（P13）。"""
+    bad = MINIMAL + PANEL.replace('english = "Goal line."', 'english = "Goal \\"quoted\\" line."')
+    with pytest.raises(modgen.DataError, match="裸双引号"):
+        _archive(tmp_path, bad)
 
 
 def test_改一个数字往返就不一致(tmp_path: Path) -> None:

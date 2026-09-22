@@ -502,7 +502,7 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
                                     f"{tab * 4}limit = {{ ig:{name} ?= {{ ig_clout >= {band} }} }}",
                                     (
                                         f'{tab * 4}debug_log = "ZZPROBE AB;CLOUT;{short};'
-                                        f'{clout_band_name(band)};'
+                                        f"{clout_band_name(band)};"
                                         f'[THIS.GetCountry.GetNameNoFormatting]"'
                                     ),
                                     f"{tab * 3}}}",
