@@ -29,6 +29,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from collections import Counter
 from pathlib import Path
@@ -100,6 +101,31 @@ def kill_game() -> list[int]:
     return pids
 
 
+def quarantine_test_artifacts() -> list[str]:
+    """把这一局在**游戏安装目录**里留下的产物挪去临时目录，并返回挪走的文件名。
+
+    为什么必须有这一步（实测，与 backlog B44/B49 同一类"环境漂移"）：
+    `-scripted_tests` 会把成绩单写成 `<游戏根>\\binaries\\<uuid>_GameTests_testoutput.xml`
+    —— 官方文档 `game/tools/scripted_tests/scripted_tests.md:24` 逐字写着
+    "an XML file will be created in the game's binaries folder"，**改不了位置**。
+    后果是 `v3 verify` 里 `binaries 目录文件数 / 字节总数` 两条断言每跑一局就红一次，
+    而且**每次都是不同的 uuid**（会越积越多）。
+
+    这与 B44/B49 的处置口径一致：**只移走，不删**（万一要查成绩单），
+    下一次门禁红的时候先看这两条判据行，别去查当次改动。
+    """
+    binaries = config.ROOT / "binaries"
+    if not binaries.is_dir():
+        return []
+    target = Path(tempfile.gettempdir()) / "v3_quarantine_stagetests"
+    moved: list[str] = []
+    for path in sorted(binaries.glob("*_GameTests_testoutput.xml")):
+        target.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(path), str(target / path.name))
+        moved.append(path.name)
+    return moved
+
+
 def _months_of(tick: str) -> float:
     """把 tick 折成"开局以来的月数"（够排时间线就行）。"""
     day = ga.tick_day(tick)
@@ -119,16 +145,27 @@ def wait_months(target: float, *, poll: float = 20.0, timeout: float = 3600.0) -
 
 
 def analyze(log: Path | None = None) -> dict[str, object]:
-    """从 `debug.log` 里取读数：逐月时间线 + 每次变化。
+    """从日志里取读数：分类计数 + 去重后的变化序列。
+
+    ⚠️ 读的是**整个日志目录**（含轮转副本 `debug.1.log`…），且按内容去重 ——
+    一局跑得久时 `debug.log` 会被轮转，只看它就会把早期读数（比如第一次换牌）
+    当成"没发生过"。去重口径与 `pdx.ab._read` 相同：逐字节相同的文件只算一次。
 
     判据口径（先写死，避免事后挑对自己有利的读法）：
     * **成功** = `LAW;<非 law_serfdom>` 出现过（法律真的换了）；
     * **牌闸门成立** = `STRATEGY;ai_strategy_progressive_agenda` 出现过；
     * **窗口开过** = `JE;active` 出现过。
     """
-    path = log or DEBUG_LOG
-    text = path.read_text(encoding="utf-8", errors="replace")
-    ours = [line for line in text.splitlines() if "ZZPROBE AB;" in line]
+    base = (log or DEBUG_LOG).parent
+    chunks: list[str] = []
+    seen: set[str] = set()
+    for path in sorted(base.glob("debug*.log")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if text in seen:
+            continue
+        seen.add(text)
+        chunks.append(text)
+    ours = [line for line in "\n".join(chunks).splitlines() if "ZZPROBE AB;" in line]
     kinds: Counter[str] = Counter()
     timeline: list[tuple[str, str]] = []
     for line in ours:
@@ -141,14 +178,6 @@ def analyze(log: Path | None = None) -> dict[str, object]:
     je = [value for kind, value in timeline if kind == "JE"]
     shocks = [value for kind, value in timeline if kind == "SHOCK"]
 
-    def first_change(values: list[str]) -> str:
-        seen = ""
-        for value in values:
-            if value != seen:
-                seen = value
-                return value
-        return ""
-
     law_switched = any(law not in {"law_serfdom", "none"} for law in laws)
     return {
         "总行数": len(ours),
@@ -158,13 +187,10 @@ def analyze(log: Path | None = None) -> dict[str, object]:
         "窗口读数（去重）": _dedupe(je),
         "冲击读数（去重）": _dedupe(shocks),
         "第一次非农奴制": next((law for law in laws if law not in {"law_serfdom", "none"}), ""),
-        "第一次进步牌": first_change(
-            [s for s in strategies if s == "ai_strategy_progressive_agenda"]
-        ),
-        "✅ 法律真的换了": law_switched,
-        "✅ 进步牌挂上过": "ai_strategy_progressive_agenda" in strategies,
-        "✅ 窗口开过": "active" in je,
-        "✅ 冲击施加过": "yes" in shocks,
+        "✅ P1 法律真的换了": law_switched,
+        "✅ P2 进步牌挂上过": "ai_strategy_progressive_agenda" in strategies,
+        "✅ P3 窗口开过": "active" in je,
+        "✅ P4 冲击施加过": "yes" in shocks,
     }
 
 
@@ -222,8 +248,11 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         killed = kill_game()
         time.sleep(2)
+        moved = quarantine_test_artifacts()
         if previous:
             ga._set_foreground(previous)
+        if moved:
+            print(f"已把 {len(moved)} 个 testoutput.xml 挪去临时目录（否则 v3 verify 会红）")
         if not args.keep_installed:
             print(f"收尾：杀掉 {killed or '（没有）'}；{restore()}")
         else:
