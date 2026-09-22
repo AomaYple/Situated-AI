@@ -22,6 +22,36 @@ from pdx import config, snapshot
 _ORDERED_SECTIONS = frozenset({"doc_tables"})
 
 
+def _first_diff(a: object, b: object, path: str = "") -> str:
+    """两个快照字典的**第一个**不同点（路径 + 两边取值）。
+
+    为什么要它：`assertEqual(da, db)` 失败时会打出两整份 JSON（几十 MB），
+    实际读不出是哪一处不同 —— 而"确定性地红了"最需要的正是那一处。
+    """
+    if type(a) is not type(b):
+        return f"{path} 类型不同（{type(a).__name__} vs {type(b).__name__}）"
+    if isinstance(a, dict) and isinstance(b, dict):
+        only_a, only_b = set(a) - set(b), set(b) - set(a)
+        if only_a or only_b:
+            return f"{path} 键不同（只 A 有 {sorted(only_a)[:5]}、只 B 有 {sorted(only_b)[:5]}）"
+        for key in sorted(a):
+            found = _first_diff(a[key], b[key], f"{path}.{key}")
+            if found:
+                return found
+        return ""
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return f"{path} 长度不同（{len(a)} vs {len(b)}）"
+        for index, (x, y) in enumerate(zip(a, b, strict=True)):
+            found = _first_diff(x, y, f"{path}[{index}]")
+            if found:
+                return found
+        return ""
+    if a != b:
+        return f"{path} 取值不同（{a!r} vs {b!r}）"
+    return ""
+
+
 class TestSnapshotShape(unittest.TestCase):
     snap: snapshot.Snapshot
 
@@ -73,11 +103,24 @@ class TestDeterminism(unittest.TestCase):
             raise unittest.SkipTest("游戏目录不可用")
 
     def test_two_builds_identical(self):
+        """两次 `build()` 必须逐字节一致 —— 否则 diff 不可用。
+
+        ⚠️ **这条在 `-n auto` 下偶发红过**（2026-09-23 一次全量跑：单跑必过、
+        连跑两次全量只红一次）。当时 `snapshot.build()` 本身是确定的
+        （连做三次 build 的 JSON 两两相同，实测），所以原因在**并行时的环境竞态**：
+        别的 xdist worker 正在读同一棵游戏树。修不了别人的读，但可以让**下一次**
+        不必再从零猜 —— 失败时把"第一个不同的点"打出来。
+        """
         a = snapshot.build()
         b = snapshot.build()
         da = json.dumps(a.to_dict(), ensure_ascii=False, sort_keys=True)
         db = json.dumps(b.to_dict(), ensure_ascii=False, sort_keys=True)
-        self.assertEqual(da, db)
+        if da != db:
+            self.fail(
+                "两次 build 不一致；第一个不同的点："
+                + _first_diff(a.to_dict(), b.to_dict())
+                + "（若只有这一条红、单跑又过，先看是不是并行时的环境竞态）"
+            )
 
     def test_lists_are_sorted(self):
         s = snapshot.build()
