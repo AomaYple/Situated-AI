@@ -383,19 +383,25 @@ def test_写盘带BOM且能被解析器读懂(tmp_path: Path) -> None:
 
 
 def test_部署会连同真mod一起启用(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """真 mod 的**目录名由档案 id 拼出来**（P9）—— 从前写死 `sitai_ru_defeat`，
+    加第二份档案时就会装错目录，而"装错目录"的表现是"探针报 Unknown effect"，
+    看起来像效果名写错了。
+    """
     seen: list[list[str]] = []
+    target = ab_probe.load_target()
+    assert target is not None, "仓库里必须能读到档案数据源"
 
     def fake_set(paths: Iterable[Path | str], **_kw: object) -> None:
         seen.append([str(p) for p in paths])
 
     monkeypatch.setattr(ab_probe.experiments, "set_enabled_mods", fake_set)
-    target = tmp_path / "mod"
-    (target / ab_probe.MOD_DIR_NAME).mkdir(parents=True)  # 假装真 mod 已装
-    dest = ab_probe.deploy(root=tmp_path / "src", target=target, game=_EMPTY_GAME)
-    assert dest == target / ab_probe.PROBE_MOD
+    root = tmp_path / "mod"
+    (root / target.dir_name).mkdir(parents=True)  # 假装真 mod 已装
+    dest = ab_probe.deploy(root=tmp_path / "src", target=root, game=_EMPTY_GAME)
+    assert dest == root / ab_probe.PROBE_MOD
     assert (dest / "common" / "on_actions" / "zz_probe_ab_on_actions.txt").is_file()
     assert (dest / "tools" / "scripted_tests" / "sitai_ab.txt").is_file()
-    assert seen[-1] == [str(dest), str(target / ab_probe.MOD_DIR_NAME)]
+    assert seen[-1] == [str(dest), str(root / target.dir_name)]
 
 
 def test_摘要写清整条阶梯() -> None:
@@ -404,6 +410,70 @@ def test_摘要写清整条阶梯() -> None:
         assert role in text
     assert "第 13 月起" in text
     assert "第 37 月起" in text
+
+
+# ── 探针盯谁：从**数据源**读，不手抄（P9）─────────────────────
+
+
+def test_目标从数据源读出来() -> None:
+    """探针原来硬编码 `SUBJECT = "RUS"` / JE 名 / 效果名 —— 加第二份档案时会漂。
+
+    现在全部由 `modgen` 从 `mod/data/*.toml` 编译出来，这条用例钉住"读得到、且与档案一致"。
+    """
+    from pdx import modgen
+
+    target = ab_probe.load_target()
+    assert target is not None
+    archives = modgen.load_all()
+    first = archives[0]
+    assert target.subject == first.country == "RUS"
+    assert target.journal_entry == first.journal_entry.name
+    assert target.shock_effect == first.memory.effect
+    assert target.input_effect == first.inputs.effect
+    assert target.dir_name == "-".join(archive.id for archive in archives)
+
+
+def test_生成的探针里不含写死的国家名() -> None:
+    """判据是**反面**：产物里出现 `c:RUS` 就说明有一条路没走 target。"""
+    files = ab_probe.build(game=_EMPTY_GAME).files
+    subject = ab_probe.load_target().subject
+    for rel, text in files.items():
+        if not rel.endswith((".txt", ".yml")):
+            continue
+        assert f"c:{subject}" in text or subject not in text, rel
+    # 效果名与 JE 名必须是**数据源里的那一份**
+    on_actions = files[_ON_ACTIONS]
+    assert ab_probe.SHOCK_EFFECT.split("_shock")[0] in on_actions  # 同源前缀
+    assert "je_sitai_ru_reform_window" in on_actions
+
+
+def test_造别的国家的探针只需换一个_target() -> None:
+    """G-EXIT-1 的口径：加一处境 = 加数据行，**Python 侧 0 行改动**。
+
+    这里用一个合成的 target 证明"换国家"确实只是换一个值（不需要改生成器）。
+    """
+    custom = ab_probe.ProbeTarget(
+        dir_name="t9",
+        subject="AUS",
+        journal_entry="je_sitai_t9_window",
+        shock_effect="sitai_t9_shock",
+        input_effect="sitai_t9_reform_input",
+        input_modifier="sitai_t9_reform_inputs",
+        archive_id="t9",
+    )
+    files = ab_probe.build(game=_EMPTY_GAME, target=custom).files
+    assert "c:AUS" in files[_ON_ACTIONS]
+    assert "c:RUS" not in files[_ON_ACTIONS]
+    assert "je_sitai_t9_window" in files[_ON_ACTIONS]
+    assert "c:AUS" in files[ab_probe.SUITE_REL]
+    assert "c:AUS" in files["common/decisions/zz_probe_ab_decisions.txt"]
+
+
+def test_读不到数据源时不猜一个国家名(monkeypatch: pytest.MonkeyPatch) -> None:
+    """P13：读不到就报错 —— 拿猜出来的国家名生成探针，会让"它在盯谁"变成看不出来的错。"""
+    monkeypatch.setattr(ab_probe, "load_target", lambda: None)
+    with pytest.raises(RuntimeError, match="不能猜一个国家名"):
+        ab_probe.build(game=_EMPTY_GAME)
 
 
 def test_元数据是合法JSON() -> None:

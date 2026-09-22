@@ -60,7 +60,7 @@ if TYPE_CHECKING:
 #: 探针 mod 目录名。
 PROBE_MOD = "zz_probe_ab"
 
-#: 真 mod 安装到用户 mod 目录时的目录名（与 `mod/.metadata/metadata.json` 的 id 同源）。
+#: 真 mod 安装到用户 mod 目录时的目录名 —— **只作兜底**（正常路径从档案 id 拼，见 :func:`deploy`）。
 MOD_DIR_NAME = "sitai_ru_defeat"
 
 #: 探针源目录（仓库内，可审阅）。
@@ -73,8 +73,56 @@ SHOCK_EFFECT = "sitai_ru_defeat_shock"
 INPUT_EFFECT = "sitai_ru_reform_input"
 INPUT_MODIFIER = "sitai_ru_reform_inputs"
 
-#: 主角国家（阶段 3：俄罗斯单国）。
+#: 主角国家 —— **只作兜底与文档用途**，真正的来源见 :func:`load_target`。
 SUBJECT = "RUS"
+
+
+@dataclass(frozen=True, slots=True)
+class ProbeTarget:
+    """探针要盯的那份档案（从 `mod/data/*.toml` **读出来**，不手抄）。
+
+    为什么要这样（P9 单一数据源 + P3 不手写生成物）：探针里原来硬编码了
+    `SUBJECT = "RUS"` / `je_sitai_ru_reform_window` / `sitai_ru_defeat_shock` ——
+    加**第二份档案**（阶段 5 要做的）时，这些名字得在人脑里同步一遍，
+    而"手写的东西迟早会漂"是这个仓库反复踩过的坑（G-EXIT-1 的判据就是
+    "加一份数据源 ⇒ Python 侧 0 行改动"）。
+    ⇒ 现在从**数据源**读：档案 id、国家、JE 名、效果名全由 `modgen` 编译出来。
+    """
+
+    dir_name: str
+    subject: str
+    journal_entry: str
+    shock_effect: str
+    input_effect: str
+    input_modifier: str
+    archive_id: str
+
+
+def load_target() -> ProbeTarget | None:
+    """从仓库的数据源读出探针要盯的档案；**读不到就给 ``None``**（不编一个假的）。
+
+    读不到时调用方必须报错（P13）：用一个猜出来的国家名生成探针，
+    会让"这个探针在盯谁"变成一件看不出来的错事。
+    """
+    from . import modgen  # noqa: PLC0415  -- 避免 import 期把 modgen 的依赖链拉进来
+
+    try:
+        archives = modgen.load_all()
+    except (OSError, modgen.DataError):  # pragma: no cover - 数据源坏了时另有用例守着
+        return None
+    if not archives:
+        return None
+    first = archives[0]
+    return ProbeTarget(
+        dir_name="-".join(archive.id for archive in archives),
+        subject=first.country,
+        journal_entry=first.journal_entry.name,
+        shock_effect=first.memory.effect,
+        input_effect=first.inputs.effect if first.inputs is not None else "",
+        input_modifier=first.inputs.name if first.inputs is not None else "",
+        archive_id=first.id,
+    )
+
 
 #: 臂阶梯的两个计数器：`stage` 单调递增（幂等靠它）、`month` 数月度脉冲。
 MONTH_VAR = "sitai_probe_ab_month"
@@ -365,7 +413,7 @@ def _slot_chains(vanilla: list[ai_surface.Card]) -> str:
     return "\n\n".join(blocks)
 
 
-def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
+def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
     """开局不挂任何东西；每月先自励、再走一格阶梯，最后**只记主角国家**。"""
     tab = "\t"
     laws = "\n".join(
@@ -398,7 +446,7 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
 
     def guarded(body: str) -> str:
         """把一段自报包进「只记主角国家」的守卫里。"""
-        return f"{tab * 2}if = {{\n{tab * 3}limit = {{ c:{SUBJECT} ?= this }}\n{body}\n{tab * 2}}}"
+        return f"{tab * 2}if = {{\n{tab * 3}limit = {{ c:{target.subject} ?= this }}\n{body}\n{tab * 2}}}"
 
     def state_line(kind: str, trigger: str, yes: str, no: str) -> str:
         """一行"在/不在"诊断（冲击与改革侧输入各一行，形状完全一致）。"""
@@ -426,7 +474,7 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
                 "\n".join(
                     [
                         (
-                            f'{tab * 3}debug_log = "ZZPROBE AB;ROLE;{SUBJECT};'
+                            f'{tab * 3}debug_log = "ZZPROBE AB;ROLE;{target.subject};'
                             f'[THIS.GetCountry.GetNameNoFormatting]"'
                         ),
                         "",
@@ -551,7 +599,7 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
                         "",
                         f"{tab * 3}# 行为层①：改革窗口开没开",
                         f"{tab * 3}if = {{",
-                        f"{tab * 4}limit = {{ has_journal_entry = je_sitai_ru_reform_window }}",
+                        f"{tab * 4}limit = {{ has_journal_entry = {target.journal_entry} }}",
                         (
                             f'{tab * 4}debug_log = "ZZPROBE AB;JE;active;'
                             f'[THIS.GetCountry.GetNameNoFormatting]"'
@@ -609,7 +657,7 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
     )
 
 
-def decisions_text() -> str:
+def decisions_text(target: ProbeTarget) -> str:
     """**一个**决议：点一次就把整条阶梯武装起来。
 
     从前是两个对称的决议（点哪个进哪一组）。改成一个之后，"一次启动"就能拿到
@@ -623,7 +671,7 @@ def decisions_text() -> str:
         f"\t# 对任何玩家可见：玩家要演**旁观者**，让俄罗斯保持 AI 控制\n"
         f"\tis_shown = {{ always = yes }}\n"
         f"\tpossible = {{ always = yes }}\n"
-        f"\twhen_taken = {{ c:{SUBJECT} ?= {{ zz_probe_ab_arm = yes }} }}\n"
+        f"\twhen_taken = {{ c:{target.subject} ?= {{ zz_probe_ab_arm = yes }} }}\n"
         f"\tai_chance = {{ value = 0 }}\n"
         f"}}\n"
     )
@@ -676,7 +724,7 @@ def loc_text_en() -> str:
     )
 
 
-def suite_text() -> str:
+def suite_text(target: ProbeTarget) -> str:
     """引擎侧判定套件：**是否开窗 / 是否换法** 两条判据。
 
     为什么要有它（除了 `v3 ab`）：`v3 ab` 是**事后**读日志，套件是**引擎每天自己判** ——
@@ -710,7 +758,7 @@ def suite_text() -> str:
         f"{TAB * 2}run_count = 1\n"
         f"{TAB * 2}# 成功 = 改革窗口开过（行为层①）。\n"
         f"{TAB * 2}success = {{\n"
-        f"{TAB * 3}c:{SUBJECT} ?= {{ has_journal_entry = je_sitai_ru_reform_window }}\n"
+        f"{TAB * 3}c:{target.subject} ?= {{ has_journal_entry = {target.journal_entry} }}\n"
         f"{TAB * 2}}}\n"
         f"{TAB * 2}# 失败 = 到日期仍未开窗（不是「跳过」：跳过会让整件事悄悄过去）。\n"
         f"{TAB * 2}fail = {{\n"
@@ -723,7 +771,7 @@ def suite_text() -> str:
         f"{TAB * 2}run_count = 1\n"
         f"{TAB * 2}# 成功 = 农奴制已经不是现行法律（行为层②：真的换了法，不只是开了个窗）。\n"
         f"{TAB * 2}success = {{\n"
-        f"{TAB * 3}c:{SUBJECT} ?= {{ NOT = {{ has_law = law_type:law_serfdom }} }}\n"
+        f"{TAB * 3}c:{target.subject} ?= {{ NOT = {{ has_law = law_type:law_serfdom }} }}\n"
         f"{TAB * 2}}}\n"
         f"{TAB * 2}fail = {{\n"
         f'{TAB * 3}game_date > "1841.1.1"\n'
@@ -761,14 +809,24 @@ class Built:
         return tuple(sorted(self.files))
 
 
-def build(*, game: Path | None = None) -> Built:
-    """生成探针的全部文件（相对探针根目录）。"""
+def build(*, game: Path | None = None, target: ProbeTarget | None = None) -> Built:
+    """生成探针的全部文件（相对探针根目录）。
+
+    ``target`` 缺省时从**数据源**读（:func:`load_target`）—— 读不到就报错（P13），
+    不拿一个猜出来的国家名生成探针。测试要造"别的国家"的探针时显式传一个。
+    """
+    chosen = target or load_target()
+    if chosen is None:
+        raise RuntimeError(
+            "读不到任何档案数据源（mod/data/*.toml）—— 探针要盯哪个国家、哪个 JE、"
+            "哪个效果，全部来自那里。不能猜一个国家名生成探针。"
+        )
     vanilla = ai_surface.read_cards(game)
     files = {
         "common/scripted_effects/zz_probe_ab_effects.txt": effects_text(),
-        "common/on_actions/zz_probe_ab_on_actions.txt": on_actions_text(vanilla),
-        "common/decisions/zz_probe_ab_decisions.txt": decisions_text(),
-        SUITE_REL: suite_text(),
+        "common/on_actions/zz_probe_ab_on_actions.txt": on_actions_text(vanilla, chosen),
+        "common/decisions/zz_probe_ab_decisions.txt": decisions_text(chosen),
+        SUITE_REL: suite_text(chosen),
         ".metadata/metadata.json": metadata_text(),
         "localization/simp_chinese/zz_probe_ab_l_simp_chinese.yml": loc_text(),
         "localization/english/zz_probe_ab_l_english.yml": loc_text_en(),
@@ -805,16 +863,18 @@ def deploy(
 ) -> Path:
     """生成 → 同步进用户 mod 目录 → 连同真 mod 一起启用。"""
     write(root=root, game=game)
+    chosen = load_target()
     source = root or PROBE_DIR
     dest_root = target or experiments.TARGET_DIR
     dest = dest_root / PROBE_MOD
     if dest.exists():
         shutil.rmtree(dest)
     shutil.copytree(source, dest)
-    # 真 mod 也要装：探针的效果引用 `sitai_ru_defeat_shock` / `sitai_ru_reform_input`，
-    # 没装就是 Unknown effect
+    # 真 mod 也要装：探针的效果引用档案里的冲击 / 改革侧输入效果，没装就是 Unknown effect。
+    # 目录名由**档案 id**拼出来（与 `mod/.metadata` 的 id 同源，P9）——
+    # 从前这里写死 `sitai_ru_defeat`，加第二份档案时就会装错目录。
     product = config.REPO / "mod"
-    mod = dest_root / MOD_DIR_NAME
+    mod = dest_root / (chosen.dir_name if chosen is not None else MOD_DIR_NAME)
     if product.is_dir():
         if mod.exists():
             shutil.rmtree(mod)
