@@ -29,10 +29,12 @@ import subprocess
 import sys
 import tempfile
 import time
+from contextlib import suppress
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import numpy as np
 
 from pdx import config, gametimer
 from pdx import game_auto as ga
@@ -46,16 +48,19 @@ OURS_DST = MODS_DIR / "sitai_sitai"
 OUT_DIR = Path(__file__).resolve().parents[1] / "out" / "perf"
 LOGS = DOCS / "logs"
 
-#: 原版 debug 覆盖层里那个「错误计数」按钮的**实测客户区坐标**（中心）。
+#: 原版 debug 覆盖层里那个「错误计数」按钮的**模板**（在 `tools/probe/zz_probe_ab/ui/`）。
 #:
-#: ⚠️ 为什么不再用颜色找按钮（2026-09-21 的做法，2026-09-23 三次实测都失败）：
-#: 往 `error_deer` 里插新按钮**画不出来**（插进内层 flowcontainer ⇒ 0 像素；
-#: 换成自己的 widget + 显式 size/position/textcolor ⇒ 仍然 0 像素）。
-#: 现在改成**覆写那个已有按钮的 `onclick`**（`perf_mod.py`），于是要点的就是它 ——
-#: 而它在屏幕上**一定可见**（1920x1080 下截图确认：底中偏右，约 x 1330–1580 / y 465–555）。
-#:
-#: ⚠️ 这是一次测量值不是常量：分辨率 / UI 缩放 / 界面语言都会移动它。
-#: 所以点完**必须验证**（`ticktask_timings.csv` 有没有出现），验不过就报错，不静默继续。
+#: 为什么不再用颜色找按钮（2026-09-21 的做法，2026-09-23 三次实测都失败）：
+#: 往 `error_deer` 里插**新**按钮画不出来（插进内层 flowcontainer ⇒ 0 像素；
+#: 换成自己的 widget + 显式 size/position/textcolor ⇒ 仍然 0 像素，
+#: 而 error.log 里那两条 `Unlocalized text 'CLEAR'` 证明控件**被解析了**）。
+#: ⇒ 改成**覆写那个已有按钮的 `onclick`**（`perf_mod.py`），要点的就是它；
+#: 而"它在哪"用**模板匹配**回答（不像坐标那样会漂）—— 自测：拿它匹配当初裁它的那张截图，
+#: 分数 **1.000**、落在 (1370,500)。模板裁的是按钮左边那枚图标（60x60）。
+ERROR_COUNTER_TEMPLATE = "btn_error_counter"
+
+#: 匹配不上时的**兜底坐标**（客户区，1920x1080；实测值）。
+#: 用它就意味着"这次没测到按钮在哪"，所以要在返回值里**如实报出来**（P13）。
 ERROR_COUNTER_XY = (1455, 510)
 
 MONTH_DAYS = 30.44
@@ -177,16 +182,40 @@ def run_once(label: str, months: float) -> dict[str, object]:
     print(f"  跑完 {months} 个月：{advanced}")
 
     # 点那个被覆写过 onclick 的错误计数按钮：它**就是** dump 的触发器。
-    # 点它要真前台（引擎读原始输入状态），所以点完把前台还给启动前那个窗口。
-    point = ERROR_COUNTER_XY
+    # 位置用**模板匹配**现场测（坐标会漂），测不到才回落实测坐标 —— 且如实报出来。
+    # 点击要真前台（引擎读原始输入状态），所以点完把前台还给启动前那个窗口。
+    ga.ensure_foreground(hwnd, force=True)
+    try:
+        before = ga.screenshot(hwnd)
+    except ga.CaptureFailedError as exc:
+        raise ga.GameAutoError(f"{label}：点击前抓不到画面（{exc}）") from exc
+    ga.save_shot(before, f"perf-{label}-before-click")
+    found = ga.match_template(
+        np.array(before),
+        ga.load_template(ERROR_COUNTER_TEMPLATE),
+        name=ERROR_COUNTER_TEMPLATE,
+        threshold=0.6,
+        scales=ga.DEFAULT_SCALES,
+    )
+    if found is not None:
+        point, how = (found.x, found.y), f"模板匹配（分数 {found.score:.3f}）"
+    else:
+        point, how = ERROR_COUNTER_XY, "**兜底坐标**（这次没测到按钮在哪）"
     ga.click_client(hwnd, point[0], point[1], previous=previous, force=True)
-    print(f"  已点错误计数按钮 @ {point}（onclick 已被覆写成 dump），等文件出现……")
+    print(f"  已点错误计数按钮 @ {point} —— {how}；onclick 已被覆写成 dump，等文件出现……")
+    with suppress(ga.CaptureFailedError):
+        ga.ensure_foreground(hwnd, force=True)
+        ga.save_shot(ga.screenshot(hwnd), f"perf-{label}-after-click")
 
     deadline = time.monotonic() + 60.0
     while time.monotonic() < deadline and not DUMP.exists():
         time.sleep(1.0)
     if not DUMP.exists():
-        raise ga.GameAutoError(f"{label}：点了 DUMP 但 {DUMP.name} 没出现")
+        raise ga.GameAutoError(
+            f"{label}：点了错误计数按钮 @ {point}（{how}）但 {DUMP.name} 没出现 —— "
+            "按钮没点到，或控制台命令没执行（证据帧：tools/out/auto/"
+            f"perf-{label}-before-click.png 与 perf-{label}-after-click.png）"
+        )
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     target = OUT_DIR / f"{label}.csv"
     shutil.copy(DUMP, target)
@@ -198,12 +227,8 @@ def run_once(label: str, months: float) -> dict[str, object]:
         "bytes": target.stat().st_size,
         "months": months,
         "advanced": advanced,
-        "session": {
-            "borrows": session["borrows"],
-            "borrow_seconds": session["borrow_seconds"],
-            "speed_ok": session["speed_ok"],
-            "rate": session["speed_days_per_second"],
-        },
+        "click": {"point": list(point), "how": how},
+        "session": session.as_dict(),
         "mounted": _mounted_evidence(),
     }
     _kill_game()
