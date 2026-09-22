@@ -141,6 +141,46 @@ class TestPipelineBenchmarks:
         assert result.unique_entries > 6000
 
 
+class TestGametimerBenchmarks:
+    """引擎计时文件的解析基准（G-EXIT-3 的对照表要反复解析这些文件）。
+
+    要换标准库 `csv` 的那一侧就是下面两条（ticktask），所以先给它们一个可比基线。
+    实测（20k 行，本机）：`parse_ticktask_tsv` 均值 **55.6 ms**、`summarize_ticktask`
+    均值 **72.5 ms** —— 换 `csv` 之后要与这两个数对照（P5）。
+
+    ⚠️ **gametimer tsv 那一侧暂时不设基准**：按文档拼的合成表头/日期格式被 `parse_tsv`
+    判成 0 行（它有自己的口径），而"拿真夹具量"才可信（见 `test_gametimer.py` 的 `SAMPLE`）。
+    等换 `csv` 时先把那份夹具抽成共享 fixture，再补这一侧的基准。
+    """
+
+    ROWS = 20000
+
+    @staticmethod
+    def _ticktask(rows: int) -> str:
+        header = "frame,task,milliseconds,calls,longest_lock\n"
+        tasks = ("RecalculateModifierNodes", "UpdateAI", "TickDaily", "OnActions")
+        body = "".join(
+            f"{59884134 + (i // 4) * 6},{tasks[i % 4]},{i % 40 + 1},{i % 5 + 1},{i % 9}\n"
+            for i in range(rows)
+        )
+        return header + body
+
+    def test_parse_ticktask_tsv(self, benchmark) -> None:
+        from pdx import gametimer as gt
+
+        text = self._ticktask(self.ROWS)
+        result = benchmark(gt.parse_ticktask_tsv, text)
+        assert len(result.rows) == self.ROWS
+
+    def test_summarize_ticktask(self, benchmark, tmp_path) -> None:
+        from pdx import gametimer as gt
+
+        path = tmp_path / "ticktask_timings.csv"
+        path.write_text(self._ticktask(self.ROWS), encoding="utf-8-sig")
+        data = benchmark(gt.summarize_ticktask, path)
+        assert data["rows"] == self.ROWS
+
+
 class TestAutoCaptureBenchmarks:
     """游戏自动化的**热路径**：找按钮 = 抓图 + 模板匹配。
 
