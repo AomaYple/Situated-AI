@@ -1,0 +1,22 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 难度档位的玩家侧修正（为什么要有难度分档：这个 mod 的处境是**真压力**（合法性 -35、利率 +0.35、保守 IG -0.30 一起落下来），而 AI 与玩家的承受方式不同 —— AI 只在权重公式里被推动，玩家还要自己扛住议会算术与财政。01a:240 把这条写成契约：'玩家被压死 → 难度分档'。默认档是**一视同仁**（J5 原文），即默认给谁都不加戏：处境对谁都成立才是这个 mod 的主张，默认给玩家开小灶会让 G3 的反馈从'世界活了'变成'世界对我温柔了'。）
+# 由冲击效果按 `has_game_rule` 施加：玩家命中哪一档，就挂哪一条。
+# 每个数字的依据见档案文档（P10）。
+
+
+# history_friendly：减震取原版同字段的**中档**：合法性 +10（原版国家静态修正档位阶梯里最温和的一档，00_code_static_modifiers.txt:322 的 +10）、保守 IG +0.15（原版同字段档位之一，106_modifiers.txt:205 的 0.15）。为什么不是 +20/-0.30 把压力整条抵消：那等于'史实友好'下这套处境白做，G4 的'世界活了'就无从谈起 —— 减震要看得见、但不能抹平。
+
+sitai_ru_defeat_difficulty_history_friendly = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds
+	country_legitimacy_base_add = 10
+	interest_group_ig_landowners_pol_str_mult = 0.15
+}
+
+# harsh：加重取原版同字段的**强档**：合法性 -20（00_code_static_modifiers.txt:353 的 -20，原版国家静态修正阶梯的强档）、保守 IG **+0.25**（00_ip4_04_modifiers.txt:47 的 +0.25；方向是**正**的 —— 压力侧已经把贵族压到 -0.30，无情要的是旧势力更不肯松手，回加 +0.25 之后净效果只剩 -0.05）。为什么不取 -50/-0.75 那种极端档：那是'革命/被外力打穿'级别的世界状态，拿来当难度选项会把处境与难度两件事混成一件，读数就没法归因了。⚠️ 本条 why 的第一版把 +0.25 写成了 -0.25（照抄了压力侧的方向）—— 数字与方向必须**同时**复核，所以这条更正留在数据源里。
+
+sitai_ru_defeat_difficulty_harsh = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds
+	country_legitimacy_base_add = -20
+	interest_group_ig_landowners_pol_str_mult = 0.25
+}

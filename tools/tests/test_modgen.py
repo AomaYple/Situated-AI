@@ -255,8 +255,16 @@ def test_解析真实档案的关键条目() -> None:
         "interest_group_ig_intelligentsia_pol_str_mult",
     }
     assert archive.cards == (), "本档案刻意不递牌（F5：A 级已表达完整条链路）"
-    # 4 条基础文案 + **3 行面板**（P11 的三行解释，键名由 JE 名派生）
-    assert len(archive.localization) == 7
+    # 7 条档案自己的文案（4 条基础 + **3 行面板**，键名由 JE 名派生）
+    # + 难度三档的 7 条（规则名 1 + 三档各自的 名称/说明 6）
+    # + 2 条"玩家侧修正名"（只有带 player_effects 的两档才有）
+    assert len(archive.localization) == 16
+    keys = {item.key for item in archive.localization}
+    assert "rule_sitai_difficulty" in keys
+    for tier in archive.difficulty.tiers:
+        assert tier.setting in keys
+        assert f"{tier.setting}_desc" in keys
+    assert {tier.id for tier in archive.difficulty.tiers} == set(modgen.DIFFICULTY_TIERS)
     assert [slot for slot, _key, _why in archive.panel] == ["goal", "pressure", "last_change"]
     assert [key for _slot, key, _why in archive.panel] == [
         "je_sitai_ru_reform_window_goal",

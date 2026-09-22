@@ -290,3 +290,60 @@ why = "工业家政治力量。原版 16 处：0.1（00_ip4_03_modifiers.txt:7�
 kind = "modifier_field"
 name = "interest_group_ig_intelligentsia_pol_str_mult"
 why = "知识界政治力量。原版 17 处：0.15（106_modifiers.txt:205）、0.25（00_ip4_04_modifiers.txt:47）、0.5（content_1_modifiers.txt:1466）。"
+
+# ── ⑦ 难度三档（契约 J5；**mod 级**：全仓只允许一份，照 [tempo] 的口径）────────
+#
+# 为什么这条要在**数据源**里而不是生成器里写死：三档的**档位名与默认档**是对外契约
+# （01a J 节第 5 条），而"每一档给玩家加多少"是设计数字 —— 数字必须有依据（P10）。
+[[localization]]
+key = "rule_sitai_difficulty"
+english = "Situations (difficulty)"
+simp_chinese = "处境难度"
+why = "游戏规则名：玩家在开局规则界面里看到的那一行。原版口径见 common/game_rules/game_rules.md:10（`rule_<键>` 是规则名的本地化键），同族样例 rule_free_construction 见 ip3_misc_01_l_simp_chinese.yml。写「处境难度」而不是「难度」：它调的是**这个 mod 的处境**落在玩家肩上的份量，不是原版全局难度。"
+
+[difficulty]
+key = "sitai_difficulty"
+icon = "gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds"
+why = "为什么要有难度分档：这个 mod 的处境是**真压力**（合法性 -35、利率 +0.35、保守 IG -0.30 一起落下来），而 AI 与玩家的承受方式不同 —— AI 只在权重公式里被推动，玩家还要自己扛住议会算术与财政。01a:240 把这条写成契约：'玩家被压死 → 难度分档'。默认档是**一视同仁**（J5 原文），即默认给谁都不加戏：处境对谁都成立才是这个 mod 的主张，默认给玩家开小灶会让 G3 的反馈从'世界活了'变成'世界对我温柔了'。"
+
+[difficulty.tiers]
+why = "为什么三档放在**一张表**里而不是散在别处：三档是同一个契约的三个取值（J5），放在一起才能一眼看出'档位集合正好是这三个、默认是哪一个'—— 生成器也就能在编译期把'多一档/少一档'当场判死（DIFFICULTY_TIERS 钉住集合，数据源只能填内容）。"
+
+[difficulty.tiers.history_friendly]
+label_english = "History-friendly"
+label_simp_chinese = "史实友好"
+desc_english = "The player carries a softened share of each situation: legitimacy recovers faster and the old guard's grip is a little looser than the world state alone would give."
+desc_simp_chinese = "玩家肩上的那一份轻一些：合法性恢复更快、旧势力的钳制比纯世界状态稍松。"
+why = "为什么第一档要给玩家**减震**：这一档服务的是'想看历史怎么走'的玩家 —— 他仍然吃全部世界状态（战败、贵族失势、借债变贵），只是不被一次压死。'不被压死'的具体含义按本 mod 自己的压力面来定：压力里最狠的两条是合法性 -35 与保守 IG -0.30，所以减震也落在这两条的同族字段上。"
+player_why = "减震取原版同字段的**中档**：合法性 +10（原版国家静态修正档位阶梯里最温和的一档，00_code_static_modifiers.txt:322 的 +10）、保守 IG +0.15（原版同字段档位之一，106_modifiers.txt:205 的 0.15）。为什么不是 +20/-0.30 把压力整条抵消：那等于'史实友好'下这套处境白做，G4 的'世界活了'就无从谈起 —— 减震要看得见、但不能抹平。"
+[[difficulty.tiers.history_friendly.player_effects]]
+key = "country_legitimacy_base_add"
+amount = 10
+why = "压力侧压的是 -35（本档案 [pressure.effects] 第一条），这里回 +10 ≈ 三成。原版同类档位：00_code_static_modifiers.txt:322 的 +10、:331 的 +5。取 +10 而不是 +20：+20 会把 -35 抵掉一半以上，玩家几乎感觉不到战败。"
+[[difficulty.tiers.history_friendly.player_effects]]
+key = "interest_group_ig_landowners_pol_str_mult"
+amount = 0.15
+why = "压力侧压的是 -0.30，这里回 +0.15（一半）。原版同字段档位：106_modifiers.txt:205 = 0.15、00_ip4_04_modifiers.txt:47 = 0.25、00_ip3_04_modifiers.txt:334 = 0.03。取 0.15 = 把'贵族失势'从 -30% 缓到 -15%，旧势力仍在走下坡，只是没被一次打垮。"
+
+[difficulty.tiers.uniform]
+label_english = "Even-handed"
+label_simp_chinese = "一视同仁"
+desc_english = "The default: situations apply to everyone exactly as the world state says. No help, no extra penalty."
+desc_simp_chinese = "默认档：处境对谁都按世界状态如实生效，既不帮忙也不额外加罚。"
+why = "为什么它是默认档（J5 原文就是默认）：这一档下'玩家看到的'与'AI 承受的'是同一套事实，G2 的 A/B 差分才是干净的 —— 任何给玩家的加减都会混进实验读数里。"
+
+[difficulty.tiers.harsh]
+label_english = "Ruthless"
+label_simp_chinese = "无情"
+desc_english = "The player carries more than the world state alone: the legitimacy blow bites deeper and the old guard digs in harder."
+desc_simp_chinese = "玩家肩上的那一份更重：合法性打击更深、旧势力更不肯松手。"
+why = "为什么需要第三档：一视同仁之下'玩家能不能扛住'只由玩法水平决定；老玩家要的是**结构性的难**，而不是靠 AI 运气。所以这一档在同样的世界状态之上，再给玩家加一条与压力同族的修正 —— 注意它压的**不是**世界，只是玩家肩上的那一份（AI 照旧按一视同仁的账走）。"
+player_why = "加重取原版同字段的**强档**：合法性 -20（00_code_static_modifiers.txt:353 的 -20，原版国家静态修正阶梯的强档）、保守 IG **+0.25**（00_ip4_04_modifiers.txt:47 的 +0.25；方向是**正**的 —— 压力侧已经把贵族压到 -0.30，无情要的是旧势力更不肯松手，回加 +0.25 之后净效果只剩 -0.05）。为什么不取 -50/-0.75 那种极端档：那是'革命/被外力打穿'级别的世界状态，拿来当难度选项会把处境与难度两件事混成一件，读数就没法归因了。⚠️ 本条 why 的第一版把 +0.25 写成了 -0.25（照抄了压力侧的方向）—— 数字与方向必须**同时**复核，所以这条更正留在数据源里。"
+[[difficulty.tiers.harsh.player_effects]]
+key = "country_legitimacy_base_add"
+amount = -20
+why = "原版同字段强档（00_code_static_modifiers.txt:353 = -20）。叠在压力侧的 -35 之上 ⇒ 玩家总共 -55；AI 仍是 -35。取 -20 而不是 -50：-50 是原版给'被外力打穿'那一档世界状态用的（content_1_modifiers.txt:17 的 opium_wars_lost），拿来当难度会盖过处境本身。"
+[[difficulty.tiers.harsh.player_effects]]
+key = "interest_group_ig_landowners_pol_str_mult"
+amount = 0.25
+why = "**方向必须是正的**：压力侧已经把贵族压到 -0.30（战败的直接后果），'无情'要的是**旧势力更不肯松手**，所以这里往回加 +0.25 —— 净效果 -0.05，贵族的钳制几乎没松，改革窗口更难推开。档位依据：00_ip4_04_modifiers.txt:47 用 +0.25（modifier_regency_landowners 那一族）。⚠️ 第一版我写成了 -0.25，那等于**继续削弱贵族**、与'无情'的语义相反 —— 数字对、方向错是最难看出来的一类错，所以这条为什么留在文件里：它记录了这个坑。"

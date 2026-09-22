@@ -37,6 +37,10 @@
 | `journal_entry.fields[0].amount` | 100 | JE 列表拥挤时的保留优先级。与原版 je_corn_laws 的 weight = 100 同档（00_corn_laws.txt:79）—— 改革窗口是处境级 JE，不该被小 JE 挤掉。 |
 | `journal_entry.conditions[3].amount` | 75 | 开窗的第二个条件：压力够大。**实测校准**（阶段 3 的 A/B 分档读数）：A 组（无冲击，`ab-A-control`）**每一个观测月都落在最高档**（探针早期的档位标签是 `vhigh`，即 >80）；B 组（-35，`ab-run7` 的 55 块分档观测）**没有一个块在 70 以下为主、且多数落在 70–75**（b70 24 / b75 18 / b80 13）—— 门槛 **75** 就落在这条实测分界上：对照组的全 >80 不会误开，而 B 组有 42/55 个月（76%）≤75。**换挂载点（已发生）**：原方案要求压到原版那条 50 线（00_liberalism.txt:54、02_peru_bolivia.txt:39），但判据仍是 50 的那一局（`ab-run3-done`，-35，61 个月）窗口从未开、法律全程 `law_serfdom`，而 -35 的水位只到 65–80 且会回升 —— 于是判据改到 75：门开在「战败后合法性确实下滑一档」这件事上，压力数值继续塑造世界。相应地 `complete` 仍是 `legitimacy >= 75`，开与关正好接上。 |
 | `journal_entry.conditions[4].amount` | 75 | 关窗的门：国家重新站稳，窗口自己关上（不是「改革完成」—— 改什么由 AI 与原版牌池决定，本档案不替它选法律）。75 也是原版用过的档：00_meiji_restoration.txt:314 的 legitimacy >= 75。 |
+| `difficulty.tiers.history_friendly.player_effects[0].amount` | 10 | 压力侧压的是 -35（本档案 [pressure.effects] 第一条），这里回 +10 ≈ 三成。原版同类档位：00_code_static_modifiers.txt:322 的 +10、:331 的 +5。取 +10 而不是 +20：+20 会把 -35 抵掉一半以上，玩家几乎感觉不到战败。 |
+| `difficulty.tiers.history_friendly.player_effects[1].amount` | 0.15 | 压力侧压的是 -0.30，这里回 +0.15（一半）。原版同字段档位：106_modifiers.txt:205 = 0.15、00_ip4_04_modifiers.txt:47 = 0.25、00_ip3_04_modifiers.txt:334 = 0.03。取 0.15 = 把'贵族失势'从 -30% 缓到 -15%，旧势力仍在走下坡，只是没被一次打垮。 |
+| `difficulty.tiers.harsh.player_effects[0].amount` | -20 | 原版同字段强档（00_code_static_modifiers.txt:353 = -20）。叠在压力侧的 -35 之上 ⇒ 玩家总共 -55；AI 仍是 -35。取 -20 而不是 -50：-50 是原版给'被外力打穿'那一档世界状态用的（content_1_modifiers.txt:17 的 opium_wars_lost），拿来当难度会盖过处境本身。 |
+| `difficulty.tiers.harsh.player_effects[1].amount` | 0.25 | **方向必须是正的**：压力侧已经把贵族压到 -0.30（战败的直接后果），'无情'要的是**旧势力更不肯松手**，所以这里往回加 +0.25 —— 净效果 -0.05，贵族的钳制几乎没松，改革窗口更难推开。档位依据：00_ip4_04_modifiers.txt:47 用 +0.25（modifier_regency_landowners 那一族）。⚠️ 第一版我写成了 -0.25，那等于**继续削弱贵族**、与'无情'的语义相反 —— 数字对、方向错是最难看出来的一类错，所以这条为什么留在文件里：它记录了这个坑。 |
 
 ## 判据（JE）
 

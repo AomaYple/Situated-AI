@@ -60,7 +60,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tabular.py` | 表格类数据（`.csv`），分隔符靠 `csv.Sniffer` 嗅探 |
 | `engine_log.py` | 从游戏日志抽外部真值：枚举清单、脚本位置、token 位置 |
 | `console.py` | stdout/stderr 的 UTF-8 兜底（**必须在构造 rich Console 之前调用**） |
-| `modgen.py` | **数据源 → mod 产物**的生成器（阶段 3）：把 `mod/data/*.toml` 编译成脚本 + 本地化 + 档案文档。每个数字必须带 `why`，空 `why` 当场报错；产物一律由它生成，**不许手写**。可选表 `[reform_inputs]` 生成"第二处理段"（第二个效果 + 第二个修正），A/B 阶梯的 B2 臂靠它 |
+| `modgen.py` | **数据源 → mod 产物**的生成器（阶段 3）：把 `mod/data/*.toml` 编译成脚本 + 本地化 + 档案文档。每个数字必须带 `why`，空 `why` 当场报错；产物一律由它生成，**不许手写**。可选表：`[reform_inputs]` 生成"第二处理段"（第二个效果 + 第二个修正，A/B 阶梯的 B2 臂靠它）；`[panel]`（P11 三行）生成三个解释键并**接进 JE 说明**（引擎显示的是 `journal_entry.gui:742` 的 `GetReason`）；`[difficulty]`（契约 J5，**mod 级**）生成 `common/game_rules/` 三档规则 + 玩家侧修正，并把"按档位给玩家加/减"接进冲击效果（机制只用原版有先例的 `flag` + `has_game_rule`，不用零先例的 `apply_modifier`） |
 | `modguard.py` | **五道闸门**（阶段 3）：键/路径与原版不相交、引用完整性、稀释预算（按阶段 2 的三槽价格表）、往返净度、生成可复现 + `why` 非空。引用类别含 `modifier_field`（修正字段名必须在原版 `static_modifiers` 里出现过 —— 让 P10 的「数值引原版同类用法」可机器核对） |
 | `ab_probe.py` | 阶段 3 的 **A/B 臂阶梯探针**生成器：点一次决议武装，之后按月度脉冲自动换臂（`A` 第 1–12 月 → `B` 第 13 月施加冲击 → `B2` 第 37 月追加改革侧输入；幂等靠 `stage` 变量）。同时生成 `tools/scripted_tests/` 套件（引擎每天判「是否开窗 / 是否换法」）与原版套件的收敛覆盖 |
 | `ab.py` | 阶段 3 的 A/B 分析器：解析探针月度行 → **两处处理分开报**（① 行为层 / ② 策略层是冲击步 A→B，③ 是改革侧输入步 B→B2）→ 判定。含开局自检（RUN / 玩家 / 观测 / 角色 / SHOCK / INPUT / 报错）、合法性五档诊断；`VERDICT_MIN_MONTHS = 12` 卡住"样本不足就宣判" |
@@ -189,7 +189,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-1418 条用例（`pytest --collect-only` 实测），
+1427 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -469,7 +469,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：1418 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：1427 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

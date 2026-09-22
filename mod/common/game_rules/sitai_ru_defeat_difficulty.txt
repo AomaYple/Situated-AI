@@ -1,0 +1,21 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 难度三档（为什么要有难度分档：这个 mod 的处境是**真压力**（合法性 -35、利率 +0.35、保守 IG -0.30 一起落下来），而 AI 与玩家的承受方式不同 —— AI 只在权重公式里被推动，玩家还要自己扛住议会算术与财政。01a:240 把这条写成契约：'玩家被压死 → 难度分档'。默认档是**一视同仁**（J5 原文），即默认给谁都不加戏：处境对谁都成立才是这个 mod 的主张，默认给玩家开小灶会让 G3 的反馈从'世界活了'变成'世界对我温柔了'。）
+# 三档是**对外契约**（01a J 节第 5 条）：史实友好 / 一视同仁（默认）/ 无情。
+# 默认档**不加戏**：这个 mod 的主张是「处境对谁都成立」，
+# 默认给玩家开小灶会让「世界活了」变成「世界对我温柔了」。
+# 读取方式：脚本侧 `has_game_rule = <设置名>`（原版同款用法）。
+
+sitai_difficulty = {
+	default = setting_sitai_difficulty_uniform
+
+	setting_sitai_difficulty_history_friendly = {
+		flag = setting_sitai_difficulty_history_friendly
+	}
+	setting_sitai_difficulty_uniform = {
+		flag = setting_sitai_difficulty_uniform
+	}
+	setting_sitai_difficulty_harsh = {
+		flag = setting_sitai_difficulty_harsh
+	}
+}

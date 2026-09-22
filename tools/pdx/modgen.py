@@ -58,6 +58,7 @@ from __future__ import annotations
 import json
 import re
 import tomllib
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -131,6 +132,10 @@ LOC_VERSION = 0
 
 #: mod 元数据的产物路径（不属于任何原版目录树，所以单列）。
 METADATA_REL = ".metadata/metadata.json"
+
+
+class _NoDifficultyError(Exception):
+    """内部哨兵：没有任何数据源声明 `[difficulty]`（不是数据源错误，见该函数说明）。"""
 
 
 class DataError(ValueError):
@@ -296,6 +301,28 @@ class Localization:
     values: dict[str, str]
 
 
+#: 难度三档的**档位 id**（契约 J5：`史实友好` / **`一视同仁`（默认）** / `无情`）。
+#:
+#: 为什么写成常量而不是让数据源随便取名：这三档是**对外契约**（玩家在开局规则界面里
+#: 看到的就是这三档），名字漂了契约就漂了。数据源只能在这三个 id 里挑，改不了集合。
+DIFFICULTY_TIERS: tuple[str, ...] = ("history_friendly", "uniform", "harsh")
+
+#: 默认档（`01a` J 节第 5 条原文：**`一视同仁`（默认）**）。
+#:
+#: 为什么默认不是"史实友好"：这个 mod 的全部主张是「处境对谁都成立」——
+#: 默认给玩家开小灶会让"世界活了"变成"世界对我温柔了"。
+DIFFICULTY_DEFAULT = "uniform"
+
+#: 玩家侧修正名的后缀（**只有带 `player_effects` 的档位**才会生成那几条修正）。
+#:
+#: 为什么放在生成器里：它表达的是"这一条是玩家肩上的那一份"这层**限定语**，
+#: 与档位名是同一件事的两半；让数据源把两半各写一遍，只会让它们有机会对不上（P9）。
+DIFFICULTY_MODIFIER_SUFFIX: dict[str, str] = {
+    "english": " (your share)",
+    "simp_chinese": "（你这一份）",
+}
+
+
 #: P11「面板三行」的三个槽位（`key` = 数据源里的键，`suffix` = 本地化键的后缀）。
 #:
 #: 为什么要有这一组（而不是把三行揉进 JE 的 `_reason` 里）：G3 的判据是
@@ -310,6 +337,58 @@ PANEL_LINES: tuple[tuple[str, str], ...] = (
     ("pressure", "pressure"),
     ("last_change", "last_change"),
 )
+
+
+@dataclass(frozen=True, slots=True)
+class DifficultyTier:
+    """难度的一档：id + 中英文名与说明 + 这一档**给玩家加什么**。
+
+    ``player_effects`` = 这一档在**玩家**身上额外施加的修正（`一视同仁` 为空 = 不加戏）。
+    **不是**"玩家豁免处境压力"：世界状态对谁都成立（这个 mod 的主张），难度调的是
+    **玩家肩上的那一份** —— `01a:240` 的原话就是"玩家被压死 → 难度分档"。
+    """
+
+    id: str
+    #: 规则键（`[difficulty].key`）—— 设置名由它派生，而 `has_game_rule` 读的就是设置名。
+    rule_key: str
+    label: dict[str, str]
+    desc: dict[str, str]
+    why: str
+    #: 玩家侧修正的名字（`sitai_<档案 id>_difficulty_<档位>`）；`player_effects` 为空时不用。
+    modifier: str
+    player_effects: tuple[Param, ...]
+    player_why: str
+
+    @property
+    def setting(self) -> str:
+        return f"setting_{self.rule_key}_{self.id}"
+
+
+@dataclass(frozen=True, slots=True)
+class Difficulty:
+    """难度三档（**mod 级**：全仓只允许一份，照 `[tempo]` 的口径）。"""
+
+    key: str
+    why: str
+    tiers: tuple[DifficultyTier, ...]
+    owner_id: str
+    #: 玩家侧修正的图标（原版路径，闸门 ② 会核它存在）。
+    icon: str = ""
+
+    def tier(self, tier_id: str) -> DifficultyTier:
+        return next(item for item in self.tiers if item.id == tier_id)
+
+    def tiers_with_player_effects(self) -> tuple[DifficultyTier, ...]:
+        """有玩家侧修正的档位（`一视同仁` 按设计为空 —— 默认不加戏）。"""
+        return tuple(item for item in self.tiers if item.player_effects)
+
+    @property
+    def rule_file(self) -> str:
+        return f"common/game_rules/sitai_{self.owner_id}_difficulty.txt"
+
+    @property
+    def modifier_file(self) -> str:
+        return f"common/static_modifiers/sitai_{self.owner_id}_difficulty.txt"
 
 
 @dataclass(frozen=True, slots=True)
@@ -357,6 +436,8 @@ class Archive:
     #: P11 的三行解释：``(槽位, 本地化键, why)``。**可空** —— 没写 `[panel]` 的档案
     #: 不生成这三个键（缺省不是"生成一个空行"，见 :data:`PANEL_LINES`）。
     panel: tuple[tuple[str, str, str], ...] = ()
+    #: 难度三档（**mod 级**：0 份或 2 份都当场报错，照 `[tempo]` 的口径）。
+    difficulty: Difficulty | None = None
 
     @property
     def effect_file(self) -> str:
@@ -407,6 +488,13 @@ def archive_files(archive: Archive) -> tuple[str, ...]:
         out.append(archive.defines_file)
     if archive.inputs is not None:
         out.append(archive.inputs_file)
+    if archive.difficulty is not None:
+        # 难度三档的两个产物（照 `[tempo]` 的口径按**声明它的档案**命名）。
+        # ⚠️ 条件必须与 `_build_one` 里完全一致：修正文件在"没有任何档位带玩家侧修正"
+        # 时**不产出** —— 这里多列一个，闸门 ④/⑤ 会报"产物读不到"（实测踩过）。
+        out.append(archive.difficulty.rule_file)
+        if archive.difficulty.tiers_with_player_effects():
+            out.append(archive.difficulty.modifier_file)
     out.extend(archive.loc_file(lang) for lang in sorted(LANGUAGES))
     out.extend(archive.card_file(card) for card in archive.cards)
     return tuple(out)
@@ -816,6 +904,23 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
             key=reason_key, why=reason_entry.why, values=merged
         )
 
+    # `[difficulty]`（可选表，**mod 级**）：难度三档（阶段 6 / 契约 J5）。
+    # 与 `[tempo]` 同一口径：全仓恰好一份，校验交给 `_check_difficulty`。
+    difficulty: Difficulty | None = None
+    if "difficulty" in data:
+        raw = _require_table(data["difficulty"], f"{source}:difficulty")
+        difficulty = Difficulty(
+            key=_require_text(raw, "key", f"{source}:difficulty"),
+            why=_why(raw, f"{source}:difficulty"),
+            # 产物与修正名都按**声明它的那份档案**命名（照 `[tempo]` 的口径：
+            # 它是全局的，档案只是它的来源）。
+            owner_id=_require_text(archive, "id", "archive"),
+            icon=_require_text(raw, "icon", f"{source}:difficulty"),
+            tiers=_parse_difficulty_tiers(
+                raw, source, _require_text(archive, "id", "archive"), localization
+            ),
+        )
+
     cards: list[Card] = []
     for index, item in enumerate(_entries(cards_raw, "items", "cards")):
         where = f"cards.items[{index}]"
@@ -865,6 +970,7 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
         whys=whys,
         inputs=inputs,
         panel=tuple(panel),
+        difficulty=difficulty,
     )
     _check_namespace(parsed)
     return parsed
@@ -946,6 +1052,40 @@ def _comment(*lines: str) -> list[Node]:
     return out
 
 
+def _difficulty_branches(archive: Archive) -> list[Node]:
+    """冲击效果里"给玩家追加难度修正"的那几个 `if` 块（没有难度表就返回空）。
+
+    判据用 `is_ai = no` + `has_game_rule = <设置名>`：前者保证只碰玩家，
+    后者是原版同款读法。时长**复用压力修正的 `years`**（同一段窗口，
+    否则会出现"压力还在、难度修正没了"的半截状态）。
+    """
+    difficulty = archive.difficulty
+    if difficulty is None:
+        return []
+    years = next((item for item in archive.pressure.params if item.key == "years"), None)
+    if years is None:
+        # 没有 years 就没法对齐窗口 ⇒ 宁可不生成（生成一条"永久"的难度修正
+        # 会和压力修正的寿命错开，那是最难查的一类不一致）。闸门 ⑤ 会看到
+        # "数据源声明了档位、产物里没有分支"吗？不会 —— 所以这里当场报错。
+        raise DataError(
+            f"{archive.source}:difficulty 需要 [pressure.params] 里有 `years`"
+            "（难度修正与压力修正必须同一段窗口，见 why）"
+        )
+    return [
+        (
+            "if",
+            [
+                ("limit", ["is_ai = no", f"has_game_rule = {tier.setting}"]),
+                (
+                    "add_modifier",
+                    [f"name = {tier.modifier}", f"years = {num(years.amount)}"],
+                ),
+            ],
+        )
+        for tier in difficulty.tiers_with_player_effects()
+    ]
+
+
 def effects_text(archive: Archive) -> str:
     """冲击记账效果：写记忆变量 + 挂压力修正（有第二处理段时再附一个效果）。"""
     memory = archive.memory
@@ -970,7 +1110,7 @@ def effects_text(archive: Archive) -> str:
             "由谁写、写在哪，见本档案 why 与数据源（每个数字都带依据，P10）。",
             f"变量 {memory.variable}；压力修正 {archive.pressure.name}。",
         ),
-        (memory.effect, [set_variable, add_modifier]),
+        (memory.effect, [set_variable, add_modifier, *_difficulty_branches(archive)]),
     ]
     inputs = archive.inputs
     if inputs is not None:
@@ -1040,6 +1180,78 @@ def modifier_text(archive: Archive) -> str:
         ),
     ]
     return "\n".join(_flatten(lines))
+
+
+def difficulty_rule_text(difficulty: Difficulty) -> str:
+    """难度三档的 `game_rules` 文件（阶段 6 / 契约 J5）。
+
+    机制只用**原版有先例**的那一种：设置块里写 `flag = <设置名>`，脚本侧用
+    `has_game_rule = <设置名>` 读（原版 `00_default_strategy.txt:4601/7096/…` 就是这么读的）。
+    `game_rules.md:5` 还写了 `apply_modifier`，但 1.14.3 的 `common/game_rules/` 里
+    **0 处使用**（实测）—— 先例为零的写法不当承重墙。
+    """
+    settings: list[Node] = [(tier.setting, [f"flag = {tier.setting}"]) for tier in difficulty.tiers]
+    return "\n".join(
+        _flatten(
+            [
+                GEN_HEADER,
+                "",
+                *_comment(
+                    f"难度三档（{difficulty.why}）",
+                    "三档是**对外契约**（01a J 节第 5 条）：史实友好 / 一视同仁（默认）/ 无情。",
+                    "默认档**不加戏**：这个 mod 的主张是「处境对谁都成立」，",
+                    "默认给玩家开小灶会让「世界活了」变成「世界对我温柔了」。",
+                    "读取方式：脚本侧 `has_game_rule = <设置名>`（原版同款用法）。",
+                ),
+                (
+                    difficulty.key,
+                    [
+                        f"default = {difficulty.tier(DIFFICULTY_DEFAULT).setting}",
+                        "",
+                        *settings,
+                    ],
+                ),
+            ]
+        )
+    )
+
+
+def difficulty_modifier_text(difficulty: Difficulty) -> str:
+    """难度档位给**玩家**追加的修正（`一视同仁` 按设计为空 ⇒ 这里可能没有内容）。
+
+    为什么改的是玩家侧而不是"世界状态"：世界状态对谁都成立；难度调的是**玩家肩上
+    那一份**（`01a:240`："玩家被压死 → 难度分档"）。
+    """
+    tiers = difficulty.tiers_with_player_effects()
+    if not tiers:
+        return ""
+    blocks: list[Node] = []
+    for tier in tiers:
+        blocks += [
+            "",
+            *_comment(f"{tier.id}：{tier.player_why}"),
+            (
+                tier.modifier,
+                [
+                    f"icon = {difficulty.icon}",
+                    *(f"{item.key} = {num(item.amount)}" for item in tier.player_effects),
+                ],
+            ),
+        ]
+    return "\n".join(
+        _flatten(
+            [
+                GEN_HEADER,
+                "",
+                *_comment(
+                    f"难度档位的玩家侧修正（{difficulty.why}）",
+                    "由冲击效果按 `has_game_rule` 施加：玩家命中哪一档，就挂哪一条。",
+                    "每个数字的依据见档案文档（P10）。",
+                ),
+                *blocks,
+            ]
+        )
+    )
 
 
 def journal_text(archive: Archive) -> str:
@@ -1286,6 +1498,110 @@ def doc_text(archive: Archive) -> str:
 
 
 # ── 编译 ────────────────────────────────────────────────────
+def _parse_difficulty_tiers(
+    raw: Mapping[str, object],
+    source: str,
+    owner_id: str,
+    localization: list[Localization],
+) -> tuple[DifficultyTier, ...]:
+    """解析三档，并把三档的本地化键（`setting_*` / `setting_*_desc`）收进 loc 表。
+
+    三条硬校验：**档位集合必须正好是契约那三档**、**规则键要有 loc**、
+    **每档都要有中英文名与说明**（缺一个玩家就会在开局规则界面看到裸键）。
+    """
+    tiers_raw = _require_table(raw.get("tiers"), f"{source}:difficulty.tiers")
+    # 容器表自己也有 `why`（审计要求每张非根表都带依据）—— 它不是档位，先剔掉再比集合。
+    unknown = sorted(set(tiers_raw) - set(DIFFICULTY_TIERS) - {"why"})
+    missing = [name for name in DIFFICULTY_TIERS if name not in tiers_raw]
+    if unknown or missing:
+        raise DataError(
+            f"{source}:difficulty.tiers 必须正好是 {list(DIFFICULTY_TIERS)}"
+            f"（多出来：{unknown or '无'}；缺：{missing or '无'}）—— 三档是对外契约，"
+            "名字由 `DIFFICULTY_TIERS` 钉住，数据源只能在三档里填内容"
+        )
+    rule_key = _require_text(raw, "key", f"{source}:difficulty")
+    if not rule_key.startswith("sitai_"):
+        raise DataError(
+            f"{source}:difficulty.key 必须以 sitai_ 开头（F7 命名空间），现在 {rule_key!r}"
+        )
+    if f"rule_{rule_key}" not in {item.key for item in localization}:
+        raise DataError(
+            f"{source}:difficulty 需要一条 `rule_{rule_key}` 本地化（规则名要在界面上显示）"
+        )
+    tiers: list[DifficultyTier] = []
+    for tier_id in DIFFICULTY_TIERS:
+        where = f"{source}:difficulty.tiers.{tier_id}"
+        item = _require_table(tiers_raw[tier_id], where)
+        labels: dict[str, str] = {}
+        descs: dict[str, str] = {}
+        for lang in LANGUAGES:
+            labels[lang] = _require_text(item, f"label_{lang}", where)
+            descs[lang] = _require_text(item, f"desc_{lang}", where)
+        player_effects = _params(item, "player_effects", where) if "player_effects" in item else ()
+        tier = DifficultyTier(
+            id=tier_id,
+            rule_key=rule_key,
+            label=labels,
+            desc=descs,
+            why=_why(item, where),
+            modifier=f"sitai_{owner_id}_difficulty_{tier_id}",
+            player_effects=player_effects,
+            player_why=_require_text(item, "player_why", where) if player_effects else "",
+        )
+        tiers.append(tier)
+        localization.append(
+            Localization(
+                key=tier.setting, why=tier.why, values={lang: labels[lang] for lang in LANGUAGES}
+            )
+        )
+        localization.append(
+            Localization(
+                key=f"{tier.setting}_desc",
+                why=tier.why,
+                values={lang: descs[lang] for lang in LANGUAGES},
+            )
+        )
+        if player_effects:
+            # 修正名要在国家的修正列表里显示 —— 缺了它就是裸键（闸门 ② 会判红）。
+            localization.append(
+                Localization(
+                    key=tier.modifier,
+                    why=tier.player_why,
+                    values={
+                        lang: f"{labels[lang]}{DIFFICULTY_MODIFIER_SUFFIX[lang]}"
+                        for lang in LANGUAGES
+                    },
+                )
+            )
+    return tuple(tiers)
+
+
+def _check_difficulty(archives: Sequence[Archive]) -> Difficulty | None:
+    """`[difficulty]` 是全仓一份的 **mod 级**表：2 份当场报错；**0 份返回 None**。
+
+    0 份为什么不报错：三档是对外契约（`01a` J5），但"发布的那一份必须有"属于**闸门**
+    的判据（`modguard.gate_determinism`），不该让每个最小夹具都背一张 mod 级契约表 ——
+    这条检查第一次写进编译期时，仓库里 61 条与难度无关的用例当场红。
+    """
+    owners = [archive for archive in archives if archive.difficulty is not None]
+    if not owners:
+        # ⚠️ **0 份不在这里报错**（与 `[tempo]` 的政策不同，理由有实测依据）：
+        # "发布的那一份必须有难度表"由闸门 ⑤ 看守（`modguard.gate_determinism`），
+        # 因为编译期硬约束的实际效果是"每个最小夹具都要带一张 mod 级契约表" ——
+        # 加这条检查时仓库里 61 条用例当场红，而它们测的都不是难度。
+        # 写了两份仍然是数据源自相矛盾，编译期就报（下面那条）。
+        raise _NoDifficultyError
+    if len(owners) > 1:
+        raise DataError(
+            "这些数据源都声明了 [difficulty]："
+            + "、".join(archive.source for archive in owners)
+            + " —— 规则名与设置名是全局的，全仓只允许一份（改哪一份而不是两份都留）"
+        )
+    found = owners[0].difficulty
+    assert found is not None  # 上面已经筛过
+    return found
+
+
 def _check_tempo(archives: Sequence[Archive]) -> None:
     """`[tempo]` 是全仓一份的 **mod 级**表：0 份或 2 份都当场报错（schema v1）。
 
@@ -1330,6 +1646,12 @@ def _build_one(archive: Archive) -> Built:
         files[archive.defines_file] = defines_text(archive)
     if archive.inputs is not None:
         files[archive.inputs_file] = inputs_text(archive)
+    if archive.difficulty is not None:
+        # 两个产物都按**声明它的那份档案**命名（照 `[tempo]` 的口径）。
+        files[archive.difficulty.rule_file] = difficulty_rule_text(archive.difficulty)
+        modifiers = difficulty_modifier_text(archive.difficulty)
+        if modifiers:
+            files[archive.difficulty.modifier_file] = modifiers
     for lang in sorted(LANGUAGES):
         files[archive.loc_file(lang)] = loc_text(archive, lang)
     for card in archive.cards:
@@ -1359,6 +1681,10 @@ def build_all(archives: Sequence[Archive]) -> Built:
     if not archives:
         raise DataError("一份档案都没有：产物不能凭空生成（数据源目录是空的？）")
     _check_tempo(archives)
+    # 没有难度表不是编译错误：契约项在位由 `test_modgen_difficulty.py` 的
+    # 「真实数据源」用例看守（见 `_check_difficulty` 的说明）。
+    with suppress(_NoDifficultyError):
+        _check_difficulty(archives)
     _check_game_version(archives)
 
     files: dict[str, str] = {}
@@ -1559,6 +1885,33 @@ def facts(archive: Archive) -> list[tuple[str, str]]:
         out.extend(
             (f"defines.{archive.tempo.block}.{p.key}", num(p.amount)) for p in archive.tempo.keys
         )
+    difficulty = archive.difficulty
+    if difficulty is not None:
+        out.append(
+            (
+                f"gamerule.{difficulty.key}.default",
+                difficulty.tier(DIFFICULTY_DEFAULT).setting,
+            )
+        )
+        out.extend(
+            (f"gamerule.{difficulty.key}.setting.{tier.setting}.flag", tier.setting)
+            for tier in difficulty.tiers
+        )
+        for tier in difficulty.tiers_with_player_effects():
+            out.append((f"modifier.{tier.modifier}.icon", difficulty.icon))
+            out.extend(
+                (f"modifier.{tier.modifier}.{item.key}", num(item.amount))
+                for item in tier.player_effects
+            )
+        # 冲击效果里那几个 `if` 分支（按出现顺序编号；顺序就是 `DIFFICULTY_TIERS` 的顺序）
+        years = next((item for item in archive.pressure.params if item.key == "years"), None)
+        for index, tier in enumerate(difficulty.tiers_with_player_effects()):
+            prefix = f"effects.{archive.memory.effect}.if[{index}]"
+            out.append((f"{prefix}.limit.is_ai", "no"))
+            out.append((f"{prefix}.limit.has_game_rule", tier.setting))
+            out.append((f"{prefix}.add_modifier.name", tier.modifier))
+            if years is not None:
+                out.append((f"{prefix}.add_modifier.years", num(years.amount)))
     if archive.inputs is not None:
         inputs = archive.inputs
         out.append((f"effects.{inputs.effect}.add_modifier.name", inputs.name))
@@ -1608,6 +1961,45 @@ def _facts_effects(rel: str, text: str) -> list[tuple[str, str]]:
             out.extend(
                 (f"effects.{top.key}.{label}.{item.key}", _scalar(item.value))
                 for item in (inner.assignments() if inner else [])
+            )
+        # 难度分支：`if = { limit = { … } add_modifier = { … } }`，按出现顺序编号。
+        for index, item in enumerate(entry for entry in block.assignments() if entry.key == "if"):
+            inner = _block_of(item)
+            if inner is None:
+                continue
+            limit = _block_of(inner.first("limit"))
+            out.extend(
+                (f"effects.{top.key}.if[{index}].limit.{clause.key}", _scalar(clause.value))
+                for clause in (limit.assignments() if limit else [])
+            )
+            add = _block_of(inner.first("add_modifier"))
+            out.extend(
+                (f"effects.{top.key}.if[{index}].add_modifier.{field.key}", _scalar(field.value))
+                for field in (add.assignments() if add else [])
+            )
+    return out
+
+
+def _facts_gamerules(rel: str, text: str) -> list[tuple[str, str]]:
+    """`common/game_rules/*.txt` → `gamerule.<规则键>.*`。
+
+    规则块里每个 `setting_* = { flag = … }` 记一条；`default = …` 记一条。
+    """
+    out: list[tuple[str, str]] = []
+    for top in _top(rel, text):
+        block = _block_of(top)
+        if block is None:
+            continue
+        default = block.first("default")
+        if default is not None:
+            out.append((f"gamerule.{top.key}.default", _scalar(default.value)))
+        for item in block.assignments():
+            if not item.key.startswith("setting_"):
+                continue
+            inner = _block_of(item)
+            flag = inner.first("flag") if inner is not None else None
+            out.append(
+                (f"gamerule.{top.key}.setting.{item.key}.flag", _scalar(flag.value) if flag else "")
             )
     return out
 
@@ -1699,6 +2091,7 @@ _FACT_READERS: dict[tuple[str, str], Callable[[str, str], list[tuple[str, str]]]
     ("common", "static_modifiers"): _facts_modifier,
     ("common", "journal_entries"): _facts_journal,
     ("common", "defines"): _facts_defines,
+    ("common", "game_rules"): _facts_gamerules,
     ("common", "ai_strategies"): _facts_card,
     **{("localization", lang): _facts_loc for lang in LANGUAGES},
 }
