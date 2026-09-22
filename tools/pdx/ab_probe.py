@@ -99,11 +99,16 @@ class ProbeTarget:
     archive_id: str
 
 
-def load_target() -> ProbeTarget | None:
+def load_target(archive_id: str | None = None) -> ProbeTarget | None:
     """从仓库的数据源读出探针要盯的档案；**读不到就给 ``None``**（不编一个假的）。
 
     读不到时调用方必须报错（P13）：用一个猜出来的国家名生成探针，
     会让"这个探针在盯谁"变成一件看不出来的错事。
+
+    ``archive_id`` 是**显式选档案**（阶段 5 起 `mod/data/` 里有多份档案，
+    探针一次只盯一份）。不给就按数据源的加载顺序取第一份 —— 顺序由
+    `modgen.load_all()` 决定（按文件名排序），**探针文本里会写明它盯的是谁**，
+    所以"默认是哪一份"是可复核的，不用记在脑子里。
     """
     from . import modgen  # noqa: PLC0415  -- 避免 import 期把 modgen 的依赖链拉进来
 
@@ -113,7 +118,17 @@ def load_target() -> ProbeTarget | None:
         return None
     if not archives:
         return None
-    first = archives[0]
+    if archive_id is None:
+        first = archives[0]
+    else:
+        picked = [archive for archive in archives if archive.id == archive_id]
+        if not picked:
+            # 点名了却没有 ⇒ **报错**，不要"回落到第一份"（那会让人以为探针盯的是 A，
+            # 实际盯的是 B —— 这正是这类工具最容易出的静默错误）。
+            raise KeyError(
+                f"数据源里没有档案 {archive_id!r}；现有：{'、'.join(a.id for a in archives)}"
+            )
+        first = picked[0]
     return ProbeTarget(
         dir_name="-".join(archive.id for archive in archives),
         subject=first.country,
@@ -141,10 +156,34 @@ class ArmStep:
     note: str
 
 
-#: 臂阶梯（**唯一的定义处**：探针文本、分析器的角色表、文档都从这里派生）。
+def ladder_for(target: ProbeTarget) -> tuple[ArmStep, ...]:
+    """臂阶梯（**唯一的定义处**）：从 ``target`` 派生出要调的效果名。
+
+    为什么必须按 target 派生（2026-09-23 修）：阶段 5 起 `mod/data/` 里有多份档案，
+    而这里原来读的是模块级的 `SHOCK_EFFECT` / `INPUT_EFFECT`（= 俄国那两个效果名）。
+    于是"探针盯奥地利、却去调俄国的效果"—— 生成出来的文本**看不出来错**，
+    跑起来只会得到"什么都没发生"。角色名与起始月与档案无关（A/B/B2 恒为 1/13/37），
+    所以 `ROLES` / `ARM_START` 仍然是模块级常量。
+    """
+    return (
+        ArmStep("A", 1, None, "对照组：什么都不做"),
+        ArmStep(
+            "B", 13, target.shock_effect, f"处理①：{target.archive_id} 的冲击（变量 + 压力修正）"
+        ),
+        ArmStep(
+            "B2",
+            37,
+            target.input_effect or None,
+            "处理②：追加改革侧输入（工业家/知识界政治力量）",
+        ),
+    )
+
+
+#: 默认阶梯（= 默认 target 那一份）。**生成文本里用的是 :func:`ladder_for`**；
+#: 这个常量留给"只看角色与月份"的下游（分析器的 `ROLES` / `ARM_START` 由它派生）。
 LADDER: tuple[ArmStep, ...] = (
     ArmStep("A", 1, None, "对照组：什么都不做"),
-    ArmStep("B", 13, SHOCK_EFFECT, "处理①：战败冲击（变量 + 压力修正）"),
+    ArmStep("B", 13, SHOCK_EFFECT, "处理①：冲击（变量 + 压力修正）"),
     ArmStep(
         "B2",
         37,
@@ -307,14 +346,18 @@ VANILLA_SUITES = ("germany", "ip3", "italy", "springtime")
 CONVERGE_DATE = "1836.1.5"
 
 
-def effects_text() -> str:
+def effects_text(target: ProbeTarget) -> str:
     """三个效果：武装阶梯、月度走一格、以及（决议用的）重新武装。
 
     角色仍然不是"装哪个探针"决定的 —— 但也不再是"点哪个决议"：**点一次就够**，
     之后由阶梯自己按月份换臂（这正是"一次点击换整条阶梯的数据"）。
     """
+    ladder = ladder_for(target)
+    selfarm = tuple(
+        (step.at_month, step.note, step.effect) for step in ladder[1:] if step.effect is not None
+    )
     arms: list[str] = []
-    for index, step in enumerate(LADDER[1:], start=1):
+    for index, step in enumerate(ladder[1:], start=1):
         arms.append(
             f"{TAB * 2}# 第 {step.at_month} 月起 → {step.note}\n"
             f"{TAB * 2}if = {{\n"
@@ -344,7 +387,7 @@ def effects_text() -> str:
             f"{TAB * 3}{effect} = yes\n"
             f"{TAB * 2}}}"
         )
-        for index, (month, note, effect) in enumerate(SELFARM, start=1)
+        for index, (month, note, effect) in enumerate(selfarm, start=1)
     )
     return (
         f"{GEN_HEADER}"
@@ -354,7 +397,7 @@ def effects_text() -> str:
         f"#    `No on_action scripted with tag … cannot link`（阶段 2 实测：分组一次没跑、\n"
         f"#    白跑一整局）。钩子/包装在 `zz_probe_ab_on_actions.txt` 里。\n"
         f"#\n"
-        f"# ① `zz_probe_ab_arm`：**点一次决议**武装整条阶梯（由决议调用，作用于俄罗斯）。\n"
+        f"# ① `zz_probe_ab_arm`：**点一次决议**武装整条阶梯（由决议调用，作用于 {target.subject}）。\n"
         f"#    可重复调用 —— 每点一次就把月份与阶段清零重跑（同一存档里重跑一局的做法）。\n"
         f"# ② `zz_probe_ab_selfarm`：**不点决议**的武装路径（`is_ai = yes` 时按月份自动走）。\n"
         f"#    为什么必须有它：观察者局**没有玩家国家**，决议永远点不到 —— 阶段 3 的臂阶梯\n"
@@ -362,7 +405,7 @@ def effects_text() -> str:
         f"#    所以玩家自己掌权时不会抢手（玩家局仍走决议那条路）。\n"
         f"# ③ `zz_probe_ab_ladder`：每月走一格。**幂等**是硬要求：`{STAGE_VAR}` 单调递增，\n"
         f"#    每个效果只施加一次；不拿「有没有那个修正」当判据（会被别的系统碰到）。\n"
-        f"# ④ `{SHOCK_EFFECT}` / `{INPUT_EFFECT}` 在**真 mod**里（`v3 modgen` 生成），\n"
+        f"# ④ `{target.shock_effect}` / `{target.input_effect}` 在**真 mod**里（`v3 modgen` 生成），\n"
         f"#    探针只调用它们 —— 这样实验用的世界状态与档案本身是同一份定义。\n"
         f"zz_probe_ab_arm = {{\n"
         f'{TAB}debug_log = "ZZPROBE AB;RUN;A"\n'
@@ -493,7 +536,7 @@ def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
                         f"{tab * 3}# ③ 两处输入到底有没有落到这个国家身上（自检用）",
                         state_line("SHOCK", f"has_variable = {target.shock_variable}", "yes", "no"),
                         "",
-                        state_line("INPUT", f"has_modifier = {INPUT_MODIFIER}", "yes", "no"),
+                        state_line("INPUT", f"has_modifier = {target.input_modifier}", "yes", "no"),
                         "",
                         f"{tab * 3}# ④ 当前挂着的政治牌（策略层读数；B53：牌才是闸门）",
                         strategies,
@@ -826,7 +869,7 @@ def build(*, game: Path | None = None, target: ProbeTarget | None = None) -> Bui
         )
     vanilla = ai_surface.read_cards(game)
     files = {
-        "common/scripted_effects/zz_probe_ab_effects.txt": effects_text(),
+        "common/scripted_effects/zz_probe_ab_effects.txt": effects_text(chosen),
         "common/on_actions/zz_probe_ab_on_actions.txt": on_actions_text(vanilla, chosen),
         "common/decisions/zz_probe_ab_decisions.txt": decisions_text(chosen),
         SUITE_REL: suite_text(chosen),
@@ -926,6 +969,7 @@ __all__ = [
     "decisions_text",
     "deploy",
     "effects_text",
+    "ladder_for",
     "loc_text",
     "loc_text_en",
     "metadata_text",

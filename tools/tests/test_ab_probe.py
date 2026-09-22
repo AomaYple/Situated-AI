@@ -39,6 +39,13 @@ def _files() -> dict[str, str]:
     return ab_probe.build(game=_EMPTY_GAME).files
 
 
+def _target() -> ab_probe.ProbeTarget:
+    """当前探针实际盯的那份档案（**从数据源读**）—— 断言一律对着它，不写死国家名。"""
+    target = ab_probe.load_target()
+    assert target is not None, "读不到 mod/data 里的档案"
+    return target
+
+
 def _code(text: str) -> str:
     """去掉注释行后的**代码**（注释里会解释规则，不该被当成实现来断言）。"""
     return "\n".join(line for line in text.splitlines() if not line.strip().startswith("#"))
@@ -113,7 +120,8 @@ def test_阶梯按月推进且带阶段守卫生效一次() -> None:
     code = _code(text)
     ladder = code.split("zz_probe_ab_ladder = {")[1]
     assert f"has_variable = {ab_probe.STAGE_VAR}" in ladder  # 没被武装就不动
-    for index, step in enumerate(ab_probe.LADDER[1:], start=1):
+    target = _target()
+    for index, step in enumerate(ab_probe.ladder_for(target)[1:], start=1):
         assert f"var:{ab_probe.STAGE_VAR} <= {index}" in ladder
         assert f"var:{ab_probe.MONTH_VAR} >= {step.at_month}" in ladder
         assert f"ZZPROBE AB;RUN;{step.role}" in ladder
@@ -146,9 +154,12 @@ def test_自励只对AI生效且让决议优先() -> None:
 
 def test_自励的每一格都幂等且按月份排序() -> None:
     selfarm = _code(_files()[_EFFECTS]).split("zz_probe_ab_selfarm = {")[1]
-    months = [month for month, _note, _effect in ab_probe.SELFARM]
+    target = _target()
+    steps = [step for step in ab_probe.ladder_for(target)[1:] if step.effect]
+    months = [step.at_month for step in steps]
     assert months == sorted(months), "自励的月份必须单调，否则顺序写反就读不懂"
-    for index, (month, _note, effect) in enumerate(ab_probe.SELFARM, start=1):
+    for index, step in enumerate(steps, start=1):
+        month, effect = step.at_month, step.effect
         assert f"var:{ab_probe.SELFARM_VAR} < {index}" in selfarm
         assert f"var:{ab_probe.MONTH_VAR} >= {month}" in selfarm
         assert f"{effect} = yes" in selfarm
@@ -251,13 +262,14 @@ def test_自报里不做整体缩进重排() -> None:
 
 def test_两处输入各调各的效果() -> None:
     """B 段只调冲击、B2 段才调改革侧输入 —— 分开才能把差分归因到某一处。"""
+    target = _target()
     ladder = _code(_files()[_EFFECTS]).split("zz_probe_ab_ladder = {")[1]
     b_block = ladder.split('RUN;B"')[1].split('RUN;B2"')[0]
     b2_block = ladder.split('RUN;B2"')[1]
-    assert f"{ab_probe.SHOCK_EFFECT} = yes" in b_block
-    assert f"{ab_probe.INPUT_EFFECT} = yes" not in b_block
-    assert f"{ab_probe.INPUT_EFFECT} = yes" in b2_block
-    assert f"{ab_probe.SHOCK_EFFECT} = yes" not in b2_block
+    assert f"{target.shock_effect} = yes" in b_block
+    assert f"{target.input_effect} = yes" not in b_block
+    assert f"{target.input_effect} = yes" in b2_block
+    assert f"{target.shock_effect} = yes" not in b2_block
 
 
 # ── 决议：一个就够 ───────────────────────────────────────────
@@ -268,7 +280,7 @@ def test_只有一个决议且远程作用于主角国家() -> None:
     defined = re.findall(r"(?m)^(\w+) = \{", code)
     assert defined == ["zzprobe_ab_apply"], "只该有一个决议（点一次武装整条阶梯）"
     assert "is_shown = { always = yes }" in code  # 对任何玩家可见（玩家演旁观者）
-    assert f"c:{ab_probe.SUBJECT} ?= {{" in code  # 效果**远程**作用于主角国家
+    assert f"c:{_target().subject} ?= {{" in code  # 效果**远程**作用于主角国家
     assert "ai_chance = { value = 0 }" in code
     assert "zz_probe_ab_arm = yes" in code
 
@@ -303,19 +315,20 @@ def test_阶梯排在自报之前() -> None:
 
 
 def test_行为层与策略层都记了且都只在主角国家() -> None:
+    target = _target()
     text = _files()[_ON_ACTIONS]
-    assert "has_journal_entry = je_sitai_ru_reform_window" in text  # 行为层①
+    assert f"has_journal_entry = {target.journal_entry}" in text  # 行为层①
     for law in ab_probe.LAWS:  # 行为层②
         assert f"has_law = law_type:{law}" in text
     for short in ("POLI", "ADMI", "DIPL"):  # 策略层
         assert f"ZZPROBE AB;{short};" in text
     # 策略层也要在守卫内（否则全世界每月刷 3 行日志）
-    assert text.index(f"c:{ab_probe.SUBJECT} ?= this") < text.index("ZZPROBE AB;POLI;")
+    assert text.index(f"c:{target.subject} ?= this") < text.index("ZZPROBE AB;POLI;")
     # 玩家是谁必须能被诊断出来（开错国家时开局一分钟就知道）
     assert "ZZPROBE AB;PLAYER;yes;" in text
     # 两处输入各一行"在/不在"自检（B2 段少了它，第③节的无差分会被误读）
-    assert f"has_variable = {ab_probe.SHOCK_VAR}" in text
-    assert f"has_modifier = {ab_probe.INPUT_MODIFIER}" in text
+    assert f"has_variable = {target.shock_variable}" in text
+    assert f"has_modifier = {target.input_modifier}" in text
     for kind in ("SHOCK", "INPUT"):
         assert f"ZZPROBE AB;{kind};yes;" in text
         assert f"ZZPROBE AB;{kind};no;" in text
@@ -329,10 +342,11 @@ def test_行为层与策略层都记了且都只在主角国家() -> None:
 
 def test_套件判据贴合我们的两条判据() -> None:
     """success = 开窗 / 换法；fail = 到日期仍未发生（不是"跳过"）。"""
+    target = _target()
     text = _files()[ab_probe.SUITE_REL]
-    assert "has_journal_entry = je_sitai_ru_reform_window" in text
+    assert f"has_journal_entry = {target.journal_entry}" in text
     assert "NOT = { has_law = law_type:law_serfdom }" in text
-    assert f"c:{ab_probe.SUBJECT} ?= {{" in text
+    assert f"c:{target.subject} ?= {{" in text
     assert text.count("run_count = 1") == 2
     assert text.count("acceptable_fail_rate = 0.0") == 2
     assert text.count("game_date >") == 2
@@ -426,7 +440,7 @@ def test_目标从数据源读出来() -> None:
     assert target is not None
     archives = modgen.load_all()
     first = archives[0]
-    assert target.subject == first.country == "RUS"
+    assert target.subject == first.country, "默认目标 = 数据源里的第一份档案"
     assert target.journal_entry == first.journal_entry.name
     assert target.shock_effect == first.memory.effect
     assert target.shock_variable == first.memory.variable
@@ -434,18 +448,35 @@ def test_目标从数据源读出来() -> None:
     assert target.dir_name == "-".join(archive.id for archive in archives)
 
 
+def test_可以点名要哪一份档案() -> None:
+    """阶段 5 起 `mod/data/` 里有多份档案 ⇒ 探针必须能**显式选一份**。
+
+    点名了却没有就**报错**，不许"回落到第一份" —— 那会让人以为探针盯的是 A、实际盯的是 B。
+    """
+    from pdx import modgen
+
+    wanted = modgen.load_all()[0].id
+    picked = ab_probe.load_target(archive_id=wanted)
+    assert picked is not None
+    assert picked.archive_id == wanted
+    with pytest.raises(KeyError, match="没有档案"):
+        ab_probe.load_target(archive_id="zzz_不存在")
+
+
 def test_生成的探针里不含写死的国家名() -> None:
-    """判据是**反面**：产物里出现 `c:RUS` 就说明有一条路没走 target。"""
+    """判据是**反面**：产物里出现别的国家的 tag 就说明有一条路没走 target。"""
+    target = _target()
     files = ab_probe.build(game=_EMPTY_GAME).files
-    subject = ab_probe.load_target().subject
-    for rel, text in files.items():
-        if not rel.endswith((".txt", ".yml")):
-            continue
-        assert f"c:{subject}" in text or subject not in text, rel
-    # 效果名与 JE 名必须是**数据源里的那一份**
     on_actions = files[_ON_ACTIONS]
-    assert ab_probe.SHOCK_EFFECT.split("_shock")[0] in on_actions  # 同源前缀
-    assert "je_sitai_ru_reform_window" in on_actions
+    assert f"c:{target.subject}" in on_actions  # 守卫就是这一份档案的国家
+    assert f"has_journal_entry = {target.journal_entry}" in on_actions
+    # 自报用的判据必须是**数据源里的那一份**（变量名 / 修正名）
+    assert f"has_variable = {target.shock_variable}" in on_actions
+    assert f"has_modifier = {target.input_modifier}" in on_actions
+    # 要调的那两个效果名出现在阶梯里（`on_actions` 只负责挂钩与自报）
+    effects = files[_EFFECTS]
+    assert f"{target.shock_effect} = yes" in effects
+    assert f"{target.input_effect} = yes" in effects
 
 
 def test_造别的国家的探针只需换一个_target() -> None:

@@ -1,0 +1,9 @@
+﻿l_simp_chinese:
+# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+ je_sitai_cn_reform_window:0 "列强干涉：改革窗口"
+ je_sitai_cn_reform_window_reason:0 "洋人已经打穿了海口。条约与赔款在给国库放血，口岸开与不开已不由我们说了算，而那些断言此事绝不会发生的士绅与旧官僚，在朝堂上失了势。\n\n窗口已经打开：旧秩序威信扫地、朝廷合法性动摇之时，改革派可以把士绅们拦了一百年的东西推过去。等国家重新站稳，这扇窗就会关上。"
+ sitai_cn_intervention_pressure:0 "列强干涉余波"
+ sitai_cn_reform_inputs:0 "改革派抬头"
+ je_sitai_cn_reform_window_goal:0 "当前目标：趁窗口开着，把士绅与旧官僚一直拦着的那项改革推过去。"
+ je_sitai_cn_reform_window_pressure:0 "最大压力与阻力：压力 = 士绅与旧官僚失势 + 朝廷合法性受损 + 条约与赔款抽血；阻力 = 等国家重新自己站稳。"
+ je_sitai_cn_reform_window_last_change:0 "上次改主意的原因：因为列强干涉被记进了账 —— 是被迫开国这件事挪动了 AI 读到的那些输入。"

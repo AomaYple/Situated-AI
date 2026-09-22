@@ -210,7 +210,7 @@ class Tempo:
 
 @dataclass(frozen=True, slots=True)
 class Memory:
-    """战败记忆：变量 + 写它的效果。"""
+    """处境记忆：变量 + 写它的效果（谁把处境判成处境，由实验给结论）。"""
 
     variable: str
     effect: str
@@ -922,10 +922,10 @@ def effects_text(archive: Archive) -> str:
         GEN_HEADER,
         "",
         *_comment(
-            "战败求存 · 冲击记账（A 级：真实世界状态 —— 变量 + 修正，不占任何槽位）。",
-            "调用方：阶段 3 的 A/B 实验（B 组施加冲击）。本档案刻意**不绑 on_action**：",
-            "原版 on_war_end 只给 scope:actor / scope:target，不带胜负（00_code_on_actions.txt:7043），",
-            "挂错会把战胜方也记成战败 —— 「谁算战败」的判定留待实验给结论。",
+            f"{archive.title} · 冲击记账（A 级：真实世界状态 —— 变量 + 修正，不占任何槽位）。",
+            "调用方：A/B 实验（B 组显式施加冲击）。本档案刻意**不绑 on_action**："
+            "「什么才算这次冲击」的判定留给实验给结论，",
+            "由谁写、写在哪，见本档案 why 与数据源（每个数字都带依据，P10）。",
             f"变量 {memory.variable}；压力修正 {archive.pressure.name}。",
         ),
         (memory.effect, [set_variable, add_modifier]),
@@ -989,7 +989,7 @@ def modifier_text(archive: Archive) -> str:
         GEN_HEADER,
         "",
         *_comment(
-            f"战败压力（A 级）：{archive.title}。三条字段都照原版同族用法取档位，",
+            f"处境压力（A 级）：{archive.title}。每条字段都照原版同族用法取档位，",
             f"每条的依据见 {FILE_PREFIX}{archive.id}.md（由 why_report 生成）。",
         ),
         (

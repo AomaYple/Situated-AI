@@ -70,6 +70,8 @@ import statistics
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 
+from pdx import config
+
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
     from pathlib import Path
@@ -89,6 +91,19 @@ FRAME_GRANULARITY_AVAILABLE = False
 
 #: 逐帧/逐任务通道的产物文件名（实测落在**用户目录根**，不是 ``logs/``）。
 TICKTASK_SOURCE = "ticktask_timings.csv"
+
+
+def ticktask_default_path() -> Path:
+    """``ticktask_timings.csv`` 的默认落点（**用户目录根**）。
+
+    实测复核（2026-09-23，控制台里提交 ``dump_ticktask_timings``）：文件确实出现在
+    ``<用户目录>/ticktask_timings.csv``，573,732 B、14,792 行、表头与
+    :data:`TICKTASK_HEADER` 逐字一致 —— 所以"落点"这件事从"exe 明文推测"升级成实测。
+    写成函数而不是常量：``config.USERDIR`` 可以被 ``V3_USERDIR`` 覆盖，
+    导入时求值会把"测试里改了环境变量"变成无效操作。
+    """
+    return config.USERDIR / TICKTASK_SOURCE
+
 
 #: 逐帧耗时能否从 :data:`TICKTASK_SOURCE` 量出来。**实测：能**（有 ``frame`` 列）。
 #: ⚠️ 但 ``milliseconds`` 是**整数毫秒** ⇒ 单帧分辨率 1ms，
@@ -767,6 +782,7 @@ __all__ = [
     "summarize",
     "summarize_ticktask",
     "summary_lines",
+    "ticktask_default_path",
     "ticktask_frame_stats",
     "ticktask_summary_lines",
     "ticktask_task_stats",

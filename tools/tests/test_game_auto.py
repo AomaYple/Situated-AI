@@ -1812,6 +1812,142 @@ class TestClickClientPrevious:
         assert calls == ["move:10,20", "click"]
 
 
+class _FakeImage:
+    """`ImageGrab.grab` 的替身：`_grab` 只用到 `.convert("RGB")`。"""
+
+    def convert(self, _mode: str) -> _FakeImage:
+        return self
+
+
+def _grey_image(
+    mean: float, *, spread: float = 0.0, size: tuple[int, int] = (64, 64)
+) -> Image.Image:
+    """造一张均值/标准差可控的灰度图（拿来喂控制台 ROI 判据）。
+
+    `spread=0` 就是纯色（"空输入框"那种平的画面）；给一点 spread 就相当于"有字"。
+    """
+    width, height = size
+    raw = bytes(
+        max(0, min(255, int(mean + (spread if (x + y) % 2 == 0 else -spread))))
+        for y in range(height)
+        for x in range(width)
+    )
+    return Image.frombytes("L", size, raw)
+
+
+class TestConsoleChannel:
+    """游戏内控制台：**引擎自带的性能仪表只在控制台里**（backlog B66）。
+
+    这一组钉住三条实测结论：反引号开、合成的字进得去、**要按两次回车才提交**；
+    判据全部走画面 ROI（暗面板 = 开着、标准差 = 有没有字），不目测也不猜。
+    """
+
+    @staticmethod
+    def _stub_rois(
+        monkeypatch: pytest.MonkeyPatch, *, edit: Image.Image, output: Image.Image
+    ) -> None:
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+
+        def fake_screenshot(_hwnd: int, roi: tuple[float, float, float, float]) -> Image.Image:
+            # 输入框那个 ROI 落在 y≈0.53 以下；输出区在顶部 —— 用 y0 区分。
+            return edit if roi[1] > 0.5 else output
+
+        monkeypatch.setattr(ga, "screenshot", fake_screenshot)
+
+    def test_暗面板判为开着亮面板判为关着(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._stub_rois(monkeypatch, edit=_grey_image(35.0), output=_grey_image(30.0, spread=60.0))
+        assert ga.console_open(4242) is True
+        self._stub_rois(monkeypatch, edit=_grey_image(190.0), output=_grey_image(30.0, spread=60.0))
+        assert ga.console_open(4242) is False
+
+    def test_已经开着就不再按键(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._stub_rois(monkeypatch, edit=_grey_image(35.0), output=_grey_image(30.0, spread=60.0))
+        monkeypatch.setattr(ga, "press_chord", lambda *_a, **_k: pytest.fail("不该按键"))
+        assert ga.open_console(4242, force=True) is True
+
+    def test_关着就按反引号并且看结果(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """判据是 ROI 变暗，**不是**"我按了键" —— 按了没开就如实返回 False。"""
+        seen: list[str] = []
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(ga, "screenshot", lambda _h, roi=None: _grey_image(190.0))  # noqa: ARG005
+        monkeypatch.setattr(ga, "press_chord", lambda chord, **_k: seen.append(chord))
+        monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        assert ga.open_console(4242, force=True) is False
+        assert seen == [ga.CONSOLE_KEY]
+        assert ga.CONSOLE_KEY == "`", "开控制台的键是实测出来的反引号"
+
+    def test_提交要按两次回车(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """实测：按一次 44.9 → 44.0（字一个没少），按两次才 43.0 → 7.5（清空）。"""
+        keys: list[str] = []
+        inks = iter([244, 1654])
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(ga, "screenshot", lambda _h, roi=None: _grey_image(35.0))  # noqa: ARG005
+        monkeypatch.setattr(ga, "click_client", lambda _h, _x, _y, **_k: None)
+        monkeypatch.setattr(ga, "type_text", lambda text, **_k: keys.append(f"type:{text}"))
+        monkeypatch.setattr(ga, "press_key", lambda key, **_k: keys.append(key))
+        monkeypatch.setattr(ga, "press_chord", lambda *_a, **_k: None)
+        monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        monkeypatch.setattr(ga, "console_output_ink", lambda _h: next(inks))
+        monkeypatch.setattr(ga, "_roi_stats", lambda _h, _roi: (35.0, 7.5, 0))
+        assert ga.submit_console_command(4242, "dump_ticktask_timings", force=True) is True
+        assert keys[-3:] == [
+            "type:dump_ticktask_timings",
+            "enter",
+            "enter",
+        ], "敲完必须**连按两次**回车（第一次会被自动补全吃掉）"
+
+    def test_提交前先把焦点交给输入框(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """实测踩过：控制台关不掉 ⇒ 它整局挂着 ⇒ 点过速度表盘之后焦点就不在输入框了，
+        下一次敲的命令会**打进游戏**、`dump` 永远"没提交成功"。所以提交前必须先点它一下。"""
+        clicks: list[tuple[int, int]] = []
+        keys: list[str] = []
+        inks = iter([244, 1654])
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(ga, "screenshot", lambda _h, roi=None: _grey_image(35.0))  # noqa: ARG005
+        monkeypatch.setattr(ga, "click_client", lambda _h, x, y, **_k: clicks.append((x, y)))
+        monkeypatch.setattr(ga, "type_text", lambda text, **_k: keys.append(f"type:{text}"))
+        monkeypatch.setattr(ga, "press_key", lambda key, **_k: keys.append(key))
+        monkeypatch.setattr(ga, "press_chord", lambda chord, **_k: keys.append(chord))
+        monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        monkeypatch.setattr(ga, "console_output_ink", lambda _h: next(inks))
+        monkeypatch.setattr(ga, "_roi_stats", lambda _h, _roi: (35.0, 7.5, 0))
+        assert ga.submit_console_command(4242, "dump_ticktask_timings", force=True) is True
+        x0, y0, x1, y1 = ga.CONSOLE_EDIT_ROI
+        assert clicks == [((x0 + x1) // 2, (y0 + y1) // 2)], "点的是输入框正中"
+        assert keys[:3] == ["ctrl+a", "backspace", "type:dump_ticktask_timings"], "先清空再敲"
+        assert "delete" not in keys, (
+            "**绝不能用 delete 清空**：pydirectinput 不带扩展位，Delete 的扫描码 0x53 "
+            "会变成小键盘的 `.`（实测控制台收到 `.clear_ticktask_timings` → Unknown command）"
+        )
+
+    def test_没清空就算没提交(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """输入框没清空 = 命令没执行 —— 不许当成成功（否则会拿着空数据下结论）。"""
+        keys: list[str] = []
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(ga, "screenshot", lambda _h, roi=None: _grey_image(35.0))  # noqa: ARG005
+        monkeypatch.setattr(ga, "click_client", lambda _h, _x, _y, **_k: None)
+        monkeypatch.setattr(ga, "type_text", lambda text, **_k: keys.append(f"type:{text}"))
+        monkeypatch.setattr(ga, "press_key", lambda key, **_k: keys.append(key))
+        monkeypatch.setattr(ga, "press_chord", lambda *_a, **_k: None)
+        monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        monkeypatch.setattr(ga, "console_output_ink", lambda _h: 244)
+        monkeypatch.setattr(ga, "_roi_stats", lambda _h, _roi: (35.0, 44.0, 900))
+        assert ga.submit_console_command(4242, "zzz", force=True, attempts=1) is False
+        # 一次"清空"（焦点那一步）+ 一次"失败后擦干净"
+        assert keys.count("backspace") == 1 + len("zzz") + 8, "没提交成功要把输入框敲干净"
+
+    def test_ROI_判据走的是分数换算(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`screenshot` 要分数、这里给像素 —— 换算错会炸在 `DecompressionBombError` 上。"""
+        seen: list[tuple[float, float, float, float]] = []
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(
+            ga, "screenshot", lambda _h, roi=None: (seen.append(roi), _grey_image(35.0))[1]
+        )
+        ga.console_open(4242)
+        x0, y0, x1, y1 = ga.CONSOLE_EDIT_ROI
+        assert seen == [(x0 / 1920, y0 / 1080, x1 / 1920, y1 / 1080)]
+
+
 class TestGrabGuard:
     """抓图前必须确认**前台就是游戏**：`ImageGrab` 抓的是屏幕，被遮挡时会拿到别的窗口的像素。"""
 
@@ -1825,6 +1961,26 @@ class TestGrabGuard:
         monkeypatch.setattr(ga, "_client_size", lambda _h: (0, 0))
         with pytest.raises(ga.CaptureFailedError, match="客户区尺寸非法"):
             ga._grab(4242)
+
+    def test_像素当分数传要当场说清楚(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """实测踩过：`roi=(8, 568, 428, 606)` 这种**像素**矩形被当成分数，
+        bbox 乘出 330 亿像素，PIL 抛 `DecompressionBombError` ——
+        那句报错指不到真正的原因，所以这里要当场拦下来说明白。"""
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+        monkeypatch.setattr(ga, "_client_origin", lambda _h: (0, 0))
+        with pytest.raises(ga.CaptureFailedError, match="必须是\\*\\*分数\\*\\*矩形"):
+            ga._grab(4242, roi=(8, 568, 428, 606))
+
+    def test_分数矩形照旧放行(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """边界值 0 与 1 都是合法分数，别把守卫写成"必须严格小于 1"。"""
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+        monkeypatch.setattr(ga, "_client_origin", lambda _h: (0, 0))
+        monkeypatch.setattr(
+            ga, "ImageGrab", type("G", (), {"grab": staticmethod(lambda **_kw: _FakeImage())})
+        )
+        ga._grab(4242, roi=(0.0, 0.0, 1.0, 1.0))
 
     def test_是前台才真的抓(self, monkeypatch: pytest.MonkeyPatch) -> None:
         grabbed: list[tuple[int, int, int, int]] = []

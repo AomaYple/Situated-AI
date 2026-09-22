@@ -84,7 +84,7 @@ why = "**实测调档**：-0.15 在一整局里没能让行为层动起来 → �
 [[pressure.effects]]
 key = "country_loan_interest_rate_add"
 amount = 0.35
-why = "**实测调档**：从 0.2 提到 0.35，让财政压力在几年内真的能被看见，而不是被收入增长吃掉。⚠️ 原版该字段**只出现过一次**（00_code_static_modifiers.txt:12 的 `base_values` 全局基准 +0.2），**没有可引的档位阶梯** —— 所以 0.35 ≈ 1.75× 基准属于**实验取值**（不是原版档位），正式版要按真实赔款机制重算（backlog B35）。战败赔款抬高借债成本，而不是直接没收国库 —— 反目标里写着「不让 AI 获得任何数值作弊」，也不想让俄罗斯当场破产（那样测出来的差分来自破产机制，不是来自战败）。"
+why = "**实测调档**：从 0.2 提到 0.35，让财政压力在几年内真的能被看见，而不是被收入增长吃掉。⚠️ **2026-09-23 复核更正**：原稿写「该字段原版只出现过一次」，实测 `common/` 下共 **12 处** —— 全局基准 00_code_static_modifiers.txt:12 = 0.2、法律侧 00_amendments_enactment_04.txt:644/1138/1174/1222/1266 = 0.02/0.02/0.03/0.01/0.05、科技侧 30_society.txt:209/599/1226/1473/1647 = -0.02、字段定义 00_modifier_types.txt:662。「**国家静态修正**那一侧没有档位阶梯」这句仍然成立（那边只有全局基准 +0.2）。0.35 ≈ 1.75× 基准、≈7× 法律侧最大值 ⇒ 仍属**实验取值**（不是原版档位），正式版要按真实赔款机制重算（backlog B35）。战败赔款抬高借债成本，而不是直接没收国库 —— 反目标里写着「不让 AI 获得任何数值作弊」，也不想让俄罗斯当场破产（那样测出来的差分来自破产机制，不是来自战败）。"
 
 # ── ④ 改革侧输入：把「改革的推力」也落成真实世界状态（A 级）────
 #
@@ -117,7 +117,7 @@ why = "与工业家同档同源（content_1_modifiers.txt:1466 的 shogun_ig_for
 name = "je_sitai_ru_reform_window"
 group = "je_group_internal_affairs"
 icon = "gfx/interface/icons/event_icons/event_portrait.dds"
-why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有两条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 has_journal_entry = <本 JE 名> 读它）。⚠️ 它喂不到原版 AI 牌：原版 212 处 has_journal_entry 全部硬编码具名 JE（ai_strategies/03_political_strategies.txt:137 读 je_metternich 那一串），没有「读任意 JE」的通用谓词（backlog B52）—— 所以「开一个 JE = 同时喂给 18 张原版牌」这句是错的。F5（能改世界就不占槽）仍然成立，只是改世界的受益者不是牌池。icon 与 group 都沿用原版内部事务那一族（je_corn_laws 用同一个 icon 与 group，见 00_corn_laws.txt:2-4）。"
+why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有两条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 has_journal_entry = <本 JE 名> 读它）。⚠️ 它喂不到原版 AI 牌：原版 212 处 has_journal_entry 全部硬编码具名 JE（03_political_strategies.txt:137 读 je_metternich 那一串），没有「读任意 JE」的通用谓词（backlog B52）—— 所以「开一个 JE = 同时喂给 18 张原版牌」这句是错的。F5（能改世界就不占槽）仍然成立，只是改世界的受益者不是牌池。icon 与 group 都沿用原版内部事务那一族（je_corn_laws 用同一个 icon 与 group，见 00_corn_laws.txt:2-4）。"
 
 [[journal_entry.fields]]
 key = "weight"
@@ -163,17 +163,17 @@ why = "关窗的门：国家重新站稳，窗口自己关上（不是「改革�
 # 阶段 3 实测：只压世界状态 ⇒ 牌被重抽到**保守**（比反动还低 1 点）⇒ 法律一条没改
 # （阶段3-结果.md §三）。要真的换路线，就得**把牌换掉**。
 [journal_entry.signals]
-why = "递牌的依据（P10：每个数字/决定都要能指到原文）。**修的是哪个具体毛病**：原版重抽是累积掷骰（CHANGE_STRATEGY_THRESHOLD = 100、每周 20% 概率 +1 点 → 期望 ≈9.6 年一次，defines/00_ai.txt:38-39），而战败窗口只开几年 ⇒ 等重抽等于不递牌。**手段为什么是 B 级而不是 A 级**（F5）：世界状态改得了 AI 的输入，改不了它**已经挂着的那张牌** —— 而牌才是「动不动手」的闸门。**为什么递原版自己的牌、不建新牌**：每国同时只有一张政治牌在用（阶段 2 实测 1.05%/国·月），自建牌是抢槽；递原版已有的牌不新增竞争，只把落点拨到那条路线。**为什么进步牌是对的落点**：`law_tenant_farmers` 的 +1000 分支要求「非反动 **且**（非保守 **或** 有运动赞成且支持 ≥10%）」（01_land_reform.txt:216-231），而土地改革运动对这两条法分别是 `neutral` / `disapprove`（03_ig_ideologies_movement.txt:720-721）⇒ 走运动那一支是假的，只有「非反动且非保守」那一支成立。递进步牌同时满足两条，且它是三张牌里唯一 `change_law_chance = 10` 的。"
+why = "递牌的依据（P10：每个数字/决定都要能指到原文）。**修的是哪个具体毛病**：原版重抽是累积掷骰（CHANGE_STRATEGY_THRESHOLD = 100、每周 20% 概率 +1 点 → 期望 ≈9.6 年一次，00_ai.txt:38-39），而战败窗口只开几年 ⇒ 等重抽等于不递牌。**手段为什么是 B 级而不是 A 级**（F5）：世界状态改得了 AI 的输入，改不了它**已经挂着的那张牌** —— 而牌才是「动不动手」的闸门。**为什么递原版自己的牌、不建新牌**：每国同时只有一张政治牌在用（阶段 2 实测 1.05%/国·月），自建牌是抢槽；递原版已有的牌不新增竞争，只把落点拨到那条路线。**为什么进步牌是对的落点**：`law_tenant_farmers` 的 +1000 分支要求「非反动 **且**（非保守 **或** 有运动赞成且支持 ≥10%）」（01_land_reform.txt:216-231），而土地改革运动对这两条法分别是 `neutral` / `disapprove`（03_ig_ideologies_movement.txt:720-721）⇒ 走运动那一支是假的，只有「非反动且非保守」那一支成立。递进步牌同时满足两条，且它是三张牌里唯一 `change_law_chance = 10` 的。"
 
 [[journal_entry.signals.set_strategy]]
 key = "set_strategy"
 arg = "ai_strategy_progressive_agenda"
-why = "窗口打开 = 处境变了 ⇒ 换到改革路线。写在 JE 的 `immediate` 里（= `add_journal_entry` 那一刻执行），所以「窗口开」与「换路线」是**同一件事的两个面**，判据与动作不分离 —— 这正是阶段 3 缺的那一环。原版在 JE 里这么用有两处先例：journal_entries/05_grunderzeit.txt:118、events/peoples_springtime.txt:980/1097。"
+why = "窗口打开 = 处境变了 ⇒ 换到改革路线。写在 JE 的 `immediate` 里（= `add_journal_entry` 那一刻执行），所以「窗口开」与「换路线」是**同一件事的两个面**，判据与动作不分离 —— 这正是阶段 3 缺的那一环。原版在 JE 里这么用有两处先例：05_grunderzeit.txt:118、events/peoples_springtime.txt:980/1097。"
 
 [[journal_entry.signals.clear_strategy]]
 key = "set_strategy"
 arg = "ai_strategy_reactionary_agenda"
-why = "窗口关闭（国家重新站稳）= 处境回到「守成」⇒ 把路线递回去。为什么明写「递回反动」而不是「什么都不做」：`set_strategy` 是**替换**当前策略，窗口开着时那一段如果不管，AI 会一直挂着进步牌（而合法性已经回来了）—— 那就不是「处境决定路线」，而是「一次战败永久改路线」。递回反动牌也是复现**原版 1836 俄国的初始落点**（history/ai/00_strategy.txt:90 就是 set_strategy = ai_strategy_reactionary_agenda），所以「窗口关」= 回到开局那条路线，闭环可解释。"
+why = "窗口关闭（国家重新站稳）= 处境回到「守成」⇒ 把路线递回去。为什么明写「递回反动」而不是「什么都不做」：`set_strategy` 是**替换**当前策略，窗口开着时那一段如果不管，AI 会一直挂着进步牌（而合法性已经回来了）—— 那就不是「处境决定路线」，而是「一次战败永久改路线」。递回反动牌也是复现**原版 1836 俄国的初始落点**（00_strategy.txt:90 就是 set_strategy = ai_strategy_reactionary_agenda），所以「窗口关」= 回到开局那条路线，闭环可解释。"
 
 # ── ⑥ 本地化：面板三行（G3）的文案 ─────────────────────────
 # 键名与游戏里的约定一致：JE 标题 = JE 名、说明 = <JE 名>_reason（见原版
@@ -241,7 +241,7 @@ why = "本档案**刻意为空**（F5：能用 A 级表达的绝不占槽）。�
 [[references]]
 kind = "trigger"
 name = "legitimacy"
-why = "JE 的开窗/关窗判据（`legitimacy <= 75` / `>= 75`）。原版用法：00_meiji_restoration.txt:314、00_sikh_empire.txt:20。"
+why = "JE 的开窗/关窗判据（`legitimacy <= 75` / `>= 75`）。原版用法：00_meiji_restoration.txt:314、04_sikh_empire.txt:20。"
 
 [[references]]
 kind = "trigger"

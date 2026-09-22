@@ -36,9 +36,9 @@ import shutil
 import time
 
 # Path 必须能**在运行期**导入：typer 用 ``inspect.signature(eval_str=True)``
-# 解析命令签名，注解挪进 TYPE_CHECKING 块会让 ``v3 --help`` 直接 NameError
-# （已实测）。所以这里不能按 TCH 规则处理，只能就地豁免。
-from pathlib import Path  # noqa: TC003
+# 解析命令签名，注解挪进 TYPE_CHECKING 块会让 ``v3 --help`` 直接 NameError（已实测）。
+# 另外 `v3 citations` 会真的构造 `Path`，所以它本来就是运行期依赖，不需要 TCH 豁免。
+from pathlib import Path
 from typing import Annotated, Any, NoReturn
 
 import typer
@@ -56,6 +56,7 @@ from pdx import (
     assets,
     backlog,
     cache,
+    citations,
     config,
     covgate,
     defines,
@@ -2458,6 +2459,62 @@ def modgen_cmd(
 
     console.print(escape(modgen.summary(built)))
     console.print("[dim]--write 落盘 / --check 核对 / --why 列依据[/]")
+
+
+@app.command("citations")
+def citations_cmd(
+    paths: Annotated[
+        list[str] | None,
+        typer.Argument(help="要扫的文件或目录（默认只扫数据源 mod/data）"),
+    ] = None,
+) -> None:
+    """核对数据源里的 `文件:行号` 引用**指得到真实文件的那一行**。
+
+    P10 要求"每个数字都要有依据"，而依据最常用的一句话是"原版某文件某一行就是这么写的"。
+    闸门 ⑤ 只查 `why` 非空 —— 它查不出**行号是编的**。这个命令补上那一步：
+
+    ```text
+    文件名写错（00_sikh_empire.txt 其实叫 04_sikh_empire.txt） ⇒ missing
+    少了子路径（ai_strategies/… 其实在 common/ai_strategies/） ⇒ missing
+    行号越界（文件 300 行，引了 :322）                          ⇒ out_of_range
+    同名文件有几十个（modifiers.txt）                          ⇒ ambiguous
+    ```
+
+    ⚠️ **默认只扫 `mod/data`**：设计文档里的 `文件:行号` 有另一种含义（知识库章节、
+    仓库内文件），拿同一把尺子去量会得到一片假红 —— 要扫别处就显式给路径。
+
+    ⚠️ 它**不做语义判断**："那一行真的支持这条 why 吗"仍然要人看。这里只保证
+    "引用存在且唯一"，把人的注意力从找文件挪到读内容。
+    """
+    targets = [Path(item) for item in (paths or ["mod/data"])]
+    missing = [str(path) for path in targets if not path.exists()]
+    if missing:
+        _fail(f"找不到：{'、'.join(missing)}")
+    found = citations.scan_paths(targets)
+    problems = [item for item in found if not item.ok]
+    table = Table(
+        title=f"{len(found)} 条引用（{len(found) - len(problems)} 条指得到）",
+        show_lines=False,
+    )
+    table.add_column("结论", style="cyan")
+    table.add_column("引用", overflow="fold")
+    table.add_column("出处", overflow="fold")
+    table.add_column("说明", overflow="fold")
+    for item in problems[:40]:
+        table.add_row(
+            f"[red]{item.status}[/]",
+            escape(f"{item.file}:{item.start}"),
+            escape(item.where),
+            escape(item.detail),
+        )
+    if problems:
+        console.print(table)
+        console.print(
+            f"[yellow]{len(problems)} 条引用指不到唯一一行[/]"
+            " —— 要么改引用，要么把原版那一段原文贴进 why（P10）"
+        )
+        raise typer.Exit(EXIT_FAILED)
+    console.print(f"[green]{len(found)} 条引用全部指得到唯一一行 ✅[/]")
 
 
 @app.command("modguard")

@@ -61,6 +61,10 @@ pytest-cache-files-*/
 # 体积大且与机器相关。报告的结论请写进文档，原始数据不入库。
 /tools/prof/out/
 
+# 控制台探针的产物（截图、report.json、抓回来的 profiling.log）。
+# 结论写进 `docs/design/exec/阶段4-性能仪表侦察.md`，原始数据不入库。
+/tools/probe/zz_console_probe/
+
 # 一次性核对脚本与它们的输出（`tools/_probe.py` / `tools/_dump.txt` 这类）。
 #
 # 为什么要有这条：做「把数字脚本化」这件事时，每批都要写几个临时脚本去反解口径，

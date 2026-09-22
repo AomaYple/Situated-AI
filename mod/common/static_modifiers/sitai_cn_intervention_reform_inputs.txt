@@ -1,0 +1,12 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 改革侧输入（A 级）：**定位**：它是「改革派那一侧的输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。走 A 级而不是递牌的理由（F5）：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（03_political_strategies.txt:528-544），改世界状态就等于改它的输入，不占任何槽位。⚠️ 正式的因果链应当是「被迫开国 → 通商口岸与洋务 → 工业化与识字率的真实位移 → IG 势力自然变化」，而不是直接改政治力量；那条已记进 backlog（B35）。**本档案与 ru/tr 的差别**：ru/tr 把这一处写成「改革派抬头」，本档案的用法与原版 `shogun_ig_forced_to_open_market`（幕府被迫开国）**同型** —— 那是原版里唯一一处把「外力逼开门 → 地主/士绅失势 + 工业家与知识界抬头」写在一个修正里的地方，本档案照它的三条一起抄（见各条 why）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**。
+# 每条字段的依据见 sitai_cn_intervention.md（由 why_report 生成）。
+# ⚠️ 这一份**不是**冲击本身：它是实验的第二处理段（B2）才挂的东西 ——
+# 写进 [pressure] 会让「只加冲击」的那一段消失。
+
+sitai_cn_reform_inputs = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds
+	interest_group_ig_industrialists_pol_str_mult = 0.5
+	interest_group_ig_intelligentsia_pol_str_mult = 0.5
+}

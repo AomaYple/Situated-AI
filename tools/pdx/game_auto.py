@@ -154,6 +154,9 @@ WINDOW_SHOW_SETTLE = 1.0
 # 判据仍然是"状态变化"（界面切走 / 速率上来），这个停顿只是给引擎一帧的时间。
 STEP_SETTLE = 0.35
 
+# 控制台开合之后等它画出来（控制台是个大面板，实测 1.5 秒足够；之后仍以 ROI 判据为准）。
+CONSOLE_SETTLE = 1.5
+
 # 启动期"事件驱动"等待：不看像素，只看**便宜的进程/日志信号**（P2）。
 #   ① 进程在不在（`tasklist`）；
 #   ② 逐 tick 真值文件 `dedicated_server.log` 的**大小**多久没变。
@@ -652,6 +655,133 @@ def type_text(text: str, *, force: bool = False) -> None:
             directinput.press(char)
 
 
+# ────────────────────────── 游戏内控制台 ──────────────────────────
+#
+# 为什么值得在这里收一层：**引擎自带的性能仪表只在控制台里**（
+# `dump_ticktask_timings` 把逐帧逐任务的计时落成 `ticktask_timings.csv`，
+# `log_ticktask_performance` 开持续日志）。GUI 注入那条路九条候选全判死（backlog B64），
+# 命令行 `-run_console_action*` 又"跑完即退"（取不到跑一段之后的读数）—— 于是
+# "能不能自动敲进控制台"直接决定性能预算量不量得出来。实测（2026-09-23，backlog B66）：
+#
+#   * **反引号**开控制台（`shift+\`` / `/` / `f12` 都量过：上半屏像素差 0.000，没反应）；
+#   * 合成的扫描码键盘**能**进输入框（截图里逐字读得到命令名）；
+#   * **要按两次回车** —— 第一次被自动补全吃掉（exe 明文有
+#     `SETTING_CONSOLE_AUTOCOMPLETE_MODE` 一族设置），第二次才执行。
+#
+# 判据全部走**画面**（不猜也不目测）：控制台开着时输入框那块 ROI 是暗的（均值 ≈31–48），
+# 关着时地图透出来（≈190）；输入框有字时标准差 ≈43–55、空的 ≈7–18。
+
+#: 开控制台的键。
+CONSOLE_KEY = "`"
+
+#: 控制台输入框（`gui/console.gui` 的 `console_edit`）在**客户区**里的像素矩形。
+#: 实测口径：1920x1080、界面缩放 100%。
+CONSOLE_EDIT_ROI = (8, 568, 428, 606)
+
+#: 控制台输出区**顶部**（命令的回话写在这儿，例如 `Wrote 14792 rows to …`）。
+CONSOLE_OUTPUT_ROI = (8, 0, 340, 120)
+
+#: 输入框标准差低于这个数 = 已经空了（提交成功的第一条判据）。
+CONSOLE_CLEARED_STD = 30.0
+
+#: 输入框 ROI 均值低于这个数 = 控制台开着（暗面板），高于它 = 关着（地图透出来）。
+CONSOLE_OPEN_MEAN = 90.0
+
+
+def _roi_stats(hwnd: int, roi_px: tuple[int, int, int, int]) -> tuple[float, float, int]:
+    """**像素** ROI 的 (均值, 标准差, 亮像素数)。
+
+    ⚠️ `screenshot` 要的是**分数**矩形，所以这里必须换算 —— 直接把像素传进去会
+    bbox 乘出天文数字、PIL 抛 `DecompressionBombError`（实测踩过，报错指不到原因）。
+    """
+    width, height = _client_size(hwnd)
+    x0, y0, x1, y1 = roi_px
+    image = screenshot(hwnd, roi=(x0 / width, y0 / height, x1 / width, y1 / height))
+    box = np.asarray(image.convert("L"), dtype=np.float32)
+    return (float(box.mean()), float(box.std()), int((box > 140).sum()))
+
+
+def console_open(hwnd: int) -> bool:
+    """控制台现在开着吗？（判据：输入框 ROI 的均值，实测开着 ≈31–48、关着 ≈190）"""
+    mean, _std, _ink = _roi_stats(hwnd, CONSOLE_EDIT_ROI)
+    return mean < CONSOLE_OPEN_MEAN
+
+
+def console_output_ink(hwnd: int) -> int:
+    """输出区顶部的亮像素数 —— 命令回话就会让它跳（提交成功的第二条判据）。"""
+    _mean, _std, ink = _roi_stats(hwnd, CONSOLE_OUTPUT_ROI)
+    return ink
+
+
+def open_console(hwnd: int, *, key: str = CONSOLE_KEY, force: bool = False) -> bool:
+    """把控制台打开；已经开着就直接返回 ``True``，没打开就**如实返回 False**（不假装）。"""
+    if console_open(hwnd):
+        return True
+    press_chord(key, force=force)
+    _sleep(CONSOLE_SETTLE)
+    return console_open(hwnd)
+
+
+def _focus_editbox(hwnd: int, *, force: bool) -> None:
+    """把键盘焦点交给控制台输入框，并清空它（免得新命令粘在旧的后面）。
+
+    为什么必须点一下：控制台一旦打开就**关不掉**（实测 escape / 反引号 / shift+escape
+    都没用），于是它会在整局里一直挂着；而"让时间跑起来"那一步要点速度表盘、按空格 ——
+    焦点就此离开输入框。下一次敲命令时字会**打进游戏而不是控制台**，
+    `submit_console_command` 就会一直判"没提交成功"。**实测踩过**：一局里
+    `clear` 成功、跑完 12 个月后的 `dump` 失败 ⇒ `ticktask_timings.csv` 没出现。
+
+    ⚠️ **清空只能用 `backspace`，绝对不能用 `delete`**：`pydirectinput` 发扫描码时
+    **不带扩展位**，而 Delete 的扫描码 `0x53` 在不带扩展位时就是**小键盘的 `.`** ——
+    实测后果是控制台收到 `.clear_ticktask_timings` 并回 **`Unknown command`**
+    （画面证据：`tools/out/auto/perf-vanilla-after-dump.png`）。
+    """
+    x0, y0, x1, y1 = CONSOLE_EDIT_ROI
+    click_client(hwnd, (x0 + x1) // 2, (y0 + y1) // 2, force=force)
+    _sleep(STEP_SETTLE)
+    press_chord("ctrl+a", force=force)  # 先全选，免得新命令粘在旧的后面
+    _sleep(0.1)
+    press_key("backspace", force=force)  # 删掉选中内容（**不是 delete**，见上）
+    _sleep(0.2)
+
+
+def submit_console_command(
+    hwnd: int,
+    command: str,
+    *,
+    force: bool = False,
+    attempts: int = 2,
+    settle: float = 2.0,
+) -> bool:
+    """敲一条控制台命令并**提交**，返回是否确认被执行（`输入框清空` 且 `输出区有回话`）。
+
+    ⚠️ **两次回车**不是随手写的：按一次时输入框标准差 44.9 → 44.0（字一个没少、
+    输出区一动不动），连按两次 43.0 → 7.5 且输出区亮像素 322 → 1732。第一次被
+    控制台的**自动补全**吃掉 —— 这条坑在 backlog B66 里。
+
+    ⚠️ 调用方要先保证**游戏是前台**（`ensure_foreground`）：合成键盘只送给前台窗口。
+    """
+    for _ in range(max(1, attempts)):
+        if not open_console(hwnd, force=force):
+            return False
+        _focus_editbox(hwnd, force=force)
+        before_ink = console_output_ink(hwnd)
+        type_text(command, force=force)
+        _sleep(0.6)
+        press_key("enter", force=force)
+        _sleep(0.35)
+        press_key("enter", force=force)
+        _sleep(settle)
+        _mean, std, _ink = _roi_stats(hwnd, CONSOLE_EDIT_ROI)
+        if std < CONSOLE_CLEARED_STD and console_output_ink(hwnd) > before_ink + 20:
+            return True
+        # 没提交成功就把输入框清干净，免得下一条命令粘在后面。
+        for _ in range(len(command) + 8):
+            press_key("backspace", force=force)
+        _sleep(0.4)
+    return False
+
+
 def _window(hwnd: int) -> gw.Win32Window:
     """pygetwindow 的窗口对象（找不到会抛 ``PyGetWindowException``）。"""
     return gw.Win32Window(hwnd)
@@ -803,6 +933,15 @@ def _grab(hwnd: int, roi: tuple[float, float, float, float] | None = None) -> Im
         )
     origin_x, origin_y = _client_origin(hwnd)
     left, top, right, bottom = roi or (0.0, 0.0, 1.0, 1.0)
+    if not all(0.0 <= value <= 1.0 for value in (left, top, right, bottom)):
+        # 实测踩过：把**像素**坐标当分数传进来（例如 (8, 568, 428, 606)），
+        # bbox 会乘出一个天文数字，PIL 直接抛 `DecompressionBombError`
+        # （"Image size (33094656000 pixels) exceeds limit"）——
+        # 那句报错完全指不到真正的原因。这里就地把它说清楚。
+        raise CaptureFailedError(
+            f"roi 必须是**分数**矩形（0–1），收到 {roi} —— 像素坐标请先除以客户区尺寸"
+            f"（当前客户区 {width}x{height}）"
+        )
     x0 = origin_x + int(left * width)
     y0 = origin_y + int(top * height)
     x1 = origin_x + max(int(right * width), int(left * width) + 1)
@@ -2184,6 +2323,9 @@ if __name__ == "__main__":  # pragma: no cover - 入口
 
 __all__ = [
     "BOTTOM_ROI",
+    "CONSOLE_EDIT_ROI",
+    "CONSOLE_KEY",
+    "CONSOLE_OUTPUT_ROI",
     "DEFAULT_SCALES",
     "DEFAULT_THRESHOLD",
     "SHIFT_CHARS",
@@ -2205,6 +2347,8 @@ __all__ = [
     "assert_no_game_running",
     "click_client",
     "click_match",
+    "console_open",
+    "console_output_ink",
     "ensure_foreground",
     "find_observe",
     "find_template",
@@ -2221,6 +2365,7 @@ __all__ = [
     "locate_optional",
     "match_template",
     "measure_rate",
+    "open_console",
     "other_window",
     "parse_tasklist_pids",
     "parse_tick_date",
@@ -2235,6 +2380,7 @@ __all__ = [
     "speed_widget_xy",
     "start_session",
     "status_report",
+    "submit_console_command",
     "switch_to_background",
     "tick_day",
     "tick_mark",

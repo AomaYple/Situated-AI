@@ -1,0 +1,6 @@
+﻿l_english:
+# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+ je_sitai_au_revolution_window:0 "Revolutionary Tide: A Window for Reform"
+ je_sitai_au_revolution_window_reason:0 "The empire is coming apart from within. The crown's authority has collapsed, and every point of legitimacy it loses turns into another radical. The aristocracy that props up the old order is losing its grip.\n\nA window is open: while the government's legitimacy is shaken and the old guard is weak, reform is possible. It closes again once the state stands firm."
+ sitai_au_revolution_pressure:0 "Revolutionary Tide"
+ sitai_au_reform_inputs:0 "Reformers Gain Influence"
