@@ -154,14 +154,48 @@ SELFARM_VAR = "sitai_probe_ab_selfarm"
 #: 决议武装过的标记。自励看到它就**完全不介入** —— 玩家自己掌权的那一局不该被自动施加。
 MANUAL_VAR = "sitai_probe_ab_manual"
 
-#: 「**立法开没开**」要盯的两条法（2026-09-22 新增的 `ENACT` 读数）。
+#: 「**立法开没开**」要盯的法（2026-09-22 新增的 `ENACT` 读数）。
 #:
 #: 为什么必须有这一行：阶段 3 重做的实机结果是"牌换了、法不动"，而三个候选
 #: （政府支持不足 / 怕革命 / 权重不够）在"每月只记法律名"的读数下**长得一模一样**。
 #: `is_enacting_law` 是引擎触发器（真在推这条法时为真），它把
 #: **从未开立法** 与 **开了没成** 分开 —— 前者指向"AI 不肯动手"，后者指向"立法过程"。
-TARGET_LAW = "law_tenant_farmers"
-TARGET_LAW_ALT = "law_commercialized_agriculture"
+#:
+#: ⚠️ **没有「任意法」的通用写法**（实测）：`is_enacting_law` 一定要 `law_type:` 操作数。
+#: exe 里检索 `is_enacting_any_law` / `has_any_enactment` / `any_enacting_law` /
+#: `enactment_progress` / `current_enactment` **全部 0 命中**（`is_enacting_law` 本身 2 命中）。
+#: ⇒ 想回答"它到底在推哪条法"，只能**逐条问**。
+#:
+#: 为什么是这 20 条（覆盖俄罗斯开局最可能被推的组，不是全量 138 条）：
+#: 土地改革整组（AI 改革的主战场）+ 权力分配整组（进步牌的 `max_progressiveness` 上限
+#: 直接作用在这一组）+ 征税 + 奴隶制 + 义务教育。多问一条只是多一行日志，
+#: 但**漏掉正在被推的那一条**就会得到假结论，所以宁可多列。
+ENACT_LAWS: tuple[str, ...] = (
+    # 土地改革（`lawgroup_land_reform`）—— 我们那条链的正主
+    "law_serfdom",
+    "law_tenant_farmers",
+    "law_commercialized_agriculture",
+    "law_peasant_proprietorship",
+    "law_collectivized_agriculture",
+    "law_homesteading",
+    # 权力分配（`lawgroup_distribution_of_power`）—— 进步牌上限直接管这一组
+    "law_autocracy",
+    "law_oligarchy",
+    "law_technocracy",
+    "law_landed_voting",
+    "law_wealth_voting",
+    "law_census_voting",
+    "law_universal_suffrage",
+    # 征税 / 经济
+    "law_consumption_based_taxation",
+    "law_land_based_taxation",
+    "law_per_capita_based_taxation",
+    "law_proportional_taxation",
+    "law_graduated_taxation",
+    # 奴隶制 / 教育（改革派最爱推的两组）
+    "law_slavery_banned",
+    "law_compulsory_primary_school",
+)
 
 #: 政府在谁手里：只记与我们这条链直接相关的三个 IG（不做全量 IG 表）。
 #: `landowners` 是守旧方的核心（`law_tenant_farmers` 把它 -0.25 政治力量），
@@ -392,18 +426,24 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
                         f"{tab * 3}#    点名「缺政府/运动支持」与「怕革命」都会让法推不动，而两者",
                         f"{tab * 3}#    在「每月只记法律名」的读数下**长得一模一样**。",
                         f"{tab * 3}#    判据：`is_enacting_law`（引擎触发器）——真在推这条法时为真。",
+                        f"{tab * 3}#    ⚠️ **没有「任意法」的通用写法**（exe 检索 5 个候选名全 0 命中），",
+                        f"{tab * 3}#    所以只能逐条问 —— 全没推时写 `none`，否则分不清「没记」与「没开」。",
                         f"{tab * 3}if = {{",
-                        f"{tab * 4}limit = {{ is_enacting_law = law_type:{TARGET_LAW} }}",
-                        (
-                            f'{tab * 4}debug_log = "ZZPROBE AB;ENACT;{TARGET_LAW};'
-                            f'[THIS.GetCountry.GetNameNoFormatting]"'
-                        ),
-                        f"{tab * 3}}}",
-                        f"{tab * 3}else_if = {{",
-                        f"{tab * 4}limit = {{ is_enacting_law = law_type:{TARGET_LAW_ALT} }}",
-                        (
-                            f'{tab * 4}debug_log = "ZZPROBE AB;ENACT;{TARGET_LAW_ALT};'
-                            f'[THIS.GetCountry.GetNameNoFormatting]"'
+                        f"{tab * 4}limit = {{",
+                        f"{tab * 5}OR = {{",
+                        *(f"{tab * 6}is_enacting_law = law_type:{law}" for law in ENACT_LAWS),
+                        f"{tab * 5}}}",
+                        f"{tab * 4}}}",
+                        f"{tab * 4}# 逐条问「是哪一条」（只给读数用，判据与上面同一个触发器）。",
+                        *(
+                            (
+                                f"{tab * 4}if = {{\n"
+                                f"{tab * 5}limit = {{ is_enacting_law = law_type:{law} }}\n"
+                                f'{tab * 5}debug_log = "ZZPROBE AB;ENACT;{law};'
+                                f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+                                f"{tab * 4}}}"
+                            )
+                            for law in ENACT_LAWS
                         ),
                         f"{tab * 3}}}",
                         f"{tab * 3}else = {{",

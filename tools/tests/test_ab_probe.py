@@ -167,11 +167,17 @@ def test_每月都记立法开没开() -> None:
     「每月只记法律名」的读数下**长得一模一样** ⇒ 必须直接记 `is_enacting_law`。
 
     它把「从未开立法」与「开了没成」分开，是三选一的分辨器。
+    ⚠️ 而**没有「任意法」的通用写法**（exe 检索 5 个候选名全 0 命中）⇒ 只能逐条问，
+    所以这里钉住"每条候选法都要问一遍"，以及"全没推时也要留一行 `none`"。
     """
     code = _code(_files()[_ON_ACTIONS])
-    assert f"is_enacting_law = law_type:{ab_probe.TARGET_LAW}" in code
-    assert f"is_enacting_law = law_type:{ab_probe.TARGET_LAW_ALT}" in code
-    assert "ZZPROBE AB;ENACT;none;" in code, "两条都没在推时也要留一行（否则分不清'没记'与'没开'）"
+    assert ab_probe.ENACT_LAWS, "候选法清单不能空 —— 空了这条读数就没意义"
+    for law in ab_probe.ENACT_LAWS:
+        assert f"is_enacting_law = law_type:{law}" in code, law
+    assert "ZZPROBE AB;ENACT;none;" in code, "全没推时也要留一行（否则分不清'没记'与'没开'）"
+    # 两条土地法是这条链的正主，必须在候选表里
+    assert "law_tenant_farmers" in ab_probe.ENACT_LAWS
+    assert "law_commercialized_agriculture" in ab_probe.ENACT_LAWS
 
 
 def test_每月都记政府在谁手里() -> None:
@@ -186,10 +192,17 @@ def test_自报里不做整体缩进重排() -> None:
     """PDX 脚本对缩进不敏感，但**嵌套块被整体右移**会生成"双倍缩进"，读起来像语法错误。
 
     实测（2026-09-22）：三槽自报链以前被 `.replace("\\n" + tab*2, "\\n" + tab*3)` 整体
-    右移 → `if` 里的 `if` 变成两层缩进叠在一起。判据：这一层只许给块定界行加缩进。
+    右移 → `if` 里的 `if` 变成两层缩进叠在一起。
+
+    判据形状：**每一层缩进都必须真的对应一层块**。这里用"三槽自报链里不许出现三层以上缩进"
+    来钉 —— 那条链最深就是 `guarded(if)` 里一层 `if`，所以 4 个 tab 是它的上限
+    （`ENACT` 那一段有个 `OR` 会到 6 个 tab，那是**真的**四层嵌套，不在本判据范围内）。
     """
-    code = _code(_files()[_ON_ACTIONS])
-    assert "\t\t\t\t\t\t" not in code, "出现了三层以上的缩进 ⇒ 多半又整体重排了"
+    text = _files()[_ON_ACTIONS]
+    start = text.index("# ② 再走臂阶梯")
+    end = text.index("# ④ 当前挂着的政治牌")
+    chain_section = text[start:end]
+    assert "\t\t\t\t\t" not in chain_section, "三槽自报链里出现 5 层缩进 ⇒ 多半又整体重排了"
 
 
 def test_两处输入各调各的效果() -> None:
