@@ -237,7 +237,10 @@ def analyze(log: Path | None = None) -> dict[str, object]:
         for ig, counter in clout.items()
     }
 
-    law_switched = any(law not in {"law_serfdom", "none"} for law in laws)
+    # ⚠️ 这里**故意不再**派生"法律真的换了"这个布尔：它原来拿观测到的法与 `law_serfdom`
+    # 比，那是**俄国口径** —— 奥地利开局读到的是 `law_autocracy`，法没换也会报 True
+    # （实测踩过，见 backlog B80）。行为层的**权威读数**是下面的"立法读数"
+    # （`is_enacting_law` 逐条问出来的 `ENACT`），法律本身则原样列在"法律读数"里。
     return {
         "总行数": len(ours),
         "分类计数": dict(kinds),
@@ -248,13 +251,14 @@ def analyze(log: Path | None = None) -> dict[str, object]:
         "立法读数（去重）": _dedupe(enact),
         "政府在朝（去重）": _dedupe(gov),
         "各 IG 的 clout 水位（最高档）": clout_top,
-        "第一次非农奴制": next((law for law in laws if law not in {"law_serfdom", "none"}), ""),
-        "✅ P1 法律真的换了": law_switched,
-        "✅ P2 进步牌挂上过": "ai_strategy_progressive_agenda" in strategies,
-        "✅ P3 窗口开过": "active" in je,
-        "✅ P4 冲击施加过": "yes" in shocks,
-        "✅ P5 立法开过（任一候选法）": any(value != "none" for value in enact),
-        "✅ P6 改革派进过政府": any(value != "landowners" for value in gov),
+        "首次观测到的非-law_serfdom 法（⚠️ 仅俄国口径，不可当结论）": next(
+            (law for law in laws if law not in {"law_serfdom", "none"}), ""
+        ),
+        "✅ 进步牌挂上过": "ai_strategy_progressive_agenda" in strategies,
+        "✅ 窗口开过": "active" in je,
+        "✅ 冲击施加过": "yes" in shocks,
+        "✅ 立法开过（任一候选法）": any(value != "none" for value in enact),
+        "✅ 改革派进过政府": any(value != "landowners" for value in gov),
     }
 
 
