@@ -117,6 +117,13 @@
 |---|---|---|---|
 | **B61** | **重跑阶段 3 的会话预算**：每局 ≈3 分钟加载 + 观测若干月；一条 A/B 至少两局 | 先跑**一局**验证"递进步牌 ⇒ 真的换法"（这是 B53-B58 整条链的**唯一未实测环节**）；成了再做 A/B 差分 | 立即（阶段 3 重做的第一步） |
 
+## 三·补④ · 阶段 4 唯一未达成的出口判据（G-EXIT-3 对照表）卡在哪（2026-09-23 实测）
+
+| # | 问题 | 我的推荐 | 何时需要 |
+|---|---|---|---|
+| **B62** | **覆写 `gui/error_deer.gui` 里已有按钮的 `onclick` 不生效**：点下去走的是**原版行为**（打开错误列表 —— 有画面证据：点前写着「84 个错误」、点后错误列表被打开），而这一版覆写**连一条 error 都没有**（上一版少写外层引号时引擎明确报 `gui/error_deer.gui:42 - '(' is not a valid widget/type/property`）⇒ **文件被解析了，但引擎用的仍是原版那一份**。已排除：坐标（模板匹配 1.000）、前台（真实输入、画面确实变了）、命令拼写（外层引号已补）。**未排除**：本地 mod 的挂载顺序 / 有没有 gui 缓存（用户目录下**没有** gui 缓存目录，只有 `shadercache`）/ 或者 `error_deer` 这个面本身不吃覆写 | 三条候选按代价排：① 先看 **B39 的机制**（本地 mod + Workshop 混合时挂载异常）是否同源；② 试 `log_ticktask_performance` → `profiling.log`（exe 里 1 命中，**持续写、不需要 dump**，若能被一次性开关打开就绕开 GUI）；③ 最后才回头啃覆写 | 跑 G-EXIT-3 对照表之前 |
+| **B63** | **`dump_ticktask_timings` 到底执行了没有 —— 有一条正面证据，且它推翻了上一版的结论**：用户目录的 `console_history.txt` 里确实有 `dump_ticktask_timings`（连同 `clear_ticktask_timings` / `Log.ResetErrorCount`，是那次点击写进去的）⇒ **命令进了控制台**。而**文件仍然不存在**、日志里既无 `Wrote %d rows to %s` 也无 `Could not write %s` | 下一步要问的是"**写了但没落地**"还是"**执行到一半就返回**"：① 查 exe 里 `dump_ticktask_timings` 的完整实现路径（它有没有要求"游戏正在跑"这类前置 —— exe 明文里出现过 `No game is running` 与它相邻）；② 找**所有可能的落点**（游戏安装目录、`%LOCALAPPDATA%`、`%TEMP%`、VirtualStore —— 当年在 Program Files 下写文件会被重定向）；③ 若确认是"权限/路径"，就改用 `log_ticktask_performance` → `profiling.log`（持续写，落点同样是用户目录） | 跑 G-EXIT-3 对照表之前 |
+
 ## 四、示例表待补（不挡主线）
 | # | 问题 | 我的推荐 | 何时需要 |
 |---|---|---|---|
