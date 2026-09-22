@@ -1,21 +1,22 @@
-"""实机闭环跑一次，**保证收尾**（关游戏 + 还前台 + 桌面采样）。
+"""实机跑一次标准流程，**保证收尾**（关游戏 + 还前台 + 桌面采样）。
 
-为什么要这个包装：`pdx.game_auto` 的闭环只管"点到跑起来"，不管"失败时把游戏收掉" ——
+为什么要这个包装：`pdx.game_auto` 只管"点到跑起来"，不管"失败时把游戏收掉" ——
 前三轮实机各失败一次，其中一次就留下了一个 victoria3 进程，下一次直接被
 `GameRunningError` 拦住。用户口径是"每条实机操作必须可回滚"，所以把收尾写成代码：
 
 * `finally` 里**无论成败**都杀掉本进程树起的 victoria3（只杀它，不动别人的进程）；
-* 把前台还给**启动前那个窗口**；
+* 把前台还给**启动前那个窗口**（`game_auto.launch_to_foreground` 会把它记下来）；
 * 采样 9 个屏幕点，确认桌面真的回到用户手里（不是"我觉得还回去了"）。
 
 判据（打印在最后，直接抄进结果文档）：
-`speed_ok` / `speed_days_per_second` / `borrows` / `borrow_seconds` / `background` / `tick`。
+`speed_ok` / `speed_days_per_second` / `handover` / `minimized` / `tick`。
 
-用法：`python tools/probe/flow_with_cleanup.py`
+用法：``python tools/probe/flow_with_cleanup.py``（默认不带 `-scripted_tests` 之外的参数）。
 """
 
 from __future__ import annotations
 
+import argparse
 import subprocess
 import sys
 import time
@@ -57,8 +58,14 @@ def kill_game() -> list[int]:
     return pids
 
 
-def main() -> int:
-    ga.ALLOW_REAL_INPUT = True  # 显式入口：允许借前台点那三下
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="flow_with_cleanup", description=__doc__)
+    parser.add_argument("--speed-xy", default="", help="显式指定速度档 V 的客户区坐标 X,Y")
+    parser.add_argument("--skip-speed", action="store_true", help="不切速度档")
+    parser.add_argument("--lobby-timeout", type=float, default=ga.LOBBY_TIMEOUT)
+    args = parser.parse_args(argv)
+
+    ga.ALLOW_REAL_INPUT = True  # 显式入口：允许抢前台点那三下
     leftover = ga._process_pids()
     if leftover:
         print(f"⚠️ 起前有残留 victoria3：{leftover} —— 先收掉（这是上一轮没收拾干净）")
@@ -67,19 +74,33 @@ def main() -> int:
 
     previous = ga._foreground_window()
     print(f"启动前前台 = {previous}（收尾会还给它）")
-    result: dict[str, object] | None = None
-    failure: str = ""
+    result: ga.SessionStart | None = None
+    failure = ""
     try:
-        hwnd = ga.launch(scripted_tests=True, timeout=float(ga.WINDOW_TIMEOUT))
+        hwnd, previous = ga.launch_to_foreground(
+            scripted_tests=True, timeout=float(args.lobby_timeout)
+        )
         print(f"窗口 hwnd = {hwnd}")
-        settle = ga.wait_for_boot_settle(timeout=float(ga.LOBBY_TIMEOUT))
+        settle = ga.wait_for_boot_settle(timeout=float(args.lobby_timeout))
         print(f"加载等待（不碰窗口）：{settle.why}")
-        result = ga.start_background_session(hwnd, force=True)
+        speed_xy: tuple[int, int] | None = None
+        if args.speed_xy:
+            left, _, right = str(args.speed_xy).partition(",")
+            speed_xy = (int(left), int(right))
+        result = ga.start_session(
+            hwnd,
+            previous,
+            settle=settle,
+            speed_xy=speed_xy,
+            skip_speed=bool(args.skip_speed),
+            force=True,
+        )
     except Exception as exc:
         failure = f"{type(exc).__name__}: {exc}"
     finally:
         killed = kill_game()
         time.sleep(2)
+        # 收尾时**先还前台再采样**：否则采到的是还在最上面的游戏窗口，看不出真相。
         if previous and previous != ga.find_window():
             ga._set_foreground(previous)
         owners = desktop_owners()
@@ -87,16 +108,17 @@ def main() -> int:
         print(f"杀掉的 victoria3 PID：{killed or '（没有）'}")
         print(f"前台现在 = {ga._foreground_window()}（应为 {previous}）")
         print("桌面采样：")
-        for hwnd_owner, count in owners.items():
+        for owner, count in owners.items():
             print(
-                f"  {count} 点 → {win32gui.GetClassName(hwnd_owner)} {win32gui.GetWindowText(hwnd_owner)[:28]!r}"
+                f"  {count} 点 → {win32gui.GetClassName(owner)} "
+                f"{win32gui.GetWindowText(owner)[:28]!r}"
             )
 
     if failure:
         print(f"\n[失败] {failure}")
         return 1
-    print("\n=== 闭环结果（照抄进结果文档）===")
-    for key, value in (result or {}).items():
+    print("\n=== 标准流程结果（照抄进结果文档）===")
+    for key, value in (result.as_dict() if result else {}).items():
         print(f"  {key:22s}: {value}")
     return 0
 
