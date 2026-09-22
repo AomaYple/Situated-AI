@@ -429,6 +429,7 @@ def test_目标从数据源读出来() -> None:
     assert target.subject == first.country == "RUS"
     assert target.journal_entry == first.journal_entry.name
     assert target.shock_effect == first.memory.effect
+    assert target.shock_variable == first.memory.variable
     assert target.input_effect == first.inputs.effect
     assert target.dir_name == "-".join(archive.id for archive in archives)
 
@@ -457,6 +458,7 @@ def test_造别的国家的探针只需换一个_target() -> None:
         subject="AUS",
         journal_entry="je_sitai_t9_window",
         shock_effect="sitai_t9_shock",
+        shock_variable="sitai_t9_memory",
         input_effect="sitai_t9_reform_input",
         input_modifier="sitai_t9_reform_inputs",
         archive_id="t9",
@@ -465,6 +467,8 @@ def test_造别的国家的探针只需换一个_target() -> None:
     assert "c:AUS" in files[_ON_ACTIONS]
     assert "c:RUS" not in files[_ON_ACTIONS]
     assert "je_sitai_t9_window" in files[_ON_ACTIONS]
+    assert "has_variable = sitai_t9_memory" in files[_ON_ACTIONS], "冲击自检要问**这份档案**的变量"
+    assert "has_variable = sitai_ru_defeat_memory" not in files[_ON_ACTIONS]
     assert "c:AUS" in files[ab_probe.SUITE_REL]
     assert "c:AUS" in files["common/decisions/zz_probe_ab_decisions.txt"]
 

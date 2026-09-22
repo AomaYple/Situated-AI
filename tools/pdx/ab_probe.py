@@ -93,6 +93,7 @@ class ProbeTarget:
     subject: str
     journal_entry: str
     shock_effect: str
+    shock_variable: str
     input_effect: str
     input_modifier: str
     archive_id: str
@@ -118,6 +119,7 @@ def load_target() -> ProbeTarget | None:
         subject=first.country,
         journal_entry=first.journal_entry.name,
         shock_effect=first.memory.effect,
+        shock_variable=first.memory.variable,
         input_effect=first.inputs.effect if first.inputs is not None else "",
         input_modifier=first.inputs.name if first.inputs is not None else "",
         archive_id=first.id,
@@ -158,6 +160,7 @@ ROLES = tuple(step.role for step in LADDER)
 ARM_START: dict[str, int] = {step.role: step.at_month for step in LADDER}
 
 #: 每个月的自报里"冲击在不在"用的判据（真 mod 写的变量）。
+#: 冲击记忆变量 —— **只作兜底与文档用途**，真正的来源是 :func:`load_target`。
 SHOCK_VAR = "sitai_ru_defeat_memory"
 
 #: 每个月要记的法律（改革相关；都是原版存在的 law_type）。
@@ -488,7 +491,7 @@ def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
                         f"{tab * 3}zz_probe_ab_ladder = yes",
                         "",
                         f"{tab * 3}# ③ 两处输入到底有没有落到这个国家身上（自检用）",
-                        state_line("SHOCK", f"has_variable = {SHOCK_VAR}", "yes", "no"),
+                        state_line("SHOCK", f"has_variable = {target.shock_variable}", "yes", "no"),
                         "",
                         state_line("INPUT", f"has_modifier = {INPUT_MODIFIER}", "yes", "no"),
                         "",
