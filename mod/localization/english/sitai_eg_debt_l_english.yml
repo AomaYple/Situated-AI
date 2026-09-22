@@ -1,0 +1,9 @@
+﻿l_english:
+# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+ je_sitai_eg_debt_window:0 "Debt Crisis: A Window for Reform"
+ je_sitai_eg_debt_window_reason:0 "The loans have outrun the treasury. The debt is now serviced by foreign creditors, the customs houses answer to them before they answer to us, and the cotton landlords who grew rich on foreign capital have lost their grip on the court.\n\nA window is open: while the money is not ours to command and the khedive's authority is spent, the modernisers can push through what the landed interest spent decades blocking. It closes again once the state stands on its own feet.\n\nCurrent goal: while the creditors hold the purse, push through the modernisation that the landed export bloc has been blocking.\n\nBiggest pressure and resistance: pressure — the treasury borrows at crisis rates, the khedive's legitimacy is spent, and the cotton landlords who live off foreign capital are losing their grip; resistance — the state standing on its own feet again.\n\nWhy it changed its mind: because the debt was written into the books — having the purse strings taken over is what moved the inputs the AI reads."
+ sitai_eg_debt_pressure:0 "Debt Servitude"
+ sitai_eg_reform_inputs:0 "Reformers Gain Influence"
+ je_sitai_eg_debt_window_goal:0 "Current goal: while the creditors hold the purse, push through the modernisation that the landed export bloc has been blocking."
+ je_sitai_eg_debt_window_pressure:0 "Biggest pressure and resistance: pressure — the treasury borrows at crisis rates, the khedive's legitimacy is spent, and the cotton landlords who live off foreign capital are losing their grip; resistance — the state standing on its own feet again."
+ je_sitai_eg_debt_window_last_change:0 "Why it changed its mind: because the debt was written into the books — having the purse strings taken over is what moved the inputs the AI reads."

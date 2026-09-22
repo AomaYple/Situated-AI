@@ -1,0 +1,309 @@
+# 档案数据源 · 波斯 单国「大博弈 / 被两强夹击」【阶段 5 的第四种失败模式】
+#
+# ⚠️ 为什么要有这一份：已入库的四份档案里**没有「被包围 / 被夹击」这种失败模式**
+#   （`阶段5-档案扩张.md` §一 的清单把它写作「被包围」，见该文件 :15；
+#   `阶段5-批次1-结果.md` §六 把它列为下一批要补的三种之一，见该文件 :113-115）。
+#   它既不是「战败」换个国家，也不是大清那份的翻版：
+#
+#     * 大清（`cn_intervention`）是**海上被一次打穿**（海口失守 → 被迫开国），
+#       记忆记的是「被列强干涉过」；
+#     * 波斯是**陆上两向夹击、无海权、也没有被一次打穿**（`01a` §K「波斯」那一行：
+#       「俄英两向夹击（大博弈）、无海权」，见 docs/design/01a-依据与参考.md:293）。
+#       所以它的 `[memory]` 记的不是「被干涉」也不是「战败」，是「被两强长期挤压」——
+#       没有那个可以指着说「就是那一天」的败仗，压力是长期的、双向的、同时来的。
+#     * 原版对这一件事**有自己的账**：`je_great_game_control`（大博弈总 JE）在 `immediate`
+#       里把波斯与俄、英并列（00_player_objectives_great_game.txt:44 的 `c:PER ?= this`），
+#       而俄英两边各有一条「确保对波斯的影响力」的 JE —— `je_secure_influence_over_persia`
+#       （00_player_objectives_great_game.txt:1443），它的 complete 就是「波斯成为我的属国」
+#       （:1461-1467 的 `exists = c:PER` + `c:PER ?= { is_subject_of = ROOT }`）。
+#       也就是说：**原版承认「两强争波斯」这件事，但只替两强记账，没替波斯记账**——
+#       被夹击的那一方在原版里合法性照旧、守旧侧照旧在朝、财政照旧。本档案补的就是这一侧。
+#
+#   数值档位**照 tr_defeat / cn_intervention 的做法沿用 ru_defeat 的实测档位**，
+#   没有针对波斯独立校准 —— 每条 why 里都写明了这一点，不许读成「实测过」。
+#   唯一**独立取字段**的是「守旧势力」那一条：ru/tr 减地主、大清减 devout，
+#   波斯的守旧侧是**教士（ulama）与部落长老**，是现代化最直接的拦路者，
+#   所以沿用 cn_intervention 的 devout 字段（理由见那一条 why，不是抄它）。
+#   它**没有 `[tempo]`**：`defines` 没有单国写法，全仓只允许一份（见 modgen 的
+#   `build_all` / `_check_tempo`），那一份在 `ru_defeat.toml` 里。
+#   它**没有 `[difficulty]`**：那是 mod 级表，全仓只允许一份，也在 `ru_defeat.toml` 里。
+#
+# 口径（P9 单一数据源 / P10 每个数字有依据 / F10 生成器优先）：
+#
+#   * 产物（`mod/` 下的脚本、本地化、档案文档）**全部由 `v3 modgen` 从本文件生成**，
+#     手改产物没有用 —— 下次生成会被覆盖，闸门 ④ 也会报红；
+#   * **每一张表都必须带非空 `why`**（数字、判据、文案、容器表一律如此）：空 `why`
+#     由 `v3 modgen` 当场报错、闸门 ⑤ 复核 —— 这是 P10 从「纪律」变成「可执行检查」的那一步；
+#   * 数字一律写成 `amount = N`（同表内配 `why`），缩写形式只有一个来源，
+#     `why_report()` 与闸门 ⑤ 才能机械地枚举「每个数字 + 它的依据」。
+#
+# 为什么是 TOML：Python 3.11+ 标准库自带 `tomllib`，不新增依赖（P4），
+# 而它同时有「表」与「数组」两种结构，正好表达「一组带依据的条目」。
+#
+# 本档案只做一件事：把**两强夹击**变成真实世界状态（A 级：变量 + 修正 + JE），
+# 让原版自己的权重公式转向改革。**一张牌都不递**（见 `[cards]`）。
+
+schema_version = 1
+
+[archive]
+id = "pe_great_game"
+title = "波斯 · 大博弈"
+country = "PER"
+# 档案对哪个引擎版本有效（写进 mod 元数据的 supported_game_version）。
+# 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
+# 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
+game_version = "1.14.3"
+why = "**修的是什么毛病**：原版 1.14.3 对「大博弈」的记账**只记在争的两强那一侧**。`je_great_game_control` 的 immediate 里把波斯与俄、英、阿富汗并列（00_player_objectives_great_game.txt:39-53，其中 :44 是 `c:PER ?= this`），而 `je_secure_influence_over_persia`（00_player_objectives_great_game.txt:1443）替俄/英两边各设一条目标，代价由波斯付：它的 complete 写的是「波斯成为我的属国」或「我或其属国占住大波斯 60% 以上的波斯文化故土」（00_player_objectives_great_game.txt:1461-1487，:1474 是 `is_homeland = cu:persian`）。**而被夹击的那一方在原版里没有账**：沙阿的合法性照旧、教士与部落长老照旧在朝、国库照旧按普通国家借债。于是「在两强之间求存 → 有限现代化」这条因果在原版里根本不存在 —— 玩家看到的是一个被两边榨却不会变的波斯。本档案不替 AI 决定改什么，只把夹击记成账、把压力落成真实的**合法性 / 借债成本 / 守旧势力**变化，让原版自己那张**读改革派 IG 的**权重公式（`ai_strategy_progressive_agenda`）自己转向。⚠️ 依据已于 2026-09-22 更正：原版 AI 策略里 212 处 has_journal_entry 全部硬编码**具名** JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）。本档案一张牌都不递（见 `[cards]`）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；它是「加一处境 = 加一份数据源」（G-EXIT-1）在**第四种失败模式（被包围 / 被夹击）**上的证明件，不是一份经过校准的档案设计。"
+
+
+# ── ② 夹击记忆：真实世界状态的第一步 ────────────────────────
+# 为什么字段名叫 memory 而不是「被夹击记忆」：schema v1 的这张表就是「处境发生过」
+# 的那张账（变量 + 写它的效果），本档案往里记的是**两强长期挤压**这件事。
+[memory]
+variable = "sitai_pe_great_game_memory"
+effect = "sitai_pe_great_game_shock"
+why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown_when_inactive / possible 读它，于是「被两强夹击过」这件事变成可查的世界状态（阶段 1 已证：牌直接读 has_variable / has_journal_entry）。**本档案与本批其他档案最本质的差别在这里**：ru/tr 记的是「战败过」、cn 记的是「被干涉过」，两者都指向一个**可以指出来的时刻**；而大博弈**没有那个时刻**——原版 `on_war_end` 只给 scope:actor / scope:target、不带胜负（common/on_actions/00_code_on_actions.txt:7043，:7040-7042 是它的作用域注释），而「被两强同时挤压」更不是一场战争的结果：`je_secure_influence_over_persia` 走的甚至是属国化与故土占领（00_player_objectives_great_game.txt:1461-1487），可以完全不开一枪。谁把夹击判成夹击，本档案不猜：挂错 on_action 会把施加方（俄/英）自己也记进去。这个判定留给施加冲击的那一处（实验显式调用 `sitai_pe_great_game_shock`，本档案**不绑 on_action**）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**。"
+
+[[memory.params]]
+key = "value"
+amount = 1
+why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次被夹击」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 common/on_actions/00_code_on_actions.txt:7046-7050）。　【沿用·口径】沿用 ru_defeat 的取值，未针对本条处境独立校准。"
+
+[[memory.params]]
+key = "days"
+amount = 3650
+why = "10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在「两强夹击」上尤其贴题**：大博弈不是一次事件而是一个**持续几十年的格局**（原版把它做成常驻目标 JE 而不是事件，见 `je_great_game_control` 的 immediate，00_player_objectives_great_game.txt:11-70），所以时间窗的下限是十年而不是一次战役的余波。对照原版给 recently_had_war 的是 days = 1825（5 年，common/on_actions/00_code_on_actions.txt:7048），而「被两强同时挤压」比「打过仗」更该留得久，故取两倍。　【沿用·口径】3650 **沿用 `ru_defeat.toml` 的实测档位**（该值在其 why 里写作「战败比打过仗更该留得久，故取两倍」），**未针对本条处境独立校准**。"
+
+# ── ③ 压力：真实的合法性 / 借债成本 / 守旧势力（A 级）────────
+#
+# 三条字段对应本处境的两种不同东西，**不许混读**（这是本档案的判据核心）：
+#   * 合法性 -35        = **被夹击的直接后果**（沙阿在两强之间反复退让 → 威信受损）；
+#   * 借债成本 +0.35    = **求存必须付出的代价**（没有海权、又不敢真打，只能借外债
+#                          买时间来练兵与修路）；
+#   * 教士 -0.30        = **夹击把守旧侧的信用打掉了** —— 这是窗口之所以开的原因，
+#                          也是改革侧输入能起作用的前提。
+[pressure]
+name = "sitai_pe_great_game_pressure"
+icon = "gfx/interface/icons/timed_modifier_icons/modifier_statue_negative.dds"
+why = "压力必须是真的世界状态，不是我们的私有计数器 —— 只有真实变化才会进原版自己的公式（01a D 节：A 级被严重低估）。**这张表的结构与本批其他档案的差别**：三条字段分别对应「夹击的直接后果」（合法性）、「求存必须付出的代价」（借债成本）、「旧秩序的信用破产」（教士失势）三种**不同性质**的东西 —— 不是把 ru/tr 的三条换个国家名再写一遍，也不是把大清那三条里的 devout 抄过来（大清用它记「士绅与旧官僚被外力撬下来」，本档案用它记「教士拦不住现代化了」）。⚠️ **本表与 [reform_inputs] 都是实验用直接修正，不是正式版设计**：它们由施加冲击的一方显式调用（不绑任何 on_action，调用点是 scripted effect `sitai_pe_great_game_shock`）；正式版必须改成真实触发 + 因果链（两强争夺 → 不平等条约与租让权 → 关税与财政的真实位移 → 教士与部落长老自然失势），那条已进 backlog（B35）。本定位同时写在 exec/阶段3-结果.md 与 exec/阶段3-归档清点.md，避免后人把实验设置当成档案设计。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**。"
+
+[[pressure.params]]
+key = "years"
+amount = 10
+why = "与 sitai_pe_great_game_memory 的 days = 3650 对齐。原版 add_modifier 用 years 的写法见 common/scripted_effects/00_movement_effects.txt:2-4（add_modifier = { name = initial_movement_enthusiasm years = 20 }）。　【沿用·口径】沿用 ru_defeat 的取值，未针对本条处境独立校准。"
+
+[[pressure.effects]]
+key = "country_legitimacy_base_add"
+amount = -35
+why = "**这一条是「被夹击」的直接后果**：沙阿的权威不是被一场败仗打掉的，是在两强之间**反复退让**磨掉的 —— 北边俄国拿走特权、南边英国要航线与港口、任何一边都得罪不起，而每一次退让都在国内被记成「保护不了臣民」。合法性是开窗判据的一半（JE 的 possible 读 `legitimacy <= 75` —— 为什么是 75 见下面 conditions 那条的依据）。**原版对同一个字段的用法也承认这个方向**：`opium_wars_lost` 给 `country_legitimacy_base_add = -50`（common/static_modifiers/content_1_modifiers.txt:17）—— 被打穿的政权威信受损，原版是认的；波斯与它的区别只在**没有那一次被打穿**，所以取更轻的一档。**为什么取 -35**：它是 `ru_defeat` 在阶段 3 里**实测调过档**的值（先取 -20 跑一整局 B 组、窗口一次都没开 → 提到 -35；复算 `v3 ab --logs ab-run7`，B 段 55 块合法性分档 b70 24 / b75 18 / b80 13），也就是「把水位稳定压出一档、又不让政府一次失能」的那一档；本档案**原样沿用**，没有针对波斯重跑 A/B。原版同字段的档位阶梯为 +10 / +5 / -10 / -20（common/static_modifiers/00_code_static_modifiers.txt:322、:331、:343、:353）与 -50（同文件 :986 的 low_electoral_confidence），-35 落在 -20 与 -50 之间。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位（-35），未针对本条处境独立校准**；原版另有 -50（content_1_modifiers.txt:17）与 -50（00_code_static_modifiers.txt:986）两处同字段可引，方向与档位都不是我们发明的。"
+
+[[pressure.effects]]
+key = "country_loan_interest_rate_add"
+amount = 0.35
+why = "**这一条是「求存必须付出的代价」，不是夹击的后果** —— 这条区分是本档案的判据核心。波斯没有海权（01a §K 那一行明写「无海权」，docs/design/01a-依据与参考.md:293），港口与航线都在英国手上；又不具备与俄国正面开战的条件。于是「求存」唯一可走的路是**借外债买时间**（练兵、修 telegraph 与铁路、办新式学堂），而债权人知道这个国家正在被两边榨 —— 借债成本因此长期抬高。原版该字段**没有可引的「国家修正档位阶梯」**：实测 common/ 下共 11 处 —— 全局基准 +0.2（common/static_modifiers/00_code_static_modifiers.txt:12）、法律侧 ±0.01/±0.02/±0.03/±0.05（common/amendments/00_amendments_enactment_04.txt:644、:1138、:1174、:1222、:1266）、科技侧 -0.02（common/technology/technologies/30_society.txt:209、:599、:1226、:1473、:1647）、字段定义一处（common/modifier_type_definitions/00_modifier_types.txt:662）。**0.35 ≈ 1.75× 全局基准**，属于**实验取值**（不是原版档位），正式版要按真实外债与租让权机制重算（backlog B35）。为什么不直接没收国库：反目标里写着「不让 AI 获得任何数值作弊」，也不想让波斯当场破产（那样测出来的差分来自破产机制，不是来自夹击）。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位（0.2→0.35），未针对本条处境独立校准**；本处境另外写明它在本档案里承担的是「代价」而不是「后果」。"
+
+[[pressure.effects]]
+key = "interest_group_ig_devout_pol_str_mult"
+amount = -0.30
+why = "**这一条是窗口之所以开的原因**：被两强夹击的局面把**教士（ulama）与部落长老**的信用打掉了 —— 他们主张的「关起门来照旧过」既没能挡住俄国的特权，也没能挡住英国的航线；而任何一项现代化（新式军队、世俗法庭、 telegraph、铁路）都要动他们的地盘。于是「守旧」第一次显得不是稳妥而是**无能** —— 朝堂上的分量因此掉下去，改革派才抬得起头。**为什么是 devout 而不是 landowners**：ru/tr 减的是地主（`interest_group_ig_landowners_pol_str_mult`），那是俄土两国议会算术里的守旧侧；波斯的守旧侧不是地主贵族，是**教士与部落结构**（01a §K「波斯」那一行的「内部因素」写的正是「部落结构、宗教势力、财政与军队落后」，docs/design/01a-依据与参考.md:293）。原版同字段的档位实测为 +0.25 / +0.15（common/static_modifiers/00_ip4_04_modifiers.txt:19、106_modifiers.txt:224）、-0.25（00_ip4_04_modifiers.txt:141，注释 `# Selling church lands` —— 变卖教产即「旧势力失势」，与本处同一族语义）、-0.50（agitators_5_modifiers.txt:616，与地主 -0.50、工业家 -0.50 成对写）。取 -0.30 = 落在原版 -0.25 与 -0.50 之间：方向明确（教士政治力量 -30%），又不把守旧侧一次打垮 —— 一次打垮会让议会算术失去张力。**为什么改的是这一侧而不是把改革侧直接抬上去**：守旧侧失势才是「夹击把改革派托起来」的中间环节，改革侧的输入由 `[reform_inputs]` 单独一张表承担（那张表在 A/B 里是可以**分开施加**的第二处理段）。　【沿用·口径】**档位沿用 `ru_defeat` 的实测档位（-0.30），未针对本条处境独立校准**；换字段的依据是原版同族用法（上面那一串行号），不是实测。"
+
+# ── ④ 改革侧输入：把「有限现代化的推力」也落成真实世界状态（A 级）──
+#
+# 为什么单独一张表、而不是往 [pressure] 里再加两条字段：阶段 3 的 A/B 阶梯要在**一局
+# 之内**分两处施加 —— 先只加夹击冲击，隔一段才追加这一处。合进同一个修正就没有
+# 「只加冲击」的那一段，两段之间的差分无从谈起。
+#
+# 为什么是工业家 + 知识界这一对：原版把「外力逼着开门 → 改革侧势力抬头」这一族
+# 用法**成对写在同一处**（幕府被迫开国，common/static_modifiers/content_1_modifiers.txt:1465-1467），
+# 而原版 AI 的进步议程权重正是**读这两个 IG 是不是 powerful**。
+[reform_inputs]
+name = "sitai_pe_reform_inputs"
+effect = "sitai_pe_reform_input"
+icon = "gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds"
+why = "**定位**：它是「改革派那一侧的输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。走 A 级而不是递牌的理由（F5）：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的，改世界状态就等于改它的输入，不占任何槽位。⚠️ 正式的因果链应当是「被夹击 → 借外债练兵修路 → 工业化与识字率的真实位移 → IG 势力自然变化」，而不是直接改政治力量；那条已记进 backlog（B35）。**本档案的取法与 ru/tr/cn 三份的关系，要说清楚**：ru/tr 表达的是「战败 → 改革派抬头」，cn 表达的是「被外力逼着开门 → 士绅失势 + 工业家与知识界抬头」，本档案表达的是**「有限」现代化** —— 不是全盘维新，是在两强都不希望波斯变强的夹缝里，只够办成军队、交通与教育这几件事。所以它要的是**改革侧输入明确到位**（否则「有限」会退化成「没有」），而不是把改革侧一次抬到压过守旧侧（那会变成大清或日本那份档案要说的事，不是波斯的）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**。"
+
+[[reform_inputs.params]]
+key = "years"
+amount = 10
+why = "与 [pressure.params] 的 years = 10、记忆变量的 days = 3650 三处对齐：三者在实验里是同一段时间窗，任何一处短了都会出现「输入还在、压力已经没了」的半截状态。原版 add_modifier 用 years 的写法见 common/scripted_effects/00_movement_effects.txt:2-4。　【沿用·口径】沿用 ru_defeat 的取值，未针对本条处境独立校准。"
+
+[[reform_inputs.effects]]
+key = "interest_group_ig_industrialists_pol_str_mult"
+amount = 0.5
+why = "取原版同族强档 +0.5，而且**这一档在「被外部压力逼着开门」这个处境上有直接同型先例**：`shogun_ig_forced_to_open_market`（common/static_modifiers/content_1_modifiers.txt:1463-1471）在同一个修正里把地主 -0.75（:1465）、知识界 +0.5（:1466）、工业家 +0.5（:1467）一起写 —— 那就是「被外力逼着开门 → 改革侧势力抬头」，与本档案要表达的「夹击逼出来的有限现代化」同型（幕府与波斯，同一时代的同一种外部压力）。原版同字段的全部档位实测为 0.1（00_ip4_03_modifiers.txt:7）、0.25（00_ip4_04_modifiers.txt:33）、0.5（content_1_modifiers.txt:1467）。取 0.5 而不是 0.1：`progressive_agenda` 的权重只在 `ig:ig_industrialists ?= { is_powerful = yes }` 时 +10，而 is_powerful 是**相对份额**判定 —— 只抬一档常常翻不过那条线，实验要的是「输入明确到位」，不是「差一点」。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位（0.5），未针对本条处境独立校准**；档位本身也是原版幕府那条的档（content_1_modifiers.txt:1467）。"
+
+[[reform_inputs.effects]]
+key = "interest_group_ig_intelligentsia_pol_str_mult"
+amount = 0.5
+why = "与工业家同档同源（common/static_modifiers/content_1_modifiers.txt:1466 的 shogun_ig_forced_to_open_market 里这两条就是成对写的）。**为什么波斯的「有限现代化」也要这一条**：真正推得动改革的不是工厂主（波斯 1836 几乎没有工厂），是**见过外面的那批人** —— 出国留学与译书局、新式军队里的教官与军官、以及围着 Dar ul-Funun 那一圈人。原版没有「开明官僚」这个 IG，**知识界是这套词汇里离它最近的一格**（这是**让步**，不是精确对应，如实记在这里）。原版该字段档位为 0.15（106_modifiers.txt:205）、0.25（00_ip4_04_modifiers.txt:47）、0.5（content_1_modifiers.txt:1466）。两条一起给才是原版的用法；只给一条会让「哪一条起了作用」在实验里不可分。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位（0.5），未针对本条处境独立校准**；档位依据见上一条。"
+
+# ── ⑤ 改革窗口 JE：把「处境」喂进原版的最短路径 ──────────────
+[journal_entry]
+name = "je_sitai_pe_great_game_window"
+group = "je_group_foreign_affairs"
+icon = "gfx/interface/icons/objectives/great_game.dds"
+why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有三条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 has_journal_entry = <本 JE 名> 读它）；③ `immediate` / `on_complete` 里递牌（本档案不用，见 `[cards]`）。⚠️ 它喂不到原版 AI 牌：原版 212 处 has_journal_entry 全部硬编码具名 JE，没有「读任意 JE」的通用谓词（backlog B52）。**group 与 icon 都按「大博弈」这个处境另选**（这是本档案与 ru/tr/cn 三份的又一处不同）：`je_group_foreign_affairs`（定义见 common/journal_entry_groups/00_journal_entries.txt:116）——本档案的处境是**外部两强之争**，不是内政（ru/tr 用 `je_group_internal_affairs`）也不是本国历史内容族（cn 用 `je_group_qing`）；原版把同族的对外 JE 放在这一组（00_opium_wars.txt:115 的 `je_opium_wars`、00_impose_law.txt:4）。icon 用 `gfx/interface/icons/objectives/great_game.dds` —— **原版「大博弈」这件事本身用的就是这一张图**（`je_great_game_control` 见 00_player_objectives_great_game.txt:5，`je_secure_influence_over_persia` 见同文件 :1446），不是我们另挑的图。　【沿用·口径】本表的**结构与数值**沿用 `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**；group 与 icon 是按本处境的语义另选的（有原版行号）。"
+
+[[journal_entry.fields]]
+key = "weight"
+amount = 100
+why = "JE 列表拥挤时的保留优先级。与原版 je_corn_laws 的 weight = 100 同档（common/journal_entries/00_corn_laws.txt:79）—— 处境级窗口不该被小 JE 挤掉。⚠️ 已知的档位差异：原版大博弈那一族 JE 用的是 1000（`je_eastern_frontier`，common/journal_entries/03_eastern_frontier.txt:98 的 weight = 1000，那是波斯的东境目标 JE）。本档案**刻意不取 1000**：那是原版核心目标内容，本档案是与它并行的处境窗口，压过它会把原版自己的大博弈目标挤下去。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
+
+[[journal_entry.conditions]]
+gate = "is_shown_when_inactive"
+key = "c:PER"
+op = "?="
+arg = "this"
+why = "档案是**单国**的，主角是波斯。tag = `PER` 是**本机实测确认**的，不是猜的：`v3 evidence PER` 命中原版 5 处/5 文件，其中 `common/country_definitions/00_countries.txt:1316` 就是 `PER = {`（该文件的顶层键就是国家 tag）；同处 :1319 写 `country_type = unrecognized`、:1323 写 `cultures = { persian }` —— 也就是「未列强承认的大国」，这正是本档案处境的制度底子。`c:PER ?= this` 这个写法在**波斯自己的 JE** 里就是原版用法（common/journal_entries/00_player_objectives_great_game.txt:44 的 `c:PER ?= this`；common/journal_entries/03_eastern_frontier.txt:10 的 `c:PER ?= THIS`），问号的语义是「作用域存在才比」，比裸 = 稳。　【沿用·口径】写法沿用 ru/tr/cn，未针对本条处境独立校准；单国门这一行是按本档案主角换的（有原版行号）。"
+
+[[journal_entry.conditions]]
+gate = "is_shown_when_inactive"
+key = "is_country_type"
+arg = "unrecognized"
+why = "**这是本档案比 ru/tr 多出来的一行，也是「被两强夹击」这个处境的结构性前提**。ru/tr 的处境是「打过一场败仗」——败仗与你的国际地位无关；本档案的处境是「**没被承认，所以两强可以随便在你身上做交易**」。原版把这条线画得很清楚：`is_country_type = unrecognized` 在 `je_request_recognition` 的判据里就是「你还没被列强承认」（common/journal_entries/00_request_recognition.txt:9 与 :13）；而**大博弈的目标 JE 恰恰以「取得承认」为波斯的胜利条件之一** —— `je_great_game_control` 里波斯的 complete 写 `is_country_type = recognized` 与 `country_rank >= rank_value:major_power`（00_player_objectives_great_game.txt:160-168，其中 :167 是 `is_country_type = recognized`）。于是这条判据的语义是：**波斯还没跳出被交易的位置，窗口才有意义**；一旦它被承认、升到列强，这段因果就换了性质（那正是原版要玩家去争的结局）。写法是原版自己的：`is_country_type = unrecognized` 作为**平铺正向判据**在 JE 里就这么用（00_request_recognition.txt:9），取反用法见 00_art_jes.txt:11。　【原版行号依据】不是实测读数，是原版同族用法。"
+
+[[journal_entry.conditions]]
+gate = "is_shown_when_inactive"
+key = "has_variable"
+arg = "sitai_pe_great_game_memory"
+why = "没被记过「两强夹击」的国家连这条 JE 都不该看见 —— 「和平期占槽率 ≈ 0」这条出口判据（G-EXIT-5.2）靠它：不施加冲击的局里，这行判据为假，整条 JE 不出现。原版读变量的写法见 common/journal_entries/00_corn_laws.txt:7（`NOT = { has_variable = corn_laws_abolished }`）。　【沿用·口径】沿用 ru/tr/cn 的判据形状，未针对本条处境独立校准。"
+
+[[journal_entry.conditions]]
+gate = "possible"
+key = "has_variable"
+arg = "sitai_pe_great_game_memory"
+why = "开窗的第一个条件：确实被两强夹击过。is_shown_when_inactive 与 possible 都写一遍是有意的 —— 前者管「看不看得见」，后者管「开不开」，原版 je_corn_laws 也是两处各写一套（common/journal_entries/00_corn_laws.txt:6-31）。　【沿用·口径】沿用 ru/tr/cn 的判据形状，未针对本条处境独立校准。"
+
+[[journal_entry.conditions]]
+gate = "possible"
+key = "legitimacy"
+op = "<="
+amount = 75
+why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`、common/journal_entries/01_french_monarchism.txt:329 的 `government_legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**本档案为什么不另加一条「被两强夹击」的门**（那是本处境最想要的那一条）：原版里表达「俄英同时压过来」的写法都是**块形式**（`c:RUS ?= { … }` / `any_country_in_great_power = { … }`），而生成器的判据渲染只支持平铺一行 `key op 操作数`（tools/pdx/modgen.py:185-189 的 `Clause.render`），块形式在本 schema 里根本表达不出来 —— 这是**让步**，如实记在这里（与 `au_revolution` 表达不出「激进派占比门」是同一类问题，backlog B69）。于是「双强夹击」这层意思由 `is_country_type = unrecognized` 那条结构性判据 + `[pressure]` 的两个字段共同承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有两条 75 是先例。"
+
+[[journal_entry.conditions]]
+gate = "complete"
+key = "legitimacy"
+op = ">="
+amount = 75
+why = "关窗的门：国家重新站稳，窗口自己关上（不是「改革完成」—— 改什么由 AI 与原版牌池决定，本档案不替它选法律）。75 也是原版用过的档：common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`、common/journal_entries/01_french_monarchism.txt:329 的 `government_legitimacy >= 75`。**为什么不用「取得列强承认」当关门条件**（那是原版给波斯大博弈的胜利判据，00_player_objectives_great_game.txt:167）：本档案的窗口关的是**处境压力**，不是**大博弈的胜负** —— 用承认当门会把「改革窗口」和「原版目标 JE」绑成一件事，那是替原版内容做决定（§0「让 AI 自己推导」）。承认这件事留给原版自己那条 JE。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
+
+# ── ⑥ 本地化：窗口说明的文案 ─────────────────────────────────
+# 键名与游戏里的约定一致：JE 标题 = JE 名、说明 = <JE 名>_reason（见原版
+# localization/simp_chinese/ip3_misc_01_l_simp_chinese.yml 的 je_metternich /
+# je_metternich_reason）；静态修正的键名 = 修正名本身（ip4_misc_01_l_simp_chinese.yml
+# 的 modifier_regency_landowners）。两处都按原版口径，不自创后缀。
+
+[[localization]]
+key = "je_sitai_pe_great_game_window"
+english = "The Great Game: A Window for Reform"
+simp_chinese = "大博弈：改革窗口"
+why = "G3 要求试玩者能复述「当前目标 + 主因」。标题只写目标（改革窗口）与来由（大博弈），不写机制。与 ru/tr 的「战败求存」、cn 的「列强干涉」并列时，三份标题一眼能分出是**三种**处境：一个打输了、一个被撬开了门、一个被两边夹着。"
+
+[[localization]]
+key = "je_sitai_pe_great_game_window_reason"
+english = "The two great powers press from both sides. Russia takes from the north, Britain from the Gulf, and neither wants a Persia strong enough to refuse either of them. There was no single battle that broke us — only the long squeeze, and a court that keeps paying in privileges because it cannot afford to fight. The treasury is kept alive on foreign loans at ruinous rates, and the ulama and tribal elders who promised that closing the door would keep us safe have lost their credit.\\n\\nA window is open: while the state is squeezed from both sides and the old order is discredited, the reformers can push through the limited modernization the clergy spent decades blocking. It closes again once the state stands firm."
+simp_chinese = "两强正从两个方向同时施压。俄国从北面取，英国从海湾取，而两边都不想要一个强到能拒绝他们的波斯。打垮我们的不是哪一场仗 —— 是这场漫长的挤压，和一个付不起战争、只能一次次拿特权去换的朝廷。国库靠高昂利息的外债撑着，而那些断言「关起门来就没事」的教士与部落长老，信用已经破产。\\n\\n窗口已经打开：国家被两边夹住、旧秩序威信扫地之时，改革派可以把教士们拦了几十年的那点有限现代化推过去。等国家重新站稳，这扇窗就会关上。"
+why = "三行解释里的「最大压力与阻力」写在这里（P11 可观测）：压力 = **被两强同时挤压**（合法性受损）+ **借外债求存的代价**（高息）+ **教士与部落长老信用破产**，阻力 = 「等国家重新站稳」—— 与 complete 的 `legitimacy >= 75` 是同一条判据的两种说法，数值改了文案也要改（P9：改一处、三处同步）。文案里刻意**不出现**「战败」二字（那是 ru/tr 的事），也**不写**「海口被打穿」「被迫开国」（那是大清 cn 的事）：本档案的来由是**陆上两向夹击、且没有被一次打穿**，写成一场败仗就把处境的因果写错了。第二句把「求存必须付出的代价」与「夹击的直接后果」分开写（外债 vs 退让），因为这条区分是本档案的判据核心。"
+
+[[localization]]
+key = "sitai_pe_great_game_pressure"
+english = "The Great Game"
+simp_chinese = "大博弈"
+why = "静态修正的名字（键 = 修正名）。玩家在修正列表里看到的就是这一行，所以写「大博弈」而不是机制名，也不写「合法性 -35 / 利率 +0.35」。原版同族写法见 ip4_misc_01_l_simp_chinese.yml 的 modifier_regency_landowners。"
+
+[[localization]]
+key = "sitai_pe_reform_inputs"
+english = "Reformers Gain Influence"
+simp_chinese = "改革派抬头"
+why = "第二处修正同样要文案，否则它挂在国家上时在修正列表里是一行空名（闸门 ② 也会点名缺键）。写「改革派抬头」而不是「工业家/知识界政治力量 +50%」：玩家看到的应当是处境，不是我们的字段名。"
+
+# ── ⑥b 面板三行（P11 / G3）：拆成三个键，缺哪一行当场可见 ─────
+# 键名由生成器派生：`<JE 名>_goal` / `_pressure` / `_last_change`，
+# 并由生成器**接进 `<JE 名>_reason`**（引擎显示的是 `[JournalEntry.GetReason]`），
+# 所以缺了上面那条 `_reason` 会当场报错。
+[panel]
+why = "**为什么这三行要放在一起**：它们是 G3 判据的三个组成部分（当前目标 / 最大压力与阻力 / 上次改主意的原因），少了任何一行，试玩者都复述不出「目标 + 主因」。放同一张表是为了让「缺行」当场可见（生成器要求三行齐全），而不是散在 JE 说明里靠人记得写全。"
+
+[panel.goal]
+english = "Current goal: while the window is open, push through the limited modernization that the clergy and the tribal elders have been blocking."
+simp_chinese = "当前目标：趁窗口开着，把教士与部落长老一直拦着的那点有限现代化推过去。"
+why = "第一行 = **当前目标**。写「推过去」而不是点名某条法律：改哪条法由 AI 与原版牌池决定，本档案不替它选（§0「让 AI 自己推导」）。用「**有限**现代化」这个词是有判据的：`01a` §K 给波斯推出的最优解原文就是「在两大国之间求存 + 有限现代化」（docs/design/01a-依据与参考.md:293）—— 不是全盘维新，所以这一行不能写成「完成现代化」。这一行与 `[pressure.effects]` 里减教士的那一条是同一个因果的两端。"
+
+[panel.pressure]
+english = "Biggest pressure and resistance: pressure — the two powers press from both sides, the court's authority is worn down by having to yield to one or the other, the treasury survives only on foreign loans at ruinous rates, and the clergy who promised that closing the door would keep us safe have lost their credit; resistance — the state standing firm on its own again."
+simp_chinese = "最大压力与阻力：压力 = 两强从两个方向同时挤压、朝廷的威信在「总得对一边让步」里被磨掉、国库只靠高息外债撑着，而断言关起门就没事的教士已经信用破产；阻力 = 等国家重新自己站稳。"
+why = "第二行 = **最大压力与阻力**。压力项与 `[pressure.effects]` 的三条字段一一对应（合法性 / 利率 / 教士），并且**按本档案的判据把两种东西分开了**：合法性是「夹击的直接后果」，高息外债是「求存必须付出的代价」—— 这一行是玩家唯一能读到这条区分的地方，所以两句都要在。阻力项与 `complete = { legitimacy >= 75 }` 是同一条判据的两种说法 —— 数值改了这行也要改（P9：一处改、三处同步）。"
+
+[panel.last_change]
+english = "Why it changed its mind: because the long squeeze was written into the books — being pressed from both sides is what moved the inputs the AI reads."
+simp_chinese = "上次改主意的原因：因为这场漫长的夹击被记进了账 —— 是被两边同时压着这件事挪动了 AI 读到的那些输入。"
+why = "第三行 = **上次改主意的原因**（G3 里最容易被跳过、却最关键的一行）：没有它，玩家只能看到「它在改革」，看不到「**为什么是现在**」。本档案的这一行与 ru/tr 有一处刻意的差别：写「**这场漫长的**夹击」而不是「这一仗」—— 「没有那个可以指出来的时刻」正是本处境与战败、与列强干涉的分界（见 `[memory].why`），玩家应当从这一行读得出来。"
+
+# ── ⑦ 递牌：本档案一张都不递 ───────────────────────────────
+[cards]
+why = "本档案**不使用自建策略牌**（F5：能改世界就不占槽）。两强夹击 → 压力的链路由变量 + 修正 + JE 表达；⚠️ 依据已于 2026-09-22 更正：JE **不会**被原版牌读到（原版 212 处 has_journal_entry 全硬编码具名 JE，没有通用谓词，backlog B52），所以意图位移**不能**指望「开一个 JE 就被牌池读到」。要真的换路线，用（a）递**原版**的牌 `set_strategy`（B58）或（b）法律承诺 law commitment（B56/B57）—— 两者都是「整条路线要换」时的手段。递牌的政治槽价格：S≈33 时权重 10 吃掉 23% 的份额（阶段 2 价格表）。**本档案为什么不递**：有判据可写的递牌法是「窗口开时递进步牌、窗口关时递回该国 1836 的初始牌」（`ru_defeat` 的 `[journal_entry.signals]` 就是这么写的），但**波斯在原版里没有写下自己的初始落点** —— `common/history/ai/00_strategy.txt` 里只有具名国家块（`c:RUS`、`c:TUR` 等），**没有 `c:PER` 块**（与 `au_revolution` 的奥地利同一种情况：档案 `au_revolution` 的 `[cards].why` 已实测记录 `c:AUS` 缺失）。照抄俄国那三行会把波斯递到一个它从没站过的路线上 —— 那就不是「让 AI 自己推导」，是我们替它选。写这张表的判据需要先实测波斯 1836 的初始牌与重抽落点（阶段 5 的 A/B 会话），在那之前**一张都不递**比递一张编的牌诚实。"
+
+# ── ⑧ 声明式引用：闸门 ② 逐条核对 ──────────────────────────
+# 变量/修正/JE/图标/本地化键这些**带名字的引用**由闸门 ② 从产物里自动抽出来核对；
+# 剩下这类「原版词汇表」的引用没法从形状上认出来（legitimacy 与被我们定义的键长得一样），
+# 所以在这里逐条声明 —— 每条都要能指到原版里真实用它的地方。
+# `modifier_field` 这一类把 P10 的「数值必须引原版同类用法」变成机器可查：
+# 池子是原版 `common/static_modifiers` 里出现过的字段名，写错一个字母即红。
+[[references]]
+kind = "trigger"
+name = "legitimacy"
+why = "JE 的开窗/关窗判据（`legitimacy <= 75` / `>= 75`）。原版用法：common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`、common/journal_entries/01_french_monarchism.txt:329 的 `government_legitimacy >= 75`。"
+
+[[references]]
+kind = "trigger"
+name = "is_country_type"
+why = "is_shown_when_inactive 里把窗口锁在「仍未被列强承认」这个位置上（`is_country_type = unrecognized`）。原版用法：common/journal_entries/00_request_recognition.txt:9 与 :13（平铺正向判据）、common/journal_entries/00_art_jes.txt:11（取反写法）；大博弈目标 JE 里波斯的胜利判据是同一个触发器的反向（common/journal_entries/00_player_objectives_great_game.txt:167 的 `is_country_type = recognized`）。"
+
+[[references]]
+kind = "trigger"
+name = "has_variable"
+why = "记忆变量的读法。原版用法：common/journal_entries/00_corn_laws.txt:7（`NOT = { has_variable = corn_laws_abolished }`），阶段 1 统计 has_variable 被 13 张原版牌直接读。"
+
+[[references]]
+kind = "effect"
+name = "set_variable"
+why = "写记忆变量。原版用法：common/on_actions/00_code_on_actions.txt:7046-7050（on_war_end 给 recently_had_war 记 5 年，:7048 是 days = 1825）。"
+
+[[references]]
+kind = "effect"
+name = "add_modifier"
+why = "把静态修正挂到国家上。原版用法：common/scripted_effects/00_movement_effects.txt:2-4（add_modifier = { name = initial_movement_enthusiasm years = 20 }）。"
+
+[[references]]
+kind = "country_tag"
+name = "PER"
+why = "JE 的单国门（`c:PER ?= this`）。本机实测：`v3 evidence PER` 命中原版 5 处/5 文件 —— common/country_definitions/00_countries.txt:1316 的 `PER = {`（:1319 `country_type = unrecognized`、:1323 `cultures = { persian }`）、common/flag_definitions/00_flag_definitions.txt:8072、common/dynamic_country_names/00_dynamic_country_names.txt:3925。原版自己在 JE 里也这么写：common/journal_entries/00_player_objectives_great_game.txt:44 与 common/journal_entries/03_eastern_frontier.txt:10。"
+
+# 修正字段名：数值必须引原版同类用法（P10），所以逐条声明 + 由闸门 ② 核对
+# 「这个名字在原版 static_modifiers 里出现过」。没有这一条，字段名写错一个字母
+# 会表现为「修正挂上去了但什么也没发生」—— 最安静的一类失败。
+[[references]]
+kind = "modifier_field"
+name = "country_legitimacy_base_add"
+why = "合法性修正字段（本档案的「夹击的直接后果」）。原版档位 +10 / +5 / -10 / -20（common/static_modifiers/00_code_static_modifiers.txt:322、:331、:343、:353）与 -50（同文件 :986 的 low_electoral_confidence），另有 -50（common/static_modifiers/content_1_modifiers.txt:17 的 opium_wars_lost）。"
+
+[[references]]
+kind = "modifier_field"
+name = "country_loan_interest_rate_add"
+why = "借债利率（本档案的「求存必须付出的代价」）。原版实测 common/ 下共 11 处：全局基准 +0.2（common/static_modifiers/00_code_static_modifiers.txt:12）、法律侧 ±0.01/±0.02/±0.03/±0.05（common/amendments/00_amendments_enactment_04.txt:644、:1138、:1174、:1222、:1266）、科技侧 -0.02（common/technology/technologies/30_society.txt:209、:599、:1226、:1473、:1647）、字段定义（common/modifier_type_definitions/00_modifier_types.txt:662）。⚠️ 「国家修正那一侧没有档位阶梯」这一点成立（那边只有全局基准 +0.2），所以本档案的 0.35 是实验取值。"
+
+[[references]]
+kind = "modifier_field"
+name = "interest_group_ig_devout_pol_str_mult"
+why = "教士 / 部落长老那一侧的政治力量（本档案「旧秩序信用破产」用的就是它）。原版档位：+0.25（common/static_modifiers/00_ip4_04_modifiers.txt:19）、+0.15（common/static_modifiers/106_modifiers.txt:224）、-0.25（common/static_modifiers/00_ip4_04_modifiers.txt:141，注释 `# Selling church lands`）、-0.50（common/static_modifiers/agitators_5_modifiers.txt:616，与地主 -0.50、工业家 -0.50 成对写）。"
+
+[[references]]
+kind = "modifier_field"
+name = "interest_group_ig_industrialists_pol_str_mult"
+why = "工业家政治力量（改革侧输入之一）。原版档位：0.1（common/static_modifiers/00_ip4_03_modifiers.txt:7）、0.25（common/static_modifiers/00_ip4_04_modifiers.txt:33）、0.5（common/static_modifiers/content_1_modifiers.txt:1467 的 shogun_ig_forced_to_open_market —— 幕府被迫开国，与本档案同型）。"
+
+[[references]]
+kind = "modifier_field"
+name = "interest_group_ig_intelligentsia_pol_str_mult"
+why = "知识界政治力量（改革侧输入之一；原版没有「开明官僚」这个 IG，这一格是最近似的，属让步）。原版档位：0.15（common/static_modifiers/106_modifiers.txt:205）、0.25（common/static_modifiers/00_ip4_04_modifiers.txt:47）、0.5（common/static_modifiers/content_1_modifiers.txt:1466 的 shogun_ig_forced_to_open_market）。"

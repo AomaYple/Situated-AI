@@ -1,0 +1,12 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 改革侧输入（A 级）：**定位**：它是「改革派那一侧的输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。走 A 级而不是递牌的理由（F5）：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的，改世界状态就等于改它的输入，不占任何槽位。⚠️ 正式的因果链应当是「被夹击 → 借外债练兵修路 → 工业化与识字率的真实位移 → IG 势力自然变化」，而不是直接改政治力量；那条已记进 backlog（B35）。**本档案的取法与 ru/tr/cn 三份的关系，要说清楚**：ru/tr 表达的是「战败 → 改革派抬头」，cn 表达的是「被外力逼着开门 → 士绅失势 + 工业家与知识界抬头」，本档案表达的是**「有限」现代化** —— 不是全盘维新，是在两强都不希望波斯变强的夹缝里，只够办成军队、交通与教育这几件事。所以它要的是**改革侧输入明确到位**（否则「有限」会退化成「没有」），而不是把改革侧一次抬到压过守旧侧（那会变成大清或日本那份档案要说的事，不是波斯的）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**。
+# 每条字段的依据见 sitai_pe_great_game.md（由 why_report 生成）。
+# ⚠️ 这一份**不是**冲击本身：它是实验的第二处理段（B2）才挂的东西 ——
+# 写进 [pressure] 会让「只加冲击」的那一段消失。
+
+sitai_pe_reform_inputs = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds
+	interest_group_ig_industrialists_pol_str_mult = 0.5
+	interest_group_ig_intelligentsia_pol_str_mult = 0.5
+}
