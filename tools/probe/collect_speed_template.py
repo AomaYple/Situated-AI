@@ -30,18 +30,27 @@ CROP = (1690, 20, 1920, 90)
 
 def main() -> int:
     game_auto.assert_no_game_running()
-    hwnd = game_auto.launch(scripted_tests=True, timeout=300)
+    game_auto.ALLOW_REAL_INPUT = True  # 显式入口
+    hwnd, previous = game_auto.launch_to_foreground(timeout=300)
     print("hwnd =", hwnd)
-    game_auto.wait_for_lobby(hwnd, timeout=420)
-    print("到大堂 ✅")
+    settle = game_auto.wait_for_boot_settle(timeout=300)
+    print(f"加载等待：{settle.why}")
 
-    # 进观察者模式（地图画出来之后顶栏的速度表盘才在）
-    game_auto.click_observer(hwnd)
-    print("已点观察 ✅，等界面定型…")
+    # 进观察者模式并跑起来（地图画出来之后顶栏的速度表盘才在）。
+    # 用标准流程开一局，而不是自己拼点击序列 —— 那正是我们要收模板的那个界面。
+    session = game_auto.start_session(hwnd, previous, settle=settle, force=True)
+    print(f"进局 ✅：{session.handover.describe()}")
+    hwnd = session.hwnd
     game_auto._sleep(4.0)
 
     AUTO.mkdir(parents=True, exist_ok=True)
-    image = game_auto.screenshot(hwnd)
+    # 收模板要抓图 ⇒ 游戏必须是前台（`_grab` 的判据）；抓完再把前台还回去。
+    game_auto.ensure_foreground(hwnd, force=True)
+    try:
+        image = game_auto.screenshot(hwnd)
+    finally:
+        if previous:
+            game_auto._set_foreground(previous)
     full = AUTO / "speed-full.png"
     image.save(full)
     print("整张截图：", full, image.size)

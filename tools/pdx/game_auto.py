@@ -1040,7 +1040,15 @@ def locate_optional(
     )
 
 
-def click_client(hwnd: int, x: int, y: int, *, settle: float = 0.0, force: bool = False) -> None:
+def click_client(
+    hwnd: int,
+    x: int,
+    y: int,
+    *,
+    settle: float = 0.0,
+    previous: int = 0,
+    force: bool = False,
+) -> None:
     """在客户区 ``(x, y)`` 处做一次**真前台左键点击**。
 
     **鼠标注入走成熟库 `pydirectinput`**（`moveTo` + `click`），不再自己拼
@@ -1060,9 +1068,10 @@ def click_client(hwnd: int, x: int, y: int, *, settle: float = 0.0, force: bool 
       「观察」按钮的匹配分数**一模一样**（0.855），界面没有切走。
       引擎读的是**原始输入状态**（光标位置 + 按键状态），不是窗口消息，这一条与用什么库无关。
 
-    所以"点一次"这件事只能**真前台**。标准流程里游戏从启动到三下点完一直是前台，
-    因此不再有"点完把前台还回去"这个动作 —— **还前台统一在流程末尾做一次**
-    （:func:`switch_to_background`），而不是每点一下闪一次。
+    标准流程里游戏从启动到三下点完一直是前台，所以**不需要** ``previous``；
+    它是给**探针**留的口子：探针在自己的一局里连点几个 debug 按钮，点完要把前台还给用户。
+    传 ``previous`` 就点完还原，不传就什么都不动 —— **不用一个 `give_back=True` 默认值**，
+    因为"默认还前台"与"默认不还"只差一个字符，而后果差很远。
     """
     if not _input_allowed(force):
         raise RealInputBlockedError(
@@ -1076,6 +1085,8 @@ def click_client(hwnd: int, x: int, y: int, *, settle: float = 0.0, force: bool 
     directinput.click()
     if settle:
         _sleep(settle)
+    if previous and previous != hwnd:
+        _set_foreground(previous)
 
 
 def _wait_cursor_at(x: int, y: int, *, timeout: float = 1.0) -> bool:
@@ -1115,7 +1126,7 @@ def tick_mark(log: Path | None = None) -> TickMark:
 def is_running(seconds: float = 6.0, *, log: Path | None = None, sleeper: object = None) -> Advance:
     """时间在推进吗？**用逐 tick 行判定**（暂停不写日志，日志增长不能当判据）。
 
-    ``sleeper`` 与 :func:`wait_until_running` / :func:`wait_for_lobby` 同口径，
+    ``sleeper`` 与 :func:`wait_until_running` / :func:`wait_for_boot_settle` 同口径，
     且**调用时解析**（见 :func:`_resolve`）—— 否则用例漏打一个补丁就要真等。
     """
     pause: Sleeper = cast("Sleeper", _resolve(sleeper, _sleep, "sleeper"))

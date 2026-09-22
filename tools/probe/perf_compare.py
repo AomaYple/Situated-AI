@@ -163,23 +163,23 @@ def run_once(label: str, months: float) -> dict[str, object]:
     if DUMP.exists():
         DUMP.unlink()  # 清掉旧的，靠"文件重新出现"判断 dump 成功
     print(f"\n===== {label}：起游戏（只挂本地 mod）=====")
-    hwnd = ga.launch(scripted_tests=True, timeout=float(ga.WINDOW_TIMEOUT))
+    previous = ga._foreground_window()
+    hwnd, previous = ga.launch_to_foreground(timeout=float(ga.WINDOW_TIMEOUT))
     settle = ga.wait_for_boot_settle(timeout=float(ga.LOBBY_TIMEOUT))
     print(f"  加载等待（不碰窗口）：{settle.why}")
-    session = ga.start_background_session(hwnd, force=True)
-    print(
-        f"  进局：borrows={session['borrows']} borrow_seconds={session['borrow_seconds']} "
-        f"speed_ok={session['speed_ok']} rate={session['speed_days_per_second']}"
-    )
+    session = ga.start_session(hwnd, previous, settle=settle, force=True)
+    print(f"  进局：{session.handover.describe()} speed_ok={session.rate_ok} rate={session.rate}")
     hwnd = ga._live_window(hwnd)
 
+    # 两个 debug 按钮是**我们自己 mod 里**的控件：位置靠颜色质心找，不猜坐标。
+    # 点它们要真前台（引擎读原始输入状态），所以点完把前台还给启动前那个窗口。
     clear_at = _wait_color_center(hwnd, CLEAR_RGB)
-    ga.click_client_nosteal(hwnd, clear_at[0], clear_at[1], force=True)
+    ga.click_client(hwnd, clear_at[0], clear_at[1], previous=previous, force=True)
     print(f"  已点 CLEAR @ {clear_at}（清掉开局加载那段计数）")
     advanced = _wait_months(hwnd, months)
     print(f"  跑完 {months} 个月：{advanced}")
     dump_at = _wait_color_center(hwnd, DUMP_RGB)
-    ga.click_client_nosteal(hwnd, dump_at[0], dump_at[1], force=True)
+    ga.click_client(hwnd, dump_at[0], dump_at[1], previous=previous, force=True)
     print(f"  已点 DUMP @ {dump_at}，等文件出现……")
 
     deadline = time.monotonic() + 60.0

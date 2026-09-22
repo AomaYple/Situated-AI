@@ -61,7 +61,8 @@ dependencies = [
                         # ⚠️ 它**不解决**两台事：① 后台点击 —— 实测 `PostMessage` /
                         # `SendMessage` 三种变体引擎一律不认（它读原始输入），换库也一样；
                         # ② 控制台 —— scancode 版键盘试过 4 个候选键仍未能唤起控制台
-                        # （判据是"命令会写的文件有没有变"，见 tools/probe/console_key_test.py）。
+                        # （判据是"命令会写的文件有没有变"；那次分不清"键没被接受"与
+                        # "这个界面不让开控制台"，所以记作未证实而不是判死）。
     "pygetwindow>=0.0.9",
                         # game_auto.py：**窗口**枚举 / 标题 / 激活（`Window.activate()`
                         # 内部自己做 `AttachThreadInput` + 置顶）/ 最小化 / 还原。

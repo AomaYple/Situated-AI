@@ -1578,6 +1578,51 @@ class TestRunSession:
         assert seen["settle"] is not None, "等加载的结果要传下去，别在 start_session 里再等一次"
 
 
+class TestClickClientPrevious:
+    """`click_client(previous=…)`：给**探针**用的"点完把前台还回去"。
+
+    标准流程不需要它（三下点击期间游戏一直是前台，收尾统一在
+    `switch_to_background` 做一次）。但探针会在自己的一局里连点几个 debug 按钮，
+    那时点完必须把前台还给用户 —— 所以这个参数存在，且**必须显式传**。
+    """
+
+    def _patch(self, monkeypatch: pytest.MonkeyPatch, calls: list[str]) -> None:
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _h, **_kw: None)
+        monkeypatch.setattr(ga, "_client_origin", lambda _h: (0, 0))
+        monkeypatch.setattr(ga, "_wait_cursor_at", lambda _x, _y, **_kw: True)
+        monkeypatch.setattr(ga, "_set_foreground", lambda h: calls.append(f"set:{h}") or True)
+        monkeypatch.setattr(
+            ga,
+            "directinput",
+            SimpleNamespace(
+                moveTo=lambda x, y: calls.append(f"move:{x},{y}"),
+                click=lambda: calls.append("click"),
+                position=lambda: (0, 0),
+            ),
+        )
+
+    def test_不传_previous_就不动前台(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+        self._patch(monkeypatch, calls)
+        ga.click_client(1, 10, 20)
+        assert calls == ["move:10,20", "click"], "标准流程：点完不碰前台（收尾统一做）"
+
+    def test_传了_previous_就点完还原(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+        self._patch(monkeypatch, calls)
+        ga.click_client(1, 10, 20, previous=777)
+        assert calls == ["move:10,20", "click", "set:777"], "探针：点完把前台还给用户"
+
+    def test_previous_就是游戏时不还(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+        self._patch(monkeypatch, calls)
+        ga.click_client(1, 10, 20, previous=1)
+        assert calls == ["move:10,20", "click"]
+
+
 class TestGrabGuard:
     """抓图前必须确认**前台就是游戏**：`ImageGrab` 抓的是屏幕，被遮挡时会拿到别的窗口的像素。"""
 
