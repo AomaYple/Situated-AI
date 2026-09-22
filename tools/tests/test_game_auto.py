@@ -715,6 +715,45 @@ def _record_popen(seen: dict[str, object]) -> object:
     return fake_popen
 
 
+class TestKillGame:
+    """收尾纪律：会话结束后**不能留进程**（它会握着日志句柄、污染下一次取证）。"""
+
+    def test_每个进程都杀一遍并返回_PID(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ga, "_process_pids", lambda: [111, 222])
+        seen: list[list[str]] = []
+
+        def fake_run(command: list[str], **kwargs: object) -> object:
+            seen.append(command)
+            return object()
+
+        monkeypatch.setattr(ga.subprocess, "run", fake_run)
+        assert ga.kill_game() == [111, 222]
+        assert seen == [
+            ["taskkill", "/PID", "111", "/F"],
+            ["taskkill", "/PID", "222", "/F"],
+        ]
+
+    def test_没在跑就一条命令都不发(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ga, "_process_pids", list)
+
+        def boom(*args: object, **kwargs: object) -> object:
+            pytest.fail("没有进程时不该发 taskkill")
+
+        monkeypatch.setattr(ga.subprocess, "run", boom)
+        assert ga.kill_game() == []
+
+    def test_杀不掉也要如实返回_PID(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`taskkill` 起不来（没有这个程序 / 权限）不该让**收尾**这一步炸掉 ——
+        调用方在 `finally` 里用它，抛异常会把"还前台"那一步一起带走。"""
+        monkeypatch.setattr(ga, "_process_pids", lambda: [333])
+
+        def boom(*args: object, **kwargs: object) -> object:
+            raise OSError("taskkill 不在 PATH 里")
+
+        monkeypatch.setattr(ga.subprocess, "run", boom)
+        assert ga.kill_game() == [333]
+
+
 class TestLaunch:
     def test_有进程在跑就拒绝启动(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """两个实例会互相抢前台与存档 —— 起之前必须断言 0 个进程。"""
@@ -1075,6 +1114,156 @@ class TestPressKeyGate:
         )
         with pytest.raises(ga.RealInputBlockedError):
             ga.press_key("space")
+
+
+class TestTypeText:
+    """敲字符串：上档字符要自己配 Shift —— `pydirectinput` 的键表里没有它们。"""
+
+    @staticmethod
+    def _spy(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+        from types import SimpleNamespace
+
+        seen: list[tuple[str, str]] = []
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)
+        monkeypatch.setattr(
+            ga,
+            "directinput",
+            SimpleNamespace(
+                press=lambda key: seen.append(("press", key)),
+                keyDown=lambda key: seen.append(("down", key)),
+                keyUp=lambda key: seen.append(("up", key)),
+            ),
+        )
+        return seen
+
+    def test_普通字符直接敲(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen = self._spy(monkeypatch)
+        ga.type_text("abc")
+        assert seen == [("press", "a"), ("press", "b"), ("press", "c")]
+
+    def test_下划线要配_Shift(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`_` 不在 `pydirectinput` 的键表里 —— 直接 `write()` 会抛 KeyError。"""
+        seen = self._spy(monkeypatch)
+        ga.type_text("a_b")
+        assert seen == [
+            ("press", "a"),
+            ("down", "shift"),
+            ("press", "-"),
+            ("up", "shift"),
+            ("press", "b"),
+        ]
+
+    def test_大写字母要配_Shift(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen = self._spy(monkeypatch)
+        ga.type_text("Ab")
+        assert seen == [("down", "shift"), ("press", "a"), ("up", "shift"), ("press", "b")]
+
+    def test_空格走_space_键名(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen = self._spy(monkeypatch)
+        ga.type_text("a b")
+        assert ("press", "space") in seen
+
+    def test_Shift_一定会被抬起(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """敲到一半炸了也必须抬起 Shift —— 否则整个桌面后面的输入都变成大写。"""
+        from types import SimpleNamespace
+
+        events: list[str] = []
+
+        def boom(key: str) -> None:
+            raise RuntimeError("注入失败")
+
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)
+        monkeypatch.setattr(
+            ga,
+            "directinput",
+            SimpleNamespace(
+                press=boom,
+                keyDown=lambda key: events.append(f"down:{key}"),
+                keyUp=lambda key: events.append(f"up:{key}"),
+            ),
+        )
+        with pytest.raises(RuntimeError):
+            ga.type_text("_")
+        assert events == ["down:shift", "up:shift"]
+
+    def test_没授权就整串都不敲(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", False)
+        monkeypatch.setattr(
+            ga, "directinput", SimpleNamespace(press=lambda _k: pytest.fail("真按键"))
+        )
+        with pytest.raises(ga.RealInputBlockedError):
+            ga.type_text("dump_ticktask_timings")
+
+
+class TestPressChord:
+    """组合键：`pydirectinput` 的键表按扫描码给，上档字符不在表里，要自己按 Shift。"""
+
+    @staticmethod
+    def _spy(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+        from types import SimpleNamespace
+
+        seen: list[tuple[str, str]] = []
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)
+        monkeypatch.setattr(
+            ga,
+            "directinput",
+            SimpleNamespace(
+                press=lambda key: seen.append(("press", key)),
+                keyDown=lambda key: seen.append(("down", key)),
+                keyUp=lambda key: seen.append(("up", key)),
+            ),
+        )
+        return seen
+
+    def test_单键就是按一下(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen = self._spy(monkeypatch)
+        ga.press_chord("f12")
+        assert seen == [("press", "f12")]
+
+    def test_加号写法按顺序按下与抬起(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen = self._spy(monkeypatch)
+        ga.press_chord("shift+ctrl+a")
+        assert seen == [
+            ("down", "shift"),
+            ("down", "ctrl"),
+            ("press", "a"),
+            ("up", "ctrl"),
+            ("up", "shift"),
+        ]
+
+    def test_敲不下去也要抬起修饰键(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from types import SimpleNamespace
+
+        events: list[str] = []
+
+        def boom(key: str) -> None:
+            raise RuntimeError("注入失败")
+
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)
+        monkeypatch.setattr(
+            ga,
+            "directinput",
+            SimpleNamespace(
+                press=boom,
+                keyDown=lambda key: events.append(f"down:{key}"),
+                keyUp=lambda key: events.append(f"up:{key}"),
+            ),
+        )
+        with pytest.raises(RuntimeError):
+            ga.press_chord("shift+`")
+        assert events == ["down:shift", "up:shift"]
+
+    def test_没授权也要拒绝(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from types import SimpleNamespace
+
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", False)
+        monkeypatch.setattr(
+            ga, "directinput", SimpleNamespace(press=lambda _k: pytest.fail("真按键"))
+        )
+        with pytest.raises(ga.RealInputBlockedError):
+            ga.press_chord("`")
 
 
 # ────────────────────────── 标准流程（单路，无回落链）──────────────────────────

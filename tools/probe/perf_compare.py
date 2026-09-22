@@ -35,7 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
-from pdx import config
+from pdx import ab_probe, config
 from pdx import game_auto as ga
 
 DOCS = Path.home() / "Documents" / "Paradox Interactive" / "Victoria 3"
@@ -74,9 +74,14 @@ CONSOLE_ACTION_VARIANT = "run_console_action_main"
 LOGS = DOCS / "logs"
 
 PROBE_DIR = MODS_DIR / "zz_sitai_perf"
-OURS_DST = MODS_DIR / "sitai_sitai"
+
+#: 真 mod 的安装目录名 —— **从数据源读**（`mod/data/*.toml`），不在探针里写死。
+#:
+#: 为什么不写死：阶段 5 的 G-EXIT-1 是"加一行数据 = 加一个处境、不改逻辑"。
+#: 目录名一旦在探针里写死，就多出若干处"改了数据还得顺手改的 Python"；
+#: 而 `ab_probe.load_target()` 已经是那条链的单一来源（`ab_probe.deploy()` 同样读它）。
+OURS_DST = MODS_DIR / ab_probe.load_target().dir_name
 OUT_DIR = Path(__file__).resolve().parents[1] / "out" / "perf"
-LOGS = DOCS / "logs"
 
 #: 探针按钮的**候选点**（客户区，1920x1080）—— **已停用，留作记录**。
 #:
@@ -99,10 +104,8 @@ RUN_TIMEOUT = 900.0
 
 
 def _kill_game() -> list[int]:
-    pids = ga._process_pids()
-    for pid in pids:
-        subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, check=False)
-    return pids
+    """转发到 :func:`pdx.game_auto.kill_game`（收尾纪律只有一份实现）。"""
+    return ga.kill_game()
 
 
 def _set_local_mods(paths: list[Path], *, original: dict[str, object] | None = None) -> None:

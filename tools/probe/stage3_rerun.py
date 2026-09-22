@@ -44,8 +44,19 @@ MODS_DIR = DOCS / "mod"
 CONTENT_LOAD = DOCS / "content_load.json"
 BACKUP = DOCS / "content_load.json.sitai-backup"
 DEBUG_LOG = DOCS / "logs" / "debug.log"
-OURS = MODS_DIR / "sitai_sitai"
 PROBE = MODS_DIR / "zz_probe_ab"
+
+
+def ours() -> Path:
+    """真 mod 的安装目录 —— **目录名从数据源读**，不在脚本里写死。
+
+    为什么不写死：阶段 5 的 G-EXIT-1 是"加一行数据 = 加一个处境、不改逻辑"。
+    目录名一旦写死，就多出若干处"改了数据还得顺手改的 Python"；
+    而 `ab_probe.load_target()` 已经是那条链的单一来源（`ab_probe.deploy()`
+    用的也是它 —— 两边不同名会让"探针装的"和"这里装的"变成两份东西）。
+    """
+    return MODS_DIR / ab_probe.load_target().dir_name
+
 
 #: 一天的推进量换算（与 `game_auto.tick_day` 同口径：够算月份就行）。
 MONTH_DAYS = 30.44
@@ -64,11 +75,12 @@ def deploy(*, with_probe: bool = True) -> str:
     if not BACKUP.exists():
         shutil.copy2(CONTENT_LOAD, BACKUP)
     original = json.loads(CONTENT_LOAD.read_text(encoding="utf-8"))
-    for target in (OURS, PROBE):
+    ours_dst = ours()
+    for target in (ours_dst, PROBE):
         if target.exists():
             shutil.rmtree(target)
-    shutil.copytree(config.REPO / "mod", OURS)
-    paths = [OURS]
+    shutil.copytree(config.REPO / "mod", ours_dst)
+    paths = [ours_dst]
     if with_probe:
         # ⚠️ 用 `ab_probe.write` 而**不是** `ab_probe.deploy`：后者会调
         # `experiments.set_enabled_mods()` 自己改写 `content_load.json`，而这里要保住
@@ -96,7 +108,7 @@ def restore() -> str:
         notes.append("content_load.json 已还原")
     else:  # pragma: no cover - 没备份就没得还原，如实说
         notes.append("⚠️ 没有备份可还原")
-    for target in (OURS, PROBE):
+    for target in (ours(), PROBE):
         if target.exists():
             shutil.rmtree(target)
             notes.append(f"已删 {target.name}")

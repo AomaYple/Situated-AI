@@ -573,6 +573,15 @@ def _monotonic() -> float:
     return time.monotonic()
 
 
+def _require_input(force: bool) -> None:
+    """没有真实输入授权就**当场报错**（每个注入点都必须先过这一关）。"""
+    if not _input_allowed(force):
+        raise RealInputBlockedError(
+            "没有授权就投真实键盘输入：这会让用户正在打的字跑到游戏里。"
+            "显式入口请打开 `ALLOW_REAL_INPUT` 或传 `force=True`。"
+        )
+
+
 def press_key(key: str, *, force: bool = False) -> None:
     """按一次**真实**键（扫描码，`pydirectinput`）—— 和点击共用同一道输入闸门。
 
@@ -580,12 +589,67 @@ def press_key(key: str, *, force: bool = False) -> None:
     于是"什么时候可以碰真实键盘"就漏了一个口子（测试里少打一个桩，用户就会看到
     自己正在打的字跑到游戏里）。收成一处，闸门才真的是闸门。
     """
-    if not _input_allowed(force):
-        raise RealInputBlockedError(
-            "没有授权就投真实键盘输入：这会让用户正在打的字跑到游戏里。"
-            "显式入口请打开 `ALLOW_REAL_INPUT` 或传 `force=True`。"
-        )
+    _require_input(force)
     directinput.press(key)
+
+
+def press_chord(chord: str, *, force: bool = False) -> None:
+    """按一次组合键：``"`"`` 或 ``"shift+`"``（同样是真实扫描码）。
+
+    为什么需要它：`pydirectinput` 的键表按**扫描码**给，上档字符（``~`` / ``^`` /
+    ``_``）**根本不在表里** —— 想敲上档就得自己按住 Shift。收成一处，
+    :func:`type_text` 与探针的按键扫描走的是同一条路，不会各自实现一遍。
+    """
+    _require_input(force)
+    if "+" not in chord:
+        directinput.press(chord)
+        return
+    mods, _, key = chord.rpartition("+")
+    for mod in mods.split("+"):
+        directinput.keyDown(mod)
+    try:
+        directinput.press(key)
+    finally:
+        # 一定要抬起：不然"按住的 Shift"会漏到后面的所有输入里（用户看到的
+        # 是"我打的字全变大了"，而且游戏里也会一直被当成按住 Shift）。
+        for mod in reversed(mods.split("+")):
+            directinput.keyUp(mod)
+
+
+#: 上档字符 → 不带 Shift 的那个键位。
+#:
+#: 为什么需要这张表：`pydirectinput` 的键表里**只有不带 Shift 的单字符键** ——
+#: 实测 ``_`` / ``~`` / ``^`` 与大写字母**都不在表里**，直接
+#: `directinput.write("dump_ticktask_timings")` 会在下划线那一格抛 `KeyError`。
+#: 表里只放我们要敲的字符集（控制台命令名用的那一套），多写的没人验证过就没意义。
+SHIFT_CHARS: dict[str, str] = {
+    "_": "-",
+    "~": "`",
+    ":": ";",
+    "?": "/",
+    '"': "'",
+    "+": "=",
+    "(": "9",
+    ")": "0",
+    " ": "space",
+}
+
+
+def type_text(text: str, *, force: bool = False) -> None:
+    """像人一样**逐字**敲入一个字符串（真实扫描码输入；上档字符自动带上 Shift）。
+
+    用它而不是 `pydirectinput.write()`：后者对不在键表里的字符会抛 `KeyError`，
+    而我们要敲的控制台命令名里就有下划线。这里把"要不要按 Shift"显式写出来，
+    闸门与 :func:`press_key` / :func:`press_chord` 是同一道。
+    """
+    _require_input(force)
+    for char in text:
+        if char in SHIFT_CHARS:
+            press_chord(f"shift+{SHIFT_CHARS[char]}", force=True)
+        elif char.isupper():
+            press_chord(f"shift+{char.lower()}", force=True)
+        else:
+            directinput.press(char)
 
 
 def _window(hwnd: int) -> gw.Win32Window:
@@ -1229,6 +1293,25 @@ def assert_no_game_running() -> None:
         raise GameRunningError(
             f"已经有 victoria3 在跑（PID {pids}）—— 先关掉再起，否则两个实例会抢前台/存档"
         )
+
+
+def kill_game() -> list[int]:
+    """杀掉当前所有 ``victoria3.exe``，返回被杀的 PID 列表（没在跑就是空列表）。
+
+    为什么收进这个模块：会话收尾**必须**做到"不留进程"—— 留一个进程会握着
+    ``logs/*.log`` 的句柄（`shutil.move` 抛 `WinError 32`），下一次会话的取证
+    还会混进它的残留。而 ``tools/probe/`` 下每个探针都各抄了一份 ``_kill_game``；
+    收成一处，这条纪律才守得住（探针只负责调用）。
+
+    为什么用 ``taskkill`` 而不是自己遍历/发信号：本机**没有 psutil**，而
+    ``taskkill`` 是系统自带、和本模块已经在用的 ``tasklist`` 配对（同一个
+    ``_process_pids`` 判据）。游戏是 Windows 独占的，跨平台在这里没有意义。
+    """
+    pids = _process_pids()
+    for pid in pids:
+        with suppress(OSError):
+            subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, check=False)
+    return pids
 
 
 def launch(
@@ -2103,6 +2186,7 @@ __all__ = [
     "BOTTOM_ROI",
     "DEFAULT_SCALES",
     "DEFAULT_THRESHOLD",
+    "SHIFT_CHARS",
     "TOP_RIGHT_ROI",
     "UI_DIR",
     "Advance",
@@ -2128,6 +2212,7 @@ __all__ = [
     "is_blank",
     "is_later",
     "is_running",
+    "kill_game",
     "last_tick_in",
     "launch",
     "launch_to_foreground",
@@ -2139,6 +2224,7 @@ __all__ = [
     "other_window",
     "parse_tasklist_pids",
     "parse_tick_date",
+    "press_chord",
     "press_key",
     "probe_months",
     "probe_roles_in",
@@ -2152,6 +2238,7 @@ __all__ = [
     "switch_to_background",
     "tick_day",
     "tick_mark",
+    "type_text",
     "wait_for_boot_settle",
     "wait_for_window",
     "wait_until",
