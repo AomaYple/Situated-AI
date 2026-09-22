@@ -165,6 +165,36 @@ class TestProcessListing:
         text = 'INFO: \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\n"victoria3.exe","42","C","1","1 K"\n'
         assert ga.parse_tasklist_pids(text) == [42]
 
+    def test_字段里带逗号不会被当分隔符(self) -> None:
+        """``tasklist`` 的内存列就是 ``"6,612 K"`` —— 引号里的逗号不是分隔符。"""
+        text = '"victoria3.exe","19084","Console","1","6,612 K"\n'
+        assert ga.parse_tasklist_pids(text) == [19084]
+
+    def test_多行各取一个(self) -> None:
+        text = '"a.exe","1","C"\n"b.exe","2","C"\n'
+        assert ga.parse_tasklist_pids(text) == [1, 2]
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            '"a.exe", "7", "Console"\n',  # 逗号后有空格（手写 split('","') 取不到）
+            "a.exe,7,Console\n",  # 完全没加引号（手写版同样取不到）
+            '"a.exe","7","Console"\n',  # 标准形状
+        ],
+    )
+    def test_容忍真实可能出现的引号形状(self, text: str) -> None:
+        """三种形状都要取到 7 —— 换标准库 csv 的收益就在这里。
+
+        旧实现要求**每个字段都带引号**，前两种形状会静默返回 ``[]``，
+        而"进程在跑却说没有"会让上层去重复启动一个游戏。
+        """
+        assert ga.parse_tasklist_pids(text) == [7]
+
+    def test_表头不变成_PID(self) -> None:
+        """``/NH`` 之外万一带了表头，也不能把列名当数字（列名本来就不是数字）。"""
+        text = '"Image Name","PID","Session Name"\n"a.exe","3","C"\n'
+        assert ga.parse_tasklist_pids(text) == [3]
+
 
 # ────────────────────────── 图像：ROI / 空白 / 通道 ──────────────────────────
 

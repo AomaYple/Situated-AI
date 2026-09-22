@@ -38,6 +38,8 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import re
 import subprocess
 import sys
@@ -348,10 +350,19 @@ def parse_tasklist_pids(text: str) -> list[int]:
 
     中文 Windows 上"没有运行的任务"那句是本地化的、编码是 GBK，
     所以这里**只认纯数字字段**，其余一律忽略 —— 不去猜文案。
+
+    切分走标准库 :mod:`csv`（不再手写 ``line.split('","')``）：手写版要求
+    **每个字段都带引号**，于是 `"a.exe", "7", "Console"`（逗号后有空格）
+    与 `a.exe,7,Console`（没加引号）这两种真实可能出现的形状都取不到 PID，
+    而 csv（带 ``skipinitialspace``）能；同时字段里带逗号（``"2,345,678 K"``）
+    两边都不会把它当分隔符。实测 9 种输入形状两边结果一致或 csv 更宽
+    （见 ``test_game_auto`` 的用例）。
     """
     pids: list[int] = []
-    for line in text.splitlines():
-        for col in (c.strip().strip('"') for c in line.split('","')):
+    reader = csv.reader(io.StringIO(text, newline=""), skipinitialspace=True)
+    for row in reader:
+        for cell in row:
+            col = cell.strip()
             if col.isdigit():
                 pids.append(int(col))
                 break
