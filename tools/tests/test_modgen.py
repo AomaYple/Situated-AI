@@ -261,6 +261,7 @@ def test_解析真实档案的关键条目() -> None:
     assert len(archive.localization) == 16
     keys = {item.key for item in archive.localization}
     assert "rule_sitai_difficulty" in keys
+    assert archive.difficulty is not None, "真实档案必须声明 [difficulty]（契约 J5）"
     for tier in archive.difficulty.tiers:
         assert tier.setting in keys
         assert f"{tier.setting}_desc" in keys

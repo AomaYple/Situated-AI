@@ -148,26 +148,12 @@ def quarantine_test_artifacts() -> list[str]:
 
 
 def quarantine_logs() -> list[str]:
-    """把**上一次会话的日志**挪去临时目录，返回挪走的文件名。
+    """转发到 :func:`pdx.game_auto.quarantine_logs`（收尾纪律只有一份实现）。
 
-    为什么「--no-probe 测占槽率」必须先做这一步（2026-09-23 实测踩到）：
-    `debug.log` 按大小轮转，而上一局的尾巴会留在 `debug.1.log`… 里。
-    不带探针的那一局**自己一条 `ZZPROBE` 行都不写**，所以读日志时看到的那十几条
-    `JE;active` 全是**上一局**的 —— 拿它判「和平期占槽率 ≈ 0」会得到**假红**
-    （看起来窗口在和平期也开着）。
-
-    最稳的测法是**开局前把旧日志挪走**，让这一局的读数只可能来自这一局。
-    （`pdx.ab` 的按内容去重 + `RUN` 分段管不到这一层：残留的 `RUN` 行
-    已经被轮转挤掉时无从判断。）
+    为什么不再各写一份：`perf_compare` 那份带着"被占用就跳过"的守卫，这份没有 ——
+    实测 `ai.log` 被别的进程握着时这里抛 `PermissionError`，整局还没开始就崩。
     """
-    base = DEBUG_LOG.parent
-    target = Path(tempfile.gettempdir()) / "v3_quarantine_sessionlogs"
-    moved: list[str] = []
-    for path in sorted(base.glob("*.log")):
-        target.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(path), str(target / path.name))
-        moved.append(path.name)
-    return moved
+    return ga.quarantine_logs()
 
 
 def _months_of(tick: str) -> float:
@@ -310,10 +296,13 @@ def main(argv: list[str] | None = None) -> int:
         kill_game()
         time.sleep(3)
 
-    print(deploy(with_probe=not bool(args.no_probe)))
+    # ⚠️ **先挪日志、再改用户配置**：挪日志只动临时目录，失败了什么都不会被改；
+    # 反过来（先 deploy 再挪）一旦挪失败，用户那 23 条 Workshop 配置就留在改动状态
+    # （实测踩过：崩完 enabledMods 只剩 1 条）。
     if args.fresh_logs:
         moved_logs = quarantine_logs()
         print(f"已把 {len(moved_logs)} 个旧日志挪去临时目录（这一局的读数只可能来自这一局）")
+    print(deploy(with_probe=not bool(args.no_probe)))
     report: dict[str, object] = {}
     failure = ""
     previous = ga._foreground_window()

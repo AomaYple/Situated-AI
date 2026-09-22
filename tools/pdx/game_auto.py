@@ -58,9 +58,12 @@ from __future__ import annotations
 import argparse
 import csv
 import io
+import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from contextlib import suppress
 from dataclasses import dataclass, replace
@@ -1432,6 +1435,38 @@ def assert_no_game_running() -> None:
         raise GameRunningError(
             f"已经有 victoria3 在跑（PID {pids}）—— 先关掉再起，否则两个实例会抢前台/存档"
         )
+
+
+#: 引擎日志的落地目录（用户目录下的 `logs/`）。
+USER_LOGS_DIR = (
+    Path(os.environ.get("V3_USERDIR", r"C:\Users\28905\Documents\Paradox Interactive\Victoria 3"))
+    / "logs"
+)
+
+
+def quarantine_logs(dest: Path | None = None) -> list[str]:
+    """把引擎日志挪去临时目录，返回**真的挪走了**的文件名。
+
+    为什么每次会话都要挪：`debug.log` 按大小轮转，上一局的尾巴会留在 `debug.1.log`… 里，
+    于是"这一局有没有挂上 mod""占槽率是多少"这类取证会**混进上一局的记录**（阶段 4
+    实测踩过："原版局看起来也挂了 mod"）。
+
+    ⚠️ **被占用的文件跳过、不报错**（实测两次踩到）：上一次跑批留下的进程会握着
+    `ai.log` 的句柄，`shutil.move` 抛 `PermissionError: [WinError 32]`。
+    跳过是安全的：判据用到的是 `debug.log` / `system.log` / `error.log`。
+    """
+    target = dest or (Path(tempfile.gettempdir()) / "v3_quarantine_logs")
+    target.mkdir(parents=True, exist_ok=True)
+    moved: list[str] = []
+    if not USER_LOGS_DIR.is_dir():
+        return moved
+    for path in sorted(USER_LOGS_DIR.glob("*.log")):
+        try:
+            shutil.move(str(path), str(target / path.name))
+        except (PermissionError, OSError):
+            continue
+        moved.append(path.name)
+    return moved
 
 
 def kill_game() -> list[int]:

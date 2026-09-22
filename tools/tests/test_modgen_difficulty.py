@@ -62,8 +62,23 @@ why = "测：为什么是 0.25"
 """
 
 
+def _sibling():
+    """拿同目录的 `test_modgen` 模块（共用它的最小夹具，不复制一份）。
+
+    ⚠️ 为什么用 `importlib` 而不是 `from tests.test_modgen import …`：后者会让 mypy 把
+    那个文件当成**两个模块名**（`test_modgen` 与 `tests.test_modgen`）⇒
+    `Source file found twice under different module names`，整份 mypy 停摆
+    （实测：这条一加，`mypy` 直接 "errors prevented further checking"）。
+    静态看不见的 import 绕开了这个歧义，同时保留"夹具只有一份"。
+    """
+    import importlib
+
+    return importlib.import_module("tests.test_modgen")
+
+
 def _build(tmp_path, extra: str = DIFFICULTY):
-    from tests.test_modgen import MINIMAL, _archive
+    sibling = _sibling()
+    MINIMAL, _archive = sibling.MINIMAL, sibling._archive
 
     archive = _archive(tmp_path, MINIMAL + extra)
     return archive, modgen.build(archive)
@@ -89,7 +104,8 @@ def test_三档集合与默认档由常量钉住(tmp_path) -> None:
 
 def test_少一档或改档位名都当场报错(tmp_path) -> None:
     """两种坏法都要**在编译期**报错，而不是生成一份"少了一档"的规则文件。"""
-    from tests.test_modgen import MINIMAL, _archive
+    sibling = _sibling()
+    MINIMAL, _archive = sibling.MINIMAL, sibling._archive
 
     from pdx import modgen as m
 
@@ -142,7 +158,7 @@ def test_修正名与规则名都有本地化(tmp_path) -> None:
 def test_没有难度表时不报错但也不产出规则文件(tmp_path) -> None:
     """0 份**不在编译期报错**（理由见 `modgen._check_difficulty`）：契约项在位由
     「真实数据源」用例看守 —— 那才是"发布的那一份"该被检查的地方。"""
-    from tests.test_modgen import MINIMAL
+    MINIMAL = _sibling().MINIMAL
 
     from pdx import modgen as m
 
@@ -179,7 +195,7 @@ def test_真实数据源声明了难度三档() -> None:
 
 
 def test_两份档案都声明难度表也报错(tmp_path) -> None:
-    from tests.test_modgen import MINIMAL
+    MINIMAL = _sibling().MINIMAL
 
     from pdx import modgen as m
 

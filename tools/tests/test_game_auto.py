@@ -26,6 +26,7 @@ from PIL import Image
 from pdx import game_auto as ga
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 # ────────────────────────── 合成素材 ──────────────────────────
@@ -713,6 +714,77 @@ def _record_popen(seen: dict[str, object]) -> object:
         return object()
 
     return fake_popen
+
+
+def _recorder(sink: list[str], *, prefix: str = "set:") -> Callable[[int], bool]:
+    """造一个"记一笔并返回 True"的桩。
+
+    为什么不写 `lambda h: sink.append(f"{prefix}{h}") or True`：`list.append` 只返回
+    `None`，在布尔表达式里用它的返回值会被 mypy 判 `func-returns-value`
+    （实测：这类写法在 `.mypy_cache` 里躲了很久，重跑整张图才露出来）。
+    """
+
+    def record(value: int) -> bool:
+        sink.append(f"{prefix}{value}")
+        return True
+
+    return record
+
+
+def _screenshot_stub(seen: list[tuple[float, float, float, float]], image: Image.Image):
+    """记下 ROI 再返回一张假图（同上的理由：不要在 lambda 里用 list 方法返回值）。
+
+    形参类型写成**精确的 ROI 元组**而不是 `list[object]`：`list` 不变，
+    传 `list[tuple[float, float, float, float]]` 进去会被 mypy 判 `arg-type`
+    （它给的建议是改用 `Sequence`，但这里要的正是"能 append 的那个 list"）。
+    """
+
+    def grab(_hwnd: int, roi: tuple[float, float, float, float] | None = None) -> Image.Image:
+        assert roi is not None, "这个桩只在带 ROI 调用时用"
+        seen.append(roi)
+        return image
+
+    return grab
+
+
+class TestQuarantineLogs:
+    """挪日志的纪律：**被占用的文件跳过、不报错**（实测两次踩到 `WinError 32`）。"""
+
+    def test_把日志挪走并返回文件名(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        logs = tmp_path / "logs"
+        logs.mkdir()
+        (logs / "debug.log").write_text("a", encoding="utf-8")
+        (logs / "ai.log").write_text("b", encoding="utf-8")
+        monkeypatch.setattr(ga, "USER_LOGS_DIR", logs)
+        dest = tmp_path / "quarantine"
+        assert ga.quarantine_logs(dest) == ["ai.log", "debug.log"]
+        assert (dest / "debug.log").read_text(encoding="utf-8") == "a"
+        assert not list(logs.glob("*.log")), "挪完原目录不该还剩日志"
+
+    def test_被占用的文件跳过而不是整局崩掉(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """`ai.log` 被别的进程握着时 `shutil.move` 抛 `PermissionError` ——
+        阶段 3 重做的脚本因此**整局还没开始就崩**（而且崩的时候用户配置已经被改了）。"""
+        logs = tmp_path / "logs"
+        logs.mkdir()
+        (logs / "ai.log").write_text("b", encoding="utf-8")
+        (logs / "system.log").write_text("c", encoding="utf-8")
+        monkeypatch.setattr(ga, "USER_LOGS_DIR", logs)
+
+        real_move = ga.shutil.move
+
+        def flaky_move(src: str, dst: str) -> str:
+            if src.endswith("ai.log"):
+                raise PermissionError(32, "另一个程序正在使用此文件")
+            return real_move(src, dst)
+
+        monkeypatch.setattr(ga.shutil, "move", flaky_move)
+        assert ga.quarantine_logs(tmp_path / "q") == ["system.log"]
+
+    def test_没有日志目录时给空列表(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        monkeypatch.setattr(ga, "USER_LOGS_DIR", tmp_path / "不存在")
+        assert ga.quarantine_logs(tmp_path / "q") == []
 
 
 class TestKillGame:
@@ -1437,7 +1509,7 @@ class TestForegroundRouting:
         monkeypatch.setattr(ga, "_is_alive", lambda _h: True)
         monkeypatch.setattr(ga, "_foreground_window", lambda: 999)
         called: list[str] = []
-        monkeypatch.setattr(ga, "_set_foreground", lambda h: called.append(f"set:{h}") or True)
+        monkeypatch.setattr(ga, "_set_foreground", _recorder(called))
         monkeypatch.setattr(ga, "ensure_foreground", lambda h, **_kw: called.append(f"ensure:{h}"))
         assert ga._route_to_foreground(4242, 777, force=True) == 4242
         assert called == ["set:777", "ensure:4242"]
@@ -1446,7 +1518,7 @@ class TestForegroundRouting:
         monkeypatch.setattr(ga, "_is_alive", lambda h: h == 4242)
         monkeypatch.setattr(ga, "_foreground_window", lambda: 999)
         called: list[str] = []
-        monkeypatch.setattr(ga, "_set_foreground", lambda h: called.append(f"set:{h}") or True)
+        monkeypatch.setattr(ga, "_set_foreground", _recorder(called))
         monkeypatch.setattr(ga, "ensure_foreground", lambda h, **_kw: called.append(f"ensure:{h}"))
         ga._route_to_foreground(4242, 777, force=True)
         assert called == ["ensure:4242"]
@@ -1782,7 +1854,7 @@ class TestClickClientPrevious:
         monkeypatch.setattr(ga, "ensure_foreground", lambda _h, **_kw: None)
         monkeypatch.setattr(ga, "_client_origin", lambda _h: (0, 0))
         monkeypatch.setattr(ga, "_wait_cursor_at", lambda _x, _y, **_kw: True)
-        monkeypatch.setattr(ga, "_set_foreground", lambda h: calls.append(f"set:{h}") or True)
+        monkeypatch.setattr(ga, "_set_foreground", _recorder(calls))
         monkeypatch.setattr(
             ga,
             "directinput",
@@ -1940,9 +2012,7 @@ class TestConsoleChannel:
         """`screenshot` 要分数、这里给像素 —— 换算错会炸在 `DecompressionBombError` 上。"""
         seen: list[tuple[float, float, float, float]] = []
         monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
-        monkeypatch.setattr(
-            ga, "screenshot", lambda _h, roi=None: (seen.append(roi), _grey_image(35.0))[1]
-        )
+        monkeypatch.setattr(ga, "screenshot", _screenshot_stub(seen, _grey_image(35.0)))
         ga.console_open(4242)
         x0, y0, x1, y1 = ga.CONSOLE_EDIT_ROI
         assert seen == [(x0 / 1920, y0 / 1080, x1 / 1920, y1 / 1080)]

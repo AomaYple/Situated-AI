@@ -333,7 +333,9 @@ def test_政治牌被折成短名并统计占比() -> None:
         "progressive_agenda",
     ]
     assert behaviour.strategy_share("progressive_agenda") == pytest.approx(1 / 3)
-    assert behaviour.strategy_stat("progressive_agenda").first_month == 3
+    stat = behaviour.strategy_stat("progressive_agenda")
+    assert stat is not None, "这一步就是在断言它存在"
+    assert stat.first_month == 3
     assert behaviour.strategy_share("没有这张牌") == 0.0
 
 

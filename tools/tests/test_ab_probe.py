@@ -444,6 +444,7 @@ def test_目标从数据源读出来() -> None:
     assert target.journal_entry == first.journal_entry.name
     assert target.shock_effect == first.memory.effect
     assert target.shock_variable == first.memory.variable
+    assert first.inputs is not None
     assert target.input_effect == first.inputs.effect
     assert target.dir_name == "-".join(archive.id for archive in archives)
 
