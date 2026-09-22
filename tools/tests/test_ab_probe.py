@@ -188,6 +188,50 @@ def test_每月都记政府在谁手里() -> None:
         assert f"ZZPROBE AB;GOV;{short};" in code, short
 
 
+def test_clout_档位名是两位百分数() -> None:
+    assert ab_probe.clout_band_name(0.03) == "b03"
+    assert ab_probe.clout_band_name(0.18) == "b18"
+    assert ab_probe.clout_band_name(0.25) == "b25"
+    assert [ab_probe.clout_band_name(b) for b in ab_probe.CLOUT_BANDS] == [
+        "b03",
+        "b08",
+        "b12",
+        "b18",
+        "b25",
+    ]
+
+
+def test_每月都记入阁距离() -> None:
+    """`is_in_government` 只有真/假，**看不出离入阁有多远** ⇒ 用 `ig_clout` 夹逼成档。
+
+    没有这一格，"再加一点压力够不够"这个问题在二元读数下无法回答
+    （阶段 3 重做的结论正卡在这里）。
+    """
+    code = _code(_files()[_ON_ACTIONS])
+    # 写成 "相等" 而不是 `sorted(...) == CLOUT_BANDS`：这里要断言的就是**顺序**，
+    # 反转过来会让失败信息难读（SIM300 的默认建议对"对称比较"是过度约束）。
+    assert ab_probe.CLOUT_BANDS == tuple(sorted(ab_probe.CLOUT_BANDS)), "档位必须升序"  # noqa: SIM300
+    for name, short in ab_probe.CLOUT_IGS:
+        for band in ab_probe.CLOUT_BANDS:
+            label = ab_probe.clout_band_name(band)
+            assert f"ig:{name} ?= {{ ig_clout >= {band} }}" in code, (name, band)
+            assert f"ZZPROBE AB;CLOUT;{short};{label};" in code, (name, label)
+    # 改革派两个 IG 必须在表里（地主留作对照）
+    shorts = {short for _name, short in ab_probe.CLOUT_IGS}
+    assert {"intelligentsia", "industrialists", "landowners"} <= shorts
+
+
+def test_生成物的大括号是配平的() -> None:
+    """CLOUT 那一格是**成对生成**的（`if = {` + `}`）—— 用 f-string 拼多行时最容易漏掉收尾。
+
+    实测踩过（2026-09-22）：把 `if` 与 `}` 写在同一个 f-string 里再靠 `\\n` 拼，
+    生成出来的 `}` 会落到错误的位置，整个 on_action 的块结构就散了。
+    """
+    for rel in (_ON_ACTIONS, _EFFECTS):
+        text = _files()[rel]
+        assert text.count("{") == text.count("}"), f"{rel} 的大括号不配平"
+
+
 def test_自报里不做整体缩进重排() -> None:
     """PDX 脚本对缩进不敏感，但**嵌套块被整体右移**会生成"双倍缩进"，读起来像语法错误。
 

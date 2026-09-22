@@ -206,6 +206,32 @@ GOVERNMENT_IGS: tuple[tuple[str, str], ...] = (
     ("ig_industrialists", "industrialists"),
 )
 
+#: **要给"入阁距离"建趋势的那三个 IG**（两个改革派 + 一个守旧方作对照）。
+#:
+#: 为什么需要它：阶段 3 重做的结论是「政府里只有地主 ⇒ AI 从不行动」，而
+#: `is_in_government` 只有真/假 —— **看不出改革派离入阁有多远**。
+#: 于是"再加一点压力够不够"这个问题在二元读数下**无法回答**。
+#: `ig_clout`（引擎触发器，`trigger_localization/00_trigger_localization.txt:2936`）
+#: 给的是一个**可比较的量**，按档位夹逼就能把它变成趋势（与合法性那五档同一手法）。
+CLOUT_IGS: tuple[tuple[str, str], ...] = (
+    ("ig_intelligentsia", "intelligentsia"),
+    ("ig_industrialists", "industrialists"),
+    ("ig_landowners", "landowners"),
+)
+
+#: clout 的档位（**升序**；夹逼读法见 `on_actions_text` 的 CLOUT 段）。
+#:
+#: 为什么是这五档：`is_powerful` 的门槛是 **0.20**（`defines/00_defines.txt:189`
+#: `POWERFUL_IG_THRESHOLD = 0.20`、`CUTOFF = 0.18`），所以 0.18 / 0.25 两档直接对应
+#: "强势 / 边缘"这条线；0.03 以下在政治上基本等于不存在，0.08 / 0.12 是"有没有发言权"的中间段。
+CLOUT_BANDS: tuple[float, ...] = (0.03, 0.08, 0.12, 0.18, 0.25)
+
+
+def clout_band_name(value: float) -> str:
+    """0.12 → ``b12``（百分数，两位数字宽；与 `LEG` 的 `b55` 同口味）。"""
+    return f"b{round(value * 100):02d}"
+
+
 #: 生成文件的头注释。与 h1 探针同一句式，但**指向自己的生成器** ——
 #: 从前这里借用 `h1_probe.GEN_HEADER`，产物头部因此写着 `v3 h1-probe`（会误导人）。
 GEN_HEADER = "# ⚠️ 本文件由 `v3 ab-probe` 生成（tools/pdx/ab_probe.py）—— 改这里没用，改生成器。\n"
@@ -462,6 +488,28 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
                             f'[THIS.GetCountry.GetNameNoFormatting]"\n'
                             f"{tab * 3}}}"
                             for name, short in GOVERNMENT_IGS
+                        ),
+                        "",
+                        f"{tab * 3}# ⑦ **入阁距离**（2026-09-22 新增）：`is_in_government` 只有真/假，",
+                        f"{tab * 3}#    看不出改革派离入阁还有多远 ⇒ 用 `ig_clout` 夹逼成五档，",
+                        f"{tab * 3}#    把「再加一点压力够不够」从不可回答变成可观测的趋势。",
+                        f"{tab * 3}#    档位 0.18 / 0.25 直接对应 `is_powerful` 那条线",
+                        f"{tab * 3}#    （defines/00_defines.txt:189 POWERFUL_IG_THRESHOLD = 0.20 / CUTOFF = 0.18）。",
+                        *(
+                            "\n".join(
+                                [
+                                    f"{tab * 3}if = {{",
+                                    f"{tab * 4}limit = {{ ig:{name} ?= {{ ig_clout >= {band} }} }}",
+                                    (
+                                        f'{tab * 4}debug_log = "ZZPROBE AB;CLOUT;{short};'
+                                        f'{clout_band_name(band)};'
+                                        f'[THIS.GetCountry.GetNameNoFormatting]"'
+                                    ),
+                                    f"{tab * 3}}}",
+                                ]
+                            )
+                            for name, short in CLOUT_IGS
+                            for band in CLOUT_BANDS
                         ),
                         "",
                         f"{tab * 3}# 诊断：合法性落在哪一档（五档夹逼 b55/b60/b70/b75/b80；",

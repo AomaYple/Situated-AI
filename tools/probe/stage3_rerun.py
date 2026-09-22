@@ -167,16 +167,38 @@ def analyze(log: Path | None = None) -> dict[str, object]:
         chunks.append(text)
     ours = [line for line in "\n".join(chunks).splitlines() if "ZZPROBE AB;" in line]
     kinds: Counter[str] = Counter()
-    timeline: list[tuple[str, str]] = []
+    timeline: list[tuple[str, str, str]] = []
     for line in ours:
         body = line.split("ZZPROBE AB;", 1)[1].split('"', 1)[0]
         parts = body.split(";")
         kinds[parts[0]] += 1
-        timeline.append((parts[0], parts[1] if len(parts) > 1 else ""))
-    laws = [value for kind, value in timeline if kind == "LAW"]
-    strategies = [value for kind, value in timeline if kind == "STRATEGY"]
-    je = [value for kind, value in timeline if kind == "JE"]
-    shocks = [value for kind, value in timeline if kind == "SHOCK"]
+        # 三格：`CLOUT;<ig>;<档位>` 用的是前两格，别的行只用第一格。
+        timeline.append(
+            (
+                parts[0],
+                parts[1] if len(parts) > 1 else "",
+                parts[2] if len(parts) > 2 else "",
+            )
+        )
+    laws = [b for k, b, _c in timeline if k == "LAW"]
+    strategies = [b for k, b, _c in timeline if k == "STRATEGY"]
+    je = [b for k, b, _c in timeline if k == "JE"]
+    shocks = [b for k, b, _c in timeline if k == "SHOCK"]
+    enact = [b for k, b, _c in timeline if k == "ENACT"]
+    gov = [b for k, b, _c in timeline if k == "GOV"]
+    # `CLOUT` 推的是"**≥** 档位"，所以每月每个 IG 会有多行。
+    # ⚠️ 水位要取**出现过的最高档位**，不能取"出现次数最多的那一档" ——
+    # 实测（2026-09-22）：智力界的 b03/b08 各 56 次、b12 49 次、b18 只有 9 次，
+    # 按"最多"取会得到 `b03`（看起来它几乎没有政治力量），而它其实有 9 个月到过 0.18。
+    # 这与 `pdx.ab` 里 `leg_top` 那个 bug 是同一类：**单调夹逼读数只能取极值**。
+    clout: dict[str, Counter[str]] = {}
+    for kind, ig, band in timeline:
+        if kind == "CLOUT":
+            clout.setdefault(ig, Counter())[band] += 1
+    clout_top = {
+        ig: max(counter, key=lambda band: int(band[1:])) if counter else "—"
+        for ig, counter in clout.items()
+    }
 
     law_switched = any(law not in {"law_serfdom", "none"} for law in laws)
     return {
@@ -186,11 +208,16 @@ def analyze(log: Path | None = None) -> dict[str, object]:
         "策略牌读数（去重，按出现顺序）": _dedupe(strategies),
         "窗口读数（去重）": _dedupe(je),
         "冲击读数（去重）": _dedupe(shocks),
+        "立法读数（去重）": _dedupe(enact),
+        "政府在朝（去重）": _dedupe(gov),
+        "各 IG 的 clout 水位（最高档）": clout_top,
         "第一次非农奴制": next((law for law in laws if law not in {"law_serfdom", "none"}), ""),
         "✅ P1 法律真的换了": law_switched,
         "✅ P2 进步牌挂上过": "ai_strategy_progressive_agenda" in strategies,
         "✅ P3 窗口开过": "active" in je,
         "✅ P4 冲击施加过": "yes" in shocks,
+        "✅ P5 立法开过（任一候选法）": any(value != "none" for value in enact),
+        "✅ P6 改革派进过政府": any(value != "landowners" for value in gov),
     }
 
 
