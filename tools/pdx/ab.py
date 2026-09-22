@@ -87,13 +87,17 @@ ROLE_LABELS = {
 LAWS = (*ab_probe.LAWS, "none")
 
 #: 主体行的类型：这几类行只对主角国家写 —— 用它们的国名当"观测到的国家"。
-_SUBJECT_KINDS = ("SHOCK", "INPUT", "JE", "LAW")
+_SUBJECT_KINDS = ("SHOCK", "INPUT", "JE", "LAW", "STRATEGY")
 
 #: 一个完整月度块必须有的行。缺任何一类 = 那一块被轮转切断了。
+#:
+#: ⚠️ `STRATEGY`（2026-09-22 新增）**不进**这一组：它是后加的行，老归档（阶段 3 的
+#: 四局）里一条都没有 —— 把它列成必需会让那些归档整批变成"残缺块"。口径：
+#: **新增的读数只能是可选行**，否则历史数据会被新判据反向作废。
 REQUIRED_KINDS = ("SHOCK", "JE", "LAW", *SLOT_SHORT.values())
 
 #: **可选**的诊断行：后加的，老归档没有。缺了不算块残缺（口径见模块文档）。
-OPTIONAL_KINDS = ("INPUT", "LEG")
+OPTIONAL_KINDS = ("INPUT", "LEG", "STRATEGY")
 
 #: 合法性诊断的档位（探针夹逼出来的，从低到高）。**只用于排序与报告** ——
 #: 探针写什么值，这里就报什么值；写了个不认识的档位也不会被吞掉。
@@ -153,8 +157,8 @@ class Block:
 class Sample:
     """一次**可用**的月度观测（只有完整的块才会变成 Sample）。
 
-    ``input`` 与 ``leg`` 可能为 ``None``：它们是后加的诊断行，老归档里没有
-    （见模块文档的口径说明）。
+    ``input`` / ``leg`` / ``strategy`` 可能为 ``None``：它们是后加的诊断行，
+    老归档里没有（见模块文档的口径说明）。
     """
 
     run: int
@@ -169,6 +173,7 @@ class Sample:
     cards: dict[str, str]
     input: str | None = None
     leg: str | None = None
+    strategy: str | None = None
 
     @property
     def shock_yes(self) -> bool:
@@ -229,6 +234,36 @@ class BandStat:
     share: float
 
 
+#: 政治牌 id → 报告里的短名（与三槽那套 `SLOT_SHORT` 同一口味：报告用短名，日志用全名）。
+STRATEGY_SHORT = {
+    "ai_strategy_progressive_agenda": "progressive_agenda",
+    "ai_strategy_conservative_agenda": "conservative_agenda",
+    "ai_strategy_reactionary_agenda": "reactionary_agenda",
+}
+#: 探针没写 `STRATEGY` 行（老归档）时的占位；`none` = 三张政治牌都没挂。
+STRATEGY_NONE = "none"
+
+
+def strategy_short(name: str) -> str:
+    """把日志里的策略 id 折成短名（认不出来的原样返回 —— 不吞信息）。"""
+    return STRATEGY_SHORT.get(name, name)
+
+
+@dataclass(frozen=True, slots=True)
+class StrategyStat:
+    """一张政治牌在一个角色里的出现情况。
+
+    为什么要有这个类型：阶段 3 的负结果（牌换了名、法一条没改）里，"牌换成了哪一张"
+    是从三槽落点**推断**的。B53（backlog）之后牌是**行为层的直接读数**
+    （`change_law_chance` 就写在牌上），所以它必须能被直接统计与差分。
+    """
+
+    name: str
+    months: int
+    share: float
+    first_month: int | None
+
+
 @dataclass(frozen=True, slots=True)
 class Behaviour:
     """一个角色的**行为层**读数（月份编号 = 合并后的第 N 个月度观测）。"""
@@ -246,6 +281,7 @@ class Behaviour:
     law_change_to: str | None
     input_yes: int = 0
     bands: tuple[BandStat, ...] = ()
+    strategies: tuple[StrategyStat, ...] = ()
 
     @property
     def months(self) -> int:
@@ -269,6 +305,14 @@ class Behaviour:
 
     def law_share(self, law: str) -> float:
         stat = self.law_stat(law)
+        return stat.share if stat else 0.0
+
+    def strategy_stat(self, short: str) -> StrategyStat | None:
+        """某张政治牌的出现情况（没出现过 = None）。"""
+        return next((stat for stat in self.strategies if stat.name == short), None)
+
+    def strategy_share(self, short: str) -> float:
+        stat = self.strategy_stat(short)
         return stat.share if stat else 0.0
 
     def band_share(self, band: str) -> float:
@@ -519,6 +563,28 @@ def _bands(samples: list[Sample]) -> tuple[BandStat, ...]:
     )
 
 
+def _strategies(samples: list[Sample]) -> tuple[StrategyStat, ...]:
+    """政治牌分布（只统计**有 `STRATEGY` 行**的月份；老归档没有 → 空元组）。"""
+    counts: Counter[str] = Counter()
+    first_seen: dict[str, int] = {}
+    total = 0
+    for sample in samples:
+        if not sample.strategy:
+            continue
+        total += 1
+        counts[sample.strategy] += 1
+        first_seen.setdefault(sample.strategy, total)
+    return tuple(
+        StrategyStat(
+            name=name,
+            months=count,
+            share=count / total if total else 0.0,
+            first_month=first_seen[name],
+        )
+        for name, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    )
+
+
 def _behaviour(role: str, samples: list[Sample]) -> Behaviour:
     """一个角色的行为层读数（月份编号在同角色的多段之间**连续**）。"""
     ordered = sorted(samples, key=lambda sample: (sample.run, sample.month))
@@ -561,6 +627,7 @@ def _behaviour(role: str, samples: list[Sample]) -> Behaviour:
         law_change_to=law_change_to,
         input_yes=sum(1 for sample in ordered if sample.input_yes),
         bands=_bands(ordered),
+        strategies=_strategies(ordered),
     )
 
 
@@ -684,6 +751,9 @@ def analyze_text(text: str) -> Result:
                 cards=cards,
                 input=block.values.get("INPUT"),
                 leg=block.values.get("LEG"),
+                strategy=strategy_short(block.values["STRATEGY"])
+                if "STRATEGY" in block.values
+                else None,
             )
         )
     by_role: defaultdict[str, list[Sample]] = defaultdict(list)
@@ -1118,6 +1188,35 @@ def _bands_table(result: Result) -> list[str]:
     return _table(["角色", "各档月数（占比）", "待得最久的一档"], rows)
 
 
+def _strategy_table(result: Result) -> list[str]:
+    """政治牌分布 —— **行为层**的直接读数（B53：`change_law_chance` 就写在牌上）。
+
+    为什么它比三槽落点更该看：三槽落点是"AI 手里的牌"，而"政治牌"是**同类的那一张**
+    （每国同时只有一张政治牌在用）。阶段 3 的负结果正是"政治牌从反动换到保守
+    ⇒ 动手概率反而降了"，而当时没有逐月读数、只能从三槽反推。
+    """
+    roles = [role for role in (*ROLES, ROLE_UNKNOWN) if result.roles.get(role) is not None]
+    if not any(stat.strategies for stat in result.roles.values()):
+        return ["（没有 `STRATEGY` 行：这是 2026-09-22 之前的探针跑的局）"]
+    rows: list[list[str]] = []
+    for role in roles:
+        behaviour = result.roles[role]
+        top = behaviour.strategies[0] if behaviour.strategies else None
+        rows.append(
+            [
+                _role_label(role),
+                "、".join(
+                    f"{stat.name} {stat.months}（{_pct(stat.share)}）"
+                    for stat in behaviour.strategies
+                )
+                or "—",
+                f"{top.name}（{_pct(top.share)}）" if top else "—",
+                str(top.first_month) if top and top.first_month else "—",
+            ]
+        )
+    return _table(["角色", "各牌月数（占比）", "最常见的那张", "首次出现月"], rows)
+
+
 def format_report(result: Result) -> str:
     """把结果排成人读的表：**先行为层差分，再策略层差分**，最后给判定。
 
@@ -1158,6 +1257,10 @@ def format_report(result: Result) -> str:
         "* **合法性档位**（世界层诊断；五档夹逼，没有「打印数字」的已证写法）",
         "",
         *_bands_table(result),
+        "",
+        "* **政治牌**（2026-09-22 起的**直接**读数，`ZZPROBE AB;STRATEGY;`；老归档没有这一行）",
+        "",
+        *_strategy_table(result),
         "",
     ]
 

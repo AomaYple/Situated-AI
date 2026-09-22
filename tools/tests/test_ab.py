@@ -41,11 +41,15 @@ _DEFAULTS = {
     "POLI": "reactionary_agenda",
     "ADMI": "agricultural_expansion",
     "DIPL": "colonial_expansion",
+    "STRATEGY": "ai_strategy_reactionary_agenda",
 }
 
 #: 加 `INPUT` / `LEG` 之前的探针写了哪些行（老归档的形状）——
 #: 用 `skip=` 造这种块，钉住"老归档照样能分析"（阶段 3 的结论就来自那些局）。
 LEGACY_SKIP = ("INPUT", "LEG")
+
+#: 加 `STRATEGY` 之前的探针（= 阶段 3 那四局）。
+LEGACY_SKIP_STRATEGY = ("INPUT", "LEG", "STRATEGY")
 
 
 def _line(sec: int, kind: str, value: str, tag: str = _TAG) -> str:
@@ -310,6 +314,86 @@ def test_行为层读数里法律占比可查() -> None:
     assert behaviour.law_stat("law_autocracy") is None
     assert behaviour.law_share("law_autocracy") == 0.0
     assert behaviour.first_law == "law_serfdom"
+
+
+# ── 政治牌（2026-09-22 起的直接读数）──────────────────────────
+
+
+def test_政治牌被折成短名并统计占比() -> None:
+    """B53：`change_law_chance` 写在牌上 ⇒ 牌是**行为层**读数，必须能直接统计。
+
+    日志里是全名（`ai_strategy_progressive_agenda`），报告里用短名 —— 与三槽那套同口味。
+    """
+    specs = [{"shock": "yes"}] * 2 + [
+        {"shock": "yes", "strategy": "ai_strategy_progressive_agenda"}
+    ]
+    behaviour = ab.analyze_text(_timeline("B", specs)).roles["B"]
+    assert [stat.name for stat in behaviour.strategies] == [
+        "reactionary_agenda",
+        "progressive_agenda",
+    ]
+    assert behaviour.strategy_share("progressive_agenda") == pytest.approx(1 / 3)
+    assert behaviour.strategy_stat("progressive_agenda").first_month == 3
+    assert behaviour.strategy_share("没有这张牌") == 0.0
+
+
+def test_认不出来的牌名原样保留() -> None:
+    """探针换过牌名 / 原版加了新牌时不许把读数吞掉 —— 短名表只做**折叠**，不做过滤。"""
+    behaviour = ab.analyze_text(_timeline("B", [{"strategy": "ai_strategy_brand_new"}])).roles["B"]
+    assert [stat.name for stat in behaviour.strategies] == ["ai_strategy_brand_new"]
+
+
+def test_老归档缺_STRATEGY_行时照样能分析() -> None:
+    """口径：**新增的读数只能是可选行** —— 否则阶段 3 那四局会被新判据反向作废。
+
+    这里连**判定**一起钉住：缺 `STRATEGY` 的那一版日志照样出得了 `A`/`B` 两组读数
+    与差分（`behaviour_changed` 是个布尔）。缺 `STRATEGY` 只让牌表变空，不影响别的。
+    """
+    legacy = "\n".join(
+        [
+            _timeline("A", [{}] * 12, skip=LEGACY_SKIP_STRATEGY),
+            _timeline("B", [{"shock": "yes"}] * 12, skip=LEGACY_SKIP_STRATEGY),
+        ]
+    )
+    result = ab.analyze_text(legacy)
+    assert result.roles["A"].strategies == (), "老归档没有牌读数 ⇒ 空元组，不是假的 0%"
+    assert result.roles["A"].strategy_share("progressive_agenda") == 0.0
+    assert result.roles["A"].observations == 12, "牌缺席不影响块是否完整"
+    assert set(result.roles) == {"A", "B"}, "两组照样分得出来"
+    # 对照：**带** STRATEGY 行的那一版必须真的记到牌（否则上一条是空转）
+    modern = ab.analyze_text(
+        "\n".join([_timeline("A", [{}] * 12), _timeline("B", [{"shock": "yes"}] * 12)])
+    )
+    assert modern.roles["A"].strategies, "带 STRATEGY 行时必须有读数"
+
+
+def test_报告里有一张政治牌表() -> None:
+    text = ab.format_report(
+        ab.analyze_text(
+            "\n".join(
+                [
+                    _timeline("A", [{}] * 12),
+                    _timeline("B", [{"shock": "yes"}] * 12),
+                ]
+            )
+        )
+    )
+    assert "政治牌" in text
+    assert "reactionary_agenda" in text
+
+
+def test_老归档的报告里明说没有政治牌行() -> None:
+    text = ab.format_report(
+        ab.analyze_text(
+            "\n".join(
+                [
+                    _timeline("A", [{}] * 12, skip=LEGACY_SKIP_STRATEGY),
+                    _timeline("B", [{"shock": "yes"}] * 12, skip=LEGACY_SKIP_STRATEGY),
+                ]
+            )
+        )
+    )
+    assert "没有 `STRATEGY` 行" in text
 
 
 # ── 策略层差分与判定 ──────────────────────────────────────────
