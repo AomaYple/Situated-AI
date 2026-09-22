@@ -51,10 +51,15 @@ PROBE = MODS_DIR / "zz_probe_ab"
 MONTH_DAYS = 30.44
 
 
-def deploy() -> str:
+def deploy(*, with_probe: bool = True) -> str:
     """装本地 mod 并改写 `content_load.json`；返回一句人读的说明。
 
     **先备份**（只备一次：反复跑时不会被"已改过的版本"覆盖掉真正的原始配置）。
+
+    ``with_probe=False`` = **只装真 mod、不装探针**。这是"和平期占槽率 ≈ 0"
+    那条出口判据的测法：探针本身就是个会写变量的 mod，装了它再测"我们的 JE 出没出现"
+    就分不清是谁的效果了 —— 而且探针的 `debug_log` 会把"没有 JE"这件事变成**沉默**，
+    而沉默不是证据（日志里那一行**不存在**才是）。
     """
     if not BACKUP.exists():
         shutil.copy2(CONTENT_LOAD, BACKUP)
@@ -63,18 +68,22 @@ def deploy() -> str:
         if target.exists():
             shutil.rmtree(target)
     shutil.copytree(config.REPO / "mod", OURS)
-    # ⚠️ 用 `ab_probe.write` 而**不是** `ab_probe.deploy`：后者会调
-    # `experiments.set_enabled_mods()` 自己改写 `content_load.json`，而这里要保住
-    # 用户原来那 23 条 Workshop 配置（本脚本自己写那个文件，只启用两个本地 mod）。
-    ab_probe.write(root=PROBE)
+    paths = [OURS]
+    if with_probe:
+        # ⚠️ 用 `ab_probe.write` 而**不是** `ab_probe.deploy`：后者会调
+        # `experiments.set_enabled_mods()` 自己改写 `content_load.json`，而这里要保住
+        # 用户原来那 23 条 Workshop 配置（本脚本自己写那个文件，只启用本地 mod）。
+        ab_probe.write(root=PROBE)
+        paths.append(PROBE)
     payload = {
-        "enabledMods": [{"path": str(OURS)}, {"path": str(PROBE)}],
+        "enabledMods": [{"path": str(path)} for path in paths],
         "disabledDLC": original.get("disabledDLC", []),
         "enabledUGC": [],
     }
     CONTENT_LOAD.write_text(json.dumps(payload), encoding="utf-8", newline="\n")
+    names = " + ".join(path.name for path in paths)
     return (
-        f"已装本地 mod：{OURS.name} + {PROBE.name}；"
+        f"已装本地 mod：{names}；"
         f"原配置（{len(original.get('enabledMods', []))} 条 Workshop）备份在 {BACKUP.name}"
     )
 
@@ -126,6 +135,29 @@ def quarantine_test_artifacts() -> list[str]:
     return moved
 
 
+def quarantine_logs() -> list[str]:
+    """把**上一次会话的日志**挪去临时目录，返回挪走的文件名。
+
+    为什么「--no-probe 测占槽率」必须先做这一步（2026-09-23 实测踩到）：
+    `debug.log` 按大小轮转，而上一局的尾巴会留在 `debug.1.log`… 里。
+    不带探针的那一局**自己一条 `ZZPROBE` 行都不写**，所以读日志时看到的那十几条
+    `JE;active` 全是**上一局**的 —— 拿它判「和平期占槽率 ≈ 0」会得到**假红**
+    （看起来窗口在和平期也开着）。
+
+    最稳的测法是**开局前把旧日志挪走**，让这一局的读数只可能来自这一局。
+    （`pdx.ab` 的按内容去重 + `RUN` 分段管不到这一层：残留的 `RUN` 行
+    已经被轮转挤掉时无从判断。）
+    """
+    base = DEBUG_LOG.parent
+    target = Path(tempfile.gettempdir()) / "v3_quarantine_sessionlogs"
+    moved: list[str] = []
+    for path in sorted(base.glob("*.log")):
+        target.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(path), str(target / path.name))
+        moved.append(path.name)
+    return moved
+
+
 def _months_of(tick: str) -> float:
     """把 tick 折成"开局以来的月数"（够排时间线就行）。"""
     day = ga.tick_day(tick)
@@ -166,6 +198,13 @@ def analyze(log: Path | None = None) -> dict[str, object]:
         seen.add(text)
         chunks.append(text)
     ours = [line for line in "\n".join(chunks).splitlines() if "ZZPROBE AB;" in line]
+    # ⚠️ **日志会跨会话**（`debug.log` 按大小轮转，上一次会话的尾巴会留在 `debug.1.log` 里）。
+    # 所以"这一局有没有自报"不能只看"日志里有没有" —— 必须**只算最后一轮之后**的行。
+    # 判据是探针的 `RUN` 行（自励与决议各写一次）；没有 `RUN` 行时退回"全部"。
+    run_at = max(
+        (index for index, line in enumerate(ours) if "ZZPROBE AB;RUN;" in line), default=-1
+    )
+    ours = ours[run_at + 1 :] if run_at >= 0 else ours
     kinds: Counter[str] = Counter()
     timeline: list[tuple[str, str, str]] = []
     for line in ours:
@@ -235,6 +274,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--speed-xy", default="", help="显式指定速度档 V 的坐标")
     parser.add_argument("--analyze-only", action="store_true", help="只分析已有日志，不起游戏")
     parser.add_argument("--keep-installed", action="store_true", help="跑完不还原 mod 配置")
+    parser.add_argument(
+        "--no-probe",
+        action="store_true",
+        help="**只装真 mod、不装探针** —— 测「和平期占槽率 ≈ 0」时必须这样（见 deploy 的说明）",
+    )
+    parser.add_argument(
+        "--fresh-logs",
+        action="store_true",
+        help="开局前把旧日志挪去临时目录（判「这一局有没有自报」时必须，见 quarantine_logs）",
+    )
     args = parser.parse_args(argv)
 
     if args.analyze_only:
@@ -249,7 +298,10 @@ def main(argv: list[str] | None = None) -> int:
         kill_game()
         time.sleep(3)
 
-    print(deploy())
+    print(deploy(with_probe=not bool(args.no_probe)))
+    if args.fresh_logs:
+        moved_logs = quarantine_logs()
+        print(f"已把 {len(moved_logs)} 个旧日志挪去临时目录（这一局的读数只可能来自这一局）")
     report: dict[str, object] = {}
     failure = ""
     previous = ga._foreground_window()
