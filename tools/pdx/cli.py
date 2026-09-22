@@ -1428,10 +1428,33 @@ def crosscheck_cmd(
         for d, e, n, hit, t in gaps:
             console.print(f"  ❌ {d}  {e}   引擎枚举 {n}，我们解析 {hit}（共 {t}）")
 
-    bad_tokens = report.token_mismatches
-    if bad_tokens:
+    # token 不一致要**分三类**打，不能混成一坨"不一致"：
+    #   ① 所在文件被覆盖且覆盖版与原版不同 ⇒ 行号**不可比**（拿两套内容对行号）；
+    #   ② token 在当前安装里根本不存在 ⇒ 日志比安装旧；
+    #   ③ token 在、但不在引擎报的那一行 ⇒ **这才是值得查的**。
+    # 把①②也报成红，等于把"日志过期"记到解析器头上（2026-09-22 实测：18 条里 18 条如此）。
+    unverifiable = report.unverifiable_tokens
+    absent = report.absent_tokens
+    misplaced = report.misplaced_tokens
+    if unverifiable:
+        console.print("\n[yellow]所在文件被 mod 覆盖且内容不同 ⇒ 行号不可比：[/]")
+        for rel in sorted(report.overridden_files):
+            console.print(f"  ⚠️ {rel}")
+        console.print(
+            f"  ⇒ 共 {len(unverifiable)} 条断言落在这类文件上，**不是**解析器问题："
+            "日志来自另一套内容。跑一次常规游戏即可让日志与安装一致。"
+        )
+    if absent:
+        console.print("\n[yellow]token 在当前安装中整份文件都找不到（日志比安装旧）：[/]")
+        for rel, line, tok, _got in absent[:20]:
+            console.print(f"  ⚠️ {rel}:{line}  {tok!r}")
+        console.print(
+            "  ⇒ 这些**不是**解析器问题：日志描述的是另一套 mod 状态。"
+            "跑一次常规游戏即可让日志与安装一致。"
+        )
+    if misplaced:
         console.print("\n[red]token 行号不一致：[/]")
-        for rel, line, tok, got in bad_tokens[:20]:
+        for rel, line, tok, got in misplaced[:20]:
             console.print(f"  ❌ {rel}:{line}  {tok!r}  我们给出 {got}")
 
     if json_out is not None:
@@ -1451,11 +1474,31 @@ def crosscheck_cmd(
                 "位置核对": [
                     {"文件": rel, "行": line, "判定": why} for rel, line, why in report.locations
                 ],
+                "token分类": {
+                    "所在文件被覆盖（行号不可比）": [
+                        {"文件": rel, "行": line, "token": tok}
+                        for rel, line, tok, _ in unverifiable
+                    ],
+                    "整份文件都没有": [
+                        {"文件": rel, "行": line, "token": tok} for rel, line, tok, _ in absent
+                    ],
+                    "在但不在那一行": [
+                        {"文件": rel, "行": line, "token": tok, "我们的行": got}
+                        for rel, line, tok, got in misplaced
+                    ],
+                },
             },
         )
 
-    if gaps or bad_tokens:
+    # 退出码只认"真正该查的"两类：覆盖面缺口 与 行号错位。
+    # 另两类不参与：① 文件被覆盖且内容不同（行号不可比）；
+    # ② token 在当前安装里不存在（日志比安装旧）。判红就是把过期数据的账
+    # 记到解析器头上 —— 实测 18 条不一致里，18 条属于这两类。
+    if gaps or misplaced:
         raise typer.Exit(EXIT_FAILED)
+    if absent or unverifiable:
+        console.print("\n[yellow]除上述「日志与安装不一致」的项外，与引擎日志一致[/]")
+        return
     console.print("\n[green]与引擎日志完全一致 ✅[/]")
 
 

@@ -122,16 +122,24 @@ def test_verify_json_落盘(tmp_path) -> None:
 # ── crosscheck（引擎交叉验证）────────────────────────────────
 @_needs_game
 def test_crosscheck_与引擎日志一致() -> None:
-    """唯一由外部背书的核对：清单来自引擎日志，不是我们自己的目录表。"""
+    """唯一由外部背书的核对：清单来自引擎日志，不是我们自己的目录表。
+
+    ⚠️ 退出码只认「覆盖面缺口」与「行号错位」；**整份文件都找不到的 token
+    不判红** —— 那是日志描述的 mod 状态与当前安装不一致（实测：Workshop mod
+    「Ultra Historical Warfare」支持 1.13 而本机 1.14.3，覆盖了那几个 gui），
+    不是解析器问题。这种情况整条命令给出明确提示、返回 0。
+    """
     from pdx import engine_log
 
     if not engine_log.parse_logs()[0]:
         pytest.skip("本机没有引擎日志（需要运行过一次游戏）")
     if engine_log.probe_session():
-        pytest.skip("日志来自探针会话（只加载了两个探针 mod），外部真值的 mod 集不同")
+        pytest.skip("日志来自探针会话（只加载了探针 mod），外部真值的 mod 集不同")
     r = _invoke("crosscheck")
     assert r.exit_code == 0, r.output
     assert "覆盖面缺口" in r.output
+    if "日志比安装旧" in r.output:
+        assert "跑一次常规游戏" in r.output  # 提示必须可操作
 
 
 def test_crosscheck_无日志时返回2(tmp_path, monkeypatch) -> None:

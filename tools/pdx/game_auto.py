@@ -1,8 +1,8 @@
-"""Victoria 3 自动化：窗口级截图 + 图像匹配 + 前进点击 + 日志真值。
+"""Victoria 3 自动化：把一局"跑起来"（起游戏 → 观察 → 5 档速度 → 空格 → 切回后台）。
 
 为什么需要这个模块
 ------------------
-阶段 3 的判据要求「固定开局、同一套指令序列跑 A/B 两遍」—— 一局是分钟级到小时级，
+阶段判据要求「固定开局、同一套指令序列跑 A/B 两遍」—— 一局是分钟级到小时级，
 靠人坐在电脑前点是不行的。而**官方流水线只差一击**：
 
     实测 ``binaries\\victoria3.exe -gdpr-compliant -debug_mode -scripted_tests``
@@ -13,6 +13,14 @@
 所以本模块承担的角色很窄：**点火**。点火之后跑与判定全部交回引擎
 （``-scripted_tests`` 自己写 ``Documents\\…\\tests.txt`` 与 ``binaries\\*_GameTests_testoutput.xml``），
 本模块只负责"读它写了什么"。判定绝不自己做 —— 那是假红/假绿的来源。
+
+标准流程（用户口径 2026-09-22，**唯一一条路**）
+----------------------------------------------
+    起游戏（正常前台启动）
+      → 加载期**完全不碰窗口**（只看进程与日志大小这类免费信号）
+      → 确认游戏在前台，然后：点「观察」→ 点 5 档速度 → 按空格
+      → 立刻把游戏切回后台（还原用户原来的前台窗口，再最小化游戏窗口）
+      → 后台验证：时间真的在走吗、速率多少
 
 三条硬约束（都是实测踩出来的，各自标了出处）
 --------------------------------------------
@@ -27,6 +35,16 @@
    （用 tick 判据验证：按空格后时间照常推进，说明暂停快捷键根本没被收到）。
    鼠标点击**有效** —— 引擎读的是光标位置与按键状态，不是注入的键盘事件。
    因此本模块只用鼠标；控制台路线随之不可用（见 `docs/design/exec/自动化范式.md` §3）。
+
+⚠️ **空格是"暂停开关"，不是"开始"**：如果此时游戏**已经在跑**，按空格会把它**暂停**。
+   所以 :func:`_step_unpause` 先量一次速率，已经在跑就**不按**。
+
+设计口径：**不做回落链**（P14 的推论）
+--------------------------------------
+这个模块以前长着"不抢前台点一次 → 失败再借前台重做 → 再失败改点播放键"的回落阶梯。
+实测（`docs/design/exec/自动化范式.md`）那套阶梯一次都没走完过，却让每次改动都要在
+两条路之间反复对齐，还把"到底哪条路在生效"变得不可知。现在只剩一条路：
+**任一步失败就抛错，把现场留给下一次修**（P13：失败要出声，不许静默降级）。
 
 与假红有关的一条
 ----------------
@@ -44,7 +62,7 @@ import re
 import subprocess
 import sys
 import time
-from contextlib import contextmanager, suppress
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -69,7 +87,7 @@ directinput.FAILSAFE = False
 directinput.PAUSE = 0.0
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable
 
     # 注入缝的类型别名：**只给类型检查器看**，运行期不存在这两个名字。
     # 为什么不在运行期定义：`collections.abc.Callable` 若只用在注解里，
@@ -132,6 +150,10 @@ FOREGROUND_POLL = 0.02
 CONDITION_POLL = 0.02
 WINDOW_SHOW_SETTLE = 1.0
 
+# 步骤之间的**最小停顿**：真实点击要过引擎那一帧才被读到，连着投三下会有一下落空。
+# 判据仍然是"状态变化"（界面切走 / 速率上来），这个停顿只是给引擎一帧的时间。
+STEP_SETTLE = 0.35
+
 # 启动期"事件驱动"等待：不看像素，只看**便宜的进程/日志信号**（P2）。
 #   ① 进程在不在（`tasklist`）；
 #   ② 逐 tick 真值文件 `dedicated_server.log` 的**大小**多久没变。
@@ -151,7 +173,7 @@ BOOT_LOGS = ("dedicated_server.log", "debug.log")
 #: 界面约 137 秒；只靠"日志安静"会在 8.7 秒 / 20 秒两次假阳性（提前借前台 ⇒ 白占屏幕）。
 BOOT_MIN_SECONDS = 120.0
 
-#: 借到前台之后等「观察」出现的上限（秒）。**必须短**：这段时间用户的屏幕被占住；
+#: 等到"忙完"之后，再等「观察」出现的上限（秒）。**必须短**：这段时间用户屏幕被游戏占着；
 #: 前面已经用"完全不碰屏幕"的信号等过一轮，所以这里通常几秒内就命中。
 LOOK_TIMEOUT = 45.0
 
@@ -177,21 +199,16 @@ MAP_SETTLE_TIMEOUT = 120.0
 ALLOW_REAL_INPUT = False
 
 #: `STARTUPINFO.wShowWindow` 的取值（来自 `winuser.h`）。
-#: `SW_SHOWNOACTIVATE`（4）= 照常显示但**不激活** —— 起游戏时用它。
+#: `SW_SHOWNOACTIVATE`（4）= 照常显示但**不激活**。
 #:
-#: ⚠️ **不要改成 `SW_SHOWMINNOACTIVE`（7）**：实测（2026-09-21 21:57）最小化启动会让引擎在
-#: 建渲染上下文时崩 —— 崩溃转储 `crashes\victoria3_01260821_215742\exception.txt`：
+#: ⚠️ **不要用 `SW_SHOWMINNOACTIVE`（7）启动**：实测（2026-09-21 21:57）最小化启动会让引擎在
+#: 建渲染上下文时崩 —— 崩溃转储 `crashes\victoria3_three_01260821_215742\exception.txt`：
 #: `Unhandled Exception C0000005 (EXCEPTION_ACCESS_VIOLATION)`，栈全在 `nvoglv64.dll`
 #: （NVIDIA OpenGL 驱动）。那一次还让 `find_window()` 找不到窗口（它要求窗口可见），
-#: 整条流程卡死。要"不占屏"只能靠**不点击**那条路（见 `docs/design/backlog.md` B32），
-#: 不是靠最小化。
+#: 整条流程卡死。**启动这一步不加戏**：普通 `Popen` 最稳。
+SW_SHOWNOACTIVATE = 4
 #: `GetAncestor` 的取值：取顶层窗口。win32con 里也有（GA_ROOT）。
 GA_ROOT = 2
-SW_SHOWNOACTIVATE = 4
-#: `ShowWindow` 用：最小化（跑完之后把窗口缩下去，桌面还给用户）。
-SW_MINIMIZE = 6
-#: 恢复最小化的窗口（会激活）。只在显式授权抢前台时用。
-SW_RESTORE = 9
 
 #: 速度档 V 在**速度表盘模板**里的相对位置（模板 `ui/btn_speed.png` 的左下为原点）。
 #:
@@ -541,32 +558,19 @@ def _sleep(seconds: float) -> None:
     time.sleep(seconds)
 
 
-#: 前台借用的**嵌套深度**（由 :func:`borrow_foreground` 维护）。
-#: 用可变小对象而不是模块级整数：模块级整数要 `global` 才能改，而"什么时候能碰真实输入"
-#: 这件事一旦散成若干 `global` 就不再是一道闸门了（ruff 的 PLW0603 说的也是这个）。
-@dataclass
-class _InputGate:
-    """输入闸门状态：借用深度 > 0 ⇒ 借用期内的点击/按键自动放行。"""
-
-    borrow_depth: int = 0
-
-
-_INPUT_GATE = _InputGate()
-
-
 def _input_allowed(force: bool) -> bool:
-    """现在允许投真实输入吗？（显式授权 / 单次强制 / 正处在借用期内）"""
-    return bool(ALLOW_REAL_INPUT or force or _INPUT_GATE.borrow_depth)
+    """现在允许投真实输入吗？只有两个来源：**模块开关**或**调用点的显式授权**。
+
+    为什么不做成"借用期内自动放行"那样更"方便"的东西：那会让"什么时候能碰真实输入"
+    变成一个**时间窗口**而不是一个**决定** —— 窗口一开，窗口内所有代码都能动用户的桌面。
+    现在的口径是：每一个会注入输入的调用点都必须自己说清楚（`force=True`），
+    而唯一会说 `force=True` 的是 CLI / 探针这些**显式入口**（见 :func:`main`）。
+    """
+    return bool(ALLOW_REAL_INPUT or force)
 
 
 def _monotonic() -> float:
     return time.monotonic()
-
-
-def press_key_at(hwnd: int, key: str, *, force: bool = False) -> None:
-    """把**键盘焦点**给游戏（不动前台）之后按一次键 —— "不抢前台"路线的按键口径。"""
-    _raise_and_focus(hwnd)
-    press_key(key, force=force)
 
 
 def press_key(key: str, *, force: bool = False) -> None:
@@ -579,7 +583,7 @@ def press_key(key: str, *, force: bool = False) -> None:
     if not _input_allowed(force):
         raise RealInputBlockedError(
             "没有授权就投真实键盘输入：这会让用户正在打的字跑到游戏里。"
-            "显式入口请打开 `ALLOW_REAL_INPUT`，或在 `borrow_foreground()` 里做。"
+            "显式入口请打开 `ALLOW_REAL_INPUT` 或传 `force=True`。"
         )
     directinput.press(key)
 
@@ -657,24 +661,23 @@ def _set_foreground(hwnd: int) -> bool:
     return _foreground_window() == hwnd
 
 
-def _minimize(hwnd: int) -> None:
-    _window(hwnd).minimize()
-
-
 def _restore(hwnd: int) -> None:
     _window(hwnd).restore()
 
 
-def _show_no_activate(hwnd: int) -> None:
-    """显示窗口但**不激活**它（不抢走用户当前的焦点）。"""
-    win32gui.ShowWindow(hwnd, SW_SHOWNOACTIVATE)
+def _minimize(hwnd: int) -> None:
+    """把窗口缩下去（"切回后台"的最后一步）。
+
+    `pygetwindow.minimize()` 就是 `ShowWindow(SW_MINIMIZE)`；不自己拼 Win32 调用。
+    """
+    _window(hwnd).minimize()
 
 
 def _owns_pixels(hwnd: int, origin_x: int, origin_y: int, width: int, height: int) -> bool:
     """客户区那几个采样点上压着的窗口，是不是（属于）``hwnd``？
 
     这是 :func:`_grab` 的判据。为什么不用"必须前台"：**看一眼界面不需要焦点** —— 只要
-    窗口露在最上面，`ImageGrab` 拿到的就是它的像素。用前台当判据会把"等待"逼进借前台
+    窗口露在最上面，`ImageGrab` 拿到的就是它的像素。用前台当判据会把"等待"逼进抢前台
     期间，实测后果是**用户黑屏几十秒**（载入画面全屏盖住桌面）。采四个角而不是一个点：
     窗口可能被别的小窗口压住一角。
     """
@@ -692,27 +695,6 @@ def _owns_pixels(hwnd: int, origin_x: int, origin_y: int, width: int, height: in
             return False
         if under == hwnd or int(win32gui.GetAncestor(under, GA_ROOT)) == hwnd:
             continue
-        return False
-    return True
-
-
-def raise_without_activate(hwnd: int) -> bool:
-    """把窗口提到 Z 序最前但**不激活**（焦点仍归用户）。
-
-    这是"看一眼界面"的配套动作：露在最上面 ⇒ 抓图拿得到；不激活 ⇒ 不抢用户焦点，
-    也**不占用户的等待时间**。
-    """
-    try:
-        win32gui.SetWindowPos(
-            hwnd,
-            win32con.HWND_TOP,
-            0,
-            0,
-            0,
-            0,
-            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE,
-        )
-    except Exception:
         return False
     return True
 
@@ -737,6 +719,8 @@ def _grab(hwnd: int, roi: tuple[float, float, float, float] | None = None) -> Im
     * 客户区尺寸合法 —— 尺寸为 0 通常是窗口最小化了；
     * ``hwnd`` 必须**就是当前前台窗口** —— ``ImageGrab`` 抓的是屏幕，窗口被遮挡时
       抓到的是**压在上面的那个窗口**的像素，据此判"按钮在不在"会得到静默错误的结论。
+      标准流程里三下点击期间游戏**就是**前台，所以这条断言在正常路径上不会被触发；
+      它的作用是挡住"以为点完了、其实屏幕上是别的窗口"这种静默错误。
 
     只抓 ROI 的收益**是实测的，而且结论与直觉不一样**（`tools/probe/measure_capture_cost.py`，
     1920×1080 屏、20 轮）：**抓图成本由固定开销主导** —— 全屏 22.8 ms vs 1920×108 横条
@@ -747,12 +731,13 @@ def _grab(hwnd: int, roi: tuple[float, float, float, float] | None = None) -> Im
     width, height = _client_size(hwnd)
     if width <= 0 or height <= 0:
         raise CaptureFailedError(f"客户区尺寸非法: {width}x{height}（窗口最小化了？）")
-    origin_x, origin_y = _client_origin(hwnd)
-    if not _owns_pixels(hwnd, origin_x, origin_y, width, height):
+    front = _foreground_window()
+    if front != hwnd:
         raise CaptureFailedError(
-            f"抓图要求那块像素**确实属于** hwnd={hwnd}：现在压在上面的是别的窗口"
-            "（ImageGrab 抓的是屏幕，拿被遮挡的像素判界面会得到静默错误的结论）"
+            f"抓图要求 hwnd={hwnd} **就是当前前台窗口**（现在前台是 {front}）—— "
+            "ImageGrab 抓的是屏幕，拿被遮挡的像素判界面会得到静默错误的结论"
         )
+    origin_x, origin_y = _client_origin(hwnd)
     left, top, right, bottom = roi or (0.0, 0.0, 1.0, 1.0)
     x0 = origin_x + int(left * width)
     y0 = origin_y + int(top * height)
@@ -840,7 +825,7 @@ def ensure_foreground(hwnd: int, *, attempts: int = 5, force: bool = False) -> N
         raise RealInputBlockedError(
             "没有授权就抢前台：这会把用户正在用的窗口挤到后面。"
             "要走点击阶段就显式打开 —— CLI 用 `python -m pdx.game_auto run`，"
-            "代码里传 `force=True`，或在 `borrow_foreground()` 里做。"
+            "代码里传 `force=True`。"
         )
     if _is_iconic(hwnd):
         # **最小化的窗口激活不了**（实测：`background=True` 起游戏后第一次借前台直接
@@ -877,7 +862,46 @@ def other_window(exclude: int) -> int:
     return 0
 
 
-# ────────────────────────── 抓图 / 匹配 / 点击 ──────────────────────────
+def _is_alive(hwnd: int) -> bool:
+    """句柄现在还有效吗（``IsWindow``）。
+
+    为什么要单独判：Victoria 3 在启动过程中**销毁并重建窗口**，而窗口重建是**不固定时刻**的
+    （实测：``launch`` 返回的 5178844 在 173 秒的加载跑完之后已失效）。
+    光靠"按标题找窗口"不够 —— 窗口被最小化/隐藏时会找不到，于是调用方会退回一个死句柄。
+    """
+    return bool(hwnd) and bool(win32gui.IsWindow(hwnd))
+
+
+def _live_window(hwnd: int) -> int:
+    """取**当前**的游戏窗口句柄。
+
+    为什么需要：Victoria 3 在启动过程中会**销毁并重建窗口**（实测：launch 返回的
+    1901988 在激活时已失效，当前窗口是 198050）。拿过期句柄去激活只会得到
+    ``ForegroundLostError``，而那个报错看起来像抢不到前台，把人引向错误的方向。
+
+    ⚠️ **找不到时抛错，不静默退回传入的句柄**（2026-09-22 实测踩到）：
+    旧实现是 ``find_window() or hwnd`` —— 句柄已经死了也照样返回它，
+    于是下一步在 ``GetClientRect`` 上抛 ``error 1400 无效的窗口句柄``。
+    那个报错**指向完全错误的方向**（看起来像坐标/尺寸问题，实际是句柄过期），
+    与本函数文档里批评 ``ForegroundLostError`` 的毛病一模一样。
+    """
+    if _is_alive(hwnd):
+        return hwnd
+    current = find_window()
+    if current:
+        if current != hwnd:
+            _REBUILDS.append((hwnd, current))
+        return current
+    raise WindowNotFoundError(
+        f"游戏窗口句柄 {hwnd} 已失效，且按标题+类（{WINDOW_TITLE!r}/{WINDOW_CLASS!r}）"
+        "找不到新的可见窗口 —— 窗口可能刚被重建、或已被最小化/关闭。"
+        "（窗口重建是启动期的正常现象，所以这里报「句柄过期」而不是「抢不到前台」。）"
+    )
+
+
+#: 实测发生过的"窗口被重建"记录：``(旧句柄, 新句柄)``。测试与探针可据此判断
+#: 本次运行到底有没有遇到重建（不猜，有据）。
+_REBUILDS: list[tuple[int, int]] = []
 
 
 def screenshot(hwnd: int, roi: tuple[float, float, float, float] | None = None) -> Image.Image:
@@ -1016,10 +1040,8 @@ def locate_optional(
     )
 
 
-def click_client(
-    hwnd: int, x: int, y: int, *, settle: float = 0.0, give_back: bool = True, force: bool = False
-) -> None:
-    """在客户区 ``(x, y)`` 处做一次**真前台左键点击**；点完把前台**还回去**。
+def click_client(hwnd: int, x: int, y: int, *, settle: float = 0.0, force: bool = False) -> None:
+    """在客户区 ``(x, y)`` 处做一次**真前台左键点击**。
 
     **鼠标注入走成熟库 `pydirectinput`**（`moveTo` + `click`），不再自己拼
     `SetCursorPos` + `mouse_event`：它内部用的也是 `SendInput`，但由库维护
@@ -1030,8 +1052,7 @@ def click_client(
     * **合成键盘**（`keybd_event` / 虚拟键 `SendInput`）**实测无效** —— 用 tick 判据验过；
       换成 **scancode 版**（`pydirectinput`，源码里确实带 `KEYEVENTF_SCANCODE`）**也没能唤起
       控制台**（4 个候选键各试一次，判据是"控制台命令执行后会写的文件有没有变"）——
-      但那次**不能区分**"键被忽略"与"这个界面本来就不让开控制台"，故记作**未证实**而不是判死，
-      见 `tools/probe/console_key_test.py`；
+      但那次**不能区分**"键被忽略"与"这个界面本来就不让开控制台"，故记作**未证实**而不是判死；
     * **后台点击（不进系统输入队列）实测无效** —— 2026-09-21 三种变体各试一次：
       `PostMessage(WM_LBUTTONDOWN/UP)`、`SendMessage`、`SendMessage` + 先发
       `WM_ACTIVATE`/`WM_SETFOCUS`；判据不是"像素差"（大厅界面**自己在动**，3 秒不动
@@ -1039,27 +1060,22 @@ def click_client(
       「观察」按钮的匹配分数**一模一样**（0.855），界面没有切走。
       引擎读的是**原始输入状态**（光标位置 + 按键状态），不是窗口消息，这一条与用什么库无关。
 
-    所以"点一次"这件事只能**借前台**。借了就要还：`give_back=True` 时点完立刻把
-    原先的前台窗口设回去（用户看到的是约 1 秒的焦点闪动，而不是鼠标被夺走）。
+    所以"点一次"这件事只能**真前台**。标准流程里游戏从启动到三下点完一直是前台，
+    因此不再有"点完把前台还回去"这个动作 —— **还前台统一在流程末尾做一次**
+    （:func:`switch_to_background`），而不是每点一下闪一次。
     """
     if not _input_allowed(force):
         raise RealInputBlockedError(
             "没有授权就投真实鼠标输入：这会让用户的鼠标自己动起来。"
-            "显式入口（CLI / 探针）请打开 `ALLOW_REAL_INPUT`，或在 "
-            "`borrow_foreground()` 里做（借用期内自动放行）。"
+            "显式入口（CLI / 探针）请打开 `ALLOW_REAL_INPUT` 或传 `force=True`。"
         )
-    previous = _foreground_window() if give_back else 0
     ensure_foreground(hwnd, force=force)
-    try:
-        origin_x, origin_y = _client_origin(hwnd)
-        directinput.moveTo(origin_x + x, origin_y + y)
-        _wait_cursor_at(origin_x + x, origin_y + y)
-        directinput.click()
-        if settle:
-            _sleep(settle)
-    finally:
-        if previous and previous != hwnd:
-            _set_foreground(previous)
+    origin_x, origin_y = _client_origin(hwnd)
+    directinput.moveTo(origin_x + x, origin_y + y)
+    _wait_cursor_at(origin_x + x, origin_y + y)
+    directinput.click()
+    if settle:
+        _sleep(settle)
 
 
 def _wait_cursor_at(x: int, y: int, *, timeout: float = 1.0) -> bool:
@@ -1077,53 +1093,9 @@ def _wait_cursor_at(x: int, y: int, *, timeout: float = 1.0) -> bool:
     return False
 
 
-def _raise_and_focus(hwnd: int) -> None:
-    """把窗口露在最上面 + 把**键盘**焦点给它（**不动前台窗口**）。"""
-    raise_without_activate(hwnd)
-    with suppress(Exception):  # 拿不到键盘焦点也继续（调用方按**状态变化**验收）
-        win32gui.SetFocus(hwnd)
-
-
-def _click_at_client(hwnd: int, x: int, y: int) -> None:
-    """在客户区 `(x, y)` 投一次**真实**左键（等光标真的到位，不用固定 sleep）。"""
-    origin_x, origin_y = _client_origin(hwnd)
-    directinput.moveTo(origin_x + x, origin_y + y)
-    _wait_cursor_at(origin_x + x, origin_y + y)
-    directinput.click()
-
-
-def click_client_nosteal(hwnd: int, x: int, y: int, *, force: bool = False) -> None:
-    """**不抢前台**地点一下客户区 ``(x, y)`` —— 实测可行（2026-09-21 两次复现）。
-
-    做法三步（探针 `tools/probe/bg_click_lib.py`，判据是**状态变化**不是像素差）：
-
-    1. `raise_without_activate`：把窗口露在**最上面**但不激活；
-    2. `SetFocus`：**键盘**焦点给游戏（前台窗口仍是用户的）；
-    3. 真实输入 `moveTo` + `click`。
-
-    实测证据：界面确实切走了（"离开大厅"），5 秒后复查仍是切走状态，且
-    `foreground_stayed_with_user=True` —— 用户的前台窗口**全程没被抢**。
-
-    ⚠️ 与"消息注入"那条死路的区别（别再混为一谈）：`PostMessage` / `SendMessage`
-    三种变体实测无效（引擎读**原始输入状态**）；这条路投的是**真实输入**，
-    只是**没有把前台抢过来**。
-
-    ⚠️ 代价（必须知道）：`SetFocus` 期间**键盘**输入会进游戏，所以只在确实要点击/按键的
-    那一瞬用它；前台一直没变，因此不需要"还焦点"。要最稳（例如游戏版本变了不认这条路）
-    就回落到 :func:`click_client`（借前台）。
-    """
-    if not _input_allowed(force):
-        raise RealInputBlockedError(
-            "没有授权就投真实鼠标输入：这会让用户的鼠标自己动起来。"
-            "显式入口请打开 `ALLOW_REAL_INPUT`，或在 `borrow_foreground()` 里做。"
-        )
-    _raise_and_focus(hwnd)
-    _click_at_client(hwnd, x, y)
-
-
-def click_match(hwnd: int, match: Match, *, give_back: bool = True, force: bool = False) -> None:
-    """点一个已经匹配好的位置。"""
-    click_client(hwnd, match.x, match.y, give_back=give_back, force=force)
+def click_match(hwnd: int, match: Match, *, force: bool = False) -> None:
+    """点一个已经匹配好的位置（坐标已经在**客户区**坐标系里）。"""
+    click_client(hwnd, match.x, match.y, force=force)
 
 
 # ────────────────────────── 日志真值 ──────────────────────────
@@ -1271,9 +1243,9 @@ def launch(
     * "窗口出现后再最小化"：能缩下去（实测安全），但用户看到的是"游戏一闪就没了"，
       也不是他要的。
 
-    ⇒ 结论：**启动这一步不加戏**，普通启动最稳、窗口正常出现；"不打扰用户"由后面的
-    两步保证：**等待全程不占前台**（:func:`_step_look` + 像素归属抓图），
-    **只有那三下点击借前台**（:func:`borrow_foreground`，约 1 秒）。
+    ⇒ 结论：**启动这一步不加戏**，普通启动最稳、窗口正常出现。"不打扰用户"由后面的
+    两步保证：**加载期完全不碰窗口**（:func:`wait_for_boot_settle`：只看进程与日志大小），
+    **三下点完之后立刻切回后台**（:func:`switch_to_background`：还前台 + 缩窗口）。
 
     ⚠️ **已知缺口（未修，故意留白不如记下来）**：``wait=False`` 时返回 ``0``，
     而 ``0`` 同时是 :func:`find_window` 的"没找到"哨兵 —— 调用方分不清
@@ -1293,57 +1265,12 @@ def launch(
         return 0
     return wait_for_window(timeout=timeout)
 
-    assert_no_game_running()
-    command = experiments.launch_command(debug=debug)
-    if scripted_tests:
-        command.append(SCRIPTED_TESTS_ARG)
-    command.extend(extra_args)
-    if not Path(command[0]).is_file():
-        raise GameAutoError(f"找不到游戏可执行文件：{command[0]}")
-    subprocess.Popen(command, cwd=str(config.ROOT), close_fds=True)
-    if not wait:
-        return 0
-    return wait_for_window(timeout=timeout)
-
-
-def ensure_visible_for_capture(hwnd: int) -> str:
-    """窗口最小化时把它**显示出来但不抢前台**；本来就没最小化就什么都不做。
-
-    为什么需要它：用**成熟库**抓图（`PIL.ImageGrab`）抓的是**屏幕**，最小化的窗口没有
-    画面 —— 这一点**不能靠猜**，所以这里做成"是最小化就显示出来，不是就什么都不做"：
-
-    * 不是最小化 ⇒ 这一步不做事，桌面不动；
-    * 是最小化 ⇒ 先 `SW_SHOWNOACTIVATE`（**不给焦点**）显示；某些窗口这一步不解除最小化，
-      再退一步用 `restore()`，但那会激活它，所以**立刻把前台还回去**。
-
-    返回一句人读的说明，直接进返回值/日志（"这一局到底占了多久屏幕"要看得见）。
-    """
-    if not _is_iconic(hwnd):
-        return "窗口本来就不是最小化"
-    _show_no_activate(hwnd)
-    wait_until(lambda: not _is_iconic(hwnd), timeout=WINDOW_SHOW_SETTLE, interval=CONDITION_POLL)
-    if _is_iconic(hwnd):
-        previous = _foreground_window()
-        _restore(hwnd)
-        wait_until(
-            lambda: not _is_iconic(hwnd), timeout=WINDOW_SHOW_SETTLE, interval=CONDITION_POLL
-        )
-        if previous and previous != hwnd:
-            _set_foreground(previous)
-        return "最小化窗口用 restore() 显示出来（已立刻把前台还回去）"
-    return "最小化窗口用 SW_SHOWNOACTIVATE 显示出来（没有抢前台）"
-
-
-def lobby_visible(hwnd: int, *, threshold: float = DEFAULT_THRESHOLD) -> Match | None:
-    """只抓底部条、找「观察」按钮 —— **找不到就返回 ``None``**（不抛），供自适应调用。"""
-    return find_in_roi(hwnd, "btn_observe", roi=BOTTOM_ROI, threshold=threshold)
-
 
 @dataclass(frozen=True)
 class BootSettle:
     """启动期"便宜信号"的观测结果。
 
-    ⚠️ 它是**启发式**，不是界面判据：界面判据永远是借到前台之后的那一次匹配。
+    ⚠️ 它是**启发式**，不是界面判据：界面判据永远是"回到前台之后那一次匹配"。
     """
 
     settled: bool
@@ -1431,140 +1358,6 @@ def wait_for_boot_settle(
     )
 
 
-def wait_for_lobby(
-    hwnd: int,
-    *,
-    timeout: float = LOBBY_TIMEOUT,
-    threshold: float = DEFAULT_THRESHOLD,
-    auto_show: bool = True,
-    clock: object = None,
-    sleeper: object = None,
-) -> Match:
-    """等"选择国家"界面出现（判据 = 底部「观察」按钮能被匹配到）。
-
-    **只有目标窗口是前台时才有像素判据**：`ImageGrab` 抓的是屏幕，不是被遮挡的窗口，
-    所以调用顺序必须是"先借前台、再看这一眼"（P5：不拿可疑像素下判断）。
-    不是前台时抓图会**报错**并记进最后的错误里（P13）。
-
-    频率自己负责（P2）：只抓底部条 :data:`BOTTOM_ROI`，且抓图间隔从
-    :data:`CAPTURE_INTERVAL_START` 按 :data:`CAPTURE_INTERVAL_GROWTH` 逐步放慢到
-    :data:`CAPTURE_INTERVAL_MAX` —— 不是固定 2 秒整屏抓。
-    """
-    tick_clock: Clock = cast("Clock", _resolve(clock, _monotonic, "clock"))
-    pause: Sleeper = cast("Sleeper", _resolve(sleeper, _sleep, "sleeper"))
-    started = tick_clock()
-    interval = CAPTURE_INTERVAL_START
-    last_error = ""
-    shown = False
-    while tick_clock() - started < timeout:
-        try:
-            image = screenshot(hwnd, roi=BOTTOM_ROI)
-        except CaptureFailedError as exc:
-            last_error = str(exc)
-            image = None
-        found = (
-            None
-            if image is None
-            else locate_optional(image, "btn_observe", threshold=threshold, first_hit=True)
-        )
-        if found is not None:
-            # 坐标是**裁剪图内**的 ⇒ 加回 ROI 偏移才是客户区坐标（否则点击会打到别处）
-            dx, dy = _roi_offset(hwnd, BOTTOM_ROI)
-            return _shift_match(found, dx, dy)
-        if auto_show and not shown and tick_clock() - started > 20.0:
-            shown = True
-            if _is_iconic(hwnd):  # pragma: no cover - 实机分支
-                ensure_visible_for_capture(hwnd)
-        pause(interval)
-        interval = min(interval * CAPTURE_INTERVAL_GROWTH, CAPTURE_INTERVAL_MAX)
-    raise TemplateNotFoundError(
-        f"{timeout:.0f} 秒内没在底部找到「观察」按钮（最后抓图错误："
-        f"{last_error or '无'}）—— 游戏没走到选择国家界面，或界面语言/分辨率变了"
-    )
-
-
-def click_observer(
-    hwnd: int,
-    *,
-    threshold: float = DEFAULT_THRESHOLD,
-    verify: bool = True,
-    verify_timeout: float = 30.0,
-) -> Match:
-    """点「观察」进入观察者模式，并用**截图对比**确认按钮真的消失了。
-
-    ⚠️ 不能用"日志有没有新行"验证：暂停时不写日志（实测）。验证只能靠截图。
-    """
-    before = screenshot(hwnd)
-    match = locate(before, "btn_observe", threshold=threshold, roi=BOTTOM_ROI)
-    save_shot(before, "01-lobby")
-    click_match(hwnd, match)
-
-    if verify:
-        deadline = _monotonic() + verify_timeout
-        while _monotonic() < deadline:
-            _sleep(1.0)
-            # 抓图失败要**容忍重试**，与 wait_for_lobby 同口径：切换界面时
-            # 会短暂抓到近纯色（加载/黑屏），那是"还没画完"，不是"点击没生效"。
-            try:
-                after = screenshot(hwnd)
-            except CaptureFailedError:
-                continue
-            if locate_optional(after, "btn_observe", threshold=threshold, roi=BOTTOM_ROI) is None:
-                save_shot(after, "02-observer")
-                return match
-        raise TemplateNotFoundError(
-            f"点了「观察」({match.describe()}) 但 {verify_timeout:.0f} 秒后按钮仍在 —— 点击没生效"
-        )
-    return match
-
-
-def unpause(
-    hwnd: int,
-    *,
-    threshold: float = DEFAULT_THRESHOLD,
-    settle: float = 3.0,
-    timeout: float = RUN_TIMEOUT,
-) -> Advance:
-    """解除暂停，并**用逐 tick 日志确认时间真的开始推进**；没推进就报错。
-
-    已经在跑时直接返回（幂等）—— 否则再点一次播放键反而会**暂停**它。
-
-    基线可能**读不到**（会话刚起时日志里一行 tick 都没有），这时改判
-    "从读不到变成读得到" —— 详见 :func:`wait_until_readable`。
-    实机跑批正是栽在这一点上：点击明明生效（引擎自己写了
-    ``Pause Toggled! Paused: false``），却被判成 90 秒超时。
-    """
-    before = tick_mark()
-    probe = is_running(settle)
-    if probe.advanced:
-        return Advance(
-            advanced=True,
-            before=probe.before,
-            after=probe.after,
-            seconds=probe.seconds,
-            source="dedicated_server.log（已经在跑，未点击）",
-        )
-
-    screen = screenshot(hwnd)
-    match = locate(screen, "btn_play", threshold=threshold, roi=TOP_RIGHT_ROI)
-    save_shot(screen, "03-paused")
-    click_match(hwnd, match)
-
-    if before.readable:
-        advance = wait_until_running(before, timeout=timeout)
-    else:
-        after = wait_until_readable(timeout=timeout)
-        advance = Advance(
-            advanced=True,
-            before=NO_TICK,
-            after=after.tick,
-            seconds=0.0,
-            source="dedicated_server.log（基线读不到，改判首次可读）",
-        )
-    save_shot(screenshot(hwnd), "04-running")
-    return advance
-
-
 def background_ok(
     hwnd: int,
     *,
@@ -1595,31 +1388,6 @@ def background_ok(
         seconds=seconds,
         source=f"后台（前台让给 hwnd={other}）",
     )
-
-
-def run_until_running(
-    *,
-    scripted_tests: bool = True,
-    lobby_timeout: float = LOBBY_TIMEOUT,
-    run_timeout: float = RUN_TIMEOUT,
-) -> dict[str, object]:
-    """推荐闭环：起游戏 → 等选择国家 → 点观察 → 解除暂停 → 确认在推进。
-
-    返回值是一份可直接写进汇报的证据字典。
-    **任何一步失败都抛异常，不返回半个结果** —— 半成品比失败更危险。
-    """
-    hwnd = launch(scripted_tests=scripted_tests, wait=True)
-    lobby = wait_for_lobby(hwnd, timeout=lobby_timeout)
-    observe = click_observer(hwnd)
-    advance = unpause(hwnd, timeout=run_timeout)
-    return {
-        "hwnd": hwnd,
-        "lobby_match": lobby.describe(),
-        "observe_match": observe.describe(),
-        "running": advance.describe(),
-        "probe_month_lines": len(probe_months()),
-        "tick": tick_mark().tick,
-    }
 
 
 def tick_day(tick: str) -> float | None:
@@ -1705,107 +1473,267 @@ def speed_candidates(
     return out
 
 
-# ────────────────────────── 会话流程：后台优先，前台只借"必须点"的那几秒 ──────────────────────────
+# ────────────────────────── 会话流程：起游戏 → 三下点击 → 切回后台 ──────────────────────────
 
 
-@dataclass
-class ForegroundVisit:
-    """一次前台借用的账：借之前是谁在前台、借了多久、有没有还回去。"""
+@dataclass(frozen=True, slots=True)
+class ForegroundHandover:
+    """一次"游戏 → 后台"的交接账。
+
+    ``previous`` 是**起游戏之前**的前台窗口 —— 那才是真正"用户的窗口"。
+    为什么不在交接时现取一次前台：游戏加载结束时**会自己抢前台**（B50 实测），
+    交接那一刻取到的其实是游戏自己，拿它去"还原"等于什么都没做。
+    """
 
     previous: int
-    seconds: float
+    after: int
     restored: bool
+    minimized: bool
+    seconds: float
 
-
-@contextmanager
-def borrow_foreground(
-    hwnd: int, *, force: bool = False, give_back: bool = True
-) -> Iterator[ForegroundVisit]:
-    """**唯一**碰前台的入口：借 → 用 → 在 ``finally`` 里还。
-
-    用户口径："能后台就后台，如果必须前台点击，那就只有在需要点击时切换到前台，
-    空格后切回后台。" 这里是**结构性**保证，不靠调用点自觉：
-
-    * 没授权（`ALLOW_REAL_INPUT` 假、`force` 假）⇒ 当场拒绝，绝不"顺手"动用户桌面；
-    * 借用期内 ``_BORROW_DEPTH > 0`` ⇒ 期间的点击/按键自动放行（不必每个调用点记得传 force）；
-    * 退出时**一定**把前台还给原来那个窗口，并把"借了多久"记进 :class:`ForegroundVisit`
-      —— "占了用户多久屏幕"是个可核对的数字，不靠感觉。
-    """
-    if not _input_allowed(force):
-        raise RealInputBlockedError(
-            "没有授权就借前台：这会把用户正在用的窗口挤到后面。"
-            "显式入口请打开 `ALLOW_REAL_INPUT`，或传 `force=True`。"
+    def describe(self) -> str:
+        where = "已最小化" if self.minimized else "仍显示（没有可还原的窗口）"
+        return (
+            f"前台 {self.previous} → {self.after}（还原{'成功' if self.restored else '未做'}，"
+            f"{where}，耗时 {self.seconds:.1f}s）"
         )
+
+
+@dataclass(frozen=True, slots=True)
+class SessionStart:
+    """一局的"点火"结果 —— 每一步都带够证据，可以直接写进汇报。
+
+    字段名与含义（不要为了好看改名）：``hwnd`` 是**当前**句柄（启动期窗口会被重建）；
+    ``unpause`` 说明那一按到底按没按；``rate`` 是**量出来的**速率，不是设出来的。
+    """
+
+    hwnd: int
+    previous: int
+    settle: BootSettle
+    observe: Match
+    speed_source: str
+    speed_xy: tuple[int, int] | None
+    unpause: str
+    pressed: bool
+    advance: Advance | None
+    rate: float
+    rate_ok: bool
+    attempts: int
+    handover: ForegroundHandover
+    tick: str
+
+    def as_dict(self) -> dict[str, object]:
+        """扁平化（CLI 打印 / 探针记档用）。"""
+        return {
+            "hwnd": self.hwnd,
+            "previous": self.previous,
+            "boot_settle": self.settle.why,
+            "observe": self.observe.describe(),
+            "speed_source": self.speed_source,
+            "speed_xy": "" if self.speed_xy is None else f"{self.speed_xy[0]},{self.speed_xy[1]}",
+            "speed_attempts": self.attempts,
+            "speed_days_per_second": self.rate,
+            "speed_ok": self.rate_ok,
+            "unpause": self.unpause,
+            "unpause_pressed": self.pressed,
+            "running": self.advance.describe() if self.advance else "（按空格前时间就已经在走）",
+            "handover": self.handover.describe(),
+            "foreground_restored": self.handover.restored,
+            "minimized": self.handover.minimized,
+            "tick": self.tick,
+        }
+
+
+def launch_to_foreground(
+    *,
+    scripted_tests: bool = True,
+    debug: bool = True,
+    timeout: float = WINDOW_TIMEOUT,
+    extra_args: tuple[str, ...] = (),
+) -> tuple[int, int]:
+    """起游戏并等窗口出现，返回 ``(当前句柄, 起游戏之前的前台窗口)``。
+
+    **启动这一步不加戏**（用户口径："直接启动游戏到前台"）：普通 ``Popen``，窗口正常出现。
+    自创的启动变体都删掉了，各自的原因写在 :data:`SW_SHOWNOACTIVATE` 的注释里
+    （最小化启动会让引擎在 `nvoglv64.dll` 里崩）。
+
+    第二个返回值是**给收尾用的**：加载结束时游戏会自己抢前台，「切回后台」要还的是
+    **用户原来的窗口**，不是"此刻的前台"。
+    """
     previous = _foreground_window()
-    visit = ForegroundVisit(previous=previous, seconds=0.0, restored=False)
+    hwnd = launch(
+        scripted_tests=scripted_tests,
+        debug=debug,
+        extra_args=extra_args,
+        wait=True,
+        timeout=timeout,
+    )
+    return _live_window(hwnd), previous
+
+
+def _route_to_foreground(hwnd: int, previous: int, *, force: bool) -> int:
+    """确保游戏在前台（先刷新句柄），返回**当前**句柄。
+
+    为什么必须先刷新：加载要 170+ 秒，而 ``launch()`` 2 秒时就返回了句柄，中间窗口会被
+    **销毁重建**（实测：5178844 → 另一个句柄），拿死句柄去激活只会得到
+    ``ForegroundLostError`` / ``error 1400``，两个报错都指向错误的方向。
+    """
+    hwnd = _live_window(hwnd)
+    if _foreground_window() != hwnd:
+        if previous and _is_alive(previous):
+            # 有"用户的窗口"可以归还：先把它还给用户，再明确地把游戏提到前台。
+            # 为什么多此一举：Windows 的前台锁定会**静默拒绝**非前台进程的置前请求；
+            # 先把前台还给原来那个窗口，我们这条置前请求的成功率明显更高（实测）。
+            _set_foreground(previous)
+        ensure_foreground(hwnd, force=force)
+    return hwnd
+
+
+def switch_to_background(
+    hwnd: int,
+    previous: int,
+    *,
+    restore: bool = True,
+    minimize: bool = True,
+    settle: float = 1.0,
+) -> ForegroundHandover:
+    """**切回后台**：把前台还给用户原来的窗口，再把游戏窗口缩下去。
+
+    两步都要，因为两步管的是不同的事：
+
+    * **还前台**：焦点与键盘归用户。这是用户口径里"再切回后台"的字面要求；
+    * **缩窗口**：游戏窗口不再占着屏幕。⚠️ 实测过"缩下去会不会不推进"是**必须验**的一条
+      （有些游戏一缩下去就不渲染），所以调用方要在缩完之后**量一次速率**
+      （:func:`start_session` 的 ``verify_minimized``），验不过就当场恢复。
+
+    找不到可还原的窗口（``previous`` 为 0 或已经关掉）时**如实报** ``restored=False``，
+    不假装还成功了。
+    """
     started = _monotonic()
-    ensure_foreground(hwnd, force=True)
-    _INPUT_GATE.borrow_depth += 1
-    try:
-        yield visit
-    finally:
-        _INPUT_GATE.borrow_depth -= 1
-        visit.restored = (
-            _set_foreground(previous) if give_back and previous and previous != hwnd else True
+    restored = False
+    if restore and previous and previous != hwnd and _is_alive(previous):
+        restored = _set_foreground(previous)
+    if minimize and not _is_iconic(hwnd):
+        _minimize(hwnd)
+        wait_until(lambda: _is_iconic(hwnd), timeout=WINDOW_SHOW_SETTLE, interval=CONDITION_POLL)
+    if settle:
+        _sleep(settle)
+    return ForegroundHandover(
+        previous=previous,
+        after=_foreground_window(),
+        restored=restored,
+        minimized=_is_iconic(hwnd),
+        seconds=_monotonic() - started,
+    )
+
+
+def _ensure_live_foreground(hwnd: int) -> int:
+    """等到"窗口活着且是前台"（最长 :data:`LOOK_TIMEOUT` 秒），返回当前句柄。
+
+    ⚠️ 抓图用的是屏幕抓取（``ImageGrab``），只有**前台**窗口的像素可信；加载刚结束时
+    另有一个窗口压在游戏上面是实测见过的（B50），所以这一步不能省。
+    """
+    tick_clock: Clock = _monotonic
+    deadline = tick_clock() + LOOK_TIMEOUT
+    hwnd = _live_window(hwnd)
+    _set_foreground(hwnd)  # 加载结束时游戏自己会抢前台；这里只是"万一它没抢"时补上
+    wait_until(
+        lambda: _foreground_window() == _live_window(hwnd),
+        timeout=FOREGROUND_SETTLE,
+        interval=FOREGROUND_POLL,
+    )
+    attempts = 0
+    while tick_clock() < deadline:
+        hwnd = _live_window(hwnd)
+        if _foreground_window() == hwnd:
+            return hwnd
+        attempts += 1
+        _set_foreground(hwnd)
+        # 把 hwnd 绑成默认参数：lambda 里直接引用 hwnd 会被 ruff 的 B023 判为"绑了循环变量"
+        # （下一轮它就被重新赋值了）—— 这里其实每轮都同步求值，但显式绑定更省事也更好读。
+        wait_until(
+            lambda target=hwnd: _foreground_window() == target,
+            timeout=FOREGROUND_SETTLE,
+            interval=CONDITION_POLL,
         )
-        visit.seconds = _monotonic() - started
+    front = _foreground_window()
+    raise ForegroundLostError(
+        f"{LOOK_TIMEOUT:.0f} 秒内游戏没能拿到前台（游戏 hwnd={hwnd}，前台={front}，"
+        f"标题={_window_title(front)!r}，试了 {attempts} 次）—— 此时点击会送给别的窗口，已中止"
+    )
 
 
-def _live_window(hwnd: int) -> int:
-    """取**当前**的游戏窗口句柄；找不到就退回传入的那个（不假装知道）。
+def find_observe(hwnd: int, *, threshold: float = DEFAULT_THRESHOLD) -> Match | None:
+    """只抓底部条、找「观察」按钮 —— **找不到返回 ``None``**（不抛），供自适应调用。"""
+    return find_in_roi(hwnd, "btn_observe", roi=BOTTOM_ROI, threshold=threshold)
 
-    为什么需要：Victoria 3 在启动过程中会**销毁并重建窗口**（实测：launch 返回的
-    1901988 在借前台时已失效，当前窗口是 198050）。拿过期句柄去激活只会得到
-    ForegroundLostError，而那个报错看起来像抢不到前台，把人引向错误的方向。
+
+def _step_look(
+    hwnd: int, *, threshold: float, lobby_timeout: float = LOOK_TIMEOUT
+) -> tuple[Match, int]:
+    """① 确认「观察」出现；返回 ``(匹配, 当前句柄)``。
+
+    频率自己负责（P2）：只抓底部条 :data:`BOTTOM_ROI`，抓图间隔从
+    :data:`CAPTURE_INTERVAL_START` 按 :data:`CAPTURE_INTERVAL_GROWTH` 放慢到
+    :data:`CAPTURE_INTERVAL_MAX` —— 不是固定 2 秒整屏抓，也不是每个尺度都试
+    （``first_hit=True``：一个可信命中就够）。
+
+    抓图失败按"还没画好"处理并**记下最后一条错误**：界面在切换时会短暂近纯色，
+    那不是失败；但一直在失败就必须把原因带进异常里（P13），否则只剩一句"没找到"。
     """
-    return find_window() or hwnd
-
-
-def _step_look(hwnd: int, *, threshold: float, lobby_timeout: float = LOOK_TIMEOUT) -> Match:
-    """① 在**借用期内**确认「观察」出现（有界，默认 :data:`LOOK_TIMEOUT` 秒）。
-
-    ⚠️ **不许在等待阶段置顶窗口**：实测那样会让游戏窗口压住 9 个屏幕采样点里的 7 个，
-    用户看到的就是"还是前台"（即使 `GetForegroundWindow()` 仍是他的窗口）。
-    所以本函数只管"已经在前台时看一眼"，长时间等待交给**完全不碰屏幕**的
-    :func:`wait_for_boot_settle`。等不到就抛错（P13），不猜。
-    """
-    return wait_for_lobby(hwnd, timeout=lobby_timeout, threshold=threshold)
+    tick_clock: Clock = _monotonic
+    hwnd = _ensure_live_foreground(hwnd)
+    deadline = tick_clock() + lobby_timeout
+    interval = CAPTURE_INTERVAL_START
+    last_error = ""
+    while tick_clock() < deadline:
+        try:
+            image = screenshot(hwnd, roi=BOTTOM_ROI)
+        except CaptureFailedError as exc:
+            last_error = str(exc)
+            image = None
+        found = (
+            None
+            if image is None
+            else locate_optional(image, "btn_observe", threshold=threshold, first_hit=True)
+        )
+        if found is not None:
+            # 坐标是**裁剪图内**的 ⇒ 加回 ROI 偏移才是客户区坐标（否则点击会打到别处）
+            dx, dy = _roi_offset(hwnd, BOTTOM_ROI)
+            return _shift_match(found, dx, dy), hwnd
+        _sleep(interval)
+        interval = min(interval * CAPTURE_INTERVAL_GROWTH, CAPTURE_INTERVAL_MAX)
+    raise TemplateNotFoundError(
+        f"{lobby_timeout:.0f} 秒内没在底部找到「观察」按钮（最后抓图错误："
+        f"{last_error or '无'}）—— 游戏没走到选择国家界面，或界面语言/分辨率变了"
+    )
 
 
 def _step_observe(
-    hwnd: int,
-    match: Match,
-    *,
-    settle_timeout: float,
-    nosteal: bool = False,
-    force: bool = False,
+    hwnd: int, match: Match, *, settle_timeout: float, force: bool = False
 ) -> dict[str, object]:
-    """① 点「观察」；界面有没有切走随后再验。
+    """② 点「观察」进入观察者模式，并确认**界面真的切走了**。
 
-    ``nosteal=True`` 走**不抢前台**那条路（实测可行）；默认走借前台那条（回落）。
+    ⚠️ 判据不能用"日志有没有新行"：暂停时不写日志（实测）。所以判据是
+    "底部那个按钮没了"，**外加**"时间开始走了"这条更硬的真值（任一成立即算切走）。
     """
-    save_shot(screenshot(hwnd), "10-lobby")  # 证据：整屏一张（一次性，不是热路径）
-    if nosteal:
-        click_client_nosteal(hwnd, match.x, match.y, force=force)
-    else:
-        click_match(hwnd, match, give_back=False, force=force)
+    with suppress(CaptureFailedError):
+        save_shot(screenshot(hwnd), "10-lobby")  # 证据：整屏一张（一次性，不是热路径）
+    click_match(hwnd, match, force=force)
     settled = wait_until(
-        lambda: lobby_visible(hwnd) is None or tick_mark().readable,
+        lambda: find_in_roi(hwnd, "btn_observe", roi=BOTTOM_ROI) is None or tick_mark().readable,
         timeout=settle_timeout,
         interval=CONDITION_POLL,
     )
-    # **留证**：点完之后界面到底变成什么样 —— 失败时不用再从零猜（实测吃过这个亏）。
     with suppress(CaptureFailedError):
         save_shot(screenshot(hwnd), "11-after-observe")
-    return {
-        "observe": match.describe(),
-        # **机器可读的标志**：调用方按它决定要不要回落；文案只给人看。
-        # （踩过：原来让调用方去匹配"没切走"这几个字，措辞一变回落就永远不触发。）
-        "lobby_settled_ok": bool(settled),
-        "lobby_settled": "大厅界面已切走（按钮消失 / 时间开始走）"
-        if settled
-        else f"{settle_timeout:.0f} 秒内「观察」按钮还在 —— 这一下可能点空了",
-    }
+    if not settled:
+        raise TemplateNotFoundError(
+            f"点了「观察」({match.describe()}) 但 {settle_timeout:.0f} 秒后界面没切走"
+            "（底部按钮还在、时间也没开始走）—— 这一下点空了；"
+            "证据帧：tools/out/auto/10-lobby.png 与 11-after-observe.png"
+        )
+    return {"observe": match.describe(), "lobby_settled": "大厅界面已切走"}
 
 
 def _step_speed(
@@ -1814,24 +1742,64 @@ def _step_speed(
     speed_xy: tuple[int, int] | None,
     threshold: float,
     index: int,
-    nosteal: bool = False,
     force: bool = False,
-) -> dict[str, object]:
-    """② 点速度档（用户口径就是 **5 档**）；点哪个位置由**候选序列**决定，不赌某一个点。"""
+) -> tuple[str, tuple[int, int]]:
+    """③ 点速度档（用户口径就是 **5 档**）；点哪个位置由**候选序列**决定，不赌某一个点。
+
+    表盘会随「运行/暂停 + 当前档」变色 —— 实测暂停态的模板拿去匹配运行态只有 0.327，
+    所以"点哪里"只能当**首选**，最终判据永远是点完量出来的速率（见 :func:`measure_rate`）。
+    """
     candidates = speed_candidates(hwnd, speed_xy=speed_xy, threshold=threshold)
     label, point = candidates[min(index, len(candidates) - 1)]
-    if nosteal:
-        click_client_nosteal(hwnd, point[0], point[1], force=force)
-    else:
-        click_client(hwnd, point[0], point[1], give_back=False, force=force)
-    return {"speed_source": label, "speed_xy": f"{point[0]},{point[1]}"}
+    click_client(hwnd, point[0], point[1], force=force)
+    _sleep(STEP_SETTLE)
+    return label, point
+
+
+def _step_unpause(
+    hwnd: int, *, key_timeout: float, run_timeout: float, key: str = "space", force: bool = False
+) -> tuple[str, bool, Advance | None]:
+    """④ 按空格开始（**已经在跑就不按**），返回 ``(说明, 按没按, 推进证据)``。
+
+    ⚠️ **空格是暂停开关，不是"开始"**：此时若时间已经在走，再按一下会把它**暂停**。
+    所以先等一次"tick 越过基线"；等到了就直接返回，一个键都不按。
+
+    为什么不用"看播放键在不在"来判断：那是**像素**判据，而暂停与否有更硬的真值
+    （逐 tick 日志）。能用真值就不用代理 —— 代理必须标注（F6），这里连标注都不需要，
+    因为真值本来就在手边。
+
+    两个超时是分开的：按之前给 ``key_timeout``（世界可能还在载入，实测 8 秒太短），
+    按之后给 ``run_timeout``（真按中了应该很快就有 tick，等太久说明没按中）。
+
+    按之前还要断言**游戏仍在前台**：空格是真实键盘事件，送给前台窗口；前台要是被别人
+    抢走了，这一按会打给那个窗口（用户正在用的窗口），必须当场停下。
+    """
+    _sleep(STEP_SETTLE)
+    if _foreground_window() != hwnd:
+        raise ForegroundLostError(
+            f"要按 {key} 时游戏已经不在前台（游戏 hwnd={hwnd}，前台={_foreground_window()}）——"
+            "真实键盘事件会送给前台窗口，这一按会打到别处，已中止"
+        )
+    advance = _wait_running(tick_mark(), timeout=key_timeout)
+    if advance is not None:
+        return f"时间已经在走 ⇒ 没有按 {key}（空格是暂停开关，按下去反而会停）", False, advance
+    press_key(key, force=force)
+    _sleep(STEP_SETTLE)
+    after = _wait_running(tick_mark(), timeout=run_timeout)
+    if after is None:
+        raise NotRunningError(
+            f"按了 {key} 之后 {run_timeout:.0f} 秒内时间仍没有推进 —— "
+            "空格没被引擎接受（进度条可能还在载入），或游戏被别的东西暂停了"
+        )
+    return f"已按 {key} 开始推进", True, after
 
 
 def _wait_running(before: TickMark, *, timeout: float) -> Advance | None:
-    """等"时间真的在走"（判据 = 逐 tick 日志）；超时给 ``None`` 而**不抛**（调用方还有回落动作）。
+    """等"时间真的在走"（判据 = 逐 tick 日志）；超时给 ``None``。
 
-    为什么"读不到基线"要单独处理：会话刚起时日志里**一行 tick 都没有**，"越过基线"无从谈起
-    （实测栽过：时间明明在走却永远判不出来），所以那种情况改用 :func:`wait_until_readable`。
+    为什么"读不到基线"要单独处理：会话刚起时日志里**一行 tick 都没有**，"越过基线"无从
+    谈起（实测栽过：时间明明在走却永远判不出来，于是误报"播放键没点中"）。
+    那种情况改判"从读不到变成读得到"。
     """
     try:
         if before.readable:
@@ -1848,9 +1816,11 @@ def _wait_running(before: TickMark, *, timeout: float) -> Advance | None:
     )
 
 
-def start_background_session(
+def start_session(
     hwnd: int,
+    previous: int = 0,
     *,
+    settle: BootSettle | None = None,
     speed_xy: tuple[int, int] | None = None,
     skip_speed: bool = False,
     min_rate: float = SPEED_V_MIN_RATE,
@@ -1858,186 +1828,129 @@ def start_background_session(
     measure_seconds: float = 8.0,
     unpause_key: str = "space",
     threshold: float = DEFAULT_THRESHOLD,
-    # 空格之后的第一次判定给足时间：世界可能还在载入。实测 8 秒太短（点完观察 8 秒内
+    # 空格之后第一次判定给足时间：世界可能还在载入。实测 8 秒太短（点完观察 8 秒内
     # 没有 tick 是**正常**的），45 秒才够"载入完 + 解暂停 + 写出第一行 tick"。
     key_timeout: float = 45.0,
     run_timeout: float = RUN_TIMEOUT,
-    lobby_timeout: float = LOBBY_TIMEOUT,
+    lobby_timeout: float = LOOK_TIMEOUT,
     settle_timeout: float = MAP_SETTLE_TIMEOUT,
-    give_back: bool = True,
-    restore_for_actions: bool = True,
-    minimize_after: bool = True,
-    background_seconds: float = 20.0,
+    verify_minimized: bool = True,
+    keep_foreground: bool = False,
     force: bool = False,
-) -> dict[str, object]:
-    """**后台优先**地把开局做完：只在"必须点"的那几秒借前台，做完立刻还。
+) -> SessionStart:
+    """**标准流程**：确认「观察」→ 点它 → 点 5 档速度 → 按空格 → 切回后台。
 
-    用户口径（2026-09-21，原样照做）：**后台启动游戏 → 点「观察」→ 点 5 档速度 →
-    按空格开始**；"能后台就后台，如果必须前台点击，那就只有在需要点击时切换到前台，
-    空格后切回后台"。
+    流程与用户口径逐条对应（2026-09-22）：
 
-    于是流程按"必须前台的 / 后台就能做的"切开，**前台访问次数与总时长写进返回值**
-    （``borrows`` / ``borrow_seconds``），让"占了用户多久屏幕"是个可核对的数：
+    1. **游戏已经在前台**（由 ``launch_to_foreground`` 负责；加载期不碰窗口）；
+    2. 点「观察」（:func:`_step_observe`）—— 判据是**界面真的切走了**；
+    3. 点 5 档速度（:func:`_step_speed`）—— 判据是**点完量出来的速率**；
+    4. 按空格开始（:func:`_step_unpause`）—— 已经在跑就**不按**（空格是暂停开关）；
+    5. **切回后台**（:func:`switch_to_background`）：还前台 + 缩窗口；
+    6. **缩着也要推进**：这是必须实测的一条（有些游戏一缩下去就不渲染），
+       所以缩完之后再量一次；验不过就**当场恢复**并如实写进 ``handover.minimized``。
 
-    1. **后台启动**（``launch(activate=False)``）→ 后台等窗口 → 后台等启动忙完
-       （:func:`wait_for_boot_settle`：只看进程与日志大小，**不抓图、不占屏**）；
-    2. **一次前台访问**里做完三件事：点「观察」→ 点 5 档速度 → 按空格；退出即**还前台**；
-    3. **后台验证**（只读逐 tick 日志，不看像素）：时间真的在走吗？速率是多少？
-    4. 空格没被接受 ⇒ 再借一次、只点播放键；速率不够 ⇒ 再借一次、只点下一个候选位置
-       （总共最多 ``speed_attempts`` 次）；
-    5. **回到后台跑**：默认缩下去（``minimize_after``），并**实测**最小化后是否仍在推进；
-       验不过立刻恢复原样，结论如实写进 ``minimized``（不静默）。
-
-    判据与坑（都实测过，别再改回去）：
-
-    * 速度档**只能用"点完量速率"证明**：表盘随「运行/暂停 + 当前档」变色，没有任何模板能
-      同时覆盖两种状态（实测暂停态模板匹配运行态只有 0.327），所以走 :func:`speed_candidates`
-      的候选序列；``speed_days_per_second`` 是**量出来的**，不是设出来的；
-    * 空格走 `pydirectinput`（**扫描码**；老的合成虚拟键实测无效），判据是逐 tick 日志；
-    * 点击必须前台（三种消息注入变体实测点完按钮分数一动不动 0.855），所以三下点击**共用
-      一次借用**、之间不还前台 —— 否则用户会看到反复闪动。
-
-    任何一步失败都抛异常，不返回半个结果（P13）。
+    失败即抛错，**不返回半个结果**（P13）。这里没有回落链 —— 见模块开头的设计口径。
     """
-    # ⚠️ **句柄可能在启动过程中被重建**（实测：launch 拿到 1901988，借前台时已经是
-    # 198050）⇒ 每次借用前都重新解析一次，别拿着过期句柄去激活。
-    hwnd = _live_window(hwnd)
-    before = tick_mark()
-    borrows = 0
-    borrow_seconds = 0.0
-    notes: dict[str, object] = {}
+    hwnd = _route_to_foreground(hwnd, previous, force=force)
+    boot = settle if settle is not None else wait_for_boot_settle()
+    match, hwnd = _step_look(hwnd, threshold=threshold, lobby_timeout=lobby_timeout)
+    _step_observe(hwnd, match, settle_timeout=settle_timeout, force=force)
+
+    rate = 0.0
     attempts = 0
-
-    # ① **后台**等并确认大厅（不占前台）—— 用户口径："只有在需要点击时切换到前台"
-    match = _step_look(hwnd, threshold=threshold, lobby_timeout=lobby_timeout)
-    notes["observe"] = match.describe()
-
-    # ② **不抢前台**做完三下（首选路线，实机两次复现）：观察 → 5 档速度 → 空格。
-    #    用户的前台窗口全程不变；真要点不动才回落到借前台（见 ③）。
-    hwnd = _live_window(hwnd)
-    notes.update(
-        _step_observe(hwnd, match, settle_timeout=settle_timeout, nosteal=True, force=force)
-    )
+    source = "跳过（skip_speed）"
+    point: tuple[int, int] | None = None
     if not skip_speed:
         attempts = 1
-        notes.update(
-            _step_speed(
-                hwnd, speed_xy=speed_xy, threshold=threshold, index=0, nosteal=True, force=force
-            )
+        source, point = _step_speed(
+            hwnd, speed_xy=speed_xy, threshold=threshold, index=0, force=force
         )
-    press_key_at(hwnd, unpause_key, force=force)
-    notes["unpause"] = f"按了 {unpause_key}（扫描码，未抢前台）"
+
+    unpause_note, pressed, advance = _step_unpause(
+        hwnd,
+        key_timeout=key_timeout,
+        run_timeout=run_timeout,
+        key=unpause_key,
+        force=force,
+    )
     with suppress(CaptureFailedError):
         save_shot(screenshot(hwnd), "12-after-space")
 
-    # ③ **回落**：万一"不抢前台"这条路在别的版本/界面下不认，就借一次前台重做"观察"。
-    #    判据是**布尔标志**，不是文案（文案随时会改）。
-    if notes.get("lobby_settled_ok") is False:
-        hwnd = _live_window(hwnd)
-        with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
-            borrows += 1
-            if restore_for_actions:
-                notes["window_shown"] = ensure_visible_for_capture(hwnd)
-            notes["fallback"] = "不抢前台没点动 ⇒ 借前台重做「观察」"
-            notes.update(_step_observe(hwnd, match, settle_timeout=settle_timeout, force=force))
-        borrow_seconds += visit.seconds
-
-    # ② **立刻切回后台**：借用的 `finally` 已经把前台还给用户了（用户口径第 ④ 步）。
-    #    ⚠️ 这里**先不缩窗口**：验证阶段万一要回头看播放键，缩下去就抓不到图了（实测踩过
-    #    ——`TemplateNotFoundError` 就是这么来的）。缩窗口放到验证之后（见 ⑤）。
-    minimized = False
-
-    # ③ 后台验证：时间有没有真的开始走（只读日志，不占前台）
-    advance = _wait_running(before, timeout=key_timeout)
-    if advance is None:
-        hwnd = _live_window(hwnd)
-        with borrow_foreground(hwnd, force=force, give_back=give_back) as visit:
-            borrows += 1
-            ensure_visible_for_capture(hwnd)  # 窗口可能已被缩下去：抓图前先让它可见
-            playing = locate_optional(
-                screenshot(hwnd, roi=TOP_RIGHT_ROI), "btn_play", threshold=threshold
-            )
-            if playing is not None:
-                click_match(hwnd, playing, give_back=False)
-                notes["unpause"] = f"{unpause_key} 没被接受 ⇒ 改用播放键"
-            else:
-                notes["unpause"] = f"{unpause_key} 没被接受，且右上角没找到播放键（可能还在载入）"
-        borrow_seconds += visit.seconds
-        if playing is not None:
-            advance = _wait_running(before, timeout=run_timeout)
-    if advance is None:
-        # 兜底也要**如实报**（P13），但把证据一起带上，省得下次又从零猜。
-        log_hint = tick_mark()
-        trail = "；".join(f"{key}={value}" for key, value in sorted(notes.items()))
-        raise NotRunningError(
-            f"{run_timeout:.0f} 秒内时间没有推进（空格与播放键都试过）—— "
-            f"日志现在读到 {log_hint.tick or '<读不到>'}；现场：{trail}；"
-            "证据帧：tools/out/auto/10-lobby.png / 11-after-observe.png / 12-after-space.png"
-        )
-
-    # ④ 速率：在**后台**量（不占前台）；不够就再借一次、只点下一个候选位置
-    rate = 0.0 if skip_speed else measure_rate(measure_seconds)
-    while not skip_speed and rate < min_rate and attempts < speed_attempts:
-        # 补点速度**也不用借前台**：首选路线是"窗口露在最上面 + 键盘焦点 + 真实点击"，
-        # 实测点得动（实机：第一次没到 5 档、第二次点中 ⇒ 2.5 天/秒）。于是 `borrows`
-        # 只在"观察没点动"的回落里才可能非零。
-        hwnd = _live_window(hwnd)
-        notes.update(
-            _step_speed(
-                hwnd,
-                speed_xy=speed_xy,
-                threshold=threshold,
-                index=attempts,
-                nosteal=True,
-                force=force,
-            )
-        )
-        attempts += 1
+    # 速率：**在切回后台之前**先量一次 —— 这时窗口还在前台、像素与输入都最干净；
+    # 切回去之后再量一次（`verify_minimized`），两次都算"实测"，不是二选一。
+    if not skip_speed:
         rate = measure_rate(measure_seconds)
-
-    # ⑤ 后台跑：窗口已经缩下去了 ⇒ 验证"**缩着也在推进**"（这是必须实测的一条，
-    #    有些游戏一缩下去就不渲染/不推进）。验不过立刻恢复原样，结论如实写进返回值。
-    background = background_ok(hwnd, seconds=background_seconds)
-
-    # ⑤ 验证完了才缩窗口：这是"把桌面还给用户"的最后一步，也是一次**实测**
-    #    （有些游戏一缩下去就不推进；验不过立刻恢复原样并如实写进返回值）。
-    if minimize_after and not _is_iconic(hwnd):
-        _minimize(hwnd)
-        minimized = bool(
-            wait_until(
-                lambda: _is_iconic(hwnd), timeout=WINDOW_SHOW_SETTLE, interval=CONDITION_POLL
+        while rate < min_rate and attempts < speed_attempts:
+            source, point = _step_speed(
+                hwnd, speed_xy=speed_xy, threshold=threshold, index=attempts, force=force
             )
-        )
-        if minimized:
-            after_min = background_ok(hwnd, seconds=background_seconds)
-            if after_min.advanced:
-                background = after_min
-            else:
-                _show_no_activate(hwnd)
-                minimized = False
-                background = background_ok(hwnd, seconds=background_seconds)
-    notes["minimized"] = "已缩回后台" if minimized else "窗口没有缩下去（按调用方要求或最小化失败）"
-    return {
-        "hwnd": hwnd,
-        "unpause": notes.get("unpause", "（没做）"),
-        "running": advance.describe(),
-        "speed_source": notes.get("speed_source", "跳过（skip_speed）"),
-        "speed_attempts": attempts,
-        "speed_days_per_second": rate,
-        "speed_ok": skip_speed or rate >= min_rate,
-        "speed_xy": notes.get("speed_xy", ""),
-        "observe": notes.get("observe", ""),
-        "lobby_settled": notes.get("lobby_settled", ""),
-        "foreground_restored": notes.get("foreground_restored", "（每次借用后都还了）"),
-        "window_shown": notes.get("window_shown", ""),
-        "minimized_note": notes.get("minimized", ""),
-        "fallback": notes.get("fallback", "（没回落：首选路线生效）"),
-        "borrows": borrows,
-        "borrow_seconds": round(borrow_seconds, 3),
-        "minimized": minimized,
-        "background": background.describe(),
-        "tick": tick_mark().tick,
-    }
+            attempts += 1
+            rate = measure_rate(measure_seconds)
+
+    handover = switch_to_background(hwnd, previous, minimize=not keep_foreground)
+    if verify_minimized and handover.minimized:
+        after = measure_rate(measure_seconds)
+        if after <= 0.0:
+            # 缩下去不推进 —— 这是**游戏行为**，不是我们的 bug；当场恢复成普通窗口再量一次，
+            # 并把结论如实写进返回值（不静默降级）。
+            _restore(hwnd)
+            wait_until(
+                lambda: not _is_iconic(hwnd), timeout=WINDOW_SHOW_SETTLE, interval=CONDITION_POLL
+            )
+            handover = replace(
+                handover,
+                minimized=False,
+                seconds=handover.seconds + measure_seconds,
+            )
+            after = measure_rate(measure_seconds)
+        rate = after if after > 0.0 else rate
+
+    return SessionStart(
+        hwnd=hwnd,
+        previous=previous,
+        settle=boot,
+        observe=match,
+        speed_source=source,
+        speed_xy=point,
+        unpause=unpause_note,
+        pressed=pressed,
+        advance=advance,
+        rate=rate,
+        rate_ok=skip_speed or rate >= min_rate,
+        attempts=attempts,
+        handover=handover,
+        tick=tick_mark().tick,
+    )
+
+
+def run_session(
+    *,
+    scripted_tests: bool = True,
+    lobby_timeout: float = LOBBY_TIMEOUT,
+    speed_xy: tuple[int, int] | None = None,
+    skip_speed: bool = False,
+    verify_minimized: bool = True,
+    keep_foreground: bool = False,
+    force: bool = False,
+) -> SessionStart:
+    """端到端一条命令：起游戏 → 等加载 → 观察/速度/空格 → 切回后台。
+
+    这是 CLI ``run`` 与探针共用的入口，**内部没有第二条路**。
+    """
+    hwnd, previous = launch_to_foreground(scripted_tests=scripted_tests, timeout=lobby_timeout)
+    settle = wait_for_boot_settle(timeout=lobby_timeout)
+    return start_session(
+        hwnd,
+        previous,
+        settle=settle,
+        speed_xy=speed_xy,
+        skip_speed=skip_speed,
+        lobby_timeout=LOOK_TIMEOUT,
+        verify_minimized=verify_minimized,
+        keep_foreground=keep_foreground,
+        force=force,
+    )
 
 
 def status_report() -> list[str]:
@@ -2058,12 +1971,12 @@ def status_report() -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     """命令行入口：``python -m pdx.game_auto <命令>``。
 
-    只做四件事：看状态、跑闭环、抓图（收模板用）、验后台。
+    只做四件事：看状态、跑一局（标准流程）、抓图（收模板用）、验后台。
     **任何一步失败都返回退出码 1**，不打印"完成"。
     """
     parser = argparse.ArgumentParser(
         prog="python -m pdx.game_auto",
-        description="Victoria 3 自动化：截图 + 图像匹配 + 前进点击 + 日志真值",
+        description="Victoria 3 自动化：起游戏 → 观察 → 5 档速度 → 空格 → 切回后台",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -2072,7 +1985,7 @@ def main(argv: list[str] | None = None) -> int:
 
     run_parser = sub.add_parser(
         "run",
-        help="完整闭环（收敛版）：起游戏→等选国家→点观察→切速度V→解暂停→还前台→后台继续跑",
+        help="标准流程：起游戏（前台）→ 等加载 → 点观察 → 点 5 档速度 → 按空格 → 切回后台",
     )
     run_parser.add_argument(
         "--no-scripted-tests", action="store_true", help="不带官方 -scripted_tests 开关"
@@ -2084,17 +1997,12 @@ def main(argv: list[str] | None = None) -> int:
     run_parser.add_argument(
         "--keep-foreground",
         action="store_true",
-        help="点完不把前台还给原来的窗口（默认会还，用户焦点只闪一下）",
+        help="跑完**不**切回后台（默认会切：还前台 + 缩窗口）",
     )
     run_parser.add_argument(
-        "--keep-window",
+        "--no-verify-minimized",
         action="store_true",
-        help="跑起来后不把游戏窗口最小化（默认最小化，桌面还给用户）",
-    )
-    run_parser.add_argument(
-        "--activate",
-        action="store_true",
-        help="起游戏时照常抢前台（默认不抢 —— 用户口径是「先后台启动」）",
+        help="跳过「缩着也在推进」那一步实测（默认实测，验不过当场恢复）",
     )
     run_parser.add_argument("--speed-xy", default="", help="显式指定速度档 V 的客户区坐标 X,Y")
 
@@ -2143,32 +2051,31 @@ def main(argv: list[str] | None = None) -> int:
             print(background_ok(hwnd, seconds=float(args.seconds)).describe())
             return 0
 
-        # 只剩 "run"：**收敛版闭环** —— 后台起游戏 → 后台等启动忙完（只看进程/日志，
-        # 不占屏）→ **借一次前台**做完三件事（点观察 / 切 5 档速度 / 按空格）→ 立刻还前台
-        # → 在后台量速率并继续跑。前台访问次数与总时长都在返回值里（borrows / borrow_seconds）。
-        hwnd = launch(
+        # 只剩 "run"：标准流程 —— 起游戏（前台）→ 等加载（**完全不碰窗口**，只用进程 +
+        # 日志这些免费信号，至少 BOOT_MIN_SECONDS 秒；实测到选国家界面约 137 秒）
+        # → 点观察 → 点 5 档速度 → 按空格 → 切回后台（还前台 + 缩窗口）。
+        hwnd, previous = launch_to_foreground(
             scripted_tests=not bool(args.no_scripted_tests),
             timeout=float(args.lobby_timeout),
         )
-        # 加载期间**完全不碰窗口**：只用进程 + 日志这些免费信号等（至少
-        # `BOOT_MIN_SECONDS` 秒，实测到选国家界面约 137 秒）。用户口径原话：
-        # "启动之后，因为游戏加载，不要碰窗口，加载完成后再切换前台点击"。
         settle = wait_for_boot_settle(timeout=float(args.lobby_timeout))
         print(f"加载等待（不碰窗口）：{settle.why}")
         speed_xy: tuple[int, int] | None = None
         if args.speed_xy:
             left, _, right = str(args.speed_xy).partition(",")
             speed_xy = (int(left), int(right))
-        result = start_background_session(
+        result = start_session(
             hwnd,
+            previous,
+            settle=settle,
             speed_xy=speed_xy,
             skip_speed=bool(args.skip_speed),
-            give_back=not bool(args.keep_foreground),
-            minimize_after=not bool(args.keep_window),
+            verify_minimized=not bool(args.no_verify_minimized),
+            keep_foreground=bool(args.keep_foreground),
             force=force,
         )
         print("闭环完成，证据：")
-        for key, value in result.items():
+        for key, value in result.as_dict().items():
             print(f"  {key:22s}: {value}")
         return 0
 
@@ -2188,21 +2095,23 @@ __all__ = [
     "TOP_RIGHT_ROI",
     "UI_DIR",
     "Advance",
+    "BootSettle",
     "CaptureFailedError",
+    "ForegroundHandover",
     "ForegroundLostError",
     "GameAutoError",
     "GameRunningError",
     "Match",
     "NotRunningError",
+    "SessionStart",
     "TemplateNotFoundError",
     "TickMark",
     "WindowNotFoundError",
     "assert_no_game_running",
-    "background_ok",
     "click_client",
     "click_match",
-    "click_observer",
     "ensure_foreground",
+    "find_observe",
     "find_template",
     "find_window",
     "is_blank",
@@ -2210,21 +2119,29 @@ __all__ = [
     "is_running",
     "last_tick_in",
     "launch",
+    "launch_to_foreground",
     "load_template",
     "locate",
     "locate_optional",
     "match_template",
+    "measure_rate",
     "other_window",
     "parse_tasklist_pids",
     "parse_tick_date",
+    "press_key",
     "probe_months",
     "probe_roles_in",
     "roi_box",
-    "run_until_running",
+    "run_session",
     "screenshot",
+    "speed_candidates",
+    "speed_widget_xy",
+    "start_session",
+    "status_report",
+    "switch_to_background",
+    "tick_day",
     "tick_mark",
-    "unpause",
-    "wait_for_lobby",
+    "wait_for_boot_settle",
     "wait_for_window",
     "wait_until",
     "wait_until_readable",
