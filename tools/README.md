@@ -188,7 +188,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-1280 条用例（`pytest --collect-only` 实测），
+1326 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -207,6 +207,8 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_doc04.py` | doc 04 的生成链，另守三处易错口径：`script_values` 的「顶层键」是**块**口径（块 270 / 赋值 479）、`$PARAM$` **不数注释里的用法**、JE 分组两栏声明的取值集合没过期；以及「`placement` 六类分得掉全部取值」「事件字段表覆盖全部 26 个字段」 |
 | `test_doc06.py` / `test_doc15.py` | doc 06 / 15 的生成链。除共用的两条（文档 == 生成结果、每一行都有人认领）外各守住本篇特有的恒等式：doc 06 的「语言表合计 == 全树 `.yml` 数」「三张目录表行数 == 子目录数」「扩展名表的每段都还在树里」；doc 15 的「`laws` 前缀划分完备」「§0 目录清单与代码一致」「五档态度合计 == 散文里的合计」「118 + 196 + 10 == 目录定义数（前两行是总数与子集，不是互斥分组）」 |
 | `_table_guards.py` | 三个文档共用的生成表看守：`assert_doc_matches_generated` / `assert_every_row_claimed` / `assert_write_free_and_idempotent` / `assert_unique_names` |
+| `test_gametimer_csv.py` | **切分口径**（`test_gametimer*.py` 管"字段怎么解释"，这个文件管"一行怎么切成字段"）：引号里的分隔符与换行、引号不闭合要**停而不是猜**（附非严格模式会把两行首尾相接成一条假记录的证据）、坏行存的是**真原文**、以及一条不变量 —— **无引号的行切出来必须与 `str.split` 逐字相同**（282 次穷举）。它踩过的坑也写在里面：一条 5 字段记录里，字段内容里的逗号加引号后就**不再是分隔符**，所以 `101,"x\nframe,task,…"` 是 2 字段而不是 5 字段 |
+| `gametimer_fixtures.py` | 三份 gametimer 用例 + 基准**共用的夹具**（`TSV_SAMPLE` / `ticktask_text()` / `gametimer_text()`）。单列它的理由：夹具曾经漂移过（探针里把表头写成 `ms`，真表头是 `milliseconds`，"表头行被判成坏行"被当成 bug 查了半天）；基准与用例共用一份口径，性能数字才是同一件事的对照 |
 | `test_repo_hygiene.py` | 源文件不带 CRLF —— Windows 上 `write_text` 漏了 `newline="\n"` 会把整份文件重写成 CRLF，而 `.gitattributes` 的 `eol=lf` 把 `git status` 掩盖成「干净」 |
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
@@ -465,7 +467,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：1280 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：1326 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

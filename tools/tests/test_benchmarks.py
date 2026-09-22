@@ -26,6 +26,9 @@
 
 from __future__ import annotations
 
+# ``tools/tests`` 没有 ``__init__.py``（pytest 的 rootdir 插入机制让它可被平级导入），
+# 所以这里按**平级模块名**导入共享夹具，与 conftest 的用法一致。
+import gametimer_fixtures as fixtures
 import numpy as np
 import pytest
 from PIL import Image
@@ -144,26 +147,43 @@ class TestPipelineBenchmarks:
 class TestGametimerBenchmarks:
     """引擎计时文件的解析基准（G-EXIT-3 的对照表要反复解析这些文件）。
 
-    要换标准库 `csv` 的那一侧就是下面两条（ticktask），所以先给它们一个可比基线。
-    实测（20k 行，本机）：`parse_ticktask_tsv` 均值 **55.6 ms**、`summarize_ticktask`
-    均值 **72.5 ms** —— 换 `csv` 之后要与这两个数对照（P5）。
+    这套基准的由来：2026-09-21 把两份解析器的**手写切分**换成标准库 :mod:`csv`
+    （引号、跨行记录、畸形行都要按 csv 口径走）。P5 要求"每项改动都有前后对照"，
+    所以下面这四个数是在**同一台机、同一份夹具**上量的（20k 行）：
 
-    ⚠️ **gametimer tsv 那一侧暂时不设基准**：按文档拼的合成表头/日期格式被 `parse_tsv`
-    判成 0 行（它有自己的口径），而"拿真夹具量"才可信（见 `test_gametimer.py` 的 `SAMPLE`）。
-    等换 `csv` 时先把那份夹具抽成共享 fixture，再补这一侧的基准。
+    ==========================================  =========  ==========
+    测点                                          改动前      改动后
+    ==========================================  =========  ==========
+    ``parse_ticktask_tsv``（csv 一侧）          55.6 ms     65.5 ms
+    ``summarize_ticktask``（csv 一侧）          72.5 ms     84.5 ms
+    ``parse_tsv``（gametimer tsv 一侧）              —      81.9 ms
+    ``summarize``（gametimer tsv 一侧）              —      94.1 ms
+    ==========================================  =========  ==========
+
+    ⚠️ **csv 一侧贵了约 18%**，这是换标准库的**真实代价**，不掩饰：
+    ``csv.reader`` 的切分本身就比 ``str.split`` 慢（实测 20k 行 6.2ms vs 3.3ms，
+    另加逐字段的 C 层调用）。第一版实现更贵（**103.7 ms**，+87%），
+    原因写在这里免得后人再犯：它把每一行**切了两遍** ——
+    一遍判表头、一遍 ``parse_ticktask_line`` 里再切一次。
+    改成"切一遍 + ``_read_*_values`` 直接建行"之后从 103.7 ms 降到 65.5 ms。
+    想再往下压只能放弃"引号/跨行记录正确"这个目标，那不值得 ——
+    P1 明确要求用成熟库而不是自己写解析器。
+
+    tsv 一侧比 csv 一侧贵（81.9 vs 65.5 ms）不是异常：它的每一行还要过一遍
+    日期正则 + 拆成 ``(年, 月, 日)`` 三个整数。分段实测（同一台机）：
+    ``_tsv_tokens`` 只切分 tsv 是 23.0 ms、csv 是 25.5 ms —— 切分本身两边一样，
+    差的是**建行**那一半（tsv 53 ms vs csv 39 ms）。
+
+    为什么 tsv 一侧以前没有基准：合成夹具的表头口径写错过一次
+    （`ms` vs `milliseconds`），"拿错夹具量出来的数"比没有数更糟。
+    现在夹具收在 ``gametimer_fixtures.py``，与用例同一份口径，才补上这两条。
     """
 
     ROWS = 20000
 
     @staticmethod
     def _ticktask(rows: int) -> str:
-        header = "frame,task,milliseconds,calls,longest_lock\n"
-        tasks = ("RecalculateModifierNodes", "UpdateAI", "TickDaily", "OnActions")
-        body = "".join(
-            f"{59884134 + (i // 4) * 6},{tasks[i % 4]},{i % 40 + 1},{i % 5 + 1},{i % 9}\n"
-            for i in range(rows)
-        )
-        return header + body
+        return fixtures.ticktask_text(rows)
 
     def test_parse_ticktask_tsv(self, benchmark) -> None:
         from pdx import gametimer as gt
@@ -179,6 +199,26 @@ class TestGametimerBenchmarks:
         path.write_text(self._ticktask(self.ROWS), encoding="utf-8-sig")
         data = benchmark(gt.summarize_ticktask, path)
         assert data["rows"] == self.ROWS
+
+    #: tsv 一侧：实测每天 4 条 Day 行，所以 20k 行 ≈ 5000 天 ≈ 167 个游戏月。
+    TSV_DAYS = 5000
+
+    def test_parse_tsv(self, benchmark) -> None:
+        from pdx import gametimer as gt
+
+        text = fixtures.gametimer_text(self.TSV_DAYS)
+        result = benchmark(gt.parse_tsv, text)
+        assert len(result.rows) == self.TSV_DAYS * 4
+        assert result.bad_lines == []
+
+    def test_summarize(self, benchmark, tmp_path) -> None:
+        from pdx import gametimer as gt
+
+        path = tmp_path / "gametimer_20260921_120000.tsv"
+        path.write_text(fixtures.gametimer_text(self.TSV_DAYS), encoding="utf-8")
+        data = benchmark(gt.summarize, path)
+        assert data["rows"] == self.TSV_DAYS * 4
+        assert data["per_frame_measurable"] is False  # 这条判据不能被测跑偏
 
 
 class TestAutoCaptureBenchmarks:

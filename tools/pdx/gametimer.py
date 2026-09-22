@@ -9,7 +9,15 @@
 
 实测列结构（**来自 12 个真实文件，不是猜的**）
 --------------------------------------------
-文件是 TAB 分隔的三列，表头带尾随空格：
+文件是 TAB 分隔的三列，表头带尾随空格。**切分交给标准库** :mod:`csv`
+（`csv.reader(..., delimiter="\t")`），不再手写 `line.split("\t")`：
+手写版会把**引号里**的分隔符也当分隔符（`"a\tb"` 被切成两段），
+而引擎侧字段一旦带引号就会静默解析错。行号取自 `csv` 自己的 `line_num`，
+引号里含换行的记录也记得对起始行。
+
+代价是 `csv` 比 `str.split` 慢（实测 20k 行：切分本身 6.2ms vs 3.3ms），
+所以两个 `parse_*_tsv` 都**只切一遍**：字段切出来后直接交给
+`_read_*_values` 建行，不再像旧实现那样「先判表头、再 `parse_*_line`」切两遍。
 
 .. code-block:: text
 
@@ -55,13 +63,15 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import re
 import statistics
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterator, Mapping
     from pathlib import Path
 
 #: 表头三列（**注意实测带尾随空格**，比较前统一 strip）。
@@ -98,6 +108,85 @@ OBSERVED_SIZE_CAP = 315_366
 
 #: ``1836_01_01``；也接受 ``6_11_01`` 这种年份位数不足的写法（见模块文档）。
 _DATE_RE = re.compile(r"^(\d{1,4})_(\d{1,2})_(\d{1,2})$")
+
+
+def _line_offsets(text: str) -> list[int]:
+    """每一行首字符在 ``text`` 里的下标（第 1 行 → ``offsets[0]``）。"""
+    offsets = [0]
+    for line in text.splitlines(keepends=True):
+        offsets.append(offsets[-1] + len(line))
+    return offsets
+
+
+def _raw_at(text: str, offsets: list[int], line_no: int) -> str:
+    """按**物理行号**取回原文。
+
+    只去掉**行终止符** —— 与旧实现 ``text.splitlines()`` 的行边界一致：
+    空行、制表符、前后空格都原样保留，所以 ``bad_lines`` 里存的是真原文。
+    """
+    start = offsets[line_no - 1]
+    end = offsets[line_no] if line_no < len(offsets) else len(text)
+    return text[start:end].rstrip("\r\n")
+
+
+def _physical_line(text: str, offsets: list[int], logical_no: int) -> int:
+    """第 N 条记录 → 它在文件里的**物理行号**。
+
+    两者只在文件里有空行时才不同；行号对外统一按物理行走
+    （``_tsv_tokens`` 的起始行号本来就是物理行号），所以报错信息也要换算，
+    否则"第 3 行"会指到一个跟文件对不上的地方。
+    """
+    count = 0
+    for index, line in enumerate(text.splitlines(), 1):
+        if line.strip():
+            count += 1
+            if count == logical_no:
+                return index
+    return len(offsets)
+
+
+def _tokens_of_line(line: str, delimiter: str) -> list[list[str]]:
+    """把一行切成字段（标准库 csv）。**不 strip** —— strip 由建行函数按原口径做。
+
+    `csv.reader` **不接受裸字符串**，必须给可迭代的行来源，
+    所以套一层 :class:`io.StringIO`。畸形行（引号不闭合）抛 :class:`csv.Error`。
+    这一层只服务于单行入口（``parse_line`` / ``parse_ticktask_line``）；
+    整份文件的解析走 :func:`_tsv_tokens`，只建一个 reader。
+    """
+    return [
+        list(record) for record in csv.reader(io.StringIO(line), delimiter=delimiter, strict=True)
+    ]
+
+
+def _tsv_tokens(
+    text: str, delimiter: str, offsets: list[int]
+) -> Iterator[tuple[int, list[str], str]]:
+    """整份文本切一遍：``(物理行号, 字段, 该行原文)``。
+
+    * 行号取自 ``csv.reader.line_num``，所以**引号里含换行**的记录也记得对
+      （跨行记录报的是它的**起始**行号）。
+    * 空行不产出（与两个 ``parse_*_tsv`` 的既有口径一致）。
+    * 字段**不做 strip**（旧实现 ``split`` 也不 strip，strip 由调用方做）。
+    * 畸形行抛 :class:`csv.Error`，异常里带好行号，由调用方记进 ``bad_lines``。
+    """
+    reader = csv.reader(io.StringIO(text), delimiter=delimiter, strict=True)
+    physical = 1  # 本条记录的第一行在文件里的行号
+    logical = 0  # 第几条非空记录
+    while True:
+        try:
+            record = next(reader)
+        except StopIteration:
+            return
+        except csv.Error as exc:
+            first = _physical_line(text, offsets, logical + 1)
+            raise csv.Error(
+                f"该记录从第 {first} 行开始（实际读到第 {reader.line_num} 行）：{exc}"
+            ) from exc
+        start, physical = physical, reader.line_num + 1
+        if not record or all(not field.strip() for field in record):
+            continue
+        logical += 1
+        yield start, record, _raw_at(text, offsets, start)
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,12 +268,16 @@ class MonthlyStat:
         )
 
 
-def parse_line(line: str, line_no: int) -> GameTimerRow | None:
-    """解析一行；不合格给 ``None``（调用方负责记进 ``bad_lines``）。"""
-    parts = line.split("\t")
-    if len(parts) != 3:
+def _read_values(values: list[str], line_no: int) -> GameTimerRow | None:
+    """三个字段 → 一行；不合格给 ``None``。
+
+    单独成一个函数是为了让整份解析**只切一遍**：字段切出来后直接建行，
+    行号由切分那一遍（:func:`_tsv_tokens`）给出，不必再调一次 ``parse_line``
+    把同一行切第二遍 —— 实测那一遍要多花一倍时间。
+    """
+    if len(values) != 3:
         return None
-    raw_date, unit, seconds_text = (p.strip() for p in parts)
+    raw_date, unit, seconds_text = (p.strip() for p in values)
     match = _DATE_RE.match(raw_date)
     if match is None:
         return None
@@ -204,10 +297,18 @@ def parse_line(line: str, line_no: int) -> GameTimerRow | None:
     )
 
 
+def parse_line(line: str, line_no: int) -> GameTimerRow | None:
+    """解析一行；不合格给 ``None``（调用方负责记进 ``bad_lines``）。"""
+    records = _tokens_of_line(line, "\t")
+    if len(records) != 1:
+        return None
+    return _read_values(records[0], line_no)
+
+
 def is_header(line: str) -> bool:
     """是不是表头（实测带尾随空格，所以按 strip 后比较）。"""
-    parts = [p.strip() for p in line.split("\t")]
-    return tuple(parts) == HEADER
+    records = _tokens_of_line(line, "\t")
+    return len(records) == 1 and tuple(p.strip() for p in records[0]) == HEADER
 
 
 def parse_tsv(text: str) -> ParseResult:
@@ -218,18 +319,25 @@ def parse_tsv(text: str) -> ParseResult:
     * 列数不对 / 日期不合法 / 秒数不是数 → 进 ``bad_lines``。
     """
     result = ParseResult()
-    for line_no, raw in enumerate(text.splitlines(), 1):
-        if not raw.strip():
-            continue
-        result.total_lines += 1
-        if is_header(raw) and not result.header_present:
-            result.header_present = True
-            continue
-        row = parse_line(raw, line_no)
-        if row is None:
-            result.bad_lines.append((line_no, raw))
-            continue
-        result.rows.append(row)
+    offsets = _line_offsets(text)
+    try:
+        for line_no, values, raw in _tsv_tokens(text, "\t", offsets):
+            result.total_lines += 1
+            # ⚠️ 「第一行」这个条件不能省：csv 切出来的字段里**可能含换行**
+            # （引号里的换行），只比字段就等着数据行被误判成表头。
+            if result.total_lines == 1 and tuple(p.strip() for p in values) == HEADER:
+                result.header_present = True
+                continue
+            row = _read_values(values, line_no)  # 行号由切分那一遍给出，省一次切分
+            if row is None:
+                result.bad_lines.append((line_no, raw))
+                continue
+            result.rows.append(row)
+    except csv.Error as exc:
+        # 畸形行（引号不闭合）后**不再往下猜**：非严格模式下 csv 会把后续行
+        # **拼进同一条记录**（实测 `"Beta` + 下一行 → `Beta102,Delta,3,1,0`），
+        # 那样出来的"数据"是编的。如实记一条坏行并说明位置。
+        result.bad_lines.append((result.total_lines + 1, f"<csv 解析中断：{exc}>"))
     return result
 
 
@@ -345,6 +453,11 @@ def summary_lines(path: Path) -> list[str]:
 
 # ──────────────── ticktask_timings.csv（逐帧 / 逐任务，2026-09-21 实测）────────────────
 #
+# 切分同样交给标准库 :mod:`csv`（默认逗号 + `strict=True`）：引号里带逗号的
+# 任务名（例如 `Foo, Bar`）只有 csv 切得对；引号不闭合这类畸形行由
+# `strict=True` 抛 :class:`csv.Error`，**如实记成坏行并停止往下解析** ——
+# 继续猜会把后续行拼进同一条记录，那才是真的编数据。
+#
 # 触发方式：控制台命令 ``dump_ticktask_timings``（引擎侧帮助原文
 # "Writes the tick task timings the game already records to a file"）。
 # 实测**不需要**「先开始记录」—— 计时从开局起就在内存里累积，
@@ -447,12 +560,11 @@ class TaskStat:
         )
 
 
-def parse_ticktask_line(line: str, line_no: int) -> TickTaskRow | None:
-    """解析 ``ticktask_timings.csv`` 的一行；不合格给 ``None``。"""
-    parts = line.split(",")
-    if len(parts) != len(TICKTASK_HEADER):
+def _read_ticktask_values(values: list[str], line_no: int) -> TickTaskRow | None:
+    """五个字段 → 一行；不合格给 ``None``（为什么单列见 tsv 一侧的说明）。"""
+    if len(values) != len(TICKTASK_HEADER):
         return None
-    frame_text, task, ms_text, calls_text, lock_text = (p.strip() for p in parts)
+    frame_text, task, ms_text, calls_text, lock_text = (p.strip() for p in values)
     if not task:
         return None
     try:
@@ -472,9 +584,18 @@ def parse_ticktask_line(line: str, line_no: int) -> TickTaskRow | None:
     )
 
 
+def parse_ticktask_line(line: str, line_no: int) -> TickTaskRow | None:
+    """解析 ``ticktask_timings.csv`` 的一行；不合格给 ``None``。"""
+    records = _tokens_of_line(line, ",")
+    if len(records) != 1:
+        return None
+    return _read_ticktask_values(records[0], line_no)
+
+
 def is_ticktask_header(line: str) -> bool:
     """是不是表头（实测无尾随空格，但仍按 strip 后比较）。"""
-    return tuple(p.strip() for p in line.split(",")) == TICKTASK_HEADER
+    records = _tokens_of_line(line, ",")
+    return len(records) == 1 and tuple(p.strip() for p in records[0]) == TICKTASK_HEADER
 
 
 def parse_ticktask_tsv(text: str) -> TickTaskParseResult:
@@ -485,18 +606,24 @@ def parse_ticktask_tsv(text: str) -> TickTaskParseResult:
     * 列数不对 / 整数解析失败 → 进 ``bad_lines``。
     """
     result = TickTaskParseResult()
-    for line_no, raw in enumerate(text.splitlines(), 1):
-        if not raw.strip():
-            continue
-        result.total_lines += 1
-        if is_ticktask_header(raw) and not result.header_present:
-            result.header_present = True
-            continue
-        row = parse_ticktask_line(raw, line_no)
-        if row is None:
-            result.bad_lines.append((line_no, raw))
-            continue
-        result.rows.append(row)
+    offsets = _line_offsets(text)
+    try:
+        for line_no, values, raw in _tsv_tokens(text, ",", offsets):
+            result.total_lines += 1
+            # ⚠️ 「第一行」这个条件不能省：csv 切出来的字段里**可能含换行**
+            # （引号里的换行），只比字段就等着数据行被误判成表头。
+            if result.total_lines == 1 and tuple(p.strip() for p in values) == TICKTASK_HEADER:
+                result.header_present = True
+                continue
+            row = _read_ticktask_values(values, line_no)  # 行号由切分那一遍给出，省一次切分
+            if row is None:
+                result.bad_lines.append((line_no, raw))
+                continue
+            result.rows.append(row)
+    except csv.Error as exc:
+        # 实测引擎写的文件是干净的；引号不闭合属于**被截断/被改坏**。
+        # 这时不猜：如实记坏行（性能对照表宁可少几帧，也不要假帧）。
+        result.bad_lines.append((result.total_lines + 1, f"<csv 解析中断：{exc}>"))
     return result
 
 
