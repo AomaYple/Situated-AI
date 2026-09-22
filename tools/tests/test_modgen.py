@@ -148,7 +148,16 @@ why = "测：窗口一关递回去"
 #: 追加到 :data:`MINIMAL` 后面的"面板三行"（可选表 `[panel]`，P11 的三行解释）。
 #: 2026-09-22 新增：G3 判的是**试玩者能复述「当前目标 + 主因」**，而揉进 `_reason`
 #: 的散文里看不出"缺哪一行" ⇒ 拆成三个键，缺行当场报错。
+#:
+#: ⚠️ 2026-09-23 起还要求数据源里有 `<JE 名>_reason` 那条 loc：三行要**上屏**就得接进
+#: JE 说明（引擎显示的是 `[JournalEntry.GetReason]`），所以这里连带补上它。
 PANEL = """
+[[localization]]
+key = "je_sitai_t1_window_reason"
+english = "Test window reason."
+simp_chinese = "测试窗口的说明。"
+why = "测：JE 说明的依据（三行会接在它后面）"
+
 [panel]
 why = "测：为什么这三行要放在一起"
 [panel.goal]
@@ -648,6 +657,30 @@ def test_三行键名由JE名派生并写进本地化与文档(tmp_path: Path) -
     for slot, key, why in archive.panel:
         assert key in doc
         assert why in doc, f"{slot} 的依据要进档案文档（P10：人读的那一份要能逐条查）"
+
+
+def test_三行接进JE说明里上屏(tmp_path: Path) -> None:
+    """**三行必须真的上屏**（阶段 6 的 G3）。
+
+    引擎显示的是 `journal_entry.gui:742` 的 `text = "[JournalEntry.GetReason]"` ⇒ 读
+    `<JE 名>_reason` 这条 loc；而 `<JE 名>_goal` 那一槽引擎会报
+    `journal_entry_type.cpp:476 … has redundant loc`（实测），显不显示**没有把握**。
+    所以三行文案要**也**接进 `_reason`（三个独立键照旧保留：能单独核对、将来接脚本化 GUI）。
+    """
+    archive = _archive(tmp_path, MINIMAL + PANEL)
+    built = modgen.build(archive)
+    loc = built.files[next(rel for rel in built.files if rel.endswith("_l_english.yml"))]
+    reason = next(
+        line for line in loc.splitlines() if f"{archive.journal_entry.name}_reason" in line
+    )
+    for slot, key, _why in archive.panel:
+        value = next(entry.values["english"] for entry in archive.localization if entry.key == key)
+        assert value in reason, f"{slot} 那一行没接进 JE 说明"
+    # 拼接用的是**字面量** `\n\n`（两个字符）：写成真换行会把 yml 拆成多行、后几行没有 key
+    assert reason.count("\\n\\n") >= len(archive.panel)
+    assert len(loc.splitlines()) == len(archive.localization) + 2, (
+        "每条 loc 一行（语言声明 + 注释头 + N 条）—— 多出来的行说明值里有真换行"
+    )
 
 
 def test_三行文案里不许有裸双引号(tmp_path: Path) -> None:

@@ -774,6 +774,48 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
             localization.append(Localization(key=key, why=line_why, values=line_values))
             panel.append((slot, key, line_why))
 
+    # **把三行接进 JE 的说明里**（阶段 6 的 G3）：引擎真正显示的那一处是
+    # `journal_entry.gui:742` 的 `text = "[JournalEntry.GetReason]"` ⇒ 读的是
+    # `<JE 名>_reason` 这条 loc。三行各自仍是**独立键**（能单独核对、将来能接到
+    # 脚本化 GUI 的三行控件上），但从这一刻起它们也**真的上屏**了。
+    #
+    # ⚠️ 为什么不是只靠 `<JE 名>_goal`：引擎会为它报
+    # `journal_entry_type.cpp:476 Journal entry has redundant loc for <JE 名>_goal`
+    # （实测 2026-09-23），也就是说"goal 那一槽到底显不显示"**没有把握**；
+    # 而 `_reason` 有 GUI 代码为证。于是：说明里三行齐全（目标/压力/上次改主意的原因），
+    # `_goal` 那一条照旧保留 —— 两处都有目标不算错，缺一处才会让 G3 判不了。
+    #
+    # ⚠️ 拼接用的是**字面量** `\n\n`（两个字符），不是真换行：数据源里的换行就是
+    # 字面量（见 committed 的 yml —— 每条 key 一行、文件 9 行）。第一版写成真换行，
+    # 结果是 yml 变 12 行、`_reason` 的值被拆成 4 行而**后三行没有 key** ⇒ 一份坏掉的
+    # 本地化文件（反解时静默丢掉那三行）。
+    if panel:
+        reason_key = f"{journal_name}_reason"
+        reason_index = next(
+            (index for index, item in enumerate(localization) if item.key == reason_key), None
+        )
+        if reason_index is None:
+            # **缺 `_reason` 就报错**，不是"那就只留三个独立键"：引擎显示的是
+            # `[JournalEntry.GetReason]`，"没接进去"等于三行**根本没上屏**，
+            # 而产物看上去一切正常 —— G3 判的正是"试玩者能不能复述"，静默失败最贵。
+            raise DataError(
+                f"{source}:panel 需要一条 `{reason_key}` 本地化（引擎显示的是它）—— "
+                "三行解释要上屏就得接进 JE 说明，请补一条 "
+                f'`[[localization]] key = "{reason_key}"`'
+            )
+        reason_entry = localization[reason_index]
+        merged = {lang: reason_entry.values[lang] for lang in LANGUAGES}
+        # ⚠️ 循环变量**不能叫 `_why`**：那会把同名的模块函数在**整个函数作用域**里
+        # 遮蔽掉，于是上面 `Pressure(...)` 那几处 `_why(...)` 直接
+        # `UnboundLocalError: cannot access local variable '_why'`（实测踩过）。
+        for _slot_name, panel_key, _panel_why in panel:
+            panel_entry = next(item for item in localization if item.key == panel_key)
+            for lang in LANGUAGES:
+                merged[lang] = f"{merged[lang]}\\n\\n{panel_entry.values[lang]}"
+        localization[reason_index] = Localization(
+            key=reason_key, why=reason_entry.why, values=merged
+        )
+
     cards: list[Card] = []
     for index, item in enumerate(_entries(cards_raw, "items", "cards")):
         where = f"cards.items[{index}]"
