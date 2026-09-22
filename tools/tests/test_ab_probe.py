@@ -162,6 +162,36 @@ def test_每月都记当前政治牌() -> None:
         assert f"ZZPROBE AB;STRATEGY;{name};" in code, name
 
 
+def test_每月都记立法开没开() -> None:
+    """「牌换了法不换」的三个候选（缺政府支持 / 怕革命 / 权重不够）在
+    「每月只记法律名」的读数下**长得一模一样** ⇒ 必须直接记 `is_enacting_law`。
+
+    它把「从未开立法」与「开了没成」分开，是三选一的分辨器。
+    """
+    code = _code(_files()[_ON_ACTIONS])
+    assert f"is_enacting_law = law_type:{ab_probe.TARGET_LAW}" in code
+    assert f"is_enacting_law = law_type:{ab_probe.TARGET_LAW_ALT}" in code
+    assert "ZZPROBE AB;ENACT;none;" in code, "两条都没在推时也要留一行（否则分不清'没记'与'没开'）"
+
+
+def test_每月都记政府在谁手里() -> None:
+    """若「缺政府支持」那一支成立，就得能看见政府在谁手里。"""
+    code = _code(_files()[_ON_ACTIONS])
+    for name, short in ab_probe.GOVERNMENT_IGS:
+        assert f"ig:{name} ?= {{ is_in_government = yes }}" in code, name
+        assert f"ZZPROBE AB;GOV;{short};" in code, short
+
+
+def test_自报里不做整体缩进重排() -> None:
+    """PDX 脚本对缩进不敏感，但**嵌套块被整体右移**会生成"双倍缩进"，读起来像语法错误。
+
+    实测（2026-09-22）：三槽自报链以前被 `.replace("\\n" + tab*2, "\\n" + tab*3)` 整体
+    右移 → `if` 里的 `if` 变成两层缩进叠在一起。判据：这一层只许给块定界行加缩进。
+    """
+    code = _code(_files()[_ON_ACTIONS])
+    assert "\t\t\t\t\t\t" not in code, "出现了三层以上的缩进 ⇒ 多半又整体重排了"
+
+
 def test_两处输入各调各的效果() -> None:
     """B 段只调冲击、B2 段才调改革侧输入 —— 分开才能把差分归因到某一处。"""
     ladder = _code(_files()[_EFFECTS]).split("zz_probe_ab_ladder = {")[1]

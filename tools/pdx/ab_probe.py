@@ -154,6 +154,24 @@ SELFARM_VAR = "sitai_probe_ab_selfarm"
 #: 决议武装过的标记。自励看到它就**完全不介入** —— 玩家自己掌权的那一局不该被自动施加。
 MANUAL_VAR = "sitai_probe_ab_manual"
 
+#: 「**立法开没开**」要盯的两条法（2026-09-22 新增的 `ENACT` 读数）。
+#:
+#: 为什么必须有这一行：阶段 3 重做的实机结果是"牌换了、法不动"，而三个候选
+#: （政府支持不足 / 怕革命 / 权重不够）在"每月只记法律名"的读数下**长得一模一样**。
+#: `is_enacting_law` 是引擎触发器（真在推这条法时为真），它把
+#: **从未开立法** 与 **开了没成** 分开 —— 前者指向"AI 不肯动手"，后者指向"立法过程"。
+TARGET_LAW = "law_tenant_farmers"
+TARGET_LAW_ALT = "law_commercialized_agriculture"
+
+#: 政府在谁手里：只记与我们这条链直接相关的三个 IG（不做全量 IG 表）。
+#: `landowners` 是守旧方的核心（`law_tenant_farmers` 把它 -0.25 政治力量），
+#: `intelligentsia` / `industrialists` 是`progressive_agenda` 的 `pro_interest_groups`。
+GOVERNMENT_IGS: tuple[tuple[str, str], ...] = (
+    ("ig_landowners", "landowners"),
+    ("ig_intelligentsia", "intelligentsia"),
+    ("ig_industrialists", "industrialists"),
+)
+
 #: 生成文件的头注释。与 h1 探针同一句式，但**指向自己的生成器** ——
 #: 从前这里借用 `h1_probe.GEN_HEADER`，产物头部因此写着 `v3 h1-probe`（会误导人）。
 GEN_HEADER = "# ⚠️ 本文件由 `v3 ab-probe` 生成（tools/pdx/ab_probe.py）—— 改这里没用，改生成器。\n"
@@ -311,7 +329,12 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
             strict=True,
         )
     )
-    chains = _slot_chains(vanilla).replace("\n" + tab * 2, "\n" + tab * 3)
+    # ⚠️ **不做整体 re-indent**（2026-09-22 修）：这里以前写成
+    # `.replace("\n" + tab * 2, "\n" + tab * 3)`，把三槽自报链的缩进整体右移一格。
+    # 结果是嵌套块（`if` 里的 `if`）被移成**双倍缩进**，读起来像语法错误。
+    # PDX 脚本对缩进不敏感，所以那不是 bug，但它把生成物变成了"不敢读"的东西。
+    # 正确做法：只给**这一层的块定界行**加缩进，块里的内容交给它自己的生成器。
+    chains = _slot_chains(vanilla)
 
     def guarded(body: str) -> str:
         """把一段自报包进「只记主角国家」的守卫里。"""
@@ -362,7 +385,44 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
                         state_line("INPUT", f"has_modifier = {INPUT_MODIFIER}", "yes", "no"),
                         "",
                         f"{tab * 3}# ④ 当前挂着的政治牌（策略层读数；B53：牌才是闸门）",
-                        strategies.replace("\n", "\n" + tab * 3),
+                        strategies,
+                        "",
+                        f"{tab * 3}# ⑤ **立法到底开没开**（2026-09-22 新增）—— 这一行是",
+                        f"{tab * 3}#    「牌换了法不换」三个候选的分辨器：原版读本 `laws/readme.md:9-10`",
+                        f"{tab * 3}#    点名「缺政府/运动支持」与「怕革命」都会让法推不动，而两者",
+                        f"{tab * 3}#    在「每月只记法律名」的读数下**长得一模一样**。",
+                        f"{tab * 3}#    判据：`is_enacting_law`（引擎触发器）——真在推这条法时为真。",
+                        f"{tab * 3}if = {{",
+                        f"{tab * 4}limit = {{ is_enacting_law = law_type:{TARGET_LAW} }}",
+                        (
+                            f'{tab * 4}debug_log = "ZZPROBE AB;ENACT;{TARGET_LAW};'
+                            f'[THIS.GetCountry.GetNameNoFormatting]"'
+                        ),
+                        f"{tab * 3}}}",
+                        f"{tab * 3}else_if = {{",
+                        f"{tab * 4}limit = {{ is_enacting_law = law_type:{TARGET_LAW_ALT} }}",
+                        (
+                            f'{tab * 4}debug_log = "ZZPROBE AB;ENACT;{TARGET_LAW_ALT};'
+                            f'[THIS.GetCountry.GetNameNoFormatting]"'
+                        ),
+                        f"{tab * 3}}}",
+                        f"{tab * 3}else = {{",
+                        (
+                            f'{tab * 4}debug_log = "ZZPROBE AB;ENACT;none;'
+                            f'[THIS.GetCountry.GetNameNoFormatting]"'
+                        ),
+                        f"{tab * 3}}}",
+                        "",
+                        f"{tab * 3}# ⑥ 政府在谁手里（若「缺政府支持」这一支成立，得能看见政府在谁手里）。",
+                        f"{tab * 3}#    只记三个与我们这条链直接相关的 IG，不做全量 IG 表。",
+                        *(
+                            f"{tab * 3}if = {{\n"
+                            f"{tab * 4}limit = {{ ig:{name} ?= {{ is_in_government = yes }} }}\n"
+                            f'{tab * 4}debug_log = "ZZPROBE AB;GOV;{short};'
+                            f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+                            f"{tab * 3}}}"
+                            for name, short in GOVERNMENT_IGS
+                        ),
                         "",
                         f"{tab * 3}# 诊断：合法性落在哪一档（五档夹逼 b55/b60/b70/b75/b80；",
                         f"{tab * 3}# 不记数字：没有已证可用的 loc 命令能打印一个数）",
