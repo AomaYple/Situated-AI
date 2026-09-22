@@ -65,7 +65,34 @@ COLOR_TOLERANCE = 40
 #: ⚠️ **整个表达式必须用 `"…"` 包起来**（`onclick = "[ExecuteConsoleCommand('…')]"`）：
 #: 第一次写成裸表达式时引擎报 `gui/error_deer.gui:42 - '(' is not a valid widget/type/property`
 #: —— 少了外层引号，解析器把 `ExecuteConsoleCommand` 当成控件类型、把括号当成属性名。
+#:
+#: ⚠️⚠️ **改已有按钮这条路 2026-09-23 实测不生效**（`console_history.txt` 里没有这条命令、
+#: 点下去走的是原版行为）⇒ 现在改用**往下插一个新按钮**（见 :data:`BUTTONS`）。
 DUMP_ONCLICK = """\"[ExecuteConsoleCommand('dump_ticktask_timings')]\""""
+
+#: 往下插一个**自己的按钮**（2026-09-23 起的主路）。
+#:
+#: 为什么"改已有按钮"不行、"新插按钮"行 —— 阶段 4 那次成功（`阶段4-性能仪表侦察.md` §二）
+#: 做的正是**注入**，而且判据是**颜色质心**；这一轮先试的是"改已有按钮的 onclick"，
+#: 结果命令根本没进控制台。所以回到"注入 + 颜色定位"这条**已被验证过**的路。
+#:
+#: 注入点选在工作流容器的**最末尾**：容器是 `direction = vertical`（往下排），
+#: 末尾插进去 ⇒ 会排在 FPS / Slow Ticks 那些控件的**下方**，既不挡原版控件，
+#: 又落在同一个可见容器里（实测 `error_deer` 的根节点在 debug 模式常驻可见）。
+#:
+#: 按钮涂**唯一色**（品红）并用 `text` 给一行字：**可见的东西才存在** ——
+#: 光有色块人眼在截图里认不出来，带文字之后一眼能确认。
+BUTTONS = """
+			# ── 探针插入（2026-09-23）：逐任务计时的开关 ──
+			button = {
+				name = "sitai_perf_toggle"
+				using = default_button
+				onclick = "[ExecuteConsoleCommand('log_ticktask_performance')]"
+				size = { 160 40 }
+				background = { color = { 255 0 255 } }
+				text = "TickTimer"
+			}
+"""
 
 DESCRIPTOR = """name="Sitai Perf Probe"
 path="mod/zz_sitai_perf"
@@ -101,34 +128,28 @@ def write_mod(target: Path | None = None) -> Path:
     (root / ".metadata" / "metadata.json").write_text(
         json.dumps(METADATA, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    # **覆写原版 + 改它已有的那个按钮**：`error_deer` 在 debug 模式常驻可见，
-    # 而**我自建的顶层 widget 不会被实例化**（实测：点了 DUMP 毫无反应；
-    # 往它内部插新钮也三次都没画出来 —— 细节见 `DUMP_ONCLICK` 的注释）。
-    # ⇒ 只改 `error_counter` 的 `onclick`：既不碰它的外观，也不需要新控件被布局。
+    # **覆写原版 `error_deer.gui`，往工作流容器的末尾插一个自己的按钮**。
+    #
+    # 走过的三条错路（都实测过，别再重复）：
+    #  ① 自建顶层 widget ⇒ 不会被实例化（点了毫无反应）；
+    #  ② 往内层 flowcontainer **的开头**插 ⇒ 抓图里一个品红像素都没有（解析通过但没画）；
+    #  ③ 改 `error_counter` 的 `onclick` ⇒ 命令**没进控制台**（`console_history.txt` 为证）。
+    # 现在这条 = 阶段 4 那次**成功过**的形状（注入 + 颜色定位），只是插在**末尾**。
     vanilla = config.GAME / "gui" / "error_deer.gui"
     if not vanilla.is_file():
         raise SystemExit(f"找不到原版 gui：{vanilla}")
     base = vanilla.read_text(encoding="utf-8-sig")
-    marker = 'name = "error_counter"'
+    marker = 'name = "debug_speed_data"'
     at = base.index(marker)
-    # 只在**这一段**里替换 onclick（别动别处的）：把原版那句**注释掉**，换成一整句 DUMP。
-    # ⚠️ **不是**加第二句 —— 实测原版没有任何一处 `onclick` 带两条命令，
-    # 而"同一属性写两遍"会被解析器只认最后一条（第一次尝试生成物里就是那两行）。
-    tail = base[at:]
-    on_index = tail.index("onclick =")
-    # 连**行首缩进**一起换掉：只从 `onclick` 起替换会让新行落在错误的缩进层级上
-    # （生成物里那一行顶格了 —— PDX 不在意缩进，但生成物要能读）。
-    line_start = tail.rindex("\n", 0, on_index) + 1
-    line_end = tail.index("\n", on_index)
-    original = tail[on_index:line_end].strip()
-    patched_tail = (
-        tail[:line_start]
-        + f"\t\t\t# 探针覆写：原版这里是 {original}\n"
-        + "\t\t\tonclick = "
-        + DUMP_ONCLICK
-        + tail[line_end:]
-    )
-    (root / "gui" / "error_deer.gui").write_text(base[:at] + patched_tail, encoding="utf-8")
+    # 找这个 flowcontainer 的**收尾大括号**：父容器 `error_deer` 是**顶层**（大括号不缩进），
+    # 所以"下一个顶格（第 0 列）的 `}`"就是它的收尾。
+    # ⚠️ 别看"下一个 `}`"（内层控件也有自己的收尾）、也别只数深度（`debug_speed_data`
+    # 自己就是一层的容器，深度法会在它自己的收尾处就停）。判据是**列位置**。
+    lines = base[at:].split("\n")
+    close_line = next(index for index, line in enumerate(lines) if line.startswith("}"))
+    close_at = at + sum(len(line) + 1 for line in lines[:close_line])
+    patched = base[:close_at] + BUTTONS + base[close_at:]
+    (root / "gui" / "error_deer.gui").write_text(patched, encoding="utf-8")
     return root
 
 
