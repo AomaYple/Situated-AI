@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -46,8 +47,11 @@ def sample() -> dict[str, object]:
 
 
 def main() -> int:
-    total = float(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_SECONDS
-    interval = float(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_INTERVAL
+    parser = argparse.ArgumentParser(description="伴随采样：前台是谁")
+    parser.add_argument("total", nargs="?", type=float, default=DEFAULT_SECONDS)
+    parser.add_argument("interval", nargs="?", type=float, default=DEFAULT_INTERVAL)
+    args = parser.parse_args()
+    total, interval = args.total, args.interval
     started = time.monotonic()
     game_seen = 0
     game_front_seconds = 0.0

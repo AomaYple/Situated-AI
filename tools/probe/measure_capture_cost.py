@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import statistics
 import sys
@@ -56,7 +57,9 @@ def _time_grab(bbox: tuple[int, int, int, int], rounds: int) -> dict[str, float]
 
 
 def main() -> int:
-    rounds = int(sys.argv[1]) if len(sys.argv) > 1 else 20
+    parser = argparse.ArgumentParser(description="抓图成本实测：整屏 vs 只抓 ROI")
+    parser.add_argument("rounds", nargs="?", type=int, default=20, help="测量轮数")
+    rounds = parser.parse_args().rounds
     hwnd = ga._foreground_window()
     if not hwnd:
         print("❌ 读不到前台窗口")

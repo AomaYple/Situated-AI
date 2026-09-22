@@ -6,18 +6,22 @@ V2 `SendMessage` + 先 `WM_ACTIVATE`/`WM_SETFOCUS`（有些框架不收到激活
 
 from __future__ import annotations
 
-import ctypes
 import sys
 import time
 from pathlib import Path
+
+import win32con
+import win32gui
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pdx import game_auto
 
-user32 = ctypes.WinDLL("user32", use_last_error=True)
-WM_MOUSEMOVE, WM_LBUTTONDOWN, WM_LBUTTONUP = 0x0200, 0x0201, 0x0202
-WM_ACTIVATE, WM_SETFOCUS = 0x0006, 0x0007
+WM_MOUSEMOVE = win32con.WM_MOUSEMOVE
+WM_LBUTTONDOWN = win32con.WM_LBUTTONDOWN
+WM_LBUTTONUP = win32con.WM_LBUTTONUP
+WM_ACTIVATE = win32con.WM_ACTIVATE
+WM_SETFOCUS = win32con.WM_SETFOCUS
 OBSERVE_XY = (864, 1055)
 
 
@@ -34,13 +38,13 @@ def button_state(hwnd: int) -> str:
 def variant_send(hwnd: int, *, activate_first: bool) -> str:
     lp = _lp(*OBSERVE_XY)
     if activate_first:
-        user32.SendMessageW(hwnd, WM_ACTIVATE, 1, 0)  # WA_ACTIVE
-        user32.SendMessageW(hwnd, WM_SETFOCUS, 0, 0)
-    user32.SendMessageW(hwnd, WM_MOUSEMOVE, 0, lp)
+        win32gui.SendMessage(hwnd, WM_ACTIVATE, 1, 0)  # WA_ACTIVE
+        win32gui.SendMessage(hwnd, WM_SETFOCUS, 0, 0)
+    win32gui.SendMessage(hwnd, WM_MOUSEMOVE, 0, lp)
     time.sleep(0.05)
-    user32.SendMessageW(hwnd, WM_LBUTTONDOWN, 1, lp)
+    win32gui.SendMessage(hwnd, WM_LBUTTONDOWN, 1, lp)
     time.sleep(0.08)
-    user32.SendMessageW(hwnd, WM_LBUTTONUP, 0, lp)
+    win32gui.SendMessage(hwnd, WM_LBUTTONUP, 0, lp)
     time.sleep(2.5)
     return button_state(hwnd)
 
@@ -50,7 +54,7 @@ def main() -> int:
     if not hwnd:
         print("没有游戏窗口")
         return 2
-    print(f"hwnd={hwnd}；前台是不是游戏：{user32.GetForegroundWindow() == hwnd}")
+    print(f"hwnd={hwnd}；前台是不是游戏：{win32gui.GetForegroundWindow() == hwnd}")
     print(f"起点：观察按钮 {button_state(hwnd)}")
     print(f"V1 SendMessage            → {variant_send(hwnd, activate_first=False)}")
     print(f"V2 SendMessage + 激活消息 → {variant_send(hwnd, activate_first=True)}")

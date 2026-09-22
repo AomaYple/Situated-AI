@@ -6,10 +6,12 @@
 
 from __future__ import annotations
 
-import ctypes
 import sys
 import time
 from pathlib import Path
+
+import win32con
+import win32gui
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -17,18 +19,19 @@ from PIL import Image, ImageChops
 
 from pdx import game_auto
 
-user32 = ctypes.WinDLL("user32", use_last_error=True)
-WM_MOUSEMOVE, WM_LBUTTONDOWN, WM_LBUTTONUP = 0x0200, 0x0201, 0x0202
+WM_MOUSEMOVE = win32con.WM_MOUSEMOVE
+WM_LBUTTONDOWN = win32con.WM_LBUTTONDOWN
+WM_LBUTTONUP = win32con.WM_LBUTTONUP
 OBSERVE_XY = (864, 1055)
 
 
 def post_click(hwnd: int, x: int, y: int) -> None:
     lp = (y << 16) | (x & 0xFFFF)
-    user32.PostMessageW(hwnd, WM_MOUSEMOVE, 0, lp)
+    win32gui.PostMessage(hwnd, WM_MOUSEMOVE, 0, lp)
     time.sleep(0.05)
-    user32.PostMessageW(hwnd, WM_LBUTTONDOWN, 1, lp)
+    win32gui.PostMessage(hwnd, WM_LBUTTONDOWN, 1, lp)
     time.sleep(0.08)
-    user32.PostMessageW(hwnd, WM_LBUTTONUP, 0, lp)
+    win32gui.PostMessage(hwnd, WM_LBUTTONUP, 0, lp)
 
 
 def grab(hwnd: int) -> Image.Image:
@@ -53,7 +56,7 @@ def main() -> int:
     if not hwnd:
         print("没有游戏窗口")
         return 2
-    print(f"hwnd={hwnd} 前台是不是游戏：{user32.GetForegroundWindow() == hwnd}")
+    print(f"hwnd={hwnd} 前台是不是游戏：{win32gui.GetForegroundWindow() == hwnd}")
 
     # ① 对照组：不点任何东西，隔 3 秒再抓一张 —— 排除"界面自己在动"
     a = grab(hwnd)

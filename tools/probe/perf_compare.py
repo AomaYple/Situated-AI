@@ -22,6 +22,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import shutil
 import subprocess
@@ -223,7 +224,9 @@ def _key_lines(csv: Path, tasks: tuple[str, ...] = ("RecalculateModifierNodes",)
 def main() -> int:
     # 探针是**显式入口**：按设计打开真实输入授权（`pdx.game_auto` 的闸门说的就是这件事）。
     ga.ALLOW_REAL_INPUT = True
-    months = float(sys.argv[1]) if len(sys.argv) > 1 else 12.0
+    parser = argparse.ArgumentParser(description="G-EXIT-3 两局性能对照")
+    parser.add_argument("months", nargs="?", type=float, default=12.0, help="每局跑几个月")
+    months = parser.parse_args().months
     backup = DOCS / "content_load.json.sitai-perf-backup"
     if not CONTENT_LOAD.is_file():
         print(f"找不到 {CONTENT_LOAD}")
