@@ -1,6 +1,9 @@
 ﻿l_english:
 # ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
  je_sitai_au_revolution_window:0 "Revolutionary Tide: A Window for Reform"
- je_sitai_au_revolution_window_reason:0 "The empire is coming apart from within. The crown's authority has collapsed, and every point of legitimacy it loses turns into another radical. The aristocracy that props up the old order is losing its grip.\n\nA window is open: while the government's legitimacy is shaken and the old guard is weak, reform is possible. It closes again once the state stands firm."
+ je_sitai_au_revolution_window_reason:0 "The empire is coming apart from within. The crown's authority has collapsed, and every point of legitimacy it loses turns into another radical. The aristocracy that props up the old order is losing its grip.\n\nA window is open: while the government's legitimacy is shaken and the old guard is weak, reform is possible. It closes again once the state stands firm.\n\nCurrent goal: while the window is open, push through the reform that the old guard has been blocking.\n\nBiggest pressure and resistance: pressure — legitimacy has collapsed and the radicals it feeds are rising, while the landowners dig in; resistance — the state standing firm on its own again.\n\nWhy it changed its mind: because the revolution was written into the books — legitimacy collapsing is what moved the inputs the AI reads."
  sitai_au_revolution_pressure:0 "Revolutionary Tide"
  sitai_au_reform_inputs:0 "Reformers Gain Influence"
+ je_sitai_au_revolution_window_goal:0 "Current goal: while the window is open, push through the reform that the old guard has been blocking."
+ je_sitai_au_revolution_window_pressure:0 "Biggest pressure and resistance: pressure — legitimacy has collapsed and the radicals it feeds are rising, while the landowners dig in; resistance — the state standing firm on its own again."
+ je_sitai_au_revolution_window_last_change:0 "Why it changed its mind: because the revolution was written into the books — legitimacy collapsing is what moved the inputs the AI reads."

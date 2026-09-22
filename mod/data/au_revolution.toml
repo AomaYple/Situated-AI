@@ -256,3 +256,24 @@ why = "工业家政治力量（改革侧输入之一）。原版档位 0.1（00_
 kind = "modifier_field"
 name = "interest_group_ig_intelligentsia_pol_str_mult"
 why = "知识界政治力量（改革侧输入之一）。原版档位 0.15（106_modifiers.txt:205）、0.25（00_ip4_04_modifiers.txt:176 的 modifier_legacy_of_the_liberal_wars）、0.5（content_1_modifiers.txt:1466 的 shogun_ig_forced_to_open_market）。"
+
+# ── ⑧ 三行解释（P11 / G3）──────────────────────────────────
+#
+# 与 `tr_defeat` 同款（见那份的 why）：三行接进 JE 说明后才真的上屏。
+[panel]
+why = "三行是 G3 的判据载体：目标 / 最大压力与阻力 / 上次改主意的原因。放同一张表是为了让'缺哪一行'当场可见（缺一行即退 2）。"
+
+[panel.goal]
+english = "Current goal: while the window is open, push through the reform that the old guard has been blocking."
+simp_chinese = "当前目标：趁窗口开着，把旧势力一直拦着的那项改革推过去。"
+why = "第一行 = **当前目标**。革命潮与战败共用同一句'目标'是对的：这一行说的是**机会窗口**（谁在拦、趁什么推开），不是'为什么会裂开' —— 后者是第三行的事。"
+
+[panel.pressure]
+english = "Biggest pressure and resistance: pressure — legitimacy has collapsed and the radicals it feeds are rising, while the landowners dig in; resistance — the state standing firm on its own again."
+simp_chinese = "最大压力与阻力：压力 = 合法性崩塌、它喂出来的激进派在涨，而土地贵族仍不肯松手；阻力 = 等国家重新自己站稳。"
+why = "第二行 = **最大压力与阻力**。压力项与 [pressure.effects] 的三条字段对应（合法性 / 激进派系数 / 保守 IG），其中'激进派在涨'来自 country_radicals_from_legitimacy_mult —— 那是革命潮的机制本身（合法性塌 → 激进派涨），所以必须在玩家看得见的那一行里出现。"
+
+[panel.last_change]
+english = "Why it changed its mind: because the revolution was written into the books — legitimacy collapsing is what moved the inputs the AI reads."
+simp_chinese = "上次改主意的原因：因为革命危机被记进了账 —— 是合法性塌下来这件事挪动了 AI 读到的那些输入。"
+why = "第三行 = **上次改主意的原因**。与战败档的区别正在这里：战败是'外部打进来'，革命潮是'内部裂开'，而玩家能从这一行读出因果链的起点。"

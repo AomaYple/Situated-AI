@@ -239,3 +239,26 @@ why = "工业家政治力量。原版 16 处：0.1（00_ip4_03_modifiers.txt:7�
 kind = "modifier_field"
 name = "interest_group_ig_intelligentsia_pol_str_mult"
 why = "知识界政治力量。原版 17 处：0.15（106_modifiers.txt:205）、0.25（00_ip4_04_modifiers.txt:47）、0.5（content_1_modifiers.txt:1466）。"
+
+# ── ⑧ 三行解释（P11 / G3）──────────────────────────────────
+#
+# 为什么这三行要放在一起：G3 判的是**试玩者能复述「当前目标 + 主因」**，
+# 散了就分不清"哪一行没写清楚"。生成器把三行**接进 JE 说明**（引擎显示的是
+# `journal_entry.gui:742` 的 `GetReason`），所以它们真的会上屏。
+[panel]
+why = "三行是 G3 的判据载体：目标 / 最大压力与阻力 / 上次改主意的原因。放同一张表是为了让'缺哪一行'当场可见（生成器要求三行齐全，缺一行即退 2）。"
+
+[panel.goal]
+english = "Current goal: while the window is open, push through the reform that the old order has been blocking."
+simp_chinese = "当前目标：趁窗口开着，把旧势力一直拦着的那项改革推过去。"
+why = "第一行 = **当前目标**。写'推过去'而不是点名某条法律：改哪条法由 AI 与原版牌池决定，本档案不替它选（§0「让 AI 自己推导」）；写'旧势力拦着的那项'是让玩家知道它为什么一直没动 —— 与 [pressure.effects] 里减贵族那一条是同一个因果的两端。"
+
+[panel.pressure]
+english = "Biggest pressure and resistance: pressure — the landowners have lost their grip, the crown's authority is broken, the treasury borrows dear; resistance — the state standing firm on its own again."
+simp_chinese = "最大压力与阻力：压力 = 贵族失势 + 王权威信破裂 + 借债成本高昂；阻力 = 等国家重新自己站稳。"
+why = "第二行 = **最大压力与阻力**。压力项与 [pressure.effects] 的三条字段一一对应（贵族 / 合法性 / 利率），阻力项与 complete 的 legitimacy >= 75 是同一条判据的两种说法 —— 数值改了这行也要改（P9：一处改、三处同步）。"
+
+[panel.last_change]
+english = "Why it changed its mind: because the defeat was written into the books — losing the war is what moved the inputs the AI reads."
+simp_chinese = "上次改主意的原因：因为战败被记进了账 —— 是这场败仗挪动了 AI 读到的那些输入。"
+why = "第三行 = **上次改主意的原因**（G3 里最容易被跳过、却最关键的一行）：没有它，玩家只能看到'它在改革'，看不到'**为什么是现在**'。写'被记进了账'是让因果链读得出来（§0.1：目标函数表要显式可审）。"
