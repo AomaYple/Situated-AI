@@ -27,12 +27,12 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import numpy as np
 
 from pdx import config, gametimer
 from pdx import game_auto as ga
@@ -46,45 +46,20 @@ OURS_DST = MODS_DIR / "sitai_sitai"
 OUT_DIR = Path(__file__).resolve().parents[1] / "out" / "perf"
 LOGS = DOCS / "logs"
 
-#: 与 `tools/probe/perf_mod.py` 里的按钮颜色**必须一致**（改一处要改两处）。
-CLEAR_RGB = (255, 0, 255)
-DUMP_RGB = (0, 255, 255)
+#: 原版 debug 覆盖层里那个「错误计数」按钮的**实测客户区坐标**（中心）。
+#:
+#: ⚠️ 为什么不再用颜色找按钮（2026-09-21 的做法，2026-09-23 三次实测都失败）：
+#: 往 `error_deer` 里插新按钮**画不出来**（插进内层 flowcontainer ⇒ 0 像素；
+#: 换成自己的 widget + 显式 size/position/textcolor ⇒ 仍然 0 像素）。
+#: 现在改成**覆写那个已有按钮的 `onclick`**（`perf_mod.py`），于是要点的就是它 ——
+#: 而它在屏幕上**一定可见**（1920x1080 下截图确认：底中偏右，约 x 1330–1580 / y 465–555）。
+#:
+#: ⚠️ 这是一次测量值不是常量：分辨率 / UI 缩放 / 界面语言都会移动它。
+#: 所以点完**必须验证**（`ticktask_timings.csv` 有没有出现），验不过就报错，不静默继续。
+ERROR_COUNTER_XY = (1455, 510)
 
 MONTH_DAYS = 30.44
 RUN_TIMEOUT = 900.0
-
-
-def _find_color_center(
-    hwnd: int, want: tuple[int, int, int], *, tolerance: int = 40
-) -> tuple[int, int] | None:
-    """抓一张客户区图，找目标颜色的**质心** —— 探针按钮就是那块色，不猜坐标。
-
-    为什么要这样：按钮插在原版 `error_deer` 的 flowcontainer 里，位置取决于前面控件的
-    高度（`size = { 0 0 }` 自动尺寸 + `spacing`），算不出来；而给它涂上唯一颜色之后，
-    "哪块像素是按钮"就变成可测的事实。色块太小（< 200 像素）当作没找到，防噪点。
-    """
-    try:
-        image = np.array(ga.screenshot(hwnd))
-    except ga.CaptureFailedError:
-        return None
-    diff = np.abs(image.astype(np.int16) - np.array(want, dtype=np.int16)).sum(axis=2)
-    ys, xs = np.where(diff <= tolerance)
-    if len(xs) < 200:
-        return None
-    return (int(xs.mean()), int(ys.mean()))
-
-
-def _wait_color_center(
-    hwnd: int, want: tuple[int, int, int], *, timeout: float = 60.0
-) -> tuple[int, int]:
-    """等按钮出现（按颜色找），超时抛错 —— 不猜、也不静默继续。"""
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        found = _find_color_center(hwnd, want)
-        if found is not None:
-            return found
-        time.sleep(1.0)
-    raise ga.GameAutoError(f"{timeout:.0f} 秒内没找到颜色 {want} 的按钮 —— 探针 mod 挂上了吗？")
 
 
 def _kill_game() -> list[int]:
@@ -94,12 +69,38 @@ def _kill_game() -> list[int]:
     return pids
 
 
-def _set_local_mods(paths: list[Path]) -> None:
-    """content_load.json 只留这些**本地** mod（先备份由 main 负责）。"""
-    payload = {"enabledMods": [{"path": str(p)} for p in paths]}
+def _set_local_mods(paths: list[Path], *, original: dict[str, object] | None = None) -> None:
+    """`content_load.json` 只留这些**本地** mod（备份由 main 负责）。
+
+    ⚠️ 三个字段都要显式写：`enabledMods`（本地 mod）+ `disabledDLC` + `enabledUGC`。
+    只写 `enabledMods` 会**丢掉**用户原有的 DLC/UGC 设置 —— 那是"改了别人的配置"，
+    而 P12 要求可回滚（回滚靠备份，但"跑的时候别把别的字段吃掉"是另一回事）。
+    """
+    base = original or {}
+    payload = {
+        "enabledMods": [{"path": str(p)} for p in paths],
+        "disabledDLC": base.get("disabledDLC", []),
+        "enabledUGC": base.get("enabledUGC", []),
+    }
     CONTENT_LOAD.write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
     )
+
+
+def _quarantine_logs() -> list[str]:
+    """把上一次会话的日志挪去临时目录 —— **两局对照必须这样做**。
+
+    为什么：`debug.log` 按大小轮转，上一局的尾巴会留在 `debug.1.log`… 里。
+    `_mounted_evidence()` 读的是"日志里有没有 Mounted Data"，跨会话残留会让
+    **第二局的取证里混进第一局的挂载记录** —— 那正是"原版局看起来也挂了 mod"的假象。
+    """
+    target = Path(tempfile.gettempdir()) / "v3_quarantine_perflogs"
+    moved: list[str] = []
+    for path in sorted(LOGS.glob("*.log")):
+        target.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(path), str(target / path.name))
+        moved.append(path.name)
+    return moved
 
 
 def _mounted_evidence() -> list[str]:
@@ -162,8 +163,9 @@ def run_once(label: str, months: float) -> dict[str, object]:
     ga.assert_no_game_running()
     if DUMP.exists():
         DUMP.unlink()  # 清掉旧的，靠"文件重新出现"判断 dump 成功
+    moved = _quarantine_logs()
     print(f"\n===== {label}：起游戏（只挂本地 mod）=====")
-    previous = ga._foreground_window()
+    print(f"  已挪走 {len(moved)} 个旧日志（取证只可能来自这一局）")
     hwnd, previous = ga.launch_to_foreground(timeout=float(ga.WINDOW_TIMEOUT))
     settle = ga.wait_for_boot_settle(timeout=float(ga.LOBBY_TIMEOUT))
     print(f"  加载等待（不碰窗口）：{settle.why}")
@@ -171,16 +173,14 @@ def run_once(label: str, months: float) -> dict[str, object]:
     print(f"  进局：{session.handover.describe()} speed_ok={session.rate_ok} rate={session.rate}")
     hwnd = ga._live_window(hwnd)
 
-    # 两个 debug 按钮是**我们自己 mod 里**的控件：位置靠颜色质心找，不猜坐标。
-    # 点它们要真前台（引擎读原始输入状态），所以点完把前台还给启动前那个窗口。
-    clear_at = _wait_color_center(hwnd, CLEAR_RGB)
-    ga.click_client(hwnd, clear_at[0], clear_at[1], previous=previous, force=True)
-    print(f"  已点 CLEAR @ {clear_at}（清掉开局加载那段计数）")
     advanced = _wait_months(hwnd, months)
     print(f"  跑完 {months} 个月：{advanced}")
-    dump_at = _wait_color_center(hwnd, DUMP_RGB)
-    ga.click_client(hwnd, dump_at[0], dump_at[1], previous=previous, force=True)
-    print(f"  已点 DUMP @ {dump_at}，等文件出现……")
+
+    # 点那个被覆写过 onclick 的错误计数按钮：它**就是** dump 的触发器。
+    # 点它要真前台（引擎读原始输入状态），所以点完把前台还给启动前那个窗口。
+    point = ERROR_COUNTER_XY
+    ga.click_client(hwnd, point[0], point[1], previous=previous, force=True)
+    print(f"  已点错误计数按钮 @ {point}（onclick 已被覆写成 dump），等文件出现……")
 
     deadline = time.monotonic() + 60.0
     while time.monotonic() < deadline and not DUMP.exists():
@@ -232,11 +232,12 @@ def main() -> int:
         print(f"找不到 {CONTENT_LOAD}")
         return 2
     shutil.copy(CONTENT_LOAD, backup)
+    original = json.loads(CONTENT_LOAD.read_text(encoding="utf-8"))
     print(f"content_load.json 已备份到 {backup.name}（收尾会还原）")
 
     reports: list[dict[str, object]] = []
     try:
-        # 装两个本地 mod：探针（两局都要）+ 我们的 mod（第二局）
+        # 装两个本地 mod：探针（两局都要，它是 dump 按钮的宿主）+ 我们的 mod（第二局）
         subprocess.run(
             [sys.executable, str(Path(__file__).parent / "perf_mod.py")],
             check=True,
@@ -247,10 +248,10 @@ def main() -> int:
         shutil.copytree(config.REPO / "mod", OURS_DST)
         print(f"已装本地 mod：{PROBE_DIR.name} + {OURS_DST.name}（复制自 {config.REPO / 'mod'}）")
 
-        _set_local_mods([PROBE_DIR])
+        _set_local_mods([PROBE_DIR], original=original)
         reports.append(run_once("vanilla", months))
 
-        _set_local_mods([PROBE_DIR, OURS_DST])
+        _set_local_mods([PROBE_DIR, OURS_DST], original=original)
         reports.append(run_once("ours", months))
     finally:
         killed = _kill_game()
