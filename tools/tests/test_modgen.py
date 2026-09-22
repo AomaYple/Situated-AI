@@ -227,6 +227,40 @@ def _two_archives(
 
 
 # ── 数据源解析 ──────────────────────────────────────────────
+def test_每份真实档案都有三行解释且真的接进JE说明() -> None:
+    """阶段 6 的 G3 挂在三行上 —— 所以**每一份**发布出去的档案都必须有它。
+
+    两个判据（都跑在真实 `mod/data` 上，不是夹具）：
+    * `[panel]` 三行齐全 —— 缺一行生成器就退 2；
+    * 三行**真的进了 JE 说明**（`<JE 名>_reason`）—— 引擎显示的是
+      `journal_entry.gui:742` 的 `GetReason`；只写三个独立键等于"没上屏"。
+    """
+    archives = modgen.load_all()
+    assert archives, "一份档案都没有 —— 扫描本身坏了，不是'干净'"
+    # 一次构建全部档案：`modgen.build(单份)` 会走 `build_all([一份])`，而 `[tempo]` 是
+    # mod 级表（只允许一份）⇒ 单份构建会报"没有任何数据源声明 [tempo]"。
+    built = modgen.build_all(archives)
+    for archive in archives:
+        assert [slot for slot, _key, _why in archive.panel] == [
+            "goal",
+            "pressure",
+            "last_change",
+        ], f"{archive.id} 缺 [panel]（三行是 G3 的载体，见 exec/阶段6-可见性与难度.md）"
+        name = archive.journal_entry.name
+        for lang in sorted(modgen.LANGUAGES):
+            loc = built.files[archive.loc_file(lang)]
+            reason = next(
+                (line for line in loc.splitlines() if f"{name}_reason" in line),
+                None,
+            )
+            assert reason is not None, f"{archive.id} 缺 {name}_reason（三行没处可接）"
+            for slot, key, _why in archive.panel:
+                value = next(
+                    entry.values[lang] for entry in archive.localization if entry.key == key
+                )
+                assert value in reason, f"{archive.id}/{lang}：{slot} 那一行没接进 JE 说明"
+
+
 def test_解析真实档案的关键条目() -> None:
     """第一份档案（俄罗斯 · 战败求存）必须能被解析出它该有的东西。
 
