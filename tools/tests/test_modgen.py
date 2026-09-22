@@ -128,6 +128,22 @@ amount = 5
 why = "测：为什么取 +5"
 """
 
+#: 追加到 :data:`MINIMAL` 后面的"递牌信号"（可选表 `[journal_entry.signals]`）。
+#: 2026-09-22 新增：世界状态只改得了 AI 的**输入**，改不了它已经挂着的那张牌，
+#: 而牌才是"动不动手改法"的闸门（backlog B53）⇒ 窗口开时必须 `set_strategy`。
+SIGNALS = """
+[journal_entry.signals]
+why = "测：为什么必须递牌（世界状态改不了已挂着的牌）"
+[[journal_entry.signals.set_strategy]]
+key = "set_strategy"
+arg = "ai_strategy_progressive_agenda"
+why = "测：窗口一开就换路线"
+[[journal_entry.signals.clear_strategy]]
+key = "set_strategy"
+arg = "ai_strategy_reactionary_agenda"
+why = "测：窗口一关递回去"
+"""
+
 
 def _write_source(tmp_path: Path, text: str = MINIMAL, name: str = "t1.toml") -> Path:
     base = tmp_path / "data"
@@ -502,6 +518,69 @@ def test_数据源与产物往返一致(tmp_path: Path) -> None:
     archive = _archive(tmp_path)
     built = modgen.build(archive)
     assert modgen.facts(archive) == modgen.readback(built.files)
+
+
+# ── 递牌信号（`[journal_entry.signals]`）：阶段 3 的修正处 ──────────────
+
+
+def test_缺省不生成递牌块(tmp_path: Path) -> None:
+    """没有 `[signals]` 的档案**不生成** `immediate` / `on_complete` 空块。
+
+    空块不是"什么都没有"：`immediate = { }` 在引擎里照样是一次真实的钩子，
+    而在数据源里没有任何东西支撑它。缺省应当是**不写**，不是"写个空的"。
+    """
+    archive = _archive(tmp_path)
+    assert archive.journal_entry.signals.empty
+    text = modgen.journal_text(archive)
+    # 判据看的是**块**（`immediate = {`），不是这个词 —— 注释里解释机制时也会提到它。
+    assert "immediate = {" not in text
+    assert "on_complete = {" not in text
+
+
+def test_信号生成两个块且各带一张原版牌(tmp_path: Path) -> None:
+    archive = _archive(tmp_path, MINIMAL + SIGNALS)
+    text = modgen.journal_text(archive)
+    assert "immediate = {" in text
+    assert "set_strategy = ai_strategy_progressive_agenda" in text
+    assert "on_complete = {" in text
+    assert "set_strategy = ai_strategy_reactionary_agenda" in text
+    # 顺序：immediate 必须在 on_complete 之前（读起来才是"开 → 关"）
+    assert text.index("immediate = {") < text.index("on_complete = {")
+
+
+def test_递牌信号能往返(tmp_path: Path) -> None:
+    """新块也要过闸门 ④ —— 否则加信号就等于绕过往返净度。"""
+    archive = _archive(tmp_path, MINIMAL + SIGNALS)
+    built = modgen.build(archive)
+    assert modgen.facts(archive) == modgen.readback(built.files)
+
+
+def test_只许递原版已有的牌(tmp_path: Path) -> None:
+    """白名单是**机制约束**，不是洁癖：递自建牌要抢政治槽（每国同时只有一张牌在用）。
+
+    这条同时钉住"我们不会不小心把自建牌写进信号" —— 报错信息里要能看出可用集合。
+    """
+    bad = SIGNALS.replace("ai_strategy_progressive_agenda", "ai_strategy_sitai_own_card")
+    with pytest.raises(modgen.DataError, match="不在白名单里"):
+        _archive(tmp_path, MINIMAL + bad)
+
+
+def test_信号必须用_arg_而不是_amount(tmp_path: Path) -> None:
+    """递牌递的是**标识符**，写成 `amount = 1.0` 会生成一句没人认的
+    `set_strategy = 1` —— 而那正是「每个数字都有依据」（P10）最容易被绕过的地方。"""
+    bad = SIGNALS.replace(
+        'arg = "ai_strategy_progressive_agenda"',
+        "amount = 1.0",
+    )
+    with pytest.raises(modgen.DataError, match="必须用 `arg` 而不是 `amount`"):
+        _archive(tmp_path, MINIMAL + bad)
+
+
+def test_信号表缺依据要报错(tmp_path: Path) -> None:
+    """P10 对**新表**同样生效：表级与条目的 `why` 都不能空。"""
+    bad = SIGNALS.replace('why = "测：为什么必须递牌（世界状态改不了已挂着的牌）"\n', "")
+    with pytest.raises(modgen.DataError, match="没有 why"):
+        _archive(tmp_path, MINIMAL + bad)
 
 
 def test_改一个数字往返就不一致(tmp_path: Path) -> None:

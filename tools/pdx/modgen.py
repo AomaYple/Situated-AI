@@ -153,11 +153,18 @@ class Number:
 
 @dataclass(frozen=True, slots=True)
 class Param:
-    """``key = amount`` 形式的参数（变量参数、修正字段、牌面字段共用）。"""
+    """``key = amount`` 形式的参数（变量参数、修正字段、牌面字段共用）。
+
+    ``arg`` 是**非数值的设置项**（目前只有 :class:`Signals` 的 `set_strategy` 用）：
+    它的右值是**原版标识符**（策略 id），不是数。两种形式互斥 —— ``amount`` 参与
+    闸门 ③ 的稀释预算与事实表（:func:`facts`），``arg`` 只进事实表
+    （字符串参数没有"价格"可言）。
+    """
 
     key: str
     amount: float
     why: str
+    arg: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -241,6 +248,33 @@ class Inputs:
 
 
 @dataclass(frozen=True, slots=True)
+class Signals:
+    """窗口开/关时递出的**原版策略牌**（`set_strategy`）。
+
+    为什么这是 B 级而不是 A 级（F5：能改世界就不占槽）：世界状态（变量 + 修正）
+    只改得了 AI 的**输入**，改不了它**已经挂着的那张牌** —— 而原版把"动不动手改法"
+    卡在牌上（`change_law_chance`：反动 3.5 / 保守 2.5 / 进步 10）。阶段 3 实测过：
+    只压世界状态，牌会被重抽到**保守**，而保守的动手概率**比反动还低** ⇒ 法律一条没改
+    （`阶段3-结果.md` §三）。所以"整条路线要换"时**必须递牌**。
+    递的是**原版自己的牌**（`ai_strategy_progressive_agenda` 等），不是我们自建的新牌
+    —— 不新增槽位竞争，也不新增要被引擎读取的键。
+
+    `set_strategy` 是脚本效果（`effect_localization/00_country_effects_loc.txt:40`），
+    原版在 JE 里就这么用（`journal_entries/05_grunderzeit.txt:118`、
+    `events/peoples_springtime.txt:780/980/1097`）—— 它**绕开** `CHANGE_STRATEGY_THRESHOLD`
+    的累积掷骰（期望 ≈9.6 年一次，`defines/00_ai.txt:38-39`）。
+    """
+
+    set_strategy: tuple[Param, ...]
+    clear_strategy: tuple[Param, ...]
+    why: str
+
+    @property
+    def empty(self) -> bool:
+        return not self.set_strategy and not self.clear_strategy
+
+
+@dataclass(frozen=True, slots=True)
 class JournalEntry:
     """改革窗口 JE。"""
 
@@ -250,6 +284,7 @@ class JournalEntry:
     why: str
     fields: tuple[Param, ...]
     conditions: tuple[Condition, ...]
+    signals: Signals
 
 
 @dataclass(frozen=True, slots=True)
@@ -425,6 +460,11 @@ def _why(raw: Mapping[str, object], path: str) -> str:
     return _require_text(raw, "why", path)
 
 
+def _arg(raw: Mapping[str, object], path: str) -> str:
+    """取 ``arg``（非数值的右值，例如原版策略 id）。"""
+    return _require_text(raw, "arg", path)
+
+
 # ── why 的机械校验（P10）────────────────────────────────────
 def audit(raw: object, path: str = "") -> tuple[tuple[Number, ...], tuple[tuple[str, str], ...]]:
     """递归遍历数据源：收齐**每个数字**与**每张表的依据**，并检查空 `why`。
@@ -479,13 +519,79 @@ def read_source(path: Path) -> dict[str, object]:
 
 
 def _params(raw: Mapping[str, object], key: str, path: str) -> tuple[Param, ...]:
-    return tuple(
-        Param(
-            key=_require_text(item, "key", f"{path}.{key}[{i}]"),
-            amount=_amount(item, f"{path}.{key}[{i}]"),
-            why=_why(item, f"{path}.{key}[{i}]"),
+    """解析一组参数条目：每条要么给 ``amount``（数字），要么给 ``arg``（标识符）。
+
+    为什么要显式**互斥校验**：两者同时出现时，"``set_strategy = 1.0``" 这种产物会带着
+    一个没人看的数字悄悄生成出来 —— 而那正是「每个数字都有依据」（P10）最容易被绕过的地方。
+    """
+    out: list[Param] = []
+    for i, item in enumerate(_entries(raw, key, path)):
+        where = f"{path}.{key}[{i}]"
+        has_amount = "amount" in item
+        has_arg = "arg" in item
+        if has_amount == has_arg:
+            raise DataError(f"{where} 必须**恰好**给一个 amount 或 arg（现在 amount={has_amount}）")
+        out.append(
+            Param(
+                key=_require_text(item, "key", where),
+                amount=_amount(item, where) if has_amount else 0.0,
+                why=_why(item, where),
+                arg=_arg(item, where) if has_arg else "",
+            )
         )
-        for i, item in enumerate(_entries(raw, key, path))
+    return tuple(out)
+
+
+#: `set_strategy` 允许递出的**原版**策略 id。
+#:
+#: ⚠️ 这里刻意**只列原版的牌**：递自建牌会抢政治槽（每国同时只有一张政治牌在用，
+#: 阶段 2 实测 1.05%/国·月重抽），而 F5 的口径是"能改世界就不占槽、只有整条路线要换
+#: 才递牌"。递原版已有的牌不新增竞争，只是把落点拨到那一条路线上去。
+#: 三张议程牌的差异见 `docs/design/backlog.md` B53/B54。
+SET_STRATEGY_WHITELIST: frozenset[str] = frozenset(
+    {
+        "ai_strategy_progressive_agenda",
+        "ai_strategy_reactionary_agenda",
+        "ai_strategy_conservative_agenda",
+        "ai_strategy_egalitarian_agenda",
+    }
+)
+
+#: `[journal_entry.signals]` 允许的键 → 它对应生成器的哪个块。
+SIGNAL_KEYS: dict[str, str] = {
+    "set_strategy": "immediate",
+    "clear_strategy": "on_complete",
+}
+
+
+def _signals(journal_raw: Mapping[str, object], source: str) -> Signals:
+    """解析可选的 ``[journal_entry.signals]`` 表。
+
+    可选是**有意的**：绝大多数档案只改世界状态（A 级）就够，不需要递牌；
+    硬性要求会让数据源多写一堆空表。缺省时 ``Signals.empty`` 为真，产物里
+    **不生成** ``immediate`` / ``on_complete`` 两个块（不是生成空块）。
+    """
+    if "signals" not in journal_raw:
+        return Signals(set_strategy=(), clear_strategy=(), why="（本档案不递牌）")
+    raw = _require_table(journal_raw["signals"], f"{source}:journal_entry.signals")
+    set_params = _params(raw, "set_strategy", "journal_entry.signals")
+    clear_params = _params(raw, "clear_strategy", "journal_entry.signals")
+    for param in (*set_params, *clear_params):
+        if not param.arg:
+            raise DataError(
+                f"journal_entry.signals.{param.key} 必须用 `arg` 而不是 `amount` —— "
+                "递牌递的是标识符（`set_strategy = ai_strategy_x`），"
+                "写数字会生成一句没人认的 `set_strategy = 1`"
+            )
+        if param.arg not in SET_STRATEGY_WHITELIST:
+            raise DataError(
+                f"journal_entry.signals.{param.key} 的 arg={param.arg!r} 不在白名单里。"
+                f"可用：{sorted(SET_STRATEGY_WHITELIST)}（只许递原版已有的牌，见 P10 与 F5）"
+            )
+    return Signals(
+        set_strategy=set_params,
+        clear_strategy=clear_params,
+        why=_why(raw, "journal_entry.signals"),
     )
 
 
@@ -574,6 +680,7 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
         why=_why(journal_raw, "journal_entry"),
         fields=_params(journal_raw, "fields", "journal_entry"),
         conditions=conditions,
+        signals=_signals(journal_raw, source),
     )
 
     # `[reform_inputs]` 是**可选**表：老档案（只有冲击一处处理）照样编译。
@@ -840,7 +947,7 @@ def modifier_text(archive: Archive) -> str:
 
 
 def journal_text(archive: Archive) -> str:
-    """改革窗口 JE：is_shown / possible / complete 判据 + weight。"""
+    """改革窗口 JE：is_shown / possible / complete 判据 + weight + 递牌信号。"""
     journal = archive.journal_entry
     body: list[Node] = [f'icon = "{journal.icon}"', f"group = {journal.group}"]
     for gate in GATE_ORDER:
@@ -852,13 +959,41 @@ def journal_text(archive: Archive) -> str:
     if journal.fields:
         body.append("")
         body.extend(f"{p.key} = {num(p.amount)}" for p in journal.fields)
+    # 递牌：窗口开时换路线（immediate 在 add_journal_entry 时执行），关时换回来。
+    # 为什么挂在 JE 上而不是挂在施加冲击的那个效果里：**判据与动作要在一起** ——
+    # "窗口开"是判据（legibility 的三行也贴在它上面），"递牌"是窗口的后果。
+    # 挂在效果里会让"冲击"与"换路线"绑死，无法分开测（阶段 3 的教训）。
+    if journal.signals.set_strategy:
+        body.append("")
+        body.append(
+            (
+                "immediate",
+                [f"set_strategy = {p.arg}" for p in journal.signals.set_strategy],
+            )
+        )
+    if journal.signals.clear_strategy:
+        body.append("")
+        body.append(
+            (
+                "on_complete",
+                [f"set_strategy = {p.arg}" for p in journal.signals.clear_strategy],
+            )
+        )
     lines: list[Node] = [
         GEN_HEADER,
         "",
         *_comment(
             f"改革窗口 JE（{archive.title}）：判据驱动 —— 只有压力够大才开。",
-            "为什么用 JE：原版有 18 张牌直接读 has_journal_entry（01a L 节），",
-            "于是「开一个 JE」= 同时喂给原版自己的 18 张牌，不占任何槽位（F5）。",
+            "这个 JE 的作用**只有三条**（2026-09-22 实测复核，别读多）：",
+            "  ① **玩家可见性**：G3 的三行解释挂在它身上（P11）；",
+            "  ② **世界状态判据**：原版脚本可以用 `has_journal_entry = <本 JE 名>` 读它；",
+            "  ③ **递牌**：`immediate` 里给该国换一张**原版**策略牌（见下面的 signals 依据）。",
+            "⚠️ **它喂不到原版 AI 牌**：原版 212 处 `has_journal_entry` 全部硬编码**具名 JE**",
+            "（`ai_strategies/03_political_strategies.txt:137` 读的是 je_metternich 这一串），",
+            "**没有「读任意 JE」的通用谓词** —— 我们自己的 JE 一张牌也喂不到。",
+            "意图位移的真正通道是**递牌**（`set_strategy`）与**法律承诺**（law commitment），",
+            "原因与实测见 `docs/design/backlog.md` B52 / B53–B60。",
+            *((f"递牌依据：{journal.signals.why}",) if not journal.signals.empty else ()),
         ),
         (journal.name, body),
     ]
@@ -1293,6 +1428,16 @@ def facts(archive: Archive) -> list[tuple[str, str]]:
         (f"journal_entry.{archive.journal_entry.name}.{c.gate}.{c.key}", c.fact())
         for c in archive.journal_entry.conditions
     )
+    # 递牌信号：`immediate` / `on_complete` 两个块。**只有声明了信号的档案**才有这几条
+    # —— 缺省不生成空块，所以事实表里也不该凭空多出条目（闸门 ④ 是集合比对）。
+    out.extend(
+        (f"journal_entry.{archive.journal_entry.name}.immediate.set_strategy", p.arg)
+        for p in archive.journal_entry.signals.set_strategy
+    )
+    out.extend(
+        (f"journal_entry.{archive.journal_entry.name}.on_complete.set_strategy", p.arg)
+        for p in archive.journal_entry.signals.clear_strategy
+    )
     if archive.tempo is not None:
         out.extend(
             (f"defines.{archive.tempo.block}.{p.key}", num(p.amount)) for p in archive.tempo.keys
@@ -1376,6 +1521,16 @@ def _facts_journal(rel: str, text: str) -> list[tuple[str, str]]:
                         f"{clause.op}{_scalar(clause.value)}",
                     )
                     for clause in (inner.assignments() if inner else [])
+                )
+            elif inner is not None:
+                # `immediate` / `on_complete`：里面的每条赋值**再展开一层**。
+                # 为什么要展开而不是记成"这个块有 1 项"：数据源是按**路径**写事实的
+                # （`…immediate.set_strategy = ai_strategy_progressive_agenda`），
+                # 闸门 ④ 是两份事实表的集合比对 —— 粒度不一致就会既"缺"又"多"，
+                # 而那两行报错看起来像真丢了东西。实测：不展开时 4 条（2 缺 2 多）。
+                out.extend(
+                    (f"journal_entry.{top.key}.{item.key}.{sub.key}", _scalar(sub.value))
+                    for sub in inner.assignments()
                 )
             else:
                 out.append((f"journal_entry.{top.key}.{item.key}", _scalar(item.value)))

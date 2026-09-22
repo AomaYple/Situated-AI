@@ -112,7 +112,6 @@ def test_阶梯按月推进且带阶段守卫生效一次() -> None:
     text = _files()[_EFFECTS]
     code = _code(text)
     ladder = code.split("zz_probe_ab_ladder = {")[1]
-    assert f"change_variable = {{ name = {ab_probe.MONTH_VAR} add = 1 }}" in ladder
     assert f"has_variable = {ab_probe.STAGE_VAR}" in ladder  # 没被武装就不动
     for index, step in enumerate(ab_probe.LADDER[1:], start=1):
         assert f"var:{ab_probe.STAGE_VAR} <= {index}" in ladder
@@ -120,6 +119,47 @@ def test_阶梯按月推进且带阶段守卫生效一次() -> None:
         assert f"ZZPROBE AB;RUN;{step.role}" in ladder
         # 换臂那一月：先把 stage 推进，再施加效果（否则下一月会再施加一次）
         assert ladder.index(f"value = {index + 1}") < ladder.index(f"{step.effect} = yes")
+
+
+def test_月份计数器只由自励与决议推进() -> None:
+    """⚠️ **月份 `+1` 只能有一处**（2026-09-22 改）：从前它在阶梯里，而阶梯要靠决议武装 ——
+    观察者局里决议点不了 ⇒ 月份永远不动 ⇒ 整条臂阶梯一次都不走（阶段 3 的结构性阻断）。
+    现在推进挪进 `zz_probe_ab_selfarm`，阶梯只读月份。两处都自增会让月份走两倍快。
+    """
+    code = _code(_files()[_EFFECTS])
+    bump = f"change_variable = {{ name = {ab_probe.MONTH_VAR} add = 1 }}"
+    assert code.count(bump) == 1, "月份自增必须只有一处"
+    selfarm = code.split("zz_probe_ab_selfarm = {")[1].split("zz_probe_ab_ladder = {")[0]
+    assert bump in selfarm
+    assert bump not in code.split("zz_probe_ab_ladder = {")[1]
+
+
+def test_自励只对AI生效且让决议优先() -> None:
+    """自励是**观察者局**的入口；玩家自己掌权时它必须完全不介入（决议是唯一入口）。"""
+    selfarm = _code(_files()[_EFFECTS]).split("zz_probe_ab_selfarm = {")[1]
+    assert "is_ai = yes" in selfarm
+    assert f"NOT = {{ has_variable = {ab_probe.MANUAL_VAR} }}" in selfarm
+    # 决议那边要写下"我武装过"的标记，否则自励会盖掉玩家那一路
+    arm = _code(_files()[_EFFECTS]).split("zz_probe_ab_arm = {")[1].split("zz_probe_ab_selfarm")[0]
+    assert f"set_variable = {{ name = {ab_probe.MANUAL_VAR} value = 1 }}" in arm
+
+
+def test_自励的每一格都幂等且按月份排序() -> None:
+    selfarm = _code(_files()[_EFFECTS]).split("zz_probe_ab_selfarm = {")[1]
+    months = [month for month, _note, _effect in ab_probe.SELFARM]
+    assert months == sorted(months), "自励的月份必须单调，否则顺序写反就读不懂"
+    for index, (month, _note, effect) in enumerate(ab_probe.SELFARM, start=1):
+        assert f"var:{ab_probe.SELFARM_VAR} < {index}" in selfarm
+        assert f"var:{ab_probe.MONTH_VAR} >= {month}" in selfarm
+        assert f"{effect} = yes" in selfarm
+
+
+def test_每月都记当前政治牌() -> None:
+    """B53：牌才是"动不动手"的闸门 ⇒ 牌必须是**逐月的行为层读数**，不许从别处反推。"""
+    code = _code(_files()[_ON_ACTIONS])
+    for name in ab_probe.POLITICAL_STRATEGIES:
+        assert f"has_strategy = {name}" in code, name
+        assert f"ZZPROBE AB;STRATEGY;{name};" in code, name
 
 
 def test_两处输入各调各的效果() -> None:

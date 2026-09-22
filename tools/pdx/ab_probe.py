@@ -122,6 +122,38 @@ LAWS = (
     "law_traditionalism",
 )
 
+#: 每个月要记的**政治策略牌**（`has_strategy`）—— 阶段 3 重做新增的一格。
+#:
+#: 为什么必须记它：阶段 3 的负结果（牌换了名、法一条没改）里，"牌到底换成了哪一张"
+#: 只是从探针的三槽自报里**推断**出来的，没有一条**逐月**的读数；而 B53（backlog）
+#: 指出牌才是"动不动手"的闸门（`change_law_chance`：反动 3.5 / 保守 2.5 / 进步 10）。
+#: 所以这次把牌当**行为层的直接读数**记，而不是从别的行反推。
+POLITICAL_STRATEGIES = (
+    "ai_strategy_progressive_agenda",
+    "ai_strategy_conservative_agenda",
+    "ai_strategy_reactionary_agenda",
+)
+
+#: 自励阶梯：**不点决议**，由月度脉冲按 `is_ai` 自动武装 —— 观察者局没有玩家国家，
+#: 决议点不了（阶段 3 的结构性阻断，见 `阶段3-结果.md` §六）。
+#:
+#: `(月, 说明, 要调的效果名)`。月份与 `LADDER` 的臂起点**对齐**：第 13 月施加冲击（B 臂）、
+#: 第 37 月追加改革侧输入（B2 臂）。
+#:
+#: ⚠️ 这里**刻意不递牌**：递牌是**真 mod 的 JE 自己的事**（`[journal_entry.signals]`，
+#: 窗口一开就递）。探针在这里再递一次就把"牌是不是闸门"与"窗口机制对不对"两个变量
+#: 搅在一起了 —— 一次只动一个变量。
+SELFARM: tuple[tuple[int, str, str], ...] = (
+    (13, "施加战败冲击", SHOCK_EFFECT),
+    (37, "追加改革侧输入", INPUT_EFFECT),
+)
+
+#: 自励进度计数器（单调递增 ⇒ 每一格只施加一次）。
+SELFARM_VAR = "sitai_probe_ab_selfarm"
+
+#: 决议武装过的标记。自励看到它就**完全不介入** —— 玩家自己掌权的那一局不该被自动施加。
+MANUAL_VAR = "sitai_probe_ab_manual"
+
 #: 生成文件的头注释。与 h1 探针同一句式，但**指向自己的生成器** ——
 #: 从前这里借用 `h1_probe.GEN_HEADER`，产物头部因此写着 `v3 h1-probe`（会误导人）。
 GEN_HEADER = "# ⚠️ 本文件由 `v3 ab-probe` 生成（tools/pdx/ab_probe.py）—— 改这里没用，改生成器。\n"
@@ -167,6 +199,24 @@ def effects_text() -> str:
             f"{TAB * 2}}}"
         )
     ladder_body = "\n\n".join(arms)
+    # 自励阶梯：月度脉冲按 `is_ai` 自动武装 —— 观察者局没有玩家国家，**决议点不了**，
+    # 所以「点一次决议」这条入口在观察者局里是死的（阶段 3 的结构性阻断）。
+    selfarm_body = "\n\n".join(
+        (
+            f"{TAB * 2}# 第 {month} 月：{note}\n"
+            f"{TAB * 2}if = {{\n"
+            f"{TAB * 3}limit = {{\n"
+            f"{TAB * 4}var:{SELFARM_VAR} < {index}\n"
+            f"{TAB * 4}var:{MONTH_VAR} >= {month}\n"
+            f"{TAB * 3}}}\n"
+            f"{TAB * 3}set_variable = {{ name = {SELFARM_VAR} value = {index} }}\n"
+            f'{TAB * 3}debug_log = "ZZPROBE AB;SELFARM;{month};'
+            f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+            f"{TAB * 3}{effect} = yes\n"
+            f"{TAB * 2}}}"
+        )
+        for index, (month, note, effect) in enumerate(SELFARM, start=1)
+    )
     return (
         f"{GEN_HEADER}"
         f"# ⚠️ **本文件里只能有裸效果列表**（scripted_effects 的语法）：写成 on_action 那种\n"
@@ -177,22 +227,47 @@ def effects_text() -> str:
         f"#\n"
         f"# ① `zz_probe_ab_arm`：**点一次决议**武装整条阶梯（由决议调用，作用于俄罗斯）。\n"
         f"#    可重复调用 —— 每点一次就把月份与阶段清零重跑（同一存档里重跑一局的做法）。\n"
-        f"# ② `zz_probe_ab_ladder`：每月走一格。**幂等**是硬要求：`{STAGE_VAR}` 单调递增，\n"
+        f"# ② `zz_probe_ab_selfarm`：**不点决议**的武装路径（`is_ai = yes` 时按月份自动走）。\n"
+        f"#    为什么必须有它：观察者局**没有玩家国家**，决议永远点不到 —— 阶段 3 的臂阶梯\n"
+        f"#    一次都没跑起来就是这个原因（`阶段3-结果.md` §六）。它只认 `is_ai`，\n"
+        f"#    所以玩家自己掌权时不会抢手（玩家局仍走决议那条路）。\n"
+        f"# ③ `zz_probe_ab_ladder`：每月走一格。**幂等**是硬要求：`{STAGE_VAR}` 单调递增，\n"
         f"#    每个效果只施加一次；不拿「有没有那个修正」当判据（会被别的系统碰到）。\n"
-        f"# ③ `{SHOCK_EFFECT}` / `{INPUT_EFFECT}` 在**真 mod**里（`v3 modgen` 生成），\n"
+        f"# ④ `{SHOCK_EFFECT}` / `{INPUT_EFFECT}` 在**真 mod**里（`v3 modgen` 生成），\n"
         f"#    探针只调用它们 —— 这样实验用的世界状态与档案本身是同一份定义。\n"
         f"zz_probe_ab_arm = {{\n"
         f'{TAB}debug_log = "ZZPROBE AB;RUN;A"\n'
+        f"{TAB}# 标记「决议武装过」—— 自励路径看到它就完全不介入。\n"
+        f"{TAB}set_variable = {{ name = {MANUAL_VAR} value = 1 }}\n"
         f"{TAB}# 月份从 0 起数：武装之后的下一次月度脉冲才是第 1 月。\n"
         f"{TAB}set_variable = {{ name = {MONTH_VAR} value = 0 }}\n"
         f"{TAB}set_variable = {{ name = {STAGE_VAR} value = 1 }}\n"
         f"}}\n"
         f"\n"
+        f"zz_probe_ab_selfarm = {{\n"
+        f"{TAB}# 只对 **AI 国家**生效，且**只在这个国家没被决议武装过时**介入 ——\n"
+        f"{TAB}# 玩家自己掌权的那一局由决议作唯一入口，自动路径完全不碰它。\n"
+        f"{TAB}if = {{\n"
+        f"{TAB * 2}limit = {{\n"
+        f"{TAB * 3}is_ai = yes\n"
+        f"{TAB * 3}NOT = {{ has_variable = {MANUAL_VAR} }}\n"
+        f"{TAB * 2}}}\n"
+        f"{TAB * 2}if = {{\n"
+        f"{TAB * 3}limit = {{ NOT = {{ has_variable = {SELFARM_VAR} }} }}\n"
+        f"{TAB * 3}set_variable = {{ name = {SELFARM_VAR} value = 0 }}\n"
+        f"{TAB * 3}set_variable = {{ name = {MONTH_VAR} value = 0 }}\n"
+        f"{TAB * 3}set_variable = {{ name = {STAGE_VAR} value = 1 }}\n"
+        f"{TAB * 2}}}\n"
+        f"{TAB * 2}change_variable = {{ name = {MONTH_VAR} add = 1 }}\n"
+        f"\n"
+        f"{selfarm_body}\n"
+        f"{TAB}}}\n"
+        f"}}\n"
+        f"\n"
         f"zz_probe_ab_ladder = {{\n"
-        f"{TAB}# 没被武装过的国家一行都不动（决议是唯一的开关）。\n"
+        f"{TAB}# 没被武装过的国家一行都不动（决议与自励是仅有的两个开关）。\n"
         f"{TAB}if = {{\n"
         f"{TAB * 2}limit = {{ has_variable = {STAGE_VAR} }}\n"
-        f"{TAB * 2}change_variable = {{ name = {MONTH_VAR} add = 1 }}\n"
         f"\n"
         f"{TAB * 2}# A 臂（第 {ARM_START['A']}–{ARM_START['B'] - 1} 月）：对照组，什么都不做 —— 没有分支就是它。\n"
         f"\n"
@@ -213,7 +288,7 @@ def _slot_chains(vanilla: list[ai_surface.Card]) -> str:
 
 
 def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
-    """开局不挂任何东西；每月走一格阶梯，再**只记主角国家**。"""
+    """开局不挂任何东西；每月先自励、再走一格阶梯，最后**只记主角国家**。"""
     tab = "\t"
     laws = "\n".join(
         f"{tab * 3}{keyword} = {{\n"
@@ -221,6 +296,20 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
         f'{tab * 4}debug_log = "ZZPROBE AB;LAW;{law};[THIS.GetCountry.GetNameNoFormatting]"\n'
         f"{tab * 3}}}"
         for keyword, law in zip(["if", *["else_if"] * (len(LAWS) - 1)], LAWS, strict=True)
+    )
+    # 策略牌读数：`has_strategy` 逐张问一遍（原版就是这么写的，见
+    # `ai_strategies/03_political_strategies.txt` 里的 `NOT = { has_strategy = … }`）。
+    strategies = "\n".join(
+        f"{tab * 3}{keyword} = {{\n"
+        f"{tab * 4}limit = {{ has_strategy = {name} }}\n"
+        f'{tab * 4}debug_log = "ZZPROBE AB;STRATEGY;{name};'
+        f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+        f"{tab * 3}}}"
+        for keyword, name in zip(
+            ["if", *["else_if"] * (len(POLITICAL_STRATEGIES) - 1)],
+            POLITICAL_STRATEGIES,
+            strict=True,
+        )
     )
     chains = _slot_chains(vanilla).replace("\n" + tab * 2, "\n" + tab * 3)
 
@@ -258,14 +347,22 @@ def on_actions_text(vanilla: list[ai_surface.Card]) -> str:
                             f'[THIS.GetCountry.GetNameNoFormatting]"'
                         ),
                         "",
-                        f"{tab * 3}# ① 先走臂阶梯：换臂那一月必须算进**新臂**，",
+                        f"{tab * 3}# ① 先自励（**不点决议**：观察者局没有玩家国家，决议点不了）。",
+                        f"{tab * 3}#    排在阶梯之前 —— 第 13 月那一格会武装并施加冲击，",
+                        f"{tab * 3}#    必须让阶梯看到已经武装好的状态。",
+                        f"{tab * 3}zz_probe_ab_selfarm = yes",
+                        "",
+                        f"{tab * 3}# ② 再走臂阶梯：换臂那一月必须算进**新臂**，",
                         f"{tab * 3}#    所以 RUN 行要排在同月的自报行之前。",
                         f"{tab * 3}zz_probe_ab_ladder = yes",
                         "",
-                        f"{tab * 3}# ② 两处输入到底有没有落到这个国家身上（自检用）",
+                        f"{tab * 3}# ③ 两处输入到底有没有落到这个国家身上（自检用）",
                         state_line("SHOCK", f"has_variable = {SHOCK_VAR}", "yes", "no"),
                         "",
                         state_line("INPUT", f"has_modifier = {INPUT_MODIFIER}", "yes", "no"),
+                        "",
+                        f"{tab * 3}# ④ 当前挂着的政治牌（策略层读数；B53：牌才是闸门）",
+                        strategies.replace("\n", "\n" + tab * 3),
                         "",
                         f"{tab * 3}# 诊断：合法性落在哪一档（五档夹逼 b55/b60/b70/b75/b80；",
                         f"{tab * 3}# 不记数字：没有已证可用的 loc 命令能打印一个数）",
