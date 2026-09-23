@@ -371,4 +371,17 @@ def list_snapshots() -> list[Path]:
 
 
 def snapshot_path(label: str | None = None) -> Path:
-    return SNAPSHOT_DIR / f"{label or 'current'}.json"
+    """按**快照名**解析出文件路径；只写了版本号时优先完整快照，退回精简快照。
+
+    为什么要退回：**只有精简快照是入库的**（6 MB vs 41 MB），
+    所以「拿 1.14.3 与 1.14.4 比结构」在别的机器上只可能拿到 ``*.compact.json``。
+    早先这里硬拼 ``<label>.json``，于是 `v3 snapshot diff release-1.14.3
+    release-1.14.4` 在只有精简快照的机器上报「快照不存在」——
+    而那正是这条命令最主要的用法（版本演练）。完整快照在本地仍然优先：
+    它多带的本地化明细对 diff 更有用。
+    """
+    full = SNAPSHOT_DIR / f"{label or 'current'}.json"
+    if full.is_file():
+        return full
+    compact = SNAPSHOT_DIR / f"{label or 'current'}.compact.json"
+    return compact if compact.is_file() else full

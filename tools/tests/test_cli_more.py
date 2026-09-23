@@ -144,15 +144,79 @@ def test_verify_fix_在一致时早退() -> None:
 
 
 @_needs_game
+def test_verify_漂移分支不会因富文本崩掉(monkeypatch) -> None:
+    """回归：漂移分支里有个**悬空的 ``[/]``**，一旦真有漂移，rich 直接抛 MarkupError。
+
+    这条分支此前从没被走到过（漂移数一直是 0），于是「文档正文与断言表脱节」
+    这个最要紧的失败提示，第一次真正需要它时打不出来 —— 报出来的是
+    ``MarkupError: closing tag '[/]'``，而不是哪篇文档的哪个数字过期了。
+    """
+    from pdx import verify
+
+    claim = next(c for c in verify.CLAIMS if c.id == "def.param_total")
+    drift = verify.DocDrift(
+        claim=claim,
+        doc="05-defines与修饰符.md",
+        line=12,
+        text="defines 共 3488 个参数条目",
+        found=3488,
+    )
+    monkeypatch.setattr(verify, "unknown_doc_drift", lambda *_a, **_k: [drift])
+    monkeypatch.setattr(verify, "run_claims", lambda *_a, **_k: [])
+    monkeypatch.setattr(verify, "check_markers", lambda *_a, **_k: [])
+    result = _run("verify", "--no-drift")
+    assert result.exit_code == 0, result.output
+    result = _run("verify")
+    assert "MarkupError" not in result.output
+    assert "脱节" in result.output, result.output
+    assert drift.describe()[:12] in result.output
+
+
+def test_verify_fix_claims_在一致时早退() -> None:
+    """`--fix-claims` 照单全收实得值 —— 但「本来就一致」时不许动断言表。"""
+    table = config.REPO / "tools" / "pdx" / "verify.py"
+    before = table.read_text(encoding="utf-8")
+    result = _run("verify", "--fix-claims")
+    assert table.read_text(encoding="utf-8") == before, "一致时不该改断言表"
+    if result.exit_code == 0:
+        assert "无需改动" in result.output
+    else:  # 本机没有游戏：_require_game 会以「跑不了」退出 2
+        assert result.exit_code == 2, result.output
+
+
+@_needs_game
 def test_snapshot_diff_自己与自己无差异() -> None:
-    """snapshot diff 收的是**快照名**（不含 .json），不是路径。"""
+    """snapshot diff 收的是**快照名**（不含 .json），不是路径。
+
+    只写了版本号时要能解析到**精简**快照 —— 入库的只有精简那份，
+    「拿两个版本比结构」在别的机器上只可能拿到它。
+    """
     snaps = sorted(config.OUT.joinpath("snapshots").glob("*.compact.json"))
     if not snaps:
         pytest.skip("没有精简快照")
     label = snaps[-1].name.removesuffix(".compact.json")
     result = _run("snapshot", "diff", label, label)
     assert result.exit_code == 0, result.output
-    assert "无差异" in result.output or "0" in result.output
+    assert "无差异" in result.output or "完全一致" in result.output
+
+
+@_needs_game
+def test_snapshot_diff_域集合不同时会点明() -> None:
+    """两份快照的域集合不同时，差异里混着**格式变化** —— 必须点明，不能静默。
+
+    这不是假想：入库的 `release-1.14.3.compact.json` 是上一轮的域集合（6 个域），
+    拿它比 1.14.4（14 个域）会报出百万级「删除」，而真正的原版变化只有几百处。
+    """
+    snaps = sorted(config.OUT.joinpath("snapshots").glob("*.compact.json"))
+    if len(snaps) < 2:
+        pytest.skip("少于两份精简快照，比不出「域集合不同」")
+    older = snaps[0].name.removesuffix(".compact.json")
+    newer = snaps[-1].name.removesuffix(".compact.json")
+    result = _run("snapshot", "diff", older, newer)
+    assert "MarkupError" not in result.output
+    assert result.exit_code == 0, result.output
+    if "域集合不同" in result.output:
+        assert "可比的是两侧都有的域" in result.output
 
 
 @_needs_game

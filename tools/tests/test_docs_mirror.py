@@ -46,8 +46,8 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.unit
 
-#: 官方 .md 的篇数。1.14.3 实测 92（game 91 + jomini 1）。
-EXPECTED_DOCS = 92
+#: 官方 .md 的篇数。1.14.3 实测 92（game 91 + jomini 1）；1.14.4 实测 94（game 93 + jomini 1）。
+EXPECTED_DOCS = 94
 
 
 def test_清单存在且可读() -> None:

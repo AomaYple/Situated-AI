@@ -2,8 +2,8 @@
 
 > 本文区分三类信息：**【实测】**= 从本机文件直接读到；**【官方】**= 游戏自带 `.md`/注释原文；**【推断】**= 由证据推导，尚未直接验证。请以标注为准。
 
-> **版本提示（精确清单）**：本机游戏是 **1.14.3 (Ice Tea)**，`binaries\victoria3.exe` = **97,292,920 B**。本文没有 1.14.2 的遗留值 ——
-> - **已是 1.14.3**：六个前缀的原版**零使用**断言 `pfx.vanilla_*` **7 条**（含总和 `pfx.vanilla_zero`）每次 `v3 verify` 都重扫全树，本次 **7/7 通过**；本机 mod 的前缀用量（总计 **2,737** 次、逐前缀 `REPLACE_OR_CREATE` 1116 / `INJECT` 740 / `TRY_INJECT` 440 / `TRY_REPLACE` 221 / `REPLACE` 174 / `INJECT_OR_CREATE` 46）由 `pfx.mods_total` 等 6 条断言钉住，本次全绿。
+> **版本提示（精确清单）**：本机游戏是 **1.14.4 (Ice Tea)**，`binaries\victoria3.exe` = **97,292,920 B**。本文没有 1.14.2 的遗留值 ——
+> - **已是 1.14.4**：六个前缀的原版**零使用**断言 `pfx.vanilla_*` **7 条**（含总和 `pfx.vanilla_zero`）每次 `v3 verify` 都重扫全树，本次 **7/7 通过**；本机 mod 的前缀用量（总计 **2,737** 次、逐前缀 `REPLACE_OR_CREATE` 1116 / `INJECT` 740 / `TRY_INJECT` 440 / `TRY_REPLACE` 221 / `REPLACE` 174 / `INJECT_OR_CREATE` 46）由 `pfx.mods_total` 等 6 条断言钉住，本次全绿。
 > - **本轮现场复算**：§5.1.1 的目录分布 = `v3 prefixes -n 60`，输出 **43 行**；它与 §5.1.1 表的唯一差异是 `technology/technologies`(58) 与 `technology/eras`(3) 在该表里被合并成 `technology` 一行，故正文写 **42** 个目录。
 > - **唯一已知漂移（已消解）**：`v3 verify` 的 `tree.game` 曾报 **27,725**（比本文的 27,723 多 2），根因是游戏目录里被外部程序丢进两个**非游戏文件**（看图工具的 `.XnViewSort` 索引与一个 `.dmp` 缓存，2026-09-20 09:02 生成）。把它们移出游戏目录后断言恢复到 **27,723**。这类文件现在由 `tools/tests/test_install_hygiene.py` 自动点名。
 

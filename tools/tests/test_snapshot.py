@@ -70,9 +70,9 @@ class TestSnapshotShape(unittest.TestCase):
         self.assertTrue(self.snap.version.get("caligula_branch"))
         self.assertTrue(self.snap.version.get("caligula_rev"))
 
-    def test_common_entries_covers_136_dirs(self):
-        """必须覆盖全部 136 个数据目录 —— 曾经因路径口径错误变成 0。"""
-        self.assertEqual(len(self.snap.sections["common_entries"]), 136)
+    def test_common_entries_covers_all_dirs(self):
+        """必须覆盖全部数据目录（1.14.4 是 138 个）—— 曾经因路径口径错误变成 0。"""
+        self.assertEqual(len(self.snap.sections["common_entries"]), 138)
 
     def test_common_entries_not_empty(self):
         total = sum(len(v) for v in self.snap.sections["common_entries"].values())
@@ -222,7 +222,7 @@ class TestCompactSnapshot(unittest.TestCase):
         for sec in ("common_entries", "fields", "defines", "dlc", "config"):
             with self.subTest(section=sec):
                 self.assertIn(sec, self.snap.sections)
-        self.assertEqual(len(self.snap.sections["common_entries"]), 136)
+        self.assertEqual(len(self.snap.sections["common_entries"]), 138)
         self.assertGreater(len(self.snap.sections["fields"]), 20_000)
 
     def test_与完整快照的结构域一致(self):

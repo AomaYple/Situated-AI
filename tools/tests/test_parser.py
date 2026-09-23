@@ -178,7 +178,7 @@ class TestKnownCounts(unittest.TestCase):
 
     EXPECTED = {
         "static_modifiers": 6128,
-        "modifier_type_definitions": 2364,
+        "modifier_type_definitions": 2365,
         "production_methods": 436,
         "character_templates": 2011,
         "buildings": 115,

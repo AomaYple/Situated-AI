@@ -5,6 +5,16 @@
    "字节": 3957,
    "行数": 112
   },
+  "game/common/ai_regional_objectives/ai_regional_objectives.md": {
+   "sha256": "8e0aa9cc633e9df5f5ba9fecd7b08b940a7ae20f16dcb5fb2bf33711e8fd1a7d",
+   "字节": 684,
+   "行数": 11
+  },
+  "game/common/ai_ship_categories/ai_ship_categories.md": {
+   "sha256": "cf933bd215f5bbaa0252b2d7adfb0c390eacbe1683df0cdde68ee2ffe84c4592",
+   "字节": 668,
+   "行数": 12
+  },
   "game/common/ai_strategic_region_stance_types/ai_strategic_region_stance_types.md": {
    "sha256": "fda74acba8a7f0f06ad356475654bac48adbb570ada9f8429d2d0ac093f9db7a",
    "字节": 268,
@@ -311,9 +321,9 @@
    "行数": 262
   },
   "game/common/ship_types/ship_types.md": {
-   "sha256": "8210f30735c6286e7538c090a7fd766e0473b283df2629fbb3d0671d08f826c7",
-   "字节": 1815,
-   "行数": 52
+   "sha256": "26943ed7bea27cc9b40a6feeef1bfd55369a8e07ce7be0bfec46d02cee6ac301",
+   "字节": 1941,
+   "行数": 55
   },
   "game/common/ship_veterancy_levels/ship_veterancy_levels.md": {
    "sha256": "3df4b1fb3994f55abd0e19ba321f3fb275cde20aa0d0315ccbefc38612b3f157",
@@ -371,9 +381,9 @@
    "行数": 72
   },
   "game/common/war_goal_types/war_goal_types.md": {
-   "sha256": "c458d3addb6822bb9c9656cc2a453f15e733add0055f08a3a2657f6a67156fd1",
-   "字节": 15869,
-   "行数": 302
+   "sha256": "3e5f85aef9d32cad491d8066d05857649d0146edaf41bf511293a3fa20e32431",
+   "字节": 16535,
+   "行数": 311
   },
   "game/dlc_metadata/dlc_metadata.md": {
    "sha256": "5e12dff7c70353226911213aa1fa480d05636c8139d769fb322323fb7891fe6b",
@@ -463,11 +473,11 @@
  },
  "来源": "game=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\game jomini=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\jomini clausewitz=C:\\Program Files (x86)\\Steam\\steamapps\\common\\Victoria 3\\clausewitz",
  "版本": {
-  "caligula_branch": "release/1.14.3",
-  "caligula_rev": "bf52e8efe8f45334a3fbd421cc9e06d51077c045",
+  "caligula_branch": "release/1.14.4",
+  "caligula_rev": "d369a59ea65e68d4cca455ddd558c497958927f9",
   "clausewitz_branch": "caligula/release/1.14.x",
   "clausewitz_rev": "1ce8c96bac918c929f55b3722e6006f447ab5cc0"
  },
- "篇数": 92,
+ "篇数": 94,
  "说明": "游戏自带官方 .md 的清单与指纹。原文不入库，见 tools/README.md 的「官方文档清单」。"
 }

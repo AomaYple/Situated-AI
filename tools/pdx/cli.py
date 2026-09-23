@@ -727,6 +727,22 @@ def snap_diff(
         console.print("[green]两份快照完全一致 —— 没有检测到任何字段增删。[/]")
         return
 
+    # 域集合不同 = 两份快照不是**同一个口径**拍的（常见于拿入库的旧快照比新版：
+    # 域是逐轮加上去的）。此时差异里混着「格式变化」，不能当成原版变化读 ——
+    # 1.14.3 那份只有 6 个域（localization 存明细），1.14.4 有 14 个
+    # （localization 换成 localization_digest + ai_surface/vocabulary 等），
+    # 直接 diff 会报出 116 万条「删除」，而真正的原版变化只有几百处。
+    only_a = sorted(set(a.sections) - set(b.sections))
+    only_b = sorted(set(b.sections) - set(a.sections))
+    if only_a or only_b:
+        console.print(
+            f"[yellow]⚠️ 两份快照的**域集合不同**[/] —— 下面的差异里混着格式变化，"
+            f"别直接当成原版变化读。\n"
+            f"   只有 A 有：{escape('、'.join(only_a) or '（无）')}\n"
+            f"   只有 B 有：{escape('、'.join(only_b) or '（无）')}\n"
+            f"   可比的是两侧都有的域：{escape('、'.join(sorted(set(a.sections) & set(b.sections))))}"
+        )
+
     summary = snapshot.diff_summary(changes)
     table = Table(title="变更", show_lines=False)
     table.add_column("域")
@@ -1198,6 +1214,10 @@ def verify_cmd(
         bool,
         typer.Option("--fix", help="把带归属标记的数字改写成断言期望值（只改标记处，写盘）"),
     ] = False,
+    fix_claims: Annotated[
+        bool,
+        typer.Option("--fix-claims", help="把**实测值**写回断言表的期望值（照单全收，写盘）"),
+    ] = False,
 ) -> None:
     """核对知识库文档里的数量断言（游戏本体口径）。
 
@@ -1221,7 +1241,49 @@ def verify_cmd(
     会被改写成断言期望值。它只碰**带标记的那一个数字**，包裹（``**`` / 反引号）
     与空格原样保留，因此不是「猜着改文本」，而是「按归属改」。不带 ``--fix``
     时同一套逻辑只报告不改 —— 两者共用一条实现，免得「说会改 A、实际改了 B」。
+
+    **``--fix-claims``**：官方更新之后用 —— 把**实测值**写回断言表
+    ``CLAIMS`` 的期望值。它与 ``--fix`` 是**相反方向**的：``--fix`` 假定断言表
+    是对的、改文档；``--fix-claims`` 假定实测是对的、改断言表。因此它照单全收，
+    量错了就把错误一起写进闸门 —— 只该在"版本演练"里、且人逐条看过改动清单之后跑。
+    ``--only`` 可以缩小到某几条（如 ``--only dip.``），改动清单永远逐条打印。
     """
+    if fix_claims:
+        _require_game()
+        edits, skipped = verify.fix_claims(write=True, only=only or "")
+        if not edits:
+            console.print("[green]断言表与实测一致，无需改动[/]")
+        else:
+            table = Table(title=f"按实测改写 {len(edits)} 条断言", show_lines=False)
+            table.add_column("ID", style="dim")
+            table.add_column("旧期望", justify="right")
+            table.add_column("新实测", justify="right", style="green")
+            table.add_column("描述", overflow="fold")
+            for edit in edits:
+                table.add_row(
+                    escape(edit.id),
+                    escape(str(edit.old)),
+                    escape(str(edit.new)),
+                    escape(edit.text)
+                    + ("  [yellow]← 描述里还写着旧值[/]" if edit.text_stale else ""),
+                )
+            console.print(table)
+            stale = [edit for edit in edits if edit.text_stale]
+            if stale:
+                console.print(
+                    f"[yellow]{len(stale)} 条断言的**描述**里还写着旧值[/]"
+                    "（表里那一列会自相矛盾）—— 请手工改描述，工具不代改："
+                    "有些旧数字是故意留的历史对照。"
+                )
+            console.print("改完请重跑 `v3 verify`（不带 --fix-claims）确认全绿。")
+        if skipped:
+            console.print(f"[yellow]{len(skipped)} 条没动[/]（期望值不是整数 / 量不出来）：")
+            for line in skipped[:20]:
+                console.print(f"   [dim]{escape(line)}[/]")
+            if len(skipped) > 20:
+                console.print(f"   …共 {len(skipped)} 条")
+        return
+
     if fix:
         changes = verify.fix_markers(write=True)
         if not changes:
@@ -1338,7 +1400,7 @@ def verify_cmd(
             for d in drift:
                 console.print(f"[red]❌[/] {escape(d.describe())}")
             console.print(
-                f"[yellow]共 {len(drift)} 处[/]。若确认是「口径不同、文档没错」，"
+                f"[yellow]共 {len(drift)} 处。若确认是「口径不同、文档没错」，"
                 f"登记到 pdx.verify.KNOWN_METRIC_MIXUPS 并写明理由；否则请改文档。[/]"
             )
         else:

@@ -196,7 +196,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-1520 条用例（`pytest --collect-only` 实测），
+1553 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -438,8 +438,8 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 同名条目里哪个最终生效 | 引擎的合并规则，未知 |
 | 平衡性与 AI 实际表现 | 要跑游戏才知道 |
 
-> 关于第三行：`victoria3.exe` 里有 **55,143 个标识符形状的串**，其中
-> **31,334 个从未在 `.txt` / `.gui` / `.yml` 里出现**（`v3 strings` 现算，
+> 关于第三行：`victoria3.exe` 里有 **55,281 个标识符形状的串**，其中
+> **31,431 个从未在 `.txt` / `.gui` / `.yml` 里出现**（`v3 strings` 现算，
 > 口径见 `pdx.exe_strings`）—— 那批词里确实藏着字段枚举。
 > **开采已经开始**：`v3 evidence --exe-grep <子串>` 能按名字族取证，
 > `identifier_neighbors()` 能看某个串在二进制里的邻居（同表聚集）。
@@ -479,7 +479,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：1520 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：1553 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

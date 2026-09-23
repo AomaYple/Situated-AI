@@ -52,7 +52,7 @@ country = "BRZ"
 # 档案对哪个引擎版本有效（写进 mod 元数据的 supported_game_version）。
 # 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
 # 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
-game_version = "1.14.3"
+game_version = "1.14.4"
 why = "**修的是什么毛病**：原版 1.14.3 对「一个单一出口国的商路被掐住」这件事**没有账**。开始没有（没有任何 on_action 记「市场丢了」），过程没有（种植园的产能、种植园贵族的势力、王权的威信，三者都不随出口市场变化），结束也没有（原版没有一条 JE 或修正表达「这个国家的出口完蛋了」）。**唯一被记下来的是市场那一侧**：谁掌握市场、谁在关税同盟里、谁给谁开了门 —— 那些都记在**列强**的账上，而被掐住的那一方自己什么都没有。⚠️ **主角身份本机实测确认**（不是猜）：tag = `BRZ`（common/country_definitions/00_countries.txt:2336 的 `BRZ = {`，该文件的顶层键就是国家 tag），同块 :2339 `country_type = recognized`、:2341 `tier = empire`、:2343 `cultures = { brazilian }`、:2344 `capital = STATE_RIO_DE_JANEIRO`。**为什么主角是巴西**：01a §K 那一行（docs/design/01a-依据与参考.md:301）写的是**出口型经济（咖啡/糖）、奴隶制、地主政治、君主制相对稳定**，外部是**英国市场支配**、拉美共和化浪潮、南境与阿根廷/乌拉圭摩擦，推出的最优解是**初级产品换安全**（抱英国、压内部叛乱、避免与列强冲突）—— 这是一份以「收入长在别人的商路上」为机制的档案。⚠️ **主角的初始落点实测**：common/history/ai/00_strategy.txt:42 有 `c:BRZ ?= {` 块，里面三张牌是 `ai_strategy_plantation_economy`（:43）、`ai_strategy_maintain_power_balance`（:44）、`ai_strategy_progressive_agenda`（:45）—— 影响见 `[cards]` 与 `[probe]`。⚠️ 依据已于 2026-09-22 更正（沿用既有八份的共同结论）：原版 212 处 has_journal_entry 全部硬编码具名 JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）—— 本档案一条都不用，理由见 `[cards]`。　【沿用·口径】本表的数值**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；本档案**独立取档**的有两处（种植园产能、种植园贵族），字段与新档位都取自原版自己的同类用法，见各自的 why。"
 
 

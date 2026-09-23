@@ -158,7 +158,6 @@ def test_断言id唯一() -> None:
 #: 大片断言会静默退出检查而没人发现。下面每条都写明为什么无法定位。
 _NO_ANCHOR_CLAIMS: dict[str, str] = {
     "script.lists_doc04": "描述「5 个列表」纯中文；目录名未写进描述（该数字在 doc 04 §0.2 生成表里）",
-    "env.common_all": "同上，'common' 太通用（该数字在 doc 08 生成表里）",
     "def.namespaces": "同上，'defines' 太通用（该数字在 doc 05 §0.4 生成表里）",
     "def.param_names": "同上，'defines' 太通用（同上）",
     "docs.total_bytes": "doc 07 的总字节数在 §0 生成表里（从入库清单现算），没有可定位的英文标识符；"

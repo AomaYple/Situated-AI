@@ -36576,10 +36576,10 @@
     "| `l_turkish:` | 170 | 土耳其语 | |"
    ],
    "07-官方文档索引.md::doc07 官方文档统计": [
-    "| 文档总数 | **92** |",
-    "| 总字节数 | **232,980** |",
-    "| 总行数 | **5,369** |",
-    "| 平均字节数 | 2,532.4 |",
+    "| 文档总数 | **94** |",
+    "| 总字节数 | **235,124** |",
+    "| 总行数 | **5,404** |",
+    "| 平均字节数 | 2,501.3 |",
     "| 最小文档 | 119 B（`ship_modification_slots.md`） |",
     "| 最大文档 | 28,171 B（`treaty_articles.md`） |",
     "| 小于 600 B 的文档 | 26 个 |",
@@ -36966,7 +36966,7 @@
     "| `ROOT\\platform_specific_game_data` | 2 | 0 | 0.02 MB |"
    ],
    "08-目录全量清单.md::doc08 版本指纹": [
-    "| 游戏版本 | **1.14.3 (Ice Tea)** | 用户环境事实 |",
+    "| 游戏版本 | **1.14.4 (Ice Tea)** | 用户环境事实 |",
     "| caligula 分支 | `release/1.14.4` | `ROOT\\caligula_branch.txt` |",
     "| caligula 修订 | `d369a59ea65e68d4cca455ddd558c497958927f9` | `ROOT\\caligula_rev.txt` |",
     "| clausewitz 分支 | `caligula/release/1.14.x` | `ROOT\\clausewitz_branch.txt` |",

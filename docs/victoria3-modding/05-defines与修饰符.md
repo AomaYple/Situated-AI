@@ -1,14 +1,14 @@
 # Victoria 3 Mod 开发知识库 · 05 defines 与修饰符
 
-> ⚠️ **版本提示（精确清单）**：本机游戏是 **1.14.3 (Ice Tea)**（版本指纹见下一段三条）。原先那句「数量统计与零使用类结论采集于 1.14.2」现在按类拆开：
-> - **已是 1.14.3 —— 表格已重算**：§2.1 / §2.2 / §2.5 / §2.6 / §1.6 共 **5 张表**由 `v3 tables --write` 重算回写（§0.3 的口径补记），§0.4 的 **9 / 75 / 50 / 3488 / 3481** 与之同源；参数总数 3488 由 `def.param_total`、`def.param_names` 两条断言钉住。
-> - **已是 1.14.3 —— 断言已核验**：本文 **25 条** `def.*` / `defines.*` 断言由 `v3 verify` 现场重扫，本次 **25/25 通过**（含 `def.modtypes` 2364、`def.static` 6128、`def.nai_count` 1017、`def.file_*` 6 条）。
-> - **已复测的「零使用 / 无实例」类结论**（1.14.3 实测值，命令见 §8 表）：`apply_modifier` → 原版键 **0 处**；`has_game_rule` → **0 处**；`type_set` → **0 处**；`scripted_modifier` → **0 处**且 exe 无该字面量。
+> ⚠️ **版本提示（精确清单）**：本机游戏是 **1.14.4 (Ice Tea)**（版本指纹见下一段三条）。原先那句「数量统计与零使用类结论采集于 1.14.2」现在按类拆开：
+> - **已是 1.14.4 —— 表格已重算**：§2.1 / §2.2 / §2.5 / §2.6 / §1.6 共 **5 张表**由 `v3 tables --write` 重算回写（§0.3 的口径补记），§0.4 的 **9 / 75 / 50 / 3482 / 3475** 与之同源；参数总数 3482 由 `def.param_total`、`def.param_names` 两条断言钉住（1.14.4 的海军战力重做删掉 24 个、加了 18 个参数，净 −6）。
+> - **已是 1.14.4 —— 断言已核验**：本文 **25 条** `def.*` / `defines.*` 断言由 `v3 verify` 现场重扫，本次 **25/25 通过**（含 `def.modtypes` 2365、`def.static` 6128、`def.nai_count` 1018、`def.file_*` 6 条）。
+> - **已复测的「零使用 / 无实例」类结论**（1.14.4 实测值，命令见 §8 表）：`apply_modifier` → 原版键 **0 处**；`has_game_rule` → **0 处**；`type_set` → **0 处**；`scripted_modifier` → **0 处**且 exe 无该字面量。
 > - **未复测（明确列出）**：§5.2 的 `game_data.type_set` **合法取值集合**（本地 0 实例，无从复测）、§1.4 的引擎 define 默认值/取值范围（本地无声明）、§8 第 12 条（mod 新增键是否无效）、§6.6 的「32 个未声明 `icon` 的静态修饰符」。
-> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.3）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
+> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.4）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
 
-> **适用版本**：Victoria 3 **1.14.3 (Ice Tea)**（本文的模块结构统计已重测到 1.14.3；个别标注为 1.14.2 的结论为历史采集值）
-> 版本依据：`launcher\launcher-settings.json` → `"version": "1.14.3 (Ice Tea)"`、`"rawVersion": "1.14.3"`；`caligula_branch.txt` → `release/1.14.3`；`clausewitz_branch.txt` → `caligula/release/1.14.x`
+> **适用版本**：Victoria 3 **1.14.4 (Ice Tea)**（本文的模块结构统计已重测到 1.14.4；个别标注为 1.14.2 的结论为历史采集值）
+> 版本依据：`launcher\launcher-settings.json` → `"version": "1.14.4 (Ice Tea)"`、`"rawVersion": "1.14.4"`；`caligula_branch.txt` → `release/1.14.4`；`clausewitz_branch.txt` → `caligula/release/1.14.x`
 > **内容根（下文简称 `GAME`）**：`C:\Program Files (x86)\Steam\steamapps\common\Victoria 3\game`
 > **安装根**：`C:\Program Files (x86)\Steam\steamapps\common\Victoria 3`
 
@@ -58,7 +58,7 @@
 > 这几张表原先由那批 PowerShell 脚本产出，数值停留在 1.14.2：
 > 1.14.3 给 `NMilitary` 增加了 1<!--claim:def.file_ai--> 个参数、给 `NDiplomacy` 增加了 39 个，
 > 于是 `00_defines.txt` 之后所有块的**起始行号整体后移 40 行**、
-> 参数总数从 3434 涨到 **3488**<!--claim:def.param_total-->。现在这些数字由仓库内的解析器
+> 参数总数从 3434 涨到 **3482**<!--claim:def.param_total-->。现在这些数字由仓库内的解析器
 > （`pdx.parser`，口径见 §0.3）重新生成，并由 `v3 verify` 的
 > `def.param_total` / `def.param_names` 两条断言钉住。
 
@@ -551,7 +551,7 @@ NCountry = {
 
 ### 2.3 `00_ai.txt` —— AI 专用 defines（详见 §3）
 
-整个文件**只有一个**顶层命名空间块 `NAI`，起始于第 1 行，包含 **1017**<!--claim:def.nai_count--> 个参数，全部为标量，无内联列表、无嵌套块。文件共 1311<!--claim:def.ai_file_lines--> 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
+整个文件**只有一个**顶层命名空间块 `NAI`，起始于第 1 行，包含 **1018**<!--claim:def.nai_count--> 个参数，全部为标量，无内联列表、无嵌套块。文件共 1312<!--claim:def.ai_file_lines--> 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
 
 结构明细见 §3.1，全部 1017 个参数名见 §3.3。
 
@@ -2178,7 +2178,7 @@ has_game_rule = high_ai_aggression
 
 【文档】来源：`GAME\common\modifier_type_definitions\modifier_types.md`
 
-**实测前缀分布**（2364<!--claim:def.modtypes--> 个键，按第一个下划线前切分）——与上述规则完全吻合：
+**实测前缀分布**（2365<!--claim:def.modtypes--> 个键，按第一个下划线前切分）——与上述规则完全吻合：
 
 | 前缀 | 键数 | 流动含义（据上文推断） |
 |---|---|---|
@@ -2198,7 +2198,7 @@ has_game_rule = high_ai_aggression
 
 【提取】
 
-**后缀分布**同样有强规律：`_add` **1635**<!--claim:defines.suffix_add-->、`_mult` **626**<!--claim:defines.suffix_mult-->、`_bool` **89**<!--claim:defines.suffix_bool-->、`_factor` 5<!--claim:def.suffix_factor-->，另有 9<!--claim:def.suffix_other--> 个键各以其它词结尾（`_support`、`_strata`、`_time`、`_cost`、`_guns`、`_literacy`、`_impact`、`_likelihood`、`_type`，各 1 个）。合计 2364。【提取】——即「加法修正 / 乘法修正 / 布尔开关」三分天下。
+**后缀分布**同样有强规律：`_add` **1636**<!--claim:defines.suffix_add-->、`_mult` **626**<!--claim:defines.suffix_mult-->、`_bool` **89**<!--claim:defines.suffix_bool-->、`_factor` 5<!--claim:def.suffix_factor-->，另有 9<!--claim:def.suffix_other--> 个键各以其它词结尾（`_support`、`_strata`、`_time`、`_cost`、`_guns`、`_literacy`、`_impact`、`_likelihood`、`_type`，各 1 个）。合计 2364。【提取】——即「加法修正 / 乘法修正 / 布尔开关」三分天下。
 
 ### 5.2 字段参考
 
@@ -5049,7 +5049,7 @@ add_modifier = { # academics polstr
 | 8 | **`game_data.type_set` 的合法取值** | **1.14.3 复测**：`v3 evidence type_set --values` → 原版键 **0 处**；官方 md **1 处赋值**，`common/modifier_type_definitions/modifier_types.md:25` 逐字 `type_set = { cultural_acceptance }`（上方 `:24` 的注释：`# the modifier typesets this type belongs to, used in code to perform bespoke operations (such as updating cultural community acceptance deltas when a country enacts a law with a modifier entry of this type)`）；exe 有字面量 | 【未确认】本地无证据（原版 0 实例，取值全集无从枚举）→ 配方 A |
 | 9 | **`decimals` / `percent` / `color` 缺省值** | 数量侧已由断言钉住（1.14.3）：`modifier_type_definitions` 共 **2364** 个键，`decimals` **2333** 处 → **31** 个没写（`def.modtypes_missing_decimals`）、`percent` **885** 处 → **1479** 个没写（`def.modtypes_missing_percent`）、`color` **2364** 处 → 0 个没写。取值分布：`decimals` {1×1349, 0×966, 2×18}、`percent` {yes×824, no×61}、`color` {good×1776, neutral×306, bad×282}（`v3 evidence … --values`） | 【未确认】本地无证据（**缺省值**本身无声明；只能证明「有默认值」）→ 配方 A |
 | 10 | **`scripted_modifiers` 是否仍被引擎解析** | **1.14.3 复测**：`v3 evidence scripted_modifier` → 原版键 **0 处**、官方 md **0 处**、exe **无该字面量**（`v3 evidence --exe-grep scripted_modifier` → 0 个）；同族里存在的是 Jomini 模板数据库 —— `v3 evidence --exe-grep scripted` → `CJominiScriptedModifierTemplateDatabase`。**2026-09-20 探针实测**：`common/scripted_modifiers/` 里的**定义会被解析**（照 md 的模板体写 → 无报错），**调用形态**见 `04-脚本系统.md` §7.3：把模板名当键会被引擎识别（引擎会去解析该模板），`scripted_modifier = 名字` / `modifier = { 名字 = yes }` / `modifier = { scripted_modifier = 名字 }` 三种写法全被拒 | **部分已答**：定义 ✅、调用点 = 模板名当键（模板体形状仍【未确认】） |
-| 11 | **wiki 的 verified 版本是 1.13，采集时点本机是 1.14.2** | 本机指纹已更新：`env.caligula_branch` = `release/1.14.3`、`env.caligula_rev` = `bf52e8e…`（本次 `v3 verify` 已核验），另有头部「版本依据」三条；§1.7 证据 4 已把该 Wiki 页标注为 verified for 1.13，并给出实测反例：`INCORPORATION_TIME_NO_MATCH` 实测 **25**（`00_defines.txt`），Wiki 示例注释写 "Base game 20 years" | 已答（版本差异已量化，见 §0.1 的【Wiki】行与 §1.7 证据 4） |
+| 11 | **wiki 的 verified 版本是 1.13，采集时点本机是 1.14.2** | 本机指纹已更新：`env.caligula_branch` = `release/1.14.4`、`env.caligula_rev` = `bf52e8e…`（本次 `v3 verify` 已核验），另有头部「版本依据」三条；§1.7 证据 4 已把该 Wiki 页标注为 verified for 1.13，并给出实测反例：`INCORPORATION_TIME_NO_MATCH` 实测 **25**（`00_defines.txt`），Wiki 示例注释写 "Base game 20 years" | 已答（版本差异已量化，见 §0.1 的【Wiki】行与 §1.7 证据 4） |
 | 12 | **mod 中新增 define 键是否完全无效** | define **键名确实编译进二进制**：`v3 evidence --exe-grep INCORPORATION_TIME_NO_MATCH` → exe 里存在该标识符（1 个）；§0.4 的 **3488** 个参数全部来自原版 9 个文件。**没有**「新增键被读取」的本地实例 | 【未确认】本地无证据 → 配方 C |
 
 ---

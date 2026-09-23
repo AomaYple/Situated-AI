@@ -216,7 +216,7 @@ class TestRealGameCounts(unittest.TestCase):
         "interest_groups": 8,
         "technology": 184,
         "character_traits": 121,
-        "modifier_type_definitions": 2364,
+        "modifier_type_definitions": 2365,
         "static_modifiers": 6128,
         "character_templates": 2011,
     }

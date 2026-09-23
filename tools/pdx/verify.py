@@ -20,6 +20,7 @@ B. 维护一份**显式断言注册表**，每条断言写明「查什么、期�
 
 from __future__ import annotations
 
+import ast
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -1097,16 +1098,16 @@ CLAIMS: list[Claim] = [
         r"game\ 全树文件数",
         "tree_files",
         "game",
-        27723,
+        27728,
         "与 doc 08 的 tree.game 同源，只是那一句写在 doc 01",
     ),
     Claim(
         "ai.nai_params_doc03",
         "03-AI系统.md",
-        "NAI 参数 1017",
+        "NAI 参数 1018",
         "defines_params",
         "00_ai.txt:NAI",
-        1017,
+        1018,
     ),
     Claim("ai.strategies_doc03", "03-AI系统.md", "共 35 个策略", "dir_blocks", "ai_strategies", 35),
     Claim(
@@ -1151,10 +1152,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "script.events_md_doc04",
         "04-脚本系统.md",
-        "GAME 下共有 91 个官方 .md",
+        "GAME 下共有 93 个官方 .md",
         "dir_md_files",
         "",
-        91,
+        93,
     ),
     Claim(
         "script.events_subdirs_doc04",
@@ -1165,7 +1166,7 @@ CLAIMS: list[Claim] = [
         12,
     ),
     Claim(
-        "defines.suffix_add", "05-defines与修饰符.md", "_add 1635", "modifier_suffix", "add", 1635
+        "defines.suffix_add", "05-defines与修饰符.md", "_add 1636", "modifier_suffix", "add", 1636
     ),
     Claim(
         "defines.suffix_mult", "05-defines与修饰符.md", "_mult 626", "modifier_suffix", "mult", 626
@@ -1179,7 +1180,7 @@ CLAIMS: list[Claim] = [
         "script_values 顶层块",
         "dir_blocks",
         "script_values",
-        270,
+        272,
     ),
     Claim(
         "defines.00_defines_namespaces",
@@ -1192,10 +1193,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "loc.yml_total_doc06",
         "06-本地化与界面资源.md",
-        "1877 个 .yml",
+        "1878 个 .yml",
         "game_all_files",
         "localization",
-        1877,
+        1878,
     ),
     Claim(
         "loc.lang_dirs_doc06",
@@ -1227,10 +1228,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "ai.nai_params_doc09",
         "09-AI-mod实战技法.md",
-        "全库 NAI 有 1017 个参数",
+        "全库 NAI 有 1018 个参数",
         "defines_params",
         "00_ai.txt:NAI",
-        1017,
+        1018,
     ),
     Claim(
         "hist.files_doc11",
@@ -1319,10 +1320,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "docs.common_md_doc07",
         "07-官方文档索引.md",
-        "common 下共 75 个 .md",
+        "common 下共 77 个 .md",
         "dir_md_files",
         "common",
-        75,
+        77,
     ),
     Claim("ai.fields_doc03", "03-AI系统.md", "共 60 个字段", "ai_strategy_count", "fields", 60),
     Claim(
@@ -1465,10 +1466,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "chr.concepts_doc17",
         "17-角色科技与呈现.md",
-        "concept_* 共 2191 个",
+        "concept_* 共 2195 个",
         "loc_concept_keys",
         "",
-        2191,
+        2195,
     ),
     Claim(
         "eng.jomini_subdirs_doc20",
@@ -1480,7 +1481,7 @@ CLAIMS: list[Claim] = [
     ),
     # ── 环境 ────────────────────────────────────────────
     Claim(
-        "env.common_dirs", "08-目录全量清单.md", "common 有 136 个子目录", "dir_subdirs", "", 136
+        "env.common_dirs", "08-目录全量清单.md", "common 有 138 个子目录", "dir_subdirs", "", 138
     ),
     Claim(
         "env.dlc",
@@ -1494,29 +1495,29 @@ CLAIMS: list[Claim] = [
     Claim(
         "env.common_txt",
         "08-目录全量清单.md",
-        "common 有 3026 个 .txt",
+        "common 有 3028 个 .txt",
         "dir_txt_files",
         "",
-        3026,
+        3028,
         "1.14.2 时为 3024，1.14.3 新增 2 个。注意 3101 是含 .md 的全部文件数",
     ),
     Claim(
         "env.common_all",
         "08-目录全量清单.md",
-        "common 共 3101 个文件",
+        "common 共 3105 个文件",
         "dir_all_files",
         "",
-        3101,
+        3105,
         "1.14.2 时为 3099",
     ),
-    Claim("env.md_total", "07-官方文档索引.md", "游戏自带 92 篇官方 .md", "md_files", "", 92),
+    Claim("env.md_total", "07-官方文档索引.md", "游戏自带 94 篇官方 .md", "md_files", "", 94),
     Claim(
         "docs.total_bytes",
         "07-官方文档索引.md",
         "92 篇官方 .md 总字节数",
         "md_total_bytes",
         "",
-        232980,
+        235124,
         "1.14.2 时为 230,173（doc 07 曾长期写着这个镜像值）",
     ),
     Claim(
@@ -1644,10 +1645,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "chr.concepts",
         "17-角色科技与呈现.md",
-        "game_concepts 有 612 个",
+        "game_concepts 有 613 个",
         "dir_entries",
         "game_concepts",
-        612,
+        613,
     ),
     # ── 外交军事（doc 16）──────────────────────────────
     Claim(
@@ -1693,19 +1694,19 @@ CLAIMS: list[Claim] = [
     Claim(
         "dip.ships",
         "16-外交军事与地图.md",
-        "ship_modifications 有 259 个",
+        "ship_modifications 有 271 个",
         "dir_entries",
         "ship_modifications",
-        259,
+        271,
     ),
     # ── defines / 修饰符（doc 05）──────────────────────
     Claim(
         "def.nai_count",
         "05-defines与修饰符.md",
-        "NAI 有 1017 个参数",
+        "NAI 有 1018 个参数",
         "defines_params",
         "00_ai.txt:NAI",
-        1017,
+        1018,
         "1.14.2 时为 1013，1.14.3 增至 1017（+4）；文件 1307 行 → 1311 行",
     ),
     Claim(
@@ -1727,29 +1728,29 @@ CLAIMS: list[Claim] = [
     Claim(
         "def.param_total",
         "05-defines与修饰符.md",
-        "defines 共 3488 个参数条目",
+        "defines 共 3482 个参数条目",
         "defines_param_total",
         "",
-        3488,
+        3482,
         "标量 3313 + 内联列表 175 + 嵌套块 0。1.14.2 时为 3434；"
         "1.14.3 给 NMilitary +1、NDiplomacy +39，§2.1/§2.2 两张表已按 1.14.3 重算",
     ),
     Claim(
         "def.param_names",
         "05-defines与修饰符.md",
-        "defines 共 3481 个去重参数名",
+        "defines 共 3475 个去重参数名",
         "defines_param_names",
         "",
-        3481,
+        3475,
         "1.14.2 时为 3427；跨块重复出现 7 次",
     ),
     Claim(
         "def.modtypes",
         "05-defines与修饰符.md",
-        "modifier_type_definitions 有 2364 个",
+        "modifier_type_definitions 有 2365 个",
         "dir_entries",
         "modifier_type_definitions",
-        2364,
+        2365,
     ),
     Claim(
         "def.static",
@@ -1832,10 +1833,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "env.common_dirs_direct",
         "08-目录全量清单.md",
-        "直接枚举 common 得到 136 个子目录",
+        "直接枚举 common 得到 138 个子目录",
         "common_dir_count",
         "",
-        136,
+        138,
         "与 env.common_dirs 是**两条独立实现**：那条走 extract_dir 的扫描口径，"
         "这条直接 iterdir。两者必须给出同一个数，否则说明扫描把某个目录吞了",
     ),
@@ -2007,16 +2008,16 @@ CLAIMS: list[Claim] = [
         "game 全树递归文件数（不含安装根下的松散文件）",
         "tree_files",
         "game",
-        27723,
+        27728,
     ),
-    Claim("tree.game_dirs", "08-目录全量清单.md", "game 全树子目录数", "tree_dirs", "game", 1986),
+    Claim("tree.game_dirs", "08-目录全量清单.md", "game 全树子目录数", "tree_dirs", "game", 1988),
     Claim(
         "tree.game_bytes",
         "08-目录全量清单.md",
-        "game 全树的字节总数（等价 17,055.76 MB）",
+        "game 全树的字节总数（等价 17,055.80 MB）",
         "tree_bytes",
         "game",
-        17884255692,
+        17884298297,
     ),
     Claim(
         "tree.binaries_files",
@@ -2029,10 +2030,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "tree.binaries_bytes",
         "08-目录全量清单.md",
-        "binaries 目录字节总数（等价 260.95 MB）",
+        "binaries 目录字节总数（等价 261.18 MB）",
         "tree_bytes",
         "binaries",
-        273630477,
+        273861901,
     ),
     Claim(
         "tree.clausewitz_files",
@@ -2075,7 +2076,7 @@ CLAIMS: list[Claim] = [
         "game/gfx 目录字节总数（等价 9,690.00 MB）",
         "tree_bytes",
         "game/gfx",
-        10160700313,
+        10160703261,
     ),
     Claim(
         "tree.events_files",
@@ -2091,7 +2092,7 @@ CLAIMS: list[Claim] = [
         "game/localization 目录文件数",
         "tree_files",
         "game/localization",
-        1877,
+        1878,
     ),
     Claim(
         "tree.gui_files", "08-目录全量清单.md", "game/gui 目录文件数", "tree_files", "game/gui", 207
@@ -2254,7 +2255,7 @@ CLAIMS: list[Claim] = [
         "localization 下 .yml 按文件名去重后的个数（1,877 个文件、22 个重名）",
         "loc_yml_unique_names",
         "",
-        1855,
+        1856,
     ),
     Claim(
         "tree.common_loose_bytes",
@@ -2391,7 +2392,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 的行数（1.14.2 时是 682）",
         "doc03_ai_script_values",
         "lines",
-        703,
+        736,
     ),
     Claim(
         "ai.script_values_top_keys",
@@ -2399,7 +2400,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 的顶层键数（1.14.2 时是 18）",
         "doc03_ai_script_values",
         "top_keys",
-        33,
+        40,
     ),
     Claim(
         "ai.script_values_ast_keys",
@@ -2407,7 +2408,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 里按结构解析去重的键名数（行中间 / 比较符 / 带冒号的键都算）",
         "doc03_ai_script_values",
         "ast_keys",
-        75,
+        82,
     ),
     Claim(
         "ai.script_values_line_keys",
@@ -2415,7 +2416,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 里行正则去重的键名数（1.14.2 时是 49）",
         "doc03_ai_script_values",
         "line_regex_keys",
-        64,
+        71,
         note="文档那句「任意缩进的键共 N 个」用的就是这个口径 —— 1.14.3 重测为 64，"
         "与 AST 口径的 75 差 11 个，差额成因写在文档里",
     ),
@@ -2434,7 +2435,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 的行数（doc 04 §4.6 与 doc 03 §4 描述的是同一个文件）",
         "doc03_ai_script_values",
         "lines",
-        703,
+        736,
     ),
     Claim(
         "script.ai_script_values_keys_doc04",
@@ -2442,7 +2443,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 的顶层键数（§4.6 那张表只列了其中 18 个重点键）",
         "doc03_ai_script_values",
         "top_keys",
-        33,
+        40,
     ),
     Claim(
         "eco.pm_hyphen_dirs",
@@ -2585,7 +2586,7 @@ CLAIMS: list[Claim] = [
         "§0 那 29 个目录的顶层定义键合计（1.14.2 时是 11,673）",
         "doc17_overview",
         "keys",
-        11705,
+        11733,
     ),
     Claim(
         "chr.loc_concept_x",
@@ -2593,7 +2594,7 @@ CLAIMS: list[Claim] = [
         "概念本地化里裸 concept_x 键的个数（§14.4 那张表的头一行）",
         "doc17_loc_suffix",
         "concept_x",
-        1037,
+        1038,
     ),
     Claim(
         "chr.loc_concept_x_desc",
@@ -2601,7 +2602,7 @@ CLAIMS: list[Claim] = [
         "概念本地化里 concept_x_desc 键的个数（比概念数多 2）",
         "doc17_loc_suffix",
         "concept_x_desc",
-        614,
+        616,
     ),
     Claim(
         "chr.gene_block_names",
@@ -2760,7 +2761,7 @@ CLAIMS: list[Claim] = [
         "00_ai.txt 的行数（唯一一个顶层命名空间的 defines 文件）",
         "file_line_count",
         "game/common/defines/00_ai.txt",
-        1311,
+        1312,
     ),
     Claim(
         "def.inline_list_total",
@@ -2851,7 +2852,7 @@ CLAIMS: list[Claim] = [
         "官方 .md 的篇数（game + jomini + clausewitz 三个内容根）",
         "md_files",
         "",
-        92,
+        94,
     ),
     Claim(
         "pol.stance_total",
@@ -2927,7 +2928,7 @@ CLAIMS: list[Claim] = [
         "ai_script_values 的顶层键数（doc 09 §4 那张表最后一行）",
         "doc03_ai_script_values",
         "top_keys",
-        33,
+        40,
     ),
     Claim(
         "ai.strategy_refs_doc09",
@@ -2935,7 +2936,7 @@ CLAIMS: list[Claim] = [
         "其中被 00_default_strategy.txt 引用的个数（源码里是文本引用）",
         "ai_script_values_referenced",
         "",
-        19,
+        26,
     ),
     # ── 版本指纹（**唯一一条「游戏一升级就变红」的断言**）──────────────────
     #
@@ -2949,7 +2950,7 @@ CLAIMS: list[Claim] = [
         "caligula_rev 修订指纹（判断游戏精确版本最可靠的依据）",
         "game_version_field",
         "caligula_rev",
-        "bf52e8efe8f45334a3fbd421cc9e06d51077c045",
+        "d369a59ea65e68d4cca455ddd558c497958927f9",
         note="CI 上由入库快照的「版本」域核验 —— 与本地同一条断言",
     ),
     Claim(
@@ -2958,7 +2959,7 @@ CLAIMS: list[Claim] = [
         "caligula_branch 分支名",
         "game_version_field",
         "caligula_branch",
-        "release/1.14.3",
+        "release/1.14.4",
     ),
     Claim(
         "env.clausewitz_rev",
@@ -2991,6 +2992,164 @@ def run_claims(
     if not include_slow:
         selected = [c for c in selected if c.kind not in SLOW_KINDS]
     return [check(c) for c in selected]
+
+
+# ── 官方更新之后：把实测值写回断言表 ──────────────────────────
+#
+# 为什么要有它：`01-大方向.md` §5 的「官方每次更新」要求跑一次版本演练，而演练的固定成本
+# 几乎全在**更新 CLAIMS 里的期望值**上（2026-09-23 的 1.14.4 演练：48 处）。
+# `v3 refresh` 只改**文档**（表 + 带标记的正文），它改不了断言表自己 ——
+# 于是那句「跑完全绿说明没有任何需要人改的东西」在最要紧的一步上不成立。
+#
+# ⚠️ **它照单全收实得值** —— 这正是它危险的地方：如果量错了（比如解析器坏了、报 0），
+# 它会把错误一起写进期望值，闸门从此形同虚设。所以：
+#   * 它是**显式**动作（`v3 verify --fix-claims`），**不挂在 `v3 refresh` 里自动跑**；
+#   * 每一处改动都**打印出来**（id、旧值、新值）—— 人要逐条扫一眼"这个变化讲不讲得通"；
+#   * 期望值不是整数的、量不出来的、执行出错的，一律**跳过并说明**，不猜。
+
+
+@dataclass(frozen=True)
+class ClaimEdit:
+    """一处「按实测改写期望值」的改动，附**给人看**的描述与过期提示。"""
+
+    id: str
+    old: object
+    new: object
+    text: str
+    text_stale: bool
+
+    def line(self) -> str:
+        tail = "（描述里还写着旧值，请顺手改）" if self.text_stale else ""
+        return f"{self.id}: {self.old} → {self.new}{tail}"
+
+
+def claim_value_slots(source: str) -> dict[str, tuple[int, int]]:
+    """``断言 id -> 期望值那个字面量在**源码字节串**里的 (起, 止) 偏移``。
+
+    用 `ast` 拿位置，不用正则：`Claim(...)` 的参数有的跨行、有的带尾注，
+    正则迟早会咬到别的东西上；而 `ast` 给的是**精确**的 ``lineno/col_offset``
+    （Python 3.8+ 还有 ``end_lineno/end_col_offset``）。
+
+    ⚠️ 偏移是**字节**偏移，不是字符偏移 —— ``col_offset`` 按 CPython 的约定是
+    「该节点首 token 的 UTF-8 字节偏移」，而断言表里**每一行都有中文**
+    （文档名、描述），两者差得很多。按字符算会把刀口切进中文中间，写出乱码。
+    """
+    tree = ast.parse(source)
+    slots: dict[str, tuple[int, int]] = {}
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)):
+            continue
+        if node.func.id != "Claim" or len(node.args) < 6:
+            continue
+        ident, value = node.args[0], node.args[5]
+        if not (isinstance(ident, ast.Constant) and isinstance(ident.value, str)):
+            continue
+        if value.end_lineno is None or value.end_col_offset is None:  # pragma: no cover
+            continue
+        slots[ident.value] = (
+            _offset(source, value.lineno, value.col_offset),
+            _offset(source, value.end_lineno, value.end_col_offset),
+        )
+    return slots
+
+
+def _offset(source: str, lineno: int, col: int) -> int:
+    """``(1 起的行号, 0 起的字节列)`` → 字节偏移（见 `claim_value_slots` 的警告）。
+
+    行按 ``str.splitlines`` 切（与 `ast` 同一套换行规则），再逐行编码 ——
+    直接对 ``source.encode()`` 调 ``bytes.splitlines`` 会漏掉 ``\\x0b``/``\\u2028``
+    这类只有字符串才认的换行，行号一错，下面全错。
+    """
+    lines = [line.encode("utf-8") for line in source.splitlines(keepends=True)]
+    return sum(len(line) for line in lines[: lineno - 1]) + col
+
+
+def apply_value_edits(source: str, edits: dict[str, object]) -> str:
+    """把新的期望值写回源码文本（按偏移**倒序**替换，避免后面的偏移失效）。
+
+    ``edits`` 的键是断言 id；值是要写进去的新值。全程在字节串上做 ——
+    刀口来自 `ast`，是字节偏移；先在字符上切、再编码，中文行就错位了。
+    """
+    slots = claim_value_slots(source)
+    todo = [(slots[ident], value) for ident, value in edits.items() if ident in slots]
+    out = source.encode("utf-8")
+    for (start, end), value in sorted(todo, key=lambda item: -item[0][0]):
+        out = out[:start] + str(value).encode("utf-8") + out[end:]
+    return out.decode("utf-8")
+
+
+def fix_claims(
+    *, source: Path | None = None, write: bool = False, only: str = ""
+) -> tuple[list[ClaimEdit], list[str]]:
+    """把**实测值**写回断言表：返回 ``(改动清单, 跳过原因)``。
+
+    调用方**必须把改动清单逐条打出来**（见本节开头那段：这一步的危险在于"照单全收"）。
+
+    清单里的每一条都是 :class:`ClaimEdit`；``.text_stale`` 是**提示不是错误**：
+    断言描述里还写着旧值时提醒一句，但**不代改**。描述是给人看的标签，
+    而有些旧数字是**故意留在描述里的历史对照**（``chr.tech_definitions``
+    的描述那句"178 是 1.14.2 旧值"就属于这种），按数字一律替换会把句子改错。
+
+    ⚠️ 比的是**导入时那份** ``CLAIMS``：同一进程里跑第二遍仍会拿旧期望值去比，
+    因此第二遍的"改动"是假的（CLI 每次是新进程，实际使用不受影响；
+    测试要重载断言表再断言幂等）。
+    """
+    path = source or (config.REPO / "tools" / "pdx" / "verify.py")
+    text = path.read_text(encoding="utf-8")
+    slots = claim_value_slots(text)
+    changes: list[ClaimEdit] = []
+    skipped: list[str] = []
+    edits: dict[str, object] = {}
+    for claim in CLAIMS:
+        if only and only not in claim.id:
+            continue
+        if claim.id not in slots:
+            skipped.append(f"{claim.id}: 断言表源码里找不到它的期望值字面量")
+            continue
+        if not isinstance(claim.expected, int):
+            skipped.append(
+                f"{claim.id}: 期望值不是整数（{type(claim.expected).__name__}），不自动改"
+            )
+            continue
+        result = check(claim)
+        if result.error:
+            skipped.append(f"{claim.id}: 量不出来（{result.error}）")
+            continue
+        if result.ok:
+            continue
+        if not isinstance(result.actual, int):
+            skipped.append(
+                f"{claim.id}: 实得值不是整数（{type(result.actual).__name__}），不自动改"
+            )
+            continue
+        edits[claim.id] = result.actual
+        changes.append(
+            ClaimEdit(
+                id=claim.id,
+                old=claim.expected,
+                new=result.actual,
+                text=claim.text,
+                text_stale=mentions_number(claim.text, claim.expected),
+            )
+        )
+    if write and edits:
+        path.write_text(apply_value_edits(text, edits), encoding="utf-8", newline="\n")
+    return changes, skipped
+
+
+#: 数字在**自然文本**里的边界：前面不能是数字/逗号/点，后面不能是数字/逗号/点。
+#: 不这么切，``1`` 会在 ``1.14.2`` 里命中、``178`` 会在 ``1178`` 里命中。
+_NUMBER_EDGE = r"(?<![\d,.]){}(?![\d,.])"
+
+
+def mentions_number(text: str, value: object) -> bool:
+    """文本里是否**作为独立数字**提到了 ``value``（千分位逗号不算边界内）。
+
+    用于 `fix_claims` 的 ``text_stale`` 提示 ——「描述里的数字与期望值对不上」
+    是最容易骗过眼睛的一类过期：表里印着"NAI 有 1017 个参数"，
+    右边一列却写着实得 1018。
+    """
+    return re.search(_NUMBER_EDGE.format(re.escape(str(value))), text) is not None
 
 
 def summarize(results: list[CheckResult]) -> dict[str, object]:

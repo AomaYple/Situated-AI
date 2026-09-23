@@ -21,10 +21,11 @@ from pdx import config, markers, verify
 #:
 #: 迁移完成时 231 条断言里有 198 条拿到标记；随后把三张手写表接进生成器
 #: （doc 07 §0 官方文档统计、doc 05 §0.4 全局规模、doc 09 §4 领域对应字段），
-#: 又补了 12 处正文标记 → **210 / 234**。
+#: 又补了 12 处正文标记 → **210 / 234**；1.14.4 演练时把 doc 08 §17 汇总表
+#: 那 4 个原先靠「锚点 + 量级」扫描的数字改成真标记 → **214 / 234**。
 #:
 #: **这个数字只能涨**：新加的可复算数字应当顺手加标记，而不是让覆盖率慢慢烂回去。
-MARKER_FLOOR = 210
+MARKER_FLOOR = 214
 
 #: **刻意不打标记**的断言：``claim_id → 理由``。三类，每一条都已经有人看守：
 #:
@@ -38,10 +39,6 @@ MARKER_NOT_NEEDED: dict[str, str] = {
     # ── 生成表拥有 ───────────────────────────────────────
     "script.lists_doc04": "doc 04 §0.2 目录规模表由 v3 tables 生成",
     "defines.script_values_blocks": "同上（该表的一行）",
-    "env.common_txt": "doc 08 的 common 主表由 v3 tables 生成",
-    "env.common_all": "同上",
-    "tree.game": "doc 08 的全局总数表由 v3 tables 生成",
-    "tree.game_dirs": "同上",
     "docs.total_bytes": "doc 07 §0 统计总览由 v3 tables 生成（从入库清单现算）",
     "def.namespaces": "doc 05 §0.4 全局规模表由 v3 tables 生成",
     "def.param_names": "同上",
@@ -56,8 +53,8 @@ MARKER_NOT_NEEDED: dict[str, str] = {
     "pfx.replace": "同上",
     "pfx.inject_or_create": "同上",
     # ── 数值不在正文里 ───────────────────────────────────
-    "tree.game_bytes": "doc 08 正文写 17,055.76 MB，断言按字节钉；正文没有这个数",
-    "tree.binaries_bytes": "同上（260.95 MB）",
+    "tree.game_bytes": "doc 08 正文写 17,055.80 MB，断言按字节钉；正文没有这个数",
+    "tree.binaries_bytes": "同上（261.18 MB）",
     "tree.gfx_bytes": "同上（9,690.00 MB）",
 }
 

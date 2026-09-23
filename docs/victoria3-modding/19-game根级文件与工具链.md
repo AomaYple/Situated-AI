@@ -4,12 +4,12 @@
 > `game\dlc\` 结构、`platform_specific_game_data\` 日志配置。
 > 全部 **【实测】**。
 
-> **版本提示（精确清单）**：本机游戏是 **1.14.3 (Ice Tea)**（版本指纹 `env.caligula_rev` = `bf52e8efe8f45334a3fbd421cc9e06d51077c045`、`env.caligula_branch` = `release/1.14.3`，两条断言本次 `v3 verify` 已核验）。原先那句笼统的「统计采集于 1.14.2」按类拆开：
-> - **已是 1.14.3 —— 表格已重算**：本篇 **5 张**表（`doc19 根目录文件`、`doc19 校验对象`、§3.1–§3.3 的 `paths.settings` 三张）由 `v3 tables` 生成；本次 `v3 tables` 核对「全部 169 张生成表都与文档一致」。
-> - **已是 1.14.3 —— 断言已核验**：本篇 **4 条** `env.*` 断言（`env.checksum_files`、`env.paths_settings_mappings`、`env.paths_checksummed_lines` 等）随 `v3 verify` 现场重扫，本次 **234/234 通过**（含本篇）。
+> **版本提示（精确清单）**：本机游戏是 **1.14.4 (Ice Tea)**（版本指纹 `env.caligula_rev` = `d369a59ea65e68d4cca455ddd558c497958927f9`、`env.caligula_branch` = `release/1.14.4`，两条断言本次 `v3 verify` 已核验）。原先那句笼统的「统计采集于 1.14.2」按类拆开：
+> - **已是 1.14.4 —— 表格已重算**：本篇 **5 张**表（`doc19 根目录文件`、`doc19 校验对象`、§3.1–§3.3 的 `paths.settings` 三张）由 `v3 tables` 生成；本次 `v3 tables` 核对「全部 171 张生成表都与文档一致」。
+> - **已是 1.14.4 —— 断言已核验**：本篇 **4 条** `env.*` 断言（`env.checksum_files`、`env.paths_settings_mappings`、`env.paths_checksummed_lines` 等）随 `v3 verify` 现场重扫，本次 **234/234 通过**（含本篇）。
 > - **已复测的「未读 / 未使用」类结论**（1.14.3 实测值，逐条见 §9）：§9 前四条「未读」文件本轮**全部读全**（`compound_settings.txt` **3,804 B / 302 行**、`settings_layout.txt` **3,290 B / 201 行**、`texture_converter_settings.json` **23,193 B / 1,016 行**、`map_editor_status.txt` **1,810,300 B / 125,788 行**）；§6 的 DLC 计数 = **17 个 `.dlc` + 17 个 `.dlc.json`**，其中 **11 个 DLC 同 stem 两份并存**（§6.2 原文只举了 `dlc001.dlc` 与 `dlc001_preorder.dlc.json` 这一对跨 stem 的例子）。
 > - **未复测（明确列出）**：§4 的 `game\tools\` 逐目录内容、§5 的 `platform_specific_game_data\` 日志配置、§8 的启动参数与日志分流表（均为 1.14.2 采集的正文结论，本轮未逐条重测）。
-> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.3）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
+> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.4）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
 
 ## 1<!--claim:env.checksum_files-->. `game\` 根目录 13 个文件
 

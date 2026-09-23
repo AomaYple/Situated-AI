@@ -57,9 +57,9 @@ class TestGameAnalysis:
     def test_all_three_content_roots(self, ga):
         assert set(ga.roots) == {"game", "jomini", "clausewitz"}
 
-    def test_common_has_136_dirs(self, ga):
+    def test_common_has_138_dirs(self, ga):
         """空目录也必须收录 —— scripted_modifiers 只有 .md 没有 .txt。"""
-        assert len(ga.common) == 136
+        assert len(ga.common) == 138
 
     def test_scripted_modifiers_present_but_empty(self, ga):
         res = ga.common["scripted_modifiers"]
@@ -76,7 +76,7 @@ class TestGameAnalysis:
             "buildings": 115,
             "laws": 138,
             "interest_groups": 8,
-            "modifier_type_definitions": 2364,
+            "modifier_type_definitions": 2365,
             "static_modifiers": 6128,
             "character_templates": 2011,
             "production_methods": 436,
@@ -102,8 +102,8 @@ class TestGameAnalysis:
         total = sum(v["键"] for v in ga.localization.values())
         assert total > 1_000_000
 
-    def test_official_docs_92(self, ga):
-        assert len(ga.official_docs) == 92
+    def test_official_docs_94(self, ga):
+        assert len(ga.official_docs) == 94
 
     def test_dlc_count(self, ga):
         assert len(ga.dlcs) == 17
@@ -215,7 +215,7 @@ class TestSerialization:
         text = json.dumps(d, ensure_ascii=False)
         assert len(text) > 1000
         back = json.loads(text)
-        assert back["概览"]["common 目录数"] == 136
+        assert back["概览"]["common 目录数"] == 138
 
     def test_mods_dict_is_jsonable(self, ma):
         d = analyze.to_mods_dict(ma)

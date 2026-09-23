@@ -2,8 +2,8 @@
 
 > **面向 Victoria 3 通用 mod 开发**的系统性参考资料（AI 相关改造是其中一部分，不是全部）。
 > 全部内容基于对**本机实际安装**的逐文件读取。**注意版本跨度**：多数主题文档的
-> 统计与「零使用」类结论采集于 **1.14.2**，而本机游戏已升级到 **1.14.3**；
-> 版本指纹（第 01、08 篇）与 `v3 verify` 的断言表已更新到 1.14.3，其余结论尚未逐条重测。
+> 统计与「零使用」类结论采集于 **1.14.2**，而本机游戏已升级到 **1.14.4**；
+> 版本指纹（第 01、08 篇）与 `v3 verify` 的断言表已更新到 1.14.4，其余结论尚未逐条重测。
 > 版式说明：全部内容来自**本机实际安装文件的逐文件读取**，而非网上二手资料；
 > 每一项事实都标注来源等级，可复核。文档与 `v3 verify` 断言表的一致性由
 > `tools/tests/test_docs_consistency.py` 持续看守。
@@ -18,7 +18,7 @@
 
 | 项目 | 值 |
 |---|---|
-| 游戏版本 | **Victoria 3 1.14.3 (Ice Tea)**，Clausewitz `caligula/release/1.14.x` |
+| 游戏版本 | **Victoria 3 1.14.4 (Ice Tea)**，Clausewitz `caligula/release/1.14.x` |
 | Steam App ID | `529340` |
 | 安装目录 | `C:\Program Files (x86)\Steam\steamapps\common\Victoria 3`（28,969 文件 / 17,172.8 MB） |
 | 用户数据 | `C:\Users\28905\Documents\Paradox Interactive\Victoria 3` |
