@@ -72,6 +72,7 @@ from pdx import (
     lockfile,
     modgen,
     modguard,
+    preflight,
     release,
     snapshot,
     tables_offline,
@@ -2719,6 +2720,60 @@ def _report_support(
         raise typer.Exit(EXIT_FAILED)
     where = "离线：与入库快照一致" if offline else "在线"
     console.print(f"[green]{len(found)} 条引用全部有入库支撑（{where}）✅[/]")
+
+
+@app.command("preflight")
+def preflight_cmd(
+    archive: Annotated[
+        str,
+        typer.Option(
+            "--archive", help="要跑的那份档案 id（给了就一并查它可不可跑、探针盯的是不是它）"
+        ),
+    ] = "",
+) -> None:
+    """开局前的**前置条件自检**（只读：不改配置、不动日志、不写盘）。
+
+    为什么要有这一条：一次实机会话的代价不是几秒钟 —— 起游戏到选国家界面实测约 137 秒，
+    还要把用户的屏幕借走、跑几十个游戏月，而**失败常常在开局十几分钟后才暴露**
+    （探针盯的国家不对、日志里混着上一局的自报、盘上产物是手改过的旧版本）。
+    这些条件**开局前全部可查**，而且不需要游戏在跑。
+
+    退出码与其它命令同一套口径：**0 = 可以开局；1 = 有该修的问题（如产物被手改、
+    上次实验没还原用户配置）；2 = 这台机器现在跑不了**（没有游戏 / 数据源坏了 / 没有
+    `content_load.json`）。它**只报告**，绝不顺带修 —— 检查脚本自己去改环境，
+    就成了第二个会留下烂摊子的东西。
+    """
+    report = preflight.run(archive=archive or None)
+    table = Table(title="开局前置条件", show_lines=False)
+    table.add_column("", width=2, justify="center")
+    table.add_column("条件")
+    table.add_column("结论", overflow="fold")
+    table.add_column("怎么修", overflow="fold")
+    for check in report.checks:
+        table.add_row(
+            "✅" if check.ok else "❌",
+            escape(check.name),
+            escape(check.detail),
+            escape(check.fix if not check.ok else ""),
+        )
+    console.print(table)
+    code = report.exit_code()
+    if code == 0:
+        console.print("[green]可以开局[/]")
+        if report.notes:
+            console.print(f"[yellow]另有 {len(report.notes)} 条提示[/]（不拦路，先看一眼）：")
+            for note in report.notes:
+                console.print(f"   [dim]{escape(note.describe())}[/]")
+        if archive:
+            console.print(
+                f"接着：`python tools/probe/stage3_rerun.py --months 66 --archive {archive} --fresh-logs`"
+            )
+        else:
+            console.print("接着：`python -m pdx.game_auto run --wait-tests <秒>`")
+        return
+    if code == 2:
+        _fail(f"{len(report.blocking)} 条前置条件缺失 —— 这台机器现在跑不了这一局")
+    _fail(f"{len(report.wrong)} 条该先修（否则这一局会白跑）")
 
 
 @app.command("modguard")

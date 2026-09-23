@@ -36,7 +36,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pdx import ab_probe, config, modgen, mods
+from pdx import ab_probe, config, modgen, mods, preflight
 from pdx import game_auto as ga
 
 DOCS = Path.home() / "Documents" / "Paradox Interactive" / "Victoria 3"
@@ -480,6 +480,11 @@ def main(argv: list[str] | None = None) -> int:
         help="探针盯哪一份档案（默认 = mod/data 里的第一份；阶段 5 每批各跑一次）",
     )
     parser.add_argument(
+        "--skip-preflight",
+        action="store_true",
+        help="跳过开局前的自检（默认自检：起游戏一次约 137 秒，白跑一次远比自检贵）",
+    )
+    parser.add_argument(
         "--no-probe",
         action="store_true",
         help="**只装真 mod、不装探针** —— 测「和平期占槽率 ≈ 0」时必须这样（见 deploy 的说明）",
@@ -508,6 +513,25 @@ def main(argv: list[str] | None = None) -> int:
         for key, value in result.items():
             print(f"  {key:34s}: {value}")
         return 0
+
+    # ⚠️ **自检放在任何改动之前**（2026-09-23）：起游戏到选国家界面实测约 137 秒，
+    # 还要跑几十个游戏月 —— 而"探针盯错了国家""盘上产物是手改过的""日志里混着上一局"
+    # 这些条件**开局前全部可查**。一次白跑的代价远大于这几毫秒。
+    if not args.skip_preflight:
+        report = preflight.run(archive=args.archive or None)
+        for line in report.lines():
+            print(f"  {line}")
+        if report.exit_code():
+            print("  ⇒ 先处理上面这些再开局（确实想跳过：--skip-preflight）")
+            return report.exit_code()
+
+    # ⚠️ **上一次被强杀留下的探针态，这里自愈**（2026-09-24 真实事故）：
+    # 会话被中途杀掉时 `finally` 不会跑，用户的配置就留在"只剩探针"的状态里
+    # —— 而那个状态**只可能是我们造成的**（用户不会把 `zz_probe*` 加进自己的列表），
+    # 所以拿备份还原是安全的。自愈之后照常继续，不让人为了修我们留下的状态再跑一趟。
+    if preflight.probe_state_backup() is not None and BACKUP.exists():
+        print(f"⚠️ 上次会话把配置留在探针态 —— 先用 {BACKUP.name} 还原，再继续")
+        print(f"  {restore()}")
 
     ga.ALLOW_REAL_INPUT = True  # 显式入口
     leftover = ga._process_pids()
