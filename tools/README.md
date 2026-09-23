@@ -37,6 +37,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `cache.py` | 解析缓存，保证同一文件只解析一次 |
 | `config.py` | 路径与常量，支持 `V3_ROOT` / `V3_USERDIR` / `V3_WORKSHOP` 覆盖 |
 | `citations.py` | **数据源里 `文件:行号` 引用的机械核对**（P10 从纪律变成可执行检查）：把 `why` 里的 `00_code_static_modifiers.txt:322` 这类引用逐条解析到原版真实文件，报 `missing`（文件名写错 / 少了 `common/` 前缀）/ `ambiguous`（同名文件几十个，等于没指）/ `out_of_range`（文件只有 300 行却引了 `:322`）。⚠️ 它**不做语义判断** —— "那一行真的支持这条 why 吗"仍要人看，它只保证"引用存在且唯一"。上线当天就抓出既有档案里 5 处指不到文件的引用与一条错的事实断言（见 `exec/阶段5-批次1-结果.md` §四）。**`--offline`（B77）**：精简快照里的 `citation_support` 域记着每条引用的**文件行数 + 被引那一行的文本指纹**，于是这条纪律在**没有游戏的机器（CI）**上也守得住；有游戏时它还顺手核「被引那一行**还是不是那句话**」—— 那正是官方更新挪走我们依据的信号。入口 `v3 citations [--offline]` |
+| `release.py` | **发布流程的机械部分**（阶段 7 的最后一件）：`CHANGELOG.md` ↔ 档案 ↔ 元数据三边一致。它原来只有一条人工纪律（「档案 id 必须出现在 changelog 条目里」），而 §1 说过**没有检查方式的原则不算原则** —— 现在版本 / 覆盖 / 幽灵 / 归档物四个面都是机器可查的。**为什么发布说明不整份生成**：它是散文、是作者的判断；P9 要集中的是阈值/权重/文案这类**事实**，所以分工是「结构由机器守、散文由人写」。入口 `v3 release [--template]` |
 | `scan.py` | 文件系统扫描与统计 |
 | `extract.py` | 目录级条目与字段提取 |
 | `defines.py` | defines 专用提取（命名空间、参数形态、覆盖预览） |
@@ -88,6 +89,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 show` | `show_outputs.py` | 转储产物的结构与规模 |
 | `v3 mirror check` | （新增） | 官方 `.md` 清单 vs 本机本体 / 本地镜像，**只读**，有差异退出码 1 |
 | `v3 strings` | （新增） | 开采 `victoria3.exe` 的字符串：引擎里有、脚本里没用的标识符（`--limit` / `--no-list`）。原先那两个数是没留口径的一次性采集值，现在可随时重算 |
+| `v3 release` | （新增，阶段 7） | **发布说明 ↔ 档案 ↔ 元数据三边一致**：① 最新一节版本 == 元数据的 `version`；② `mod/data` 里每份档案都以条目形式写进了 `CHANGELOG.md`；③ 没有"幽灵条目"（删了档案却留着说明）；④ 各档案声明的 `game_version` == 元数据的 `supported_game_version`。**不读游戏**，已进 CI。`--template` 打印缺的条目骨架（只打印：那句话得人来说） |
 | `v3 refresh` | （新增） | **游戏升级后的一条命令**：`tables --write` + `verify --fix`，再核一遍并列出机器改不了的剩余项（`--dry-run` 只报告）。跑完全绿说明没有任何需要人改的东西 |
 | `v3 mirror write` | （新增） | 重生成清单（要游戏）；`--sync` 顺便把原文拷到本机 `research/official-docs/` |
 | `v3 tables --offline` | （新增） | **不读游戏**核对那张表的另一条路：快照里记着每张生成表当时的数据行，这条只比文档与快照（CI 用；`--write` 可按快照恢复）。它证明「表与入库快照一致」，不证明「表与现在的游戏一致」 |
@@ -193,7 +195,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-1504 条用例（`pytest --collect-only` 实测），
+1520 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -218,6 +220,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
 | `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
+| `test_release.py` | 发布流程的机械部分（`v3 release`）：版本对不上 / 少写一份档案 / 幽灵条目 / 没有发布说明 / 没有版本标题 / 归档物版本不一致，各钉一条；外加一条跑在**真实 `CHANGELOG.md`** 上的看守（不然这套检查只是自娱自乐） |
 | `test_citations.py` | `文件:行号` 引用的核对：认出区间写法、**不把 `P2:F9` 这类章节号当引用**、同名多文件必须报歧义、行号越界要报出来、仓库内文件也认；最后一条跑在**真实数据源**上（**全部档案**的引用必须全部指得到）—— 这条断言就是"依据不许是编的"。另有一组看守入库的**引用支撑域**（B77）：域的形状与行数/指纹、离线只看记录不看在现场、在线核得出「被引那一行变了」、真实数据源的域与现场一致、以及**入库快照里确实带这个域** |
 | `test_cache.py` | 缓存透明性：`parse_cached` 必须恒等于 `parse_file` |
 | `test_coverage.py` | **覆盖面契约**：每个文件必须归入四类之一，落不进就失败 |
@@ -474,7 +477,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：1504 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：1520 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

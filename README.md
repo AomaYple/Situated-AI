@@ -130,7 +130,7 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **1504 条**用例（1496 通过 / 8 按条件跳过） |
+| 测试 | **1520 条**用例（1512 通过 / 8 按条件跳过） |
 | 覆盖率 | **88.07%**（`v3 cov` 实测；门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | 6,250 个 PDX 文件 + 1,877 个本地化文件 |
@@ -148,12 +148,13 @@ Situated AI/
 │   ├─ official-docs/        92 篇游戏自带官方 .md 的逐字镜像（**不入库**，用 `v3 mirror write` 重建）
 │   └─ official-docs.manifest.json  镜像清单：路径 / 字节 / 行数 / sha256（**入库**，Paradox 版权内容不在其中）
 ├─ tools/
-│   ├─ pdx/                  工具链核心包（51 个模块；解析部分纯标准库，cli.py 用 typer + rich）
-│   ├─ tests/                测试（72 个测试文件 / 1504 条用例）
+│   ├─ pdx/                  工具链核心包（54 个模块，不含 `__init__.py`；解析部分纯标准库，cli.py 用 typer + rich）
+│   ├─ tests/                测试（73 个测试文件 / 1520 条用例）
 │   ├─ prof/                 性能剖析
 │   ├─ out/                  分析产物（已 gitignore）
 │   └─ reports/              人可读报告（**入库**）
 ├─ pyproject.toml            唯一配置源：依赖 / pytest / ruff / mypy / coverage
+├─ CHANGELOG.md              **发布说明**（玩家读的那一份）；`v3 release` 核它与档案/元数据一致
 └─ README.md  LICENSE  .gitignore  .gitattributes
 ```
 

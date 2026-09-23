@@ -72,6 +72,7 @@ from pdx import (
     lockfile,
     modgen,
     modguard,
+    release,
     snapshot,
     tables_offline,
     tabular,
@@ -2560,6 +2561,43 @@ def citations_cmd(
             )
         raise typer.Exit(EXIT_FAILED)
     console.print(f"[green]{len(found)} 条引用全部指得到唯一一行 ✅[/]")
+
+
+@app.command("release")
+def release_cmd(
+    template: Annotated[
+        bool,
+        typer.Option("--template", help="只打印还没写进发布说明的档案条目骨架（不检查）"),
+    ] = False,
+) -> None:
+    """检查**发布说明 ↔ 档案 ↔ 元数据**三边一致（阶段 7 的发布流程）。
+
+    `01-大方向.md` §3 阶段 7 要的是「发布流程（changelog 对应到档案）」，而它原来只有一条
+    人工纪律：`mod/data/<id>.toml` 的 `id` 必须出现在 changelog 条目里。§1 的原则是
+    **没有检查方式的原则不算原则** —— 这条命令把那条纪律变成四件机器可查的事：
+
+    ```text
+    ① 版本对得上    changelog 最新一节 == 元数据的 version（发了版没写说明？）
+    ② 每份档案都写过  mod/data 里每个 id 都以条目形式出现在 changelog 里
+    ③ 没有幽灵条目  changelog 里提到的 id 都真的存在（删了档案还留着说明？）
+    ④ 归档物对得上  各档案声明的 game_version == 元数据的 supported_game_version
+    ```
+
+    格式要求写在 `pdx/release.py` 的开头，也写在 `CHANGELOG.md` 自己的第一段 ——
+    **机器可查的前提是格式固定**。条目骨架可以用 `--template` 打印出来（只打印，不写盘：
+    那句话得人来说）。
+    """
+    report = release.check()
+    if template:
+        console.print(release.template(report))
+        return
+    console.print(report.describe())
+    if not report.ok:
+        for item in report.problems:
+            console.print(f"  [red]❌ {escape(item)}[/]")
+        console.print("[yellow]跑 `v3 release --template` 可以打印缺的条目骨架[/]")
+        raise typer.Exit(EXIT_FAILED)
+    console.print("[green]发布说明、档案、元数据三边一致 ✅[/]")
 
 
 def _report_support(
