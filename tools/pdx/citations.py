@@ -27,15 +27,16 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from pdx import config
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
-    from pathlib import Path
+    from collections.abc import Iterable, Iterator, Mapping
 
 #: 引用：``名字:行号`` / ``名字:起-止``。
 #:
@@ -207,13 +208,136 @@ def summarize(citations: Iterable[Citation]) -> dict[str, object]:
     }
 
 
+# ── 入库的「引用支撑域」：让这条纪律在**没有游戏的机器**上也守得住（B77）──
+#
+# 为什么需要它：`v3 citations` 要**打开原版文件**确认那一行在不在，而 CI runner 上没有游戏。
+# 其余门禁都有离线通道（`verify --from-snapshot` / `tables --offline` / `modguard --offline`
+# / `ai-surface --offline`），只有这一条没有 —— 这是当前 CI 的唯一实质缺口。
+#
+# 口径（与其它离线通道一致）：**证明"与入库快照一致"，不证明"与现在的游戏一致"**。
+# 后者永远是本机门禁的活（那边 `live=True` 会顺手核一遍"被引那一行还是不是那句话"，
+# 也就是"官方更新把我们的依据挪走了"这个信号）。
+
+#: 精简快照里的域名（形状与其余域一致：``域 -> 名称 -> 字符串列表``）。
+SECTION = "citation_support"
+
+#: 指纹取 sha256 的前多少位。每行一条、全仓不到一千条 ⇒ 16 位足够，体积减半。
+DIGEST_LEN = 16
+
+
+def line_digest(text: str) -> str:
+    """被引那一行的文本指纹（**去首尾空白**后取 sha256 前 :data:`DIGEST_LEN` 位）。
+
+    为什么去空白：行尾空格在原版文件里没有语义，算进去只会制造假漂移。
+    """
+    return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()[:DIGEST_LEN]
+
+
+def support_domain(
+    targets: Iterable[Path] | None = None, *, root: Path | None = None
+) -> dict[str, list[str]]:
+    """产出引用支撑域：``引用写法 -> ["lines=N", "<行号>:<指纹>", …]``。
+
+    为什么按**引用写法**（而不是解析后的相对路径）建键：离线通道没有游戏树，
+    解析不了 `00_defines.txt` 到底指谁 —— 那边能核的只有「这条引用与入库时一模一样」。
+
+    解析不到的引用**不入域**：它本来就该在在线检查里报错，不该被记成"有支撑"。
+
+    ⚠️ 返回值必须**排序**：快照有一条不变量 —— 每个域的字符串列表都是有序的
+    （`test_snapshot.py::TestDeterminism::test_lists_are_sorted` 守着它），
+    否则两份内容相同的快照会因为遍历顺序不同而"逐字节不同"（本次实测踩到：
+    第一版返回的是插入序，那一条一次红出 50 个子项）。
+    """
+    out: dict[str, list[str]] = {}
+    cache: dict[Path, list[str]] = {}
+    for item in scan_paths(targets if targets is not None else [Path("mod/data")], root=root):
+        if not item.ok:
+            continue
+        path = Path(item.resolved)
+        if path not in cache:
+            cache[path] = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = cache[path]
+        body = out.setdefault(item.file, [f"lines={len(lines)}"])
+        for number in range(item.start, min(item.end, len(lines)) + 1):
+            body.append(f"{number}:{line_digest(lines[number - 1])}")
+    return {name: sorted(set(body)) for name, body in out.items()}
+
+
+def parse_support(body: Iterable[str]) -> tuple[int, dict[int, str]]:
+    """把域里的一条记录解成 ``(文件行数, {行号: 指纹})``。"""
+    total = 0
+    digests: dict[int, str] = {}
+    for raw in body:
+        text = raw.strip()
+        if text.startswith("lines="):
+            total = int(text[len("lines=") :])
+        elif ":" in text:
+            number, _, digest = text.partition(":")
+            digests[int(number)] = digest
+    return total, digests
+
+
+def unsupported(
+    items: Iterable[Citation],
+    support: Mapping[str, list[str]],
+    *,
+    live: bool = False,
+    root: Path | None = None,
+) -> list[tuple[Citation, str]]:
+    """把引用对到**入库支撑域**上；返回对不上的那些 + 原因。
+
+    ``live=True``（有游戏本体）时**再核一遍**「被引那一行还是不是那句话」——
+    那正是「官方更新把我们的依据挪走了」这第一手信号（`01-大方向.md` §5 的版本演练要的就是它）。
+    ``live=False``（CI）只核「与入库快照一致」。
+
+    域里没有的引用**不算通过**：那是"这条依据从来没被记下来过"（或刚加、忘了刷新快照）。
+    """
+    out: list[tuple[Citation, str]] = []
+    cache: dict[Path, list[str]] = {}
+    for item in items:
+        body = support.get(item.file)
+        if body is None:
+            out.append(
+                (item, "不在入库支撑域里 —— 新加的引用要刷新快照（v3 snapshot create --compact）")
+            )
+            continue
+        total, digests = parse_support(body)
+        if item.start > total or item.end > total:
+            out.append((item, f"入库时该文件只有 {total} 行"))
+            continue
+        if not live:
+            continue
+        path, status, detail = _resolve(item.file, root=root)
+        if path is None:
+            out.append((item, f"现在解析不到了（{status}）：{detail}"))
+            continue
+        if path not in cache:
+            cache[path] = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = cache[path]
+        for number in range(item.start, item.end + 1):
+            recorded = digests.get(number)
+            if recorded is None:
+                out.append((item, f"第 {number} 行没被记进支撑域"))
+                break
+            if number > len(lines) or line_digest(lines[number - 1]) != recorded:
+                out.append((item, f"第 {number} 行的内容变了（原版更新？）—— 核对后刷新快照"))
+                break
+    return out
+
+
 __all__ = [
     "CITATION_RE",
+    "DIGEST_LEN",
+    "SECTION",
     "Citation",
     "clear_cache",
     "game_index",
+    "line_digest",
+    "parse_support",
     "scan_file",
     "scan_paths",
     "scan_text",
     "summarize",
+    "support_domain",
+    "unsupported",
 ]

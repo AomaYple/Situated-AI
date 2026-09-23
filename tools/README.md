@@ -36,7 +36,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `parser.py` | 语法：递归下降，**花括号深度判定顶层**；`TOLERATED_ERRORS` 定义可容忍异常 |
 | `cache.py` | 解析缓存，保证同一文件只解析一次 |
 | `config.py` | 路径与常量，支持 `V3_ROOT` / `V3_USERDIR` / `V3_WORKSHOP` 覆盖 |
-| `citations.py` | **数据源里 `文件:行号` 引用的机械核对**（P10 从纪律变成可执行检查）：把 `why` 里的 `00_code_static_modifiers.txt:322` 这类引用逐条解析到原版真实文件，报 `missing`（文件名写错 / 少了 `common/` 前缀）/ `ambiguous`（同名文件几十个，等于没指）/ `out_of_range`（文件只有 300 行却引了 `:322`）。⚠️ 它**不做语义判断** —— "那一行真的支持这条 why 吗"仍要人看，它只保证"引用存在且唯一"。上线当天就抓出既有档案里 5 处指不到文件的引用与一条错的事实断言（见 `exec/阶段5-批次1-结果.md` §四）。入口 `v3 citations` |
+| `citations.py` | **数据源里 `文件:行号` 引用的机械核对**（P10 从纪律变成可执行检查）：把 `why` 里的 `00_code_static_modifiers.txt:322` 这类引用逐条解析到原版真实文件，报 `missing`（文件名写错 / 少了 `common/` 前缀）/ `ambiguous`（同名文件几十个，等于没指）/ `out_of_range`（文件只有 300 行却引了 `:322`）。⚠️ 它**不做语义判断** —— "那一行真的支持这条 why 吗"仍要人看，它只保证"引用存在且唯一"。上线当天就抓出既有档案里 5 处指不到文件的引用与一条错的事实断言（见 `exec/阶段5-批次1-结果.md` §四）。**`--offline`（B77）**：精简快照里的 `citation_support` 域记着每条引用的**文件行数 + 被引那一行的文本指纹**，于是这条纪律在**没有游戏的机器（CI）**上也守得住；有游戏时它还顺手核「被引那一行**还是不是那句话**」—— 那正是官方更新挪走我们依据的信号。入口 `v3 citations [--offline]` |
 | `scan.py` | 文件系统扫描与统计 |
 | `extract.py` | 目录级条目与字段提取 |
 | `defines.py` | defines 专用提取（命名空间、参数形态、覆盖预览） |
@@ -170,14 +170,18 @@ CI runner 上没有游戏本体，所以「哪些命令能在无游戏环境跑�
 | `v3 modgen --check` | **exit 0** | 盘上产物与 `mod/data/*.toml` 逐字节一致（P3：没有手写产物） | ✅ |
 | `v3 verify --from-snapshot` | **exit 0** | 断言注册表与**入库快照**一致（不是"游戏里现在还是这个数"） | ✅ |
 | `v3 tables --offline` | **exit 0** | 171 张生成表与**入库快照**一致（不是"表与现在的游戏一致"） | ✅ |
+| `v3 citations --offline` | **exit 0**（实测） | 850 条引用与**入库快照的 `citation_support` 域**一致 —— 域里记着每条引用的**文件行数 + 被引那一行的文本指纹**（B77） | ✅ |
 | `v3 lock` | **exit 0** | 装出来的环境与 `requirements.lock` 逐条一致 | ✅（Windows job） |
-| `v3 modguard` | **exit 2** | 闸门 ③④⑤（稀释预算 / 往返净度 / 生成可复现）**已能离线跑**；但闸门 ①② 要与原版键名、修正字段池取交集 ⇒ 无游戏时整条命令报「前置条件缺失」而不是"通过" | ❌（待 `--offline` 通道） |
-| `v3 ai-surface --check` | **exit 2** | 三件事全部枚举自原版 `ai_strategies` / `defines` ⇒ 无游戏时不可用。**退出码 2 + 一句话**，不是 traceback（这条在阶段 4 之前是 `FileNotFoundError` + 退出码 1） | ❌（待 `--offline` 通道） |
+| `v3 modguard --offline` | **exit 0** | 五道闸门；①② 的原版真值改读入库快照（③④⑤ 本来就不读游戏） | ✅ |
+| `v3 ai-surface --check --offline` | **exit 0** | 三件事全部枚举自原版 `ai_strategies` / `defines`（离线改读快照，且复用同一个 `render()`） | ✅ |
+| `v3 modguard` / `v3 ai-surface --check`（**在线**） | **exit 2** | 闸门 ①② 要与原版键名、修正字段池取交集 ⇒ 无游戏时报「前置条件缺失」而不是"通过"（退出码 2 + 一句话，不是 traceback） | ❌（CI 用 `--offline`） |
+| `v3 citations`（**在线**） | **exit 1**（实测：850 条里 827 条报 missing） | 它要**打开原版文件**确认那一行在不在 ⇒ 无游戏时是**假红**。CI 上必须用 `--offline` | ❌（CI 用 `--offline`） |
 | `v3 cov` | 不适用 | 无游戏时集成用例被 `conftest` 跳过，覆盖率必然低于 86% 下限 ⇒ **门禁留在本机**，这不是遗漏 | ❌（刻意） |
 
 两条口径（别读错）：
-* **exit 2 不是"闸门不过"**，是"这台机器上跑不了"。CI 里把 2 当成通过是错的，
-  所以上表里 `modguard` / `ai-surface` 两行**现在都不进 CI**，等它们的 `--offline` 通道。
+* **exit 2 不是"闸门不过"**，是"这台机器上跑不了"。**exit 1 才是判据不过** ——
+  所以 `v3 citations` 的在线版在无游戏的机器上给的是**假红**（827/850 条报 missing），
+  那种情况要用 `--offline`；把在线版的 1 当成"引用真的坏了"是错的。
 * 离线通道证明的是**「与入库快照一致」**，不是**「与现在的游戏一致」** ——
   后者永远是本机门禁（`v3 verify` / `v3 tables` 不带 `--offline`）。两者合起来才完整。
 
@@ -189,7 +193,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-1493 条用例（`pytest --collect-only` 实测），
+1504 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -214,7 +218,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
 | `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
-| `test_citations.py` | `文件:行号` 引用的核对：认出区间写法、**不把 `P2:F9` 这类章节号当引用**、同名多文件必须报歧义、行号越界要报出来、仓库内文件也认；最后一条跑在**真实数据源**上（**全部档案**的引用必须全部指得到）—— 这条断言就是"依据不许是编的" |
+| `test_citations.py` | `文件:行号` 引用的核对：认出区间写法、**不把 `P2:F9` 这类章节号当引用**、同名多文件必须报歧义、行号越界要报出来、仓库内文件也认；最后一条跑在**真实数据源**上（**全部档案**的引用必须全部指得到）—— 这条断言就是"依据不许是编的"。另有一组看守入库的**引用支撑域**（B77）：域的形状与行数/指纹、离线只看记录不看在现场、在线核得出「被引那一行变了」、真实数据源的域与现场一致、以及**入库快照里确实带这个域** |
 | `test_cache.py` | 缓存透明性：`parse_cached` 必须恒等于 `parse_file` |
 | `test_coverage.py` | **覆盖面契约**：每个文件必须归入四类之一，落不进就失败 |
 | `test_conftest.py` | 「没有游戏就自动跳过集成用例」这条机制本身（子进程真跑一次收集） |
@@ -470,7 +474,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：1493 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：1504 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

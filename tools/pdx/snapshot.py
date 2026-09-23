@@ -24,7 +24,7 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from . import ai_surface, config, vanilla_index
+from . import ai_surface, citations, config, vanilla_index
 from .cache import parse_cached
 from .defines import extract_defines
 from .extract import entry_fields
@@ -304,6 +304,9 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     # —— 不是另抄一份清单。
     snap.sections.update(vanilla_index.snapshot_sections(config.GAME))
     snap.sections[ai_surface.SECTION] = ai_surface.snapshot_section(config.GAME)
+    # `v3 citations` 的离线通道（B77）：把「数据源引了哪些文件:行号、那一行长什么样」
+    # 记进快照 —— 没有游戏的机器上，这一条纪律第一次守得住。
+    snap.sections[citations.SECTION] = citations.support_domain()
     if verbose:
         for name in (*vanilla_index.SECTIONS, ai_surface.SECTION):
             body = snap.sections[name]

@@ -2535,6 +2535,1375 @@
     "switch=0006:AUTONOMOUS_INVESTMENT_CONSTRUCTION_ENABLED"
    ]
   },
+  "citation_support": {
+   "00_ai.txt": [
+    "38:8a708787c3766920",
+    "39:90f430e59de967ed",
+    "lines=1311"
+   ],
+   "00_amendments_enactment_04.txt": [
+    "644:a2eac52ac15cdebd",
+    "lines=1755"
+   ],
+   "00_art_jes.txt": [
+    "11:9da8031cb97e230e",
+    "lines=177"
+   ],
+   "00_behavior_variables.txt": [
+    "6:68c8f1f7f914c4f7",
+    "lines=19"
+   ],
+   "00_belle_epoque.txt": [
+    "68:af01a3d9015e769a",
+    "lines=295"
+   ],
+   "00_boxer_rebellion.txt": [
+    "12:0856d84a90022dde",
+    "14:d79055a87c86b211",
+    "49:33a72220d3ed01e5",
+    "4:3f358865ed89b6fc",
+    "lines=52"
+   ],
+   "00_church_and_state.txt": [
+    "547:158e06388e9f5c3a",
+    "lines=645"
+   ],
+   "00_code_on_actions.txt": [
+    "4951:51b7d73c3d2f7d4e",
+    "5540:fbee8692bde63af6",
+    "5541:2f827f2d84aa2a2c",
+    "5542:2d871835c6f374ab",
+    "5772:0e499c13ed80d25b",
+    "7043:dca6077267487d80",
+    "7046:8ea971bf16cc660d",
+    "7048:ec56b6d03d1449f1",
+    "lines=8015"
+   ],
+   "00_code_static_modifiers.txt": [
+    "12:07dfa0685dc6b3f4",
+    "234:2cbf48d5cf3b0787",
+    "236:894d0410c012fa89",
+    "243:9105429cfa1f7222",
+    "322:7ced9969428784f1",
+    "323:97fe1b8551abc888",
+    "324:779fd5c8d4ef231e",
+    "325:4aac2fc2b168692c",
+    "326:41c630d2c85a1965",
+    "327:d10b36aa74a59bcf",
+    "328:e3b0c44298fc1c14",
+    "329:eae845758158a5ad",
+    "330:c9bf848f2e38050a",
+    "331:1f61b096d89a7820",
+    "332:0a464bd34a7daf10",
+    "333:20dc06e77b88ce5d",
+    "334:ef1f71e70e792ba9",
+    "335:1e71917ec35f6751",
+    "336:d10b36aa74a59bcf",
+    "337:e3b0c44298fc1c14",
+    "338:b7fc26fc45945dfa",
+    "339:d10b36aa74a59bcf",
+    "340:e3b0c44298fc1c14",
+    "341:4fac47f445dab214",
+    "342:f74cbb80476309b0",
+    "343:412827b4dce3c58e",
+    "344:2383d40a33a7b1f4",
+    "345:37c70b376d71e856",
+    "346:18c2a4ee155b8590",
+    "347:89e4f7e658599314",
+    "348:b271f368a4b3e796",
+    "349:d10b36aa74a59bcf",
+    "350:e3b0c44298fc1c14",
+    "351:680f7c9ecfa8d12e",
+    "352:f74cbb80476309b0",
+    "353:7b1adb8d967f3feb",
+    "986:12fe792b810fcce6",
+    "lines=1036"
+   ],
+   "00_corn_laws.txt": [
+    "10:d10b36aa74a59bcf",
+    "11:1ff5b4c6d69ad746",
+    "12:bb545c574d2a0a2f",
+    "13:e5755723c7716db8",
+    "14:d10b36aa74a59bcf",
+    "15:d10b36aa74a59bcf",
+    "16:e3b0c44298fc1c14",
+    "17:1cc98ed731baca4b",
+    "18:4e5d7b3b1400bdbe",
+    "19:ee5bb6f32ead0ad2",
+    "20:88a1f1c5b5eb9a79",
+    "21:d10b36aa74a59bcf",
+    "22:d10b36aa74a59bcf",
+    "23:1ff5b4c6d69ad746",
+    "24:bb545c574d2a0a2f",
+    "25:e5755723c7716db8",
+    "26:d10b36aa74a59bcf",
+    "27:87f840ba0ea523d4",
+    "28:247d0542650f08f8",
+    "29:de7f19635c325cf9",
+    "2:7fdbf8a12d04ae5d",
+    "30:d10b36aa74a59bcf",
+    "31:d10b36aa74a59bcf",
+    "3:e3b0c44298fc1c14",
+    "4:cf07e8499e9fd275",
+    "6:5ff70cea2b79b924",
+    "79:99edbe1aab6d32ac",
+    "7:55e0c0af792249fc",
+    "8:87f840ba0ea523d4",
+    "9:55ae7dea696578b3",
+    "lines=82"
+   ],
+   "00_countries.txt": [
+    "1818:5c578b05b254f030",
+    "lines=5251"
+   ],
+   "00_german_unification.txt": [
+    "2:458780afa0cc9f05",
+    "lines=372"
+   ],
+   "00_governance_principles.txt": [
+    "717:e2421da58925d8d5",
+    "lines=1307"
+   ],
+   "00_impose_law.txt": [
+    "4:37c2183e69232c86",
+    "lines=105"
+   ],
+   "00_ip3_02_modifiers.txt": [
+    "104:c868dc7712eb5474",
+    "302:1ffd07025b67937f",
+    "lines=475"
+   ],
+   "00_ip3_04_modifiers.txt": [
+    "334:066fe5ff0f6dd0ba",
+    "lines=580"
+   ],
+   "00_ip3_victoria_scripted_triggers.txt": [
+    "193:74106413da23a618",
+    "194:3b5d0a9bb3a4df26",
+    "195:6d76dcc5e3ed47da",
+    "196:d10b36aa74a59bcf",
+    "lines=1677"
+   ],
+   "00_ip4_02_modifiers.txt": [
+    "20:f84a7f1d3a7bd413",
+    "64:76119d06d5bc9337",
+    "71:24f9ef8d5f2d2f57",
+    "lines=374"
+   ],
+   "00_ip4_03_modifiers.txt": [
+    "14:996a8c8f02d3cb34",
+    "7:3a8b443fddb04d21",
+    "lines=236"
+   ],
+   "00_ip4_04_modifiers.txt": [
+    "12:b9587816156795c1",
+    "139:9105429cfa1f7222",
+    "141:d4c64257dff66a0a",
+    "172:7a075e0c7dcdbeb3",
+    "173:d006ad6e29afa7d0",
+    "174:e5bc29d5e2335cd3",
+    "175:759b6b7cb910b877",
+    "176:20e612e1ff9d569a",
+    "177:6ac978fddae4a6a6",
+    "178:c9b01f356ad79069",
+    "19:e2421da58925d8d5",
+    "219:7ae7b76126c1f117",
+    "26:759b6b7cb910b877",
+    "33:25c02ba5447545f8",
+    "368:416a96a30b85bffb",
+    "47:20e612e1ff9d569a",
+    "lines=582"
+   ],
+   "00_journal_entries.txt": [
+    "106:35cebbe5745e7d20",
+    "112:03d0e2b64ff80535",
+    "113:fa1f37812c89ac5c",
+    "114:d10b36aa74a59bcf",
+    "68:e7818373196a0e9d",
+    "lines=138"
+   ],
+   "00_liberalism.txt": [
+    "54:3be98b56a86aaf0e",
+    "lines=172"
+   ],
+   "00_meiji_restoration.txt": [
+    "314:196fc1aef0e78638",
+    "330:3e4085ae1faf53e2",
+    "lines=881"
+   ],
+   "00_modifier_types.txt": [
+    "662:4b173e13eac60f2c",
+    "lines=3906"
+   ],
+   "00_movement_effects.txt": [
+    "1:c4ba9f948ca77364",
+    "2:40acb7feda6c3802",
+    "3:da86e3f6e492d1a9",
+    "4:b8322262c99c4fc1",
+    "5:56dad4e4da6920fc",
+    "6:d10b36aa74a59bcf",
+    "7:d10b36aa74a59bcf",
+    "lines=7"
+   ],
+   "00_opium_wars.txt": [
+    "115:37c2183e69232c86",
+    "117:fc33d274ba935c54",
+    "118:1ff5b4c6d69ad746",
+    "119:94afdb8b848c4835",
+    "120:fcea4b2181f8504c",
+    "121:d10b36aa74a59bcf",
+    "122:ee6269adea7cd781",
+    "123:9b31868e34fc44d9",
+    "124:3b5d55a13da8c3de",
+    "125:f767b3327f9e31e6",
+    "126:9b31868e34fc44d9",
+    "127:834009230eea1355",
+    "128:d10b36aa74a59bcf",
+    "129:d10b36aa74a59bcf",
+    "130:d10b36aa74a59bcf",
+    "131:d10b36aa74a59bcf",
+    "132:c37147e3ddd0000d",
+    "133:9833dd81bb41a066",
+    "134:0e9c4ba51479cb26",
+    "135:d10b36aa74a59bcf",
+    "136:d10b36aa74a59bcf",
+    "137:d10b36aa74a59bcf",
+    "183:a9e59bac129ef577",
+    "187:1b3de2e55a667ee8",
+    "lines=188"
+   ],
+   "00_peoples_springtime_je.txt": [
+    "315:a9e59bac129ef577",
+    "327:456cfe405ae3d80b",
+    "329:1d49da7a20c69161",
+    "472:2f985a749bde7e9b",
+    "lines=478"
+   ],
+   "00_player_objectives_great_game.txt": [
+    "11:3253a38cf15ab15d",
+    "12:56aea40a637ebd94",
+    "13:dda2590791fdd063",
+    "1443:c886ae8d7a320ef6",
+    "1461:13c5c09f57829e2f",
+    "1462:d10b36aa74a59bcf",
+    "1463:c220e997595383d1",
+    "1464:6a8c08e3c62268a6",
+    "1465:427efc2100eae398",
+    "1466:8c4d0e87b0044522",
+    "1467:d10b36aa74a59bcf",
+    "1468:d10b36aa74a59bcf",
+    "1469:d10b36aa74a59bcf",
+    "1470:cd249881e2676482",
+    "1471:946f990d79614933",
+    "1472:3f9aa151dadfca89",
+    "1473:f767b3327f9e31e6",
+    "1474:7ff512460e40e672",
+    "1475:d10b36aa74a59bcf",
+    "1476:d10b36aa74a59bcf",
+    "1477:c220e997595383d1",
+    "1478:175d25e8f2b94a3c",
+    "1479:1ff5b4c6d69ad746",
+    "1480:3a93f5d8f4654df0",
+    "1481:fb3ac17114f57b44",
+    "1482:8c4d0e87b0044522",
+    "1483:d10b36aa74a59bcf",
+    "1484:d10b36aa74a59bcf",
+    "1485:d10b36aa74a59bcf",
+    "1486:663d2eb6d3df1295",
+    "1487:d10b36aa74a59bcf",
+    "14:b40d4708646a4266",
+    "15:b9102d381d0f150b",
+    "160:7fd02c0886007d2e",
+    "161:b9102d381d0f150b",
+    "162:1ff5b4c6d69ad746",
+    "163:a2c6220be574be9e",
+    "164:c4d161ce7d9af232",
+    "165:d10b36aa74a59bcf",
+    "166:d10b36aa74a59bcf",
+    "167:1bb439b10769e369",
+    "168:e134cdc329e46c27",
+    "16:1ff5b4c6d69ad746",
+    "17:004e549e6cb38d03",
+    "18:0fa43994f4d882b9",
+    "19:d10b36aa74a59bcf",
+    "20:d10b36aa74a59bcf",
+    "21:5d4f18294ab45e17",
+    "22:d10b36aa74a59bcf",
+    "23:cd945bc656489911",
+    "24:8b864db6f2aa9734",
+    "25:d10b36aa74a59bcf",
+    "26:e3b0c44298fc1c14",
+    "27:b40d4708646a4266",
+    "28:b9102d381d0f150b",
+    "29:a88ebdad365e379f",
+    "30:d10b36aa74a59bcf",
+    "31:347c225dcf1494b2",
+    "32:e3b0c44298fc1c14",
+    "33:62ff2544dcc6b601",
+    "34:1347e23f5706b9da",
+    "35:c91f4340633df4a7",
+    "36:683db312a4649d35",
+    "37:d10b36aa74a59bcf",
+    "38:e3b0c44298fc1c14",
+    "39:8941da3f099a46e2",
+    "40:b9102d381d0f150b",
+    "41:1ff5b4c6d69ad746",
+    "42:0fa43994f4d882b9",
+    "43:004e549e6cb38d03",
+    "44:a2c6220be574be9e",
+    "45:e8d3f0ee6bddeacc",
+    "46:d10b36aa74a59bcf",
+    "47:91cce0776a4ba87a",
+    "48:07b9ecdc4c56d2c4",
+    "49:364d4456f5e59af5",
+    "50:d10b36aa74a59bcf",
+    "51:d10b36aa74a59bcf",
+    "52:310703d4ed68271f",
+    "53:d10b36aa74a59bcf",
+    "54:d10b36aa74a59bcf",
+    "55:b40d4708646a4266",
+    "56:b9102d381d0f150b",
+    "57:0fa43994f4d882b9",
+    "58:d10b36aa74a59bcf",
+    "59:d12976d3b6dc57ec",
+    "5:938749f3ade00654",
+    "60:c1bd8a3a0d5037ab",
+    "61:d10b36aa74a59bcf",
+    "62:d10b36aa74a59bcf",
+    "63:d4dffe0566e6e076",
+    "64:b9102d381d0f150b",
+    "65:004e549e6cb38d03",
+    "66:d10b36aa74a59bcf",
+    "67:a8cbf6216a919547",
+    "68:c1bd8a3a0d5037ab",
+    "69:d10b36aa74a59bcf",
+    "70:d10b36aa74a59bcf",
+    "lines=1765"
+   ],
+   "00_relations.txt": [
+    "21:8f127804cd8408f1",
+    "lines=376"
+   ],
+   "00_request_recognition.txt": [
+    "9:afbd6cd515d1c87f",
+    "lines=74"
+   ],
+   "00_scripted_triggers.txt": [
+    "1117:5300bce778845f5f",
+    "lines=2408"
+   ],
+   "00_sick_man.txt": [
+    "189:5303763da83d9b44",
+    "lines=507"
+   ],
+   "00_strategy.txt": [
+    "120:ef9ef71812329674",
+    "90:335ff0c7e3c36f2e",
+    "lines=176"
+   ],
+   "00_strike_je.txt": [
+    "4:1d49da7a20c69161",
+    "lines=158"
+   ],
+   "00_strike_triggers.txt": [
+    "53:74106413da23a618",
+    "54:97de91a31b43d6aa",
+    "55:c29914987d003ee0",
+    "56:d10b36aa74a59bcf",
+    "57:74106413da23a618",
+    "58:97de91a31b43d6aa",
+    "59:5e59c5e907f12223",
+    "60:d10b36aa74a59bcf",
+    "lines=82"
+   ],
+   "00_taiping.txt": [
+    "1:35a47adbb6a502e9",
+    "242:a95bbb2b74bbcf2b",
+    "lines=347"
+   ],
+   "00_veiled_protectorate.txt": [
+    "11:5303763da83d9b44",
+    "4:37c2183e69232c86",
+    "70:1b3de2e55a667ee8",
+    "72:a9e59bac129ef577",
+    "lines=75"
+   ],
+   "00_warlord_china.txt": [
+    "105:a9e59bac129ef577",
+    "1:772e693a9e4e327f",
+    "4:3f358865ed89b6fc",
+    "8:67685b5112707760",
+    "9:d79055a87c86b211",
+    "lines=108"
+   ],
+   "01_french_monarchism.txt": [
+    "329:71c5f19d58be6cd5",
+    "lines=502"
+   ],
+   "01_land_reform.txt": [
+    "216:b40d4708646a4266",
+    "217:b9102d381d0f150b",
+    "218:73516ef753ec9c3f",
+    "219:9e8538df596f9c9b",
+    "220:1ff5b4c6d69ad746",
+    "221:d998e84afaa7cc64",
+    "222:6a96c8c7c980c27c",
+    "223:93c3684873ed6984",
+    "224:a2340073b22cc69e",
+    "225:cde6c09a12f20ec9",
+    "226:d10b36aa74a59bcf",
+    "227:8e514b8f5c13859f",
+    "228:d10b36aa74a59bcf",
+    "229:d10b36aa74a59bcf",
+    "230:d10b36aa74a59bcf",
+    "231:82828d2e3dadd915",
+    "lines=689"
+   ],
+   "02_peru_bolivia.txt": [
+    "39:3be98b56a86aaf0e",
+    "lines=355"
+   ],
+   "03_ig_ideologies_movement.txt": [
+    "720:372cb59220077c94",
+    "721:95faffce8fda714a",
+    "lines=1882"
+   ],
+   "03_political_strategies.txt": [
+    "137:6bb6d610240aac1f",
+    "198:a58d290453a6039c",
+    "528:b40d4708646a4266",
+    "529:b9102d381d0f150b",
+    "530:b1dcd4f259070c5f",
+    "531:517f4c5a979fbee7",
+    "532:d10b36aa74a59bcf",
+    "533:e3b0c44298fc1c14",
+    "534:bfb711b073ec68cc",
+    "535:d10b36aa74a59bcf",
+    "536:e3b0c44298fc1c14",
+    "537:b40d4708646a4266",
+    "538:b9102d381d0f150b",
+    "539:8d4a60072348368a",
+    "540:1970c6bfa23246e7",
+    "541:d10b36aa74a59bcf",
+    "542:e3b0c44298fc1c14",
+    "543:bfb711b073ec68cc",
+    "544:d10b36aa74a59bcf",
+    "lines=1395"
+   ],
+   "04_sikh_empire.txt": [
+    "20:196fc1aef0e78638",
+    "lines=202"
+   ],
+   "05_austria_journal_entries.txt": [
+    "10:5f01ee70f5d16724",
+    "42:6a96c8c7c980c27c",
+    "43:b629d7d88bc1b919",
+    "44:56cce92b0a63f36f",
+    "45:4284bef00ee3f6e5",
+    "lines=429"
+   ],
+   "05_grunderzeit.txt": [
+    "118:6902ed8210e2d9d4",
+    "lines=344"
+   ],
+   "05_metternich.txt": [
+    "8:5f01ee70f5d16724",
+    "lines=159"
+   ],
+   "06_the_carlist_wars.txt": [
+    "136:437abf9d044771d6",
+    "137:3278e490b5467f3c",
+    "138:53ddb04500c11c94",
+    "139:6a167fc30a1f6acb",
+    "140:44cf60fd1a638e80",
+    "141:c0c32c46ee5b70f7",
+    "142:9bef631438398345",
+    "143:ca93d174f7873982",
+    "144:b8913a3f7a22a42a",
+    "145:c414ba0af77f6e2d",
+    "146:7d64c71d9abe3f31",
+    "147:e3b0c44298fc1c14",
+    "148:b40d4708646a4266",
+    "149:b9102d381d0f150b",
+    "150:9b31868e34fc44d9",
+    "151:3cc1e32a3c23220b",
+    "152:d10b36aa74a59bcf",
+    "153:d10b36aa74a59bcf",
+    "154:246b93fc05f11a30",
+    "155:b9102d381d0f150b",
+    "156:3cc1e32a3c23220b",
+    "157:d10b36aa74a59bcf",
+    "158:7603d331468d4643",
+    "159:d10b36aa74a59bcf",
+    "160:d10b36aa74a59bcf",
+    "161:b40d4708646a4266",
+    "162:b9102d381d0f150b",
+    "163:85943021ffa9dafa",
+    "164:7755daac57080ec7",
+    "165:d10b36aa74a59bcf",
+    "166:d10b36aa74a59bcf",
+    "167:246b93fc05f11a30",
+    "168:b9102d381d0f150b",
+    "169:7755daac57080ec7",
+    "170:d10b36aa74a59bcf",
+    "171:3ad46249feaf73b9",
+    "172:d10b36aa74a59bcf",
+    "173:d10b36aa74a59bcf",
+    "174:b40d4708646a4266",
+    "175:b9102d381d0f150b",
+    "176:9b31868e34fc44d9",
+    "177:49a5c267ecbbe06d",
+    "178:d10b36aa74a59bcf",
+    "179:d10b36aa74a59bcf",
+    "180:246b93fc05f11a30",
+    "181:b9102d381d0f150b",
+    "182:49a5c267ecbbe06d",
+    "183:d10b36aa74a59bcf",
+    "184:0a242e0c2e449666",
+    "185:d10b36aa74a59bcf",
+    "186:d10b36aa74a59bcf",
+    "187:b40d4708646a4266",
+    "188:b9102d381d0f150b",
+    "189:9b31868e34fc44d9",
+    "190:102bd641b290073d",
+    "191:d10b36aa74a59bcf",
+    "192:d10b36aa74a59bcf",
+    "193:246b93fc05f11a30",
+    "194:b9102d381d0f150b",
+    "195:102bd641b290073d",
+    "196:d10b36aa74a59bcf",
+    "197:0b9648b080d49d62",
+    "198:d10b36aa74a59bcf",
+    "199:d10b36aa74a59bcf",
+    "200:b40d4708646a4266",
+    "201:b9102d381d0f150b",
+    "202:9b31868e34fc44d9",
+    "203:2b7d8ea19ff9f437",
+    "204:d10b36aa74a59bcf",
+    "205:d10b36aa74a59bcf",
+    "206:246b93fc05f11a30",
+    "207:b9102d381d0f150b",
+    "208:2b7d8ea19ff9f437",
+    "209:d10b36aa74a59bcf",
+    "210:d51aeba3847a8196",
+    "211:d10b36aa74a59bcf",
+    "212:d10b36aa74a59bcf",
+    "213:d10b36aa74a59bcf",
+    "lines=223"
+   ],
+   "106_modifiers.txt": [
+    "191:2a37a3f2be9e8307",
+    "205:815bf13c114c432c",
+    "224:3ba2418a860a7077",
+    "lines=315"
+   ],
+   "30_society.txt": [
+    "209:0b11ffa56a4fafbd",
+    "lines=1734"
+   ],
+   "agitators_1_modifiers.txt": [
+    "168:02bf79d2018e54ef",
+    "169:e975f66e285e7bf4",
+    "lines=430"
+   ],
+   "agitators_2_modifiers.txt": [
+    "782:02bf79d2018e54ef",
+    "lines=864"
+   ],
+   "agitators_3_modifiers.txt": [
+    "81:10228303f4bd558d",
+    "lines=151"
+   ],
+   "agitators_4_modifiers.txt": [
+    "210:10531004508630a7",
+    "lines=1136"
+   ],
+   "agitators_4_revolution_modifiers.txt": [
+    "319:56413ba617978e23",
+    "321:a12ef517af7a91f8",
+    "lines=606"
+   ],
+   "agitators_5_modifiers.txt": [
+    "613:ea9f33336686bb13",
+    "615:bd474a57299cfa87",
+    "616:d9c36caeba32398b",
+    "lines=1211"
+   ],
+   "brazil_2_modifiers.txt": [
+    "149:b3b32bef89c6f7c2",
+    "lines=432"
+   ],
+   "bulgarian_modifiers.txt": [
+    "38:16e1cac07f45ec66",
+    "lines=65"
+   ],
+   "common/achievements/base_achievements.txt": [
+    "89:f6840e67995c0008",
+    "lines=697"
+   ],
+   "common/achievements/ip4_iberian_twilight_achievements.txt": [
+    "106:f6840e67995c0008",
+    "lines=181"
+   ],
+   "common/achievements/rp1_colossus_of_the_south_achievements.txt": [
+    "6:9f6c17befb4b0d1b",
+    "lines=207"
+   ],
+   "common/ai_strategies/02_diplomatic_strategies.txt": [
+    "1182:95a119aa8222a56d",
+    "1628:34340697fa5d1e2a",
+    "1631:70236dbdacee979f",
+    "lines=3953"
+   ],
+   "common/ai_strategies/03_political_strategies.txt": [
+    "374:9f32919d5f953135",
+    "377:d2b45553b7ef2f19",
+    "528:b40d4708646a4266",
+    "529:b9102d381d0f150b",
+    "530:b1dcd4f259070c5f",
+    "531:517f4c5a979fbee7",
+    "532:d10b36aa74a59bcf",
+    "533:e3b0c44298fc1c14",
+    "534:bfb711b073ec68cc",
+    "535:d10b36aa74a59bcf",
+    "536:e3b0c44298fc1c14",
+    "537:b40d4708646a4266",
+    "538:b9102d381d0f150b",
+    "539:8d4a60072348368a",
+    "540:1970c6bfa23246e7",
+    "541:d10b36aa74a59bcf",
+    "542:e3b0c44298fc1c14",
+    "543:bfb711b073ec68cc",
+    "544:d10b36aa74a59bcf",
+    "lines=1395"
+   ],
+   "common/amendments/00_amendments_enactment_04.txt": [
+    "644:a2eac52ac15cdebd",
+    "lines=1755"
+   ],
+   "common/building_groups/00_building_groups.txt": [
+    "184:a52ecadeda7f4e9e",
+    "lines=775"
+   ],
+   "common/character_templates/historical_agitators.txt": [
+    "172:e91b16773ae6bd0c",
+    "lines=1754"
+   ],
+   "common/country_definitions/00_countries.txt": [
+    "1316:a48ad55a0c4b0995",
+    "1818:5c578b05b254f030",
+    "2336:bc08f7942c764b9e",
+    "2763:87bafaf97e2842ea",
+    "429:e0cc954498b57df0",
+    "480:412add2b21665d83",
+    "487:d66da49de8ce8911",
+    "93:cf66f50db8a84c01",
+    "lines=5251"
+   ],
+   "common/country_definitions/01_africa.txt": [
+    "26:34618d3bf5a1170f",
+    "lines=2073"
+   ],
+   "common/country_formation/00_formable_countries.txt": [
+    "177:5c578b05b254f030",
+    "lines=1110"
+   ],
+   "common/customizable_localization/ip3_custom_loc.txt": [
+    "137:e91b16773ae6bd0c",
+    "lines=883"
+   ],
+   "common/dynamic_country_names/00_dynamic_country_names.txt": [
+    "1233:b72031696868f08d",
+    "3925:a48ad55a0c4b0995",
+    "lines=5017"
+   ],
+   "common/flag_definitions/00_flag_definitions.txt": [
+    "2184:b72031696868f08d",
+    "8072:016842c3db81a687",
+    "lines=12047"
+   ],
+   "common/game_rules/game_rules.md": [
+    "10:89a28886c0e23229",
+    "lines=26"
+   ],
+   "common/history/ai/00_secret_goals.txt": [
+    "278:58b80201d5c9f33b",
+    "279:0852e4ce8d3f6175",
+    "280:586848640f01b7c3",
+    "281:d10b36aa74a59bcf",
+    "lines=888"
+   ],
+   "common/history/ai/00_strategy.txt": [
+    "117:5303763da83d9b44",
+    "118:788597d7f1b3e0c5",
+    "119:a0bb9e961c6ee061",
+    "120:ef9ef71812329674",
+    "121:d10b36aa74a59bcf",
+    "42:dbdc6e7a9123970f",
+    "43:788597d7f1b3e0c5",
+    "44:b2a2b44f65ff4dd4",
+    "45:b71261caf9c22448",
+    "90:335ff0c7e3c36f2e",
+    "lines=176"
+   ],
+   "common/history/countries/aus - austria.txt": [
+    "17:e96e3b8460bd8559",
+    "lines=73"
+   ],
+   "common/history/countries/bav - bavaria.txt": [
+    "10:40a71350aab29ae7",
+    "11:83b409cd5a61aa4c",
+    "12:93b96c9f7b7e9bc1",
+    "13:d10b36aa74a59bcf",
+    "15:87f840ba0ea523d4",
+    "16:e103f0a9e015bbb1",
+    "17:d10b36aa74a59bcf",
+    "5:5d3d4cc605f8788e",
+    "7:5d0527bcd0117303",
+    "8:5856b697e0a3b287",
+    "lines=19"
+   ],
+   "common/history/countries/brz - brazil.txt": [
+    "39:bf15ce0814e3984d",
+    "40:e103f0a9e015bbb1",
+    "41:d10b36aa74a59bcf",
+    "59:2d3e83b776a9b0bf",
+    "lines=63"
+   ],
+   "common/history/countries/chi - china.txt": [
+    "13:6c3858066ad748c9",
+    "lines=36"
+   ],
+   "common/history/countries/per - persia.txt": [
+    "23:6c3858066ad748c9",
+    "lines=40"
+   ],
+   "common/history/countries/rus - russia.txt": [
+    "14:6c3858066ad748c9",
+    "lines=47"
+   ],
+   "common/history/countries/spa - spain.txt": [
+    "35:e04a668dee377121",
+    "52:e643d34e97547feb",
+    "53:3815fb34f7eb2c54",
+    "54:a730d41ac78dcfeb",
+    "55:7127ee1705384e0b",
+    "56:c4773460df42b93d",
+    "57:d10b36aa74a59bcf",
+    "58:d10b36aa74a59bcf",
+    "67:87f840ba0ea523d4",
+    "68:70db3a562cc5dd4d",
+    "69:d10b36aa74a59bcf",
+    "70:e3b0c44298fc1c14",
+    "71:b8360f3294bfbffe",
+    "72:e103f0a9e015bbb1",
+    "73:d10b36aa74a59bcf",
+    "74:e3b0c44298fc1c14",
+    "75:dba3d9b70a73338a",
+    "76:e103f0a9e015bbb1",
+    "77:b7bc8aa44e8a4e0d",
+    "78:d10b36aa74a59bcf",
+    "80:8010561eaf19c96e",
+    "82:21e5dc279123789b",
+    "lines=91"
+   ],
+   "common/history/diplomacy/00_relations.txt": [
+    "9:8454e7542d10e3a9",
+    "lines=376"
+   ],
+   "common/history/diplomacy/00_subject_relationships.txt": [
+    "270:e542f65b7a6c3969",
+    "271:564089314752ad15",
+    "272:0123a747f63dfc26",
+    "273:d10b36aa74a59bcf",
+    "lines=654"
+   ],
+   "common/history/diplomatic_plays/00_carlist_war.txt": [
+    "10:e3b0c44298fc1c14",
+    "11:44c3b20d6732217c",
+    "12:e3b0c44298fc1c14",
+    "20:4b1b0f91fc9bc133",
+    "21:890b1463e0b247cb",
+    "22:ca9e20f5bec20001",
+    "3:f4b7597b45fa41ce",
+    "4:37b64ffd35c0a6b1",
+    "5:e3b0c44298fc1c14",
+    "6:1e6218f67365a6ae",
+    "7:e3b0c44298fc1c14",
+    "8:d5ae1a31e99eebc1",
+    "9:d95c8b0ebbb9a1ad",
+    "lines=25"
+   ],
+   "common/history/power_blocs/00_power_blocs.txt": [
+    "52:442571339cf772c8",
+    "70:b33a35b43cf34874",
+    "lines=147"
+   ],
+   "common/journal_entries/00_art_jes.txt": [
+    "11:9da8031cb97e230e",
+    "lines=177"
+   ],
+   "common/journal_entries/00_corn_laws.txt": [
+    "10:d10b36aa74a59bcf",
+    "11:1ff5b4c6d69ad746",
+    "12:bb545c574d2a0a2f",
+    "13:e5755723c7716db8",
+    "14:d10b36aa74a59bcf",
+    "15:d10b36aa74a59bcf",
+    "16:e3b0c44298fc1c14",
+    "17:1cc98ed731baca4b",
+    "18:4e5d7b3b1400bdbe",
+    "19:ee5bb6f32ead0ad2",
+    "20:88a1f1c5b5eb9a79",
+    "21:d10b36aa74a59bcf",
+    "22:d10b36aa74a59bcf",
+    "23:1ff5b4c6d69ad746",
+    "24:bb545c574d2a0a2f",
+    "25:e5755723c7716db8",
+    "26:d10b36aa74a59bcf",
+    "27:87f840ba0ea523d4",
+    "28:247d0542650f08f8",
+    "29:de7f19635c325cf9",
+    "30:d10b36aa74a59bcf",
+    "31:d10b36aa74a59bcf",
+    "6:5ff70cea2b79b924",
+    "79:99edbe1aab6d32ac",
+    "7:55e0c0af792249fc",
+    "8:87f840ba0ea523d4",
+    "9:55ae7dea696578b3",
+    "lines=82"
+   ],
+   "common/journal_entries/00_german_unification.txt": [
+    "106:33a72220d3ed01e5",
+    "111:7747875a4461f029",
+    "11:52225032b609a8d2",
+    "213:6fdf35e719d5a01c",
+    "4:8edb07d4d74461e3",
+    "9:47bc04d9812a2114",
+    "lines=372"
+   ],
+   "common/journal_entries/00_meiji_restoration.txt": [
+    "314:196fc1aef0e78638",
+    "lines=881"
+   ],
+   "common/journal_entries/00_opium.txt": [
+    "2:39b7d283edaa0ca5",
+    "lines=59"
+   ],
+   "common/journal_entries/00_player_objectives_great_game.txt": [
+    "167:1bb439b10769e369",
+    "44:a2c6220be574be9e",
+    "lines=1765"
+   ],
+   "common/journal_entries/00_prohibition_laws.txt": [
+    "13:076558cbd9ec06e3",
+    "lines=122"
+   ],
+   "common/journal_entries/00_request_recognition.txt": [
+    "9:afbd6cd515d1c87f",
+    "lines=74"
+   ],
+   "common/journal_entries/00_veiled_protectorate.txt": [
+    "11:5303763da83d9b44",
+    "1:edca4b36cae39631",
+    "70:1b3de2e55a667ee8",
+    "lines=75"
+   ],
+   "common/journal_entries/00_warlord_china.txt": [
+    "73:8c233070516938a5",
+    "lines=108"
+   ],
+   "common/journal_entries/01_coup.txt": [
+    "4:1d49da7a20c69161",
+    "lines=160"
+   ],
+   "common/journal_entries/01_french_monarchism.txt": [
+    "329:71c5f19d58be6cd5",
+    "lines=502"
+   ],
+   "common/journal_entries/03_eastern_frontier.txt": [
+    "10:dcf34583778d3ecc",
+    "98:33a72220d3ed01e5",
+    "lines=100"
+   ],
+   "common/journal_entries/06_portugal_politics.txt": [
+    "15:018e55984c984b4b",
+    "lines=696"
+   ],
+   "common/journal_entries/06_spain_provisional_government.txt": [
+    "2:633c0fdb5f15f54a",
+    "lines=129"
+   ],
+   "common/journal_entries/06_spanish_new_world.txt": [
+    "110:9cb7e4b380764e67",
+    "3:8db8ee355d4006f5",
+    "lines=349"
+   ],
+   "common/journal_entries/06_the_carlist_wars.txt": [
+    "129:40acb7feda6c3802",
+    "130:f9954a4110314ac9",
+    "131:b8322262c99c4fc1",
+    "132:56dad4e4da6920fc",
+    "133:d10b36aa74a59bcf",
+    "1:e8133b9a4ba6b712",
+    "216:a9e59bac129ef577",
+    "3:8db8ee355d4006f5",
+    "7:419e873e5be6ccc3",
+    "89:fc33d274ba935c54",
+    "90:c220e997595383d1",
+    "91:0237affcb4ff843f",
+    "92:da417519dacf62b5",
+    "93:302d0da3de49b4ff",
+    "94:4ff0ff1fa9ecb867",
+    "95:d10b36aa74a59bcf",
+    "96:d10b36aa74a59bcf",
+    "97:d10b36aa74a59bcf",
+    "lines=223"
+   ],
+   "common/journal_entries/06_the_two_spains.txt": [
+    "167:2ea816e6bf01ae6b",
+    "2:633c0fdb5f15f54a",
+    "8:419e873e5be6ccc3",
+    "lines=171"
+   ],
+   "common/journal_entry_groups/00_journal_entries.txt": [
+    "106:35cebbe5745e7d20",
+    "112:03d0e2b64ff80535",
+    "116:7e56e58417994048",
+    "44:fd34ef15af0f5438",
+    "45:fa1f37812c89ac5c",
+    "46:58be2881ded26d3a",
+    "47:d10b36aa74a59bcf",
+    "lines=138"
+   ],
+   "common/laws/01_land_reform.txt": [
+    "140:985250194f466b48",
+    "236:141614cd4ae78bfe",
+    "238:520527da6d0fa6f0",
+    "268:84bc01ccbd6ee608",
+    "291:e189a441f88fa207",
+    "lines=689"
+   ],
+   "common/modifier_type_definitions/00_modifier_types.txt": [
+    "662:4b173e13eac60f2c",
+    "lines=3906"
+   ],
+   "common/on_actions/00_code_on_actions.txt": [
+    "2484:20a02bc4959ed1bb",
+    "2487:34d9ac28e15ac5ce",
+    "7043:dca6077267487d80",
+    "7046:8ea971bf16cc660d",
+    "7047:1004e16399f6f9ce",
+    "7048:ec56b6d03d1449f1",
+    "7049:b497e8e9bea5fbc9",
+    "7050:d10b36aa74a59bcf",
+    "7438:014ee74f96947bfb",
+    "lines=8015"
+   ],
+   "common/script_values/event_values.txt": [
+    "41:018487a8134de3ed",
+    "lines=302"
+   ],
+   "common/scripted_effects/00_movement_effects.txt": [
+    "2:40acb7feda6c3802",
+    "3:da86e3f6e492d1a9",
+    "4:b8322262c99c4fc1",
+    "lines=7"
+   ],
+   "common/scripted_effects/00_political_setup.txt": [
+    "20:ed4efa68e9711547",
+    "lines=143"
+   ],
+   "common/static_modifiers/00_code_static_modifiers.txt": [
+    "12:07dfa0685dc6b3f4",
+    "232:83314ccfe4bb444b",
+    "233:02bf79d2018e54ef",
+    "234:2cbf48d5cf3b0787",
+    "235:c05d27e9db91ee8b",
+    "236:894d0410c012fa89",
+    "237:2a6aea6b0e5f66be",
+    "238:0373ac16a895d8c2",
+    "239:4b4aa0133334438e",
+    "240:039a0853cfef54e7",
+    "241:bb2e133fb2f92e6f",
+    "242:99323cd223bfe9e6",
+    "243:9105429cfa1f7222",
+    "244:d10b36aa74a59bcf",
+    "311:1bb4ac0e113a1b38",
+    "322:7ced9969428784f1",
+    "lines=1036"
+   ],
+   "common/static_modifiers/00_ep2_02_modifiers.txt": [
+    "240:eb8a1b9e0b8c46ce",
+    "lines=288"
+   ],
+   "common/static_modifiers/00_ep2_04_modifiers.txt": [
+    "171:2deb3799ead83bb5",
+    "lines=387"
+   ],
+   "common/static_modifiers/00_ip2_02_modifiers.txt": [
+    "149:e3b0c44298fc1c14",
+    "153:919a11982aa30741",
+    "lines=316"
+   ],
+   "common/static_modifiers/00_ip3_03_modifiers.txt": [
+    "202:aaa68f2db79b1387",
+    "203:610f55e3f7c8b94e",
+    "204:5227562660f40841",
+    "205:0670161835cc87f1",
+    "206:60f6fd5f33ab2fd4",
+    "207:d10b36aa74a59bcf",
+    "209:aa0bdd7fc2617599",
+    "210:61cd7a0a455ee410",
+    "211:b57ef5e43b238caf",
+    "212:d10b36aa74a59bcf",
+    "lines=257"
+   ],
+   "common/static_modifiers/00_ip4_02_modifiers.txt": [
+    "117:b4ccd2ce8b963748",
+    "lines=374"
+   ],
+   "common/static_modifiers/00_ip4_03_modifiers.txt": [
+    "26:ea9f33336686bb13",
+    "7:3a8b443fddb04d21",
+    "lines=236"
+   ],
+   "common/static_modifiers/00_ip4_04_modifiers.txt": [
+    "12:b9587816156795c1",
+    "141:d4c64257dff66a0a",
+    "176:20e612e1ff9d569a",
+    "17:412827b4dce3c58e",
+    "19:e2421da58925d8d5",
+    "26:759b6b7cb910b877",
+    "33:25c02ba5447545f8",
+    "345:03c51249e7f6548d",
+    "346:75579a0526732fa3",
+    "347:777e899117977d35",
+    "348:3a748f8c9d1c9aaf",
+    "349:e735afb24d59fc5b",
+    "350:d10b36aa74a59bcf",
+    "354:00eacd1ec3805ddd",
+    "355:20e612e1ff9d569a",
+    "357:759b6b7cb910b877",
+    "367:2c13dea3845d1fa7",
+    "368:416a96a30b85bffb",
+    "416:c5f35c82cb8794e0",
+    "417:02bf79d2018e54ef",
+    "418:8440db1395cb5320",
+    "419:d10b36aa74a59bcf",
+    "43:8aac6ddffbe405be",
+    "442:e2421da58925d8d5",
+    "47:20e612e1ff9d569a",
+    "523:8f9b9ba5144259ee",
+    "527:7b628dc00e50660e",
+    "54:ea9f33336686bb13",
+    "lines=582"
+   ],
+   "common/static_modifiers/02_event_modifiers.txt": [
+    "651:69c8a79299386673",
+    "lines=2020"
+   ],
+   "common/static_modifiers/07_sphere_of_influence_4_modifiers.txt": [
+    "288:43f5d753e4f37b42",
+    "289:82d2acfb864b4d83",
+    "290:9f5009295e2fbe07",
+    "291:e0d29e01692a897c",
+    "292:d10b36aa74a59bcf",
+    "lines=413"
+   ],
+   "common/static_modifiers/105_modifiers.txt": [
+    "556:0741aabf1796bb75",
+    "557:610f55e3f7c8b94e",
+    "558:1bb4ac0e113a1b38",
+    "559:d10b36aa74a59bcf",
+    "lines=831"
+   ],
+   "common/static_modifiers/106_modifiers.txt": [
+    "197:31d35dd0d90da506",
+    "203:88aa347650b95c23",
+    "205:815bf13c114c432c",
+    "224:3ba2418a860a7077",
+    "247:a2459c9967756dd1",
+    "lines=315"
+   ],
+   "common/static_modifiers/agitators_4_revolution_modifiers.txt": [
+    "162:1b55eed20c0ab8f2",
+    "28:8a797c09157f9de4",
+    "319:56413ba617978e23",
+    "321:a12ef517af7a91f8",
+    "lines=606"
+   ],
+   "common/static_modifiers/agitators_5_modifiers.txt": [
+    "616:d9c36caeba32398b",
+    "lines=1211"
+   ],
+   "common/static_modifiers/agitators_6_modifiers.txt": [
+    "357:3f96eaf461b6c429",
+    "lines=416"
+   ],
+   "common/static_modifiers/brazil_1_modifiers.txt": [
+    "133:2c95a04133be6499",
+    "lines=151"
+   ],
+   "common/static_modifiers/brazil_2_modifiers.txt": [
+    "149:b3b32bef89c6f7c2",
+    "lines=432"
+   ],
+   "common/static_modifiers/content_1_modifiers.txt": [
+    "112:8f9b9ba5144259ee",
+    "1463:d7f941c92a442cde",
+    "1464:61cd7a0a455ee410",
+    "1465:e5bc29d5e2335cd3",
+    "1466:1cb687808cb60e8e",
+    "1467:f13bc4b3f8aed19e",
+    "1468:c74469ba46ea4e59",
+    "1469:8897652acdd2bdd8",
+    "1470:05b3b09ad5d02cae",
+    "1471:d10b36aa74a59bcf",
+    "17:12fe792b810fcce6",
+    "33:3cad8eebf38ba86c",
+    "lines=1490"
+   ],
+   "common/static_modifiers/content_204_modifiers.txt": [
+    "282:2a96dc0e2cc04ffc",
+    "284:c0328a00749ba4d1",
+    "551:759b6b7cb910b877",
+    "lines=727"
+   ],
+   "common/static_modifiers/content_304_modifiers.txt": [
+    "182:304a25c1dd77af1d",
+    "249:1572f7703c6d2751",
+    "lines=744"
+   ],
+   "common/static_modifiers/content_4_modifiers.txt": [
+    "781:104a65468f916f74",
+    "782:c9bf848f2e38050a",
+    "783:80d53ebd472514ab",
+    "784:69e99470a28de03c",
+    "785:e0d29e01692a897c",
+    "786:d10b36aa74a59bcf",
+    "830:38e21dc744218cc2",
+    "lines=862"
+   ],
+   "common/static_modifiers/spanish_africa_modifiers.txt": [
+    "100:d10b36aa74a59bcf",
+    "92:e3a310d9cbe46cb9",
+    "97:8a5564a85f4b7fae",
+    "98:84fa7406bf106362",
+    "99:cdb46dffa07af7e1",
+    "lines=100"
+   ],
+   "common/technology/technologies/30_society.txt": [
+    "209:0b11ffa56a4fafbd",
+    "lines=1734"
+   ],
+   "common/treaty_articles/25_trade_privilege.txt": [
+    "52:617e8fd44ea7a795",
+    "lines=454"
+   ],
+   "content_1_modifiers.txt": [
+    "1452:8a797c09157f9de4",
+    "1462:e3b0c44298fc1c14",
+    "1463:d7f941c92a442cde",
+    "1464:61cd7a0a455ee410",
+    "1465:e5bc29d5e2335cd3",
+    "1466:1cb687808cb60e8e",
+    "1467:f13bc4b3f8aed19e",
+    "1468:c74469ba46ea4e59",
+    "1469:8897652acdd2bdd8",
+    "1470:05b3b09ad5d02cae",
+    "1471:d10b36aa74a59bcf",
+    "15:7e7d741c0cb543b1",
+    "16:f74cbb80476309b0",
+    "17:12fe792b810fcce6",
+    "18:41fa90fe23d270a6",
+    "19:2383d40a33a7b1f4",
+    "20:3615e99259da4a0b",
+    "21:e735afb24d59fc5b",
+    "22:b5a6791c6bd57162",
+    "23:ea832843c32892fc",
+    "24:d6dd9d8e99759c13",
+    "25:a80cdf6a0bcb58c4",
+    "26:d10b36aa74a59bcf",
+    "871:02bf79d2018e54ef",
+    "872:e975f66e285e7bf4",
+    "lines=1490"
+   ],
+   "content_204_modifiers.txt": [
+    "340:956f34d4d1aa328d",
+    "354:f427dc277d977bab",
+    "lines=727"
+   ],
+   "content_304_modifiers.txt": [
+    "249:1572f7703c6d2751",
+    "251:1637bbd7e82b7800",
+    "254:debed47688d077c6",
+    "lines=744"
+   ],
+   "content_4_modifiers.txt": [
+    "796:3ba2418a860a7077",
+    "lines=862"
+   ],
+   "docs/design/backlog.md": [
+    "161:e3b0c44298fc1c14",
+    "lines=178"
+   ],
+   "events/1848.txt": [
+    "430:40acb7feda6c3802",
+    "431:26f534790792695e",
+    "432:40d7d8dc8aa80479",
+    "433:d10b36aa74a59bcf",
+    "867:8c233070516938a5",
+    "lines=1097"
+   ],
+   "events/egyptian_crisis_events.txt": [
+    "41:a3c4edab175517d0",
+    "49:14a541dbf8b1cbc0",
+    "50:07e257597dca4472",
+    "lines=198"
+   ],
+   "events/german_unification.txt": [
+    "127:60bace1c8c19b0bb",
+    "lines=463"
+   ],
+   "events/greece_events.txt": [
+    "179:71c5f19d58be6cd5",
+    "lines=974"
+   ],
+   "events/iberia_events/carlist_war_events.txt": [
+    "240:40acb7feda6c3802",
+    "241:f9954a4110314ac9",
+    "242:b8322262c99c4fc1",
+    "243:56dad4e4da6920fc",
+    "244:d10b36aa74a59bcf",
+    "245:d10b36aa74a59bcf",
+    "701:8db8ee355d4006f5",
+    "lines=727"
+   ],
+   "events/peoples_springtime.txt": [
+    "980:b71261caf9c22448",
+    "lines=1288"
+   ],
+   "ip4_misc_01_l_simp_chinese.yml": [
+    "87:84846992942a7622",
+    "lines=960"
+   ],
+   "journal_entry.gui": [
+    "742:d9fccd7799b16540",
+    "lines=1020"
+   ],
+   "localization/simp_chinese/ip3_misc_01_l_simp_chinese.yml": [
+    "549:221fed52abfb1b04",
+    "lines=859"
+   ],
+   "tools/pdx/ab_probe.py": [
+    "805:535a840e30945e02",
+    "806:b6d267efe80a3dbc",
+    "807:e3b0c44298fc1c14",
+    "808:9ab2444443096596",
+    "809:57c6893389242c16",
+    "810:302d1273afd0af6d",
+    "811:1e3117f0d2f5621b",
+    "812:9800d12097024475",
+    "813:0ada0f28ce7ad8fd",
+    "814:a3480eaad1feb7f4",
+    "815:2d867e4bbf09a6b0",
+    "lines=1026"
+   ],
+   "tools/pdx/modgen.py": [
+    "1122:a4fbf4967dc3f57c",
+    "1123:8308b78d597b5494",
+    "1124:1b8cd1c23f6620ef",
+    "1125:76fe007139221ad3",
+    "1179:a006063eded77589",
+    "1209:b0cd0e0c3a7a6b1e",
+    "1247:e3b0c44298fc1c14",
+    "1248:7db8c1cc4516325b",
+    "1249:f0087284db65df19",
+    "1250:0fc861cad3880df1",
+    "1251:c78a1767147bc638",
+    "1252:b6d267efe80a3dbc",
+    "1253:122b69be226d04cb",
+    "1254:91ba68e647343f12",
+    "1255:25407d1b8e533f1d",
+    "1256:245843abef9e72e7",
+    "1257:3d1f65482abf65d7",
+    "1258:077f19e1ef9aa8e8",
+    "1259:a006063eded77589",
+    "1260:07b0c3a02d69c70d",
+    "1261:107a526f8a59df79",
+    "1262:2d9659648d00ee8e",
+    "1263:ca45eaedc25b6193",
+    "1264:3b4b4017482f9743",
+    "1265:bb01c44bd646ab29",
+    "1370:e3b0c44298fc1c14",
+    "1579:f39c9299cdd620f2",
+    "1605:8915724a48a81f00",
+    "1606:68ecf39abb058d5c",
+    "1607:b56947db38c4238f",
+    "1608:38bbba26d44d3657",
+    "1609:60969fbf5afce543",
+    "1610:ba5ec51d07a4ac0e",
+    "1611:99908ebc38141471",
+    "1612:f7ab85f7729bc4e0",
+    "1613:ca5085f56127360a",
+    "1614:8ba3883f696ac6cd",
+    "1615:ba5ec51d07a4ac0e",
+    "1616:ba5ec51d07a4ac0e",
+    "1617:f7ab85f7729bc4e0",
+    "1618:ca5085f56127360a",
+    "1619:8acdd0ad575860ee",
+    "1620:ea72a8865f1560b3",
+    "1621:ca631d5d694bf40b",
+    "1622:ba5ec51d07a4ac0e",
+    "1623:ba5ec51d07a4ac0e",
+    "1624:5dd3f4158594f183",
+    "1625:6c8eb5e4eea48d16",
+    "1626:f7ab85f7729bc4e0",
+    "1627:ca5085f56127360a",
+    "1628:78dc49034a51a978",
+    "1629:8503ca4fbcfd2f53",
+    "1630:1a92b6fe7db73654",
+    "1631:bc287f9c6635285e",
+    "1632:0baa89f0aa1f902b",
+    "1635:ba5ec51d07a4ac0e",
+    "1636:70d8f2993c32807b",
+    "1637:e3b0c44298fc1c14",
+    "1638:e3b0c44298fc1c14",
+    "1639:60a13ad2765c9232",
+    "1640:ba3185dbd5238694",
+    "1641:e3b0c44298fc1c14",
+    "1642:e393f607be4ba23f",
+    "1643:54f83ac0f4968e20",
+    "1644:1ab272a418b0adb8",
+    "1645:b6d267efe80a3dbc",
+    "1646:b808f7d9b1b6877f",
+    "1647:410ba48e1f463bc5",
+    "1648:228ef34ba0f8e2e5",
+    "1649:87f71bdfe1569600",
+    "1650:d8a9180a7ec4dbc4",
+    "1651:99df4d84b0829ba5",
+    "1652:12fbae388053976e",
+    "1653:858ab96d079c0ca9",
+    "180:e3b0c44298fc1c14",
+    "181:c599e6e10a97e90b",
+    "182:1b976092f8f95353",
+    "185:23e70c22333265d2",
+    "186:e3b0c44298fc1c14",
+    "187:0be2fc578794a211",
+    "188:d2fbf4260c102143",
+    "189:e3b0c44298fc1c14",
+    "679:0db74eb3be7a1faf",
+    "680:ab27abbab49692a1",
+    "681:588ce3e82fc14da7",
+    "682:699251d4104387a1",
+    "683:5ea4019cb8934b42",
+    "684:68ecf39abb058d5c",
+    "685:97c3251c950c5350",
+    "686:ba5ec51d07a4ac0e",
+    "lines=2266"
+   ]
+  },
   "common_entries": {
    "acceptance_statuses": [
     "cultural_erasure",

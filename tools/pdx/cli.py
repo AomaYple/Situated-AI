@@ -2467,6 +2467,13 @@ def citations_cmd(
         list[str] | None,
         typer.Argument(help="要扫的文件或目录（默认只扫数据源 mod/data）"),
     ] = None,
+    offline: Annotated[
+        bool,
+        typer.Option(
+            "--offline",
+            help="离线：不读游戏本体，只核「与入库快照一致」（CI 用，B77）",
+        ),
+    ] = False,
 ) -> None:
     """核对数据源里的 `文件:行号` 引用**指得到真实文件的那一行**。
 
@@ -2485,13 +2492,38 @@ def citations_cmd(
 
     ⚠️ 它**不做语义判断**："那一行真的支持这条 why 吗"仍然要人看。这里只保证
     "引用存在且唯一"，把人的注意力从找文件挪到读内容。
+
+    **``--offline``（B77）**：原来这条**进不了 CI** —— 它要打开原版文件，而 runner 上
+    没有游戏（其余门禁都有离线通道，这是最后一个缺口）。现在精简快照里多了一个
+    `citation_support` 域（`v3 snapshot create --compact` 写入）：每条引用记着
+    **被引那一行的文本指纹 + 文件行数**。离线核的是「与入库快照一致」，
+    **不是**「与现在的游戏一致」—— 后者是本机门禁的活（有游戏时本命令会顺手核
+    "被引那一行还是不是那句话"，那正是官方更新挪走我们依据的信号）。
     """
     targets = [Path(item) for item in (paths or ["mod/data"])]
     missing = [str(path) for path in targets if not path.exists()]
     if missing:
         _fail(f"找不到：{'、'.join(missing)}")
     found = citations.scan_paths(targets)
+    snap = verify.latest_compact_snapshot()
+    support = (snap.sections.get(citations.SECTION) or {}) if snap is not None else {}
+
+    if offline:
+        if snap is None:
+            _fail(
+                "没有精简快照（tools/out/snapshots/*.compact.json）—— 离线核对要靠它里的"
+                f"`{citations.SECTION}` 域；在装有游戏的机器上跑 `v3 snapshot create --compact`"
+            )
+        bad = citations.unsupported(found, support)
+        _report_support(found, bad, offline=True)
+        return
+
     problems = [item for item in found if not item.ok]
+    malformed = [
+        (item, detail)
+        for item, detail in citations.unsupported(found, support, live=True)
+        if item.ok  # 已经报成 missing/ambiguous/out_of_range 的不重复报
+    ]
     table = Table(
         title=f"{len(found)} 条引用（{len(found) - len(problems)} 条指得到）",
         show_lines=False,
@@ -2507,14 +2539,57 @@ def citations_cmd(
             escape(item.where),
             escape(item.detail),
         )
-    if problems:
-        console.print(table)
-        console.print(
-            f"[yellow]{len(problems)} 条引用指不到唯一一行[/]"
-            " —— 要么改引用，要么把原版那一段原文贴进 why（P10）"
+    for item, detail in malformed[:40]:
+        table.add_row(
+            "[red]unsupported[/]",
+            escape(f"{item.file}:{item.start}"),
+            escape(item.where),
+            escape(detail),
         )
+    if problems or malformed:
+        console.print(table)
+        if problems:
+            console.print(
+                f"[yellow]{len(problems)} 条引用指不到唯一一行[/]"
+                " —— 要么改引用，要么把原版那一段原文贴进 why（P10）"
+            )
+        if malformed:
+            console.print(
+                f"[yellow]{len(malformed)} 条引用与入库支撑域对不上[/]"
+                " —— 核对后跑 `v3 snapshot create --compact` 刷新（它是入库的）"
+            )
         raise typer.Exit(EXIT_FAILED)
     console.print(f"[green]{len(found)} 条引用全部指得到唯一一行 ✅[/]")
+
+
+def _report_support(
+    found: list[citations.Citation], bad: list[tuple[citations.Citation, str]], *, offline: bool
+) -> None:
+    """离线/在线共用的「支撑域」结果表（CI 只看这一张）。"""
+    table = Table(
+        title=f"{len(found)} 条引用（{len(found) - len(bad)} 条与入库快照一致）",
+        show_lines=False,
+    )
+    table.add_column("结论", style="cyan")
+    table.add_column("引用", overflow="fold")
+    table.add_column("出处", overflow="fold")
+    table.add_column("说明", overflow="fold")
+    for item, detail in bad[:40]:
+        table.add_row(
+            "[red]unsupported[/]",
+            escape(f"{item.file}:{item.start}"),
+            escape(item.where),
+            escape(detail),
+        )
+    if bad:
+        console.print(table)
+        console.print(
+            f"[yellow]{len(bad)} 条引用与入库支撑域对不上[/]"
+            " —— 核对后跑 `v3 snapshot create --compact` 刷新（它是入库的）"
+        )
+        raise typer.Exit(EXIT_FAILED)
+    where = "离线：与入库快照一致" if offline else "在线"
+    console.print(f"[green]{len(found)} 条引用全部有入库支撑（{where}）✅[/]")
 
 
 @app.command("modguard")

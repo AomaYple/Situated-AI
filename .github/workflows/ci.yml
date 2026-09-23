@@ -115,6 +115,15 @@ jobs:
         # 所以两边渲染出来的文本逐字节相同（不是存了一份文档文本）。
         run: v3 ai-surface --check --offline
 
+      - name: v3 citations --offline —— P10 的引用在 CI 上也守得住
+        # 这一步补的是**当前 CI 的最后一个实质缺口**（backlog B77）：`v3 citations`
+        # 要打开原版文件确认那一行在不在，而 runner 上没有游戏。
+        # 现在精简快照里多了一个 `citation_support` 域：每条引用记着**被引那一行的
+        # 文本指纹 + 该文件行数**。离线核的是「与入库快照一致」——**不是**
+        # 「与现在的游戏一致」（后者永远是本机门禁的活，有游戏时 `v3 citations`
+        # 会顺手核「被引那一行还是不是那句话」，那正是官方更新挪走我们依据的信号）。
+        run: v3 citations --offline
+
       # 注：不带 `--offline` 的 `v3 tables`（重算表格）**仍然不在这里** ——
       # 它要读游戏本体才能算出内容，CI 上会以「前置条件缺失」退出 2。
       # 它与 `v3 verify` 一样属于本地门禁，由 `pytest -m integration` 在装有
