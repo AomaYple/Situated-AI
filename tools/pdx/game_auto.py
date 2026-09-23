@@ -21,6 +21,12 @@
       → 确认游戏在前台，然后：点「观察」→ 点 5 档速度 → 按空格
       → 立刻把游戏切回后台（还原用户原来的前台窗口，再最小化游戏窗口）
       → 后台验证：时间真的在走吗、速率多少
+      →（``run --wait-tests N``）再验一次"缩着也在跑" → 等官方套件判定 → 读产物给结论
+
+最后那一步是**闭环的收口**（`自动化范式.md` §6 的后两步）：判据全部来自引擎自己写的
+``tests.txt`` 与 ``binaries/*_GameTests_testoutput.xml``，本模块只解析、不判分。
+默认不等 —— 成绩单什么时候写完由套件的 ``last_date`` 决定，可能是**小时级**，
+不该由工具替调用方定这个时长。
 
 三条硬约束（都是实测踩出来的，各自标了出处）
 --------------------------------------------
@@ -65,6 +71,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import xml.etree.ElementTree as ET
 from contextlib import suppress
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -1658,6 +1665,247 @@ def background_ok(
     )
 
 
+# ── 路线 A 的后两步：等官方套件判定 + 读它的产物 ──────────────────────
+#
+# `自动化范式.md` §6 那张闭环图的**后两步原先一直是手动的**：等 `-scripted_tests`
+# 自己判定并落盘、读 `tests.txt` 与 `binaries/*_GameTests_testoutput.xml`。
+# 这一段把它们补上。判据全部来自**引擎自己写的文件** —— 本模块只解析、不判分
+# （自己判分就是假红/假绿的来源，见模块头）。
+
+#: 官方 harness 的**文本**成绩单（**仓库外**：用户目录）。原文样例见 `自动化范式.md` §1.2。
+TESTS_TXT = config.USERDIR / "tests.txt"
+
+#: 官方 harness 的**机器可读**成绩单（**仓库外**：游戏安装目录 `binaries/`）。
+#: 文件名带随机 uuid ⇒ 每局都是新文件，只能靠"点火之前它不存在"来认。
+TESTOUTPUT_GLOB = "*_GameTests_testoutput.xml"
+
+#: 判定"这条 error.log 是不是在说我们"的标记：
+#: `sitai_` 覆盖脚本 / 本地化 / 策略键名（F7 命名空间），`SITAI` 覆盖 mod 名本身。
+OUR_MARKS: tuple[str, ...] = (config.NAMESPACE_PREFIX, "SITAI")
+
+#: 等成绩单"写完"的轮询间隔与要求：引擎是**先建文件、再写内容**。
+#: 判据用"大小连续两次不变"，不是"睡一觉"（用户口径：等状态一律条件等待）。
+VERDICT_STABLE_POLL = 0.5
+
+
+def binaries_dir() -> Path:
+    """游戏安装目录下的 ``binaries/`` —— 官方成绩单唯一会落的地方。"""
+    return config.ROOT / "binaries"
+
+
+def error_log_path() -> Path:
+    """用户目录下的 ``logs/error.log`` —— "有没有我们的报错"唯一的真值来源。"""
+    return config.USERDIR / "logs" / "error.log"
+
+
+def testoutput_files() -> list[Path]:
+    """``binaries/`` 下已有的官方成绩单，按 mtime 从旧到新。"""
+    root = binaries_dir()
+    if not root.is_dir():
+        return []
+    return sorted(
+        (p for p in root.glob(TESTOUTPUT_GLOB) if p.is_file()),
+        key=lambda p: (p.stat().st_mtime, p.name),
+    )
+
+
+def _int_attr(node: ET.Element, key: str, default: int) -> int:
+    """读一个整数属性；**缺**就用 ``default``，**有但不是数**就报错（P13，不猜）。"""
+    raw = node.get(key)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise GameAutoError(f"官方成绩单里 {key}={raw!r} 不是整数") from exc
+
+
+def _suite_counts(suite: ET.Element) -> tuple[int, int, int]:
+    """一个套件的 ``(tests, failures, errors)``。
+
+    优先用官方写在属性上的数（那是引擎自己的计数）；属性缺了就**数子元素** ——
+    两种来源都在官方格式里，谁在就用谁，不混着加（混着加会重复计数）。
+    """
+    cases = suite.findall("testcase")
+    tests = _int_attr(suite, "tests", len(cases))
+    failures = _int_attr(suite, "failures", sum(1 for c in cases if c.find("failure") is not None))
+    errors = _int_attr(suite, "errors", sum(1 for c in cases if c.find("error") is not None))
+    return tests, failures, errors
+
+
+def parse_testoutput(path: Path) -> tuple[tuple[str, ...], int, int, int]:
+    """解析官方 XML 成绩单 → ``(套件名, tests, failures, errors)``。
+
+    只认官方那一种结构（``<testsuites>`` → ``<testsuite name=…>`` → ``<testcase>``）：
+    根元素不对就**报错**，不按"猜一个"的方式往下走（P13）。
+    """
+    try:
+        root = ET.fromstring(path.read_text(encoding="utf-8-sig"))
+    except OSError as exc:  # pragma: no cover - 文件存在但读不了（权限/占用）
+        raise GameAutoError(f"读不了官方成绩单 {path}：{exc}") from exc
+    except ET.ParseError as exc:
+        raise GameAutoError(f"官方成绩单 {path} 不是合法 XML：{exc}") from exc
+    if root.tag != "testsuites":
+        raise GameAutoError(f"{path.name} 的根元素是 <{root.tag}>，不是 <testsuites> —— 格式变了")
+    suites: list[str] = []
+    tests = failures = errors = 0
+    for suite in root.findall("testsuite"):
+        suites.append(suite.get("name") or "（无名套件）")
+        one_tests, one_failures, one_errors = _suite_counts(suite)
+        tests += one_tests
+        failures += one_failures
+        errors += one_errors
+    return tuple(suites), tests, failures, errors
+
+
+def our_error_lines(text: str) -> tuple[str, ...]:
+    """``error.log`` 里**属于我们命名空间**的行（其余是原版噪音）。
+
+    为什么必须自己数这一遍：harness 那行 ``[ FAIL ] Error log: N errors`` 数的是
+    **整份** error.log，而原版自己就有几十条（实测 85 条）⇒ 照它判**每次假红**。
+    """
+    return tuple(line for line in text.splitlines() if any(mark in line for mark in OUR_MARKS))
+
+
+@dataclass(slots=True)
+class SuiteVerdict:
+    """一次 ``-scripted_tests`` 会话的判定结果（**引擎判的**，这里只解析）。"""
+
+    xml: Path
+    suites: tuple[str, ...]
+    tests: int
+    failures: int
+    errors: int
+    our_errors: tuple[str, ...]
+    #: ``error.log`` 到底读没读到。**读不到 ≠ 没有我们的错** —— 两者必须分开
+    #: （与 :data:`NO_TICK` 同一条纪律），所以它是 :attr:`ok` 的一部分。
+    error_log_read: bool
+    tests_txt: str
+
+    @property
+    def ok(self) -> bool:
+        """三条同时成立才算过：套件真的跑了 · 引擎没判失败 · error.log 里没有我们。
+
+        「套件真的跑了」这一条不能省：``failures == 0 and errors == 0`` 在
+        **一个套件都没跑**时也为真 —— 那是最危险的一种"绿"。
+        """
+        return (
+            bool(self.suites)
+            and self.failures == 0
+            and self.errors == 0
+            and self.error_log_read
+            and not self.our_errors
+        )
+
+    def describe(self) -> str:
+        head = "通过 ✅" if self.ok else "不通过 ❌"
+        lines = [
+            f"官方套件判定  : {head}",
+            f"  成绩单      : {self.xml.name}（{len(self.suites)} 个套件 / {self.tests} 个用例）",
+            f"  引擎判定    : failures={self.failures} errors={self.errors}",
+        ]
+        if self.suites:
+            # 套件名要打出来：出问题时第一个要回答的就是"跑的是哪一份套件"。
+            lines.append("  套件        : " + "、".join(self.suites[:4]))
+        if not self.suites:
+            lines.append("  ⚠️ 一个套件都没跑 —— 这种『零失败』不算通过")
+        if not self.error_log_read:
+            lines.append("  ⚠️ 读不到 error.log ⇒ 无法确认有没有我们的报错 ⇒ 不算通过")
+        elif self.our_errors:
+            lines.append(f"  我们的报错  : {len(self.our_errors)} 条（error.log 里含 {OUR_MARKS}）")
+            lines.extend(f"    {line[:160]}" for line in self.our_errors[:5])
+        else:
+            lines.append("  我们的报错  : 0 条")
+        if self.tests_txt:
+            tail = [ln for ln in self.tests_txt.splitlines() if ln.strip()][-3:]
+            lines.append("  tests.txt   : " + " | ".join(tail))
+        return "\n".join(lines)
+
+    def as_dict(self) -> dict[str, object]:
+        """扁平化（CLI 打印 / 探针记档用）—— 与 :meth:`SessionStart.as_dict` 同款。"""
+        return {
+            "suite_xml": self.xml.name,
+            "suite_count": len(self.suites),
+            "suite_names": "、".join(self.suites),
+            "suite_tests": self.tests,
+            "suite_failures": self.failures,
+            "suite_errors": self.errors,
+            "suite_our_errors": len(self.our_errors),
+            "suite_error_log_read": self.error_log_read,
+            "suite_ok": self.ok,
+        }
+
+
+def read_verdict(xml: Path) -> SuiteVerdict:
+    """把一局的判定产物读成结论（**只读**，不改任何东西）。"""
+    suites, tests, failures, errors = parse_testoutput(xml)
+    log = error_log_path()
+    text = log.read_text(encoding="utf-8", errors="replace") if log.is_file() else ""
+    return SuiteVerdict(
+        xml=xml,
+        suites=suites,
+        tests=tests,
+        failures=failures,
+        errors=errors,
+        our_errors=our_error_lines(text),
+        error_log_read=log.is_file(),
+        tests_txt=TESTS_TXT.read_text(encoding="utf-8-sig") if TESTS_TXT.is_file() else "",
+    )
+
+
+def _wait_size_stable(path: Path, *, timeout: float, poll: float = VERDICT_STABLE_POLL) -> None:
+    """等文件**写完**：大小连续两次相同（引擎先建文件、再写内容）。
+
+    为什么不能只看"文件在不在"：实测那一下能读到**半截** XML，解析失败会让人
+    以为是格式变了 —— 其实只是还没写完。
+    """
+    last = -1
+
+    def stable() -> bool:
+        nonlocal last
+        try:
+            size = path.stat().st_size
+        except OSError:  # pragma: no cover - 刚被挪走/占用
+            return False
+        done = size > 0 and size == last
+        last = size
+        return done
+
+    if not wait_until(stable, timeout=timeout, interval=poll):
+        raise GameAutoError(f"{path.name} 在 {timeout:.0f} 秒内没写完（大小一直在变）")
+
+
+def wait_for_testoutput(
+    known: frozenset[Path] = frozenset(), *, timeout: float, poll: float = POLL_INTERVAL
+) -> Path:
+    """等官方写出**新的**成绩单，并等它写完。
+
+    ``known`` 是点火**之前**就存在的那批文件。引擎每局换一个新 uuid，
+    所以"出现了一个 ``known`` 里没有的文件"才是可靠判据 —— 只看"最新的那个"会把
+    上一局留下的成绩单当成这一局的。
+    """
+    fresh: list[Path] = []
+
+    def appeared() -> bool:
+        found = [p for p in testoutput_files() if p not in known]
+        fresh[:] = found
+        return bool(found)
+
+    if not wait_until(appeared, timeout=timeout, interval=poll):
+        raise GameAutoError(
+            f"{timeout:.0f} 秒内没等到新的官方成绩单（{binaries_dir()}\\{TESTOUTPUT_GLOB}）—— "
+            "套件没跑起来？先看 tests.txt 与引擎日志"
+        )
+    xml = fresh[-1]
+    _wait_size_stable(xml, timeout=timeout)
+    return xml
+
+
+def wait_for_verdict(known: frozenset[Path] = frozenset(), *, timeout: float) -> SuiteVerdict:
+    """**闭环的最后一步**：等套件判定 → 读产物 → 给结论。"""
+    return read_verdict(wait_for_testoutput(known, timeout=timeout))
+
+
 def tick_day(tick: str) -> float | None:
     """把 ``1836.1.12.12`` 折成"第几天"（够算速率就行，不做精确日历）。读不到返回 ``None``。"""
     parts = tick.split(".")
@@ -1789,10 +2037,15 @@ class SessionStart:
     attempts: int
     handover: ForegroundHandover
     tick: str
+    #: 后台继续模拟的证据（`background_ok(..., restore=False)`）—— 只有要求
+    #: 等判定时才会填：等判定意味着"要相信后台真的在跑"。
+    background: Advance | None = None
+    #: 官方套件的判定（**引擎自己判的**）—— 只有要求等判定时才会填。
+    verdict: SuiteVerdict | None = None
 
     def as_dict(self) -> dict[str, object]:
         """扁平化（CLI 打印 / 探针记档用）。"""
-        return {
+        out: dict[str, object] = {
             "hwnd": self.hwnd,
             "previous": self.previous,
             "boot_settle": self.settle.why,
@@ -1810,6 +2063,12 @@ class SessionStart:
             "minimized": self.handover.minimized,
             "tick": self.tick,
         }
+        if self.background is not None:
+            out["background"] = self.background.describe()
+            out["background_advanced"] = self.background.advanced
+        if self.verdict is not None:
+            out.update(self.verdict.as_dict())
+        return out
 
 
 def launch_to_foreground(
@@ -2201,14 +2460,24 @@ def run_session(
     verify_minimized: bool = True,
     keep_foreground: bool = False,
     force: bool = False,
+    wait_tests: float = 0.0,
+    background_seconds: float = 8.0,
 ) -> SessionStart:
-    """端到端一条命令：起游戏 → 等加载 → 观察/速度/空格 → 切回后台。
+    """端到端一条命令：起游戏 → 等加载 → 观察/速度/空格 → 切回后台 →（可选）等判定。
 
     这是 CLI ``run`` 与探针共用的入口，**内部没有第二条路**。
+
+    ``wait_tests`` > 0 时把闭环的**最后两步**也做掉（`自动化范式.md` §6）：
+    验一次后台仍在模拟 → 等官方写出新的成绩单 → 读它给结论。默认 0 = 不等：
+    成绩单什么时候写完由套件的 ``last_date`` 决定，跑的可能是**小时级**，
+    不能替调用方定这个时长。
     """
+    # 点火**之前**先记下已有的成绩单 —— 引擎每局换一个新 uuid，
+    # "出现了一个先前没有的文件"才是这一局的成绩单。
+    known = frozenset(testoutput_files())
     hwnd, previous = launch_to_foreground(scripted_tests=scripted_tests, timeout=lobby_timeout)
     settle = wait_for_boot_settle(timeout=lobby_timeout)
-    return start_session(
+    started = start_session(
         hwnd,
         previous,
         settle=settle,
@@ -2218,6 +2487,15 @@ def run_session(
         verify_minimized=verify_minimized,
         keep_foreground=keep_foreground,
         force=force,
+    )
+    if wait_tests <= 0 or not scripted_tests:
+        return started
+    # `restore=False`：**不许把前台抢回游戏** —— 用户口径是点火之后就把机器还给人。
+    # `SessionStart` 是 frozen 的：后两步的结果用 `replace` 挂上去，不改原对象。
+    return replace(
+        started,
+        background=background_ok(started.hwnd, seconds=background_seconds, restore=False),
+        verdict=wait_for_verdict(known, timeout=wait_tests),
     )
 
 
@@ -2273,6 +2551,20 @@ def main(argv: list[str] | None = None) -> int:
         help="跳过「缩着也在推进」那一步实测（默认实测，验不过当场恢复）",
     )
     run_parser.add_argument("--speed-xy", default="", help="显式指定速度档 V 的客户区坐标 X,Y")
+    run_parser.add_argument(
+        "--wait-tests",
+        type=float,
+        default=0.0,
+        metavar="秒",
+        help="等官方套件判定并读产物（闭环的最后两步）。0 = 不等（默认）—— "
+        "成绩单什么时候写完由套件的 last_date 决定，可能是小时级",
+    )
+    run_parser.add_argument(
+        "--background-seconds",
+        type=float,
+        default=8.0,
+        help="等判定之前先验一次「缩着也在推进」的秒数（只在 --wait-tests 时用）",
+    )
 
     cap_parser = sub.add_parser("capture", help="抓游戏窗口到 PNG（收模板/留证据用）")
     cap_parser.add_argument("out", help="输出 PNG 路径")
@@ -2321,31 +2613,36 @@ def main(argv: list[str] | None = None) -> int:
 
         # 只剩 "run"：标准流程 —— 起游戏（前台）→ 等加载（**完全不碰窗口**，只用进程 +
         # 日志这些免费信号，至少 BOOT_MIN_SECONDS 秒；实测到选国家界面约 137 秒）
-        # → 点观察 → 点 5 档速度 → 按空格 → 切回后台（还前台 + 缩窗口）。
-        hwnd, previous = launch_to_foreground(
-            scripted_tests=not bool(args.no_scripted_tests),
-            timeout=float(args.lobby_timeout),
-        )
-        settle = wait_for_boot_settle(timeout=float(args.lobby_timeout))
-        print(f"加载等待（不碰窗口）：{settle.why}")
+        # → 点观察 → 点 5 档速度 → 按空格 → 切回后台（还前台 + 缩窗口）
+        # →（--wait-tests）验后台仍在跑 → 等官方套件判定 → 读产物给结论。
+        #
+        # ⚠️ 这段话以前是**第二份实现**（与 `run_session` 各写一遍），于是
+        # 「`run_session` 是唯一入口」这句话是假的、`--wait-tests` 也只会在这里生效。
+        # 现在只有一条路：CLI 也只调 `run_session`。
         speed_xy: tuple[int, int] | None = None
         if args.speed_xy:
             left, _, right = str(args.speed_xy).partition(",")
             speed_xy = (int(left), int(right))
-        result = start_session(
-            hwnd,
-            previous,
-            settle=settle,
+        result = run_session(
+            scripted_tests=not bool(args.no_scripted_tests),
+            lobby_timeout=float(args.lobby_timeout),
             speed_xy=speed_xy,
             skip_speed=bool(args.skip_speed),
             verify_minimized=not bool(args.no_verify_minimized),
             keep_foreground=bool(args.keep_foreground),
             force=force,
+            wait_tests=float(args.wait_tests),
+            background_seconds=float(args.background_seconds),
         )
+        print(f"加载等待（不碰窗口）：{result.settle.why}")
         print("闭环完成，证据：")
         for key, value in result.as_dict().items():
             print(f"  {key:22s}: {value}")
-        return 0
+        if result.verdict is None:
+            return 0
+        print(result.verdict.describe())
+        # 判定不通过就是**这次运行不通过**（P13）：退出码交给调用方，别只打印一句。
+        return 0 if result.verdict.ok else 1
 
     except GameAutoError as exc:
         print(f"[失败] {type(exc).__name__}: {exc}", file=sys.stderr)
@@ -2363,7 +2660,10 @@ __all__ = [
     "CONSOLE_OUTPUT_ROI",
     "DEFAULT_SCALES",
     "DEFAULT_THRESHOLD",
+    "OUR_MARKS",
     "SHIFT_CHARS",
+    "TESTOUTPUT_GLOB",
+    "TESTS_TXT",
     "TOP_RIGHT_ROI",
     "UI_DIR",
     "Advance",
@@ -2376,15 +2676,18 @@ __all__ = [
     "Match",
     "NotRunningError",
     "SessionStart",
+    "SuiteVerdict",
     "TemplateNotFoundError",
     "TickMark",
     "WindowNotFoundError",
     "assert_no_game_running",
+    "binaries_dir",
     "click_client",
     "click_match",
     "console_open",
     "console_output_ink",
     "ensure_foreground",
+    "error_log_path",
     "find_observe",
     "find_template",
     "find_window",
@@ -2402,12 +2705,15 @@ __all__ = [
     "measure_rate",
     "open_console",
     "other_window",
+    "our_error_lines",
     "parse_tasklist_pids",
+    "parse_testoutput",
     "parse_tick_date",
     "press_chord",
     "press_key",
     "probe_months",
     "probe_roles_in",
+    "read_verdict",
     "roi_box",
     "run_session",
     "screenshot",
@@ -2417,10 +2723,13 @@ __all__ = [
     "status_report",
     "submit_console_command",
     "switch_to_background",
+    "testoutput_files",
     "tick_day",
     "tick_mark",
     "type_text",
     "wait_for_boot_settle",
+    "wait_for_testoutput",
+    "wait_for_verdict",
     "wait_for_window",
     "wait_until",
     "wait_until_readable",

@@ -184,15 +184,64 @@ def _scan_prefixes(path: Path, rel_str: str, vanilla: Path, info: ModInfo) -> No
 #: 实测踩过：装完探针，`test_golden` 的产物指纹与 `refresh --dry-run` 立刻红。
 PROBE_PREFIX = "zz_probe_"
 
+#: 本仓库**自己的 mod** 在 `.metadata/metadata.json` 里的 `id` 前缀。
+#:
+#: `modgen.metadata_payload()` 把 id 写成
+#: ``f"{NAMESPACE_PREFIX.rstrip('_')}.{'-'.join(sorted(档案 id))}"``
+#: ⇒ 本仓库任何一版部署出去的 mod，id 都以 `sitai.` 开头。
+#:
+#: **为什么必须按 id 认、不能按目录名认**（实测踩过，backlog **B83**）：
+#: 部署目录名就是那一串档案 id（`tools/probe/stage3_rerun.ours()`），
+#: **档案集合一变，旧目录名就再也匹配不上** —— 于是那个目录既删不掉（`restore()`
+#: 按新名字找不到它），又被 `discover_mods()` 当成「用户订阅的 mod」。后果三层，
+#: 每一层都在真实数据上发生过：
+#:
+#:   ① `mod.total` 从 23 被顶到 24（把**我们自己**数成了用户订阅）；
+#:   ② `mod.files` 从 4,777 被顶到 4,828（多算了我们自己那 51 个文件）；
+#:   ③ doc 12 那一批「本机 mod 快照」分布数跟着算错，而当时它们**没有断言看守** ——
+#:      这正是 `../docs/design/backlog.md` B83 说的那件事，只是原因不是「用户改了订阅」。
+OWN_MOD_ID_PREFIX = config.NAMESPACE_PREFIX.rstrip("_") + "."
+
+
+def own_mod(root: Path) -> bool:
+    """这个目录是不是**本仓库自己部署**的 mod？（判据见 :data:`OWN_MOD_ID_PREFIX`）"""
+    ident = read_metadata(root).get("id")
+    return isinstance(ident, str) and ident.startswith(OWN_MOD_ID_PREFIX)
+
+
+def own_mod_dirs() -> list[Path]:
+    """用户 mod 目录里**属于本仓库**的那些目录（探针 mod + 我们自己部署的 mod）。
+
+    给 `tools/probe/` 的收尾用：它必须在**不知道旧目录名**的前提下也能清干净 ——
+    旧目录名是上一版的档案集合拼的，档案一增删就再也拼不回来。
+    """
+    if not config.LOCAL_MODS.is_dir():
+        return []
+    return sorted(
+        p
+        for p in config.LOCAL_MODS.iterdir()
+        if p.is_dir()
+        and not p.name.startswith(".")
+        and (p.name.startswith(PROBE_PREFIX) or own_mod(p))
+    )
+
 
 def discover_mods(*, include_local: bool = True, include_workshop: bool = True) -> list[Path]:
-    """列出所有 mod 根目录（**不含本仓库自己的探针 mod**，见 :data:`PROBE_PREFIX`）。"""
+    """列出所有 mod 根目录。
+
+    **不含本仓库自己装进去的东西**：探针 mod（:data:`PROBE_PREFIX`）与
+    我们自己部署的真 mod（:func:`own_mod`）。它们不算「本机装了哪些 mod」——
+    装进去只是为了跑一次游戏实测，数进来就会让 mod 侧的统计与断言
+    随「这一局跑没跑过」而变（B83）。
+    """
     roots: list[Path] = []
     if include_workshop and config.WORKSHOP.is_dir():
         roots += sorted(p for p in config.WORKSHOP.iterdir() if p.is_dir())
     if include_local and config.LOCAL_MODS.is_dir():
         roots += sorted(
-            p for p in config.LOCAL_MODS.iterdir() if p.is_dir() and not p.name.startswith(".")
+            p
+            for p in config.LOCAL_MODS.iterdir()
+            if p.is_dir() and not p.name.startswith(".") and not own_mod(p)
         )
     return [r for r in roots if not r.name.startswith(PROBE_PREFIX)]
 

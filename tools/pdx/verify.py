@@ -747,6 +747,11 @@ def _mods_files(_target: str) -> int:
     为什么要单列：doc 12 与索引页关于「23 个 mod 一共有多少文件」的说法
     长期停在 3,046，而实测是 4,777 —— 这个数字没进断言表，
     所以它漂了多久都没人知道。
+
+    ⚠️ **口径 = 「本机装了哪些 mod」，不是「那个目录里有什么」**：`discover_mods()`
+    排除本仓库自己装进去的东西（探针 mod 与 `mods.own_mod`）。踩过的坑（B83）：
+    我们自己部署的真 mod 曾经被数进来，于是 `mod.total` 23→24、`mod.files` 4,777→4,828，
+    而 doc 12 一整批快照数跟着算错 —— 根因见 `mods.OWN_MOD_ID_PREFIX`。
     """
     return sum(m.files for m in analyse_all())
 
@@ -1898,20 +1903,21 @@ CLAIMS: list[Claim] = [
     Claim(
         "mod.total",
         "12-真实mod解剖与改造面地图.md",
-        "订阅了 24 个 Workshop mod",
+        "订阅了 23 个 Workshop mod",
         "mods_total",
         "",
-        24,
+        23,
     ),
     Claim(
         "mod.files",
         "12-真实mod解剖与改造面地图.md",
-        "24 个 Workshop mod 共 4828 个内容文件",
+        "23 个 Workshop mod 共 4796 个内容文件",
         "mods_files",
         "",
-        4828,
-        "不含各 mod 的 metadata.json（每 mod 1 个，共 24 个）；"
-        "去重后为 4,750 个相对路径。doc 12 与索引页曾长期写作 3,046",
+        4796,
+        "不含各 mod 的 metadata.json（每 mod 1 个，共 23 个）；"
+        "去重后为 4,769 个相对路径。doc 12 与索引页曾长期写作 3,046。"
+        "⚠️ 4,828 那一版是把**我们自己部署的 mod** 也数了进去（B83），已修正",
     ),
     # ── 引擎级功能前缀（doc 02 / doc 14，本项目最核心的结论之一）──
     #: 这条长期缺席：函数写好了、注册了，却没有 claim 引用它，

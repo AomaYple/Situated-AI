@@ -36,7 +36,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pdx import ab_probe, config, modgen
+from pdx import ab_probe, config, modgen, mods
 from pdx import game_auto as ga
 
 DOCS = Path.home() / "Documents" / "Paradox Interactive" / "Victoria 3"
@@ -62,6 +62,36 @@ def ours() -> Path:
 MONTH_DAYS = 30.44
 
 
+def _clean_ours(*extra: Path) -> list[str]:
+    """删掉用户 mod 目录里**所有属于本仓库**的目录，返回删掉的名字。
+
+    为什么是「所有」而不是「当前那一个」—— 这两件事都必须成立，缺一条就漏：
+
+    * **目录名会变**：`ours()` 现算 `ab_probe.load_target().dir_name`，而那个名字是
+      **各档案 id 拼出来的**。档案集合一增删，上一版部署的目录就再也匹配不上。
+      实测（backlog **B83**）：批次 2 装下的 6 档案目录在批次 3（8 档案）之后
+      **既删不掉**（`restore()` 按新名字找不到它），**又被当成用户订阅的 mod**
+      （`discover_mods()` 那时只排除 `zz_probe_` 前缀）—— 于是 `mod.total` 被顶到 24、
+      `mod.files` 被顶到 4,828，doc 12 一整批分布数跟着算错。
+    * **不许静默空转**：一个都没删到时也要说话（P13）—— 调用方据此判断
+      "环境已经干净"还是"我没找到东西"。
+
+    认目录的判据是 `.metadata/metadata.json` 的 id 前缀（`mods.own_mod_dirs()`），
+    不是目录名。副作用要说清：用户**手动**装进本地 mod 目录的那份 SITAI 也会被删 ——
+    对一个"还原用户环境"的收尾动作来说这是对的（它是我们的东西），但值得知道。
+    """
+    targets = set(mods.own_mod_dirs())
+    for path in extra:
+        if path.exists():
+            targets.add(path)
+    removed: list[str] = []
+    for target in sorted(targets):
+        if target.exists():
+            shutil.rmtree(target, ignore_errors=True)
+            removed.append(target.name)
+    return removed
+
+
 def deploy(*, with_probe: bool = True, archive_id: str | None = None) -> str:
     """装本地 mod 并改写 `content_load.json`；返回一句人读的说明。
 
@@ -76,9 +106,8 @@ def deploy(*, with_probe: bool = True, archive_id: str | None = None) -> str:
         shutil.copy2(CONTENT_LOAD, BACKUP)
     original = json.loads(CONTENT_LOAD.read_text(encoding="utf-8"))
     ours_dst = ours()
-    for target in (ours_dst, PROBE):
-        if target.exists():
-            shutil.rmtree(target)
+    # 先清残留：上一版档案集合留下的目录按新名字是找不到的（见 `_clean_ours`）。
+    _clean_ours(ours_dst, PROBE)
     shutil.copytree(config.REPO / "mod", ours_dst)
     paths = [ours_dst]
     if with_probe:
@@ -101,17 +130,17 @@ def deploy(*, with_probe: bool = True, archive_id: str | None = None) -> str:
 
 
 def restore() -> str:
-    """还原 `content_load.json` 并删掉我们装进去的两个本地 mod 目录。"""
+    """还原 `content_load.json` 并删掉**所有**属于本仓库的本地 mod 目录。"""
     notes: list[str] = []
     if BACKUP.exists():
         shutil.copy2(BACKUP, CONTENT_LOAD)
         notes.append("content_load.json 已还原")
     else:  # pragma: no cover - 没备份就没得还原，如实说
         notes.append("⚠️ 没有备份可还原")
-    for target in (ours(), PROBE):
-        if target.exists():
-            shutil.rmtree(target)
-            notes.append(f"已删 {target.name}")
+    removed = _clean_ours(ours(), PROBE)
+    notes.append(
+        "已删本地 mod：" + "、".join(removed) if removed else "本地 mod 目录里没有我们的残留"
+    )
     return "；".join(notes)
 
 

@@ -107,7 +107,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 ab-probe` | （阶段 3 新增） | 生成 A/B 臂阶梯探针（`tools/probe/zz_probe_ab/`，含 `tools/scripted_tests/` 套件）；`--deploy` 连同真 mod 一起装进用户 mod 目录 |
 | `v3 ab` | （阶段 3 新增） | 分析实验归档：`--logs` 指目录、`--json` 机器可读、`--health` 开局自检（任一红即退出码 1）。报告按 ① 行为层 / ② 策略层 / ③ 改革侧输入段分开排，最后给判定 |
 | `v3 ab-auto` | （阶段 3 新增） | 自动跑臂队列：`--plan` 只看队列与接线（安全）、`--months` / `--expect` / `--repeat` / `--record`。⚠️ **端到端跑批尚不可用**：`ab_auto.default_ports()` 的 `start` / `stop` 目前是"调用即抛错"的空实现（`cli.py` 里 `--plan` 也直接印着"启动/杀进程 **未接**"），要接 `game_auto` 才能从 `Ports` 传进去。设计上**没接上就退出码 1**（不静默跳过），所以现在跑只会得到一条 ❌ 记录 —— 证据见 `docs/design/exec/阶段3-实验记录.md`（目前只有表头，没有任何一节跑批记录） |
-| `python -m pdx.game_auto <check\|run\|status\|capture\|background>` | （阶段 3 新增，**不是 `v3` 子命令**） | 底层「把游戏跑起来」的原语：`check` 起游戏前断言 0 个 `victoria3` 进程、`run` 完整闭环（点火 → 前台断言 → 点「观察」→ 取消暂停 → 等 `-scripted_tests` 自己判定）、`status` 只读 tick / 探针月度行、`capture` 抓图、`background` 验后台是否继续模拟。**分工**：它只负责点火与读引擎写的结果，判定绝不自做；`v3 ab-auto` 是阶段 3 的编排状态机，通过 `ab_auto.Ports` 注入调用它（`start` / `stop`）。范式与实测证据见 `docs/design/exec/自动化范式.md` |
+| `python -m pdx.game_auto <check\|run\|status\|capture\|background>` | （阶段 3 新增，**不是 `v3` 子命令**） | 底层「把游戏跑起来」的原语：`check` 起游戏前断言 0 个 `victoria3` 进程、`run` 完整闭环（点火 → 前台断言 → 点「观察」→ 取消暂停 → 切回后台；`--wait-tests N` 再补**后两步**：验后台仍在跑 → 等官方套件判定 → 读 `tests.txt` / `binaries/*_GameTests_testoutput.xml` 给结论，**不通过退 1**）、`status` 只读 tick / 探针月度行、`capture` 抓图、`background` 验后台是否继续模拟。**分工**：它只负责点火与读引擎写的结果，判定绝不自做 —— `SuiteVerdict` 判的是"引擎判了失败 / `error.log` 里有 `sitai_`/`SITAI` 的行 / 一个套件都没跑 / 读不到 `error.log`"，那行 `[ FAIL ] Error log: N errors` **不参与**（它数的是整份 error.log，原版自己就有几十条噪音）；`v3 ab-auto` 是阶段 3 的编排状态机，通过 `ab_auto.Ports` 注入调用它（`start` / `stop`）。范式与实测证据见 `docs/design/exec/自动化范式.md` |
 
 ```text
 .venv\Scripts\v3.exe analyze                     # 全量分析，落盘报告
@@ -189,7 +189,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-1434 条用例（`pytest --collect-only` 实测），
+1469 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -241,6 +241,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_ab.py` | 阶段 3 的 A/B 分析器：按月配对（含脉冲跨秒与轮转副本）、`RUN` 分段 + 同臂多段合并、**一局三臂**（`A→B→B2`）、**两处处理分开报**（① / ② 是冲击步 A→B，③ 是改革侧输入步 B→B2）、判定三档（G2 初步成立 / H2 薄壳 / 无差分）与"样本不足不许宣判"、合法性五档诊断、`SHOCK`/`INPUT` 两条自检的通过与否决路径，以及**老归档（没有 `INPUT`/`LEG` 行）照样能分析**（阶段 3 的结论就来自那些局） |
 | `test_ab_auto.py` | 阶段 3 的**自动实验编排**状态机全路径（假端口，不开游戏）：有进程时前置断言中断、启动接口没接上当场报错、轮询三种收工方式（到点 / 游戏提前退出 / 轮询用尽）、进度按探针自己的月度块算而不按墙钟、整臂跑通的状态顺序与归档标签、没跑到目标臂或月数不够即不达标、记录文件的表头与追加、队列"一臂不达标即停"、CLI `--plan` 不写文件与未接线时退出码 1 |
 | `test_game_auto.py` | `game_auto.py`（1102 行）的**纯逻辑**看守（948 行；假窗口 / 假截图 / 假时钟，不开游戏）：tick 与探针月度行的解析与读取、进程清单、ROI 裁剪、空白检测、图像匹配（含真实模板回放）、`wait_until*` 的等待语义、前台断言、点击（含「点观察」）、截图、取消暂停、后台仍在推进的判据、启动命令构造与缺 exe 的报错、窗口/大厅等待、`describe`/`status` 的文案。真开游戏的 `TestLive` 一类按条件跳过 |
+| `test_game_auto_verdict.py` | 闭环**最后两步**的看守（官方成绩单解析 / "我们的报错"只数我们的 / 两条假绿都挡住 / 等落盘是条件等待 / 接线与退出码）。两条假绿指的是：照 `[ FAIL ] Error log: N errors` 判会**每次假红**，而"零失败 + 零套件"会**假绿** |
 | `test_gametimer.py` | `gametimer.py` 的解析与统计（纯合成夹具，不依赖游戏）：表头识别、`Year/Month/Day` 三档聚合、坏行只打标不改写、按单元汇总与「最坏一天」、**「单帧量不出来」这件事本身**（`per_frame_measurable is False`）—— 预算判据不许把不可测的东西写成测过了 |
 | `test_mod_hygiene.py` | **P3 / G-EXIT-4 的文件面判据**：`mod/` 下的文件必须**正好**等于「生成结果 ∪ 数据源」。为什么需要它 —— `v3 modgen --check` 与 `v3 modguard` 都只认本档案前缀（`sitai_`），实测换一个前缀手写一个游戏侧文件（`zz_stray_handwritten.txt`）**两道门禁都报绿** |
 
@@ -469,7 +470,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：1434 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：1469 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

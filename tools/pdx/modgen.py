@@ -101,7 +101,9 @@ GATE_ORDER = ("is_shown_when_inactive", "possible", "complete", "fail", "invalid
 #: 引擎认的是**它自己的**前缀（`je_` 让它找 journal_entries、`ai_strategy_` 让它
 #: 找策略），所以 `sitai_` 只能排在后面 —— 于是判据写成"可选引擎前缀 + sitai_"，
 #: 而不是"必须以 sitai_ 开头"。
-NAMESPACE_PREFIX = "sitai_"
+#: 定义在 `config` 里（扫描器也要用它认出「哪个目录是我们自己部署的 mod」）——
+#: 这里只是把它挂到生成器的命名空间上，**不是**第二份定义。
+NAMESPACE_PREFIX = config.NAMESPACE_PREFIX
 
 #: 命名空间的完整判据（见 :data:`NAMESPACE_PREFIX` 的注释）。
 NAMESPACE_RE = re.compile(r"^(?:ai_strategy_|je_)?sitai_[a-z0-9_]+$")
