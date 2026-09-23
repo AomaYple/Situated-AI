@@ -277,3 +277,13 @@ why = "第二行 = **最大压力与阻力**。压力项与 [pressure.effects] �
 english = "Why it changed its mind: because the revolution was written into the books — legitimacy collapsing is what moved the inputs the AI reads."
 simp_chinese = "上次改主意的原因：因为革命危机被记进了账 —— 是合法性塌下来这件事挪动了 AI 读到的那些输入。"
 why = "第三行 = **上次改主意的原因**。与战败档的区别正在这里：战败是'外部打进来'，革命潮是'内部裂开'，而玩家能从这一行读出因果链的起点。"
+
+
+# ── ⑨ 探针口径（B80：本档案盯哪条法；**留空 = 没查实**）────────────
+#
+# 为什么要有这张表：探针的行为层②原来写死 `NOT = { has_law = law_type:law_serfdom }`，
+# 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
+# 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
+[probe]
+why = "**奥地利的土地法是庄园制而不是农奴制** —— 依据：`common/history/countries/aus - austria.txt:17` 的 `activate_law = law_type:law_manorialism`（逐行打开确认）。照抄俄国的 `law_serfdom` 会让「不是农奴制」当场成立、报出假的「法律换了」。"
+reform_law = "law_manorialism"

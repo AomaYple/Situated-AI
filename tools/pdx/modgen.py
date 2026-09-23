@@ -340,6 +340,20 @@ PANEL_LINES: tuple[tuple[str, str], ...] = (
 
 
 @dataclass(frozen=True, slots=True)
+class Probe:
+    """探针要盯的东西（**每份档案显式声明**，可选表 `[probe]`）。
+
+    ``reform_law``：`ab_probe` 的"行为层②"用哪条法判"改革真的发生了"。
+    **允许为空**（= 没查实）—— 空的时候套件**不产出**那条判据：宁可少一条读数，
+    也不给一条会对某些国家立刻为真的假判据（奥斯曼/埃及在历史文件里没有土地法，
+    写死 `law_serfdom` 时"不是农奴制"当场成立，实测踩过）。
+    """
+
+    why: str
+    reform_law: str
+
+
+@dataclass(frozen=True, slots=True)
 class DifficultyTier:
     """难度的一档：id + 中英文名与说明 + 这一档**给玩家加什么**。
 
@@ -438,6 +452,8 @@ class Archive:
     panel: tuple[tuple[str, str, str], ...] = ()
     #: 难度三档（**mod 级**：0 份或 2 份都当场报错，照 `[tempo]` 的口径）。
     difficulty: Difficulty | None = None
+    #: 探针口径（可选表 `[probe]`）：本档案盯哪条法。
+    probe: Probe | None = None
 
     @property
     def effect_file(self) -> str:
@@ -904,6 +920,19 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
             key=reason_key, why=reason_entry.why, values=merged
         )
 
+    # `[probe]`（可选表）：探针口径 —— 本档案盯哪条法（B80）。
+    probe: Probe | None = None
+    if "probe" in data:
+        raw = _require_table(data["probe"], f"{source}:probe")
+        reform_law = raw.get("reform_law", "")
+        if not isinstance(reform_law, str):
+            raise DataError(f"{source}:probe.reform_law 必须是字符串（留空 = 没查实）")
+        if reform_law and not reform_law.startswith("law_"):
+            raise DataError(
+                f"{source}:probe.reform_law 要写原版的法律键（law_ 开头），现在 {reform_law!r}"
+            )
+        probe = Probe(why=_why(raw, f"{source}:probe"), reform_law=reform_law)
+
     # `[difficulty]`（可选表，**mod 级**）：难度三档（阶段 6 / 契约 J5）。
     # 与 `[tempo]` 同一口径：全仓恰好一份，校验交给 `_check_difficulty`。
     difficulty: Difficulty | None = None
@@ -971,6 +1000,7 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
         inputs=inputs,
         panel=tuple(panel),
         difficulty=difficulty,
+        probe=probe,
     )
     _check_namespace(parsed)
     return parsed

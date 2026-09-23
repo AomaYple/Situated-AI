@@ -36,7 +36,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pdx import ab_probe, config
+from pdx import ab_probe, config, modgen
 from pdx import game_auto as ga
 
 DOCS = Path.home() / "Documents" / "Paradox Interactive" / "Victoria 3"
@@ -174,6 +174,44 @@ def wait_months(target: float, *, poll: float = 20.0, timeout: float = 3600.0) -
     return mark.tick  # 超时也如实返回走到了哪
 
 
+def _subject_archive(ours: list[str]) -> str:
+    """这一局盯的**档案 id**（探针武装时写的 `ZZPROBE AB;TARGET;<id>`）。
+
+    为什么不能从日志里的国名认：自报行的最后一格是**本地化国名**（实测是「波斯」），
+    不是 tag；而 `[This.GetTag]` 不是合法的 loc 命令（生成器里写明了）。
+    没有这一行（旧日志）就返回空串 —— 调用方**不判**，不猜。
+    """
+    for line in ours:
+        if "ZZPROBE AB;TARGET;" in line:
+            body = line.split("ZZPROBE AB;TARGET;", 1)[1].split('"', 1)[0]
+            return body.split(";")[0].strip()
+    return ""
+
+
+def _law_reading(laws: list[str], ours: list[str]) -> dict[str, object]:
+    """按**这一局那个国家所属档案**声明的法报"换没换"（B80）。
+
+    声明了 `[probe].reform_law` ⇒ 报「盯的法」+「它还在不在」；
+    没声明（或日志里读不到国家）⇒ **这一栏不判**，并说明为什么。
+    """
+    archive_id = _subject_archive(ours)
+    target = next((archive for archive in modgen.load_all() if archive.id == archive_id), None)
+    if target is None or target.probe is None or not target.probe.reform_law:
+        why = (
+            f"这一局盯的是 {archive_id}，它没声明 `[probe].reform_law`"
+            if archive_id
+            else "日志里没有 `TARGET` 行（旧探针生成的日志）"
+        )
+        return {
+            "⚠️ 法律换过没有：不判": f'{why} —— 数据源里补 `[probe] reform_law = "law_…"` 才能判'
+        }
+    declared = target.probe.reform_law
+    return {
+        f"本档案盯的法（{target.id}.[probe].reform_law）": declared,
+        f"✅ 那条法已不是现行法律（{declared}）": declared not in laws,
+    }
+
+
 def analyze(log: Path | None = None) -> dict[str, object]:
     """从日志里取读数：分类计数 + 去重后的变化序列。
 
@@ -251,9 +289,7 @@ def analyze(log: Path | None = None) -> dict[str, object]:
         "立法读数（去重）": _dedupe(enact),
         "政府在朝（去重）": _dedupe(gov),
         "各 IG 的 clout 水位（最高档）": clout_top,
-        "首次观测到的非-law_serfdom 法（⚠️ 仅俄国口径，不可当结论）": next(
-            (law for law in laws if law not in {"law_serfdom", "none"}), ""
-        ),
+        **_law_reading(laws, ours),
         "✅ 进步牌挂上过": "ai_strategy_progressive_agenda" in strategies,
         "✅ 窗口开过": "active" in je,
         "✅ 冲击施加过": "yes" in shocks,

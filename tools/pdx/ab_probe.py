@@ -97,6 +97,12 @@ class ProbeTarget:
     input_effect: str
     input_modifier: str
     archive_id: str
+    #: "行为层②"用哪条法判"改革真的发生了"。**空 = 该档案没查实**（B80）。
+    #:
+    #: 为什么允许为空：套件原来写死 `NOT = { has_law = law_type:law_serfdom }`，
+    #: 而奥斯曼与埃及的历史文件里**没有**土地法那一组（实测）⇒ 对它们这条判据
+    #: **立刻为真**，报出一个假的"法律换了"。空的时候干脆不判。
+    reform_law: str = ""
 
 
 def load_target(archive_id: str | None = None) -> ProbeTarget | None:
@@ -138,6 +144,7 @@ def load_target(archive_id: str | None = None) -> ProbeTarget | None:
         input_effect=first.inputs.effect if first.inputs is not None else "",
         input_modifier=first.inputs.name if first.inputs is not None else "",
         archive_id=first.id,
+        reform_law=first.probe.reform_law if first.probe is not None else "",
     )
 
 
@@ -204,7 +211,15 @@ SHOCK_VAR = "sitai_ru_defeat_memory"
 
 #: 每个月要记的法律（改革相关；都是原版存在的 law_type）。
 LAWS = (
+    # 土地法那一组（**各国不一样**：俄国/大清/波斯是农奴制，奥地利是庄园制，
+    # 新大陆是 latifundias —— 少列一条，某个国家的土地法就读不到）
     "law_serfdom",
+    "law_manorialism",
+    "law_latifundias",
+    "law_expanded_latifundias",
+    "law_tenant_farmers",
+    "law_commercialized_agriculture",
+    # 权力分配 / 言论 / 兵役 / 经济（改革方向上的常见落点）
     "law_autocracy",
     "law_wealth_voting",
     "law_censorship",
@@ -409,6 +424,9 @@ def effects_text(target: ProbeTarget) -> str:
         f"#    探针只调用它们 —— 这样实验用的世界状态与档案本身是同一份定义。\n"
         f"zz_probe_ab_arm = {{\n"
         f'{TAB}debug_log = "ZZPROBE AB;RUN;A"\n'
+        f"{TAB}# 这一局盯的是**哪一份档案** —— 分析器靠它认主语（日志里的国名是本地化的，"
+        f"不是 tag）。\n"
+        f'{TAB}debug_log = "ZZPROBE AB;TARGET;{target.archive_id}"\n'
         f"{TAB}# 标记「决议武装过」—— 自励路径看到它就完全不介入。\n"
         f"{TAB}set_variable = {{ name = {MANUAL_VAR} value = 1 }}\n"
         f"{TAB}# 月份从 0 起数：武装之后的下一次月度脉冲才是第 1 月。\n"
@@ -784,6 +802,31 @@ def suite_text(target: ProbeTarget) -> str:
     * `run_count = 1`：一次实验只判一次。
     """
 
+    if target.reform_law:
+        law_changed = (
+            f"{TAB}law_changed = {{\n"
+            f"{TAB * 2}acceptable_fail_rate = 0.0\n"
+            f"{TAB * 2}run_count = 1\n"
+            f"{TAB * 2}# 成功 = {target.reform_law} 已经不是现行法律"
+            f"（行为层②：真的换了法，不只是开了个窗）。\n"
+            f"{TAB * 2}success = {{\n"
+            f"{TAB * 3}c:{target.subject} ?= "
+            f"{{ NOT = {{ has_law = law_type:{target.reform_law} }} }}\n"
+            f"{TAB * 2}}}\n"
+            f"{TAB * 2}fail = {{\n"
+            f'{TAB * 3}game_date > "1841.1.1"\n'
+            f"{TAB * 2}}}\n"
+            f"{TAB}}}\n"
+        )
+    else:
+        # **不产出**那条判据（B80）：没有查实的法就不能判 —— 写死 `law_serfdom` 会让
+        # "不是农奴制"对奥斯曼/埃及这类国家**立刻为真**，报出一个假的"法律换了"。
+        law_changed = (
+            f"{TAB}# ⚠️ 本档案**没有**声明 `[probe].reform_law`（没查实该盯哪条法）⇒\n"
+            f"{TAB}#    「法律是否换过」这一条**不判**：宁可少一条读数，也不给一条会假的。\n"
+            f'{TAB}#    要加它：在该档案的数据源里写 `[probe] reform_law = "law_…"` + why。\n'
+        )
+
     return (
         f"{GEN_HEADER}"
         f"# 阶段 3 的引擎侧判定套件（H2：真实冲击 → AI 行为层差分）。\n"
@@ -792,7 +835,7 @@ def suite_text(target: ProbeTarget) -> str:
         f"# tests.<名字> = {{ success / fail / run_count }}，两个触发器**每天**检查，success 先判，\n"
         f"# 到 last_date 都没命中则判「跳过」（所以 fail 的日期必须早于 last_date）。\n"
         f"#\n"
-        f"# 两条判据与 `pdx.ab` 同源：主指标 = 改革窗口；次指标 = 法律是否换过。\n"
+        f"# 判据与 `pdx.ab` 同源：主指标 = 改革窗口；次指标 = 法律是否换过（**该档案查实了才判**，见下）。\n"
         f"# 日期口径：阶梯第 {ARM_START['B2']} 月（≈1839.1）才追加改革侧输入，给 2 年余量 →\n"
         f"# fail 定在开局后第 61 个月（1841.1.1），last_date 再多半年。\n"
         f"\n"
@@ -812,17 +855,7 @@ def suite_text(target: ProbeTarget) -> str:
         f"{TAB * 2}}}\n"
         f"{TAB}}}\n"
         f"\n"
-        f"{TAB}law_changed = {{\n"
-        f"{TAB * 2}acceptable_fail_rate = 0.0\n"
-        f"{TAB * 2}run_count = 1\n"
-        f"{TAB * 2}# 成功 = 农奴制已经不是现行法律（行为层②：真的换了法，不只是开了个窗）。\n"
-        f"{TAB * 2}success = {{\n"
-        f"{TAB * 3}c:{target.subject} ?= {{ NOT = {{ has_law = law_type:law_serfdom }} }}\n"
-        f"{TAB * 2}}}\n"
-        f"{TAB * 2}fail = {{\n"
-        f'{TAB * 3}game_date > "1841.1.1"\n'
-        f"{TAB * 2}}}\n"
-        f"{TAB}}}\n"
+        f"{law_changed}"
         f"}}\n"
     )
 

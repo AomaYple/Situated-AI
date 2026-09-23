@@ -307,3 +307,13 @@ why = "工业家政治力量（改革侧输入之一）。原版档位：0.1（c
 kind = "modifier_field"
 name = "interest_group_ig_intelligentsia_pol_str_mult"
 why = "知识界政治力量（改革侧输入之一；原版没有「开明官僚」这个 IG，这一格是最近似的，属让步）。原版档位：0.15（common/static_modifiers/106_modifiers.txt:205）、0.25（common/static_modifiers/00_ip4_04_modifiers.txt:47）、0.5（common/static_modifiers/content_1_modifiers.txt:1466 的 shogun_ig_forced_to_open_market）。"
+
+
+# ── ⑨ 探针口径（B80：本档案盯哪条法；**留空 = 没查实**）────────────
+#
+# 为什么要有这张表：探针的行为层②原来写死 `NOT = { has_law = law_type:law_serfdom }`，
+# 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
+# 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
+[probe]
+why = "波斯的观测点是农奴制。依据：`common/history/countries/per - persia.txt:23` 的 `activate_law = law_type:law_serfdom`（逐行打开确认）。"
+reform_law = "law_serfdom"

@@ -347,3 +347,13 @@ why = "原版同字段强档（00_code_static_modifiers.txt:353 = -20）。叠�
 key = "interest_group_ig_landowners_pol_str_mult"
 amount = 0.25
 why = "**方向必须是正的**：压力侧已经把贵族压到 -0.30（战败的直接后果），'无情'要的是**旧势力更不肯松手**，所以这里往回加 +0.25 —— 净效果 -0.05，贵族的钳制几乎没松，改革窗口更难推开。档位依据：00_ip4_04_modifiers.txt:47 用 +0.25（modifier_regency_landowners 那一族）。⚠️ 第一版我写成了 -0.25，那等于**继续削弱贵族**、与'无情'的语义相反 —— 数字对、方向错是最难看出来的一类错，所以这条为什么留在文件里：它记录了这个坑。"
+
+
+# ── ⑨ 探针口径（B80：本档案盯哪条法；**留空 = 没查实**）────────────
+#
+# 为什么要有这张表：探针的行为层②原来写死 `NOT = { has_law = law_type:law_serfdom }`，
+# 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
+# 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
+[probe]
+why = "本档案的改革方向是**土地改革**，观测点是「农奴制还在不在」。依据：`common/history/countries/rus - russia.txt:14` 的 `activate_law = law_type:law_serfdom`（逐行打开确认）。"
+reform_law = "law_serfdom"

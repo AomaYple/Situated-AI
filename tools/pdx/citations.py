@@ -43,7 +43,9 @@ if TYPE_CHECKING:
 #: 否则 `03_political_strategies.txt:528-544` 没问题，而 `P2:F9` 这种非文件引用
 #: （文档章节号）会被误当成引用。实测 why 里两类都写，所以这条限定是必须的。
 CITATION_RE = re.compile(
-    r"(?P<file>[0-9A-Za-z_./\\-]+\.(?:txt|gui|py|md|toml|json|yml))"
+    # ⚠️ 名字里**可以带空格**：原版历史文件就叫 `rus - russia.txt`（实测：写全路径时
+    # 扫描器原样不认，报 4 条假 missing）。首字符仍限死非空格，避免从行首一路吃过来。
+    r"(?P<file>[0-9A-Za-z_./\\-][0-9A-Za-z_./\\ -]*?\.(?:txt|gui|py|md|toml|json|yml))"
     r":(?P<start>\d+)(?:-(?P<end>\d+))?"
 )
 
@@ -140,7 +142,7 @@ def scan_text(text: str, *, where: str, root: Path | None = None) -> list[Citati
     """扫一段文本（通常是整个数据源文件）里的全部引用并逐条核对。"""
     found: list[Citation] = []
     for match in CITATION_RE.finditer(text):
-        name = match.group("file")
+        name = match.group("file").strip()
         start = int(match.group("start"))
         end = int(match.group("end") or start)
         path, status, detail = _resolve(name, root=root)

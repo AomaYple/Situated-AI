@@ -345,11 +345,45 @@ def test_套件判据贴合我们的两条判据() -> None:
     target = _target()
     text = _files()[ab_probe.SUITE_REL]
     assert f"has_journal_entry = {target.journal_entry}" in text
-    assert "NOT = { has_law = law_type:law_serfdom }" in text
+    assert f"NOT = {{ has_law = law_type:{target.reform_law} }}" in text, (
+        "行为层②必须按**本档案声明的**那条法判（B80）—— 写死 `law_serfdom` 时，"
+        "对没有农奴制的国家它立刻为真，会报出假的「法律换了」"
+    )
     assert f"c:{target.subject} ?= {{" in text
     assert text.count("run_count = 1") == 2
     assert text.count("acceptable_fail_rate = 0.0") == 2
     assert text.count("game_date >") == 2
+
+
+def test_没声明盯哪条法就不产出那条判据() -> None:
+    """**没查实就不判**（B80）：奥斯曼/埃及的历史文件里没有土地法那一组（实测）⇒
+    套件里干脆不出现 `law_changed`，而不是写一条会对它们立刻为真的判据。
+    """
+    import dataclasses
+
+    plain = dataclasses.replace(_target(), reform_law="")
+    built = ab_probe.build(game=_EMPTY_GAME, target=plain)
+    suite = built.files[ab_probe.SUITE_REL]
+    assert "law_changed" not in suite
+    assert "没有" in suite, "要留一句注释说明为什么没有它"
+    assert "reform_law" in suite, "注释里要点名要加什么"
+    assert suite.count("run_count = 1") == 1, "只该剩开窗那一条"
+
+
+def test_探针把盯的档案写进日志() -> None:
+    """分析器靠 `ZZPROBE AB;TARGET;<档案 id>` 认主语（B80）。
+
+    为什么不能靠国名：自报行的最后一格是**本地化国名**（实测是「波斯」），不是 tag；
+    而 `[This.GetTag]` 不是合法的 loc 命令。探针本来就是为某一份档案生成的，
+    所以让它直接写那个常量。
+    """
+    target = _target()
+    effects = _files()[_EFFECTS]
+    assert f"ZZPROBE AB;TARGET;{target.archive_id}" in effects
+    other = ab_probe.load_target("cn_intervention")
+    assert other is not None
+    rebuilt = ab_probe.build(game=_EMPTY_GAME, target=other)
+    assert f"ZZPROBE AB;TARGET;{other.archive_id}" in rebuilt.files[_EFFECTS]
 
 
 def test_套件的fail日期早于last_date() -> None:

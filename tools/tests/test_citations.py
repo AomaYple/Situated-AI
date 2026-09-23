@@ -43,6 +43,14 @@ class TestExtraction:
         """`P2:F9` / `阶段 3：12` 这类是文档章节号，不能当文件引用。"""
         assert citations.scan_text("见 01a 的 P2:F9 与 ULTRA:12", where="x") == []
 
+    def test_文件名里带空格也认(self) -> None:
+        """原版历史文件真的叫 `rus - russia.txt`（实测：写全路径时扫描器原样不认，
+        `v3 citations` 报了 4 条假 missing）。"""
+        found = citations.scan_text("依据：common/history/countries/rus - russia.txt:14", where="x")
+        assert len(found) == 1
+        assert found[0].file == "common/history/countries/rus - russia.txt"
+        assert found[0].start == 14
+
     def test_中文叙述里的行号照样认得出(self) -> None:
         found = citations.scan_text("原版 `00_corn_laws.txt:79` 就是 `weight = 100`", where="x")
         assert len(found) == 1

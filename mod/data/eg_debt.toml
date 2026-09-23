@@ -288,3 +288,13 @@ why = "工业家政治力量（改革侧输入之一，对应 01a §K 埃及那�
 kind = "modifier_field"
 name = "interest_group_ig_intelligentsia_pol_str_mult"
 why = "知识界政治力量（改革侧输入之一，对应 01a §K 埃及那一行的 `great_reforms`）。原版档位 0.15（106_modifiers.txt:205）、0.25（00_ip4_04_modifiers.txt:47）、0.5（content_1_modifiers.txt:1466，与工业家 0.5 成对写）。"
+
+
+# ── ⑨ 探针口径（B80：本档案盯哪条法；**留空 = 没查实**）────────────
+#
+# 为什么要有这张表：探针的行为层②原来写死 `NOT = { has_law = law_type:law_serfdom }`，
+# 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
+# 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
+[probe]
+why = "**留空（没查实）**：埃及的历史文件里同样**没有**土地法那一组 —— `common/history/countries/egy - egypt.txt` 第 11–18 行共 8 条 `activate_law`（monarchy / autocracy / people_of_the_book / per_capita_based_taxation / subjecthood / agrarianism / professional_army / slave_trade），**没有** `lawgroup_land_reform` 那一条。要让这条判据可用，先得实测埃及开局那条土地法是什么（`LAW` 月度读数或存档）。"
+reform_law = ""

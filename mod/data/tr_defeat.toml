@@ -262,3 +262,13 @@ why = "第二行 = **最大压力与阻力**。压力项与 [pressure.effects] �
 english = "Why it changed its mind: because the defeat was written into the books — losing the war is what moved the inputs the AI reads."
 simp_chinese = "上次改主意的原因：因为战败被记进了账 —— 是这场败仗挪动了 AI 读到的那些输入。"
 why = "第三行 = **上次改主意的原因**（G3 里最容易被跳过、却最关键的一行）：没有它，玩家只能看到'它在改革'，看不到'**为什么是现在**'。写'被记进了账'是让因果链读得出来（§0.1：目标函数表要显式可审）。"
+
+
+# ── ⑨ 探针口径（B80：本档案盯哪条法；**留空 = 没查实**）────────────
+#
+# 为什么要有这张表：探针的行为层②原来写死 `NOT = { has_law = law_type:law_serfdom }`，
+# 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
+# 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
+[probe]
+why = "**留空（没查实）**：奥斯曼的历史文件里**没有**土地法那一组 —— `common/history/countries/tur - ottoman empire.txt` 第 16–23 行共 8 条 `activate_law`（monarchy / autocracy / millet_system / subjecthood / traditionalism / censorship / land_based_taxation / slave_trade），**没有** `lawgroup_land_reform` 那一条 ⇒ 开局那条土地法由引擎默认决定，我们没有证据说是哪一条。**宁可不判，也不给一条会假的判据**。"
+reform_law = ""
