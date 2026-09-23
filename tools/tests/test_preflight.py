@@ -184,3 +184,98 @@ class TestRealEnvironment:
             assert check.detail
             if not check.ok:
                 assert check.fix, f"{check.name} 不通过却没说怎么修"
+
+
+class TestEnvironmentFailures:
+    """把各条检查的**失败分支**逐个演一遍（这些分支平时跑不到，而正是它们值钱）。"""
+
+    def test_没有游戏是跑不了(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(preflight.config, "GAME", tmp_path / "无")
+        check = preflight.check_game()
+        assert not check.ok
+        assert check.level == preflight.BLOCKING
+        assert "V3_ROOT" in check.fix or "v3 doctor" in check.fix
+
+    def test_版本不一致要说清怎么修(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(preflight, "_game_version", lambda: "1.15.0")
+        monkeypatch.setattr(
+            preflight, "_mod_metadata", lambda: {"supported_game_version": "1.14.4"}
+        )
+        check = preflight.check_version_matches_mod()
+        assert not check.ok
+        assert "1.15.0" in check.detail
+        assert "modgen --write" in check.fix
+
+    def test_产物被手改要报出来(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """**不碰真产物**：把 `modgen.check` 换成"报一处不一致"。"""
+        monkeypatch.setattr(preflight.modgen, "check", lambda _built: ["mod/x.txt 与数据源不一致"])
+        check = preflight.check_products()
+        assert not check.ok
+        assert "1 处不一致" in check.detail
+        assert "modgen --write" in check.fix
+
+    def test_数据源坏了是跑不了(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def boom() -> list[object]:
+            raise ValueError("坏 TOML")
+
+        monkeypatch.setattr(preflight.modgen, "load_all", boom)
+        check = preflight.check_products()
+        assert not check.ok
+        assert check.level == preflight.BLOCKING
+        assert "坏 TOML" in check.detail
+
+    def test_有残留进程要人先关游戏(self) -> None:
+        check = preflight.check_no_leftover_game([4242])
+        assert not check.ok
+        assert "4242" in check.detail
+        assert "存档会丢" in check.fix
+
+    def test_日志里有上一局自报时给提示而不是拦路(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pdx import game_auto
+
+        (tmp_path / "debug.log").write_text("zz ZZPROBE AB;ROLE;RUS\n", encoding="utf-8")
+        monkeypatch.setattr(game_auto, "DEBUG_LOG", tmp_path / "debug.log")
+        check = preflight.check_logs_fresh()
+        assert not check.ok
+        assert check.level == preflight.INFO
+        assert "1 行上一局" in check.detail
+        assert "--fresh-logs" in check.fix
+
+    def test_盘上探针盯错国家时给提示(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pdx import ab_probe
+
+        root = tmp_path / "zz_probe_ab"
+        (root / "common" / "on_actions").mkdir(parents=True)
+        (root / "common" / "on_actions" / "zz_probe_ab_on_actions.txt").write_text(
+            "c:RUS ?= this\n", encoding="utf-8"
+        )
+        monkeypatch.setattr(ab_probe, "PROBE_DIR", root)
+        check = preflight.check_probe("tr_defeat")
+        assert not check.ok
+        assert check.level == preflight.INFO
+        assert "c:TUR" in check.detail
+        assert "ab-probe --archive tr_defeat" in check.fix
+
+    def test_探针目录不在时给提示(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        from pdx import ab_probe
+
+        monkeypatch.setattr(ab_probe, "PROBE_DIR", tmp_path / "无")
+        check = preflight.check_probe("tr_defeat")
+        assert not check.ok
+        assert check.level == preflight.INFO
+
+    def test_没声明探针读数的档案要说清哪一格不判(self) -> None:
+        """空 `[probe]` 字段是**合法**的，但要知道那一格不会被判 —— 所以要带条件地报"可跑"。"""
+        check = preflight.check_archive("brz_market_loss")
+        assert not check.ok
+        assert "reform_card" in check.detail, "巴西留空的正是牌那一格，必须点出来"
+        assert "modgen --write" in check.fix
+
+    def test_不用探针时不查探针(self) -> None:
+        check = preflight.check_probe(None)
+        assert check.ok
+        assert check.level == preflight.INFO
