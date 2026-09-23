@@ -201,8 +201,8 @@
 | 外交 | `max_active_stances` / `strategic_region_scores` / `undesirable_infamy_level` / `wargoal_scores` / `treaty_category_scores` | strategy |
 | 军事 | `wanted_army_size` / `wanted_navy_size` / `wanted_marines` / `ship_group_weights` / `combat_unit_group_weights` | strategy |
 | 机构 | `institution_scores` | strategy |
-| PM 评分 / 外交阈值 / 各类机制 | 1,017 个 `NAI` 参数 | `common\defines\00_ai.txt` |
-| AI 中间值 | 33 个脚本值（其中 19 个被 `00_default_strategy.txt` 引用） | `common\script_values\ai_script_values.txt` |
+| PM 评分 / 外交阈值 / 各类机制 | 1,018 个 `NAI` 参数 | `common\defines\00_ai.txt` |
+| AI 中间值 | 40 个脚本值（其中 26 个被 `00_default_strategy.txt` 引用） | `common\script_values\ai_script_values.txt` |
 
 ## 5. 真实 AI mod 覆盖了哪些 `NAI` 参数
 

@@ -42,13 +42,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
-from pdx import ab_probe, config, gametimer
+from pdx import ab_probe, config, gametimer, stress_probe
 from pdx import game_auto as ga
 
 DOCS = config.USERDIR
 MODS_DIR = DOCS / "mod"
 CONTENT_LOAD = DOCS / "content_load.json"
 LOGS = DOCS / "logs"
+
+#: 标准压力剧本（阶段 4 ④）在用户 mod 目录里的落点。`--stress` 时**两臂都装它** ——
+#: 单装一臂就等于把"世界被推到高压"这件事算进了那一臂的差里，对照立刻作废。
+STRESS_DST = stress_probe.dest()
 
 #: 真 mod 的安装目录名 —— **从数据源读**（`mod/data/*.toml`），不在探针里写死。
 #:
@@ -312,6 +316,12 @@ def main() -> int:
         default=1,
         help="每个配置跑几局（≥2 才看得出「这两局的差」是不是噪声；单局抖动见结果文档）",
     )
+    parser.add_argument(
+        "--stress",
+        action="store_true",
+        help="开**标准压力剧本**（大战 + 连锁破产 + 革命潮）：两臂都装那一份探针，"
+        "于是世界被推到同一个高压状态，差只剩我们的 mod —— 0.5 ms 要靠它才分辨得出来",
+    )
     args = parser.parse_args()
     months = args.months
     backup = DOCS / "content_load.json.sitai-perf-backup"
@@ -329,19 +339,35 @@ def main() -> int:
         shutil.copytree(config.REPO / "mod", OURS_DST)
         print(f"已装本地 mod：{OURS_DST.name}（复制自 {config.REPO / 'mod'}）")
 
+        # 压力剧本：**两臂都装**。单装一臂的话，"世界被推到高压"这件事本身会被算进
+        # 那一臂的差里，对照立刻作废 —— 它必须是一个两臂共有的**场景**，不是一种处理。
+        stress_mods: list[Path] = []
+        if args.stress:
+            if STRESS_DST.exists():
+                shutil.rmtree(STRESS_DST)
+            stress_probe.write(STRESS_DST)
+            stress_mods = [STRESS_DST]
+            print(
+                f"已开压力剧本：{STRESS_DST.name}"
+                f"（大战 {len(stress_probe.WAR_PAIRS)} 场 @ {stress_probe.WAR_DATE}；"
+                f"抽干 {len(stress_probe.BREAK_TAGS)} 国库 @ {stress_probe.BREAK_DATE}；"
+                f"激进派 {len(stress_probe.RADICAL_DATES)} 波）"
+            )
+
         # **交替跑**（vanilla, ours, vanilla, ours…）：同一时段的机器状态（温升、后台负载）
         # 被两个配置平摊，比"先把原版跑完再跑我们"更能压住系统性偏差。
         for index in range(1, max(1, args.repeat) + 1):
-            _set_local_mods([], original=original)  # 基线：**真的原版**，一条 mod 都不挂
+            _set_local_mods(stress_mods, original=original)  # 基线：只有压力剧本（没有我们）
             reports.append(run_once("vanilla", months, index=index))
-            _set_local_mods([OURS_DST], original=original)
+            _set_local_mods([*stress_mods, OURS_DST], original=original)
             reports.append(run_once("ours", months, index=index))
     finally:
         killed = ga.kill_game()
         shutil.copy(backup, CONTENT_LOAD)
         backup.unlink(missing_ok=True)
-        if OURS_DST.exists():
-            shutil.rmtree(OURS_DST)
+        for path in (OURS_DST, STRESS_DST):
+            if path.exists():
+                shutil.rmtree(path)
         print(f"\n[收尾] 杀游戏 {killed or '（没有）'}；content_load.json 已还原；本地 mod 已删除")
 
     table = report_table(reports)

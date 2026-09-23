@@ -94,8 +94,8 @@
 | `common\defines\` 下 `.txt` 文件数 | **9**（根目录 6 + `jomini\` 子目录 3） | 【提取】递归枚举 `common\defines\` |
 | 顶层命名空间块总数 | **75** | 【提取】§2.2 |
 | 去重后命名空间数 | **50** | 【提取】§1.6 |
-| 参数条目总数 | **3488**（标量 3313 + 内联列表 175 + 嵌套块 0） | 【提取】§2.1 汇总 |
-| 去重后参数名数 | **3481**（有 7 次跨块重复出现） | 【提取】 |
+| 参数条目总数 | **3482**（标量 3307 + 内联列表 175 + 嵌套块 0） | 【提取】§2.1 汇总 |
+| 去重后参数名数 | **3475**（有 7 次跨块重复出现） | 【提取】 |
 
 > **解析器口径提示**：`00_shaders.txt` 第 1-2 行是 PDX 的另一种写法——`NShadersCommon =` 与 `{` 分行。全库 9 个 defines 文件中**只有这一处**采用该写法（脚本已逐文件校验：其余文件均无"行尾为 `=`"的情况）。本文的解析器已处理该情形，行号一律为**物理行号**。
 
@@ -255,23 +255,23 @@ MAP_LENS_military_lens
 
 | Namespace | Blocks | Params | File(s) |
 |---|---|---|---|
-| `NAI` | 1 | 1017 | 00_ai.txt |
+| `NAI` | 1 | 1018 | 00_ai.txt |
 | `NAudio` | 1 | 23 | 00_audio.txt |
-| `NBattle` | 1 | 66 | 00_defines.txt |
+| `NBattle` | 1 | 67 | 00_defines.txt |
 | `NCamera` | 1 | 18 | 00_graphics.txt |
 | `NCharacters` | 1 | 103 | 00_defines.txt |
 | `NCities` | 1 | 28 | 00_graphics.txt |
 | `NCoasts` | 1 | 6 | 00_graphics.txt |
 | `NCountry` | 1 | 44 | 00_defines.txt |
 | `NDebug` | 1 | 3 | 00_defines.txt |
-| `NDiplomacy` | 1 | 406 | 00_defines.txt |
+| `NDiplomacy` | 1 | 397 | 00_defines.txt |
 | `NEconomy` | 1 | 294 | 00_defines.txt |
 | `NEdgeOfWorld` | 1 | 19 | 00_shaders.txt |
 | `NEvents` | 1 | 3 | 00_defines.txt |
 | `NFogOfWar` | 1 | 23 | jomini/fog_of_war.txt |
 | `NFortifications` | 1 | 5 | 00_graphics.txt |
 | `NFrontend` | 1 | 3 | 00_graphics.txt |
-| `NGUI` | 24 | 189 | 00_interfaces.txt |
+| `NGUI` | 24 | 190 | 00_interfaces.txt |
 | `NGame` | 1 | 6 | 00_defines.txt |
 | `NGraphics` | 1 | 136 | 00_graphics.txt |
 | `NGuiFlag` | 1 | 3 | 00_shaders.txt |
@@ -285,7 +285,7 @@ MAP_LENS_military_lens
 | `NMapMode` | 1 | 97 | 00_graphics.txt |
 | `NMapName` | 1 | 8 | 00_graphics.txt |
 | `NMapmodeStripes` | 1 | 6 | 00_shaders.txt |
-| `NMilitary` | 1 | 169 | 00_defines.txt |
+| `NMilitary` | 1 | 168 | 00_defines.txt |
 | `NNavy` | 1 | 98 | 00_graphics.txt |
 | `NPolitics` | 1 | 208 | 00_defines.txt |
 | `NPops` | 2 | 227 | 00_defines.txt |
@@ -304,7 +304,7 @@ MAP_LENS_military_lens
 | `NTooltip` | 1 | 7 | jomini/00_tooltips.txt |
 | `NTravelNetwork` | 2 | 43 | 00_defines.txt, 00_graphics.txt |
 | `NTrend` | 1 | 2 | 00_interfaces.txt |
-| `NWar` | 1 | 76 | 00_defines.txt |
+| `NWar` | 1 | 77 | 00_defines.txt |
 
 ---
 
@@ -452,16 +452,16 @@ NCountry = {
 
 | 文件（相对 `common\defines\`） | 顶层块数 | 标量参数 | 内联列表 | 嵌套块 | 条目合计 |
 |---|---|---|---|---|---|
-| `00_ai.txt` | 1 | 1017 | 0 | 0 | **1017** |
+| `00_ai.txt` | 1 | 1018 | 0 | 0 | **1018** |
 | `00_audio.txt` | 1 | 23 | 0 | 0 | **23** |
-| `00_defines.txt` | 19 | 1674 | 5 | 0 | **1679** |
+| `00_defines.txt` | 19 | 1666 | 5 | 0 | **1671** |
 | `00_graphics.txt` | 19 | 369 | 123 | 0 | **492** |
-| `00_interfaces.txt` | 27 | 161 | 40 | 0 | **201** |
+| `00_interfaces.txt` | 27 | 162 | 40 | 0 | **202** |
 | `00_shaders.txt` | 5 | 35 | 5 | 0 | **40** |
 | `jomini/00_tooltips.txt` | 1 | 6 | 1 | 0 | **7** |
 | `jomini/fog_of_war.txt` | 1 | 22 | 1 | 0 | **23** |
 | `jomini/rivers.txt` | 1 | 6 | 0 | 0 | **6** |
-| **合计** | **75** | **3313** | **175** | **0** | **3488** |
+| **合计** | **75** | **3307** | **175** | **0** | **3482** |
 
 【提取】
 
@@ -471,27 +471,27 @@ NCountry = {
 
 | File | Namespace block | Line | Scalar | Inline list | Nested | Total |
 |---|---|---|---|---|---|---|
-| `00_ai.txt` | `NAI` | 1 | 1017 | 0 | 0 | 1017 |
+| `00_ai.txt` | `NAI` | 1 | 1018 | 0 | 0 | 1018 |
 | `00_audio.txt` | `NAudio` | 1 | 23 | 0 | 0 | 23 |
 | `00_defines.txt` | `NGame` | 1 | 6 | 0 | 0 | 6 |
 | `00_defines.txt` | `NJominiMap` | 10 | 4 | 0 | 0 | 4 |
 | `00_defines.txt` | `NCountry` | 17 | 44 | 0 | 0 | 44 |
 | `00_defines.txt` | `NPolitics` | 64 | 208 | 0 | 0 | 208 |
 | `00_defines.txt` | `NEconomy` | 358 | 293 | 1 | 0 | 294 |
-| `00_defines.txt` | `NMilitary` | 728 | 169 | 0 | 0 | 169 |
-| `00_defines.txt` | `NDiplomacy` | 942 | 406 | 0 | 0 | 406 |
-| `00_defines.txt` | `NPowerBlocs` | 1417 | 24 | 0 | 0 | 24 |
-| `00_defines.txt` | `NPops` | 1444 | 207 | 4 | 0 | 211 |
-| `00_defines.txt` | `NPops` | 1813 | 16 | 0 | 0 | 16 |
-| `00_defines.txt` | `NEvents` | 1840 | 3 | 0 | 0 | 3 |
-| `00_defines.txt` | `NTechnology` | 1846 | 4 | 0 | 0 | 4 |
-| `00_defines.txt` | `NCharacters` | 1854 | 103 | 0 | 0 | 103 |
-| `00_defines.txt` | `NBattle` | 2014 | 66 | 0 | 0 | 66 |
-| `00_defines.txt` | `NWar` | 2102 | 76 | 0 | 0 | 76 |
-| `00_defines.txt` | `NTravelNetwork` | 2183 | 34 | 0 | 0 | 34 |
-| `00_defines.txt` | `NHarvestConditions` | 2228 | 2 | 0 | 0 | 2 |
-| `00_defines.txt` | `NText` | 2233 | 6 | 0 | 0 | 6 |
-| `00_defines.txt` | `NDebug` | 2243 | 3 | 0 | 0 | 3 |
+| `00_defines.txt` | `NMilitary` | 728 | 168 | 0 | 0 | 168 |
+| `00_defines.txt` | `NDiplomacy` | 941 | 397 | 0 | 0 | 397 |
+| `00_defines.txt` | `NPowerBlocs` | 1407 | 24 | 0 | 0 | 24 |
+| `00_defines.txt` | `NPops` | 1434 | 207 | 4 | 0 | 211 |
+| `00_defines.txt` | `NPops` | 1803 | 16 | 0 | 0 | 16 |
+| `00_defines.txt` | `NEvents` | 1830 | 3 | 0 | 0 | 3 |
+| `00_defines.txt` | `NTechnology` | 1836 | 4 | 0 | 0 | 4 |
+| `00_defines.txt` | `NCharacters` | 1844 | 103 | 0 | 0 | 103 |
+| `00_defines.txt` | `NBattle` | 2004 | 67 | 0 | 0 | 67 |
+| `00_defines.txt` | `NWar` | 2092 | 77 | 0 | 0 | 77 |
+| `00_defines.txt` | `NTravelNetwork` | 2174 | 34 | 0 | 0 | 34 |
+| `00_defines.txt` | `NHarvestConditions` | 2219 | 2 | 0 | 0 | 2 |
+| `00_defines.txt` | `NText` | 2224 | 6 | 0 | 0 | 6 |
+| `00_defines.txt` | `NDebug` | 2234 | 3 | 0 | 0 | 3 |
 | `00_graphics.txt` | `NMapMode` | 1 | 38 | 59 | 0 | 97 |
 | `00_graphics.txt` | `NMapName` | 157 | 7 | 1 | 0 | 8 |
 | `00_graphics.txt` | `NJominiMapGraphics` | 187 | 11 | 0 | 0 | 11 |
@@ -513,31 +513,31 @@ NCountry = {
 | `00_graphics.txt` | `NShipViewer` | 716 | 16 | 6 | 0 | 22 |
 | `00_interfaces.txt` | `NLenses` | 1 | 9 | 0 | 0 | 9 |
 | `00_interfaces.txt` | `NGUI` | 13 | 1 | 0 | 0 | 1 |
-| `00_interfaces.txt` | `NGUI` | 17 | 48 | 15 | 0 | 63 |
-| `00_interfaces.txt` | `NGUI` | 95 | 1 | 0 | 0 | 1 |
-| `00_interfaces.txt` | `NGUI` | 100 | 2 | 0 | 0 | 2 |
-| `00_interfaces.txt` | `NTrend` | 105 | 2 | 0 | 0 | 2 |
-| `00_interfaces.txt` | `NGUI` | 110 | 13 | 0 | 0 | 13 |
-| `00_interfaces.txt` | `NGUI` | 130 | 5 | 4 | 0 | 9 |
-| `00_interfaces.txt` | `NGUI` | 142 | 8 | 0 | 0 | 8 |
-| `00_interfaces.txt` | `NGUI` | 153 | 1 | 0 | 0 | 1 |
-| `00_interfaces.txt` | `NSaves` | 159 | 1 | 0 | 0 | 1 |
-| `00_interfaces.txt` | `NGUI` | 163 | 6 | 0 | 0 | 6 |
-| `00_interfaces.txt` | `NGUI` | 172 | 0 | 1 | 0 | 1 |
-| `00_interfaces.txt` | `NGUI` | 176 | 3 | 0 | 0 | 3 |
-| `00_interfaces.txt` | `NGUI` | 182 | 4 | 0 | 0 | 4 |
-| `00_interfaces.txt` | `NGUI` | 189 | 2 | 0 | 0 | 2 |
-| `00_interfaces.txt` | `NGUI` | 194 | 2 | 0 | 0 | 2 |
-| `00_interfaces.txt` | `NGUI` | 199 | 1 | 0 | 0 | 1 |
-| `00_interfaces.txt` | `NGUI` | 203 | 6 | 0 | 0 | 6 |
-| `00_interfaces.txt` | `NGUI` | 216 | 7 | 0 | 0 | 7 |
-| `00_interfaces.txt` | `NGUI` | 226 | 1 | 0 | 0 | 1 |
-| `00_interfaces.txt` | `NGUI` | 230 | 2 | 0 | 0 | 2 |
-| `00_interfaces.txt` | `NGUI` | 235 | 0 | 8 | 0 | 8 |
-| `00_interfaces.txt` | `NGUI` | 246 | 1 | 0 | 0 | 1 |
-| `00_interfaces.txt` | `NGUI` | 250 | 1 | 0 | 0 | 1 |
-| `00_interfaces.txt` | `NGUI` | 254 | 18 | 12 | 0 | 30 |
-| `00_interfaces.txt` | `NGUI` | 303 | 16 | 0 | 0 | 16 |
+| `00_interfaces.txt` | `NGUI` | 17 | 49 | 15 | 0 | 64 |
+| `00_interfaces.txt` | `NGUI` | 97 | 1 | 0 | 0 | 1 |
+| `00_interfaces.txt` | `NGUI` | 102 | 2 | 0 | 0 | 2 |
+| `00_interfaces.txt` | `NTrend` | 107 | 2 | 0 | 0 | 2 |
+| `00_interfaces.txt` | `NGUI` | 112 | 13 | 0 | 0 | 13 |
+| `00_interfaces.txt` | `NGUI` | 132 | 5 | 4 | 0 | 9 |
+| `00_interfaces.txt` | `NGUI` | 144 | 8 | 0 | 0 | 8 |
+| `00_interfaces.txt` | `NGUI` | 155 | 1 | 0 | 0 | 1 |
+| `00_interfaces.txt` | `NSaves` | 161 | 1 | 0 | 0 | 1 |
+| `00_interfaces.txt` | `NGUI` | 165 | 6 | 0 | 0 | 6 |
+| `00_interfaces.txt` | `NGUI` | 174 | 0 | 1 | 0 | 1 |
+| `00_interfaces.txt` | `NGUI` | 178 | 3 | 0 | 0 | 3 |
+| `00_interfaces.txt` | `NGUI` | 184 | 4 | 0 | 0 | 4 |
+| `00_interfaces.txt` | `NGUI` | 191 | 2 | 0 | 0 | 2 |
+| `00_interfaces.txt` | `NGUI` | 196 | 2 | 0 | 0 | 2 |
+| `00_interfaces.txt` | `NGUI` | 201 | 1 | 0 | 0 | 1 |
+| `00_interfaces.txt` | `NGUI` | 205 | 6 | 0 | 0 | 6 |
+| `00_interfaces.txt` | `NGUI` | 218 | 7 | 0 | 0 | 7 |
+| `00_interfaces.txt` | `NGUI` | 228 | 1 | 0 | 0 | 1 |
+| `00_interfaces.txt` | `NGUI` | 232 | 2 | 0 | 0 | 2 |
+| `00_interfaces.txt` | `NGUI` | 237 | 0 | 8 | 0 | 8 |
+| `00_interfaces.txt` | `NGUI` | 248 | 1 | 0 | 0 | 1 |
+| `00_interfaces.txt` | `NGUI` | 252 | 1 | 0 | 0 | 1 |
+| `00_interfaces.txt` | `NGUI` | 256 | 18 | 12 | 0 | 30 |
+| `00_interfaces.txt` | `NGUI` | 305 | 16 | 0 | 0 | 16 |
 | `00_shaders.txt` | `NShadersCommon` | 1 | 1 | 0 | 0 | 1 |
 | `00_shaders.txt` | `NMapCoa` | 6 | 11 | 0 | 0 | 11 |
 | `00_shaders.txt` | `NMapmodeStripes` | 20 | 6 | 0 | 0 | 6 |
@@ -578,20 +578,20 @@ NCountry = {
 | 3 | `NCountry` | 17 | 1 | 44 |
 | 4 | `NPolitics` | 64 | 1 | 208 |
 | 5 | `NEconomy` | 358 | 1 | 294 |
-| 6 | `NMilitary` | 728 | 1 | 169 |
-| 7 | `NDiplomacy` | 942 | 1 | 406 |
-| 8 | `NPowerBlocs` | 1417 | 1 | 24 |
-| 9 | `NPops` | 1444, 1813 | **2** | 211 + 16 = 227 |
-| 10 | `NEvents` | 1840 | 1 | 3 |
-| 11 | `NTechnology` | 1846 | 1 | 4 |
-| 12 | `NCharacters` | 1854 | 1 | 103 |
-| 13 | `NBattle` | 2014 | 1 | 66 |
-| 14 | `NWar` | 2102 | 1 | 76 |
-| 15 | `NTravelNetwork` | 2183 | 1 | 34 |
-| 16 | `NHarvestConditions` | 2228 | 1 | 2 |
-| 17 | `NText` | 2233 | 1 | 6 |
-| 18 | `NDebug` | 2243 | 1 | 3 |
-| | **合计** | | **19 块** | **1679** |
+| 6 | `NMilitary` | 728 | 1 | 168 |
+| 7 | `NDiplomacy` | 941 | 1 | 397 |
+| 8 | `NPowerBlocs` | 1407 | 1 | 24 |
+| 9 | `NPops` | 1434, 1803 | **2** | 211 + 16 = 227 |
+| 10 | `NEvents` | 1830 | 1 | 3 |
+| 11 | `NTechnology` | 1836 | 1 | 4 |
+| 12 | `NCharacters` | 1844 | 1 | 103 |
+| 13 | `NBattle` | 2004 | 1 | 67 |
+| 14 | `NWar` | 2092 | 1 | 77 |
+| 15 | `NTravelNetwork` | 2174 | 1 | 34 |
+| 16 | `NHarvestConditions` | 2219 | 1 | 2 |
+| 17 | `NText` | 2224 | 1 | 6 |
+| 18 | `NDebug` | 2234 | 1 | 3 |
+| | **合计** | | **19 块** | **1671** |
 
 【提取】——这 18 个命名空间与官方 Wiki [Defines](https://vic3.paradoxwikis.com/Defines) 的 §2 小节列表**完全一致**，可作为交叉验证。
 
@@ -632,11 +632,11 @@ NCountry = {
 
 | 命名空间块 | 出现次数 | 各块起始行 | 合计条目 |
 |---|---|---|---|
-| `NGUI` | **24** | 13, 17, 95, 100, 110, 130, 142, 153, 163, 172, 176, 182, 189, 194, 199, 203, 216, 226, 230, 235, 246, 250, 254, 303 | 189 |
+| `NGUI` | **24** | 13, 17, 95, 100, 110, 130, 142, 153, 163, 172, 176, 182, 189, 194, 199, 203, 216, 226, 230, 235, 246, 250, 254, 303 | 190 |
 | `NLenses` | 1 | 1 | 9 |
 | `NTrend` | 1 | 105 | 2 |
 | `NSaves` | 1 | 159 | 1 |
-| | | | **201** |
+|  |  |  | **202** |
 
 【提取】
 
@@ -817,6 +817,7 @@ Jomini 内容根另有 15<!--claim:def.jomini_untaken--> 个未被 game 层接�
 | `OBSOLETE_*` | 1 |
 | `PROJECT_*` | 1 |
 | `PROMOTION_*` | 1 |
+| `REGIONAL_*` | 1 |
 | `RETIRE_*` | 1 |
 | `SECRET_*` | 1 |
 | `SENT_*` | 1 |
@@ -2181,7 +2182,7 @@ has_game_rule = high_ai_aggression
 
 | 前缀 | 键数 | 流动含义（据上文推断） |
 |---|---|---|
-| `country_` | **1095** | 作用于国家；在权力集团上施加时只流到成员国，不再向下 |
+| `country_` | **1096** | 作用于国家；在权力集团上施加时只流到成员国，不再向下 |
 | `state_` | **571** | 会穿过国家流到该国所有州 |
 | `building_` | **300** | 作用于建筑 |
 | `goods_` | **125** | 作用于商品 |

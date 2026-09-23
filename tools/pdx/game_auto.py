@@ -1698,6 +1698,69 @@ def error_log_path() -> Path:
     return config.USERDIR / "logs" / "error.log"
 
 
+def rotated_logs(base: Path, stem: str) -> list[Path]:
+    """引擎的**轮转日志**，按时间从旧到新：``<stem>.N.log``（N 大在前）+ ``<stem>.log``。
+
+    ⚠️ **不许直接 `sorted()`**（实测踩过两次，backlog **B85**）：轮转副本叫
+    ``debug.1.log`` …，当前那份叫 ``debug.log`` —— 字典序把**当前那份排在最后、
+    次新的排在最前**，拼出来的文本时间顺序是错的，再叠上"按标记切片"就会读出一段
+    **不连续的切片**（实测：盘上 1,401 行只读了 402 行，还报出一个假的窗口翻转顺序）。
+
+    第二次踩是在 **`error.log`** 上：`read_verdict` 只读了 `error.log` 那一份，
+    于是那些被轮转进 `error.1.log` 的行读不到 —— **"我们在 error.log 里没看到"被当成了
+    "这一局我们没有报错"**。两处现在共用这一条排序规则。
+    """
+    numbered = sorted(
+        (p for p in base.glob(f"{stem}.[0-9]*.log") if p.stem.rsplit(".", 1)[-1].isdigit()),
+        key=lambda p: -int(p.stem.rsplit(".", 1)[-1]),
+    )
+    current = [base / f"{stem}.log"]
+    return [*numbered, *(p for p in current if p.is_file())]
+
+
+def error_logs() -> list[Path]:
+    """``error.log`` 及其轮转副本，按时间从旧到新（判据口径见 :func:`rotated_logs`）。"""
+    return rotated_logs(error_log_path().parent, "error")
+
+
+#: `error.log` 里**已知无害**的那一类：JE 的 `_goal` 槽被引擎判成 redundant。
+#:
+#: 口径见 backlog **B74**（已实测并定过口径）：「上屏」以 `_reason` 为准，`_goal` 只当加分项 ——
+#: 原版自己也大量用 `je_*_goal`，这句 `redundant` 取决于 JE 形态，**不是我们的缺陷**。
+#: 实测：九份档案各一行，每次装载都会写一遍。
+#:
+#: ⚠️ **这是"分类"，不是"忽略"**（P13）：带我们命名空间的**其他**任何一行照样算失败；
+#: 而且这一类的条数会照实报出来（`SuiteVerdict.benign_errors`），不是藏起来。
+BENIGN_ERROR_RE = re.compile(r"Journal entry has redundant loc for \w+_goal\b")
+
+
+def our_error_lines(text: str) -> tuple[str, ...]:
+    """``error.log`` 里**属于我们命名空间**的行（其余是原版噪音），**不含已知无害的那一类**。
+
+    为什么必须自己数这一遍：harness 那行 ``[ FAIL ] Error log: N errors`` 数的是
+    **整份** error.log，而原版自己就有几十条（实测 85 条）⇒ 照它判**每次假红**。
+    已知无害的那一类见 :data:`BENIGN_ERROR_RE`（由 :func:`benign_error_lines` 单独报）。
+    """
+    return tuple(
+        line
+        for line in text.splitlines()
+        if any(mark in line for mark in OUR_MARKS) and not BENIGN_ERROR_RE.search(line)
+    )
+
+
+def benign_error_lines(text: str) -> tuple[str, ...]:
+    """带我们命名空间、但**属于已知无害**那一类的行（B74：`_goal` 槽 redundant）。
+
+    单独列出来是为了让"分类"看得见 —— 读数里会同时报"我们的报错 N 条"与
+    "已知无害 M 条"，而不是把 M 悄悄减掉。
+    """
+    return tuple(
+        line
+        for line in text.splitlines()
+        if any(mark in line for mark in OUR_MARKS) and BENIGN_ERROR_RE.search(line)
+    )
+
+
 def testoutput_files() -> list[Path]:
     """``binaries/`` 下已有的官方成绩单，按 mtime 从旧到新。"""
     root = binaries_dir()
@@ -1758,15 +1821,6 @@ def parse_testoutput(path: Path) -> tuple[tuple[str, ...], int, int, int]:
     return tuple(suites), tests, failures, errors
 
 
-def our_error_lines(text: str) -> tuple[str, ...]:
-    """``error.log`` 里**属于我们命名空间**的行（其余是原版噪音）。
-
-    为什么必须自己数这一遍：harness 那行 ``[ FAIL ] Error log: N errors`` 数的是
-    **整份** error.log，而原版自己就有几十条（实测 85 条）⇒ 照它判**每次假红**。
-    """
-    return tuple(line for line in text.splitlines() if any(mark in line for mark in OUR_MARKS))
-
-
 @dataclass(slots=True)
 class SuiteVerdict:
     """一次 ``-scripted_tests`` 会话的判定结果（**引擎判的**，这里只解析）。"""
@@ -1777,6 +1831,9 @@ class SuiteVerdict:
     failures: int
     errors: int
     our_errors: tuple[str, ...]
+    #: 带我们命名空间、但**已知无害**的那些行（B74：`_goal` 槽 redundant）。
+    #: **照实报出来**，不是悄悄减掉 —— 分类与忽略是两件事（P13）。
+    benign_errors: tuple[str, ...]
     #: ``error.log`` 到底读没读到。**读不到 ≠ 没有我们的错** —— 两者必须分开
     #: （与 :data:`NO_TICK` 同一条纪律），所以它是 :attr:`ok` 的一部分。
     error_log_read: bool
@@ -1788,6 +1845,8 @@ class SuiteVerdict:
 
         「套件真的跑了」这一条不能省：``failures == 0 and errors == 0`` 在
         **一个套件都没跑**时也为真 —— 那是最危险的一种"绿"。
+        ``benign_errors`` **不参与**判定（它们是已知无害的那一类，口径见 B74），
+        但会照实打印出来。
         """
         return (
             bool(self.suites)
@@ -1816,6 +1875,11 @@ class SuiteVerdict:
             lines.extend(f"    {line[:160]}" for line in self.our_errors[:5])
         else:
             lines.append("  我们的报错  : 0 条")
+        if self.benign_errors:
+            lines.append(
+                f"  已知无害    : {len(self.benign_errors)} 条（JE 的 `_goal` 槽 redundant，"
+                "口径见 backlog B74 —— 上屏以 `_reason` 为准）"
+            )
         if self.tests_txt:
             tail = [ln for ln in self.tests_txt.splitlines() if ln.strip()][-3:]
             lines.append("  tests.txt   : " + " | ".join(tail))
@@ -1831,16 +1895,23 @@ class SuiteVerdict:
             "suite_failures": self.failures,
             "suite_errors": self.errors,
             "suite_our_errors": len(self.our_errors),
+            "suite_benign_errors": len(self.benign_errors),
             "suite_error_log_read": self.error_log_read,
             "suite_ok": self.ok,
         }
 
 
 def read_verdict(xml: Path) -> SuiteVerdict:
-    """把一局的判定产物读成结论（**只读**，不改任何东西）。"""
+    """把一局的判定产物读成结论（**只读**，不改任何东西）。
+
+    ⚠️ ``error.log`` 要读**整组**（含轮转副本），不能只读当前那一份 —— 实测踩过（B85 的
+    第二次）：只读 `error.log` 时，被轮转进 `error.1.log` 的行读不到，于是
+    **"我们在 error.log 里没看到"被当成了"这一局我们没有报错"**
+    （同一局的两种读法给出 0 条与 9 条）。
+    """
     suites, tests, failures, errors = parse_testoutput(xml)
-    log = error_log_path()
-    text = log.read_text(encoding="utf-8", errors="replace") if log.is_file() else ""
+    logs = error_logs()
+    text = "\n".join(path.read_text(encoding="utf-8", errors="replace") for path in logs)
     return SuiteVerdict(
         xml=xml,
         suites=suites,
@@ -1848,7 +1919,8 @@ def read_verdict(xml: Path) -> SuiteVerdict:
         failures=failures,
         errors=errors,
         our_errors=our_error_lines(text),
-        error_log_read=log.is_file(),
+        benign_errors=benign_error_lines(text),
+        error_log_read=bool(logs),
         tests_txt=TESTS_TXT.read_text(encoding="utf-8-sig") if TESTS_TXT.is_file() else "",
     )
 
@@ -2654,6 +2726,7 @@ if __name__ == "__main__":  # pragma: no cover - 入口
 
 
 __all__ = [
+    "BENIGN_ERROR_RE",
     "BOTTOM_ROI",
     "CONSOLE_EDIT_ROI",
     "CONSOLE_KEY",
@@ -2681,6 +2754,7 @@ __all__ = [
     "TickMark",
     "WindowNotFoundError",
     "assert_no_game_running",
+    "benign_error_lines",
     "binaries_dir",
     "click_client",
     "click_match",
@@ -2688,6 +2762,7 @@ __all__ = [
     "console_output_ink",
     "ensure_foreground",
     "error_log_path",
+    "error_logs",
     "find_observe",
     "find_template",
     "find_window",
@@ -2715,6 +2790,7 @@ __all__ = [
     "probe_roles_in",
     "read_verdict",
     "roi_box",
+    "rotated_logs",
     "run_session",
     "screenshot",
     "speed_candidates",

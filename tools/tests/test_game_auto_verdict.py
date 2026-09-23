@@ -136,6 +136,57 @@ def test_原版噪音一条都不算(产物) -> None:
     assert verdict.ok is True
 
 
+# ── 已知无害的那一类（B74）与轮转的 error.log（B85 第二次）─────────────
+
+#: 引擎对每个 JE 的 `_goal` 槽都会写这么一句（B74 已定口径：上屏以 `_reason` 为准）。
+_BENIGN = "[02:19:19][journal_entry_type.cpp:476]: Journal entry has redundant loc for je_sitai_ru_reform_window_goal"
+
+
+def test_goal槽那句redundant算已知无害不算失败() -> None:
+    """**分类，不是忽略**：它照实报出来（`benign_errors`），但不参与判定（B74 的口径）。"""
+    text = "\n".join([_NOISE, _BENIGN, _OURS])
+    assert ga.our_error_lines(text) == (_OURS,), "已知无害的那一类不该混进『我们的报错』"
+    assert ga.benign_error_lines(text) == (_BENIGN,)
+
+    verdict = ga.SuiteVerdict(
+        xml=Path("x.xml"),
+        suites=("s",),
+        tests=1,
+        failures=0,
+        errors=0,
+        our_errors=(),
+        benign_errors=(_BENIGN,),
+        error_log_read=True,
+        tests_txt="",
+    )
+    assert verdict.ok is True, "9 条 `_goal` redundant 不该把整局判成不通过"
+    assert "已知无害" in verdict.describe()
+    assert verdict.as_dict()["suite_benign_errors"] == 1
+
+
+def test_轮转的error日志也要读(产物, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """实测踩过（B85 第二次）：只读 `error.log` 那一份 ⇒ 被轮转走的行读不到，
+    **"没看到"被当成了"没有"** —— 同一局的两种读法给出 0 条与 9 条。"""
+    xml, _log = 产物
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "error.1.log").write_text(_BENIGN + "\n", encoding="utf-8")  # 旧的（轮转走了）
+    (logs / "error.log").write_text(_OURS + "\n", encoding="utf-8")  # 当前
+    monkeypatch.setattr(ga, "error_log_path", lambda: logs / "error.log")
+
+    assert [p.name for p in ga.error_logs()] == ["error.1.log", "error.log"]
+    verdict = ga.read_verdict(xml)
+    assert len(verdict.our_errors) == 1, "当前那份里的真报错要读到"
+    assert len(verdict.benign_errors) == 1, "轮转走的那份里的已知无害行也要读到"
+
+
+def test_没有error日志时算读不到(产物, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    xml, _log = 产物
+    monkeypatch.setattr(ga, "error_log_path", lambda: tmp_path / "logs" / "error.log")
+    assert ga.error_logs() == []
+    assert ga.read_verdict(xml).error_log_read is False
+
+
 # ── 两条假绿都必须被挡住 ──────────────────────────────────────────
 
 
@@ -277,6 +328,7 @@ def _verdict(*, failures: int = 0) -> ga.SuiteVerdict:
         failures=failures,
         errors=0,
         our_errors=(),
+        benign_errors=(),
         error_log_read=True,
         tests_txt="[ OK ] smoke_harness_runs",
     )
