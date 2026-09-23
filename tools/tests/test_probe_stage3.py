@@ -112,10 +112,10 @@ def test_有TARGET行时按它认主语(探针) -> None:
 
 
 def test_没有TARGET行时按ROLE的tag反查(探针) -> None:
-    """**2026-09-23 `bv_alignment` 那一局的现场**：日志里没有 `TARGET`，只有 56 条 `ROLE`。
+    """`TARGET` 只在武装那一刻写一次，且**可能落在轮转文件里**（实测 `debug.1.log` 有、
+    `debug.log` 里 0 条）—— 只看当前那份就会误判成"这一行没落"。
 
-    照旧口径这一栏会报「不判」，白白丢掉一条本可以判的读数；现在按
-    `ROLE;<TAG>` → `[archive].country` 反查（档案↔国家是数据源里的事实）。
+    所以还要有一条不依赖它的路：`ROLE;<TAG>` → `[archive].country`（数据源里的事实）。
     """
     probe, _xml, _log = 探针
     ours = ["…: ZZPROBE AB;ROLE;BAV;巴伐利亚"]
