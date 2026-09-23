@@ -1898,19 +1898,19 @@ CLAIMS: list[Claim] = [
     Claim(
         "mod.total",
         "12-真实mod解剖与改造面地图.md",
-        "订阅了 23 个 Workshop mod",
+        "订阅了 24 个 Workshop mod",
         "mods_total",
         "",
-        23,
+        24,
     ),
     Claim(
         "mod.files",
         "12-真实mod解剖与改造面地图.md",
-        "23 个 Workshop mod 共 4777 个内容文件",
+        "24 个 Workshop mod 共 4828 个内容文件",
         "mods_files",
         "",
-        4777,
-        "不含各 mod 的 metadata.json（每 mod 1 个，共 23 个）；"
+        4828,
+        "不含各 mod 的 metadata.json（每 mod 1 个，共 24 个）；"
         "去重后为 4,750 个相对路径。doc 12 与索引页曾长期写作 3,046",
     ),
     # ── 引擎级功能前缀（doc 02 / doc 14，本项目最核心的结论之一）──

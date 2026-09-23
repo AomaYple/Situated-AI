@@ -1,0 +1,12 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 处境压力（A 级）：西班牙 · 帝国残骸与内战。每条字段都照原版同族用法取档位，
+# 每条的依据见 sitai_sp_empire_remnant.md（由 why_report 生成）。
+
+sitai_sp_empire_remnant_pressure = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_rifle_negative.dds
+	country_legitimacy_base_add = -35
+	interest_group_ig_devout_pol_str_mult = -0.3
+	interest_group_ig_armed_forces_pol_str_mult = 0.25
+	country_loan_interest_rate_add = 0.35
+}

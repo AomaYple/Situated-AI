@@ -1,0 +1,30 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 巴伐利亚 · 倒向谁 · 冲击记账（A 级：真实世界状态 —— 变量 + 修正，不占任何槽位）。
+# 调用方：A/B 实验（B 组显式施加冲击）。本档案刻意**不绑 on_action**：「什么才算这次冲击」的判定留给实验给结论，
+# 由谁写、写在哪，见本档案 why 与数据源（每个数字都带依据，P10）。
+# 变量 sitai_bv_alignment_memory；压力修正 sitai_bv_alignment_pressure。
+
+sitai_bv_alignment_shock = {
+	set_variable = {
+		name = sitai_bv_alignment_memory
+		value = 1
+		days = 3650
+	}
+	add_modifier = {
+		name = sitai_bv_alignment_pressure
+		years = 10
+	}
+}
+
+# 改革侧输入（A 级：同样是真实世界状态）：**定位**：它是「现代化那一侧的输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。走 A 级而不是递牌的理由（F5）：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（common/ai_strategies/03_political_strategies.txt:374 是块头、:528-544 是读知识界与工业家是否 powerful 的那两段），改世界状态就等于改它的输入，不占任何槽位。**为什么巴伐利亚的这一处落在工业家与知识界**（依据是本机实测的原版数据，不是照抄）：① 原版把巴伐利亚放进了普鲁士的 Zollverein（common/history/power_blocs/00_power_blocs.txt:70）—— 关税同盟本来就是「市场整合 → 工业化」这件事在原版里的写法，而整合的受益者是工业家；② 原版给巴伐利亚的起点里**已经有铁路与集约农业**（common/history/countries/bav - bavaria.txt:7-8 的 `add_technology_researched = railways` 与 `intensive_agriculture`），也就是原版自己认为它 1836 站在铁路时代门口；③ 原版还给它的**学校制度投到 2 级**（同文件 :10-13 的 `institution_schools … level = 2`）—— 识字与教育那一侧有底子，对应知识界。**⚠️ 必须写明的让步**：本处境真正该动的是**外交槽**（倒向谁），而 schema 的递牌通道只认四张**政治**议程牌（tools/pdx/modgen.py:679-686），外交槽的意图（如 `ai_strategy_unify_germany`，`type = diplomatic`，common/ai_strategies/02_diplomatic_strategies.txt:1631）**递不出去**；所以这张表**只记选边在国内留下的那一半**，把「倒向谁」本身留给原版的集团与 JE（那是它们的账）。⚠️ 正式的因果链应当是「选边 → 关税与市场准入的真实位移 → 工业化与识字率的位移 → IG 势力自然变化」，而不是直接改政治力量；那条已记进 backlog（B35）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**。
+# 为什么单独一个效果：实验的 B 段只施加冲击、B2 段才追加这一处 ——
+# 两处合并在一个效果里就分不出是哪一处起了作用（执行文档：两层分开报）。
+# 修正 sitai_bv_reform_inputs；效果名 sitai_bv_reform_input（不绑 on_action，由实验显式调用）。
+
+sitai_bv_reform_input = {
+	add_modifier = {
+		name = sitai_bv_reform_inputs
+		years = 10
+	}
+}

@@ -447,6 +447,9 @@ def effects_text(target: ProbeTarget) -> str:
         f"{TAB * 3}set_variable = {{ name = {SELFARM_VAR} value = 0 }}\n"
         f"{TAB * 3}set_variable = {{ name = {MONTH_VAR} value = 0 }}\n"
         f"{TAB * 3}set_variable = {{ name = {STAGE_VAR} value = 1 }}\n"
+        f"{TAB * 3}# 这一局盯的是哪一份档案 —— **两条武装路径都要写**：观察者局只走这一条\n"
+        f"{TAB * 3}# （没有玩家国家 ⇒ 决议点不到），只写在决议那条上等于没写（实测踩过）。\n"
+        f'{TAB * 3}debug_log = "ZZPROBE AB;TARGET;{target.archive_id}"\n'
         f"{TAB * 2}}}\n"
         f"{TAB * 2}change_variable = {{ name = {MONTH_VAR} add = 1 }}\n"
         f"\n"

@@ -1,0 +1,30 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 西班牙 · 帝国残骸与内战 · 冲击记账（A 级：真实世界状态 —— 变量 + 修正，不占任何槽位）。
+# 调用方：A/B 实验（B 组显式施加冲击）。本档案刻意**不绑 on_action**：「什么才算这次冲击」的判定留给实验给结论，
+# 由谁写、写在哪，见本档案 why 与数据源（每个数字都带依据，P10）。
+# 变量 sitai_sp_empire_remnant_memory；压力修正 sitai_sp_empire_remnant_pressure。
+
+sitai_sp_empire_remnant_shock = {
+	set_variable = {
+		name = sitai_sp_empire_remnant_memory
+		value = 1
+		days = 3650
+	}
+	add_modifier = {
+		name = sitai_sp_empire_remnant_pressure
+		years = 10
+	}
+}
+
+# 改革侧输入（A 级：同样是真实世界状态）：**定位**：它是「改革派那一侧的输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。走 A 级而不是递牌的理由（F5）：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（common/ai_strategies/03_political_strategies.txt:528-544），改世界状态就等于改它的输入，不占任何槽位。**为什么这两个 IG 就是西班牙的「被逼出来的那一侧」**：原版把内战胜方的奖励**成对写在同一个修正里** —— `carlist_war_spa_reward` 给知识界 `interest_group_ig_intelligentsia_pol_str_mult = 0.25`（common/static_modifiers/00_ip4_04_modifiers.txt:355）与小资产阶级 `interest_group_ig_petty_bourgeoisie_pol_str_mult = 0.25`（:357），同一块里还有 `country_legitimacy_headofstate_add = 25`（:354）；而卡洛斯派赢的那一块（`carlist_war_spc_reward`）把同样这两个 IG 各扣 0.25（:367、:368）—— 也就是说原版自己认为：**这场内战的两侧就是「知识界 + 小资产阶级」对「教会 + 地主」**（后两者的 +approval 在同文件 :365 与 :366）。本档案只是把「自由派那一侧赢了这一段」记成账。⚠️ 正式的因果链应当是「内战 → 变卖教产与借债 → 城市化与识字率的真实位移 → IG 势力自然变化」，而不是直接改政治力量；那条已记进 backlog（B35）。　【沿用·口径】**数值沿用 `ru_defeat.toml` 的实测档位（+0.5/+0.5），未针对本条处境独立校准**；字段组合（知识界 + 小资产阶级）是按原版自己的西班牙内战内容另选的（上面那一串行号）。
+# 为什么单独一个效果：实验的 B 段只施加冲击、B2 段才追加这一处 ——
+# 两处合并在一个效果里就分不出是哪一处起了作用（执行文档：两层分开报）。
+# 修正 sitai_sp_reform_inputs；效果名 sitai_sp_reform_input（不绑 on_action，由实验显式调用）。
+
+sitai_sp_reform_input = {
+	add_modifier = {
+		name = sitai_sp_reform_inputs
+		years = 10
+	}
+}

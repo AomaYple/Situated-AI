@@ -1,0 +1,33 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 改革窗口 JE（西班牙 · 帝国残骸与内战）：判据驱动 —— 只有压力够大才开。
+# 这个 JE 的作用**只有三条**（2026-09-22 实测复核，别读多）：
+#   ① **玩家可见性**：G3 的三行解释挂在它身上（P11）；
+#   ② **世界状态判据**：原版脚本可以用 `has_journal_entry = <本 JE 名>` 读它；
+#   ③ **递牌**：`immediate` 里给该国换一张**原版**策略牌（见下面的 signals 依据）。
+# ⚠️ **它喂不到原版 AI 牌**：原版 212 处 `has_journal_entry` 全部硬编码**具名 JE**
+# （`ai_strategies/03_political_strategies.txt:137` 读的是 je_metternich 这一串），
+# **没有「读任意 JE」的通用谓词** —— 我们自己的 JE 一张牌也喂不到。
+# 意图位移的真正通道是**递牌**（`set_strategy`）与**法律承诺**（law commitment），
+# 原因与实测见 `docs/design/backlog.md` B52 / B53–B60。
+
+je_sitai_sp_empire_remnant_window = {
+	icon = "gfx/interface/icons/event_icons/event_carlist_beret.dds"
+	group = je_group_crises
+
+	is_shown_when_inactive = {
+		c:SPA ?= this
+		has_variable = sitai_sp_empire_remnant_memory
+	}
+
+	possible = {
+		has_variable = sitai_sp_empire_remnant_memory
+		legitimacy <= 75
+	}
+
+	complete = {
+		legitimacy >= 75
+	}
+
+	weight = 100
+}

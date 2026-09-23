@@ -1,0 +1,11 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 处境压力（A 级）：巴伐利亚 · 倒向谁。每条字段都照原版同族用法取档位，
+# 每条的依据见 sitai_bv_alignment.md（由 why_report 生成）。
+
+sitai_bv_alignment_pressure = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_statue_negative.dds
+	country_influence_mult = -0.1
+	country_legitimacy_base_add = -35
+	interest_group_ig_landowners_pol_str_mult = -0.3
+}

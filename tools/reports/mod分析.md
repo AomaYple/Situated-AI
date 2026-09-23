@@ -5,8 +5,8 @@
 
 ## 一、概览
 
-- mod 数：**23**
-- 文件总计：**4,777**
+- mod 数：**24**
+- 文件总计：**4,828**
 - 功能前缀总计：**2,737**
 
 ## 二、功能前缀分布
@@ -49,6 +49,7 @@
 | `3640730097` | Ultra Historical Debts and Taxes | 26 | 0 | 26 | 36 | 1.13* |
 | `3647628156` | Ultra Historical Workforce | 15 | 0 | 15 | 248 | 1.13* |
 | `3656697666` | Ultra Historical Companies | 15 | 0 | 15 | 586 | 1.13* |
+| `au_revolution-cn_intervention-eg_debt-pe_great_game-ru_defeat-tr_defeat` | SITAI 处境档案 · 奥地利 · 革命潮、大清 · 列强干涉、埃及 · 债务危机、波斯 · 大博弈、俄罗斯 · 战败求存、奥斯曼 · 战败求存 | 51 | 0 | 51 | 0 | 1.14.3 |
 
 ## 四、文件类型分布
 
@@ -77,6 +78,7 @@
 | `3640730097` | 14 | 11 | 0 | 1 | 0 | 0 | 0 |
 | `3647628156` | 14 | 0 | 0 | 1 | 0 | 0 | 0 |
 | `3656697666` | 11 | 3 | 0 | 1 | 0 | 0 | 0 |
+| `au_revolution-cn_intervention-eg_debt-pe_great_game-ru_defeat-tr_defeat` | 27 | 12 | 0 | 0 | 0 | 0 | 6 |
 
 ## 五、交叉：被 mod 触及的原版目录
 
