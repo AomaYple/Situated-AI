@@ -167,6 +167,8 @@ def _fake_game(tmp_path: Path) -> Path:
         "\tcountry_influence_mult = 0.25\n"
         "\tinterest_group_ig_armed_forces_pol_str_mult = 0.25\n"
         "\tinterest_group_ig_petty_bourgeoisie_pol_str_mult = 0.25\n"
+        "\tcountry_aristocrats_pol_str_mult = 0.25\n"
+        "\tbuilding_group_bg_plantations_throughput_add = 0.1\n"
         "}\n",
     )
     _write(game / "common" / "journal_entries" / "00_vanilla.txt", "je_vanilla = {\n}\n")
@@ -190,11 +192,12 @@ def _fake_game(tmp_path: Path) -> Path:
     # 国家 tag：**数据源里声明过的每一个都要在这里**。闸门 ② 会拿产物里出现的 tag 去
     # 原版池里找 —— 少了哪个就报"原版里找不到这个国家 tag：X"（阶段 4 加第二份档案时
     # 真踩过：夹具只有 RUS，于是 tr_defeat 被正确地判红，修的是夹具而不是闸门；
-    # 阶段 5 加 au/cn 两份时同样：补齐 AUS / CHI）；批次 3 加 sp/bv：SPA / BAV。
+    # 阶段 5 加 au/cn 两份时同样：补齐 AUS / CHI）；批次 3 加 sp/bv：SPA / BAV；
+    # 加 brz_market_loss（失去市场）：BRZ。
     _write(
         game / "common" / "country_definitions" / "00_countries.txt",
         "RUS = {\n}\nTUR = {\n}\nAUS = {\n}\nCHI = {\n}\nEGY = {\n}\nPER = {\n}\n"
-        "SPA = {\n}\nBAV = {\n}\n",
+        "SPA = {\n}\nBAV = {\n}\nBRZ = {\n}\n",
     )
     _write(
         game / "common" / "defines" / "00_ai.txt",
@@ -213,6 +216,8 @@ def _fake_game(tmp_path: Path) -> Path:
         "gfx/interface/icons/event_icons/event_carlist_beret.dds",
         "gfx/interface/icons/event_icons/waving_flag.dds",
         "gfx/interface/icons/timed_modifier_icons/modifier_rifle_negative.dds",
+        "gfx/interface/icons/timed_modifier_icons/modifier_gear_negative.dds",
+        "gfx/interface/icons/goods_icons/coffee.dds",
     ):
         path = game / icon
         path.parent.mkdir(parents=True, exist_ok=True)

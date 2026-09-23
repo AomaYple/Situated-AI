@@ -270,5 +270,6 @@ why = "第三行 = **上次改主意的原因**（G3 里最容易被跳过、却
 # 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
 # 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
 [probe]
-why = "**留空（没查实）**：奥斯曼的历史文件里**没有**土地法那一组 —— `common/history/countries/tur - ottoman empire.txt` 第 16–23 行共 8 条 `activate_law`（monarchy / autocracy / millet_system / subjecthood / traditionalism / censorship / land_based_taxation / slave_trade），**没有** `lawgroup_land_reform` 那一条 ⇒ 开局那条土地法由引擎默认决定，我们没有证据说是哪一条。**宁可不判，也不给一条会假的判据**。"
+why = "**留空（没查实）**：奥斯曼的历史文件里**没有**土地法那一组 —— `common/history/countries/tur - ottoman empire.txt` 第 16–23 行共 8 条 `activate_law`（monarchy / autocracy / millet_system / subjecthood / traditionalism / censorship / land_based_taxation / slave_trade），**没有** `lawgroup_land_reform` 那一条 ⇒ 开局那条土地法由引擎默认决定，我们没有证据说是哪一条。**宁可不判，也不给一条会假的判据**。　【牌口径 · B86】`reform_card` =「意图层动没动」看哪张牌（判据是它**出现过**）：本档案开局那张政治牌不是它（八份逐份核过 common/history/ai/00_strategy.txt —— AUS/EGY 是 conservative、RUS 是 reactionary、TUR/CHI/PER/SPA/BAV 没有块），所以它出现就是真的位移。"
 reform_law = ""
+reform_card = "ai_strategy_progressive_agenda"

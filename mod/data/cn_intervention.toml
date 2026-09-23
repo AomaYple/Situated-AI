@@ -299,5 +299,6 @@ why = "知识界政治力量。原版档位：0.15（106_modifiers.txt:205）、
 # 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
 # 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
 [probe]
-why = "大清的观测点同样是农奴制。依据：`common/history/countries/chi - china.txt:13` 的 `activate_law = law_type:law_serfdom`（逐行打开确认）。"
+why = "大清的观测点同样是农奴制。依据：`common/history/countries/chi - china.txt:13` 的 `activate_law = law_type:law_serfdom`（逐行打开确认）。　【牌口径 · B86】`reform_card` =「意图层动没动」看哪张牌（判据是它**出现过**）：本档案开局那张政治牌不是它（八份逐份核过 common/history/ai/00_strategy.txt —— AUS/EGY 是 conservative、RUS 是 reactionary、TUR/CHI/PER/SPA/BAV 没有块），所以它出现就是真的位移。"
 reform_law = "law_serfdom"
+reform_card = "ai_strategy_progressive_agenda"

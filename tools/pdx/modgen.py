@@ -349,10 +349,26 @@ class Probe:
     **允许为空**（= 没查实）—— 空的时候套件**不产出**那条判据：宁可少一条读数，
     也不给一条会对某些国家立刻为真的假判据（奥斯曼/埃及在历史文件里没有土地法，
     写死 `law_serfdom` 时"不是农奴制"当场成立，实测踩过）。
+
+    ``reform_card``：分析器判"意图层动没动"时用哪张**政治议程牌**。
+    **同样允许为空**，而空在这里有两种正当理由（都不是"懒得写"）：
+
+    * **没查实**；
+    * **查实了、但它对这份档案没有判别力** —— 判据是"那张牌**出现过**"，
+      而巴西 1836 开局的初始政治牌里**本来就有** `ai_strategy_progressive_agenda`
+      （`common/history/ai/00_strategy.txt:42-45` 的 `c:BRZ` 块）⇒ 在巴西身上它**开局即为真**，
+      报出来的"行为层动了"是假的。这正是 `收口清单.md` 那句"任何跨档案通用的判据都要问：
+      它对别的档案是不是立刻为真"（backlog **B86**，与 B80 同族）。
+      那种档案就把它**留空并写明**，行为层改看 `ENACT` 与 `GOV` 两条通用读数。
+
+    为什么要有这一格而不是把 `progressive_agenda` 写死在分析器里：写死的那一版
+    **对巴西必然假真**，而"每份档案显式声明 + `why`"这条口径已经在 `reform_law` 上验证过
+    （P9：一处声明、三处同步）。
     """
 
     why: str
     reform_law: str
+    reform_card: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -922,7 +938,7 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
             key=reason_key, why=reason_entry.why, values=merged
         )
 
-    # `[probe]`（可选表）：探针口径 —— 本档案盯哪条法（B80）。
+    # `[probe]`（可选表）：探针口径 —— 本档案盯哪条法 / 哪张牌（B80 / B86）。
     probe: Probe | None = None
     if "probe" in data:
         raw = _require_table(data["probe"], f"{source}:probe")
@@ -933,7 +949,19 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
             raise DataError(
                 f"{source}:probe.reform_law 要写原版的法律键（law_ 开头），现在 {reform_law!r}"
             )
-        probe = Probe(why=_why(raw, f"{source}:probe"), reform_law=reform_law)
+        reform_card = raw.get("reform_card", "")
+        if not isinstance(reform_card, str):
+            raise DataError(f"{source}:probe.reform_card 必须是字符串（留空 = 不判）")
+        if reform_card and not reform_card.startswith("ai_strategy_"):
+            raise DataError(
+                f"{source}:probe.reform_card 要写原版的策略键（ai_strategy_ 开头），"
+                f"现在 {reform_card!r}"
+            )
+        probe = Probe(
+            why=_why(raw, f"{source}:probe"),
+            reform_law=reform_law,
+            reform_card=reform_card,
+        )
 
     # `[difficulty]`（可选表，**mod 级**）：难度三档（阶段 6 / 契约 J5）。
     # 与 `[tempo]` 同一口径：全仓恰好一份，校验交给 `_check_difficulty`。

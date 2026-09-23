@@ -296,5 +296,6 @@ why = "知识界政治力量（改革侧输入之一，对应 01a §K 埃及那�
 # 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
 # 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
 [probe]
-why = "**留空（没查实）**：埃及的历史文件里同样**没有**土地法那一组 —— `common/history/countries/egy - egypt.txt` 第 11–18 行共 8 条 `activate_law`（monarchy / autocracy / people_of_the_book / per_capita_based_taxation / subjecthood / agrarianism / professional_army / slave_trade），**没有** `lawgroup_land_reform` 那一条。要让这条判据可用，先得实测埃及开局那条土地法是什么（`LAW` 月度读数或存档）。"
+why = "**留空（没查实）**：埃及的历史文件里同样**没有**土地法那一组 —— `common/history/countries/egy - egypt.txt` 第 11–18 行共 8 条 `activate_law`（monarchy / autocracy / people_of_the_book / per_capita_based_taxation / subjecthood / agrarianism / professional_army / slave_trade），**没有** `lawgroup_land_reform` 那一条。要让这条判据可用，先得实测埃及开局那条土地法是什么（`LAW` 月度读数或存档）。　【牌口径 · B86】`reform_card` =「意图层动没动」看哪张牌（判据是它**出现过**）：本档案开局那张政治牌不是它（八份逐份核过 common/history/ai/00_strategy.txt —— AUS/EGY 是 conservative、RUS 是 reactionary、TUR/CHI/PER/SPA/BAV 没有块），所以它出现就是真的位移。"
 reform_law = ""
+reform_card = "ai_strategy_progressive_agenda"

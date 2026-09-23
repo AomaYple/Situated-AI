@@ -1,0 +1,11 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 处境压力（A 级）：巴西 · 失去市场。每条字段都照原版同族用法取档位，
+# 每条的依据见 sitai_brz_market_loss.md（由 why_report 生成）。
+
+sitai_brz_market_loss_pressure = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_gear_negative.dds
+	building_group_bg_plantations_throughput_add = -0.1
+	country_aristocrats_pol_str_mult = -0.3
+	country_legitimacy_base_add = -35
+}

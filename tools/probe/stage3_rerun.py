@@ -270,15 +270,21 @@ def _subject_archive(ours: list[str]) -> str:
     return matched[0] if len(matched) == 1 else ""
 
 
+def _probe_target(ours: list[str]) -> tuple[str, object | None]:
+    """``(档案 id, 那份档案)`` —— 认不出来时 ``("", None)``。"""
+    archive_id = _subject_archive(ours)
+    target = next((a for a in modgen.load_all() if a.id == archive_id), None)
+    return archive_id, target
+
+
 def _law_reading(laws: list[str], ours: list[str]) -> dict[str, object]:
     """按**这一局那个国家所属档案**声明的法报"换没换"（B80）。
 
     声明了 `[probe].reform_law` ⇒ 报「盯的法」+「它还在不在」；
     没声明（或日志里读不到国家）⇒ **这一栏不判**，并说明为什么。
     """
-    archive_id = _subject_archive(ours)
-    target = next((archive for archive in modgen.load_all() if archive.id == archive_id), None)
-    if target is None or target.probe is None or not target.probe.reform_law:
+    archive_id, target = _probe_target(ours)
+    if target is None or target.probe is None or not target.probe.reform_law:  # type: ignore[attr-defined]
         why = (
             f"这一局盯的是 {archive_id}，它没声明 `[probe].reform_law`"
             if archive_id
@@ -287,10 +293,35 @@ def _law_reading(laws: list[str], ours: list[str]) -> dict[str, object]:
         return {
             "⚠️ 法律换过没有：不判": f'{why} —— 数据源里补 `[probe] reform_law = "law_…"` 才能判'
         }
-    declared = target.probe.reform_law
+    declared = target.probe.reform_law  # type: ignore[attr-defined]
     return {
-        f"本档案盯的法（{target.id}.[probe].reform_law）": declared,
+        f"本档案盯的法（{target.id}.[probe].reform_law）": declared,  # type: ignore[attr-defined]
         f"✅ 那条法已不是现行法律（{declared}）": declared not in laws,
+    }
+
+
+def _card_reading(strategies: list[str], ours: list[str]) -> dict[str, object]:
+    """按**这一局那个国家所属档案**声明的政治议程牌报「意图层动没动」（B86）。
+
+    为什么不能把 `ai_strategy_progressive_agenda` 写死在分析器里：判据是"那张牌**出现过**"，
+    而有的国家**开局就挂着它**（巴西，`common/history/ai/00_strategy.txt:42-45`）
+    ⇒ 写死的那一版对巴西**必然假真**。所以改成每份档案显式声明，空 = 不判。
+
+    ⚠️ **空是正当结论，不是遗漏**：查实了但那张牌对这份档案没有判别力时，
+    就该留空并写明 —— 行为层改看 `ENACT` 与 `GOV` 两条通用读数。
+    """
+    archive_id, target = _probe_target(ours)
+    if target is None or target.probe is None or not target.probe.reform_card:  # type: ignore[attr-defined]
+        why = (
+            f"这一局盯的是 {archive_id}，它没声明 `[probe].reform_card`"
+            if archive_id
+            else "日志里既没有 `TARGET` 行、也没有可反查的 `ROLE;<TAG>` 行"
+        )
+        return {"⚠️ 意图层动没动（牌）：不判": f"{why} —— 见该档案 `[probe].why` 里写的理由"}
+    declared = target.probe.reform_card  # type: ignore[attr-defined]
+    return {
+        f"本档案盯的牌（{target.id}.[probe].reform_card）": declared,  # type: ignore[attr-defined]
+        f"✅ 那张牌挂上过（{declared}）": declared in strategies,
     }
 
 
@@ -331,7 +362,8 @@ def analyze(log: Path | None = None, *, only_after_arm: bool = True) -> dict[str
 
     判据口径（先写死，避免事后挑对自己有利的读法）：
     * **成功** = `LAW;<非 law_serfdom>` 出现过（法律真的换了）；
-    * **牌闸门成立** = `STRATEGY;ai_strategy_progressive_agenda` 出现过；
+    * **牌闸门成立** = 该档案 `[probe].reform_card` 声明的那张牌出现过（**每份档案各自声明**，
+      留空 = 不判 —— 写死 `progressive_agenda` 对巴西必然假真，见 `_card_reading` / B86）；
     * **窗口开过** = `JE;active` 出现过。
     """
     base = (log or DEBUG_LOG).parent
@@ -407,7 +439,7 @@ def analyze(log: Path | None = None, *, only_after_arm: bool = True) -> dict[str
         "政府在朝（去重）": _dedupe(gov),
         "各 IG 的 clout 水位（最高档）": clout_top,
         **_law_reading(laws, ours),
-        "✅ 进步牌挂上过": "ai_strategy_progressive_agenda" in strategies,
+        **_card_reading(strategies, ours),
         "✅ 窗口开过": "active" in je,
         "✅ 冲击施加过": "yes" in shocks,
         "✅ 立法开过（任一候选法）": any(value != "none" for value in enact),

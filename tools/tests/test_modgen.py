@@ -340,6 +340,58 @@ def test_reform_inputs缺why照样报错(tmp_path: Path) -> None:
         _archive(tmp_path, text)
 
 
+# ── `[probe]`：每份档案显式声明"盯哪条法 / 哪张牌"（B80 / B86）──────────
+
+
+def _probe_block(*, law: str = "law_serfdom", card: str = "ai_strategy_progressive_agenda") -> str:
+    return f'\n[probe]\nwhy = "测：探针盯什么"\nreform_law = "{law}"\nreform_card = "{card}"\n'
+
+
+def test_probe声明了法与牌就能编译(tmp_path: Path) -> None:
+    archive = _archive(tmp_path, MINIMAL + _probe_block())
+    assert archive.probe is not None
+    assert archive.probe.reform_law == "law_serfdom"
+    assert archive.probe.reform_card == "ai_strategy_progressive_agenda"
+
+
+def test_probe的牌留空是允许的(tmp_path: Path) -> None:
+    """留空是**正当结论**（那张牌对该档案没有判别力），不是遗漏 —— 与 `reform_law` 同口径。"""
+    archive = _archive(tmp_path, MINIMAL + _probe_block(card=""))
+    assert archive.probe is not None
+    assert archive.probe.reform_card == ""
+
+
+def test_probe的牌必须是原版策略键(tmp_path: Path) -> None:
+    with pytest.raises(modgen.DataError, match=r"probe\.reform_card"):
+        _archive(tmp_path, MINIMAL + _probe_block(card="progressive_agenda"))
+
+
+def test_probe的法必须是原版法律键(tmp_path: Path) -> None:
+    with pytest.raises(modgen.DataError, match=r"probe\.reform_law"):
+        _archive(tmp_path, MINIMAL + _probe_block(law="serfdom"))
+
+
+def test_probe的牌不能写成数字(tmp_path: Path) -> None:
+    text = (MINIMAL + _probe_block()).replace(
+        'reform_card = "ai_strategy_progressive_agenda"', "reform_card = 1"
+    )
+    with pytest.raises(modgen.DataError, match="必须是字符串"):
+        _archive(tmp_path, text)
+
+
+def test_真实档案都声明了牌() -> None:
+    """八份真实档案都要么声明 `reform_card`、要么在 `why` 里写明为什么不判。
+
+    这条只查**在场**：具体声明的牌**有没有判别力**由
+    `test_probe_stage3.py::test_声明的牌不能是该国开局就有的` 拿原版数据核（B86）。
+    """
+    archives = modgen.load_all()
+    assert archives
+    for archive in archives:
+        assert archive.probe is not None, f"{archive.id} 没有 [probe] 表"
+        assert archive.probe.why.strip(), f"{archive.id} 的 [probe] 没有 why"
+
+
 def test_真实档案的每个数字都有依据() -> None:
     """P10：`v3 modgen --why` 能机械枚举出每个数字 + 它的依据。"""
     archive = modgen.load_data(modgen.DATA_DIR / "ru_defeat.toml")

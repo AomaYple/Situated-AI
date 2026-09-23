@@ -189,7 +189,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-1482 条用例（`pytest --collect-only` 实测），
+1493 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -214,7 +214,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_properties.py` / `test_metamorphic.py` / `test_lexer_differential.py` | hypothesis 属性测试、变形测试、与独立 oracle 实现的差分对比 |
 | `test_benchmarks.py` | 性能基准（`pytest-benchmark`，回归即失败） |
 | `test_cli.py` | CLI 端到端：参数解析、退出码、入口点可用性、GBK 控制台不崩 |
-| `test_citations.py` | `文件:行号` 引用的核对：认出区间写法、**不把 `P2:F9` 这类章节号当引用**、同名多文件必须报歧义、行号越界要报出来、仓库内文件也认；最后一条跑在**真实数据源**上（4 份档案 292 条引用必须全部指得到）—— 这条断言就是"依据不许是编的" |
+| `test_citations.py` | `文件:行号` 引用的核对：认出区间写法、**不把 `P2:F9` 这类章节号当引用**、同名多文件必须报歧义、行号越界要报出来、仓库内文件也认；最后一条跑在**真实数据源**上（**全部档案**的引用必须全部指得到）—— 这条断言就是"依据不许是编的" |
 | `test_cache.py` | 缓存透明性：`parse_cached` 必须恒等于 `parse_file` |
 | `test_coverage.py` | **覆盖面契约**：每个文件必须归入四类之一，落不进就失败 |
 | `test_conftest.py` | 「没有游戏就自动跳过集成用例」这条机制本身（子进程真跑一次收集） |
@@ -470,7 +470,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：1482 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：1493 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

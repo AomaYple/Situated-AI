@@ -1,0 +1,310 @@
+# 档案数据源 · 巴西 单国「失去市场」（阶段 5 的第六种失败模式 · 本阶段收尾）
+#
+# ⚠️ 为什么要有这一份：已入库的八份里**没有「靠它吃饭的那条商路被掐断」这种失败模式**。
+#   `ru_defeat` / `tr_defeat` 是「战败」（外部敌人打进来）、`au_revolution` 是「革命潮」
+#   （多民族帝国从内部裂开）、`cn_intervention` 是「列强干涉」（海上被一次打穿）、
+#   `eg_debt` 是「破产」（财政主权被债主拿走）、`pe_great_game` 是「被两强夹击」、
+#   `sp_empire_remnant` 是「帝国残骸与内战」、`bv_alignment` 是「两个强权之间选边」。
+#   巴西这一份不是它们任何一个换个名字：
+#
+#     * **敌人不是国家，是市场**。前八份的处境都有个"谁"：打你的、夹你的、选边的、讨债的。
+#       巴西 1836 的处境里没有那个"谁" —— 它的问题是**它的收入长在一条别人说了算的商路上**。
+#       这正是 `01a` §K 给巴西那一行里「**英国市场支配**」这半句（docs/design/01a-依据与参考.md:301）。
+#     * **它的经济是单一出口**：咖啡与糖，也就是**种植园**（`bg_plantations`，
+#       common/building_groups/00_building_groups.txt:184）—— 原版把巴西的种植园写在
+#       common/history/buildings/07_south_america.txt 里。
+#     * **它的政治是君主制 + 摄政**，而原版自己承认这场摄政的合法性账：
+#       巴西 1836 挂着 `modifier_regency_intelligentsia`（common/history/countries/brz - brazil.txt:59），
+#       那一条的正文是 `country_legitimacy_base_add = -10` 与
+#       `interest_group_ig_intelligentsia_pol_str_mult = 0.25`
+#       （common/static_modifiers/00_ip4_04_modifiers.txt:43 是块头、:45 与 :47 是这两个字段）。
+#     * **原版把这件事记在别人的账上**：市场这一侧原版记的是**英国**（power bloc / 关税同盟），
+#       而**被市场掐住的那一方自己的账一个字都没有**：种植园照旧开工、种植园贵族照旧有势、
+#       王权照旧。于是「单一出口国的商路一断 → 出口部门受损 → 靠它吃饭的那一侧失势 →
+#       改革的窗口打开」这条因果在原版里**不存在**。本档案补的就是这一格。
+#
+# 口径（P9 单一数据源 / P10 每个数字有依据 / F10 生成器优先）：
+#
+#   * 产物（`mod/` 下的脚本、本地化、档案文档）**全部由 `v3 modgen` 从本文件生成**，
+#     手改产物没有用 —— 下次生成会被覆盖，闸门 ④ 也会报红；
+#   * **每一张表都必须带非空 `why`**（数字、判据、文案、容器表一律如此）：空 `why` 由
+#     `v3 modgen` 当场报错、闸门 ⑤ 复核 —— 这是 P10 从「纪律」变成「可执行检查」的那一步；
+#   * 数字一律写成 `amount = N`（同表内配 `why`），缩写形式只有一个来源，
+#     `why_report()` 与闸门 ⑤ 才能机械地枚举「每个数字 + 它的依据」。
+#
+# 为什么是 TOML：Python 3.11+ 标准库自带 `tomllib`，不新增依赖（P4），
+# 而它同时有「表」与「数组」两种结构，正好表达「一组带依据的条目」。
+#
+# 本档案只做一件事：把**失去市场**变成真实世界状态（A 级：变量 + 修正 + JE），
+# 让原版自己的权重公式转向。**一张牌都不递**（见 `[cards]`）。
+#
+# 为什么**没有** `[tempo]`、也**没有** `[difficulty]`：这两张都是 **mod 级**表
+# （`defines` 没有单国写法；难度三档是对外契约，档位集合由生成器钉死），全仓各只允许
+# 一份 —— 「恰好一份」由 `_check_tempo` 与 `_check_difficulty` 在全仓范围上当场判死。
+# 那两份都在 `ru_defeat.toml` 里。本档案**复用**它们，不复制。
+
+schema_version = 1
+
+[archive]
+id = "brz_market_loss"
+title = "巴西 · 失去市场"
+country = "BRZ"
+# 档案对哪个引擎版本有效（写进 mod 元数据的 supported_game_version）。
+# 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
+# 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
+game_version = "1.14.3"
+why = "**修的是什么毛病**：原版 1.14.3 对「一个单一出口国的商路被掐住」这件事**没有账**。开始没有（没有任何 on_action 记「市场丢了」），过程没有（种植园的产能、种植园贵族的势力、王权的威信，三者都不随出口市场变化），结束也没有（原版没有一条 JE 或修正表达「这个国家的出口完蛋了」）。**唯一被记下来的是市场那一侧**：谁掌握市场、谁在关税同盟里、谁给谁开了门 —— 那些都记在**列强**的账上，而被掐住的那一方自己什么都没有。⚠️ **主角身份本机实测确认**（不是猜）：tag = `BRZ`（common/country_definitions/00_countries.txt:2336 的 `BRZ = {`，该文件的顶层键就是国家 tag），同块 :2339 `country_type = recognized`、:2341 `tier = empire`、:2343 `cultures = { brazilian }`、:2344 `capital = STATE_RIO_DE_JANEIRO`。**为什么主角是巴西**：01a §K 那一行（docs/design/01a-依据与参考.md:301）写的是**出口型经济（咖啡/糖）、奴隶制、地主政治、君主制相对稳定**，外部是**英国市场支配**、拉美共和化浪潮、南境与阿根廷/乌拉圭摩擦，推出的最优解是**初级产品换安全**（抱英国、压内部叛乱、避免与列强冲突）—— 这是一份以「收入长在别人的商路上」为机制的档案。⚠️ **主角的初始落点实测**：common/history/ai/00_strategy.txt:42 有 `c:BRZ ?= {` 块，里面三张牌是 `ai_strategy_plantation_economy`（:43）、`ai_strategy_maintain_power_balance`（:44）、`ai_strategy_progressive_agenda`（:45）—— 影响见 `[cards]` 与 `[probe]`。⚠️ 依据已于 2026-09-22 更正（沿用既有八份的共同结论）：原版 212 处 has_journal_entry 全部硬编码具名 JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）—— 本档案一条都不用，理由见 `[cards]`。　【沿用·口径】本表的数值**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；本档案**独立取档**的有两处（种植园产能、种植园贵族），字段与新档位都取自原版自己的同类用法，见各自的 why。"
+
+
+# ── ② 失去市场的记忆：真实世界状态的第一步 ────────────────────
+# 为什么字段名叫 memory 而不是「市场记忆」：schema v1 的这张表就是「处境发生过」
+# 的那张账（变量 + 写它的效果），本档案往里记的是**这条商路被掐断过**。
+[memory]
+variable = "sitai_brz_market_loss_memory"
+effect = "sitai_brz_market_loss_shock"
+why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown_when_inactive / possible 读它，于是「失去市场」这件事变成可查的世界状态（阶段 1 已证：牌直接读 has_variable）。**谁把这件事判成这件事，本档案不猜**：原版**没有**任何 on_action 记「市场丢了」—— 市场那一侧的状态是动态的（贸易路线、关税、power bloc 成员），没有一条「落了账」的时刻（这与 `sp_empire_remnant` 至少还有 JE 的 complete 可引不同）。所以判定留在**施加方**：`sitai_brz_market_loss_shock` 由调用方显式执行，本档案**不绑任何 on_action**（与既有八份同口径：A/B 实验要求处理段能分开施加、单独关掉，绑上就等于替 AI 决定「什么时候算市场丢了」）。　【沿用·口径】判据形状沿用 `ru_defeat.toml`（变量 + 显式冲击效果），**未针对本条处境独立校准**；「原版没有这一格」是本机逐条打开 `common/on_actions/` 的结论。"
+
+[[memory.params]]
+key = "value"
+amount = 1
+why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次丢掉市场」时不用换类型（原版 `set_variable = { recently_had_war … }` 那一处甚至没有 value，见 common/on_actions/00_code_on_actions.txt:7046-7048）。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
+
+[[memory.params]]
+key = "days"
+amount = 3650
+why = "10 年，与压力修正的 `years = 10` 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在本处境上有一条原版刻度可引**：原版把「10 年」定成具名刻度 `long_modifier_time = 3650`（common/script_values/event_values.txt:41，同处 :40 是 5 年的 normal_modifier_time、:42 是 15 年的 moderately_long_modifier_time）。对照原版给 `recently_had_war` 的是 `days = 1825`（5 年，common/on_actions/00_code_on_actions.txt:7048）：一条商路的改道、一片种植园的枯荣、一代人的债务，都是以十年计的。　【沿用·口径】天数**沿用 `ru_defeat.toml` 的 3650**，本处境只是换了一条更贴题的原版刻度来支撑同一个数，**未独立校准**。"
+
+# ── ③ 压力：真实的「失去市场」代价（A 级）─────────────────────
+#
+# 三条字段合起来表达的是：**市场没了，最先疼的是靠它吃饭的那一块，然后是王权**。
+# 与八份既有档案的差别：第一条换了**从没有人用过的字段族**（`building_group_*`，按产能压
+# 出口部门本身），第二条把「谁失势」从 IG 换到**人口类别**（种植园贵族＝aristocrats）。
+[pressure]
+name = "sitai_brz_market_loss_pressure"
+icon = "gfx/interface/icons/timed_modifier_icons/modifier_gear_negative.dds"
+why = "压力必须是真的世界状态，不是我们的私有计数器 —— 只有真实变化才会进原版自己的公式（01a D 节：A 级被严重低估）。三条字段覆盖「失去市场」这件事**在出口国自己身上**留下的三笔账：**① 出口部门本身的产能被打**（种植园，`building_group_bg_plantations_throughput_add`）、**② 靠它吃饭的那一侧失势**（种植园贵族＝`country_aristocrats_pol_str_mult`）、**③ 王权替这件事付出的威信**（合法性）。**icon 取 `modifier_gear_negative.dds`**：它是「产能/工业」那一支的负向图，与本档案第一条字段同义；原版九张 `*_negative` 图里 coins（`eg_debt` 用）、fire（`au_revolution` 用）、rifle（`sp_empire_remnant` 用）、statue（bv/cn/pe/ru/tr 用）都已被既有档案占用，gear 语义贴且不撞脸。⚠️ **本表与 `[reform_inputs]` 都是实验用直接修正，不是正式版设计**：它们由施加冲击的一方显式调用（不绑任何 on_action，调用点是 scripted effect `sitai_brz_market_loss_shock`）；正式版必须改成真实触发 + 因果链（商路改道 → 出口收入与种植园产能的真实位移 → 贵族与王权的自然变化），那条已进 backlog（B35）。本定位同时写在 exec/阶段3-结果.md 与 exec/阶段3-归档清点.md，避免后人把实验设置当成档案设计。⚠️ **一处必须写明的让步（「市场」本身表达不出来）**：本机实测原版**所有**贸易类修正在**国家**那一侧都没有对应字段 —— 它们全是 `state_` 作用域（`state_trade_advantage_mult` 16 处、`state_trade_capacity_mult` 8 处、`state_market_access_price_impact` 4 处、`state_import_advantage_mult` 3 处；例：`opium_wars_export_modifier` 用的是 `state_trade_advantage_mult = 0.10`，common/static_modifiers/content_1_modifiers.txt:33 是块头、:35 是该字段），而 `[pressure].effects` 渲出来的是**国家静态修正的数值字段**（tools/pdx/modgen.py）—— 把 `state_*` 字段挂到国家上不是同一回事（作用域不对，与 `bv_alignment` 那条 `power_bloc_leverage_generation_mult` 是同一类让步）。所以本档案表达的是**出口部门的后果**，不是市场通道本身。　【沿用·口径】**三条里第三条的数值沿用 `ru_defeat` 的实测档位（-35），未针对本条处境独立校准**；前两条是原版档位本身（见各自的 why）。"
+
+[[pressure.params]]
+key = "years"
+amount = 10
+why = "与 sitai_brz_market_loss_memory 的 `days = 3650` 对齐，也与原版那个 10 年刻度 `long_modifier_time = 3650`（common/script_values/event_values.txt:41）同尺度。原版 `add_modifier` 用 `years` 的写法见 common/scripted_effects/00_movement_effects.txt:2-4（`add_modifier = { name = initial_movement_enthusiasm years = 20 }`）。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
+
+[[pressure.effects]]
+key = "building_group_bg_plantations_throughput_add"
+amount = -0.10
+why = "**这一条是本档案与八份既有档案最硬的差别：前八份没有一份用过 `building_group_*` 字段族**（它们压的是合法性 / 借债利率 / 各个 IG / 外交影响力）。**为什么是种植园的产能**：巴西 1836 的收入长在咖啡与糖上，而这两样在原版里就是**种植园**建筑 —— 建筑组 `bg_plantations` 定义在 common/building_groups/00_building_groups.txt:184；原版自己把巴西的种植园写在 common/history/buildings/07_south_america.txt 里。商路一断，第一个被打的就是这条产能，而**产能是真实世界状态**：它进原版自己的产出与就业公式，不需要我们另造一个计数器（A 级）。**为什么取 -0.10**：原版给了真实负档 —— `temporary_switch_to_food_crops` 是 `-0.2`（common/static_modifiers/00_ip2_02_modifiers.txt:149 是块头、:153 是该字段），`food_crop_system_modifier` 是 `-0.1`（同文件 :181 是块头、:185 是该字段）；正向档另有 +0.05（`modifier_agricultural_development_trade`，common/static_modifiers/content_204_modifiers.txt:282 / :284）与 +0.1（common/static_modifiers/00_ip4_02_modifiers.txt:117）。取 -0.1 而不是 -0.2：那两处原版负档说的是「改种粮食」（**主动换掉**出口作物），而本档案要表达的是**外部商路被掐**（产能还在、出路没了）—— 取两档里轻的那一档，让「出口还在勉强运转但已经不赚」这件事读得出来。⚠️ **诚实项**：这个档位**没有实测过本处境的效果大小**。　【原版行号依据】不是实测读数，是原版同类用法（上面那一串行号，逐行打开确认过）。"
+
+[[pressure.effects]]
+key = "country_aristocrats_pol_str_mult"
+amount = -0.30
+why = "**第二条是「谁靠它吃饭」的落点，也是本档案与八份既有档案的第二处差别：前八份压的一律是某个 IG（`interest_group_ig_*`），没有一份压过人口类别**（`country_aristocrats_pol_str_mult`）。**为什么是贵族而不是地主 IG**：本处境要表达的是**种植园主这一批人的经济基础被打掉**（他们的田还在、买家没了），而 `ig_landowners` 在原版里同时代表旧地主与种植园主两批人 —— 用人口类别 `aristocrats` 指得更准，而且它与本档案第三条（王权）不是同一层的东西（一个是社会力量，一个是政体）。这个字段在本处境有**原版自己的反向先例**：伊比利亚的大地产法 `law_latifundias` 给的就是 `country_aristocrats_pol_str_mult = 0.4`（common/laws/01_land_reform.txt:268）—— 也就是说原版用这个字段表达「大地产者的政治力量」，本档案只是把它朝反方向用。**为什么取 -0.30**：原版同字段的档位实测为 +0.10（4 处）、+0.20、+0.15、+0.1、-0.05、-0.10、-0.15（2 处）、-0.25、-0.50、-0.80、-0.90（2 处）—— -0.30 落在 -0.25 与 -0.50 之间，方向明确、又不把这一侧一次打垮（一次打垮会让议会算术失去张力）。⚠️ **诚实项**：这个档位是**按原版档位阶梯选的**，不是实测出来的。　【原版行号依据】不是实测读数，是原版同族用法。"
+[[pressure.effects]]
+key = "country_legitimacy_base_add"
+amount = -35
+why = "**第三条是王权的账**：合法性是开窗判据的一半（JE 的 possible 读 `legitimacy <= 75` —— 为什么是 75 见下面 conditions 那条的依据）。**为什么失去市场会打到巴西的王权**：这个帝国的体面是**建立在出口繁荣上的** —— 原版自己就把巴西的摄政写成一件合法性受损的事：巴西 1836 挂着 `modifier_regency_intelligentsia`（common/history/countries/brz - brazil.txt:59），而那一条的正文里就有 `country_legitimacy_base_add = -10`（common/static_modifiers/00_ip4_04_modifiers.txt:43 是块头、:45 是该字段，同族另有 :46 的 `country_law_enactment_speed_mult = -0.25`）。也就是说：**王位未定 + 商路被掐，两笔账落在同一个字段上**，本档案补的是后一笔。**为什么取 -35**：它是 `ru_defeat` 在阶段 3 里**实测调过档**的值（先取 -20 跑一整局 B 组、窗口一次都没开 → 提到 -35；复算 `v3 ab --logs ab-run7`，B 段 55 块合法性分档 b70 24 / b75 18 / b80 13），也就是「把水位稳定压出一档、又不让政府一次失能」的那一档；本档案**原样沿用**，没有针对巴西重跑 A/B。原版同字段的档位阶梯为 +10 / +5 / -10 / -20（common/static_modifiers/00_code_static_modifiers.txt:322、:331、:343、:353）与 -50（同文件 :986 的 `low_electoral_confidence`），另有 -50（common/static_modifiers/content_1_modifiers.txt:17 的 `opium_wars_lost`）—— -35 落在 -20 与 -50 之间。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位（-35），未针对本条处境独立校准**。"
+
+# ── ④ 改革侧输入：市场没了之后，谁的主张变得可行（A 级）────────
+#
+# 为什么单独一张表、而不是往 [pressure] 里再加两条字段：阶段 3 的 A/B 阶梯要在**一局
+# 之内**分两处施加 —— 先只加冲击，隔一段才追加这一处。合进同一个修正就没有「只加冲击」
+# 的那一段，两段之间的差分无从谈起。
+#
+# 为什么是工业家 + 知识界：单一出口国的商路一断，「只会种咖啡」这件事本身就变成了
+# 国家风险 —— 主张**把经济铺开**的那一侧因此有了论据。原版对「被外部经济力量逼着换路」
+# 有现成的成对写法：`shogun_ig_forced_to_open_market` 在同一个修正里把
+# 地主 -0.75、知识界 +0.5、工业家 +0.5 一起写（common/static_modifiers/content_1_modifiers.txt:1463-1471，
+# :1465 / :1466 / :1467 分别是这三个字段）—— 与本档案同型。而 01a §K 给巴西的行政槽
+# 是 `plantation_economy`（docs/design/01a-依据与参考.md:301），工业家 1836 在巴西**很弱**
+# （不是"不存在"），所以这一处抬的是**本来就有论据、只是没有力量**的那一侧。
+[reform_inputs]
+name = "sitai_brz_reform_inputs"
+effect = "sitai_brz_reform_input"
+icon = "gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds"
+why = "**定位**：它是「改革派那一侧的输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。走 A 级而不是递牌的理由（F5）：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（common/ai_strategies/03_political_strategies.txt:528-544），改世界状态就等于改它的输入，不占任何槽位。**为什么这两个 IG 就是巴西的「被逼出来的那一侧」**：① 单一出口被打 ⇒「把经济铺开」成了国家存续问题，落点是工业家；② 巴西开局**在朝的就是知识界**（common/history/countries/brz - brazil.txt:39-41 的 `ig:ig_intelligentsia ?= { add_ruling_interest_group = yes }`），原版的摄政修正也给知识界 +0.25（common/static_modifiers/00_ip4_04_modifiers.txt:47）—— 也就是说原版自己认为这一侧是巴西 1836 的政治主角，本档案只是把它的力量抬到能推动法律的位置。⚠️ 正式的因果链应当是「商路改道 → 出口收入与种植园产能的真实位移 → 工业化与识字率的位移 → IG 势力自然变化」，而不是直接改政治力量；那条已记进 backlog（B35）。　【沿用·口径】**数值沿用 `ru_defeat.toml` 的实测档位（+0.5/+0.5），未针对本条处境独立校准**；字段组合是按原版自己的同类写法另选的（上面那一串行号）。"
+
+[[reform_inputs.params]]
+key = "years"
+amount = 10
+why = "与 [pressure.params] 的 `years = 10`、记忆变量的 `days = 3650` 三处对齐：三者在实验里是同一段时间窗，任何一处短了都会出现「输入还在、压力已经没了」的半截状态。原版 `add_modifier` 用 `years` 的写法见 common/scripted_effects/00_movement_effects.txt:2-4。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
+
+[[reform_inputs.effects]]
+key = "interest_group_ig_industrialists_pol_str_mult"
+amount = 0.5
+why = "工业家是「把经济铺开」那一侧的落点。取原版同族强档 +0.5，而且这一档在本处境的语义上**有同型先例**：`shogun_ig_forced_to_open_market`（common/static_modifiers/content_1_modifiers.txt:1463-1471）在同一个修正里把地主 -0.75（:1465）、知识界 +0.5（:1466）、工业家 +0.5（:1467）一起写 —— 那就是「被外部经济力量逼着换路 → 现代化侧抬头」，与本档案要表达的「商路被掐 → 主张铺开经济的那一侧抬头」同型（幕府与巴西，同一时代的同一种外部经济压力）。原版同字段的档位为 0.1（common/static_modifiers/00_ip4_03_modifiers.txt:7）、0.25（common/static_modifiers/00_ip4_04_modifiers.txt:33）、0.5（content_1_modifiers.txt:1467）。取 0.5 而不是 0.1：`progressive_agenda` 的权重只在 `ig:ig_industrialists ?= { is_powerful = yes }` 时 +10（common/ai_strategies/03_political_strategies.txt:537-544），而 `is_powerful` 是**相对份额**判定 —— 只抬一档常常翻不过那条线，实验要的是「输入明确到位」，不是「差一点」。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位（0.5），未针对本条处境独立校准**；档位本身也是原版幕府那条的档。"
+[[reform_inputs.effects]]
+key = "interest_group_ig_intelligentsia_pol_str_mult"
+amount = 0.5
+why = "知识界是巴西 1836 **开局在朝**的那一侧（common/history/countries/brz - brazil.txt:39-41），原版摄政修正给它的档是 +0.25（common/static_modifiers/00_ip4_04_modifiers.txt:47）。**为什么取 +0.5 而不是原版那一档的 +0.25**：`progressive_agenda` 的权重只在 `ig:ig_intelligentsia ?= { is_powerful = yes }` 时 +10（common/ai_strategies/03_political_strategies.txt:537-544），而 `is_powerful` 是**相对份额**判定 —— 只抬一档常常翻不过那条线；`ru_defeat` 的实测档位就是 0.5（本档案原样沿用）。原版同字段档位实测为 0.15（common/static_modifiers/106_modifiers.txt:205）、0.25（00_ip4_04_modifiers.txt:47、:355）、0.5（content_1_modifiers.txt:1466，与工业家 +0.5 成对写）。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位（0.5），未针对本条处境独立校准**。"
+
+# ── ⑤ 改革窗口 JE：把「处境」喂进原版的最短路径 ──────────────
+[journal_entry]
+name = "je_sitai_brz_market_loss_window"
+group = "je_group_internal_affairs"
+icon = "gfx/interface/icons/goods_icons/coffee.dds"
+why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有三条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 `has_journal_entry = <本 JE 名>` 读它）；③ `immediate` / `on_complete` 里递牌（本档案不用，见 `[cards]`）。⚠️ 它喂不到原版 AI 牌：原版 212 处 `has_journal_entry` 全部硬编码具名 JE，没有「读任意 JE」的通用谓词（backlog B52）。**group 与 icon 都按本处境的语义另选**：group = `je_group_internal_affairs`（定义见 common/journal_entry_groups/00_journal_entries.txt:112，`context = country`）—— 本档案的窗口是**内政**窗口（改革），不是外交窗口；**刻意不用 `je_group_brazil`**（同文件 :73，原版自己的巴西剧情组）：那一组是原版的巴西内容，本档案是与它并行的处境窗口，挤进去会让玩家以为它是原版内容的一部分（与 `sp_empire_remnant` 不用 `event_scales.dds` 同一条理由）。icon = `gfx/interface/icons/goods_icons/coffee.dds` —— **咖啡就是巴西这条商路上的货**，这是本档案的处境本身；九份档案里没有一份用过 `goods_icons/` 这一支（前八份用的都是 `event_icons/`），撞脸风险最低，而且比任何一张抽象事件图都更直接地说出「这是哪一种处境」。⚠️ 闸门 ② 会核这个路径真的在原版里（`gfx/interface/icons/` 下的图标域）。　【沿用·口径】本表的**结构与数值**沿用 `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**；group 与 icon 是按本处境的语义另选的（有原版行号）。"
+
+[[journal_entry.fields]]
+key = "weight"
+amount = 100
+why = "JE 列表拥挤时的保留优先级。与原版 `je_corn_laws` 的 `weight = 100` 同档（common/journal_entries/00_corn_laws.txt:79）—— 处境级窗口不该被小 JE 挤掉。⚠️ 已知的档位差异：原版巴西自己的 JE 用的是更高的档（如 `je_brazilian_nation_building` 那一族，common/journal_entries/02_brazilian_nation_building.txt）。本档案**刻意不取更高的档**：那是原版核心内容 JE，本档案是与它并行的处境窗口，压过它会把原版自己的巴西内容挤下去。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
+
+[[journal_entry.conditions]]
+gate = "is_shown_when_inactive"
+key = "c:BRZ"
+op = "?="
+arg = "this"
+why = "档案是**单国**的，主角是巴西。tag = `BRZ` 是**本机实测确认**的：common/country_definitions/00_countries.txt:2336 就是 `BRZ = {`（原版国家定义文件的顶层键就是国家 tag）。**平铺写法 `c:BRZ ?= this` 在本机原版里确实有先例**（这点与 `eg_debt` 不同：原版写埃及一律用块形式）：common/achievements/base_achievements.txt:89、common/achievements/ip4_iberian_twilight_achievements.txt:106、common/achievements/rp1_colossus_of_the_south_achievements.txt:6 都是 `c:BRZ ?= this`。问号的语义是「作用域存在才比」，比裸 `=` 稳。　【沿用·口径】写法沿用 ru/tr/cn/bv，未针对本条处境独立校准；单国门这一行是按本档案主角换的（tag 与形式各**有原版行号**）。"
+
+[[journal_entry.conditions]]
+gate = "is_shown_when_inactive"
+key = "has_variable"
+arg = "sitai_brz_market_loss_memory"
+why = "没被记过「失去市场」的国家连这条 JE 都不该看见 —— 「和平期占槽率 ≈ 0」这条出口判据（G-EXIT-5.2）靠它：不施加冲击的局里，这行判据为假，整条 JE 不出现。原版读变量的写法见 common/journal_entries/00_corn_laws.txt:7（`NOT = { has_variable = corn_laws_abolished }`）。　【沿用·口径】沿用既有八份的判据形状，未针对本条处境独立校准。"
+
+[[journal_entry.conditions]]
+gate = "possible"
+key = "has_variable"
+arg = "sitai_brz_market_loss_memory"
+why = "开窗的第一个条件：这件事确实发生过。`is_shown_when_inactive` 与 `possible` 都写一遍是有意的 —— 前者管「看不看得见」，后者管「开不开」，原版 `je_corn_laws` 也是两处各写一套（common/journal_entries/00_corn_laws.txt:6-31）。　【沿用·口径】沿用既有八份的判据形状，未针对本条处境独立校准。"
+
+[[journal_entry.conditions]]
+gate = "possible"
+key = "legitimacy"
+op = "<="
+amount = 75
+why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**为什么没有一条「出口依赖」专属判据**（本处境最想要的那一条，比如「我的种植园产出占比掉了多少」）：原版没有**平铺**的国家侧贸易/产出占比触发器 —— 与贸易有关的那一族读法都带作用域操作数或块形式（`is_in_customs_union_with = scope:target_country`，common/ai_strategies/02_diplomatic_strategies.txt:1182；`is_junior_in_customs_union = yes` 虽然在 common/treaty_articles/25_trade_privilege.txt:52 是平铺的，但它问的是「我在不在别人的关税同盟里当小弟」，不是「我的出口掉没掉」），而生成器的判据渲染只支持平铺一行 `key op 操作数`（tools/pdx/modgen.py:185-189 的 `Clause.render`）—— 这是**让步**，如实记在这里（与 `sp_empire_remnant` 表达不出「王位之争」、`bv_alignment` 表达不出「倒向谁」是同一类问题，backlog B69 / B86 一族）。于是「市场没了」这层意思由 `[pressure]` 的第一条（种植园产能）+ `[memory]` 承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有 75 的先例（有行号）。"
+
+[[journal_entry.conditions]]
+gate = "complete"
+key = "legitimacy"
+op = ">="
+amount = 75
+why = "关窗的门：国家重新站稳，窗口自己关上（不是「市场回来了」—— 市场回不回来不由它决定，也不该由我们替它判）。75 也是原版用过的档：common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`。**为什么不用贸易侧的完成条件当关门**（比如「我又进了谁的同盟」「我的出口恢复到某条线」）：原版没有平铺的国家侧出口判据（见上一条），而拿 `is_junior_in_customs_union` 那种同盟门当关门等于把「市场回来了」与「站队站对了」混成一件事 —— 那是替原版内容做决定（§0「让 AI 自己推导」）。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
+
+# ── ⑥ 本地化：窗口说明的文案 ─────────────────────────────────
+# 键名与游戏里的约定一致：JE 标题 = JE 名、说明 = `<JE 名>_reason`（见原版
+# localization/simp_chinese/ip3_misc_01_l_simp_chinese.yml 的 je_metternich /
+# je_metternich_reason）；静态修正的键名 = 修正名本身（ip4_misc_01_l_simp_chinese.yml
+# 的 modifier_regency_landowners）。两处都按原版口径，不自创后缀。
+
+[[localization]]
+key = "je_sitai_brz_market_loss_window"
+english = "The Market Is Gone: A Window for Reform"
+simp_chinese = "商路断了：改革窗口"
+why = "G3 要求试玩者能复述「当前目标 + 主因」。标题只写目标（改革窗口）与来由（商路断了），不写机制 —— 与既有八份并列时，这个标题一眼能分出是「**靠它吃饭的买家没了**」这一种处境（既不是打输了、内部裂开、被人撬开门，也不是破产、被夹住、帝国残骸或选边）。"
+
+[[localization]]
+key = "je_sitai_brz_market_loss_window_reason"
+english = "Our coffee and our sugar go out on a road that other people own. The estates are still there, the hands are still there, the ships still come — but the price is set somewhere we do not sit, and this year the road is closing. A country that lives on one crop has just learned what that means: the export that paid for the court, the army and the crown's dignity is the same export that can be taken away.\\n\\nA window is open: with the estate interest weakened and the crown's standing spent on a road it does not control, the men who have been arguing that this country must not live on one crop can push through what the planters spent decades blocking. It closes again once the crown stands on its own."
+simp_chinese = "我们的咖啡和糖，走的是别人的路。庄园还在、人手还在、船也照来 —— 可是价钱定在我们坐不上的那张桌子上，而今年这条路正在关上。一个只靠一样作物的国家，刚刚明白了这句话是什么意思：替朝廷、军队和王冠体面付账的那笔出口，正是随时会被拿走的那一笔。\\n\\n窗口已经打开：靠出口吃饭的那一侧失了势、王冠的威信又花在一条它做不了主的路上之时，那些一直主张这个国家不能只靠一样作物的人，可以把种植园主拦了几十年的东西推过去。等王冠重新自己站住，这扇窗就会关上。"
+why = "三行解释里的「最大压力与阻力」写在这里（P11 可观测）：压力 = **出口部门本身被打**（种植园产能）+ **靠它吃饭的那一侧失势**（种植园贵族）+ **王权替一条它做不了主的路付威信**，阻力 = 「等王冠重新自己站住」—— 与 `complete` 的 `legitimacy >= 75` 是同一条判据的两种说法，数值改了文案也要改（P9：改一处、三处同步）。文案里**刻意不出现**「战败」「革命」「破产」「被撬开门」「选边」这些别份档案的词；第一句把本档案的机制说成人话（**路是别人的、价钱在别人的桌上**），因为「收入长在别人的商路上」正是本档案与既有八份的处境差别，玩家应当从第一句就读出来。"
+
+[[localization]]
+key = "sitai_brz_market_loss_pressure"
+english = "The Road Is Not Ours"
+simp_chinese = "路不是自己的"
+why = "静态修正的名字（键 = 修正名）。玩家在修正列表里看到的就是这一行，所以写「路不是自己的」而不是机制名，也不写「种植园产能 -10% / 贵族 -30% / 合法性 -35」。原版同族写法见 ip4_misc_01_l_simp_chinese.yml 的 modifier_regency_landowners；同族的原版修正名可参照 `working_with_the_great_powers`（与列强合作）那一族（都是「依附」的短名）。"
+
+[[localization]]
+key = "sitai_brz_reform_inputs"
+english = "Reformers Gain Influence"
+simp_chinese = "改革派抬头"
+why = "第二处修正同样要文案，否则它挂在国家上时在修正列表里是一行空名（闸门 ② 也会点名缺键）。写「改革派抬头」而不是「工业家/知识界政治力量 +50%」：玩家看到的应当是处境，不是我们的字段名。与既有八份里多数同键名同文案是有意的 —— 这一处表达的是**同一件事**（改革侧输入被抬起来），不是九种处境。"
+
+# ── ⑦ 三行解释（P11 / G3）──────────────────────────────────
+#
+# 与 `sp_empire_remnant` / `bv_alignment` 同款：三行接进 JE 说明后才真的上屏，
+# 所以 `[panel]` 与上面那条 `<JE 名>_reason` 必须**同时**存在（生成器会报错点名）。
+# ⚠️ 三行的本地化键（`<JE 名>_goal` / `_pressure` / `_last_change`）由生成器**派生**，
+# 不在这里手写 `[[localization]]` —— 写了就会与派生出来的那三条**重键**（P9 的反面）。
+[panel]
+why = "三行是 G3 的判据载体：目标 / 最大压力与阻力 / 上次改主意的原因。放同一张表是为了让「缺哪一行」当场可见（生成器要求三行齐全，缺一行即退 2）。"
+
+[panel.goal]
+english = "Current goal: while the estates are weakened and the crown's standing is spent, push through the reform that would stop this country from living on a single crop."
+simp_chinese = "当前目标：趁庄园那一侧失势、王冠威信也花掉了的时候，把那套能让这个国家不再只靠一样作物的改革推过去。"
+why = "第一行 = **当前目标**。写「不再只靠一样作物」而不是点名某条法律或某张牌：改什么由 AI 与原版牌池决定（§0「让 AI 自己推导」），而这正是 01a §K 给巴西推出的最优解（docs/design/01a-依据与参考.md:301）在「商路被掐」这个处境下的落点。这一行与 `[reform_inputs]` 抬的那两个 IG 是同一个因果的两端。"
+
+[panel.pressure]
+english = "Biggest pressure and resistance: pressure — the export that pays for everything runs on a road we do not own, the estates that live off it have lost their grip, and the crown has spent its standing on a road it cannot control; resistance — the crown standing on its own again."
+simp_chinese = "最大压力与阻力：压力 = 替这个国家付账的那笔出口走的是别人家的路、靠它吃饭的庄园那一侧失了势、王冠又把威信花在一条自己做不了主的路上；阻力 = 等王冠重新自己站住。"
+why = "第二行 = **最大压力与阻力**。压力项与 `[pressure.effects]` 的三条字段一一对应（种植园产能 / 种植园贵族 / 合法性），并且**第一条是玩家唯一能读到「这是失去市场而不是别的经济危机」的地方** —— 所以它必须写出来。阻力项与 `complete` 的 `legitimacy >= 75` 是同一条判据的两种说法 —— 数值改了这行也要改（P9：一处改、三处同步）。"
+
+[panel.last_change]
+english = "Why it changed its mind: because the lost road was written into the books — the buyer, not a battlefield, is what moved the inputs the AI reads."
+simp_chinese = "上次改主意的原因：因为路断了这件事被记进了账 —— 是「买家」而不是「战场」挪动了 AI 读到的那些输入。"
+why = "第三行 = **上次改主意的原因**（G3 里最容易被跳过、却最关键的一行）。与既有八份的差别刻意写在这一行里：别的档案改主意的原因是「打输了 / 被人撬开门 / 被夹住 / 钱不是自己的 / 帝国没了 / 必须挑一个靠山」，本档案是「**买家没了**」—— 玩家从这一行读得出因果链的起点是市场而不是枪炮。"
+
+# ── ⑧ 递牌：本档案一张都不递 ───────────────────────────────
+[cards]
+why = "**为什么是零张，而且这次的零张不是「查不到初始落点」**（这一点必须说清，否则后人会以为我们在偷懒）：原版 `common/history/ai/00_strategy.txt:42-45` **有** `c:BRZ` 块，三张牌是 `ai_strategy_plantation_economy` / `ai_strategy_maintain_power_balance` / `ai_strategy_progressive_agenda` —— ru_defeat 那套递牌写法（窗口开时递进步牌、窗口关时递回**该国 1836 年的初始牌**）在巴西这里**有落点可引**。**不递是三条判据性的理由叠在一起**：① **递进步牌等于没递**：巴西的初始政治牌里**已经有** `ai_strategy_progressive_agenda`（同文件 :45）—— 递一张它已经挂着的牌什么也改变不了，而递**别的**牌（保守 / 反动 / 平等）就是我们替它选了方向，那不是「让 AI 自己推导」（与 `bv_alignment`、`pe_great_game` 同一条纪律）；② **同一件事不占两个通道**（F5：能改世界就不占槽）：`[reform_inputs]` 抬的正是原版 `ai_strategy_progressive_agenda` 所读的那两个 IG（common/ai_strategies/03_political_strategies.txt:528-544），意图位移已经由**世界状态**产生；再递一张牌是用第二个通道做同一件事，而那个通道有价格（每国同时只有一张政治牌在用，阶段 2 实测 1.05%/国·月；S≈33 时权重 10 吃掉 23% 的份额）；③ **实验要能归因**：本档案的 `[pressure]` 与 `[reform_inputs]` 是**两处可分两处可关**的处理段，再叠一层递牌就等于在同一个实验单元里同时动世界状态与意图层，出了差分也说不清是哪一层起的作用。⚠️ 这两条是**排序**判断，不是「递牌不可能」：等本档案有了一次「只动世界状态」的 A/B 读数（G-EXIT-5.2/5.3），再决定要不要加那一层。**一张都不递**比在一个「牌已经在那儿」的地方硬塞一张、把一个可归因的实验单元搅浑要诚实。"
+
+# ── ⑨ 声明式引用：闸门 ② 逐条核对 ──────────────────────────
+# 变量/修正/JE/图标/本地化键这些**带名字的引用**由闸门 ② 从产物里自动抽出来核对；
+# 剩下这类「原版词汇表」的引用没法从形状上认出来（`legitimacy` 与被我们定义的键长得一样），
+# 所以在这里逐条声明 —— 每条都要能指到原版里真实用它的地方。
+# `modifier_field` 这一类把 P10 的「数值必须引原版同类用法」变成机器可查：
+# 池子是原版 `common/static_modifiers` 里出现过的字段名，写错一个字母即红。
+[[references]]
+kind = "trigger"
+name = "legitimacy"
+why = "JE 的开窗/关窗判据（`legitimacy <= 75` / `>= 75`）。原版用法：common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`。"
+
+[[references]]
+kind = "trigger"
+name = "has_variable"
+why = "记忆变量的读法。原版用法：common/journal_entries/00_corn_laws.txt:7（`NOT = { has_variable = corn_laws_abolished }`），阶段 1 统计 has_variable 被 13 张原版牌直接读。"
+
+[[references]]
+kind = "effect"
+name = "set_variable"
+why = "写记忆变量。原版用法：common/on_actions/00_code_on_actions.txt:7046-7048（on_war_end 给 recently_had_war 记 5 年，:7048 是 `days = 1825`）。"
+
+[[references]]
+kind = "effect"
+name = "add_modifier"
+why = "把静态修正挂到国家上。原版用法：common/scripted_effects/00_movement_effects.txt:2-4（`add_modifier = { name = initial_movement_enthusiasm years = 20 }`）。"
+
+[[references]]
+kind = "country_tag"
+name = "BRZ"
+why = "JE 的单国门（`c:BRZ ?= this`）。本机实测：common/country_definitions/00_countries.txt:2336 的 `BRZ = {`（:2339 `country_type = recognized`、:2341 `tier = empire`、:2343 `cultures = { brazilian }`、:2344 `capital = STATE_RIO_DE_JANEIRO`）；原版自己也这么写平铺形式：common/achievements/base_achievements.txt:89、common/achievements/rp1_colossus_of_the_south_achievements.txt:6。"
+
+# 修正字段名：数值必须引原版同类用法（P10），所以逐条声明 + 由闸门 ② 核对
+# 「这个名字在原版 static_modifiers 里出现过」。没有这一条，字段名写错一个字母
+# 会表现为「修正挂上去了但什么也没发生」—— 最安静的一类失败。
+[[references]]
+kind = "modifier_field"
+name = "building_group_bg_plantations_throughput_add"
+why = "**本档案新引入的字段族**（前八份一份都没用过 `building_group_*`）。原版档位（本机实测，逐行打开确认）：**-0.2（common/static_modifiers/00_ip2_02_modifiers.txt:153，属于 `temporary_switch_to_food_crops`，块头 :149）**、**-0.1（同文件 :185，属于 `food_crop_system_modifier`，块头 :181 —— 本档案取的就是这一档）**、+0.05（common/static_modifiers/content_204_modifiers.txt:284 的 `modifier_agricultural_development_trade`，块头 :282）、+0.04（common/static_modifiers/00_ep2_02_modifiers.txt:240）、+0.1（common/static_modifiers/00_ip4_02_modifiers.txt:117）、+0.002（common/static_modifiers/00_ep2_04_modifiers.txt:171）。字段名里的建筑组 `bg_plantations` 定义在 common/building_groups/00_building_groups.txt:184。"
+
+[[references]]
+kind = "modifier_field"
+name = "country_aristocrats_pol_str_mult"
+why = "**本档案第二处新引入的字段**（前八份压的一律是 `interest_group_ig_*`，没有一份压过人口类别）。原版档位（本机实测，按出现次数）：+0.10（4 处）、-0.90（2 处）、-0.15（2 处）、+0.20、+0.15、+0.1、-0.80、-0.50、-0.25、-0.10、-0.05 —— 本档案取的 -0.30 落在 -0.25 与 -0.50 之间。**同语义的反向先例**：原版的大地产法 `law_latifundias` 给 `country_aristocrats_pol_str_mult = 0.4`（common/laws/01_land_reform.txt:268），也就是说原版用这个字段表达「大地产者的政治力量」。"
+
+[[references]]
+kind = "modifier_field"
+name = "country_legitimacy_base_add"
+why = "合法性修正字段。**本处境自己的先例**：原版给巴西 1836 的摄政修正 `modifier_regency_intelligentsia` 正文里就有 `country_legitimacy_base_add = -10`（common/static_modifiers/00_ip4_04_modifiers.txt:43 是块头、:45 是该字段；挂载点 common/history/countries/brz - brazil.txt:59）。同字段的档位阶梯为 +10 / +5 / -10 / -20（common/static_modifiers/00_code_static_modifiers.txt:322、:331、:343、:353）与 -50（同文件 :986 的 `low_electoral_confidence`），另有 -50（common/static_modifiers/content_1_modifiers.txt:17 的 `opium_wars_lost`）—— 本档案取的 -35 落在 -20 与 -50 之间，且与 `ru_defeat` 的实测档位一致。"
+
+[[references]]
+kind = "modifier_field"
+name = "interest_group_ig_industrialists_pol_str_mult"
+why = "工业家政治力量（「把经济铺开」那一侧）。原版档位 0.1（common/static_modifiers/00_ip4_03_modifiers.txt:7）、0.25（common/static_modifiers/00_ip4_04_modifiers.txt:33）、0.5（common/static_modifiers/content_1_modifiers.txt:1467 的 `shogun_ig_forced_to_open_market`，与本档案同型的「被外部经济力量逼着换路」那一族）。"
+
+[[references]]
+kind = "modifier_field"
+name = "interest_group_ig_intelligentsia_pol_str_mult"
+why = "知识界政治力量（巴西 1836 **开局在朝**的那一侧：common/history/countries/brz - brazil.txt:39-41）。**本处境自己的档位**：原版给巴西的摄政修正就是 `interest_group_ig_intelligentsia_pol_str_mult = 0.25`（common/static_modifiers/00_ip4_04_modifiers.txt:47，块头 :43）。同字段档位另有 0.15（common/static_modifiers/106_modifiers.txt:205）、0.5（common/static_modifiers/content_1_modifiers.txt:1466，与工业家 +0.5 成对写）。"
+
+# ── ⑩ 探针口径（B80 / B86：本档案盯哪条法、哪张牌；**留空 = 不判**）──
+#
+# 为什么要有这张表：① 法律那条原来在探针里写死 `law_serfdom`，**对没有农奴制的国家
+# 立刻为真** ⇒ 会报假的「法律换了」（B80）；② 「进步牌挂上过」那条原来是**跨档案通用**的，
+# 而**巴西开局就挂着那张牌**（common/history/ai/00_strategy.txt:45）⇒ 对巴西**开局即真**，
+# 会报假的「行为层动了」（B86）。现在两条都按档案声明，留空 = 那条判据**不产出**。
+[probe]
+why = "**土地法查实了**：`common/history/countries/brz - brazil.txt` 里 :11-23 共 13 条 `activate_law`（monarchy / freedom_of_conscience / slave_trade / wealth_voting / racial_segregation / mercantilism / interventionism / per_capita_based_taxation / national_guard / no_schools / agrarianism …），**没有**土地改革那一组；开局的土地法来自 :7 调用的 scripted effect `effect_starting_politics_conservative`（定义在 common/scripted_effects/00_political_setup.txt:20，其中 `activate_law = law_type:law_tenant_farmers` 在 :43），而巴西后面**没有任何一条把它覆盖掉** —— 所以 `reform_law = \"law_tenant_farmers\"`。核这条法属于哪一组：common/laws/01_land_reform.txt:140 是 `law_tenant_farmers = {`、:141 是 `group = lawgroup_land_reform`。⚠️ **照抄俄/大清的 `law_serfdom` 会当场为真、报出假的「法律换了」**（B80 踩过；这与 `bv_alignment` 是同一条法，两档案盯同一条不影响判据 —— 判据是按**档案**声明的）。　【牌口径 · B86】**本档案的 `reform_card` 故意留空，并写明为什么**：那条判据是「那张牌**出现过**」，而巴西 1836 的初始政治牌里**本来就有** `ai_strategy_progressive_agenda`（common/history/ai/00_strategy.txt:45）⇒ 对巴西它**开局即为真**，报出来的「行为层动了」是假的。所以本档案的行为层改看两条通用读数（`ENACT` 立法 / `GOV` 在朝）与引擎侧的法律判定；要恢复牌读数，得先有「牌**换过**没有」这种相对判据（backlog B86 的方案 B），而不是声明一张开局就挂着的牌。"
+reform_law = "law_tenant_farmers"
+reform_card = ""

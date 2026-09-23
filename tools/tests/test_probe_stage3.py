@@ -16,12 +16,14 @@
 
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
+import re
 from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import config
+from pdx import config, modgen
 from pdx import game_auto as ga
 
 if TYPE_CHECKING:
@@ -144,6 +146,120 @@ def test_反查得到的档案真的带reform_law(探针) -> None:
     out = probe._law_reading(["law_tenant_farmers"], ["…: ZZPROBE AB;ROLE;BAV;巴伐利亚"])
     assert out.get("本档案盯的法（bv_alignment.[probe].reform_law）") == "law_tenant_farmers"
     assert out.get("✅ 那条法已不是现行法律（law_tenant_farmers）") is False
+
+
+# ── 意图层：按档案声明的牌判（B86）────────────────────────────────────
+
+
+def test_声明的牌出现过就算动过(探针) -> None:
+    probe, _xml, _log = 探针
+    out = probe._card_reading(
+        ["ai_strategy_conservative_agenda", "ai_strategy_progressive_agenda"],
+        ["…: ZZPROBE AB;ROLE;BAV;巴伐利亚"],
+    )
+    assert out.get("本档案盯的牌（bv_alignment.[probe].reform_card）") == (
+        "ai_strategy_progressive_agenda"
+    )
+    assert out.get("✅ 那张牌挂上过（ai_strategy_progressive_agenda）") is True
+
+
+def test_没声明牌就不判并说明理由(探针, monkeypatch: pytest.MonkeyPatch) -> None:
+    """留空是正当结论（那张牌对该档案没有判别力）⇒ 不判，而不是报 False。"""
+    probe, _xml, _log = 探针
+    real = list(probe.modgen.load_all())
+    # ⚠️ 不能写成 `[replace(bv, probe=None), *real[1:]]` —— 那会按 bv 的位置**复制/丢掉**别的档案，
+    # 而"一个国家对上多份档案"会让 `_subject_archive` 按设计返回空串（不猜），测试就测错了东西。
+    monkeypatch.setattr(
+        probe.modgen,
+        "load_all",
+        lambda: [dataclasses.replace(a, probe=None) if a.id == "bv_alignment" else a for a in real],
+    )
+    out = probe._card_reading(
+        ["ai_strategy_progressive_agenda"], ["…: ZZPROBE AB;ROLE;BAV;巴伐利亚"]
+    )
+    key = next(iter(out))
+    assert "不判" in key, out
+    assert "bv_alignment" in str(out[key])
+
+
+def test_分析器不再写死进步牌(探针) -> None:
+    """B86 的根：写死的那一版对**开局就挂着它**的国家必然假真。
+
+    这条钉的是「分析器里不许再出现写死的牌名」—— 判据只在数据源的 `[probe].reform_card` 里。
+    ⚠️ 只查**代码**，不查 docstring（那段解释里当然要提这张牌，它是反例本身）。
+    """
+    source = _PROBE.read_text(encoding="utf-8")
+    body = source.split("def _card_reading", 1)[1].split("\ndef ", 1)[0]
+    code = body.split('"""', 2)[-1]
+    assert "ai_strategy_progressive_agenda" not in code, (
+        "`_card_reading` 的代码里又出现了写死的牌名 —— 那样巴西（开局就挂着它）会报假的「动过」"
+    )
+
+
+def _initial_agenda_cards(path: Path) -> dict[str, set[str]]:
+    """`common/history/ai/00_strategy.txt` 里每个国家块内的 `set_strategy = ai_strategy_*_agenda`。
+
+    ⚠️ 读的是**整份文件**、按缩进配对块（`c:XXX ?= {` → 条目 → `}`）——
+    拿 `Select-String` 扫前几行的教训在 B85 那条纪律里（"只看一份得到的没有从来不是证据"）。
+    """
+    out: dict[str, set[str]] = {}
+    current: str | None = None
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        opened = _COUNTRY_BLOCK.match(line)
+        if opened:
+            current = opened.group(1)
+            out.setdefault(current, set())
+            continue
+        if current is not None and line.strip() == "}":
+            current = None
+            continue
+        if current is not None:
+            found = _AGENDA_LINE.match(line)
+            if found:
+                out[current].add(found.group(1))
+    return out
+
+
+_COUNTRY_BLOCK = re.compile(r"^\s*c:([A-Z0-9]+)\s*\?=\s*\{")
+_AGENDA_LINE = re.compile(r"^\s*set_strategy\s*=\s*(ai_strategy_\w*agenda)\b")
+
+
+def test_开局牌的解析器本身可信(探针) -> None:
+    """反向自检：解析器读出来的东西必须与原版文件对得上（否则下面那条等于没查）。"""
+    strategy = config.GAME / "common" / "history" / "ai" / "00_strategy.txt"
+    if not strategy.is_file():
+        pytest.skip("没有游戏本体")
+    cards = _initial_agenda_cards(strategy)
+    assert "ai_strategy_reactionary_agenda" in cards["RUS"]
+    assert "ai_strategy_conservative_agenda" in cards["AUS"]
+    assert "ai_strategy_progressive_agenda" in cards["BRZ"]
+    assert "SPA" not in cards
+    assert "BAV" not in cards
+    assert "BRZ" in cards, "巴西有 c: 块，这正是 B86 那个陷阱的来源"
+
+
+def test_声明的牌不能是该国开局就有的(探针) -> None:
+    """**B86 的机器化**：判据是「那张牌出现过」，所以声明一张**开局就挂着**的牌 = 假真。
+
+    这正是收口清单那句「任何跨档案通用的判据都要问：它对别的档案是不是立刻为真」。
+    巴西就是那个反例：`c:BRZ` 的初始政治牌里本来就有 `ai_strategy_progressive_agenda`
+    ⇒ 那份档案必须**留空并在 why 里写明**。
+    """
+    strategy = config.GAME / "common" / "history" / "ai" / "00_strategy.txt"
+    if not strategy.is_file():
+        pytest.skip("没有游戏本体")
+    initial = _initial_agenda_cards(strategy)
+    bad = [
+        f"{a.id}（{a.country}）声明了 {a.probe.reform_card}，而它开局就挂着这张牌"
+        for a in modgen.load_all()
+        if a.probe is not None
+        and a.probe.reform_card
+        and a.probe.reform_card in initial.get(a.country, set())
+    ]
+    assert not bad, (
+        "声明的牌对该档案没有判别力（判据是「出现过」，开局就有 ⇒ 必然假真）：\n  "
+        + "\n  ".join(bad)
+    )
 
 
 # ── 轮转日志的顺序（**一次真被读错过的 bug**）──────────────────────────

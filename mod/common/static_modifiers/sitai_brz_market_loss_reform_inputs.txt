@@ -1,0 +1,12 @@
+﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 改革侧输入（A 级）：**定位**：它是「改革派那一侧的输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。走 A 级而不是递牌的理由（F5）：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（common/ai_strategies/03_political_strategies.txt:528-544），改世界状态就等于改它的输入，不占任何槽位。**为什么这两个 IG 就是巴西的「被逼出来的那一侧」**：① 单一出口被打 ⇒「把经济铺开」成了国家存续问题，落点是工业家；② 巴西开局**在朝的就是知识界**（common/history/countries/brz - brazil.txt:39-41 的 `ig:ig_intelligentsia ?= { add_ruling_interest_group = yes }`），原版的摄政修正也给知识界 +0.25（common/static_modifiers/00_ip4_04_modifiers.txt:47）—— 也就是说原版自己认为这一侧是巴西 1836 的政治主角，本档案只是把它的力量抬到能推动法律的位置。⚠️ 正式的因果链应当是「商路改道 → 出口收入与种植园产能的真实位移 → 工业化与识字率的位移 → IG 势力自然变化」，而不是直接改政治力量；那条已记进 backlog（B35）。　【沿用·口径】**数值沿用 `ru_defeat.toml` 的实测档位（+0.5/+0.5），未针对本条处境独立校准**；字段组合是按原版自己的同类写法另选的（上面那一串行号）。
+# 每条字段的依据见 sitai_brz_market_loss.md（由 why_report 生成）。
+# ⚠️ 这一份**不是**冲击本身：它是实验的第二处理段（B2）才挂的东西 ——
+# 写进 [pressure] 会让「只加冲击」的那一段消失。
+
+sitai_brz_reform_inputs = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds
+	interest_group_ig_industrialists_pol_str_mult = 0.5
+	interest_group_ig_intelligentsia_pol_str_mult = 0.5
+}
