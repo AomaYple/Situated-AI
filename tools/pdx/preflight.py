@@ -312,6 +312,39 @@ def probe_state_backup() -> Path | None:
     return backups[0] if backups else None
 
 
+def check_probe_lint(archive_id: str | None) -> Check:
+    """探针产物的**引用体检**：它引用的名字在不在（原版 / 本仓库里）。
+
+    为什么要在开局前查（2026-09-24）：探针是**一次性实机实验**的载体，而一个拼错的引用
+    **不会让探针崩** —— 效果名写错 ⇒ 引擎记一条 `Unknown effect`、那一格读数静默为空；
+    `law_type:` 写错 ⇒ 那条 `LAW` 行永远不出现；data function 写错 ⇒ `debug_log`
+    把 `[...]` 原样打出来。三类都是「开局前读文件就知道」的事，
+    而查它们的代价远小于白跑一局（起游戏到选国家界面约 137 秒 + 几十个游戏月）。
+    """
+    from pdx import ab_probe, exe_strings, probe_lint  # noqa: PLC0415
+
+    if archive_id is None:
+        return Check("探针引用体检", True, "（这一局不用探针）", level=INFO)
+    try:
+        files = ab_probe.build().files
+    except Exception as exc:  # pragma: no cover - 数据源坏了由「档案可跑」先报
+        return Check("探针引用体检", False, f"生成探针失败：{exc}", "先修数据源", level=BLOCKING)
+    identifiers = exe_strings.exe_identifiers() if exe_strings.exe_path().is_file() else None
+    issues = probe_lint.lint(files, exe_identifiers=identifiers)
+    bad = probe_lint.failures(issues)
+    if bad:
+        head = "；".join(f"{issue.kind} {issue.name}" for issue in bad[:3])
+        return Check(
+            "探针引用体检",
+            False,
+            f"{len(bad)} 处引用不存在：{head}",
+            "改对名字（`v3 ab-probe --archive <id>` 重新生成）；"
+            "写错的效果名只会让那一格读数静默为空",
+        )
+    note = "" if identifiers else "（没有 exe，data function 那一类跳过）"
+    return Check("探针引用体检", True, f"{len(issues)} 处引用全都在{note}")
+
+
 def check_logs_fresh() -> Check:
     """日志里没有**上一局**的探针自报（否则读数会混两局）。
 
@@ -437,5 +470,5 @@ def run(*, archive: str | None = None, root: Path | None = None) -> Report:
         check_logs_fresh(),
     ]
     if archive:
-        checks.extend([check_archive(archive), check_probe(archive)])
+        checks.extend([check_archive(archive), check_probe(archive), check_probe_lint(archive)])
     return Report(checks)

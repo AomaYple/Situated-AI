@@ -112,6 +112,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 strings --families` | （新增） | 把未使用的 exe 标识符按**同后缀 / 同前缀**聚族（`--by suffix\|prefix --min N`）：实测 `*_command` 233 个、`*_cw_duplicate_compat` 161 个 —— PDX 字段名往往成族出现 |
 | `v3 experiment` | （新增） | **游戏实测探针**：`plan` 打印「一次启动收工」的操作清单、`install` 把探针 mod 装进本机 mod 目录、`collect` 收割 `logs/` 并按实验编号归位证据、`uninstall` 移除。覆盖 P1–P11（裸同名键、双 mod 顺序、`scripted_modifier`/`scripted_list` 调用语法、`$PARAM$` 候选、进度条自定义样式、JE/事件/按钮字段语义、本地化 `:数字`、重名 namespace）。**登记范围**：它只管理 **3 个**探针 —— `experiments.PROBE_MODS`（`zz_probe_a` / `zz_probe_b`）加 `--risky` 才启用的 `zz_probe_risky`；`tools/probe/` 下另有 `zz_probe_h1` 与 `zz_probe_ab`，它们分别由 `v3 h1-probe` / `v3 ab-probe` 生成与部署（各自带真 mod），**不在 `v3 experiment` 的白名单里** |
 | `v3 modgen` | （阶段 3 新增） | **数据源 → mod 产物**：`--write` 落盘并清理被取代的旧文件、`--check` 核对盘上产物是否被手改或过期、`--why` 列出每个数字与它的依据。产物在 `mod/`（原版目录树的镜像），改产物没用 |
+| `probe_lint.py` | **探针产物的引用体检**（2026-09-24）：探针是**一次性实机实验**的载体，而写错一个引用**不会让它崩** —— 效果名错 ⇒ 引擎记 `Unknown effect`、那格读数静默为空；`law_type:` 错 ⇒ 那条 `LAW` 行永不出现；data function 错 ⇒ `debug_log` 把 `[...]` 原样打出来。三类都是开局前读文件就知道的事。**只看代码不看注释**（注释里故意举了 `[This.GetTag]` 这种反例）、**只查形状能认出来的五类**（我们前缀的效果 / JE / 法 / AI 牌 / IG / data function 片段）—— 覆盖面换不来精度，而误报的代价是这套体检被关掉。已接进 `v3 preflight` 与探针驱动 |
 | `v3 preflight` | （阶段 3 新增） | **开局前的只读自检**（`--archive <id>` 时一并查那份档案可不可跑、盘上的探针盯的是不是它）：游戏本体 / 版本与 mod 声明是否一致 / 盘上产物是否被手改 / **用户 mod 配置是不是原样**（探针态、残留备份都查）/ 有没有残留 `victoria3` 进程 / 日志里有没有上一局的自报。**退出码与其余命令同一套**：0 = 可以开局，1 = 有该修的问题，2 = 这台机器现在跑不了。为什么值一条命令：起游戏到选国家界面实测约 **137 秒**，白跑一次远比自检贵 —— 探针驱动（`stage3_rerun`）已经把它接在**任何改动之前**（`--skip-preflight` 可跳过）。它**只报告、绝不顺带修**；唯一会动手的是驱动在"上次被强杀留下探针态"时的自愈（backlog B89） |
 | `v3 modguard` | （阶段 3 新增） | **五道闸门**：`--only` 逐道跑（编号或键名）。任一不过即非零退出，前置条件缺失（没有游戏）按用法错误处理 —— **跳过的检查不算通过** |
 | `v3 ab-probe` | （阶段 3 新增） | 生成 A/B 臂阶梯探针（`tools/probe/zz_probe_ab/`，含 `tools/scripted_tests/` 套件）；`--deploy` 连同真 mod 一起装进用户 mod 目录 |
@@ -203,7 +204,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-1603 条用例（`pytest --collect-only` 实测），
+1616 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -486,7 +487,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：1603 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：1616 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
