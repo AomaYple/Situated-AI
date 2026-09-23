@@ -325,15 +325,95 @@ def unsupported(
     return out
 
 
+@dataclass(frozen=True, slots=True)
+class CitationMove:
+    """一条**位置漂移**的引用：那一行的内容还在，只是行号变了。"""
+
+    file: str
+    old_line: int
+    new_line: int
+    where: str
+    #: 同文多处时取"离原行号最近"的那一处，并在这里说明（不静默）。
+    note: str = ""
+
+    def describe(self) -> str:
+        tail = f"（{self.note}）" if self.note else ""
+        return f"{self.file}:{self.old_line} → :{self.new_line}  ← {self.where}{tail}"
+
+
+def relocate(
+    items: Iterable[Citation],
+    support: Mapping[str, list[str]],
+    *,
+    root: Path | None = None,
+) -> list[CitationMove]:
+    """按**内容指纹**指出漂移的引用现在在哪一行。
+
+    这不是"猜"：支撑域里记着被引那一行的 sha256 前 :data:`DIGEST_LEN` 位，
+    所以能在**同一个文件**里精确找回它。为什么会需要它 —— 编辑一个被大量引用的文件
+    （`docs/design/backlog.md`、`tools/pdx/ab_probe.py` 这类）时行号会整体平移，
+    而内容一个字没动：`v3 citations` 会报"第 N 行的内容变了"，但**不说它去哪了**，
+    人得自己 grep 一遍找回来（本轮实测踩过两次：`ab_probe.py:805→852`、
+    `backlog.md:161→168`）。这一步补的就是那一句。
+
+    同文多处（同一行文本在文件里出现多次）时取**离原行号最近**的那一处，
+    并在 ``note`` 里写明 —— 不静默挑一个。
+    """
+    out: list[CitationMove] = []
+    cache: dict[Path, list[str]] = {}
+    for item in items:
+        body = support.get(item.file)
+        if body is None:
+            continue
+        _total, digests = parse_support(body)
+        path, _status, _detail = _resolve(item.file, root=root)
+        if path is None:
+            continue
+        if path not in cache:
+            cache[path] = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = cache[path]
+        index: dict[str, list[int]] = {}
+        for number, text in enumerate(lines, start=1):
+            index.setdefault(line_digest(text), []).append(number)
+        for number in range(item.start, item.end + 1):
+            recorded = digests.get(number)
+            if recorded is None:
+                continue
+            if number <= len(lines) and line_digest(lines[number - 1]) == recorded:
+                continue
+            found = index.get(recorded, [])
+            if not found:
+                # 内容真的变了（不是漂移）—— 那要人判断，不在这里编一个位置。
+                break
+            if len(found) == 1:
+                note = ""
+            elif all(not lines[n - 1].strip() for n in found):
+                # 入库记的是一个**空行** —— 那说明这条引用本来就指错了（空行不可能是依据），
+                # 不是"漂移"。实测：`backlog.md:161` 的 why 写着"（B22）"，
+                # 而行号落在空行上，空了 32 处 ⇒ 谁也找不回"正确的那一行"。
+                note = (
+                    f"⚠️ 入库记的那一行是**空行**（重复出现 {len(found)} 次）"
+                    "—— 这条引用本来就指错了，请按语义改到正确的那一行"
+                )
+            else:
+                note = f"同一行文本出现 {len(found)} 次，取最近的一处"
+            nearest = min(found, key=lambda n: abs(n - number))
+            out.append(CitationMove(item.file, number, nearest, item.where, note))
+            break
+    return out
+
+
 __all__ = [
     "CITATION_RE",
     "DIGEST_LEN",
     "SECTION",
     "Citation",
+    "CitationMove",
     "clear_cache",
     "game_index",
     "line_digest",
     "parse_support",
+    "relocate",
     "scan_file",
     "scan_paths",
     "scan_text",

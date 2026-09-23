@@ -2578,7 +2578,7 @@ def citations_cmd(
                 f"`{citations.SECTION}` 域；在装有游戏的机器上跑 `v3 snapshot create --compact`"
             )
         bad = citations.unsupported(found, support)
-        _report_support(found, bad, offline=True)
+        _report_support(found, bad, offline=True, support=support)
         return
 
     problems = [item for item in found if not item.ok]
@@ -2617,6 +2617,7 @@ def citations_cmd(
                 " —— 要么改引用，要么把原版那一段原文贴进 why（P10）"
             )
         if malformed:
+            _report_relocations([item for item, _ in malformed], support)
             console.print(
                 f"[yellow]{len(malformed)} 条引用与入库支撑域对不上[/]"
                 " —— 核对后跑 `v3 snapshot create --compact` 刷新（它是入库的）"
@@ -2662,8 +2663,34 @@ def release_cmd(
     console.print("[green]发布说明、档案、元数据三边一致 ✅[/]")
 
 
+def _report_relocations(items: list[citations.Citation], support: dict[str, list[str]]) -> None:
+    """报「只是行号漂移」的那些引用：按**入库支撑域**里的行指纹找回它现在在哪一行。
+
+    为什么要专门说一句：编辑一个被大量引用的文件（`docs/design/backlog.md`、
+    `tools/pdx/ab_probe.py` 这类）会让行号整体平移而内容一个字没变，
+    此时闸门只会说"第 N 行的内容变了（原版更新？）"—— 那句话会把人往**错的方向**引
+    （去看原版更新），而真相是自己刚编辑过那个文件。本轮实测踩过两次。
+    ⚠️ 比对基准必须是**入库快照**里的域，不能现算一份：现算出来的指纹必然与现在一致，
+    那样永远找不到漂移（第一版就是这么写错的）。
+    """
+    moves = citations.relocate(items, support)
+    if not moves:
+        return
+    console.print(f"[yellow]{len(moves)} 条只是**行号漂移**[/]（内容没变）：")
+    for move in moves[:40]:
+        console.print(f"   {escape(move.describe())}")
+    console.print(
+        "   改完引用行号后重跑本命令；改的是数据源就再接 `v3 modgen --write`，"
+        "最后 `v3 snapshot create --compact` 刷新入库支撑。"
+    )
+
+
 def _report_support(
-    found: list[citations.Citation], bad: list[tuple[citations.Citation, str]], *, offline: bool
+    found: list[citations.Citation],
+    bad: list[tuple[citations.Citation, str]],
+    *,
+    offline: bool,
+    support: dict[str, list[str]] | None = None,
 ) -> None:
     """离线/在线共用的「支撑域」结果表（CI 只看这一张）。"""
     table = Table(
@@ -2683,6 +2710,8 @@ def _report_support(
         )
     if bad:
         console.print(table)
+        # 报"内容变了"之前先按**指纹**找一遍：多半只是行号被编辑平移了。
+        _report_relocations([item for item, _ in bad], support or {})
         console.print(
             f"[yellow]{len(bad)} 条引用与入库支撑域对不上[/]"
             " —— 核对后跑 `v3 snapshot create --compact` 刷新（它是入库的）"

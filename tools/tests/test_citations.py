@@ -272,3 +272,84 @@ class TestSupportDomain:
         body = snap.sections.get(citations.SECTION)
         assert body, f"精简快照里没有 {citations.SECTION} 域 —— 跑 `v3 snapshot create --compact`"
         assert any(item.startswith("lines=") for values in body.values() for item in values)
+
+
+class TestRelocate:
+    """行号漂移的**找回**（`citations.relocate`）。
+
+    为什么要有它：编辑一个被大量引用的文件（`docs/design/backlog.md`、`tools/pdx/ab_probe.py`
+    这类）会让行号整体平移而内容一个字没变，闸门只说"第 N 行的内容变了（原版更新？）"——
+    那句话把人的注意力引到**错的方向**上（去看原版更新），而真相是自己刚编辑过那个文件。
+    本轮实测踩过两次（`ab_probe.py:805→852`、`backlog.md:161→168`）。
+    """
+
+    def _support(self, text: str) -> dict[str, list[str]]:
+        lines = text.splitlines()
+        return {
+            "00_ai.txt": [
+                f"lines={len(lines)}",
+                *(f"{n}:{citations.line_digest(line)}" for n, line in enumerate(lines, start=1)),
+            ]
+        }
+
+    def test_内容没变只是行号平移时找回新行号(self, tmp_path: Path) -> None:
+        before = "alpha\nbeta\ngamma\n"
+        support = self._support(before)
+        after = "新插入的一行\n又一行\nalpha\nbeta\ngamma\n"
+        root = _fake_game(tmp_path, {"common/defines/00_ai.txt": after})
+        found = citations.scan_text("00_ai.txt:2", where="t.toml:3", root=root)
+        moves = citations.relocate(found, support, root=root)
+        assert [(m.old_line, m.new_line) for m in moves] == [(2, 4)]
+        assert moves[0].where == "t.toml:3"
+        assert "→" in moves[0].describe()
+
+    def test_内容真的变了就不编一个位置(self, tmp_path: Path) -> None:
+        """改的是**内容**（不是位置）时，`relocate` 必须闭嘴 —— 那要人判断。"""
+        support = self._support("alpha\nbeta\ngamma\n")
+        root = _fake_game(tmp_path, {"common/defines/00_ai.txt": "alpha\n换了\ngamma\n"})
+        found = citations.scan_text("00_ai.txt:2", where="t", root=root)
+        assert citations.relocate(found, support, root=root) == []
+
+    def test_同文多处取最近的一处并说明(self, tmp_path: Path) -> None:
+        support = self._support("x\n同文\nx\n同文\nx\n")
+        root = _fake_game(tmp_path, {"common/defines/00_ai.txt": "新\nx\n同文\nx\n同文\nx\n"})
+        found = citations.scan_text("00_ai.txt:2", where="t", root=root)
+        moves = citations.relocate(found, support, root=root)
+        assert len(moves) == 1
+        assert moves[0].new_line == 3, moves
+        assert "出现 2 次" in moves[0].note
+
+    def test_入库记的是空行时要说这条引用本来就指错了(self, tmp_path: Path) -> None:
+        """实测那一处：`backlog.md:161` 的 why 写着「（B22）」，而行号落在**空行**上。
+
+        空行不可能是依据 ⇒ 报"漂移"是把人往错方向引；这里要的是一句**指错了**。
+        造法：入库时第 2 行是空行，之后在文件**开头**插了一行 ⇒ 原行号上已不是空行，
+        而空行在文件里有多处（多处 + 全是空行 = 这条引用本来就指错了）。
+        """
+        support = self._support("a\n\nb\n\nc\n")
+        root = _fake_game(tmp_path, {"common/defines/00_ai.txt": "x\na\n\nb\n\nc\n"})
+        found = citations.scan_text("00_ai.txt:2", where="t", root=root)
+        moves = citations.relocate(found, support, root=root)
+        assert len(moves) == 1
+        assert "空行" in moves[0].note
+        assert "指错" in moves[0].note
+
+    def test_没漂移的不出现在清单里(self, tmp_path: Path) -> None:
+        text = "a\nb\nc\n"
+        root = _fake_game(tmp_path, {"common/defines/00_ai.txt": text})
+        found = citations.scan_text("00_ai.txt:2", where="t", root=root)
+        assert citations.relocate(found, self._support(text), root=root) == []
+
+    def test_区间引用逐行找(self, tmp_path: Path) -> None:
+        """区间引用逐行核：**第一处对不上**的那一行就是被报出来的那一行。"""
+        support = self._support("a\nb\nc\nd\n")
+        root = _fake_game(tmp_path, {"common/defines/00_ai.txt": "a\nb\n插入\nc\nd\n"})
+        found = citations.scan_text("00_ai.txt:2-4", where="t", root=root)
+        moves = citations.relocate(found, support, root=root)
+        # 第 2 行（b）没动；第 3 行（c）被挤到第 4 行 —— 报的是它
+        assert [(m.old_line, m.new_line) for m in moves] == [(3, 4)]
+
+    def test_域里没有这条引用时不报(self, tmp_path: Path) -> None:
+        root = _fake_game(tmp_path, {"common/defines/00_ai.txt": "a\nb\n"})
+        found = citations.scan_text("00_ai.txt:1", where="t", root=root)
+        assert citations.relocate(found, {}, root=root) == []
