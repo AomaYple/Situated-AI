@@ -176,6 +176,32 @@ def quarantine_test_artifacts() -> list[str]:
     return moved
 
 
+def engine_verdict() -> dict[str, object]:
+    """引擎自己判的那一份（`-scripted_tests` 的成绩单）—— 读不到就**如实说没判定**。
+
+    为什么要有它：探针自己那套读数（`v3 ab` 读 `debug.log`）是**事后**判的；套件是
+    **引擎每天判**的（判据同源、实现不共享，P9）。两条路互相独立 —— 一条出问题还有另一条。
+
+    ⚠️ **必须在收尾挪走成绩单之前读**：`quarantine_test_artifacts()` 会把
+    `binaries/*_GameTests_testoutput.xml` 移去临时目录（否则 `v3 verify` 会红），
+    所以这里读到的必须是那一刻还在原地的文件。
+
+    读不到**不算失败**（这一局可能在套件判完之前就被杀了），但要打出来 ——
+    "没判定"与"判了通过"是两件事，不许混。
+    """
+    files = ga.testoutput_files()
+    if not files:
+        return {
+            "引擎判定": "（没有成绩单：套件还没判完，或者压根没挂上）",
+            "套件跑没跑": False,
+        }
+    verdict = ga.read_verdict(files[-1])
+    out: dict[str, object] = dict(verdict.as_dict())
+    out["引擎判定"] = "通过" if verdict.ok else "不通过"
+    out["套件跑没跑"] = True
+    return out
+
+
 def quarantine_logs() -> list[str]:
     """转发到 :func:`pdx.game_auto.quarantine_logs`（收尾纪律只有一份实现）。
 
@@ -203,18 +229,43 @@ def wait_months(target: float, *, poll: float = 20.0, timeout: float = 3600.0) -
     return mark.tick  # 超时也如实返回走到了哪
 
 
-def _subject_archive(ours: list[str]) -> str:
-    """这一局盯的**档案 id**（探针武装时写的 `ZZPROBE AB;TARGET;<id>`）。
+def _subject_tag(ours: list[str]) -> str:
+    """这一局的**主角 tag**（`ZZPROBE AB;ROLE;<TAG>;<本地化国名>` 的中间那格）。
 
-    为什么不能从日志里的国名认：自报行的最后一格是**本地化国名**（实测是「波斯」），
-    不是 tag；而 `[This.GetTag]` 不是合法的 loc 命令（生成器里写明了）。
-    没有这一行（旧日志）就返回空串 —— 调用方**不判**，不猜。
+    为什么可以用它：ROLE 行由 on_action **每月**写（实测一局 56 条），第一格就是 tag
+    （实测原文 `…;ROLE;BAV;巴伐利亚`）。而 `TARGET` 行只在"武装"那一刻写一次。
+    """
+    for line in ours:
+        if "ZZPROBE AB;ROLE;" in line:
+            body = line.split("ZZPROBE AB;ROLE;", 1)[1].split('"', 1)[0]
+            return body.split(";")[0].strip()
+    return ""
+
+
+def _subject_archive(ours: list[str]) -> str:
+    """这一局盯的**档案 id** —— 两条路，先精确后兜底。
+
+    ① 探针武装时写的 `ZZPROBE AB;TARGET;<档案 id>`（B80 加的自报行）；
+    ② **按主角 tag 从数据源反查**：`ROLE;<TAG>;<本地化国名>` → `[archive].country`。
+
+    ⚠️ **为什么必须有 ②（实测 2026-09-23，`bv_alignment` 那一局）**：`TARGET` 只在
+    "武装"那一刻写一次，那一局的日志里**根本没有它** —— 分析器据此报了「不判」，
+    白白丢掉一条本可以判的读数（法律换没换）。同一局的 `ROLE` 行有 **56 条**，
+    tag 明明白白写在第一格。档案 ↔ 国家是**数据源里的事实**（`[archive].country`），
+    比"某一条只在某一刻写的日志"稳得多（P9：事实只有一处定义）。
+
+    一个国家对上**多份**档案时返回空串（不猜）—— 现在的八份各占一个国家，
+    但抽象没保证这条，所以按"唯一才认"写。
     """
     for line in ours:
         if "ZZPROBE AB;TARGET;" in line:
             body = line.split("ZZPROBE AB;TARGET;", 1)[1].split('"', 1)[0]
             return body.split(";")[0].strip()
-    return ""
+    tag = _subject_tag(ours)
+    if not tag:
+        return ""
+    matched = [archive.id for archive in modgen.load_all() if archive.country == tag]
+    return matched[0] if len(matched) == 1 else ""
 
 
 def _law_reading(laws: list[str], ours: list[str]) -> dict[str, object]:
@@ -229,7 +280,7 @@ def _law_reading(laws: list[str], ours: list[str]) -> dict[str, object]:
         why = (
             f"这一局盯的是 {archive_id}，它没声明 `[probe].reform_law`"
             if archive_id
-            else "日志里没有 `TARGET` 行（旧探针生成的日志）"
+            else "日志里既没有 `TARGET` 行、也没有可反查的 `ROLE;<TAG>` 行"
         )
         return {
             "⚠️ 法律换过没有：不判": f'{why} —— 数据源里补 `[probe] reform_law = "law_…"` 才能判'
@@ -396,6 +447,8 @@ def main(argv: list[str] | None = None) -> int:
         tick = wait_months(args.months)
         print(f"  现在 tick={tick or '<读不到>'}（≈{_months_of(tick):.1f} 个月）")
         report["tick"] = tick
+        # 引擎侧的判定要在收尾挪走成绩单**之前**读（见 `engine_verdict`）。
+        report["verdict"] = engine_verdict()
         report["analysis"] = analyze()
     except Exception as exc:
         failure = f"{type(exc).__name__}: {exc}"
@@ -416,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n[失败] {failure}")
         return 1
     print("\n=== 读数（判据口径见脚本 docstring）===")
+    for key, value in (report.get("verdict") or {}).items():
+        print(f"  {key:34s}: {value}")
     for key, value in (report.get("analysis") or {}).items():  # type: ignore[union-attr]
         print(f"  {key:34s}: {value}")
     return 0
