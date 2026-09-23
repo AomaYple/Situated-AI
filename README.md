@@ -200,7 +200,7 @@ Situated AI/
    `scripted_list`/`scripted_modifier` 调用语法、若干字段语义）；配方已写好在
    doc 04 §13.1，`game\tools\scripted_tests` 与 `-debug_mode` 日志是现成入口。
 2. 两项一次性普查脚本化（doc 06 的 DDS 头普查 11,294 个文件、`adjacencies.csv` 全表枚举）。
-3. 覆盖率重路径（`cli.py` 60.9%、`experiments` 64.2%、`engine_log` 65.4% 等 —— 都是要真开一次游戏 / 真跑游戏数据的路径；`localization` / `mods` / `tabular` 这一轮已补到 88–94%）。
+3. 覆盖率重路径（`cli.py` 58.5%、`experiments` 64.2%、`game_auto` 82.5%、`ai_surface` 83.1% 等 —— 都是要真开一次游戏 / 真跑游戏数据的路径；`engine_log` 这一轮已补到 87.3%，`localization` 88.5%）。整轮口径见 `v3 cov` 与 `python tools/probe/audit_repo.py`。
 4. CI 改为从 `requirements.lock` 安装（现在锁只在本地对账）。
 
 ## 授权

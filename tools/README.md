@@ -71,6 +71,12 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `gametimer.py` | 阶段 4 的**引擎计时刻度解析**（两条数据源）：① `gametimer_*.tsv` 是引擎自己的墙钟统计（三列 `Game Date / Time Unit / Seconds`，粒度只到 `Day` —— **没有帧号、没有 per-frame 列**，所以「单帧 ≤0.5ms」这条预算**量不出来**，模块里用 `FRAME_GRANULARITY_AVAILABLE = False` 把这件事写成机器可读的常量，不让下游顺手凑数）；② **`ticktask_timings.csv`** 是帧级真值（`frame,task,milliseconds,calls,longest_lock`，由控制台 `dump_ticktask_timings` 落盘，默认落点见 `ticktask_default_path()`）。配套侦察记录见 `exec/阶段4-gametimer侦察.md` 与 `exec/阶段4-性能仪表侦察.md` |
 | `cli.py` | 唯一的命令行入口，`v3` 的全部子命令 |
 
+`tools/probe/` 下是**一次性但仍在用**的实测脚本（不挂 `v3` 子命令，因为都要开游戏或要人看着跑）：
+`perf_compare.py`（性能 A/B，`--stress` 换标准压力剧本）、`stage3_rerun.py`（档案探针 A/B 重跑）、
+`console_probe.py`、`flow_with_cleanup.py`、`measure_capture_cost.py`、`perf_mod.py`，
+以及 `audit_repo.py` —— **那五条口径的可执行清单**（Python 化 / 成熟库 / 测试与覆盖 / 性能基准 / 默认并行），
+只读仓库、不读游戏，收口时跑一次就知道还差什么。
+
 ## 命令行 `v3`
 
 7 个各自为政的旧入口脚本（`run_analyze.py` / `run_defines.py` / `run_index.py` /
