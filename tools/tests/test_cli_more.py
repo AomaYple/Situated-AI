@@ -230,3 +230,28 @@ def test_snapshot_list_可读() -> None:
     result = _run("snapshot", "list")
     assert result.exit_code == 0
     assert ".json" in result.output
+
+
+def test_ab_probe_写出盯的档案并支持显式指定(monkeypatch) -> None:
+    """`v3 ab-probe` 必须**写出它盯的是哪一份档案**，并支持 `--archive` 指定。
+
+    为什么值得一条测试：`ab_probe.load_target()` 的默认值是「数据源里按文件名排序的第一份」，
+    而那个默认值**会随着新档案入库而变**（现在是 `au_revolution`，而入库的探针是
+    `ru_defeat` 的）—— 不写出来的话，"这个探针在盯谁"就变成一件看不出来的错事（P13）。
+    ⚠️ 这里把 `write` monkeypatch 掉：真跑会重写仓库里的探针目录。
+    """
+    from pdx import ab_probe
+
+    written: list[str | None] = []
+    monkeypatch.setattr(
+        ab_probe, "write", lambda *, archive_id=None, **_kw: written.append(archive_id) or []
+    )
+    result = _run("ab-probe", "--archive", "ru_defeat")
+    assert result.exit_code == 0, result.output
+    assert "ru_defeat" in result.output
+    assert written == ["ru_defeat"], written
+
+    result = _run("ab-probe")
+    assert result.exit_code == 0, result.output
+    assert "按文件名排序的第一份" in result.output
+    assert written[-1] is None, written

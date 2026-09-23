@@ -86,15 +86,27 @@ def main() -> int:
         "自造参数解析（argparse/typer 之外）": re.compile(r"sys\.argv\["),
         "自造 CSV/JSON（应走标准库）": re.compile(r"\.split\(\"[\n,]\""),
     }
+    # ⚠️ **每一处都要给出 `文件:行` 与那一行的原文**（2026-09-23 修）。
+    # 只印文件名时，人得自己回去 grep 才知道命中的是什么 —— 而这份清单的价值就在于
+    # 「扫一眼就能判断是真手写还是误报」。实测：`verify.py` 那句
+    # `target.split(",")` 拆的是断言注册表里一个**逗号分隔的 target 字段**，
+    # 与 CSV 毫无关系，但在旧输出里和"真的手写了解析器"长得一模一样。
+    # 已知的**正当**命中（判据要能区分"手写解析器"与"手写判据"）：
+    #   * 测试里的**手写 oracle**（`test_gametimer_csv.py` 拿 `split(",")` 当独立参照，
+    #     与走标准库的实现**差分对比**）—— 那是刻意留的第二实现，不是重复造轮子；
+    #   * 提到这些关键词的注释 / docstring / 正则本身。
     for label, pattern in patterns.items():
-        hits = [
-            p
-            for p in files
-            if p.suffix == ".py" and pattern.search(p.read_text(encoding="utf-8", errors="replace"))
-        ]
-        print(f"  {label}: {len(hits)} 个文件")
-        for path in hits[:6]:
-            print(f"      {path.relative_to(root)}")
+        hits: list[tuple[Path, int, str]] = []
+        for path in files:
+            if path.suffix != ".py":
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                if pattern.search(line):
+                    hits.append((path, lineno, line.strip()))
+        print(f"  {label}: {len(hits)} 处 / {len({h[0] for h in hits})} 个文件")
+        for path, lineno, line in hits[:6]:
+            print(f"      {path.relative_to(root)}:{lineno}  {line[:96]}")
 
     section("④ 测试：模块 → 是否被专门测试文件引用")
     modules = sorted((root / "tools" / "pdx").glob("*.py"))
