@@ -102,6 +102,25 @@ key = "interest_group_ig_intelligentsia_pol_str_mult"
 amount = 0.5
 why = "与工业家同档同源（content_1_modifiers.txt:1466 的 shogun_ig_forced_to_open_market 里这两条就是成对写的）。`progressive_agenda` 的权重对知识界与工业家各 +10（03_political_strategies.txt:528-544），两条一起给才是原版的用法；只给一条会让「哪一条起了作用」在实验里不可分。档位依据见上一条。"
 
+# ⚠️ 下面两条是 **2026-09-24 按 B88 的归因加的**（见 `exec/阶段5-B88-杠杆设计.md`）：
+# 66 个月那一局的读数是「牌没换、目标法正确、AI 自己推了 33 个月的 `law_tenant_farmers`、
+# 法始终没成」。原版 defines 说明**停滞**由两条决定，而原来的改革侧输入一条都没碰到：
+#   * `LAW_ENACTMENT_IG_CLOUT_STALL_EFFECT = 1.0`，且按 IG 心情分档
+#     （`_NEUTRAL_MULT` 0.5 / `_UNHAPPY_MULT` 1.0 / `_ANGRY_MULT` 1.5，00_defines.txt:177-180）
+#     —— 反对派 IG 的**政治力量 × 心情**就是停滞概率；
+#   * `LAW_ENACTMENT_MOVEMENT_SUPPORT_PASS_EFFECT` / `_STALL_EFFECT`（同文件 :175-176）。
+# 原来那两条只抬改革派的份额（= 原版牌的权重输入），对"推得动推不动"没有直接作用。
+
+[[reform_inputs.effects]]
+key = "country_law_enactment_success_add"
+amount = 0.1
+why = "**停滞侧的第一杠杆，取原版最常见的档位**：实测 `common/` 里 433 处使用，正向取值里 0.1 出现 146 次（其余 0.05×21、0.02×1、0.04×2 …… 负向 -0.1×93、-0.15×30 等）—— 0.1 是原版自己的主力档（复算：`v3 evidence country_law_enactment_success_add` → 434 处/26 文件；档位分布见 `exec/阶段5-B88-杠杆设计.md`）。为什么改这条而不是继续抬 IG 份额：66 个月那一局证明 AI**已经在推**那条法（`ENACT;law_tenant_farmers` 连续 33 个月），卡的是每次检查点的**通过/停滞判定**，而通过率这一侧原版本来就是用这个字段调的（原版 AI 更新自己也用它）。"
+
+[[reform_inputs.effects]]
+key = "country_opposition_ig_approval_add"
+amount = 3
+why = "**停滞侧的第二杠杆：反对派的脸色**。原版按心情给停滞系数乘 0.5 / 1.0 / 1.5（`LAW_ENACTMENT_IG_NEUTRAL_MULT` / `_UNHAPPY_MULT` / `_ANGRY_MULT`，00_defines.txt:178-180）—— 也就是说**同样的政治力量，愤怒的反对派造成的停滞是中立时的 3 倍**；只压份额（[pressure] 里那条 -0.30）不改脸色，停滞系数就一直在最坏那一档。取 +3：原版 10 处使用里正向只有 +1（1 次）与 +3（2 次）（`v3 evidence country_opposition_ig_approval_add` → 11 处/9 文件），取原版用过的高档。本档案里贵族在野（在朝的是知识界），所以这条正的正是那位反对者。"
+
 # ── ⑤ 改革窗口 JE：把「处境」喂进原版的最短路径 ──────────────
 [journal_entry]
 name = "je_sitai_tr_reform_window"

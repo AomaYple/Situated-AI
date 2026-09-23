@@ -439,13 +439,17 @@ def analyze(log: Path | None = None, *, only_after_arm: bool = True) -> dict[str
     # （实测踩过，见 backlog B80）。行为层的**权威读数**是下面的"立法读数"
     # （`is_enacting_law` 逐条问出来的 `ENACT`），法律本身则原样列在"法律读数"里。
     legitimacy = _preferred_scalars(timeline, "LEGV", "LEGF")
-    clout_values = _numbers(timeline, "CLOUTV") or _numbers(timeline, "CLOUTP")
+    clout_values, clout_kind = _preferred_numbers(timeline, "CLOUTV", "CLOUTP")
     progress = _scalars(timeline, "PROG")
+    # ⚠️ 单位跟着**读数种类**走：`CLOUTP`（`|%1`）是百分数，`CLOUTV`（原始值）是定点小数。
+    # 标签里把用的是哪条写上 —— 否则 0.248 会被读成 0.248%（差 100 倍）。
+    clout_unit = "%" if clout_kind == "CLOUTP" else ""
+    clout_note = f"（读数 {clout_kind}）" if clout_kind else ""
     numbers: dict[str, object] = {}
     if legitimacy:
         numbers["合法性数值（逐月）"] = _series_summary(legitimacy)
     for ig, values in sorted(clout_values.items()):
-        numbers[f"IG 政治力量数值（{ig}）"] = _series_summary(values, unit="%")
+        numbers[f"IG 政治力量数值（{ig}）{clout_note}"] = _series_summary(values, unit=clout_unit)
     if progress:
         numbers["立法进度数值"] = _series_summary(progress)
     return {
@@ -549,6 +553,28 @@ def _preferred_scalars(timeline: list[tuple[str, str, str]], *kinds: str) -> lis
         if values:
             return values
     return []
+
+
+def _preferred_numbers(
+    timeline: list[tuple[str, str, str]], *kinds: str
+) -> tuple[dict[str, list[float]], str]:
+    """从若干**同义读数**里取第一个解析得出数值的那一组，并**说明用的是哪一种写法**。
+
+    为什么要两条：`debug_log` 里带不带格式指令（`|v` / `|%1`）是**一个没验过的细节**，
+    而验它的代价是一次实机会话。所以探针两条都记，这里取能解析的那一条 ——
+    「哪条能用」这件事由数据回答，不由猜。
+
+    ⚠️ **返回值里带 ``kind``**（2026-09-24 修我自己挖的坑）：两种写法的**单位不一样** ——
+    `CLOUTV` 是 `GetClout` 的原始值（定点小数），`CLOUTP` 是 `|%1` 的百分数。
+    第一版把两者都标成 `%` 直接报，于是原始值 0.248 会被印成「0.248%」——
+    少了 100 倍的假读数，比不报还坏。现在标签里写上**用的是哪条读数**，
+    单位由读数种类决定，不由调用方猜。
+    """
+    for kind in kinds:
+        values = _numbers(timeline, kind)
+        if values:
+            return values, kind
+    return {}, ""
 
 
 def main(argv: list[str] | None = None) -> int:

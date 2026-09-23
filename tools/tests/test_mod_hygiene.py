@@ -28,6 +28,7 @@ mod、可能与原版或第三方内容撞名 —— 而那正是闸门 ①（F7
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -87,4 +88,64 @@ def test_数据源目录也在文件面之内(tmp_path: Path) -> None:
     modgen.write(built, tmp_path)
     assert not list(tmp_path.glob(f"**/{modgen.DATA_SUFFIX}")), (
         "产物目录里出现了数据源文件：说明生成器把输入也当产物写出去了"
+    )
+
+
+def _our_modifier_fields() -> dict[str, list[str]]:
+    """数据源里用到的**修正字段** → 用它的档案 id（``[pressure]`` 与 ``reform_inputs``）。"""
+    fields: dict[str, list[str]] = {}
+    for archive in modgen.load_all():
+        for table in (archive.pressure, archive.inputs):
+            if table is None:
+                continue
+            for effect in getattr(table, "effects", ()):
+                fields.setdefault(effect.key, []).append(archive.id)
+    return fields
+
+
+def _vanilla_field_uses(field: str) -> int:
+    """原版**脚本**里用了这个字段多少次（排除 ``modifier_type_definitions`` 自己）。"""
+    from pdx import config
+
+    hits = 0
+    for path in config.GAME.rglob("*.txt"):
+        if "modifier_type_definitions" in str(path):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:  # pragma: no cover - 读不动的文件跳过
+            continue
+        hits += len(re.findall(rf"^\s*{re.escape(field)}\s*=", text, re.MULTILINE))
+    return hits
+
+
+@pytest.mark.skipif(
+    not (modgen.config.GAME / "common").is_dir(), reason="游戏目录不可用（要扫原版脚本）"
+)
+def test_我们用的修正字段原版真的在用() -> None:
+    """**每个字段都必须「接上线」**：原版脚本用过它，**或** exe 里有它的字面量。
+
+    为什么这条比闸门 ① 更严（2026-09-24，B88 那一轮发现）：闸门 ① 查的是
+    `modifier_type_definitions` 那个**定义池** —— 而「有定义」不等于「引擎会读」。
+    实测反例：`state_pop_support_movement_land_reform_add` 与 `country_institution_impact_add`
+    在定义池里都**有**，但**原版脚本 0 处、exe 无字面量** ⇒ 用了它，五道闸门全绿，
+    游戏里却很可能什么都不发生（这类键正是「声明了没接线」）。
+
+    判据本身就是上面那句话，所以它是**可复算的**：不需要人去记哪些键可信。
+    """
+    from pdx import exe_strings
+
+    identifiers = exe_strings.exe_identifiers() if exe_strings.exe_path().is_file() else frozenset()
+    fields = _our_modifier_fields()
+    assert len(fields) >= 10, f"只读到 {len(fields)} 个字段 —— 数据源的形状变了吗？"
+
+    unwired = [
+        (field, users)
+        for field, users in sorted(fields.items())
+        if not _vanilla_field_uses(field) and field not in identifiers
+    ]
+    assert not unwired, (
+        "以下修正字段在原版里**没有接线**（脚本 0 处、exe 无字面量）—— "
+        "定义池里有不等于引擎会读，换一个字段，或在 why 里写明为什么仍要用它：\n  "
+        + "\n  ".join(f"{field}（{','.join(users)}）" for field, users in unwired)
     )

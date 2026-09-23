@@ -373,9 +373,9 @@ def test_IG政治力量数值按IG分开报(探针, tmp_path: Path, monkeypatch:
     log.write_text(
         "\n".join(
             [
-                '…: ZZPROBE AB;CLOUTV;landowners;24.8%;土耳其"',
-                '…: ZZPROBE AB;CLOUTV;landowners;21.3%;土耳其"',
-                '…: ZZPROBE AB;CLOUTV;intelligentsia;18.0%;土耳其"',
+                '…: ZZPROBE AB;CLOUTP;landowners;24.8%;土耳其"',
+                '…: ZZPROBE AB;CLOUTP;landowners;21.3%;土耳其"',
+                '…: ZZPROBE AB;CLOUTP;intelligentsia;18.0%;土耳其"',
             ]
         ),
         encoding="utf-8",
@@ -383,8 +383,28 @@ def test_IG政治力量数值按IG分开报(探针, tmp_path: Path, monkeypatch:
     monkeypatch.setattr(probe, "DEBUG_LOG", log)
     out = probe.analyze(only_after_arm=False)
     # 数值格式：`%g` 会把 18.0 打成 18（读数里够用，且不假装有小数点精度）
-    assert "24.8%" in str(out["IG 政治力量数值（landowners）"])
-    assert "18%" in str(out["IG 政治力量数值（intelligentsia）"])
+    assert "24.8%" in str(out["IG 政治力量数值（landowners）（读数 CLOUTP）"])
+    assert "18%" in str(out["IG 政治力量数值（intelligentsia）（读数 CLOUTP）"])
+
+
+def test_原始值读数不许被当成百分数(探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """**回归**（我自己挖的坑）：`CLOUTV` 是 `GetClout` 的原始定点值，`CLOUTP` 是百分数。
+
+    第一版把两者都标成 `%` 直接报 —— 于是原始值 0.248 会被印成「0.248%」，
+    **少 100 倍的假读数**，比不报还坏。现在标签里写明用的是哪条读数，单位跟着读数种类走。
+    """
+    probe, _xml, _log = 探针
+    log = tmp_path / "debug.log"
+    log.write_text(
+        '…: ZZPROBE AB;CLOUTV;landowners;0.248;土耳其"\n'
+        '…: ZZPROBE AB;CLOUTV;landowners;0.213;土耳其"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(probe, "DEBUG_LOG", log)
+    out = probe.analyze(only_after_arm=False)
+    text = str(out["IG 政治力量数值（landowners）（读数 CLOUTV）"])
+    assert "0.248" in text
+    assert "%" not in text, f"原始值不是百分数，不许印成百分数：{text}"
 
 
 def test_读不出数值时不编一个0(探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -441,7 +461,7 @@ def test_IG数值的两条同义读数同理(探针, tmp_path: Path, monkeypatch
     )
     monkeypatch.setattr(probe, "DEBUG_LOG", log)
     out = probe.analyze(only_after_arm=False)
-    assert "23.5%" in str(out["IG 政治力量数值（landowners）"])
+    assert "23.5%" in str(out["IG 政治力量数值（landowners）（读数 CLOUTP）"])
 
 
 def test_立法进度数值(探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
