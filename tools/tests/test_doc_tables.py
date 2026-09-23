@@ -218,16 +218,22 @@ def test_全部生成表都与文档一致() -> None:
 
 @pytest.mark.integration
 @_game
-def test_生成是幂等的() -> None:
+def test_生成是幂等的(tmp_path: Path) -> None:
+    """同一份文档跑两次 `patch_doc(write=True)`，结果必须逐字节相同。
+
+    ⚠️ **在副本上跑，不动真文档**（2026-09-24 修）：原来它直接改 `target.path`、
+    再在 `finally` 里还原 —— 而全套件默认并行（`-n auto`），于是**同一时刻**别的用例
+    读到的是"改了一半的文档树"。实测后果：`v3 snapshot verify`（连拍两次快照比差异）
+    报了 `[doc_tables] 06-… +1 -17`，看起来像"快照不确定"，其实是一个测试在共享文件上
+    写字节。**纪律**：并行的用例不许改仓库里的共享文件；要写就写副本。
+    """
     for target in docgen.targets():
-        before = target.path.read_text(encoding="utf-8")
-        try:
-            doc_tables.patch_doc(target.path, target.specs, write=True)
-            once = target.path.read_text(encoding="utf-8")
-            doc_tables.patch_doc(target.path, target.specs, write=True)
-            assert target.path.read_text(encoding="utf-8") == once, f"{target.name} 跑两次结果不同"
-        finally:
-            target.path.write_text(before, encoding="utf-8", newline="\n")
+        copy = tmp_path / target.path.name
+        copy.write_text(target.path.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
+        doc_tables.patch_doc(copy, target.specs, write=True)
+        once = copy.read_text(encoding="utf-8")
+        doc_tables.patch_doc(copy, target.specs, write=True)
+        assert copy.read_text(encoding="utf-8") == once, f"{target.name} 跑两次结果不同"
 
 
 @pytest.mark.integration

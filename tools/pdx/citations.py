@@ -325,6 +325,22 @@ def unsupported(
     return out
 
 
+def _is_content(text: str) -> bool:
+    """这一行**算不算内容**（能当依据的那种）。
+
+    空行、以及只剩表格分隔符的行（``|---|---|`` / ``|---:|---|``）都不算 ——
+    它们在同一份文件里重复出现几十次，所以「按指纹找回它」在语义上是没有意义的：
+    实测（2026-09-24）`backlog.md` 那条引用指到了 `|---|---|---|---|`，
+    而 relocate 老老实实报了个「同一行文本出现 11 次，取最近的一处」——
+    那个建议是**噪声**，还差点把我引到错的行上。这种时候正确的输出是
+    「这条引用本来就指错了」。
+    """
+    stripped = text.strip()
+    if not stripped:
+        return False
+    return bool(set(stripped) - set("|-: "))
+
+
 @dataclass(frozen=True, slots=True)
 class CitationMove:
     """一条**位置漂移**的引用：那一行的内容还在，只是行号变了。"""
@@ -387,12 +403,12 @@ def relocate(
                 break
             if len(found) == 1:
                 note = ""
-            elif all(not lines[n - 1].strip() for n in found):
-                # 入库记的是一个**空行** —— 那说明这条引用本来就指错了（空行不可能是依据），
-                # 不是"漂移"。实测：`backlog.md:161` 的 why 写着"（B22）"，
-                # 而行号落在空行上，空了 32 处 ⇒ 谁也找不回"正确的那一行"。
+            elif not any(_is_content(lines[n - 1]) for n in found):
+                # 匹配到的全是**空行 / 表格分隔符** —— 那说明这条引用本来就指错了
+                # （空行与分隔线不可能是依据），不是"漂移"。实测：`backlog.md` 那条
+                # 写着「（B22）」的引用指到了 `|---|---|---|---|`。
                 note = (
-                    f"⚠️ 入库记的那一行是**空行**（重复出现 {len(found)} 次）"
+                    f"⚠️ 入库记的那一行是**空行或表格分隔符**（重复出现 {len(found)} 次）"
                     "—— 这条引用本来就指错了，请按语义改到正确的那一行"
                 )
             else:

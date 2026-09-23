@@ -369,9 +369,30 @@ def test_行为层与策略层都记了且都只在主角国家() -> None:
     for kind in ("SHOCK", "INPUT"):
         assert f"ZZPROBE AB;{kind};yes;" in text
         assert f"ZZPROBE AB;{kind};no;" in text
-    # 诊断行：合法性落在哪一档（五档夹逼）
-    for band in ("b55", "b60", "b70", "b75", "b80"):
-        assert f"ZZPROBE AB;LEG;{band};" in text
+    # 诊断行：**合法性数值**（2026-09-24 起不再只记五档夹逼）
+    assert "ZZPROBE AB;LEGV;" in text
+    assert "[THIS.GetCountry.GetGovernmentLegitimacy|v]" in text, (
+        "读数值靠的是原版自己的 data function —— 原版提示就是这么打的"
+        "（alerts_l_english.yml 的 [GetPlayer.GetGovernmentLegitimacy|v]）"
+    )
+    # 各 IG 的政治力量同样读数值（旧的 CLOUT 档位保留，老归档还要能读）
+    for name, short in ab_probe.CLOUT_IGS:
+        assert f"GetInterestGroupOfType('{name}').GetClout|%1" in text, name
+        assert f"ZZPROBE AB;CLOUTV;{short};" in text, name
+        assert f"ZZPROBE AB;CLOUT;{short};" in text, name
+
+
+def test_数值读数用的是原版验证过的调用形状() -> None:
+    """**形状**必须照抄原版，不能自己编：编错的 data function 会静默变成字面量。
+
+    `[InterestGroup.GetClout|%1]`（customized_tooltips）、
+    `GetCountry.GetInterestGroupOfType('ig_…')`（cohesion_levels）都是原版逐字用过的，
+    所以这三个片段必须同时出现在生成物里。
+    """
+    text = _files()[_ON_ACTIONS]
+    assert "GetGovernmentLegitimacy|v" in text
+    assert "GetClout|%1" in text
+    assert "GetInterestGroupOfType('" in text
 
 
 # ── scripted_tests 套件（引擎侧判定）────────────────────────

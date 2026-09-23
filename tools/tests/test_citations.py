@@ -334,6 +334,23 @@ class TestRelocate:
         assert "空行" in moves[0].note
         assert "指错" in moves[0].note
 
+    def test_入库记的是表格分隔符时同样说指错了(self, tmp_path: Path) -> None:
+        """**回归**：`|---|---|` 这类行也重复几十次，同样不可能当依据。
+
+        实测（2026-09-24）：那条写着「（B22）」的引用指到了 `|---|---|---|---|`，
+        而 relocate 老老实实报了个「同一行文本出现 11 次，取最近的一处」——
+        那个建议是**噪声**，还差点把我引到错的行上。
+        """
+        support = self._support("a\n|---|---|\nb\n|---|---|\nc\n")
+        root = _fake_game(
+            tmp_path, {"common/defines/00_ai.txt": "x\na\n|---|---|\nb\n|---|---|\nc\n"}
+        )
+        found = citations.scan_text("00_ai.txt:2", where="t", root=root)
+        moves = citations.relocate(found, support, root=root)
+        assert len(moves) == 1
+        assert "分隔符" in moves[0].note
+        assert "取最近的一处" not in moves[0].note
+
     def test_没漂移的不出现在清单里(self, tmp_path: Path) -> None:
         text = "a\nb\nc\n"
         root = _fake_game(tmp_path, {"common/defines/00_ai.txt": text})

@@ -335,3 +335,122 @@ def test_读数要报出被剪掉多少行(探针, tmp_path: Path, monkeypatch: 
     whole = probe.analyze(only_after_arm=False)
     assert whole["算进读数的行数"] == 3
     assert whole["冲击读数（去重）"] == ["no", "yes"]
+
+
+# ── 数值读数（2026-09-24，B88）────────────────────────────────────────
+#
+# 旧读数是**五档夹逼**（b55/b60/…），而夹逼量不出档内的变化 —— B88 问的正是
+# 「我们的压力有没有把合法性抬起来一点」。探针改成记原版的 data function 数值，
+# 这一组钉住解析与摘要。
+
+
+def test_合法性数值逐月摘要(探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    probe, _xml, _log = 探针
+    log = tmp_path / "debug.log"
+    log.write_text(
+        "\n".join(
+            [
+                '…: ZZPROBE AB;LEGV;61.4;土耳其"',
+                '…: ZZPROBE AB;LEGV;55.0;土耳其"',
+                '…: ZZPROBE AB;LEGV;52.5;土耳其"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(probe, "DEBUG_LOG", log)
+    out = probe.analyze(only_after_arm=False)
+    text = str(out["合法性数值（逐月）"])
+    assert "61.4" in text, text
+    assert "52.5" in text, text
+    assert "最低 52.5" in text, text
+    assert "最高 61.4" in text, text
+    assert "3 个月" in text
+
+
+def test_IG政治力量数值按IG分开报(探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    probe, _xml, _log = 探针
+    log = tmp_path / "debug.log"
+    log.write_text(
+        "\n".join(
+            [
+                '…: ZZPROBE AB;CLOUTV;landowners;24.8%;土耳其"',
+                '…: ZZPROBE AB;CLOUTV;landowners;21.3%;土耳其"',
+                '…: ZZPROBE AB;CLOUTV;intelligentsia;18.0%;土耳其"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(probe, "DEBUG_LOG", log)
+    out = probe.analyze(only_after_arm=False)
+    # 数值格式：`%g` 会把 18.0 打成 18（读数里够用，且不假装有小数点精度）
+    assert "24.8%" in str(out["IG 政治力量数值（landowners）"])
+    assert "18%" in str(out["IG 政治力量数值（intelligentsia）"])
+
+
+def test_读不出数值时不编一个0(探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """data function 拼错时引擎会把 `[...]` 原样留在日志里 —— 那不算数值。
+
+    报 0 是最坏的失败形态（"合法性跌到 0"看起来像个发现）；正确做法是**没有这一栏**。
+    """
+    probe, _xml, _log = 探针
+    log = tmp_path / "debug.log"
+    log.write_text(
+        '…: ZZPROBE AB;LEGV;[THIS.GetCountry.GetGovernmentLegitimacy|v];土耳其"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(probe, "DEBUG_LOG", log)
+    out = probe.analyze(only_after_arm=False)
+    assert "合法性数值（逐月）" not in out
+    assert out["分类计数"]["LEGV"] == 1, "行还是要数出来 —— 读不到与没记是两件事"
+
+
+def test_数值摘要函数本身() -> None:
+    probe = _probe()
+    assert probe._series_summary([]) == "（没有数值读数）"
+    assert probe._series_summary([1.0]) == "1 → 1（共 1 个月；最低 1、最高 1）"
+    assert "→ 3%" in probe._series_summary([1.0, 2.0, 3.0], unit="%")
+
+
+def test_两条同义读数里取能解析的那条(
+    探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`LEGV`（不带格式指令）优先；它读不出来时退回 `LEGF`（带 `|v`）。
+
+    带不带 `|v` 是**没验过的细节**，所以探针两条都记，这里由数据决定用哪条 ——
+    一次实机是分钟级代价，不该为了省两行日志去赌。
+    """
+    probe, _xml, _log = 探针
+    log = tmp_path / "debug.log"
+    log.write_text(
+        '…: ZZPROBE AB;LEGV;[THIS.GetCountry.GetGovernmentLegitimacy];土耳其"\n'
+        '…: ZZPROBE AB;LEGF;47.2;土耳其"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(probe, "DEBUG_LOG", log)
+    out = probe.analyze(only_after_arm=False)
+    assert "47.2" in str(out["合法性数值（逐月）"]), out.get("合法性数值（逐月）")
+
+
+def test_IG数值的两条同义读数同理(探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    probe, _xml, _log = 探针
+    log = tmp_path / "debug.log"
+    log.write_text(
+        '…: ZZPROBE AB;CLOUTV;landowners;[…];土耳其"\n'
+        '…: ZZPROBE AB;CLOUTP;landowners;23.5%;土耳其"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(probe, "DEBUG_LOG", log)
+    out = probe.analyze(only_after_arm=False)
+    assert "23.5%" in str(out["IG 政治力量数值（landowners）"])
+
+
+def test_立法进度数值(探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    probe, _xml, _log = 探针
+    log = tmp_path / "debug.log"
+    log.write_text(
+        "\n".join(['…: ZZPROBE AB;PROG;0.35;土耳其"', '…: ZZPROBE AB;PROG;0.10;土耳其"']),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(probe, "DEBUG_LOG", log)
+    out = probe.analyze(only_after_arm=False)
+    assert "0.35" in str(out["立法进度数值"])

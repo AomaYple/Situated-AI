@@ -651,42 +651,50 @@ def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
                             for band in CLOUT_BANDS
                         ),
                         "",
-                        f"{tab * 3}# 诊断：合法性落在哪一档（五档夹逼 b55/b60/b70/b75/b80；",
-                        f"{tab * 3}# 不记数字：没有已证可用的 loc 命令能打印一个数）",
-                        f"{tab * 3}if = {{",
-                        f"{tab * 4}limit = {{ legitimacy <= 55 }}",
+                        f"{tab * 3}# 诊断：**合法性数值**（2026-09-24 起记数字，不再只记档位）。",
+                        f"{tab * 3}# 原来这里是五档夹逼（b55/b60/b70/b75/b80），理由是「没有已证可用的",
+                        f"{tab * 3}# 命令能打印一个数」。那条判断是错的，三条证据：",
+                        f"{tab * 3}#   ① 原版提示里就是这么打的 —— `localization/english/alerts_l_english.yml:262`",
+                        f"{tab * 3}#      逐字 `[GetPlayer.GetGovernmentLegitimacy|v]`；",
+                        f"{tab * 3}#   ② `debug_log` **确实会展开** data function —— 原版自己就在用：",
+                        f"{tab * 3}#      `common/on_actions/00_code_on_actions.txt:854` 的",
+                        f'{tab * 3}#      `debug_log = "[TimeKeeper.GetCurrentDate.GetString]: … [THIS.GetCountry.Get…"`，',
+                        f"{tab * 3}#      与这里**同一条作用域链**（`THIS.GetCountry.…`）；",
+                        f"{tab * 3}#   ③ 标识符在 exe 里（`v3 evidence --exe-grep GetGovernmentLegitimacy`）。",
+                        f"{tab * 3}# 为什么必须换成数字：夹逼读数**量不出档内的变化**，而 tr_defeat 那一局",
+                        f"{tab * 3}# 的归因（backlog B88）问的正是「我们的压力有没有把合法性抬起来一点」——",
+                        f"{tab * 3}# 卡在 b55 那一档里，抬 1 分和抬 5 分在旧读数里长得一模一样。",
+                        f"{tab * 3}# ⚠️ 记**两条**：`LEGV` 不带格式指令（不依赖 `|v` 被认），",
+                        f"{tab * 3}#    `LEGF` 带 `|v`（原版验证过的写法）。分析器优先用能解析出来的那条 ——",
+                        f"{tab * 3}#    一次实机是分钟级代价，为「格式指令在 debug_log 里认不认」省两行日志不值得。",
                         (
-                            f'{tab * 4}debug_log = "ZZPROBE AB;LEG;b55;'
+                            f'{tab * 3}debug_log = "ZZPROBE AB;LEGV;'
+                            f"[THIS.GetCountry.GetGovernmentLegitimacy];"
                             f'[THIS.GetCountry.GetNameNoFormatting]"'
                         ),
-                        f"{tab * 3}}}",
-                        f"{tab * 3}else_if = {{",
-                        f"{tab * 4}limit = {{ legitimacy <= 60 }}",
                         (
-                            f'{tab * 4}debug_log = "ZZPROBE AB;LEG;b60;'
+                            f'{tab * 3}debug_log = "ZZPROBE AB;LEGF;'
+                            f"[THIS.GetCountry.GetGovernmentLegitimacy|v];"
                             f'[THIS.GetCountry.GetNameNoFormatting]"'
                         ),
-                        f"{tab * 3}}}",
-                        f"{tab * 3}else_if = {{",
-                        f"{tab * 4}limit = {{ legitimacy <= 70 }}",
-                        (
-                            f'{tab * 4}debug_log = "ZZPROBE AB;LEG;b70;'
+                        "",
+                        f"{tab * 3}# 同一件事对**各 IG 的政治力量**再来一遍：取 IG 的访问器见",
+                        f"{tab * 3}# `cohesion_levels_l_english.yml:39` 的 `GetInterestGroupOfType('ig_…')`，",
+                        f"{tab * 3}# 数值写法见 `customized_tooltips_l_english.yml:392` 的 `[InterestGroup.GetClout|%1]`。",
+                        f"{tab * 3}# 同样记两条：`CLOUTV` 不带格式（拿到的是原始值，最好解析），",
+                        f"{tab * 3}# `CLOUTP` 带 `%1`（原版写法）。旧的 `CLOUT;<档>` 保留：老归档只有它。",
+                        *(
+                            f'{tab * 3}debug_log = "ZZPROBE AB;CLOUTV;{short};'
+                            f"[THIS.GetCountry.GetInterestGroupOfType('{name}').GetClout];"
                             f'[THIS.GetCountry.GetNameNoFormatting]"'
+                            for name, short in CLOUT_IGS
                         ),
-                        f"{tab * 3}}}",
-                        f"{tab * 3}else_if = {{",
-                        f"{tab * 4}limit = {{ legitimacy <= 75 }}",
-                        (
-                            f'{tab * 4}debug_log = "ZZPROBE AB;LEG;b75;'
+                        *(
+                            f'{tab * 3}debug_log = "ZZPROBE AB;CLOUTP;{short};'
+                            f"[THIS.GetCountry.GetInterestGroupOfType('{name}').GetClout|%1];"
                             f'[THIS.GetCountry.GetNameNoFormatting]"'
+                            for name, short in CLOUT_IGS
                         ),
-                        f"{tab * 3}}}",
-                        f"{tab * 3}else = {{",
-                        (
-                            f'{tab * 4}debug_log = "ZZPROBE AB;LEG;b80;'
-                            f'[THIS.GetCountry.GetNameNoFormatting]"'
-                        ),
-                        f"{tab * 3}}}",
                         "",
                         f"{tab * 3}# 行为层①：改革窗口开没开",
                         f"{tab * 3}if = {{",

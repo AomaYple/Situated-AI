@@ -438,6 +438,16 @@ def analyze(log: Path | None = None, *, only_after_arm: bool = True) -> dict[str
     # 比，那是**俄国口径** —— 奥地利开局读到的是 `law_autocracy`，法没换也会报 True
     # （实测踩过，见 backlog B80）。行为层的**权威读数**是下面的"立法读数"
     # （`is_enacting_law` 逐条问出来的 `ENACT`），法律本身则原样列在"法律读数"里。
+    legitimacy = _preferred_scalars(timeline, "LEGV", "LEGF")
+    clout_values = _numbers(timeline, "CLOUTV") or _numbers(timeline, "CLOUTP")
+    progress = _scalars(timeline, "PROG")
+    numbers: dict[str, object] = {}
+    if legitimacy:
+        numbers["合法性数值（逐月）"] = _series_summary(legitimacy)
+    for ig, values in sorted(clout_values.items()):
+        numbers[f"IG 政治力量数值（{ig}）"] = _series_summary(values, unit="%")
+    if progress:
+        numbers["立法进度数值"] = _series_summary(progress)
     return {
         # 两个数都要报：只报"算进去多少"会让人以为那就是盘上的全部（实测踩过：
         # 盘上 1,401 行、只报了 402 行，而输出里看不出被剪掉了什么）。
@@ -451,6 +461,7 @@ def analyze(log: Path | None = None, *, only_after_arm: bool = True) -> dict[str
         "立法读数（去重）": _dedupe(enact),
         "政府在朝（去重）": _dedupe(gov),
         "各 IG 的 clout 水位（最高档）": clout_top,
+        **numbers,
         **_law_reading(laws, ours),
         **_card_reading(strategies, ours),
         "✅ 窗口开过": "active" in je,
@@ -466,6 +477,78 @@ def _dedupe(values: list[str]) -> list[str]:
         if not out or out[-1] != value:
             out.append(value)
     return out
+
+
+def _to_float(text: str) -> float | None:
+    """``"61.4"`` / ``"24.8%"`` → 数值；读不出来给 ``None``（**不编 0**）。
+
+    ⚠️ data function 拼错时引擎会把 `[...]` **原样**留在日志里 —— 那时日志里确实有这一行，
+    但它的值是字面量。报 0 是最坏的失败形态（「合法性跌到 0」看起来像个发现）。
+    """
+    try:
+        return float(text.replace(",", "").replace("%", "").strip())
+    except ValueError:
+        return None
+
+
+def _scalars(timeline: list[tuple[str, str, str]], kind: str) -> list[float]:
+    """**单值**读数（``LEGV`` / ``PROG``）：第 1 格就是数值（第 2 格是国名）。"""
+    out: list[float] = []
+    for row_kind, value, _rest in timeline:
+        if row_kind != kind:
+            continue
+        number = _to_float(value)
+        if number is not None:
+            out.append(number)
+    return out
+
+
+def _numbers(timeline: list[tuple[str, str, str]], kind: str) -> dict[str, list[float]]:
+    """**带标签**的数值读数（``CLOUTV;<ig>;<数值>``）→ ``{标签: [逐月数值]}``。
+
+    为什么要有数值读数（2026-09-24，B88）：旧的合法性读数是**五档夹逼**（b55/b60/b70/b75/b80），
+    而夹逼读数**量不出档内的变化** —— 「我们的压力把合法性抬起 1 分还是 5 分」
+    这个问题在旧读数里长得一模一样。原版自己就能打数字
+    （`[GetPlayer.GetGovernmentLegitimacy|v]`、`[InterestGroup.GetClout|%1]`），
+    所以探针改成记数值；解析**容忍读不出来**（见 :func:`_to_float`）。
+    """
+    out: dict[str, list[float]] = {}
+    for row_kind, label, value in timeline:
+        if row_kind != kind:
+            continue
+        number = _to_float(value)
+        if number is not None:
+            out.setdefault(label, []).append(number)
+    return out
+
+
+def _series_summary(values: list[float], *, unit: str = "") -> str:
+    """一串数值 → 一句人读的摘要（首 → 末，最低/最高）。
+
+    ⚠️ 首末比"均值"值钱：B88 要问的是**压力施加前后动没动**，那是一个方向问题。
+    """
+    if not values:
+        return "（没有数值读数）"
+    first, last = values[0], values[-1]
+    tail = f"{unit}" if unit else ""
+    return (
+        f"{first:g}{tail} → {last:g}{tail}"
+        f"（共 {len(values)} 个月；最低 {min(values):g}、最高 {max(values):g}）"
+    )
+
+
+def _preferred_scalars(timeline: list[tuple[str, str, str]], *kinds: str) -> list[float]:
+    """从若干**同义读数**里取第一个解析得出数值的那一组（``LEGV`` / ``LEGF``）。
+
+    为什么要两条：`debug_log` 里带不带格式指令（`|v`）是**一个没验过的细节**，
+    而验它的代价是一次实机会话。所以探针两条都记，这里取能解析的那一条 ——
+    「哪条能用」这件事由数据回答，不由猜。
+    """
+    for kind in kinds:
+        values = _scalars(timeline, kind)
+        if values:
+            return values
+    return []
 
 
 def main(argv: list[str] | None = None) -> int:
