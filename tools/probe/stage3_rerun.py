@@ -292,12 +292,40 @@ def _law_reading(laws: list[str], ours: list[str]) -> dict[str, object]:
     }
 
 
-def analyze(log: Path | None = None) -> dict[str, object]:
+def debug_logs(base: Path) -> list[Path]:
+    """引擎的调试日志，**按时间从旧到新**。
+
+    ⚠️ **不许直接 `sorted()`**（实测踩过，2026-09-23）：轮转副本叫 `debug.1.log` …
+    `debug.4.log`，当前那份叫 `debug.log` —— 字典序把**当前那份排在最后、次新的排在最前**，
+    于是拼出来的文本时间顺序是错的（最新那份夹在中间）。
+
+    后果不是"少读一点"，而是**读出一段不连续的切片**：下面的 `RUN` 切片按拼接后的位置
+    找"最后一次武装"，会切在最旧那份的中间 —— `debug.3` / `debug.2` / `debug.1` 整份被丢掉，
+    而最新的 `debug.log` 被接在后面。实测同一个目录：**盘上 1,401 行自报，分析器只报了 402 行**，
+    还报出一个**假的**「窗口 `inactive → active`」顺序（那是把最旧那份的尾巴接到最新那份上
+    拼出来的）。
+
+    正确顺序：编号大的在前（`debug.4` → `debug.1`），当前那份最后。
+    """
+    rotated = sorted(
+        (p for p in base.glob("debug.[0-9]*.log") if p.stem.rsplit(".", 1)[-1].isdigit()),
+        key=lambda p: -int(p.stem.rsplit(".", 1)[-1]),
+    )
+    return [*rotated, *(p for p in [base / "debug.log"] if p.is_file())]
+
+
+def analyze(log: Path | None = None, *, only_after_arm: bool = True) -> dict[str, object]:
     """从日志里取读数：分类计数 + 去重后的变化序列。
 
-    ⚠️ 读的是**整个日志目录**（含轮转副本 `debug.1.log`…），且按内容去重 ——
-    一局跑得久时 `debug.log` 会被轮转，只看它就会把早期读数（比如第一次换牌）
-    当成"没发生过"。去重口径与 `pdx.ab._read` 相同：逐字节相同的文件只算一次。
+    ⚠️ 读的是**整个日志目录**（含轮转副本 `debug.1.log`…），顺序按 :func:`debug_logs`；
+    逐字节相同的文件只算一次。一局跑得久时 `debug.log` 会被轮转，只看它就会把早期读数
+    （比如第一次换牌）当成"没发生过"。
+
+    ``only_after_arm``：只算**最后一次武装之后**的行。它的原意是排除**上一局**留在轮转
+    文件里的尾巴；但观察者局里没有 `RUN;A`（决议点不到），第一次武装标记是第 37 个月的
+    `RUN;B` —— 于是它会**把这一局自己的前 37 个月剪掉**，"窗口开过没有"这类
+    **存在性**判据就变成"第 37 个月之后开过没有"。
+    ⇒ 用 `--fresh-logs` 跑（日志全是这一局的）时**必须传 False**，调用点见 `main()`。
 
     判据口径（先写死，避免事后挑对自己有利的读法）：
     * **成功** = `LAW;<非 law_serfdom>` 出现过（法律真的换了）；
@@ -307,18 +335,22 @@ def analyze(log: Path | None = None) -> dict[str, object]:
     base = (log or DEBUG_LOG).parent
     chunks: list[str] = []
     seen: set[str] = set()
-    for path in sorted(base.glob("debug*.log")):
+    for path in debug_logs(base):
         text = path.read_text(encoding="utf-8", errors="replace")
         if text in seen:
             continue
         seen.add(text)
         chunks.append(text)
     ours = [line for line in "\n".join(chunks).splitlines() if "ZZPROBE AB;" in line]
+    total_lines = len(ours)
     # ⚠️ **日志会跨会话**（`debug.log` 按大小轮转，上一次会话的尾巴会留在 `debug.1.log` 里）。
     # 所以"这一局有没有自报"不能只看"日志里有没有" —— 必须**只算最后一轮之后**的行。
     # 判据是探针的 `RUN` 行（自励与决议各写一次）；没有 `RUN` 行时退回"全部"。
-    run_at = max(
-        (index for index, line in enumerate(ours) if "ZZPROBE AB;RUN;" in line), default=-1
+    # 但这把剪刀在观察者局里会剪掉这一局自己的前 37 个月（见 docstring）⇒ `--fresh-logs` 时不剪。
+    run_at = (
+        max((index for index, line in enumerate(ours) if "ZZPROBE AB;RUN;" in line), default=-1)
+        if only_after_arm
+        else -1
     )
     ours = ours[run_at + 1 :] if run_at >= 0 else ours
     kinds: Counter[str] = Counter()
@@ -360,7 +392,10 @@ def analyze(log: Path | None = None) -> dict[str, object]:
     # （实测踩过，见 backlog B80）。行为层的**权威读数**是下面的"立法读数"
     # （`is_enacting_law` 逐条问出来的 `ENACT`），法律本身则原样列在"法律读数"里。
     return {
-        "总行数": len(ours),
+        # 两个数都要报：只报"算进去多少"会让人以为那就是盘上的全部（实测踩过：
+        # 盘上 1,401 行、只报了 402 行，而输出里看不出被剪掉了什么）。
+        "盘上自报行数": total_lines,
+        "算进读数的行数": len(ours),
         "分类计数": dict(kinds),
         "法律读数（去重，按出现顺序）": _dedupe(laws),
         "策略牌读数（去重，按出现顺序）": _dedupe(strategies),
@@ -407,10 +442,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="开局前把旧日志挪去临时目录（判「这一局有没有自报」时必须，见 quarantine_logs）",
     )
+    parser.add_argument(
+        "--whole-log",
+        action="store_true",
+        help="把这些日志**整段**当成同一局（不按 `RUN` 剪切）。跑过 --fresh-logs 的日志本来"
+        "就该这样读；与 --analyze-only 合用时用它复核历史日志",
+    )
     args = parser.parse_args(argv)
 
+    # `--fresh-logs` 已经把上一局的日志挪走了 ⇒ 盘上剩的全是这一局的，**不该再按 RUN 剪切**
+    # （观察者局里那把剪刀会剪掉这一局自己的前 37 个月，见 `analyze`）。
+    only_after_arm = not (args.fresh_logs or args.whole_log)
+
     if args.analyze_only:
-        for key, value in analyze().items():
+        result = analyze(only_after_arm=only_after_arm)
+        mode = "只算最后一次武装之后" if only_after_arm else "整段（全是这一局的）"
+        print(f"  {'读数区间':34s}: {mode}")
+        for key, value in result.items():
             print(f"  {key:34s}: {value}")
         return 0
 
@@ -449,7 +497,7 @@ def main(argv: list[str] | None = None) -> int:
         report["tick"] = tick
         # 引擎侧的判定要在收尾挪走成绩单**之前**读（见 `engine_verdict`）。
         report["verdict"] = engine_verdict()
-        report["analysis"] = analyze()
+        report["analysis"] = analyze(only_after_arm=only_after_arm)
     except Exception as exc:
         failure = f"{type(exc).__name__}: {exc}"
     finally:

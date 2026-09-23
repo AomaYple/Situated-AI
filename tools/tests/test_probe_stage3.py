@@ -144,3 +144,56 @@ def test_反查得到的档案真的带reform_law(探针) -> None:
     out = probe._law_reading(["law_tenant_farmers"], ["…: ZZPROBE AB;ROLE;BAV;巴伐利亚"])
     assert out.get("本档案盯的法（bv_alignment.[probe].reform_law）") == "law_tenant_farmers"
     assert out.get("✅ 那条法已不是现行法律（law_tenant_farmers）") is False
+
+
+# ── 轮转日志的顺序（**一次真被读错过的 bug**）──────────────────────────
+
+
+def test_轮转日志按时间从旧到新(探针, tmp_path: Path) -> None:
+    """`debug.4 → debug.3 → debug.2 → debug.1 → debug.log`，**不是字典序**。
+
+    实测踩过（2026-09-23 跑 `sp_empire_remnant`）：字典序是
+    `[debug.1, debug.2, debug.3, debug.4, debug.log]` —— 当前那份排最后、次新的排最前，
+    于是拼出来的文本时间顺序是错的。叠加下面那条 `RUN` 剪切之后，`debug.3/2/1` 整份被丢掉：
+    **盘上 1,401 行自报，分析器只报了 402 行**，还报出一个假的「窗口 `inactive → active`」。
+    """
+    probe, _xml, _log = 探针
+    for name in ("debug.4.log", "debug.3.log", "debug.2.log", "debug.1.log", "debug.log"):
+        (tmp_path / name).write_text(name, encoding="utf-8")
+    (tmp_path / "debug.log.bak").write_text("不是日志", encoding="utf-8")
+    got = [p.name for p in probe.debug_logs(tmp_path)]
+    assert got == ["debug.4.log", "debug.3.log", "debug.2.log", "debug.1.log", "debug.log"]
+
+
+def test_只有当前那份日志时也给得出来(探针, tmp_path: Path) -> None:
+    probe, _xml, _log = 探针
+    (tmp_path / "debug.log").write_text("x", encoding="utf-8")
+    assert [p.name for p in probe.debug_logs(tmp_path)] == ["debug.log"]
+
+
+def test_没有日志目录时给空表(探针, tmp_path: Path) -> None:
+    probe, _xml, _log = 探针
+    assert probe.debug_logs(tmp_path / "不存在") == []
+
+
+def test_读数要报出被剪掉多少行(探针, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """只报「算进去多少」会让人以为那就是盘上的全部 —— 两个数都要报。"""
+    probe, _xml, _log = 探针
+    log = tmp_path / "debug.log"
+    log.write_text(
+        "\n".join(
+            [
+                '…: ZZPROBE AB;SHOCK;no;西班牙"',
+                '…: ZZPROBE AB;RUN;B"',
+                '…: ZZPROBE AB;SHOCK;yes;西班牙"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(probe, "DEBUG_LOG", log)
+    cut = probe.analyze(only_after_arm=True)
+    assert cut["盘上自报行数"] == 3
+    assert cut["算进读数的行数"] == 1  # 只留 RUN;B 之后那一条
+    whole = probe.analyze(only_after_arm=False)
+    assert whole["算进读数的行数"] == 3
+    assert whole["冲击读数（去重）"] == ["no", "yes"]
