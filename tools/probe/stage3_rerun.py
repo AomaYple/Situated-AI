@@ -301,7 +301,7 @@ def _law_reading(laws: list[str], ours: list[str]) -> dict[str, object]:
 
 
 def _card_reading(strategies: list[str], ours: list[str]) -> dict[str, object]:
-    """按**这一局那个国家所属档案**声明的政治议程牌报「意图层动没动」（B86）。
+    """按**这一局那个国家所属档案**声明的政治议程牌报「意图层动没动」（B86/B87）。
 
     为什么不能把 `ai_strategy_progressive_agenda` 写死在分析器里：判据是"那张牌**出现过**"，
     而有的国家**开局就挂着它**（巴西，`common/history/ai/00_strategy.txt:42-45`）
@@ -309,8 +309,21 @@ def _card_reading(strategies: list[str], ours: list[str]) -> dict[str, object]:
 
     ⚠️ **空是正当结论，不是遗漏**：查实了但那张牌对这份档案没有判别力时，
     就该留空并写明 —— 行为层改看 `ENACT` 与 `GOV` 两条通用读数。
+
+    ⚠️ **「一行都没有」与「牌是 none」必须分开报**（2026-09-23 加，B87）：
+    探针那条 `STRATEGY` 链是 `if/else_if … else`，链尾一定会落一行 —— 所以
+    `strategies == []` **只可能**意味着根本没读到这类行（老归档 / 探针没盯这个国家 / 日志被剪过），
+    而它此前会被报成"那张牌没挂上过"（**假否定**）。现在分开说。
     """
     archive_id, target = _probe_target(ours)
+    if not strategies:
+        return {
+            "⚠️ 意图层动没动（牌）：读不到 `STRATEGY` 行": (
+                "日志里这类行是 0 条 —— 老归档（2026-09-22 之前的探针没有这一格）、"
+                "探针没盯这个国家、或日志被剪过，都会这样。"
+                "**这不是「牌没挂上」**：探针的链尾必有 `else`，真跑过就一定有一行。"
+            )
+        }
     if target is None or target.probe is None or not target.probe.reform_card:  # type: ignore[attr-defined]
         why = (
             f"这一局盯的是 {archive_id}，它没声明 `[probe].reform_card`"

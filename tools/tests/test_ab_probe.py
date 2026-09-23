@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import ab_probe, config, modgen
+from pdx import ab_probe, ai_surface, config, modgen
 from pdx.parser import parse_text
 
 if TYPE_CHECKING:
@@ -165,12 +165,49 @@ def test_自励的每一格都幂等且按月份排序() -> None:
         assert f"{effect} = yes" in selfarm
 
 
+@pytest.mark.skipif(not config.GAME.is_dir(), reason="游戏目录不可用")
 def test_每月都记当前政治牌() -> None:
-    """B53：牌才是"动不动手"的闸门 ⇒ 牌必须是**逐月的行为层读数**，不许从别处反推。"""
-    code = _code(_files()[_ON_ACTIONS])
-    for name in ab_probe.POLITICAL_STRATEGIES:
+    """B53：牌才是"动不动手"的闸门 ⇒ 牌必须是**逐月的行为层读数**，不许从别处反推。
+
+    ⚠️ 这条测试**以前只问手写清单里的三张牌**，于是清单漏掉
+    `ai_strategy_egalitarian_agenda` 时它照样绿（B87）。现在两个方向都问：
+    ① 原版政治槽**每一张**牌都得被问到（候选集现读，不是手写）；
+    ② 兜底那两条也在 —— 否则"这张牌不在清单里"会变成日志里的**沉默**，
+    而沉默与"没有牌"长得一模一样。
+
+    必须用**真游戏**生成（空目录读不到牌表，那是另一条路径），
+    所以这条是集成用例而不是纯单元用例。
+    """
+    vanilla = ai_surface.read_cards(config.GAME)
+    assert vanilla, "读不到原版 AI 面 —— 这条测试的前提没了"
+    code = _code(ab_probe.build(game=config.GAME).files[_ON_ACTIONS])
+    cards = ab_probe.strategy_candidates(vanilla)
+    assert cards, "原版政治槽一张牌都没有？候选集是现读的，空了说明读法坏了"
+    assert "ai_strategy_egalitarian_agenda" in cards, (
+        "白名单里递得出去的牌必须在读数链里 —— 它曾经漏掉，表现是这个月一行都不记"
+    )
+    for name in cards:
         assert f"has_strategy = {name}" in code, name
         assert f"ZZPROBE AB;STRATEGY;{name};" in code, name
+    assert "ZZPROBE AB;STRATEGY;ai_strategy_default;" in code
+    assert "ZZPROBE AB;STRATEGY;none;" in code, "兜底那行没了 ⇒ 分不清'没记'与'没有牌'"
+
+
+@pytest.mark.skipif(not config.GAME.is_dir(), reason="游戏目录不可用")
+def test_递牌白名单的牌都在原版政治槽里() -> None:
+    """我们自己递牌的**白名单**必须是原版真有的政治牌（B87 的根因那一半）。
+
+    这条把两个来源钉在一起：`modgen.SET_STRATEGY_WHITELIST`（我们能递什么）
+    与 `common/ai_strategies/*.txt`（原版有什么）。任一边悄悄变了都会红 ——
+    白名单里多一张不存在的牌 = 生成物写了一辈子也不会生效的 `set_strategy`；
+    少一张真牌 = 那条路线根本递不出去（而读数链也读不到它）。
+    """
+    whitelist = set(modgen.SET_STRATEGY_WHITELIST)
+    political = set(ab_probe.strategy_candidates(ai_surface.read_cards(config.GAME)))
+    missing = sorted(whitelist - political)
+    assert not missing, (
+        f"白名单里的牌不在原版政治槽：{missing}\n原版政治槽实际有：{sorted(political)}"
+    )
 
 
 def test_每月都记立法开没开() -> None:
@@ -548,8 +585,13 @@ def test_读不到数据源时不猜一个国家名(monkeypatch: pytest.MonkeyPa
 
 def test_元数据是合法JSON() -> None:
     data = json.loads(ab_probe.metadata_text())
-    assert data["supported_game_version"] == "1.14.3"
     assert "A→B→B2" in data["short_description"]
+    # 探针与真 mod 一起加载 ⇒ 声明的游戏版本必须同源（曾经写死 1.14.3，mod 升到 1.14.4 后
+    # 启动器会对探针弹版本警告，看起来像探针坏了）。
+    declared = [archive.game_version for archive in modgen.load_all()]
+    assert declared, "读不到数据源"
+    assert data["supported_game_version"] == declared[0]
+    assert len(set(declared)) == 1, "各档案声明的 game_version 必须一致（modgen 会强制）"
 
 
 def test_探针源目录在仓库内() -> None:

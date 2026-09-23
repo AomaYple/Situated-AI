@@ -2785,22 +2785,41 @@ def ab_probe_cmd(
     deploy: Annotated[
         bool, typer.Option("--deploy", help="同步探针与真 mod 进用户 mod 目录并只启用它们")
     ] = False,
+    archive: Annotated[
+        str,
+        typer.Option(
+            "--archive",
+            help="盯哪一份档案（不给 = 数据源里按文件名排序的第一份，会在输出里写明）",
+        ),
+    ] = "",
 ) -> None:
     """生成阶段 3 的 A/B 探针（**不要手改探针文件**，改 `tools/pdx/ab_probe.py`）。
 
     两局点的是**同一个决议**，唯一差异是角色：A = 决议什么都不做，B = 决议调用真 mod 的
-    `sitai_ru_defeat_shock`。自报只盯主角国家（俄罗斯），每月记三个槽位落点 +
+    `sitai_ru_defeat_shock`。自报只盯主角国家，每月记三个槽位落点 +
     改革窗口 JE + 冲击变量 + 6 条改革相关法律 —— **行为层与策略层分开记**，
     因为阶段 3 的失败长相写死了「只有策略层动 = H2 不成立」。
+
+    ``--archive`` 显式指定盯哪一份档案：不写就取数据源里**按文件名排序的第一份**，
+    而那个默认值会随着新档案入库而变（`au_revolution` 现在排在最前）——
+    所以想复现某次实验的探针，必须把档案名写出来。
     """
-    built = ab_probe.build()
-    ab_probe.write()
+    archive_id = archive or None
+    built = ab_probe.build(target=ab_probe.load_target(archive_id))
+    ab_probe.write(archive_id=archive_id)
+    target = ab_probe.load_target(archive_id)
+    console.print(
+        f"盯的档案：[bold]{target.archive_id if target else '?'}[/]"
+        f"（{target.subject if target else '?'}）"
+        f"{'（按文件名排序的第一份）' if archive_id is None else ''}"
+    )
     console.print(ab_probe.summary(built))
     if deploy:
-        dest = ab_probe.deploy()
+        dest = ab_probe.deploy(archive_id=archive_id)
         console.print(f"已部署 [bold]{dest}[/]（连同真 mod 一起启用，原列表已备份）")
         console.print(
-            "接着：启动游戏 → 选俄罗斯开 1836 → 点【A】或【B】→ 不做任何操作 → 跑 6-8 年 → 退出。"
+            f"接着：启动游戏 → 选 {target.subject if target else '主角国家'} 开 1836 → "
+            "点【A】或【B】→ 不做任何操作 → 跑 6-8 年 → 退出。"
         )
 
 

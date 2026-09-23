@@ -5,28 +5,78 @@
 #    `No on_action scripted with tag … cannot link`（阶段 2 实测：分组一次没跑、
 #    白跑一整局）。钩子/包装在 `zz_probe_ab_on_actions.txt` 里。
 #
-# ① `zz_probe_ab_arm`：**点一次决议**武装整条阶梯（由决议调用，作用于俄罗斯）。
+# ① `zz_probe_ab_arm`：**点一次决议**武装整条阶梯（由决议调用，作用于 RUS）。
 #    可重复调用 —— 每点一次就把月份与阶段清零重跑（同一存档里重跑一局的做法）。
-# ② `zz_probe_ab_ladder`：每月走一格。**幂等**是硬要求：`sitai_probe_ab_stage` 单调递增，
+# ② `zz_probe_ab_selfarm`：**不点决议**的武装路径（`is_ai = yes` 时按月份自动走）。
+#    为什么必须有它：观察者局**没有玩家国家**，决议永远点不到 —— 阶段 3 的臂阶梯
+#    一次都没跑起来就是这个原因（`阶段3-结果.md` §六）。它只认 `is_ai`，
+#    所以玩家自己掌权时不会抢手（玩家局仍走决议那条路）。
+# ③ `zz_probe_ab_ladder`：每月走一格。**幂等**是硬要求：`sitai_probe_ab_stage` 单调递增，
 #    每个效果只施加一次；不拿「有没有那个修正」当判据（会被别的系统碰到）。
-# ③ `sitai_ru_defeat_shock` / `sitai_ru_reform_input` 在**真 mod**里（`v3 modgen` 生成），
+# ④ `sitai_ru_defeat_shock` / `sitai_ru_reform_input` 在**真 mod**里（`v3 modgen` 生成），
 #    探针只调用它们 —— 这样实验用的世界状态与档案本身是同一份定义。
 zz_probe_ab_arm = {
 	debug_log = "ZZPROBE AB;RUN;A"
+	# 这一局盯的是**哪一份档案** —— 分析器靠它认主语（日志里的国名是本地化的，不是 tag）。
+	debug_log = "ZZPROBE AB;TARGET;ru_defeat"
+	# 标记「决议武装过」—— 自励路径看到它就完全不介入。
+	set_variable = { name = sitai_probe_ab_manual value = 1 }
 	# 月份从 0 起数：武装之后的下一次月度脉冲才是第 1 月。
 	set_variable = { name = sitai_probe_ab_month value = 0 }
 	set_variable = { name = sitai_probe_ab_stage value = 1 }
 }
 
+zz_probe_ab_selfarm = {
+	# 只对 **AI 国家**生效，且**只在这个国家没被决议武装过时**介入 ——
+	# 玩家自己掌权的那一局由决议作唯一入口，自动路径完全不碰它。
+	if = {
+		limit = {
+			is_ai = yes
+			NOT = { has_variable = sitai_probe_ab_manual }
+		}
+		if = {
+			limit = { NOT = { has_variable = sitai_probe_ab_selfarm } }
+			set_variable = { name = sitai_probe_ab_selfarm value = 0 }
+			set_variable = { name = sitai_probe_ab_month value = 0 }
+			set_variable = { name = sitai_probe_ab_stage value = 1 }
+			# 这一局盯的是哪一份档案 —— **两条武装路径都要写**：观察者局只走这一条
+			# （没有玩家国家 ⇒ 决议点不到），只写在决议那条上等于没写（实测踩过）。
+			debug_log = "ZZPROBE AB;TARGET;ru_defeat"
+		}
+		change_variable = { name = sitai_probe_ab_month add = 1 }
+
+		# 第 13 月：处理①：ru_defeat 的冲击（变量 + 压力修正）
+		if = {
+			limit = {
+				var:sitai_probe_ab_selfarm < 1
+				var:sitai_probe_ab_month >= 13
+			}
+			set_variable = { name = sitai_probe_ab_selfarm value = 1 }
+			debug_log = "ZZPROBE AB;SELFARM;13;[THIS.GetCountry.GetNameNoFormatting]"
+			sitai_ru_defeat_shock = yes
+		}
+
+		# 第 37 月：处理②：追加改革侧输入（工业家/知识界政治力量）
+		if = {
+			limit = {
+				var:sitai_probe_ab_selfarm < 2
+				var:sitai_probe_ab_month >= 37
+			}
+			set_variable = { name = sitai_probe_ab_selfarm value = 2 }
+			debug_log = "ZZPROBE AB;SELFARM;37;[THIS.GetCountry.GetNameNoFormatting]"
+			sitai_ru_reform_input = yes
+		}
+	}
+}
+
 zz_probe_ab_ladder = {
-	# 没被武装过的国家一行都不动（决议是唯一的开关）。
+	# 没被武装过的国家一行都不动（决议与自励是仅有的两个开关）。
 	if = {
 		limit = { has_variable = sitai_probe_ab_stage }
-		change_variable = { name = sitai_probe_ab_month add = 1 }
 
 		# A 臂（第 1–12 月）：对照组，什么都不做 —— 没有分支就是它。
 
-		# 第 13 月起 → 处理①：战败冲击（变量 + 压力修正）
+		# 第 13 月起 → 处理①：ru_defeat 的冲击（变量 + 压力修正）
 		if = {
 			limit = {
 				var:sitai_probe_ab_stage <= 1

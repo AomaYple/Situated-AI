@@ -24,11 +24,16 @@ zz_probe_ab_monthly = {
 			limit = { c:RUS ?= this }
 			debug_log = "ZZPROBE AB;ROLE;RUS;[THIS.GetCountry.GetNameNoFormatting]"
 
-			# ① 先走臂阶梯：换臂那一月必须算进**新臂**，
+			# ① 先自励（**不点决议**：观察者局没有玩家国家，决议点不了）。
+			#    排在阶梯之前 —— 第 13 月那一格会武装并施加冲击，
+			#    必须让阶梯看到已经武装好的状态。
+			zz_probe_ab_selfarm = yes
+
+			# ② 再走臂阶梯：换臂那一月必须算进**新臂**，
 			#    所以 RUN 行要排在同月的自报行之前。
 			zz_probe_ab_ladder = yes
 
-			# ② 两处输入到底有没有落到这个国家身上（自检用）
+			# ③ 两处输入到底有没有落到这个国家身上（自检用）
 			if = {
 				limit = { has_variable = sitai_ru_defeat_memory }
 				debug_log = "ZZPROBE AB;SHOCK;yes;[THIS.GetCountry.GetNameNoFormatting]"
@@ -43,6 +48,250 @@ zz_probe_ab_monthly = {
 			}
 			else = {
 				debug_log = "ZZPROBE AB;INPUT;no;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+
+			# ④ 当前挂着的政治牌（策略层读数；B53：牌才是闸门）
+			if = {
+				limit = { has_strategy = ai_strategy_conservative_agenda }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_conservative_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_strategy = ai_strategy_egalitarian_agenda }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_egalitarian_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_strategy = ai_strategy_great_reforms }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_great_reforms;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_strategy = ai_strategy_maintain_mandate_of_heaven }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_maintain_mandate_of_heaven;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_strategy = ai_strategy_meiji_restoration }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_meiji_restoration;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_strategy = ai_strategy_nationalist_agenda }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_nationalist_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_strategy = ai_strategy_progressive_agenda }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_progressive_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_strategy = ai_strategy_reactionary_agenda }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_reactionary_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_strategy = ai_strategy_tanzimat_reforms }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_tanzimat_reforms;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_strategy = ai_strategy_default }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_default;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else = {
+				debug_log = "ZZPROBE AB;STRATEGY;none;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+
+			# ⑤ **立法到底开没开**（2026-09-22 新增）—— 这一行是
+			#    「牌换了法不换」三个候选的分辨器：原版读本 `laws/readme.md:9-10`
+			#    点名「缺政府/运动支持」与「怕革命」都会让法推不动，而两者
+			#    在「每月只记法律名」的读数下**长得一模一样**。
+			#    判据：`is_enacting_law`（引擎触发器）——真在推这条法时为真。
+			#    ⚠️ **没有「任意法」的通用写法**（exe 检索 5 个候选名全 0 命中），
+			#    所以只能逐条问 —— 全没推时写 `none`，否则分不清「没记」与「没开」。
+			if = {
+				limit = {
+					OR = {
+						is_enacting_law = law_type:law_serfdom
+						is_enacting_law = law_type:law_tenant_farmers
+						is_enacting_law = law_type:law_commercialized_agriculture
+						is_enacting_law = law_type:law_peasant_proprietorship
+						is_enacting_law = law_type:law_collectivized_agriculture
+						is_enacting_law = law_type:law_homesteading
+						is_enacting_law = law_type:law_autocracy
+						is_enacting_law = law_type:law_oligarchy
+						is_enacting_law = law_type:law_technocracy
+						is_enacting_law = law_type:law_landed_voting
+						is_enacting_law = law_type:law_wealth_voting
+						is_enacting_law = law_type:law_census_voting
+						is_enacting_law = law_type:law_universal_suffrage
+						is_enacting_law = law_type:law_consumption_based_taxation
+						is_enacting_law = law_type:law_land_based_taxation
+						is_enacting_law = law_type:law_per_capita_based_taxation
+						is_enacting_law = law_type:law_proportional_taxation
+						is_enacting_law = law_type:law_graduated_taxation
+						is_enacting_law = law_type:law_slavery_banned
+						is_enacting_law = law_type:law_compulsory_primary_school
+					}
+				}
+				# 逐条问「是哪一条」（只给读数用，判据与上面同一个触发器）。
+				if = {
+					limit = { is_enacting_law = law_type:law_serfdom }
+					debug_log = "ZZPROBE AB;ENACT;law_serfdom;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_tenant_farmers }
+					debug_log = "ZZPROBE AB;ENACT;law_tenant_farmers;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_commercialized_agriculture }
+					debug_log = "ZZPROBE AB;ENACT;law_commercialized_agriculture;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_peasant_proprietorship }
+					debug_log = "ZZPROBE AB;ENACT;law_peasant_proprietorship;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_collectivized_agriculture }
+					debug_log = "ZZPROBE AB;ENACT;law_collectivized_agriculture;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_homesteading }
+					debug_log = "ZZPROBE AB;ENACT;law_homesteading;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_autocracy }
+					debug_log = "ZZPROBE AB;ENACT;law_autocracy;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_oligarchy }
+					debug_log = "ZZPROBE AB;ENACT;law_oligarchy;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_technocracy }
+					debug_log = "ZZPROBE AB;ENACT;law_technocracy;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_landed_voting }
+					debug_log = "ZZPROBE AB;ENACT;law_landed_voting;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_wealth_voting }
+					debug_log = "ZZPROBE AB;ENACT;law_wealth_voting;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_census_voting }
+					debug_log = "ZZPROBE AB;ENACT;law_census_voting;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_universal_suffrage }
+					debug_log = "ZZPROBE AB;ENACT;law_universal_suffrage;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_consumption_based_taxation }
+					debug_log = "ZZPROBE AB;ENACT;law_consumption_based_taxation;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_land_based_taxation }
+					debug_log = "ZZPROBE AB;ENACT;law_land_based_taxation;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_per_capita_based_taxation }
+					debug_log = "ZZPROBE AB;ENACT;law_per_capita_based_taxation;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_proportional_taxation }
+					debug_log = "ZZPROBE AB;ENACT;law_proportional_taxation;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_graduated_taxation }
+					debug_log = "ZZPROBE AB;ENACT;law_graduated_taxation;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_slavery_banned }
+					debug_log = "ZZPROBE AB;ENACT;law_slavery_banned;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+				if = {
+					limit = { is_enacting_law = law_type:law_compulsory_primary_school }
+					debug_log = "ZZPROBE AB;ENACT;law_compulsory_primary_school;[THIS.GetCountry.GetNameNoFormatting]"
+				}
+			}
+			else = {
+				debug_log = "ZZPROBE AB;ENACT;none;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+
+			# ⑥ 政府在谁手里（若「缺政府支持」这一支成立，得能看见政府在谁手里）。
+			#    只记三个与我们这条链直接相关的 IG，不做全量 IG 表。
+			if = {
+				limit = { ig:ig_landowners ?= { is_in_government = yes } }
+				debug_log = "ZZPROBE AB;GOV;landowners;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_intelligentsia ?= { is_in_government = yes } }
+				debug_log = "ZZPROBE AB;GOV;intelligentsia;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_industrialists ?= { is_in_government = yes } }
+				debug_log = "ZZPROBE AB;GOV;industrialists;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+
+			# ⑦ **入阁距离**（2026-09-22 新增）：`is_in_government` 只有真/假，
+			#    看不出改革派离入阁还有多远 ⇒ 用 `ig_clout` 夹逼成五档，
+			#    把「再加一点压力够不够」从不可回答变成可观测的趋势。
+			#    档位 0.18 / 0.25 直接对应 `is_powerful` 那条线
+			#    （defines/00_defines.txt:189 POWERFUL_IG_THRESHOLD = 0.20 / CUTOFF = 0.18）。
+			if = {
+				limit = { ig:ig_intelligentsia ?= { ig_clout >= 0.03 } }
+				debug_log = "ZZPROBE AB;CLOUT;intelligentsia;b03;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_intelligentsia ?= { ig_clout >= 0.08 } }
+				debug_log = "ZZPROBE AB;CLOUT;intelligentsia;b08;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_intelligentsia ?= { ig_clout >= 0.12 } }
+				debug_log = "ZZPROBE AB;CLOUT;intelligentsia;b12;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_intelligentsia ?= { ig_clout >= 0.18 } }
+				debug_log = "ZZPROBE AB;CLOUT;intelligentsia;b18;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_intelligentsia ?= { ig_clout >= 0.25 } }
+				debug_log = "ZZPROBE AB;CLOUT;intelligentsia;b25;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_industrialists ?= { ig_clout >= 0.03 } }
+				debug_log = "ZZPROBE AB;CLOUT;industrialists;b03;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_industrialists ?= { ig_clout >= 0.08 } }
+				debug_log = "ZZPROBE AB;CLOUT;industrialists;b08;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_industrialists ?= { ig_clout >= 0.12 } }
+				debug_log = "ZZPROBE AB;CLOUT;industrialists;b12;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_industrialists ?= { ig_clout >= 0.18 } }
+				debug_log = "ZZPROBE AB;CLOUT;industrialists;b18;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_industrialists ?= { ig_clout >= 0.25 } }
+				debug_log = "ZZPROBE AB;CLOUT;industrialists;b25;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_landowners ?= { ig_clout >= 0.03 } }
+				debug_log = "ZZPROBE AB;CLOUT;landowners;b03;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_landowners ?= { ig_clout >= 0.08 } }
+				debug_log = "ZZPROBE AB;CLOUT;landowners;b08;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_landowners ?= { ig_clout >= 0.12 } }
+				debug_log = "ZZPROBE AB;CLOUT;landowners;b12;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_landowners ?= { ig_clout >= 0.18 } }
+				debug_log = "ZZPROBE AB;CLOUT;landowners;b18;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { ig:ig_landowners ?= { ig_clout >= 0.25 } }
+				debug_log = "ZZPROBE AB;CLOUT;landowners;b25;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 
 			# 诊断：合法性落在哪一档（五档夹逼 b55/b60/b70/b75/b80；
@@ -82,6 +331,26 @@ zz_probe_ab_monthly = {
 				debug_log = "ZZPROBE AB;LAW;law_serfdom;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 			else_if = {
+				limit = { has_law = law_type:law_manorialism }
+				debug_log = "ZZPROBE AB;LAW;law_manorialism;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_law = law_type:law_latifundias }
+				debug_log = "ZZPROBE AB;LAW;law_latifundias;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_law = law_type:law_expanded_latifundias }
+				debug_log = "ZZPROBE AB;LAW;law_expanded_latifundias;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_law = law_type:law_tenant_farmers }
+				debug_log = "ZZPROBE AB;LAW;law_tenant_farmers;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_law = law_type:law_commercialized_agriculture }
+				debug_log = "ZZPROBE AB;LAW;law_commercialized_agriculture;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
 				limit = { has_law = law_type:law_autocracy }
 				debug_log = "ZZPROBE AB;LAW;law_autocracy;[THIS.GetCountry.GetNameNoFormatting]"
 			}
@@ -110,164 +379,164 @@ zz_probe_ab_monthly = {
 		if = {
 			limit = { c:RUS ?= this }
 		if = {
-				limit = { has_strategy = ai_strategy_conservative_agenda }
-				debug_log = "ZZPROBE AB;POLI;conservative_agenda;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_egalitarian_agenda }
-				debug_log = "ZZPROBE AB;POLI;egalitarian_agenda;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_great_reforms }
-				debug_log = "ZZPROBE AB;POLI;great_reforms;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_maintain_mandate_of_heaven }
-				debug_log = "ZZPROBE AB;POLI;maintain_mandate_of_heaven;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_meiji_restoration }
-				debug_log = "ZZPROBE AB;POLI;meiji_restoration;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_nationalist_agenda }
-				debug_log = "ZZPROBE AB;POLI;nationalist_agenda;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_progressive_agenda }
-				debug_log = "ZZPROBE AB;POLI;progressive_agenda;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_reactionary_agenda }
-				debug_log = "ZZPROBE AB;POLI;reactionary_agenda;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_tanzimat_reforms }
-				debug_log = "ZZPROBE AB;POLI;tanzimat_reforms;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_default }
-				debug_log = "ZZPROBE AB;POLI;default;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else = {
-				debug_log = "ZZPROBE AB;POLI;none;[THIS.GetCountry.GetNameNoFormatting]"
-			}
+			limit = { has_strategy = ai_strategy_conservative_agenda }
+			debug_log = "ZZPROBE AB;POLI;conservative_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_egalitarian_agenda }
+			debug_log = "ZZPROBE AB;POLI;egalitarian_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_great_reforms }
+			debug_log = "ZZPROBE AB;POLI;great_reforms;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_maintain_mandate_of_heaven }
+			debug_log = "ZZPROBE AB;POLI;maintain_mandate_of_heaven;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_meiji_restoration }
+			debug_log = "ZZPROBE AB;POLI;meiji_restoration;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_nationalist_agenda }
+			debug_log = "ZZPROBE AB;POLI;nationalist_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_progressive_agenda }
+			debug_log = "ZZPROBE AB;POLI;progressive_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_reactionary_agenda }
+			debug_log = "ZZPROBE AB;POLI;reactionary_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_tanzimat_reforms }
+			debug_log = "ZZPROBE AB;POLI;tanzimat_reforms;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_default }
+			debug_log = "ZZPROBE AB;POLI;default;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else = {
+			debug_log = "ZZPROBE AB;POLI;none;[THIS.GetCountry.GetNameNoFormatting]"
+		}
 
-			if = {
-				limit = { has_strategy = ai_strategy_agricultural_expansion }
-				debug_log = "ZZPROBE AB;ADMI;agricultural_expansion;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_colonial_extraction }
-				debug_log = "ZZPROBE AB;ADMI;colonial_extraction;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_industrial_expansion }
-				debug_log = "ZZPROBE AB;ADMI;industrial_expansion;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_montenegro_admin }
-				debug_log = "ZZPROBE AB;ADMI;montenegro_admin;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_placate_population }
-				debug_log = "ZZPROBE AB;ADMI;placate_population;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_plantation_economy }
-				debug_log = "ZZPROBE AB;ADMI;plantation_economy;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_resource_expansion }
-				debug_log = "ZZPROBE AB;ADMI;resource_expansion;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_default }
-				debug_log = "ZZPROBE AB;ADMI;default;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else = {
-				debug_log = "ZZPROBE AB;ADMI;none;[THIS.GetCountry.GetNameNoFormatting]"
-			}
+		if = {
+			limit = { has_strategy = ai_strategy_agricultural_expansion }
+			debug_log = "ZZPROBE AB;ADMI;agricultural_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_colonial_extraction }
+			debug_log = "ZZPROBE AB;ADMI;colonial_extraction;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_industrial_expansion }
+			debug_log = "ZZPROBE AB;ADMI;industrial_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_montenegro_admin }
+			debug_log = "ZZPROBE AB;ADMI;montenegro_admin;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_placate_population }
+			debug_log = "ZZPROBE AB;ADMI;placate_population;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_plantation_economy }
+			debug_log = "ZZPROBE AB;ADMI;plantation_economy;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_resource_expansion }
+			debug_log = "ZZPROBE AB;ADMI;resource_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_default }
+			debug_log = "ZZPROBE AB;ADMI;default;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else = {
+			debug_log = "ZZPROBE AB;ADMI;none;[THIS.GetCountry.GetNameNoFormatting]"
+		}
 
-			if = {
-				limit = { has_strategy = ai_strategy_anti_imperialism }
-				debug_log = "ZZPROBE AB;DIPL;anti_imperialism;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_armed_isolationism }
-				debug_log = "ZZPROBE AB;DIPL;armed_isolationism;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_colonial_expansion }
-				debug_log = "ZZPROBE AB;DIPL;colonial_expansion;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_economic_imperialism }
-				debug_log = "ZZPROBE AB;DIPL;economic_imperialism;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_maintain_power_balance }
-				debug_log = "ZZPROBE AB;DIPL;maintain_power_balance;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_prussia_of_the_balkans }
-				debug_log = "ZZPROBE AB;DIPL;prussia_of_the_balkans;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_restore_natural_borders }
-				debug_log = "ZZPROBE AB;DIPL;restore_natural_borders;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_socialism_in_one_country }
-				debug_log = "ZZPROBE AB;DIPL;socialism_in_one_country;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_subject_break_free }
-				debug_log = "ZZPROBE AB;DIPL;subject_break_free;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_subject_maintain_autonomy }
-				debug_log = "ZZPROBE AB;DIPL;subject_maintain_autonomy;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_subject_overlord_compliance }
-				debug_log = "ZZPROBE AB;DIPL;subject_overlord_compliance;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_subject_strengthen_self }
-				debug_log = "ZZPROBE AB;DIPL;subject_strengthen_self;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_territorial_expansion }
-				debug_log = "ZZPROBE AB;DIPL;territorial_expansion;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_unify_china }
-				debug_log = "ZZPROBE AB;DIPL;unify_china;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_unify_ethiopia }
-				debug_log = "ZZPROBE AB;DIPL;unify_ethiopia;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_unify_germany }
-				debug_log = "ZZPROBE AB;DIPL;unify_germany;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_unify_italy }
-				debug_log = "ZZPROBE AB;DIPL;unify_italy;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_world_revolution }
-				debug_log = "ZZPROBE AB;DIPL;world_revolution;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else_if = {
-				limit = { has_strategy = ai_strategy_default }
-				debug_log = "ZZPROBE AB;DIPL;default;[THIS.GetCountry.GetNameNoFormatting]"
-			}
-			else = {
-				debug_log = "ZZPROBE AB;DIPL;none;[THIS.GetCountry.GetNameNoFormatting]"
-			}
+		if = {
+			limit = { has_strategy = ai_strategy_anti_imperialism }
+			debug_log = "ZZPROBE AB;DIPL;anti_imperialism;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_armed_isolationism }
+			debug_log = "ZZPROBE AB;DIPL;armed_isolationism;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_colonial_expansion }
+			debug_log = "ZZPROBE AB;DIPL;colonial_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_economic_imperialism }
+			debug_log = "ZZPROBE AB;DIPL;economic_imperialism;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_maintain_power_balance }
+			debug_log = "ZZPROBE AB;DIPL;maintain_power_balance;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_prussia_of_the_balkans }
+			debug_log = "ZZPROBE AB;DIPL;prussia_of_the_balkans;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_restore_natural_borders }
+			debug_log = "ZZPROBE AB;DIPL;restore_natural_borders;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_socialism_in_one_country }
+			debug_log = "ZZPROBE AB;DIPL;socialism_in_one_country;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_subject_break_free }
+			debug_log = "ZZPROBE AB;DIPL;subject_break_free;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_subject_maintain_autonomy }
+			debug_log = "ZZPROBE AB;DIPL;subject_maintain_autonomy;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_subject_overlord_compliance }
+			debug_log = "ZZPROBE AB;DIPL;subject_overlord_compliance;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_subject_strengthen_self }
+			debug_log = "ZZPROBE AB;DIPL;subject_strengthen_self;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_territorial_expansion }
+			debug_log = "ZZPROBE AB;DIPL;territorial_expansion;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_unify_china }
+			debug_log = "ZZPROBE AB;DIPL;unify_china;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_unify_ethiopia }
+			debug_log = "ZZPROBE AB;DIPL;unify_ethiopia;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_unify_germany }
+			debug_log = "ZZPROBE AB;DIPL;unify_germany;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_unify_italy }
+			debug_log = "ZZPROBE AB;DIPL;unify_italy;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_world_revolution }
+			debug_log = "ZZPROBE AB;DIPL;world_revolution;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else_if = {
+			limit = { has_strategy = ai_strategy_default }
+			debug_log = "ZZPROBE AB;DIPL;default;[THIS.GetCountry.GetNameNoFormatting]"
+		}
+		else = {
+			debug_log = "ZZPROBE AB;DIPL;none;[THIS.GetCountry.GetNameNoFormatting]"
+		}
 		}
 	}
 }

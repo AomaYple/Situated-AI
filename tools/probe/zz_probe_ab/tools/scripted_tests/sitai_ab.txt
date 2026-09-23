@@ -5,7 +5,7 @@
 # tests.<名字> = { success / fail / run_count }，两个触发器**每天**检查，success 先判，
 # 到 last_date 都没命中则判「跳过」（所以 fail 的日期必须早于 last_date）。
 #
-# 两条判据与 `pdx.ab` 同源：主指标 = 改革窗口；次指标 = 法律是否换过。
+# 判据与 `pdx.ab` 同源：主指标 = 改革窗口；次指标 = 法律是否换过（**该档案查实了才判**，见下）。
 # 日期口径：阶梯第 37 月（≈1839.1）才追加改革侧输入，给 2 年余量 →
 # fail 定在开局后第 61 个月（1841.1.1），last_date 再多半年。
 
@@ -28,7 +28,7 @@ tests = {
 	law_changed = {
 		acceptable_fail_rate = 0.0
 		run_count = 1
-		# 成功 = 农奴制已经不是现行法律（行为层②：真的换了法，不只是开了个窗）。
+		# 成功 = law_serfdom 已经不是现行法律（行为层②：真的换了法，不只是开了个窗）。
 		success = {
 			c:RUS ?= { NOT = { has_law = law_type:law_serfdom } }
 		}

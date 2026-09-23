@@ -182,6 +182,28 @@ def test_没声明牌就不判并说明理由(探针, monkeypatch: pytest.Monkey
     assert "bv_alignment" in str(out[key])
 
 
+def test_一行牌读数都没有时报读不到而不是报没挂上(探针) -> None:
+    """B87 的另一半：`STRATEGY` 行**一条都没有**时，不许报成"那张牌没挂上过"。
+
+    探针那条链是 `if / else_if … / else`，链尾必落一行 ⇒ 空列表只可能是
+    "根本没读到这类行"（老归档、探针没盯这个国家、日志被剪过）。
+    报成 False 就是**假否定**：读数是"缺"，报出来却像"否"。
+    """
+    probe, _xml, _log = 探针
+    out = probe._card_reading([], ["…: ZZPROBE AB;ROLE;BAV;巴伐利亚"])
+    key = next(iter(out))
+    assert "读不到" in key, out
+    assert "这不是「牌没挂上」" in str(out[key]), out
+    assert not any("挂上过" in k for k in out), "空读数不该走「挂上过」那条判据"
+
+
+def test_牌读数是none时按不出现处理(探针) -> None:
+    """链尾的 `none` / `ai_strategy_default` 是**真读数**：它们出现时就是"没挂着那张牌"。"""
+    probe, _xml, _log = 探针
+    out = probe._card_reading(["none"], ["…: ZZPROBE AB;ROLE;BAV;巴伐利亚"])
+    assert out.get("✅ 那张牌挂上过（ai_strategy_progressive_agenda）") is False
+
+
 def test_分析器不再写死进步牌(探针) -> None:
     """B86 的根：写死的那一版对**开局就挂着它**的国家必然假真。
 

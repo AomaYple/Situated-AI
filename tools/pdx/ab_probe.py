@@ -227,17 +227,32 @@ LAWS = (
     "law_traditionalism",
 )
 
-#: 每个月要记的**政治策略牌**（`has_strategy`）—— 阶段 3 重做新增的一格。
+#: 每个月要记的**政治策略牌**：候选集**从原版现读**（`common/ai_strategies/` 里
+#: `type = political` 的全部牌），不再手写。
 #:
-#: 为什么必须记它：阶段 3 的负结果（牌换了名、法一条没改）里，"牌到底换成了哪一张"
-#: 只是从探针的三槽自报里**推断**出来的，没有一条**逐月**的读数；而 B53（backlog）
-#: 指出牌才是"动不动手"的闸门（`change_law_chance`：反动 3.5 / 保守 2.5 / 进步 10）。
-#: 所以这次把牌当**行为层的直接读数**记，而不是从别的行反推。
-POLITICAL_STRATEGIES = (
-    "ai_strategy_progressive_agenda",
-    "ai_strategy_conservative_agenda",
-    "ai_strategy_reactionary_agenda",
-)
+#: ⚠️ 这里原先是一份手写的三张牌清单（2026-09-23 修，B87）：
+#: `progressive_agenda` / `conservative_agenda` / `reactionary_agenda` —— **少了
+#: `ai_strategy_egalitarian_agenda`**，而那张牌**就在我们自己递牌的白名单里**
+#: （`modgen.SET_STRATEGY_WHITELIST`）。后果不是"少一格读数"而是**静默失真**：
+#: 国家挂着那张牌时，`if / else_if` 三条全不匹配、链尾又没有兜底 ⇒ **这个月一行都不记**，
+#: 而"没记"与"没有牌"在这套日志里长得一模一样；分析器按档案声明的
+#: `[probe].reform_card` 去问"那张牌出现过吗"，对 egalitarian 这份档案**必然为假**。
+#: 同一类失真在 `h1_probe` 的注释里已经写过一次（手写清单随版本漂移，
+#: 表现是"某个槽位永远落进兜底桶"）。⇒ 候选集现读、并补 `default` 与 `none` 两条兜底。
+#:
+#: 与 `_slot_chains` 的关系：那条链记的是"三槽各自落在哪张牌"，本条记的是
+#: "政治槽这张牌是哪一张"（`STRATEGY;<完整牌名>`，分析器的行为层直接读数）。
+POLITICAL_SLOT = "political"
+
+
+def strategy_candidates(vanilla: list[ai_surface.Card]) -> list[str]:
+    """政治槽的候选牌名（**原版现读**，升序去重）。
+
+    单独一个函数是为了让测试能直接钉住它 —— 这份清单曾经漏掉一张牌，
+    而漏掉的表现是日志里**什么都没有**，测试不主动问就永远发现不了。
+    """
+    return h1_probe.vanilla_chain_cards(vanilla, POLITICAL_SLOT)
+
 
 #: 自励阶梯：**不点决议**，由月度脉冲按 `is_ai` 自动武装 —— 观察者局没有玩家国家，
 #: 决议点不了（阶段 3 的结构性阻断，见 `阶段3-结果.md` §六）。
@@ -492,17 +507,26 @@ def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
     )
     # 策略牌读数：`has_strategy` 逐张问一遍（原版就是这么写的，见
     # `ai_strategies/03_political_strategies.txt` 里的 `NOT = { has_strategy = … }`）。
+    # 候选集**现读原版**（见 `strategy_candidates` 上那段 B87），并补两条兜底：
+    # `default` 与 `none` —— 否则"这张牌不在清单里"会变成日志里的一片沉默。
+    chain = [*strategy_candidates(vanilla), "ai_strategy_default"]
     strategies = "\n".join(
-        f"{tab * 3}{keyword} = {{\n"
-        f"{tab * 4}limit = {{ has_strategy = {name} }}\n"
-        f'{tab * 4}debug_log = "ZZPROBE AB;STRATEGY;{name};'
-        f'[THIS.GetCountry.GetNameNoFormatting]"\n'
-        f"{tab * 3}}}"
-        for keyword, name in zip(
-            ["if", *["else_if"] * (len(POLITICAL_STRATEGIES) - 1)],
-            POLITICAL_STRATEGIES,
-            strict=True,
-        )
+        [
+            *(
+                f"{tab * 3}{'if' if index == 0 else 'else_if'} = {{\n"
+                f"{tab * 4}limit = {{ has_strategy = {name} }}\n"
+                f'{tab * 4}debug_log = "ZZPROBE AB;STRATEGY;{name};'
+                f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+                f"{tab * 3}}}"
+                for index, name in enumerate(chain)
+            ),
+            f"{tab * 3}else = {{",
+            (
+                f'{tab * 4}debug_log = "ZZPROBE AB;STRATEGY;none;'
+                f'[THIS.GetCountry.GetNameNoFormatting]"'
+            ),
+            f"{tab * 3}}}",
+        ]
     )
     # ⚠️ **不做整体 re-indent**（2026-09-22 修）：这里以前写成
     # `.replace("\n" + tab * 2, "\n" + tab * 3)`，把三槽自报链的缩进整体右移一格。
@@ -744,6 +768,26 @@ def decisions_text(target: ProbeTarget) -> str:
     )
 
 
+def supported_game_version() -> str:
+    """探针声明的游戏版本 —— 与真 mod **同源**（`mod/data/*.toml` 的 `game_version`）。
+
+    ⚠️ 这里原来是写死的 `"1.14.3"`（2026-09-23 修）：探针是挂在真 mod 旁边一起加载的，
+    两边声明的版本不一致时启动器会对**探针**弹一次版本警告，看起来像"探针坏了"；
+    而"mod 声明哪个版本"的唯一来源是数据源（`modgen` 强制各档案一致），
+    读它才不会在下一次官方更新时又漏掉一处。
+    """
+    from . import modgen  # noqa: PLC0415  -- 避免 import 期把 modgen 的依赖链拉进来
+
+    archives = modgen.load_all()
+    if not archives:
+        # P13：读不到就说读不到，不猜一个版本号（猜出来的值会静默写进 metadata）。
+        raise RuntimeError(
+            "读不到任何档案数据源（mod/data/*.toml）—— 探针的 supported_game_version "
+            "与真 mod 同源，不能猜"
+        )
+    return archives[0].game_version
+
+
 def metadata_text() -> str:
     """探针 mod 的 metadata。"""
     arms = "→".join(step.role for step in LADDER)
@@ -753,7 +797,7 @@ def metadata_text() -> str:
                 "name": "ZZ Probe AB",
                 "id": "",
                 "version": "3.0",
-                "supported_game_version": "1.14.3",
+                "supported_game_version": supported_game_version(),
                 "short_description": (
                     f"阶段 3 A/B 探针：点一次决议武装臂阶梯（{arms}），"
                     f"第 {ARM_START['B']} 月自动施加冲击、第 {ARM_START['B2']} 月自动追加改革侧输入"
