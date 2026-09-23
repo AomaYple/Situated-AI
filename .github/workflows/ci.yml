@@ -138,6 +138,50 @@ jobs:
       # `v3 verify --from-snapshot` 混为一谈：那时快照里**没有**表格内容，
       # 也算不出那些表 —— 这轮把表格内容也记进了快照，才有了 `--offline` 这条。
 
+  bench:
+    # 基准进 CI（阶段 4 的出口判据之一：「闸门**与基准**进 CI」）。
+    #
+    # ⚠️ **为什么这一 job 不断言、只报告**（2026-09-24）：
+    # 绝对墙钟在共享 runner 上抖动极大（同一次提交能差一倍），拿它当门禁必然误报 ——
+    # 这正是这份 CI 此前把基准排除在外的原因（见上面 check job 里那句注）。
+    # 但「不进 CI」的代价是**性能没人看**：改动把某条热路径拖慢十倍也不会有人发现。
+    # 折中：**数字进 CI（进 job summary 与 artifact），断言留在本机** ——
+    #   * 本机的墙钟断言：`test_audit_leftovers.py::test_解析吞吐不低于下限`（带下限）；
+    #   * 本机的**确定性**不变量：`test_cache.py` / `test_audit_leftovers.py` 里
+    #     「并发下每个文件只真正解析一次」（misses == 文件数）—— 它不依赖墙钟，
+    #     所以它在**普通的并行套件**里就能跑，不需要单开 job。
+    # 于是 CI 这一 job 的职责是**可比性**：每次 push 都留一份同样口径的 JSON。
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: 安装（含 dev 依赖）
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: pytest-benchmark —— 不需要游戏的基准
+        # 必须清掉 addopts：xdist 开着时 pytest-benchmark 会自己禁用（见 pyproject 的注）。
+        # runner 上没有游戏 ⇒ 带 `_needs_game` 的那几类会自动 skip，跑到的都是合成样本
+        # （`SMALL` / `MEDIUM` / `TRICKY`），因此这份数字**跨机器口径一致**。
+        run: |
+          python -m pytest tools/tests/test_benchmarks.py \
+            -o addopts="" --benchmark-only --benchmark-json=bench.json -q
+
+      - name: 把基准数字写进 job summary
+        run: python tools/ci/bench_summary.py bench.json >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-json
+          path: bench.json
+
   lock:
     # 依赖锁这条**单开一个 job，固定 windows-latest**。
     #

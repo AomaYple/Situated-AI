@@ -188,6 +188,7 @@ CI runner 上没有游戏本体，所以「哪些命令能在无游戏环境跑�
 | `v3 modguard` / `v3 ai-surface --check`（**在线**） | **exit 2** | 闸门 ①② 要与原版键名、修正字段池取交集 ⇒ 无游戏时报「前置条件缺失」而不是"通过"（退出码 2 + 一句话，不是 traceback） | ❌（CI 用 `--offline`） |
 | `v3 citations`（**在线**） | **exit 1**（实测：850 条里 827 条报 missing） | 它要**打开原版文件**确认那一行在不在 ⇒ 无游戏时是**假红**。CI 上必须用 `--offline` | ❌（CI 用 `--offline`） |
 | `v3 cov` | 不适用 | 无游戏时集成用例被 `conftest` 跳过，覆盖率必然低于 86% 下限 ⇒ **门禁留在本机**，这不是遗漏 | ❌（刻意） |
+| `pytest-benchmark`（`bench` job） | **不断言** | 阶段 4 的出口判据要求「闸门**与基准**进 CI」。绝对墙钟在共享 runner 上会抖（同一次提交能差一倍）⇒ 拿它当门禁必然误报；所以这一 job **只把数字写进 job summary 与 artifact**，断言留在本机：`test_audit_leftovers` 的吞吐下限（墙钟）+ `test_cache` 的「并发下每个文件只解析一次」（**不依赖墙钟**，因此在普通并行套件里就能守） | ✅（只报告） |
 
 两条口径（别读错）：
 * **exit 2 不是"闸门不过"**，是"这台机器上跑不了"。**exit 1 才是判据不过** ——
@@ -204,7 +205,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-1616 条用例（`pytest --collect-only` 实测），
+1625 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -487,7 +488,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：1616 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：1625 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
