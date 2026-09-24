@@ -84,11 +84,12 @@ def test_原版自带的那两个异样文件都在且大小一致() -> None:
             missing.append(rel)
         elif path.stat().st_size != size:
             wrong.append(f"{rel}：期望 {size:,} B，实得 {path.stat().st_size:,} B")
-    assert not missing and not wrong, (
-        "原版自带的两个异样文件对不上（证据见 test_install_hygiene 模块注释）：\n  "
-        + "\n  ".join(missing + wrong)
+    assert not missing, (
+        "原版自带的异样文件不见了（证据见本模块注释）：\n  "
+        + "\n  ".join(missing)
         + "\n处置：先让 Steam 校验/更新把安装补全，再跑 `v3 tables --write` + `v3 verify --fix` 重冻基线。"
     )
+    assert not wrong, "原版自带的异样文件大小对不上：\n  " + "\n  ".join(wrong)
 
 
 @_needs_game
