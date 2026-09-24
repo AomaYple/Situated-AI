@@ -3766,8 +3766,8 @@
     "lines=862"
    ],
    "docs/design/backlog.md": [
-    "173:15a6ede30fc4c6fc",
-    "lines=185"
+    "175:15a6ede30fc4c6fc",
+    "lines=187"
    ],
    "events/1848.txt": [
     "430:40acb7feda6c3802",
@@ -36510,7 +36510,7 @@
    "06-本地化与界面资源.md::doc06 gfx 子目录": [
     "| `coat_of_arms` | 1,013 | 纹章图案与底色 |",
     "| `compound_nodes` | 162 | 粒子复合节点 |",
-    "| `cursors` | 130 | 光标（`.cur` 63 个 + 贴图） |",
+    "| `cursors` | 131 | 光标（`.cur` 63 个 + 贴图） |",
     "| `event_pictures` | 90 | 事件插画 |",
     "| `frontend` | 57 | 主菜单美术 |",
     "| `FX` | 57 | 着色器（`.shader` 27、`.fxh` 30） |",
@@ -36521,7 +36521,7 @@
     "| `media_aliases` | 1 | `media_aliases.txt` |",
     "| `models` | 10,252 | 3D 模型（`.mesh` / `.asset` / `.anim`） |",
     "| `particles` | 1,229 | 粒子与贴图 |",
-    "| `portraits` | 999 | 肖像贴图（大量 `_masks` / `_normal` / `_properties` 三件套） |",
+    "| `portraits` | 1,000 | 肖像贴图（大量 `_masks` / `_normal` / `_properties` 三件套） |",
     "| `removed` | 1 | 已废弃贴图 |",
     "| `skins` | 1 | `dummy.txt` |",
     "| `state_pictures` | 35 | 州面板插画 |",
@@ -36601,7 +36601,7 @@
    "08-目录全量清单.md::doc08 ROOT 一级结构": [
     "| `binaries` | 40 | 2 | 261.18 MB | 可执行文件与原生依赖 DLL（victoria3.exe、fmod、DX/Vulkan 编译器等） |",
     "| `clausewitz` | 753 | 47 | 114.71 MB | Clausewitz 引擎**共享层**：字体、通用 gfx/gui、编辑器工具 UI、输入配置文件 |",
-    "| `game` | 27,728 | 1,988 | 17,055.80 MB | 游戏**内容层**（脚本数据库、事件、本地化、GUI、贴图、地图数据、DLC）；mod 覆盖的目标 |",
+    "| `game` | 27,730 | 1,988 | 17,055.94 MB | 游戏**内容层**（脚本数据库、事件、本地化、GUI、贴图、地图数据、DLC）；mod 覆盖的目标 |",
     "| `jomini` | 493 | 72 | 2.30 MB | Jomini 通用框架层（成就、多人、账号、社交、通用 GUI/本地化、通用脚本数据库） |",
     "| `launcher` | 12 | 2 | 188.18 MB | Paradox 启动器本体（dowser.exe）与安装包、主题资源 |",
     "| `platform_specific_game_data` | 2 | 0 | 0.02 MB | 平台相关日志配置 JSON |"
@@ -36832,7 +36832,7 @@
     "| `dlc_metadata` | 2 | 2 | 0 | 0 | `.md:1, .txt:1` | DLC 元数据定义（`00_dlc_metadata.txt` 1,217 B + 官方 md 1,158 B） |",
     "| `events` | 328 | 130 | 12 | 4.93 | `.txt:328` | 事件脚本：130 个主题事件文件 + 12 个专题子目录 |",
     "| `fonts` | 90 | 1 | 11 | 343.05 | `.otf:41, .ttf:37, .txt:9, .font:1, .pdf:1` | 全语言字体族（含 CJK NotoSans/NotoSerif SC/JP/KR）+ `fonts.font` |",
-    "| `gfx` | 19,161 | 2 | 1,370 | 9,690.00 | `.dds:11294, .mesh:3456, .asset:1621, .anim:601, .editordata:585` | **全部图形资源**：模型、贴图、粒子、头像、地图视觉 |",
+    "| `gfx` | 19,163 | 2 | 1,370 | 9,690.15 | `.dds:11294, .mesh:3456, .asset:1621, .anim:601, .editordata:585` | **全部图形资源**：模型、贴图、粒子、头像、地图视觉 |",
     "| `gui` | 207 | 145 | 15 | 5.78 | `.gui:204, .layout:1, .md:1, .shortcuts:1` | 游戏 UI 定义（145 个直接 `.gui` + 15 个子目录） |",
     "| `input_profile` | 2 | 2 | 0 | 0.01 | `.md:1, .profile:1` | `default.profile` (7,983 B) 按键绑定 + 官方文档 |",
     "| `interface` | 1 | 1 | 0 | 0.05 | `.txt:1` | `messagetypes.txt` (56,049 B)：消息类型定义 |",
@@ -36863,7 +36863,7 @@
    "08-目录全量清单.md::doc08 gfx 子目录": [
     "| `coat_of_arms` | 1,013 | 4 | `.dds:1008, .tga:5` | 纹章图元 |",
     "| `compound_nodes` | 162 | 0 | `.compound:81, .editordata:81` | 复合节点（粒子/材质图） |",
-    "| `cursors` | 130 | 1 | `.png:65, .cur:63, .ani:2` | 鼠标光标 |",
+    "| `cursors` | 131 | 1 | `.png:65, .cur:63, .ani:2` | 鼠标光标 |",
     "| `event_pictures` | 90 | 1 | `.bk2:77, .dds:13` | **事件配图（77 个 Bink 影片）** |",
     "| `frontend` | 57 | 11 | `.dds:56, .shader:1` | 主菜单美术 |",
     "| `FX` | 57 | 1 | `.fxh:30, .shader:26, .settings:1` | 着色器 |",
@@ -36874,7 +36874,7 @@
     "| `media_aliases` | 1 | 0 | `.txt:1` | 媒体别名 |",
     "| `models` | 10,252 | 1,058 | `.dds:4558, .mesh:3456, .asset:1621, .anim:601, .png:8` | **3D 模型主体**（最大目录树） |",
     "| `particles` | 1,229 | 23 | `.editordata:504, .particle2:504, .dds:218, .png:1, .settings:1` | 粒子效果 |",
-    "| `portraits` | 999 | 21 | `.dds:965, .txt:32, .psd:2` | 人物画像 |",
+    "| `portraits` | 1,000 | 21 | `.dds:965, .txt:32, .psd:2, .dmp:1` | 人物画像 |",
     "| `removed` | 1 | 0 | `.dds:1` | 已移除资源占位 |",
     "| `skins` | 1 | 0 | `.txt:1` | 皮肤定义 |",
     "| `state_pictures` | 35 | 0 | `.dds:35` | 州图片 |",
@@ -36970,7 +36970,7 @@
     "| `log_settings_live.json` | 10,947 | 生效中的日志级别配置 |"
    ],
    "08-目录全量清单.md::doc08 全局总数": [
-    "| `ROOT\\game` 全树 | **27,728** | **1,988** | **17,055.80 MB** |",
+    "| `ROOT\\game` 全树 | **27,730** | **1,988** | **17,055.94 MB** |",
     "| `ROOT\\binaries` | 40 | 2 | 261.18 MB |",
     "| `ROOT\\clausewitz` | 753 | 47 | 114.71 MB |",
     "| `ROOT\\jomini` | 493 | 72 | 2.30 MB |",

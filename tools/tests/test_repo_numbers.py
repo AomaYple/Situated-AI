@@ -71,7 +71,11 @@ def test_README里的机械数字与仓库现状一致() -> None:
     root, tools = _readmes()
     checks: list[tuple[str, str]] = [
         ("README 的知识库篇数", f"**{len(DOCS)} 篇"),
-        ("README 的知识库字符总量", f"| {_docs_chars():,} 字符 |"),
+        # 这一条的口径是**原始 `len(text)`**（含 Markdown 记号与换行），而授权节
+        # 还有另一个同样合法的数（`test_quote_audit` 用的**折叠空白后**的长度）。
+        # 所以针必须带上前面的「知识库正文总量」标签，否则两个数谁在都算过
+        # —— 实测踩过：改了原始口径那个，`test_quote_audit` 报的却是另一个。
+        ("README 的知识库字符总量", f"知识库正文总量 | {_docs_chars():,} 字符"),
         ("README 的生成表张数", f"{_tables()} 张"),
         ("README 的测试文件数", f"{len(TEST_FILES)} 个测试文件"),
         ("tools/README 的断言条数", f"{_claims()} 条断言核验"),

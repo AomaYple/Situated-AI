@@ -11,10 +11,13 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
 import pytest
 from _helpers import signature
 
 from pdx import cache
+from pdx.model import Assignment, Block, ParsedFile
 from pdx.parser import parse_file
 
 pytestmark = pytest.mark.unit
@@ -134,6 +137,73 @@ def test_clear同时清零计数(tmp_path) -> None:
     cache.parse_cached(p)
     cache.clear()
     assert cache.stats() == {"条目": 0, "命中": 0, "未命中": 0}
+
+
+# ── 身份判据（2026-09-24 那次「同一棵树、两份数字」事故的回归）──
+
+
+def test_自己解析出来的结果通过身份判据(tmp_path) -> None:
+    p = tmp_path / "a.txt"
+    p.write_text(_SAMPLE, encoding="utf-8")
+    assert cache._same_identity(parse_file(p)) is True
+
+
+def test_外来身份的解析结果要被判否() -> None:
+    """构造一棵**长得一样、类却不一样**的树 —— 正是双模块身份造成的形态。
+
+    ``pdx`` 与 ``tools.pdx`` 都指向同一份源码（pytest 的 rootdir 机制让前者
+    可用，``python -m tools.pdx.cli`` 走后者），于是 ``Block`` 有两个互不相认
+    的类对象，而磁盘缓存按模块名 pickle。后果不是报错而是**静默变小**：
+    ``isinstance(v, Block)`` 全判否，``snapshot._field_names`` 把整棵 AST
+    过滤掉（``fields`` 域 27,476 → 4,285 个键）。所以判据必须是「类对象是不是
+    同一批」，比 ``__module__`` 字符串会被名字骗过去。
+
+    ⚠️ 造这条假树时**必须用真的 ``Block`` 与真的 ``Assignment`` 当容器**，
+    只把叶子的类换掉：``top_assignments()`` 自己带 ``isinstance(a, Assignment)``
+    过滤，若连赋值语句都用替身类，它会筛出**空**列表，判据就恒真了
+    —— 写这条用例时先踩了一次（``_same_identity`` 返回 True）。
+    """
+
+    @dataclass
+    class LookalikeBlock:
+        items: list = field(default_factory=list)
+        line: int = 0
+
+    tree = ParsedFile(
+        path="<fake>",
+        root=Block(items=[Assignment("nope", "=", LookalikeBlock())]),
+    )
+    assert cache._same_identity(tree) is False
+
+
+def test_身份不对的缓存条目被丢弃并重算(tmp_path) -> None:
+    """磁盘上那条身份不对的条目必须**被删掉**，而不是每次运行都被判否一遍。
+
+    同时验证自愈：删掉之后这一轮照常解析，拿到的还是正确结果。
+    """
+    p = tmp_path / "a.txt"
+    p.write_text(_SAMPLE, encoding="utf-8")
+    good = parse_file(p)
+    sig = cache._signature(str(p))
+    assert sig is not None
+    shard = cache._shard_of(str(p))
+
+    @dataclass
+    class LookalikeBlock:
+        items: list = field(default_factory=list)
+        line: int = 0
+
+    poisoned = ParsedFile(
+        path=str(p),
+        root=Block(items=[Assignment("old", "=", LookalikeBlock())]),
+    )
+    cache._disk_store(sig, shard, poisoned)
+    assert cache._disk_load(sig, shard) is None, "身份不对的条目必须当作未命中"
+    assert sig not in cache._state.shards[shard], "而且要从分片里删掉（否则每轮都白判一次）"
+
+    cache._disk_store(sig, shard, good)
+    assert cache._disk_load(sig, shard) is not None
+    assert signature(cache.parse_cached(p)) == signature(good)
 
 
 @pytest.mark.integration

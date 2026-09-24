@@ -34,6 +34,12 @@ mod 分析同理：多个 mod 覆盖同一个原版文件时，那个文件会�
   —— 这比「记得手动清缓存」可靠；
 * **磁盘层坏了不影响正确性**：读失败 / 反序列化失败 / 结构不对，一律当作未命中
   并删掉那条，然后正常解析；
+* **身份不对的条目也当作未命中**（:func:`_same_identity`）：本包有 ``pdx`` 与
+  ``tools.pdx`` 两个合法导入名，它们各自拥有一套 ``Block`` / ``Assignment`` /
+  ``Scalar`` 类对象，而 pickle 按模块名还原。若不管这一层，
+  ``isinstance(v, Block)`` 会静默全判否、整棵 AST 被下游过滤掉，
+  数字变小却毫无报错 —— 实测把快照的 ``fields`` 域从 27,476 个键打到 4,285。
+  判据是「三个类对象是否为同一批」，不看名字；
 * **写失败静默**：只读文件系统、磁盘满、权限不足都只是「没有磁盘缓存」，
   绝不让缓存故障变成解析故障。
 
@@ -54,13 +60,10 @@ import zlib
 from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from . import config
+from .model import Assignment, Block, Node, ParsedFile, Scalar
 from .parser import parse_file as _parse_file
-
-if TYPE_CHECKING:
-    from .model import ParsedFile
 
 #: 磁盘缓存的结构版本。**解析结果的结构变了就 +1**（字段增删、语义变化）。
 #: 与引擎指纹配合：改代码时 mtime 会让旧条目失效，改结构时这里是双保险。
@@ -86,6 +89,50 @@ MIN_ENTRIES_TO_PERSIST = 200
 
 #: 参与「引擎指纹」的模块文件。改了任何一个，整个磁盘缓存自动失效。
 _ENGINE_SOURCES = ("parser.py", "model.py", "lexer.py", "cache.py")
+
+#: 一条解析结果里合法的节点类型。**必须是本模块导入的那三个类对象**，
+#: 见 :func:`_same_identity` —— 这正是 2026-09-24 那次「同一棵树、两份数字」
+#: 事故的判据。
+_NODE_TYPES = (Assignment, Block, Scalar)
+
+
+def _same_identity(pf: ParsedFile) -> bool:
+    """反序列化出来的节点类，是否就是本模块这一套？若不是，这条缓存不能用。
+
+    为什么需要这一条（真实事故，不是假想）
+    ------------------------------------
+    本包有**两个合法的导入名**：``pdx``（pytest 的 rootdir 机制把 ``tools/``
+    加进 ``sys.path``，于是 ``from pdx import ...`` 到处可用）与 ``tools.pdx``
+    （``python -m tools.pdx.cli`` 走这条）。两者都指向同一份源码，但 CPython
+    会把它当成**两个模块对象**，于是 ``pdx.model.Block`` 与
+    ``tools.pdx.model.Block`` 是**两个互不相认的类**。
+
+    磁盘缓存按模块名 pickle：谁先写进去，后来者就拿到谁的身份。实测后果是
+    静默而严重的 —— ``isinstance(v, Block)`` 全判否，于是
+    ``snapshot._field_names`` 把整棵 AST 都过滤掉：``fields`` 域从
+    27,476 个键掉到 4,285 个，``acceptance_statuses`` 5 个块一个不留，
+    ``defines`` 命名空间从 67 掉到 23。**没有任何异常、没有任何日志**，
+    只是数字变小了 —— 正是本模块开头承诺「不会发生」的那类失效。
+
+    判据取「三个类对象是否为同一批」而不是比 ``__module__`` 字符串：
+    名字可以相同而对象不同（这就是事故本身），身份则不会骗人。
+
+    走法是**迭代**的、一发现不对就返回：正常条目只花一次顶层循环；
+    有问题的条目通常第一个赋值就判否，不会为了判否把整棵树走完。
+    """
+    for a in pf.top_assignments:
+        if type(a) is not Assignment:
+            return False
+        stack: list[Node | None] = [a.value]
+        while stack:
+            node = stack.pop()
+            if node is None:
+                continue
+            if type(node) not in _NODE_TYPES:
+                return False
+            if isinstance(node, Block):
+                stack.extend(node.items)
+    return True
 
 
 @dataclass
@@ -233,9 +280,23 @@ def _load_shard(index: int) -> dict[str, tuple[int, ParsedFile]]:
 
 
 def _disk_load(sig: str, shard: int) -> ParsedFile | None:
-    """按内容指纹取一条；取不到返回 ``None``。"""
-    entry = _load_shard(shard).get(sig)
-    return entry[1] if entry is not None else None
+    """按内容指纹取一条；取不到、或取到的**不是同一套类**时返回 ``None``。
+
+    身份不对的那条会被就地删掉：它永远不会变对，留着只会让同一个文件
+    在每次运行里都被判一次否（而且它对应的正是「另一套导入名」写下的
+    结果，下一次同名的调用者还会撞上）。删掉之后这一轮照常解析并重新
+    入库 —— 缓存自愈，不需要人工 ``v3 cache --clear``。
+    """
+    entries = _load_shard(shard)
+    entry = entries.get(sig)
+    if entry is None:
+        return None
+    parsed = entry[1]
+    if not _same_identity(parsed):
+        del entries[sig]
+        _state.dirty.add(shard)
+        return None
+    return parsed
 
 
 def _disk_store(sig: str, shard: int, parsed: ParsedFile) -> None:

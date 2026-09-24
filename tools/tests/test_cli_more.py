@@ -172,12 +172,57 @@ def test_verify_漂移分支不会因富文本崩掉(monkeypatch) -> None:
     assert drift.describe()[:12] in result.output
 
 
-def test_verify_fix_claims_在一致时早退() -> None:
-    """`--fix-claims` 照单全收实得值 —— 但「本来就一致」时不许动断言表。"""
+def test_verify_fix_claims_只动_只匹配的那几条(tmp_path) -> None:
+    """``--fix-claims`` 是**写盘**操作 —— 所以这里只让它写一份**副本**。
+
+    为什么不在真仓库上跑：``--fix-claims`` 的语义是「照单全收实测值」，
+    因此只要本机安装与断言表有出入（例如官方往游戏目录里补回两个文件），
+    它就会**真的改写** ``tools/pdx/verify.py``，随后这条用例才在断言上失败 ——
+    文件已经被改了。实测踩过：2026-09-24 的一次并行跑里，``tree.game`` 一族
+    5 条期望值就是这样被就地改掉的（与 B91「用例改真实文档」同一类事故）。
+
+    ``fix_claims`` 本来就有 ``source=`` 参数（供测试指向副本），这里用它。
+    副本不需要是合法 Python：只要够得着那一个期望值字面量，就能验证
+    「按 id 精确换值、别的字节一律不碰」。
+    """
+    from pdx import verify
+
+    claim = next(c for c in verify.CLAIMS if c.id == "tree.game")
+    table = tmp_path / "verify.py"
+    table.write_text(
+        "CLAIMS = [\n"
+        '    Claim(\n        "tree.game",\n        "08-目录全量清单.md",\n'
+        '        "game 全树递归文件数",\n        "tree_files",\n        "game",\n'
+        f"        {claim.expected},\n    ),\n"
+        "]\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    original = table.read_text(encoding="utf-8")
+
+    edits, _skipped = verify.fix_claims(source=table, write=True, only="tree.game")
+    after = table.read_text(encoding="utf-8")
+
+    if not edits:  # 本机没有游戏：量不出来，那就什么都不该写
+        assert after == original, "量不出来时不许改断言表"
+        return
+    assert [e.id for e in edits] == ["tree.game"]
+    assert after != original
+    assert f"        {edits[0].new},\n" in after
+    assert str(claim.expected) not in after.split("tree_files")[1].split(")")[0]
+
+
+def test_verify_fix_claims_只跑一条时不碰真断言表() -> None:
+    """走 CLI 的真路径，但用 ``--only`` 选一个**匹配不到**的 id。
+
+    这样跑的是真实写盘分支（不是模拟），而匹配集为空 ⇒ 它必须一个字节都不改。
+    「一致时早退」那条判断因此在任何机器上都成立：有游戏时它证明没匹配就
+    不写，没游戏时它证明量不出来也不写。
+    """
     table = config.REPO / "tools" / "pdx" / "verify.py"
     before = table.read_text(encoding="utf-8")
-    result = _run("verify", "--fix-claims")
-    assert table.read_text(encoding="utf-8") == before, "一致时不该改断言表"
+    result = _run("verify", "--fix-claims", "--only", "__no_such_claim__")
+    assert table.read_text(encoding="utf-8") == before, "--only 没匹配到就不该改断言表"
     if result.exit_code == 0:
         assert "无需改动" in result.output
     else:  # 本机没有游戏：_require_game 会以「跑不了」退出 2
