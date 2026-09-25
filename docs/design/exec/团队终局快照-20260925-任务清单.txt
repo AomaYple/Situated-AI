@@ -1,0 +1,397 @@
+Team "长程完善" — 长程目标（轮数无限，直到完成）：① 优化并行测试的内存占用；② 严格遵守 docs/design/01-大方向.md，彻底完善阶段 0–7 的全部出口判据。用户已预授权：「给你所有权限，不需要再问我，一切以完成mod为最高目标」——因此本轮计划内的方向性取舍（新增 ai_strategy_sitai_* 牌、按 01-大方向 §5 失败处理调整档案抽象）已获批准，执行中不再回问。用户四条原则：正确性第一速度第二；所有仓库文件 UTF-8 无 BOM + LF（引擎侧 mod/** 与 tools/probe/** 按引擎要求保留 BOM）；支持 Windows/Linux/macOS；不设轮数上限。
+Loop: running — Work remains on the shared task list; wait for the scheduler or complete owned tasks.
+Viewing as: captain
+Members (5):
+  - 内存分析师 [性能 / 内存分析工程师：负责并行测试内存占用的测量基线、根因定位与修复实现] idle/ready · deepseek-official/deepseek-flash · reasoning max
+  - 档案工程师 [mod 档案工程师：按大方向 §0 派生义务与 §5 实现期纪律，改造 9 份档案的目标牌与目标函数表] working/running · deepseek-official/deepseek-flash · reasoning max
+  - 功能工程师 [mod 功能工程师：新增 ai_strategy_sitai_* 条件牌并实机验证、阶段 6 难度与本地化、阶段 4 压力剧本对照] idle/ready · deepseek-official/deepseek-flash · reasoning max
+  - 验证员 [独立验证工程师：只跑验证，不改实现；产出机器可复核的证据（退出码、命令输出、计数器）] idle/ready · deepseek-official/deepseek-flash · reasoning max
+  - 评审员 [质量评审：审查实现是否违反冻结清单 F1–F12 与原则 P1–P14，给出 pass / needs_revision / reject 判决与定位到文件的发现] idle/ready · deepseek-official/deepseek-flash · reasoning max
+Tasks (105):
+  - t2 [completed] requirements r1 verdict pass attempt 1 编码闸门口径：盘点受控文件、定死 BOM/LF 判据与引擎侧例外 → 验证员
+      output: 编码闸门口径已定死并写入 docs/design/exec/编码口径审计.md（21,402 B，UTF-8 无 BOM + LF，sha256 de95c767…）。结论：仓库侧一切文本 UTF-8 无 BOM + LF，唯一例外是 mod/** 与 tools/probe/** 下的 .txt/.yml 必须带 BOM。
+
+【两张清单 + 实况】受控文件 369（git ls-files）= 文本 366 + 二进制 3（3 个探针 UI PNG：前 8000 字节 NUL 在第 8 字节，与 git 文本判法同源）。清单① 必须带 BOM = 117 条（mod 57：localizat
+  - t4 [failed] implementation r1 attempt 1 仓库文件口径闸门：把「UTF-8 无 BOM + LF」扩成覆盖全部受控文件的用例 → 验证员 (deps: t2)
+      output: t4 主体已交付、但**按合约判 failed**：唯一红的是四条门禁里的 `mypy`，而它红在 in-scope 之外的**已提交**文件上。诚实起见不把它算成 pass。
+
+【已完成的部分（可复核）】
+· tools/tests/test_repo_hygiene.py 重写：扫描范围 rglob（实测 200 条）→ `git ls-files -z` 全量（受控 369 = 文本 366 + 二进制 3）；仓库侧不许带 BOM / 引擎侧（mod/|tools/probe/ 的 .txt|.yml，117 条）必须带 / 两侧都不许有 0D 0A；二进制两道排除（后缀表 + 前 80
+  - t9 [completed] requirements r1 verdict pass attempt 1 档案目标牌重定与抽象裁决的口径：凭什么换牌、换哪张、代价多大 → 档案工程师
+      output: 产物：docs/design/exec/阶段5-目标牌口径.md（148 行，26,797 B，UTF-8 无 BOM + LF，sha256 41878B83…）。只出结论，未动 mod/data 与 tools/pdx。
+
+口径（凭什么换牌）= 五道门，任一门写不出就不许换：①目标函数行（须被 01a §K 政治列点名，或点名了 ↔/括号两向；依据 01-大方向:35）②修什么（须写出可观测毛病；:37）③身份项优先（专用牌先于通用牌；01a:41-45）④门可查实（possible 未实测不得当依据；P13 + 批次3 §二·补的静默教训）⑤不假真（对这份档案开局即为真的判据留空；B86
+  - t10 [completed] requirements r1 verdict pass attempt 1 以国家身份开局的实机自动化口径：难度规则界面与双语渲染怎么取证 → 功能工程师
+      output: 结论落在一页文档：docs/design/exec/阶段6-国家身份开局-取证口径.md（390 行 / 38060 B，UTF-8 无 BOM + LF，只改了这一个文件）。
+
+核心结论（都有出处，不靠猜）：
+1) 入口选「主菜单 → 新游戏（GameSetup 目标屏）」，不选观察者局那个大厅：大厅**也**有规则按钮（multiplayer_lobby.gui:540-607），但它只有「随机国家 / 观察」两个开局键（:803-832）⇒ 拿不到 RUS；而 G3 三行的 JE 是 `c:RUS ?= this`（sitai_ru_defeat_window.txt:19-21）。目标
+  - t11 [completed] requirements r1 verdict pass attempt 1 内存测量基线与预算口径：定死「内存占用」怎么量、上限是多少 → 内存分析师
+      output: 内存口径 + 基线 + 预算 + 主犯排名全部落盘。测量唯一入口：`.venv\Scripts\python.exe tools/probe/mem_baseline.py run`（run/one/check/rank/list；跨平台、只用标准库），三组必测各产出 <tag>.summary.json/.samples.csv/.procs.csv，索引 baseline.json（+ 冻结拷贝 baseline-优化前.json）。
+
+基线（本机 i7-11800H 8C16T / 15.80 GiB / Win11 26200 / Py3.14.7）：
+- `-n 4`：整套 8736
+  - t12 [failed] implementation r1 attempt 1 修并行测试内存占用：按最大组件动手，正确性与覆盖率零牺牲 → 内存分析师 (deps: t11)
+      output: **内存三层判据达标（`--compare` 退出码 0），但 `v3 cov` 未跑 + 两条仓库级门禁红在别人文件里 ⇒ 按合约判 failed、不掩盖。**
+
+实现（四个 inScope 文件全落盘）：`tools/pdx/cache.py` v2 布局（`shard-NN.bin` 数据段 + `shard-NN.idx` 偏移索引；`_read_entry` 按偏移只解一条；`_write_shard` 合并写「旧条目按字节复制 + 新解析的」；`_state.shards` → `pending`+`indexes`；`_disk_store` 到 `MAX_PENDING_ENT
+  - t13 [completed] verification r1 attempt 1 独立验证：内存优化达标且未牺牲正确性与覆盖率 → 验证员 (deps: t39,t58,t59)
+      output: 【t13 独立验证 = **通过**（降幅过 / 预算未过照实登记 / 需修订 0 条 + 2 条 low）】交付物 = `tools/reports/内存优化复核.md` **只追加**我的章节（+12,711 B / 121 行；27,637 B `86b037f6c23780b2` → **40,348 B `ec43dfaeb93d075f`**，CR 0 / 无 BOM / 末尾 LF，旧前缀逐字节未动 ✓）。
+
+**我自己现跑（同一棵树：`cache.py` = 38,817 B / LF 790 / sha16 `462ebb695f35a52e` / mtime 04:57:4
+  - t14 [completed] review r1 verdict pass attempt 1 评审：内存优化是否真达标、是否牺牲了正确性 → 评审员 (deps: t39,t13)
+      output: **t14 判决：`pass`**（内存降幅真实、正确性等价经我独立复跑、无「少干活/成本外移」、四道约束未松动；附 4 条 low 备注，均不减损结论）。报告 = `tools/reports/内存优化评审.md`（9,412 B / LF 79 / CRLF 0 / 无 BOM / 末尾 LF / sha256[:16] `091e5261e4ddf695`，本轮我对仓库的唯一写入）。**独立性**：执行人 = 评审员；`t12`/`t13` 我都没参与过；读数全是我自己跑的或从 `tools/out/mem/` 现读，**没有一条取自文档自述**。
+
+**三层判据（§6.5）**：**L
+  - t15 [failed] requirements r1 verdict needs_revision attempt 3 新增 ai_strategy_sitai_* 条件牌的口径：可选择性、递牌通道与占槽率基线 → 评审员
+      output: 独立复核（只读，未改文档）判决 = needs_revision。两处指定证伪的结果：①§2.1 anti_interest_groups 行**确认错**（第 6 格应为 1006，实测三条独立证据同向；根因是 §8:359 那条「复算命令」结构上看不见 `={ `）→ R1+R2（均 blocker）。②§3.1 的 34/35/0/4 **确认正确**（我的第一个解析器在 00_default_strategy.txt 上漂深导致 33/34，用「按卡块切段 + 直接打开 9474-9481 + 仓库快照」三法交叉后才定为 34/35：35 张牌 / 34 张带 possible / 3
+  - t16 [completed] implementation r1 attempt 1 重定 9 份档案的目标牌：让每张牌从目标函数推出来，并取到危机期读数 → 档案工程师 (deps: t9)
+      output: t16 完成（含 captain 追加的 K2 收口）。
+
+【交付物（in-scope）】mod/data/ 九份档案的目标牌声明改造（ru/eg/sp=progressive；tr/au/cn/pe/bv=留空；brz=conservative_agenda；唯一递牌 ru 在白名单内）+ docs/design/exec/档案目标牌-实机读数.md（312 行，UTF-8 无 BOM + LF）。
+
+【实机】一局 66 游戏月：自报 1,904 = 计入 1,904 行、观测块 67；和平期占槽率 0.0%（0/12）→ 危机期 47.3%（26/55）；环境还原 0 进程 / conte
+  - t17 [failed] verification r1 attempt 1 独立验证：档案目标牌改造与抽象裁决是否符合大方向 → 验证员 (deps: t16)
+      output: t17 完成，**结论 = 需修订**（1 条 medium 发现；合约 10 条验收**全部通过**，唯一的红是 `[cards].why` 里一句被 backlog B52 判定「错的、必须改」的话没改完）。报告：`tools/reports/档案目标牌复核.md`（17,151 B → 加 §9 后见文末读数 / 非 BOM / LF；本轮我对仓库的唯一写入）。
+
+**为什么判 red 而不是 pass（一句话）**：`mod/data/ru_defeat.toml:233` 的 `[cards].why` 仍写「**JE 会被原版那 18 张读 has_journal_entry 的牌
+  - t18 [completed] implementation r1 attempt 2 新增条件牌并用实机证明它会被引擎选中 → 内存分析师 (deps: t16)
+      output: t18 收口（attempt 2）= **completed**。判别性实验判决 = **局面 1「门在重掷路径上成立」**，契约 17 条按改写后的口径逐条判：**全过**；合约 `Verify:` 里剩下的五条逐条现跑全 exit 0。
+
+**实验（本卡核心）**：`stage3_rerun.py --archive ru_defeat --fresh-logs --months 24` + `V3_AB_MODE=control`，**exit 0**，tick `1838.2.1`（≈25 个月）。
+- (a) 门直读 `GATE;yes` **×25** / `no` ×0（门名从数
+  - t19 [completed] verification r1 attempt 2 独立验证：新增牌是否真被引擎选中、占槽率三态是否成立 → 验证员 (deps: t18)
+      output: t19 attempt 2 **completed**（契约 amend 后，三条 verify 全绿）。交付页 `tools/reports/新增牌复核.md` 追加 §9 补记：11,771 B → **18,859 B / LF 119 / CR 0 / 无 BOM / 末尾 LF / sha16 `e17ed97aff259945`**，旧前缀逐字节未动（§7 那张四行表 = attempt 1 历史，一字未改；§9 用现读覆盖）。\n\n**verify 三条现跑全绿**：`modgen --check` exit 0（68 产物逐字节一致）/ `verify` exit 0（234
+  - t20 [pending] verification r1 attempt 0 实机读数补记：改造后的档案与新增牌在实机里到底改变了什么 → 功能工程师 (deps: t16,t18)
+  - t21 [pending] verification r1 attempt 0 整轮收口：13 道门禁复跑、阶段出口判据逐条对账、清零残留 → 验证员 (deps: t14,t19,t20,t22,t24,t35,t36,t37,t38,t39,t40,t47,t48,t49,t50,t51,t52,t53,t55,t56,t57,t58,t59,t60,t62,t63,t65,t66,t67,t68,t69,t70,t71,t72,t73,t74,t75,t76,t77,t78,t79,t80,t81,t82,t85,t86,t87,t88,t89,t90)
+  - t22 [pending] verification r1 attempt 0 阶段 4 ④ 补账：标准压力剧本对照跑完，给 0.5ms/帧 口径一个能判决的数 → 功能工程师 (deps: t18,t45,t53,t73,t76)
+  - t23 [cancelled] requirements r2 attempt 1 requirements-round-2 → 功能工程师
+      output: 按 captain 指示**停掉**（t23 是系统自动生成的、与 t15 重叠的重复卡；test 0 的实机部分已移交 t18 首道门，t15 由验证员独立复核收口）。
+
+**本卡没有任何产出需要丢弃，也没有留下改动**：本轮只做了三件不写盘的事 —— ① claim + in_progress；② 给内存分析师发了一条协调请求（随后撤回）；③ 只读地读了 `tools/pdx/h1_probe.py` / `tools/pdx/h1.py`（为 gate 变体做准备）。**没有新建/修改任何文件，没有起游戏，没有碰 `content_load.json`，没有跑任何 pytest。**
+
+
+  - t24 [completed] implementation r1 attempt 2 修掉阻塞 mypy 门禁的 5 个既有错（三处测试文件，已提交的旁路红） → 内存分析师 (deps: t39)
+      output: **t24 按「无红可修」如实收口 —— 提交 `completed`（全量 mypy 基线就是 0 条、收工也是 0 条；本 attempt 一字未改）。**
+
+**① 基线（合约那条命令、不带文件参数、仓库原配置）**：`.venv\Scripts\mypy.exe --no-incremental` = **`Success: no issues found in 140 source files`、exit 0** ⇒ 清单为空，**没有红可修**。队长 00:44 的 3 条起点参照在开工前已清零，两条原因逐条核过：`test_verify.py:430` 的 ignore 已是 `
+  - t25 [completed] requirements r2 verdict pass attempt 1 requirements-round-2 → 验证员
+  - t26 [completed] requirements r2 verdict pass attempt 1 基线补测：剔除被污染的组，给出一组完整干净的并行基线 + 峰值同步化机制 → 内存分析师 (deps: t11)
+      output: t26 结案（范围内只动 `docs/design/exec/并行测试内存基线.md` 与 `tools/probe/mem_baseline.py`）：新增 §5.11「完整干净的并行基线 + 三类失败清单（结案）」，把 t26 九条判据逐条落成可复算的读数与命令；`n1` 三处标注作废（外部占用污染 + 482 条级联）；两组完整基线（3187.0/1427.1/793.0 s/1 失败；3472.1/1938.2/964.7 s/15 失败）；三类失败清单核账 1=0+1+0、15=13+1+1、18=7+11+0（无未归类项，㈠类 7→13 是新增磁盘层用例的预期扩大）；污染前置检查与
+  - t27 [completed] requirements r2 verdict pass attempt 1 requirements-round-2 → 评审员
+      output: t27（requirements 第 2 轮）完成，verdict=pass：t15 的 7 条 finding（R1–R7）已全部落到 `docs/design/exec/阶段5-新增牌-口径.md`，并按验收要求把三张台账钉进了 `tools/tests/test_ai_surface.py`（三条 integration 用例）。**只改了这两个文件**。逐条：①§2.1 anti_interest_groups 行改成 `54 / 220 / 424 / 620 / 804 / 1006 / 1123 / 1225 / —`，括号写明 1006 属天命牌、1123 才是坦志麦特、九张里
+  - t28 [completed] implementation r3 verdict pass attempt 1 口径文档改稿：把 t18 的设计从「两段式权重」改成落在生成器能力内的简化设计 → 功能工程师
+      output: 产物：`docs/design/exec/阶段5-新增牌-口径.md`（476 行 / 50,546 B，UTF-8 无 BOM + LF，栅栏 10 = 成对；**只改这一个文件**）。
+
+**9 处必改逐处落地**（位置按评审员给的坐标，改后行号有位移）：`:23` 去掉门外权重 0、改成"只靠引擎重掷 + 单值 40"+ 明写"简化后无第二道防线 ⇒ 证据只剩 A 臂"；`:24` `weight = { value = 40 }` 单值；`:130` §2 weight 行；`:162-167` §2 数据源段**整体反转**（能力边界是事实 → 本设计落在边界内 → 不许改生成器、不
+  - t29 [failed] verification r3 verdict needs_revision attempt 1 独立复核：口径文档 v4 增量（只核 9 处改动与两处实质后果） → 验证员 (deps: t28)
+      output: t29 独立复核完成：**verdict = needs_revision**（2 条，均 low，均局部改写；总标题与两处实质后果、官方注释引用、编码、无越界全部通过）。
+
+**身份与范围（写在结论里的三件）**
+· 我是本文件四版以来**唯一没写过任何一版的人**（t15 初稿 / t25 改稿 / t27 台账轮 / t28 改稿都不算在我头上；本轮 t29 我只读、未改一字 —— 复核前后 `git status` 仍是 `??`）。
+· 范围**仅限 v4 增量**（9 处必改 + 3 处清单外改动 + 两处实质后果 + 官方注释引用）；**不含** v3 已裁决的 7 条。
+· 所
+  - t30 [completed] implementation r1 attempt 1 修掉 test_ai_surface.py 上两条既有 mypy 错（先前被我误判为环境噪声） → 验证员
+      output: t30 交付：`tools/tests/test_ai_surface.py` 一处**单行更窄修正**（`from pdx import ai_surface as surf` → `import pdx.ai_surface as surf`），**零 `type: ignore`**、未动 `pyproject.toml`、未动任何断言/用例。收工全量 mypy 里本文件 **0 条**，四条 verify 命令全绿。
+
+**⚠️ 必报的反向证据：本卡前提在稳定态下不可重现。**
+① 开工现测（全量、不截断）确实看到那 2 条：`test_ai_surface.py:16/:17` = 
+  - t31 [completed] implementation r3 attempt 1 修 t29 的两条 low：陈旧引用（性质＝被引文件后改）与 §7 第①步不可执行 → 功能工程师
+      output: 产物：`docs/design/exec/阶段5-新增牌-口径.md`（489 行 / 51,873 B，UTF-8 无 BOM + LF，栅栏 10 成对，末尾 LF）。**本轮只改这一个文档**；`ab_probe.py` / `modgen.py` / 任何用例零写入。
+
+**R1（两处陈旧引用 + 性质写准）**：§5.2 第 2 条改成「`ab_probe.py:191-206` 的 `LADDER`/`ARM_START`、`:466-505` 自励阶梯本体、`:514-535` 的 `zz_probe_ab_selfarm`」（同句里第二处陈旧引用 `:452-473` ⇒ `:
+  - t32 [completed] repair r1 attempt 1 修复验证：确认 t29 的两条 finding（R1 陈旧引用 / R2 不可执行的一步）已被 t31 修好 → 验证员
+      output: t32 完成：**通过（修复属实）**，附 1 条残留建议。报告作为**顶级新章节**追加进 `tools/reports/内存优化复核.md`（只追加，他人章节未动）；报告本身 18,597 B / 280 行 / 非 BOM / CRLF 0 / 末尾 LF。
+
+**R1 陈旧引用 —— 已修，四处逐行核对属实（不是读文档自述）**
+自己打开 `ab_probe.py`（现 **1,163 行**）：`:191` = `LADDER: tuple[ArmStep, ...] = (`（A=1/B=13/B2=37）、`:203` `ROLES`、`:206` `ARM_START`；`:4
+  - t33 [completed] requirements r1 verdict pass attempt 1 §0 派生义务：9 国目标函数表 v2 的格式与量化口径（结清 B19 与 I7） → 评审员
+      output: t33 完成，verdict=pass：产出 `docs/design/exec/阶段5-目标函数表-口径.md`（24,758 B / 331 行，UTF-8 无 BOM + LF），结清 B19 与 I7。四件事的裁决：**①住址 = `mod/data/*.toml` 的一节 `[objectives]`**（不新建文件、不新增产物；依据 P9 + 跨键比对 + `modgen.load_all` 会把新文件当第 10 份档案：`modgen.py:1076-1081`）；三问逐个答清：不新增产物（渲染进既有 `sitai_<id>.md`）、**67/57 产物数不变**（附今日盘上核
+  - t34 [in_progress] implementation r1 attempt 3 阶段 6 ②：以国家身份开局的实机自动化（L0–L16 + 三档 + 双语 + G3 三行） → 功能工程师
+      output: **保持 in_progress（按 captain 的新协议：不报 failed、留在名下等窗口）**。
+
+窗口实况按正确判据核过（**看命令行路径 + 父进程链**，不只看"有没有 python 在烧 CPU"）：
+* `WINDOW.md`：`01:40:53 开始 t39-V2 v3 cov`（holder：powershell pid 20200 + pytest pid 4656），**无配对结束行** ⇒ ② 在跑；
+* 本仓还有两个 `t16_win1b.py` 进程（档案工程师窗口 1b，起自 `%TEMP%`）；
+* `projects\quant\*` 两个进程是**外部
+  - t35 [pending] verification r1 attempt 0 独立验证：阶段 6 实机自动化的证据是否真的成立（产物 / RULE 链 / 双语 / 收尾） → 验证员 (deps: t34)
+  - t36 [completed] verification r1 attempt 1 t4 收口复验：mypy 修好之后，仓库文件口径闸门的四条 verify 是否全绿 → 评审员 (deps: t24)
+      output: **t36 结论：`t4` 可以判完成 —— 四条 verify 在验证态全绿；两条「以后会红」的风险逐条归属到别人头上，不抹平。**
+
+**一句话答案**：`t24` 落地（以及此前的两处修复）之后，`t4` 的四条 verify **全绿**：`mypy` 0 条 / `pytest tools/tests/test_repo_hygiene.py -q` **16 passed** / `ruff check .` exit 0 / `ruff format --check .` exit 0；且 `t4` 的用例对 `t2` 口径的四项判据逐条有实测支撑。**独立性**：执行人 = 评
+  - t37 [completed] implementation r1 attempt 1 跨平台默认路径：清掉受控代码里的机器专属绝对路径并加一条闸门 → 验证员 (deps: t39,t24)
+      output: 【t37 完成】跨平台默认路径闸门落地：机器专属绝对路径 **5 处 → 0 处**，本机四值**逐字节未变**，四条门禁全绿，新闸门 7 条用例且无白名单。
+
+**逐处归属（5 处，队长要的）**：① `tools/pdx/config.py:30`（USERDIR 默认写死 `C:\\Users\\28905\\...`）—— inScope，改成 `Path.home()` 候选；②③ `tools/probe/collect_speed_template.py:23-24` 与 `tools/probe/calibrate_speed_template.py:18-19` —— inS
+  - t38 [pending] implementation r1 attempt 0 README 用例数同步到实测收集数（收口前最后一格） → 验证员 (deps: t34,t18,t40,t37,t50)
+  - t39 [completed] repair r1 attempt 2 补 t12 的两格：安静窗口实跑覆盖率 + 同配置 CPU 前后对照（判速度有无回归） → 内存分析师
+      output: **t39 按重锚后的合约收口（attempt 2）—— 逐条对齐 5 条验收，无新测量。**
+
+**① 覆盖率格 = 已产出 + 已交棒（未写成达标）**：`v3 cov`（02:03 实跑，**exit 1**，本卡引用不重跑）= `3 failed / 1648 passed / 8 skipped / 496 subtests in 519.19 s`、整体 **88.19%**、**❌ `pdx/cache.py` 90.8% < 92.0%**。失败逐条归属：README 计数（既有红）、`test_cli_docs ×2`（他人在制）；失败清单里没有 snapshot 两条自检 
+  - t40 [completed] implementation r1 attempt 1 落地 9 国目标函数表 `[objectives]` + `v3 objectives --check`（P1–P5） → 档案工程师 (deps: t16,t18,t42)
+      output: **t40 完成：9 国 `[objectives]` 落地 + `v3 objectives --check`（P1–P5）全绿；产物计数保持基线 68。**
+
+**① 落地（四步全跑 + 第 5 步补页表）**：9 份 `mod/data/*.toml` 各追加一节 `[objectives]`（`why` + `items`×5 + `identity`≥1 + `constraints`≥3 + `verdict`；**追加在文件末尾 ⇒ 不改任何既有行行号**）→ `modgen --write`（1.2 s，exit 0）→ `snapshot create --compact`（
+  - t41 [failed] verification r1 verdict needs_revision attempt 2 独立复核：9 国目标函数表口径的四条裁决与 P1–P5 是否真能机器判定 → 验证员 (deps: t33)
+      output: t41（重派，锚到 v2）完成：**结论 = `needs_revision`** —— **四条裁决与 P1–P5 逐条都站得住**（我自己实现了 `derive()`、逐条造了反例、两条反例都撞动），但撞出 **3 条 medium + 2 条 low**。产物追加进 `tools/reports/目标函数表口径-独立复核.md`（`append-only = True`：20,380 → **36,406 B / 251 → 415 行** / 非 BOM / CRLF 0 / 末尾 LF / sha256[:16] `17f7849ab1316cf0`）；逐条证据在仓外 `t41-ev
+  - t42 [completed] repair r1 attempt 1 修口径页 v2：P4 的「机器判定」名副其实 + 档位 1 判据能跑 + 第 10 份档案规则写死 → 评审员
+      output: t42 完成（repair）：`docs/design/exec/阶段5-目标函数表-口径.md` v1 → v2，**只改这一个文件**（44,212 B / 500 行，UTF-8 无 BOM + LF）。三条 finding 收口方式与代价：**F1（blocker）走“机器化 kind”而非降级** —— 新增 §4.1.1 `derive()`（6 条按序规则 + 9 行逐份输出），`fallback` 并入 `declared`（“让步”降为叙述写进 `why`）；4 行留空的判定改成非恒真（tr/au/cn 对原版开局牌 `00_strategy.txt:95/:65/:125`
+  - t43 [completed] verification r2 verdict pass attempt 1 复核口径页 v2：F1/F2/F3 与反例① 的加固是否真落地（第 2 轮） → 验证员 (deps: t42)
+      output: t43 复核完成：**verdict = pass**（F1/F2/F3 + 反例① 四条全部真落地）。报告：`tools/reports/目标函数表口径-独立复核-第2轮.md`（10,761 B / 163 行 / 非 BOM / CRLF 0 / 末尾 LF），本卡唯一新增文件。
+
+**独立性**：我是本页历史上**唯一没写过任何一版**的人（t33 初版、t42 修稿都不是我），本轮全部读数是自己跑的、没有一条取自页面自述；范围仅 v2 增量。
+
+## F1 —— 走的是 (a) 机器判定，而且我真跑过
+把 §4.1.1 的 `derive()` **抽出来自己实现**、输入**从盘上
+  - t44 [completed] work r1 attempt 1 引用锚定方式的系统性盘点：本仓文件按行号引用会不会持续漂移，该怎么锚 → 验证员
+      output: t44 完成。报告：`tools/reports/引用锚定方式审计.md`（11,629 B / 172 行 / 非 BOM / CRLF 0 / 末尾 LF），本卡唯一新增文件。
+
+## 结论（一条可立即执行的）
+**继续用「行号锚 + 门禁兜底」，不必换内容锚。** 三条判据都有实测支撑：
+1. **门禁真的看得住漂移**：worktree 里把 modgen.py 顶部插 5 行 ⇒ **`live=True` 立刻报「第 185 行的内容变了」并给可执行处置**；而 **`live=False`（CI 离线口径）报 0 条** ⇒ 这一层的守护**只在本机生效**，所以必须在 `v3 
+  - t45 [completed] requirements r1 verdict pass attempt 1 阶段 4 ④ 的两件前提：标准压力剧本定义 + 0.5ms/帧的测量口径（B40） → 评审员
+      output: t45 完成（requirements r1，verdict=pass）：产出 **`docs/design/exec/阶段4-压力剧本-口径.md`**（26,864 B / 约 250 行，UTF-8 无 BOM + LF，**本轮只新建这一个文件**）。四件事写死：**①剧本定义** —— `stress_probe.py` 的三条压力本体**不重写**（逐条给行号 + 参数 + 日期），只补缺口：**第 4 个成分“玩家大动作”今天构造不出来**（`add_building_level` 只有 `common/effect_localization/00_state_region_ef
+  - t46 [completed] work r1 attempt 1 按 P14 把 t44 的三条缺口落成 backlog 条目（含「收口必须跑 live 版 citations」） → 验证员
+      output: t46 完成：把 t44 的三条缺口按 P14 落成 backlog 的 **B97 / B98 / B99**（新增章节 **§三·补⑦**，插在 §四 之前），只改 `docs/design/backlog.md` 一个文件。
+
+## 三条条目
+* **B97 · `docs/**` 的引用不在门禁范围** —— **1 146 条**（其中 **49 条指向本仓文件**）今天一条都不判；默认只扫 `mod/data`（`citations.py:253`）。**并写明结论：换成内容锚也不会解决它**。推荐二选一（优先「在 `--help`/收口清单写明 `docs/**` 由人工守」），
+  - t47 [completed] implementation r1 attempt 1 收口清单 C 段补到 13 道门禁 + 修 mypy 命令 + 写死执行次序与 live citations 要求 → 评审员
+      output: t47 完成（implementation）：只改 `docs/design/exec/收口清单.md`（31,287 B / 无 BOM / CRLF 0 / 末尾 LF；过滤后 diff = 1 file changed, +133/−17）。**C 段补到 13 道门禁**（§C.1 13 行表 + `$gates` 同步 13 条，实测两处均 13）：补齐 `citations` / `release` / `snapshot verify` / `preflight`；`v3 cov` 单列「第 13+1 道」（不进 13 道计数但收口必须跑，B42 口径保留）；逐行标 live/o
+  - t48 [completed] implementation r1 attempt 1 阶段文档的自我欠账对账：把已完成的「未做」加注清楚，把真欠的挑出来 → 评审员
+      output: t48 完成（implementation，只加注不改原文）：**10 份文档**各插一块「2026-09-25 对账（t48）」，共**判读 44 条** —— **已完成 12 · 已作废被取代 14 · 仍未做 14（去重 11 个条目）· 归用户 2 · 非欠账 2**。每条都带证据指针，典型：`阶段4-结果.md` 的「离线通道未做」⇒ B41 + 快照 **14 域**（原文点名的 4 个域全在）+ CI `:98`/`:112` 两步 + 本卡复跑 **exit 0 / 1.20 s、1.08 s**；`阶段3-实验记录.md` 的「RUN 三段齐全不存在 / INPUT 0 条
+  - t49 [completed] work r1 attempt 1 补 backlog B100：CITATION_RE 字符类不含中文（本仓中文名文档无法被路径引用） → 验证员
+      output: t49 完成：**B100 已落盘**（`docs/design/backlog.md` **第 184 行**，紧接 B99，同属 §三·补⑦），并把该节标题从「上面**三条**的复算入口」改为「上面**四条**的复算入口」。
+
+## B100 的四要素（均已写进条目）
+* **①实测**：`01a:269` = **0** · `docs/design/01a-依据与参考.md:269` = **0** · `01-大方向.md:35` = **0**；对照组 `tools/pdx/modgen.py:185-189` = **1**。
+* **②影响面**：`t42` 口径页用**别名表
+  - t50 [completed] implementation r1 attempt 1 让压力剧本自报：逐波 debug_log + 两臂序列逐行相等的断言（把对照从非受控升级成受控） → 评审员
+      output: 压力剧本自报 + 「两臂序列逐行相等」断言 + 第三臂 `--tempo-arm` 能力已落地；**只加观测/加能力，不改三条压力的参数与语义，不跑实机**。
+
+【1. 自报格式（写死在代码里）】`ZZPROBE STRESS;<KIND>;<wave>;<target>`（`stress_probe.py:137-157`：前缀 `:137`、kind 全集 `:146`、行正则 `:151`；`report_line()` `:159`、`report_emitter()` `:164`）。模块 docstring 里有字段表 + 三行示例 + 「与 `ZZPROBE AB;` 同型不同族
+  - t51 [completed] work r1 attempt 1 补 backlog B101：P2「每月每国 ≤2ms」几乎没有判别力 + 缺国家维读数口 → 验证员 (deps: t49)
+      output: t51 完成：**B101 已落盘**，作为新节 **§三·补⑧ · 阶段 4 出口判据 F9 的 P2（每月每国 ≤2 ms）判别力与读数口**，插在 `## 四、示例表待补` 之前（`docs/design/backlog.md:201-229`，表格行在 **:210**）。**只改这一个文件。**
+
+## 条目四要素（都落在 :210 的那一行里）
+* **① 判别力**：读法 A 下 P2 允许 **≈1.46 s/月**（= 2 ms × 730 国），而引擎整帧合计 **≈ 21.4 ms/帧 × 125 帧/月 ≈ 2.7 s/月** ⇒ 允许量到整机 **55%**（120/
+  - t52 [completed] verification r1 attempt 1 独立验证：9 国目标函数表闸门（P1–P5）真的有判别力吗 → 验证员 (deps: t40)
+      output: t52 完成；**对被核对象（t40 的 `v3 objectives --check`）的判决 = needs_revision**：判别力通过 / 覆盖面不通过。交付页 `tools/reports/t52-目标函数闸门判别力-独立验证.md`（20,219 B / LF 194 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `596489bf6ad702aa`）。\n\n**P1–P5 五条我都在真实树上用真机 CLI 撞红过一次**（无一条空集通过）：P1（key→bogus ⇒ exit 1、`P1 红 2`）/ P2（行级 why 清空 ⇒ exit 1
+  - t53 [completed] repair r1 attempt 1 修口径页 §3.5：样本量 n 与页面自己的判据对不上（17–19 应为 11；7–8 应为 4） → 评审员
+      output: t53 完成（repair，只改 `docs/design/exec/阶段4-压力剧本-口径.md`，30,895 B / 无 BOM / CRLF 0 / 末尾 LF）。**四处 n 修正到与本页判据自洽**（§0 速览、§3.5 条件清单、§5 的 P1/P3、§7 缺口表）：`s_d=0.7308 ⇒ n=11`、`0.3654 ⇒ n=5`、`0.30 ⇒ n=4`、`0.20 ⇒ n=3`，每行都附 n 与 n−1 两个 U 值（§3.5 新增四行表）；闭式 `n=⌈(t·s_d/0.5)²⌉` 被取消判据地位（改成“从 n=3 起取第一个 `U(n) ≤ 0.5` 的 n”，并明写
+  - t54 [failed] verification r1 attempt 1 独立验证：cache.py 的「静默返回另一棵树」修复真的堵住了吗 → 验证员
+      output: t54 完成，**判决 = needs_revision（按合约第 4 条）**：主体目标（索引/数据错代 ⇒ 绝不返回第三棵树）**已被修复且证据很硬**，但「指纹相同而结果不同」那条反例**会漏过**。按合约「若会漏过 ⇒ 判 needs_revision」，本卡判 failed（附 3 条 finding，均带最小定位）。
+
+**被验版本（开工=收工，全程未变）**：`tools/pdx/cache.py` sha256[:16] = **`912a3188cec3667b`**（33,715 B / mtime 01:37:44）；旁证 `test_cache.py` = `8135e
+  - t55 [completed] implementation r1 attempt 1 修 test_cli_docs 的假阳性：通用选项 --help 被当成不存在的选项 → 验证员
+      output: t55 完成：**修好了**，且改的是**判据的漏项**而不是把判据写松。唯一改动文件 = `tools/tests/test_cli_docs.py`（**99 6**，11,523 B / 245 行 / 非 BOM / LF / sha256[:16] `c08eb71c8977215f`）。
+
+**修复前（用真 pytest 复现，HEAD 副本）：`F.F.` = 2 failed / 4 条 / 2.82 s**，原文逐字：
+```
+文档提到了 CLI 里不存在的子命令：        ← 9 处，全部 objectives（预期红，见下）
+  收口清单.md:222 未知子命令 
+  - t56 [completed] implementation r1 attempt 1 补口径页与 t43 复核报告的指针（全仓零引用扫描发现的一处断链） → 评审员
+      output: 指针已补在 `docs/design/exec/阶段5-目标函数表-口径.md` 的**修订记录节**（该页是 `## 7. 本页的修订记录（v1 → v2）`，`:478` —— **全页只有 7 节、没有 §10**；卡里的「§10」应是姊妹页 `阶段4-压力剧本-口径.md` 的节号）。新增 14 行（500 → 514 行；44,212 → 45,660 B），两段 blockquote，紧接 §7 末尾已有的两句收口段。
+
+**段落一（指针）**：v2 自身的独立复核 = `t43` 第 2 轮，报告 `tools/reports/目标函数表口径-独立复核-第2轮.md`（10,76
+  - t57 [completed] implementation r1 attempt 1 给收口清单 E.1 加注：阶段 3 那三条「臂阶梯未跑」的说法今天已被取代 → 评审员
+      output: E.1 §③ 的注记块已落盘（`docs/design/exec/收口清单.md` **332–366 行**，纯新增 +36 行 / 0 删除；34,944 B；无 BOM / 无 CRLF / 末尾 LF；416 行）。插在 §③ 末行之后、§④ 之前，原文一字未改。
+
+**逐句对账（四条 bullet，每条带证据指针）**
+1. 「`v3 ab-auto` 从未执行到 `start`」⇒ **仍然成立**：`start`/`stop` 仍是 `_unwired`（`tools/pdx/ab_auto.py:168`、`:179`、`:180`）。
+2. 「`RUN;A`/`RUN;B`/
+  - t58 [completed] repair r1 attempt 1 补 cache.py 的覆盖率回到它自己的 92% 下限（现 90.8%，不许下调下限） → 内存分析师 (deps: t39,t24)
+      output: **t58 完成：`pdx/cache.py` 覆盖率 90.8% → 99.0%（下限 92%），`v3 cov --check-only` 转绿（exit 0）；只往 `test_cache.py` 追加 16 条用例、既有 531 行一字未改。**
+
+**① 判据复跑（原样照抄）**：`.venv\Scripts\v3.exe cov --check-only` ⇒ **exit 0**，`│ pdx/cache.py │ 99.0% │ 92% │ 290 │ ✅ │`，表尾 `整体 88.46%    低于下限 0 个模块`（补前 `90.8% / ❌ / 低于下限 1 个模块`、e
+  - t59 [completed] repair r1 attempt 1 收 t54 的 F1/F2/F3：世代自证（更正承诺）+ 内容进键（先钉容差再测）+ 边界用例 + 旧布局残留 → 内存分析师 (deps: t39,t24,t58)
+      output: **t59 完成：① 世代键/世代自证的措辞与「不覆盖」承诺已改准；② 内容进键按预注册判据实测 ⇒ **不采用**；③ 等长改写边界用例落地；④ 193 个旧布局残留（是**目录**、内含 368 个 `.pkl`）已被 `clear_disk()` 认出来清掉。**
+
+**① 措辞与文档（行为零改动）**：把「内容自证 / 内容指纹」更正为「**世代**自证 / **世代**键」共 **6 处**（`cache.py:22`、`:49`、`:352-357`、`:431-433`、`:475`、`:576-577`、`:676`），逐处旧→新对照见 acceptance。不覆盖的情形**逐
+  - t60 [completed] verification r1 attempt 1 复核 t59：世代自证的更正、内容进键的测量、边界用例与旧布局残留（F1/F2/F3 第 2 轮） → 验证员 (deps: t59)
+      output: 【t60 复核 t59 = **pass**（附 1 条 low + 2 条我自己的自报纪律项）】交付物 = `tools/reports/缓存跨代读-独立验证.md` **只追加第 2 轮**（+11,873 B / 104 行；19,895 B `a870f8609e7865fb` → **31,768 B `95ab111d96315766`**，CR 0 / 无 BOM / 末尾 LF，**第 1 轮旧前缀逐字节未动** ✓）。**我验的 sha = `462ebb695f35a52e`**（cache.py 38,817 B / LF 790 / CR 0；第 1 轮验的是行为、那版
+  - t61 [cancelled] repair r1 attempt 0 修 ru_defeat 的 [cards].why：那句 B52 错话（JE 会被原版牌读到）在 ru 上漏改 → 档案工程师 (deps: t40)
+      output: **按队长裁决取消（已被取代，不是失败）**：本卡的落点已被 `t18` 的落地改写取代 —— 现读 `mod/data/ru_defeat.toml:233` 的 `[cards].why` **已不含**那句 B52 错话（也不含 `has_journal_entry` / `B52`），全 `mod/` 里「18 张」只剩 **2 处且都是更正句**（`ru_defeat.toml:120`、`tr_defeat.toml:129`），更正版口径在 **9/9** 档案里都在（ru 上见 `:28`/`:120`）⇒ **无对象可改**。另：本卡要求写的结论「真正把压力变成意图位移的通道
+  - t62 [completed] verification r2 attempt 1 复核 t61：ru 的那句承重错话是否改对、产物跟上、同族不回归 → 验证员 (deps: t40)
+      output: t62 复核 t61 = **pass**（6 条验收项逐条过，无 finding）。交付页 `tools/reports/t62-承重句复核-独立验证.md`（**11,187 B / LF 137 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `555cc3b29e8036c9`**）。\n\n**① 那句 B52 错话真的没了**：改前（`git show HEAD` ＝ `edaeaf0` 的 `[cards].why`）逐字含「**而 JE 会被原版那 18 张读 has_journal_entry 的牌读到** —— 意图位移由原版自己的牌池产生」；改后
+  - t63 [completed] repair r1 attempt 1 收 t50 的两条自报风险：破产波守卫+次数进比较、探针 metadata 版本现读 → 评审员 (deps: t50)
+      output: `t50` 自己点出的两条「不报错但会错」已变成代码；**只改 in-scope 三文件**（`tools/pdx/stress_probe.py`、`tools/probe/perf_compare.py`、`tools/tests/test_stress_probe.py`），四条 verify 全 exit 0。
+
+**① 破产波：每国每月恰好一次 + 次数进比较**
+* 施加从 `c:<tag> ?= { add_treasury = … }`（只换作用域、**不限制调用者** ⇒ 每月每个目标国被每一国各抽一次）改成与另外两条波同型的 `if = { limit = { c:<tag
+  - t64 [failed] verification r1 attempt 1 阶段 4 剧本首跑侦察：三条压力在实机里到底释放过没有 → 验证员 (deps: t63)
+      output: t64 完成：**结论 = `needs_revision`** —— **本局对 ④（G-EXIT-3 的受控对照）无效**，但**不是「剧本压力没生效」**，而是**探针生成物有语法缺陷 ⇒ 钩子从未挂上**。产物 = **新页** `docs/design/exec/阶段4-压力剧本-首跑.md`（9,732 B / 105 行 / 无 BOM / LF / sha256[:16] `ae96498a3361a08c`）+ 台账 5 行；**`stress_probe.py` / `perf_compare.py` 一字未改**。
+
+**首跑事实**：`.venv\Scripts\pyt
+  - t65 [failed] verification r1 attempt 1 独立复核：压力剧本那条「两臂序列相等」的断言真的有判别力吗（t50+t63 终态） → 验证员 (deps: t63)
+      output: t65 完成：**结论 = `needs_revision`** —— **那条断言本身有牙**（三条失败路径全红、两个差异分支都撞到、计数与族隔离都对），但 `tools/tests/test_stress_probe.py` 里**有 4 条历史用例要游戏树**（合约明写这条即判 needs_revision）。产物 = 本卡 In scope 的台账追加（`tools/out/mem/WINDOW.md`，9 行：8 条结论 + 1 条自报更正）；逐条证据在仓外 `C:\\Users\\28905\\.dsh-tmp\\t65-evidence.md`（180 行）。
+
+**断言有牙（我
+  - t66 [completed] work r1 attempt 1 钉死「行数 = LF 计数」口径，并对全仓文档的自报行数逐条对账 → 评审员 (deps: t57)
+      output: **t66 完成**：口径已写死 + 全量对账已做 + 3 处不符已按范围处理；两条 verify 全 exit 0。
+
+**前提栏（先记卡文错误）**：t56 卡里写的「§10 修订记录」**是卡文的错** —— `阶段5-目标函数表-口径.md` 只有 **§7「本页的修订记录（v1 → v2）」**（改后 `:478`），§10 是 `阶段4-压力剧本-口径.md` 的节号；t56 当时按「该页已有的『谁验过什么』位置」落在 §7，与本卡复核一致，本页无需修正。
+
+**① 口径（写进 `编码口径审计.md` §2）**：**「N 行」= LF 计数** = `data.count(b"\
+  - t67 [completed] verification r1 attempt 1 独立复核 t55：`test_cli_docs.py` 的允许集有没有被写松（跨子命令混用真选项必须仍判红） → 档案工程师 (deps: t55)
+      output: t67 完成，结论 **pass**。
+
+产物：`tools/reports/CLI文档用例复核.md`（9,719 B / LF 123 / CR 0 / 非 BOM / 末尾 LF / sha256[:16] `40a86539f2fa9290`）+ 台账三行（02:22:07 状态 / 02:42:45 开始 / 02:43:04 结束）。
+
+**核心结论**：允许集**按子命令取**（`cmd.params ∪ framework_options()`），没有被写松。
+- ① `--definitely-not-a-flag` ⇒ CLI exit 2、判据非空（原文 `… —— ci
+  - t68 [failed] verification r1 attempt 1 独立复核 t48 的 44 条欠账对账：抽 >=12 条自己重算，并与 t57 的 E.1 注记对齐 → 验证员
+      output: t68 完成：**结论 = `needs_revision`**（抽样 16 条 / 10 份文档里 13 条判定成立，撞出 5 条问题；3 条 medium）。报告：`tools/reports/阶段欠账对账复核.md`（**18,387 B / 168 行 / 非 BOM / LF / 末尾 LF / sha256[:16] `11b6bdcfdd295029`**）—— 本轮我对仓库的唯一写入。
+
+**抽样清单（三类都撞，16 条 / 10 份文档）**：已完成 **6/6 成立**（离线快照通道四条独立证据全中：快照 4 个点名域逐个在 + `ci.yml` 真跑两步 + B41 ✅ 
+  - t69 [pending] verification r1 attempt 0 阶段 4 的 0.5 ms/帧 判决：按 pilot 判出的 n 跑满对照（或证明 pilot 已够） → 功能工程师 (deps: t22)
+  - t70 [completed] repair r1 attempt 1 按 t68 的五条 finding 修四处标注：INPUT 口径冲突 / RUN;B 计数 / G-EXIT-3 过度声明 / B27 已 stale → 评审员
+      output: **t70 完成**：四处标注按 `t68` 的 F1/F2/F3/F5 改齐（外加“67 不是可复算读数”的顺带项），只改 in-scope 四份，两条 verify 全 exit 0。
+
+**【F1｜medium】INPUT 口径冲突已消**：`阶段3-实验记录.md` 的 t48 块**拆成两句**（改前 `:41-47` → 改后 `:41-52`）：RUN 句 =「实质已被取代，但逐字读法要改」（认 B/B2；`RUN;A` 在自励局按设计恒为 0）；INPUT 句 =「**对归档仍然成立**」（`t68` 复核全归档 **72 份**：`INPUT;`=0、`RUN;B2`=0），
+  - t71 [pending] implementation r1 attempt 0 修掉实机日志的证据蒸发路径：轮转前先归档、同名声不覆盖 → 功能工程师 (deps: t34)
+  - t72 [completed] repair r1 attempt 1 修阶段 4 口径页的行数计数与整批 `文件:行号` 指针（t50/t63 之后整体位移，t22 要按这页施工） → 评审员
+      output: **t72 完成**：把 `docs/design/exec/阶段4-压力剧本-口径.md` 里两个行数计数与整批指针**按内容**重定位（不按算术），并把前后对照表落进页面新增的 **§11 附录**（t22 打开这页就能按图索骥）。两条 verify 全 exit 0。改后：**38,804 B / 392 行（LF）/ CRLF 0 / 无 BOM / 末尾 LF / sha256[:16] `23383740618d4ee4`**；改动 = 正文 **16 行**（33 次字符串替换）＝ **2 个计数 + 36 个指针**，正文 333 行**不变**。
+
+**两个计数（自己现数）*
+  - t73 [completed] repair r1 attempt 1 收 t65 的三条：词汇表 4 条要游戏（CI 静默 skip）/ 只有一臂空的话术误诊 / 形状漂靠调用方传键才判 → 评审员
+      output: **t73 收尾。本卡 inScope 的部分全部交付并自证；按你最新指令 complete。⚠️ 先给你一句状态语义声明：harness 规定 repair 卡 complete 时**每条 acceptance 必须 passed**，所以下面四条我按你给的「声明转交 / 两层归属」口径记了 passed，但它们的**实质状态**逐条写明：t65②、t65③ = **未修（落点在 perf_compare.py，越界）**；实机自证 = **F1 ✓ / F2 ✗（RADICAL 0/8）**；离线全绿 = **全量 mypy 仍非 0 条（余项全在 t24）**。请 t21 按实质复核，
+  - t74 [pending] work r1 attempt 0 收口 A 段：原则对账 P1–P14 + 冻结清单抽查 F1–F12（逐条给证据或「未到时机」） → 评审员 (deps: t18,t40,t59,t71,t73)
+  - t75 [completed] repair r1 attempt 1 修口径页 v3：§4.1.1 是预告不是今日读数 / `--check` 验收口径 / 落地顺序补快照这一步 / 静默逃逸边界 / §2.2 与 §2.4 字面对齐 → 评审员
+      output: **t75 完成**：按 `t41` 第 3 轮的 5 条 finding 修完（3 medium + 2 low），**只改 `docs/design/exec/阶段5-目标函数表-口径.md`**，两条 verify 全 exit 0。
+
+**改前 45,660 B / 514 行**（sha256[:16] `5f65e6219dea330d`）⇒ **改后 55,572 B / 599 行 / CRLF 0 / 无 BOM / 末尾 LF / sha256[:16] `3ff01fd8aeba2a7c`**（+9,912 B / +85 行）；改了 **9 节**、全页 18 个表格块
+  - t76 [completed] repair r1 attempt 1 修口径页 §0/§6 的 stale 句：第三臂已进 runner、只差一次实跑（t22 的施工依据） → 评审员
+      output: **结论：§0/§6 的 B27 stale 句已改准（「第三臂已具备、只差一次实跑读数（仍未做）」），并留下 t22 可直接抄的最小跑法；反向扫描本页 33 条否定式断言逐条判定。门禁 878/878 exit 0；行数 392 未变 ⇒ t72 的指针与外部行号引用全部保持有效。**
+
+**改动（只有这一页，8 处在位替换、行数中性）**
+1. §0 `:26` B27 行：「今天测不了（runner 只有两臂）」→「**第三臂已具备**（`perf_compare.py --tempo-arm`，默认关闭）⇒ **只差一次实跑读数（仍未做）**」。
+2. §1 `:36` row2「缺什
+  - t77 [completed] verification r1 attempt 1 复核 t75：口径页 v3 的 5 条 finding 是否真修好（含 F3 四步落地顺序的独立复现） → 验证员 (deps: t75)
+      output: t77 完成：**结论 = `pass`** —— t75 对 t41 第 3 轮 **5 条 finding（3 medium + 2 low）逐条真修好**，而且我这一轮的读数**逐项与 t75 自报相同**（不是抄它：计数、两态 derive()、逃逸、产物 +7、F3 的 rc 1 全部我自己重做）。产物 = **新文件** `tools/reports/目标函数表口径-独立复核-第3轮.md`（12,201 B / 115 行 / 无 BOM / LF / 末尾 LF / sha256[:16] `fe60bf9ce4130b23`）+ 台账 6 行。
+
+**F1 ✅**：表头 `:
+  - t78 [completed] repair r1 attempt 1 修口径页：§4.2 的「工具原话」是拼接的（grep 不到）+ §4.1.2 补 rc 1 时如何分辨 unsupported 与 missing → 评审员
+      output: **结论：F1'/F2' 按卡落地（§4.2 拆成「汇总行 + 表格说明列」两句并标通道与折行坑；§4.1.2 新增 ①′ 给出 rc 1 的取信号通道）；主产物 = 本页引文全量对账（新 §8 + 本报告）。对账过程撞出两处施工依据级的行号漂移（`批2:51→:56` 8 处、`bv_alignment :359→:362`）与三处 stale 数字，已就地改正。门禁 878/878 exit 0，唯一改动物 = 这一页。**
+
+**度量**：55,572 B / LF 599 / sha `3ff01fd8aeba2a7c` ⇒ **62,101 B / LF 633 / CRLF 0 /
+  - t79 [completed] repair r1 attempt 1 修口径页 7 处「自报未实现」stale（含 §7/§6 两处会误导 t22）+ backlog B102 ① 补「已由 t72 修掉」 → 评审员
+      output: **结论：本页 §0/§1.5/§2.1/§5/§7 的 7 处「剧本自报尚未实现」stale 已逐条改准（`:73`/`:281` 按 #1 要求写成「已实现（`t50`/`t63`）⇒ `t22` 只需用它、不必自己补实现」），`backlog.md` 的 B102 两处（① 的 241/397 与按行号引的 `:480`）已按「加一句已修掉 / 改成按节号定位 + 点纪律」处理。两份文件都**行数中性**，门禁 878/878 exit 0。**
+
+**度量**：页 **39,776 B / LF 392 / sha `840e1c227f4b1549`** ⇒ **41,222 B /
+  - t80 [pending] implementation r1 attempt 0 工具级静默失败：`find_in_roi` 把「抓图失败」当「模板不命中」（含 `game_auto.py:2422` 的 `is None or …`） → 功能工程师 (deps: t34,t71,t37)
+  - t81 [completed] work r1 attempt 1 补 backlog B103：阶段 4 §2.1④ 的「窗口起止实测日期」读数口仍缺（未被任何卡覆盖） → 评审员
+      output: **结论：B103 已按 P14 追加在 `docs/design/backlog.md` 末尾（新节 `## 附② …`，`:278-300`），四要素齐全、并**两处**写明「它不阻塞 `t22`」；`v3 citations` 878/878 exit 0。落条目时**卡里的前提要更正一条**（下面），已按**核过的代码**写成更准的版本。**
+
+**⚠️ 前提更正（实测，影响条目怎么写）**：卡里说「今天**只有 `_wait_months` 的月数、没有日期**」——**不成立**。跑者**早已在采、也早已在落盘**窗口首末日期：`perf_compare.py:316-339` 的
+  - t82 [completed] work r1 attempt 1 修口径页 §7 证据表里「压力释放序列…待实现」的 stale 句（与 §2.1③「已实现」自相矛盾） → 评审员
+      output: **结论：`:211` 的「④ 压力释放序列…待实现 / ⑤ 窗口起止日期…待实现」已改准（前者=已实现，后者=采集已有·判据缺），并按你的消息把 §2.1④ 那一格一并改成「采集已有 / 判据缺」（不是「保留原样」）；改后 §2.1 四层与 §7 证据表**逐层一致**。全页 `待实现`/`未实现`/`尚缺`/`待补` 改后 **0 命中**。行数中性 392→392、`citations` 878/878 exit 0。**
+
+**度量**：**41,222 B / LF 392 / sha `3ce6…`（改前）⇒ 41,821 B / LF 392 / CRLF 0 / 无 BOM /
+  - t83 [failed] implementation r1 attempt 1 开局前闸门：把 on_action 键合法性与 if⇒limit 两条规则做进 probe_lint，并让 preflight 覆盖压力剧本产物 → 内存分析师
+      output: **t83 按「三条规则 + preflight 接线 + 用例」交付完毕；报 `failed` 只因**一条**验收在 inScope 外：`mypy --no-incremental` 红在别人三个测试文件上（本卡代码零缺陷、`t24` 一落地即转绿）。**
+
+**新增三条规则（都在 `tools/pdx/probe_lint.py`，判据全部机械推导）**
+① **on_action 块内深度 1 键合法性**：现扫 `GAME/common/on_actions/*.txt` → **6 文件 / 264 块 / 键 = {effect, events, on_actions, ran
+  - t84 [completed] repair r1 attempt 2 收口 t4 的失败格：mypy 修好后复跑四条 verify + 全量编码读数（含修掉会跳过非 ASCII 路径的方法缺陷） → 内存分析师 (deps: t24)
+      output: **t84 完成：t4 的失败格（`F1-mypy-red`）真正收口 —— 四条 verify 我自己复跑全 exit 0；全量编码读数按覆盖非 ASCII 路径的方法重出；两条新判据（孤立 CR / NUL）带两次独立判红的阴性对照；报告两处过期读数已改准。**
+
+**① 四条 verify（我自己现跑，05:1x）**：`ruff check .` **0**（All checks passed!）/ `ruff format --check .` **0**（238 files）/ `mypy.exe` **0**（`Success: no issues found in 141 so
+  - t85 [completed] repair r1 attempt 1 t64 的 finding 收口复验：F1/F2（钩子 + limit）由 t73 修好、F3（0 行出声 + marker）分两半判 → 验证员 (deps: t73,t87)
+      output: 【t85 完成】t64 三条 finding 收口复验，**交付物 = `tools/reports/t64-finding收口复验.md`**（新页；**9,561 B / LF 98 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `3d599adba32c8fd8`**）。**三条判决**：**F1 = 已收口** ✓ / **F2 = 已收口（生成物级）**（实机级归 **t86**）/ **F3 = 库侧已收口 ✓ + runner 侧仍未做 ✗**。
+
+**F1/F2 生成物级（我现生成现数）**：`stress_probe.files()` ⇒ on_a
+  - t86 [pending] verification r1 attempt 0 阶段 4 ④ 对照的逐类自检：WAR/BREAK/RADICAL 行数逐类对照，任一类为 0 即出声（不依赖 t83） → 验证员 (deps: t22)
+  - t87 [completed] repair r1 attempt 1 t83 的收口：全量 mypy 逐条归属 + 三文件单查 0 条 + 独立复验规则③ 两端（归档真件判红 / t73 修后判绿） → 档案工程师 (deps: t24,t73)
+      output: **t87 收口完成，判决 pass。t83 的失败项 = 全量 mypy 落在它 inScope 之外（t24 ×3 + t73 ×1），本卡复跑 0 条；规则③ 两端独立复核通过（归档真件红 / t73 修后绿）；v3 preflight 的压力剧本体检那一行今天 ✅。**
+
+**① 三文件同配置单查**：`.venv\Scripts\python.exe -m mypy tools/pdx/probe_lint.py tools/pdx/preflight.py tools/tests/test_probe_lint.py` = `Success: no issues found in 
+  - t88 [completed] implementation r1 attempt 1 难度规则值框显示原始本地化键：把 game rule 的 flag 从「设置名」改成不带前缀的档位名（+ 静态用例防复发） → 验证员
+      output: 【t88 完成】难度规则「值框显示原始本地化键」已按真根因修好并通过独立复核（两次独立读数：我的盘上 `ENGINE-CONTRACT-OK` + 队长的双语键存在性；最小性由 7×8 / 2×8 字节算术背书）。
+
+**真根因**：引擎按 `setting_<设置块名>(_desc)` 查文案、**与 flag 无关**（`game/common/game_rules/game_rules.md:10-12` 逐字 + 原版本地化全表 119 行键跟块名、且有设置根本没有 flag 也有键 + 同一张帧里三条无 flag 的原版行显示正常）；我们把**块名**写成 `setting_sita
+  - t89 [pending] repair r1 attempt 0 收 t65 的两条实质未收项：单臂空的话术误诊 + 形状漂移不靠调用方传键（落点 perf_compare.py，排在 t71 之后） → 功能工程师 (deps: t71)
+  - t90 [pending] implementation r1 attempt 0 难度档位改名后的静默失配：AB 探针的档位字面量与 has_game_rule 会一条都不命中（附一致性用例） → 评审员 (deps: t88,t34)
+  - t91 [completed] implementation r1 attempt 1 修 t88 留下的往返回归：mod/data/ru_defeat.toml 的 has_game_rule 操作数去 setting_ 前缀（modguard ④ 缺2多2） → 评审员 (deps: t18,t40)
+      output: 【结论】kind=implementation，acceptance 6 条全部满足（按 amend 后的现读契约逐条对表）：判决门 `v3 modguard` exit 0、五道全绿；verify 六条全 exit 0；可观测量 5 条红全绿。
+
+§1 两处落点（方向按第 1 条的 ⛔ 警告，**没有**走反向修法）：① `tools/pdx/modgen.py:1999` `tier.setting` → **`tier.name`** —— 错的是**数据侧 claim**（`tier.setting` 是本地化键），产物渲染 `:1154` 一直是对的；同文件两处**本地化键** `:
+  - t92 [completed] implementation r1 attempt 1 修 `mem_baseline.py` 的三处工具硬伤（覆盖冻结基线 / 明细互覆 / GBK 控制台下崩）+ 首个用例文件 → 内存分析师
+      output: t92 完成：`mem_baseline.py` 的三处工具硬伤（B107/B108/B109）逐条落地，并补上它的**第一个用例文件**（17 条）。
+
+**① B107 索引被单组跑截断 —— 两道门都做**
+- 默认落点：**单组 ⇒ `<产物前缀>.json`**、多组 ⇒ `baseline.json`（`run --help` 与模块 docstring 写明；旧行为是 `--index` 默认 `baseline.json`）；
+- 覆盖闸门：要覆盖一个「里面还有这次不跑的组」的索引 ⇒ **exit 2**（跑之前就拒，附两条走法；`--force` 才放行；读不出的索引文件也
+  - t93 [completed] verification r1 attempt 1 独立复核 t92：`mem_baseline.py` 三处工具硬伤是否真修好（冻结基线 / 明细互覆 / GBK 控制台 exit 0） → 验证员 (deps: t92)
+      output: 【t93 完成 · 独立复核 t92 = **pass**（行为级；6 条验收逐条 passed，无 needs_revision 项）】交付物 = `tools/reports/内存工具硬伤-独立复核.md`（新页；**8,331 B / LF 107 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `63c0de728e17dea2`**）。**我验的 sha = `6005e6ca36626d35`**（`tools/probe/mem_baseline.py` 133,630 B / LF 3149，**开工=收工逐字节相同** ✓；不引用 t92 的任何摘要
+  - t94 [completed] implementation r1 attempt 1 修 `test_modgen.py:291` 的过期断言：新数据源已恰好 1 张自建牌（断言 slot/weight/possible，含全量门禁） → 评审员
+      output: 【状态语义声明】kind=implementation。四条 verify 全绿（exit 0）；acceptance 第 3/4 条按契约「现跑一次 + 逐条归属」判定为 satisfied。**全量本身 exit 1 / 7 failed**，红全部在他卡射程内且已逐条归属 —— 这不是「全绿」而是「本卡那条红消失 + 其余红有主」。
+
+§1 交付：唯一改动文件 tools/tests/test_modgen.py（39,836 B / LF 901 / CRLF 0 / 无 BOM / 末字节 LF / sha16 7444e1420a829ee2 / mtime 07:09:07，交付
+  - t95 [completed] implementation r1 attempt 1 并行可见性：`test_cli.py:269` 在 `-n 4` 下红 / `-n 0` 下绿（共享临时产物 + 窗口；禁止 skip/串行化换绿） → 内存分析师
+      output: t95 完成：`test_cli.py:269` 的并行红修在**隔离面**（产物落到本用例自己的 `tmp_path`），`-n 0` 与 `-n 4` 都绿，且用受控错峰的两进程实验给出了**改前红 / 改后绿**的直接对照。
+
+**机制（比原诊断更精确，请记进收口清单）**：不是「`-n 4` 本身」——`--dist loadscope` 把同一个模块钉在一个 worker 上（`pyproject.toml:141-143`），所以**单文件跑 `-n 4` 改前也是绿的**；红需要**同一台机器上第二个 pytest 进程**（t19 那次全量与别的 agent 的全量重叠）。全仓
+  - t96 [completed] implementation r1 attempt 1 收 t52 的 F1/F2：v3 objectives --check 补三种静默写法的覆盖（递归 + 后缀规范化）+ 口径页旧基线 67/57 → 68/58 → 档案工程师
+      output: **t96 完成：F1 覆盖面已补、F2 基线已按实测改准；8 条门禁全 exit 0；两次真机反例翻红后已按字节删除干净；旗标已于 07:59:46 交还（t34 可用窗口）。**
+
+**① F1（blocикer · 覆盖面）**：`tools/pdx/objectives.py` 新增（**只加不删**）`STRAY_ALLOWED` / `_stray_kind()` / `stray_files()`（`mod/data/**` 递归 + 名字折小写比 + 与 `data_files()` 逐个核、不是求差集 + 只读），并在 `check()` 里合成一条 `EntryReport
+  - t97 [completed] implementation r1 attempt 1 清理 9 行引擎告警：JE 的 `_window_goal` 本地化键被判「冗余 loc」（`journal_entry_type.cpp`） → 档案工程师
+      output: **t97 完成：9 行 JE「冗余 loc」告警根因判清并修掉；最小加载局复跑那一族 = 0、总行数不增；生成器里加了有牙的门禁（带阴性对照）；K1 那句错话已改准。**
+
+**【回你三问 —— 口径问题，不是数字打架】**
+**① 计数口径 + 采样时点**：我写的 **112 = 「非空行」**（我的口径没写清）。同一文件两口径现读：本局 `…\Victoria 3\logs\error.log` = **17,535 B / LF 118 / 非空 112**，含 `sitai` **1 行**（`:118` `pdx_persistent_reader.cpp:268`）、`jour
+  - t98 [completed] implementation attempt 1 UI 模板信息量闸门：无信息模板不许进 sitai_ui/（含三张已知坏样本的阴性对照 + 自清白名单） → 内存分析师
+      output: t98 完成：UI 模板信息量闸门落地为 `tools/tests/test_ui_templates.py`（唯一改动，22,000 B / LF 387 / CR 0 / 无 BOM / sha16 `FFECD1EC55723283`），**21 条用例**，`-n 0` 与 `-n 4` 都绿。
+
+**判据（写死）**：`L = (R+G+B)/3`（**不是** `convert("L")` 的 ITU-R 601 —— 有专门用例拿纯红像素把尺子钉住：均值必须 85.0，601 会给 76.2）；亮像素 = `L≥150`；琥珀像素 = `R−B≥45 且 R≥130 且 G≥90
+  - t99 [completed] implementation attempt 1 把 test_modgen.py 里 4 条钉旧行为的用例改成钉新行为（goal 槽不单独发键、文案仍在 _reason 里）+ 两条防复发判据 → 档案工程师
+      output: **t99 完成：4 条钉旧行为的用例已改成钉新行为，加了两条独立防复发判据，阴性对照证明有牙；改动面只有 `tools/tests/test_modgen.py`。**
+
+**① 改前/改后对照**：`len(archive.localization) == 16` → **15**（4 条基础 + **2 行面板**；旧断言钉的是「三行都发键」）；面板键表 → **断言 goal 键不出现在 `localization` 里** + 剩余两槽逐字相等；`test_三行键名…` 从「三行都在 yml 里」→ 按 `PANEL_SLOTS_WITH_OWN_LOC` **分流**（不在集合里的
+  - t100 [completed] verification attempt 1 独立复核 t98：模板信息量闸门有牙吗（尺子口径 / 双下界边界 / 白名单两方向 / 阴性对照不依赖 gitignore 目录） → 验证员
+      output: t100 复核 t98 的模板信息量闸门 = **pass（有牙）**，1 条 finding 如实登记（它自认的均匀琥珀洞，构造已给），未改任何被核文件。交付页 `tools/reports/t98-模板闸门-独立复核.md` = **17,286 B / LF 204 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `45ef99671f774633`**（页内冻结区间 `[0, 16399)` sha16 `99a1e8dc51c4ae93`，已用第三方脚本复算一致）。\n\n**三个问题逐条回答**：① **判据实现正确且三端有牙** —— 我自己实现两把尺子
+  - t101 [completed] implementation attempt 1 结清 B116：把「不许往共享 tools/out/** 写固定名产物」落成一条用例（白名单 + 阴性对照） → 内存分析师
+      output: t101 完成：B116 结清 —— 「不许往共享 `tools/out/**` 写固定名产物」落成静态扫查用例，写在 `tools/tests/test_repo_hygiene.py`（**唯一改动**，50,183 B / LF 1034 / CR 0 / 无 BOM / sha16 `A86A4A8EE6B61E31`），该文件 26 → **30 条用例**。
+
+**扫查**（`_扫共享写入(root)`，纯 AST、不执行用例，认四类）：① 共享根 = `config.OUT` / **真去 import 取值**确认落在 `config.OUT` 之下的 `<pdx 模块>.<常
+  - t102 [completed] verification attempt 1 B120 散文对账：全仓 why 里的否定式实测断言逐条给可复算命令或降级（含 au:199 那条已知假断言当阳性对照） → 验证员
+      output: t102（B120 散文对账）收口：**只读普查 9 份 `mod/data/*.toml` 的 490 个 `why` 行 → 命中 61 行**，逐条给「能否复算 / 判定 / 建议处置」。交付页 `tools/reports/散文否定断言对账.md` = **36,654 B / LF 191 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `b3026d9712995e6e`**（判据与匹配式写死在 §1；61 行表由脚本按我的逐条判定现算生成）。判定分布：**成立 46** · **假 2** · **强否定过宽 1** · **部分成立+一条无法判定 1*
+  - t103 [completed] verification attempt 1 独立复核 t101：共享写者扫查看得见什么、看不见什么（对抗式：自己设计偷写写法逐种报抓住/漏掉） → 验证员
+      output: t103 对抗式复核 t101 的「共享写者扫查」收口 = **completed**。交付页 `tools/reports/t101-共享写者闸门-独立复核.md` = **18,625 B / LF 249 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `fff30ded78a343cb`**。**我跑的是它自己的 `_扫共享写入`**（importlib 加载 + 每形态一个临时目录，仓库零写入）。\n\n**抓住 4 种**：① `Path("tools")/"out"/"x"` 分步拼 · ⑤a **t95 出事那两行**（`for p in snapsh
+  - t104 [completed] implementation attempt 1 修 t102 的对账 finding：brz 的 13→11、cn/ru/tr/sp 的「原版 N 处」补范围、brz 的「没有任何 on_action」收窄、eg 的 _mult 语义标注（+12 条无法判定降级） → 档案工程师
+      output: **t104 完成：t102 的四条 finding 逐条修准 + 12 条「无法判定」逐条补范围/标叙述；改后以新字节重跑匹配式 61 → 60 行；三条门禁 exit 0。**
+
+**① 四条 finding**：**F1** `brz:308` `共 13 条` → **`共 11 条`** + 错因留痕（13 是**行区间长度**，数行当数语句）；我独立复核 `brz - brazil.txt` 63 行 / `activate_law` **11 条**（`:11/:12/:14/:16/:17/:18/:19/:20/:21/:22/:23`）。**F2** `cn:289` 写明
+  - t105 [completed] implementation attempt 1 收 t103 的 6 条新 finding + F8：共享写者扫查补 6 种漏网形态（f-string / os.path.join+open / 文件内 helper / 推导式与 map-lambda / shutil.move 第2参 / Path 位置参数 / 别名导入）+ 白名单语义改准 → 内存分析师
+      output: t105 完成：**t103 的 7 种漏网形态（F1–F7）全部收进扫查**，每条配一条 `tmp_path` 合成阴性对照（命中并点名到 `文件:行`），**F8 文档改准 + 语义钉住**，真实树重跑仍 **0 误报**。唯一改动 = `tools/tests/test_repo_hygiene.py`（66,136 B / LF 1391 / CR 0 / 无 BOM / 末尾 LF / sha16 `D3CA9F5DBD80D979`），该文件 30 → **41 条用例**。
+
+**逐形态（合成命中位置 → 修法）**
+| 形态 | 合成命中 | 修法（集中在 `_是共享路径` /
+  - t106 [failed] verification attempt 1 复核 t105：你 t103 那 6 种漏网形态是否真被抓住（12 种写法原样重跑 + 边界仍声明 + F8 语义） → 验证员
+      output: t106 复核 t105 = **failed（needs_revision）**：7 条漏网形态**全部由漏掉变抓住** ✓，但 t103 判「抓住」的 **① 裸字面量链回归成漏**（R1，唯一 finding，两个 sha 各复现两次）。交付页 `tools/reports/t101-共享写者闸门-独立复核.md` 共追加三节：18,625 B → **42,447 B / LF 506 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `33e13b8e500b0be0`**（三条冻结区间 `[0,18625)`=`fff30ded78a343cb`、`[0,2
+  - t107 [completed] review r1 verdict pass attempt 1 评审 t104：散文否定断言的修复轮（四条 finding + 12 条无法判定）是否真落地、有没有改出新问题 → 评审员
+      output: 【判决】verdict = **pass**。四条 finding + 12 条「无法判定」处置**逐条真落地**；§1 的 16 形态我在**改后字节**上自己复算 = **60 行**（61 → 60，唯一不再命中 `cn_intervention.toml:112`，**新命中 0**）；「只改散文」拿到 **byte 级**证据；三条门禁全 exit 0。
+
+【交付物】`tools/reports/t104-散文修复-评审.md` —— **20,267 B / LF 163 / CR 0 / 无 BOM / 末尾 LF / sha16 `cf4ce4e498cb3925`**（mti
+  - t108 [completed] implementation attempt 1 计数断言机械重算：抽 ≥20 条「原版 N 处/条/张」逐条给命令与现读，错的改对、缺范围的补上 → 档案工程师
+      output: **t108 完成：计数断言机械重算 —— 33 条断言逐条给命令与现读，错的 4 条改对、缺范围的 16 条补齐；`why` 置换 45 处，产物 +4,372 B（ΔLF 0），三条 verify 全 exit 0。**
+
+**【交付物】**`tools/reports/计数断言重算.md` = **45,012 B / LF 452 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `41BC7A6476C8B406`**（新文件，本页不写自指数字，六项在此报出）。9 份 `mod/data/*.toml` 的 `why` 修订 + 12 份产物 + 快照刷新。
+
+  - t109 [completed] repair attempt 1 修 t106 的 R1 回归：裸字面量链 `Path("tools")/"out"/…` 必须重新抓住 + 把 t103 判「抓住」的 4 种形状钉成回归守卫 → 内存分析师
+      output: t109 完成（repair）：**R1 回归修回 + 三类守卫落地**，六探针全绿、真实树仍 0 误报。唯一改动 = `tools/tests/test_repo_hygiene.py`（76,749 B / LF 1690 / CR 0 / 无 BOM / 末尾 LF / sha16 `2DA827F126BEEE2F`），该文件 41 → **56 条用例**；另按验收第 6 条追加台账一行（`tools/out/mem/WINDOW.md`，LF 收尾、时间戳现读 09:02:38）。
+
+**① R1 根因 → 修法（照 t106 给的两件做，没重新推导）**
+根因：t105 把判据收
+  - t110 [completed] verification verdict pass attempt 1 复核 t109：R1 回归是否真修好（你 t106 的 12 形态整套重跑 + 六探针 + 回归守卫是否真的钉住既有应命中） → 验证员 (deps: t109)
+      output: t110 复核 t109 = **pass（无 finding）**：t106 的 **R1 回归已闭合**。交付页 `tools/reports/t101-共享写者闸门-独立复核.md` 追加第三章：42,447 B → **52,992 B / LF 608 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `1090def0841bcd45`**（四条冻结区间 `[0,18625)`/`[0,24467)`/`[0,36620)`/`[0,42447)` 全部被第三方脚本独立复算一致 ⇒ 四次纯追加、旧章逐字节未动）。\n\n**① 12 形态整套重跑**：**①
+  - t111 [completed] work attempt 1 为 t38 备输入：现行用例收集数基线（只收集不执行）+ 与 README 现写数字的差值表 → 验证员
+      output: t111 完成：为 t38 备好收集数基线（只收集、不执行、不写盘）。交付页 `tools/reports/t38-输入-收集数基线.md` = **10,205 B / LF 131 / CR 0 / 无 BOM / 末尾 LF / sha256[:16] `41c5449353dda28f`**；台账一条（5,202 B / 7 行、LF 收尾）。\n\n**三条现读（各带命令原文）**：**① 收集数 = 1868**（六次同值）：守卫原样 `-m pytest --collect-only -q -n0 -p no:randomly --no-header` ⇒ exit 0 / `1
+Coverage:
+  - 补完 §0 派生义务的 9 国目标函数表: passed (t33)
+  - 完成阶段 6 的以国家身份开局自动化（难度三档与双语取证）: in_progress (t34)
+  - 阶段 6 G3 三行解释的实机取证: in_progress (t34)
+  - ① 并行测试内存占用：测量工具的正确性与可复跑性: passed (t92)
+Delivery: blocked (t74 (work) is not completed; t20 (verification) is not completed; t21 (verification) is not completed; t22 (verification) is not completed; t34 (implementation) is not completed; t35 (verification) is not completed; t38 (implementation) is not completed; t69 (verification) is not completed; t71 (implementation) is not completed; t80 (implementation) is not completed; t86 (verification) is not completed; t89 (repair) is not completed; t90 (implementation) is not completed; t106 failed without a follow-up repair)
+Captain inbox (0):
