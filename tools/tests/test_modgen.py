@@ -187,6 +187,22 @@ def _archive(tmp_path: Path, text: str = MINIMAL) -> modgen.Archive:
     return modgen.load_data(_write_source(tmp_path, text))
 
 
+def _panel_text(archive: modgen.Archive, slot: str, lang: str) -> str:
+    """从**数据源**里取 `[panel.<slot>].<lang>` 的文案（`t97` 起 `goal` 槽不再进 `localization`）。
+
+    为什么必须走数据源、而不是从 `archive.localization` 里按 key 找：`goal` 那一槽的 loc 键
+    **已经被引擎判为冗余并停发**（见 `modgen.PANEL_SLOTS_WITH_OWN_LOC`）⇒ 它在 `localization`
+    里查不到了，而"文案还在不在"这件事恰恰是这条用例要守的东西 ⇒ 只能回到数据源取期望值。
+    """
+    raw = modgen.read_source(modgen.DATA_DIR / f"{archive.id}.toml")["panel"]
+    assert isinstance(raw, dict), "数据源的 [panel] 应该是表"
+    line = raw[slot]
+    assert isinstance(line, dict), f"[panel.{slot}] 应该是表"
+    value = line[lang]
+    assert isinstance(value, str), f"[panel.{slot}].{lang} 应该是字符串"
+    return value
+
+
 def _second_source(
     *,
     tempo: bool = False,
@@ -234,6 +250,12 @@ def test_每份真实档案都有三行解释且真的接进JE说明() -> None:
     * `[panel]` 三行齐全 —— 缺一行生成器就退 2；
     * 三行**真的进了 JE 说明**（`<JE 名>_reason`）—— 引擎显示的是
       `journal_entry.gui:742` 的 `GetReason`；只写三个独立键等于"没上屏"。
+
+    ⚠️ `goal` 那一槽**不单独发 loc 键**（`t97`）：引擎只为带 goal 度量
+    （`goal_add_value`）的 JE 用 `<JE 名>_goal`，没有度量却写了它 ⇒
+    `journal_entry_type.cpp:476 Journal entry has redundant loc for …_goal`。
+    所以这一槽的**期望文案要从数据源里取**，再断言它确实并进了 `_reason` ——
+    这正是「消掉冗余 loc **不许**把玩家可见文案一起删掉」那条判据。
     """
     archives = modgen.load_all()
     assert archives, "一份档案都没有 —— 扫描本身坏了，不是'干净'"
@@ -255,9 +277,12 @@ def test_每份真实档案都有三行解释且真的接进JE说明() -> None:
             )
             assert reason is not None, f"{archive.id} 缺 {name}_reason（三行没处可接）"
             for slot, key, _why in archive.panel:
-                value = next(
-                    entry.values[lang] for entry in archive.localization if entry.key == key
-                )
+                if slot in modgen.PANEL_SLOTS_WITH_OWN_LOC:
+                    value = next(
+                        entry.values[lang] for entry in archive.localization if entry.key == key
+                    )
+                else:
+                    value = _panel_text(archive, slot, lang)
                 assert value in reason, f"{archive.id}/{lang}：{slot} 那一行没接进 JE 说明"
 
 
@@ -265,7 +290,7 @@ def test_解析真实档案的关键条目() -> None:
     """第一份档案（俄罗斯 · 战败求存）必须能被解析出它该有的东西。
 
     这条同时钉住"设计意图没被改掉"：变量名、修正名、JE 名、两个节奏键、
-    第二处理段（B2 的改革侧输入），以及"一张牌都不递"（F5）。
+    第二处理段（B2 的改革侧输入），以及**恰好一张自建牌**（t18 落地的 `ai_strategy_sitai_ru_defeat_agenda`）。
     """
     archive = modgen.load_data(modgen.DATA_DIR / "ru_defeat.toml")
     assert archive.id == "ru_defeat"
@@ -288,11 +313,29 @@ def test_解析真实档案的关键条目() -> None:
         "interest_group_ig_industrialists_pol_str_mult",
         "interest_group_ig_intelligentsia_pol_str_mult",
     }
-    assert archive.cards == (), "本档案刻意不递牌（F5：A 级已表达完整条链路）"
-    # 7 条档案自己的文案（4 条基础 + **3 行面板**，键名由 JE 名派生）
+    # 自建牌：**恰好这一张**（`mod/data/ru_defeat.toml` 的 `[cards]` —— t18 落地，t94 改准）。
+    #
+    # ⚠️ **为什么断言「恰好一张 + 逐字段」，而不是「≥1 张」或「非空」**：这条用例守的是
+    #    「我们递了哪些牌、它们长什么样」这件**事实**。放宽成 `len(cards) >= 1` 或 `cards`
+    #    就直接把它废掉了 —— 少一张、换一张、`slot` 写错、`weight` 漂出预算、门换成别的
+    #    字段，它都会绿。牌是**处方**（F5 的取舍结果），不是可以随实现漂的自由量。
+    cards = archive.cards
+    assert len(cards) == 1, (
+        f"本档案现在**恰好一张**自建牌，实际 {len(cards)} 张：{[c.name for c in cards]} —— "
+        "数量本身是被这条用例守住的事实，放宽成「≥1」等于把断言废掉"
+    )
+    card = cards[0]
+    assert card.name == "ai_strategy_sitai_ru_defeat_agenda"
+    assert card.slot == "political"
+    assert card.weight == 40  # 政治槽预算 [0.3, 0.6] ⇒ W ≤ 49（闸门 ③ 的价格表）
+    assert [(clause.key, clause.fact()) for clause in card.possible] == [
+        ("has_modifier", "=sitai_ru_defeat_pressure")
+    ], "门 = 本档案的压力修正（处境驱动），不是别的字段"
+    # 7 条档案自己的文案（4 条基础 + **2 行面板**）—— `t97` 起 `goal` 那一槽不再单独发键
+    # （引擎会为它报 `has redundant loc`，文案并进 `_reason`）⇒ 16 → 15
     # + 难度三档的 7 条（规则名 1 + 三档各自的 名称/说明 6）
     # + 2 条"玩家侧修正名"（只有带 player_effects 的两档才有）
-    assert len(archive.localization) == 16
+    assert len(archive.localization) == 15
     keys = {item.key for item in archive.localization}
     assert "rule_sitai_difficulty" in keys
     assert archive.difficulty is not None, "真实档案必须声明 [difficulty]（契约 J5）"
@@ -301,8 +344,11 @@ def test_解析真实档案的关键条目() -> None:
         assert f"{tier.setting}_desc" in keys
     assert {tier.id for tier in archive.difficulty.tiers} == set(modgen.DIFFICULTY_TIERS)
     assert [slot for slot, _key, _why in archive.panel] == ["goal", "pressure", "last_change"]
-    assert [key for _slot, key, _why in archive.panel] == [
-        "je_sitai_ru_reform_window_goal",
+    # `goal` 那一槽**不许**单独发 loc 键（`t97`：引擎只为带 goal 度量的 JE 用它，
+    # 没有度量却写了它 ⇒ `journal_entry_type.cpp:476` 报 redundant）；压力与上次改主意照旧发键。
+    _goal_slot, goal_key, _goal_why = archive.panel[0]
+    assert goal_key not in keys, "goal 槽不该出现在 localization 里（t97：它会被判冗余）"
+    assert [key for _slot, key, _why in archive.panel[1:]] == [
         "je_sitai_ru_reform_window_pressure",
         "je_sitai_ru_reform_window_last_change",
     ]
@@ -741,12 +787,27 @@ def test_三行必须齐全(tmp_path: Path) -> None:
 
 
 def test_三行键名由JE名派生并写进本地化与文档(tmp_path: Path) -> None:
+    """键名由 JE 名派生 —— 但**只有** `PANEL_SLOTS_WITH_OWN_LOC` 那几个槽单独发键。
+
+    `t97` 改前这条断言「三行**都**在 yml 里」，钉的是旧行为：`goal` 那一槽当时照发
+    `<JE 名>_goal`，而引擎为它报 `journal_entry_type.cpp:476 Journal entry has redundant
+    loc for …_goal`（只有带 goal 度量的 JE 才该有这条 loc）。改后改钉**新行为**：
+    压力与上次改主意照发，`goal` **不许**出现在 yml 里；三个槽的依据照旧都要进档案文档。
+    """
     archive = _archive(tmp_path, MINIMAL + PANEL)
     built = modgen.build(archive)
     name = archive.journal_entry.name
     loc = built.files[next(rel for rel in built.files if rel.endswith("_l_english.yml"))]
-    for _slot, suffix in modgen.PANEL_LINES:
-        assert f"{name}_{suffix}:0" in loc
+    for slot, suffix in modgen.PANEL_LINES:
+        key = f"{name}_{suffix}"
+        if slot in modgen.PANEL_SLOTS_WITH_OWN_LOC:
+            assert f"{key}:0" in loc, (
+                f"{slot} 那一槽该单独发键（它不在 PANEL_SLOTS_WITH_OWN_LOC？）"
+            )
+        else:
+            assert f"{key}:0" not in loc, (
+                f"{slot} 那一槽**不许**单独发键 —— 引擎会为它报 `has redundant loc`（t97）"
+            )
     doc = built.files[archive.doc_file]
     assert "面板三行" in doc
     for slot, key, why in archive.panel:
@@ -758,9 +819,10 @@ def test_三行接进JE说明里上屏(tmp_path: Path) -> None:
     """**三行必须真的上屏**（阶段 6 的 G3）。
 
     引擎显示的是 `journal_entry.gui:742` 的 `text = "[JournalEntry.GetReason]"` ⇒ 读
-    `<JE 名>_reason` 这条 loc；而 `<JE 名>_goal` 那一槽引擎会报
-    `journal_entry_type.cpp:476 … has redundant loc`（实测），显不显示**没有把握**。
-    所以三行文案要**也**接进 `_reason`（三个独立键照旧保留：能单独核对、将来接脚本化 GUI）。
+    `<JE 名>_reason` 这条 loc；而 `<JE 名>_goal` 那一槽**不单独发键**（`t97`：引擎会报
+    `journal_entry_type.cpp:476 … has redundant loc`）。
+    所以判据是：三行的文案**都在** `_reason` 里（压力 / 上次改主意另有独立键可单独核对；
+    `goal` 那一行的期望值从数据源取 —— 见 :func:`_panel_text`）。
     """
     archive = _archive(tmp_path, MINIMAL + PANEL)
     built = modgen.build(archive)
@@ -769,13 +831,62 @@ def test_三行接进JE说明里上屏(tmp_path: Path) -> None:
         line for line in loc.splitlines() if f"{archive.journal_entry.name}_reason" in line
     )
     for slot, key, _why in archive.panel:
-        value = next(entry.values["english"] for entry in archive.localization if entry.key == key)
+        if slot in modgen.PANEL_SLOTS_WITH_OWN_LOC:
+            value = next(
+                entry.values["english"] for entry in archive.localization if entry.key == key
+            )
+        else:
+            raw = modgen.read_source(_write_source(tmp_path, MINIMAL + PANEL))["panel"]
+            assert isinstance(raw, dict)
+            line = raw[slot]
+            assert isinstance(line, dict)
+            value = line["english"]
+            assert isinstance(value, str)
         assert value in reason, f"{slot} 那一行没接进 JE 说明"
     # 拼接用的是**字面量** `\n\n`（两个字符）：写成真换行会把 yml 拆成多行、后几行没有 key
     assert reason.count("\\n\\n") >= len(archive.panel)
     assert len(loc.splitlines()) == len(archive.localization) + 2, (
         "每条 loc 一行（语言声明 + 注释头 + N 条）—— 多出来的行说明值里有真换行"
     )
+
+
+def test_真实档案的目标那行仍在JE说明里() -> None:
+    """**防复发判据①**（`t97`）：消掉冗余 loc 之后，目标那一行的文案**不许**跟着消失。
+
+    为什么单开一条：`goal` 槽停发 loc 键之后，最容易犯的错就是"顺手把那行文字也删了" ——
+    产物照样能生成、`v3 modgen --check` 照样绿，而 G3（试玩者能复述「当前目标 + 主因」）
+    悄悄少了一行。这里逐份 × 逐语言核对「数据源里的目标文案确实在 `_reason` 行里」。
+    """
+    archives = modgen.load_all()
+    built = modgen.build_all(archives)
+    for archive in archives:
+        name = archive.journal_entry.name
+        for lang in sorted(modgen.LANGUAGES):
+            loc = built.files[archive.loc_file(lang)]
+            reason = next(line for line in loc.splitlines() if f"{name}_reason" in line)
+            goal = _panel_text(archive, "goal", lang)
+            assert goal in reason, f"{archive.id}/{lang}：目标那行没进 {name}_reason"
+
+
+def test_产物里没有以goal结尾的本地化键() -> None:
+    """**防复发判据②**（`t97`）：全量本地化产物里**没有**任何以 `_goal` 结尾的 loc 键。
+
+    判据来自引擎：`journal_entry_type.cpp:476 Journal entry has redundant loc for {}_goal`
+    —— 只有带 goal 度量（`goal_add_value`）的 JE 才该有这条 loc；原版 419 份 JE 里，
+    有度量的 90 份中 77 份带它、**没有度量的 329 份里 0 份**带。
+    扫**盘上产物**（不是内存里那份）：这条判据要能抓住"有人手改产物"或"生成器回退"两种情形。
+    """
+    offenders: list[str] = []
+    for path in sorted(modgen.PRODUCT_DIR.joinpath("localization").rglob("*.yml")):
+        for number, line in enumerate(
+            path.read_text(encoding="utf-8-sig", errors="replace").splitlines(), 1
+        ):
+            key = line.strip().split(":", 1)[0].strip()
+            if key.endswith("_goal"):
+                offenders.append(
+                    f"{path.relative_to(modgen.PRODUCT_DIR).as_posix()}:{number} {key}"
+                )
+    assert not offenders, f"这些 loc 键会被引擎判冗余（t97）：{offenders}"
 
 
 def test_三行文案里不许有裸双引号(tmp_path: Path) -> None:

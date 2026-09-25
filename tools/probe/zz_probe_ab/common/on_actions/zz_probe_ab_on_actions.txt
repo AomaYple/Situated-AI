@@ -21,8 +21,11 @@ zz_probe_ab_monthly = {
 		}
 
 		if = {
-			limit = { c:RUS ?= this }
-			debug_log = "ZZPROBE AB;ROLE;RUS;[THIS.GetCountry.GetNameNoFormatting]"
+			limit = { c:AUS ?= this }
+			debug_log = "ZZPROBE AB;ROLE;AUS;[THIS.GetCountry.GetNameNoFormatting]"
+
+			debug_log = "ZZPROBE AB;MODE;natural;[THIS.GetCountry.GetNameNoFormatting]"
+			debug_log = "ZZPROBE AB;STORM;no;[THIS.GetCountry.GetNameNoFormatting]"
 
 			# ① 先自励（**不点决议**：观察者局没有玩家国家，决议点不了）。
 			#    排在阶梯之前 —— 第 13 月那一格会武装并施加冲击，
@@ -35,7 +38,7 @@ zz_probe_ab_monthly = {
 
 			# ③ 两处输入到底有没有落到这个国家身上（自检用）
 			if = {
-				limit = { has_variable = sitai_ru_defeat_memory }
+				limit = { has_variable = sitai_au_revolution_memory }
 				debug_log = "ZZPROBE AB;SHOCK;yes;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 			else = {
@@ -43,15 +46,32 @@ zz_probe_ab_monthly = {
 			}
 
 			if = {
-				limit = { has_modifier = sitai_ru_reform_inputs }
+				limit = { has_modifier = sitai_au_reform_inputs }
 				debug_log = "ZZPROBE AB;INPUT;yes;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 			else = {
 				debug_log = "ZZPROBE AB;INPUT;no;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 
+			# ③·补 (a) **门直读**（t18 第 10 条）：门开没开要有一行直读，
+			#    不许再从记忆变量旁证（B 臂 0/13 的归因缺口就是它）。
+			if = {
+				limit = { has_modifier = sitai_au_revolution_pressure }
+				debug_log = "ZZPROBE AB;GATE;yes;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else = {
+				debug_log = "ZZPROBE AB;GATE;no;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+
+			# （t18 的 test 0 直置与 `GATE0` 自报已按口径撤掉 —— 见文件头那段；
+			#  结论 = 门不挡直置，递给通道不作承重。）
+
 			# ④ 当前挂着的政治牌（策略层读数；B53：牌才是闸门）
 			if = {
+				limit = { has_strategy = ai_strategy_sitai_ru_defeat_agenda }
+				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_sitai_ru_defeat_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
 				limit = { has_strategy = ai_strategy_conservative_agenda }
 				debug_log = "ZZPROBE AB;STRATEGY;ai_strategy_conservative_agenda;[THIS.GetCountry.GetNameNoFormatting]"
 			}
@@ -93,6 +113,73 @@ zz_probe_ab_monthly = {
 			}
 			else = {
 				debug_log = "ZZPROBE AB;STRATEGY;none;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+
+			# ④·补 我们自己的牌**逐月在/不在**（2026-09-25 加；口径见
+			#    `docs/design/exec/阶段5-新增牌-口径.md` §4）。两个理由：
+			#    ① 上面那条链只在**命中时**写一行，这一条每月都写（含 `none`）
+			#       —— 于是「我们的牌没被选中」是**写出来**的，不是从缺席倒推的；
+			#    ② 它独立于那条链的语义 ⇒ 两条读数不一致就是链被挪动过
+			#       （顺序用例之外的第二道防线）。
+			if = {
+				limit = { has_strategy = ai_strategy_sitai_ru_defeat_agenda }
+				debug_log = "ZZPROBE AB;CARD;sitai_ru_defeat_agenda;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else = {
+				debug_log = "ZZPROBE AB;CARD;none;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+
+			# ④·补② (b) **每张自建牌一行显式 yes/no**（t18 第 10 条）：
+			#    上面那条 `CARD` 链是「命中即停」的，只能证明「落点是哪一张」；
+			#    这一族逐张问 `has_strategy`，取值位里带**完整牌名** ⇒
+			#    「引擎到底有没有持有它」不再依赖任何链的文本。
+			if = {
+				limit = { has_strategy = ai_strategy_sitai_ru_defeat_agenda }
+				debug_log = "ZZPROBE AB;HELD;ai_strategy_sitai_ru_defeat_agenda=yes;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else = {
+				debug_log = "ZZPROBE AB;HELD;ai_strategy_sitai_ru_defeat_agenda=no;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+
+			# ④·补② 难度档位（阶段 6；口径见 `exec/阶段6-国家身份开局-取证口径.md`
+			#    §3.3 第 1 条）。互斥链回答「是哪一档」，三档各自的
+			#    yes/no 保证另两档也留痕 —— 承重判据要的是那个**组合**。
+			if = {
+				limit = { has_game_rule = sitai_difficulty_history_friendly }
+				debug_log = "ZZPROBE AB;RULE;sitai_difficulty_history_friendly;yes;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_game_rule = sitai_difficulty_uniform }
+				debug_log = "ZZPROBE AB;RULE;sitai_difficulty_uniform;yes;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else_if = {
+				limit = { has_game_rule = sitai_difficulty_harsh }
+				debug_log = "ZZPROBE AB;RULE;sitai_difficulty_harsh;yes;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else = {
+				debug_log = "ZZPROBE AB;RULE;none;yes;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+
+			if = {
+				limit = { has_game_rule = sitai_difficulty_history_friendly }
+				debug_log = "ZZPROBE AB;RULEHISTORY;yes;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else = {
+				debug_log = "ZZPROBE AB;RULEHISTORY;no;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { has_game_rule = sitai_difficulty_uniform }
+				debug_log = "ZZPROBE AB;RULEUNIFORM;yes;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else = {
+				debug_log = "ZZPROBE AB;RULEUNIFORM;no;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			if = {
+				limit = { has_game_rule = sitai_difficulty_harsh }
+				debug_log = "ZZPROBE AB;RULEHARSH;yes;[THIS.GetCountry.GetNameNoFormatting]"
+			}
+			else = {
+				debug_log = "ZZPROBE AB;RULEHARSH;no;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 
 			# ⑤ **立法到底开没开**（2026-09-22 新增）—— 这一行是
@@ -327,7 +414,7 @@ zz_probe_ab_monthly = {
 
 			# 行为层①：改革窗口开没开
 			if = {
-				limit = { has_journal_entry = je_sitai_ru_reform_window }
+				limit = { has_journal_entry = je_sitai_au_revolution_window }
 				debug_log = "ZZPROBE AB;JE;active;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 			else = {
@@ -386,7 +473,7 @@ zz_probe_ab_monthly = {
 
 		# 策略层：三槽落点（同一个守卫，不给全世界刷日志）
 		if = {
-			limit = { c:RUS ?= this }
+			limit = { c:AUS ?= this }
 		if = {
 			limit = { has_strategy = ai_strategy_conservative_agenda }
 			debug_log = "ZZPROBE AB;POLI;conservative_agenda;[THIS.GetCountry.GetNameNoFormatting]"

@@ -427,7 +427,7 @@ class TestFixClaims:
         assert "7" in out
         ns: dict[str, object] = {"Claim": verify.Claim}
         exec(compile(out, "<out>", "exec"), ns)
-        got = {c.id: c.expected for c in ns["CLAIMS"]}  # type: ignore[union-attr]
+        got = {c.id: c.expected for c in ns["CLAIMS"]}  # type: ignore[attr-defined]
         assert got["a"] == 42
         assert got["e"] == 7
         assert got["b"] == 2, "没点名的断言不能被动到"

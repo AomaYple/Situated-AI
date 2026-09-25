@@ -18,7 +18,7 @@ sitai_ru_defeat_shock = {
 	if = {
 		limit = {
 			is_ai = no
-			has_game_rule = setting_sitai_difficulty_history_friendly
+			has_game_rule = sitai_difficulty_history_friendly
 		}
 		add_modifier = {
 			name = sitai_ru_defeat_difficulty_history_friendly
@@ -28,7 +28,7 @@ sitai_ru_defeat_shock = {
 	if = {
 		limit = {
 			is_ai = no
-			has_game_rule = setting_sitai_difficulty_harsh
+			has_game_rule = sitai_difficulty_harsh
 		}
 		add_modifier = {
 			name = sitai_ru_defeat_difficulty_harsh

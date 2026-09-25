@@ -345,6 +345,55 @@ def check_probe_lint(archive_id: str | None) -> Check:
     return Check("探针引用体检", True, f"{len(issues)} 处引用全都在{note}")
 
 
+def check_stress_lint() -> Check:
+    """**压力剧本产物**的形状体检（2026-09-25 加；一次白烧的实机窗口换来的）。
+
+    为什么单列一条、而不塞进 :func:`check_probe_lint`：那一支是**探针档案**的体检（要
+    `--archive` 才跑），而压力剧本的产物与档案无关 —— 它由 :mod:`pdx.stress_probe`
+    按仓库数据生成，每次开局前都该查。两处都走同一个 :func:`pdx.probe_lint.lint`，
+    判据只写一份（P9）。
+
+    被它挡下的三类都是「引擎只记一行日志、脚本侧毫无感觉」的形状错误（`t64` /
+    `t73` 侦察局实测）：
+
+    * `on_action` 块里**直接写脚本效果调用** ⇒ 引擎拒掉整份文件
+      （`Unexpected token: zz_stress_tick`）⇒ 钩子一次都没挂上，那一局 0 行自报；
+    * 生成物里 `if = {` 少了 `limit = {` ⇒ 引擎把里面几行当**效果**读
+      （8 行 `Unknown effect c:GBR`）⇒ 那一格读数静默为空；
+    * `limit = { … }` 里**平铺了几条作用域比较**（`c:GBR ?= this` + `c:RUS ?= this` …）⇒
+      `limit` 是**与**（AND）⇒ 恒假 ⇒ 整段一次都不执行，**而引擎一行日志都不报**
+      （2026-09-25 03:33 实测：四波 32 行自报全没发生、`error.log` 里 0 行）。
+    """
+    from pdx import probe_lint, stress_probe  # noqa: PLC0415
+
+    try:
+        files = stress_probe.files()
+    except Exception as exc:  # pragma: no cover - 数据源坏了由别的检查先报
+        return Check(
+            "压力剧本体检", False, f"生成压力剧本失败：{exc}", "先修生成器的数据源", level=BLOCKING
+        )
+    issues = probe_lint.lint(files)
+    bad = probe_lint.failures(issues)
+    shapes = probe_lint.scan_shapes(files)
+    if bad:
+        head = "；".join(f"{issue.kind} {issue.name}" for issue in bad[:3])
+        return Check(
+            "压力剧本体检",
+            False,
+            f"{len(bad)} 处形状不合法：{head}",
+            "改生成器 `tools/pdx/stress_probe.py`（别手改部署产物）—— "
+            "这三类里最坏的一类引擎**连一行日志都不记**，那一局的读数会静默为空",
+            level=WRONG,
+        )
+    note = "" if shapes.vanilla_keys else "（没有游戏目录：on_action 键只按官方 10 个结构成员判）"
+    return Check(
+        "压力剧本体检",
+        True,
+        f"{shapes.on_action_keys} 个 on_action 顶层键 + {shapes.if_blocks} 个 `if` + "
+        f"{shapes.limits} 个 `limit` 全合法{note}",
+    )
+
+
 def check_logs_fresh() -> Check:
     """日志里没有**上一局**的探针自报（否则读数会混两局）。
 
@@ -468,6 +517,7 @@ def run(*, archive: str | None = None, root: Path | None = None) -> Report:
         check_user_config(),
         check_no_leftover_game(),
         check_logs_fresh(),
+        check_stress_lint(),
     ]
     if archive:
         checks.extend([check_archive(archive), check_probe(archive), check_probe_lint(archive)])

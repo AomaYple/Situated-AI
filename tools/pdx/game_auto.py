@@ -64,7 +64,6 @@ from __future__ import annotations
 import argparse
 import csv
 import io
-import os
 import re
 import shutil
 import subprocess
@@ -166,6 +165,15 @@ STEP_SETTLE = 0.35
 
 # 控制台开合之后等它画出来（控制台是个大面板，实测 1.5 秒足够；之后仍以 ROI 判据为准）。
 CONSOLE_SETTLE = 1.5
+
+#: 滚轮一格的值（`pydirectinput.scroll` 的单位；120 = Win32 的一个 `WHEEL_DELTA`）。
+#: 阶段 6 的规则窗要用它把折叠线以下的规则卡滚进视野（见 :func:`mouse_wheel`）。
+WHEEL_NOTCH = 120
+
+#: 等"画面不再变"的上限（秒）与判据（帧间平均差 ≤ 这个比例即算稳定）。
+#: 规则窗里点一下 ‹ › 之后档名/说明要过一帧才画出来 —— 这是 :func:`wait_stable` 存在的理由。
+STABLE_TIMEOUT = 8.0
+STABLE_DIFF = 0.002
 
 # 启动期"事件驱动"等待：不看像素，只看**便宜的进程/日志信号**（P2）。
 #   ① 进程在不在（`tasklist`）；
@@ -1156,10 +1164,16 @@ def find_in_roi(
     *,
     roi: tuple[float, float, float, float],
     threshold: float = DEFAULT_THRESHOLD,
+    directory: Path | None = None,
 ) -> Match | None:
     """只在 ``roi`` 里找模板：**只抓那一块**再匹配（P2：热路径只读需要的像素）。
 
     收益量级见 :func:`_grab`：抓图省 2.3%，匹配省 75×（1146.5 ms → 15.3 ms）。
+
+    ``directory`` 是模板目录（缺省 :data:`UI_DIR`）。为什么要这个口子（2026-09-25）：
+    阶段 6 的取证要**两套语言的模板**（`tools/probe/sitai_ui/{zh,en}/`），混在一个
+    目录里会出现"中文模板匹配到英文界面"这种最难查的假绿。:func:`locate` /
+    :func:`load_template` 早就支持 `directory=`，只有这条最常用的入口漏了。
 
     抓图失败（不是前台 / 最小化）按"没找到"返回 ``None``；要区分"看不到"与"没有"的
     调用方请直接用 :func:`screenshot`，让它出声（P13）。
@@ -1168,11 +1182,145 @@ def find_in_roi(
         image = screenshot(hwnd, roi=roi)
     except CaptureFailedError:
         return None
-    found = locate_optional(image, name, threshold=threshold, first_hit=True)
+    found = locate_optional(image, name, threshold=threshold, first_hit=True, directory=directory)
     if found is None:
         return None
     dx, dy = _roi_offset(hwnd, roi)
     return _shift_match(found, dx, dy)
+
+
+def mouse_wheel(
+    hwnd: int,
+    x: int,
+    y: int,
+    clicks: int,
+    *,
+    settle: float = 0.0,
+    force: bool = False,
+) -> None:
+    """在客户区 ``(x, y)`` 处滚**真实**滚轮 ``clicks`` 格（正数向下）。
+
+    为什么需要它（2026-09-25，阶段 6）：开局规则窗的规则列表是 ``scrollbox`` +
+    ``fixedgridbox``（`game/gui/game_rules.gui`：`addrow = 186`、窗口高 845），
+    **一屏放不下 16 条规则** —— 我们的卡片可能在折叠线以下，不滚就永远匹配不到。
+    本模块原先只有点击与按键，没有滚轮，这是缺的那一件。
+
+    与点击同一条纪律：**真实输入**（`pydirectinput.scroll`，与已用的 `moveTo`/`click`
+    同源），并且**先把光标移到目标点**再滚 —— 滚轮事件打在光标所在的控件上，
+    不移动就滚的是上一个位置（同族的坑：点击打到了屏幕顶部，`自动化范式.md:479`）。
+    """
+    _require_input(force)
+    live = _live_window(hwnd)
+    if _foreground_window() != live:
+        raise ForegroundLostError(
+            f"要滚轮时游戏已经不在前台（游戏 hwnd={hwnd}，前台={_foreground_window()}）——"
+            "真实滚轮事件会送给前台窗口（用户正在用的那个），已中止"
+        )
+    _set_cursor(x, y)
+    if not _wait_cursor_at(x, y):
+        raise RealInputBlockedError(
+            f"光标没能停到客户区 ({x}, {y}) —— 滚轮会打给别的控件，已中止（P13）"
+        )
+    step = WHEEL_NOTCH if clicks >= 0 else -WHEEL_NOTCH
+    for _ in range(abs(int(clicks))):
+        # ⚠️ pydirectinput **没有** scroll（2026-09-25 实机踩到：AttributeError，侦察局死在 L7）。
+        #    改用 win32api.mouse_event 的 MOUSEEVENTF_WHEEL —— 与 pydirectinput 同一条
+        #    **系统输入队列**（不是被实测否定的 PostMessage/SendMessage 消息注入），引擎读得到。
+        win32api.mouse_event(win32con.MOUSEEVENTF_WHEEL, 0, 0, step, 0)
+        if settle:
+            _sleep(settle)
+    if settle:
+        _sleep(settle)
+
+
+def mouse_drag(
+    hwnd: int,
+    x0: int,
+    y0: int,
+    x1: int,
+    y1: int,
+    *,
+    steps: int = 12,
+    settle: float = 0.02,
+    force: bool = False,
+) -> None:
+    """按住左键把光标从客户区 ``(x0, y0)`` 拖到 ``(x1, y1)``。
+
+    为什么需要它（2026-09-25 第九遍实测，硬事实）：**注入的滚轮到不了引擎** ——
+    `21-rules-window.png` 与滚过一格之后的 `22-rule-sitai-scroll-1.png` **逐字节相同**
+    （同 sha256 `414f481b56c870e5`、同 1,934,985 B）。这与本模块早已证实的"键盘注入
+    （`keybd_event` / `SendInput`）不被接受"同族；而**移动与点击**是实机反复证明可用的
+    通道（本模块只用它）。规则窗右侧就是 scrollbox 的滚动条 ⇒ 拖它。
+
+    与点击/滚轮同一条纪律：先确认游戏在**前台**，再把光标放到起点、确认**真的停到了那里**，
+    然后按住 → **分步**移动 → 抬起。分步是必要的：引擎读的是它自己帧里的光标位置，
+    一次跳到底它可能只看到起点与终点（甚至只看到抬起那一瞬）。
+    """
+    _require_input(force)
+    live = _live_window(hwnd)
+    if _foreground_window() != live:
+        raise ForegroundLostError(
+            f"要拖动时游戏已经不在前台（游戏 hwnd={hwnd}，前台={_foreground_window()}）"
+            "—— 真实鼠标事件会送给前台窗口（用户正在用的那个），已中止"
+        )
+    _set_cursor(x0, y0)
+    if not _wait_cursor_at(x0, y0):
+        raise RealInputBlockedError(
+            f"光标没能停到拖动起点 ({x0}, {y0}) —— 拖动会从别的地方开始，已中止（P13）"
+        )
+    directinput.mouseDown()
+    try:
+        for i in range(1, steps + 1):
+            _set_cursor(
+                round(x0 + (x1 - x0) * i / steps),
+                round(y0 + (y1 - y0) * i / steps),
+            )
+            _sleep(settle)
+    finally:
+        # 无论中途出什么事都要抬键 —— 留着按下的左键会把后面每一步都变成拖动。
+        directinput.mouseUp()
+    if settle:
+        _sleep(settle)
+
+
+def wait_stable(
+    hwnd: int,
+    *,
+    roi: tuple[float, float, float, float],
+    timeout: float = STABLE_TIMEOUT,
+    interval: float = CONDITION_POLL,
+    settle_frames: int = 2,
+) -> bool:
+    """等 ``roi`` 里的画面**连着 ``settle_frames`` 帧不再变**（返回是否等到）。
+
+    为什么不是"睡一觉"（用户口径：不要直接 sleep）：规则窗里点一下 ‹ › 之后，
+    档名与说明是**下一帧**才画出来的；睡固定时长要么不够（读到的还是上一档 ⇒
+    把三档取证做成"同一档三张图"这种假绿），要么白等。所以用**帧稳定**当条件。
+
+    判据是"帧间平均差 ≤ :data:`STABLE_DIFF`"（比例），不是"逐像素相同" ——
+    界面有动效与抗锯齿，逐像素相同这个条件永远不成立。
+    """
+    try:
+        before = np.asarray(screenshot(hwnd, roi=roi).convert("L"), dtype=np.int16)
+    except CaptureFailedError:
+        return False
+    deadline = _monotonic() + timeout
+    stable = 0
+    while _monotonic() < deadline:
+        _sleep(interval)
+        try:
+            after = np.asarray(screenshot(hwnd, roi=roi).convert("L"), dtype=np.int16)
+        except CaptureFailedError:
+            continue
+        if before.shape != after.shape:
+            stable = 0
+        else:
+            diff = float(np.abs(after - before).mean()) / 255.0
+            stable = stable + 1 if diff <= STABLE_DIFF else 0
+        before = after
+        if stable >= settle_frames:
+            return True
+    return False
 
 
 def save_shot(image: Image.Image, tag: str) -> Path:
@@ -1444,11 +1592,10 @@ def assert_no_game_running() -> None:
         )
 
 
-#: 引擎日志的落地目录（用户目录下的 `logs/`）。
-USER_LOGS_DIR = (
-    Path(os.environ.get("V3_USERDIR", r"C:\Users\28905\Documents\Paradox Interactive\Victoria 3"))
-    / "logs"
-)
+#: 引擎日志的落地目录（用户目录下的 `logs/`）—— 走 `config.USERDIR`：默认路径的解析只有
+#: 一处（环境变量优先 → 平台候选 → 确定的回落值），原先这里自己又写了一遍 `V3_USERDIR`
+#: 的默认值 + 一个机器专属绝对路径（P9；本文件其它用户目录早就都走 `config.USERDIR`）。
+USER_LOGS_DIR = config.USERDIR / "logs"
 
 
 def quarantine_logs(dest: Path | None = None) -> list[str]:

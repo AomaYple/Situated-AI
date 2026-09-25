@@ -7,15 +7,15 @@
 # 读取方式：脚本侧 `has_game_rule = <设置名>`（原版同款用法）。
 
 sitai_difficulty = {
-	default = setting_sitai_difficulty_uniform
+	default = sitai_difficulty_uniform
 
-	setting_sitai_difficulty_history_friendly = {
-		flag = setting_sitai_difficulty_history_friendly
+	sitai_difficulty_history_friendly = {
+		flag = sitai_difficulty_history_friendly
 	}
-	setting_sitai_difficulty_uniform = {
-		flag = setting_sitai_difficulty_uniform
+	sitai_difficulty_uniform = {
+		flag = sitai_difficulty_uniform
 	}
-	setting_sitai_difficulty_harsh = {
-		flag = setting_sitai_difficulty_harsh
+	sitai_difficulty_harsh = {
+		flag = sitai_difficulty_harsh
 	}
 }

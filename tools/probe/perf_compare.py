@@ -15,6 +15,31 @@
 ⚠️ **非受控对照**（要标清楚）：没有固定存档 + 固定指令序列，两局不是同一个世界；
 结论只能读"量级与方向"，不能读成"精确差值"。
 
+## 受控性：两臂的压力自报必须逐行相等（2026-09-25 起）
+
+`--stress` 时两臂都装同一份压力剧本（`pdx.stress_probe`），它在每一波落地时由**一个写死的国家**
+写一行 `ZZPROBE STRESS;<KIND>;<wave>;<target>`（格式在 `stress_probe` 的模块 docstring 里）。
+本脚本在两臂跑完后把两串序列**逐行比对**（`:func:`stress_control_verdict``）：
+
+* 不等 ⇒ **出声失败**（退出码 1，并指出第一处不同的波次与两臂各自那一行，P13）；
+* **一条都没有** ⇒ 也是失败 —— "两边都空所以相等"是**空的**受控（窗口里根本没压力落地）；
+* 形状不对的自报行（分类不认识等）⇒ 同样失败（格式漂了，"相等"两个字就没有意义）。
+
+⇒ `阶段4-结果.md` §六·补 那张表里的"**非受控**"因此可以升级成"**受控**"，
+判据 = 这次的退出码 + `compare.json` 里的 `stress` 块（每局的序列都在里面）。
+
+## 第三臂 `--tempo-arm`（B27，默认关闭）
+
+`--tempo-arm` 多跑一条臂 `tempo` = **原版 + 剧本 + 只挂那一份 tempo defines 的壳 mod**
+（`mod/common/defines/*_tempo.txt`，逐字节复制 `v3 modgen` 的产物 —— 探针不重写生成物）。
+口径见 `docs/design/exec/阶段4-压力剧本-口径.md` §6：`Δ_tempo = M_tempo − M_vanilla`，盯 `UpdateAI`，
+把"节奏杠杆的开销"从 ours 臂的混杂项里**分离**出来。
+
+⚠️ **默认关闭 ⇒ 两臂的行为、产物名与报告格式与从前一字不差**：第三臂的 CSV 是
+`tempo-<序号>.csv`（不与 `vanilla-<序号>.csv` / `ours-<序号>.csv` 冲突），壳 mod 落在
+`<用户 mod 目录>/zz_probe_tempo_only`（跑完删除，`finally` 里）。
+**本卡只提供能力、不跑实机** —— 实跑由 `t22` 按窗口预算决定；不跑就按口径页把它标成混杂项。
+
 ## 收尾（P12/可回滚）
 
 `finally` 里：杀游戏 → 还原 `content_load.json`（先备份）→ 删掉本脚本装进去的本地 mod。
@@ -37,13 +62,18 @@ import sys
 import tempfile
 import time
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 from pdx import ab_probe, config, gametimer, stress_probe
 from pdx import game_auto as ga
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 DOCS = config.USERDIR
 MODS_DIR = DOCS / "mod"
@@ -61,6 +91,49 @@ STRESS_DST = stress_probe.dest()
 #: 而 `ab_probe.load_target()` 已经是那条链的单一来源（`ab_probe.deploy()` 同样读它）。
 OURS_DST = MODS_DIR / ab_probe.load_target().dir_name
 OUT_DIR = Path(__file__).resolve().parents[1] / "out" / "perf"
+
+#: 三条臂的标签（= `run_once` 的 `label` = CSV 文件名前缀 = 报告里的 label）。
+#: **前两条是默认臂**；第三条（B27 的 `tempo-only`）要显式开，见 :func:`arm_labels`。
+VANILLA_LABEL = "vanilla"
+OURS_LABEL = "ours"
+TEMPO_LABEL = "tempo"
+
+
+def arm_labels(tempo_arm: bool = False) -> tuple[str, ...]:
+    """这一轮要跑的臂（**顺序就是交替顺序**；默认两臂与从前一字不差）。"""
+    if tempo_arm:
+        return (VANILLA_LABEL, OURS_LABEL, TEMPO_LABEL)
+    return (VANILLA_LABEL, OURS_LABEL)
+
+
+def arm_csv_path(label: str, index: int) -> Path:
+    """某一臂某一局的 CSV 落点（**产物路径的唯一来源**）。
+
+    为什么单开一个函数：三条臂的路径必须互不冲突，而路径原来是就地拼的字符串 ——
+    多一条臂时"撞名"**不会有任何报错**（后一局把前一局的 CSV 覆盖掉，报告里两条臂读出同一份）。
+    有了单一来源，"三臂路径互不相同"才能被一条**不跑游戏**的用例钉住。
+    """
+    return OUT_DIR / f"{label}-{index}.csv"
+
+
+def arm_mods(label: str, stress_mods: Sequence[Path]) -> list[Path]:
+    """这一臂挂哪些**本地** mod：基线 = 剧本；处理 = 剧本 + 我们；第三臂 = 剧本 + 壳 mod。"""
+    if label == OURS_LABEL:
+        return [*stress_mods, OURS_DST]
+    if label == TEMPO_LABEL:
+        return [*stress_mods, TEMPO_DST]
+    return [*stress_mods]
+
+
+#: 第三臂（B27）的**壳 mod** 名字：只挂那一份 tempo defines，不带任何档案产物。
+#:
+#: 前缀取 `mods.PROBE_PREFIX`（`zz_probe_`）**且** id 取 `sitai.` 前缀 —— **两条判据都占上**：
+#: `pdx.mods.discover_mods()` 按**目录名前缀**排除探针、按 **id 前缀**排除我们自己部署的 mod
+#: （`mods.py:185`、`:203`、`:229-246`；B83 记的就是后者踩过的坑）。
+#: 少占一条，"多跑了一条臂"就会把本机 mod 统计与黄金回归指纹一起顶掉。
+TEMPO_MOD_NAME = "zz_probe_tempo_only"
+TEMPO_DST = MODS_DIR / TEMPO_MOD_NAME
+TEMPO_DEFINES_GLOB = "*_tempo.txt"
 
 #: 有界窗口的三条控制台命令（B66 实测：反引号开控制台、敲完要**按两次回车**才提交）。
 CLEAR_COMMAND = "clear_ticktask_timings"
@@ -140,6 +213,106 @@ def _ours_mounted() -> bool:
     return False
 
 
+# ── 压力自报：读取与比对（"受控 / 非受控"就是这一节）────────────────────────
+
+
+def scan_stress_lines(directory: Path | None = None) -> stress_probe.ReportScan:
+    """这一局日志里的**压力自报行**（按轮转顺序：`debug.N.log` 旧 → `debug.log` 新）。
+
+    ⚠️ 顺序**不许**拿 `sorted()` 凑：字典序把 `debug.10.log` 排在 `debug.2.log` 前面，
+    拼出来的时间顺序是错的（B85 实测踩过两次）⇒ 一律走 `ga.rotated_logs()`。
+
+    为什么**不去重**：重复本身是"这一波释放了两次"的证据；两侧都会看到它，
+    比对时能判出来 —— 去重就是把这件事实吃掉（P13）。
+    """
+    base = LOGS if directory is None else directory
+    lines: list[str] = []
+    malformed: list[str] = []
+    for path in ga.rotated_logs(base, "debug"):
+        scanned = stress_probe.scan_report_lines(path.read_text(encoding="utf-8", errors="replace"))
+        lines.extend(scanned.lines)
+        malformed.extend(scanned.malformed)
+    return stress_probe.ReportScan(tuple(lines), tuple(malformed))
+
+
+def _report_lines(report: dict[str, object]) -> list[str]:
+    """一局报告里的自报序列（没有就是空列表 —— 由判据去判，不在这里补）。"""
+    raw = report.get("stress_lines")
+    return [str(item) for item in raw] if isinstance(raw, list) else []
+
+
+@dataclass(frozen=True, slots=True)
+class StressControl:
+    """两臂受的压到底一不一样 —— "受控 / 非受控"**只有这一条判据**。"""
+
+    ok: bool
+    pairs: int
+    problems: tuple[str, ...] = ()
+
+    def describe(self) -> str:
+        if self.ok:
+            return f"✅ 受控：{self.pairs} 对臂的压力自报**逐行相等**"
+        return "❌ 受控性不成立：" + "；".join(self.problems)
+
+
+def stress_control_verdict(reports: Sequence[dict[str, object]]) -> StressControl:
+    """把各局折成"同序号的臂对"、逐对比对自报序列 —— **这就是那条断言**。
+
+    判据三条，缺一条都不算受控（P13 不许静默降级）：
+
+    1. 每个序号都有 `vanilla` 那一局（没有基线就无从配对）；
+    2. `vanilla` 的序列**非空** —— 两边都空时"相等"是**空的**受控：窗口里根本没有压力落地
+       （剧本没挂上、窗口太短、效果没跑起来都会长成这个样子）；
+    3. 其余每一臂与 `vanilla` 的序列**逐行相等**（第一处不同由
+       :func:`pdx.stress_probe.compare_report_sequences` 给出：第几处 + 哪一波 + 两臂各自那一行）。
+
+    ⚠️ **次数也算判据**（`t63`）：剧本里"行数 = 施加次数"（自报与施加在同一个守卫里，
+    见 `pdx.stress_probe.report_emitter`），所以逐行比**本身**就把次数比进去了；
+    这里再把 `describe_count_differences` 的逐行计数差印进失败信息 —— 只报"第一处不同"时，
+    读的人看不出根因是"同一波同一国多抽了一次"。
+
+    另外：只要日志里有**形状不对**的自报行（分类不认识、字段少一个），也判不成立 ——
+    格式漂了的时候，"相等"两个字没有意义。
+    """
+    by_index: dict[int, dict[str, list[str]]] = {}
+    malformed: list[str] = []
+    for report in reports:
+        label = str(report.get("label"))
+        index = report.get("index")
+        key = index if isinstance(index, int) else 0
+        by_index.setdefault(key, {})[label] = _report_lines(report)
+        bad = report.get("stress_malformed")
+        if isinstance(bad, list):
+            malformed.extend(f"{label}#{key}: {item}" for item in bad)
+    problems: list[str] = []
+    for key in sorted(by_index):
+        arms = by_index[key]
+        baseline = arms.get(VANILLA_LABEL)
+        if baseline is None:
+            problems.append(f"#{key}：没有 {VANILLA_LABEL} 那一局 ⇒ 无从配对")
+            continue
+        if not baseline:
+            problems.append(
+                f"#{key}：两臂一条压力自报都没有 ⇒ 窗口内**没有压力落地**，"
+                "「相等」是空的，**不能**称受控（先查剧本挂没挂上、窗口够不够长）"
+            )
+            continue
+        for label in sorted(set(arms) - {VANILLA_LABEL}):
+            diff = stress_probe.compare_report_sequences(baseline, arms[label])
+            if diff is not None:
+                problems.append(
+                    f"#{key}：" + diff.describe(left_label=VANILLA_LABEL, right_label=label)
+                )
+                counts = stress_probe.describe_count_differences(
+                    baseline, arms[label], left_label=VANILLA_LABEL, right_label=label
+                )
+                if counts:
+                    problems.append(f"#{key} 施加次数不同：" + "；".join(counts[:4]))
+    if malformed:
+        problems.append("形状不对的自报行（格式漂了，不能称受控）：" + "；".join(malformed[:5]))
+    return StressControl(ok=not problems, pairs=len(by_index), problems=tuple(problems))
+
+
 def _wait_months(hwnd: int, months: float, *, timeout: float = 900.0) -> dict[str, object]:
     """跑到游戏时间前进 ``months`` 个月（判据是**游戏内日期**，不是墙钟）。"""
     start = ga.tick_mark()
@@ -169,8 +342,14 @@ def _wait_months(hwnd: int, months: float, *, timeout: float = 900.0) -> dict[st
     }
 
 
-def run_once(label: str, months: float, *, index: int = 1) -> dict[str, object]:
-    """跑一局并取一份 dump。调用方负责 content_load 与 mod 目录已就位。"""
+def run_once(
+    label: str, months: float, *, index: int = 1, stress: bool = False
+) -> dict[str, object]:
+    """跑一局并取一份 dump。调用方负责 content_load 与 mod 目录已就位。
+
+    ``stress=True`` 时额外读这一局的**压力自报**（`ZZPROBE STRESS;…`，见上「受控性」一节）
+    并写进报告；``False`` 时连日志都不读一趟 —— 默认两臂的输出与从前一字不差。
+    """
     ga.assert_no_game_running()
     csv_path = gametimer.ticktask_default_path()
     csv_path.unlink(missing_ok=True)  # 清掉旧的，靠"文件重新出现"判断命令生效
@@ -213,7 +392,7 @@ def run_once(label: str, months: float, *, index: int = 1) -> dict[str, object]:
             "（检查 backlog B66 的三条：反引号开、敲得进去、**两次回车**才提交）"
         )
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    target = OUT_DIR / f"{label}-{index}.csv"
+    target = arm_csv_path(label, index)
     shutil.copy(csv_path, target)
     summary = gametimer.summarize_ticktask(target)
     print(f"  {target}（{target.stat().st_size} 字节）")
@@ -236,6 +415,15 @@ def run_once(label: str, months: float, *, index: int = 1) -> dict[str, object]:
         "mounted": mounted,
         "ours_mounted": ours_mounted,
     }
+    # 压力自报：只在 `--stress` 时读（默认两臂连这一趟 I/O 都不做 ⇒ 输出与从前一字不差）。
+    if stress:
+        scanned = scan_stress_lines()
+        note = f"  压力自报：{len(scanned.lines)} 行"
+        if scanned.malformed:
+            note += f"｜⚠️ 形状不对 {len(scanned.malformed)} 行（第一条：{scanned.malformed[0]}）"
+        print(note)
+        report["stress_lines"] = list(scanned.lines)
+        report["stress_malformed"] = list(scanned.malformed)
     ga.kill_game()
     time.sleep(3)
     return report
@@ -269,8 +457,31 @@ def _task_mean(csv: Path, task: str) -> float | None:
 WATCH_TASK = "RecalculateModifierNodes"
 
 
+def _delta(
+    base: dict[str, float | None],
+    other: dict[str, float | None],
+    *,
+    from_label: str,
+    to_label: str,
+) -> dict[str, float | str | None]:
+    """两个 label 的均值差（相对差按**基线**算）。
+
+    两臂的 `delta`（ours − vanilla）与第三臂的 `delta_tempo`（tempo − vanilla）同一套算法：
+    同一份代码、同一组键，免得两条差用两种口径读。
+    """
+    delta: dict[str, float | str | None] = {}
+    for key in ("per_frame_mean", "task_mean"):
+        first, second = base.get(key), other.get(key)
+        value: float | None = None if first is None or second is None else round(second - first, 4)
+        delta[key] = value
+        delta[f"{key}_pct"] = None if not first or value is None else round(100 * value / first, 2)
+    delta["from"] = from_label
+    delta["to"] = to_label
+    return delta
+
+
 def report_table(reports: list[dict[str, object]]) -> dict[str, object]:
-    """把若干局折成一张对照表：每个 label 的**每一局**读数 + 均值。"""
+    """把若干局折成一张对照表：每个 label 的**每一局**读数 + 均值（+ 差）。"""
     table: dict[str, object] = {"runs": reports, "by_label": {}}
     by_label: dict[str, list[dict[str, float | None]]] = {}
     for report in reports:
@@ -290,25 +501,91 @@ def report_table(reports: list[dict[str, object]]) -> dict[str, object]:
             )
         aggregate[label]["runs"] = len(rows)
     table["by_label"] = aggregate
-    if len(aggregate) == 2:
-        labels = list(aggregate)
-        delta: dict[str, float | None] = {}
-        for key in ("per_frame_mean", "task_mean"):
-            a, b = aggregate[labels[0]][key], aggregate[labels[1]][key]
-            delta[key] = None if a is None or b is None else round(b - a, 4)
-            delta[f"{key}_pct"] = (
-                None if not a or delta[key] is None else round(100 * delta[key] / a, 2)
-            )
-        delta["from"] = labels[0]
-        delta["to"] = labels[1]
-        table["delta"] = delta
+    # 主量：`Δ_arm = M_ours − M_vanilla`（两臂时 from/to 就是 vanilla/ours，与从前一字不差）。
+    if VANILLA_LABEL in aggregate and OURS_LABEL in aggregate:
+        table["delta"] = _delta(
+            aggregate[VANILLA_LABEL],
+            aggregate[OURS_LABEL],
+            from_label=VANILLA_LABEL,
+            to_label=OURS_LABEL,
+        )
+    # 第三臂（B27）：`Δ_tempo = M_tempo − M_vanilla`，口径 `阶段4-压力剧本-口径.md` §6。
+    if VANILLA_LABEL in aggregate and TEMPO_LABEL in aggregate:
+        table["delta_tempo"] = _delta(
+            aggregate[VANILLA_LABEL],
+            aggregate[TEMPO_LABEL],
+            from_label=VANILLA_LABEL,
+            to_label=TEMPO_LABEL,
+        )
     return table
 
 
-def main() -> int:
-    # 探针是**显式入口**：按设计打开真实输入授权（`pdx.game_auto` 的闸门说的就是这件事）。
-    ga.ALLOW_REAL_INPUT = True
-    parser = argparse.ArgumentParser(description="G-EXIT-3 两局性能对照")
+def tempo_defines_sources(mod_root: Path | None = None) -> list[Path]:
+    """仓库产物里那份 **tempo defines**（`mod/common/defines/*_tempo.txt`，来自 `[tempo]` 表）。
+
+    为什么从**产物**取、不现造：`[tempo]` 是 mod 级表，产物名由 `modgen` 按"声明它的那份档案"
+    命名（`modgen.py:496-500`）⇒ 探针再拼一次名字，就多出一处"改了档案还得顺手改探针"，
+    而 G-EXIT-1 的判据正是"加一行数据 = 不改 Python"（P9）。产物由闸门 ⑤ 与数据源对齐。
+    """
+    return sorted(
+        ((mod_root or (config.REPO / "mod")) / "common" / "defines").glob(TEMPO_DEFINES_GLOB)
+    )
+
+
+def tempo_metadata_text(mod_root: Path | None = None) -> str:
+    """壳 mod 的 `.metadata/metadata.json`（id 用 `sitai.` 前缀，理由见 :data:`TEMPO_MOD_NAME`）。
+
+    ``supported_game_version`` 走 `stress_probe.mod_game_version()` —— **与压力剧本探针同源**
+    （`t63` 把那一份从"写死 1.14.3"改成现读，两处就不再各读一遍产物了）。
+    """
+    return (
+        "{\n"
+        '  "name": "SITAI 第三臂壳 mod（B27：只挂 tempo defines）",\n'
+        f'  "id": "sitai.perf.{TEMPO_MOD_NAME}",\n'
+        '  "version": "0.1.0",\n'
+        f'  "supported_game_version": "{stress_probe.mod_game_version(mod_root)}",\n'
+        '  "short_description": "性能对照第三臂：只有一份 defines 覆盖（节奏杠杆），'
+        '不带任何档案产物。由 tools/probe/perf_compare.py --tempo-arm 装，跑完删除。",\n'
+        '  "tags": [],\n'
+        '  "relationships": [],\n'
+        '  "game_custom_data": { "multiplayer_synchronized": false }\n'
+        "}\n"
+    )
+
+
+def write_tempo_shell(target: Path | None = None, *, mod_root: Path | None = None) -> list[Path]:
+    """把第三臂的**壳 mod** 写到 ``target``（默认 :data:`TEMPO_DST`），返回写出的文件。
+
+    **逐字节复制**那份 defines（`shutil.copyfile`，不重读不重写）：它是 `v3 modgen` 的产物，
+    BOM 与内部结构都已经按引擎要求写好了 —— 探针再转一遍只是多一个漂移点（P3：不手写生成物）。
+    产物一份都没有时**报错**（不许装一个空的壳 mod 上去，那会让第三臂变成"原版 + 空气"，
+    而读数看起来完全正常）。
+    """
+    sources = tempo_defines_sources(mod_root)
+    if not sources:
+        raise RuntimeError(
+            f"仓库产物里没有 tempo defines（mod/common/defines/{TEMPO_DEFINES_GLOB}）—— "
+            "先跑 `.venv\\Scripts\\v3.exe modgen`；第三臂只挂这一份文件，没有它就没有第三臂"
+        )
+    base = TEMPO_DST if target is None else target
+    written: list[Path] = []
+    meta = base / ".metadata" / "metadata.json"
+    meta.parent.mkdir(parents=True, exist_ok=True)
+    meta.write_text(tempo_metadata_text(mod_root), encoding="utf-8", newline="\n")
+    written.append(meta)
+    for source in sources:
+        copy = base / "common" / "defines" / source.name
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, copy)
+        written.append(copy)
+    return written
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """命令行 —— 单列出来是为了让用例**不跑游戏**也能钉住 flag 名与默认值。"""
+    parser = argparse.ArgumentParser(
+        description="G-EXIT-3 性能对照（默认两臂；可选压力剧本 / 第三臂）"
+    )
     parser.add_argument("months", nargs="?", type=float, default=12.0, help="每局跑几个月")
     parser.add_argument(
         "--repeat",
@@ -320,9 +597,25 @@ def main() -> int:
         "--stress",
         action="store_true",
         help="开**标准压力剧本**（大战 + 连锁破产 + 革命潮）：两臂都装那一份探针，"
-        "于是世界被推到同一个高压状态，差只剩我们的 mod —— 0.5 ms 要靠它才分辨得出来",
+        "于是世界被推到同一个高压状态，差只剩我们的 mod —— 0.5 ms 要靠它才分辨得出来；"
+        "并且两臂的压力自报必须**逐行相等**（不等即出声失败），这才是「受控」",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--tempo-arm",
+        action="store_true",
+        help="多跑一条臂 `tempo` = 原版 + 剧本 + **只挂 tempo defines 的壳 mod**（不带档案产物）—— "
+        "B27 的测法：Δ_tempo = M_tempo − M_vanilla，盯 UpdateAI，把「节奏杠杆的开销」从 ours 臂里"
+        "分离出来（口径见 docs/design/exec/阶段4-压力剧本-口径.md §6）。默认关闭 ⇒ 两臂的行为与产物"
+        "与从前一字不差；打开后 CSV 落 tools/out/perf/tempo-<序号>.csv，壳 mod 落 "
+        f"<用户 mod 目录>/{TEMPO_MOD_NAME}（跑完删除）。本卡只提供能力，实跑由 t22 定",
+    )
+    return parser
+
+
+def main() -> int:
+    # 探针是**显式入口**：按设计打开真实输入授权（`pdx.game_auto` 的闸门说的就是这件事）。
+    ga.ALLOW_REAL_INPUT = True
+    args = build_parser().parse_args()
     months = args.months
     backup = DOCS / "content_load.json.sitai-perf-backup"
     if not CONTENT_LOAD.is_file():
@@ -354,24 +647,42 @@ def main() -> int:
                 f"激进派 {len(stress_probe.RADICAL_DATES)} 波）"
             )
 
-        # **交替跑**（vanilla, ours, vanilla, ours…）：同一时段的机器状态（温升、后台负载）
-        # 被两个配置平摊，比"先把原版跑完再跑我们"更能压住系统性偏差。
+        # 第三臂（B27）：**只挂那一份 tempo defines**，不带档案产物。
+        if args.tempo_arm:
+            if TEMPO_DST.exists():
+                shutil.rmtree(TEMPO_DST)
+            shell = write_tempo_shell(TEMPO_DST)
+            print(
+                f"已装第三臂壳 mod：{TEMPO_DST.name}"
+                f"（{len(shell)} 个文件：{'、'.join(path.name for path in shell)}）"
+            )
+
+        # **交替跑**（vanilla, ours[, tempo], vanilla, …）：同一时段的机器状态（温升、后台负载）
+        # 被各个配置平摊，比"先把原版跑完再跑我们"更能压住系统性偏差。
+        arms = arm_labels(args.tempo_arm)
         for index in range(1, max(1, args.repeat) + 1):
-            _set_local_mods(stress_mods, original=original)  # 基线：只有压力剧本（没有我们）
-            reports.append(run_once("vanilla", months, index=index))
-            _set_local_mods([*stress_mods, OURS_DST], original=original)
-            reports.append(run_once("ours", months, index=index))
+            for label in arms:
+                _set_local_mods(arm_mods(label, stress_mods), original=original)
+                reports.append(run_once(label, months, index=index, stress=args.stress))
     finally:
         killed = ga.kill_game()
         shutil.copy(backup, CONTENT_LOAD)
         backup.unlink(missing_ok=True)
-        for path in (OURS_DST, STRESS_DST):
+        for path in (OURS_DST, STRESS_DST, TEMPO_DST):
             if path.exists():
                 shutil.rmtree(path)
-        print(f"\n[收尾] 杀游戏 {killed or '（没有）'}；content_load.json 已还原；本地 mod 已删除")
+        print(
+            f"\n[收尾] 杀游戏 {killed or '（没有）'}；content_load.json 已还原；"
+            "本地 mod 已删除（含第三臂的壳 mod）"
+        )
 
     table = report_table(reports)
-    print("\n===== G-EXIT-3 对照（非受控：两局不是同一个世界，只读量级与方向）=====")
+    banner = (
+        "===== G-EXIT-3 对照（`--stress`：受控与否由文末的压力自报比对判定）====="
+        if args.stress
+        else "===== G-EXIT-3 对照（非受控：两局不是同一个世界，只读量级与方向）====="
+    )
+    print("\n" + banner)
     for report in reports:
         print(f"\n--- {report['label']} #{report.get('index')} ---")
         print(f"  月数 {report['months']}｜{report['advanced']}")
@@ -387,9 +698,34 @@ def main() -> int:
         print(f"  {label}：{row}")
     if "delta" in table:
         print(f"  差（{table['delta']}）")  # type: ignore[index]
+    if "delta_tempo" in table:
+        print(f"  第三臂差（{table['delta_tempo']}）")  # type: ignore[index]
+
+    # 受控性：**跑完才判**，判据与每局的原始序列一起落盘（可复核，不靠终端里的字）。
+    control: StressControl | None = None
+    if args.stress:
+        control = stress_control_verdict(reports)
+        table["stress"] = {
+            "ok": control.ok,
+            "pairs": control.pairs,
+            "problems": list(control.problems),
+            "sequences": {
+                f"{report['label']}#{report.get('index')}": _report_lines(report)
+                for report in reports
+            },
+        }
     out = OUT_DIR / "compare.json"
     out.write_text(json.dumps(table, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n证据：{out}")
+    if control is not None:
+        print("\n===== 受控性（压力自报比对）=====")
+        for report in reports:
+            label, index = report["label"], report.get("index")
+            print(f"  {label} #{index}：{len(_report_lines(report))} 行自报")
+        print("  " + control.describe())
+        if not control.ok:
+            print("  ⇒ **这一轮不能报「受控」**：先修上面那几条，或按「非受控」写结论（P13）")
+            return 1
     return 0
 
 

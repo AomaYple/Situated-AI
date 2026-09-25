@@ -407,3 +407,55 @@ def test_监视器与归档都跳过同名目录(tmp_path: Path, monkeypatch: py
     assert (copied, skipped) == (1, 0)
     _dest2, moved, skipped2 = h1_probe.archive_logs("watch-5", log_dir=logs)
     assert (moved, skipped2) == (1, 0)
+
+
+def test_gate变体生成三张门测牌且月度体不带三槽链() -> None:
+    """test 0 的三张门测牌与读数（口径 `exec/阶段5-新增牌-口径.md` §1.4）。
+
+    三格判定（`gate` 直置在 RUS、`open` 直置在 FRA、`strong` 谁都不直置）要**一次会话**跑完，
+    所以三张牌必须同生：少一张，某一格就无从判起，而缺的那一格在日志里
+    长得跟"没出现"一模一样 —— 那正是这轮要防的静默失真。
+    月度体刻意**不带**三槽链：链每个国家每月各写一行（阶段 2 实测 40 个月 ≈ 11,000 行），
+    日志按 512KB 轮转，最早那个月的读数正是本测试要的东西。
+    """
+    files = h1_probe.build(variant="gate", game=_EMPTY_GAME).files
+    assert {short for short, _p, _w in h1_probe.GATE_CARDS} == {"gate", "open", "strong"}
+    for short, possible, weight in h1_probe.GATE_CARDS:
+        rel = f"common/ai_strategies/zz_probe_h1_{short}.txt"
+        assert rel in files, f"{rel} 没生成 —— 三格判定少一角"
+        text = files[rel]
+        assert f"{h1_probe.GATE_PREFIX}{short} = {{" in text
+        assert f"possible = {{ always = {possible} }}" in text
+        assert f"weight = {{ value = {weight:g} }}" in text
+    on_actions = files["common/on_actions/zz_probe_h1_on_actions.txt"]
+    for short, tag in h1_probe.GATE_SET_TAGS:
+        assert f"set_strategy = {h1_probe.GATE_PREFIX}{short}" in on_actions
+        assert f"c:{tag} ?= this" in on_actions
+    for short, _p, _w in h1_probe.GATE_CARDS:
+        assert f"ZZPROBE H1;GATE;{short}_yes;" in on_actions
+        assert f"ZZPROBE H1;GATE;{short}_no;" in on_actions, (
+            "没有 no 分支 ⇒ 分不清「没挂上」与「这一格没记」"
+        )
+    assert "ZZPROBE H1;GATE;strong_seen;" in on_actions
+    assert "ZZPROBE H1;POLI;" not in on_actions, "gate 变体不该带三槽链（日志量）"
+
+
+def test_gate变体的钩子引用也自洽() -> None:
+    """gate 变体换了月度体，但「`on_actions` 引用 ⊆ 定义」这条不变 —— 单独钉一次。"""
+    text = h1_probe.gate_on_actions_text()
+    code = "\n".join(line for line in text.splitlines() if not line.strip().startswith("#"))
+    defined = set(re.findall(r"(?m)^(\w+) = \{", code))
+    referenced: set[str] = set()
+    for match in re.finditer(r"on_actions = \{([^}]*)\}", code):
+        referenced |= set(match.group(1).split())
+    assert referenced == {"zz_probe_h1_start", "zz_probe_h1_monthly"}
+    assert referenced <= defined, f"没定义的 tag：{sorted(referenced - defined)}"
+    assert "zz_probe_h1_boot = yes" in text
+
+
+def test_gate变体不影响另外两个变体的产物() -> None:
+    """每次只改一个变量：`natural` / `storm` 的产物里不许出现门测牌与它的读数行。"""
+    for variant in ("natural", "storm"):
+        files = h1_probe.build(variant=variant, game=_EMPTY_GAME).files
+        assert not [rel for rel in files if rel.endswith(("_gate.txt", "_open.txt", "_strong.txt"))]
+        assert "ZZPROBE H1;GATE;" not in files["common/on_actions/zz_probe_h1_on_actions.txt"]

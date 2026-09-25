@@ -4,7 +4,24 @@
 
 * **档案 id**：`tr_defeat`　**国家**：`TUR`　**游戏版本**：`1.14.4`
 * **本档案修什么毛病**：战败之后 AI 照旧走原来的路 —— 贵族照旧在朝、合法性不塌、财政不受罚，于是「战败 → 改革」这条因果在原版里根本不存在。档案不替 AI 决定改什么，只把战败记成账、把压力落成真实的合法性/贵族/财政变化。⚠️ 依据已于 2026-09-22 更正：原版 AI 策略里 212 处 has_journal_entry 全部硬编码**具名** JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）。　【骨架·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；它是「加一处境 = 加一份数据源」（G-EXIT-1）的证明件，不是一份经过校准的档案设计。
-* **递牌**：0 张 —— 本档案**不使用自建策略牌**（F5：能改世界就不占槽）。战败 → 压力的链路由变量 + 修正 + JE 表达；⚠️ 依据已于 2026-09-22 更正：JE **不会**被原版牌读到（原版 212 处 has_journal_entry 全硬编码具名 JE，没有通用谓词，backlog B52），所以意图位移**不能**指望「开一个 JE 就被牌池读到」。要真的换路线，用（a）递**原版**的牌 `set_strategy`（B58）或（b）法律承诺 law commitment（B56/B57）—— 两者都是「整条路线要换」时的手段。递牌的政治槽价格：S≈33 时权重 10 吃掉 23% 的份额（阶段 2 价格表）。本档案目前**故意不做**（骨架件），等 ru 那条链实测通过再按同一抽象抄。
+* **递牌**：0 张 —— 本档案**不使用自建策略牌**（F5：能改世界就不占槽）。战败 → 压力的链路由变量 + 修正 + JE 表达；⚠️ 依据已于 2026-09-22 更正：JE **不会**被原版牌读到（原版 AI 策略（`common/ai_strategies/**`）里 212 处 has_journal_entry 全硬编码具名 JE，没有通用谓词，backlog B52），所以意图位移**不能**指望「开一个 JE 就被牌池读到」。要真的换路线，用（a）递**原版**的牌 `set_strategy`（B58）或（b）法律承诺 law commitment（B56/B57）—— 两者都是「整条路线要换」时的手段。递牌的政治槽价格：S≈33 时权重 10 吃掉 23% 的份额（阶段 2 价格表）。本档案目前**故意不做**（骨架件），等 ru 那条链实测通过再按同一抽象抄。
+
+## 目标函数（9 国目标函数表 · I7）
+
+| 项 | 档 | 依据 | 为什么 |
+|---|---|---|---|
+| 存续 | 1 · `01a:272` | §K 奥斯曼行（`01a:272`）写「制度老化、财政依赖外债、军队与教育落后」+「以改革换生存」⇒ 存续这件事在这份档案里就是立档理由；本仓无存续字段 ⇒ 档 1。 |
+| 财政 | 3 · `mod/data/tr_defeat.toml:75-77` | 本档案 `[[pressure.effects]]` 在动 `country_loan_interest_rate_add`（`:75-77`）⇒ 档 3（字段在动它）。 |
+| 合法性 | 3 · `mod/data/tr_defeat.toml:65-67` | 本档案在动 `country_legitimacy_base_add`（`:65-67`）⇒ 档 3。 |
+| 军力 | 1 · `01a:272` | §K 写「军队与教育落后」（`01a:272`）；本仓无军力字段用于本档案 ⇒ 档 1 不再往上。 |
+| 市场依赖 | 0 · 缺 | **缺**：本仓 9 份里没有任何字段动商路/市场依赖；`01a:272` 的「依赖外债」是财政项 ⇒ 留空。 |
+| 身份项 · `mission` | 3 · `common/ai_strategies/03_political_strategies.txt:1178-1180` | 原版使命牌 `ai_strategy_tanzimat_reforms` 的门是 `has_journal_entry = je_sick_man_main`（`common/ai_strategies/03_political_strategies.txt:1178-1180`）—— **门即身份**（§3.2 第 3 条），而 §K 点名要用的正是这张牌（`01a:272`）。 |
+| 约束集 · `friction` | 3 · `mod/data/tr_defeat.toml:70-72` | 本档案 `[[pressure.effects]]` 把地主压到负值（`:70-72`）⇒ 档 3（字段在动它）。 |
+| 约束集 · `friction` | 3 · `mod/data/tr_defeat.toml:115-117` | 本档案 `[[reform_inputs.effects]]` 动 `country_law_enactment_success_add`（`:115-117`）—— 改革能不能落地这件事本身是这份档案的摩擦项。 |
+| 约束集 · `player` | 1 · `01a:18` | 玩家是外部因素里「快」的那一档、不落文件（`01a:18`）⇒ 档 1 + 别名依据。 |
+
+**裁定**：`opening_card` · `ai_strategy_tanzimat_reforms` —— `[probe].reform_card` 留空，而该国的**原版开局政治牌**正是它（`common/history/ai/00_strategy.txt:95`）⇒ `derive()` 第 2 条第一分支 ⇒ `opening_card`（判据是原版开局牌，不是「空 == 空」）。
+**代价**：政治槽 `0/(0 + 33)` = **0.0%**（现算；预算 `[0.3, 0.6]` 见闸门 ③）
 
 ## 产物清单
 
@@ -32,10 +49,10 @@
 | `reform_inputs.params[0].amount` | 10 | 与 [pressure.params] 的 years = 10、记忆变量的 days = 3650 三处对齐：三者在实验里是同一段时间窗，任何一处短了都会出现「输入还在、压力已经没了」的半截状态。原版 add_modifier 用 years 的写法见 00_movement_effects.txt:1-7。 |
 | `reform_inputs.effects[0].amount` | 0.5 | 取原版同族强档 +0.5：`shogun_ig_forced_to_open_market`（content_1_modifiers.txt:1462-1470）在同一处把地主 -0.75、知识界 +0.5、工业家 +0.5 一起写 —— 那正是「被外力逼着开门 → 改革侧势力抬头」这一族用法，与本处要表达的情形同型。原版全部档位实测为 ±0.03 / ±0.05 / ±0.10 / ±0.15 / ±0.25 / ±0.5 / ±0.75（00_ip3_04_modifiers.txt:334、00_ip4_03_modifiers.txt:7、106_modifiers.txt:191、00_ip4_04_modifiers.txt:33、content_204_modifiers.txt:340）。取 0.5 而不是 0.15：`progressive_agenda` 的权重只在 `ig:ig_industrialists ?= { is_powerful = yes }` 时 +10（03_political_strategies.txt:537-544），而 is_powerful 是**相对份额**判定 —— 同一处只抬一档常常翻不过那条线，实验要的是「输入明确到位」，不是「差一点」。 |
 | `reform_inputs.effects[1].amount` | 0.5 | 与工业家同档同源（content_1_modifiers.txt:1466 的 shogun_ig_forced_to_open_market 里这两条就是成对写的）。`progressive_agenda` 的权重对知识界与工业家各 +10（03_political_strategies.txt:528-544），两条一起给才是原版的用法；只给一条会让「哪一条起了作用」在实验里不可分。档位依据见上一条。 |
-| `reform_inputs.effects[2].amount` | 0.1 | **停滞侧的第一杠杆，取原版最常见的档位**：实测 `common/` 里 433 处使用，正向取值里 0.1 出现 146 次（其余 0.05×21、0.02×1、0.04×2 …… 负向 -0.1×93、-0.15×30 等）—— 0.1 是原版自己的主力档（复算：`v3 evidence country_law_enactment_success_add` → 434 处/26 文件；档位分布见 `exec/阶段5-B88-杠杆设计.md`）。为什么改这条而不是继续抬 IG 份额：66 个月那一局证明 AI**已经在推**那条法（`ENACT;law_tenant_farmers` 连续 33 个月），卡的是每次检查点的**通过/停滞判定**，而通过率这一侧原版本来就是用这个字段调的（原版 AI 更新自己也用它）。 |
-| `reform_inputs.effects[3].amount` | 3 | **停滞侧的第二杠杆：反对派的脸色**。原版按心情给停滞系数乘 0.5 / 1.0 / 1.5（`LAW_ENACTMENT_IG_NEUTRAL_MULT` / `_UNHAPPY_MULT` / `_ANGRY_MULT`，00_defines.txt:178-180）—— 也就是说**同样的政治力量，愤怒的反对派造成的停滞是中立时的 3 倍**；只压份额（[pressure] 里那条 -0.30）不改脸色，停滞系数就一直在最坏那一档。取 +3：原版 10 处使用里正向只有 +1（1 次）与 +3（2 次）（`v3 evidence country_opposition_ig_approval_add` → 11 处/9 文件），取原版用过的高档。本档案里贵族在野（在朝的是知识界），所以这条正的正是那位反对者。 |
+| `reform_inputs.effects[2].amount` | 0.1 | **停滞侧的第一杠杆，取原版最常见的档位**：实测 `common/` 里 433 处**取值**使用（另 1 处是 `modifier_type_definitions` 的定义块 ⇒ `common/**` 全树 434 处），正向取值里 0.1 出现 146 次（**按数值归一化**：`0.1`×112 + `0.10`×34；其余 0.05×21、0.02×1、0.04×2 …… 负向 -0.1×93（`-0.1`×71 + `-0.10`×22）、-0.15×30 等）—— 0.1 是原版自己的主力档（复算：`v3 evidence country_law_enactment_success_add` → 434 处/26 文件；档位分布见 `exec/阶段5-B88-杠杆设计.md`）。为什么改这条而不是继续抬 IG 份额：66 个月那一局证明 AI**已经在推**那条法（`ENACT;law_tenant_farmers` 连续 33 个月），卡的是每次检查点的**通过/停滞判定**，而通过率这一侧原版本来就是用这个字段调的（原版 AI 更新自己也用它）。 |
+| `reform_inputs.effects[3].amount` | 3 | **停滞侧的第二杠杆：反对派的脸色**。原版按心情给停滞系数乘 0.5 / 1.0 / 1.5（`LAW_ENACTMENT_IG_NEUTRAL_MULT` / `_UNHAPPY_MULT` / `_ANGRY_MULT`，00_defines.txt:178-180）—— 也就是说**同样的政治力量，愤怒的反对派造成的停滞是中立时的 3 倍**；只压份额（[pressure] 里那条 -0.30）不改脸色，停滞系数就一直在最坏那一档。取 +3：原版 10 处**取值**使用里正向只有 +1（1 次）与 +3（2 次）（10 = 11 处减掉 1 处 `modifier_type_definitions` 定义块；`v3 evidence country_opposition_ig_approval_add` → 11 处/9 文件、取值分布 -2×3 / -1×2 / +3×2 / +1×1 / -3×1 / -10×1），取原版用过的高档。本档案里贵族在野（在朝的是知识界），所以这条正的正是那位反对者。 |
 | `journal_entry.fields[0].amount` | 100 | JE 列表拥挤时的保留优先级。与原版 je_corn_laws 的 weight = 100 同档（00_corn_laws.txt:79）—— 改革窗口是处境级 JE，不该被小 JE 挤掉。 |
-| `journal_entry.conditions[3].amount` | 75 | 开窗的第二个条件：压力够大。**实测校准**（阶段 3 的 A/B 分档读数）：A 组（无冲击，`ab-A-control`）**每一个观测月都落在最高档**（探针早期的档位标签是 `vhigh`，即 >80）；B 组（-35，`ab-run7` 的 55 块分档观测）**没有一个块在 70 以下为主、且多数落在 70–75**（b70 24 / b75 18 / b80 13）—— 门槛 **75** 就落在这条实测分界上：对照组的全 >80 不会误开，而 B 组有 42/55 个月（76%）≤75。**换挂载点（已发生）**：原方案要求压到原版那条 50 线（00_liberalism.txt:54、02_peru_bolivia.txt:39），但判据仍是 50 的那一局（`ab-run3-done`，-35，61 个月）窗口从未开、法律全程 `law_serfdom`，而 -35 的水位只到 65–80 且会回升 —— 于是判据改到 75：门开在「战败后合法性确实下滑一档」这件事上，压力数值继续塑造世界。相应地 `complete` 仍是 `legitimacy >= 75`，开与关正好接上。 |
+| `journal_entry.conditions[3].amount` | 75 | 开窗的第二个条件：压力够大。**实测校准**（阶段 3 的 A/B 分档读数；**查法**：`v3 ab --logs ab-run7`，转述出处 `docs/design/exec/阶段3-结果.md`）：A 组（无冲击，`ab-A-control`）**每一个观测月都落在最高档**（探针早期的档位标签是 `vhigh`，即 >80）；B 组（-35，`ab-run7` 的 55 块分档观测）**没有一个块在 70 以下为主、且多数落在 70–75**（b70 24 / b75 18 / b80 13）—— 门槛 **75** 就落在这条实测分界上：对照组的全 >80 不会误开，而 B 组有 42/55 个月（76%）≤75。**换挂载点（已发生）**：原方案要求压到原版那条 50 线（00_liberalism.txt:54、02_peru_bolivia.txt:39），但判据仍是 50 的那一局（`ab-run3-done`，-35，61 个月）窗口从未开、法律全程 `law_serfdom`，而 -35 的水位只到 65–80 且会回升 —— 于是判据改到 75：门开在「战败后合法性确实下滑一档」这件事上，压力数值继续塑造世界。相应地 `complete` 仍是 `legitimacy >= 75`，开与关正好接上。 |
 | `journal_entry.conditions[4].amount` | 75 | 关窗的门：国家重新站稳，窗口自己关上（不是「改革完成」—— 改什么由 AI 与原版牌池决定，本档案不替它选法律）。75 也是原版用过的档：00_meiji_restoration.txt:314 的 legitimacy >= 75。 |
 
 ## 判据（JE）
@@ -45,14 +62,14 @@
 | `is_shown_when_inactive` | `c:TUR ?= this` | 档案是**单国**的（阶段 3 执行文档：主角奥斯曼单国）。c:AUS ?= this 是原版写法（05_metternich.txt:8），问号的语义是「作用域存在才比」，比裸 = 稳。 |
 | `is_shown_when_inactive` | `has_variable = sitai_tr_defeat_memory` | 没被记过战败的国家连这条 JE 都不该看见 —— 「和平期占槽率 ≈ 0」这条出口判据靠它：不施加冲击的局里，这行判据为假，整条 JE 不出现。 |
 | `possible` | `has_variable = sitai_tr_defeat_memory` | 开窗的第一个条件：确实战败过。is_shown 与 possible 都写一遍是有意的 —— 前者管「看不看得见」，后者管「开不开」，原版 je_corn_laws 也是两处各写一套（00_corn_laws.txt:6-31）。 |
-| `possible` | `legitimacy <= 75` | 开窗的第二个条件：压力够大。**实测校准**（阶段 3 的 A/B 分档读数）：A 组（无冲击，`ab-A-control`）**每一个观测月都落在最高档**（探针早期的档位标签是 `vhigh`，即 >80）；B 组（-35，`ab-run7` 的 55 块分档观测）**没有一个块在 70 以下为主、且多数落在 70–75**（b70 24 / b75 18 / b80 13）—— 门槛 **75** 就落在这条实测分界上：对照组的全 >80 不会误开，而 B 组有 42/55 个月（76%）≤75。**换挂载点（已发生）**：原方案要求压到原版那条 50 线（00_liberalism.txt:54、02_peru_bolivia.txt:39），但判据仍是 50 的那一局（`ab-run3-done`，-35，61 个月）窗口从未开、法律全程 `law_serfdom`，而 -35 的水位只到 65–80 且会回升 —— 于是判据改到 75：门开在「战败后合法性确实下滑一档」这件事上，压力数值继续塑造世界。相应地 `complete` 仍是 `legitimacy >= 75`，开与关正好接上。 |
+| `possible` | `legitimacy <= 75` | 开窗的第二个条件：压力够大。**实测校准**（阶段 3 的 A/B 分档读数；**查法**：`v3 ab --logs ab-run7`，转述出处 `docs/design/exec/阶段3-结果.md`）：A 组（无冲击，`ab-A-control`）**每一个观测月都落在最高档**（探针早期的档位标签是 `vhigh`，即 >80）；B 组（-35，`ab-run7` 的 55 块分档观测）**没有一个块在 70 以下为主、且多数落在 70–75**（b70 24 / b75 18 / b80 13）—— 门槛 **75** 就落在这条实测分界上：对照组的全 >80 不会误开，而 B 组有 42/55 个月（76%）≤75。**换挂载点（已发生）**：原方案要求压到原版那条 50 线（00_liberalism.txt:54、02_peru_bolivia.txt:39），但判据仍是 50 的那一局（`ab-run3-done`，-35，61 个月）窗口从未开、法律全程 `law_serfdom`，而 -35 的水位只到 65–80 且会回升 —— 于是判据改到 75：门开在「战败后合法性确实下滑一档」这件事上，压力数值继续塑造世界。相应地 `complete` 仍是 `legitimacy >= 75`，开与关正好接上。 |
 | `complete` | `legitimacy >= 75` | 关窗的门：国家重新站稳，窗口自己关上（不是「改革完成」—— 改什么由 AI 与原版牌池决定，本档案不替它选法律）。75 也是原版用过的档：00_meiji_restoration.txt:314 的 legitimacy >= 75。 |
 
 ## 面板三行（P11 / G3）
 
 | 行 | 本地化键 | 为什么是这一行 |
 |---|---|---|
-| goal | `je_sitai_tr_reform_window_goal` | 第一行 = **当前目标**。写'推过去'而不是点名某条法律：改哪条法由 AI 与原版牌池决定，本档案不替它选（§0「让 AI 自己推导」）；写'旧势力拦着的那项'是让玩家知道它为什么一直没动 —— 与 [pressure.effects] 里减贵族那一条是同一个因果的两端。 |
+| goal | `（不单独发键；并进 je_sitai_tr_reform_window_reason）` | 第一行 = **当前目标**。写'推过去'而不是点名某条法律：改哪条法由 AI 与原版牌池决定，本档案不替它选（§0「让 AI 自己推导」）；写'旧势力拦着的那项'是让玩家知道它为什么一直没动 —— 与 [pressure.effects] 里减贵族那一条是同一个因果的两端。 |
 | pressure | `je_sitai_tr_reform_window_pressure` | 第二行 = **最大压力与阻力**。压力项与 [pressure.effects] 的三条字段一一对应（贵族 / 合法性 / 利率），阻力项与 complete 的 legitimacy >= 75 是同一条判据的两种说法 —— 数值改了这行也要改（P9：一处改、三处同步）。 |
 | last_change | `je_sitai_tr_reform_window_last_change` | 第三行 = **上次改主意的原因**（G3 里最容易被跳过、却最关键的一行）：没有它，玩家只能看到'它在改革'，看不到'**为什么是现在**'。写'被记进了账'是让因果链读得出来（§0.1：目标函数表要显式可审）。 |
 
@@ -63,15 +80,15 @@
 | 类别 | 名字 | 为什么 |
 |---|---|---|
 | `trigger` | `legitimacy` | JE 的开窗/关窗判据（`legitimacy <= 75` / `>= 75`）。原版用法：00_meiji_restoration.txt:314、04_sikh_empire.txt:20。 |
-| `trigger` | `has_variable` | 记忆变量的读法。原版用法：00_corn_laws.txt:7 等 795 处（阶段 1 统计 has_variable 被 13 张牌直接读）。 |
+| `trigger` | `has_variable` | 记忆变量的读法。原版用法：00_corn_laws.txt:7 等 795 处（**范围 = `common/journal_entries/**`**，即该例所在目录；`v3 evidence has_variable` 现读全树 6383 处。阶段 1 统计读它的牌 = 13 张，规则与现读见生成物 `docs/design/02-可执行面.md`）。 |
 | `effect` | `set_variable` | 写记忆变量。原版用法：00_code_on_actions.txt:7046（on_war_end 给 recently_had_war 记 5 年）。 |
 | `effect` | `add_modifier` | 把静态修正挂到国家上。原版用法：00_movement_effects.txt:2（add_modifier = { name = … years = 20 }）。 |
 | `country_tag` | `TUR` | JE 的单国门（c:TUR ?= this）。原版用法：country_definitions 里的 TUR。 |
-| `modifier_field` | `country_legitimacy_base_add` | 合法性修正字段。原版 157 处，档位 ±5 / ±10 / ±20 / ±50（00_code_static_modifiers.txt:322-353 等）。 |
-| `modifier_field` | `interest_group_ig_landowners_pol_str_mult` | 贵族政治力量。原版 26 处：±0.03（00_ip3_04_modifiers.txt:334）、-0.75（content_1_modifiers.txt:1465 幕府被迫开国）。 |
-| `modifier_field` | `country_loan_interest_rate_add` | 借债利率。原版只有一处：00_code_static_modifiers.txt:12 的 `base_values` 全局基准 +0.2（是全局基准的一部分，不是某个事件修正的档位）。 |
-| `modifier_field` | `interest_group_ig_industrialists_pol_str_mult` | 工业家政治力量。原版 16 处：0.1（00_ip4_03_modifiers.txt:7）、0.25（00_ip4_04_modifiers.txt:33）、0.5（content_1_modifiers.txt:1467）。 |
-| `modifier_field` | `interest_group_ig_intelligentsia_pol_str_mult` | 知识界政治力量。原版 17 处：0.15（106_modifiers.txt:205）、0.25（00_ip4_04_modifiers.txt:47）、0.5（content_1_modifiers.txt:1466）。 |
+| `modifier_field` | `country_legitimacy_base_add` | 合法性修正字段。原版 `common/static_modifiers/**` 下 157 处（`common/**` 全树 173 处），档位 ±5 / ±10 / ±20 / ±50（00_code_static_modifiers.txt:322-353 等）。 |
+| `modifier_field` | `interest_group_ig_landowners_pol_str_mult` | 贵族政治力量。原版 `common/static_modifiers/**` 下 26 处（全树 41 处）：+0.03（4 处，00_ip3_04_modifiers.txt:334、:341、:349、:357；该字段没有 -0.03）、-0.75（content_1_modifiers.txt:1465 幕府被迫开国）。 |
+| `modifier_field` | `country_loan_interest_rate_add` | 借债利率。原版**国家修正那一侧**（`common/static_modifiers/**`）实测只有一处：00_code_static_modifiers.txt:12 的 `base_values` 全局基准 +0.2（是全局基准的一部分，不是某个事件修正的档位）；**范围之外另算**：`common/**` 全树 **12 处**（含 `modifier_type_definitions` 定义行）/ **11 处**（不含）—— 口径与查法见 `mod/data/cn_intervention.toml:289`。 |
+| `modifier_field` | `interest_group_ig_industrialists_pol_str_mult` | 工业家政治力量。原版 `common/static_modifiers/**` 下 16 处（全树 26 处）：0.1（00_ip4_03_modifiers.txt:7）、0.25（00_ip4_04_modifiers.txt:33）、0.5（content_1_modifiers.txt:1467）。 |
+| `modifier_field` | `interest_group_ig_intelligentsia_pol_str_mult` | 知识界政治力量。原版 `common/static_modifiers/**` 下 17 处（全树 21 处）：0.15（106_modifiers.txt:205）、0.25（00_ip4_04_modifiers.txt:47）、0.5（content_1_modifiers.txt:1466）。 |
 
 ## 复算
 

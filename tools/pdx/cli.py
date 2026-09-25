@@ -72,6 +72,7 @@ from pdx import (
     lockfile,
     modgen,
     modguard,
+    objectives,
     preflight,
     release,
     snapshot,
@@ -1056,6 +1057,80 @@ def tables_cmd(
     console.print(table)
     console.print("[yellow]跑 `v3 tables --write` 可按生成结果修正[/]")
     raise typer.Exit(EXIT_FAILED)
+
+
+# ── objectives（9 国目标函数表）──────────────────────────────
+@app.command("objectives")
+def objectives_cmd(
+    check: Annotated[
+        bool, typer.Option("--check", help="跑 P1–P5 判据（不带则只印那张表）")
+    ] = False,
+) -> None:
+    """9 国目标函数表（`mod/data/*.toml` 的 `[objectives]`）：渲染 + 五条闸门 P1–P5。
+
+    判据的唯一定义在 `docs/design/exec/阶段5-目标函数表-口径.md`（住址 §1 / 形状 §2 /
+    来源 §3 / 闸门 §4）：P1 存在性、P2 档位合法、P3 引用可解（形态①复用 `v3 citations`、
+    形态②走别名表）、P4 裁定自洽（`kind` 由 `derive()` **算出**，不由人挑）、P5 渲染一致。
+
+    退出码三档（§4.1.2 ①）：**0 = 9 份全过；1 = 判据红**（数据在、判据不过）；
+    **2 = 前置缺失 ⇒ 判不了**（档案数 ≠ 9 / 某份缺 `[objectives]` / 支撑域过期 ⇒
+    先跑 `v3 snapshot create --compact` 刷新入库支撑）。
+
+    ⚠️ 为什么它**不是** `modguard` 的第 6 道：`01-大方向.md` 通篇写的是「**五道**闸门」，
+    加第 6 道等于改冻结措辞（要升格得队长裁）⇒ 本命令与 `tables` / `ai-surface` / `verify` 同类。
+
+    ⚠️ 为什么退出码的分档要读"结论"而不是只看数字：`unsupported`（支撑域过期）与
+    `missing`（引用写错）在新库里都可能表现为非零，判读时以逐条明细为准（§4.1.2 ①′）。
+    """
+    if not check:
+        table = Table(title="9 国目标函数表（[objectives]）", show_lines=False)
+        for title in (
+            "档案",
+            "国",
+            "存续",
+            "财政",
+            "合法性",
+            "军力",
+            "市场依赖",
+            "身份项",
+            "约束集",
+            "裁定",
+            "代价",
+        ):
+            table.add_column(title, overflow="fold")
+        for row in objectives.table_rows():
+            table.add_row(*(escape(cell) for cell in doc_tables.split_row(row)))
+        console.print(table)
+        console.print("判据：`v3 objectives --check`（P1–P5，退出码 0/1/2）")
+        return
+
+    report = objectives.check()
+    table = Table(title="目标函数表 · P1–P5", show_lines=False)
+    table.add_column("", width=2, justify="center")
+    table.add_column("档案")
+    table.add_column("命中的谓词", overflow="fold")
+    for entry in report.entries:
+        hits = "、".join(sorted({problem.predicate for problem in entry.problems}))
+        table.add_row("✅" if entry.ok else "❌", escape(entry.id), escape(hits or "全绿"))
+    console.print(table)
+    for entry in report.entries:
+        for problem in entry.problems:
+            console.print(
+                f"   [red]❌[/] {escape(entry.id)} · {problem.predicate} · "
+                f"{escape(problem.where)} · {escape(problem.detail)}"
+            )
+    for name, detail in report.broken:
+        console.print(f"   [red]❌[/] {escape(name)} 读不了：{escape(detail)}")
+    if report.prerequisites:
+        console.print(f"[yellow]{len(report.prerequisites)} 条前置缺失（判不了 = 退出码 2）[/]：")
+        for item in report.prerequisites:
+            console.print(f"   [yellow]· {escape(item)}[/]")
+    console.print(report.summary())
+    code = report.exit_code()
+    if code == 0:
+        console.print("[green]9 份档案的目标函数表全过 ✅[/]")
+        return
+    raise typer.Exit(code)
 
 
 def _tables_offline(*, write: bool, only: str) -> None:

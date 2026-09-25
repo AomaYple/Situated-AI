@@ -1,20 +1,164 @@
 """路径与常量。
 
-所有硬编码路径集中在这里，方便换机器时一处修改。
-环境变量可覆盖默认值：
+所有硬编码路径集中在这里，方便换机器时一处修改。**默认值里不含任何机器专属路径**：
+用户名一律由 ``Path.home()`` 推出来，Steam 只写各平台的**规范位置**（不写盘符、不写用户名）。
 
-* ``V3_ROOT``    游戏安装根目录
-* ``V3_USERDIR`` 用户数据目录
-* ``V3_WORKSHOP`` Workshop 内容目录
+三个路径走**同一条解析链**（:func:`resolve`）：
+
+1. **环境变量优先** —— ``V3_ROOT`` / ``V3_USERDIR`` / ``V3_WORKSHOP`` 设了就赢，
+   且**不判存在**（CI 与伪造环境要能把它们指到一个还没生成的目录，见
+   ``tools/tests/test_conftest.py`` 的 ``Z:/nope`` 用法）；
+2. **平台候选清单逐条判存在** —— Windows / Linux / macOS 各一份
+   （:func:`steam_roots` / :func:`game_candidates` / :func:`userdir_candidates`），先到先得；
+3. **确定的回落值** —— 一条候选都不存在时取该平台清单的第一条。**不抛异常**：
+   ``pdx.config`` 会在没装游戏的机器上被 import，import 期炸掉会让整套单测收集失败。
+
+Workshop 目录由**找到 ROOT 的那个 Steam 根**推导（:func:`workshop_for`），
+不再写第二份平台路径；App ID 也只有一个来源（:data:`APP_ID`）。
 """
 
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-#: 游戏安装根目录
-ROOT = Path(os.environ.get("V3_ROOT", r"C:\Program Files (x86)\Steam\steamapps\common\Victoria 3"))
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+#: Steam App ID（Victoria 3）—— Workshop 路径里的**唯一**来源
+APP_ID = 529340
+
+#: 游戏在 Steam 库里的固定相对位置：``<Steam 根>/steamapps/common/<这个名字>``
+GAME_DIR_NAME = "Victoria 3"
+
+#: Paradox 的用户数据目录名：``<Documents / XDG 数据目录>/Paradox Interactive/<游戏名>``
+PUBLISHER_DIR_NAME = "Paradox Interactive"
+
+
+# ── 默认路径的解析：环境变量优先 → 平台候选逐条判存在 → 确定的回落值 ──────
+def _first_existing(candidates: Sequence[Path]) -> Path | None:
+    """候选清单里**第一个存在**的路径；一条都不存在 ⇒ ``None``。"""
+    for candidate in candidates:
+        try:
+            if candidate.exists():
+                return candidate
+        except OSError:  # pragma: no cover - 畸形路径（超长等）只在某些平台上会抛
+            continue
+    return None
+
+
+def resolve(env_value: str | None, candidates: Sequence[Path], fallback: Path) -> Path:
+    """上面那条解析链的**唯一实现**（三个路径同一条）。
+
+    ``env_value`` 只判"设没设"、**不判存在** —— 于是 CI 里能把三个变量指到
+    ``Z:/nope`` 这种不存在的路径上，而 ``import pdx.config`` 照常成功。
+    """
+    if env_value:
+        return Path(env_value)
+    found = _first_existing(candidates)
+    if found is None:
+        return fallback
+    return found
+
+
+def steam_roots(home: Path | None = None, platform: str | None = None) -> tuple[Path, ...]:
+    """Steam 安装根的**平台候选清单**（只判存在 —— 不读注册表、不扫盘）。
+
+    * Windows：``Program Files (x86)`` / ``Program Files`` 下的 ``Steam``，
+      以及二级盘符上的 ``<盘>:\\SteamLibrary``（Steam 默认装在 C:，但把库放 D:/E: 是标准做法）；
+    * macOS：``~/Library/Application Support/Steam``；
+    * Linux：官方包的 ``~/.steam/steam``、发行版包的 ``~/.local/share/Steam``、
+      Flatpak 的 ``~/.var/app/com.valvesoftware.Steam/data/Steam``。
+
+    ``home`` / ``platform`` 可注入 ⇒ 用例能拿假 home 逐平台核对清单，不必真装游戏。
+    """
+    if home is None:
+        home = Path.home()
+    if platform is None:
+        platform = sys.platform
+    if platform.startswith("win"):
+        windows = (
+            "C:/Program Files (x86)/Steam",
+            "C:/Program Files/Steam",
+            "C:/SteamLibrary",
+            "D:/SteamLibrary",
+            "E:/SteamLibrary",
+        )
+        return tuple(Path(item) for item in windows)
+    if platform == "darwin":
+        return (home / "Library" / "Application Support" / "Steam",)
+    return (
+        home / ".steam" / "steam",
+        home / ".local" / "share" / "Steam",
+        home / ".var" / "app" / "com.valvesoftware.Steam" / "data" / "Steam",
+    )
+
+
+def game_candidates(home: Path | None = None, platform: str | None = None) -> tuple[Path, ...]:
+    """游戏安装根目录候选 = 每个 Steam 根下面的 ``steamapps/common/<游戏>``。"""
+    return tuple(
+        steam / "steamapps" / "common" / GAME_DIR_NAME
+        for steam in steam_roots(home=home, platform=platform)
+    )
+
+
+def default_game_root(home: Path | None = None, platform: str | None = None) -> Path:
+    """该平台上**确定的**游戏安装根（候选清单第一条，**不判存在**）—— 一条候选都没有时用它。"""
+    return game_candidates(home=home, platform=platform)[0]
+
+
+def steam_root_of(game_root: Path) -> Path | None:
+    """从 ``<Steam 根>/steamapps/common/<游戏>`` **反推** ``<Steam 根>``。
+
+    形状不符（路径里没有 ``steamapps`` 这一段，例如环境变量指到了一个自定义目录）
+    ⇒ ``None``：调用方据此退回该平台的规范 Steam 根，而不是猜。
+    """
+    parts = game_root.parts
+    for index in range(len(parts) - 1, 0, -1):
+        if parts[index] == "steamapps":
+            return Path(*parts[:index])
+    return None
+
+
+def workshop_dir(steam_root: Path) -> Path:
+    """``<Steam 根>/steamapps/workshop/content/<App ID>``（App ID 只从 :data:`APP_ID` 来）。"""
+    return steam_root / "steamapps" / "workshop" / "content" / str(APP_ID)
+
+
+def workshop_for(game_root: Path) -> Path:
+    """由**游戏安装根**推导 Workshop 目录 —— 这就是"不再写第二份平台路径"的落点。"""
+    steam = steam_root_of(game_root)
+    if steam is None:
+        steam = steam_roots()[0]
+    return workshop_dir(steam)
+
+
+def userdir_candidates(home: Path | None = None, platform: str | None = None) -> tuple[Path, ...]:
+    """用户数据目录候选 —— **全部由 ``Path.home()`` 推出来**，不写任何用户名。
+
+    * Windows / macOS：``~/Documents/Paradox Interactive/Victoria 3``；
+    * Linux：Paradox 走 XDG 数据目录 ``~/.local/share/...``；旧版也在 ``~/Documents`` 下，
+      两条都列上（先到先得）。
+    """
+    if home is None:
+        home = Path.home()
+    if platform is None:
+        platform = sys.platform
+    paradox = Path(PUBLISHER_DIR_NAME) / GAME_DIR_NAME
+    if platform.startswith("win") or platform == "darwin":
+        return (home / "Documents" / paradox,)
+    return (home / ".local" / "share" / paradox, home / "Documents" / paradox)
+
+
+def default_userdir(home: Path | None = None, platform: str | None = None) -> Path:
+    """该平台上**确定的**用户数据目录（候选清单第一条，**不判存在**）。"""
+    return userdir_candidates(home=home, platform=platform)[0]
+
+
+#: 游戏安装根目录（环境变量 → 平台候选 → 确定的回落值）
+ROOT = resolve(os.environ.get("V3_ROOT"), game_candidates(), default_game_root())
 
 #: 游戏内容层（mod 覆盖的目标）
 GAME = ROOT / "game"
@@ -23,26 +167,17 @@ GAME = ROOT / "game"
 JOMINI = ROOT / "jomini"
 CLAUSEWITZ = ROOT / "clausewitz"
 
-#: 用户数据目录
-USERDIR = Path(
-    os.environ.get(
-        "V3_USERDIR",
-        r"C:\Users\28905\Documents\Paradox Interactive\Victoria 3",
-    )
-)
+#: 用户数据目录（环境变量 → 平台候选（**全部由 ``Path.home()`` 推导**）→ 确定的回落值）
+USERDIR = resolve(os.environ.get("V3_USERDIR"), userdir_candidates(), default_userdir())
 
 #: 本地 mod 目录
 LOCAL_MODS = USERDIR / "mod"
 
-#: Steam App ID（Victoria 3）
-APP_ID = 529340
-
-#: Steam Workshop 内容目录（默认路径里的 App ID 由上面的常量拼出 —— 原先两处各写一遍）
-WORKSHOP = Path(
-    os.environ.get(
-        "V3_WORKSHOP",
-        rf"C:\Program Files (x86)\Steam\steamapps\workshop\content\{APP_ID}",
-    )
+#: Steam Workshop 内容目录（**由找到 ROOT 的那个 Steam 根推导** —— 原先两处各写一遍平台路径）
+WORKSHOP = resolve(
+    os.environ.get("V3_WORKSHOP"),
+    (workshop_for(ROOT),),
+    workshop_for(default_game_root()),
 )
 
 #: mod 的命名空间前缀（F7：策略 `ai_strategy_sitai_*`、变量/本地化 `sitai_*`、文件 `sitai_*.txt`）。

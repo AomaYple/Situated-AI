@@ -520,6 +520,33 @@ def test_闸门四在往返一致时通过(tmp_path: Path) -> None:
     assert finding.ok, finding.details
 
 
+def test_闸门四在牌的槽位键上两侧对齐(tmp_path: Path) -> None:
+    """同一张牌：**数据源事实与产物事实必须同键**。
+
+    产物里牌的槽位是**引擎键** `type`（`modgen.card_text()`：`body = ["type = <slot>"]`），
+    而事实表统一叫 `slot`（`Card.slot` 与闸门 ③ 同词）⇒ 中间必须有人翻译，否则闸门 ④
+    对**任何**一张牌都报「缺 1（`slot`）多 1（`type`）」—— 本仓第一张牌（t18 的
+    `ai_strategy_sitai_ru_defeat_agenda`）第一次走到这条比较时就是这么红的。
+
+    翻译落在**反解那一侧**（`modgen._facts_card`），与同族的既有做法一致：
+    `_facts_gamerules()` 把产物里直接铺开的设置块记成 `.setting.<块名>.flag`（产物里
+    没有 `setting` 这一层）；`_facts_effects()` 把 `if` 块编号成 `if[i]`（产物里也没有
+    下标）⇒ 反解器的职责本来就是「把产物的写法翻成事实表的词」。比较器
+    （`modguard.gate_roundtrip`）只做两份事实表的集合比对，不该懂牌的字段语义。
+    """
+    ctx = _context(tmp_path, text=MINIMAL + CARD % (40, CARD_GATE))
+    archive = ctx.archives[0]
+    card = archive.cards[0]
+    text = ctx.built.files[archive.card_file(card)]
+    assert f"type = {card.slot}" in text, "产物必须写引擎键 `type`（引擎读的是它）"
+    facts = dict(modgen.facts(archive))
+    back = dict(modgen.readback(ctx.built.files))
+    assert facts[f"card.{card.name}.slot"] == card.slot, "claim 侧的事实键是 `slot`"
+    assert back[f"card.{card.name}.slot"] == card.slot, "反解侧必须把它翻成 `slot`"
+    assert f"card.{card.name}.type" not in back, "产物侧的引擎键名不许漏进事实表"
+    assert modguard.gate_roundtrip(ctx).ok, modguard.format_report(modguard.run(ctx))
+
+
 def test_闸门四在产物被改一个数字时变红(tmp_path: Path) -> None:
     ctx = _context(tmp_path)
     broken = _patched(ctx, ctx.archives[0].modifier_file, "-20", "-25")

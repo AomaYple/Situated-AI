@@ -152,12 +152,17 @@ def test_反查得到的档案真的带reform_law(探针) -> None:
 
 
 def test_声明的牌出现过就算动过(探针) -> None:
+    """按**数据源里那份档案声明的**牌判 —— 样本用 `sp_empire_remnant`（它声明进步牌）。
+
+    ⚠️ 2026-09-24：这条原来拿 `bv_alignment` 当样本，而 t9 的裁决把巴伐利亚那一格**留空**了
+    （它的处境该走外交槽，牌根本推不出来）⇒ 换成仍在声明的那一份；判据一字未变。
+    """
     probe, _xml, _log = 探针
     out = probe._card_reading(
         ["ai_strategy_conservative_agenda", "ai_strategy_progressive_agenda"],
-        ["…: ZZPROBE AB;ROLE;BAV;巴伐利亚"],
+        ["…: ZZPROBE AB;ROLE;SPA;西班牙"],
     )
-    assert out.get("本档案盯的牌（bv_alignment.[probe].reform_card）") == (
+    assert out.get("本档案盯的牌（sp_empire_remnant.[probe].reform_card）") == (
         "ai_strategy_progressive_agenda"
     )
     assert out.get("✅ 那张牌挂上过（ai_strategy_progressive_agenda）") is True
@@ -198,9 +203,12 @@ def test_一行牌读数都没有时报读不到而不是报没挂上(探针) ->
 
 
 def test_牌读数是none时按不出现处理(探针) -> None:
-    """链尾的 `none` / `ai_strategy_default` 是**真读数**：它们出现时就是"没挂着那张牌"。"""
+    """链尾的 `none` / `ai_strategy_default` 是**真读数**：它们出现时就是"没挂着那张牌"。
+
+    样本同 `test_声明的牌出现过就算动过`（`sp_empire_remnant`，它声明进步牌）。
+    """
     probe, _xml, _log = 探针
-    out = probe._card_reading(["none"], ["…: ZZPROBE AB;ROLE;BAV;巴伐利亚"])
+    out = probe._card_reading(["none"], ["…: ZZPROBE AB;ROLE;SPA;西班牙"])
     assert out.get("✅ 那张牌挂上过（ai_strategy_progressive_agenda）") is False
 
 

@@ -13,10 +13,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import numpy as np
 
-from pdx import game_auto
+from pdx import config, game_auto
 
-AUTO = Path(r"C:\Users\28905\projects\Situated AI\tools\out\auto")
-TEMPLATE = Path(r"C:\Users\28905\projects\Situated AI\tools\probe\zz_probe_ab\ui\btn_speed.png")
+#: 产物目录与模板路径都**从仓库位置推导**（原先写死 `C:\Users\<用户名>\...`，换机器/换用户名就落空）。
+AUTO = config.OUT / "auto"
+TEMPLATE = Path(__file__).resolve().parent / "zz_probe_ab" / "ui" / "btn_speed.png"
 
 #: 扇形表盘本体（客户区坐标）：左边界留一点、右边界停在圆按钮之前。
 CROP = (1700, 18, 1858, 86)

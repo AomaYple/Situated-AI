@@ -35,8 +35,8 @@
 #
 # 为什么**没有** `[tempo]`、也**没有** `[difficulty]`：这两张都是 **mod 级**表
 # （`defines` 没有单国写法；难度三档是对外契约，档位集合由生成器钉死），全仓各只允许
-# 一份 —— 「恰好一份」由 `_check_tempo`（tools/pdx/modgen.py:1605-1625）与
-# `_check_difficulty`（tools/pdx/modgen.py:1579）在全仓范围上当场判死。
+# 一份 —— 「恰好一份」由 `_check_tempo`（tools/pdx/modgen.py:1747-1767）与
+# `_check_difficulty`（tools/pdx/modgen.py:1721）在全仓范围上当场判死。
 # 那两份都在 `ru_defeat.toml` 里。
 # 本档案**复用**它们，不复制。
 
@@ -50,7 +50,7 @@ country = "EGY"
 # 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
 # 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
 game_version = "1.14.4"
-why = "**修的是什么毛病**：原版 1.14.3 里「破产」这件事**已经被记了一笔**（`declared_bankruptcy`：威望 -75%、借债利率 ×1.5、军队攻防 -75%、强制私有化，common/static_modifiers/00_code_static_modifiers.txt:232-244），但那笔账只在**宣布那一刻**记一次，而且它记的是**结果**（军队垮、威望掉），不是**因果**：债主是谁、钱被谁管着、为什么这个国家从此只能按别人的账本过日子 —— 世界上一个字都没有。于是「债务危机 → 列强财政接管 → 改革」这条因果在原版里不存在：总督照旧在朝、农业出口集团照旧站在朝堂中央、合法性照旧。本档案不替 AI 决定改什么，只把这笔债记成账、把压力落成真实的**财政 / 合法性 / 农业出口集团**变化，让原版自己那张**读改革派 IG 的**权重公式（`ai_strategy_progressive_agenda`，03_political_strategies.txt:528-544）自己转向。**为什么主角是埃及**：01a §K「埃及」那一行写的是**尼罗河农业、穆罕默德·阿里改革遗产、军队较强**，外部是**名义上属奥斯曼、英法俄随时干预**，推出的最优解是**半独立扩张 + 现代化** —— 这是一份以「财政主权被外力拿走」为机制的档案。主角身份**本机实测确认**（不是猜）：tag = `EGY`（common/country_definitions/01_africa.txt:26 的 `EGY = {`，该文件的顶层键就是国家 tag），`country_type = unrecognized`（:29）、`tier = kingdom`（:31）、`cultures = { misri }`（:33）、`capital = STATE_LOWER_EGYPT`（:34）；1836 年埃及是奥斯曼的**保护国** —— common/history/diplomacy/00_subject_relationships.txt:270-273 里 `c:TUR` 对 `country = c:EGY` 建 `type = protectorate`，且 :599-601 给 `c:EGY` 写死 `add_liberty_desire = 45`（原版自己的「属国想跑」刻度）—— 也就是 01a §K 说的「名义上属奥斯曼」在数据里是真的。⚠️ 原版对「埃及被外力接管」**有现成 JE**：`je_veiled_protectorate`（common/journal_entries/00_veiled_protectorate.txt:1）—— 列强把埃及收成属国 —— 但那是**从列强视角写的**（它的 is_shown_when_inactive 要求 `c:EGY ?= { is_subject = no … }`，即埃及**还独立**时才出现，:11-13）；埃及自己这边「我的钱已经被外人管着」的账，原版没有。这正是本档案要补的那一格。⚠️ 依据已于 2026-09-22 更正（沿用四份档案的共同结论）：原版 AI 策略里 212 处 has_journal_entry 全部硬编码**具名** JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）。　【沿用·口径】本表的数值**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；本档案**独立取档的只有一条**（`country_loan_interest_rate_mult = 0.25`，依据是原版自己的档位阶梯），那一条的 why 里写明了它同样**没有实测过本处境的效果**。"
+why = "**修的是什么毛病**：原版 1.14.3 里「破产」这件事**已经被记了一笔**（`declared_bankruptcy`：威望 -75%、借债利率 `country_loan_interest_rate_mult = 0.5`（**语义待查**：`_mult` 是乘算还是加算未实测 —— 这里原来写「×1.5」是同一字段的另一种读法，未查实前不当结论）、军队攻防 -75%、强制私有化，common/static_modifiers/00_code_static_modifiers.txt:232-244），但那笔账只在**宣布那一刻**记一次，而且它记的是**结果**（军队垮、威望掉），不是**因果**：债主是谁、钱被谁管着、为什么这个国家从此只能按别人的账本过日子 —— 世界上一个字都没有。于是「债务危机 → 列强财政接管 → 改革」这条因果在原版里不存在：总督照旧在朝、农业出口集团照旧站在朝堂中央、合法性照旧。本档案不替 AI 决定改什么，只把这笔债记成账、把压力落成真实的**财政 / 合法性 / 农业出口集团**变化，让原版自己那张**读改革派 IG 的**权重公式（`ai_strategy_progressive_agenda`，03_political_strategies.txt:528-544）自己转向。**为什么主角是埃及**：01a §K「埃及」那一行写的是**尼罗河农业、穆罕默德·阿里改革遗产、军队较强**，外部是**名义上属奥斯曼、英法俄随时干预**，推出的最优解是**半独立扩张 + 现代化** —— 这是一份以「财政主权被外力拿走」为机制的档案。主角身份**本机实测确认**（不是猜）：tag = `EGY`（common/country_definitions/01_africa.txt:26 的 `EGY = {`，该文件的顶层键就是国家 tag），`country_type = unrecognized`（:29）、`tier = kingdom`（:31）、`cultures = { misri }`（:33）、`capital = STATE_LOWER_EGYPT`（:34）；1836 年埃及是奥斯曼的**保护国** —— common/history/diplomacy/00_subject_relationships.txt:270-273 里 `c:TUR` 对 `country = c:EGY` 建 `type = protectorate`，且 :599-601 给 `c:EGY` 写死 `add_liberty_desire = 45`（原版自己的「属国想跑」刻度）—— 也就是 01a §K 说的「名义上属奥斯曼」在数据里是真的。⚠️ 原版对「埃及被外力接管」**有现成 JE**：`je_veiled_protectorate`（common/journal_entries/00_veiled_protectorate.txt:1）—— 列强把埃及收成属国 —— 但那是**从列强视角写的**（它的 is_shown_when_inactive 要求 `c:EGY ?= { is_subject = no … }`，即埃及**还独立**时才出现，:11-13）；埃及自己这边「我的钱已经被外人管着」的账，原版没有。这正是本档案要补的那一格。⚠️ 依据已于 2026-09-22 更正（沿用四份档案的共同结论）：原版 AI 策略里 212 处 has_journal_entry 全部硬编码**具名** JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）。　【沿用·口径】本表的数值**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；本档案**独立取档的只有一条**（`country_loan_interest_rate_mult = 0.25`，依据是原版自己的档位阶梯），那一条的 why 里写明了它同样**没有实测过本处境的效果**。"
 
 
 # ── ② 债务记忆：真实世界状态的第一步 ────────────────────────
@@ -78,7 +78,7 @@ why = "10 年，与压力修正的 `years = 10` 同一时间尺度（两处必�
 [pressure]
 name = "sitai_eg_debt_pressure"
 icon = "gfx/interface/icons/timed_modifier_icons/modifier_coins_negative.dds"
-why = "压力必须是真的世界状态，不是我们的私有计数器 —— 只有真实变化才会进原版自己的公式（01a D 节：A 级被严重低估）。三条字段覆盖 P10 要的三件事：**财政**（借债成本）、**合法性**（政府还站不站得住）、**守旧＝买办势力**（靠外国资本吃饭的农业出口集团）。**icon 取 `modifier_coins_negative.dds`**：原版自己的破产修正用的就是它（common/static_modifiers/00_code_static_modifiers.txt:233 的 `declared_bankruptcy`），同族还有 `lost_gold_reserves`（agitators_1_modifiers.txt:168）、`bank_robberies`（content_1_modifiers.txt:871）、`modifier_french_independence_payments_*`（agitators_2_modifiers.txt:782，原版海地赔款那一族）—— 全是「钱出问题」这一族，方向一致。⚠️ **本表与 [reform_inputs] 都是实验用直接修正，不是正式版设计**：它们由施加冲击的一方显式调用（不绑任何 on_action，调用点是 scripted effect `sitai_eg_debt_shock`）；正式版必须改成真实触发 + 因果链（借债 → 利息滚雪球 → 关税与资产被抵押 → 财政主权实际转移），那条已进 backlog（B35）。本定位同时写在 exec/阶段3-结果.md 与 exec/阶段3-归档清点.md，避免后人把实验设置当成档案设计。　【原版没有的字段我们没塞】**「列强财政接管」最像的那个原版字段是 `country_force_privatization_bool`**（原版破产修正里就写着 `= yes`，00_code_static_modifiers.txt:243；`modifier_devorismo` 也有，00_ip4_04_modifiers.txt:139），但生成器把每条 effects 渲染成 `<字段> = <数字>`（tools/pdx/modgen.py:1179 的 `f\"{p.key} = {num(p.amount)}\"`）—— 布尔字段在这个 schema 里**表达不出来**（会被写成一堆 `= 1`）。如实写在这里：它是本处境最想要、却**这一版拿不到**的那一条（要拿到得改生成器，那就不是「只加数据行」了）。　【沿用·口径】**三条里两条的数值沿用 `ru_defeat` 的实测档位（-35 / -0.30），未针对本条处境独立校准**；第一条（0.25）**不是沿用**，它是原版自己的档位，见那一条 why。"
+why = "压力必须是真的世界状态，不是我们的私有计数器 —— 只有真实变化才会进原版自己的公式（01a D 节：A 级被严重低估）。三条字段覆盖 P10 要的三件事：**财政**（借债成本）、**合法性**（政府还站不站得住）、**守旧＝买办势力**（靠外国资本吃饭的农业出口集团）。**icon 取 `modifier_coins_negative.dds`**：原版自己的破产修正用的就是它（common/static_modifiers/00_code_static_modifiers.txt:233 的 `declared_bankruptcy`），同族还有 `lost_gold_reserves`（agitators_1_modifiers.txt:168）、`bank_robberies`（content_1_modifiers.txt:871）、`modifier_french_independence_payments_*`（agitators_2_modifiers.txt:782，原版海地赔款那一族）—— 全是「钱出问题」这一族，方向一致。⚠️ **本表与 [reform_inputs] 都是实验用直接修正，不是正式版设计**：它们由施加冲击的一方显式调用（不绑任何 on_action，调用点是 scripted effect `sitai_eg_debt_shock`）；正式版必须改成真实触发 + 因果链（借债 → 利息滚雪球 → 关税与资产被抵押 → 财政主权实际转移），那条已进 backlog（B35）。本定位同时写在 exec/阶段3-结果.md 与 exec/阶段3-归档清点.md，避免后人把实验设置当成档案设计。　【原版没有的字段我们没塞】**「列强财政接管」最像的那个原版字段是 `country_force_privatization_bool`**（原版破产修正里就写着 `= yes`，00_code_static_modifiers.txt:243；`modifier_devorismo` 也有，00_ip4_04_modifiers.txt:139），但生成器把每条 effects 渲染成 `<字段> = <数字>`（tools/pdx/modgen.py:1309 的 `f\"{p.key} = {num(p.amount)}\"`）—— 布尔字段在这个 schema 里**表达不出来**（会被写成一堆 `= 1`）。如实写在这里：它是本处境最想要、却**这一版拿不到**的那一条（要拿到得改生成器，那就不是「只加数据行」了）。　【沿用·口径】**三条里两条的数值沿用 `ru_defeat` 的实测档位（-35 / -0.30），未针对本条处境独立校准**；第一条（0.25）**不是沿用**，它是原版自己的档位，见那一条 why。"
 
 [[pressure.params]]
 key = "years"
@@ -131,7 +131,7 @@ why = "与工业家同档同源：`shogun_ig_forced_to_open_market`（content_1_
 name = "je_sitai_eg_debt_window"
 group = "je_group_foreign_affairs"
 icon = "gfx/interface/icons/event_icons/event_trade.dds"
-why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有三条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 `has_journal_entry = <本 JE 名>` 读它）；③ `immediate` / `on_complete` 里递牌（本档案不用，见 `[cards]`）。⚠️ 它喂不到原版 AI 牌：原版 212 处 `has_journal_entry` 全部硬编码具名 JE，没有「读任意 JE」的通用谓词（backlog B52）。**group 与 icon 选原版「对外事务 + 经济贸易」那一对**（这是本档案与四份既有档案都不同的第三处）：`je_group_foreign_affairs`（定义见 common/journal_entry_groups/00_journal_entries.txt:116）与 `event_trade.dds` —— 原版 `je_opium`（鸦片，外力从经济上撬开一个非欧洲帝国）用的就是这一对（common/journal_entries/00_opium.txt:2 是 icon、:4 是 group），而**原版埃及那条 JE**（`je_veiled_protectorate`，列强把埃及收为属国）用的也是同一个 group（00_veiled_protectorate.txt:4）。ru/tr 用 `je_group_internal_affairs` + `event_portrait.dds`（00_corn_laws.txt:2 与 :4），是因为它们的处境是「战败后的内政」；`au_revolution` 用 `je_group_crises` + `event_protest.dds`，是因为它的处境是「内部的合法性崩塌」。本档案的机制是**外力接管财政**，落在对外事务 + 经济这一对上是原版自己的分法，不是我们挑好看的图标。　【沿用·口径】本表的**结构与数值**沿用 `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**；group 与 icon 是按本处境的语义另选的（有原版行号）。"
+why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有三条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 `has_journal_entry = <本 JE 名>` 读它）；③ `immediate` / `on_complete` 里递牌（本档案不用，见 `[cards]`）。⚠️ 它喂不到原版 AI 牌：原版 AI 策略（`common/ai_strategies/**`）里 212 处 `has_journal_entry` 全部硬编码具名 JE，没有「读任意 JE」的通用谓词（backlog B52）。**group 与 icon 选原版「对外事务 + 经济贸易」那一对**（这是本档案与四份既有档案都不同的第三处）：`je_group_foreign_affairs`（定义见 common/journal_entry_groups/00_journal_entries.txt:116）与 `event_trade.dds` —— 原版 `je_opium`（鸦片，外力从经济上撬开一个非欧洲帝国）用的就是这一对（common/journal_entries/00_opium.txt:2 是 icon、:4 是 group），而**原版埃及那条 JE**（`je_veiled_protectorate`，列强把埃及收为属国）用的也是同一个 group（00_veiled_protectorate.txt:4）。ru/tr 用 `je_group_internal_affairs` + `event_portrait.dds`（00_corn_laws.txt:2 与 :4），是因为它们的处境是「战败后的内政」；`au_revolution` 用 `je_group_crises` + `event_protest.dds`，是因为它的处境是「内部的合法性崩塌」。本档案的机制是**外力接管财政**，落在对外事务 + 经济这一对上是原版自己的分法，不是我们挑好看的图标。　【沿用·口径】本表的**结构与数值**沿用 `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**；group 与 icon 是按本处境的语义另选的（有原版行号）。"
 
 [[journal_entry.fields]]
 key = "weight"
@@ -143,7 +143,7 @@ gate = "is_shown_when_inactive"
 key = "c:EGY"
 op = "?="
 arg = "this"
-why = "档案是**单国**的，主角是埃及。tag = `EGY` 是**本机实测确认**的：`common/country_definitions/01_africa.txt:26` 就是 `EGY = {`（原版国家定义文件的顶层键就是国家 tag），该块里 `country_type = unrecognized`（:29，即「未获列强承认的大国」—— 这正是本处境「借钱要看别人脸色」的制度底子）。`c:<TAG> ?= this` 这个**形式**是原版自己的：05_metternich.txt:8 的 `c:AUS ?= this`、00_belle_epoque.txt:68 的 `c:USA ?= this`、00_boxer_rebellion.txt:12 的 `c:CHI ?= THIS`，问号的语义是「作用域存在才比」，比裸 `=` 稳。⚠️ **诚实项**：本机**没有**找到 `c:EGY ?= this` 的原版用例 —— 原版写到埃及一律用**块形式**（`c:EGY ?= { … }`，00_veiled_protectorate.txt:11、00_sick_man.txt:189），而生成器的判据渲染只支持平铺一行 `key op 操作数`（tools/pdx/modgen.py:185-186 的 `Clause.render`），块形式在这个 schema 里表达不出来。所以这里用的是「原版的形式 + 本机实测的 tag」，不是「原版原样抄来的一行」。　【沿用·口径】写法沿用 ru/tr/cn，未针对本条处境独立校准；单国门这一行是按本档案主角换的（tag 与形式各有原版行号）。"
+why = "档案是**单国**的，主角是埃及。tag = `EGY` 是**本机实测确认**的：`common/country_definitions/01_africa.txt:26` 就是 `EGY = {`（原版国家定义文件的顶层键就是国家 tag），该块里 `country_type = unrecognized`（:29，即「未获列强承认的大国」—— 这正是本处境「借钱要看别人脸色」的制度底子）。`c:<TAG> ?= this` 这个**形式**是原版自己的：05_metternich.txt:8 的 `c:AUS ?= this`、00_belle_epoque.txt:68 的 `c:USA ?= this`、00_boxer_rebellion.txt:12 的 `c:CHI ?= THIS`，问号的语义是「作用域存在才比」，比裸 `=` 稳。⚠️ **诚实项**：本机**没有**找到 `c:EGY ?= this` 的原版用例 —— 原版写到埃及一律用**块形式**（`c:EGY ?= { … }`，00_veiled_protectorate.txt:11、00_sick_man.txt:189），而生成器的判据渲染只支持平铺一行 `key op 操作数`（tools/pdx/modgen.py:187 的 `Clause.render`），块形式在这个 schema 里表达不出来。所以这里用的是「原版的形式 + 本机实测的 tag」，不是「原版原样抄来的一行」。　【沿用·口径】写法沿用 ru/tr/cn，未针对本条处境独立校准；单国门这一行是按本档案主角换的（tag 与形式各有原版行号）。"
 
 [[journal_entry.conditions]]
 gate = "is_shown_when_inactive"
@@ -162,7 +162,7 @@ gate = "possible"
 key = "legitimacy"
 op = "<="
 amount = 75
-why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（00_meiji_restoration.txt:314 的 `legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**为什么没有一条「债务」判据**（本处境最想要的那一条）—— 查过原版，词是有的、我们**刻意不用**，如实记在这里：原版有一个国家作用域的触发器 **`taking_loans`**（`v3 evidence taking_loans`：原版键 15 处 / 12 文件，其中 4 处在 journal_entries；用法如 `taking_loans = yes`，events/1848.txt:867、common/journal_entries/00_warlord_china.txt:73），它在**形状上**正好能当这个门。不拿它当门的理由不是「原版没有这个词」，而是**实测教训**：`ru_defeat` 曾经把判据挂在一个没有实测过的门槛上（50），那一局（`ab-run3-done`）窗口一次都没开、法律全程没动 —— 一个没跑过 A/B 的新判据会把窗口**关死**，而关死是静默的（JE 就是不出现，没有任何报错）。所以本档案的门只开在沿用过的合法性上，`taking_loans` 留给下一次带 A/B 的校准（**这是让步，不是结论**）。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；另一条原版 75 是先例（有行号）。"
+why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（00_meiji_restoration.txt:314 的 `legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**为什么没有一条「债务」判据**（本处境最想要的那一条）—— 查过原版，词是有的、我们**刻意不用**，如实记在这里：原版有一个国家作用域的触发器 **`taking_loans`**（`v3 evidence taking_loans`：原版键 16 处 / 12 文件，其中 4 处在 journal_entries —— ⚠️ 这里原来写 15，与这条复算命令的现读不符；用法如 `taking_loans = yes`，events/1848.txt:867、common/journal_entries/00_warlord_china.txt:73），它在**形状上**正好能当这个门。不拿它当门的理由不是「原版没有这个词」，而是**实测教训**：`ru_defeat` 曾经把判据挂在一个没有实测过的门槛上（50），那一局（`ab-run3-done`）窗口一次都没开、法律全程没动 —— 一个没跑过 A/B 的新判据会把窗口**关死**，而关死是静默的（JE 就是不出现，没有任何报错）。所以本档案的门只开在沿用过的合法性上，`taking_loans` 留给下一次带 A/B 的校准（**这是让步，不是结论**）。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；另一条原版 75 是先例（有行号）。"
 
 [[journal_entry.conditions]]
 gate = "complete"
@@ -244,7 +244,7 @@ why = "JE 的开窗/关窗判据（`legitimacy <= 75` / `>= 75`）。原版用�
 [[references]]
 kind = "trigger"
 name = "has_variable"
-why = "记忆变量的读法。原版用法：common/journal_entries/00_corn_laws.txt:7（`NOT = { has_variable = corn_laws_abolished }`），阶段 1 统计 has_variable 被 13 张原版牌直接读。"
+why = "记忆变量的读法。原版用法：common/journal_entries/00_corn_laws.txt:7（`NOT = { has_variable = corn_laws_abolished }`），阶段 1 统计 has_variable 被 13 张原版牌直接读（13 = `common/ai_strategies/**` 里读该键的**牌数**，现读见生成物 `docs/design/02-可执行面.md`；同键在 `common/journal_entries/**` 出现 795 处、全树 6383 处 —— `v3 evidence has_variable`）。"
 
 [[references]]
 kind = "effect"
@@ -296,6 +296,73 @@ why = "知识界政治力量（改革侧输入之一，对应 01a §K 埃及那�
 # 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
 # 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
 [probe]
-why = "**先留空，后来实测查实了（2026-09-23，改这一段时留痕）**：埃及的历史文件里**没有**土地法那一组 —— `common/history/countries/egy - egypt.txt` 第 11–18 行共 8 条 `activate_law`（monarchy / autocracy / people_of_the_book / per_capita_based_taxation / subjecthood / agrarianism / professional_army / slave_trade），**没有** `lawgroup_land_reform` 那一条 ⇒ 开局那条由**引擎默认**决定。所以第一版**留空**（宁可不判，也不给一条会假的判据）。**现在有读数了**：跑满 66 个游戏月的那一局（`stage3_rerun.py --months 66 --archive eg_debt --fresh-logs`），探针的月度 `LAW` 读数**全程只有 `law_serfdom` 一种**（69 个观测块，去重后就是 `['law_serfdom']`）—— 也就是说引擎默认给埃及的土地法就是**农奴制**那一条。`LAW` 读的是**土地改革那一组**的现行法（另两局分别在西班牙读出 `law_latifundias`、在巴伐利亚读出 `law_tenant_farmers`，与各自 `[probe].reform_law` 逐字一致 ⇒ 这条读数可信）。据此把它填上。⚠️ 同一族里**奥斯曼（tr_defeat）仍然留空** —— 它没有过这样一局实测，别照抄埃及这一条（B80 的教训：没实测过的判据会把窗口**静默关死**、或者报出一个假的「法律换了」）。　【牌口径 · B86】`reform_card` =「意图层动没动」看哪张牌（判据是它**出现过**）：本档案开局那张政治牌不是它（逐份核过 common/history/ai/00_strategy.txt —— `c:EGY`（:117）是 `conservative_agenda`、`c:AUS`（:62）也是 conservative、`c:RUS`（:87）是 reactionary、TUR/CHI/PER/SPA/BAV 没有块），所以它出现就是真的位移 —— 那一局实测就是 `['conservative_agenda', 'progressive_agenda']`。"
+why = "**先留空，后来实测查实了（2026-09-23，改这一段时留痕）**：埃及的历史文件里**没有**土地法那一组 —— `common/history/countries/egy - egypt.txt` 第 11–18 行共 8 条 `activate_law`（monarchy / autocracy / people_of_the_book / per_capita_based_taxation / subjecthood / agrarianism / professional_army / slave_trade），**没有** `lawgroup_land_reform` 那一条 ⇒ 开局那条由**引擎默认**决定。所以第一版**留空**（宁可不判，也不给一条会假的判据）。**现在有读数了**：跑满 66 个游戏月的那一局（`stage3_rerun.py --months 66 --archive eg_debt --fresh-logs`），探针的月度 `LAW` 读数**全程只有 `law_serfdom` 一种**（69 个观测块，去重后就是 `['law_serfdom']`）—— 也就是说引擎默认给埃及的土地法就是**农奴制**那一条。`LAW` 读的是**土地改革那一组**的现行法（另两局分别在西班牙读出 `law_latifundias`、在巴伐利亚读出 `law_tenant_farmers`，与各自 `[probe].reform_law` 逐字一致 ⇒ 这条读数可信）。据此把它填上。⚠️ 同一族里**奥斯曼（tr_defeat）仍然留空** —— 它没有过这样一局实测，别照抄埃及这一条（B80 的教训：没实测过的判据会把窗口**静默关死**、或者报出一个假的「法律换了」）。　【牌 · t9 裁决】目标牌 = `ai_strategy_progressive_agenda`，**但这是「让步」，不是推导**。**从目标函数表的哪一项推出来**：`docs/design/01a-依据与参考.md:294` 的埃及行 —— 政治列点名的是 `great_reforms` / `nationalist_agenda`，而这两张**当前都不可达**：`great_reforms` 的 `possible` 门是 `has_journal_entry = je_great_reformer`（`common/ai_strategies/03_political_strategies.txt:1388-1390`），那个 JE 是**俄国的**「大改革」（`common/journal_entries/03_russia.txt:1104-1111`，fail 条件 = 君主不是 Alexander II）⇒ 它是俄国的牌；`nationalist_agenda` 的门是 `has_technology_researched = nationalism`（同文件 :863-864），1836 年成不成立**未查实**。同向可达的只剩进步牌。**修什么毛病**：破产/财政被接管却不转产 —— 本档案的账（借债成本、合法性、地主）要落到一个**会推法**的落点上；实测那一局牌确实从保守**动到**进步（`docs/design/exec/阶段5-实机读数补记.md` §四）。**递法**：**不递**（等引擎重掷 —— 先把「只动世界状态」的归因做干净，两条理由已写在 `[cards].why`）。**解除条件**（`docs/design/exec/阶段5-目标牌口径.md` §六 I3）：查实 `nationalist_agenda` 的科技门在 1836 的埃及成不成立 ⇒ 成立就换成 §K 点名的那张；`great_reforms` **永久排除**。**`reform_card` = 进步牌**：埃及开局政治牌是 `conservative_agenda`（`common/history/ai/00_strategy.txt:120`）⇒ 判据开局为假，有判别力。"
 reform_law = "law_serfdom"
 reform_card = "ai_strategy_progressive_agenda"
+
+# ── ⑩ 目标函数表（9 国目标函数表 · I7；判据 = `v3 objectives --check`）────
+#
+# 口径：`docs/design/exec/阶段5-目标函数表-口径.md`（v3）—— 住址 §1 / 形状 §2.1 /
+# **档位即来源等级** §2.2（0 留空 / 1 叙述 / 2 具名事实 / 3 判据或字段）/ 来源 §3 /
+# 五条闸门 §4.1 / `derive()` §4.1.1。幅度只在原版同族阶梯或本仓实测处写，
+# 其余**留空并写明缺什么** —— 把格子填满比留空更坏（P10：不许编）。
+[objectives]
+why = "五格 2/3/3/1/0。存续这一格是**档 2**：埃及名义上属奥斯曼，这是原版文件里的具名事实（不是叙述）—— 也是这份档案「以改革换生存」的起点。"
+
+[[objectives.items]]
+key = "survival"
+tier = 2
+evidence = "common/history/diplomacy/00_subject_relationships.txt:270-273"
+why = "原版具名事实：1836 年埃及对奥斯曼是保护国（`common/history/diplomacy/00_subject_relationships.txt:270-273` 的 `create_diplomatic_pact = { country = c:EGY type = protectorate }`）⇒ 存续被人决定。同文件 `:599-601` 还给了 `add_liberty_desire = 45`（另一条依据写 here、不进 evidence）。"
+
+[[objectives.items]]
+key = "finance"
+tier = 3
+evidence = "mod/data/eg_debt.toml:89-91"
+why = "本档案在动 `country_loan_interest_rate_mult`（`:89-91`）⇒ 档 3（字段在动它）。原版同族的具名事实是 `common/static_modifiers/00_code_static_modifiers.txt:232-244` 的 `declared_bankruptcy`（写在 `why` 里备查）。"
+
+[[objectives.items]]
+key = "legitimacy"
+tier = 3
+evidence = "mod/data/eg_debt.toml:94-96"
+why = "本档案在动 `country_legitimacy_base_add`（`:94-96`）⇒ 档 3。"
+
+[[objectives.items]]
+key = "military"
+tier = 1
+evidence = "01a:294"
+why = "§K 写「军队较强」「穆罕默德·阿里改革遗产」（`01a:294`）⇒ 档 1（叙述）；本仓没有为本档案动军力字段 ⇒ 不往上。"
+
+[[objectives.items]]
+key = "market"
+tier = 0
+why = "**缺**：§K 写「尼罗河农业」（`01a:294`）—— 那是农业禀赋、不是市场依赖；本仓也没有市场字段 ⇒ 留空（要填先有字段，见口径页 §3.3）。"
+
+[[objectives.identity]]
+key = "ideology"
+tier = 2
+evidence = "common/history/countries/egy - egypt.txt:11-18"
+why = "原版具名事实：开局 8 条 `activate_law`（君主制 / 独裁 / 有经人 / 人均税 / 属民 / 农本 / 职业军队 / 奴隶贸易）—— 穆罕默德·阿里改革遗产落在这些法律上（`common/history/countries/egy - egypt.txt:11-18`）。§K 点名的 `great_reforms` / `nationalist_agenda` 当前都不可达（前者的门是**俄国**的 JE `je_great_reformer`，见 `docs/design/exec/阶段5-目标牌口径.md` §六）。"
+
+[[objectives.constraints]]
+key = "friction"
+tier = 3
+evidence = "mod/data/eg_debt.toml:99-101"
+why = "本档案在动地主的政治力量（`:99-101`）⇒ 旧秩序那道钳制。"
+
+[[objectives.constraints]]
+key = "position"
+tier = 2
+evidence = "common/history/diplomacy/00_subject_relationships.txt:599-601"
+why = "位置 = 属国身份本身的代价：`c:EGY ?= { add_liberty_desire = 45 }`（`:599-601`）—— 原版具名事实：独立渴望被写在开局。"
+
+[[objectives.constraints]]
+key = "player"
+tier = 1
+evidence = "01a:18"
+why = "玩家是外部因素里「快」的那一档、不落文件（`01a:18`）⇒ 档 1 + 别名依据。"
+
+[objectives.verdict]
+kind = "declared"
+card = "ai_strategy_progressive_agenda"
+why = "`[probe].reform_card` 非空而 `[journal_entry.signals]` 为空（不递牌）⇒ `derive()` 第 1 条 ⇒ `declared`。**这是「让步」而不是推导**：§K 点名的两张牌今天都不可达（`docs/design/exec/阶段5-目标牌口径.md` §六 I5/I7），退到这张通用牌 —— 让步是叙述、写在这里，不进 `kind`（口径页 §4.1.1 规则 1 的注）。"

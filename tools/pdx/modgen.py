@@ -62,7 +62,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pdx import config
+from pdx import config, objectives
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 
@@ -340,6 +340,27 @@ PANEL_LINES: tuple[tuple[str, str], ...] = (
     ("last_change", "last_change"),
 )
 
+#: `[panel]` 里哪些槽**单独发一条 loc 键**（`<JE 名>_<后缀>`）。
+#:
+#: ⚠️ **`goal` 不在其中**（`t97` 的裁决）：引擎只为**有 goal 度量**（`goal_add_value` /
+#: `current_value`）的 JE 使用 `<JE 名>_goal`；没有度量却写了这条 loc，引擎会报
+#: `journal_entry_type.cpp:476 Journal entry has redundant loc for <JE 名>_goal`
+#: —— 那 9 行噪声会污染 `error.log` 这个证据面（本队多次判据就是"我们文件的行数"）。
+#:
+#: **判据是两条独立证据，不是猜**：
+#: ① **引擎原文**（`binaries/victoria3.exe` 的字符串表，同段相邻字面量）：
+#:    `Journal entry is missing loc for {}` / `_reason` / `Journal entry is missing loc
+#:    for {}_goal` / **`Journal entry has redundant loc for {}_goal`** / `is_goal_complete` / `_goal`
+#:    ⇒ `_goal` 那一槽是与 `is_goal_complete`（度量的完成谓词）成对出现的；
+#: ② **原版 419 份 JE 的机械列联表**（2026-09-25 现测）：
+#:    有 `goal_add_value` 的 90 份里 **77 份**有 `<je>_goal` loc；**没有度量的 329 份里 0 份**有
+#:    ⇒ "有度量才有 `_goal`"这条在数据上是硬的（反例 0 条）。
+#:
+#: **目标那行照样上屏** —— 它的文案并进 `<JE 名>_reason`（引擎 GUI 读的是
+#: `[JournalEntry.GetReason]`），所以消掉这条键**不是**删玩家可见文案，是删**重复**：
+#: 修前同一句话在 `_reason` 与 `_goal` 里各存一份（见 `mod/localization/**` 的对照）。
+PANEL_SLOTS_WITH_OWN_LOC: frozenset[str] = frozenset({"pressure", "last_change"})
+
 
 @dataclass(frozen=True, slots=True)
 class Probe:
@@ -392,8 +413,24 @@ class DifficultyTier:
     player_why: str
 
     @property
+    def name(self) -> str:
+        """引擎眼里的**设置名**：设置块名 = 块内 `flag` 值 = `default =`/`has_game_rule =` 的取值。
+
+        ⚠️ **不许带 `setting_` 前缀**：引擎的文案键是 `setting_<设置名>` /
+        `setting_<设置名>_desc`（原版 `common/game_rules/game_rules.md:10-12`，且
+        `game/localization/english/game_rules_l_english.yml` 全表逐条可核 —— 键跟
+        **块名**不跟 `flag`：`setting_lenient_ai_behavior` 的 flag 是 `lenient_ai`、
+        `setting_achievements_blocked` 的是 `blocks_achievements`，
+        而 `setting_all_formable_nations` 这类**没有 flag** 的设置照样有键）。
+        带前缀就查成 `setting_setting_*` 落空 ⇒ 规则窗那一行显示原始键
+        （实机帧 `tools/out/auto/22-rule-sitai-scroll-5.png`）。
+        """
+        return f"{self.rule_key}_{self.id}"
+
+    @property
     def setting(self) -> str:
-        return f"setting_{self.rule_key}_{self.id}"
+        """本地化键：规则窗里那一档的名称与说明（`:attr:`name`` 前面加 `setting_`）。"""
+        return f"setting_{self.name}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -874,6 +911,7 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
     # 每行既要文案（进 `localization`）又要 `why`（P10）⇒ 在这里一起收，
     # 文案走的仍是同一个 `localization` 列表（单一数据源，P9）。
     panel: list[tuple[str, str, str]] = []
+    panel_values: dict[str, dict[str, str]] = {}
     if "panel" in data:
         panel_raw = _require_table(data["panel"], f"{source}:panel")
         for slot, suffix in PANEL_LINES:
@@ -893,8 +931,15 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
                     raise DataError(f"{source}:panel.{slot} 的 {lang} 文案里有裸双引号")
                 line_values[lang] = text
             line_why = _why(line, f"{source}:panel.{slot}")
-            localization.append(Localization(key=key, why=line_why, values=line_values))
-            panel.append((slot, key, line_why))
+            panel_values[slot] = line_values
+            if slot in PANEL_SLOTS_WITH_OWN_LOC:
+                localization.append(Localization(key=key, why=line_why, values=line_values))
+                panel.append((slot, key, line_why))
+            else:
+                # 这一行**不单独发键**（:data:`PANEL_SLOTS_WITH_OWN_LOC`）：文案照旧并进
+                # `<JE 名>_reason`。文档表里照样列出这一行，但键那一格写明它的去处 ——
+                # 写成"键存在"会误导（`v3 modgen --check` 逐键比字数，不存在的键查不到）。
+                panel.append((slot, f"（不单独发键；并进 {journal_name}_reason）", line_why))
 
     # **把三行接进 JE 的说明里**（阶段 6 的 G3）：引擎真正显示的那一处是
     # `journal_entry.gui:742` 的 `text = "[JournalEntry.GetReason]"` ⇒ 读的是
@@ -930,13 +975,38 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
         # ⚠️ 循环变量**不能叫 `_why`**：那会把同名的模块函数在**整个函数作用域**里
         # 遮蔽掉，于是上面 `Pressure(...)` 那几处 `_why(...)` 直接
         # `UnboundLocalError: cannot access local variable '_why'`（实测踩过）。
-        for _slot_name, panel_key, _panel_why in panel:
-            panel_entry = next(item for item in localization if item.key == panel_key)
+        for slot, _panel_key, _panel_why in panel:
             for lang in LANGUAGES:
-                merged[lang] = f"{merged[lang]}\\n\\n{panel_entry.values[lang]}"
+                merged[lang] = f"{merged[lang]}\\n\\n{panel_values[slot][lang]}"
         localization[reason_index] = Localization(
             key=reason_key, why=reason_entry.why, values=merged
         )
+        # **反例防线（t97）**：目标那一行必须是**并进 `_reason` 之后仍然在**的。
+        # 少了这句，将来有人"为了消警告"把那行文字从 `_reason` 里也抠掉，产物照样生成、
+        # 三行解释少一行而没人发现 —— 而 G3 判的正是"试玩者能不能复述"。
+        if panel_values["goal"]["english"].strip() not in merged["english"]:
+            raise DataError(
+                f"{source}:panel.goal 的文案没有并进 `{reason_key}` —— "
+                "消冗余 loc 的正确做法是**不再单独发键**（文案并进说明），不是把文字删掉"
+            )
+
+    # **防复发门禁（t97）**：**不许**发 `<JE 名>_goal` 这条 loc。
+    #
+    # 判据：引擎只为**有 goal 度量**（`goal_add_value` / `current_value`）的 JE 用这条键，
+    # 没有度量却写了它，`journal_entry_type.cpp:476` 会报
+    # `Journal entry has redundant loc for <JE 名>_goal`（那 9 行 `error.log` 噪声）；
+    # 原版 419 份 JE 的机械列联表也支持这条：有度量的 90 份里 77 份带 `_goal` loc，
+    # **没有度量的 329 份里 0 份**带（见 :data:`PANEL_SLOTS_WITH_OWN_LOC` 的注）。
+    # 本 schema 还没有"goal 度量"这个字段 ⇒ 现在一律不发；将来真有度量时要**同时**
+    # 放开这条门禁与 `PANEL_SLOTS_WITH_OWN_LOC`（两处都在，缺一处就自相矛盾）。
+    for item in localization:
+        if item.key.endswith("_goal"):
+            raise DataError(
+                f"{source}:本地化键 `{item.key}` 是 JE 的 goal 槽 loc —— "
+                "本 schema 的 JE 没有 goal 度量（`goal_add_value`），"
+                "发这条键会被引擎判**冗余**（`journal_entry_type.cpp:476`）。"
+                "目标那行的文案请并进 `<JE 名>_reason`（见 `[panel]` 的处理）。"
+            )
 
     # `[probe]`（可选表）：探针口径 —— 本档案盯哪条法 / 哪张牌（B80 / B86）。
     probe: Probe | None = None
@@ -1135,7 +1205,7 @@ def _difficulty_branches(archive: Archive) -> list[Node]:
         (
             "if",
             [
-                ("limit", ["is_ai = no", f"has_game_rule = {tier.setting}"]),
+                ("limit", ["is_ai = no", f"has_game_rule = {tier.name}"]),
                 (
                     "add_modifier",
                     [f"name = {tier.modifier}", f"years = {num(years.amount)}"],
@@ -1245,12 +1315,15 @@ def modifier_text(archive: Archive) -> str:
 def difficulty_rule_text(difficulty: Difficulty) -> str:
     """难度三档的 `game_rules` 文件（阶段 6 / 契约 J5）。
 
-    机制只用**原版有先例**的那一种：设置块里写 `flag = <设置名>`，脚本侧用
-    `has_game_rule = <设置名>` 读（原版 `00_default_strategy.txt:4601/7096/…` 就是这么读的）。
+    机制只用**原版有先例**的那一种：设置块的**块名**就是脚本侧 `has_game_rule` 读的取值，
+    块里写一个与块名**同串**的 `flag`（原版 `common/ai_strategies/00_default_strategy.txt:4612`
+    读 `free_construction_unscaled`、`:7194` 读 `high_ai_aggression`；凡被它读的设置，
+    原版 flag 都与块名同串）。块名**不许**带 `setting_` 前缀 —— 引擎的文案键是
+    `setting_<块名>`（见 :attr:`DifficultyTier.name`），前缀只属于本地化键。
     `game_rules.md:5` 还写了 `apply_modifier`，但 1.14.3 的 `common/game_rules/` 里
     **0 处使用**（实测）—— 先例为零的写法不当承重墙。
     """
-    settings: list[Node] = [(tier.setting, [f"flag = {tier.setting}"]) for tier in difficulty.tiers]
+    settings: list[Node] = [(tier.name, [f"flag = {tier.name}"]) for tier in difficulty.tiers]
     return "\n".join(
         _flatten(
             [
@@ -1266,7 +1339,7 @@ def difficulty_rule_text(difficulty: Difficulty) -> str:
                 (
                     difficulty.key,
                     [
-                        f"default = {difficulty.tier(DIFFICULTY_DEFAULT).setting}",
+                        f"default = {difficulty.tier(DIFFICULTY_DEFAULT).name}",
                         "",
                         *settings,
                     ],
@@ -1482,6 +1555,15 @@ def doc_text(archive: Archive) -> str:
         f"* **本档案修什么毛病**：{archive.why}",
         f"* **递牌**：{len(archive.cards)} 张 —— {archive.cards_why}",
         "",
+        # ── 目标函数表（9 国目标函数表 · 口径页 §2.3 的渲染面）──
+        # 渲染**只此一处**：数据在 `mod/data/*.toml` 的 `[objectives]`，判据在
+        # `pdx.objectives`（`v3 objectives --check`），这里只是把人读的那一页印出来。
+        # 所以本行**不能**自己拼表 —— 拼第二遍就是第二个数据源（P9）。
+        *(
+            [*objectives.section_lines(entry)]
+            if (entry := objectives.entry_for(archive.id)) is not None
+            else ["> ⚠️ 找不到本档案的数据源，目标函数表印不出来。", ""]
+        ),
         "## 产物清单",
         "",
         "| 文件 | 作用 |",
@@ -1950,11 +2032,11 @@ def facts(archive: Archive) -> list[tuple[str, str]]:
         out.append(
             (
                 f"gamerule.{difficulty.key}.default",
-                difficulty.tier(DIFFICULTY_DEFAULT).setting,
+                difficulty.tier(DIFFICULTY_DEFAULT).name,
             )
         )
         out.extend(
-            (f"gamerule.{difficulty.key}.setting.{tier.setting}.flag", tier.setting)
+            (f"gamerule.{difficulty.key}.setting.{tier.name}.flag", tier.name)
             for tier in difficulty.tiers
         )
         for tier in difficulty.tiers_with_player_effects():
@@ -1968,7 +2050,7 @@ def facts(archive: Archive) -> list[tuple[str, str]]:
         for index, tier in enumerate(difficulty.tiers_with_player_effects()):
             prefix = f"effects.{archive.memory.effect}.if[{index}]"
             out.append((f"{prefix}.limit.is_ai", "no"))
-            out.append((f"{prefix}.limit.has_game_rule", tier.setting))
+            out.append((f"{prefix}.limit.has_game_rule", tier.name))
             out.append((f"{prefix}.add_modifier.name", tier.modifier))
             if years is not None:
                 out.append((f"{prefix}.add_modifier.years", num(years.amount)))
@@ -2043,7 +2125,9 @@ def _facts_effects(rel: str, text: str) -> list[tuple[str, str]]:
 def _facts_gamerules(rel: str, text: str) -> list[tuple[str, str]]:
     """`common/game_rules/*.txt` → `gamerule.<规则键>.*`。
 
-    规则块里每个 `setting_* = { flag = … }` 记一条；`default = …` 记一条。
+    规则块里每个设置块（`… = { flag = … }`）记一条；`default = …` 记一条。
+    设置块的**块名不带** `setting_` 前缀（前缀只属于本地化键，见 :attr:`DifficultyTier.name`）
+    ⇒ 这里按"是不是块"挑，不按名字前缀挑。
     """
     out: list[tuple[str, str]] = []
     for top in _top(rel, text):
@@ -2054,7 +2138,8 @@ def _facts_gamerules(rel: str, text: str) -> list[tuple[str, str]]:
         if default is not None:
             out.append((f"gamerule.{top.key}.default", _scalar(default.value)))
         for item in block.assignments():
-            if not item.key.startswith("setting_"):
+            # 规则块的成员只有两类：`default = <设置名>` 与设置块（原版 `game_rules.md:1-8`）。
+            if item.key == "default" or _block_of(item) is None:
                 continue
             inner = _block_of(item)
             flag = inner.first("flag") if inner is not None else None
@@ -2117,6 +2202,18 @@ def _facts_defines(rel: str, text: str) -> list[tuple[str, str]]:
     return out
 
 
+#: 产物侧键名 → 事实表键名（只翻**语义等价、写法不同**的那几个）。
+#:
+#: 牌的槽位在产物里是**引擎键** `type`（:func:`card_text` 渲染 `type = <slot>`），
+#: 事实表统一叫 `slot`（:attr:`Card.slot` 与闸门 ③ 同词）⇒ 翻译落在**反解这一侧**，
+#: 与同族的既有做法一致：:func:`_facts_gamerules` 把产物里直接铺开的设置块记成
+#: `.setting.<块名>.flag`（产物里没有 `setting` 这一层）、:func:`_facts_effects` 把
+#: `if` 块编号成 `if[i]`（产物里也没有下标）—— 反解器的职责就是「把产物的写法翻成
+#: 事实表的词」，比较器（`modguard.gate_roundtrip`）只做两份事实表的集合比对。
+#: 实测：不翻译时闸门 ④ 对**任何**一张牌都报「缺 1 多 1」（t18 的第一张牌暴露）。
+_CARD_FACT_KEYS = {"type": "slot"}
+
+
 def _facts_card(rel: str, text: str) -> list[tuple[str, str]]:
     out: list[tuple[str, str]] = []
     for top in _top(rel, text):
@@ -2132,7 +2229,10 @@ def _facts_card(rel: str, text: str) -> list[tuple[str, str]]:
             for clause in (possible.assignments() if possible else [])
         )
         out.extend(
-            (f"card.{top.key}.{item.key}", _scalar(item.value))
+            (
+                f"card.{top.key}.{_CARD_FACT_KEYS.get(item.key, item.key)}",
+                _scalar(item.value),
+            )
             for item in block.assignments()
             if item.key not in {"weight", "possible"}
         )

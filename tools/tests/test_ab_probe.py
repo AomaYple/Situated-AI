@@ -193,6 +193,68 @@ def test_每月都记当前政治牌() -> None:
     assert "ZZPROBE AB;STRATEGY;none;" in code, "兜底那行没了 ⇒ 分不清'没记'与'没有牌'"
 
 
+def test_我们自己的牌插在自报链链首且逐月留痕() -> None:
+    """我们自己的牌必须排 `ai_strategy_default` **之前**（`if / else_if` 命中即停）。
+
+    这条顺序是"能不能看见命中"的**充要条件**，而它原先**没有任何用例守着**：
+    把插入位置挪到末尾，引擎真选中我们的牌时日志里出现的仍是那张原版牌
+    （前面的分支先命中）⇒ 读出来正好是"牌没被选中"这种最难查的假象。
+    同时钉住 ④·补 那条诊断：两个分支都要写（含 `none`），否则分不清"没被选中"与"没记"。
+    """
+    our = "ai_strategy_sitai_probe_order_test"
+    # 用**真的** `ai_surface.Card`（不是假对象）：`on_actions_text` 的形参标着
+    # `list[ai_surface.Card]`，而 mypy 开着 —— 假牌会多出一条 `arg-type`
+    # （本仓 `warn_unused_ignores = true`，所以拿 `# type: ignore` 糊更差）。
+    vanilla = [
+        ai_surface.Card(
+            name="ai_strategy_conservative_agenda",
+            slot="political",
+            file="<test>",
+            line=1,
+            weight_base=20.0,
+            weight_terms=0,
+            has_possible=True,
+            fields=(),
+            weight_inputs=(),
+            possible_inputs=(),
+            field_inputs=(),
+        )
+    ]
+    code = _code(ab_probe.on_actions_text(vanilla, _target(), own=[our]))
+    assert "has_strategy = ai_strategy_conservative_agenda" in code, "假牌没进生成物？"
+    assert f"has_strategy = {our}" in code
+    assert code.index(f"has_strategy = {our}") < code.index("has_strategy = ai_strategy_default"), (
+        "我们的牌排到了 default 之后 —— 命中即停 ⇒ 永远读不到它（B87 同族）"
+    )
+    assert f"ZZPROBE AB;{ab_probe.CARD_KIND};{our.removeprefix('ai_strategy_')};" in code
+    assert f"ZZPROBE AB;{ab_probe.CARD_KIND};none;" in code, (
+        "没有 none 分支 ⇒ 分不清'我们的牌没被选中'与'这一格没记'"
+    )
+
+
+def test_自己的牌为零时只写一行none而不是悬空else() -> None:
+    """0 张牌那条路径（**今天就是它**：九份档案都是 0 张，F5 的结果）也要留痕。
+
+    没有配对的 `if` 就不能有 `else` —— 引擎会报错。所以空集走**裸行**；这条用例
+    把那条路径钉住，免得将来有人图省事改成"空集就不写"，把可观测性悄悄丢掉。
+    """
+    empty = ab_probe.own_card_chain([])
+    assert f"ZZPROBE AB;{ab_probe.CARD_KIND};none;" in empty
+    assert "if = {" not in empty, "空集不许写悬空 else"
+    assert "else" not in empty, "空集不许写悬空 else"
+
+    one = ab_probe.own_card_chain(["ai_strategy_sitai_one"])
+    assert "if = {" in one
+    assert "else_if = {" not in one
+    assert "else = {" in one
+
+    two = ab_probe.own_card_chain(["ai_strategy_sitai_a", "ai_strategy_sitai_b"])
+    assert "if = {" in two
+    assert "else_if = {" in two
+    assert "else = {" in two
+    assert f"{ab_probe.CARD_KIND};none;" in two, "多张时也要有兜底那行"
+
+
 @pytest.mark.skipif(not config.GAME.is_dir(), reason="游戏目录不可用")
 def test_递牌白名单的牌都在原版政治槽里() -> None:
     """我们自己递牌的**白名单**必须是原版真有的政治牌（B87 的根因那一半）。
@@ -322,10 +384,39 @@ def test_只有一个决议且远程作用于主角国家() -> None:
     assert "zz_probe_ab_arm = yes" in code
 
 
-def test_探针不新增任何牌() -> None:
-    """F5：本档案 0 张牌 —— 探针也不许偷偷加。"""
+def test_探针不定义任何牌() -> None:
+    """F5：牌写在**真档案**的数据源里（`[cards]`），探针一个都不许**定义**。
+
+    ⚠️ 判据的**形态**在 2026-09-25（t18）改过一次，如实写在案：原来是「任何探针文件里
+    都不许出现 `ai_strategy_sitai_` 这个**子串**」—— 那时本 mod 的政治槽是空的，子串检查
+    恰好等价。t18 落了第一张真牌（`ai_strategy_sitai_ru_defeat_agenda`）之后，探针**会照
+    设计去读它**（`own_cards()` 从产物现读、`chain` 把它排在链首）⇒ 子串必然出现。
+    判据因此改成「不许出现 `ai_strategy_*` 的**定义块**」：**读**是设计，**定义**才是越界。
+    （t18 的 test 0 专测牌曾短暂破例，已按 t15 §1.4「用完即撤」撤掉。）
+    """
     for rel, text in _files().items():
-        assert "ai_strategy_sitai_" not in text, rel
+        defined = set(re.findall(r"(?m)^(\w+) = \{", text))
+        offenders = sorted(name for name in defined if name.startswith("ai_strategy_"))
+        assert not offenders, (rel, offenders)
+
+
+def test_真牌被读进自报链且排在兜底之前() -> None:
+    """t18：真牌落进数据源之后，探针的读数**必须看得到它**（不是只在合成臂里成立）。
+
+    与 `test_我们自己的牌插在自报链链首且逐月留痕` 的分工：那条用**合成的**牌验证链的
+    顺序语义；这条用**真产物**（`own_cards()` 现读 `mod/common/ai_strategies/`）验证
+    「数据源 → 产物 → 探针读数」这条端到端链路真的接通了 —— 它是本卡验收第 6 条
+    （自报链路两条都给）的机器钉子。
+    """
+    code = _code(_files()[_ON_ACTIONS])
+    ours = ab_probe.own_cards()
+    assert ours, "真档案里一张政治槽牌都没有 —— 要么数据源没落，要么 own_cards 读法坏了"
+    for name in ours:
+        assert f"has_strategy = {name}" in code, f"{name} 没被读进自报链"
+    first = f"has_strategy = {ours[0]}"
+    assert code.index(first) < code.index("has_strategy = ai_strategy_default"), (
+        "我们的牌排在兜底之后 —— 命中即停的链会把它盖住"
+    )
 
 
 # ── 月度自报：只记俄罗斯，且换臂在自报之前 ───────────────────
@@ -617,3 +708,291 @@ def test_元数据是合法JSON() -> None:
 
 def test_探针源目录在仓库内() -> None:
     assert ab_probe.PROBE_DIR == config.REPO / "tools" / "probe" / ab_probe.PROBE_MOD
+
+
+def test_难度档位的逐月读数两族行都在() -> None:
+    """阶段 6 口径 §3.3 第 1 条：`RULE` 互斥链 + 三档各自的 yes/no，两族都要有。
+
+    缺任何一族都是**静默失真**：
+    * 只有三档各自的行 ⇒ 读不出"这一局到底挂在哪一档"；
+    * 只有互斥链 ⇒ 另两档**一个月都不出现**，而"没记"与"没有"分不开（B87 同族）——
+      承重判据要的正是「harsh;yes **且**另两档 no」这个**组合**。
+
+    还要钉住 kind 的划分：三档各自的读数**不能**都叫 `RULE`（`pdx.ab` 里
+    `rows[key][kind] = parts[0]` 会让同 kind 的三行互相覆盖，只剩最后一行）。
+    """
+    code = _code(ab_probe.difficulty_rule_lines())
+    for setting in ab_probe.DIFFICULTY_SETTINGS:
+        assert f"has_game_rule = {setting}" in code, setting
+    else_if_count = len(ab_probe.DIFFICULTY_SETTINGS) - 1
+    assert code.count("else_if = {") == else_if_count, "互斥链必须是 if / else_if… / else 一条链"
+    assert "else = {" in code, "没有 else 兜底 ⇒「一档都没命中」会变成一行都不记"
+    for short, _setting in zip(ab_probe.RULE_SHORTS, ab_probe.DIFFICULTY_SETTINGS, strict=True):
+        kind = ab_probe.RULE_KINDS[short]
+        assert kind != "RULE", "三档各自的读数必须各有 kind（同 kind 会互相覆盖）"
+        assert f"ZZPROBE AB;{kind};yes;" in code, kind
+        assert f"ZZPROBE AB;{kind};no;" in code, f"{kind} 缺 no 分支"
+    # 🔧 2026-09-25 随字面量同步（t88 之后设置名不再带 `setting_` 前缀）：
+    #    这条断言原来写的是 `RULE;setting_sitai_difficulty_harsh;yes;`，而 t88 的目标量是
+    #    **不带前缀**的 `sitai_difficulty_harsh` ⇒ 断言与生成物必须同时改，否则红的是"用例
+    #    记着旧名"而不是"代码坏了"（今天这一族已经栽过：把字面量的毛病记到被测对象头上）。
+    assert "ZZPROBE AB;RULE;sitai_difficulty_harsh;yes;" in code, (
+        "互斥链命中那一档要写**设置名**（口径 §3.3 要逐字摘录这一行）"
+    )
+    assert "ZZPROBE AB;RULE;setting_sitai_difficulty_harsh;yes;" not in code, (
+        "带 `setting_` 前缀的旧设置名不许再出现（t88 之后会静默判错、走 else 兜底）"
+    )
+    assert "ZZPROBE AB;RULE;none;yes;" in code
+
+
+# ── 判别性实验模式（t18 第 10 条）与读数判决（t18 第 15 条）──────────────────
+#
+# 这一族用例存在的原因：B 臂 0/13 当时**没有任何程序会叫**（读数只在人脑子里判），
+# 而"门到底开没开"连一行自报都没有 ⇒ 一个 0 命中可以被读成三种完全不同的东西。
+# 下面的用例把两件事钉死：① 控制局的产物里必须有那几行、且**不许**设记忆变量；
+# ② 判决函数在"门开而 0 命中 / 应出现而 0 次 / 没有读数 / 模式不符"四种情况下都要判红。
+
+
+def _control_files() -> dict[str, str]:
+    return ab_probe.build(game=_EMPTY_GAME, mode=ab_probe.MODE_CONTROL).files
+
+
+def test_控制模式的效果文件也不许调冲击效果() -> None:
+    target = _target()
+    control = _control_files()
+    assert f"{target.shock_effect} = yes" not in _code(control[_EFFECTS]), (
+        "控制局的阶梯必须是空的：台阶 B 会设记忆变量 ⇒ JE 窗口开 ⇒ 档案的直置会跑 ⇒ 隔离失效"
+    )
+    assert f"{target.shock_effect} = yes" in _code(_files()[_EFFECTS]), "自然模式的阶梯要留着"
+    assert "本局是控制局" in control[_EFFECTS]
+    assert "本局是控制局" not in _files()[_EFFECTS], "自然模式的文件头不许写控制局那一段"
+
+
+def test_控制模式才生成defines与两张哨兵牌() -> None:
+    natural = _files()
+    control = _control_files()
+    for rel in ab_probe.MODE_ONLY_FILES:
+        assert rel not in natural, f"natural 模式不该生成 {rel}"
+        assert rel in control, f"control 模式必须生成 {rel}"
+
+
+def test_风暴覆盖只动那两个键且值写死() -> None:
+    text = _control_files()["common/defines/zz_probe_ab_defines.txt"]
+    assert text.count("NAI = {") == 1, "按「块 + 参数」覆盖：只许一个 NAI 块，不复制原版 00_ai.txt"
+    code = _code(text)
+    assert "CHANGE_STRATEGY_THRESHOLD = 1" in code
+    assert "CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE = 100" in code
+    assert "CHANGE_STRATEGY_THRESHOLD = 100" not in code, (
+        "原版值只许出现在注释里（用来说明为什么改）"
+    )
+
+
+def test_哨兵窗口不重叠且先变量门后修正门() -> None:
+    assert ab_probe.SENTINEL_OPEN_MONTHS[1] < ab_probe.SENTINEL_GATE_MONTHS[0], (
+        "两个 10000 权重的哨兵同时在池里时谁赢是随机的 ⇒ 窗口必须不重叠，否则两件事说不清"
+    )
+    open_card = _control_files()["common/ai_strategies/zz_probe_ab_sentinel_open.txt"]
+    gate_card = _control_files()["common/ai_strategies/zz_probe_ab_sentinel_gate.txt"]
+    assert f"has_variable = {ab_probe.SENTINEL_OPEN_VAR}" in open_card
+    assert "has_modifier" not in open_card, "哨兵①只测「有没有重掷」，不要混进门的形状"
+    assert f"has_modifier = {_target().pressure_modifier}" in gate_card, (
+        "哨兵②的门必须**逐字**是真牌那一行（否则测的不是同一件事）"
+    )
+
+
+def test_控制模式只挂压力修正而不设记忆变量() -> None:
+    target = _target()
+    code = _code(_control_files()[_ON_ACTIONS])
+    assert f"add_modifier = {{ name = {target.pressure_modifier} years = 10 }}" in code
+    assert f"{target.shock_effect} = yes" not in code, (
+        "控制局不许调冲击效果：它会设记忆变量 ⇒ JE 窗口开 ⇒ 档案那条 set_strategy 直置会跑，"
+        "直置与重掷就再也分不开（这正是 B 臂 0/13 不可归因的原因之一）"
+    )
+    assert f"has_variable = {target.shock_variable}" in code, (
+        "变量读那一行要留着（用来证明确实没设）"
+    )
+
+
+def test_两种模式都有门直读与逐牌yesno行() -> None:
+    target = _target()
+    for files in (_files(), _control_files()):
+        code = _code(files[_ON_ACTIONS])
+        assert f"has_modifier = {target.pressure_modifier}" in code, "门直读（第 10 条 (a)）"
+        assert "ZZPROBE AB;GATE;yes;" in code
+        assert "ZZPROBE AB;GATE;no;" in code, "两向都要写"
+        for name in ab_probe.own_cards():
+            assert f"ZZPROBE AB;HELD;{name}=yes;" in code, f"{name} 缺显式 yes（第 10 条 (b)）"
+            assert f"ZZPROBE AB;HELD;{name}=no;" in code, f"{name} 缺显式 no"
+
+
+def test_模式与节奏逐月自报() -> None:
+    for files, mode, storm in (
+        (_files(), "natural", "no"),
+        (_control_files(), "control", "yes"),
+    ):
+        code = _code(files[_ON_ACTIONS])
+        assert f"ZZPROBE AB;MODE;{mode};" in code
+        assert f"ZZPROBE AB;STORM;{storm};" in code
+
+
+def test_未知模式就地报错() -> None:
+    with pytest.raises(ValueError, match="不是合法模式"):
+        ab_probe.active_mode({"V3_AB_MODE": "nope"})
+    with pytest.raises(ValueError, match="未知模式"):
+        ab_probe.build(game=_EMPTY_GAME, mode="nope")
+
+
+def test_没有压力修正的档案不许生成控制模式() -> None:
+    import dataclasses
+
+    bare = dataclasses.replace(_target(), pressure_modifier="")
+    with pytest.raises(RuntimeError, match="pressure"):
+        ab_probe.build(game=_EMPTY_GAME, target=bare, mode=ab_probe.MODE_CONTROL)
+
+
+def test_切回自然模式会清掉控制模式留下的文件(tmp_path: Path) -> None:
+    ab_probe.write(root=tmp_path, game=_EMPTY_GAME, mode=ab_probe.MODE_CONTROL)
+    left = [rel for rel in ab_probe.MODE_ONLY_FILES if (tmp_path / rel).is_file()]
+    assert left == list(ab_probe.MODE_ONLY_FILES), "控制模式的产物应当落盘"
+    ab_probe.write(root=tmp_path, game=_EMPTY_GAME, mode=ab_probe.MODE_NATURAL)
+    assert [rel for rel in ab_probe.MODE_ONLY_FILES if (tmp_path / rel).is_file()] == [], (
+        "切回 natural 必须把 defines 与哨兵牌删掉 —— 否则下一局会静默带着每周重抽的节奏"
+    )
+
+
+def test_控制模式的产物过探针形状体检() -> None:
+    from pdx import probe_lint
+
+    if not config.GAME.is_dir():  # pragma: no cover - 没有游戏树的机器只能跳过
+        pytest.skip("这台机器没有游戏树，形状体检交给 preflight")
+    assert probe_lint.failures(probe_lint.lint(_control_files(), game=config.GAME)) == []
+
+
+# ── 读数判决（第 15 条：必须能判红，且"不知道"也算红）─────────────────────
+
+_CARD = "ai_strategy_sitai_ru_defeat_agenda"
+
+
+def _line(kind: str, value: str) -> str:
+    return f"[09:00:00][jomini_effect_impl.cpp:454]: ZZPROBE AB;{kind};{value};俄罗斯"
+
+
+def _month_rows(
+    *,
+    gate: str,
+    hit: bool = False,
+    card: str = _CARD,
+    mode: str = "control",
+    storm: str = "yes",
+    sentinels: tuple[tuple[str, str], ...] = (),
+) -> list[str]:
+    rows = [
+        _line("ROLE", "RUS"),
+        _line("GATE", gate),
+        _line("MODE", mode),
+        _line("STORM", storm),
+        _line("HELD", f"{card}={'yes' if hit else 'no'}"),
+    ]
+    rows += [_line("SENT", f"{name}={value}") for name, value in sentinels]
+    return rows
+
+
+def _report(months: int, *, gate: str = "yes", hit_from: int = 0) -> str:
+    rows: list[str] = []
+    for index in range(1, months + 1):
+        rows += _month_rows(gate=gate, hit=bool(hit_from) and index >= hit_from)
+    return "\n".join(rows)
+
+
+def test_门开而命中0必须判红() -> None:
+    verdict = ab_probe.card_verdict(
+        ab_probe.parse_rows(_report(13)), card=_CARD, expect="appear", expect_mode="control"
+    )
+    assert verdict.status == "red_gate_open_no_hits"
+    assert not verdict.ok
+    assert (verdict.months, verdict.gate_yes, verdict.gate_no, verdict.hits) == (13, 13, 0, 0)
+    assert "进不了政治槽" in verdict.report(), "判红的理由要能直接读懂下一步查什么"
+
+
+def test_门开而命中就是通过() -> None:
+    verdict = ab_probe.card_verdict(
+        ab_probe.parse_rows(_report(13, hit_from=5)),
+        card=_CARD,
+        expect="appear",
+        expect_mode="control",
+    )
+    assert verdict.status == "pass_appeared"
+    assert verdict.ok
+    assert verdict.first_hit_month == 5
+
+
+def test_应出现而0次且门一次都没开也判红() -> None:
+    verdict = ab_probe.card_verdict(ab_probe.parse_rows(_report(12, gate="no")), card=_CARD)
+    assert verdict.status == "red_gate_closed_no_hits"
+    assert not verdict.ok
+
+
+def test_没有门读数或没有这张牌的读数都算红() -> None:
+    rows_without_gate: list[str] = []
+    for _index in range(1, 4):
+        rows_without_gate += [row for row in _month_rows(gate="yes") if "GATE" not in row]
+    verdict = ab_probe.card_verdict(ab_probe.parse_rows("\n".join(rows_without_gate)), card=_CARD)
+    assert verdict.status == "red_no_gate_reading", "老探针的读数不许被当成「牌没被选中」"
+    stranger = ab_probe.card_verdict(ab_probe.parse_rows(_report(3)), card="ai_strategy_不存在的牌")
+    assert stranger.status == "red_no_card_reading"
+    assert not stranger.ok
+
+
+def test_模式或节奏对不上就判红() -> None:
+    rows = ab_probe.parse_rows(_report(4, hit_from=1))
+    assert ab_probe.card_verdict(rows, card=_CARD, expect_mode="natural").status == (
+        "red_mode_mismatch"
+    )
+    assert ab_probe.card_verdict(rows, card=_CARD, expect_storm="no").status == "red_storm_mismatch"
+
+
+def test_期望缺席时出现也判红() -> None:
+    rows = ab_probe.parse_rows(_report(4, hit_from=3))
+    verdict = ab_probe.card_verdict(rows, card=_CARD, expect="absent")
+    assert verdict.status == "red_appeared_when_absent"
+    assert not verdict.ok
+    assert ab_probe.card_verdict(
+        ab_probe.parse_rows(_report(4)), card=_CARD, expect="absent"
+    ).status == ("pass_absent")
+
+
+def test_哨兵与真牌分开判() -> None:
+    rows: list[str] = []
+    for index in range(1, 5):
+        sentinels = (
+            (ab_probe.SENTINEL_OPEN, "yes" if index <= 2 else "no"),
+            (ab_probe.SENTINEL_GATE, "yes" if index >= 3 else "no"),
+        )
+        rows += _month_rows(gate="yes", hit=False, sentinels=sentinels)
+    parsed = ab_probe.parse_rows("\n".join(rows))
+    assert ab_probe.card_verdict(parsed, card=ab_probe.SENTINEL_OPEN).status == "pass_appeared"
+    assert ab_probe.card_verdict(parsed, card=ab_probe.SENTINEL_GATE).status == "pass_appeared"
+    assert ab_probe.card_verdict(parsed, card=_CARD).status == "red_gate_open_no_hits", (
+        "哨兵能进池而我们那张进不去 ⇒ 这才是可执行的那条结论（t18 第 10 条的判决条件）"
+    )
+
+
+def test_命令行入口真的接上了() -> None:
+    """`python -m pdx.ab_probe` 必须**真的跑** `main` —— 光有 `main()` 不算入口。
+
+    这条是现场抓出来的：入口函数写好了却没接 `__main__`，于是
+    `python -m pdx.ab_probe --log …` **什么都不打印、还 exit 0** ——
+    「判红入口自己静默返回成功」正是第 15 条要杀的那件事。
+    """
+    source = Path(ab_probe.__file__).read_text(encoding="utf-8")
+    assert 'if __name__ == "__main__":' in source
+    assert "raise SystemExit(main())" in source
+
+
+def test_读数入口判红时给非零退出码(tmp_path: Path) -> None:
+    bad = tmp_path / "red.log"
+    bad.write_text(_report(6), encoding="utf-8", newline="\n")
+    assert ab_probe.main(["--log", str(bad), "--card", _CARD, "--expect-mode", "control"]) == 1
+    good = tmp_path / "pass.log"
+    good.write_text(_report(6, hit_from=3), encoding="utf-8", newline="\n")
+    assert ab_probe.main(["--log", str(good), "--card", _CARD]) == 0

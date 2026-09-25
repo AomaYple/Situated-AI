@@ -46,7 +46,11 @@ mod 提供的套件（"只读安装目录"那条假设已被证伪，见 `exec/�
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
+import pathlib
+import re
 import shutil
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -55,6 +59,7 @@ from pdx import ai_surface, config, experiments, h1_probe
 from pdx.h1 import SLOT_SHORT, SLOTS
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
     from pathlib import Path
 
 #: 探针 mod 目录名。
@@ -97,6 +102,16 @@ class ProbeTarget:
     input_effect: str
     input_modifier: str
     archive_id: str
+    #: 本档案的**压力修正名**（`[pressure].name`，由 `modgen` 编译出来）。
+    #:
+    #: 为什么探针需要它（t18 判别性实验，2026-09-25）：t18 的那张牌的门是
+    #: `possible = { has_modifier = <压力修正> }`，而**月读数里从来没有一行直读它**
+    #: —— 「门到底开没开」只能从变量 `has_variable` 旁证。B 臂 0/13 之后这一点
+    #: 直接决定了「不可归因」（见 `docs/design/exec/阶段5-新增牌-结果.md` §5）。
+    #: 门名从**数据源**读（不手抄）：手抄的后果是改名之后探针**静默读一个不存在的修正**、
+    #: 永远报 `no`，而这与"门真的没开"在日志里长得一模一样。
+    #: 空字符串 = 这份档案没有压力修正 ⇒ 不写 `GATE` 行（不能写一行永远为 `no` 的读数）。
+    pressure_modifier: str = ""
     #: "行为层②"用哪条法判"改革真的发生了"。**空 = 该档案没查实**（B80）。
     #:
     #: 为什么允许为空：套件原来写死 `NOT = { has_law = law_type:law_serfdom }`，
@@ -145,6 +160,7 @@ def load_target(archive_id: str | None = None) -> ProbeTarget | None:
         input_modifier=first.inputs.name if first.inputs is not None else "",
         archive_id=first.id,
         reform_law=first.probe.reform_law if first.probe is not None else "",
+        pressure_modifier=first.pressure.name if first.pressure is not None else "",
     )
 
 
@@ -254,6 +270,151 @@ def strategy_candidates(vanilla: list[ai_surface.Card]) -> list[str]:
     return h1_probe.vanilla_chain_cards(vanilla, POLITICAL_SLOT)
 
 
+#: 本仓 mod 的**产物根**（`common/ai_strategies/*.txt` 在这里）。
+MOD_ROOT = config.REPO / "mod"
+
+#: 我们自己的牌在自报里用的 kind。**只能是大写字母**：`pdx.ab` 的行正则是
+#: `ZZPROBE AB;(?P<kind>[A-Z]+);(?P<rest>.+?)$`（`ab.py:114`）——
+#: 所以牌名不能放进 kind，只能放进**取值位**（一个国家同月只挂一张政治牌 ⇒ 单值）。
+CARD_KIND = "CARD"
+
+
+def own_cards(root: Path | None = None) -> list[str]:
+    """本仓 mod 的**政治槽**牌名（从盘上产物现读；升序去重；没有牌就是空列表）。
+
+    为什么要有它（B87 的教训，两个方向都是**静默失真**）：
+    手写清单会随档案增减漂移 —— 多写一张不存在的牌名，那一格永远是"读不到"；
+    少写一张真牌，它挂着的时候链会落进兜底桶，看上去像"没有牌"。
+
+    为什么读**产物**而不是 `mod/data/*.toml`：产物由 `v3 modgen` 落盘、闸门 ⑤ 保证
+    与数据源逐字节一致（P3/P9），而这里只要名字；也免得把整个生成器拉进探针的依赖里
+    （t16 正在改数据源时，探针生成不该因此报错）。
+    """
+    base = root or MOD_ROOT
+    return sorted(
+        {card.name for card in ai_surface.read_cards(base) if card.slot == POLITICAL_SLOT}
+    )
+
+
+def own_card_chain(ours: list[str], *, tab: str = "\t") -> str:
+    """我们自己的牌**逐月"在/不在"**读数（`CARD;<牌名短写|none>;<国名>`）。
+
+    形状照 `state_line`（同一条道理：**两个分支都要写**）—— 链首插入
+    （见 :func:`on_actions_text`）只能"命中才写"，而这条链每月都写一行，
+    且**独立于那条链的语义**：两条读数一旦不一致，就说明链被挪动过
+    （`test_ab_probe.py` 的顺序用例之外的第二道防线）。
+
+    ``ours`` 为空时只写 `none` 一行：**不能**只写 `else = { … }` ——
+    没有配对的 `if`，那是一个引擎会报错的悬空 else。
+    """
+    if not ours:
+        return (
+            f'{tab * 3}debug_log = "ZZPROBE AB;{CARD_KIND};none;'
+            f'[THIS.GetCountry.GetNameNoFormatting]"'
+        )
+    lines: list[str] = []
+    for index, name in enumerate(ours):
+        keyword = "if" if index == 0 else "else_if"
+        short = name.removeprefix("ai_strategy_")
+        lines.append(
+            f"{tab * 3}{keyword} = {{\n"
+            f"{tab * 4}limit = {{ has_strategy = {name} }}\n"
+            f'{tab * 4}debug_log = "ZZPROBE AB;{CARD_KIND};{short};'
+            f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+            f"{tab * 3}}}"
+        )
+    lines.append(
+        f"{tab * 3}else = {{\n"
+        f'{tab * 4}debug_log = "ZZPROBE AB;{CARD_KIND};none;'
+        f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+        f"{tab * 3}}}"
+    )
+    return "\n".join(lines)
+
+
+#: 难度三档的**设置名**（口径 `docs/design/exec/阶段6-国家身份开局-取证口径.md` §3.3）。
+#: `has_game_rule` 读的就是**设置名**（不是规则名 `sitai_difficulty`）—— 原版同款用法见
+#: `03_political_strategies.txt` 里 7 处读 `has_game_rule` 的地方，本 mod 的效果侧
+#: （`sitai_ru_defeat_effects.txt`）那两条 `if = { limit = { has_game_rule = … } }` 也是它。
+#: ⚠️ 这一族是**实机判据**：harsh 局要出现 `RULE;<设置名>_harsh;yes` 且**另两档各有一行 `no`**。
+#: 🔧 2026-09-25 **把族名写进来**（原来这句有歧义，害得执行者把"另两档的 no"归给了第一族，
+#: 于是 L13 的期望模型写错、自检才撞出来）：那两行 `no` **不是**这里写的，而是**第二族**
+#: （逐档 `if/else`，kind = `RULEHISTORY`/`RULEUNIFORM`/`RULEHARSH`）写的。两族分工：
+#: * **第一族**（下面这个互斥链 `if / else_if / else_if / else`，kind = `RULE`）——
+#:   **只写命中的那一档**（`RULE;<设置名>;yes;<国名>`）；一档都没命中才写 `RULE;none;yes`。
+#:   ⇒ 另两档**根本没有 `RULE` 行**，别去那里找它们的 `no`。
+#: * **第二族**（:func:`difficulty_rule_lines` 的后半段）—— 每档一条 `yes`/`no`，
+#:   "另两档是 no"这条**承重组合**靠它。理由是 `if` 命中即停 ⇒ 只靠第一族时
+#:   "没命中"与"没记"分不开（B87 同族）。
+#: 🔧 2026-09-25 **字面量同步（t88 之后）**：这里原来写的是 `setting_sitai_difficulty_*`，
+#: 而 t88 把设置块的 **flag 名去掉了 `setting_` 前缀**（引擎按 `setting_<flag>` 查本地化 ⇒
+#: 带前缀会查成 `setting_setting_…`、值框显示原始键 —— 那正是 t88 修的玩家可见缺陷）。
+#: ⇒ `has_game_rule` 读的是**设置名/flag 名**，现在必须是**不带前缀**的 `sitai_difficulty_*`。
+#: 不改的后果**不是报错而是静默判错**：三个 `if` 全部不命中 ⇒ 走 :func:`difficulty_rule_lines`
+#: 的 `else` 兜底写下 `RULE;none;yes`，看起来"有读数"，实际什么都没证。
+DIFFICULTY_SETTINGS: tuple[str, ...] = (
+    "sitai_difficulty_history_friendly",
+    "sitai_difficulty_uniform",
+    "sitai_difficulty_harsh",
+)
+
+#: 三档的短名（按 :data:`DIFFICULTY_SETTINGS` 的顺序）与它们在自报里用的 kind。
+#: kind 只能是 `[A-Z]+`（`ab.py:114`）—— 所以 `RULEHISTORY` / `RULEUNIFORM` / `RULEHARSH`。
+RULE_SHORTS: tuple[str, ...] = ("history_friendly", "uniform", "harsh")
+
+#: 短名 → kind（见 :func:`difficulty_rule_lines` 里"为什么另两档不能也叫 RULE"）。
+RULE_KINDS: dict[str, str] = {
+    "history_friendly": "RULEHISTORY",
+    "uniform": "RULEUNIFORM",
+    "harsh": "RULEHARSH",
+}
+
+
+def difficulty_rule_lines(*, tab: str = "\t") -> str:
+    """难度档位的逐月读数 —— 两族行，各有各的用途（口径 §3.3 第 1 条）。
+
+    1. **互斥链**（`if / else_if / else_if / else`，kind = `RULE`）：回答"这一局挂在
+       **哪一档**"，命中写成 `RULE;sitai_difficulty_<档>;yes;<国名>`；
+       一档都没命中时写 `RULE;none;yes` —— 于是"规则没进这一局 / 设置名写错"也是
+       **写出来**的一行，不是缺席。
+    2. **三档各自的 if/else**（kind = `RULEHISTORY` / `RULEUNIFORM` / `RULEHARSH`，
+       取值就是 `yes` / `no`）：保证**另两档也各留一行 `no`**。承重判据要的是
+       「`…_harsh;yes` **且**另两档 `no`」这个**组合**；只发互斥链时，另两档根本不出现在
+       日志里，而"没记"与"没有"分不开（B87 那一族的静默失真）。
+
+    ⚠️ 为什么另两档不能也叫 `RULE`：`pdx.ab` / `h1` 的行正则要求 kind 是 `[A-Z]+`
+    （`ab.py:114`），而且**同一 (时刻, 国家) 下每个 kind 只留一条**（`rows[key][kind] = parts[0]`）
+    ⇒ 三行同 kind 会互相覆盖，只剩最后一行。所以"哪一档"编进 kind，取值只放 yes/no。
+    """
+    branches = [
+        f"{tab * 3}{'if' if index == 0 else 'else_if'} = {{\n"
+        f"{tab * 4}limit = {{ has_game_rule = {setting} }}\n"
+        f'{tab * 4}debug_log = "ZZPROBE AB;RULE;{setting};yes;'
+        f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+        f"{tab * 3}}}"
+        for index, setting in enumerate(DIFFICULTY_SETTINGS)
+    ]
+    branches.append(
+        f"{tab * 3}else = {{\n"
+        f'{tab * 4}debug_log = "ZZPROBE AB;RULE;none;yes;'
+        f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+        f"{tab * 3}}}"
+    )
+    pairs = "\n".join(
+        f"{tab * 3}if = {{\n"
+        f"{tab * 4}limit = {{ has_game_rule = {setting} }}\n"
+        f'{tab * 4}debug_log = "ZZPROBE AB;{RULE_KINDS[short]};yes;'
+        f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+        f"{tab * 3}}}\n"
+        f"{tab * 3}else = {{\n"
+        f'{tab * 4}debug_log = "ZZPROBE AB;{RULE_KINDS[short]};no;'
+        f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+        f"{tab * 3}}}"
+        for short, setting in zip(RULE_SHORTS, DIFFICULTY_SETTINGS, strict=True)
+    )
+    return "\n".join(["\n".join(branches), "", pairs])
+
+
 #: 自励阶梯：**不点决议**，由月度脉冲按 `is_ai` 自动武装 —— 观察者局没有玩家国家，
 #: 决议点不了（阶段 3 的结构性阻断，见 `阶段3-结果.md` §六）。
 #:
@@ -273,6 +434,13 @@ SELFARM_VAR = "sitai_probe_ab_selfarm"
 
 #: 决议武装过的标记。自励看到它就**完全不介入** —— 玩家自己掌权的那一局不该被自动施加。
 MANUAL_VAR = "sitai_probe_ab_manual"
+
+# ⚠️ **t18 的 test 0 专测牌已按口径撤掉**（t15 §1.4 的「用完即撤」）：它曾在
+#    `common/ai_strategies/` 下临时发过一张 `possible = { always = no }` + `weight = 10000`
+#    的牌，配一条 `set_strategy` 直置与一行 `GATE0` 自报。结论 = **门不挡直置**
+#    （7/7 行 `yes`、零报错）⇒ 递牌不作承重；那张牌若留着会污染之后每一局
+#    （权重 10000 会几乎占满政治槽）。原始读数与判词见
+#    `docs/design/exec/阶段5-新增牌-结果.md`；判据见 `阶段5-新增牌-口径.md` §1.4 / §7。
 
 #: 「**立法开没开**」要盯的法（2026-09-22 新增的 `ENACT` 读数）。
 #:
@@ -375,14 +543,212 @@ VANILLA_SUITES = ("germany", "ip3", "italy", "springtime")
 #: 收敛覆盖的到期日：开局 4 天之后，套件当天即"到日期仍未命中" → 判跳过、收工。
 CONVERGE_DATE = "1836.1.5"
 
+#: 探针的运行模式。默认 :data:`MODE_NATURAL` = 阶段 3 起一直在用的 A/B 阶梯（引擎真实节奏）。
+#:
+#: :data:`MODE_CONTROL` 是 t18 第 10 条的**判别性实验模式**（2026-09-25 加）。它要分开的
+#: 两条活假设是：(i) 门从未开（压力修正没挂上）；(ii) 那张牌根本进不了政治槽。为此它做四件事，
+#: **每一件都在生成物里写死、并逐月自报**：
+#:
+#: 1. **隔离直置**：只挂压力修正、**不设记忆变量**。档案 JE 的判据读的是
+#:    `has_variable = <记忆变量>`（数据源 `[journal_entry.conditions]`）⇒ 变量不设 ⇒
+#:    窗口不开 ⇒ 档案自己那条 `set_strategy = progressive_agenda` **一次都不执行**。
+#:    这正是 B 臂 0/13 说不清的两个原因之一（另一个是门没有直读）。
+#: 2. **门必开**：第 1 个月起无条件挂 `[pressure].name`（幂等：已挂着就不再挂）。
+#: 3. **两张哨兵牌**（本探针自己的产物，**只在这个模式生成**）：
+#:    * `…_sentinel_open`（门 = **变量**，权重 10000）在第 1–2 月开窗；
+#:    * `…_sentinel_gate`（门 = **`has_modifier`**，与真牌同形，权重 10000）在第 3–4 月开窗。
+#:    它们回答的是"**有没有重掷**"与"**带这种门的牌能不能进池**"，从而把上面两条假设分开。
+#:    窗口靠窗口变量的 `days` 到期关掉（两个窗口**不重叠**），闸门变量只点一次。
+#: 4. **风暴节奏**：覆盖 `NAI` 的两个键，把重掷从"攒够 100 点"压到"每周都掷"。原版是
+#:    `CHANGE_STRATEGY_THRESHOLD = 100` + 每周 20% 概率 +1 点（`common/defines/00_ai.txt:38-39`）
+#:    ⇒ 单靠周通道 ≈9.6 年一次（阶段 2 实测 0.37%/月）⇒ **24 个月的天然观测窗里重掷期望 ≈0.2 次**，
+#:    B 臂那种"12 个月看落点"的判据**天生观测不到重掷**。先例：`h1_probe` 的 `storm` 变体
+#:    （阶段 2 实测生效）、`modguard.py:63` 引作"改原版全局参数的唯一合法方式"。
+#:
+#: ⚠️ 第 4 件是**实验干预**：它改的是 AI **什么时候**重抽，不改"抽谁"的语义（权重与 `possible`
+#: 求值走的是同一条路）。所以它只用来回答"进不进得了池"，**不许**拿它的落点频率去说自然节奏。
+MODE_ENV = "V3_AB_MODE"
 
-def effects_text(target: ProbeTarget) -> str:
+#: 默认模式：引擎真实节奏（不挂压力、不加哨兵、不改 defines）。
+MODE_NATURAL = "natural"
+
+#: 判别性实验模式（见 :data:`MODE_ENV` 上那段）。
+MODE_CONTROL = "control"
+
+#: 合法模式（顺序 = 报错信息里的枚举顺序）。
+MODES: tuple[str, ...] = (MODE_NATURAL, MODE_CONTROL)
+
+
+def active_mode(env: Mapping[str, str] | None = None) -> str:
+    """这一次生成用哪个模式 —— 只认**显式**的环境变量，默认 :data:`MODE_NATURAL`。
+
+    为什么用环境变量而不是再加一个 CLI 开关（取舍与代价都写明）：向 `v3 ab-probe`
+    加 `--mode` 要改 `tools/pdx/cli.py`，而那个文件不在 t18 的 inScope 里。
+    环境变量是**一次性**的（每个进程一份），不会像"目录里放个标记文件"那样在**下一局**
+    悄悄改变生成物；值不合法就地报错，**不回落**到默认。
+
+    ⚠️ 它**不是**静默开关：模式写进每一份生成文件的头，并且探针**逐月**自报
+    `MODE` / `STORM` 两行；读数侧（:func:`card_verdict`）可以要求这两行与预期一致，
+    不一致直接判红 —— 于是"把控制局的读数当成自然局"这件事没有静默空间。
+    """
+    raw = (env if env is not None else os.environ).get(MODE_ENV, "").strip().lower()
+    if not raw:
+        return MODE_NATURAL
+    if raw not in MODES:
+        raise ValueError(f"{MODE_ENV}={raw!r} 不是合法模式；可选：{'、'.join(MODES)}；不给 = 默认")
+    return raw
+
+
+#: 两张哨兵牌的名字。前缀 `zz_probe_ab_` ⇒ `probe_lint.OUR_PREFIXES` 认得它们是我们
+#: 自己的东西（`has_strategy` 的读数不会判"原版里没有这张牌"）。
+SENTINEL_OPEN = "ai_strategy_zz_probe_ab_sentinel_open"
+SENTINEL_GATE = "ai_strategy_zz_probe_ab_sentinel_gate"
+
+#: 哨兵牌的**窗口变量**（`possible` 读它）与**闸门变量**（只点一次，防止窗口被重新点亮）。
+SENTINEL_OPEN_VAR = "sitai_probe_ab_sentinel_open"
+SENTINEL_GATE_VAR = "sitai_probe_ab_sentinel_gate"
+SENTINEL_OPEN_LATCH = "sitai_probe_ab_latch_open"
+SENTINEL_GATE_LATCH = "sitai_probe_ab_latch_gate"
+
+#: 哨兵权重：**压倒性地大**。理由不是"想让它赢"，而是"要么看见它、要么证明确实没有重掷"：
+#: 政治槽其余候选的权重和按阶段 2 的价格表是 S≈33 ⇒ 任何一次重掷里哨兵赢的概率 ≈99.7%，
+#: 于是"哨兵没出现"几乎只能是"重掷没发生"。窗口一关它就不在池里，**不遮**真牌。
+SENTINEL_WEIGHT = 10000
+
+#: 两个哨兵窗口（月，闭区间）与窗口时长（天）。**不重叠**是硬要求：两个 10000 权重的牌
+#: 同时在池里时"谁赢"是随机的，那就等于同时测两件事、结论说不清。
+SENTINEL_OPEN_MONTHS: tuple[int, int] = (1, 2)
+SENTINEL_GATE_MONTHS: tuple[int, int] = (3, 4)
+SENTINEL_DAYS = 60
+
+
+def sentinel_card_text(name: str, clauses: tuple[str, ...], why: str) -> str:
+    """一张哨兵牌（`possible` 的每个子句一行）。**只在 `control` 模式生成**。"""
+    possible = "\n".join(f"{TAB * 2}{clause}" for clause in clauses)
+    return (
+        f"{GEN_HEADER}"
+        f"# {why}\n"
+        f"# ⚠️ 只在 `{MODE_ENV}={MODE_CONTROL}` 时生成；`{MODE_NATURAL}` 模式下这份文件**不存在**"
+        f"（`write()` 会清掉另一种模式留下的文件）。\n"
+        f"\n"
+        f"{name} = {{\n"
+        f"{TAB}type = {POLITICAL_SLOT}\n"
+        f"\n"
+        f"{TAB}possible = {{\n"
+        f"{possible}\n"
+        f"{TAB}}}\n"
+        f"\n"
+        f"{TAB}weight = {{\n"
+        f"{TAB * 2}value = {SENTINEL_WEIGHT}\n"
+        f"{TAB}}}\n"
+        f"}}\n"
+    )
+
+
+def sentinel_files(pressure: str) -> dict[str, str]:
+    """`control` 模式多出来的两张哨兵牌（相对探针根目录）。"""
+    return {
+        "common/ai_strategies/zz_probe_ab_sentinel_open.txt": sentinel_card_text(
+            SENTINEL_OPEN,
+            (f"has_variable = {SENTINEL_OPEN_VAR}",),
+            "哨兵①：门 = **变量**。它测的是「到底有没有重掷」 —— 权重 10000 在池里，"
+            "只要引擎重掷一次就几乎必然落它。",
+        ),
+        "common/ai_strategies/zz_probe_ab_sentinel_gate.txt": sentinel_card_text(
+            SENTINEL_GATE,
+            (f"has_modifier = {pressure}", f"has_variable = {SENTINEL_GATE_VAR}"),
+            f"哨兵②：门 = `has_modifier = {pressure}`，**与真牌同形**。"
+            "它测的是「`possible` 里读修正这条外推在实机上成不成立」（t15 §7 那个问题）。",
+        ),
+    }
+
+
+def defines_text() -> str:
+    """`control` 模式的风暴覆盖：按「块 + 参数」覆盖 `NAI` 的两个键（**不复制**原版 `00_ai.txt`）。"""
+    return (
+        f"{GEN_HEADER}"
+        f"# ⚠️ 这是**实验干预**，不是正式版设计：它改的是 AI **什么时候**重抽，不改「抽谁」的语义。\n"
+        f"#\n"
+        f"# 原版值：`CHANGE_STRATEGY_THRESHOLD = 100`、`CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE = 20`\n"
+        f"# （`common/defines/00_ai.txt:38-39`；同文件 :41 起是那三条加速通道：换统治者 +100、\n"
+        f"#   改政体 +100、立法 +25）。原版语义 = 攒够 100 个「变更点」才重抽一次，\n"
+        f"# 而周通道每周只有 20% 概率 +1 点 ⇒ 单靠它 ≈9.6 年一次（= 政治槽实测 0.37%/月）。\n"
+        f"#\n"
+        f"# 本模式把门槛压到 1、周概率拉满 ⇒ **每周都重抽**。为什么必须这么做：\n"
+        f"# 24 个月的天然窗口里重掷期望 ≈0.2 次 ⇒ 「12 个月看落点」的判据观测不到重掷，\n"
+        f"# 于是「没抽到」与「进不了池」分不开（t18 的 B 臂 0/13 就是这么来的）。\n"
+        f"# 先例：`h1_probe` 的 `storm` 变体（阶段 2 实测生效）；`modguard.py:63` 把这种写法\n"
+        f"# 记作「我们改原版全局参数的唯一合法方式」（KB 05 §1.7 的按「块 + 参数」覆盖）。\n"
+        f"NAI = {{\n"
+        f"{TAB}CHANGE_STRATEGY_THRESHOLD = 1\n"
+        f"{TAB}CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE = 100\n"
+        f"}}\n"
+    )
+
+
+def control_monthly_lines(target: ProbeTarget, *, tab: str = "\t") -> str:
+    """`control` 模式在月度体里多做的三件事（挂门 + 两张哨兵的窗口）。
+
+    为什么写在**月度体**而不是臂阶梯里：阶梯的语义是"第 N 月起施加**一次**"，而哨兵窗口
+    要"开**也得关**" —— 用阶梯写不出"第 1–2 月开着、第 3 月起必须关掉"。幂等靠两个闸门变量
+    （只点一次）+ 窗口变量自己的 `days` 到期。
+
+    读不到 `[pressure].name` 就**报错**，不生成：否则门永远为假，实验会静默变成"什么都没测"。
+    """
+    pressure = target.pressure_modifier
+    if not pressure:
+        raise RuntimeError(
+            f"control 模式要求档案 {target.archive_id!r} 声明 [pressure].name（门名从数据源读）——"
+            "读不到就报错，不生成一份门永远为假的探针"
+        )
+    open_lo, open_hi = SENTINEL_OPEN_MONTHS
+    gate_lo, gate_hi = SENTINEL_GATE_MONTHS
+    return "\n".join(
+        [
+            f"{tab * 3}# ══ control 模式（判别性实验）══ 见 `{MODE_ENV}` 那一段的说明。",
+            f"{tab * 3}# ① 门必开：第 1 个月起无条件挂压力修正，**不设记忆变量** ⇒ 归档的直置一次都不发生。",
+            f"{tab * 3}if = {{",
+            f"{tab * 4}limit = {{",
+            f"{tab * 5}var:{MONTH_VAR} >= 1",
+            f"{tab * 5}NOT = {{ has_modifier = {pressure} }}",
+            f"{tab * 4}}}",
+            f"{tab * 4}add_modifier = {{ name = {pressure} years = 10 }}",
+            f"{tab * 3}}}",
+            f"{tab * 3}# ② 哨兵①（门 = 变量）：第 {open_lo}–{open_hi} 月开窗 ⇒ 证明「引擎真的在重揗」。",
+            f"{tab * 3}if = {{",
+            f"{tab * 4}limit = {{",
+            f"{tab * 5}NOT = {{ has_variable = {SENTINEL_OPEN_LATCH} }}",
+            f"{tab * 5}var:{MONTH_VAR} >= {open_lo}",
+            f"{tab * 4}}}",
+            f"{tab * 4}set_variable = {{ name = {SENTINEL_OPEN_LATCH} value = 1 }}",
+            f"{tab * 4}set_variable = {{ name = {SENTINEL_OPEN_VAR} value = 1 days = {SENTINEL_DAYS} }}",
+            f"{tab * 3}}}",
+            f"{tab * 3}# ③ 哨兵②（门 = `has_modifier`，与真牌同形）：第 {gate_lo}–{gate_hi} 月开窗。",
+            f"{tab * 3}if = {{",
+            f"{tab * 4}limit = {{",
+            f"{tab * 5}NOT = {{ has_variable = {SENTINEL_GATE_LATCH} }}",
+            f"{tab * 5}var:{MONTH_VAR} >= {gate_lo}",
+            f"{tab * 4}}}",
+            f"{tab * 4}set_variable = {{ name = {SENTINEL_GATE_LATCH} value = 1 }}",
+            f"{tab * 4}set_variable = {{ name = {SENTINEL_GATE_VAR} value = 1 days = {SENTINEL_DAYS} }}",
+            f"{tab * 3}}}",
+        ]
+    )
+
+
+def effects_text(target: ProbeTarget, *, mode: str = MODE_NATURAL) -> str:
     """三个效果：武装阶梯、月度走一格、以及（决议用的）重新武装。
 
     角色仍然不是"装哪个探针"决定的 —— 但也不再是"点哪个决议"：**点一次就够**，
     之后由阶梯自己按月份换臂（这正是"一次点击换整条阶梯的数据"）。
+
+    ⚠️ ``mode=control`` 时**阶梯是空的**（手臂一格都不施加）。这不是省事，是**隔离的前提**：
+    t18 阶梯的第 B 格调的是档案的冲击效果，而那个效果会设记忆变量 ⇒ JE 窗口开 ⇒
+    档案自己那条 `set_strategy` 直置会跑 —— 那就把"门/权重能不能让牌进池"这件事
+    和"直置换路线"搅在一起，B 臂 0/13 正是这么变得不可归因的。控制局的门由月度体
+    直接挂压力修正（:func:`control_monthly_lines`），**全程不碰记忆变量**。
     """
-    ladder = ladder_for(target)
+    ladder = () if mode == MODE_CONTROL else ladder_for(target)
     selfarm = tuple(
         (step.at_month, step.note, step.effect) for step in ladder[1:] if step.effect is not None
     )
@@ -419,6 +785,18 @@ def effects_text(target: ProbeTarget) -> str:
         )
         for index, (month, note, effect) in enumerate(selfarm, start=1)
     )
+    # 控制局的额外说明（只在 control 模式拼进文件头）：阶梯是空的，隔离靠「不设记忆变量」。
+    control_note = (
+        f"#\n"
+        f"# ⚠️ **本局是控制局**（{MODE_ENV}={MODE_CONTROL}）：上面③那条阶梯**是空的** —— 一格都不施加。\n"
+        f"#    理由：台阶 B 会调 `{target.shock_effect}` ⇒ 它会设记忆变量 ⇒ 档案 JE 的窗口开 ⇒\n"
+        f"#    档案那条 `set_strategy` 直置跟着跑，「门/权重能不能让牌进池」与「直置换路线」就混在一起。\n"
+        f"#    控制局的门由月度体直接挂压力修正（幂等），**全程不设记忆变量**：\n"
+        f"#    `SHOCK;no` 会逐月写出来，`JE` 也应全程不出现 —— 那是隔离的**读数证据**，不是声明。\n"
+        if mode == MODE_CONTROL
+        else ""
+    )
+
     return (
         f"{GEN_HEADER}"
         f"# ⚠️ **本文件里只能有裸效果列表**（scripted_effects 的语法）：写成 on_action 那种\n"
@@ -437,6 +815,7 @@ def effects_text(target: ProbeTarget) -> str:
         f"#    每个效果只施加一次；不拿「有没有那个修正」当判据（会被别的系统碰到）。\n"
         f"# ④ `{target.shock_effect}` / `{target.input_effect}` 在**真 mod**里（`v3 modgen` 生成），\n"
         f"#    探针只调用它们 —— 这样实验用的世界状态与档案本身是同一份定义。\n"
+        f"{control_note}"
         f"zz_probe_ab_arm = {{\n"
         f'{TAB}debug_log = "ZZPROBE AB;RUN;A"\n'
         f"{TAB}# 这一局盯的是**哪一份档案** —— 分析器靠它认主语（日志里的国名是本地化的，"
@@ -495,8 +874,21 @@ def _slot_chains(vanilla: list[ai_surface.Card]) -> str:
     return "\n\n".join(blocks)
 
 
-def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
-    """开局不挂任何东西；每月先自励、再走一格阶梯，最后**只记主角国家**。"""
+def on_actions_text(
+    vanilla: list[ai_surface.Card],
+    target: ProbeTarget,
+    *,
+    own: list[str] | None = None,
+    mode: str = MODE_NATURAL,
+) -> str:
+    """开局不挂任何东西；每月先自励、再走一格阶梯，最后**只记主角国家**。
+
+    ``own`` 是**我们自己的政治槽牌名**（缺省从盘上产物现读，见 :func:`own_cards`）。
+    测试要造"有我们自己牌"的生成物时显式传一个 —— 否则这条路径只能等真档案先加牌才走得到。
+
+    ``mode`` 见 :data:`MODE_ENV`：``control`` 时多出（①）第 1 月起无条件挂压力修正、
+    （②③）两张哨兵的窗口，以及 `SENT` 两行读数。**`natural` 的产物一行都不含这些。**
+    """
     tab = "\t"
     laws = "\n".join(
         f"{tab * 3}{keyword} = {{\n"
@@ -509,7 +901,13 @@ def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
     # `ai_strategies/03_political_strategies.txt` 里的 `NOT = { has_strategy = … }`）。
     # 候选集**现读原版**（见 `strategy_candidates` 上那段 B87），并补两条兜底：
     # `default` 与 `none` —— 否则"这张牌不在清单里"会变成日志里的一片沉默。
-    chain = [*strategy_candidates(vanilla), "ai_strategy_default"]
+    #
+    # ⚠️ **我们自己的牌必须插在链首**（2026-09-25）：`if / else_if` 是**命中即停**的，
+    #    追加在 `default` 之后等于永远读不到它 —— 引擎真选中了我们的牌，前面的分支
+    #    也会先命中，日志里看到的仍是那张原版牌。这就是 B87 的同族失真换了个位置。
+    #    顺序由 `test_ab_probe.py` 的顺序用例钉住（`code.index(我们的牌) < code.index(default)`）。
+    ours = own_cards() if own is None else list(own)
+    chain = [*ours, *strategy_candidates(vanilla), "ai_strategy_default"]
     strategies = "\n".join(
         [
             *(
@@ -559,6 +957,44 @@ def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
             ]
         )
 
+    control = mode == MODE_CONTROL
+    pressure = target.pressure_modifier
+    # (a) 门直读（t18 第 10 条）。门名从**数据源**读（`[pressure].name`）；这份档案没有压力
+    # 修正时**不写**这一行 —— 写一行永远为 `no` 的读数，与"门真的没开"在日志里长得一样。
+    gate_lines = [state_line("GATE", f"has_modifier = {pressure}", "yes", "no")] if pressure else []
+    # (b) **每张自建牌一行显式 yes/no**（t18 第 10 条）：不依赖 `STRATEGY` 链那行文本 ——
+    # 那条链是"命中即停"的，只能证明"落点是哪一张"，证明不了"引擎到底有没有持有它"。
+    # 形状：`HELD;<完整牌名>=yes|no;<国名>`（取值位里带牌名 ⇒ 一张多牌也分得清）。
+    held_lines = [
+        state_line("HELD", f"has_strategy = {name}", f"{name}=yes", f"{name}=no") for name in ours
+    ]
+    # 模式与节奏必须**逐月写出来**：读数侧要能把"控制局的读数"与"自然局"分开，
+    # 否则一个 0 命中既能读成"进不了池"、也能读成"这局压根没重掷"（t18 B 臂的原病）。
+    mode_lines = [
+        (f'{tab * 3}debug_log = "ZZPROBE AB;MODE;{mode};[THIS.GetCountry.GetNameNoFormatting]"'),
+        (
+            f'{tab * 3}debug_log = "ZZPROBE AB;STORM;{"yes" if control else "no"};'
+            f'[THIS.GetCountry.GetNameNoFormatting]"'
+        ),
+    ]
+    sentinel_lines: list[str] = []
+    if control:
+        sentinel_lines = [
+            state_line(
+                "SENT",
+                f"has_strategy = {SENTINEL_OPEN}",
+                f"{SENTINEL_OPEN}=yes",
+                f"{SENTINEL_OPEN}=no",
+            ),
+            state_line(
+                "SENT",
+                f"has_strategy = {SENTINEL_GATE}",
+                f"{SENTINEL_GATE}=yes",
+                f"{SENTINEL_GATE}=no",
+            ),
+        ]
+    control_body = control_monthly_lines(target, tab=tab) if control else ""
+
     behaviour = "\n".join(
         [
             guarded(
@@ -569,6 +1005,8 @@ def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
                             f'[THIS.GetCountry.GetNameNoFormatting]"'
                         ),
                         "",
+                        *mode_lines,
+                        "",
                         f"{tab * 3}# ① 先自励（**不点决议**：观察者局没有玩家国家，决议点不了）。",
                         f"{tab * 3}#    排在阶梯之前 —— 第 13 月那一格会武装并施加冲击，",
                         f"{tab * 3}#    必须让阶梯看到已经武装好的状态。",
@@ -578,13 +1016,59 @@ def on_actions_text(vanilla: list[ai_surface.Card], target: ProbeTarget) -> str:
                         f"{tab * 3}#    所以 RUN 行要排在同月的自报行之前。",
                         f"{tab * 3}zz_probe_ab_ladder = yes",
                         "",
+                        *([control_body, ""] if control_body else []),
                         f"{tab * 3}# ③ 两处输入到底有没有落到这个国家身上（自检用）",
                         state_line("SHOCK", f"has_variable = {target.shock_variable}", "yes", "no"),
                         "",
                         state_line("INPUT", f"has_modifier = {target.input_modifier}", "yes", "no"),
                         "",
+                        f"{tab * 3}# ③·补 (a) **门直读**（t18 第 10 条）：门开没开要有一行直读，",
+                        f"{tab * 3}#    不许再从记忆变量旁证（B 臂 0/13 的归因缺口就是它）。",
+                        *gate_lines,
+                        "",
+                        f"{tab * 3}# （t18 的 test 0 直置与 `GATE0` 自报已按口径撤掉 —— 见文件头那段；",
+                        f"{tab * 3}#  结论 = 门不挡直置，递给通道不作承重。）",
+                        "",
                         f"{tab * 3}# ④ 当前挂着的政治牌（策略层读数；B53：牌才是闸门）",
                         strategies,
+                        "",
+                        f"{tab * 3}# ④·补 我们自己的牌**逐月在/不在**（2026-09-25 加；口径见",
+                        f"{tab * 3}#    `docs/design/exec/阶段5-新增牌-口径.md` §4）。两个理由：",
+                        f"{tab * 3}#    ① 上面那条链只在**命中时**写一行，这一条每月都写（含 `none`）",
+                        f"{tab * 3}#       —— 于是「我们的牌没被选中」是**写出来**的，不是从缺席倒推的；",
+                        f"{tab * 3}#    ② 它独立于那条链的语义 ⇒ 两条读数不一致就是链被挪动过",
+                        f"{tab * 3}#       （顺序用例之外的第二道防线）。",
+                        own_card_chain(ours, tab=tab),
+                        *(
+                            [
+                                "",
+                                f"{tab * 3}# ④·补② (b) **每张自建牌一行显式 yes/no**（t18 第 10 条）：",
+                                f"{tab * 3}#    上面那条 `CARD` 链是「命中即停」的，只能证明「落点是哪一张」；",
+                                f"{tab * 3}#    这一族逐张问 `has_strategy`，取值位里带**完整牌名** ⇒",
+                                f"{tab * 3}#    「引擎到底有没有持有它」不再依赖任何链的文本。",
+                                *held_lines,
+                            ]
+                            if held_lines
+                            else []
+                        ),
+                        *(
+                            [
+                                "",
+                                f"{tab * 3}# ④·补③ `SENT` 两行：两张**哨兵牌**（只在 control 模式生成）。",
+                                f"{tab * 3}#    「没有重掷」、「门形状不成立」、「牌进不了池」三者分不开 ⇒ 不判决。",
+                                f"{tab * 3}#    引擎真的在重掷；哨兵②（门 = `has_modifier`，与真牌同形）",
+                                f"{tab * 3}#    出现 ⇒ `possible` 里读修正这条外推成立。两条都没出现 ⇒",
+                                f"{tab * 3}#    「没有重掷」、「门形状不成立」、「牌进不了池」三者分不开 ⇒ 不判决。",
+                                *sentinel_lines,
+                            ]
+                            if sentinel_lines
+                            else []
+                        ),
+                        "",
+                        f"{tab * 3}# ④·补② 难度档位（阶段 6；口径见 `exec/阶段6-国家身份开局-取证口径.md`",
+                        f"{tab * 3}#    §3.3 第 1 条）。互斥链回答「是哪一档」，三档各自的",
+                        f"{tab * 3}#    yes/no 保证另两档也留痕 —— 承重判据要的是那个**组合**。",
+                        difficulty_rule_lines(tab=tab),
                         "",
                         f"{tab * 3}# ⑤ **立法到底开没开**（2026-09-22 新增）—— 这一行是",
                         f"{tab * 3}#    「牌换了法不换」三个候选的分辨器：原版读本 `laws/readme.md:9-10`",
@@ -937,18 +1421,45 @@ class Built:
     """一次 build 的产物：相对路径 → 文本。"""
 
     files: dict[str, str]
+    #: 这次 build 用的模式（:data:`MODE_NATURAL` / :data:`MODE_CONTROL`）—— 摘要里要看得见。
+    mode: str = MODE_NATURAL
 
     @property
     def paths(self) -> tuple[str, ...]:
         return tuple(sorted(self.files))
 
 
-def build(*, game: Path | None = None, target: ProbeTarget | None = None) -> Built:
+#: **只有 `control` 模式才有**的文件（切回 `natural` 时必须删掉）。
+#:
+#: 为什么单独列出来删：`write()` 只写本次 build 的文件、**不扫目录**，于是上一局留下的
+#: defines 覆盖与哨兵牌会**静默**留在盘上、并随下一局一起装进游戏 ——
+#: 那意味着"自然局"其实带着每周重抽的节奏，而读数里看不出来（`h1_probe` 的同族用例
+#: `test_natural会删掉storm留下的defines` 说的就是这件事）。
+MODE_ONLY_FILES: tuple[str, ...] = (
+    "common/defines/zz_probe_ab_defines.txt",
+    "common/ai_strategies/zz_probe_ab_sentinel_open.txt",
+    "common/ai_strategies/zz_probe_ab_sentinel_gate.txt",
+)
+
+
+def build(
+    *,
+    game: Path | None = None,
+    target: ProbeTarget | None = None,
+    own: list[str] | None = None,
+    mode: str | None = None,
+) -> Built:
     """生成探针的全部文件（相对探针根目录）。
 
     ``target`` 缺省时从**数据源**读（:func:`load_target`）—— 读不到就报错（P13），
     不拿一个猜出来的国家名生成探针。测试要造"别的国家"的探针时显式传一个。
+    ``own`` 是我们自己的政治槽牌名（缺省现读盘上产物，见 :func:`own_cards`）。
+    ``mode=None`` = 读 :func:`active_mode`（环境变量 `V3_AB_MODE`，默认 `natural`）；
+    测试与库调用方可以显式传值，于是**不必**碰进程环境。
     """
+    chosen_mode = active_mode() if mode is None else mode
+    if chosen_mode not in MODES:
+        raise ValueError(f"未知模式：{chosen_mode!r}（可选：{'、'.join(MODES)}）")
     chosen = target or load_target()
     if chosen is None:
         raise RuntimeError(
@@ -957,8 +1468,10 @@ def build(*, game: Path | None = None, target: ProbeTarget | None = None) -> Bui
         )
     vanilla = ai_surface.read_cards(game)
     files = {
-        "common/scripted_effects/zz_probe_ab_effects.txt": effects_text(chosen),
-        "common/on_actions/zz_probe_ab_on_actions.txt": on_actions_text(vanilla, chosen),
+        "common/scripted_effects/zz_probe_ab_effects.txt": effects_text(chosen, mode=chosen_mode),
+        "common/on_actions/zz_probe_ab_on_actions.txt": on_actions_text(
+            vanilla, chosen, own=own, mode=chosen_mode
+        ),
         "common/decisions/zz_probe_ab_decisions.txt": decisions_text(chosen),
         SUITE_REL: suite_text(chosen),
         ".metadata/metadata.json": metadata_text(),
@@ -968,7 +1481,15 @@ def build(*, game: Path | None = None, target: ProbeTarget | None = None) -> Bui
     files.update(
         {f"tools/scripted_tests/{name}.txt": converge_text(name) for name in VANILLA_SUITES}
     )
-    return Built(files=files)
+    if chosen_mode == MODE_CONTROL:
+        if not chosen.pressure_modifier:
+            raise RuntimeError(
+                f"control 模式要求档案 {chosen.archive_id!r} 声明 [pressure].name —— "
+                "门名读不到就不生成（否则这份探针的门永远为假、实验会静默变成什么都没测）"
+            )
+        files.update(sentinel_files(chosen.pressure_modifier))
+        files["common/defines/zz_probe_ab_defines.txt"] = defines_text()
+    return Built(files=files, mode=chosen_mode)
 
 
 def write(
@@ -976,15 +1497,24 @@ def write(
     root: Path | None = None,
     game: Path | None = None,
     archive_id: str | None = None,
+    mode: str | None = None,
 ) -> list[Path]:
     """写进仓库里的探针目录（游戏侧文件带 UTF-8 BOM，loc 与套件都必须带）。
 
     原版 `tools/scripted_tests/*.txt` 实测带 BOM（含 `scripted_tests.md` 之外的 5 个套件），
     所以这里与 `common/` 一视同仁 —— BOM 是游戏侧文本的默认口径。
+
+    **模式切换要清理**：本次 build 里没有的 :data:`MODE_ONLY_FILES` 会被删掉（见那张表的说明）。
     """
     base = root or PROBE_DIR
     # `archive_id=None` = 数据源里的第一份（`load_target` 的默认口径）。
-    built = build(game=game, target=load_target(archive_id))
+    built = build(game=game, target=load_target(archive_id), mode=mode)
+    for rel in MODE_ONLY_FILES:
+        if rel in built.files:
+            continue
+        stale = base / rel
+        if stale.is_file():
+            stale.unlink()
     written: list[Path] = []
     for rel, text in sorted(built.files.items()):
         path = base / rel
@@ -1001,12 +1531,14 @@ def deploy(
     target: Path | None = None,
     game: Path | None = None,
     archive_id: str | None = None,
+    mode: str | None = None,
 ) -> Path:
     """生成 → 同步进用户 mod 目录 → 连同真 mod 一起启用。
 
     ``archive_id`` 选**盯哪一份档案**（阶段 5 起有多份；不给就是数据源里的第一份）。
+    ``mode`` 透传给 :func:`write`（``None`` = 读 :func:`active_mode`）。
     """
-    write(root=root, game=game, archive_id=archive_id)
+    write(root=root, game=game, archive_id=archive_id, mode=mode)
     chosen = load_target(archive_id)
     source = root or PROBE_DIR
     dest_root = target or experiments.TARGET_DIR
@@ -1028,6 +1560,246 @@ def deploy(
     return dest
 
 
+#: 自报行的形状（与 `pdx.ab` 的 `REPORT_RE` 同源）：`ZZPROBE AB;<KIND>;<取值>;<国名>`。
+#: kind 只能是大写字母，取值位里可以带牌名（`<完整牌名>=yes`）。
+REPORT_RE = re.compile(r"ZZPROBE AB;(?P<kind>[A-Z]+);(?P<value>.*?);(?P<country>[^;]*)\s*$")
+
+
+@dataclass(frozen=True, slots=True)
+class Row:
+    """一行自报。"""
+
+    kind: str
+    value: str
+    country: str
+
+
+@dataclass(slots=True)
+class Sample:
+    """一个月（一个 `ROLE` 块）里读数侧要的那几样东西。
+
+    **可变**（不是 frozen）：`samples_of` 是一行一行把读数**填进**去的。
+    """
+
+    index: int
+    #: 门直读（`GATE`）：`yes` / `no` / 空 = 这一局压根没有门读数（老探针）。
+    gate: str
+    #: 每张牌被持有的情况（`HELD` / `SENT`）：完整牌名 → `yes` / `no`。
+    held: dict[str, str]
+    #: 这一局的模式与节奏（`MODE` / `STORM`）：老探针没有这两行 ⇒ 空。
+    mode: str
+    storm: str
+
+
+def parse_rows(text: str) -> tuple[Row, ...]:
+    """把一份日志/留档文本里的自报行解析出来（**只认形状**，不解释语义）。"""
+    rows: list[Row] = []
+    for line in text.splitlines():
+        match = REPORT_RE.search(line)
+        if match is not None:
+            rows.append(
+                Row(
+                    kind=match.group("kind"),
+                    value=match.group("value"),
+                    country=match.group("country"),
+                )
+            )
+    return tuple(rows)
+
+
+def samples_of(rows: Sequence[Row]) -> tuple[Sample, ...]:
+    """按 `ROLE` 行分月（与生成器的月度块头一致）。第一行 `ROLE` 之前的内容丢掉。"""
+    samples: list[Sample] = []
+    current: Sample | None = None
+    for row in rows:
+        if row.kind == "ROLE":
+            current = Sample(index=len(samples) + 1, gate="", held={}, mode="", storm="")
+            samples.append(current)
+            continue
+        if current is None:
+            continue
+        if row.kind == "GATE":
+            current.gate = row.value
+        elif row.kind in ("HELD", "SENT"):
+            name, _, value = row.value.partition("=")
+            if name:
+                current.held[name] = value
+        elif row.kind == "MODE":
+            current.mode = row.value
+        elif row.kind == "STORM":
+            current.storm = row.value
+    return tuple(samples)
+
+
+#: 每条判决的**理由**与**下一步**（判红必须说清"红在哪、下一步查什么"，不许只给一个词）。
+_STATUS_NOTES: dict[str, tuple[str, ...]] = {
+    "pass_appeared": ("理由：该牌在观测期里至少被持有过一个月。",),
+    "pass_absent": ("理由：期望就是「不该出现」，观测期里一次都没出现。",),
+    "red_gate_open_no_hits": (
+        "理由：门直读为「开」而这张牌一次都没被持有 ⇒ 不是「门没开」，剩下的解释是",
+        "「它进不了政治槽」（候选集 / 门的求值 / 产物没被加载）—— 报队长，不许写成「设计失败」。",
+    ),
+    "red_gate_closed_no_hits": (
+        "理由：应出现而 0 次，**且门直读一次都没开** ⇒ 这一局没做成我们要做的实验",
+        "（门没开就是没测到），读数不可判 ⇒ 判红，不许当成「牌进不了池」的证据。",
+    ),
+    "red_no_gate_reading": (
+        "理由：这份读数里**没有 `GATE` 行**（老探针，或探针没跑起来）⇒「门开没开」无从知道，",
+        "而不知道就等于不能判 ⇒ 判红并要求重跑（t18 B 臂 0/13 不可归因的根因就是它）。",
+    ),
+    "red_no_card_reading": (
+        "理由：这份读数里**没有这张牌的 `HELD`/`SENT` 行** ⇒ 它在生成物里就不存在",
+        "（牌名写错，或探针没生成这一族读数）—— 判红，别把「没记」读成「没出现」。",
+    ),
+    "red_appeared_when_absent": (
+        "理由：期望是「不该出现」而它出现了 ⇒ 门 / 权重 / 候选集里至少有一处与声明不符。",
+    ),
+    "red_mode_mismatch": ("理由：`MODE` 行与调用方要求的模式不一致（或整局没有 `MODE` 行）。",),
+    "red_storm_mismatch": ("理由：`STORM` 行与调用方要求的节奏不一致（或整局没有 `STORM` 行）。",),
+}
+
+
+@dataclass(frozen=True, slots=True)
+class CardVerdict:
+    """一张牌的读数判决（t18 第 15 条：**读数侧必须能判红**，不许静默返回成功）。"""
+
+    status: str
+    card: str
+    expect: str
+    months: int
+    gate_yes: int
+    gate_no: int
+    hits: int
+    first_hit_month: int | None
+
+    @property
+    def ok(self) -> bool:
+        return self.status.startswith("pass")
+
+    def report(self) -> str:
+        lines = [
+            f"牌：{self.card}",
+            f"期望：{self.expect}（appear = 应出现；absent = 不该出现）",
+            f"观测月数：{self.months}　门直读：yes {self.gate_yes} 月 / no {self.gate_no} 月",
+            f"命中：{self.hits} 月"
+            + (f"（首次第 {self.first_hit_month} 月）" if self.first_hit_month else ""),
+            f"判决：{self.status}　{'✅ 通过' if self.ok else '❌ 判红'}",
+        ]
+        return "\n".join([*lines, *_STATUS_NOTES.get(self.status, ())])
+
+
+def _verdict_from_counts(
+    *, expect: str, hits: int, gate_yes: int, gate_no: int, seen_card: bool
+) -> str:
+    """把四个计数折成判决（拆出来是为了让 `MODE` / `STORM` 的检查读起来不嵌套）。"""
+    if not seen_card:
+        return "red_no_card_reading"
+    if expect == "appear":
+        if hits:
+            return "pass_appeared"
+        if gate_yes == 0 and gate_no == 0:
+            return "red_no_gate_reading"
+        if gate_yes == 0:
+            return "red_gate_closed_no_hits"
+        return "red_gate_open_no_hits"
+    if expect == "absent":
+        return "red_appeared_when_absent" if hits else "pass_absent"
+    raise ValueError(f"expect 只能是 appear / absent，收到 {expect!r}")
+
+
+def card_verdict(
+    rows: Sequence[Row],
+    *,
+    card: str,
+    expect: str = "appear",
+    expect_mode: str = "",
+    expect_storm: str = "",
+) -> CardVerdict:
+    """对**一张牌**给判决（纯函数：输入是自报行，不碰文件、不碰游戏）。
+
+    判红的四种情况（t18 第 15 条要的就是"必须出声"）：
+
+    * **门直读为开而一次都没命中** ⇒ 那不是"门没开"，而是"进不了池"那一族（要报队长）；
+    * **应出现而 0 次、且门一次都没开** ⇒ 这一局没做成实验，**不可判**（不许当证据）；
+    * **没有 `GATE` 行 / 没有这张牌的 `HELD` 行** ⇒ "不知道"也算红（静默的反面就是它）；
+    * **`MODE` / `STORM` 与要求不符** ⇒ 拿错局的读数说事。
+
+    ``expect="absent"`` 是另一向（A 臂那种"不该出现"）。
+    """
+    samples = samples_of(rows)
+    gate_yes = sum(1 for sample in samples if sample.gate == "yes")
+    gate_no = sum(1 for sample in samples if sample.gate == "no")
+    hit_months = [sample.index for sample in samples if sample.held.get(card) == "yes"]
+    seen_card = any(card in sample.held for sample in samples)
+    # ⚠️ **先查模式与节奏，再数命中**：读数来自哪一局比"命中几次"更靠前 ——
+    # 拿自然局的读数去说控制局的事，是这一族读数最容易犯、也最难发现的错。
+    status = ""
+    if expect_mode:
+        modes = {sample.mode for sample in samples if sample.mode}
+        if not modes or expect_mode not in modes:
+            status = "red_mode_mismatch"
+    if not status and expect_storm:
+        storms = {sample.storm for sample in samples if sample.storm}
+        if not storms or expect_storm not in storms:
+            status = "red_storm_mismatch"
+    if not status:
+        status = _verdict_from_counts(
+            expect=expect,
+            hits=len(hit_months),
+            gate_yes=gate_yes,
+            gate_no=gate_no,
+            seen_card=seen_card,
+        )
+    return CardVerdict(
+        status=status,
+        card=card,
+        expect=expect,
+        months=len(samples),
+        gate_yes=gate_yes,
+        gate_no=gate_no,
+        hits=len(hit_months),
+        first_hit_month=hit_months[0] if hit_months else None,
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """读数入口：`python -m pdx.ab_probe --log <文件> --card <牌名>`（判红即非零退出）。
+
+    为什么要有这个入口（t18 第 15 条）：这一族读数过去**只在人脑子里判** ——
+    B 臂 0/13 在日志里躺了一整局，没有任何程序会叫。判红必须是一个**退出码**，
+    这样脚本、CI、下一个跑局的人都能直接看见它。
+    """
+    parser = argparse.ArgumentParser(
+        prog="python -m pdx.ab_probe",
+        description="读一份探针自报（游戏 logs/debug.log 或留档副本），对一张牌给判决。",
+    )
+    parser.add_argument("--log", required=True, help="自报文本文件（整份日志即可）")
+    parser.add_argument("--card", required=True, help="要判的牌**完整名**（ai_strategy_…）")
+    parser.add_argument(
+        "--expect",
+        choices=("appear", "absent"),
+        default="appear",
+        help="appear = 应出现（判红的重点）；absent = 不该出现（A 臂那种）",
+    )
+    parser.add_argument(
+        "--expect-mode", default="", help=f"要求的模式（{MODE_ENV} 取值），空 = 不查"
+    )
+    parser.add_argument(
+        "--expect-storm", choices=("", "yes", "no"), default="", help="要求的节奏，空 = 不查"
+    )
+    args = parser.parse_args(argv)
+    text = pathlib.Path(args.log).read_text(encoding="utf-8", errors="replace")
+    verdict = card_verdict(
+        parse_rows(text),
+        card=args.card,
+        expect=args.expect,
+        expect_mode=args.expect_mode,
+        expect_storm=args.expect_storm,
+    )
+    print(verdict.report())
+    return 0 if verdict.ok else 1
+
+
 def summary(built: Built) -> str:
     """给人看的构建摘要。"""
     arms = " → ".join(
@@ -1035,6 +1807,12 @@ def summary(built: Built) -> str:
         for step in LADDER
     )
     lines = [
+        f"模式：{built.mode}（{MODE_ENV}）"
+        + (
+            "　⚠️ 控制局：不设记忆变量、门从第 1 月起挂上、含两张哨兵牌与 defines 覆盖"
+            if built.mode == MODE_CONTROL
+            else ""
+        ),
         f"臂阶梯（点一次决议武装）：{arms}",
         f"生成文件 {len(built.files)} 个：",
     ]
@@ -1050,10 +1828,23 @@ __all__ = [
     "INPUT_MODIFIER",
     "LADDER",
     "LAWS",
+    "MODES",
+    "MODE_CONTROL",
+    "MODE_ENV",
+    "MODE_NATURAL",
+    "MODE_ONLY_FILES",
     "MONTH_VAR",
     "PROBE_DIR",
     "PROBE_MOD",
+    "REPORT_RE",
     "ROLES",
+    "SENTINEL_GATE",
+    "SENTINEL_GATE_MONTHS",
+    "SENTINEL_GATE_VAR",
+    "SENTINEL_OPEN",
+    "SENTINEL_OPEN_MONTHS",
+    "SENTINEL_OPEN_VAR",
+    "SENTINEL_WEIGHT",
     "SHOCK_EFFECT",
     "SHOCK_VAR",
     "STAGE_VAR",
@@ -1062,17 +1853,31 @@ __all__ = [
     "VANILLA_SUITES",
     "ArmStep",
     "Built",
+    "CardVerdict",
+    "Row",
+    "Sample",
+    "active_mode",
     "build",
+    "card_verdict",
     "converge_text",
     "decisions_text",
+    "defines_text",
     "deploy",
     "effects_text",
     "ladder_for",
     "loc_text",
     "loc_text_en",
+    "main",
     "metadata_text",
     "on_actions_text",
+    "parse_rows",
+    "samples_of",
+    "sentinel_card_text",
+    "sentinel_files",
     "suite_text",
     "summary",
     "write",
 ]
+
+if __name__ == "__main__":  # pragma: no cover - 手工运行入口（判红靠它的退出码）
+    raise SystemExit(main())

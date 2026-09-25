@@ -289,7 +289,12 @@ def test_ab_probe_写出盯的档案并支持显式指定(monkeypatch) -> None:
 
     written: list[str | None] = []
     monkeypatch.setattr(
-        ab_probe, "write", lambda *, archive_id=None, **_kw: written.append(archive_id) or []
+        ab_probe,
+        "write",
+        lambda *, archive_id=None, **_kw: (
+            written.append(archive_id)  # type: ignore[func-returns-value]
+            or []
+        ),
     )
     result = _run("ab-probe", "--archive", "ru_defeat")
     assert result.exit_code == 0, result.output

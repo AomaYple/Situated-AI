@@ -100,7 +100,7 @@ why = "**这一条是「被夹击」的直接后果**：沙阿的权威不是被
 [[pressure.effects]]
 key = "country_loan_interest_rate_add"
 amount = 0.35
-why = "**这一条是「求存必须付出的代价」，不是夹击的后果** —— 这条区分是本档案的判据核心。波斯没有海权（01a §K 那一行明写「无海权」，docs/design/01a-依据与参考.md:293），港口与航线都在英国手上；又不具备与俄国正面开战的条件。于是「求存」唯一可走的路是**借外债买时间**（练兵、修 telegraph 与铁路、办新式学堂），而债权人知道这个国家正在被两边榨 —— 借债成本因此长期抬高。原版该字段**没有可引的「国家修正档位阶梯」**：实测 common/ 下共 11 处 —— 全局基准 +0.2（common/static_modifiers/00_code_static_modifiers.txt:12）、法律侧 ±0.01/±0.02/±0.03/±0.05（common/amendments/00_amendments_enactment_04.txt:644、:1138、:1174、:1222、:1266）、科技侧 -0.02（common/technology/technologies/30_society.txt:209、:599、:1226、:1473、:1647）、字段定义一处（common/modifier_type_definitions/00_modifier_types.txt:662）。**0.35 ≈ 1.75× 全局基准**，属于**实验取值**（不是原版档位），正式版要按真实外债与租让权机制重算（backlog B35）。为什么不直接没收国库：反目标里写着「不让 AI 获得任何数值作弊」，也不想让波斯当场破产（那样测出来的差分来自破产机制，不是来自夹击）。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位（0.2→0.35），未针对本条处境独立校准**；本处境另外写明它在本档案里承担的是「代价」而不是「后果」。"
+why = "**这一条是「求存必须付出的代价」，不是夹击的后果** —— 这条区分是本档案的判据核心。波斯没有海权（01a §K 那一行明写「无海权」，docs/design/01a-依据与参考.md:293），港口与航线都在英国手上；又不具备与俄国正面开战的条件。于是「求存」唯一可走的路是**借外债买时间**（练兵、修 telegraph 与铁路、办新式学堂），而债权人知道这个国家正在被两边榨 —— 借债成本因此长期抬高。原版该字段**没有可引的「国家修正档位阶梯」**：实测 `common/**` 全树 **12 处**（含 `modifier_type_definitions` 定义行；不含则 11 处）—— 全局基准 +0.2（common/static_modifiers/00_code_static_modifiers.txt:12）、法律侧 ±0.01/±0.02/±0.03/±0.05（common/amendments/00_amendments_enactment_04.txt:644、:1138、:1174、:1222、:1266）、科技侧 -0.02（common/technology/technologies/30_society.txt:209、:599、:1226、:1473、:1647）、字段定义一处（common/modifier_type_definitions/00_modifier_types.txt:662）。**0.35 ≈ 1.75× 全局基准**，属于**实验取值**（不是原版档位），正式版要按真实外债与租让权机制重算（backlog B35）。为什么不直接没收国库：反目标里写着「不让 AI 获得任何数值作弊」，也不想让波斯当场破产（那样测出来的差分来自破产机制，不是来自夹击）。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位（0.2→0.35），未针对本条处境独立校准**；本处境另外写明它在本档案里承担的是「代价」而不是「后果」。"
 
 [[pressure.effects]]
 key = "interest_group_ig_devout_pol_str_mult"
@@ -142,7 +142,7 @@ why = "与工业家同档同源（common/static_modifiers/content_1_modifiers.tx
 name = "je_sitai_pe_great_game_window"
 group = "je_group_foreign_affairs"
 icon = "gfx/interface/icons/objectives/great_game.dds"
-why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有三条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 has_journal_entry = <本 JE 名> 读它）；③ `immediate` / `on_complete` 里递牌（本档案不用，见 `[cards]`）。⚠️ 它喂不到原版 AI 牌：原版 212 处 has_journal_entry 全部硬编码具名 JE，没有「读任意 JE」的通用谓词（backlog B52）。**group 与 icon 都按「大博弈」这个处境另选**（这是本档案与 ru/tr/cn 三份的又一处不同）：`je_group_foreign_affairs`（定义见 common/journal_entry_groups/00_journal_entries.txt:116）——本档案的处境是**外部两强之争**，不是内政（ru/tr 用 `je_group_internal_affairs`）也不是本国历史内容族（cn 用 `je_group_qing`）；原版把同族的对外 JE 放在这一组（00_opium_wars.txt:115 的 `je_opium_wars`、00_impose_law.txt:4）。icon 用 `gfx/interface/icons/objectives/great_game.dds` —— **原版「大博弈」这件事本身用的就是这一张图**（`je_great_game_control` 见 00_player_objectives_great_game.txt:5，`je_secure_influence_over_persia` 见同文件 :1446），不是我们另挑的图。　【沿用·口径】本表的**结构与数值**沿用 `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**；group 与 icon 是按本处境的语义另选的（有原版行号）。"
+why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有三条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 has_journal_entry = <本 JE 名> 读它）；③ `immediate` / `on_complete` 里递牌（本档案不用，见 `[cards]`）。⚠️ 它喂不到原版 AI 牌：原版 AI 策略（`common/ai_strategies/**`）里 212 处 has_journal_entry 全部硬编码具名 JE，没有「读任意 JE」的通用谓词（backlog B52）。**group 与 icon 都按「大博弈」这个处境另选**（这是本档案与 ru/tr/cn 三份的又一处不同）：`je_group_foreign_affairs`（定义见 common/journal_entry_groups/00_journal_entries.txt:116）——本档案的处境是**外部两强之争**，不是内政（ru/tr 用 `je_group_internal_affairs`）也不是本国历史内容族（cn 用 `je_group_qing`）；原版把同族的对外 JE 放在这一组（00_opium_wars.txt:115 的 `je_opium_wars`、00_impose_law.txt:4）。icon 用 `gfx/interface/icons/objectives/great_game.dds` —— **原版「大博弈」这件事本身用的就是这一张图**（`je_great_game_control` 见 00_player_objectives_great_game.txt:5，`je_secure_influence_over_persia` 见同文件 :1446），不是我们另挑的图。　【沿用·口径】本表的**结构与数值**沿用 `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**；group 与 icon 是按本处境的语义另选的（有原版行号）。"
 
 [[journal_entry.fields]]
 key = "weight"
@@ -179,7 +179,7 @@ gate = "possible"
 key = "legitimacy"
 op = "<="
 amount = 75
-why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`、common/journal_entries/01_french_monarchism.txt:329 的 `government_legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**本档案为什么不另加一条「被两强夹击」的门**（那是本处境最想要的那一条）：原版里表达「俄英同时压过来」的写法都是**块形式**（`c:RUS ?= { … }` / `any_country_in_great_power = { … }`），而生成器的判据渲染只支持平铺一行 `key op 操作数`（tools/pdx/modgen.py:185-189 的 `Clause.render`），块形式在本 schema 里根本表达不出来 —— 这是**让步**，如实记在这里（与 `au_revolution` 表达不出「激进派占比门」是同一类问题，backlog B69）。于是「双强夹击」这层意思由 `is_country_type = unrecognized` 那条结构性判据 + `[pressure]` 的两个字段共同承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有两条 75 是先例。"
+why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`、common/journal_entries/01_french_monarchism.txt:329 的 `government_legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**本档案为什么不另加一条「被两强夹击」的门**（那是本处境最想要的那一条）：原版里表达「俄英同时压过来」的写法都是**块形式**（`c:RUS ?= { … }` / `any_country_in_great_power = { … }`），而生成器的判据渲染只支持平铺一行 `key op 操作数`（tools/pdx/modgen.py:187 的 `Clause.render`），块形式在本 schema 里根本表达不出来 —— 这是**让步**，如实记在这里（与 `au_revolution` 表达不出「激进派占比门」是同一类问题，backlog B69）。于是「双强夹击」这层意思由 `is_country_type = unrecognized` 那条结构性判据 + `[pressure]` 的两个字段共同承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有两条 75 是先例。"
 
 [[journal_entry.conditions]]
 gate = "complete"
@@ -233,7 +233,7 @@ why = "第一行 = **当前目标**。写「推过去」而不是点名某条法
 [panel.pressure]
 english = "Biggest pressure and resistance: pressure — the two powers press from both sides, the court's authority is worn down by having to yield to one or the other, the treasury survives only on foreign loans at ruinous rates, and the clergy who promised that closing the door would keep us safe have lost their credit; resistance — the state standing firm on its own again."
 simp_chinese = "最大压力与阻力：压力 = 两强从两个方向同时挤压、朝廷的威信在「总得对一边让步」里被磨掉、国库只靠高息外债撑着，而断言关起门就没事的教士已经信用破产；阻力 = 等国家重新自己站稳。"
-why = "第二行 = **最大压力与阻力**。压力项与 `[pressure.effects]` 的三条字段一一对应（合法性 / 利率 / 教士），并且**按本档案的判据把两种东西分开了**：合法性是「夹击的直接后果」，高息外债是「求存必须付出的代价」—— 这一行是玩家唯一能读到这条区分的地方，所以两句都要在。阻力项与 `complete = { legitimacy >= 75 }` 是同一条判据的两种说法 —— 数值改了这行也要改（P9：一处改、三处同步）。"
+why = "第二行 = **最大压力与阻力**。压力项与 `[pressure.effects]` 的三条字段一一对应（合法性 / 利率 / 教士），并且**按本档案的判据把两种东西分开了**（**设计叙述·不可由脚本判**：UI 可见性不经任何闸门）：合法性是「夹击的直接后果」，高息外债是「求存必须付出的代价」—— 这一行是玩家唯一能读到这条区分的地方，所以两句都要在。阻力项与 `complete = { legitimacy >= 75 }` 是同一条判据的两种说法 —— 数值改了这行也要改（P9：一处改、三处同步）。"
 
 [panel.last_change]
 english = "Why it changed its mind: because the long squeeze was written into the books — being pressed from both sides is what moved the inputs the AI reads."
@@ -242,7 +242,7 @@ why = "第三行 = **上次改主意的原因**（G3 里最容易被跳过、却
 
 # ── ⑦ 递牌：本档案一张都不递 ───────────────────────────────
 [cards]
-why = "本档案**不使用自建策略牌**（F5：能改世界就不占槽）。两强夹击 → 压力的链路由变量 + 修正 + JE 表达；⚠️ 依据已于 2026-09-22 更正：JE **不会**被原版牌读到（原版 212 处 has_journal_entry 全硬编码具名 JE，没有通用谓词，backlog B52），所以意图位移**不能**指望「开一个 JE 就被牌池读到」。要真的换路线，用（a）递**原版**的牌 `set_strategy`（B58）或（b）法律承诺 law commitment（B56/B57）—— 两者都是「整条路线要换」时的手段。递牌的政治槽价格：S≈33 时权重 10 吃掉 23% 的份额（阶段 2 价格表）。**本档案为什么不递**：有判据可写的递牌法是「窗口开时递进步牌、窗口关时递回该国 1836 的初始牌」（`ru_defeat` 的 `[journal_entry.signals]` 就是这么写的），但**波斯在原版里没有写下自己的初始落点** —— `common/history/ai/00_strategy.txt` 里只有具名国家块（`c:RUS`、`c:TUR` 等），**没有 `c:PER` 块**（与 `au_revolution` 的奥地利同一种情况：档案 `au_revolution` 的 `[cards].why` 已实测记录 `c:AUS` 缺失）。照抄俄国那三行会把波斯递到一个它从没站过的路线上 —— 那就不是「让 AI 自己推导」，是我们替它选。写这张表的判据需要先实测波斯 1836 的初始牌与重抽落点（阶段 5 的 A/B 会话），在那之前**一张都不递**比递一张编的牌诚实。"
+why = "本档案**不使用自建策略牌**（F5：能改世界就不占槽）。两强夹击 → 压力的链路由变量 + 修正 + JE 表达；⚠️ 依据已于 2026-09-22 更正：JE **不会**被原版牌读到（原版 AI 策略（`common/ai_strategies/**`）里 212 处 has_journal_entry 全硬编码具名 JE，没有通用谓词，backlog B52），所以意图位移**不能**指望「开一个 JE 就被牌池读到」。要真的换路线，用（a）递**原版**的牌 `set_strategy`（B58）或（b）法律承诺 law commitment（B56/B57）—— 两者都是「整条路线要换」时的手段。递牌的政治槽价格：S≈33 时权重 10 吃掉 23% 的份额（阶段 2 价格表）。**本档案为什么不递**：有判据可写的递牌法是「窗口开时递进步牌、窗口关时递回该国 1836 的初始牌」（`ru_defeat` 的 `[journal_entry.signals]` 就是这么写的），但**波斯在原版里没有写下自己的初始落点** —— `common/history/ai/00_strategy.txt` 里只有具名国家块（`c:RUS`、`c:TUR` 等），**没有 `c:PER` 块**（**勘误 · t9 §六 K1**：`au_revolution` 的 `[cards].why` 原把「没有 `c:AUS` 块」写成实测结论，那是错的 —— 1.14.4 实测 `c:AUS` 在 `common/history/ai/00_strategy.txt:62-66`；奥地利不递牌的真理由是「目标牌就是它的开局牌」。**波斯这一条不同**：`c:PER` 确实不存在）。照抄俄国那三行会把波斯递到一个它从没站过的路线上 —— 那就不是「让 AI 自己推导」，是我们替它选。写这张表的判据需要先实测波斯 1836 的初始牌与重抽落点（阶段 5 的 A/B 会话），在那之前**一张都不递**比递一张编的牌诚实。**2026-09-24 补充（那一局已经跑过）**：波斯开局与全程挂着的是 `ai_strategy_conservative_agenda`（`docs/design/exec/阶段5-批次2-结果.md` §二·补），而按 t9 裁决它的**目标牌就是那张保守牌** ⇒ 递它等于没递，所以本档案仍然一张都不递 —— 理由从「查不到落点」升级成「目标牌 = 开局牌」。"
 
 # ── ⑧ 声明式引用：闸门 ② 逐条核对 ──────────────────────────
 # 变量/修正/JE/图标/本地化键这些**带名字的引用**由闸门 ② 从产物里自动抽出来核对；
@@ -263,7 +263,7 @@ why = "is_shown_when_inactive 里把窗口锁在「仍未被列强承认」这�
 [[references]]
 kind = "trigger"
 name = "has_variable"
-why = "记忆变量的读法。原版用法：common/journal_entries/00_corn_laws.txt:7（`NOT = { has_variable = corn_laws_abolished }`），阶段 1 统计 has_variable 被 13 张原版牌直接读。"
+why = "记忆变量的读法。原版用法：common/journal_entries/00_corn_laws.txt:7（`NOT = { has_variable = corn_laws_abolished }`），阶段 1 统计 has_variable 被 13 张原版牌直接读（13 = `common/ai_strategies/**` 里读该键的**牌数**，现读见生成物 `docs/design/02-可执行面.md`；同键在 `common/journal_entries/**` 出现 795 处、全树 6383 处 —— `v3 evidence has_variable`）。"
 
 [[references]]
 kind = "effect"
@@ -291,7 +291,7 @@ why = "合法性修正字段（本档案的「夹击的直接后果」）。原�
 [[references]]
 kind = "modifier_field"
 name = "country_loan_interest_rate_add"
-why = "借债利率（本档案的「求存必须付出的代价」）。原版实测 common/ 下共 11 处：全局基准 +0.2（common/static_modifiers/00_code_static_modifiers.txt:12）、法律侧 ±0.01/±0.02/±0.03/±0.05（common/amendments/00_amendments_enactment_04.txt:644、:1138、:1174、:1222、:1266）、科技侧 -0.02（common/technology/technologies/30_society.txt:209、:599、:1226、:1473、:1647）、字段定义（common/modifier_type_definitions/00_modifier_types.txt:662）。⚠️ 「国家修正那一侧没有档位阶梯」这一点成立（那边只有全局基准 +0.2），所以本档案的 0.35 是实验取值。"
+why = "借债利率（本档案的「求存必须付出的代价」）。原版实测 `common/**` 全树 **12 处**（含 `modifier_type_definitions` 定义行；不含则 11 处）：全局基准 +0.2（common/static_modifiers/00_code_static_modifiers.txt:12）、法律侧 ±0.01/±0.02/±0.03/±0.05（common/amendments/00_amendments_enactment_04.txt:644、:1138、:1174、:1222、:1266）、科技侧 -0.02（common/technology/technologies/30_society.txt:209、:599、:1226、:1473、:1647）、字段定义（common/modifier_type_definitions/00_modifier_types.txt:662）。⚠️ 「国家修正那一侧没有档位阶梯」这一点成立（那边只有全局基准 +0.2），所以本档案的 0.35 是实验取值。"
 
 [[references]]
 kind = "modifier_field"
@@ -309,12 +309,80 @@ name = "interest_group_ig_intelligentsia_pol_str_mult"
 why = "知识界政治力量（改革侧输入之一；原版没有「开明官僚」这个 IG，这一格是最近似的，属让步）。原版档位：0.15（common/static_modifiers/106_modifiers.txt:205）、0.25（common/static_modifiers/00_ip4_04_modifiers.txt:47）、0.5（common/static_modifiers/content_1_modifiers.txt:1466 的 shogun_ig_forced_to_open_market）。"
 
 
-# ── ⑨ 探针口径（B80：本档案盯哪条法；**留空 = 没查实**）────────────
+# ── ⑨ 探针口径（B80 盯哪条法 / B86 盯哪张牌；**留空 = 没查实，或查实了但那格没有判别力**）────────────
 #
 # 为什么要有这张表：探针的行为层②原来写死 `NOT = { has_law = law_type:law_serfdom }`，
 # 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
-# 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
+# 现在按档案声明：查实了就写；**没查实、或查实了但那格没有判别力（B86），就留空并写明**（留空时那条判据**不产出**）。
 [probe]
-why = "波斯的观测点是农奴制。依据：`common/history/countries/per - persia.txt:23` 的 `activate_law = law_type:law_serfdom`（逐行打开确认）。　【牌口径 · B86】`reform_card` =「意图层动没动」看哪张牌（判据是它**出现过**）：本档案开局那张政治牌不是它（八份逐份核过 common/history/ai/00_strategy.txt —— AUS/EGY 是 conservative、RUS 是 reactionary、TUR/CHI/PER/SPA/BAV 没有块），所以它出现就是真的位移。"
+why = "波斯的观测点是农奴制。依据：`common/history/countries/per - persia.txt:23` 的 `activate_law = law_type:law_serfdom`（逐行打开确认）。　【牌 · t9 裁决】目标牌 = `ai_strategy_conservative_agenda`。**从目标函数表的哪一项推出来**：`docs/design/01a-依据与参考.md:293` 的波斯行 —— 政治列点名 `conservative_agenda`（最优解「在两大国之间求存 + 有限现代化」）。**修什么毛病**：被夹击却没有账 —— 账落在世界层（合法性、借债成本、教士失势），意图层不替它选路；原来那份进步牌声明没有目标函数依据（与奥地利同一条毛病）。**递法**：**不递**。**`reform_card` 留空并写明理由**（门 5）：本机实测那一局**全程挂着 `conservative_agenda`**（`docs/design/exec/阶段5-批次2-结果.md` §二·补）⇒ 声明的牌开局即为真、没有判别力；行为层改看 `ENACT` 与 `GOV`。原版 `common/history/ai/00_strategy.txt` 里**确实没有 `c:PER` 块**（全文件 27 个具名块，`c:SWE` 在 :22、`c:MON` 在 :171），这一条仍然成立。"
 reform_law = "law_serfdom"
-reform_card = "ai_strategy_progressive_agenda"
+reform_card = ""
+
+# ── ⑩ 目标函数表（9 国目标函数表 · I7；判据 = `v3 objectives --check`）────
+#
+# 口径：`docs/design/exec/阶段5-目标函数表-口径.md`（v3）—— 住址 §1 / 形状 §2.1 /
+# **档位即来源等级** §2.2（0 留空 / 1 叙述 / 2 具名事实 / 3 判据或字段）/ 来源 §3 /
+# 五条闸门 §4.1 / `derive()` §4.1.1。幅度只在原版同族阶梯或本仓实测处写，
+# 其余**留空并写明缺什么** —— 把格子填满比留空更坏（P10：不许编）。
+[objectives]
+why = "五格 1/3/3/1/0。这份档案的裁定不是「查不到落点就从缺」，而是**有读数行**：`批2:56` 那一行里写着它全程挂的牌名（`derive()` 第 2 条第二分支；**查法**：别名 `批2` → `docs/design/exec/阶段5-批次2-结果.md:56`，规则见口径页 §4.1.1）。"
+
+[[objectives.items]]
+key = "survival"
+tier = 1
+evidence = "01a:293"
+why = "§K 波斯行（`01a:293`）写「在两大国之间求存 + 有限现代化」「无海权」⇒ 求存是立档理由；本仓无存续字段 ⇒ 档 1。"
+
+[[objectives.items]]
+key = "finance"
+tier = 3
+evidence = "mod/data/pe_great_game.toml:101-103"
+why = "本档案在动 `country_loan_interest_rate_add`（`:101-103`）⇒ 档 3（字段在动它）。"
+
+[[objectives.items]]
+key = "legitimacy"
+tier = 3
+evidence = "mod/data/pe_great_game.toml:96-98"
+why = "本档案在动 `country_legitimacy_base_add`（`:96-98`）⇒ 档 3。"
+
+[[objectives.items]]
+key = "military"
+tier = 1
+evidence = "01a:293"
+why = "§K 写「财政与军队落后」（`01a:293`）⇒ 档 1（叙述）；本仓没有为本档案动军力字段 ⇒ 不往上。"
+
+[[objectives.items]]
+key = "market"
+tier = 0
+why = "**缺**：本仓 9 份里没有任何字段动商路/市场依赖；§K 的「无海权」是海权不是市场依赖 ⇒ 留空。"
+
+[[objectives.identity]]
+key = "ideology"
+tier = 1
+evidence = "01a:293"
+why = "§K 政治列给 `conservative_agenda`、最优解是「在两大国之间求存 + **有限**现代化」（`01a:293`）⇒ 守成意识形态；本表不把「有限」读成「进步」。"
+
+[[objectives.constraints]]
+key = "friction"
+tier = 3
+evidence = "mod/data/pe_great_game.toml:106-108"
+why = "本档案在动宗教势力的政治力量（`:106-108`）⇒ 部落与教士那道钳制。"
+
+[[objectives.constraints]]
+key = "friction"
+tier = 3
+evidence = "mod/data/pe_great_game.toml:131-133"
+why = "本档案 `[[reform_inputs.effects]]` 动工业家（`:131-133`）—— 改革侧输入。"
+
+[[objectives.constraints]]
+key = "player"
+tier = 1
+evidence = "01a:18"
+why = "玩家是外部因素里「快」的那一档、不落文件（`01a:18`）⇒ 档 1 + 别名依据。"
+
+[objectives.verdict]
+kind = "measured_true"
+card = "ai_strategy_conservative_agenda"
+evidence = "批2:56"
+why = "`[probe].reform_card` 留空、原版 `00_strategy.txt` 里**没有 `c:PER` 块**（⇒ `opening` 为空），而读数行 `批2:56` 里出现牌名 ⇒ `derive()` 第 2 条第二分支 ⇒ `measured_true`（判据是**读到的**那张牌，不是推断的）。"

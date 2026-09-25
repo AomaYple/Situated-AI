@@ -1,8 +1,11 @@
 """`[difficulty]`（阶段 6 / 契约 J5）的看守。
 
-这一组钉住四件事，缺一个就会以"看起来没事"的方式烂掉：
+这一组钉住五件事，缺一个就会以"看起来没事"的方式烂掉：
 * **档位集合是契约**：多一档/少一档、改名，编译期就报错（`DIFFICULTY_TIERS` 钉住）；
 * **规则名与设置名在同一命名空间**（F7）：`has_game_rule` 读的是全局字符串；
+* **引擎的文案键必须命中**：`setting_<设置块名>` 与 `setting_<设置块名>_desc` 都要在本地化表里，
+  且**块名不许带 `setting_` 前缀**（带一次，规则窗那一行就显示原始键 —— 实机帧
+  `tools/out/auto/22-rule-sitai-scroll-5.png`）。这是唯一一条"玩家直接用眼睛看得到"的判据；
 * **三档的行为差异真的落到产物里**：玩家侧修正 + 效果里的 `if` 分支
   （否则就是"界面上有个选项，选了什么也不发生"）；
 * **默认档不加戏**：`一视同仁` 不能悄悄带一条修正。
@@ -91,15 +94,95 @@ def test_规则与设置名都在_sitai_命名空间(tmp_path) -> None:
     assert difficulty.key.startswith("sitai_"), "F7：规则名必须落在我们自己的命名空间里"
     for tier in difficulty.tiers:
         assert tier.setting.startswith("setting_sitai_")
+        assert tier.setting == f"setting_{tier.name}"
+        assert tier.name.startswith("sitai_")
+        assert not tier.name.startswith("setting_"), "设置名自带前缀 ⇒ 引擎会查 `setting_setting_*`"
         assert tier.modifier.startswith("sitai_")
+
+
+def test_引擎的_setting_文案键必须命中(tmp_path) -> None:
+    """引擎查规则窗那一档的文案 = `setting_<设置块名>` / `setting_<设置块名>_desc`。
+
+    ⚠️ 键跟的是**设置块名**，不是块里的 `flag`（原版 `common/game_rules/game_rules.md:10-12`
+    规定了这一族前缀；`game/localization/english/game_rules_l_english.yml` 全表逐条可核）：
+    块 `lenient_ai_behavior` 的 flag 是 `lenient_ai` ⇒ 键是 `setting_lenient_ai_behavior`；
+    块 `achievements_blocked` 的 flag 是 `blocks_achievements` ⇒ 键是
+    `setting_achievements_blocked`；而 `setting_all_formable_nations` /
+    `setting_allow_dynamic_naming` / `setting_no_custom_rng_seed` 这些设置**根本没有 flag**，
+    照样有键 ⇒「按 flag 查」结构上不成立（实机帧 `22-rule-sitai-scroll-5.png` 里
+    那几条无 flag 的原版行显示正常文案，是同一现象的正向对照）。
+    踩过的坑：块名写成 `setting_sitai_difficulty_uniform` ⇒ 引擎查
+    `setting_setting_sitai_difficulty_uniform` ⇒ 落空 ⇒ 规则窗那一行显示原始键
+    （标题「处境难度」正常、值框与说明是原始键 —— 前缀只在这一层出错）。
+    **产品对产品**地判：块名与 flag 从 `readback()`（按 PDX 语法把产物解析回来）读，
+    文案键从同一份 readback 的本地化条目读 —— 不看 Python 对象。
+    """
+    archive, built = _build(tmp_path)
+    difficulty = archive.difficulty
+    assert difficulty is not None
+    back = dict(modgen.readback(built.files))
+    prefix = f"gamerule.{difficulty.key}.setting."
+    blocks = {
+        key[len(prefix) : -len(".flag")]: value
+        for key, value in back.items()
+        if key.startswith(prefix) and key.endswith(".flag")
+    }
+    assert len(blocks) == len(difficulty.tiers), f"设置块没记全：{sorted(blocks)}"
+    keys = {key.split(".", 2)[2] for key in back if key.startswith("localization.english.")}
+    assert f"rule_{difficulty.key}" in keys, "规则名走同一套前缀规则（`rule_<块名>`）"
+    for block, flag in blocks.items():
+        assert f"setting_{block}" in keys, (
+            f"引擎按 `setting_{block}` 查这一档的名字 ⇒ 现在只会落空、显示原始键"
+        )
+        assert f"setting_{block}_desc" in keys, f"说明键 `setting_{block}_desc` 不在本地化表里"
+        assert not block.startswith("setting_"), "块名不许带 `setting_` 前缀（前缀只属于本地化键）"
+        assert flag == block, "flag 与块名必须同串：`has_game_rule` 的取值在原版里两者同串"
+    assert back[f"gamerule.{difficulty.key}.default"] in blocks, "`default =` 必须引用某个块名"
+    for tier in difficulty.tiers:
+        assert tier.name in blocks, f"{tier.id} 这一档的块名不是 `tier.name`（{tier.name}）"
+
+
+def test_has_game_rule_取设置名而文案键仍带_setting_前缀(tmp_path) -> None:
+    """效果里的 `limit.has_game_rule` 取**设置名**（无前缀），文案键才带 `setting_`。
+
+    引擎读的是设置名（:attr:`modgen.DifficultyTier.name`），`setting_<设置名>`
+    只用于查文案 —— 两个词在同一处相邻出现，最容易顺手改错其中一个：t88 拆分这两个
+    属性时只改了渲染与文案，**漏改了 `modgen.facts()` 的预期值**（产物写设置名、
+    claim 写文案键）⇒ 闸门 ④ 对 `ru_defeat` 报「缺 2 多 2」（modguard 的 5 条红）。
+
+    这条**两侧都钉**：claim（`facts()`）与产物反解（`readback()`），任一侧把
+    name/setting 弄混都会红；反向「给产物补前缀」也会红（`:138` 那条断言的同类）。
+    """
+    archive, built = _build(tmp_path)
+    difficulty = archive.difficulty
+    assert difficulty is not None
+    tiers = difficulty.tiers_with_player_effects()
+    assert len(tiers) == 2, "夹具要有两档带 player_effects，否则这条什么都没测"
+    facts = dict(modgen.facts(archive))
+    back = dict(modgen.readback(built.files))
+    text = built.files[archive.effect_file]
+    for index, tier in enumerate(tiers):
+        key = f"effects.{archive.memory.effect}.if[{index}].limit.has_game_rule"
+        assert facts[key] == tier.name, f"claim 的预期值必须是设置名：{facts[key]!r}"
+        assert back[key] == tier.name, f"产物里的操作数必须是设置名：{back[key]!r}"
+        assert not facts[key].startswith("setting_"), "带前缀 ⇒ 引擎查 `setting_setting_*` 落空"
+        assert f"has_game_rule = {tier.name}" in text
+        # 文案键那一侧**不许**被顺手改掉：本地化表里仍要有 `setting_<设置名>`
+        loc = f"localization.english.{tier.setting}"
+        assert loc in facts, f"文案键 {tier.setting} 必须还在 claim 的事实表里"
+        assert loc in back, f"文案键 {tier.setting} 必须还在产物的事实表里"
+    assert "has_game_rule = setting_" not in text, "操作数不许带文案键的前缀"
 
 
 def test_三档集合与默认档由常量钉住(tmp_path) -> None:
     archive, built = _build(tmp_path)
-    rule = built.files[archive.difficulty.rule_file]
-    assert f"default = setting_sitai_t1_difficulty_{modgen.DIFFICULTY_DEFAULT}" in rule
-    for tier in archive.difficulty.tiers:
-        assert f"flag = {tier.setting}" in rule, "没有 flag 就 `has_game_rule` 读不到"
+    difficulty = archive.difficulty
+    assert difficulty is not None
+    rule = built.files[difficulty.rule_file]
+    assert f"default = {difficulty.tier(modgen.DIFFICULTY_DEFAULT).name}" in rule
+    for tier in difficulty.tiers:
+        assert f"{tier.name} = {{" in rule, "设置块的块名就是引擎眼里的设置名"
+        assert f"flag = {tier.name}" in rule, "没有 flag 就 `has_game_rule` 读不到"
 
 
 def test_少一档或改档位名都当场报错(tmp_path) -> None:
@@ -141,7 +224,7 @@ def test_效果里按档位给玩家追加修正(tmp_path) -> None:
     assert difficulty is not None
     assert "is_ai = no" in effects, "玩家侧修正只该落在玩家身上"
     for tier in difficulty.tiers_with_player_effects():
-        assert f"has_game_rule = {tier.setting}" in effects
+        assert f"has_game_rule = {tier.name}" in effects
         assert f"name = {tier.modifier}" in effects
     # 时长与压力修正一致（否则会出现"压力还在、难度修正没了"的半截状态）
     assert effects.count("years = 10") == 3  # 压力 + 两档难度
@@ -192,6 +275,12 @@ def test_真实数据源声明了难度三档() -> None:
     assert difficulty.rule_file in built.files
     assert difficulty.modifier_file in built.files
     assert "sitai_difficulty" in built.files[difficulty.rule_file]
+    # 发布的那一份也要过引擎的文案键判据（跑在真实 `mod/data` + 真实本地化产物上）
+    back = dict(modgen.readback(built.files))
+    loc = {key.split(".", 2)[2] for key in back if key.startswith("localization.english.")}
+    for tier in difficulty.tiers:
+        assert f"setting_{tier.name}" in loc, f"{tier.id} 的名称键不在本地化表里"
+        assert f"setting_{tier.name}_desc" in loc, f"{tier.id} 的说明键不在本地化表里"
 
 
 def test_两份档案都声明难度表也报错(tmp_path) -> None:

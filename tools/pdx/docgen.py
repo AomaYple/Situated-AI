@@ -33,6 +33,7 @@ from . import (
     install_tree,
     localization,
     modifiers,
+    objectives,
     tabular,
     usage,
 )
@@ -128,6 +129,14 @@ def targets() -> tuple[DocTarget, ...]:
             # 不需要游戏（这也是它第一次进生成器）。
             path=config.DOCS / "07-官方文档索引.md",
             specs=tuple(docs_mirror.doc_table_specs()),
+        ),
+        DocTarget(
+            # 阶段 5 的 9 国目标函数表（`mod/data/*.toml` 的 `[objectives]` 渲染）。
+            # ⚠️ 这是**第一份 `docs/design/**` 目标**（其余 12 份都在 `config.DOCS` 下）：
+            # 表在口径页 §2.3，判据在 `pdx.objectives`（`v3 objectives --check`），
+            # 数据在 `mod/data`。三者一处一方，这张表只负责把数据印成文档里那一张。
+            path=config.REPO / "docs" / "design" / "exec" / "阶段5-目标函数表-口径.md",
+            specs=tuple(objectives.doc_table_specs()),
         ),
         # 散落的单表文档：doc 03 / 09 / 10（AI）、doc 11 / 18 / 20（子目录文件数）。
         # 它们各只有一两张表，为每篇建一个模块是过度设计 —— 按名字前缀分发给各自的目标。

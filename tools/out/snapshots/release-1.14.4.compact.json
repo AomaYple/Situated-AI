@@ -2766,6 +2766,14 @@
     "7:d10b36aa74a59bcf",
     "lines=7"
    ],
+   "00_on_actions_yearly.txt": [
+    "193:0174e170f5f1f36a",
+    "194:531e8f04ff3e0cd1",
+    "195:4fd284c364839756",
+    "196:bb7cde75860e6098",
+    "197:4cf52cd791d3f30a",
+    "lines=619"
+   ],
    "00_opium_wars.txt": [
     "115:37c2183e69232c86",
     "117:fc33d274ba935c54",
@@ -2901,6 +2909,10 @@
     "70:d10b36aa74a59bcf",
     "lines=1765"
    ],
+   "00_power_blocs.txt": [
+    "70:b33a35b43cf34874",
+    "lines=147"
+   ],
    "00_relations.txt": [
     "21:8f127804cd8408f1",
     "lines=376"
@@ -2913,12 +2925,20 @@
     "1117:5300bce778845f5f",
     "lines=2408"
    ],
+   "00_secret_goals.txt": [
+    "94:e669e28d87e7b93d",
+    "lines=888"
+   ],
    "00_sick_man.txt": [
     "189:5303763da83d9b44",
     "lines=507"
    ],
    "00_strategy.txt": [
     "120:ef9ef71812329674",
+    "42:dbdc6e7a9123970f",
+    "43:788597d7f1b3e0c5",
+    "44:b2a2b44f65ff4dd4",
+    "45:b71261caf9c22448",
     "90:335ff0c7e3c36f2e",
     "lines=176"
    ],
@@ -3145,6 +3165,7 @@
     "lines=606"
    ],
    "agitators_5_modifiers.txt": [
+    "607:da01623b51e6e8d0",
     "613:ea9f33336686bb13",
     "615:bd474a57299cfa87",
     "616:d9c36caeba32398b",
@@ -3177,8 +3198,26 @@
     "lines=3953"
    ],
    "common/ai_strategies/03_political_strategies.txt": [
+    "1006:564832f8499c605f",
+    "1007:ce408a6633b27419",
+    "1008:13723d6a57cb870b",
+    "1009:9a244665b3effc22",
+    "1010:d10b36aa74a59bcf",
+    "1113:374ac902bc173df0",
+    "1114:90c451375c931fb6",
+    "1178:1cc98ed731baca4b",
+    "1179:a031bd6e39c67a74",
+    "1180:d10b36aa74a59bcf",
+    "1388:1cc98ed731baca4b",
+    "1389:769ff3a0613a34a6",
+    "1390:d10b36aa74a59bcf",
+    "198:a58d290453a6039c",
     "374:9f32919d5f953135",
     "377:d2b45553b7ef2f19",
+    "424:549d634f76398a9f",
+    "425:75429245266e9662",
+    "426:10b25848cd95e8a1",
+    "427:d10b36aa74a59bcf",
     "528:b40d4708646a4266",
     "529:b9102d381d0f150b",
     "530:b1dcd4f259070c5f",
@@ -3196,6 +3235,9 @@
     "542:e3b0c44298fc1c14",
     "543:bfb711b073ec68cc",
     "544:d10b36aa74a59bcf",
+    "966:cbae08424db575ed",
+    "967:2ee6e0facd694a71",
+    "968:d10b36aa74a59bcf",
     "lines=1395"
    ],
    "common/amendments/00_amendments_enactment_04.txt": [
@@ -3209,6 +3251,10 @@
    "common/character_templates/historical_agitators.txt": [
     "172:e91b16773ae6bd0c",
     "lines=1754"
+   ],
+   "common/company_types/00_companies_asia.txt": [
+    "186:4849f8fa85ebb208",
+    "lines=1020"
    ],
    "common/country_definitions/00_countries.txt": [
     "1316:a48ad55a0c4b0995",
@@ -3232,6 +3278,11 @@
    "common/customizable_localization/ip3_custom_loc.txt": [
     "137:e91b16773ae6bd0c",
     "lines=883"
+   ],
+   "common/defines/00_defines.txt": [
+    "189:eae60043523779d4",
+    "190:82b85dc42f450874",
+    "lines=2239"
    ],
    "common/dynamic_country_names/00_dynamic_country_names.txt": [
     "1233:b72031696868f08d",
@@ -3260,11 +3311,22 @@
     "119:a0bb9e961c6ee061",
     "120:ef9ef71812329674",
     "121:d10b36aa74a59bcf",
+    "125:18a56d46b137fe95",
     "42:dbdc6e7a9123970f",
     "43:788597d7f1b3e0c5",
     "44:b2a2b44f65ff4dd4",
     "45:b71261caf9c22448",
+    "62:68c8f1f7f914c4f7",
+    "63:dce58972fe84e3d3",
+    "64:b2a2b44f65ff4dd4",
+    "65:ef9ef71812329674",
+    "66:d10b36aa74a59bcf",
     "90:335ff0c7e3c36f2e",
+    "92:9ea9f3038fef761c",
+    "93:7d5bed4513f91192",
+    "94:b2a2b44f65ff4dd4",
+    "95:cc112450f67c28b3",
+    "96:d10b36aa74a59bcf",
     "lines=176"
    ],
    "common/history/countries/aus - austria.txt": [
@@ -3294,6 +3356,17 @@
    "common/history/countries/chi - china.txt": [
     "13:6c3858066ad748c9",
     "lines=36"
+   ],
+   "common/history/countries/egy - egypt.txt": [
+    "11:a7f026ae1da648f1",
+    "12:aded38b5e41bff52",
+    "13:e81b1343eb8b9961",
+    "14:ee5a5c5954c1fc1e",
+    "15:d1de48800827b1a5",
+    "16:07ce0321d9b33bf4",
+    "17:7945427500e7a518",
+    "18:c5cebbc896ee3261",
+    "lines=24"
    ],
    "common/history/countries/per - persia.txt": [
     "23:6c3858066ad748c9",
@@ -3328,6 +3401,10 @@
     "82:21e5dc279123789b",
     "lines=91"
    ],
+   "common/history/countries/tur - ottoman empire.txt": [
+    "33:b4b79ceed08ee270",
+    "lines=45"
+   ],
    "common/history/diplomacy/00_relations.txt": [
     "9:8454e7542d10e3a9",
     "lines=376"
@@ -3337,6 +3414,9 @@
     "271:564089314752ad15",
     "272:0123a747f63dfc26",
     "273:d10b36aa74a59bcf",
+    "599:5303763da83d9b44",
+    "600:632a49f5e050c6b0",
+    "601:d10b36aa74a59bcf",
     "lines=654"
    ],
    "common/history/diplomatic_plays/00_carlist_war.txt": [
@@ -3424,6 +3504,10 @@
     "9:afbd6cd515d1c87f",
     "lines=74"
    ],
+   "common/journal_entries/00_sick_man.txt": [
+    "17:ddccdedf96711b35",
+    "lines=507"
+   ],
    "common/journal_entries/00_veiled_protectorate.txt": [
     "11:5303763da83d9b44",
     "1:edca4b36cae39631",
@@ -3446,6 +3530,17 @@
     "10:dcf34583778d3ecc",
     "98:33a72220d3ed01e5",
     "lines=100"
+   ],
+   "common/journal_entries/03_russia.txt": [
+    "1104:8db030513a334a66",
+    "1105:8758211ac1ac690d",
+    "1106:e3b0c44298fc1c14",
+    "1107:77630e6990877ba6",
+    "1108:e3b0c44298fc1c14",
+    "1109:f6a8e4fcd1dc7a11",
+    "1110:b45142dcdae42332",
+    "1111:d10b36aa74a59bcf",
+    "lines=1349"
    ],
    "common/journal_entries/06_portugal_politics.txt": [
     "15:018e55984c984b4b",
@@ -3696,6 +3791,16 @@
     "249:1572f7703c6d2751",
     "lines=744"
    ],
+   "common/static_modifiers/content_3_modifiers.txt": [
+    "245:ad3585387ed0e355",
+    "246:9d9414761372fd24",
+    "247:f59cac888ef42021",
+    "248:7d5b5fe176fad94c",
+    "249:23a06558141b610e",
+    "250:05b3b09ad5d02cae",
+    "251:d10b36aa74a59bcf",
+    "lines=648"
+   ],
    "common/static_modifiers/content_4_modifiers.txt": [
     "781:104a65468f916f74",
     "782:c9bf848f2e38050a",
@@ -3766,8 +3871,8 @@
     "lines=862"
    ],
    "docs/design/backlog.md": [
-    "175:15a6ede30fc4c6fc",
-    "lines=187"
+    "234:15a6ede30fc4c6fc",
+    "lines=383"
    ],
    "events/1848.txt": [
     "430:40acb7feda6c3802",
@@ -3817,117 +3922,183 @@
     "549:221fed52abfb1b04",
     "lines=859"
    ],
+   "mod/data/au_revolution.toml": [
+    "82:a41663188b308b6a",
+    "83:671c4f308be38f88",
+    "84:bf2a3c10867313e6",
+    "87:f3266255fa2891a5",
+    "88:318de7680cf770bf",
+    "89:fe2cc89e39b28f4b",
+    "92:e8ddacc5cb989b33",
+    "93:49f6d1b2ed0166ca",
+    "94:3e44727f4b3801bd",
+    "lines=356"
+   ],
+   "mod/data/brz_market_loss.toml": [
+    "100:88e8feed139cb217",
+    "102:a41663188b308b6a",
+    "103:671c4f308be38f88",
+    "104:88ea99ce0f60b02f",
+    "131:cc524229edec0ebf",
+    "132:c711f001dc425a59",
+    "133:74d5f4aaaef55c80",
+    "93:4833062ba91af23c",
+    "94:ef4324393979452f",
+    "95:63175b02c0107a68",
+    "98:9260271bbad96d80",
+    "99:49f6d1b2ed0166ca",
+    "lines=376"
+   ],
+   "mod/data/bv_alignment.toml": [
+    "131:a41663188b308b6a",
+    "132:671c4f308be38f88",
+    "133:27ebd15f9d948767",
+    "136:e8ddacc5cb989b33",
+    "137:49f6d1b2ed0166ca",
+    "138:6b61c6e1266cf2b7",
+    "lines=432"
+   ],
+   "mod/data/cn_intervention.toml": [
+    "120:cc524229edec0ebf",
+    "121:c711f001dc425a59",
+    "122:82809b8979b348e5",
+    "289:443c053970330c52",
+    "79:a41663188b308b6a",
+    "80:671c4f308be38f88",
+    "81:c2ad595923e97319",
+    "84:ee765431c6d80261",
+    "85:49f6d1b2ed0166ca",
+    "86:2f08fc300fab496c",
+    "89:9d9cb9f10a938d7f",
+    "90:c3017753eefe12ad",
+    "91:a81d4ff5cf27dfbe",
+    "lines=377"
+   ],
+   "mod/data/eg_debt.toml": [
+    "100:49f6d1b2ed0166ca",
+    "101:4a7df78cd0cfc582",
+    "89:c0da63704f9361f4",
+    "90:318de7680cf770bf",
+    "91:49e57890b53d5788",
+    "94:a41663188b308b6a",
+    "95:671c4f308be38f88",
+    "96:bb70804a9b289fd9",
+    "99:e8ddacc5cb989b33",
+    "lines=368"
+   ],
+   "mod/data/pe_great_game.toml": [
+    "101:9d9cb9f10a938d7f",
+    "102:c3017753eefe12ad",
+    "103:b67129a809f56a24",
+    "106:ee765431c6d80261",
+    "107:49f6d1b2ed0166ca",
+    "108:f5ceb9fe8b48912e",
+    "131:cc524229edec0ebf",
+    "132:c711f001dc425a59",
+    "133:c581f3337cb3d878",
+    "96:a41663188b308b6a",
+    "97:671c4f308be38f88",
+    "98:c6b0540324808b6d",
+    "lines=388"
+   ],
+   "mod/data/ru_defeat.toml": [
+    "148:0d848b012174e72a",
+    "149:eaef46b60693c86d",
+    "150:df70dcb91a7719a0",
+    "80:e8ddacc5cb989b33",
+    "81:49f6d1b2ed0166ca",
+    "82:123ceb19b09130b8",
+    "85:9d9cb9f10a938d7f",
+    "86:c3017753eefe12ad",
+    "87:8605112a94bc6098",
+    "lines=440"
+   ],
+   "mod/data/sp_empire_remnant.toml": [
+    "103:a41663188b308b6a",
+    "104:671c4f308be38f88",
+    "105:2dd491d58b21151c",
+    "108:ee765431c6d80261",
+    "109:49f6d1b2ed0166ca",
+    "110:f268763822bfcbc2",
+    "113:e370a709b72b9a18",
+    "114:318de7680cf770bf",
+    "115:0954ba893ba60272",
+    "118:9d9cb9f10a938d7f",
+    "119:c3017753eefe12ad",
+    "120:1f3f927bf7b46cea",
+    "315:ad7f4cdaddcf75ec",
+    "lines=403"
+   ],
+   "mod/data/tr_defeat.toml": [
+    "115:f82872d9b1993999",
+    "116:772c97a71d5f94d7",
+    "117:cf8ff497f2d997d6",
+    "65:a41663188b308b6a",
+    "66:671c4f308be38f88",
+    "67:d4e6446fb8fd20da",
+    "70:e8ddacc5cb989b33",
+    "71:49f6d1b2ed0166ca",
+    "72:123ceb19b09130b8",
+    "75:9d9cb9f10a938d7f",
+    "76:c3017753eefe12ad",
+    "77:929447c6ebc71be8",
+    "lines=361"
+   ],
    "tools/pdx/ab_probe.py": [
-    "852:7e6538258b739ad6",
-    "853:e3b0c44298fc1c14",
-    "854:d83b5f6b25914766",
-    "855:2036f6d5cfed0bc3",
-    "856:dd0bec5565a2b1dc",
-    "857:535a840e30945e02",
-    "858:b6d267efe80a3dbc",
-    "859:e3b0c44298fc1c14",
-    "860:9ab2444443096596",
-    "861:57c6893389242c16",
-    "862:302d1273afd0af6d",
-    "863:1e3117f0d2f5621b",
-    "864:9800d12097024475",
-    "865:0ada0f28ce7ad8fd",
-    "866:a3480eaad1feb7f4",
-    "867:2d867e4bbf09a6b0",
-    "lines=1078"
+    "1017:2a15b423365101c0",
+    "1018:077f19e1ef9aa8e8",
+    "1019:808f92883f351f87",
+    "1020:5a1b3ba35baa39f7",
+    "1021:191ab2d94af8026c",
+    "1022:077f19e1ef9aa8e8",
+    "1023:8975922a5385c4b4",
+    "1024:077f19e1ef9aa8e8",
+    "1025:a83b7f8ebb4e9fd3",
+    "1026:14d914d8e465b8c2",
+    "1027:61384efab03bf9ec",
+    "1028:077f19e1ef9aa8e8",
+    "1029:4debc0db74904f77",
+    "1030:bd019f0bbae49a0e",
+    "1031:077f19e1ef9aa8e8",
+    "lines=1883"
    ],
    "tools/pdx/modgen.py": [
-    "1122:a4fbf4967dc3f57c",
-    "1123:8308b78d597b5494",
-    "1124:1b8cd1c23f6620ef",
-    "1125:76fe007139221ad3",
-    "1179:a006063eded77589",
-    "1209:b0cd0e0c3a7a6b1e",
-    "1247:e3b0c44298fc1c14",
-    "1248:7db8c1cc4516325b",
-    "1249:f0087284db65df19",
-    "1250:0fc861cad3880df1",
-    "1251:c78a1767147bc638",
-    "1252:b6d267efe80a3dbc",
-    "1253:122b69be226d04cb",
-    "1254:91ba68e647343f12",
-    "1255:25407d1b8e533f1d",
-    "1256:245843abef9e72e7",
-    "1257:3d1f65482abf65d7",
-    "1258:077f19e1ef9aa8e8",
-    "1259:a006063eded77589",
-    "1260:07b0c3a02d69c70d",
-    "1261:107a526f8a59df79",
-    "1262:2d9659648d00ee8e",
-    "1263:ca45eaedc25b6193",
-    "1264:3b4b4017482f9743",
-    "1265:bb01c44bd646ab29",
-    "1370:e3b0c44298fc1c14",
-    "1579:f39c9299cdd620f2",
-    "1605:8915724a48a81f00",
-    "1606:68ecf39abb058d5c",
-    "1607:b56947db38c4238f",
-    "1608:38bbba26d44d3657",
-    "1609:60969fbf5afce543",
-    "1610:ba5ec51d07a4ac0e",
-    "1611:99908ebc38141471",
-    "1612:f7ab85f7729bc4e0",
-    "1613:ca5085f56127360a",
-    "1614:8ba3883f696ac6cd",
-    "1615:ba5ec51d07a4ac0e",
-    "1616:ba5ec51d07a4ac0e",
-    "1617:f7ab85f7729bc4e0",
-    "1618:ca5085f56127360a",
-    "1619:8acdd0ad575860ee",
-    "1620:ea72a8865f1560b3",
-    "1621:ca631d5d694bf40b",
-    "1622:ba5ec51d07a4ac0e",
-    "1623:ba5ec51d07a4ac0e",
-    "1624:5dd3f4158594f183",
-    "1625:6c8eb5e4eea48d16",
-    "1626:f7ab85f7729bc4e0",
-    "1627:ca5085f56127360a",
-    "1628:78dc49034a51a978",
-    "1629:8503ca4fbcfd2f53",
-    "1630:1a92b6fe7db73654",
-    "1631:bc287f9c6635285e",
-    "1632:0baa89f0aa1f902b",
-    "1635:ba5ec51d07a4ac0e",
-    "1636:70d8f2993c32807b",
-    "1637:e3b0c44298fc1c14",
-    "1638:e3b0c44298fc1c14",
-    "1639:60a13ad2765c9232",
-    "1640:ba3185dbd5238694",
-    "1641:e3b0c44298fc1c14",
-    "1642:e393f607be4ba23f",
-    "1643:54f83ac0f4968e20",
-    "1644:1ab272a418b0adb8",
-    "1645:b6d267efe80a3dbc",
-    "1646:b808f7d9b1b6877f",
-    "1647:410ba48e1f463bc5",
-    "1648:228ef34ba0f8e2e5",
-    "1649:87f71bdfe1569600",
-    "1650:d8a9180a7ec4dbc4",
-    "1651:99df4d84b0829ba5",
-    "1652:12fbae388053976e",
-    "1653:858ab96d079c0ca9",
-    "180:e3b0c44298fc1c14",
-    "181:c599e6e10a97e90b",
-    "182:1b976092f8f95353",
-    "185:23e70c22333265d2",
-    "186:e3b0c44298fc1c14",
+    "1222:cc77f7a8a2e2946a",
+    "1223:46db4e77db5c5cbb",
+    "1224:7c7d04818c4e092f",
+    "1297:de932c6d487a5e05",
+    "1309:00a1bc728b641947",
+    "1370:c57e096f486ae893",
+    "1467:088e367a474ee7df",
+    "1721:60a13ad2765c9232",
+    "1747:3c63781931495957",
+    "1748:bacfb4d89991a5d3",
+    "1749:e3b0c44298fc1c14",
+    "1750:ed8a4206293a2a4d",
+    "1751:4e76aa1009f88cb0",
+    "1752:39c879a19b56e265",
+    "1753:b6d267efe80a3dbc",
+    "1754:116e157d60c41c58",
+    "1755:410ba48e1f463bc5",
+    "1756:0132b03c355f856a",
+    "1757:fe49af20d449d512",
+    "1758:beef98d3993398f6",
+    "1759:ba5ec51d07a4ac0e",
+    "1760:9fcaf5fc1b39b1c0",
+    "1761:0132b03c355f856a",
+    "1762:ed5f85d304122fd0",
+    "1763:cd760eecbfe6c0ed",
+    "1764:3fde4f84c625121a",
+    "1765:ba5ec51d07a4ac0e",
+    "1766:e3b0c44298fc1c14",
+    "1767:e3b0c44298fc1c14",
     "187:0be2fc578794a211",
-    "188:d2fbf4260c102143",
-    "189:e3b0c44298fc1c14",
-    "679:0db74eb3be7a1faf",
-    "680:ab27abbab49692a1",
-    "681:588ce3e82fc14da7",
-    "682:699251d4104387a1",
-    "683:5ea4019cb8934b42",
-    "684:68ecf39abb058d5c",
-    "685:97c3251c950c5350",
-    "686:ba5ec51d07a4ac0e",
-    "lines=2266"
+    "734:8fe64aa76df314dd",
+    "lines=2366"
+   ],
+   "tools/pdx/modguard.py": [
+    "60:53788cc49b125aeb",
+    "lines=880"
    ]
   },
   "common_entries": {
@@ -38238,6 +38409,17 @@
     "| `input_profile\\` | 19 | 输入配置 |",
     "| `imgui_fonts\\` | 2 | 开发者界面字体 |",
     "| `tools\\` | 1 | 工具 |"
+   ],
+   "阶段5-目标函数表-口径.md::阶段5 9国目标函数表": [
+    "| `au_revolution` | `AUS` | 1 · `01a:270` | 1 · `01a:270` | 3 · `mod/data/au_revolution.toml:82-84` | 0 · 缺 | 0 · 缺 | `ideology` 1 | `friction` 3 / `friction` 3 / `player` 1 | **`opening_card`** · `ai_strategy_conservative_agenda` | 0.0% |",
+    "| `brz_market_loss` | `BRZ` | 1 · `01a:301` | 0 · 缺 | 3 · `mod/data/brz_market_loss.toml:102-104` | 0 · 缺 | 3 · `mod/data/brz_market_loss.toml:93-95` | `ideology` 1 | `friction` 3 / `friction` 3 / `player` 1 | **`declared`** · `ai_strategy_conservative_agenda` | 0.0% |",
+    "| `bv_alignment` | `BAV` | 2 · `common/history/power_blocs/00_power_blocs.txt:70` | 0 · 缺 | 3 · `mod/data/bv_alignment.toml:131-133` | 0 · 缺 | 0 · 缺 | `ideology` 0 | `friction` 3 / `position` 2 / `external` 2 / `player` 1 | **`underivable`** | 0.0% |",
+    "| `cn_intervention` | `CHI` | 1 · `01a:291` | 3 · `mod/data/cn_intervention.toml:89-91` | 3 · `mod/data/cn_intervention.toml:79-81` | 1 · `01a:291` | 0 · 缺 | `mission` 2 | `friction` 3 / `friction` 3 / `player` 1 | **`opening_card`** · `ai_strategy_maintain_mandate_of_heaven` | 0.0% |",
+    "| `eg_debt` | `EGY` | 2 · `common/history/diplomacy/00_subject_relationships.txt:270-273` | 3 · `mod/data/eg_debt.toml:89-91` | 3 · `mod/data/eg_debt.toml:94-96` | 1 · `01a:294` | 0 · 缺 | `ideology` 2 | `friction` 3 / `position` 2 / `player` 1 | **`declared`** · `ai_strategy_progressive_agenda` | 0.0% |",
+    "| `pe_great_game` | `PER` | 1 · `01a:293` | 3 · `mod/data/pe_great_game.toml:101-103` | 3 · `mod/data/pe_great_game.toml:96-98` | 1 · `01a:293` | 0 · 缺 | `ideology` 1 | `friction` 3 / `friction` 3 / `player` 1 | **`measured_true`** · `ai_strategy_conservative_agenda` | 0.0% |",
+    "| `ru_defeat` | `RUS` | 1 · `01a:269` | 3 · `mod/data/ru_defeat.toml:85-87` | 3 · `mod/data/ru_defeat.toml:148-150` | 1 · `01a:269` | 0 · 缺 | `ideology` 1 | `friction` 3 / `endowment` 2 / `player` 1 | **`pushed`** · `ai_strategy_progressive_agenda` | 54.8% |",
+    "| `sp_empire_remnant` | `SPA` | 1 · `01a:279` | 3 · `mod/data/sp_empire_remnant.toml:118-120` | 3 · `mod/data/sp_empire_remnant.toml:103-105` | 3 · `mod/data/sp_empire_remnant.toml:113-115` | 0 · 缺 | `prestige` 1 | `friction` 3 / `endowment` 2 / `player` 1 | **`declared`** · `ai_strategy_progressive_agenda` | 0.0% |",
+    "| `tr_defeat` | `TUR` | 1 · `01a:272` | 3 · `mod/data/tr_defeat.toml:75-77` | 3 · `mod/data/tr_defeat.toml:65-67` | 1 · `01a:272` | 0 · 缺 | `mission` 3 | `friction` 3 / `friction` 3 / `player` 1 | **`opening_card`** · `ai_strategy_tanzimat_reforms` | 0.0% |"
    ]
   },
   "fields": {

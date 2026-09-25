@@ -5,6 +5,6 @@ zzprobe_ab_apply = {
 	# 对任何玩家可见：玩家要演**旁观者**，让俄罗斯保持 AI 控制
 	is_shown = { always = yes }
 	possible = { always = yes }
-	when_taken = { c:RUS ?= { zz_probe_ab_arm = yes } }
+	when_taken = { c:AUS ?= { zz_probe_ab_arm = yes } }
 	ai_chance = { value = 0 }
 }

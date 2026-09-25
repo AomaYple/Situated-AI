@@ -18,10 +18,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
-from pdx import game_auto
+from pdx import config, game_auto
 
-AUTO = Path(r"C:\Users\28905\projects\Situated AI\tools\out\auto")
-TEMPLATE = Path(r"C:\Users\28905\projects\Situated AI\tools\probe\zz_probe_ab\ui\btn_speed.png")
+#: 产物目录与模板路径都**从仓库位置推导**（原先写死 `C:\Users\<用户名>\...`，换机器/换用户名就落空）。
+AUTO = config.OUT / "auto"
+TEMPLATE = Path(__file__).resolve().parent / "zz_probe_ab" / "ui" / "btn_speed.png"
 
 #: 顶栏右侧的候选区域（客户区坐标）。范式文档 §4.3 的实测把「播放」放在 (1725,54)、
 #: 速度 V 放在 (1851,52)，所以这块一定落在这里面 —— 先裁大一点，人看一眼再收紧。

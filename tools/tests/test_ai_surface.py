@@ -9,12 +9,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
-from pdx import ai_surface as surf
-from pdx import config
-from pdx.model import Block
+import pdx.ai_surface as surf
+import pdx.config
+from pdx.model import Block, Scalar
 from pdx.parser import parse_text
+
+if TYPE_CHECKING:
+    from pdx.model import ParsedFile
 
 pytestmark = pytest.mark.unit
 
@@ -171,7 +176,7 @@ def test_核对缺文件时给出提示(tmp_path, monkeypatch) -> None:
 
 @pytest.mark.integration
 def test_真实原版_三槽牌数与默认层() -> None:
-    if not (config.GAME / surf.STRATEGY_DIR).is_dir():
+    if not (pdx.config.GAME / surf.STRATEGY_DIR).is_dir():
         pytest.skip("没有游戏本体：这一条只在装了游戏的机器上判定")
     cards = surf.read_cards()
     slots: dict[str, int] = {}
@@ -185,7 +190,7 @@ def test_真实原版_三槽牌数与默认层() -> None:
 
 @pytest.mark.integration
 def test_真实原版_保守议程读到梅特涅JE() -> None:
-    if not (config.GAME / surf.STRATEGY_DIR).is_dir():
+    if not (pdx.config.GAME / surf.STRATEGY_DIR).is_dir():
         pytest.skip("没有游戏本体")
     cards = surf.read_cards()
     conservative = next(c for c in cards if c.name == "ai_strategy_conservative_agenda")
@@ -194,9 +199,168 @@ def test_真实原版_保守议程读到梅特涅JE() -> None:
 
 @pytest.mark.integration
 def test_真实原版_defines面_有NAI块与开关() -> None:
-    if not (config.GAME / surf.DEFINES_FILE).is_file():
+    if not (pdx.config.GAME / surf.DEFINES_FILE).is_file():
         pytest.skip("没有游戏本体")
     surface = surf.read_defines()
     assert surface.nai_keys > 900
     assert "PRODUCTION_BUILDING_CONSTRUCTION_ENABLED" in surface.enabled_switches
     assert "STRATEGY_RANDOM_FACTOR" in surface.notable
+
+
+# ── 真实原版：新增牌的字段台账（`阶段5-新增牌-口径.md` §2.1 / §3.1 / §3.3）────
+#
+# 这一组守的是**行号与计数**。它存在的原因值得写在代码里：那两处台账此前连错两轮，
+# 两次错因都不在结论、而在**复算手段本身** ——
+#   * 一条只认单个 TAB 缩进的解析漏掉了 `nationalist_agenda`（它的块缩进是两个 TAB）；
+#   * 一条要求 `=` 后面有空格的窄正则看不见原版 `:1006` 的 `anti_interest_groups ={`；
+#   * 行首正则还看不见同行写法 `limit = { has_modifier = X }`（`00_default_strategy.txt` 里有 5 处）。
+# ⇒ 这里的计数一律**在块内递归**做，不对整份文本跑行首正则；行号取解析器的 `line`。
+
+_PS_NAME = "03_political_strategies.txt"
+
+#: `anti_interest_groups` 的 8 处行号（**按块归属**实测；卡序 = 保守/反动/进步/平等/民族/天命/坦志麦特/明治）。
+#: ⚠️ `maintain_mandate_of_heaven` 的是 **1006**（原版写作 `anti_interest_groups ={`，等号后没有空格），
+#: 坦志麦特的是 **1123** —— 这两个数曾经被写反，别再"顺手修正"。
+_ANTI_IG_LINES = {
+    "ai_strategy_conservative_agenda": 54,
+    "ai_strategy_reactionary_agenda": 220,
+    "ai_strategy_progressive_agenda": 424,
+    "ai_strategy_egalitarian_agenda": 620,
+    "ai_strategy_nationalist_agenda": 804,
+    "ai_strategy_maintain_mandate_of_heaven": 1006,
+    "ai_strategy_tanzimat_reforms": 1123,
+    "ai_strategy_meiji_restoration": 1225,
+}
+
+#: 九张政治牌里**唯一**没有 `anti_interest_groups` 的那一张。
+#: （`ai_strategy_default` 也有这一块，但它不在这九张政治牌里 —— 见 §2.1 的括注。）
+_ANTI_IG_MISSING = "ai_strategy_great_reforms"
+
+
+def _parsed(name: str) -> ParsedFile:
+    """解析 `common/ai_strategies/` 下的一份原版文件（编码口径与原版一致：``utf-8-sig``）。"""
+    path = pdx.config.GAME / surf.STRATEGY_DIR / name
+    return parse_text(path.read_text(encoding="utf-8-sig"), path=str(path))
+
+
+def _cards_of(parsed: ParsedFile) -> dict[str, Block]:
+    """``ai_strategy_*`` 顶层块 → 它的块体（其余顶层条目一律不看）。"""
+    return {
+        a.key: a.value
+        for a in parsed.top_assignments
+        if a.key.startswith("ai_strategy_") and isinstance(a.value, Block)
+    }
+
+
+def _has_modifier_lines(block: Block) -> list[int]:
+    """块内**递归**找 `has_modifier` 的行号。
+
+    为什么不是"块内文本 + 行首正则"：同行写法（``limit = { has_modifier = X }``）不会被行首正则
+    看见，而漏掉的表现只是"数字变小"—— 没有报错、没有红，正是最坏的那种失真。
+    """
+    out: list[int] = []
+    for sub in block.assignments():
+        if sub.key == "has_modifier":
+            out.append(sub.line)
+        if isinstance(sub.value, Block):
+            out.extend(_has_modifier_lines(sub.value))
+    return out
+
+
+@pytest.mark.integration
+def test_真实原版_反IG块8处行号与归属() -> None:
+    """§2.1 的 `anti_interest_groups` 行：8 处行号 + 卡名归属 + 九张里唯一缺的那一张。"""
+    path = pdx.config.GAME / surf.STRATEGY_DIR / _PS_NAME
+    if not path.is_file():
+        pytest.skip("没有游戏本体")
+    cards = _cards_of(_parsed(_PS_NAME))
+    got: dict[str, int] = {}
+    for name, body in cards.items():
+        found = body.first("anti_interest_groups")
+        if found is not None:
+            got[name] = found.line
+    assert got == _ANTI_IG_LINES
+    assert _ANTI_IG_MISSING not in got
+    # 括注里的另一条事实：`ai_strategy_default`（不在这九列里）也有这一块。
+    default = _cards_of(_parsed("00_default_strategy.txt"))["ai_strategy_default"]
+    assert default.first("anti_interest_groups") is not None
+
+
+@pytest.mark.integration
+def test_真实原版_牌面门与权重复算() -> None:
+    """§3.1 的四个数：带 `possible` **34** 张 / 带 `weight` **35** 张 / possible 内读修正 **0** / weight 内 **4**。
+
+    这四个数出过 32/33 与 33/34 两套错值，全部来自"块边界没算对"。计数口径写死在这里：
+    **顶层 `ai_strategy_*` 块 → 块内 `possible`/`weight` → 块内递归找 `has_modifier`**。
+    """
+    strategy_dir = pdx.config.GAME / surf.STRATEGY_DIR
+    if not strategy_dir.is_dir():
+        pytest.skip("没有游戏本体")
+    total = 0
+    with_possible = 0
+    with_weight = 0
+    missing_possible: list[str] = []
+    hm_in_possible: dict[str, list[int]] = {}
+    hm_in_weight: dict[str, list[int]] = {}
+    for name in sorted(p.name for p in strategy_dir.glob("*.txt")):
+        for card_name, body in _cards_of(_parsed(name)).items():
+            total += 1
+            possible = body.first("possible")
+            weight = body.first("weight")
+            if possible is None:
+                missing_possible.append(card_name)
+            else:
+                with_possible += 1
+                hits = (
+                    _has_modifier_lines(possible.value) if isinstance(possible.value, Block) else []
+                )
+                if hits:
+                    hm_in_possible[card_name] = hits
+            if weight is not None:
+                with_weight += 1
+                hits = _has_modifier_lines(weight.value) if isinstance(weight.value, Block) else []
+                if hits:
+                    hm_in_weight[card_name] = hits
+    assert total == 35
+    assert with_possible == 34
+    assert with_weight == 35
+    assert missing_possible == ["ai_strategy_industrial_expansion"]
+    assert hm_in_possible == {}
+    assert hm_in_weight == {
+        "ai_strategy_reactionary_agenda": [355],
+        "ai_strategy_progressive_agenda": [548],
+        "ai_strategy_egalitarian_agenda": [738],
+        "ai_strategy_nationalist_agenda": [927],
+    }
+
+
+@pytest.mark.integration
+def test_真实原版_权重为0的牌只有默认牌() -> None:
+    """§3.3 的"门外权重 0"先例：全五份文件里 `weight` 基值为 0 的**只有** `ai_strategy_default`。
+
+    它的语义是"默认牌：永不随机分配"—— `possible = { always = no }`（`:9474`）配
+    `weight = { value = 0 }`（`:9479`），与本页"门说不 + 权重也说 0"同型。
+    """
+    strategy_dir = pdx.config.GAME / surf.STRATEGY_DIR
+    if not strategy_dir.is_dir():
+        pytest.skip("没有游戏本体")
+    zeros: list[tuple[str, str, int]] = []
+    for name in sorted(p.name for p in strategy_dir.glob("*.txt")):
+        cards = _cards_of(_parsed(name))
+        for card_name, body in cards.items():
+            weight = body.first("weight")
+            if weight is None or not isinstance(weight.value, Block):
+                continue
+            base = weight.value.first("value")
+            if base is not None and isinstance(base.value, Scalar) and base.value.unquoted == "0":
+                zeros.append((name, card_name, weight.line))
+    assert zeros == [("00_default_strategy.txt", "ai_strategy_default", 9479)]
+    default = _cards_of(_parsed("00_default_strategy.txt"))["ai_strategy_default"]
+    possible = default.first("possible")
+    assert possible is not None
+    assert possible.line == 9474
+    assert isinstance(possible.value, Block)
+    always = possible.value.first("always")
+    assert always is not None
+    assert isinstance(always.value, Scalar)
+    assert always.value.unquoted == "no"

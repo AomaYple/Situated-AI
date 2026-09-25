@@ -110,7 +110,13 @@ class TestProbeStateRecovery:
 
 class TestArchive:
     def test_真实档案都有国家与两条读数(self) -> None:
-        check = preflight.check_archive("tr_defeat")
+        """样本用 `ru_defeat`（它 `[probe]` 两条都声明了）。
+
+        ⚠️ 2026-09-24：原来钉的是 `tr_defeat`，而 t9 的裁决把奥斯曼那一格**留空**了
+        （目标牌 = 它 1836 的开局牌 `ai_strategy_tanzimat_reforms` ⇒ 判据开局即真，见
+        `docs/design/exec/阶段5-目标牌口径.md` §四.1）—— 换成两条都声明的 `ru_defeat`，判据不变。
+        """
+        check = preflight.check_archive("ru_defeat")
         assert check.ok, check.describe()
 
     def test_不存在的档案报出可选项(self) -> None:
@@ -269,10 +275,15 @@ class TestEnvironmentFailures:
         assert check.level == preflight.INFO
 
     def test_没声明探针读数的档案要说清哪一格不判(self) -> None:
-        """空 `[probe]` 字段是**合法**的，但要知道那一格不会被判 —— 所以要带条件地报"可跑"。"""
-        check = preflight.check_archive("brz_market_loss")
+        """空 `[probe]` 字段是**合法**的，但要知道那一格不会被判 —— 所以要带条件地报"可跑"。
+
+        ⚠️ 2026-09-24：样本从 `brz_market_loss` 换成 `bv_alignment` —— t9 的裁决把巴西那一格
+        **填上了**（改成押 `ai_strategy_conservative_agenda`，判据不再假真），而巴伐利亚那一格
+        按同一条裁决**留空**（它的处境该走外交槽，牌推不出来）。判据一字未变。
+        """
+        check = preflight.check_archive("bv_alignment")
         assert not check.ok
-        assert "reform_card" in check.detail, "巴西留空的正是牌那一格，必须点出来"
+        assert "reform_card" in check.detail, "bv 留空的正是牌那一格，必须点出来"
         assert "modgen --write" in check.fix
 
     def test_不用探针时不查探针(self) -> None:

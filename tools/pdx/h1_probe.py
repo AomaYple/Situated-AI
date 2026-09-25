@@ -22,6 +22,11 @@ mod 目录，并把 `content_load.json` 只留这一个 mod（原列表有备份
     ``CHANGE_STRATEGY_THRESHOLD = 1`` + ``CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE = 100``
     → 每周都可能重抽。回答两件事：**权重能不能推动落点**（大样本剂量反应），
     以及**mod 能不能接管重抽节奏**（这是"让 AI 在战役尺度上重新推导最优解"的杠杆）。
+``gate``
+    **test 0 专用**（2026-09-25 加）：三张门测牌（`possible` 明确为真/为假 × 权重 0/10000）
+    用来判 `set_strategy` **直置**受不受 `possible` 约束 —— 参见
+    `docs/design/exec/阶段5-新增牌-口径.md` §1.4 与 :data:`GATE_CARDS` 上那张表。
+    这个变体的月度体**不带三槽自报链**（只为把日志量压到不会被轮转刷掉）。
 """
 
 from __future__ import annotations
@@ -106,7 +111,7 @@ STORM_DEFINES: dict[str, dict[str, object]] = {
     "NAI": {"CHANGE_STRATEGY_THRESHOLD": 1, "CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE": 100}
 }
 
-VARIANTS = ("natural", "storm")
+VARIANTS = ("natural", "storm", "gate")
 
 #: 生成文件的开头（提醒"改这里没用"）。
 GEN_HEADER = "# ⚠️ 本文件由 `v3 h1-probe` 生成（tools/pdx/h1_probe.py）—— 改这里没用，改生成器。\n"
@@ -187,6 +192,132 @@ def fourth_card_text() -> str:
         f"\tweight = {{ value = 1000 }}\n"
         f"\n"
         f"\tpro_interest_groups = {{ ig_intelligentsia }}\n"
+        f"}}\n"
+    )
+
+
+#: ---- test 0：三张「门」测牌（口径 `docs/design/exec/阶段5-新增牌-口径.md` §1.4）----
+#:
+#: 三格判定，**一次会话同时排掉两个混淆项**：
+#:
+#: ==========  ===================  ========  ============  ==================================
+#: 牌（短名）    `possible`           `weight`  直置在谁      它证明什么
+#: ==========  ===================  ========  ============  ==================================
+#: `gate`      `always = no`        0         RUS           挂上 ⇒ **直置无视 `possible`**
+#:                                                           （权重 0 ⇒ 不可能是引擎抽中的）
+#: `open`      `always = yes`       0         FRA           挂上 ⇒ **权重 0 不阻断直置**
+#:                                                           （正对照；否则 `gate` 的「没挂上」
+#:                                                           会与「权重 0 让直置失效」混淆）
+#: `strong`    `always = no`        10000     谁都不直置    任何国家挂上 ⇒ **引擎自己也
+#:                                                           无视 `possible`**
+#: ==========  ===================  ========  ============  ==================================
+#:
+#: 三张牌**只在这个变体里生成**：`natural` / `storm` 的产物逐字节不变（每次只改一个变量）。
+GATE_PREFIX = "ai_strategy_sitai_probe_"
+
+#: 短名 → `possible` 的 `always` 取值、权重。
+GATE_CARDS: tuple[tuple[str, str, float], ...] = (
+    ("gate", "no", 0.0),
+    ("open", "yes", 0.0),
+    ("strong", "no", 10000.0),
+)
+
+#: 直置对象（短名 → 国家 tag）。`strong` 刻意不在里面 —— 它的证据是"**没有**直置却出现了"。
+GATE_SET_TAGS: tuple[tuple[str, str], ...] = (("gate", "RUS"), ("open", "FRA"))
+
+#: 读数盯哪两个国家（直置对象；`strong` 另有一条"谁挂上就记一行"的阳性行覆盖所有国家）。
+GATE_WATCH_TAGS: tuple[str, ...] = ("RUS", "FRA")
+
+
+def gate_card_text(short: str, possible: str, weight: float) -> str:
+    """test 0 的一张探针牌（`possible` / `weight` 由 :data:`GATE_CARDS` 定）。"""
+    return (
+        f"{GEN_HEADER}"
+        f"# test 0 的「门」测牌（口径见 `docs/design/exec/阶段5-新增牌-口径.md` §1.4）。\n"
+        f"# 它证明什么，见 `h1_probe.GATE_CARDS` 上面那张表 —— 三张牌是一组对照。\n"
+        f"{GATE_PREFIX}{short} = {{\n"
+        f'\ticon = "gfx/interface/icons/ai_strategy_icons/progressive_agenda.dds"\n'
+        f"\ttype = political\n"
+        f"\tpossible = {{ always = {possible} }}\n"
+        f"\n"
+        f"\tweight = {{ value = {weight:g} }}\n"
+        f"}}\n"
+    )
+
+
+def gate_monthly_text() -> str:
+    """gate 变体的月度体：**只有**直置与读数，不带三槽自报链。
+
+    为什么砍掉链：那三条链每个国家每月各写一行（阶段 2 实测 40 个月 ≈ 11,000 行），
+    而日志按 512KB 轮转（阶段 2 事实 8）—— 最早那个月的读数正是本测试要的东西，
+    不该冒被刷掉的风险。
+    """
+    sets = "\n".join(
+        (
+            f"\t\tif = {{\n"
+            f"\t\t\tlimit = {{ c:{tag} ?= this }}\n"
+            f"\t\t\tset_strategy = {GATE_PREFIX}{short}\n"
+            f'\t\t\tdebug_log = "ZZPROBE H1;GATE;set_{short};'
+            f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+            f"\t\t}}"
+        )
+        for short, tag in GATE_SET_TAGS
+    )
+    watch = " ".join(f"c:{tag} ?= this" for tag in GATE_WATCH_TAGS)
+    reads: list[str] = []
+    for short, _possible, _weight in GATE_CARDS:
+        reads.append(
+            f"\t\tif = {{\n"
+            f"\t\t\tlimit = {{ OR = {{ {watch} }} }}\n"
+            f"\t\t\tif = {{\n"
+            f"\t\t\t\tlimit = {{ has_strategy = {GATE_PREFIX}{short} }}\n"
+            f'\t\t\t\tdebug_log = "ZZPROBE H1;GATE;{short}_yes;'
+            f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+            f"\t\t\t}}\n"
+            f"\t\t\telse = {{\n"
+            f'\t\t\t\tdebug_log = "ZZPROBE H1;GATE;{short}_no;'
+            f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+            f"\t\t\t}}\n"
+            f"\t\t}}"
+        )
+    seen = (
+        f"\t\t# `strong` 谁都没被直置 ⇒ 它出现在**任何**国家上，都是「引擎自己绕过门」的证据。\n"
+        f"\t\tif = {{\n"
+        f"\t\t\tlimit = {{ has_strategy = {GATE_PREFIX}strong }}\n"
+        f'\t\t\tdebug_log = "ZZPROBE H1;GATE;strong_seen;'
+        f'[THIS.GetCountry.GetNameNoFormatting]"\n'
+        f"\t\t}}"
+    )
+    return "\n".join(["\t\t# ① 直置（每月一次，只打在对照国上）", sets, "", *reads, "", seen])
+
+
+def gate_on_actions_text() -> str:
+    """gate 变体的钩子：与另外两个变体**同一组钩子**，月度体换成门测那几行。"""
+    return (
+        f"{GEN_HEADER}"
+        f"# test 0 专用。钩子与 natural/storm 同源（都在 `on_monthly_pulse_country` 上），\n"
+        f"# 只有月度体不同 —— 这样「直置」与「读数」都在**同一个国家作用域**里发生。\n"
+        f"on_game_started = {{\n"
+        f"\ton_actions = {{ zz_probe_h1_start }}\n"
+        f"}}\n"
+        f"\n"
+        f"on_game_started_after_lobby = {{\n"
+        f"\ton_actions = {{ zz_probe_h1_start }}\n"
+        f"}}\n"
+        f"\n"
+        f"on_monthly_pulse_country = {{\n"
+        f"\ton_actions = {{ zz_probe_h1_monthly }}\n"
+        f"}}\n"
+        f"\n"
+        f"zz_probe_h1_start = {{\n"
+        f"\teffect = {{ zz_probe_h1_boot = yes }}\n"
+        f"}}\n"
+        f"\n"
+        f"# root = 国家\n"
+        f"zz_probe_h1_monthly = {{\n"
+        f"\teffect = {{\n"
+        f"{gate_monthly_text()}\n"
+        f"\t}}\n"
         f"}}\n"
     )
 
@@ -407,9 +538,17 @@ def build(*, variant: str = "natural", game: Path | None = None) -> Built:
     files["common/ai_strategies/zz_probe_h1_noloc.txt"] = noloc_card_text()
     files["common/ai_strategies/zz_probe_h1_fourth.txt"] = fourth_card_text()
     files["common/scripted_effects/zz_probe_h1_effects.txt"] = effects_text(variant)
-    files["common/on_actions/zz_probe_h1_on_actions.txt"] = on_actions_text(
-        ai_surface.read_cards(game)
-    )
+    if variant == "gate":
+        # test 0 的三张门测牌 + 只读门的那份月度体（见 GATE_CARDS 上那张表）。
+        for short, possible, weight in GATE_CARDS:
+            files[f"common/ai_strategies/zz_probe_h1_{short}.txt"] = gate_card_text(
+                short, possible, weight
+            )
+        files["common/on_actions/zz_probe_h1_on_actions.txt"] = gate_on_actions_text()
+    else:
+        files["common/on_actions/zz_probe_h1_on_actions.txt"] = on_actions_text(
+            ai_surface.read_cards(game)
+        )
     if variant == "storm":
         files["common/defines/zz_probe_h1_defines.txt"] = defines_text()
     return Built(variant=variant, files=files)

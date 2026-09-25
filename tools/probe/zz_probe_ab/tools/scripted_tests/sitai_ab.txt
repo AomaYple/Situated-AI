@@ -17,7 +17,7 @@ tests = {
 		run_count = 1
 		# 成功 = 改革窗口开过（行为层①）。
 		success = {
-			c:RUS ?= { has_journal_entry = je_sitai_ru_reform_window }
+			c:AUS ?= { has_journal_entry = je_sitai_au_revolution_window }
 		}
 		# 失败 = 到日期仍未开窗（不是「跳过」：跳过会让整件事悄悄过去）。
 		fail = {
@@ -28,9 +28,9 @@ tests = {
 	law_changed = {
 		acceptable_fail_rate = 0.0
 		run_count = 1
-		# 成功 = law_serfdom 已经不是现行法律（行为层②：真的换了法，不只是开了个窗）。
+		# 成功 = law_manorialism 已经不是现行法律（行为层②：真的换了法，不只是开了个窗）。
 		success = {
-			c:RUS ?= { NOT = { has_law = law_type:law_serfdom } }
+			c:AUS ?= { NOT = { has_law = law_type:law_manorialism } }
 		}
 		fail = {
 			game_date > "1841.1.1"
