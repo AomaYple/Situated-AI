@@ -1,4 +1,4 @@
-﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+# ⚠️ 本文件由 `v3 modgen` 生成（src/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
 
 # 埃及 · 债务危机 · 冲击记账（A 级：真实世界状态 —— 变量 + 修正，不占任何槽位）。
 # 调用方：A/B 实验（B 组显式施加冲击）。本档案刻意**不绑 on_action**：「什么才算这次冲击」的判定留给实验给结论，
@@ -11,6 +11,7 @@ sitai_eg_debt_shock = {
 		value = 1
 		days = 3650
 	}
+	remove_modifier = sitai_eg_debt_pressure
 	add_modifier = {
 		name = sitai_eg_debt_pressure
 		years = 10
@@ -23,6 +24,7 @@ sitai_eg_debt_shock = {
 # 修正 sitai_eg_reform_inputs；效果名 sitai_eg_reform_input（不绑 on_action，由实验显式调用）。
 
 sitai_eg_reform_input = {
+	remove_modifier = sitai_eg_reform_inputs
 	add_modifier = {
 		name = sitai_eg_reform_inputs
 		years = 10

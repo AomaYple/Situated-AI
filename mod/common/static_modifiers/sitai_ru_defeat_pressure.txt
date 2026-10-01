@@ -1,11 +1,19 @@
-﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+# ⚠️ 本文件由 `v3 modgen` 生成（src/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
 
-# 处境压力（A 级）：俄罗斯 · 战败求存。每条字段都照原版同族用法取档位，
+# 处境压力（A 级）：俄罗斯 · 战败求存。基线档的每条字段照原版同族用法取档位，
 # 每条的依据见 sitai_ru_defeat.md（由 why_report 生成）。
+# 叠加档 sitai_ru_defeat_pressure_capitulation：只在 has_variable = recent_capitulation 时由冲击效果额外挂上（基线档恒挂 ⇒ 处境牌的门在两种形态下都成立）。
+# ⚠️ 叠加档的每条字段是「实测总量 − 原版基线档」的**差额**，**不是**原版同族用法里的一档（档位依据与「为什么是差额」见各条 why）。
 
 sitai_ru_defeat_pressure = {
 	icon = gfx/interface/icons/timed_modifier_icons/modifier_statue_negative.dds
-	country_legitimacy_base_add = -35
-	interest_group_ig_landowners_pol_str_mult = -0.3
-	country_loan_interest_rate_add = 0.35
+	country_legitimacy_base_add = -20
+	interest_group_ig_landowners_pol_str_mult = -0.15
+	country_loan_interest_rate_add = 0.2
+}
+sitai_ru_defeat_pressure_capitulation = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_statue_negative.dds
+	country_legitimacy_base_add = -15
+	interest_group_ig_landowners_pol_str_mult = -0.15
+	country_loan_interest_rate_add = 0.15
 }

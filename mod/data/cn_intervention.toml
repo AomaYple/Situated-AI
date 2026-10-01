@@ -39,7 +39,7 @@ country = "CHI"
 # 档案对哪个引擎版本有效（写进 mod 元数据的 supported_game_version）。
 # 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
 # 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
-game_version = "1.14.4"
+game_version = "1.14.5"
 why = "**修的是什么毛病**：原版 1.14.3 里「被列强打穿」这件事**已经有原版自己的账**（`opium_wars_lost`：合法性 -50、生活水平 -2、军事 -33%，content_1_modifiers.txt:15-26），但那本账只记在**战败那一刻**，而且原版对大清只有两条反应通道 —— 要么走 `je_warlord_china` 的军阀裂解（00_warlord_china.txt:1），要么走 `je_chinese_missions` 的传教渗透与排教冲突（00_taiping.txt:1 那个块的块名其实是 `je_chinese_missions`，同文件里的 `je_taiping` 块在 :242）。**「被外力逼着开门 → 改革派被托起来」这条因果在原版里不存在**：士绅与旧官僚照旧在朝、科举与八股照旧，于是玩家看到的是一个**挨了打却不会变**的大清。本档案不替 AI 决定改什么，只把干涉记成账、把压力落成真实的合法性 / 保守侧 / 财政变化，让原版自己那张**读改革派 IG 的**权重公式（`ai_strategy_progressive_agenda`，03_political_strategies.txt:528-544）自己转向。⚠️ 依据已于 2026-09-22 更正：原版 AI 策略里 212 处 has_journal_entry 全部硬编码**具名** JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）。本档案一张牌都不递（见 `[cards]`）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；它是「加一处境 = 加一份数据源」（G-EXIT-1）在**另一种失败模式**上的证明件，不是一份经过校准的档案设计。"
 
 
@@ -49,17 +49,17 @@ why = "**修的是什么毛病**：原版 1.14.3 里「被列强打穿」这件�
 [memory]
 variable = "sitai_cn_intervention_memory"
 effect = "sitai_cn_intervention_shock"
-why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown_when_inactive / possible 读它，于是「被列强干涉过」这件事变成可查的世界状态（阶段 1 已证：牌直接读 has_variable / has_journal_entry）。谁把干涉判成干涉，本档案不猜：原版 on_war_end 只给 scope:actor / scope:target，不带胜负（00_code_on_actions.txt:7043），而「被迫开国」甚至**不一定是战争结果**（原版 `je_opium_wars` 的 complete 也可以是拿到 treaty port，00_opium_wars.txt:117-137）—— 挂错会把被侵略的一方记成没被碰过，也会把侵略者记进去。这个判定留给施加冲击的那一处（实验显式调用 `sitai_cn_intervention_shock`，本档案**不绑 on_action**）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**。"
+why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown_when_inactive / possible 读它，于是「被列强干涉过」这件事变成可查的世界状态（阶段 1 已证：牌直接读 has_variable / has_journal_entry）。谁把干涉判成干涉，本档案不猜：原版 on_war_end 只给 scope:actor / scope:target，不带胜负（00_code_on_actions.txt:7081），而「被迫开国」甚至**不一定是战争结果**（原版 `je_opium_wars` 的 complete 也可以是拿到 treaty port，00_opium_wars.txt:120-139）—— 挂错会把被侵略的一方记成没被碰过，也会把侵略者记进去。这个判定留给施加冲击的那一处（实验显式调用 `sitai_cn_intervention_shock`，本档案**不绑 on_action**）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**。"
 
 [[memory.params]]
 key = "value"
 amount = 1
-why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次被干涉」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 00_code_on_actions.txt:7046）。　【沿用·口径】沿用 ru_defeat 的取值，未针对本条处境独立校准。"
+why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次被干涉」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 00_code_on_actions.txt:7084）。　【沿用·口径】沿用 ru_defeat 的取值，未针对本条处境独立校准。"
 
 [[memory.params]]
 key = "days"
 amount = 3650
-why = "10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在大清身上有原版先例**：原版 `je_opium_wars`（鸦片战争，就是「外力打穿大清」那条 JE）的 timeout 正是 3650（00_opium_wars.txt:187）—— 原版给「被外力打开之后」的时间窗就是这个数，而 19 世纪的不平等条约本身就是以十年计的长期抽血，不是一次赔款。⚠️ **本条 why 更正过一次**：初稿写的是「`je_taiping` 的 timeout 是 3650」，复核时发现 `je_taiping` 块（00_taiping.txt:242）**根本没有 timeout 字段**，3650 出自 `je_opium_wars`；已改为引真源。对照原版给 recently_had_war 的是 days = 1825（5 年，00_code_on_actions.txt:7048）。　【沿用·口径】天数沿用 ru_defeat 的 3650（该值在其 why 里写作「战败比打过仗更该留得久，故取两倍」）；本处境换了一条**更贴题**的原版先例（鸦片战争 JE 的同一个数）来支撑它，**未独立校准**。"
+why = "10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在大清身上有原版先例**：原版 `je_opium_wars`（鸦片战争，就是「外力打穿大清」那条 JE）的 timeout 正是 3650（00_opium_wars.txt:189）—— 原版给「被外力打开之后」的时间窗就是这个数，而 19 世纪的不平等条约本身就是以十年计的长期抽血，不是一次赔款。⚠️ **本条 why 更正过一次**：初稿写的是「`je_taiping` 的 timeout 是 3650」，复核时发现 `je_taiping` 块（00_taiping.txt:242）**根本没有 timeout 字段**，3650 出自 `je_opium_wars`；已改为引真源。对照原版给 recently_had_war 的是 days = 1825（5 年，00_code_on_actions.txt:7086）。　【沿用·口径】天数沿用 ru_defeat 的 3650（该值在其 why 里写作「战败比打过仗更该留得久，故取两倍」）；本处境换了一条**更贴题**的原版先例（鸦片战争 JE 的同一个数）来支撑它，**未独立校准**。"
 
 # ── ③ 压力：真实的合法性 / 保守侧失势 / 财政恶化（A 级）──────
 # 三条字段合起来表达的是：**外力把守旧那一侧从朝堂上撬下来**。
@@ -136,7 +136,7 @@ why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有两条（
 [[journal_entry.fields]]
 key = "weight"
 amount = 100
-why = "JE 列表拥挤时的保留优先级。与原版 je_corn_laws 的 weight = 100 同档（00_corn_laws.txt:79）—— 改革窗口是处境级 JE，不该被小 JE 挤掉。⚠️ 已知的档位差异：原版大清那一族的 JE 用 weight = 10000（je_opium_wars，00_opium_wars.txt:183；je_warlord_china，00_warlord_china.txt:105）、1000（je_boxer_rebellion，00_boxer_rebellion.txt:49）。本档案**刻意不取 1000/10000**：那几档是原版核心历史内容 JE，本档案是与它们并行的处境窗口，压过它们会把原版自己的历史内容挤下去。　【沿用·口径】沿用 ru_defeat 的取值，未针对本条处境独立校准。"
+why = "JE 列表拥挤时的保留优先级。与原版 je_corn_laws 的 weight = 100 同档（00_corn_laws.txt:79）—— 改革窗口是处境级 JE，不该被小 JE 挤掉。⚠️ 已知的档位差异：原版大清那一族的 JE 用 weight = 10000（je_opium_wars，00_opium_wars.txt:185；je_warlord_china，00_warlord_china.txt:105）、1000（je_boxer_rebellion，00_boxer_rebellion.txt:49）。本档案**刻意不取 1000/10000**：那几档是原版核心历史内容 JE，本档案是与它们并行的处境窗口，压过它们会把原版自己的历史内容挤下去。　【沿用·口径】沿用 ru_defeat 的取值，未针对本条处境独立校准。"
 
 [[journal_entry.conditions]]
 gate = "is_shown_when_inactive"
@@ -258,7 +258,7 @@ why = "记忆变量的读法。原版用法：00_corn_laws.txt:7 等 795 处（*
 [[references]]
 kind = "effect"
 name = "set_variable"
-why = "写记忆变量。原版用法：00_code_on_actions.txt:7046（on_war_end 给 recently_had_war 记 5 年）。"
+why = "写记忆变量。原版用法：00_code_on_actions.txt:7084（on_war_end 给 recently_had_war 记 5 年）。"
 
 [[references]]
 kind = "effect"

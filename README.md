@@ -5,25 +5,27 @@ Victoria 3 的 AI 相关 mod 开发项目。
 > **当前状态**：仓库里有三部分 —— 一套 **21 篇的 mod 开发知识库**、一套
 > **可复现其中全部统计数据的 Python 工具链**，以及**已经在跑的 mod 本体**：
 > 数据源 `mod/data/*.toml`（**9 份处境档案**）经 `v3 modgen` 生成 `mod/` 下的
-> **67 个产物**，由五道闸门 + 234 条断言 + 850 条引用持续看守。
+> **69 个产物**，由五道闸门 + 234 条断言与引用检查持续看守。
 > 已进入**阶段 5（档案扩张）**，逐阶段进度见 `docs/design/01-大方向.md` §3。
 >
-> **接手 / 隔久了再回来：先读 [`docs/design/exec/接续说明.md`](docs/design/exec/接续说明.md)**
-> —— 那一页写清"现在在哪、下一步做什么、怎么跑"，以及一批踩过的雷。
+> **接手 / 隔久了再回来：先读 [`docs/design/exec/接续-下一步.md`](docs/design/exec/接续-下一步.md)**
+> —— 那是**完整的接手文档**（自包含：项目背景、当前停在哪、卡表与重建波次、全部工作口径、
+> 铁律、一批踩过的雷、开场命令）。文档总览见 [`docs/README.md`](docs/README.md)；
+> 历史交接页 [`docs/design/exec/接续说明.md`](docs/design/exec/接续说明.md) 仍在，但以新接手文档为准。
 
 ## 环境
 
 | 项目 | 值 |
 |---|---|
-| 游戏 | Victoria 3 **1.14.3 (Ice Tea)** |
+| 游戏 | Victoria 3 **1.14.5 (Ice Tea)** |
 | Clausewitz | `caligula/release/1.14.x` |
 | Steam App ID | `529340` |
 | Python | 3.11+（本机 3.14） |
-| 平台 | Steam / Windows |
+| 工具链平台 | Windows / macOS / Linux；实机窗口自动化目前仅支持 Windows |
 
 > ⚠️ **版本跨度**：知识库多数主题文档的统计与「零使用」类结论**采集于 1.14.2**，
-> 而游戏已升级到 1.14.3，这些结论尚未逐条重测。已核验的数字见 `v3 verify`
-> （断言表已更新到 1.14.3），文档与断言表的一致性由测试持续看守。
+> 而游戏已升级到 1.14.5，这些结论尚未逐条重测。已核验的数字见 `v3 verify`
+> （断言表已更新到 1.14.5），文档与断言表的一致性由测试持续看守。
 
 ## 知识库
 
@@ -56,12 +58,36 @@ Victoria 3 的 AI 相关 mod 开发项目。
 但「所有与 mod 开发相关的信息」没有边界。仓库只声明**能回答哪些任务** ——
 见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」。
 
-```powershell
+Windows（无需激活虚拟环境）：
+
+```text
+python -m venv .venv
 .venv\Scripts\python.exe -m pip install -e ".[dev]"   # 一次性安装
-.venv\Scripts\v3.exe analyze --quiet                  # 全量分析并落盘（本机约 35 秒）
-.venv\Scripts\v3.exe verify --fast                    # 核对文档里的数量断言
-.venv\Scripts\v3.exe crosscheck                       # 用游戏日志交叉验证解析正确性
+.venv\Scripts\python.exe -m pdx.cli analyze --quiet   # 全量分析并落盘
+.venv\Scripts\python.exe -m pdx.cli verify --fast     # 核对文档里的数量断言
 ```
+
+macOS / Linux：
+
+```text
+python3 -m venv .venv
+.venv/bin/python -m pip install -e ".[dev]"
+.venv/bin/python -m pdx.cli verify --from-snapshot
+.venv/bin/python -m pdx.cli tables --offline
+.venv/bin/python -m pdx.cli modguard --offline
+```
+
+游戏位置由 `V3_ROOT` 配置；没有游戏时使用离线快照路径。检查统一使用
+`python tools/ci/run_check.py <lint|format|types|test|offline|encoding>`，入口会优先选择
+当前平台的仓库 `.venv`。Windows 的 `requirements.lock` 用于该平台的依赖对账，
+macOS / Linux 从 `pyproject.toml` 安装对应平台依赖。
+
+### 游戏安装与编码
+
+仓库全部文本采用 **UTF-8 无 BOM、LF**。游戏脚本和本地化的 BOM 由安装或打包边界添加；
+因此安装时使用部署工具或 `python -m pdx.cli package --output dist/situated-ai.zip`，
+解压 ZIP 到独立 mod 目录后挂载该目录。ZIP 内的 `DISTRIBUTION-MANIFEST.json`
+记录每个交付文件的 SHA-256。仓库里的 `mod/` 是无 BOM 的源码产物目录。
 
 ### 它做什么
 
@@ -101,7 +127,7 @@ mod 相关信息，游戏升级后 `v3 snapshot diff` 一次就能看出 Paradox
 CI 跑 `v3 verify --from-snapshot`（真值来自**入库的离线真值**：精简快照 + 官方文档清单，覆盖其中 43 条）。
 两条路径共用同一份断言注册表与同一个漂移扫描，不会出现「测试过了但工具没发现」。
 
-**171 张生成表也有对称的那一条**：算它们要读游戏，于是「表被手改、或改了生成器
+**174 张生成表也有对称的那一条**：算它们要读游戏，于是「表被手改、或改了生成器
 却忘了重跑」在 CI 上原本无人看守。现在精简快照里带着每张表当时的数据行，
 `v3 tables --offline` 只读快照与文档即可逐行核对（`--write` 可按快照恢复），
 CI 与 pre-commit 都跑它。`.pre-commit-config.yaml` 与 `ci.yml` 的对应关系写在
@@ -119,10 +145,10 @@ CI 与 pre-commit 都跑它。`.pre-commit-config.yaml` 与 `ci.yml` 的对应�
 游戏升级后的维护因此是**一条命令**：`v3 refresh`（= `v3 tables --write` + `v3 verify --fix`，
 再核一遍并列出机器改不了的剩余项）。
 
-文档里那些**由工具生成**的表格（171 张：doc 05 的 defines 表、doc 08 的目录统计表、
+文档里那些**由工具生成**的表格（174 张：doc 05 的 defines 表、doc 08 的目录统计表、
 doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几族统计表）走另一条路：`v3 tables`
 直接重算并逐行比对，不一致就退出码 1 —— 所以它们不可能过期，也不该手改。
-「哪些表已经有人管」本身也有余额看守（`tools/tests/test_inventory.py`：无人看守的
+「哪些表已经有人管」本身也有余额看守（`tests/test_inventory.py`：无人看守的
 机械表只许减少，**现为 0**；散文数字那一面也是 0，剩下的每一个数字的「为什么不该由工具算」
 都写在 `test_inventory.py` 的 `PROSE_NOT_COMPUTED` 里）。
 
@@ -130,8 +156,8 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **1630 条**用例（1622 通过 / 8 按条件跳过） |
-| 覆盖率 | **88.50%**（`v3 cov` 实测；门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
+| 测试 | **2151 条**用例（`pytest --collect-only` 实测；整套读数见 `docs/reports/` 的全量基线） |
+| 覆盖率 | **89.02%**（`v3 cov` 实测；门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | **3,962** 个脚本文件（`game\` 下 `.txt` 3,758 + `.gui` 204，即 `pdx.cache` 的解析条数）+ **1,878** 个本地化 `.yml` |
 | 范围声明 | **不说「全量」** —— 文件维度可证伪（136 个 `common\` 子目录逐文件覆盖，有引擎日志背书），但「所有相关信息」没有边界、无法证伪。本仓库只声明**能回答哪些任务**，见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」 |
@@ -143,13 +169,13 @@ Situated AI/
 ├─ mod/                      **mod 本体**：`data/*.toml` 是唯一手写的数据源，其余全是 `v3 modgen` 的生成物
 ├─ docs/design/              「大方向」+ `exec/`（一页执行文档 · 结果文档 · 收口清单 · **接续说明**）+ backlog
 ├─ docs/victoria3-modding/   20 篇 mod 开发知识库 + 本索引
-├─ docs/audits/              测试套件审计报告（重构前的历史快照）
+├─ docs/audits/              当前工程审计与历史测试快照
 ├─ research/
-│   ├─ official-docs/        92 篇游戏自带官方 .md 的逐字镜像（**不入库**，用 `v3 mirror write` 重建）
+│   ├─ official-docs/        94 篇游戏自带官方 .md 的规范化镜像（**不入库**，用 `v3 mirror write` 重建）
 │   └─ official-docs.manifest.json  镜像清单：路径 / 字节 / 行数 / sha256（**入库**，Paradox 版权内容不在其中）
 ├─ tools/
-│   ├─ pdx/                  工具链核心包（54 个模块，不含 `__init__.py`；解析部分纯标准库，cli.py 用 typer + rich）
-│   ├─ tests/                测试（77 个测试文件 / 1630 条用例）
+│   ├─ pdx/                  工具链核心包（64 个模块，不含 `__init__.py`；解析部分纯标准库，cli.py 用 typer + rich）
+│   ├─ tests/                测试（84 个测试文件 / 2151 条用例）
 │   ├─ prof/                 性能剖析
 │   ├─ out/                  分析产物（已 gitignore）
 │   └─ reports/              人可读报告（**入库**）
@@ -189,7 +215,7 @@ Situated AI/
 
 | 新东西 | 解决什么 |
 |---|---|
-| `v3 tables --offline` + 快照的 `doc_tables` 域 | CI 上（没有游戏）也能守住 171 张生成表 |
+| `v3 tables --offline` + 快照的 `doc_tables` 域 | CI 上（没有游戏）也能守住 174 张生成表 |
 | `v3 cache`（解析磁盘缓存） | 全树解析 65 秒 → 读回 2.8 秒；16 个 xdist worker 共享，且 worker 只读不写 |
 | `v3 cov`（覆盖率门禁） | 整体 86% 之外，再给 11 个核心模块各设下限 —— 整体数字会掩盖「大模块退化、小模块补测」 |
 | `v3 lock` + `requirements.lock` | `pyproject.toml` 全是下限，下限不保证装出来是同一套 |
@@ -220,7 +246,7 @@ Situated AI/
 
 | 项 | 数值 | 说明 |
 |---|---:|---|
-| 知识库正文总量 | 1,296,706 字符 | 全部 21 篇（20 篇主题文档 + 索引） |
+| 知识库正文总量 | 1,296,152 字符 | 全部 21 篇（20 篇主题文档 + 索引） |
 | 逐字命中官方原文 | 45,259 个窗口（**3.58%**） | 约相当于官方 219,000 字符语料的 **20.7%** |
 | ├ 代码块内 | 40,780 个（3.22%） | **PDX 语法骨架、字段名、示例模板** —— 与引用 API 签名同类 |
 | └ 代码块外 | 4,479 个（**0.35%**，约 4.5K 字符） | 官方 `.md` 里的**英文注释原句**，作为字段语义的依据被引述 |

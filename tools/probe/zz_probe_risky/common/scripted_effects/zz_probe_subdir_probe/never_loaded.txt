@@ -1,4 +1,4 @@
-﻿# P25 的反证文件：**故意**放进 `common/scripted_effects/` 的子目录里。
+# P25 的反证文件：**故意**放进 `common/scripted_effects/` 的子目录里。
 # 2026-09-20 实测推断「common/<库>/ 的子目录不被枚举」——证据是当时放在
 # zz_probe_p5_candidates/ 等子目录里的文件既没被读（无 BOM 提醒），
 # 调用时还报 `Unknown effect`。这里用自报方式再钉一次：

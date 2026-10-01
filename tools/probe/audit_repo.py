@@ -11,7 +11,7 @@
 本脚本只**读**仓库并打印清单（不改任何文件、不读游戏），把"该改什么"变成可核对的行：
 
 * 非 Python 的可执行/脚本文件（Python 化的候选）；
-* `tools/pdx` 模块 → 是否有专门测试文件引用它（覆盖缺口）；
+* `src/pdx` 模块 → 是否有专门测试文件引用它（覆盖缺口）；
 * 手写痕迹：`ctypes` / 自造解析（`csv`/`json`/`toml` 之外的逐字符解析）/ 自造 CLI 参数解析；
 * 覆盖率低于门禁或偏低的模块（读 `cov.json`）；
 * 性能：基准用例清单（`pytest-benchmark`）+ 是否有对应基准；
@@ -26,7 +26,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from pdx import config
 

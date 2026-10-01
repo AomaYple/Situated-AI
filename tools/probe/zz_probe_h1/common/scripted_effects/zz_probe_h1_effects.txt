@@ -1,4 +1,4 @@
-﻿# ⚠️ 本文件由 `v3 h1-probe` 生成（tools/pdx/h1_probe.py）—— 改这里没用，改生成器。
+# ⚠️ 本文件由 `v3 h1-probe` 生成（src/pdx/h1_probe.py）—— 改这里没用，改生成器。
 # ⚠️ **本文件里只能有裸效果列表**（scripted_effects 的语法）：写成 on_action 那种
 #    `effect = { … }` 包装会被引擎读成「调一个叫 effect 的效果」→
 #    `Unknown effect effect`，整个定义作废，而 on_action 那头只会报

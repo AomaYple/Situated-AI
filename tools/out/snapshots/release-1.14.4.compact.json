@@ -2583,6 +2583,12 @@
     "lines=645"
    ],
    "00_code_on_actions.txt": [
+    "125:ccffd12f9f72c2e0",
+    "4206:0e5d682823755d37",
+    "4213:8ea971bf16cc660d",
+    "4214:5057c551beb6e66d",
+    "4215:40d7d8dc8aa80479",
+    "4216:d10b36aa74a59bcf",
     "4951:51b7d73c3d2f7d4e",
     "5540:fbee8692bde63af6",
     "5541:2f827f2d84aa2a2c",
@@ -2671,6 +2677,7 @@
     "lines=5251"
    ],
    "00_defines.txt": [
+    "1092:66daade96f900cc2",
     "177:0253c2fa6b0cd778",
     "178:2e17dec063ba287b",
     "179:fbec8320a45885ff",
@@ -2707,6 +2714,7 @@
    ],
    "00_ip4_02_modifiers.txt": [
     "20:f84a7f1d3a7bd413",
+    "303:13c92563f1f3a3b6",
     "64:76119d06d5bc9337",
     "71:24f9ef8d5f2d2f57",
     "lines=374"
@@ -3132,11 +3140,19 @@
     "213:d10b36aa74a59bcf",
     "lines=223"
    ],
+   "105_modifiers.txt": [
+    "621:13c92563f1f3a3b6",
+    "lines=831"
+   ],
    "106_modifiers.txt": [
     "191:2a37a3f2be9e8307",
     "205:815bf13c114c432c",
     "224:3ba2418a860a7077",
     "lines=315"
+   ],
+   "17_war_reparations.txt": [
+    "1:2f8f4c50a7e5d748",
+    "lines=31"
    ],
    "30_society.txt": [
     "209:0b11ffa56a4fafbd",
@@ -3169,6 +3185,7 @@
     "613:ea9f33336686bb13",
     "615:bd474a57299cfa87",
     "616:d9c36caeba32398b",
+    "853:45a2bec5b6a128d9",
     "lines=1211"
    ],
    "brazil_2_modifiers.txt": [
@@ -3607,6 +3624,9 @@
    "common/on_actions/00_code_on_actions.txt": [
     "2484:20a02bc4959ed1bb",
     "2487:34d9ac28e15ac5ce",
+    "4205:fbee8692bde63af6",
+    "4206:0e5d682823755d37",
+    "6264:fa0fabe04d27841e",
     "7043:dca6077267487d80",
     "7046:8ea971bf16cc660d",
     "7047:1004e16399f6f9ce",
@@ -3617,6 +3637,7 @@
     "lines=8015"
    ],
    "common/script_values/event_values.txt": [
+    "39:c8a6ce2942a7c79c",
     "41:018487a8134de3ed",
     "lines=302"
    ],
@@ -3864,11 +3885,19 @@
     "249:1572f7703c6d2751",
     "251:1637bbd7e82b7800",
     "254:debed47688d077c6",
+    "331:815bf13c114c432c",
     "lines=744"
    ],
    "content_4_modifiers.txt": [
+    "397:45a2bec5b6a128d9",
     "796:3ba2418a860a7077",
+    "809:815bf13c114c432c",
+    "816:cd0b0e48abce5b86",
     "lines=862"
+   ],
+   "cuban_modifiers.txt": [
+    "40:e99f4ea211e32dca",
+    "lines=127"
    ],
    "docs/design/backlog.md": [
     "234:15a6ede30fc4c6fc",
@@ -4002,16 +4031,16 @@
     "lines=388"
    ],
    "mod/data/ru_defeat.toml": [
-    "148:0d848b012174e72a",
-    "149:eaef46b60693c86d",
-    "150:df70dcb91a7719a0",
-    "80:e8ddacc5cb989b33",
-    "81:49f6d1b2ed0166ca",
-    "82:123ceb19b09130b8",
-    "85:9d9cb9f10a938d7f",
-    "86:c3017753eefe12ad",
-    "87:8605112a94bc6098",
-    "lines=440"
+    "148:82a88ac0867431e0",
+    "149:f2cfed954bf8fb0a",
+    "150:0c2def8fa416b238",
+    "80:7e54c773d40e374f",
+    "81:5349a4d2fadd8837",
+    "82:49c8575f06221ff5",
+    "85:7e54c773d40e374f",
+    "86:0f7786c2abe7ce9f",
+    "87:8b50994eacf17608",
+    "lines=531"
    ],
    "mod/data/sp_empire_remnant.toml": [
     "103:a41663188b308b6a",
@@ -4044,61 +4073,74 @@
     "77:929447c6ebc71be8",
     "lines=361"
    ],
+   "research/official-docs/game/common/on_actions/_on_actions.md": [
+    "115:9d059492d356195c",
+    "lines=128"
+   ],
    "tools/pdx/ab_probe.py": [
-    "1017:2a15b423365101c0",
-    "1018:077f19e1ef9aa8e8",
-    "1019:808f92883f351f87",
-    "1020:5a1b3ba35baa39f7",
-    "1021:191ab2d94af8026c",
-    "1022:077f19e1ef9aa8e8",
-    "1023:8975922a5385c4b4",
-    "1024:077f19e1ef9aa8e8",
-    "1025:a83b7f8ebb4e9fd3",
-    "1026:14d914d8e465b8c2",
-    "1027:61384efab03bf9ec",
-    "1028:077f19e1ef9aa8e8",
-    "1029:4debc0db74904f77",
-    "1030:bd019f0bbae49a0e",
-    "1031:077f19e1ef9aa8e8",
-    "lines=1883"
+    "1017:f5901ac7a228c480",
+    "1018:334359b90efed75d",
+    "1019:353f66a37d0d32b5",
+    "1020:9a50fe084e1b7c94",
+    "1021:f1c88ca0df77a4d3",
+    "1022:c17f68e8f63e8aaf",
+    "1023:44cf00dcffec7c36",
+    "1024:369299811fe744c7",
+    "1025:0ce985237056952a",
+    "1026:245843abef9e72e7",
+    "1027:3b1a2e6718efe1c2",
+    "1028:d8ff9403e2edc567",
+    "1029:3df589fffd1e33e2",
+    "1030:e4f3d18421b46acf",
+    "1031:2d8718d3cf9825ae",
+    "lines=2007"
    ],
    "tools/pdx/modgen.py": [
-    "1222:cc77f7a8a2e2946a",
-    "1223:46db4e77db5c5cbb",
-    "1224:7c7d04818c4e092f",
-    "1297:de932c6d487a5e05",
-    "1309:00a1bc728b641947",
-    "1370:c57e096f486ae893",
-    "1467:088e367a474ee7df",
-    "1721:60a13ad2765c9232",
-    "1747:3c63781931495957",
-    "1748:bacfb4d89991a5d3",
-    "1749:e3b0c44298fc1c14",
-    "1750:ed8a4206293a2a4d",
-    "1751:4e76aa1009f88cb0",
-    "1752:39c879a19b56e265",
-    "1753:b6d267efe80a3dbc",
-    "1754:116e157d60c41c58",
-    "1755:410ba48e1f463bc5",
-    "1756:0132b03c355f856a",
-    "1757:fe49af20d449d512",
-    "1758:beef98d3993398f6",
-    "1759:ba5ec51d07a4ac0e",
-    "1760:9fcaf5fc1b39b1c0",
-    "1761:0132b03c355f856a",
-    "1762:ed5f85d304122fd0",
-    "1763:cd760eecbfe6c0ed",
-    "1764:3fde4f84c625121a",
-    "1765:ba5ec51d07a4ac0e",
-    "1766:e3b0c44298fc1c14",
-    "1767:e3b0c44298fc1c14",
+    "1222:f0ea3a416a0b589c",
+    "1223:09c4c9893a792241",
+    "1224:8abe622a000e3ec9",
+    "1297:e3b0c44298fc1c14",
+    "1309:64d990673bc5b663",
+    "1370:61a54f7c8d01fe67",
+    "1467:ecc5e8c067e8a45e",
+    "1721:4ceaaa41992aa366",
+    "1747:a006063eded77589",
+    "1748:205ad6665d6f4716",
+    "1749:d482102b2afe6b0f",
+    "1750:a5b5b3a5359509a4",
+    "1751:1796a71216b51cbe",
+    "1752:bb01c44bd646ab29",
+    "1753:40751506c72124b3",
+    "1754:cfae0d4248f7142f",
+    "1755:ecc5e8c067e8a45e",
+    "1756:e3b0c44298fc1c14",
+    "1757:e3b0c44298fc1c14",
+    "1758:088e367a474ee7df",
+    "1759:cb2e654bc4066774",
+    "1760:e3b0c44298fc1c14",
+    "1761:d893edad7ed97ed9",
+    "1762:4d82760815034d87",
+    "1763:b6d267efe80a3dbc",
+    "1764:e9f340b50946d8a6",
+    "1765:568782cd5db765b8",
+    "1766:dd5876abdbbbb180",
+    "1767:93165449fcec0ced",
     "187:0be2fc578794a211",
-    "734:8fe64aa76df314dd",
-    "lines=2366"
+    "734:b6d267efe80a3dbc",
+    "lines=2697"
    ],
    "tools/pdx/modguard.py": [
     "60:53788cc49b125aeb",
     "lines=880"
+   ],
+   "tools/pdx/vanilla_index.py": [
+    "66:174dec46b1ea2749",
+    "67:7b7fc9b144ed50c7",
+    "68:d78b381d92984b30",
+    "69:5e0ca402000cbded",
+    "70:6f54d93e9cf29ddd",
+    "71:ba5ec51d07a4ac0e",
+    "lines=420"
    ]
   },
   "common_entries": {

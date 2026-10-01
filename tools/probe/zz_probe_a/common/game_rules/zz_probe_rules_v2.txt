@@ -1,4 +1,4 @@
-﻿# P21：`apply_modifier` 在 game_rules 里是否仍有效。
+# P21：`apply_modifier` 在 game_rules 里是否仍有效。
 # 形状照原版 common/game_rules/00_game_rules.txt：rule = { default = 设置名 设置名 = { … } }。
 # 上一版我写成 rule = { settings = { … } }，被引擎拒（Unexpected token），那是形状错、不是字段的锅。
 #

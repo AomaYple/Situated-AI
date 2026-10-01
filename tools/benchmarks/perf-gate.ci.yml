@@ -1,0 +1,80 @@
+# 性能回归护栏 —— **CI 专用 job 片段**（不是整个 workflow）。
+#
+# 为什么是「片段」而不是直接改 .github/workflows/ci.yml：
+#   * 本卡（t24/I7a）的 in-scope 是 `tools/benchmarks/**` 与报告，
+#     `.github/workflows/**` 归「② 三平台支持 / CI 矩阵」那条工作流；
+#   * 护栏要落地必须与「CI 加 macOS」那条改动**同批**进去，否则 runner 口径会打架。
+# 用法：把下面 `perf-gate:` 这一段整体粘进 `.github/workflows/ci.yml` 的 `jobs:` 下。
+#
+# ─────────────────────────────────────────────────────────────────────
+# 口径（三条，缺一条这条护栏就是误报制造机）
+# ─────────────────────────────────────────────────────────────────────
+#
+# 1. **只在同机同类上比**。基线 `tools/benchmarks/repo-audit-baseline.json` 是在
+#    一台 Windows / 16 逻辑核 / 16 GiB 的机器上录的。**共享 hosted runner 上
+#    绝对墙钟同一次提交能差一倍**（这是本仓自己实测过的，见 ci.yml 的 bench job 注），
+#    拿它跟异机基线比 +10% 必然误报。
+#    所以这条 job 的 `runs-on` 必须是**基线录制时的同一 runner 类别**：
+#    自托管机器（`self-hosted`）或固定的 runner label。
+#    换机 / 换镜像 / 换 CPU 家族 ⇒ 先 `summarize` 重录一份基线（见下「重录」）。
+#
+# 2. **本机只出信息性读数**。同一个脚本在本机跑（不带 `--ci`、不设
+#    `REPO_AUDIT_PERF_GATE=1`）时**永远 exit 0**，只打印 `[INFO]` 行；
+#    判红只在这里发生。这是「标记隔离」的落地点：本机噪声大，读数是给人看的。
+#
+# 3. **内存比墙钟硬**。峰值内存（OS 高水位）跨轮离散度远小于墙钟，
+#    所以 `peak_hwm_mb` 的 +10% 是**硬判据**；`wall_s` 的 +10% 只在
+#    「基线是同一台机器录的」前提下成立（见报告 §护栏）。
+#
+# ─────────────────────────────────────────────────────────────────────
+# 重录基线（换机器 / 大版本升级后）
+# ─────────────────────────────────────────────────────────────────────
+#     python tools/benchmarks/perf_baseline.py run --group cli --rounds 5
+#     python tools/benchmarks/perf_baseline.py run --group suite --rounds 3
+#     python tools/benchmarks/perf_baseline.py summarize        # 写进 tools/benchmarks/
+#     # 人工审一遍 diff（数字与热点排名都要能解释），再提交 —— 护栏不许自己悄悄漂
+
+perf-gate:
+  # ⚠️ 必须是录基线时的同一 runner 类别，否则 +10% 无意义（见文件头口径 1）。
+  runs-on: self-hosted
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.14"
+        cache: pip
+        cache-dependency-path: pyproject.toml
+
+    - name: 安装（含 dev 依赖）
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -e ".[dev]"
+
+    - name: 等机器安静（同一时刻只跑一个重活）
+      # 本 job 自己是重活；与同机其它 job 的并发会让读数据不可比。
+      # `ensure_quiet` 在 `run` 里逐轮自动执行；这里额外把并发 job 隔开。
+      run: python -c "print('perf-gate 独占机器；若与其它重活并发，读数作废并重跑')"
+
+    - name: v3 子命令 + 测试套件 —— 现测
+      run: |
+        python tools/benchmarks/perf_baseline.py run --group cli --rounds 5
+        python tools/benchmarks/perf_baseline.py run --group suite --rounds 3
+        python tools/benchmarks/perf_baseline.py summarize --out perf-now.json
+
+    - name: 护栏对照（超基线 +10% ⇒ exit 1）
+      # `--ci` 打开判红；本机跑同一条命令不加 `--ci`，永远 exit 0。
+      run: |
+        python tools/benchmarks/perf_baseline.py check \
+          --baseline tools/benchmarks/repo-audit-baseline.json \
+          --current perf-now.json --ci | tee perf-gate.txt
+
+    - name: 数字写进 job summary
+      if: always()
+      run: cat perf-gate.txt >> "$GITHUB_STEP_SUMMARY"
+
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: perf-baseline-now
+        path: perf-now.json

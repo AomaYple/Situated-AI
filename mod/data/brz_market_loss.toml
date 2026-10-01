@@ -52,7 +52,7 @@ country = "BRZ"
 # 档案对哪个引擎版本有效（写进 mod 元数据的 supported_game_version）。
 # 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
 # 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
-game_version = "1.14.4"
+game_version = "1.14.5"
 why = "**修的是什么毛病**：原版 1.14.3 对「一个单一出口国的商路被掐住」这件事**没有账**。开始没有（`common/on_actions/**` 里**没有任何 on_action 以「本国失去出口市场」为触发** —— 该目录里市场相关的钩子 `on_create_market:2370` / `on_merge_markets:2362` / `is_world_market_hub:1446` 与 `00_on_actions_yearly.txt:193-197` 的 `trade_route_events.*` 都记在**市场/列强**那一侧，没有一条记在**被掐住的那一方**），过程没有（种植园的产能、种植园贵族的势力、王权的威信，三者都不随出口市场变化），结束也没有（原版没有一条 JE 或修正表达「这个国家的出口完蛋了」）。**唯一被记下来的是市场那一侧**：谁掌握市场、谁在关税同盟里、谁给谁开了门 —— 那些都记在**列强**的账上，而被掐住的那一方自己什么都没有。⚠️ **主角身份本机实测确认**（不是猜）：tag = `BRZ`（common/country_definitions/00_countries.txt:2336 的 `BRZ = {`，该文件的顶层键就是国家 tag），同块 :2339 `country_type = recognized`、:2341 `tier = empire`、:2343 `cultures = { brazilian }`、:2344 `capital = STATE_RIO_DE_JANEIRO`。**为什么主角是巴西**：01a §K 那一行（docs/design/01a-依据与参考.md:301）写的是**出口型经济（咖啡/糖）、奴隶制、地主政治、君主制相对稳定**，外部是**英国市场支配**、拉美共和化浪潮、南境与阿根廷/乌拉圭摩擦，推出的最优解是**初级产品换安全**（抱英国、压内部叛乱、避免与列强冲突）—— 这是一份以「收入长在别人的商路上」为机制的档案。⚠️ **主角的初始落点实测**：common/history/ai/00_strategy.txt:42 有 `c:BRZ ?= {` 块，里面三张牌是 `ai_strategy_plantation_economy`（:43）、`ai_strategy_maintain_power_balance`（:44）、`ai_strategy_progressive_agenda`（:45）—— 影响见 `[cards]` 与 `[probe]`。⚠️ 依据已于 2026-09-22 更正（沿用既有八份的共同结论）：原版 AI 策略（`common/ai_strategies/**`）里 212 处 has_journal_entry 全部硬编码具名 JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）—— 本档案一条都不用，理由见 `[cards]`。　【沿用·口径】本表的数值**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；本档案**独立取档**的有两处（种植园产能、种植园贵族），字段与新档位都取自原版自己的同类用法，见各自的 why。"
 
 
@@ -67,12 +67,12 @@ why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 
 [[memory.params]]
 key = "value"
 amount = 1
-why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次丢掉市场」时不用换类型（原版 `set_variable = { recently_had_war … }` 那一处甚至没有 value，见 common/on_actions/00_code_on_actions.txt:7046-7048）。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
+why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次丢掉市场」时不用换类型（原版 `set_variable = { recently_had_war … }` 那一处甚至没有 value，见 common/on_actions/00_code_on_actions.txt:7084-7086）。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
 
 [[memory.params]]
 key = "days"
 amount = 3650
-why = "10 年，与压力修正的 `years = 10` 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在本处境上有一条原版刻度可引**：原版把「10 年」定成具名刻度 `long_modifier_time = 3650`（common/script_values/event_values.txt:41，同处 :40 是 5 年的 normal_modifier_time、:42 是 15 年的 moderately_long_modifier_time）。对照原版给 `recently_had_war` 的是 `days = 1825`（5 年，common/on_actions/00_code_on_actions.txt:7048）：一条商路的改道、一片种植园的枯荣、一代人的债务，都是以十年计的。　【沿用·口径】天数**沿用 `ru_defeat.toml` 的 3650**，本处境只是换了一条更贴题的原版刻度来支撑同一个数，**未独立校准**。"
+why = "10 年，与压力修正的 `years = 10` 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在本处境上有一条原版刻度可引**：原版把「10 年」定成具名刻度 `long_modifier_time = 3650`（common/script_values/event_values.txt:41，同处 :40 是 5 年的 normal_modifier_time、:42 是 15 年的 moderately_long_modifier_time）。对照原版给 `recently_had_war` 的是 `days = 1825`（5 年，common/on_actions/00_code_on_actions.txt:7086）：一条商路的改道、一片种植园的枯荣、一代人的债务，都是以十年计的。　【沿用·口径】天数**沿用 `ru_defeat.toml` 的 3650**，本处境只是换了一条更贴题的原版刻度来支撑同一个数，**未独立校准**。"
 
 # ── ③ 压力：真实的「失去市场」代价（A 级）─────────────────────
 #
@@ -82,7 +82,7 @@ why = "10 年，与压力修正的 `years = 10` 同一时间尺度（两处必�
 [pressure]
 name = "sitai_brz_market_loss_pressure"
 icon = "gfx/interface/icons/timed_modifier_icons/modifier_gear_negative.dds"
-why = "压力必须是真的世界状态，不是我们的私有计数器 —— 只有真实变化才会进原版自己的公式（01a D 节：A 级被严重低估）。三条字段覆盖「失去市场」这件事**在出口国自己身上**留下的三笔账：**① 出口部门本身的产能被打**（种植园，`building_group_bg_plantations_throughput_add`）、**② 靠它吃饭的那一侧失势**（种植园贵族＝`country_aristocrats_pol_str_mult`）、**③ 王权替这件事付出的威信**（合法性）。**icon 取 `modifier_gear_negative.dds`**：它是「产能/工业」那一支的负向图，与本档案第一条字段同义；原版九张 `*_negative` 图里 coins（`eg_debt` 用）、fire（`au_revolution` 用）、rifle（`sp_empire_remnant` 用）、statue（bv/cn/pe/ru/tr 用）都已被既有档案占用，gear 语义贴且不撞脸。⚠️ **本表与 `[reform_inputs]` 都是实验用直接修正，不是正式版设计**：它们由施加冲击的一方显式调用（不绑任何 on_action，调用点是 scripted effect `sitai_brz_market_loss_shock`）；正式版必须改成真实触发 + 因果链（商路改道 → 出口收入与种植园产能的真实位移 → 贵族与王权的自然变化），那条已进 backlog（B35）。本定位同时写在 exec/阶段3-结果.md 与 exec/阶段3-归档清点.md，避免后人把实验设置当成档案设计。⚠️ **一处必须写明的让步（「市场」本身表达不出来）**：本机实测原版**所有**贸易类修正在**国家**那一侧都没有对应字段 —— 它们全是 `state_` 作用域（`state_trade_advantage_mult` 16 处、`state_trade_capacity_mult` 8 处、`state_market_access_price_impact` 4 处、`state_import_advantage_mult` 3 处 —— 四个数都在 `common/static_modifiers/**` 下数，`common/**` 全树分别是 34 / 54 / 61 / 5 处；例：`opium_wars_export_modifier` 用的是 `state_trade_advantage_mult = 0.10`，common/static_modifiers/content_1_modifiers.txt:33 是块头、:35 是该字段），而 `[pressure].effects` 渲出来的是**国家静态修正的数值字段**（tools/pdx/modgen.py）—— 把 `state_*` 字段挂到国家上不是同一回事（作用域不对，与 `bv_alignment` 那条 `power_bloc_leverage_generation_mult` 是同一类让步）。所以本档案表达的是**出口部门的后果**，不是市场通道本身。　【沿用·口径】**三条里第三条的数值沿用 `ru_defeat` 的实测档位（-35），未针对本条处境独立校准**；前两条是原版档位本身（见各自的 why）。"
+why = "压力必须是真的世界状态，不是我们的私有计数器 —— 只有真实变化才会进原版自己的公式（01a D 节：A 级被严重低估）。三条字段覆盖「失去市场」这件事**在出口国自己身上**留下的三笔账：**① 出口部门本身的产能被打**（种植园，`building_group_bg_plantations_throughput_add`）、**② 靠它吃饭的那一侧失势**（种植园贵族＝`country_aristocrats_pol_str_mult`）、**③ 王权替这件事付出的威信**（合法性）。**icon 取 `modifier_gear_negative.dds`**：它是「产能/工业」那一支的负向图，与本档案第一条字段同义；原版九张 `*_negative` 图里 coins（`eg_debt` 用）、fire（`au_revolution` 用）、rifle（`sp_empire_remnant` 用）、statue（bv/cn/pe/ru/tr 用）都已被既有档案占用，gear 语义贴且不撞脸。⚠️ **本表与 `[reform_inputs]` 都是实验用直接修正，不是正式版设计**：它们由施加冲击的一方显式调用（不绑任何 on_action，调用点是 scripted effect `sitai_brz_market_loss_shock`）；正式版必须改成真实触发 + 因果链（商路改道 → 出口收入与种植园产能的真实位移 → 贵族与王权的自然变化），那条已进 backlog（B35）。本定位同时写在 exec/阶段3-结果.md 与 exec/阶段3-归档清点.md，避免后人把实验设置当成档案设计。⚠️ **一处必须写明的让步（「市场」本身表达不出来）**：本机实测原版**所有**贸易类修正在**国家**那一侧都没有对应字段 —— 它们全是 `state_` 作用域（`state_trade_advantage_mult` 16 处、`state_trade_capacity_mult` 8 处、`state_market_access_price_impact` 4 处、`state_import_advantage_mult` 3 处 —— 四个数都在 `common/static_modifiers/**` 下数，`common/**` 全树分别是 34 / 54 / 61 / 5 处；例：`opium_wars_export_modifier` 用的是 `state_trade_advantage_mult = 0.10`，common/static_modifiers/content_1_modifiers.txt:33 是块头、:35 是该字段），而 `[pressure].effects` 渲出来的是**国家静态修正的数值字段**（src/pdx/modgen.py）—— 把 `state_*` 字段挂到国家上不是同一回事（作用域不对，与 `bv_alignment` 那条 `power_bloc_leverage_generation_mult` 是同一类让步）。所以本档案表达的是**出口部门的后果**，不是市场通道本身。　【沿用·口径】**三条里第三条的数值沿用 `ru_defeat` 的实测档位（-35），未针对本条处境独立校准**；前两条是原版档位本身（见各自的 why）。"
 
 [[pressure.params]]
 key = "years"
@@ -172,7 +172,7 @@ gate = "possible"
 key = "legitimacy"
 op = "<="
 amount = 75
-why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**为什么没有一条「出口依赖」专属判据**（本处境最想要的那一条，比如「我的种植园产出占比掉了多少」）：原版没有**平铺**的国家侧贸易/产出占比触发器 —— 与贸易有关的那一族读法都带作用域操作数或块形式（`is_in_customs_union_with = scope:target_country`，common/ai_strategies/02_diplomatic_strategies.txt:1182；`is_junior_in_customs_union = yes` 虽然在 common/treaty_articles/25_trade_privilege.txt:52 是平铺的，但它问的是「我在不在别人的关税同盟里当小弟」，不是「我的出口掉没掉」），而生成器的判据渲染只支持平铺一行 `key op 操作数`（tools/pdx/modgen.py:187 的 `Clause.render`）—— 这是**让步**，如实记在这里（与 `sp_empire_remnant` 表达不出「王位之争」、`bv_alignment` 表达不出「倒向谁」是同一类问题，backlog B69 / B86 一族）。于是「市场没了」这层意思由 `[pressure]` 的第一条（种植园产能）+ `[memory]` 承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有 75 的先例（有行号）。"
+why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**为什么没有一条「出口依赖」专属判据**（本处境最想要的那一条，比如「我的种植园产出占比掉了多少」）：原版没有**平铺**的国家侧贸易/产出占比触发器 —— 与贸易有关的那一族读法都带作用域操作数或块形式（`is_in_customs_union_with = scope:target_country`，common/ai_strategies/02_diplomatic_strategies.txt:1182；`is_junior_in_customs_union = yes` 虽然在 common/treaty_articles/25_trade_privilege.txt:52 是平铺的，但它问的是「我在不在别人的关税同盟里当小弟」，不是「我的出口掉没掉」），而生成器的判据渲染只支持平铺一行 `key op 操作数`（src/pdx/modgen.py:187 的 `Clause.render`）—— 这是**让步**，如实记在这里（与 `sp_empire_remnant` 表达不出「王位之争」、`bv_alignment` 表达不出「倒向谁」是同一类问题，backlog B69 / B86 一族）。于是「市场没了」这层意思由 `[pressure]` 的第一条（种植园产能）+ `[memory]` 承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有 75 的先例（有行号）。"
 
 [[journal_entry.conditions]]
 gate = "complete"
@@ -258,7 +258,7 @@ why = "记忆变量的读法。原版用法：common/journal_entries/00_corn_law
 [[references]]
 kind = "effect"
 name = "set_variable"
-why = "写记忆变量。原版用法：common/on_actions/00_code_on_actions.txt:7046-7048（on_war_end 给 recently_had_war 记 5 年，:7048 是 `days = 1825`）。"
+why = "写记忆变量。原版用法：common/on_actions/00_code_on_actions.txt:7084-7086（on_war_end 给 recently_had_war 记 5 年，:7048 是 `days = 1825`）。"
 
 [[references]]
 kind = "effect"

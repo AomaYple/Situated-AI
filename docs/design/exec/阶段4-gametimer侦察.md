@@ -205,8 +205,8 @@ Day   n= 13019 合计=  1195.617s 均值=  0.0918s 中位=  0.0476s 最坏=  1.7
 
 | 文件 | 内容 |
 |---|---|
-| `tools/pdx/gametimer.py` | TSV 解析 + 统计（schema 来自上面 12 份实测文件）。纯离线，不依赖游戏 |
-| `tools/tests/test_gametimer.py` | 34 个用例，全部合成夹具；含两个真实瑕疵（年份位数不足、触顶截断） |
+| `src/pdx/gametimer.py` | TSV 解析 + 统计（schema 来自上面 12 份实测文件）。纯离线，不依赖游戏 |
+| `tests/test_gametimer.py` | 34 个用例，全部合成夹具；含两个真实瑕疵（年份位数不足、触顶截断） |
 | 本文件 | 侦察结论 |
 
 `pdx.gametimer` 的入口：`parse_tsv` / `parse_file` / `unit_stats` / `all_unit_stats` /

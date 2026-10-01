@@ -11,7 +11,14 @@
 # 默认策略：由 git 自动判定文本，文本一律以 LF 入库
 * text=auto eol=lf
 
+# 仓库文本 UTF-8 无 BOM + LF。Git 只规范换行；BOM 由文本门禁检查。
+# 游戏脚本和本地化在安装/打包边界添加 BOM，源码不带。
+
 # ── 明确的文本类型 ─────────────────────────────────────────
+# 源文件面（`tools/` `docs/` `research/` `.github/` `mod/` 与仓库根文件）里
+# 这些后缀都真的有文件；`.ini` / `.cfg` / `.csv` 目前一个都没有，是前瞻规则
+# （留着比将来被行尾转换破坏掉划算）。"每个出现过的后缀都归了类"由
+# `tests/test_repo_hygiene.py` 盯着：新增后缀没在这里归类就红。
 *.py      text eol=lf
 *.md      text eol=lf
 *.txt     text eol=lf
@@ -22,12 +29,20 @@
 *.yml     text eol=lf
 *.yaml    text eol=lf
 *.csv     text eol=lf
+*.lock    text eol=lf
+*.frozen  text eol=lf
+
+# ── 无扩展名的根文件（`*` 兜底能覆盖，但显式声明才是"归类"）──
+/.gitattributes text eol=lf
+/.gitignore     text eol=lf
+/.editorconfig  text eol=lf
+/LICENSE        text eol=lf
 
 # ── 二进制类型（禁止任何行尾转换）──────────────────────────
 #
-# 前瞻规则：当前仓库里**一个都没有**（168 个跟踪文件的扩展名只有
-# .md/.py/.yml/.yaml/.toml 与无扩展名）。留着是为了将来真把素材或
-# Excel 塞进来时不会被行尾转换破坏 —— 这类破坏一旦发生就不可逆。
+# 源文件面现在真有 16 个 PNG（`tools/probe/sitai_ui/**` 14 个 +
+# `tools/probe/zz_probe_ab/ui/**` 2 个），其余几条仍是前瞻规则。
+# `.txt` / `.yml` 是文本，必须能逐行审查差异。
 *.prof    binary
 *.pyisession binary
 *.png     binary
@@ -50,4 +65,4 @@ research/official-docs/**  -diff
 # ── GitHub 语言统计 ────────────────────────────────────────
 # research/official-docs/ 是游戏官方文档的逐字镜像，不算本仓库的代码贡献
 research/official-docs/**    linguist-vendored
-tools/tests/test_golden/**   linguist-generated
+tests/test_golden/**   linguist-generated

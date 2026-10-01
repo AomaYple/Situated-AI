@@ -39,7 +39,7 @@ pytest-cache-files-*/
 .coverage.*
 
 # ── tools/ 的中间产物 ──────────────────────────────────────
-# 提取出的大型 JSON（tools/out 全树约 114 MB），由 v3 analyze 重新生成。
+# 提取出的大型 JSON（tools/out 含大型数据与实机证据），由 v3 analyze 重新生成。
 /tools/out/*
 
 # ⚠️ **版本快照分两种，只有精简版入库**：
@@ -81,8 +81,8 @@ pytest-cache-files-*/
 
 
 
-# 注意：tools/reports/ **已入库**。
-# 它们是分析产物，但篇幅小（两份合计约 350 行）、且是「数量真值的单一来源」，
+# 注意：docs/reports/ **已入库**。
+# 它们包含工程结论、历史判据及独立复核，保留稳定引用路径，
 # 入库才能让文档一致性测试在无游戏环境下也有据可查。
 
 
@@ -119,15 +119,15 @@ $RECYCLE.BIN/
 
 
 # ── 备注 ───────────────────────────────────────────────────
-# research/official-docs/ 是游戏自带官方 .md 的**逐字镜像**（Paradox 版权内容），
-# **不入库**；入库的是同目录下的 official-docs.manifest.json（92 篇的
+# research/official-docs/ 是游戏自带官方 .md 的 UTF-8 无 BOM / LF 镜像（Paradox 版权内容），
+# **不入库**；入库的是同目录下的 official-docs.manifest.json（94 篇的
 # 路径/字节/行数/sha256，约 17 KB）—— 它承载了镜像的全部功能价值
 # （检测「Paradox 改了官方文档」），而哈希与文件名是事实、不是创作内容。
 #
 # 本地镜像仍在，`.gitignore` 只是不让它进版本控制；装了游戏的机器随时可用
 # `v3 mirror write` 重建清单。详见 tools/README.md 的「官方文档清单」。
 #
-# ⚠️ 从 git 移除只影响**当前树**：那 92 篇仍在仓库历史里。要彻底清除需重写历史。
+# ⚠️ 从 git 移除只影响**当前树**：是否存在旧原文由历史审计核查；此规则只声明当前目录不入库。
 /research/official-docs/
 #
 # 注意：*.log 被忽略，但游戏日志位于用户数据目录（本仓库之外），不受影响。
@@ -135,3 +135,12 @@ $RECYCLE.BIN/
 # 提交信息草稿（`git commit -F` 用的临时文件）。`.commitmsg*` 已覆盖
 # `.commitmsg` 本身与 `.commitmsg.txt` 这类变体，无需再列一条。
 .commitmsg*
+
+# 三平台可再生产的缓存与交付物
+/v3-parse-cache-*/
+/tools/.benchmarks/
+/dist/
+/build/
+# 含本机硬件和墙钟读数；可复现的结论保存在审计报告。
+/tools/benchmarks/repo-audit-baseline.json
+/tools/benchmarks/repo-audit-modules.json

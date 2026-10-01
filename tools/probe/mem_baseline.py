@@ -108,14 +108,11 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import ctypes
 import gc
 import hashlib
 import json
 import os
 import re
-import shutil
-import signal
 import subprocess
 import sys
 import tempfile
@@ -124,12 +121,14 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import psutil
+
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
 REPO = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO / "tools" / "out" / "mem"
-TESTS = "tools/tests"
+TESTS = "tests"
 
 #: 采样间隔。250 ms × 8 分钟 ≈ 1900 条，采样线程本身的代价可忽略；
 #: 之所以不更密：遍历一次进程表 + 逐进程读计数器在 Windows 上是毫秒级的
@@ -173,200 +172,38 @@ def _now_iso() -> str:
 # 统一口径：``read(pid) -> (rss_bytes, peak_bytes, private_bytes)``。
 # ``peak`` 是 OS 维护的高水位（不需要采样就能拿到），拿不到时退化成 None。
 
-if _IS_WIN:  # pragma: no cover - 平台分支
-    import ctypes.wintypes as _wt
-
-    # 结构体字段名保持 Win32 原名（PROCESS_MEMORY_COUNTERS 等），类名按本仓
-    # 的 CapWords 约定（ruff N801）：字段名要能对着 MSDN 读，类名只是本地壳子。
-    class _MemCounters(ctypes.Structure):
-        _fields_ = [
-            ("cb", _wt.DWORD),
-            ("PageFaultCount", _wt.DWORD),
-            ("PeakWorkingSetSize", ctypes.c_size_t),
-            ("WorkingSetSize", ctypes.c_size_t),
-            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
-            ("QuotaPagedPoolUsage", ctypes.c_size_t),
-            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
-            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
-            ("PagefileUsage", ctypes.c_size_t),
-            ("PeakPagefileUsage", ctypes.c_size_t),
-        ]
-
-    class _ProcEntry(ctypes.Structure):
-        _fields_ = [
-            ("dwSize", _wt.DWORD),
-            ("cntUsage", _wt.DWORD),
-            ("th32ProcessID", _wt.DWORD),
-            ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
-            ("th32ModuleID", _wt.DWORD),
-            ("cntThreads", _wt.DWORD),
-            ("th32ParentProcessID", _wt.DWORD),
-            ("pcPriClassBase", ctypes.c_long),
-            ("dwFlags", _wt.DWORD),
-            ("szExeFile", ctypes.c_char * 260),
-        ]
-
-    class _MemStatusEx(ctypes.Structure):
-        _fields_ = [
-            ("dwLength", _wt.DWORD),
-            ("dwMemoryLoad", _wt.DWORD),
-            ("ullTotalPhys", ctypes.c_ulonglong),
-            ("ullAvailPhys", ctypes.c_ulonglong),
-            ("ullTotalPageFile", ctypes.c_ulonglong),
-            ("ullAvailPageFile", ctypes.c_ulonglong),
-            ("ullTotalVirtual", ctypes.c_ulonglong),
-            ("ullAvailVirtual", ctypes.c_ulonglong),
-            ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
-        ]
-
-    _K32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    _K32.GetCurrentProcess.restype = _wt.HANDLE
-    _K32.OpenProcess.restype = _wt.HANDLE
-    _K32.OpenProcess.argtypes = [_wt.DWORD, _wt.BOOL, _wt.DWORD]
-    _K32.CloseHandle.argtypes = [_wt.HANDLE]
-    _K32.CreateToolhelp32Snapshot.restype = _wt.HANDLE
-    _K32.CreateToolhelp32Snapshot.argtypes = [_wt.DWORD, _wt.DWORD]
-    _K32.Process32First.argtypes = [_wt.HANDLE, ctypes.POINTER(_ProcEntry)]
-    _K32.Process32Next.argtypes = [_wt.HANDLE, ctypes.POINTER(_ProcEntry)]
-    _GetProcessMemoryInfo = _K32.K32GetProcessMemoryInfo
-    _GetProcessMemoryInfo.argtypes = [
-        _wt.HANDLE,
-        ctypes.POINTER(_MemCounters),
-        _wt.DWORD,
-    ]
-    _GetProcessMemoryInfo.restype = _wt.BOOL
-
-    #: 只读访问权限：够读内存计数器，又不会被拒绝（比 PROCESS_QUERY_INFORMATION 宽松）。
-    _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-    _TH32CS_SNAPPROCESS = 0x00000002
-    _INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
-else:
-    _PROCESS_QUERY_LIMITED_INFORMATION = 0
-    _TH32CS_SNAPPROCESS = 0
-    _INVALID_HANDLE_VALUE = None
-
 
 class MemReader:
-    """跨平台「读任意进程 RSS / 高水位 / 私有提交」。
+    """psutil 提供 RSS、Windows 高水位、私有提交和 CPU；Linux 高水位补读 /proc。
 
-    为什么不用 psutil：它不是本仓的依赖（``pyproject.toml`` 的依赖是钉死的口径），
-    而这三件事在三个平台上各只有几行标准库代码。
+    macOS 无任意进程的可比高水位，明确标为 sampled，不能拿 RSS 冒充峰值。
     """
 
     def __init__(self) -> None:
-        self._handles: dict[int, Any] = {}
         self.peak_source = "hwm" if (_IS_WIN or _IS_LINUX) else "sampled"
 
-    # ── 单个进程 ────────────────────────────────────────────────
     def read(self, pid: int) -> tuple[int, int | None, int | None] | None:
-        """返回 ``(rss, peak|None, private|None)``；读不到返回 None（进程已退出等）。"""
-        if _IS_WIN:
-            return self._read_win(pid)
+        try:
+            info = psutil.Process(pid).memory_info()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return None
+        peak = getattr(info, "peak_wset", None)
+        private = getattr(info, "private", None)
         if _IS_LINUX:
-            return self._read_linux(pid)
-        return self._read_ps(pid)
+            linux = self._read_linux(pid)
+            if linux is not None:
+                peak, private = linux[1:]
+        return (info.rss, peak, private)
 
     def close(self) -> None:
-        if not _IS_WIN:  # pragma: no cover - 平台分支
-            return
-        for handle in self._handles.values():
-            with contextlib.suppress(OSError):
-                _K32.CloseHandle(handle)
-        self._handles.clear()
+        """psutil 不持有本模块缓存的进程句柄；保留调用方的清理协议。"""
 
     def read_cpu(self, pid: int) -> float | None:
-        """进程**累计 CPU 时间**（用户+内核，秒）；读不到返回 None。
-
-        为什么必须有这一列：墙钟会被**别人的进程**抬高（实测：我这轮 793 s 的测量期间
-        机器上还有另一套 `-n 4` 的 pytest、一个外部项目的 12 worker 套件和一局游戏），
-        而 CPU 时间对「谁在抢 CPU」免疫 —— 它才是判断「这次改动是不是真慢」的口径。
-        """
-        if _IS_WIN:
-            return self._cpu_win(pid)
-        if _IS_LINUX:
-            return self._cpu_linux(pid)
-        return self._cpu_ps(pid)
-
-    def _cpu_win(self, pid: int) -> float | None:  # pragma: no cover - 平台分支
-        handle = _K32.GetCurrentProcess() if pid == os.getpid() else self._handles.get(pid)
-        if handle is None:
-            handle = _K32.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-            if not handle:
-                return None
-            self._handles[pid] = handle
-        created = _wt.FILETIME()
-        exited = _wt.FILETIME()
-        kernel = _wt.FILETIME()
-        user = _wt.FILETIME()
-        ok = _K32.GetProcessTimes(
-            handle,
-            ctypes.byref(created),
-            ctypes.byref(exited),
-            ctypes.byref(kernel),
-            ctypes.byref(user),
-        )
-        if not ok:
-            return None
-        to_s = lambda ft: ((ft.dwHighDateTime << 32) | ft.dwLowDateTime) / 1e7  # noqa: E731
-        return round(to_s(kernel) + to_s(user), 2)
-
-    @staticmethod
-    def _cpu_linux(pid: int) -> float | None:
         try:
-            stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8", errors="replace")
-        except OSError:
+            times = psutil.Process(pid).cpu_times()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
             return None
-        tail = stat.rpartition(")")[2].split()
-        if len(tail) < 15:
-            return None
-        ticks = int(tail[11]) + int(tail[12])  # utime + stime
-        return round(ticks / (os.sysconf("SC_CLK_TCK") or 100), 2)
-
-    @staticmethod
-    def _cpu_ps(pid: int) -> float | None:  # pragma: no cover - macOS
-        out = _run_quiet(["ps", "-o", "time=", "-p", str(pid)])
-        if not out:
-            return None
-        parts = out.strip().split(":")
-        try:
-            seconds = 0.0
-            for part in parts:
-                seconds = seconds * 60 + float(part)
-        except ValueError:
-            return None
-        return round(seconds, 2)
-
-    def _read_win(self, pid: int) -> tuple[int, int, int] | None:
-        if pid == os.getpid():
-            handle = _K32.GetCurrentProcess()  # 伪句柄，不用关、也不进缓存
-        else:
-            handle = self._handles.get(pid)
-            if handle is None:
-                # 只读权限就够：比 PROCESS_QUERY_INFORMATION 宽松，不会被拒
-                handle = _K32.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-                if not handle:
-                    return None
-                self._handles[pid] = handle
-        counters = _MemCounters()
-        counters.cb = ctypes.sizeof(counters)
-        try:
-            if not _GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb):
-                self._drop(pid)
-                return None
-        except OSError:  # pragma: no cover - 权限/退出竞态
-            self._drop(pid)
-            return None
-        return (
-            int(counters.WorkingSetSize),
-            int(counters.PeakWorkingSetSize),
-            int(counters.PagefileUsage),
-        )
-
-    def _drop(self, pid: int) -> None:  # pragma: no cover - 只在竞态下走到
-        handle = self._handles.pop(pid, None)
-        if handle:
-            with contextlib.suppress(OSError):
-                _K32.CloseHandle(handle)
+        return round(times.user + times.system, 2)
 
     @staticmethod
     def _read_linux(pid: int) -> tuple[int, int | None, int | None] | None:
@@ -387,31 +224,6 @@ class MemReader:
             return None
         return (rss, fields.get("VmHWM"), fields.get("RssAnon"))
 
-    @staticmethod
-    def _read_ps(pid: int) -> tuple[int, int | None, int | None] | None:  # pragma: no cover
-        """macOS / 其它 POSIX：只有当前 RSS，没有高水位。"""
-        out = _run_quiet(["ps", "-o", "rss=", "-p", str(pid)])
-        if out is None:
-            return None
-        text = out.strip()
-        if not text.isdigit():
-            return None
-        return (int(text) * 1024, None, None)
-
-
-def _run_quiet(cmd: Sequence[str]) -> str | None:
-    """跑一条只读命令取 stdout；不存在 / 失败返回 None（不抛）。"""
-    if shutil.which(cmd[0]) is None:
-        return None
-    try:
-        done = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=30)
-    except (OSError, subprocess.SubprocessError):
-        return None
-    return done.stdout if done.returncode == 0 else None
-
-
-# ────────────────────────── 进程表 / 系统内存 ──────────────────────────
-
 
 def _looks_python(name: str) -> bool:
     """按进程名判断「这是不是 python」（跨平台：python / python3.14 / pythonw / py.exe）。"""
@@ -420,97 +232,22 @@ def _looks_python(name: str) -> bool:
 
 
 def list_procs() -> list[tuple[int, int, str]]:
-    """``[(pid, ppid, 进程名), …]``。"""
-    if _IS_WIN:
-        return _list_procs_win()
-    if _IS_LINUX:
-        return _list_procs_linux()
-    return _list_procs_ps()  # pragma: no cover
-
-
-def _list_procs_win() -> list[tuple[int, int, str]]:  # pragma: no cover - 平台分支
-    snapshot = _K32.CreateToolhelp32Snapshot(_TH32CS_SNAPPROCESS, 0)
-    if not snapshot or int(snapshot) == int(_INVALID_HANDLE_VALUE or 0):
-        return []
-    rows: list[tuple[int, int, str]] = []
-    try:
-        entry = _ProcEntry()
-        entry.dwSize = ctypes.sizeof(entry)
-        ok = _K32.Process32First(snapshot, ctypes.byref(entry))
-        while ok:
-            name = entry.szExeFile.decode("mbcs", errors="replace")
-            rows.append((int(entry.th32ProcessID), int(entry.th32ParentProcessID), name))
-            ok = _K32.Process32Next(snapshot, ctypes.byref(entry))
-    finally:
-        _K32.CloseHandle(snapshot)
-    return rows
-
-
-def _list_procs_linux() -> list[tuple[int, int, str]]:
-    rows: list[tuple[int, int, str]] = []
-    for entry in Path("/proc").iterdir():
-        if not entry.name.isdigit():
-            continue
+    """psutil 原生跨平台进程枚举，跳过退出或无权限的进程。"""
+    rows = []
+    for process in psutil.process_iter(["pid", "ppid", "name"]):
         try:
-            stat = (entry / "stat").read_text(encoding="utf-8", errors="replace")
-        except OSError:
+            info = process.info
+            if info["ppid"] is not None and info["name"] is not None:
+                rows.append((info["pid"], info["ppid"], info["name"]))
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
-        # comm 里可以有空格与括号，prune 到最后一个 ')' 之后再切
-        head, _, tail = stat.rpartition(")")
-        parts = tail.split()
-        if len(parts) < 2:
-            continue
-        rows.append((int(entry.name), int(parts[1]), head.partition("(")[2]))
-    return rows
-
-
-def _list_procs_ps() -> list[tuple[int, int, str]]:  # pragma: no cover - macOS
-    out = _run_quiet(["ps", "-axo", "pid=,ppid=,comm="])
-    if out is None:
-        return []
-    rows: list[tuple[int, int, str]] = []
-    for line in out.splitlines():
-        parts = line.split(None, 2)
-        if len(parts) < 2 or not parts[0].isdigit():
-            continue
-        rows.append((int(parts[0]), int(parts[1]), Path(parts[2]).name if len(parts) > 2 else ""))
     return rows
 
 
 def sys_mem() -> dict[str, float | None]:
-    """``{total_mb, avail_mb, commit_mb}``；读不到的项为 None（不猜）。"""
-    if _IS_WIN:
-        status = _MemStatusEx()
-        status.dwLength = ctypes.sizeof(status)
-        if _K32.GlobalMemoryStatusEx(ctypes.byref(status)):
-            pagefile = status.ullTotalPageFile - status.ullAvailPageFile
-            return {
-                "total_mb": _mb(status.ullTotalPhys),
-                "avail_mb": _mb(status.ullAvailPhys),
-                "commit_mb": _mb(pagefile),
-            }
-        return {"total_mb": None, "avail_mb": None, "commit_mb": None}
-    if _IS_LINUX:
-        fields: dict[str, float] = {}
-        try:
-            for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
-                key, _, rest = line.partition(":")
-                value = rest.strip().split()
-                if value and value[0].isdigit():
-                    fields[key] = float(value[0]) * 1024
-        except OSError:  # pragma: no cover
-            return {"total_mb": None, "avail_mb": None, "commit_mb": None}
-        return {
-            "total_mb": _mb(fields.get("MemTotal", 0)),
-            "avail_mb": _mb(fields.get("MemAvailable", 0)),
-            "commit_mb": _mb(fields.get("Committed_AS", 0)),
-        }
-    total = _run_quiet(["sysctl", "-n", "hw.memsize"])  # pragma: no cover - macOS
-    return {
-        "total_mb": _mb(float(total)) if total and total.strip().isdigit() else None,
-        "avail_mb": None,
-        "commit_mb": None,
-    }
+    """物理总量/可用量来自 psutil；不把 swap 或 RSS 冒充系统提交量。"""
+    info = psutil.virtual_memory()
+    return {"total_mb": _mb(info.total), "avail_mb": _mb(info.available), "commit_mb": None}
 
 
 def cpu_count() -> int | None:
@@ -885,23 +622,18 @@ class TreeSampler(threading.Thread):
 
 
 def kill_tree(pid: int) -> None:
-    """把一棵进程树停掉（看门狗与 Ctrl-C 共用）。"""
-    if _IS_WIN:  # pragma: no cover - 平台分支
-        subprocess.run(
-            ["taskkill", "/F", "/T", "/PID", str(pid)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        return
-    # pragma: no cover - POSIX
+    """只停止指定子树；psutil 校验进程身份，避免 shell 拼接与 PID 重用误杀。"""
     try:
-        os.killpg(os.getpgid(pid), signal.SIGTERM)
-    except OSError:
+        parent = psutil.Process(pid)
+        tree = [*parent.children(recursive=True), parent]
+    except psutil.NoSuchProcess:
         return
-    time.sleep(2.0)
-    with contextlib.suppress(OSError):
-        os.killpg(os.getpgid(pid), signal.SIGKILL)
+    for process in reversed(tree[:-1]):
+        with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+            process.kill()
+    with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+        parent.kill()
+    psutil.wait_procs(tree, timeout=3)
 
 
 def spawn(argv: Sequence[str], env: dict[str, str], log_path: Path) -> tuple[Any, Any]:
@@ -1843,9 +1575,9 @@ def deep_size(obj: object) -> float:
 
 
 def _add_pdx_path() -> None:
-    tools = str(REPO / "tools")
-    if tools not in sys.path:
-        sys.path.insert(0, tools)
+    source = str(REPO / "src")
+    if source not in sys.path:
+        sys.path.insert(0, source)
 
 
 def corpus_files() -> list[Path]:
@@ -2046,7 +1778,7 @@ def _step_shards_each() -> int:
 
 
 def _step_invariant(limit: int) -> int:
-    """缓存不变量检查（`tools/reports/内存优化复核.md` §一–§六 的可执行版本）。
+    """缓存不变量检查（`docs/reports/内存优化复核.md` §一–§六 的可执行版本）。
 
     四项判据，任一项不过即红（退出码 1）：
 

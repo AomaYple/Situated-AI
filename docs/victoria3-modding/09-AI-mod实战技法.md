@@ -201,12 +201,12 @@
 | 外交 | `max_active_stances` / `strategic_region_scores` / `undesirable_infamy_level` / `wargoal_scores` / `treaty_category_scores` | strategy |
 | 军事 | `wanted_army_size` / `wanted_navy_size` / `wanted_marines` / `ship_group_weights` / `combat_unit_group_weights` | strategy |
 | 机构 | `institution_scores` | strategy |
-| PM 评分 / 外交阈值 / 各类机制 | 1,018 个 `NAI` 参数 | `common\defines\00_ai.txt` |
-| AI 中间值 | 40 个脚本值（其中 26 个被 `00_default_strategy.txt` 引用） | `common\script_values\ai_script_values.txt` |
+| PM 评分 / 外交阈值 / 各类机制 | 1,025 个 `NAI` 参数 | `common\defines\00_ai.txt` |
+| AI 中间值 | 43 个脚本值（其中 28 个被 `00_default_strategy.txt` 引用） | `common\script_values\ai_script_values.txt` |
 
 ## 5. 真实 AI mod 覆盖了哪些 `NAI` 参数
 
-**【实测】** 解剖 `Kuromi's AI` 的 `common\defines\kai_ai.txt`（67 行），其中 `NAI = { ... }` 块**只覆盖了 31 个参数**（全库有 1,018<!--claim:ai.nai_params_doc09--> 个）。
+**【实测】** 解剖 `Kuromi's AI` 的 `common\defines\kai_ai.txt`（67 行），其中 `NAI = { ... }` 块**只覆盖了 31 个参数**（全库有 1,025<!--claim:ai.nai_params_doc09--> 个）。
 
 > **这本身就是重要信息**：一个成熟的 AI mod 并没有大改参数，而是**精准打击少数关键项**。
 

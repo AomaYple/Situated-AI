@@ -3,12 +3,12 @@
 > Victoria 3 的内容有**三层**：`clausewitz\`（引擎底层）→ `jomini\`（通用框架）→ `game\`（游戏内容）。
 > mod 主要作用于 `game\`，但另两层也含可被覆盖的数据。本文补齐这一盲区。**【实测】**
 
-> **版本提示（精确清单）**：本机游戏是 **1.14.4 (Ice Tea)**（版本指纹 `env.caligula_rev` = `d369a59ea65e68d4cca455ddd558c497958927f9`、`env.caligula_branch` = `release/1.14.4`，两条断言本次 `v3 verify` 已核验）。原先那句笼统的「统计采集于 1.14.2」按类拆开：
-> - **已是 1.14.4 —— 表格已重算**：本篇 **1 张**表（`doc20 clausewitz 子目录`）由 `v3 tables` 生成；本次 `v3 tables` 核对**全部 171 张生成表都与文档一致**。
-> - **已是 1.14.4 —— 断言已核验**：本篇 **1 条** `eng.*` 断言随 `v3 verify` 现场重扫，本次 **234/234 通过**（含本篇）、**210 处**归属标记全部对上。
+> **版本提示（精确清单）**：本机游戏是 **1.14.5 (Ice Tea)**（版本指纹 `env.caligula_rev` = `9f8281a37e85639359b3b0c2c5df0196e975ca4b`、`env.caligula_branch` = `release/1.14.5`，两条断言本次 `v3 verify` 已核验）。原先那句笼统的「统计采集于 1.14.2」按类拆开：
+> - **已是 1.14.5 —— 表格已重算**：本篇 **1 张**表（`doc20 clausewitz 子目录`）由 `v3 tables` 生成；本次 `v3 tables` 核对**全部 172 张生成表都与文档一致**。
+> - **已是 1.14.5 —— 断言已核验**：本篇 **1 条** `eng.*` 断言随 `v3 verify` 现场重扫，本次 **234/234 通过**（含本篇）、**219 处**归属标记全部对上。
 > - **已复测的数字**（1.14.3 现场实测，原为 1.14.2 采集）：`clausewitz` 七个一级子目录 = `fonts` 46 / `gfx` 547 / `gui` 68 / `imgui_fonts` 2 / `input_profile` 19 / `localization` 68 / `tools` 1（七项合计 753）；`jomini` 六个一级子目录 = `common` 25 / `gfx` 134 / `gui` 99 / `jomini` 1 / `localization` 231 / `notifications` 2（六项合计 493）；`jomini\common\` = 5 个子目录 + 1 个 `.md`；`jomini\common\defines\` = 18 个文件 —— 四项与 §1 / §2 / §3 表逐一相符。
 > - **未复测（明确列出）**：§5 三份 readme 的**字节数**（内容本轮已读全，见 §7）、§4 的 `jomini\localization\` 键覆盖实例（`MODIFIER_DESCRIPTION_ENTRY`）、§1 表里 `game\` 的 27,723（该数字由 `08-目录全量清单.md` 的生成表看守）。
-> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.4）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
+> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.5）；文档与断言表的一致性由 `tests/test_docs_consistency.py` 持续看守。
 
 ## 1. 三层架构
 

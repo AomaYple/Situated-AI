@@ -4,7 +4,7 @@
 
 找按钮 = **抓图 + 模板匹配**，等界面时一秒要跑好几遍，所以这条路径是热路径。
 2026-09-21 把它从"整屏抓图 + 6 尺度全试"改成"只抓需要的 ROI + 命中即停"，
-匹配侧的前后对照跑在 `tools/tests/test_benchmarks.py::TestAutoCaptureBenchmarks`
+匹配侧的前后对照跑在 `tests/test_benchmarks.py::TestAutoCaptureBenchmarks`
 （均值 1.147 秒 → 15.3 毫秒）。**抓图侧**测不了那么干净 —— 它依赖真实屏幕 ——
 所以单独放这个探针，量的是同一件事的两个口径：
 
@@ -31,7 +31,7 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from PIL import ImageGrab
 

@@ -12,8 +12,8 @@
 # 测试套件**不**放进来 —— 全量跑一次要 5 分钟，那是 CI / 提交前手动做的事，
 # 不是每次 commit 都该付的成本。
 #
-# ⚠️ 下面的 entry 写的是 Windows 下的 `.venv/Scripts/`，因此这套 hook 只在
-# Windows 本地可用；跨平台的同一套检查由 `.github/workflows/ci.yml` 承担。
+# 入口为 Python 驱动，自动选择 .venv/Scripts/python.exe 或 .venv/bin/python。
+# 无虚拟环境时使用当前 Python；Windows/macOS/Linux 使用同一份检查配置。
 #
 # 与 CI 的对应关系（**别让两边漂开**）
 # ----------------------------------
@@ -30,16 +30,23 @@
 repos:
   - repo: local
     hooks:
+      - id: source-encoding
+        name: UTF-8 无 BOM + LF（含未跟踪新文件）
+        entry: python tools/ci/run_check.py encoding
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
       - id: ruff-check
         name: ruff（代码检查）
-        entry: .venv/Scripts/ruff.exe check --force-exclude
+        entry: python tools/ci/run_check.py lint
         language: system
         types: [python]
         require_serial: true
 
       - id: ruff-format
         name: ruff（格式化）
-        entry: .venv/Scripts/ruff.exe format --force-exclude
+        entry: python tools/ci/run_check.py format
         language: system
         types: [python]
         require_serial: true
@@ -48,7 +55,7 @@ repos:
         name: mypy（类型检查）
         # mypy 的配置全在 pyproject.toml 的 [tool.mypy] 里，这里不传路径，
         # 让它按配置自己决定检查范围（传了路径反而会覆盖 files/exclude）。
-        entry: .venv/Scripts/mypy.exe
+        entry: python tools/ci/run_check.py types
         language: system
         types: [python]
         pass_filenames: false
@@ -58,7 +65,7 @@ repos:
         name: v3 verify（用入库快照核验，不读游戏）
         # pass_filenames: false —— 这条检查的是**整个仓库**的一致性，
         # 与本次改了哪几个文件无关（改文档、改断言注册表、改快照都算）。
-        entry: .venv/Scripts/v3.exe verify --from-snapshot
+        entry: python tools/ci/run_check.py offline
         language: system
         pass_filenames: false
         always_run: true

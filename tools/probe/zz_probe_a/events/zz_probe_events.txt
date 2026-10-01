@@ -1,4 +1,4 @@
-﻿# P8：事件三个待验证字段（after / show_as_tooltip / is_popup / orphan）
+# P8：事件三个待验证字段（after / show_as_tooltip / is_popup / orphan）
 namespace = zzprobe
 
 zzprobe.1 = {

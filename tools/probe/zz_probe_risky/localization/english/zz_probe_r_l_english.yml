@@ -1,4 +1,4 @@
-﻿l_english:
+l_english:
  zzprobe_r_selftest_decision:0 "ZZ Probe: run syntax self-test"
  # P17-A: literal block scalar `|` -- expect TWO lines in the panel
  zzprobe_r_selftest_decision_desc:0 |

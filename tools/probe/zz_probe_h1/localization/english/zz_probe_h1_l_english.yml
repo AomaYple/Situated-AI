@@ -1,4 +1,4 @@
-﻿l_english:
+l_english:
  zzprobe_h1_assign:0 "H1 probe: randomize groups"
  zzprobe_h1_assign_desc:0 "Splits every country into 4 groups (control/low/mid/high) with different weights for the probe card. Idempotent."
  ai_strategy_sitai_probe_reform:0 "Probe: reform agenda"

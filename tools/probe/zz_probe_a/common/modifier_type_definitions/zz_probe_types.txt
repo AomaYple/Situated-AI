@@ -1,4 +1,4 @@
-﻿# P22：`game_data.type_set` 是否被接受（官方 md 有、原版 0 处）。
+# P22：`game_data.type_set` 是否被接受（官方 md 有、原版 0 处）。
 # 骨架逐字复制自原版修改器类型 `interest_group_ig_armed_forces_pol_str_mult=`，只改键名并注入 type_set。
 zzprobe_modifier_type = {
 	decimals=0

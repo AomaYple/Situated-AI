@@ -1,4 +1,4 @@
-﻿# P7：JE 字段语义 —— 骨架逐字复制自 common/journal_entries/00_abolish_monarchy.txt，
+# P7：JE 字段语义 —— 骨架逐字复制自 common/journal_entries/00_abolish_monarchy.txt，
 # 只改键名并注入三个待验证字段。
 zzprobe_je = {
 	icon = "gfx/interface/icons/event_icons/event_portrait.dds"

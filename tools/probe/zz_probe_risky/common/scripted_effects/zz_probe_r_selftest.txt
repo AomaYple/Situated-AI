@@ -1,4 +1,4 @@
-﻿# 自检效果：一次跑完「必须进游戏才能判」的候选，判定直接写进 logs（grep ZZPROBE）。
+# 自检效果：一次跑完「必须进游戏才能判」的候选，判定直接写进 logs（grep ZZPROBE）。
 #
 # 为什么要 debug_log：原版自己在 common/scripted_effects、common/on_actions 里就用它
 # （例：00_code_on_actions.txt:7353 `debug_log = "Objective completed"`），

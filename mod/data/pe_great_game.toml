@@ -52,7 +52,7 @@ country = "PER"
 # 档案对哪个引擎版本有效（写进 mod 元数据的 supported_game_version）。
 # 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
 # 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
-game_version = "1.14.4"
+game_version = "1.14.5"
 why = "**修的是什么毛病**：原版 1.14.3 对「大博弈」的记账**只记在争的两强那一侧**。`je_great_game_control` 的 immediate 里把波斯与俄、英、阿富汗并列（00_player_objectives_great_game.txt:39-53，其中 :44 是 `c:PER ?= this`），而 `je_secure_influence_over_persia`（00_player_objectives_great_game.txt:1443）替俄/英两边各设一条目标，代价由波斯付：它的 complete 写的是「波斯成为我的属国」或「我或其属国占住大波斯 60% 以上的波斯文化故土」（00_player_objectives_great_game.txt:1461-1487，:1474 是 `is_homeland = cu:persian`）。**而被夹击的那一方在原版里没有账**：沙阿的合法性照旧、教士与部落长老照旧在朝、国库照旧按普通国家借债。于是「在两强之间求存 → 有限现代化」这条因果在原版里根本不存在 —— 玩家看到的是一个被两边榨却不会变的波斯。本档案不替 AI 决定改什么，只把夹击记成账、把压力落成真实的**合法性 / 借债成本 / 守旧势力**变化，让原版自己那张**读改革派 IG 的**权重公式（`ai_strategy_progressive_agenda`）自己转向。⚠️ 依据已于 2026-09-22 更正：原版 AI 策略里 212 处 has_journal_entry 全部硬编码**具名** JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）。本档案一张牌都不递（见 `[cards]`）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；它是「加一处境 = 加一份数据源」（G-EXIT-1）在**第四种失败模式（被包围 / 被夹击）**上的证明件，不是一份经过校准的档案设计。"
 
 
@@ -62,17 +62,17 @@ why = "**修的是什么毛病**：原版 1.14.3 对「大博弈」的记账**�
 [memory]
 variable = "sitai_pe_great_game_memory"
 effect = "sitai_pe_great_game_shock"
-why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown_when_inactive / possible 读它，于是「被两强夹击过」这件事变成可查的世界状态（阶段 1 已证：牌直接读 has_variable / has_journal_entry）。**本档案与本批其他档案最本质的差别在这里**：ru/tr 记的是「战败过」、cn 记的是「被干涉过」，两者都指向一个**可以指出来的时刻**；而大博弈**没有那个时刻**——原版 `on_war_end` 只给 scope:actor / scope:target、不带胜负（common/on_actions/00_code_on_actions.txt:7043，:7040-7042 是它的作用域注释），而「被两强同时挤压」更不是一场战争的结果：`je_secure_influence_over_persia` 走的甚至是属国化与故土占领（00_player_objectives_great_game.txt:1461-1487），可以完全不开一枪。谁把夹击判成夹击，本档案不猜：挂错 on_action 会把施加方（俄/英）自己也记进去。这个判定留给施加冲击的那一处（实验显式调用 `sitai_pe_great_game_shock`，本档案**不绑 on_action**）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**。"
+why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown_when_inactive / possible 读它，于是「被两强夹击过」这件事变成可查的世界状态（阶段 1 已证：牌直接读 has_variable / has_journal_entry）。**本档案与本批其他档案最本质的差别在这里**：ru/tr 记的是「战败过」、cn 记的是「被干涉过」，两者都指向一个**可以指出来的时刻**；而大博弈**没有那个时刻**——原版 `on_war_end` 只给 scope:actor / scope:target、不带胜负（common/on_actions/00_code_on_actions.txt:7081，:7040-7042 是它的作用域注释），而「被两强同时挤压」更不是一场战争的结果：`je_secure_influence_over_persia` 走的甚至是属国化与故土占领（00_player_objectives_great_game.txt:1461-1487），可以完全不开一枪。谁把夹击判成夹击，本档案不猜：挂错 on_action 会把施加方（俄/英）自己也记进去。这个判定留给施加冲击的那一处（实验显式调用 `sitai_pe_great_game_shock`，本档案**不绑 on_action**）。　【沿用·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**。"
 
 [[memory.params]]
 key = "value"
 amount = 1
-why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次被夹击」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 common/on_actions/00_code_on_actions.txt:7046-7050）。　【沿用·口径】沿用 ru_defeat 的取值，未针对本条处境独立校准。"
+why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次被夹击」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 common/on_actions/00_code_on_actions.txt:7084-7088）。　【沿用·口径】沿用 ru_defeat 的取值，未针对本条处境独立校准。"
 
 [[memory.params]]
 key = "days"
 amount = 3650
-why = "10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在「两强夹击」上尤其贴题**：大博弈不是一次事件而是一个**持续几十年的格局**（原版把它做成常驻目标 JE 而不是事件，见 `je_great_game_control` 的 immediate，00_player_objectives_great_game.txt:11-70），所以时间窗的下限是十年而不是一次战役的余波。对照原版给 recently_had_war 的是 days = 1825（5 年，common/on_actions/00_code_on_actions.txt:7048），而「被两强同时挤压」比「打过仗」更该留得久，故取两倍。　【沿用·口径】3650 **沿用 `ru_defeat.toml` 的实测档位**（该值在其 why 里写作「战败比打过仗更该留得久，故取两倍」），**未针对本条处境独立校准**。"
+why = "10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在「两强夹击」上尤其贴题**：大博弈不是一次事件而是一个**持续几十年的格局**（原版把它做成常驻目标 JE 而不是事件，见 `je_great_game_control` 的 immediate，00_player_objectives_great_game.txt:11-70），所以时间窗的下限是十年而不是一次战役的余波。对照原版给 recently_had_war 的是 days = 1825（5 年，common/on_actions/00_code_on_actions.txt:7086），而「被两强同时挤压」比「打过仗」更该留得久，故取两倍。　【沿用·口径】3650 **沿用 `ru_defeat.toml` 的实测档位**（该值在其 why 里写作「战败比打过仗更该留得久，故取两倍」），**未针对本条处境独立校准**。"
 
 # ── ③ 压力：真实的合法性 / 借债成本 / 守旧势力（A 级）────────
 #
@@ -142,7 +142,7 @@ why = "与工业家同档同源（common/static_modifiers/content_1_modifiers.tx
 name = "je_sitai_pe_great_game_window"
 group = "je_group_foreign_affairs"
 icon = "gfx/interface/icons/objectives/great_game.dds"
-why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有三条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 has_journal_entry = <本 JE 名> 读它）；③ `immediate` / `on_complete` 里递牌（本档案不用，见 `[cards]`）。⚠️ 它喂不到原版 AI 牌：原版 AI 策略（`common/ai_strategies/**`）里 212 处 has_journal_entry 全部硬编码具名 JE，没有「读任意 JE」的通用谓词（backlog B52）。**group 与 icon 都按「大博弈」这个处境另选**（这是本档案与 ru/tr/cn 三份的又一处不同）：`je_group_foreign_affairs`（定义见 common/journal_entry_groups/00_journal_entries.txt:116）——本档案的处境是**外部两强之争**，不是内政（ru/tr 用 `je_group_internal_affairs`）也不是本国历史内容族（cn 用 `je_group_qing`）；原版把同族的对外 JE 放在这一组（00_opium_wars.txt:115 的 `je_opium_wars`、00_impose_law.txt:4）。icon 用 `gfx/interface/icons/objectives/great_game.dds` —— **原版「大博弈」这件事本身用的就是这一张图**（`je_great_game_control` 见 00_player_objectives_great_game.txt:5，`je_secure_influence_over_persia` 见同文件 :1446），不是我们另挑的图。　【沿用·口径】本表的**结构与数值**沿用 `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**；group 与 icon 是按本处境的语义另选的（有原版行号）。"
+why = "为什么用 JE 而不是我们自己的牌：JE 的作用只有三条（2026-09-22 实测复核）——① 玩家可见性（G3 三行解释的载体）；② 世界状态判据（原版脚本可用 has_journal_entry = <本 JE 名> 读它）；③ `immediate` / `on_complete` 里递牌（本档案不用，见 `[cards]`）。⚠️ 它喂不到原版 AI 牌：原版 AI 策略（`common/ai_strategies/**`）里 212 处 has_journal_entry 全部硬编码具名 JE，没有「读任意 JE」的通用谓词（backlog B52）。**group 与 icon 都按「大博弈」这个处境另选**（这是本档案与 ru/tr/cn 三份的又一处不同）：`je_group_foreign_affairs`（定义见 common/journal_entry_groups/00_journal_entries.txt:116）——本档案的处境是**外部两强之争**，不是内政（ru/tr 用 `je_group_internal_affairs`）也不是本国历史内容族（cn 用 `je_group_qing`）；原版把同族的对外 JE 放在这一组（00_opium_wars.txt:116 的 `je_opium_wars`、00_impose_law.txt:4）。icon 用 `gfx/interface/icons/objectives/great_game.dds` —— **原版「大博弈」这件事本身用的就是这一张图**（`je_great_game_control` 见 00_player_objectives_great_game.txt:5，`je_secure_influence_over_persia` 见同文件 :1446），不是我们另挑的图。　【沿用·口径】本表的**结构与数值**沿用 `ru_defeat.toml` 的实测档位，**未针对本条处境独立校准**；group 与 icon 是按本处境的语义另选的（有原版行号）。"
 
 [[journal_entry.fields]]
 key = "weight"
@@ -179,7 +179,7 @@ gate = "possible"
 key = "legitimacy"
 op = "<="
 amount = 75
-why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`、common/journal_entries/01_french_monarchism.txt:329 的 `government_legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**本档案为什么不另加一条「被两强夹击」的门**（那是本处境最想要的那一条）：原版里表达「俄英同时压过来」的写法都是**块形式**（`c:RUS ?= { … }` / `any_country_in_great_power = { … }`），而生成器的判据渲染只支持平铺一行 `key op 操作数`（tools/pdx/modgen.py:187 的 `Clause.render`），块形式在本 schema 里根本表达不出来 —— 这是**让步**，如实记在这里（与 `au_revolution` 表达不出「激进派占比门」是同一类问题，backlog B69）。于是「双强夹击」这层意思由 `is_country_type = unrecognized` 那条结构性判据 + `[pressure]` 的两个字段共同承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有两条 75 是先例。"
+why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`、common/journal_entries/01_french_monarchism.txt:329 的 `government_legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**本档案为什么不另加一条「被两强夹击」的门**（那是本处境最想要的那一条）：原版里表达「俄英同时压过来」的写法都是**块形式**（`c:RUS ?= { … }` / `any_country_in_great_power = { … }`），而生成器的判据渲染只支持平铺一行 `key op 操作数`（src/pdx/modgen.py:187 的 `Clause.render`），块形式在本 schema 里根本表达不出来 —— 这是**让步**，如实记在这里（与 `au_revolution` 表达不出「激进派占比门」是同一类问题，backlog B69）。于是「双强夹击」这层意思由 `is_country_type = unrecognized` 那条结构性判据 + `[pressure]` 的两个字段共同承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有两条 75 是先例。"
 
 [[journal_entry.conditions]]
 gate = "complete"
@@ -268,7 +268,7 @@ why = "记忆变量的读法。原版用法：common/journal_entries/00_corn_law
 [[references]]
 kind = "effect"
 name = "set_variable"
-why = "写记忆变量。原版用法：common/on_actions/00_code_on_actions.txt:7046-7050（on_war_end 给 recently_had_war 记 5 年，:7048 是 days = 1825）。"
+why = "写记忆变量。原版用法：common/on_actions/00_code_on_actions.txt:7084-7088（on_war_end 给 recently_had_war 记 5 年，:7086 是 days = 1825）。"
 
 [[references]]
 kind = "effect"

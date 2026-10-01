@@ -12,9 +12,9 @@
 > 想直接跑就用上面的完整路径。
 
 ⚠️ **``full`` / ``stages`` / ``walkaudit`` 会重跑整条分析流水线，
-> 因此会覆盖已入库的 ``tools/reports/*.md`` 与 ``tools/out/**``。**
+> 因此会覆盖已入库的 ``docs/reports/*.md`` 与 ``tools/out/**``。**
 > 这不是只读的剖析 —— 跑完 ``git status`` 会脏，黄金回归冻结的
-> ``tools/reports/`` 指纹也可能变（正常应逐字节相同；不同就说明有非确定性 bug）。
+> ``docs/reports/`` 指纹也可能变（正常应逐字节相同；不同就说明有非确定性 bug）。
 
 设计原则
 --------

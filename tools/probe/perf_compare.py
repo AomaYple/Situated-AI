@@ -47,7 +47,7 @@
 
 ⚠️ **跑完之后请再跑一局常规游戏**（`python -m pdx.game_auto run`，用用户自己的 mod 配置）：
 本脚本的两局都是"只挂本地 mod"，引擎日志因此是在**另一套 mod 集**下产生的，而
-`tools/tests/test_cli.py::test_crosscheck_与引擎日志一致` 拿日志行号与原版安装比对 ——
+`tests/test_cli.py::test_crosscheck_与引擎日志一致` 拿日志行号与原版安装比对 ——
 mod 集不同会让它红（实测踩过）。跑一局常规游戏即可让日志与安装一致。
 
 用法：`python tools/probe/perf_compare.py [月数] [--repeat N]`
@@ -66,14 +66,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 
 from pdx import ab_probe, config, gametimer, stress_probe
 from pdx import game_auto as ga
+from pdx.textio import deploy_tree
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
 DOCS = config.USERDIR
 MODS_DIR = DOCS / "mod"
@@ -160,26 +161,76 @@ def _set_local_mods(paths: list[Path], *, original: dict[str, object] | None = N
     )
 
 
-def _quarantine_logs() -> list[str]:
-    """把上一次会话的日志挪去临时目录 —— **两局对照必须这样做**。
+def _announce(fault: str) -> None:
+    """挪不动 / 被改名时的**唯一出声处**（默认出口；`t36`，B114）。
+
+    为什么单开一个函数：静默就是证据蒸发。有了这个出口，"文件没挪走却没人知道"
+    这条路径才被堵住 —— 出声看得见（stderr 一行），也被用例收集得到（注入 `announce`）。
+    """
+    print(f"  [隔离日志] {fault}", file=sys.stderr)
+
+
+def _quarantine_logs(
+    *,
+    stamp: str | None = None,
+    announce: Callable[[str], None] | None = None,
+) -> list[str]:
+    """把上一次会话的日志挪去**本跑者自己的**隔离目录 —— **两局对照必须这样做**。
 
     为什么：`debug.log` 按大小轮转，上一局的尾巴会留在 `debug.1.log`… 里。
     `_mounted_evidence()` 读的是"日志里有没有 Mounted Data"，跨会话残留会让
     **第二局的取证里混进第一局的挂载记录** —— 那正是"原版局看起来也挂了 mod"的假象。
 
-    ⚠️ **被占用的文件要跳过、不报错**（2026-09-23 实测）：上一次跑批留下过一个进程，
+    ⚠️ **同名冲突要改名落地，既不覆盖也不静默**（`t36`，B114 的证据蒸发路径）：
+    原写法是同名 `shutil.move(path, target / path.name)`。**实测的静默路径有三条**
+    （`t12` 逐条复现，读数见 `docs/reports/t12-静默路径文案与回归.md`）：
+    ① 隔离目录里已有同名**文件** ⇒ `os.rename` 抛 `FileExistsError`，`shutil.move`
+    退回 `copy2` + `unlink` ⇒ **静默覆盖上一代**（实测 8 局里 7 局没归档就是这一条）；
+    ② 已有同名**目录**、且那目录里**已有同名文件** ⇒ 走"目标是目录"支：先算出
+    `target\\<名字>\\<名字>`、发现它存在 ⇒ 抛 **`shutil.Error`**（`Destination path …
+    already exists`）—— 它是 `OSError` 子类，被下面那句
+    `except (PermissionError, OSError): continue` **吞掉** ⇒ 文件**留在原地**、**零行输出**；
+    ③ 已有同名**目录**、且那目录**为空** ⇒ 按"目标目录"语义把文件挪进
+    `target\\<名字>\\<名字>` ⇒ **证据被埋深一层、零行输出、看不见**。
+    现在复用 `src/pdx/game_auto.py:1717` 的 `unused_path()`（配 `:1708` 的
+    `archive_stamp()`，**不另写一套**）：空着就用原名，被占则把 UTC 时间戳插进扩展名
+    （`debug.log` → `debug.20260929-021712.log`，再冲突 `…-2.log`），**两代都留住**
+    ⇒ 三条一起堵住（②那句 `shutil.Error` 再无机会出现：挑出来的名字一定是空的）。
+
+    ⚠️ **挪不动的要出声**（2026-09-23 实测 `PermissionError`）：上一次跑批留下过一个进程，
     它握着 `ai.log` 的句柄 ⇒ `shutil.move` 抛 `PermissionError`，整局还没开始就崩。
-    跳过是安全的：被判据用到的是 `debug.log` / `system.log`，那两个不常被长期占用。
+    **跳过仍然是安全的**（被判据用到的是 `debug.log` / `system.log`，那两个不常被长期占用），
+    但"跳过"现在**带一行出声**（路径 + 原因）—— 不再有"没挪走又没人知道"的路径。
+    行里报的是**源路径 + 原因 + 隔离目录**：落点名由 `unused_path()` 挑，写成固定的
+    `target\\<原名>` 会指到**占位**那一处（三条占位路径全都叫这个名字）。
+
+    ⚠️ **三个近名目录不是一回事**（名字很像，找错了会把"在另一边"误判成"丢了"）：
+    * `%TEMP%\\v3_quarantine_perflogs` —— **本文件**（perf_compare 跑者）自己的，就是这里；
+    * `%TEMP%\\v3_quarantine_logs` —— `src/pdx/game_auto.py:1743` 的
+      `quarantine_logs()` 的目标，`tools/probe/stage3_rerun.py` / `stage6_ui_rerun.py` 在用；
+    * `%TEMP%\\v3_quarantine_stagetests` —— `tools/probe/stage3_rerun.py:154` 的
+      `quarantine_test_artifacts()`（阶段 3 的**成绩单/产物**，不是引擎日志）。
+
+    ``stamp`` / ``announce`` 是给用例的注入点：时间戳可固定、出声可收集（默认打 stderr）。
     """
     target = Path(tempfile.gettempdir()) / "v3_quarantine_perflogs"
     target.mkdir(parents=True, exist_ok=True)
+    the_stamp = stamp or ga.archive_stamp()
+    say = _announce if announce is None else announce
     moved: list[str] = []
     for path in sorted(LOGS.glob("*.log")):
         try:
-            shutil.move(str(path), str(target / path.name))
-        except (PermissionError, OSError):
+            landing = ga.unused_path(target / path.name, stamp=the_stamp)
+            shutil.move(str(path), str(landing))
+        except (PermissionError, OSError) as fault:
+            say(
+                f"⚠️ 挪不动，文件仍在原地：{path}（{type(fault).__name__}: {fault}）"
+                f"；隔离目录 {target}（落点名由 unused_path() 挑，不一定是原名）"
+            )
             continue
-        moved.append(path.name)
+        moved.append(landing.name)
+        if landing.name != path.name:
+            say(f"同名已在隔离目录：{path.name} → {landing.name}（两代都留住，没覆盖）")
     return moved
 
 
@@ -241,6 +292,48 @@ def _report_lines(report: dict[str, object]) -> list[str]:
     return [str(item) for item in raw] if isinstance(raw, list) else []
 
 
+# 一局的**自带**扫描结果：一个键里同时带 `lines` 与 `malformed`（t89 ②）。
+STRESS_SCAN_KEY = "stress_scan"
+
+
+def _as_str_list(raw: object) -> list[str]:
+    return [str(item) for item in raw] if isinstance(raw, list) else []
+
+
+def _report_scan(report: dict[str, object]) -> stress_probe.ReportScan:
+    """一局的压力自报扫描：**自带**在报告里，不再靠调用方另传一个键（t89 ②）。
+
+    两条路都走，缺一条都不算"自带"：
+
+    1. **自带块** ``stress_scan``：跑者现在把 ``lines`` 与 ``malformed`` 一起塞进这一个键
+       （少了它，形状漂移就只能靠调用方记得补传 —— 换个调用点就静默失效）；
+    2. **逐行自核**：手上每一行都按 :func:`pdx.stress_probe.scan_report_lines` 的格式
+       再核一遍 —— 形状漂了的行进 ``malformed``。于是就算上游只把行塞进 ``stress_lines``
+       （老的键、甚至把漂移行混在里面），判定照样看得见，不会因为"少传一个键"放行（P13）。
+
+    兼容：老的 ``stress_lines`` / ``stress_malformed`` 仍然读；不含前缀的杂项照旧留在
+    序列里（由比对去判），**不当**形状漂移。
+    """
+    block = report.get(STRESS_SCAN_KEY)
+    if isinstance(block, dict):
+        raw_lines = _as_str_list(block.get("lines"))
+        raw_bad = _as_str_list(block.get("malformed"))
+    else:
+        raw_lines = _report_lines(report)
+        raw_bad = _as_str_list(report.get("stress_malformed"))
+    lines: list[str] = []
+    malformed: list[str] = []
+    for item in [*raw_lines, *raw_bad]:
+        parsed = stress_probe.scan_report_lines(item)
+        if parsed.malformed:
+            malformed.append(item)
+        elif parsed.lines:
+            lines.append(parsed.lines[0])
+        else:
+            lines.append(item)
+    return stress_probe.ReportScan(tuple(lines), tuple(malformed))
+
+
 @dataclass(frozen=True, slots=True)
 class StressControl:
     """两臂受的压到底一不一样 —— "受控 / 非受控"**只有这一条判据**。"""
@@ -272,7 +365,11 @@ def stress_control_verdict(reports: Sequence[dict[str, object]]) -> StressContro
     读的人看不出根因是"同一波同一国多抽了一次"。
 
     另外：只要日志里有**形状不对**的自报行（分类不认识、字段少一个），也判不成立 ——
-    格式漂了的时候，"相等"两个字没有意义。
+    格式漂了的时候，"相等"两个字没有意义。这份扫描结果由**每局报告自带**
+    （:func:`_report_scan`：``stress_scan`` 块 + 逐行自核），**不**依赖调用方另传键（t89 ②）。
+
+    只有**一臂**空时（t89 ①）：话术点名是**哪一臂**没跑出来 —— "两臂都没有"只留给
+    两臂都空那一种；空的那一臂是原因，不是"剧本没挂上"。
     """
     by_index: dict[int, dict[str, list[str]]] = {}
     malformed: list[str] = []
@@ -280,10 +377,9 @@ def stress_control_verdict(reports: Sequence[dict[str, object]]) -> StressContro
         label = str(report.get("label"))
         index = report.get("index")
         key = index if isinstance(index, int) else 0
-        by_index.setdefault(key, {})[label] = _report_lines(report)
-        bad = report.get("stress_malformed")
-        if isinstance(bad, list):
-            malformed.extend(f"{label}#{key}: {item}" for item in bad)
+        scanned = _report_scan(report)
+        by_index.setdefault(key, {})[label] = list(scanned.lines)
+        malformed.extend(f"{label}#{key}: {item}" for item in scanned.malformed)
     problems: list[str] = []
     for key in sorted(by_index):
         arms = by_index[key]
@@ -292,12 +388,33 @@ def stress_control_verdict(reports: Sequence[dict[str, object]]) -> StressContro
             problems.append(f"#{key}：没有 {VANILLA_LABEL} 那一局 ⇒ 无从配对")
             continue
         if not baseline:
-            problems.append(
-                f"#{key}：两臂一条压力自报都没有 ⇒ 窗口内**没有压力落地**，"
-                "「相等」是空的，**不能**称受控（先查剧本挂没挂上、窗口够不够长）"
-            )
+            landed = {
+                label: lines
+                for label, lines in sorted(arms.items())
+                if label != VANILLA_LABEL and lines
+            }
+            if landed:
+                # t89 ①：**只有一臂空**时不许把原因说成"剧本没挂上" —— 空的那一臂才是原因
+                detail = "、".join(f"{label} 有 {len(lines)} 行" for label, lines in landed.items())
+                problems.append(
+                    f"#{key}：{VANILLA_LABEL} 那一局**一条压力自报都没有**（{detail}）"
+                    "⇒ 这一臂没跑出来（日志没拿到、窗口没跑满、这一局没起），**不能**称受控；"
+                    "另一臂有压力落地 ⇒ 不是剧本没挂上"
+                )
+            else:
+                problems.append(
+                    f"#{key}：两臂一条压力自报都没有 ⇒ 窗口内**没有压力落地**，"
+                    "「相等」是空的，**不能**称受控（先查剧本挂没挂上、窗口够不够长）"
+                )
             continue
         for label in sorted(set(arms) - {VANILLA_LABEL}):
+            if not arms[label]:
+                problems.append(
+                    f"#{key}：{label} 那一局**一条压力自报都没有**"
+                    f"（{VANILLA_LABEL} 有 {len(baseline)} 行）⇒ 这一臂没跑出来，"
+                    "**不能**称受控（不是「序列不等」，是这一局没有可比的序列）"
+                )
+                continue
             diff = stress_probe.compare_report_sequences(baseline, arms[label])
             if diff is not None:
                 problems.append(
@@ -424,6 +541,11 @@ def run_once(
         print(note)
         report["stress_lines"] = list(scanned.lines)
         report["stress_malformed"] = list(scanned.malformed)
+        # 自带块（t89 ②）：判定要的东西跟序列**在同一个键**里，别指望调用方记得补传。
+        report[STRESS_SCAN_KEY] = {
+            "lines": list(scanned.lines),
+            "malformed": list(scanned.malformed),
+        }
     ga.kill_game()
     time.sleep(3)
     return report
@@ -629,7 +751,7 @@ def main() -> int:
     try:
         if OURS_DST.exists():
             shutil.rmtree(OURS_DST)
-        shutil.copytree(config.REPO / "mod", OURS_DST)
+        deploy_tree(config.REPO / "mod", OURS_DST)
         print(f"已装本地 mod：{OURS_DST.name}（复制自 {config.REPO / 'mod'}）")
 
         # 压力剧本：**两臂都装**。单装一臂的话，"世界被推到高压"这件事本身会被算进

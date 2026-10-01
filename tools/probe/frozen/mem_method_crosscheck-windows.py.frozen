@@ -1,0 +1,275 @@
+#!/usr/bin/env python
+"""内存读数四法交叉验证：证明「哪个峰值可信、哪个不可信、可信到什么程度」。
+
+背景（为什么必须有这个脚本）
+============================
+
+`docs/design/exec/仓库审计-盘点与判定.md` §⑦ 记着一条**已知坏读数**：psapi 峰值 RSS
+不可靠（出处 `docs/design/exec/阶段性收尾-20261001.md:103`）。基线给出的每一个内存数字
+都建立在「读数可信」之上，所以本脚本用一个**已知分配量的控制进程**做四路交叉：
+
+===========  ==========================================================  ==================
+编号          取法                                                        性质
+===========  ==========================================================  ==================
+M1            ``kernel32!K32GetProcessMemoryInfo`` 的 ``PeakWorkingSetSize``  OS 高水位（精确）
+M2            M1 的 ``WorkingSetSize`` 每 20 ms 采样取最大                        真峰值的**下界**
+M3            ``psapi!GetProcessMemoryInfo`` 的 ``PeakWorkingSetSize``           同源旧路径（嫌疑）
+M4            PowerShell ``Get-Process`` 的 ``PeakWorkingSet64``                另一条表面（.NET）
+SELF          子进程**自读**自己的峰值（SELF 句柄，不是 LIMITED_INFORMATION）      句柄权限路径
+===========  ==========================================================  ==================
+
+真值对照：控制进程分配 ``payload`` MiB 并**逐块触碰**，故真峰值 ≈ ``M1(payload=0) + payload``。
+判据（写进基线 json 的「内存读法」）：
+
+* **M2 ≤ M1** —— 采样峰值不得高于 OS 高水位，否则说明至少一个读数是坏的；
+* **|M1 − M3| ≤ 1%** —— 两者同源（psapi 是现代 Windows 上 kernel32 的旧别名），
+  **一致不构成独立证据**，报告里不许拿它当「两法互证」；
+* **|M1 − (M1₀ + payload)| ≤ 5%** —— 高水位能还原已知分配量 ⇒ 可用；
+* **SELF ≈ M1** —— 说明本仓用的 ``LIMITED_INFORMATION`` 句柄没有丢掉峰值信息。
+
+用法::
+
+    .venv\\Scripts\\python.exe tools/benchmarks/mem_method_crosscheck.py
+    .venv\\Scripts\\python.exe tools/benchmarks/mem_method_crosscheck.py --payload 64 256
+"""
+
+from __future__ import annotations
+
+import argparse
+import ctypes
+import importlib.util
+import json
+import os
+import subprocess
+import time
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+REPO = Path(__file__).resolve().parents[2]
+MEM_SCRIPT = REPO / "tools" / "probe" / "mem_baseline.py"
+PY = REPO / ".venv" / "Scripts" / "python.exe"
+TMP_DIR = Path(os.environ.get("TEMP") or os.environ.get("TMP") or "/tmp") / "repo-audit-perf"
+SAMPLE_INTERVAL_S = 0.02
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+#: 控制进程：分配 payload MiB、逐块触碰（保证进 RSS）、喊一声 READY、然后自读峰值再停住。
+_CHILD = """
+import importlib.util as u
+import os
+import sys
+import time
+
+payload = int(sys.argv[1])
+hold = float(sys.argv[2])
+blocks = [bytearray(1 << 20) for _ in range(payload)]
+for index, block in enumerate(blocks):
+    block[index %% 1024] = 1
+sys.stdout.write("READY\\n")
+sys.stdout.flush()
+time.sleep(hold)
+spec = u.spec_from_file_location("mem_baseline", r"%s")
+module = u.module_from_spec(spec)
+spec.loader.exec_module(module)
+reader = module.MemReader()
+reading = reader.read(os.getpid())
+reader.close()
+sys.stdout.write("SELF %%d %%d %%d\\n" %% reading)
+sys.stdout.flush()
+"""
+
+
+def _load_mem() -> ModuleType:
+    spec = importlib.util.spec_from_file_location("repo_audit_mem_baseline", MEM_SCRIPT)
+    if spec is None or spec.loader is None:  # pragma: no cover - 文件必然存在
+        raise SystemExit(f"找不到量尺：{MEM_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def m3_psapi_peak(pid: int, counters_type: type) -> int | None:
+    """``psapi!GetProcessMemoryInfo`` —— 与 M1 同源的旧路径（嫌疑读数）。"""
+    try:
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        psapi = ctypes.WinDLL("psapi", use_last_error=True)
+    except OSError:  # pragma: no cover - 只在 Windows 上有
+        return None
+    handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not handle:
+        return None
+    try:
+        counters = counters_type()
+        psapi.GetProcessMemoryInfo.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(counters_type),
+            ctypes.c_uint32,
+        ]
+        psapi.GetProcessMemoryInfo.restype = ctypes.c_int
+        if not psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), ctypes.sizeof(counters)):
+            return None
+        return int(counters.PeakWorkingSetSize)
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def m4_powershell(pid: int) -> dict[str, Any] | None:
+    """PowerShell ``Get-Process`` 的 ``PeakWorkingSet64`` / ``WorkingSet64``（另一条表面）。"""
+    script = (
+        f"$p=Get-Process -Id {pid} -ErrorAction SilentlyContinue; "
+        "if($p){[pscustomobject]@{peak=$p.PeakWorkingSet64;ws=$p.WorkingSet64}"
+        "|ConvertTo-Json -Compress}"
+    )
+    try:
+        out = subprocess.run(
+            ["pwsh", "-NoProfile", "-Command", script],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):  # pragma: no cover - 无 pwsh 的平台
+        return None
+    text = out.stdout.strip()
+    if not text:
+        return None
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    return {"peak": int(data["peak"]), "ws": int(data["ws"])}
+
+
+def probe(mem: ModuleType, payload_mib: int, hold_s: float) -> dict[str, Any]:
+    """跑一个控制进程，四法同时读它。"""
+    argv = [str(PY), "-c", _CHILD % str(MEM_SCRIPT), str(payload_mib), str(hold_s)]
+    child = subprocess.Popen(
+        argv,
+        cwd=str(REPO),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+    )
+    assert child.stdout is not None
+    marker = child.stdout.readline().strip()
+    if marker != "READY":  # pragma: no cover - 防呆
+        child.kill()
+        raise SystemExit(f"控制进程没有就绪：{marker!r}")
+
+    reader = mem.MemReader()
+    # M2：采样工作集，取最大（下界）
+    sampled = 0
+    deadline = time.perf_counter() + min(2.0, hold_s * 0.5)
+    live_readings = 0
+    while time.perf_counter() < deadline:
+        reading = reader.read(child.pid)
+        if reading is not None:
+            sampled = max(sampled, int(reading[0]))
+            live_readings += 1
+        time.sleep(SAMPLE_INTERVAL_S)
+    # M1：OS 高水位（主读数）
+    latest = reader.read(child.pid)
+    hwm = int(latest[1]) if latest and latest[1] is not None else None
+    rss_last = int(latest[0]) if latest else None
+    reader.close()
+    # M3 / M4：另外两条表面
+    psapi_peak = m3_psapi_peak(child.pid, mem._MemCounters)  # 复用同一定义（私有名，仓库内可接受）
+    shell = m4_powershell(child.pid)
+    # 控制进程自己在 hold 结束时打印 SELF 再退出 ⇒ 自然收尾，不提前杀（杀了就没有 SELF 读数）
+    try:
+        out, _ = child.communicate(timeout=hold_s + 60.0)
+    except subprocess.TimeoutExpired:  # pragma: no cover - 防呆
+        child.kill()
+        out, _ = child.communicate(timeout=30.0)
+    self_line = next((ln for ln in out.splitlines() if ln.startswith("SELF ")), "")
+    self_values = [int(v) for v in self_line.split()[1:]] if self_line else []
+
+    payload_bytes = payload_mib * (1 << 20)
+    return {
+        "payload_mib": payload_mib,
+        "m1_os_hwm_mb": round((hwm or 0) / (1 << 20), 2),
+        "m2_sampled_max_mb": round(sampled / (1 << 20), 2),
+        "m2_samples": live_readings,
+        "m3_psapi_peak_mb": round(psapi_peak / (1 << 20), 2) if psapi_peak else None,
+        "m4_powershell_peak_mb": round(shell["peak"] / (1 << 20), 2) if shell else None,
+        "m4_powershell_ws_mb": round(shell["ws"] / (1 << 20), 2) if shell else None,
+        "self_rss_mb": round(self_values[0] / (1 << 20), 2) if self_values else None,
+        "self_peak_mb": round(self_values[1] / (1 << 20), 2) if len(self_values) > 1 else None,
+        "rss_last_mb": round(rss_last / (1 << 20), 2) if rss_last else None,
+        "payload_mb": round(payload_bytes / (1 << 20), 2),
+    }
+
+
+def verdicts(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    zero = next((row for row in rows if row["payload_mib"] == 0), None)
+    base = zero["m1_os_hwm_mb"] if zero else None
+    checks: list[dict[str, Any]] = []
+    for row in rows:
+        payload = row["payload_mb"]
+        hwm = row["m1_os_hwm_mb"]
+        sampled = row["m2_sampled_max_mb"]
+        psapi_peak = row["m3_psapi_peak_mb"]
+        self_peak = row["self_peak_mb"]
+        checks.append(
+            {
+                "payload_mb": payload,
+                "M2≤M1（下界成立）": sampled <= hwm + 0.5,
+                "M1 还原已知分配": (None if base is None else round(hwm - (base + payload), 2)),
+                "|M1−M3|%": (
+                    None if not psapi_peak else round(abs(hwm - psapi_peak) / hwm * 100.0, 3)
+                ),
+                "|M1−SELF|MB": None if not self_peak else round(abs(hwm - self_peak), 2),
+                "M4 peak": row["m4_powershell_peak_mb"],
+            }
+        )
+    return {
+        "base_hwm_mb": base,
+        "逐行": checks,
+        "结论": {
+            "主读数": "M1（kernel32 K32GetProcessMemoryInfo 的 PeakWorkingSetSize）",
+            "M2 定位": "下界：只能证明『峰 ≥ 采样最大』，不能证明真峰",
+            "M3 定位": "同源旧路径：与 M1 一致**不构成互证**；若不一致则以 M1 为准并记异常",
+            "M4 定位": "独立表面（.NET），用于交叉；差异 >1% 需在报告里写明",
+            "SELF 定位": "句柄权限路径交叉：证明 LIMITED_INFORMATION 没丢峰值",
+        },
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--payload", type=int, nargs="*", default=[0, 64, 256])
+    parser.add_argument("--hold-s", type=float, default=10.0)
+    parser.add_argument("--out", default=str(TMP_DIR / "mem-methods.json"))
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    mem = _load_mem()
+    rows = [probe(mem, payload_mib, args.hold_s) for payload_mib in args.payload]
+    report = {
+        "口径": "控制进程分配已知 MiB 并逐块触碰，四法同读；真峰值 ≈ M1(payload=0) + payload",
+        "机器": mem.machine_info(),
+        "样本": rows,
+        **verdicts(rows),
+    }
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    print(f"[methods] 写入 {out}")
+    # 一致性自检：M2 必须是下界，M1 必须能还原已知分配
+    problems = [
+        check
+        for check in report["逐行"]
+        if not check["M2≤M1（下界成立）"] or abs(check["M1 还原已知分配"] or 0) > 8.0
+    ]
+    return 1 if problems else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

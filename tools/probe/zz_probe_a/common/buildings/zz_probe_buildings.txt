@@ -1,4 +1,4 @@
-﻿# P26：照原版 building_food_industry 复制、改名，并把 doc 14 里那几个「原版 0 次」的字段塞进去。
+# P26：照原版 building_food_industry 复制、改名，并把 doc 14 里那几个「原版 0 次」的字段塞进去。
 # 引擎在加载时会对不认识的键报 unknown key（带文件与行号），于是这一份文件就能一次问清一批字段。
 zzprobe_building = {
 	# ↓ P26：doc 14 里「官方 md 有、原版 0 次」的字段 —— 引擎报 unknown key 即「不被识别」

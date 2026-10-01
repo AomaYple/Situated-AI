@@ -49,7 +49,7 @@
   接在 journal entry 的说明里直接上屏（P11：可观测）。
 - **难度三档**（`game_rules`）：处境压力对谁都成立，难度调的是**玩家肩上的那一份**。
 
-### 工具链（`tools/pdx/`，Python）
+### 工具链（`src/pdx/`，Python）
 
 mod 是**生成**的，不是手写的：数据源 `mod/data/*.toml` →`v3 modgen`→ `mod/` 下的产物
 （脚本 / 本地化 / 文档），手改产物会被闸门 ④ 报红。

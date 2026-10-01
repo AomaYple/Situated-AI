@@ -15,7 +15,7 @@
 # conftest 的 `pytest_collection_modifyitems` 会把带 integration 标记的用例
 # 全部加上 skip。这条机制此前是坏的（形参 `config` 遮蔽了 `pdx.config` 模块，
 # 在没有游戏的机器上直接 INTERNALERROR）—— 也就是说**这份 CI 配置正是发现并
-# 验证该修复的手段**。`tools/tests/test_conftest.py` 现在守着它。
+# 验证该修复的手段**。`tests/test_conftest.py` 现在守着它。
 
 name: CI
 
@@ -31,13 +31,14 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         # 覆盖声明范围（requires-python = ">=3.11"）的下界与本地开发版本。
         # 中间版本（3.12 / 3.13）不再单列 —— mypy 已按 python_version=3.11
         # 的 typeshed 校验过 API 可用性，多跑一遍收益有限。
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.11", "3.14"]
 
     steps:
@@ -56,6 +57,9 @@ jobs:
 
       - name: ruff —— 代码检查
         run: ruff check .
+
+      - name: UTF-8 无 BOM + LF —— 全部提交文本
+        run: python tools/ci/run_check.py encoding
 
       - name: ruff —— 格式检查
         run: ruff format --check .
@@ -80,7 +84,7 @@ jobs:
         run: v3 verify --from-snapshot
 
       - name: v3 tables --offline —— 用入库快照核验生成表
-        # 171 张生成表是文档里大部分数字的来源，而**算**它们要读游戏 ——
+        # 174 张生成表是文档里大部分数字的来源，而**算**它们要读游戏 ——
         # 于是「表格被手改、或改了生成器却忘了重跑」在 CI 上一直没人守。
         # 现在快照里带着每张表当时的数据行（域 doc_tables），这条只读快照与文档。
         #
@@ -171,16 +175,21 @@ jobs:
         # runner 上没有游戏 ⇒ 带 `_needs_game` 的那几类会自动 skip，跑到的都是合成样本
         # （`SMALL` / `MEDIUM` / `TRICKY`），因此这份数字**跨机器口径一致**。
         run: |
-          python -m pytest tools/tests/test_benchmarks.py \
+          python -m pytest tests/test_benchmarks.py \
             -o addopts="" --benchmark-only --benchmark-json=bench.json -q
 
       - name: 把基准数字写进 job summary
         run: python tools/ci/bench_summary.py bench.json >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Python 时间与分配峰值（输出指纹随报告保存）
+        run: python -m pdx.performance --output performance.json
+
       - uses: actions/upload-artifact@v4
         with:
           name: benchmark-json
-          path: bench.json
+          path: |
+            bench.json
+            performance.json
 
   lock:
     # 依赖锁这条**单开一个 job，固定 windows-latest**。
@@ -224,4 +233,3 @@ jobs:
 
       - name: pytest —— 在锁定的环境里跑不依赖游戏的用例
         run: python -m pytest -m "not integration"
-

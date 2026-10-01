@@ -1,14 +1,14 @@
 # Victoria 3 Mod 开发知识库 · 05 defines 与修饰符
 
-> ⚠️ **版本提示（精确清单）**：本机游戏是 **1.14.4 (Ice Tea)**（版本指纹见下一段三条）。原先那句「数量统计与零使用类结论采集于 1.14.2」现在按类拆开：
-> - **已是 1.14.4 —— 表格已重算**：§2.1 / §2.2 / §2.5 / §2.6 / §1.6 共 **5 张表**由 `v3 tables --write` 重算回写（§0.3 的口径补记），§0.4 的 **9 / 75 / 50 / 3482 / 3475** 与之同源；参数总数 3482 由 `def.param_total`、`def.param_names` 两条断言钉住（1.14.4 的海军战力重做删掉 24 个、加了 18 个参数，净 −6）。
-> - **已是 1.14.4 —— 断言已核验**：本文 **25 条** `def.*` / `defines.*` 断言由 `v3 verify` 现场重扫，本次 **25/25 通过**（含 `def.modtypes` 2365、`def.static` 6128、`def.nai_count` 1018、`def.file_*` 6 条）。
+> ⚠️ **版本提示（精确清单）**：本机游戏是 **1.14.5 (Ice Tea)**（版本指纹见下一段三条）。原先那句「数量统计与零使用类结论采集于 1.14.2」现在按类拆开：
+> - **已是 1.14.5 —— 表格已重算**：§2.1 / §2.2 / §2.5 / §2.6 / §1.6 共 **5 张表**由 `v3 tables --write` 重算回写（§0.3 的口径补记），§0.4 的 **9 / 75 / 50 / 3515 / 3508** 与之同源；参数总数 3515 由 `def.param_total`、`def.param_names` 两条断言钉住（1.14.4 的海军战力重做删掉 24 个、加了 18 个参数，净 −6）。
+> - **已是 1.14.5 —— 断言已核验**：本文 **25 条** `def.*` / `defines.*` 断言由 `v3 verify` 现场重扫，本次 **25/25 通过**（含 `def.modtypes` 2371、`def.static` 6128、`def.nai_count` 1025、`def.file_*` 6 条）。
 > - **已复测的「零使用 / 无实例」类结论**（1.14.4 实测值，命令见 §8 表）：`apply_modifier` → 原版键 **0 处**；`has_game_rule` → **0 处**；`type_set` → **0 处**；`scripted_modifier` → **0 处**且 exe 无该字面量。
 > - **未复测（明确列出）**：§5.2 的 `game_data.type_set` **合法取值集合**（本地 0 实例，无从复测）、§1.4 的引擎 define 默认值/取值范围（本地无声明）、§8 第 12 条（mod 新增键是否无效）、§6.6 的「32 个未声明 `icon` 的静态修饰符」。
-> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.4）；文档与断言表的一致性由 `tools/tests/test_docs_consistency.py` 持续看守。
+> 已经过自动核验的数量断言见 `v3 verify`（其断言表已更新到 1.14.5）；文档与断言表的一致性由 `tests/test_docs_consistency.py` 持续看守。
 
-> **适用版本**：Victoria 3 **1.14.4 (Ice Tea)**（本文的模块结构统计已重测到 1.14.4；个别标注为 1.14.2 的结论为历史采集值）
-> 版本依据：`launcher\launcher-settings.json` → `"version": "1.14.4 (Ice Tea)"`、`"rawVersion": "1.14.4"`；`caligula_branch.txt` → `release/1.14.4`；`clausewitz_branch.txt` → `caligula/release/1.14.x`
+> **适用版本**：Victoria 3 **1.14.5 (Ice Tea)**（本文的模块结构统计已重测到 1.14.5；个别标注为 1.14.2 的结论为历史采集值）
+> 版本依据：`launcher\launcher-settings.json` → `"version": "1.14.5 (Ice Tea)"`、`"rawVersion": "1.14.5"`；`caligula_branch.txt` → `release/1.14.5`；`clausewitz_branch.txt` → `caligula/release/1.14.x`
 > **内容根（下文简称 `GAME`）**：`C:\Program Files (x86)\Steam\steamapps\common\Victoria 3\game`
 > **安装根**：`C:\Program Files (x86)\Steam\steamapps\common\Victoria 3`
 
@@ -58,7 +58,7 @@
 > 这几张表原先由那批 PowerShell 脚本产出，数值停留在 1.14.2：
 > 1.14.3 给 `NMilitary` 增加了 1<!--claim:def.file_ai--> 个参数、给 `NDiplomacy` 增加了 39 个，
 > 于是 `00_defines.txt` 之后所有块的**起始行号整体后移 40 行**、
-> 参数总数从 3434 涨到 **3482**<!--claim:def.param_total-->。现在这些数字由仓库内的解析器
+> 参数总数从 3434 涨到 **3515**<!--claim:def.param_total-->。现在这些数字由仓库内的解析器
 > （`pdx.parser`，口径见 §0.3）重新生成，并由 `v3 verify` 的
 > `def.param_total` / `def.param_names` 两条断言钉住。
 
@@ -94,8 +94,8 @@
 | `common\defines\` 下 `.txt` 文件数 | **9**（根目录 6 + `jomini\` 子目录 3） | 【提取】递归枚举 `common\defines\` |
 | 顶层命名空间块总数 | **75** | 【提取】§2.2 |
 | 去重后命名空间数 | **50** | 【提取】§1.6 |
-| 参数条目总数 | **3482**（标量 3307 + 内联列表 175 + 嵌套块 0） | 【提取】§2.1 汇总 |
-| 去重后参数名数 | **3475**（有 7 次跨块重复出现） | 【提取】 |
+| 参数条目总数 | **3515**（标量 3340 + 内联列表 175 + 嵌套块 0） | 【提取】§2.1 汇总 |
+| 去重后参数名数 | **3508**（有 7 次跨块重复出现） | 【提取】 |
 
 > **解析器口径提示**：`00_shaders.txt` 第 1-2 行是 PDX 的另一种写法——`NShadersCommon =` 与 `{` 分行。全库 9 个 defines 文件中**只有这一处**采用该写法（脚本已逐文件校验：其余文件均无"行尾为 `=`"的情况）。本文的解析器已处理该情形，行号一律为**物理行号**。
 
@@ -255,7 +255,7 @@ MAP_LENS_military_lens
 
 | Namespace | Blocks | Params | File(s) |
 |---|---|---|---|
-| `NAI` | 1 | 1018 | 00_ai.txt |
+| `NAI` | 1 | 1025 | 00_ai.txt |
 | `NAudio` | 1 | 23 | 00_audio.txt |
 | `NBattle` | 1 | 67 | 00_defines.txt |
 | `NCamera` | 1 | 18 | 00_graphics.txt |
@@ -264,7 +264,7 @@ MAP_LENS_military_lens
 | `NCoasts` | 1 | 6 | 00_graphics.txt |
 | `NCountry` | 1 | 44 | 00_defines.txt |
 | `NDebug` | 1 | 3 | 00_defines.txt |
-| `NDiplomacy` | 1 | 397 | 00_defines.txt |
+| `NDiplomacy` | 1 | 421 | 00_defines.txt |
 | `NEconomy` | 1 | 294 | 00_defines.txt |
 | `NEdgeOfWorld` | 1 | 19 | 00_shaders.txt |
 | `NEvents` | 1 | 3 | 00_defines.txt |
@@ -302,9 +302,9 @@ MAP_LENS_military_lens
 | `NTechnology` | 1 | 4 | 00_defines.txt |
 | `NText` | 1 | 6 | 00_defines.txt |
 | `NTooltip` | 1 | 7 | jomini/00_tooltips.txt |
-| `NTravelNetwork` | 2 | 43 | 00_defines.txt, 00_graphics.txt |
+| `NTravelNetwork` | 2 | 42 | 00_defines.txt, 00_graphics.txt |
 | `NTrend` | 1 | 2 | 00_interfaces.txt |
-| `NWar` | 1 | 77 | 00_defines.txt |
+| `NWar` | 1 | 80 | 00_defines.txt |
 
 ---
 
@@ -452,16 +452,16 @@ NCountry = {
 
 | 文件（相对 `common\defines\`） | 顶层块数 | 标量参数 | 内联列表 | 嵌套块 | 条目合计 |
 |---|---|---|---|---|---|
-| `00_ai.txt` | 1 | 1018 | 0 | 0 | **1018** |
+| `00_ai.txt` | 1 | 1025 | 0 | 0 | **1025** |
 | `00_audio.txt` | 1 | 23 | 0 | 0 | **23** |
-| `00_defines.txt` | 19 | 1666 | 5 | 0 | **1671** |
+| `00_defines.txt` | 19 | 1692 | 5 | 0 | **1697** |
 | `00_graphics.txt` | 19 | 369 | 123 | 0 | **492** |
 | `00_interfaces.txt` | 27 | 162 | 40 | 0 | **202** |
 | `00_shaders.txt` | 5 | 35 | 5 | 0 | **40** |
 | `jomini/00_tooltips.txt` | 1 | 6 | 1 | 0 | **7** |
 | `jomini/fog_of_war.txt` | 1 | 22 | 1 | 0 | **23** |
 | `jomini/rivers.txt` | 1 | 6 | 0 | 0 | **6** |
-| **合计** | **75** | **3307** | **175** | **0** | **3482** |
+| **合计** | **75** | **3340** | **175** | **0** | **3515** |
 
 【提取】
 
@@ -471,7 +471,7 @@ NCountry = {
 
 | File | Namespace block | Line | Scalar | Inline list | Nested | Total |
 |---|---|---|---|---|---|---|
-| `00_ai.txt` | `NAI` | 1 | 1018 | 0 | 0 | 1018 |
+| `00_ai.txt` | `NAI` | 1 | 1025 | 0 | 0 | 1025 |
 | `00_audio.txt` | `NAudio` | 1 | 23 | 0 | 0 | 23 |
 | `00_defines.txt` | `NGame` | 1 | 6 | 0 | 0 | 6 |
 | `00_defines.txt` | `NJominiMap` | 10 | 4 | 0 | 0 | 4 |
@@ -479,19 +479,19 @@ NCountry = {
 | `00_defines.txt` | `NPolitics` | 64 | 208 | 0 | 0 | 208 |
 | `00_defines.txt` | `NEconomy` | 358 | 293 | 1 | 0 | 294 |
 | `00_defines.txt` | `NMilitary` | 728 | 168 | 0 | 0 | 168 |
-| `00_defines.txt` | `NDiplomacy` | 941 | 397 | 0 | 0 | 397 |
-| `00_defines.txt` | `NPowerBlocs` | 1407 | 24 | 0 | 0 | 24 |
-| `00_defines.txt` | `NPops` | 1434 | 207 | 4 | 0 | 211 |
-| `00_defines.txt` | `NPops` | 1803 | 16 | 0 | 0 | 16 |
-| `00_defines.txt` | `NEvents` | 1830 | 3 | 0 | 0 | 3 |
-| `00_defines.txt` | `NTechnology` | 1836 | 4 | 0 | 0 | 4 |
-| `00_defines.txt` | `NCharacters` | 1844 | 103 | 0 | 0 | 103 |
-| `00_defines.txt` | `NBattle` | 2004 | 67 | 0 | 0 | 67 |
-| `00_defines.txt` | `NWar` | 2092 | 77 | 0 | 0 | 77 |
-| `00_defines.txt` | `NTravelNetwork` | 2174 | 34 | 0 | 0 | 34 |
-| `00_defines.txt` | `NHarvestConditions` | 2219 | 2 | 0 | 0 | 2 |
-| `00_defines.txt` | `NText` | 2224 | 6 | 0 | 0 | 6 |
-| `00_defines.txt` | `NDebug` | 2234 | 3 | 0 | 0 | 3 |
+| `00_defines.txt` | `NDiplomacy` | 941 | 421 | 0 | 0 | 421 |
+| `00_defines.txt` | `NPowerBlocs` | 1431 | 24 | 0 | 0 | 24 |
+| `00_defines.txt` | `NPops` | 1458 | 207 | 4 | 0 | 211 |
+| `00_defines.txt` | `NPops` | 1827 | 16 | 0 | 0 | 16 |
+| `00_defines.txt` | `NEvents` | 1854 | 3 | 0 | 0 | 3 |
+| `00_defines.txt` | `NTechnology` | 1860 | 4 | 0 | 0 | 4 |
+| `00_defines.txt` | `NCharacters` | 1868 | 103 | 0 | 0 | 103 |
+| `00_defines.txt` | `NBattle` | 2028 | 67 | 0 | 0 | 67 |
+| `00_defines.txt` | `NWar` | 2116 | 80 | 0 | 0 | 80 |
+| `00_defines.txt` | `NTravelNetwork` | 2201 | 33 | 0 | 0 | 33 |
+| `00_defines.txt` | `NHarvestConditions` | 2245 | 2 | 0 | 0 | 2 |
+| `00_defines.txt` | `NText` | 2250 | 6 | 0 | 0 | 6 |
+| `00_defines.txt` | `NDebug` | 2260 | 3 | 0 | 0 | 3 |
 | `00_graphics.txt` | `NMapMode` | 1 | 38 | 59 | 0 | 97 |
 | `00_graphics.txt` | `NMapName` | 157 | 7 | 1 | 0 | 8 |
 | `00_graphics.txt` | `NJominiMapGraphics` | 187 | 11 | 0 | 0 | 11 |
@@ -551,7 +551,7 @@ NCountry = {
 
 ### 2.3 `00_ai.txt` —— AI 专用 defines（详见 §3）
 
-整个文件**只有一个**顶层命名空间块 `NAI`，起始于第 1 行，包含 **1018**<!--claim:def.nai_count--> 个参数，全部为标量，无内联列表、无嵌套块。文件共 1312<!--claim:def.ai_file_lines--> 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
+整个文件**只有一个**顶层命名空间块 `NAI`，起始于第 1 行，包含 **1025**<!--claim:def.nai_count--> 个参数，全部为标量，无内联列表、无嵌套块。文件共 1319<!--claim:def.ai_file_lines--> 行，全文中 `= {` 只出现 1 次（即第 1 行的 `NAI = {`）。【提取】
 
 结构明细见 §3.1，全部 1017 个参数名见 §3.3。
 
@@ -579,19 +579,19 @@ NCountry = {
 | 4 | `NPolitics` | 64 | 1 | 208 |
 | 5 | `NEconomy` | 358 | 1 | 294 |
 | 6 | `NMilitary` | 728 | 1 | 168 |
-| 7 | `NDiplomacy` | 941 | 1 | 397 |
-| 8 | `NPowerBlocs` | 1407 | 1 | 24 |
-| 9 | `NPops` | 1434, 1803 | **2** | 211 + 16 = 227 |
-| 10 | `NEvents` | 1830 | 1 | 3 |
-| 11 | `NTechnology` | 1836 | 1 | 4 |
-| 12 | `NCharacters` | 1844 | 1 | 103 |
-| 13 | `NBattle` | 2004 | 1 | 67 |
-| 14 | `NWar` | 2092 | 1 | 77 |
-| 15 | `NTravelNetwork` | 2174 | 1 | 34 |
-| 16 | `NHarvestConditions` | 2219 | 1 | 2 |
-| 17 | `NText` | 2224 | 1 | 6 |
-| 18 | `NDebug` | 2234 | 1 | 3 |
-| | **合计** | | **19 块** | **1671** |
+| 7 | `NDiplomacy` | 941 | 1 | 421 |
+| 8 | `NPowerBlocs` | 1431 | 1 | 24 |
+| 9 | `NPops` | 1458, 1827 | **2** | 211 + 16 = 227 |
+| 10 | `NEvents` | 1854 | 1 | 3 |
+| 11 | `NTechnology` | 1860 | 1 | 4 |
+| 12 | `NCharacters` | 1868 | 1 | 103 |
+| 13 | `NBattle` | 2028 | 1 | 67 |
+| 14 | `NWar` | 2116 | 1 | 80 |
+| 15 | `NTravelNetwork` | 2201 | 1 | 33 |
+| 16 | `NHarvestConditions` | 2245 | 1 | 2 |
+| 17 | `NText` | 2250 | 1 | 6 |
+| 18 | `NDebug` | 2260 | 1 | 3 |
+| | **合计** | | **19 块** | **1697** |
 
 【提取】——这 18 个命名空间与官方 Wiki [Defines](https://vic3.paradoxwikis.com/Defines) 的 §2 小节列表**完全一致**，可作为交叉验证。
 
@@ -725,8 +725,8 @@ Jomini 内容根另有 15<!--claim:def.jomini_untaken--> 个未被 game 层接�
 | `DIPLO_*` | 210 |
 | `PRODUCTION_*` | 89 |
 | `MONEY_*` | 45 |
-| `AI_*` | 34 |
-| `GOAL_*` | 33 |
+| `AI_*` | 38 |
+| `GOAL_*` | 35 |
 | `AUTONOMOUS_*` | 30 |
 | `FLEET_*` | 30 |
 | `UNIFICATION_*` | 30 |
@@ -771,6 +771,7 @@ Jomini 内容根另有 15<!--claim:def.jomini_untaken--> 个未被 game 层接�
 | `IMPOSE_*` | 5 |
 | `PORT_*` | 5 |
 | `RAISE_*` | 5 |
+| `START_*` | 5 |
 | `SUBSIDIZE_*` | 5 |
 | `VIOLATE_*` | 5 |
 | `ESCORT_*` | 4 |
@@ -778,7 +779,6 @@ Jomini 内容根另有 15<!--claim:def.jomini_untaken--> 个未被 game 层接�
 | `INTERCEPT_*` | 4 |
 | `MAX_*` | 4 |
 | `REGIME_*` | 4 |
-| `START_*` | 4 |
 | `COLONIZATION_*` | 3 |
 | `INFLUENCE_*` | 3 |
 | `LOWER_*` | 3 |
@@ -2178,15 +2178,15 @@ has_game_rule = high_ai_aggression
 
 【文档】来源：`GAME\common\modifier_type_definitions\modifier_types.md`
 
-**实测前缀分布**（2365<!--claim:def.modtypes--> 个键，按第一个下划线前切分）——与上述规则完全吻合：
+**实测前缀分布**（2371<!--claim:def.modtypes--> 个键，按第一个下划线前切分）——与上述规则完全吻合：
 
 | 前缀 | 键数 | 流动含义（据上文推断） |
 |---|---|---|
-| `country_` | **1096** | 作用于国家；在权力集团上施加时只流到成员国，不再向下 |
+| `country_` | **1099** | 作用于国家；在权力集团上施加时只流到成员国，不再向下 |
 | `state_` | **571** | 会穿过国家流到该国所有州 |
 | `building_` | **300** | 作用于建筑 |
 | `goods_` | **125** | 作用于商品 |
-| `ship_` | **68** | 作用于船只 |
+| `ship_` | **71** | 作用于船只 |
 | `unit_` | **56** | 作用于陆军单位 |
 | `character_` | **41** | 作用于角色 |
 | `power_` | **39** | 权力集团（`power_bloc_*`） |
@@ -2198,7 +2198,7 @@ has_game_rule = high_ai_aggression
 
 【提取】
 
-**后缀分布**同样有强规律：`_add` **1636**<!--claim:defines.suffix_add-->、`_mult` **626**<!--claim:defines.suffix_mult-->、`_bool` **89**<!--claim:defines.suffix_bool-->、`_factor` 5<!--claim:def.suffix_factor-->，另有 9<!--claim:def.suffix_other--> 个键各以其它词结尾（`_support`、`_strata`、`_time`、`_cost`、`_guns`、`_literacy`、`_impact`、`_likelihood`、`_type`，各 1 个）。合计 2364。【提取】——即「加法修正 / 乘法修正 / 布尔开关」三分天下。
+**后缀分布**同样有强规律：`_add` **1636**<!--claim:defines.suffix_add-->、`_mult` **629**<!--claim:defines.suffix_mult-->、`_bool` **92**<!--claim:defines.suffix_bool-->、`_factor` 5<!--claim:def.suffix_factor-->，另有 9<!--claim:def.suffix_other--> 个键各以其它词结尾（`_support`、`_strata`、`_time`、`_cost`、`_guns`、`_literacy`、`_impact`、`_likelihood`、`_type`，各 1 个）。合计 2364。【提取】——即「加法修正 / 乘法修正 / 布尔开关」三分天下。
 
 ### 5.2 字段参考
 
@@ -2219,7 +2219,7 @@ has_game_rule = high_ai_aggression
 
 【提取 + 文档】
 
-字段是否必填【未确认】——原版有 31<!--claim:def.modtypes_missing_decimals--> 个键完全没写 `decimals`、1479<!--claim:def.modtypes_missing_percent--> 个键没写 `percent`，说明二者至少有默认值。建议 mod 显式写出 `decimals` / `color` / `percent` 以避免显示异常。
+字段是否必填【未确认】——原版有 31<!--claim:def.modtypes_missing_decimals--> 个键完全没写 `decimals`、1482<!--claim:def.modtypes_missing_percent--> 个键没写 `percent`，说明二者至少有默认值。建议 mod 显式写出 `decimals` / `color` / `percent` 以避免显示异常。
 
 ### 5.3 规模与文件分布
 
@@ -5049,7 +5049,7 @@ add_modifier = { # academics polstr
 | 8 | **`game_data.type_set` 的合法取值** | **1.14.3 复测**：`v3 evidence type_set --values` → 原版键 **0 处**；官方 md **1 处赋值**，`common/modifier_type_definitions/modifier_types.md:25` 逐字 `type_set = { cultural_acceptance }`（上方 `:24` 的注释：`# the modifier typesets this type belongs to, used in code to perform bespoke operations (such as updating cultural community acceptance deltas when a country enacts a law with a modifier entry of this type)`）；exe 有字面量 | 【未确认】本地无证据（原版 0 实例，取值全集无从枚举）→ 配方 A |
 | 9 | **`decimals` / `percent` / `color` 缺省值** | 数量侧已由断言钉住（1.14.3）：`modifier_type_definitions` 共 **2364** 个键，`decimals` **2333** 处 → **31** 个没写（`def.modtypes_missing_decimals`）、`percent` **885** 处 → **1479** 个没写（`def.modtypes_missing_percent`）、`color` **2364** 处 → 0 个没写。取值分布：`decimals` {1×1349, 0×966, 2×18}、`percent` {yes×824, no×61}、`color` {good×1776, neutral×306, bad×282}（`v3 evidence … --values`） | 【未确认】本地无证据（**缺省值**本身无声明；只能证明「有默认值」）→ 配方 A |
 | 10 | **`scripted_modifiers` 是否仍被引擎解析** | **1.14.3 复测**：`v3 evidence scripted_modifier` → 原版键 **0 处**、官方 md **0 处**、exe **无该字面量**（`v3 evidence --exe-grep scripted_modifier` → 0 个）；同族里存在的是 Jomini 模板数据库 —— `v3 evidence --exe-grep scripted` → `CJominiScriptedModifierTemplateDatabase`。**2026-09-20 探针实测**：`common/scripted_modifiers/` 里的**定义会被解析**（照 md 的模板体写 → 无报错），**调用形态**见 `04-脚本系统.md` §7.3：把模板名当键会被引擎识别（引擎会去解析该模板），`scripted_modifier = 名字` / `modifier = { 名字 = yes }` / `modifier = { scripted_modifier = 名字 }` 三种写法全被拒 | **部分已答**：定义 ✅、调用点 = 模板名当键（模板体形状仍【未确认】） |
-| 11 | **wiki 的 verified 版本是 1.13，采集时点本机是 1.14.2** | 本机指纹已更新：`env.caligula_branch` = `release/1.14.4`、`env.caligula_rev` = `bf52e8e…`（本次 `v3 verify` 已核验），另有头部「版本依据」三条；§1.7 证据 4 已把该 Wiki 页标注为 verified for 1.13，并给出实测反例：`INCORPORATION_TIME_NO_MATCH` 实测 **25**（`00_defines.txt`），Wiki 示例注释写 "Base game 20 years" | 已答（版本差异已量化，见 §0.1 的【Wiki】行与 §1.7 证据 4） |
+| 11 | **wiki 的 verified 版本是 1.13，采集时点本机是 1.14.2** | 本机指纹已更新：`env.caligula_branch` = `release/1.14.5`、`env.caligula_rev` = `9f8281a…`（本次 `v3 verify` 已核验），另有头部「版本依据」三条；§1.7 证据 4 已把该 Wiki 页标注为 verified for 1.13，并给出实测反例：`INCORPORATION_TIME_NO_MATCH` 实测 **25**（`00_defines.txt`），Wiki 示例注释写 "Base game 20 years" | 已答（版本差异已量化，见 §0.1 的【Wiki】行与 §1.7 证据 4） |
 | 12 | **mod 中新增 define 键是否完全无效** | define **键名确实编译进二进制**：`v3 evidence --exe-grep INCORPORATION_TIME_NO_MATCH` → exe 里存在该标识符（1 个）；§0.4 的 **3488** 个参数全部来自原版 9 个文件。**没有**「新增键被读取」的本地实例 | 【未确认】本地无证据 → 配方 C |
 
 ---

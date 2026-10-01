@@ -1,4 +1,4 @@
-﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+# ⚠️ 本文件由 `v3 modgen` 生成（src/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
 
 # 改革窗口 JE（巴西 · 失去市场）：判据驱动 —— 只有压力够大才开。
 # 这个 JE 的作用**只有三条**（2026-09-22 实测复核，别读多）：
@@ -10,6 +10,9 @@
 # **没有「读任意 JE」的通用谓词** —— 我们自己的 JE 一张牌也喂不到。
 # 意图位移的真正通道是**递牌**（`set_strategy`）与**法律承诺**（law commitment），
 # 原因与实测见 `docs/design/backlog.md` B52 / B53–B60。
+# ⚠️ **可见面**：`on_complete` 的递牌包在 `custom_tooltip` 里 —— `set_strategy`
+# 的 `effect_localization` 只有 `global`，而那一格要 `first` ⇒ 裸写会被引擎渲染成
+# `BUG: … missing perspective`（2026-10-01 预检帧实拍）。包一层只换说法、不改行为。
 
 je_sitai_brz_market_loss_window = {
 	icon = "gfx/interface/icons/goods_icons/coffee.dds"

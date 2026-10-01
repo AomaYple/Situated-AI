@@ -27,17 +27,17 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from pdx import ab_probe, config, modgen, mods, preflight
 from pdx import game_auto as ga
+from pdx.textio import deploy_tree
 
 DOCS = Path.home() / "Documents" / "Paradox Interactive" / "Victoria 3"
 MODS_DIR = DOCS / "mod"
@@ -108,7 +108,7 @@ def deploy(*, with_probe: bool = True, archive_id: str | None = None) -> str:
     ours_dst = ours()
     # 先清残留：上一版档案集合留下的目录按新名字是找不到的（见 `_clean_ours`）。
     _clean_ours(ours_dst, PROBE)
-    shutil.copytree(config.REPO / "mod", ours_dst)
+    deploy_tree(config.REPO / "mod", ours_dst)
     paths = [ours_dst]
     if with_probe:
         # ⚠️ 用 `ab_probe.write` 而**不是** `ab_probe.deploy`：后者会调
@@ -145,10 +145,7 @@ def restore() -> str:
 
 
 def kill_game() -> list[int]:
-    pids = ga._process_pids()
-    for pid in pids:
-        subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, check=False)
-    return pids
+    return ga.kill_game()
 
 
 def quarantine_test_artifacts() -> list[str]:

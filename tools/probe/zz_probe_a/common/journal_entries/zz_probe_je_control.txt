@@ -1,4 +1,4 @@
-﻿# P14：**对照组** —— 与 zzprobe_je 同时挂上，唯一差别是三个字段都没有。
+# P14：**对照组** —— 与 zzprobe_je 同时挂上，唯一差别是三个字段都没有。
 # 并排比较进度条：带 display_progressbar_as_months 的那个应显示「月」而不是数值。
 # 原文说明： —— 骨架逐字复制自 common/journal_entries/00_abolish_monarchy.txt，
 # 只改键名并注入三个待验证字段。

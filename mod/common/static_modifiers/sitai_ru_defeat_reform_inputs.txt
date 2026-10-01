@@ -1,12 +1,18 @@
-﻿# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+# ⚠️ 本文件由 `v3 modgen` 生成（src/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
 
-# 改革侧输入（A 级）：**实验手段**（与 [pressure] 同一定位）：它是「改革派牌读得到的那两个输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。真正的正式版设计应当是**真实触发 + 因果链**（战败 → 割地赔款 → 工业化/识字率的真实位移 → IG 势力自然变化），而不是直接改政治力量；这条已记进 backlog，本档案的实验定位也写在 阶段3-结果.md 与 阶段3-归档清点.md 里。为什么走 A 级而不是递牌：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（03_political_strategies.txt:528-544），改世界状态就等于改它的输入，不占任何槽位（F5）。
+# 改革侧输入（A 级）：改革侧的推力也落成真实世界状态（A 级）：它是「改革派牌读得到的那两个输入」的修正，**B35 落地后由原版事件接线挂上**（`[trigger]` 路径①②都挂这一条线；探针只作仪器通道）。正式版设计要的是**真实触发 + 因果链**（战败 → 割地赔款 → 工业化/识字率的真实位移 → IG 势力自然变化），而不是直接改政治力量 —— 本版走的是这条链的第一段（战败事实由原版事件认定），**后一段仍是 A 级近似**：原版没有可读的「割地赔款使工业化/识字率位移」的现成字段，这一点如实写在报告《只能间接派生的两条》里。为什么走 A 级而不是递牌：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（03_political_strategies.txt:528-544），改世界状态就等于改它的输入，不占任何槽位（F5）。**旧实验值作废留痕（B112：不改历史读数、只补记）**：阶段 3 A/B 用的是**直接一击 +0.5 / +0.5**（第二处理段 B2 显式施加）；现在同一总量由**基线 +0.25 / +0.25（恒挂）+ 投降叠加 +0.25 / +0.25**合成，窗口内总量与实验段一致。实验读数的原文在 阶段3-结果.md 与 阶段3-归档清点.md（未改动）。
 # 每条字段的依据见 sitai_ru_defeat.md（由 why_report 生成）。
 # ⚠️ 这一份**不是**冲击本身：它是实验的第二处理段（B2）才挂的东西 ——
 # 写进 [pressure] 会让「只加冲击」的那一段消失。
+# 叠加档 sitai_ru_reform_inputs_capitulation：只在 has_variable = recent_capitulation 时额外挂上（判据是真实结果，不是实验设置）。
 
 sitai_ru_reform_inputs = {
 	icon = gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds
-	interest_group_ig_industrialists_pol_str_mult = 0.5
-	interest_group_ig_intelligentsia_pol_str_mult = 0.5
+	interest_group_ig_industrialists_pol_str_mult = 0.25
+	interest_group_ig_intelligentsia_pol_str_mult = 0.25
+}
+sitai_ru_reform_inputs_capitulation = {
+	icon = gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds
+	interest_group_ig_industrialists_pol_str_mult = 0.25
+	interest_group_ig_intelligentsia_pol_str_mult = 0.25
 }

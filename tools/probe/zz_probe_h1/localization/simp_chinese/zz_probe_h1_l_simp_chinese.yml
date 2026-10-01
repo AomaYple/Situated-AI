@@ -1,4 +1,4 @@
-﻿l_simp_chinese:
+l_simp_chinese:
  zzprobe_h1_assign:0 "【H1 探针】随机分组"
  zzprobe_h1_assign_desc:0 "把全世界国家随机分成 4 组（对照 / 低 / 中 / 高），给我们的探针牌不同权重。幂等，点多次也只分一次。"
  ai_strategy_sitai_probe_reform:0 "探针：改革议程"

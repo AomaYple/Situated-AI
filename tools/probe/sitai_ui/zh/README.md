@@ -90,3 +90,33 @@
 `tier_uniform_desc_head` + `tier_uniform_desc_tail` + **`tier_uniform_name`（本轮新建）** = **12**。
 （队长 08:3x 说的"换完仍 11"指的是**三张重裁不改变数量**；但同一轮**新建**了 `tier_uniform_name`，
 所以总数是 11 + 1 = **12**。计数这种事以后一律**取现读**，不沿用上一轮的叙述。）
+
+## `tier_history_friendly_*`（2026-09-29 Pass A 后裁，来自「点过一次 ◀」的那一帧）
+
+素材：`tools/out/auto/pass-20260929-024847-harsh/26-tier-prev-candidate.png`
+（1,933,002 B / sha256 `9ddfe919b0d707c61847974db617b876de6d7ba24da137719c42d1053d75de94`）。
+**这一帧的性质**：Pass A 侦察的**候选帧**（驱动按 `--row-arrows` 在 `◀` 上点过一次之后抓的），
+档位读数**未经判据确认** —— 用它裁模板的依据是「模板自己的自证 + 交叉阴性」，不是「这一帧已被判过」。
+肉眼核对：`◀` 之后卡片上的档名从「一视同仁」变成 **「史实友好」**，说明这一帧读到的是 `history_friendly`
+（`◀` 一次点击 = uniform→history_friendly，与 `src/pdx/ab_probe.py` 同段代码的两支一致）。
+
+脚本：`%TEMP%\t41-facts\check_history_templates.py`（只读量具，**不进仓库**：读帧 → 在 `rules_window`
+ROI 里匹配 → 报「判据路」（阈值 0.75，驱动 L8 走的那条）与「最优路」（跨尺度取最优）两栏）。
+
+| 模板 | 像框（全分辨率） | 字节 / sha256 | 自证（判据路，阈值 0.75） | 位置落回原框 | 阴性（最优路 / 判据路） |
+|---|---|---|---|---|---|
+| `tier_history_friendly_name.png` | (1145,729,1215,750) | 3,209 B / `177f1160…c0b8` | **1.000000** | ✓ | `22-rule-sitai`（一视同仁那一帧）**0.308765** / 0.292956；`21-rules-window` **0.297898**；旧候选帧 **0.308765** / 0.292956 |
+| `tier_history_friendly_desc_head.png` | (979,771,1371,792) | 15,179 B / `3c995f64…97a9` | **1.000000** | ✓ | `22-rule-sitai` **0.263201** / 0.211476；`21-rules-window` **0.262547** / 0.233990；旧候选帧同上 |
+| `tier_history_friendly_desc_tail.png` | (978,793,1174,814) | 8,495 B / `b1c949c5…8f42` | **1.000000** | ✓ | `22-rule-sitai` **0.422488**；`21-rules-window` **0.292197** / 0.255860；旧候选帧同上 |
+
+**判据纪律**：三张都满足「自证 ≥0.99 且位置落回原框」+「不该命中的帧上 <0.75」⇒ 才写盘；
+**任一不过就不许写文件**（本页上方第 2 条纪律）。交叉阴性最差 0.422488（`desc_tail` 对「一视同仁」说明
+尾段那一行）⇒ 对 0.75 的余量 ≥0.33。
+**跨档特异性来自内容本身**：三张模板都裁自「史实友好」那一档的文案，在显示「一视同仁」的同位置框上
+最高只有 0.422488 —— 这就是「档名读数」判据能分开两档的物质基础（另见 `tier_uniform_*` 三张的反向读数）。
+
+**订正本页计数（现读）**：`zh/` 现共 **15** 张模板 = 上一节说的 12 张 + 本节新建的 3 张
+（`tier_history_friendly_{name,desc_head,desc_tail}.png`）。
+**仍缺**（收齐前承重模式会报错退出并点名，不会静默跳过）：`tier_harsh_{name,desc_head,desc_tail}` 三张、
+`btn_start_game`（要「选了国家之后的可用态」帧）、`btn_probe_decision`、`je_line_{goal,pressure,last_change}`
+三张、`chip_tier_<档>` 三张、`rule_card_title_sitai`。

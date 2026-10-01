@@ -1,9 +1,12 @@
-﻿l_simp_chinese:
-# ⚠️ 本文件由 `v3 modgen` 生成（tools/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+l_simp_chinese:
+# ⚠️ 本文件由 `v3 modgen` 生成（src/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
  je_sitai_ru_reform_window:0 "战败求存：改革窗口"
  je_sitai_ru_reform_window_reason:0 "仗打输了，账单到了。把国家带进这场战争的贵族失去了对朝堂的掌控，王权的威信已经破裂，国库只能以高昂的利息借债。\n\n窗口已经打开：旧势力虚弱、政府合法性动摇之时，改革是可能的。等国家重新站稳，这扇窗就会关上。\n\n当前目标：趁窗口开着，把旧势力一直拦着的那项改革推过去。\n\n最大压力与阻力：压力 = 贵族失势 + 王权威信破裂 + 借债成本高昂；阻力 = 等国家重新自己站稳。\n\n上次改主意的原因：因为战败被记进了账 —— 是这场败仗挪动了 AI 读到的那些输入。"
+ je_sitai_ru_reform_window_complete_tt:0 "国家重新站稳，改革窗口关闭：俄罗斯将回到#variable 弘扬传统价值#!战略。"
  sitai_ru_defeat_pressure:0 "战败余波"
  sitai_ru_reform_inputs:0 "改革派抬头"
+ sitai_ru_defeat_pressure_capitulation:0 "战败余波：被迫投降（合法性 -15，地主政治力量 -15%，借债利息 +15%）"
+ sitai_ru_reform_inputs_capitulation:0 "改革派抬头：被迫投降（工业家与知识界政治力量各 +25%）"
  rule_sitai_difficulty:0 "处境难度"
  je_sitai_ru_reform_window_pressure:0 "最大压力与阻力：压力 = 贵族失势 + 王权威信破裂 + 借债成本高昂；阻力 = 等国家重新自己站稳。"
  je_sitai_ru_reform_window_last_change:0 "上次改主意的原因：因为战败被记进了账 —— 是这场败仗挪动了 AI 读到的那些输入。"

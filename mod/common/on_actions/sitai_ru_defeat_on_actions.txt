@@ -1,0 +1,41 @@
+# ⚠️ 本文件由 `v3 modgen` 生成（src/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
+
+# 俄罗斯 · 战败求存 · 真实触发接线（B35）：**触发是真的**（B35）：本档案的记账效果 `sitai_ru_defeat_shock` 从本版起由原版事件调用，探针只是仪器通道。两条路径都要求「本国正是被打的那一方」才写账 —— 判据落在每条钩子的 scope 上（见各 hook 的 why）；赢的一方在两条路径上都结构性地拿不到记账效果（负面对照见 docs/reports/t3-真实因果链.md）。⚠️ 生成器能力缺口（如实记）：`common/on_actions` 不在反解表里（src/pdx/modgen.py 的 `_FACT_READERS` 只有七类），所以这份产物**不进闸门 ④ 的往返比对** —— 它的正确性由 tests/test_modgen.py 的用例看守，缺口本身记在报告里。
+# 给原版钩子**追加** `on_actions` 字段 —— 原版的 `effect` / `events` 字段一字不动；
+# 包装 on_action 与钩子写在同一个文件里（`on_actions = { … }` 只认 on_action 定义）。
+# 记账效果 sitai_ru_defeat_shock；判据 scope 见每条钩子的 why。
+
+
+on_capitulation = {
+	on_actions = {
+		sitai_ru_defeat_on_capitulation
+	}
+}
+sitai_ru_defeat_on_capitulation = {
+	effect = {
+		if = {
+			limit = {
+				c:RUS ?= this
+			}
+			sitai_ru_defeat_shock = yes
+		}
+	}
+}
+
+on_wargoal_enforced = {
+	on_actions = {
+		sitai_ru_defeat_on_wargoal_enforced
+	}
+}
+sitai_ru_defeat_on_wargoal_enforced = {
+	effect = {
+		if = {
+			limit = {
+				scope:target ?= c:RUS
+			}
+			scope:target = {
+				sitai_ru_defeat_shock = yes
+			}
+		}
+	}
+}

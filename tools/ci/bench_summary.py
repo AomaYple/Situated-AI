@@ -7,7 +7,7 @@
 用法：
 
 ```text
-pytest tools/tests/test_benchmarks.py -o addopts="" --benchmark-only --benchmark-json=bench.json
+pytest tests/test_benchmarks.py -o addopts="" --benchmark-only --benchmark-json=bench.json
 python tools/ci/bench_summary.py bench.json >> "$GITHUB_STEP_SUMMARY"
 ```
 

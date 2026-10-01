@@ -1,4 +1,4 @@
-﻿# 备用触发点：万一 on_game_started 在读档时不触发，手动点一次也能把自检跑完。
+# 备用触发点：万一 on_game_started 在读档时不触发，手动点一次也能把自检跑完。
 # 顺带验证 doc 04 记的那条：**决策**的 ai_chance 用的是 `value`，不是事件的 `base`
 # （原文 common/decisions/000_decisions_help.txt:42、:123）。
 zzprobe_r_selftest_decision = {

@@ -13,7 +13,10 @@
 # 而它同时有「表」与「数组」两种结构，正好表达"一组带依据的条目"。
 #
 # 本档案只做一件事：把**战败**变成真实世界状态（A 级：变量 + 修正 + JE），
-# 让原版自己的权重公式转向改革。**一张牌都不递**（见 `[cards]`）。
+# 让原版自己的权重公式转向改革。入口是**原版事件**（`[trigger]`：被占领首都而投降 /
+# 和约上被强制执行战争目标），不再由实验脚本显式调用。
+# 牌与信号的账目如实写：**自建处境牌一张**（`[cards]`）+ JE 上两条 `set_strategy`
+# （`[journal_entry.signals]`）；**不递任何原版牌**（F5 的那条结论不变）。
 
 schema_version = 1
 
@@ -24,7 +27,7 @@ country = "RUS"
 # 档案对哪个引擎版本有效（写进 mod 元数据的 supported_game_version）。
 # 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
 # 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
-game_version = "1.14.4"
+game_version = "1.14.5"
 why = "战败之后 AI 照旧走原来的路 —— 贵族照旧在朝、合法性不塌、财政不受罚，于是「战败 → 改革」这条因果在原版里根本不存在。档案不替 AI 决定改什么，只把战败记成账、把压力落成真实的合法性/贵族/财政变化。⚠️ 依据已于 2026-09-22 更正：原版 AI 策略里 212 处 has_journal_entry 全部硬编码**具名** JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）。"
 
 # ── ① 节奏杠杆：温和档 NAI 覆盖 ─────────────────────────────
@@ -48,23 +51,47 @@ why = "原版 20（1 = 1%）。与门槛 40 一起决定重抽周期（见上一
 [memory]
 variable = "sitai_ru_defeat_memory"
 effect = "sitai_ru_defeat_shock"
-why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown/possible 读它，于是「战败过」这件事变成可查的世界状态（阶段 1 已证：牌直接读 has_variable / has_journal_entry）。谁把战败判成战败，本档案不猜：原版 on_war_end 只给 scope:actor / scope:target，不带胜负（00_code_on_actions.txt:7043），挂错会把战胜方也记成战败 —— 这个判定留给阶段 3 的 A/B 实验（B 组由探针施加冲击）。"
+why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown/possible 读它，于是「战败过」这件事变成可查的世界状态（阶段 1 已证：牌直接读 has_variable / has_journal_entry）。**谁把战败判成战败：本版起是真实判定**（B35 已落地，接线见 `[trigger]`）—— 两条原版路径都只在「本国正是被打的那一方」时才写这本账：① 被逼投降（on_capitulation，root = 投降国本身，00_code_on_actions.txt:4222）；② 和约上被强制执行战争目标（on_wargoal_enforced，:6264 的 scope:target = 被强制执行的一方；赢家才是 root，:6298 给它写 recently_won_war）⇒ 赢的一方在任何一条路径上都拿不到记账效果。原版 on_war_end（:7043）只给 scope:actor / scope:target、不带胜负，**所以不用它判战败**：用它会把赢输记成一样。探针通道保留，但自本版起只是**仪器通道**（B2 实验段显式施加，用来做对照），不再是唯一入口。"
 
 [[memory.params]]
 key = "value"
 amount = 1
-why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次战败」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 00_code_on_actions.txt:7046）。"
+why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次战败」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 00_code_on_actions.txt:7084）。"
 
 [[memory.params]]
 key = "days"
 amount = 3650
-why = "10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。对照原版给 recently_had_war 的是 days = 1825（5 年，00_code_on_actions.txt:7048）—— 战败比「打过仗」更该留得久，故取两倍。"
+why = "10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。对照原版给 recently_had_war 的是 days = 1825（5 年，00_code_on_actions.txt:7086）—— 战败比「打过仗」更该留得久，故取两倍。"
+
+# ── ②b 真实触发接线（B35）：战败由原版事件自己记进账 ────────────
+#
+# 为什么单列一张表：它的产物是**单独一份**文件
+# （`common/on_actions/sitai_ru_defeat_on_actions.txt`），内容是给原版钩子
+# **追加**一个 `on_actions` 字段 —— 原版的 `effect` / `events` 字段一字不动。
+# 官方口径：`research/official-docs/game/common/on_actions/_on_actions.md:115`
+# 明说不能给已有 `effect` 块的 on_action 再追加一个 effect 块（会冲突），
+# `:117-128` 给的写法就是 `<原版钩子> = { on_actions = { <我们自己的 on_action> } }`；
+# 本仓的探针（`tools/probe/zz_probe_h1/common/on_actions/zz_probe_h1_on_actions.txt`）
+# 已按这个写法实机跑过，且踩过「`on_actions` 只认 on_action 定义、不认
+# scripted_effects 里的效果名」这条（报 `No on_action scripted with tag`）。
+[trigger]
+why = "**触发是真的**（B35）：本档案的记账效果 `sitai_ru_defeat_shock` 从本版起由原版事件调用，探针只是仪器通道。两条路径都要求「本国正是被打的那一方」才写账 —— 判据落在每条钩子的 scope 上（见各 hook 的 why）；赢的一方在两条路径上都结构性地拿不到记账效果（负面对照见 docs/reports/t3-真实因果链.md）。⚠️ 生成器能力缺口（如实记）：`common/on_actions` 不在反解表里（src/pdx/modgen.py 的 `_FACT_READERS` 只有七类），所以这份产物**不进闸门 ④ 的往返比对** —— 它的正确性由 tests/test_modgen.py 的用例看守，缺口本身记在报告里。"
+
+[[trigger.hooks]]
+on_action = "on_capitulation"
+scope = "this"
+why = "路径①：**被占领首都而投降**。原版 `common/on_actions/00_code_on_actions.txt:4214` 的注释写明 `# Root = Country`（就是投降国自己；钩子体在 `:4206-4218`），`:4208-4212` 给它写 recently_lost_war（1825 天），`:4213-4216` 写 recent_capitulation（`short_modifier_time`）。scope 写 `this` ⇒ 判据是 root 就是本国（`c:RUS ?= this`）：别的国家投降不会写这本账。**为什么这条路径同时是「重档」判据的来源**：recent_capitulation 是原版自己写的记号、窗口 913 天（`common/script_values/event_values.txt:39` 的 short_modifier_time = 913），不是我们发明的标记 —— [pressure.escalation] 读它不自我循环，窗口小也保证五年前的旧投降不会被算成今天的事。"
+
+[[trigger.hooks]]
+on_action = "on_wargoal_enforced"
+scope = "scope:target"
+why = "路径②：**和约上被强制执行战争目标**（割地 / 赔款那类条款落地时引擎烧这个钩子）。原版 `:6257` 注释写明 `# Root = Country`（钩子体在 `:6264`）；`:6258` scope:actor = 强制执行的一方、`:6259` scope:target = **被强制执行的一方**、`:6262` scope:enforced_by_timer（只有靠占住目标点打赢才置位，和约落地时不置位）；`:6298-6302` 给 root 写 recently_won_war ⇒ **root 是赢家**。所以这条路径的施加**只写在 scope:target 里**（判据 `scope:target ?= c:RUS`）：胜利者拿不到记账 —— 这不是约定，是结构（施加语句根本不在 root 上）。"
 
 # ── ③ 压力：真实的合法性 / 贵族 / 财政变化（A 级）────────────
 [pressure]
 name = "sitai_ru_defeat_pressure"
 icon = "gfx/interface/icons/timed_modifier_icons/modifier_statue_negative.dds"
-why = "压力必须是真的世界状态，不是我们的私有计数器 —— 只有真实变化才会进原版自己的公式（01a D 节：A 级被严重低估，战败后贵族失势、合法性下降、财政崩溃都可以真实发生）。三条字段都照原版同族用法取档位，见各条 why。⚠️ **本表与 [reform_inputs] 都是实验用直接修正，不是正式版设计**：它们由 A/B 实验显式调用（不绑任何 on_action），三条数值**都是实测定档**（-20→-35、-0.15→-0.30、0.2→0.35，理由见各条 why）；正式版必须改成真实触发 + 因果链，那条已进 backlog（B35）。本定位同时写在 exec/阶段3-结果.md 与 exec/阶段3-归档清点.md，避免后人把实验设置当成档案设计。"
+why = "压力必须是真的世界状态，不是我们的私有计数器 —— 只有真实变化才会进原版自己的公式（01a D 节：A 级被严重低估，战败后贵族失势、合法性下降、财政崩溃都可以真实发生）。三条字段都照原版同族用法取档位，见各条 why。⚠️ **B35 已于 2026-09-29 落地：本表不再是「实验用直接修正」** —— 它由 `[trigger]` 的原版事件挂上，且数值改成**两档叠加**：**基线档**（本表三条字段，只要冲击被真实触发就恒挂）取原版自家档位；**投降叠加档**（`[pressure.escalation]`，只在原版记号 recent_capitulation 还亮着时挂）补足差额。**旧实验值作废留痕（B112：不改历史读数、只补记）**：阶段 3 A/B 实测的三个总量 -35 / -0.30 / 0.35 当时是**直接一击**（那时没有真实入口，探针显式施加）；现在同样的总量由「基线 + 叠加」合成（-20 + -15 / -0.15 + -0.15 / 0.2 + 0.15），**窗口内总量与实验段一致、来源换成真实结果**；叠加窗口（913 天）过后回落到基线档 —— 那是设计意图（战败久了压力减一档），不是遗漏。字段级差异与逐条对账见 docs/reports/t3-真实因果链.md；实验读数的原文在 exec/阶段3-结果.md 与 exec/阶段3-归档清点.md（**未改动**）。"
 
 [[pressure.params]]
 key = "years"
@@ -73,18 +100,45 @@ why = "与 sitai_ru_defeat_memory 的 days = 3650 对齐。原版 add_modifier �
 
 [[pressure.effects]]
 key = "country_legitimacy_base_add"
-amount = -35
-why = "合法性是开窗判据的一半（JE 的 possible 读 `legitimacy <= 75` —— 为什么是 75 见下面 conditions 那条的依据）。**实测调档**：先取 -20 跑了一整局 B（15 个月），窗口一次都没开（JE 全程 0%）→ 提到 -35。**-35 的实测水位**（复算：`v3 ab --logs ab-run7`，B 段 55 块合法性分档）：b70 24 / b75 18 / b80 13 —— 也就是「从开局的全 >80 掉到 70–80 之间来回，还会自己回升」，**够不到原版那条 50 线**（00_liberalism.txt:54 的「政府站得住」分界）。所以本档案**不再要求压到 50**，开窗判据按实测分界取 75；换挂载点的来由与读数写在 conditions 那条 why 里。取 -35 不是因为它能压到 50，而是它把水位稳定压出一档、又不让政府一次失能：原版同字段的档位是 ±5 / ±10 / ±20 / ±50（00_code_static_modifiers.txt:322-353 一连串），-35 落在 -20 与 -50 之间。"
+amount = -20
+why = "**基线档 = 原版自家档位 -20**（原版同字段档位 ±5 / ±10 / ±20 / ±50，00_code_static_modifiers.txt:322-353 与 :979-1034 两处；取其中一档，不再自造介于两档之间的数）。合法性是开窗判据的一半（JE 的 possible 读 `legitimacy <= 75` —— 为什么是 75 见下面 conditions 那条的依据）。**旧实验值作废留痕（B112：不改历史读数，只补记）**：阶段 3 A/B 实测用的是**直接一击 -35**（先取 -20 跑一整局 B（15 个月）窗口一次都没开、JE 全程 0% → 提到 -35），-35 的实测水位是 b70 24 / b75 18 / b80 13（复算 `v3 ab --logs ab-run7`），即「从开局全 >80 掉到 70–80 之间来回、还会自己回升」，够不到原版那条 50 线（00_liberalism.txt:54 的「政府站得住」分界）—— 所以本档案不要求压到 50，开窗判据按实测分界取 75。那些读数保持原样，作废的是「直接一击」这个做法：同一字段现由**基线 -20（恒挂）+ 投降叠加 -15（[pressure.escalation]）**合成，合计仍是被实测过的 -35，且不再自造档位外的数。"
 
 [[pressure.effects]]
 key = "interest_group_ig_landowners_pol_str_mult"
-amount = -0.30
-why = "**实测调档**：-0.15 在一整局里没能让行为层动起来 → 取 -0.30。贵族失势是「战败 → 改革阻力下降」的那一环。原版同字段的档位实测为 ±0.03（00_ip3_04_modifiers.txt:334）、±0.10（00_ip4_03_modifiers.txt:14）、±0.25（00_ip4_04_modifiers.txt:12 的 modifier_regency_landowners）、-0.20（agitators_4_revolution_modifiers.txt:321）、-0.50（agitators_5_modifiers.txt:615）、-0.75（content_1_modifiers.txt:1465 的 shogun_ig_forced_to_open_market，与知识界 +0.5、工业家 +0.5 成对写）。取 -0.30 = 落在原版 -0.25 与 -0.50 之间：方向明确（贵族政治力量 -30%），又不把贵族一次打垮 —— 一次打垮会让议会算术失去张力。"
+amount = -0.15
+why = "**基线档 = 原版自家档位 -0.15**（同字段 -0.15 的原版出处：cuban_modifiers.txt:40；+0.15 那一侧见 content_4_modifiers.txt:816。原版全部档位实测：±0.03（00_ip3_04_modifiers.txt:334）、±0.05（agitators_5_modifiers.txt:853）、±0.10（00_ip4_03_modifiers.txt:14）、±0.15（cuban_modifiers.txt:40）、±0.25（00_ip4_04_modifiers.txt:12 的 modifier_regency_landowners）、-0.20（agitators_4_revolution_modifiers.txt:321）、-0.50（agitators_5_modifiers.txt:615）、-0.75（content_1_modifiers.txt:1465 的 shogun_ig_forced_to_open_market，与知识界 +0.5、工业家 +0.5 成对写））。贵族失势是「战败 → 改革阻力下降」的那一环。**旧实验值作废留痕（B112：不改历史读数、只补记）**：阶段 3 A/B 用的是**直接一击 -0.30**，当时的理由是「-0.15 在一整局里没能让行为层动起来 → 取 -0.30」，而 -0.30 落在原版 -0.25 与 -0.50 之间（方向明确，又不把贵族一次打垮 —— 一次打垮会让议会算术失去张力）。现在 -0.30 由**基线 -0.15（恒挂）+ 投降叠加 -0.15（[pressure.escalation]）**合成：总量与实验段相同，但**轻档与重档分开了** —— 「只被和约逼让步」拿一档，「被逼投降」拿两档。"
 
 [[pressure.effects]]
 key = "country_loan_interest_rate_add"
-amount = 0.35
-why = "**实测调档**：从 0.2 提到 0.35，让财政压力在几年内真的能被看见，而不是被收入增长吃掉。⚠️ **2026-09-23 复核更正**：原稿写「该字段原版只出现过一次」，实测 `common/` 下共 **12 处** —— 全局基准 00_code_static_modifiers.txt:12 = 0.2、法律侧 00_amendments_enactment_04.txt:644/1138/1174/1222/1266 = 0.02/0.02/0.03/0.01/0.05、科技侧 30_society.txt:209/599/1226/1473/1647 = -0.02、字段定义 00_modifier_types.txt:662。「**国家静态修正**那一侧没有档位阶梯」这句仍然成立（那边只有全局基准 +0.2）。0.35 ≈ 1.75× 基准、≈7× 法律侧最大值 ⇒ 仍属**实验取值**（不是原版档位），正式版要按真实赔款机制重算（backlog B35）。战败赔款抬高借债成本，而不是直接没收国库 —— 反目标里写着「不让 AI 获得任何数值作弊」，也不想让俄罗斯当场破产（那样测出来的差分来自破产机制，不是来自战败）。"
+amount = 0.2
+why = "**基线档 = 原版全局基准 0.2**：00_code_static_modifiers.txt:12 的 base_values 里 `country_loan_interest_rate_add = 0.2` —— 国家静态修正这一侧原版**没有档位阶梯**、只有这个基准，所以基线就取它。战败赔款抬高借债成本，而不是直接没收国库 —— 反目标里写着「不让 AI 获得任何数值作弊」，也不想让俄罗斯当场破产（那样测出来的差分来自破产机制，不是来自战败）。⚠️ **2026-09-23 复核更正（保留）**：原稿写「该字段原版只出现过一次」，实测 `common/` 下共 **12 处** —— 全局基准 00_code_static_modifiers.txt:12 = 0.2、法律侧 00_amendments_enactment_04.txt:644/1138/1174/1222/1266 = 0.02/0.02/0.03/0.01/0.05、科技侧 30_society.txt:209/599/1226/1473/1647 = -0.02、字段定义 00_modifier_types.txt:662。**旧实验值作废留痕（B112：不改历史读数、只补记）**：阶段 3 A/B 用的是**直接一击 0.35**（从 0.2 提到 0.35，让财政压力在几年内真的能被看见、而不是被收入增长吃掉；当时就标明 0.35 ≈ 1.75× 基准、属实验取值）；现在 0.35 由**基线 0.2 + 投降叠加 0.15（[pressure.escalation]）**合成，总量不变、来源换成真实结果。⚠️ **如实记：财政这条只能间接派生** —— 全树找不到脚本可读的「赔款」触发器（`war_reparations` 只作为外交行动 17_war_reparations.txt:1 与概念存在），所以它是从「战败事实」派生，而不是从赔款金额算出来的；相关 defines（00_defines.txt:1092 WAR_GOAL_REPARATIONS_MONTHS = 60、:1386 DEFAULT_WAR_REPARATIONS_MONEY_TRANSFER = 0.1）只能说明赔款在原版是**月度转账**，不构成可读判据。"
+
+# ── ③b 投降叠加档：真实结果更重的那一档 ──────────────────────
+#
+# 为什么拆两档、而不是一张表把总量写死：修正名 `sitai_ru_defeat_pressure` 是**处境牌的门**
+# （`[cards.items.possible]` 的 `has_modifier = sitai_ru_defeat_pressure`），它必须
+# 「只要被真实触发就挂着」；拆出叠加档之后门照旧恒挂，而**重档**的判据换成原版自己写的记号。
+# ⚠️ 如实记：叠加量不是原版档位，它是「阶段 3 实测总量 − 原版基线档」的差额 ——
+# 这样拆的目的是让**基线**落在原版档位上、让**判据**来自原版记号；总量与实验段一致。
+[pressure.escalation]
+variable = "recent_capitulation"
+modifier = "sitai_ru_defeat_pressure_capitulation"
+why = "叠加档只在**被逼投降**时挂：判据是原版自己写的记号 recent_capitulation（00_code_on_actions.txt:4221-4224 写、取值 `short_modifier_time` = 913 天，见 common/script_values/event_values.txt:39）。为什么不自己写一个变量当判据：那又变回「我们的私有计数器」，而这条链要的是**真实结果**；也不把窗口拉成 years = 10 那样长 —— 913 天是原版的「短期记号」，它自己过期，于是五年前的旧投降不会被算成今天的事。只被和约逼让步（路径②）不写这个记号 ⇒ 拿基线档，这就是两档的分界。"
+
+[[pressure.escalation.effects]]
+key = "country_legitimacy_base_add"
+amount = -15
+why = "叠加量 = 实测总量 -35 与基线档 -20 的差额（-15）。⚠️ 它不是 `00_code_static_modifiers.txt` 那套档位阶梯里的一档（那一套是 ±5 / ±10 / ±20 / ±50，见 :322-353 与 :979-1034），**是差额**（如实记：-15 这个取值在原版其它文件里也出现，如 00_ip4_02_modifiers.txt:303、105_modifiers.txt:621；本处取它的理由**只是差额**，不是「原版用了几档」）：这样拆的意义在于「轻档」本身落在原版档位上、而「重档」由原版记号判出来。合法性这一档在投降后 913 天内生效，之后回落到基线 -20。"
+
+[[pressure.escalation.effects]]
+key = "interest_group_ig_landowners_pol_str_mult"
+amount = -0.15
+why = "叠加量 = 实测总量 -0.30 与基线档 -0.15 的差额。它与基线档同值、方向相同 ⇒ 投降后贵族政治力量合计 -0.30（阶段 3 A/B 实测过的那个总量），只被和约逼让步时是 -0.15。原版档位表见 [pressure.effects] 里那条 why。"
+
+[[pressure.escalation.effects]]
+key = "country_loan_interest_rate_add"
+amount = 0.15
+why = "叠加量 = 实测总量 0.35 与基线档 0.2（原版全局基准 00_code_static_modifiers.txt:12）的差额。财政这条只能**间接派生**（没有可读的赔款触发器，见基线那条 why 的末段）：重档 = 「被逼投降」这个事实 ⇒ 借债成本再抬 0.15，合计 0.35 与实验段一致。"
 
 # ── ④ 改革侧输入：把「改革的推力」也落成真实世界状态（A 级）────
 #
@@ -95,7 +149,7 @@ why = "**实测调档**：从 0.2 提到 0.35，让财政压力在几年内真�
 name = "sitai_ru_reform_inputs"
 effect = "sitai_ru_reform_input"
 icon = "gfx/interface/icons/timed_modifier_icons/modifier_lightbulb_positive.dds"
-why = "**实验手段**（与 [pressure] 同一定位）：它是「改革派牌读得到的那两个输入」的直接修正，用来把 A/B 阶梯的第二处理段做成可施加、可关掉的一处。真正的正式版设计应当是**真实触发 + 因果链**（战败 → 割地赔款 → 工业化/识字率的真实位移 → IG 势力自然变化），而不是直接改政治力量；这条已记进 backlog，本档案的实验定位也写在 阶段3-结果.md 与 阶段3-归档清点.md 里。为什么走 A 级而不是递牌：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（03_political_strategies.txt:528-544），改世界状态就等于改它的输入，不占任何槽位（F5）。"
+why = "改革侧的推力也落成真实世界状态（A 级）：它是「改革派牌读得到的那两个输入」的修正，**B35 落地后由原版事件接线挂上**（`[trigger]` 路径①②都挂这一条线；探针只作仪器通道）。正式版设计要的是**真实触发 + 因果链**（战败 → 割地赔款 → 工业化/识字率的真实位移 → IG 势力自然变化），而不是直接改政治力量 —— 本版走的是这条链的第一段（战败事实由原版事件认定），**后一段仍是 A 级近似**：原版没有可读的「割地赔款使工业化/识字率位移」的现成字段，这一点如实写在报告《只能间接派生的两条》里。为什么走 A 级而不是递牌：原版 `ai_strategy_progressive_agenda` 的权重是**读**这两个 IG 的（03_political_strategies.txt:528-544），改世界状态就等于改它的输入，不占任何槽位（F5）。**旧实验值作废留痕（B112：不改历史读数、只补记）**：阶段 3 A/B 用的是**直接一击 +0.5 / +0.5**（第二处理段 B2 显式施加）；现在同一总量由**基线 +0.25 / +0.25（恒挂）+ 投降叠加 +0.25 / +0.25**合成，窗口内总量与实验段一致。实验读数的原文在 阶段3-结果.md 与 阶段3-归档清点.md（未改动）。"
 
 [[reform_inputs.params]]
 key = "years"
@@ -104,13 +158,32 @@ why = "与 [pressure.params] 的 years = 10、记忆变量的 days = 3650 三处
 
 [[reform_inputs.effects]]
 key = "interest_group_ig_industrialists_pol_str_mult"
-amount = 0.5
-why = "取原版同族强档 +0.5：`shogun_ig_forced_to_open_market`（content_1_modifiers.txt:1462-1470）在同一处把地主 -0.75、知识界 +0.5、工业家 +0.5 一起写 —— 那正是「被外力逼着开门 → 改革侧势力抬头」这一族用法，与本处要表达的情形同型。原版全部档位实测为 ±0.03 / ±0.05 / ±0.10 / ±0.15 / ±0.25 / ±0.5 / ±0.75（00_ip3_04_modifiers.txt:334、00_ip4_03_modifiers.txt:7、106_modifiers.txt:191、00_ip4_04_modifiers.txt:33、content_204_modifiers.txt:340）。取 0.5 而不是 0.15：`progressive_agenda` 的权重只在 `ig:ig_industrialists ?= { is_powerful = yes }` 时 +10（03_political_strategies.txt:537-544），而 is_powerful 是**相对份额**判定 —— 同一处只抬一档常常翻不过那条线，实验要的是「输入明确到位」，不是「差一点」。"
+amount = 0.25
+why = "**基线档 = 原版档位 +0.25**（同字段 +0.25 的原版出处：00_ip4_04_modifiers.txt:33；原版同字段常见档位实测为 ±0.03 / ±0.05 / ±0.10 / ±0.15 / ±0.25 / ±0.5 / ±0.75，另有单点取值 0.3：00_ip3_04_modifiers.txt:334、00_ip4_03_modifiers.txt:7、106_modifiers.txt:191、agitators_5_modifiers.txt:853、content_4_modifiers.txt:397、content_1_modifiers.txt:1467、content_204_modifiers.txt:340；取 +0.25 这一档，不再自造档位外的数）。取原版同族强档 +0.5 的那一族用法是 `shogun_ig_forced_to_open_market`（content_1_modifiers.txt:1462-1470 —— 同一处把地主 -0.75、知识界 +0.5、工业家 +0.5 一起写，正是「被外力逼着开门 → 改革侧势力抬头」那一族，与本处情形同型）。**为什么基线取 0.25 而不是 0.5**：0.5 是**重档总量**（被逼投降时由基线 +0.25 + 叠加 +0.25 得到），轻档（只被和约逼让步）拿一档 0.25。**旧实验值作废留痕（B112：不改历史读数、只补记）**：阶段 3 A/B 用的是**直接一击 +0.5**，当时的理由是「`progressive_agenda` 的权重只在 `ig:ig_industrialists ?= { is_powerful = yes }` 时 +10（03_political_strategies.txt:537-544），而 is_powerful 是**相对份额**判定 —— 同一处只抬一档常常翻不过那条线，实验要的是「输入明确到位」，不是「差一点」」；这条**读数与推理都保留**，只是「一击到位」的做法作废：重档现在仍能拿到 +0.5 总量。"
 
 [[reform_inputs.effects]]
 key = "interest_group_ig_intelligentsia_pol_str_mult"
-amount = 0.5
-why = "与工业家同档同源（content_1_modifiers.txt:1466 的 shogun_ig_forced_to_open_market 里这两条就是成对写的）。`progressive_agenda` 的权重对知识界与工业家各 +10（03_political_strategies.txt:528-544），两条一起给才是原版的用法；只给一条会让「哪一条起了作用」在实验里不可分。档位依据见上一条。"
+amount = 0.25
+why = "**基线档 = 原版档位 +0.25**（同字段 +0.25 的原版出处：00_ip4_04_modifiers.txt:47；+0.15 那一档见 content_4_modifiers.txt:809、content_304_modifiers.txt:331），与工业家同档同源（content_1_modifiers.txt:1466-1467 的 shogun_ig_forced_to_open_market 把知识界 +0.5、工业家 +0.5 成对写）。`progressive_agenda` 的权重对知识界与工业家各 +10（03_political_strategies.txt:528-544），两条一起给才是原版的用法；只给一条会让「哪一条起了作用」在实验里不可分。**旧实验值作废留痕（B112：不改历史读数、只补记）**：阶段 3 A/B 用的是**直接一击 +0.5**（两条成对）；现在重档总量仍为 +0.5，由基线 +0.25（恒挂）+ 投降叠加 +0.25（[reform_inputs.escalation]）合成，轻档只拿一档。档位依据见上一条。"
+
+# ── ④b 改革侧输入的投降叠加档 ────────────────────────────────
+#
+# 与 [pressure.escalation] 同一判据、同一窗口（原版记号 recent_capitulation = 913 天）。
+# 两条字段成对（知识界 / 工业家），理由见上一条 why。
+[reform_inputs.escalation]
+variable = "recent_capitulation"
+modifier = "sitai_ru_reform_inputs_capitulation"
+why = "判据与 [pressure.escalation] 完全相同（同一个原版记号、同一段窗口），只是补的是**改革侧**的两个输入。为什么两处各自留一份判据、而不是共用：产物是两个修正文件、两段效果，共用判据意味着要引入文件间的隐式耦合（谁先挂、谁读谁）—— 直写同一判据更容易被闸门与测试看守；代价是判据写了两遍，这是**已知且有意**的重复，报告里点名。"
+
+[[reform_inputs.escalation.effects]]
+key = "interest_group_ig_industrialists_pol_str_mult"
+amount = 0.25
+why = "叠加量 = 实测总量 +0.5 与基线档 +0.25 的差额。⚠️ 如实记：它不是原版档位（原版档位表见基线那条 why），**是差额** —— 基线落在原版档位上，重档由原版记号判出来。"
+
+[[reform_inputs.escalation.effects]]
+key = "interest_group_ig_intelligentsia_pol_str_mult"
+amount = 0.25
+why = "同上，与工业家成对（两个 IG 各 +0.25，重档合计各 +0.5 = 阶段 3 A/B 实测总量）。"
 
 # ── ⑤ 改革窗口 JE：把「处境」喂进原版的最短路径 ──────────────
 [journal_entry]
@@ -173,13 +246,17 @@ why = "窗口打开 = 处境变了 ⇒ 换到改革路线。写在 JE 的 `immed
 [[journal_entry.signals.clear_strategy]]
 key = "set_strategy"
 arg = "ai_strategy_reactionary_agenda"
-why = "窗口关闭（国家重新站稳）= 处境回到「守成」⇒ 把路线递回去。为什么明写「递回反动」而不是「什么都不做」：`set_strategy` 是**替换**当前策略，窗口开着时那一段如果不管，AI 会一直挂着进步牌（而合法性已经回来了）—— 那就不是「处境决定路线」，而是「一次战败永久改路线」。递回反动牌也是复现**原版 1836 俄国的初始落点**（00_strategy.txt:90 就是 set_strategy = ai_strategy_reactionary_agenda），所以「窗口关」= 回到开局那条路线，闭环可解释。"
+tooltip = "je_sitai_ru_reform_window_complete_tt"
+why = "窗口关闭（国家重新站稳）= 处境回到「守成」⇒ 把路线递回去。为什么明写「递回反动」而不是「什么都不做」：`set_strategy` 是**替换**当前策略，窗口开着时那一段如果不管，AI 会一直挂着进步牌（而合法性已经回来了）—— 那就不是「处境决定路线」，而是「一次战败永久改路线」。递回反动牌也是复现**原版 1836 俄国的初始落点**（00_strategy.txt:90 就是 set_strategy = ai_strategy_reactionary_agenda），所以「窗口关」= 回到开局那条路线，闭环可解释。**为什么这一条必须带 `tooltip`**：它落在 `on_complete` —— 引擎把那个块渲染成详情面板「如果完成」那一格（journal_entry.gui:854 `[JournalEntry.GetOnCompleteTooltip]`），而 `set_strategy` 的 effect_localization 只登记了 global（`00_country_effects_loc.txt`，行号与原句见 `src/pdx/modgen.py` 的 `TOOLTIP_BLOCK` 注释 + 本卡报告 §1），可见块要的是 first ⇒ 裸写会被引擎拼成 `BUG: set_strategy missing perspective …` 当成文案显示给玩家（2026-10-01 功能工程师的预检帧 tools/out/t5-frames/t8-je4-detail.png 拍到的就是这句）。上面那条 `set_strategy`（immediate）**不**带 tooltip：immediate 不是 tooltip 的来源 —— 原版 05_grunderzeit.txt:111-119 正是在 immediate_all_involved 里裸写。包一层 `custom_tooltip` 只换显示、不改执行：原版可见块里 356 处这么做（例 `00_acw_entries.txt`，行号见 `src/pdx/modgen.py` 的 `TOOLTIP_BLOCK` 注释）。"
 
 # ── ⑥ 本地化：面板三行（G3）的文案 ─────────────────────────
 # 键名与游戏里的约定一致：JE 标题 = JE 名、说明 = <JE 名>_reason（见原版
 # localization/simp_chinese/ip3_misc_01_l_simp_chinese.yml:549 的 je_metternich /
 # je_metternich_reason）；静态修正的键名 = 修正名本身（ip4_misc_01_l_simp_chinese.yml:87
-# 的 modifier_regency_landowners）。两处都按原版口径，不自创后缀。
+# 的 modifier_regency_landowners）。两处都按原版口径，不自创后缀。第三处是本卡新加的
+# `custom_tooltip` 的 `text` 键：原版一律 `*_tt` 后缀（`acw_text_l_english.yml` 里
+# 的 `acw_will_happen_tt`，行号见 `src/pdx/modgen.py` 的 `TOOLTIP_BLOCK` 注释），
+# 我们也用 `<JE 名>_complete_tt`。
 
 [[localization]]
 key = "je_sitai_ru_reform_window"
@@ -194,6 +271,12 @@ simp_chinese = "仗打输了，账单到了。把国家带进这场战争的贵�
 why = "三行解释里的「最大压力与阻力」写在这里（P11 可观测）：压力 = 贵族失势 + 合法性坍塌 + 财政恶化，阻力 = 「等国家重新站稳」—— 与 complete 的 legitimacy >= 75 是同一条判据的两种说法，数值改了文案也要改。"
 
 [[localization]]
+key = "je_sitai_ru_reform_window_complete_tt"
+english = "The state stands firm again and the window closes: Russia returns to the #variable Foster Traditional Values#! strategy."
+simp_chinese = "国家重新站稳，改革窗口关闭：俄罗斯将回到#variable 弘扬传统价值#!战略。"
+why = "详情面板「如果完成」那一格（on_complete 的 tooltip）显示的文案 —— 2026-10-01 之前，那一格显示的是引擎拼出来的 `BUG: set_strategy missing perspective …`（t8 帧 t8-je4-detail.png）。三件事说清楚：① **为什么不是动态句**：原版 custom_tooltip 的 `text` 键就是一句静态话（`00_acw_entries.txt` 里的 `acw_will_happen_tt = \"The American Civil War breaks out\"`，不带任何数据函数；行号见 `src/pdx/modgen.py` 的 `TOOLTIP_BLOCK` 注释）—— 这里照同一个取法；② **为什么把「俄罗斯」写死**：本 JE 的触发条件就是 `c:RUS ?= this`，受方只有一个国家，写成 `[COUNTRY.GetNameNoFlag]` 反而要在无作用域的 tooltip 里赌那层作用域；③ **为什么战略名是照抄的**：官方译名在 `ai_strategies_l_simp_chinese.yml`（弘扬传统价值）/ `ai_strategies_l_english.yml`（Foster Traditional Values），行号见 `src/pdx/modgen.py` 的 `TOOLTIP_BLOCK` 注释 + 本卡报告 §1；这里抄同一句话 —— 不写 `[AIStrategy.GetName]`，JE tooltip 里没有 AIStrategy 作用域（那正是不写 set_strategy 展示文案时的坑）。文案与 complete 的判据同源：合法性回到 75 ⇒ 国家站稳 ⇒ 窗口关、路线归位。"
+
+[[localization]]
 key = "sitai_ru_defeat_pressure"
 english = "Aftermath of the Defeat"
 simp_chinese = "战败余波"
@@ -204,6 +287,22 @@ key = "sitai_ru_reform_inputs"
 english = "Reformers Gain Influence"
 simp_chinese = "改革派抬头"
 why = "第二处修正同样要文案，否则它挂在国家上时在修正列表里是一行空名（闸门 ② 也会点名缺键）。写「改革派抬头」而不是「工业家/知识界政治力量 +50%」：玩家看到的应当是处境，不是我们的字段名。"
+
+# ── ⑤b 两个投降叠加档的文案（B35 遗留：没给键 ⇒ 游戏里显示裸键名）────
+# 键 = 叠加档修正名本身（闸门 ② 的本地化判据就是「每个自家修正都要有键」）。
+# 文案要点名**这是哪一档**（被迫投降 = 原版自己写的 recent_capitulation 记号）
+# 与**这一条修正自己管什么**；不写总量 —— 总量是「基线 + 叠加」，
+# 写在这里会让玩家以为这一条就是全部。
+[[localization]]
+key = "sitai_ru_defeat_pressure_capitulation"
+english = "Aftermath of the Defeat: Forced to Capitulate (legitimacy -15, landowners -15% political strength, loan interest +15%)"
+simp_chinese = "战败余波：被迫投降（合法性 -15，地主政治力量 -15%，借债利息 +15%）"
+why = "叠加档的名字（[pressure.escalation] 的 modifier）。英文与中文都点名三件事：它挂在哪个处境上（战败余波）、这一档的来由（被迫投降）、以及它自己那三条效果（合法性 -15 / 地主 -15% / 借债利息 +15%）。与基线档 `sitai_ru_defeat_pressure` 的「战败余波」配套读：基线是只被和约逼让步，这一档才是被逼投降。"
+[[localization]]
+key = "sitai_ru_reform_inputs_capitulation"
+english = "Reformers Gain Influence: Forced to Capitulate (industrialists +25% and intelligentsia +25% political strength)"
+simp_chinese = "改革派抬头：被迫投降（工业家与知识界政治力量各 +25%）"
+why = "叠加档的名字（[reform_inputs.escalation] 的 modifier），与 `sitai_ru_reform_inputs` 成对。效果写成两条各 +25%（不是「+50%」）：这一条修正自己只给 +0.25，另 +0.25 在基线档上恒挂，玩家看到的两行合起来才是阶段 3 实测的总量。"
 
 # ── ⑥b 面板三行（P11 / G3）：拆成三个键，缺哪一行当场可见 ─────
 # 为什么拆开而不是写在 `_reason` 里：G3 的判据是**试玩者能复述「当前目标 + 主因」**，
@@ -230,13 +329,13 @@ why = "第三行 = **上次改主意的原因**。这一行是 G3 里最容易�
 
 # ── ⑦ 牌：一张自建处境牌（t18；不是 F5 的例外，是那条机制的第一次实证）──
 [cards]
-why = "本档案现在有**一张**自建牌（`ai_strategy_sitai_ru_defeat_agenda`）—— 它承载的不是「意图位移」而是 t18 要交付的**那条机制本身**：**由处境标志（压力修正）驱动牌选择**。为什么不改用递原版牌（F5 的常规手段）：`set_strategy` 的**直置**通道已被 t18 的 test 0 实测证伪（`possible = { always = no }` 的牌照样被直置挂上、零报错、7/7 行 `yes`，见 `docs/design/exec/阶段5-新增牌-结果.md`）⇒ 递牌**不作承重**；这张牌**只靠引擎自己的重掷**进场（`possible` 门 + 单值权重 40），门开在**处境**上：压力修正挂着 ⇒ 它进池；压力到期 ⇒ 它自动退回池外。第一版只发三样（`type` / `possible` / 单值 `weight`），全部落在生成器能力边界内（`tools/pdx/modgen.py:1467`；t15 `docs/design/exec/阶段5-新增牌-口径.md` §2 的能力边界段）。"
+why = "本档案现在有**一张**自建牌（`ai_strategy_sitai_ru_defeat_agenda`）—— 它承载的不是「意图位移」而是 t18 要交付的**那条机制本身**：**由处境标志（压力修正）驱动牌选择**。为什么不改用递原版牌（F5 的常规手段）：`set_strategy` 的**直置**通道已被 t18 的 test 0 实测证伪（`possible = { always = no }` 的牌照样被直置挂上、零报错、7/7 行 `yes`，见 `docs/design/exec/阶段5-新增牌-结果.md`）⇒ 递牌**不作承重**；这张牌**只靠引擎自己的重掷**进场（`possible` 门 + 单值权重 40），门开在**处境**上：压力修正挂着 ⇒ 它进池；压力到期 ⇒ 它自动退回池外。第一版只发三样（`type` / `possible` / 单值 `weight`），全部落在生成器能力边界内（`src/pdx/modgen.py:1467`；t15 `docs/design/exec/阶段5-新增牌-口径.md` §2 的能力边界段）。"
 
 [[cards.items]]
 name = "ai_strategy_sitai_ru_defeat_agenda"
 slot = "political"
 why = "处境牌：门 = 本档案的压力修正（战败后 10 年的求存处境），门内它作为**政治槽**的一张候选参与引擎重掷。与递原版牌的分工：递牌回答「整条路线要换」（本档案仍保留 `[journal_entry.signals]` 的那条，t9 判「保留转向」），这张牌回答「**处境在不在**」——两者互不依赖，本卡只实证后者。"
-weight = { amount = 40, why = "政治槽的等效竞争权重 S≈33（阶段 2 实测）⇒ 门开时份额 p = 40/(40+33) = **54.8%**，落在闸门 ③ 的预算区间 [0.3, 0.6] 内（上限换算 W ≤ 49）。取 40 而不取更高：给将来第二张处境牌留余量，且 60% 是闸门 ③ 的硬上限（`tools/pdx/modguard.py:60`）。" }
+weight = { amount = 40, why = "政治槽的等效竞争权重 S≈33（阶段 2 实测）⇒ 门开时份额 p = 40/(40+33) = **54.8%**，落在闸门 ③ 的预算区间 [0.3, 0.6] 内（上限换算 W ≤ 49）。取 40 而不取更高：给将来第二张处境牌留余量，且 60% 是闸门 ③ 的硬上限（`src/pdx/modguard.py:60`）。" }
 
 [[cards.items.possible]]
 key = "has_modifier"
@@ -264,7 +363,7 @@ why = "记忆变量的读法。原版用法：00_corn_laws.txt:7 等 795 处（*
 [[references]]
 kind = "effect"
 name = "set_variable"
-why = "写记忆变量。原版用法：00_code_on_actions.txt:7046（on_war_end 给 recently_had_war 记 5 年）。"
+why = "写记忆变量。原版用法：00_code_on_actions.txt:7084（on_war_end 给 recently_had_war 记 5 年）。"
 
 [[references]]
 kind = "effect"
@@ -275,6 +374,24 @@ why = "把静态修正挂到国家上。原版用法：00_movement_effects.txt:2
 kind = "country_tag"
 name = "RUS"
 why = "JE 的单国门（c:RUS ?= this）。原版用法：country_definitions 里的 RUS。"
+
+# B35 的新词汇：两个原版 on_action 名 + 我们追加的那个字段名。闸门 ② 的
+# 「原版词汇表」池包含 `common/on_actions` 下的键名（src/pdx/vanilla_index.py:80-85
+# 的 VOCABULARY_DIRS），所以这三个名字写错一个字母会当场红。
+[[references]]
+kind = "trigger"
+name = "on_capitulation"
+why = "路径①的挂载点：原版 on_action 名（`common/on_actions/00_code_on_actions.txt:4214`，Root = 投降国本身）。⚠️ 名字在池里 ≠ 接线正确：`common/on_actions` **不在反解表**里（src/pdx/modgen.py 的 `_FACT_READERS` 只有七类），这份产物的正确性由 tests/test_modgen.py 的用例看守（缺口如实记在报告里）。"
+
+[[references]]
+kind = "trigger"
+name = "on_wargoal_enforced"
+why = "路径②的挂载点：原版 on_action 名（`common/on_actions/00_code_on_actions.txt:6288`；`:6259` scope:target = 被强制执行的一方、`:6298` 给 root（赢家）写 recently_won_war）。池子与缺口同上一条。"
+
+[[references]]
+kind = "trigger"
+name = "on_actions"
+why = "我们给原版钩子**追加的字段名**（不是 effect 块）：官方口径 research/official-docs/game/common/on_actions/_on_actions.md:115 写明不能给已有 effect 块的 on_action 再追加 effect 块，`:117-128` 给的就是这个字段；原版自己也用它（00_code_on_actions.txt:125 等 11 处），所以它在词汇表池里、闸门 ② 能核。"
 
 # 修正字段名：数值必须引原版同类用法（P10），所以逐条声明 + 由闸门 ② 核对
 # 「这个名字在原版 static_modifiers 里出现过」。没有这一条，字段名写错一个字母
@@ -368,7 +485,7 @@ why = "**方向必须是正的**：压力侧已经把贵族压到 -0.30（战败
 # 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
 # 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
 [probe]
-why = "本档案的改革方向是**土地改革**，观测点是「农奴制还在不在」。依据：`common/history/countries/rus - russia.txt:14` 的 `activate_law = law_type:law_serfdom`（逐行打开确认）。　【牌 · t9 裁决】目标牌 = `ai_strategy_progressive_agenda`。**从目标函数表的哪一项推出来**：`docs/design/01a-依据与参考.md:269` 的俄国行 —— 政治列写 `conservative_agenda`，**括号里明写「战败后应转向 `progressive_agenda`」**（同一句见 `docs/design/01a-依据与参考.md:306-307`），再加 `docs/design/01a-依据与参考.md:25`「身份项必须能被现实惩罚（重大失败要让执念衰减或转向）」。**修什么毛病**：战败不改革 —— 只压贵族与合法性时，重抽落点是**保守**牌，而「动不动手」的闸门 `change_law_chance` 从反动的 3.5（`common/ai_strategies/03_political_strategies.txt:198`）掉到 2.5（同文件 :31），六条改革法一条没换（`docs/design/exec/阶段3-结果.md` §三）。**递法**：`set_strategy` 直置（`[journal_entry.signals]`：窗口开递进步牌、窗口关递回 `ai_strategy_reactionary_agenda`）—— 九份里唯一递牌的一份，递的是**原版牌**（`tools/pdx/modgen.py:734` 的白名单），不是自建牌。**为什么不用原版给俄国准备的 `ai_strategy_great_reforms`**：它的 `possible` 门是 `has_journal_entry = je_great_reformer`（`common/ai_strategies/03_political_strategies.txt:1388-1390`），而那个 JE 是亚历山大二世的「大改革」（`common/journal_entries/03_russia.txt:1104-1111`，fail 条件 = 君主不是他）—— 1836 年这扇门开不开**从未实测**，按 P13「门未查实不许当依据」不采用（未查实项记在 `docs/design/exec/阶段5-目标牌口径.md` §六 I5）。**`reform_card` = 进步牌**：RUS 开局政治牌是 `reactionary_agenda`（`common/history/ai/00_strategy.txt:90`）⇒ 这条判据开局为假，有判别力。"
+why = "本档案的改革方向是**土地改革**，观测点是「农奴制还在不在」。依据：`common/history/countries/rus - russia.txt:14` 的 `activate_law = law_type:law_serfdom`（逐行打开确认）。　【牌 · t9 裁决】目标牌 = `ai_strategy_progressive_agenda`。**从目标函数表的哪一项推出来**：`docs/design/01a-依据与参考.md:269` 的俄国行 —— 政治列写 `conservative_agenda`，**括号里明写「战败后应转向 `progressive_agenda`」**（同一句见 `docs/design/01a-依据与参考.md:306-307`），再加 `docs/design/01a-依据与参考.md:25`「身份项必须能被现实惩罚（重大失败要让执念衰减或转向）」。**修什么毛病**：战败不改革 —— 只压贵族与合法性时，重抽落点是**保守**牌，而「动不动手」的闸门 `change_law_chance` 从反动的 3.5（`common/ai_strategies/03_political_strategies.txt:198`）掉到 2.5（同文件 :31），六条改革法一条没换（`docs/design/exec/阶段3-结果.md` §三）。**递法**：`set_strategy` 直置（`[journal_entry.signals]`：窗口开递进步牌、窗口关递回 `ai_strategy_reactionary_agenda`）—— 九份里唯一递牌的一份，递的是**原版牌**（`src/pdx/modgen.py:734` 的白名单），不是自建牌。**为什么不用原版给俄国准备的 `ai_strategy_great_reforms`**：它的 `possible` 门是 `has_journal_entry = je_great_reformer`（`common/ai_strategies/03_political_strategies.txt:1388-1390`），而那个 JE 是亚历山大二世的「大改革」（`common/journal_entries/03_russia.txt:1125-1132`，fail 条件 = 君主不是他）—— 1836 年这扇门开不开**从未实测**，按 P13「门未查实不许当依据」不采用（未查实项记在 `docs/design/exec/阶段5-目标牌口径.md` §六 I5）。**`reform_card` = 进步牌**：RUS 开局政治牌是 `reactionary_agenda`（`common/history/ai/00_strategy.txt:90`）⇒ 这条判据开局为假，有判别力。"
 reform_law = "law_serfdom"
 reform_card = "ai_strategy_progressive_agenda"
 

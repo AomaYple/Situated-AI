@@ -1,0 +1,68 @@
+团队「长程完善二」终局快照 · 2026-09-29 09:26（归档时现读，49 张卡）
+================================================================
+成员：功能工程师 / 验证员 / 评审员 / 档案工程师 / 内存分析师（各带执行提示：机器锁协议 + 角色职责）
+
+统计：completed 27 · cancelled 3 · failed 4 · in_progress 1 · pending 14
+
+状态  卡    kind            owner        依赖                          主题
+----------------------------------------------------------------------------------------------------------------
+completed t1   implementation  功能工程师     —                             阶段 6 仪器（点击前琥珀镜像三角自检 + 落帧 <pass-id>/ 归档）
+completed t4   work            档案工程师     —                             t38 README 计数落地（7 文件/36 行/38 处；当时 1885/82/172）
+completed t5   work            内存分析师     —                             全量 pytest 基线（1868 收集 / 1858 通过 / 5 失败 / 5 跳过）
+completed t6   verification    内存分析师     t5                            t22 pilot：3 对，判 **未判决**（U(3)=5.0924；最小 n=68）
+completed t8   verification    验证员         t1                            对抗式复核：needs_revision + 放行；F1/F2/F3
+completed t9   verification    验证员         t6                            t86 逐类自检：WAR 有 / BREAK 有 / RADICAL 有
+completed t15  implementation  功能工程师     t8                            t71 日志归档（轮转前归档 + 同名不覆盖 + 真实演练）
+completed t16  implementation  内存分析师     t5,t6                         t89 收 t65 两条未收项（四支话术 + stress_scan 键）
+completed t17  implementation  评审员         t8                            t90 档位静默失配（读产物 + 生成期硬闸 + 两模式判词）
+completed t19  implementation  功能工程师     t15                           t80 find_in_roi 默认 raise + 同族 7 处 + AST 对账
+completed t21  implementation  评审员         —                             crosscheck 假判决 → 「不可核对」（退出码 3）
+completed t23  implementation  评审员         —                             口径统一到 engine_log.token_verdicts() 唯一来源
+completed t24  repair          档案工程师     —                             修 F1：七项连续形状判据 + F3 注释阈值
+completed t25  review (pass)   验证员         t24                           复核 t24（动物园 54 格 48 红/6 绿；误拒反照全绿）
+completed t28  work            验证员         —                             收口前欠账 ⑥⑦⑧⑨ 对账
+completed t29  verification    内存分析师     —                             方差归因与 n 复核（AI 侧 11 对 / 整帧 68 对）
+completed t30  work            档案工程师     —                             档案与新增牌改动清单（C1–C14 + 覆盖矩阵 + t2 模板）
+completed t32  work            评审员         —                             CI 闸门与基准独立核对（11/13 在 CI + bench 真跑）
+completed t33  implementation  功能工程师     t25                           驱动轮询语义显式化（恰 3 处 miss + 同帧等价 12 对）
+completed t34  implementation  评审员         —                             CI 三条红灯诚实处置（显式 skip，assert 增删 0 行）
+completed t35  review (pass)   验证员         t34                           复核 t34（两次反照证明「跳过不是藏红」）
+completed t36  repair          档案工程师     —                             隔离目录同名吞证据修复（复用 unused_path + 出声）
+completed t38  verification    验证员         —                             t9 引用在存活载体上仍成立（45 条，非 44）
+completed t41  implementation  功能工程师     —                             取证执行器 L5→L16 + 悬停修因 + 三张档位模板
+completed t44  repair (r2)     档案工程师     t36                           收 t37 的 F1–F5（两处 docstring + 脚本真比较）
+completed t45  review (pass)   验证员         t44                           复核 t44（旧四路径全复现，OK=51/FAIL=0）
+completed t46  work            档案工程师     —                             事故补记两处更正（doc 只动 3 行；t86 追加 §9）
+----------------------------------------------------------------------------------------------------------------
+in_progress t48 repair (r2)    功能工程师     t41                           H1 修复 `:2622` → `tick_outcome`（显式 .tick）+ 三条用例；**五条 verify 未跑**
+----------------------------------------------------------------------------------------------------------------
+pending t2   verification    档案工程师     t30,t15,t19,t43,t18            实机读数补记（改造后档案与新增牌改变了什么）
+pending t3   work            评审员         t15,t16,t17,t19,t21,t23,t43,t18 原则对账 P1–P14 + 冻结清单 F1–F12
+pending t11  verification    验证员         t43,t18,t20                    独立验证阶段 6 实机证据（产物/RULE 链/双语/收尾）
+pending t12  work            档案工程师     t2,t6,t31,t9,t43,t18,t20,t46   读数落档（不许覆盖历史）
+pending t13  verification    验证员         （除自身外全部）                整轮收口：13 门禁现跑 + 阶段出口逐条 + 清零残留
+pending t18  work            功能工程师     t43,t15                        阶段 6 主战场（3/4）L11→L16
+pending t20  work            功能工程师     t18                            阶段 6 主战场（4/4）英文整链（en/ 零模板）
+pending t22  work            档案工程师     t1,t12,t15,t16,t17,t19,t21,t23,t24,t25,t33,t34,t36,t39,t47  覆盖率三处读数收口
+pending t27  work            档案工程师     t15,t16,t17,t19,t21,t23,t24,t25,t33,t34,t36,t39,t43,t47    收口前机械数字同步
+pending t39  repair          档案工程师     t20                            quarantine_logs() 跳过时出声（B114 第四条）
+pending t40  review          验证员         t39                            复核 t39
+pending t43  work            功能工程师     t41,t49                        阶段 6 承重取证（Pass B → C 承重 → C2 复现）
+pending t47  work            档案工程师     t31                            静默路径文案对齐 + 一条参数化回归用例
+pending t49  review          验证员         t48                            复核 t48（H1 真修 / H2 行号 / 冻结面 / 落地哈希）
+----------------------------------------------------------------------------------------------------------------
+failed  t10  verification    验证员         t15,t16,t17,t19,t21,t23        **判据结论四卡逐卡 pass**；卡落 failed 只因契约命令 exit 1（README 用例数 1885 vs 1986）；follow-up = t27/t22 修 + t13 复跑
+failed  t31  work            内存分析师     —                              阶段 4 ④ 判决：**成员会话 403 FORBIDDEN** ⇒ 05:51:07 中断；13 局 / 6 完整配对已留证；需重提并按 §5 路线恢复
+failed  t37  review          验证员         t36                             verdict=needs_revision（修复本体 pass，仅 ⑧ 事故留痕）⇒ 已由 t44/t45 收口
+failed  t42  review          验证员         t41                             verdict=needs_revision（H1 实参类型错 + H2 行号）⇒ 已由 t48/t49 收口
+----------------------------------------------------------------------------------------------------------------
+cancelled t7  verification     captain        t6                             阶段 4 ④ 旧卡：held 期间零产物，路线改走 AI 侧量后作废（由 t31 承接）
+cancelled t14 work            captain        t8                             阶段 6 旧卡：命令缺 `--row-arrows`，零产物 ⇒ 由 t26（再被 t43）取代
+cancelled t26 work            captain        t24,t25,t33                    阶段 6 旧卡：取证模式当时**没有执行器**（零证据丢失）⇒ 由 t41+t43 取代
+
+现场留证（归档后仍可复算）
+- run A：`tools/out/mem/t31-runA-csv/`（13 CSV + MANIFEST，逐份 sha256 + copy_equal=True）
+- run A 逐臂日志：`tools/out/mem/t31-logs/`（14 目录 = 13 × `session-<arm>-<k>` 21 件 + `runner-quarantine`）
+- 台账：`tools/out/mem/WINDOW.md`（641,120 B，append-only；含 3 个 CR 字节，已登记）
+- 冻结预注册：`docs/reports/阶段4-④-判决-t31-预注册.md` 13,090 B / `f485835c37e77d0b6298b611b51d1cf9ad8e6440e19de02231e397dac434fe91` + 补记 01–05
+- 收尾文档：`docs/design/exec/阶段性收尾-20260929.md`（本快照的服务对象）

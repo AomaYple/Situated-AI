@@ -1,4 +1,4 @@
-﻿# U14：`scripted_modifier` 的**调用候选** —— 放进**事件选项**的 ai_chance。
+# U14：`scripted_modifier` 的**调用候选** —— 放进**事件选项**的 ai_chance。
 #
 # 上一版把 `ai_chance` 放在事件顶层 → 引擎逐字报
 #   [pdx_persistent_reader.cpp:268]: Error: "Unexpected token: ai_chance, near line: 11"

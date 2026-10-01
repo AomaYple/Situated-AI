@@ -46,8 +46,8 @@
 #
 # 为什么**没有** `[tempo]`、也**没有** `[difficulty]`：这两张都是 **mod 级**表
 # （`defines` 没有单国写法；难度三档是对外契约，档位集合由生成器钉死），全仓各只允许
-# 一份 —— 「恰好一份」由 `_check_tempo`（tools/pdx/modgen.py:1747-1767）与
-# `_check_difficulty`（tools/pdx/modgen.py:1721）在全仓范围上当场判死。
+# 一份 —— 「恰好一份」由 `_check_tempo`（src/pdx/modgen.py:1751-1771）与
+# `_check_difficulty`（src/pdx/modgen.py:1725）在全仓范围上当场判死。
 # 那两份都在 `ru_defeat.toml` 里。本档案**复用**它们，不复制。
 
 schema_version = 1
@@ -59,7 +59,7 @@ country = "SPA"
 # 档案对哪个引擎版本有效（写进 mod 元数据的 supported_game_version）。
 # 钉住 1.14.3 = 阶段 2 三次探针局与本仓库知识库的口径版本；官方升级后
 # 闸门 ①/② 会先红（原版键名变了），届时改这里而不是改产物。
-game_version = "1.14.4"
+game_version = "1.14.5"
 why = "**修的是什么毛病**：原版 1.14.3 对这场王位内战**记账记到战争结束那一刻为止**（**叙述·不可由脚本判**：这是对原版记账范围的概括）。开始与结束都有账：开局就有一场外交博弈 `first_carlist_war`（common/history/diplomatic_plays/00_carlist_war.txt:3-12，:11 是 `type = dp_revolution`、:9 是 `annex_as_civil_war = yes`），战争本体挂在 `je_the_first_carlist_war`（common/journal_entries/06_the_carlist_wars.txt:1，weight 10000 见 :216）；结束时 `on_complete_all_involved` 把战争期间的所有修正**逐一撤掉**（同文件 :136-213，:145 连开局写死的 `set_immune_to_revolutions = yes`（common/history/countries/spa - spain.txt:82）也改回 `no`），只给胜方挂一个 20 年递减的**奖励**（同文件 :129-133 的 `carlist_war_spa_reward`）。**战后的账没有**：帝国已经丢光（1836 年只剩古巴、菲律宾、波多黎各 —— 原版开局那场博弈要解决的对象就是 `c:CUB` / `c:PHI` / `c:PCO`，common/history/diplomatic_plays/00_carlist_war.txt:20-22；`PCO` 就是波多黎各：common/country_definitions/00_countries.txt:2763 是 `PCO = {`、:2771 是 `capital = STATE_PUERTO_RICO`），本土打完一场王位内战后，合法性靠什么重新站起来、教会与军队的势力各自落到哪里、这笔打仗的钱怎么还 —— 这三件事在原版里一个字都没有。本档案不替 AI 决定改什么，只把这笔账记成真实世界状态（记忆变量 + 四条压力 + 一条改革侧输入），让原版自己那张**读改革派 IG 的**权重公式（`ai_strategy_progressive_agenda`，common/ai_strategies/03_political_strategies.txt:528-544）自己转向。**为什么主角是西班牙**：01a §K「西班牙」那一行（docs/design/01a-依据与参考.md:279）写的是**帝国残骸、卡洛斯战争、教会与军队势力强**，外部是**殖民地所剩无几、英法主导拉美、摩洛哥机会**，推出的最优解是**保住残存帝国 + 内部整合**（有限北非扩张）—— 这是一份以「帝国没了、本土还在打」为机制的档案。主角身份**本机实测确认**（不是猜）：tag = `SPA`（common/country_definitions/00_countries.txt:429 的 `SPA = {`，该文件的顶层键就是国家 tag），`country_type = recognized`（:436）、`tier = kingdom`（:438）、`cultures = { spanish }`（:440）、`capital = STATE_NEW_CASTILE`（:441）。⚠️ **与既有六份的结构差别（这一条会直接影响探针）**：西班牙开局的土地法是**伊比利亚专有的那一条** `law_latifundias`（common/history/countries/spa - spain.txt:35），不是俄/大清的农奴制、也不是奥地利的庄园制 —— 照抄 `law_serfdom` 会让判据当场为真、报出假的「法律换了」（详见 `[probe]`）。⚠️ 依据已于 2026-09-22 更正（沿用既有六份的共同结论）：原版 AI 策略（`common/ai_strategies/**`）里 212 处 has_journal_entry 全部硬编码具名 JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）—— 本档案一条都不用，理由见 `[cards]`。　【沿用·口径】本表的数值**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；本档案**独立取字段**的有三处（教会、军队、改革侧输入落在小资产阶级），字段名与档位都取自原版自己的西班牙内容，见各自的 why。"
 
 
@@ -69,17 +69,17 @@ why = "**修的是什么毛病**：原版 1.14.3 对这场王位内战**记账�
 [memory]
 variable = "sitai_sp_empire_remnant_memory"
 effect = "sitai_sp_empire_remnant_shock"
-why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown_when_inactive / possible 读它，于是「这场内战与帝国残骸已经发生过」变成可查的世界状态（阶段 1 已证：牌直接读 has_variable）。**谁把这件事判成这件事，本档案不猜、也确实不能猜**：原版记这场内战结束的地方不是任何一个 on_action，而是 JE 自己的 `complete`（common/journal_entries/06_the_carlist_wars.txt:89-97 的 `NAND = { exists = c:SPC  exists = c:SPA }`）加 `on_complete_all_involved`（:99）；`on_war_end` 只给 actor / target、不带胜负（common/on_actions/00_code_on_actions.txt:7043），而 `on_civil_war_won`（同文件 :5772）管的是**叛乱型内战**，不是这场以 `dp_revolution` 外交博弈开打的王位战争（common/history/diplomatic_plays/00_carlist_war.txt:11）。所以判定留在**施加方**：`sitai_sp_empire_remnant_shock` 由调用方显式执行，本档案**不绑任何 on_action**（与 tr/au/eg/pe 同口径：A/B 实验要求两处处理段能分开施加、单独关掉，绑上就等于替 AI 决定「什么时候算打完」）。　【沿用·口径】判据形状沿用 `ru_defeat.toml`（变量 + 显式冲击效果），**未针对本条处境独立校准**；「原版用 JE 的 complete 而不是 on_action 记这场战争的结束」是本机实测结论（命令见上面那一串文件与行号）。"
+why = "记忆本身不产生任何数值效果 —— 它是**判据**：JE 的 is_shown_when_inactive / possible 读它，于是「这场内战与帝国残骸已经发生过」变成可查的世界状态（阶段 1 已证：牌直接读 has_variable）。**谁把这件事判成这件事，本档案不猜、也确实不能猜**：原版记这场内战结束的地方不是任何一个 on_action，而是 JE 自己的 `complete`（common/journal_entries/06_the_carlist_wars.txt:89-97 的 `NAND = { exists = c:SPC  exists = c:SPA }`）加 `on_complete_all_involved`（:99）；`on_war_end` 只给 actor / target、不带胜负（common/on_actions/00_code_on_actions.txt:7081），而 `on_civil_war_won`（同文件 :5772）管的是**叛乱型内战**，不是这场以 `dp_revolution` 外交博弈开打的王位战争（common/history/diplomatic_plays/00_carlist_war.txt:11）。所以判定留在**施加方**：`sitai_sp_empire_remnant_shock` 由调用方显式执行，本档案**不绑任何 on_action**（与 tr/au/eg/pe 同口径：A/B 实验要求两处处理段能分开施加、单独关掉，绑上就等于替 AI 决定「什么时候算打完」）。　【沿用·口径】判据形状沿用 `ru_defeat.toml`（变量 + 显式冲击效果），**未针对本条处境独立校准**；「原版用 JE 的 complete 而不是 on_action 记这场战争的结束」是本机实测结论（命令见上面那一串文件与行号）。"
 
 [[memory.params]]
 key = "value"
 amount = 1
-why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几场内战」时不用换类型（原版 `set_variable = { name = recently_had_war value = yes }` 用的是 yes，见 common/on_actions/00_code_on_actions.txt:7046）。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
+why = "变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几场内战」时不用换类型（原版 `set_variable = { name = recently_had_war value = yes }` 用的是 yes，见 common/on_actions/00_code_on_actions.txt:7084）。　【沿用·口径】沿用 `ru_defeat` 的取值，未针对本条处境独立校准。"
 
 [[memory.params]]
 key = "days"
 amount = 3650
-why = "10 年，与压力修正的 `years = 10` 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在西班牙身上有原版先例**：原版给内战胜方的奖励是 `years = 20`（common/journal_entries/06_the_carlist_wars.txt:129-133 的 `carlist_war_spa_reward`，`is_decaying = yes`）—— 也就是说原版自己认为「内战留下的东西」要按**十年到二十年**计；对照原版给 `recently_had_war` 的 `days = 1825`（5 年，common/on_actions/00_code_on_actions.txt:7048），本档案取十年，恰好落在原版这场战争的两档之间。　【沿用·口径】3650 **沿用 `ru_defeat.toml` 的实测档位**（该值在其 why 里写作「战败比打过仗更该留得久，故取两倍」），**未针对本条处境独立校准**；这里只是换了一条更贴题的原版先例来支撑同一个数。"
+why = "10 年，与压力修正的 `years = 10` 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。**这个尺度在西班牙身上有原版先例**：原版给内战胜方的奖励是 `years = 20`（common/journal_entries/06_the_carlist_wars.txt:129-133 的 `carlist_war_spa_reward`，`is_decaying = yes`）—— 也就是说原版自己认为「内战留下的东西」要按**十年到二十年**计；对照原版给 `recently_had_war` 的 `days = 1825`（5 年，common/on_actions/00_code_on_actions.txt:7086），本档案取十年，恰好落在原版这场战争的两档之间。　【沿用·口径】3650 **沿用 `ru_defeat.toml` 的实测档位**（该值在其 why 里写作「战败比打过仗更该留得久，故取两倍」），**未针对本条处境独立校准**；这里只是换了一条更贴题的原版先例来支撑同一个数。"
 
 # ── ③ 压力：真实的合法性 / 教会 / 军队 / 财政（A 级）──────────
 #
@@ -194,7 +194,7 @@ gate = "possible"
 key = "legitimacy"
 op = "<="
 amount = 75
-why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**为什么没有一条「王位之争」专属判据**（本处境最想要的那一条，比如「场上同时存在两个宣称者」）：原版表达这件事的写法都是**块形式**（`c:SPC ?= { … }`、`has_gov_regency = yes` 之类），而生成器的判据渲染只支持平铺一行 `key op 操作数`（tools/pdx/modgen.py:187 的 `Clause.render`），块形式在本 schema 里表达不出来 —— 这是**让步**，如实记在这里（与 `au_revolution` 表达不出「激进派占比门」、`pe_great_game` 表达不出「两强同时压过来」是同一类问题，backlog B69）。于是「王位被两头撕」这层意思由 `[pressure]` 的合法性那一条 + `[memory]` 承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有 75 的先例（有行号）。"
+why = "开窗的第二个条件：压力够大。**为什么门槛是 75**：① 原版就用 75 做「政府站得住 / 站不住」的国家级分界（common/journal_entries/00_meiji_restoration.txt:314 的 `legitimacy >= 75`）；② 它同时是 `ru_defeat` 在阶段 3 里**实测校准**过的门槛（A 组无冲击时每一个观测月都 >80、不会误开；B 组 -35 时 55 块里有 42 块 ≤75）。本档案没有独立重跑 A/B：这个 75 **原样沿用 `ru_defeat` 的实测分界**。**为什么没有一条「王位之争」专属判据**（本处境最想要的那一条，比如「场上同时存在两个宣称者」）：原版表达这件事的写法都是**块形式**（`c:SPC ?= { … }`、`has_gov_regency = yes` 之类），而生成器的判据渲染只支持平铺一行 `key op 操作数`（src/pdx/modgen.py:187 的 `Clause.render`），块形式在本 schema 里表达不出来 —— 这是**让步**，如实记在这里（与 `au_revolution` 表达不出「激进派占比门」、`pe_great_game` 表达不出「两强同时压过来」是同一类问题，backlog B69）。于是「王位被两头撕」这层意思由 `[pressure]` 的合法性那一条 + `[memory]` 承担，门只开在合法性上。相应地 `complete` 写 75，开与关正好接上。　【沿用·口径】**数值沿用 `ru_defeat` 的实测档位，未针对本条处境独立校准**；原版另有 75 的先例（有行号）。"
 
 [[journal_entry.conditions]]
 gate = "complete"
@@ -279,7 +279,7 @@ why = "记忆变量的读法。原版用法：common/journal_entries/00_corn_law
 [[references]]
 kind = "effect"
 name = "set_variable"
-why = "写记忆变量。原版用法：common/on_actions/00_code_on_actions.txt:7046-7048（`on_war_end` 给 `recently_had_war` 记 5 年，:7048 是 `days = 1825`）。"
+why = "写记忆变量。原版用法：common/on_actions/00_code_on_actions.txt:7084-7086（`on_war_end` 给 `recently_had_war` 记 5 年，:7048 是 `days = 1825`）。"
 
 [[references]]
 kind = "effect"
@@ -331,7 +331,7 @@ why = "小资产阶级政治力量（本档案改革侧的第二格 —— 原�
 # 而**对没有农奴制的国家它立刻为真** ⇒ 会报出一个假的「法律换了」（奥斯曼/埃及实测踩到）。
 # 现在按档案声明：查实了就写，没查实就留空（留空时那条判据**不产出**）。
 [probe]
-why = "西班牙的开局土地法是**伊比利亚专有的那一条** `law_latifundias` —— 依据：`common/history/countries/spa - spain.txt:35` 的 `activate_law = law_type:law_latifundias`（逐行打开确认；同块还有 :30 的 `law_state_religion`、:41 的 `law_oligarchy`）。该法属于 `lawgroup_land_reform`（common/laws/01_land_reform.txt:238 的 `group = lawgroup_land_reform`），且原版在文件里明写它是伊比利亚专用变体：common/laws/01_land_reform.txt:236 的注释 `# Special tenant farmer variant for Iberia`。**为什么它正好能当「改革真的发生了」的判据**：这条法本身就是大土地所有者的法 —— 它给 `country_aristocrats_pol_str_mult = 0.4`（common/laws/01_land_reform.txt:268），也就是本档案压着的那条守旧线的制度底座；它被换掉，就是「土地法真的动了」。⚠️ **B80 的教训在这份档案上会立刻应验**：如果照抄俄/大清的 `law_serfdom`（或波斯的同一条），西班牙**没有**农奴制、开局是 latifundias ⇒ 那条判据当场为真，报出一个假的「法律换了」（奥斯曼/埃及就是这么踩到的）。⚠️ 一处需要说清的边界：同组里还有一条 `law_expanded_latifundias`（common/laws/01_land_reform.txt:291 的注释 `# Special tenant farmer variant for Iberia (Upgraded by JE)`、:292 是法名），它是原版自己的 JE 升级路径；探针渲染出来的是 `NOT = { has_law = law_type:law_latifundias }`（tools/pdx/ab_probe.py:1017-1031，渲染 `law_changed` 的那个块；行号 2026-09-25 由 `:852-867` 更正 —— 被引文件在其上方新增了 RULE 两族行、内容未变），所以升级到那一条也会让判据为真 —— 那是土地法确实被换过的另一种形态，**本档案不额外排除它**（排除要靠块形式判据，本 schema 表达不出来，见 `[journal_entry]` 的 conditions 那两条 why）。　【牌 · t9 裁决】目标牌 = `ai_strategy_progressive_agenda`（**保留**）。**从目标函数表的哪一项推出来**：`docs/design/01a-依据与参考.md:279` 的西班牙行 —— 政治列写的是 `conservative_agenda` **↔** `progressive_agenda`（§K 明写**两向**），本档案取「内部整合」那一向：内战逼出来的那一刀（教会松手、王位失信）。**修什么毛病**：帝国残骸 + 内战却不重整 —— 原版里这件事没有账（现在落成合法性、教会、军队、借债成本四条压力）；目标牌在**开局为假**（实测那一局全程 `conservative_agenda`，`docs/design/exec/阶段5-实机读数补记.md` §一）⇒ 判据有判别力。**递法**：**不递**（`common/history/ai/00_strategy.txt` 里没有 `c:SPA` 块 ⇒ 无落点可递，且要先拿到「只动世界状态」的干净读数）。⚠️ **同向性记账**（`docs/design/exec/阶段5-目标牌口径.md` §六 K2）：`[reform_inputs]` 抬的是知识界 + 小资产阶级，而本目标牌的权重读的是知识界 + **工业家**（`common/ai_strategies/03_political_strategies.txt:528-535` / :537-544）⇒ 第二根杠杆落在 `conservative_agenda` 的亲名单里（同文件 :51）—— **已在 `[reform_inputs].why` 与 `docs/design/exec/档案目标牌-实机读数.md` §七 收口**：机制核查显示它对目标牌是**中立**（不在目标牌的 anti 里、也不喂竞争对手的权重），而换成工业家会因 CLOUT 水位（b08）**变哑**。"
+why = "西班牙的开局土地法是**伊比利亚专有的那一条** `law_latifundias` —— 依据：`common/history/countries/spa - spain.txt:35` 的 `activate_law = law_type:law_latifundias`（逐行打开确认；同块还有 :30 的 `law_state_religion`、:41 的 `law_oligarchy`）。该法属于 `lawgroup_land_reform`（common/laws/01_land_reform.txt:238 的 `group = lawgroup_land_reform`），且原版在文件里明写它是伊比利亚专用变体：common/laws/01_land_reform.txt:236 的注释 `# Special tenant farmer variant for Iberia`。**为什么它正好能当「改革真的发生了」的判据**：这条法本身就是大土地所有者的法 —— 它给 `country_aristocrats_pol_str_mult = 0.4`（common/laws/01_land_reform.txt:268），也就是本档案压着的那条守旧线的制度底座；它被换掉，就是「土地法真的动了」。⚠️ **B80 的教训在这份档案上会立刻应验**：如果照抄俄/大清的 `law_serfdom`（或波斯的同一条），西班牙**没有**农奴制、开局是 latifundias ⇒ 那条判据当场为真，报出一个假的「法律换了」（奥斯曼/埃及就是这么踩到的）。⚠️ 一处需要说清的边界：同组里还有一条 `law_expanded_latifundias`（common/laws/01_land_reform.txt:291 的注释 `# Special tenant farmer variant for Iberia (Upgraded by JE)`、:292 是法名），它是原版自己的 JE 升级路径；探针渲染出来的是 `NOT = { has_law = law_type:law_latifundias }`（src/pdx/ab_probe.py:1017-1031，渲染 `law_changed` 的那个块；行号 2026-09-25 由 `:852-867` 更正 —— 被引文件在其上方新增了 RULE 两族行、内容未变），所以升级到那一条也会让判据为真 —— 那是土地法确实被换过的另一种形态，**本档案不额外排除它**（排除要靠块形式判据，本 schema 表达不出来，见 `[journal_entry]` 的 conditions 那两条 why）。　【牌 · t9 裁决】目标牌 = `ai_strategy_progressive_agenda`（**保留**）。**从目标函数表的哪一项推出来**：`docs/design/01a-依据与参考.md:279` 的西班牙行 —— 政治列写的是 `conservative_agenda` **↔** `progressive_agenda`（§K 明写**两向**），本档案取「内部整合」那一向：内战逼出来的那一刀（教会松手、王位失信）。**修什么毛病**：帝国残骸 + 内战却不重整 —— 原版里这件事没有账（现在落成合法性、教会、军队、借债成本四条压力）；目标牌在**开局为假**（实测那一局全程 `conservative_agenda`，`docs/design/exec/阶段5-实机读数补记.md` §一）⇒ 判据有判别力。**递法**：**不递**（`common/history/ai/00_strategy.txt` 里没有 `c:SPA` 块 ⇒ 无落点可递，且要先拿到「只动世界状态」的干净读数）。⚠️ **同向性记账**（`docs/design/exec/阶段5-目标牌口径.md` §六 K2）：`[reform_inputs]` 抬的是知识界 + 小资产阶级，而本目标牌的权重读的是知识界 + **工业家**（`common/ai_strategies/03_political_strategies.txt:528-535` / :537-544）⇒ 第二根杠杆落在 `conservative_agenda` 的亲名单里（同文件 :51）—— **已在 `[reform_inputs].why` 与 `docs/design/exec/档案目标牌-实机读数.md` §七 收口**：机制核查显示它对目标牌是**中立**（不在目标牌的 anti 里、也不喂竞争对手的权重），而换成工业家会因 CLOUT 水位（b08）**变哑**。"
 reform_law = "law_latifundias"
 reform_card = "ai_strategy_progressive_agenda"
 

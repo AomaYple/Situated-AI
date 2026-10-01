@@ -17,16 +17,16 @@
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-import win32gui
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from pdx import game_auto as ga
+from pdx.platform_support import require_windows
+
+win32gui = ga.win32gui
 
 SAMPLE_POINTS = (
     (100, 100),
@@ -51,11 +51,8 @@ def desktop_owners() -> dict[int, int]:
 
 
 def kill_game() -> list[int]:
-    """杀掉 victoria3；返回杀掉的 PID（`taskkill` 不读就不假装知道）。"""
-    pids = ga._process_pids()
-    for pid in pids:
-        subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True, check=False)
-    return pids
+    """复用进程收尾；返回已发出终止请求的 PID。"""
+    return ga.kill_game()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -64,6 +61,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-speed", action="store_true", help="不切速度档")
     parser.add_argument("--lobby-timeout", type=float, default=ga.LOBBY_TIMEOUT)
     args = parser.parse_args(argv)
+    require_windows("flow_with_cleanup 实机窗口操作")
 
     ga.ALLOW_REAL_INPUT = True  # 显式入口：允许抢前台点那三下
     leftover = ga._process_pids()

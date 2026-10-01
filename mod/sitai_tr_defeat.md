@@ -2,7 +2,7 @@
 
 > ⚠️ 本文件由 `v3 modgen` 生成 —— 改这里没用，改数据源 `mod/data/*.toml`。
 
-* **档案 id**：`tr_defeat`　**国家**：`TUR`　**游戏版本**：`1.14.4`
+* **档案 id**：`tr_defeat`　**国家**：`TUR`　**游戏版本**：`1.14.5`
 * **本档案修什么毛病**：战败之后 AI 照旧走原来的路 —— 贵族照旧在朝、合法性不塌、财政不受罚，于是「战败 → 改革」这条因果在原版里根本不存在。档案不替 AI 决定改什么，只把战败记成账、把压力落成真实的合法性/贵族/财政变化。⚠️ 依据已于 2026-09-22 更正：原版 AI 策略里 212 处 has_journal_entry 全部硬编码**具名** JE，没有「读任意 JE」的通用谓词 ⇒ 我们自己的 JE 一张原版牌也喂不到（backlog B52）；真正把压力变成意图位移的通道是递牌（set_strategy，B58）与法律承诺（law commitment，B56/B57）。　【骨架·口径】本表的数值与依据**原样沿用** `ru_defeat.toml` 的实测档位（阶段 3 的 A/B 读数），**未针对本条处境独立校准**；它是「加一处境 = 加一份数据源」（G-EXIT-1）的证明件，不是一份经过校准的档案设计。
 * **递牌**：0 张 —— 本档案**不使用自建策略牌**（F5：能改世界就不占槽）。战败 → 压力的链路由变量 + 修正 + JE 表达；⚠️ 依据已于 2026-09-22 更正：JE **不会**被原版牌读到（原版 AI 策略（`common/ai_strategies/**`）里 212 处 has_journal_entry 全硬编码具名 JE，没有通用谓词，backlog B52），所以意图位移**不能**指望「开一个 JE 就被牌池读到」。要真的换路线，用（a）递**原版**的牌 `set_strategy`（B58）或（b）法律承诺 law commitment（B56/B57）—— 两者都是「整条路线要换」时的手段。递牌的政治槽价格：S≈33 时权重 10 吃掉 23% 的份额（阶段 2 价格表）。本档案目前**故意不做**（骨架件），等 ru 那条链实测通过再按同一抽象抄。
 
@@ -40,8 +40,8 @@
 
 | 位置 | 数值 | 依据 |
 |---|---:|---|
-| `memory.params[0].amount` | 1 | 变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次战败」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 00_code_on_actions.txt:7046）。 |
-| `memory.params[1].amount` | 3650 | 10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。对照原版给 recently_had_war 的是 days = 1825（5 年，00_code_on_actions.txt:7048）—— 战败比「打过仗」更该留得久，故取两倍。 |
+| `memory.params[0].amount` | 1 | 变量在判据里只被 has_variable 读，值不参与任何运算；写 1 而不是 yes，是为了将来要用 change_variable 记「第几次战败」时不用换类型（原版 set_variable = { name = recently_had_war value = yes } 用的是 yes，见 00_code_on_actions.txt:7084）。 |
+| `memory.params[1].amount` | 3650 | 10 年，与压力修正的 years = 10 同一时间尺度（两处必须一起改，否则会出现「记忆还在、压力已经没了」的半截状态）。对照原版给 recently_had_war 的是 days = 1825（5 年，00_code_on_actions.txt:7086）—— 战败比「打过仗」更该留得久，故取两倍。 |
 | `pressure.params[0].amount` | 10 | 与 sitai_tr_defeat_memory 的 days = 3650 对齐。原版 add_modifier 用 years 的写法见 00_movement_effects.txt:1-7（add_modifier = { name = … years = 20 }）。 |
 | `pressure.effects[0].amount` | -35 | 合法性是开窗判据的一半（JE 的 possible 读 `legitimacy <= 75` —— 为什么是 75 见下面 conditions 那条的依据）。**实测调档**：先取 -20 跑了一整局 B（15 个月），窗口一次都没开（JE 全程 0%）→ 提到 -35。**-35 的实测水位**（复算：`v3 ab --logs ab-run7`，B 段 55 块合法性分档）：b70 24 / b75 18 / b80 13 —— 也就是「从开局的全 >80 掉到 70–80 之间来回，还会自己回升」，**够不到原版那条 50 线**（00_liberalism.txt:54 的「政府站得住」分界）。所以本档案**不再要求压到 50**，开窗判据按实测分界取 75；换挂载点的来由与读数写在 conditions 那条 why 里。取 -35 不是因为它能压到 50，而是它把水位稳定压出一档、又不让政府一次失能：原版同字段的档位是 ±5 / ±10 / ±20 / ±50（00_code_static_modifiers.txt:322-353 一连串），-35 落在 -20 与 -50 之间。 |
 | `pressure.effects[1].amount` | -0.3 | **实测调档**：-0.15 在一整局里没能让行为层动起来 → 取 -0.30。贵族失势是「战败 → 改革阻力下降」的那一环。原版同字段的档位实测为 ±0.03（00_ip3_04_modifiers.txt:334）、±0.10（00_ip4_03_modifiers.txt:14）、±0.25（00_ip4_04_modifiers.txt:12 的 modifier_regency_landowners）、-0.20（agitators_4_revolution_modifiers.txt:321）、-0.50（agitators_5_modifiers.txt:615）、-0.75（content_1_modifiers.txt:1465 的 shogun_ig_forced_to_open_market，与知识界 +0.5、工业家 +0.5 成对写）。取 -0.30 = 落在原版 -0.25 与 -0.50 之间：方向明确（贵族政治力量 -30%），又不把贵族一次打垮 —— 一次打垮会让议会算术失去张力。 |
@@ -81,7 +81,7 @@
 |---|---|---|
 | `trigger` | `legitimacy` | JE 的开窗/关窗判据（`legitimacy <= 75` / `>= 75`）。原版用法：00_meiji_restoration.txt:314、04_sikh_empire.txt:20。 |
 | `trigger` | `has_variable` | 记忆变量的读法。原版用法：00_corn_laws.txt:7 等 795 处（**范围 = `common/journal_entries/**`**，即该例所在目录；`v3 evidence has_variable` 现读全树 6383 处。阶段 1 统计读它的牌 = 13 张，规则与现读见生成物 `docs/design/02-可执行面.md`）。 |
-| `effect` | `set_variable` | 写记忆变量。原版用法：00_code_on_actions.txt:7046（on_war_end 给 recently_had_war 记 5 年）。 |
+| `effect` | `set_variable` | 写记忆变量。原版用法：00_code_on_actions.txt:7084（on_war_end 给 recently_had_war 记 5 年）。 |
 | `effect` | `add_modifier` | 把静态修正挂到国家上。原版用法：00_movement_effects.txt:2（add_modifier = { name = … years = 20 }）。 |
 | `country_tag` | `TUR` | JE 的单国门（c:TUR ?= this）。原版用法：country_definitions 里的 TUR。 |
 | `modifier_field` | `country_legitimacy_base_add` | 合法性修正字段。原版 `common/static_modifiers/**` 下 157 处（`common/**` 全树 173 处），档位 ±5 / ±10 / ±20 / ±50（00_code_static_modifiers.txt:322-353 等）。 |

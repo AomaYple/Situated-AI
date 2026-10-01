@@ -1,4 +1,4 @@
-﻿l_simp_chinese:
+l_simp_chinese:
  zzprobe_r_selftest_decision:0 "ZZ 探针：跑一次语法自检"
  # P17-A：字面量块标量 `|` —— 期望面板里显示**两行**
  zzprobe_r_selftest_decision_desc:0 |

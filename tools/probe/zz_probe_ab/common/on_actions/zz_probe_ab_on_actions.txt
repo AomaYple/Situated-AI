@@ -1,4 +1,4 @@
-﻿# ⚠️ 本文件由 `v3 ab-probe` 生成（tools/pdx/ab_probe.py）—— 改这里没用，改生成器。
+# ⚠️ 本文件由 `v3 ab-probe` 生成（src/pdx/ab_probe.py）—— 改这里没用，改生成器。
 # 触发与自报（**纯新增字段**，不覆盖原版任何字段）。
 #
 # ⚠️ `on_actions = { … }` 只认 on_action 定义：把 `zz_probe_ab_monthly` 定义到效果文件里
@@ -21,8 +21,8 @@ zz_probe_ab_monthly = {
 		}
 
 		if = {
-			limit = { c:AUS ?= this }
-			debug_log = "ZZPROBE AB;ROLE;AUS;[THIS.GetCountry.GetNameNoFormatting]"
+			limit = { c:RUS ?= this }
+			debug_log = "ZZPROBE AB;ROLE;RUS;[THIS.GetCountry.GetNameNoFormatting]"
 
 			debug_log = "ZZPROBE AB;MODE;natural;[THIS.GetCountry.GetNameNoFormatting]"
 			debug_log = "ZZPROBE AB;STORM;no;[THIS.GetCountry.GetNameNoFormatting]"
@@ -38,7 +38,7 @@ zz_probe_ab_monthly = {
 
 			# ③ 两处输入到底有没有落到这个国家身上（自检用）
 			if = {
-				limit = { has_variable = sitai_au_revolution_memory }
+				limit = { has_variable = sitai_ru_defeat_memory }
 				debug_log = "ZZPROBE AB;SHOCK;yes;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 			else = {
@@ -46,7 +46,7 @@ zz_probe_ab_monthly = {
 			}
 
 			if = {
-				limit = { has_modifier = sitai_au_reform_inputs }
+				limit = { has_modifier = sitai_ru_reform_inputs }
 				debug_log = "ZZPROBE AB;INPUT;yes;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 			else = {
@@ -56,7 +56,7 @@ zz_probe_ab_monthly = {
 			# ③·补 (a) **门直读**（t18 第 10 条）：门开没开要有一行直读，
 			#    不许再从记忆变量旁证（B 臂 0/13 的归因缺口就是它）。
 			if = {
-				limit = { has_modifier = sitai_au_revolution_pressure }
+				limit = { has_modifier = sitai_ru_defeat_pressure }
 				debug_log = "ZZPROBE AB;GATE;yes;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 			else = {
@@ -414,7 +414,7 @@ zz_probe_ab_monthly = {
 
 			# 行为层①：改革窗口开没开
 			if = {
-				limit = { has_journal_entry = je_sitai_au_revolution_window }
+				limit = { has_journal_entry = je_sitai_ru_reform_window }
 				debug_log = "ZZPROBE AB;JE;active;[THIS.GetCountry.GetNameNoFormatting]"
 			}
 			else = {
@@ -473,7 +473,7 @@ zz_probe_ab_monthly = {
 
 		# 策略层：三槽落点（同一个守卫，不给全世界刷日志）
 		if = {
-			limit = { c:AUS ?= this }
+			limit = { c:RUS ?= this }
 		if = {
 			limit = { has_strategy = ai_strategy_conservative_agenda }
 			debug_log = "ZZPROBE AB;POLI;conservative_agenda;[THIS.GetCountry.GetNameNoFormatting]"

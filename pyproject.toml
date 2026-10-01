@@ -36,6 +36,8 @@ classifiers = [
 
 # 运行期依赖：只保留「标准库确实没有对应能力」的，每条写明用途。
 dependencies = [
+    "packaging>=26.0", # PEP 508 条件依赖使用成熟解析器，不自行实现表达式求值。
+    "psutil>=7.0",    # 三平台进程树 RSS / CPU / 内存测量；仪器读数不再绑 Win32。
     "typer>=0.27",      # 命令行参数解析。取代 7 个入口脚本里重复的 argparse 样板
     "rich>=15.0",       # 终端表格与格式化输出。取代手写字符串对齐
 
@@ -52,7 +54,7 @@ dependencies = [
                         # （少一层 GTK/Qt 的隐式依赖，也不会和游戏的窗口抢东西）。
                         # 为什么不手写：滑动窗口互相关自己实现只会更慢更容易错，
                         # 而"用成熟库"是本仓 P4 明确要求的。
-    "pydirectinput>=1.0.4",
+    "pydirectinput>=1.0.4; sys_platform == 'win32'",
                         # game_auto.py：鼠标**注入**（`moveTo` + `click`）。它内部同样是
                         # `SendInput`，选它不是为了"更强的注入"，而是为了**别再自己拼
                         # `SetCursorPos` + `mouse_event` 那段 Win32 细节**，并把
@@ -63,13 +65,13 @@ dependencies = [
                         # ② 控制台 —— scancode 版键盘试过 4 个候选键仍未能唤起控制台
                         # （判据是"命令会写的文件有没有变"；那次分不清"键没被接受"与
                         # "这个界面不让开控制台"，所以记作未证实而不是判死）。
-    "pygetwindow>=0.0.9",
+    "pygetwindow>=0.0.9; sys_platform == 'win32'",
                         # game_auto.py：**窗口**枚举 / 标题 / 激活（`Window.activate()`
                         # 内部自己做 `AttachThreadInput` + 置顶）/ 最小化 / 还原。
                         # 为什么换掉手写 ctypes（P3 + 用户口径"不要使用其他代码例如 win32，
                         # 完全使用 python"）：这段 Win32 细节原本是我们自己拼的
                         # `EnumWindows` + 回调 + `AttachThreadInput`，属于典型的重复造轮子（P4）。
-    "pywin32>=306",
+    "pywin32>=306; sys_platform == 'win32'",
                         # game_auto.py：补 `pygetwindow` 没暴露的几个**只读量** ——
                         # 客户区坐标（`ClientToScreen`，点击坐标必须加这个原点）、类名、
                         # 是否最小化（`IsIconic`）、`ShowWindow(SW_SHOWNOACTIVATE)`。
@@ -79,6 +81,7 @@ dependencies = [
 [project.optional-dependencies]
 # 测试与静态检查。一次装齐，避免后续「这个库没装」的反复。
 dev = [
+    "types-psutil>=7.0",       # 跨平台性能测量库的类型桩
     # ── 测试框架与插件 ────────────────────────────────────
     "pytest>=9.0",
     "pytest-cov>=7.0",          # 覆盖率
@@ -111,14 +114,14 @@ v3 = "pdx.cli:app"
 [tool.setuptools]
 # 包源码在 tools/ 下（仓库既是「研究资料库」也是「工具源码库」，
 # 因此没有采用 src/ 布局 —— 那样会让 tools/ 与 src/ 两份代码并存）。
-package-dir = { "" = "tools" }
+package-dir = { "" = "src" }
 packages = ["pdx"]
 
 # ─────────────────────────────────────────────────────────────
 # pytest
 # ─────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
-testpaths = ["tools/tests"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -145,14 +148,19 @@ addopts = [
     #
     # 需要串行（例如要读完整的失败上下文）时传 ``-n0`` 覆盖。
     #
-    # ⚠️ **跑基准必须把 addopts 清掉**：pytest-benchmark 在 xdist 开启时会
-    # **自动禁用自己**（它无法在多个 worker 上做有意义的计时）。
-    # 后果是 ``--benchmark-only`` 会直接报错，而不带该参数时基准被
-    # 静默跳过 —— 实测踩过：启用并行后所有基准其实一直在跳过。
-    # 注意 ``-n0`` **不管用**（xdist 插件仍算"开着"，实测报
-    # "Can't have both --benchmark-only and --benchmark-disable"），
-    # 要清 addopts：
-    #     pytest tools/tests/test_benchmarks.py -o addopts="" --benchmark-only
+    # ⚠️ **跑基准必须显式带 `--benchmark-only`**：pytest-benchmark 在 xdist
+    # **真的并发**时会自动禁用自己（它无法在多个 worker 上做有意义的计时）。
+    # 此时**不带**该参数的跑法会**静默降级**：用例照跑、退出码照 0，
+    # 但一条计时读数都没有（实测 18 passed / EXIT=0 / 无基准表），
+    # 与"真测过"的外观完全相同。
+    # 2026-09-29 更正（t34，实测）：旧注释写「`-n0` 不管用」**不成立** ——
+    # `-n0` 时 xdist 自己把 `dist` 归一成 `no`
+    # （`xdist/plugin.py`：`if config.option.numprocesses == 0: config.option.dist = "no"`），
+    # pytest-benchmark 据此（`pytest_benchmark/session.py` 的
+    # `xdist_active = config.getoption('dist','no') != 'no'`）不判并发 ⇒
+    # `-n0 --benchmark-only` 能跑出基准表（实测 18 passed / 有表 / EXIT=0）。
+    # 纪律（跑基准要显式 `--benchmark-only`、建议照旧 `-o addopts=""`）不变，理由改口。
+    #     pytest tests/test_benchmarks.py -o addopts="" --benchmark-only
     "-n",
     "auto",
     "--dist",
@@ -179,7 +187,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-# 口径：只统计**装进包里**的代码（pdx），不含 tools/prof 与 tools/tests。
+# 口径：只统计**装进包里**的代码（pdx），不含 tools/prof 与 tests。
 source = ["pdx"]
 branch = true
 omit = ["*/tests/*"]
@@ -221,11 +229,11 @@ line-length = 100
 target-version = "py311"
 extend-exclude = [
     ".venv",
-    # 下面三个目录当前**一个 .py 都没有**（tools/out 是 JSON 产物、
-    # tools/reports 与 research/official-docs 全是 .md），而 ruff 本来
-    # 就不检查非 Python 文件 —— 这两条目前是空转。留着的原因见各条注释。
+    # 下面三个目录**入库的 .py 一个都没有**（tools/out 是产物目录、docs/reports 与
+    # research/official-docs 全是 .md），但**不是空转**：`ruff format` 会连 `.md` 里的
+    # python 代码块一起格式化（`docs/reports` 下就靠本条挡住 2 个未格式化的块）。
     "tools/out",          # 产物目录，将来若落脚本也不该被 lint
-    "tools/reports",      # 自动生成的 Markdown 报告
+    "docs/reports",      # 自动生成的 Markdown 报告
     # research/official-docs/ 是游戏官方文档的逐字镜像，不是我们的代码；
     # research/ 根下若出现自有产物则仍需检查，故不整目录排除。
     "research/official-docs",
@@ -298,7 +306,7 @@ ignore = [
 #   S101   断言就是测试的正文；bandit 的 S 规则集并未启用，此项为前瞻
 #   PT011  pytest.raises 不带 match= 是有意的：这里只关心「抛了没抛」
 #   PLC0415 少量用例在函数体内 import（如 subprocess 起 CLI），便于局部化
-"tools/tests/*" = [
+"tests/*" = [
     "PT009", "PLC2401", "N802", "N803", "RUF012",
     "ARG001", "ARG002", "N806",
     "S101", "PT011", "PLC0415",
@@ -331,8 +339,8 @@ docstring-code-format = true
 # 因为环境差异而失败（那种红不代表测试强）。
 # ─────────────────────────────────────────────────────────────
 [tool.mutmut]
-paths_to_mutate = ["tools/pdx/lexer.py", "tools/pdx/markers.py"]
-tests_dir = "tools/tests"
+paths_to_mutate = ["src/pdx/lexer.py", "src/pdx/markers.py"]
+tests_dir = "tests"
 runner = "python -m pytest -x -q -p no:randomly --no-header -m 'not integration and not benchmark'"
 
 # ─────────────────────────────────────────────────────────────
@@ -363,7 +371,7 @@ python_version = "3.12"
 # 覆盖范围：解析器包 + 测试。
 # **不含 `tools/prof/`** —— 那是一次性的剖析脚本，只在本地手跑、不进 CI；
 # 但它仍受 ruff 约束（ruff 扫全仓），不是完全无人看管。
-files = ["tools/pdx", "tools/tests"]
+files = ["src/pdx", "tests"]
 # 渐进式收紧：先保证「不出现新错误」，再逐步加严。
 warn_unused_configs = true
 warn_redundant_casts = true
@@ -383,4 +391,3 @@ pretty = true
 [[tool.mypy.overrides]]
 module = ["pydirectinput", "pygetwindow", "win32api", "win32con", "win32gui", "win32process"]
 ignore_missing_imports = true
-

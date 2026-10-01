@@ -1,4 +1,4 @@
-﻿# P5 候选 2：等号默认值 `$AMOUNT=默认值$` —— **实测不成立**（2026-09-20 第三轮，加载期）：
+# P5 候选 2：等号默认值 `$AMOUNT=默认值$` —— **实测不成立**（2026-09-20 第三轮，加载期）：
 #
 #   [jomini_script_argument.cpp:83]: Missing $ to end argument around
 #   common/scripted_effects/zz_probe_p5_c2.txt:3
