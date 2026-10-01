@@ -20,6 +20,7 @@ import ast
 import hashlib
 import json
 import os
+import sys
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 
@@ -1061,7 +1062,7 @@ class TestLaunch:
             return object()
 
         monkeypatch.setattr(ga.subprocess, "Popen", fake_popen)
-        assert ga.launch(wait=False) == 0
+        assert ga.launch(wait=False) is None
         assert seen["command"] == [str(fake_exe), ga.SCRIPTED_TESTS_ARG]
         # 启动就是**普通启动**（用户口径："直接用之前那套测试的怎么启动就怎么启动"）：
         # 不带任何窗口样式变体。三种变体都实测过并已删：创建时最小化（游戏**崩**，
@@ -1084,7 +1085,7 @@ class TestLaunch:
             return object()
 
         monkeypatch.setattr(ga.subprocess, "Popen", fake_popen)
-        assert ga.launch(wait=False) == 0
+        assert ga.launch(wait=False) is None
         assert set(cast("dict[str, object]", seen["kwargs"])) == {"cwd", "close_fds"}
 
     def test_不带自动化开关时就不加(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -2903,3 +2904,10 @@ class TestGrabGuard:
         monkeypatch.setattr(ga, "is_blank", lambda _img, **_kw: False)
         ga.screenshot(4242, roi=ga.BOTTOM_ROI)
         assert grabbed == [(100, 50 + 972, 100 + 1920, 50 + 1080)], "ROI 只抓底部那一条"
+
+
+def test_platform_capabilities_is_read_only() -> None:
+    capabilities = ga.platform_capabilities()
+    assert capabilities["platform"] == sys.platform
+    assert capabilities["background_validation"] is True
+    assert capabilities["headless_log_validation"] is True

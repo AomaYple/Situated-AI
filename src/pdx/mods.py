@@ -23,6 +23,7 @@ from typing import Any
 
 from . import config
 from .cache import parse_cached
+from .localization import extract_localization
 from .parser import TOLERATED_ERRORS
 from .scan import walk_files
 
@@ -40,6 +41,10 @@ class ModInfo:
     supported_game_version: str = ""
     description: str = ""
     multiplayer_synced: bool | None = None
+    #: 原始 metadata，保留官方字段（id/tags/dependencies 等）以便 mod 开发审计。
+    metadata: dict[str, Any] = field(default_factory=dict)
+    #: 本地化键 -> 出现语言；值文本仍由游戏运行时解析，避免复制大体积正文。
+    localization_keys: dict[str, tuple[str, ...]] = field(default_factory=dict)
     #: 顶层条目（目录名或根级文件名）
     top_entries: list[str] = field(default_factory=list)
     files: int = 0
@@ -138,12 +143,18 @@ def analyse_mod(root: Path, *, vanilla: Path | None = None) -> ModInfo:
         else:
             info.additions.append(rel_str)
 
-        if f.suffix == ".txt":
+        if config.is_scriptable(rel.parts, f.suffix):
             _scan_prefixes(f.path, rel_str, vanilla, info)
 
     info.top_entries = sorted(tops)
     info.overrides.sort()
     info.additions.sort()
+    info.metadata = dict(meta)
+    # 本地化单独使用行式解析器；只保留键到语言的倒排索引，避免把所有文本值
+    # 复制进游戏全量报告。对没有本地化的 mod 不触发额外扫描。
+    if (root / "localization").is_dir():
+        report = extract_localization(root)
+        info.localization_keys = {key: entry.langs for key, entry in sorted(report.entries.items())}
     return info
 
 

@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 import unittest
 
+import pytest
+
 from pdx import config, snapshot
 
 #: **不参与「列表已排序」判定**的域。
@@ -192,6 +194,33 @@ class TestCompare(unittest.TestCase):
         line = snapshot.compare(a, b)[0].line()
         self.assertIn("[x]", line)
         self.assertIn("+2", line)
+
+    def test_ordered_doc_tables_detects_reorder_and_duplicates(self):
+        a = self._snap({"doc_tables": {"t": ["a", "b"]}})
+        b = self._snap({"doc_tables": {"t": ["b", "a", "a"]}})
+        changes = snapshot.compare(a, b)
+        self.assertEqual(len(changes), 1)
+        self.assertEqual(changes[0].added.count("a"), 1)
+        self.assertEqual(changes[0].added.count("b"), 1)
+        self.assertIn("b", changes[0].removed)
+
+
+class TestSnapshotValidation(unittest.TestCase):
+    def test_load_rejects_unknown_format_and_non_boolean_compact(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "bad.json"
+            p.write_text(json.dumps({"格式版本": 999, "版本": {}, "域": {}}), encoding="utf-8")
+            with pytest.raises(snapshot.SnapshotFormatError):
+                snapshot.Snapshot.load(p)
+            p.write_text(
+                json.dumps({"格式版本": snapshot.FORMAT, "版本": {}, "域": {}, "精简": "false"}),
+                encoding="utf-8",
+            )
+            with pytest.raises(snapshot.SnapshotFormatError):
+                snapshot.Snapshot.load(p)
 
 
 class TestCompactSnapshot(unittest.TestCase):

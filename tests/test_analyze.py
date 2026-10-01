@@ -138,7 +138,7 @@ class TestGameViews:
 
     def test_all_fields_structure(self, ga):
         fields = ga.all_fields()
-        assert len(fields) == len(ga.common) + len(ga.scripts)
+        assert len(fields) == len(ga.common) + len(ga.scripts) + len(ga.engine_scripts)
         for _name, names in list(fields.items())[:10]:
             assert isinstance(names, list)
             assert names == sorted(names)

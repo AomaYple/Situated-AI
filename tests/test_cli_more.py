@@ -259,9 +259,8 @@ def test_snapshot_diff_域集合不同时会点明() -> None:
     newer = snaps[-1].name.removesuffix(".compact.json")
     result = _run("snapshot", "diff", older, newer)
     assert "MarkupError" not in result.output
-    assert result.exit_code == 0, result.output
-    if "域集合不同" in result.output:
-        assert "可比的是两侧都有的域" in result.output
+    assert result.exit_code == 2, result.output
+    assert "精简口径不同" in result.output
 
 
 @_needs_game

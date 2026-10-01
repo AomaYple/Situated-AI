@@ -98,6 +98,8 @@ class DlcInfo:
     name: str
     path: Path
     descriptor: dict[str, str] = field(default_factory=dict)
+    #: 每个 .dlc 描述符的独立内容，避免同名键互相覆盖。
+    descriptors: list[dict[str, str]] = field(default_factory=list)
     top_entries: list[str] = field(default_factory=list)
     files: int = 0
     size: int = 0
@@ -120,6 +122,8 @@ class GameAnalysis:
     common: dict[str, DirExtract] = field(default_factory=dict)
     #: 其他脚本目录：``"events" -> DirExtract``
     scripts: dict[str, DirExtract] = field(default_factory=dict)
+    #: Jomini/Clausewitz 层脚本，单独保留内容根，避免把引擎层误报成 game。
+    engine_scripts: dict[str, DirExtract] = field(default_factory=dict)
     #: 本地化：``语言 -> {文件, 键出现次数, 去重键}``
     localization: dict[str, dict[str, int]] = field(default_factory=dict)
     #: 本地化的**完整键名清单**（14 万+ 键）。
@@ -156,19 +160,21 @@ class GameAnalysis:
 
     @property
     def total_entries(self) -> int:
-        return sum(e.unique_entries for e in self.common.values()) + sum(
-            e.unique_entries for e in self.scripts.values()
+        return sum(
+            e.unique_entries
+            for e in [*self.common.values(), *self.scripts.values(), *self.engine_scripts.values()]
         )
 
     def all_keys(self) -> dict[str, list[str]]:
         """``目录名 -> 排序后的全部条目名``（含 common 与 scripts）。"""
         out = {n: sorted(e.entries) for n, e in self.common.items()}
         out.update({n: sorted(e.entries) for n, e in self.scripts.items()})
+        out.update({n: sorted(e.entries) for n, e in self.engine_scripts.items()})
         return out
 
     def all_fields(self) -> dict[str, list[str]]:
         out: dict[str, list[str]] = {}
-        for name, e in list(self.common.items()) + list(self.scripts.items()):
+        for name, e in [*self.common.items(), *self.scripts.items(), *self.engine_scripts.items()]:
             merged: set[str] = set()
             for fset in e.fields.values():
                 merged |= fset
@@ -182,7 +188,9 @@ class GameAnalysis:
         原地重写了一遍（同样是遍历 ``field_usage`` 累加），
         而 ``global_usage`` 因为「没人用」差点被当成死代码删掉。
         """
-        return global_usage([*self.common.values(), *self.scripts.values()])
+        return global_usage(
+            [*self.common.values(), *self.scripts.values(), *self.engine_scripts.values()]
+        )
 
     def summary(self) -> dict[str, Any]:
         return {
@@ -195,6 +203,7 @@ class GameAnalysis:
             "common 目录数": len(self.common),
             "common 条目数": sum(e.unique_entries for e in self.common.values()),
             "其他脚本目录": {k: v.unique_entries for k, v in self.scripts.items()},
+            "引擎层脚本目录": {k: v.unique_entries for k, v in self.engine_scripts.items()},
             "本地化语言数": len(self.localization),
             "GUI 文件": len(self.gui_files),
             "根级配置": len(self.root_files),
@@ -285,6 +294,7 @@ def _analyse_dlc(root: Path) -> list[DlcInfo]:
             info.by_class[classify(f.suffix)] += 1
         # 描述符：同目录下的 .dlc（PDX 格式）
         for desc in d.glob("*.dlc"):
+            parsed: dict[str, str] = {}
             try:
                 txt = desc.read_text(encoding="utf-8-sig", errors="replace")
             except OSError:
@@ -292,8 +302,10 @@ def _analyse_dlc(root: Path) -> list[DlcInfo]:
             for line in txt.splitlines():
                 if "=" in line:
                     k, _, v = line.partition("=")
-                    info.descriptor[k.strip()] = v.strip().strip('"')
-            break
+                    parsed[k.strip()] = v.strip().strip('"')
+            if parsed:
+                info.descriptors.append(parsed)
+                info.descriptor.update(parsed)
         out.append(info)
     return out
 
@@ -333,6 +345,7 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
 
     per_common: dict[str, DirExtract] = {}
     per_script: dict[str, DirExtract] = {}
+    per_engine: dict[str, DirExtract] = {}
     loose_common = 0
 
     # 先为**每一个**子目录建好空结果。
@@ -365,8 +378,15 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
             if a.prefix:
                 ga.vanilla_prefixes[a.prefix] += 1
 
-        # 只有 game 层参与目录级提取；jomini/clausewitz 只计前缀
+        # game 与引擎层都做条目/字段级提取；分桶保留内容根，避免同名目录混淆。
         if root_name != "game":
+            rel_top = rel.parts[0] if rel.parts else root_name
+            key = f"{root_name}/{rel_top}"
+            res = per_engine.get(key)
+            if res is None:
+                res = DirExtract(name=key, path=root / rel_top)
+                per_engine[key] = res
+            extract_file(pf, res)
             continue
 
         top = rel.parts[0] if rel.parts else ""
@@ -397,7 +417,8 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
 
     ga.common = dict(sorted(per_common.items()))
     ga.scripts = dict(sorted(per_script.items()))
-    for res in list(ga.common.values()) + list(ga.scripts.values()):
+    ga.engine_scripts = dict(sorted(per_engine.items()))
+    for res in [*ga.common.values(), *ga.scripts.values(), *ga.engine_scripts.values()]:
         for path, err in res.errors:
             ga.parse_errors.append((str(path), err))
 
@@ -565,7 +586,11 @@ def cross_analysis(ma: ModsAnalysis, *, verbose: bool = False) -> CrossAnalysis:
 
             src = m.root / rel
             dst = config.GAME / rel
-            if src.suffix != ".txt" or not dst.is_file():
+            try:
+                rel_parts = tuple(src.relative_to(m.root).parts)
+            except ValueError:
+                continue
+            if not config.is_scriptable(rel_parts, src.suffix) or not dst.is_file():
                 continue
             try:
                 mf = parse_cached(src)
@@ -749,10 +774,17 @@ def to_game_dict(ga: GameAnalysis) -> dict[str, Any]:
         "一级目录": {k: [_dir_to_dict(d) for d in v] for k, v in ga.top_dirs.items()},
         "common": {k: _extract_to_dict(v) for k, v in ga.common.items()},
         "其他脚本目录": {k: _extract_to_dict(v) for k, v in ga.scripts.items()},
+        "引擎层脚本目录": {k: _extract_to_dict(v) for k, v in ga.engine_scripts.items()},
         "本地化": ga.localization,
         "GUI文件": ga.gui_files,
         "根级配置": {
-            k: {"字节": v.size, "类型": v.kind, "摘要": v.summary} for k, v in ga.root_files.items()
+            k: {
+                "字节": v.size,
+                "类型": v.kind,
+                "摘要": v.summary,
+                "文本": v.text if v.kind == "text" else "",
+            }
+            for k, v in ga.root_files.items()
         },
         "校验和目录": ga.checksummed,
         "路径映射": ga.paths,
@@ -764,6 +796,7 @@ def to_game_dict(ga: GameAnalysis) -> dict[str, Any]:
                 "顶层条目": d.top_entries,
                 "类型分布": dict(d.by_class),
                 "描述符": d.descriptor,
+                "描述符文件": d.descriptors,
                 "自带脚本目录": d.has_script_dir,
             }
             for d in ga.dlcs
@@ -790,6 +823,8 @@ def to_mods_dict(ma: ModsAnalysis) -> dict[str, Any]:
                 "新增条目所在目录": dict(m.added_entries),
                 "文件类型分布": dict(ma.by_class.get(m.target, {})),
                 "本地化语言": dict(ma.localization.get(m.target, {})),
+                "metadata": m.metadata,
+                "本地化键": {k: list(v) for k, v in sorted(m.localization_keys.items())},
             }
             for m in ma.mods
         ],

@@ -152,6 +152,31 @@ def test_本仓库自己的mod元数据对得上判据() -> None:
     assert ident == f"{config.NAMESPACE_PREFIX.rstrip('_')}.{ident.split('.', 1)[1]}"
 
 
+def test_分析保留完整metadata并解析非txt脚本和本地化(tmp_path) -> None:
+    root = tmp_path / "mod"
+    vanilla = tmp_path / "game"
+    (root / ".metadata").mkdir(parents=True)
+    (root / "common" / "gui_test").mkdir(parents=True)
+    (root / "gui").mkdir()
+    (root / "localization" / "english").mkdir(parents=True)
+    metadata = {
+        "id": "example.mod",
+        "name": "Example",
+        "tags": ["Gameplay", "GUI"],
+        "dependencies": ["base"],
+        "remote_file_id": "123",
+    }
+    (root / ".metadata" / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (root / "gui" / "window.gui").write_text("window = { name = test_window }\n", encoding="utf-8")
+    (root / "localization" / "english" / "example_l_english.yml").write_text(
+        'l_english:\n example_key:0 "Example"\n', encoding="utf-8"
+    )
+    info = mods.analyse_mod(root, vanilla=vanilla)
+    assert info.metadata == metadata
+    assert info.added_entries["gui"] >= 1
+    assert info.localization_keys["example_key"] == ("l_english",)
+
+
 #: doc 12 的两处版本分布：§7 的表（给人看的）与 §9 第 1 条的散文（给结论看的）。
 #: 它们**曾经互相矛盾**（表写 `1.13*` 8 / 空 10，散文写 9 / 9），而且两边都没有看守，
 #: 所以只能靠人偶然发现。这条用例把「表 == 现场」钉死，散文那一侧由 §7 反向引用。

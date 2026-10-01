@@ -84,7 +84,7 @@ import psutil
 from PIL import Image, ImageGrab
 
 from . import config, experiments
-from .platform_support import UnavailableWindowsModule
+from .platform_support import UnavailableWindowsModule, WindowsOnlyError
 
 if sys.platform == "win32" or TYPE_CHECKING:
     import pydirectinput as directinput
@@ -2169,6 +2169,22 @@ def kill_game() -> list[int]:
     return requested
 
 
+def platform_capabilities() -> dict[str, object]:
+    """返回当前平台可用的自动化能力，不触碰窗口或输入设备。"""
+    windows = sys.platform == "win32"
+    return {
+        "platform": sys.platform,
+        "gui_automation": windows,
+        "background_validation": True,
+        "headless_log_validation": True,
+        "reason": (
+            "Windows GUI backend: pygetwindow + pydirectinput"
+            if windows
+            else "当前平台没有受支持的 Victoria 3 GUI 输入后端"
+        ),
+    }
+
+
 def launch(
     *,
     scripted_tests: bool = True,
@@ -2176,7 +2192,7 @@ def launch(
     extra_args: tuple[str, ...] = (),
     wait: bool = True,
     timeout: float = WINDOW_TIMEOUT,
-) -> int:
+) -> int | None:
     """以调试模式起游戏（可选带官方自动化开关），返回窗口句柄。
 
     **启动方式就用之前那套探针/测试的那一套**（用户口径："直接用之前那套测试的怎么启动
@@ -2196,11 +2212,8 @@ def launch(
     两步保证：**加载期完全不碰窗口**（:func:`wait_for_boot_settle`：只看进程与日志大小），
     **三下点完之后立刻切回后台**（:func:`switch_to_background`：还前台 + 缩窗口）。
 
-    ⚠️ **已知缺口（未修，故意留白不如记下来）**：``wait=False`` 时返回 ``0``，
-    而 ``0`` 同时是 :func:`find_window` 的"没找到"哨兵 —— 调用方分不清
-    "没等窗口"与"没找到窗口"。正确修法是返回 ``int | None``（``None`` = 没等），
-    但那会改掉公开返回类型并要同步改 ``tests/test_game_auto.py`` 里两处
-    ``== 0`` 断言。当前调用点都用 ``wait=True``，不受影响。
+    ``wait=False`` 返回 ``None``，与 :func:`find_window` 的 ``0`` 哨兵区分开；
+    调用方不会再把“没有等待窗口”误判成“窗口不存在”。
     """
     assert_no_game_running()
     command = experiments.launch_command(debug=debug)
@@ -2211,7 +2224,7 @@ def launch(
         raise GameAutoError(f"找不到游戏可执行文件：{command[0]}")
     subprocess.Popen(command, cwd=str(config.ROOT), close_fds=True)
     if not wait:
-        return 0
+        return None
     return wait_for_window(timeout=timeout)
 
 
@@ -2845,6 +2858,8 @@ def launch_to_foreground(
         wait=True,
         timeout=timeout,
     )
+    if hwnd is None:  # pragma: no cover - wait=True 总是返回句柄
+        raise WindowNotFoundError("启动后未取得游戏窗口句柄")
     return _live_window(hwnd), previous
 
 
@@ -3545,6 +3560,10 @@ def run_session(
     成绩单什么时候写完由套件的 ``last_date`` 决定，跑的可能是**小时级**，
     不能替调用方定这个时长。
     """
+    if sys.platform != "win32":
+        raise WindowsOnlyError(
+            "run 需要 Windows GUI 输入后端；当前平台仍可使用 capabilities、status 和日志/判定解析。"
+        )
     # 点火**之前**先记下已有的成绩单 —— 引擎每局换一个新 uuid，
     # "出现了一个先前没有的文件"才是这一局的成绩单。
     known = frozenset(testoutput_files())
@@ -3588,6 +3607,15 @@ def run_session(
 
 def status_report() -> list[str]:
     """只读地把"时间在不在走"这件事说清楚（不点任何东西）。"""
+    if sys.platform != "win32":
+        mark = tick_mark()
+        return [
+            f"平台          : {sys.platform}",
+            "游戏窗口      : （GUI 状态不可用）",
+            f"游戏进程      : {len(_process_pids())} 个",
+            f"最近 tick     : {mark.tick or '（读不到）'}   ← {TICK_LOG}",
+            f"当前时间在走  : {is_running(4.0).describe()}",
+        ]
     mark = tick_mark()
     roles = probe_months()
     lines = [
@@ -3614,6 +3642,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("status", help="只读：报告 tick / 探针月度行 / 时间是否在推进")
+    sub.add_parser("capabilities", help="只读：报告当前平台的 GUI 与无头验证能力")
     sub.add_parser("check", help="断言当前没有 victoria3 在跑")
 
     run_parser = sub.add_parser(
@@ -3683,6 +3712,11 @@ def main(argv: list[str] | None = None) -> int:
         if command == "status":
             for line in status_report():
                 print(line)
+            return 0
+
+        if command == "capabilities":
+            for key, value in platform_capabilities().items():
+                print(f"{key}: {value}")
             return 0
 
         if command == "capture":
@@ -3814,6 +3848,7 @@ __all__ = [
     "parse_tasklist_pids",
     "parse_testoutput",
     "parse_tick_date",
+    "platform_capabilities",
     "press_chord",
     "press_key",
     "probe_months",

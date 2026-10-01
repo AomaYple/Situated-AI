@@ -21,7 +21,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
+from contextlib import suppress
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from . import ai_surface, citations, config, vanilla_index
@@ -33,12 +38,16 @@ from .scan import walk_files
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
 
 SNAPSHOT_DIR = config.OUT / "snapshots"
 
 #: 快照格式版本。结构变更时递增，避免旧快照被误读。
 FORMAT = 1
+ORDERED_SECTIONS = frozenset({"doc_tables"})
+
+
+class SnapshotFormatError(ValueError):
+    """快照文件格式不受支持或结构损坏。"""
 
 
 # ── 构建 ────────────────────────────────────────────────────
@@ -191,19 +200,52 @@ class Snapshot:
         # newline="\n"：快照会入库（精简版），而 .gitattributes 规定 eol=lf。
         # 不传这个参数的话，Windows 上生成的快照与 Linux 上的**字节不同**，
         # 跨平台 diff 会整份报差异。
-        path.write_text(
-            json.dumps(self.to_dict(), ensure_ascii=False, indent=1, sort_keys=True),
-            encoding="utf-8",
-            newline="\n",
-        )
+        payload = json.dumps(self.to_dict(), ensure_ascii=False, indent=1, sort_keys=True)
+        # 同目录临时文件 + os.replace：进程被中断时不会留下半个 JSON，
+        # 且 replace 在 Windows/macOS/Linux 都是原子的（同一文件系统内）。
+        fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+            Path(temporary).replace(path)
+        except BaseException:
+            with suppress(FileNotFoundError):
+                Path(temporary).unlink()
+            raise
 
     @classmethod
     def load(cls, path: Path) -> Snapshot:
-        d = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            d = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise SnapshotFormatError(f"无法读取快照 {path}: {exc}") from exc
+        if not isinstance(d, dict) or d.get("格式版本") != FORMAT:
+            raise SnapshotFormatError(
+                f"{path} 的格式版本不受支持：{d.get('格式版本') if isinstance(d, dict) else type(d).__name__}"
+            )
+        version = d.get("版本")
+        sections = d.get("域")
+        compact = d.get("精简", False)
+        if (
+            not isinstance(version, dict)
+            or not isinstance(sections, dict)
+            or not isinstance(compact, bool)
+        ):
+            raise SnapshotFormatError(f"{path} 的快照字段类型错误")
+        if any(not isinstance(k, str) or not isinstance(v, dict) for k, v in sections.items()):
+            raise SnapshotFormatError(f"{path} 的域结构错误")
+        if any(
+            not isinstance(k, str) or not isinstance(v, list)
+            for body in sections.values()
+            for k, v in body.items()
+        ):
+            raise SnapshotFormatError(f"{path} 的域条目结构错误")
         return cls(
-            version=d.get("版本", {}),
-            sections=d.get("域", {}),
-            compact=bool(d.get("精简", False)),
+            version={str(k): str(v) for k, v in version.items()},
+            sections=sections,
+            compact=compact,
         )
 
     @property
@@ -342,18 +384,38 @@ def compare(old: Snapshot, new: Snapshot) -> list[Change]:
         a = old.sections.get(sec, {})
         b = new.sections.get(sec, {})
         for name in sorted(set(a) | set(b)):
-            sa, sb = set(a.get(name, [])), set(b.get(name, []))
-            if sa == sb:
+            old_values = list(a.get(name, []))
+            new_values = list(b.get(name, []))
+            if sec in ORDERED_SECTIONS:
+                added, removed = _ordered_delta(old_values, new_values)
+            else:
+                sa, sb = set(old_values), set(new_values)
+                if sa == sb:
+                    continue
+                added, removed = sorted(sb - sa), sorted(sa - sb)
+            if not added and not removed:
                 continue
             changes.append(
                 Change(
                     section=sec,
                     name=name,
-                    added=sorted(sb - sa),
-                    removed=sorted(sa - sb),
+                    added=added,
+                    removed=removed,
                 )
             )
     return changes
+
+
+def _ordered_delta(old: list[str], new: list[str]) -> tuple[list[str], list[str]]:
+    """为有序域保留重复项和顺序变化，返回新增/删除序列。"""
+    added: list[str] = []
+    removed: list[str] = []
+    for tag, i1, i2, j1, j2 in SequenceMatcher(a=old, b=new, autojunk=False).get_opcodes():
+        if tag in {"replace", "delete"}:
+            removed.extend(old[i1:i2])
+        if tag in {"replace", "insert"}:
+            added.extend(new[j1:j2])
+    return added, removed
 
 
 def diff_summary(changes: list[Change]) -> dict[str, int]:

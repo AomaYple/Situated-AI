@@ -103,6 +103,10 @@ macOS / Linux 从 `pyproject.toml` 安装对应平台依赖。
 | `交叉.json` | 哪些原版条目被哪些 mod 改动 |
 | `游戏本体分析.md` / `mod分析.md` | 上面这些数据的人可读报告（**入库**，其余在 `tools/out/`，已 gitignore） |
 
+分析还会单独保留引擎层（`jomini/`、`clausewitz/`）的脚本条目、mod 的完整
+`.metadata/metadata.json`、mod 本地化键及 DLC 的全部描述符，避免只看 `game/`
+或只看 `.txt` 时漏掉可覆盖的接口。
+
 另有一条**独立**的版本快照线（`v3 snapshot create`）：捕获某个版本的全部
 mod 相关信息，游戏升级后 `v3 snapshot diff` 一次就能看出 Paradox 增删了哪些字段。
 
@@ -156,7 +160,7 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2151 条**用例（`pytest --collect-only` 实测；整套读数见 `docs/reports/` 的全量基线） |
+| 测试 | **2155 条**用例（`pytest --collect-only` 实测；整套读数见 `docs/reports/` 的全量基线） |
 | 覆盖率 | **89.02%**（`v3 cov` 实测；门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | **3,962** 个脚本文件（`game\` 下 `.txt` 3,758 + `.gui` 204，即 `pdx.cache` 的解析条数）+ **1,878** 个本地化 `.yml` |
@@ -173,9 +177,9 @@ Situated AI/
 ├─ research/
 │   ├─ official-docs/        94 篇游戏自带官方 .md 的规范化镜像（**不入库**，用 `v3 mirror write` 重建）
 │   └─ official-docs.manifest.json  镜像清单：路径 / 字节 / 行数 / sha256（**入库**，Paradox 版权内容不在其中）
+├─ src/pdx/                  工具链核心包（解析部分纯标准库，cli.py 用 typer + rich）
+├─ tests/                    测试（统一由仓库 `.venv` 的 pytest 执行）
 ├─ tools/
-│   ├─ pdx/                  工具链核心包（64 个模块，不含 `__init__.py`；解析部分纯标准库，cli.py 用 typer + rich）
-│   ├─ tests/                测试（84 个测试文件 / 2151 条用例）
 │   ├─ prof/                 性能剖析
 │   ├─ out/                  分析产物（已 gitignore）
 │   └─ reports/              人可读报告（**入库**）

@@ -132,7 +132,11 @@ app = typer.Typer(
 #: 口径）加「JSON 本身坏了」组成。刻意不含 ``Exception``：那会把代码 bug
 #: （属性名打错、类型不符）降级成「产物缺失」，是最难查的一类问题 ——
 #: 它让错误静默地变成合法输出。
-_READ_ERRORS: tuple[type[BaseException], ...] = (*TOLERATED_ERRORS, json.JSONDecodeError)
+_READ_ERRORS: tuple[type[BaseException], ...] = (
+    *TOLERATED_ERRORS,
+    json.JSONDecodeError,
+    snapshot.SnapshotFormatError,
+)
 
 
 def _fail(message: str, code: int = EXIT_USAGE) -> NoReturn:
@@ -743,6 +747,9 @@ def snap_diff(
 
     a = _load_snapshot(a_path)
     b = _load_snapshot(b_path)
+
+    if a.compact != b.compact:
+        _fail("两份快照的精简口径不同：请使用两个完整快照，或使用两个 --compact 快照再比较。")
 
     console.rule(f"对比 {a.version_label}  →  {b.version_label}")
     console.print(
