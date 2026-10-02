@@ -3934,8 +3934,8 @@
     "lines=127"
    ],
    "docs/design/backlog.md": [
-    "234:15a6ede30fc4c6fc",
-    "lines=396"
+    "234:deb4f9eedba68729",
+    "lines=406"
    ],
    "events/1848.txt": [
     "430:40acb7feda6c3802",
@@ -4112,7 +4112,7 @@
     "115:9d059492d356195c",
     "lines=128"
    ],
-   "tools/pdx/ab_probe.py": [
+   "src/pdx/ab_probe.py": [
     "1017:84b102b5c79d1b54",
     "1018:f5901ac7a228c480",
     "1019:334359b90efed75d",
@@ -4130,7 +4130,7 @@
     "1031:e4f3d18421b46acf",
     "lines=2002"
    ],
-   "tools/pdx/modgen.py": [
+   "src/pdx/modgen.py": [
     "1222:0132b03c355f856a",
     "1223:d48327d68fd9a9b6",
     "1224:a29ca1dce1e09485",
@@ -4162,13 +4162,13 @@
     "1771:b6d267efe80a3dbc",
     "187:23e70c22333265d2",
     "734:e3b0c44298fc1c14",
-    "lines=2857"
+    "lines=2868"
    ],
-   "tools/pdx/modguard.py": [
+   "src/pdx/modguard.py": [
     "60:53788cc49b125aeb",
     "lines=907"
    ],
-   "tools/pdx/vanilla_index.py": [
+   "src/pdx/vanilla_index.py": [
     "80:174dec46b1ea2749",
     "81:7b7fc9b144ed50c7",
     "82:d78b381d92984b30",
@@ -36926,7 +36926,9 @@
     "| `game` | 27,732 | 1,988 | 17,056.00 MB | 游戏**内容层**（脚本数据库、事件、本地化、GUI、贴图、地图数据、DLC）；mod 覆盖的目标 |",
     "| `jomini` | 493 | 72 | 2.30 MB | Jomini 通用框架层（成就、多人、账号、社交、通用 GUI/本地化、通用脚本数据库） |",
     "| `launcher` | 12 | 2 | 188.18 MB | Paradox 启动器本体（dowser.exe）与安装包、主题资源 |",
-    "| `platform_specific_game_data` | 2 | 0 | 0.02 MB | 平台相关日志配置 JSON |"
+    "| `platform_specific_game_data` | 2 | 0 | 0.02 MB | 平台相关日志配置 JSON |",
+    "| `%LOCALAPPDATA%` | 2 | 3 | 0 MB | —— **待补** |",
+    "| `NVIDIA Corporation` | 0 | 1 | 0 MB | —— **待补** |"
    ],
    "08-目录全量清单.md::doc08 ROOT 松散文件": [
     "| `caligula_branch.txt` | `release/1.14.5` | 游戏分支标识 |",
@@ -37293,10 +37295,12 @@
    ],
    "08-目录全量清单.md::doc08 全局总数": [
     "| `ROOT\\game` 全树 | **27,732** | **1,988** | **17,056.00 MB** |",
+    "| `ROOT\\%LOCALAPPDATA%` | 2 | 3 | 0 MB |",
     "| `ROOT\\binaries` | 40 | 2 | 261.41 MB |",
     "| `ROOT\\clausewitz` | 753 | 47 | 114.71 MB |",
     "| `ROOT\\jomini` | 493 | 72 | 2.30 MB |",
     "| `ROOT\\launcher` | 12 | 2 | 188.18 MB |",
+    "| `ROOT\\NVIDIA Corporation` | 0 | 1 | 0 MB |",
     "| `ROOT\\platform_specific_game_data` | 2 | 0 | 0.02 MB |"
    ],
    "08-目录全量清单.md::doc08 版本指纹": [

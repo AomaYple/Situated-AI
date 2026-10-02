@@ -42,8 +42,12 @@
 
 ## 收尾（P12/可回滚）
 
-`finally` 里：杀游戏 → 还原 `content_load.json`（先备份）→ 删掉本脚本装进去的本地 mod。
-**用户原来的 23 条 Workshop 配置一个字都不改。**
+统一收尾路径由 `finally`、`atexit`、Ctrl+C、SIGTERM 和 Windows SIGBREAK 共同触发：
+只终止本次会话启动的游戏进程 → 原子还原 `content_load.json` → 删除本次产物并恢复运行前同名目录。
+每项收尾独立执行，结果写入 `tools/out/perf/cleanup.json`；**用户原来的 Workshop 配置和本地同名 mod 都会恢复。**
+
+⚠️ 操作系统级强杀（例如 `SIGKILL` 或 Windows `TerminateProcess`）不会执行用户态清理；
+这种情况会留下临时隔离区，下一次运行前应先检查并恢复。
 
 ⚠️ **跑完之后请再跑一局常规游戏**（`python -m pdx.game_auto run`，用用户自己的 mod 配置）：
 本脚本的两局都是"只挂本地 mod"，引擎日志因此是在**另一套 mod 集**下产生的，而
@@ -56,13 +60,16 @@ mod 集不同会让它红（实测踩过）。跑一局常规游戏即可让日�
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
+import os
 import shutil
+import signal
 import sys
 import tempfile
 import time
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -71,6 +78,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from pdx import ab_probe, config, gametimer, stress_probe
 from pdx import game_auto as ga
+from pdx.console import enable_utf8_stdio
 from pdx.textio import deploy_tree
 
 if TYPE_CHECKING:
@@ -135,6 +143,165 @@ def arm_mods(label: str, stress_mods: Sequence[Path]) -> list[Path]:
 TEMPO_MOD_NAME = "zz_probe_tempo_only"
 TEMPO_DST = MODS_DIR / TEMPO_MOD_NAME
 TEMPO_DEFINES_GLOB = "*_tempo.txt"
+
+
+@dataclass
+class PerfCleanup:
+    """一次性能对照会话的可重复、可中断收尾状态。
+
+    运行前已存在的探针目录先移到临时隔离区，再允许运行器重建同名目录。
+    异常、Ctrl+C、SIGTERM 和正常返回都走同一条恢复路径，且不会误删用户
+    原有的本地 mod。所有步骤独立执行，第一步失败不能阻断配置和目录恢复。
+    """
+
+    content_path: Path
+    backup_path: Path
+    generated_paths: tuple[Path, ...]
+    killer: Callable[[], list[int]]
+    restore_dir: Path | None = None
+    path_backups: dict[Path, Path] = field(default_factory=dict)
+    cleaned: bool = False
+    errors: list[str] = field(default_factory=list)
+    archived_logs: list[str] = field(default_factory=list)
+    reason: str = ""
+
+    def claim_existing_paths(self) -> None:
+        """把运行前同名路径安全移入临时隔离区。"""
+        if self.restore_dir is None:
+            self.restore_dir = Path(tempfile.mkdtemp(prefix="sitai-perf-restore-"))
+        for index, path in enumerate(self.generated_paths):
+            if not (path.exists() or path.is_symlink()):
+                continue
+            backup = self.restore_dir / f"{index}-{path.name}"
+            shutil.move(str(path), str(backup))
+            self.path_backups[path] = backup
+
+    def _step(self, label: str, action: Callable[[], object]) -> object | None:
+        try:
+            return action()
+        except Exception as exc:  # pragma: no cover - 实机权限/占用故障
+            self.errors.append(f"{label}: {type(exc).__name__}: {exc}")
+            return None
+
+    def _restore_content(self) -> None:
+        """原子替换 content_load，避免恢复过程中留下半个 JSON。"""
+        if not self.backup_path.is_file():
+            raise FileNotFoundError(f"备份不存在：{self.backup_path}")
+        fd, temp_name = tempfile.mkstemp(
+            prefix=f".{self.content_path.name}.restore-",
+            dir=str(self.content_path.parent),
+        )
+        os.close(fd)
+        temp_path = Path(temp_name)
+        try:
+            shutil.copyfile(self.backup_path, temp_path)
+            temp_path.replace(self.content_path)
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    @staticmethod
+    def _remove_path(path: Path) -> None:
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink(missing_ok=True)
+
+    def run(self, *, reason: str) -> tuple[str, ...]:
+        """执行一次幂等收尾，并返回所有收尾错误。"""
+        if self.cleaned:
+            return tuple(self.errors)
+        self.cleaned = True
+        self.reason = reason
+        self._step("终止本次游戏", self.killer)
+        self._step("恢复 content_load.json", self._restore_content)
+        for path in self.generated_paths:
+            self._step(f"删除运行产物 {path.name}", lambda path=path: self._remove_path(path))
+        for path, backup in self.path_backups.items():
+            self._step(
+                f"恢复原有目录 {path.name}",
+                lambda path=path, backup=backup: shutil.move(str(backup), str(path)),
+            )
+        restore_dir = self.restore_dir
+        if restore_dir is not None and restore_dir.exists():
+            self._step("删除临时隔离区", lambda: shutil.rmtree(restore_dir))
+        moved = self._step("归档本次日志", _quarantine_logs)
+        if isinstance(moved, list):
+            self.archived_logs.extend(str(item) for item in moved)
+        self._step("删除 content_load 备份", lambda: self.backup_path.unlink(missing_ok=True))
+        self._write_report()
+        return tuple(self.errors)
+
+    def _write_report(self) -> None:
+        """尽力留下可复核的收尾结果；报告写失败不能掩盖原始异常。"""
+        try:
+            OUT_DIR.mkdir(parents=True, exist_ok=True)
+            (OUT_DIR / "cleanup.json").write_text(
+                json.dumps(
+                    {
+                        "reason": self.reason,
+                        "cleaned": self.cleaned,
+                        "errors": list(self.errors),
+                        "archived_logs": list(self.archived_logs),
+                        "restored_paths": [str(path) for path in self.path_backups],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+                newline="\n",
+            )
+        except Exception as exc:  # pragma: no cover - 输出目录不可写
+            self.errors.append(f"写入收尾报告: {type(exc).__name__}: {exc}")
+
+
+def _make_backup(path: Path) -> Path:
+    """创建不会覆盖旧备份的字节级副本。"""
+    fd, name = tempfile.mkstemp(
+        prefix=f"{path.name}.sitai-perf-", suffix=".backup", dir=str(path.parent)
+    )
+    os.close(fd)
+    backup = Path(name)
+    try:
+        shutil.copyfile(path, backup)
+    except Exception:
+        backup.unlink(missing_ok=True)
+        raise
+    return backup
+
+
+def _install_cleanup_handlers(cleanup: PerfCleanup) -> Callable[[], None]:
+    """注册退出、Ctrl+C、SIGTERM 和 Windows SIGBREAK 的统一收尾。"""
+    previous: dict[int, object] = {}
+
+    def handle(signum: int, _frame: object) -> None:
+        cleanup.run(reason=signal.Signals(signum).name)
+        if signum == getattr(signal, "SIGINT", -1):
+            raise KeyboardInterrupt
+        raise SystemExit(128 + signum)
+
+    signals = [signal.SIGINT, signal.SIGTERM]
+    sigbreak = getattr(signal, "SIGBREAK", None)
+    if sigbreak is not None:
+        signals.append(sigbreak)
+    for signum in signals:
+        try:
+            previous[signum] = signal.getsignal(signum)
+            signal.signal(signum, handle)
+        except (OSError, RuntimeError, ValueError):
+            continue
+
+    def at_exit() -> None:
+        cleanup.run(reason="atexit")
+
+    atexit.register(at_exit)
+
+    def restore() -> None:
+        for signum, old in previous.items():
+            with suppress(OSError, RuntimeError, ValueError):
+                signal.signal(signum, old)
+
+    return restore
+
 
 #: 有界窗口的三条控制台命令（B66 实测：反引号开控制台、敲完要**按两次回车**才提交）。
 CLEAR_COMMAND = "clear_ticktask_timings"
@@ -546,7 +713,8 @@ def run_once(
             "lines": list(scanned.lines),
             "malformed": list(scanned.malformed),
         }
-    ga.kill_game()
+    # 只终止本次会话启动的进程，不碰用户另开的 Victoria 3。
+    ga.kill_owned_game()
     time.sleep(3)
     return report
 
@@ -735,22 +903,32 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    enable_utf8_stdio()
     # 探针是**显式入口**：按设计打开真实输入授权（`pdx.game_auto` 的闸门说的就是这件事）。
     ga.ALLOW_REAL_INPUT = True
     args = build_parser().parse_args()
     months = args.months
-    backup = DOCS / "content_load.json.sitai-perf-backup"
     if not CONTENT_LOAD.is_file():
         print(f"找不到 {CONTENT_LOAD}")
         return 2
-    shutil.copy(CONTENT_LOAD, backup)
-    original = json.loads(CONTENT_LOAD.read_text(encoding="utf-8"))
+    backup = _make_backup(CONTENT_LOAD)
+    try:
+        original = json.loads(CONTENT_LOAD.read_text(encoding="utf-8"))
+    except Exception:
+        backup.unlink(missing_ok=True)
+        raise
+    cleanup = PerfCleanup(
+        content_path=CONTENT_LOAD,
+        backup_path=backup,
+        generated_paths=(OURS_DST, STRESS_DST, TEMPO_DST),
+        killer=ga.kill_owned_game,
+    )
+    restore_signals = _install_cleanup_handlers(cleanup)
     print(f"content_load.json 已备份到 {backup.name}（收尾会还原）")
 
     reports: list[dict[str, object]] = []
     try:
-        if OURS_DST.exists():
-            shutil.rmtree(OURS_DST)
+        cleanup.claim_existing_paths()
         deploy_tree(config.REPO / "mod", OURS_DST)
         print(f"已装本地 mod：{OURS_DST.name}（复制自 {config.REPO / 'mod'}）")
 
@@ -758,8 +936,6 @@ def main() -> int:
         # 那一臂的差里，对照立刻作废 —— 它必须是一个两臂共有的**场景**，不是一种处理。
         stress_mods: list[Path] = []
         if args.stress:
-            if STRESS_DST.exists():
-                shutil.rmtree(STRESS_DST)
             stress_probe.write(STRESS_DST)
             stress_mods = [STRESS_DST]
             print(
@@ -771,8 +947,6 @@ def main() -> int:
 
         # 第三臂（B27）：**只挂那一份 tempo defines**，不带档案产物。
         if args.tempo_arm:
-            if TEMPO_DST.exists():
-                shutil.rmtree(TEMPO_DST)
             shell = write_tempo_shell(TEMPO_DST)
             print(
                 f"已装第三臂壳 mod：{TEMPO_DST.name}"
@@ -787,15 +961,11 @@ def main() -> int:
                 _set_local_mods(arm_mods(label, stress_mods), original=original)
                 reports.append(run_once(label, months, index=index, stress=args.stress))
     finally:
-        killed = ga.kill_game()
-        shutil.copy(backup, CONTENT_LOAD)
-        backup.unlink(missing_ok=True)
-        for path in (OURS_DST, STRESS_DST, TEMPO_DST):
-            if path.exists():
-                shutil.rmtree(path)
+        errors = cleanup.run(reason="normal" if sys.exc_info()[0] is None else "exception")
+        restore_signals()
         print(
-            f"\n[收尾] 杀游戏 {killed or '（没有）'}；content_load.json 已还原；"
-            "本地 mod 已删除（含第三臂的壳 mod）"
+            f"\n[收尾] 本次游戏已终止；content_load.json 已还原；"
+            f"本地 mod 已恢复/删除；收尾错误={list(errors) or '无'}"
         )
 
     table = report_table(reports)

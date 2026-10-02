@@ -84,6 +84,7 @@ import psutil
 from PIL import Image, ImageGrab
 
 from . import config, experiments
+from .console import enable_utf8_stdio
 from .platform_support import UnavailableWindowsModule, WindowsOnlyError
 
 # 本模块本次 Popen 创建的根进程；失败清理只针对这些 PID。
@@ -165,6 +166,13 @@ DEFAULT_SCALES: tuple[float, ...] = (1.0, 0.9, 1.1, 0.8, 1.25, 1.5)
 #: 「观察」按钮在底部条 / 播放键在右上角 —— 限定搜索范围能显著降误匹配。
 BOTTOM_ROI = (0.0, 0.90, 1.0, 1.0)
 TOP_RIGHT_ROI = (0.80, 0.0, 1.0, 0.12)
+#: 普通主菜单「新游戏」按钮的已证 ROI（1920×1080 实测 x=236..520, y=414..454）。
+MAIN_MENU_ROI = (0.105, 0.350, 0.290, 0.455)
+#: 主菜单模板在悬停/缩放后分数低于观察者模板，ROI 已收紧后取 0.55。
+NEW_GAME_THRESHOLD = 0.55
+#: 普通新游戏设置页「开始游戏」按钮 ROI（2026-10-02 实机帧提取）。
+SETUP_START_ROI = (0.80, 0.58, 0.98, 0.72)
+START_GAME_THRESHOLD = 0.60
 
 #: 官方流水线实测要 ~137 秒才到 ingame idler，所以等待给足余量。
 LOBBY_TIMEOUT = 300.0
@@ -3272,7 +3280,12 @@ def park_cursor_clear_of(
 
 
 def _step_look(
-    hwnd: int, *, threshold: float, lobby_timeout: float = LOOK_TIMEOUT
+    hwnd: int,
+    *,
+    threshold: float,
+    lobby_timeout: float = LOOK_TIMEOUT,
+    force: bool = False,
+    auto_new_game: bool = True,
 ) -> tuple[Match, int]:
     """① 确认「观察」出现；返回 ``(匹配, 当前句柄)``。
 
@@ -3280,6 +3293,10 @@ def _step_look(
     :data:`CAPTURE_INTERVAL_START` 按 :data:`CAPTURE_INTERVAL_GROWTH` 放慢到
     :data:`CAPTURE_INTERVAL_MAX` —— 不是固定 2 秒整屏抓，也不是每个尺度都试
     （``first_hit=True``：一个可信命中就够）。
+
+    普通主菜单没有「观察」按钮时，默认在已证的 :data:`MAIN_MENU_ROI` 内寻找
+    「新游戏」并点击一次，再继续等待观察者按钮；`auto_new_game=False` 保留
+    旧的观察者局入口。新游戏的点击也必须经过模板命中，绝不退化成盲点坐标。
 
     抓图失败按"还没画好"处理并**记下最后一条错误**：界面在切换时会短暂近纯色，
     那不是失败；但一直在失败就必须把原因带进异常里（P13），否则只剩一句"没找到"。
@@ -3297,6 +3314,8 @@ def _step_look(
     deadline = tick_clock() + lobby_timeout
     interval = CAPTURE_INTERVAL_START
     last_error = ""
+    new_game_clicked = False
+    setup_clicked = False
     while tick_clock() < deadline:
         try:
             image = screenshot(hwnd, roi=BOTTOM_ROI)
@@ -3312,6 +3331,52 @@ def _step_look(
             # 坐标是**裁剪图内**的 ⇒ 加回 ROI 偏移才是客户区坐标（否则点击会打到别处）
             dx, dy = _roi_offset(hwnd, BOTTOM_ROI)
             return _shift_match(found, dx, dy), hwnd
+
+        if new_game_clicked and not setup_clicked:
+            try:
+                setup = screenshot(hwnd, roi=SETUP_START_ROI)
+                start_game = locate_optional(
+                    setup,
+                    "btn_start_game",
+                    threshold=START_GAME_THRESHOLD,
+                    first_hit=True,
+                )
+            except CaptureFailedError as exc:
+                last_error = str(exc)
+                start_game = None
+            if start_game is not None:
+                dx, dy = _roi_offset(hwnd, SETUP_START_ROI)
+                shifted = _shift_match(start_game, dx, dy)
+                click_match(hwnd, shifted, force=force)
+                _shot_or_note(hwnd, "09-start-game-click")
+                setup_clicked = True
+                # 设置页到国家/观察者界面也可能经过一段载入，重新给完整预算。
+                deadline = tick_clock() + lobby_timeout
+                interval = CAPTURE_INTERVAL_START
+                continue
+
+        if auto_new_game and not new_game_clicked:
+            try:
+                menu = screenshot(hwnd, roi=MAIN_MENU_ROI)
+                new_game = locate_optional(
+                    menu,
+                    "btn_new_game",
+                    threshold=NEW_GAME_THRESHOLD,
+                    first_hit=True,
+                )
+            except CaptureFailedError as exc:
+                last_error = str(exc)
+                new_game = None
+            if new_game is not None:
+                dx, dy = _roi_offset(hwnd, MAIN_MENU_ROI)
+                shifted = _shift_match(new_game, dx, dy)
+                click_match(hwnd, shifted, force=force)
+                _shot_or_note(hwnd, "09-new-game-click")
+                new_game_clicked = True
+                # 点击后重新给完整大厅预算，加载期不因主菜单等待耗尽而误报。
+                deadline = tick_clock() + lobby_timeout
+                interval = CAPTURE_INTERVAL_START
+                continue
         _sleep(interval)
         interval = min(interval * CAPTURE_INTERVAL_GROWTH, CAPTURE_INTERVAL_MAX)
     # 失败取证（2026-09-30 t9 条件授权）：**在异常路径里、杀进程之前**落一张证据帧 + 一行窗口状态。
@@ -3505,7 +3570,7 @@ def start_session(
             # 宁可多等一轮，也不把旧读数和新局面拼在一起。
             settle = wait_for_boot_settle()
     boot = settle if settle is not None else wait_for_boot_settle()
-    match, hwnd = _step_look(hwnd, threshold=threshold, lobby_timeout=lobby_timeout)
+    match, hwnd = _step_look(hwnd, threshold=threshold, lobby_timeout=lobby_timeout, force=force)
     _step_observe(hwnd, match, settle_timeout=settle_timeout, force=force)
 
     rate = 0.0
@@ -3623,7 +3688,7 @@ def _run_session_impl(
         settle=settle,
         speed_xy=speed_xy,
         skip_speed=skip_speed,
-        lobby_timeout=LOOK_TIMEOUT,
+        lobby_timeout=lobby_timeout,
         verify_minimized=verify_minimized,
         keep_foreground=keep_foreground,
         force=force,
@@ -3709,6 +3774,7 @@ def main(argv: list[str] | None = None) -> int:
     只做四件事：看状态、跑一局（标准流程）、抓图（收模板用）、验后台。
     **任何一步失败都返回退出码 1**，不打印"完成"。
     """
+    enable_utf8_stdio()
     parser = argparse.ArgumentParser(
         prog="python -m pdx.game_auto",
         description="Victoria 3 自动化：起游戏 → 观察 → 5 档速度 → 空格 → 切回后台",

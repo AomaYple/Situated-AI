@@ -2473,6 +2473,59 @@ class TestStepLook:
 
         assert (match.x, match.y) == (864, 1055), "停靠没成不影响 look 本身"
 
+    def test_普通主菜单先点新游戏再等观察(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """无 ``-scripted_tests`` 时，主菜单也能走到观察者局。"""
+        monkeypatch.setattr(ga, "_ensure_live_foreground", lambda h: h)
+        monkeypatch.setattr(ga, "park_cursor_clear_of", lambda *_a, **_k: _fake_park())
+        monkeypatch.setattr(
+            ga,
+            "_roi_offset",
+            lambda _h, roi: (
+                (0, 972)
+                if roi == ga.BOTTOM_ROI
+                else (100, 200)
+                if roi == ga.MAIN_MENU_ROI
+                else (200, 300)
+            ),
+        )
+        monkeypatch.setattr(ga, "screenshot", lambda _h, **_kw: textured())
+        clicked: list[tuple[int, int]] = []
+        shots: list[str] = []
+        state = {"new_game": False, "start_game": False}
+
+        def locate(_image: Image.Image, name: str, **_kw: object) -> ga.Match | None:
+            if name == "btn_observe":
+                return (
+                    ga.Match("btn_observe", 864, 83, 0.99, 1.0, (755, 65, 973, 101))
+                    if state["start_game"]
+                    else None
+                )
+            if name == "btn_new_game":
+                return ga.Match("btn_new_game", 10, 20, 0.80, 1.0, (0, 0, 20, 20))
+            if name == "btn_start_game" and state["new_game"]:
+                return ga.Match("btn_start_game", 30, 40, 0.80, 1.0, (0, 0, 30, 20))
+            return None
+
+        monkeypatch.setattr(ga, "locate_optional", locate)
+
+        def click(_h: int, match: ga.Match, **_kw: object) -> None:
+            clicked.append((match.x, match.y))
+            if match.name == "btn_new_game":
+                state["new_game"] = True
+            else:
+                state["start_game"] = True
+
+        monkeypatch.setattr(ga, "click_match", click)
+        monkeypatch.setattr(ga, "_shot_or_note", lambda _h, tag: shots.append(tag))
+        monkeypatch.setattr(ga, "_sleep", lambda _seconds: None)
+
+        match, hwnd = ga._step_look(4242, threshold=0.75, lobby_timeout=1.0, force=True)
+
+        assert hwnd == 4242
+        assert match.name == "btn_observe"
+        assert clicked == [(110, 220), (230, 340)]
+        assert shots == ["09-new-game-click", "09-start-game-click"]
+
 
 _ADVANCE = ga.Advance(True, "1836.1.1", "1836.1.8", 1.0, "log")
 
@@ -2757,6 +2810,7 @@ class TestRunSession:
         assert seen["skip_speed"] is True
         assert seen["keep_foreground"] is True
         assert seen["settle"] is not None, "等加载的结果要传下去，别在 start_session 里再等一次"
+        assert seen["lobby_timeout"] == ga.LOBBY_TIMEOUT, "CLI 的大厅超时不能被 LOOK_TIMEOUT 覆盖"
 
     def test_失败时清理本会话进程并保留原异常(self, monkeypatch: pytest.MonkeyPatch) -> None:
         seen: list[str] = []

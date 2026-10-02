@@ -66,7 +66,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `ab_probe.py` | 阶段 3 的 **A/B 臂阶梯探针**生成器（**数值读数**：合法性 `LEGV`/`LEGF`、三个相关 IG 的政治力量 `CLOUTV`/`CLOUTP`、立法进度 `PROG` —— 都用原版自己的 data function，夹逼档位 `CLOUT;<档>` 保留给老归档；依据与两种写法都记的原因见 backlog B90）：点一次决议武装，之后按月度脉冲自动换臂（`A` 第 1–12 月 → `B` 第 13 月施加冲击 → `B2` 第 37 月追加改革侧输入；幂等靠 `stage` 变量）。同时生成 `tools/scripted_tests/` 套件（引擎每天判「是否开窗 / 是否换法」）与原版套件的收敛覆盖 |
 | `ab.py` | 阶段 3 的 A/B 分析器：解析探针月度行 → **两处处理分开报**（① 行为层 / ② 策略层是冲击步 A→B，③ 是改革侧输入步 B→B2）→ 判定。含开局自检（RUN / 玩家 / 观测 / 角色 / SHOCK / INPUT / 报错）、合法性五档诊断；`VERDICT_MIN_MONTHS = 12` 卡住"样本不足就宣判" |
 | `ab_auto.py` | 阶段 3 的**自动实验编排**（状态机，自己不碰游戏）：断言 0 个游戏进程 → 启动 → 轮询探针月度行判进度 → 到点杀进程 → 归档 → 分析 → 追加进 `exec/阶段3-实验记录.md` → 下一臂。启动/杀进程由 `Ports` 注入（**设计上**没接上就当场报错、不静默跳过；**当前默认端口是空的** —— 见 `v3 ab-auto` 那一行的"尚不可用"说明） |
-| `game_auto.py` | 阶段 3 的**游戏自动化原语**（窗口级截图 + 图像匹配 + 点击 + 真实键盘 + **游戏内控制台** + 日志真值，见 `exec/自动化范式.md`）：官方 `-scripted_tests` 已经把「开局 → 存读档 → 进 idler」做完了，本模块只补**最后一击**（强激活前台 → 点「观察」→ 取消暂停 → 切后台验证 tick 仍在走）。**控制台那一层是阶段 4 性能仪表的唯一入口**（`console_open` / `open_console` / `submit_console_command`：反引号开、敲完**按两次回车**才提交，判据走画面 ROI）—— 为什么必须收在这里、以及三条实测结论见 `exec/阶段4-性能仪表侦察.md` §四·补② 与 backlog B66。入口是 `python -m pdx.game_auto`（**不挂 `v3` 子命令**，理由见命令表那一行） |
+| `game_auto.py` | 阶段 3 的**游戏自动化原语**（窗口级截图 + 图像匹配 + 点击 + 真实键盘 + **游戏内控制台** + 日志真值，见 `exec/自动化范式.md`）：带 `-scripted_tests` 时等待官方流程进入国家界面；普通主菜单时按「新游戏 → 开始游戏 → 观察」两步回落路径进入观察者局，然后切到速度 5、解除暂停并验证后台 tick。所有点击都要求模板命中，不使用盲坐标。**控制台那一层是阶段 4 性能仪表的唯一入口**（`console_open` / `open_console` / `submit_console_command`：反引号开、敲完**按两次回车**才提交，判据走画面 ROI）—— 为什么必须收在这里、以及三条实测结论见 `exec/阶段4-性能仪表侦察.md` §四·补② 与 backlog B66。入口是 `python -m pdx.game_auto`（**不挂 `v3` 子命令**，理由见命令表那一行）；普通菜单路径的 Windows 1.14.5 实机报告见 `docs/reports/2026-10-02-普通菜单自动化实机.md` |
 | `stress_probe.py` | 阶段 4 ④ 的**标准压力剧本**（大战 + 连锁破产 + 革命潮），生成一份探针 mod：**三条压力都用原版自己的效果造**（`create_diplomatic_play` / `add_radicals_in_state` / `add_treasury = -200000`），不伪造状态 —— 伪造的状态不让引擎干活，也就压不出负载。⚠️ **破产不是我们写上去的**：原版没有那个效果（`DECLARE_BANKRUPTCY_MIN_DAYS_IN_DEFAULT = 30`，`common/defines/00_ai.txt:52`），我们只把国库抽干、引擎自己走完最后一步。跑法见 `tools/probe/perf_compare.py --stress`（**两臂都装它** —— 单装一臂等于把"世界被推到高压"算进那一臂的差里） |
 | `gametimer.py` | 阶段 4 的**引擎计时刻度解析**（两条数据源）：① `gametimer_*.tsv` 是引擎自己的墙钟统计（三列 `Game Date / Time Unit / Seconds`，粒度只到 `Day` —— **没有帧号、没有 per-frame 列**，所以「单帧 ≤0.5ms」这条预算**量不出来**，模块里用 `FRAME_GRANULARITY_AVAILABLE = False` 把这件事写成机器可读的常量，不让下游顺手凑数）；② **`ticktask_timings.csv`** 是帧级真值（`frame,task,milliseconds,calls,longest_lock`，由控制台 `dump_ticktask_timings` 落盘，默认落点见 `ticktask_default_path()`）。配套侦察记录见 `exec/阶段4-gametimer侦察.md` 与 `exec/阶段4-性能仪表侦察.md` |
 | `cli.py` | 唯一的命令行入口，`v3` 的全部子命令 |
@@ -205,7 +205,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-86 个测试文件；2170 条用例（`pytest --collect-only` 实测），
+87 个测试文件；2174 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -488,7 +488,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：2170 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：2174 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

@@ -25,3 +25,13 @@
 ## 仍需区分的证据等级
 
 CI 的三平台矩阵负责跨平台静态、单元和离线快照验证；当前环境没有 macOS/Linux 实机 GUI，因此不能把它们描述为真实窗口自动化通过。Windows 实机的长时间运行、官方成绩单等待和阶段六取证必须保留原始截图、日志与摘要，超时或人工中断都只能记为未完成，不能改写成通过。
+
+## 2026-10-02 追加收口：性能对照探针
+
+- `tools/probe/perf_compare.py` 已加入 `PerfCleanup`：运行前同名本地 mod 先移入临时隔离区，收尾时逐项恢复；配置文件使用临时文件 + `os.replace` 原子还原。
+- 收尾只调用 `game_auto.kill_owned_game()`，不会误杀用户另开的 Victoria 3。
+- 正常返回、异常、`atexit`、Ctrl+C、SIGTERM 和 Windows SIGBREAK 共用同一条幂等收尾路径；收尾状态写入 `tools/out/perf/cleanup.json`。
+- 新增 `tests/test_perf_compare.py`，覆盖同名目录恢复、单项收尾失败隔离、信号处理器行为。
+- 明确限制：`SIGKILL`、Windows `TerminateProcess` 等操作系统级强杀无法执行 Python 清理。
+
+本追加的回归测试：`tests/test_perf_compare.py` 3 passed。
