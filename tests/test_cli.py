@@ -653,6 +653,18 @@ def test_snapshot_list_列出快照() -> None:
     assert r.exit_code == 0, r.output
 
 
+def test_snapshot_create_输出口径不互相覆盖(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from pdx import cli as cli_module
+    from pdx import snapshot as snapshot_module
+
+    monkeypatch.setattr(snapshot_module, "SNAPSHOT_DIR", tmp_path)
+    full = cli_module._snapshot_output_path("probe", compact=False)
+    compact = cli_module._snapshot_output_path("probe", compact=True)
+    assert full == tmp_path / "probe.json"
+    assert compact == tmp_path / "probe.compact.json"
+    assert full != compact
+
+
 @_needs_game
 def test_snapshot_diff_缺快照时返回2() -> None:
     r = _invoke("snapshot", "diff", "no_such_snapshot_a", "no_such_snapshot_b")

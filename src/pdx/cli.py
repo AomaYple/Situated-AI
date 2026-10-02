@@ -649,6 +649,12 @@ def _load_snapshot(path: Path) -> snapshot.Snapshot:
         _fail(f"快照无法读取：{_relative(path)}（{type(exc).__name__}: {exc}）")
 
 
+def _snapshot_output_path(target: str, *, compact: bool) -> Path:
+    """返回创建命令的明确输出路径，不走读取时的回退规则。"""
+    suffix = ".compact.json" if compact else ".json"
+    return snapshot.SNAPSHOT_DIR / f"{target}{suffix}"
+
+
 @snapshot_app.command("create")
 def snap_create(
     label: Annotated[str | None, typer.Option("--label", help="快照名（默认为游戏版本号）")] = None,
@@ -667,9 +673,9 @@ def snap_create(
     _require_game()
     snap = snapshot.build(compact=compact, verbose=True)
     target = label or snap.version_label.replace("/", "-")
-    if compact:
-        target = f"{target}.compact"
-    path = snapshot.snapshot_path(target)
+    # 创建命令必须显式选择输出口径；snapshot_path() 为读取场景提供
+    # 完整→精简回退，不能用于写入，否则完整快照会覆盖同名 .compact.json。
+    path = _snapshot_output_path(target, compact=compact)
     snap.write(path)
 
     counts = snap.counts()

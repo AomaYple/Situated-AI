@@ -75,34 +75,48 @@ def _walk_scriptable(root: Path, top: str):
             yield f, rel
 
 
-def _scriptable_names(root: Path, top: str = "common") -> dict[str, list[str]]:
-    """``数据目录 -> 排序后的顶层条目名``。"""
-    out: dict[str, list[str]] = {}
+def _scriptable_snapshot(
+    root: Path, top: str = "common"
+) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    """一次遍历并解析一个内容根，同时收集条目名和字段名。"""
+    names: dict[str, list[str]] = {}
+    fields: dict[str, set[str]] = {}
     for f, rel in _walk_scriptable(root, top):
         pf = parse_cached(f.path)
-        bucket = out.setdefault(rel.parts[1], [])
-        bucket.extend(a.key for a in pf.top_assignments if not a.is_variable)
-    return {k: _sorted_names(v) for k, v in sorted(out.items())}
+        bucket = names.setdefault(rel.parts[1], [])
+        for assignment in pf.top_assignments:
+            if assignment.is_variable:
+                continue
+            bucket.append(assignment.key)
+            if isinstance(assignment.value, Block):
+                key = f"{rel.parts[1]}/{assignment.key}"
+                fields.setdefault(key, set()).update(entry_fields(assignment.value))
+    return (
+        {k: _sorted_names(v) for k, v in sorted(names.items())},
+        {k: sorted(v) for k, v in sorted(fields.items())},
+    )
+
+
+def _scriptable_names(root: Path, top: str = "common") -> dict[str, list[str]]:
+    """数据目录到排序后的顶层条目名。"""
+    return _scriptable_snapshot(root, top)[0]
 
 
 def _field_names(root: Path, top: str = "common") -> dict[str, list[str]]:
-    """``目录/条目 -> 该条目块内出现过的字段名``。
+    """目录和条目到条目块内出现过的字段名。"""
+    return _scriptable_snapshot(root, top)[1]
 
-    这是「某类型支持哪些字段」的完整清单，字段增删都能被发现。
 
-    字段的判定复用 :func:`pdx.extract.entry_fields` —— 本模块**不做**
-    自己的遍历规则（这里保留自己的目录遍历，是因为快照要覆盖全部
-    ``SCRIPTABLE_SUFFIXES``，而 ``extract_dir`` 只管 ``.txt``）。
-    """
-    out: dict[str, set[str]] = {}
-    for f, rel in _walk_scriptable(root, top):
-        pf = parse_cached(f.path)
-        for a in pf.top_assignments:
-            if a.is_variable or not isinstance(a.value, Block):
-                continue
-            key = f"{rel.parts[1]}/{a.key}"
-            out.setdefault(key, set()).update(entry_fields(a.value))
-    return {k: sorted(v) for k, v in sorted(out.items())}
+def _scriptable_domain_sections() -> dict[str, dict[str, list[str]]]:
+    """返回 common 之外每个可脚本目录的条目域和字段域。"""
+    sections: dict[str, dict[str, list[str]]] = {}
+    for top in config.SCRIPTABLE_DIRS:
+        if top == "common":
+            continue
+        names, fields = _scriptable_snapshot(config.GAME, top)
+        sections[f"{top}_entries"] = names
+        sections[f"{top}_fields"] = fields
+    return sections
 
 
 def _defines_snapshot() -> dict[str, list[str]]:
@@ -285,11 +299,10 @@ def _doc_tables_snapshot() -> dict[str, list[str]]:
 
 
 def _localization_digest(root: Path) -> dict[str, list[str]]:
-    """精简快照用：每个语言的**键数 + 键名指纹**，不带 14 万条键名清单。
+    """精简快照用：每个语言的**键数 + 键名指纹**，不带完整键名清单。
 
-    完整快照里 ``localization`` 一个域就占 30 MB（11 种语言 × 14.5 万键），
-    是整份快照 73% 的体积。而「Paradox 有没有改本地化键」这个问题，
-    用「键数 + sha256」就能回答；具体改了哪些键，回到本机那份完整快照去查。
+    完整快照里的 ``localization`` 域是体积大户；而「Paradox 有没有改本地化键」
+    这个问题，用「键数 + sha256」就能回答。具体改了哪些键，回到本机那份完整快照去查。
     """
     out: dict[str, list[str]] = {}
     for lang, keys in _localization_keys(root).items():
@@ -301,10 +314,10 @@ def _localization_digest(root: Path) -> dict[str, list[str]]:
 def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     """生成当前游戏版本的快照。
 
-    ``compact=True`` 产出**精简快照**：结构域（``common_entries`` / ``fields`` /
-    ``defines`` / ``dlc`` / ``config``）原样保留 —— 它们才是「Paradox 增删了
-    哪些字段与条目」的答案 —— 只把 ``localization`` 换成计数 + 指纹，
-    体积从 ~39 MiB 降到 ~6.0 MiB，**小到足以入库**。
+    ``compact=True`` 产出**精简快照**：所有结构域（包括 ``common`` 之外的
+    ``events`` / ``gui`` / ``map_data`` / ``gfx`` / ``dlc`` 等）原样保留，
+    只把 ``localization`` 换成计数 + 指纹；体积从 ~41 MiB 降到 ~8.0 MiB，
+    **小到足以入库**。
 
     两个模式**形状相同**（都是 ``域 -> 名称 -> 字符串列表``），因此
     :func:`compare` 对两者都能用；但**不要拿精简版与完整版对 diff** ——
@@ -320,13 +333,22 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     if verbose:
         print(f"  版本: {snap.version_label}  精简: {compact}")
 
-    snap.sections["common_entries"] = _scriptable_names(config.GAME, "common")
+    common_entries, common_fields = _scriptable_snapshot(config.GAME, "common")
+    snap.sections["common_entries"] = common_entries
     if verbose:
         print(f"  common 目录: {len(snap.sections['common_entries'])}")
 
-    snap.sections["fields"] = _field_names(config.GAME, "common")
+    snap.sections["fields"] = common_fields
     if verbose:
         print(f"  字段条目: {len(snap.sections['fields'])}")
+
+    # common 之外的每个可脚本目录独立入域，避免事件、GUI、地图和 DLC
+    # 的新增条目被旧的 common-only 快照悄悄漏掉。
+    scriptable_sections = _scriptable_domain_sections()
+    snap.sections.update(scriptable_sections)
+    if verbose:
+        for name in sorted(scriptable_sections):
+            print(f"  {name}: {len(snap.sections[name])} 组")
 
     snap.sections["defines"] = _defines_snapshot()
     if verbose:
@@ -450,7 +472,7 @@ def list_snapshots() -> list[Path]:
 def snapshot_path(label: str | None = None) -> Path:
     """按**快照名**解析出文件路径；只写了版本号时优先完整快照，退回精简快照。
 
-    为什么要退回：**只有精简快照是入库的**（6 MB vs 41 MB），
+    为什么要退回：**只有精简快照是入库的**（8 MB vs 41 MB），
     所以「拿 1.14.3 与 1.14.4 比结构」在别的机器上只可能拿到 ``*.compact.json``。
     早先这里硬拼 ``<label>.json``，于是 `v3 snapshot diff release-1.14.3
     release-1.14.4` 在只有精简快照的机器上报「快照不存在」——

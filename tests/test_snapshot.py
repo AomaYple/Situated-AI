@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import pytest
 
@@ -54,6 +56,20 @@ def _first_diff(a: object, b: object, path: str = "") -> str:
     return ""
 
 
+class TestScriptableSnapshot(unittest.TestCase):
+    def test_combined_walk_collects_entries_and_fields(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            path = root / "events" / "sample.txt"
+            path.parent.mkdir(parents=True)
+            path.write_text("foo = { bar = 1  baz = { nested = 2 } }\n", encoding="utf-8")
+
+            names, fields = snapshot._scriptable_snapshot(root, "events")
+
+        self.assertEqual(names, {"sample.txt": ["foo"]})
+        self.assertEqual(fields["sample.txt/foo"], ["bar", "baz"])
+
+
 class TestSnapshotShape(unittest.TestCase):
     snap: snapshot.Snapshot
 
@@ -67,6 +83,20 @@ class TestSnapshotShape(unittest.TestCase):
         for sec in ("common_entries", "fields", "defines", "localization", "dlc", "config"):
             with self.subTest(section=sec):
                 self.assertIn(sec, self.snap.sections)
+
+    def test_non_common_scriptable_domains_are_recorded(self):
+        # 这些域曾经完全漏出快照；至少事件和地图必须有真实条目，
+        # 其他目录即使当前为空也要保留稳定的空域。
+        for top in config.SCRIPTABLE_DIRS:
+            if top == "common":
+                continue
+            with self.subTest(top=top):
+                self.assertIn(f"{top}_entries", self.snap.sections)
+                self.assertIn(f"{top}_fields", self.snap.sections)
+        self.assertGreater(len(self.snap.sections["events_entries"]), 0)
+        self.assertGreater(len(self.snap.sections["events_fields"]), 0)
+        self.assertGreater(len(self.snap.sections["map_data_entries"]), 0)
+        self.assertGreater(len(self.snap.sections["map_data_fields"]), 0)
 
     def test_version_recorded(self):
         self.assertTrue(self.snap.version.get("caligula_branch"))
@@ -272,9 +302,16 @@ class TestCompactSnapshot(unittest.TestCase):
 
     def test_结构域完整保留(self):
         """「Paradox 增删了哪些字段」靠的是这几个域，一个都不能少。"""
-        for sec in ("common_entries", "fields", "defines", "dlc", "config"):
+        base_sections = ("common_entries", "fields", "defines", "dlc", "config")
+        for sec in base_sections:
             with self.subTest(section=sec):
                 self.assertIn(sec, self.snap.sections)
+        for top in config.SCRIPTABLE_DIRS:
+            if top == "common":
+                continue
+            for suffix in ("entries", "fields"):
+                with self.subTest(section=f"{top}_{suffix}"):
+                    self.assertIn(f"{top}_{suffix}", self.snap.sections)
         self.assertEqual(len(self.snap.sections["common_entries"]), 138)
         self.assertGreater(len(self.snap.sections["fields"]), 20_000)
 
@@ -284,6 +321,13 @@ class TestCompactSnapshot(unittest.TestCase):
         for sec in ("common_entries", "fields", "defines", "dlc", "config"):
             with self.subTest(section=sec):
                 self.assertEqual(self.snap.sections[sec], full.sections[sec])
+        for top in config.SCRIPTABLE_DIRS:
+            if top == "common":
+                continue
+            for suffix in ("entries", "fields"):
+                sec = f"{top}_{suffix}"
+                with self.subTest(section=sec):
+                    self.assertEqual(self.snap.sections[sec], full.sections[sec])
 
     def test_标记了精简位(self):
         """`精简` 标记要落进文件 —— 否则 diff 时无法判断两边是否同口径。"""

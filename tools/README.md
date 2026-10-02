@@ -205,7 +205,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-87 个测试文件；2178 条用例（`pytest --collect-only` 实测），
+87 个测试文件；2181 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -318,19 +318,18 @@ docs/reports/mod分析.md          人可读报告
 另有**独立**的一条线：
 
 ```
-tools/out/snapshots/<版本>.compact.json   精简快照，约 6.0 MiB（**入库**，跨机器可 diff）
-tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignore，本机深挖用）
+tools/out/snapshots/<版本>.compact.json   精简快照，约 8.0 MiB（**入库**，跨机器可 diff）
+tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignore，本机深挖用）
 ```
 
 > 上面的 MB / KB 按 1024 进制。精确值由黄金回归（`tests/test_golden.py`）
 > 冻结为逐产物的「字节数 + sha256」，改动一个字节就会失败。
 >
-> ⚠️ **快照分两种，只有精简版入库**：完整快照 73% 的体积是本地化键清单
-> （11 种语言 × 14.5 万键），而「Paradox 增删了哪些字段与条目」只需要结构域。
-> 精简版保留 `common_entries` / `fields` / `defines` / `dlc` / `config` 五个域，
-> 只把 `localization` 换成「键数 + sha256」，因此 **6 MiB 上下就能随仓库分发**，
+> ⚠️ **快照分两种，只有精简版入库**：完整快照的主要体积来自本地化键清单
+> （按语言记录完整键名）；条目、字段、defines、DLC、AI 输入面等结构域在两种快照中都保留。
+> 精简版只把 `localization` 换成「键数 + sha256」，当前约 **8.0 MiB**，
 > 让 `v3 snapshot diff` 在别人的克隆里也能跑。
-> 想知道**具体**改了哪些本地化键，才需要那份约 39 MiB 的完整快照。
+> 想知道**具体**改了哪些本地化键，才需要那份约 41 MiB 的完整快照。
 >
 > 两者**形状相同**，`compare` 对谁都能用；但**别拿精简版与完整版对 diff** ——
 > 那会把整个本地化域报成「全删 + 全增」。文件里有 `精简` 标记，可据此判断。
@@ -488,7 +487,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：2178 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：2181 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

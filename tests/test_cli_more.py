@@ -255,12 +255,14 @@ def test_snapshot_diff_域集合不同时会点明() -> None:
     snaps = sorted(config.OUT.joinpath("snapshots").glob("*.compact.json"))
     if len(snaps) < 2:
         pytest.skip("少于两份精简快照，比不出「域集合不同」")
-    older = snaps[0].name.removesuffix(".compact.json")
-    newer = snaps[-1].name.removesuffix(".compact.json")
+    # 明确传入 `.compact`，避免旧版本同时有完整快照时被读取回退规则选成
+    # 完整快照，导致两边口径不同；这个用例专门检查域集合扩展。
+    older = snaps[0].name.removesuffix(".json")
+    newer = snaps[-1].name.removesuffix(".json")
     result = _run("snapshot", "diff", older, newer)
     assert "MarkupError" not in result.output
-    assert result.exit_code == 2, result.output
-    assert "精简口径不同" in result.output
+    assert result.exit_code == 0, result.output
+    assert "域集合不同" in result.output
 
 
 @_needs_game
