@@ -2326,23 +2326,27 @@ def background_ok(
     seconds: float = 20.0,
     log: Path | None = None,
     restore: bool = True,
+    force: bool = False,
 ) -> Advance:
     """把前台让给别的窗口，验证**模拟是否继续**（实测：是）。
 
     意义：点火之后就不必让游戏一直占着前台 —— 轮询可以完全在后台做。
+
+    ``force`` 只应由显式 CLI/实机流程开启；它把用户已经授权的前台切换
+    传给输入安全闸门。默认 ``False``，这样库调用不会悄悄抢占用户桌面。
     """
     other = other_window(hwnd)
     if not other:
         raise GameAutoError("找不到可用的非游戏窗口来让出前台 —— 无法验证后台模拟")
     before = tick_mark(log)
-    ensure_foreground(other)
+    ensure_foreground(other, force=force)
     _sleep(2.0)
     if _foreground_window() == hwnd:  # pragma: no cover - 抢不走的极端情况
         raise ForegroundLostError("没能把前台让出去，后台结论不可信")
     _sleep(seconds)
     after = tick_mark(log)
     if restore:
-        ensure_foreground(hwnd)
+        ensure_foreground(hwnd, force=force)
     return Advance(
         advanced=is_later(before.tick, after.tick),
         before=before.tick,
@@ -3600,7 +3604,12 @@ def run_session(
     # `SessionStart` 是 frozen 的：后两步的结果用 `replace` 挂上去，不改原对象。
     return replace(
         started,
-        background=background_ok(started.hwnd, seconds=background_seconds, restore=False),
+        background=background_ok(
+            started.hwnd,
+            seconds=background_seconds,
+            restore=False,
+            force=force,
+        ),
         verdict=wait_for_verdict(known, timeout=wait_tests),
     )
 
@@ -3735,7 +3744,13 @@ def main(argv: list[str] | None = None) -> int:
             hwnd = find_window()
             if not hwnd:
                 raise WindowNotFoundError(f"没找到 {WINDOW_TITLE!r} 窗口")
-            print(background_ok(hwnd, seconds=float(args.seconds)).describe())
+            print(
+                background_ok(
+                    hwnd,
+                    seconds=float(args.seconds),
+                    force=force,
+                ).describe()
+            )
             return 0
 
         # 只剩 "run"：标准流程 —— 起游戏（前台）→ 等加载（**完全不碰窗口**，只用进程 +

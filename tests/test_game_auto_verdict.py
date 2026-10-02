@@ -293,7 +293,7 @@ def _stub_session(monkeypatch: pytest.MonkeyPatch, calls: list[str]) -> None:
         return _session()
 
     def fake_background(_hwnd: int, **kw: object) -> ga.Advance:
-        calls.append(f"bg:restore={kw.get('restore')}")
+        calls.append(f"bg:restore={kw.get('restore')}:force={kw.get('force')}")
         return _advance()
 
     def fake_verdict(*_a: object, **_kw: object) -> ga.SuiteVerdict:
@@ -370,7 +370,25 @@ def test_等判定时先验后台再读产物(monkeypatch: pytest.MonkeyPatch) -
     calls: list[str] = []
     _stub_session(monkeypatch, calls)
     result = ga.run_session(wait_tests=600.0)
-    assert calls == ["start", "bg:restore=False", "verdict"]
+    assert calls == ["start", "bg:restore=False:force=False", "verdict"]
+    assert result.background is not None
+    assert result.background.advanced is True
+    assert result.verdict is not None
+    assert result.verdict.ok is True
+    flat = result.as_dict()
+    assert flat["background_advanced"] is True
+    assert flat["suite_ok"] is True
+
+
+def test_等判定时把真实输入授权传给后台验证(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+    _stub_session(monkeypatch, calls)
+
+    result = ga.run_session(wait_tests=600.0, force=True)
+
+    assert calls == ["start", "bg:restore=False:force=True", "verdict"]
     assert result.background is not None
     assert result.background.advanced is True
     assert result.verdict is not None

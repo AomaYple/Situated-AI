@@ -727,6 +727,45 @@ class TestBackground:
         assert advance.advanced is True
         assert "后台" in advance.source
 
+    def test_显式授权会传给让出和恢复前台(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        ticks = TickLog(tmp_path / "t.log", "1836.9.20")
+        calls: list[tuple[int, bool]] = []
+        monkeypatch.setattr(ga, "TICK_LOG", ticks.path)
+        monkeypatch.setattr(ga, "other_window", lambda _exclude: 55)
+
+        def fake_foreground(hwnd: int, *, force: bool = False) -> None:
+            calls.append((hwnd, force))
+
+        monkeypatch.setattr(ga, "ensure_foreground", fake_foreground)
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 55)
+        monkeypatch.setattr(ga, "_sleep", lambda _s: ticks.set("1836.11.11"))
+
+        advance = ga.background_ok(777, seconds=20.0, force=True)
+
+        assert advance.advanced is True
+        assert calls == [(55, True), (777, True)]
+
+    def test_默认不授权仍传入安全闸门(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        ticks = TickLog(tmp_path / "t.log", "1836.9.20")
+        calls: list[tuple[int, bool]] = []
+        monkeypatch.setattr(ga, "TICK_LOG", ticks.path)
+        monkeypatch.setattr(ga, "other_window", lambda _exclude: 55)
+
+        def fake_foreground(hwnd: int, *, force: bool = False) -> None:
+            calls.append((hwnd, force))
+
+        monkeypatch.setattr(ga, "ensure_foreground", fake_foreground)
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 55)
+        monkeypatch.setattr(ga, "_sleep", lambda _s: ticks.set("1836.11.11"))
+
+        ga.background_ok(777, seconds=20.0)
+
+        assert calls == [(55, False), (777, False)]
+
     def test_没有别的窗口可用时报错(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         monkeypatch.setattr(ga, "TICK_LOG", tmp_path / "t.log")
         monkeypatch.setattr(ga, "other_window", lambda _exclude: 0)
@@ -2649,6 +2688,28 @@ class TestRunCommand:
         err = capsys.readouterr().err
         assert "失败" in err
         assert "GameRunningError" in err
+
+
+class TestBackgroundCommand:
+    def test_background_入口传递真实输入授权(self, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+        seen: dict[str, object] = {}
+        monkeypatch.setattr(ga, "find_window", lambda: 4242)
+
+        def fake_background(hwnd: int, **kw: object) -> ga.Advance:
+            seen.update({"hwnd": hwnd, **kw})
+            return ga.Advance(
+                advanced=True,
+                before="1836.1.1",
+                after="1836.2.1",
+                seconds=0.1,
+                source="stub",
+            )
+
+        monkeypatch.setattr(ga, "background_ok", fake_background)
+
+        assert ga.main(["background", "--seconds", "0.1"]) == 0
+        assert seen == {"hwnd": 4242, "seconds": 0.1, "force": True}
+        assert "推进" in capsys.readouterr().out
 
 
 class TestRunSession:
