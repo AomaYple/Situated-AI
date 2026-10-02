@@ -204,6 +204,18 @@ class TestCompare(unittest.TestCase):
         self.assertEqual(changes[0].added.count("b"), 1)
         self.assertIn("b", changes[0].removed)
 
+    def test_rejects_compact_full_mismatch(self):
+        a = snapshot.Snapshot(version={"v": "1"}, sections={}, compact=False)
+        b = snapshot.Snapshot(version={"v": "1"}, sections={}, compact=True)
+        with pytest.raises(snapshot.SnapshotFormatError):
+            snapshot.compare(a, b)
+
+    def test_regular_sections_preserve_duplicate_delta(self):
+        a = self._snap({"x": {"a": ["k", "k"]}})
+        b = self._snap({"x": {"a": ["k"]}})
+        changes = snapshot.compare(a, b)
+        self.assertEqual(changes[0].removed, ["k"])
+
 
 class TestSnapshotValidation(unittest.TestCase):
     def test_load_rejects_unknown_format_and_non_boolean_compact(self):
@@ -217,6 +229,18 @@ class TestSnapshotValidation(unittest.TestCase):
                 snapshot.Snapshot.load(p)
             p.write_text(
                 json.dumps({"格式版本": snapshot.FORMAT, "版本": {}, "域": {}, "精简": "false"}),
+                encoding="utf-8",
+            )
+            with pytest.raises(snapshot.SnapshotFormatError):
+                snapshot.Snapshot.load(p)
+            p.write_text(
+                json.dumps({"格式版本": snapshot.FORMAT, "版本": {"v": 1}, "域": {}}),
+                encoding="utf-8",
+            )
+            with pytest.raises(snapshot.SnapshotFormatError):
+                snapshot.Snapshot.load(p)
+            p.write_text(
+                json.dumps({"格式版本": snapshot.FORMAT, "版本": {}, "域": {"x": {"a": [1]}}}),
                 encoding="utf-8",
             )
             with pytest.raises(snapshot.SnapshotFormatError):

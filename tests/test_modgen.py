@@ -667,7 +667,7 @@ def test_写盘会清掉被取代的旧文件(tmp_path: Path) -> None:
     root = tmp_path / "mod"
     stale = root / "common" / "journal_entries" / "sitai_t1_old.txt"
     stale.parent.mkdir(parents=True, exist_ok=True)
-    stale.write_text("上一版的产物", encoding="utf-8")
+    stale.write_text(modgen.GEN_HEADER + "\n上一版的产物", encoding="utf-8")
     modgen.write(built, root)
     assert not stale.exists()
     assert (root / archive.journal_file).is_file()

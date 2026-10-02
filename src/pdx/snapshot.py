@@ -23,6 +23,7 @@ import hashlib
 import json
 import os
 import tempfile
+from collections import Counter
 from contextlib import suppress
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
@@ -242,8 +243,17 @@ class Snapshot:
             for k, v in body.items()
         ):
             raise SnapshotFormatError(f"{path} 的域条目结构错误")
+        if any(
+            not isinstance(item, str)
+            for body in sections.values()
+            for values in body.values()
+            for item in values
+        ):
+            raise SnapshotFormatError(f"{path} 的域值必须全部是字符串")
+        if any(not isinstance(k, str) or not isinstance(v, str) for k, v in version.items()):
+            raise SnapshotFormatError(f"{path} 的版本字段必须是字符串")
         return cls(
-            version={str(k): str(v) for k, v in version.items()},
+            version=dict(version),
             sections=sections,
             compact=compact,
         )
@@ -376,7 +386,9 @@ class Change:
 
 
 def compare(old: Snapshot, new: Snapshot) -> list[Change]:
-    """比对两份快照，返回全部变更（按域、按名称排序）。"""
+    """比对两份同口径快照，返回全部变更（按域、按名称排序）。"""
+    if old.compact != new.compact:
+        raise SnapshotFormatError("精简快照与完整快照不能直接比较")
     changes: list[Change] = []
     sections = sorted(set(old.sections) | set(new.sections))
 
@@ -389,10 +401,13 @@ def compare(old: Snapshot, new: Snapshot) -> list[Change]:
             if sec in ORDERED_SECTIONS:
                 added, removed = _ordered_delta(old_values, new_values)
             else:
-                sa, sb = set(old_values), set(new_values)
-                if sa == sb:
+                # 普通域语义上是集合，但重复项说明快照损坏；保留计数差异，
+                # 避免静默吞掉结构变化。
+                ca, cb = Counter(old_values), Counter(new_values)
+                if ca == cb:
                     continue
-                added, removed = sorted(sb - sa), sorted(sa - sb)
+                added = sorted((cb - ca).elements())
+                removed = sorted((ca - cb).elements())
             if not added and not removed:
                 continue
             changes.append(

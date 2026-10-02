@@ -86,6 +86,9 @@ from PIL import Image, ImageGrab
 from . import config, experiments
 from .platform_support import UnavailableWindowsModule, WindowsOnlyError
 
+# 本模块本次 Popen 创建的根进程；失败清理只针对这些 PID。
+_OWNED_GAME_PIDS: set[int] = set()
+
 if sys.platform == "win32" or TYPE_CHECKING:
     import pydirectinput as directinput
     import pygetwindow as gw
@@ -2145,6 +2148,32 @@ def quarantine_logs(dest: Path | None = None, *, stamp: str | None = None) -> li
     return moved
 
 
+def kill_owned_game() -> list[int]:
+    """只终止本模块本次启动的游戏进程及其子进程。"""
+    requested: list[int] = []
+    roots = sorted(_OWNED_GAME_PIDS)
+    for root_pid in roots:
+        pids = [root_pid]
+        try:
+            process = psutil.Process(root_pid)
+            children = getattr(process, "children", None)
+            if callable(children):
+                pids.extend(child.pid for child in children(recursive=True))
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+        for pid in reversed(dict.fromkeys(pids)):
+            try:
+                psutil.Process(pid).kill()
+            except psutil.NoSuchProcess:
+                continue
+            except psutil.AccessDenied:
+                print(f"无法终止本会话游戏进程 {pid}：权限不足", file=sys.stderr)
+            else:
+                requested.append(pid)
+        _OWNED_GAME_PIDS.discard(root_pid)
+    return requested
+
+
 def kill_game() -> list[int]:
     """尝试终止所有同名游戏进程，返回已发出终止请求的 PID 列表。
 
@@ -2222,7 +2251,10 @@ def launch(
     command.extend(extra_args)
     if not Path(command[0]).is_file():
         raise GameAutoError(f"找不到游戏可执行文件：{command[0]}")
-    subprocess.Popen(command, cwd=str(config.ROOT), close_fds=True)
+    process = subprocess.Popen(command, cwd=str(config.ROOT), close_fds=True)
+    pid = getattr(process, "pid", None)
+    if isinstance(pid, int) and pid > 0:
+        _OWNED_GAME_PIDS.add(pid)
     if not wait:
         return None
     return wait_for_window(timeout=timeout)
@@ -3542,7 +3574,7 @@ def start_session(
     )
 
 
-def run_session(
+def _run_session_impl(
     *,
     scripted_tests: bool = True,
     lobby_timeout: float = LOBBY_TIMEOUT,
@@ -3636,6 +3668,39 @@ def status_report() -> list[str]:
         lines.append(f"              最后一个是 {roles[-1]}")
     lines.append(f"当前时间在走  : {is_running(4.0).describe()}")
     return lines
+
+
+def run_session(
+    *,
+    scripted_tests: bool = True,
+    lobby_timeout: float = LOBBY_TIMEOUT,
+    speed_xy: tuple[int, int] | None = None,
+    skip_speed: bool = False,
+    verify_minimized: bool = True,
+    keep_foreground: bool = False,
+    force: bool = False,
+    foreground_recovery: bool = True,
+    wait_tests: float = 0.0,
+    background_seconds: float = 8.0,
+) -> SessionStart:
+    """运行一次会话；失败时只清理本模块启动的进程。"""
+    try:
+        return _run_session_impl(
+            scripted_tests=scripted_tests,
+            lobby_timeout=lobby_timeout,
+            speed_xy=speed_xy,
+            skip_speed=skip_speed,
+            verify_minimized=verify_minimized,
+            keep_foreground=keep_foreground,
+            force=force,
+            foreground_recovery=foreground_recovery,
+            wait_tests=wait_tests,
+            background_seconds=background_seconds,
+        )
+    except BaseException:
+        with suppress(Exception):
+            kill_owned_game()
+        raise
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1,8 +1,8 @@
-"""全量分析：把游戏本体与 mod 本体的全部可提取信息一次性产出。
+"""可脚本化范围分析：把游戏本体与 mod 本体当前可提取的信息一次性产出。
 
-「全量」的含义
+「范围完整」的含义
 --------------
-**不挑目录、不抽样**。具体覆盖：
+**不挑已纳入范围的目录、不抽样**；资产二进制与 C++ 运行时语义不在解析器范围。具体覆盖：
 
 游戏本体
     * 三个内容根（``game`` / ``jomini`` / ``clausewitz``）的逐目录统计
@@ -344,8 +344,11 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
     # 先为**每一个**子目录建好空结果。
     # 不能等遇到 .txt 才创建 —— `scripted_modifiers` 目录下只有 .md 没有 .txt，
     # 那样会让目录数从 136 变成 135，是个真实踩过的错。
-    for child in sorted(p for p in common_root.iterdir() if p.is_dir()):
-        per_common[child.name] = DirExtract(name=child.name, path=child)
+    if common_root.is_dir():
+        for child in sorted(p for p in common_root.iterdir() if p.is_dir()):
+            per_common[child.name] = DirExtract(name=child.name, path=child)
+    else:
+        ga.parse_errors.append((str(common_root), "游戏 common 目录不存在，跳过 common 深度分析"))
     for name in config.SCRIPTABLE_DIRS:
         if name == "common":
             continue
@@ -561,14 +564,21 @@ def mods_analysis(*, verbose: bool = False) -> ModsAnalysis:
 # ── 交叉分析 ────────────────────────────────────────────────
 @dataclass
 class CrossAnalysis:
+    #: 按原版文件计数；同一文件被多个 mod 覆盖会分别计数。
     dir_touched_by: Counter = field(default_factory=Counter)
+    #: 按 mod 去重后的目录触及次数。
+    dir_touched_mods: Counter = field(default_factory=Counter)
     changed_entries: dict[str, dict[str, list[str]]] = field(default_factory=dict)
     mod_prefixes: dict[str, Counter] = field(default_factory=dict)
+    parse_errors: list[tuple[str, str]] = field(default_factory=list)
 
     def summary(self) -> dict[str, Any]:
         return {
             "被 mod 触及的目录数": len(self.dir_touched_by),
+            "被覆盖的原版文件数": sum(self.dir_touched_by.values()),
+            "涉及的 mod 触及次数": sum(self.dir_touched_mods.values()),
             "被改动的原版条目数": sum(len(v) for v in self.changed_entries.values()),
+            "解析错误数": len(self.parse_errors),
         }
 
 
@@ -584,10 +594,15 @@ def cross_analysis(ma: ModsAnalysis, *, verbose: bool = False) -> CrossAnalysis:
     for m in ma.mods:
         target = m.target
         ca.mod_prefixes[target] = Counter(m.prefixes)
+        touched_tops: set[str] = set()
         for rel in m.overrides:
             top = rel.split("/")[0]
             ca.dir_touched_by[top] += 1
-
+            touched_tops.add(top)
+        for top in sorted(touched_tops):
+            ca.dir_touched_mods[top] += 1
+        for rel in m.overrides:
+            top = rel.split("/")[0]
             src = m.root / rel
             dst = config.GAME / rel
             try:
@@ -599,12 +614,15 @@ def cross_analysis(ma: ModsAnalysis, *, verbose: bool = False) -> CrossAnalysis:
             try:
                 mf = parse_cached(src)
                 vf = parse_cached(dst)
-            except Exception:
+            except Exception as exc:
+                ca.parse_errors.append((str(src), f"{type(exc).__name__}: {exc}"))
                 continue
             vanilla_keys = set(vf.top_keys)
             bucket = ca.changed_entries.setdefault(top, {})
             for a in mf.top_assignments:
-                if a.key in vanilla_keys or a.prefix:
+                # 只把原版已有键报告为“改动”；新增前缀键属于 mod 自有扩展，
+                # 由 mod 分析的 additions/prefixes 记录，避免污染原版变更清单。
+                if a.key in vanilla_keys:
                     bucket.setdefault(a.key, []).append(target)
             if verbose:
                 print(f"  [{target}] {rel}")
@@ -841,7 +859,9 @@ def to_cross_dict(ca: CrossAnalysis) -> dict[str, Any]:
     """交叉数据。引用两侧，但自身独立成文件。"""
     return {
         "概览": ca.summary(),
-        "目录被触及次数": dict(ca.dir_touched_by.most_common()),
+        "目录被覆盖文件数": dict(ca.dir_touched_by.most_common()),
+        "目录涉及 mod 数": dict(ca.dir_touched_mods.most_common()),
+        "解析错误": list(ca.parse_errors),
         "被改动的原版条目": {
             k: {ek: sorted(set(ev)) for ek, ev in v.items()} for k, v in ca.changed_entries.items()
         },

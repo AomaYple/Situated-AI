@@ -450,7 +450,7 @@ SHARD_COUNT = 4
 
 def shard_cases() -> list[dict[str, Any]]:
     """把 ``tests`` 的测试文件按名字四分，每片一条用例（读数=片内墙钟与峰值）。"""
-    files = sorted(p.name for p in (REPO / "tools" / "tests").glob("test_*.py"))
+    files = sorted(p.name for p in (REPO / "tests").glob("test_*.py"))
     shards: list[list[str]] = [[] for _ in range(SHARD_COUNT)]
     for index, name in enumerate(files):
         shards[index % SHARD_COUNT].append(name)

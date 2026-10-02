@@ -112,8 +112,8 @@ dev = [
 v3 = "pdx.cli:app"
 
 [tool.setuptools]
-# 包源码在 tools/ 下（仓库既是「研究资料库」也是「工具源码库」，
-# 因此没有采用 src/ 布局 —— 那样会让 tools/ 与 src/ 两份代码并存）。
+# Python 包源码位于 src/pdx；tools/ 只放一次性探针、基准与 CI 脚本。
+# 使用标准 src 布局，避免仓库根目录的工具脚本被误当成可导入包。
 package-dir = { "" = "src" }
 packages = ["pdx"]
 

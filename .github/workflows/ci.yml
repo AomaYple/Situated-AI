@@ -23,6 +23,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 # 同一分支连着推两次时，取消掉还在跑的那次
 concurrency:
@@ -71,6 +72,9 @@ jobs:
         # 上一步已经覆盖 `docs` / `contract` / `property` 这些标记；
         # 唯二被排除的是 integration（无游戏）与要显式传 -n0 的 benchmark。
         run: python -m pytest -m "not integration"
+
+      - name: 性能分片编排器 —— 确认每片覆盖真实测试文件
+        run: python -m pytest tests/test_perf_baseline.py -q -o addopts=""
 
       - name: v3 verify —— 用入库快照核验一部分断言
         # 234 条断言里 43 条能用入库的离线真值核验，其余要读游戏本体 ——

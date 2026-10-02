@@ -62,6 +62,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lobby-timeout", type=float, default=ga.LOBBY_TIMEOUT)
     args = parser.parse_args(argv)
     require_windows("flow_with_cleanup 实机窗口操作")
+    speed_xy: tuple[int, int] | None = None
+    if args.speed_xy:
+        left, sep, right = str(args.speed_xy).partition(",")
+        if not sep or not left.strip() or not right.strip():
+            parser.error("--speed-xy 必须是 X,Y 两个整数")
+        try:
+            speed_xy = (int(left), int(right))
+        except ValueError as exc:
+            parser.error(f"--speed-xy 必须是 X,Y 两个整数：{exc}")
 
     ga.ALLOW_REAL_INPUT = True  # 显式入口：允许抢前台点那三下
     leftover = ga._process_pids()
@@ -81,10 +90,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"窗口 hwnd = {hwnd}")
         settle = ga.wait_for_boot_settle(timeout=float(args.lobby_timeout))
         print(f"加载等待（不碰窗口）：{settle.why}")
-        speed_xy: tuple[int, int] | None = None
-        if args.speed_xy:
-            left, _, right = str(args.speed_xy).partition(",")
-            speed_xy = (int(left), int(right))
         result = ga.start_session(
             hwnd,
             previous,
@@ -96,21 +101,37 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         failure = f"{type(exc).__name__}: {exc}"
     finally:
-        killed = kill_game()
-        time.sleep(2)
-        # 收尾时**先还前台再采样**：否则采到的是还在最上面的游戏窗口，看不出真相。
+        cleanup_errors: list[str] = []
+
+        def cleanup(label: str, action):
+            try:
+                return action()
+            except Exception as exc:  # pragma: no cover - 实机故障分支
+                cleanup_errors.append(f"{label}: {type(exc).__name__}: {exc}")
+                return None
+
+        # 只清理本次 launch 登记的进程；启动前发现的残留已在上方明确授权清理。
+        killed = cleanup("终止本次游戏", ga.kill_owned_game) or []
+        cleanup("等待进程退出", lambda: time.sleep(2))
+        # 收尾时先还前台再采样；每一步独立保护，避免一个失败掩盖原始故障。
         if previous and previous != ga.find_window():
-            ga._set_foreground(previous)
-        owners = desktop_owners()
+            cleanup("恢复前台", lambda: ga._set_foreground(previous))
+        owners = cleanup("桌面采样", desktop_owners) or {}
         print("\n=== 收尾 ===")
         print(f"杀掉的 victoria3 PID：{killed or '（没有）'}")
         print(f"前台现在 = {ga._foreground_window()}（应为 {previous}）")
         print("桌面采样：")
         for owner, count in owners.items():
-            print(
-                f"  {count} 点 → {win32gui.GetClassName(owner)} "
-                f"{win32gui.GetWindowText(owner)[:28]!r}"
-            )
+            try:
+                print(
+                    f"  {count} 点 → {win32gui.GetClassName(owner)} "
+                    f"{win32gui.GetWindowText(owner)[:28]!r}"
+                )
+            except Exception as exc:  # pragma: no cover - 实机故障分支
+                cleanup_errors.append(f"打印桌面采样: {type(exc).__name__}: {exc}")
+        if cleanup_errors:
+            detail = "；".join(cleanup_errors)
+            failure = f"{failure}；收尾也有问题：{detail}" if failure else f"收尾失败：{detail}"
 
     if failure:
         print(f"\n[失败] {failure}")

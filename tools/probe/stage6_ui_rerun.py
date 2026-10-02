@@ -35,6 +35,7 @@ import re
 import sys
 import tempfile
 import time
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from io import TextIOWrapper
@@ -2783,37 +2784,55 @@ def run(args: argparse.Namespace) -> int:
                         f"（{'命中' if found15 is not None else '没命中'}；旁证，不是承重墙）",
                     )
         finally:
-            ga.SHOT_DIR = shot_dir_before  # 落帧出口还原（进程内状态一并还回，别留给下一次调用）
-            killed = ga.kill_game()
-            time.sleep(2)
+            cleanup_errors: list[str] = []
+
+            def cleanup(label: str, action):
+                try:
+                    return action()
+                except Exception as exc:  # pragma: no cover - 实机故障分支
+                    cleanup_errors.append(f"{label}: {type(exc).__name__}: {exc}")
+                    return None
+
+            # 每项收尾独立执行；一项失败不能阻断日志、前台和摘要恢复。
+            ga.SHOT_DIR = shot_dir_before
+            owned_pids = getattr(ga, "_OWNED_GAME_PIDS", set())
+            killer = ga.kill_owned_game if owned_pids else ga.kill_game
+            killed = cleanup("终止本次游戏", killer) or []
+            cleanup("等待进程退出", lambda: time.sleep(2))
             if previous:
-                ga._set_foreground(previous)
+                cleanup("恢复前台", lambda: ga._set_foreground(previous))
             restored = "按 --no-restore 保留安装" if args.no_restore else None
             if not args.no_restore:
-                restored = experiments.restore_content_load()
+                restored_value = cleanup("还原 content_load.json", experiments.restore_content_load)
                 restored = (
-                    "content_load.json 已还原" if restored else "content_load.json 本来就一致"
+                    "content_load.json 已还原" if restored_value else "content_load.json 本来就一致"
                 )
-            after = sha256(content_load()) if content_load().is_file() else ""
+            after_path = content_load()
+            after = sha256(after_path) if after_path.is_file() else ""
             extra["content_load_sha256_after"] = after
             extra["content_load_same"] = bool(before_hash) and before_hash == after
             extra["victoria3_alive_after"] = ga._process_pids()
             extra["elapsed_seconds"] = round(time.monotonic() - started, 1)
+            if cleanup_errors:
+                extra["cleanup_errors"] = cleanup_errors
             report.step(
                 "收尾三件",
                 "过"
-                if (not extra["victoria3_alive_after"] and extra["content_load_same"])
+                if (
+                    not extra["victoria3_alive_after"]
+                    and extra["content_load_same"]
+                    and not cleanup_errors
+                )
                 else "不过",
                 f"杀 {killed or '（没有）'}；{restored}；sha256 一致={extra['content_load_same']}；"
-                f"残留={extra['victoria3_alive_after']}",
+                f"残留={extra['victoria3_alive_after']}；收尾错误={cleanup_errors or '无'}",
             )
-            # **失败也要留摘要**：异常正在飞的时候，把「跑到哪一步、为什么没达成」落到盘上。
-            # 没有这一条，崩溃遍在产物里**没有痕迹**（第四遍就是这样：纯色帧抛错 ⇒ 无摘要）。
-            if sys.exc_info()[0] is not None:
-                report.step("本步未达成", "未达成", f"{sys.exc_info()[1]}")
+            # 失败也要留摘要，并把清理错误写入额外字段。
+            if sys.exc_info()[0] is not None or cleanup_errors:
+                if sys.exc_info()[0] is not None:
+                    report.step("本步未达成", "未达成", f"{sys.exc_info()[1]}")
                 summary_path.write_text(report.render(extra=extra), encoding="utf-8", newline="\n")
                 print(f"运行摘要（失败也留）：{summary_path}")
-
     summary_path.write_text(report.render(extra=extra), encoding="utf-8", newline="\n")
     print(f"运行摘要：{summary_path}")
     failed = any(verdict == "不过" for _n, verdict, _d in report.rows)
@@ -2876,7 +2895,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def _main_impl(argv: Sequence[str] | None = None) -> int:
     # 控制台编码：本机 cmd 是 GBK，而 preflight 的报告里有 ✅/❌ —— 不换 UTF-8 会在
     # **打印报告**那一步抛 `UnicodeEncodeError`（实测踩到，而且它盖住了真正的退出码）。
     # `-X utf8` 只覆盖"用 `-X utf8` 起"的那条走法；口径 §10 写的入口命令不带它，
@@ -2886,6 +2905,36 @@ def main(argv: Sequence[str] | None = None) -> int:
             stream.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args(argv)
     return run(args)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """运行阶段六，并为早期失败提供统一的环境恢复兜底。"""
+    shot_dir_before = ga.SHOT_DIR
+    content_path = content_load()
+    before_hash = sha256(content_path) if content_path.is_file() else ""
+    argv_values = list(sys.argv[1:] if argv is None else argv)
+    previous = 0
+    if sys.platform == "win32":
+        with suppress(Exception):
+            previous = ga._foreground_window()
+    try:
+        return _main_impl(argv)
+    finally:
+        # _main_impl 的正常路径已有细粒度收尾；这里专门覆盖 preflight、模板检查、
+        # 部署之前的异常和提前 return，所有动作都不得覆盖原始异常。
+        ga.SHOT_DIR = shot_dir_before
+        with suppress(Exception):
+            if getattr(ga, "_OWNED_GAME_PIDS", set()):
+                ga.kill_owned_game()
+        with suppress(Exception):
+            if previous and previous != ga.find_window():
+                ga._set_foreground(previous)
+        with suppress(Exception):
+            if "--no-restore" not in argv_values:
+                after_path = content_load()
+                after_hash = sha256(after_path) if after_path.is_file() else ""
+                if before_hash and after_hash != before_hash:
+                    experiments.restore_content_load()
 
 
 if __name__ == "__main__":  # pragma: no cover

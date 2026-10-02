@@ -2332,8 +2332,19 @@ def _prune_empty(path: Path, base: Path) -> None:
         path = path.parent
 
 
+def _is_generated_file(path: Path) -> bool:
+    """只认带生成器头的文件，避免误删用户自有的同前缀文件。"""
+    if path.name == "metadata.json" and path.parent.name == ".metadata":
+        return True
+    try:
+        head = path.read_text(encoding="utf-8", errors="strict")[:4096]
+    except (OSError, UnicodeError):
+        return False
+    return GEN_HEADER in head or DOC_HEADER in head
+
+
 def stale_files(built: Built, root: Path | None = None) -> list[Path]:
-    """产物根下**该清掉**的旧文件：我们的文件里不在本次构建结果中的那些。"""
+    """产物根下**该清掉**的旧文件：只删除有生成器标记且已不在本次结果中的文件。"""
     base = root or PRODUCT_DIR
     if not base.is_dir():
         return []
@@ -2341,7 +2352,7 @@ def stale_files(built: Built, root: Path | None = None) -> list[Path]:
     return [
         path
         for path in sorted(base.rglob(f"{FILE_PREFIX}*"))
-        if path.is_file() and path not in wanted
+        if path.is_file() and path not in wanted and _is_generated_file(path)
     ]
 
 

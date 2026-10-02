@@ -42,7 +42,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `extract.py` | 目录级条目与字段提取 |
 | `defines.py` | defines 专用提取（命名空间、参数形态、覆盖预览） |
 | `mods.py` | Workshop 与本地 mod 分析 |
-| `analyze.py` | 全量分析（游戏本体 / mod / 交叉，**分开存储**） |
+| `analyze.py` | 可脚本化范围分析（游戏本体 / mod / 交叉，**分开存储**） |
 | `snapshot.py` | 版本快照与两份快照的 diff |
 | `verify.py` | 断言注册表，把文档里的数字变成可执行检查；产物核验与文档漂移扫描 |
 | `doc_tables.py` | **通用**的「文档里由工具生成的 markdown 表」机制：整表替换 / 按键合并 / 同表头多张 |
@@ -85,7 +85,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 | 子命令 | 取代 | 作用 |
 |---|---|---|
-| `v3 analyze` | `run_analyze.py` | 全量分析并落盘：`--no-mods` `--no-cross` `--no-write` `--quiet` `--profile` |
+| `v3 analyze` | `run_analyze.py` | 可脚本化范围分析并落盘：`--no-mods` `--no-cross` `--no-write` `--quiet` `--profile` |
 | `v3 defines` | `run_defines.py` | defines 提取：`--ns NAME` `--json PATH` `--overlay FILE` |
 | `v3 index` | `run_index.py` | 重生成 `docs/victoria3-modding/13-common全量键名索引.md`：`--dry-run` |
 | `v3 tables` | （新增） | 重算文档里**由工具生成**的 174 张表格（doc 05 的 defines 表、doc 08 的目录统计表、doc 19 的根目录与 `paths.settings` 表、doc 03/04/05/06/07/09/10/11/14/15/16/17/18/20 那几族统计表）；不加 `--write` 时是核对，不一致即退出码 1。**要读游戏本体**，属本地门禁（CI 上以退出码 2 报前置条件缺失） |
@@ -205,7 +205,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-85 个测试文件；2165 条用例（`pytest --collect-only` 实测），
+86 个测试文件；2170 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -488,7 +488,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：2165 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：2170 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

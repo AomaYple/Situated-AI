@@ -1078,6 +1078,31 @@ class TestKillGame:
         assert ga.kill_game() == []
         assert "333" in capsys.readouterr().err
 
+    def test_只清理本模块登记的进程(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        ga._OWNED_GAME_PIDS.clear()
+        ga._OWNED_GAME_PIDS.add(111)
+        seen: list[int] = []
+
+        class Child:
+            def __init__(self, pid: int) -> None:
+                self.pid = pid
+
+        class FakeProcess:
+            def __init__(self, pid: int) -> None:
+                self.pid = pid
+
+            def children(self, recursive: bool = False) -> list[Child]:
+                assert recursive
+                return [Child(222)] if self.pid == 111 else []
+
+            def kill(self) -> None:
+                seen.append(self.pid)
+
+        monkeypatch.setattr(ga.psutil, "Process", FakeProcess)
+        assert ga.kill_owned_game() == [222, 111]
+        assert seen == [222, 111]
+        assert not ga._OWNED_GAME_PIDS
+
 
 class TestLaunch:
     def test_有进程在跑就拒绝启动(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2732,6 +2757,22 @@ class TestRunSession:
         assert seen["skip_speed"] is True
         assert seen["keep_foreground"] is True
         assert seen["settle"] is not None, "等加载的结果要传下去，别在 start_session 里再等一次"
+
+    def test_失败时清理本会话进程并保留原异常(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen: list[str] = []
+
+        def boom(**_kwargs: object) -> ga.SessionStart:
+            raise RuntimeError("流程失败")
+
+        def kill_owned() -> list[int]:
+            seen.append("kill")
+            return [123]
+
+        monkeypatch.setattr(ga, "_run_session_impl", boom)
+        monkeypatch.setattr(ga, "kill_owned_game", kill_owned)
+        with pytest.raises(RuntimeError, match="流程失败"):
+            ga.run_session()
+        assert seen == ["kill"]
 
 
 class TestClickClientPrevious:
