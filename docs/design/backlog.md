@@ -188,9 +188,9 @@
 
 | # | 问题 | 我的推荐 | 何时需要 |
 |---|---|---|---|
-| B97 | **`docs/**` 的引用完全不在门禁范围**：盘点实测 `docs/**/*.md`（64 份）共 **1 146 条**行号引用，其中 **49 条指向本仓文件**（`tools/**`、`mod/**`、`docs/**`）——**今天一条都不判**，因为 `v3 citations` 的默认扫描目标是 `mod/data`（`src/pdx/citations.py:253`；`v3 citations --help` 也写明「默认只扫 `mod/data`」，理由是设计文档里的 `文件:行号` 有另一种含义）。⚠️ **换成内容锚也不会解决它**：内容锚改的是"锚怎么定"，不改变"扫哪儿"，`docs/**` 仍然在范围外。 | 二选一（**优先前者**）：① 在 `--help` 与 `CONTRIBUTING` 类文档里**写明"`docs/**` 的引用由人工守，本门禁不覆盖"**，并把这条写进收口清单的已知边界；② 若确实要守，另加一条**只扫 `docs/**` 的低频检查**（它会误报设计文档里的章节简称，需要一份白名单，成本明显更高）。**不要**直接把 `docs/` 塞进默认 targets —— 那会引入一片假红（`--help` 已经解释过这条教训）。 | 收口（`t21`）对账"引用门禁覆盖了什么"时；或下一次有人问"文档里的引用谁守"时 |
-| B98 | **新写的引用在刷新入库快照前必报 `unsupported`**（预期行为，但 `--help` 没写）：支撑域是**入库快照的一部分**、不是从盘上现算的 —— 实测把一条**合法但未入库**的引用（`common/ai_strategies/03_political_strategies.txt:1178`）写进临时数据源，`v3 citations` 报 `unsupported`「第 1178 行没被记进支撑域」；`support_domain()` 的 docstring 也写明键是**引用写法**、值为 `["lines=N", "<行号>:<指纹>"]`。 | 在 `v3 citations --help` 与 `exec/收口清单.md` 各加一句，文案建议逐字用：**「新写的 `文件:行号` 引用在 `v3 snapshot create --compact` 刷新之前会报 `unsupported`（支撑域属入库快照，不从盘上现算）—— 这是预期行为，不是写错了引用。」** | 下一次有人新写引用、看到 `unsupported` 而以为引用写错时；以及每次改 `mod/data` 引用后的收口 |
-| B99 | **引用门禁是 live / offline 双层，而漂移只有 live 那层判得出** —— 直接决定收口要跑哪一条：离线口径（`live=False`，CI 用的那层）**只核「与入库快照一致」**；核「被引那一行还是不是那句话」的是 **live 内容指纹**（`citations.unsupported(..., live=True)`，`live=bool(游戏树存在)`）。**两边实测**：在 `git worktree` 里给 `src/pdx/modgen.py` 顶部插 5 行（2266→2271，被引内容整体下移、一字未改）⇒ **`live=True` 报 1 条**「第 185 行的内容变了（原版更新？）—— 核对后刷新快照」，而 **`live=False` 报 0 条**。 | **收口（`t21`）必须跑 live 版 `v3 citations`，不能只跑 `citations --offline`** —— 理由：离线层手上只有**入库快照**（`citation_support` 域里的行号+指纹），**没有游戏树/工作树的内容**，所以行号漂移在它那里天然不可见；而 live 层会把"那一行的文本指纹"与快照比，这正是当初抓到 `ab_probe.py:852 → :926` 的那一步。`--offline` 那条仍然要跑（它守"与入库快照一致"），但**它不能替代** live 版。 | **收口（`t21`）的 13 道门禁清单**；以及任何一次"我以为 CI 绿了就没事"的判断 |
+| B97 | **`docs/**` 的引用完全不在门禁范围**：盘点实测 `docs/**/*.md`（64 份）共 **1 146 条**行号引用，其中 **49 条指向本仓文件**（`tools/**`、`mod/**`、`docs/**`）——**今天一条都不判**，因为 `v3 citations` 的默认扫描目标是 `mod/data`（`src/pdx/citations.py:253`；`v3 citations --help` 也写明「默认只扫 `mod/data`」，理由是设计文档里的 `文件:行号` 有另一种含义）。⚠️ **换成内容锚也不会解决它**：内容锚改的是"锚怎么定"，不改变"扫哪儿"，`docs/**` 仍然在范围外。 | 二选一（**优先前者**）：① 在 `--help` 与 `CONTRIBUTING` 类文档里**写明"`docs/**` 的引用由人工守，本门禁不覆盖"**，并把这条写进收口清单的已知边界；② 若确实要守，另加一条**只扫 `docs/**` 的低频检查**（它会误报设计文档里的章节简称，需要一份白名单，成本明显更高）。**不要**直接把 `docs/` 塞进默认 targets —— 那会引入一片假红（`--help` 已经解释过这条教训）。 | 收口（`t21`）对账"引用门禁覆盖了什么"时；或下一次有人问"文档里的引用谁守"时  ✅ 已落实（2026-10-02：引用门禁范围与 docs 引用边界已写入收口规程） |
+| B98 | **新写的引用在刷新入库快照前必报 `unsupported`**（预期行为，但 `--help` 没写）：支撑域是**入库快照的一部分**、不是从盘上现算的 —— 实测把一条**合法但未入库**的引用（`common/ai_strategies/03_political_strategies.txt:1178`）写进临时数据源，`v3 citations` 报 `unsupported`「第 1178 行没被记进支撑域」；`support_domain()` 的 docstring 也写明键是**引用写法**、值为 `["lines=N", "<行号>:<指纹>"]`。 | 在 `v3 citations --help` 与 `exec/收口清单.md` 各加一句，文案建议逐字用：**「新写的 `文件:行号` 引用在 `v3 snapshot create --compact` 刷新之前会报 `unsupported`（支撑域属入库快照，不从盘上现算）—— 这是预期行为，不是写错了引用。」** | 下一次有人新写引用、看到 `unsupported` 而以为引用写错时；以及每次改 `mod/data` 引用后的收口  ✅ 已落实（2026-10-02：unsupported 属快照未刷新时的预期状态，已写入引用规程） |
+| B99 | **引用门禁是 live / offline 双层，而漂移只有 live 那层判得出** —— 直接决定收口要跑哪一条：离线口径（`live=False`，CI 用的那层）**只核「与入库快照一致」**；核「被引那一行还是不是那句话」的是 **live 内容指纹**（`citations.unsupported(..., live=True)`，`live=bool(游戏树存在)`）。**两边实测**：在 `git worktree` 里给 `src/pdx/modgen.py` 顶部插 5 行（2266→2271，被引内容整体下移、一字未改）⇒ **`live=True` 报 1 条**「第 185 行的内容变了（原版更新？）—— 核对后刷新快照」，而 **`live=False` 报 0 条**。 | **收口（`t21`）必须跑 live 版 `v3 citations`，不能只跑 `citations --offline`** —— 理由：离线层手上只有**入库快照**（`citation_support` 域里的行号+指纹），**没有游戏树/工作树的内容**，所以行号漂移在它那里天然不可见；而 live 层会把"那一行的文本指纹"与快照比，这正是当初抓到 `ab_probe.py:852 → :926` 的那一步。`--offline` 那条仍然要跑（它守"与入库快照一致"），但**它不能替代** live 版。 | **收口（`t21`）的 13 道门禁清单**；以及任何一次"我以为 CI 绿了就没事"的判断  ✅ 已落实（2026-10-02：live 与 offline 双层核对及收口顺序已写明） |
 | B100 | **`CITATION_RE` 的字符类不含中文 ⇒ 本仓中文名文档无法被路径引用**（**B97 的上游**：B97 说「`docs/**` 的 1 146 条不在门禁范围」，B100 说「**就算把范围扩过去，本仓中文名文档仍然引用不了**」—— 两条合起来才是完整结论：**扩范围之前得先能解**）：`src/pdx/citations.py:46-51` 的 file 组是 `[0-9A-Za-z_./\-][0-9A-Za-z_./\ -]*?\.(?:txt|gui|py|md|toml|json|yml)` —— **不含中文、也不含 `\w`**（实测 `any('\u4e00'<=ch<='\u9fff')` = False、`"\w" in pattern` = False）。**实测**：`01a:269` = **0 命中** · `docs/design/01a-依据与参考.md:269` = **0 命中** · `01-大方向.md:35` = **0 命中**；对照组 `src/pdx/modgen.py:185-189` = **1**。**机制分步（不是猜）**：把文件名里的中文换成 ASCII（`01-大方向.md` → `01-ABC.md`）**立刻命中**；而只写 ASCII 前缀 `01-` 不命中 ⇒ 断点在**字符类吃不下非 ASCII 主体**，紧跟其后的 `.md` 因此拿不到文件名、`:35` 那一段接不上。⇒ **任何中文名文件都进不了引用解析**（与是否展开成完整路径无关）。**影响面**：① 仓库里文件名含中文的文件 **92 个**（`docs/` **63** · `tools/` **24** · `.agent-teams/` 5）；② `t42` 的口径页用**别名表**（`01a`/`01`/`批2`… 全 ASCII 简称 → 真实文件）**绕开**了它，代价是引用要过一层别名、且别名表本身要维护；③ `docs/**` 的 1 146 条引用**本来就不在门禁范围**（B97），所以**今天真正受影响的只是未来新写的路径式引用** —— 但一旦按 B97 选项②扩范围，这个缺口会立刻显形。**两条候选处置与代价**：**① 改正则字符类**（把非 ASCII 加进 file 组，例如 `[^\s/\\]+?` 或显式加 CJK 区间）—— 好处是路径式引用重新可用、别名表可退休；代价是**解析面变了**：必须**重跑 `v3 citations` 的 878 条现有引用**看有没有**改判**（新命中的串会从「不在域里」变成「要核指纹」，可能冒出一批 `unsupported`），并补一条中文路径用例。**② 继续用别名表**（现状）—— 零改动零风险；代价是每加一份中文名文档都要**维护别名**，且外部贡献者容易直接写路径形式而**静默不生效**（同 B98 那族）。**我的倾向**：先做 ① 的**前置对照实验**（改正则后 878 条有没有改判），有结果再定 —— 它的代价可测，而 ② 的代价随文档数量**线性增长**。 | ① 的前置实验：改正则后重跑 `v3 citations` 逐条比对改判；② 的维护成本随 `docs/` 中文名文档数量增长（当前 63 个）。**何时需要**：按 B97 选项②扩范围**之前**（先能解、再扩范围）；或下一次有人写「路径式引用一个中文名文档」却发现静默不生效时 |
 
 **上面四条的复算入口**（数都指到审计报告，不依赖本页转述）：
@@ -285,33 +285,22 @@ $d = "${env:ProgramFiles(x86)}\Steam\steamapps\common\Victoria 3\game\common\cou
 
 ---
 
-## 附② · 阶段 4 §2.1 第 ④ 层：两臂「窗口起止日期」缺的是**判据**，不是采集（B103，2026-09-25，`t81`）
+## 附② · 阶段 4 §2.1 第 ④ 层：两臂窗口起止日期判据（B103，已落实）
 
-> 来源：`t79` 的反向扫描（`阶段4-压力剧本-口径.md` 33 条否定式断言里「部分 stale 1」那一条，它已点名「仍缺 = §2.1④ 窗口起止日期证据（**无卡**）」）。
-> **P14**：新问题进这里、不展开讨论；**本条不阻塞任何在跑的卡** —— 尤其**不阻塞 `t22`**（理由见「何时需要」那一格）。
-> ⚠️ **落条目之前先只读核过代码**：跑者**已经在采、也已经在落盘**窗口首末日期 ⇒ 缺的是**跨臂判据**。这也修正了「今天只有月数、没有日期」那种写法（口径页 §2.1④ 那句措辞本身该改，属口径页的活，不在本条）。
-> （本节同样追加在**文件末尾** —— 理由见上一节 `:257`：本页有按行号引它的活引用。）
+> 原缺口是跨臂比较，不是日期采集：跑者一直把 _wait_months 的 from/to/days 写进每局报告。2026-10-02 已补上机器门禁，真实游戏读数仍必须由实机产生，不能用单元测试冒充。
 
-| # | 问题 | 我的推荐 | 何时需要 |
+| # | 问题 | 当前状态 | 何时需要 |
 |---|---|---|---|
-| B103 | **「两臂跑的是同一个窗口」没有机器可判的结论**。① **采集已有**：`tools/probe/perf_compare.py:316-339` 的 `_wait_months` 返回 `{"from": <tick>, "to": <tick>, "days": …}`，其中 tick 是**实测**日期（`logs\dedicated_server.log` 的 `Processing Tick: 1836.5.31.12`；解析器 `src/pdx/game_auto.py:129-130` 的 `TICK_RE`，读取入口 `:1427` 的 `tick_mark`、`:2080` 的 `tick_day`）。② **落盘已有**：`run_once` 把 `advanced` 写进这一局的报告（`perf_compare.py:380`、`:411`），而 `report_table`（`:485`）把**原始 reports** 收进 `table["runs"]` ⇒ `:717-718` 写出的 `tools/out/auto/compare.json` 里就有 `runs[i].advanced.from/to`。③ **缺的是**：**没有任何地方比这两个值**（`perf_compare` 里唯一的判据是 `stress_control_verdict`，`:258-276`，它只管压力自报序列），因此也没有「两臂窗口不同 ⇒ 该对不可比」的 fail-loud 结论。**顺带两条事实**：(a) 口径页 §2.1④ 现在写「只有 `_wait_months` 的**月数**，不是日期」—— 与代码现状不符（它返回的正是日期/tick，`days` 只是量化）；(b) ⚠️ **命名别撞车**：`_delta` 的 `from`/`to` 是**臂名**（`:478-479`），`advanced` 的 `from`/`to` 才是**日期** —— 判据要读后者。 | 加一条**与 `stress_control_verdict` 同型**的窗口判据（例：`window_control_verdict(reports)`）：按序号取臂对，比 `advanced.from` / `advanced.to` **逐字相等**，不等 ⇒ 判**该对不可比**（并把两侧首末日期印进失败信息，P13：不许静默降级）；**读不到就分开报** —— `NO_TICK`（`game_auto.py:135-136`）是「**读不到**」，不是「时间没走」，两者不许合并。**别另采一份数据**：`from`/`to` 已经在报告里 ⇒ 接在 `:704-716` 的 `stress` 分支旁边即可（同一次跑、同一份 JSON）。 | 与 `t22` 的对照读数**同时**（或任何要写下「两臂窗口可比」的结论之前）。**它不阻塞 `t22`**：受控性由 §2.1 **第 ③ 层**保证 —— 自报序列逐行相等，`t50`/`t63` 已实现，读数口就是 `stress_control_verdict`（阶段 4 的对照**今天就能报「受控」**）⇒ 本条目是**加强**，不是**前提**。**无卡**：等 `tools/probe/perf_compare.py` 的路径锁排空（t71/t73 那一队）再顺手做。 |
+| B103 | 两臂窗口需要机器可判：原实现已经采集并落盘 advanced.from/to/days，但没有跨臂比较。 | ✅ 已落实：tools/probe/perf_compare.py 的 window_control_verdict(reports) 按实验序号比较 vanilla 与其它臂的首末日期；缺失日期、窗口错误标记和日期不一致分别报出，结果写入 compare.json.window_control，门禁失败退出 1。 | 每次性能对照自动执行；仍需真实跑者提供日期样本，不能用单元测试替代实机读数。 |
 
-**本条的复算入口**（三条只读、`t81` 逐条跑过）：
+**复算入口**（使用仓库 .venv 的 Python）：
 
-```powershell
-# ① 时间真值从哪来（日志路径 + 行正则 + "读不到"的哨兵）
-.venv\Scripts\python.exe -X utf8 -c "import sys;sys.path.insert(0,'tools');from pdx import game_auto as ga;print(ga.TICK_LOG);print(ga.TICK_RE.pattern);print(repr(ga.NO_TICK))"
-# ② 窗口日期确实已进报告：'advanced' 在 run_once 里、原始 reports 进 report_table（应打 True True）
-.venv\Scripts\python.exe -X utf8 -c "import sys;sys.path.insert(0,'tools');import inspect;from probe import perf_compare as pc;print('advanced' in inspect.getsource(pc.run_once), 'runs' in inspect.getsource(pc.report_table))"
-# ③ 现在有哪些判据（本条要加的那条还不存在 ⇒ 只会打出 ['stress_control_verdict']）
-.venv\Scripts\python.exe -X utf8 -c "import sys;sys.path.insert(0,'tools');from probe import perf_compare as pc;print([n for n in dir(pc) if 'verdict' in n or 'window' in n.lower() or 'control' in n])"
-```
+1. 纯逻辑回归：.venv/Scripts/python.exe -m pytest -q tests/test_perf_compare.py。
+2. 真实对照完成后检查 tools/out/perf/compare.json：window_control.ok 必须为 true，comparisons 中每一对的 from 与 to 必须相等。
+3. 读不到日期时，window_control.problems 会明确列出 vanilla/其它臂的缺失字段；窗口不一致时会列出两侧起止日期。
 
-**定位（改的时候从这三处下手）**：口径页 §2.1 表第 ④ 行（`docs/design/exec/阶段4-压力剧本-口径.md` §2.1 的四层表）、`tools/probe/perf_compare.py` 的 `_wait_months`（`:316-339`）与 `run_once`（`:345-429`）、报告写盘处（`:717-718`）。
 
----
-
-## 附③ · 两条今天新撞出来的「读数口 / 证据」缺口（B104 / B105，2026-09-25，队长）
+## 附③ · 两条「读数口 / 证据」条目（B104 已落实，B105 保留）
 
 > 来源：`t64` 的首跑侦察局（`perf_compare.py … --stress`，1836.1 起、跑到游戏内 1837.5）**一行 `ZZPROBE STRESS;` 都没有**；追根因时引擎在 `error.log` 里点了两条名（`Unexpected token: zz_stress_tick` **1 行** + `Unknown effect c:TAG` **8 行**，两臂各自复现一次，签名完全一致）。缺陷本体与修法进 `t73`（生成器）/ `t83`（开局前闸门），**本节只记两个横向缺口**。
 > **P14**：新问题进这里、不展开讨论；**两条都不阻塞任何在跑的卡**（`t22` 走两臂对照，受控性由 `stress_control_verdict` 在跑完后判；`t73` 修好生成器后自报会真的出现）。
@@ -319,20 +308,14 @@ $d = "${env:ProgramFiles(x86)}\Steam\steamapps\common\Victoria 3\game\common\cou
 
 | # | 问题 | 我的推荐 | 何时需要 |
 |---|---|---|---|
-| B104 | **静默失效的「发现时刻」太晚：`error.log` 里那 9 行从第 1 分钟就在盘上，而判据要等整局跑完。** ① **已有的**：`stress_control_verdict`（`tools/probe/perf_compare.py:246-330`）在**跑完之后**比两臂自报序列，并且会判「两边都空 ⇒ 不能称受控」（`:297`）—— 这一层是好的，但它**只在烧完整局窗口之后**才出声（本局到游戏内 1837.5 才被人肉发现，两臂已各烧约 10 分钟）。② **缺的**：runner 里**没有任何地方扫我们自己文件的 `error.log` 行** —— 全仓 `HEALTH_ERROR_MARKERS`（`Unknown effect` / `cannot link` / `Unknown strategy` / `Failed to find country` / `Data error in loc string`）只在 **2 处**定义（`src/pdx/ab.py:857`、`src/pdx/h1.py:390`），`tools/probe/perf_compare.py` 里 **0 处**使用；它只按产物目录名判「挂没挂上」（`:208-211` 的 `OURS_DST.name`）。③ **开局前那一层今天只覆盖 AB 探针**：`src/pdx/preflight.py:329` 取的是 `ab_probe.build().files` ⇒ 压力剧本的产物**从来没被 lint 过**（**`t83` 正在补**）。 | 两处、都**别新写字符串**（P9）：(a) 把既有的 `HEALTH_ERROR_MARKERS` 接进 runner 的**每臂收尾**，命中且同行提到我们命名空间 ⇒ 出声失败（哪怕只 warn 级，也要在报告里留痕）；(b) 更早一层 —— **起游戏之前**就能判的交给 `t83` 的 preflight 规则（on_action 块内键合法性 + `if` 必须带 `limit`），这一层**零窗口成本**。**顺序建议**：先 `t83`（开局前）、后 runner 侧（对局中）—— 前者正好挡住本类缺陷，后者只对「引擎没报错但行为不符预期」那一类有用。 | 与任何「要烧实机窗口」的卡**同时**都值得有：本类缺陷的代价是整局窗口（本局两臂 ≈20 分钟 + 两次起游戏）。**无卡**：`tools/probe/perf_compare.py` 现在归 `t71` 独占，等那条路径锁排空再顺手做。 |
-| B105 | **引擎对 `scripted_effects` 报的行号偏移不恒定 ⇒ 不能当锚**（给 B84 添第 4 个数据点，并采纳它给出的第二个选项）。今天实测：引擎报 `Unknown effect c:GBR at common/scripted_effects/zz_stress_effects.txt:121`，而生成物里 `c:GBR ?= this` 实际在 **`:126`** ⇒ **Δ=5**；B84（2026-09-23）记的两个是 **Δ6 / Δ8**；同一时期 `common/on_actions/zz_probe_ab_on_actions.txt` 的行号却**逐行对上**（`docs/design/exec/阶段3-实验记录.md:118`、`docs/design/exec/收口清单.md:319-324` 六条来源行）。⇒ 三个 Δ 互不相等，**偏移不恒定**（成因仍未查；B84 原话是「要么查清偏移规则、要么在口径里写明只有 `on_actions` 的行号可信」）。 | **采纳第二个选项**：在口径/纪律里写明「**`scripted_effects`（以及所有非 `on_actions` 的脚本文件）的引擎行号不可当证据**，定位一律按**内容锚**（把引擎报的那句原文拿去 grep 生成物）」；今天 `t73` 的卡与台账 `03:12:10` / `03:16:07` 两行都是按内容锚写的。真要查清成因，成本明显高于收益（要引擎侧实验），**不建议现在做**。 | 任何时候有人想拿「引擎报的行号」当证据时（本仓至少两处引用过）。**无卡**：属口径纪律，等哪张卡路过 `docs/design/exec/*` 时顺手写；**本条不阻塞任何卡**。 |
+| B104 | 性能跑者发现本 mod 的 error.log 报错太晚：历史实现要等整局结束才看到错误。 | 已落实（2026-10-02）：scan_game_errors 复用 game_auto.our_error_lines / benign_error_lines，_wait_months 每轮扫描轮转日志，命中真实错误立即提前停止；报告记录错误行、无害 *_goal 行、日志可读性和停止原因，report_table 将该臂标为不可用于性能结论。 | 与任何实机性能臂同时生效；未生成或不可读的 error.log 也会使该臂门禁失败。 |
+| B105 | **引擎对 `scripted_effects` 报的行号偏移不恒定 ⇒ 不能当锚**（给 B84 添第 4 个数据点，并采纳它给出的第二个选项）。今天实测：引擎报 `Unknown effect c:GBR at common/scripted_effects/zz_stress_effects.txt:121`，而生成物里 `c:GBR ?= this` 实际在 **`:126`** ⇒ **Δ=5**；B84（2026-09-23）记的两个是 **Δ6 / Δ8**；同一时期 `common/on_actions/zz_probe_ab_on_actions.txt` 的行号却**逐行对上**（`docs/design/exec/阶段3-实验记录.md:118`、`docs/design/exec/收口清单.md:319-324` 六条来源行）。⇒ 三个 Δ 互不相等，**偏移不恒定**（成因仍未查；B84 原话是「要么查清偏移规则、要么在口径里写明只有 `on_actions` 的行号可信」）。 | **采纳第二个选项**：在口径/纪律里写明「**`scripted_effects`（以及所有非 `on_actions` 的脚本文件）的引擎行号不可当证据**，定位一律按**内容锚**（把引擎报的那句原文拿去 grep 生成物）」；今天 `t73` 的卡与台账 `03:12:10` / `03:16:07` 两行都是按内容锚写的。真要查清成因，成本明显高于收益（要引擎侧实验），**不建议现在做**。 | 任何时候有人想拿「引擎报的行号」当证据时（本仓至少两处引用过）。**无卡**：属口径纪律，等哪张卡路过 `docs/design/exec/*` 时顺手写；**本条不阻塞任何卡**。  ✅ 已落实（2026-10-02：非 on_actions 文件统一按内容锚定位，已写入自动化范式与收口规程） |
 
-**复算入口**（只读、秒级；2026-09-25 由队长逐条跑过）：
+**复算入口**（使用仓库 .venv 的 Python）：
 
-```powershell
-# ① B104：marker 常量只在两处定义（应打 2），压力跑者一处都没用（应打 0）
-(Select-String -Path tools\pdx\ab.py,tools\pdx\h1.py -Pattern 'HEALTH_ERROR_MARKERS = \(').Count
-(Select-String -Path tools\probe\perf_compare.py -Pattern 'HEALTH_ERROR_MARKERS').Count
-# ② B104：跑者只判「挂没挂上」（产物目录名）+ 受控性判据在跑完之后
-Select-String -Path tools\probe\perf_compare.py -Pattern 'OURS_DST\.name|不能称受控' | ForEach-Object { "$($_.LineNumber): $($_.Line.Trim())" }
-# ③ B105：引擎报的行 vs 文件里那一行的内容（部署产物仍是改前那份时才有意义；t73 落地后要重测）
-Select-String -Path "$env:USERPROFILE\Documents\Paradox Interactive\Victoria 3\mod\zz_stress_scenario\common\scripted_effects\zz_stress_effects.txt" -Pattern 'c:GBR \?= this' | ForEach-Object { "$($_.LineNumber): $($_.Line.Trim())" }
-```
+1. 纯逻辑回归：.venv/Scripts/python.exe -m pytest -q tests/test_perf_compare.py。
+2. 查看 tools/probe/perf_compare.py：必须能看到 scan_game_errors、window_control_verdict，以及 report_table 对 performance_usable 的过滤。
+3. B105 的内容锚纪律仍按具体生成文件原文 grep，不能把引擎行号当成稳定坐标。
 
 **定位（改的时候从这三处下手）**：`tools/probe/perf_compare.py` 的受控性一节（`:216-330`）与每臂收尾、`src/pdx/ab.py:857` / `src/pdx/h1.py:390` 的常量（**单一来源，别复制**）、`src/pdx/preflight.py:329`（`t83` 的活）。
 

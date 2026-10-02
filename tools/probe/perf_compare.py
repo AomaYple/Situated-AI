@@ -161,6 +161,8 @@ class PerfCleanup:
     restore_dir: Path | None = None
     path_backups: dict[Path, Path] = field(default_factory=dict)
     cleaned: bool = False
+    running: bool = False
+    deferred_signals: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     archived_logs: list[str] = field(default_factory=list)
     reason: str = ""
@@ -208,27 +210,34 @@ class PerfCleanup:
 
     def run(self, *, reason: str) -> tuple[str, ...]:
         """执行一次幂等收尾，并返回所有收尾错误。"""
-        if self.cleaned:
+        if self.cleaned or self.running:
             return tuple(self.errors)
-        self.cleaned = True
+        self.running = True
         self.reason = reason
-        self._step("终止本次游戏", self.killer)
-        self._step("恢复 content_load.json", self._restore_content)
-        for path in self.generated_paths:
-            self._step(f"删除运行产物 {path.name}", lambda path=path: self._remove_path(path))
-        for path, backup in self.path_backups.items():
-            self._step(
-                f"恢复原有目录 {path.name}",
-                lambda path=path, backup=backup: shutil.move(str(backup), str(path)),
-            )
-        restore_dir = self.restore_dir
-        if restore_dir is not None and restore_dir.exists():
-            self._step("删除临时隔离区", lambda: shutil.rmtree(restore_dir))
-        moved = self._step("归档本次日志", _quarantine_logs)
-        if isinstance(moved, list):
-            self.archived_logs.extend(str(item) for item in moved)
-        self._step("删除 content_load 备份", lambda: self.backup_path.unlink(missing_ok=True))
-        self._write_report()
+        try:
+            self._step("终止本次游戏", self.killer)
+            self._step("恢复 content_load.json", self._restore_content)
+            for path in self.generated_paths:
+                self._step(
+                    f"删除运行产物 {path.name}",
+                    lambda path=path: self._remove_path(path),
+                )
+            for path, backup in self.path_backups.items():
+                self._step(
+                    f"恢复原有目录 {path.name}",
+                    lambda path=path, backup=backup: shutil.move(str(backup), str(path)),
+                )
+            restore_dir = self.restore_dir
+            if restore_dir is not None and restore_dir.exists():
+                self._step("删除临时隔离区", lambda: shutil.rmtree(restore_dir))
+            moved = self._step("归档本次日志", _quarantine_logs)
+            if isinstance(moved, list):
+                self.archived_logs.extend(str(item) for item in moved)
+            self._step("删除 content_load 备份", lambda: self.backup_path.unlink(missing_ok=True))
+        finally:
+            self.running = False
+            self.cleaned = True
+            self._write_report()
         return tuple(self.errors)
 
     def _write_report(self) -> None:
@@ -240,6 +249,7 @@ class PerfCleanup:
                     {
                         "reason": self.reason,
                         "cleaned": self.cleaned,
+                        "deferred_signals": list(self.deferred_signals),
                         "errors": list(self.errors),
                         "archived_logs": list(self.archived_logs),
                         "restored_paths": [str(path) for path in self.path_backups],
@@ -274,7 +284,11 @@ def _install_cleanup_handlers(cleanup: PerfCleanup) -> Callable[[], None]:
     previous: dict[int, object] = {}
 
     def handle(signum: int, _frame: object) -> None:
-        cleanup.run(reason=signal.Signals(signum).name)
+        name = signal.Signals(signum).name
+        if cleanup.running:
+            cleanup.deferred_signals.append(name)
+            return
+        cleanup.run(reason=name)
         if signum == getattr(signal, "SIGINT", -1):
             raise KeyboardInterrupt
         raise SystemExit(128 + signum)
@@ -597,33 +611,234 @@ def stress_control_verdict(reports: Sequence[dict[str, object]]) -> StressContro
     return StressControl(ok=not problems, pairs=len(by_index), problems=tuple(problems))
 
 
+@dataclass(frozen=True, slots=True)
+class ErrorScan:
+    """本次性能臂的 error.log 扫描结果。"""
+
+    readable: bool | None
+    files: tuple[str, ...] = ()
+    unreadable: tuple[str, ...] = ()
+    errors: tuple[str, ...] = ()
+    benign: tuple[str, ...] = ()
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "readable": self.readable,
+            "files": list(self.files),
+            "unreadable": list(self.unreadable),
+            "errors": list(self.errors),
+            "benign": list(self.benign),
+        }
+
+
+def scan_game_errors(directory: Path | None = None) -> ErrorScan:
+    """读取本次会话的 error.log 及轮转副本，复用 game_auto 的分类口径。
+
+    readable=None 表示日志尚未生成；有文件但任一文件无法读取时为 False。
+    带我们命名空间的真实错误进入 errors，已知无害的 *_goal redundant 行进入 benign，
+    两者不混淆。
+    """
+    base = LOGS if directory is None else directory
+    paths = ga.error_logs() if directory is None else ga.rotated_logs(base, "error")
+    if not paths:
+        return ErrorScan(readable=None)
+    files: list[str] = []
+    unreadable: list[str] = []
+    errors: list[str] = []
+    benign: list[str] = []
+    for path in paths:
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+        except (OSError, UnicodeError) as exc:
+            unreadable.append(f"{path}: {type(exc).__name__}: {exc}")
+            continue
+        files.append(str(path))
+        errors.extend(ga.our_error_lines(content))
+        benign.extend(ga.benign_error_lines(content))
+    return ErrorScan(
+        readable=not unreadable,
+        files=tuple(files),
+        unreadable=tuple(unreadable),
+        errors=tuple(errors),
+        benign=tuple(benign),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class WindowControl:
+    """两臂是否实际跑过同一个游戏日期窗口。"""
+
+    ok: bool
+    pairs: int
+    comparisons: tuple[dict[str, object], ...] = ()
+    problems: tuple[str, ...] = ()
+
+    def describe(self) -> str:
+        if self.ok:
+            return f"✅ 窗口可比：{self.pairs} 对臂的起止日期逐字相等"
+        return "❌ 窗口不可比：" + "；".join(self.problems)
+
+
+def _window_date(advanced: object, key: str) -> str | None:
+    if not isinstance(advanced, dict):
+        return None
+    value = advanced.get(key)
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    if not value or value.startswith("<"):
+        return None
+    return value
+
+
+def window_control_verdict(reports: Sequence[dict[str, object]]) -> WindowControl:
+    """按实验序号比较 vanilla 与其它每一臂的 advanced.from/to。
+
+    日期缺失、窗口错误标记和日期不一致分别报出；不会把缺失值当成相等，
+    也不会重新采集一份日期数据。
+    """
+    by_index: dict[int, dict[str, object]] = {}
+    for report in reports:
+        index = report.get("index")
+        key = index if isinstance(index, int) else 0
+        by_index.setdefault(key, {})[str(report.get("label"))] = report.get("advanced")
+
+    comparisons: list[dict[str, object]] = []
+    problems: list[str] = []
+    pairs = 0
+    for key in sorted(by_index):
+        arms = by_index[key]
+        baseline = arms.get(VANILLA_LABEL)
+        if baseline is None:
+            problems.append(f"#{key}：没有 {VANILLA_LABEL} 那一局 ⇒ 无从配对")
+            continue
+        labels = sorted(label for label in arms if label != VANILLA_LABEL)
+        if not labels:
+            problems.append(f"#{key}：没有可与 {VANILLA_LABEL} 比较的其它臂")
+            continue
+        left_from = _window_date(baseline, "from")
+        left_to = _window_date(baseline, "to")
+        for label in labels:
+            right = arms[label]
+            right_from = _window_date(right, "from")
+            right_to = _window_date(right, "to")
+            missing: list[str] = []
+            if left_from is None:
+                missing.append(f"{VANILLA_LABEL}.from")
+            if left_to is None:
+                missing.append(f"{VANILLA_LABEL}.to")
+            if right_from is None:
+                missing.append(f"{label}.from")
+            if right_to is None:
+                missing.append(f"{label}.to")
+            comparison: dict[str, object] = {
+                "index": key,
+                "from": {VANILLA_LABEL: left_from, label: right_from},
+                "to": {VANILLA_LABEL: left_to, label: right_to},
+                "comparable": not missing and left_from == right_from and left_to == right_to,
+            }
+            comparisons.append(comparison)
+            if missing:
+                problems.append(
+                    f"#{key}：{label} 与 {VANILLA_LABEL} 缺少日期：{', '.join(missing)}"
+                )
+                continue
+            pairs += 1
+            if left_from != right_from or left_to != right_to:
+                problems.append(
+                    f"#{key}：{label} 与 {VANILLA_LABEL} 窗口不同："
+                    f"{VANILLA_LABEL}={left_from}→{left_to}，{label}={right_from}→{right_to}"
+                )
+    return WindowControl(
+        ok=not problems and pairs > 0,
+        pairs=pairs,
+        comparisons=tuple(comparisons),
+        problems=tuple(problems),
+    )
+
+
+def _advanced_payload(
+    from_tick: str,
+    to_tick: str,
+    days: object,
+    scan: ErrorScan,
+    **extra: object,
+) -> dict[str, object]:
+    result: dict[str, object] = {
+        "from": from_tick,
+        "to": to_tick,
+        "days": days,
+        "error_log_readable": scan.readable,
+        "error_files": list(scan.files),
+        "error_log_unreadable": list(scan.unreadable),
+        "error_lines": list(scan.errors),
+        "benign_error_lines": list(scan.benign),
+    }
+    result.update(extra)
+    return result
+
+
 def _wait_months(hwnd: int, months: float, *, timeout: float = 900.0) -> dict[str, object]:
-    """跑到游戏时间前进 ``months`` 个月（判据是**游戏内日期**，不是墙钟）。"""
+    """跑到游戏时间前进 months 个月，并在发现本 mod 报错时提前停止。"""
     start = ga.tick_mark()
     start_day = ga.tick_day(start.tick)
     target = months * MONTH_DAYS
     last = start_day
+    latest = scan_game_errors()
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        latest = scan_game_errors()
+        if latest.errors:
+            return _advanced_payload(
+                start.tick,
+                ga.tick_mark().tick,
+                last,
+                latest,
+                stopped_early=True,
+                stop_reason="our_error_log",
+            )
         if not ga._live_window(hwnd):
-            return {
-                "from": start.tick,
-                "to": "<窗口没了或换了>",
-                "days": last,
-                "window_gone": True,
-            }
+            return _advanced_payload(
+                start.tick,
+                "<窗口没了或换了>",
+                last,
+                latest,
+                window_gone=True,
+            )
         mark = ga.tick_mark()
         day = ga.tick_day(mark.tick)
         if day is not None and start_day is not None and day - start_day >= target:
-            return {"from": start.tick, "to": mark.tick, "days": round(day - start_day, 1)}
+            latest = scan_game_errors()
+            if latest.errors:
+                return _advanced_payload(
+                    start.tick,
+                    mark.tick,
+                    round(day - start_day, 1),
+                    latest,
+                    stopped_early=True,
+                    stop_reason="our_error_log",
+                )
+            return _advanced_payload(
+                start.tick,
+                mark.tick,
+                round(day - start_day, 1),
+                latest,
+            )
         last = day
         time.sleep(5.0)
-    return {
-        "from": start.tick,
-        "to": ga.tick_mark().tick,
-        "days": last,
-        "timeout": True,
-    }
+    end = ga.tick_mark()
+    latest = scan_game_errors()
+    if latest.errors:
+        return _advanced_payload(
+            start.tick,
+            end.tick,
+            last,
+            latest,
+            stopped_early=True,
+            stop_reason="our_error_log",
+            timeout=True,
+        )
+    return _advanced_payload(start.tick, end.tick, last, latest, timeout=True)
 
 
 def run_once(
@@ -670,6 +885,20 @@ def run_once(
     with suppress(ga.CaptureFailedError):
         ga.save_shot(ga.screenshot(hwnd), f"perf-{label}-after-dump")
     time.sleep(3.0)
+    error_scan = scan_game_errors()
+    invalid_reasons: list[str] = []
+    if bool(advanced.get("stopped_early")):
+        invalid_reasons.append(str(advanced.get("stop_reason") or "提前停止"))
+    if error_scan.errors:
+        invalid_reasons.append("error.log 命中属于本 mod 的真实错误")
+    if error_scan.readable is not True:
+        invalid_reasons.append("error.log 不可读或尚未生成")
+    if error_scan.errors:
+        print(f"  ⚠️ 提前停止：error.log 命中 {len(error_scan.errors)} 行本 mod 错误")
+    elif error_scan.readable is not True:
+        print("  ⚠️ 性能臂不可判定：error.log 不可读或尚未生成")
+    elif error_scan.benign:
+        print(f"  已分类无害 error.log 行：{len(error_scan.benign)} 行")
     if not csv_path.is_file():
         raise ga.GameAutoError(
             f"{label}：dump 之后 {csv_path} 没出现 —— 控制台那条命令没生效"
@@ -698,6 +927,9 @@ def run_once(
         "summary": summary,
         "mounted": mounted,
         "ours_mounted": ours_mounted,
+        "error_scan": error_scan.as_dict(),
+        "performance_usable": not invalid_reasons,
+        "performance_invalid_reasons": invalid_reasons,
     }
     # 压力自报：只在 `--stress` 时读（默认两臂连这一趟 I/O 都不做 ⇒ 输出与从前一字不差）。
     if stress:
@@ -771,17 +1003,37 @@ def _delta(
 
 
 def report_table(reports: list[dict[str, object]]) -> dict[str, object]:
-    """把若干局折成一张对照表：每个 label 的**每一局**读数 + 均值（+ 差）。"""
-    table: dict[str, object] = {"runs": reports, "by_label": {}}
+    """把若干局折成一张对照表，过滤明确不可用于性能结论的臂。"""
+    table: dict[str, object] = {"runs": reports, "by_label": {}, "invalid_runs": []}
     by_label: dict[str, list[dict[str, float | None]]] = {}
+    invalid_runs: list[dict[str, object]] = []
     for report in reports:
         label = str(report["label"])
-        by_label.setdefault(label, []).append(
-            {
-                "per_frame_mean": _per_frame_mean(report.get("summary")),
-                "task_mean": _task_mean(Path(str(report["csv"])), WATCH_TASK),
-            }
+        usable_raw = report.get("performance_usable")
+        usable = True if usable_raw is None else bool(usable_raw)
+        csv_value = report.get("csv")
+        task_path = Path(str(csv_value)) if csv_value else None
+        task_mean = (
+            _task_mean(task_path, WATCH_TASK)
+            if usable and task_path is not None and task_path.is_file()
+            else None
         )
+        row = {
+            "per_frame_mean": _per_frame_mean(report.get("summary")),
+            "task_mean": task_mean,
+        }
+        if not usable:
+            invalid_runs.append(
+                {
+                    "label": label,
+                    "index": report.get("index"),
+                    "reasons": list(report.get("performance_invalid_reasons", []))
+                    if isinstance(report.get("performance_invalid_reasons"), list)
+                    else ["性能臂被标记为不可用"],
+                }
+            )
+            continue
+        by_label.setdefault(label, []).append(row)
     aggregate: dict[str, dict[str, float | None]] = {}
     for label, rows in by_label.items():
         for key in ("per_frame_mean", "task_mean"):
@@ -791,16 +1043,25 @@ def report_table(reports: list[dict[str, object]]) -> dict[str, object]:
             )
         aggregate[label]["runs"] = len(rows)
     table["by_label"] = aggregate
-    # 主量：`Δ_arm = M_ours − M_vanilla`（两臂时 from/to 就是 vanilla/ours，与从前一字不差）。
-    if VANILLA_LABEL in aggregate and OURS_LABEL in aggregate:
+    table["invalid_runs"] = invalid_runs
+    if (
+        VANILLA_LABEL in aggregate
+        and OURS_LABEL in aggregate
+        and aggregate[VANILLA_LABEL].get("runs", 0)
+        and aggregate[OURS_LABEL].get("runs", 0)
+    ):
         table["delta"] = _delta(
             aggregate[VANILLA_LABEL],
             aggregate[OURS_LABEL],
             from_label=VANILLA_LABEL,
             to_label=OURS_LABEL,
         )
-    # 第三臂（B27）：`Δ_tempo = M_tempo − M_vanilla`，口径 `阶段4-压力剧本-口径.md` §6。
-    if VANILLA_LABEL in aggregate and TEMPO_LABEL in aggregate:
+    if (
+        VANILLA_LABEL in aggregate
+        and TEMPO_LABEL in aggregate
+        and aggregate[VANILLA_LABEL].get("runs", 0)
+        and aggregate[TEMPO_LABEL].get("runs", 0)
+    ):
         table["delta_tempo"] = _delta(
             aggregate[VANILLA_LABEL],
             aggregate[TEMPO_LABEL],
@@ -980,11 +1241,18 @@ def main() -> int:
         print(f"  月数 {report['months']}｜{report['advanced']}")
         summary = report["summary"]
         if isinstance(summary, dict):
+            csv_value = report.get("csv")
+            task_mean = _task_mean(Path(str(csv_value)), WATCH_TASK) if csv_value else None
             print(
                 f"  帧 {summary.get('frames')}｜每帧合计均值 {_per_frame_mean(summary)} ms"
-                f"｜{WATCH_TASK} 均值 {_task_mean(Path(str(report['csv'])), WATCH_TASK)} ms"
+                f"｜{WATCH_TASK} 均值 {task_mean} ms"
             )
         print(f"  我们的 mod 挂上了吗：{report.get('ours_mounted')}")
+        if report.get("performance_usable") is False:
+            print(
+                "  ⚠️ 该性能臂不可用于结论："
+                + "；".join(str(item) for item in report.get("performance_invalid_reasons", []))
+            )
     print("\n--- 汇总 ---")
     for label, row in table["by_label"].items():  # type: ignore[union-attr]
         print(f"  {label}：{row}")
@@ -992,6 +1260,21 @@ def main() -> int:
         print(f"  差（{table['delta']}）")  # type: ignore[index]
     if "delta_tempo" in table:
         print(f"  第三臂差（{table['delta_tempo']}）")  # type: ignore[index]
+
+    invalid_runs = table.get("invalid_runs", [])
+    if invalid_runs:
+        print(f"\n===== 性能结论门禁：{len(invalid_runs)} 个臂不可用 =====")
+        for item in invalid_runs:
+            print(f"  {item}")
+
+    # 窗口日期判据：同一序号的每个非 vanilla 臂都必须与 vanilla 逐字相等。
+    window = window_control_verdict(reports)
+    table["window_control"] = {
+        "ok": window.ok,
+        "pairs": window.pairs,
+        "problems": list(window.problems),
+        "comparisons": list(window.comparisons),
+    }
 
     # 受控性：**跑完才判**，判据与每局的原始序列一起落盘（可复核，不靠终端里的字）。
     control: StressControl | None = None
@@ -1009,6 +1292,8 @@ def main() -> int:
     out = OUT_DIR / "compare.json"
     out.write_text(json.dumps(table, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n证据：{out}")
+    print("\n===== 窗口可比性 =====")
+    print("  " + window.describe())
     if control is not None:
         print("\n===== 受控性（压力自报比对）=====")
         for report in reports:
@@ -1018,6 +1303,8 @@ def main() -> int:
         if not control.ok:
             print("  ⇒ **这一轮不能报「受控」**：先修上面那几条，或按「非受控」写结论（P13）")
             return 1
+    if invalid_runs or not window.ok:
+        return 1
     return 0
 
 

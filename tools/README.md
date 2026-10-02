@@ -72,7 +72,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `cli.py` | 唯一的命令行入口，`v3` 的全部子命令 |
 
 `tools/probe/` 下是**一次性但仍在用**的实测脚本（不挂 `v3` 子命令，因为都要开游戏或要人看着跑）：
-`perf_compare.py`（性能 A/B，`--stress` 换标准压力剧本）、`stage3_rerun.py`（档案探针 A/B 重跑）、
+`perf_compare.py`（性能 A/B，`--stress` 换标准压力剧本；每轮扫描本 mod 的 `error.log`，命中真实错误提前停止并在 `compare.json` 标记不可用；`window_control_verdict` 校验两臂 `advanced.from/to`，窗口不可比时退出 1）、`stage3_rerun.py`（档案探针 A/B 重跑）、
 `console_probe.py`、`flow_with_cleanup.py`、`measure_capture_cost.py`、`perf_mod.py`，
 以及 `audit_repo.py` —— **那五条口径的可执行清单**（Python 化 / 成熟库 / 测试与覆盖 / 性能基准 / 默认并行），
 只读仓库、不读游戏，收口时跑一次就知道还差什么。
@@ -205,7 +205,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-87 个测试文件；2174 条用例（`pytest --collect-only` 实测），
+87 个测试文件；2178 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -488,7 +488,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 39 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：2174 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：2178 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
