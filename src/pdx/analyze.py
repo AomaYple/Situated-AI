@@ -47,7 +47,7 @@ from .localization import LocalizationReport, extract_localization
 from .model import Assignment, Block, ParsedFile, Scalar
 from .mods import ModInfo, aggregate_prefixes, analyse_all
 from .parser import TOLERATED_ERRORS
-from .scan import DirStats, FileEntry, stats_for, subdir_stats, walk_files
+from .scan import DirStats, stats_for, subdir_stats, walk_files
 from .tabular import extract_tables
 
 if TYPE_CHECKING:
@@ -310,6 +310,17 @@ def _analyse_dlc(root: Path) -> list[DlcInfo]:
     return out
 
 
+def _iter_scriptable_files(root: Path):
+    """惰性产生某个内容根下需要深度解析的文件。"""
+    for f in walk_files(root):
+        try:
+            rel = f.path.relative_to(root)
+        except ValueError:
+            continue
+        if config.is_scriptable(rel.parts, f.suffix):
+            yield f
+
+
 def _scriptable_files(root: Path) -> list:
     """收集某个内容根下**需要深度解析**的文件。
 
@@ -317,31 +328,13 @@ def _scriptable_files(root: Path) -> list:
     ``gfx/``、``sound/``、``dlc/`` 等资产目录只做清单统计，不解析 ——
     目标不是读遍游戏，而是**提取所有与 mod 开发有关的信息**。
     """
-    out = []
-    for f in walk_files(root):
-        try:
-            rel = f.path.relative_to(root)
-        except ValueError:
-            continue
-        if config.is_scriptable(rel.parts, f.suffix):
-            out.append(f)
-    return out
+    return list(_iter_scriptable_files(root))
 
 
 def game_analysis(*, verbose: bool = False) -> GameAnalysis:
     """对游戏本体做分析。整棵树只遍历一次，只深度解析 mod 相关文件。"""
     ga = GameAnalysis(version=config.game_version())
     common_root = config.GAME / "common"
-
-    # ── 一次遍历：只解析可脚本化的文件 ───────────────────
-    targets: list[tuple[str, FileEntry]] = [
-        (name, f)
-        for name, root in CONTENT_ROOTS.items()
-        if root.is_dir()
-        for f in _scriptable_files(root)
-    ]
-    if verbose:
-        print(f"  [游戏] 待解析的 mod 相关文件：{len(targets):,} 个")
 
     per_common: dict[str, DirExtract] = {}
     per_script: dict[str, DirExtract] = {}
@@ -360,60 +353,69 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
         if d.is_dir():
             per_script[name] = DirExtract(name=name, path=d)
 
-    for i, (root_name, f) in enumerate(targets, 1):
-        try:
-            pf = parse_cached(f.path)
-        except Exception as exc:
-            ga.parse_errors.append((str(f.path), f"未捕获异常: {exc}"))
+    # ── 流式遍历：只解析可脚本化的文件 ───────────────────
+    # 旧实现先把所有 FileEntry 收进 targets，再开始解析；每个 xdist worker
+    # 都会常驻一份完整列表。现在边走边解析，避免把同一批路径和 stat 信息
+    # 在内存中保留到主循环结束。
+    parsed_count = 0
+    for root_name, root in CONTENT_ROOTS.items():
+        if not root.is_dir():
             continue
-
-        root = CONTENT_ROOTS[root_name]
-        try:
-            rel = f.path.relative_to(root)
-        except ValueError:
-            continue
-
-        # 原版是否使用功能前缀（含 jomini / clausewitz 层）
-        for a in pf.top_assignments:
-            if a.prefix:
-                ga.vanilla_prefixes[a.prefix] += 1
-
-        # game 与引擎层都做条目/字段级提取；分桶保留内容根，避免同名目录混淆。
-        if root_name != "game":
-            rel_top = rel.parts[0] if rel.parts else root_name
-            key = f"{root_name}/{rel_top}"
-            res = per_engine.get(key)
-            if res is None:
-                res = DirExtract(name=key, path=root / rel_top)
-                per_engine[key] = res
-            extract_file(pf, res)
-            continue
-
-        top = rel.parts[0] if rel.parts else ""
-        if top == "common":
-            # 散装文件（common/xxx.txt 直接放在 common 根下，不属于任何子目录）
-            # 注意 rel 是相对 GAME 的，所以散装文件形如 ("common", "xxx.txt")，
-            # 判据是 parts[1] 是不是目录，**不能**用 len(rel.parts) 判断。
-            if len(rel.parts) < 2 or not (common_root / rel.parts[1]).is_dir():
-                loose_common += 1
+        for f in _iter_scriptable_files(root):
+            parsed_count += 1
+            i = parsed_count
+            try:
+                pf = parse_cached(f.path)
+            except Exception as exc:
+                ga.parse_errors.append((str(f.path), f"未捕获异常: {exc}"))
                 continue
-            name = rel.parts[1]
-            res = per_common.get(name)
-            if res is None:
-                res = DirExtract(name=name, path=common_root / name)
-                per_common[name] = res
-            extract_file(pf, res)
-        elif top in config.SCRIPTABLE_DIRS:
-            # DLC 下按 ``dlc/<名称>`` 分桶 —— 全糊进一个 "dlc" 会丢掉
-            # 「是哪个 DLC 定义的」这个关键信息。
-            key = f"dlc/{rel.parts[1]}" if top == "dlc" and len(rel.parts) > 1 else top
-            res = per_script.get(key)
-            if res is None:
-                res = DirExtract(name=key, path=config.GAME / key)
-                per_script[key] = res
-            extract_file(pf, res)
-        if verbose and i % 1000 == 0:
-            print(f"    已解析 {i:,}/{len(targets):,} …")
+
+            try:
+                rel = f.path.relative_to(root)
+            except ValueError:
+                continue
+
+            # 原版是否使用功能前缀（含 jomini / clausewitz 层）
+            for a in pf.top_assignments:
+                if a.prefix:
+                    ga.vanilla_prefixes[a.prefix] += 1
+
+            # game 与引擎层都做条目/字段级提取；分桶保留内容根，避免同名目录混淆。
+            if root_name != "game":
+                rel_top = rel.parts[0] if rel.parts else root_name
+                key = f"{root_name}/{rel_top}"
+                res = per_engine.get(key)
+                if res is None:
+                    res = DirExtract(name=key, path=root / rel_top)
+                    per_engine[key] = res
+                extract_file(pf, res)
+                continue
+
+            top = rel.parts[0] if rel.parts else ""
+            if top == "common":
+                # 散装文件（common/xxx.txt 直接放在 common 根下，不属于任何子目录）
+                # 注意 rel 是相对 GAME 的，所以散装文件形如 ("common", "xxx.txt")，
+                # 判据是 parts[1] 是不是目录，**不能**用 len(rel.parts) 判断。
+                if len(rel.parts) < 2 or not (common_root / rel.parts[1]).is_dir():
+                    loose_common += 1
+                    continue
+                name = rel.parts[1]
+                res = per_common.get(name)
+                if res is None:
+                    res = DirExtract(name=name, path=common_root / name)
+                    per_common[name] = res
+                extract_file(pf, res)
+            elif top in config.SCRIPTABLE_DIRS:
+                # DLC 下按 ``dlc/<名称>`` 分桶 —— 全糊进一个 "dlc" 会丢掉
+                # 「是哪个 DLC 定义的」这个关键信息。
+                key = f"dlc/{rel.parts[1]}" if top == "dlc" and len(rel.parts) > 1 else top
+                res = per_script.get(key)
+                if res is None:
+                    res = DirExtract(name=key, path=config.GAME / key)
+                    per_script[key] = res
+                extract_file(pf, res)
+            if verbose and i % 1000 == 0:
+                print(f"    已解析 {i:,} …")
 
     ga.common = dict(sorted(per_common.items()))
     ga.scripts = dict(sorted(per_script.items()))
@@ -432,12 +434,14 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
             s = ga.roots[name]
             print(f"  [{name}] {s.files:,} 文件 / {s.size_mb:,} MB")
     # ── 本地化 ─────────────────────────────────────────
-    # 两件事分开做：``_analyse_localization`` 给出各语言的计数（快，
-    # 只看行数），``extract_localization`` 给出**完整键名清单**（慢一些，
-    # 实测 3.8 秒 / 14.5 万键）。后者此前完全没有，是覆盖面审计发现的
-    # 最大一处遗漏 —— 本地化对 mod 来说是最常用的东西。
-    ga.localization = _analyse_localization(config.GAME)
-    ga.localization_detail = extract_localization(config.GAME)
+    # 完整键名清单同时带有各语言的文件数和出现次数；摘要直接从这份报告
+    # 派生，避免为计数和 detail 分别读取整棵本地化树。
+    localization_detail = extract_localization(config.GAME)
+    ga.localization = {
+        lang: {"文件": values["文件"], "键": values["键出现次数"]}
+        for lang, values in localization_detail.by_lang.items()
+    }
+    ga.localization_detail = localization_detail
     if verbose:
         print(f"  [本地化] {len(ga.localization)} 种语言")
 

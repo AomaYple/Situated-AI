@@ -144,3 +144,6 @@ $RECYCLE.BIN/
 # 含本机硬件和墙钟读数；可复现的结论保存在审计报告。
 /tools/benchmarks/repo-audit-baseline.json
 /tools/benchmarks/repo-audit-modules.json
+
+# 实机运行产生的截图与临时取证，不作为源码交付物；需要留档时复制到外部证据目录。
+/evidence/

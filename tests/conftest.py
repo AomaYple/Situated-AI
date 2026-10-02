@@ -15,19 +15,78 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Iterator, Sequence
+from functools import lru_cache
+from typing import TYPE_CHECKING, overload
 
 import pytest
 
-from pdx import analyze
+from pdx import analyze, parallel
 from pdx import config as pdx_config
 from pdx.scan import walk_files
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+
+@lru_cache(maxsize=64)
+def _read_corpus_text(path: Path) -> tuple[str, str]:
+    return str(path), path.read_text(encoding="utf-8-sig", errors="replace")
+
+
+class LazyCorpusTexts(Sequence[tuple[str, str]]):
+    """真实语料的惰性只读序列。
+
+    旧 fixture 会把约 6250 个文件全文同时保存在每个 xdist worker 中。
+    这里只保留路径，按索引读取，且最多缓存 64 个文本；因此全量差分测试
+    仍然逐文件看到同样的 ``(路径, 文本)``，但不会把整棵语料树常驻内存。
+    """
+
+    def __init__(self, paths: Sequence[Path]) -> None:
+        self._paths = tuple(paths)
+
+    def _item(self, index: int) -> tuple[str, str]:
+        return _read_corpus_text(self._paths[index])
+
+    @overload
+    def __getitem__(self, index: int) -> tuple[str, str]: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[tuple[str, str]]: ...
+
+    def __getitem__(self, index: int | slice) -> tuple[str, str] | list[tuple[str, str]]:
+        if isinstance(index, slice):
+            return [self._item(i) for i in range(*index.indices(len(self)))]
+        if index < 0:
+            index += len(self)
+        if not 0 <= index < len(self):
+            raise IndexError(index)
+        return self._item(index)
+
+    def __len__(self) -> int:
+        return len(self._paths)
+
+    def __iter__(self) -> Iterator[tuple[str, str]]:
+        for index in range(len(self)):
+            yield self._item(index)
+
+
 #: 游戏内容层是否可用（mod 相关文件都在 game/ 下）
 GAME_OK = (pdx_config.GAME / "common").is_dir()
+
+
+@pytest.hookimpl(tryfirst=True, optionalhook=True)
+def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
+    """给 ``-n auto`` 加内存护栏，避免按逻辑 CPU 盲目复制重型 fixture。
+
+    没有游戏树时，集成用例会被跳过，内存开销很小，保留 CPU 并行度；
+    有游戏树时才按可用内存计算。``PYTEST_XDIST_AUTO_NUM_WORKERS`` 仍由
+    xdist 自己处理，项目专用的 ``SITAI_XDIST_WORKERS`` 可强制指定数量。
+    """
+    del config
+    if not GAME_OK:
+        return parallel.cpu_workers()
+    return parallel.auto_worker_count()
 
 
 def pytest_collection_modifyitems(config, items):
@@ -76,15 +135,17 @@ def corpus_files() -> list[Path]:
 
 
 @pytest.fixture(scope="session")
-def corpus_texts(corpus_files: list[Path]) -> list[tuple[str, str]]:
-    """语料文本，``(路径, 内容)``。只读一次，session 内共享。"""
-    out: list[tuple[str, str]] = []
-    for p in corpus_files:
+def corpus_texts(corpus_files: list[Path]) -> LazyCorpusTexts:
+    """语料文本，``(路径, 内容)``；按需读取并有界缓存。"""
+    readable: list[Path] = []
+    for path in corpus_files:
         try:
-            out.append((str(p), p.read_text(encoding="utf-8-sig", errors="replace")))
+            with path.open("rb"):
+                pass
         except OSError:
             continue
-    return out
+        readable.append(path)
+    return LazyCorpusTexts(readable)
 
 
 # ── 全量分析结果（整轮只跑一次）────────────────────────────

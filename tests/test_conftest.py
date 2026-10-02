@@ -24,10 +24,30 @@ import subprocess
 import sys
 
 import pytest
+from conftest import LazyCorpusTexts
 
 from pdx import config
 
 pytestmark = pytest.mark.unit
+
+
+def test_真实语料序列支持索引切片和负索引(tmp_path) -> None:
+    first = tmp_path / "a.txt"
+    second = tmp_path / "b.txt"
+    first.write_text('l_english:\n A:0 "a"\n', encoding="utf-8")
+    second.write_text('l_english:\n B:0 "b"\n', encoding="utf-8")
+    corpus = LazyCorpusTexts([first, second])
+
+    assert len(corpus) == 2
+    assert corpus[0][0] == str(first)
+    assert corpus[-1] == (str(second), 'l_english:\n B:0 "b"\n')
+    assert [item[0] for item in corpus[::2]] == [str(first)]
+
+
+def test_真实语料序列越界时报IndexError(tmp_path) -> None:
+    corpus = LazyCorpusTexts([tmp_path / "missing.txt"])
+    with pytest.raises(IndexError):
+        _ = corpus[1]
 
 
 def _run_collect(env_overrides: dict[str, str]) -> subprocess.CompletedProcess[str]:

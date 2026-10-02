@@ -166,6 +166,12 @@ def _scan_prefixes(path: Path, rel_str: str, vanilla: Path, info: ModInfo) -> No
         return
 
     vanilla_file = vanilla / rel_str
+    vanilla_keys: set[str] = set()
+    if vanilla_file.is_file():
+        try:
+            vanilla_keys = set(parse_cached(vanilla_file).top_keys)
+        except Exception:
+            vanilla_keys = set()
     rel_dir = str(PurePosixPath(rel_str).parent)
     for a in pf.top_assignments:
         if a.prefix:
@@ -175,12 +181,7 @@ def _scan_prefixes(path: Path, rel_str: str, vanilla: Path, info: ModInfo) -> No
                 info.prefix_samples.append((a.prefix, a.key, rel_str))
 
         # 归类到「改了原版条目」还是「新增条目」
-        if vanilla_file.is_file():
-            try:
-                vpf = parse_cached(vanilla_file)
-                vanilla_keys = set(vpf.top_keys)
-            except Exception:
-                vanilla_keys = set()
+        if vanilla_keys:
             bucket = info.touched_vanilla if a.key in vanilla_keys else info.added_entries
         else:
             bucket = info.added_entries
