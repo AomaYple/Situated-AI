@@ -13,6 +13,13 @@ Victoria 3 的 AI 相关 mod 开发项目。
 > 铁律、一批踩过的雷、开场命令）。文档总览见 [`docs/README.md`](docs/README.md)；
 > 历史交接页 [`docs/design/exec/接续说明.md`](docs/design/exec/接续说明.md) 仍在，但以新接手文档为准。
 
+工程测试、快照、CI 摘要和自动化状态轨迹的冻结口径见
+[`docs/design/exec/工程基线-1.0.md`](docs/design/exec/工程基线-1.0.md)。本地离线闭环可直接运行：
+
+```text
+.venv\Scripts\python.exe tools\ci\run_check.py baseline
+```
+
 ## 环境
 
 | 项目 | 值 |
@@ -78,7 +85,7 @@ python3 -m venv .venv
 ```
 
 游戏位置由 `V3_ROOT` 配置；没有游戏时使用离线快照路径。检查统一使用
-`python tools/ci/run_check.py <lint|format|types|test|offline|encoding>`，入口会优先选择
+`python tools/ci/run_check.py <lint|format|types|test|test-offline|offline|encoding>`，入口会优先选择
 当前平台的仓库 `.venv`。Windows 的 `requirements.lock` 用于该平台的依赖对账，
 macOS / Linux 从 `pyproject.toml` 安装对应平台依赖。
 
@@ -162,7 +169,8 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2196 条**用例（`pytest --collect-only` 实测；整套读数见 `docs/reports/` 的全量基线） |
+| 测试 | **2214 条**用例（`pytest --collect-only` 实测；整套读数见 `docs/reports/` 的全量基线） |
+| 测试文件 | **92 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | **89.02%**（`v3 cov` 实测；门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | **3,962** 个脚本文件（`game\` 下 `.txt` 3,758 + `.gui` 204，即 `pdx.cache` 的解析条数）+ **1,878** 个本地化 `.yml` |

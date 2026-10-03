@@ -2616,6 +2616,9 @@ class TestStepOrder:
         assert result.rate_ok is True
         assert result.pressed is True
         assert result.handover.restored is True
+        assert result.trace is not None
+        assert result.trace.complete is True
+        assert result.as_dict()["automation_phase"] == "complete"
 
     def test_已经在跑就不按空格(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """空格是**暂停开关**，不是"开始"：时间已经在走时按下去会把游戏停住。"""

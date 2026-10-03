@@ -148,7 +148,11 @@ LAUNCHER_MAX_MB = 24.0
 ALIVE_RATIO = 0.3
 
 #: 预算：每 worker 峰值上限（MiB）。定义与 why 见 docs/design/exec/并行测试内存基线.md §4。
-BUDGET_PER_WORKER_MB = 512.0
+# 运行预算与 pdx.parallel.DEFAULT_WORKER_MIB 保持同一口径。旧版 512 MiB
+# 仍作为 one biggest 的单文件瞬时回归阈值；完整分析 worker 还会同时持有
+# ga/ma 结果和有界解析缓存。词法器去掉长字符串回溯后，完整 worker 的
+# 实测峰值约 1.35 GiB，因此 1536 MiB 是有证据的运行门槛，而非掩盖异常。
+BUDGET_PER_WORKER_MB = 1_536.0
 
 #: 预算：固定的车头开销（MiB）—— controller 收集全部用例 + 采集输出 + 结果汇总。
 #: 整套峰值上限写成 ``BUDGET_HEAD_MB + n × BUDGET_PER_WORKER_MB``：

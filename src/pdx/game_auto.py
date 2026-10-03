@@ -84,6 +84,7 @@ import psutil
 from PIL import Image, ImageGrab
 
 from . import config, experiments
+from .automation_contract import AutomationPhase, AutomationTrace
 from .console import enable_utf8_stdio
 from .platform_support import UnavailableWindowsModule, WindowsOnlyError
 
@@ -2990,6 +2991,8 @@ class SessionStart:
     background: Advance | None = None
     #: 官方套件的判定（**引擎自己判的**）—— 只有要求等判定时才会填。
     verdict: SuiteVerdict | None = None
+    #: 标准流程的不可变阶段轨迹，便于实机报告定位最后完成的步骤。
+    trace: AutomationTrace | None = None
 
     def as_dict(self) -> dict[str, object]:
         """扁平化（CLI 打印 / 探针记档用）。"""
@@ -3016,6 +3019,9 @@ class SessionStart:
             out["background_advanced"] = self.background.advanced
         if self.verdict is not None:
             out.update(self.verdict.as_dict())
+        if self.trace is not None:
+            out["automation_phase"] = self.trace.current.value
+            out["automation_phases"] = cast("list[str]", self.trace.as_dict()["phases"])
         return out
 
 
@@ -3695,6 +3701,7 @@ def start_session(
 
     失败即抛错，**不返回半个结果**（P13）。这里没有回落链 —— 见模块开头的设计口径。
     """
+    trace = AutomationTrace()
     try:
         hwnd = _route_to_foreground(hwnd, previous, force=force)
     except ForegroundLostError as exc:
@@ -3710,9 +3717,12 @@ def start_session(
             # 重启过 ⇒ 之前那份 boot-settle 读数已经作废：**重新量一次**，
             # 宁可多等一轮，也不把旧读数和新局面拼在一起。
             settle = wait_for_boot_settle()
+    trace = trace.advance(AutomationPhase.FOREGROUND_READY)
     boot = settle if settle is not None else wait_for_boot_settle()
+    trace = trace.advance(AutomationPhase.BOOT_SETTLED)
     match, hwnd = _step_look(hwnd, threshold=threshold, lobby_timeout=lobby_timeout, force=force)
     _step_observe(hwnd, match, settle_timeout=settle_timeout, force=force)
+    trace = trace.advance(AutomationPhase.OBSERVE_SELECTED)
 
     rate = 0.0
     attempts = 0
@@ -3723,6 +3733,7 @@ def start_session(
         source, point = _step_speed(
             hwnd, speed_xy=speed_xy, threshold=threshold, index=0, force=force
         )
+    trace = trace.advance(AutomationPhase.SPEED_SET)
 
     unpause_note, pressed, advance = _step_unpause(
         hwnd,
@@ -3731,6 +3742,7 @@ def start_session(
         key=unpause_key,
         force=force,
     )
+    trace = trace.advance(AutomationPhase.RUNNING)
     _shot_or_note(hwnd, "12-after-space")
 
     # 速率：**在切回后台之前**先量一次 —— 这时窗口还在前台、像素与输入都最干净；
@@ -3745,6 +3757,7 @@ def start_session(
             rate = measure_rate(measure_seconds)
 
     handover = switch_to_background(hwnd, previous, minimize=not keep_foreground)
+    trace = trace.advance(AutomationPhase.BACKGROUND)
     if verify_minimized and handover.minimized:
         after = measure_rate(measure_seconds)
         if after <= 0.0:
@@ -3761,6 +3774,8 @@ def start_session(
             )
             after = measure_rate(measure_seconds)
         rate = after if after > 0.0 else rate
+    trace = trace.advance(AutomationPhase.VERIFIED)
+    trace = trace.advance(AutomationPhase.COMPLETE)
 
     return SessionStart(
         hwnd=hwnd,
@@ -3777,6 +3792,7 @@ def start_session(
         attempts=attempts,
         handover=handover,
         tick=tick_mark().tick,
+        trace=trace,
     )
 
 
@@ -4088,6 +4104,8 @@ __all__ = [
     "TOP_RIGHT_ROI",
     "UI_DIR",
     "Advance",
+    "AutomationPhase",
+    "AutomationTrace",
     "BootSettle",
     "CaptureFailedError",
     "CursorPark",

@@ -73,10 +73,27 @@ jobs:
       - name: mypy —— 类型检查
         run: mypy
 
+      - name: 创建测试产物目录
+        run: python -c "from pathlib import Path; Path('tools/out/ci').mkdir(parents=True, exist_ok=True)"
+
       - name: pytest —— 不依赖游戏的用例
         # 上一步已经覆盖 `docs` / `contract` / `property` 这些标记；
         # 唯二被排除的是 integration（无游戏）与要显式传 -n0 的 benchmark。
-        run: python -m pytest -m "not integration and not benchmark"
+        run: >-
+          python -m pytest -m "not integration and not benchmark"
+          --junitxml=tools/out/ci/test-results.xml
+
+      - name: 测试跳过项 —— 分类并拒绝未知原因
+        run: >-
+          python tools/ci/test_summary.py tools/out/ci/test-results.xml
+          --output tools/out/ci/test-summary.json
+
+      - name: 测试摘要归档
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-summary-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: tools/out/ci/
 
       - name: 性能分片编排器 —— 确认每片覆盖真实测试文件
         run: python -m pytest tests/test_perf_baseline.py -q -o addopts=""
