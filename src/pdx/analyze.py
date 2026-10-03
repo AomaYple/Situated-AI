@@ -33,7 +33,7 @@ mod 本体
 from __future__ import annotations
 
 import json
-from collections import Counter, defaultdict
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -288,39 +288,6 @@ def _read_root_file(path: Path) -> RootFile:
             for parts in [ln.split("=", 1)]
         }
     return rf
-
-
-def _analyse_localization(root: Path) -> dict[str, dict[str, int]]:
-    """统计每个语言目录的文件数与键数。
-
-    语言由文件**首行的 ``l_xx:``** 决定，而不是目录名 ——
-    ``localization/modifiers/`` 这种目录名并不是语言码。
-    """
-    out: dict[str, dict[str, int]] = defaultdict(lambda: {"文件": 0, "键": 0})
-    loc = root / "localization"
-    if not loc.is_dir():
-        return {}
-    for f in walk_files(loc):
-        if f.suffix not in (".yml", ".yaml"):
-            continue
-        try:
-            text = f.path.read_text(encoding="utf-8-sig", errors="replace")
-        except OSError:
-            continue
-        lang = "?"
-        keys = 0
-        for line in text.splitlines():
-            s = line.strip()
-            if not s or s.startswith("#"):
-                continue
-            if s.endswith(":") and s.startswith("l_"):
-                lang = s[:-1]
-                continue
-            if ":" in s and not s.startswith("l_"):
-                keys += 1
-        out[lang]["文件"] += 1
-        out[lang]["键"] += keys
-    return dict(out)
 
 
 def _analyse_dlc(root: Path) -> list[DlcInfo]:

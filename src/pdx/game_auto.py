@@ -214,9 +214,6 @@ STEP_SETTLE = 0.35
 # 控制台开合之后等它画出来（控制台是个大面板，实测 1.5 秒足够；之后仍以 ROI 判据为准）。
 CONSOLE_SETTLE = 1.5
 
-#: 滚轮一格的值（`pydirectinput.scroll` 的单位；120 = Win32 的一个 `WHEEL_DELTA`）。
-#: 阶段 6 的规则窗要用它把折叠线以下的规则卡滚进视野（见 :func:`mouse_wheel`）。
-WHEEL_NOTCH = 120
 
 #: 等"画面不再变"的上限（秒）与判据（帧间平均差 ≤ 这个比例即算稳定）。
 #: 规则窗里点一下 ‹ › 之后档名/说明要过一帧才画出来 —— 这是 :func:`wait_stable` 存在的理由。
@@ -937,32 +934,6 @@ def _minimize(hwnd: int) -> None:
     `pygetwindow.minimize()` 就是 `ShowWindow(SW_MINIMIZE)`；不自己拼 Win32 调用。
     """
     _window(hwnd).minimize()
-
-
-def _owns_pixels(hwnd: int, origin_x: int, origin_y: int, width: int, height: int) -> bool:
-    """客户区那几个采样点上压着的窗口，是不是（属于）``hwnd``？
-
-    这是 :func:`_grab` 的判据。为什么不用"必须前台"：**看一眼界面不需要焦点** —— 只要
-    窗口露在最上面，`ImageGrab` 拿到的就是它的像素。用前台当判据会把"等待"逼进抢前台
-    期间，实测后果是**用户黑屏几十秒**（载入画面全屏盖住桌面）。采四个角而不是一个点：
-    窗口可能被别的小窗口压住一角。
-    """
-    inset_x = max(1, width // 10)
-    inset_y = max(1, height // 10)
-    points = (
-        (origin_x + inset_x, origin_y + inset_y),
-        (origin_x + width - inset_x, origin_y + inset_y),
-        (origin_x + inset_x, origin_y + height - inset_y),
-        (origin_x + width - inset_x, origin_y + height - inset_y),
-    )
-    for x, y in points:
-        under = int(win32gui.WindowFromPoint((x, y)))
-        if not under:
-            return False
-        if under == hwnd or int(win32gui.GetAncestor(under, GA_ROOT)) == hwnd:
-            continue
-        return False
-    return True
 
 
 def _set_cursor(x: int, y: int) -> None:
@@ -1703,50 +1674,6 @@ def find_in_roi(
         return None
     dx, dy = _roi_offset(hwnd, roi)
     return _shift_match(found, dx, dy)
-
-
-def mouse_wheel(
-    hwnd: int,
-    x: int,
-    y: int,
-    clicks: int,
-    *,
-    settle: float = 0.0,
-    force: bool = False,
-) -> None:
-    """在客户区 ``(x, y)`` 处滚**真实**滚轮 ``clicks`` 格（正数向下）。
-
-    为什么需要它（2026-09-25，阶段 6）：开局规则窗的规则列表是 ``scrollbox`` +
-    ``fixedgridbox``（`game/gui/game_rules.gui`：`addrow = 186`、窗口高 845），
-    **一屏放不下 16 条规则** —— 我们的卡片可能在折叠线以下，不滚就永远匹配不到。
-    本模块原先只有点击与按键，没有滚轮，这是缺的那一件。
-
-    与点击同一条纪律：**真实输入**（`pydirectinput.scroll`，与已用的 `moveTo`/`click`
-    同源），并且**先把光标移到目标点**再滚 —— 滚轮事件打在光标所在的控件上，
-    不移动就滚的是上一个位置（同族的坑：点击打到了屏幕顶部，`自动化范式.md:479`）。
-    """
-    _require_input(force)
-    live = _live_window(hwnd)
-    if _foreground_window() != live:
-        raise ForegroundLostError(
-            f"要滚轮时游戏已经不在前台（游戏 hwnd={hwnd}，前台={_foreground_window()}）——"
-            "真实滚轮事件会送给前台窗口（用户正在用的那个），已中止"
-        )
-    _set_cursor(x, y)
-    if not _wait_cursor_at(x, y):
-        raise RealInputBlockedError(
-            f"光标没能停到客户区 ({x}, {y}) —— 滚轮会打给别的控件，已中止（P13）"
-        )
-    step = WHEEL_NOTCH if clicks >= 0 else -WHEEL_NOTCH
-    for _ in range(abs(int(clicks))):
-        # ⚠️ pydirectinput **没有** scroll（2026-09-25 实机踩到：AttributeError，侦察局死在 L7）。
-        #    改用 win32api.mouse_event 的 MOUSEEVENTF_WHEEL —— 与 pydirectinput 同一条
-        #    **系统输入队列**（不是被实测否定的 PostMessage/SendMessage 消息注入），引擎读得到。
-        win32api.mouse_event(win32con.MOUSEEVENTF_WHEEL, 0, 0, step, 0)
-        if settle:
-            _sleep(settle)
-    if settle:
-        _sleep(settle)
 
 
 def mouse_drag(

@@ -21,6 +21,7 @@ COMMANDS = {
         "--output",
         "tools/out/repository-audit/source-encoding.json",
     ],
+    "deadcode": ["tools.ci.deadcode_audit", "--check"],
 }
 
 BASELINE_COMMANDS = [
@@ -31,6 +32,7 @@ BASELINE_COMMANDS = [
     ("offline modguard", ["pdx.cli", "modguard", "--offline"]),
     ("offline ai surface", ["pdx.cli", "ai-surface", "--check", "--offline"]),
     ("offline citations", ["pdx.cli", "citations", "--offline"]),
+    ("deadcode", ["tools.ci.deadcode_audit", "--check"]),
     ("release", ["pdx.cli", "release"]),
 ]
 

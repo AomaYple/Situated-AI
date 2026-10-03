@@ -27,6 +27,20 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 装好之后 `pdx` 可被任意目录下的 Python 导入（不再需要 `sys.path` 补丁），
 并生成 `v3` 入口。**不装也能跑**：`python -m pdx.cli` 完全等价。
 
+## 工程收口检查
+
+工程检查统一从 `tools/ci/run_check.py` 进入，并显式选择仓库 `.venv` 的 Python：
+
+```text
+.venv\Scripts\python.exe tools\ci\run_check.py deadcode
+.venv\Scripts\python.exe tools\ci\run_check.py baseline
+```
+
+`deadcode` 扫描当前受控 Python 源码的函数和类引用面。它会把测试文件纳入索引，
+识别 `__all__`、`__main__`、pytest hook、插件装饰器和类方法等动态入口，只把确定的
+零引用定义作为失败候选。`tools/probe/frozen/` 是历史证据，`tools/out/ci/` 下的 JSON
+和 Markdown 报告是可再生临时产物，均不作为可删除源码处理。
+
 ## 包结构 `src/pdx/`
 
 | 模块 | 职责 |

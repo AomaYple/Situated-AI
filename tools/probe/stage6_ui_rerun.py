@@ -1042,14 +1042,6 @@ def content_load() -> Path:
     return experiments.CONTENT_LOAD
 
 
-def parse_xy(text: str) -> tuple[int, int] | None:
-    """``--click 864,1055`` 这类显式坐标（侦察用：模板还没收时的唯一合法入口）。"""
-    if not text:
-        return None
-    left, _, right = text.partition(",")
-    return int(left), int(right)
-
-
 def estimate_xy(
     roi: tuple[float, float, float, float], *, size: tuple[int, int]
 ) -> tuple[int, int]:
@@ -1344,41 +1336,6 @@ def missing_template_policy(step: Step, lang: str, *, discovery: bool) -> tuple[
         f"未达成（缺模板 {names}）—— **有判据的一遍在此停**（不许无判据前进）",
         True,
     )
-
-
-def teeth_table(lang: str) -> list[tuple[str, str, str]]:
-    """逐步骤的**牙清单**：`[(步骤名, 牙的档位, 说明), …]`（只供报告与复核，不参与判定）。
-
-    档位：`静态牙（起局前拒）` / `静态牙（走到时点名）` / `运行时牙（通配展开）` /
-    `无模板步骤（判据在代码里）`。
-    """
-    rows: list[tuple[str, str, str]] = []
-    # ⚠️ 这张表的第一版在这里错了一次（值得留着）：`step_template_gaps` 返回的是
-    #    `(步骤名, 模板名)`，我却拿**模板名**去查一张**按步骤名做键**的字典 ⇒ 条件恒真、
-    #    于是每个具名步都报「齐」—— 连 L10/L11/L12 那三个确实缺模板的也报齐。
-    #    「检查器报了错误的事实」正是今天一路在清的那一族 ⇒ 这里改成按**模板名集合**查。
-    gapped_templates = {tpl for _name, tpl in step_template_gaps(lang)}
-    for step in STEPS:
-        needed = step_templates(step)
-        if not needed:
-            rows.append((step.name, "无模板步骤（判据在代码里）", f"template={step.template!r}"))
-            continue
-        if step.template in HARD_TEMPLATES:
-            rows.append((step.name, "静态牙（起局前拒）", f"缺 ⇒ 起局前拒：{step.template}"))
-            continue
-        if "*" in step.template:
-            missing = step_missing_templates(step, lang)
-            detail = f"通配 {step.template} ⇒ 需 {len(needed)} 个"
-            detail += f"；**现在缺 {len(missing)}**：{'、'.join(missing)}" if missing else "；齐"
-            rows.append((step.name, "运行时牙（通配展开）", detail))
-            continue
-        detail = (
-            f"**现在缺** {step.template}"
-            if step.template in gapped_templates
-            else f"齐（{step.template}）"
-        )
-        rows.append((step.name, "静态牙（走到时点名）", detail))
-    return rows
 
 
 #: L13（口径 `:81`）= **脚本侧判据**：它不是截图步，是**日志行牙**（口径 `:83` 还写明 L15 只是

@@ -56,9 +56,13 @@ def test_baseline_command_manifest_is_stable() -> None:
         "offline modguard",
         "offline ai surface",
         "offline citations",
+        "deadcode",
         "release",
     ]
-    assert all(command and command[0] in {"pip", "pdx.cli"} for _, command in BASELINE_COMMANDS)
+    assert all(
+        command and command[0] in {"pip", "pdx.cli", "tools.ci.deadcode_audit"}
+        for _, command in BASELINE_COMMANDS
+    )
 
 
 def test_offline_test_runner_keeps_marker_as_one_argument() -> None:
