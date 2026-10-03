@@ -99,6 +99,9 @@ class LocalizationReport:
     files: int = 0
     total_size: int = 0
     errors: list[tuple[str, str]] = field(default_factory=list)
+    values: dict[str, dict[str, str]] = field(default_factory=dict)
+    placeholders: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    duplicates: dict[str, dict[str, int]] = field(default_factory=dict)
 
     @property
     def unique_keys(self) -> int:
@@ -117,6 +120,8 @@ class LocalizationReport:
             "分类目录数": len(self.by_category),
             "体积MB": round(self.total_size / 1048576, 2),
             "解析错误": len(self.errors),
+            "重复键": sum(sum(v.values()) - len(v) for v in self.duplicates.values()),
+            "占位符键": len(self.placeholders),
         }
 
     def to_dict(self) -> dict[str, object]:
@@ -144,14 +149,34 @@ class LocalizationReport:
         }
 
 
-def parse_loc_text(text: str) -> tuple[str, list[str]]:
-    """解析一份本地化文本，返回 ``(语言, 键列表)``。
+_PLACEHOLDER_RE = re.compile(r"\$([A-Za-z0-9_.-]+)\$")
 
-    语言取**最后一个** ``l_xx:`` 声明 —— 一个文件里理论上可以有多段，
-    实测都只有一段，取最后与旧实现口径一致。
-    """
+
+def _unquote_loc_value(raw: str) -> str:
+    """提取本地化值，保留 Paradox 转义而不误切含引号的文本。"""
+    value = raw.strip()
+    if not value.startswith('"'):
+        return value.split(" #", 1)[0].rstrip()
+    out: list[str] = []
+    escaped = False
+    for char in value[1:]:
+        if escaped:
+            out.append(char)
+            escaped = False
+        elif char == "\\":
+            out.append(char)
+            escaped = True
+        elif char == '"':
+            break
+        else:
+            out.append(char)
+    return "".join(out)
+
+
+def parse_loc_entries(text: str) -> tuple[str, list[tuple[str, str]]]:
+    """解析本地化键和值，返回语言和键值对列表。"""
     lang = "?"
-    keys: list[str] = []
+    entries: list[tuple[str, str]] = []
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
@@ -161,17 +186,28 @@ def parse_loc_text(text: str) -> tuple[str, list[str]]:
             lang = m.group(1)
             continue
         if _is_lang_line(stripped):
-            # ``l_english:1 "English"`` 这种带值的语言行，不算数据条目
             continue
         m = _ENTRY_RE.match(line)
         if m:
             key = m.group(1).strip()
             if key:
-                keys.append(key)
-    return lang, keys
+                entries.append((key, _unquote_loc_value(m.group(3))))
+    return lang, entries
 
 
-def extract_localization(root: Path | None = None) -> LocalizationReport:
+def parse_loc_text(text: str) -> tuple[str, list[str]]:
+    """解析一份本地化文本，返回 ``(语言, 键列表)``。
+
+    语言取**最后一个** ``l_xx:`` 声明 —— 一个文件里理论上可以有多段，
+    实测都只有一段，取最后与旧实现口径一致。
+    """
+    lang, entries = parse_loc_entries(text)
+    return lang, [key for key, _ in entries]
+
+
+def extract_localization(
+    root: Path | None = None, *, include_values: bool = False
+) -> LocalizationReport:
     """提取一个内容根下 ``localization/`` 的全部键名。
 
     ``root`` 默认为 ``config.GAME``；传 ``config.JOMINI`` 可提取 Jomini 层。
@@ -196,6 +232,9 @@ def extract_localization(root: Path | None = None) -> LocalizationReport:
     per_file: Counter = Counter()
     langs_of: dict[str, set[str]] = defaultdict(set)
     category_keys: Counter = Counter()
+    value_map: dict[str, dict[str, str]] = defaultdict(dict)
+    placeholder_map: dict[str, set[str]] = defaultdict(set)
+    lang_key_occurrences: dict[str, Counter[str]] = defaultdict(Counter)
 
     for f in sorted(walk_files(loc), key=lambda e: str(e.path)):
         if f.suffix not in SUFFIXES:
@@ -206,17 +245,24 @@ def extract_localization(root: Path | None = None) -> LocalizationReport:
             report.errors.append((str(f.path), f"{type(exc).__name__}: {exc}"))
             continue
 
-        lang, keys = parse_loc_text(text)
+        lang, entries = parse_loc_entries(text)
+        keys = [key for key, _ in entries]
         category = _category_of(f.path.stem)
 
         report.files += 1
         report.total_size += f.size
         lang_files[lang] += 1
         lang_keys[lang] += len(keys)
-        for k in keys:
+        for k, value in entries:
             lang_seen[lang].add(k)
             per_file[k] += 1
             langs_of[k].add(lang)
+            lang_key_occurrences[lang][k] += 1
+            if include_values:
+                value_map[k][lang] = value
+                placeholder_map[k].update(
+                    "$" + name + "$" for name in _PLACEHOLDER_RE.findall(value)
+                )
             category_keys[category] += 1
 
     report.by_lang = {
@@ -232,6 +278,22 @@ def extract_localization(root: Path | None = None) -> LocalizationReport:
         k: LocEntry(key=k, langs=tuple(sorted(langs_of[k])), files=per_file[k]) for k in per_file
     }
     report.by_category = category_keys
+    if include_values:
+        report.values = {
+            key: dict(sorted(values.items())) for key, values in sorted(value_map.items())
+        }
+        report.placeholders = {
+            key: tuple(sorted(values)) for key, values in sorted(placeholder_map.items()) if values
+        }
+    report.duplicates = {
+        key: {
+            lang: count
+            for lang, counts in sorted(lang_key_occurrences.items())
+            if (count := counts[key]) > 1
+        }
+        for key in sorted({key for counts in lang_key_occurrences.values() for key in counts})
+        if any(counts[key] > 1 for counts in lang_key_occurrences.values())
+    }
     return report
 
 

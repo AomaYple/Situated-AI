@@ -21,6 +21,7 @@ from pdx import config
 from pdx.localization import (
     _category_of,
     extract_localization,
+    parse_loc_entries,
     parse_loc_text,
 )
 
@@ -188,3 +189,21 @@ def test_每个语言都有可观的键数() -> None:
     r = extract_localization(config.GAME)
     for lang, stat in r.by_lang.items():
         assert stat["去重键"] > 50_000, f"{lang} 只有 {stat['去重键']} 个键"
+
+
+def test_解析值占位符和重复键(tmp_path) -> None:
+    _make_tree(
+        tmp_path / "localization",
+        {
+            "english/a_l_english.yml": ('l_english:\n K:0 "Hello $STATE$"\n DUP:0 "first"\n'),
+            "english/b_l_english.yml": 'l_english:\n DUP:0 "second"\n',
+        },
+    )
+    lang, entries = parse_loc_entries('l_english:\n K:0 "Hello $STATE$"\n')
+    assert lang == "l_english"
+    assert entries == [("K", "Hello $STATE$")]
+    report = extract_localization(tmp_path, include_values=True)
+    assert report.values["K"]["l_english"] == "Hello $STATE$"
+    assert report.placeholders["K"] == ("$STATE$",)
+    assert report.duplicates["DUP"]["l_english"] == 2
+    assert report.summary()["重复键"] == 1

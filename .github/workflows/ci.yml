@@ -33,14 +33,16 @@ concurrency:
 jobs:
   check:
     runs-on: ${{ matrix.os }}
+    env:
+      # 无游戏 runner 不需要按 CPU 数量无限扩张 xdist；固定上限降低内存峰值，
+      # 同时保留并行测试路径。需要压测时可在本机显式覆盖该变量。
+      SITAI_XDIST_WORKERS: "2"
     strategy:
       fail-fast: false
       matrix:
-        # 覆盖声明范围（requires-python = ">=3.11"）的下界与本地开发版本。
-        # 中间版本（3.12 / 3.13）不再单列 —— mypy 已按 python_version=3.11
-        # 的 typeshed 校验过 API 可用性，多跑一遍收益有限。
+        # 覆盖 pyproject 声明的全部 Python 版本，避免只验证下界和当前开发版。
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11", "3.14"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +57,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
+
+      - name: pip check — 平台依赖闭包可解析
+        run: python -m pip check
 
       - name: ruff —— 代码检查
         run: ruff check .
@@ -71,7 +76,7 @@ jobs:
       - name: pytest —— 不依赖游戏的用例
         # 上一步已经覆盖 `docs` / `contract` / `property` 这些标记；
         # 唯二被排除的是 integration（无游戏）与要显式传 -n0 的 benchmark。
-        run: python -m pytest -m "not integration"
+        run: python -m pytest -m "not integration and not benchmark"
 
       - name: 性能分片编排器 —— 确认每片覆盖真实测试文件
         run: python -m pytest tests/test_perf_baseline.py -q -o addopts=""
@@ -236,4 +241,4 @@ jobs:
         run: v3 lock
 
       - name: pytest —— 在锁定的环境里跑不依赖游戏的用例
-        run: python -m pytest -m "not integration"
+        run: python -m pytest -m "not integration and not benchmark"

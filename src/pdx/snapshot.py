@@ -107,15 +107,40 @@ def _field_names(root: Path, top: str = "common") -> dict[str, list[str]]:
     return _scriptable_snapshot(root, top)[1]
 
 
-def _scriptable_domain_sections() -> dict[str, dict[str, list[str]]]:
-    """返回 common 之外每个可脚本目录的条目域和字段域。"""
+def _scriptable_domain_sections(
+    root: Path = config.GAME,
+    *,
+    label: str = "",
+    include_common: bool = False,
+) -> dict[str, dict[str, list[str]]]:
+    """返回某个内容根下每个可脚本目录的条目域和字段域。
+
+    ``game`` 保持历史域名（例如 ``events_entries``），而引擎共享层使用
+    ``jomini/events_entries`` 这类带内容根前缀的域名，避免同名目录互相覆盖。
+    ``include_common`` 只对引擎层开启；游戏层的 ``common`` 由调用方单独收集，
+    这样既保持旧快照兼容，又不会漏掉 Jomini/Clausewitz 的 common 定义。
+    """
     sections: dict[str, dict[str, list[str]]] = {}
     for top in config.SCRIPTABLE_DIRS:
-        if top == "common":
+        if top == "common" and not include_common:
             continue
-        names, fields = _scriptable_snapshot(config.GAME, top)
-        sections[f"{top}_entries"] = names
-        sections[f"{top}_fields"] = fields
+        if not (root / top).is_dir():
+            names: dict[str, list[str]] = {}
+            fields: dict[str, list[str]] = {}
+        else:
+            names, fields = _scriptable_snapshot(root, top)
+        prefix = f"{label}/" if label else ""
+        sections[f"{prefix}{top}_entries"] = names
+        sections[f"{prefix}{top}_fields"] = fields
+    return sections
+
+
+def _engine_scriptable_sections() -> dict[str, dict[str, list[str]]]:
+    """收集 Jomini 与 Clausewitz 内容根的可脚本化域。"""
+    sections: dict[str, dict[str, list[str]]] = {}
+    for label, root in (("jomini", config.JOMINI), ("clausewitz", config.CLAUSEWITZ)):
+        if root.is_dir():
+            sections.update(_scriptable_domain_sections(root, label=label, include_common=True))
     return sections
 
 
@@ -173,6 +198,31 @@ def _dlc_snapshot() -> dict[str, list[str]]:
         return out
     for d in sorted(p for p in base.iterdir() if p.is_dir()):
         out[d.name] = _sorted_names([p.name for p in d.iterdir()] if d.is_dir() else [])
+    return out
+
+
+def _dlc_descriptor_snapshot(root: Path = config.GAME) -> dict[str, list[str]]:
+    """保存 DLC 描述符的来源文件与全部键值，包含重复键。"""
+    base = root / "dlc"
+    out: dict[str, list[str]] = {}
+    if not base.is_dir():
+        return out
+    for dlc in sorted(path for path in base.iterdir() if path.is_dir()):
+        values: list[str] = []
+        for descriptor in sorted(dlc.glob("*.dlc")):
+            try:
+                text = descriptor.read_text(encoding="utf-8-sig", errors="replace")
+            except OSError:
+                continue
+            for line in text.splitlines():
+                if "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                key, value = key.strip(), value.strip().strip('"')
+                if key:
+                    values.append(f"{descriptor.name}:{key}={value}")
+        if values:
+            out[dlc.name] = sorted(values)
     return out
 
 
@@ -346,8 +396,14 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     # 的新增条目被旧的 common-only 快照悄悄漏掉。
     scriptable_sections = _scriptable_domain_sections()
     snap.sections.update(scriptable_sections)
+    # 引擎共享层同样可以被 mod 依赖或覆盖；之前只把它们用于在线分析，
+    # 导致版本快照无法发现 Jomini/Clausewitz 层的条目变更。
+    engine_sections = _engine_scriptable_sections()
+    snap.sections.update(engine_sections)
     if verbose:
         for name in sorted(scriptable_sections):
+            print(f"  {name}: {len(snap.sections[name])} 组")
+        for name in sorted(engine_sections):
             print(f"  {name}: {len(snap.sections[name])} 组")
 
     snap.sections["defines"] = _defines_snapshot()
@@ -356,16 +412,23 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
 
     if compact:
         snap.sections["localization_digest"] = _localization_digest(config.GAME)
+        for label, root in (("jomini", config.JOMINI), ("clausewitz", config.CLAUSEWITZ)):
+            if root.is_dir():
+                snap.sections[f"{label}/localization_digest"] = _localization_digest(root)
         if verbose:
             print(
                 f"  本地化指纹: {len(snap.sections['localization_digest'])} 种语言（键清单已省略）"
             )
     else:
         snap.sections["localization"] = _localization_keys(config.GAME)
+        for label, root in (("jomini", config.JOMINI), ("clausewitz", config.CLAUSEWITZ)):
+            if root.is_dir():
+                snap.sections[f"{label}/localization"] = _localization_keys(root)
         if verbose:
             print(f"  本地化语言: {len(snap.sections['localization'])}")
 
     snap.sections["dlc"] = _dlc_snapshot()
+    snap.sections["dlc_descriptors"] = _dlc_descriptor_snapshot()
     snap.sections["config"] = _checksum_and_paths()
     snap.sections["doc_tables"] = _doc_tables_snapshot()
     if verbose:

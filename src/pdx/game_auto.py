@@ -87,8 +87,25 @@ from . import config, experiments
 from .console import enable_utf8_stdio
 from .platform_support import UnavailableWindowsModule, WindowsOnlyError
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 # 本模块本次 Popen 创建的根进程；失败清理只针对这些 PID。
 _OWNED_GAME_PIDS: set[int] = set()
+
+
+@dataclass(frozen=True, slots=True)
+class OwnedProcess:
+    """启动时记录的进程身份，防止 PID 复用导致误杀。"""
+
+    pid: int
+    create_time: float | None = None
+    executable: str = ""
+
+
+_OWNED_GAME_META: dict[int, OwnedProcess] = {}
+LAST_QUARANTINE_ERRORS: list[str] = []
+LAST_KILL_ALIVE: list[int] = []
 
 if sys.platform == "win32" or TYPE_CHECKING:
     import pydirectinput as directinput
@@ -1013,15 +1030,99 @@ def _process_pids(image_name: str | None = None) -> list[int]:
     )
 
 
+def _capture_process_identity(pid: int) -> OwnedProcess:
+    """尽力记录 pid 的创建时间和可执行文件；权限不足时保留可用字段。"""
+    create_time: float | None = None
+    executable = ""
+    try:
+        process = psutil.Process(pid)
+        with suppress(AttributeError, OSError, psutil.Error):
+            create_time = float(process.create_time())
+        try:
+            executable = str(process.exe())
+        except (AttributeError, OSError, psutil.Error):
+            executable = str(getattr(process, "name", lambda: "")())
+    except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
+        pass
+    return OwnedProcess(pid=pid, create_time=create_time, executable=executable)
+
+
+def _owned_identity_matches(process: object, expected: OwnedProcess) -> bool:
+    """校验当前 PID 仍是启动时的进程；缺少字段时不凭空拒绝清理。"""
+    if expected.create_time is not None:
+        try:
+            actual = float(process.create_time())  # type: ignore[attr-defined]
+        except (AttributeError, OSError, psutil.Error):
+            return False
+        if abs(actual - expected.create_time) > 0.01:
+            return False
+    if expected.executable:
+        try:
+            actual_exe = str(process.exe())  # type: ignore[attr-defined]
+        except (AttributeError, OSError, psutil.Error):
+            return False
+        if (
+            actual_exe
+            and Path(actual_exe).name.casefold() != Path(expected.executable).name.casefold()
+        ):
+            return False
+    return True
+
+
+def _wait_for_pids(pids: Sequence[int], *, timeout: float = 5.0) -> list[int]:
+    """等待一组已终止的 PID 真正退出，返回仍存活的 PID。
+
+    清理不能把 kill 请求当作进程已经退出：Windows 日志句柄在这段窗口
+    里仍可能被占用，紧接着归档会产生假阴性。测试桩若没有 is_running 能力
+    会被视为“不提供确认”，不阻断原有的纯逻辑测试。
+    """
+    remaining = {pid for pid in pids if isinstance(pid, int) and pid > 0}
+    if not remaining:
+        return []
+    deadline = time.monotonic() + max(0.0, timeout)
+    while remaining:
+        for pid in tuple(remaining):
+            try:
+                process = psutil.Process(pid)
+            except psutil.NoSuchProcess:
+                remaining.discard(pid)
+                continue
+            is_running = getattr(process, "is_running", None)
+            if not callable(is_running):
+                return []
+            try:
+                if not is_running():
+                    remaining.discard(pid)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                remaining.discard(pid)
+        if not remaining or time.monotonic() >= deadline:
+            break
+        time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
+    return sorted(remaining)
+
+
 # ────────────────────────── 窗口与前台 ──────────────────────────
 
 
-def find_window(title: str = WINDOW_TITLE, window_class: str = WINDOW_CLASS) -> int:
-    """按标题 + 类找可见的游戏窗口；找不到给 0。"""
+def _window_pid(hwnd: int) -> int | None:
+    """读取窗口所属 PID；非 Windows 或读取失败返回 ``None``。"""
+    try:
+        _thread, pid = win32process.GetWindowThreadProcessId(hwnd)
+        return int(pid)
+    except (AttributeError, OSError, WindowsOnlyError):
+        return None
+
+
+def find_window(
+    title: str = WINDOW_TITLE, window_class: str = WINDOW_CLASS, *, pid: int | None = None
+) -> int:
+    """按标题、类和可选 PID 找可见的游戏窗口；找不到给 0。"""
     for hwnd in _enum_windows():
         if not _is_visible(hwnd):
             continue
         if title in _window_title(hwnd) and _window_class(hwnd) == window_class:
+            if pid is not None and _window_pid(hwnd) != pid:
+                continue
             return hwnd
     return 0
 
@@ -1047,14 +1148,18 @@ def _resolve(candidate: object, fallback: object, name: str) -> object:
 
 
 def wait_for_window(
-    *, timeout: float = WINDOW_TIMEOUT, clock: object = None, sleeper: object = None
+    *,
+    timeout: float = WINDOW_TIMEOUT,
+    clock: object = None,
+    sleeper: object = None,
+    pid: int | None = None,
 ) -> int:
     """等游戏窗口出现（官方流水线到标题菜单实测要 ~124 秒）。"""
     tick_clock: Clock = cast("Clock", _resolve(clock, _monotonic, "clock"))
     pause: Sleeper = cast("Sleeper", _resolve(sleeper, _sleep, "sleeper"))
     deadline = tick_clock() + timeout
     while tick_clock() < deadline:
-        hwnd = find_window()
+        hwnd = find_window(pid=pid) if pid is not None else find_window()
         if hwnd:
             return hwnd
         pause(POLL_INTERVAL)
@@ -2140,35 +2245,48 @@ def quarantine_logs(dest: Path | None = None, *, stamp: str | None = None) -> li
     文件留在原地混进下一局。默认目标目录 `%TEMP%\\v3_quarantine_logs` 会攒下很多代，
     返回的名字就是去那里读的入口。
     """
+    LAST_QUARANTINE_ERRORS.clear()
     target = dest or (Path(tempfile.gettempdir()) / "v3_quarantine_logs")
     target.mkdir(parents=True, exist_ok=True)
     stamp = stamp or archive_stamp()
     moved: list[str] = []
+    errors: list[str] = []
     if not USER_LOGS_DIR.is_dir():
         return moved
     for path in sorted(USER_LOGS_DIR.glob("*.log")):
         landing = unused_path(target / path.name, stamp=stamp)
         try:
             shutil.move(str(path), str(landing))
-        except (PermissionError, OSError):
+        except (PermissionError, OSError) as exc:
+            errors.append(f"{path.name}: {type(exc).__name__}: {exc}")
             continue
         moved.append(landing.name)
+    LAST_QUARANTINE_ERRORS.extend(errors)
     return moved
 
 
 def kill_owned_game() -> list[int]:
-    """只终止本模块本次启动的游戏进程及其子进程。"""
+    """只终止本模块本次启动的游戏进程及其子进程，并确认它们已退出。"""
+    LAST_KILL_ALIVE.clear()
     requested: list[int] = []
     roots = sorted(_OWNED_GAME_PIDS)
     for root_pid in roots:
         pids = [root_pid]
+        keep_owned = False
         try:
             process = psutil.Process(root_pid)
+            expected = _OWNED_GAME_META.get(root_pid)
+            if expected is not None and not _owned_identity_matches(process, expected):
+                print(f"跳过 PID {root_pid}：进程身份已变化，拒绝误杀", file=sys.stderr)
+                continue
             children = getattr(process, "children", None)
             if callable(children):
                 pids.extend(child.pid for child in children(recursive=True))
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+        except psutil.NoSuchProcess:
             pass
+        except psutil.AccessDenied:
+            keep_owned = True
+            print(f"无法读取本会话游戏进程 {root_pid}：权限不足", file=sys.stderr)
         for pid in reversed(dict.fromkeys(pids)):
             try:
                 psutil.Process(pid).kill()
@@ -2178,7 +2296,13 @@ def kill_owned_game() -> list[int]:
                 print(f"无法终止本会话游戏进程 {pid}：权限不足", file=sys.stderr)
             else:
                 requested.append(pid)
-        _OWNED_GAME_PIDS.discard(root_pid)
+        if not keep_owned:
+            _OWNED_GAME_PIDS.discard(root_pid)
+            _OWNED_GAME_META.pop(root_pid, None)
+    alive = _wait_for_pids(requested)
+    LAST_KILL_ALIVE.extend(alive)
+    if alive:
+        print(f"本会话游戏进程在清理等待后仍存活：{alive}", file=sys.stderr)
     return requested
 
 
@@ -2203,6 +2327,9 @@ def kill_game() -> list[int]:
             print(f"无法终止游戏进程 {pid}：权限不足", file=sys.stderr)
         else:
             requested.append(pid)
+    alive = _wait_for_pids(requested)
+    if alive:
+        print(f"游戏进程在清理等待后仍存活：{alive}", file=sys.stderr)
     return requested
 
 
@@ -2212,7 +2339,8 @@ def platform_capabilities() -> dict[str, object]:
     return {
         "platform": sys.platform,
         "gui_automation": windows,
-        "background_validation": True,
+        # 后台验证需要窗口与输入后端；非 Windows 只支持日志/tick 的无头验证。
+        "background_validation": windows,
         "headless_log_validation": True,
         "reason": (
             "Windows GUI backend: pygetwindow + pydirectinput"
@@ -2263,8 +2391,16 @@ def launch(
     pid = getattr(process, "pid", None)
     if isinstance(pid, int) and pid > 0:
         _OWNED_GAME_PIDS.add(pid)
+        _OWNED_GAME_META[pid] = _capture_process_identity(pid)
     if not wait:
         return None
+    if isinstance(pid, int):
+        try:
+            return wait_for_window(timeout=timeout, pid=pid)
+        except TypeError as exc:
+            # 兼容旧的注入桩（只接受 timeout），真实实现仍会按 PID 过滤窗口。
+            if "pid" not in str(exc):
+                raise
     return wait_for_window(timeout=timeout)
 
 
@@ -2383,7 +2519,12 @@ def background_ok(
     _sleep(2.0)
     if _foreground_window() == hwnd:  # pragma: no cover - 抢不走的极端情况
         raise ForegroundLostError("没能把前台让出去，后台结论不可信")
+    # 真实游戏会在启动期重建窗口；有进程时必须重新确认句柄仍然有效。
+    if _process_pids():
+        hwnd = _live_window(hwnd)
     _sleep(seconds)
+    if _process_pids():
+        hwnd = _live_window(hwnd)
     after = tick_mark(log)
     if restore:
         ensure_foreground(hwnd, force=force)
@@ -3938,6 +4079,8 @@ __all__ = [
     "CURSOR_PARK_LOG",
     "DEFAULT_SCALES",
     "DEFAULT_THRESHOLD",
+    "LAST_KILL_ALIVE",
+    "LAST_QUARANTINE_ERRORS",
     "OUR_MARKS",
     "SHIFT_CHARS",
     "TESTOUTPUT_GLOB",
@@ -3956,6 +4099,7 @@ __all__ = [
     "GameRunningError",
     "Match",
     "NotRunningError",
+    "OwnedProcess",
     "SessionStart",
     "SuiteVerdict",
     "TemplateNotFoundError",

@@ -293,7 +293,6 @@ SCRIPTABLE_SUFFIXES: tuple[str, ...] = (
 ASSET_DIRS: tuple[str, ...] = (
     "soundtrack",
     "licenses",
-    "dlc",
 )
 
 #: ③ 完全跳过的目录（二进制本体与启动器，与 mod 开发无关）

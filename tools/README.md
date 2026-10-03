@@ -205,7 +205,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-87 个测试文件；2181 条用例（`pytest --collect-only` 实测），
+89 个测试文件；2196 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -303,9 +303,10 @@ python -m pytest tests/test_benchmarks.py --benchmark-only -n0
 **分开存放** —— 游戏本体与 mod 互不混杂：
 
 ```
-tools/out/game/游戏本体.json      统计口径：条目、字段、使用频次（约 8.2 MB）
+tools/out/game/游戏本体.json      统计口径：条目、字段、使用频次、三内容根资源索引
 tools/out/game/游戏数据.json      内容口径：字段、值、嵌套结构、行号与注释（约 54 MB）
-tools/out/game/本地化.json        14.5 万个本地化键（约 6.1 MB）
+tools/out/game/本地化.json        game 本地化完整键清单（约 6.1 MB）
+tools/out/game/本地化-各内容根.json  game/jomini/clausewitz 本地化摘要
 tools/out/game/表格数据.json      adjacencies.csv 等表格类数据
 tools/out/mods/mod.json          mod 全量数据（约 640 KB）
 tools/out/cross/交叉.json         两者的覆盖关系
@@ -458,24 +459,13 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 > 早先这里写的是 17,821 / 16,535：那是一次性采集值，**口径没留、脚本没留**。
 > 现在这两个数由 `v3 strings` 从 exe 现算，`tests/test_repo_numbers.py` 会核对。
 
-## 阶段性收尾（2026-09）
+## 阶段性收尾（2026-10-03）
 
-这一轮做完了两件事：把 **12 处功能前缀覆盖证据**与 **92 处【未确认】** 收敛到
-**51 处**（每条都写明「已查什么证据 / 还缺什么实测」，`v3 unverified` 可复算），
-以及补齐工程卫生（离线核验生成表、解析磁盘缓存、覆盖率模块下限、依赖锁）。
+工程改造已经完成：全量分析覆盖 `game`、`jomini`、`clausewitz` 三个内容根，记录脚本/defines、本地化摘要、DLC 描述符、资源索引和完整本地化键清单；mod 分析补齐 metadata、本地化值/重复键/占位符与资源引用断链；快照和 citations 保持跨根一致。
 
-**还剩什么**（四块，按性价比排序）：
+自动化清理具备 PID 身份校验、窗口 PID 过滤、关键日志失败报告和存活进程报告；性能探针具备跨进程锁。CI 覆盖三平台与 Python 3.11–3.14，默认 worker 上限为 2，普通测试排除 integration/benchmark。
 
-| # | 事项 | 现状 | 缺口 |
-|---|---|---|---|
-| 1 | **C 组：语义实测** | 51 处【未确认】里约 35 处属「只能进游戏才能定」：裸同名覆盖语义、跨 mod 优先级、`scripted_list`/`scripted_modifier` 调用语法、`after`/`orphan`/`is_shown_in_lobby` 等字段语义 | 需要启动游戏：`game\tools\scripted_tests` + `-debug_mode` 日志；`database_conflicts.log` 目前是 0 字节，跑一次真实冲突就能填上 |
-| 2 | 两项一次性普查脚本化 | doc 06 的 DDS 头普查（11,294 个文件）与 `adjacencies.csv` 全表枚举仍是手写脚本 | 做成 `v3` 子命令后可复算、可断言（符合「能脚本化的都脚本化」） |
-| 3 | 覆盖率重路径 | 整体 88.07%（`v3 cov` 门禁 86%；模块下限表 11 个） | `cli.py` 60.9%、`experiments` 64.2%、`engine_log` 65.4% 是「要真跑游戏数据 / 真开一次游戏」的路径；`console` 85.7% 同理。**不是退步**：`localization` 88.5% / `mods` 93.9% / `tabular` 93.4% 这一轮已补上（旧值 74 / 79 / 80 是补测前的口径） |
-| 4 | CI 用锁安装 | `requirements.lock` 已在本地对账（`v3 lock`） | CI 仍从 `pyproject.toml` 的下限现解析；改成从锁安装需要一次跨平台验证 |
-
-> 这四块**都不影响当前可用性**：知识库里每条结论要么有证据、要么明确标着
-> 「未确认 + 取证配方」，工具链的门禁（断言 234 条、生成表 174 张、覆盖率、
-> 依赖锁、离线核验）全绿。
+仍然保留的不是工程缺陷，而是必须用游戏因果实验回答的研究问题：B11–B13、B26–B27、B29、B35–B38，以及 B115 的 F3/F4 证据补档。它们在 `docs/design/backlog.md` 中有实验入口和证据边界；没有把合成夹具、CI 或离线快照当成游戏机制结论。当前只有 Windows Victoria 3 GUI 实机证据，macOS/Linux 仅完成跨平台代码、CI、无头逻辑和合成夹具验证。
 
 ## 为什么全 Python 化
 
@@ -487,7 +477,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：2181 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：2196 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

@@ -391,3 +391,10 @@ $d = "${env:ProgramFiles(x86)}\Steam\steamapps\common\Victoria 3\game\common\cou
 2. **引用本身不要写「起止反了」**：`ru_defeat.toml:126` 的 `00_code_on_actions.txt:4220-4216` 与 `:369` 的 `src/pdx/vanilla_index.py:80-71` 是作者写反的（`HEAD` 里根本没有这两行，是 `t1` 本轮新增），闸门只报 `out_of_range`、不告诉你「该是哪两行」⇒ 改完按句子主语现核（`4221-4224` = `set_variable { name = recent_capitulation … }`；`80-85` = `VOCABULARY_DIRS` 定义块）。
 
 **现状（2026-10-02）**：范围引用的首尾分别按内容锚定位、反向范围直接判错的规则已写入同一规程；`tests/test_citations.py` 已覆盖区间逐行漂移和反向区间回归。
+
+
+**[B127 · 2026-10-03，工程收口]** 本轮全量工程改造已落地：`analyze` 和 `snapshot` 分别覆盖 `game`、`jomini`、`clausewitz` 内容根；游戏侧记录脚本/defines、本地化摘要、DLC 描述符、资源索引和完整本地化键清单；mod 侧记录 metadata、本地化值/重复键/占位符、明确字段资源引用及未解析引用。`citations` 支持引擎根和 `.asset/.font/.layout/.settings/.profile/.shortcuts` 等可脚本化后缀。上述结果有合成树、确定性和跨根回归测试，精简快照仍保持 `game` 域兼容。
+
+**[B128 · 2026-10-03，自动化收口]** 游戏自动化启动记录 PID 创建时间与可执行文件，窗口查找按 PID 过滤，清理会等待退出并报告存活 PID、关键日志归档失败和报告写入失败；性能探针增加跨进程 `RunLock`，避免并发覆盖 `content_load.json`、mod 和日志。Windows Victoria 3 GUI 实机证据继续单独记录，macOS/Linux 只申报跨平台代码、CI、无头逻辑和合成夹具验证。
+
+**[B129 · 2026-10-03，门禁收口]** CI 矩阵覆盖 Python 3.11–3.14 与 Windows/macOS/Linux，普通测试排除 `integration`/`benchmark` 并将无游戏 runner 的 xdist 限为 2 个 worker；`pip check`、`v3 verify --from-snapshot`、`tables --offline`、`modgen --check`、`modguard --offline`、`ai-surface --check --offline`、`citations --offline`、`release` 均已通过。当前收集为 2196 条用例、89 个测试文件；B11–B13、B26–B27、B29、B35–B38 与 B115 F3/F4 仍属于需要真实游戏因果或完整实机证据的研究项，不在工程门禁中冒充完成。

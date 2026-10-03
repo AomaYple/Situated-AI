@@ -73,6 +73,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 
@@ -106,6 +111,57 @@ OUT_DIR = Path(__file__).resolve().parents[1] / "out" / "perf"
 VANILLA_LABEL = "vanilla"
 OURS_LABEL = "ours"
 TEMPO_LABEL = "tempo"
+
+
+class RunLock:
+    """跨进程互斥锁，防止两个性能探针同时改写用户配置和日志。"""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self._handle = None
+
+    def acquire(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._handle = self.path.open("a+b")
+        try:
+            if os.name == "nt":
+                self._handle.seek(0)
+                msvcrt.locking(self._handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl.flock(self._handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (OSError, BlockingIOError) as exc:
+            self._handle.close()
+            self._handle = None
+            raise RuntimeError(f"已有另一个 perf_compare 正在运行（锁：{self.path}）") from exc
+        self._handle.seek(0)
+        self._handle.write(
+            json.dumps({"pid": os.getpid(), "started": time.time()}, ensure_ascii=False).encode()
+        )
+        self._handle.truncate()
+        self._handle.flush()
+
+    def release(self) -> None:
+        if self._handle is None:
+            return
+        try:
+            if os.name == "nt":
+                self._handle.seek(0)
+                msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            self._handle.close()
+            self._handle = None
+
+    def __enter__(self) -> RunLock:
+        self.acquire()
+        return self
+
+    def __exit__(self, _type: object, _value: object, _traceback: object) -> None:
+        self.release()
+
+
+RUN_LOCK = OUT_DIR / "perf_compare.lock"
 
 
 def arm_labels(tempo_arm: bool = False) -> tuple[str, ...]:
@@ -215,7 +271,12 @@ class PerfCleanup:
         self.running = True
         self.reason = reason
         try:
-            self._step("终止本次游戏", self.killer)
+            killed = self._step("终止本次游戏", self.killer)
+            alive = getattr(ga, "LAST_KILL_ALIVE", ())
+            if alive:
+                self.errors.append(f"游戏进程仍存活：{list(alive)}")
+            if killed is None and not self.errors:
+                self.errors.append("终止本次游戏：未返回清理结果")
             self._step("恢复 content_load.json", self._restore_content)
             for path in self.generated_paths:
                 self._step(
@@ -236,8 +297,10 @@ class PerfCleanup:
             self._step("删除 content_load 备份", lambda: self.backup_path.unlink(missing_ok=True))
         finally:
             self.running = False
-            self.cleaned = True
+            # cleaned 表示关键收尾全部完成；任何错误都必须进入报告并让 CLI 失败。
+            self.cleaned = not self.errors
             self._write_report()
+            self.cleaned = not self.errors
         return tuple(self.errors)
 
     def _write_report(self) -> None:
@@ -399,19 +462,26 @@ def _quarantine_logs(
     the_stamp = stamp or ga.archive_stamp()
     say = _announce if announce is None else announce
     moved: list[str] = []
+    critical_failures: list[str] = []
+    critical_names = {"debug.log", "system.log", "error.log"}
     for path in sorted(LOGS.glob("*.log")):
         try:
             landing = ga.unused_path(target / path.name, stamp=the_stamp)
             shutil.move(str(path), str(landing))
         except (PermissionError, OSError) as fault:
-            say(
+            message = (
                 f"⚠️ 挪不动，文件仍在原地：{path}（{type(fault).__name__}: {fault}）"
                 f"；隔离目录 {target}（落点名由 unused_path() 挑，不一定是原名）"
             )
+            say(message)
+            if path.name in critical_names:
+                critical_failures.append(message)
             continue
         moved.append(landing.name)
         if landing.name != path.name:
             say(f"同名已在隔离目录：{path.name} → {landing.name}（两代都留住，没覆盖）")
+    if critical_failures:
+        raise RuntimeError("关键日志归档失败：" + "；".join(critical_failures))
     return moved
 
 
@@ -1163,7 +1233,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
+def _main() -> int:
     enable_utf8_stdio()
     # 探针是**显式入口**：按设计打开真实输入授权（`pdx.game_auto` 的闸门说的就是这件事）。
     ga.ALLOW_REAL_INPUT = True
@@ -1188,6 +1258,7 @@ def main() -> int:
     print(f"content_load.json 已备份到 {backup.name}（收尾会还原）")
 
     reports: list[dict[str, object]] = []
+    cleanup_errors: tuple[str, ...] = ()
     try:
         cleanup.claim_existing_paths()
         deploy_tree(config.REPO / "mod", OURS_DST)
@@ -1222,11 +1293,11 @@ def main() -> int:
                 _set_local_mods(arm_mods(label, stress_mods), original=original)
                 reports.append(run_once(label, months, index=index, stress=args.stress))
     finally:
-        errors = cleanup.run(reason="normal" if sys.exc_info()[0] is None else "exception")
+        cleanup_errors = cleanup.run(reason="normal" if sys.exc_info()[0] is None else "exception")
         restore_signals()
         print(
             f"\n[收尾] 本次游戏已终止；content_load.json 已还原；"
-            f"本地 mod 已恢复/删除；收尾错误={list(errors) or '无'}"
+            f"本地 mod 已恢复/删除；收尾错误={list(cleanup_errors) or '无'}"
         )
 
     table = report_table(reports)
@@ -1303,9 +1374,20 @@ def main() -> int:
         if not control.ok:
             print("  ⇒ **这一轮不能报「受控」**：先修上面那几条，或按「非受控」写结论（P13）")
             return 1
+    if cleanup_errors:
+        print("\n===== 收尾门禁：失败 =====")
+        for error in cleanup_errors:
+            print(f"  {error}")
+        return 1
     if invalid_runs or not window.ok:
         return 1
     return 0
+
+
+def main() -> int:
+    """在整个性能对照生命周期内持有跨进程锁。"""
+    with RunLock(RUN_LOCK):
+        return _main()
 
 
 if __name__ == "__main__":

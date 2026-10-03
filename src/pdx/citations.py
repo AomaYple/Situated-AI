@@ -46,12 +46,26 @@ if TYPE_CHECKING:
 CITATION_RE = re.compile(
     # ⚠️ 名字里**可以带空格**：原版历史文件就叫 `rus - russia.txt`（实测：写全路径时
     # 扫描器原样不认，报 4 条假 missing）。首字符仍限死非空格，避免从行首一路吃过来。
-    r"(?P<file>[0-9A-Za-z_./\\-][0-9A-Za-z_./\\ -]*?\.(?:txt|gui|py|md|toml|json|yml))"
+    r"(?P<file>[0-9A-Za-z_./\\-][0-9A-Za-z_./\\ -]*?\.(?:txt|gui|asset|font|layout|settings|profile|shortcuts|py|md|toml|json|yml))"
     r":(?P<start>\d+)(?:-(?P<end>\d+))?"
 )
 
 #: 建索引时跳过的目录名（大且无用：图形资源、着色器缓存）。
-SKIP_DIRS = frozenset({"gfx", "sound", "music", "shadercache", "__pycache__", ".git"})
+SKIP_DIRS = frozenset(
+    {
+        "binaries",
+        "launcher",
+        "platform_specific_game_data",
+        "shadercache",
+        "__pycache__",
+        ".git",
+        "logs",
+        "crashes",
+        "screenshots",
+    }
+)
+
+CONTENT_ROOTS = ("game", "jomini", "clausewitz")
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,6 +114,30 @@ def game_index(root: Path | None = None) -> dict[str, list[Path]]:
     return _INDEX_CACHE[base]
 
 
+def _content_roots(root: Path | None) -> tuple[tuple[str, Path], ...]:
+    """返回引用扫描所见的内容根；显式 ``root`` 时保持旧的单根语义。"""
+    if root is not None:
+        return (("game", root),)
+    return (
+        ("game", config.GAME),
+        ("jomini", config.JOMINI),
+        ("clausewitz", config.CLAUSEWITZ),
+    )
+
+
+def _all_content_hits(name: str) -> list[tuple[str, Path]]:
+    # 绝大多数档案引用都指向 game；先查 game，命中后不为一次引用扫描
+    # 整棵 Jomini/Clausewitz 树建立索引。只有 game 没有该 basename 时，
+    # 才按需探查引擎层，显式 ``jomini/...`` 仍走直接路径。
+    game_hits = [("game", path) for path in game_index(config.GAME).get(name, [])]
+    if game_hits:
+        return game_hits
+    hits: list[tuple[str, Path]] = []
+    for label, base in _content_roots(None)[1:]:
+        hits.extend((label, path) for path in game_index(base).get(name, []))
+    return hits
+
+
 def clear_cache() -> None:
     _INDEX_CACHE.clear()
 
@@ -112,9 +150,15 @@ def _line_count(path: Path) -> int:
 
 def _resolve(name: str, *, root: Path | None = None) -> tuple[Path | None, str, str]:
     """把引用里的文件名解析成唯一个文件；返回 ``(路径|None, 状态, 说明)``。"""
-    base = root or config.GAME
     cleaned = name.replace("\\", "/")
+    roots = _content_roots(root)
+    base = roots[0][1]
     if "/" in cleaned:
+        head, rel = cleaned.split("/", 1)
+        selected = dict(roots).get(head)
+        if selected is not None:
+            base = selected
+            cleaned = rel
         direct = base / cleaned
         if direct.is_file():
             return (direct, "ok", "")
@@ -123,20 +167,25 @@ def _resolve(name: str, *, root: Path | None = None) -> tuple[Path | None, str, 
         if repo.is_file():
             return (repo, "ok", "")
         return (None, "missing", f"{base / cleaned} 不存在（也试过 {repo}）")
-    hits = game_index(base).get(cleaned, [])
+    if root is not None:
+        hits = [("game", path) for path in game_index(base).get(cleaned, [])]
+    else:
+        hits = _all_content_hits(cleaned)
     if not hits:
         repo = config.REPO / cleaned
         if repo.is_file():
             return (repo, "ok", "")
         return (None, "missing", f"{base} 下没有任何文件叫这个名字")
     if len(hits) > 1:
-        sample = "、".join(str(p.relative_to(base)) for p in hits[:4])
+        sample = "、".join(
+            f"{label}/{path.relative_to(dict(roots).get(label, base))}" for label, path in hits[:4]
+        )
         return (
             None,
             "ambiguous",
             f"同名 {len(hits)} 个：{sample}…（引用要么写子路径，要么换一个）",
         )
-    return (hits[0], "ok", "")
+    return (hits[0][1], "ok", "")
 
 
 def scan_text(text: str, *, where: str, root: Path | None = None) -> list[Citation]:
@@ -189,7 +238,21 @@ def scan_paths(paths: Iterable[Path], *, root: Path | None = None) -> list[Citat
 
 
 def _expand(paths: Iterable[Path]) -> Iterator[Path]:
-    suffixes = {".toml", ".md", ".txt", ".py"}
+    suffixes = {
+        ".toml",
+        ".md",
+        ".txt",
+        ".py",
+        ".gui",
+        ".asset",
+        ".font",
+        ".layout",
+        ".settings",
+        ".profile",
+        ".shortcuts",
+        ".yml",
+        ".json",
+    }
     for path in paths:
         if path.is_dir():
             for child in sorted(path.rglob("*")):

@@ -69,6 +69,27 @@ class TestScriptableSnapshot(unittest.TestCase):
         self.assertEqual(names, {"sample.txt": ["foo"]})
         self.assertEqual(fields["sample.txt/foo"], ["bar", "baz"])
 
+    def test_engine_sections_use_content_root_prefix(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            path = root / "common" / "sample.txt"
+            path.parent.mkdir(parents=True)
+            path.write_text("engine_entry = { field = 1 }\n", encoding="utf-8")
+            sections = snapshot._scriptable_domain_sections(
+                root, label="jomini", include_common=True
+            )
+        self.assertEqual(sections["jomini/common_entries"], {"sample.txt": ["engine_entry"]})
+
+    def test_dlc_descriptor_snapshot_keeps_source_and_duplicates(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            dlc = root / "dlc" / "alpha"
+            dlc.mkdir(parents=True)
+            (dlc / "a.dlc").write_text('name = "Alpha"\n', encoding="utf-8")
+            (dlc / "b.dlc").write_text('name = "Alpha local"\n', encoding="utf-8")
+            result = snapshot._dlc_descriptor_snapshot(root)
+        self.assertEqual(result["alpha"], ["a.dlc:name=Alpha", "b.dlc:name=Alpha local"])
+
 
 class TestSnapshotShape(unittest.TestCase):
     snap: snapshot.Snapshot

@@ -16,6 +16,51 @@ import pytest
 from pdx import citations
 
 
+def test_可脚本化资源后缀也能识别(tmp_path: Path) -> None:
+    found = citations.scan_text(
+        "依据 foo.asset:1、bar.font:2、window.layout:3、keys.shortcuts:4",
+        where="x",
+        root=tmp_path,
+    )
+    assert [item.file for item in found] == [
+        "foo.asset",
+        "bar.font",
+        "window.layout",
+        "keys.shortcuts",
+    ]
+
+
+def test_默认扫描包含引擎内容根并支持前缀(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    game = tmp_path / "game"
+    jomini = tmp_path / "jomini"
+    clausewitz = tmp_path / "clausewitz"
+    for root in (game, jomini, clausewitz):
+        root.mkdir()
+    (jomini / "gui").mkdir()
+    (jomini / "gui" / "shared.gui").write_text("x\n", encoding="utf-8")
+    monkeypatch.setattr(citations.config, "GAME", game)
+    monkeypatch.setattr(citations.config, "JOMINI", jomini)
+    monkeypatch.setattr(citations.config, "CLAUSEWITZ", clausewitz)
+    found = citations.scan_text("jomini/gui/shared.gui:1", where="x")
+    assert found[0].status == "ok"
+    assert Path(found[0].resolved) == jomini / "gui" / "shared.gui"
+
+
+def test_跨内容根同名_basename_必须写前缀(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    roots = [tmp_path / name for name in ("game", "jomini", "clausewitz")]
+    for root in roots:
+        (root / "gui").mkdir(parents=True)
+        (root / "gui" / "same.gui").write_text("x\n", encoding="utf-8")
+    (roots[0] / "gui" / "same.gui").unlink()
+    monkeypatch.setattr(citations.config, "GAME", roots[0])
+    monkeypatch.setattr(citations.config, "JOMINI", roots[1])
+    monkeypatch.setattr(citations.config, "CLAUSEWITZ", roots[2])
+    found = citations.scan_text("same.gui:1", where="x")
+    assert found[0].status == "ambiguous"
+    explicit = citations.scan_text("clausewitz/gui/same.gui:1", where="x")
+    assert explicit[0].status == "ok"
+
+
 @pytest.fixture(autouse=True)
 def _clear_index() -> None:
     citations.clear_cache()

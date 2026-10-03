@@ -187,3 +187,8 @@ def test_本地化由专用提取器覆盖() -> None:
     r = extract_localization(config.GAME)
     assert r.files > 1_800, f"本地化只覆盖了 {r.files} 个文件"
     assert r.unique_keys > 100_000, f"只提取到 {r.unique_keys} 个键"
+
+
+def test_脚本目录与清单目录口径互斥() -> None:
+    """同一目录只能有一个分析口径，避免 dlc 一边深析一边被当资产。"""
+    assert set(config.SCRIPTABLE_DIRS).isdisjoint(config.ASSET_DIRS)

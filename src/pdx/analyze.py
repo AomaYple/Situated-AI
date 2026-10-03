@@ -91,6 +91,39 @@ class RootFile:
     text: str = ""  # 仅对小型文本文件保留
 
 
+def _resource_index(root: Path) -> dict[str, list[dict[str, object]]]:
+    """建立轻量资源索引，只记录路径、大小和扩展名，不读取二进制内容。"""
+    categories = {
+        "图形": {".dds", ".tga", ".png", ".jpg", ".jpeg", ".webp", ".bmp"},
+        "音频": {".wav", ".ogg", ".mp3", ".bank", ".fsb", ".flac"},
+        "模型": {".mesh", ".anim", ".asset", ".bin"},
+        "界面": {".gui", ".layout"},
+        "字体": {".font", ".ttf", ".otf"},
+    }
+    out: dict[str, list[dict[str, object]]] = {name: [] for name in categories}
+    if not root.is_dir():
+        return out
+    # 资源类别只会出现在这些内容目录；限制遍历范围，避免把 binaries/地图生成
+    # 数据等数百 MB 的无关树再次扫一遍。
+    resource_roots = [root / name for name in ("gfx", "sound", "music", "gui", "fonts", "dlc")]
+    for base in resource_roots:
+        if not base.is_dir():
+            continue
+        for item in walk_files(base):
+            suffix = item.path.suffix.lower()
+            for category, suffixes in categories.items():
+                if suffix in suffixes:
+                    try:
+                        rel = item.path.relative_to(root).as_posix()
+                    except ValueError:
+                        continue
+                    out[category].append({"路径": rel, "字节": item.size, "扩展名": suffix})
+                    break
+    for values in out.values():
+        values.sort(key=lambda value: str(value["路径"]))
+    return {name: values for name, values in out.items() if values}
+
+
 @dataclass
 class DlcInfo:
     """一个 DLC 的结构与描述符。"""
@@ -100,6 +133,10 @@ class DlcInfo:
     descriptor: dict[str, str] = field(default_factory=dict)
     #: 每个 .dlc 描述符的独立内容，避免同名键互相覆盖。
     descriptors: list[dict[str, str]] = field(default_factory=list)
+    #: 描述符文件名到内容的映射，保留来源文件。
+    descriptor_sources: dict[str, dict[str, str]] = field(default_factory=dict)
+    #: 同名键的全部值，避免合并视图丢失重复定义。
+    descriptor_values: dict[str, list[str]] = field(default_factory=dict)
     top_entries: list[str] = field(default_factory=list)
     files: int = 0
     size: int = 0
@@ -135,6 +172,11 @@ class GameAnalysis:
     localization_detail: LocalizationReport | None = None
     #: GUI 文件清单
     gui_files: list[str] = field(default_factory=list)
+    #: 各内容根的图形、音频、模型、界面和字体路径索引。
+    resources: dict[str, dict[str, list[dict[str, object]]]] = field(default_factory=dict)
+    #: 引擎层本地化摘要；``localization_detail`` 继续保留 game 完整键清单。
+    localization_by_root: dict[str, dict[str, dict[str, int]]] = field(default_factory=dict)
+    localization_details: dict[str, LocalizationReport] = field(default_factory=dict)
     #: 根级配置文件
     root_files: dict[str, RootFile] = field(default_factory=dict)
     #: 校验和清单里列出的目录
@@ -206,6 +248,10 @@ class GameAnalysis:
             "引擎层脚本目录": {k: v.unique_entries for k, v in self.engine_scripts.items()},
             "本地化语言数": len(self.localization),
             "GUI 文件": len(self.gui_files),
+            "资源": {
+                root: sum(len(items) for items in values.values())
+                for root, values in self.resources.items()
+            },
             "根级配置": len(self.root_files),
             "DLC": len(self.dlcs),
             "官方md": len(self.official_docs),
@@ -305,6 +351,9 @@ def _analyse_dlc(root: Path) -> list[DlcInfo]:
                     parsed[k.strip()] = v.strip().strip('"')
             if parsed:
                 info.descriptors.append(parsed)
+                info.descriptor_sources[desc.name] = parsed
+                for key, value in parsed.items():
+                    info.descriptor_values.setdefault(key, []).append(value)
                 info.descriptor.update(parsed)
         out.append(info)
     return out
@@ -325,8 +374,8 @@ def _scriptable_files(root: Path) -> list:
     """收集某个内容根下**需要深度解析**的文件。
 
     只取 ``SCRIPTABLE_DIRS`` 下、扩展名属 ``SCRIPTABLE_SUFFIXES`` 的文件。
-    ``gfx/``、``sound/``、``dlc/`` 等资产目录只做清单统计，不解析 ——
-    目标不是读遍游戏，而是**提取所有与 mod 开发有关的信息**。
+    资产目录中仍包含可由 mod 覆盖的 PDX 定义，因此按配置进入深度解析；
+    只有 ``EXCLUDED_SUBTREES`` 明确列出的机器生成子树跳过。
     """
     return list(_iter_scriptable_files(root))
 
@@ -445,6 +494,18 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
         for lang, values in localization_detail.by_lang.items()
     }
     ga.localization_detail = localization_detail
+    ga.localization_details = {"game": localization_detail}
+    for root_name, root in CONTENT_ROOTS.items():
+        if root_name == "game" or not root.is_dir():
+            continue
+        report = extract_localization(root)
+        if report.files:
+            ga.localization_details[root_name] = report
+        ga.localization_by_root[root_name] = {
+            lang: {"文件": values["文件"], "键出现次数": values["键出现次数"]}
+            for lang, values in report.by_lang.items()
+        }
+    ga.localization_by_root["game"] = ga.localization
     if verbose:
         print(f"  [本地化] {len(ga.localization)} 种语言")
 
@@ -455,6 +516,11 @@ def game_analysis(*, verbose: bool = False) -> GameAnalysis:
             str(f.path.relative_to(config.GAME)).replace("\\", "/")
             for f in walk_files(gui_root, suffix=".gui")
         )
+    ga.resources = {
+        root_name: _resource_index(root)
+        for root_name, root in CONTENT_ROOTS.items()
+        if root.is_dir()
+    }
     # ── 根级配置文件 ───────────────────────────────────
     # **三个内容根都要看**，不能只读 game 的 —— jomini 与 clausewitz 的根下
     # 也有 PDX 文件（``settings_layout.txt`` / ``compound_settings.txt``），
@@ -798,6 +864,8 @@ def to_game_dict(ga: GameAnalysis) -> dict[str, Any]:
         "其他脚本目录": {k: _extract_to_dict(v) for k, v in ga.scripts.items()},
         "引擎层脚本目录": {k: _extract_to_dict(v) for k, v in ga.engine_scripts.items()},
         "本地化": ga.localization,
+        "各内容根本地化": ga.localization_by_root,
+        "资源索引": ga.resources,
         "GUI文件": ga.gui_files,
         "根级配置": {
             k: {
@@ -819,6 +887,8 @@ def to_game_dict(ga: GameAnalysis) -> dict[str, Any]:
                 "类型分布": dict(d.by_class),
                 "描述符": d.descriptor,
                 "描述符文件": d.descriptors,
+                "描述符来源": d.descriptor_sources,
+                "描述符全部值": d.descriptor_values,
                 "自带脚本目录": d.has_script_dir,
             }
             for d in ga.dlcs
@@ -847,6 +917,15 @@ def to_mods_dict(ma: ModsAnalysis) -> dict[str, Any]:
                 "本地化语言": dict(ma.localization.get(m.target, {})),
                 "metadata": m.metadata,
                 "本地化键": {k: list(v) for k, v in sorted(m.localization_keys.items())},
+                "本地化值": {
+                    k: dict(sorted(v.items())) for k, v in sorted(m.localization_values.items())
+                },
+                "本地化占位符": {
+                    k: list(v) for k, v in sorted(m.localization_placeholders.items())
+                },
+                "本地化重复键": m.localization_duplicates,
+                "资源引用": m.references,
+                "未解析资源引用": m.unresolved_references,
             }
             for m in ma.mods
         ],
@@ -947,6 +1026,13 @@ def write_reports(ga: GameAnalysis, ma: ModsAnalysis, ca: CrossAnalysis) -> dict
         loc = GAME_OUT / "本地化.json"
         dump(ga.localization_detail.to_dict(), loc)
         out["本地化 JSON"] = loc
+    if len(ga.localization_details) > 1:
+        loc_all = GAME_OUT / "本地化-各内容根.json"
+        dump(
+            {name: report.to_dict() for name, report in sorted(ga.localization_details.items())},
+            loc_all,
+        )
+        out["各内容根本地化 JSON"] = loc_all
 
     p = config.REPORTS / "游戏本体分析.md"
     p.write_text(render_game_markdown(ga), encoding="utf-8", newline="\n")

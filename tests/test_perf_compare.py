@@ -10,13 +10,13 @@ import importlib.util
 import json
 import signal
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
 from pdx import config
 
@@ -100,6 +100,7 @@ def test_单项清理失败不阻断其它恢复步骤(tmp_path: Path, monkeypat
     assert (target / "original.txt").is_file()
     assert not (target / "generated.txt").exists()
     assert not cleanup.backup_path.exists()
+    assert cleanup.cleaned is False
 
 
 def test_信号处理器先收尾再抛出对应退出异常(
@@ -243,3 +244,29 @@ def test_report_table剔除不可用于性能结论的性能臂(tmp_path: Path) 
     assert table["by_label"] == {"vanilla": {"per_frame_mean": 4.0, "task_mean": None, "runs": 1}}
     assert "delta" not in table
     assert table["invalid_runs"][0]["label"] == "ours"
+
+
+def test_跨进程锁拒绝第二个持有者(tmp_path: Path) -> None:
+    module = _load()
+    first = module.RunLock(tmp_path / "probe.lock")
+    second = module.RunLock(tmp_path / "probe.lock")
+    first.acquire()
+    try:
+        with pytest.raises(RuntimeError, match="另一个 perf_compare"):
+            second.acquire()
+    finally:
+        first.release()
+        second.release()
+
+
+def test_报告写入失败会让_cleaned_为假(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load()
+    _module, cleanup, _content, _target = _state(module, tmp_path, list)
+
+    def fail_write(_path: Path, *_args: object, **_kwargs: object) -> None:
+        raise OSError("只读")
+
+    monkeypatch.setattr(Path, "write_text", fail_write)
+    cleanup.run(reason="report-failure")
+    assert cleanup.cleaned is False
+    assert any("写入收尾报告" in error for error in cleanup.errors)

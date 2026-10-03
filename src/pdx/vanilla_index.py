@@ -110,6 +110,24 @@ ICON_DIR = "gfx/interface/icons"
 #: 路径撞车检查覆盖的目录 = 键目录 + 本地化（我们产物可能落到的那些）。
 PATH_DIRS: tuple[str, ...] = (*KEY_DIRS, "localization")
 
+
+def snapshot_path_dirs(game: Path) -> tuple[str, ...]:
+    """返回离线路径索引的最小目录分区，覆盖所有可脚本化内容根。"""
+    roots = set(PATH_DIRS)
+    for top in config.SCRIPTABLE_DIRS:
+        base = game / top
+        if not base.is_dir():
+            continue
+        if top in {"common", "dlc"}:
+            children = sorted(child.name for child in base.iterdir() if child.is_dir())
+            roots.update(f"{top}/{child}" for child in children)
+            if any(child.is_file() for child in base.iterdir()):
+                roots.add(top)
+        else:
+            roots.add(top)
+    return tuple(sorted(roots))
+
+
 #: 快照里的域（名字必须与 :mod:`pdx.snapshot` 写入时一致）。
 SECTION_KEYS = "vanilla_keys"
 SECTION_VOCABULARY = "vocabulary"
@@ -285,7 +303,7 @@ def snapshot_sections(game: Path) -> dict[str, dict[str, list[str]]]:
             MODIFIER_FIELD_DIR: sorted(modifier_field_names(game / MODIFIER_FIELD_DIR))
         },
         SECTION_VARIABLES: {rel: sorted(variable_names(game / rel)) for rel in VARIABLE_POOL_DIRS},
-        SECTION_PATHS: {rel: dir_files(game, rel) for rel in PATH_DIRS},
+        SECTION_PATHS: {rel: dir_files(game, rel) for rel in snapshot_path_dirs(game)},
         SECTION_ICONS: {ICON_DIR: dir_files(game, ICON_DIR)},
     }
 

@@ -446,20 +446,31 @@ CASES: list[dict[str, Any]] = [
 
 #: 分片：按**测试文件名**四分（不按 -k 过滤，避免重复收集与重复 session fixture）。
 SHARD_COUNT = 4
+# 外部并行运行四片时，每片只保留一个 xdist worker，避免四个 auto
+# 池叠加造成内存峰值；完整套件仍使用 SUITE_ARGS 的 auto。
+SHARD_SUITE_ARGS = ["-n", "1", "--dist", "no"]
+
+
+def shard_test_files(files: Sequence[str], shard_count: int = SHARD_COUNT) -> list[list[str]]:
+    """按稳定文件名轮转分片，并拒绝无意义的分片参数。"""
+    if shard_count <= 0:
+        raise ValueError("shard_count must be positive")
+    shards: list[list[str]] = [[] for _ in range(shard_count)]
+    for index, name in enumerate(sorted(files)):
+        shards[index % shard_count].append(name)
+    return shards
 
 
 def shard_cases() -> list[dict[str, Any]]:
-    """把 ``tests`` 的测试文件按名字四分，每片一条用例（读数=片内墙钟与峰值）。"""
-    files = sorted(p.name for p in (REPO / "tests").glob("test_*.py"))
-    shards: list[list[str]] = [[] for _ in range(SHARD_COUNT)]
-    for index, name in enumerate(files):
-        shards[index % SHARD_COUNT].append(name)
+    """把 tests 的测试文件按名字四分，每片一条用例（读数=片内墙钟与峰值）。"""
+    files = [p.name for p in (REPO / "tests").glob("test_*.py")]
+    shards = shard_test_files(files)
     return [
         {
             "id": f"shard.{number + 1}-of-{SHARD_COUNT}",
             "group": "shards",
             "tier": "T1",
-            "argv": _pytest(*SUITE_ARGS, *[f"tests/{name}" for name in shard]),
+            "argv": _pytest(*SHARD_SUITE_ARGS, *[f"tests/{name}" for name in shard]),
             "interp": f"全量套件第 {number + 1}/{SHARD_COUNT} 片（{len(shard)} 个测试文件，按文件名轮转切）",
             "interval_s": INTERVAL_SUITE_S,
             "timeout_s": 3600.0,

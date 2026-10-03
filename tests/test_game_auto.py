@@ -766,6 +766,29 @@ class TestBackground:
 
         assert calls == [(55, False), (777, False)]
 
+    def test_后台期间会刷新仍存活游戏的窗口句柄(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        ticks = TickLog(tmp_path / "t.log", "1836.9.20")
+        calls: list[int] = []
+        monkeypatch.setattr(ga, "TICK_LOG", ticks.path)
+        monkeypatch.setattr(ga, "other_window", lambda _exclude: 55)
+        monkeypatch.setattr(ga, "_process_pids", lambda: [123])
+
+        def live_window(hwnd: int) -> int:
+            calls.append(hwnd)
+            return 888
+
+        monkeypatch.setattr(ga, "_live_window", live_window)
+        monkeypatch.setattr(ga, "ensure_foreground", lambda _hwnd, **_kw: None)
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 55)
+        monkeypatch.setattr(ga, "_sleep", lambda _s: ticks.set("1836.11.11"))
+
+        advance = ga.background_ok(777, seconds=1.0)
+
+        assert advance.advanced is True
+        assert calls == [777, 888]
+
     def test_没有别的窗口可用时报错(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         monkeypatch.setattr(ga, "TICK_LOG", tmp_path / "t.log")
         monkeypatch.setattr(ga, "other_window", lambda _exclude: 0)
@@ -1099,9 +1122,32 @@ class TestKillGame:
                 seen.append(self.pid)
 
         monkeypatch.setattr(ga.psutil, "Process", FakeProcess)
+        monkeypatch.setattr(ga, "_wait_for_pids", lambda _pids: [])
         assert ga.kill_owned_game() == [222, 111]
         assert seen == [222, 111]
         assert not ga._OWNED_GAME_PIDS
+
+    def test_清理后仍存活的进程会出声(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        ga._OWNED_GAME_PIDS.clear()
+        ga._OWNED_GAME_PIDS.add(111)
+
+        class FakeProcess:
+            def __init__(self, pid: int) -> None:
+                self.pid = pid
+
+            def children(self, recursive: bool = False) -> list[object]:
+                del recursive
+                return []
+
+            def kill(self) -> None:
+                return None
+
+        monkeypatch.setattr(ga.psutil, "Process", FakeProcess)
+        monkeypatch.setattr(ga, "_wait_for_pids", lambda _pids: [111])
+        assert ga.kill_owned_game() == [111]
+        assert "仍存活" in capsys.readouterr().err
 
 
 class TestLaunch:

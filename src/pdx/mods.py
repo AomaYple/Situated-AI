@@ -25,6 +25,7 @@ from . import config
 from .cache import parse_cached
 from .localization import extract_localization
 from .parser import TOLERATED_ERRORS
+from .references import scan_tree
 from .scan import walk_files
 
 METADATA_REL = Path(".metadata") / "metadata.json"
@@ -43,8 +44,17 @@ class ModInfo:
     multiplayer_synced: bool | None = None
     #: 原始 metadata，保留官方字段（id/tags/dependencies 等）以便 mod 开发审计。
     metadata: dict[str, Any] = field(default_factory=dict)
-    #: 本地化键 -> 出现语言；值文本仍由游戏运行时解析，避免复制大体积正文。
+    #: 本地化键 -> 出现语言。
     localization_keys: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    #: 本地化键 -> 语言 -> 值，仅对 mod 保存，便于直接检查文本与占位符。
+    localization_values: dict[str, dict[str, str]] = field(default_factory=dict)
+    #: 本地化键 -> 占位符集合。
+    localization_placeholders: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    #: 同一语言重复定义的键。
+    localization_duplicates: dict[str, dict[str, int]] = field(default_factory=dict)
+    #: 明确字段赋值形式的资源引用，以及无法在 mod/游戏内容根中解析的引用。
+    references: list[dict[str, object]] = field(default_factory=list)
+    unresolved_references: list[dict[str, object]] = field(default_factory=list)
     #: 顶层条目（目录名或根级文件名）
     top_entries: list[str] = field(default_factory=list)
     files: int = 0
@@ -153,8 +163,12 @@ def analyse_mod(root: Path, *, vanilla: Path | None = None) -> ModInfo:
     # 本地化单独使用行式解析器；只保留键到语言的倒排索引，避免把所有文本值
     # 复制进游戏全量报告。对没有本地化的 mod 不触发额外扫描。
     if (root / "localization").is_dir():
-        report = extract_localization(root)
+        report = extract_localization(root, include_values=True)
         info.localization_keys = {key: entry.langs for key, entry in sorted(report.entries.items())}
+        info.localization_values = report.values
+        info.localization_placeholders = report.placeholders
+        info.localization_duplicates = report.duplicates
+    info.references, info.unresolved_references = scan_tree(root)
     return info
 
 
