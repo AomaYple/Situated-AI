@@ -8,10 +8,10 @@ Victoria 3 的 AI 相关 mod 开发项目。
 > **69 个产物**，由五道闸门 + 234 条断言与引用检查持续看守。
 > 已进入**阶段 5（档案扩张）**，逐阶段进度见 `docs/design/01-大方向.md` §3。
 >
-> **接手 / 隔久了再回来：先读 [`docs/design/exec/接续-下一步.md`](docs/design/exec/接续-下一步.md)**
-> —— 那是**完整的接手文档**（自包含：项目背景、当前停在哪、卡表与重建波次、全部工作口径、
-> 铁律、一批踩过的雷、开场命令）。文档总览见 [`docs/README.md`](docs/README.md)；
-> 历史交接页 [`docs/design/exec/接续说明.md`](docs/design/exec/接续说明.md) 仍在，但以新接手文档为准。
+> **接手 / 隔久了再回来：先读 [`docs/design/exec/工程基线-1.0.md`](docs/design/exec/工程基线-1.0.md)**
+> —— 这里冻结当前工程入口、测试分层、快照与证据边界。设计欠账见 [`docs/design/backlog.md`](docs/design/backlog.md)，
+> 历史接手记录 [`docs/design/exec/接续-下一步.md`](docs/design/exec/接续-下一步.md) 保留为过程档案，
+> 不作为当前状态的唯一来源。文档总览见 [`docs/README.md`](docs/README.md)。
 
 工程测试、快照、CI 摘要和自动化状态轨迹的冻结口径见
 [`docs/design/exec/工程基线-1.0.md`](docs/design/exec/工程基线-1.0.md)。本地离线闭环可直接运行：
@@ -60,7 +60,7 @@ Victoria 3 的 AI 相关 mod 开发项目。
 
 ## 工具链
 
-[`tools/`](tools/) —— Python 实现的 PDX 脚本解析与信息提取工具链。
+[`src/pdx/`](src/pdx/) —— Python 实现的 PDX 脚本解析与信息提取核心包；[`tools/`](tools/) 保留 CI、探针、基准和操作手册。
 **它不说自己「全量」**：文件维度确实逐文件覆盖（可证伪，有引擎日志背书），
 但「所有与 mod 开发相关的信息」没有边界。仓库只声明**能回答哪些任务** ——
 见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」。
@@ -190,9 +190,9 @@ Situated AI/
 ├─ src/pdx/                  工具链核心包（解析部分纯标准库，cli.py 用 typer + rich）
 ├─ tests/                    测试（统一由仓库 `.venv` 的 pytest 执行）
 ├─ tools/
-│   ├─ prof/                 性能剖析
-│   ├─ out/                  分析产物（已 gitignore）
-│   └─ reports/              人可读报告（**入库**）
+│   ├─ ci/ benchmarks/ probe/ prof/  开发检查、基准、探针与性能工具
+│   └─ out/                  分析产物（已 gitignore）
+├─ docs/reports/              人可读报告（**入库**）
 ├─ pyproject.toml            唯一配置源：依赖 / pytest / ruff / mypy / coverage
 ├─ CHANGELOG.md              **发布说明**（玩家读的那一份）；`v3 release` 核它与档案/元数据一致
 └─ README.md  LICENSE  .gitignore  .gitattributes
