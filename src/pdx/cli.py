@@ -1236,7 +1236,7 @@ def _verify_from_snapshot(*, claims: list[verify.Claim], only: str | None, no_dr
     """``v3 verify --from-snapshot``：不读游戏，用**入库的离线真值**核验。
 
     两份真值：精简快照（目录条目、defines、DLC 清单）与官方文档清单
-    （92 篇 ``.md`` 的篇数与逐篇字节数）。后者是新加的 —— 官方文档那几条断言
+    （94 篇 ``.md`` 的篇数与逐篇字节数）。后者是新加的 —— 官方文档那几条断言
     本来就不需要游戏，白丢在 CI 覆盖之外没有道理。
 
     抽成独立函数而不是塞在 ``verify_cmd`` 里，是为了让「无游戏也能跑」

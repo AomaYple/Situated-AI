@@ -30,9 +30,9 @@
 | 用户数据 | `C:\Users\28905\Documents\Paradox Interactive\Victoria 3` |
 | 本地 mod 目录 | `...\Victoria 3\mod\`（当前为空） |
 | 已订阅 mod | 23 个（全部已解剖，见 `12`） |
-| 官方 `.md` 文档 | 92 篇（**清单** `research/official-docs.manifest.json` 入库；原文不入库，本机用 `v3 mirror write --sync` 重建） |
+| 官方 `.md` 文档 | 94 篇（**清单** `research/official-docs.manifest.json` 入库；原文不入库，本机用 `v3 mirror write --sync` 重建） |
 
-## 文档索引（20 篇）
+## 文档索引（20 篇主题文档）
 
 ### 基础篇 —— 动手前必读
 
@@ -76,7 +76,7 @@
 
 | 文档 | 内容 |
 |---|---|
-| [`07-官方文档索引.md`](07-官方文档索引.md) | 92 篇官方 `.md` 的完整清单、要点摘要、**原文已知缺陷** |
+| [`07-官方文档索引.md`](07-官方文档索引.md) | 94 篇官方 `.md` 的完整清单、要点摘要、**原文已知缺陷** |
 | [`08-目录全量清单.md`](08-目录全量清单.md) | 全部目录结构与机械统计数字（**21 张表由 `v3 tables` 生成**，不会过期） |
 | [`../tools/README.md`](../../tools/README.md) | PDX 脚本提取工具链（可复现所有统计） |
 
@@ -113,7 +113,7 @@ TRY_REPLACE:company_xxx = { ... }
 | 23 个 mod 使用总次数 | **2,737** |
 | **原版本体使用次数** | **0** |
 | 支持的 `common\` 子目录 | **42 个** |
-| 官方 92 篇 `.md` 是否记载 | **完全没有** |
+| 官方 94 篇 `.md` 是否记载 | **完全没有** |
 | 哪些脚本类目录已被实测用过前缀 | `scripted_triggers`(23)、`decisions`(13)、`script_values`(6)、`scripted_effects`(6)、`scripted_buttons`(2)、`journal_entries`(1)；其余目录原版与 23 个 mod 都没用过（`v3 prefixes` 复算） |
 
 **这是 23 个 mod 能零冲突共存的关键机制** —— 大多数 mod 根本不替换原版文件。
@@ -152,7 +152,7 @@ TRY_REPLACE:company_xxx = { ... }
 
 ### 6. 官方文档有坑，必须交叉验证
 
-92 篇 `.md` 中已知问题包括：字段名拼错（如 `ai_privatization_deisre` → 实际为 `ai_nationalization_desire`）、
+94 篇 `.md` 中已知问题包括：字段名拼错（如 `ai_privatization_deisre` → 实际为 `ai_nationalization_desire`）、
 文档声明但原版零使用的字段、`pop_types.md` 漏写 9 个实际字段、`input_profile.md` 混入了其他文件内容。
 **每个系统篇文档都做了「官方声明 vs 机械实测」的逐字段对照。**
 

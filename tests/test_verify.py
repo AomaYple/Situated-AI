@@ -242,11 +242,11 @@ class TestRealClaims:
         """官方 ``.md`` 的篇数 / 总字节 / 最大单篇必须能实测出来。
 
         这三条登记为 ``slow``（全库扫描类），快速模式会跳过它们 ——
-        但实测只需扫 92 个 ``.md``，毫秒级。在这里直接跑一遍，
+        但实测只需扫 94 个 ``.md``，毫秒级。在这里直接跑一遍，
         否则新加的 ``docs.total_bytes`` / ``docs.max_bytes`` 会长期无人看守。
 
         背景：doc 07 曾把**镜像**（1.14.2）的总字节与最大文档尺寸
-        当成游戏本体的值写进正文，只钉「篇数 92」是发现不了的。
+        当成游戏本体的值写进正文，只钉「篇数 94」是发现不了的。
         """
         for cid in ("env.md_total", "docs.total_bytes", "docs.max_bytes"):
             claim = next(c for c in verify.CLAIMS if c.id == cid)

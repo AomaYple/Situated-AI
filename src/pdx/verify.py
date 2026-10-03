@@ -512,7 +512,7 @@ def _ai_script_values_referenced(_target: str) -> int:
 def _dir_md_files(target: str) -> int:
     """**游戏内容根**下某个目录的 ``.md`` 数（target 相对 ``game/``，空串表示 game 本身）。
 
-    为什么要单列：`md_files` 数的是**全部官方 `.md`**（game + jomini + clausewitz = 92），
+    为什么要单列：`md_files` 数的是**全部官方 `.md`**（game + jomini + clausewitz = 94），
     而 doc 04 那句「GAME 下共有 91 个官方 `.md`」是**只看 game** 的口径 ——
     两个数都对，混用就差 1（这类「口径差 1」最容易被当成漂移去改）。
     """
@@ -769,8 +769,8 @@ def _history_wrappers(_target: str) -> int:
 def _md_files(_target: str) -> int:
     """游戏自带的官方 .md 总数。
 
-    必须跨三个内容根统计 —— 实测 ``game`` 树 91 篇 + ``jomini`` 树 1 篇
-    = **92**。只扫 ``game/`` 会少算一篇
+    必须跨三个内容根统计 —— 实测 ``game`` 树 93 篇 + ``jomini`` 树 1 篇
+    = **94**。只扫 ``game/`` 会少算一篇
     （``jomini/common/audio_persistent_objects.md``）。
     """
     return sum(
@@ -807,7 +807,7 @@ def _md_total_bytes(_target: str) -> int:
     """全部官方 ``.md`` 的字节总数。
 
     存在的理由：doc 07 的总字节数曾长期等于**镜像**（1.14.2）的值，
-    而本体已随 1.14.3 增长 —— 只钉「篇数 92」是看不出这种漂移的。
+    而本体已随 1.14.3 增长 —— 只钉「篇数 94」是看不出这种漂移的。
     """
     return sum(size for _key, size in _official_docs())
 
@@ -1514,7 +1514,7 @@ CLAIMS: list[Claim] = [
     Claim(
         "docs.total_bytes",
         "07-官方文档索引.md",
-        "92 篇官方 .md 总字节数",
+        "94 篇官方 .md 总字节数",
         "md_total_bytes",
         "",
         236926,
@@ -3774,7 +3774,7 @@ def verify_from_snapshot(
 
     * 精简快照（``tools/out/snapshots/*.compact.json``）—— 目录条目名、
       defines 命名空间、DLC 清单；
-    * 官方文档清单（``research/official-docs.manifest.json``）—— 92 篇 ``.md``
+    * 官方文档清单（``research/official-docs.manifest.json``）—— 94 篇 ``.md``
       的篇数与逐篇字节数。
 
     覆盖不到的断言类型**不出现在结果里**（用 :func:`snapshot_kinds` 查范围），

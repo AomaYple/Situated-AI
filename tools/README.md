@@ -219,7 +219,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-92 个测试文件；2214 条用例（`pytest --collect-only` 实测），
+93 个测试文件；2221 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -354,7 +354,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 
 ## 官方文档清单
 
-`research/official-docs.manifest.json`（约 17 KB，**入库**）记着游戏自带 **92 篇**官方 `.md` 的
+`research/official-docs.manifest.json`（约 17 KB，**入库**）记着游戏自带 **94 篇**官方 `.md` 的
 路径 / 字节数 / 行数 / sha256，外加生成时的游戏版本。原文本身**不入库**。
 
 **为什么原文不入库**：那 230 KB 是 Paradox 的版权内容，而本仓库是 Apache-2.0 公开仓库。
@@ -373,9 +373,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 > `scope:other_country`、`requirement_to_maintain` 等规则）。**照旧镜像写条约 mod 会漏掉这些规则**，
 > 而当时没有任何断言会响。`test_docs_mirror.py` 现在守着这条。
 
-> ⚠️ **诚实说明**：`git rm --cached` 只能把原文从**当前树**移除，那 92 篇仍在仓库历史里。
-> 要彻底清除需重写历史（`git filter-repo`），属单独决定，本次没做 —— 所以 README 的「授权」
-> 一节保留了这条说明，而不是假装版权问题已经解决。
+> **历史核验**：`git log -- research/official-docs` 与 `git rev-list --objects --all` 均无该目录记录。官方镜像从未进入 Git 历史，因此无需重写历史；当前 `.gitignore` 只阻止本机镜像进入索引。
 
 `v3 mirror check` 的两条比对**各自独立跳过**：没有游戏就跳过「清单 vs 本体」，
 没有本地镜像就跳过「清单 vs 镜像」。**跳过不算失败**（旧实现里跳过只是不打印，
@@ -491,7 +489,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：2214 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：2221 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

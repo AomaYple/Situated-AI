@@ -7,6 +7,7 @@
 | 想做什么 | 看这里 |
 |---|---|
 | 当前编码、三平台工具链、测试与性能审计 | [`design/exec/工程基线-1.0.md`](design/exec/工程基线-1.0.md)（当前工程入口与证据边界）；[`audits/2026-10-01-repository-upgrade.md`](audits/2026-10-01-repository-upgrade.md) 是审计依据 |
+| 参与开发、编码和提交前检查 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
 | **接手工作 / 恢复一个暂停的会话** | [`design/exec/工程基线-1.0.md`](design/exec/工程基线-1.0.md)；[`design/exec/接续-下一步.md`](design/exec/接续-下一步.md) 作为历史交接记录保留 |
 | 了解项目大方向与阶段划分 | [`design/01-大方向.md`](design/01-大方向.md)（**冻结文档**：原则 P1–P14、冻结清单 F1–F12、阶段 §3） |
 | 看依据与参考 | [`design/01a-依据与参考.md`](design/01a-依据与参考.md) |

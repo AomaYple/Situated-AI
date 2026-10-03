@@ -2,9 +2,9 @@
 
 为什么不再直接比对镜像
 ----------------------
-``research/official-docs/`` 曾是 92 篇官方 ``.md`` 的逐字镜像，**现已移出
+``research/official-docs/`` 曾是 94 篇官方 ``.md`` 的逐字镜像，**现已移出
 版本控制** —— 那是 Paradox 的版权内容，而本仓库是 Apache-2.0 公开仓库。
-入库的是 ``research/official-docs.manifest.json``（92 篇的路径/字节/行数/sha256，
+入库的是 ``research/official-docs.manifest.json``（94 篇的路径/字节/行数/sha256，
 约 17 KB）：哈希与文件名是事实，不是创作内容，而镜像的**功能价值**
 （检测「Paradox 改了官方文档」）全部由它承载。
 
@@ -247,7 +247,7 @@ def test_没有游戏也没有镜像时不算通过(monkeypatch: pytest.MonkeyPa
 def test_没有游戏但有镜像时只看镜像(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """没有游戏的那条**跳过**，不该把退出码弄成 1。
 
-    旧实现里「跳过」只是不打印，``against_game`` 那 92 条「删除」
+    旧实现里「跳过」只是不打印，``against_game`` 那 94 条「删除」
     照样进了退出码判断 —— 于是任何没装游戏的机器上这个门禁永远是红的。
     """
     assert _run_check(monkeypatch, tmp_path, manifest=True, mirror=True) == 0

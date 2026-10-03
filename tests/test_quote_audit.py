@@ -35,7 +35,7 @@ def _norm(s: str) -> str:
 
 
 def _official_corpus() -> list[str]:
-    """官方 92 篇 ``.md`` 的正文（优先读游戏本体，退而读本机镜像）。"""
+    """官方 94 篇 ``.md`` 的正文（优先读游戏本体，退而读本机镜像）。"""
     texts: list[str] = []
     for base in (config.GAME, config.JOMINI, config.CLAUSEWITZ):
         if base.is_dir():

@@ -1,0 +1,67 @@
+# 贡献与维护规范
+
+这份文档是仓库级的开发入口。工程状态、已验证指标和证据边界以 [`docs/design/exec/工程基线-1.0.md`](docs/design/exec/工程基线-1.0.md) 为准；这里约定日常改动怎样保持可复现。
+
+## 环境与命令
+
+统一使用仓库根目录的 `.venv`，不要调用系统 Python 或临时创建第二个虚拟环境。
+
+```text
+# Windows（cmd.exe）
+.venv\Scripts\python.exe -X utf8 -m pytest -q
+.venv\Scripts\python.exe -X utf8 -m ruff check .
+
+# macOS / Linux
+.venv/bin/python -X utf8 -m pytest -q
+.venv/bin/python -X utf8 -m ruff check .
+```
+
+仓库脚本通过 `pathlib`、`sys.executable` 和 `platform` 选择路径与解释器。新代码不要写死盘符、用户目录、反斜杠或只在某个 shell 中存在的命令；命令示例同时给出三平台可执行的写法。Windows 端优先使用 `cmd.exe` 或仓库 Python，避免把 PowerShell 的编码和转义行为带进自动化流程。
+
+## 编码和换行
+
+受控文本文件必须是 UTF-8、无 BOM、LF 换行，并在文件末尾保留一个换行。仓库门禁会检查 Git 跟踪文件、未跟踪文件和可见的忽略文件；不要用编辑器的默认本地代码页保存文件。
+
+游戏原始文件属于证据，按原始字节保存。Victoria 3 本地化 `.yml` 在交付到游戏目录时可以由安装/打包命令按游戏要求补 BOM；仓库源文件仍保持 UTF-8 无 BOM。不要把安装时的兼容转换写回 `mod/` 源码。
+
+## 目录、命名和生成物
+
+- `src/pdx/` 是可复用的 Python 包；`tests/` 放测试；`mod/data/*.toml` 是 mod 的手写数据源。
+- `mod/` 中除 `data/*.toml` 外的内容由 `v3 modgen` 生成，不要手改生成物。
+- `tools/ci/` 放门禁与检查驱动，`tools/benchmarks/` 放基准，`tools/probe/` 放实机探针与冻结夹具，`tools/out/` 保存可复核证据。
+- `tools/out/`、`tools/probe/frozen/`、精简快照和实机证据都有审计引用。清理前先查 `git ls-files`、报告引用和 `.gitignore`，不要用 `git clean -fdX` 代替盘点。
+- 新的 Python 模块使用小写下划线命名；文档文件名沿用现有中文章节编号，不为形式重命名已有路径。只有临时文件、无引用文件或能提供兼容指针时才改名。
+- 新增目录或产物必须同时更新 `docs/README.md`、相关索引和 `.gitignore`，说明它是源码、生成物、缓存、第三方镜像还是证据。
+
+## 测试与性能
+
+提交前至少运行以下门禁；需要游戏安装的检查在没有游戏的机器上按项目规则跳过，不要把离线快照结果写成实机结论。
+
+```text
+.venv\Scripts\python.exe -X utf8 tools\ci\run_check.py encoding
+.venv\Scripts\python.exe -X utf8 -m pytest -q -o addopts=
+.venv\Scripts\python.exe -X utf8 -m ruff check .
+.venv\Scripts\python.exe -X utf8 -m ruff format --check .
+.venv\Scripts\python.exe -X utf8 -m mypy
+.venv\Scripts\python.exe -X utf8 tools\ci\run_check.py baseline
+.venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
+git diff --check
+```
+
+默认测试并行度由仓库配置控制；不要在单个测试里自行启动固定数量的全局 worker。性能改动要同时测墙钟时间和峰值内存，记录硬件、Python 版本、worker 设置和是否冷缓存；正确性回归优先于速度提升。成熟库已有稳定实现时优先复用，并为边界行为补测试。
+
+## 快照、实机和文档证据
+
+`v3 analyze`、`v3 snapshot`、`v3 snapshot diff` 产生的是文件和快照层证据；它们不能证明引擎运行期的加载顺序、覆盖优先级、字段合法性或平衡性。游戏自动化测试和 GUI 探针产生的日志、截图、进程报告必须保留运行参数和时间窗口，才能进入 `tools/out/` 证据链。
+
+文档中的数字要写清口径和来源。能由仓库现算的数字应接入测试或生成表；历史报告中的旧数字可以保留，但要标注历史时点，不能让它看起来像当前基线。官方文档镜像不入库，使用 `research/official-docs.manifest.json` 和 `v3 mirror` 命令复核。
+
+## 提交前与提交信息
+
+提交信息使用中文，直接描述结果，例如：
+
+```text
+统一仓库文档口径并规范工程入口
+```
+
+提交前检查 `git status --short`、`git diff --stat` 和 `git diff --check`。提交应包含源码、测试、文档和生成物之间完整的一致性变更；临时盘点脚本、缓存、虚拟环境和本机日志不得进入提交。
