@@ -488,6 +488,22 @@ def test_开局自检_健康双角色全绿() -> None:
     assert "可以继续跑" in ab.format_health(items)
 
 
+def test_开局自检_观察者局缺PLAYER但月度观测流动时全绿() -> None:
+    text = _healthy_text(player=None)
+    items = ab.health(ab.analyze_text(text), text=text, error_text="")
+    player = next(item for item in items if item.name.startswith("PLAYER"))
+    assert player.ok
+    assert "观察者局" in player.detail
+    assert all(item.ok for item in items), [item.detail for item in items if not item.ok]
+
+
+def test_开局自检_缺PLAYER且无主角观测仍然报红() -> None:
+    items = ab.health(ab.analyze_text(_run_line("A")), text="", error_text="")
+    player = next(item for item in items if item.name.startswith("PLAYER"))
+    assert not player.ok
+    assert "没有可确认的主角国家" in player.detail
+
+
 def test_开局自检_没有RUN行会红但角色仍可判() -> None:
     text = "\n".join(_month(sec) for sec in (1, 2, 3)).replace("AB;ROLE;RUS;", "AB;ROLE;A;")
     items = ab.health(ab.analyze_text(text), text=text, error_text="")

@@ -991,24 +991,30 @@ def health(
         )
     )
 
-    # ② 玩家是不是主角国家：对不上就是"开错国家"，A/B 会变成两国相比
+    # ② 玩家是不是主角国家：对不上就是"开错国家"，A/B 会变成两国相比。
+    # 观察者局按设计没有 PLAYER 行；只要已有主角国家且月度观测在流动，
+    # 就把缺少 PLAYER 解释为观察者模式。月度观测本身仍由第 ③ 项独立门禁检查。
     subject = result.subject
+    if result.player is None:
+        player_ok = bool(subject) and result.months >= 1
+        player_detail = (
+            f"未读到 PLAYER 行；按观察者局处理，主角国家：{subject}，"
+            f"已有 {result.months} 个月度观测 ✅"
+            if player_ok
+            else "未读到 PLAYER 行，且没有可确认的主角国家或月度观测"
+        )
+    else:
+        player_ok = bool(subject) and result.player != subject
+        player_detail = (
+            f"PLAYER;yes;{result.player}；主角国家：{subject} ✅ 旁观者"
+            if player_ok
+            else f"❌ 玩家就是主角国家 {subject}：它不是 AI，问不出「AI 自己改革」"
+        )
     items.append(
         HealthItem(
-            # ⚠️ 口径在阶段 3 中途**反过来了**：玩家扮演主角国家时，那个国家就不是 AI 了 ——
-            # 而 G2 问的正是"AI 在战败后自己走向改革"。所以玩家必须是**旁观者**，
-            # 主角国家要保持 AI 控制（冲击由决议远程施加）。这一条因此检查"不是"。
             name="PLAYER 不是主角国家（它要保持 AI）",
-            ok=bool(result.player) and bool(subject) and result.player != subject,
-            detail=(
-                (
-                    f"PLAYER;yes;{result.player}；主角国家：{subject} ✅ 旁观者"
-                    if result.player != subject
-                    else f"❌ 玩家就是主角国家 {subject}：它不是 AI，问不出「AI 自己改革」"
-                )
-                if result.player
-                else "一条 PLAYER 行都没有（月度钩子没跑？）"
-            ),
+            ok=player_ok,
+            detail=player_detail,
         )
     )
 
