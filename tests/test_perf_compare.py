@@ -38,6 +38,9 @@ def _load() -> Any:
 def _state(
     module: Any, tmp_path: Path, killer: Callable[[], list[int]]
 ) -> tuple[Any, Any, Path, Path]:
+    module.LOGS = tmp_path / "logs"
+    module.LOGS.mkdir()
+    module.OUT_DIR = tmp_path / "out"
     content = tmp_path / "content_load.json"
     content.write_bytes(b'{"enabledMods": []}\n')
     backup = module._make_backup(content)
@@ -99,8 +102,24 @@ def test_单项清理失败不阻断其它恢复步骤(tmp_path: Path, monkeypat
     assert content.read_bytes() == b'{"enabledMods": []}\n'
     assert (target / "original.txt").is_file()
     assert not (target / "generated.txt").exists()
-    assert not cleanup.backup_path.exists()
+    assert cleanup.backup_path.exists()
     assert cleanup.cleaned is False
+
+
+def test_游戏仍存活时保留实验资源和可恢复原件(tmp_path, monkeypatch):
+    module = _load()
+    _module, cleanup, content, target = _state(module, tmp_path, list)
+    target.mkdir()
+    (target / "generated.txt").write_bytes(b"experiment")
+    content.write_bytes(b"running-state")
+    monkeypatch.setattr(module.ga, "LAST_KILL_ALIVE", (123,))
+    errors = cleanup.run(reason="kill-failed")
+    assert errors
+    assert content.read_bytes() == b"running-state"
+    assert (target / "generated.txt").exists()
+    assert cleanup.backup_path.exists()
+    assert cleanup.path_backups[target].exists()
+    assert not cleanup.cleaned
 
 
 def test_信号处理器先收尾再抛出对应退出异常(
@@ -252,7 +271,7 @@ def test_跨进程锁拒绝第二个持有者(tmp_path: Path) -> None:
     second = module.RunLock(tmp_path / "probe.lock")
     first.acquire()
     try:
-        with pytest.raises(RuntimeError, match="另一个 perf_compare"):
+        with pytest.raises(RuntimeError, match="另一个实机实验"):
             second.acquire()
     finally:
         first.release()

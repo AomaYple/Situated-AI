@@ -727,7 +727,9 @@ def build_baseline() -> dict[str, Any]:
     cases: dict[str, Any] = {}
     for case in all_cases():
         records = by_case.get(case["id"], [])
-        summary = case_summary(records) if records else {"rounds_total": 0, "missing": True}
+        summary: dict[str, Any] = (
+            case_summary(records) if records else {"rounds_total": 0, "missing": True}
+        )
         summary.update(
             {
                 "group": case["group"],

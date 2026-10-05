@@ -31,7 +31,7 @@ def _archives() -> tuple[modgen.Archive, ...]:
     return loaded
 
 
-def _changelog(tmp_path: Path, *, version: str = "0.1.0", drop: str = "", extra: str = "") -> Path:
+def _changelog(tmp_path: Path, *, version: str = "0.2.0", drop: str = "", extra: str = "") -> Path:
     """按**真实档案**生成一份变体 changelog：`drop` 去掉一份，`extra` 追加一行。"""
     archives = _archives()
     entries = "\n".join(
@@ -64,12 +64,12 @@ class TestCheck:
         assert report.ok, report.problems
         assert report.missing == ()
         assert report.orphans == ()
-        assert report.versions == ("0.1.0",)
+        assert report.versions == ("0.2.0",)
 
     def test_版本对不上要报(self, tmp_path: Path) -> None:
-        report = release.check(_changelog(tmp_path, version="0.2.0"), archives=_archives())
+        report = release.check(_changelog(tmp_path, version="0.9.0"), archives=_archives())
         assert not report.ok
-        assert any("最新一节写的是 0.2.0" in item for item in report.problems)
+        assert any("最新一节写的是 0.9.0" in item for item in report.problems)
 
     def test_少写一份档案要报(self, tmp_path: Path) -> None:
         report = release.check(_changelog(tmp_path, drop="brz_market_loss"), archives=_archives())

@@ -154,6 +154,24 @@ tooltip = "je_sitai_t1_window_complete_tt"
 why = "测：窗口一关递回去（可见块 ⇒ 自带文案键）"
 """
 
+CARD_SCRIPT_VALUE = """
+[[cards.items]]
+name = "ai_strategy_sitai_t1_diplomatic"
+slot = "diplomatic"
+weight = { amount = 20, why = "测：外交牌权重" }
+why = "测：外交牌为什么读取脚本值"
+[[cards.items.possible]]
+key = "is_at_war"
+arg = "yes"
+why = "测：战争门"
+[[cards.items.fields]]
+key = "diplomatic_play_boldness"
+why = "测：字段为什么用脚本值块"
+[cards.items.fields.value]
+amount = -25
+why = "测：脚本值的数值依据"
+"""
+
 
 #: 追加到 :data:`MINIMAL` 后面的"面板三行"（可选表 `[panel]`，P11 的三行解释）。
 #: 2026-09-22 新增：G3 判的是**试玩者能复述「当前目标 + 主因」**，而揉进 `_reason`
@@ -323,18 +341,13 @@ def test_解析真实档案的关键条目() -> None:
         "interest_group_ig_industrialists_pol_str_mult",
         "interest_group_ig_intelligentsia_pol_str_mult",
     }
-    # 自建牌：**恰好这一张**（`mod/data/ru_defeat.toml` 的 `[cards]` —— t18 落地，t94 改准）。
-    #
-    # ⚠️ **为什么断言「恰好一张 + 逐字段」，而不是「≥1 张」或「非空」**：这条用例守的是
-    #    「我们递了哪些牌、它们长什么样」这件**事实**。放宽成 `len(cards) >= 1` 或 `cards`
-    #    就直接把它废掉了 —— 少一张、换一张、`slot` 写错、`weight` 漂出预算、门换成别的
-    #    字段，它都会绿。牌是**处方**（F5 的取舍结果），不是可以随实现漂的自由量。
+    # 自建牌：旧政治处境牌。这里仍然逐牌钉住名称、槽位、权重、门和字段，
+    # 防止把新增正式闭环误写成只改了文件数量。
     cards = archive.cards
-    assert len(cards) == 1, (
-        f"本档案现在**恰好一张**自建牌，实际 {len(cards)} 张：{[c.name for c in cards]} —— "
-        "数量本身是被这条用例守住的事实，放宽成「≥1」等于把断言废掉"
-    )
-    card = cards[0]
+    assert {card.name for card in cards} == {
+        "ai_strategy_sitai_ru_defeat_agenda",
+    }
+    card = next(card for card in cards if card.name.endswith("_agenda"))
     assert card.name == "ai_strategy_sitai_ru_defeat_agenda"
     assert card.slot == "political"
     assert card.weight == 40  # 政治槽预算 [0.3, 0.6] ⇒ W ≤ 49（闸门 ③ 的价格表）
@@ -375,6 +388,44 @@ def test_没有reform_inputs的档案照样编译(tmp_path: Path) -> None:
     assert archive.inputs_file not in built.files
     assert "没有第二处理段" in built.files[archive.doc_file]
     assert modgen.facts(archive) == modgen.readback(built.files)
+
+
+def test_策略牌脚本值块能生成并往返(tmp_path: Path) -> None:
+    archive = _archive(tmp_path, MINIMAL + CARD_SCRIPT_VALUE)
+    card = archive.cards[0]
+    field = card.fields[0]
+    assert field.script_value is not None
+    assert field.script_value.amount == -25
+    built = modgen.build(archive)
+    text = built.files[archive.card_file(card)]
+    assert "diplomatic_play_boldness = {" in text
+    assert "value = -25" in text
+    assert modgen.facts(archive) == modgen.readback(built.files)
+
+
+def test_策略牌脚本值块禁止混用标量(tmp_path: Path) -> None:
+    bad = CARD_SCRIPT_VALUE.replace(
+        'key = "diplomatic_play_boldness"\nwhy = "测：字段为什么用脚本值块"',
+        'key = "diplomatic_play_boldness"\namount = -25\nwhy = "测：字段为什么用脚本值块"',
+    )
+    with pytest.raises(modgen.DataError, match="不能同时给标量"):
+        _archive(tmp_path, MINIMAL + bad)
+
+
+@pytest.mark.parametrize("key", ["multiply", "if", "tooltip", "unexpected"])
+def test_策略牌未知字段不会静默丢失(tmp_path: Path, key: str) -> None:
+    with pytest.raises(modgen.DataError, match="未支持"):
+        _archive(tmp_path, MINIMAL + CARD_SCRIPT_VALUE + f'\n{key} = "bad"\n')
+
+
+@pytest.mark.parametrize("extra", ["add = 2", "value = 9", "if = { value = 1 }", "stray"])
+def test_策略牌篡改嵌套脚本值被往返检查拒绝(tmp_path: Path, extra: str) -> None:
+    archive = _archive(tmp_path, MINIMAL + CARD_SCRIPT_VALUE)
+    files = dict(modgen.build(archive).files)
+    path = archive.card_file(archive.cards[0])
+    files[path] = files[path].replace("value = -25", f"value = -25\n{extra}")
+    with pytest.raises(modgen.DataError):
+        modgen.readback(files)
 
 
 def test_有reform_inputs时多出效果与修正两条事实(tmp_path: Path) -> None:

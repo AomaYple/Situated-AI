@@ -1,0 +1,5 @@
+# 由 pdx.decisions 生成；追加子钩子，不替换原版 effect。
+on_monthly_pulse_country = { on_actions = { sitai_fiscal_update } }
+on_country_default = { on_actions = { sitai_fiscal_update } }
+on_country_no_longer_default = { on_actions = { sitai_fiscal_update } }
+sitai_fiscal_update = { effect = { sitai_update_fiscal = yes } }

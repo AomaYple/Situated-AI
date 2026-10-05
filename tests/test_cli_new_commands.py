@@ -169,6 +169,26 @@ def test_cov_check_only在有数据时打印表格(tmp_path, monkeypatch) -> Non
     result = _run("cov", "--check-only", "--top", "1")
     assert "模块覆盖率" in result.output
     assert "整体" in result.output
+    assert result.exit_code == 1  # 核心模块数据不齐不能通过门禁
+
+
+@pytest.mark.parametrize("code", [1, 3])
+def test_cov即使覆盖率达标也不能吞掉pytest失败(monkeypatch, code):
+    from pdx import covgate
+
+    rows = [covgate.ModuleCoverage(name, 100.0, 100) for name in covgate.FLOORS]
+    monkeypatch.setattr(covgate, "run_pytest", lambda: code)
+    monkeypatch.setattr(covgate, "load_coverage", lambda: rows)
+    assert _run("cov").exit_code == 1
+
+
+def test_cov_top只过滤展示不能改变整体门禁(monkeypatch):
+    from pdx import covgate
+
+    rows = [covgate.ModuleCoverage(name, 100.0, 100) for name in covgate.FLOORS]
+    rows.append(covgate.ModuleCoverage("pdx/extra.py", 0.0, 1))
+    monkeypatch.setattr(covgate, "load_coverage", lambda: rows)
+    assert _run("cov", "--check-only", "--top", "1").exit_code == 0
 
 
 def test_cov整体不达标时退出码为1(tmp_path, monkeypatch) -> None:

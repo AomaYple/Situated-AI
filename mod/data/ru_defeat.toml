@@ -329,7 +329,7 @@ why = "第三行 = **上次改主意的原因**。这一行是 G3 里最容易�
 
 # ── ⑦ 牌：一张自建处境牌（t18；不是 F5 的例外，是那条机制的第一次实证）──
 [cards]
-why = "本档案现在有**一张**自建牌（`ai_strategy_sitai_ru_defeat_agenda`）—— 它承载的不是「意图位移」而是 t18 要交付的**那条机制本身**：**由处境标志（压力修正）驱动牌选择**。为什么不改用递原版牌（F5 的常规手段）：`set_strategy` 的**直置**通道已被 t18 的 test 0 实测证伪（`possible = { always = no }` 的牌照样被直置挂上、零报错、7/7 行 `yes`，见 `docs/design/exec/阶段5-新增牌-结果.md`）⇒ 递牌**不作承重**；这张牌**只靠引擎自己的重掷**进场（`possible` 门 + 单值权重 40），门开在**处境**上：压力修正挂着 ⇒ 它进池；压力到期 ⇒ 它自动退回池外。第一版只发三样（`type` / `possible` / 单值 `weight`），全部落在生成器能力边界内（`src/pdx/modgen.py:1467`；t15 `docs/design/exec/阶段5-新增牌-口径.md` §2 的能力边界段）。"
+why = "旧设计实验资产：政治槽处境牌仍参与压力修正后的抽取。本档案不是通用财政决策的默认生产机制；不从 possible 推导已持牌会自动退出。"
 
 [[cards.items]]
 name = "ai_strategy_sitai_ru_defeat_agenda"
@@ -342,7 +342,6 @@ key = "has_modifier"
 op = "="
 arg = "sitai_ru_defeat_pressure"
 why = "门 = 处境本身（t15 §3.1）。用**修正**当「处境旗」在原版是完整存在的路线：`sick_man_of_europe` 由 `common/static_modifiers/content_3_modifiers.txt:245-251` 定义、`common/history/countries/tur - ottoman empire.txt:33` 开局挂上、`common/company_types/00_companies_asia.txt:186` 等 6 处用 `has_modifier` 读它、处境结束时由 `common/journal_entries/00_sick_man.txt:17`/`:26` 摘掉。⚠️ **外推（如实写在案）**：原版 34 张带 `possible` 的牌里（34 = 生成物 `docs/design/02-可执行面.md` 里 `possible` 列「有」的牌行数；该表共 35 张牌），`possible` 块内读修正的 **0 张**（`has_modifier` 的 4 处先例全在 `weight` 块内）⇒ 「`possible` 里能不能读修正」只能由实机判：A 臂（门为假、1–12 月）若牌**仍**进链 ⇒ 门在重掷路径上也不成立、要换通道（t15 §7 的失败判据）。修正名见 `mod/common/static_modifiers/sitai_ru_defeat_pressure.txt`。"
-
 
 # ── ⑧ 声明式引用：闸门 ② 逐条核对 ──────────────────────────
 # 变量/修正/JE/图标/本地化键这些**带名字的引用**由闸门 ② 从产物里自动抽出来核对；

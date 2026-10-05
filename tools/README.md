@@ -1,8 +1,8 @@
 # tools —— Python 工具链
 
 Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取逻辑在 `src/pdx/` 包里，
-**只用标准库**；命令行外壳用 typer + rich（表格与状态输出），
-`--profile` 另需 pyinstrument。
+解析核心使用标准库；命令行使用 typer + rich，进程与内存测量使用 psutil，
+实机自动化使用 filelock、Pillow、NumPy、OpenCV 及平台输入库。Python 调用树剖析另需 pyinstrument。
 
 > 早期版本用 PowerShell（10 个脚本）与 Node.js（2 个原型）实现，已全部退休。
 > 退休原因见文末「为什么全 Python 化」。
@@ -36,10 +36,41 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\python.exe tools\ci\run_check.py baseline
 ```
 
-`deadcode` 扫描当前受控 Python 源码的函数和类引用面。它会把测试文件纳入索引，
+`deadcode` 扫描受控及未忽略的新 Python 源码的函数和类引用面。它会把测试文件纳入索引，
 识别 `__all__`、`__main__`、pytest hook、插件装饰器和类方法等动态入口，只把确定的
 零引用定义作为失败候选。`tools/probe/frozen/` 是历史证据，`tools/out/ci/` 下的 JSON
 和 Markdown 报告是可再生临时产物，均不作为可删除源码处理。
+
+## 当前处境决策实验
+
+生产源为 `mod/decisions/`，由 `pdx.decisions` 生成；旧 `mod/data/` 仅生成到 `mod/legacy/`。
+实机脚本使用同一 `pdx.game_run` 资源事务：跨进程互斥、隔离旧存档菜单、配置和存档原字节恢复、
+持续日志归档、启动期及模拟期进程采样。游戏用户目录不保存实验临时文件。
+
+| 入口 | 用途 |
+|---|---|
+| `tools/probe/decision_lifecycle.py` | 隔离财政注入，核对进入、迟滞、退出和外交暴露 |
+| `tools/probe/decision_behavior.py` | 固定观察者存档的单字段外交/市场两臂；创建机会与AI选择分别统计 |
+| `tools/probe/decision_compare.py` | 检查neutrality单字段、完整检查点、版本和其他源一致，再核实际评分差分 |
+| `tools/probe/market_compare.py` | 同依赖输入、有资格窗口的支持评分方向与实际角色；不判总体质量通过 |
+| `tools/probe/decision_stability.py` | 原版/财政/政治/组合的自然长局、存档迁移与可选后台引擎任务计时 |
+| `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期 |
+| `tools/benchmarks/decision_runtime.py` | 分开测生成、日志/存档读取的墙钟与Python分配峰值；正式基线要求机器安静 |
+
+例如，激活仓库虚拟环境后运行 `python tools/probe/decision_stability.py --arm fiscal --months 24 --profile`。
+`--profile` 仅在清零/导出控制台计时时暂时到前台，模拟窗口退回后台并核实tick推进；
+导出的CSV须新出现、稳定且可完整解析，用户原CSV最终恢复。此处是引擎任务样本，不是渲染延迟或FPS。
+`--save` 只接受已核对的观察者存档，同版本默认要求；跨版本升级须单独加 `--allow-save-upgrade` 并记录风险。
+政治与市场实验默认停用；放大参数通道实验与保守生产参数分开。结果入口在 `docs/design/exec/M1-结果.md` 至 `M5-结果.md`。
+
+`--localization-baseline` 可显式为隔离实验生成原版中文缺键补全源，只复制当前安装中已核实的英语文本，
+已有中文键不覆盖；清单与源哈希随局归档，所有错误门禁保持。它是实验仪器，生产包不包含它。
+新仪器使用 `sample-N` 私有序号避免模拟效果调用全局GUI日期；实际日历起止见运行器tick。
+市场分数Getter为整数，比较器声明量化界并拒绝弱于分辨率的效果，不把评分差分等同于行为收益。
+
+`decision_stability.py --natural-diplomacy` 追加纯自然外交观察：从全量原版类型键生成started钩子，
+以月度自报区别零发起与缺日志，不创建博弈、不设置策略、不注入财政。它记录自然运行的发起事实、
+目标和类型；原版脚本也可能发起博弈，因此数量不是完整机会分母、引擎自主性或行为质量证明。
 
 ## 包结构 `src/pdx/`
 
@@ -219,7 +250,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-93 个测试文件；2221 条用例（`pytest --collect-only` 实测），
+104 个测试文件；2473 条用例（`pytest --collect-only` 实测），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -489,7 +520,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：2221 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：2473 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 

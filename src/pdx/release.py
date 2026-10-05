@@ -1,4 +1,4 @@
-"""发布流程的机械部分：**changelog ↔ 档案 ↔ 元数据**（阶段 7 的最后一件）。
+"""发布门禁：生产 changelog 与根级元数据一致，legacy 档案保留历史覆盖核对。
 
 为什么需要它
 ------------
@@ -9,9 +9,9 @@
 
 §1 说过「**没有检查方式的原则不算原则**」。这一模块把那句话变成机器可查的四件事：
 
-1. **版本对得上**：changelog 最新那一节的版本号 == 元数据的 `version`
+1. **生产版本对得上**：changelog 最新那一节的版本号 == `pdx.decisions` 元数据的 `version`
    （发了新版却忘了写发布说明，玩家就不知道这次改了什么）；
-2. **每份档案都被写过**：`mod/data` 里每个 id 都以条目形式出现在 changelog 里；
+2. **legacy 每份档案都被写过**：`mod/data` 里每个 id 都以条目形式出现在 changelog 里；
 3. **没有幽灵条目**：changelog 里提到的每个档案 id 都真的存在
    （删了档案却留着发布说明 = 说明在骗人）；
 4. **归档物对得上**：各档案声明的 `game_version` 必须一致
@@ -39,7 +39,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pdx import config, modgen
+from pdx import config, decisions, modgen
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -106,11 +106,11 @@ def check(
     """跑一遍发布检查，返回结论（**不抛异常**：每一条问题都写进 `problems`）。"""
     path = changelog or CHANGELOG
     loaded = tuple(archives) if archives is not None else tuple(modgen.load_all())
-    payload = modgen.metadata_payload(loaded)
+    payload = decisions.metadata_payload()
     metadata_version = str(payload.get("version", ""))
     supported = str(payload.get("supported_game_version", ""))
     ids = tuple(sorted(archive.id for archive in loaded))
-    declared = tuple(sorted({archive.game_version for archive in loaded}))
+    declared = tuple(sorted({supported, *(archive.game_version for archive in loaded)}))
 
     problems: list[str] = []
     if not path.is_file():
@@ -145,12 +145,6 @@ def check(
         problems.append("发布说明里提到了不存在的档案：" + "、".join(orphans))
     if len(declared) > 1:
         problems.append("各档案声明的 game_version 不一致：" + "、".join(declared))
-    # ⚠️ 这里**故意不**再核「declared[0] == supported」：`metadata_payload` 的
-    # `supported_game_version` **就是** `archives[0].game_version`（`modgen.py:1458`），
-    # 而档案之间不一致由 `build_all` → `_check_game_version` 拦下 ⇒ 在 `len(declared) == 1`
-    # 的前提下那两句永远相等，写出来是一段**不可能失败**的检查（P13 的反面：检查要么能响，
-    # 要么别写）。真正守住这件事的是 modgen 那一条，不在这里重复。
-
     return ReleaseReport(
         changelog=path,
         versions=versions,

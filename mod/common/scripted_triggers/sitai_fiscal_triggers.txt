@@ -1,0 +1,27 @@
+# 由 pdx.decisions 生成；所有国家共享同一规则。
+sitai_fiscal_entry = {
+    OR = {
+        in_default = yes
+        AND = { taking_loans = yes credit > 0 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 }
+    }
+}
+sitai_fiscal_hold = {
+    OR = {
+        in_default = yes
+        AND = { taking_loans = yes credit > 0 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 52 }
+    }
+}
+sitai_external_exposure = {
+    OR = {
+        is_at_war = yes
+        is_diplomatic_play_initiator = yes
+        is_diplomatic_play_target = yes
+        is_diplomatic_play_committed_participant = yes
+    }
+}
+sitai_fiscal_external_risk = {
+    is_ai = yes
+    sitai_external_exposure = yes
+    has_variable = sitai_fiscal_risk
+    sitai_fiscal_hold = yes
+}

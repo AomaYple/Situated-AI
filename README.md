@@ -2,16 +2,20 @@
 
 Victoria 3 的 AI 相关 mod 开发项目。
 
-> **当前状态**：仓库里有三部分 —— 一套 **21 篇的 mod 开发知识库**、一套
-> **可复现其中全部统计数据的 Python 工具链**，以及**已经在跑的 mod 本体**：
-> 数据源 `mod/data/*.toml`（**9 份处境档案**）经 `v3 modgen` 生成 `mod/` 下的
-> **69 个产物**，由五道闸门 + 234 条断言与引用检查持续看守。
-> 已进入**阶段 5（档案扩张）**，逐阶段进度见 `docs/design/01-大方向.md` §3。
+> **当前状态**：工程底座继续复用，包括 **21 篇的 mod 开发知识库**、
+> **可复现统计数据的 Python 工具链**和当前的**实验性 mod 实现**：
+> 生产数据源 `mod/decisions/fiscal.toml` 生成真实财政风险规则及默认策略的条件偏置。
+> 旧 `mod/data/*.toml` 的 **9 份实验档案、69 个产物**隔离在 `mod/legacy/`，不进入生产 ZIP。
+> **新机制已实现且两国财政生命周期有 Windows 实机证据；实际外交收益、稳定性与扩展仍在验证。**
 >
-> **接手 / 隔久了再回来：先读 [`docs/design/exec/工程基线-1.0.md`](docs/design/exec/工程基线-1.0.md)**
-> —— 这里冻结当前工程入口、测试分层、快照与证据边界。设计欠账见 [`docs/design/backlog.md`](docs/design/backlog.md)，
-> 历史接手记录 [`docs/design/exec/接续-下一步.md`](docs/design/exec/接续-下一步.md) 保留为过程档案，
-> 不作为当前状态的唯一来源。文档总览见 [`docs/README.md`](docs/README.md)。
+> **接手 / 隔久了再回来：先读 [`当前 mod 设计`](docs/design/03-处境决策设计.md)和 [`工程基线`](docs/design/exec/工程基线-1.0.md)。**
+> 前者定义通用处境判断、策略行为和验收；后者定义继续复用的工具链、测试、快照与证据边界。
+> 下一步见 [`mod 重设计实施计划`](docs/design/exec/mod重设计-实施计划.md)，研究欠账见 [`backlog`](docs/design/backlog.md)。
+> 旧方向与阶段接手记录保留为历史依据；文档总览见 [`docs/README.md`](docs/README.md)。
+
+mod 的目标是让 AI 国家依据内部因素、外部因素和自身政治偏好，在可行路线中作出更合理的选择，
+并随玩家改变世界重新评估。实现方向是**通用处境判断 + 少量长期策略及动态行为参数 + 原版 AI 执行**。
+优先读取真实世界状态；新增世界模拟机制单独设计和验证。Python 负责生成与测试，游戏运行不依赖外部 Python 服务。
 
 工程测试、快照、CI 摘要和自动化状态轨迹的冻结口径见
 [`docs/design/exec/工程基线-1.0.md`](docs/design/exec/工程基线-1.0.md)。本地离线闭环可直接运行：
@@ -169,8 +173,8 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2221 条**用例（`pytest --collect-only` 实测；整套读数见 `docs/reports/` 的全量基线） |
-| 测试文件 | **93 个测试文件**（`tests/test_*.py`） |
+| 测试 | **2473 条**用例（`pytest --collect-only` 实测；整套读数见 `docs/reports/` 的全量基线） |
+| 测试文件 | **104 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 以 `v3 cov` 与 CI coverage artifact 的当前输出为准（门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | **3,962** 个脚本文件（`game\` 下 `.txt` 3,758 + `.gui` 204，即 `pdx.cache` 的解析条数）+ **1,878** 个本地化 `.yml` |
@@ -180,8 +184,8 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 ```
 Situated AI/
-├─ mod/                      **mod 本体**：`data/*.toml` 是唯一手写的数据源，其余全是 `v3 modgen` 的生成物
-├─ docs/design/              「大方向」+ `exec/`（一页执行文档 · 结果文档 · 收口清单 · **接续说明**）+ backlog
+├─ mod/                      生产产物（`decisions/*.toml` 生成）；`data/` → `legacy/` 仅为历史实验
+├─ docs/design/              当前处境决策设计 + 历史方向依据 + `exec/` 实施与结果记录 + backlog
 ├─ docs/victoria3-modding/   20 篇主题文档 + 1 个索引
 ├─ docs/audits/              当前工程审计与历史测试快照
 ├─ research/

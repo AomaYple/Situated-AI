@@ -3,8 +3,8 @@
 为什么需要先钉口径
 ==================
 
-`pyproject.toml` 的 addopts 默认 `-n auto --dist loadscope`；本机 16 个逻辑核就是
-**16 个 worker**，而 xdist 的 worker 之间不共享内存缓存，每个 worker 都要自己把
+`pyproject.toml` 的 addopts 默认 `-n auto --dist loadscope`；装有游戏树时会按可用内存
+动态限制 worker 数，而 xdist 的 worker 之间不共享内存缓存，每个 worker 都要自己把
 需要的那部分语料装一遍。所以「并行测试的内存占用」不是某次运行的偶然现象，而是
 **乘上并行度的常数** —— 谈优化之前，先把「量什么、怎么量、上限多少」写死。
 
@@ -41,14 +41,13 @@
 跨平台
 ======
 
-* Windows：``kernel32!K32GetProcessMemoryInfo`` 读 RSS / 高水位，
-  ``CreateToolhelp32Snapshot`` 枚举父子关系；
-* Linux：``/proc/<pid>/status``（``VmRSS`` / ``VmHWM``）+ ``/proc/<pid>/stat``（ppid）；
-* macOS 与其它 POSIX：``ps -axo pid=,ppid=,rss=``。该平台**只有当前 RSS、没有高水位**，
+* 三平台用 ``psutil`` 读取 RSS、CPU 与父子关系；Windows 同时读 OS 高水位；
+* Linux 补读 ``/proc/<pid>/status``（``VmHWM`` / ``RssAnon``）；
+* macOS 与其它 POSIX **只有当前 RSS、没有可比高水位**，
   于是每 worker 峰值退化成「存活期间的最大采样值」，输出里用 ``peak_source``
   标注是 ``hwm`` 还是 ``sampled``，混用两种来源的数之前先看这个字段。
 
-只用标准库；``--inproc`` 路径需要 dev 依赖 pytest（仓库 `[project.optional-dependencies] dev`）。
+进程测量使用运行期依赖 psutil；``--inproc`` 另需 dev 依赖 pytest。
 
 工具自身的三条硬伤（都已修，2026-09-25；逐条登记在 `docs/design/backlog.md` 附⑤）
 ======================================================================
@@ -119,7 +118,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import psutil
 
@@ -185,10 +184,12 @@ class MemReader:
 
     def __init__(self) -> None:
         self.peak_source = "hwm" if (_IS_WIN or _IS_LINUX) else "sampled"
+        # 插件与应用同处 pytest 进程；保存入口，避免应用的进程 mock 污染仪器。
+        self._process = psutil.Process
 
     def read(self, pid: int) -> tuple[int, int | None, int | None] | None:
         try:
-            info = psutil.Process(pid).memory_info()
+            info = self._process(pid).memory_info()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return None
         peak = getattr(info, "peak_wset", None)
@@ -204,7 +205,7 @@ class MemReader:
 
     def read_cpu(self, pid: int) -> float | None:
         try:
-            times = psutil.Process(pid).cpu_times()
+            times = self._process(pid).cpu_times()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return None
         return round(times.user + times.system, 2)
@@ -777,7 +778,7 @@ GROUPS: dict[str, dict[str, Any]] = {
         "n": "auto",
         "cache": True,
         "required": False,
-        "note": "附加：pyproject addopts 的默认并行度（本机 -n auto = 逻辑核数）",
+        "note": "附加：pyproject 默认并行度（装有游戏树时按可用内存动态限制）",
     },
     "n4-seed1": {
         "n": "4",
@@ -1470,10 +1471,11 @@ _STEP_T0 = time.time()
 #: 本进程**真正开始跑测量**的时刻（``cmd_one`` 里重新求值）。
 #: 与 ``_now_iso()`` 在收尾时求值不同 —— 那个是结束时刻（踩过这个坑）。
 _STARTED_AT = _now_iso()
+_SELF_READER = MemReader()
 
 
 def _self_read() -> tuple[float, float, float]:
-    row = MemReader().read(os.getpid())
+    row = _SELF_READER.read(os.getpid())
     if row is None:  # pragma: no cover - 本进程必然读得到
         raise SystemExit("[mem] 读不到自己的内存计数器")
     rss, hwm, private = row
@@ -1515,7 +1517,14 @@ def released(label: str, note: str) -> dict[str, Any]:
 # 「清掉之后峰值是多少」就是这条路径的**内存下界**，也是 §5 预算可达性的证据：
 # 它回答的是「如果把永久保留改成有界/按需，能降到多少」，而不是在改产品代码。
 
-_JANITOR = {"evictions": 0, "stop": threading.Event(), "thread": None}
+
+class JanitorState(TypedDict):
+    evictions: int
+    stop: threading.Event
+    thread: threading.Thread | None
+
+
+_JANITOR: JanitorState = {"evictions": 0, "stop": threading.Event(), "thread": None}
 
 
 def start_janitor(interval_s: float) -> None:
@@ -1666,8 +1675,8 @@ def step_one(
                 picked.setdefault(index, str(path))
                 if len(picked) >= cache.SHARDS:
                     break
-            for path in picked.values():
-                cache.parse_cached(path)
+            for selected_path in picked.values():
+                cache.parse_cached(selected_path)
             step(
                 "shards_touch",
                 note=f"只解析 {len(picked)} 个文件（每个分片 1 个）→ 分片视图 {cache.SHARDS} 片",
@@ -1717,7 +1726,8 @@ def _step_shards_each() -> int:
     """
     from pdx import cache  # noqa: PLC0415 - 延迟导入（见 corpus_files）
 
-    has_v1 = hasattr(cache, "_load_shard") and hasattr(cache._state, "shards")
+    v1_load = getattr(cache, "_load_shard", None)
+    has_v1 = callable(v1_load) and hasattr(cache._state, "shards")
     has_v2 = hasattr(cache._state, "indexes")
     layout = "v1（整片常驻）" if has_v1 else ("v2（索引 + 按需单条取）" if has_v2 else "未知")
 
@@ -1725,7 +1735,8 @@ def _step_shards_each() -> int:
     for index in range(cache.SHARDS):
         rss0 = _self_read()[0]
         if has_v1:
-            entries = cache._load_shard(index)  # 探针要看的就是这一层
+            assert callable(v1_load)
+            entries = v1_load(index)  # 探针要看的就是这一层
             count = len(entries)
         else:
             index_entries = cache._load_index(index)
@@ -1853,8 +1864,8 @@ def _step_invariant(limit: int) -> int:
         f"memo entries={cache.stats()['条目']}",
         flush=True,
     )
-    for path in mismatches[:10]:
-        print(f"  MISMATCH {path}", flush=True)
+    for mismatch_path in mismatches[:10]:
+        print(f"  MISMATCH {mismatch_path}", flush=True)
     for name in sorted(set(foreign))[:10]:
         print(f"  FOREIGN-CLASS {name}", flush=True)
     step(
@@ -2233,8 +2244,8 @@ def _step_analysis(which: str) -> int:
             picked.setdefault(index, str(path))
             if len(picked) >= cache.SHARDS:
                 break
-        for path in picked.values():
-            cache.parse_cached(path)
+        for selected_path in picked.values():
+            cache.parse_cached(selected_path)
         step("shards_touch", note=f"只解析 {len(picked)} 个文件（每个分片 1 个）")
         _clear_retention(cache)
         cache._parse_by_key.cache_clear()
@@ -2264,16 +2275,16 @@ def _step_analysis(which: str) -> int:
         return 0
 
     if which == "ga":
-        holder = analyze.game_analysis()
-        step("ga", note="analyze.game_analysis()（session 夹具 ga）", size_of=holder)
+        game_holder = analyze.game_analysis()
+        step("ga", note="analyze.game_analysis()（session 夹具 ga）", size_of=game_holder)
         return 0
     if which == "ma":
-        holder = analyze.mods_analysis()
-        step("ma", note="analyze.mods_analysis()（session 夹具 ma）", size_of=holder)
+        mods_holder = analyze.mods_analysis()
+        step("ma", note="analyze.mods_analysis()（session 夹具 ma）", size_of=mods_holder)
         return 0
-    holder = analyze.mods_analysis()
+    mods_holder = analyze.mods_analysis()
     step("ma", note="cross_analysis 的输入")
-    cross = analyze.cross_analysis(holder)
+    cross = analyze.cross_analysis(mods_holder)
     step("ca", note="analyze.cross_analysis(ma)（session 夹具 ca）", size_of=cross)
     return 0
 
@@ -2350,7 +2361,17 @@ try:  # pragma: no cover - pytest 是 dev 依赖，缺了只是不能 --inproc
 except ImportError:  # pragma: no cover
     pytest = None  # type: ignore[assignment]
 
-_INPROC = {
+
+class InprocState(TypedDict):
+    tests: list[dict[str, Any]]
+    fixtures: list[dict[str, Any]]
+    phases: list[dict[str, Any]]
+    series: list[list[float]]
+    counts: dict[str, int]
+    errors: list[str]
+
+
+_INPROC: InprocState = {
     "tests": [],
     "fixtures": [],
     "phases": [],
@@ -2496,14 +2517,14 @@ if pytest is not None:  # pragma: no branch
         原样 ``return`` 回去，漏了会让夹具返回值变成 None。
         """
         del request  # 只为对齐 hookspec 的形参名
-        outcome = yield
-        if not _inproc_enabled():
-            return outcome
         try:
-            value = outcome.get_result()
+            value = yield
         except Exception as exc:
-            _INPROC["errors"].append(f"FIXTURE-ERROR {fixturedef.argname}: {exc!r}")
-            return outcome
+            if _inproc_enabled():
+                _INPROC["errors"].append(f"FIXTURE-ERROR {fixturedef.argname}: {exc!r}")
+            raise
+        if not _inproc_enabled():
+            return value
         rss, hwm = _inproc_snapshot()
         extra: dict[str, Any] = {}
         if isinstance(value, (list, tuple, set, frozenset, dict)):
@@ -2519,7 +2540,7 @@ if pytest is not None:  # pragma: no branch
                     **extra,
                 }
             )
-        return outcome
+        return value
 
 
 def pytest_sessionfinish(session: Any, exitstatus: Any) -> None:  # pragma: no cover

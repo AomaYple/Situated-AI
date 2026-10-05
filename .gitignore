@@ -65,6 +65,9 @@ pytest-cache-files-*/
 # 结论写进 `docs/design/exec/阶段4-性能仪表侦察.md`，原始数据不入库。
 /tools/probe/zz_console_probe/
 
+# M1源由Python按局生成，完整源快照随实机证据归档；旧生成落点不入库。
+/tools/probe/zz_probe_m1_diplomacy/
+
 # 一次性核对脚本与它们的输出（`tools/_probe.py` / `tools/_dump.txt` 这类）。
 #
 # 为什么要有这条：做「把数字脚本化」这件事时，每批都要写几个临时脚本去反解口径，

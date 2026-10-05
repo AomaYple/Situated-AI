@@ -74,7 +74,7 @@ SCHEMA_VERSION = 1
 DATA_DIR = config.REPO / "mod" / "data"
 
 #: 产物根（仓库根下）。**它就是 mod 根** —— 原版目录树的镜像。
-PRODUCT_DIR = config.REPO / "mod"
+PRODUCT_DIR = config.REPO / "mod" / "legacy"
 
 #: 数据源扩展名。
 DATA_SUFFIX = ".toml"
@@ -164,6 +164,10 @@ class Param:
     闸门 ③ 的稀释预算与事实表（:func:`facts`），``arg`` 只进事实表
     （字符串参数没有"价格"可言）。
 
+    ``script_value`` 用于 AI 策略牌的脚本值块（例如
+    ``diplomatic_play_boldness = { value = -50 }``）。普通参数仍然使用
+    ``amount`` / ``arg`` 的标量写法；只有牌面字段显式声明这个嵌套块时才会生成脚本值。
+
     ``tooltip`` 只有一个用处：:class:`Signals` 落在**玩家可见块**里的那条递牌，
     要让引擎显示我们自己的文案、而不是它给 `set_strategy` 自动生成的那行
     （见 :data:`VISIBLE_BLOCKS`）。别的表写它会被 :func:`_params` 拒掉 —— 没人渲染。
@@ -174,6 +178,7 @@ class Param:
     why: str
     arg: str = ""
     tooltip: str = ""
+    script_value: Param | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -829,6 +834,65 @@ def _params(
     return tuple(out)
 
 
+def _card_params(raw: Mapping[str, object], key: str, path: str) -> tuple[Param, ...]:
+    """解析 AI 策略牌字段，支持标量和显式脚本值块两种形状。
+
+    原版策略字段大多写成 ``field = { value = N }``。旧数据源没有牌面数值，
+    因而此前只需要 ``_params`` 的标量契约；M2 开始把已在 M1 探针中核对过的
+    外交字段接入正式牌面。脚本值的 ``value`` 自己也必须带 ``why``，这样数字
+    仍然由 :func:`audit` 统一收集，反解事实表也能逐项比对。
+    """
+    out: list[Param] = []
+    for i, item in enumerate(_entries(raw, key, path)):
+        where = f"{path}.{key}[{i}]"
+        unknown = set(item) - {"key", "why", "amount", "arg", "value"}
+        if unknown:
+            raise DataError(f"{where} 含未支持的牌面字段设置：{sorted(unknown)}")
+        has_amount = "amount" in item
+        has_arg = "arg" in item
+        has_value = "value" in item
+        scalar = has_amount or has_arg
+        if has_value and scalar:
+            raise DataError(f"{where} 不能同时给标量 amount/arg 和脚本值 value")
+        if not has_value and has_amount == has_arg:
+            raise DataError(f"{where} 必须**恰好**给 amount、arg 或 value")
+        outer_why = _why(item, where)
+        if has_value:
+            value_where = f"{where}.value"
+            value_raw = _require_table(item["value"], value_where)
+            unknown = set(value_raw) - {"why", "amount", "arg"}
+            if unknown:
+                raise DataError(f"{value_where} 含未支持的脚本值设置：{sorted(unknown)}")
+            value_has_amount = "amount" in value_raw
+            value_has_arg = "arg" in value_raw
+            if value_has_amount == value_has_arg:
+                raise DataError(f"{value_where} 必须**恰好**给一个 amount 或 arg")
+            value = Param(
+                key="value",
+                amount=_amount(value_raw, value_where) if value_has_amount else 0.0,
+                why=_why(value_raw, value_where),
+                arg=_arg(value_raw, value_where) if value_has_arg else "",
+            )
+            out.append(
+                Param(
+                    key=_require_text(item, "key", where),
+                    amount=0.0,
+                    why=outer_why,
+                    script_value=value,
+                )
+            )
+            continue
+        out.append(
+            Param(
+                key=_require_text(item, "key", where),
+                amount=_amount(item, where) if has_amount else 0.0,
+                why=outer_why,
+                arg=_arg(item, where) if has_arg else "",
+            )
+        )
+    return tuple(out)
+
+
 def _parse_escalation(raw: Mapping[str, object], path: str) -> Escalation | None:
     """`[<表>.escalation]`（可选）：真实结果更重时额外挂的那一层修正。
 
@@ -1280,7 +1344,7 @@ def parse_source(data: Mapping[str, object], source: str) -> Archive:
                     _clause(entry, f"{where}.possible[{i}]")
                     for i, entry in enumerate(_entries(item, "possible", where))
                 ),
-                fields=_params(item, "fields", where),
+                fields=_card_params(item, "fields", where),
             )
         )
 
@@ -1905,10 +1969,11 @@ def defines_text(archive: Archive) -> str:
 
 
 def card_text(archive: Archive, card: Card) -> str:
-    """一张递牌（本档案为空；骨架留着，因为它决定闸门 ③ 的输入形状）。
+    """一张策略牌。
 
-    ``archive`` 目前只用于注释头（档案 id）—— 保留这个形参是因为牌的
-    traceability 迟早要引档案级信息，而调用点（:func:`build`）已按档案分发。
+    ``fields`` 可以是旧数据源的标量，也可以是原版外交策略使用的
+    ``field = { value = N }`` 脚本值块。后者由数据源显式声明，避免生成器
+    猜测字段语义；调用点已按档案分发，注释保留档案 id 以便追溯。
     """
     body: list[Node] = [f"type = {card.slot}"]
     if card.possible:
@@ -1916,17 +1981,31 @@ def card_text(archive: Archive, card: Card) -> str:
     body.extend(["", ("weight", [f"value = {num(card.weight)}"])])
     if card.fields:
         body.append("")
-        body.extend(f"{p.key} = {num(p.amount)}" for p in card.fields)
+        body.extend(_card_field_node(p) for p in card.fields)
     lines: list[Node] = [
         GEN_HEADER,
         "",
         *_comment(
             f"递牌（C 级）：{card.name} —— 占 {card.slot} 槽一个位置（档案 {archive.id}）。",
-            "定价见闸门 ③（阶段 2 的等效竞争权重表）；档案里没有牌是 F5 的结果，不是漏写。",
+            "定价见闸门 ③（阶段 2 的等效竞争权重表）；牌的进入门与牌面字段均来自数据源。",
         ),
         (card.name, body),
     ]
     return "\n".join(_flatten(lines))
+
+
+def _card_field_node(param: Param) -> Node:
+    """把牌面字段渲染成标量或脚本值块。"""
+    value = param.script_value
+    if value is None:
+        if param.arg:
+            return f"{param.key} = {param.arg}"
+        return f"{param.key} = {num(param.amount)}"
+    if value.arg:
+        operand = value.arg
+    else:
+        operand = num(value.amount)
+    return (param.key, [f"value = {operand}"])
 
 
 def _flatten(nodes: Sequence[Node]) -> list[str]:
@@ -2554,7 +2633,13 @@ def facts(archive: Archive) -> list[tuple[str, str]]:
         out.append((f"card.{card.name}.slot", card.slot))
         out.append((f"card.{card.name}.weight", num(card.weight)))
         out.extend((f"card.{card.name}.possible.{c.key}", c.fact()) for c in card.possible)
-        out.extend((f"card.{card.name}.{p.key}", num(p.amount)) for p in card.fields)
+        for param in card.fields:
+            if param.script_value is None:
+                value = param.arg or num(param.amount)
+                out.append((f"card.{card.name}.{param.key}", value))
+            else:
+                value = param.script_value.arg or num(param.script_value.amount)
+                out.append((f"card.{card.name}.{param.key}.value", value))
     for entry in archive.localization:
         out.extend((f"localization.{lang}.{entry.key}", entry.values[lang]) for lang in LANGUAGES)
     return sorted(out)
@@ -2724,14 +2809,23 @@ def _facts_card(rel: str, text: str) -> list[tuple[str, str]]:
             (f"card.{top.key}.possible.{clause.key}", f"{clause.op}{_scalar(clause.value)}")
             for clause in (possible.assignments() if possible else [])
         )
-        out.extend(
-            (
-                f"card.{top.key}.{_CARD_FACT_KEYS.get(item.key, item.key)}",
-                _scalar(item.value),
-            )
-            for item in block.assignments()
-            if item.key not in {"weight", "possible"}
-        )
+        for item in block.assignments():
+            if item.key in {"weight", "possible"}:
+                continue
+            key = _CARD_FACT_KEYS.get(item.key, item.key)
+            nested = _block_of(item)
+            if nested is not None:
+                if (
+                    any(entry.key != "value" or entry.op != "=" for entry in nested.assignments())
+                    or len(nested) != 1
+                ):
+                    raise DataError(f"{rel}:{item.key} 的脚本值形状超出数据契约")
+                value = nested.first("value")
+                if value is None or isinstance(value.value, Block):
+                    raise DataError(f"{rel}:{item.key}.value 必须为标量")
+                out.append((f"card.{top.key}.{key}.value", _scalar(value.value)))
+                continue
+            out.append((f"card.{top.key}.{key}", _scalar(item.value)))
     return out
 
 

@@ -179,6 +179,22 @@ class TestTickReading:
         log.write_text("Processing Tick: 1837.4.10\n", encoding="utf-8")
         assert ga.tick_mark(log).tick == "1837.4.10"
 
+    def test_tick_mark_大日志只读尾部且跨utf8边界可读(self, tmp_path: Path) -> None:
+        log = tmp_path / "large.log"
+        log.write_bytes(("中文日志\n" * 20000).encode() + b"Processing Tick: 1900.12.1\n")
+        assert ga.tick_mark(log).tick == "1900.12.1"
+
+    def test_tick_后面没有新tick仍保留最近有效值(self, tmp_path: Path) -> None:
+        log = tmp_path / "tick.log"
+        log.write_bytes(b"Processing Tick: 1900.12.1\n" + b"other log\n" * 20000)
+        assert ga.tick_mark(log).tick == "1900.12.1"
+
+    @pytest.mark.parametrize("offset", [1, 10, 15, 20])
+    def test_tick_跨读取块边界不丢失(self, tmp_path: Path, offset: int) -> None:
+        log = tmp_path / "tick.log"
+        log.write_bytes(b"Processing Tick: 1900.12.1\n" + b"x" * (65536 - offset))
+        assert ga.tick_mark(log).tick == "1900.12.1"
+
 
 class TestProbeReading:
     def test_取国家标签(self) -> None:
@@ -2620,6 +2636,21 @@ class TestStepOrder:
         assert result.trace.complete is True
         assert result.as_dict()["automation_phase"] == "complete"
 
+    def test_观察者存档重载仍选择观察且禁止误点新游戏(self, monkeypatch):
+        calls: list[str] = []
+        self._patch(monkeypatch, calls)
+        seen = {}
+
+        def look(*_args, **kwargs):
+            seen.update(kwargs)
+            return _observe_match(), 4242
+
+        monkeypatch.setattr(ga, "_step_look", look)
+        result = ga.start_session(4242, 777, force=True, loaded_observer=True)
+        assert seen["auto_new_game"] is False
+        assert calls == ["click_observe:864,1055", "click_speed:1851", "press:space"]
+        assert result.observe.name == "btn_observe"
+
     def test_已经在跑就不按空格(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """空格是**暂停开关**，不是"开始"：时间已经在走时按下去会把游戏停住。"""
         calls: list[str] = []
@@ -2841,6 +2872,22 @@ class TestBackgroundCommand:
 
 class TestRunSession:
     """`run_session` 是探针共用的入口：起游戏 + 等加载 + 标准流程，一路传参不丢。"""
+
+    def test_重载失败不继续向主菜单发送游戏输入(self, tmp_path, monkeypatch):
+        log = tmp_path / "debug.log"
+        log.write_text(
+            "Could not load save game [checkpoint.v3]. Going to main menu.\n", encoding="utf-8"
+        )
+        seen: dict[str, object] = {}
+        monkeypatch.setattr(ga, "DEBUG_LOG", log)
+        monkeypatch.setattr(ga, "launch_to_foreground", lambda **kw: seen.update(kw) or (4242, 777))
+        monkeypatch.setattr(ga, "wait_for_boot_settle", lambda **_kw: _settle())
+        monkeypatch.setattr(
+            ga, "start_session", lambda *_a, **_kw: pytest.fail("加载失败不得发送输入")
+        )
+        with pytest.raises(ga.GameAutoError, match="拒绝载入"):
+            ga._run_session_impl(save_name="C:/save games/checkpoint.v3")
+        assert seen["extra_args"] == ("-loadsave=C:/save games/checkpoint.v3",)
 
     def test_把_previous_与开关一起传下去(self, monkeypatch: pytest.MonkeyPatch) -> None:
         seen: dict[str, object] = {}

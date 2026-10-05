@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 
 from tools.ci import deadcode_audit as audit
 
@@ -100,3 +101,19 @@ def test_报告写出为无BOM的LF文本(tmp_path) -> None:
         assert not raw.startswith(b"\xef\xbb\xbf")
         assert b"\r" not in raw
     assert json.loads(json_path.read_text(encoding="utf-8"))["definition_count"] == 1
+
+
+def test_新代码未提交时也纳入审计且排除忽略产物(tmp_path, monkeypatch) -> None:
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
+    source = tmp_path / "src/pdx"
+    source.mkdir(parents=True)
+    for name in ("tracked.py", "new.py", "ignored.py"):
+        (source / name).write_text("def helper():\n    return 1\n", encoding="utf-8")
+    (tmp_path / ".gitignore").write_text("ignored.py\n", encoding="utf-8")
+    subprocess.run(
+        ["git", "add", "src/pdx/tracked.py"], cwd=tmp_path, check=True, capture_output=True
+    )
+    monkeypatch.setattr(audit, "ROOT", tmp_path)
+    expected = ["src/pdx/new.py", "src/pdx/tracked.py"]
+    assert audit._tracked_paths() == expected
+    assert audit._reference_paths() == expected

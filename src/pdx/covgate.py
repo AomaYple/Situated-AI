@@ -102,6 +102,8 @@ def run_pytest(*, extra: Iterable[str] = ()) -> int:
     COV_JSON.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
         sys.executable,
+        "-X",
+        "utf8",
         "-m",
         "pytest",
         "-q",

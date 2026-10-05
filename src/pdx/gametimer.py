@@ -693,9 +693,11 @@ def ticktask_task_stats(result: TickTaskParseResult) -> list[TaskStat]:
     return out
 
 
-def summarize_ticktask(path: Path) -> dict[str, object]:
+def summarize_ticktask(
+    path: Path, *, parsed: TickTaskParseResult | None = None
+) -> dict[str, object]:
     """把一份 ``ticktask_timings.csv`` 压成可直接进对照表/汇报的字典。"""
-    result = parse_ticktask_file(path)
+    result = parsed if parsed is not None else parse_ticktask_file(path)
     frames = ticktask_frame_stats(result)
     totals = [f.total_ms for f in frames]
     tasks = ticktask_task_stats(result)

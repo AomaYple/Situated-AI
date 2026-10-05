@@ -190,7 +190,10 @@ MAIN_MENU_ROI = (0.105, 0.350, 0.290, 0.455)
 NEW_GAME_THRESHOLD = 0.55
 #: 普通新游戏设置页「开始游戏」按钮 ROI（2026-10-02 实机帧提取）。
 SETUP_START_ROI = (0.80, 0.58, 0.98, 0.72)
-START_GAME_THRESHOLD = 0.60
+#: 2026-10-04 实测 1.14.5 中文目标页同一按钮在未悬停状态为 0.5905；
+#: ROI 只覆盖右下角开始按钮，0.55 保留与主菜单相同的抗锯齿余量，
+#: 后续仍必须找到「观察」并验证游戏时间推进，低分误匹配不会形成假成功。
+START_GAME_THRESHOLD = 0.55
 
 #: 官方流水线实测要 ~137 秒才到 ingame idler，所以等待给足余量。
 LOBBY_TIMEOUT = 300.0
@@ -1992,14 +1995,28 @@ def click_match(hwnd: int, match: Match, *, force: bool = False) -> None:
 
 
 def tick_mark(log: Path | None = None) -> TickMark:
-    """读最新 tick 与文件修改时间。读不到时 ``tick`` 为空串。"""
+    """从尾部按块找最新 tick；无 tick 时扫描至文件头，内存保持有界。"""
     path = log or TICK_LOG
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
+        with path.open("rb") as stream:
+            stream.seek(0, 2)
+            end = stream.tell()
+            overlap = b""
+            tick = NO_TICK
+            while end:
+                start = max(0, end - 65536)
+                stream.seek(start)
+                raw = stream.read(end - start) + overlap
+                tick = last_tick_in(raw.decode("utf-8", errors="replace"))
+                if tick:
+                    break
+                # 数字、前缀可跨块；重叠只保留短前缀，不累计整个文件。
+                overlap = raw[:256]
+                end = start
         mtime = path.stat().st_mtime
     except OSError:
         return TickMark(NO_TICK, 0.0)
-    return TickMark(last_tick_in(text), mtime)
+    return TickMark(tick, mtime)
 
 
 def is_running(seconds: float = 6.0, *, log: Path | None = None, sleeper: object = None) -> Advance:
@@ -3613,6 +3630,7 @@ def start_session(
     # 而它只在前台真的抢不到时才动手，正常局一行日志都不会多出来。
     foreground_recovery: bool = True,
     foreground_relaunch: Callable[[], tuple[int, int]] | None = None,
+    loaded_observer: bool = False,
 ) -> SessionStart:
     """**标准流程**：确认「观察」→ 点它 → 点 5 档速度 → 按空格 → 切回后台。
 
@@ -3647,7 +3665,15 @@ def start_session(
     trace = trace.advance(AutomationPhase.FOREGROUND_READY)
     boot = settle if settle is not None else wait_for_boot_settle()
     trace = trace.advance(AutomationPhase.BOOT_SETTLED)
-    match, hwnd = _step_look(hwnd, threshold=threshold, lobby_timeout=lobby_timeout, force=force)
+    # 已保存的观察者世界重载后仍进入国家选择界面，必须重新选择观察。
+    # 重载流程禁用“新游戏”入口，加载失败不能静默变成另一局。
+    match, hwnd = _step_look(
+        hwnd,
+        threshold=threshold,
+        lobby_timeout=lobby_timeout,
+        force=force,
+        auto_new_game=not loaded_observer,
+    )
     _step_observe(hwnd, match, settle_timeout=settle_timeout, force=force)
     trace = trace.advance(AutomationPhase.OBSERVE_SELECTED)
 
@@ -3735,6 +3761,7 @@ def _run_session_impl(
     foreground_recovery: bool = True,
     wait_tests: float = 0.0,
     background_seconds: float = 8.0,
+    save_name: str | None = None,
 ) -> SessionStart:
     """端到端一条命令：起游戏 → 等加载 → 观察/速度/空格 → 切回后台 →（可选）等判定。
 
@@ -3752,8 +3779,15 @@ def _run_session_impl(
     # 点火**之前**先记下已有的成绩单 —— 引擎每局换一个新 uuid，
     # "出现了一个先前没有的文件"才是这一局的成绩单。
     known = frozenset(testoutput_files())
-    hwnd, previous = launch_to_foreground(scripted_tests=scripted_tests, timeout=lobby_timeout)
+    extra_args = (f"-loadsave={save_name}",) if save_name else ()
+    hwnd, previous = launch_to_foreground(
+        scripted_tests=scripted_tests, timeout=lobby_timeout, extra_args=extra_args
+    )
     settle = wait_for_boot_settle(timeout=lobby_timeout)
+    if save_name and DEBUG_LOG.is_file():
+        with DEBUG_LOG.open(encoding="utf-8-sig", errors="replace") as stream:
+            if any("Could not load save game" in line for line in stream):
+                raise GameAutoError(f"引擎拒绝载入检查点：{save_name}；保留日志并停止启动输入")
 
     def _relaunch_for_recovery() -> tuple[int, int]:
         """恢复流程专用：把游戏**干净重启**一次（进程与窗口句柄都换新的）。
@@ -3762,7 +3796,7 @@ def _run_session_impl(
         （见那里 `recovery.restarts` 的分支），免得两头各等一轮。
         """
         again, prev_again = launch_to_foreground(
-            scripted_tests=scripted_tests, timeout=lobby_timeout
+            scripted_tests=scripted_tests, timeout=lobby_timeout, extra_args=extra_args
         )
         return again, prev_again
 
@@ -3778,6 +3812,7 @@ def _run_session_impl(
         force=force,
         foreground_recovery=foreground_recovery,
         foreground_relaunch=_relaunch_for_recovery if foreground_recovery else None,
+        loaded_observer=save_name is not None,
     )
     if wait_tests <= 0 or not scripted_tests:
         return started
@@ -3831,6 +3866,7 @@ def run_session(
     foreground_recovery: bool = True,
     wait_tests: float = 0.0,
     background_seconds: float = 8.0,
+    save_name: str | None = None,
 ) -> SessionStart:
     """运行一次会话；失败时只清理本模块启动的进程。"""
     try:
@@ -3845,6 +3881,7 @@ def run_session(
             foreground_recovery=foreground_recovery,
             wait_tests=wait_tests,
             background_seconds=background_seconds,
+            save_name=save_name,
         )
     except BaseException:
         with suppress(Exception):

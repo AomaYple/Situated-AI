@@ -19,7 +19,7 @@
 臂      起止月       进入这一臂时做什么
 ======  ===========  ==========================================================
 `A`     第 1–12 月   什么都不做（对照组：窗口与法律应当一动不动）
-`B`     第 13–36 月  调用真 mod 的 `sitai_ru_defeat_shock`（冲击）
+`B`     第 13–36 月  调用legacy 档案 mod 的 `sitai_ru_defeat_shock`（冲击）
 `B2`    第 37 月起   再调用 `sitai_ru_reform_input`（改革侧输入）
 ======  ===========  ==========================================================
 
@@ -66,16 +66,16 @@ if TYPE_CHECKING:
 #: 探针 mod 目录名。
 PROBE_MOD = "zz_probe_ab"
 
-#: 真 mod 安装到用户 mod 目录时的目录名 —— **只作兜底**（正常路径从档案 id 拼，见 :func:`deploy`）。
+#: legacy 档案 mod 安装到用户 mod 目录时的目录名 —— **只作兜底**（正常路径从档案 id 拼，见 :func:`deploy`）。
 MOD_DIR_NAME = "sitai_ru_defeat"
 
 #: 探针源目录（仓库内，可审阅）。
 PROBE_DIR = config.REPO / "tools" / "probe" / PROBE_MOD
 
-#: 真 mod 的冲击效果（由 `mod/common/scripted_effects/sitai_ru_defeat_effects.txt` 生成）。
+#: legacy 档案 mod 的冲击效果（由 `mod/legacy/common/scripted_effects/sitai_ru_defeat_effects.txt` 生成）。
 SHOCK_EFFECT = "sitai_ru_defeat_shock"
 
-#: 真 mod 的**改革侧输入**效果与修正（同源文件；闸门 ② 保证它们真实存在）。
+#: legacy 档案 mod 的**改革侧输入**效果与修正（同源文件；闸门 ② 保证它们真实存在）。
 INPUT_EFFECT = "sitai_ru_reform_input"
 INPUT_MODIFIER = "sitai_ru_reform_inputs"
 
@@ -222,7 +222,7 @@ ROLES = tuple(step.role for step in LADDER)
 #: 角色 → 起始月（供分析器/文档解释"第几个月开始算这一臂"）。
 ARM_START: dict[str, int] = {step.role: step.at_month for step in LADDER}
 
-#: 每个月的自报里"冲击在不在"用的判据（真 mod 写的变量）。
+#: 每个月的自报里"冲击在不在"用的判据（legacy 档案 mod 写的变量）。
 #: 冲击记忆变量 —— **只作兜底与文档用途**，真正的来源是 :func:`load_target`。
 SHOCK_VAR = "sitai_ru_defeat_memory"
 
@@ -272,7 +272,7 @@ def strategy_candidates(vanilla: list[ai_surface.Card]) -> list[str]:
 
 
 #: 本仓 mod 的**产物根**（`common/ai_strategies/*.txt` 在这里）。
-MOD_ROOT = config.REPO / "mod"
+MOD_ROOT = config.REPO / "mod" / "legacy"
 
 #: 我们自己的牌在自报里用的 kind。**只能是大写字母**：`pdx.ab` 的行正则是
 #: `ZZPROBE AB;(?P<kind>[A-Z]+);(?P<rest>.+?)$`（`ab.py:114`）——
@@ -416,7 +416,7 @@ def difficulty_rule_lines(*, tab: str = "\t") -> str:
     return "\n".join(["\n".join(branches), "", pairs])
 
 
-#: 真 mod 侧难度设置名的**唯一真相**在**产物**里：`mod/common/game_rules/*_difficulty.txt`。
+#: legacy 档案 mod 侧难度设置名的**唯一真相**在**产物**里：`mod/legacy/common/game_rules/*_difficulty.txt`。
 #: 为什么读产物而不是 `mod/data/*.toml`：与 :func:`own_cards` 同一条道理 —— 这里只要设置名，
 #: 免得把整个生成器拉进探针的依赖里；产物由 `v3 modgen` 落盘、闸门 ⑤ 保证与数据源逐字节一致。
 DIFFICULTY_RULE_GLOB = "common/game_rules/*_difficulty.txt"
@@ -443,7 +443,7 @@ def mod_difficulty_settings(root: Path | None = None) -> tuple[str, ...]:
 
 @dataclass(frozen=True, slots=True)
 class DifficultyCheck:
-    """**探针写死的三档设置名**（:data:`DIFFICULTY_SETTINGS`）与**真 mod 产物**的一致性读数。
+    """**探针写死的三档设置名**（:data:`DIFFICULTY_SETTINGS`）与**legacy 档案 mod 产物**的一致性读数。
 
     为什么要有它（t90 那族的静默失真）：那份字面量是写死的，而
     `tests/test_ab_probe.py` 里钉它的用例**以它自己为参照** —— 数据源改名而这里没跟时
@@ -536,7 +536,7 @@ def require_difficulty_match(root: Path | None = None) -> DifficultyCheck:
 #: `(月, 说明, 要调的效果名)`。月份与 `LADDER` 的臂起点**对齐**：第 13 月施加冲击（B 臂）、
 #: 第 37 月追加改革侧输入（B2 臂）。
 #:
-#: ⚠️ 这里**刻意不递牌**：递牌是**真 mod 的 JE 自己的事**（`[journal_entry.signals]`，
+#: ⚠️ 这里**刻意不递牌**：递牌是**legacy 档案 mod 的 JE 自己的事**（`[journal_entry.signals]`，
 #: 窗口一开就递）。探针在这里再递一次就把"牌是不是闸门"与"窗口机制对不对"两个变量
 #: 搅在一起了 —— 一次只动一个变量。
 SELFARM: tuple[tuple[int, str, str], ...] = (
@@ -564,10 +564,10 @@ MANUAL_VAR = "sitai_probe_ab_manual"
 #: `is_enacting_law` 是引擎触发器（真在推这条法时为真），它把
 #: **从未开立法** 与 **开了没成** 分开 —— 前者指向"AI 不肯动手"，后者指向"立法过程"。
 #:
-#: ⚠️ **没有「任意法」的通用写法**（实测）：`is_enacting_law` 一定要 `law_type:` 操作数。
-#: exe 里检索 `is_enacting_any_law` / `has_any_enactment` / `any_enacting_law` /
-#: `enactment_progress` / `current_enactment` **全部 0 命中**（`is_enacting_law` 本身 2 命中）。
-#: ⇒ 想回答"它到底在推哪条法"，只能**逐条问**。
+#: 旧二进制候选名称搜索未找到通用接口；2026-10-05 原版脚本核对已纠正：
+#: `enacting_any_law = yes` 可读任意立法是否进行（00_code_on_actions.txt:4549），
+#: `exists = currently_enacting_law` 也有原版先例。此历史仪器继续按下列局部清单
+#: 记录具体法律，新仪器从原版全量法律生成枚举，避免局部清单漏判。
 #:
 #: 为什么是这 20 条（覆盖俄罗斯开局最可能被推的组，不是全量 138 条）：
 #: 土地改革整组（AI 改革的主战场）+ 权力分配整组（进步牌的 `max_progressiveness` 上限
@@ -928,7 +928,7 @@ def effects_text(target: ProbeTarget, *, mode: str = MODE_NATURAL) -> str:
         f"#    所以玩家自己掌权时不会抢手（玩家局仍走决议那条路）。\n"
         f"# ③ `zz_probe_ab_ladder`：每月走一格。**幂等**是硬要求：`{STAGE_VAR}` 单调递增，\n"
         f"#    每个效果只施加一次；不拿「有没有那个修正」当判据（会被别的系统碰到）。\n"
-        f"# ④ `{target.shock_effect}` / `{target.input_effect}` 在**真 mod**里（`v3 modgen` 生成），\n"
+        f"# ④ `{target.shock_effect}` / `{target.input_effect}` 在**legacy 档案 mod**里（`v3 modgen` 生成），\n"
         f"#    探针只调用它们 —— 这样实验用的世界状态与档案本身是同一份定义。\n"
         f"{control_note}"
         f"zz_probe_ab_arm = {{\n"
@@ -1376,9 +1376,9 @@ def decisions_text(target: ProbeTarget) -> str:
 
 
 def supported_game_version() -> str:
-    """探针声明的游戏版本 —— 与真 mod **同源**（`mod/data/*.toml` 的 `game_version`）。
+    """探针声明的游戏版本 —— 与legacy 档案 mod **同源**（`mod/data/*.toml` 的 `game_version`）。
 
-    ⚠️ 这里原来是写死的 `"1.14.3"`（2026-09-23 修）：探针是挂在真 mod 旁边一起加载的，
+    ⚠️ 这里原来是写死的 `"1.14.3"`（2026-09-23 修）：探针是挂在legacy 档案 mod 旁边一起加载的，
     两边声明的版本不一致时启动器会对**探针**弹一次版本警告，看起来像"探针坏了"；
     而"mod 声明哪个版本"的唯一来源是数据源（`modgen` 强制各档案一致），
     读它才不会在下一次官方更新时又漏掉一处。
@@ -1390,7 +1390,7 @@ def supported_game_version() -> str:
         # P13：读不到就说读不到，不猜一个版本号（猜出来的值会静默写进 metadata）。
         raise RuntimeError(
             "读不到任何档案数据源（mod/data/*.toml）—— 探针的 supported_game_version "
-            "与真 mod 同源，不能猜"
+            "与legacy 档案 mod 同源，不能猜"
         )
     return archives[0].game_version
 
@@ -1572,7 +1572,7 @@ def build(
     ``mode=None`` = 读 :func:`active_mode`（环境变量 `V3_AB_MODE`，默认 `natural`）；
     测试与库调用方可以显式传值，于是**不必**碰进程环境。
 
-    ⚠️ 生成前先过 :func:`require_difficulty_match`：探针写死的三档设置名与真 mod 产物对不上
+    ⚠️ 生成前先过 :func:`require_difficulty_match`：探针写死的三档设置名与legacy 档案 mod 产物对不上
     就是「每月只写 `RULE;none;yes`」的静默失真（t90 那族）⇒ 当场报错，不生成。
     """
     chosen_mode = active_mode() if mode is None else mode
@@ -1646,7 +1646,7 @@ def deploy(
     archive_id: str | None = None,
     mode: str | None = None,
 ) -> Path:
-    """生成 → 同步进用户 mod 目录 → 连同真 mod 一起启用。
+    """生成 → 同步进用户 mod 目录 → 连同legacy 档案 mod 一起启用。
 
     ``archive_id`` 选**盯哪一份档案**（阶段 5 起有多份；不给就是数据源里的第一份）。
     ``mode`` 透传给 :func:`write`（``None`` = 读 :func:`active_mode`）。
@@ -1659,10 +1659,10 @@ def deploy(
     if dest.exists():
         shutil.rmtree(dest)
     deploy_tree(source, dest)
-    # 真 mod 也要装：探针的效果引用档案里的冲击 / 改革侧输入效果，没装就是 Unknown effect。
-    # 目录名由**档案 id**拼出来（与 `mod/.metadata` 的 id 同源，P9）——
+    # legacy 档案 mod 也要装：探针的效果引用档案里的冲击 / 改革侧输入效果，没装就是 Unknown effect。
+    # 目录名由**档案 id**拼出来（与 `mod/legacy/.metadata` 的 id 同源，P9）——
     # 从前这里写死 `sitai_ru_defeat`，加第二份档案时就会装错目录。
-    product = config.REPO / "mod"
+    product = config.REPO / "mod" / "legacy"
     mod = dest_root / (chosen.dir_name if chosen is not None else MOD_DIR_NAME)
     if product.is_dir():
         if mod.exists():
@@ -1927,7 +1927,7 @@ def summary(built: Built) -> str:
             else ""
         ),
         f"臂阶梯（点一次决议武装）：{arms}",
-        f"难度三档（与真 mod 产物同串）：{'、'.join(DIFFICULTY_SETTINGS)}",
+        f"难度三档（与legacy 档案 mod 产物同串）：{'、'.join(DIFFICULTY_SETTINGS)}",
         f"生成文件 {len(built.files)} 个：",
     ]
     lines += [f"  {rel}" for rel in built.paths]

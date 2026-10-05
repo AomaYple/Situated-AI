@@ -108,6 +108,57 @@ def test_psutil_reader_self_and_missing_process(mem) -> None:
     assert mem.sys_mem()["commit_mb"] is None
 
 
+def test_inproc_sampler_survives_application_process_mock(mem, monkeypatch):
+    """进程消失的应用测试不能替换采样器自己的计数器。"""
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(mem, "_INPROC_ACTIVE", True)
+
+    def exited(pid):
+        raise mem.psutil.NoSuchProcess(pid)
+
+    monkeypatch.setattr(mem.psutil, "Process", exited)
+    before = len(mem._INPROC["tests"])
+    mem.pytest_runtest_logreport(
+        SimpleNamespace(when="call", nodeid="sample.py::exited", outcome="passed")
+    )
+    assert len(mem._INPROC["tests"]) == before + 1
+    row = mem._INPROC["tests"][-1]
+    assert row["ws_mb"] > 0
+    assert row["peak_mb"] >= row["ws_mb"]
+
+
+@pytest.mark.parametrize("value", [{"fixture": "data"}, 42])
+def test_inproc_fixture_wrapper_records_and_preserves_value(mem, monkeypatch, value):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(mem, "_INPROC_ACTIVE", True)
+    hook = mem.pytest_fixture_setup(SimpleNamespace(argname="sample", scope="session"), None)
+    next(hook)
+    with pytest.raises(StopIteration) as result:
+        hook.send(value)
+    assert result.value.value is value
+    assert not mem._INPROC["errors"]
+    row = mem._INPROC["fixtures"][-1]
+    assert row["name"] == "sample"
+    assert row["ws_mb"] > 0
+    assert row.get("len") == (len(value) if isinstance(value, dict) else None)
+
+
+def test_inproc_fixture_wrapper_preserves_setup_error(mem, monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(mem, "_INPROC_ACTIVE", True)
+    hook = mem.pytest_fixture_setup(SimpleNamespace(argname="broken", scope="session"), None)
+    next(hook)
+    error = ValueError("fixture setup failed")
+    with pytest.raises(ValueError) as result:
+        hook.throw(error)
+    assert result.value is error
+    assert mem._INPROC["errors"] == ["FIXTURE-ERROR broken: ValueError('fixture setup failed')"]
+    assert not mem._INPROC["fixtures"]
+
+
 def module_artifact_stem(mem: ModuleType, tag: str, group: str) -> str:
     """被测脚本的命名函数（单测只经这一个入口取前缀，免得两处各写一遍）。"""
     stem: str = mem.artifact_stem(tag, group)

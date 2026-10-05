@@ -108,7 +108,7 @@ def deploy(*, with_probe: bool = True, archive_id: str | None = None) -> str:
     ours_dst = ours()
     # 先清残留：上一版档案集合留下的目录按新名字是找不到的（见 `_clean_ours`）。
     _clean_ours(ours_dst, PROBE)
-    deploy_tree(config.REPO / "mod", ours_dst)
+    deploy_tree(config.REPO / "mod" / "legacy", ours_dst)
     paths = [ours_dst]
     if with_probe:
         # ⚠️ 用 `ab_probe.write` 而**不是** `ab_probe.deploy`：后者会调

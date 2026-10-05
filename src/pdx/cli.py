@@ -64,6 +64,7 @@ from pdx import (
     citations,
     config,
     covgate,
+    decisions,
     defines,
     doc_tables,
     docgen,
@@ -2066,6 +2067,7 @@ def cov_cmd(
     带覆盖率跑整套测试约 5 分钟，因此这条**不进 CI**（CI 上没有游戏，
     覆盖率口径完全不同，理由见 `.github/workflows/ci.yml` 的文件头注释）。
     """
+    code = 0
     if not check_only:
         code = covgate.run_pytest()
         if code != 0:
@@ -2075,8 +2077,7 @@ def cov_cmd(
     if not rows:
         _fail(f"读不到覆盖率数据（{covgate.COV_JSON}）—— 先跑一次 `v3 cov`（不带 --check-only）")
 
-    if top:
-        rows = sorted(rows, key=lambda r: r.percent)[:top]
+    display_rows = sorted(rows, key=lambda r: r.percent)[:top] if top else rows
 
     table = Table(title="模块覆盖率（分支）", show_lines=False)
     table.add_column("模块")
@@ -2084,7 +2085,7 @@ def cov_cmd(
     table.add_column("下限", justify="right")
     table.add_column("语句", justify="right", style="dim")
     table.add_column("", width=2, justify="center")
-    for row in rows:
+    for row in display_rows:
         floor = row.floor
         table.add_row(
             escape(row.module),
@@ -2113,7 +2114,7 @@ def cov_cmd(
         console.print(
             f"[yellow]下限表里这些模块这次没有数据（改名或删了？）：{escape(', '.join(gone))}[/]"
         )
-    if failed or below_overall:
+    if code != 0 or failed or below_overall or gone:
         raise typer.Exit(EXIT_FAILED)
 
 
@@ -2640,7 +2641,7 @@ def h1_probe_cmd(
 def modgen_cmd(
     write: Annotated[
         bool,
-        typer.Option("--write", help="把数据源编译成 mod/ 下的产物（写盘 + 清理被取代的旧文件）"),
+        typer.Option("--write", help="生成生产 mod/ 与实验 mod/legacy/（旧档案清理过期产物）"),
     ] = False,
     check: Annotated[
         bool,
@@ -2650,9 +2651,9 @@ def modgen_cmd(
 ) -> None:
     """把结构化数据源编译成 mod 产物：脚本 + 本地化 + 档案文档。
 
-    P3「引擎脚本由 Python 生成，人只改数据源」的落点。数据源在 `mod/data/*.toml`，
-    产物在 `mod/`（原版目录树的镜像）。**改产物没有用** —— 每个生成文件头都写着
-    这句话，闸门 ⑤ 也会把与生成结果不一致的产物点出来。
+    生产数据源是 `mod/decisions/*.toml`，产物在 `mod/`。旧档案源 `mod/data/*.toml`
+    只生成至 `mod/legacy/`，用于复现历史实验；游戏 ZIP 只包含生产产物。
+    底本版本或指纹不符时拒绝生成。手改产物会被一致性检查发现。
 
     三种用法：
 
@@ -2671,10 +2672,13 @@ def modgen_cmd(
     try:
         archives = modgen.load_all()
         built = modgen.build_all(archives)
-    except modgen.DataError as exc:
+        decision_files = decisions.build()
+    except (modgen.DataError, ValueError, OSError) as exc:
         _fail(f"数据源不合法：{exc}")
 
     if why:
+        console.rule("生产处境决策 · mod/decisions/fiscal.toml")
+        console.print(escape(decisions.SOURCE.read_text(encoding="utf-8")))
         for archive in archives:
             console.rule(f"{archive.title}（{archive.source}）")
             console.print(
@@ -2689,7 +2693,7 @@ def modgen_cmd(
 
     if write:
         try:
-            written = modgen.write(built)
+            written = [*decisions.write(decisions.PRODUCT, decision_files), *modgen.write(built)]
         except OSError as exc:
             _fail(f"写盘失败：{type(exc).__name__}: {exc}")
         table = Table(title=f"已写入 {len(written)} 个产物", show_lines=False)
@@ -2705,13 +2709,13 @@ def modgen_cmd(
             )
         console.print(table)
         console.print(
-            "游戏侧文件（.txt / .yml）带 UTF-8 BOM 写入；文档与元数据不带。"
-            "接着跑 [bold]v3 modguard[/]——五道闸门全过才进游戏（冻结文档 §5）。"
+            "仓库产物均以 UTF-8 无 BOM、LF 写入；安装或打包时才为游戏文件添加 BOM。"
+            "接着跑 [bold]v3 modguard[/]——核对生产覆盖与 legacy 五道闸门。"
         )
         return
 
     if check:
-        problems = modgen.check(built)
+        problems = [*decisions.check(decisions.PRODUCT, decision_files), *modgen.check(built)]
         if problems:
             table = Table(title=f"{len(problems)} 处与数据源不一致", show_lines=False)
             table.add_column("问题", overflow="fold")
@@ -2720,9 +2724,15 @@ def modgen_cmd(
             console.print(table)
             console.print("[yellow]跑 `v3 modgen --write` 重新生成（产物不许手改）[/]")
             raise typer.Exit(EXIT_FAILED)
-        console.print(f"[green]盘上 {len(built.files)} 个产物与数据源逐字节一致 ✅[/]")
+        console.print(
+            f"[green]生产 {len(decision_files)} 个、legacy {len(built.files)} 个产物与数据源逐字节一致 ✅[/]"
+        )
         return
 
+    console.print(
+        f"生产处境决策：{len(decision_files)} 个产物；有意覆盖原版 00_default_strategy.txt"
+    )
+    console.print("legacy 历史档案：")
     console.print(escape(modgen.summary(built)))
     console.print("[dim]--write 落盘 / --check 核对 / --why 列依据[/]")
 
@@ -3000,7 +3010,7 @@ def modguard_cmd(
         str,
         typer.Option(
             "--only",
-            help="只跑某一道闸门（编号 1–5，或键名 keys/refs/dilution/roundtrip/determinism）",
+            help="只核 legacy 某道闸门（1–5或键名）；省略时同时核生产处境决策",
         ),
     ] = "",
     offline: Annotated[
@@ -3037,6 +3047,22 @@ def modguard_cmd(
     """
     try:
         ctx = modguard.context(offline=offline)
+        if not only:
+            decision_issues = decisions.check(decisions.PRODUCT)
+            if decision_issues:
+                _fail("生产处境决策产物检查失败：\n" + "\n".join(decision_issues), EXIT_FAILED)
+            interface_issues = decisions.validate(
+                ctx.vanilla.vocabulary() if ctx.vanilla else None,
+                game=None if offline else ctx.game,
+            )
+            if interface_issues:
+                _fail("生产处境决策证据检查失败：\n" + "\n".join(interface_issues))
+            console.print("[green]生产处境决策：生成一致、底本结构/指纹与新增接口检查通过 ✅[/]")
+            console.print(
+                "有意覆盖原版 00_default_strategy.txt；与修改默认策略的模组存在兼容成本。以下五道闸门仅核 legacy 历史档案。"
+            )
+        else:
+            console.print("本次仅核选定的 legacy 闸门；生产处境决策未检查。")
         report = modguard.run(ctx, only)
     except modgen.DataError as exc:
         _fail(f"数据源不合法：{exc}")
@@ -3045,7 +3071,7 @@ def modguard_cmd(
     except OSError as exc:
         _fail(f"读产物/原版失败：{type(exc).__name__}: {exc}")
 
-    table = Table(title=f"闸门（{len(report.findings)} 道）", show_lines=False)
+    table = Table(title=f"legacy 历史档案闸门（{len(report.findings)} 道）", show_lines=False)
     table.add_column("", width=2, justify="center")
     table.add_column("闸门")
     table.add_column("结论", overflow="fold")
@@ -3079,13 +3105,17 @@ def modguard_cmd(
     if not report.ok:
         console.print("[red]有闸门不过 —— 按上面的明细修完再跑一次[/]")
         raise typer.Exit(EXIT_FAILED)
-    console.print("[green]五道闸门全过 ✅[/]")
+    console.print(
+        "[green]选定的 legacy 闸门通过 ✅[/]"
+        if only
+        else "[green]生产检查与 legacy 五道闸门全过 ✅[/]"
+    )
 
 
 @app.command("ab-probe")
 def ab_probe_cmd(
     deploy: Annotated[
-        bool, typer.Option("--deploy", help="同步探针与真 mod 进用户 mod 目录并只启用它们")
+        bool, typer.Option("--deploy", help="同步探针与legacy 档案 mod 进用户 mod 目录并只启用它们")
     ] = False,
     archive: Annotated[
         str,
@@ -3097,7 +3127,7 @@ def ab_probe_cmd(
 ) -> None:
     """生成阶段 3 的 A/B 探针（**不要手改探针文件**，改 `src/pdx/ab_probe.py`）。
 
-    两局点的是**同一个决议**，唯一差异是角色：A = 决议什么都不做，B = 决议调用真 mod 的
+    两局点的是**同一个决议**，唯一差异是角色：A = 决议什么都不做，B = 决议调用legacy 档案 mod 的
     `sitai_ru_defeat_shock`。自报只盯主角国家，每月记三个槽位落点 +
     改革窗口 JE + 冲击变量 + 6 条改革相关法律 —— **行为层与策略层分开记**，
     因为阶段 3 的失败长相写死了「只有策略层动 = H2 不成立」。
@@ -3118,7 +3148,7 @@ def ab_probe_cmd(
     console.print(ab_probe.summary(built))
     if deploy:
         dest = ab_probe.deploy(archive_id=archive_id)
-        console.print(f"已部署 [bold]{dest}[/]（连同真 mod 一起启用，原列表已备份）")
+        console.print(f"已部署 [bold]{dest}[/]（连同legacy 档案 mod 一起启用，原列表已备份）")
         console.print(
             f"接着：启动游戏 → 选 {target.subject if target else '主角国家'} 开 1836 → "
             "点【A】或【B】→ 不做任何操作 → 跑 6-8 年 → 退出。"

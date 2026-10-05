@@ -124,7 +124,7 @@ def test_delivery_case_collision():
 
 
 def test_package_refuses_drift_without_touching_destination(tmp_path, monkeypatch):
-    monkeypatch.setattr(distribution.modgen, "check", lambda _: ["modified"])
+    monkeypatch.setattr(distribution.decisions, "check", lambda *_: ["modified"])
     target = tmp_path / "existing.zip"
     target.write_bytes(b"existing")
     with pytest.raises(ValueError, match="拒绝打包"):
@@ -320,7 +320,7 @@ def test_package_cli_success_and_refusal(tmp_path, monkeypatch):
     assert runner.invoke(cli.app, ["package", "--output", str(target)]).exit_code == 0
     assert target.is_file()
     before = target.read_bytes()
-    monkeypatch.setattr(distribution.modgen, "check", lambda _: ["drift"])
+    monkeypatch.setattr(distribution.decisions, "check", lambda *_: ["drift"])
     result = runner.invoke(cli.app, ["package", "--output", str(target)])
     assert result.exit_code == 1
     assert "拒绝打包" in result.stdout

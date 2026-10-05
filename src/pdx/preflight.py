@@ -21,7 +21,7 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from pdx import config, modgen
+from pdx import config, decisions, modgen
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -107,8 +107,11 @@ def _game_version() -> str:
     return str(data.get("rawVersion") or "")
 
 
-def _mod_metadata() -> dict[str, object]:
-    path = config.REPO / "mod" / ".metadata" / "metadata.json"
+def _mod_metadata(*, legacy: bool = False) -> dict[str, object]:
+    product = config.REPO / "mod"
+    if legacy:
+        product /= "legacy"
+    path = product / ".metadata" / "metadata.json"
     if not path.is_file():
         return {}
     try:
@@ -134,13 +137,14 @@ def check_game() -> Check:
     return Check("游戏本体", True, f"{_game_version() or '版本读不到'} · {config.GAME}")
 
 
-def check_version_matches_mod() -> Check:
+def check_version_matches_mod(*, legacy: bool = False) -> Check:
     """游戏版本 == mod 元数据声明的 ``supported_game_version``。
 
     不一致不会让游戏开不起来，但它意味着**这一局的读数与 mod 声明的支持面不符**：
     启动器会对 mod 弹版本警告，而更麻烦的是"版本警告"与"mod 真的坏了"在截图里长得像。
     """
-    want = str(_mod_metadata().get("supported_game_version") or "")
+    metadata = _mod_metadata(legacy=True) if legacy else _mod_metadata()
+    want = str(metadata.get("supported_game_version") or "")
     got = _game_version()
     if not want or not got:  # pragma: no cover - 缺元数据由「产物一致」那条报
         return Check(
@@ -155,7 +159,11 @@ def check_version_matches_mod() -> Check:
         "版本一致",
         False,
         f"mod 声明 {want}，本机游戏是 {got}",
-        "改 mod/data/*.toml 的 game_version 后 `v3 modgen --write`（或把游戏升/降到同一版）",
+        (
+            "核对 mod/data/*.toml 的 legacy 支持版本后 `v3 modgen --write`（或使用声明的游戏版本）"
+            if legacy
+            else "核对 mod/decisions/fiscal.toml 与锁定底本；升级需要重新审核后 `v3 modgen --write`（或使用声明的游戏版本）"
+        ),
     )
 
 
@@ -168,15 +176,16 @@ def check_products() -> Check:
     """
     try:
         built = modgen.build_all(modgen.load_all())
+        current = decisions.build()
+        diffs = [*decisions.check(decisions.PRODUCT, current), *modgen.check(built)]
     except Exception as exc:
         return Check(
             "产物一致",
             False,
             f"编译数据源失败：{type(exc).__name__}: {exc}",
-            "先修 mod/data 里的数据源",
+            "先修 mod/decisions 或 mod/data 里的数据源及底本",
             level=BLOCKING,
         )
-    diffs = modgen.check(built)
     if diffs:
         return Check(
             "产物一致",
@@ -184,7 +193,11 @@ def check_products() -> Check:
             f"{len(diffs)} 处不一致：{diffs[0]}",
             "跑 `v3 modgen --write`（产物由数据源生成，不要手改）",
         )
-    return Check("产物一致", True, f"{len(built.files)} 个产物与数据源逐字节一致")
+    return Check(
+        "产物一致",
+        True,
+        f"生产 {len(current)} 个、legacy {len(built.files)} 个产物与数据源逐字节一致",
+    )
 
 
 def check_no_leftover_game(pids: Iterable[int] | None = None) -> Check:
@@ -512,7 +525,7 @@ def run(*, archive: str | None = None, root: Path | None = None) -> Report:
     _ = root  # 目前所有检查都走 config；保留参数是为了调用方对称
     checks = [
         check_game(),
-        check_version_matches_mod(),
+        check_version_matches_mod(legacy=True) if archive else check_version_matches_mod(),
         check_products(),
         check_user_config(),
         check_no_leftover_game(),

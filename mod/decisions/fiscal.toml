@@ -1,0 +1,14 @@
+schema_version = 1
+game_version = "1.14.5"
+baseline_sha256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
+
+[fiscal]
+entry_weeks = 26
+exit_weeks = 52
+ttl_days = 62
+why = "真实违约或持续借款且距破产不足半年视为财政风险；一年退出线形成迟滞。阈值是待实机校准的设计参数，不是优化证明。变量月度续期，失去更新最多62天后停止干预。"
+
+[fields]
+diplomatic_play_neutrality = 25
+aggression = -0.25
+why = "仅调整两个原版明确相加的字段：财政危机叠加战争，或已作为发起方、目标方、承诺参与方承担外交博弈时，提高第三方中立倾向并降低新增博弈倾向。未决定参与不算承诺。保留原版持牌、国家身份和防御选择，不改财政/IG/法律/军力。"

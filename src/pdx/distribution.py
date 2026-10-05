@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
-from pdx import modgen
+from pdx import decisions
 from pdx.textio import GAME_SUFFIXES, text_bytes
 
 if TYPE_CHECKING:
@@ -85,11 +85,11 @@ def write_zip(files: Mapping[str, str], destination: Path) -> Path:
 
 
 def package(destination: Path) -> Path:
-    built = modgen.build_all(modgen.load_all())
-    issues = modgen.check(built)
+    current = decisions.build()
+    issues = decisions.check(decisions.PRODUCT, current)
     if issues:
         raise ValueError("生成物不一致，拒绝打包：\n" + "\n".join(issues))
-    return write_zip(built.files, destination)
+    return write_zip(current, destination)
 
 
 def main() -> int:

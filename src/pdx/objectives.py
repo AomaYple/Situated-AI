@@ -105,7 +105,7 @@ TABLE_DOC = config.REPO / "docs" / "design" / "exec" / "阶段5-目标函数表-
 DATA_DIR = config.REPO / "mod" / "data"
 
 #: `mod/sitai_<id>.md` 产物目录。
-PRODUCT_DIR = config.REPO / "mod"
+PRODUCT_DIR = config.REPO / "mod" / "legacy"
 
 #: `derive()` 的输入之一：原版开局牌所在文件（§4.1.1）。
 STRATEGY_HISTORY = ("common", "history", "ai", "00_strategy.txt")

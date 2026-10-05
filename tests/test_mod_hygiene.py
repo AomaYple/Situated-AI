@@ -52,10 +52,9 @@ def test_mod_目录里的文件正好等于生成器产出(tmp_path: Path) -> No
     modgen.write(built, tmp_path)
 
     expected = _relative_files(tmp_path)
-    source = {"data/" + p.name for p in modgen.DATA_DIR.glob(f"*{modgen.DATA_SUFFIX}")}
     actual = _relative_files(modgen.PRODUCT_DIR)
 
-    extra = sorted(actual - expected - source)
+    extra = sorted(actual - expected)
     missing = sorted(expected - actual)
     assert not extra, (
         "mod/ 下有生成器不认识的文件（手写产物？）—— P3 要求游戏侧文件全部由 "
@@ -64,7 +63,7 @@ def test_mod_目录里的文件正好等于生成器产出(tmp_path: Path) -> No
     assert not missing, (
         f"生成器该产出但盘上没有的文件（被手删了？）—— 跑 `v3 modgen --write`：{missing}"
     )
-    assert actual == expected | source
+    assert actual == expected
 
 
 def test_多余的手写文件会被这条等式抓住(tmp_path: Path) -> None:

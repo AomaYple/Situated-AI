@@ -1,7 +1,7 @@
 # ⚠️ 本文件由 `v3 modgen` 生成（src/pdx/modgen.py）—— 改这里没用，改数据源 mod/data/*.toml。
 
 # 递牌（C 级）：ai_strategy_sitai_ru_defeat_agenda —— 占 political 槽一个位置（档案 ru_defeat）。
-# 定价见闸门 ③（阶段 2 的等效竞争权重表）；档案里没有牌是 F5 的结果，不是漏写。
+# 定价见闸门 ③（阶段 2 的等效竞争权重表）；牌的进入门与牌面字段均来自数据源。
 
 ai_strategy_sitai_ru_defeat_agenda = {
 	type = political

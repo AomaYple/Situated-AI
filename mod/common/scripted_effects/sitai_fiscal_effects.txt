@@ -1,0 +1,8 @@
+# 由 pdx.decisions 生成；只有本更新器写入财政状态。
+sitai_update_fiscal = {
+    if = {
+        limit = { is_ai = yes OR = { sitai_fiscal_entry = yes AND = { has_variable = sitai_fiscal_risk sitai_fiscal_hold = yes } } }
+        set_variable = { name = sitai_fiscal_risk value = 1 days = 62 }
+    }
+    else = { remove_variable = sitai_fiscal_risk }
+}

@@ -119,7 +119,7 @@ class Definition:
 
 def _tracked_paths() -> list[str]:
     result = subprocess.run(
-        ["git", "ls-files", "-z"],
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
         cwd=ROOT,
         check=True,
         capture_output=True,
@@ -127,7 +127,7 @@ def _tracked_paths() -> list[str]:
     paths = result.stdout.decode("utf-8", "surrogateescape").split("\x00")
     return [
         path
-        for path in paths
+        for path in sorted(set(paths))
         if path.endswith(".py")
         and path.startswith(SOURCE_PREFIXES)
         and not any(part in EXCLUDED_PARTS for part in Path(path).parts)
@@ -135,10 +135,10 @@ def _tracked_paths() -> list[str]:
 
 
 def _reference_paths() -> list[str]:
-    """返回用于引用索引的全部受控 Python 文本。"""
+    """返回受控及尚未入库的新Python文本；忽略产物不能掩盖新代码漏审。"""
 
     result = subprocess.run(
-        ["git", "ls-files", "-z"],
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
         cwd=ROOT,
         check=True,
         capture_output=True,
@@ -146,7 +146,7 @@ def _reference_paths() -> list[str]:
     paths = result.stdout.decode("utf-8", "surrogateescape").split("\x00")
     return [
         path
-        for path in paths
+        for path in sorted(set(paths))
         if path.endswith(".py") and not any(part in EXCLUDED_PARTS for part in Path(path).parts)
     ]
 

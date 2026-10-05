@@ -73,17 +73,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-if os.name == "nt":
-    import msvcrt
-else:
-    import fcntl
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 
 from pdx import ab_probe, config, gametimer, stress_probe
 from pdx import game_auto as ga
 from pdx.console import enable_utf8_stdio
+from pdx.game_run import RunLock
 from pdx.textio import deploy_tree
 
 if TYPE_CHECKING:
@@ -113,55 +109,7 @@ OURS_LABEL = "ours"
 TEMPO_LABEL = "tempo"
 
 
-class RunLock:
-    """跨进程互斥锁，防止两个性能探针同时改写用户配置和日志。"""
-
-    def __init__(self, path: Path) -> None:
-        self.path = path
-        self._handle = None
-
-    def acquire(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._handle = self.path.open("a+b")
-        try:
-            if os.name == "nt":
-                self._handle.seek(0)
-                msvcrt.locking(self._handle.fileno(), msvcrt.LK_NBLCK, 1)
-            else:
-                fcntl.flock(self._handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except (OSError, BlockingIOError) as exc:
-            self._handle.close()
-            self._handle = None
-            raise RuntimeError(f"已有另一个 perf_compare 正在运行（锁：{self.path}）") from exc
-        self._handle.seek(0)
-        self._handle.write(
-            json.dumps({"pid": os.getpid(), "started": time.time()}, ensure_ascii=False).encode()
-        )
-        self._handle.truncate()
-        self._handle.flush()
-
-    def release(self) -> None:
-        if self._handle is None:
-            return
-        try:
-            if os.name == "nt":
-                self._handle.seek(0)
-                msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
-        finally:
-            self._handle.close()
-            self._handle = None
-
-    def __enter__(self) -> RunLock:
-        self.acquire()
-        return self
-
-    def __exit__(self, _type: object, _value: object, _traceback: object) -> None:
-        self.release()
-
-
-RUN_LOCK = OUT_DIR / "perf_compare.lock"
+RUN_LOCK = config.USERDIR / ".sitai-game.lock"
 
 
 def arm_labels(tempo_arm: bool = False) -> tuple[str, ...]:
@@ -275,6 +223,8 @@ class PerfCleanup:
             alive = getattr(ga, "LAST_KILL_ALIVE", ())
             if alive:
                 self.errors.append(f"游戏进程仍存活：{list(alive)}")
+                self.errors.append("原配置与目录备份已保留；不在游戏仍运行时恢复或删除实验资源")
+                return tuple(self.errors)
             if killed is None and not self.errors:
                 self.errors.append("终止本次游戏：未返回清理结果")
             self._step("恢复 content_load.json", self._restore_content)
@@ -289,12 +239,15 @@ class PerfCleanup:
                     lambda path=path, backup=backup: shutil.move(str(backup), str(path)),
                 )
             restore_dir = self.restore_dir
-            if restore_dir is not None and restore_dir.exists():
+            if restore_dir is not None and restore_dir.exists() and not self.errors:
                 self._step("删除临时隔离区", lambda: shutil.rmtree(restore_dir))
             moved = self._step("归档本次日志", _quarantine_logs)
             if isinstance(moved, list):
                 self.archived_logs.extend(str(item) for item in moved)
-            self._step("删除 content_load 备份", lambda: self.backup_path.unlink(missing_ok=True))
+            if not self.errors:
+                self._step(
+                    "删除 content_load 备份", lambda: self.backup_path.unlink(missing_ok=True)
+                )
         finally:
             self.running = False
             # cleaned 表示关键收尾全部完成；任何错误都必须进入报告并让 CLI 失败。
@@ -944,7 +897,12 @@ def run_once(
         ga.click_client(hwnd, session.speed_xy[0], session.speed_xy[1], force=True)
         time.sleep(0.8)
     ga.press_key("space", force=True)
-    time.sleep(3.0)
+    # 清零需要前台输入；计时本身必须在后台，且用真实tick核对最小化后仍推进。
+    before_background = ga.tick_mark()
+    handover = ga.switch_to_background(hwnd, previous)
+    if not handover.minimized:
+        raise ga.GameAutoError("性能窗口未成功退到后台")
+    ga.wait_until_running(before_background, timeout=30)
 
     advanced = _wait_months(hwnd, months)
     print(f"  跑完 {months} 个月：{advanced}")
@@ -1149,7 +1107,7 @@ def tempo_defines_sources(mod_root: Path | None = None) -> list[Path]:
     而 G-EXIT-1 的判据正是"加一行数据 = 不改 Python"（P9）。产物由闸门 ⑤ 与数据源对齐。
     """
     return sorted(
-        ((mod_root or (config.REPO / "mod")) / "common" / "defines").glob(TEMPO_DEFINES_GLOB)
+        ((mod_root or (config.REPO / "mod/legacy")) / "common" / "defines").glob(TEMPO_DEFINES_GLOB)
     )
 
 
@@ -1251,7 +1209,7 @@ def _main() -> int:
     cleanup = PerfCleanup(
         content_path=CONTENT_LOAD,
         backup_path=backup,
-        generated_paths=(OURS_DST, STRESS_DST, TEMPO_DST),
+        generated_paths=(OURS_DST, STRESS_DST, TEMPO_DST, gametimer.ticktask_default_path()),
         killer=ga.kill_owned_game,
     )
     restore_signals = _install_cleanup_handlers(cleanup)

@@ -1,0 +1,139 @@
+"""真实日志格式、轮转次序与两国生命周期证据判定。"""
+
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from pdx import decision_probe
+from pdx.localization import parse_loc_entries
+from pdx.model import Block
+from pdx.parser import parse_text
+
+pytestmark = pytest.mark.unit
+
+
+def test_真实标量颜色分隔符不破坏日期(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        "SITAI DECISION;RUS;PRINCIPAL;\x15v; 55.00\x15!;1月 28, 1836\n", encoding="utf-8"
+    )
+    row = decision_probe.analyze(tmp_path)["rows"][0]
+    assert row["value"] == "55.00"
+    assert row["date"] == "1月 28, 1836"
+
+
+def test_轮转日志保留重复并按时间读退出(tmp_path):
+    (tmp_path / "debug.10.log").write_text("SITAI DECISION;RUS;RISK;no;date\n", encoding="utf-8")
+    (tmp_path / "debug.2.log").write_text("SITAI DECISION;RUS;RISK;yes;date\n", encoding="utf-8")
+    (tmp_path / "debug.log").write_text(
+        "SITAI DECISION;RUS;RISK;no;date\nSITAI DECISION;RUS;RISK;no;date\n", encoding="utf-8"
+    )
+    result = decision_probe.analyze(tmp_path)
+    assert result["countries"]["RUS"]["risk_series"] == ["no", "yes", "no", "no"]
+    assert result["countries"]["RUS"]["exit_after_entry"]
+    assert not result["countries"]["PRU"]["entry_observed"]
+    assert not result["behavior_causality"]
+
+
+def test_探针注入不会混入生产生成链():
+    for name, text in decision_probe.build().items():
+        if name.endswith(".txt"):
+            assert not parse_text(text, name).errors
+            assert text.count("add_treasury = -1000000000") == 2
+
+
+def test_卸载观察仪器不会刷新生产状态():
+    def assert_private_writes(block):
+        for assignment in block.assignments():
+            if assignment.key in {"set_variable", "change_variable"}:
+                assert isinstance(assignment.value, Block)
+                name = assignment.value.first("name")
+                assert name is not None
+                assert str(name.value) == decision_probe.SAMPLE_VAR
+            if isinstance(assignment.value, Block):
+                assert_private_writes(assignment.value)
+
+    for name, text in decision_probe.build_observer().items():
+        if name.endswith(".txt"):
+            tree = parse_text(text, name)
+            assert not tree.errors
+            assert_private_writes(tree.root)
+            assert "remove_variable" not in text
+            assert "add_treasury" not in text
+            assert "sitai_update_fiscal" not in text
+
+
+@pytest.mark.parametrize(
+    "variable", ["sitai_fiscal_risk", "sitai_probe_", "sitai_probe_a }", "sitai_probe_A"]
+)
+def test_采样序号拒绝生产命名空间和脚本注入(variable):
+    with pytest.raises(ValueError, match="仪器命名空间"):
+        decision_probe.sample_step(variable)
+
+
+def test_私有序号可解析且不会调用全局GUI日期(tmp_path):
+    assert not parse_text(decision_probe.sample_step(decision_probe.SAMPLE_VAR)).errors
+    assert all("TimeKeeper" not in text for text in decision_probe.build_observer().values())
+    (tmp_path / "debug.log").write_text("SITAI DECISION;RUS;RISK;yes;sample-1\n", encoding="utf-8")
+    analysis = decision_probe.analyze(tmp_path)
+    assert analysis["rows"][0]["date"] == "sample-1"
+    assert "not a calendar date" in analysis["time_basis"]
+
+
+@pytest.mark.parametrize("row", ["RISK;INVALID;sample-1", "RISK;yes;sample-error", "truncated"])
+def test_财政观测错误与空日志不能被当作没有风险(tmp_path, row):
+    with pytest.raises(ValueError):
+        decision_probe.analyze(tmp_path)
+    (tmp_path / "debug.log").write_text(f"SITAI DECISION;RUS;{row}\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        decision_probe.analyze(tmp_path)
+
+
+def test_财政输入反事实可以关闭注入而不改读数():
+    files = decision_probe.build(inject=False)
+    text = files["common/on_actions/zz_sitai_decision_probe.txt"]
+    assert not parse_text(text).errors
+    assert "add_treasury" not in text
+    assert "SITAI DECISION;RUS;ACTIVE" in text
+    assert "SITAI DECISION;PRU;ACTIVE" in text
+
+
+def write_localization(tmp_path, *, english=True, chinese=False, duplicate=False):
+    for lang, enabled in (("english", english), ("simp_chinese", chinese)):
+        directory = tmp_path / "localization" / lang
+        directory.mkdir(parents=True, exist_ok=True)
+        keys = sorted(decision_probe.BASELINE_LOC_KEYS) if enabled else []
+        text = f"l_{lang}:\n" + "\n".join(
+            f' {key}:0 "value $placeholder$ \\"quoted\\""' for key in keys
+        )
+        (directory / "base.yml").write_text(text, encoding="utf-8")
+        if duplicate and lang == "english":
+            (directory / "duplicate.yml").write_text(text, encoding="utf-8")
+
+
+def test_中文缺键实验只补缺失键并保留英语占位符(tmp_path):
+    write_localization(tmp_path)
+    files = decision_probe.build_localization_baseline(tmp_path)
+    text = files["localization/simp_chinese/zz_sitai_vanilla_baseline_l_simp_chinese.yml"]
+    language, entries = parse_loc_entries(text)
+    assert language == "l_simp_chinese"
+    assert {key for key, _value in entries} == decision_probe.BASELINE_LOC_KEYS
+    assert all(value == 'value $placeholder$ \\"quoted\\"' for _key, value in entries)
+    assert not any(name.startswith(("common/", "events/")) for name in files)
+    assert set(json.loads(files["baseline.json"])["keys"]) == decision_probe.BASELINE_LOC_KEYS
+
+
+def test_中文已有键不被实验覆盖(tmp_path):
+    write_localization(tmp_path, chinese=True)
+    files = decision_probe.build_localization_baseline(tmp_path)
+    manifest = json.loads(files["baseline.json"])
+    assert manifest["keys"] == {}
+    assert set(manifest["already_present"]) == decision_probe.BASELINE_LOC_KEYS
+
+
+@pytest.mark.parametrize("duplicate", [False, True])
+def test_缺失或歧义底本拒绝猜测(tmp_path, duplicate):
+    write_localization(tmp_path, english=duplicate, duplicate=duplicate)
+    with pytest.raises(ValueError, match=r"底本|重复"):
+        decision_probe.build_localization_baseline(tmp_path)
