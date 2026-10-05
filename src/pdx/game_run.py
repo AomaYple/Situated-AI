@@ -235,6 +235,21 @@ def write_json(path: Path, value: object) -> None:
     temporary.replace(path)
 
 
+LEGACY_SAVE_MARKERS = (
+    b"setting_sitai_",
+    b"je_sitai_",
+    b"sitai_ru_",
+    b"sitai_au_revolution_",
+    b"sitai_brz_market_loss_",
+    b"sitai_bv_alignment_",
+    b"sitai_cn_intervention_",
+    b"sitai_eg_debt_",
+    b"sitai_pe_great_game_",
+    b"sitai_sp_empire_remnant_",
+    b"sitai_tr_defeat_",
+)
+
+
 def save_header(path: Path) -> dict[str, str]:
     """只读取二进制存档的有限明文头，不改写原始存档字节。"""
     with path.open("rb") as stream:
@@ -252,6 +267,11 @@ def save_header(path: Path) -> dict[str, str]:
         result["invalid_rules"] = "empty game-rule reference"
     # 观察者的player_manager数据库为空；缺该结构时保持未知，不能默认当观察者。
     with path.open("rb") as stream, mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as data:
+        legacy = tuple(
+            marker.decode("ascii") for marker in LEGACY_SAVE_MARKERS if data.find(marker) >= 0
+        )
+        if legacy:
+            result["legacy_mod_state"] = ",".join(legacy)
         at = data.find(b"player_manager=")
         if at >= 0:
             result["observer"] = (
@@ -260,6 +280,23 @@ def save_header(path: Path) -> dict[str, str]:
                 else "no"
             )
     return result
+
+
+def validate_load_save_header(
+    header: Mapping[str, str], *, expected_version: str, allow_save_upgrade: bool
+) -> None:
+    """在启动游戏前拒绝不适合作为迁移输入的存档。"""
+
+    if header.get("version") != expected_version and not allow_save_upgrade:
+        raise ValueError("检查点游戏版本不一致；升级实验需显式声明")
+    if header.get("invalid_rules"):
+        raise ValueError("存档包含空游戏规则引用；保留原件并重新生成干净检查点")
+    if header.get("legacy_mod_state"):
+        raise ValueError(
+            "存档包含已停用 Mod 状态；先保留原件并完成状态迁移，拒绝把旧世界直接载入新生产逻辑"
+        )
+    if header.get("observer") != "yes":
+        raise ValueError("固定检查点必须是观察者存档")
 
 
 def wait_save_ready(
@@ -697,12 +734,11 @@ def run(
                 source_save = deployment.source_after_isolation(load_save)
                 header = save_header(source_save)
                 expected_version = config.game_version().get("caligula_branch", "").split("/")[-1]
-                if header["version"] != expected_version and not allow_save_upgrade:
-                    raise ValueError("检查点游戏版本不一致；升级实验需显式声明")
-                if header.get("invalid_rules"):
-                    raise ValueError("存档包含空游戏规则引用；保留原件并重新生成干净检查点")
-                if header.get("observer") != "yes":
-                    raise ValueError("固定检查点必须是观察者存档")
+                validate_load_save_header(
+                    header,
+                    expected_version=expected_version,
+                    allow_save_upgrade=allow_save_upgrade,
+                )
                 staged_name = deployment.stage_save(source_save)
                 save_name = Path(staged_name).stem
                 with source_save.open("rb") as stream:

@@ -53,6 +53,19 @@ def test_invalid_rules_are_not_upgrade_candidates(tmp_path: Path):
     assert inventory.eligible_upgrade_entries == ()
 
 
+def test_legacy_mod_state_is_not_upgrade_candidate(tmp_path: Path):
+    path = tmp_path / "legacy.v3"
+    path.write_bytes(
+        b'SAV0100\nversion="1.14.4" game_date=1841.1.2 settings={}\n'
+        b"player_manager={database={}} je_sitai_ru_defeat_window={}"
+    )
+
+    inventory = save_migration.scan(tmp_path, expected_version="1.14.5")
+
+    assert len(inventory.legacy_state_entries) == 1
+    assert inventory.eligible_upgrade_entries == ()
+
+
 def test_parse_errors_are_retained_and_reported(tmp_path: Path):
     broken = tmp_path / "broken.v3"
     broken.write_bytes(b"not a save")

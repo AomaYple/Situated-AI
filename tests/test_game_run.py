@@ -346,6 +346,20 @@ def test_存档空规则和非观察者状态可在启动前发现(tmp_path):
     assert header["invalid_rules"]
 
 
+def test_旧处境状态在载入前拒绝(tmp_path):
+    path = tmp_path / "legacy.v3"
+    path.write_bytes(
+        b'SAV0100\nversion="1.14.4" game_date=1841.1.2 settings={}\n'
+        b"player_manager={database={}} je_sitai_ru_defeat_window={}"
+    )
+    header = game_run.save_header(path)
+    assert "je_sitai_" in header["legacy_mod_state"]
+    with pytest.raises(ValueError, match="已停用 Mod 状态"):
+        game_run.validate_load_save_header(
+            header, expected_version="1.14.5", allow_save_upgrade=True
+        )
+
+
 def test_自动存档等待稳定且排除本局之前的副本(tmp_path, monkeypatch):
     path = tmp_path / "save.v3"
     path.write_bytes(b'SAV0100\nversion="1.14.5" game_date=1836.4.1\nplayer_manager={database={}}')

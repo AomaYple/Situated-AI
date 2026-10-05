@@ -83,6 +83,10 @@ class SaveInventory:
         return tuple(e for e in self.entries if e.header.get("invalid_rules"))
 
     @property
+    def legacy_state_entries(self) -> tuple[SaveInventoryEntry, ...]:
+        return tuple(e for e in self.entries if e.header.get("legacy_mod_state"))
+
+    @property
     def eligible_upgrade_entries(self) -> tuple[SaveInventoryEntry, ...]:
         """返回可提交真实升级实验的输入候选，不代表升级已经成功。"""
 
@@ -92,6 +96,7 @@ class SaveInventory:
             if not e.parse_error
             and e.header.get("observer") == "yes"
             and not e.header.get("invalid_rules")
+            and not e.header.get("legacy_mod_state")
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -104,6 +109,7 @@ class SaveInventory:
             "parse_errors": len(self.parse_errors),
             "observers": len(self.observer_entries),
             "invalid_rules": len(self.invalid_rule_entries),
+            "legacy_mod_state": len(self.legacy_state_entries),
             "cross_version": len(self.cross_version_entries),
             "eligible_upgrade_inputs": len(self.eligible_upgrade_entries),
             "entries": [entry.to_dict() for entry in self.entries],
