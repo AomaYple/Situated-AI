@@ -18,14 +18,15 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from pdx import config, decisions, modgen
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
 
 #: 「跑不了」与「跑得起来但会白跑」的分界。
 #:
@@ -290,6 +291,98 @@ def check_user_config() -> Check:
     return Check("用户配置", True, f"启用 {len(enabled)} 个 mod，无探针态、无残留备份")
 
 
+def _under(path: Path, root: Path) -> bool:
+    """判断路径是否位于 root 下；坏路径只返回 False，不让前置检查崩溃。"""
+    try:
+        return path.resolve(strict=False).is_relative_to(root.resolve(strict=False))
+    except (OSError, ValueError):
+        return False
+
+
+def check_launcher_playset() -> Check:
+    """只读核对活动 Launcher playset 是否注册了 ``content_load`` 请求的本地 mod。
+
+    游戏在活动 playset 仍含 Workshop 条目时，直接改 ``content_load.json`` 可能仍然
+    看不到本地 mod。这里不写数据库、不切换 playset，只把可疑组合提前报告出来；
+    没有 Launcher 数据库的机器（例如 CI）按信息提示处理。
+    """
+    from pdx import experiments  # noqa: PLC0415
+
+    requested = [
+        Path(raw)
+        for raw in experiments.enabled_mod_paths()
+        if raw and _under(Path(raw), config.LOCAL_MODS)
+    ]
+    if not requested:
+        return Check("启动器 playset", True, "content_load 没有请求本地 mod", level=INFO)
+
+    database = config.USERDIR / "launcher-v2.sqlite"
+    if not database.is_file():
+        return Check(
+            "启动器 playset",
+            False,
+            f"请求 {len(requested)} 个本地 mod，但没有 {database.name}，无法核对活动 playset",
+            "在启动器创建或打开对应 playset 后再跑；没有启动器数据库时只能看游戏日志确认挂载",
+            level=INFO,
+        )
+    try:
+        uri = f"file:{database.as_posix()}?mode=ro"
+        with sqlite3.connect(uri, uri=True) as connection:
+            active = connection.execute(
+                "SELECT id, name FROM playsets WHERE isActive = 1 ORDER BY lastUsedAt DESC LIMIT 1"
+            ).fetchone()
+            if active is None:
+                return Check(
+                    "启动器 playset",
+                    False,
+                    "没有活动 playset，无法核对本地 mod 是否注册",
+                    "在启动器打开包含本地 mod 的 playset；没有启动器数据库时只能看游戏日志确认挂载",
+                    level=INFO,
+                )
+            rows = connection.execute(
+                """
+                SELECT m.dirPath, m.source, m.steamId
+                FROM playsets_mods AS pm
+                JOIN mods AS m ON m.id = pm.modId
+                WHERE pm.playsetId = ? AND pm.enabled = 1
+                """,
+                (active[0],),
+            ).fetchall()
+    except (OSError, sqlite3.Error) as exc:
+        return Check(
+            "启动器 playset",
+            False,
+            f"读取 {database.name} 失败：{type(exc).__name__}",
+            "关闭启动器后重试；不要直接改 SQLite，先用启动器注册本地 mod",
+            level=INFO,
+        )
+
+    registered = [
+        Path(row[0]) for row in rows if row[0] and _under(Path(row[0]), config.LOCAL_MODS)
+    ]
+    missing = [
+        path
+        for path in requested
+        if not any(path.resolve() == item.resolve() for item in registered)
+    ]
+    if missing:
+        workshop_count = sum(1 for row in rows if row[2])
+        return Check(
+            "启动器 playset",
+            False,
+            f"活动 playset {active[1] or active[0]} 未注册 {len(missing)} 个请求的本地 mod，"
+            f"同时启用 {workshop_count} 个 Workshop 条目",
+            "在当前 playset 注册并启用这些本地 mod；否则只用 content_load 的实机局必须以 Mounted Data 日志确认挂载",
+            level=INFO,
+        )
+    return Check(
+        "启动器 playset",
+        True,
+        f"活动 playset {active[1] or active[0]} 已注册 {len(registered)} 个请求的本地 mod",
+        level=INFO,
+    )
+
+
 #: 备份文件的可能后缀。**不止一个**：`.v3probe-backup` 是 `experiments` 那一套的，
 #: `.sitai-backup` 是更早一轮 `perf_compare` 那一套留下的 —— 只看前者就会漏掉真实事故
 #: （2026-09-24 那次就是这么漏的：配置停在探针态而检查报了 ✅）。
@@ -528,6 +621,7 @@ def run(*, archive: str | None = None, root: Path | None = None) -> Report:
         check_version_matches_mod(legacy=True) if archive else check_version_matches_mod(),
         check_products(),
         check_user_config(),
+        check_launcher_playset(),
         check_no_leftover_game(),
         check_logs_fresh(),
         check_stress_lint(),

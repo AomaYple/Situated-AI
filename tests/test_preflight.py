@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from typing import TYPE_CHECKING
 
 import pytest
@@ -88,6 +89,69 @@ class TestUserConfig:
         check = preflight.check_user_config()
         assert not check.ok
         assert check.level == preflight.BLOCKING
+
+
+class TestLauncherPlayset:
+    @staticmethod
+    def _write_db(path: Path, rows: list[tuple[str, str, str | None]]) -> None:
+        connection = sqlite3.connect(path)
+        connection.executescript(
+            """
+            CREATE TABLE playsets (id TEXT PRIMARY KEY, name TEXT, isActive INTEGER, lastUsedAt INTEGER);
+            CREATE TABLE mods (id TEXT PRIMARY KEY, dirPath TEXT, source TEXT, steamId TEXT);
+            CREATE TABLE playsets_mods (playsetId TEXT, modId TEXT, enabled INTEGER);
+            """
+        )
+        connection.execute("INSERT INTO playsets VALUES ('p1', '测试 playset', 1, 1)")
+        for index, (directory, source, steam_id) in enumerate(rows):
+            mod_id = f"m{index}"
+            connection.execute(
+                "INSERT INTO mods VALUES (?, ?, ?, ?)", (mod_id, directory, source, steam_id)
+            )
+            connection.execute("INSERT INTO playsets_mods VALUES ('p1', ?, 1)", (mod_id,))
+        connection.commit()
+        connection.close()
+
+    @pytest.fixture
+    def launcher_paths(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path]:
+        from pdx import experiments
+
+        userdir = tmp_path / "user"
+        local = userdir / "mod"
+        local.mkdir(parents=True)
+        content = userdir / "content_load.json"
+        _write_config(content, [str(local / "sitai_test")])
+        monkeypatch.setattr(experiments, "CONTENT_LOAD", content)
+        monkeypatch.setattr(preflight.config, "USERDIR", userdir)
+        monkeypatch.setattr(preflight.config, "LOCAL_MODS", local)
+        return userdir, local
+
+    def test_没有启动器数据库只提示(self, launcher_paths: tuple[Path, Path]) -> None:
+        check = preflight.check_launcher_playset()
+        assert not check.ok
+        assert check.level == preflight.INFO
+        assert "无法核对" in check.detail
+
+    def test_活动playset缺本地mod且混有Workshop时提示(
+        self, launcher_paths: tuple[Path, Path]
+    ) -> None:
+        userdir, _local = launcher_paths
+        self._write_db(
+            userdir / "launcher-v2.sqlite",
+            [("C:/Steam/workshop/529340/123", "steam", "123")],
+        )
+        check = preflight.check_launcher_playset()
+        assert not check.ok
+        assert check.level == preflight.INFO
+        assert "未注册 1 个请求的本地 mod" in check.detail
+        assert "Workshop" in check.detail
+
+    def test_活动playset已注册本地mod通过(self, launcher_paths: tuple[Path, Path]) -> None:
+        userdir, local = launcher_paths
+        self._write_db(userdir / "launcher-v2.sqlite", [(str(local / "sitai_test"), "local", None)])
+        check = preflight.check_launcher_playset()
+        assert check.ok
+        assert "已注册 1 个" in check.detail
 
 
 class TestProbeStateRecovery:
