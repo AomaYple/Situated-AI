@@ -248,6 +248,10 @@ LEGACY_SAVE_MARKERS = (
     b"sitai_sp_empire_remnant_",
     b"sitai_tr_defeat_",
 )
+LEGACY_SAVE_PATTERN = re.compile(
+    rb"setting_sitai_|je_sitai_|sitai_(?:ru_|au_revolution_|brz_market_loss_|"
+    rb"bv_alignment_|cn_intervention_|eg_debt_|pe_great_game_|sp_empire_remnant_|tr_defeat_)"
+)
 
 
 def save_header(path: Path) -> dict[str, str]:
@@ -267,9 +271,8 @@ def save_header(path: Path) -> dict[str, str]:
         result["invalid_rules"] = "empty game-rule reference"
     # 观察者的player_manager数据库为空；缺该结构时保持未知，不能默认当观察者。
     with path.open("rb") as stream, mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as data:
-        legacy = tuple(
-            marker.decode("ascii") for marker in LEGACY_SAVE_MARKERS if data.find(marker) >= 0
-        )
+        found = set(LEGACY_SAVE_PATTERN.findall(data))
+        legacy = tuple(marker.decode("ascii") for marker in LEGACY_SAVE_MARKERS if marker in found)
         if legacy:
             result["legacy_mod_state"] = ",".join(legacy)
         at = data.find(b"player_manager=")
