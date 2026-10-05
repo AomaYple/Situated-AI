@@ -52,6 +52,10 @@ def test_类型生成拒绝空集重复与注入(play_types):
 def test_观察国生成拒绝空集重复与注入(tags):
     with pytest.raises(ValueError):
         natural_probe.build(["dp_humiliation"], tags=tags)
+    for raw in ("", "RUS", "RUS,RUS", "RU}"):
+        with pytest.raises(ValueError):
+            natural_probe.parse_tags(raw)
+    assert natural_probe.parse_tags(" AUS, FRA ") == ("AUS", "FRA")
 
 
 def pulses():

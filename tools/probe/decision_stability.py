@@ -38,6 +38,11 @@ def main() -> int:
     parser.add_argument(
         "--natural-diplomacy", action="store_true", help="只读记录自然发起事实；不创建博弈"
     )
+    parser.add_argument(
+        "--natural-tags",
+        default=",".join(natural_probe.DEFAULT_TAGS),
+        help="自然外交观察国标签，逗号分隔，至少两个（默认 RUS,PRU）",
+    )
     args = parser.parse_args()
     laws: list[str] = []
     for path in sorted((config.GAME / "common/laws").glob("*.txt")):
@@ -84,6 +89,9 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
         decisions.write(baseline, decision_probe.build_localization_baseline(config.GAME))
         sources["zz_sitai_vanilla_localization_baseline"] = baseline
     natural = getattr(args, "natural_diplomacy", False)
+    natural_tags = (
+        natural_probe.parse_tags(args.natural_tags) if natural else natural_probe.DEFAULT_TAGS
+    )
     if natural:
         play_types: list[str] = []
         for path in sorted((config.GAME / "common/diplomatic_plays").glob("*.txt")):
@@ -92,7 +100,7 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 raise ValueError(f"原版博弈类型无法解析：{path}")
             play_types.extend(key for key in tree.top_keys if key.startswith("dp_"))
         diplomacy = source_root / "natural-diplomacy"
-        decisions.write(diplomacy, natural_probe.build(play_types))
+        decisions.write(diplomacy, natural_probe.build(play_types, tags=natural_tags))
         sources["zz_sitai_natural_diplomacy"] = diplomacy
     if args.arm != "vanilla":
         candidate = source_root / "candidate"
@@ -155,7 +163,8 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
             },
         }
         if natural:
-            result["natural_diplomacy"] = natural_probe.analyze(logdir)
+            result["natural_diplomacy"] = natural_probe.analyze(logdir, tags=natural_tags)
+            result["natural_tags"] = natural_tags
         return result
 
     report = game_run.run(

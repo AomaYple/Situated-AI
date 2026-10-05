@@ -14,12 +14,26 @@ if TYPE_CHECKING:
 
 START_VAR = "sitai_probe_natural_start_sample"
 MONTH_VAR = "sitai_probe_natural_month_sample"
+DEFAULT_TAGS = ("RUS", "PRU")
 ROW = re.compile(
     r"SITAI NATURAL;(?P<tag>[A-Z]{3});(?P<kind>START|TYPE|PULSE);(?P<value>.*);(?P<sample>sample-\d+)$"
 )
 
 
-def build(play_types: list[str], *, tags: tuple[str, ...] = ("RUS", "PRU")) -> dict[str, str]:
+def parse_tags(value: str) -> tuple[str, ...]:
+    """解析 CLI 的观察国列表，避免把拼写错误静默写进探针。"""
+
+    tags = tuple(part.strip() for part in value.split(",") if part.strip())
+    if (
+        len(tags) < 2
+        or len(set(tags)) != len(tags)
+        or any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in tags)
+    ):
+        raise ValueError("自然外交至少需要两个不重复的三字母国家标签")
+    return tags
+
+
+def build(play_types: list[str], *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dict[str, str]:
     """从全量原版类型键生成纯观察钩子；变量只属于本仪器。"""
     if (
         not play_types
@@ -74,7 +88,7 @@ def build(play_types: list[str], *, tags: tuple[str, ...] = ("RUS", "PRU")) -> d
     }
 
 
-def analyze(directory: Path, *, tags: tuple[str, ...] = ("RUS", "PRU")) -> dict:
+def analyze(directory: Path, *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dict:
     """按国家和started私有序号去重；冲突、缺类型或缺观察自报均失败。"""
     starts: dict[tuple[str, str], dict[str, str]] = {}
     pulses: dict[str, set[str]] = {tag: set() for tag in tags}
