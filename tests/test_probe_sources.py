@@ -31,6 +31,8 @@ def test_所有实机入口按局生成源并保留原始残留供恢复(tmp_pat
             assert ".sources-" in str(path)
             assert not (path / "common/on_actions/obsolete.txt").exists()
             assert (path / ".metadata/metadata.json").is_file()
+        if module_name == "decision_unload":
+            assert set(sources) == {"zz_sitai_fiscal_observer", "zz_probe_decision_lifecycle"}
         if fails:
             raise RuntimeError("test failure")
         return {"ok": True}
@@ -42,7 +44,12 @@ def test_所有实机入口按局生成源并保留原始残留供恢复(tmp_pat
             return module.run(1)
     else:
         arguments = Namespace(
-            months=1, controlled=False, keep_save=False, load_save=None, save=tmp_path / "save.v3"
+            months=1,
+            controlled=False,
+            keep_save=False,
+            load_save=None,
+            save=tmp_path / "save.v3",
+            localization_baseline=False,
         )
         monkeypatch.setattr(
             module.argparse.ArgumentParser, "parse_args", lambda *_a, **_k: arguments
