@@ -3195,3 +3195,44 @@ def test_platform_capabilities_is_read_only() -> None:
     assert capabilities["platform"] == sys.platform
     assert capabilities["background_validation"] is True
     assert capabilities["headless_log_validation"] is True
+
+
+def test_press_game_shortcut_checks_foreground_and_uses_shared_mapping(monkeypatch):
+    seen: list[str] = []
+    monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+    monkeypatch.setattr(ga, "press_key", lambda key, **_kwargs: seen.append(key))
+    monkeypatch.setattr(ga, "_sleep", lambda _seconds: None)
+    assert ga.press_game_shortcut(4242, "open_journal", force=True, settle=0.1) == "j"
+    assert seen == ["j"]
+
+
+def test_press_game_shortcut_rejects_unknown_or_wrong_foreground(monkeypatch):
+    monkeypatch.setattr(ga, "_foreground_window", lambda: 7)
+    with pytest.raises(ga.ForegroundLostError):
+        ga.press_game_shortcut(4242, "pause", force=True, settle=0)
+    monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+    with pytest.raises(ValueError, match="未知游戏快捷键"):
+        ga.press_game_shortcut(4242, "does_not_exist", force=True, settle=0)
+
+
+def test_press_game_shortcut_sends_profile_modifier_binding(monkeypatch):
+    seen: list[str] = []
+    monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+    monkeypatch.setattr(ga, "press_chord", lambda chord, **_kwargs: seen.append(chord))
+    monkeypatch.setattr(ga, "_sleep", lambda _seconds: None)
+    assert ga.press_game_shortcut(4242, "open_companies", force=True, settle=0) == "f1"
+    assert seen == ["shift+f1"]
+
+
+def test_press_game_shortcut_rejects_profile_actions_without_safe_sender():
+    with pytest.raises(ga.UnsupportedShortcutError, match="媒体键"):
+        ga.press_game_shortcut(4242, "music_play_pause", force=True, settle=0)
+
+
+def test_shortcut_surface_covers_profile_keyboard_actions():
+    from pdx.input_profile import check_profile
+
+    profile = check_profile()
+    profile_keyboard = {action.name for action in profile.actions if action.scancodes}
+    unsupported = set(ga.UNSUPPORTED_GAME_SHORTCUTS)
+    assert profile_keyboard - unsupported <= set(ga.GAME_SHORTCUTS)

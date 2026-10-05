@@ -419,30 +419,50 @@ class VanillaIndex:
     def path_exists(self, rel: str) -> bool | None:
         """``game/<rel>`` 这个文件在不在（``None`` = 离线未覆盖该目录）。
 
-        按**最长匹配的已覆盖根目录**判定：我们产物落在 ``common/defines/`` 下
-        时用 ``mod_paths`` 里那个根的清单，落在 ``gfx/interface/icons/`` 下时用
-        ``icon_paths``；两个域都没覆盖到的路径一律返回 ``None``。
+        路径域和图标域分开判定。对于闸门 ① 要检查的已知原版目录，
+        **具体目录缺失时不能被上层的宽泛目录兜底**：否则快照少记
+        ``common/defines``，但仍保留 ``common``，会把“未覆盖”误判成“原版没有”。
+        已知目录之外才按最长匹配的快照根目录判定。
         """
         if self.source != "snapshot":
             return (self.game / rel).exists()
-        pools = self._pools()
-        if pools is None:
+        body = self.sections.get(SECTION_PATHS)
+        if not body:
             return None
+
+        # 闸门 ① 的固定路径根必须逐项覆盖；不能让 common 之类的宽根
+        # 掩盖某个具体根目录缺失。
+        configured = [root for root in PATH_DIRS if rel == root or rel.startswith(root + "/")]
+        if configured:
+            root = max(configured, key=len)
+            files = body.get(root)
+            if files is None:
+                return None
+            return rel in files
+
         best: str | None = None
-        for root in pools:
+        for root in body:
             if (rel == root or rel.startswith(root + "/")) and (
                 best is None or len(root) > len(best)
             ):
                 best = root
         if best is None:
             return None
-        return rel in pools[best]
+        return rel in body[best]
 
     def icon_exists(self, rel: str) -> bool | None:
         """图标路径在不在原版里（只有 ``gfx/interface/icons`` 下面可判）。"""
         if self.source != "snapshot":
             return (self.game / rel).is_file()
-        return self.path_exists(rel)
+        body = self.sections.get(SECTION_ICONS)
+        if not body:
+            return None
+        files = body.get(ICON_DIR)
+        if files is None:
+            return None
+        if rel != ICON_DIR and not rel.startswith(ICON_DIR + "/"):
+            return None
+        return rel in files
 
     def ai_surface(self) -> Mapping[str, list[str]] | None:
         """原版 AI 面的原始记录（解码在 :mod:`pdx.ai_surface`）。"""

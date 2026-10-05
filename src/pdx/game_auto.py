@@ -35,12 +35,12 @@
    截图与点击前逐像素相同 —— 而当时把原因误判成"坐标不准"，白跑了一轮。
 2. **"日志没长"不能证明"点击没生效"**：游戏暂停时不写日志。
    所以"点击是否生效"必须用**截图对比**或 **tick 真值**判定。
-3. **键盘这条路走不通**（实测）：窗口在 Win32 层面确实是 active+focus
-   （``GetGUIThreadInfo`` 的 ``hwndActive == hwndFocus == 游戏窗口``），
-   但 ``keybd_event`` 与 ``SendInput`` 发的空格一律**不被引擎接受**
-   （用 tick 判据验证：按空格后时间照常推进，说明暂停快捷键根本没被收到）。
-   鼠标点击**有效** —— 引擎读的是光标位置与按键状态，不是注入的键盘事件。
-   因此本模块只用鼠标；控制台路线随之不可用（见 `docs/design/exec/自动化范式.md` §3）。
+3. **键盘输入必须逐动作验收**：旧实测曾显示部分合成键盘事件不被引擎接受，
+   但当前 Windows 1.14.5 已用原版 ``speed_5`` 的数字键 5 完成闭环。
+   因此速度路径默认走键盘并用 tick 速率验收；空格暂停也必须用 tick 判据确认。
+   其它公共动作现在通过 :func:`press_game_shortcut` 统一发送，但没有对应状态
+   判据之前不能把“按键发出”写成“游戏已执行”。输入配置漂移由
+   ``python -m pdx.input_profile`` 离线检查。
 
 ⚠️ **空格是"暂停开关"，不是"开始"**：如果此时游戏**已经在跑**，按空格会把它**暂停**。
    所以 :func:`_step_unpause` 先量一次速率，已经在跑就**不按**。
@@ -311,6 +311,96 @@ SPEED_V_MIN_RATE = 1.5
 # 键盘路径不依赖分辨率、UI 缩放、界面语言或光标位置；最终仍以真实 tick 速率验收。
 SPEED_5_KEY = "5"
 
+# 原版公共动作的键盘别名。速度档已用 tick 验收；其它动作只提供统一输入
+# 原语，调用方仍必须为目标界面补状态/日志判据，不能把“按键已发送”当成
+# 游戏已经接受。
+GAME_SHORTCUTS: dict[str, str] = {
+    "pause": "space",
+    "increase_speed": "=",
+    "decrease_speed": "-",
+    "speed_1": "1",
+    "speed_2": "2",
+    "speed_3": "3",
+    "speed_4": "4",
+    "speed_5": SPEED_5_KEY,
+    "open_journal": "j",
+    "location_finder": "f",
+    "focus": "f",  # 兼容旧调用名；原版动作名是 location_finder
+    "map_list": "q",
+    "construction_queue": "b",
+    "country_panel": "r",
+    "confirm": "c",
+    "cancel": "esc",
+    "open_politics": "f1",
+    "open_budget": "f2",
+    "open_buildings": "f3",
+    "open_market": "f4",
+    "open_military": "f5",
+    "open_power_bloc": "f6",
+    "open_diplomatic": "f7",
+    "open_technology": "f8",
+    "open_society": "f9",
+    "open_population": "f10",
+    "camera_up": "w",
+    "camera_left": "a",
+    "camera_down": "s",
+    "camera_right": "d",
+    "open_companies": "f1",
+    "tab_1": "1",
+    "tab_2": "2",
+    "tab_3": "3",
+    "tab_4": "4",
+    "tab_5": "5",
+    "production_lens": "1",
+    "political_lens": "2",
+    "diplomatic_lens": "3",
+    "military_lens": "4",
+    "trade_lens": "5",
+    "outliner_toggle_pinned": "1",
+    "outliner_toggle_economy": "2",
+    "outliner_toggle_politics": "3",
+    "outliner_toggle_diplomacy": "4",
+    "outliner_toggle_military": "5",
+    "outliner_toggle_all": "6",
+    "toggle_construction_queue_pause": "b",
+    "dismiss_toast": "esc",
+    "current_situation": "e",
+    "go_to_details": "g",
+    "merge": "m",
+    "toggle_pin": "x",
+    "zoom_to": "z",
+    "scroll_up": "pageup",
+    "scroll_down": "pagedown",
+    "toggle_gui_debug": "o",
+    **{f"panel_{index}": f"f{index}" for index in range(1, 11)},
+}
+
+# ``default.profile`` 的 binding 块中声明的修饰键。单独保存修饰键而不把
+# ``GAME_SHORTCUTS`` 改成复杂对象，兼容旧调用方读取 ``action -> key`` 的接口。
+GAME_SHORTCUT_MODIFIERS: dict[str, tuple[str, ...]] = {
+    "open_companies": ("shift",),
+    **{f"tab_{index}": ("shift",) for index in range(1, 6)},
+    **{
+        f"{name}_lens": ("alt",)
+        for name in ("production", "political", "diplomatic", "military", "trade")
+    },
+    **{
+        f"outliner_toggle_{name}": ("ctrl",)
+        for name in ("pinned", "economy", "politics", "diplomacy", "military", "all")
+    },
+    "toggle_construction_queue_pause": ("ctrl",),
+}
+
+# 这些动作在原版配置中只有媒体键或鼠标绑定。pydirectinput 没有跨平台、
+# 可验证的媒体键接口，而鼠标动作又需要上下文坐标，所以统一入口明确报不支持，
+# 不把一个普通数字键伪装成“动作已执行”。
+UNSUPPORTED_GAME_SHORTCUTS: dict[str, str] = {
+    "music_play_pause": "原版绑定媒体键/小键盘键，当前输入库无法提供可验证的跨平台发送",
+    "music_next_track": "原版绑定媒体键/小键盘键，当前输入库无法提供可验证的跨平台发送",
+    "lock_tooltip": "原版仅绑定鼠标中键，需要上下文鼠标入口",
+    "back": "原版仅绑定侧键，需要上下文鼠标入口",
+}
+
 #: 点了但速率不够时，在算出来的点周围试的**水平抖动**（像素）。命中偏差往往只有几像素，
 #: 抖动一圈比"整段重来"便宜得多，也让这步**自纠**而不是自认失败。
 SPEED_JITTER_PX = (0, -6, 6, -12, 12)
@@ -345,6 +435,10 @@ class ForegroundLostError(GameAutoError):
 
 class TemplateNotFoundError(GameAutoError):
     """模板没匹配上 —— 按钮不在预期位置（分辨率 / UI 缩放 / 界面语言变了）。"""
+
+
+class UnsupportedShortcutError(GameAutoError):
+    """原版动作存在，但当前输入库没有安全、可验证的发送方式。"""
 
 
 class NotRunningError(GameAutoError):
@@ -670,6 +764,43 @@ def press_key(key: str, *, force: bool = False) -> None:
     """
     _require_input(force)
     directinput.press(key)
+
+
+def press_game_shortcut(
+    hwnd: int,
+    action: str,
+    *,
+    force: bool = False,
+    settle: float = STEP_SETTLE,
+) -> str:
+    """在游戏前台发送一个公共动作快捷键，并返回实际发送的键名。
+
+    这是统一输入入口，不是成功判据：调用方必须随后检查 tick、ROI、日志或
+    其它与动作对应的状态。速度动作仍应使用 :func:`_step_speed_key`，因为它
+    还会接入真实速率验证和鼠标回退。
+    """
+
+    if action in UNSUPPORTED_GAME_SHORTCUTS:
+        raise UnsupportedShortcutError(
+            f"游戏快捷键动作 {action} 暂不支持：{UNSUPPORTED_GAME_SHORTCUTS[action]}"
+        )
+    try:
+        key = GAME_SHORTCUTS[action]
+    except KeyError as exc:
+        raise ValueError(f"未知游戏快捷键动作：{action}") from exc
+    foreground = _foreground_window()
+    if foreground != hwnd:
+        raise ForegroundLostError(
+            f"要发送游戏快捷键 {action} 时游戏不在前台（游戏 hwnd={hwnd}，前台={foreground}）"
+        )
+    modifiers = GAME_SHORTCUT_MODIFIERS.get(action, ())
+    if modifiers:
+        press_chord("+".join((*modifiers, key)), force=force)
+    else:
+        press_key(key, force=force)
+    if settle > 0:
+        _sleep(settle)
+    return key
 
 
 def press_chord(chord: str, *, force: bool = False) -> None:
@@ -4117,6 +4248,8 @@ __all__ = [
     "CURSOR_PARK_LOG",
     "DEFAULT_SCALES",
     "DEFAULT_THRESHOLD",
+    "GAME_SHORTCUTS",
+    "GAME_SHORTCUT_MODIFIERS",
     "LAST_KILL_ALIVE",
     "LAST_QUARANTINE_ERRORS",
     "OUR_MARKS",
@@ -4126,6 +4259,7 @@ __all__ = [
     "TESTS_TXT",
     "TOP_RIGHT_ROI",
     "UI_DIR",
+    "UNSUPPORTED_GAME_SHORTCUTS",
     "Advance",
     "AutomationPhase",
     "AutomationTrace",
@@ -4145,6 +4279,7 @@ __all__ = [
     "SuiteVerdict",
     "TemplateNotFoundError",
     "TickMark",
+    "UnsupportedShortcutError",
     "WindowNotFoundError",
     "archive_stamp",
     "assert_no_game_running",
@@ -4181,6 +4316,7 @@ __all__ = [
     "parse_tick_date",
     "platform_capabilities",
     "press_chord",
+    "press_game_shortcut",
     "press_key",
     "probe_months",
     "probe_roles_in",

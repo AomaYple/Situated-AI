@@ -237,7 +237,43 @@ def build_observer() -> dict[str, str]:
     }
 
 
-def analyze(directory: Path) -> Analysis:
+def _validate_lifecycle(rows: list[dict[str, str]], *, countries: tuple[str, ...]) -> None:
+    """严格模式下拒绝缺国、缺月、重复月和跨缺失月份的退出判定。"""
+
+    for tag in countries:
+        country_rows = [row for row in rows if row["tag"] == tag]
+        if not country_rows:
+            raise ValueError(f"财政生命周期缺少国家观测：{tag}")
+        samples: list[int] = []
+        kind_samples: set[tuple[str, int]] = set()
+        for row in country_rows:
+            date = row["date"]
+            if not date.startswith("sample-"):
+                raise ValueError(f"财政生命周期缺少 sample-N 时间基准：{tag}")
+            sample = int(date.removeprefix("sample-"))
+            samples.append(sample)
+            key = (row["kind"], sample)
+            if key in kind_samples:
+                raise ValueError(f"财政生命周期同类样本重复：{tag}/{row['kind']}/sample-{sample}")
+            kind_samples.add(key)
+        unique = sorted(set(samples))
+        expected = list(range(1, unique[-1] + 1))
+        if unique != expected:
+            raise ValueError(f"财政生命周期样本不连续：{tag}，实际 {unique}")
+        observed_kinds = {row["kind"] for row in country_rows}
+        if "RISK" not in observed_kinds:
+            raise ValueError(f"财政生命周期缺少 RISK 观测：{tag}")
+        risk_samples = {
+            int(row["date"].removeprefix("sample-"))
+            for row in country_rows
+            if row["kind"] == "RISK"
+        }
+        if risk_samples != set(unique):
+            missing = sorted(set(unique) - risk_samples)
+            raise ValueError(f"财政生命周期 RISK 样本不连续：{tag}，缺少 {missing}")
+
+
+def analyze(directory: Path, *, strict: bool = False) -> Analysis:
     rows: list[dict[str, str]] = []
     for path in ga.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
@@ -261,6 +297,8 @@ def analyze(directory: Path) -> Analysis:
                     rows.append(row)
     if not rows:
         raise ValueError("缺少本局财政观测，不能把空日志当无风险")
+    if strict:
+        _validate_lifecycle(rows, countries=("RUS", "PRU"))
     counts = Counter(
         f"{r['tag']}:{r['kind']}:{r['value']}"
         for r in rows
@@ -268,11 +306,22 @@ def analyze(directory: Path) -> Analysis:
     )
     countries: dict[str, CountryEvidence] = {}
     for tag in ("RUS", "PRU"):
-        risk = [r["value"] for r in rows if r["tag"] == tag and r["kind"] == "RISK"]
+        risk_rows = [r for r in rows if r["tag"] == tag and r["kind"] == "RISK"]
+        if strict:
+            risk_rows.sort(key=lambda row: int(row["date"].removeprefix("sample-")))
+        risk = [r["value"] for r in risk_rows]
+        transitions = list(pairwise(risk))
+        if strict:
+            transitions = [
+                (a["value"], b["value"])
+                for a, b in pairwise(risk_rows)
+                if int(b["date"].removeprefix("sample-"))
+                == int(a["date"].removeprefix("sample-")) + 1
+            ]
         countries[tag] = {
             "risk_series": risk,
             "entry_observed": "yes" in risk,
-            "exit_after_entry": any(a == "yes" and b == "no" for a, b in pairwise(risk)),
+            "exit_after_entry": any(a == "yes" and b == "no" for a, b in transitions),
             "active_observed": any(
                 r["value"] == "yes" for r in rows if r["tag"] == tag and r["kind"] == "ACTIVE"
             ),

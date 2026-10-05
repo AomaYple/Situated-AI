@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from pdx import config, snapshot
+from pdx.input_profile import InputAction, ProfileCheck
 
 #: **不参与「列表已排序」判定**的域。
 #:
@@ -57,6 +58,27 @@ def _first_diff(a: object, b: object, path: str = "") -> str:
 
 
 class TestScriptableSnapshot(unittest.TestCase):
+    def test_input_profile_snapshot_keeps_bindings_and_digest(self):
+        result = ProfileCheck(
+            Path("default.profile"),
+            "a" * 64,
+            123,
+            (InputAction("speed_5", (34, 93), text="SETTING_INPUT_ACTION_SPEED_FIVE"),),
+            (),
+        )
+        original = snapshot.input_profile.check_profile
+        snapshot.input_profile.check_profile = lambda: result
+        try:
+            body = snapshot._input_profile_snapshot()
+        finally:
+            snapshot.input_profile.check_profile = original
+        assert body["default.profile"] == ["sha256:" + "a" * 64, "size:123"]
+        assert body["speed_5"] == [
+            "scancode:34",
+            "scancode:93",
+            "text:SETTING_INPUT_ACTION_SPEED_FIVE",
+        ]
+
     def test_combined_walk_collects_entries_and_fields(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

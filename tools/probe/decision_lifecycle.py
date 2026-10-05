@@ -10,6 +10,12 @@ from pathlib import Path
 from pdx import config, decision_probe, decisions, game_run
 
 
+def analyze_lifecycle(logdir: Path):
+    """M2 证据必须使用严格连续样本口径。"""
+
+    return decision_probe.analyze(logdir, strict=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--months", type=float, default=9)
@@ -31,7 +37,7 @@ def main() -> int:
             {"sitai_decision_candidate": candidate, "zz_probe_decision_lifecycle": probe},
             months=args.months,
             output=output,
-            analyze=decision_probe.analyze,
+            analyze=analyze_lifecycle,
             load_save=args.load_save,
             keep_save=args.keep_save,
         )

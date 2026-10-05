@@ -75,7 +75,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
 
     def analyze(logdir):
         return {
-            "fiscal": decision_probe.analyze(logdir),
+            "fiscal": decision_probe.analyze(logdir, strict=True),
             "opportunity": behavior_probe.analyze(logdir, tags=tags),
         }
 

@@ -10,6 +10,10 @@ from pathlib import Path
 from pdx import config, decision_probe, decisions, game_run
 
 
+def analyze_unload(logdir: Path):
+    return decision_probe.analyze(logdir, strict=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--save", type=Path, required=True)
@@ -25,7 +29,7 @@ def main() -> int:
             months=args.months,
             output=output,
             load_save=args.save,
-            analyze=decision_probe.analyze,
+            analyze=analyze_unload,
         )
     print(
         json.dumps(

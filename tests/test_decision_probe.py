@@ -99,6 +99,47 @@ def test_财政输入反事实可以关闭注入而不改读数():
     assert "SITAI DECISION;PRU;ACTIVE" in text
 
 
+def test_严格生命周期拒绝缺国和缺月(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        "\n".join(
+            [
+                "SITAI DECISION;RUS;RISK;no;sample-1",
+                "SITAI DECISION;RUS;RISK;yes;sample-3",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match=r"缺少国家观测|不连续"):
+        decision_probe.analyze(tmp_path, strict=True)
+
+
+def test_严格生命周期允许两国连续样本并按样本序列判退出(tmp_path):
+    rows = []
+    for tag in ("RUS", "PRU"):
+        for sample, value in ((1, "no"), (2, "yes"), (3, "no")):
+            rows.append(f"SITAI DECISION;{tag};RISK;{value};sample-{sample}")
+    (tmp_path / "debug.log").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    result = decision_probe.analyze(tmp_path, strict=True)
+    assert result["countries"]["RUS"]["exit_after_entry"]
+    assert result["countries"]["PRU"]["entry_observed"]
+
+
+def test_严格生命周期拒绝中间月份缺少风险读数(tmp_path):
+    rows = []
+    for tag in ("RUS", "PRU"):
+        rows.extend(
+            [
+                f"SITAI DECISION;{tag};RISK;no;sample-1",
+                f"SITAI DECISION;{tag};ACTIVE;no;sample-2",
+                f"SITAI DECISION;{tag};RISK;yes;sample-3",
+            ]
+        )
+    (tmp_path / "debug.log").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="RISK 样本不连续"):
+        decision_probe.analyze(tmp_path, strict=True)
+
+
 def write_localization(tmp_path, *, english=True, chinese=False, duplicate=False):
     for lang, enabled in (("english", english), ("simp_chinese", chinese)):
         directory = tmp_path / "localization" / lang

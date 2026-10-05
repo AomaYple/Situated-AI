@@ -30,7 +30,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from . import ai_surface, citations, config, vanilla_index
+from . import ai_surface, citations, config, input_profile, vanilla_index
 from .cache import parse_cached
 from .defines import extract_defines
 from .extract import entry_fields
@@ -361,6 +361,32 @@ def _localization_digest(root: Path) -> dict[str, list[str]]:
     return out
 
 
+def _input_profile_snapshot() -> dict[str, list[str]]:
+    """记录 ``default.profile`` 的动作绑定与文件指纹。
+
+    通用 PDX 快照只记录了 ``input_action`` 字段名，无法发现键位漂移；
+    这里保留所有动作的 scancode / mouse button，仍使用快照的字符串列表
+    形状，因此旧的序列化与离线比较器无需特殊分支。
+    """
+
+    result = input_profile.check_profile()
+    if not result.sha256:
+        return {}
+    body: dict[str, list[str]] = {
+        "default.profile": sorted([f"size:{result.size}", f"sha256:{result.sha256}"]),
+    }
+    for action in result.actions:
+        values = [f"scancode:{value}" for value in action.scancodes]
+        values.extend(f"mouse_button:{value}" for value in action.mouse_buttons)
+        values.extend(
+            f"modifier:{modifier}" for binding in action.bindings for modifier in binding.modifiers
+        )
+        if action.text:
+            values.append(f"text:{action.text}")
+        body[action.name] = sorted(values)
+    return body
+
+
 def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     """生成当前游戏版本的快照。
 
@@ -409,6 +435,10 @@ def build(*, compact: bool = False, verbose: bool = False) -> Snapshot:
     snap.sections["defines"] = _defines_snapshot()
     if verbose:
         print(f"  defines 命名空间: {len(snap.sections['defines'])}")
+
+    snap.sections["input_profile"] = _input_profile_snapshot()
+    if verbose:
+        print(f"  输入动作: {len(snap.sections['input_profile'])}")
 
     if compact:
         snap.sections["localization_digest"] = _localization_digest(config.GAME)

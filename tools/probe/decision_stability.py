@@ -117,7 +117,7 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
 
     def analyze(logdir):
         result = {
-            "fiscal": decision_probe.analyze(logdir),
+            "fiscal": decision_probe.analyze(logdir, strict=True),
             "reform": extension_probe.analyze(logdir),
             "experiment": {
                 "arm": args.arm,
