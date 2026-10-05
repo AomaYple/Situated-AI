@@ -534,6 +534,14 @@ def test_清零控制台后立即还后台再核实推进(ticktask_capture, monk
     assert capture.background["minimized"]
 
 
+def test_键盘速度会在控制台清零后重新夺回游戏焦点(ticktask_capture, monkeypatch):
+    capture, _session, events = ticktask_capture
+    session = SimpleNamespace(hwnd=1, previous=2, speed_xy=None, speed_key="5")
+    monkeypatch.setattr(game_run.ga, "submit_console_command", lambda *_a, **_k: True)
+    capture.start(session)
+    assert events == ["front", "key", "key", "key", "background", "verified-running"]
+
+
 def test_清零失败也归还窗口且不开始计时(ticktask_capture, monkeypatch):
     capture, session, events = ticktask_capture
     monkeypatch.setattr(game_run.ga, "submit_console_command", lambda *_a, **_k: False)

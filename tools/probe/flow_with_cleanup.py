@@ -72,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError as exc:
             parser.error(f"--speed-xy 必须是 X,Y 两个整数：{exc}")
 
-    ga.ALLOW_REAL_INPUT = True  # 显式入口：允许抢前台点那三下
+    ga.ALLOW_REAL_INPUT = True  # 显式入口：允许抢前台并发送观察/速度/暂停输入
     leftover = ga._process_pids()
     if leftover:
         print(f"⚠️ 起前有残留 victoria3：{leftover} —— 先收掉（这是上一轮没收拾干净）")

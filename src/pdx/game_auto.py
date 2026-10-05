@@ -1,4 +1,4 @@
-"""Victoria 3 自动化：把一局"跑起来"（起游戏 → 观察 → 5 档速度 → 空格 → 切回后台）。
+"""Victoria 3 自动化：把一局"跑起来"（起游戏 → 观察 → 按 5 速 → 空格 → 切回后台）。
 
 为什么需要这个模块
 ------------------
@@ -18,7 +18,7 @@
 ----------------------------------------------
     起游戏（正常前台启动）
       → 加载期**完全不碰窗口**（只看进程与日志大小这类免费信号）
-      → 确认游戏在前台，然后：点「观察」→ 点 5 档速度 → 按空格
+      → 确认游戏在前台，然后：点「观察」→ 按 5 速快捷键 → 按空格
       → 立刻把游戏切回后台（还原用户原来的前台窗口，再最小化游戏窗口）
       → 后台验证：时间真的在走吗、速率多少
       →（``run --wait-tests N``）再验一次"缩着也在跑" → 等官方套件判定 → 读产物给结论
@@ -306,6 +306,10 @@ SPEED_V_XY = (1851, 52)
 #: 「50 秒推进 5 个月」≈ 3 天/秒；取 1.5 是留一半余量（机器快慢、前线加载都会影响）。
 #: 低于它的常见原因：那一下点空了（实机踩过，只有 0.5 天/秒）。
 SPEED_V_MIN_RATE = 1.5
+
+# 原版 game/input_profile/default.profile 的 speed_5 快捷键：物理数字键 5。
+# 键盘路径不依赖分辨率、UI 缩放、界面语言或光标位置；最终仍以真实 tick 速率验收。
+SPEED_5_KEY = "5"
 
 #: 点了但速率不够时，在算出来的点周围试的**水平抖动**（像素）。命中偏差往往只有几像素，
 #: 抖动一圈比"整段重来"便宜得多，也让这步**自纠**而不是自认失败。
@@ -798,7 +802,7 @@ def _focus_editbox(hwnd: int, *, force: bool) -> None:
     """把键盘焦点交给控制台输入框，并清空它（免得新命令粘在旧的后面）。
 
     为什么必须点一下：控制台一旦打开就**关不掉**（实测 escape / 反引号 / shift+escape
-    都没用），于是它会在整局里一直挂着；而"让时间跑起来"那一步要点速度表盘、按空格 ——
+    都没用），于是它会在整局里一直挂着；而"让时间跑起来"那一步要按 5 速快捷键、按空格 ——
     焦点就此离开输入框。下一次敲命令时字会**打进游戏而不是控制台**，
     `submit_console_command` 就会一直判"没提交成功"。**实测踩过**：一局里
     `clear` 成功、跑完 12 个月后的 `dump` 失败 ⇒ `ticktask_timings.csv` 没出现。
@@ -2882,7 +2886,7 @@ def speed_candidates(
     return out
 
 
-# ────────────────────────── 会话流程：起游戏 → 三下点击 → 切回后台 ──────────────────────────
+# ────────────────────────── 会话流程：起游戏 → 观察/按键 → 切回后台 ──────────────────────────
 
 
 @dataclass(frozen=True, slots=True)
@@ -2937,6 +2941,8 @@ class SessionStart:
     verdict: SuiteVerdict | None = None
     #: 标准流程的不可变阶段轨迹，便于实机报告定位最后完成的步骤。
     trace: AutomationTrace | None = None
+    #: 使用键盘速度快捷键时记录实际按键；旧的鼠标路径为 ``None``。
+    speed_key: str | None = None
 
     def as_dict(self) -> dict[str, object]:
         """扁平化（CLI 打印 / 探针记档用）。"""
@@ -2947,6 +2953,7 @@ class SessionStart:
             "observe": self.observe.describe(),
             "speed_source": self.speed_source,
             "speed_xy": "" if self.speed_xy is None else f"{self.speed_xy[0]},{self.speed_xy[1]}",
+            "speed_key": self.speed_key or "",
             "speed_attempts": self.attempts,
             "speed_days_per_second": self.rate,
             "speed_ok": self.rate_ok,
@@ -3544,6 +3551,24 @@ def _step_speed(
     return label, point
 
 
+def _step_speed_key(
+    hwnd: int, *, speed_key: str = SPEED_5_KEY, force: bool = False
+) -> tuple[str, None]:
+    """用原版 ``speed_5`` 快捷键切到 V 档。
+
+    按键前重新核实前台，避免焦点被抢走时把数字键发送到错误的程序；是否被游戏接受
+    仍由后续真实 tick 速率确认。
+    """
+    if _foreground_window() != hwnd:
+        raise ForegroundLostError(
+            f"要按速度快捷键 {speed_key} 时游戏已经不在前台（游戏 hwnd={hwnd}，"
+            f"前台={_foreground_window()}）——已中止"
+        )
+    press_key(speed_key, force=force)
+    _sleep(STEP_SETTLE)
+    return f"快捷键 {speed_key}", None
+
+
 def _step_unpause(
     hwnd: int, *, key_timeout: float, run_timeout: float, key: str = "space", force: bool = False
 ) -> tuple[str, bool, Advance | None]:
@@ -3610,6 +3635,8 @@ def start_session(
     *,
     settle: BootSettle | None = None,
     speed_xy: tuple[int, int] | None = None,
+    speed_key: str = SPEED_5_KEY,
+    speed_keyboard: bool = True,
     skip_speed: bool = False,
     min_rate: float = SPEED_V_MIN_RATE,
     speed_attempts: int = 3,
@@ -3632,13 +3659,14 @@ def start_session(
     foreground_relaunch: Callable[[], tuple[int, int]] | None = None,
     loaded_observer: bool = False,
 ) -> SessionStart:
-    """**标准流程**：确认「观察」→ 点它 → 点 5 档速度 → 按空格 → 切回后台。
+    """**标准流程**：确认「观察」→ 点它 → 按 5 速快捷键 → 按空格 → 切回后台。
 
     流程与用户口径逐条对应（2026-09-22）：
 
     1. **游戏已经在前台**（由 ``launch_to_foreground`` 负责；加载期不碰窗口）；
     2. 点「观察」（:func:`_step_observe`）—— 判据是**界面真的切走了**；
-    3. 点 5 档速度（:func:`_step_speed`）—— 判据是**点完量出来的速率**；
+    3. 优先按原版 5 速快捷键（:func:`_step_speed_key`）—— 判据是**按完量出来的速率**；
+       键盘路径失败后才回退到鼠标表盘；
     4. 按空格开始（:func:`_step_unpause`）—— 已经在跑就**不按**（空格是暂停开关）；
     5. **切回后台**（:func:`switch_to_background`）：还前台 + 缩窗口；
     6. **缩着也要推进**：这是必须实测的一条（有些游戏一缩下去就不渲染），
@@ -3681,11 +3709,16 @@ def start_session(
     attempts = 0
     source = "跳过（skip_speed）"
     point: tuple[int, int] | None = None
+    speed_key_used: str | None = None
     if not skip_speed:
         attempts = 1
-        source, point = _step_speed(
-            hwnd, speed_xy=speed_xy, threshold=threshold, index=0, force=force
-        )
+        if speed_keyboard and speed_xy is None:
+            source, point = _step_speed_key(hwnd, speed_key=speed_key, force=force)
+            speed_key_used = speed_key
+        else:
+            source, point = _step_speed(
+                hwnd, speed_xy=speed_xy, threshold=threshold, index=0, force=force
+            )
     trace = trace.advance(AutomationPhase.SPEED_SET)
 
     unpause_note, pressed, advance = _step_unpause(
@@ -3703,9 +3736,17 @@ def start_session(
     if not skip_speed:
         rate = measure_rate(measure_seconds)
         while rate < min_rate and attempts < speed_attempts:
-            source, point = _step_speed(
-                hwnd, speed_xy=speed_xy, threshold=threshold, index=attempts, force=force
-            )
+            if speed_keyboard and speed_xy is None and speed_key_used is not None and attempts == 1:
+                # 键盘动作只重试一次；仍未达到速率才进入坐标回退，避免无意义连按。
+                source, point = _step_speed_key(hwnd, speed_key=speed_key, force=force)
+            else:
+                source, point = _step_speed(
+                    hwnd,
+                    speed_xy=speed_xy,
+                    threshold=threshold,
+                    index=max(0, attempts - 1),
+                    force=force,
+                )
             attempts += 1
             rate = measure_rate(measure_seconds)
 
@@ -3745,6 +3786,7 @@ def start_session(
         attempts=attempts,
         handover=handover,
         tick=tick_mark().tick,
+        speed_key=speed_key_used,
         trace=trace,
     )
 
@@ -3754,6 +3796,8 @@ def _run_session_impl(
     scripted_tests: bool = True,
     lobby_timeout: float = LOBBY_TIMEOUT,
     speed_xy: tuple[int, int] | None = None,
+    speed_key: str = SPEED_5_KEY,
+    speed_keyboard: bool = True,
     skip_speed: bool = False,
     verify_minimized: bool = True,
     keep_foreground: bool = False,
@@ -3805,6 +3849,8 @@ def _run_session_impl(
         previous,
         settle=settle,
         speed_xy=speed_xy,
+        speed_key=speed_key,
+        speed_keyboard=speed_keyboard,
         skip_speed=skip_speed,
         lobby_timeout=lobby_timeout,
         verify_minimized=verify_minimized,
@@ -3859,6 +3905,8 @@ def run_session(
     scripted_tests: bool = True,
     lobby_timeout: float = LOBBY_TIMEOUT,
     speed_xy: tuple[int, int] | None = None,
+    speed_key: str = SPEED_5_KEY,
+    speed_keyboard: bool = True,
     skip_speed: bool = False,
     verify_minimized: bool = True,
     keep_foreground: bool = False,
@@ -3874,6 +3922,8 @@ def run_session(
             scripted_tests=scripted_tests,
             lobby_timeout=lobby_timeout,
             speed_xy=speed_xy,
+            speed_key=speed_key,
+            speed_keyboard=speed_keyboard,
             skip_speed=skip_speed,
             verify_minimized=verify_minimized,
             keep_foreground=keep_foreground,
@@ -3898,7 +3948,7 @@ def main(argv: list[str] | None = None) -> int:
     enable_utf8_stdio()
     parser = argparse.ArgumentParser(
         prog="python -m pdx.game_auto",
-        description="Victoria 3 自动化：起游戏 → 观察 → 5 档速度 → 空格 → 切回后台",
+        description="Victoria 3 自动化：起游戏 → 观察 → 按 5 速 → 空格 → 切回后台",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -3908,7 +3958,7 @@ def main(argv: list[str] | None = None) -> int:
 
     run_parser = sub.add_parser(
         "run",
-        help="标准流程：起游戏（前台）→ 等加载 → 点观察 → 点 5 档速度 → 按空格 → 切回后台",
+        help="标准流程：起游戏（前台）→ 等加载 → 点观察 → 按 5 速快捷键 → 按空格 → 切回后台",
     )
     run_parser.add_argument(
         "--no-scripted-tests", action="store_true", help="不带官方 -scripted_tests 开关"
@@ -3934,6 +3984,12 @@ def main(argv: list[str] | None = None) -> int:
         help="跳过「缩着也在推进」那一步实测（默认实测，验不过当场恢复）",
     )
     run_parser.add_argument("--speed-xy", default="", help="显式指定速度档 V 的客户区坐标 X,Y")
+    run_parser.add_argument(
+        "--speed-mouse",
+        action="store_true",
+        help="强制使用旧的鼠标表盘路径；默认优先按原版 5 速快捷键，失败后再回退鼠标",
+    )
+    run_parser.add_argument("--speed-key", default=SPEED_5_KEY, help="5 速快捷键，默认 5")
     run_parser.add_argument(
         "--wait-tests",
         type=float,
@@ -4007,7 +4063,7 @@ def main(argv: list[str] | None = None) -> int:
 
         # 只剩 "run"：标准流程 —— 起游戏（前台）→ 等加载（**完全不碰窗口**，只用进程 +
         # 日志这些免费信号，至少 BOOT_MIN_SECONDS 秒；实测到选国家界面约 137 秒）
-        # → 点观察 → 点 5 档速度 → 按空格 → 切回后台（还前台 + 缩窗口）
+        # → 点观察 → 按 5 速快捷键 → 按空格 → 切回后台（还前台 + 缩窗口）
         # →（--wait-tests）验后台仍在跑 → 等官方套件判定 → 读产物给结论。
         #
         # ⚠️ 这段话以前是**第二份实现**（与 `run_session` 各写一遍），于是
@@ -4021,6 +4077,8 @@ def main(argv: list[str] | None = None) -> int:
             scripted_tests=not bool(args.no_scripted_tests),
             lobby_timeout=float(args.lobby_timeout),
             speed_xy=speed_xy,
+            speed_key=str(args.speed_key),
+            speed_keyboard=not bool(args.speed_mouse),
             skip_speed=bool(args.skip_speed),
             verify_minimized=not bool(args.no_verify_minimized),
             keep_foreground=bool(args.keep_foreground),
@@ -4063,6 +4121,7 @@ __all__ = [
     "LAST_QUARANTINE_ERRORS",
     "OUR_MARKS",
     "SHIFT_CHARS",
+    "SPEED_5_KEY",
     "TESTOUTPUT_GLOB",
     "TESTS_TXT",
     "TOP_RIGHT_ROI",

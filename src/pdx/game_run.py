@@ -94,8 +94,9 @@ class TickTaskCapture:
         self.background: dict[str, object] = {}
 
     def start(self, session: ga.SessionStart) -> None:
-        if session.speed_xy is None:
-            raise ValueError("计时窗口需要已验证的速度表盘坐标，以恢复控制台后的键盘焦点")
+        speed_key = getattr(session, "speed_key", None)
+        if session.speed_xy is None and speed_key is None:
+            raise ValueError("计时窗口需要已验证的速度坐标或快捷键，以恢复控制台后的键盘焦点")
         self.path.unlink(missing_ok=True)
         hwnd = ga._live_window(session.hwnd)
         ga.ensure_foreground(hwnd, force=True)
@@ -104,7 +105,11 @@ class TickTaskCapture:
             time.sleep(1.5)
             if not ga.submit_console_command(hwnd, "clear_ticktask_timings", force=True):
                 raise RuntimeError("引擎计时清零命令未提交")
-            ga.click_client(hwnd, *session.speed_xy, force=True)
+            if speed_key is not None:
+                ga.press_key(speed_key, force=True)
+            else:
+                assert session.speed_xy is not None
+                ga.click_client(hwnd, *session.speed_xy, force=True)
             time.sleep(0.8)
             before = ga.tick_mark()
             self.start_tick = before.tick

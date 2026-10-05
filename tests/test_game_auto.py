@@ -2627,7 +2627,7 @@ class TestStepOrder:
         calls: list[str] = []
         self._patch(monkeypatch, calls)
         result = ga.start_session(4242, 777, force=True)
-        assert calls == ["click_observe:864,1055", "click_speed:1851", "press:space"]
+        assert calls == ["click_observe:864,1055", "press:5", "press:space"]
         assert result.rate == 3.0
         assert result.rate_ok is True
         assert result.pressed is True
@@ -2648,7 +2648,7 @@ class TestStepOrder:
         monkeypatch.setattr(ga, "_step_look", look)
         result = ga.start_session(4242, 777, force=True, loaded_observer=True)
         assert seen["auto_new_game"] is False
-        assert calls == ["click_observe:864,1055", "click_speed:1851", "press:space"]
+        assert calls == ["click_observe:864,1055", "press:5", "press:space"]
         assert result.observe.name == "btn_observe"
 
     def test_已经在跑就不按空格(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2659,7 +2659,7 @@ class TestStepOrder:
         result = ga.start_session(4242, 777, force=True)
         assert result.pressed is False
         assert "没有按" in result.unpause
-        assert [c for c in calls if c.startswith("press")] == []
+        assert [c for c in calls if c == "press:space"] == []
 
     def test_观察没切走就报错且不继续往下点(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: list[str] = []
@@ -2703,13 +2703,18 @@ class TestStepOrder:
         with pytest.raises(ga.ForegroundLostError, match="不在前台"):
             ga._step_unpause(4242, key_timeout=0.0, run_timeout=0.0, force=True)
 
+    def test_按五速快捷键前必须确认游戏在前台(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 999)
+        with pytest.raises(ga.ForegroundLostError, match="速度快捷键"):
+            ga._step_speed_key(4242, force=True)
+
     def test_速率不够就补点下一个候选(self, monkeypatch: pytest.MonkeyPatch) -> None:
         calls: list[str] = []
         self._patch(monkeypatch, calls)
         # 依次：切回后台前量一次（1.0 不够）→ 补点后再量（3.0）→ 缩窗口后复量（3.0）
         rates = iter([1.0, 3.0, 3.0])
         monkeypatch.setattr(ga, "measure_rate", lambda *_a, **_k: next(rates))
-        result = ga.start_session(4242, 777, force=True)
+        result = ga.start_session(4242, 777, speed_keyboard=False, force=True)
         assert calls.count("click_speed:1851") == 2, "第一次没到 5 档，要补点一次"
         assert result.attempts == 2
         assert result.rate == 3.0
@@ -2721,6 +2726,25 @@ class TestStepOrder:
         assert [c for c in calls if c.startswith("click_speed")] == []
         assert result.speed_source == "跳过（skip_speed）"
         assert result.rate_ok is True
+
+    def test_默认用原版五速快捷键且记录按键(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+        self._patch(monkeypatch, calls)
+        result = ga.start_session(4242, 777, force=True)
+        assert result.speed_source == "快捷键 5"
+        assert result.speed_key == "5"
+        assert result.speed_xy is None
+        assert result.as_dict()["speed_key"] == "5"
+
+    def test_键盘路径失败后才回退鼠标(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[str] = []
+        self._patch(monkeypatch, calls)
+        rates = iter([0.5, 0.5, 3.0, 3.0])
+        monkeypatch.setattr(ga, "measure_rate", lambda *_a, **_k: next(rates))
+        result = ga.start_session(4242, 777, force=True)
+        assert calls.count("press:5") == 2
+        assert calls.count("click_speed:1851") == 1
+        assert result.rate == 3.0
 
     def test_切回后台之后不推进就当场恢复窗口(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """缩下去不推进是**游戏行为**：当场恢复成普通窗口，并如实报 `minimized=False`。"""
@@ -2819,6 +2843,8 @@ class TestRunCommand:
         self._stub(monkeypatch, seen)
         assert ga.main(["run"]) == 0
         assert seen["skip_speed"] is False
+        assert seen["speed_key"] == "5"
+        assert seen["speed_keyboard"] is True
         assert seen["verify_minimized"] is True
         assert seen["keep_foreground"] is False
 
@@ -2833,6 +2859,12 @@ class TestRunCommand:
         self._stub(monkeypatch, seen)
         assert ga.main(["run", "--speed-xy", "1800,40"]) == 0
         assert seen["speed_xy"] == (1800, 40)
+
+    def test_run_可以强制鼠标速度路径(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen: dict[str, object] = {}
+        self._stub(monkeypatch, seen)
+        assert ga.main(["run", "--speed-mouse"]) == 0
+        assert seen["speed_keyboard"] is False
 
     def test_失败时退出码是一(self, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
         """任何一步失败都退 1，不打印"完成"（P13）。"""
