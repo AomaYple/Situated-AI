@@ -510,6 +510,7 @@ def ticktask_capture(tmp_path, monkeypatch):
     monkeypatch.setattr(game_run.ga, "ensure_foreground", lambda *_a, **_k: events.append("front"))
     monkeypatch.setattr(game_run.ga, "press_key", lambda *_a, **_k: events.append("key"))
     monkeypatch.setattr(game_run.ga, "click_client", lambda *_a, **_k: events.append("focus"))
+    monkeypatch.setattr(game_run.ga, "speed_widget_xy", lambda *_a, **_k: (5, 6))
     monkeypatch.setattr(game_run.ga, "tick_mark", lambda: SimpleNamespace(tick="1836.6.1"))
 
     def background(*_):
@@ -539,7 +540,7 @@ def test_键盘速度会在控制台清零后重新夺回游戏焦点(ticktask_c
     session = SimpleNamespace(hwnd=1, previous=2, speed_xy=None, speed_key="5")
     monkeypatch.setattr(game_run.ga, "submit_console_command", lambda *_a, **_k: True)
     capture.start(session)
-    assert events == ["front", "key", "key", "key", "background", "verified-running"]
+    assert events == ["front", "key", "focus", "key", "key", "background", "verified-running"]
 
 
 def test_清零失败也归还窗口且不开始计时(ticktask_capture, monkeypatch):

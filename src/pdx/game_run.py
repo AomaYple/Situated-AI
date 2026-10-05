@@ -106,6 +106,13 @@ class TickTaskCapture:
             if not ga.submit_console_command(hwnd, "clear_ticktask_timings", force=True):
                 raise RuntimeError("引擎计时清零命令未提交")
             if speed_key is not None:
+                # 控制台命令提交后，游戏窗口仍可能把键盘焦点留在 console_edit。
+                # 鼠标速度分支天然会通过 click_client 夺回游戏焦点；快捷键分支也必须
+                # 先点击速度表盘，再发送 5，否则最后的 space 会被控制台吃掉，窗口
+                # 退到后台后游戏仍停在清零时刻。速度最终仍由快捷键设置，点击只用于
+                # 重新聚焦并同时确认速度控件存在。
+                point = ga.speed_widget_xy(hwnd, threshold=0.75) or ga.SPEED_V_XY
+                ga.click_client(hwnd, *point, force=True)
                 ga.press_key(speed_key, force=True)
             else:
                 assert session.speed_xy is not None

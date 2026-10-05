@@ -220,6 +220,7 @@ def test_全局政治正控明确隔离且不强制立法(tmp_path, monkeypatch)
     inspected = []
 
     def run(sources, **options):
+        assert "zz_probe_decision_lifecycle" in sources
         candidate = sources["sitai_decision_candidate"]
         strategy = (candidate / "common/ai_strategies/00_default_strategy.txt").read_text(
             encoding="utf-8"

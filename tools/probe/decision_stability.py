@@ -55,12 +55,30 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
     positive_control = args.arm in {"reform-positive-control", "reform-global-positive-control"}
     global_control = args.arm == "reform-global-positive-control"
     observer, fiscal = source_root / "politics", source_root / "fiscal-observer"
+    # 固定检查点可能来自旧版生命周期实验，并在存档元数据中保留
+    # ``zz_probe_decision_lifecycle``。自然外交观测不需要注入财政，但必须
+    # 提供同源的只读兼容仪器，否则引擎会把缺少旧 mod 记录为本局错误。
+    lifecycle = source_root / "fiscal-lifecycle-observer"
     decisions.write(
         observer,
         extension_probe.build(laws, strategies=extension_probe.political_keys(config.GAME)),
     )
     decisions.write(fiscal, decision_probe.build_observer())
-    sources = {"zz_sitai_reform_observer": observer, "zz_sitai_fiscal_observer": fiscal}
+    decisions.write(lifecycle, decision_probe.build_observer())
+    # 旧检查点保存的是该仪器的历史显示名称。只读内容足以满足存档
+    # 的挂载契约，但名称也必须保持一致，否则引擎仍会写“缺少 Mod”。
+    lifecycle_metadata = lifecycle / ".metadata/metadata.json"
+    metadata = json.loads(lifecycle_metadata.read_text(encoding="utf-8"))
+    metadata["name"] = "SITAI fiscal lifecycle instrument"
+    metadata["short_description"] = "Compatibility read-only observer for fixed saves"
+    lifecycle_metadata.write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    sources = {
+        "zz_sitai_reform_observer": observer,
+        "zz_sitai_fiscal_observer": fiscal,
+        "zz_probe_decision_lifecycle": lifecycle,
+    }
     if getattr(args, "localization_baseline", False):
         baseline = source_root / "localization-baseline"
         decisions.write(baseline, decision_probe.build_localization_baseline(config.GAME))
