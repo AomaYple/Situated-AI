@@ -11,10 +11,12 @@ import json
 import math
 import mmap
 import os
+import posixpath
 import re
 import shutil
 import threading
 import time
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
@@ -47,6 +49,7 @@ class LogFindings(TypedDict):
     errors: dict[str, int]
     mounted: list[str]
     missing_mounts: list[str]
+    unexpected_mounts: list[str]
     mod_errors: list[str]
     observer_warnings: list[str]
 
@@ -532,10 +535,68 @@ def wait_progress(
         time.sleep(min(poll, max(0, deadline - time.monotonic())))
 
 
-def log_findings(logdir: Path, destinations: list[Path]) -> LogFindings:
-    """仅解析本局归档；挂载行需匹配完整部署路径。"""
+def _normalize_mount_path(value: Path | str) -> str:
+    """把日志和部署路径变成可跨平台比较的完整路径。
+
+    游戏日志在 Windows 上可能使用反斜杠，而运行器在不同平台生成的
+    ``Path`` 使用本机分隔符。这里不调用本机 ``Path.resolve``，避免在
+    macOS/Linux 上把 Windows 日志误解释成相对路径；只做分隔符、重复
+    分隔符和 ``.`` 段的词法规范化，大小写按游戏路径语义折叠。
+    """
+    text = str(value).strip().replace("\\", "/")
+    return posixpath.normpath(text).casefold()
+
+
+def _base_mount_allowlist() -> list[Path]:
+    """返回本局允许的原版内容挂载；不把它们当成缺失项。
+
+    游戏会逐项记录 ``jomini``、``clausewitz``、``game``、平台数据和 DLC。
+    DLC 目录从当前安装读取，避免把 Workshop 或用户 mod 目录误当成原版。
+    """
+    roots = [
+        config.CLAUSEWITZ,
+        config.JOMINI,
+        config.GAME,
+        config.ROOT / "platform_specific_game_data",
+    ]
+    dlc = config.GAME / "dlc"
+    with suppress(OSError):
+        roots.extend(sorted((path for path in dlc.iterdir() if path.is_dir()), key=str))
+    # 没有游戏树时，离线测试仍可调用日志解析；生产运行会在挂载门禁中
+    # 通过缺失的候选/错误日志报告失败，而不是在这里抛出无关异常。
+    return roots
+
+
+def mount_allowlist(destinations: list[Path]) -> list[str]:
+    """生成并冻结本局完整挂载允许列表（规范化路径）。"""
+    return sorted(
+        {_normalize_mount_path(path) for path in (*_base_mount_allowlist(), *destinations)}
+    )
+
+
+def _mounted_path(line: str) -> str | None:
+    marker = "Mounted Data:"
+    if marker not in line:
+        return None
+    value = line.split(marker, 1)[1].strip()
+    return _normalize_mount_path(value) if value else None
+
+
+def log_findings(
+    logdir: Path,
+    destinations: list[Path],
+    *,
+    expected_mounts: list[Path | str] | None = None,
+) -> LogFindings:
+    """仅解析本局归档；严格模式按完整允许列表拒绝额外挂载。
+
+    ``expected_mounts`` 为空时保留旧的离线解析口径，只检查部署目标是否存在。
+    实机运行必须传入 :func:`mount_allowlist` 的结果；这样历史报告可以被重新
+    解析，但没有新允许列表的历史报告不会被追认为通过。
+    """
     errors = dict.fromkeys(ERROR_MARKERS, 0)
     mounted: list[str] = []
+    mounted_paths: set[str] = set()
     mod_errors: list[str] = []
     observer_warnings: list[str] = []
     for path in sorted(logdir.glob("*.log")):
@@ -550,18 +611,19 @@ def log_findings(logdir: Path, destinations: list[Path]) -> LogFindings:
                         else:
                             mod_errors.append(line.strip())
                 if "Mounted Data" in line:
-                    mounted.append(line.strip())
-    missing = [
-        str(p)
-        for p in destinations
-        if not any(
-            str(p).replace("\\", "/").lower() in s.replace("\\", "/").lower() for s in mounted
-        )
-    ]
+                    raw = line.strip()
+                    mounted.append(raw)
+                    if (path_value := _mounted_path(raw)) is not None:
+                        mounted_paths.add(path_value)
+    expected = {_normalize_mount_path(path) for path in (expected_mounts or destinations)}
+    required = list(expected_mounts) if expected_mounts is not None else destinations
+    missing = [str(path) for path in required if _normalize_mount_path(path) not in mounted_paths]
+    unexpected = sorted(mounted_paths - expected) if expected_mounts is not None else []
     return {
         "errors": errors,
         "mounted": mounted,
         "missing_mounts": missing,
+        "unexpected_mounts": unexpected,
         "mod_errors": mod_errors,
         "observer_warnings": observer_warnings,
     }
@@ -569,6 +631,8 @@ def log_findings(logdir: Path, destinations: list[Path]) -> LogFindings:
 
 def require_clean_report(report: dict) -> None:
     """配对必须采用完整门禁；不能仅凭历史ok字段接受漏判报告。"""
+    if report.get("review", {}).get("mounts_verified") is False:
+        raise ValueError("挂载隔离证据不足；旧报告缺少完整允许列表，不能作为严格通过")
     findings = report.get("log_findings", {})
     counts = findings.get("errors", {})
     if (
@@ -579,6 +643,7 @@ def require_clean_report(report: dict) -> None:
         or any(type(value) is not int or value != 0 for value in counts.values())
         or findings.get("mod_errors")
         or findings.get("missing_mounts")
+        or findings.get("unexpected_mounts")
     ):
         raise ValueError("两臂实机门禁必须通过；旧口径需先核对原始归档")
 
@@ -590,19 +655,34 @@ def read_reviewed_report(path: Path) -> dict:
     expected = report.get("log_hashes")
     if not expected or not logdir.is_dir() or hashes(logdir) != expected:
         raise ValueError("原始归档缺少完整日志指纹或指纹已变更；拒绝复核为通过")
-    findings = log_findings(logdir, [])
-    findings["missing_mounts"] = report.get("log_findings", {}).get("missing_mounts", [])
+    allowlist = report.get("mount_allowlist")
+    mounts_verified = isinstance(allowlist, list) and bool(allowlist)
+    if mounts_verified:
+        findings = log_findings(logdir, allowlist, expected_mounts=allowlist)
+    else:
+        # 历史报告只保存了 missing_mounts，无法从原始日志恢复当时的完整
+        # 允许列表；保留原始字段供追溯，但禁止把它当作新的隔离门禁通过。
+        findings = log_findings(logdir, [])
+        findings["missing_mounts"] = report.get("log_findings", {}).get("missing_mounts", [])
+        findings["unexpected_mounts"] = []
     with path.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
     report["review"] = {
         "report_sha256": digest,
         "original_ok": report.get("ok"),
         "logs_verified": True,
+        "mounts_verified": mounts_verified,
     }
     report["log_findings"] = findings
-    if any(findings["errors"].values()) or findings["mod_errors"] or findings["missing_mounts"]:
+    if (
+        not mounts_verified
+        or any(findings["errors"].values())
+        or findings["mod_errors"]
+        or findings["missing_mounts"]
+        or findings["unexpected_mounts"]
+    ):
         report["ok"] = False
-        report.setdefault("failure", "当前门禁复核发现引擎错误或缺少挂载证据")
+        report.setdefault("failure", "当前门禁复核发现引擎错误或挂载隔离证据不足")
     return report
 
 
@@ -729,6 +809,7 @@ def run(
                 raise RuntimeError(f"日志隔离失败：{ga.LAST_QUARANTINE_ERRORS}")
             destinations = deployment.deploy(sources)
             report["deployed_hashes"] = {p.name: hashes(p) for p in destinations}
+            report["mount_allowlist"] = mount_allowlist(destinations)
             monitor = threading.Thread(target=observe, name="sitai-evidence", daemon=True)
             monitor.start()
             ga.ALLOW_REAL_INPUT = True
@@ -859,7 +940,11 @@ def run(
                             cleanup_errors.append(f"复制归档日志 {path.name}：{exc}")
                 report["raw_log_hashes"] = hashes(evidence / "logs-raw")
                 report["log_hashes"] = hashes(evidence / "logs")
-                report["log_findings"] = findings = log_findings(evidence / "logs", destinations)
+                report["log_findings"] = findings = log_findings(
+                    evidence / "logs",
+                    destinations,
+                    expected_mounts=report.get("mount_allowlist"),
+                )
             except Exception as exc:
                 cleanup_errors.append(f"汇总本局证据：{type(exc).__name__}: {exc}")
             report["monitoring"] = {
@@ -875,6 +960,7 @@ def run(
                 any(findings["errors"].values())
                 or findings["mod_errors"]
                 or findings["missing_mounts"]
+                or findings["unexpected_mounts"]
             ):
                 report.setdefault("failure", "引擎错误或缺少本局挂载证据")
             if cleanup_errors:

@@ -46,6 +46,16 @@ def paired_sources(control: dict, treatment: dict) -> list[dict]:
     """两类配对共享版本、完整检查点与挂载来源契约。"""
     for report in (control, treatment):
         game_run.require_clean_report(report)
+    mount_lists = [report.get("mount_allowlist") for report in (control, treatment)]
+    if any(value is not None for value in mount_lists):
+        if not all(
+            isinstance(value, list) and all(isinstance(item, str) for item in value)
+            for value in mount_lists
+        ):
+            raise ValueError("两臂必须记录完整挂载允许清单")
+        normalized = [tuple(sorted(item.casefold() for item in value)) for value in mount_lists]
+        if normalized[0] != normalized[1]:
+            raise ValueError("两臂基础内容与探针的挂载允许清单必须一致")
     left, right = control.get("loaded_save", {}), treatment.get("loaded_save", {})
     if (
         not isinstance(left.get("sha256"), str)

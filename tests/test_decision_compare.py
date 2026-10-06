@@ -25,6 +25,7 @@ def report(score="-10", *, neutrality=0, aggression=0):
             rows.append({"tag": tag, "kind": kind, "value": value, "date": "day1"})
     return {
         "ok": True,
+        "mount_allowlist": ["c:/game", "c:/mods/probe"],
         "log_findings": {
             "errors": dict.fromkeys(game_run.ERROR_MARKERS, 0),
             "mod_errors": [],
@@ -95,6 +96,13 @@ def test_改变仪器会使配对失效():
     right = report(neutrality=25)
     right["source_hashes"]["instrument"]["probe"] = "different"
     with pytest.raises(ValueError, match="非策略"):
+        compare(report(), right)
+
+
+def test_两臂挂载允许清单不一致不得配对():
+    right = report(neutrality=25)
+    right["mount_allowlist"].append("c:/mods/unexpected")
+    with pytest.raises(ValueError, match="允许清单"):
         compare(report(), right)
 
 

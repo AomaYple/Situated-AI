@@ -173,8 +173,8 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2504 条**用例（`pytest --collect-only` 实测；整套读数见 `docs/reports/` 的全量基线） |
-| 测试文件 | **106 个测试文件**（`tests/test_*.py`） |
+| 测试 | **2513 条**用例（`pytest --collect-only` 实测；整套读数见 `docs/reports/` 的全量基线） |
+| 测试文件 | **107 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 以 `v3 cov` 与 CI coverage artifact 的当前输出为准（门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | **3,962** 个脚本文件（`game\` 下 `.txt` 3,758 + `.gui` 204，即 `pdx.cache` 的解析条数）+ **1,878** 个本地化 `.yml` |
@@ -229,9 +229,9 @@ Situated AI/
 
 后续统一按已定型的 [`最终执行纲领 1.0`](docs/design/exec/mod重设计-实施计划.md) 推进：先补配对挂载隔离与审计扫描，再确认 M3 可测性并做有限行为/质量对照；M4 独立安全验证可先做，正式候选验收仍依赖 M3；M5 按模块重复验收后启用。接口不足、阴性结果、版本升级和工程回归均按纲领中的固定分支处理，进度写结果页。B37 已完成，其他历史研究项按触发条件管理，当前缺口见 backlog B130–B138；不把模拟、CI 或离线快照写成机制结论。Windows 有 Victoria 3 GUI 实机证据；macOS/Linux 只有工具链、CI 和无头验证。
 
-## 工程收尾复核（2026-10-05）
+## 工程收尾复核（2026-10-06，B137/B138）
 
-2026-10-06 格式修复后的完整 `n-auto` 回归为 **2494 passed / 10 skipped / 1551 subtests passed，710.57秒**，无失败、worker崩溃、超时或 watchdog 中止；2504 是收集用例数，subtests 不与它相加。本次没有覆盖率、RSS 或 CPU 采样。2026-10-05 的2487通过/6跳过、4个 worker、521.5秒/3646.7 MiB及覆盖率门禁结果，以及更早的2463通过/10跳过，均保留为各自的历史测量，不与本次拼接。详见 [`仓库与计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
+2026-10-06 B137/B138 修补后的完整 `n-auto` 回归为 **2503 passed / 10 skipped / 1551 subtests passed，770.64秒**，无失败、worker崩溃、xdist INTERNALERROR、超时或 watchdog 中止；2513 是收集用例数，subtests 不与它相加。本次没有采集新的覆盖率、RSS 或 CPU 数据。10 项跳过为 3 项符号链接权限条件与 7 项本机引擎日志不可用；此前的 2494/10、2487/6 和更早基线均保留为各自的历史测量，不与本次拼接。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
 
 ## 授权
 

@@ -144,6 +144,41 @@ def test_挂载要求完整路径且错误只来自错误日志(tmp_path):
     assert game_run.log_findings(tmp_path, [Path("C:/other/probe")])["missing_mounts"]
 
 
+def test_严格挂载门禁拒绝同名前缀和额外模组(tmp_path):
+    destination = Path("C:/mods/probe")
+    (tmp_path / "system.log").write_text(
+        "Mounted Data: C:/mods/probe\nMounted Data: C:/mods/probe-extra\n",
+        encoding="utf-8",
+    )
+    findings = game_run.log_findings(
+        tmp_path,
+        [destination],
+        expected_mounts=[destination],
+    )
+    assert findings["missing_mounts"] == []
+    assert findings["unexpected_mounts"] == ["c:/mods/probe-extra"]
+
+    (tmp_path / "system.log").write_text("Mounted Data: C:/mods/probe-extra\n", encoding="utf-8")
+    missing = game_run.log_findings(
+        tmp_path,
+        [destination],
+        expected_mounts=[destination],
+    )
+    assert missing["missing_mounts"] == [str(destination)]
+
+
+def test_挂载路径规范化跨平台分隔符(tmp_path):
+    destination = Path("C:/mods/probe")
+    (tmp_path / "system.log").write_text("Mounted Data: c:\\mods\\.\\probe\n", encoding="utf-8")
+    findings = game_run.log_findings(
+        tmp_path,
+        [destination],
+        expected_mounts=[destination],
+    )
+    assert findings["missing_mounts"] == []
+    assert findings["unexpected_mounts"] == []
+
+
 def test_未列举的本模组错误也不能漏过门禁(tmp_path):
     (tmp_path / "error.log").write_text(
         "Invalid custom invocation sitai_market_rule\nVariable 'sitai_fiscal_risk' is used but is never set.\n"
@@ -206,6 +241,9 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
     source.mkdir()
     (source / "test.txt").write_bytes(b"test\n")
     monkeypatch.setattr(game_run.config, "USERDIR", user)
+    # 该单元测试只模拟声明的 mod 挂载；原版根目录/DLC 的完整清单由
+    # 实机日志配对测试覆盖，这里隔离环境路径避免制造虚假的缺失挂载。
+    monkeypatch.setattr(game_run, "_base_mount_allowlist", list)
     monkeypatch.setattr(game_run.config, "game_version", lambda: {"version": "test"})
     monkeypatch.setattr(game_run.ga, "assert_no_game_running", lambda: None)
     monkeypatch.setattr(game_run.ga, "_foreground_window", lambda: 0)
@@ -622,10 +660,31 @@ def test_干净归档复核保留成功且缺指纹不能默认通过(tmp_path):
     path = tmp_path / "report.json"
     game_run.write_json(path, {"ok": True, "log_hashes": game_run.hashes(logs)})
     result = game_run.read_reviewed_report(path)
-    game_run.require_clean_report(result)
+    assert result["review"]["mounts_verified"] is False
+    with pytest.raises(ValueError, match="挂载隔离"):
+        game_run.require_clean_report(result)
     game_run.write_json(path, {"ok": True})
     with pytest.raises(ValueError, match="指纹"):
         game_run.read_reviewed_report(path)
+
+
+def test_新归档复核必须使用完整挂载允许列表(tmp_path):
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    destination = "C:/mods/probe"
+    (logs / "system.log").write_text("Mounted Data: C:\\mods\\probe\n", encoding="utf-8")
+    path = tmp_path / "report.json"
+    game_run.write_json(
+        path,
+        {
+            "ok": True,
+            "mount_allowlist": [destination],
+            "log_hashes": game_run.hashes(logs),
+        },
+    )
+    result = game_run.read_reviewed_report(path)
+    assert result["review"]["mounts_verified"] is True
+    game_run.require_clean_report(result)
 
 
 def test_后期检查点不能接受早期但已写完的自动存档(tmp_path, monkeypatch):
@@ -661,6 +720,9 @@ def test_完整运行按结束日期归档检查点且失败也恢复用户状�
     (source / ".metadata").mkdir()
     (source / ".metadata/metadata.json").write_bytes(b"{}\n")
     monkeypatch.setattr(game_run.config, "USERDIR", user)
+    # 该单元测试只模拟声明的 mod 挂载；原版根目录/DLC 的完整清单由
+    # 实机日志配对测试覆盖，这里隔离环境路径避免制造虚假的缺失挂载。
+    monkeypatch.setattr(game_run, "_base_mount_allowlist", list)
     monkeypatch.setattr(game_run.ga, "_OWNED_GAME_PIDS", set())
     monkeypatch.setattr(game_run.ga, "_OWNED_GAME_META", {})
     monkeypatch.setattr(game_run.ga, "_foreground_window", lambda: 0)

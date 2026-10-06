@@ -57,6 +57,23 @@ def section(title: str) -> None:
     print(f"\n===== {title} =====")
 
 
+def _scan_targets(root: Path) -> tuple[list[Path], list[Path]]:
+    """返回生产源码与测试文件；目录迁移后禁止静默扫描空旧路径。"""
+    source_root = root / "src" / "pdx"
+    test_root = root / "tests"
+    missing = [path for path in (source_root, test_root) if not path.is_dir()]
+    if missing:
+        names = ", ".join(str(path) for path in missing)
+        raise ValueError(f"审计目标目录不存在：{names}")
+    modules = sorted(source_root.glob("*.py"))
+    tests = sorted(test_root.glob("test_*.py"))
+    if not modules or not tests:
+        raise ValueError(
+            f"审计目标扫描为空：src/pdx Python={len(modules)}，tests/test_*.py={len(tests)}"
+        )
+    return modules, tests
+
+
 def main() -> int:
     # 控制台可能是 GBK：先把标准输出钉成 UTF-8，别让编码问题伪装成审查失败。
     for stream in (sys.stdout, sys.stderr):
@@ -109,8 +126,13 @@ def main() -> int:
             print(f"      {path.relative_to(root)}:{lineno}  {line[:96]}")
 
     section("④ 测试：模块 → 是否被专门测试文件引用")
-    modules = sorted((root / "tools" / "pdx").glob("*.py"))
-    tests = sorted((root / "tools" / "tests").glob("test_*.py"))
+    try:
+        modules, tests = _scan_targets(root)
+    except ValueError as exc:
+        print(f"  ❌ {exc}", file=sys.stderr)
+        return 2
+    print("  扫描源码目录：src/pdx")
+    print("  扫描测试目录：tests")
     test_text = {p: p.read_text(encoding="utf-8", errors="replace") for p in tests}
     untested: list[str] = []
     for module in modules:
@@ -131,6 +153,10 @@ def main() -> int:
     cov_path = root / "tools" / "out" / "cov.json"  # `v3 cov` 写在这里（原来找了仓库根 ⇒ 永远空）
     if cov_path.is_file():
         data = json.loads(cov_path.read_text(encoding="utf-8"))
+        meta = data.get("meta", {})
+        timestamp = meta.get("timestamp", "未知")
+        branch = "是" if meta.get("branch_coverage") else "否"
+        print(f"  来源：{cov_path.relative_to(root)}；生成时间：{timestamp}；分支覆盖：{branch}")
         rows = []
         for path, body in data.get("files", {}).items():
             summary = body.get("summary", {})

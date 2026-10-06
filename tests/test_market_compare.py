@@ -82,6 +82,7 @@ def report(*, enabled=False, init=-10, target=-20):
         )
     return {
         "ok": True,
+        "mount_allowlist": ["c:/game", "c:/mods/probe"],
         "log_findings": {
             "errors": dict.fromkeys(game_run.ERROR_MARKERS, 0),
             "mod_errors": [],
