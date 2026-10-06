@@ -510,11 +510,11 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 
 ## 阶段性收尾（2026-10-03）
 
-工程改造已经完成：全量分析覆盖 `game`、`jomini`、`clausewitz` 三个内容根，记录脚本/defines、本地化摘要、DLC 描述符、资源索引和完整本地化键清单；mod 分析补齐 metadata、本地化值/重复键/占位符与资源引用断链；快照和 citations 保持跨根一致。
+既定工程收口项目已有对应证据：全量分析覆盖 `game`、`jomini`、`clausewitz` 三个内容根，记录脚本/defines、本地化摘要、DLC 描述符、资源索引和完整本地化键清单；mod 分析补齐 metadata、本地化值/重复键/占位符与资源引用断链；快照和 citations 保持跨根一致。后续发现的缺口在现有入口修补，不能由阶段收尾推导工具永远没有工程缺陷。
 
 自动化清理具备 PID 身份校验、窗口 PID 过滤、关键日志失败报告和存活进程报告；性能探针具备跨进程锁。CI 覆盖三平台与 Python 3.11–3.14，默认 worker 上限为 2，普通测试排除 integration/benchmark。
 
-仍然保留的不是工程缺陷，而是必须用游戏因果实验回答的研究问题：B11–B13、B26–B27、B29、B35–B38，以及 B115 的 F3/F4 证据补档。它们在 `docs/design/backlog.md` 中有实验入口和证据边界；没有把合成夹具、CI 或离线快照当成游戏机制结论。当前只有 Windows Victoria 3 GUI 实机证据，macOS/Linux 仅完成跨平台代码、CI、无头逻辑和合成夹具验证。
+B37 的观察者健康检查假红已修复；B11–B13、B26–B27、B29、B35–B36、B38 和 B115 等历史研究项仍按触发条件管理。2026-10-06 复审另发现 B137 配对挂载隔离和 B138 旧审计脚本扫描目录缺口，尚未实现修补，见 [`仓库与计划复审`](../docs/audits/2026-10-06-plan-review.md)。后续按 [`最终执行纲领`](../docs/design/exec/mod重设计-实施计划.md) 处理版本变化、失败与不可测项，不把合成夹具、CI 或离线快照当机制结论。Windows 有 Victoria 3 GUI 实机证据，macOS/Linux 仅有工具链、CI 和无头验证。
 
 ## 为什么全 Python 化
 

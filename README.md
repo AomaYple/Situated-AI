@@ -227,11 +227,11 @@ Situated AI/
 - 游戏自动化具备 PID 身份校验、窗口 PID 过滤、关键日志失败报告和存活进程报告；性能探针具备跨进程锁。
 - CI 覆盖 Python 3.11–3.14 与 Windows/macOS/Linux；无游戏 runner 将 xdist 限为 2 个 worker，普通测试排除 integration/benchmark。
 
-仍需真实游戏因果验证的研究项按 [`mod重设计-实施计划`](docs/design/exec/mod重设计-实施计划.md) 排队：先完成 M3-A 外交支持行为和 M3-B 自主发起/财政因果，再进入 M4 长期稳定性与性能，最后才处理 M5 政治和市场扩展。B11–B13、B26–B27、B29、B35–B40、B115 以及 B130–B136 仍按各自触发条件管理。它们明确标注实验入口和证据边界，不把模拟、CI 或离线快照写成机制结论。当前 Windows 有 Victoria 3 GUI 实机证据；macOS/Linux 只有跨平台代码、CI、无头逻辑和合成夹具验证。
+后续统一按已定型的 [`最终执行纲领 1.0`](docs/design/exec/mod重设计-实施计划.md) 推进：先补配对挂载隔离与审计扫描，再确认 M3 可测性并做有限行为/质量对照；M4 独立安全验证可先做，正式候选验收仍依赖 M3；M5 按模块重复验收后启用。接口不足、阴性结果、版本升级和工程回归均按纲领中的固定分支处理，进度写结果页。B37 已完成，其他历史研究项按触发条件管理，当前缺口见 backlog B130–B138；不把模拟、CI 或离线快照写成机制结论。Windows 有 Victoria 3 GUI 实机证据；macOS/Linux 只有工具链、CI 和无头验证。
 
 ## 工程收尾复核（2026-10-05）
 
-工程收尾早期基线为完整默认 `n auto` 通过2463项、跳过10项，3个 worker；该结果作为历史基线保留。快捷键与输入配置收口后的最新完整并行基线为2487项通过、6项跳过，`n-auto` 实际4个 worker，墙钟约521.5秒，进程树 RSS 峰值约3646.7 MiB，无失败、超时或 watchdog 中止。完整覆盖率通过86%门槛，离线基线、死代码审计和发布清单也全部通过。两组结果的收集集合不同，不相加、不互相覆盖。逐项命令、原始产物和跳过/未覆盖边界见 [`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 与 [`快捷键自动化、输入漂移与 M2 工程收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
+2026-10-06 格式修复后的完整 `n-auto` 回归为 **2494 passed / 10 skipped / 1551 subtests passed，710.57秒**，无失败、worker崩溃、超时或 watchdog 中止；2504 是收集用例数，subtests 不与它相加。本次没有覆盖率、RSS 或 CPU 采样。2026-10-05 的2487通过/6跳过、4个 worker、521.5秒/3646.7 MiB及覆盖率门禁结果，以及更早的2463通过/10跳过，均保留为各自的历史测量，不与本次拼接。详见 [`仓库与计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
 
 ## 授权
 
