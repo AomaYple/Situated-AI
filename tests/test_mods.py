@@ -215,3 +215,22 @@ def test_doc12_版本分布表与现场一致() -> None:
     assert got, "§7 那张版本分布表没解析到任何行（表格被改过？）"
     assert got == dict(live), f"doc 12 §7 与现场不符：文档 {got}，现场 {dict(live)}"
     assert sum(got.values()) == len(mods.analyse_all())
+
+
+def test_doc12_重复路径结论与现场一致() -> None:
+    """文档必须区分全量路径重复与游戏内容路径重复。"""
+    live = mods.analyse_all()
+    paths: dict[str, list[str]] = {}
+    for info in live:
+        for rel in (*info.overrides, *info.additions):
+            paths.setdefault(rel, []).append(info.target)
+    duplicated = {rel: owners for rel, owners in paths.items() if len(owners) > 1}
+    content_roots = {"common", "localization", "events", "gfx", "gui", "map_data"}
+    duplicated_content = {
+        rel: owners for rel, owners in duplicated.items() if rel.split("/", 1)[0] in content_roots
+    }
+    text = _DOC12.read_text(encoding="utf-8")
+    assert "全量相对路径中被 2 个及以上 mod 提供的路径数 = 8" in text
+    assert "游戏内容目录中被 2 个及以上 mod 提供的路径数 = 0" in text
+    assert len(duplicated) == 8
+    assert not duplicated_content

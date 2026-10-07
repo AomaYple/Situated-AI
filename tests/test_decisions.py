@@ -133,6 +133,31 @@ def test_所有生成脚本可解析且没有旧世界或换牌干预(policy):
     assert f"days = {policy.ttl_days}" in added
 
 
+def test_财政生命周期所有入口汇聚到唯一更新器(policy):
+    """月度、违约和退出事件都必须调用同一状态更新器。"""
+    actions = decisions.on_actions()
+    assert actions.count("sitai_fiscal_update = { effect = { sitai_update_fiscal = yes } }") == 1
+    assert actions.count("on_monthly_pulse_country = { on_actions = { sitai_fiscal_update } }") == 1
+    assert actions.count("on_country_default = { on_actions = { sitai_fiscal_update } }") == 1
+    assert (
+        actions.count("on_country_no_longer_default = { on_actions = { sitai_fiscal_update } }")
+        == 1
+    )
+    effects = decisions.effects(policy)
+    assert effects.count(f"set_variable = {{ name = {decisions.RISK_VAR}") == 1
+    assert effects.count(f"remove_variable = {decisions.RISK_VAR}") == 1
+
+
+def test_财政生命周期写入包含迟滞和TTL边界(policy):
+    """生成器必须同时保留进入线、退出线和至少一个月 TTL。"""
+    triggers = decisions.triggers(policy)
+    assert f"weeks_until_bankruptcy < {policy.entry_weeks}" in triggers
+    assert f"weeks_until_bankruptcy < {policy.exit_weeks}" in triggers
+    effects = decisions.effects(policy)
+    assert f"days = {policy.ttl_days}" in effects
+    assert policy.ttl_days >= 32
+
+
 def test_写盘检查发现篡改和遗留产物(tmp_path):
     decisions.write(tmp_path)
     assert decisions.check(tmp_path) == []
