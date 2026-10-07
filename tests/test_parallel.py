@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from conftest import pytest_xdist_auto_num_workers
 
 from pdx import parallel
 
@@ -27,3 +28,29 @@ def test_显式worker数优先于预算(monkeypatch: pytest.MonkeyPatch) -> None
 def test_xdist官方覆盖变量仍然有效(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "3")
     assert parallel.auto_worker_count(cpu=16, available=2048) == 3
+
+
+def test_xdist官方覆盖变量在无游戏树时仍然有效(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("conftest.GAME_OK", False)
+    monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "3")
+    monkeypatch.setattr(parallel, "cpu_workers", lambda: 16)
+    monkeypatch.setattr(parallel, "available_mib", lambda: 2048)
+    assert pytest_xdist_auto_num_workers(None) == 3
+
+
+@pytest.mark.parametrize("reader", [parallel.cpu_workers, parallel.available_mib])
+def test_psutil权限异常时资源查询安全回退(monkeypatch: pytest.MonkeyPatch, reader) -> None:
+    if reader is parallel.cpu_workers:
+        monkeypatch.setattr(
+            parallel.psutil,
+            "cpu_count",
+            lambda **_kwargs: (_ for _ in ()).throw(parallel.psutil.AccessDenied(1)),
+        )
+        assert reader() >= 1
+    else:
+        monkeypatch.setattr(
+            parallel.psutil,
+            "virtual_memory",
+            lambda: (_ for _ in ()).throw(parallel.psutil.AccessDenied(1)),
+        )
+        assert reader() == 0

@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -19,10 +20,15 @@ from .lexer import LBRACE, RBRACE, tokenize
 from .model import Block
 from .parser import parse_text
 from .textio import normalized_text
-from .vanilla_index import vocabulary_dir
+from .vanilla_index import (
+    KEY_DIRS,
+    VARIABLE_POOL_DIRS,
+    VOCABULARY_DIRS,
+    game_index,
+    vocabulary_dir,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from pathlib import Path
 
 SOURCE = config.REPO / "mod" / "decisions" / "fiscal.toml"
@@ -421,8 +427,18 @@ def check(root: Path, files: Mapping[str, str] | None = None) -> list[str]:
     return issues
 
 
-def validate(vocabulary: set[str] | None, *, game: Path | None = None) -> list[str]:
-    """检查新增引擎接口和锁定底本，未覆盖接口明确失败。"""
+def validate(
+    vocabulary: set[str] | None,
+    *,
+    game: Path | None = None,
+    snapshot: object | None = None,
+) -> list[str]:
+    """检查决策生成器实际生成的引擎接口及锁定底本。
+
+    只凭目标词汇表集合无法验证所有产品接口：新生成的改革/市场字段需要
+    对应 API 词汇证据；脚本解析成功不是引擎证据。快照域必须覆盖
+    ``vocabulary``、``vanilla_keys`` 和 ``vanilla_variables``。
+    """
     interfaces = {
         "is_ai",
         "is_at_war",
@@ -440,12 +456,96 @@ def validate(vocabulary: set[str] | None, *, game: Path | None = None) -> list[s
         "on_country_default",
         "on_country_no_longer_default",
     }
+    extensions = load_extensions()
+    if extensions.reform_enabled:
+        interfaces |= {"legitimacy", "any_insurrection_ongoing", "is_in_government"}
+    if extensions.market_enabled:
+        interfaces |= {"economic_dependence", "diplomatic_play_support"}
+    # 财政值属于独立的原版 script value 参考，而不是四个通用词汇目录。
+    fiscal_words = vocabulary_dir(BASELINE.parent)
+    fiscal_words |= {
+        "credit",
+        "weeks_until_bankruptcy",
+    }
     if vocabulary is None:
-        return ["原版词汇表缺失，无法校验通用决策接口"]
-    evidence_words = vocabulary | vocabulary_dir(BASELINE.parent)
+        vocabulary_words: set[str] = set()
+        vocabulary_uncovered = True
+    else:
+        vocabulary_words = vocabulary
+        vocabulary_uncovered = False
+    key_words = vocabulary_dir(BASELINE.parent)
+    variable_words: set[str] = set()
+    variable_uncovered = False
+    if snapshot is not None:
+        if not isinstance(snapshot, Mapping):
+            return ["原版接口快照结构无效"]
+        sections = snapshot.get("域", snapshot.get("sections"))
+        if not isinstance(sections, Mapping):
+            return ["原版接口快照缺少域映射"]
+        vocabulary_section = sections.get("vocabulary")
+        keys_section = sections.get("vanilla_keys")
+        variables_section = sections.get("vanilla_variables")
+        vocabulary_uncovered = not isinstance(vocabulary_section, Mapping) or any(
+            rel not in vocabulary_section for rel in VOCABULARY_DIRS
+        )
+        if isinstance(vocabulary_section, Mapping):
+            vocabulary_words = {
+                word
+                for rel in VOCABULARY_DIRS
+                for word in vocabulary_section.get(rel, [])
+                if isinstance(word, str)
+            }
+        keys_uncovered = not isinstance(keys_section, Mapping) or any(
+            rel not in keys_section for rel in KEY_DIRS
+        )
+        if isinstance(keys_section, Mapping):
+            key_words = {
+                word
+                for rel in KEY_DIRS
+                for word in keys_section.get(rel, [])
+                if isinstance(word, str)
+            }
+        variable_uncovered = not isinstance(variables_section, Mapping) or any(
+            rel not in variables_section for rel in VARIABLE_POOL_DIRS
+        )
+        if isinstance(variables_section, Mapping):
+            variable_words = {
+                word
+                for rel in VARIABLE_POOL_DIRS
+                for word in variables_section.get(rel, [])
+                if isinstance(word, str)
+            }
+        if keys_uncovered:
+            return ["原版键快照缺失所需目录，无法校验 on_action / effect 接口"]
+    elif game is not None:
+        index = game_index(game)
+        if index is None:
+            return [
+                "本机原版目录缺失，无法校验决策接口",
+                "原版词汇、键和变量证据均不可用；不能把缺失输入当成通过",
+            ]
+        key_sets = [index.keys(rel) for rel in KEY_DIRS]
+        if any(words is None for words in key_sets):
+            return ["原版键目录缺失，无法校验 on_action / effect 接口"]
+        key_words = set().union(*(words for words in key_sets if words is not None))
+        variables = index.variables()
+        if variables is None:
+            variable_uncovered = True
+        else:
+            variable_words = variables
+    else:
+        # 兼容以往只检查通用词汇的调用，但把底本自带证据与自产物词汇分开；
+        # 新模块所需接口不会被“所有目标词都存在于目标里”这件事验证。
+        vocabulary_uncovered = True
+
+    evidence_words = vocabulary_words | key_words | variable_words | fiscal_words
     issues = [
-        f"通用决策接口未被原版证据覆盖：{name}" for name in sorted(interfaces - evidence_words)
+        f"决策生成接口未被原版证据覆盖：{name}" for name in sorted(interfaces - evidence_words)
     ]
+    if vocabulary_uncovered:
+        issues.append("原版词汇快照缺少所需目录；接口词汇检查未覆盖，不算通过")
+    if variable_uncovered and "has_variable" in interfaces:
+        issues.append("原版变量写入快照缺失；变量 API 检查未覆盖，不算通过")
     if game is not None:
         path = game / "common/ai_strategies/00_default_strategy.txt"
         if not path.is_file() or normalized_text(

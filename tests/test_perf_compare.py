@@ -260,7 +260,14 @@ def test_report_table剔除不可用于性能结论的性能臂(tmp_path: Path) 
         },
     ]
     table = module.report_table(reports)
-    assert table["by_label"] == {"vanilla": {"per_frame_mean": 4.0, "task_mean": None, "runs": 1}}
+    vanilla = table["by_label"]["vanilla"]
+    assert vanilla["per_frame_mean"] == 4.0
+    assert vanilla["task_mean"] is None
+    assert vanilla["rss_peak_mib"] is None
+    assert vanilla["cpu_seconds"] is None
+    assert vanilla["wall_seconds"] is None
+    assert vanilla["resource_samples"] == 0
+    assert vanilla["runs"] == 1
     assert "delta" not in table
     assert table["invalid_runs"][0]["label"] == "ours"
 
@@ -289,3 +296,118 @@ def test_报告写入失败会让_cleaned_为假(tmp_path: Path, monkeypatch: py
     cleanup.run(reason="report-failure")
     assert cleanup.cleaned is False
     assert any("写入收尾报告" in error for error in cleanup.errors)
+
+
+def _performance_report(
+    label: str,
+    index: int,
+    csv: Path,
+    *,
+    days: float = 30.0,
+    wall: float = 60.0,
+    rss: float = 100.0,
+    cpu: float = 20.0,
+) -> dict[str, object]:
+    return {
+        "label": label,
+        "index": index,
+        "csv": str(csv),
+        "summary": {"per_frame_total_ms": {"mean": 4.0}},
+        "advanced": {"from": "1836.1.1", "to": "1836.2.1", "days": days},
+        "samples": [
+            {"rss_mib": rss - 1, "cpu_seconds": cpu - 1},
+            {"rss_mib": rss, "cpu_seconds": cpu},
+        ],
+        "wall_seconds": wall,
+        "performance_usable": True,
+    }
+
+
+def test_report_table_聚合资源和游戏日吞吐并计算差分(tmp_path: Path) -> None:
+    module = _load()
+    csv = tmp_path / "timings.csv"
+    csv.write_text(
+        "frame,task,milliseconds,calls,longest_lock\n1,RecalculateModifierNodes,2,1,0\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    reports = [
+        _performance_report("vanilla", index, csv, wall=60 + index, rss=100 + index)
+        for index in range(1, 4)
+    ] + [
+        _performance_report("ours", index, csv, wall=66 + index, rss=110 + index)
+        for index in range(1, 4)
+    ]
+    table = module.report_table(reports, required_pairs=3)
+    vanilla = table["by_label"]["vanilla"]
+    assert vanilla["runs"] == 3
+    assert vanilla["rss_peak_mib"] == 102.0
+    assert vanilla["rss_start_mib"] == 101.0
+    assert vanilla["rss_end_mib"] == 102.0
+    assert vanilla["rss_change_mib"] == 1.0
+    assert vanilla["cpu_seconds"] == 20.0
+    assert vanilla["wall_seconds"] == 62.0
+    assert vanilla["game_days"] == 30.0
+    assert vanilla["wall_seconds_per_game_day"] == round(62.0 / 30.0, 4)
+    assert vanilla["resource_samples"] == 6
+    assert table["m4_gate"] == {"required_pairs": 3, "ok": True, "reasons": []}
+    assert table["delta"]["rss_peak_mib"] == 10.0
+    assert table["delta"]["wall_seconds_per_game_day"] == round(6.0 / 30.0, 4)
+
+
+def test_report_table_资源样本缺失时拒绝正式门禁但保留探索读数(tmp_path: Path) -> None:
+    module = _load()
+    csv = tmp_path / "timings.csv"
+    csv.write_text(
+        "frame,task,milliseconds,calls,longest_lock\n1,RecalculateModifierNodes,2,1,0\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    reports: list[dict[str, object]] = []
+    for label in ("vanilla", "ours"):
+        for index in range(1, 4):
+            report = _performance_report(label, index, csv)
+            if label == "ours" and index == 2:
+                report["samples"] = []
+            reports.append(report)
+    table = module.report_table(reports, required_pairs=3)
+    assert table["by_label"]["ours"]["runs"] == 3
+    assert table["m4_gate"]["ok"] is False
+    assert any("ours #2 缺少指标" in reason for reason in table["m4_gate"]["reasons"])
+    assert "delta" not in table  # 门禁失败时不生成正式成对差分
+
+
+def test_report_table_重复或缺失编号不能形成正式结论(tmp_path: Path) -> None:
+    module = _load()
+    csv = tmp_path / "timings.csv"
+    csv.write_text(
+        "frame,task,milliseconds,calls,longest_lock\n1,RecalculateModifierNodes,2,1,0\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    reports = [
+        _performance_report("vanilla", 1, csv),
+        _performance_report("vanilla", 1, csv),
+        _performance_report("vanilla", 3, csv),
+        _performance_report("ours", 1, csv),
+        _performance_report("ours", 2, csv),
+        _performance_report("ours", 3, csv),
+    ]
+    table = module.report_table(reports, required_pairs=3)
+    assert table["m4_gate"]["ok"] is False
+    assert any("重复实验编号" in reason for reason in table["m4_gate"]["reasons"])
+    assert "delta" not in table
+
+
+def test_window_control_正式门禁拒绝少于三组和重复臂() -> None:
+    module = _load()
+    one = {
+        "label": "vanilla",
+        "index": 1,
+        "advanced": {"from": "1836.1.1", "to": "1837.1.1"},
+    }
+    reports = [one, {**one, "label": "ours"}, {**one, "label": "ours"}]
+    verdict = module.window_control_verdict(reports, required_pairs=3)
+    assert verdict.ok is False
+    assert any("重复出现" in problem for problem in verdict.problems)
+    assert any("1..3" in problem for problem in verdict.problems)

@@ -35,7 +35,7 @@ def cpu_workers() -> int:
     """返回适合作为上限的 CPU worker 数。"""
     try:
         count = psutil.cpu_count(logical=False) or psutil.cpu_count()
-    except (ImportError, OSError):  # pragma: no cover - 依赖缺失/系统拒绝查询
+    except (ImportError, OSError, psutil.Error):  # pragma: no cover - 系统拒绝查询
         count = os.cpu_count()
     return max(1, count or 1)
 
@@ -44,7 +44,7 @@ def available_mib() -> int:
     """读取当前可用物理内存，失败时返回 0（交给调用方保守处理）。"""
     try:
         return max(0, int(psutil.virtual_memory().available // (1024 * 1024)))
-    except (ImportError, OSError):  # pragma: no cover - 依赖缺失/系统拒绝查询
+    except (ImportError, OSError, psutil.Error):  # pragma: no cover - 系统拒绝查询
         return 0
 
 

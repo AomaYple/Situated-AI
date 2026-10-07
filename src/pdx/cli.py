@@ -3054,6 +3054,9 @@ def modguard_cmd(
             interface_issues = decisions.validate(
                 ctx.vanilla.vocabulary() if ctx.vanilla else None,
                 game=None if offline else ctx.game,
+                snapshot=(
+                    {"域": ctx.vanilla.sections} if offline and ctx.vanilla is not None else None
+                ),
             )
             if interface_issues:
                 _fail("生产处境决策证据检查失败：\n" + "\n".join(interface_issues))

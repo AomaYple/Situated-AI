@@ -219,8 +219,25 @@ def test_拒绝错误类型和未审查游戏版本(tmp_path, mutation):
 
 def test_新接口缺证据和本机底本漂移均拒绝(tmp_path):
     assert decisions.validate(None)
-    assert any("on_monthly_pulse_country" in issue for issue in decisions.validate(set()))
+    assert decisions.validate(set())
     assert len(decisions.validate(set(), game=tmp_path)) >= 2
+
+
+def test_扩展开启时新增接口必须有原版证据(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        decisions,
+        "load_extensions",
+        lambda: decisions.Extensions(reform_enabled=True, market_enabled=True),
+    )
+    issues = decisions.validate(set())
+    assert any("legitimacy" in issue for issue in issues)
+    assert any("economic_dependence" in issue for issue in issues)
+
+
+def test_快照缺失扩展接口域明确报告未覆盖(tmp_path):
+    snapshot = {"域": {"vocabulary": {}, "vanilla_keys": {rel: [] for rel in decisions.KEY_DIRS}}}
+    issues = decisions.validate(set(), snapshot=snapshot)
+    assert any("词汇快照缺少" in issue for issue in issues)
 
 
 def test_生产ZIP不携带历史档案(tmp_path):

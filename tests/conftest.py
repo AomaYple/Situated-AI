@@ -84,8 +84,6 @@ def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
     xdist 自己处理，项目专用的 ``SITAI_XDIST_WORKERS`` 可强制指定数量。
     """
     del config
-    if not GAME_OK:
-        return parallel.cpu_workers()
     return parallel.auto_worker_count()
 
 

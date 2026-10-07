@@ -55,6 +55,8 @@
 mod 集不同会让它红（实测踩过）。跑一局常规游戏即可让日志与安装一致。
 
 用法：`python tools/probe/perf_compare.py [月数] [--repeat N]`
+
+正式 M4 性能表要求 `--repeat 3`；少于三组只产生探索性读数，不会形成正式成对结论。
 """
 
 from __future__ import annotations
@@ -62,6 +64,7 @@ from __future__ import annotations
 import argparse
 import atexit
 import json
+import math
 import os
 import shutil
 import signal
@@ -70,8 +73,11 @@ import tempfile
 import time
 from contextlib import suppress
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
+
+import psutil
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
@@ -99,7 +105,10 @@ STRESS_DST = stress_probe.dest()
 #: 为什么不写死：阶段 5 的 G-EXIT-1 是"加一行数据 = 加一个处境、不改逻辑"。
 #: 目录名一旦在探针里写死，就多出若干处"改了数据还得顺手改的 Python"；
 #: 而 `ab_probe.load_target()` 已经是那条链的单一来源（`ab_probe.deploy()` 同样读它）。
-OURS_DST = MODS_DIR / ab_probe.load_target().dir_name
+_TARGET = ab_probe.load_target()
+if _TARGET is None:
+    raise RuntimeError("未发现可用于性能对照的 mod 目标")
+OURS_DST = MODS_DIR / _TARGET.dir_name
 OUT_DIR = Path(__file__).resolve().parents[1] / "out" / "perf"
 
 #: 三条臂的标签（= `run_once` 的 `label` = CSV 文件名前缀 = 报告里的 label）。
@@ -107,6 +116,11 @@ OUT_DIR = Path(__file__).resolve().parents[1] / "out" / "perf"
 VANILLA_LABEL = "vanilla"
 OURS_LABEL = "ours"
 TEMPO_LABEL = "tempo"
+KNOWN_ARM_LABELS = frozenset({VANILLA_LABEL, OURS_LABEL, TEMPO_LABEL})
+
+# M4 预注册的每个检查点成对样本数。探索性短跑可以少于此数，但必须明确不能作为
+# 正式性能验收；报告函数据此不再把单组读数伪装成 M4 结论。
+REQUIRED_M4_PAIRS = 3
 
 
 RUN_LOCK = config.USERDIR / ".sitai-game.lock"
@@ -231,12 +245,12 @@ class PerfCleanup:
             for path in self.generated_paths:
                 self._step(
                     f"删除运行产物 {path.name}",
-                    lambda path=path: self._remove_path(path),
+                    partial(self._remove_path, path),
                 )
             for path, backup in self.path_backups.items():
                 self._step(
                     f"恢复原有目录 {path.name}",
-                    lambda path=path, backup=backup: shutil.move(str(backup), str(path)),
+                    partial(shutil.move, str(backup), str(path)),
                 )
             restore_dir = self.restore_dir
             if restore_dir is not None and restore_dir.exists() and not self.errors:
@@ -328,7 +342,7 @@ def _install_cleanup_handlers(cleanup: PerfCleanup) -> Callable[[], None]:
     def restore() -> None:
         for signum, old in previous.items():
             with suppress(OSError, RuntimeError, ValueError):
-                signal.signal(signum, old)
+                signal.signal(signum, cast("Callable[[int, object], object]", old))
 
     return restore
 
@@ -714,21 +728,37 @@ def _window_date(advanced: object, key: str) -> str | None:
     return value
 
 
-def window_control_verdict(reports: Sequence[dict[str, object]]) -> WindowControl:
+def window_control_verdict(
+    reports: Sequence[dict[str, object]], *, required_pairs: int | None = None
+) -> WindowControl:
     """按实验序号比较 vanilla 与其它每一臂的 advanced.from/to。
 
     日期缺失、窗口错误标记和日期不一致分别报出；不会把缺失值当成相等，
     也不会重新采集一份日期数据。
     """
     by_index: dict[int, dict[str, object]] = {}
+    seen: set[tuple[int, str]] = set()
+    shape_problems: list[str] = []
     for report in reports:
         index = report.get("index")
-        key = index if isinstance(index, int) else 0
-        by_index.setdefault(key, {})[str(report.get("label"))] = report.get("advanced")
+        label = report.get("label")
+        if isinstance(index, bool) or not isinstance(index, int) or index < 1:
+            shape_problems.append(f"编号无效：{index!r}（必须是正整数）")
+            continue
+        if not isinstance(label, str) or label not in KNOWN_ARM_LABELS:
+            shape_problems.append(f"#{index}：未知性能臂 {label!r}")
+            continue
+        entry = (index, label)
+        if entry in seen:
+            shape_problems.append(f"#{index}：性能臂 {label} 重复出现")
+            continue
+        seen.add(entry)
+        by_index.setdefault(index, {})[label] = report.get("advanced")
 
     comparisons: list[dict[str, object]] = []
-    problems: list[str] = []
+    problems: list[str] = [*shape_problems]
     pairs = 0
+    pair_counts: dict[str, int] = {}
     for key in sorted(by_index):
         arms = by_index[key]
         baseline = arms.get(VANILLA_LABEL)
@@ -767,10 +797,40 @@ def window_control_verdict(reports: Sequence[dict[str, object]]) -> WindowContro
                 )
                 continue
             pairs += 1
+            pair_counts[label] = pair_counts.get(label, 0) + 1
             if left_from != right_from or left_to != right_to:
                 problems.append(
                     f"#{key}：{label} 与 {VANILLA_LABEL} 窗口不同："
                     f"{VANILLA_LABEL}={left_from}→{left_to}，{label}={right_from}→{right_to}"
+                )
+    if required_pairs is not None:
+        if required_pairs < 1:
+            raise ValueError("required_pairs 必须为正整数")
+        expected_indices: set[int] = set(range(1, required_pairs + 1))
+        required_labels = {
+            label for arms in by_index.values() for label in arms if label != VANILLA_LABEL
+        }
+        if not required_labels:
+            problems.append("没有可用于正式配对的非 vanilla 性能臂")
+        for label in sorted(required_labels):
+            actual = {
+                index for index, arms in by_index.items() if VANILLA_LABEL in arms and label in arms
+            }
+            if actual != expected_indices:
+                missing = sorted(expected_indices - actual)  # type: ignore[arg-type]
+                extra = sorted(actual - expected_indices)
+                detail: list[str] = []
+                if missing:
+                    detail.append(f"缺少 {missing}")
+                if extra:
+                    detail.append(f"多出 {extra}")
+                problems.append(
+                    f"{label} 有效配对编号不符合预注册的 1..{required_pairs}：" + "、".join(detail)
+                )
+            elif pair_counts.get(label, 0) != required_pairs:
+                problems.append(
+                    f"{label} 有效配对数为 {pair_counts.get(label, 0)}，"
+                    f"预注册要求 {required_pairs} 组"
                 )
     return WindowControl(
         ok=not problems and pairs > 0,
@@ -801,7 +861,46 @@ def _advanced_payload(
     return result
 
 
-def _wait_months(hwnd: int, months: float, *, timeout: float = 900.0) -> dict[str, object]:
+def _resource_sample(started: float) -> dict[str, object]:
+    """采集本次性能臂拥有的游戏进程 RSS/CPU 快照。
+
+    只读 ``game_auto`` 已确认归本会话的 PID；进程退出或权限受限时跳过该
+    PID，保留快照结构，避免把不可读的资源值伪装成零。
+    """
+    rss = 0.0
+    cpu = 0.0
+    readable = 0
+    for pid in tuple(ga._OWNED_GAME_PIDS):
+        try:
+            process = psutil.Process(pid)
+            identity = ga._OWNED_GAME_META.get(pid)
+            if identity is not None and not ga._owned_identity_matches(process, identity):
+                continue
+            with process.oneshot():
+                rss += process.memory_info().rss / 1024**2
+                times = process.cpu_times()
+                cpu += times.user + times.system
+            readable += 1
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+        except psutil.Error:
+            continue
+    return {
+        "seconds": round(time.monotonic() - started, 4),
+        "rss_mib": round(rss, 4) if readable else None,
+        "cpu_seconds": round(cpu, 4) if readable else None,
+        "tick": ga.tick_mark().tick,
+    }
+
+
+def _wait_months(
+    hwnd: int,
+    months: float,
+    *,
+    timeout: float = 900.0,
+    samples: list[dict[str, object]] | None = None,
+    started: float | None = None,
+) -> dict[str, object]:
     """跑到游戏时间前进 months 个月，并在发现本 mod 报错时提前停止。"""
     start = ga.tick_mark()
     start_day = ga.tick_day(start.tick)
@@ -810,6 +909,8 @@ def _wait_months(hwnd: int, months: float, *, timeout: float = 900.0) -> dict[st
     latest = scan_game_errors()
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        if samples is not None and started is not None:
+            samples.append(_resource_sample(started))
         latest = scan_game_errors()
         if latest.errors:
             return _advanced_payload(
@@ -850,6 +951,8 @@ def _wait_months(hwnd: int, months: float, *, timeout: float = 900.0) -> dict[st
         last = day
         time.sleep(5.0)
     end = ga.tick_mark()
+    if samples is not None and started is not None:
+        samples.append(_resource_sample(started))
     latest = scan_game_errors()
     if latest.errors:
         return _advanced_payload(
@@ -904,7 +1007,14 @@ def run_once(
         raise ga.GameAutoError("性能窗口未成功退到后台")
     ga.wait_until_running(before_background, timeout=30)
 
-    advanced = _wait_months(hwnd, months)
+    samples: list[dict[str, object]] = []
+    performance_started = time.monotonic()
+    advanced = _wait_months(
+        hwnd,
+        months,
+        samples=samples,
+        started=performance_started,
+    )
     print(f"  跑完 {months} 个月：{advanced}")
 
     ga.ensure_foreground(hwnd, force=True)
@@ -958,6 +1068,8 @@ def run_once(
         "error_scan": error_scan.as_dict(),
         "performance_usable": not invalid_reasons,
         "performance_invalid_reasons": invalid_reasons,
+        "samples": samples,
+        "wall_seconds": round(time.monotonic() - performance_started, 4),
     }
     # 压力自报：只在 `--stress` 时读（默认两臂连这一趟 I/O 都不做 ⇒ 输出与从前一字不差）。
     if stress:
@@ -1008,8 +1120,8 @@ WATCH_TASK = "RecalculateModifierNodes"
 
 
 def _delta(
-    base: dict[str, float | None],
-    other: dict[str, float | None],
+    base: dict[str, float | int | None],
+    other: dict[str, float | int | None],
     *,
     from_label: str,
     to_label: str,
@@ -1020,7 +1132,18 @@ def _delta(
     同一份代码、同一组键，免得两条差用两种口径读。
     """
     delta: dict[str, float | str | None] = {}
-    for key in ("per_frame_mean", "task_mean"):
+    for key in (
+        "per_frame_mean",
+        "task_mean",
+        "rss_peak_mib",
+        "rss_start_mib",
+        "rss_end_mib",
+        "rss_change_mib",
+        "cpu_seconds",
+        "wall_seconds",
+        "game_days",
+        "wall_seconds_per_game_day",
+    ):
         first, second = base.get(key), other.get(key)
         value: float | None = None if first is None or second is None else round(second - first, 4)
         delta[key] = value
@@ -1030,10 +1153,62 @@ def _delta(
     return delta
 
 
-def report_table(reports: list[dict[str, object]]) -> dict[str, object]:
+def _sample_metrics(report: dict[str, object]) -> dict[str, float | int | None]:
+    """从 ``game_run`` 报告聚合资源、墙钟和游戏日；缺样本保持 ``None``。
+
+    资源监视器读数属于证据而不是计数器：布尔值、无穷值、负值和无法解析的
+    数据都不能参与均值或峰值，更不能悄悄当成零。CPU 采用运行器报告的累计
+    ``cpu_seconds`` 的最后一个有效读数，RSS 采用本局峰值。
+    """
+    samples = report.get("samples")
+    rows = samples if isinstance(samples, list) else []
+    valid = [row for row in rows if isinstance(row, dict)]
+
+    def finite(value: object, *, nonnegative: bool = True) -> float | None:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        number = float(value)
+        if not math.isfinite(number) or (nonnegative and number < 0):
+            return None
+        return number
+
+    rss = [value for row in valid if (value := finite(row.get("rss_mib"))) is not None]
+    cpu = [value for row in valid if (value := finite(row.get("cpu_seconds"))) is not None]
+    wall = report.get("wall_seconds")
+    wall_value = finite(wall)
+    advanced = report.get("advanced")
+    days = finite(advanced.get("days")) if isinstance(advanced, dict) else None
+    per_day = None if wall_value is None or days is None or days <= 0 else wall_value / days
+    return {
+        "rss_peak_mib": round(max(rss), 4) if rss else None,
+        "rss_start_mib": round(rss[0], 4) if rss else None,
+        "rss_end_mib": round(rss[-1], 4) if rss else None,
+        "rss_change_mib": round(rss[-1] - rss[0], 4) if rss else None,
+        "cpu_seconds": round(max(cpu), 4) if cpu else None,
+        "wall_seconds": round(wall_value, 4) if wall_value is not None else None,
+        "game_days": round(days, 4) if days is not None else None,
+        "wall_seconds_per_game_day": round(per_day, 4) if per_day is not None else None,
+        "resource_samples": sum(
+            1
+            for row in valid
+            if finite(row.get("rss_mib")) is not None and finite(row.get("cpu_seconds")) is not None
+        ),
+        "rss_samples": len(rss),
+        "cpu_samples": len(cpu),
+    }
+
+
+def _count_value(value: object) -> int:
+    """把内部采样计数安全地收敛成整数。"""
+    return int(value) if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
+def report_table(
+    reports: list[dict[str, object]], *, required_pairs: int | None = None
+) -> dict[str, object]:
     """把若干局折成一张对照表，过滤明确不可用于性能结论的臂。"""
     table: dict[str, object] = {"runs": reports, "by_label": {}, "invalid_runs": []}
-    by_label: dict[str, list[dict[str, float | None]]] = {}
+    by_label: dict[str, list[dict[str, object]]] = {}
     invalid_runs: list[dict[str, object]] = []
     for report in reports:
         label = str(report["label"])
@@ -1047,36 +1222,151 @@ def report_table(reports: list[dict[str, object]]) -> dict[str, object]:
             else None
         )
         row = {
+            "_index": report.get("index"),
             "per_frame_mean": _per_frame_mean(report.get("summary")),
             "task_mean": task_mean,
+            **_sample_metrics(report),
         }
         if not usable:
             invalid_runs.append(
                 {
                     "label": label,
                     "index": report.get("index"),
-                    "reasons": list(report.get("performance_invalid_reasons", []))
-                    if isinstance(report.get("performance_invalid_reasons"), list)
-                    else ["性能臂被标记为不可用"],
+                    "reasons": (
+                        list(cast("list[object]", report["performance_invalid_reasons"]))
+                        if isinstance(report.get("performance_invalid_reasons"), list)
+                        else ["性能臂被标记为不可用"]
+                    ),
                 }
             )
             continue
         by_label.setdefault(label, []).append(row)
-    aggregate: dict[str, dict[str, float | None]] = {}
+    aggregate: dict[str, dict[str, float | int | None]] = {}
     for label, rows in by_label.items():
-        for key in ("per_frame_mean", "task_mean"):
-            values = [row[key] for row in rows if row[key] is not None]
+        for key in (
+            "per_frame_mean",
+            "task_mean",
+            "rss_peak_mib",
+            "rss_start_mib",
+            "rss_end_mib",
+            "rss_change_mib",
+            "cpu_seconds",
+            "wall_seconds",
+            "game_days",
+            "wall_seconds_per_game_day",
+        ):
+            values = [
+                float(value)
+                for row in rows
+                if (value := row.get(key)) is not None
+                and isinstance(value, (int, float))
+                and not isinstance(value, bool)
+            ]
             aggregate.setdefault(label, {})[key] = (
                 round(sum(values) / len(values), 4) if values else None
             )
+        aggregate[label]["resource_samples"] = sum(
+            _count_value(row.get("resource_samples")) for row in rows
+        )
+        aggregate[label]["rss_samples"] = sum(_count_value(row.get("rss_samples")) for row in rows)
+        aggregate[label]["cpu_samples"] = sum(_count_value(row.get("cpu_samples")) for row in rows)
         aggregate[label]["runs"] = len(rows)
     table["by_label"] = aggregate
     table["invalid_runs"] = invalid_runs
+
+    # 这部分是正式 M4 的结构与证据门禁。单局或缺指标的报告仍可作为探索性
+    # 读数写入 by_label，但不能被下面的 delta 误读为验收结论。
+    gate_reasons: list[str] = []
+    if required_pairs is not None:
+        if required_pairs < 1:
+            raise ValueError("required_pairs 必须为正整数")
+        usable_reports = [
+            report for report in reports if report.get("performance_usable") is not False
+        ]
+        labels = {str(report.get("label")) for report in usable_reports}
+        if VANILLA_LABEL not in labels or OURS_LABEL not in labels:
+            gate_reasons.append(f"缺少正式配对所需的 {VANILLA_LABEL}/{OURS_LABEL} 臂")
+        baseline_indices = {
+            index
+            for report in usable_reports
+            if str(report.get("label")) == VANILLA_LABEL
+            and isinstance((index := report.get("index")), int)
+            and not isinstance(index, bool)
+        }
+        for label in sorted(labels):
+            if label not in KNOWN_ARM_LABELS:
+                gate_reasons.append(f"出现未知性能臂：{label}")
+                continue
+            arm = [report for report in usable_reports if str(report.get("label")) == label]
+            indices = [report.get("index") for report in arm]
+            if any(isinstance(index, bool) or not isinstance(index, int) for index in indices):
+                gate_reasons.append(f"{label} 存在非整数实验编号")
+            integer_indices = [
+                index for index in indices if isinstance(index, int) and not isinstance(index, bool)
+            ]
+            if len(integer_indices) != len(set(integer_indices)):
+                gate_reasons.append(f"{label} 存在重复实验编号")
+            actual = set(integer_indices)
+            expected_indices = set(range(1, required_pairs + 1))
+            if actual != expected_indices:
+                gate_reasons.append(
+                    f"{label} 实验编号应为 1..{required_pairs}，实际为 {sorted(actual)}"
+                )
+            if label != VANILLA_LABEL and actual != baseline_indices:
+                gate_reasons.append(
+                    f"{label} 与 {VANILLA_LABEL} 的实验编号不成对："
+                    f"{sorted(actual)} 对 {sorted(baseline_indices)}"
+                )
+            for report in arm:
+                row = next(
+                    (
+                        item
+                        for item in by_label.get(label, [])
+                        if item.get("_index") == report.get("index")
+                    ),
+                    {},
+                )
+                if not row:
+                    continue
+                missing = [
+                    key
+                    for key in (
+                        "per_frame_mean",
+                        "task_mean",
+                        "rss_peak_mib",
+                        "rss_start_mib",
+                        "rss_end_mib",
+                        "rss_change_mib",
+                        "cpu_seconds",
+                        "wall_seconds",
+                        "game_days",
+                        "wall_seconds_per_game_day",
+                    )
+                    if row.get(key) is None
+                ]
+                if not row.get("rss_samples") or not row.get("cpu_samples"):
+                    missing.append("samples.rss_mib/cpu_seconds")
+                if missing:
+                    gate_reasons.append(
+                        f"{label} #{report.get('index')} 缺少指标：{', '.join(missing)}"
+                    )
+        if invalid_runs:
+            gate_reasons.append("存在被标记为不可用的性能臂")
+    table["m4_gate"] = {
+        "required_pairs": required_pairs,
+        "ok": required_pairs is None or not gate_reasons,
+        "reasons": gate_reasons,
+    }
+    gate = cast("dict[str, object]", table["m4_gate"])
+    gate_ok = bool(gate["ok"])
     if (
-        VANILLA_LABEL in aggregate
+        gate_ok
+        and VANILLA_LABEL in aggregate
         and OURS_LABEL in aggregate
         and aggregate[VANILLA_LABEL].get("runs", 0)
         and aggregate[OURS_LABEL].get("runs", 0)
+        and (required_pairs is None or aggregate[VANILLA_LABEL]["runs"] == required_pairs)
+        and (required_pairs is None or aggregate[OURS_LABEL]["runs"] == required_pairs)
     ):
         table["delta"] = _delta(
             aggregate[VANILLA_LABEL],
@@ -1085,10 +1375,12 @@ def report_table(reports: list[dict[str, object]]) -> dict[str, object]:
             to_label=OURS_LABEL,
         )
     if (
-        VANILLA_LABEL in aggregate
+        gate_ok
+        and VANILLA_LABEL in aggregate
         and TEMPO_LABEL in aggregate
         and aggregate[VANILLA_LABEL].get("runs", 0)
         and aggregate[TEMPO_LABEL].get("runs", 0)
+        and (required_pairs is None or aggregate[TEMPO_LABEL]["runs"] == required_pairs)
     ):
         table["delta_tempo"] = _delta(
             aggregate[VANILLA_LABEL],
@@ -1169,8 +1461,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--repeat",
         type=int,
-        default=1,
-        help="每个配置跑几局（≥2 才看得出「这两局的差」是不是噪声；单局抖动见结果文档）",
+        default=REQUIRED_M4_PAIRS,
+        help=f"每个配置跑几局（正式 M4 要求 {REQUIRED_M4_PAIRS} 组；少于此数只作探索性读数）",
     )
     parser.add_argument(
         "--stress",
@@ -1258,7 +1550,7 @@ def _main() -> int:
             f"本地 mod 已恢复/删除；收尾错误={list(cleanup_errors) or '无'}"
         )
 
-    table = report_table(reports)
+    table = report_table(reports, required_pairs=REQUIRED_M4_PAIRS)
     banner = (
         "===== G-EXIT-3 对照（`--stress`：受控与否由文末的压力自报比对判定）====="
         if args.stress
@@ -1278,26 +1570,35 @@ def _main() -> int:
             )
         print(f"  我们的 mod 挂上了吗：{report.get('ours_mounted')}")
         if report.get("performance_usable") is False:
-            print(
-                "  ⚠️ 该性能臂不可用于结论："
-                + "；".join(str(item) for item in report.get("performance_invalid_reasons", []))
-            )
+            reasons = report.get("performance_invalid_reasons", [])
+            if not isinstance(reasons, list):
+                reasons = ["性能臂被标记为不可用"]
+            print("  ⚠️ 该性能臂不可用于结论：" + "；".join(str(item) for item in reasons))
     print("\n--- 汇总 ---")
-    for label, row in table["by_label"].items():  # type: ignore[union-attr]
+    by_label = cast("dict[str, object]", table["by_label"])
+    for label, row in by_label.items():
         print(f"  {label}：{row}")
     if "delta" in table:
-        print(f"  差（{table['delta']}）")  # type: ignore[index]
+        print(f"  差（{table['delta']}）")
     if "delta_tempo" in table:
-        print(f"  第三臂差（{table['delta_tempo']}）")  # type: ignore[index]
+        print(f"  第三臂差（{table['delta_tempo']}）")
 
     invalid_runs = table.get("invalid_runs", [])
+    if not isinstance(invalid_runs, list):
+        invalid_runs = []
     if invalid_runs:
         print(f"\n===== 性能结论门禁：{len(invalid_runs)} 个臂不可用 =====")
         for item in invalid_runs:
             print(f"  {item}")
 
+    m4_gate = table.get("m4_gate", {})
+    if isinstance(m4_gate, dict) and not m4_gate.get("ok", False):
+        print("\n===== M4 性能证据门禁：失败 =====")
+        for reason in m4_gate.get("reasons", []):
+            print(f"  {reason}")
+
     # 窗口日期判据：同一序号的每个非 vanilla 臂都必须与 vanilla 逐字相等。
-    window = window_control_verdict(reports)
+    window = window_control_verdict(reports, required_pairs=REQUIRED_M4_PAIRS)
     table["window_control"] = {
         "ok": window.ok,
         "pairs": window.pairs,
@@ -1326,8 +1627,9 @@ def _main() -> int:
     if control is not None:
         print("\n===== 受控性（压力自报比对）=====")
         for report in reports:
-            label, index = report["label"], report.get("index")
-            print(f"  {label} #{index}：{len(_report_lines(report))} 行自报")
+            label = str(report.get("label"))
+            current_index = report.get("index")
+            print(f"  {label} #{current_index}：{len(_report_lines(report))} 行自报")
         print("  " + control.describe())
         if not control.ok:
             print("  ⇒ **这一轮不能报「受控」**：先修上面那几条，或按「非受控」写结论（P13）")
@@ -1337,7 +1639,8 @@ def _main() -> int:
         for error in cleanup_errors:
             print(f"  {error}")
         return 1
-    if invalid_runs or not window.ok:
+    m4_gate_dict = m4_gate if isinstance(m4_gate, dict) else {}
+    if invalid_runs or not window.ok or not bool(m4_gate_dict.get("ok", False)):
         return 1
     return 0
 

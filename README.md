@@ -173,7 +173,7 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2520 条**用例（`pytest --collect-only` 实测；最近完整 `n-auto`：2510 passed / 10 skipped / 1551 subtests，614.55 秒） |
+| 测试 | **2529 条**用例（`pytest --collect-only` 实测；最近完整 `n-auto`：2519 passed / 10 skipped，621.06 秒） |
 | 测试文件 | **108 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 以 `v3 cov` 与 CI coverage artifact 的当前输出为准（门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
@@ -231,7 +231,7 @@ Situated AI/
 
 ## 工程收尾复核（2026-10-06，B137/B138）
 
-2026-10-08 当前完整 `n-auto` 回归为 **2510 passed / 10 skipped / 1551 subtests passed，614.55 秒**，共收集 **2520** 个用例，无失败、worker 崩溃、xdist INTERNALERROR、超时或 watchdog 中止；subtests 不与收集用例数相加。10 项跳过为 3 项符号链接权限条件与 7 项本机引擎日志不可用；此前的 2508/10、2503/10、2494/10、2487/6 和更早基线均保留为各自的历史测量，不与本次拼接。本轮没有采集新的覆盖率、RSS 或 CPU 数据。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
+2026-10-08 本轮完整 `n-auto` 回归收集 **2529** 个用例，结果为 **2519 passed / 10 skipped**，运行 **621.06 秒**；3 个 worker 全部正常，没有失败、worker 崩溃、xdist 内部错误、超时或 watchdog 中止。10 项跳过来自符号链接权限条件和本机引擎日志不可用。本轮没有采集新的覆盖率、RSS 或 CPU 数据；M4 真实性能配对仍需合法后期检查点和实机候选输入。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
 
 ## 授权
 
