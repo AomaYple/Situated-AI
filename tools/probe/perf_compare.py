@@ -86,7 +86,7 @@ from pdx import ab_probe, config, gametimer, stress_probe
 from pdx import game_auto as ga
 from pdx.console import enable_utf8_stdio
 from pdx.game_run import RunLock
-from pdx.textio import deploy_tree
+from pdx.textio import deploy_tree, text_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -95,6 +95,8 @@ DOCS = config.USERDIR
 MODS_DIR = DOCS / "mod"
 CONTENT_LOAD = DOCS / "content_load.json"
 LOGS = DOCS / "logs"
+SAVE_DIR = DOCS / "save games"
+RULE_PRESETS = DOCS / "player" / "game_rules" / "presets.txt"
 
 #: 标准压力剧本（阶段 4 ④）在用户 mod 目录里的落点。`--stress` 时**两臂都装它** ——
 #: 单装一臂就等于把"世界被推到高压"这件事算进了那一臂的差里，对照立刻作废。
@@ -226,6 +228,12 @@ class PerfCleanup:
         else:
             path.unlink(missing_ok=True)
 
+    @staticmethod
+    def _restore_path(backup: Path, path: Path) -> None:
+        """恢复文件或目录前创建父目录，覆盖游戏未重建状态目录的情况。"""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(backup), str(path))
+
     def run(self, *, reason: str) -> tuple[str, ...]:
         """执行一次幂等收尾，并返回所有收尾错误。"""
         if self.cleaned or self.running:
@@ -250,7 +258,7 @@ class PerfCleanup:
             for path, backup in self.path_backups.items():
                 self._step(
                     f"恢复原有目录 {path.name}",
-                    partial(shutil.move, str(backup), str(path)),
+                    partial(self._restore_path, backup, path),
                 )
             restore_dir = self.restore_dir
             if restore_dir is not None and restore_dir.exists() and not self.errors:
@@ -996,10 +1004,11 @@ def run_once(
     print(f"  {CLEAR_COMMAND}：{'已提交' if cleared else '⚠️ 没提交成功'}")
     # 控制台关不掉（实测 escape / 反引号 / shift+escape 都没用），但**点一下速度表盘**
     # 就能把焦点从输入框拿走 —— 否则空格会被输入框吃掉，游戏一直暂停（实测踩过）。
-    if session.speed_xy is not None:
-        ga.click_client(hwnd, session.speed_xy[0], session.speed_xy[1], force=True)
-        time.sleep(0.8)
-    ga.press_key("space", force=True)
+    # 恢复运行不能只靠“再按一次空格”：如果第一次暂停没有被游戏接受，第二次反而
+    # 会把已经运行的世界停住。统一复用 game_auto 的 tick 真值判定，先确认是否已经
+    # 推进，只有确实暂停时才按键，并且在按键后再次确认 tick。
+    resume_note = resume_after_clear(hwnd, speed_xy=session.speed_xy)
+    print(f"  清零后恢复运行：{resume_note}")
     # 清零需要前台输入；计时本身必须在后台，且用真实tick核对最小化后仍推进。
     before_background = ga.tick_mark()
     handover = ga.switch_to_background(hwnd, previous)
@@ -1089,6 +1098,25 @@ def run_once(
     ga.kill_owned_game()
     time.sleep(3)
     return report
+
+
+def resume_after_clear(hwnd: int, *, speed_xy: tuple[int, int] | None) -> str:
+    """把清零计时后的游戏恢复到运行态，并返回带判据的说明。
+
+    控制台输入框会吞掉空格；先点击已经由 ``start_session`` 验证过的速度表盘，
+    然后交给 ``game_auto._step_unpause`` 读取真实 tick。该函数不会盲目发送第二个
+    空格，因此即使清零前的暂停键未被游戏接受，也不会把已经运行的局再次暂停。
+    """
+    point = speed_xy or ga.speed_widget_xy(hwnd) or ga.SPEED_V_XY
+    ga.click_client(hwnd, point[0], point[1], force=True)
+    time.sleep(0.8)
+    note, _pressed, _advance = ga._step_unpause(
+        hwnd,
+        key_timeout=30.0,
+        run_timeout=30.0,
+        force=True,
+    )
+    return note
 
 
 def _per_frame_mean(summary: object) -> float | None:
@@ -1427,8 +1455,8 @@ def tempo_metadata_text(mod_root: Path | None = None) -> str:
 def write_tempo_shell(target: Path | None = None, *, mod_root: Path | None = None) -> list[Path]:
     """把第三臂的**壳 mod** 写到 ``target``（默认 :data:`TEMPO_DST`），返回写出的文件。
 
-    **逐字节复制**那份 defines（`shutil.copyfile`，不重读不重写）：它是 `v3 modgen` 的产物，
-    BOM 与内部结构都已经按引擎要求写好了 —— 探针再转一遍只是多一个漂移点（P3：不手写生成物）。
+    仓库产物保持 UTF-8 无 BOM；写入游戏 mod 目录时只在部署边界为脚本添加恰好一个
+    UTF-8 BOM，并统一为 LF。正文仍来自 `v3 modgen` 产物，探针不手写或改写脚本结构。
     产物一份都没有时**报错**（不许装一个空的壳 mod 上去，那会让第三臂变成"原版 + 空气"，
     而读数看起来完全正常）。
     """
@@ -1442,14 +1470,27 @@ def write_tempo_shell(target: Path | None = None, *, mod_root: Path | None = Non
     written: list[Path] = []
     meta = base / ".metadata" / "metadata.json"
     meta.parent.mkdir(parents=True, exist_ok=True)
-    meta.write_text(tempo_metadata_text(mod_root), encoding="utf-8", newline="\n")
+    meta.write_bytes(text_bytes(tempo_metadata_text(mod_root)))
     written.append(meta)
     for source in sources:
         copy = base / "common" / "defines" / source.name
         copy.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, copy)
+        copy.write_bytes(text_bytes(source.read_bytes().decode("utf-8-sig"), game=True))
         written.append(copy)
     return written
+
+
+def deploy_stress_probe(destination: Path = STRESS_DST) -> list[Path]:
+    """生成压力剧本源码，并在游戏部署边界转换为 BOM/LF 文件。
+
+    `pdx.stress_probe.write` 的仓库产物必须保持无 BOM；直接写到用户 mod 目录会被
+    Victoria 3 拒载。因此先写入短生命周期的源码目录，再复用唯一的 `deploy_tree`
+    边界部署函数。临时目录在返回前删除，游戏目录只留下可运行的安装副本。
+    """
+    with tempfile.TemporaryDirectory(prefix="sitai-stress-source-") as temp:
+        source = Path(temp)
+        stress_probe.write(source)
+        return deploy_tree(source, destination)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1501,7 +1542,17 @@ def _main() -> int:
     cleanup = PerfCleanup(
         content_path=CONTENT_LOAD,
         backup_path=backup,
-        generated_paths=(OURS_DST, STRESS_DST, TEMPO_DST, gametimer.ticktask_default_path()),
+        # 菜单启动时会扫描整个存档目录；旧实验存档里的停用变量会在尚未进入
+        # 本局前就写入 error.log。把它和日志、临时 Mod 一起隔离，结束时按原路径
+        # 恢复，既不改变用户存档字节，也不把历史错误误归因到性能臂。
+        generated_paths=(
+            OURS_DST,
+            STRESS_DST,
+            TEMPO_DST,
+            SAVE_DIR,
+            RULE_PRESETS,
+            gametimer.ticktask_default_path(),
+        ),
         killer=ga.kill_owned_game,
     )
     restore_signals = _install_cleanup_handlers(cleanup)
@@ -1518,7 +1569,7 @@ def _main() -> int:
         # 那一臂的差里，对照立刻作废 —— 它必须是一个两臂共有的**场景**，不是一种处理。
         stress_mods: list[Path] = []
         if args.stress:
-            stress_probe.write(STRESS_DST)
+            deploy_stress_probe(STRESS_DST)
             stress_mods = [STRESS_DST]
             print(
                 f"已开压力剧本：{STRESS_DST.name}"

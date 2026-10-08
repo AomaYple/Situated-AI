@@ -258,7 +258,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-109 个测试文件；2559 条用例（`pytest --collect-only` 实测；最近完整 `n-auto`：2549 passed / 10 skipped，484.92 秒；4 workers；RSS 峰值约 3.75 GB），
+109 个测试文件；2563 条用例（`pytest --collect-only` 实测；最近完整 `n-auto`：2553 passed / 10 skipped，515.96 秒；4 workers；RSS 峰值约 3.75 GB），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

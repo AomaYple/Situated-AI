@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import signal
 import sys
 from pathlib import Path
@@ -57,6 +58,36 @@ def _state(
     return module, cleanup, content, target
 
 
+def test_清零后恢复运行先读tick而不是盲按空格(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load()
+    calls: list[tuple[object, ...]] = []
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        module.ga,
+        "click_client",
+        lambda hwnd, x, y, **_kwargs: calls.append(("click", hwnd, x, y)),
+    )
+    monkeypatch.setattr(module.ga, "speed_widget_xy", lambda _hwnd: (17, 19))
+    monkeypatch.setattr(
+        module.ga,
+        "_step_unpause",
+        lambda hwnd, **kwargs: (
+            calls.append(("unpause", hwnd, kwargs)) or ("已确认运行", False, None)
+        ),
+    )
+
+    assert module.resume_after_clear(7, speed_xy=(11, 13)) == "已确认运行"
+    assert calls[0] == ("click", 7, 11, 13)
+    assert calls[1][0] == "unpause"
+    assert calls[1][2]["key_timeout"] == 30.0
+    assert calls[1][2]["run_timeout"] == 30.0
+
+    calls.clear()
+    assert module.resume_after_clear(8, speed_xy=None) == "已确认运行"
+    assert calls[0] == ("click", 8, 17, 19)
+    assert calls[1][0] == "unpause"
+
+
 def test_收尾恢复运行前同名目录和content_load且幂等(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -83,6 +114,48 @@ def test_收尾恢复运行前同名目录和content_load且幂等(
     report = json.loads((tmp_path / "out" / "cleanup.json").read_text(encoding="utf-8"))
     assert report["reason"] == "test"
     assert report["errors"] == []
+
+
+def test_收尾恢复运行前存档目录而不保留实验存档(tmp_path: Path) -> None:
+    module = _load()
+    content = tmp_path / "content_load.json"
+    content.write_bytes(b"{}\n")
+    saves = tmp_path / "save games"
+    saves.mkdir()
+    (saves / "user.v3").write_bytes(b"user-save")
+    cleanup = module.PerfCleanup(
+        content_path=content,
+        backup_path=module._make_backup(content),
+        generated_paths=(saves,),
+        killer=list,
+    )
+    cleanup.claim_existing_paths()
+    saves.mkdir()
+    (saves / "experiment.v3").write_bytes(b"experiment")
+
+    assert cleanup.run(reason="save-isolation") == ()
+    assert (saves / "user.v3").read_bytes() == b"user-save"
+    assert not (saves / "experiment.v3").exists()
+
+
+def test_收尾恢复规则预设时重建被游戏移除的父目录(tmp_path: Path) -> None:
+    module = _load()
+    content = tmp_path / "content_load.json"
+    content.write_bytes(b"{}\n")
+    presets = tmp_path / "player" / "game_rules" / "presets.txt"
+    presets.parent.mkdir(parents=True)
+    presets.write_bytes(b"user-rules")
+    cleanup = module.PerfCleanup(
+        content_path=content,
+        backup_path=module._make_backup(content),
+        generated_paths=(presets,),
+        killer=list,
+    )
+    cleanup.claim_existing_paths()
+    shutil.rmtree(presets.parent.parent)
+
+    assert cleanup.run(reason="preset-isolation") == ()
+    assert presets.read_bytes() == b"user-rules"
 
 
 def test_单项清理失败不阻断其它恢复步骤(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

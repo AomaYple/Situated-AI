@@ -173,7 +173,7 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2559 条**用例（`pytest --collect-only` 实测；最近完整 `n-auto`：2549 passed / 10 skipped，484.92 秒） |
+| 测试 | **2563 条**用例（`pytest --collect-only` 实测；最近完整 `n-auto`：2553 passed / 10 skipped，515.96 秒） |
 | 测试文件 | **109 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 以 `v3 cov` 与 CI coverage artifact 的当前输出为准（门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
@@ -231,7 +231,7 @@ Situated AI/
 
 ## 工程收尾复核（2026-10-06，B137/B138）
 
-2026-10-09 本轮完整 `n-auto` 回归收集 **2559** 个用例，结果为 **2549 passed / 10 skipped**，pytest 用时 **484.92 秒**（wrapper 墙钟本轮未单独采集），4 个 worker；进程树 RSS 峰值 **3,746,906,112 bytes（约 3.75 GB）**，总覆盖率 **88.37%**；本轮未重新采集分支覆盖率、RSS 或 CPU，RSS **3.75 GB**与分支覆盖率 **82.649%**沿用前次同配置基线。10 项跳过的已知条件包括符号链接权限和本机引擎日志不可用；资源警告已在 SQLite 连接关闭修复后消失，仅保留 xdist 下 pytest-benchmark 自动停用提示。M4 真实性能配对仍需合法后期检查点和实机候选输入。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与执行计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
+2026-10-09 本轮完整 `n-auto` 回归收集 **2563** 个用例，结果为 **2553 passed / 10 skipped**，pytest 用时 **515.96 秒**，4 个 worker；总覆盖率 **88.37%**，超过 86% 门槛。跳过项仍来自符号链接权限和本机引擎日志不可用；并行环境下 pytest-benchmark 自动停用是预期行为。M4 真实性能配对仍需合法后期检查点和实机候选输入。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与执行计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
 
 ## 授权
 

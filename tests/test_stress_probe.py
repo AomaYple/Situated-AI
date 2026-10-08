@@ -527,7 +527,7 @@ class Test受控性断言与第三臂:
         assert "arm_csv_path(label, index)" in source
         assert source.count('f"{label}-{index}.csv"') == 1
 
-    def test_壳mod只挂那一份defines且逐字节复制(self, tmp_path: Path) -> None:
+    def test_壳mod只挂那一份defines且在部署边界加BOM(self, tmp_path: Path) -> None:
         perf = _perf()
         products = tmp_path / "产物"
         (products / "common" / "defines").mkdir(parents=True)
@@ -536,12 +536,18 @@ class Test受控性断言与第三臂:
             '{"supported_game_version": "1.14.4"}', encoding="utf-8"
         )
         tempo = products / "common" / "defines" / "sitai_x_tempo.txt"
-        tempo.write_bytes(b"\xef\xbb\xbfNAI = {\n\trandom_ai_accept = 1\n}\n")
+        tempo.write_bytes(b"NAI = {\r\n\trandom_ai_accept = 1\r\n}\r\n")
         written = perf.write_tempo_shell(tmp_path / "shell", mod_root=products)
         rels = sorted(path.relative_to(tmp_path / "shell").as_posix() for path in written)
         assert rels == [".metadata/metadata.json", "common/defines/sitai_x_tempo.txt"]
         copied = tmp_path / "shell" / "common" / "defines" / "sitai_x_tempo.txt"
-        assert copied.read_bytes() == tempo.read_bytes(), "生成物要逐字节复制，不许重写一遍"
+        assert copied.read_bytes() == b"\xef\xbb\xbfNAI = {\n\trandom_ai_accept = 1\n}\n"
+        assert tempo.read_bytes() == b"NAI = {\r\n\trandom_ai_accept = 1\r\n}\r\n"
+        assert (
+            not (tmp_path / "shell" / ".metadata" / "metadata.json")
+            .read_bytes()
+            .startswith(b"\xef\xbb\xbf")
+        )
         meta = json.loads(
             (tmp_path / "shell" / ".metadata" / "metadata.json").read_text(encoding="utf-8")
         )
@@ -549,6 +555,23 @@ class Test受控性断言与第三臂:
         # 两条"别被当成本机 mod"的判据都要占上（`mods.py:185` 目录前缀 + `:203` id 前缀）
         assert perf.TEMPO_MOD_NAME.startswith(mods.PROBE_PREFIX)
         assert meta["id"].startswith(mods.OWN_MOD_ID_PREFIX)
+
+    def test_压力剧本源码无BOM部署副本有BOM且临时目录清理(self, tmp_path: Path) -> None:
+        perf = _perf()
+        destination = tmp_path / "stress"
+        written = perf.deploy_stress_probe(destination)
+        assert written
+        assert all(path.is_file() for path in written)
+        game_files = [path for path in written if path.suffix.lower() in {".txt", ".yml"}]
+        assert game_files
+        assert all(path.read_bytes().startswith(b"\xef\xbb\xbf") for path in game_files)
+        assert all(b"\r" not in path.read_bytes() for path in game_files)
+        assert all(
+            not path.read_bytes().startswith(b"\xef\xbb\xbf")
+            for path in destination.rglob("*")
+            if path.is_file() and path.suffix.lower() == ".json"
+        )
+        assert not list(tmp_path.glob("sitai-stress-source-*"))
 
     def test_没有tempo产物时报错不静默(self, tmp_path: Path) -> None:
         """仓库没生成 `[tempo]` 产物时装空壳 ⇒ 第三臂变成"原版 + 空气"，读数却看着正常。"""
