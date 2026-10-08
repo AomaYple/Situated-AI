@@ -97,7 +97,9 @@ def analyze(directory: Path, *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dict:
     """按国家和started私有序号去重；冲突、缺类型或缺观察自报均失败。"""
     starts: dict[tuple[str, str], dict[str, str]] = {}
     pulses: dict[str, set[str]] = {tag: set() for tag in tags}
-    root_observations: dict[str, set[str]] = {kind: set() for kind in ("HOOK", "INITIATOR", "TARGET")}
+    root_observations: dict[str, set[str]] = {
+        kind: set() for kind in ("HOOK", "INITIATOR", "TARGET")
+    }
     for path in game_auto.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
             for line in stream:

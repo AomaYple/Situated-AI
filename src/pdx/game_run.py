@@ -857,7 +857,9 @@ def run(
             activation_tick = session_advance.after if session_advance is not None else None
             progress = wait_progress(months, timeout=timeout, start_tick=activation_tick)
             progress["activation_tick"] = activation_tick
-            progress["activation_source"] = "session.advance.after" if activation_tick else "wait_progress baseline"
+            progress["activation_source"] = (
+                "session.advance.after" if activation_tick else "wait_progress baseline"
+            )
             report["progress"] = progress
             if keep_save:
                 end = ga.tick_day(str(progress["end"]))

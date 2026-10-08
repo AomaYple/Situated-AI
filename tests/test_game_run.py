@@ -123,7 +123,8 @@ def test_等待可从首次运行证据计量而不是调用时刻(monkeypatch):
     result = game_run.wait_progress(1, start_tick="1900.2.1")
     assert result["start"] == "1900.2.1"
     assert result["end"] == "1900.3.8"
-    assert result["days"] >= 31
+    days = result["days"]
+    assert isinstance(days, (int, float)) and days >= 31
 
 
 @pytest.mark.parametrize("tick", ["", "1899.12.1", "1900.1.1"])
