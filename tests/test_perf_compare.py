@@ -88,6 +88,53 @@ def test_清零后恢复运行先读tick而不是盲按空格(monkeypatch: pytes
     assert calls[1][0] == "unpause"
 
 
+def test_固定检查点只读复制并记录摘要(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load()
+    source = tmp_path / "source.v3"
+    source.write_bytes(b"SAV\x00fixed-checkpoint")
+    destination = tmp_path / "save games"
+    monkeypatch.setattr(
+        module,
+        "save_header",
+        lambda _path: {"version": "1.14.5", "game_date": "1838.1.1", "observer": "yes"},
+    )
+    monkeypatch.setattr(module.config, "game_version", lambda: {"caligula_branch": "1.14.5"})
+
+    def no_validate(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(module, "validate_load_save_header", no_validate)
+
+    name, evidence = module.stage_checkpoint(source, destination)
+
+    assert name.startswith("sitai_checkpoint_")
+    staged = destination / evidence["name"]
+    assert staged.read_bytes() == source.read_bytes()
+    assert evidence["sha256"]
+    assert evidence["header"]["game_date"] == "1838.1.1"
+    assert source.read_bytes() == b"SAV\x00fixed-checkpoint"
+
+
+def test_固定检查点缺失时拒绝启动(tmp_path: Path) -> None:
+    module = _load()
+    with pytest.raises(FileNotFoundError, match="固定检查点不存在"):
+        module.stage_checkpoint(tmp_path / "missing.v3", tmp_path / "save games")
+
+
+def test_固定检查点在隔离存档目录前保留源字节(tmp_path: Path) -> None:
+    module = _load()
+    source = tmp_path / "save games" / "autosave.v3"
+    source.parent.mkdir()
+    source.write_bytes(b"SAV\x00user-checkpoint")
+
+    copy, original = module.preserve_checkpoint_source(source)
+
+    assert original == source.resolve()
+    assert copy.read_bytes() == source.read_bytes()
+    shutil.rmtree(copy.parent)
+    assert source.read_bytes() == b"SAV\x00user-checkpoint"
+
+
 def test_收尾恢复运行前同名目录和content_load且幂等(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

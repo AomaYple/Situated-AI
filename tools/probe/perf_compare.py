@@ -54,7 +54,11 @@
 `tests/test_cli.py::test_crosscheck_与引擎日志一致` 拿日志行号与原版安装比对 ——
 mod 集不同会让它红（实测踩过）。跑一局常规游戏即可让日志与安装一致。
 
-用法：`python tools/probe/perf_compare.py [月数] [--repeat N]`
+用法：`python tools/probe/perf_compare.py [月数] [--repeat N] [--load-save <观察者检查点.v3>]`
+
+提供 `--load-save` 时，每条臂都从同一份经过版本、观察者身份、停用 Mod 状态和空规则引用检查的
+固定检查点启动；源文件先复制到临时 holding 目录，再隔离用户存档目录，收尾删除临时副本并恢复用户原件。
+这只是满足固定输入的前置条件，仍需正式三组配对、相同起止日期、真实后期输入和无引擎错误窗口才能形成 M4 结论。
 
 正式 M4 性能表要求 `--repeat 3`；少于三组只产生探索性读数，不会形成正式成对结论。
 """
@@ -63,6 +67,7 @@ from __future__ import annotations
 
 import argparse
 import atexit
+import hashlib
 import json
 import math
 import os
@@ -85,7 +90,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from pdx import ab_probe, config, gametimer, stress_probe
 from pdx import game_auto as ga
 from pdx.console import enable_utf8_stdio
-from pdx.game_run import RunLock
+from pdx.game_run import RunLock, save_header, validate_load_save_header
 from pdx.textio import deploy_tree, text_bytes
 
 if TYPE_CHECKING:
@@ -976,7 +981,13 @@ def _wait_months(
 
 
 def run_once(
-    label: str, months: float, *, index: int = 1, stress: bool = False
+    label: str,
+    months: float,
+    *,
+    index: int = 1,
+    stress: bool = False,
+    save_name: str | None = None,
+    checkpoint: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """跑一局并取一份 dump。调用方负责 content_load 与 mod 目录已就位。
 
@@ -989,10 +1000,23 @@ def run_once(
     moved = _quarantine_logs()
     print(f"\n===== {label} #{index}：起游戏（前台，不碰窗口直到进局）=====")
     print(f"  已挪走 {len(moved)} 个旧日志（取证只可能来自这一局）")
-    hwnd, previous = ga.launch_to_foreground(timeout=float(ga.WINDOW_TIMEOUT))
+    extra_args = (f"-loadsave={save_name}",) if save_name else ()
+    hwnd, previous = ga.launch_to_foreground(
+        timeout=float(ga.WINDOW_TIMEOUT), extra_args=extra_args
+    )
     settle = ga.wait_for_boot_settle(timeout=float(ga.LOBBY_TIMEOUT))
     print(f"  加载等待（不碰窗口）：{settle.why}")
-    session = ga.start_session(hwnd, previous, settle=settle, force=True)
+    if save_name and ga.DEBUG_LOG.is_file():
+        with ga.DEBUG_LOG.open(encoding="utf-8-sig", errors="replace") as stream:
+            if any("Could not load save game" in line for line in stream):
+                raise ga.GameAutoError(f"引擎拒绝载入检查点：{save_name}；保留日志并停止启动输入")
+    session = ga.start_session(
+        hwnd,
+        previous,
+        settle=settle,
+        force=True,
+        loaded_observer=save_name is not None,
+    )
     print(f"  进局：{session.handover.describe()} speed_ok={session.rate_ok} rate={session.rate}")
     hwnd = ga._live_window(hwnd)
 
@@ -1080,6 +1104,8 @@ def run_once(
         "samples": samples,
         "wall_seconds": round(time.monotonic() - performance_started, 4),
     }
+    if checkpoint is not None:
+        report["loaded_save"] = checkpoint
     # 压力自报：只在 `--stress` 时读（默认两臂连这一趟 I/O 都不做 ⇒ 输出与从前一字不差）。
     if stress:
         scanned = scan_stress_lines()
@@ -1493,6 +1519,72 @@ def deploy_stress_probe(destination: Path = STRESS_DST) -> list[Path]:
         return deploy_tree(source, destination)
 
 
+def _assert_no_symlink(path: Path, *, label: str) -> None:
+    """拒绝检查点源/目标路径链上的符号链接，避免隔离边界被绕过。"""
+    for item in (path, *path.parents):
+        if item.is_symlink():
+            raise ValueError(f"{label}不允许符号链接：{item}")
+
+
+def preserve_checkpoint_source(source: Path) -> tuple[Path, Path]:
+    """在隔离用户存档目录前复制检查点源，返回临时副本和原始绝对路径。"""
+    original = source.expanduser().resolve()
+    _assert_no_symlink(source.expanduser(), label="固定检查点源")
+    if not original.is_file():
+        raise FileNotFoundError(f"固定检查点不存在：{original}")
+    holding = Path(tempfile.mkdtemp(prefix="sitai-checkpoint-source-"))
+    copy = holding / original.name
+    shutil.copyfile(original, copy)
+    return copy, original
+
+
+def stage_checkpoint(
+    source: Path,
+    destination: Path,
+    *,
+    source_label: Path | None = None,
+) -> tuple[str, dict[str, object]]:
+    """校验并复制固定观察者检查点，返回游戏启动所需的存档名与证据字段。
+
+    源文件可以位于用户 ``save games`` 目录中；调用方必须在隔离该目录前调用本函数
+    或先保留源字节。复制后的文件只存在于本次探针的临时用户存档目录，收尾由
+    :class:`PerfCleanup` 删除，不修改源存档。
+    """
+    source = source.expanduser().resolve()
+    _assert_no_symlink(source, label="固定检查点源")
+    _assert_no_symlink(destination, label="固定检查点目标")
+    if not source.is_file():
+        raise FileNotFoundError(f"固定检查点不存在：{source}")
+    header = save_header(source)
+    expected_version = config.game_version().get("caligula_branch", "").split("/")[-1]
+    validate_load_save_header(
+        header,
+        expected_version=expected_version,
+        allow_save_upgrade=False,
+    )
+    raw = source.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    destination.mkdir(parents=True, exist_ok=True)
+    staged = destination / f"sitai_checkpoint_{digest[:16]}.v3"
+    _assert_no_symlink(staged, label="固定检查点目标")
+    fd, temp_name = tempfile.mkstemp(prefix=".sitai-checkpoint-", dir=str(destination))
+    os.close(fd)
+    temporary = Path(temp_name)
+    try:
+        temporary.write_bytes(raw)
+        temporary.replace(staged)
+    finally:
+        temporary.unlink(missing_ok=True)
+    if hashlib.sha256(staged.read_bytes()).hexdigest() != digest:
+        raise OSError(f"固定检查点复制后校验失败：{staged}")
+    return staged.stem, {
+        "source": str(source_label or source),
+        "name": staged.name,
+        "sha256": digest,
+        "header": header,
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     """命令行 —— 单列出来是为了让用例**不跑游戏**也能钉住 flag 名与默认值。"""
     parser = argparse.ArgumentParser(
@@ -1520,6 +1612,11 @@ def build_parser() -> argparse.ArgumentParser:
         "分离出来（口径见 docs/design/exec/阶段4-压力剧本-口径.md §6）。默认关闭 ⇒ 两臂的行为与产物"
         "与从前一字不差；打开后 CSV 落 tools/out/perf/tempo-<序号>.csv，壳 mod 落 "
         f"<用户 mod 目录>/{TEMPO_MOD_NAME}（跑完删除）。本卡只提供能力，实跑由 t22 定",
+    )
+    parser.add_argument(
+        "--load-save",
+        type=Path,
+        help="从固定观察者检查点启动每一臂；源存档只读复制并在收尾删除临时副本",
     )
     return parser
 
@@ -1560,8 +1657,27 @@ def _main() -> int:
 
     reports: list[dict[str, object]] = []
     cleanup_errors: tuple[str, ...] = ()
+    checkpoint_source: Path | None = None
+    checkpoint_original: Path | None = None
+    checkpoint_holding: Path | None = None
     try:
+        if args.load_save is not None:
+            checkpoint_source, checkpoint_original = preserve_checkpoint_source(args.load_save)
+            checkpoint_holding = checkpoint_source.parent
         cleanup.claim_existing_paths()
+        checkpoint_name: str | None = None
+        checkpoint: dict[str, object] | None = None
+        if args.load_save is not None:
+            assert checkpoint_source is not None
+            assert checkpoint_original is not None
+            checkpoint_name, checkpoint = stage_checkpoint(
+                checkpoint_source,
+                SAVE_DIR,
+                source_label=checkpoint_original,
+            )
+            print(
+                f"已载入固定观察者检查点：{checkpoint['name']}（sha256={str(checkpoint['sha256'])[:16]}…）"
+            )
         deploy_tree(config.REPO / "mod", OURS_DST)
         print(f"已装本地 mod：{OURS_DST.name}（复制自 {config.REPO / 'mod'}）")
 
@@ -1592,9 +1708,20 @@ def _main() -> int:
         for index in range(1, max(1, args.repeat) + 1):
             for label in arms:
                 _set_local_mods(arm_mods(label, stress_mods), original=original)
-                reports.append(run_once(label, months, index=index, stress=args.stress))
+                reports.append(
+                    run_once(
+                        label,
+                        months,
+                        index=index,
+                        stress=args.stress,
+                        save_name=checkpoint_name,
+                        checkpoint=checkpoint,
+                    )
+                )
     finally:
         cleanup_errors = cleanup.run(reason="normal" if sys.exc_info()[0] is None else "exception")
+        if checkpoint_holding is not None:
+            shutil.rmtree(checkpoint_holding, ignore_errors=True)
         restore_signals()
         print(
             f"\n[收尾] 本次游戏已终止；content_load.json 已还原；"

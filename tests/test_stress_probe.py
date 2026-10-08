@@ -501,8 +501,10 @@ class Test受控性断言与第三臂:
         parser = perf.build_parser()
         assert parser.parse_args([]).tempo_arm is False, "第三臂必须**默认关闭**"
         assert parser.parse_args(["--tempo-arm"]).tempo_arm is True
+        assert parser.parse_args(["--load-save", "checkpoint.v3"]).load_save.name == "checkpoint.v3"
         help_text = parser.format_help()
         assert "--tempo-arm" in help_text
+        assert "--load-save" in help_text
         assert "B27" in help_text, "帮助文本要写明用途（B27：把节奏杠杆的开销从混杂项里分离）"
 
     def test_三臂的臂名与产物路径互不冲突(self) -> None:
