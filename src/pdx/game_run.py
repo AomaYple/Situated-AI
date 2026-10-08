@@ -511,12 +511,18 @@ def wait_progress(
     timeout: float = 3600,
     poll: float = 5,
     sample: Callable[[], None] | None = None,
+    start_tick: str | None = None,
 ) -> dict[str, object]:
-    """从调用时刻起推进 N 月；无 tick、倒退、超时均明确失败。"""
+    """从指定或当前 tick 起推进 N 月；无 tick、倒退、超时均明确失败。
+
+    实机启动流程会在首次确认运行后短暂测量前台/后台速率。调用方若把
+    ``start_tick`` 传入首次运行证据，就不会把这段已经发生的游戏时间排除在
+    行为窗口之外；离线调用仍默认从函数调用时刻取基线。
+    """
     if any(not math.isfinite(v) or v <= 0 for v in (months, poll, timeout)):
         raise ValueError("月份、轮询和超时必须为有限正数")
-    start_tick = ga.tick_mark().tick
-    start_day = ga.tick_day(start_tick)
+    baseline_tick = start_tick or ga.tick_mark().tick
+    start_day = ga.tick_day(baseline_tick)
     if start_day is None:
         raise RuntimeError("开始等待时没有可读 tick")
     deadline = time.monotonic() + timeout
@@ -525,13 +531,13 @@ def wait_progress(
         tick = ga.tick_mark().tick
         day = ga.tick_day(tick)
         if day is not None and day < start_day:
-            raise RuntimeError(f"游戏时间倒退：{start_tick} → {tick}")
+            raise RuntimeError(f"游戏时间倒退：{baseline_tick} → {tick}")
         if sample is not None:
             sample()
         if day is not None and day - start_day >= target_days:
-            return {"start": start_tick, "end": tick, "days": day - start_day, "reached": True}
+            return {"start": baseline_tick, "end": tick, "days": day - start_day, "reached": True}
         if time.monotonic() >= deadline:
-            raise TimeoutError(f"未推进 {months} 月：{start_tick} → {tick}")
+            raise TimeoutError(f"未推进 {months} 月：{baseline_tick} → {tick}")
         time.sleep(min(poll, max(0, deadline - time.monotonic())))
 
 
@@ -847,7 +853,11 @@ def run(
             if profiler is not None:
                 profiler.start(session)
             phase = "simulation"
-            progress = wait_progress(months, timeout=timeout)
+            session_advance = getattr(session, "advance", None)
+            activation_tick = session_advance.after if session_advance is not None else None
+            progress = wait_progress(months, timeout=timeout, start_tick=activation_tick)
+            progress["activation_tick"] = activation_tick
+            progress["activation_source"] = "session.advance.after" if activation_tick else "wait_progress baseline"
             report["progress"] = progress
             if keep_save:
                 end = ga.tick_day(str(progress["end"]))

@@ -40,6 +40,8 @@ def test_自然仪器只写私有计数且不改变AI或创建博弈():
     visit(tree.root)
     assert "TimeKeeper" not in text
     assert "is_ai = yes" in text
+    assert "SITAI NATURAL;ROOT;HOOK" in text
+    assert "SITAI NATURAL;ROOT;INITIATOR" in text
 
 
 @pytest.mark.parametrize("play_types", [[], ["dp_a", "dp_a"], ["dp_a }"], ["not_a_play"]])
@@ -68,8 +70,23 @@ def test_有完整自报的零发起可以报告而无日志必须失败(tmp_pat
     (tmp_path / "debug.log").write_text(pulses(), encoding="utf-8")
     result = natural_probe.analyze(tmp_path)
     assert result["countries"]["RUS"]["started"] == 0
+    assert result["hook_observations"] == 0
     assert result["opportunity_denominator"] is None
     assert not result["quality_improvement_proven"]
+
+
+def test_根哨兵能区分hook触发与观察国过滤(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        pulses() + "SITAI NATURAL;ROOT;HOOK;start;sample-0\n"
+        "SITAI NATURAL;ROOT;INITIATOR;Austria;sample-0\n"
+        "SITAI NATURAL;ROOT;TARGET;Sardinia;sample-0\n",
+        encoding="utf-8",
+    )
+    result = natural_probe.analyze(tmp_path)
+    assert result["hook_observations"] == 1
+    assert result["root_initiators"] == ["Austria"]
+    assert result["root_targets"] == ["Sardinia"]
+    assert result["countries"]["RUS"]["started"] == 0
 
 
 def test_同一发起的重复行不膨胀计数且国家序号互不覆盖(tmp_path):

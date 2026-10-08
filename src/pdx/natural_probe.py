@@ -16,7 +16,7 @@ START_VAR = "sitai_probe_natural_start_sample"
 MONTH_VAR = "sitai_probe_natural_month_sample"
 DEFAULT_TAGS = ("RUS", "PRU")
 ROW = re.compile(
-    r"SITAI NATURAL;(?P<tag>[A-Z]{3});(?P<kind>START|TYPE|PULSE);(?P<value>.*);(?P<sample>sample-\d+)$"
+    r"SITAI NATURAL;(?P<tag>[A-Z]{3}|ROOT);(?P<kind>START|TYPE|PULSE|HOOK|INITIATOR|TARGET);(?P<value>.*);(?P<sample>sample-\d+)$"
 )
 
 
@@ -51,7 +51,12 @@ def build(play_types: list[str], *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dic
             f'if = {{ limit = {{ is_diplomatic_play_type = {key} }} debug_log = "SITAI NATURAL;{tag};TYPE;{key};{sample}" }}'
             for key in sorted(play_types)
         )
-        starts.append(f"""scope:initiator ?= {{
+        starts.append(f"""debug_log = "SITAI NATURAL;ROOT;HOOK;start;sample-0"
+        scope:initiator ?= {{
+            debug_log = "SITAI NATURAL;ROOT;INITIATOR;[SCOPE.sCountry('initiator').GetNameNoFormatting];sample-0"
+            scope:target ?= {{
+                debug_log = "SITAI NATURAL;ROOT;TARGET;[SCOPE.sCountry('target').GetNameNoFormatting];sample-0"
+            }}
             if = {{ limit = {{ c:{tag} ?= this is_ai = yes }}
                 {decision_probe.sample_step(START_VAR)}
                 debug_log = "SITAI NATURAL;{tag};START;[SCOPE.sCountry('target').GetNameNoFormatting];sample-[THIS.Var('{START_VAR}').GetValue|0]"
@@ -92,6 +97,7 @@ def analyze(directory: Path, *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dict:
     """按国家和started私有序号去重；冲突、缺类型或缺观察自报均失败。"""
     starts: dict[tuple[str, str], dict[str, str]] = {}
     pulses: dict[str, set[str]] = {tag: set() for tag in tags}
+    root_observations: dict[str, set[str]] = {kind: set() for kind in ("HOOK", "INITIATOR", "TARGET")}
     for path in game_auto.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
             for line in stream:
@@ -102,6 +108,11 @@ def analyze(directory: Path, *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dict:
                     raise ValueError("自然外交仪器行未完整解析")
                 row = match.groupdict()
                 tag, sample, kind, value = (row[key] for key in ("tag", "sample", "kind", "value"))
+                if tag == "ROOT":
+                    if kind not in root_observations or not value:
+                        raise ValueError("自然外交根作用域哨兵无效")
+                    root_observations[kind].add(value)
+                    continue
                 if tag not in pulses:
                     raise ValueError(f"自然外交出现未声明观察国：{tag}")
                 if kind == "PULSE":
@@ -135,8 +146,11 @@ def analyze(directory: Path, *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dict:
         }
     return {
         "countries": countries,
+        "hook_observations": len(root_observations["HOOK"]),
+        "root_initiators": sorted(root_observations["INITIATOR"]),
+        "root_targets": sorted(root_observations["TARGET"]),
         "time_basis": "separate per-country monthly and started sequences; actual calendar window from runner ticks",
         "opportunity_denominator": None,
         "quality_improvement_proven": False,
-        "limits": "Started facts can include vanilla-scripted plays. Accepted demands without a play are absent. Counts do not identify all available AI opportunities, engine autonomy, end outcomes, or policy quality.",
+        "limits": "Root hook observations distinguish a hook with no matching observer country from a wholly silent window. Started facts can include vanilla-scripted plays. Accepted demands without a play are absent. Counts do not identify all available AI opportunities, engine autonomy, end outcomes, or policy quality.",
     }

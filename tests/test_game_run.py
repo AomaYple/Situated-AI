@@ -116,6 +116,16 @@ def test_相对等待从当前日期计量(monkeypatch):
     assert result["reached"]
 
 
+def test_等待可从首次运行证据计量而不是调用时刻(monkeypatch):
+    ticks = iter(["1900.2.1", "1900.2.1", "1900.3.8"])
+    monkeypatch.setattr(game_run.ga, "tick_mark", lambda: SimpleNamespace(tick=next(ticks)))
+    monkeypatch.setattr(game_run.time, "sleep", lambda _seconds: None)
+    result = game_run.wait_progress(1, start_tick="1900.2.1")
+    assert result["start"] == "1900.2.1"
+    assert result["end"] == "1900.3.8"
+    assert result["days"] >= 31
+
+
 @pytest.mark.parametrize("tick", ["", "1899.12.1", "1900.1.1"])
 def test_无tick倒退超时明确失败(monkeypatch, tick):
     values = iter(["1900.1.1", tick])
