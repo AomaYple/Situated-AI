@@ -125,6 +125,17 @@ def test_严格生命周期允许两国连续样本并按样本序列判退出(t
     assert result["countries"]["PRU"]["entry_observed"]
 
 
+def test_严格式样本可从检查点已有计数继续(tmp_path):
+    rows = []
+    for tag in ("RUS", "PRU"):
+        for sample, value in ((4, "no"), (5, "yes"), (6, "no")):
+            rows.append(f"SITAI DECISION;{tag};RISK;{value};sample-{sample}")
+    (tmp_path / "debug.log").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    result = decision_probe.analyze(tmp_path, strict=True)
+    assert result["countries"]["RUS"]["exit_after_entry"]
+    assert result["countries"]["PRU"]["entry_observed"]
+
+
 def test_严格生命周期拒绝中间月份缺少风险读数(tmp_path):
     rows = []
     for tag in ("RUS", "PRU"):

@@ -257,7 +257,10 @@ def _validate_lifecycle(rows: list[dict[str, str]], *, countries: tuple[str, ...
                 raise ValueError(f"财政生命周期同类样本重复：{tag}/{row['kind']}/sample-{sample}")
             kind_samples.add(key)
         unique = sorted(set(samples))
-        expected = list(range(1, unique[-1] + 1))
+        # A loaded checkpoint may already contain observations, so the
+        # counter need not start at one. Require continuity from the first
+        # observed sample while preserving duplicate and gap detection.
+        expected = list(range(unique[0], unique[-1] + 1))
         if unique != expected:
             raise ValueError(f"财政生命周期样本不连续：{tag}，实际 {unique}")
         observed_kinds = {row["kind"] for row in country_rows}
