@@ -28,7 +28,7 @@ def test_启用扩展只追加声明字段且原版逐字保留():
         r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n", "", patched, flags=re.DOTALL
     )
     assert restored == decisions.BASELINE.read_text(encoding="utf-8")
-    assert patched.count("# SITAI BEGIN") == 4
+    assert patched.count("# SITAI BEGIN") == 3
     for name, text in files.items():
         assert "\r" not in text
         assert not text.startswith("\ufeff")
@@ -101,6 +101,79 @@ def test_政治仪器只读且四类事件和全量输入法律都可生成():
     assert "law_is_available = yes" in hooks
     assert "has_law = prev.type" in hooks
     assert "law_estimated_enactment_chance > 0" in hooks
+
+
+def test_显式国家法律阻挡要求只读且另记现行法律():
+    files = extension_probe.build(
+        ["law_autocracy"],
+        tags=("RUS",),
+        legality_laws=("law_autocracy", "law_census_voting"),
+    )
+    hooks = files["common/on_actions/zz_sitai_reform_observer.txt"]
+    assert "COUNTRY_NAME;[THIS.GetCountry.GetNameNoFormatting]" in hooks
+    assert "GetLawType('law_autocracy').GetBlockingRequirements(THIS.GetCountry.Self)" in hooks
+    assert "LEGAL_BLOCKED;law_census_voting=" in hooks
+    assert "LEGAL_ENACTED;law_autocracy=yes" in hooks
+    assert "start_enactment" not in hooks
+
+
+def test_法律阻挡要求需要同组现行状态且区分正反读数(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        "\n".join(
+            (
+                "SITAI REFORM;RUS;COUNTRY_NAME;Russian Empire;sample-1",
+                "SITAI REFORM;RUS;LEGAL_BLOCKED;law_autocracy=yes;sample-1",
+                "SITAI REFORM;RUS;LEGAL_ENACTED;law_autocracy=no;sample-1",
+                "SITAI REFORM;RUS;LEGAL_BLOCKED;law_census_voting=no;sample-1",
+                "SITAI REFORM;RUS;LEGAL_ENACTED;law_census_voting=no;sample-1",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    report = extension_probe.analyze(tmp_path)
+    assert report["legality_interface_validated"]
+    assert report["countries"]["RUS"]["country_names"] == ["Russian Empire"]
+    assert report["countries"]["RUS"]["legality"]["law_autocracy"] == {
+        "blocked_yes": 1,
+        "blocked_no": 0,
+        "enacted_yes": 0,
+        "enacted_no": 1,
+    }
+    assert not report["quality_improvement_proven"]
+
+
+def test_法律阻挡要求归一化游戏的零一格式(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        "\n".join(
+            (
+                "SITAI REFORM;RUS;COUNTRY_NAME;俄罗斯;sample-1",
+                "SITAI REFORM;RUS;LEGAL_BLOCKED;law_autocracy=0;sample-1",
+                "SITAI REFORM;RUS;LEGAL_ENACTED;law_autocracy=1;sample-1",
+                "SITAI REFORM;RUS;LEGAL_BLOCKED;law_universal_suffrage=1;sample-1",
+                "SITAI REFORM;RUS;LEGAL_ENACTED;law_universal_suffrage=0;sample-1",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    report = extension_probe.analyze(tmp_path)
+    assert report["legality_interface_validated"]
+    assert report["countries"]["RUS"]["legality"]["law_universal_suffrage"]["blocked_yes"] == 1
+
+
+def test_法律阻挡要求坏行不能静默降级(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        "SITAI REFORM;RUS;LEGAL_BLOCKED;law_autocracy=[unresolved];sample-1\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="法律资格"):
+        extension_probe.analyze(tmp_path)
+
+
+def test_法律阻挡观察键拒绝注入():
+    with pytest.raises(ValueError):
+        extension_probe.build(["law_autocracy"], legality_laws=["law_bad } = yes"])
 
 
 def test_政府偏好可用法律读数仍不冒充完整AI机会(tmp_path):

@@ -176,7 +176,9 @@ def test_拒绝任意默认策略改动和多个字段同时变化():
     ] = "0" * 64
     with pytest.raises(ValueError, match="额外改动"):
         compare(report(), right)
-    with pytest.raises(ValueError, match="单字段"):
+    # aggression=-0.25 已从生产实验臂撤下；比较器应先拒绝未声明的默认策略，
+    # 而不是把它误报成可接受的单字段差分。
+    with pytest.raises(ValueError, match="默认策略"):
         compare(report(), report(neutrality=25, aggression=-0.25))
 
 

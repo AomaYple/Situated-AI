@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -327,7 +328,10 @@ def check_launcher_playset() -> Check:
         )
     try:
         uri = f"file:{database.as_posix()}?mode=ro"
-        with sqlite3.connect(uri, uri=True) as connection:
+        # sqlite3.Connection 的原生上下文管理器只负责提交/回滚，离开
+        # ``with`` 后仍可能保持连接；这里显式 closing，避免并行测试与
+        # 临时目录清理时出现未关闭数据库资源警告。
+        with closing(sqlite3.connect(uri, uri=True)) as connection:
             active = connection.execute(
                 "SELECT id, name FROM playsets WHERE isActive = 1 ORDER BY lastUsedAt DESC LIMIT 1"
             ).fetchone()

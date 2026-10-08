@@ -64,7 +64,9 @@ def test_默认策略原文只增加两个声明偏置(policy):
         r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n", "", patched, flags=re.DOTALL
     )
     assert restored == original
-    assert patched.count("# SITAI BEGIN") == 2
+    assert patched.count("# SITAI BEGIN") == sum(
+        amount != 0 for amount in (policy.neutrality, policy.aggression)
+    )
     assert not parse_text(patched).errors
     assert len(parse_text(patched).top_assignments) == 1
     assert parse_text(patched).top_keys == parse_text(original).top_keys
@@ -88,7 +90,12 @@ def test_财政字段仅在有效root存在时调用国家触发器(policy):
     tree = parse_text(patched)
     strategy = tree.top_assignments[0].value
     assert isinstance(strategy, Block)
-    for name in ("aggression", "diplomatic_play_neutrality"):
+    for name, amount in (
+        ("aggression", policy.aggression),
+        ("diplomatic_play_neutrality", policy.neutrality),
+    ):
+        if amount == 0:
+            continue
         field = strategy.all(name)[0].value
         assert isinstance(field, Block)
         condition = field.all("if")[-1].value
@@ -179,7 +186,7 @@ def test_写盘检查发现篡改和遗留产物(tmp_path):
         "entry_weeks = 26|entry_weeks = 0",
         "exit_weeks = 52|exit_weeks = 26",
         "ttl_days = 62|ttl_days = 1",
-        "aggression = -0.25|aggression = 20",
+        "aggression = 0|aggression = 20",
         "diplomatic_play_neutrality = 25|diplomatic_play_neutrality = nan",
         "schema_version = 1|schema_version = 2",
     ],

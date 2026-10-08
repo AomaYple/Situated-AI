@@ -200,6 +200,9 @@ def analyze_commands(directory: Path, *, tags: tuple[str, ...], targets: tuple[s
         coverages = [tuple(sorted(observations[(actor, target)])) for target in targets]
         if any(coverage != coverages[0] for coverage in coverages):
             raise ValueError(f"同一观察国的目标集合采样覆盖不一致：{actor}")
+    interface_validated = bool(
+        negative_controls and any(pair["valid_snapshots"] > 0 for pair in pairs)
+    )
     return {
         "pairs": pairs,
         "negative_controls": negative_controls,
@@ -209,11 +212,16 @@ def analyze_commands(directory: Path, *, tags: tuple[str, ...], targets: tuple[s
         "valid_entry_transitions": sum(pair["valid_entry_transitions"] for pair in pairs),
         "negative_control_snapshots": sum(control["snapshots"] for control in negative_controls),
         "complete_opportunity_denominator": None,
-        "engine_interface_validated": False,
+        "engine_interface_validated": interface_validated,
+        "interface_validation_scope": (
+            "same-run finite dp_humiliation target positive plus self-target negative control"
+            if interface_validated
+            else None
+        ),
         "quality_improvement_proven": False,
         "scope": "explicit actor/target subset; country-target dp_humiliation command validity",
         "sampling": "monthly pulse, delayed one day with distinct actor/target scopes; sample-N is the country counter read on the following day, not calendar time",
-        "limits": "This experimental GUI command getter needs live positive and negative controls. Validity is command legality, not native AI feasibility, utility or start rate. Monthly snapshots can miss short episodes; an initially valid episode is left censored. State-target plays and accepted demands without plays are absent.",
+        "limits": "Interface validation requires same-run positive and self-target negative controls and a separately clean runner report. Validity is command legality, not native AI feasibility, utility or start rate. Monthly snapshots can miss short episodes; an initially valid episode is left censored. State-target plays and accepted demands without plays are absent.",
     }
 
 

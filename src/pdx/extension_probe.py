@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 ROW = re.compile(
     r"SITAI REFORM;(?P<tag>[A-Z]{3});(?P<kind>[A-Z_0-9]+);(?P<value>[^;]*);(?P<date>[^;]*)$"
 )
+LEGALITY_ROW = re.compile(
+    r"SITAI REFORM;(?P<tag>[A-Z]{3});(?P<kind>LEGAL_BLOCKED|LEGAL_ENACTED);"
+    r"(?P<law>law_[a-z0-9_]+)=(?P<value>yes|no|0|1);(?P<date>[^;]*)$"
+)
 THRESHOLDS = (10, 15, 20, 50)
 BOOLEANS = {
     "ENACTING",
@@ -57,6 +61,7 @@ def build(
     *,
     tags: tuple[str, ...] = ("RUS", "FRA"),
     strategies: Iterable[str] = (),
+    legality_laws: Iterable[str] = (),
 ) -> dict[str, str]:
     laws = sorted(set(laws))
     if not laws or any(not re.fullmatch(r"law_[a-z0-9_]+", law) for law in laws):
@@ -67,6 +72,9 @@ def build(
         or any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in tags)
     ):
         raise ValueError("观察国标签无效或重复")
+    legality_laws = sorted(set(legality_laws))
+    if any(not re.fullmatch(r"law_[a-z0-9_]+", law) for law in legality_laws):
+        raise ValueError("法律阻挡要求观察键无效")
     strategies = list(strategies)
     if len(strategies) != len(set(strategies)) or any(
         not re.fullmatch(r"ai_strategy_[a-z0-9_]+", key) for key in strategies
@@ -119,12 +127,26 @@ def build(
             f"if = {{ limit = {{ has_strategy = {key} }} {log('POLITICAL_STRATEGY', key)} }}"
             for key in sorted(strategies)
         )
+        legality_readings = "\n".join(
+            "\n".join(
+                (
+                    log(
+                        "LEGAL_BLOCKED",
+                        f"{law}=[Not(StringIsEmpty(GetLawType('{law}').GetBlockingRequirements(THIS.GetCountry.Self)))]",
+                    ),
+                    f"if = {{ limit = {{ has_law = law_type:{law} }} {log('LEGAL_ENACTED', f'{law}=yes')} }} else = {{ {log('LEGAL_ENACTED', f'{law}=no')} }}",
+                )
+            )
+            for law in legality_laws
+        )
         readings.append(f"""if = {{ limit = {{ c:{tag} ?= this }}
             {decision_probe.sample_step(SAMPLE_VAR)}
+            {log("COUNTRY_NAME", "[THIS.GetCountry.GetNameNoFormatting]")}
             {booleans}
             {strategy_readings}
             {log("LEGITIMACY", "[THIS.GetCountry.GetGovernmentLegitimacy|3]")}
             {log("COMPUTED_DEFAULT_DELTA", "[THIS.GetCountry.MakeScope.ScriptValue('sitai_probe_reform_default_delta')|3]")}
+            {legality_readings}
         }}""")
         for kind in ("START", "PASS", "FAIL", "END"):
             target = "\n".join(
@@ -176,7 +198,19 @@ def analyze(directory: Path) -> dict:
             for line in stream:
                 if "SITAI REFORM;" not in line:
                     continue
-                match = ROW.search(line.rstrip())
+                legal_match = LEGALITY_ROW.search(line.rstrip())
+                match = None if legal_match else ROW.search(line.rstrip())
+                if legal_match is not None:
+                    row = legal_match.groupdict()
+                    row["value"] = {"1": "yes", "0": "no"}.get(row["value"], row["value"])
+                    if row["date"].startswith("sample-") and not re.fullmatch(
+                        r"sample-[1-9]\d*", row["date"]
+                    ):
+                        raise ValueError("政治采样序号无效")
+                    rows.append(row)
+                    continue
+                if ";LEGAL_BLOCKED;" in line or ";LEGAL_ENACTED;" in line:
+                    raise ValueError("法律资格读数未完整解析")
                 if match is None:
                     raise ValueError("政治仪器行未完整解析")
                 if match:
@@ -234,11 +268,56 @@ def analyze(directory: Path) -> dict:
             "computed_delta_distribution": dict(
                 Counter(r["value"] for r in seen if r["kind"] == "COMPUTED_DEFAULT_DELTA")
             ),
+            "country_names": sorted({r["value"] for r in seen if r["kind"] == "COUNTRY_NAME"}),
+            "legality": {
+                law: {
+                    "blocked_yes": sum(
+                        r["kind"] == "LEGAL_BLOCKED" and r.get("law") == law and r["value"] == "yes"
+                        for r in seen
+                    ),
+                    "blocked_no": sum(
+                        r["kind"] == "LEGAL_BLOCKED" and r.get("law") == law and r["value"] == "no"
+                        for r in seen
+                    ),
+                    "enacted_yes": sum(
+                        r["kind"] == "LEGAL_ENACTED" and r.get("law") == law and r["value"] == "yes"
+                        for r in seen
+                    ),
+                    "enacted_no": sum(
+                        r["kind"] == "LEGAL_ENACTED" and r.get("law") == law and r["value"] == "no"
+                        for r in seen
+                    ),
+                }
+                for law in sorted({r["law"] for r in seen if r["kind"] == "LEGAL_BLOCKED"})
+            },
         }
+    legal_rows = [r for r in rows if r["kind"] == "LEGAL_BLOCKED"]
+    legal_values = {r["value"] for r in legal_rows}
+    country_names = {
+        r["tag"]: r["value"]
+        for r in rows
+        if r["kind"] == "COUNTRY_NAME"
+        and r["value"]
+        and "[" not in r["value"]
+        and "]" not in r["value"]
+    }
+    legal_pairs = {(r["tag"], r["law"]) for r in legal_rows}
+    enacted_pairs = {(r["tag"], r["law"]) for r in rows if r["kind"] == "LEGAL_ENACTED"}
     return {
         "rows": rows,
         "countries": countries,
+        "legality_interface_validated": bool(
+            legal_rows
+            and legal_values == {"yes", "no"}
+            and all(tag in country_names for tag, _law in legal_pairs)
+            and legal_pairs == enacted_pairs
+        ),
+        "legality_scope": (
+            "explicit country tags × requested law types; blocking requirement is a GUI-native getter and enacted is a separate native state"
+            if legal_rows
+            else None
+        ),
         "quality_improvement_proven": False,
         "time_basis": "sample-N is a per-country observation/event sequence, not a calendar date; historical date strings remain unchanged",
-        "limits": "Monthly idle observations do not prove a viable law existed. Government-preferred available laws and estimated advance threshold buckets are partial conditions, not final AI feasibility, success chance, or law-selection scores. Active political strategy is observed separately; conditional minimums, direction and civil-war vetoes remain distinct. Computed default contribution is not final engine chance. Pass/fail/end are separate outcomes; one run is not causal proof.",
+        "limits": "Monthly idle observations do not prove a viable law existed. Legal blocking is limited to explicitly requested country × law pairs and must have same-run yes/no controls; it is not final AI feasibility, success chance, or law-selection ranking. Government-preferred available laws and estimated advance threshold buckets are partial conditions. Active political strategy is observed separately; conditional minimums, direction and civil-war vetoes remain distinct. Computed default contribution is not final engine chance. Pass/fail/end are separate outcomes; one run is not causal proof.",
     }

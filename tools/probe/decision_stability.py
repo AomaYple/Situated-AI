@@ -48,9 +48,21 @@ def main() -> int:
         default="",
         help="实验性只读 dp_humiliation 命令合法性目标，逗号分隔；需要 --natural-diplomacy",
     )
+    parser.add_argument(
+        "--legality-laws",
+        default="",
+        help="实验性只读显式国家×法律阻挡要求，法律键逗号分隔",
+    )
+    parser.add_argument(
+        "--legality-tags",
+        default="RUS,FRA",
+        help="法律阻挡要求观察国标签，逗号分隔（默认 RUS,FRA）",
+    )
     args = parser.parse_args()
     if args.natural_targets and not args.natural_diplomacy:
         parser.error("--natural-targets 需要 --natural-diplomacy")
+    if args.legality_laws and not args.legality_tags:
+        parser.error("--legality-laws 需要 --legality-tags")
     laws: list[str] = []
     for path in sorted((config.GAME / "common/laws").glob("*.txt")):
         tree = parse_file(path)
@@ -73,7 +85,14 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
     lifecycle = source_root / "fiscal-lifecycle-observer"
     decisions.write(
         observer,
-        extension_probe.build(laws, strategies=extension_probe.political_keys(config.GAME)),
+        extension_probe.build(
+            laws,
+            strategies=extension_probe.political_keys(config.GAME),
+            tags=tuple(value.strip() for value in args.legality_tags.split(",") if value.strip()),
+            legality_laws=tuple(
+                value.strip() for value in args.legality_laws.split(",") if value.strip()
+            ),
+        ),
     )
     policy_state = args.arm != "vanilla"
     decisions.write(fiscal, decision_probe.build_observer(policy_state=policy_state))
@@ -166,6 +185,12 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                     "Observer recomputes the conservative rule, not the positive-control "
                     "99 contribution or final engine chance. Source snapshots identify the "
                     "actual candidate contribution."
+                ),
+                "legality_laws": tuple(
+                    value.strip() for value in args.legality_laws.split(",") if value.strip()
+                ),
+                "legality_tags": tuple(
+                    value.strip() for value in args.legality_tags.split(",") if value.strip()
                 ),
             },
         }

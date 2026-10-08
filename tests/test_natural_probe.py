@@ -190,6 +190,8 @@ def test_自我目标只用作非法反例不能计入候选分母(tmp_path):
     assert result["candidate_snapshots"] == 1
     assert result["valid_snapshots"] == 1
     assert result["negative_control_snapshots"] == 1
+    assert result["engine_interface_validated"]
+    assert result["interface_validation_scope"]
     path.write_text(text.replace("VALID;no", "VALID;yes"), encoding="utf-8")
     with pytest.raises(ValueError, match="自我"):
         natural_probe.analyze_commands(tmp_path, tags=("RUS", "PRU"), targets=("RUS",))

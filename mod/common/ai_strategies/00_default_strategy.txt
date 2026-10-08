@@ -4768,12 +4768,6 @@ ai_strategy_default = {
 			}
 			multiply = ai_unjustified_war_restraint
 		}
-		# SITAI BEGIN aggression
-		if = {
-			limit = { ROOT ?= { sitai_fiscal_external_risk = yes } }
-			add = -0.25
-		}
-		# SITAI END aggression
 	}
 
 	# How much construction output should the AI aim for
