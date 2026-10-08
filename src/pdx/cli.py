@@ -79,6 +79,7 @@ from pdx import (
     modgen,
     modguard,
     objectives,
+    political_surface,
     preflight,
     release,
     snapshot,
@@ -2472,6 +2473,81 @@ def ai_surface_cmd(
         f"原版子系统开关 {len(defines.enabled_switches)} 个 / `AI_*` 条目 {len(defines.ai_keys)} 个。"
     )
     console.print("跑 `v3 ai-surface --write` 生成 `docs/design/02-可执行面.md`。")
+
+
+# ── political-surface（M5：政治候选静态语义）────────────────────
+@app.command("political-surface")
+def political_surface_cmd(
+    write: Annotated[
+        bool, typer.Option("--write", help="生成/更新 docs/design/02-政治候选面.md")
+    ] = False,
+    check: Annotated[
+        bool, typer.Option("--check", help="核对文档与当前原版政治策略是否一致")
+    ] = False,
+    json_path: Annotated[
+        Path | None,
+        typer.Option("--json", help="另写一份结构化 JSON 索引（可选路径）"),
+    ] = None,
+) -> None:
+    """枚举原版政治策略的法律候选输入与静态字段。
+
+    该命令解析 ``change_law_chance``、通过率阈值、方向上限、革命厌恶和
+    IG/运动偏好，并保留每个条件加法的来源行。它不计算引擎最终启动概率、
+    候选排序或随机抽签；这些仍需实机 Getter 或行为证据。
+    """
+    if not config.GAME.is_dir():
+        _fail(f"前置条件缺失：找不到原版目录 {config.GAME}（可用环境变量 V3_ROOT 指定）")
+    try:
+        strategies = political_surface.read_strategies()
+        default_strategy = political_surface.read_default_strategy()
+    except (OSError, ValueError) as exc:
+        _fail(f"原版政治策略无法读取：{exc}")
+    if check:
+        problem = political_surface.check_doc()
+        if problem:
+            _fail(problem)
+        console.print(f"[green]{escape(political_surface.DOC_REL)} 与生成结果一致 ✅[/]")
+    if write:
+        path = political_surface.write_doc()
+        console.print(
+            f"[green]已写入 {escape(str(path))}[/]：{len(strategies)} 张政治策略牌 + 默认层"
+        )
+    if json_path is not None:
+        path = political_surface.write_json(json_path)
+        console.print(f"[green]已写入 {escape(str(path))}[/]")
+    if write or check or json_path is not None:
+        return
+    table = Table(title=f"原版政治策略：{len(strategies)} 张 + 默认层", show_lines=False)
+    table.add_column("策略")
+    table.add_column("change_law_chance")
+    table.add_column("通过阈值")
+    table.add_column("进度/倒退上限")
+    table.add_column("来源")
+    for strategy in strategies:
+        change = political_surface._format_summary(strategy.change_law_chance)
+        minimum = political_surface._format_summary(strategy.min_law_chance_to_pass)
+        direction = (
+            f"{political_surface._format_summary(strategy.max_progressiveness)} / "
+            f"{political_surface._format_summary(strategy.max_regressiveness)}"
+        )
+        table.add_row(
+            escape(strategy.name),
+            escape(change),
+            escape(minimum),
+            escape(direction),
+            escape(f"{strategy.file}:{strategy.line}"),
+        )
+    table.add_row(
+        escape(default_strategy.name),
+        escape(political_surface._format_summary(default_strategy.change_law_chance)),
+        "—",
+        "—",
+        escape(f"{default_strategy.file}:{default_strategy.line}"),
+    )
+    console.print(table)
+    console.print(
+        "静态字段不等于最终引擎启动概率；运行 `v3 political-surface --write` 生成可追踪文档。"
+    )
 
 
 # ── h1（阶段 2：H1 生死门的实验结果）────────────────────────

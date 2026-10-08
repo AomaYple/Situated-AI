@@ -11,7 +11,7 @@
 | **接手工作 / 恢复一个暂停的会话** | [`最终执行纲领 1.0`](design/exec/mod重设计-实施计划.md) → 对应 M1–M5 结果页及 [`backlog`](design/backlog.md)；行为模型见 [`03`](design/03-处境决策设计.md)，工程入口见 [`工程基线`](design/exec/工程基线-1.0.md) |
 | 了解当前 mod 方向、产品形式与验收 | [`design/03-处境决策设计.md`](design/03-处境决策设计.md)（当前设计；真实财政机制已实现；评分差分与卸载已有实机证据，长期和扩展验收继续执行） |
 | 看历史方向及引擎依据 | [`design/01-大方向.md`](design/01-大方向.md)、[`design/01a-依据与参考.md`](design/01a-依据与参考.md)（保留历史正文与引用行号） |
-| 看可执行面 / 欠账 | [`design/02-可执行面.md`](design/02-可执行面.md)、[`design/backlog.md`](design/backlog.md) |
+| 看可执行面 / 政治候选 / 欠账 | [`design/02-可执行面.md`](design/02-可执行面.md)、[`design/02-政治候选面.md`](design/02-政治候选面.md)、[`design/backlog.md`](design/backlog.md) |
 | 最近一次收尾快照 | [`design/exec/阶段性收尾-20261001-仓库审计.md`](design/exec/阶段性收尾-20261001-仓库审计.md)（2026-10-01 历史快照）；当前工程状态以基线和 backlog 为准 |
 
 ## 本目录结构

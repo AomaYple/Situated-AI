@@ -145,6 +145,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 crosscheck` | （新增） | 用**游戏自己的日志**交叉验证解析：覆盖面、行号、token 识别 |
 | `v3 check-outputs` | `check_outputs.py` | 核验**已落盘产物**是否与断言注册表一致 |
 | `v3 show` | `show_outputs.py` | 转储产物的结构与规模 |
+| `v3 political-surface` | （M5 新增） | 只读枚举 9 张原版政治策略与默认层 `change_law_chance`，保留条件运算、canonical AST、源指纹和非有限诊断；`--write/--check` 生成或核对 `docs/design/02-政治候选面.md`，`--json PATH` 落结构化索引。它不冒充最终 AI 启动概率或候选排名 |
 | `v3 mirror check` | （新增） | 官方 `.md` 清单 vs 本机本体 / 本地镜像，**只读**，有差异退出码 1 |
 | `v3 strings` | （新增） | 开采 `victoria3.exe` 的字符串：引擎里有、脚本里没用的标识符（`--limit` / `--no-list`）。原先那两个数是没留口径的一次性采集值，现在可随时重算 |
 | `v3 release` | （新增，阶段 7） | **发布说明 ↔ 档案 ↔ 元数据三边一致**：① 最新一节版本 == 元数据的 `version`；② `mod/data` 里每份档案都以条目形式写进了 `CHANGELOG.md`；③ 没有"幽灵条目"（删了档案却留着说明）；④ 各档案声明的 `game_version` == 元数据的 `supported_game_version`。**不读游戏**，已进 CI。`--template` 打印缺的条目骨架（只打印：那句话得人来说） |
@@ -202,6 +203,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe index --dry-run             # 只统计，不写文档
 .venv\Scripts\v3.exe snapshot diff A B --detail  # 比对两份快照
 .venv\Scripts\v3.exe show                        # 产物里到底有什么
+.venv\Scripts\v3.exe political-surface --check  # 核对政治策略/默认层静态索引
 .venv\Scripts\v3.exe <子命令> --help             # 每个子命令都有中文帮助
 ```
 
@@ -256,7 +258,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-108 个测试文件；2553 条用例（`pytest --collect-only` 实测；最近完整 `n-auto`：2543 passed / 10 skipped，502.86 秒；4 workers；RSS 峰值约 3.75 GB），
+109 个测试文件；2559 条用例（`pytest --collect-only` 实测；最近完整 `n-auto`：2549 passed / 10 skipped，484.92 秒；4 workers；RSS 峰值约 3.75 GB），
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -526,7 +528,7 @@ B37 的观察者健康检查假红已修复；B11–B13、B26–B27、B29、B35�
 | 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：2553 条用例 + 234 条断言核验
+Python 版把上述问题都变成了**可测试的代码**：2559 条用例 + 234 条断言核验
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
