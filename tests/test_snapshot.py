@@ -12,6 +12,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -66,12 +67,8 @@ class TestScriptableSnapshot(unittest.TestCase):
             (InputAction("speed_5", (34, 93), text="SETTING_INPUT_ACTION_SPEED_FIVE"),),
             (),
         )
-        original = snapshot.input_profile.check_profile
-        snapshot.input_profile.check_profile = lambda: result
-        try:
+        with patch.object(snapshot.input_profile, "check_profile", return_value=result):
             body = snapshot._input_profile_snapshot()
-        finally:
-            snapshot.input_profile.check_profile = original
         assert body["default.profile"] == ["sha256:" + "a" * 64, "size:123"]
         assert body["speed_5"] == [
             "scancode:34",

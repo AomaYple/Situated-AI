@@ -63,7 +63,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         fiscal,
         decision_probe.build(inject=args.fiscal_injection == "stress")
         if args.fiscal_injection in {"stress", "no-stress"}
-        else decision_probe.build_observer(),
+        else decision_probe.build_observer(lifecycle=True),
     )
     tags = tuple(args.observers)
     decisions.write(
@@ -79,20 +79,16 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
             "opportunity": behavior_probe.analyze(logdir, tags=tags),
         }
 
+    # Fixed checkpoints record both fiscal probe identities for every arm.
     sources = {
         "sitai_decision_candidate": candidate,
-        (
-            "zz_probe_decision_lifecycle"
-            if args.fiscal_injection in {"stress", "no-stress"}
-            else "zz_sitai_fiscal_observer"
-        ): fiscal,
+        "zz_probe_decision_lifecycle": fiscal,
         "zz_probe_decision_opportunity": opportunity,
     }
-    if args.fiscal_injection in {"stress", "no-stress"}:
-        # 固定自然检查点曾挂载该只读身份，压力仪器不能替代它而造成缺失mod告警。
-        readonly = source_root / "fiscal-readonly"
-        decisions.write(readonly, decision_probe.build_observer())
-        sources["zz_sitai_fiscal_observer"] = readonly
+    # ``none`` disables injection but still mounts the read-only observer.
+    readonly = source_root / "fiscal-readonly"
+    decisions.write(readonly, decision_probe.build_observer())
+    sources["zz_sitai_fiscal_observer"] = readonly
     # 各臂都保留自然检查点原只读仪器身份；不让观测源随输入实验改变。
     laws: list[str] = []
     for path in sorted((config.GAME / "common/laws").glob("*.txt")):

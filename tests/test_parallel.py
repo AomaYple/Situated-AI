@@ -30,12 +30,14 @@ def test_xdist官方覆盖变量仍然有效(monkeypatch: pytest.MonkeyPatch) ->
     assert parallel.auto_worker_count(cpu=16, available=2048) == 3
 
 
-def test_xdist官方覆盖变量在无游戏树时仍然有效(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_xdist官方覆盖变量在无游戏树时仍然有效(
+    monkeypatch: pytest.MonkeyPatch, pytestconfig: pytest.Config
+) -> None:
     monkeypatch.setattr("conftest.GAME_OK", False)
     monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "3")
     monkeypatch.setattr(parallel, "cpu_workers", lambda: 16)
     monkeypatch.setattr(parallel, "available_mib", lambda: 2048)
-    assert pytest_xdist_auto_num_workers(None) == 3
+    assert pytest_xdist_auto_num_workers(pytestconfig) == 3
 
 
 @pytest.mark.parametrize("reader", [parallel.cpu_workers, parallel.available_mib])

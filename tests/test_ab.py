@@ -149,7 +149,7 @@ def _ladder(
     )
 
 
-def _healthy_text(*, player: str = _TAG, b_shock: str = "yes") -> str:
+def _healthy_text(*, player: str | None = _TAG, b_shock: str = "yes") -> str:
     """一局"数据一切正常"的 A+B：自检应当全绿。"""
     return "\n".join(
         [

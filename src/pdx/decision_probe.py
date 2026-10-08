@@ -209,7 +209,7 @@ def build(*, controlled: bool = False, inject: bool = True) -> dict[str, str]:
     }
 
 
-def build_observer() -> dict[str, str]:
+def build_observer(*, lifecycle: bool = False) -> dict[str, str]:
     """只读生产状态；私有采样序号不注入财政或续期生产变量。"""
     countries = []
     for tag in ("RUS", "PRU"):
@@ -226,10 +226,13 @@ def build_observer() -> dict[str, str]:
             f"if = {{ limit = {{ c:{tag} ?= this }} {sample_step(SAMPLE_VAR)} {readings} }}"
         )
     files = build()
+    metadata = json.loads(files[".metadata/metadata.json"])
+    if lifecycle:
+        metadata["short_description"] = "Compatibility read-only observer for fixed saves"
+    else:
+        metadata["name"] = "SITAI fiscal read-only observer"
     return {
-        ".metadata/metadata.json": files[".metadata/metadata.json"].replace(
-            "fiscal lifecycle instrument", "fiscal read-only observer"
-        ),
+        ".metadata/metadata.json": json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
         "common/on_actions/zz_sitai_fiscal_observer.txt": "on_monthly_pulse_country = { on_actions = { zz_sitai_fiscal_observer } }\nzz_sitai_fiscal_observer = { effect = {\n"
         + "\n".join(countries)
         + "\n} }\n",

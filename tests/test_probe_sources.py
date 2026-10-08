@@ -6,7 +6,7 @@ from importlib import import_module
 
 import pytest
 
-from pdx import config, game_run
+from pdx import config, decision_probe, game_run
 
 pytestmark = pytest.mark.unit
 
@@ -81,11 +81,30 @@ def test_财政行为各臂保留检查点的两只读身份(tmp_path, monkeypat
     observed: list[str] = []
 
     def fake_run(sources, **kwargs):
-        assert {"zz_sitai_fiscal_observer", "zz_sitai_reform_observer"} <= sources.keys()
+        assert {"zz_probe_decision_lifecycle", "zz_sitai_reform_observer"} <= sources.keys()
+        assert "zz_sitai_fiscal_observer" in sources
         observed.extend(
             json.loads((path / ".metadata/metadata.json").read_text(encoding="utf-8"))["id"]
             for path in sources.values()
         )
+        lifecycle = json.loads(
+            (sources["zz_probe_decision_lifecycle"] / ".metadata/metadata.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert lifecycle["name"] == "SITAI fiscal lifecycle instrument"
+        if injection in {"stress", "no-stress"}:
+            expected = decision_probe.build(inject=injection == "stress")
+            assert {
+                name: (sources["zz_probe_decision_lifecycle"] / name).read_bytes()
+                for name in expected
+            } == {name: text.encode("utf-8") for name, text in expected.items()}
+        else:
+            for path in sources["zz_probe_decision_lifecycle"].rglob("*.txt"):
+                text = path.read_text(encoding="utf-8")
+                assert "add_treasury" not in text
+                assert "sitai_update_fiscal" not in text
+                assert "remove_variable" not in text
         assert kwargs["months"] == 1
         return {"ok": True}
 

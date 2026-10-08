@@ -28,7 +28,7 @@ from . import game_auto as ga
 from .textio import deploy_tree
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
 
 
 ERROR_MARKERS = (
@@ -584,9 +584,9 @@ def _mounted_path(line: str) -> str | None:
 
 def log_findings(
     logdir: Path,
-    destinations: list[Path],
+    destinations: Sequence[Path | str],
     *,
-    expected_mounts: list[Path | str] | None = None,
+    expected_mounts: Sequence[Path | str] | None = None,
 ) -> LogFindings:
     """仅解析本局归档；严格模式按完整允许列表拒绝额外挂载。
 
@@ -657,7 +657,7 @@ def read_reviewed_report(path: Path) -> dict:
         raise ValueError("原始归档缺少完整日志指纹或指纹已变更；拒绝复核为通过")
     allowlist = report.get("mount_allowlist")
     mounts_verified = isinstance(allowlist, list) and bool(allowlist)
-    if mounts_verified:
+    if isinstance(allowlist, list) and allowlist:
         findings = log_findings(logdir, allowlist, expected_mounts=allowlist)
     else:
         # 历史报告只保存了 missing_mounts，无法从原始日志恢复当时的完整
@@ -745,6 +745,7 @@ def run(
         started = time.monotonic()
         cleanup_errors: list[str] = []
         destinations: list[Path] = []
+        expected_mounts: list[str] | None = None
         capture = LogCapture(config.USERDIR / "logs", evidence / "logs")
         stop_monitor = threading.Event()
         monitor: threading.Thread | None = None
@@ -809,7 +810,8 @@ def run(
                 raise RuntimeError(f"日志隔离失败：{ga.LAST_QUARANTINE_ERRORS}")
             destinations = deployment.deploy(sources)
             report["deployed_hashes"] = {p.name: hashes(p) for p in destinations}
-            report["mount_allowlist"] = mount_allowlist(destinations)
+            expected_mounts = mount_allowlist(destinations)
+            report["mount_allowlist"] = expected_mounts
             monitor = threading.Thread(target=observe, name="sitai-evidence", daemon=True)
             monitor.start()
             ga.ALLOW_REAL_INPUT = True
@@ -943,7 +945,7 @@ def run(
                 report["log_findings"] = findings = log_findings(
                     evidence / "logs",
                     destinations,
-                    expected_mounts=report.get("mount_allowlist"),
+                    expected_mounts=expected_mounts,
                 )
             except Exception as exc:
                 cleanup_errors.append(f"汇总本局证据：{type(exc).__name__}: {exc}")

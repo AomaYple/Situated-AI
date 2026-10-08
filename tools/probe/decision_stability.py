@@ -69,16 +69,7 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
         extension_probe.build(laws, strategies=extension_probe.political_keys(config.GAME)),
     )
     decisions.write(fiscal, decision_probe.build_observer())
-    decisions.write(lifecycle, decision_probe.build_observer())
-    # 旧检查点保存的是该仪器的历史显示名称。只读内容足以满足存档
-    # 的挂载契约，但名称也必须保持一致，否则引擎仍会写“缺少 Mod”。
-    lifecycle_metadata = lifecycle / ".metadata/metadata.json"
-    metadata = json.loads(lifecycle_metadata.read_text(encoding="utf-8"))
-    metadata["name"] = "SITAI fiscal lifecycle instrument"
-    metadata["short_description"] = "Compatibility read-only observer for fixed saves"
-    lifecycle_metadata.write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    decisions.write(lifecycle, decision_probe.build_observer(lifecycle=True))
     sources = {
         "zz_sitai_reform_observer": observer,
         "zz_sitai_fiscal_observer": fiscal,
@@ -142,7 +133,7 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
         sources["sitai_decision_candidate"] = candidate
 
     def analyze(logdir):
-        result = {
+        result: dict[str, object] = {
             "fiscal": decision_probe.analyze(logdir, strict=True),
             "reform": extension_probe.analyze(logdir),
             "experiment": {

@@ -32,14 +32,7 @@ def main() -> int:
         # 固定检查点可能保留旧生命周期探针的元数据。卸载实验不需要它的
         # 生产逻辑，但必须用同名只读兼容源满足存档挂载契约，否则引擎会把
         # “缺少 Mod”计入本局错误，掩盖真正的卸载观测结果。
-        decisions.write(lifecycle, decision_probe.build_observer())
-        metadata_path = lifecycle / ".metadata/metadata.json"
-        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-        metadata["name"] = "SITAI fiscal lifecycle instrument"
-        metadata["short_description"] = "Compatibility read-only observer for fixed saves"
-        metadata_path.write_text(
-            json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
+        decisions.write(lifecycle, decision_probe.build_observer(lifecycle=True))
         sources = {
             "zz_sitai_fiscal_observer": observer,
             "zz_probe_decision_lifecycle": lifecycle,

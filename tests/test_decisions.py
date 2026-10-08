@@ -235,7 +235,9 @@ def test_扩展开启时新增接口必须有原版证据(monkeypatch, tmp_path)
 
 
 def test_快照缺失扩展接口域明确报告未覆盖(tmp_path):
-    snapshot = {"域": {"vocabulary": {}, "vanilla_keys": {rel: [] for rel in decisions.KEY_DIRS}}}
+    snapshot: dict[str, object] = {
+        "域": {"vocabulary": {}, "vanilla_keys": {rel: [] for rel in decisions.KEY_DIRS}}
+    }
     issues = decisions.validate(set(), snapshot=snapshot)
     assert any("词汇快照缺少" in issue for issue in issues)
 

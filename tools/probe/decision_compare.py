@@ -53,7 +53,11 @@ def paired_sources(control: dict, treatment: dict) -> list[dict]:
             for value in mount_lists
         ):
             raise ValueError("两臂必须记录完整挂载允许清单")
-        normalized = [tuple(sorted(item.casefold() for item in value)) for value in mount_lists]
+        normalized = [
+            tuple(sorted(item.casefold() for item in value))
+            for value in mount_lists
+            if isinstance(value, list)
+        ]
         if normalized[0] != normalized[1]:
             raise ValueError("两臂基础内容与探针的挂载允许清单必须一致")
     left, right = control.get("loaded_save", {}), treatment.get("loaded_save", {})
