@@ -57,6 +57,43 @@ def test_有效评分差分不会升级为行为质量通过():
     assert result["two_country_score_effect_observed"]
     assert result["countries"]["RUS"]["active_score_deltas"] == {"-25.0": 1}
     assert not result["quality_improvement_proven"]
+    assert not result["phase_alignment_verified"]
+
+
+def test_有评分也不能接受错位的外交阶段():
+    left, right = report(), report("-35", neutrality=25)
+    for arm, phase in ((left, "36"), (right, "37")):
+        arm["analysis"]["opportunity"]["rows"].append(
+            {"tag": "CONTROL", "kind": "ESCALATION", "value": phase, "date": "day1"}
+        )
+    with pytest.raises(ValueError, match="阶段"):
+        compare(left, right)
+
+
+def test_实际角色差异独立报告不把缺记录当未加入():
+    left, right = report(), report("-35", neutrality=25)
+    for arm, backed in ((left, "yes"), (right, "no")):
+        for tag in ("RUS", "PRU"):
+            arm["analysis"]["opportunity"]["rows"].extend(
+                {"tag": tag, "kind": kind, "value": value, "date": "day1"}
+                for kind, value in (
+                    ("BACKER", backed),
+                    ("INIT_BACKER", backed),
+                    ("TARGET_BACKER", "no"),
+                )
+            )
+    result = compare(left, right)
+    country = result["countries"]["RUS"]
+    assert country["role_observation_complete"]
+    assert country["role_differences"][0]["control"]["INIT_BACKER"] == "yes"
+    assert country["role_differences"][0]["treatment"]["INIT_BACKER"] == "no"
+    assert not result["quality_improvement_proven"]
+    right["analysis"]["opportunity"]["rows"] = [
+        row for row in right["analysis"]["opportunity"]["rows"] if row["kind"] != "BACKER"
+    ]
+    country = compare(left, right)["countries"]["RUS"]
+    assert not country["role_observation_complete"]
+    assert not country["role_differences"]
 
 
 def test_任意两个观察国按证据集合比较且不混入其他国家():

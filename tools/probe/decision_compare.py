@@ -111,6 +111,25 @@ def compare(control: dict, treatment: dict, *, neutrality_delta: float = 25) -> 
                 raise ValueError(f"同一评分采样键存在冲突：{key}")
             index[key] = row["value"]
         indexes.append(index)
+    phases = [
+        {
+            date: value
+            for (tag, date, kind), value in index.items()
+            if tag == "CONTROL" and kind == "ESCALATION"
+        }
+        for index in indexes
+    ]
+    phase_verified = False
+    if any(phases):
+        dates_by_arm = [{date for tag, date, _kind in index if tag in tags} for index in indexes]
+        if any(
+            not dates <= phase.keys() for dates, phase in zip(dates_by_arm, phases, strict=True)
+        ):
+            raise ValueError("外交阶段记录缺失，不能仅按采样序号配对")
+        shared = dates_by_arm[0] & dates_by_arm[1]
+        if not shared or any(phases[0][date] != phases[1][date] for date in shared):
+            raise ValueError("两臂同采样序号的外交阶段不一致")
+        phase_verified = True
     countries = {}
     for tag in tags:
         active_deltas: Counter[str] = Counter()
@@ -144,6 +163,24 @@ def compare(control: dict, treatment: dict, *, neutrality_delta: float = 25) -> 
                 inactive_deltas[str(delta)] += 1
                 if active_seen:
                     post_exit_deltas[str(delta)] += 1
+        role_kinds = ("BACKER", "INIT_BACKER", "TARGET_BACKER")
+        observed_dates = [
+            {date for row_tag, date, _kind in index if row_tag == tag} for index in indexes
+        ]
+        common_dates = observed_dates[0] & observed_dates[1]
+        role_differences = []
+        roles_complete = bool(common_dates)
+        for date in sorted(common_dates):
+            roles = [
+                {kind: index.get((tag, date, kind)) for kind in role_kinds} for index in indexes
+            ]
+            if any(value not in {"yes", "no"} for role in roles for value in role.values()):
+                roles_complete = False
+                continue
+            if roles[0] != roles[1]:
+                role_differences.append(
+                    {"sample": date, "control": roles[0], "treatment": roles[1]}
+                )
         countries[tag] = {
             "eligible_active_dates": sorted(dates),
             "active_score_deltas": dict(active_deltas),
@@ -169,12 +206,15 @@ def compare(control: dict, treatment: dict, *, neutrality_delta: float = 25) -> 
             ),
             "control_behavior": analyses[0]["countries"][tag],
             "treatment_behavior": analyses[1]["countries"][tag],
+            "role_observation_complete": roles_complete,
+            "role_differences": role_differences,
         }
     return {
         "control_evidence": control["evidence"],
         "treatment_evidence": treatment["evidence"],
         "checkpoint_sha256": control["loaded_save"]["sha256"],
         "neutrality_delta": neutrality_delta,
+        "phase_alignment_verified": phase_verified,
         "countries": countries,
         "two_country_score_effect_observed": all(
             c["expected_score_effect_observed"] for c in countries.values()

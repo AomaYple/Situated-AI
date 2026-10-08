@@ -110,9 +110,10 @@ def sample_step(variable: str) -> str:
 
 class CountryEvidence(TypedDict):
     risk_series: list[str]
-    entry_observed: bool
-    exit_after_entry: bool
-    active_observed: bool
+    risk_observation_available: bool
+    entry_observed: bool | None
+    exit_after_entry: bool | None
+    active_observed: bool | None
 
 
 class Analysis(TypedDict):
@@ -230,20 +231,20 @@ def build(
 
 
 def build_observer(
-    *, lifecycle: bool = False, tags: tuple[str, ...] = DEFAULT_TAGS
+    *, lifecycle: bool = False, tags: tuple[str, ...] = DEFAULT_TAGS, policy_state: bool = True
 ) -> dict[str, str]:
-    """只读生产状态；私有采样序号不注入财政或续期生产变量。"""
+    """只读状态；原版基线只读原生输入，不引用未挂载的生产变量。"""
     _validate_tags(tags)
     countries = []
+    conditions = ((("RISK", f"has_variable = {decisions.RISK_VAR}"),) if policy_state else ()) + (
+        ("DEFAULT", "in_default = yes"),
+        ("LOANS", "taking_loans = yes"),
+        ("WAR", "is_at_war = yes"),
+    )
     for tag in tags:
         readings = "\n".join(
             f"if = {{ limit = {{ {trigger} }} {log(tag, kind, 'yes')} }} else = {{ {log(tag, kind, 'no')} }}"
-            for kind, trigger in (
-                ("RISK", f"has_variable = {decisions.RISK_VAR}"),
-                ("DEFAULT", "in_default = yes"),
-                ("LOANS", "taking_loans = yes"),
-                ("WAR", "is_at_war = yes"),
-            )
+            for kind, trigger in conditions
         )
         countries.append(
             f"if = {{ limit = {{ c:{tag} ?= this }} {sample_step(SAMPLE_VAR)} {readings} }}"
@@ -263,7 +264,9 @@ def build_observer(
     }
 
 
-def _validate_lifecycle(rows: list[dict[str, str]], *, countries: tuple[str, ...]) -> None:
+def _validate_lifecycle(
+    rows: list[dict[str, str]], *, countries: tuple[str, ...], policy_state: bool = True
+) -> None:
     """严格模式下拒绝缺国、缺月、重复月和跨缺失月份的退出判定。"""
 
     for tag in countries:
@@ -289,21 +292,26 @@ def _validate_lifecycle(rows: list[dict[str, str]], *, countries: tuple[str, ...
         expected = list(range(unique[0], unique[-1] + 1))
         if unique != expected:
             raise ValueError(f"财政生命周期样本不连续：{tag}，实际 {unique}")
-        observed_kinds = {row["kind"] for row in country_rows}
-        if "RISK" not in observed_kinds:
-            raise ValueError(f"财政生命周期缺少 RISK 观测：{tag}")
-        risk_samples = {
-            int(row["date"].removeprefix("sample-"))
-            for row in country_rows
-            if row["kind"] == "RISK"
-        }
-        if risk_samples != set(unique):
-            missing = sorted(set(unique) - risk_samples)
-            raise ValueError(f"财政生命周期 RISK 样本不连续：{tag}，缺少 {missing}")
+        required = ("RISK",) if policy_state else ("DEFAULT", "LOANS", "WAR")
+        for kind in required:
+            kind_values = {
+                int(row["date"].removeprefix("sample-"))
+                for row in country_rows
+                if row["kind"] == kind
+            }
+            if not kind_values:
+                raise ValueError(f"财政生命周期缺少 {kind} 观测：{tag}")
+            if kind_values != set(unique):
+                missing = sorted(set(unique) - kind_values)
+                raise ValueError(f"财政生命周期 {kind} 样本不连续：{tag}，缺少 {missing}")
 
 
 def analyze(
-    directory: Path, *, strict: bool = False, tags: tuple[str, ...] = DEFAULT_TAGS
+    directory: Path,
+    *,
+    strict: bool = False,
+    tags: tuple[str, ...] = DEFAULT_TAGS,
+    policy_state: bool = True,
 ) -> Analysis:
     _validate_tags(tags)
     rows: list[dict[str, str]] = []
@@ -330,7 +338,9 @@ def analyze(
     if not rows:
         raise ValueError("缺少本局财政观测，不能把空日志当无风险")
     if strict:
-        _validate_lifecycle(rows, countries=tags)
+        _validate_lifecycle(rows, countries=tags, policy_state=policy_state)
+    if not policy_state and any(row["kind"] in {"RISK", "ACTIVE"} for row in rows):
+        raise ValueError("原版输入观察模式不能混入生产状态读数")
     counts = Counter(
         f"{r['tag']}:{r['kind']}:{r['value']}"
         for r in rows
@@ -352,11 +362,16 @@ def analyze(
             ]
         countries[tag] = {
             "risk_series": risk,
-            "entry_observed": "yes" in risk,
-            "exit_after_entry": any(a == "yes" and b == "no" for a, b in transitions),
+            "risk_observation_available": bool(risk),
+            "entry_observed": "yes" in risk if risk else None,
+            "exit_after_entry": any(a == "yes" and b == "no" for a, b in transitions)
+            if risk
+            else None,
             "active_observed": any(
                 r["value"] == "yes" for r in rows if r["tag"] == tag and r["kind"] == "ACTIVE"
-            ),
+            )
+            if any(r["tag"] == tag and r["kind"] == "ACTIVE" for r in rows)
+            else None,
         }
     return {
         "rows": rows,

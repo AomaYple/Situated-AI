@@ -145,6 +145,7 @@ zz_sitai_opportunity.1 = {
         __SITAI_SAMPLE_STEP__
         if = { limit = { any_diplomatic_play = { initiator_is = c:AUS target_is = c:SAR } }
         scope:sitai_opportunity ?= {
+            debug_log = "SITAI OPPORTUNITY;CONTROL;ESCALATION;[SCOPE.sDiplomaticPlay('sitai_opportunity').GetEscalation];[TimeKeeper.GetCurrentDate.GetString]"
 """
         "__SITAI_ROLE_READINGS__"
         """
@@ -214,6 +215,12 @@ def analyze(directory: Path, *, tags: tuple[str, str] = ("RUS", "PRU")) -> Analy
                     )
                     if row["kind"] in BOOLEAN_KINDS and row["value"] not in {"yes", "no"}:
                         raise ValueError(f"外交数据函数未返回可判布尔值：{row}")
+                    if row["kind"] == "ESCALATION" and (
+                        row["tag"] != "CONTROL"
+                        or not re.fullmatch(r"\d+", row["value"])
+                        or not 0 <= int(row["value"]) <= 100
+                    ):
+                        raise ValueError(f"外交阶段未返回0到100之间的整数：{row}")
                     if row["kind"] in {
                         "INIT_SCORE",
                         "TARGET_SCORE",

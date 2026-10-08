@@ -14,6 +14,41 @@ from pdx.parser import parse_text
 pytestmark = pytest.mark.unit
 
 
+def test_原版输入仪器不引用生产变量并明确状态不可观测(tmp_path):
+    files = decision_probe.build_observer(policy_state=False)
+    actions = files["common/on_actions/zz_sitai_fiscal_observer.txt"]
+    assert "sitai_fiscal_risk" not in actions
+    assert "SITAI DECISION;RUS;RISK" not in actions
+    lines = "".join(
+        f"SITAI DECISION;{tag};{kind};no;sample-{sample}\n"
+        for tag in ("RUS", "PRU")
+        for sample in (4, 5)
+        for kind in ("DEFAULT", "LOANS", "WAR")
+    )
+    path = tmp_path / "debug.log"
+    path.write_text(lines, encoding="utf-8")
+    result = decision_probe.analyze(tmp_path, strict=True, policy_state=False)
+    for country in result["countries"].values():
+        assert country["risk_observation_available"] is False
+        assert country["entry_observed"] is None
+        assert country["exit_after_entry"] is None
+        assert country["active_observed"] is None
+    path.write_text(lines + "SITAI DECISION;RUS;RISK;no;sample-5\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="生产状态"):
+        decision_probe.analyze(tmp_path, strict=True, policy_state=False)
+
+
+def test_原版输入仪器仍拒绝漏采原生财政条件(tmp_path):
+    lines = "".join(
+        f"SITAI DECISION;{tag};{kind};no;sample-1\n"
+        for tag in ("RUS", "PRU")
+        for kind in ("DEFAULT", "LOANS")
+    )
+    (tmp_path / "debug.log").write_text(lines, encoding="utf-8")
+    with pytest.raises(ValueError, match="WAR"):
+        decision_probe.analyze(tmp_path, strict=True, policy_state=False)
+
+
 def test_真实标量颜色分隔符不破坏日期(tmp_path):
     (tmp_path / "debug.log").write_text(
         "SITAI DECISION;RUS;PRINCIPAL;\x15v; 55.00\x15!;1月 28, 1836\n", encoding="utf-8"
@@ -46,8 +81,10 @@ def test_探针注入不会混入生产生成链():
 def test_财政探针可声明另一组国家且默认字节不变():
     custom = decision_probe.build(tags=("SAX", "BAV"))
     text = custom["common/on_actions/zz_sitai_decision_probe.txt"]
-    assert "c:SAX" in text and "c:BAV" in text
-    assert "c:RUS" not in text and "c:PRU" not in text
+    assert "c:SAX" in text
+    assert "c:BAV" in text
+    assert "c:RUS" not in text
+    assert "c:PRU" not in text
     assert decision_probe.build() == decision_probe.build(tags=decision_probe.DEFAULT_TAGS)
 
 

@@ -43,7 +43,14 @@ def main() -> int:
         default=",".join(natural_probe.DEFAULT_TAGS),
         help="自然外交观察国标签，逗号分隔，至少两个（默认 RUS,PRU）",
     )
+    parser.add_argument(
+        "--natural-targets",
+        default="",
+        help="实验性只读 dp_humiliation 命令合法性目标，逗号分隔；需要 --natural-diplomacy",
+    )
     args = parser.parse_args()
+    if args.natural_targets and not args.natural_diplomacy:
+        parser.error("--natural-targets 需要 --natural-diplomacy")
     laws: list[str] = []
     for path in sorted((config.GAME / "common/laws").glob("*.txt")):
         tree = parse_file(path)
@@ -68,8 +75,11 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
         observer,
         extension_probe.build(laws, strategies=extension_probe.political_keys(config.GAME)),
     )
-    decisions.write(fiscal, decision_probe.build_observer())
-    decisions.write(lifecycle, decision_probe.build_observer(lifecycle=True))
+    policy_state = args.arm != "vanilla"
+    decisions.write(fiscal, decision_probe.build_observer(policy_state=policy_state))
+    decisions.write(
+        lifecycle, decision_probe.build_observer(lifecycle=True, policy_state=policy_state)
+    )
     sources = {
         "zz_sitai_reform_observer": observer,
         "zz_sitai_fiscal_observer": fiscal,
@@ -83,6 +93,9 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
     natural_tags = (
         natural_probe.parse_tags(args.natural_tags) if natural else natural_probe.DEFAULT_TAGS
     )
+    command_targets = tuple(
+        value.strip() for value in getattr(args, "natural_targets", "").split(",") if value.strip()
+    )
     if natural:
         play_types: list[str] = []
         for path in sorted((config.GAME / "common/diplomatic_plays").glob("*.txt")):
@@ -91,7 +104,10 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 raise ValueError(f"原版博弈类型无法解析：{path}")
             play_types.extend(key for key in tree.top_keys if key.startswith("dp_"))
         diplomacy = source_root / "natural-diplomacy"
-        decisions.write(diplomacy, natural_probe.build(play_types, tags=natural_tags))
+        decisions.write(
+            diplomacy,
+            natural_probe.build(play_types, tags=natural_tags, command_targets=command_targets),
+        )
         sources["zz_sitai_natural_diplomacy"] = diplomacy
     if args.arm != "vanilla":
         candidate = source_root / "candidate"
@@ -134,7 +150,7 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
 
     def analyze(logdir):
         result: dict[str, object] = {
-            "fiscal": decision_probe.analyze(logdir, strict=True),
+            "fiscal": decision_probe.analyze(logdir, strict=True, policy_state=policy_state),
             "reform": extension_probe.analyze(logdir),
             "experiment": {
                 "arm": args.arm,
@@ -156,6 +172,10 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
         if natural:
             result["natural_diplomacy"] = natural_probe.analyze(logdir, tags=natural_tags)
             result["natural_tags"] = natural_tags
+            if command_targets:
+                result["command_legality"] = natural_probe.analyze_commands(
+                    logdir, tags=natural_tags, targets=command_targets
+                )
         return result
 
     report = game_run.run(

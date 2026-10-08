@@ -70,7 +70,8 @@ def test_有完整自报的零发起可以报告而无日志必须失败(tmp_pat
     (tmp_path / "debug.log").write_text(pulses(), encoding="utf-8")
     result = natural_probe.analyze(tmp_path)
     assert result["countries"]["RUS"]["started"] == 0
-    assert result["hook_observations"] == 0
+    assert result["hook_seen"] is False
+    assert result["hook_count"] is None
     assert result["opportunity_denominator"] is None
     assert not result["quality_improvement_proven"]
 
@@ -83,7 +84,8 @@ def test_根哨兵能区分hook触发与观察国过滤(tmp_path):
         encoding="utf-8",
     )
     result = natural_probe.analyze(tmp_path)
-    assert result["hook_observations"] == 1
+    assert result["hook_seen"] is True
+    assert result["hook_count"] is None
     assert result["root_initiators"] == ["Austria"]
     assert result["root_targets"] == ["Sardinia"]
     assert result["countries"]["RUS"]["started"] == 0
@@ -113,3 +115,99 @@ def test_不完整冲突和错误行都拒绝(tmp_path, extra):
     (tmp_path / "debug.log").write_text(pulses() + extra, encoding="utf-8")
     with pytest.raises(ValueError):
         natural_probe.analyze(tmp_path)
+
+
+def test_有限命令合法性只读观测并延迟传递国家作用域():
+    files = natural_probe.build(
+        ["dp_humiliation"], tags=("RUS", "PRU"), command_targets=("PER", "SAX")
+    )
+    events = files["events/zz_sitai_natural_commands.txt"]
+    assert not parse_text(events).errors
+    assert "GetStartCommandCountry" in events
+    assert "IsValid(" in events
+    assert "Execute(" not in events
+    assert "GetPlayer" not in events
+    assert "save_scope_as" not in events
+    actions = files["common/on_actions/zz_sitai_natural.txt"]
+    assert "save_scope_as = sitai_command_actor_rus" in actions
+    assert "save_scope_as = sitai_command_target_rus_per" in actions
+    assert "save_scope_as = sitai_command_target_rus_sax" in actions
+    assert "sCountry('sitai_command_target_rus_per')" in events
+    assert "sCountry('sitai_command_target_rus_sax')" in events
+    assert "days = 1" in files["common/on_actions/zz_sitai_natural.txt"]
+
+
+def test_根哨兵只生成一次且多次入口不冒充事件计数(tmp_path):
+    actions = natural_probe.build(["dp_humiliation"])["common/on_actions/zz_sitai_natural.txt"]
+    assert actions.count("SITAI NATURAL;ROOT;HOOK;start;") == 1
+    (tmp_path / "debug.log").write_text(
+        pulses() + "SITAI NATURAL;ROOT;HOOK;start;sample-0\n" * 3, encoding="utf-8"
+    )
+    result = natural_probe.analyze(tmp_path)
+    assert result["hook_seen"] is True
+    assert result["hook_count"] is None
+
+
+def test_自然月度缺号和零序号不当作完整观测(tmp_path):
+    path = tmp_path / "debug.log"
+    path.write_text(pulses() + pulses().replace("sample-1", "sample-3"), encoding="utf-8")
+    with pytest.raises(ValueError, match="不连续"):
+        natural_probe.analyze(tmp_path)
+    path.write_text(pulses().replace("sample-1", "sample-0"), encoding="utf-8")
+    with pytest.raises(ValueError, match="正整数"):
+        natural_probe.analyze(tmp_path)
+
+
+def command_rows():
+    return "".join(
+        f"SITAI COMMAND;{actor};{target};dp_humiliation;VALID;{value};sample-{sample}\n"
+        for actor in ("RUS", "PRU")
+        for target in ("PER", "SAX")
+        for sample, value in ((1, "yes"), (2, "no"), (3, "yes"))
+    )
+
+
+def test_命令合法性计数是有限月度快照而非独立自然机会(tmp_path):
+    (tmp_path / "debug.log").write_text(command_rows(), encoding="utf-8")
+    result = natural_probe.analyze_commands(tmp_path, tags=("RUS", "PRU"), targets=("PER", "SAX"))
+    assert result["valid_snapshots"] == 8
+    assert result["candidate_snapshots"] == 12
+    assert result["observed_valid_episodes"] == 8
+    assert result["valid_entry_transitions"] == 4
+    assert result["complete_opportunity_denominator"] is None
+    assert not result["engine_interface_validated"]
+    assert not result["quality_improvement_proven"]
+
+
+def test_自我目标只用作非法反例不能计入候选分母(tmp_path):
+    path = tmp_path / "debug.log"
+    text = (
+        "SITAI COMMAND;RUS;RUS;dp_humiliation;VALID;no;sample-1\n"
+        "SITAI COMMAND;PRU;RUS;dp_humiliation;VALID;yes;sample-1\n"
+    )
+    path.write_text(text, encoding="utf-8")
+    result = natural_probe.analyze_commands(tmp_path, tags=("RUS", "PRU"), targets=("RUS",))
+    assert result["candidate_snapshots"] == 1
+    assert result["valid_snapshots"] == 1
+    assert result["negative_control_snapshots"] == 1
+    path.write_text(text.replace("VALID;no", "VALID;yes"), encoding="utf-8")
+    with pytest.raises(ValueError, match="自我"):
+        natural_probe.analyze_commands(tmp_path, tags=("RUS", "PRU"), targets=("RUS",))
+
+
+@pytest.mark.parametrize("mutation", ["missing", "conflict", "invalid", "gap"])
+def test_有限命令观测缺失冲突坏值或采样缺口必须拒绝(tmp_path, mutation):
+    text = command_rows()
+    if mutation == "missing":
+        text = "\n".join(
+            line for line in text.splitlines() if not line.startswith("SITAI COMMAND;PRU;SAX;")
+        )
+    elif mutation == "conflict":
+        text += "SITAI COMMAND;RUS;PER;dp_humiliation;VALID;no;sample-1\n"
+    elif mutation == "invalid":
+        text = text.replace(";yes;", ";[bad.expression];", 1)
+    else:
+        text = text.replace("sample-3", "sample-4")
+    (tmp_path / "debug.log").write_text(text, encoding="utf-8")
+    with pytest.raises(ValueError):
+        natural_probe.analyze_commands(tmp_path, tags=("RUS", "PRU"), targets=("PER", "SAX"))
