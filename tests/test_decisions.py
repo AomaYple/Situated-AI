@@ -101,6 +101,11 @@ def test_财政字段仅在有效root存在时调用国家触发器(policy):
         assert str(root.value.all(decisions.ACTIVE_TRIGGER)[0].value) == "yes"
 
 
+def test_财政外部暴露包含尚未选边的合法参与者(policy):
+    triggers = decisions.triggers(policy)
+    assert "is_diplomatic_play_undecided_participant = yes" in triggers
+
+
 @pytest.mark.parametrize(
     "body",
     [

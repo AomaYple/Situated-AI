@@ -246,6 +246,7 @@ sitai_external_exposure = {{
         is_diplomatic_play_initiator = yes
         is_diplomatic_play_target = yes
         is_diplomatic_play_committed_participant = yes
+        is_diplomatic_play_undecided_participant = yes
     }}
 }}
 {ACTIVE_TRIGGER} = {{

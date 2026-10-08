@@ -21,6 +21,11 @@ def main() -> int:
         required=True,
     )
     parser.add_argument("--months", type=float, default=6)
+    parser.add_argument(
+        "--keep-save",
+        action="store_true",
+        help="归档窗口结束后的 autosave.v3；用于制作单独登记的风险检查点，不构成因果样本",
+    )
     parser.add_argument("--initiator", default="AUS", help="机会发起国；不能是观察国")
     parser.add_argument("--target", default="SAR", help="机会目标国；不能是观察国")
     parser.add_argument("--observers", nargs=2, default=("RUS", "PRU"))
@@ -113,6 +118,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         months=args.months,
         output=output,
         load_save=args.save,
+        keep_save=getattr(args, "keep_save", False),
         analyze=analyze,
     )
     print(
