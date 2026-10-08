@@ -47,6 +47,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         source_root / "fiscal",
         source_root / "opportunity",
     )
+    tags = tuple(args.observers)
     policy = decisions.load()
     if args.arm in {"control", "market", "market-control"}:
         policy = replace(policy, neutrality=0, aggression=0)
@@ -61,11 +62,10 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
     decisions.write(candidate, decisions.build(policy, extensions=extensions))
     decisions.write(
         fiscal,
-        decision_probe.build(inject=args.fiscal_injection == "stress")
+        decision_probe.build(inject=args.fiscal_injection == "stress", tags=tags)
         if args.fiscal_injection in {"stress", "no-stress"}
-        else decision_probe.build_observer(lifecycle=True),
+        else decision_probe.build_observer(lifecycle=True, tags=tags),
     )
-    tags = tuple(args.observers)
     decisions.write(
         opportunity,
         behavior_probe.build(
@@ -75,7 +75,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
 
     def analyze(logdir):
         return {
-            "fiscal": decision_probe.analyze(logdir, strict=True),
+            "fiscal": decision_probe.analyze(logdir, strict=True, tags=tags),
             "opportunity": behavior_probe.analyze(logdir, tags=tags),
         }
 
@@ -87,7 +87,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
     }
     # ``none`` disables injection but still mounts the read-only observer.
     readonly = source_root / "fiscal-readonly"
-    decisions.write(readonly, decision_probe.build_observer())
+    decisions.write(readonly, decision_probe.build_observer(tags=tags))
     sources["zz_sitai_fiscal_observer"] = readonly
     # 各臂都保留自然检查点原只读仪器身份；不让观测源随输入实验改变。
     laws: list[str] = []

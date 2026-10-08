@@ -43,6 +43,14 @@ def test_探针注入不会混入生产生成链():
             assert text.count("add_treasury = -1000000000") == 2
 
 
+def test_财政探针可声明另一组国家且默认字节不变():
+    custom = decision_probe.build(tags=("SAX", "BAV"))
+    text = custom["common/on_actions/zz_sitai_decision_probe.txt"]
+    assert "c:SAX" in text and "c:BAV" in text
+    assert "c:RUS" not in text and "c:PRU" not in text
+    assert decision_probe.build() == decision_probe.build(tags=decision_probe.DEFAULT_TAGS)
+
+
 def test_卸载观察仪器不会刷新生产状态():
     def assert_private_writes(block):
         for assignment in block.assignments():
@@ -123,6 +131,17 @@ def test_严格生命周期允许两国连续样本并按样本序列判退出(t
     result = decision_probe.analyze(tmp_path, strict=True)
     assert result["countries"]["RUS"]["exit_after_entry"]
     assert result["countries"]["PRU"]["entry_observed"]
+
+
+def test_严格生命周期支持自定义国家对(tmp_path):
+    rows = []
+    for tag in ("SAX", "BAV"):
+        for sample, value in ((1, "no"), (2, "yes"), (3, "no")):
+            rows.append(f"SITAI DECISION;{tag};RISK;{value};sample-{sample}")
+    (tmp_path / "debug.log").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    result = decision_probe.analyze(tmp_path, strict=True, tags=("SAX", "BAV"))
+    assert result["countries"]["SAX"]["exit_after_entry"]
+    assert result["countries"]["BAV"]["entry_observed"]
 
 
 def test_严格式样本可从检查点已有计数继续(tmp_path):

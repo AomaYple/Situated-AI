@@ -16,9 +16,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 ROW = re.compile(
-    r"SITAI DECISION;(?P<tag>RUS|PRU);(?P<kind>[A-Z_]+);(?P<value>.*);(?P<date>[^;]*)$"
+    r"SITAI DECISION;(?P<tag>[A-Z]{3});(?P<kind>[A-Z_]+);(?P<value>.*);(?P<date>[^;]*)$"
 )
 SAMPLE_VAR = "sitai_probe_fiscal_sample"
+DEFAULT_TAGS = ("RUS", "PRU")
 BOOLEANS = frozenset(
     {
         "DEFAULT",
@@ -126,9 +127,21 @@ def log(tag: str, kind: str, value: str) -> str:
     return f"debug_log = \"SITAI DECISION;{tag};{kind};{value};sample-[THIS.Var('{SAMPLE_VAR}').GetValue|0]\""
 
 
-def on_actions(*, controlled: bool = False, inject: bool = True) -> str:
+def _validate_tags(tags: tuple[str, ...]) -> None:
+    if (
+        len(tags) != 2
+        or len(set(tags)) != len(tags)
+        or any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in tags)
+    ):
+        raise ValueError("财政探针需要两个不重复的三字母国家标签")
+
+
+def on_actions(
+    *, controlled: bool = False, inject: bool = True, tags: tuple[str, ...] = DEFAULT_TAGS
+) -> str:
+    _validate_tags(tags)
     subjects: list[str] = []
-    for tag in ("RUS", "PRU"):
+    for tag in tags:
         readings = "\n".join(
             f"if = {{ limit = {{ {trigger} }} {log(tag, kind, 'yes')} }} else = {{ {log(tag, kind, 'no')} }}"
             for kind, trigger in (
@@ -155,12 +168,16 @@ def on_actions(*, controlled: bool = False, inject: bool = True) -> str:
         )
         setup = ""
         if controlled:
-            target = "KRA" if tag == "RUS" else "LIP"
-            setup = f"""if = {{
+            target = {"RUS": "KRA", "PRU": "LIP"}.get(tag)
+            setup = (
+                f"""if = {{
     limit = {{ var:sitai_probe_month = 1 exists = c:{target} }}
     create_diplomatic_play = {{ name = sitai_probe_fiscal_play target_country = c:{target} type = dp_humiliation }}
     {log(tag, "CONTROL_PLAY", target)}
 }}"""
+                if target is not None
+                else ""
+            )
         injection = (
             f"""if = {{ limit = {{ var:sitai_probe_month = 2 }} add_treasury = -1000000000 {log(tag, "INJECT", "withdraw")} }}
     if = {{ limit = {{ var:sitai_probe_month = 6 }} add_treasury = 2000000000 {log(tag, "INJECT", "recover")} }}"""
@@ -188,7 +205,10 @@ zz_sitai_decision_read = { effect = {
     )
 
 
-def build(*, controlled: bool = False, inject: bool = True) -> dict[str, str]:
+def build(
+    *, controlled: bool = False, inject: bool = True, tags: tuple[str, ...] = DEFAULT_TAGS
+) -> dict[str, str]:
+    _validate_tags(tags)
     metadata = {
         "name": "SITAI fiscal lifecycle instrument",
         "id": "sitai.probe.decisions",
@@ -201,7 +221,7 @@ def build(*, controlled: bool = False, inject: bool = True) -> dict[str, str]:
     }
     return {
         "common/on_actions/zz_sitai_decision_probe.txt": on_actions(
-            controlled=controlled, inject=inject
+            controlled=controlled, inject=inject, tags=tags
         ),
         ".metadata/metadata.json": json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
         "localization/english/zz_sitai_decision_l_english.yml": 'l_english:\n sitai_probe_fiscal_play: "Fiscal lifecycle experiment"\n',
@@ -209,10 +229,13 @@ def build(*, controlled: bool = False, inject: bool = True) -> dict[str, str]:
     }
 
 
-def build_observer(*, lifecycle: bool = False) -> dict[str, str]:
+def build_observer(
+    *, lifecycle: bool = False, tags: tuple[str, ...] = DEFAULT_TAGS
+) -> dict[str, str]:
     """只读生产状态；私有采样序号不注入财政或续期生产变量。"""
+    _validate_tags(tags)
     countries = []
-    for tag in ("RUS", "PRU"):
+    for tag in tags:
         readings = "\n".join(
             f"if = {{ limit = {{ {trigger} }} {log(tag, kind, 'yes')} }} else = {{ {log(tag, kind, 'no')} }}"
             for kind, trigger in (
@@ -279,7 +302,10 @@ def _validate_lifecycle(rows: list[dict[str, str]], *, countries: tuple[str, ...
             raise ValueError(f"财政生命周期 RISK 样本不连续：{tag}，缺少 {missing}")
 
 
-def analyze(directory: Path, *, strict: bool = False) -> Analysis:
+def analyze(
+    directory: Path, *, strict: bool = False, tags: tuple[str, ...] = DEFAULT_TAGS
+) -> Analysis:
+    _validate_tags(tags)
     rows: list[dict[str, str]] = []
     for path in ga.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
@@ -304,14 +330,14 @@ def analyze(directory: Path, *, strict: bool = False) -> Analysis:
     if not rows:
         raise ValueError("缺少本局财政观测，不能把空日志当无风险")
     if strict:
-        _validate_lifecycle(rows, countries=("RUS", "PRU"))
+        _validate_lifecycle(rows, countries=tags)
     counts = Counter(
         f"{r['tag']}:{r['kind']}:{r['value']}"
         for r in rows
         if r["kind"] in {"DEFAULT", "ENTRY", "RISK", "ACTIVE", "INJECT"}
     )
     countries: dict[str, CountryEvidence] = {}
-    for tag in ("RUS", "PRU"):
+    for tag in tags:
         risk_rows = [r for r in rows if r["tag"] == tag and r["kind"] == "RISK"]
         if strict:
             risk_rows.sort(key=lambda row: int(row["date"].removeprefix("sample-")))
