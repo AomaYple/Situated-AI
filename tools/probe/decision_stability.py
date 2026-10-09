@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from pdx import config, decision_probe, decisions, extension_probe, game_run, natural_probe
+from pdx.experiment_queue import RunRequest
 from pdx.parser import parse_file
 
 
@@ -26,8 +27,14 @@ def main() -> int:
         ),
         required=True,
     )
-    parser.add_argument("--months", type=float, default=120)
-    parser.add_argument("--save", type=Path)
+    parser.add_argument("--months", type=float, default=6)
+    parser.add_argument("--save", type=Path, required=True)
+    parser.add_argument("--experiment-plan", default="stability-exploration-20261010")
+    parser.add_argument("--experiment-scene", default="fixed-checkpoint")
+    parser.add_argument("--pair-index", type=int, default=1)
+    parser.add_argument("--purpose", choices=("instrument", "safety", "M4"), default="instrument")
+    parser.add_argument("--max-months", type=float, default=6)
+    parser.add_argument("--prior-failure-report", type=Path, action="append", default=[])
     parser.add_argument("--keep-save", action="store_true")
     parser.add_argument("--timeout", type=float, default=21600)
     parser.add_argument("--allow-save-upgrade", action="store_true")
@@ -228,6 +235,15 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
         analyze=analyze,
         allow_save_upgrade=args.allow_save_upgrade,
         profile=args.profile,
+        experiment=RunRequest(
+            plan_id=args.experiment_plan,
+            scene_id=args.experiment_scene,
+            arm=args.arm,
+            pair=args.pair_index,
+            purpose=args.purpose,
+            max_months=args.max_months,
+        ),
+        prior_failure_reports=tuple(args.prior_failure_report),
     )
     print(
         json.dumps(

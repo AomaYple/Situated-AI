@@ -132,6 +132,48 @@ def test_缺失备份时重复恢复也不删除现有目录(deployment):
         assert (dest / "recovered.v3").read_bytes() == b"recovered"
 
 
+@pytest.mark.parametrize("failure", ["unlink", "journal"])
+def test_实验存档删除失败不归还同名用户原件(deployment, tmp_path, monkeypatch, failure):
+    source = tmp_path / "checkpoint.v3"
+    source.write_bytes(b"checkpoint")
+    name = f"sitai_checkpoint_{hashlib.sha256(source.read_bytes()).hexdigest()[:16]}.v3"
+    saves = deployment.userdir / "save games"
+    saves.mkdir()
+    original = saves / name
+    original.write_bytes(b"user original with same name")
+    deployment.isolate_saves()
+    assert deployment.stage_save(source) == name
+    unlink = Path.unlink
+    persist = deployment._persist
+
+    def fail_staged(path, *args, **kwargs):
+        if path == original:
+            raise PermissionError("staged save locked")
+        return unlink(path, *args, **kwargs)
+
+    def fail_publish():
+        if original not in deployment.state_files and deployment.claims:
+            raise OSError("state completion journal locked")
+        return persist()
+
+    with monkeypatch.context() as patch:
+        if failure == "unlink":
+            patch.setattr(Path, "unlink", fail_staged)
+        else:
+            patch.setattr(deployment, "_persist", fail_publish)
+        assert deployment.restore()
+        assert any(dest == saves for dest, _ in deployment.claims)
+        if failure == "unlink":
+            assert original.read_bytes() == b"checkpoint"
+        else:
+            assert not original.exists()
+    restarted = game_run.Deployment.load(deployment.userdir, deployment.evidence)
+    assert restarted.restore() == []
+    assert original.read_bytes() == b"user original with same name"
+    assert restarted.restore() == []
+    assert original.read_bytes() == b"user original with same name"
+
+
 def test_共享锁拒绝第二个实验(tmp_path):
     with (
         game_run.RunLock(tmp_path / "run.lock"),
@@ -348,7 +390,7 @@ def test_预检失败不移动或分析既有游戏日志(tmp_path, monkeypatch,
             return original_copy(src, dst)
 
         monkeypatch.setattr(game_run.shutil, "copytree", changed_copy)
-    analyzed = []
+    analyzed: list[Path] = []
     report = game_run.run(
         {"probe": source},
         months=1,
@@ -576,12 +618,17 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
         assert any("controlled failure" in error for error in report["cleanup_errors"])
     assert (Path(str(report["evidence"])) / "report.json").is_file()
     stages = report["stage_timings"]
+    assert isinstance(stages, list)
     assert stages
     assert all(item["end_s"] >= item["start_s"] and item["wall_s"] >= 0 for item in stages)
     if phase in {"startup", "wait", "analyze"}:
         expected = {"startup": "startup_load", "wait": "simulation", "analyze": "analysis"}[phase]
         assert any(item["name"] == expected and item["status"] == "failed" for item in stages)
-    assert report["pipeline_wall_seconds"] >= report["wall_seconds"]
+    pipeline_wall = report["pipeline_wall_seconds"]
+    legacy_wall = report["wall_seconds"]
+    assert isinstance(pipeline_wall, float)
+    assert isinstance(legacy_wall, float)
+    assert pipeline_wall >= legacy_wall
 
 
 def test_游戏未退出时保留配置和存档备份不覆盖运行状态(tmp_path, monkeypatch):

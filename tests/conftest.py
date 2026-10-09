@@ -79,8 +79,8 @@ GAME_OK = (pdx_config.GAME / "common").is_dir()
 def pytest_xdist_auto_num_workers(config: pytest.Config) -> int:
     """给 ``-n auto`` 加内存护栏，避免按逻辑 CPU 盲目复制重型 fixture。
 
-    没有游戏树时，集成用例会被跳过，内存开销很小，保留 CPU 并行度；
-    有游戏树时才按可用内存计算。``PYTEST_XDIST_AUTO_NUM_WORKERS`` 仍由
+    无论是否存在游戏树，都按 CPU 和可用内存预算计算。
+    ``PYTEST_XDIST_AUTO_NUM_WORKERS`` 仍由
     xdist 自己处理，项目专用的 ``SITAI_XDIST_WORKERS`` 可强制指定数量。
     """
     del config

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -41,7 +42,7 @@ def _report(path: Path, *, neutrality: str = "control", clean: bool = True) -> P
         {"tag": "CONTROL", "kind": "ESCALATION", "value": "10", "date": date}
         for date in ("sample-1", "sample-2")
     )
-    data = {
+    data: dict[str, Any] = {
         "ok": clean,
         "game_version": {"caligula_branch": "release/1.14.5"},
         "loaded_save": {
@@ -68,7 +69,7 @@ def _report(path: Path, *, neutrality: str = "control", clean: bool = True) -> P
         },
         "analysis": {"opportunity": {"rows": rows}},
     }
-    deployed = {}
+    deployed: dict[str, dict[str, str]] = {}
     for name, files in data["source_hashes"].items():
         deployed[name] = {}
         for relative, value in files.items():
@@ -158,7 +159,11 @@ def test_仅候选模组策略允许差异而探针同名路径必须一致(tmp_
     right = m3a_screen.load_report(_report(tmp_path / "right.json", neutrality="treatment"))
     hashes = {name: dict(files) for name, files in getattr(right, fingerprint).items()}
     hashes["zz_probe_decision_opportunity"][m3a_screen.STRATEGY_PATH] = "f" * 64
-    right = replace(right, **{fingerprint: hashes})
+    right = (
+        replace(right, source_hashes=hashes)
+        if fingerprint == "source_hashes"
+        else replace(right, deployed_hashes=hashes)
+    )
     ok, reasons = m3a_screen._pair_shape(left, right)
     assert not ok
     assert f"{fingerprint}.non_strategy_differs" in reasons

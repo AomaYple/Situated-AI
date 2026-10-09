@@ -632,6 +632,7 @@ class Deployment:
 
     def restore(self) -> list[str]:
         errors: list[str] = []
+        failed_state: set[Path] = set()
         for path, backup in list(self.state_files.items()):
             try:
                 plain_path(path)
@@ -653,6 +654,7 @@ class Deployment:
                 del self.state_files[path]
                 self._persist()
             except (OSError, ValueError) as exc:
+                failed_state.add(path)
                 errors.append(f"恢复用户状态 {path}：{exc}")
         if self.config_claimed:
             try:
@@ -678,6 +680,8 @@ class Deployment:
         for dest, saved in reversed(self.claims.copy()):
             try:
                 plain_path(dest)
+                if any(path.is_relative_to(dest) for path in (*self.state_files, *failed_state)):
+                    raise OSError("子文件恢复未完成，保留隔离目录和原件备份")
                 info = self.claim_info[str(dest)]
                 archive = Path(info["archive"])
                 plain_path(archive)
@@ -933,6 +937,7 @@ def run(
     allow_save_upgrade: bool = False,
     profile: bool = False,
     experiment: RunRequest | None = None,
+    prior_failure_reports: tuple[Path, ...] = (),
 ) -> dict[str, object]:
     """运行隔离观察者局，成功与失败都保留不可覆盖的原始证据。"""
     if not math.isfinite(months) or months <= 0:
@@ -941,6 +946,8 @@ def run(
         raise ValueError("timeout 必须为有限正数")
     if not sources or any(not path.is_dir() for path in sources.values()):
         raise ValueError("实验必须提供存在的 mod 源目录")
+    if prior_failure_reports and experiment is None:
+        raise ValueError("导入历史失败必须有冻结实验身份")
     with RunLock():
         ga.assert_no_game_running()
         Deployment.recover_pending(config.USERDIR)
@@ -951,11 +958,12 @@ def run(
         source_hashes = timings.call(
             "input_fingerprints", lambda: {name: hashes(path) for name, path in sources.items()}
         )
+        game_version = config.game_version()
         report: dict[str, object] = {
             "evidence": str(evidence),
             "deployment_journal": str(deployment.journal),
             "recovery_root": str(deployment.recovery_root),
-            "game_version": config.game_version(),
+            "game_version": game_version,
             "months": months,
             "source_hashes": source_hashes,
         }
@@ -1049,9 +1057,14 @@ def run(
                     raise RuntimeError("可用内存不足预登记资源预算，暂不启动游戏")
                 ledger = ExperimentLedger(config.USERDIR / ".sitai-experiments.sqlite3")
                 ledger.interrupt_pending()
-                used = sum(
-                    row["scene"] == experiment.scene_id for row in ledger.runs(experiment.plan_id)
-                )
+                for path in prior_failure_reports:
+                    ledger.import_prior_failure(
+                        experiment,
+                        path,
+                        checkpoint_sha256=checkpoint["sha256"],
+                        game_version=game_version,
+                    )
+                used = ledger.used_arms(experiment.plan_id, experiment.scene_id)
                 preflight = checkpoint_catalog.preflight(
                     checkpoint, purpose=experiment.purpose, months=months, used_arms=used
                 )
@@ -1083,6 +1096,9 @@ def run(
                         "profile": profile,
                         "allow_save_upgrade": allow_save_upgrade,
                         "keep_save": keep_save,
+                        "prior_failure_reports": {
+                            str(p.resolve()): file_sha(p) for p in prior_failure_reports
+                        },
                     },
                     evidence=evidence,
                 )
@@ -1315,7 +1331,7 @@ def run(
                 "legacy wall_seconds excludes initial hashes and analysis; report writes excluded"
             )
             write_json(evidence / "report.json", report)
-            write_json(output / "latest.json", report)
             if ledger is not None and run_id is not None:
                 ledger.finish(run_id, report, report_sha256=file_sha(evidence / "report.json"))
+            write_json(output / "latest.json", report)
         return report

@@ -140,7 +140,11 @@ def test_默认层单独进入索引(tmp_path):
     assert result.change_law_chance is not None
     assert result.change_law_chance.base == 1
     payload = political_surface.as_json(political_surface.read_strategies(tmp_path), result)
-    assert payload["default_strategy"]["change_law_chance"]["base"] == 1
+    default_payload = payload["default_strategy"]
+    assert isinstance(default_payload, dict)
+    chance = default_payload["change_law_chance"]
+    assert isinstance(chance, dict)
+    assert chance["base"] == 1
 
 
 @pytest.mark.integration

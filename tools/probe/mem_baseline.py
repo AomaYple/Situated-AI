@@ -778,7 +778,7 @@ GROUPS: dict[str, dict[str, Any]] = {
         "n": "auto",
         "cache": True,
         "required": False,
-        "note": "附加：pyproject 默认并行度（装有游戏树时按可用内存动态限制）",
+        "note": "附加：pyproject 默认并行度（综合 CPU 与可用内存动态限制）",
     },
     "n4-seed1": {
         "n": "4",

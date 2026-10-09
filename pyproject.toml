@@ -147,9 +147,9 @@ addopts = [
     # 而 **xdist 的 worker 之间不共享解析缓存**，每个 worker 都要各自重跑。
     # 按模块分组能把这份重复压到最小。
     #
-    # ``-n auto`` 在装有游戏树的机器上由 tests/conftest.py 的 hook 加内存护栏：
-    # 默认给系统留 2048 MiB、按每 worker 1536 MiB 计算上限；没有游戏树时保留
-    # CPU 并行度。``SITAI_XDIST_WORKERS`` 或 xdist 官方环境变量可显式覆盖。
+    # ``-n auto`` 由 tests/conftest.py 的 hook 综合 CPU 与内存预算：
+    # 默认给系统留 2048 MiB、按每 worker 1536 MiB 计算上限，存在或缺少游戏树
+    # 都应用护栏。``SITAI_XDIST_WORKERS`` 或 xdist 官方环境变量可显式覆盖。
     # 需要串行（例如要读完整的失败上下文）时传 ``-n0`` 覆盖。
     #
     # ⚠️ **跑基准必须显式带 `--benchmark-only`**：pytest-benchmark 在 xdist

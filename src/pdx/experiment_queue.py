@@ -10,19 +10,29 @@ import sqlite3
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .deployment_state import plain_path
+from .deployment_state import digest, plain_path
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
-    from pathlib import Path
 
 
 def _json(value: object) -> str:
     return json.dumps(
         value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
     )
+
+
+def _failure_types(report: Mapping[str, Any]) -> list[str]:
+    findings = report.get("log_findings", {})
+    raw_errors = findings.get("errors", {}) if isinstance(findings, dict) else {}
+    errors = {key for key, count in raw_errors.items() if isinstance(count, int) and count > 0}
+    if isinstance(findings, dict) and findings.get("mod_errors"):
+        # 未枚举的模组错误统一保守计次，不被时间戳/对象 ID 的变化绕过。
+        errors.add("unclassified-mod-error")
+    return sorted(errors)
 
 
 @dataclass(frozen=True)
@@ -79,6 +89,11 @@ class ExperimentLedger:
                 "manifest TEXT NOT NULL, evidence TEXT NOT NULL UNIQUE, status TEXT NOT NULL, "
                 "report_sha TEXT, errors TEXT NOT NULL DEFAULT '[]')"
             )
+            database.execute(
+                "CREATE TABLE IF NOT EXISTS prior_failures (plan TEXT NOT NULL, scene TEXT NOT NULL, "
+                "evidence TEXT NOT NULL, report_sha TEXT NOT NULL, errors TEXT NOT NULL, "
+                "PRIMARY KEY(plan,scene,evidence))"
+            )
             database.execute("BEGIN IMMEDIATE")
             yield database
             database.commit()
@@ -103,14 +118,18 @@ class ExperimentLedger:
             rows = database.execute(
                 "SELECT * FROM runs WHERE plan=?", (request.plan_id,)
             ).fetchall()
-            scenes = {row["scene"] for row in rows}
+            prior = database.execute(
+                "SELECT * FROM prior_failures WHERE plan=?", (request.plan_id,)
+            ).fetchall()
+            scenes = {row["scene"] for row in [*rows, *prior]}
             if request.scene_id not in scenes and len(scenes) >= request.max_scenes:
                 raise ValueError("已达到场景预算")
             scene = [row for row in rows if row["scene"] == request.scene_id]
-            if len(scene) >= request.max_pairs * 2:
+            prior_scene = [row for row in prior if row["scene"] == request.scene_id]
+            if len(scene) + len(prior_scene) >= request.max_pairs * 2:
                 raise ValueError("已达到三组配对的运行预算（含失败）")
             errors: dict[str, int] = {}
-            for row in scene:
+            for row in [*scene, *prior_scene]:
                 for error in json.loads(row["errors"]):
                     errors[error] = errors.get(error, 0) + 1
             if any(count >= 2 for count in errors.values()):
@@ -154,11 +173,7 @@ class ExperimentLedger:
     def finish(self, run_id: str, report: Mapping[str, Any], *, report_sha256: str) -> None:
         if not re.fullmatch(r"[0-9a-f]{64}", report_sha256):
             raise ValueError("报告指纹无效")
-        findings = report.get("log_findings", {})
-        raw_errors = findings.get("errors", {}) if isinstance(findings, dict) else {}
-        errors = sorted(
-            key for key, count in raw_errors.items() if isinstance(count, int) and count > 0
-        )
+        errors = _failure_types(report)
         with self._transaction() as database:
             changed = database.execute(
                 "UPDATE runs SET status=?,report_sha=?,errors=? WHERE id=? AND status='reserved'",
@@ -174,8 +189,121 @@ class ExperimentLedger:
 
     def interrupt_pending(self) -> None:
         """仅由已持有 RunLock、证明游戏退出并完成部署恢复的入口调用。"""
+        from .game_run import read_reviewed_report  # noqa: PLC0415
+
         with self._transaction() as database:
-            database.execute("UPDATE runs SET status='interrupted' WHERE status='reserved'")
+            rows = database.execute("SELECT * FROM runs WHERE status='reserved'").fetchall()
+            for row in rows:
+                path = Path(row["evidence"]) / "report.json"
+                plain_path(path)
+                report_sha = None
+                errors: list[str] = []
+                if path.exists():
+                    report_sha = digest(path)
+                    report = json.loads(path.read_text(encoding="utf-8"))
+                    expected = {
+                        "run_id": row["id"],
+                        "plan_id": row["plan"],
+                        "scene_id": row["scene"],
+                        "arm": row["arm"],
+                        "pair": row["pair"],
+                        "manifest_sha256": hashlib.sha256(row["manifest"].encode()).hexdigest(),
+                    }
+                    actual = report.get("experiment", {})
+                    if (
+                        report.get("evidence") != row["evidence"]
+                        or not isinstance(actual, dict)
+                        or any(actual.get(key) != value for key, value in expected.items())
+                    ):
+                        raise ValueError("中断报告身份与冻结账本不符，拒绝消除停止事实")
+                    findings = report.get("log_findings", {})
+                    counts = findings.get("errors", {}) if isinstance(findings, dict) else None
+                    if not (
+                        report.get("session_requested") is False
+                        and report.get("logs_isolated") is False
+                        and not report.get("log_hashes")
+                        and isinstance(findings, dict)
+                        and isinstance(counts, dict)
+                        and all(type(count) is int and count == 0 for count in counts.values())
+                        and not findings.get("mod_errors")
+                        and not findings.get("mounted")
+                        and not findings.get("unexpected_mounts")
+                    ):
+                        report = read_reviewed_report(path)
+                    if digest(path) != report_sha:
+                        raise ValueError("中断报告在复核中发生变化")
+                    errors = _failure_types(report)
+                database.execute(
+                    "UPDATE runs SET status='interrupted',report_sha=?,errors=? WHERE id=?",
+                    (report_sha, _json(errors), row["id"]),
+                )
+
+    def import_prior_failure(
+        self,
+        request: RunRequest,
+        path: Path,
+        *,
+        checkpoint_sha256: str,
+        game_version: Mapping[str, Any],
+    ) -> None:
+        """显式导入同检查点/游戏版本的保守停止事实，不复用为行为样本。"""
+        from .game_run import read_reviewed_report  # noqa: PLC0415
+
+        plain_path(path)
+        report_sha = digest(path)
+        report = read_reviewed_report(path)
+        errors = _failure_types(report)
+        if (
+            report.get("loaded_save", {}).get("sha256") != checkpoint_sha256
+            or report.get("game_version") != game_version
+            or not errors
+            or digest(path) != report_sha
+        ):
+            raise ValueError("历史失败的检查点、版本、错误或指纹不符")
+        limits = _json(request.limits())
+        evidence = str(path.resolve())
+        with self._transaction() as database:
+            plan = database.execute(
+                "SELECT limits_json FROM plans WHERE id=?", (request.plan_id,)
+            ).fetchone()
+            if plan is not None and plan[0] != limits:
+                raise ValueError("实验预算已冻结，拒绝事后改写")
+            database.execute("INSERT OR IGNORE INTO plans VALUES (?,?)", (request.plan_id, limits))
+            scenes = {
+                row[0]
+                for row in database.execute(
+                    "SELECT scene FROM runs WHERE plan=? UNION SELECT scene FROM prior_failures WHERE plan=?",
+                    (request.plan_id, request.plan_id),
+                )
+            }
+            if request.scene_id not in scenes and len(scenes) >= request.max_scenes:
+                raise ValueError("已达到场景预算，拒绝导入第三个场景")
+            duplicate = database.execute(
+                "SELECT report_sha FROM prior_failures WHERE plan=? AND scene=? AND evidence=?",
+                (request.plan_id, request.scene_id, evidence),
+            ).fetchone()
+            if duplicate is not None and duplicate[0] != report_sha:
+                raise ValueError("已导入的历史报告发生改变")
+            existing = database.execute(
+                "SELECT id FROM runs WHERE plan=? AND scene=? AND evidence=?",
+                (request.plan_id, request.scene_id, str(path.parent.resolve())),
+            ).fetchone()
+            if existing is not None:
+                raise ValueError("历史运行已在账本中，拒绝重复计次")
+            database.execute(
+                "INSERT OR IGNORE INTO prior_failures VALUES (?,?,?,?,?)",
+                (request.plan_id, request.scene_id, evidence, report_sha, _json(errors)),
+            )
+
+    def used_arms(self, plan_id: str, scene_id: str) -> int:
+        with self._transaction() as database:
+            return sum(
+                database.execute(
+                    f"SELECT COUNT(*) FROM {table} WHERE plan=? AND scene=?",
+                    (plan_id, scene_id),
+                ).fetchone()[0]
+                for table in ("runs", "prior_failures")
+            )
 
     def runs(self, plan_id: str) -> list[dict[str, Any]]:
         with self._transaction() as database:

@@ -15,7 +15,7 @@ import os
 import pickle
 import zlib
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from _helpers import signature
@@ -148,12 +148,17 @@ def test_同进程等长复原时间戳改写必须失效(tmp_path, disk_dir, mo
 
 
 def test_身份判据拒绝外来根和深层外来值(tmp_path):
-    foreign_root = ParsedFile(path="root", root=_LookalikeBlock())
+    # 故意破坏模型类型契约，验证运行时的深层身份防线。
+    foreign_root = ParsedFile(path="root", root=cast("Block", _LookalikeBlock()))
     assert not cache._same_identity(foreign_root)
     nested = ParsedFile(
         path="nested",
         root=Block(
-            items=[Assignment("a", "=", Block(items=[Assignment("b", "=", _LookalikeBlock())]))]
+            items=[
+                Assignment(
+                    "a", "=", Block(items=[Assignment("b", "=", cast("Block", _LookalikeBlock()))])
+                )
+            ]
         ),
     )
     assert not cache._same_identity(nested)

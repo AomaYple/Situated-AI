@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 
@@ -38,6 +39,25 @@ def test_两次相同引擎错误停止同场景(tmp_path):
         ledger.finish(
             run_id,
             {"ok": False, "log_findings": {"errors": {"Script system error!": 1}}},
+            report_sha256="b" * 64,
+        )
+    with pytest.raises(ValueError, match="错误重复"):
+        reserve(ledger, request(pair=3), tmp_path / "new")
+
+
+def test_两次未枚举的模组错误也停止同场景(tmp_path):
+    ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
+    for pair in (1, 2):
+        run_id = reserve(ledger, request(pair=pair), tmp_path / str(pair))
+        ledger.finish(
+            run_id,
+            {
+                "ok": False,
+                "log_findings": {
+                    "errors": {},
+                    "mod_errors": [f"[12:00:0{pair}][script] Invalid custom invocation sitai_rule"],
+                },
+            },
             report_sha256="b" * 64,
         )
     with pytest.raises(ValueError, match="错误重复"):
@@ -104,6 +124,182 @@ def test_跨配对仍冻结运行条件和每臂源码(tmp_path, field):
 def test_请求不能扩大本轮硬预算(limits):
     with pytest.raises(ValueError, match="预算"):
         RunRequest(plan_id="plan", scene_id="scene", arm="control", **limits).limits()
+
+
+def published_failure(ledger, run_id, directory):
+    from pdx import game_run
+
+    row = next(row for row in ledger.runs("test-plan") if row["id"] == run_id)
+    logs = directory / "logs"
+    logs.mkdir(parents=True)
+    (logs / "debug.log").write_text("Mounted Data: C:/base\n", encoding="utf-8")
+    (logs / "error.log").write_text("Assertion failed: dead formation\n", encoding="utf-8")
+    report = {
+        "ok": False,
+        "failure": "engine",
+        "session_requested": True,
+        "logs_isolated": True,
+        "evidence": str(directory.resolve()),
+        "game_version": {"caligula_branch": "release/1.14.5"},
+        "loaded_save": {"sha256": "a" * 64},
+        "mount_allowlist": ["C:/base"],
+        "log_hashes": game_run.hashes(logs),
+        "experiment": {
+            "run_id": run_id,
+            "plan_id": row["plan"],
+            "scene_id": row["scene"],
+            "arm": row["arm"],
+            "pair": row["pair"],
+            "manifest_sha256": ledger.manifest_sha256(run_id),
+        },
+    }
+    path = directory / "report.json"
+    game_run.write_json(path, report)
+    return path
+
+
+def test_发布报告后中断仍恢复错误停止事实但不拼接完成(tmp_path):
+    ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
+    first = reserve(ledger, request(), tmp_path / "one")
+    path = published_failure(ledger, first, tmp_path / "one")
+    ledger.interrupt_pending()
+    row = ledger.runs("test-plan")[0]
+    assert row["status"] == "interrupted"
+    assert json.loads(row["errors"]) == ["Assertion failed"]
+    assert row["report_sha"]
+    assert path.exists()
+    second = reserve(ledger, request(pair=2), tmp_path / "two")
+    ledger.finish(
+        second,
+        {"ok": False, "log_findings": {"errors": {"Assertion failed": 1}}},
+        report_sha256="b" * 64,
+    )
+    with pytest.raises(ValueError, match="错误重复"):
+        reserve(ledger, request(pair=3), tmp_path / "three")
+
+
+@pytest.mark.parametrize("problem", [None, "engine", "mod", "malformed", "mounted"])
+def test_启动前结构化零错误报告可恢复而异常报告保持阻断(tmp_path, problem):
+    from pdx import game_run
+
+    ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
+    run_id = reserve(ledger, request(), tmp_path / "one")
+    path = published_failure(ledger, run_id, tmp_path / "one")
+    logs = path.parent / "logs"
+    for logfile in logs.glob("*.log"):
+        logfile.unlink()
+    report = json.loads(path.read_text(encoding="utf-8"))
+    report.update(
+        session_requested=False,
+        logs_isolated=False,
+        log_hashes={},
+        log_findings=game_run.log_findings(logs, [], expected_mounts=["C:/base"]),
+    )
+    findings = report["log_findings"]
+    assert findings
+    assert findings["missing_mounts"]
+    if problem == "engine":
+        findings["errors"]["Assertion failed"] = 1
+    elif problem == "mod":
+        findings["mod_errors"] = ["invalid sitai_rule"]
+    elif problem == "malformed":
+        findings["errors"]["Assertion failed"] = "0"
+    elif problem == "mounted":
+        findings["mounted"] = ["Mounted Data: C:/base"]
+    game_run.write_json(path, report)
+    restarted = ExperimentLedger(ledger.path)
+    if problem is not None:
+        with pytest.raises(ValueError, match="日志指纹"):
+            restarted.interrupt_pending()
+        assert restarted.runs("test-plan")[0]["status"] == "reserved"
+    else:
+        restarted.interrupt_pending()
+        row = restarted.runs("test-plan")[0]
+        assert row["status"] == "interrupted"
+        assert json.loads(row["errors"]) == []
+        assert row["report_sha"]
+        assert restarted.used_arms("test-plan", "scene-a") == 1
+        reserve(restarted, request(), tmp_path / "new-attempt")
+
+
+@pytest.mark.parametrize("field", ["run_id", "manifest_sha256"])
+def test_中断报告身份不符阻止下一局且不消除原记录(tmp_path, field):
+    ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
+    run_id = reserve(ledger, request(), tmp_path / "one")
+    path = published_failure(ledger, run_id, tmp_path / "one")
+    report = json.loads(path.read_text(encoding="utf-8"))
+    report["experiment"][field] = "changed"
+    path.write_text(json.dumps(report), encoding="utf-8")
+    with pytest.raises(ValueError, match="身份"):
+        ledger.interrupt_pending()
+    assert ledger.runs("test-plan")[0]["status"] == "reserved"
+
+
+def test_历史失败导入幂等且消耗预算和错误次数(tmp_path):
+    old = ExperimentLedger(tmp_path / "old.sqlite3")
+    run_id = reserve(old, request(), tmp_path / "prior")
+    path = published_failure(old, run_id, tmp_path / "prior")
+    ledger = ExperimentLedger(tmp_path / "new.sqlite3")
+    for _ in range(2):
+        ledger.import_prior_failure(
+            request(),
+            path,
+            checkpoint_sha256="a" * 64,
+            game_version={"caligula_branch": "release/1.14.5"},
+        )
+    assert ledger.used_arms("test-plan", "scene-a") == 1
+    second = reserve(ledger, request(pair=2), tmp_path / "two")
+    ledger.finish(
+        second,
+        {"ok": False, "log_findings": {"errors": {"Assertion failed": 1}}},
+        report_sha256="b" * 64,
+    )
+    with pytest.raises(ValueError, match="错误重复"):
+        reserve(ledger, request(pair=3), tmp_path / "three")
+
+
+@pytest.mark.parametrize("change", ["checkpoint", "version", "log"])
+def test_历史失败输入或日志不符不得导入(tmp_path, change):
+    old = ExperimentLedger(tmp_path / "old.sqlite3")
+    run_id = reserve(old, request(), tmp_path / "prior")
+    path = published_failure(old, run_id, tmp_path / "prior")
+    if change == "log":
+        (path.parent / "logs/error.log").write_bytes(b"tampered")
+    ledger = ExperimentLedger(tmp_path / "new.sqlite3")
+    with pytest.raises(ValueError):
+        ledger.import_prior_failure(
+            request(),
+            path,
+            checkpoint_sha256="b" * 64 if change == "checkpoint" else "a" * 64,
+            game_version={
+                "caligula_branch": "changed" if change == "version" else "release/1.14.5"
+            },
+        )
+    assert ledger.used_arms("test-plan", "scene-a") == 0
+
+
+def test_历史导入不能绕过场景上限(tmp_path):
+    old = ExperimentLedger(tmp_path / "old.sqlite3")
+    run_id = reserve(old, request(), tmp_path / "prior")
+    path = published_failure(old, run_id, tmp_path / "prior")
+    ledger = ExperimentLedger(tmp_path / "new.sqlite3")
+    for scene in ("one", "two", "three"):
+        if scene == "three":
+            with pytest.raises(ValueError, match="场景预算"):
+                ledger.import_prior_failure(
+                    request(scene),
+                    path,
+                    checkpoint_sha256="a" * 64,
+                    game_version={"caligula_branch": "release/1.14.5"},
+                )
+        else:
+            ledger.import_prior_failure(
+                request(scene),
+                path,
+                checkpoint_sha256="a" * 64,
+                game_version={"caligula_branch": "release/1.14.5"},
+            )
+    assert ledger.used_arms("test-plan", "three") == 0
 
 
 @pytest.mark.parametrize("edge", ["before", "after"])

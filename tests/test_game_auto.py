@@ -1204,7 +1204,7 @@ def test_退出状态未知的子进程不能视为已经退出(monkeypatch, den
             if denied_at == "constructor":
                 raise ga.psutil.AccessDenied(pid)
             if denied_at == "missing_method":
-                self.is_running = None
+                monkeypatch.setattr(self, "is_running", None)
 
         def is_running(self):
             raise ga.psutil.AccessDenied(222)
@@ -1218,7 +1218,7 @@ def test_父进程退出后重试仍核验前次存活子进程但不据旧PID�
     monkeypatch.setattr(ga, "_OWNED_GAME_META", {})
     monkeypatch.setattr(ga, "LAST_KILL_ALIVE", [])
     requested = []
-    waited = []
+    waited: list[list[int]] = []
 
     class Process:
         def __init__(self, pid):

@@ -78,19 +78,20 @@ def test_清零后恢复运行先读tick而不是盲按空格(monkeypatch: pytes
         lambda hwnd, x, y, **_kwargs: calls.append(("click", hwnd, x, y)),
     )
     monkeypatch.setattr(module.ga, "speed_widget_xy", lambda _hwnd: (17, 19))
-    monkeypatch.setattr(
-        module.ga,
-        "_step_unpause",
-        lambda hwnd, **kwargs: (
-            calls.append(("unpause", hwnd, kwargs)) or ("已确认运行", False, None)
-        ),
-    )
+
+    def unpause(hwnd, **kwargs):
+        calls.append(("unpause", hwnd, kwargs))
+        return "已确认运行", False, None
+
+    monkeypatch.setattr(module.ga, "_step_unpause", unpause)
 
     assert module.resume_after_clear(7, speed_xy=(11, 13)) == "已确认运行"
     assert calls[0] == ("click", 7, 11, 13)
     assert calls[1][0] == "unpause"
-    assert calls[1][2]["key_timeout"] == 30.0
-    assert calls[1][2]["run_timeout"] == 30.0
+    options = calls[1][2]
+    assert isinstance(options, dict)
+    assert options["key_timeout"] == 30.0
+    assert options["run_timeout"] == 30.0
 
     calls.clear()
     assert module.resume_after_clear(8, speed_xy=None) == "已确认运行"
@@ -600,11 +601,12 @@ def test_dump_ticktask文件一直缺失时返回最大重试次数(
     monkeypatch.setattr(
         module.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds)
     )
-    monkeypatch.setattr(
-        module.ga,
-        "submit_console_command",
-        lambda *_args, **_kwargs: calls.append("dump") or True,
-    )
+
+    def dump(*_args, **_kwargs):
+        calls.append("dump")
+        return True
+
+    monkeypatch.setattr(module.ga, "submit_console_command", dump)
     assert module.dump_ticktask_csv(1, target, max_attempts=2, attempt_timeout=1.0) == 2
     assert calls == ["dump", "dump"]
 

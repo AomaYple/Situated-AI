@@ -17,6 +17,21 @@ from pdx.parser import parse_text
 pytestmark = pytest.mark.unit
 
 
+def test_生成会修复编码和同长度正文漂移(tmp_path):
+    files = {"common/a.txt": "同样内容\n"}
+    paths = decisions.write(tmp_path, files)
+    path = paths[0]
+    assert decisions.write(tmp_path, files) == paths
+    for raw in (
+        b"\xef\xbb\xbf" + files["common/a.txt"].encode(),
+        "同样内容\r\n".encode(),
+        "其他内容\n".encode(),
+    ):
+        path.write_bytes(raw)
+        decisions.write(tmp_path, files)
+        assert path.read_bytes() == files["common/a.txt"].encode()
+
+
 @pytest.fixture
 def policy():
     return decisions.load()

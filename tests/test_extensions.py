@@ -229,7 +229,8 @@ def test_法律资格按预注册国家样本法律逐格验收(tmp_path, fault)
         "SITAI REFORM;RUS;LEGAL_BLOCKED;law_census_voting=no;sample-1",
         "SITAI REFORM;RUS;LEGAL_ENACTED;law_census_voting=no;sample-1",
     ]
-    tags, laws = ("RUS",), ("law_autocracy", "law_census_voting")
+    tags: tuple[str, ...] = ("RUS",)
+    laws: tuple[str, ...] = ("law_autocracy", "law_census_voting")
     if fault == "expected_missing":
         laws = ()
     elif fault == "country_missing":
@@ -370,11 +371,26 @@ def test_全局政治正控明确隔离且不强制立法(tmp_path, monkeypatch)
     monkeypatch.setattr(
         sys,
         "argv",
-        ["decision_stability.py", "--arm", "reform-global-positive-control", "--months", "12"],
+        [
+            "decision_stability.py",
+            "--arm",
+            "reform-global-positive-control",
+            "--months",
+            "6",
+            "--save",
+            str(tmp_path / "checkpoint.v3"),
+            "--experiment-plan",
+            "isolated-positive-control",
+        ],
     )
     inspected = []
 
     def run(sources, **options):
+        experiment = options["experiment"]
+        assert experiment.plan_id == "isolated-positive-control"
+        assert experiment.purpose == "instrument"
+        assert experiment.max_months == 6
+        assert options["load_save"] == tmp_path / "checkpoint.v3"
         assert "zz_probe_decision_lifecycle" in sources
         candidate = sources["sitai_decision_candidate"]
         strategy = (candidate / "common/ai_strategies/00_default_strategy.txt").read_text(

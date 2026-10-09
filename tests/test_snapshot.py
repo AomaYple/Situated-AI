@@ -19,6 +19,33 @@ import pytest
 from pdx import config, snapshot
 from pdx.input_profile import InputAction, ProfileCheck
 
+
+def test_精简本地化与完整键列表指纹一致(tmp_path):
+    import hashlib
+
+    localization = tmp_path / "localization"
+    localization.mkdir()
+    (localization / "mixed.yml").write_bytes(
+        b"\xef\xbb\xbf"
+        + "# comment\n unknown: value\nl_english:\n a: x\n a: duplicate\nl_simp_chinese:\n 中文键: x\n".encode()
+    )
+    (localization / "more.yaml").write_text(
+        "l_english:\n" + "\n".join(f" key{i:05}: x" for i in range(2200)), encoding="utf-8"
+    )
+    keys = snapshot._localization_keys(tmp_path)
+    assert keys["?"] == ["unknown"]
+    assert keys["l_simp_chinese"] == ["中文键"]
+    expected = {
+        language: [
+            f"{len(values)} 键",
+            "sha256:" + hashlib.sha256("\n".join(values).encode()).hexdigest(),
+        ]
+        for language, values in keys.items()
+    }
+    assert snapshot._localization_digest(tmp_path) == expected
+    assert snapshot._localization_digest(tmp_path / "missing") == {}
+
+
 #: **不参与「列表已排序」判定**的域。
 #:
 #: ``doc_tables`` 存的是**生成表的数据行**（`文档名::表名 → [行文本, …]`）：
@@ -117,6 +144,7 @@ class TestSnapshotShape(unittest.TestCase):
     def setUpClass(cls):
         if not (config.GAME / "common").is_dir():
             raise unittest.SkipTest("游戏目录不可用")
+
         cls.snap = snapshot.build()
 
     def test_has_all_sections(self):
@@ -169,10 +197,17 @@ class TestSnapshotShape(unittest.TestCase):
 class TestDeterminism(unittest.TestCase):
     """确定性是 diff 可用的前提。"""
 
+    first: snapshot.Snapshot
+
     @classmethod
     def setUpClass(cls):
         if not (config.GAME / "common").is_dir():
             raise unittest.SkipTest("游戏目录不可用")
+        cls.first = snapshot.build()
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.first
 
     def test_two_builds_identical(self):
         """两次 `build()` 必须逐字节一致 —— 否则 diff 不可用。
@@ -183,7 +218,7 @@ class TestDeterminism(unittest.TestCase):
         别的 xdist worker 正在读同一棵游戏树。修不了别人的读，但可以让**下一次**
         不必再从零猜 —— 失败时把"第一个不同的点"打出来。
         """
-        a = snapshot.build()
+        a = self.first
         b = snapshot.build()
         da = json.dumps(a.to_dict(), ensure_ascii=False, sort_keys=True)
         db = json.dumps(b.to_dict(), ensure_ascii=False, sort_keys=True)
@@ -195,7 +230,7 @@ class TestDeterminism(unittest.TestCase):
             )
 
     def test_lists_are_sorted(self):
-        s = snapshot.build()
+        s = self.first
         for sec, body in s.sections.items():
             if sec in _ORDERED_SECTIONS:
                 continue
@@ -205,7 +240,7 @@ class TestDeterminism(unittest.TestCase):
                     self.assertEqual(len(names), len(set(names)), "列表有重复")
 
     def test_serialization_roundtrip(self):
-        s = snapshot.build()
+        s = self.first
         d = s.to_dict()
         text = json.dumps(d, ensure_ascii=False, sort_keys=True)
         back = json.loads(text)
@@ -321,12 +356,18 @@ class TestCompactSnapshot(unittest.TestCase):
     """精简快照：体积小到可入库，但必须仍能回答「字段增删」这个核心问题。"""
 
     snap: snapshot.Snapshot
+    full: snapshot.Snapshot
 
     @classmethod
     def setUpClass(cls):
         if not (config.GAME / "common").is_dir():
             raise unittest.SkipTest("游戏目录不可用")
         cls.snap = snapshot.build(compact=True)
+        cls.full = snapshot.build()
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.snap, cls.full
 
     def test_用指纹域替代键清单(self):
         """本地化只留「键数 + sha256」，不带 14 万条键名。"""
@@ -357,7 +398,7 @@ class TestCompactSnapshot(unittest.TestCase):
 
     def test_与完整快照的结构域一致(self):
         """精简只应影响本地化那一个域 —— 其余域必须逐字节等同。"""
-        full = snapshot.build()
+        full = self.full
         for sec in ("common_entries", "fields", "defines", "dlc", "config"):
             with self.subTest(section=sec):
                 self.assertEqual(self.snap.sections[sec], full.sections[sec])
@@ -373,7 +414,7 @@ class TestCompactSnapshot(unittest.TestCase):
         """`精简` 标记要落进文件 —— 否则 diff 时无法判断两边是否同口径。"""
         self.assertTrue(self.snap.compact)
         self.assertTrue(self.snap.to_dict()["精简"])
-        self.assertFalse(snapshot.build().to_dict()["精简"])
+        self.assertFalse(self.full.to_dict()["精简"])
 
     def test_往返保住精简标记(self):
         """``load(write(x))`` 必须等价 —— 曾经 ``load`` 会丢掉这个标记。"""
