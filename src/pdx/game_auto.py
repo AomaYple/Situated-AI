@@ -1183,29 +1183,35 @@ def _wait_for_pids(pids: Sequence[int], *, timeout: float = 5.0) -> list[int]:
     """等待一组已终止的 PID 真正退出，返回仍存活的 PID。
 
     清理不能把 kill 请求当作进程已经退出：Windows 日志句柄在这段窗口
-    里仍可能被占用，紧接着归档会产生假阴性。测试桩若没有 is_running 能力
-    会被视为“不提供确认”，不阻断原有的纯逻辑测试。
+    里仍可能被占用，紧接着归档会产生假阴性。状态读取权限不足或缺少
+    is_running 能力时保留为未确认退出，不能据此删除实验资源。
     """
     remaining = {pid for pid in pids if isinstance(pid, int) and pid > 0}
     if not remaining:
         return []
     deadline = time.monotonic() + max(0.0, timeout)
     while remaining:
+        uninspectable = False
         for pid in tuple(remaining):
             try:
                 process = psutil.Process(pid)
             except psutil.NoSuchProcess:
                 remaining.discard(pid)
                 continue
+            except psutil.AccessDenied:
+                continue
             is_running = getattr(process, "is_running", None)
             if not callable(is_running):
-                return []
+                uninspectable = True
+                continue
             try:
                 if not is_running():
                     remaining.discard(pid)
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
+            except psutil.NoSuchProcess:
                 remaining.discard(pid)
-        if not remaining or time.monotonic() >= deadline:
+            except psutil.AccessDenied:
+                pass
+        if uninspectable or not remaining or time.monotonic() >= deadline:
             break
         time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
     return sorted(remaining)
@@ -2347,8 +2353,13 @@ def quarantine_logs(dest: Path | None = None, *, stamp: str | None = None) -> li
 
 def kill_owned_game() -> list[int]:
     """只终止本模块本次启动的游戏进程及其子进程，并确认它们已退出。"""
+    # 父进程可能先退出，重试时无法再枚举仍活着的子进程。历史 PID 只用于核验，
+    # 不能据此发 kill；PID 重用最多保守阻止恢复，避免误杀无关进程。
+    observed: set[int] = set(LAST_KILL_ALIVE)
     LAST_KILL_ALIVE.clear()
     requested: list[int] = []
+    owned_groups: dict[int, set[int]] = {}
+    protected_roots: set[int] = set()
     roots = sorted(_OWNED_GAME_PIDS)
     for root_pid in roots:
         pids = [root_pid]
@@ -2359,6 +2370,7 @@ def kill_owned_game() -> list[int]:
             if expected is not None and not _owned_identity_matches(process, expected):
                 print(f"跳过 PID {root_pid}：进程身份已变化，拒绝误杀", file=sys.stderr)
                 continue
+            observed.add(root_pid)
             children = getattr(process, "children", None)
             if callable(children):
                 pids.extend(child.pid for child in children(recursive=True))
@@ -2366,20 +2378,28 @@ def kill_owned_game() -> list[int]:
             pass
         except psutil.AccessDenied:
             keep_owned = True
+            observed.add(root_pid)
             print(f"无法读取本会话游戏进程 {root_pid}：权限不足", file=sys.stderr)
         for pid in reversed(dict.fromkeys(pids)):
+            observed.add(pid)
             try:
                 psutil.Process(pid).kill()
             except psutil.NoSuchProcess:
                 continue
             except psutil.AccessDenied:
+                keep_owned = True
                 print(f"无法终止本会话游戏进程 {pid}：权限不足", file=sys.stderr)
             else:
                 requested.append(pid)
-        if not keep_owned:
+        owned_groups[root_pid] = set(pids)
+        if keep_owned:
+            protected_roots.add(root_pid)
+    # 权限不足的 PID 也必须核实；只等待 kill 成功的 PID 会把拒绝终止误报为退出。
+    alive = _wait_for_pids(sorted(observed))
+    for root_pid, group in owned_groups.items():
+        if not group.intersection(alive) and root_pid not in protected_roots:
             _OWNED_GAME_PIDS.discard(root_pid)
             _OWNED_GAME_META.pop(root_pid, None)
-    alive = _wait_for_pids(requested)
     LAST_KILL_ALIVE.extend(alive)
     if alive:
         print(f"本会话游戏进程在清理等待后仍存活：{alive}", file=sys.stderr)

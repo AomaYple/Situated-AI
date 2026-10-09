@@ -79,6 +79,7 @@ import time
 from contextlib import suppress
 from dataclasses import dataclass, field
 from functools import partial
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -116,7 +117,7 @@ _TARGET = ab_probe.load_target()
 if _TARGET is None:
     raise RuntimeError("未发现可用于性能对照的 mod 目标")
 OURS_DST = MODS_DIR / _TARGET.dir_name
-OUT_DIR = Path(__file__).resolve().parents[1] / "out" / "perf"
+OUT_DIR = config.OUT / "perf"
 
 #: 三条臂的标签（= `run_once` 的 `label` = CSV 文件名前缀 = 报告里的 label）。
 #: **前两条是默认臂**；第三条（B27 的 `tempo-only`）要显式开，见 :func:`arm_labels`。
@@ -185,10 +186,15 @@ class PerfCleanup:
     killer: Callable[[], list[int]]
     restore_dir: Path | None = None
     path_backups: dict[Path, Path] = field(default_factory=dict)
+    claimed_paths: set[Path] = field(default_factory=set)
+    removed_paths: set[Path] = field(default_factory=set)
+    restored_paths: set[Path] = field(default_factory=set)
+    content_restored: bool = False
     cleaned: bool = False
     running: bool = False
     deferred_signals: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    error_history: list[str] = field(default_factory=list)
     archived_logs: list[str] = field(default_factory=list)
     reason: str = ""
 
@@ -198,10 +204,12 @@ class PerfCleanup:
             self.restore_dir = Path(tempfile.mkdtemp(prefix="sitai-perf-restore-"))
         for index, path in enumerate(self.generated_paths):
             if not (path.exists() or path.is_symlink()):
+                self.claimed_paths.add(path)
                 continue
             backup = self.restore_dir / f"{index}-{path.name}"
             shutil.move(str(path), str(backup))
             self.path_backups[path] = backup
+            self.claimed_paths.add(path)
 
     def _step(self, label: str, action: Callable[[], object]) -> object | None:
         try:
@@ -212,6 +220,8 @@ class PerfCleanup:
 
     def _restore_content(self) -> None:
         """原子替换 content_load，避免恢复过程中留下半个 JSON。"""
+        if self.content_restored:
+            return
         if not self.backup_path.is_file():
             raise FileNotFoundError(f"备份不存在：{self.backup_path}")
         fd, temp_name = tempfile.mkstemp(
@@ -223,6 +233,7 @@ class PerfCleanup:
         try:
             shutil.copyfile(self.backup_path, temp_path)
             temp_path.replace(self.content_path)
+            self.content_restored = True
         finally:
             temp_path.unlink(missing_ok=True)
 
@@ -239,31 +250,53 @@ class PerfCleanup:
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(backup), str(path))
 
+    def _clean_generated_path(self, path: Path) -> None:
+        """清理一个产物路径并最多恢复一次原件，支持失败后安全重试。"""
+        if path not in self.claimed_paths:
+            return
+        if path in self.restored_paths or path in self.removed_paths:
+            return
+        backup = self.path_backups.get(path)
+        if backup is None:
+            self._remove_path(path)
+            self.removed_paths.add(path)
+            return
+        # 备份缺失时绝不能先删目标：它可能已在上次 cleanup 调用中成功恢复。
+        if not (backup.exists() or backup.is_symlink()):
+            raise FileNotFoundError(f"原件备份不存在且恢复状态未知：{backup}")
+        self._remove_path(path)
+        self._restore_path(backup, path)
+        self.restored_paths.add(path)
+
     def run(self, *, reason: str) -> tuple[str, ...]:
         """执行一次幂等收尾，并返回所有收尾错误。"""
         if self.cleaned or self.running:
             return tuple(self.errors)
         self.running = True
         self.reason = reason
+        if self.errors:
+            self.error_history.extend(self.errors)
+            self.errors.clear()
         try:
             killed = self._step("终止本次游戏", self.killer)
+            if killed is None:
+                self.errors.append("无法确认游戏已退出；保留原配置、目录备份和实验资源")
+                return tuple(self.errors)
+            try:
+                remaining = ga._process_pids()
+            except Exception as exc:
+                self.errors.append(f"无法独立核实游戏退出；保留原件与实验资源：{exc}")
+                return tuple(self.errors)
             alive = getattr(ga, "LAST_KILL_ALIVE", ())
-            if alive:
-                self.errors.append(f"游戏进程仍存活：{list(alive)}")
+            if alive or remaining:
+                self.errors.append(f"游戏进程仍存活：{list(alive or remaining)}")
                 self.errors.append("原配置与目录备份已保留；不在游戏仍运行时恢复或删除实验资源")
                 return tuple(self.errors)
-            if killed is None and not self.errors:
-                self.errors.append("终止本次游戏：未返回清理结果")
             self._step("恢复 content_load.json", self._restore_content)
             for path in self.generated_paths:
                 self._step(
-                    f"删除运行产物 {path.name}",
-                    partial(self._remove_path, path),
-                )
-            for path, backup in self.path_backups.items():
-                self._step(
-                    f"恢复原有目录 {path.name}",
-                    partial(self._restore_path, backup, path),
+                    f"清理并恢复路径 {path.name}",
+                    partial(self._clean_generated_path, path),
                 )
             restore_dir = self.restore_dir
             if restore_dir is not None and restore_dir.exists() and not self.errors:
@@ -294,8 +327,16 @@ class PerfCleanup:
                         "cleaned": self.cleaned,
                         "deferred_signals": list(self.deferred_signals),
                         "errors": list(self.errors),
+                        "error_history": list(self.error_history),
                         "archived_logs": list(self.archived_logs),
-                        "restored_paths": [str(path) for path in self.path_backups],
+                        "restored_paths": [str(path) for path in sorted(self.restored_paths)],
+                        "removed_paths": [str(path) for path in sorted(self.removed_paths)],
+                        "pending_paths": [
+                            str(path)
+                            for path in sorted(
+                                self.claimed_paths - self.restored_paths - self.removed_paths
+                            )
+                        ],
                     },
                     ensure_ascii=False,
                     indent=2,
@@ -716,7 +757,7 @@ def scan_game_errors(directory: Path | None = None) -> ErrorScan:
 
 @dataclass(frozen=True, slots=True)
 class WindowControl:
-    """两臂是否实际跑过同一个游戏日期窗口。"""
+    """两臂是否实际跑过同一个游戏日历日期窗口。"""
 
     ok: bool
     pairs: int
@@ -725,7 +766,7 @@ class WindowControl:
 
     def describe(self) -> str:
         if self.ok:
-            return f"✅ 窗口可比：{self.pairs} 对臂的起止日期逐字相等"
+            return f"✅ 窗口可比：{self.pairs} 对臂的起止日历日期相等（忽略日内 tick）"
         return "❌ 窗口不可比：" + "；".join(self.problems)
 
 
@@ -739,6 +780,75 @@ def _window_date(advanced: object, key: str) -> str | None:
     if not value or value.startswith("<"):
         return None
     return value
+
+
+def _calendar_date(value: str | None) -> str | None:
+    """把 ``1836.4.25`` 或 ``1836.4.25.12`` 规范化为日历日期。
+
+    性能臂的采样时刻可能落在同一个游戏日的不同 sub-day tick；窗口门禁
+    只承诺同一日历起止日，因此保留原始 tick 供审计，同时用前三段作比较。
+    """
+    if value is None:
+        return None
+    parts = value.split(".")
+    if len(parts) < 3:
+        return None
+    try:
+        year, month, day = (int(parts[0]), int(parts[1]), int(parts[2]))
+    except ValueError:
+        return None
+    if year < 1 or not 1 <= month <= 12 or not 1 <= day <= 31:
+        return None
+    return f"{year}.{month}.{day}"
+
+
+def _calendar_key(value: str | None) -> tuple[int, int, int] | None:
+    normalized = _calendar_date(value)
+    if normalized is None:
+        return None
+    year, month, day = (int(part) for part in normalized.split("."))
+    return year, month, day
+
+
+def _shift_to_month_start(value: str, months: int) -> str:
+    """将游戏日期平移若干月并对齐到月初，供多臂实验预注册共同窗口。"""
+    parts = value.split(".")
+    if len(parts) < 3:
+        raise ValueError(f"无效游戏日期：{value!r}")
+    try:
+        year, month = int(parts[0]), int(parts[1])
+    except ValueError as exc:
+        raise ValueError(f"无效游戏日期：{value!r}") from exc
+    if year < 1 or not 1 <= month <= 12:
+        raise ValueError(f"无效游戏日期：{value!r}")
+    absolute_month = year * 12 + month - 1 + months
+    shifted_year, shifted_month0 = divmod(absolute_month, 12)
+    return f"{shifted_year}.{shifted_month0 + 1}.1"
+
+
+def _wait_for_calendar_date(hwnd: int, target: str, *, timeout: float = 180.0) -> str:
+    """等到共同窗口的日历边界；错过目标日就失败，避免暗中改变实验窗口。"""
+    target_day = _calendar_date(target)
+    if target_day is None:
+        raise ValueError(f"窗口日期无效：{target!r}")
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not ga._live_window(hwnd):
+            raise ga.GameAutoError("等待共同性能窗口时游戏窗口消失")
+        tick = ga.tick_mark().tick
+        current_day = _calendar_date(tick)
+        if current_day == target_day:
+            return tick
+        if (
+            _calendar_key(current_day) is not None
+            and _calendar_key(target_day) is not None
+            and _calendar_key(current_day) > _calendar_key(target_day)
+        ):
+            raise ga.GameAutoError(
+                f"共同性能窗口边界已错过：目标 {target_day}，当前 {current_day}（{tick}）"
+            )
+        time.sleep(0.05)
+    raise ga.GameAutoError(f"等待共同性能窗口边界超时：{target_day}")
 
 
 def window_control_verdict(
@@ -797,11 +907,30 @@ def window_control_verdict(
                 missing.append(f"{label}.from")
             if right_to is None:
                 missing.append(f"{label}.to")
+            left_from_day = _calendar_date(left_from)
+            right_from_day = _calendar_date(right_from)
+            left_to_day = _calendar_date(left_to)
+            right_to_day = _calendar_date(right_to)
+            invalid_dates: list[str] = []
+            for date_label, date_value in (
+                (f"{VANILLA_LABEL}.from", left_from_day),
+                (f"{label}.from", right_from_day),
+                (f"{VANILLA_LABEL}.to", left_to_day),
+                (f"{label}.to", right_to_day),
+            ):
+                if date_value is None and date_label not in missing:
+                    invalid_dates.append(date_label)
+            if invalid_dates:
+                missing.extend(f"{name}（格式无效）" for name in invalid_dates)
             comparison: dict[str, object] = {
                 "index": key,
                 "from": {VANILLA_LABEL: left_from, label: right_from},
                 "to": {VANILLA_LABEL: left_to, label: right_to},
-                "comparable": not missing and left_from == right_from and left_to == right_to,
+                "calendar_from": {VANILLA_LABEL: left_from_day, label: right_from_day},
+                "calendar_to": {VANILLA_LABEL: left_to_day, label: right_to_day},
+                "comparable": not missing
+                and left_from_day == right_from_day
+                and left_to_day == right_to_day,
             }
             comparisons.append(comparison)
             if missing:
@@ -811,7 +940,7 @@ def window_control_verdict(
                 continue
             pairs += 1
             pair_counts[label] = pair_counts.get(label, 0) + 1
-            if left_from != right_from or left_to != right_to:
+            if left_from_day != right_from_day or left_to_day != right_to_day:
                 problems.append(
                     f"#{key}：{label} 与 {VANILLA_LABEL} 窗口不同："
                     f"{VANILLA_LABEL}={left_from}→{left_to}，{label}={right_from}→{right_to}"
@@ -913,6 +1042,7 @@ def _wait_months(
     timeout: float = 900.0,
     samples: list[dict[str, object]] | None = None,
     started: float | None = None,
+    end_date: str | None = None,
 ) -> dict[str, object]:
     """跑到游戏时间前进 months 个月，并在发现本 mod 报错时提前停止。"""
     start = ga.tick_mark()
@@ -921,11 +1051,21 @@ def _wait_months(
     last = start_day
     latest = scan_game_errors()
     deadline = time.monotonic() + timeout
+    last_sample = started if started is not None else time.monotonic()
+    last_health_check = time.monotonic()
+    if samples is not None and started is not None:
+        samples.append(_resource_sample(started))
     while time.monotonic() < deadline:
-        if samples is not None and started is not None:
+        now = time.monotonic()
+        if samples is not None and started is not None and now - last_sample >= 5.0:
             samples.append(_resource_sample(started))
-        latest = scan_game_errors()
+            last_sample = now
+        if now - last_health_check >= 5.0:
+            latest = scan_game_errors()
+            last_health_check = now
         if latest.errors:
+            if samples is not None and started is not None:
+                samples.append(_resource_sample(started))
             return _advanced_payload(
                 start.tick,
                 ga.tick_mark().tick,
@@ -944,8 +1084,23 @@ def _wait_months(
             )
         mark = ga.tick_mark()
         day = ga.tick_day(mark.tick)
-        if day is not None and start_day is not None and day - start_day >= target:
+        reached_target = (
+            _calendar_date(mark.tick) == end_date
+            if end_date is not None
+            else day is not None and start_day is not None and day - start_day >= target
+        )
+        missed_target = end_date is not None and _calendar_date(mark.tick) not in (None, end_date)
+        if end_date is not None and _calendar_date(mark.tick) is not None:
+            current_date = _calendar_date(mark.tick)
+            missed_target = (
+                _calendar_key(current_date) is not None
+                and _calendar_key(end_date) is not None
+                and _calendar_key(current_date) > _calendar_key(end_date)
+            )
+        if reached_target or missed_target:
             latest = scan_game_errors()
+            if samples is not None and started is not None:
+                samples.append(_resource_sample(started))
             if latest.errors:
                 return _advanced_payload(
                     start.tick,
@@ -960,9 +1115,10 @@ def _wait_months(
                 mark.tick,
                 round(day - start_day, 1),
                 latest,
+                **({"window_boundary_missed": True} if missed_target else {}),
             )
         last = day
-        time.sleep(5.0)
+        time.sleep(0.1 if end_date is not None else 5.0)
     end = ga.tick_mark()
     if samples is not None and started is not None:
         samples.append(_resource_sample(started))
@@ -978,6 +1134,26 @@ def _wait_months(
             timeout=True,
         )
     return _advanced_payload(start.tick, end.tick, last, latest, timeout=True)
+
+
+def dump_ticktask_csv(
+    hwnd: int,
+    csv_path: Path,
+    *,
+    max_attempts: int = 3,
+    attempt_timeout: float = 8.0,
+) -> int:
+    """提交 dump 并等待文件落盘；命令可安全重试，避免偶发丢失整组实机样本。"""
+    if max_attempts < 1:
+        raise ValueError("max_attempts 必须为正整数")
+    for attempt in range(1, max_attempts + 1):
+        ga.submit_console_command(hwnd, DUMP_COMMAND, force=True)
+        deadline = time.monotonic() + attempt_timeout
+        while time.monotonic() < deadline:
+            if csv_path.is_file() and csv_path.stat().st_size > 0:
+                return attempt
+            time.sleep(0.25)
+    return max_attempts
 
 
 def run_once(
@@ -1040,6 +1216,12 @@ def run_once(
         raise ga.GameAutoError("性能窗口未成功退到后台")
     ga.wait_until_running(before_background, timeout=30)
 
+    window_start = checkpoint.get("window_start") if checkpoint is not None else None
+    window_end = checkpoint.get("window_end") if checkpoint is not None else None
+    if isinstance(window_start, str) and isinstance(window_end, str):
+        aligned_tick = _wait_for_calendar_date(hwnd, window_start)
+        print(f"  已对齐共同窗口：{window_start}（原始 tick={aligned_tick}）")
+
     samples: list[dict[str, object]] = []
     performance_started = time.monotonic()
     advanced = _wait_months(
@@ -1047,19 +1229,25 @@ def run_once(
         months,
         samples=samples,
         started=performance_started,
+        end_date=window_end if isinstance(window_end, str) else None,
     )
+    measurement_wall_seconds = time.monotonic() - performance_started
     print(f"  跑完 {months} 个月：{advanced}")
 
     ga.ensure_foreground(hwnd, force=True)
-    dumped = ga.submit_console_command(hwnd, DUMP_COMMAND, force=True)
-    print(f"  {DUMP_COMMAND}：{'已提交' if dumped else '⚠️ 没提交成功'}")
+    dump_attempts = dump_ticktask_csv(hwnd, csv_path)
+    dumped = csv_path.is_file() and csv_path.stat().st_size > 0
+    print(
+        f"  {DUMP_COMMAND}：{'文件已写入' if dumped else '⚠️ 文件未生成'}（提交 {dump_attempts} 次）"
+    )
     with suppress(ga.CaptureFailedError):
         ga.save_shot(ga.screenshot(hwnd), f"perf-{label}-after-dump")
-    time.sleep(3.0)
     error_scan = scan_game_errors()
     invalid_reasons: list[str] = []
     if bool(advanced.get("stopped_early")):
         invalid_reasons.append(str(advanced.get("stop_reason") or "提前停止"))
+    if bool(advanced.get("window_boundary_missed")):
+        invalid_reasons.append("错过预注册的共同窗口结束日")
     if error_scan.errors:
         invalid_reasons.append("error.log 命中属于本 mod 的真实错误")
     if error_scan.readable is not True:
@@ -1093,7 +1281,7 @@ def run_once(
         "bytes": target.stat().st_size,
         "months": months,
         "advanced": advanced,
-        "console": {"clear": cleared, "dump": dumped},
+        "console": {"clear": cleared, "dump": dumped, "dump_attempts": dump_attempts},
         "session": session.as_dict(),
         "summary": summary,
         "mounted": mounted,
@@ -1102,6 +1290,8 @@ def run_once(
         "performance_usable": not invalid_reasons,
         "performance_invalid_reasons": invalid_reasons,
         "samples": samples,
+        "resource_cpu_basis": "process_lifetime",
+        "measurement_wall_seconds": round(measurement_wall_seconds, 4),
         "wall_seconds": round(time.monotonic() - performance_started, 4),
     }
     if checkpoint is not None:
@@ -1211,8 +1401,9 @@ def _sample_metrics(report: dict[str, object]) -> dict[str, float | int | None]:
     """从 ``game_run`` 报告聚合资源、墙钟和游戏日；缺样本保持 ``None``。
 
     资源监视器读数属于证据而不是计数器：布尔值、无穷值、负值和无法解析的
-    数据都不能参与均值或峰值，更不能悄悄当成零。CPU 采用运行器报告的累计
-    ``cpu_seconds`` 的最后一个有效读数，RSS 采用本局峰值。
+    数据都不能参与均值或峰值，更不能悄悄当成零。进程累计 CPU 采用窗口首尾差，
+    排除载入开销；旧运行器已经从窗口零点累计的读数保留其原口径。
+    墙钟优先使用模拟窗口计时，控制台导出和报告解析耗时单独保留。
     """
     samples = report.get("samples")
     rows = samples if isinstance(samples, list) else []
@@ -1228,7 +1419,21 @@ def _sample_metrics(report: dict[str, object]) -> dict[str, float | int | None]:
 
     rss = [value for row in valid if (value := finite(row.get("rss_mib"))) is not None]
     cpu = [value for row in valid if (value := finite(row.get("cpu_seconds"))) is not None]
-    wall = report.get("wall_seconds")
+    process_cpu = report.get("resource_cpu_basis") == "process_lifetime"
+    cpu_value = max(cpu) if cpu else None
+    if process_cpu:
+        endpoints = (
+            [finite(row.get("cpu_seconds")) for row in (valid[0], valid[-1])] if valid else []
+        )
+        cpu_value = (
+            cpu[-1] - cpu[0]
+            if len(cpu) >= 2
+            and len(valid) >= 2
+            and all(value is not None for value in endpoints)
+            and all(first <= second for first, second in pairwise(cpu))
+            else None
+        )
+    wall = report.get("measurement_wall_seconds", report.get("wall_seconds"))
     wall_value = finite(wall)
     advanced = report.get("advanced")
     days = finite(advanced.get("days")) if isinstance(advanced, dict) else None
@@ -1238,7 +1443,7 @@ def _sample_metrics(report: dict[str, object]) -> dict[str, float | int | None]:
         "rss_start_mib": round(rss[0], 4) if rss else None,
         "rss_end_mib": round(rss[-1], 4) if rss else None,
         "rss_change_mib": round(rss[-1] - rss[0], 4) if rss else None,
-        "cpu_seconds": round(max(cpu), 4) if cpu else None,
+        "cpu_seconds": round(cpu_value, 4) if cpu_value is not None else None,
         "wall_seconds": round(wall_value, 4) if wall_value is not None else None,
         "game_days": round(days, 4) if days is not None else None,
         "wall_seconds_per_game_day": round(per_day, 4) if per_day is not None else None,
@@ -1328,8 +1533,8 @@ def report_table(
     table["by_label"] = aggregate
     table["invalid_runs"] = invalid_runs
 
-    # 这部分是正式 M4 的结构与证据门禁。单局或缺指标的报告仍可作为探索性
-    # 读数写入 by_label，但不能被下面的 delta 误读为验收结论。
+    # 这里只检查采集结构和样本数量；M4 的后期、冻结行为候选与预注册预算
+    # 另行验收，不能把 m4_gate.ok 误读为完整 M4 或发布通过。
     gate_reasons: list[str] = []
     if required_pairs is not None:
         if required_pairs < 1:
@@ -1675,8 +1880,19 @@ def _main() -> int:
                 SAVE_DIR,
                 source_label=checkpoint_original,
             )
+            header = checkpoint.get("header")
+            game_date = header.get("game_date") if isinstance(header, dict) else None
+            if not isinstance(game_date, str):
+                raise ga.GameAutoError("固定检查点报告缺少有效 game_date，无法预注册共同窗口")
+            if not float(months).is_integer():
+                raise ga.GameAutoError("固定检查点的共同性能窗口要求 months 为整数")
+            window_start = _shift_to_month_start(game_date, 4)
+            window_end = _shift_to_month_start(window_start, int(months))
+            checkpoint["window_start"] = window_start
+            checkpoint["window_end"] = window_end
             print(
-                f"已载入固定观察者检查点：{checkpoint['name']}（sha256={str(checkpoint['sha256'])[:16]}…）"
+                f"已载入固定观察者检查点：{checkpoint['name']}（sha256={str(checkpoint['sha256'])[:16]}…）；"
+                f"预注册共同窗口 {window_start}→{window_end}"
             )
         deploy_tree(config.REPO / "mod", OURS_DST)
         print(f"已装本地 mod：{OURS_DST.name}（复制自 {config.REPO / 'mod'}）")
@@ -1775,7 +1991,8 @@ def _main() -> int:
         for reason in m4_gate.get("reasons", []):
             print(f"  {reason}")
 
-    # 窗口日期判据：同一序号的每个非 vanilla 臂都必须与 vanilla 逐字相等。
+    # 窗口日期判据：同一序号的每个非 vanilla 臂都必须与 vanilla 共享同一日历起止日；
+    # 原始 sub-day tick 仍完整保留在 comparisons 中供审计。
     window = window_control_verdict(reports, required_pairs=REQUIRED_M4_PAIRS)
     table["window_control"] = {
         "ok": window.ok,

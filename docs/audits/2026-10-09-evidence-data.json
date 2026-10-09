@@ -1,0 +1,798 @@
+{
+  "scope": "Offline reanalysis of 2026-10-09 evidence; raw bytes archived unchanged",
+  "performance": {
+    "archive": "tools/out/perf/archive/20261009-fixed-checkpoint",
+    "manifest": {
+      "compare.json": {
+        "bytes": 207952,
+        "sha256": "7e9d5571313226b71c8a4a2ee5d1bf2fb52ac74a75d1a5d13f29417bb81d5f19"
+      },
+      "_audit_evidence_20261009.py": {
+        "bytes": 4953,
+        "sha256": "f64d068c8a60352dea951d0d736f6bb04e21b9ccda32043e750de765ea263b09"
+      },
+      "vanilla-1.csv": {
+        "bytes": 3712579,
+        "sha256": "29a1a51f528db094c65f4604e2092f8f69be996e13cfa60fcc1205b3f16f07c1"
+      },
+      "ours-1.csv": {
+        "bytes": 3712579,
+        "sha256": "497ba1a8f236da0529e14cba1d95169431e25bb1931b122e834f1db4374a2976"
+      },
+      "tempo-1.csv": {
+        "bytes": 3706022,
+        "sha256": "eb717d0ca358a63e2e0be61acf67d5777af340f92ac33aaa154c99aab1d0bc26"
+      },
+      "vanilla-2.csv": {
+        "bytes": 3712601,
+        "sha256": "cd5dd32851fdf77c4bbca6eeda544d6394a117816e82b84724bcc4369a8a076d"
+      },
+      "ours-2.csv": {
+        "bytes": 3712610,
+        "sha256": "b4d9d6e4f717492f025ede7b3b1b5545a918c8da4f1b9acdc8eb41820b180a8c"
+      },
+      "tempo-2.csv": {
+        "bytes": 3712530,
+        "sha256": "c7e7e032dfb322a131c02403cd6bb472759e48b461ef0c098b90935c26b721a4"
+      },
+      "vanilla-3.csv": {
+        "bytes": 3712594,
+        "sha256": "d6628ed3a5dc3d998dfeafc520b793dbaabe741aa853e248e9e6da4714cd201e"
+      },
+      "ours-3.csv": {
+        "bytes": 3712591,
+        "sha256": "d1b73de88efc62e23f932f1c40000b81f5d4bce41f98f98ef80bcad96fd226dc"
+      },
+      "tempo-3.csv": {
+        "bytes": 3707644,
+        "sha256": "84c710a52c8973e492fedfcfa46aea8aff4a96c1314e3090361cbbe985a14236"
+      }
+    },
+    "by_label": {
+      "vanilla": {
+        "per_frame_mean": 21.2133,
+        "task_mean": 4.5624,
+        "rss_peak_mib": 7663.9336,
+        "rss_start_mib": 7210.0534,
+        "rss_end_mib": 7643.5586,
+        "rss_change_mib": 433.5052,
+        "cpu_seconds": 1669.1979,
+        "wall_seconds": 339.2608,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3096,
+        "resource_samples": 207,
+        "rss_samples": 207,
+        "cpu_samples": 207,
+        "runs": 3
+      },
+      "ours": {
+        "per_frame_mean": 21.2123,
+        "task_mean": 4.5496,
+        "rss_peak_mib": 7682.5768,
+        "rss_start_mib": 7261.8906,
+        "rss_end_mib": 7516.1042,
+        "rss_change_mib": 254.2136,
+        "cpu_seconds": 1660.151,
+        "wall_seconds": 339.3971,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3097,
+        "resource_samples": 207,
+        "rss_samples": 207,
+        "cpu_samples": 207,
+        "runs": 3
+      },
+      "tempo": {
+        "per_frame_mean": 20.6933,
+        "task_mean": 4.6188,
+        "rss_peak_mib": 7759.3945,
+        "rss_start_mib": 7221.9167,
+        "rss_end_mib": 7718.3177,
+        "rss_change_mib": 496.401,
+        "cpu_seconds": 1673.7187,
+        "wall_seconds": 338.4114,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3088,
+        "resource_samples": 207,
+        "rss_samples": 207,
+        "cpu_samples": 207,
+        "runs": 3
+      }
+    },
+    "delta": {
+      "per_frame_mean": -0.001,
+      "per_frame_mean_pct": -0.0,
+      "task_mean": -0.0128,
+      "task_mean_pct": -0.28,
+      "rss_peak_mib": 18.6432,
+      "rss_peak_mib_pct": 0.24,
+      "rss_start_mib": 51.8372,
+      "rss_start_mib_pct": 0.72,
+      "rss_end_mib": -127.4544,
+      "rss_end_mib_pct": -1.67,
+      "rss_change_mib": -179.2916,
+      "rss_change_mib_pct": -41.36,
+      "cpu_seconds": -9.0469,
+      "cpu_seconds_pct": -0.54,
+      "wall_seconds": 0.1363,
+      "wall_seconds_pct": 0.04,
+      "game_days": 0.0,
+      "game_days_pct": 0.0,
+      "wall_seconds_per_game_day": 0.0001,
+      "wall_seconds_per_game_day_pct": 0.03,
+      "from": "vanilla",
+      "to": "ours"
+    },
+    "delta_tempo": {
+      "per_frame_mean": -0.52,
+      "per_frame_mean_pct": -2.45,
+      "task_mean": 0.0564,
+      "task_mean_pct": 1.24,
+      "rss_peak_mib": 95.4609,
+      "rss_peak_mib_pct": 1.25,
+      "rss_start_mib": 11.8633,
+      "rss_start_mib_pct": 0.16,
+      "rss_end_mib": 74.7591,
+      "rss_end_mib_pct": 0.98,
+      "rss_change_mib": 62.8958,
+      "rss_change_mib_pct": 14.51,
+      "cpu_seconds": 4.5208,
+      "cpu_seconds_pct": 0.27,
+      "wall_seconds": -0.8494,
+      "wall_seconds_pct": -0.25,
+      "game_days": 0.0,
+      "game_days_pct": 0.0,
+      "wall_seconds_per_game_day": -0.0008,
+      "wall_seconds_per_game_day_pct": -0.26,
+      "from": "vanilla",
+      "to": "tempo"
+    },
+    "paired_runs": [
+      {
+        "label": "vanilla",
+        "index": 1,
+        "rss_peak_mib": 7686.418,
+        "rss_start_mib": 7252.4297,
+        "rss_end_mib": 7649.043,
+        "rss_change_mib": 396.6133,
+        "cpu_seconds": 1670.0469,
+        "wall_seconds": 338.5792,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.309,
+        "resource_samples": 69,
+        "rss_samples": 69,
+        "cpu_samples": 69
+      },
+      {
+        "label": "ours",
+        "index": 1,
+        "rss_peak_mib": 7737.3281,
+        "rss_start_mib": 7298.2773,
+        "rss_end_mib": 7728.0586,
+        "rss_change_mib": 429.7813,
+        "cpu_seconds": 1651.7656,
+        "wall_seconds": 339.6233,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3099,
+        "resource_samples": 69,
+        "rss_samples": 69,
+        "cpu_samples": 69
+      },
+      {
+        "label": "tempo",
+        "index": 1,
+        "rss_peak_mib": 7727.1836,
+        "rss_start_mib": 7257.4258,
+        "rss_end_mib": 7669.668,
+        "rss_change_mib": 412.2422,
+        "cpu_seconds": 1672.4531,
+        "wall_seconds": 337.9192,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3084,
+        "resource_samples": 69,
+        "rss_samples": 69,
+        "cpu_samples": 69
+      },
+      {
+        "label": "vanilla",
+        "index": 2,
+        "rss_peak_mib": 7742.668,
+        "rss_start_mib": 7220.9961,
+        "rss_end_mib": 7732.082,
+        "rss_change_mib": 511.0859,
+        "cpu_seconds": 1674.0937,
+        "wall_seconds": 340.3128,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3106,
+        "resource_samples": 69,
+        "rss_samples": 69,
+        "cpu_samples": 69
+      },
+      {
+        "label": "ours",
+        "index": 2,
+        "rss_peak_mib": 7644.3867,
+        "rss_start_mib": 7295.8203,
+        "rss_end_mib": 7194.125,
+        "rss_change_mib": -101.6953,
+        "cpu_seconds": 1665.3125,
+        "wall_seconds": 339.7592,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3101,
+        "resource_samples": 69,
+        "rss_samples": 69,
+        "cpu_samples": 69
+      },
+      {
+        "label": "tempo",
+        "index": 2,
+        "rss_peak_mib": 7812.082,
+        "rss_start_mib": 7191.4336,
+        "rss_end_mib": 7780.2109,
+        "rss_change_mib": 588.7773,
+        "cpu_seconds": 1676.1875,
+        "wall_seconds": 338.6386,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.309,
+        "resource_samples": 69,
+        "rss_samples": 69,
+        "cpu_samples": 69
+      },
+      {
+        "label": "vanilla",
+        "index": 3,
+        "rss_peak_mib": 7562.7148,
+        "rss_start_mib": 7156.7344,
+        "rss_end_mib": 7549.5508,
+        "rss_change_mib": 392.8164,
+        "cpu_seconds": 1663.4531,
+        "wall_seconds": 338.8903,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3093,
+        "resource_samples": 69,
+        "rss_samples": 69,
+        "cpu_samples": 69
+      },
+      {
+        "label": "ours",
+        "index": 3,
+        "rss_peak_mib": 7666.0156,
+        "rss_start_mib": 7191.5742,
+        "rss_end_mib": 7626.1289,
+        "rss_change_mib": 434.5547,
+        "cpu_seconds": 1663.375,
+        "wall_seconds": 338.8089,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3092,
+        "resource_samples": 69,
+        "rss_samples": 69,
+        "cpu_samples": 69
+      },
+      {
+        "label": "tempo",
+        "index": 3,
+        "rss_peak_mib": 7738.918,
+        "rss_start_mib": 7216.8906,
+        "rss_end_mib": 7705.0742,
+        "rss_change_mib": 488.1836,
+        "cpu_seconds": 1672.5156,
+        "wall_seconds": 338.6765,
+        "game_days": 1095.8,
+        "wall_seconds_per_game_day": 0.3091,
+        "resource_samples": 69,
+        "rss_samples": 69,
+        "cpu_samples": 69
+      }
+    ],
+    "reanalysis": {
+      "source_report_sha256": "7e9d5571313226b71c8a4a2ee5d1bf2fb52ac74a75d1a5d13f29417bb81d5f19",
+      "cpu_basis": "Legacy _resource_sample read process.cpu_times; subtract the first from the last sample. This excludes loading CPU.",
+      "wall_basis": "Last sample.seconds minus first sample.seconds; sampled simulation window excludes console export. This is a sampled approximation, not retrospectively exact start/stop timing.",
+      "formal_m4_passed": false,
+      "limits": [
+        "No frozen M3 behavior candidate",
+        "Early checkpoint only",
+        "No preregistered resource budget or established vanilla noise"
+      ]
+    },
+    "capture_gate": {
+      "required_pairs": 3,
+      "ok": true,
+      "reasons": []
+    },
+    "window_control": {
+      "ok": true,
+      "pairs": 6,
+      "problems": [],
+      "comparisons": [
+        {
+          "index": 1,
+          "from": {
+            "vanilla": "1836.6.1",
+            "ours": "1836.6.1"
+          },
+          "to": {
+            "vanilla": "1839.6.1",
+            "ours": "1839.6.1"
+          },
+          "calendar_from": {
+            "vanilla": "1836.6.1",
+            "ours": "1836.6.1"
+          },
+          "calendar_to": {
+            "vanilla": "1839.6.1",
+            "ours": "1839.6.1"
+          },
+          "comparable": true
+        },
+        {
+          "index": 1,
+          "from": {
+            "vanilla": "1836.6.1",
+            "tempo": "1836.6.1"
+          },
+          "to": {
+            "vanilla": "1839.6.1",
+            "tempo": "1839.6.1"
+          },
+          "calendar_from": {
+            "vanilla": "1836.6.1",
+            "tempo": "1836.6.1"
+          },
+          "calendar_to": {
+            "vanilla": "1839.6.1",
+            "tempo": "1839.6.1"
+          },
+          "comparable": true
+        },
+        {
+          "index": 2,
+          "from": {
+            "vanilla": "1836.6.1",
+            "ours": "1836.6.1"
+          },
+          "to": {
+            "vanilla": "1839.6.1",
+            "ours": "1839.6.1"
+          },
+          "calendar_from": {
+            "vanilla": "1836.6.1",
+            "ours": "1836.6.1"
+          },
+          "calendar_to": {
+            "vanilla": "1839.6.1",
+            "ours": "1839.6.1"
+          },
+          "comparable": true
+        },
+        {
+          "index": 2,
+          "from": {
+            "vanilla": "1836.6.1",
+            "tempo": "1836.6.1"
+          },
+          "to": {
+            "vanilla": "1839.6.1",
+            "tempo": "1839.6.1"
+          },
+          "calendar_from": {
+            "vanilla": "1836.6.1",
+            "tempo": "1836.6.1"
+          },
+          "calendar_to": {
+            "vanilla": "1839.6.1",
+            "tempo": "1839.6.1"
+          },
+          "comparable": true
+        },
+        {
+          "index": 3,
+          "from": {
+            "vanilla": "1836.6.1",
+            "ours": "1836.6.1"
+          },
+          "to": {
+            "vanilla": "1839.6.1",
+            "ours": "1839.6.1"
+          },
+          "calendar_from": {
+            "vanilla": "1836.6.1",
+            "ours": "1836.6.1"
+          },
+          "calendar_to": {
+            "vanilla": "1839.6.1",
+            "ours": "1839.6.1"
+          },
+          "comparable": true
+        },
+        {
+          "index": 3,
+          "from": {
+            "vanilla": "1836.6.1",
+            "tempo": "1836.6.1"
+          },
+          "to": {
+            "vanilla": "1839.6.1",
+            "tempo": "1839.6.1"
+          },
+          "calendar_from": {
+            "vanilla": "1836.6.1",
+            "tempo": "1836.6.1"
+          },
+          "calendar_to": {
+            "vanilla": "1839.6.1",
+            "tempo": "1839.6.1"
+          },
+          "comparable": true
+        }
+      ]
+    },
+    "stress_ok": true
+  },
+  "m3": {
+    "report_count": 116,
+    "strict_clean_count": 23,
+    "qualified_count": 0
+  },
+  "politics": [
+    {
+      "report": "tools/out/decisions/stability/vanilla/20261008-165221/report.json",
+      "sha256": "db20eda66a548516e22e092d148d4b270ddac19e058754132849e2188d9687d4",
+      "run_ok": true,
+      "legality_interface_validated": true,
+      "validation": {
+        "expected_tags": [
+          "RUS",
+          "FRA"
+        ],
+        "expected_laws": [
+          "law_autocracy",
+          "law_census_voting",
+          "law_universal_suffrage",
+          "law_local_police"
+        ],
+        "expected_cells": 24,
+        "blocked_cells": 24,
+        "enacted_cells": 24,
+        "issues": [],
+        "country_identity_verified": false,
+        "identity_basis": "Names are observed in the explicit tag scope; no independent tag-to-name identity oracle is available."
+      }
+    },
+    {
+      "report": "tools/out/decisions/stability/vanilla/20261008-181852/report.json",
+      "sha256": "9a9659c0b324423d507a22bddbda09e3d41841c8572f58f9b8ce2714d03eafee",
+      "run_ok": false,
+      "legality_interface_validated": true,
+      "validation": {
+        "expected_tags": [
+          "RUS",
+          "FRA"
+        ],
+        "expected_laws": [
+          "law_autocracy",
+          "law_census_voting",
+          "law_universal_suffrage",
+          "law_local_police"
+        ],
+        "expected_cells": 208,
+        "blocked_cells": 208,
+        "enacted_cells": 208,
+        "issues": [],
+        "country_identity_verified": false,
+        "identity_basis": "Names are observed in the explicit tag scope; no independent tag-to-name identity oracle is available."
+      }
+    },
+    {
+      "report": "tools/out/decisions/stability/vanilla/20261008-182747/report.json",
+      "sha256": "9cb019170e1685877571748fd5df9bf1b4d4eeb9922288506b19fd9509b823e2",
+      "run_ok": false,
+      "legality_interface_validated": true,
+      "validation": {
+        "expected_tags": [
+          "RUS",
+          "FRA"
+        ],
+        "expected_laws": [
+          "law_autocracy",
+          "law_census_voting",
+          "law_universal_suffrage",
+          "law_local_police"
+        ],
+        "expected_cells": 192,
+        "blocked_cells": 192,
+        "enacted_cells": 192,
+        "issues": [],
+        "country_identity_verified": false,
+        "identity_basis": "Names are observed in the explicit tag scope; no independent tag-to-name identity oracle is available."
+      }
+    },
+    {
+      "report": "tools/out/decisions/stability/vanilla/20261008-183635/report.json",
+      "sha256": "73b961ada5190d419b78f2e688d38cef0e2d18af40d9fce75b116c554c9f8f63",
+      "run_ok": false,
+      "legality_interface_validated": true,
+      "validation": {
+        "expected_tags": [
+          "RUS",
+          "FRA"
+        ],
+        "expected_laws": [
+          "law_autocracy",
+          "law_census_voting",
+          "law_universal_suffrage",
+          "law_local_police"
+        ],
+        "expected_cells": 200,
+        "blocked_cells": 200,
+        "enacted_cells": 200,
+        "issues": [],
+        "country_identity_verified": false,
+        "identity_basis": "Names are observed in the explicit tag scope; no independent tag-to-name identity oracle is available."
+      }
+    }
+  ],
+  "recovery": {
+    "path": "tools/out/recovery/user-state-20261009.json",
+    "sha256": "9549487062d9e90fcfef43c296d5c1c2466bf3ddc7d39d6e87441b7fb32106f5",
+    "evidence": {
+      "scope": "Four last confirmed local originals; complete user directory recovery is unproven",
+      "original_manifest": "C:\\Users\\28905\\projects\\Situated AI\\tools\\out\\decisions\\stability\\vanilla\\20261008-194918\\state-backups.json",
+      "files": [
+        {
+          "source": "C:\\Users\\28905\\projects\\Situated AI\\tools\\out\\decisions\\stability\\vanilla\\original-state\\2dd53705c563663926b7784cac85c9f0f800dcfd9b39ecfda39eba5bbf51337f",
+          "destination": "C:\\Users\\28905\\Documents\\Paradox Interactive\\Victoria 3\\player\\game_rules\\presets.txt",
+          "bytes": 968,
+          "sha256": "2dd53705c563663926b7784cac85c9f0f800dcfd9b39ecfda39eba5bbf51337f",
+          "verified": true
+        },
+        {
+          "source": "C:\\Users\\28905\\projects\\Situated AI\\tools\\out\\decisions\\stability\\vanilla\\original-state\\3e41bf64b4bdf0074ad7dc192fe2311ed6f734e12a7b49873abcb23a12ad0c7f",
+          "destination": "C:\\Users\\28905\\Documents\\Paradox Interactive\\Victoria 3\\save games\\autosave_1.v3",
+          "bytes": 125779673,
+          "sha256": "3e41bf64b4bdf0074ad7dc192fe2311ed6f734e12a7b49873abcb23a12ad0c7f",
+          "verified": true
+        },
+        {
+          "source": "C:\\Users\\28905\\projects\\Situated AI\\tools\\out\\decisions\\stability\\vanilla\\original-state\\1af9487749947d640e6f93baeebf95d5bcd235998bcc301bebb59145418b0bfc",
+          "destination": "C:\\Users\\28905\\Documents\\Paradox Interactive\\Victoria 3\\save games\\autosave_2.v3",
+          "bytes": 122743750,
+          "sha256": "1af9487749947d640e6f93baeebf95d5bcd235998bcc301bebb59145418b0bfc",
+          "verified": true
+        },
+        {
+          "source": "C:\\Users\\28905\\projects\\Situated AI\\tools\\out\\decisions\\stability\\vanilla\\original-state\\0c1dd88265cfd6198dc7ec08df9b0d62a9efb68d74ac7d1caab9ae4c5cc639a3",
+          "destination": "C:\\Users\\28905\\Documents\\Paradox Interactive\\Victoria 3\\save games\\autosave_3.v3",
+          "bytes": 116649022,
+          "sha256": "0c1dd88265cfd6198dc7ec08df9b0d62a9efb68d74ac7d1caab9ae4c5cc639a3",
+          "verified": true
+        }
+      ]
+    }
+  },
+  "game_processes": [],
+  "safety_smoke": {
+    "report": "tools/out/recovery/checkpoint-safety-20261009/report.json",
+    "sha256": "1fba6e23d0fc4d1bbc892d62e674ed234460186c8ba57b93736460fd21ec5007",
+    "current_state_restored_exactly": true,
+    "game_processes": [],
+    "checkpoint": {
+      "path": "C:\\Users\\28905\\projects\\Situated AI\\tools\\out\\recovery\\checkpoint-safety-20261009\\checkpoints\\safety-observer.v3",
+      "sha256": "3ade3016d482e386d0f9e9adbccb906998b3d2ac88c3b8b16eb24bb346cf6e7d",
+      "bytes": 111644427,
+      "header": {
+        "version": "1.14.5",
+        "game_date": "1836.2.1",
+        "observer": "yes"
+      },
+      "content_load": "vanilla_only",
+      "session": {
+        "hwnd": 9963074,
+        "previous": 788042,
+        "boot_settle": "进程 1 个；dedicated_server.log=0、debug.log=264038；已连续 20.1 秒没变",
+        "observe": "btn_observe @ (864,1055) score=1.000 scale=1.00 box=(755, 1037, 973, 1073)",
+        "speed_source": "快捷键 5",
+        "speed_xy": "",
+        "speed_key": "5",
+        "speed_attempts": 1,
+        "speed_days_per_second": 3.055,
+        "speed_ok": true,
+        "unpause": "已按 space 开始推进",
+        "unpause_pressed": true,
+        "running": "[dedicated_server.log] 1836.1.2 -> 1836.1.8 (2.0s) 推进",
+        "handover": "前台 788042 → 788042（还原成功，仍显示（没有可还原的窗口），耗时 1.0s）",
+        "foreground_restored": true,
+        "minimized": false,
+        "tick": "1836.2.6.6",
+        "automation_phase": "complete",
+        "automation_phases": [
+          "created",
+          "foreground_ready",
+          "boot_settled",
+          "observe_selected",
+          "speed_set",
+          "running",
+          "background",
+          "verified",
+          "complete"
+        ]
+      },
+      "state_evidence": "C:\\Users\\28905\\projects\\Situated AI\\tools\\out\\recovery\\checkpoint-safety-20261009\\checkpoints\\session-rf9dy47p"
+    },
+    "scope": "Equality to current pre-run state only; does not prove recovery of historically missing user files"
+  },
+  "engineering_final_regression": {
+    "command": ".venv/Scripts/python.exe -X utf8 -m pytest --cov=pdx --cov-branch",
+    "collected": 2642,
+    "passed": 2632,
+    "skipped": 10,
+    "failed": 0,
+    "pytest_seconds": 501.75,
+    "wall_seconds": 503.171,
+    "coverage_percent": 88.54,
+    "branch_coverage_gate": "passed",
+    "workers": 4,
+    "resource": {
+      "peak_total_mib": 3821.3,
+      "peak_total_private_mib": 6204.9,
+      "sum_hwm_mib": 5666.4,
+      "per_worker_peak_mib": 1497.0,
+      "cpu_total_seconds": 1774.3,
+      "cpu_workers_seconds": 1753.7,
+      "samples": 1787,
+      "max_processes": 13,
+      "watchdog_killed": false
+    },
+    "memory_unit": "MiB (1024**2 bytes); historical field suffix _mb",
+    "artifact": "tools/out/mem/20261009-evidence-final3"
+  },
+  "component_benchmarks": {
+    "decision-runtime-20261009-final.json": {
+      "python": "3.14.7",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "log_bytes": 33554460,
+      "rounds": 5,
+      "memory_scope": "tracemalloc Python allocations; excludes OS cache and native RSS",
+      "source_sha256": "0cb770776451ab417a2d5721e1fdec88d684294c47a59003e7397159d27b8f71",
+      "previous_full_read": {
+        "median_seconds": 0.036696300012408756,
+        "python_peak_mib": 64.12617015838623
+      },
+      "current_reverse_chunks": {
+        "median_seconds": 8.629998774267733e-05,
+        "python_peak_mib": 0.25162696838378906
+      },
+      "decision_build": {
+        "median_seconds": 0.09770749999734107,
+        "python_peak_mib": 4.231035232543945
+      },
+      "streaming_hash": {
+        "median_seconds": 0.024477899991325103,
+        "python_peak_mib": 0.37703514099121094
+      },
+      "behavior_instrument_build": {
+        "median_seconds": 0.00022489999537356198,
+        "python_peak_mib": 0.1461181640625
+      },
+      "reform_instrument_build": {
+        "median_seconds": 0.0008719000034034252,
+        "python_peak_mib": 0.6728363037109375
+      },
+      "reform_law_keys": 138,
+      "save_header": {
+        "median_seconds": 0.6210335999930976,
+        "python_peak_mib": 0.19344329833984375
+      },
+      "save_bytes": 111522872,
+      "behavior_analyze": {
+        "median_seconds": 0.010523699995246716,
+        "python_peak_mib": 1.2389507293701172
+      },
+      "reform_analyze": {
+        "median_seconds": 0.0017088000022340566,
+        "python_peak_mib": 0.1805276870727539
+      }
+    },
+    "m3a-screen-20261009-final.json": {
+      "rounds": 5,
+      "report_count": 116,
+      "strict_clean_count": 23,
+      "qualified_count": 0,
+      "median_seconds": 2.125624100008281,
+      "samples_seconds": [
+        2.6173095000121975,
+        2.121245000002091,
+        2.088988799994695,
+        2.125624100008281,
+        2.1264876000059303
+      ],
+      "python_peak_mib": 27.089754104614258,
+      "source_sha256": "2cf3d392da021e36ce823f3df1e930231cc732878ea653e36602d734cc936b66",
+      "scope": "Python tracemalloc allocations for strict M3 screen; excludes OS RSS"
+    },
+    "decision-runtime-20261009-final2.json": {
+      "python": "3.14.7",
+      "platform": "Windows-11-10.0.26300-SP0",
+      "log_bytes": 33554460,
+      "rounds": 5,
+      "memory_scope": "tracemalloc Python allocations; excludes OS cache and native RSS",
+      "source_sha256": "0cb770776451ab417a2d5721e1fdec88d684294c47a59003e7397159d27b8f71",
+      "previous_full_read": {
+        "median_seconds": 0.03567769999790471,
+        "python_peak_mib": 64.12617015838623
+      },
+      "current_reverse_chunks": {
+        "median_seconds": 9.250000584870577e-05,
+        "python_peak_mib": 0.25162696838378906
+      },
+      "decision_build": {
+        "median_seconds": 0.0952160000015283,
+        "python_peak_mib": 4.231035232543945
+      },
+      "streaming_hash": {
+        "median_seconds": 0.023919800005387515,
+        "python_peak_mib": 0.37703514099121094
+      },
+      "behavior_instrument_build": {
+        "median_seconds": 0.0002241000038338825,
+        "python_peak_mib": 0.1461181640625
+      },
+      "reform_instrument_build": {
+        "median_seconds": 0.0008966000023065135,
+        "python_peak_mib": 0.6729354858398438
+      },
+      "reform_law_keys": 138,
+      "save_header": {
+        "median_seconds": 0.6027140000078361,
+        "python_peak_mib": 0.19344329833984375
+      },
+      "save_bytes": 111522872,
+      "behavior_analyze": {
+        "median_seconds": 0.009928400002536364,
+        "python_peak_mib": 1.2389507293701172
+      },
+      "reform_analyze": {
+        "median_seconds": 0.0017320999904768541,
+        "python_peak_mib": 0.1805276870727539
+      }
+    }
+  },
+  "enactment_details_probe": {
+    "report": "tools/out/decisions/stability/vanilla/20261009-084843/report.json",
+    "game_version": {
+      "caligula_branch": "release/1.14.5",
+      "caligula_rev": "9f8281a37e85639359b3b0c2c5df0196e975ca4b",
+      "clausewitz_branch": "caligula/release/1.14.x",
+      "clausewitz_rev": "fd5e1dbd038c3c4a3f48a36abf60ebb42dd0ceef"
+    },
+    "checkpoint": "a8be0642cfaadd02c98cf37757adc725823818bab52ee2d91c383970354f1137",
+    "window": {
+      "start": "1836.2.2.18",
+      "end": "1836.8.6.12",
+      "days": 186.64000000000001,
+      "reached": true,
+      "activation_tick": "1836.2.2.18",
+      "activation_source": "session.advance.after"
+    },
+    "ok": false,
+    "failure": "引擎错误或缺少本局挂载证据",
+    "engine_errors": {
+      "Unexpected token": 0,
+      "Unknown effect": 0,
+      "Unknown trigger": 0,
+      "Invalid database object": 0,
+      "Mod metadata read error": 0,
+      "Duplicated key": 0,
+      "Undefined event target": 0,
+      "Invalid left side": 0,
+      "Script system error!": 0,
+      "Assertion failed": 3
+    },
+    "detail_rows": 0,
+    "detail_values": [],
+    "scope": "A single vanilla observer run with read-only in-progress law key and checkpoint chance instrumentation; original engine assertions invalidate the run, and no natural in-progress law occurred in the observed window.",
+    "production_switches": {
+      "reform_enabled": false,
+      "market_enabled": false
+    }
+  }
+}

@@ -117,6 +117,38 @@ def test_显式国家法律阻挡要求只读且另记现行法律():
     assert "start_enactment" not in hooks
 
 
+def test_进行中法律概率观测只读且受进行中守卫保护():
+    files = extension_probe.build(["law_autocracy"], tags=("RUS",), enactment_details=True)
+    hooks = files["common/on_actions/zz_sitai_reform_observer.txt"]
+    assert "ENACTING_LAW;[THIS.GetCountry.GetLawBeingEnacted.GetLawType.GetKey]" in hooks
+    assert (
+        "CHECKPOINT_SUCCESS;[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointSuccessChance|3]"
+        in hooks
+    )
+    assert (
+        "CHECKPOINT_ADVANCE;[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointAdvanceChance|3]"
+        in hooks
+    )
+    assert hooks.count("enacting_any_law = yes") >= 4
+    assert "start_enactment" not in hooks
+
+
+def test_进行中法律概率坏值不能静默接受(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        "\n".join(
+            (
+                "SITAI REFORM;RUS;COUNTRY_NAME;俄罗斯;sample-1",
+                "SITAI REFORM;RUS;ENACTING_LAW;law_local_police;sample-1",
+                "SITAI REFORM;RUS;CHECKPOINT_SUCCESS;nan;sample-1",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="立法概率"):
+        extension_probe.analyze(tmp_path)
+
+
 def test_法律阻挡要求需要同组现行状态且区分正反读数(tmp_path):
     (tmp_path / "debug.log").write_text(
         "\n".join(
@@ -131,7 +163,9 @@ def test_法律阻挡要求需要同组现行状态且区分正反读数(tmp_pat
         + "\n",
         encoding="utf-8",
     )
-    report = extension_probe.analyze(tmp_path)
+    report = extension_probe.analyze(
+        tmp_path, expected_tags=("RUS",), expected_laws=("law_autocracy", "law_census_voting")
+    )
     assert report["legality_interface_validated"]
     assert report["countries"]["RUS"]["country_names"] == ["Russian Empire"]
     assert report["countries"]["RUS"]["legality"]["law_autocracy"] == {
@@ -157,7 +191,9 @@ def test_法律阻挡要求归一化游戏的零一格式(tmp_path):
         + "\n",
         encoding="utf-8",
     )
-    report = extension_probe.analyze(tmp_path)
+    report = extension_probe.analyze(
+        tmp_path, expected_tags=("RUS",), expected_laws=("law_autocracy", "law_universal_suffrage")
+    )
     assert report["legality_interface_validated"]
     assert report["countries"]["RUS"]["legality"]["law_universal_suffrage"]["blocked_yes"] == 1
 
@@ -169,6 +205,52 @@ def test_法律阻挡要求坏行不能静默降级(tmp_path):
     )
     with pytest.raises(ValueError, match="法律资格"):
         extension_probe.analyze(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "none",
+        "expected_missing",
+        "country_missing",
+        "law_missing",
+        "cross_sample",
+        "duplicate",
+        "name_missing",
+        "unknown_identity",
+        "monthly_batch_missing",
+    ],
+)
+def test_法律资格按预注册国家样本法律逐格验收(tmp_path, fault):
+    lines = [
+        "SITAI REFORM;RUS;COUNTRY_NAME;Russian Empire;sample-1",
+        "SITAI REFORM;RUS;LEGAL_BLOCKED;law_autocracy=yes;sample-1",
+        "SITAI REFORM;RUS;LEGAL_ENACTED;law_autocracy=no;sample-1",
+        "SITAI REFORM;RUS;LEGAL_BLOCKED;law_census_voting=no;sample-1",
+        "SITAI REFORM;RUS;LEGAL_ENACTED;law_census_voting=no;sample-1",
+    ]
+    tags, laws = ("RUS",), ("law_autocracy", "law_census_voting")
+    if fault == "expected_missing":
+        laws = ()
+    elif fault == "country_missing":
+        tags = ("RUS", "FRA")
+    elif fault == "law_missing":
+        laws = (*laws, "law_universal_suffrage")
+    elif fault == "cross_sample":
+        lines[2] = lines[2].replace("sample-1", "sample-2")
+    elif fault == "duplicate":
+        lines.append(lines[1])
+    elif fault == "name_missing":
+        lines[0] = lines[0].replace("Russian Empire", "[unresolved]")
+    elif fault == "unknown_identity":
+        lines[0] = lines[0].replace("Russian Empire", "Unverified Name")
+    elif fault == "monthly_batch_missing":
+        lines.append("SITAI REFORM;RUS;ENACTING;no;sample-2")
+    (tmp_path / "debug.log").write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
+    result = extension_probe.analyze(tmp_path, expected_tags=tags, expected_laws=laws)
+    assert result["legality_interface_validated"] is (fault in {"none", "unknown_identity"})
+    assert not result["legality_validation"]["country_identity_verified"]
+    assert not result["quality_improvement_proven"]
 
 
 def test_法律阻挡观察键拒绝注入():

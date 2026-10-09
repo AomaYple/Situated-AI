@@ -19,21 +19,19 @@ from pathlib import Path
 from typing import Any
 
 from . import decisions
+from .game_run import ERROR_MARKERS, _normalize_mount_path
+from .textio import GAME_SUFFIXES, text_bytes
 
 TAG_RE = re.compile(r"^[A-Z]{3}$")
 STRATEGY_PATH = "common/ai_strategies/00_default_strategy.txt"
-ERROR_KEYS = (
-    "Unexpected token",
-    "Unknown effect",
-    "Unknown trigger",
-    "Invalid database object",
-    "Mod metadata read error",
-    "Duplicated key",
-    "Undefined event target",
-    "Invalid left side",
-)
+ERROR_KEYS = ERROR_MARKERS
 ROLE_KINDS = ("BACKER", "INIT_BACKER", "TARGET_BACKER")
 ELIGIBILITY_KINDS = ("CAN_INIT", "CAN_TARGET")
+
+
+def _sample_key(value: str) -> tuple[str, int, str]:
+    match = re.fullmatch(r"sample-(\d+)", value)
+    return ("sample", int(match[1]), "") if match else (value, 0, value)
 
 
 def _json_key(value: Any) -> str:
@@ -55,7 +53,7 @@ def _clean_report(report: Mapping[str, Any]) -> tuple[bool, list[str]]:
         reasons.append("report.ok_not_true")
     if report.get("failure"):
         reasons.append("report.failure")
-    if report.get("cleanup_errors"):
+    if report.get("cleanup_errors") != []:
         reasons.append("report.cleanup_errors")
     findings = report.get("log_findings")
     if not isinstance(findings, Mapping):
@@ -71,7 +69,7 @@ def _clean_report(report: Mapping[str, Any]) -> tuple[bool, list[str]]:
         reasons.extend(
             f"log_findings.{key}"
             for key in ("mod_errors", "missing_mounts", "unexpected_mounts")
-            if findings.get(key)
+            if findings.get(key) != []
         )
     review = report.get("review")
     if isinstance(review, Mapping) and review.get("mounts_verified") is False:
@@ -81,6 +79,30 @@ def _clean_report(report: Mapping[str, Any]) -> tuple[bool, list[str]]:
         reasons.append("mount_allowlist.missing")
     elif any(not isinstance(item, str) or not item for item in allowlist):
         reasons.append("mount_allowlist.invalid")
+    elif isinstance(findings, Mapping):
+        mounted = findings.get("mounted")
+        actual = (
+            {
+                _normalize_mount_path(line.split("Mounted Data:", 1)[-1])
+                for line in mounted or ()
+                if isinstance(line, str) and "Mounted Data:" in line
+            }
+            if isinstance(mounted, list)
+            else set()
+        )
+        if actual != {_normalize_mount_path(item) for item in allowlist}:
+            reasons.append("mounts.actual_missing_or_differs")
+    sources, deployed = report.get("source_hashes"), report.get("deployed_hashes")
+    if not isinstance(deployed, Mapping) or not isinstance(sources, Mapping) or not deployed:
+        reasons.append("deployed_hashes.missing")
+    elif sources.keys() != deployed.keys() or any(
+        not isinstance(files, Mapping)
+        or not files
+        or not isinstance(deployed.get(name), Mapping)
+        or files.keys() != deployed[name].keys()
+        for name, files in sources.items()
+    ):
+        reasons.append("deployed_hashes.incomplete")
     loaded = report.get("loaded_save")
     if not isinstance(loaded, Mapping) or not re.fullmatch(
         r"[0-9a-f]{64}", str(loaded.get("sha256", ""))
@@ -99,6 +121,8 @@ class CountryFacts:
     backer_dates: tuple[str, ...]
     role_by_date: tuple[tuple[str, tuple[tuple[str, str], ...]], ...]
     score_values: tuple[tuple[str, tuple[float, ...]], ...]
+    samples: tuple[tuple[str, tuple[tuple[str, str], ...]], ...]
+    issues: tuple[str, ...]
 
     @property
     def score_range(self) -> tuple[float, float] | None:
@@ -124,6 +148,10 @@ class ReportFacts:
     countries: Mapping[str, CountryFacts]
     observer: str | None
     evidence: str | None
+    phases: Mapping[str, str]
+    deployed_hashes: Mapping[str, Mapping[str, str]]
+    window_start: str | None
+    activation_tick: str | None
 
     @property
     def strategy_digest(self) -> str | None:
@@ -134,7 +162,11 @@ class ReportFacts:
     @property
     def non_strategy_sources(self) -> Mapping[str, Mapping[str, str]]:
         return {
-            name: {key: value for key, value in files.items() if key != STRATEGY_PATH}
+            name: {
+                key: value
+                for key, value in files.items()
+                if name != "sitai_decision_candidate" or key != STRATEGY_PATH
+            }
             for name, files in self.source_hashes.items()
         }
 
@@ -146,7 +178,7 @@ class PairCandidate:
     neutrality_delta: float | None
     common_eligible_active_dates: tuple[str, ...]
     countries: tuple[str, ...]
-    role_changes: Mapping[str, Mapping[str, bool]]
+    role_changes: Mapping[str, Mapping[str, bool | None]]
     score_deltas: Mapping[str, tuple[float, ...]]
     qualified: bool
     reasons: tuple[str, ...]
@@ -178,33 +210,52 @@ def _country_facts(tag: str, rows: Iterable[Mapping[str, Any]]) -> CountryFacts:
     roles: dict[str, dict[str, str]] = defaultdict(dict)
     scores: dict[str, list[float]] = defaultdict(list)
     by_date: dict[str, dict[str, str]] = defaultdict(dict)
+    issues: list[str] = []
     for row in rows:
         date = str(row.get("date", ""))
         kind = str(row.get("kind", ""))
         value = str(row.get("value", "")).strip()
-        if not date:
+        if not date or not kind or not value:
+            issues.append(f"opportunity.invalid_row:{tag}")
+            continue
+        if kind in by_date[date]:
+            issues.append(f"opportunity.duplicate_sample:{tag}:{date}:{kind}")
             continue
         by_date[date][kind] = value
         if kind in ROLE_KINDS:
             roles[date][kind] = value
         if kind == "BACKER" and value == "yes":
             backer.add(date)
-        if kind in ELIGIBILITY_KINDS and value == "yes":
-            state = by_date[date]
-            if state.get("UNDECIDED") == "yes" and state.get("ACTIVE") == "yes":
-                eligible.add(date)
-        if kind in {"INIT_SCORE", "TARGET_SCORE"}:
-            number = _number(value)
-            if number is not None:
-                scores[kind].append(number)
+    for date, state in sorted(by_date.items(), key=lambda item: _sample_key(item[0])):
+        if any(
+            state.get(kind) not in {"yes", "no"}
+            for kind in ("UNDECIDED", "ACTIVE", *ELIGIBILITY_KINDS, *ROLE_KINDS)
+        ):
+            issues.append(f"opportunity.incomplete_sample:{tag}:{date}")
+        if state.get("UNDECIDED") == state.get("ACTIVE") == "yes" and any(
+            state.get(kind) == "yes" for kind in ELIGIBILITY_KINDS
+        ):
+            eligible.add(date)
+        for kind in ("INIT_SCORE", "TARGET_SCORE"):
+            if kind in state:
+                number = _number(state[kind])
+                if number is None:
+                    issues.append(f"opportunity.invalid_score:{tag}:{date}:{kind}")
+                else:
+                    scores[kind].append(number)
     return CountryFacts(
         tag=tag,
-        eligible_active_dates=tuple(sorted(eligible)),
-        backer_dates=tuple(sorted(backer)),
+        eligible_active_dates=tuple(sorted(eligible, key=_sample_key)),
+        backer_dates=tuple(sorted(backer, key=_sample_key)),
         role_by_date=tuple(
             (date, tuple(sorted(values.items()))) for date, values in sorted(roles.items())
         ),
         score_values=tuple((kind, tuple(values)) for kind, values in sorted(scores.items())),
+        samples=tuple(
+            (date, tuple(sorted(state.items())))
+            for date, state in sorted(by_date.items(), key=lambda item: _sample_key(item[0]))
+        ),
+        issues=tuple(dict.fromkeys(issues)),
     )
 
 
@@ -219,6 +270,19 @@ def load_report(path: Path) -> ReportFacts:
             if isinstance(row, Mapping) and TAG_RE.fullmatch(str(row.get("tag", ""))):
                 grouped[str(row["tag"])].append(row)
     clean, reasons = _clean_report(report)
+    phases: dict[str, str] = {}
+    for row in rows if isinstance(rows, list) else ():
+        if (
+            isinstance(row, Mapping)
+            and row.get("tag") == "CONTROL"
+            and row.get("kind") == "ESCALATION"
+        ):
+            date, value = str(row.get("date", "")), str(row.get("value", ""))
+            if not date or _number(value) is None or date in phases:
+                reasons.append("opportunity.phase_invalid_or_duplicate")
+            phases[date] = value
+    countries = {tag: _country_facts(tag, tag_rows) for tag, tag_rows in sorted(grouped.items())}
+    reasons.extend(issue for facts in countries.values() for issue in facts.issues)
     loaded = report.get("loaded_save")
     sha = loaded.get("sha256") if isinstance(loaded, Mapping) else None
     header = loaded.get("header", {}) if isinstance(loaded, Mapping) else {}
@@ -228,9 +292,42 @@ def load_report(path: Path) -> ReportFacts:
         sources = {}
         reasons.append("source_hashes.missing")
         clean = False
+    deployed = report.get("deployed_hashes", {})
+    if not isinstance(deployed, Mapping):
+        deployed = {}
+    for name, files in sources.items():
+        if not isinstance(files, Mapping):
+            continue
+        for relative, digest in files.items():
+            source = path.parent / "sources" / str(name) / str(relative)
+            root = path.parent / "sources"
+            if not source.resolve().is_relative_to(root.resolve()) or any(
+                p.is_symlink() for p in (source, *source.parents)
+            ):
+                reasons.append("deployment.source_path_invalid")
+                continue
+            try:
+                raw = source.read_bytes()
+                expected = (
+                    text_bytes(raw.decode("utf-8-sig"), game=True)
+                    if source.suffix.lower() in GAME_SUFFIXES
+                    else raw
+                )
+                actual = deployed.get(name, {})
+                if (
+                    not isinstance(actual, Mapping)
+                    or hashlib.sha256(raw).hexdigest() != digest
+                    or hashlib.sha256(expected).hexdigest() != actual.get(relative)
+                ):
+                    reasons.append("deployment.fingerprint_mismatch")
+            except (OSError, UnicodeError):
+                reasons.append("deployment.source_unavailable")
+    progress = report.get("progress", {})
+    if not isinstance(progress, Mapping):
+        progress = {}
     return ReportFacts(
         path=str(path),
-        clean=clean,
+        clean=clean and not reasons,
         gate_reasons=tuple(dict.fromkeys(reasons)),
         game_version=dict(report.get("game_version", {}))
         if isinstance(report.get("game_version"), Mapping)
@@ -242,9 +339,17 @@ def load_report(path: Path) -> ReportFacts:
             for name, files in sources.items()
             if isinstance(files, Mapping)
         },
-        countries={tag: _country_facts(tag, tag_rows) for tag, tag_rows in sorted(grouped.items())},
+        countries=countries,
         observer=str(header.get("observer")) if header.get("observer") is not None else None,
         evidence=str(report.get("evidence")) if report.get("evidence") else None,
+        phases=phases,
+        deployed_hashes={
+            str(name): dict(files) for name, files in deployed.items() if isinstance(files, Mapping)
+        },
+        window_start=str(progress["start"]) if progress.get("start") else None,
+        activation_tick=str(progress["activation_tick"])
+        if progress.get("activation_tick")
+        else None,
     )
 
 
@@ -260,6 +365,28 @@ def _pair_shape(left: ReportFacts, right: ReportFacts) -> tuple[bool, list[str]]
         reasons.append("mount_allowlist.differs")
     if left.non_strategy_sources != right.non_strategy_sources:
         reasons.append("source_hashes.non_strategy_differs")
+    deployed = [
+        {
+            name: {
+                key: value
+                for key, value in files.items()
+                if name != "sitai_decision_candidate" or key != STRATEGY_PATH
+            }
+            for name, files in report.deployed_hashes.items()
+        }
+        for report in (left, right)
+    ]
+    if deployed[0] != deployed[1]:
+        reasons.append("deployed_hashes.non_strategy_differs")
+    if not left.window_start or left.window_start != right.window_start:
+        reasons.append("opportunity.window_start_missing_or_differs")
+    if (
+        not left.activation_tick
+        or not right.activation_tick
+        or left.activation_tick != left.window_start
+        or right.activation_tick != right.window_start
+    ):
+        reasons.append("opportunity.activation_tick_missing_or_differs")
     if left.source_hashes.keys() != right.source_hashes.keys():
         reasons.append("source_hashes.mod_set_differs")
     if left.countries.keys() != right.countries.keys():
@@ -305,7 +432,8 @@ def pair_reports(
                     & set(treatment.countries[tag].eligible_active_dates)
                     for tag in tags
                 )
-            )
+            ),
+            key=_sample_key,
         )
         if tags
         else ()
@@ -322,16 +450,32 @@ def pair_reports(
         for tag in tags
     ):
         reasons.append("opportunity.no_common_eligible_active_date_for_country")
-    role_changes: dict[str, dict[str, bool]] = {}
+    if not common_dates:
+        reasons.append("opportunity.no_common_eligible_active_date")
+    role_changes: dict[str, dict[str, bool | None]] = {}
     score_deltas: dict[str, tuple[float, ...]] = {}
     for tag in tags:
         left_facts: CountryFacts = control.countries[tag]
         right_facts: CountryFacts = treatment.countries[tag]
-        dates = sorted(
-            set(left_facts.eligible_active_dates) & set(right_facts.eligible_active_dates)
-        )
+        left_samples = {date: dict(values) for date, values in left_facts.samples}
+        right_samples = {date: dict(values) for date, values in right_facts.samples}
+        dates = sorted(left_samples.keys() & right_samples.keys(), key=_sample_key)
+        if left_samples.keys() != right_samples.keys():
+            reasons.append(f"opportunity.sample_keys_differ:{tag}")
+        if not dates or any(
+            date not in control.phases or date not in treatment.phases for date in dates
+        ):
+            reasons.append("opportunity.phase_missing")
+        elif any(
+            _number(control.phases[date]) != _number(treatment.phases[date]) for date in dates
+        ):
+            reasons.append("opportunity.phase_differs")
         role_changes[tag] = {
-            kind: any(
+            kind: None
+            if any(
+                kind not in left_samples[date] or kind not in right_samples[date] for date in dates
+            )
+            else any(
                 dict(left_facts.role_at(date)).get(kind)
                 != dict(right_facts.role_at(date)).get(kind)
                 for date in dates
@@ -339,14 +483,32 @@ def pair_reports(
             for kind in ROLE_KINDS
         }
         deltas: list[float] = []
-        left_scores = dict(left_facts.score_values)
-        right_scores = dict(right_facts.score_values)
-        for kind in set(left_scores) & set(right_scores):
-            if len(left_scores[kind]) == len(right_scores[kind]):
-                deltas.extend(
-                    round(b - a, 10)
-                    for a, b in zip(left_scores[kind], right_scores[kind], strict=True)
-                )
+        for date in sorted(
+            set(left_facts.eligible_active_dates) & set(right_facts.eligible_active_dates),
+            key=_sample_key,
+        ):
+            if any(
+                left_samples[date].get(kind) != right_samples[date].get(kind)
+                for kind in ELIGIBILITY_KINDS
+            ):
+                reasons.append(f"opportunity.eligibility_side_differs:{tag}:{date}")
+            for eligible_kind, score_kind in (
+                ("CAN_INIT", "INIT_SCORE"),
+                ("CAN_TARGET", "TARGET_SCORE"),
+            ):
+                if (
+                    left_samples[date].get(eligible_kind)
+                    == right_samples[date].get(eligible_kind)
+                    == "yes"
+                ):
+                    a = _number(left_samples[date].get(score_kind, ""))
+                    b = _number(right_samples[date].get(score_kind, ""))
+                    if a is None or b is None:
+                        reasons.append(f"opportunity.score_missing:{tag}:{date}:{score_kind}")
+                    else:
+                        deltas.append(round(b - a, 10))
+        if not deltas:
+            reasons.append(f"opportunity.no_common_readable_score:{tag}")
         score_deltas[tag] = tuple(deltas)
     if not shape_ok:
         reasons.extend(shape_reasons)
@@ -417,6 +579,13 @@ def screen(
         for index, control in enumerate(group):
             for treatment in group[index + 1 :]:
                 pair = pair_reports(control, treatment, neutrality_resolver=resolver)
+                if resolver is not None and control.strategy_digest and treatment.strategy_digest:
+                    left, right = (
+                        resolver(control.strategy_digest),
+                        resolver(treatment.strategy_digest),
+                    )
+                    if left is not None and right is not None and left[0] > right[0]:
+                        pair = pair_reports(treatment, control, neutrality_resolver=resolver)
                 candidates.append(pair)
     candidates.sort(
         key=lambda item: (

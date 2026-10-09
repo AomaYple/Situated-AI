@@ -270,7 +270,9 @@ def save_header(path: Path) -> dict[str, str]:
             result[key] = match[1].decode("utf-8")
     if not result.get("game_date") or not result.get("version"):
         raise ValueError("存档头缺少日期或版本")
-    if re.search(rb'settings\s*=\s*\{[^}]*""', header):
+    # 原版新局会在规则列表首位保留一个空占位，随后跟着一串有效规则；
+    # 只有整个列表确实只有空字符串时，才是不可重放的空规则引用。
+    if re.search(rb'settings\s*=\s*\{\s*""\s*\}', header):
         result["invalid_rules"] = "empty game-rule reference"
     # 观察者的player_manager数据库为空；缺该结构时保持未知，不能默认当观察者。
     with path.open("rb") as stream, mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as data:
@@ -489,11 +491,13 @@ class Deployment:
                     if self.content.read_bytes() != self.original:
                         raise RuntimeError("配置字节恢复校验失败")
                 self.config_claimed = False
-            except OSError as exc:
+            except (OSError, RuntimeError) as exc:
                 errors.append(f"恢复 {self.content}：{exc}")
         remaining: list[tuple[Path, Path | None]] = []
         for dest, saved in reversed(self.claims):
             try:
+                if saved is not None and not saved.exists():
+                    raise FileNotFoundError(f"原件备份缺失，保留目标且拒绝重复清理：{saved}")
                 if dest.exists():
                     shutil.rmtree(dest)
                 if saved is not None:

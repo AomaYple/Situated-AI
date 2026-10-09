@@ -12,6 +12,7 @@ import shutil
 import signal
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -24,6 +25,15 @@ from pdx import config
 pytestmark = pytest.mark.unit
 
 _SCRIPT = config.REPO / "tools" / "probe" / "perf_compare.py"
+
+
+@pytest.fixture(autouse=True)
+def _isolate_probe_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # 动态导入的探针每个用例都有独立目录，收尾测试不能覆盖真实实机证据。
+    monkeypatch.setattr(config, "OUT", tmp_path / "probe-out")
+    from pdx import game_auto
+
+    monkeypatch.setattr(game_auto, "_process_pids", list)
 
 
 def _load() -> Any:
@@ -185,6 +195,55 @@ def test_收尾恢复运行前存档目录而不保留实验存档(tmp_path: Pat
     assert not (saves / "experiment.v3").exists()
 
 
+def test_收尾第二次重试不会删除第一次已经恢复的用户目录(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _load()
+    monkeypatch.setattr(module, "OUT_DIR", tmp_path / "out")
+    content = tmp_path / "content_load.json"
+    content.write_bytes(b"original-config")
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+    (first / "user.txt").write_bytes(b"first-user-data")
+    (second / "user.txt").write_bytes(b"second-user-data")
+    cleanup = module.PerfCleanup(
+        content_path=content,
+        backup_path=module._make_backup(content),
+        generated_paths=(first, second),
+        killer=list,
+    )
+    cleanup.claim_existing_paths()
+    for path in (first, second):
+        path.mkdir()
+        (path / "generated.txt").write_bytes(b"generated")
+
+    original_restore = cleanup._restore_path
+    failed_once = False
+
+    def fail_second_restore(backup: Path, path: Path) -> None:
+        nonlocal failed_once
+        if path == second and not failed_once:
+            failed_once = True
+            raise OSError("模拟暂时性占用")
+        original_restore(backup, path)
+
+    monkeypatch.setattr(cleanup, "_restore_path", fail_second_restore)
+
+    first_errors = cleanup.run(reason="first-attempt")
+    assert first_errors
+    assert (first / "user.txt").read_bytes() == b"first-user-data"
+    assert not (first / "generated.txt").exists()
+
+    second_errors = cleanup.run(reason="retry")
+    assert second_errors == ()
+    assert (first / "user.txt").read_bytes() == b"first-user-data"
+    assert (second / "user.txt").read_bytes() == b"second-user-data"
+    assert not (first / "generated.txt").exists()
+    assert not (second / "generated.txt").exists()
+
+
 def test_收尾恢复规则预设时重建被游戏移除的父目录(tmp_path: Path) -> None:
     module = _load()
     content = tmp_path / "content_load.json"
@@ -205,7 +264,9 @@ def test_收尾恢复规则预设时重建被游戏移除的父目录(tmp_path: 
     assert presets.read_bytes() == b"user-rules"
 
 
-def test_单项清理失败不阻断其它恢复步骤(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_终止游戏异常时不恢复或删除仍可能被使用的资源(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     module = _load()
     monkeypatch.setattr(module, "OUT_DIR", tmp_path / "out")
 
@@ -219,9 +280,9 @@ def test_单项清理失败不阻断其它恢复步骤(tmp_path: Path, monkeypat
 
     errors = cleanup.run(reason="exception")
     assert any("终止本次游戏" in error for error in errors)
-    assert content.read_bytes() == b'{"enabledMods": []}\n'
-    assert (target / "original.txt").is_file()
-    assert not (target / "generated.txt").exists()
+    assert content.read_bytes() == b"temporary"
+    assert (cleanup.path_backups[target] / "original.txt").is_file()
+    assert (target / "generated.txt").exists()
     assert cleanup.backup_path.exists()
     assert cleanup.cleaned is False
 
@@ -240,6 +301,66 @@ def test_游戏仍存活时保留实验资源和可恢复原件(tmp_path, monkey
     assert cleanup.backup_path.exists()
     assert cleanup.path_backups[target].exists()
     assert not cleanup.cleaned
+
+
+def test_独立检查发现残留进程时不能信任空的终止报告(tmp_path, monkeypatch):
+    module = _load()
+    _, cleanup, content, target = _state(module, tmp_path, list)
+    target.mkdir()
+    (target / "generated").write_bytes(b"running")
+    content.write_bytes(b"running")
+    monkeypatch.setattr(module.ga, "LAST_KILL_ALIVE", [])
+    monkeypatch.setattr(module.ga, "_process_pids", lambda: [123])
+    assert cleanup.run(reason="independent-check")
+    assert content.read_bytes() == b"running"
+    assert (cleanup.path_backups[target] / "original.txt").exists()
+    assert (target / "generated").exists()
+
+
+def test_认领中途失败绝不删除尚未备份的原件(tmp_path, monkeypatch):
+    module = _load()
+    content = tmp_path / "content_load.json"
+    content.write_bytes(b"original")
+    first, second = tmp_path / "first", tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+    (first / "user").write_bytes(b"first")
+    (second / "user").write_bytes(b"second")
+    cleanup = module.PerfCleanup(content, module._make_backup(content), (first, second), list)
+    move = module.shutil.move
+
+    def fail_second(source, dest):
+        if Path(source) == second:
+            raise OSError("backup failed")
+        return move(source, dest)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(module.shutil, "move", fail_second)
+        with pytest.raises(OSError, match="backup failed"):
+            cleanup.claim_existing_paths()
+    assert cleanup.run(reason="partial-claim") == ()
+    assert (first / "user").read_bytes() == b"first"
+    assert (second / "user").read_bytes() == b"second"
+
+
+def test_报告写入失败后仍能安全重试收尾(tmp_path, monkeypatch):
+    module = _load()
+    _, cleanup, content, target = _state(module, tmp_path, list)
+    target.mkdir()
+    original = cleanup._write_report
+
+    def fail_report():
+        cleanup.errors.append("report unavailable")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(cleanup, "_write_report", fail_report)
+        assert cleanup.run(reason="first")
+    assert not cleanup.backup_path.exists()
+    assert cleanup.content_restored
+    assert cleanup._write_report == original
+    assert cleanup.run(reason="retry") == ()
+    assert content.read_bytes() == b'{"enabledMods": []}\n'
+    assert (target / "original.txt").exists()
 
 
 def test_信号处理器先收尾再抛出对应退出异常(
@@ -305,16 +426,18 @@ def test_清理期间再次收到信号不会中断恢复(tmp_path: Path, monkey
     restore()
 
 
-def test_窗口日期判据要求每一对首末日期完全一致() -> None:
+def test_窗口日期判据比较日历日期并保留原始tick() -> None:
     module = _load()
     same = [
         {"label": "vanilla", "index": 1, "advanced": {"from": "1836.1.1", "to": "1837.1.1"}},
-        {"label": "ours", "index": 1, "advanced": {"from": "1836.1.1", "to": "1837.1.1"}},
+        {"label": "ours", "index": 1, "advanced": {"from": "1836.1.1.12", "to": "1837.1.1.6"}},
     ]
     verdict = module.window_control_verdict(same)
     assert verdict.ok
     assert verdict.pairs == 1
     assert verdict.comparisons[0]["comparable"] is True
+    assert verdict.comparisons[0]["from"]["ours"] == "1836.1.1.12"
+    assert verdict.comparisons[0]["calendar_from"]["ours"] == "1836.1.1"
 
     mismatch = [
         *same[:1],
@@ -332,6 +455,106 @@ def test_窗口日期判据要求每一对首末日期完全一致() -> None:
     missing_verdict = module.window_control_verdict(missing)
     assert not missing_verdict.ok
     assert "ours.from" in missing_verdict.problems[0]
+
+
+def test_固定检查点窗口按日历月初平移并拒绝无效日期() -> None:
+    module = _load()
+    assert module._shift_to_month_start("1836.2.1", 4) == "1836.6.1"
+    assert module._shift_to_month_start("1836.6.1", 36) == "1839.6.1"
+    assert module._calendar_date("1836.6.1.12") == "1836.6.1"
+    assert module._calendar_date("1836.13.1") is None
+    assert module._calendar_key("1839.10.1") > module._calendar_key("1839.6.1")
+    with pytest.raises(ValueError, match="无效游戏日期"):
+        module._shift_to_month_start("1836.invalid.1", 4)
+
+
+def test_固定窗口轮询不会每次都采集资源或扫描错误日志(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load()
+    clock = [0.0]
+    ticks = [0]
+    samples: list[dict[str, object]] = []
+    scans = [0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        module.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds)
+    )
+
+    def tick_mark() -> Any:
+        ticks[0] += 1
+        date = "1836.1.1" if ticks[0] < 52 else "1836.1.2"
+        return SimpleNamespace(tick=date)
+
+    monkeypatch.setattr(module.ga, "tick_mark", tick_mark)
+    monkeypatch.setattr(module.ga, "_live_window", lambda _hwnd: True)
+
+    def scan() -> Any:
+        scans[0] += 1
+        return SimpleNamespace(readable=True, errors=(), files=(), unreadable=(), benign=())
+
+    monkeypatch.setattr(module, "scan_game_errors", scan)
+    monkeypatch.setattr(
+        module,
+        "_resource_sample",
+        lambda started: {"seconds": round(clock[0] - started, 2)},
+    )
+
+    result = module._wait_months(
+        1,
+        1.0,
+        timeout=20.0,
+        samples=samples,
+        started=0.0,
+        end_date="1836.1.2",
+    )
+
+    assert result["to"] == "1836.1.2"
+    assert len(samples) <= 3  # 初始、每5秒、窗口结束；不是每次0.1秒轮询
+    assert scans[0] <= 3  # 初始、每5秒健康检查、窗口结束
+
+
+def test_dump_ticktask文件缺失时有限重试并最终返回次数(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _load()
+    target = tmp_path / "ticktask_timings.csv"
+    calls: list[str] = []
+    clock = [0.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        module.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds)
+    )
+
+    def submit(*_args: object, **_kwargs: object) -> bool:
+        calls.append("dump")
+        if len(calls) == 2:
+            target.write_text("header\n", encoding="utf-8")
+        return True
+
+    monkeypatch.setattr(module.ga, "submit_console_command", submit)
+    assert module.dump_ticktask_csv(1, target, max_attempts=3, attempt_timeout=1.0) == 2
+    assert calls == ["dump", "dump"]
+
+
+def test_dump_ticktask文件一直缺失时返回最大重试次数(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module = _load()
+    target = tmp_path / "ticktask_timings.csv"
+    calls: list[str] = []
+    clock = [0.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        module.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds)
+    )
+    monkeypatch.setattr(
+        module.ga,
+        "submit_console_command",
+        lambda *_args, **_kwargs: calls.append("dump") or True,
+    )
+    assert module.dump_ticktask_csv(1, target, max_attempts=2, attempt_timeout=1.0) == 2
+    assert calls == ["dump", "dump"]
 
 
 def test_error_log扫描区分真实错误无害错误和未生成(tmp_path: Path) -> None:
@@ -473,6 +696,28 @@ def test_report_table_聚合资源和游戏日吞吐并计算差分(tmp_path: Pa
     assert table["m4_gate"] == {"required_pairs": 3, "ok": True, "reasons": []}
     assert table["delta"]["rss_peak_mib"] == 10.0
     assert table["delta"]["wall_seconds_per_game_day"] == round(6.0 / 30.0, 4)
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ([800, 900, 1000], 200.0),
+        ([800, 700, 1000], None),
+        ([800], None),
+        ([None, 900, 1000], None),
+        ([800, 900, float("inf")], None),
+    ],
+)
+def test_进程累计CPU必须使用窗口有效首尾差(tmp_path, values, expected):
+    module = _load()
+    report = _performance_report("vanilla", 1, tmp_path / "missing.csv", wall=999)
+    report["resource_cpu_basis"] = "process_lifetime"
+    report["measurement_wall_seconds"] = 60.0
+    report["samples"] = [{"rss_mib": 100.0, "cpu_seconds": value} for value in values]
+    metrics = module._sample_metrics(report)
+    assert metrics["cpu_seconds"] == expected
+    assert metrics["wall_seconds"] == 60.0
+    assert metrics["wall_seconds_per_game_day"] == 2.0
 
 
 def test_report_table_资源样本缺失时拒绝正式门禁但保留探索读数(tmp_path: Path) -> None:

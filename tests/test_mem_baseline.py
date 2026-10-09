@@ -57,6 +57,27 @@ def mem(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> ModuleType:
 # ────────────────────────── 造数：一份「达标」的组读数与索引 ──────────────────────────
 
 
+@pytest.mark.parametrize(
+    ("tail", "expected"),
+    [
+        (
+            "================ 2622 passed, 10 skipped in 541.17s (0:09:01) =================",
+            {"passed": 2622, "skipped": 10},
+        ),
+        (
+            "================ 1 failed, 12 passed, 1 error in 2.0s =================",
+            {"failed": 1, "passed": 12, "error": 1},
+        ),
+        ("35 passed, 16 subtests passed in 1.23s", {"passed": 35}),
+        ("================ 16 subtests passed in 1.0s =================", {}),
+    ],
+)
+def test_pytest尾行计数支持装饰符且不计子断言(mem, tail, expected):
+    counts, failed = mem.parse_pytest_tail(tail)
+    assert counts == expected
+    assert failed == []
+
+
 def _summary(*, tag: str, group: str, peak: float = 900.0, per_worker: float = 100.0) -> dict:
     """一份能过 `judge()` 的组读数（n=4 ⇒ 上限 1024+4×512）。"""
     return {

@@ -173,8 +173,8 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2566 条**用例（`pytest --collect-only` 实测；最近完整 `n-auto`：2556 passed / 10 skipped，517.16 秒，4 workers） |
-| 测试文件 | **109 个测试文件**（`tests/test_*.py`） |
+| 测试 | **2642 条**用例（`pytest --collect-only` 实测；最新完整回归为 2632 passed / 10 skipped / 0 failed，覆盖率 88.54%） |
+| 测试文件 | **110 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 以 `v3 cov` 与 CI coverage artifact 的当前输出为准（门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | **3,962** 个脚本文件（`game\` 下 `.txt` 3,758 + `.gui` 204，即 `pdx.cache` 的解析条数）+ **1,878** 个本地化 `.yml` |
@@ -231,7 +231,7 @@ Situated AI/
 
 ## 工程收尾复核（2026-10-06，B137/B138）
 
-2026-10-09 本轮完整 `n-auto` 回归收集 **2566** 个用例，结果为 **2556 passed / 10 skipped**，pytest 用时 **517.16 秒**，4 个 worker；总覆盖率 **88.37%**，超过 86% 门槛。跳过项仍来自符号链接权限和本机引擎日志不可用；并行环境下 pytest-benchmark 自动停用是预期行为。M4 真实性能配对仍需合法、干净的后期观察者检查点和实机候选输入。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与执行计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
+2026-10-09 首轮完整 `n-auto` 回归收集 **2576** 个用例，实际结果为 **2565 passed / 10 skipped / 1 failed**，561.87 秒、4 个 worker、覆盖率 **88.37%**；唯一失败是 README 用例数陈旧，定向修正已通过。新增原件保护、M3 样本配对和政治矩阵回归后现收集 **2642** 项；最新完整回归 **2632 passed / 10 skipped / 0 failed**，覆盖率 **88.54%**，资源摘要见本轮[证据审计](docs/audits/2026-10-09-evidence-audit.md)。M4 已完成早期固定检查点 3 组 × 3 臂的采集回归；正式性能验收仍缺冻结的 M3 候选、真实后期输入及事前资源预算。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与执行计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
 
 ## 授权
 

@@ -1166,6 +1166,89 @@ class TestKillGame:
         assert "仍存活" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("denied_at", ["inspect", "kill"])
+def test_本局进程权限失败仍登记为存活并保留重试权(monkeypatch, denied_at):
+    monkeypatch.setattr(ga, "_OWNED_GAME_PIDS", {111})
+    monkeypatch.setattr(ga, "_OWNED_GAME_META", {})
+    monkeypatch.setattr(ga, "LAST_KILL_ALIVE", [])
+
+    class Process:
+        def __init__(self, pid):
+            if denied_at == "inspect":
+                raise ga.psutil.AccessDenied(pid)
+            self.pid = pid
+
+        def children(self, recursive=False):
+            return []
+
+        def kill(self):
+            raise ga.psutil.AccessDenied(self.pid)
+
+    def wait(pids):
+        assert pids == [111]
+        return pids
+
+    monkeypatch.setattr(ga.psutil, "Process", Process)
+    monkeypatch.setattr(ga, "_wait_for_pids", wait)
+    assert ga.kill_owned_game() == []
+    assert ga.LAST_KILL_ALIVE == [111]
+    assert sorted(ga._OWNED_GAME_PIDS) == [111]
+
+
+@pytest.mark.parametrize("denied_at", ["constructor", "status", "missing_method"])
+def test_退出状态未知的子进程不能视为已经退出(monkeypatch, denied_at):
+    class Process:
+        def __init__(self, pid):
+            if pid == 111:
+                raise ga.psutil.NoSuchProcess(pid)
+            if denied_at == "constructor":
+                raise ga.psutil.AccessDenied(pid)
+            if denied_at == "missing_method":
+                self.is_running = None
+
+        def is_running(self):
+            raise ga.psutil.AccessDenied(222)
+
+    monkeypatch.setattr(ga.psutil, "Process", Process)
+    assert ga._wait_for_pids([111, 222], timeout=0) == [222]
+
+
+def test_父进程退出后重试仍核验前次存活子进程但不据旧PID终止(monkeypatch):
+    monkeypatch.setattr(ga, "_OWNED_GAME_PIDS", {111})
+    monkeypatch.setattr(ga, "_OWNED_GAME_META", {})
+    monkeypatch.setattr(ga, "LAST_KILL_ALIVE", [])
+    requested = []
+    waited = []
+
+    class Process:
+        def __init__(self, pid):
+            if waited:
+                raise ga.psutil.NoSuchProcess(pid)
+            self.pid = pid
+
+        def children(self, recursive=False):
+            return [Process(222)]
+
+        def kill(self):
+            requested.append(self.pid)
+
+    def wait(pids):
+        waited.append(pids)
+        return [222] if 222 in pids and len(waited) < 3 else []
+
+    monkeypatch.setattr(ga.psutil, "Process", Process)
+    monkeypatch.setattr(ga, "_wait_for_pids", wait)
+    assert ga.kill_owned_game() == [222, 111]
+    assert ga.LAST_KILL_ALIVE == [222]
+    assert ga.kill_owned_game() == []
+    assert ga.LAST_KILL_ALIVE == [222]
+    assert requested == [222, 111]
+    assert waited == [[111, 222], [111, 222]]
+    assert ga.kill_owned_game() == []
+    assert not ga.LAST_KILL_ALIVE
+    assert not ga._OWNED_GAME_PIDS
+
+
 class TestLaunch:
     def test_有进程在跑就拒绝启动(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """两个实例会互相抢前台与存档 —— 起之前必须断言 0 个进程。"""

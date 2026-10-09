@@ -1205,7 +1205,7 @@ def parse_pytest_tail(text: str) -> tuple[dict[str, int], list[str]]:
         stripped = line.strip()
         if stripped.startswith(("FAILED ", "ERROR ")):
             failed.append(stripped.split(" ", 1)[1][:160])
-        head = stripped.split(" in ", 1)[0]
+        head = stripped.strip("= ").split(" in ", 1)[0]
         for chunk in head.split(","):
             hit = _COUNT_RE.fullmatch(chunk.strip())
             if not hit:

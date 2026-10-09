@@ -37,6 +37,7 @@ BOOLEANS = {
     "GOV_PREFERRED_ADVANCE_POSITIVE",
 } | {f"GOV_PREFERRED_ADVANCE_GE_{value}" for value in THRESHOLDS}
 SAMPLE_VAR = "sitai_probe_reform_sample"
+ENACTMENT_DETAIL_NUMERIC = {"CHECKPOINT_SUCCESS", "CHECKPOINT_ADVANCE"}
 
 
 def political_keys(game: Path) -> list[str]:
@@ -62,6 +63,7 @@ def build(
     tags: tuple[str, ...] = ("RUS", "FRA"),
     strategies: Iterable[str] = (),
     legality_laws: Iterable[str] = (),
+    enactment_details: bool = False,
 ) -> dict[str, str]:
     laws = sorted(set(laws))
     if not laws or any(not re.fullmatch(r"law_[a-z0-9_]+", law) for law in laws):
@@ -123,6 +125,15 @@ def build(
                 *thresholds,
             )
         )
+        enactment_detail_readings = ""
+        if enactment_details:
+            enactment_detail_readings = "\n".join(
+                (
+                    f"if = {{ limit = {{ enacting_any_law = yes }} {log('ENACTING_LAW', '[THIS.GetCountry.GetLawBeingEnacted.GetLawType.GetKey]')} }}",
+                    f"if = {{ limit = {{ enacting_any_law = yes }} {log('CHECKPOINT_SUCCESS', '[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointSuccessChance|3]')} }}",
+                    f"if = {{ limit = {{ enacting_any_law = yes }} {log('CHECKPOINT_ADVANCE', '[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointAdvanceChance|3]')} }}",
+                )
+            )
         strategy_readings = "\n".join(
             f"if = {{ limit = {{ has_strategy = {key} }} {log('POLITICAL_STRATEGY', key)} }}"
             for key in sorted(strategies)
@@ -143,6 +154,7 @@ def build(
             {decision_probe.sample_step(SAMPLE_VAR)}
             {log("COUNTRY_NAME", "[THIS.GetCountry.GetNameNoFormatting]")}
             {booleans}
+            {enactment_detail_readings}
             {strategy_readings}
             {log("LEGITIMACY", "[THIS.GetCountry.GetGovernmentLegitimacy|3]")}
             {log("COMPUTED_DEFAULT_DELTA", "[THIS.GetCountry.MakeScope.ScriptValue('sitai_probe_reform_default_delta')|3]")}
@@ -191,7 +203,12 @@ def build(
     }
 
 
-def analyze(directory: Path) -> dict:
+def analyze(
+    directory: Path,
+    *,
+    expected_tags: tuple[str, ...] = (),
+    expected_laws: tuple[str, ...] = (),
+) -> dict:
     rows = []
     for path in game_auto.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
@@ -228,6 +245,17 @@ def analyze(directory: Path) -> dict:
                         r"ai_strategy_[a-z0-9_]+", row["value"]
                     ):
                         raise ValueError(f"政治策略读数未解析：{row}")
+                    if row["kind"] == "ENACTING_LAW" and not re.fullmatch(
+                        r"law_[a-z0-9_]+", row["value"]
+                    ):
+                        raise ValueError(f"进行中法律键未解析：{row}")
+                    if row["kind"] in ENACTMENT_DETAIL_NUMERIC:
+                        try:
+                            number = float(row["value"].replace("−", "-").replace(",", "."))
+                        except ValueError as exc:
+                            raise ValueError(f"立法概率未解析：{row}") from exc
+                        if not math.isfinite(number):
+                            raise ValueError(f"立法概率非有限：{row}")
                     if row["kind"] in {"LEGITIMACY", "COMPUTED_DEFAULT_DELTA"}:
                         try:
                             number = float(row["value"].replace("−", "-").replace(",", "."))
@@ -265,6 +293,13 @@ def analyze(directory: Path) -> dict:
             ),
             "events": {kind: counts[kind] for kind in ("START", "PASS", "FAIL", "END")},
             "starts": [r for r in seen if r["kind"] == "START_LAW"],
+            "enacting_law_keys": [r["value"] for r in seen if r["kind"] == "ENACTING_LAW"],
+            "checkpoint_success_values": [
+                r["value"] for r in seen if r["kind"] == "CHECKPOINT_SUCCESS"
+            ],
+            "checkpoint_advance_values": [
+                r["value"] for r in seen if r["kind"] == "CHECKPOINT_ADVANCE"
+            ],
             "computed_delta_distribution": dict(
                 Counter(r["value"] for r in seen if r["kind"] == "COMPUTED_DEFAULT_DELTA")
             ),
@@ -293,25 +328,71 @@ def analyze(directory: Path) -> dict:
         }
     legal_rows = [r for r in rows if r["kind"] == "LEGAL_BLOCKED"]
     legal_values = {r["value"] for r in legal_rows}
-    country_names = {
-        r["tag"]: r["value"]
+    # 预注册矩阵不能从已收到的行反推，否则整国/整法律漏采仍会伪装完整。
+    issues: list[str] = []
+    if not expected_tags or not expected_laws:
+        issues.append("expected_matrix.missing")
+    if (
+        len(set(expected_tags)) != len(expected_tags)
+        or any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in expected_tags)
+        or len(set(expected_laws)) != len(expected_laws)
+        or any(not re.fullmatch(r"law_[a-z0-9_]+", law) for law in expected_laws)
+    ):
+        raise ValueError("法律资格预注册矩阵无效")
+    blocked = Counter((r["tag"], r["date"], r["law"]) for r in legal_rows)
+    enacted = Counter((r["tag"], r["date"], r["law"]) for r in rows if r["kind"] == "LEGAL_ENACTED")
+    samples = {
+        (r["tag"], r["date"])
+        for r in rows
+        if r["kind"]
+        in BOOLEANS
+        | {
+            "COUNTRY_NAME",
+            "LEGITIMACY",
+            "LEGAL_BLOCKED",
+            "LEGAL_ENACTED",
+            "POLITICAL_STRATEGY",
+            "COMPUTED_DEFAULT_DELTA",
+        }
+    }
+    expected = {
+        (tag, sample, law)
+        for tag, sample in samples
+        if tag in expected_tags
+        for law in expected_laws
+    }
+    if set(expected_tags) != {tag for tag, _sample in samples}:
+        issues.append("matrix.country_missing_or_unexpected")
+    if not expected or set(blocked) != expected or set(enacted) != expected:
+        issues.append("matrix.missing_or_unexpected_cells")
+    if any(count != 1 for count in (*blocked.values(), *enacted.values())):
+        issues.append("matrix.duplicate_cells")
+    names = Counter(
+        (r["tag"], r["date"])
         for r in rows
         if r["kind"] == "COUNTRY_NAME"
         and r["value"]
         and "[" not in r["value"]
         and "]" not in r["value"]
-    }
-    legal_pairs = {(r["tag"], r["law"]) for r in legal_rows}
-    enacted_pairs = {(r["tag"], r["law"]) for r in rows if r["kind"] == "LEGAL_ENACTED"}
+    )
+    if any(names[tag, sample] != 1 for tag, sample, _law in expected):
+        issues.append("matrix.country_name_missing_or_duplicate")
+    if legal_values != {"yes", "no"}:
+        issues.append("controls.yes_no_missing")
     return {
         "rows": rows,
         "countries": countries,
-        "legality_interface_validated": bool(
-            legal_rows
-            and legal_values == {"yes", "no"}
-            and all(tag in country_names for tag, _law in legal_pairs)
-            and legal_pairs == enacted_pairs
-        ),
+        "legality_interface_validated": bool(legal_rows and not issues),
+        "legality_validation": {
+            "expected_tags": list(expected_tags),
+            "expected_laws": list(expected_laws),
+            "expected_cells": len(expected),
+            "blocked_cells": len(blocked),
+            "enacted_cells": len(enacted),
+            "issues": issues,
+            "country_identity_verified": False,
+            "identity_basis": "Names are observed in the explicit tag scope; no independent tag-to-name identity oracle is available.",
+        },
         "legality_scope": (
             "explicit country tags × requested law types; blocking requirement is a GUI-native getter and enacted is a separate native state"
             if legal_rows

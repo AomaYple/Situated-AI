@@ -95,6 +95,41 @@ def test_恢复失败保留可重试副本(deployment, tmp_path, monkeypatch):
     assert (dest / "old").is_file()
 
 
+def test_配置校验失败不会中止其它恢复且可重试(deployment, tmp_path, monkeypatch):
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "probe.txt").write_bytes(b"probe")
+    deployment.deploy({"probe": source})
+    original_read_bytes = Path.read_bytes
+    failures = iter([True, False])
+
+    def flaky_read(path):
+        if path == deployment.content and next(failures, False):
+            return b"tampered"
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", flaky_read)
+    errors = deployment.restore()
+    assert any("配置字节恢复校验失败" in error for error in errors)
+    assert not deployment.claims
+    assert deployment.config_claimed
+    assert deployment.restore() == []
+    assert not deployment.config_claimed
+
+
+def test_缺失备份时重复恢复也不删除现有目录(deployment):
+    dest = deployment.userdir / "save games"
+    dest.mkdir()
+    (dest / "original.v3").write_bytes(b"original")
+    deployment.isolate_saves()
+    saved = deployment.claims[0][1]
+    saved.rename(saved.with_name("externally-restored"))
+    (dest / "recovered.v3").write_bytes(b"recovered")
+    for _ in range(2):
+        assert deployment.restore()
+        assert (dest / "recovered.v3").read_bytes() == b"recovered"
+
+
 def test_共享锁拒绝第二个实验(tmp_path):
     with (
         game_run.RunLock(tmp_path / "run.lock"),
@@ -394,6 +429,17 @@ def test_存档空规则和非观察者状态可在启动前发现(tmp_path):
     header = game_run.save_header(path)
     assert header["observer"] == "no"
     assert header["invalid_rules"]
+
+
+def test_原版规则列表首位空占位不算空规则(tmp_path):
+    path = tmp_path / "vanilla-observer.v3"
+    path.write_bytes(
+        b'SAV0100\nversion="1.14.5" game_date=1836.4.1 '
+        b'settings={ "" achievements_allowed standard_ai_behavior }\n'
+        b"player_manager={database={}}"
+    )
+    header = game_run.save_header(path)
+    assert "invalid_rules" not in header
 
 
 def test_旧处境状态在载入前拒绝(tmp_path):

@@ -58,6 +58,11 @@ def main() -> int:
         default="RUS,FRA",
         help="法律阻挡要求观察国标签，逗号分隔（默认 RUS,FRA）",
     )
+    parser.add_argument(
+        "--enactment-details",
+        action="store_true",
+        help="只读记录自然进行中法律键及当前 checkpoint 成功/推进概率",
+    )
     args = parser.parse_args()
     if args.natural_targets and not args.natural_diplomacy:
         parser.error("--natural-targets 需要 --natural-diplomacy")
@@ -92,6 +97,7 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
             legality_laws=tuple(
                 value.strip() for value in args.legality_laws.split(",") if value.strip()
             ),
+            enactment_details=args.enactment_details,
         ),
     )
     policy_state = args.arm != "vanilla"
@@ -170,7 +176,15 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
     def analyze(logdir):
         result: dict[str, object] = {
             "fiscal": decision_probe.analyze(logdir, strict=True, policy_state=policy_state),
-            "reform": extension_probe.analyze(logdir),
+            "reform": extension_probe.analyze(
+                logdir,
+                expected_tags=tuple(
+                    value.strip() for value in args.legality_tags.split(",") if value.strip()
+                ),
+                expected_laws=tuple(
+                    value.strip() for value in args.legality_laws.split(",") if value.strip()
+                ),
+            ),
             "experiment": {
                 "arm": args.arm,
                 "positive_control_default_contribution": (99 if positive_control else None),
@@ -192,6 +206,7 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 "legality_tags": tuple(
                     value.strip() for value in args.legality_tags.split(",") if value.strip()
                 ),
+                "enactment_details": args.enactment_details,
             },
         }
         if natural:
