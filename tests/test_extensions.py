@@ -117,26 +117,42 @@ def test_显式国家法律阻挡要求只读且另记现行法律():
     assert "start_enactment" not in hooks
 
 
-def test_进行中法律概率观测只读且受进行中守卫保护():
+def test_实机已断言的阶段概率观测在生成前拒绝():
     laws = ["law_autocracy", "law_local_police"]
-    files = extension_probe.build(laws, tags=("RUS",), enactment_details=True)
+    with pytest.raises(ValueError, match="Interface 访问断言"):
+        extension_probe.build(laws, tags=("RUS",), enactment_details=True)
+    files = extension_probe.build(laws, tags=("RUS",))
     hooks = files["common/on_actions/zz_sitai_reform_observer.txt"]
     assert "GetKey" not in hooks
-    for law in laws:
-        assert (
-            f'is_enacting_law = law_type:{law} }} debug_log = "SITAI REFORM;RUS;ENACTING_LAW;{law};'
-            in hooks
-        )
-    assert (
-        "CHECKPOINT_SUCCESS;[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointSuccessChance|3]"
-        in hooks
-    )
-    assert (
-        "CHECKPOINT_ADVANCE;[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointAdvanceChance|3]"
-        in hooks
-    )
-    assert hooks.count("enacting_any_law = yes") >= 4
+    assert "GetCheckpointSuccessChance" not in hooks
+    assert "GetCheckpointAdvanceChance" not in hooks
     assert "start_enactment" not in hooks
+
+
+def test_已停用阶段概率选项在读取原版或部署前拒绝(monkeypatch, tmp_path, capsys):
+    import sys
+
+    from pdx import game_run
+    from tools.probe import decision_stability
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "decision_stability.py",
+            "--arm",
+            "vanilla",
+            "--save",
+            str(tmp_path / "missing.v3"),
+            "--enactment-details",
+        ],
+    )
+    monkeypatch.setattr(decision_stability, "parse_file", lambda _path: pytest.fail("提前拒绝失败"))
+    monkeypatch.setattr(game_run, "run", lambda *_args, **_kwargs: pytest.fail("不得启动游戏"))
+    with pytest.raises(SystemExit) as result:
+        decision_stability.main()
+    assert result.value.code == 2
+    assert "Interface 访问断言" in capsys.readouterr().err
 
 
 def test_进行中法律概率坏值不能静默接受(tmp_path):

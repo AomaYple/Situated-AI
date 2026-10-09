@@ -68,7 +68,7 @@ def main() -> int:
     parser.add_argument(
         "--enactment-details",
         action="store_true",
-        help="只读记录自然进行中法律键及当前 checkpoint 成功/推进概率",
+        help="已停用：只读日志访问阶段概率会触发引擎 Interface 断言",
     )
     parser.add_argument("--approval-igs", default="", help="只读态度矩阵 IG 键，逗号分隔；默认关闭")
     parser.add_argument("--approval-laws", default="", help="只读态度矩阵法律键，逗号分隔")
@@ -79,6 +79,8 @@ def main() -> int:
     )
     parser.add_argument("--fiscal-tags", default="RUS,PRU", help="财政只读观察的两个国家标签")
     args = parser.parse_args()
+    if args.enactment_details:
+        parser.error(extension_probe.ENACTMENT_DETAILS_UNAVAILABLE)
     if args.natural_targets and not args.natural_diplomacy:
         parser.error("--natural-targets 需要 --natural-diplomacy")
     if args.legality_laws and not args.legality_tags:
@@ -126,7 +128,6 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
             legality_laws=tuple(
                 value.strip() for value in args.legality_laws.split(",") if value.strip()
             ),
-            enactment_details=args.enactment_details,
             approval_igs=approval_igs,
             approval_laws=approval_laws,
         ),

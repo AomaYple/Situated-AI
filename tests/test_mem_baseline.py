@@ -143,7 +143,11 @@ def test_tree_sample_keeps_grandchildren_of_exited_parent_and_rejects_unrelated_
     )
     monkeypatch.setattr(mem, "sys_mem", lambda: {"avail_mb": 1000.0})
     sampler = mem.TreeSampler(10)
-    readings = {10: ((100, 200, 80), None), 11: ((100, 200, 80), None), 12: ((50, None, None), 2.0)}
+    readings: dict[int, tuple[tuple[int, int | None, int | None] | None, float | None]] = {
+        10: ((100, 200, 80), None),
+        11: ((100, 200, 80), None),
+        12: ((50, None, None), 2.0),
+    }
     readings[exited_pid] = (None, None)
     sampler._reader = SimpleNamespace(
         read=lambda pid: readings[pid][0], read_cpu=lambda pid: readings[pid][1]

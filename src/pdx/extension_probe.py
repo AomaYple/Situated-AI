@@ -38,6 +38,10 @@ BOOLEANS = {
 } | {f"GOV_PREFERRED_ADVANCE_GE_{value}" for value in THRESHOLDS}
 SAMPLE_VAR = "sitai_probe_reform_sample"
 ENACTMENT_DETAIL_NUMERIC = {"CHECKPOINT_SUCCESS", "CHECKPOINT_ADVANCE"}
+ENACTMENT_DETAILS_UNAVAILABLE = (
+    "进行中法律阶段概率观测已停用：1.14.5 实机触发 Interface 访问断言，"
+    "注册 getter 不能据此用于只读脚本日志；重新验收前拒绝生成或运行。"
+)
 
 
 def political_keys(game: Path) -> list[str]:
@@ -67,6 +71,8 @@ def build(
     approval_igs: Iterable[str] = (),
     approval_laws: Iterable[str] = (),
 ) -> dict[str, str]:
+    if enactment_details:
+        raise ValueError(ENACTMENT_DETAILS_UNAVAILABLE)
     laws = sorted(set(laws))
     if not laws or any(not re.fullmatch(r"law_[a-z0-9_]+", law) for law in laws):
         raise ValueError("只读仪器必须提供规范的全量法律键")
@@ -128,21 +134,6 @@ def build(
                 *thresholds,
             )
         )
-        enactment_detail_readings = ""
-        if enactment_details:
-            # 注册清单没有 LawType.GetKey；沿用原生生命周期探针的逐键条件，
-            # 只识别已声明原版法律，不把本地化名称转换成身份键。
-            enacting_law = "\n".join(
-                f"if = {{ limit = {{ is_enacting_law = law_type:{law} }} {log('ENACTING_LAW', law)} }}"
-                for law in laws
-            )
-            enactment_detail_readings = "\n".join(
-                (
-                    f"if = {{ limit = {{ enacting_any_law = yes }} {enacting_law} }}",
-                    f"if = {{ limit = {{ enacting_any_law = yes }} {log('CHECKPOINT_SUCCESS', '[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointSuccessChance|3]')} }}",
-                    f"if = {{ limit = {{ enacting_any_law = yes }} {log('CHECKPOINT_ADVANCE', '[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointAdvanceChance|3]')} }}",
-                )
-            )
         strategy_readings = "\n".join(
             f"if = {{ limit = {{ has_strategy = {key} }} {log('POLITICAL_STRATEGY', key)} }}"
             for key in sorted(strategies)
@@ -163,11 +154,12 @@ def build(
             legality_readings += "\n" + political_approval.readings(
                 tag, approval_igs, approval_laws, SAMPLE_VAR
             )
+        # 保留原可选读数所在的空行，使已验收的默认观测源指纹保持一致。
         readings.append(f"""if = {{ limit = {{ c:{tag} ?= this }}
             {decision_probe.sample_step(SAMPLE_VAR)}
             {log("COUNTRY_NAME", "[THIS.GetCountry.GetNameNoFormatting]")}
             {booleans}
-            {enactment_detail_readings}
+            {""}
             {strategy_readings}
             {log("LEGITIMACY", "[THIS.GetCountry.GetGovernmentLegitimacy|3]")}
             {log("COMPUTED_DEFAULT_DELTA", "[THIS.GetCountry.MakeScope.ScriptValue('sitai_probe_reform_default_delta')|3]")}
