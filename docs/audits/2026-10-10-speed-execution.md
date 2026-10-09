@@ -158,7 +158,7 @@ CI 将 Ruff 的 lint/format 从十二个运行时矩阵单元提取至一个静�
 
 第一次完整冻结回归保存在 `tools/out/decisions/verification-observation-20261010/`：2892 collected，2881 passed、10 skipped、1551 subtests passed、1 failed，pytest 649.08 秒。唯一失败是市场实验测试手工构造 Namespace 时遗漏新增自然模式参数，在进入生成／部署之前报 AttributeError；现改为真实命令行解析，默认值与入口保持一致。市场／行为探针定向复验 64 passed、5.01 秒。首轮全部源指纹保持一致，总覆盖率 88.692128%、11 个核心下限通过，但整轮验收仍为失败；独立 `acceptance.json` 明确记录，未用采样包装器的零退出码覆盖 pytest 的非零退出码。
 
-第二次完整回归保存在 `tools/out/decisions/verification-observation-final-20261010/`：运行前冻结全部 639 个 Git 文件，结束后指纹全部一致；2892 collected、2882 passed、10 skipped、1551 subtests passed、0 failed，pytest 626.98 秒、采样包装墙钟 628.4 秒。JUnit 的 4443 个 testcase 包含 1551 个子断言，不将其冒充新增独立用例。总覆盖率 88.692128%，整体 86% 和 11 个核心模块下限全部通过；跳过项仍为七项本地引擎日志不可用、三项符号链接权限不足，无未知跳过。独立 `acceptance.json` 核对真实 pytest 状态、JUnit、覆盖率、源码及完整采样后为 `ok=true`。
+第二次完整回归保存在 `tools/out/decisions/verification-observation-final-20261010/`：运行前冻结全部 639 个 Git 文件，结束后指纹全部一致；2892 collected、2882 passed、10 skipped、1551 subtests passed、0 failed，pytest 626.98 秒、采样包装墙钟 628.4 秒。JUnit suite 声明计数为4443，实际为2892个 testcase 节点；差额是1551个原生子断言，不将其冒充新增独立用例。总覆盖率 88.692128%，整体 86% 和 11 个核心模块下限全部通过；跳过项仍为七项本地引擎日志不可用、三项符号链接权限不足，无未知跳过。独立 `acceptance.json` 核对真实 pytest 状态、JUnit、覆盖率、源码及完整采样后为 `ok=true`。
 
 本轮 n-auto 在起始可用内存 8681.8 MiB 下自选四 worker，没有强制 worker 数或改变算法。100 毫秒配置共取得 4976 次进程树样本：RSS 峰值 3739.9 MiB、私有内存峰值 6327.0 MiB、最大单 worker OS 高水位 1464.6 MiB、已观测进程高水位之和 7217.7 MiB，累计 CPU 2203.5 秒；采样错误为空，无超时或 watchdog 中止。原始摘要为 `tools/out/mem/20261010-observation-final2-auto.summary.json`。这些指标口径不同，不能相加；没有控制不同运行的缓存及机器状态，不由本次较短墙钟计算全仓提速比例。
 
@@ -173,3 +173,15 @@ CI 将 Ruff 的 lint/format 从十二个运行时矩阵单元提取至一个静�
 失败来源是测试环境依赖：合成 GUI 流程漏模拟 Windows、能力断言错误要求所有平台支持后台 GUI、stage6 回落用例漏掉真实鼠标桩、政治正控缺临时游戏策略输入、通用 CLI 用例错误要求任意环境等于 Windows 锁、本机 mod 对照缺少无现场前置、worker 预算受 CI 环境覆盖，以及两项 Windows 用例硬编码 venv／入口脚本路径。分别补齐隔离和真实安装方案读取；不修改生产平台门禁、严格锁比较、生成器或 worker 算法。平台代理实时转发 sys 属性，避免复制旧 stderr 破坏 pytest 捕获。新增三平台能力、非 Windows 启动拒绝、配置优先级和锁漂移反例。
 
 当前实际收集 2898 项。修复后的定向复验 47 passed；随后以不存在的 `V3_ROOT` 和 `SITAI_XDIST_WORKERS=2` 运行完整离线集合，2548 passed、122 skipped、0 failed，127.97 秒；122 项跳过为119项游戏输入与3项系统权限，无未知原因。运行前后全部639个Git文件内容指纹一致。先前定向复验的 stderr 捕获失败也保留，未以最终通过覆盖；最新源码的完整覆盖率复验和第二轮真实 CI 尚待结果。独立原件与命令位于 `tools/out/ci-portability-20261010/`。
+
+### 第二轮 CI 与本地完整复验
+
+提交 `be6b3e494fb0606f872b7e63bc9b778185c7b8f0` 的 [CI 38004675889](https://github.com/AomaYple/Situated-AI/actions/runs/38004675889) 中，Linux/macOS 的八项矩阵、静态检查、benchmark 和独立 Windows 锁任务成功；普通 Windows 四项矩阵的 pytest 均为2545 passed／125 skipped／零失败，随后摘要打印中文 JSON 时因系统默认 cp1252 编码崩溃，因此工作流仍为失败。下载并核对十三份 artifact 的 SHA-256，十二份测试摘要均为2670项、零失败／错误／未知跳过；不因 JSON 已写成功而忽略打印阶段失败。
+
+同提交本地冻结完整回归 `verification-ci-portability-20261010/` 通过：2898 collected、2888 passed、10 skipped、1551 subtests passed，620.49秒；覆盖率88.753799%，整体及11个核心下限通过。全部639个Git文件指纹一致，4912次有效采样，无timeout／watchdog／采样错误；n-auto 在起始可用8348.1 MiB下自选四worker，RSS峰值3676.0 MiB、private峰值6292.2 MiB、单worker高水位1399.3 MiB、已观测高水位之和6861.6 MiB、CPU2208.4秒，包装墙钟621.8秒。独立验收为true。其最初检查器错误要求子断言各自生成XML节点，失败诊断保留为`acceptance-attempt1.json`；复核原XML和pytest实现后改为同时核对2898个节点与4449的suite声明计数，没有修改原始测试结果。
+
+摘要入口现复用`pdx.console.enable_utf8_stdio`，不放宽未知跳过门禁。新增cp1252／GBK × 已知原因／未知原因／缺失输入的六项真实子进程反例，修复前六项全部失败，修复后该文件九项通过，并严格验证UTF-8输出、报告无BOM/LF及0／2退出码。当前收集2904项；最终完整回归与第三轮真实CI在上述修复后另行冻结，不把2898项结果当成2904项全量通过。
+
+### Mod 输入增量复核
+
+与上一轮十九份检查点目录对比，新增两份自动存档分别为`20261009-184747/saves/autosave.v3`（1836.4.1）和`20261009-183516/saves/autosave.v3`（1836.8.1）。其来源报告均为`ok=false`，分别有1／3项引擎断言；它们既非真实后期，也没有处理前机会证明，不能提名正式配对。只读头部／来源核对保存在`ci-portability-20261010/new-checkpoint-review.json`。主纲领的M3／M4／M5阻塞与重开条件继续有效，生产扩展开关保持关闭。

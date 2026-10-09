@@ -19,6 +19,7 @@ from collections import Counter
 from pathlib import Path
 from typing import cast
 
+from pdx.console import enable_utf8_stdio
 from pdx.engineering import require_skip_category
 
 
@@ -55,6 +56,7 @@ def summarize(path: Path) -> dict[str, object]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    enable_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("junit", type=Path)
     parser.add_argument("--output", type=Path)
