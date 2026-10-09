@@ -9,15 +9,13 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 from pdx import config
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 pytestmark = pytest.mark.unit
 
@@ -245,7 +243,10 @@ def test_检查点部分失败保护原件(tmp_path, monkeypatch, failure):
         assert presets.read_bytes() == b"rules"
         assert content.read_bytes() == b"{}\r\n"
     else:
-        backup = next(output.glob("session-*/original-save-directory"))
+        journal = json.loads(next(output.glob("session-*/deployment.json")).read_bytes())
+        backup = Path(
+            next(saved for original, saved in journal["claims"] if original == str(saves))
+        )
         assert (backup / "nested/manual.bin").read_bytes() == b"unique-save"
         assert not (saves / "nested/manual.bin").exists()
         report = json.loads(next(output.glob("session-*/cleanup.json")).read_bytes())

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -86,7 +88,7 @@ def test_恢复失败保留可重试副本(deployment, tmp_path, monkeypatch):
     saved = deployment.claims[0][1]
     with monkeypatch.context() as patch:
         patch.setattr(
-            game_run.shutil, "rmtree", lambda _p: (_ for _ in ()).throw(OSError("locked"))
+            game_run, "move_directory", lambda *_a, **_k: (_ for _ in ()).throw(OSError("locked"))
         )
         assert deployment.restore()
         assert saved.is_dir()
@@ -139,6 +141,227 @@ def test_共享锁拒绝第二个实验(tmp_path):
         pytest.fail("应被拒绝")
     with game_run.RunLock(tmp_path / "run.lock"):
         pass
+
+
+def test_新对象从持久记录恢复部署与状态(deployment, tmp_path):
+    settings = deployment.userdir / "pdx_settings.json"
+    settings.write_bytes(b"original settings")
+    dest = deployment.userdir / "mod/probe"
+    dest.mkdir(parents=True)
+    (dest / "original").write_bytes(b"original mod")
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "new.txt").write_bytes(b"candidate")
+    deployment.snapshot_state()
+    deployment.isolate_saves()
+    deployment.deploy({"probe": source})
+    settings.write_bytes(b"game mutation")
+    restored = game_run.Deployment.load(deployment.userdir, deployment.evidence)
+    assert restored.restore() == []
+    assert settings.read_bytes() == b"original settings"
+    assert (dest / "original").read_bytes() == b"original mod"
+    assert restored.restore() == []
+
+
+def test_中断在移动之后写完成之前可恢复(deployment, monkeypatch):
+    saves = deployment.userdir / "save games"
+    saves.mkdir()
+    (saves / "original.v3").write_bytes(b"original")
+    original_move = game_run.move_directory
+
+    def interrupted_move(*args, **kwargs):
+        original_move(*args, **kwargs)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(game_run, "move_directory", interrupted_move)
+    with pytest.raises(KeyboardInterrupt):
+        deployment.isolate_saves()
+    monkeypatch.setattr(game_run, "move_directory", original_move)
+    restored = game_run.Deployment.load(deployment.userdir, deployment.evidence)
+    assert restored.restore() == []
+    assert (saves / "original.v3").read_bytes() == b"original"
+
+
+def test_恢复拒绝已被篡改的原件备份(deployment):
+    saves = deployment.userdir / "save games"
+    saves.mkdir()
+    (saves / "original.v3").write_bytes(b"original")
+    deployment.isolate_saves()
+    saved = deployment.claims[0][1]
+    (saved / "original.v3").write_bytes(b"tampered")
+    assert deployment.restore()
+    assert saved.exists()
+    assert saves.exists()
+
+
+@pytest.mark.parametrize("edge", ["before", "after"])
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "isolate",
+        "rename",
+        "config",
+        "archive",
+        "return",
+        "state",
+        "journal",
+        "checkpoint",
+        "state-delete",
+        "config-restore",
+    ],
+)
+def test_子进程外部操作中断后重复恢复保留原件(tmp_path, edge, fault):
+    user = tmp_path / "user"
+    user.mkdir()
+    original = b'{"disabledDLC":[]}\r\n'
+    (user / "content_load.json").write_bytes(original)
+    (user / "pdx_settings.json").write_bytes(b"original settings")
+    (user / "save games").mkdir()
+    (user / "save games/original.v3").write_bytes(b"original save")
+    (user / "mod/probe").mkdir(parents=True)
+    (user / "mod/probe/original.txt").write_bytes(b"original mod")
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "new.txt").write_bytes(b"candidate")
+    script = r"""
+import os, sys
+from pathlib import Path
+from pdx import game_run
+root, fault, edge = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+user = root / 'user'
+original_move, original_rename = game_run.move_directory, Path.rename
+original_replace, original_json = Path.replace, game_run.write_json
+original_durable, original_unlink = game_run.durable_json, Path.unlink
+original_content = (user / 'content_load.json').read_bytes()
+def interrupt(name, call, *args, **kwargs):
+    if name == fault and edge == 'before': os._exit(99)
+    value = call(*args, **kwargs)
+    if name == fault and edge == 'after': os._exit(99)
+    return value
+def move(src, dst, *args, **kwargs):
+    name = 'isolate' if str(dst).endswith('original-save-directory') else (
+        'return' if str(src).endswith('original-save-directory') else 'archive')
+    return interrupt(name, original_move, src, dst, *args, **kwargs)
+def replace(src, dst):
+    name = 'state' if Path(dst) == user / 'pdx_settings.json' else (
+        'config-restore' if Path(dst) == user / 'content_load.json' and src.read_bytes() == original_content else (
+        'checkpoint' if Path(dst).name.startswith('sitai_checkpoint_') else ''))
+    return interrupt(name, original_replace, src, dst)
+game_run.move_directory = move
+Path.rename = lambda src, dst: interrupt('rename' if src == user / 'mod/probe' and '.sitai-backup' in str(dst) else '', original_rename, src, dst)
+Path.replace = replace
+game_run.write_json = lambda path, value: interrupt(
+    'config' if path == user / 'content_load.json' else '', original_json, path, value)
+game_run.durable_json = lambda path, value: interrupt(
+    'journal' if path.name == 'deployment.json' and value.get('config_claimed') else '', original_durable, path, value)
+Path.unlink = lambda path, *args, **kwargs: interrupt(
+    'state-delete' if path == user / 'continue_game.json' and path.exists() else '', original_unlink, path, *args, **kwargs)
+d = game_run.Deployment(user, root / 'evidence')
+d.snapshot_state()
+d.isolate_saves()
+d.deploy({'probe': root / 'source'})
+d.stage_save(user / 'save games/original.v3')
+(user / 'pdx_settings.json').write_bytes(b'game changed settings')
+(user / 'continue_game.json').write_bytes(b'created by game')
+d.restore()
+raise SystemExit('fault not reached')
+"""
+    child = subprocess.run(
+        [sys.executable, "-X", "utf8", "-c", script, str(tmp_path), fault, edge],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+        check=False,
+    )
+    assert child.returncode == 99, child.stderr
+    for _ in range(2):
+        with game_run.RunLock(user / ".sitai-game.lock"):
+            game_run.Deployment.recover_pending(user)
+        assert (user / "content_load.json").read_bytes() == original
+        assert (user / "pdx_settings.json").read_bytes() == b"original settings"
+        assert (user / "save games/original.v3").read_bytes() == b"original save"
+        assert (user / "mod/probe/original.txt").read_bytes() == b"original mod"
+
+
+def test_相对路径记录可在不同工作目录恢复(tmp_path, monkeypatch):
+    user = tmp_path / "user"
+    user.mkdir()
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "candidate.txt").write_bytes(b"candidate")
+    monkeypatch.chdir(tmp_path)
+    deployment = game_run.Deployment(Path("user"), Path("evidence"))
+    deployment.deploy({"probe": source})
+    monkeypatch.chdir(tmp_path.parent)
+    game_run.Deployment.recover_pending(user)
+    assert not (user / "mod/probe").exists()
+
+
+def test_恢复不覆盖用户已有的临时文件(deployment):
+    settings = deployment.userdir / "pdx_settings.json"
+    settings.write_bytes(b"original")
+    temporary = settings.with_suffix(".sitai-restore.tmp")
+    temporary.write_bytes(b"user temporary")
+    deployment.snapshot_state()
+    settings.write_bytes(b"changed")
+    assert deployment.restore() == []
+    assert temporary.read_bytes() == b"user temporary"
+
+
+def test_目录重命名不退化为跨盘复制删除(tmp_path, monkeypatch):
+    source, target = tmp_path / "original", tmp_path / "backup"
+    source.mkdir()
+    (source / "unique").write_bytes(b"unique")
+
+    def fail(_self, _target):
+        raise OSError("EXDEV")
+
+    monkeypatch.setattr(Path, "rename", fail)
+    with pytest.raises(OSError, match="EXDEV"):
+        game_run.move_directory(source, target)
+    assert (source / "unique").read_bytes() == b"unique"
+    assert not target.exists()
+
+
+@pytest.mark.parametrize("failure", ["checkpoint", "source"])
+def test_预检失败不移动或分析既有游戏日志(tmp_path, monkeypatch, failure):
+    user = tmp_path / "user"
+    (user / "logs").mkdir(parents=True)
+    original_log = user / "logs/error.log"
+    original_log.write_bytes(b"Script system error! previous game\n")
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "a.txt").write_bytes(b"frozen")
+    bad = tmp_path / "invalid.v3"
+    bad.write_bytes(b"invalid save")
+    monkeypatch.setattr(game_run.config, "USERDIR", user)
+    monkeypatch.setattr(game_run.ga, "assert_no_game_running", lambda: None)
+    monkeypatch.setattr(game_run.ga, "_foreground_window", lambda: 0)
+    monkeypatch.setattr(game_run.ga, "_process_pids", list)
+    monkeypatch.setattr(game_run.ga, "kill_owned_game", lambda: None)
+    if failure == "source":
+        original_copy = game_run.shutil.copytree
+
+        def changed_copy(src, dst):
+            (src / "a.txt").write_bytes(b"changed after hash")
+            return original_copy(src, dst)
+
+        monkeypatch.setattr(game_run.shutil, "copytree", changed_copy)
+    analyzed = []
+    report = game_run.run(
+        {"probe": source},
+        months=1,
+        output=tmp_path / "out",
+        load_save=bad if failure == "checkpoint" else None,
+        analyze=analyzed.append,
+    )
+    assert report["ok"] is False
+    assert report["session_requested"] is False
+    assert report["logs_isolated"] is False
+    assert original_log.read_bytes() == b"Script system error! previous game\n"
+    assert not analyzed
+    assert not (user / "mod/probe").exists()
 
 
 def test_相对等待从当前日期计量(monkeypatch):

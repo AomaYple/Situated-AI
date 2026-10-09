@@ -96,6 +96,7 @@ def make_checkpoint(*, output: Path = OUT_DIR, name: str = SAVE_NAME) -> dict[st
 def _make_checkpoint(*, output: Path, name: str) -> dict[str, Any]:
     """复用实机运行器的持久备份和目录事务；未备份的原件绝不删除。"""
     ga.assert_no_game_running()
+    Deployment.recover_pending(SAVE_DIR.parent)
     previous = ga._foreground_window()
     output.mkdir(parents=True, exist_ok=True)
     evidence = Path(tempfile.mkdtemp(prefix="session-", dir=output))

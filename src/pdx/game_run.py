@@ -18,18 +18,23 @@ import threading
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import psutil
 from filelock import FileLock, Timeout
 
-from . import config, gametimer
+from . import checkpoint_catalog, config, gametimer
 from . import game_auto as ga
+from .deployment_state import digest as file_sha
+from .deployment_state import durable_json, move_directory, plain_path, temporary_file, tree_digest
+from .experiment_queue import ExperimentLedger
 from .performance import StageTimings
 from .textio import deploy_tree
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
+
+    from .experiment_queue import RunRequest
 
 
 ERROR_MARKERS = (
@@ -232,11 +237,11 @@ def hashes(root: Path) -> dict[str, str]:
 
 def write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
-    )
-    temporary.replace(path)
+    with temporary_file(path) as temporary:
+        temporary.write_text(
+            json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+        )
+        temporary.replace(path)
 
 
 LEGACY_SAVE_MARKERS = (
@@ -344,6 +349,9 @@ class Deployment:
     """精确恢复启用配置以及实验前已存在的同名目录。"""
 
     def __init__(self, userdir: Path, evidence: Path) -> None:
+        plain_path(userdir)
+        plain_path(evidence)
+        userdir, evidence = userdir.resolve(), evidence.resolve()
         self.userdir = userdir
         self.evidence = evidence
         self.content = userdir / "content_load.json"
@@ -351,6 +359,141 @@ class Deployment:
         self.config_claimed = False
         self.claims: list[tuple[Path, Path | None]] = []
         self.state_files: dict[Path, Path | None] = {}
+        self.claim_info: dict[str, dict[str, Any]] = {}
+        self.journal = evidence / "deployment.json"
+        self.active = userdir / ".sitai-active-deployment.json"
+        self.original_digest: str | None = None
+        token = hashlib.sha256(str(evidence).encode("utf-8")).hexdigest()[:16]
+        self.recovery_root = userdir / ".sitai-recovery" / token
+        self._published: str | None = None
+
+    def _persist(self) -> None:
+        """所有外部副作用前先发布可独立重建的意图。调用方持有 RunLock。"""
+        plain_path(self.active)
+        pending = self.config_claimed or bool(self.claims) or bool(self.state_files)
+        value = {
+            "schema": 1,
+            "userdir": str(self.userdir.resolve()),
+            "evidence": str(self.evidence.resolve()),
+            "pending": pending,
+            "config_claimed": self.config_claimed,
+            "original_digest": self.original_digest,
+            "state_files": {str(p): str(b) if b else None for p, b in self.state_files.items()},
+            "claims": [[str(p), str(b) if b else None] for p, b in self.claims],
+            "claim_info": self.claim_info,
+        }
+        serialized = json.dumps(value, sort_keys=True, ensure_ascii=False)
+        if serialized != self._published:
+            durable_json(self.journal, value)
+            self._published = serialized
+        if pending:
+            if self.active.exists():
+                active = json.loads(self.active.read_text(encoding="utf-8"))
+                if active.get("evidence") != str(self.evidence.resolve()):
+                    raise RuntimeError("存在尚未恢复的部署，拒绝覆盖恢复指针")
+            else:
+                durable_json(self.active, {"schema": 1, "evidence": str(self.evidence.resolve())})
+        elif self.active.exists():
+            active = json.loads(self.active.read_text(encoding="utf-8"))
+            if active.get("evidence") == str(self.evidence.resolve()):
+                self.active.unlink()
+
+    @classmethod
+    def load(cls, userdir: Path, evidence: Path) -> Deployment:
+        """从磁盘重建，不推测 PID 所属、不杀进程、不拼接中断的运行。"""
+        plain_path(userdir)
+        plain_path(evidence)
+        result = cls(userdir, evidence)
+        plain_path(result.journal)
+        value = json.loads(result.journal.read_text(encoding="utf-8"))
+        if (
+            value.get("schema") != 1
+            or value.get("userdir") != str(userdir.resolve())
+            or value.get("evidence") != str(evidence.resolve())
+        ):
+            raise ValueError("部署记录身份或版本不符")
+        result.config_claimed = value["config_claimed"]
+        result.original_digest = value["original_digest"]
+        if result.original_digest is not None:
+            original_backup = evidence / "content_load.original.backup"
+            if file_sha(original_backup) != result.original_digest:
+                raise ValueError("配置原件备份指纹不符")
+            result.original = original_backup.read_bytes()
+        for target, backup_name in value["state_files"].items():
+            path = Path(target)
+            plain_path(path)
+            if not path.resolve().is_relative_to(userdir.resolve()):
+                raise ValueError("状态恢复路径越界")
+            backup = Path(backup_name) if backup_name is not None else None
+            if backup is not None:
+                plain_path(backup)
+                if backup.parent.resolve() != (evidence.parent / "original-state").resolve():
+                    raise ValueError("状态备份路径越界")
+                if file_sha(backup) != backup.name:
+                    raise ValueError("状态备份指纹不符")
+            result.state_files[path] = backup
+        for target, backup_name in value["claims"]:
+            dest = Path(target)
+            plain_path(dest)
+            if (
+                dest.resolve() != (userdir / "save games").resolve()
+                and dest.parent.resolve() != (userdir / "mod").resolve()
+            ):
+                raise ValueError("目录恢复路径越界")
+            saved = Path(backup_name) if backup_name is not None else None
+            if saved is not None:
+                plain_path(saved)
+                if not (
+                    saved.resolve() == (result.recovery_root / "original-save-directory").resolve()
+                    or (
+                        saved.parent == dest.parent
+                        and saved.name.startswith(dest.name + ".sitai-backup")
+                    )
+                ):
+                    raise ValueError("目录备份路径越界")
+            info = value["claim_info"][target]
+            archive = Path(info["archive"])
+            plain_path(archive)
+            if archive.parent.resolve() != (result.recovery_root / "recovered-output").resolve():
+                raise ValueError("运行输出归档路径越界")
+            result.claims.append((dest, saved))
+            result.claim_info[str(dest)] = info
+        return result
+
+    @classmethod
+    def recover_pending(cls, userdir: Path) -> None:
+        """调用方先持有运行锁并证明没有游戏进程，失败阻断下一次部署。"""
+        active = userdir / ".sitai-active-deployment.json"
+        plain_path(active)
+        if not active.exists():
+            return
+        value = json.loads(active.read_text(encoding="utf-8"))
+        if value.get("schema") != 1:
+            raise ValueError("恢复指针版本不符")
+        deployment = cls.load(userdir, Path(value["evidence"]))
+        errors = deployment.restore()
+        durable_json(
+            deployment.evidence / "recovery-result.json",
+            {
+                "schema": 1,
+                "recovered": not errors,
+                "errors": errors,
+                "limits": "Interrupted sessions are not complete runs; logs are not stitched.",
+            },
+        )
+        if errors:
+            raise RuntimeError(f"上次部署恢复失败，拒绝启动新局：{errors}")
+
+    def _claim(self, dest: Path, saved: Path | None) -> None:
+        original = tree_digest(dest) if saved is not None else None
+        self.claims.append((dest, saved))
+        token = hashlib.sha256(str(dest.resolve()).encode("utf-8")).hexdigest()[:16]
+        self.claim_info[str(dest)] = {
+            "original": original,
+            "phase": "intent",
+            "archive": str(self.recovery_root / "recovered-output" / token),
+        }
+        self._persist()
 
     def snapshot_state(self) -> None:
         """保存游戏本身会改写的用户状态；副本按内容复用，避免重复大存档。"""
@@ -369,38 +512,44 @@ class Deployment:
             saves / name for name in ("autosave.v3", *(f"autosave_{i}.v3" for i in range(1, 6)))
         )
         backup_root = self.evidence.parent / "original-state"
+        plain_path(backup_root)
         backup_root.mkdir(parents=True, exist_ok=True)
         for path in paths:
-            if any(p.is_symlink() for p in (path, *path.parents)):
-                raise ValueError(f"用户状态不允许符号链接：{path}")
+            plain_path(path)
             if not path.is_file():
                 self.state_files[path] = None
                 continue
             with path.open("rb") as stream:
                 digest = hashlib.file_digest(stream, "sha256").hexdigest()
             backup = backup_root / digest
+            plain_path(backup)
             if not backup.exists():
                 temp = backup.with_suffix(".tmp")
+                plain_path(temp)
                 shutil.copy2(path, temp)
                 temp.replace(backup)
             with backup.open("rb") as stream:
                 if hashlib.file_digest(stream, "sha256").hexdigest() != digest:
                     raise OSError(f"用户状态备份校验失败：{backup}")
             self.state_files[path] = backup
+        # 此前只创建副本，尚未移动或改写原件。一次发布完整恢复意图。
+        self._persist()
 
     def isolate_saves(self) -> None:
         """隔离菜单会扫描的旧存档，结束时整体归还，不修改存档字节。"""
         saves = self.userdir / "save games"
         if any(path.is_symlink() for path in (saves, *saves.parents)):
             raise ValueError("存档目录不允许符号链接")
-        backup = self.evidence / "original-save-directory"
+        backup = self.recovery_root / "original-save-directory"
         if backup.exists():
             raise ValueError("存档目录备份已存在，拒绝覆盖")
         if saves.exists():
-            shutil.move(str(saves), str(backup))
-            self.claims.append((saves, backup))
+            self._claim(saves, backup)
+            move_directory(saves, backup)
         else:
-            self.claims.append((saves, None))
+            self._claim(saves, None)
+        self.claim_info[str(saves)]["phase"] = "moved"
+        self._persist()
         saves.mkdir(parents=True)
         write_json(
             self.evidence / "state-backups.json",
@@ -409,11 +558,17 @@ class Deployment:
 
     def deploy(self, sources: Mapping[str, Path]) -> list[Path]:
         self.evidence.mkdir(parents=True, exist_ok=True)
+        plain_path(self.content)
         self.original = self.content.read_bytes() if self.content.exists() else None
         original = json.loads(self.original.decode("utf-8-sig")) if self.original else {}
         if self.original is not None:
+            plain_path(self.evidence / "content_load.original.backup")
             (self.evidence / "content_load.original.backup").write_bytes(self.original)
+            self.original_digest = file_sha(self.evidence / "content_load.original.backup")
+            if self.original_digest != hashlib.sha256(self.original).hexdigest():
+                raise OSError("配置原件备份校验失败")
         self.config_claimed = True
+        self._persist()
         destinations: list[Path] = []
         for name, source in sources.items():
             if Path(name).name != name or name in {"", ".", ".."}:
@@ -426,9 +581,14 @@ class Deployment:
                 saved = ga.unused_path(
                     dest.with_name(dest.name + ".sitai-backup"), stamp=ga.archive_stamp()
                 )
-                dest.rename(saved)
-            self.claims.append((dest, saved))
+            self._claim(dest, saved)
+            if saved is not None:
+                move_directory(dest, saved)
+            self.claim_info[str(dest)]["phase"] = "moved"
+            self._persist()
             deploy_tree(source, dest)
+            self.claim_info[str(dest)]["phase"] = "deployed"
+            self._persist()
             destinations.append(dest)
         payload = {
             "enabledMods": [{"path": str(p)} for p in destinations],
@@ -462,51 +622,92 @@ class Deployment:
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
             self.state_files[target] = None
-            shutil.copy2(source, target)
+            self._persist()
+            with temporary_file(target) as temp:
+                shutil.copy2(source, temp)
+                if file_sha(temp) != digest:
+                    raise OSError("检查点副本指纹不符")
+                temp.replace(target)
         return target.name
 
     def restore(self) -> list[str]:
         errors: list[str] = []
-        remaining_state: dict[Path, Path | None] = {}
-        for path, backup in self.state_files.items():
+        for path, backup in list(self.state_files.items()):
             try:
+                plain_path(path)
+                if backup is None and not path.exists():
+                    del self.state_files[path]
+                    continue
+                self._persist()
                 if backup is None:
                     path.unlink(missing_ok=True)
                 else:
+                    if file_sha(backup) != backup.name:
+                        raise OSError(f"用户状态备份指纹不符：{backup}")
                     path.parent.mkdir(parents=True, exist_ok=True)
-                    temp = path.with_suffix(".sitai-restore.tmp")
-                    shutil.copy2(backup, temp)
-                    temp.replace(path)
-            except OSError as exc:
+                    with temporary_file(path) as temp:
+                        shutil.copy2(backup, temp)
+                        temp.replace(path)
+                    if file_sha(path) != backup.name:
+                        raise OSError(f"恢复后的用户状态指纹不符：{path}")
+                del self.state_files[path]
+                self._persist()
+            except (OSError, ValueError) as exc:
                 errors.append(f"恢复用户状态 {path}：{exc}")
-                remaining_state[path] = backup
-        self.state_files = remaining_state
         if self.config_claimed:
             try:
+                plain_path(self.content)
+                self._persist()
                 if self.original is None:
                     self.content.unlink(missing_ok=True)
                 else:
-                    temp = self.content.with_suffix(".sitai-restore.tmp")
-                    temp.write_bytes(self.original)
-                    temp.replace(self.content)
+                    if (
+                        file_sha(self.evidence / "content_load.original.backup")
+                        != self.original_digest
+                    ):
+                        raise RuntimeError("配置原件备份指纹不符")
+                    with temporary_file(self.content) as temp:
+                        temp.write_bytes(self.original)
+                        temp.replace(self.content)
                     if self.content.read_bytes() != self.original:
                         raise RuntimeError("配置字节恢复校验失败")
                 self.config_claimed = False
-            except (OSError, RuntimeError) as exc:
+                self._persist()
+            except (OSError, ValueError, RuntimeError) as exc:
                 errors.append(f"恢复 {self.content}：{exc}")
-        remaining: list[tuple[Path, Path | None]] = []
-        for dest, saved in reversed(self.claims):
+        for dest, saved in reversed(self.claims.copy()):
             try:
-                if saved is not None and not saved.exists():
-                    raise FileNotFoundError(f"原件备份缺失，保留目标且拒绝重复清理：{saved}")
-                if dest.exists():
-                    shutil.rmtree(dest)
-                if saved is not None:
-                    shutil.move(str(saved), str(dest))
-            except OSError as exc:
+                plain_path(dest)
+                info = self.claim_info[str(dest)]
+                archive = Path(info["archive"])
+                plain_path(archive)
+                original_present = dest.exists() and tree_digest(dest) == info["original"]
+                # 中断在移动之前或恢复原件之后：只接受完整原件，不能删除它。
+                if not (original_present and info["phase"] in {"intent", "restoring"}):
+                    if saved is not None:
+                        if not saved.exists():
+                            raise FileNotFoundError(
+                                f"原件备份缺失，保留目标且拒绝重复清理：{saved}"
+                            )
+                        if tree_digest(saved) != info["original"]:
+                            raise OSError(f"原件备份指纹不符，保留现场：{saved}")
+                    info["phase"] = "restoring"
+                    self._persist()
+                    if dest.exists():
+                        if archive.exists():
+                            raise OSError(f"运行输出归档已存在且目标仍有内容，拒绝覆盖：{archive}")
+                        archive.parent.mkdir(parents=True, exist_ok=True)
+                        move_directory(dest, archive)
+                    if saved is not None:
+                        move_directory(saved, dest)
+                        if tree_digest(dest) != info["original"]:
+                            raise OSError(f"恢复目录指纹不符：{dest}")
+                self.claims.remove((dest, saved))
+                self._persist()
+            except (OSError, ValueError) as exc:
                 errors.append(f"恢复 {dest}（备份 {saved}）：{exc}")
-                remaining.append((dest, saved))
-        self.claims = list(reversed(remaining))
+        if not errors:
+            self._persist()
         return errors
 
 
@@ -731,6 +932,7 @@ def run(
     keep_save: bool = False,
     allow_save_upgrade: bool = False,
     profile: bool = False,
+    experiment: RunRequest | None = None,
 ) -> dict[str, object]:
     """运行隔离观察者局，成功与失败都保留不可覆盖的原始证据。"""
     if not math.isfinite(months) or months <= 0:
@@ -741,17 +943,21 @@ def run(
         raise ValueError("实验必须提供存在的 mod 源目录")
     with RunLock():
         ga.assert_no_game_running()
+        Deployment.recover_pending(config.USERDIR)
         evidence = ga.unused_path(output / ga.archive_stamp(), stamp=ga.archive_stamp())
         evidence.mkdir(parents=True)
         deployment = Deployment(config.USERDIR, evidence)
         timings = StageTimings()
+        source_hashes = timings.call(
+            "input_fingerprints", lambda: {name: hashes(path) for name, path in sources.items()}
+        )
         report: dict[str, object] = {
             "evidence": str(evidence),
+            "deployment_journal": str(deployment.journal),
+            "recovery_root": str(deployment.recovery_root),
             "game_version": config.game_version(),
             "months": months,
-            "source_hashes": timings.call(
-                "input_fingerprints", lambda: {name: hashes(path) for name, path in sources.items()}
-            ),
+            "source_hashes": source_hashes,
         }
         samples: list[dict[str, object]] = []
         previous = ga._foreground_window()
@@ -767,6 +973,11 @@ def run(
         monitor_errors: list[str] = []
         profiler = TickTaskCapture(evidence) if profile else None
         session: ga.SessionStart | None = None
+        ledger: ExperimentLedger | None = None
+        run_id: str | None = None
+        checkpoint: dict[str, Any] | None = None
+        logs_isolated = False
+        session_requested = False
 
         def sample() -> None:
             rss = cpu = 0.0
@@ -807,6 +1018,86 @@ def run(
                 stop_monitor.wait(0.25)
 
         try:
+            if load_save is not None:
+                expected_version = config.game_version().get("caligula_branch", "").split("/")[-1]
+                checkpoint = timings.call(
+                    "checkpoint_preflight",
+                    checkpoint_catalog.inspect,
+                    load_save,
+                    expected_version=expected_version,
+                    allow_save_upgrade=allow_save_upgrade,
+                )
+                preflight = checkpoint_catalog.preflight(
+                    checkpoint,
+                    purpose=experiment.purpose if experiment else "safety",
+                    months=months,
+                )
+                report["checkpoint_preflight"] = checkpoint
+                report["experiment_preflight"] = preflight
+                write_json(
+                    evidence / "preflight.json", {"checkpoint": checkpoint, "decision": preflight}
+                )
+                if not preflight["allowed"]:
+                    raise ValueError(f"检查点预检拒绝：{preflight['reasons']}")
+            if experiment is not None:
+                experiment.limits()
+                if checkpoint is None or months > experiment.max_months:
+                    raise ValueError("有预算实验必须提供检查点且不得超过冻结月份")
+                available = psutil.virtual_memory().available / 1024**2
+                report["available_memory_mib"] = available
+                if available < experiment.min_available_mib:
+                    raise RuntimeError("可用内存不足预登记资源预算，暂不启动游戏")
+                ledger = ExperimentLedger(config.USERDIR / ".sitai-experiments.sqlite3")
+                ledger.interrupt_pending()
+                used = sum(
+                    row["scene"] == experiment.scene_id for row in ledger.runs(experiment.plan_id)
+                )
+                preflight = checkpoint_catalog.preflight(
+                    checkpoint, purpose=experiment.purpose, months=months, used_arms=used
+                )
+                report["experiment_preflight"] = preflight
+                write_json(
+                    evidence / "preflight.json", {"checkpoint": checkpoint, "decision": preflight}
+                )
+                if not preflight["allowed"]:
+                    raise ValueError(f"实验预算预检拒绝：{preflight['reasons']}")
+                run_id = ledger.reserve(
+                    experiment,
+                    manifest={
+                        "checkpoint": checkpoint["sha256"],
+                        "sources": source_hashes,
+                        "probe_sources": {
+                            k: v
+                            for k, v in source_hashes.items()
+                            if k != "sitai_decision_candidate"
+                        },
+                        "environment": {
+                            "game": report["game_version"],
+                            "tools": {
+                                p.name: file_sha(p)
+                                for p in sorted(Path(__file__).parent.glob("*.py"))
+                            },
+                        },
+                        "months": months,
+                        "timeout": timeout,
+                        "profile": profile,
+                        "allow_save_upgrade": allow_save_upgrade,
+                        "keep_save": keep_save,
+                    },
+                    evidence=evidence,
+                )
+                report["experiment"] = {
+                    "run_id": run_id,
+                    "plan_id": experiment.plan_id,
+                    "scene_id": experiment.scene_id,
+                    "arm": experiment.arm,
+                    "pair": experiment.pair,
+                    "purpose": experiment.purpose,
+                    "limits": experiment.limits(),
+                    "manifest_sha256": ledger.manifest_sha256(run_id),
+                }
+                write_json(evidence / "task.json", report["experiment"])
+            frozen_sources = {}
             for name, source in sources.items():
                 if Path(name).name != name or name in {"", ".", ".."}:
                     raise ValueError(f"mod目录名无效：{name}")
@@ -815,6 +1106,10 @@ def run(
                 if source.resolve() in evidence.resolve().parents:
                     raise ValueError("证据目录不能放在实验源内")
                 timings.call("source_archive", shutil.copytree, source, evidence / "sources" / name)
+                frozen = evidence / "sources" / name
+                if hashes(frozen) != source_hashes[name]:
+                    raise ValueError("源在内容冻结后发生变化，拒绝部署")
+                frozen_sources[name] = frozen
             timings.call("user_state_backup", deployment.snapshot_state)
             timings.call("save_isolation", deployment.isolate_saves)
             # 仅本局用干净预设；原件已按字节备份，收尾恢复。
@@ -822,7 +1117,8 @@ def run(
             report["quarantined"] = ga.quarantine_logs(evidence / "previous-logs")
             if ga.LAST_QUARANTINE_ERRORS:
                 raise RuntimeError(f"日志隔离失败：{ga.LAST_QUARANTINE_ERRORS}")
-            destinations = timings.call("deployment", deployment.deploy, sources)
+            logs_isolated = True
+            destinations = timings.call("deployment", deployment.deploy, frozen_sources)
             report["deployed_hashes"] = {p.name: hashes(p) for p in destinations}
             expected_mounts = mount_allowlist(destinations)
             report["mount_allowlist"] = expected_mounts
@@ -843,12 +1139,15 @@ def run(
                 save_name = Path(staged_name).stem
                 with source_save.open("rb") as stream:
                     save_sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
+                if checkpoint is not None and save_sha256 != checkpoint["sha256"]:
+                    raise ValueError("检查点在预检后发生内容变化，拒绝启动")
                 report["loaded_save"] = {
                     "header": header,
                     "name": staged_name,
                     "sha256": save_sha256,
                     "upgrade_requested": allow_save_upgrade,
                 }
+            session_requested = True
             session = timings.call(
                 "startup_load",
                 ga.run_session,
@@ -925,7 +1224,7 @@ def run(
                 monitor.join(timeout=10)
                 if monitor.is_alive():
                     cleanup_errors.append("证据监测线程未退出；本局证据不完整")
-                else:
+                elif logs_isolated:
                     try:
                         capture.poll()
                     except Exception as exc:
@@ -952,6 +1251,8 @@ def run(
                 ("恢复配置与目录", deployment.restore),
                 ("恢复原窗口", lambda: ga._set_foreground(previous) if previous else None),
             ):
+                if name == "归档本局日志" and not logs_isolated:
+                    continue
                 if not stopped and name != "恢复原窗口":
                     continue
                 try:
@@ -999,7 +1300,9 @@ def run(
                 report.setdefault("failure", "引擎错误或缺少本局挂载证据")
             if cleanup_errors:
                 report.setdefault("failure", "实机收尾失败；备份已保留")
-            if analyze is not None:
+            report["session_requested"] = session_requested
+            report["logs_isolated"] = logs_isolated
+            if analyze is not None and session_requested:
                 try:
                     report["analysis"] = timings.call("analysis", analyze, evidence / "logs")
                 except Exception as exc:
@@ -1013,4 +1316,6 @@ def run(
             )
             write_json(evidence / "report.json", report)
             write_json(output / "latest.json", report)
+            if ledger is not None and run_id is not None:
+                ledger.finish(run_id, report, report_sha256=file_sha(evidence / "report.json"))
         return report

@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from pdx import behavior_probe, config, decision_probe, decisions, extension_probe, game_run
+from pdx.experiment_queue import RunRequest
 from pdx.parser import parse_file
 
 
@@ -21,6 +22,8 @@ def main() -> int:
         required=True,
     )
     parser.add_argument("--months", type=float, default=6)
+    parser.add_argument("--experiment-plan", default="m3a-exploration-20261010")
+    parser.add_argument("--pair-index", type=int, default=1)
     parser.add_argument(
         "--keep-save",
         action="store_true",
@@ -120,6 +123,12 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         load_save=args.save,
         keep_save=getattr(args, "keep_save", False),
         analyze=analyze,
+        experiment=RunRequest(
+            plan_id=getattr(args, "experiment_plan", "m3a-exploration-20261010"),
+            scene_id=f"{args.initiator}-{args.target}:{args.fiscal_injection}",
+            arm=args.arm,
+            pair=getattr(args, "pair_index", 1),
+        ),
     )
     print(
         json.dumps(
