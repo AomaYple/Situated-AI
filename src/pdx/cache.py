@@ -46,22 +46,18 @@ mod 分析同理：多个 mod 覆盖同一个原版文件时，那个文件会�
 ------------------------------------------------------------------------
 * ``parse_cached`` 对调用方的语义**完全等价于** ``parse_file``：
   任何一层命中都返回**同一个** ``ParsedFile`` 结构，测试逐字段比对（``test_cache.py``）；
-* **源文件一变，键就变 —— 但键是「世代键」，不是内容指纹**：``mtime_ns`` 与 ``size``
-  都进了键，所以「改写文件再读」不会读到旧结果（前提是那两个量也跟着变）；
-  **⚠️ 明写它不覆盖什么**：键里**没有内容成分** ⇒
-  **同路径 + 同 ``mtime_ns`` + 同 ``size`` 而内容被改**（粗粒度文件系统
-  —— FAT/exFAT 2 s、部分 SMB/网络盘 —— 在**同一时间粒度内**的等长改写，
-  以及 ``copy2`` / ``utime`` 复原时间戳）**仍会命中旧条目**，拿到的是一棵
-  **陈旧但合法**的树：不报错、不写日志、``parsed_total`` 不动
-  （2026-09-25 实测反例与最小定位：`docs/reports/缓存跨代读-独立验证.md` §5）。
-  需要**绝对正确**时走两条逃生口：``V3_PARSE_CACHE=0``（这一次运行不用磁盘层）、
-  ``v3 cache --clear``（清空磁盘层，下一次全部重新解析）；
-* **解析器一变，键也变**：``引擎指纹`` 取 ``parser.py`` / ``model.py`` / ``lexer.py``
-  三个模块的 mtime 与 :data:`PARSE_CACHE_FORMAT`，改了实现就整体失效
-  —— 这比「记得手动清缓存」可靠。**布局版本也进指纹**：``shard-NN.idx`` 里记着
+* **每次入口验证当前内容**：memo 键包含 SHA-256，磁盘键还包含路径和实现指纹。
+  同大小、同时间戳改写、删除和同进程重新读取都不能返回旧树；读取途中元数据变化
+  或未命中后二次读取摘要变化明确失败。原文字节只用于本次验证，不随 LRU 长期保留。
+  历史陈旧命中反例见 `docs/reports/缓存跨代读-独立验证.md`，2026-10-09 已补回归修复；
+* **解析器一变，键也变**：``引擎指纹`` 取 ``parser.py`` / ``model.py`` / ``lexer.py`` /
+  ``cache.py`` 的源码内容与 :data:`PARSE_CACHE_FORMAT`；每个进程冻结一次，热改实现须重启。
+  **布局版本也进指纹**：``shard-NN.idx`` 里记着
   ``格式``，对不上就整片作废（不试图兼容旧文件）；
 * **磁盘层坏了不影响正确性**：读失败 / 反序列化失败 / 结构不对，一律当作未命中
   并删掉那条，然后正常解析；
+* **反序列化限制全局对象**：只允许当前模型类，不按缓存中的模块名导入或执行任意函数；
+  缓存仍属于本工具的临时目录，内容摘要不认证写入者，不能把第三方缓存当可信证据；
 * **身份不对的条目也当作未命中**（:func:`_same_identity`）：本包有 ``pdx`` 与
   ``tools.pdx`` 两个合法导入名，它们各自拥有一套 ``Block`` / ``Assignment`` /
   ``Scalar`` 类对象，而 pickle 按模块名还原。若不管这一层，
@@ -89,6 +85,7 @@ from __future__ import annotations
 import atexit
 import contextlib
 import hashlib
+import io
 import os
 import pickle
 import tempfile
@@ -100,7 +97,7 @@ from typing import cast
 
 from . import config
 from .model import Assignment, Block, Node, ParsedFile, Scalar
-from .parser import parse_file as _parse_file
+from .parser import parse_bytes
 
 #: 磁盘缓存的**布局版本**。结构变了、或**文件布局**变了就 +1
 #: （v2 = 逐条存储 + 偏移索引，见模块文档「磁盘层的物理布局」）。
@@ -204,22 +201,41 @@ def _same_identity(pf: ParsedFile) -> bool:
     判据取「三个类对象是否为同一批」而不是比 ``__module__`` 字符串：
     名字可以相同而对象不同（这就是事故本身），身份则不会骗人。
 
-    走法是**迭代**的、一发现不对就返回：正常条目只花一次顶层循环；
-    有问题的条目通常第一个赋值就判否，不会为了判否把整棵树走完。
+    从根开始迭代检查 Block.items 与 Assignment.value，拒绝外来身份和循环图；
+    不使用会先过滤异类节点的 top_assignments 视图建立判据。
     """
-    for a in pf.top_assignments:
-        if type(a) is not Assignment:
+    if type(pf) is not ParsedFile or type(getattr(pf, "root", None)) is not Block:
+        return False
+    stack: list[Node | None] = [pf.root]
+    seen: set[int] = set()
+    while stack:
+        node = stack.pop()
+        if node is None:
+            continue
+        if type(node) not in _NODE_TYPES or id(node) in seen:
             return False
-        stack: list[Node | None] = [a.value]
-        while stack:
-            node = stack.pop()
-            if node is None:
-                continue
-            if type(node) not in _NODE_TYPES:
+        seen.add(id(node))
+        if isinstance(node, Block):
+            if not isinstance(getattr(node, "items", None), list):
                 return False
-            if isinstance(node, Block):
-                stack.extend(node.items)
+            stack.extend(node.items)
+        elif isinstance(node, Assignment):
+            stack.append(getattr(node, "value", None))
     return True
+
+
+class _CacheUnpickler(pickle.Unpickler):
+    """只恢复本工具的数据类；不按缓存内容导入或调用任意全局对象。"""
+
+    def find_class(self, module: str, name: str) -> type:
+        allowed = {item.__name__: item for item in (ParsedFile, Assignment, Block, Scalar)}
+        if module == ParsedFile.__module__ and name in allowed:
+            return allowed[name]
+        raise pickle.UnpicklingError(f"缓存含不允许的全局对象：{module}.{name}")
+
+
+def _cache_loads(raw: bytes) -> object:
+    return _CacheUnpickler(io.BytesIO(raw)).load()
 
 
 @dataclass
@@ -262,10 +278,10 @@ def _pending_total() -> int:
 
 
 @lru_cache(maxsize=_memo_maxsize())
-def _parse_by_key(key: str) -> ParsedFile:
+def _parse_by_key(key: str, content_digest: str) -> ParsedFile:
     """真正干活的那一层。键必须是 ``str`` —— ``Path`` 与 ``str`` 会算成两条。
 
-    单独抽一层的原因：``lru_cache`` 按**实参**做键，若直接装饰
+    当前内容摘要也是 memo 键的一部分。单独抽一层的原因：``lru_cache`` 按实参做键，若直接装饰
     ``parse_cached``，``Path("a")`` 与 ``"a"`` 会各缓存一份，
     白白解析两次（实测确实如此）。统一在入口处 ``str()`` 化即可避免。
 
@@ -273,13 +289,16 @@ def _parse_by_key(key: str) -> ParsedFile:
     「扫过全树」就等于「把全树的解析结果永久留在这个进程里」（实测 605.7 MB）。
     超上限之后旧条目会被淘汰，重复请求由磁盘层按需单条取回来。
     """
-    sig = _signature(key)
+    sig = _signature(key, content_digest=content_digest)
     shard = _shard_of(key)
     if sig is not None:
         hit = _disk_load(sig, shard)
         if hit is not None:
             return hit
-    parsed = _parse_file(key)
+    raw = Path(key).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != content_digest:
+        raise OSError(f"源文件读取期间发生变化，拒绝缓存：{key}")
+    parsed = parse_bytes(raw, str(Path(key)))
     if sig is not None:
         _state.parsed_total += 1
         _disk_store(sig, shard, parsed)
@@ -287,8 +306,18 @@ def _parse_by_key(key: str) -> ParsedFile:
 
 
 def parse_cached(path: str | Path) -> ParsedFile:
-    """解析文件，带记忆化（内存 + 磁盘）。同一路径只真正解析一次。"""
-    return _parse_by_key(str(path))
+    """以当前内容验证 memo 与磁盘命中；原文字节不随 LRU 长期保留。"""
+    key = str(path)
+    source = Path(key)
+    before = source.stat()
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    after = source.stat()
+    if any(
+        getattr(before, attr) != getattr(after, attr)
+        for attr in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+    ):
+        raise OSError(f"源文件读取期间发生变化，拒绝缓存：{key}")
+    return _parse_by_key(key, digest)
 
 
 def clear() -> None:
@@ -337,32 +366,26 @@ def cache_dir() -> Path:
 
 @lru_cache(maxsize=1)
 def _engine_stamp() -> str:
-    """引擎指纹：登记模块的 mtime + 结构版本。"""
+    """本进程加载实现的源码内容指纹；热改源码须重启解释器。"""
     parts = [str(PARSE_CACHE_FORMAT)]
     base = Path(__file__).parent
     for name in _ENGINE_SOURCES:
         try:
-            parts.append(f"{name}:{int((base / name).stat().st_mtime_ns)}")
+            parts.append(f"{name}:{hashlib.sha256((base / name).read_bytes()).hexdigest()}")
         except OSError:  # pragma: no cover - 模块文件必然存在
             parts.append(f"{name}:?")
     return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:16]
 
 
-def _signature(path: str) -> str | None:
-    """文件的**世代键**（路径 + mtime + 大小 + 引擎指纹）；取不到时 ``None``。
-
-    ⚠️ 它是**世代键**、不是**内容指纹**：键里**没有内容成分** ⇒ 同路径 + 同 ``mtime_ns``
-    + 同 ``size`` 而内容被改时，键**一字不变**、会命中旧条目（2026-09-25 实测反例见
-    `docs/reports/缓存跨代读-独立验证.md` §5）。不覆盖的情形与两条逃生口逐字写在
-    模块文档「正确性」一节。
-    """
+def _signature(path: str, *, content_digest: str | None = None) -> str | None:
+    """路径、当前内容与实现指纹；同大小同时间戳的改写也必须失效。"""
     if not _enabled():
         return None
     try:
-        st = Path(path).stat()
+        digest = content_digest or hashlib.sha256(Path(path).read_bytes()).hexdigest()
     except OSError:
         return None
-    raw = f"{path}\0{st.st_mtime_ns}\0{st.st_size}\0{_engine_stamp()}"
+    raw = f"{path}\0{digest}\0{_engine_stamp()}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -392,7 +415,10 @@ def _load_index(index: int) -> dict[str, tuple[int, int, int]]:
         return cached
     entries: dict[str, tuple[int, int, int]] = {}
     try:
-        body = pickle.loads(_index_path(index).read_bytes())  # 只读本工具自己写的目录
+        index_path = _index_path(index)
+        if index_path.stat().st_size > _MAX_INDEX_BYTES:
+            raise ValueError("缓存索引过大")
+        body = _cache_loads(index_path.read_bytes())
         if isinstance(body, dict) and body.get("格式") == PARSE_CACHE_FORMAT:
             raw = body.get("条目")
             if isinstance(raw, dict):
@@ -428,9 +454,8 @@ def _read_entry(index: int, meta: tuple[int, int, int], sig: str) -> ParsedFile 
     （`-n 0` 跑 `test_cache.py` >173 s）与**解析缓存目录秒级缩减**
     （读者把「对不上」的片反复判坏并删掉，与写者互相打架）。
 
-    判据用**世代自证**：写的时候把这条自己的**世代键**一起放进 payload，读回来必须相等。
-    它证明的是「这条条目来自**同一次写盘的那一代**」；**不覆盖**「源文件内容变了而世代键
-    没变」的那种情形（见 :func:`_signature` 与模块文档「正确性」一节的明写）。
+    写入时将包含内容摘要的条目指纹放进 payload，读回必须相等；
+    它既防索引/数据错配，也绑定当前入口校验的源内容，不认证缓存写入者。
     对不上 = 这一条不能用（当作未命中），并**只让本进程的索引视图失效**，
     **不去删盘上的文件** —— 删不删是写者的事（见 :func:`_drop_shard_files`）。
     """
@@ -443,7 +468,7 @@ def _read_entry(index: int, meta: tuple[int, int, int], sig: str) -> ParsedFile 
             blob = handle.read(length)
         if len(blob) != length:
             return None
-        payload = pickle.loads(zlib.decompress(blob))
+        payload = _cache_loads(zlib.decompress(blob))
     except Exception:
         return None
     if not (isinstance(payload, tuple) and len(payload) == 3 and payload[0] == sig):

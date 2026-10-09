@@ -131,6 +131,58 @@ def test_固定检查点缺失时拒绝启动(tmp_path: Path) -> None:
         module.stage_checkpoint(tmp_path / "missing.v3", tmp_path / "save games")
 
 
+def test_大检查点暂存不整档读入并保留完整校验(tmp_path, monkeypatch):
+    import hashlib
+
+    module = _load()
+    source = tmp_path / "source.v3"
+    block = b"0123456789abcdef" * 65536
+    with source.open("wb") as stream:
+        for _ in range(5):
+            stream.write(block)
+    monkeypatch.setattr(module, "save_header", lambda _p: {"observer": "yes"})
+    monkeypatch.setattr(module, "validate_load_save_header", lambda *_a, **_k: None)
+    monkeypatch.setattr(Path, "read_bytes", lambda _p: pytest.fail("检查点不能整档读入"))
+    name, evidence = module.stage_checkpoint(source, tmp_path / "staged")
+    expected = hashlib.sha256(block * 5).hexdigest()
+    assert evidence["sha256"] == expected
+    assert name == "sitai_checkpoint_" + expected[:16]
+    with (tmp_path / "staged" / evidence["name"]).open("rb") as stream:
+        assert hashlib.file_digest(stream, "sha256").hexdigest() == expected
+    assert not list((tmp_path / "staged").glob(".sitai-checkpoint-*"))
+
+
+def test_预计算任务均值使报表不依赖再次读取csv(tmp_path):
+    module = _load()
+    report = {
+        "label": "vanilla",
+        "index": 1,
+        "performance_usable": True,
+        "csv": str(tmp_path / "already-archived.csv"),
+        "summary": {"per_frame_total_ms": {"mean": 2.0}},
+        "watch_task": {"name": module.WATCH_TASK, "mean_ms": 1.25},
+    }
+    table = module.report_table([report])
+    assert table["by_label"]["vanilla"]["task_mean"] == 1.25
+
+
+def test_检查点验证与复制期间变化必须拒绝且清理临时文件(tmp_path, monkeypatch):
+    module = _load()
+    source = tmp_path / "changing.v3"
+    source.write_bytes(b"original")
+
+    def header_then_change(_path):
+        source.write_bytes(b"modified-source")
+        return {"observer": "yes"}
+
+    monkeypatch.setattr(module, "save_header", header_then_change)
+    monkeypatch.setattr(module, "validate_load_save_header", lambda *_a, **_k: None)
+    destination = tmp_path / "staged"
+    with pytest.raises(OSError, match="发生变化"):
+        module.stage_checkpoint(source, destination)
+    assert not list(destination.iterdir())
+
+
 def test_固定检查点在隔离存档目录前保留源字节(tmp_path: Path) -> None:
     module = _load()
     source = tmp_path / "save games" / "autosave.v3"

@@ -728,9 +728,9 @@ def summarize_ticktask(
     }
 
 
-def ticktask_summary_lines(path: Path) -> list[str]:
+def ticktask_summary_lines(path: Path, *, summary: Mapping[str, object] | None = None) -> list[str]:
     """人能读的几行结论（供 ``v3`` 子命令或文档引用）。"""
-    data = summarize_ticktask(path)
+    data = summarize_ticktask(path) if summary is None else summary
     lines = [f"文件：{path.name}（{data['size_bytes']:,} 字节）"]
     if data["bom_present"]:
         lines.append("  ⚠️ 文件带 UTF-8 BOM（解析用 utf-8-sig；逐字节复算时别忘）")

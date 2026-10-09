@@ -352,6 +352,13 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
     if phase in {"capture", "archive", "process", "summary"}:
         assert any("controlled failure" in error for error in report["cleanup_errors"])
     assert (Path(str(report["evidence"])) / "report.json").is_file()
+    stages = report["stage_timings"]
+    assert stages
+    assert all(item["end_s"] >= item["start_s"] and item["wall_s"] >= 0 for item in stages)
+    if phase in {"startup", "wait", "analyze"}:
+        expected = {"startup": "startup_load", "wait": "simulation", "analyze": "analysis"}[phase]
+        assert any(item["name"] == expected and item["status"] == "failed" for item in stages)
+    assert report["pipeline_wall_seconds"] >= report["wall_seconds"]
 
 
 def test_游戏未退出时保留配置和存档备份不覆盖运行状态(tmp_path, monkeypatch):

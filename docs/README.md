@@ -4,6 +4,8 @@
 
 ## 先看这个
 
+全链路提速计划见 [速度优化计划-正确性优先](design/exec/速度优化计划-正确性优先.md)；用户已授权执行，不改变 Mod 行为验收标准。
+
 | 想做什么 | 看这里 |
 |---|---|
 | 当前编码、三平台工具链、测试与性能审计 | [`design/exec/工程基线-1.0.md`](design/exec/工程基线-1.0.md)（当前工程入口与证据边界）；[`audits/2026-10-01-repository-upgrade.md`](audits/2026-10-01-repository-upgrade.md) 是审计依据 |

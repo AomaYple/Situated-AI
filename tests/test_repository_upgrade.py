@@ -244,3 +244,37 @@ def test_command_timeout_kills_its_own_child(tmp_path):
     )
     assert result["timed_out"]
     assert result["exit_code"] != 0
+
+
+def test_stage_timings_preserve_nested_intervals_without_summing_overlap():
+    moments = iter([10.0, 11.0, 12.0, 14.0, 16.0])
+    timings = performance.StageTimings(clock=lambda: next(moments))
+    with timings.phase("outer"), timings.phase("inner"):
+        pass
+    assert timings.intervals == [
+        {"name": "inner", "start_s": 2.0, "end_s": 4.0, "wall_s": 2.0, "status": "ok"},
+        {"name": "outer", "start_s": 1.0, "end_s": 6.0, "wall_s": 5.0, "status": "ok"},
+    ]
+
+
+def test_stage_timings_record_interrupt_and_propagate_it():
+    moments = iter([0.0, 1.0, 3.0])
+    timings = performance.StageTimings(clock=lambda: next(moments))
+    with pytest.raises(KeyboardInterrupt), timings.phase("copy"):
+        raise KeyboardInterrupt("cancelled")
+    assert timings.intervals == [
+        {
+            "name": "copy",
+            "start_s": 1.0,
+            "end_s": 3.0,
+            "wall_s": 2.0,
+            "status": "failed",
+            "error": "KeyboardInterrupt: cancelled",
+        }
+    ]
+
+
+def test_measure_rejects_nondeterminism_in_any_timed_round():
+    values = iter(["stable", "different", "stable", "stable"])
+    with pytest.raises(ValueError, match="不确定"):
+        performance.measure(lambda: next(values), rounds=3)

@@ -12,15 +12,44 @@ import sys
 import tempfile
 import time
 import tracemalloc
+from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ParamSpec, TypeVar
 
 import psutil
 
-from pdx import citations, localization, modgen
-
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterator, Sequence
+
+P = ParamSpec("P")
+T = TypeVar("T")
+
+
+class StageTimings:
+    """单调时钟的阶段区间；保留重叠与异常，不把区间和冒充总墙钟。"""
+
+    def __init__(self, *, clock: Callable[[], float] = time.monotonic) -> None:
+        self.clock = clock
+        self.started = clock()
+        self.intervals: list[dict[str, object]] = []
+
+    @contextmanager
+    def phase(self, name: str) -> Iterator[None]:
+        start = self.clock() - self.started
+        record: dict[str, object] = {"name": name, "start_s": start, "status": "ok"}
+        try:
+            yield
+        except BaseException as exc:
+            record.update(status="failed", error=f"{type(exc).__name__}: {exc}")
+            raise
+        finally:
+            end = self.clock() - self.started
+            record.update(end_s=end, wall_s=end - start)
+            self.intervals.append(record)
+
+    def call(self, name: str, action: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:
+        with self.phase(name):
+            return action(*args, **kwargs)
 
 
 def measure(function: Callable[[], object], *, rounds: int = 5) -> dict[str, object]:
@@ -29,10 +58,15 @@ def measure(function: Callable[[], object], *, rounds: int = 5) -> dict[str, obj
         raise ValueError("rounds 必须至少为 1")
     times: list[float] = []
     result: object = None
+    fingerprint: str | None = None
     for _ in range(rounds):
         start = time.perf_counter()
         result = function()
         times.append(time.perf_counter() - start)
+        current = repr(result)
+        if fingerprint is not None and current != fingerprint:
+            raise ValueError("同一工作负载结果不确定，拒绝形成基线")
+        fingerprint = current
     tracemalloc.start()
     try:
         memory_result = function()
@@ -103,6 +137,8 @@ def command(
 
 def workloads(*, rounds: int = 5) -> dict[str, object]:
     """有输出指纹的实际功能负载；每项独立，禁止为快而改变结果。"""
+    from pdx import citations, localization, modgen  # noqa: PLC0415 - 计时入口不预载生成工具链
+
     with tempfile.TemporaryDirectory(prefix="sitai-perf-") as folder:
         root = Path(folder)
         target = root / "sample.txt"

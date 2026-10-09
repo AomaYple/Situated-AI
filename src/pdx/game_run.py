@@ -25,6 +25,7 @@ from filelock import FileLock, Timeout
 
 from . import config, gametimer
 from . import game_auto as ga
+from .performance import StageTimings
 from .textio import deploy_tree
 
 if TYPE_CHECKING:
@@ -743,11 +744,14 @@ def run(
         evidence = ga.unused_path(output / ga.archive_stamp(), stamp=ga.archive_stamp())
         evidence.mkdir(parents=True)
         deployment = Deployment(config.USERDIR, evidence)
+        timings = StageTimings()
         report: dict[str, object] = {
             "evidence": str(evidence),
             "game_version": config.game_version(),
             "months": months,
-            "source_hashes": {name: hashes(path) for name, path in sources.items()},
+            "source_hashes": timings.call(
+                "input_fingerprints", lambda: {name: hashes(path) for name, path in sources.items()}
+            ),
         }
         samples: list[dict[str, object]] = []
         previous = ga._foreground_window()
@@ -810,15 +814,15 @@ def run(
                     raise ValueError(f"实验源不允许符号链接：{source}")
                 if source.resolve() in evidence.resolve().parents:
                     raise ValueError("证据目录不能放在实验源内")
-                shutil.copytree(source, evidence / "sources" / name)
-            deployment.snapshot_state()
-            deployment.isolate_saves()
+                timings.call("source_archive", shutil.copytree, source, evidence / "sources" / name)
+            timings.call("user_state_backup", deployment.snapshot_state)
+            timings.call("save_isolation", deployment.isolate_saves)
             # 仅本局用干净预设；原件已按字节备份，收尾恢复。
             (config.USERDIR / "player/game_rules/presets.txt").unlink(missing_ok=True)
             report["quarantined"] = ga.quarantine_logs(evidence / "previous-logs")
             if ga.LAST_QUARANTINE_ERRORS:
                 raise RuntimeError(f"日志隔离失败：{ga.LAST_QUARANTINE_ERRORS}")
-            destinations = deployment.deploy(sources)
+            destinations = timings.call("deployment", deployment.deploy, sources)
             report["deployed_hashes"] = {p.name: hashes(p) for p in destinations}
             expected_mounts = mount_allowlist(destinations)
             report["mount_allowlist"] = expected_mounts
@@ -835,7 +839,7 @@ def run(
                     expected_version=expected_version,
                     allow_save_upgrade=allow_save_upgrade,
                 )
-                staged_name = deployment.stage_save(source_save)
+                staged_name = timings.call("checkpoint_staging", deployment.stage_save, source_save)
                 save_name = Path(staged_name).stem
                 with source_save.open("rb") as stream:
                     save_sha256 = hashlib.file_digest(stream, "sha256").hexdigest()
@@ -845,7 +849,13 @@ def run(
                     "sha256": save_sha256,
                     "upgrade_requested": allow_save_upgrade,
                 }
-            session = ga.run_session(scripted_tests=False, force=True, save_name=save_name)
+            session = timings.call(
+                "startup_load",
+                ga.run_session,
+                scripted_tests=False,
+                force=True,
+                save_name=save_name,
+            )
             report["session"] = session.as_dict()
             if not session.rate_ok:
                 raise RuntimeError("5 速验证失败")
@@ -859,7 +869,9 @@ def run(
             phase = "simulation"
             session_advance = getattr(session, "advance", None)
             activation_tick = session_advance.after if session_advance is not None else None
-            progress = wait_progress(months, timeout=timeout, start_tick=activation_tick)
+            progress = timings.call(
+                "simulation", wait_progress, months, timeout=timeout, start_tick=activation_tick
+            )
             progress["activation_tick"] = activation_tick
             progress["activation_source"] = (
                 "session.advance.after" if activation_tick else "wait_progress baseline"
@@ -870,14 +882,18 @@ def run(
                 assert end is not None
                 auto = config.USERDIR / "save games/autosave.v3"
                 original = deployment.state_files.get(auto)
-                report["checkpoint_ready"] = wait_save_ready(
-                    auto, earliest=end, original_sha256=original.name if original else None
+                report["checkpoint_ready"] = timings.call(
+                    "checkpoint_wait",
+                    wait_save_ready,
+                    auto,
+                    earliest=end,
+                    original_sha256=original.name if original else None,
                 )
                 report["checkpoint_scope"] = "within 31 game days of completed window end"
                 report["after_checkpoint_wait"] = ga.tick_mark().tick
             if profiler is not None:
                 phase = "profiling"
-                report["ticktask"] = profiler.finish(session)
+                report["ticktask"] = timings.call("profiling", profiler.finish, session)
         except Exception as exc:
             report["failure"] = f"{type(exc).__name__}: {exc}"
         except BaseException:
@@ -886,13 +902,13 @@ def run(
         finally:
             if session is not None:
                 try:
-                    report["shutdown"] = graceful_stop(session.hwnd)
+                    report["shutdown"] = timings.call("shutdown", graceful_stop, session.hwnd)
                 except Exception as exc:
                     cleanup_errors.append(
                         f"正常退出失败，执行强制收尾：{type(exc).__name__}: {exc}"
                     )
             try:
-                ga.kill_owned_game()
+                timings.call("forced_shutdown", ga.kill_owned_game)
             except Exception as exc:
                 cleanup_errors.append(f"终止本局游戏：{type(exc).__name__}: {exc}")
             stopped = False
@@ -939,7 +955,7 @@ def run(
                 if not stopped and name != "恢复原窗口":
                     continue
                 try:
-                    result = action()
+                    result = timings.call(name, action)
                     if name == "恢复配置与目录" and isinstance(result, list):
                         cleanup_errors.extend(str(item) for item in result)
                     if name == "归档本局日志" and ga.LAST_QUARANTINE_ERRORS:
@@ -985,10 +1001,16 @@ def run(
                 report.setdefault("failure", "实机收尾失败；备份已保留")
             if analyze is not None:
                 try:
-                    report["analysis"] = analyze(evidence / "logs")
+                    report["analysis"] = timings.call("analysis", analyze, evidence / "logs")
                 except Exception as exc:
                     report.setdefault("failure", f"日志分析失败：{exc}")
             report["ok"] = not report.get("failure")
+            report["stage_timings"] = timings.intervals
+            report["pipeline_wall_seconds"] = time.monotonic() - timings.started
+            report["timing_scope"] = (
+                "stage intervals include input hashes through analysis; overlaps are not summed; "
+                "legacy wall_seconds excludes initial hashes and analysis; report writes excluded"
+            )
             write_json(evidence / "report.json", report)
             write_json(output / "latest.json", report)
         return report

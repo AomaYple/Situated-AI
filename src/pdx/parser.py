@@ -283,14 +283,17 @@ def parse_file(path: str | Path) -> ParsedFile:
     3000 个带 BOM，这个编码名会**自动剥离**它，避免首键被污染成
     ``\\ufefffoo`` 或被行首匹配漏掉。
     """
-    p = Path(path)
-    raw = p.read_bytes()
+    return parse_bytes(Path(path).read_bytes(), str(Path(path)))
+
+
+def parse_bytes(raw: bytes, path: str) -> ParsedFile:
+    """解析已经读取并可校验指纹的同一份字节，保留文件入口的编码语义。"""
     had_bom = raw.startswith(b"\xef\xbb\xbf")
     try:
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError:
         # 极少数文件可能不是 UTF-8；用替换字符兜底，不中断整轮扫描
         text = raw.decode("utf-8", errors="replace")
-    result = parse_text(text, str(p))
+    result = parse_text(text, path)
     result.had_bom = had_bom
     return result

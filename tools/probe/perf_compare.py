@@ -839,11 +839,9 @@ def _wait_for_calendar_date(hwnd: int, target: str, *, timeout: float = 180.0) -
         current_day = _calendar_date(tick)
         if current_day == target_day:
             return tick
-        if (
-            _calendar_key(current_day) is not None
-            and _calendar_key(target_day) is not None
-            and _calendar_key(current_day) > _calendar_key(target_day)
-        ):
+        current_key = _calendar_key(current_day)
+        target_key = _calendar_key(target_day)
+        if current_key is not None and target_key is not None and current_key > target_key:
             raise ga.GameAutoError(
                 f"共同性能窗口边界已错过：目标 {target_day}，当前 {current_day}（{tick}）"
             )
@@ -1092,12 +1090,15 @@ def _wait_months(
         missed_target = end_date is not None and _calendar_date(mark.tick) not in (None, end_date)
         if end_date is not None and _calendar_date(mark.tick) is not None:
             current_date = _calendar_date(mark.tick)
+            current_key = _calendar_key(current_date)
+            end_key = _calendar_key(end_date)
             missed_target = (
-                _calendar_key(current_date) is not None
-                and _calendar_key(end_date) is not None
-                and _calendar_key(current_date) > _calendar_key(end_date)
+                current_key is not None and end_key is not None and current_key > end_key
             )
         if reached_target or missed_target:
+            elapsed_days = (
+                round(day - start_day, 1) if day is not None and start_day is not None else None
+            )
             latest = scan_game_errors()
             if samples is not None and started is not None:
                 samples.append(_resource_sample(started))
@@ -1105,7 +1106,7 @@ def _wait_months(
                 return _advanced_payload(
                     start.tick,
                     mark.tick,
-                    round(day - start_day, 1),
+                    elapsed_days,
                     latest,
                     stopped_early=True,
                     stop_reason="our_error_log",
@@ -1113,7 +1114,7 @@ def _wait_months(
             return _advanced_payload(
                 start.tick,
                 mark.tick,
-                round(day - start_day, 1),
+                elapsed_days,
                 latest,
                 **({"window_boundary_missed": True} if missed_target else {}),
             )
@@ -1266,9 +1267,14 @@ def run_once(
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     target = arm_csv_path(label, index)
     shutil.copy(csv_path, target)
-    summary = gametimer.summarize_ticktask(target)
+    parsed = gametimer.parse_ticktask_file(target)
+    summary = gametimer.summarize_ticktask(target, parsed=parsed)
+    watch_mean = next(
+        (stat.mean_ms for stat in gametimer.ticktask_task_stats(parsed) if stat.task == WATCH_TASK),
+        None,
+    )
     print(f"  {target}（{target.stat().st_size} 字节）")
-    for line in gametimer.ticktask_summary_lines(target):
+    for line in gametimer.ticktask_summary_lines(target, summary=summary):
         print("    " + line)
     mounted = _mounted_evidence()
     ours_mounted = _ours_mounted()
@@ -1284,6 +1290,7 @@ def run_once(
         "console": {"clear": cleared, "dump": dumped, "dump_attempts": dump_attempts},
         "session": session.as_dict(),
         "summary": summary,
+        "watch_task": {"name": WATCH_TASK, "mean_ms": watch_mean},
         "mounted": mounted,
         "ours_mounted": ours_mounted,
         "error_scan": error_scan.as_dict(),
@@ -1357,6 +1364,20 @@ def _task_mean(csv: Path, task: str) -> float | None:
         if stat.task == task:
             return stat.mean_ms
     return None
+
+
+def _report_task_mean(report: dict[str, object]) -> float | None:
+    """新报告复用本次解析；旧报告仍可按既有路径读取。"""
+    cached = report.get("watch_task")
+    if isinstance(cached, dict) and cached.get("name") == WATCH_TASK:
+        value = cached.get("mean_ms")
+        if value is None:
+            return None
+        if isinstance(value, (float, int)) and not isinstance(value, bool) and math.isfinite(value):
+            return float(value)
+    csv = report.get("csv")
+    path = Path(str(csv)) if csv else None
+    return _task_mean(path, WATCH_TASK) if path is not None and path.is_file() else None
 
 
 #: 对照表盯的两个量：整帧合计均值，以及"我们直接改的那个任务"的均值。
@@ -1473,13 +1494,7 @@ def report_table(
         label = str(report["label"])
         usable_raw = report.get("performance_usable")
         usable = True if usable_raw is None else bool(usable_raw)
-        csv_value = report.get("csv")
-        task_path = Path(str(csv_value)) if csv_value else None
-        task_mean = (
-            _task_mean(task_path, WATCH_TASK)
-            if usable and task_path is not None and task_path.is_file()
-            else None
-        )
+        task_mean = _report_task_mean(report) if usable else None
         row = {
             "_index": report.get("index"),
             "per_frame_mean": _per_frame_mean(report.get("summary")),
@@ -1760,6 +1775,7 @@ def stage_checkpoint(
     _assert_no_symlink(destination, label="固定检查点目标")
     if not source.is_file():
         raise FileNotFoundError(f"固定检查点不存在：{source}")
+    source_before = source.stat()
     header = save_header(source)
     expected_version = config.game_version().get("caligula_branch", "").split("/")[-1]
     validate_load_save_header(
@@ -1767,20 +1783,31 @@ def stage_checkpoint(
         expected_version=expected_version,
         allow_save_upgrade=False,
     )
-    raw = source.read_bytes()
-    digest = hashlib.sha256(raw).hexdigest()
     destination.mkdir(parents=True, exist_ok=True)
-    staged = destination / f"sitai_checkpoint_{digest[:16]}.v3"
-    _assert_no_symlink(staged, label="固定检查点目标")
     fd, temp_name = tempfile.mkstemp(prefix=".sitai-checkpoint-", dir=str(destination))
     os.close(fd)
     temporary = Path(temp_name)
     try:
-        temporary.write_bytes(raw)
+        hasher = hashlib.sha256()
+        with source.open("rb") as reader, temporary.open("wb") as writer:
+            while chunk := reader.read(1024 * 1024):
+                hasher.update(chunk)
+                writer.write(chunk)
+        source_after = source.stat()
+        if any(
+            getattr(source_before, attr) != getattr(source_after, attr)
+            for attr in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        ):
+            raise OSError("固定检查点复制期间发生变化，拒绝发布")
+        digest = hasher.hexdigest()
+        staged = destination / f"sitai_checkpoint_{digest[:16]}.v3"
+        _assert_no_symlink(staged, label="固定检查点目标")
         temporary.replace(staged)
     finally:
         temporary.unlink(missing_ok=True)
-    if hashlib.sha256(staged.read_bytes()).hexdigest() != digest:
+    with staged.open("rb") as reader:
+        copied_digest = hashlib.file_digest(reader, "sha256").hexdigest()
+    if copied_digest != digest:
         raise OSError(f"固定检查点复制后校验失败：{staged}")
     return staged.stem, {
         "source": str(source_label or source),
@@ -1956,8 +1983,7 @@ def _main() -> int:
         print(f"  月数 {report['months']}｜{report['advanced']}")
         summary = report["summary"]
         if isinstance(summary, dict):
-            csv_value = report.get("csv")
-            task_mean = _task_mean(Path(str(csv_value)), WATCH_TASK) if csv_value else None
+            task_mean = _report_task_mean(report)
             print(
                 f"  帧 {summary.get('frames')}｜每帧合计均值 {_per_frame_mean(summary)} ms"
                 f"｜{WATCH_TASK} 均值 {task_mean} ms"

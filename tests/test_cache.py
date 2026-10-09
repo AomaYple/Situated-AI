@@ -129,6 +129,71 @@ def test_缓存命中返回同一对象(tmp_path) -> None:
     assert first is second, "第二次应直接返回缓存里的同一对象"
 
 
+@pytest.mark.parametrize("disk_enabled", [True, False])
+def test_同进程等长复原时间戳改写必须失效(tmp_path, disk_dir, monkeypatch, disk_enabled):
+    monkeypatch.setenv(cache.CACHE_ENV, "1" if disk_enabled else "0")
+    path = tmp_path / "changing.txt"
+    path.write_bytes(b"before = 1\n")
+    first = cache.parse_cached(path)
+    previous = path.stat()
+    path.write_bytes(b"after_ = 2\n")
+    os.utime(path, ns=(previous.st_atime_ns, previous.st_mtime_ns))
+    second = cache.parse_cached(path)
+    assert first.top_keys == ["before"]
+    assert second.top_keys == ["after_"]
+    assert second is not first
+    path.unlink()
+    with pytest.raises(FileNotFoundError):
+        cache.parse_cached(path)
+
+
+def test_身份判据拒绝外来根和深层外来值(tmp_path):
+    foreign_root = ParsedFile(path="root", root=_LookalikeBlock())
+    assert not cache._same_identity(foreign_root)
+    nested = ParsedFile(
+        path="nested",
+        root=Block(
+            items=[Assignment("a", "=", Block(items=[Assignment("b", "=", _LookalikeBlock())]))]
+        ),
+    )
+    assert not cache._same_identity(nested)
+
+
+def _write_pickle_marker(path):
+    from pathlib import Path
+
+    Path(path).write_text("executed", encoding="utf-8")
+    return {}
+
+
+class _UnsafeCachePayload:
+    def __init__(self, marker):
+        self.marker = str(marker)
+
+    def __reduce__(self):
+        return _write_pickle_marker, (self.marker,)
+
+
+@pytest.mark.parametrize("location", ["index", "entry"])
+def test_缓存反序列化不得执行任意全局函数(tmp_path, disk_dir, location):
+    marker = tmp_path / "side-effect.txt"
+    disk_dir.mkdir()
+    path = tmp_path / "source.txt"
+    path.write_bytes(b"valid = 1\n")
+    sig = cache._signature(str(path))
+    shard = cache._shard_of(str(path))
+    if location == "index":
+        cache._index_path(shard).write_bytes(pickle.dumps(_UnsafeCachePayload(marker)))
+    else:
+        blob = zlib.compress(pickle.dumps((sig, 1, _UnsafeCachePayload(marker))))
+        cache._shard_path(shard).write_bytes(blob)
+        cache._index_path(shard).write_bytes(
+            pickle.dumps({"格式": cache.PARSE_CACHE_FORMAT, "条目": {sig: (0, len(blob), 1)}})
+        )
+    assert cache.parse_cached(path).top_keys == ["valid"]
+    assert not marker.exists()
+
+
 def test_缓存结果与直连解析逐字段一致(tmp_path) -> None:
     p = tmp_path / "a.txt"
     p.write_text(_SAMPLE, encoding="utf-8")
@@ -246,7 +311,7 @@ def test_盘上身份不对的条目也要被丢掉(tmp_path, disk_dir) -> None:
     _reset_disk_state()
 
     assert cache._disk_load(sig, shard) is None, "盘上那条身份不对，必须判未命中"
-    assert sig not in cache._state.indexes[shard], "而且要删掉，不能每轮都白判一次"
+    assert sig not in cache._state.indexes.get(shard, {}), "坏条目或其索引视图必须失效"
     assert cache._state.parsed_total == 0, "这一步不该触发真正的解析"
 
     # 随后照常解析并入库，缓存自愈
@@ -853,21 +918,8 @@ def _scalar_texts(parsed: ParsedFile) -> list[str]:
     return texts
 
 
-def test_等长改写并复原mtime时仍会命中旧条目_已知边界(tmp_path, disk_dir) -> None:
-    """**已知边界**（t59）：键是**世代键**，不是内容指纹。
-
-    构造与 `docs/reports/缓存跨代读-独立验证.md` §5 **一致**：同一个文件**等长**改写
-    （`v = 111111\\n` → `v = 222222\\n`，都是 12 B）后用 `os.utime` 把 `mtime_ns` **复原**
-    ⇒ :func:`pdx.cache._signature` 一字不变 ⇒ **新进程**（内存层与待落盘区都清空）读它
-    拿到的是**旧树**，而 `parse_file` 给的是真值。
-
-    这条用例断言的**就是当前行为**（不是新 bug）：模块文档「正确性」一节已明写不覆盖这种
-    情形，并给了两条逃生口（`V3_PARSE_CACHE=0` / `v3 cache --clear`）。留着它是为了
-    **免得下一个人把「源文件一变，键就变」当结论** —— 那条性质有一个真实反例。
-
-    ⚠️ 与 `test_源文件一变缓存就失效` 的区别：那条的改写**同时改了 size**（`alpha = 1`
-    → `beta = 2`），只覆盖了安全的那一侧；这一条是它的**边界对照**。
-    """
+def test_等长改写并复原mtime时磁盘条目必须失效(tmp_path, disk_dir) -> None:
+    """复现历史陈旧命中反例，内容证明必须在模拟新进程后仍成立。"""
     p = tmp_path / "same-len.txt"
     p.write_text("v = 111111\n", encoding="utf-8")
     before = p.stat()
@@ -880,13 +932,13 @@ def test_等长改写并复原mtime时仍会命中旧条目_已知边界(tmp_pat
     p.write_text("v = 222222\n", encoding="utf-8")  # 等长改写
     os.utime(p, ns=(before.st_atime_ns, before.st_mtime_ns))  # 把时间戳复原
     assert p.stat().st_size == before.st_size, "这条用例的前提是「等长」"
-    assert cache._signature(str(p)) == sig_before, "世代键一字不变（边界就在这里）"
+    assert cache._signature(str(p)) != sig_before, "内容改变必须改变磁盘键"
 
     cached = cache.parse_cached(p)
     fresh = parse_file(p)
-    assert _scalar_texts(cached) == ["111111"], "缓存给的是**旧树**"
+    assert _scalar_texts(cached) == ["222222"], "缓存必须返回当前内容"
     assert _scalar_texts(fresh) == ["222222"], "直接解析是**真值**"
-    assert cache._state.parsed_total == 0, "0 ⇒ 答案来自磁盘层，根本没有重新解析"
+    assert cache._state.parsed_total == 1, "旧条目不能复用，必须重新解析"
 
 
 def test_清磁盘时顺手清掉更早布局的残留(tmp_path, disk_dir) -> None:
