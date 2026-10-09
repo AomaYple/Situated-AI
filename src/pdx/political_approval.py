@@ -50,7 +50,12 @@ def readings(tag: str, igs: Iterable[str], laws: Iterable[str], sample_variable:
         raise ValueError("态度观察国或采样变量无效")
     blocks = []
     for ig in groups:
-        receiver = f"THIS.GetCountry.GetInterestGroupOfType('{ig}')"
+        scope_name = f"sitai_probe_approval_{tag.lower()}_{ig}"
+        receiver = f"SCOPE.gsInterestGroup('{scope_name}')"
+        binding = (
+            f"every_interest_group = {{ limit = {{ is_interest_group_type = {ig} }} "
+            f"save_scope_as = {scope_name} }}"
+        )
         for law in targets:
 
             def log(kind: str, value: str, *, ig: str = ig, law: str = law) -> str:
@@ -72,7 +77,7 @@ def readings(tag: str, igs: Iterable[str], laws: Iterable[str], sample_variable:
             )
             blocks.append(
                 f"if = {{ limit = {{ any_interest_group = {{ is_interest_group_type = {ig} }} }}\n"
-                f"{present}\n}} else = {{ {log('EXISTS', 'no')} }}"
+                f"{binding}\n{present}\n}} else = {{ {log('EXISTS', 'no')} }}"
             )
     return "\n".join(blocks)
 

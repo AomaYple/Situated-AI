@@ -194,7 +194,10 @@ def test_观测只读且在原版存在性守卫下读取():
     text = political_approval.readings("RUS", IGS, LAWS, "sample_var")
     assert not parse_text(text).errors
     assert "any_interest_group = { is_interest_group_type = ig_landowners }" in text
-    assert "THIS.GetCountry.GetInterestGroupOfType('ig_landowners').GetApprovalValue" in text
+    assert "every_interest_group = { limit = { is_interest_group_type = ig_landowners }" in text
+    assert "save_scope_as = sitai_probe_approval_rus_ig_landowners" in text
+    assert "SCOPE.gsInterestGroup('sitai_probe_approval_rus_ig_landowners').GetApprovalValue" in text
+    assert "GetInterestGroupOfType" not in text
     assert "GetApprovalValueDeltaFromEnactment(GetLawType('law_census_voting').Self)" in text
     assert "WillRadicalizeIfEnacted(GetLawType('law_autocracy').Self)" in text
     for forbidden in ("set_law", "start_enactment", "add_modifier", "add_treasury", "set_strategy"):
