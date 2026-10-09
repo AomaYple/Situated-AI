@@ -49,6 +49,66 @@ ERROR_MARKERS = (
     "Script system error!",
     "Assertion failed",
 )
+OBSERVER_WARNING = "Variable 'sitai_fiscal_risk' is used but is never set."
+
+
+class LiveLogGuard:
+    """只检查新 error 字节，跨块/轮转保留匹配；单文件状态有界。
+
+    完整错误类别一旦出现就记首错；未枚举的 sitai 错误等行结束再判，
+    避免把尚未写完的已知财政警告误判。最终仍全量复核原始归档。
+    """
+
+    needles = tuple((marker, marker.encode()) for marker in ERROR_MARKERS)
+    warning = OBSERVER_WARNING.encode()
+    overlap = max(len(warning), *(len(needle) for _, needle in needles)) - 1
+    mod_pattern = re.compile(rb"sitai", re.IGNORECASE)
+
+    def __init__(self) -> None:
+        self.failure: dict[str, str] | None = None
+        self.states: dict[tuple[int, int], tuple[bytes, bool, bool, bytes]] = {}
+
+    def feed(self, name: str, identity: tuple[int, int], chunk: bytes) -> None:
+        if not name.startswith("error") or self.failure is not None:
+            return
+        tail, mod, benign, context = self.states.get(identity, (b"", False, False, b""))
+        window = tail + chunk
+        for marker, needle in self.needles:
+            if needle in window:
+                self._fail(marker, name, window[:512])
+                return
+        # 大多数行没有 Mod 标记；只定位标记所在行，避免逐行做十次 Python 搜索。
+        first_end = window.find(b"\n")
+        if mod and first_end >= 0 and not (benign or self.warning in window[:first_end]):
+            self._fail("Mod error", name, context)
+            return
+        previous_end = -1
+        for match in self.mod_pattern.finditer(window):
+            if match.start() <= previous_end:
+                continue
+            start = window.rfind(b"\n", 0, match.start()) + 1
+            end = window.find(b"\n", match.start())
+            if end < 0:
+                break
+            previous_end = end
+            if self.warning not in window[start:end] and not (start == 0 and benign):
+                self._fail("Mod error", name, window[start : min(end, start + 512)])
+                return
+        start = window.rfind(b"\n") + 1
+        remaining = window[start:]
+        self.states[identity] = (
+            remaining[-self.overlap :],
+            (mod if start == 0 else False) or self.mod_pattern.search(remaining) is not None,
+            (benign if start == 0 else False) or self.warning in remaining,
+            (context + chunk)[:512] if start == 0 else remaining[:512],
+        )
+
+    def _fail(self, kind: str, name: str, context: bytes) -> None:
+        self.failure = {
+            "kind": kind,
+            "log": name,
+            "context": context.decode("utf-8", errors="replace"),
+        }
 
 
 class LogFindings(TypedDict):
@@ -68,6 +128,7 @@ class LogCapture:
         self.destination = destination
         self.offsets: dict[tuple[int, int], int] = {}
         self.errors: list[str] = []
+        self.guard = LiveLogGuard()
 
     def poll(self) -> None:
         self.destination.mkdir(parents=True, exist_ok=True)
@@ -84,6 +145,7 @@ class LogCapture:
                         with (self.destination / f"{stem}.log").open("ab") as target:
                             while chunk := incoming.read(65536):
                                 target.write(chunk)
+                                self.guard.feed(path.name, identity, chunk)
                             self.offsets[identity] = incoming.tell()
                 except FileNotFoundError:
                     continue
@@ -314,13 +376,20 @@ def validate_load_save_header(
 
 
 def wait_save_ready(
-    path: Path, *, earliest: float, original_sha256: str | None = None, timeout: float = 60
+    path: Path,
+    *,
+    earliest: float,
+    original_sha256: str | None = None,
+    timeout: float = 60,
+    check: Callable[[], None] | None = None,
 ) -> dict[str, str]:
     """等本局自动存档写完；不把旧存档或写到一半的文件当检查点。"""
     deadline = time.monotonic() + timeout
     previous: tuple[int, int] | None = None
     stable_since = time.monotonic()
     while time.monotonic() < deadline:
+        if check is not None:
+            check()
         try:
             stat = path.stat()
             signature = (stat.st_size, stat.st_mtime_ns)
@@ -822,7 +891,7 @@ def log_findings(
                     for marker in ERROR_MARKERS:
                         errors[marker] += line.count(marker)
                     if "sitai" in line.casefold():
-                        if "Variable 'sitai_fiscal_risk' is used but is never set." in line:
+                        if OBSERVER_WARNING in line:
                             observer_warnings.append(line.strip())
                         else:
                             mod_errors.append(line.strip())
@@ -1025,6 +1094,19 @@ def run(
                     return
                 stop_monitor.wait(0.25)
 
+        def check_health() -> None:
+            failure = capture.guard.failure
+            if failure is not None:
+                report["early_stop"] = {
+                    **failure,
+                    "seconds": time.monotonic() - started,
+                    "tick": ga.tick_mark().tick,
+                    "phase": phase,
+                }
+                raise RuntimeError(f"实时错误门禁：{failure['kind']} ({failure['log']})")
+            if capture.errors or monitor_errors:
+                raise RuntimeError("实时证据采集失败，停止推进并保留现场")
+
         try:
             if load_save is not None:
                 expected_version = config.game_version().get("caligula_branch", "").split("/")[-1]
@@ -1172,6 +1254,7 @@ def run(
                 save_name=save_name,
             )
             report["session"] = session.as_dict()
+            check_health()
             if not session.rate_ok:
                 raise RuntimeError("5 速验证失败")
             if load_save is not None:
@@ -1185,7 +1268,12 @@ def run(
             session_advance = getattr(session, "advance", None)
             activation_tick = session_advance.after if session_advance is not None else None
             progress = timings.call(
-                "simulation", wait_progress, months, timeout=timeout, start_tick=activation_tick
+                "simulation",
+                wait_progress,
+                months,
+                timeout=timeout,
+                start_tick=activation_tick,
+                sample=check_health,
             )
             progress["activation_tick"] = activation_tick
             progress["activation_source"] = (
@@ -1203,9 +1291,11 @@ def run(
                     auto,
                     earliest=end,
                     original_sha256=original.name if original else None,
+                    check=check_health,
                 )
                 report["checkpoint_scope"] = "within 31 game days of completed window end"
                 report["after_checkpoint_wait"] = ga.tick_mark().tick
+            check_health()
             if profiler is not None:
                 phase = "profiling"
                 report["ticktask"] = timings.call("profiling", profiler.finish, session)
@@ -1301,6 +1391,7 @@ def run(
             report["monitoring"] = {
                 "log_poll_seconds": 0.25,
                 "process_poll_seconds": 5,
+                "error_stop": "Incremental error-log guard; simulation checks every 5s, save wait every 1s; blocking startup is checked on return. Final full-log validation remains mandatory.",
                 "scope": "owned game PID RSS and CPU; startup and simulation; sampled peaks, not frame-time measurements",
                 "limits": "Polling captures known rotating files; rotations faster than the retention window may lose unseen bytes.",
             }

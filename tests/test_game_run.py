@@ -428,6 +428,61 @@ def test_等待可从首次运行证据计量而不是调用时刻(monkeypatch):
     assert days >= 31
 
 
+@pytest.mark.parametrize("marker", game_run.ERROR_MARKERS)
+@pytest.mark.parametrize("newline", [b"\n", b""])
+def test_增量错误跨任意字节边界仍停止且保留首错(marker, newline):
+    guard = game_run.LiveLogGuard()
+    raw = f"[game] {marker}: invalid state".encode() + newline
+    for byte in raw:
+        guard.feed("error.log", (1, 1), bytes([byte]))
+    assert guard.failure is not None
+    assert guard.failure["kind"] == marker
+    original = guard.failure.copy()
+    guard.feed("error_1.log", (1, 2), b"Unknown effect later\n")
+    assert guard.failure == original
+
+
+def test_增量错误保留轮转身份且不误判调试文本和财政警告():
+    guard = game_run.LiveLogGuard()
+    guard.feed("debug.log", (1, 1), b"Assertion failed example\n")
+    warning = b"Variable 'sitai_fiscal_risk' is used but is never set.\n"
+    for byte in warning:
+        guard.feed("error.log", (1, 2), bytes([byte]))
+    guard.feed("error.log", (1, 2), b"Unknown eff")
+    guard.feed("error.log", (1, 3), b"ect unrelated\n")
+    assert guard.failure is None
+    guard.feed("error_1.log", (1, 2), b"ect real\n")
+    assert guard.failure is not None
+    assert guard.failure["kind"] == "Unknown effect"
+
+
+def test_增量未知模组错误不吞跨块文本且单行缓冲有界():
+    guard = game_run.LiveLogGuard()
+    guard.feed("error.log", (1, 1), b"x" * 1000000 + b"si")
+    guard.feed("error.log", (1, 1), b"TaI unexpected input\n")
+    assert guard.failure is not None
+    assert guard.failure["kind"] == "Mod error"
+    assert len(guard.failure["context"].encode()) <= 1024
+
+
+def test_实时错误检查优先于达到推进目标(monkeypatch):
+    monkeypatch.setattr(game_run.ga, "tick_mark", lambda: SimpleNamespace(tick="1900.2.5"))
+
+    def fail():
+        raise RuntimeError("已出现引擎错误")
+
+    with pytest.raises(RuntimeError, match="引擎错误"):
+        game_run.wait_progress(1, start_tick="1900.1.1", sample=fail)
+
+
+def test_保存等待先检查实时错误而不是继续等文件(tmp_path):
+    def fail():
+        raise RuntimeError("已出现引擎错误")
+
+    with pytest.raises(RuntimeError, match="引擎错误"):
+        game_run.wait_save_ready(tmp_path / "absent.v3", earliest=0, check=fail)
+
+
 @pytest.mark.parametrize("tick", ["", "1899.12.1", "1900.1.1"])
 def test_无tick倒退超时明确失败(monkeypatch, tick):
     values = iter(["1900.1.1", tick])
@@ -542,7 +597,18 @@ def test_内容相同的状态备份复用(deployment):
 
 
 @pytest.mark.parametrize(
-    "phase", ["startup", "wait", "analyze", "archive", "capture", "process", "summary"]
+    "phase",
+    [
+        "startup",
+        "wait",
+        "analyze",
+        "archive",
+        "capture",
+        "process",
+        "summary",
+        "engine-startup",
+        "engine-wait",
+    ],
 )
 def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypatch, phase):
     user = tmp_path / "user"
@@ -592,12 +658,39 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
 
     monkeypatch.setattr(game_run.ga, "quarantine_logs", quarantine)
     session = SimpleNamespace(hwnd=123, rate_ok=True, as_dict=lambda: {"test": True})
-    monkeypatch.setattr(
-        game_run.ga, "run_session", fail if phase == "startup" else lambda **_k: session
-    )
-    monkeypatch.setattr(
-        game_run, "wait_progress", fail if phase == "wait" else lambda *_a, **_k: {"reached": True}
-    )
+    captures = []
+    capture_type = game_run.LogCapture
+
+    def capture_factory(*args):
+        capture = capture_type(*args)
+        captures.append(capture)
+        return capture
+
+    if phase.startswith("engine-"):
+        monkeypatch.setattr(game_run, "LogCapture", capture_factory)
+
+    def engine_error():
+        captures[0].guard.feed("error.log", (1, 1), b"Assertion failed: invalid world\n")
+
+    def start(**_kwargs):
+        if phase == "startup":
+            fail()
+        if phase == "engine-startup":
+            engine_error()
+        return session
+
+    def wait(*_args, sample, **_kwargs):
+        if phase == "wait":
+            fail()
+        if phase == "engine-startup":
+            pytest.fail("启动时已失败不得继续推进")
+        if phase == "engine-wait":
+            engine_error()
+        sample()
+        return {"reached": True}
+
+    monkeypatch.setattr(game_run.ga, "run_session", start)
+    monkeypatch.setattr(game_run, "wait_progress", wait)
     report = game_run.run(
         {"probe": source},
         months=1,
@@ -616,6 +709,13 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
         assert not (user / "mod/probe").exists()
     if phase in {"capture", "archive", "process", "summary"}:
         assert any("controlled failure" in error for error in report["cleanup_errors"])
+    if phase.startswith("engine-"):
+        early_stop, failure = report["early_stop"], report["failure"]
+        assert isinstance(early_stop, dict)
+        assert early_stop["kind"] == "Assertion failed"
+        assert isinstance(failure, str)
+        assert "实时错误门禁" in failure
+        assert "checkpoint" not in report
     assert (Path(str(report["evidence"])) / "report.json").is_file()
     stages = report["stage_timings"]
     assert isinstance(stages, list)
@@ -1090,7 +1190,8 @@ def test_完整运行按结束日期归档检查点且失败也恢复用户状�
         lambda *_a, **_k: {"start": "1840.7.1", "end": "1900.1.10", "reached": True},
     )
 
-    def checkpoint(path, *, earliest, original_sha256):
+    def checkpoint(path, *, earliest, original_sha256, check):
+        check()
         assert earliest == game_run.ga.tick_day("1900.1.10")
         assert original_sha256 is None
         if not ready:
