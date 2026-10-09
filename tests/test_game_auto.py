@@ -20,12 +20,12 @@ import ast
 import hashlib
 import json
 import os
-import sys
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pytest
+from conftest import mock_game_auto_platform
 from PIL import Image
 
 from pdx import config, h1_probe
@@ -2889,11 +2889,18 @@ class TestSessionStartDict:
         assert "没有按" in str(payload["unpause"])
 
 
+@pytest.fixture
+def synthetic_windows_platform(monkeypatch: pytest.MonkeyPatch) -> None:
+    """只替换被测模块的平台引用，不改变 pathlib/pytest 所用的共享 sys。"""
+    mock_game_auto_platform(monkeypatch, "win32")
+
+
+@pytest.mark.usefixtures("synthetic_windows_platform")
 class TestRunCommand:
     """`python -m pdx.game_auto run` 必须走**标准流程**（单路，没有回落链）。
 
     流程口径（用户 2026-09-22）：起游戏到前台 → 加载期不碰窗口 → 点「观察」→
-    点 5 档速度 → 按空格 → 切回后台。`main()` 以前完全没有用例，这里把它钉住。
+    按 5 切速度 → 按空格 → 切回后台。这里保留真实编排，原生输入全部替换为桩。
     """
 
     def _stub(self, monkeypatch: pytest.MonkeyPatch, seen: dict[str, object]) -> None:
@@ -2985,6 +2992,7 @@ class TestBackgroundCommand:
         assert "推进" in capsys.readouterr().out
 
 
+@pytest.mark.usefixtures("synthetic_windows_platform")
 class TestRunSession:
     """`run_session` 是探针共用的入口：起游戏 + 等加载 + 标准流程，一路传参不丢。"""
 
@@ -3486,11 +3494,30 @@ class TestGrabGuard:
         assert grabbed == [(100, 50 + 972, 100 + 1920, 50 + 1080)], "ROI 只抓底部那一条"
 
 
-def test_platform_capabilities_is_read_only() -> None:
+@pytest.mark.parametrize("platform", ["win32", "linux", "darwin"])
+def test_platform_capabilities_is_read_only(monkeypatch, platform) -> None:
+    mock_game_auto_platform(monkeypatch, platform)
+
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("能力查询不得启动游戏、查询窗口或发送输入")
+
+    for name in ("launch", "find_window", "_foreground_window", "press_key", "_set_cursor"):
+        monkeypatch.setattr(ga, name, forbidden)
     capabilities = ga.platform_capabilities()
-    assert capabilities["platform"] == sys.platform
-    assert capabilities["background_validation"] is True
+    assert capabilities["platform"] == platform
+    assert capabilities["gui_automation"] is (platform == "win32")
+    assert capabilities["background_validation"] is (platform == "win32")
     assert capabilities["headless_log_validation"] is True
+
+
+@pytest.mark.parametrize("platform", ["linux", "darwin"])
+def test_run_session_rejects_unsupported_platform_before_launch(monkeypatch, platform) -> None:
+    mock_game_auto_platform(monkeypatch, platform)
+    monkeypatch.setattr(
+        ga, "launch_to_foreground", lambda **_kw: pytest.fail("非 Windows 不得启动 GUI 流程")
+    )
+    with pytest.raises(ga.WindowsOnlyError, match="Windows GUI"):
+        ga._run_session_impl()
 
 
 def test_press_game_shortcut_checks_foreground_and_uses_shared_mapping(monkeypatch):

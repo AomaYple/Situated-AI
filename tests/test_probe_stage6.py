@@ -1196,17 +1196,25 @@ def test_修因_抓不到图_退回手里那一帧_不抛也不假绿(
         raise probe.ga.CaptureFailedError("（用例）抓不到图")
 
     monkeypatch.setattr(probe.ga, "screenshot", _boom)
+    cursor: list[tuple[int, int]] = []
     clicks: list[tuple[int, int]] = []
+    monkeypatch.setattr(probe.ga, "_set_cursor", lambda x, y: cursor.append((x, y)))
     monkeypatch.setattr(probe.ga, "click_client", lambda _h, x, y, **_kw: clicks.append((x, y)))
     spot = probe.click_row_arrow(4242, which="prev", image=_frame(), row_center_y=_ROW_CENTER_Y)
     assert spot.x == probe.ROW_ARROW_PREV_X
     assert clicks == [(probe.ROW_ARROW_PREV_X, _ROW_CENTER_Y)]
+    assert cursor == [probe.NEUTRAL_CURSOR_XY, (probe.ROW_ARROW_PREV_X, _ROW_CENTER_Y)]
     with pytest.raises(probe.RowArrowCheckError) as caught:
         probe.click_row_arrow(
             4242, which="prev", image=_hovered_frame(), row_center_y=_ROW_CENTER_Y
         )
     assert caught.value.reason == "镜像不过"  # 手里那张是悬停帧 ⇒ 照红
     assert clicks == [(probe.ROW_ARROW_PREV_X, _ROW_CENTER_Y)]  # 第二次一个键也没送
+    assert cursor == [
+        probe.NEUTRAL_CURSOR_XY,
+        (probe.ROW_ARROW_PREV_X, _ROW_CENTER_Y),
+        probe.NEUTRAL_CURSOR_XY,
+    ]
 
 
 # ── t41：承重判据的单元面（档名读数 / 三块同帧 / 应用 vs 只关窗）────────────────

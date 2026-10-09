@@ -36,6 +36,7 @@ import json
 import re
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 
 import pytest
@@ -922,11 +923,11 @@ class TestSubprocess:
 
         这条能抓到「改了 pyproject 但没重新 pip install -e .」这类问题。
 
-        入口点直接照着**当前解释器所在的 Scripts 目录**找，不走 ``PATH`` ——
+        入口点照着**当前解释器的安装方案**找，不走 ``PATH`` ——
         虚拟环境通常不激活就调 pytest，这时 ``shutil.which("v3")`` 找不到，
         测试会永远静默跳过，等于没有这条检查（实测踩过）。
         """
-        scripts = Path(sys.executable).parent
+        scripts = Path(sysconfig.get_path("scripts"))
         candidates = [scripts / "v3.exe", scripts / "v3"]
         exe = next((c for c in candidates if c.is_file()), None)
         if exe is None:

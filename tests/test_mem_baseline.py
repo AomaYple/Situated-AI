@@ -614,7 +614,7 @@ def test_真实GBK控制台chcp936下不崩(tmp_path: Path) -> None:
         "ascii", "replace"
     )
     cp = "".join(ch for ch in before if ch.isdigit()) or "936"
-    python = str(config.REPO / ".venv" / "Scripts" / "python.exe")
+    python = sys.executable
     script = str(_SCRIPT)
     try:
         proc = subprocess.run(

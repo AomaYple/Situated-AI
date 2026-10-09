@@ -10,6 +10,13 @@ from pdx import parallel
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def _isolate_worker_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
+    """外部 CI worker 配置不能污染预算与覆盖优先级的单元测试。"""
+    monkeypatch.delenv("SITAI_XDIST_WORKERS", raising=False)
+    monkeypatch.delenv("PYTEST_XDIST_AUTO_NUM_WORKERS", raising=False)
+
+
 def test_内存不足时至少保留一个worker() -> None:
     assert parallel.auto_worker_count(cpu=16, available=2048) == 1
 
@@ -28,6 +35,12 @@ def test_显式worker数优先于预算(monkeypatch: pytest.MonkeyPatch) -> None
 def test_xdist官方覆盖变量仍然有效(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "3")
     assert parallel.auto_worker_count(cpu=16, available=2048) == 3
+
+
+def test_项目覆盖变量优先于xdist官方变量(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SITAI_XDIST_WORKERS", "2")
+    monkeypatch.setenv("PYTEST_XDIST_AUTO_NUM_WORKERS", "3")
+    assert parallel.auto_worker_count(cpu=16, available=2048) == 2
 
 
 def test_xdist官方覆盖变量在无游戏树时仍然有效(

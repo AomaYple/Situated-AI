@@ -389,6 +389,15 @@ def test_全局政治正控明确隔离且不强制立法(tmp_path, monkeypatch)
     from pdx import config, game_run
     from tools.probe import decision_stability
 
+    game = tmp_path / "game"
+    for directory, text in (
+        ("ai_strategies", "ai_strategy_alpha = { type = political }\n"),
+        ("laws", "law_autocracy = {}\n"),
+    ):
+        root = game / "common" / directory
+        root.mkdir(parents=True)
+        (root / "fixture.txt").write_text(text, encoding="utf-8", newline="\n")
+    monkeypatch.setattr(config, "GAME", game)
     monkeypatch.setattr(config, "OUT", tmp_path)
     monkeypatch.setattr(
         sys,

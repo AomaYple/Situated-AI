@@ -61,11 +61,24 @@ def test_cache可以列出分片() -> None:
     assert result.exit_code == 0
 
 
-def test_lock与当前环境对账() -> None:
-    """入库的 `requirements.lock` 必须与当前环境一致（不一致就说明该重生成）。"""
+@pytest.mark.parametrize(("actual_version", "expected_code"), [("1.0", 0), ("2.0", 1)])
+def test_lock与当前环境对账(tmp_path, monkeypatch, actual_version, expected_code) -> None:
+    """CLI 保留严格对账；真实 Windows 锁的安装与闭包由独立 CI job 验收。"""
+    from pdx import lockfile
+
+    target = tmp_path / lockfile.LOCK_FILE
+    target.write_text(lockfile.render({"sample-package": "1.0"}), encoding="utf-8", newline="\n")
+    monkeypatch.setattr(lockfile.config, "REPO", tmp_path)
+    monkeypatch.setattr(lockfile, "resolve", lambda: {"sample-package": actual_version})
     result = _run("lock")
-    assert result.exit_code == 0, result.output
-    assert "一致" in result.output
+    assert result.exit_code == expected_code, result.output
+    if expected_code:
+        assert "不一致" in result.output
+        assert "sample-package" in result.output
+        assert "版本不同" in result.output
+    else:
+        assert "与当前环境一致" in result.output
+    assert lockfile.read(target) == {"sample-package": "1.0"}
 
 
 def test_lock写入模式可用(tmp_path, monkeypatch) -> None:

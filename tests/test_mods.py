@@ -232,5 +232,7 @@ def test_doc12_重复路径结论与现场一致() -> None:
     text = _DOC12.read_text(encoding="utf-8")
     assert "全量相对路径中被 2 个及以上 mod 提供的路径数 = 8" in text
     assert "游戏内容目录中被 2 个及以上 mod 提供的路径数 = 0" in text
+    if not live:
+        pytest.skip("本机没有可发现的 mod，无从对照（CI 环境正常）")
     assert len(duplicated) == 8
     assert not duplicated_content

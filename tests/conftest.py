@@ -15,8 +15,10 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterator, Sequence
 from functools import lru_cache
+from types import ModuleType
 from typing import TYPE_CHECKING, overload
 
 import pytest
@@ -27,6 +29,15 @@ from pdx.scan import walk_files
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def mock_game_auto_platform(monkeypatch: pytest.MonkeyPatch, platform: str) -> None:
+    """模块局部平台桩；其余 sys 属性实时转发，保留 pytest 的输出捕获。"""
+    from pdx import game_auto
+
+    proxy = ModuleType("game_auto_test_sys")
+    vars(proxy).update(platform=platform, __getattr__=lambda name: getattr(sys, name))
+    monkeypatch.setattr(game_auto, "sys", proxy)
 
 
 @lru_cache(maxsize=64)

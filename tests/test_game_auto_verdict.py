@@ -19,6 +19,7 @@ import dataclasses
 from pathlib import Path
 
 import pytest
+from conftest import mock_game_auto_platform
 
 from pdx import game_auto as ga
 
@@ -300,6 +301,7 @@ def _stub_session(monkeypatch: pytest.MonkeyPatch, calls: list[str]) -> None:
         calls.append("verdict")
         return _verdict()
 
+    mock_game_auto_platform(monkeypatch, "win32")
     monkeypatch.setattr(ga, "testoutput_files", list)
     monkeypatch.setattr(ga, "launch_to_foreground", lambda **_kw: (4242, 777))
     monkeypatch.setattr(ga, "wait_for_boot_settle", lambda **_kw: _settle())
