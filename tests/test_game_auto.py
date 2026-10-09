@@ -3305,7 +3305,7 @@ class TestConsoleChannel:
     def test_提交要按两次回车(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """实测：按一次 44.9 → 44.0（字一个没少），按两次才 43.0 → 7.5（清空）。"""
         keys: list[str] = []
-        inks = iter([244, 1654])
+        outputs = iter([np.zeros((20, 20), dtype=bool), np.ones((20, 20), dtype=bool)])
         monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
         monkeypatch.setattr(ga, "screenshot", lambda _h, roi=None: _grey_image(35.0))  # noqa: ARG005
         monkeypatch.setattr(ga, "click_client", lambda _h, _x, _y, **_k: None)
@@ -3313,8 +3313,9 @@ class TestConsoleChannel:
         monkeypatch.setattr(ga, "press_key", lambda key, **_k: keys.append(key))
         monkeypatch.setattr(ga, "press_chord", lambda *_a, **_k: None)
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
-        monkeypatch.setattr(ga, "console_output_ink", lambda _h: next(inks))
-        monkeypatch.setattr(ga, "_roi_stats", lambda _h, _roi: (35.0, 7.5, 0))
+        monkeypatch.setattr(ga, "_console_output_mask", lambda _h: next(outputs))
+        deviations = iter([7.5, 44.0, 7.5])
+        monkeypatch.setattr(ga, "_roi_stats", lambda _h, _roi: (35.0, next(deviations), 0))
         assert ga.submit_console_command(4242, "dump_ticktask_timings", force=True) is True
         assert keys[-3:] == [
             "type:dump_ticktask_timings",
@@ -3327,7 +3328,7 @@ class TestConsoleChannel:
         下一次敲的命令会**打进游戏**、`dump` 永远"没提交成功"。所以提交前必须先点它一下。"""
         clicks: list[tuple[int, int]] = []
         keys: list[str] = []
-        inks = iter([244, 1654])
+        outputs = iter([np.zeros((20, 20), dtype=bool), np.ones((20, 20), dtype=bool)])
         monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
         monkeypatch.setattr(ga, "screenshot", lambda _h, roi=None: _grey_image(35.0))  # noqa: ARG005
         monkeypatch.setattr(ga, "click_client", lambda _h, x, y, **_k: clicks.append((x, y)))
@@ -3335,7 +3336,7 @@ class TestConsoleChannel:
         monkeypatch.setattr(ga, "press_key", lambda key, **_k: keys.append(key))
         monkeypatch.setattr(ga, "press_chord", lambda chord, **_k: keys.append(chord))
         monkeypatch.setattr(ga, "_sleep", lambda _s: None)
-        monkeypatch.setattr(ga, "console_output_ink", lambda _h: next(inks))
+        monkeypatch.setattr(ga, "_console_output_mask", lambda _h: next(outputs))
         monkeypatch.setattr(ga, "_roi_stats", lambda _h, _roi: (35.0, 7.5, 0))
         assert ga.submit_console_command(4242, "dump_ticktask_timings", force=True) is True
         x0, y0, x1, y1 = ga.CONSOLE_EDIT_ROI
@@ -3362,6 +3363,40 @@ class TestConsoleChannel:
         # 一次"清空"（焦点那一步）+ 一次"失败后擦干净"
         assert keys.count("backspace") == 1 + len("zzz") + 8, "没提交成功要把输入框敲干净"
 
+    @pytest.mark.parametrize(
+        "change", ["less", "same_count", "unchanged", "noise", "not_cleared", "shape"]
+    )
+    def test_已有回话按文字像素变化验提交而非亮像素净增(
+        self, monkeypatch: pytest.MonkeyPatch, change: str
+    ) -> None:
+        before = np.zeros((120, 332), dtype=np.uint8)
+        before[10:30, 10:40] = 255
+        after = before.copy()
+        if change == "less":
+            after[10:30, 10:30] = 0
+        elif change in {"same_count", "not_cleared"}:
+            after[:] = 0
+            after[40:60, 10:40] = 255
+        elif change == "noise":
+            after[10, :10] = 255
+        elif change == "shape":
+            after = np.zeros((1, 1), dtype=np.uint8)
+        images = iter((before, after))
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+        monkeypatch.setattr(ga, "screenshot", lambda _h, roi=None: Image.fromarray(next(images)))  # noqa: ARG005
+        monkeypatch.setattr(ga, "open_console", lambda *_a, **_k: True)
+        monkeypatch.setattr(ga, "_focus_editbox", lambda *_a, **_k: None)
+        monkeypatch.setattr(ga, "type_text", lambda *_a, **_k: None)
+        keys: list[str] = []
+        monkeypatch.setattr(ga, "press_key", lambda key, **_k: keys.append(key))
+        monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        std = 44.0 if change == "not_cleared" else 7.5
+        monkeypatch.setattr(ga, "_roi_stats", lambda _h, _roi: (35.0, std, 0))
+        assert ga.submit_console_command(4242, "log list", force=True, attempts=1) is (
+            change in {"less", "same_count"}
+        )
+        assert keys.count("enter") == (2 if change == "not_cleared" else 1)
+
     def test_ROI_判据走的是分数换算(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """`screenshot` 要分数、这里给像素 —— 换算错会炸在 `DecompressionBombError` 上。"""
         seen: list[tuple[float, float, float, float]] = []
@@ -3370,6 +3405,31 @@ class TestConsoleChannel:
         ga.console_open(4242)
         x0, y0, x1, y1 = ga.CONSOLE_EDIT_ROI
         assert seen == [(x0 / 1920, y0 / 1080, x1 / 1920, y1 / 1080)]
+
+    def test_新回话追加在输出区下半部也能确认提交(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        before = Image.new("L", (1920, 1080), 35)
+        after = before.copy()
+        # 顶部不变，命令历史已占满前120像素，新回话只出现在下方。
+        after.paste(220, (20, 300, 160, 320))
+        images = iter((before, after))
+        monkeypatch.setattr(ga, "_client_size", lambda _h: (1920, 1080))
+
+        def screenshot(_hwnd, roi):
+            return next(images).crop(
+                tuple(
+                    round(v * size) for v, size in zip(roi, (1920, 1080, 1920, 1080), strict=True)
+                )
+            )
+
+        monkeypatch.setattr(ga, "screenshot", screenshot)
+        monkeypatch.setattr(ga, "open_console", lambda *_a, **_k: True)
+        monkeypatch.setattr(ga, "_focus_editbox", lambda *_a, **_k: None)
+        monkeypatch.setattr(ga, "type_text", lambda *_a, **_k: None)
+        monkeypatch.setattr(ga, "press_key", lambda *_a, **_k: None)
+        monkeypatch.setattr(ga, "_sleep", lambda _s: None)
+        monkeypatch.setattr(ga, "_roi_stats", lambda _h, _roi: (35.0, 7.5, 0))
+        assert ga.submit_console_command(4242, "dump_ticktask_timings", force=True, attempts=1)
+        assert ga.CONSOLE_OUTPUT_ROI[3] <= ga.CONSOLE_EDIT_ROI[1]
 
 
 class TestGrabGuard:

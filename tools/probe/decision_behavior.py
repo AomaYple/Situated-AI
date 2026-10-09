@@ -22,6 +22,12 @@ def main() -> int:
         required=True,
     )
     parser.add_argument("--months", type=float, default=6)
+    parser.add_argument("--timeout", type=float, default=3600)
+    parser.add_argument(
+        "--natural-opportunity",
+        action="store_true",
+        help="只绑定首场自然博弈；仅限无注入 control 仪器",
+    )
     parser.add_argument("--experiment-plan", default="m3a-exploration-20261010")
     parser.add_argument("--pair-index", type=int, default=1)
     parser.add_argument(
@@ -39,11 +45,15 @@ def main() -> int:
         "--localization-baseline", action="store_true", help="隔离实验补原版中文缺键；不豁免错误"
     )
     args = parser.parse_args()
+    if args.natural_opportunity and (args.arm != "control" or args.fiscal_injection != "none"):
+        parser.error("自然响应侦察仅允许 --arm control --fiscal-injection none，不派候选或制造机会")
     output = config.OUT / "decisions/behavior" / args.arm
     if (args.initiator, args.target) != ("AUS", "SAR"):
         output /= f"{args.initiator}-{args.target}"
     if args.fiscal_injection != "stress":
         output /= f"input-{args.fiscal_injection}"
+    if args.natural_opportunity:
+        output /= "natural"
     output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".sources-", dir=output) as directory:
         return execute(args, output, Path(directory))
@@ -56,6 +66,14 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         source_root / "opportunity",
     )
     tags = tuple(args.observers)
+    natural = getattr(args, "natural_opportunity", False)
+    play_types: list[str] = []
+    if natural:
+        for path in sorted((config.GAME / "common/diplomatic_plays").glob("*.txt")):
+            tree = parse_file(path)
+            if tree.errors:
+                raise ValueError(f"原版博弈类型无法解析：{path}")
+            play_types.extend(key for key in tree.top_keys if key.startswith("dp_"))
     policy = decisions.load()
     if args.arm in {"control", "market", "market-control"}:
         policy = replace(policy, neutrality=0, aggression=0)
@@ -77,14 +95,21 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
     decisions.write(
         opportunity,
         behavior_probe.build(
-            initiator=args.initiator, target=args.target, tags=tags, market_readings=market_readings
+            initiator=args.initiator,
+            target=args.target,
+            tags=tags,
+            market_readings=market_readings,
+            natural=natural,
+            play_types=tuple(play_types),
         ),
     )
 
     def analyze(logdir):
         return {
             "fiscal": decision_probe.analyze(logdir, strict=True, tags=tags),
-            "opportunity": behavior_probe.analyze(logdir, tags=tags),
+            "opportunity": behavior_probe.analyze(
+                logdir, tags=tags, natural_pair=(args.initiator, args.target) if natural else None
+            ),
         }
 
     # Fixed checkpoints record both fiscal probe identities for every arm.
@@ -122,10 +147,11 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         output=output,
         load_save=args.save,
         keep_save=getattr(args, "keep_save", False),
+        timeout=getattr(args, "timeout", 3600),
         analyze=analyze,
         experiment=RunRequest(
             plan_id=getattr(args, "experiment_plan", "m3a-exploration-20261010"),
-            scene_id=f"{args.initiator}-{args.target}:{args.fiscal_injection}",
+            scene_id=f"{'natural:' if natural else ''}{args.initiator}-{args.target}:{args.fiscal_injection}",
             arm=args.arm,
             pair=getattr(args, "pair_index", 1),
         ),

@@ -91,6 +91,8 @@ from .platform_support import UnavailableWindowsModule, WindowsOnlyError
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
+    from numpy.typing import NDArray
+
 # 本模块本次 Popen 创建的根进程；失败清理只针对这些 PID。
 _OWNED_GAME_PIDS: set[int] = set()
 
@@ -886,8 +888,8 @@ CONSOLE_KEY = "`"
 #: 实测口径：1920x1080、界面缩放 100%。
 CONSOLE_EDIT_ROI = (8, 568, 428, 606)
 
-#: 控制台输出区**顶部**（命令的回话写在这儿，例如 `Wrote 14792 rows to …`）。
-CONSOLE_OUTPUT_ROI = (8, 0, 340, 120)
+#: 控制台输出区，覆盖追加在历史下方的回话，止于输入框上方。
+CONSOLE_OUTPUT_ROI = (8, 0, 340, 566)
 
 #: 输入框标准差低于这个数 = 已经空了（提交成功的第一条判据）。
 CONSOLE_CLEARED_STD = 30.0
@@ -916,9 +918,16 @@ def console_open(hwnd: int) -> bool:
 
 
 def console_output_ink(hwnd: int) -> int:
-    """输出区顶部的亮像素数 —— 命令回话就会让它跳（提交成功的第二条判据）。"""
-    _mean, _std, ink = _roi_stats(hwnd, CONSOLE_OUTPUT_ROI)
-    return ink
+    """输出区的亮像素数，供诊断使用；字数不保证随回话单调增加。"""
+    return int(np.count_nonzero(_console_output_mask(hwnd)))
+
+
+def _console_output_mask(hwnd: int) -> NDArray[np.bool_]:
+    """只比较输出区文字位置，减少暗背景细微变化的干扰。"""
+    width, height = _client_size(hwnd)
+    x0, y0, x1, y1 = CONSOLE_OUTPUT_ROI
+    image = screenshot(hwnd, roi=(x0 / width, y0 / height, x1 / width, y1 / height))
+    return np.asarray(image.convert("L")) > 140
 
 
 def open_console(hwnd: int, *, key: str = CONSOLE_KEY, force: bool = False) -> bool:
@@ -1012,11 +1021,13 @@ def submit_console_command(
 ) -> bool:
     """敲一条控制台命令并提交，确认输入框清空且输出区有回话。
 
-    回话可能是 Unknown command；调用方仍须核对实际输出文件或状态，不能把提交当执行成功。
+    回话可能是 Unknown command 或开发者限制；调用方仍须核对实际回话、输出文件或状态，
+    不能把提交当执行成功。滚动或更短的新回话会减少亮像素，因此比较文字位置变化，
+    不要求亮像素净增；尺寸漂移和不足 21 个像素的变化不确认提交。
 
-    ⚠️ **两次回车**不是随手写的：按一次时输入框标准差 44.9 → 44.0（字一个没少、
-    输出区一动不动），连按两次 43.0 → 7.5 且输出区亮像素 322 → 1732。第一次被
-    控制台的**自动补全**吃掉 —— 这条坑在 backlog B66 里。
+    第一次回车可能被自动补全吃掉（backlog B66）：实测输入框 44.9 → 44.0，
+    第二次才清空。按第一次后先检查输入框，仍有字才按第二次；已经清空就不再
+    提交空命令，避免产生与原命令无关的回话。
 
     ⚠️ 调用方要先保证**游戏是前台**（`ensure_foreground`）：合成键盘只送给前台窗口。
     """
@@ -1025,16 +1036,23 @@ def submit_console_command(
             if not open_console(hwnd, force=force):
                 return False
             _focus_editbox(hwnd, force=force)
-            before_ink = console_output_ink(hwnd)
+            before_output = _console_output_mask(hwnd)
             type_text(command, force=force)
             _sleep(0.6)
             press_key("enter", force=force)
             _sleep(0.35)
-            press_key("enter", force=force)
+            _mean, first_std, _ink = _roi_stats(hwnd, CONSOLE_EDIT_ROI)
+            if first_std >= CONSOLE_CLEARED_STD:
+                press_key("enter", force=force)
             _sleep(settle)
             _mean, std, _ink = _roi_stats(hwnd, CONSOLE_EDIT_ROI)
-            if std < CONSOLE_CLEARED_STD and console_output_ink(hwnd) > before_ink + 20:
-                return True
+            if std < CONSOLE_CLEARED_STD:
+                after_output = _console_output_mask(hwnd)
+                if (
+                    before_output.shape == after_output.shape
+                    and np.count_nonzero(before_output != after_output) > 20
+                ):
+                    return True
             # 没提交成功就把输入框清干净，免得下一条命令粘在后面。
             for _ in range(len(command) + 8):
                 press_key("backspace", force=force)

@@ -596,6 +596,47 @@ def test_内容相同的状态备份复用(deployment):
     assert deployment.state_files[settings] == saved
 
 
+@pytest.mark.parametrize("existed", [True, False])
+def test_控制台历史纳入持久事务且保留实验输出(deployment, existed):
+    history = deployment.userdir / "console_history.txt"
+    original = "用户原有命令\r\n".encode()
+    if existed:
+        history.write_bytes(original)
+    deployment.snapshot_state()
+    generated = (original if existed else b"") + b"help log\nlog list\n"
+    history.write_bytes(generated)
+    restarted = game_run.Deployment.load(deployment.userdir, deployment.evidence)
+    assert restarted.restore() == []
+    assert history.exists() is existed
+    if existed:
+        assert history.read_bytes() == original
+    assert restarted.restore() == []
+    assert any(
+        path.read_bytes() == generated
+        for path in (restarted.evidence / "console-history-output").iterdir()
+        if path.is_file()
+    )
+
+
+def test_控制台历史归档损坏则保留现场且支持修复后重试(deployment):
+    history = deployment.userdir / "console_history.txt"
+    history.write_bytes(b"original")
+    deployment.snapshot_state()
+    generated = b"original\nhelp log\n"
+    history.write_bytes(generated)
+    archive = deployment.evidence / "console-history-output" / hashlib.sha256(generated).hexdigest()
+    archive.parent.mkdir(parents=True)
+    archive.write_bytes(b"corrupted archive")
+    assert any("归档指纹不符" in error for error in deployment.restore())
+    assert history.read_bytes() == generated
+    assert history in deployment.state_files
+    archive.rename(archive.with_suffix(".bad"))
+    restarted = game_run.Deployment.load(deployment.userdir, deployment.evidence)
+    assert restarted.restore() == []
+    assert history.read_bytes() == b"original"
+    assert archive.read_bytes() == generated
+
+
 @pytest.mark.parametrize(
     "phase",
     [
@@ -999,6 +1040,11 @@ def ticktask_capture(tmp_path, monkeypatch):
     monkeypatch.setattr(game_run.ga, "click_client", lambda *_a, **_k: events.append("focus"))
     monkeypatch.setattr(game_run.ga, "speed_widget_xy", lambda *_a, **_k: (5, 6))
     monkeypatch.setattr(game_run.ga, "tick_mark", lambda: SimpleNamespace(tick="1836.6.1"))
+    monkeypatch.setattr(
+        game_run.ga,
+        "_step_unpause",
+        lambda *_a, **_k: events.append("ensure-running"),
+    )
 
     def background(*_):
         events.append("background")
@@ -1018,7 +1064,7 @@ def test_清零控制台后立即还后台再核实推进(ticktask_capture, monk
     monkeypatch.setattr(game_run.ga, "submit_console_command", lambda *_a, **_k: True)
     capture.start(session)
     assert not capture.path.exists()
-    assert events == ["front", "key", "focus", "key", "background", "verified-running"]
+    assert events == ["front", "key", "focus", "ensure-running", "background", "verified-running"]
     assert capture.background["minimized"]
 
 
@@ -1027,7 +1073,46 @@ def test_键盘速度会在控制台清零后重新夺回游戏焦点(ticktask_c
     session = SimpleNamespace(hwnd=1, previous=2, speed_xy=None, speed_key="5")
     monkeypatch.setattr(game_run.ga, "submit_console_command", lambda *_a, **_k: True)
     capture.start(session)
-    assert events == ["front", "key", "focus", "key", "key", "background", "verified-running"]
+    assert events == [
+        "front",
+        "key",
+        "focus",
+        "key",
+        "ensure-running",
+        "background",
+        "verified-running",
+    ]
+
+
+def test_清零后恢复失败也归还窗口且不确认后台推进(ticktask_capture, monkeypatch):
+    capture, session, events = ticktask_capture
+    monkeypatch.setattr(game_run.ga, "submit_console_command", lambda *_a, **_k: True)
+
+    def fail(*_args, **_kwargs):
+        raise game_run.ga.NotRunningError("未推进")
+
+    monkeypatch.setattr(game_run.ga, "_step_unpause", fail)
+    with pytest.raises(game_run.ga.NotRunningError):
+        capture.start(session)
+    assert events[-1] == "background"
+    assert "verified-running" not in events
+
+
+def test_清零后后台验收使用归还窗口后的tick边界(ticktask_capture, monkeypatch):
+    capture, session, events = ticktask_capture
+    monkeypatch.setattr(game_run.ga, "submit_console_command", lambda *_a, **_k: True)
+    monkeypatch.setattr(
+        game_run.ga,
+        "tick_mark",
+        lambda: SimpleNamespace(tick="1836.6.2" if "background" in events else "1836.6.1"),
+    )
+    boundaries = []
+    monkeypatch.setattr(
+        game_run.ga, "wait_until_running", lambda before, **_k: boundaries.append(before.tick)
+    )
+    capture.start(session)
+    assert capture.start_tick == "1836.6.1"
+    assert boundaries == ["1836.6.2"]
 
 
 def test_清零失败也归还窗口且不开始计时(ticktask_capture, monkeypatch):

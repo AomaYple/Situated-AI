@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, NotRequired, TypedDict
 
 from . import decision_probe, decisions, game_auto
 
@@ -15,7 +15,20 @@ ROW = re.compile(
     r"SITAI OPPORTUNITY;(?P<tag>[A-Z]{3}|CONTROL);(?P<kind>[A-Z_]+);(?P<value>.*);(?P<date>[^;]*)$"
 )
 BOOLEAN_KINDS = frozenset(
-    {"UNDECIDED", "CAN_INIT", "CAN_TARGET", "BACKER", "INIT_BACKER", "TARGET_BACKER", "ACTIVE"}
+    {
+        "UNDECIDED",
+        "CAN_INIT",
+        "CAN_TARGET",
+        "BACKER",
+        "INIT_BACKER",
+        "TARGET_BACKER",
+        "ACTIVE",
+        "ENTRY",
+        "HOLD",
+        "TASK",
+        "FLAG",
+        "PRESENT",
+    }
 )
 SAMPLE_VAR = "sitai_probe_opportunity_sample"
 
@@ -37,6 +50,7 @@ class Analysis(TypedDict):
     common_eligible_active_dates: list[str]
     usable_for_paired_behavior: bool
     time_basis: str
+    natural_capture: NotRequired[dict[str, object]]
 
 
 def build(
@@ -45,6 +59,8 @@ def build(
     target: str = "SAR",
     tags: tuple[str, str] = ("RUS", "PRU"),
     market_readings: bool = False,
+    natural: bool = False,
+    play_types: tuple[str, ...] = (),
 ) -> dict[str, str]:
     if (
         any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in (initiator, target))
@@ -55,6 +71,15 @@ def build(
         or any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in tags)
     ):
         raise ValueError("第三方机会必须由两个不同的三字母国家标签构成，且不能是观察国")
+    if natural and (
+        not play_types
+        or len(set(play_types)) != len(play_types)
+        or any(not re.fullmatch(r"dp_[a-z0-9_]+", key) for key in play_types)
+        or market_readings
+    ):
+        raise ValueError("自然响应只读仪器需要规范全量类型，不能同时开启市场实验")
+    if play_types and not natural:
+        raise ValueError("博弈类型全集仅用于自然响应仪器")
     roles = []
     for tag in tags:
         for kind, method in (
@@ -72,6 +97,19 @@ def build(
         roles.append(
             f"""c:{tag} ?= {{ if = {{ limit = {{ {decisions.ACTIVE_TRIGGER} = yes }} debug_log = "SITAI OPPORTUNITY;{tag};ACTIVE;yes;[TimeKeeper.GetCurrentDate.GetString]" }} else = {{ debug_log = "SITAI OPPORTUNITY;{tag};ACTIVE;no;[TimeKeeper.GetCurrentDate.GetString]" }} }}"""
         )
+        if natural:
+            roles.append(
+                f"""if = {{ limit = {{ exists = c:{tag} }} debug_log = "SITAI OPPORTUNITY;{tag};PRESENT;yes;[TimeKeeper.GetCurrentDate.GetString]" }} else = {{ debug_log = "SITAI OPPORTUNITY;{tag};PRESENT;no;[TimeKeeper.GetCurrentDate.GetString]" }}"""
+            )
+            for kind, condition in (
+                ("ENTRY", "sitai_fiscal_entry = yes"),
+                ("HOLD", "sitai_fiscal_hold = yes"),
+                ("TASK", "is_involved_in_journal_entry = je_peru_bolivia"),
+                ("FLAG", "has_variable = attack_bolivia"),
+            ):
+                roles.append(
+                    f"""c:{tag} ?= {{ if = {{ limit = {{ {condition} }} debug_log = "SITAI OPPORTUNITY;{tag};{kind};yes;[TimeKeeper.GetCurrentDate.GetString]" }} else = {{ debug_log = "SITAI OPPORTUNITY;{tag};{kind};no;[TimeKeeper.GetCurrentDate.GetString]" }} }}"""
+                )
         score_lines = []
         for kind, method in (
             ("INIT_SCORE", "GetInitiatorPreferenceScore"),
@@ -157,6 +195,53 @@ zz_sitai_opportunity.1 = {
 }
 """
     )
+    if natural:
+        # ROOT 就是引擎创建的那场博弈；只捕获首场，延迟事件持有同一 scope，
+        # 不通过国家对重新搜索另一场博弈，也不调用创建/加入/注入效果。
+        script = """# 只绑定引擎自然创建的首场声明机会。
+on_diplomatic_play_started = { on_actions = { zz_sitai_opportunity_bind } }
+on_monthly_pulse_country = { on_actions = { zz_sitai_opportunity_ready } }
+zz_sitai_opportunity_ready = { effect = {
+    if = { limit = { c:AUS ?= this }
+        debug_log = "SITAI OPPORTUNITY;CONTROL;READY;AUS_SAR;sample-0"
+    }
+} }
+zz_sitai_opportunity_bind = { effect = {
+    debug_log = "SITAI OPPORTUNITY;CONTROL;HOOK;natural;sample-0"
+    if = { limit = { initiator_is = c:AUS target_is = c:SAR
+            c:AUS = { NOT = { has_variable = sitai_opportunity_created } }
+        }
+        save_scope_as = sitai_opportunity
+        c:AUS ?= { save_scope_as = sitai_init }
+        c:SAR ?= { save_scope_as = sitai_target }
+        __SITAI_COUNTRY_SCOPES__
+        c:AUS ?= {
+            set_variable = { name = sitai_opportunity_created value = 1 }
+            set_variable = { name = sitai_opportunity_watch value = 1 days = 190 }
+            set_variable = { name = sitai_probe_opportunity_sample value = 0 }
+            debug_log = "SITAI OPPORTUNITY;CONTROL;BIND;AUS_SAR;sample-0"
+            trigger_event = { id = zz_sitai_opportunity.1 days = 1 }
+        }
+    }
+} }
+"""
+        script = script.replace(
+            "initiator_is = c:AUS target_is = c:SAR",
+            "initiator_is = c:AUS target_is = c:SAR __SITAI_OBSERVER_GUARDS__",
+            1,
+        )
+        watch = watch.replace(
+            "any_diplomatic_play = { initiator_is = c:AUS target_is = c:SAR }",
+            "exists = scope:sitai_opportunity",
+            1,
+        )
+        type_readings = "\n".join(
+            f"""if = {{ limit = {{ is_diplomatic_play_type = {key} }} debug_log = "SITAI OPPORTUNITY;CONTROL;TYPE;{key};[TimeKeeper.GetCurrentDate.GetString]" }}"""
+            for key in sorted(play_types)
+        )
+        watch = watch.replace(
+            "__SITAI_ROLE_READINGS__", type_readings + "\n__SITAI_ROLE_READINGS__"
+        )
     mapping = {"AUS": initiator, "SAR": target}
     script = re.sub(r"c:(AUS|SAR)\b", lambda m: f"c:{mapping[m[1]]}", script).replace(
         "AUS_SAR", f"{initiator}_{target}"
@@ -172,19 +257,33 @@ zz_sitai_opportunity.1 = {
     )
     script = script.replace("[TimeKeeper.GetCurrentDate.GetString]", "sample-0")
     script = script.replace(
+        "__SITAI_OBSERVER_GUARDS__", " ".join(f"exists = c:{tag}" for tag in tags)
+    )
+    script = script.replace(
         "__SITAI_COUNTRY_SCOPES__",
         "\n".join(f"c:{tag} ?= {{ save_scope_as = sitai_{tag.lower()} }}" for tag in tags),
     )
-    return {
+    if natural:
+        for old, new in (
+            (SAMPLE_VAR, "sitai_probe_natural_response_sample"),
+            ("sitai_opportunity_created", "sitai_probe_natural_bound"),
+            ("sitai_opportunity_watch", "sitai_probe_natural_watch"),
+        ):
+            script, watch = script.replace(old, new), watch.replace(old, new)
+    files = {
         "common/on_actions/zz_sitai_opportunity.txt": script,
         "events/zz_sitai_opportunity.txt": watch,
         ".metadata/metadata.json": json.dumps(
             {
-                "name": "SITAI third-party opportunity instrument",
+                "name": "SITAI natural third-party response observer"
+                if natural
+                else "SITAI third-party opportunity instrument",
                 "id": "sitai.probe.opportunity",
                 "version": "1.0",
                 "supported_game_version": decisions.load().game_version,
-                "short_description": "受控机会与自主选边分开计数",
+                "short_description": "只绑定自然博弈并读取第三方响应，不创造机会"
+                if natural
+                else "受控机会与自主选边分开计数",
                 "tags": [],
                 "relationships": [],
                 "game_custom_data": {"multiplayer_synchronized": False},
@@ -196,14 +295,26 @@ zz_sitai_opportunity.1 = {
         "localization/english/zz_sitai_opportunity_l_english.yml": 'l_english:\n sitai_opportunity_name: "Third-party diplomacy experiment"\n',
         "localization/simp_chinese/zz_sitai_opportunity_l_simp_chinese.yml": 'l_simp_chinese:\n sitai_opportunity_name: "第三方外交机会实验"\n',
     }
+    if natural:
+        for name in tuple(files):
+            if name.startswith("localization/"):
+                del files[name]
+    return files
 
 
-def analyze(directory: Path, *, tags: tuple[str, str] = ("RUS", "PRU")) -> Analysis:
+def analyze(
+    directory: Path,
+    *,
+    tags: tuple[str, str] = ("RUS", "PRU"),
+    natural_pair: tuple[str, str] | None = None,
+) -> Analysis:
     rows: list[dict[str, str]] = []
     for path in game_auto.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
             for line in stream:
                 match = ROW.search(line.rstrip())
+                if natural_pair is not None and "SITAI OPPORTUNITY;" in line and match is None:
+                    raise ValueError("自然响应仪器行格式不完整")
                 if match:
                     row = match.groupdict()
                     if row["date"].startswith("sample-") and not re.fullmatch(
@@ -255,7 +366,7 @@ def analyze(directory: Path, *, tags: tuple[str, str] = ("RUS", "PRU")) -> Analy
             "absence_is_neutrality": False,
             "eligible_active_days": len(eligible_active[tag]),
         }
-    return {
+    result: Analysis = {
         "rows": rows,
         "countries": countries,
         "forced_creation_is_autonomous": False,
@@ -264,4 +375,102 @@ def analyze(directory: Path, *, tags: tuple[str, str] = ("RUS", "PRU")) -> Analy
         "behavior_causality": False,
         "common_eligible_active_dates": sorted(eligible_active[tags[0]] & eligible_active[tags[1]]),
         "usable_for_paired_behavior": bool(eligible_active[tags[0]] & eligible_active[tags[1]]),
+    }
+    if natural_pair is not None:
+        result["natural_capture"] = _natural_capture(rows, tags, natural_pair)
+        result["sampling"] = (
+            "daily after first natural START; exact saved play scope; at most one captured play per run"
+        )
+        # 绑定或资格侦察不能自行成为配对因果样本。
+        result["usable_for_paired_behavior"] = False
+    return result
+
+
+def _natural_capture(
+    rows: list[dict[str, str]], tags: tuple[str, str], pair: tuple[str, str]
+) -> dict[str, object]:
+    expected_pair = "_".join(pair)
+    grouped: dict[tuple[str, str], dict[str, str]] = {}
+    bindings = 0
+    last_sample = 0
+    end_sample: int | None = None
+    samples: set[int] = set()
+    required = BOOLEAN_KINDS | {"INIT_SCORE", "TARGET_SCORE"}
+    for row in rows:
+        tag, kind, value, date = (row[key] for key in ("tag", "kind", "value", "date"))
+        if tag not in {"CONTROL", *tags} or not re.fullmatch(r"sample-\d+", date):
+            raise ValueError("自然响应含未声明国家或错误序号")
+        number = int(date.removeprefix("sample-"))
+        if kind in {"BIND", "READY", "HOOK"}:
+            if (
+                tag != "CONTROL"
+                or number != 0
+                or value != ("natural" if kind == "HOOK" else expected_pair)
+            ):
+                raise ValueError("自然响应入口身份或采样不符")
+            bindings += int(kind == "BIND")
+            continue
+        if kind == "END":
+            if (
+                tag != "CONTROL"
+                or value != expected_pair
+                or bindings != 1
+                or end_sample is not None
+                or number != last_sample + 1
+            ):
+                raise ValueError("自然响应结束身份或时序不符")
+            end_sample = number
+            continue
+        if (
+            number < 1
+            or (tag == "CONTROL" and kind not in {"TYPE", "ESCALATION"})
+            or (tag != "CONTROL" and kind not in required)
+        ):
+            raise ValueError("自然响应包含未知读数或零序号")
+        if bindings != 1:
+            raise ValueError("自然响应读数出现在唯一绑定之前")
+        if end_sample is not None or number < last_sample:
+            raise ValueError("自然响应结束后读数或日样本倒序")
+        last_sample = number
+        state = grouped.setdefault((tag, date), {})
+        if kind in state:
+            raise ValueError("自然响应同一样本重复读数")
+        state[kind] = value
+        samples.add(number)
+    if bindings > 1 or (samples and bindings != 1):
+        raise ValueError("自然响应绑定缺失或重复")
+    if samples and sorted(samples) != list(range(1, max(samples) + 1)):
+        raise ValueError("自然响应样本缺号")
+    for number in samples:
+        date = f"sample-{number}"
+        control = grouped.get(("CONTROL", date), {})
+        if set(control) != {"TYPE", "ESCALATION"} or not re.fullmatch(
+            r"dp_[a-z0-9_]+", control["TYPE"]
+        ):
+            raise ValueError("自然响应类型或阶段缺失")
+        for tag in tags:
+            state = grouped.get((tag, date), {})
+            if not state.keys() >= BOOLEAN_KINDS or (
+                state["UNDECIDED"] == "yes" and not required <= state.keys()
+            ):
+                raise ValueError("自然响应角色／资格／任务读数不完整")
+            if state["PRESENT"] != "yes":
+                raise ValueError("自然响应观察国不存在，不能接受空对象读数")
+            backing_sides = sum(state[kind] == "yes" for kind in ("INIT_BACKER", "TARGET_BACKER"))
+            if (
+                backing_sides > 1
+                or (state["BACKER"] == "yes") != bool(backing_sides)
+                or (state["UNDECIDED"] == state["BACKER"] == "yes")
+            ):
+                raise ValueError("自然响应角色互相矛盾")
+    return {
+        "captured": bindings == 1,
+        "binding_matrix_complete": bool(bindings == 1 and samples),
+        "samples": len(samples),
+        "ended": end_sample is not None,
+        "end_sample": end_sample,
+        "pair": list(pair),
+        "engine_safety_requires_clean_report": True,
+        "complete_opportunity_denominator": None,
+        "quality_improvement_proven": False,
     }

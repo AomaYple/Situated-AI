@@ -10,7 +10,7 @@ from tools.probe.market_compare import compare
 
 
 def test_重复实验只使用本局生成物并清理临时源(tmp_path, monkeypatch):
-    import argparse
+    import sys
 
     from pdx import config, game_run
     from tools.probe import decision_behavior
@@ -28,16 +28,28 @@ def test_重复实验只使用本局生成物并清理临时源(tmp_path, monkey
     strategy.write_text("ai_strategy_test = { type = political }\n", encoding="utf-8")
     monkeypatch.setattr(config, "GAME", game)
     monkeypatch.setattr(config, "OUT", output)
-    args = argparse.Namespace(
-        arm="market-control",
-        initiator="GBR",
-        target="FRA",
-        observers=("BEL", "NET"),
-        fiscal_injection="none",
-        months=3,
-        save=tmp_path / "save.v3",
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "decision_behavior.py",
+            "--arm",
+            "market-control",
+            "--initiator",
+            "GBR",
+            "--target",
+            "FRA",
+            "--observers",
+            "BEL",
+            "NET",
+            "--fiscal-injection",
+            "none",
+            "--months",
+            "3",
+            "--save",
+            str(tmp_path / "save.v3"),
+        ],
     )
-    monkeypatch.setattr(argparse.ArgumentParser, "parse_args", lambda *_: args)
     generated = []
 
     def fake_run(sources, **_kwargs):

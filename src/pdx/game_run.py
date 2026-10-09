@@ -191,7 +191,8 @@ class TickTaskCapture:
             time.sleep(0.8)
             before = ga.tick_mark()
             self.start_tick = before.tick
-            ga.press_key("space", force=True)
+            # 速度控件点击本身可能已经恢复推进；空格是开关，先用 tick 判断。
+            ga._step_unpause(hwnd, key_timeout=5, run_timeout=30, force=True)
         finally:
             handover = ga.switch_to_background(hwnd, session.previous)
             self.background = {
@@ -200,7 +201,8 @@ class TickTaskCapture:
             }
         if not handover.minimized:
             raise RuntimeError("引擎计时窗口未成功退到后台")
-        ga.wait_until_running(before, timeout=30)
+        # 前台已经推进不能证明最小化后仍在跑，另取后台边界再核实。
+        ga.wait_until_running(ga.tick_mark(), timeout=30)
 
     def finish(self, session: ga.SessionStart, *, timeout: float = 30) -> dict[str, object]:
         if not math.isfinite(timeout) or timeout <= 0:
@@ -572,6 +574,7 @@ class Deployment:
                 "pdx_settings.json",
                 "continue_game.json",
                 "game_data.json",
+                "console_history.txt",
                 "player/game_rules/presets.txt",
                 "ticktask_timings.csv",
             )
@@ -708,6 +711,17 @@ class Deployment:
                 if backup is None and not path.exists():
                     del self.state_files[path]
                     continue
+                if path == self.userdir / "console_history.txt" and path.is_file():
+                    output_digest = file_sha(path)
+                    archived = self.evidence / "console-history-output" / output_digest
+                    plain_path(archived)
+                    archived.parent.mkdir(parents=True, exist_ok=True)
+                    if not archived.exists():
+                        with temporary_file(archived) as temp:
+                            shutil.copy2(path, temp)
+                            temp.replace(archived)
+                    if file_sha(archived) != output_digest:
+                        raise OSError("实验控制台历史归档指纹不符")
                 self._persist()
                 if backup is None:
                     path.unlink(missing_ok=True)
