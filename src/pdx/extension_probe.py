@@ -11,7 +11,7 @@ import re
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from . import decision_probe, decisions, game_auto
+from . import decision_probe, decisions, game_auto, political_approval
 from .model import Block
 from .parser import parse_file
 
@@ -64,6 +64,8 @@ def build(
     strategies: Iterable[str] = (),
     legality_laws: Iterable[str] = (),
     enactment_details: bool = False,
+    approval_igs: Iterable[str] = (),
+    approval_laws: Iterable[str] = (),
 ) -> dict[str, str]:
     laws = sorted(set(laws))
     if not laws or any(not re.fullmatch(r"law_[a-z0-9_]+", law) for law in laws):
@@ -75,6 +77,7 @@ def build(
     ):
         raise ValueError("观察国标签无效或重复")
     legality_laws = sorted(set(legality_laws))
+    approval_igs, approval_laws = political_approval.validate(approval_igs, approval_laws)
     if any(not re.fullmatch(r"law_[a-z0-9_]+", law) for law in legality_laws):
         raise ValueError("法律阻挡要求观察键无效")
     strategies = list(strategies)
@@ -150,6 +153,10 @@ def build(
             )
             for law in legality_laws
         )
+        if approval_igs:
+            legality_readings += "\n" + political_approval.readings(
+                tag, approval_igs, approval_laws, SAMPLE_VAR
+            )
         readings.append(f"""if = {{ limit = {{ c:{tag} ?= this }}
             {decision_probe.sample_step(SAMPLE_VAR)}
             {log("COUNTRY_NAME", "[THIS.GetCountry.GetNameNoFormatting]")}
@@ -208,11 +215,17 @@ def analyze(
     *,
     expected_tags: tuple[str, ...] = (),
     expected_laws: tuple[str, ...] = (),
+    expected_approval_igs: tuple[str, ...] = (),
+    expected_approval_laws: tuple[str, ...] = (),
 ) -> dict:
     rows = []
+    approval_rows = []
     for path in game_auto.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
             for line in stream:
+                if political_approval.PREFIX in line:
+                    approval_rows.append(political_approval.parse_row(line))
+                    continue
                 if "SITAI REFORM;" not in line:
                     continue
                 legal_match = LEGALITY_ROW.search(line.rstrip())
@@ -379,7 +392,7 @@ def analyze(
         issues.append("matrix.country_name_missing_or_duplicate")
     if legal_values != {"yes", "no"}:
         issues.append("controls.yes_no_missing")
-    return {
+    result = {
         "rows": rows,
         "countries": countries,
         "legality_interface_validated": bool(legal_rows and not issues),
@@ -402,3 +415,14 @@ def analyze(
         "time_basis": "sample-N is a per-country observation/event sequence, not a calendar date; historical date strings remain unchanged",
         "limits": "Monthly idle observations do not prove a viable law existed. Legal blocking is limited to explicitly requested country × law pairs and must have same-run yes/no controls; it is not final AI feasibility, success chance, or law-selection ranking. Government-preferred available laws and estimated advance threshold buckets are partial conditions. Active political strategy is observed separately; conditional minimums, direction and civil-war vetoes remain distinct. Computed default contribution is not final engine chance. Pass/fail/end are separate outcomes; one run is not causal proof.",
     }
+    if approval_rows or expected_approval_igs or expected_approval_laws:
+        result["approval"] = political_approval.analyze(
+            approval_rows,
+            expected_tags=expected_tags,
+            expected_igs=expected_approval_igs,
+            expected_laws=expected_approval_laws,
+            country_samples=[
+                (r["tag"], r["date"], r["value"]) for r in rows if r["kind"] == "COUNTRY_NAME"
+            ],
+        )
+    return result

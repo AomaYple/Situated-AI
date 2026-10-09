@@ -70,11 +70,15 @@ def main() -> int:
         action="store_true",
         help="只读记录自然进行中法律键及当前 checkpoint 成功/推进概率",
     )
+    parser.add_argument("--approval-igs", default="", help="只读态度矩阵 IG 键，逗号分隔；默认关闭")
+    parser.add_argument("--approval-laws", default="", help="只读态度矩阵法律键，逗号分隔")
     args = parser.parse_args()
     if args.natural_targets and not args.natural_diplomacy:
         parser.error("--natural-targets 需要 --natural-diplomacy")
     if args.legality_laws and not args.legality_tags:
         parser.error("--legality-laws 需要 --legality-tags")
+    if bool(args.approval_igs) != bool(args.approval_laws):
+        parser.error("--approval-igs 与 --approval-laws 必须同时声明")
     laws: list[str] = []
     for path in sorted((config.GAME / "common/laws").glob("*.txt")):
         tree = parse_file(path)
@@ -88,6 +92,12 @@ def main() -> int:
 
 
 def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root: Path) -> int:
+    approval_igs = tuple(
+        value.strip() for value in getattr(args, "approval_igs", "").split(",") if value.strip()
+    )
+    approval_laws = tuple(
+        value.strip() for value in getattr(args, "approval_laws", "").split(",") if value.strip()
+    )
     positive_control = args.arm in {"reform-positive-control", "reform-global-positive-control"}
     global_control = args.arm == "reform-global-positive-control"
     observer, fiscal = source_root / "politics", source_root / "fiscal-observer"
@@ -105,6 +115,8 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 value.strip() for value in args.legality_laws.split(",") if value.strip()
             ),
             enactment_details=args.enactment_details,
+            approval_igs=approval_igs,
+            approval_laws=approval_laws,
         ),
     )
     policy_state = args.arm != "vanilla"
@@ -191,6 +203,8 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 expected_laws=tuple(
                     value.strip() for value in args.legality_laws.split(",") if value.strip()
                 ),
+                expected_approval_igs=approval_igs,
+                expected_approval_laws=approval_laws,
             ),
             "experiment": {
                 "arm": args.arm,
@@ -214,6 +228,8 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                     value.strip() for value in args.legality_tags.split(",") if value.strip()
                 ),
                 "enactment_details": args.enactment_details,
+                "approval_igs": approval_igs,
+                "approval_laws": approval_laws,
             },
         }
         if natural:
