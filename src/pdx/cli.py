@@ -2065,7 +2065,7 @@ def cov_cmd(
     归属标记、表格生成）已经悄悄退化了。口径与下限见 `pdx.covgate`。
 
     `--check-only` 读上次 `v3 cov` 写下的 `tools/out/cov.json`（不重跑，秒级）；
-    带覆盖率跑整套测试约 5 分钟，因此这条**不进 CI**（CI 上没有游戏，
+    完整覆盖率使用自适应并行预算，实际耗时见回归记录；这条**不进 CI**（CI 上没有游戏，
     覆盖率口径完全不同，理由见 `.github/workflows/ci.yml` 的文件头注释）。
     """
     code = 0

@@ -133,3 +133,24 @@ def test_整体覆盖率按语句加权() -> None:
     ]
     assert covgate.total_percent(rows) == pytest.approx(90.0)
     assert covgate.total_percent([]) == 0.0
+
+
+@pytest.mark.parametrize("exit_code", [0, 1, 2])
+def test_覆盖率入口使用自适应并行并保留失败状态(monkeypatch, tmp_path, exit_code) -> None:
+    from types import SimpleNamespace
+
+    target = tmp_path / "reports" / "coverage.json"
+    monkeypatch.setattr(covgate, "COV_JSON", target)
+
+    def fake_run(command, *, cwd, check):
+        assert command[command.index("-n") + 1] == "auto"
+        assert f"--cov-report=json:{target}" in command
+        assert "--cov" in command
+        assert command[-1] == "--maxfail=1"
+        assert cwd == str(config.REPO)
+        assert check is False
+        assert target.parent.is_dir()
+        return SimpleNamespace(returncode=exit_code)
+
+    monkeypatch.setattr(covgate.subprocess, "run", fake_run)
+    assert covgate.run_pytest(extra=("--maxfail=1",)) == exit_code

@@ -129,6 +129,33 @@ def test_psutil_reader_self_and_missing_process(mem) -> None:
     assert mem.sys_mem()["commit_mb"] is None
 
 
+@pytest.mark.parametrize("exited_pid", [10, 11])
+def test_tree_sample_keeps_grandchildren_of_exited_parent_and_rejects_unrelated_processes(
+    mem, monkeypatch, exited_pid
+):
+    from types import SimpleNamespace
+
+    # 根或中间父节点在读取内存前退出；完整进程表仍证明后代关系。
+    monkeypatch.setattr(
+        mem,
+        "list_procs",
+        lambda: [(10, 1, "python"), (11, 10, "python"), (12, 11, "helper"), (99, 0, "unrelated")],
+    )
+    monkeypatch.setattr(mem, "sys_mem", lambda: {"avail_mb": 1000.0})
+    sampler = mem.TreeSampler(10)
+    readings = {10: ((100, 200, 80), None), 11: ((100, 200, 80), None), 12: ((50, None, None), 2.0)}
+    readings[exited_pid] = (None, None)
+    sampler._reader = SimpleNamespace(
+        read=lambda pid: readings[pid][0], read_cpu=lambda pid: readings[pid][1]
+    )
+    sampler.sample_once()
+    assert sampler.rows[0][1:4] == (3, 150, 80)
+    assert set(sampler.procs) == {10, 11, 12} - {exited_pid}
+    assert sampler.procs[11 if exited_pid == 10 else 10]["cpu_s"] == 0.0
+    assert sampler.procs[12]["cpu_s"] == 2.0
+    assert sampler.procs[12]["level"] == 2
+
+
 def test_inproc_sampler_survives_application_process_mock(mem, monkeypatch):
     """进程消失的应用测试不能替换采样器自己的计数器。"""
     from types import SimpleNamespace

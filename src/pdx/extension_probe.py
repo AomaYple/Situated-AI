@@ -130,9 +130,15 @@ def build(
         )
         enactment_detail_readings = ""
         if enactment_details:
+            # 注册清单没有 LawType.GetKey；沿用原生生命周期探针的逐键条件，
+            # 只识别已声明原版法律，不把本地化名称转换成身份键。
+            enacting_law = "\n".join(
+                f"if = {{ limit = {{ is_enacting_law = law_type:{law} }} {log('ENACTING_LAW', law)} }}"
+                for law in laws
+            )
             enactment_detail_readings = "\n".join(
                 (
-                    f"if = {{ limit = {{ enacting_any_law = yes }} {log('ENACTING_LAW', '[THIS.GetCountry.GetLawBeingEnacted.GetLawType.GetKey]')} }}",
+                    f"if = {{ limit = {{ enacting_any_law = yes }} {enacting_law} }}",
                     f"if = {{ limit = {{ enacting_any_law = yes }} {log('CHECKPOINT_SUCCESS', '[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointSuccessChance|3]')} }}",
                     f"if = {{ limit = {{ enacting_any_law = yes }} {log('CHECKPOINT_ADVANCE', '[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointAdvanceChance|3]')} }}",
                 )

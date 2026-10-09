@@ -118,9 +118,15 @@ def test_显式国家法律阻挡要求只读且另记现行法律():
 
 
 def test_进行中法律概率观测只读且受进行中守卫保护():
-    files = extension_probe.build(["law_autocracy"], tags=("RUS",), enactment_details=True)
+    laws = ["law_autocracy", "law_local_police"]
+    files = extension_probe.build(laws, tags=("RUS",), enactment_details=True)
     hooks = files["common/on_actions/zz_sitai_reform_observer.txt"]
-    assert "ENACTING_LAW;[THIS.GetCountry.GetLawBeingEnacted.GetLawType.GetKey]" in hooks
+    assert "GetKey" not in hooks
+    for law in laws:
+        assert (
+            f'is_enacting_law = law_type:{law} }} debug_log = "SITAI REFORM;RUS;ENACTING_LAW;{law};'
+            in hooks
+        )
     assert (
         "CHECKPOINT_SUCCESS;[THIS.GetCountry.GetLawBeingEnacted.GetCheckpointSuccessChance|3]"
         in hooks
