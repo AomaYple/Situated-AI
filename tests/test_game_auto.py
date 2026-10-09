@@ -1845,7 +1845,7 @@ class TestTypeText:
     def test_空格走_space_键名(self, monkeypatch: pytest.MonkeyPatch) -> None:
         seen = self._spy(monkeypatch)
         ga.type_text("a b")
-        assert ("press", "space") in seen
+        assert seen == [("press", "a"), ("press", "space"), ("press", "b")]
 
     def test_Shift_一定会被抬起(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """敲到一半炸了也必须抬起 Shift —— 否则整个桌面后面的输入都变成大写。"""
@@ -3108,12 +3108,165 @@ def _grey_image(
     return Image.frombytes("L", size, raw)
 
 
+class TestConsoleKeyboardLayout:
+    """控制台输入只临时切游戏线程布局；静默拒绝或恢复失败必须出声。"""
+
+    @staticmethod
+    def _patch(monkeypatch: pytest.MonkeyPatch, original: int = 0x08040804):
+        from types import SimpleNamespace
+
+        state = [original]
+        requests: list[int] = []
+
+        def request(_hwnd, _message, _flags, layout, _timeout_flags, _timeout):
+            requests.append(layout)
+            state[0] = layout
+            return 0
+
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 4242)
+        monkeypatch.setattr(
+            ga, "win32process", SimpleNamespace(GetWindowThreadProcessId=lambda _h: (22, 33))
+        )
+        monkeypatch.setattr(
+            ga,
+            "win32api",
+            SimpleNamespace(
+                GetKeyboardLayout=lambda _tid: state[0],
+                GetKeyboardLayoutList=lambda: [0x08040804, 0x04090409],
+            ),
+        )
+        monkeypatch.setattr(ga, "win32gui", SimpleNamespace(SendMessageTimeout=request))
+        monkeypatch.setattr(
+            ga, "win32con", SimpleNamespace(WM_INPUTLANGCHANGEREQUEST=80, SMTO_ABORTIFHUNG=2)
+        )
+        return state, requests
+
+    def test_正文用英文布局退出恢复原布局(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        state, requests = self._patch(monkeypatch)
+        with ga._console_input_layout(4242, force=True):
+            assert state[0] == 0x04090409
+        assert state == [0x08040804]
+        assert requests == [0x04090409, 0x08040804]
+
+    def test_输入异常也恢复(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        state, requests = self._patch(monkeypatch)
+        with (
+            pytest.raises(ValueError, match="输入失败"),
+            ga._console_input_layout(4242, force=True),
+        ):
+            raise ValueError("输入失败")
+        assert state == [0x08040804]
+        assert requests[-1] == 0x08040804
+
+    def test_原本英文不发送切换(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _state, requests = self._patch(monkeypatch, 0x04090409)
+        with ga._console_input_layout(4242, force=True):
+            pass
+        assert requests == []
+
+    def test_布局被正文改变也恢复(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        state, requests = self._patch(monkeypatch, 0x04090409)
+        with ga._console_input_layout(4242, force=True):
+            state[0] = 0x08040804
+        assert state == [0x04090409]
+        assert requests == [0x04090409]
+
+    def test_系统静默拒绝切换不得输入(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from types import SimpleNamespace
+
+        state, _requests = self._patch(monkeypatch)
+        monkeypatch.setattr(ga, "win32gui", SimpleNamespace(SendMessageTimeout=lambda *_args: 0))
+        with (
+            pytest.raises(ga.GameAutoError, match="布局切换"),
+            ga._console_input_layout(4242, force=True),
+        ):
+            pytest.fail("切换失败仍发送命令")
+        assert state == [0x08040804]
+
+    def test_切换后API抛错也恢复(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        state, requests = self._patch(monkeypatch)
+        request = ga.win32gui.SendMessageTimeout
+
+        def failing_request(*args):
+            request(*args)
+            if len(requests) == 1:
+                raise OSError("切换回执失败")
+
+        monkeypatch.setattr(ga.win32gui, "SendMessageTimeout", failing_request)
+        with pytest.raises(OSError, match="回执"), ga._console_input_layout(4242, force=True):
+            pytest.fail("失败后仍输入")
+        assert state == [0x08040804]
+        assert requests == [0x04090409, 0x08040804]
+
+    def test_恢复静默失败必须报错(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        state, requests = self._patch(monkeypatch)
+        request = ga.win32gui.SendMessageTimeout
+
+        def refuse_restore(*args):
+            if args[3] == 0x04090409:
+                request(*args)
+
+        monkeypatch.setattr(ga.win32gui, "SendMessageTimeout", refuse_restore)
+        with (
+            pytest.raises(ga.GameAutoError, match="布局切换"),
+            ga._console_input_layout(4242, force=True),
+        ):
+            pass
+        assert state == [0x04090409]
+        assert requests == [0x04090409]
+
+    def test_没有标准英文布局拒绝且不安装布局(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        state, requests = self._patch(monkeypatch)
+        monkeypatch.setattr(ga.win32api, "GetKeyboardLayoutList", lambda: [0x08040804])
+        with (
+            pytest.raises(ga.GameAutoError, match="英文键盘"),
+            ga._console_input_layout(4242, force=True),
+        ):
+            pytest.fail("没有英文布局仍输入")
+        assert state == [0x08040804]
+        assert requests == []
+
+    def test_未授权不读取或修改桌面(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._patch(monkeypatch)
+        monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", False)
+        monkeypatch.setattr(ga, "_foreground_window", lambda: pytest.fail("未授权读取桌面"))
+        with pytest.raises(ga.RealInputBlockedError), ga._console_input_layout(4242):
+            pytest.fail("未授权输入")
+
+    def test_前台不匹配不切换(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _state, requests = self._patch(monkeypatch)
+        monkeypatch.setattr(ga, "_foreground_window", lambda: 999)
+        with pytest.raises(ga.ForegroundLostError), ga._console_input_layout(4242, force=True):
+            pytest.fail("发给错误窗口")
+        assert requests == []
+
+    @pytest.mark.parametrize("missing", ["thread", "layout"])
+    def test_原线程或布局不可读不输入(self, monkeypatch: pytest.MonkeyPatch, missing: str) -> None:
+        _state, requests = self._patch(monkeypatch)
+        if missing == "thread":
+            monkeypatch.setattr(ga.win32process, "GetWindowThreadProcessId", lambda _h: (0, 0))
+        else:
+            monkeypatch.setattr(ga.win32api, "GetKeyboardLayout", lambda _tid: 0)
+        with (
+            pytest.raises(ga.GameAutoError, match="无法读取"),
+            ga._console_input_layout(4242, force=True),
+        ):
+            pytest.fail("无法恢复原布局仍输入")
+        assert requests == []
+
+
 class TestConsoleChannel:
     """游戏内控制台：**引擎自带的性能仪表只在控制台里**（backlog B66）。
 
     这一组钉住三条实测结论：反引号开、合成的字进得去、**要按两次回车才提交**；
     判据全部走画面 ROI（暗面板 = 开着、标准差 = 有没有字），不目测也不猜。
     """
+
+    @pytest.fixture(autouse=True)
+    def _layout_is_synthetic(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from contextlib import nullcontext
+
+        monkeypatch.setattr(ga, "_console_input_layout", lambda *_args, **_kwargs: nullcontext())
 
     @staticmethod
     def _stub_rois(

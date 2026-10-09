@@ -226,19 +226,23 @@ def risk_next(
     return weeks < (policy.exit_weeks if active else policy.entry_weeks)
 
 
+def fiscal_condition(weeks: int) -> str:
+    """复用相同原生输入条件；它不包含迟滞记忆、TTL 或策略状态。"""
+    if type(weeks) is not int or weeks <= 0:
+        raise ValueError("财政条件周数必须是正整数")
+    return f"""    OR = {{
+        in_default = yes
+        AND = {{ taking_loans = yes credit > 0 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < {weeks} }}
+    }}"""
+
+
 def triggers(policy: Policy) -> str:
     return f"""# 由 pdx.decisions 生成；所有国家共享同一规则。
 sitai_fiscal_entry = {{
-    OR = {{
-        in_default = yes
-        AND = {{ taking_loans = yes credit > 0 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < {policy.entry_weeks} }}
-    }}
+{fiscal_condition(policy.entry_weeks)}
 }}
 sitai_fiscal_hold = {{
-    OR = {{
-        in_default = yes
-        AND = {{ taking_loans = yes credit > 0 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < {policy.exit_weeks} }}
-    }}
+{fiscal_condition(policy.exit_weeks)}
 }}
 sitai_external_exposure = {{
     OR = {{

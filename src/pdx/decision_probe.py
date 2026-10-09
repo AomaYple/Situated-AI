@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections import Counter
 from itertools import pairwise
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, NotRequired, TypedDict
 
 from . import decisions
 from . import game_auto as ga
@@ -20,6 +21,7 @@ ROW = re.compile(
 )
 SAMPLE_VAR = "sitai_probe_fiscal_sample"
 DEFAULT_TAGS = ("RUS", "PRU")
+NATIVE_KINDS = ("NATIVE_CREDIT_POS", "NATIVE_ENTRY", "NATIVE_HOLD", "NATIVE_WEEKS")
 BOOLEANS = frozenset(
     {
         "DEFAULT",
@@ -32,8 +34,12 @@ BOOLEANS = frozenset(
         "HOLD",
         "RISK",
         "ACTIVE",
+        "NATIVE_CREDIT_POS",
+        "NATIVE_ENTRY",
+        "NATIVE_HOLD",
     }
 )
+NATIVE_ALLOWED_KINDS = BOOLEANS | {"NATIVE_WEEKS"}
 BASELINE_LOC_KEYS = frozenset(
     {
         "is_at_war_with_overlord_tt",
@@ -122,6 +128,7 @@ class Analysis(TypedDict):
     countries: dict[str, CountryEvidence]
     behavior_causality: bool
     time_basis: str
+    native_fiscal_inputs: NotRequired[dict]
 
 
 def log(tag: str, kind: str, value: str) -> str:
@@ -231,7 +238,11 @@ def build(
 
 
 def build_observer(
-    *, lifecycle: bool = False, tags: tuple[str, ...] = DEFAULT_TAGS, policy_state: bool = True
+    *,
+    lifecycle: bool = False,
+    tags: tuple[str, ...] = DEFAULT_TAGS,
+    policy_state: bool = True,
+    native_fiscal_inputs: bool = False,
 ) -> dict[str, str]:
     """只读状态；原版基线只读原生输入，不引用未挂载的生产变量。"""
     _validate_tags(tags)
@@ -241,11 +252,22 @@ def build_observer(
         ("LOANS", "taking_loans = yes"),
         ("WAR", "is_at_war = yes"),
     )
+    if native_fiscal_inputs:
+        policy = decisions.load()
+        conditions += (
+            ("NATIVE_CREDIT_POS", "credit > 0"),
+            ("NATIVE_ENTRY", decisions.fiscal_condition(policy.entry_weeks)),
+            ("NATIVE_HOLD", decisions.fiscal_condition(policy.exit_weeks)),
+        )
     for tag in tags:
         readings = "\n".join(
             f"if = {{ limit = {{ {trigger} }} {log(tag, kind, 'yes')} }} else = {{ {log(tag, kind, 'no')} }}"
             for kind, trigger in conditions
         )
+        if native_fiscal_inputs:
+            readings += "\n" + log(
+                tag, "NATIVE_WEEKS", "[THIS.GetCountry.GetWeeksUntilBankruptcy|3]"
+            )
         countries.append(
             f"if = {{ limit = {{ c:{tag} ?= this }} {sample_step(SAMPLE_VAR)} {readings} }}"
         )
@@ -265,7 +287,11 @@ def build_observer(
 
 
 def _validate_lifecycle(
-    rows: list[dict[str, str]], *, countries: tuple[str, ...], policy_state: bool = True
+    rows: list[dict[str, str]],
+    *,
+    countries: tuple[str, ...],
+    policy_state: bool = True,
+    native_fiscal_inputs: bool = False,
 ) -> None:
     """严格模式下拒绝缺国、缺月、重复月和跨缺失月份的退出判定。"""
 
@@ -292,7 +318,9 @@ def _validate_lifecycle(
         expected = list(range(unique[0], unique[-1] + 1))
         if unique != expected:
             raise ValueError(f"财政生命周期样本不连续：{tag}，实际 {unique}")
-        required = ("RISK",) if policy_state else ("DEFAULT", "LOANS", "WAR")
+        required: tuple[str, ...] = ("RISK",) if policy_state else ("DEFAULT", "LOANS", "WAR")
+        if native_fiscal_inputs:
+            required += NATIVE_KINDS
         for kind in required:
             kind_values = {
                 int(row["date"].removeprefix("sample-"))
@@ -312,6 +340,7 @@ def analyze(
     strict: bool = False,
     tags: tuple[str, ...] = DEFAULT_TAGS,
     policy_state: bool = True,
+    native_fiscal_inputs: bool = False,
 ) -> Analysis:
     _validate_tags(tags)
     rows: list[dict[str, str]] = []
@@ -325,11 +354,24 @@ def analyze(
                     raise ValueError("财政仪器行未完整解析")
                 if match:
                     row = match.groupdict()
+                    if native_fiscal_inputs and (
+                        row["tag"] not in tags or row["kind"] not in NATIVE_ALLOWED_KINDS
+                    ):
+                        raise ValueError("原生财政输入出现未声明国家或字段")
                     row["value"] = (
                         re.sub(r"\x15[^;\x15]*;", "", row["value"]).replace("\x15!", "").strip()
                     )
                     if row["kind"] in BOOLEANS and row["value"] not in {"yes", "no"}:
                         raise ValueError("财政布尔读数未解析")
+                    if row["kind"] in NATIVE_KINDS and not native_fiscal_inputs:
+                        raise ValueError("未声明原生财政输入观测")
+                    if row["kind"] == "NATIVE_WEEKS":
+                        try:
+                            number = float(row["value"].replace("−", "-").replace(",", "."))
+                        except ValueError as exc:
+                            raise ValueError("原生财政周数未解析") from exc
+                        if not math.isfinite(number):
+                            raise ValueError("原生财政周数非有限")
                     if row["date"].startswith("sample-") and not re.fullmatch(
                         r"sample-[1-9]\d*", row["date"]
                     ):
@@ -337,8 +379,13 @@ def analyze(
                     rows.append(row)
     if not rows:
         raise ValueError("缺少本局财政观测，不能把空日志当无风险")
-    if strict:
-        _validate_lifecycle(rows, countries=tags, policy_state=policy_state)
+    if strict or native_fiscal_inputs:
+        _validate_lifecycle(
+            rows,
+            countries=tags,
+            policy_state=policy_state,
+            native_fiscal_inputs=native_fiscal_inputs,
+        )
     if not policy_state and any(row["kind"] in {"RISK", "ACTIVE"} for row in rows):
         raise ValueError("原版输入观察模式不能混入生产状态读数")
     counts = Counter(
@@ -373,10 +420,18 @@ def analyze(
             if any(r["tag"] == tag and r["kind"] == "ACTIVE" for r in rows)
             else None,
         }
-    return {
+    result: Analysis = {
         "rows": rows,
         "counts": dict(counts),
         "countries": countries,
         "behavior_causality": False,
         "time_basis": "sample-N is a per-country monthly observation sequence, not a calendar date; historical date strings remain unchanged",
     }
+    if native_fiscal_inputs:
+        result["native_fiscal_inputs"] = {
+            "rows": [row for row in rows if row["kind"] in NATIVE_KINDS],
+            "scope": "Native weeks/credit and declared entry/hold threshold conditions only; thresholds are in the archived observer source, not an engine AI risk policy. Rounded weeks cannot independently prove an exact threshold boundary.",
+            "production_risk_state_inferred": False,
+            "active_inferred": False,
+        }
+    return result

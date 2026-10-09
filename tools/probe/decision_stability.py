@@ -72,6 +72,12 @@ def main() -> int:
     )
     parser.add_argument("--approval-igs", default="", help="只读态度矩阵 IG 键，逗号分隔；默认关闭")
     parser.add_argument("--approval-laws", default="", help="只读态度矩阵法律键，逗号分隔")
+    parser.add_argument(
+        "--native-fiscal-inputs",
+        action="store_true",
+        help="只读原生破产周数/信用和声明阈值；默认关闭",
+    )
+    parser.add_argument("--fiscal-tags", default="RUS,PRU", help="财政只读观察的两个国家标签")
     args = parser.parse_args()
     if args.natural_targets and not args.natural_diplomacy:
         parser.error("--natural-targets 需要 --natural-diplomacy")
@@ -92,6 +98,12 @@ def main() -> int:
 
 
 def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root: Path) -> int:
+    native_fiscal_inputs = getattr(args, "native_fiscal_inputs", False)
+    fiscal_tags = tuple(
+        value.strip()
+        for value in getattr(args, "fiscal_tags", "RUS,PRU").split(",")
+        if value.strip()
+    )
     approval_igs = tuple(
         value.strip() for value in getattr(args, "approval_igs", "").split(",") if value.strip()
     )
@@ -120,9 +132,20 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
         ),
     )
     policy_state = args.arm != "vanilla"
-    decisions.write(fiscal, decision_probe.build_observer(policy_state=policy_state))
     decisions.write(
-        lifecycle, decision_probe.build_observer(lifecycle=True, policy_state=policy_state)
+        fiscal,
+        decision_probe.build_observer(
+            policy_state=policy_state, tags=fiscal_tags, native_fiscal_inputs=native_fiscal_inputs
+        ),
+    )
+    decisions.write(
+        lifecycle,
+        decision_probe.build_observer(
+            lifecycle=True,
+            policy_state=policy_state,
+            tags=fiscal_tags,
+            native_fiscal_inputs=native_fiscal_inputs,
+        ),
     )
     sources = {
         "zz_sitai_reform_observer": observer,
@@ -194,7 +217,13 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
 
     def analyze(logdir):
         result: dict[str, object] = {
-            "fiscal": decision_probe.analyze(logdir, strict=True, policy_state=policy_state),
+            "fiscal": decision_probe.analyze(
+                logdir,
+                strict=True,
+                policy_state=policy_state,
+                tags=fiscal_tags,
+                native_fiscal_inputs=native_fiscal_inputs,
+            ),
             "reform": extension_probe.analyze(
                 logdir,
                 expected_tags=tuple(
@@ -230,6 +259,8 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 "enactment_details": args.enactment_details,
                 "approval_igs": approval_igs,
                 "approval_laws": approval_laws,
+                "native_fiscal_inputs": native_fiscal_inputs,
+                "fiscal_tags": fiscal_tags,
             },
         }
         if natural:

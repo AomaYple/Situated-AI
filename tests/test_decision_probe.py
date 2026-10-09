@@ -49,6 +49,150 @@ def test_原版输入仪器仍拒绝漏采原生财政条件(tmp_path):
         decision_probe.analyze(tmp_path, strict=True, policy_state=False)
 
 
+def native_rows():
+    return [
+        f"SITAI DECISION;{tag};{kind};{value};sample-{sample}"
+        for tag in ("RUS", "PRU")
+        for sample in (4, 5)
+        for kind, value in (
+            ("DEFAULT", "no"),
+            ("LOANS", "yes"),
+            ("WAR", "no"),
+            ("NATIVE_CREDIT_POS", "yes"),
+            ("NATIVE_ENTRY", "no"),
+            ("NATIVE_HOLD", "yes"),
+            ("NATIVE_WEEKS", "40.000"),
+        )
+    ]
+
+
+def test_原生财政只读条件复用生产阈值但不写生产状态(tmp_path):
+    import hashlib
+
+    from pdx import decisions
+
+    previous = decision_probe.build_observer(policy_state=False)[
+        "common/on_actions/zz_sitai_fiscal_observer.txt"
+    ]
+    assert (
+        hashlib.sha256(previous.encode()).hexdigest()
+        == "17c830a0567ec260ba7e8cf16dcfd6bb615cdd2b414a2dbe7b571a43cee9141c"
+    )
+    text = decision_probe.build_observer(policy_state=False, native_fiscal_inputs=True)[
+        "common/on_actions/zz_sitai_fiscal_observer.txt"
+    ]
+    assert not parse_text(text).errors
+    for weeks in (decisions.load().entry_weeks, decisions.load().exit_weeks):
+        assert decisions.fiscal_condition(weeks) in text
+    for forbidden in (
+        "sitai_fiscal_risk",
+        "add_treasury",
+        "set_strategy",
+        "create_diplomatic_play",
+    ):
+        assert forbidden not in text
+    (tmp_path / "debug.log").write_bytes(("\n".join(native_rows()) + "\n").encode())
+    result = decision_probe.analyze(tmp_path, policy_state=False, native_fiscal_inputs=True)
+    assert len(result["native_fiscal_inputs"]["rows"]) == 16
+    assert not result["native_fiscal_inputs"]["active_inferred"]
+    for country in result["countries"].values():
+        assert country["risk_observation_available"] is False
+        assert country["active_observed"] is None
+        assert country["entry_observed"] is None
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "missing",
+        "duplicate",
+        "cross_sample",
+        "country",
+        "unknown_field",
+        "unknown_legacy_field",
+        "production_state",
+    ],
+)
+def test_原生财政输入缺失和声明漂移不能静默接受(tmp_path, fault):
+    rows = native_rows()
+    if fault == "missing":
+        rows.pop()
+    elif fault == "duplicate":
+        rows.append(rows[-1])
+    elif fault == "cross_sample":
+        rows[-1] = rows[-1].replace("sample-5", "sample-6")
+    elif fault == "country":
+        rows.append(rows[-1].replace("PRU", "FRA"))
+    elif fault == "unknown_field":
+        rows.append(rows[-1].replace("NATIVE_WEEKS", "NATIVE_UNKNOWN"))
+    elif fault == "unknown_legacy_field":
+        rows.append(rows[-1].replace("NATIVE_WEEKS", "BOGUS"))
+    else:
+        rows.append("SITAI DECISION;RUS;RISK;yes;sample-4")
+    (tmp_path / "debug.log").write_bytes(("\n".join(rows) + "\n").encode())
+    with pytest.raises(ValueError):
+        decision_probe.analyze(tmp_path, policy_state=False, native_fiscal_inputs=True)
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf", "[unresolved]", ""])
+def test_原生财政周数未解析不能当零(tmp_path, value):
+    rows = [line.replace(";40.000;", f";{value};") for line in native_rows()]
+    (tmp_path / "debug.log").write_bytes(("\n".join(rows) + "\n").encode())
+    with pytest.raises(ValueError, match="周数"):
+        decision_probe.analyze(tmp_path, policy_state=False, native_fiscal_inputs=True)
+
+
+def test_未开启原生输入时拒绝混入观测(tmp_path):
+    (tmp_path / "debug.log").write_bytes(("\n".join(native_rows()) + "\n").encode())
+    with pytest.raises(ValueError, match="未声明"):
+        decision_probe.analyze(tmp_path, policy_state=False)
+
+
+@pytest.mark.parametrize("policy_state", [False, True])
+def test_原生输入支持自定义国家且生产变量仍独立观测(tmp_path, policy_state):
+    rows = [line.replace("RUS", "SAX").replace("PRU", "BAV") for line in native_rows()]
+    if policy_state:
+        rows += [
+            f"SITAI DECISION;{tag};RISK;yes;sample-{sample}"
+            for tag in ("SAX", "BAV")
+            for sample in (4, 5)
+        ]
+    (tmp_path / "debug.log").write_bytes(("\n".join(rows) + "\n").encode())
+    result = decision_probe.analyze(
+        tmp_path, tags=("SAX", "BAV"), policy_state=policy_state, native_fiscal_inputs=True
+    )
+    for country in result["countries"].values():
+        assert country["risk_observation_available"] is policy_state
+        assert country["active_observed"] is None
+    assert not result["native_fiscal_inputs"]["production_risk_state_inferred"]
+
+
+@pytest.mark.parametrize("value", ["−1,250", "0.000", "92233720368547.758"])
+def test_本地化周数及原版超大读数仅保持为观察值(tmp_path, value):
+    rows = [line.replace(";40.000;", f";{value};") for line in native_rows()]
+    (tmp_path / "debug.log").write_bytes(("\n".join(rows) + "\n").encode())
+    result = decision_probe.analyze(tmp_path, policy_state=False, native_fiscal_inputs=True)
+    assert {
+        row["value"]
+        for row in result["native_fiscal_inputs"]["rows"]
+        if row["kind"] == "NATIVE_WEEKS"
+    } == {value}
+
+
+@pytest.mark.parametrize("tags", [("RUS",), ("RUS", "RUS"), ("RUS", "BAD }"), ("rus", "PRU")])
+def test_原生输入的国家声明必须为两国唯一规范标签(tags):
+    with pytest.raises(ValueError, match="国家"):
+        decision_probe.build_observer(tags=tags, native_fiscal_inputs=True)
+
+
+@pytest.mark.parametrize("weeks", [0, -1, True, 26.0])
+def test_财政条件生成拒绝非正整数(weeks):
+    from pdx import decisions
+
+    with pytest.raises(ValueError):
+        decisions.fiscal_condition(weeks)
+
+
 def test_真实标量颜色分隔符不破坏日期(tmp_path):
     (tmp_path / "debug.log").write_text(
         "SITAI DECISION;RUS;PRINCIPAL;\x15v; 55.00\x15!;1月 28, 1836\n", encoding="utf-8"

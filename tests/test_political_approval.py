@@ -21,6 +21,8 @@ def lines():
         for kind, value in (
             ("EXISTS", "yes"),
             ("NAME", "Observed interest group"),
+            ("OBJECT_ID", str(1 + TAGS.index(tag) * len(IGS) + IGS.index(ig))),
+            ("OWNER_TAG", tag),
             ("CURRENT", "-3"),
             ("DELTA", "5"),
             ("PREDICTED", "2"),
@@ -49,6 +51,7 @@ def test_完整矩阵只验证只读接口而非AI风险否决():
     assert result["matrix_complete"]
     assert result["numeric_interface_validated"]
     assert result["radicalize_interface_validated"]
+    assert result["receiver_identity_verified"]
     assert result["expected_cells"] == 8
     assert result["observed_cells"] == 8
     assert result["radicalize_values"] == [False, True]
@@ -106,7 +109,7 @@ def test_布尔缺反例不冒充完整验证():
     assert not result["radicalize_interface_validated"]
 
 
-@pytest.mark.parametrize("field", ["EXISTS", "CURRENT", "NAME"])
+@pytest.mark.parametrize("field", ["EXISTS", "CURRENT", "NAME", "OBJECT_ID", "OWNER_TAG"])
 def test_同IG同样本的法外状态跨法律必须一致(field):
     raw = lines()
     prefix = "SITAI APPROVAL;RUS;ig_landowners;law_autocracy;"
@@ -115,11 +118,15 @@ def test_同IG同样本的法外状态跨法律必须一致(field):
         raw.append(prefix + "EXISTS;no;sample-1")
     elif field == "CURRENT":
         raw = [line.replace(prefix + "CURRENT;-3;", prefix + "CURRENT;4;") for line in raw]
-    else:
+    elif field == "NAME":
         raw = [
             line.replace(prefix + "NAME;Observed interest group;", prefix + "NAME;Other group;")
             for line in raw
         ]
+    elif field == "OBJECT_ID":
+        raw = [line.replace(prefix + "OBJECT_ID;1;", prefix + "OBJECT_ID;99;") for line in raw]
+    else:
+        raw = [line.replace(prefix + "OWNER_TAG;RUS;", prefix + "OWNER_TAG;FRA;") for line in raw]
     result = analyze(raw)
     assert not result["matrix_complete"]
     assert not result["numeric_interface_validated"]
@@ -151,7 +158,18 @@ def test_态度整数错误不能当零(value):
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    [("RADICALIZE", "maybe"), ("EXISTS", ""), ("NAME", "[unresolved]"), ("UNKNOWN", "1")],
+    [
+        ("RADICALIZE", "maybe"),
+        ("EXISTS", ""),
+        ("NAME", "[unresolved]"),
+        ("NAME", "\x15title 无政治阵营\x15!"),
+        ("OWNER_TAG", ""),
+        ("OWNER_TAG", "[unresolved]"),
+        ("OBJECT_ID", "0"),
+        ("OBJECT_ID", "-1"),
+        ("OBJECT_ID", "18446744073709551616"),
+        ("UNKNOWN", "1"),
+    ],
 )
 def test_未解析布尔名称和未知字段拒绝(field, value):
     with pytest.raises(ValueError):
@@ -195,8 +213,11 @@ def test_观测只读且在原版存在性守卫下读取():
     assert not parse_text(text).errors
     assert "any_interest_group = { is_interest_group_type = ig_landowners }" in text
     assert "every_interest_group = { limit = { is_interest_group_type = ig_landowners }" in text
-    assert "save_scope_as = sitai_probe_approval_rus_ig_landowners" in text
-    assert "SCOPE.gsInterestGroup('sitai_probe_approval_rus_ig_landowners').GetApprovalValue" in text
+    assert "THIS.GetInterestGroup.GetApprovalValue" in text
+    assert "THIS.GetInterestGroup.GetID" in text
+    assert "THIS.GetInterestGroup.GetCountry.GetTagName" in text
+    assert "save_scope_as" not in text
+    assert "SCOPE.gsInterestGroup" not in text
     assert "GetInterestGroupOfType" not in text
     assert "GetApprovalValueDeltaFromEnactment(GetLawType('law_census_voting').Self)" in text
     assert "WillRadicalizeIfEnacted(GetLawType('law_autocracy').Self)" in text
@@ -243,3 +264,24 @@ def test_未解析国家名不能当有效作用域锚点(tmp_path, name):
     )
     assert not result["approval"]["matrix_complete"]
     assert not result["approval"]["numeric_interface_validated"]
+
+
+def test_旧六字段矩阵缺少receiver身份不能验收():
+    raw = [line for line in lines() if ";OBJECT_ID;" not in line and ";OWNER_TAG;" not in line]
+    result = analyze(raw)
+    assert not result["matrix_complete"]
+    assert not result["numeric_interface_validated"]
+    assert not result["receiver_identity_verified"]
+
+
+@pytest.mark.parametrize("fault", ["wrong_country", "same_object"])
+def test_可解析的空对象或别国对象不能冒充声明IG(fault):
+    raw = lines()
+    if fault == "wrong_country":
+        raw = [line.replace(";OWNER_TAG;RUS;", ";OWNER_TAG;FRA;") for line in raw]
+    else:
+        raw = [line.replace(";OBJECT_ID;2;", ";OBJECT_ID;1;") for line in raw]
+    result = analyze(raw)
+    assert not result["numeric_interface_validated"]
+    assert not result["receiver_identity_verified"]
+    assert result["issues"]

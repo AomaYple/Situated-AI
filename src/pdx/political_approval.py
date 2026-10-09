@@ -16,7 +16,9 @@ ROW = re.compile(
     r"(?P<law>law_[a-z0-9_]+);(?P<kind>[A-Z_]+);(?P<value>[^;]*);"
     r"(?P<sample>sample-[1-9]\d*)$"
 )
-KINDS = frozenset({"EXISTS", "NAME", "CURRENT", "DELTA", "PREDICTED", "RADICALIZE"})
+KINDS = frozenset(
+    {"EXISTS", "NAME", "OBJECT_ID", "OWNER_TAG", "CURRENT", "DELTA", "PREDICTED", "RADICALIZE"}
+)
 NUMERIC = frozenset({"CURRENT", "DELTA", "PREDICTED"})
 
 
@@ -50,18 +52,14 @@ def readings(tag: str, igs: Iterable[str], laws: Iterable[str], sample_variable:
         raise ValueError("态度观察国或采样变量无效")
     blocks = []
     for ig in groups:
-        scope_name = f"sitai_probe_approval_{tag.lower()}_{ig}"
-        receiver = f"SCOPE.gsInterestGroup('{scope_name}')"
-        binding = (
-            f"every_interest_group = {{ limit = {{ is_interest_group_type = {ig} }} "
-            f"save_scope_as = {scope_name} }}"
-        )
+        receiver = "THIS.GetInterestGroup"
+        group_readings = []
         for law in targets:
 
             def log(kind: str, value: str, *, ig: str = ig, law: str = law) -> str:
                 return (
                     f'debug_log = "{PREFIX}{tag};{ig};{law};{kind};{value};'
-                    f"sample-[THIS.Var('{sample_variable}').GetValue|0]\""
+                    f"sample-[THIS.GetInterestGroup.GetCountry.MakeScope.Var('{sample_variable}').GetValue|0]\""
                 )
 
             argument = f"GetLawType('{law}').Self"
@@ -69,16 +67,26 @@ def readings(tag: str, igs: Iterable[str], laws: Iterable[str], sample_variable:
                 (
                     log("EXISTS", "yes"),
                     log("NAME", f"[{receiver}.GetNameNoFormatting]"),
+                    log("OBJECT_ID", f"[{receiver}.GetID]"),
+                    log("OWNER_TAG", f"[{receiver}.GetCountry.GetTagName]"),
                     log("CURRENT", f"[{receiver}.GetApprovalValue|0]"),
                     log("DELTA", f"[{receiver}.GetApprovalValueDeltaFromEnactment({argument})|0]"),
                     log("PREDICTED", f"[{receiver}.GetApprovalValueIfEnacted({argument})|0]"),
                     log("RADICALIZE", f"[{receiver}.WillRadicalizeIfEnacted({argument})]"),
                 )
             )
-            blocks.append(
-                f"if = {{ limit = {{ any_interest_group = {{ is_interest_group_type = {ig} }} }}\n"
-                f"{binding}\n{present}\n}} else = {{ {log('EXISTS', 'no')} }}"
-            )
+            group_readings.append(present)
+        absent = "\n".join(
+            f'debug_log = "{PREFIX}{tag};{ig};{law};EXISTS;no;'
+            f"sample-[THIS.Var('{sample_variable}').GetValue|0]\""
+            for law in targets
+        )
+        blocks.append(
+            f"if = {{ limit = {{ any_interest_group = {{ is_interest_group_type = {ig} }} }}\n"
+            f"every_interest_group = {{ limit = {{ is_interest_group_type = {ig} }}\n"
+            + "\n".join(group_readings)
+            + f"\n}}\n}} else = {{ {absent} }}"
+        )
     return "\n".join(blocks)
 
 
@@ -96,14 +104,20 @@ def parse_row(line: str) -> ApprovalRow:
         if value not in {"yes", "no", "0", "1"}:
             raise ValueError("态度布尔读数未解析")
         parsed = value in {"yes", "1"}
-    elif kind in NUMERIC:
+    elif kind in NUMERIC or kind == "OBJECT_ID":
         normalized = value.replace("−", "-")
         if not re.fullmatch(r"-?\d+", normalized):
             raise ValueError("态度整数未解析")
         parsed = int(normalized)
-        if not -(2**31) <= parsed < 2**31:
+        if kind == "OBJECT_ID":
+            if not 0 < parsed < 2**64:
+                raise ValueError("态度对象 ID 无效")
+        elif not -(2**31) <= parsed < 2**31:
             raise ValueError("态度整数超出 int32")
-    elif not value or "[" in value or "]" in value:
+    elif kind == "OWNER_TAG":
+        if not re.fullmatch(r"[A-Z]{3}", value):
+            raise ValueError("态度对象所属国家未解析")
+    elif not value or "[" in value or "]" in value or any(ord(c) < 32 for c in value):
         raise ValueError("态度名称未解析")
     return ApprovalRow(fields["tag"], fields["ig"], fields["law"], kind, parsed, fields["sample"])
 
@@ -129,7 +143,7 @@ def analyze(
     invariant_values: dict[tuple[str, str, str, str], set[str | int | bool]] = defaultdict(set)
     for row in observed:
         cells[row.tag, row.sample, row.ig, row.law].append(row)
-        if row.kind in {"EXISTS", "NAME", "CURRENT"}:
+        if row.kind in {"EXISTS", "NAME", "OBJECT_ID", "OWNER_TAG", "CURRENT"}:
             invariant_values[row.tag, row.sample, row.ig, row.kind].add(row.value)
     expected = {
         (tag, sample, ig, law)
@@ -151,6 +165,14 @@ def analyze(
         issues.append("matrix.country_name_unresolved")
     if any(len(values_) != 1 for values_ in invariant_values.values()):
         issues.append("matrix.interest_group_state_inconsistent_across_laws")
+    if any(r.kind == "OWNER_TAG" and r.value != r.tag for r in observed):
+        issues.append("matrix.receiver_country_mismatch")
+    identities: dict[tuple[str, str | int | bool], set[tuple[str, str]]] = defaultdict(set)
+    for row in observed:
+        if row.kind == "OBJECT_ID":
+            identities[row.sample, row.value].add((row.tag, row.ig))
+    if any(len(groups_) != 1 for groups_ in identities.values()):
+        issues.append("matrix.receiver_identity_reused")
     present_cells = 0
     for readings_ in cells.values():
         counts = Counter(row.kind for row in readings_)
@@ -179,8 +201,9 @@ def analyze(
         "radicalize_interface_validated": numeric_valid and values == [False, True],
         "radicalize_values": values,
         "issues": sorted(set(issues)),
-        "country_identity_verified": False,
+        "receiver_identity_verified": numeric_valid,
+        "country_identity_verified": numeric_valid,
         "ai_veto_proven": False,
         "quality_improvement_proven": False,
-        "scope": "Explicit country × interest-group type × law type, paired by country sample-N; predicted approval and radicalization are native getters, not final AI feasibility or civil-war probability.",
+        "scope": "Explicit country × native-selected interest-group type × law type, paired by country sample-N; receiver ID and owner tag must match the declared country and distinct groups. Predicted approval and radicalization are native getters, not final AI feasibility or civil-war probability.",
     }

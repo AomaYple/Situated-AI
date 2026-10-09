@@ -72,7 +72,7 @@ import sys
 import tempfile
 import time
 import xml.etree.ElementTree as ET
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -89,7 +89,7 @@ from .console import enable_utf8_stdio
 from .platform_support import UnavailableWindowsModule, WindowsOnlyError
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
 # 本模块本次 Popen 创建的根进程；失败清理只针对这些 PID。
 _OWNED_GAME_PIDS: set[int] = set()
@@ -841,7 +841,6 @@ SHIFT_CHARS: dict[str, str] = {
     "+": "=",
     "(": "9",
     ")": "0",
-    " ": "space",
 }
 
 
@@ -854,7 +853,9 @@ def type_text(text: str, *, force: bool = False) -> None:
     """
     _require_input(force)
     for char in text:
-        if char in SHIFT_CHARS:
+        if char == " ":
+            directinput.press("space")
+        elif char in SHIFT_CHARS:
             press_chord(f"shift+{SHIFT_CHARS[char]}", force=True)
         elif char.isupper():
             press_chord(f"shift+{char.lower()}", force=True)
@@ -952,6 +953,55 @@ def _focus_editbox(hwnd: int, *, force: bool) -> None:
     _sleep(0.2)
 
 
+def _change_keyboard_layout(hwnd: int, thread_id: int, layout: int) -> None:
+    """有界请求后读取目标线程真值；消息回执本身不能证明布局已切换。"""
+    win32gui.SendMessageTimeout(
+        hwnd,
+        win32con.WM_INPUTLANGCHANGEREQUEST,
+        0,
+        layout,
+        win32con.SMTO_ABORTIFHUNG,
+        2000,
+    )
+    actual = int(win32api.GetKeyboardLayout(thread_id))
+    if actual != layout:
+        raise GameAutoError(f"游戏输入布局切换失败：目标={layout:#x}，实际={actual:#x}")
+
+
+@contextmanager
+def _console_input_layout(hwnd: int, *, force: bool = False) -> Iterator[None]:
+    """临时使用已加载的标准英文键盘，成功、失败均恢复游戏线程原布局。
+
+    扫描码经过中文 IME 时可能被吞掉或转换成全角；不安装新布局，不改系统默认布局。
+    """
+    _require_input(force)
+    if _foreground_window() != hwnd:
+        raise ForegroundLostError("切换控制台输入布局时游戏不在前台")
+    thread_id, _pid = win32process.GetWindowThreadProcessId(hwnd)
+    if not thread_id:
+        raise GameAutoError("无法读取游戏输入线程")
+    original = int(win32api.GetKeyboardLayout(thread_id))
+    if not original:
+        raise GameAutoError("无法读取游戏原输入布局")
+    english = next(
+        (
+            int(layout)
+            for layout in win32api.GetKeyboardLayoutList()
+            if int(layout) & 0xFFFFFFFF == 0x04090409
+        ),
+        None,
+    )
+    if english is None:
+        raise GameAutoError("控制台输入需要已加载的标准美式英文键盘布局")
+    try:
+        if original != english:
+            _change_keyboard_layout(hwnd, thread_id, english)
+        yield
+    finally:
+        if int(win32api.GetKeyboardLayout(thread_id)) != original:
+            _change_keyboard_layout(hwnd, thread_id, original)
+
+
 def submit_console_command(
     hwnd: int,
     command: str,
@@ -960,7 +1010,9 @@ def submit_console_command(
     attempts: int = 2,
     settle: float = 2.0,
 ) -> bool:
-    """敲一条控制台命令并**提交**，返回是否确认被执行（`输入框清空` 且 `输出区有回话`）。
+    """敲一条控制台命令并提交，确认输入框清空且输出区有回话。
+
+    回话可能是 Unknown command；调用方仍须核对实际输出文件或状态，不能把提交当执行成功。
 
     ⚠️ **两次回车**不是随手写的：按一次时输入框标准差 44.9 → 44.0（字一个没少、
     输出区一动不动），连按两次 43.0 → 7.5 且输出区亮像素 322 → 1732。第一次被
@@ -968,24 +1020,25 @@ def submit_console_command(
 
     ⚠️ 调用方要先保证**游戏是前台**（`ensure_foreground`）：合成键盘只送给前台窗口。
     """
-    for _ in range(max(1, attempts)):
-        if not open_console(hwnd, force=force):
-            return False
-        _focus_editbox(hwnd, force=force)
-        before_ink = console_output_ink(hwnd)
-        type_text(command, force=force)
-        _sleep(0.6)
-        press_key("enter", force=force)
-        _sleep(0.35)
-        press_key("enter", force=force)
-        _sleep(settle)
-        _mean, std, _ink = _roi_stats(hwnd, CONSOLE_EDIT_ROI)
-        if std < CONSOLE_CLEARED_STD and console_output_ink(hwnd) > before_ink + 20:
-            return True
-        # 没提交成功就把输入框清干净，免得下一条命令粘在后面。
-        for _ in range(len(command) + 8):
-            press_key("backspace", force=force)
-        _sleep(0.4)
+    with _console_input_layout(hwnd, force=force):
+        for _ in range(max(1, attempts)):
+            if not open_console(hwnd, force=force):
+                return False
+            _focus_editbox(hwnd, force=force)
+            before_ink = console_output_ink(hwnd)
+            type_text(command, force=force)
+            _sleep(0.6)
+            press_key("enter", force=force)
+            _sleep(0.35)
+            press_key("enter", force=force)
+            _sleep(settle)
+            _mean, std, _ink = _roi_stats(hwnd, CONSOLE_EDIT_ROI)
+            if std < CONSOLE_CLEARED_STD and console_output_ink(hwnd) > before_ink + 20:
+                return True
+            # 没提交成功就把输入框清干净，免得下一条命令粘在后面。
+            for _ in range(len(command) + 8):
+                press_key("backspace", force=force)
+            _sleep(0.4)
     return False
 
 
