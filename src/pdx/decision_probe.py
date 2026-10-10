@@ -79,14 +79,14 @@ def build_localization_baseline(game: Path) -> dict[str, str]:
     # 原版反斜杠转义已由行式解析器保留；只补闭合引号，不用JSON/YAML重写值。
     lines.extend(f' {key}: "{found["l_english"][key][0]}"' for key in missing)
     manifest = {
-        "purpose": "diagnostic vanilla localization baseline; not production gameplay",
+        "purpose": "用于诊断的原版本地化基线，不属于生产玩法",
         "language": "l_simp_chinese",
         "keys": {key: found["l_english"][key][1] for key in missing},
         "already_present": sorted(BASELINE_LOC_KEYS - set(missing)),
-        "limits": "English fallback text for verified missing vanilla keys; no engine error exemptions",
+        "limits": "只为已核实缺失的原版键提供英文回退文本；不豁免引擎错误",
     }
     metadata = {
-        "name": "SITAI vanilla localization baseline instrument",
+        "name": "SITAI 原版本地化基线仪器",
         "id": "sitai.probe.localization_baseline",
         "version": "1.0",
         "supported_game_version": decisions.load().game_version,
@@ -218,7 +218,7 @@ def build(
 ) -> dict[str, str]:
     _validate_tags(tags)
     metadata = {
-        "name": "SITAI fiscal lifecycle instrument",
+        "name": "SITAI 财政生命周期仪器",
         "id": "sitai.probe.decisions",
         "version": "1.0",
         "supported_game_version": decisions.load().game_version,
@@ -274,9 +274,9 @@ def build_observer(
     files = build()
     metadata = json.loads(files[".metadata/metadata.json"])
     if lifecycle:
-        metadata["short_description"] = "Compatibility read-only observer for fixed saves"
+        metadata["short_description"] = "兼容固定存档的只读观察器"
     else:
-        metadata["name"] = "SITAI fiscal read-only observer"
+        metadata["name"] = "SITAI 财政只读观察器"
     return {
         ".metadata/metadata.json": json.dumps(metadata, ensure_ascii=False, indent=2) + "\n",
         "common/on_actions/zz_sitai_fiscal_observer.txt": "on_monthly_pulse_country = { on_actions = { zz_sitai_fiscal_observer } }\nzz_sitai_fiscal_observer = { effect = {\n"
@@ -312,9 +312,8 @@ def _validate_lifecycle(
                 raise ValueError(f"财政生命周期同类样本重复：{tag}/{row['kind']}/sample-{sample}")
             kind_samples.add(key)
         unique = sorted(set(samples))
-        # A loaded checkpoint may already contain observations, so the
-        # counter need not start at one. Require continuity from the first
-        # observed sample while preserving duplicate and gap detection.
+        # 加载的检查点可能已有观察记录，因此计数器不必从一开始。
+        # 从本局首次观察的序号起检查连续性，同时保留重复与缺口检测。
         expected = list(range(unique[0], unique[-1] + 1))
         if unique != expected:
             raise ValueError(f"财政生命周期样本不连续：{tag}，实际 {unique}")
@@ -425,12 +424,12 @@ def analyze(
         "counts": dict(counts),
         "countries": countries,
         "behavior_causality": False,
-        "time_basis": "sample-N is a per-country monthly observation sequence, not a calendar date; historical date strings remain unchanged",
+        "time_basis": "sample-N 是各国独立的每月观察序号，不是日历日期；历史日期字符串原样保留",
     }
     if native_fiscal_inputs:
         result["native_fiscal_inputs"] = {
             "rows": [row for row in rows if row["kind"] in NATIVE_KINDS],
-            "scope": "Native weeks/credit and declared entry/hold threshold conditions only; thresholds are in the archived observer source, not an engine AI risk policy. Rounded weeks cannot independently prove an exact threshold boundary.",
+            "scope": "只读取原版周数、信用及声明的进入/保持阈值条件；阈值定义在归档的观察器源中，不代表引擎 AI 风险政策。舍入后的周数不能独立证明精确阈值边界。",
             "production_risk_state_inferred": False,
             "active_inferred": False,
         }

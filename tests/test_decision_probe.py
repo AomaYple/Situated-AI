@@ -267,7 +267,7 @@ def test_私有序号可解析且不会调用全局GUI日期(tmp_path):
     (tmp_path / "debug.log").write_text("SITAI DECISION;RUS;RISK;yes;sample-1\n", encoding="utf-8")
     analysis = decision_probe.analyze(tmp_path)
     assert analysis["rows"][0]["date"] == "sample-1"
-    assert "not a calendar date" in analysis["time_basis"]
+    assert "不是日历日期" in analysis["time_basis"]
 
 
 @pytest.mark.parametrize("row", ["RISK;INVALID;sample-1", "RISK;yes;sample-error", "truncated"])

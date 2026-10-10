@@ -25,14 +25,14 @@ COMMANDS = {
 }
 
 BASELINE_COMMANDS = [
-    ("pip check", ["pip", "check"]),
-    ("offline verify", ["pdx.cli", "verify", "--from-snapshot"]),
-    ("offline tables", ["pdx.cli", "tables", "--offline"]),
-    ("generated mod", ["pdx.cli", "modgen", "--check"]),
-    ("offline modguard", ["pdx.cli", "modguard", "--offline"]),
-    ("offline ai surface", ["pdx.cli", "ai-surface", "--check", "--offline"]),
-    ("offline citations", ["pdx.cli", "citations", "--offline"]),
-    ("deadcode", ["tools.ci.deadcode_audit", "--check"]),
+    ("依赖一致性", ["pip", "check"]),
+    ("离线断言", ["pdx.cli", "verify", "--from-snapshot"]),
+    ("离线生成表格", ["pdx.cli", "tables", "--offline"]),
+    ("Mod 生成一致性", ["pdx.cli", "modgen", "--check"]),
+    ("离线 Mod 门禁", ["pdx.cli", "modguard", "--offline"]),
+    ("离线 AI 可执行面", ["pdx.cli", "ai-surface", "--check", "--offline"]),
+    ("离线引用", ["pdx.cli", "citations", "--offline"]),
+    ("死代码审计", ["tools.ci.deadcode_audit", "--check"]),
 ]
 
 

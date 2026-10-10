@@ -204,9 +204,7 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 files[key] = files[key].replace(guard, "\t\tadd = sitai_reform_default_delta\n", 1)
             metadata = json.loads(files[".metadata/metadata.json"])
             metadata["name"] = (
-                "SITAI global law-start positive control instrument"
-                if global_control
-                else "SITAI law-start positive control instrument"
+                "SITAI 全局立法启动阳性对照仪器" if global_control else "SITAI 立法启动阳性对照仪器"
             )
             metadata["short_description"] = "仅验证立法启动通道；放大参数不是生产玩法或质量证明"
             metadata["game_custom_data"]["multiplayer_synchronized"] = False
@@ -240,16 +238,14 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 "arm": args.arm,
                 "positive_control_default_contribution": (99 if positive_control else None),
                 "positive_control_scope": (
-                    "all AI countries, unconditional default contribution"
+                    "全部 AI 国家，无条件默认层贡献"
                     if global_control
-                    else "RUS and FRA, guarded default contribution"
+                    else "RUS 与 FRA，带条件守卫的默认层贡献"
                     if positive_control
                     else None
                 ),
                 "computed_delta_scope": (
-                    "Observer recomputes the conservative rule, not the positive-control "
-                    "99 contribution or final engine chance. Source snapshots identify the "
-                    "actual candidate contribution."
+                    "观察器重算保守规则，不代表阳性对照的 99 贡献或引擎最终概率。实际候选贡献由源快照确认。"
                 ),
                 "legality_laws": tuple(
                     value.strip() for value in args.legality_laws.split(",") if value.strip()

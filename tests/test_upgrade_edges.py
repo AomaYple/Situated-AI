@@ -256,7 +256,7 @@ def test_inventory_cli(tmp_path, monkeypatch):
     target = tmp_path / "audit.json"
     monkeypatch.setattr(sys, "argv", ["audit", "--root", str(root), "--output", str(target)])
     assert repo_audit.main() == 0
-    assert json.loads(target.read_text())["read_errors"] == []
+    assert json.loads(target.read_text(encoding="utf-8"))["read_errors"] == []
 
 
 def test_performance_cli_and_comparison(tmp_path, monkeypatch):

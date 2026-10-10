@@ -55,7 +55,7 @@ def write_zip(files: Mapping[str, str], destination: Path) -> Path:
     data = payloads(files)
     manifest = {
         "schema": 1,
-        "encoding": "game .txt/.yml: UTF-8 BOM + LF; other text: UTF-8 + LF",
+        "encoding": "游戏 .txt/.yml：UTF-8 含 BOM、LF；其他文本：UTF-8 无 BOM、LF",
         "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in data.items()},
     }
     data["DISTRIBUTION-MANIFEST.json"] = text_bytes(

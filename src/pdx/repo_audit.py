@@ -245,7 +245,7 @@ def inventory(root: Path) -> dict[str, object]:
             records.append(record)
     return {
         "schema": 1,
-        "scope": "all on-disk files except .git; links are not followed",
+        "scope": "盘上除 .git 外的全部文件；不跟随链接",
         "counts": dict(sorted(counts.items())),
         "bytes": dict(sorted(totals.items())),
         "directories": directories,

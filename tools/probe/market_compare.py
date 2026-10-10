@@ -125,10 +125,10 @@ def compare(control: dict, treatment: dict) -> dict:
         "measurement_model": {
             "score_quantum": SCORE_QUANTUM,
             "dependency_quantum": DEPENDENCY_QUANTUM,
-            "rounding": "conservative truncation error bound; exact engine rounding is unverified",
-            "minimum_visible_effect": "theoretical effect exceeds total error bound; both signed observed margins exceed 2 score units",
+            "rounding": "保守的截断误差上界；引擎的精确舍入方式尚未核实",
+            "minimum_visible_effect": "理论效应超过总误差上界；两个带符号的实测优势均超过 2 个评分单位",
         },
-        "limits": "Preference margin subtracts the larger of other-side support and neutrality; one support delta may yield between one and two times that margin delta. Integer Getter and dependence quantization are bounded conservatively. Matched rounded dependence inputs and directional agreement do not prove overall behavior quality.",
+        "limits": "偏好优势以本方支持评分减去另一方支持与中立评分中的较大值计算；一次支持评分差可能产生一至两倍的优势差。整数 getter 与依赖量化按保守误差上界处理。舍入后的依赖输入匹配、方向一致均不能证明整体行为质量。",
     }
 
 

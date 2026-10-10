@@ -2514,7 +2514,7 @@ def platform_capabilities() -> dict[str, object]:
         "background_validation": windows,
         "headless_log_validation": True,
         "reason": (
-            "Windows GUI backend: pygetwindow + pydirectinput"
+            "Windows GUI 后端：pygetwindow + pydirectinput"
             if windows
             else "当前平台没有受支持的 Victoria 3 GUI 输入后端"
         ),

@@ -144,9 +144,9 @@ def catalog(root: Path, *, expected_version: str) -> dict[str, Any]:
         "entries": entries,
         "reports": reports,
         "limits": [
-            "binary header proves load eligibility only; opportunity remains unknown",
-            "post-treatment scores/roles are not used to nominate checkpoints",
-            "formal-pair-suitable requires a separately verified pretreatment opportunity; unavailable here",
+            "二进制头只证明存档具备加载资格；决策机会仍未知",
+            "不使用处理后的评分或角色来筛选检查点",
+            "formal-pair-suitable 需要独立核实处理前的决策机会；此处尚无该证据",
         ],
     }
 

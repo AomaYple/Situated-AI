@@ -66,7 +66,7 @@ def summarize(directory: Path, root: Path = ROOT) -> dict[str, object]:
             record["self_elapsed_s"] += own
     return {
         "schema": 1,
-        "method": "cProfile own elapsed-time sum, not OS CPU time; includes profiler overhead; memory measured separately",
+        "method": "cProfile 自身耗时之和，不是操作系统 CPU 时间；包含分析器开销；内存另行测量",
         "profiles": [p.name for p in profiles],
         "modules": dict(
             sorted(modules.items(), key=lambda item: float(item[1]["self_elapsed_s"]), reverse=True)

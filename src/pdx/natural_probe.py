@@ -116,7 +116,7 @@ def build(
         + "\n} }\n"
     )
     metadata = {
-        "name": "SITAI natural diplomatic start observer",
+        "name": "SITAI 自然外交发起观察器",
         "id": "sitai.probe.natural_diplomacy",
         "version": "1.0",
         "supported_game_version": decisions.load().game_version,
@@ -214,14 +214,14 @@ def analyze_commands(directory: Path, *, tags: tuple[str, ...], targets: tuple[s
         "complete_opportunity_denominator": None,
         "engine_interface_validated": interface_validated,
         "interface_validation_scope": (
-            "same-run finite dp_humiliation target positive plus self-target negative control"
+            "同局使用有限 dp_humiliation 目标阳性对照及以自身为目标的阴性对照"
             if interface_validated
             else None
         ),
         "quality_improvement_proven": False,
-        "scope": "explicit actor/target subset; country-target dp_humiliation command validity",
-        "sampling": "monthly pulse, delayed one day with distinct actor/target scopes; sample-N is the country counter read on the following day, not calendar time",
-        "limits": "Interface validation requires same-run positive and self-target negative controls and a separately clean runner report. Validity is command legality, not native AI feasibility, utility or start rate. Monthly snapshots can miss short episodes; an initially valid episode is left censored. State-target plays and accepted demands without plays are absent.",
+        "scope": "显式行动方/目标子集；仅验证以国家为目标的 dp_humiliation 命令是否合法",
+        "sampling": "每月脉冲后延迟一天，行动方与目标使用不同作用域；sample-N 是次日读取的国家计数器，不是日历时间",
+        "limits": "接口验证需要同局阳性对照、以自身为目标的阴性对照及另行通过的运行器报告。命令合法性不代表原版 AI 可行性、效用或发起率。每月快照可能遗漏短暂机会；首次采样已合法的片段，其起点不可观测。未覆盖以州为目标的博弈及未发起博弈就被接受的要求。",
     }
 
 
@@ -300,8 +300,8 @@ def analyze(directory: Path, *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dict:
         "hook_count": None,
         "root_initiators": sorted(root_observations["INITIATOR"]),
         "root_targets": sorted(root_observations["TARGET"]),
-        "time_basis": "separate per-country monthly and started sequences; actual calendar window from runner ticks",
+        "time_basis": "各国的每月序号与发起序号分别记录；实际日历窗口来自运行器的 tick",
         "opportunity_denominator": None,
         "quality_improvement_proven": False,
-        "limits": "Root hook_seen records presence, never event count; historical hook_observations was also only deduplicated presence. Started facts can include vanilla-scripted plays. Accepted demands without a play are absent. Counts do not identify all available AI opportunities, engine autonomy, end outcomes, or policy quality.",
+        "limits": "根级 hook_seen 只记录钩子出现，不能当作事件次数；历史 hook_observations 也只记录去重后的出现情况。发起事实可能包含原版脚本创建的博弈。未记录不经博弈就被接受的要求。计数不能识别全部可用 AI 机会、引擎自主性、结束结果或政策质量。",
     }

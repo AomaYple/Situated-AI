@@ -92,7 +92,7 @@ def test_财政行为各臂保留检查点的两只读身份(tmp_path, monkeypat
                 encoding="utf-8"
             )
         )
-        assert lifecycle["name"] == "SITAI fiscal lifecycle instrument"
+        assert lifecycle["name"] == "SITAI 财政生命周期仪器"
         if injection in {"stress", "no-stress"}:
             expected = decision_probe.build(inject=injection == "stress")
             assert {

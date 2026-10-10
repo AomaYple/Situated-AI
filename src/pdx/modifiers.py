@@ -2,12 +2,11 @@
 
 为什么单独一个模块
 ------------------
-doc 05（`defines与修饰符`）§6.5 有一张 ``| File | Entries | Max entries in one
-modifier |`` 表，**曾号称「脚本直接落盘的」而实际无人重跑**：产出它的
-PowerShell 脚本早已退休，表还留在文档里（doc 05 §1 至今写着「由脚本机械
-生成的表头保持英文（如 … ``File``、``Entries``）」）。
+doc 05（`defines与修饰符`）§6.5 的逐文件表此前没有可维护的生成入口：
+原 PowerShell 脚本已经退休，表还留在文档里。中文表头在本模块定义，
+数据行由提取逻辑生成，不需要手写统计。
 
-核查结果：``Entries`` 列 68/68 全对，但 ``Max entries`` 列与紧随其上的那句
+当时的核查结果：条目数列 68/68 全对，但单个修饰符最大条目数列与紧随其上的那句
 说明**自相矛盾** —— 数据用的是「块内全部键（**含** ``icon``）」口径
 （68/68 命中），而说明写着「**不含** ``icon``」（按那个口径只命中 1/68）。
 
@@ -31,7 +30,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 #: doc 05 §6.5 的表头
-STATIC_TABLE = "| File | Entries | Max entries in one modifier |"
+STATIC_TABLE = "| 文件 | 条目数 | 单个修饰符最大条目数 |"
 
 #: 数字片段（用于**自然序**排序）
 _NUM = re.compile(r"(\d+)")

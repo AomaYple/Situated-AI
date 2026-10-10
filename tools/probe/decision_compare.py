@@ -223,7 +223,7 @@ def compare(control: dict, treatment: dict, *, neutrality_delta: float = 25) -> 
             c["exit_effect_status"] == "zero_difference" for c in countries.values()
         ),
         "quality_improvement_proven": False,
-        "limits": "One controlled opportunity per run. Dates and score rows are repeated observations, not independent behavior samples. Only the declared neutrality field changes; native simulation randomness remains uncontrolled.",
+        "limits": "每局只有一次受控机会。日期与评分行是重复观察，不是独立行为样本。只改变声明的中立评分字段；原版模拟的随机性仍未受控。",
     }
 
 
@@ -273,7 +273,7 @@ def compare_inputs(control: dict, treatment: dict) -> dict:
             country["risk_input_effect_observed"] for country in countries.values()
         ),
         "quality_improvement_proven": False,
-        "limits": "Only the declared treasury withdrawal/recovery instrument differs. This changes real finances and can change native world behavior; risk activation is not an isolated policy score or behavior-quality effect. Native randomness remains uncontrolled.",
+        "limits": "差异仅限声明的国库扣减/恢复仪器。它改变真实财政，并可能改变原版世界行为；风险激活不能视为孤立的政策评分或行为质量效应。原版随机性仍未受控。",
     }
 
 

@@ -252,9 +252,7 @@ class TickTaskCapture:
                             for stat in gametimer.ticktask_task_stats(parsed)
                         },
                         "limits": (
-                            "Engine tick-task samples, integer milliseconds; not renderer frame "
-                            "latency or FPS. Clear is confirmed by UI submission only. Includes "
-                            "brief console/focus handover at measurement boundaries."
+                            "引擎 tick 任务采样，单位为整数毫秒；不代表渲染帧延迟或 FPS。清空计时数据仅确认已通过 UI 提交。测量边界包含短暂的控制台/焦点切换。"
                         ),
                     }
                 previous = signature
@@ -549,7 +547,7 @@ class Deployment:
                 "schema": 1,
                 "recovered": not errors,
                 "errors": errors,
-                "limits": "Interrupted sessions are not complete runs; logs are not stitched.",
+                "limits": "中断的会话不算完整运行；不拼接不同会话的日志。",
             },
         )
         if errors:
@@ -1307,7 +1305,7 @@ def run(
                     original_sha256=original.name if original else None,
                     check=check_health,
                 )
-                report["checkpoint_scope"] = "within 31 game days of completed window end"
+                report["checkpoint_scope"] = "距已完成窗口终点不超过 31 个游戏日"
                 report["after_checkpoint_wait"] = ga.tick_mark().tick
             check_health()
             if profiler is not None:
@@ -1405,9 +1403,9 @@ def run(
             report["monitoring"] = {
                 "log_poll_seconds": 0.25,
                 "process_poll_seconds": 5,
-                "error_stop": "Incremental error-log guard; simulation checks every 5s, save wait every 1s; blocking startup is checked on return. Final full-log validation remains mandatory.",
-                "scope": "owned game PID RSS and CPU; startup and simulation; sampled peaks, not frame-time measurements",
-                "limits": "Polling captures known rotating files; rotations faster than the retention window may lose unseen bytes.",
+                "error_stop": "增量错误日志守卫：模拟中每 5 秒检查，等待存档时每 1 秒检查；阻塞式启动返回后检查。结束时仍须核验完整日志。",
+                "scope": "只测本次拥有的游戏 PID 的 RSS 与 CPU，覆盖启动和模拟阶段；记录采样峰值，不测帧耗时",
+                "limits": "轮询捕获已知轮转文件；轮转快于保留窗口时，可能遗漏尚未读取的字节。",
             }
             report["cleanup_errors"] = cleanup_errors
             report["samples"] = samples
@@ -1432,8 +1430,7 @@ def run(
             report["stage_timings"] = timings.intervals
             report["pipeline_wall_seconds"] = time.monotonic() - timings.started
             report["timing_scope"] = (
-                "stage intervals include input hashes through analysis; overlaps are not summed; "
-                "legacy wall_seconds excludes initial hashes and analysis; report writes excluded"
+                "阶段区间覆盖输入指纹计算至分析结束；重叠区间不累加；旧 wall_seconds 不含初始指纹计算与分析；计时均不含报告写盘"
             )
             write_json(evidence / "report.json", report)
             if ledger is not None and run_id is not None:

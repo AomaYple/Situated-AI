@@ -83,7 +83,7 @@ def main() -> int:
             "platform": platform.platform(),
             "log_bytes": log.stat().st_size,
             "rounds": args.rounds,
-            "memory_scope": "tracemalloc Python allocations; excludes OS cache and native RSS",
+            "memory_scope": "tracemalloc 测量 Python 分配；不含操作系统缓存及原生 RSS",
             "source_sha256": hashlib.sha256(Path(game_auto.__file__).read_bytes()).hexdigest(),
             "previous_full_read": measure(previous, args.rounds),
             "current_reverse_chunks": measure(current, args.rounds),

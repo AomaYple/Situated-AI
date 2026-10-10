@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from pathlib import Path  # noqa: TC003 - constants are constructed at import time
+from pathlib import Path  # noqa: TC003 - 模块导入时需要构造常量
 
 from . import config
 

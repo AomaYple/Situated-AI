@@ -275,9 +275,7 @@ zz_sitai_opportunity_bind = { effect = {
         "events/zz_sitai_opportunity.txt": watch,
         ".metadata/metadata.json": json.dumps(
             {
-                "name": "SITAI natural third-party response observer"
-                if natural
-                else "SITAI third-party opportunity instrument",
+                "name": "SITAI 自然第三方响应观察器" if natural else "SITAI 第三方机会仪器",
                 "id": "sitai.probe.opportunity",
                 "version": "1.0",
                 "supported_game_version": decisions.load().game_version,
@@ -370,8 +368,8 @@ def analyze(
         "rows": rows,
         "countries": countries,
         "forced_creation_is_autonomous": False,
-        "sampling": "daily; changes within one day may be missed; one controlled country pair per run",
-        "time_basis": "sample-N is a shared daily opportunity observation sequence, not a calendar date; actual window dates are runner ticks; historical date strings remain unchanged",
+        "sampling": "每日采样；可能遗漏一天内的变化；每局只构造一对国家的受控机会",
+        "time_basis": "sample-N 是共享的每日机会观察序号，不是日历日期；实际窗口日期来自运行器的 tick；历史日期字符串原样保留",
         "behavior_causality": False,
         "common_eligible_active_dates": sorted(eligible_active[tags[0]] & eligible_active[tags[1]]),
         "usable_for_paired_behavior": bool(eligible_active[tags[0]] & eligible_active[tags[1]]),
@@ -379,7 +377,7 @@ def analyze(
     if natural_pair is not None:
         result["natural_capture"] = _natural_capture(rows, tags, natural_pair)
         result["sampling"] = (
-            "daily after first natural START; exact saved play scope; at most one captured play per run"
+            "首次自然 START 后每日采样；使用保存的确切博弈作用域；每局最多捕获一场博弈"
         )
         # 绑定或资格侦察不能自行成为配对因果样本。
         result["usable_for_paired_behavior"] = False

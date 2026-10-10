@@ -192,7 +192,7 @@ def build(
         ).replace("sitai_reform_", "sitai_probe_reform_"),
         ".metadata/metadata.json": json.dumps(
             {
-                "name": "SITAI read-only political observer",
+                "name": "SITAI 政治只读观察器",
                 "id": "sitai.probe.reform",
                 "version": "1.0",
                 "supported_game_version": decisions.load().game_version,
@@ -402,16 +402,16 @@ def analyze(
             "enacted_cells": len(enacted),
             "issues": issues,
             "country_identity_verified": False,
-            "identity_basis": "Names are observed in the explicit tag scope; no independent tag-to-name identity oracle is available.",
+            "identity_basis": "名称从显式国家标签作用域读取；没有独立的标签与名称身份真值可供核对。",
         },
         "legality_scope": (
-            "explicit country tags × requested law types; blocking requirement is a GUI-native getter and enacted is a separate native state"
+            "显式国家标签 × 请求的法律类型；阻断要求来自原版 GUI getter，已颁布状态由另一原版接口单独读取"
             if legal_rows
             else None
         ),
         "quality_improvement_proven": False,
-        "time_basis": "sample-N is a per-country observation/event sequence, not a calendar date; historical date strings remain unchanged",
-        "limits": "Monthly idle observations do not prove a viable law existed. Legal blocking is limited to explicitly requested country × law pairs and must have same-run yes/no controls; it is not final AI feasibility, success chance, or law-selection ranking. Government-preferred available laws and estimated advance threshold buckets are partial conditions. Active political strategy is observed separately; conditional minimums, direction and civil-war vetoes remain distinct. Computed default contribution is not final engine chance. Pass/fail/end are separate outcomes; one run is not causal proof.",
+        "time_basis": "sample-N 是各国独立的观察/事件序号，不是日历日期；历史日期字符串原样保留",
+        "limits": "每月空闲观察不能证明存在可行法律。法律阻断只覆盖显式请求的国家 × 法律组合，且必须具备同局 yes/no 对照；它不代表最终 AI 可行性、成功概率或法律选择排名。政府偏好的可用法律和估算的推进阈值分桶只是部分条件。当前政治策略单独观察；条件最小值、方向与内战否决仍分别记录。计算的默认层贡献不代表引擎最终概率。通过、失败、结束分别记录；单局不能证明因果。",
     }
     if approval_rows or expected_approval_igs or expected_approval_laws:
         result["approval"] = political_approval.analyze(

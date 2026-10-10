@@ -205,5 +205,5 @@ def analyze(
         "country_identity_verified": numeric_valid,
         "ai_veto_proven": False,
         "quality_improvement_proven": False,
-        "scope": "Explicit country × native-selected interest-group type × law type, paired by country sample-N; receiver ID and owner tag must match the declared country and distinct groups. Predicted approval and radicalization are native getters, not final AI feasibility or civil-war probability.",
+        "scope": "显式国家 × 原版选出的利益集团类型 × 法律类型，按各国 sample-N 配对；接收者 ID 与所属国家标签须符合声明的国家，且集团须彼此不同。预测支持度与激进化来自原版 getter，不代表最终 AI 可行性或内战概率。",
     }

@@ -3,8 +3,8 @@
 为什么单独一个文件（而不是并进 ``test_defines_tables.py``）
 ----------------------------------------------------------
 上一轮只覆盖 doc 05。这一轮把替换算法抽成了 :mod:`pdx.doc_tables` 并推广到
-doc 19 与 doc 08，**通用机制本身**也必须被测 —— 它现在同时托着 31 张表，
-一个回归会让全部 9 张一起烂掉，而它们的共同症状是「文档悄悄过期、没人发现」。
+doc 19 与 doc 08，**通用机制本身**也必须被测 —— 它已经覆盖多个领域的生成表，
+一个回归可能影响全部登记表，导致文档悄悄过期而无人发现。
 
 三层各测一次：
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 #: 合成文档那几条**不需要游戏** —— 它们是通用机制的单元测试。
 #: 早先整个文件打了 module 级 ``integration``，于是 CI 上连它们也一起跳过，
-#: 而它们恰恰是最该在 CI 上跑的部分（通用机制一回归就是 31 张表一起烂）。
+#: 而它们恰恰是最该在 CI 上跑的部分（通用机制回归可能影响全部登记表）。
 _unit = pytest.mark.unit
 
 #: 要读游戏本体的用例：打 ``integration``（conftest 在无游戏时自动跳过）
@@ -50,6 +50,42 @@ HEAD = HEAD_LINE + "\n|---|---:|\n"
 #: 于是断言「新行里应当出现待补」永远不成立，测试却看不出自己错了。
 HEAD3_LINE = "| 名称 | 数值 | 说明 |"
 HEAD3 = HEAD3_LINE + "\n|---|---:|---|\n"
+
+
+@_unit
+@pytest.mark.parametrize("occurrence", [0, 1])
+def test_header_translation_preserves_snapshot_identity(tmp_path: Path, occurrence: int) -> None:
+    """表头翻译只改变定位文字；快照身份、数据行和同名表序号仍可复用。"""
+    rows = ["| NAI | 1017 |"]
+    old = doc_tables.TableSpec(
+        name="参数汇总", header="| Namespace | Params |", rows=lambda: rows, occurrence=occurrence
+    )
+    translated = doc_tables.TableSpec(
+        name=old.name, header="| 命名空间 | 参数数 |", rows=old.rows, occurrence=occurrence
+    )
+    key = doc_tables.spec_key("知识库.md", old)
+    assert doc_tables.spec_key("知识库.md", translated) == key
+    cached_rows = {key: rows}
+    body = (translated.header + "\n|---|---:|\n" + rows[0] + "\n\n") * (occurrence + 1)
+    doc = _doc(tmp_path, body)
+    assert doc_tables.current_rows(doc, translated) == cached_rows[key]
+    assert not doc_tables.check_doc(doc, [translated])
+
+
+@_unit
+def test_translated_doc05_specs_keep_distinct_table_headers() -> None:
+    """翻译后的相似表头仍应明确区分全量表与 Jomini 子表。"""
+    from pdx.defines import doc_table_specs
+
+    specs = {spec.name: spec for spec in doc_table_specs()}
+    all_defines = specs["doc05 表3"]
+    jomini = specs["doc05 jomini 三文件"]
+    assert (
+        all_defines.header
+        == "| 全部 defines 文件 | 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |"
+    )
+    assert jomini.header != all_defines.header
+    assert jomini.occurrence == 0
 
 
 @_unit

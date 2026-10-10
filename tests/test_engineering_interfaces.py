@@ -48,19 +48,25 @@ def test_public_cli_commands_have_help() -> None:
 
 def test_baseline_command_manifest_is_stable() -> None:
     assert [label for label, _ in BASELINE_COMMANDS] == [
-        "pip check",
-        "offline verify",
-        "offline tables",
-        "generated mod",
-        "offline modguard",
-        "offline ai surface",
-        "offline citations",
-        "deadcode",
+        "依赖一致性",
+        "离线断言",
+        "离线生成表格",
+        "Mod 生成一致性",
+        "离线 Mod 门禁",
+        "离线 AI 可执行面",
+        "离线引用",
+        "死代码审计",
     ]
-    assert all(
-        command and command[0] in {"pip", "pdx.cli", "tools.ci.deadcode_audit"}
-        for _, command in BASELINE_COMMANDS
-    )
+    assert [command for _, command in BASELINE_COMMANDS] == [
+        ["pip", "check"],
+        ["pdx.cli", "verify", "--from-snapshot"],
+        ["pdx.cli", "tables", "--offline"],
+        ["pdx.cli", "modgen", "--check"],
+        ["pdx.cli", "modguard", "--offline"],
+        ["pdx.cli", "ai-surface", "--check", "--offline"],
+        ["pdx.cli", "citations", "--offline"],
+        ["tools.ci.deadcode_audit", "--check"],
+    ]
 
 
 def test_offline_test_runner_keeps_marker_as_one_argument() -> None:

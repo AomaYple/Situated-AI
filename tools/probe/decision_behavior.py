@@ -112,13 +112,13 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
             ),
         }
 
-    # Fixed checkpoints record both fiscal probe identities for every arm.
+    # 固定检查点的每个实验臂都记录两种财政探针身份。
     sources = {
         "sitai_decision_candidate": candidate,
         "zz_probe_decision_lifecycle": fiscal,
         "zz_probe_decision_opportunity": opportunity,
     }
-    # ``none`` disables injection but still mounts the read-only observer.
+    # ``none`` 禁用注入，但仍挂载只读观察器。
     readonly = source_root / "fiscal-readonly"
     decisions.write(readonly, decision_probe.build_observer(tags=tags))
     sources["zz_sitai_fiscal_observer"] = readonly

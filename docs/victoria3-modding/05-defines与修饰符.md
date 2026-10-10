@@ -83,7 +83,7 @@
 > **`v3 tables --write`** 生成，不再手抄（它们此前因为无人重跑，
 > 整整落后了一个游戏版本）。
 
-> **关于表格表头语言**：本文正文为中文，但**由脚本机械生成的表头保持英文**（如 `Namespace block`、`Leading prefix`、`File`、`Entries`）——因为这些表是脚本直接落盘的，改成中文会引入手写环节、破坏"机械提取"的可追溯性。表内数据（命名空间名、参数名、文件名、计数）与语言无关，不影响使用。
+> **关于表格语言与生成**：普通表头使用中文，表头定义由 `pdx.defines`、`pdx.modifiers` 维护，数据行通过 `v3 tables --write` 生成。命名空间名、参数名和文件名保留实际接口值；快照使用稳定的文档名与表名定位，表头翻译不改变提取口径或数据行。
 
 > **关于行号**：全文所有行号均为**物理行号**（1-based），可直接用于在编辑器中跳转。
 
@@ -251,9 +251,9 @@ MAP_LENS_military_lens
 
 ### 1.6 全部命名空间清单
 
-下表由脚本按命名空间聚合，`Params` 为该命名空间在**全部文件**中的参数条目总和（含重复块累加）。完整逐块明细（第 2 节）见 §2.2。
+下表由脚本按命名空间聚合，“参数数”为该命名空间在**全部文件**中的参数条目总和（含重复块累加）。完整逐块明细（第 2 节）见 §2.2。
 
-| Namespace | Blocks | Params | File(s) |
+| 命名空间 | 块数 | 参数数 | 文件 |
 |---|---|---|---|
 | `NAI` | 1 | 1025 | 00_ai.txt |
 | `NAudio` | 1 | 23 | 00_audio.txt |
@@ -467,9 +467,9 @@ NCountry = {
 
 ### 2.2 全部 75<!--claim:def.blocks--> 个顶层命名空间块
 
-「Line」为该块在所属文件中的**物理起始行号**。
+“起始行”为该块在所属文件中的**物理起始行号**。
 
-| File | Namespace block | Line | Scalar | Inline list | Nested | Total |
+| 全部 defines 文件 | 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |
 |---|---|---|---|---|---|---|
 | `00_ai.txt` | `NAI` | 1 | 1025 | 0 | 0 | 1025 |
 | `00_audio.txt` | `NAudio` | 1 | 23 | 0 | 0 | 23 |
@@ -708,7 +708,7 @@ Jomini 内容根另有 15<!--claim:def.jomini_untaken--> 个未被 game 层接�
 
 ### 3.1 `NAI` 块清单
 
-| Namespace block | Start line | Scalar params | Inline-list params | Nested blocks | Total params |
+| 命名空间块 | 起始行 | 标量参数 | 内联列表参数 | 嵌套块 | 参数合计 |
 |---|---|---|---|---|---|
 | `NAI` | 1 | 1017 | 0 | 0 | **1017** |
 
@@ -720,7 +720,7 @@ Jomini 内容根另有 15<!--claim:def.jomini_untaken--> 个未被 game 层接�
 
 > 说明：这是**机械切分**，不是官方分组。同一前缀可能跨越不同语义（如 `MIN_` 是通用修饰前缀）。原版文件本身没有 `# ===== 分区 =====` 式的分区标题，只有零散的行内/行上注释。
 
-| Leading prefix | Param count |
+| 参数前缀 | 参数数 |
 |---|---|
 | `DIPLO_*` | 210 |
 | `PRODUCTION_*` | 89 |
@@ -1866,7 +1866,7 @@ NAVAL_HQ_IMPORTANCE_MIN_SCORE
 
 下表为完整命中清单：
 
-| File | Namespace block | Define |
+| 文件 | 命名空间块 | 参数键 |
 |---|---|---|
 | `00_defines.txt` | `NPolitics` | `MAX_GOVERNMENT_ALTERNATIVES_TO_CONSIDER_AI` |
 | `00_defines.txt` | `NMilitary` | `AI_FIND_FLEET_EXPECTED_DISTANCE` |
@@ -1928,7 +1928,7 @@ setting_<key>_desc will be used as the key for game rule setting descs
 
 ### 4.4 15 条 game_rule 完整键名
 
-| # | game_rule key | default | 非默认 setting | flag 条目数 |
+| # | game_rule 键 | 默认 setting | 非默认 setting | flag 条目数 |
 |---|---|---|---|---|
 | 1 | `achievements` | `achievements_allowed` | `achievements_blocked` | 1 |
 | 2 | `ai_behavior` | `standard_ai_behavior` | `lenient_ai_behavior`, `harsh_ai_behavior` | 2 |
@@ -1950,7 +1950,7 @@ setting_<key>_desc will be used as the key for game rule setting descs
 
 ### 4.5 完整明细：每条规则的 default / settings / flags
 
-| # | game_rule key | default | settings (non-default) | flag entries |
+| # | game_rule 键 | 默认 setting | 非默认 setting | flag 条目 |
 |---|---|---|---|---|
 | 1 | `achievements` | `achievements_allowed` | `achievements_blocked` | `achievements_blocked:blocks_achievements` |
 | 2 | `ai_behavior` | `standard_ai_behavior` | `lenient_ai_behavior`, `harsh_ai_behavior` | `lenient_ai_behavior:lenient_ai`<br>`harsh_ai_behavior:harsh_ai` |
@@ -1960,7 +1960,7 @@ setting_<key>_desc will be used as the key for game rule setting descs
 | 6 | `releasable_nations` | `all_releasable_nations` | `plausible_releasable_nations` | (none) |
 | 7 | `loyalties_grace_period` | `loyalties_grace_period_none` | `loyalties_grace_period_short`, `loyalties_grace_period_long`, `loyalties_grace_period_extra_long` | `loyalties_grace_period_none:loyalties_grace_period_none`<br>`loyalties_grace_period_short:loyalties_grace_period_short`<br>`loyalties_grace_period_long:loyalties_grace_period_long`<br>`loyalties_grace_period_extra_long:loyalties_grace_period_extra_long` |
 | 8 | `pop_consolidation` | `moderate_consolidation` | `no_consolidation`, `minor_consolidation`, `aggressive_consolidation` | `no_consolidation:no_pop_consolidation`<br>`minor_consolidation:minor_pop_consolidation`<br>`moderate_consolidation:moderate_pop_consolidation`<br>`aggressive_consolidation:aggressive_pop_consolidation` |
-| 9 | `monument_effects` | `allow_monument_effects` | `prestige_only_monument_effects`, `no_monument_effects` | **43** entries (see section 4.7) |
+| 9 | `monument_effects` | `allow_monument_effects` | `prestige_only_monument_effects`, `no_monument_effects` | **43** 条（见 §4.7） |
 | 10 | `subject_flags` | `allow_subject_flags` | `no_subject_flags` | `no_subject_flags:no_subject_flags` |
 | 11 | `subject_map_color` | `allow_subject_map_color` | `no_subject_map_color` | `no_subject_map_color:no_subject_map_color` |
 | 12 | `fantastical_content` | `allow_fantastical_content` | `no_fantastical_content` | `allow_fantastical_content:give_fantastical_content`<br>`no_fantastical_content:no_fantastical_content` |
@@ -1974,7 +1974,7 @@ setting_<key>_desc will be used as the key for game rule setting descs
 
 `game_rule` 下的 `setting_*` 块即为可选设置。下表列出全部 38 个，并标明所属规则与是否为默认值。
 
-| # | setting key | game_rule | is default |
+| # | setting 键 | 所属 game_rule | 是否默认 |
 |---|---|---|---|
 | 1 | `achievements_allowed` | `achievements` | yes |
 | 2 | `achievements_blocked` | `achievements` |  |
@@ -2021,7 +2021,7 @@ setting_<key>_desc will be used as the key for game rule setting descs
 
 每条 `flag` 都归在某个 `game_rule` 的某个 `setting` 之下。原版对 flag 的**消费方式**是脚本 trigger `has_game_rule`（见 §4.9），而不是在游戏规则文件里自带效果——**flag 本身只是一个开关名**。
 
-| game_rule | setting | flag / directive |
+| game_rule | setting | flag / 指令 |
 |---|---|---|
 | `achievements` | `achievements_blocked` | `blocks_achievements` |
 | `ai_behavior` | `lenient_ai_behavior` | `lenient_ai` |
@@ -2223,7 +2223,7 @@ has_game_rule = high_ai_aggression
 
 ### 5.3 规模与文件分布
 
-| File | Modifier type keys |
+| 文件 | 修饰符类型键数 |
 |---|---|
 | `00_modifier_types.txt` | 451 |
 | `01_building_modifier_types.txt` | 351 |
@@ -2249,7 +2249,7 @@ has_game_rule = high_ai_aggression
 
 > 目录下的第 16 个文件 `modifier_types.md` 是说明文档，不含任何修饰符类型。
 
-#### `00_modifier_types.txt` -- 451 keys
+#### `00_modifier_types.txt` —— 451 个键
 
 ```text
 interest_group_ig_armed_forces_pol_str_mult
@@ -2705,7 +2705,7 @@ state_buy_orders_artillery_add
 country_flagship_interest_gain_mult
 ```
 
-#### `01_building_modifier_types.txt` -- 351 keys
+#### `01_building_modifier_types.txt` —— 351 个键
 
 ```text
 building_group_bg_construction_laborers_mortality_mult
@@ -3061,7 +3061,7 @@ building_soldiers_standard_of_living_add
 building_slaves_standard_of_living_add
 ```
 
-#### `02_modifier_types_rules.txt` -- 43 keys
+#### `02_modifier_types_rules.txt` —— 43 个键
 
 ```text
 country_can_impose_same_lawgroup_governance_principles_in_power_bloc_bool
@@ -3109,7 +3109,7 @@ state_peasants_internal_migration_disallowed_bool
 country_no_advantage_loss_from_lack_of_interest_bool
 ```
 
-#### `03_modifier_types_script_only.txt` -- 32 keys
+#### `03_modifier_types_script_only.txt` —— 32 个键
 
 ```text
 character_battle_condition_dug_in_mult
@@ -3146,7 +3146,7 @@ battle_naval_condition_rough_waters_chance_mult
 battle_naval_condition_tropical_storm_chance_mult
 ```
 
-#### `04_label_modifier_types.txt` -- 24 keys
+#### `04_label_modifier_types.txt` —— 24 个键
 
 ```text
 unit_offense_flat_add
@@ -3175,7 +3175,7 @@ unit_defense_water_add
 unit_defense_water_mult
 ```
 
-#### `05_power_bloc_modifier_types.txt` -- 41<!--claim:def.file_defines--> keys
+#### `05_power_bloc_modifier_types.txt` —— 41<!--claim:def.file_defines--> 个键
 
 ```text
 power_bloc_leader_can_make_subjects_bool
@@ -3221,7 +3221,7 @@ country_join_power_bloc_member_in_defensive_plays_bool
 country_join_power_bloc_member_in_plays_bool
 ```
 
-#### `06_country_modifier_types.txt` -- 123 keys
+#### `06_country_modifier_types.txt` —— 123 个键
 
 ```text
 country_general_rank_impact_mult
@@ -3349,7 +3349,7 @@ country_financial_districts_buy_farms_likelihood
 country_navy_goods_cost_mult
 ```
 
-#### `07_description_modifier_types.txt` -- 4 keys
+#### `07_description_modifier_types.txt` —— 4 个键
 
 ```text
 country_higher_diplomatic_acceptance_same_religion_bool
@@ -3358,7 +3358,7 @@ country_higher_leverage_from_economic_dependence_bool
 power_bloc_allow_foreign_investment_lower_rank_bool
 ```
 
-#### `08_movement_modifier_types.txt` -- 67 keys
+#### `08_movement_modifier_types.txt` —— 67 个键
 
 ```text
 state_pop_support_movement_pro_slavery_add
@@ -3430,7 +3430,7 @@ state_pop_support_movement_slave_revolt_mult
 state_free_state_pop_support_movement_anti_slavery_mult
 ```
 
-#### `09_social_class_modifier_types.txt` -- 101 keys
+#### `09_social_class_modifier_types.txt` —— 101 个键
 
 ```text
 country_brahmins_acceptance_min_add
@@ -3536,7 +3536,7 @@ country_strata_commoners_townspeople_qualification_growth_other_class_mult
 country_strata_outcastes_qualification_growth_other_class_mult
 ```
 
-#### `10_country_cultural_acceptance_culture_modifier_types.txt` -- 317 keys
+#### `10_country_cultural_acceptance_culture_modifier_types.txt` —— 317 个键
 
 ```text
 country_scottish_cultural_acceptance_add
@@ -3858,7 +3858,7 @@ country_lumad_cultural_acceptance_add
 country_ryukyuan_cultural_acceptance_add
 ```
 
-#### `11_country_fervor_taget_culture_modifier_types.txt` -- 317 keys
+#### `11_country_fervor_taget_culture_modifier_types.txt` —— 317 个键
 
 ```text
 country_fervor_target_scottish_add
@@ -4180,7 +4180,7 @@ country_fervor_target_lumad_add
 country_fervor_target_ryukyuan_add
 ```
 
-#### `12_ip4_script_modifiers.txt` -- 12 keys
+#### `12_ip4_script_modifiers.txt` —— 12 个键
 
 ```text
 country_yankee_and_dixie_cultures_obsessed_with_guns
@@ -4197,7 +4197,7 @@ country_two_spains_liberal_drift_add
 country_two_spains_conservative_drift_add
 ```
 
-#### `13_ep2_script_modifiers.txt` -- 3 keys
+#### `13_ep2_script_modifiers.txt` —— 3 个键
 
 ```text
 country_limit_officers_qualifications_to_upper_strata
@@ -4205,7 +4205,7 @@ country_je_korea_action_cost
 country_electoral_confidence_over_time
 ```
 
-#### `99_todo_sort_into_other_files.txt` -- 478 keys
+#### `99_todo_sort_into_other_files.txt` —— 478 个键
 
 ```text
 state_catholic_standard_of_living_add
@@ -4868,7 +4868,7 @@ add_modifier = { # academics polstr
 「最大条目数」指该文件内单个静态修饰符所含的**全部键**数量，**含 `icon`**（即块内键数最多的那个块的键数）。
 > ⚠️ 这句原先写的是「不含 `icon`」，与列里的数据**矛盾** —— 按「含」算 68/68 行相符，按「不含」只相符 1/68。已按数据如实改写；该表现在由 `v3 tables` 生成，说明与数字不会再各自漂移。
 
-| File | Entries | Max entries in one modifier |
+| 文件 | 条目数 | 单个修饰符最大条目数 |
 |---|---|---|
 | `00_code_static_modifiers.txt` | 150 | 49 |
 | `00_companies.txt` | 1 | 2 |
@@ -4945,7 +4945,7 @@ add_modifier = { # academics polstr
 
 `icon` 是静态修饰符**唯一**的非修饰符类型键，但并非强制。下图由脚本机械筛出全部 32 个缺 `icon` 的条目——其中 **26 个在 `00_code_static_modifiers.txt`**（代码内部使用、不在 UI 上作为"临时修正"展示），另有 5 个在 `104_modifiers.txt`、1 个在 `00_test_modifiers.txt`。
 
-| File | Static modifier without `icon` |
+| 文件 | 未声明 `icon` 的静态修饰符 |
 |---|---|
 | `00_code_static_modifiers.txt` | `base_army_attrition` |
 | `00_code_static_modifiers.txt` | `base_navy_attrition` |

@@ -296,9 +296,9 @@ def overlay(vanilla: DefinesReport, mod_text: str) -> dict[str, object]:
 #: NDiplomacy +39 个参数，总数 3434 应当变 3488，而文档里一直写着 3434）。
 #: 现在口径只有一处（:func:`_classify`），表格可以随时重算。
 DOC_TABLES: tuple[str, ...] = (
-    "| Namespace | Blocks | Params | File(s) |",
+    "| 命名空间 | 块数 | 参数数 | 文件 |",
     "| 文件（相对 `common\\defines\\`） | 顶层块数 | 标量参数 | 内联列表 | 嵌套块 | 条目合计 |",
-    "| File | Namespace block | Line | Scalar | Inline list | Nested | Total |",
+    "| 全部 defines 文件 | 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |",
     "| # | 命名空间 | 块起始行 | 该命名空间的块数 | 参数合计 |",
     "| 命名空间块 | 起始行 | 标量 | 内联列表 | 嵌套 | 合计 |",
 )
@@ -396,12 +396,11 @@ def doc_table_rows() -> dict[str, list[str]]:
 
 #: doc 05 §3.2 的表头：``NAI`` 参数按命名前缀分组。
 #:
-#: 这张表**曾经号称「脚本直接落盘的」而实际无人重跑** —— doc 05 §1 里写着
-#: 「由脚本机械生成的表头保持英文（如 ``Namespace block``、``Leading prefix``）」，
-#: 但产出它的 PowerShell 脚本早已退休，表还留在文档里。实测漂了 3 处
+#: 这张表此前没有可维护的生成入口：原 PowerShell 脚本已经退休，
+#: 表还留在文档里。实测漂了 3 处
 #: （``DIPLO_*`` 209→210、``SELL_*`` 4→6、``STRATEGIC_*`` 2→3，合计 1,013→1,017）。
-#: 现在接进 :mod:`pdx.docgen`，那句声明才重新成立。
-PREFIX_TABLE = "| Leading prefix | Param count |"
+#: 现在接进 :mod:`pdx.docgen`，中文表头在这里定义，数据行仍由提取逻辑生成。
+PREFIX_TABLE = "| 参数前缀 | 参数数 |"
 
 #: 无下划线的参数归到这一组（实测 NAI 里没有这种，但留着以防原版改名）
 NO_PREFIX = "（无前缀）"
@@ -659,7 +658,7 @@ def doc_table_specs() -> list[TableSpec | KeyedTableSpec]:
             ),
             KeyedTableSpec(
                 name="doc05 game_rule flag 数",
-                header="| # | game_rule key | default | 非默认 setting | flag 条目数 |",
+                header="| # | game_rule 键 | 默认 setting | 非默认 setting | flag 条目数 |",
                 cells=game_rule_rows,
                 key_column=1,
                 append_new=False,

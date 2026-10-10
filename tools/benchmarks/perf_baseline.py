@@ -446,7 +446,7 @@ SHARD_SUITE_ARGS = ["-n", "1", "--dist", "no"]
 def shard_test_files(files: Sequence[str], shard_count: int = SHARD_COUNT) -> list[list[str]]:
     """按稳定文件名轮转分片，并拒绝无意义的分片参数。"""
     if shard_count <= 0:
-        raise ValueError("shard_count must be positive")
+        raise ValueError("shard_count 必须为正数")
     shards: list[list[str]] = [[] for _ in range(shard_count)]
     for index, name in enumerate(sorted(files)):
         shards[index % shard_count].append(name)
