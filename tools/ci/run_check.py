@@ -33,7 +33,6 @@ BASELINE_COMMANDS = [
     ("offline ai surface", ["pdx.cli", "ai-surface", "--check", "--offline"]),
     ("offline citations", ["pdx.cli", "citations", "--offline"]),
     ("deadcode", ["tools.ci.deadcode_audit", "--check"]),
-    ("release", ["pdx.cli", "release"]),
 ]
 
 

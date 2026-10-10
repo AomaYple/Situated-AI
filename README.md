@@ -175,8 +175,8 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2923 条**用例；本轮维护后的完整覆盖率回归（串行）为 **2913 passed / 10 skipped / 0 failed**，耗时 1299.47 秒，覆盖率 **88.79%**，11 个核心模块下限通过。速度专项另有独立口径的 `n-auto` 历史记录（2904 collected、2894 passed、10 skipped）；真实 Windows/macOS/Linux × Python 3.11–3.14 离线 CI 矩阵全部通过；详见[维护记录](docs/audits/2026-10-10-repository-maintenance.md)与[速度执行记录](docs/audits/2026-10-10-speed-execution.md) |
-| 测试文件 | **113 个测试文件**（`tests/test_*.py`） |
+| 测试 | **2908 条**用例；此前仓库维护记录中的完整覆盖率回归（串行）为 **2913 passed / 10 skipped / 0 failed**，耗时 1299.47 秒，覆盖率 **88.79%**，11 个核心模块下限通过。速度专项另有独立口径的 `n-auto` 历史记录（2904 collected、2894 passed、10 skipped）；真实 Windows/macOS/Linux × Python 3.11–3.14 离线 CI 矩阵全部通过；详见[维护记录](docs/audits/2026-10-10-repository-maintenance.md)与[速度执行记录](docs/audits/2026-10-10-speed-execution.md) |
+| 测试文件 | **112 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 以 `v3 cov` 与 CI coverage artifact 的当前输出为准（门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
 | 解析规模 | **3,962** 个脚本文件（`game\` 下 `.txt` 3,758 + `.gui` 204，即 `pdx.cache` 的解析条数）+ **1,878** 个本地化 `.yml` |
@@ -200,7 +200,6 @@ Situated AI/
 │   └─ out/                  分析产物（已 gitignore）
 ├─ docs/reports/              人可读报告（**入库**）
 ├─ pyproject.toml            唯一配置源：依赖 / pytest / ruff / mypy / coverage
-├─ CHANGELOG.md              **发布说明**（玩家读的那一份）；`v3 release` 核它与档案/元数据一致
 └─ README.md  LICENSE  .gitignore  .gitattributes
 ```
 

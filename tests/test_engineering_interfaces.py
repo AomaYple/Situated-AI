@@ -36,7 +36,6 @@ def test_public_cli_commands_have_help() -> None:
         "modguard",
         "package",
         "citations",
-        "release",
         "preflight",
         "tables",
         "ai-surface",
@@ -57,7 +56,6 @@ def test_baseline_command_manifest_is_stable() -> None:
         "offline ai surface",
         "offline citations",
         "deadcode",
-        "release",
     ]
     assert all(
         command and command[0] in {"pip", "pdx.cli", "tools.ci.deadcode_audit"}

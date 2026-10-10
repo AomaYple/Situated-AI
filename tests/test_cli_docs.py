@@ -69,6 +69,20 @@ _SPLIT = re.compile(r";|&&|\|")
 #: 文档里提到的、**故意不检查**的目标：写清理由才许留。
 SKIP: dict[str, str] = {}
 
+#: 2026-10-10 删除变更说明及其专用命令。仅允许以下原始历史记录保留旧调用；
+#: 当前操作文档仍须通过命令存在性检查，其他未知命令不享有历史豁免。
+HISTORICAL_COMMAND_REFERENCES: dict[str, frozenset[str]] = {
+    "release": frozenset(
+        {
+            "docs/design/exec/接续说明.md",
+            "docs/design/exec/收口清单.md",
+            "docs/design/exec/阶段4-压力剧本-首跑.md",
+            "docs/design/exec/阶段7-版本演练-1.14.4.md",
+            "docs/design/exec/阶段7-长期维护.md",
+        }
+    ),
+}
+
 #: 框架通用选项的**候选名单**。判据不从这张表来 —— 它只是待验证的输入；
 #: 真正进允许集的是 :func:`framework_options` **实测**跑得通的那些。
 _FRAMEWORK_OPT_CANDIDATES = ("--help", "--version")
@@ -134,6 +148,7 @@ def fragments() -> Iterator[tuple[str, int, str]]:
             if path.is_relative_to(config.REPORTS):
                 continue  # 历史复核报告保留失败命令作为证据，不是操作手册。
             seen.add(path)
+            document = path.relative_to(config.REPO).as_posix()
             fenced = False
             for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 if line.lstrip().startswith("```"):
@@ -143,21 +158,44 @@ def fragments() -> Iterator[tuple[str, int, str]]:
                     body = line.split("#", 1)[0]
                     for piece in _SPLIT.split(body):
                         if piece.strip():
-                            yield path.name, lineno, piece
+                            yield document, lineno, piece
                 else:
                     for span in _SPAN.findall(line):
-                        yield path.name, lineno, span
+                        yield document, lineno, span
+
+
+def _command_offenders(frags: Iterable[tuple[str, int, str]] | None = None) -> list[str]:
+    tree = _command_tree()
+    return [
+        f"{doc}:{lineno} 未知子命令 {name!r} —— {frag.strip()[:80]}"
+        for doc, lineno, frag in (fragments() if frags is None else frags)
+        for name in _INVOCATION.findall(frag)
+        if name not in tree
+        and name not in SKIP
+        and doc not in HISTORICAL_COMMAND_REFERENCES.get(name, frozenset())
+    ]
 
 
 def test_文档里的v3命令都有对应的子命令() -> None:
-    tree = _command_tree()
-    bad = [
-        f"{doc}:{lineno} 未知子命令 {name!r} —— {frag.strip()[:80]}"
-        for doc, lineno, frag in fragments()
-        for name in _INVOCATION.findall(frag)
-        if name not in tree and name not in SKIP
-    ]
+    bad = _command_offenders()
     assert not bad, "文档提到了 CLI 里不存在的子命令：\n  " + "\n  ".join(bad[:15])
+
+
+def test_退役命令只允许出现在登记的历史记录中() -> None:
+    bad = _command_offenders(
+        [
+            ("docs/design/exec/阶段7-长期维护.md", 22, "v3.exe release --template"),
+            ("CONTRIBUTING.md", 3, "v3 release"),
+            ("docs/design/exec/阶段7-长期维护.md", 24, "v3 definitely-missing"),
+            ("docs/guides/阶段7-长期维护.md", 5, "v3 release"),
+        ]
+    )
+    assert len(bad) == 3
+    assert "CONTRIBUTING.md:3" in bad[0]
+    assert "'release'" in bad[0]
+    assert "阶段7-长期维护.md:24" in bad[1]
+    assert "'definitely-missing'" in bad[1]
+    assert "docs/guides/阶段7-长期维护.md:5" in bad[2]
 
 
 def _option_offenders(frags: Iterable[tuple[str, int, str]] | None = None) -> list[str]:
