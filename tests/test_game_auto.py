@@ -450,6 +450,22 @@ class TestRealTemplates:
     def test_load_template_给的是三通道数组(self) -> None:
         assert ga.load_template("btn_observe").shape[2] == 3
 
+    def test_无文字观察图标仅在底部范围匹配(self) -> None:
+        icon = Image.fromarray(ga.load_template("btn_observe_icon"))
+        screen = textured()
+        screen.paste(icon, (800, 1030))
+        cx, cy = 800 + icon.width // 2, 1030 + icon.height // 2
+        found = ga.locate(screen, "btn_observe_icon", roi=ga.BOTTOM_ROI)
+        assert (found.x, found.y) == (cx, cy)
+        assert found.score > 0.95
+        assert ga.locate_optional(screen, "btn_observe_icon", roi=ga.TOP_RIGHT_ROI) is None
+        assert ga.load_template("btn_observe_icon") is ga.load_template("btn_observe_icon")
+
+    def test_观察图标源模板变更不能静默使用旧裁剪(self, tmp_path) -> None:
+        Image.new("RGB", (100, 36)).save(tmp_path / "btn_observe.png")
+        with pytest.raises(ga.TemplateNotFoundError, match="源模板尺寸变化"):
+            ga.load_template("btn_observe_icon", tmp_path)
+
 
 # ────────────────────────── 等待与超时 ──────────────────────────
 
@@ -2995,6 +3011,39 @@ class TestBackgroundCommand:
 @pytest.mark.usefixtures("synthetic_windows_platform")
 class TestRunSession:
     """`run_session` 是探针共用的入口：起游戏 + 等加载 + 标准流程，一路传参不丢。"""
+
+    def test_英文检查点和恢复重启保留同一语言(self, monkeypatch, tmp_path):
+        launches = []
+        monkeypatch.setattr(ga, "DEBUG_LOG", tmp_path / "missing.log")
+
+        def launch(**kwargs):
+            launches.append(kwargs)
+            return 4242, 777
+
+        monkeypatch.setattr(ga, "launch_to_foreground", launch)
+        monkeypatch.setattr(ga, "wait_for_boot_settle", lambda **_kw: _settle())
+
+        def start(_hwnd, _previous, **kwargs):
+            assert kwargs["loaded_observer"] is True
+            assert kwargs["observe_template"] == "btn_observe_icon"
+            kwargs["foreground_relaunch"]()
+            return _session_start()
+
+        monkeypatch.setattr(ga, "start_session", start)
+        ga.run_session(save_name="checkpoint", language="l_english")
+        assert len(launches) == 2
+        assert all(
+            row["extra_args"] == ("-loadsave=checkpoint", "-language=l_english") for row in launches
+        )
+
+    @pytest.mark.parametrize("language", ["english", "", "l_english -debug_mode", "l_english"])
+    def test_不支持的语言或英文新局在启动前拒绝(self, monkeypatch, language):
+        monkeypatch.setattr(
+            ga, "launch_to_foreground", lambda **_kw: pytest.fail("语言拒绝不能启动游戏")
+        )
+        monkeypatch.setattr(ga, "kill_owned_game", lambda: None)
+        with pytest.raises(ValueError):
+            ga.run_session(language=language)
 
     def test_重载失败不继续向主菜单发送游戏输入(self, tmp_path, monkeypatch):
         log = tmp_path / "debug.log"

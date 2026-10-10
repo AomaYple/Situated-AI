@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from . import decisions
-from .game_run import ERROR_MARKERS, _normalize_mount_path
+from .game_run import ERROR_MARKERS, _normalize_mount_path, ga
 from .textio import GAME_SUFFIXES, text_bytes
 
 TAG_RE = re.compile(r"^[A-Z]{3}$")
@@ -71,6 +71,10 @@ def _clean_report(report: Mapping[str, Any]) -> tuple[bool, list[str]]:
             for key in ("mod_errors", "missing_mounts", "unexpected_mounts")
             if findings.get(key) != []
         )
+        # 历史原报告尚无这个字段；归档复核会补解析值。已有必需字段仍须
+        # 显式为空列表，不能为兼容新字段而把缺失的挂载/Mod结果默认为成功。
+        if findings.get("unclassified_errors", []) != []:
+            reasons.append("log_findings.unclassified_errors")
     review = report.get("review")
     if isinstance(review, Mapping) and review.get("mounts_verified") is False:
         reasons.append("review.mounts_not_verified")
@@ -111,6 +115,8 @@ def _clean_report(report: Mapping[str, Any]) -> tuple[bool, list[str]]:
     version = report.get("game_version")
     if not isinstance(version, Mapping) or not version:
         reasons.append("game_version.missing")
+    if report.get("language") is not None and report["language"] not in ga.SESSION_LANGUAGES:
+        reasons.append("language.invalid")
     return not reasons, reasons
 
 
@@ -152,6 +158,7 @@ class ReportFacts:
     deployed_hashes: Mapping[str, Mapping[str, str]]
     window_start: str | None
     activation_tick: str | None
+    language: str | None = None
 
     @property
     def strategy_digest(self) -> str | None:
@@ -260,7 +267,19 @@ def _country_facts(tag: str, rows: Iterable[Mapping[str, Any]]) -> CountryFacts:
 
 
 def load_report(path: Path) -> ReportFacts:
+    from .game_run import read_reviewed_report  # noqa: PLC0415
+
     report = json.loads(path.read_text(encoding="utf-8"))
+    # 原报告里的失败/缺证不能被新的日志解析清空；成功还必须经当前归档门禁复核。
+    clean, reasons = _clean_report(report)
+    try:
+        report = read_reviewed_report(path)
+        reviewed_clean, reviewed_reasons = _clean_report(report)
+        clean = clean and reviewed_clean
+        reasons.extend(reviewed_reasons)
+    except (OSError, ValueError, TypeError, KeyError, UnicodeError):
+        clean = False
+        reasons.append("log_archive.unverified")
     analysis = report.get("analysis")
     opportunity = analysis.get("opportunity") if isinstance(analysis, Mapping) else None
     rows = opportunity.get("rows", []) if isinstance(opportunity, Mapping) else []
@@ -269,7 +288,6 @@ def load_report(path: Path) -> ReportFacts:
         for row in rows:
             if isinstance(row, Mapping) and TAG_RE.fullmatch(str(row.get("tag", ""))):
                 grouped[str(row["tag"])].append(row)
-    clean, reasons = _clean_report(report)
     phases: dict[str, str] = {}
     for row in rows if isinstance(rows, list) else ():
         if (
@@ -350,6 +368,7 @@ def load_report(path: Path) -> ReportFacts:
         activation_tick=str(progress["activation_tick"])
         if progress.get("activation_tick")
         else None,
+        language=report.get("language") if isinstance(report.get("language"), str) else None,
     )
 
 
@@ -357,6 +376,8 @@ def _pair_shape(left: ReportFacts, right: ReportFacts) -> tuple[bool, list[str]]
     reasons: list[str] = []
     if left.game_version != right.game_version:
         reasons.append("game_version.differs")
+    if left.language != right.language:
+        reasons.append("language.differs_or_unknown")
     if not left.checkpoint_sha256 or left.checkpoint_sha256 != right.checkpoint_sha256:
         reasons.append("checkpoint.sha256_differs_or_missing")
     if left.mount_allowlist is None or right.mount_allowlist is None:
@@ -564,7 +585,7 @@ def screen(
 ) -> dict[str, Any]:
     reports = discover(root)
     resolver = _default_neutrality_resolver() if resolver is None else resolver
-    groups: dict[tuple[str, str, tuple[str, ...], str], list[ReportFacts]] = defaultdict(list)
+    groups: dict[tuple[str, str, tuple[str, ...], str, str], list[ReportFacts]] = defaultdict(list)
     for report in reports:
         groups[
             (
@@ -572,6 +593,7 @@ def screen(
                 report.checkpoint_sha256 or "",
                 report.mount_allowlist or (),
                 _json_key(report.non_strategy_sources),
+                report.language or "",
             )
         ].append(report)
     candidates: list[PairCandidate] = []

@@ -2077,7 +2077,9 @@ def clear_template_cache() -> None:
 def load_template(name: str, directory: Path | None = None) -> np.ndarray:
     """读按钮模板（``tools/probe/zz_probe_ab/ui/<name>.png``）；**同一份只读一次盘**。"""
     base = directory or UI_DIR
-    path = base / f"{name}.png"
+    # 英文检查点使用同一按钮的眼睛图标；不依赖中文文字，也不复制一套图片。
+    source_name = "btn_observe" if name == "btn_observe_icon" else name
+    path = base / f"{source_name}.png"
     key = (str(base), name)
     cached = _TEMPLATE_CACHE.get(key)
     if cached is not None:
@@ -2085,7 +2087,12 @@ def load_template(name: str, directory: Path | None = None) -> np.ndarray:
     if not path.is_file():
         raise TemplateNotFoundError(f"模板文件不存在：{path}")
     with Image.open(path) as handle:
-        array = np.array(handle.convert("RGB"))
+        frame = handle.convert("RGB")
+        if name == "btn_observe_icon":
+            if frame.size != (218, 36):
+                raise TemplateNotFoundError("观察按钮源模板尺寸变化，须重新复核眼睛图标裁剪")
+            frame = frame.crop((152, 6, 183, 27))
+        array = np.array(frame)
     _TEMPLATE_CACHE[key] = array
     return array
 
@@ -3606,6 +3613,7 @@ def _step_look(
     lobby_timeout: float = LOOK_TIMEOUT,
     force: bool = False,
     auto_new_game: bool = True,
+    observe_template: str = "btn_observe",
 ) -> tuple[Match, int]:
     """① 确认「观察」出现；返回 ``(匹配, 当前句柄)``。
 
@@ -3645,7 +3653,7 @@ def _step_look(
         found = (
             None
             if image is None
-            else locate_optional(image, "btn_observe", threshold=threshold, first_hit=True)
+            else locate_optional(image, observe_template, threshold=threshold, first_hit=True)
         )
         if found is not None:
             # 坐标是**裁剪图内**的 ⇒ 加回 ROI 偏移才是客户区坐标（否则点击会打到别处）
@@ -3714,7 +3722,12 @@ def _step_look(
 
 
 def _step_observe(
-    hwnd: int, match: Match, *, settle_timeout: float, force: bool = False
+    hwnd: int,
+    match: Match,
+    *,
+    settle_timeout: float,
+    force: bool = False,
+    observe_template: str = "btn_observe",
 ) -> dict[str, object]:
     """② 点「观察」进入观察者模式，并确认**界面真的切走了**。
 
@@ -3733,7 +3746,7 @@ def _step_observe(
         if tick_mark().readable:
             return True
         try:
-            return find_in_roi(hwnd, "btn_observe", roi=BOTTOM_ROI) is None
+            return find_in_roi(hwnd, observe_template, roi=BOTTOM_ROI) is None
         except CaptureFailedError as exc:
             capture_error = str(exc)
             return False
@@ -3880,6 +3893,7 @@ def start_session(
     foreground_recovery: bool = True,
     foreground_relaunch: Callable[[], tuple[int, int]] | None = None,
     loaded_observer: bool = False,
+    observe_template: str = "btn_observe",
 ) -> SessionStart:
     """**标准流程**：确认「观察」→ 点它 → 按 5 速快捷键 → 按空格 → 切回后台。
 
@@ -3923,8 +3937,11 @@ def start_session(
         lobby_timeout=lobby_timeout,
         force=force,
         auto_new_game=not loaded_observer,
+        observe_template=observe_template,
     )
-    _step_observe(hwnd, match, settle_timeout=settle_timeout, force=force)
+    _step_observe(
+        hwnd, match, settle_timeout=settle_timeout, force=force, observe_template=observe_template
+    )
     trace = trace.advance(AutomationPhase.OBSERVE_SELECTED)
 
     rate = 0.0
@@ -4013,6 +4030,17 @@ def start_session(
     )
 
 
+SESSION_LANGUAGES = ("l_english", "l_simp_chinese")
+
+
+def validate_session_language(language: str | None, *, loaded_observer: bool) -> None:
+    """临时语言只接受已声明值；英文目前只支持固定观察者检查点。"""
+    if language is not None and language not in SESSION_LANGUAGES:
+        raise ValueError(f"不支持的临时语言：{language!r}")
+    if language == "l_english" and not loaded_observer:
+        raise ValueError("英文自动化须提供观察者检查点；英文新游戏菜单尚未验证")
+
+
 def _run_session_impl(
     *,
     scripted_tests: bool = True,
@@ -4028,6 +4056,7 @@ def _run_session_impl(
     wait_tests: float = 0.0,
     background_seconds: float = 8.0,
     save_name: str | None = None,
+    language: str | None = None,
 ) -> SessionStart:
     """端到端一条命令：起游戏 → 等加载 → 观察/速度/空格 → 切回后台 →（可选）等判定。
 
@@ -4038,6 +4067,7 @@ def _run_session_impl(
     成绩单什么时候写完由套件的 ``last_date`` 决定，跑的可能是**小时级**，
     不能替调用方定这个时长。
     """
+    validate_session_language(language, loaded_observer=save_name is not None)
     if sys.platform != "win32":
         raise WindowsOnlyError(
             "run 需要 Windows GUI 输入后端；当前平台仍可使用 capabilities、status 和日志/判定解析。"
@@ -4045,7 +4075,9 @@ def _run_session_impl(
     # 点火**之前**先记下已有的成绩单 —— 引擎每局换一个新 uuid，
     # "出现了一个先前没有的文件"才是这一局的成绩单。
     known = frozenset(testoutput_files())
-    extra_args = (f"-loadsave={save_name}",) if save_name else ()
+    extra_args: tuple[str, ...] = (f"-loadsave={save_name}",) if save_name else ()
+    if language is not None:
+        extra_args += (f"-language={language}",)
     hwnd, previous = launch_to_foreground(
         scripted_tests=scripted_tests, timeout=lobby_timeout, extra_args=extra_args
     )
@@ -4081,6 +4113,7 @@ def _run_session_impl(
         foreground_recovery=foreground_recovery,
         foreground_relaunch=_relaunch_for_recovery if foreground_recovery else None,
         loaded_observer=save_name is not None,
+        observe_template="btn_observe_icon" if language == "l_english" else "btn_observe",
     )
     if wait_tests <= 0 or not scripted_tests:
         return started
@@ -4137,6 +4170,7 @@ def run_session(
     wait_tests: float = 0.0,
     background_seconds: float = 8.0,
     save_name: str | None = None,
+    language: str | None = None,
 ) -> SessionStart:
     """运行一次会话；失败时只清理本模块启动的进程。"""
     try:
@@ -4154,6 +4188,7 @@ def run_session(
             wait_tests=wait_tests,
             background_seconds=background_seconds,
             save_name=save_name,
+            language=language,
         )
     except BaseException:
         with suppress(Exception):

@@ -16,6 +16,59 @@ from pdx import game_run
 pytestmark = pytest.mark.unit
 
 
+def test_语言参数拒绝发生在锁和恢复事务之前(tmp_path, monkeypatch):
+    monkeypatch.setattr(game_run, "RunLock", lambda: pytest.fail("无效语言不能开启事务"))
+    with pytest.raises(ValueError, match="不支持的临时语言"):
+        game_run.run({"probe": tmp_path}, months=1, output=tmp_path / "out", language="x")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_语言进入报告启动和冻结实验环境(tmp_path, monkeypatch):
+    from pdx.experiment_queue import ExperimentLedger, RunRequest
+
+    user, source = tmp_path / "user", tmp_path / "source"
+    user.mkdir()
+    source.mkdir()
+    (source / "a.txt").write_bytes(b"probe = yes\n")
+    checkpoint = tmp_path / "checkpoint.v3"
+    checkpoint.write_bytes(
+        b'SAV0100\nmeta_data={version="1.14.5" game_date=1836.2.1}\nplayer_manager={database={}}\n'
+    )
+    monkeypatch.setattr(game_run.config, "USERDIR", user)
+    monkeypatch.setattr(
+        game_run.config, "game_version", lambda: {"caligula_branch": "release/1.14.5"}
+    )
+    monkeypatch.setattr(game_run.ga, "assert_no_game_running", lambda: None)
+    monkeypatch.setattr(game_run.ga, "_foreground_window", lambda: 0)
+    monkeypatch.setattr(game_run.ga, "_process_pids", list)
+    monkeypatch.setattr(game_run.ga, "kill_owned_game", lambda: None)
+    seen = {}
+
+    def fail_start(**kwargs):
+        seen.update(kwargs)
+        raise RuntimeError("停止在合成启动，禁止真实游戏")
+
+    monkeypatch.setattr(game_run.ga, "run_session", fail_start)
+    request = RunRequest(
+        "language-test", "observer", "vanilla", purpose="safety", min_available_mib=0
+    )
+    report = game_run.run(
+        {"probe": source},
+        months=1,
+        output=tmp_path / "out",
+        load_save=checkpoint,
+        language="l_english",
+        experiment=request,
+    )
+    assert seen["language"] == "l_english"
+    assert report["language"] == "l_english"
+    assert report["cleanup_errors"] == []
+    runs = ExperimentLedger(user / ".sitai-experiments.sqlite3").runs("language-test")
+    assert json.loads(runs[0]["manifest"])["environment"]["language"] == "l_english"
+    assert not report["ok"]
+    assert not (user / "mod/probe").exists()
+
+
 @pytest.fixture
 def deployment(tmp_path):
     user = tmp_path / "user"
@@ -559,6 +612,16 @@ def test_未列举的本模组错误也不能漏过门禁(tmp_path):
     assert findings["errors"]["Assertion failed"] == 1
 
 
+def test_未分类的VFS错误单独记录并触发实时守卫(tmp_path):
+    (tmp_path / "error.log").write_text("[x] VFSOpen Error: missing texture\n", encoding="utf-8")
+    findings = game_run.log_findings(tmp_path, [])
+    assert findings["unclassified_errors"] == ["[x] VFSOpen Error: missing texture"]
+    guard = game_run.LiveLogGuard()
+    guard.feed("error.log", (1, 1), b"VFSOpen Error: missing texture\n")
+    assert guard.failure is not None
+    assert guard.failure["kind"] == "VFSOpen Error"
+
+
 def test_证据分块哈希和原子json(tmp_path):
     raw = b"x" * 1024
     (tmp_path / "sample").write_bytes(raw)
@@ -842,7 +905,7 @@ def test_未知或不完整的存档头拒绝猜测(tmp_path, raw):
 def test_存档空规则和非观察者状态可在启动前发现(tmp_path):
     path = tmp_path / "save.v3"
     path.write_bytes(
-        b'SAV0100\nversion="1.14.5" game_date=1836.4.1 settings={ "" }\nplayer_manager={database={1={country=42}}}'
+        b'SAV0100\nversion="1.14.5" game_date=1836.4.1 game_rules={settings={ "" }}\nplayer_manager={database={1={country=42}}}'
     )
     header = game_run.save_header(path)
     assert header["observer"] == "no"
@@ -853,11 +916,68 @@ def test_原版规则列表首位空占位不算空规则(tmp_path):
     path = tmp_path / "vanilla-observer.v3"
     path.write_bytes(
         b'SAV0100\nversion="1.14.5" game_date=1836.4.1 '
-        b'settings={ "" achievements_allowed standard_ai_behavior }\n'
+        b'game_rules={settings={ "" achievements_allowed standard_ai_behavior }}\n'
         b"player_manager={database={}}"
     )
     header = game_run.save_header(path)
     assert "invalid_rules" not in header
+
+
+def test_已知失效的原版规则引用在启动前拒绝(tmp_path):
+    path = tmp_path / "stale-rule.v3"
+    path.write_bytes(
+        b'SAV0100\nversion="1.14.5" game_date=1836.4.1 '
+        b"game_rules={settings={ achievements_allowed no_ai_debts }}\nplayer_manager={database={}}"
+    )
+    header = game_run.save_header(path)
+    assert "no_ai_debts" in header["invalid_rules"]
+    with pytest.raises(ValueError, match="无效游戏规则引用"):
+        game_run.validate_load_save_header(
+            header, expected_version="1.14.5", allow_save_upgrade=False
+        )
+
+
+@pytest.mark.parametrize(
+    ("version", "body"),
+    [
+        ("1.15.0", b"game_rules={settings={ no_ai_debts }}"),
+        ("1.14.5", b"game_rules={settings={ no_ai_debts_new }}"),
+        ("1.14.5", b'comment="no_ai_debts" game_rules={settings={ standard_ai_behavior }}'),
+        ("1.14.5", b"settings={ no_ai_debts } game_rules={settings={ standard_ai_behavior }}"),
+    ],
+)
+def test_失效规则不误拒未来版本正文或相似键(tmp_path, version, body):
+    path = tmp_path / "save.v3"
+    path.write_bytes(
+        f'SAV0100\nversion="{version}" game_date=1836.4.1 '.encode()
+        + body
+        + b"\nplayer_manager={database={}}"
+    )
+    assert "invalid_rules" not in game_run.save_header(path)
+
+
+@pytest.mark.parametrize("existing", [True, False])
+def test_日志全目录隔离可从磁盘恢复且重复恢复安全(deployment, existing):
+    logs = deployment.userdir / "logs"
+    if existing:
+        (logs / "data_types").mkdir(parents=True)
+        (logs / "error.log").write_bytes(b"original log\r\n")
+        (logs / "data_types/common.txt").write_bytes(b"original types\r\n")
+    deployment.isolate_logs()
+    (logs / "error.log").write_bytes(b"experiment log\n")
+    (logs / "data_types").mkdir()
+    (logs / "data_types/common.txt").write_bytes(b"experiment types\n")
+    loaded = game_run.Deployment.load(deployment.userdir, deployment.evidence)
+    archive = Path(loaded.claim_info[str(logs)]["archive"])
+    assert loaded.restore() == []
+    assert loaded.restore() == []
+    assert (archive / "error.log").read_bytes() == b"experiment log\n"
+    assert (archive / "data_types/common.txt").read_bytes() == b"experiment types\n"
+    if existing:
+        assert (logs / "error.log").read_bytes() == b"original log\r\n"
+        assert (logs / "data_types/common.txt").read_bytes() == b"original types\r\n"
+    else:
+        assert not logs.exists()
 
 
 def test_旧处境状态在载入前拒绝(tmp_path):
@@ -1205,6 +1325,31 @@ def test_新归档复核必须使用完整挂载允许列表(tmp_path):
     result = game_run.read_reviewed_report(path)
     assert result["review"]["mounts_verified"] is True
     game_run.require_clean_report(result)
+
+
+def test_历史成功报告按VFS门禁只读拒绝(tmp_path):
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "debug.log").write_bytes(b"Mounted Data: C:/base\n")
+    (logs / "error.log").write_bytes(b"VFSOpen Error: missing texture\n")
+    path = tmp_path / "report.json"
+    game_run.write_json(
+        path,
+        {
+            "ok": True,
+            "mount_allowlist": ["C:/base"],
+            "log_hashes": game_run.hashes(logs),
+        },
+    )
+    original = path.read_bytes()
+    result = game_run.read_reviewed_report(path)
+    assert result["review"]["original_ok"] is True
+    assert result["review"]["mounts_verified"] is True
+    assert result["ok"] is False
+    assert result["log_findings"]["unclassified_errors"] == ["VFSOpen Error: missing texture"]
+    with pytest.raises(ValueError, match="门禁"):
+        game_run.require_clean_report(result)
+    assert path.read_bytes() == original
 
 
 def test_后期检查点不能接受早期但已写完的自动存档(tmp_path, monkeypatch):

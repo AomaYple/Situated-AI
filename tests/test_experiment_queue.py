@@ -64,6 +64,25 @@ def test_两次未枚举的模组错误也停止同场景(tmp_path):
         reserve(ledger, request(pair=3), tmp_path / "new")
 
 
+def test_两次未分类资源错误也停止同场景(tmp_path):
+    ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
+    for pair in (1, 2):
+        run_id = reserve(ledger, request(pair=pair), tmp_path / str(pair))
+        ledger.finish(
+            run_id,
+            {
+                "ok": False,
+                "log_findings": {
+                    "errors": {},
+                    "unclassified_errors": [f"VFSOpen Error: missing texture {pair}"],
+                },
+            },
+            report_sha256="b" * 64,
+        )
+    with pytest.raises(ValueError, match="错误重复"):
+        reserve(ledger, request(pair=3), tmp_path / "new")
+
+
 def test_失败消耗预算且更改预算不能事后追认(tmp_path):
     ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
     for index in range(6):
@@ -178,7 +197,7 @@ def test_发布报告后中断仍恢复错误停止事实但不拼接完成(tmp_
         reserve(ledger, request(pair=3), tmp_path / "three")
 
 
-@pytest.mark.parametrize("problem", [None, "engine", "mod", "malformed", "mounted"])
+@pytest.mark.parametrize("problem", [None, "engine", "mod", "unclassified", "malformed", "mounted"])
 def test_启动前结构化零错误报告可恢复而异常报告保持阻断(tmp_path, problem):
     from pdx import game_run
 
@@ -202,6 +221,8 @@ def test_启动前结构化零错误报告可恢复而异常报告保持阻断(t
         findings["errors"]["Assertion failed"] = 1
     elif problem == "mod":
         findings["mod_errors"] = ["invalid sitai_rule"]
+    elif problem == "unclassified":
+        findings["unclassified_errors"] = ["VFSOpen Error: missing texture"]
     elif problem == "malformed":
         findings["errors"]["Assertion failed"] = "0"
     elif problem == "mounted":

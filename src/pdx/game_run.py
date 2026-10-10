@@ -49,6 +49,9 @@ ERROR_MARKERS = (
     "Script system error!",
     "Assertion failed",
 )
+# 不属于十类脚本门禁、但仍表示引擎/VFS错误的日志项单独记录，避免
+# “十类为零”被误读为画面与资源加载完全无错。
+UNCLASSIFIED_ERROR_MARKERS = ("VFSOpen Error",)
 OBSERVER_WARNING = "Variable 'sitai_fiscal_risk' is used but is never set."
 
 
@@ -59,7 +62,9 @@ class LiveLogGuard:
     避免把尚未写完的已知财政警告误判。最终仍全量复核原始归档。
     """
 
-    needles = tuple((marker, marker.encode()) for marker in ERROR_MARKERS)
+    needles = tuple(
+        (marker, marker.encode()) for marker in (*ERROR_MARKERS, *UNCLASSIFIED_ERROR_MARKERS)
+    )
     warning = OBSERVER_WARNING.encode()
     overlap = max(len(warning), *(len(needle) for _, needle in needles)) - 1
     mod_pattern = re.compile(rb"sitai", re.IGNORECASE)
@@ -113,6 +118,7 @@ class LiveLogGuard:
 
 class LogFindings(TypedDict):
     errors: dict[str, int]
+    unclassified_errors: list[str]
     mounted: list[str]
     missing_mounts: list[str]
     unexpected_mounts: list[str]
@@ -323,6 +329,9 @@ LEGACY_SAVE_PATTERN = re.compile(
     rb"setting_sitai_|je_sitai_|sitai_(?:ru_|au_revolution_|brz_market_loss_|"
     rb"bv_alignment_|cn_intervention_|eg_debt_|pe_great_game_|sp_empire_remnant_|tr_defeat_)"
 )
+# 只登记对应版本实机确认的失效规则，不能外推到未来版本或正文中的同名变量。
+INVALID_SAVE_RULES = {"1.14.5": frozenset({b"no_ai_debts"})}
+SAVE_RULE_LIST = re.compile(rb"\bgame_rules\s*=\s*\{\s*settings\s*=\s*\{([^{}]*)\}")
 
 
 def save_header(path: Path) -> dict[str, str]:
@@ -340,8 +349,23 @@ def save_header(path: Path) -> dict[str, str]:
         raise ValueError("存档头缺少日期或版本")
     # 原版新局会在规则列表首位保留一个空占位，随后跟着一串有效规则；
     # 只有整个列表确实只有空字符串时，才是不可重放的空规则引用。
-    if re.search(rb'settings\s*=\s*\{\s*""\s*\}', header):
+    rule_lists = SAVE_RULE_LIST.findall(header)
+    # 旧版本/测试夹具可能没有 game_rules 外层，但精确的空 settings 仍表示
+    # 不可重放的空规则列表；只接受结构化空列表，不匹配正文中的同名文本。
+    empty_settings = re.search(rb'\bsettings\s*=\s*\{\s*""\s*\}', header)
+    if empty_settings or any(re.fullmatch(rb'\s*""\s*', values) for values in rule_lists):
         result["invalid_rules"] = "empty game-rule reference"
+    rules = {
+        token.strip(b'"')
+        for values in rule_lists
+        for token in re.findall(rb'"[^"\r\n]*"|[^\s"{}]+', values)
+    }
+    invalid = sorted(
+        rule.decode("ascii")
+        for rule in rules & INVALID_SAVE_RULES.get(result["version"], frozenset())
+    )
+    if invalid:
+        result["invalid_rules"] = "unknown game-rule reference: " + ",".join(invalid)
     # 观察者的player_manager数据库为空；缺该结构时保持未知，不能默认当观察者。
     with path.open("rb") as stream, mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as data:
         found = set(LEGACY_SAVE_PATTERN.findall(data))
@@ -366,7 +390,7 @@ def validate_load_save_header(
     if header.get("version") != expected_version and not allow_save_upgrade:
         raise ValueError("检查点游戏版本不一致；升级实验需显式声明")
     if header.get("invalid_rules"):
-        raise ValueError("存档包含空游戏规则引用；保留原件并重新生成干净检查点")
+        raise ValueError("存档包含无效游戏规则引用；保留原件并重新生成干净检查点")
     if header.get("legacy_mod_state"):
         raise ValueError(
             "存档包含已停用 Mod 状态；先保留原件并完成状态迁移，拒绝把旧世界直接载入新生产逻辑"
@@ -505,7 +529,8 @@ class Deployment:
             dest = Path(target)
             plain_path(dest)
             if (
-                dest.resolve() != (userdir / "save games").resolve()
+                dest.resolve()
+                not in {(userdir / "save games").resolve(), (userdir / "logs").resolve()}
                 and dest.parent.resolve() != (userdir / "mod").resolve()
             ):
                 raise ValueError("目录恢复路径越界")
@@ -513,9 +538,19 @@ class Deployment:
             if saved is not None:
                 plain_path(saved)
                 if not (
-                    saved.resolve() == (result.recovery_root / "original-save-directory").resolve()
+                    (
+                        dest.resolve() == (userdir / "save games").resolve()
+                        and saved.resolve()
+                        == (result.recovery_root / "original-save-directory").resolve()
+                    )
                     or (
-                        saved.parent == dest.parent
+                        dest.resolve() == (userdir / "logs").resolve()
+                        and saved.resolve()
+                        == (result.recovery_root / "original-log-directory").resolve()
+                    )
+                    or (
+                        dest.parent.resolve() == (userdir / "mod").resolve()
+                        and saved.parent == dest.parent
                         and saved.name.startswith(dest.name + ".sitai-backup")
                     )
                 ):
@@ -607,24 +642,30 @@ class Deployment:
 
     def isolate_saves(self) -> None:
         """隔离菜单会扫描的旧存档，结束时整体归还，不修改存档字节。"""
-        saves = self.userdir / "save games"
-        if any(path.is_symlink() for path in (saves, *saves.parents)):
-            raise ValueError("存档目录不允许符号链接")
-        backup = self.recovery_root / "original-save-directory"
-        if backup.exists():
-            raise ValueError("存档目录备份已存在，拒绝覆盖")
-        if saves.exists():
-            self._claim(saves, backup)
-            move_directory(saves, backup)
-        else:
-            self._claim(saves, None)
-        self.claim_info[str(saves)]["phase"] = "moved"
-        self._persist()
-        saves.mkdir(parents=True)
+        self._isolate_directory("save games", "original-save-directory")
         write_json(
             self.evidence / "state-backups.json",
             {str(p): str(saved) if saved else None for p, saved in self.state_files.items()},
         )
+
+    def isolate_logs(self) -> None:
+        """隔离全部用户日志与子目录；持久事务负责原件逐字节归还。"""
+        self._isolate_directory("logs", "original-log-directory")
+
+    def _isolate_directory(self, name: str, backup_name: str) -> None:
+        directory = self.userdir / name
+        plain_path(directory)
+        backup = self.recovery_root / backup_name
+        if backup.exists():
+            raise ValueError(f"{name} 目录备份已存在，拒绝覆盖")
+        if directory.exists():
+            self._claim(directory, backup)
+            move_directory(directory, backup)
+        else:
+            self._claim(directory, None)
+        self.claim_info[str(directory)]["phase"] = "moved"
+        self._persist()
+        directory.mkdir(parents=True)
 
     def deploy(self, sources: Mapping[str, Path]) -> list[Path]:
         self.evidence.mkdir(parents=True, exist_ok=True)
@@ -892,6 +933,7 @@ def log_findings(
     解析，但没有新允许列表的历史报告不会被追认为通过。
     """
     errors = dict.fromkeys(ERROR_MARKERS, 0)
+    unclassified_errors: list[str] = []
     mounted: list[str] = []
     mounted_paths: set[str] = set()
     mod_errors: list[str] = []
@@ -902,6 +944,8 @@ def log_findings(
                 if path.name.startswith("error"):
                     for marker in ERROR_MARKERS:
                         errors[marker] += line.count(marker)
+                    if any(marker in line for marker in UNCLASSIFIED_ERROR_MARKERS):
+                        unclassified_errors.append(line.strip())
                     if "sitai" in line.casefold():
                         if OBSERVER_WARNING in line:
                             observer_warnings.append(line.strip())
@@ -918,6 +962,7 @@ def log_findings(
     unexpected = sorted(mounted_paths - expected) if expected_mounts is not None else []
     return {
         "errors": errors,
+        "unclassified_errors": unclassified_errors,
         "mounted": mounted,
         "missing_mounts": missing,
         "unexpected_mounts": unexpected,
@@ -941,6 +986,7 @@ def require_clean_report(report: dict) -> None:
         or findings.get("mod_errors")
         or findings.get("missing_mounts")
         or findings.get("unexpected_mounts")
+        or findings.get("unclassified_errors")
     ):
         raise ValueError("两臂实机门禁必须通过；旧口径需先核对原始归档")
 
@@ -977,6 +1023,7 @@ def read_reviewed_report(path: Path) -> dict:
         or findings["mod_errors"]
         or findings["missing_mounts"]
         or findings["unexpected_mounts"]
+        or findings.get("unclassified_errors")
     ):
         report["ok"] = False
         report.setdefault("failure", "当前门禁复核发现引擎错误或挂载隔离证据不足")
@@ -1019,12 +1066,14 @@ def run(
     profile: bool = False,
     experiment: RunRequest | None = None,
     prior_failure_reports: tuple[Path, ...] = (),
+    language: str | None = None,
 ) -> dict[str, object]:
     """运行隔离观察者局，成功与失败都保留不可覆盖的原始证据。"""
     if not math.isfinite(months) or months <= 0:
         raise ValueError("months 必须为有限正数")
     if not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("timeout 必须为有限正数")
+    ga.validate_session_language(language, loaded_observer=load_save is not None)
     if not sources or any(not path.is_dir() for path in sources.values()):
         raise ValueError("实验必须提供存在的 mod 源目录")
     if prior_failure_reports and experiment is None:
@@ -1045,6 +1094,7 @@ def run(
             "deployment_journal": str(deployment.journal),
             "recovery_root": str(deployment.recovery_root),
             "game_version": game_version,
+            "language": language,
             "months": months,
             "source_hashes": source_hashes,
         }
@@ -1180,6 +1230,7 @@ def run(
                         },
                         "environment": {
                             "game": report["game_version"],
+                            "language": language,
                             "tools": {
                                 p.name: file_sha(p)
                                 for p in sorted(Path(__file__).parent.glob("*.py"))
@@ -1222,6 +1273,8 @@ def run(
                 frozen_sources[name] = frozen
             timings.call("user_state_backup", deployment.snapshot_state)
             timings.call("save_isolation", deployment.isolate_saves)
+            timings.call("log_isolation", deployment.isolate_logs)
+            report["log_isolation"] = "transactional_directory"
             # 仅本局用干净预设；原件已按字节备份，收尾恢复。
             (config.USERDIR / "player/game_rules/presets.txt").unlink(missing_ok=True)
             report["quarantined"] = ga.quarantine_logs(evidence / "previous-logs")
@@ -1264,6 +1317,7 @@ def run(
                 scripted_tests=False,
                 force=True,
                 save_name=save_name,
+                language=language,
             )
             report["session"] = session.as_dict()
             check_health()
@@ -1361,7 +1415,7 @@ def run(
                         "hashes": hashes(save.parent),
                     }
                     if save_header(save).get("invalid_rules"):
-                        raise ValueError("本局检查点包含空游戏规则引用，未通过载入前置检查")
+                        raise ValueError("本局检查点包含无效游戏规则引用，未通过载入前置检查")
                 except Exception as exc:
                     report.setdefault("failure", f"检查点归档失败：{type(exc).__name__}: {exc}")
             for name, action in (
@@ -1415,6 +1469,7 @@ def run(
                 or findings["mod_errors"]
                 or findings["missing_mounts"]
                 or findings["unexpected_mounts"]
+                or findings.get("unclassified_errors")
             ):
                 report.setdefault("failure", "引擎错误或缺少本局挂载证据")
             if cleanup_errors:

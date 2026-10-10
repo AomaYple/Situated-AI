@@ -69,6 +69,8 @@ def paired_sources(control: dict, treatment: dict) -> list[dict]:
         raise ValueError("两臂必须记录相同检查点的完整 SHA-256")
     if control.get("game_version") != treatment.get("game_version"):
         raise ValueError("两臂游戏版本不一致")
+    if control.get("language") != treatment.get("language"):
+        raise ValueError("两臂临时语言不一致或一臂缺少语言记录")
     sources = [r["source_hashes"] for r in (control, treatment)]
     if any("sitai_decision_candidate" not in source for source in sources):
         raise ValueError("两臂必须包含已声明的候选决策产物")

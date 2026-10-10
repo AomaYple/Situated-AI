@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+from typing import Any
 
 import pytest
 
@@ -83,7 +84,7 @@ def origin(tmp_path, *, clean=True):
     source.parent.mkdir(parents=True)
     source.write_bytes(b"observer = yes\n")
     raw = source.read_bytes()
-    report = {
+    report: dict[str, Any] = {
         "ok": True,  # 故意保留历史误判，须以归档重新核验。
         "cleanup_errors": [],
         "checkpoint": {"hashes": {path.name: game_run.file_sha(path)}},
@@ -210,3 +211,56 @@ def test_实验存档局部来源报告缺失拒绝而不是当作普通外部�
     assert result["state"] == "rejected"
     assert "origin.output_unverified" in result["reasons"]
     assert "origin.not_clean" in result["reasons"]
+
+
+@pytest.mark.parametrize(
+    "damage", [None, "vfs", "source", "missing_cleanup", "header", "output", "version", "loaded"]
+)
+def test_原版新局检查点来源独立复核不伪造载入或行为资格(tmp_path, damage):
+    path, report_path = origin(tmp_path)
+    path = path.rename(path.with_name("checkpoint.v3"))
+    shutil.rmtree(report_path.parent / "sources")
+    logs = report_path.parent / "logs"
+    (logs / "debug.log").write_bytes(b"Mounted Data: base\n")
+    if damage == "vfs":
+        (logs / "error.log").write_bytes(b"VFSOpen Error: missing texture\n")
+    report: dict[str, Any] = {
+        "kind": "vanilla_checkpoint_preparation",
+        "ok": True,
+        "content_load": "vanilla_only",
+        "session_requested": True,
+        "logs_isolated": True,
+        "cleanup_errors": [],
+        "source_hashes": {},
+        "deployed_hashes": {},
+        "game_version": {"caligula_branch": "release/1.14.5"},
+        "mount_allowlist": ["base"],
+        "log_hashes": game_run.hashes(logs),
+        "checkpoint": {
+            "header": game_run.save_header(path),
+            "hashes": {path.name: game_run.file_sha(path)},
+        },
+    }
+    if damage == "source":
+        report["source_hashes"] = {"undeclared": {"file.txt": "a" * 64}}
+    elif damage == "missing_cleanup":
+        report.pop("cleanup_errors")
+    elif damage == "header":
+        report["checkpoint"]["header"]["observer"] = "no"
+    elif damage == "output":
+        path.write_bytes(path.read_bytes() + b"changed")
+    elif damage == "version":
+        report["game_version"]["caligula_branch"] = "release/1.15"
+    elif damage == "loaded":
+        report["loaded_save"] = {"sha256": "a" * 64}
+    game_run.write_json(report_path, report)
+    original = report_path.read_bytes()
+    result = checkpoint_catalog.inspect(path, expected_version="1.14.5")
+    assert report_path.read_bytes() == original
+    assert result["instrument_suitable"] is (damage is None)
+    assert result["formal_pair_suitable"] is False
+    assert result["opportunity_count"] is None
+    assert result["origin_reports"][0]["clean"] is (damage is None)
+    origin_row = result["origin_reports"][0]
+    if origin_row["clean"]:
+        assert origin_row.get("checkpoint_sha256") == result["sha256"]

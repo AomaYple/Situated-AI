@@ -32,6 +32,9 @@ def _failure_types(report: Mapping[str, Any]) -> list[str]:
     if isinstance(findings, dict) and findings.get("mod_errors"):
         # 未枚举的模组错误统一保守计次，不被时间戳/对象 ID 的变化绕过。
         errors.add("unclassified-mod-error")
+    if isinstance(findings, dict) and findings.get("unclassified_errors"):
+        # 资源/VFS 等尚未逐类建模的错误同样必须进入停止计数，不能由旧字段缺失绕过。
+        errors.add("unclassified-error")
     return sorted(errors)
 
 
@@ -226,6 +229,7 @@ class ExperimentLedger:
                         and isinstance(counts, dict)
                         and all(type(count) is int and count == 0 for count in counts.values())
                         and not findings.get("mod_errors")
+                        and not findings.get("unclassified_errors")
                         and not findings.get("mounted")
                         and not findings.get("unexpected_mounts")
                     ):

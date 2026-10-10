@@ -21,7 +21,16 @@ from typing import Any
 
 from pdx import config
 from pdx import game_auto as ga
-from pdx.game_run import Deployment, RunLock, save_header, validate_load_save_header, write_json
+from pdx.game_run import (
+    Deployment,
+    RunLock,
+    hashes,
+    log_findings,
+    mount_allowlist,
+    save_header,
+    validate_load_save_header,
+    write_json,
+)
 
 SAVE_NAME = "sitai_clean_observer_checkpoint"
 OUT_DIR = config.OUT / "checkpoints"
@@ -103,14 +112,33 @@ def _make_checkpoint(*, output: Path, name: str) -> dict[str, Any]:
     deployment = Deployment(SAVE_DIR.parent, evidence)
     deployment.content = CONTENT_LOAD
     session: ga.SessionStart | None = None
+    result: dict[str, Any] = {
+        "evidence": str(evidence),
+        "kind": "vanilla_checkpoint_preparation",
+        "game_version": config.game_version(),
+        "content_load": "vanilla_only",
+        "source_hashes": {},
+        "deployed_hashes": {},
+        "session_requested": False,
+        "logs_isolated": False,
+        "mount_allowlist": mount_allowlist([]),
+        "ok": False,
+    }
+    target = output / f"{name}.v3"
+    temporary = evidence / "saves" / "checkpoint.v3"
     try:
+        if target.exists():
+            raise FileExistsError(f"检查点已存在，拒绝覆盖证据：{target}")
         deployment.snapshot_state()
         deployment.isolate_saves()
+        deployment.isolate_logs()
+        result["logs_isolated"] = True
         deployment.deploy({})
         CONTENT_LOAD.write_bytes(_vanilla_content_load())
         RULE_PRESETS.unlink(missing_ok=True)
         autosave = SAVE_DIR / "autosave.v3"
         previous_sha256 = _sha256(autosave) if autosave.is_file() else None
+        result["session_requested"] = True
         hwnd, old_foreground = ga.launch_to_foreground(
             scripted_tests=False, timeout=float(ga.WINDOW_TIMEOUT)
         )
@@ -140,24 +168,25 @@ def _make_checkpoint(*, output: Path, name: str) -> dict[str, Any]:
         )
         if header.get("observer") != "yes":
             raise ga.GameAutoError(f"检查点不是观察者存档：{header}")
-        target = output / f"{name}.v3"
         digest = _sha256(autosave)
-        if target.exists():
-            raise FileExistsError(f"检查点已存在，拒绝覆盖证据：{target}")
-        temporary = evidence / "checkpoint.v3.tmp"
+        temporary.parent.mkdir(parents=True)
         shutil.copyfile(autosave, temporary)
         if _sha256(temporary) != digest or _sha256(autosave) != digest:
             raise ga.GameAutoError("复制期间检查点发生变化，保留临时证据并拒绝发布")
-        temporary.replace(target)
-        return {
-            "path": str(target),
-            "sha256": digest,
-            "bytes": target.stat().st_size,
-            "header": header,
-            "content_load": "vanilla_only",
-            "session": session.as_dict(),
-            "state_evidence": str(evidence),
-        }
+        result.update(
+            {
+                "path": str(target),
+                "sha256": digest,
+                "bytes": temporary.stat().st_size,
+                "header": header,
+                "session": session.as_dict(),
+                "state_evidence": str(evidence),
+                "checkpoint": {"header": header, "hashes": {temporary.name: digest}},
+            }
+        )
+    except BaseException as exc:
+        result["failure"] = f"{type(exc).__name__}: {exc}"
+        raise
     finally:
         cleanup_errors: list[str] = []
         try:
@@ -172,7 +201,34 @@ def _make_checkpoint(*, output: Path, name: str) -> dict[str, Any]:
         except Exception as exc:
             cleanup_errors.append(f"无法核实游戏退出；保留原件和实验目录：{exc}")
         if not cleanup_errors:
+            # 全目录归还由 Deployment 负责；顶级日志另保留标准原始归档。
+            try:
+                if any(original == SAVE_DIR.parent / "logs" for original, _ in deployment.claims):
+                    ga.quarantine_logs(evidence / "logs")
+                    cleanup_errors.extend(ga.LAST_QUARANTINE_ERRORS)
+            except Exception as exc:
+                cleanup_errors.append(f"检查点日志归档失败：{exc}")
             cleanup_errors.extend(deployment.restore())
+        result["cleanup_errors"] = cleanup_errors
+        try:
+            result["log_hashes"] = hashes(evidence / "logs")
+            findings = log_findings(
+                evidence / "logs", [], expected_mounts=result["mount_allowlist"]
+            )
+            result["log_findings"] = findings
+            result["ok"] = not (
+                result.get("failure")
+                or cleanup_errors
+                or not result["log_hashes"]
+                or any(findings["errors"].values())
+                or findings["mod_errors"]
+                or findings["missing_mounts"]
+                or findings["unexpected_mounts"]
+                or findings["unclassified_errors"]
+            )
+        except Exception as exc:
+            result["failure"] = f"检查点日志门禁失败：{exc}"
+        write_json(evidence / "report.json", result)
         write_json(
             evidence / "cleanup.json",
             {"cleaned": not cleanup_errors, "errors": cleanup_errors},
@@ -182,6 +238,22 @@ def _make_checkpoint(*, output: Path, name: str) -> dict[str, Any]:
                 ga._set_foreground(previous)
         if cleanup_errors:
             raise RuntimeError(f"检查点收尾失败；原始备份保留于 {evidence}：{cleanup_errors}")
+    if not result["ok"]:
+        raise ga.GameAutoError(f"检查点生成局未通过严格门禁；存档仅保留在证据目录：{evidence}")
+    try:
+        # RunLock 只约束项目入口；外部写入者仍可能在运行期间创建同名文件。
+        # 独占创建保证发布不会覆写后出现的用户文件或旧证据。
+        with temporary.open("rb") as source, target.open("xb") as destination:
+            shutil.copyfileobj(source, destination, length=1024 * 1024)
+        if _sha256(target) != result["sha256"]:
+            raise ga.GameAutoError("检查点发布副本指纹不符；保留现场")
+        result["published"] = True
+    except Exception as exc:
+        result.update(ok=False, published=False, failure=f"检查点发布失败：{exc}")
+        raise
+    finally:
+        write_json(evidence / "report.json", result)
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:

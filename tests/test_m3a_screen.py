@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from pdx import m3a_screen
+from pdx import game_run, m3a_screen
 from pdx.textio import text_bytes
 
 CONTROL_DIGEST = hashlib.sha256(b"control").hexdigest()
@@ -80,8 +80,34 @@ def _report(path: Path, *, neutrality: str = "control", clean: bool = True) -> P
             files[relative] = hashlib.sha256(raw).hexdigest()
             deployed[name][relative] = hashlib.sha256(text_bytes(value, game=True)).hexdigest()
     data["deployed_hashes"] = deployed
+    logs = path.parent / "logs"
+    logs.mkdir()
+    (logs / "debug.log").write_bytes(b"Mounted Data: base\nMounted Data: candidate\n")
+    (logs / "error.log").write_bytes(b"")
+    data["log_hashes"] = game_run.hashes(logs)
     path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8", newline="\n")
     return path
+
+
+@pytest.mark.parametrize("damage", ["vfs", "missing", "tampered"])
+def test_历史报告漏判或日志缺证不能进入合格筛选(tmp_path, damage):
+    path = _report(tmp_path / "old.json")
+    logs = path.parent / "logs"
+    if damage == "missing":
+        (logs / "error.log").unlink()
+    else:
+        (logs / "error.log").write_bytes(b"VFSOpen Error: missing texture\n")
+    if damage == "vfs":
+        data = json.loads(path.read_bytes())
+        data["log_hashes"] = game_run.hashes(logs)
+        game_run.write_json(path, data)
+    original = path.read_bytes()
+    facts = m3a_screen.load_report(path)
+    assert not facts.clean
+    assert (
+        "log_findings.unclassified_errors" if damage == "vfs" else "log_archive.unverified"
+    ) in facts.gate_reasons
+    assert path.read_bytes() == original
 
 
 def test_load_report_extracts_two_eligible_countries(tmp_path: Path) -> None:
@@ -90,6 +116,24 @@ def test_load_report_extracts_two_eligible_countries(tmp_path: Path) -> None:
     assert facts.checkpoint_sha256 == "a" * 64
     assert facts.countries["RUS"].eligible_active_dates == ("sample-1", "sample-2")
     assert facts.countries["PRU"].score_range == (10.0, 10.0)
+
+
+@pytest.mark.parametrize("other", [None, "l_simp_chinese"])
+def test_语言改变或缺证不属于同一冻结场景(tmp_path, other):
+    left = _report(tmp_path / "left.json")
+    right = _report(tmp_path / "right.json", neutrality="treatment")
+    for path, language in ((left, "l_english"), (right, other)):
+        data = json.loads(path.read_bytes())
+        data["language"] = language
+        path.write_text(json.dumps(data), encoding="utf-8", newline="\n")
+    pair = m3a_screen.pair_reports(
+        m3a_screen.load_report(left),
+        m3a_screen.load_report(right),
+        neutrality_resolver={CONTROL_DIGEST: (0.0, -0.2), TREATMENT_DIGEST: (25.0, -0.2)}.get,
+    )
+    assert not pair.qualified
+    assert "language.differs_or_unknown" in pair.reasons
+    assert m3a_screen.screen(tmp_path)["qualified_count"] == 0
 
 
 def test_pair_requires_resolved_neutrality_and_reports_roles(tmp_path: Path) -> None:

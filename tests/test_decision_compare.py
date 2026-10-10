@@ -143,6 +143,15 @@ def test_两臂挂载允许清单不一致不得配对():
         compare(report(), right)
 
 
+@pytest.mark.parametrize("other", [None, "l_simp_chinese"])
+def test_临时语言不同或另一臂缺证不接受配对(other):
+    left, right = report(), report(neutrality=25)
+    left["language"] = "l_english"
+    right["language"] = other
+    with pytest.raises(ValueError, match="语言"):
+        compare(left, right)
+
+
 def test_旧门禁和引擎错误拒绝评分配对():
     right = report(neutrality=25)
     del right["log_findings"]["errors"]["Script system error!"]

@@ -16,6 +16,57 @@ from .deployment_state import digest, plain_path
 STATES = ("instrument-suitable", "formal-pair-suitable", "rejected", "opportunity-unknown")
 
 
+def _review_preparation(path: Path, report: Mapping[str, Any]) -> list[str]:
+    """原版新局没有载入存档或探针，按独立准备契约核验，不能借用行为资格。"""
+    from .game_run import (  # noqa: PLC0415
+        require_clean_report,
+        save_header,
+        validate_load_save_header,
+    )
+
+    require_clean_report(dict(report))
+    reasons: list[str] = []
+    for field, expected in (
+        ("content_load", "vanilla_only"),
+        ("source_hashes", {}),
+        ("deployed_hashes", {}),
+        ("cleanup_errors", []),
+        ("session_requested", True),
+        ("logs_isolated", True),
+    ):
+        if (
+            field not in report
+            or type(report[field]) is not type(expected)
+            or report[field] != expected
+        ):
+            reasons.append(f"preparation.{field}")
+    if report.get("loaded_save") or (path.parent / "sources").exists():
+        reasons.append("preparation.not_vanilla_new_game")
+    checkpoint = report.get("checkpoint")
+    if not isinstance(checkpoint, Mapping) or not isinstance(checkpoint.get("header"), Mapping):
+        reasons.append("preparation.checkpoint_missing")
+        return reasons
+    output = path.parent / "saves" / "checkpoint.v3"
+    plain_path(output)
+    before = digest(output)
+    header = save_header(output)
+    if checkpoint.get("hashes") != {output.name: before} or digest(output) != before:
+        reasons.append("preparation.output_changed_or_incomplete")
+    if checkpoint["header"] != header or header.get("observer") != "yes":
+        reasons.append("preparation.header_differs_or_not_observer")
+    version = report.get("game_version")
+    expected_version = version.get("caligula_branch") if isinstance(version, Mapping) else None
+    if not isinstance(expected_version, str) or not expected_version:
+        reasons.append("preparation.game_version_missing")
+    else:
+        validate_load_save_header(
+            header,
+            expected_version=expected_version.split("/")[-1],
+            allow_save_upgrade=False,
+        )
+    return reasons
+
+
 def _review_report(path: Path) -> dict[str, Any]:
     """保留输出指纹后复核原局，避免把失败局产物当作新输入。"""
     from .game_run import read_reviewed_report  # noqa: PLC0415
@@ -60,19 +111,29 @@ def _review_report(path: Path) -> dict[str, Any]:
         loaded = raw.get("loaded_save", {})
         if "header" in loaded and not isinstance(loaded["header"], Mapping):
             raise ValueError("报告字段 loaded_save.header 必须是对象")
+        is_preparation = raw.get("kind") == "vanilla_checkpoint_preparation"
         del raw
-        reviewed = read_reviewed_report(path)
-        facts = load_report(path)
+        if is_preparation:
+            reviewed = read_reviewed_report(path)
+            reasons = _review_preparation(path, reviewed)
+            output_sha = row["output_sha256"]
+            row.update(
+                checkpoint_sha256=output_sha[0] if len(output_sha) == 1 else None,
+                clean=not reasons,
+                reasons=reasons,
+            )
+        else:
+            # 行为报告加载器已执行当前日志门禁；避免再次散列/扫描同一大归档。
+            facts = load_report(path)
+            row.update(
+                checkpoint_sha256=facts.checkpoint_sha256,
+                clean=facts.clean,
+                reasons=list(facts.gate_reasons),
+            )
         if digest(path) != before:
             raise ValueError("报告在复核中变化")
-        row.update(
-            checkpoint_sha256=facts.checkpoint_sha256,
-            clean=reviewed.get("ok") is True and facts.clean,
-            reasons=list(facts.gate_reasons),
-        )
-        if reviewed.get("ok") is not True:
-            row["reasons"].append(str(reviewed.get("failure", "report.rejected")))
     except (OSError, ValueError, TypeError, KeyError, UnicodeError) as exc:
+        row["clean"] = False
         row["reasons"] = [f"{type(exc).__name__}: {exc}"]
     return row
 

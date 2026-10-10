@@ -412,6 +412,8 @@ def test_全局政治正控明确隔离且不强制立法(tmp_path, monkeypatch)
             str(tmp_path / "checkpoint.v3"),
             "--experiment-plan",
             "isolated-positive-control",
+            "--language",
+            "l_english",
         ],
     )
     inspected = []
@@ -422,6 +424,7 @@ def test_全局政治正控明确隔离且不强制立法(tmp_path, monkeypatch)
         assert experiment.purpose == "instrument"
         assert experiment.max_months == 6
         assert options["load_save"] == tmp_path / "checkpoint.v3"
+        assert options["language"] == "l_english"
         assert "zz_probe_decision_lifecycle" in sources
         candidate = sources["sitai_decision_candidate"]
         strategy = (candidate / "common/ai_strategies/00_default_strategy.txt").read_text(

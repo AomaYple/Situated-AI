@@ -38,6 +38,11 @@ def main() -> int:
     parser.add_argument("--keep-save", action="store_true")
     parser.add_argument("--timeout", type=float, default=21600)
     parser.add_argument("--allow-save-upgrade", action="store_true")
+    parser.add_argument(
+        "--language",
+        choices=game_run.ga.SESSION_LANGUAGES,
+        help="仅本局传入语言启动参数，不改用户设置；英文仅支持观察者检查点",
+    )
     parser.add_argument("--profile", action="store_true", help="采集后台窗口的引擎逐帧任务计时")
     parser.add_argument(
         "--localization-baseline", action="store_true", help="隔离实验补原版中文缺键；不豁免错误"
@@ -288,6 +293,7 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
             max_months=args.max_months,
         ),
         prior_failure_reports=tuple(args.prior_failure_report),
+        language=getattr(args, "language", None),
     )
     print(
         json.dumps(

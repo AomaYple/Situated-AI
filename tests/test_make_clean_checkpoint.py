@@ -24,11 +24,13 @@ _SCRIPT = config.REPO / "tools" / "probe" / "make_clean_checkpoint.py"
 
 @pytest.fixture(autouse=True)
 def _isolate_output_and_processes(tmp_path, monkeypatch):
-    from pdx import game_auto
+    from pdx import game_auto, game_run
 
     monkeypatch.setattr(config, "OUT", tmp_path / "probe-out")
     monkeypatch.setattr(game_auto, "_process_pids", list)
     monkeypatch.setattr(game_auto, "LAST_KILL_ALIVE", [])
+    monkeypatch.setattr(game_auto, "USER_LOGS_DIR", tmp_path / "logs")
+    monkeypatch.setattr(game_run, "_base_mount_allowlist", lambda: [tmp_path / "native"])
     monkeypatch.setattr(sys, "platform", "win32")
 
 
@@ -66,8 +68,9 @@ def test_make_checkpoint在非windows平台明确拒绝(
         module.make_checkpoint(output=tmp_path)
 
 
-def test_make_checkpoint恢复配置规则和全部用户存档(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("error_kind", [None, "script", "mount", "vfs", "publish_collision"])
+def test_make_checkpoint恢复配置规则存档日志且拒绝失败局产物(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error_kind: str | None
 ) -> None:
     module = _load()
     content = tmp_path / "content_load.json"
@@ -81,6 +84,10 @@ def test_make_checkpoint恢复配置规则和全部用户存档(
     old_autosave = save_dir / "autosave.v3"
     user_save.write_bytes(b"SAV-user")
     old_autosave.write_bytes(b"SAV-old-autosave")
+    logs = tmp_path / "logs"
+    (logs / "data_types").mkdir(parents=True)
+    (logs / "error.log").write_bytes(b"user log\r\n")
+    (logs / "data_types/common.txt").write_bytes(b"user types\r\n")
     output = tmp_path / "evidence"
 
     monkeypatch.setattr(module, "CONTENT_LOAD", content)
@@ -90,10 +97,25 @@ def test_make_checkpoint恢复配置规则和全部用户存档(
     monkeypatch.setattr(module.ga, "assert_no_game_running", lambda: None)
     monkeypatch.setattr(module.ga, "_foreground_window", lambda: 456)
     monkeypatch.setattr(module.ga, "_set_foreground", lambda _hwnd: None)
+
+    def launch(**_kwargs):
+        logs = tmp_path / "logs"
+        logs.mkdir(exist_ok=True)
+        (logs / "system.log").write_bytes(
+            b"no mounts\n"
+            if error_kind == "mount"
+            else f"Mounted Data: {tmp_path / 'native'}\n".encode()
+        )
+        if error_kind == "script":
+            (logs / "error.log").write_bytes(b"Script system error!\n")
+        elif error_kind == "vfs":
+            (logs / "error.log").write_bytes(b"VFSOpen Error: missing texture\n")
+        return 123, 456
+
     monkeypatch.setattr(
         module.ga,
         "launch_to_foreground",
-        lambda **_kwargs: (123, 456),
+        launch,
     )
     monkeypatch.setattr(module.ga, "wait_for_boot_settle", lambda **_kwargs: object())
 
@@ -113,7 +135,13 @@ def test_make_checkpoint恢复配置规则和全部用户存档(
         "is_running",
         lambda *_args, **_kwargs: SimpleNamespace(advanced=False),
     )
-    monkeypatch.setattr(module.ga, "kill_owned_game", list)
+
+    def kill():
+        if error_kind == "publish_collision":
+            (output / "offline-test.v3").write_bytes(b"external evidence")
+        return []
+
+    monkeypatch.setattr(module.ga, "kill_owned_game", kill)
 
     def fake_save_command(_hwnd: int, command: str, **_kwargs: object) -> bool:
         assert command == "save"
@@ -133,10 +161,27 @@ def test_make_checkpoint恢复配置规则和全部用户存档(
 
     monkeypatch.setattr(module, "validate_load_save_header", fake_validate)
 
-    evidence = module.make_checkpoint(output=output, name="offline-test")
+    if error_kind == "publish_collision":
+        with pytest.raises(FileExistsError):
+            module.make_checkpoint(output=output, name="offline-test")
+        evidence = json.loads(next(output.glob("session-*/report.json")).read_bytes())
+        assert (output / "offline-test.v3").read_bytes() == b"external evidence"
+        assert evidence["published"] is False
+        assert "发布失败" in evidence["failure"]
+    elif error_kind:
+        with pytest.raises(module.ga.GameAutoError, match="严格门禁"):
+            module.make_checkpoint(output=output, name="offline-test")
+        evidence = json.loads(next(output.glob("session-*/report.json")).read_bytes())
+        assert not (output / "offline-test.v3").exists()
+        assert not evidence["ok"]
+        failed_output = Path(evidence["evidence"]) / "saves/checkpoint.v3"
+        assert failed_output.read_bytes() == b"SAV-new-checkpoint"
+    else:
+        evidence = module.make_checkpoint(output=output, name="offline-test")
 
     target = output / "offline-test.v3"
-    assert target.read_bytes() == b"SAV-new-checkpoint"
+    if not error_kind:
+        assert target.read_bytes() == b"SAV-new-checkpoint"
     assert evidence["path"] == str(target)
     assert evidence["bytes"] == len(b"SAV-new-checkpoint")
     assert evidence["sha256"]
@@ -149,6 +194,10 @@ def test_make_checkpoint恢复配置规则和全部用户存档(
     assert user_save.read_bytes() == b"SAV-user"
     assert old_autosave.read_bytes() == b"SAV-old-autosave"
     assert sorted(path.name for path in save_dir.glob("*.v3")) == ["autosave.v3", "user.v3"]
+    assert evidence["ok"] is (error_kind is None)
+    assert (logs / "error.log").read_bytes() == b"user log\r\n"
+    assert (logs / "data_types/common.txt").read_bytes() == b"user types\r\n"
+    assert sorted(p.name for p in logs.iterdir()) == ["data_types", "error.log"]
 
 
 def test_make_checkpoint恢复原本不存在的规则预设(
@@ -167,7 +216,14 @@ def test_make_checkpoint恢复原本不存在的规则预设(
     monkeypatch.setattr(module, "OUT_DIR", output)
     monkeypatch.setattr(module.ga, "assert_no_game_running", lambda: None)
     monkeypatch.setattr(module.ga, "_foreground_window", lambda: None)
-    monkeypatch.setattr(module.ga, "launch_to_foreground", lambda **_kwargs: (1, 0))
+
+    def launch(**_kwargs):
+        logs = tmp_path / "logs"
+        logs.mkdir(exist_ok=True)
+        (logs / "system.log").write_bytes(f"Mounted Data: {tmp_path / 'native'}\n".encode())
+        return 1, 0
+
+    monkeypatch.setattr(module.ga, "launch_to_foreground", launch)
     monkeypatch.setattr(module.ga, "wait_for_boot_settle", lambda **_kwargs: object())
 
     class FakeSession:
