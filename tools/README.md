@@ -262,7 +262,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-113 个测试文件；2904 条用例。上一轮 2898 条完整回归为 2888 passed / 10 skipped / 0 failed，另有 1551 个 subtests passed；总覆盖率 88.75%，11 个核心模块下限通过；`n auto` 按起始可用内存自选 4 个 worker，pytest 620.49 秒，进程树 RSS 采样峰值 3676.0 MiB、私有内存峰值 6292.2 MiB。最终六项编码反例已定向通过，完整覆盖率与 CI 复验进行中。MiB 按 1024² 字节；不同测试集合、缓存和资源状态的运行不冒充受控前后提速对照，详见[执行记录](../docs/audits/2026-10-10-speed-execution.md)。早期固定检查点 3 组 × 3 臂仅通过采集结构、同窗口与压力自报检查，正式 M4 仍缺冻结候选、真实后期和资源预算；见 `docs/design/exec/M4-结果.md`。
+113 个测试文件；2904 条用例。最新完整回归为 2894 passed / 10 skipped / 0 failed，另有 1551 个 subtests passed；总覆盖率 88.76%，11 个核心模块下限通过；`n auto` 按起始可用内存自选 4 个 worker，pytest 621.47 秒，进程树 RSS 采样峰值 3710.4 MiB、私有内存峰值 6408.0 MiB。真实 Windows/macOS/Linux × Python 3.11–3.14 离线 CI 矩阵、静态检查、基准及锁文件检查全部通过，未知跳过为零。MiB 按 1024² 字节；不同测试集合、缓存和资源状态的运行不冒充受控前后提速对照，详见[执行记录](../docs/audits/2026-10-10-speed-execution.md)。早期固定检查点 3 组 × 3 臂仅通过采集结构、同窗口与压力自报检查，正式 M4 仍缺冻结候选、真实后期和资源预算；见 `docs/design/exec/M4-结果.md`。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
