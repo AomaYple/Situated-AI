@@ -4,17 +4,18 @@
 
 ## 先看这个
 
-全链路提速计划见 [速度优化计划-正确性优先](design/exec/速度优化计划-正确性优先.md)；用户已授权执行，不改变 Mod 行为验收标准。
-
 | 想做什么 | 看这里 |
 |---|---|
 | 当前编码、三平台工具链、测试与性能审计 | [`design/exec/工程基线-1.0.md`](design/exec/工程基线-1.0.md)（当前工程入口与证据边界）；[`audits/2026-10-01-repository-upgrade.md`](audits/2026-10-01-repository-upgrade.md) 是审计依据 |
 | 参与开发、编码和提交前检查 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| 编码代理的项目规则、源码入口与验证选择 | [`../AGENTS.md`](../AGENTS.md) |
+| 性能优化的顺序、预算与正确性验收 | [速度优化计划-正确性优先](design/exec/速度优化计划-正确性优先.md) |
+| 本轮仓库总览、清理与验证 | [2026-10-10 仓库整理](audits/2026-10-10-repository-maintenance.md) |
 | **接手工作 / 恢复一个暂停的会话** | [`最终执行纲领 1.0`](design/exec/mod重设计-实施计划.md) → 对应 M1–M5 结果页及 [`backlog`](design/backlog.md)；行为模型见 [`03`](design/03-处境决策设计.md)，工程入口见 [`工程基线`](design/exec/工程基线-1.0.md) |
 | 了解当前 mod 方向、产品形式与验收 | [`design/03-处境决策设计.md`](design/03-处境决策设计.md)（当前设计；真实财政机制已实现；评分差分与卸载已有实机证据，长期和扩展验收继续执行） |
 | 看历史方向及引擎依据 | [`design/01-大方向.md`](design/01-大方向.md)、[`design/01a-依据与参考.md`](design/01a-依据与参考.md)（保留历史正文与引用行号） |
 | 看可执行面 / 政治候选 / 欠账 | [`design/02-可执行面.md`](design/02-可执行面.md)、[`design/02-政治候选面.md`](design/02-政治候选面.md)、[`design/backlog.md`](design/backlog.md) |
-| 最近一次收尾快照 | [`design/exec/阶段性收尾-20261001-仓库审计.md`](design/exec/阶段性收尾-20261001-仓库审计.md)（2026-10-01 历史快照）；当前工程状态以基线和 backlog 为准 |
+| 2026-10-01 收尾快照 | [`design/exec/阶段性收尾-20261001-仓库审计.md`](design/exec/阶段性收尾-20261001-仓库审计.md)（历史快照）；当前工程状态以基线和 backlog 为准 |
 
 ## 本目录结构
 
@@ -38,7 +39,7 @@
 | `docs/reports/` | 各卡的交付报告与独立复核，索引见 [`reports/README.md`](reports/README.md) |
 | `tools/out/` | 原始证据、机器测量和可恢复备份；忽略原始输出，只放行精简快照 |
 | `research/` | 官方文档 manifest + 本地镜像（**原文不入库**） |
-| `mod/` | 生产源 `decisions/*.toml` 生成根级产物；旧9份 `data/*.toml` 只生成至 `legacy/`，**不要手改产物** |
+| `mod/` | 生产源 `decisions/fiscal.toml` 与 `decisions/extensions.toml` 生成根级产物；旧9份 `data/*.toml` 只生成至 `legacy/`，**不要手改产物** |
 | 历史会话纪律与交接 | [`design/exec/接续-下一步.md`](design/exec/接续-下一步.md)；其中任务、授权和读数属于当时记录，当前工作以本页入口及用户指令为准 |
 
 ## 当前设计与历史证据的关系

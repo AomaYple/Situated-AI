@@ -2727,7 +2727,7 @@ def modgen_cmd(
 ) -> None:
     """把结构化数据源编译成 mod 产物：脚本 + 本地化 + 档案文档。
 
-    生产数据源是 `mod/decisions/*.toml`，产物在 `mod/`。旧档案源 `mod/data/*.toml`
+    生产数据源是 `mod/decisions/fiscal.toml` 与 `mod/decisions/extensions.toml`，产物在 `mod/`；新 TOML 须显式接入。旧档案源 `mod/data/*.toml`
     只生成至 `mod/legacy/`，用于复现历史实验；游戏 ZIP 只包含生产产物。
     底本版本或指纹不符时拒绝生成。手改产物会被一致性检查发现。
 

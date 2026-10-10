@@ -54,6 +54,22 @@ def mem(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> ModuleType:
     return module
 
 
+def test_采样线程可以启动停止且不覆盖Thread内部方法(mem, monkeypatch) -> None:
+    """真实启动并 join；Python 3.11/3.12 的 join 会调用 Thread._stop。"""
+    sampler = mem.TreeSampler(os.getpid(), interval_s=0.001)
+    monkeypatch.setattr(sampler, "sample_once", lambda: None)
+    if hasattr(mem.threading.Thread, "_stop"):
+        assert callable(sampler._stop)
+    sampler.start()
+    try:
+        result = sampler.finish()
+    finally:
+        sampler._stop_event.set()
+        sampler.join(timeout=5)
+    assert not sampler.is_alive()
+    assert result["sampler_errors"] == []
+
+
 # ────────────────────────── 造数：一份「达标」的组读数与索引 ──────────────────────────
 
 

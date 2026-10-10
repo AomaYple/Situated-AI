@@ -1,75 +1,136 @@
 # 贡献与维护规范
 
-这份文档是仓库级的开发入口。工程状态、已验证指标和证据边界以 [`docs/design/exec/工程基线-1.0.md`](docs/design/exec/工程基线-1.0.md) 为准；这里约定日常改动怎样保持可复现。
+本指南面向贡献者和维护者，说明环境搭建、工程约定、验证和提交流程。编码代理的工作入口见 [AGENTS.md](AGENTS.md)，项目总览见 [README.md](README.md)，文档导航见 [docs/README.md](docs/README.md)。
 
-Mod 行为原则以 [`docs/design/03-处境决策设计.md`](docs/design/03-处境决策设计.md) 为准，实施顺序和验收由 [`最终执行纲领`](docs/design/exec/mod重设计-实施计划.md) 管理；性能优化遵守 [`速度优化计划`](docs/design/exec/速度优化计划-正确性优先.md) 的测量、预算与回退规则。旧方向和交接文档保留历史证据，不覆盖当前设计与纲领。
+工程契约以 [工程基线](docs/design/exec/工程基线-1.0.md) 为准；Mod 行为由 [处境决策设计](docs/design/03-处境决策设计.md) 定义，阶段出口由 [最终执行纲领](docs/design/exec/mod重设计-实施计划.md) 管理。实验参数和进度更新到结果页与 [backlog](docs/design/backlog.md)，历史报告保留当时事实。性能专项遵循 [速度优化计划](docs/design/exec/速度优化计划-正确性优先.md)。
+
+## 开始贡献
+
+先检查已有改动和相关问题、计划或记录，确认本次工作范围。小修复可以直接准备变更；涉及行为模型、公共接口或验收条件的调整，应记录理由、兼容影响和验证办法。已有任务授权内的实施不要求重复发起审批。
+
+提交问题时提供预期与实际行为、最小复现、操作系统、Python 和游戏版本、实际命令、退出码及相关日志。涉及游戏加载或 AI 行为时，还要提供启用的 Mod、存档或场景及输入指纹。不要公开凭据、个人目录信息或受版权限制的游戏原文。
 
 ## 环境与命令
 
-统一使用仓库根目录的 `.venv`，不要调用系统 Python 或临时创建第二个虚拟环境。
+Python 版本要求以 `pyproject.toml` 为准。优先使用本工作区已有的 `.venv`；首次搭建时才用已安装的 Python 创建它。日常开发和检查使用该环境，不依赖 shell 激活脚本。
+
+Windows（PowerShell 或 cmd，首次搭建）：
 
 ```text
-# Windows（cmd.exe）
-.venv\Scripts\python.exe -X utf8 -m pytest -q
-.venv\Scripts\python.exe -X utf8 -m ruff check .
+python -m venv .venv
+.venv\Scripts\python.exe -X utf8 -m pip install -e ".[dev]"
+.venv\Scripts\python.exe -X utf8 -m pip check
+```
 
+macOS / Linux（首次搭建）：
+
+```text
+python3 -m venv .venv
+.venv/bin/python -X utf8 -m pip install -e ".[dev]"
+.venv/bin/python -X utf8 -m pip check
+```
+
+`pyproject.toml` 是依赖、打包与检查配置入口；`requirements.lock` 用于 Windows 环境对账，不作为跨平台统一锁。改变依赖时说明用途与兼容性，并检查依赖闭包；其他平台安装项目声明的适用依赖。
+
+检查统一通过 `tools/ci/run_check.py`，它会选择当前平台的仓库解释器。以下命令从仓库根目录运行：
+
+| 平台 | 示例 |
+|---|---|
+| Windows | `.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py encoding` |
+| macOS / Linux | `.venv/bin/python -X utf8 tools/ci/run_check.py encoding` |
+
+保留平台对应的入口，按需替换末尾参数：
+
+| 参数 | 作用 |
+|---|---|
+| `encoding` | 仓库自有文本编码审计；详细报告写入忽略的输出目录 |
+| `lint .` | Ruff 代码检查 |
+| `format --check .` | 只检查格式；去掉 `--check` 会写盘 |
+| `types` | mypy 类型检查 |
+| `test tests/test_cli_docs.py` | 示例：运行指定测试文件 |
+| `test` | 完整 pytest 收集集合，默认自适应并行 |
+| `test-offline` | 排除 integration 与 benchmark 的测试 |
+| `deadcode` | 当前源码死代码审计 |
+| `baseline` | 依赖、离线快照、生成物、引用、死代码及发布清单的闭环检查 |
+
+可选的提交钩子配置在 `.pre-commit-config.yaml`。钩子不运行完整 pytest，不能替代适用的测试和验收。CLI 可通过环境内的 `v3` 或对应解释器的 `-m pdx.cli` 调用；完整用法见 [工具手册](tools/README.md)。
+
+游戏目录由 `V3_ROOT`、`V3_USERDIR`、`V3_WORKSHOP` 指定。没有游戏安装时使用离线快照；不要为通过检查伪造游戏目录或把缺失前提写成通过。
+
+## 工程约定
+
+正确性第一，速度第二。Python 工具链支持 Windows、macOS、Linux；使用 `pathlib`、`sys.executable` 和适用的平台分支，不写死盘符、用户目录或某种 shell 的语义。文本处理、路径与批量盘点优先使用 Python，shell 仅承担必要的命令启动和交互。
+
+优先复用现有 Python 模块与成熟库；自写替代实现须有缺口依据、边界测试和维护理由。可重复的生成、检查与迁移接入已有脚本入口，避免平行工具和一次性逻辑长期留在源码树。清理死代码前核对调用、动态注册、CLI、测试及生成路径，审计候选本身不能证明可以删除。
+
+受控文本使用 UTF-8 无 BOM、LF，遵守 `.editorconfig` 与 `.gitattributes`。Python 写文本显式指定 `encoding="utf-8"`、`newline="\n"`；末尾换行遵守文件与生成器契约。二进制内容不适用文本编码要求。原始游戏文件、日志与冻结证据保留原始字节；需要规范化时保留可恢复原件，生成派生副本。
+
+Python 模块采用小写下划线命名。文档沿用所在目录的主题与编号约定；改名和移动必须更新引用、配置与生成入口。新增目录或产物说明其属于源码、生成物、缓存、镜像还是证据，并按需更新导航和 `.gitignore`。
+
+## 数据源、生成物与清理
+
+- `src/pdx/` 是可复用包，`tests/` 是测试；`tools/ci/`、`tools/benchmarks/`、`tools/probe/` 分别放检查、基准与实机探针。
+- 当前生产源 `mod/decisions/fiscal.toml` 与 `mod/decisions/extensions.toml` 由 `pdx.decisions` 读取并生成根级游戏产物；扩展开关关闭时仍读取并校验扩展配置。这两个入口之外的新 TOML 不会自动加载，新增定义须同步生成入口与测试。历史源 `mod/data/*.toml` 由 `pdx.modgen` 生成至 `mod/legacy/`，不进入生产包。
+- 改动数据或生成逻辑后先执行 `v3 modgen --write`，再执行 `v3 modgen --check`。源码、测试及对应生成物保持一致；生成文档和知识库机械表格使用各自生成入口维护。
+- 安装、打包时才为交付游戏脚本与本地化添加 BOM；转换不能写回仓库产物。交付入口是 `v3 package --output dist/situated-ai.zip`，文件指纹由交付 manifest 记录。
+- `tools/out/` 主要是忽略的输出与证据，但 `tools/out/snapshots/*.compact.json` 是入库例外。完整快照、本机测量、缓存和临时脚本不默认入库。
+- `tools/probe/frozen/`、历史报告和有引用的实机证据具有审计用途；清理前核查 Git 跟踪状态、消费者和引用，必要时保留恢复副本。不要用 `git clean -fdX` 代替盘点。
+- 官方文档原文镜像不入库；使用 `research/official-docs.manifest.json` 与 `v3 mirror` 维护来源和指纹。忽略文件仍可能有价值，忽略规则不构成删除依据。
+
+## 验证矩阵
+
+根据改动范围选择检查，并在提交或 PR 中记录选择依据。下面的最小范围不能替代相关阶段的既定验收。
+
+| 改动 | 必需验证 |
+|---|---|
+| 普通文档、协作文件 | 编码、链接、命令与事实核对；运行受影响的文档检查 |
+| 生成文档、统计或引用 | 对应生成检查，涉及离线真值时运行 `baseline`；需要当前游戏真值时补充本地核验 |
+| Python 实现 | lint、格式、类型及相关单元、边界和回归测试；涉及集成接口时增加契约或集成验证 |
+| Mod 数据、生成器或交付 | 生成一致性、`baseline` 及相关测试；运行期合法性和行为按阶段要求实机验证 |
+| 依赖、平台、共享测试设施或广泛重构 | 静态检查、`baseline`、完整回归及受影响平台的 CI；缺少环境时明确未验证范围 |
+| Python 性能变化 | 正确性对照、可重复的速度与峰值内存测量，以及预算和回退验证 |
+| 阶段验收或交付候选 | 完整回归及对应阶段全部出口；覆盖率、实机与性能证据分别验收 |
+
+普通测试默认使用 `-n auto --dist loadscope`。`tests/conftest.py` 综合 CPU 与可用内存控制 worker 数；`SITAI_XDIST_WORKERS` 可以显式覆盖。不要将某次机器上的 worker 数当成固定默认，也不要在测试内部自行扩张全局并行度。
+
+测试通过 `tmp_path` 或唯一临时目录隔离写盘，不向共享 `tools/out/` 写固定名文件。按行为风险补充单元、属性、契约、回归、CLI 和集成测试，优先覆盖反例、异常、恢复与平台边界；不堆叠只重复实现的测试。
+
+持续增加有意义的测试种类并提高代码的有效覆盖率，优先覆盖尚未验证的行为与边界。覆盖率门槛来自 `pyproject.toml` 与 `pdx.covgate`，用于防止已有覆盖回退。完整覆盖率入口为 `v3 cov`；`v3 cov --check-only` 读取上次结果，不能声称重新测量。无游戏 CI 的覆盖范围与装有游戏的本地回归不同，不能混为一个通过结论。
+
+基准必须串行、清除普通测试参数并显式启用计时。例如：
+
+```text
+# Windows
+.venv\Scripts\python.exe -X utf8 -m pytest tests/test_benchmarks.py -o "addopts=" -n 0 --benchmark-only
 # macOS / Linux
-.venv/bin/python -X utf8 -m pytest -q
-.venv/bin/python -X utf8 -m ruff check .
+.venv/bin/python -X utf8 -m pytest tests/test_benchmarks.py -o "addopts=" -n 0 --benchmark-only
 ```
 
-仓库脚本通过 `pathlib`、`sys.executable` 和 `platform` 选择路径与解释器。新代码不要写死盘符、用户目录、反斜杠或只在某个 shell 中存在的命令；命令示例同时给出三平台可执行的写法。Windows 端优先使用 `cmd.exe` 或仓库 Python，避免把 PowerShell 的编码和转义行为带进自动化流程。
+性能工作的覆盖目标是全部项目维护的 Python 代码，按模块或调用链建立速度与峰值内存基线；日常改动测受影响路径，阶段性能验收汇总覆盖范围与未覆盖项。基准与完整回归、游戏及剖析错峰运行。性能改动固定输入、环境、重复规则和噪声判据，同时测墙钟与峰值内存，区分 Python 分配峰值、进程树 RSS 和其他内存口径。只有满足预先定义的收益与正确性要求才启用；保留失败与回退记录。
 
-## 编码和换行
+## 快照、实机和证据
 
-受控文本文件必须是 UTF-8、无 BOM、LF 换行。Python 源码末尾保留一个换行；其他文件遵循 `.editorconfig` 与生成器字节契约，不自动改写生成物末尾。仓库门禁会检查 Git 跟踪文件、未跟踪文件和可见的忽略文件；不要用编辑器的默认本地代码页保存文件。
+`v3 analyze`、`v3 snapshot` 和离线门禁提供文件与快照层证据，不能证明运行期加载、覆盖语义、AI 选择质量或平衡性。`integration` 测试可能只读取游戏文件，也不代表 GUI 实测。
 
-游戏原始文件属于证据，按原始字节保存。Victoria 3 本地化 `.yml` 在交付到游戏目录时可以由安装/打包命令按游戏要求补 BOM；仓库源文件仍保持 UTF-8 无 BOM。不要把安装时的兼容转换写回 `mod/` 源码。
+实机复用 `pdx.game_run` 的互斥、部署、归档与恢复能力；检查现有游戏进程、挂载、日志和存档状态，避免并行实验污染。自动化优先使用已验证的快捷键，必要前台操作完成后恢复后台运行。Python 工具链跨三平台；Victoria 3 GUI 自动化当前支持 Windows，其他平台能力须单独实现与验证。
 
-## 目录、命名和生成物
+实验开始前记录场景、候选、预算、判据及允许的差异。对照与候选使用匹配的检查点、版本、来源和挂载，保存输入 SHA-256、参数、激活时间窗口、资格与机会分母、原始日志、截图和清理结果。引擎错误、挂载污染或关键前提缺失时，按既定规则判失败或无法判定，不用增加尝试次数掩盖问题。
 
-- `src/pdx/` 是可复用的 Python 包；`tests/` 放测试；`mod/decisions/*.toml` 是当前生产数据源，旧 `mod/data/*.toml` 是历史实验数据源。
-- 根级游戏产物由 `pdx.decisions` 从生产源生成；旧数据源只生成至 `mod/legacy/`，不进入生产包。使用 `v3 modgen` 统一检查／生成，不要手改生成物。
-- `tools/ci/` 放门禁与检查驱动，`tools/benchmarks/` 放基准，`tools/probe/` 放实机探针与冻结夹具，`tools/out/` 保存可复核证据。
-- `tools/out/`、`tools/probe/frozen/`、精简快照和实机证据都有审计引用。清理前先查 `git ls-files`、报告引用和 `.gitignore`，不要用 `git clean -fdX` 代替盘点。
-- 新的 Python 模块使用小写下划线命名；文档文件名沿用现有中文章节编号，不为形式重命名已有路径。只有临时文件、无引用文件或能提供兼容指针时才改名。
-- 新增目录或产物必须同时更新 `docs/README.md`、相关索引和 `.gitignore`，说明它是源码、生成物、缓存、第三方镜像还是证据。
+评分通道、加载成功、脚本强制机会和某个国家的单次结果不能单独证明 AI 质量。Mod 目标是依据真实内部、外部因素与政治偏好影响原版 AI 的可行选择，不靠免费资源、暴力削弱、强制行动或固定国家剧本制造成功。
 
-## 测试与性能
-
-提交前至少运行以下门禁；需要游戏安装的检查在没有游戏的机器上按项目规则跳过，不要把离线快照结果写成实机结论。
-
-```text
-.venv\Scripts\python.exe -X utf8 tools\ci\run_check.py encoding
-.venv\Scripts\python.exe -X utf8 tools\ci\run_check.py test
-.venv\Scripts\python.exe -X utf8 -m ruff check .
-.venv\Scripts\python.exe -X utf8 -m ruff format --check .
-.venv\Scripts\python.exe -X utf8 -m mypy
-.venv\Scripts\python.exe -X utf8 tools\ci\run_check.py baseline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
-git diff --check
-```
-
-默认完整回归保留 `n-auto`，并行度由 CPU 和可用内存预算自适应控制；不要在单个测试里自行启动固定数量的全局 worker。基准显式串行运行并清除普通测试 `addopts`，与游戏、完整回归及内存剖析错峰。性能改动要同时测墙钟时间和峰值内存，事先固定输入、环境、重复规则、噪声与资源预算；收益满足判据才启用，失败和回退证据保留。正确性回归优先于速度提升。成熟库已有稳定实现时优先复用，并为边界行为补测试。
-
-## 快照、实机和文档证据
-
-`v3 analyze`、`v3 snapshot`、`v3 snapshot diff` 产生的是文件和快照层证据；它们不能证明引擎运行期的加载顺序、覆盖优先级、字段合法性或平衡性。游戏自动化测试和 GUI 探针产生的日志、截图、进程报告必须保留运行参数和时间窗口，才能进入 `tools/out/` 证据链。
-
-文档中的数字要写清口径和来源。能由仓库现算的数字应接入测试或生成表；历史报告中的旧数字可以保留，但要标注历史时点，不能让它看起来像当前基线。官方文档镜像不入库，使用 `research/official-docs.manifest.json` 和 `v3 mirror` 命令复核。
+能由工具计算的表格、统计和指纹通过生成流程维护。手写文档用于目标、理由、契约、解释及结论；数字附来源和口径，历史记录标明时点，后续运行追加新结果，不把旧测量冒充当前值。
 
 ## 提交前与提交信息
 
-**Git 提交遵循最佳实践，提交标题和说明使用中文。** 文件路径、命令、标识符和必要的技术名称保留原文，不使用 `feat:` / `fix:` / `chore:` 等英文前缀。
+**Git 提交遵循最佳实践，标题和说明使用中文。** 命令、路径、标识符和必要技术名称保留原文；沿用已有中文动词标题，不使用英文类型前缀。
 
-- 每次提交围绕一个明确目的，保持改动完整、可审查、可独立回退。无关功能、清理和格式化分别提交；相互依赖的源码、测试、文档和生成物放在同一提交，避免人为拆出不一致状态。
-- 标题使用简短、具体的中文，以“修复”“增加”“统一”等动词描述实际结果，不使用“更新”“修改一些东西”等含糊标题。标题不声称未完成或未验证的效果。
-- 简单改动可以只有标题；复杂改动在标题后空一行，用中文正文说明原因、关键实现、实际验证及必要的兼容或迁移影响。只记录真正执行的检查，失败或未验证项如实说明。
-- 提交前按改动范围完成所需门禁，检查 `git status --short`、工作区 diff 和 `git diff --check`；按文件或相关补丁选择暂存，再检查 `git diff --cached` 和 `git diff --cached --check`，确认本次提交内容。
-- 临时盘点脚本、缓存、虚拟环境、本机日志和凭据不进入提交。提交后核对提交内容与工作区状态；已经共享的历史通过新的修复或回退提交维护，不擅自改写。
+- 一次提交围绕一个明确目的，保持完整、可审查、可独立回退；相互依赖的源码、测试、文档与生成物一起提交，无关清理或格式化另行处理。
+- 标题具体说明结果，如“修复离线快照的重复键校验”；复杂变更在空行后说明原因、关键实现、实际验证和兼容影响，不声称未完成效果。
+- 提交前完成适用检查，查看 `git status --short`、工作区 diff 与 `git diff --check`；按文件或补丁暂存，再检查 `git diff --cached` 和 `git diff --cached --check`。
+- 提交后核对内容和工作区状态；共享历史通过修复或回退提交维护。推送、合并和发布按任务授权执行。
 
-例如：
+PR 描述说明问题与结果、设计依据、实际运行的命令与结果、未验证范围及必要的迁移或兼容影响。失败和跳过项如实记录，AI 辅助生成的内容也须经过核查。用户可见变化按现有发布流程同步相关文档和 `CHANGELOG.md`；不要把工程检查通过写成 Mod 行为验收通过。
 
-```text
-统一仓库文档口径并规范工程入口
-```
+## 维护协作文件
+
+`AGENTS.md` 保留代理执行需要的入口、修改边界和易错事项，`CONTRIBUTING.md` 维护完整贡献流程。准确命令来自 CLI 与检查脚本，工具配置来自 `pyproject.toml`，进度和性能读数留在结果记录。命令或契约变化时同步相关章节，保留或更新已有链接锚点，避免多份规则长期漂移。

@@ -37,9 +37,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from pdx import ab_probe, config, modgen, mods, preflight
 from pdx import game_auto as ga
+from pdx.game_run import RunLock
 from pdx.textio import deploy_tree
 
-DOCS = Path.home() / "Documents" / "Paradox Interactive" / "Victoria 3"
+DOCS = config.USERDIR
 MODS_DIR = DOCS / "mod"
 CONTENT_LOAD = DOCS / "content_load.json"
 BACKUP = DOCS / "content_load.json.sitai-backup"
@@ -142,10 +143,6 @@ def restore() -> str:
         "已删本地 mod：" + "、".join(removed) if removed else "本地 mod 目录里没有我们的残留"
     )
     return "；".join(notes)
-
-
-def kill_game() -> list[int]:
-    return ga.kill_game()
 
 
 def quarantine_test_artifacts() -> list[str]:
@@ -574,7 +571,7 @@ def _preferred_numbers(
     return {}, ""
 
 
-def main(argv: list[str] | None = None) -> int:
+def _main_unlocked(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="stage3_rerun", description=__doc__)
     parser.add_argument("--months", type=float, default=96.0, help="跑到第几个游戏月")
     parser.add_argument("--speed-xy", default="", help="显式指定速度档 V 的坐标")
@@ -640,11 +637,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {restore()}")
 
     ga.ALLOW_REAL_INPUT = True  # 显式入口
-    leftover = ga._process_pids()
-    if leftover:
-        print(f"⚠️ 起前有残留 victoria3：{leftover} —— 先收掉")
-        kill_game()
-        time.sleep(3)
+    ga.assert_no_game_running()
 
     # ⚠️ **先挪日志、再改用户配置**：挪日志只动临时目录，失败了什么都不会被改；
     # 反过来（先 deploy 再挪）一旦挪失败，用户那 23 条 Workshop 配置就留在改动状态
@@ -652,11 +645,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.fresh_logs:
         moved_logs = quarantine_logs()
         print(f"已把 {len(moved_logs)} 个旧日志挪去临时目录（这一局的读数只可能来自这一局）")
-    print(deploy(with_probe=not bool(args.no_probe), archive_id=args.archive or None))
     report: dict[str, object] = {}
     failure = ""
     previous = ga._foreground_window()
     try:
+        print(deploy(with_probe=not bool(args.no_probe), archive_id=args.archive or None))
         hwnd, previous = ga.launch_to_foreground(scripted_tests=True, timeout=300.0)
         print(f"窗口 hwnd={hwnd}；等加载……")
         settle = ga.wait_for_boot_settle(timeout=400.0)
@@ -678,7 +671,7 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         failure = f"{type(exc).__name__}: {exc}"
     finally:
-        killed = kill_game()
+        killed = ga.kill_owned_game()
         time.sleep(2)
         moved = quarantine_test_artifacts()
         if previous:
@@ -699,6 +692,15 @@ def main(argv: list[str] | None = None) -> int:
     for key, value in (report.get("analysis") or {}).items():  # type: ignore[union-attr]
         print(f"  {key:34s}: {value}")
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    """在统一实机锁内运行会修改用户目录的旧阶段探针。"""
+    values = sys.argv[1:] if argv is None else argv
+    if any(value in {"--analyze-only", "-h", "--help"} for value in values):
+        return _main_unlocked(argv)
+    with RunLock(config.USERDIR / ".sitai-game.lock"):
+        return _main_unlocked(argv)
 
 
 if __name__ == "__main__":

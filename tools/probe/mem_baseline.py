@@ -336,7 +336,7 @@ class TreeSampler(threading.Thread):
         self.watch_avail_mb = watch_avail_mb
         self.kill_reason = ""
         self._killer = killer
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
         self._reader = MemReader()
         self._t0 = time.time()
         #: 时间线：(t_s, nproc, total_rss_bytes, total_private_bytes, avail_mb)
@@ -355,14 +355,14 @@ class TreeSampler(threading.Thread):
 
     # ── 采样 ────────────────────────────────────────────────────
     def run(self) -> None:  # pragma: no cover - 线程体
-        while not self._stop.is_set():
+        while not self._stop_event.is_set():
             try:
                 self.sample_once()
             except Exception as exc:
                 self._errors.append(repr(exc))
             if self.killed_by_watchdog:
                 return
-            self._stop.wait(self.interval_s)
+            self._stop_event.wait(self.interval_s)
 
     def sample_once(self) -> None:
         table = list_procs()
@@ -546,7 +546,7 @@ class TreeSampler(threading.Thread):
         )
 
     def finish(self) -> dict[str, Any]:
-        self._stop.set()
+        self._stop_event.set()
         self.join(timeout=5.0)
         self._reader.close()
         self._classify()

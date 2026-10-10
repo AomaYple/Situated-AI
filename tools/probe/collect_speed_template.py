@@ -13,12 +13,14 @@ UI 缩放、界面语言、窗口大小一变就落空）。「观察」「播�
 from __future__ import annotations
 
 import sys
+from contextlib import ExitStack
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 
 from pdx import config, game_auto
+from pdx.game_run import RunLock
 
 #: 产物目录与模板路径都**从仓库位置推导**（原先写死 `C:\Users\<用户名>\...`，换机器/换用户名就落空）。
 AUTO = config.OUT / "auto"
@@ -29,7 +31,7 @@ TEMPLATE = Path(__file__).resolve().parent / "zz_probe_ab" / "ui" / "btn_speed.p
 CROP = (1690, 20, 1920, 90)
 
 
-def main() -> int:
+def _main_unlocked() -> int:
     game_auto.assert_no_game_running()
     game_auto.ALLOW_REAL_INPUT = True  # 显式入口
     hwnd, previous = game_auto.launch_to_foreground(timeout=300)
@@ -65,6 +67,18 @@ def main() -> int:
     crop.save(TEMPLATE)
     print("模板已收：", TEMPLATE)
     return 0
+
+
+def main() -> int:
+    """模板采集也持有实机锁；启动或截取失败时清理本次游戏并还原输入状态。"""
+    with RunLock(config.USERDIR / ".sitai-game.lock"), ExitStack() as cleanup:
+        game_auto.assert_no_game_running()
+        previous = game_auto._foreground_window()
+        if previous:
+            cleanup.callback(game_auto._set_foreground, previous)
+        cleanup.callback(setattr, game_auto, "ALLOW_REAL_INPUT", game_auto.ALLOW_REAL_INPUT)
+        cleanup.callback(game_auto.kill_owned_game)
+        return _main_unlocked()
 
 
 if __name__ == "__main__":

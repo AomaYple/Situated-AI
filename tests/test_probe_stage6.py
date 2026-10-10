@@ -236,6 +236,7 @@ def driver(probe: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
         probe.ga, "click_client", lambda _hwnd, x, y, **_kw: mouse.clicks.append((x, y))
     )
     monkeypatch.setattr(probe.ga, "kill_game", _kill_game)
+    monkeypatch.setattr(probe.ga, "kill_owned_game", _kill_game)
     monkeypatch.setattr(probe.ga, "_process_pids", lambda *_a, **_kw: [])
     monkeypatch.setattr(probe.ga, "quarantine_logs", lambda *_a, **_kw: [])
     monkeypatch.setattr(probe.experiments, "restore_content_load", _restore_content_load)
@@ -860,6 +861,38 @@ def test_pass_id自带时间戳与tier_且是合法目录名(probe: ModuleType) 
 
 
 # ── 驱动级：`run()` 真的走这两条路（替身不碰实机）────────────────────────────────
+
+
+def test_部署失败也执行收尾(
+    driver: SimpleNamespace, probe: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail(**_kwargs):
+        raise OSError("部署中途失败")
+
+    monkeypatch.setattr(probe.ab_probe, "deploy", fail)
+    record = driver.跑()
+    assert isinstance(record.error, OSError)
+    assert driver.teardown.restore == 1
+    assert driver.teardown.kill == 1
+    assert record.shot_dir_after == record.shot_dir_before
+    assert len(record.summaries) == 1
+
+
+def test_探针源在临时目录生成而非覆盖仓库(
+    driver: SimpleNamespace, probe: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    roots = []
+
+    def deploy(*, root, **_kwargs):
+        assert root.is_dir()
+        roots.append(root)
+        return "临时源部署"
+
+    monkeypatch.setattr(probe.ab_probe, "deploy", deploy)
+    record = driver.跑()
+    assert record.error is None
+    assert len(roots) == 1
+    assert not roots[0].exists()
 
 
 def test_驱动一遍_箭头都在就点_帧落进这一遍的子目录(driver: SimpleNamespace) -> None:

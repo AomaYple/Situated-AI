@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import numpy as np
 
 from pdx import config, game_auto
+from pdx.game_run import RunLock
 
 #: 产物目录与模板路径都**从仓库位置推导**（原先写死 `C:\Users\<用户名>\...`，换机器/换用户名就落空）。
 AUTO = config.OUT / "auto"
@@ -25,7 +26,7 @@ CROP = (1700, 18, 1858, 86)
 V_REL = ((1851 - CROP[0]) / (CROP[2] - CROP[0]), (52 - CROP[1]) / (CROP[3] - CROP[1]))
 
 
-def main() -> int:
+def _main_unlocked() -> int:
     hwnd = game_auto.find_window()
     if not hwnd:
         print("游戏没在跑")
@@ -64,6 +65,11 @@ def main() -> int:
             f"→ 由模板算出的 V 点={click}"
         )
     return 0
+
+
+def main() -> int:
+    with RunLock(config.USERDIR / ".sitai-game.lock"):
+        return _main_unlocked()
 
 
 if __name__ == "__main__":

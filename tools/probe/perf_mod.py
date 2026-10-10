@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from pdx import config
+from pdx.game_run import RunLock
 
 #: 按钮颜色（探针靠**颜色质心**定位按钮，不靠猜坐标）：品红 = CLEAR、青 = DUMP。
 CLEAR_RGB = (255, 0, 255)
@@ -113,9 +114,7 @@ METADATA = {
 
 def probe_mod_dir() -> Path:
     """用户 mod 目录下的探针 mod（**不进仓库**，用完删）。"""
-    return (
-        Path.home() / "Documents" / "Paradox Interactive" / "Victoria 3" / "mod" / "zz_sitai_perf"
-    )
+    return config.LOCAL_MODS / "zz_sitai_perf"
 
 
 def write_mod(target: Path | None = None) -> Path:
@@ -153,13 +152,18 @@ def write_mod(target: Path | None = None) -> Path:
     return root
 
 
-def main() -> int:
+def _main_unlocked() -> int:
     root = write_mod()
     print(f"探针 mod 已写入：{root}")
     print("  gui/error_deer.gui（覆写原版；改的是 error_counter 的 onclick）")
     print(f"  判据：它在屏幕上**一定可见**（截图确认过），点它 = {DUMP_ONCLICK}")
     print("[注意] 覆写原版 gui 只允许出现在这个**一次性探针**里；产品 mod 走 P1/R3（纯追加）。")
     return 0
+
+
+def main() -> int:
+    with RunLock(config.USERDIR / ".sitai-game.lock"):
+        return _main_unlocked()
 
 
 if __name__ == "__main__":

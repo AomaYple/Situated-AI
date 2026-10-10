@@ -10,7 +10,6 @@
 # ── Python 虚拟环境 ────────────────────────────────────────
 # 本地开发环境，体积大且机器相关，不入库。
 # 依赖请记录到 pyproject.toml 的 [project.dependencies]（本仓库的唯一配置源）。
-/.venv/
 .venv/
 __pycache__/
 *.py[cod]
@@ -39,15 +38,16 @@ pytest-cache-files-*/
 .coverage.*
 
 # ── tools/ 的中间产物 ──────────────────────────────────────
-# 提取出的大型 JSON（tools/out 含大型数据与实机证据），由 v3 analyze 重新生成。
+# 本地分析输出、测量、恢复副本与原始实机证据。
+# 分析输出可由对应入口重建；原始证据和恢复副本不可据此删除。
 /tools/out/*
 
 # ⚠️ **版本快照分两种，只有精简版入库**：
 #
-#   完整快照  tools/out/snapshots/<版本>.json          约 39 MiB  ← 忽略
-#   精简快照  tools/out/snapshots/<版本>.compact.json  约 5.1 MiB ← **入库**
+#   完整快照  tools/out/snapshots/<版本>.json          ← 忽略
+#   精简快照  tools/out/snapshots/<版本>.compact.json  ← 入库
 #
-# 完整快照 73% 的体积是本地化键清单（11 种语言 × 14.5 万键），而「Paradox 增删了
+# 完整快照包含逐语言本地化键清单，而「Paradox 增删了
 # 哪些字段与条目」只需要结构域 —— 精简版保留全部结构域，只把本地化换成
 # 「键数 + sha256」。这样跨版本 diff 在**别人的机器上**也能做。
 #
@@ -123,8 +123,8 @@ $RECYCLE.BIN/
 
 # ── 备注 ───────────────────────────────────────────────────
 # research/official-docs/ 是游戏自带官方 .md 的 UTF-8 无 BOM / LF 镜像（Paradox 版权内容），
-# **不入库**；入库的是同目录下的 official-docs.manifest.json（94 篇的
-# 路径/字节/行数/sha256，约 17 KB）—— 它承载了镜像的全部功能价值
+# 不入库；入库的是同目录下的 official-docs.manifest.json（原文的
+# 路径/字节/行数/sha256）—— 它承载镜像的版本比较价值
 # （检测「Paradox 改了官方文档」），而哈希与文件名是事实、不是创作内容。
 #
 # 本地镜像仍在，`.gitignore` 只是不让它进版本控制；装了游戏的机器随时可用

@@ -272,9 +272,8 @@ def test_自己解析出来的结果通过身份判据(tmp_path) -> None:
 def test_外来身份的解析结果要被判否(tmp_path) -> None:
     """构造一棵**长得一样、类却不一样**的树 —— 正是双模块身份造成的形态。
 
-    ``pdx`` 与 ``tools.pdx`` 都指向同一份源码（pytest 的 rootdir 机制让前者
-    可用，``python -m tools.pdx.cli`` 走后者），于是 ``Block`` 有两个互不相认
-    的类对象，而磁盘缓存按模块名 pickle。后果不是报错而是**静默变小**：
+    迁移前 ``pdx`` 与 ``tools.pdx`` 曾产生两套互不相认的模型类；当前
+    只支持安装后的 ``pdx``，但仍应拒绝历史缓存或异类节点。后果不是报错而是**静默变小**：
     ``isinstance(v, Block)`` 全判否，``snapshot._field_names`` 把整棵 AST
     过滤掉（``fields`` 域 27,476 → 4,285 个键）。所以判据必须是「类对象是不是
     同一批」，比 ``__module__`` 字符串会被名字骗过去。

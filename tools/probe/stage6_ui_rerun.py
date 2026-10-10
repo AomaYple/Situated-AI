@@ -46,6 +46,7 @@ from PIL import Image, ImageChops, ImageStat
 
 from pdx import ab_probe, config, experiments, preflight
 from pdx import game_auto as ga
+from pdx.game_run import RunLock
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -1567,21 +1568,17 @@ def run(args: argparse.Namespace) -> int:
             )
     ga.ALLOW_REAL_INPUT = True
 
-    leftover = ga._process_pids()
-    if leftover:
-        report.note(f"起前有残留 victoria3：{leftover} —— 先收掉")
-        ga.kill_game()
-        time.sleep(3)
+    ga.assert_no_game_running()
 
     moved = ga.quarantine_logs()
     report.note(f"已把 {len(moved)} 个旧日志挪去临时目录（这一局的读数只可能来自这一局）")
     for _note in args.note:
         report.note(f"现场注记（--note，调用方给的，不是探针测的）：{_note}")
 
-    with tempfile.TemporaryDirectory(prefix="stage6-deploy-") as _tmp:
-        deploy_note = ab_probe.deploy(archive_id=args.archive or None)
-        report.note(deploy_note)
+    with tempfile.TemporaryDirectory(prefix="stage6-deploy-") as staging:
         try:
+            deploy_note = ab_probe.deploy(root=Path(staging), archive_id=args.archive or None)
+            report.note(deploy_note)
             previous = ga._foreground_window()
             hwnd = ga.launch(
                 scripted_tests=False,
@@ -2752,9 +2749,7 @@ def run(args: argparse.Namespace) -> int:
 
             # 每项收尾独立执行；一项失败不能阻断日志、前台和摘要恢复。
             ga.SHOT_DIR = shot_dir_before
-            owned_pids = getattr(ga, "_OWNED_GAME_PIDS", set())
-            killer = ga.kill_owned_game if owned_pids else ga.kill_game
-            killed = cleanup("终止本次游戏", killer) or []
+            killed = cleanup("终止本次游戏", ga.kill_owned_game) or []
             cleanup("等待进程退出", lambda: time.sleep(2))
             if previous:
                 cleanup("恢复前台", lambda: ga._set_foreground(previous))
@@ -2864,7 +2859,7 @@ def _main_impl(argv: Sequence[str] | None = None) -> int:
     return run(args)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def _main_unlocked(argv: Sequence[str] | None = None) -> int:
     """运行阶段六，并为早期失败提供统一的环境恢复兜底。"""
     shot_dir_before = ga.SHOT_DIR
     content_path = content_load()
@@ -2892,6 +2887,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 after_hash = sha256(after_path) if after_path.is_file() else ""
                 if before_hash and after_hash != before_hash:
                     experiments.restore_content_load()
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """锁覆盖所有前置操作及恢复，拒绝与生产实验争用用户状态。"""
+    values = sys.argv[1:] if argv is None else argv
+    if any(value in {"-h", "--help"} for value in values):
+        return _main_impl(argv)
+    with RunLock(config.USERDIR / ".sitai-game.lock"):
+        return _main_unlocked(argv)
 
 
 if __name__ == "__main__":  # pragma: no cover

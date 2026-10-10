@@ -19,6 +19,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import re
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -72,6 +73,141 @@ def test_没有成绩单时如实说没判定(探针) -> None:
     out = probe.engine_verdict()
     assert out["套件跑没跑"] is False
     assert "没有成绩单" in str(out["引擎判定"])
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "stage3_rerun",
+        "stage6_ui_rerun",
+        "console_probe",
+        "flow_with_cleanup",
+        "perf_mod",
+        "collect_speed_template",
+        "calibrate_speed_template",
+    ],
+)
+def test_旧探针在锁冲突时不执行副作用(
+    name: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """用真实 filelock 竞争，不能靠检查源码中是否出现锁名判定保护生效。"""
+    from pdx.game_run import RunLock
+
+    userdir = tmp_path / "用户数据"
+    monkeypatch.setattr(config, "USERDIR", userdir)
+    path = _PROBE.with_name(name + ".py")
+    spec = importlib.util.spec_from_file_location("probe_lock_" + name, path)
+    assert spec is not None
+    assert spec.loader is not None
+    probe = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, spec.name, probe)
+    spec.loader.exec_module(probe)
+    calls: list[str] = []
+    monkeypatch.setattr(probe, "_main_unlocked", lambda *_a: calls.append("side effect"))
+    with RunLock(userdir / ".sitai-game.lock"), pytest.raises(RuntimeError, match="另一个实机实验"):
+        probe.main()
+    assert calls == []
+
+
+@pytest.mark.parametrize("name", ["stage3_rerun", "console_probe", "perf_mod"])
+def test_旧探针尊重统一用户目录(name: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    userdir = tmp_path / "重定向目录"
+    monkeypatch.setattr(config, "USERDIR", userdir)
+    monkeypatch.setattr(config, "LOCAL_MODS", userdir / "mod")
+    spec = importlib.util.spec_from_file_location(
+        "probe_paths_" + name, _PROBE.with_name(name + ".py")
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    probe = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, spec.name, probe)
+    spec.loader.exec_module(probe)
+    if name == "perf_mod":
+        assert probe.probe_mod_dir() == userdir / "mod" / "zz_sitai_perf"
+    else:
+        assert userdir == probe.DOCS
+        assert userdir / "logs" / "debug.log" == probe.DEBUG_LOG
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["stage3_rerun", "stage6_ui_rerun", "console_probe", "flow_with_cleanup"],
+)
+def test_旧探针在失败后释放实机锁(
+    name: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from pdx.game_run import RunLock
+
+    monkeypatch.setattr(config, "USERDIR", tmp_path)
+    monkeypatch.setattr(sys, "argv", [name])
+    spec = importlib.util.spec_from_file_location(
+        "probe_failure_" + name, _PROBE.with_name(name + ".py")
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    probe = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, spec.name, probe)
+    spec.loader.exec_module(probe)
+
+    def fail(*_args):
+        with (
+            pytest.raises(RuntimeError, match="另一个实机实验"),
+            RunLock(tmp_path / ".sitai-game.lock"),
+        ):
+            pytest.fail("执行过程中未持有实机锁")
+        raise ValueError("中途失败")
+
+    monkeypatch.setattr(probe, "_main_unlocked", fail)
+    with pytest.raises(ValueError, match="中途失败"):
+        probe.main()
+    with RunLock(tmp_path / ".sitai-game.lock"):
+        pass
+
+
+def test_只读日志分析不需要实机锁(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from pdx.game_run import RunLock
+
+    monkeypatch.setattr(config, "USERDIR", tmp_path)
+    probe = _probe()
+    calls = []
+
+    def analyze(argv):
+        calls.append(argv)
+        return 0
+
+    monkeypatch.setattr(probe, "_main_unlocked", analyze)
+    with RunLock(tmp_path / ".sitai-game.lock"):
+        assert probe.main(["--analyze-only"]) == 0
+    assert calls == [["--analyze-only"]]
+
+
+def test_模板采集失败也终止本次进程并归还前台和输入状态(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(config, "USERDIR", tmp_path)
+    spec = importlib.util.spec_from_file_location(
+        "probe_collect_cleanup", _PROBE.with_name("collect_speed_template.py")
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    probe = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(probe)
+    cleanup = []
+    monkeypatch.setattr(ga, "assert_no_game_running", lambda: None)
+    monkeypatch.setattr(ga, "_foreground_window", lambda: 42)
+    monkeypatch.setattr(ga, "_set_foreground", lambda hwnd: cleanup.append(("foreground", hwnd)))
+    monkeypatch.setattr(ga, "kill_owned_game", lambda: cleanup.append(("owned", 0)))
+    monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", False)
+
+    def fail():
+        ga.ALLOW_REAL_INPUT = True
+        raise OSError("启动失败")
+
+    monkeypatch.setattr(probe, "_main_unlocked", fail)
+    with pytest.raises(OSError, match="启动失败"):
+        probe.main()
+    assert cleanup == [("owned", 0), ("foreground", 42)]
+    assert ga.ALLOW_REAL_INPUT is False
 
 
 def test_有成绩单时给引擎的判定(探针) -> None:

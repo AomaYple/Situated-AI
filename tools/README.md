@@ -25,7 +25,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 > （把 `.venv\Scripts\` 换成 `.venv/bin/` 即可）。
 
 装好之后 `pdx` 可被任意目录下的 Python 导入（不再需要 `sys.path` 补丁），
-并生成 `v3` 入口。**不装也能跑**：`python -m pdx.cli` 完全等价。
+并生成 `v3` 入口。安装后也可用环境内的 `python -m pdx.cli` 调用同一 CLI；`src` 布局需要先安装项目，不能只从仓库根目录直接导入。
 
 ## 工程收口检查
 
@@ -37,15 +37,14 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 ```
 
 `deadcode` 扫描受控及未忽略的新 Python 源码的函数和类引用面。它会把测试文件纳入索引，
-识别 `__all__`、`__main__`、pytest hook、插件装饰器和类方法等动态入口，只把确定的
-零引用定义作为失败候选。`tools/probe/frozen/` 是历史证据，`tools/out/ci/` 下的 JSON
+识别 `__all__`、`__main__`、pytest hook、插件装饰器和类方法等动态入口，把静态零引用定义列为失败候选；同名文本与动态入口豁免可能漏报，不能据此证明所有代码可达。`tools/probe/frozen/` 是历史证据，`tools/out/ci/` 下的 JSON
 和 Markdown 报告是可再生临时产物，均不作为可删除源码处理。
 
 ## 当前处境决策实验
 
-生产源为 `mod/decisions/`，由 `pdx.decisions` 生成；旧 `mod/data/` 仅生成到 `mod/legacy/`。
-实机脚本使用同一 `pdx.game_run` 资源事务：跨进程互斥、隔离旧存档菜单、配置和存档原字节恢复、
-持续日志归档、启动期及模拟期进程采样。游戏用户目录不保存实验临时文件。
+生产固定读取 `mod/decisions/fiscal.toml` 与 `mod/decisions/extensions.toml`，由 `pdx.decisions` 生成；旧 `mod/data/` 仅生成到 `mod/legacy/`。
+下表中的生产实验入口复用 `pdx.game_run` 资源事务：跨进程互斥、隔离旧存档菜单、配置和存档原字节恢复、
+持续日志归档、启动期及模拟期进程采样。恢复指针与必要备份受事务管理，实验结束后核对恢复结果。旧阶段探针的部署和恢复契约见下文历史入口说明。
 
 | 入口 | 用途 |
 |---|---|
@@ -115,8 +114,9 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tabular.py` | 表格类数据（`.csv`），分隔符靠 `csv.Sniffer` 嗅探 |
 | `engine_log.py` | 从游戏日志抽外部真值：枚举清单、脚本位置、token 位置 |
 | `console.py` | stdout/stderr 的 UTF-8 兜底（**必须在构造 rich Console 之前调用**） |
-| `modgen.py` | **数据源 → mod 产物**的生成器（阶段 3）：把 `mod/data/*.toml` 编译成脚本 + 本地化 + 档案文档。每个数字必须带 `why`，空 `why` 当场报错；产物一律由它生成，**不许手写**。可选表：`[reform_inputs]` 生成"第二处理段"（第二个效果 + 第二个修正，A/B 阶梯的 B2 臂靠它）；`[panel]`（P11 三行）生成三个解释键并**接进 JE 说明**（引擎显示的是 `journal_entry.gui:742` 的 `GetReason`）；`[difficulty]`（契约 J5，**mod 级**）生成 `common/game_rules/` 三档规则 + 玩家侧修正，并把"按档位给玩家加/减"接进冲击效果（机制只用原版有先例的 `flag` + `has_game_rule`，不用零先例的 `apply_modifier`） |
-| `modguard.py` | **五道闸门**（阶段 3）：键/路径与原版不相交、引用完整性、稀释预算（按阶段 2 的三槽价格表）、往返净度、生成可复现 + `why` 非空。引用类别含 `modifier_field`（修正字段名必须在原版 `static_modifiers` 里出现过 —— 让 P10 的「数值引原版同类用法」可机器核对） |
+| `decisions.py` | 生产生成器：显式读取 `fiscal.toml` 与 `extensions.toml`，生成根级脚本、本地化及默认策略覆盖；扩展开关关闭时仍校验参数。CLI `modgen` 同时检查生产与 legacy 生成物。 |
+| `modgen.py` | **历史数据源 → legacy 产物**的生成器（阶段 3）：把 `mod/data/*.toml` 编译成脚本 + 本地化 + 档案文档。每个数字必须带 `why`，空 `why` 当场报错；产物一律由它生成，**不许手写**。可选表：`[reform_inputs]` 生成"第二处理段"（第二个效果 + 第二个修正，A/B 阶梯的 B2 臂靠它）；`[panel]`（P11 三行）生成三个解释键并**接进 JE 说明**（引擎显示的是 `journal_entry.gui:742` 的 `GetReason`）；`[difficulty]`（契约 J5，**mod 级**）生成 `common/game_rules/` 三档规则 + 玩家侧修正，并把"按档位给玩家加/减"接进冲击效果（机制只用原版有先例的 `flag` + `has_game_rule`，不用零先例的 `apply_modifier`） |
+| `modguard.py` | **legacy 五道闸门**（阶段 3；CLI 另运行生产生成、引用和默认策略覆盖检查）：键/路径与原版不相交、引用完整性、稀释预算（按阶段 2 的三槽价格表）、往返净度、生成可复现 + `why` 非空。引用类别含 `modifier_field`（修正字段名必须在原版 `static_modifiers` 里出现过 —— 让 P10 的「数值引原版同类用法」可机器核对） |
 | `ab_probe.py` | 阶段 3 的 **A/B 臂阶梯探针**生成器（**数值读数**：合法性 `LEGV`/`LEGF`、三个相关 IG 的政治力量 `CLOUTV`/`CLOUTP`、立法进度 `PROG` —— 都用原版自己的 data function，夹逼档位 `CLOUT;<档>` 保留给老归档；依据与两种写法都记的原因见 backlog B90）：点一次决议武装，之后按月度脉冲自动换臂（`A` 第 1–12 月 → `B` 第 13 月施加冲击 → `B2` 第 37 月追加改革侧输入；幂等靠 `stage` 变量）。同时生成 `tools/scripted_tests/` 套件（引擎每天判「是否开窗 / 是否换法」）与原版套件的收敛覆盖 |
 | `ab.py` | 阶段 3 的 A/B 分析器：解析探针月度行 → **两处处理分开报**（① 行为层 / ② 策略层是冲击步 A→B，③ 是改革侧输入步 B→B2）→ 判定。含开局自检（RUN / 玩家 / 观测 / 角色 / SHOCK / INPUT / 报错）、合法性五档诊断；`VERDICT_MIN_MONTHS = 12` 卡住"样本不足就宣判" |
 | `ab_auto.py` | 阶段 3 的**自动实验编排**（状态机，自己不碰游戏）：断言 0 个游戏进程 → 启动 → 轮询探针月度行判进度 → 到点杀进程 → 归档 → 分析 → 追加进 `exec/阶段3-实验记录.md` → 下一臂。启动/杀进程由 `Ports` 注入（**设计上**没接上就当场报错、不静默跳过；**当前默认端口是空的** —— 见 `v3 ab-auto` 那一行的"尚不可用"说明） |
@@ -128,9 +128,11 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 `tools/probe/` 下是**一次性但仍在用**的实测脚本（不挂 `v3` 子命令，因为都要开游戏或要人看着跑）：
 `perf_compare.py`（性能 A/B，`--stress` 换标准压力剧本；每轮扫描本 mod 的 `error.log`，命中真实错误提前停止并在 `compare.json` 标记不可用；`window_control_verdict` 校验两臂 `advanced.from/to`，窗口不可比时退出 1）、`stage3_rerun.py`（档案探针 A/B 重跑）、
-`console_probe.py`、`flow_with_cleanup.py`、`measure_capture_cost.py`、`perf_mod.py`，
+`console_probe.py`、`flow_with_cleanup.py`、`measure_capture_cost.py`、`perf_mod.py`；
 以及 `audit_repo.py` —— **那五条口径的可执行清单**（Python 化 / 成熟库 / 测试与覆盖 / 性能基准 / 默认并行），
 只读仓库、不读游戏，收口时跑一次就知道还差什么。
+
+历史入口 `stage3_rerun.py`、`stage6_ui_rerun.py`、`console_probe.py`、`flow_with_cleanup.py` 和 `perf_mod.py` 在修改用户状态的公开 CLI 入口持有 `pdx.game_run.RunLock`，并使用统一用户目录。只读分析和帮助不申请实机锁。它们仍保留历史部署/日志处理逻辑，不能等同于 `decision_*` 入口的完整 `Deployment` 恢复事务；新生产实验使用上表入口。
 
 ## 命令行 `v3`
 
@@ -167,10 +169,10 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `v3 csv <路径>` | （新增） | 非 PDX 表格（`.csv` / `.tsv`）的**逐列取值分布**，`-c 列名` 详列某列。doc 06 关于 `adjacencies.csv` 的结论由此可复算 |
 | `v3 strings --families` | （新增） | 把未使用的 exe 标识符按**同后缀 / 同前缀**聚族（`--by suffix\|prefix --min N`）：实测 `*_command` 233 个、`*_cw_duplicate_compat` 161 个 —— PDX 字段名往往成族出现 |
 | `v3 experiment` | （新增） | **游戏实测探针**：`plan` 打印「一次启动收工」的操作清单、`install` 把探针 mod 装进本机 mod 目录、`collect` 收割 `logs/` 并按实验编号归位证据、`uninstall` 移除。覆盖 P1–P11（裸同名键、双 mod 顺序、`scripted_modifier`/`scripted_list` 调用语法、`$PARAM$` 候选、进度条自定义样式、JE/事件/按钮字段语义、本地化 `:数字`、重名 namespace）。**登记范围**：它只管理 **3 个**探针 —— `experiments.PROBE_MODS`（`zz_probe_a` / `zz_probe_b`）加 `--risky` 才启用的 `zz_probe_risky`；`tools/probe/` 下另有 `zz_probe_h1` 与 `zz_probe_ab`，它们分别由 `v3 h1-probe` / `v3 ab-probe` 生成与部署（各自带真 mod），**不在 `v3 experiment` 的白名单里** |
-| `v3 modgen` | （阶段 3 新增） | **数据源 → mod 产物**：`--write` 落盘并清理被取代的旧文件、`--check` 核对盘上产物是否被手改或过期、`--why` 列出每个数字与它的依据。产物在 `mod/`（原版目录树的镜像），改产物没用 |
+| `v3 modgen` | （生产与历史生成入口） | **数据源 → mod 产物**：`--write` 落盘并清理被取代的旧文件、`--check` 核对盘上产物是否被手改或过期、`--why` 列出每个数字与它的依据。生产产物在 `mod/` 根级目录，历史档案只在 `mod/legacy/`，两者均通过生成器维护 |
 | `probe_lint.py` | **探针产物的引用体检**（2026-09-24）：探针是**一次性实机实验**的载体，而写错一个引用**不会让它崩** —— 效果名错 ⇒ 引擎记 `Unknown effect`、那格读数静默为空；`law_type:` 错 ⇒ 那条 `LAW` 行永不出现；data function 错 ⇒ `debug_log` 把 `[...]` 原样打出来。三类都是开局前读文件就知道的事。**只看代码不看注释**（注释里故意举了 `[This.GetTag]` 这种反例）、**只查形状能认出来的五类**（我们前缀的效果 / JE / 法 / AI 牌 / IG / data function 片段）—— 覆盖面换不来精度，而误报的代价是这套体检被关掉。已接进 `v3 preflight` 与探针驱动 |
 | `v3 preflight` | （阶段 3 新增） | **开局前的只读自检**（`--archive <id>` 时一并查那份档案可不可跑、盘上的探针盯的是不是它）：游戏本体 / 版本与 mod 声明是否一致 / 盘上产物是否被手改 / **用户 mod 配置是不是原样**（探针态、残留备份都查）/ 有没有残留 `victoria3` 进程 / 日志里有没有上一局的自报 / **活动 Launcher playset 是否登记了 content_load 请求的本地 mod**。最后一项只读 `launcher-v2.sqlite`，没有数据库或发现本地 mod 未登记时只给信息提示，不改启动器状态；实机仍须以 `Mounted Data` 日志确认挂载。**退出码与其余命令同一套**：0 = 可以开局，1 = 有该修的问题，2 = 这台机器现在跑不了。为什么值一条命令：起游戏到选国家界面实测约 **137 秒**，白跑一次远比自检贵 —— 探针驱动（`stage3_rerun`）已经把它接在**任何改动之前**（`--skip-preflight` 可跳过）。它**只报告、绝不顺带修**；唯一会动手的是驱动在"上次被强杀留下探针态"时的自愈（backlog B89） |
-| `v3 modguard` | （阶段 3 新增） | **五道闸门**：`--only` 逐道跑（编号或键名）。任一不过即非零退出，前置条件缺失（没有游戏）按用法错误处理 —— **跳过的检查不算通过** |
+| `v3 modguard` | （生产与历史检查入口） | **生产检查 + legacy 五闸**；有意覆盖默认策略仍有跨版本和兼容成本。legacy `--only` 选择闸门：`--only` 逐道跑（编号或键名）。任一不过即非零退出，前置条件缺失（没有游戏）按用法错误处理 —— **跳过的检查不算通过** |
 | `v3 ab-probe` | （阶段 3 新增） | 生成 A/B 臂阶梯探针（`tools/probe/zz_probe_ab/`，含 `tools/scripted_tests/` 套件）；`--deploy` 连同真 mod 一起装进用户 mod 目录 |
 | `v3 ab` | （阶段 3 新增） | 分析实验归档：`--logs` 指目录、`--json` 机器可读、`--health` 开局自检（任一红即退出码 1）。报告按 ① 行为层 / ② 策略层 / ③ 改革侧输入段分开排，最后给判定 |
 | `v3 ab-auto` | （阶段 3 新增） | 自动跑臂队列：`--plan` 只看队列与接线（安全）、`--months` / `--expect` / `--repeat` / `--record`。⚠️ **端到端跑批尚不可用**：`ab_auto.default_ports()` 的 `start` / `stop` 目前是"调用即抛错"的空实现（`cli.py` 里 `--plan` 也直接印着"启动/杀进程 **未接**"），要接 `game_auto` 才能从 `Ports` 传进去。设计上**没接上就退出码 1**（不静默跳过），所以现在跑只会得到一条 ❌ 记录 —— 证据见 `docs/design/exec/阶段3-实验记录.md`（目前只有表头，没有任何一节跑批记录） |
@@ -200,7 +202,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe experiment collect          # 游戏退出后收割 logs/
 .venv\Scripts\v3.exe cov                         # 覆盖率门禁（含核心模块下限）
 .venv\Scripts\v3.exe modgen --write              # 数据源 → mod 产物（改完 TOML 必跑）
-.venv\Scripts\v3.exe modguard                    # 五道闸门（全过才进游戏）
+.venv\Scripts\v3.exe modguard                    # 生产检查 + legacy 五闸（通过后再做实机验收）
 .venv\Scripts\v3.exe lock                        # 依赖锁与当前环境对账
 .venv\Scripts\v3.exe check-outputs               # 核验产物（需先 analyze）
 .venv\Scripts\v3.exe defines --ns NAI            # 展开某个 defines 命名空间
@@ -235,12 +237,12 @@ CI runner 上没有游戏本体，所以「哪些命令能在无游戏环境跑�
 
 | 命令 | 无游戏时 | 它证明什么 | 进 CI |
 |---|---|---|---|
-| `v3 modgen --check` | **exit 0** | 盘上产物与 `mod/data/*.toml` 逐字节一致（P3：没有手写产物） | ✅ |
+| `v3 modgen --check` | **exit 0** | 生产及 legacy 产物分别与对应数据源逐字节一致（P3：没有手写产物） | ✅ |
 | `v3 verify --from-snapshot` | **exit 0** | 断言注册表与**入库快照**一致（不是"游戏里现在还是这个数"） | ✅ |
 | `v3 tables --offline` | **exit 0** | 174 张生成表与**入库快照**一致（不是"表与现在的游戏一致"） | ✅ |
 | `v3 citations --offline` | **exit 0**（实测） | 949 条引用与**入库快照的 `citation_support` 域**一致 —— 域里记着每条引用的**文件行数 + 被引那一行的文本指纹**（B77） | ✅ |
 | `v3 lock` | **exit 0** | 装出来的环境与 `requirements.lock` 逐条一致 | ✅（Windows job） |
-| `v3 modguard --offline` | **exit 0** | 五道闸门；①② 的原版真值改读入库快照（③④⑤ 本来就不读游戏） | ✅ |
+| `v3 modguard --offline` | **exit 0** | 生产检查 + legacy 五闸；legacy ①② 的原版真值改读入库快照（③④⑤ 本来就不读游戏） | ✅ |
 | `v3 ai-surface --check --offline` | **exit 0** | 三件事全部枚举自原版 `ai_strategies` / `defines`（离线改读快照，且复用同一个 `render()`） | ✅ |
 | `v3 modguard` / `v3 ai-surface --check`（**在线**） | **exit 2** | 闸门 ①② 要与原版键名、修正字段池取交集 ⇒ 无游戏时报「前置条件缺失」而不是"通过"（退出码 2 + 一句话，不是 traceback） | ❌（CI 用 `--offline`） |
 | `v3 citations`（**在线**） | **exit 1**（实测：当时 850 条里 827 条报 missing） | 它要**打开原版文件**确认那一行在不在 ⇒ 无游戏时是**假红**。CI 上必须用 `--offline` | ❌（CI 用 `--offline`） |
@@ -262,7 +264,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-113 个测试文件；2904 条用例。最新完整回归为 2894 passed / 10 skipped / 0 failed，另有 1551 个 subtests passed；总覆盖率 88.76%，11 个核心模块下限通过；`n auto` 按起始可用内存自选 4 个 worker，pytest 621.47 秒，进程树 RSS 采样峰值 3710.4 MiB、私有内存峰值 6408.0 MiB。真实 Windows/macOS/Linux × Python 3.11–3.14 离线 CI 矩阵、静态检查、基准及锁文件检查全部通过，未知跳过为零。MiB 按 1024² 字节；不同测试集合、缓存和资源状态的运行不冒充受控前后提速对照，详见[执行记录](../docs/audits/2026-10-10-speed-execution.md)。早期固定检查点 3 组 × 3 臂仅通过采集结构、同窗口与压力自报检查，正式 M4 仍缺冻结候选、真实后期和资源预算；见 `docs/design/exec/M4-结果.md`。
+当前收集 113 个测试文件、2923 条用例。本轮维护后的完整覆盖率回归（串行）为 2913 passed / 10 skipped / 0 failed，耗时 1299.47 秒，覆盖率 88.79%，11 个核心模块下限通过；资源采样峰值为进程树 RSS 2453.2 MB、Private Bytes 4109.1 MB，采样到的单个 worker 峰值 RSS 为 133.7 MB。速度专项另有独立口径的 `n-auto` 历史记录：2904 collected、2894 passed / 10 skipped / 0 failed，4 个 worker，pytest 621.47 秒，进程树 RSS 采样峰值 3710.4 MiB、私有内存峰值 6408.0 MiB。真实 Windows/macOS/Linux × Python 3.11–3.14 离线 CI 矩阵、静态检查、基准及锁文件检查全部通过，未知跳过为零。不同测试集合、缓存和资源状态的运行不冒充受控前后提速对照，详见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)与[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。早期固定检查点 3 组 × 3 臂仅通过采集结构、同窗口与压力自报检查，正式 M4 仍缺冻结候选、真实后期和资源预算；见 `docs/design/exec/M4-结果.md`。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -315,18 +317,18 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_ab_probe.py` | 阶段 3 的 **A/B 臂阶梯探针**必须被钉住的五件事：阶梯只有一处定义（`LADDER`）、换臂**幂等**（`stage` 单调递增，每个效果只施加一次）、两处输入**分开施加**（B 段只调冲击、B2 段才调改革侧输入）、0 张牌（F5）、生成物能被自家解析器读懂；另钉 `scripted_tests` 套件的判据方向（`fail` 日期必须早于 `last_date`，否则"没发生"永远不报）与"探针引用的效果名 == 数据源生成的名字"（P9） |
 | `test_ab.py` | 阶段 3 的 A/B 分析器：按月配对（含脉冲跨秒与轮转副本）、`RUN` 分段 + 同臂多段合并、**一局三臂**（`A→B→B2`）、**两处处理分开报**（① / ② 是冲击步 A→B，③ 是改革侧输入步 B→B2）、判定三档（G2 初步成立 / H2 薄壳 / 无差分）与"样本不足不许宣判"、合法性五档诊断、`SHOCK`/`INPUT` 两条自检的通过与否决路径，以及**老归档（没有 `INPUT`/`LEG` 行）照样能分析**（阶段 3 的结论就来自那些局） |
 | `test_ab_auto.py` | 阶段 3 的**自动实验编排**状态机全路径（假端口，不开游戏）：有进程时前置断言中断、启动接口没接上当场报错、轮询三种收工方式（到点 / 游戏提前退出 / 轮询用尽）、进度按探针自己的月度块算而不按墙钟、整臂跑通的状态顺序与归档标签、没跑到目标臂或月数不够即不达标、记录文件的表头与追加、队列"一臂不达标即停"、CLI `--plan` 不写文件与未接线时退出码 1 |
-| `test_game_auto.py` | `game_auto.py`（1102 行）的**纯逻辑**看守（948 行；假窗口 / 假截图 / 假时钟，不开游戏）：tick 与探针月度行的解析与读取、进程清单、ROI 裁剪、空白检测、图像匹配（含真实模板回放）、`wait_until*` 的等待语义、前台断言、点击（含「点观察」）、截图、取消暂停、后台仍在推进的判据、启动命令构造与缺 exe 的报错、窗口/大厅等待、`describe`/`status` 的文案。真开游戏的 `TestLive` 一类按条件跳过 |
+| `test_game_auto.py` | `game_auto.py` 的**纯逻辑**看守（假窗口 / 假截图 / 假时钟，不开游戏）：tick 与探针月度行的解析与读取、进程清单、ROI 裁剪、空白检测、图像匹配（含真实模板回放）、`wait_until*` 的等待语义、前台断言、点击（含「点观察」）、截图、取消暂停、后台仍在推进的判据、启动命令构造与缺 exe 的报错、窗口/大厅等待、`describe`/`status` 的文案。真开游戏的 `TestLive` 一类按条件跳过 |
 | `test_game_auto_verdict.py` | 闭环**最后两步**的看守（官方成绩单解析 / "我们的报错"只数我们的 / 两条假绿都挡住 / 等落盘是条件等待 / 接线与退出码）。两条假绿指的是：照 `[ FAIL ] Error log: N errors` 判会**每次假红**，而"零失败 + 零套件"会**假绿** |
 | `test_gametimer.py` | `gametimer.py` 的解析与统计（纯合成夹具，不依赖游戏）：表头识别、`Year/Month/Day` 三档聚合、坏行只打标不改写、按单元汇总与「最坏一天」、**「单帧量不出来」这件事本身**（`per_frame_measurable is False`）—— 预算判据不许把不可测的东西写成测过了 |
 | `test_mod_hygiene.py` | **P3 / G-EXIT-4 的文件面判据**：`mod/` 下的文件必须**正好**等于「生成结果 ∪ 数据源」。为什么需要它 —— `v3 modgen --check` 与 `v3 modguard` 都只认本档案前缀（`sitai_`），实测换一个前缀手写一个游戏侧文件（`zz_stray_handwritten.txt`）**两道门禁都报绿** |
 
-### 跑基准要加 `-n0`
+### 跑基准须串行并清除普通测试参数
 
 `pytest-benchmark` 在 xdist 开启时会**自动禁用自己**，而本项目默认并行
 （`-n auto`）。因此不带 `-n0` 时基准会被静默跳过 —— 实测踩过：
 
 ```text
-python -m pytest tests/test_benchmarks.py --benchmark-only -n0
+.venv\Scripts\python.exe -X utf8 -m pytest tests/test_benchmarks.py -o "addopts=" -n 0 --benchmark-only
 ```
 
 ### 变异测试：按需跑，不进 CI
@@ -518,9 +520,9 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 
 既定工程收口项目已有对应证据：全量分析覆盖 `game`、`jomini`、`clausewitz` 三个内容根，记录脚本/defines、本地化摘要、DLC 描述符、资源索引和完整本地化键清单；mod 分析补齐 metadata、本地化值/重复键/占位符与资源引用断链；快照和 citations 保持跨根一致。后续发现的缺口在现有入口修补，不能由阶段收尾推导工具永远没有工程缺陷。
 
-自动化清理具备 PID 身份校验、窗口 PID 过滤、关键日志失败报告和存活进程报告；性能探针具备跨进程锁。CI 覆盖三平台与 Python 3.11–3.14，默认 worker 上限为 2，普通测试排除 integration/benchmark。
+自动化清理具备 PID 身份校验、窗口 PID 过滤、关键日志失败报告和存活进程报告；性能探针具备跨进程锁。CI 覆盖三平台与 Python 3.11–3.14；无游戏 runner 通过 `SITAI_XDIST_WORKERS=2` 限制普通测试的 worker 数，并排除 integration/benchmark。开发机默认仍按 CPU 与可用内存自适应 `n-auto`。
 
-B37 的观察者健康检查假红已修复；B11–B13、B26–B27、B29、B35–B36、B38 和 B115 等历史研究项仍按触发条件管理。2026-10-06 复审另发现 B137 配对挂载隔离和 B138 旧审计脚本扫描目录缺口，尚未实现修补，见 [`仓库与计划复审`](../docs/audits/2026-10-06-plan-review.md)。后续按 [`最终执行纲领`](../docs/design/exec/mod重设计-实施计划.md) 处理版本变化、失败与不可测项，不把合成夹具、CI 或离线快照当机制结论。Windows 有 Victoria 3 GUI 实机证据，macOS/Linux 仅有工具链、CI 和无头验证。
+B37 的观察者健康检查假红已修复；B11–B13、B26–B27、B29、B35–B36、B38 和 B115 等历史研究项仍按触发条件管理。2026-10-06 复审发现的 B137 配对挂载隔离和 B138 旧审计脚本扫描目录缺口已修补，状态见 [backlog](../docs/design/backlog.md)，历史发现见 [`仓库与计划复审`](../docs/audits/2026-10-06-plan-review.md)。后续按 [`最终执行纲领`](../docs/design/exec/mod重设计-实施计划.md) 处理版本变化、失败与不可测项，不把合成夹具、CI 或离线快照当机制结论。Windows 有 Victoria 3 GUI 实机证据，macOS/Linux 仅有工具链、CI 和无头验证。
 
 ## 为什么全 Python 化
 
@@ -528,11 +530,11 @@ B37 的观察者健康检查假红已修复；B11–B13、B26–B27、B29、B35�
 |---|---|
 | PowerShell 5.1 的编码陷阱 | 不加 `-Encoding utf8` 按 GBK 解码；`Set-Content -Encoding UTF8` 写 BOM |
 | PowerShell 的反引号转义 | 字符串里写 Markdown 代码块会报语法错误（开发中触发多次） |
-| 缺少数据结构 | 解析结果只能用 PSCustomObject 拼，不如 dataclass 清晰 |
-| 无法写正经测试 | PowerShell 没有 `pytest` 那样的测试框架 |
+| 统一结构与测试 | 本项目使用 dataclass 和 pytest 维护解析、生成与证据契约，避免两套实现漂移 |
+| 维护成本 | PowerShell 可使用 Pester 测试；本项目选择集中到现有 Python 工具链 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版把上述问题都变成了**可测试的代码**：2904 条用例 + 234 条断言核验
+Python 版将这些流程集中为可测试的代码；速度执行记录收集 2904 条用例，另有 234 条断言核验；本轮维护后的覆盖率回归收集 2923 条用例
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
@@ -550,5 +552,5 @@ Python 版把上述问题都变成了**可测试的代码**：2904 条用例 + 2
 > **生成表也有离线那一条**：174 张表要读游戏才算得出来，于是「表被手改、或改了
 > 生成器却忘了重跑」在 CI 上一直没人守。现在精简快照里带着每张表当时的数据行
 > （域 `doc_tables`），`v3 tables --offline` 只读快照与文档即可逐行核对
-> （`--write` 可按快照恢复）。CI 与 pre-commit 都跑这一条
-> —— 它与 `v3 verify --from-snapshot` 的分工完全对称。
+> （`--write` 可按快照恢复）。CI 运行表格检查；pre-commit 只运行离线断言核验等静态检查，
+> 表格检查与 `v3 verify --from-snapshot` 各自负责不同的一致性范围。

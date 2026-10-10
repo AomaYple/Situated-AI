@@ -53,11 +53,12 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from pdx import game_auto as ga
+from pdx.game_run import RunLock
 
 OUT = Path(__file__).resolve().parent / "zz_console_probe"
 
 #: 用户目录（引擎把 `console_history.txt` 写这儿）。
-DOCS = Path.home() / "Documents" / "Paradox Interactive" / "Victoria 3"
+DOCS = ga.config.USERDIR
 HISTORY = DOCS / "console_history.txt"
 DEBUG_LOG = DOCS / "logs" / "debug.log"
 
@@ -394,7 +395,7 @@ def _new_log_lines(size_before: int) -> list[str]:
     return [line.strip() for line in fresh.splitlines() if any(w in line for w in wanted)][:20]
 
 
-def main() -> int:
+def _main_unlocked() -> int:
     parser = argparse.ArgumentParser(description="游戏内控制台：打开引擎自带的逐任务计时")
     parser.add_argument("--run", type=float, default=12.0, help="开完计时让它跑几个月")
     parser.add_argument("--sweep", action="store_true", help="先重扫一遍候选键")
@@ -493,12 +494,19 @@ def main() -> int:
         (OUT / "report.json").write_text(
             json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        killed = ga.kill_game()
+        killed = ga.kill_owned_game()
         if previous:
             ga._set_foreground(previous)
         print(f"[收尾] 杀游戏 {killed or '（没有）'}；{restore_logger_settings()}")
         print(f"        报告 {OUT / 'report.json'}")
     return 0
+
+
+def main() -> int:
+    if any(value in {"-h", "--help"} for value in sys.argv[1:]):
+        return _main_unlocked()
+    with RunLock(ga.config.USERDIR / ".sitai-game.lock"):
+        return _main_unlocked()
 
 
 if __name__ == "__main__":

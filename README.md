@@ -2,9 +2,11 @@
 
 Victoria 3 的 AI 相关 mod 开发项目。
 
+开发与维护见 [CONTRIBUTING.md](CONTRIBUTING.md)，编码代理的项目入口见 [AGENTS.md](AGENTS.md)。
+
 > **当前状态**：工程底座继续复用，包括 **21 篇的 mod 开发知识库**、
 > **可复现统计数据的 Python 工具链**和当前的**实验性 mod 实现**：
-> 生产数据源 `mod/decisions/fiscal.toml` 生成真实财政风险规则及默认策略的条件偏置。
+> 生产数据源 `mod/decisions/fiscal.toml` 与 `mod/decisions/extensions.toml` 生成财政规则、扩展配置和默认策略的条件偏置；扩展当前默认关闭。
 > 旧 `mod/data/*.toml` 的 **9 份实验档案、69 个产物**隔离在 `mod/legacy/`，不进入生产 ZIP。
 > **新机制已实现且两国财政生命周期有 Windows 实机证据；实际外交收益、稳定性与扩展仍在验证。**
 >
@@ -147,8 +149,8 @@ CI 跑 `v3 verify --from-snapshot`（真值来自**入库的离线真值**：精
 **174 张生成表也有对称的那一条**：算它们要读游戏，于是「表被手改、或改了生成器
 却忘了重跑」在 CI 上原本无人看守。现在精简快照里带着每张表当时的数据行，
 `v3 tables --offline` 只读快照与文档即可逐行核对（`--write` 可按快照恢复），
-CI 与 pre-commit 都跑它。`.pre-commit-config.yaml` 与 `ci.yml` 的对应关系写在
-配置文件里（ruff / mypy / 离线核验三条对齐，pytest 有意不进 hook）。
+.github/workflows/ci.yml 运行此检查；pre-commit 运行编码、Ruff、mypy 与离线断言核验，不运行表格检查或 pytest。`.pre-commit-config.yaml` 与 `ci.yml` 的对应关系写在
+配置文件里；钩子不能替代完整回归。
 
 **正文里的数字由「归属标记」绑定**：写法是 `共 205<!--claim:dip.group_files--> 个文件`
 （HTML 注释，GitHub 渲染时不可见）。它把「这个数字属于哪条断言」写进文档本身，于是：
@@ -173,7 +175,7 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2904 条**用例；最新完整回归为 2894 passed / 10 skipped / 0 failed，另有 1551 个 subtests passed；总覆盖率 88.76%，11 个核心模块下限通过。真实 Windows/macOS/Linux × Python 3.11–3.14 离线 CI 矩阵全部通过；详见[执行记录](docs/audits/2026-10-10-speed-execution.md) |
+| 测试 | **2923 条**用例；本轮维护后的完整覆盖率回归（串行）为 **2913 passed / 10 skipped / 0 failed**，耗时 1299.47 秒，覆盖率 **88.79%**，11 个核心模块下限通过。速度专项另有独立口径的 `n-auto` 历史记录（2904 collected、2894 passed、10 skipped）；真实 Windows/macOS/Linux × Python 3.11–3.14 离线 CI 矩阵全部通过；详见[维护记录](docs/audits/2026-10-10-repository-maintenance.md)与[速度执行记录](docs/audits/2026-10-10-speed-execution.md) |
 | 测试文件 | **113 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 以 `v3 cov` 与 CI coverage artifact 的当前输出为准（门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
@@ -184,7 +186,7 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 ```
 Situated AI/
-├─ mod/                      生产产物（`decisions/*.toml` 生成）；`data/` → `legacy/` 仅为历史实验
+├─ mod/                      生产产物（`decisions/fiscal.toml` 与 `extensions.toml` 生成）；`data/` → `legacy/` 仅为历史实验
 ├─ docs/design/              当前处境决策设计 + 历史方向依据 + `exec/` 实施与结果记录 + backlog
 ├─ docs/victoria3-modding/   20 篇主题文档 + 1 个索引
 ├─ docs/audits/              当前工程审计与历史测试快照
@@ -212,7 +214,7 @@ Situated AI/
 | **官方文档需交叉验证** | 游戏自带 94 篇 `.md` 有多处字段名错误与遗漏，写 mod 前先对照实测 |
 | **能用库就不自己写** | 解析用标准库、CLI 用 typer、测试用 pytest 全家桶；不重造已有轮子 |
 | **正确性第一** | 优先保证与源文件一致，性能优化必须在有测试护航的前提下做 |
-| **自动看守** | `.github/workflows/ci.yml` 在每次 push/PR 上跑 ruff + mypy + 不依赖游戏的用例；`.pre-commit-config.yaml` 在提交前跑同一套 |
+| **自动看守** | `.github/workflows/ci.yml` 在每次 push/PR 上跑 ruff + mypy + 不依赖游戏的用例；`.pre-commit-config.yaml` 在提交前运行编码、Ruff、mypy 与离线断言核验，不运行 pytest |
 
 ### 已知边界
 
@@ -227,11 +229,13 @@ Situated AI/
 - 游戏自动化具备 PID 身份校验、窗口 PID 过滤、关键日志失败报告和存活进程报告；性能探针具备跨进程锁。
 - CI 覆盖 Python 3.11–3.14 与 Windows/macOS/Linux；无游戏 runner 将 xdist 限为 2 个 worker，普通测试排除 integration/benchmark。
 
-后续统一按已定型的 [`最终执行纲领 1.0`](docs/design/exec/mod重设计-实施计划.md) 推进：先补配对挂载隔离与审计扫描，再确认 M3 可测性并做有限行为/质量对照；M4 独立安全验证可先做，正式候选验收仍依赖 M3；M5 按模块重复验收后启用。接口不足、阴性结果、版本升级和工程回归均按纲领中的固定分支处理，进度写结果页。B37 已完成，其他历史研究项按触发条件管理，当前缺口见 backlog B130–B138；不把模拟、CI 或离线快照写成机制结论。Windows 有 Victoria 3 GUI 实机证据；macOS/Linux 只有工具链、CI 和无头验证。
+后续统一按已定型的 [`最终执行纲领 1.0`](docs/design/exec/mod重设计-实施计划.md) 推进：配对挂载隔离与审计扫描（B137/B138）已完成，M1–M5 的当前状态以各结果页与 backlog 为准，后续继续执行有限行为/质量对照；M4 独立安全验证可先做，正式候选验收仍依赖 M3；M5 按模块重复验收后启用。接口不足、阴性结果、版本升级和工程回归均按纲领中的固定分支处理，进度写结果页。B37 已完成，其他历史研究项按触发条件管理，当前缺口见 backlog B130–B138；不把模拟、CI 或离线快照写成机制结论。Windows 有 Victoria 3 GUI 实机证据；macOS/Linux 只有工具链、CI 和无头验证。
 
 ## 工程收尾复核（2026-10-06，B137/B138）
 
-2026-10-09 首轮完整 `n-auto` 回归收集 **2576** 个用例，实际结果为 **2565 passed / 10 skipped / 1 failed**，561.87 秒、4 个 worker、覆盖率 **88.37%**；唯一失败是 README 用例数陈旧，定向修正已通过。新增原件保护、M3 样本配对和政治矩阵回归后现收集 **2642** 项；最新完整回归 **2632 passed / 10 skipped / 0 failed**，覆盖率 **88.54%**，资源摘要见本轮[证据审计](docs/audits/2026-10-09-evidence-audit.md)。M4 已完成早期固定检查点 3 组 × 3 臂的采集回归；正式性能验收仍缺冻结的 M3 候选、真实后期输入及事前资源预算。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与执行计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
+2026-10-09 首轮完整 `n-auto` 回归收集 **2576** 个用例，实际结果为 **2565 passed / 10 skipped / 1 failed**，561.87 秒、4 个 worker、覆盖率 **88.37%**；唯一失败是 README 用例数陈旧，定向修正已通过。新增原件保护、M3 样本配对和政治矩阵回归后，2026-10-09 当次收集 **2642** 项，完整回归 **2632 passed / 10 skipped / 0 failed**，覆盖率 **88.54%**，资源摘要见本轮[证据审计](docs/audits/2026-10-09-evidence-audit.md)。M4 已完成早期固定检查点 3 组 × 3 臂的采集回归；正式性能验收仍缺冻结的 M3 候选、真实后期输入及事前资源预算。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与执行计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
+
+本轮目录、入口、残留与检查整理见 [2026-10-10 仓库维护记录](docs/audits/2026-10-10-repository-maintenance.md)。
 
 ## 授权
 

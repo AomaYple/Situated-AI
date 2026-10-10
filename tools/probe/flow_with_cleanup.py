@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from pdx import game_auto as ga
+from pdx.game_run import RunLock
 from pdx.platform_support import require_windows
 
 win32gui = ga.win32gui
@@ -50,12 +51,7 @@ def desktop_owners() -> dict[int, int]:
     return tally
 
 
-def kill_game() -> list[int]:
-    """复用进程收尾；返回已发出终止请求的 PID。"""
-    return ga.kill_game()
-
-
-def main(argv: list[str] | None = None) -> int:
+def _main_unlocked(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="flow_with_cleanup", description=__doc__)
     parser.add_argument("--speed-xy", default="", help="显式指定速度档 V 的客户区坐标 X,Y")
     parser.add_argument("--skip-speed", action="store_true", help="不切速度档")
@@ -73,11 +69,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"--speed-xy 必须是 X,Y 两个整数：{exc}")
 
     ga.ALLOW_REAL_INPUT = True  # 显式入口：允许抢前台并发送观察/速度/暂停输入
-    leftover = ga._process_pids()
-    if leftover:
-        print(f"⚠️ 起前有残留 victoria3：{leftover} —— 先收掉（这是上一轮没收拾干净）")
-        kill_game()
-        time.sleep(3)
+    ga.assert_no_game_running()
 
     previous = ga._foreground_window()
     print(f"启动前前台 = {previous}（收尾会还给它）")
@@ -110,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
                 cleanup_errors.append(f"{label}: {type(exc).__name__}: {exc}")
                 return None
 
-        # 只清理本次 launch 登记的进程；启动前发现的残留已在上方明确授权清理。
+        # 只清理本次 launch 登记的进程；已有游戏在启动前被拒绝。
         killed = cleanup("终止本次游戏", ga.kill_owned_game) or []
         cleanup("等待进程退出", lambda: time.sleep(2))
         # 收尾时先还前台再采样；每一步独立保护，避免一个失败掩盖原始故障。
@@ -140,6 +132,14 @@ def main(argv: list[str] | None = None) -> int:
     for key, value in (result.as_dict() if result else {}).items():
         print(f"  {key:22s}: {value}")
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    values = sys.argv[1:] if argv is None else argv
+    if any(value in {"-h", "--help"} for value in values):
+        return _main_unlocked(argv)
+    with RunLock(ga.config.USERDIR / ".sitai-game.lock"):
+        return _main_unlocked(argv)
 
 
 if __name__ == "__main__":
