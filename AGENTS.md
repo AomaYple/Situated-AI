@@ -6,7 +6,10 @@
 
 - [工程原则](docs/principles/工程原则.md)定义工程底线；[CONTRIBUTING.md](CONTRIBUTING.md)维护具体贡献流程，[工程基线](docs/design/exec/工程基线-1.0.md)维护工具与验证契约。
 - [Mod 开发原则](docs/principles/Mod开发原则.md)定义产品底线；[处境决策设计](docs/design/03-处境决策设计.md)维护架构，[最终执行纲领](docs/design/exec/mod重设计-实施计划.md)维护阶段出口。
+- 两类原则共同要求正确性第一、速度第二；在保持正确性与证据完整性的前提下，优化开发、验证和游戏运行效率。流程、设计和计划落实这些约束，性能结论由对应测量验收。
 - 原则页只维护持续约束，结果页管理实测和阻塞；导航页不重复定义规则。文档分类与更新规则见 [文档维护](docs/README.md#文档维护)。
+
+全仓规范按维护时最新且适用的现代 Python 仓库最佳实践持续更新；目录、元数据、配置与迁移的落实方式见 [现代 Python 仓库维护](CONTRIBUTING.md#现代-python-仓库维护)。
 
 ## 先定位任务
 
@@ -15,7 +18,7 @@
 - Mod 目标与行为边界：[处境决策设计](docs/design/03-处境决策设计.md)。
 - 制作顺序与阶段验收：[最终执行纲领](docs/design/exec/mod重设计-实施计划.md)；当前进展查看对应结果页及 [backlog](docs/design/backlog.md)。
 - 工具链与证据边界：[工程基线](docs/design/exec/工程基线-1.0.md)；命令细节见 [工具手册](tools/README.md)。
-- 性能任务：[速度优化计划](docs/design/exec/速度优化计划-正确性优先.md)。
+- 性能任务：工具与开发流程使用 [速度优化计划](docs/design/exec/速度优化计划-正确性优先.md)；游戏运行效率按 [Mod 效率要求](docs/principles/Mod开发原则.md#开发与运行效率)和 M4 实机出口验证。
 
 历史交接、台账与旧报告用于核对当时事实，不替代当前设计、验收条件或本次任务授权。
 
