@@ -175,12 +175,12 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **2908 条**用例；此前仓库维护记录中的完整覆盖率回归（串行）为 **2913 passed / 10 skipped / 0 failed**，耗时 1299.47 秒，覆盖率 **88.79%**，11 个核心模块下限通过。速度专项另有独立口径的 `n-auto` 历史记录（2904 collected、2894 passed、10 skipped）；真实 Windows/macOS/Linux × Python 3.11–3.14 离线 CI 矩阵全部通过；详见[维护记录](docs/audits/2026-10-10-repository-maintenance.md)与[速度执行记录](docs/audits/2026-10-10-speed-execution.md) |
-| 测试文件 | **112 个测试文件**（`tests/test_*.py`） |
+| 测试 | **2879 条**用例（2026-10-10 当前工作区收集）；清理后的完整回归见[清理记录](docs/audits/2026-10-10-stale-cleanup.md)，有日期的覆盖率和三平台 CI 结果见[维护记录](docs/audits/2026-10-10-repository-maintenance.md) |
+| 测试文件 | **111 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 以 `v3 cov` 与 CI coverage artifact 的当前输出为准（门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
-| 端到端 | 约 35 秒（三次实测 33.7 / 34.9 / 37.1；随机器而异） |
-| 解析规模 | **3,962** 个脚本文件（`game\` 下 `.txt` 3,758 + `.gui` 204，即 `pdx.cache` 的解析条数）+ **1,878** 个本地化 `.yml` |
-| 范围声明 | **不说「全量」** —— 文件维度可证伪（136 个 `common\` 子目录逐文件覆盖，有引擎日志背书），但「所有相关信息」没有边界、无法证伪。本仓库只声明**能回答哪些任务**，见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」 |
+| 性能测量 | 工具、测试和内存的独立测量见[速度执行记录](docs/audits/2026-10-10-speed-execution.md)，不同输入与环境的结果不作为受控提速对照 |
+| 文件规模 | **3,964** 个 `.txt` / `.gui` 文件（`game\` 下 `.txt` 3,760 + `.gui` 204）+ **1,878** 个本地化 `.yml`；2026-10-10 由 `pdx.scan.walk_files` 核对，文件计数不等于运行期语义已验证 |
+| 范围声明 | **不说「全量」** —— 当前安装中 138 个 `common\` 子目录进入文件分析，运行期枚举另有历史日志背书；「所有相关信息」没有边界、无法证伪。本仓库只声明**能回答哪些任务**，见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」 |
 
 ## 目录结构
 
@@ -217,7 +217,7 @@ Situated AI/
 
 ## 工程与 Mod 状态
 
-最近一次完整工程回归记录见 [2026-10-10 仓库维护](docs/audits/2026-10-10-repository-maintenance.md)：2913 passed、10 skipped、0 failed，分支覆盖率 88.79%。这是有日期的历史测量，本页更新不代表重新跑过完整回归。当前测试收集与机械统计由仓库测试持续核对。
+清理后完整工程回归见 [2026-10-10 过时内容清理](docs/audits/2026-10-10-stale-cleanup.md)。此前的分支覆盖率 88.79%、核心模块下限与三平台离线 CI 记录见 [仓库维护](docs/audits/2026-10-10-repository-maintenance.md)，这些测量属于各自记录的版本，不能当作本次重新测量。当前测试收集与机械统计由仓库测试持续核对。
 
 工程底座继续复用，Mod 仍为实验实现：M1 接口观测与 M2 财政生命周期有证据，M3 行为/质量、M4 正式冻结候选的长期/后期验收尚未通过，政治与市场生产扩展仍关闭。最新条件、失败、阻塞与重开依据集中在 [当前工作清单](docs/design/当前工作清单.md)和 [M1–M5 结果索引](docs/design/exec/README.md)，执行顺序始终遵循 [最终执行纲领](docs/design/exec/mod重设计-实施计划.md)。
 
@@ -227,9 +227,9 @@ Situated AI/
 
 [Apache-2.0](LICENSE)
 
-> `research/official-docs/` 是游戏自带官方 `.md` 的**逐字镜像**，属 Paradox 版权内容。
+> `research/official-docs/` 是游戏自带官方 `.md` 的 UTF-8 无 BOM、LF 规范化镜像，属 Paradox 版权内容。
 > 该目录**不纳入版本控制**（`.gitignore` 已忽略）：仓库里只有 `research/official-docs.manifest.json`，
-> 记的是每篇的**路径 / 字节数 / 行数 / sha256**，不含正文。要在本机重建镜像用 `v3 mirror write --sync`，
+> 记的是每篇的**路径 / 字节数 / 行数 / sha256**及规范化镜像指纹，不含正文。要在本机重建镜像用 `v3 mirror write --sync`，
 > 核对清单与本机游戏、清单与本地镜像是否一致用 `v3 mirror check`。
 
 ### 知识库正文里也引用了官方原文（实测口径）

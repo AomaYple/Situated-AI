@@ -377,14 +377,6 @@ CASES: list[dict[str, Any]] = [
         "interval_s": INTERVAL_CLI_S,
     },
     {
-        "id": "cli.ab-auto-plan",
-        "group": "cli",
-        "tier": "T1",
-        "argv": _v3("ab-auto", "--plan"),
-        "interp": "A/B 编排的 --plan：只打印臂队列，不动游戏、不写记录",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
         "id": "cli.ab-health",
         "group": "cli",
         "tier": "T3",

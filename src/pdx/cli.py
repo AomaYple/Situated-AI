@@ -54,7 +54,6 @@ from rich.table import Table
 
 from pdx import (
     ab,
-    ab_auto,
     ab_probe,
     ai_surface,
     analyze,
@@ -3194,87 +3193,6 @@ def ab_probe_cmd(
             f"接着：启动游戏 → 选 {target.subject if target else '主角国家'} 开 1836 → "
             "点【A】或【B】→ 不做任何操作 → 跑 6-8 年 → 退出。"
         )
-
-
-@app.command("ab-auto")
-def ab_auto_cmd(
-    arm: Annotated[str, typer.Option("--arm", help="这一臂的归档标签（也是记录里的小节名）")] = (
-        "ladder"
-    ),
-    months: Annotated[int, typer.Option("--months", help="目标观测月数（到点杀进程）")] = 60,
-    expect: Annotated[
-        str, typer.Option("--expect", help="预期跑到哪一臂：A | B | B2（默认 B2 = 阶梯跑满）")
-    ] = "B2",
-    repeat: Annotated[int, typer.Option("--repeat", help="臂队列长度（G2 要求两次同向 → 2）")] = 1,
-    interval: Annotated[float, typer.Option("--interval", help="轮询间隔秒数")] = (
-        ab_auto.POLL_INTERVAL
-    ),
-    max_polls: Annotated[int, typer.Option("--max-polls", help="轮询次数上限（防呆）")] = (
-        ab_auto.MAX_POLLS
-    ),
-    plan: Annotated[
-        bool, typer.Option("--plan", help="只打印臂队列与端口接线情况，不动游戏也不写记录")
-    ] = False,
-    record: Annotated[
-        Path,
-        typer.Option("--record", help="实验记录文件（默认 docs/design/exec/阶段3-实验记录.md）"),
-    ] = ab_auto.RECORD_PATH,
-) -> None:
-    """阶段 3 的自动实验编排：启动 → 轮询 → 到点杀进程 → 归档 → 分析 → 写记录。
-
-    **它自己不碰游戏本体**：启动/杀进程由 `game_auto`（并行轨）实现，通过
-    :class:`pdx.ab_auto.Ports` 注入；没接上时**当场报错**（P13：不静默跳过）。
-
-    进度的口径是**探针自己报的月度块**（`v3 ab` 去重后的观测数），不是墙钟 ——
-    游戏暂停着的时候墙钟照走、月度块不走。
-
-    ```text
-    v3 ab-auto --plan                    # 只看队列与接线（安全）
-    v3 ab-auto --arm ladder-1 --months 60 --expect B2 --repeat 2
-    ```
-
-    每一臂的结果会**追加**进 `docs/design/exec/阶段3-实验记录.md`（报告全文进折叠块），
-    某臂没达标就地停下（后面的臂不跑，见 `QueueReport.stopped_early`）。
-    """
-    arms = [
-        ab_auto.Arm(
-            name=f"{arm}-{index + 1}" if repeat > 1 else arm,
-            months=months,
-            expect=expect,
-            note=f"第 {index + 1} / {repeat} 局（G2 要的是两次同向）" if repeat > 1 else "",
-        )
-        for index in range(max(1, repeat))
-    ]
-    ports = ab_auto.default_ports()
-    table = Table(title=f"臂队列（{len(arms)} 局）", show_lines=False)
-    table.add_column("臂")
-    table.add_column("目标月数", justify="right")
-    table.add_column("预期", justify="center")
-    table.add_column("备注")
-    for item in arms:
-        table.add_row(escape(item.name), str(item.months), item.expect, escape(item.note))
-    console.print(table)
-    console.print(f"日志目录：[bold]{ports.log_dir}[/]　记录：[bold]{ab_auto.RECORD_PATH}[/]")
-    console.print(
-        "接线：进程查询 ✅（`h1_probe.game_running`）；启动/杀进程 "
-        "**未接**（传给 `ab_auto.Ports` 的 `start` / `stop`，由 `game_auto` 提供）"
-    )
-    if plan:
-        console.print("[dim]--plan：什么都没跑、什么都没写。[/]")
-        return
-    try:
-        report = ab_auto.run_queue(
-            arms,
-            ports_for=lambda _arm: ports,
-            path=record,
-            interval=interval,
-            max_polls=max_polls,
-        )
-    except ab_auto.OrchestratorError as exc:
-        _fail(f"编排中断：{exc}")
-    console.print(Markdown(ab_auto.format_queue(report)))
-    if not report.ok:
-        raise typer.Exit(EXIT_FAILED)
 
 
 # ── ab（阶段 3：A/B 实验的差分，H2）──────────────────────────

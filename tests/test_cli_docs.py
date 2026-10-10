@@ -2,7 +2,7 @@
 
 为什么需要这一条（实测踩过）
 ----------------------------
-`exec/接续说明.md` 与 `exec/阶段7-长期维护.md` 长期写着 `v3 tables --check`，
+旧维护文档曾长期写着 `v3 tables --check`，
 而 `v3 tables` **没有 `--check`**（不带 `--write` 就是核对）。照着维护手册敲命令的人
 会拿到一句 `No such option: --check` —— 文档在教一个不存在的命令，而没有任何东西看着它。
 
@@ -69,16 +69,19 @@ _SPLIT = re.compile(r";|&&|\|")
 #: 文档里提到的、**故意不检查**的目标：写清理由才许留。
 SKIP: dict[str, str] = {}
 
-#: 2026-10-10 删除变更说明及其专用命令。仅允许以下原始历史记录保留旧调用；
+#: 退役变更说明命令与未接线编排器。仅允许以下原始历史记录保留旧调用；
 #: 当前操作文档仍须通过命令存在性检查，其他未知命令不享有历史豁免。
 HISTORICAL_COMMAND_REFERENCES: dict[str, frozenset[str]] = {
     "release": frozenset(
         {
-            "docs/design/exec/接续说明.md",
-            "docs/design/exec/收口清单.md",
             "docs/design/exec/阶段4-压力剧本-首跑.md",
             "docs/design/exec/阶段7-版本演练-1.14.4.md",
-            "docs/design/exec/阶段7-长期维护.md",
+        }
+    ),
+    "ab-auto": frozenset(
+        {
+            "docs/design/exec/阶段3-结果.md",
+            "docs/design/exec/阶段3-实验记录.md",
         }
     ),
 }
@@ -181,21 +184,29 @@ def test_文档里的v3命令都有对应的子命令() -> None:
     assert not bad, "文档提到了 CLI 里不存在的子命令：\n  " + "\n  ".join(bad[:15])
 
 
-def test_退役命令只允许出现在登记的历史记录中() -> None:
+@pytest.mark.parametrize(
+    ("command", "document"),
+    [
+        ("release", "docs/design/exec/阶段7-版本演练-1.14.4.md"),
+        ("ab-auto", "docs/design/exec/阶段3-实验记录.md"),
+    ],
+)
+def test_退役命令只允许出现在登记的历史记录中(command: str, document: str) -> None:
+    assert runner.invoke(cli.app, [command, "--help"]).exit_code == 2
     bad = _command_offenders(
         [
-            ("docs/design/exec/阶段7-长期维护.md", 22, "v3.exe release --template"),
-            ("CONTRIBUTING.md", 3, "v3 release"),
-            ("docs/design/exec/阶段7-长期维护.md", 24, "v3 definitely-missing"),
-            ("docs/guides/阶段7-长期维护.md", 5, "v3 release"),
+            (document, 22, f"v3.exe {command} --help"),
+            ("CONTRIBUTING.md", 3, f"v3 {command}"),
+            (document, 24, "v3 definitely-missing"),
+            ("docs/guides/操作指南.md", 5, f"v3 {command}"),
         ]
     )
     assert len(bad) == 3
     assert "CONTRIBUTING.md:3" in bad[0]
-    assert "'release'" in bad[0]
-    assert "阶段7-长期维护.md:24" in bad[1]
+    assert f"'{command}'" in bad[0]
+    assert f"{document}:24" in bad[1]
     assert "'definitely-missing'" in bad[1]
-    assert "docs/guides/阶段7-长期维护.md:5" in bad[2]
+    assert "docs/guides/操作指南.md:5" in bad[2]
 
 
 def _option_offenders(frags: Iterable[tuple[str, int, str]] | None = None) -> list[str]:
@@ -272,13 +283,24 @@ def test_命令树本身不是空的() -> None:
     assert {"tables", "verify", "modgen", "citations", "modguard"} <= set(tree)
 
 
-def test_片段切分不会漏掉代码块里的命令() -> None:
-    """反向自检：切片口径太紧就会**静默漏检**，那比误报更糟。
-
-    `exec/接续说明.md` §4 那些命令写在 ```powershell 块里、没有反引号 ——
-    如果切片只认反引号，这一整节就没人看了。
-    """
+def test_片段切分不会漏掉代码块里的命令(tmp_path, monkeypatch) -> None:
+    """围栏内的并列命令与内联命令都被独立提取，不依赖某份旧文档仍存在。"""
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "操作指南.md").write_text(
+        "```text\nv3.exe modgen --check; v3.exe verify # 注释\n```\n"
+        "`v3 tables` 和 `v3 ai-surface --check`\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    monkeypatch.setattr(config, "REPO", tmp_path)
+    monkeypatch.setattr(config, "DOCS", docs)
     frags = list(fragments())
-    joined = "\n".join(f for _d, _n, f in frags)
-    assert "v3.exe modgen --check" in joined
-    assert "v3.exe verify" in joined
+    assert [fragment.strip() for _doc, _line, fragment in frags] == [
+        "v3.exe modgen --check",
+        "v3.exe verify",
+        "v3 tables",
+        "v3 ai-surface --check",
+    ]
+    assert _command_offenders(frags) == []
+    assert _option_offenders(frags) == []

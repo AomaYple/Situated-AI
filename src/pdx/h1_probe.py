@@ -609,11 +609,6 @@ def _game_running(process: str = GAME_PROCESS) -> bool:
     return process in (done.stdout or "")
 
 
-#: 公开别名：`pdx.ab_auto` 的前置断言（"断言 0 个游戏进程"）要用它 ——
-#: 同一个进程查询只能有一份实现（P9），但下游不该去碰私有名。
-game_running = _game_running
-
-
 def watch(
     tag: str,
     *,
@@ -761,7 +756,6 @@ __all__ = [
     "deploy",
     "effects_text",
     "fourth_card_text",
-    "game_running",
     "log_chain",
     "metadata_text",
     "noloc_card_text",

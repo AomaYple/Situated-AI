@@ -8,7 +8,7 @@
 * `verify._mods_total()` / `_mods_files()` 就是 `analyse_all()` 的长度与文件数之和。
   我们**自己部署进用户 mod 目录**的那份真 mod 被数进来 ⇒ `mod.total` 23→24、
   `mod.files` 4,777→4,828，而 `v3 verify` 报的是「文档过期」，指向完全错误的方向。
-* 同一个坑踩过**两次**（第一次见 `exec/收口清单.md` 那段），第二次还把它判成了
+* 同一个坑踩过**两次**，第二次还把它判成了
   「用户新订阅了一份 mod」—— 所以修法必须是**结构性的**：认 mod 靠
   `.metadata/metadata.json` 的 `id` 前缀（`OWN_MOD_ID_PREFIX`），**不看目录名**。
 
