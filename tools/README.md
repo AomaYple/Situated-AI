@@ -7,6 +7,8 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 > 早期版本用 PowerShell（10 个脚本）与 Node.js（2 个原型）实现，已全部退休。
 > 退休原因见文末「为什么全 Python 化」。
 
+本页维护工具的命令、输出和能力边界。持续原则见 [工程原则](../docs/principles/工程原则.md)与 [Mod 开发原则](../docs/principles/Mod开发原则.md)，贡献与验证流程见 [CONTRIBUTING.md](../CONTRIBUTING.md)。
+
 ## 环境与安装
 
 ```
@@ -516,13 +518,11 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 > 早先这里写的是 17,821 / 16,535：那是一次性采集值，**口径没留、脚本没留**。
 > 现在这两个数由 `v3 strings` 从 exe 现算，`tests/test_repo_numbers.py` 会核对。
 
-## 阶段性收尾（2026-10-03）
+## 工程记录与当前工作
 
-既定工程收口项目已有对应证据：全量分析覆盖 `game`、`jomini`、`clausewitz` 三个内容根，记录脚本/defines、本地化摘要、DLC 描述符、资源索引和完整本地化键清单；mod 分析补齐 metadata、本地化值/重复键/占位符与资源引用断链；快照和 citations 保持跨根一致。后续发现的缺口在现有入口修补，不能由阶段收尾推导工具永远没有工程缺陷。
+分析、快照、三平台工具链、测试和实机仪器的契约见 [工程基线](../docs/design/exec/工程基线-1.0.md)。有日期的速度、内存、事故与修复读数见 [审计索引](../docs/audits/README.md)；2026-10-03 的收尾只描述当时范围，不承诺工具永远没有缺陷。
 
-自动化清理具备 PID 身份校验、窗口 PID 过滤、关键日志失败报告和存活进程报告；性能探针具备跨进程锁。CI 覆盖三平台与 Python 3.11–3.14；无游戏 runner 通过 `SITAI_XDIST_WORKERS=2` 限制普通测试的 worker 数，并排除 integration/benchmark。开发机默认仍按 CPU 与可用内存自适应 `n-auto`。
-
-B37 的观察者健康检查假红已修复；B11–B13、B26–B27、B29、B35–B36、B38 和 B115 等历史研究项仍按触发条件管理。2026-10-06 复审发现的 B137 配对挂载隔离和 B138 旧审计脚本扫描目录缺口已修补，状态见 [backlog](../docs/design/backlog.md)，历史发现见 [`仓库与计划复审`](../docs/audits/2026-10-06-plan-review.md)。后续按 [`最终执行纲领`](../docs/design/exec/mod重设计-实施计划.md) 处理版本变化、失败与不可测项，不把合成夹具、CI 或离线快照当机制结论。Windows 有 Victoria 3 GUI 实机证据，macOS/Linux 仅有工具链、CI 和无头验证。
+Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工作清单.md)，历史研究编号保留在 [backlog](../docs/design/backlog.md)。按 [最终执行纲领](../docs/design/exec/mod重设计-实施计划.md)推进；工具输出、模拟与 CI 不替代机制验收。
 
 ## 为什么全 Python 化
 

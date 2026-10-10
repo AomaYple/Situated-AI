@@ -2,6 +2,12 @@
 
 本文件适用于整个 Situated AI 仓库，补充通用协作原则。详细贡献流程与工程约定见 [CONTRIBUTING.md](CONTRIBUTING.md)；开始修改前读取与本次任务相关的章节。
 
+## 原则分层
+
+- [工程原则](docs/principles/工程原则.md)定义工程底线；[CONTRIBUTING.md](CONTRIBUTING.md)维护具体贡献流程，[工程基线](docs/design/exec/工程基线-1.0.md)维护工具与验证契约。
+- [Mod 开发原则](docs/principles/Mod开发原则.md)定义产品底线；[处境决策设计](docs/design/03-处境决策设计.md)维护架构，[最终执行纲领](docs/design/exec/mod重设计-实施计划.md)维护阶段出口。
+- 原则页只维护持续约束，结果页管理实测和阻塞；导航页不重复定义规则。文档分类与更新规则见 [文档维护](docs/README.md#文档维护)。
+
 ## 先定位任务
 
 本项目用 Python 分析、生成和验证 Victoria 3 Mod；游戏运行使用生成的游戏脚本，不依赖外部 Python 服务。
@@ -18,7 +24,7 @@
 | 内容 | 修改入口与边界 |
 |---|---|
 | 可复用 Python 实现 | `src/pdx/`；测试放在 `tests/` |
-| 生产 Mod | 固定数据入口为 `mod/decisions/fiscal.toml`、`mod/decisions/extensions.toml`，生成器为 `src/pdx/decisions.py`；新增定义须接入生成器，根级游戏产物由生成器维护 |
+| 生产 Mod | 当前固定数据入口为 `mod/decisions/fiscal.toml`、`mod/decisions/extensions.toml`，生成器为 `src/pdx/decisions.py`；新增定义须接入生成器，根级游戏产物由生成器维护 |
 | 历史实验 Mod | `mod/data/*.toml` 与 `src/pdx/modgen.py`；只生成到 `mod/legacy/`，不进入生产包 |
 | 检查、性能与实机探针 | `tools/ci/`、`tools/benchmarks/`、`tools/probe/`；优先扩展已有入口 |
 | 生成文档 | 可执行面由对应 CLI 生成，知识库机械表格由 `pdx.doc_tables` 维护；不要手改 |

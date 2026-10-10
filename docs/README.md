@@ -1,60 +1,52 @@
 # docs/ 导航
 
-本目录是「Situated AI」项目的文档面。**第一次来 / 隔久了再回来，先看下面第一行。**
+本目录按“当前规则 → 当前设计 → 当前结果 → 历史依据 → 知识库”组织。导航页只提供入口和状态摘要；原则、设计和计划只在各自权威文档维护。
 
-## 先看这个
+## 先看当前入口
 
-| 想做什么 | 看这里 |
+| 目的 | 权威入口 |
 |---|---|
-| 当前编码、三平台工具链、测试与性能审计 | [`design/exec/工程基线-1.0.md`](design/exec/工程基线-1.0.md)（当前工程入口与证据边界）；[`audits/2026-10-01-repository-upgrade.md`](audits/2026-10-01-repository-upgrade.md) 是审计依据 |
-| 参与开发、编码和提交前检查 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
-| 编码代理的项目规则、源码入口与验证选择 | [`../AGENTS.md`](../AGENTS.md) |
-| 性能优化的顺序、预算与正确性验收 | [速度优化计划-正确性优先](design/exec/速度优化计划-正确性优先.md) |
-| 本轮仓库总览、清理与验证 | [2026-10-10 仓库整理](audits/2026-10-10-repository-maintenance.md) |
-| **接手工作 / 恢复一个暂停的会话** | [`最终执行纲领 1.0`](design/exec/mod重设计-实施计划.md) → 对应 M1–M5 结果页及 [`backlog`](design/backlog.md)；行为模型见 [`03`](design/03-处境决策设计.md)，工程入口见 [`工程基线`](design/exec/工程基线-1.0.md) |
-| 了解当前 mod 方向、产品形式与验收 | [`design/03-处境决策设计.md`](design/03-处境决策设计.md)（当前设计；真实财政机制已实现；评分差分与卸载已有实机证据，长期和扩展验收继续执行） |
-| 看历史方向及引擎依据 | [`design/01-大方向.md`](design/01-大方向.md)、[`design/01a-依据与参考.md`](design/01a-依据与参考.md)（保留历史正文与引用行号） |
-| 看可执行面 / 政治候选 / 欠账 | [`design/02-可执行面.md`](design/02-可执行面.md)、[`design/02-政治候选面.md`](design/02-政治候选面.md)、[`design/backlog.md`](design/backlog.md) |
-| 2026-10-01 收尾快照 | [`design/exec/阶段性收尾-20261001-仓库审计.md`](design/exec/阶段性收尾-20261001-仓库审计.md)（历史快照）；当前工程状态以基线和 backlog 为准 |
+| 工程原则 | [工程原则](principles/工程原则.md) |
+| Mod 开发原则 | [Mod 开发原则](principles/Mod开发原则.md) |
+| 贡献、验证、性能、实机和 Git | [CONTRIBUTING.md](<../CONTRIBUTING.md>) |
+| 代理工作边界和修改入口 | [AGENTS.md](<../AGENTS.md>) |
+| 测试、分析、快照和证据契约 | [工程基线 1.0](design/exec/工程基线-1.0.md) |
+| 当前产品架构和行为边界 | [处境决策设计](design/03-处境决策设计.md) |
+| M0–M5 执行顺序、出口和重开条件 | [最终执行纲领](design/exec/mod重设计-实施计划.md) |
+| 当前阶段结果和阻塞 | [当前工作清单](design/当前工作清单.md)、[结果索引](design/exec/README.md)与 [backlog](design/backlog.md) |
+| 报告与独立复核 | [报告索引](reports/README.md)、[审计索引](audits/README.md) |
+| Victoria 3 文件和脚本知识库 | [知识库](victoria3-modding/README.md) |
+| Python 工具、CLI、快照和探针 | [工具手册](../tools/README.md) |
 
-## 本目录结构
+## 目录职责
 
-| 路径 | 内容 |
-|---|---|
-| `design/` | 当前处境决策设计、历史方向与依据、生成的可执行面、研究欠账清单 |
-| `design/exec/` | 阶段执行文档、实机读数与历史交接；引用路径保留，索引见 [`design/exec/README.md`](design/exec/README.md) |
-| `audits/` | 当前工程审计与历史快照；已完成报告集中在 [`audits/archive/`](audits/archive/) |
-| `victoria3-modding/` | **21 篇 mod 开发知识库**（基于本机游戏安装目录与用户数据目录逐文件读取整理；多数结论采集于 1.14.2，尚未逐条重测） |
+| 路径 | 职责 | 文档效力 |
+|---|---|---|
+| `principles/` | 工程原则与 Mod 开发原则摘要 | 当前原则入口 |
+| [design/](design/README.md) | 当前设计、计划、结果、backlog 和历史依据 | 设计与执行权威 |
+| [design/exec/](design/exec/README.md) | M1–M5 结果、工程基线、性能计划和历史执行记录 | 当前入口在 README，旧文件按历史使用 |
+| [audits/](audits/README.md) | 仓库、工程和证据审计 | 日期化审计；不能覆盖当前原则 |
+| [reports/](reports/README.md) | 独立报告、复核和失败记录 | 历史证据；按报告自身日期和范围解释 |
+| [victoria3-modding/](victoria3-modding/README.md) | 基于本机游戏文件整理的 21 篇知识库 | 研究资料；版本和来源以各页说明为准 |
+| `superpowers/plans/` | 已执行的工程专项计划 | 具体历史任务的依据，不替代当前 Mod 纲领 |
 
-## 历史归档
+## 当前设计与历史证据
 
-已完成的工程记录、重构计划和重构前测试审计集中在 [`audits/archive/`](audits/archive/) 与 [`superpowers/archive/`](superpowers/archive/)。原路径保留兼容指针，避免历史报告和测试说明出现悬空引用。
+当前行为设计以 [03 · 处境决策设计](design/03-处境决策设计.md)为准，当前工程契约以 [工程基线](design/exec/工程基线-1.0.md)为准，当前执行顺序以 [最终执行纲领](design/exec/mod重设计-实施计划.md)为准。[当前工作清单](design/当前工作清单.md)提供状态摘要，M1–M5 结果页记录实测和边界；backlog 保留当前触发条件以及已结案条目的历史编号。
 
-## 相关但不在本目录
+01、01a、旧阶段文档、交接记录、审计和 reports 保留当时的输入、失败和推断。它们可以支持复核，不能把旧阶段完成词句追认为当前能力。02 · 可执行面是当前生成的接口资料，生成入口见 [设计导航](design/README.md#生成文档)；生成文档和机械统计由对应工具维护，不手改。
 
-| 位置 | 内容 |
-|---|---|
-| `README.md`（仓库根） | 项目总览、环境、知识库入口、关键结论 |
-| `tools/README.md` | **工具链手册**（`v3` 全子命令、门禁、测试、性能与内存纪律） |
-| `docs/reports/` | 各卡的交付报告与独立复核，索引见 [`reports/README.md`](reports/README.md) |
-| `tools/out/` | 原始证据、机器测量和可恢复备份；忽略原始输出，只放行精简快照 |
-| `research/` | 官方文档 manifest + 本地镜像（**原文不入库**） |
-| `mod/` | 生产源 `decisions/fiscal.toml` 与 `decisions/extensions.toml` 生成根级产物；旧9份 `data/*.toml` 只生成至 `legacy/`，**不要手改产物** |
-| 历史会话纪律与交接 | [`design/exec/接续-下一步.md`](design/exec/接续-下一步.md)；其中任务、授权和读数属于当时记录，当前工作以本页入口及用户指令为准 |
+## 文档维护
 
-## 当前设计与历史证据的关系
+新增或修改文档时先判定它属于规则、设计、计划、结果、审计、历史报告、生成物、官方原文或证据。持续原则进入原则页；工程流程进入 CONTRIBUTING，工具契约进入工程基线；产品架构进入 03；阶段顺序和出口进入最终执行纲领。专项实现可以有从属计划，但不得改变主纲领门禁。实测追加到结果页或日期化审计，历史报告保留原语境。导航文件只增加链接和短摘要，不复制完整规则。机械数字、表格和指纹通过生成器更新。
 
-`design/03-处境决策设计.md` 管理当前行为设计，`design/exec/工程基线-1.0.md` 管理工程契约，
-`design/exec/mod重设计-实施计划.md` 是固定执行纲领，定义目标、出口与变化分支；M1–M5 结果页更新实验参数和进度，`design/backlog.md` 管理未完成研究与工程维护项。
-旧 `01 / 01a` 和阶段报告继续提供历史事实与实验依据；旧手段阶梯、阶段顺序和验收不能覆盖当前设计。
-`design/02-可执行面.md`、知识库机械表格以及 `mod/legacy/sitai_*.md` 仍由对应工具生成，不手改。
+维护时同时更新受影响的链接、命令和状态摘要。结果页负责完整证据，当前工作清单只摘录结论和下一出口；冲突时先核对新结果并修正摘要。删除或移动前检查历史引用、测试、生成入口和可恢复原件。旧文档若混有当前操作与历史取证，在索引中说明范围，不能一律当作失效文件删除。
 
-## 三条最常见的命令
+## 常用命令
 
-```text
-python -m pdx.cli modgen --check          # 生成物与数据源逐字节一致？（使用仓库 venv Python）
-python -m pdx.cli verify                 # 234 条断言；没有游戏时加 --from-snapshot
-python -m pdx.cli citations --offline    # 引用是否落在快照支撑域内
-```
+    .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py encoding
+    .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py baseline
+    .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
+    .venv\Scripts\python.exe -X utf8 -m pdx.cli citations --offline
 
-完整门禁清单见 [`design/exec/收口清单.md`](design/exec/收口清单.md)。
+macOS/Linux 将解释器替换为 `.venv/bin/python`。完整命令和验证矩阵见 [CONTRIBUTING.md](../CONTRIBUTING.md#验证矩阵)；游戏侧 BOM 只在安装/打包边界添加，仓库文档保持 UTF-8 无 BOM、LF。

@@ -2,7 +2,7 @@
 
 Victoria 3 的 AI 相关 mod 开发项目。
 
-开发与维护见 [CONTRIBUTING.md](CONTRIBUTING.md)，编码代理的项目入口见 [AGENTS.md](AGENTS.md)。
+开发与维护见 [CONTRIBUTING.md](CONTRIBUTING.md)，编码代理的项目入口见 [AGENTS.md](AGENTS.md)。两类开发原则分别见 [工程原则](docs/principles/工程原则.md)和 [Mod 开发原则](docs/principles/Mod开发原则.md)。
 
 > **当前状态**：工程底座继续复用，包括 **21 篇的 mod 开发知识库**、
 > **可复现统计数据的 Python 工具链**和当前的**实验性 mod 实现**：
@@ -12,7 +12,7 @@ Victoria 3 的 AI 相关 mod 开发项目。
 >
 > **接手 / 隔久了再回来：先读 [`当前 mod 设计`](docs/design/03-处境决策设计.md)和 [`工程基线`](docs/design/exec/工程基线-1.0.md)。**
 > 前者定义通用处境判断、策略行为和验收；后者定义继续复用的工具链、测试、快照与证据边界。
-> 下一步见 [`mod 重设计实施计划`](docs/design/exec/mod重设计-实施计划.md)，研究欠账见 [`backlog`](docs/design/backlog.md)。
+> 下一步见 [`mod 重设计实施计划`](docs/design/exec/mod重设计-实施计划.md)，当前阻塞和下一步见 [当前工作清单](docs/design/当前工作清单.md)，历史编号与原件见 [`backlog`](docs/design/backlog.md)。
 > 旧方向与阶段接手记录保留为历史依据；文档总览见 [`docs/README.md`](docs/README.md)。
 
 mod 的目标是让 AI 国家依据内部因素、外部因素和自身政治偏好，在可行路线中作出更合理的选择，
@@ -206,15 +206,9 @@ Situated AI/
 
 ## 开发约定
 
-| 约定 | 说明 |
-|---|---|
-| **Git 提交遵循最佳实践，消息用中文** | 单一目的、完整一致、验证后提交；中文标题，复杂改动补中文正文，详见[提交规范](CONTRIBUTING.md#提交前与提交信息) |
-| **信息分级标注** | 文档中的每条事实都标来源：**【实测】** / **【官方】** / **【推断】** / 未确认 |
-| **统计必须写口径** | 按「顶层键」或「含嵌套块」会得出不同数字，引用时写明规则 |
-| **官方文档需交叉验证** | 游戏自带 94 篇 `.md` 有多处字段名错误与遗漏，写 mod 前先对照实测 |
-| **能用库就不自己写** | 解析用标准库、CLI 用 typer、测试用 pytest 全家桶；不重造已有轮子 |
-| **正确性第一** | 优先保证与源文件一致，性能优化必须在有测试护航的前提下做 |
-| **自动看守** | `.github/workflows/ci.yml` 在每次 push/PR 上跑 ruff + mypy + 不依赖游戏的用例；`.pre-commit-config.yaml` 在提交前运行编码、Ruff、mypy 与离线断言核验，不运行 pytest |
+工程底线集中维护在 [工程原则](docs/principles/工程原则.md)，产品行为底线集中维护在 [Mod 开发原则](docs/principles/Mod开发原则.md)。贡献、测试、性能、实机与中文 Git 提交的具体流程见 [CONTRIBUTING.md](CONTRIBUTING.md)；本页只提供总览，不复制原则正文。
+
+文档事实区分【实测】、【官方】、【推断】和未确认，机械统计写明来源和口径。知识库对官方资料的交叉验证与工具已知边界见工具手册。
 
 ### 已知边界
 
@@ -222,20 +216,13 @@ Situated AI/
 **不能**回答引擎运行期语义（加载顺序、覆盖优先级、字段合法性、平衡性）——
 那些信息不在文件里。详见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」。
 
-## 本轮工程收尾（2026-10-03）
+## 工程与 Mod 状态
 
-- 全量分析覆盖 `game`、`jomini`、`clausewitz` 三个内容根，记录脚本/defines、本地化摘要、DLC 描述符、资源索引和完整本地化键清单；大型二进制只记录元数据。
-- mod 分析记录 metadata、本地化值/重复键/占位符、明确字段资源引用和未解析引用；快照与 citations 保持跨根一致。
-- 游戏自动化具备 PID 身份校验、窗口 PID 过滤、关键日志失败报告和存活进程报告；性能探针具备跨进程锁。
-- CI 覆盖 Python 3.11–3.14 与 Windows/macOS/Linux；无游戏 runner 将 xdist 限为 2 个 worker，普通测试排除 integration/benchmark。
+最近一次完整工程回归记录见 [2026-10-10 仓库维护](docs/audits/2026-10-10-repository-maintenance.md)：2913 passed、10 skipped、0 failed，分支覆盖率 88.79%。这是有日期的历史测量，本页更新不代表重新跑过完整回归。当前测试收集与机械统计由仓库测试持续核对。
 
-后续统一按已定型的 [`最终执行纲领 1.0`](docs/design/exec/mod重设计-实施计划.md) 推进：配对挂载隔离与审计扫描（B137/B138）已完成，M1–M5 的当前状态以各结果页与 backlog 为准，后续继续执行有限行为/质量对照；M4 独立安全验证可先做，正式候选验收仍依赖 M3；M5 按模块重复验收后启用。接口不足、阴性结果、版本升级和工程回归均按纲领中的固定分支处理，进度写结果页。B37 已完成，其他历史研究项按触发条件管理，当前缺口见 backlog B130–B138；不把模拟、CI 或离线快照写成机制结论。Windows 有 Victoria 3 GUI 实机证据；macOS/Linux 只有工具链、CI 和无头验证。
+工程底座继续复用，Mod 仍为实验实现：M1 接口观测与 M2 财政生命周期有证据，M3 行为/质量、M4 正式冻结候选的长期/后期验收尚未通过，政治与市场生产扩展仍关闭。最新条件、失败、阻塞与重开依据集中在 [当前工作清单](docs/design/当前工作清单.md)和 [M1–M5 结果索引](docs/design/exec/README.md)，执行顺序始终遵循 [最终执行纲领](docs/design/exec/mod重设计-实施计划.md)。
 
-## 工程收尾复核（2026-10-06，B137/B138）
-
-2026-10-09 首轮完整 `n-auto` 回归收集 **2576** 个用例，实际结果为 **2565 passed / 10 skipped / 1 failed**，561.87 秒、4 个 worker、覆盖率 **88.37%**；唯一失败是 README 用例数陈旧，定向修正已通过。新增原件保护、M3 样本配对和政治矩阵回归后，2026-10-09 当次收集 **2642** 项，完整回归 **2632 passed / 10 skipped / 0 failed**，覆盖率 **88.54%**，资源摘要见本轮[证据审计](docs/audits/2026-10-09-evidence-audit.md)。M4 已完成早期固定检查点 3 组 × 3 臂的采集回归；正式性能验收仍缺冻结的 M3 候选、真实后期输入及事前资源预算。详见 [`B137/B138 收口审计`](docs/audits/2026-10-06-b137-b138.md)、[`仓库与执行计划复审`](docs/audits/2026-10-06-plan-review.md)、[`工程收尾复核`](docs/audits/2026-10-05-engineering-closeout.md) 和 [`快捷键收口`](docs/audits/2026-10-05-shortcut-closeout.md)。
-
-本轮目录、入口、残留与检查整理见 [2026-10-10 仓库维护记录](docs/audits/2026-10-10-repository-maintenance.md)。
+本次原则拆分和文档治理见 [2026-10-10 文档治理记录](docs/audits/2026-10-10-document-governance.md)，其他日期记录见 [工程审计索引](docs/audits/README.md)。工程通过不能替代 Mod 行为通过；Windows GUI 有实机证据，macOS/Linux 保持代码、CI 和无头验证口径。
 
 ## 授权
 
