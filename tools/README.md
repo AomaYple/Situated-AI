@@ -59,9 +59,12 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tools/probe/decision_stability.py` | 原版/财政/政治/组合的自然长局、存档迁移与可选后台引擎任务计时 |
 | `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期；安装版简体中文缺键时显式加 `--localization-baseline`，不豁免错误门禁 |
 | `tools/probe/save_migration_audit.py` | 递归盘点 `.v3` 版本、观察者状态、空规则和 SHA-256；只报告可用于跨版本升级实验的输入，不执行迁移 |
+| `python -m pdx.checkpoint_catalog` | 只读盘点存档与原局来源：复核日志/挂载/源/部署/收尾，按输出 SHA 关联复制或改名文件；失败或缺证来源拒绝，不提名正式机会 |
 | `tools/benchmarks/decision_runtime.py` | 分开测生成、日志/存档读取的墙钟与Python分配峰值；正式基线要求机器安静 |
 
-例如，激活仓库虚拟环境后运行 `python tools/probe/decision_stability.py --arm fiscal --months 24 --profile`。
+使用仓库虚拟环境，先执行只读输入盘点：`python -m pdx.checkpoint_catalog tools/out --output tools/out/checkpoints/catalog.json`；用户存档可另指定目录盘点。盘点的来源关联限于所给根目录；没有关联不证明来源干净，来源干净不等于新机会或正式后期资格。运行器会在部署前再次核对 `saves/` 下输入的同局来源；脱离原目录的复制件须保留并核对目录盘点结果，不能用改名绕过失败记录。
+
+真实运行须提供 `--save`、对应阶段事前登记的实验身份、用途与月份上限，不能直接套用长局示例绕过 M3/M4 前提。参数和有限预算以 [M3](../docs/design/exec/M3-结果.md) / [M4 结果](../docs/design/exec/M4-结果.md)中的当前有效登记为准；历史已停止场景不重新运行。
 `--profile` 仅在清零/导出控制台计时时暂时到前台，模拟窗口退回后台并核实tick推进；
 导出的CSV须新出现、稳定且可完整解析，用户原CSV最终恢复。此处是引擎任务样本，不是渲染延迟或FPS。
 `--save` 只接受已核对的观察者存档，同版本默认要求；跨版本升级须单独加 `--allow-save-upgrade` 并记录风险。
@@ -264,7 +267,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 111 个测试文件、2882 条用例（2026-10-10 工作区口径）。本轮完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，此前清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，测试速度与内存的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 111 个测试文件、2898 条用例（2026-10-11 工作区口径）。本轮检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，测试速度与内存的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
