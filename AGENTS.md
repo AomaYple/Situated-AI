@@ -11,6 +11,8 @@
 
 全仓规范按维护时最新且适用的现代 Python 仓库最佳实践持续更新；目录、元数据、配置与迁移的落实方式见 [现代 Python 仓库维护](CONTRIBUTING.md#现代-python-仓库维护)。
 
+语言与命名遵循 [工程原则](docs/principles/工程原则.md#语言与命名)；具体写作、命名与翻译边界见 [贡献指南](CONTRIBUTING.md#语言与命名)。
+
 ## 先定位任务
 
 本项目用 Python 分析、生成和验证 Victoria 3 Mod；游戏运行使用生成的游戏脚本，不依赖外部 Python 服务。
