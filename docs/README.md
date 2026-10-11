@@ -9,6 +9,7 @@
 | 工程原则 | [工程原则](principles/工程原则.md) |
 | Mod 开发原则 | [Mod 开发原则](principles/Mod开发原则.md) |
 | 贡献、验证、性能、实机和 Git | [CONTRIBUTING.md](<../CONTRIBUTING.md>) |
+| Git 分支、合并与主线保护 | [分支与合并](../CONTRIBUTING.md#分支与合并) |
 | 代理工作边界和修改入口 | [AGENTS.md](<../AGENTS.md>) |
 | 测试、分析、快照和证据契约 | [工程基线 1.0](design/exec/工程基线-1.0.md) |
 | 当前产品架构和行为边界 | [处境决策设计](design/03-处境决策设计.md) |
