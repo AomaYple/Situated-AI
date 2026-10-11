@@ -264,3 +264,20 @@ def test_原版新局检查点来源独立复核不伪造载入或行为资格(t
     origin_row = result["origin_reports"][0]
     if origin_row["clean"]:
         assert origin_row.get("checkpoint_sha256") == result["sha256"]
+
+
+def test_噪声准备只占三次单臂预算():
+    checkpoint = {"instrument_suitable": True, "state": "instrument-suitable"}
+    result = checkpoint_catalog.preflight(checkpoint, purpose="M4-noise", months=1, used_arms=2)
+    assert result["allowed"]
+    assert result["remaining_arms"] == 1
+    result = checkpoint_catalog.preflight(checkpoint, purpose="M4-noise", months=1, used_arms=3)
+    assert not result["allowed"]
+    assert result["remaining_arms"] == 0
+
+
+@pytest.mark.parametrize("months", [6, 23, 121])
+def test_正式性能入口保留长期窗口(months):
+    checkpoint = {"instrument_suitable": True, "formal_pair_suitable": True, "formal_purpose": "M4"}
+    result = checkpoint_catalog.preflight(checkpoint, purpose="M4", months=months)
+    assert "budget.m4_window" in result["reasons"]

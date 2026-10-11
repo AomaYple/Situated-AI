@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from pdx import config, decision_probe, decisions, extension_probe, game_run, natural_probe
+from pdx.experiment_evidence import OBSERVATION_VERSION
 from pdx.experiment_queue import RunRequest
 from pdx.parser import parse_file
 
@@ -32,7 +33,17 @@ def main() -> int:
     parser.add_argument("--experiment-plan", default="stability-exploration-20261010")
     parser.add_argument("--experiment-scene", default="fixed-checkpoint")
     parser.add_argument("--pair-index", type=int, default=1)
-    parser.add_argument("--purpose", choices=("instrument", "safety", "M4"), default="instrument")
+    parser.add_argument(
+        "--purpose", choices=("instrument", "safety", "M4-noise", "M4"), default="instrument"
+    )
+    parser.add_argument("--qualification-report", type=Path)
+    parser.add_argument("--qualification-registration", type=Path)
+    parser.add_argument(
+        "--observation-package",
+        choices=("full", "vanilla-performance"),
+        default="full",
+        help="原观测包保留默认；性能包仅显式 M4/M4-noise 使用，仍须独立实机验收",
+    )
     parser.add_argument("--max-months", type=float, default=6)
     parser.add_argument("--prior-failure-report", type=Path, action="append", default=[])
     parser.add_argument("--keep-save", action="store_true")
@@ -84,6 +95,24 @@ def main() -> int:
     )
     parser.add_argument("--fiscal-tags", default="RUS,PRU", help="财政只读观察的两个国家标签")
     args = parser.parse_args()
+    if args.purpose == "M4" and (
+        args.qualification_report is None
+        or args.allow_save_upgrade
+        or args.keep_save
+        or args.arm not in {"vanilla", "fiscal"}
+        or args.language is None
+    ):
+        parser.error("正式 M4 需要资格报告及冻结候选；不允许升级、准备存档或未验收扩展")
+    if args.purpose != "M4" and args.qualification_report is not None:
+        parser.error("资格报告只能用于显式正式 M4 目的")
+    if args.purpose == "M4" and args.qualification_registration is not None:
+        parser.error("正式 M4 不能临时补写资格观察登记")
+    if args.purpose == "M4-noise" and args.arm != "vanilla":
+        parser.error("M4 噪声准备只允许 vanilla，不派候选")
+    try:
+        _check_performance_package(args)
+    except ValueError as exc:
+        parser.error(str(exc))
     if args.enactment_details:
         parser.error(extension_probe.ENACTMENT_DETAILS_UNAVAILABLE)
     if args.natural_targets and not args.natural_diplomacy:
@@ -93,7 +122,11 @@ def main() -> int:
     if bool(args.approval_igs) != bool(args.approval_laws):
         parser.error("--approval-igs 与 --approval-laws 必须同时声明")
     laws: list[str] = []
-    for path in sorted((config.GAME / "common/laws").glob("*.txt")):
+    for path in (
+        sorted((config.GAME / "common/laws").glob("*.txt"))
+        if args.observation_package == "full"
+        else []
+    ):
         tree = parse_file(path)
         if tree.errors:
             raise ValueError(f"原版法律无法解析：{path}")
@@ -104,8 +137,45 @@ def main() -> int:
         return execute(args, laws, output, Path(directory))
 
 
+def _check_performance_package(args: argparse.Namespace) -> None:
+    purpose = getattr(args, "purpose", "instrument")
+    package = getattr(args, "observation_package", "full")
+    if package not in {"full", "vanilla-performance"}:
+        raise ValueError("观测包不受支持")
+    if purpose == "M4" and package != "vanilla-performance":
+        raise ValueError("正式 M4 必须显式登记 vanilla-performance 观测包")
+    if package == "vanilla-performance" and (
+        purpose not in {"M4-noise", "M4"}
+        or getattr(args, "localization_baseline", False)
+        or getattr(args, "natural_diplomacy", False)
+        or getattr(args, "natural_targets", "")
+        or getattr(args, "legality_laws", "")
+        or getattr(args, "approval_igs", "")
+        or getattr(args, "approval_laws", "")
+        or getattr(args, "enactment_details", False)
+        or getattr(args, "qualification_registration", None) is not None
+    ):
+        raise ValueError("性能观测包仅用于 M4/M4-noise，不能混入其他仪器或临时资格登记")
+
+
 def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root: Path) -> int:
-    native_fiscal_inputs = getattr(args, "native_fiscal_inputs", False)
+    _check_performance_package(args)
+    purpose = getattr(args, "purpose", "instrument")
+    if purpose == "M4" and (
+        getattr(args, "qualification_report", None) is None
+        or getattr(args, "qualification_registration", None) is not None
+        or getattr(args, "language", None) is None
+        or getattr(args, "allow_save_upgrade", False)
+        or getattr(args, "keep_save", False)
+        or args.arm not in {"vanilla", "fiscal"}
+    ):
+        raise ValueError("正式 M4 缺少冻结资格、语言或包含未验收处理")
+    if purpose == "M4-noise" and args.arm != "vanilla":
+        raise ValueError("M4 噪声准备只允许 vanilla")
+    if purpose != "M4" and getattr(args, "qualification_report", None) is not None:
+        raise ValueError("资格报告只能用于正式 M4")
+    performance_package = getattr(args, "observation_package", "full") == "vanilla-performance"
+    native_fiscal_inputs = performance_package or getattr(args, "native_fiscal_inputs", False)
     fiscal_tags = tuple(
         value.strip()
         for value in getattr(args, "fiscal_tags", "RUS,PRU").split(",")
@@ -124,19 +194,22 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
     # ``zz_probe_decision_lifecycle``。自然外交观测不需要注入财政，但必须
     # 提供同源的只读兼容仪器，否则引擎会把缺少旧 mod 记录为本局错误。
     lifecycle = source_root / "fiscal-lifecycle-observer"
-    decisions.write(
-        observer,
-        extension_probe.build(
-            laws,
-            strategies=extension_probe.political_keys(config.GAME),
-            tags=tuple(value.strip() for value in args.legality_tags.split(",") if value.strip()),
-            legality_laws=tuple(
-                value.strip() for value in args.legality_laws.split(",") if value.strip()
+    if not performance_package:
+        decisions.write(
+            observer,
+            extension_probe.build(
+                laws,
+                strategies=extension_probe.political_keys(config.GAME),
+                tags=tuple(
+                    value.strip() for value in args.legality_tags.split(",") if value.strip()
+                ),
+                legality_laws=tuple(
+                    value.strip() for value in args.legality_laws.split(",") if value.strip()
+                ),
+                approval_igs=approval_igs,
+                approval_laws=approval_laws,
             ),
-            approval_igs=approval_igs,
-            approval_laws=approval_laws,
-        ),
-    )
+        )
     policy_state = args.arm != "vanilla"
     decisions.write(
         fiscal,
@@ -144,20 +217,21 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
             policy_state=policy_state, tags=fiscal_tags, native_fiscal_inputs=native_fiscal_inputs
         ),
     )
-    decisions.write(
-        lifecycle,
-        decision_probe.build_observer(
-            lifecycle=True,
-            policy_state=policy_state,
-            tags=fiscal_tags,
-            native_fiscal_inputs=native_fiscal_inputs,
-        ),
-    )
-    sources = {
-        "zz_sitai_reform_observer": observer,
-        "zz_sitai_fiscal_observer": fiscal,
-        "zz_probe_decision_lifecycle": lifecycle,
-    }
+    sources = {"zz_sitai_fiscal_observer": fiscal}
+    if not performance_package:
+        decisions.write(
+            lifecycle,
+            decision_probe.build_observer(
+                lifecycle=True,
+                policy_state=policy_state,
+                tags=fiscal_tags,
+                native_fiscal_inputs=native_fiscal_inputs,
+            ),
+        )
+        sources.update(
+            zz_sitai_reform_observer=observer,
+            zz_probe_decision_lifecycle=lifecycle,
+        )
     if getattr(args, "localization_baseline", False):
         baseline = source_root / "localization-baseline"
         decisions.write(baseline, decision_probe.build_localization_baseline(config.GAME))
@@ -228,7 +302,9 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 tags=fiscal_tags,
                 native_fiscal_inputs=native_fiscal_inputs,
             ),
-            "reform": extension_probe.analyze(
+            "reform": None
+            if performance_package
+            else extension_probe.analyze(
                 logdir,
                 expected_tags=tuple(
                     value.strip() for value in args.legality_tags.split(",") if value.strip()
@@ -294,6 +370,19 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
         ),
         prior_failure_reports=tuple(args.prior_failure_report),
         language=getattr(args, "language", None),
+        qualification_report=getattr(args, "qualification_report", None),
+        qualification_registration=getattr(args, "qualification_registration", None),
+        qualification_context=(
+            {
+                "observation": {
+                    "package": "vanilla-performance",
+                    "version": OBSERVATION_VERSION,
+                    "observers": list(fiscal_tags),
+                }
+            }
+            if performance_package
+            else None
+        ),
     )
     print(
         json.dumps(

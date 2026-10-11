@@ -170,8 +170,11 @@ def inspect(
     expected_version: str,
     allow_save_upgrade: bool = False,
     origin_reports: Sequence[Mapping[str, Any]] | None = None,
+    qualification_report: Path | None = None,
+    purpose: str | None = None,
+    qualification_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """只证明输入内容、载入资格；当前二进制头不提供外交机会分母。"""
+    """载入资格与正式资格分别核验；无独立报告仍保持机会未知。"""
     from .game_run import save_header, validate_load_save_header  # noqa: PLC0415
 
     result: dict[str, Any] = {
@@ -215,6 +218,30 @@ def inspect(
         result["reasons"] = [f"{type(exc).__name__}: {exc}"]
     if result["sha256"] is not None:
         _check_origins(result, path, origin_reports)
+    if qualification_report is not None:
+        from .experiment_evidence import validate  # noqa: PLC0415
+
+        qualification = validate(
+            qualification_report,
+            checkpoint_sha256=result["sha256"],
+            expected_version=expected_version,
+            purpose=purpose or "",
+            context=qualification_context,
+        )
+        result["qualification"] = qualification
+        if (
+            result["instrument_suitable"]
+            and result["header"].get("version") == expected_version
+            and qualification["allowed"]
+        ):
+            result["formal_pair_suitable"] = True
+            result["formal_purpose"] = purpose
+            result["state"] = "formal-pair-suitable"
+            result["opportunity_count"] = qualification.get("opportunity_count")
+            result["reasons"] = []
+        else:
+            result["reasons"].extend(qualification["reasons"])
+            result["reasons"] = list(dict.fromkeys(result["reasons"]))
     return result
 
 
@@ -228,19 +255,30 @@ def preflight(
 ) -> dict[str, Any]:
     """资格与预算分开。持久计数、锁与资源由实验账本/运行器负责。"""
     reasons = list(stop_reasons)
-    if purpose not in {"instrument", "reconnaissance", "safety", "M3-A", "M3-B", "M4"}:
+    if purpose not in {"instrument", "reconnaissance", "safety", "M3-A", "M3-B", "M4", "M4-noise"}:
         reasons.append("purpose.invalid")
     if not math.isfinite(months) or months <= 0:
         reasons.append("months.invalid")
     if checkpoint.get("instrument_suitable") is not True:
         reasons.extend(checkpoint.get("reasons", ("checkpoint.rejected",)))
-    if purpose in {"M3-A", "M3-B", "M4"} and checkpoint.get("formal_pair_suitable") is not True:
-        reasons.append("opportunity.unverified")
+    if purpose in {"M3-A", "M3-B", "M4"}:
+        if checkpoint.get("formal_pair_suitable") is not True:
+            reasons.append("opportunity.unverified")
+            reasons.extend(checkpoint.get("qualification", {}).get("reasons", ()))
+        elif checkpoint.get("formal_purpose") != purpose:
+            reasons.append("qualification.purpose")
     if purpose in {"instrument", "reconnaissance", "M3-A", "M3-B"}:
         if months > 6:
             reasons.append("budget.six_months")
         if used_arms >= 6:
             reasons.append("budget.three_pairs")
+    if purpose == "M4-noise":
+        if months > 120:
+            reasons.append("budget.noise_window")
+        if used_arms >= 3:
+            reasons.append("budget.three_runs")
+    if purpose == "M4" and not 24 <= months <= 120:
+        reasons.append("budget.m4_window")
     if used_arms < 0:
         reasons.append("budget.invalid_count")
     return {
@@ -248,7 +286,7 @@ def preflight(
         "purpose": purpose,
         "months": months,
         "used_arms": used_arms,
-        "remaining_arms": max(0, 6 - used_arms),
+        "remaining_arms": max(0, (3 if purpose == "M4-noise" else 6) - used_arms),
         "state": checkpoint.get("state"),
         "opportunity_count": checkpoint.get("opportunity_count"),
         "reasons": list(dict.fromkeys(reasons)),
