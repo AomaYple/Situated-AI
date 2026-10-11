@@ -2,8 +2,8 @@
 
 设计要点
 --------
-全量分析跑一次约 21 秒，因此用 **session 级 fixture 只跑一次**，
-所有用例共享结果。这样既能覆盖完整流程，又不会让测试套件变得无法忍受。
+复用 ``conftest.py`` 的 session 级分析 fixture，同一 worker 的只读用例
+共享结果，避免模块内重新定义 fixture 后构建并保留第二份相同数据。
 
 覆盖的内容
 ----------
@@ -27,23 +27,6 @@ from pdx import analyze, config
 pytestmark = pytest.mark.integration
 
 _needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="游戏目录不可用")
-
-
-# ── session 级共享结果 ──────────────────────────────────────
-@pytest.fixture(scope="session")
-def ga():
-    """游戏本体分析结果（整轮只跑一次）。"""
-    return analyze.game_analysis()
-
-
-@pytest.fixture(scope="session")
-def ma():
-    return analyze.mods_analysis()
-
-
-@pytest.fixture(scope="session")
-def ca(ga, ma):
-    return analyze.cross_analysis(ma)
 
 
 # ── 游戏本体 ────────────────────────────────────────────────

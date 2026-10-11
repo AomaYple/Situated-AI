@@ -2,10 +2,10 @@
 
 为什么用指纹而不是整份文件
 --------------------------
-:func:`pdx.analyze.write_reports` 的产物合计 **72,610,313 字节（约 69 MiB）**，
-其中 ``游戏数据.json`` 一份就有 **56,893,083 字节（约 54 MiB）**。把这种体积的
-文本塞进 git 会让仓库迅速劣化，因此这里记录每个产物的 ``(字节数, sha256)`` ——
-同样能保证"改一个字节就失败"，但仓库只增加几百字节。
+:func:`pdx.analyze.write_reports` 的全量产物包含游戏结构、完整数据、本地化和
+Mod 内容，体积较大。把整份文本塞进 git 会让仓库迅速劣化，因此这里记录
+每个产物的 ``(字节数, sha256)`` —— 同样能保证"改一个字节就失败"。
+具体尺寸以本文件对应的黄金指纹为准，不在说明中重复维护易过时的读数。
 
 本测试走的是**真实写盘路径**（``write_reports`` 本身），不是自己重新
 序列化一遍。否则测试和实现会各自演化，测的就不是真正交付的东西了。
@@ -59,10 +59,16 @@ def _write_to(out: Path, ga, ma, ca, monkeypatch) -> dict[str, Path]:
     return analyze.write_reports(ga, ma, ca)
 
 
-@pytest.fixture
-def artifacts(tmp_path, ga, ma, ca, monkeypatch) -> dict[str, Path]:
-    """跑一次真实写盘。"""
-    return _write_to(tmp_path, ga, ma, ca, monkeypatch)
+@pytest.fixture(scope="module")
+def artifacts(tmp_path_factory: pytest.TempPathFactory, ga, ma, ca) -> dict[str, Path]:
+    """同模块的只读断言复用真实产物；确定性测试另做两次独立写盘。
+
+    只在生成时替换路径，返回前恢复全局配置，避免模块作用域的补丁
+    干扰其他测试。需要改写产物的测试必须使用自己的临时目录。
+    """
+    out = tmp_path_factory.mktemp("golden-artifacts")
+    with pytest.MonkeyPatch.context() as patch:
+        return _write_to(out, ga, ma, ca, patch)
 
 
 def test_artifact_digests(artifacts, data_regression) -> None:

@@ -505,14 +505,17 @@ def compare(old: Snapshot, new: Snapshot) -> list[Change]:
     if old.compact != new.compact:
         raise SnapshotFormatError("精简快照与完整快照不能直接比较")
     changes: list[Change] = []
-    sections = sorted(set(old.sections) | set(new.sections))
+    sections = sorted(old.sections.keys() | new.sections.keys())
 
     for sec in sections:
         a = old.sections.get(sec, {})
         b = new.sections.get(sec, {})
-        for name in sorted(set(a) | set(b)):
-            old_values = list(a.get(name, []))
-            new_values = list(b.get(name, []))
+        for name in sorted(a.keys() | b.keys()):
+            old_values = a.get(name, [])
+            new_values = b.get(name, [])
+            # 相同列表没有增删、重排或重数变化；保留不同列表的原有比对语义。
+            if old_values == new_values:
+                continue
             if sec in ORDERED_SECTIONS:
                 added, removed = _ordered_delta(old_values, new_values)
             else:

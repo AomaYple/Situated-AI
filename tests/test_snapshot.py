@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from itertools import zip_longest
 from pathlib import Path
 from unittest.mock import patch
 
@@ -147,6 +148,10 @@ class TestSnapshotShape(unittest.TestCase):
 
         cls.snap = snapshot.build()
 
+    @classmethod
+    def tearDownClass(cls):
+        del cls.snap
+
     def test_has_all_sections(self):
         for sec in ("common_entries", "fields", "defines", "localization", "dlc", "config"):
             with self.subTest(section=sec):
@@ -220,9 +225,10 @@ class TestDeterminism(unittest.TestCase):
         """
         a = self.first
         b = snapshot.build()
-        da = json.dumps(a.to_dict(), ensure_ascii=False, sort_keys=True)
-        db = json.dumps(b.to_dict(), ensure_ascii=False, sort_keys=True)
-        if da != db:
+        # 规范 JSON 逐块完全相等才通过，避免同时持有两份完整序列化字符串。
+        encoder = json.JSONEncoder(ensure_ascii=False, sort_keys=True)
+        chunks = zip_longest(encoder.iterencode(a.to_dict()), encoder.iterencode(b.to_dict()))
+        if any(left != right for left, right in chunks):
             self.fail(
                 "两次 build 不一致；第一个不同的点："
                 + _first_diff(a.to_dict(), b.to_dict())
@@ -257,6 +263,34 @@ class TestCompare(unittest.TestCase):
     def test_identical_yields_no_changes(self):
         s = self._snap({"x": {"a": ["1", "2"]}})
         self.assertEqual(snapshot.compare(s, s), [])
+
+    def test_equal_independent_snapshots_keep_inputs_unchanged(self):
+        from copy import deepcopy
+
+        sections = {
+            "x": {"a": ["中文", "中文", "1"], "empty": []},
+            "doc_tables": {"table": ["b", "a", "b"]},
+        }
+        a = self._snap(deepcopy(sections))
+        b = self._snap(deepcopy(sections))
+        self.assertIsNot(a.sections["x"]["a"], b.sections["x"]["a"])
+        self.assertEqual(snapshot.compare(a, b), [])
+        self.assertEqual(a.sections, sections)
+        self.assertEqual(b.sections, sections)
+
+    def test_regular_reorder_keeps_multiset_semantics(self):
+        a = self._snap({"x": {"a": ["k", "k", "z"]}})
+        b = self._snap({"x": {"a": ["z", "k", "k"]}})
+        self.assertEqual(snapshot.compare(a, b), [])
+
+    def test_sparse_changes_survive_equal_groups(self):
+        a = self._snap({"x": {"same": ["k", "k"], "changed": ["a", "a"]}})
+        b = self._snap({"x": {"same": ["k", "k"], "changed": ["a", "b"]}})
+        changes = snapshot.compare(a, b)
+        self.assertEqual(len(changes), 1)
+        self.assertEqual(changes[0].name, "changed")
+        self.assertEqual(changes[0].added, ["b"])
+        self.assertEqual(changes[0].removed, ["a"])
 
     def test_detects_addition(self):
         a = self._snap({"x": {"a": ["1"]}})
