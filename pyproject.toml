@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 # ─────────────────────────────────────────────────────────────
 # Victoria 3 mod 开发研究工具链
 #
-# 本文件是**唯一**的工程配置源：
+# 本文件集中维护 Python 工程配置：
 #   项目元数据 / 依赖 / 打包 / pytest / ruff / mypy / coverage
-# 不再需要 pytest.ini、requirements.txt、setup.py、setup.cfg。
+# Git、编辑器、提交钩子与 CI 保留各自的专用配置；具体流程见 CONTRIBUTING.md。
 #
-# 安装（开发模式，之后所有 sys.path 补丁都可以删掉）：
+# 安装（完整仓库的可编辑开发环境）：
 #     .venv\Scripts\python.exe -m pip install -e ".[dev]"
 # ─────────────────────────────────────────────────────────────
 
@@ -39,13 +39,12 @@ dependencies = [
     "filelock>=3.19",         # 所有实机实验共享跨平台进程互斥锁
     "packaging>=26.0", # PEP 508 条件依赖使用成熟解析器，不自行实现表达式求值。
     "psutil>=7.0",    # 三平台进程树 RSS / CPU / 内存测量；仪器读数不再绑 Win32。
-    "typer>=0.27",      # 命令行参数解析。取代 7 个入口脚本里重复的 argparse 样板
+    "typer>=0.27",      # 统一 CLI 的命令与参数解析
     "rich>=15.0",       # 终端表格与格式化输出。取代手写字符串对齐
 
-    # ── 游戏自动化（`v3` 之外的第三个能力面：把游戏真的跑起来）──────
-    # 为什么这三个是运行期依赖、而不是 dev：它们被 `pdx.game_auto` **直接 import**，
-    # 也就是"自动化测试 Victoria 3"这条能力本身的实现，不是测试期工具。
-    # 增量很小：本机实测 Pillow 7.2 MB + numpy 12.7 MB + opencv 43.8 MB（headless 轮子）。
+    # ── 游戏自动化 ─────────────────────────────────────────
+    # 图像处理由 pdx.game_auto 在运行时直接使用，因此属于运行期依赖。
+    # GUI 输入与窗口后端当前只支持 Windows；其他平台的能力边界见工程基线。
     "Pillow>=11.0",     # game_auto.py：PNG 编解码 + 截图对象（模板匹配的输入/输出）
     "numpy>=2.1",       # game_auto.py：把截图与模板当成像素数组（PIL↔cv2 的桥）
     "opencv-python-headless>=4.10",
@@ -53,30 +52,16 @@ dependencies = [
                         # 选 **headless** 而不是 `opencv-python`：我们只用匹配，
                         # 不用 `imshow`/`waitKey`，而 headless 轮子不带 GUI 依赖
                         # （少一层 GTK/Qt 的隐式依赖，也不会和游戏的窗口抢东西）。
-                        # 为什么不手写：滑动窗口互相关自己实现只会更慢更容易错，
-                        # 而"用成熟库"是本仓 P4 明确要求的。
+                        # 模板匹配复用成熟实现，遵循 docs/principles/工程原则.md。
     "pydirectinput>=1.0.4; sys_platform == 'win32'",
-                        # game_auto.py：鼠标**注入**（`moveTo` + `click`）。它内部同样是
-                        # `SendInput`，选它不是为了"更强的注入"，而是为了**别再自己拼
-                        # `SetCursorPos` + `mouse_event` 那段 Win32 细节**，并把
-                        # `FAILSAFE` / `PAUSE` 这两个开关交给库管（我们只负责关掉它们）。
-                        # 无第三方依赖（实测 `pip show` 的 Requires 为空）。
-                        # ⚠️ 它**不解决**两台事：① 后台点击 —— 实测 `PostMessage` /
-                        # `SendMessage` 三种变体引擎一律不认（它读原始输入），换库也一样；
-                        # ② 控制台 —— scancode 版键盘试过 4 个候选键仍未能唤起控制台
-                        # （判据是"命令会写的文件有没有变"；那次分不清"键没被接受"与
-                        # "这个界面不让开控制台"，所以记作未证实而不是判死）。
+                        # 扫描码键盘与鼠标输入；前台校验、授权和失败恢复由 game_auto 统一管理。
+                        # 速度、暂停与控制台操作分别使用 tick、画面、回话或产物验收。
+                        # 输入库返回成功不证明游戏已接受动作；实测见工具手册及其证据链接。
     "pygetwindow>=0.0.9; sys_platform == 'win32'",
-                        # game_auto.py：**窗口**枚举 / 标题 / 激活（`Window.activate()`
-                        # 内部自己做 `AttachThreadInput` + 置顶）/ 最小化 / 还原。
-                        # 为什么换掉手写 ctypes（P3 + 用户口径"不要使用其他代码例如 win32，
-                        # 完全使用 python"）：这段 Win32 细节原本是我们自己拼的
-                        # `EnumWindows` + 回调 + `AttachThreadInput`，属于典型的重复造轮子（P4）。
+                        # 窗口枚举、标题、激活、最小化与还原，复用已有窗口库。
     "pywin32>=306; sys_platform == 'win32'",
-                        # game_auto.py：补 `pygetwindow` 没暴露的几个**只读量** ——
-                        # 客户区坐标（`ClientToScreen`，点击坐标必须加这个原点）、类名、
-                        # 是否最小化（`IsIconic`）、`ShowWindow(SW_SHOWNOACTIVATE)`。
-                        # 只用只读/显示这几支，不再自己声明 `argtypes` 与位图结构体。
+                        # 补充客户区坐标、窗口状态、前台恢复与游戏线程键盘布局管理。
+                        # 使用成熟 Win32 绑定，避免自写 ctypes 结构体和函数声明。
 ]
 
 [project.optional-dependencies]
@@ -107,13 +92,12 @@ dev = [
 ]
 
 [project.scripts]
-# 单一入口，取代 tools/ 下原先 7 个各自为政的脚本。
-# 改动本段后需要重新 `pip install -e .`，否则 .venv/Scripts 下不会生成 v3.exe。
-# 不装入口点也能用：`python -m pdx.cli` 等价。
+# 统一 CLI 入口；修改入口定义后重新进行可编辑安装以更新环境内的启动脚本。
+# 完成可编辑安装后，也可用对应解释器的 `python -m pdx.cli` 调用。
 v3 = "pdx.cli:app"
 
 [tool.setuptools]
-# Python 包源码位于 src/pdx；tools/ 只放一次性探针、基准与 CI 脚本。
+# Python 包源码位于 src/pdx；tools/ 放检查入口、基准、实机探针与证据输出。
 # 使用标准 src 布局，避免仓库根目录的工具脚本被误当成可导入包。
 package-dir = { "" = "src" }
 packages = ["pdx"]
@@ -136,47 +120,28 @@ addopts = [
     # ── 并行（pytest-xdist）────────────────────────────────
     # pytest 默认**串行**；装上 xdist 只是提供能力，必须显式传 -n 才并行。
     #
-    # 这里的分发策略是实测出来的，不是拍的：
-    #     串行                    314.2 秒
-    #     -n auto --dist loadscope  132.8 秒   （-58%）
-    #
-    # 口径：整套测试（含基准用例与 15 MB 级的黄金回归写盘），
-    # Windows 本机、`--no-cov`、连续两次运行取墙钟时间。
-    # ``--dist loadscope`` 让同一个测试模块固定落在同一个 worker。这是必要的：
-    # 本项目多个模块共用 session 级 fixture（ga/ma/ca 会跑一遍 16 秒的全量分析），
-    # 而 **xdist 的 worker 之间不共享解析缓存**，每个 worker 都要各自重跑。
-    # 按模块分组能把这份重复压到最小。
+    # ``loadscope`` 按模块或测试类分组，便于复用同一 worker 内的重型 fixture。
+    # session fixture 和进程内解析缓存不会跨 worker 共享。
+    # 完整测试的调度、速度与峰值内存复核见：
+    # docs/audits/2026-10-11-工程提速.md；后续读数按日期和输入追加到结果记录。
+    # 测试集合、覆盖率、worker 数和缓存状态不同的运行不能直接计算整体提速。
     #
     # ``-n auto`` 由 tests/conftest.py 的 hook 综合 CPU 与内存预算：
     # 默认给系统留 2048 MiB、按每 worker 1536 MiB 计算上限，存在或缺少游戏树
     # 都应用护栏。``SITAI_XDIST_WORKERS`` 或 xdist 官方环境变量可显式覆盖。
     # 需要串行（例如要读完整的失败上下文）时传 ``-n0`` 覆盖。
     #
-    # ⚠️ **跑基准必须显式带 `--benchmark-only`**：pytest-benchmark 在 xdist
-    # **真的并发**时会自动禁用自己（它无法在多个 worker 上做有意义的计时）。
-    # 此时**不带**该参数的跑法会**静默降级**：用例照跑、退出码照 0，
-    # 但一条计时读数都没有（实测 18 passed / EXIT=0 / 无基准表），
-    # 与"真测过"的外观完全相同。
-    # 2026-09-29 更正（t34，实测）：旧注释写「`-n0` 不管用」**不成立** ——
-    # `-n0` 时 xdist 自己把 `dist` 归一成 `no`
-    # （`xdist/plugin.py`：`if config.option.numprocesses == 0: config.option.dist = "no"`），
-    # pytest-benchmark 据此（`pytest_benchmark/session.py` 的
-    # `xdist_active = config.getoption('dist','no') != 'no'`）不判并发 ⇒
-    # `-n0 --benchmark-only` 能跑出基准表（实测 18 passed / 有表 / EXIT=0）。
-    # 纪律（跑基准要显式 `--benchmark-only`、建议照旧 `-o addopts=""`）不变，理由改口。
-    #     pytest tests/test_benchmarks.py -o addopts="" --benchmark-only
+    # 基准串行运行并清除普通 addopts；并发时 pytest-benchmark 会禁用计时。
+    # 用例通过不能替代有效的基准表和采样结果。命令示例：
+    #     python -m pytest tests/test_benchmarks.py -o addopts="" --benchmark-only
+    # 历史判据与实测更正见 docs/reports/t34-CI-环境红灯-与-n0-口径更正.md。
     "-n",
     "auto",
     "--dist",
     "loadscope",
 ]
-# 说明：不设 --basetemp。pytest 的 tmp_path 在本机已可用，
-# 默认落在系统 Temp 下即可，无需固定。
-#
-# 注：并行曾经不可用 —— 测试里的临时目录工具用「类变量计数器 + 固定前缀」
-# 命名，而 worker 是独立进程、计数器各自从 0 开始，两个 worker 会撞同一个
-# 目录。换用 tempfile.mkdtemp 后（它在操作系统层面保证唯一）才真正可用；
-# 这个隔离缺陷正是并行时才暴露出来的。
+# 不固定 --basetemp；测试使用 pytest 的独立临时目录或系统保证唯一的目录。
+# worker 之间不能用进程内计数器拼接共享目录名，避免并行写入冲突。
 
 markers = [
     "unit: 单元测试，不依赖游戏安装",
@@ -203,14 +168,10 @@ omit = ["*/tests/*"]
 # 不可直接比较。数字变低不代表测试变差，而是分母里多了
 # 「只走了一个方向的分支」。
 #
-# 当前实测 87.2%，门槛钉在 86%。原始目标 95%。
-#
-# 已知的主要缺口（都是「重路径」，需要真跑游戏数据，故未覆盖）：
-#   cli.py        73%  snapshot create/diff、analyze --profile 等分支
-#   engine_log.py 77%  日志消息种类的冷门分支
-#   mods.py       78%  mod 目录异常的兜底分支
-#   tabular.py    80%  CSV 列数不齐等边界
-# 其余模块均在 86% 以上；defines.py / cache.py 已 100%。
+# 整体下限由 fail_under 定义，核心模块下限由 pdx.covgate.FLOORS 定义。
+# 实测百分比、未覆盖分支与命令以对应运行的 coverage JSON 和日期化记录为准。
+# 2026-10-11 完整回归及其限制见 docs/audits/2026-10-11-工程提速.md。
+# 配置只维护门禁，不另存容易漂移的“当前覆盖率”或模块实测列表。
 fail_under = 86
 show_missing = true
 skip_covered = false
@@ -233,11 +194,10 @@ line-length = 100
 target-version = "py311"
 extend-exclude = [
     ".venv",
-    # 下面三个目录**入库的 .py 一个都没有**（tools/out 是产物目录、docs/reports 与
-    # research/official-docs 全是 .md），但**不是空转**：`ruff format` 会连 `.md` 里的
-    # python 代码块一起格式化（`docs/reports` 下就靠本条挡住 2 个未格式化的块）。
+    # 排除产物与历史资料目录中可能出现的 Python 文件。
+    # docstring-code-format 处理 Python 文档字符串内的代码示例，不处理独立 .md 文件。
     "tools/out",          # 产物目录，将来若落脚本也不该被 lint
-    "docs/reports",      # 自动生成的 Markdown 报告
+    "docs/reports",      # 历史报告与独立复核
     # research/official-docs/ 是游戏官方文档的逐字镜像，不是我们的代码；
     # research/ 根下若出现自有产物则仍需检查，故不整目录排除。
     "research/official-docs",
@@ -271,9 +231,7 @@ select = [
     "ERA",  # eradicate：注释掉的代码
     "PL",   # pylint
     "RUF",  # ruff 自有规则
-    # 后加的两组：PERF 专门抓「手写但标准写法更快更清楚」的模式
-    # （实测本仓只有 2 处：一处手写 append 循环可用列表推导、
-    # 一处只取 values 却用了 items）；FURB 是现代化的进一步建议，实测 0 告警。
+    # PERF 检查低效写法；FURB 提供现代 Python 写法建议。
     "PERF", # perflint
     "FURB", # refurb
 ]
@@ -292,7 +250,7 @@ ignore = [
     # 本项目所有文档、注释、报错信息都是中文，必然出现全角标点
     # （）：「」、【】、—— 等。这三条规则把它们判为「易混淆的 Unicode
     # 字符」，在英文代码库里是对的，在中文代码库里是纯噪声：
-    # 实测 848 条告警全部是中文标点，没有一条是真的字符混用。
+    # 保留中文解释所需的标点；实际字符混用仍需人工审查。
     "RUF001",   # 字符串里的易混淆 Unicode 字符
     "RUF002",   # 文档字符串里的易混淆 Unicode 字符
     "RUF003",   # 注释里的易混淆 Unicode 字符
@@ -300,8 +258,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # 测试文件的刻意选择：
-#   PT009  沿用 unittest 风格的 self.assertXxx —— 改成裸 assert 是独立的大
-#          改造，收益是风格统一，风险是碰 179 处断言，性价比不划算
+#   PT009  保留既有 unittest 风格的 self.assertXxx；迁移时按断言语义单独验证
 #   PLC2401/N802/N803 中文测试函数名与 fixture 形参名（test_镜像逐字节一致(镜像文件)）
 #          比拼音可读得多，失败时 pytest 直接把中文名打出来，定位比英文名更快
 #   RUF012 测试里的类属性是 fixture 风格的常量，加 ClassVar 只是噪声
@@ -315,9 +272,7 @@ ignore = [
     "ARG001", "ARG002", "N806",
     "S101", "PT011", "PLC0415",
 ]
-# 注：这里**不再**列 lexer.py 的 PLR2004 —— 全局 ignore 里已经有了，
-# 重复列一条永远不会生效（实测确认过）。
-# 算法实现里的位运算与短路是刻意的
+# 已全局忽略的规则不在按文件豁免中重复登记。
 
 [tool.ruff.lint.isort]
 known-first-party = ["pdx"]
@@ -370,7 +325,7 @@ runner = "python -m pytest -x -q -p no:randomly --no-header -m 'not integration 
 # 兜底不靠它：`requires-python = ">=3.11"` 与 classifiers 里的 3.11 由
 # **CI 跑真实解释器**兜底（3.11 上 import 就会炸），ruff 的
 # `target-version = "py311"` 也仍然只按 3.11 给建议。
-# 实测口径变更的爆炸半径：全仓 111 个文件在 3.12 下 **0 个新错误**。
+# 检查范围由下面的 files 定义；实际文件数和结果记录在对应验证输出中。
 python_version = "3.12"
 # 覆盖范围：解析器包 + 测试。
 # **不含 `tools/prof/`** —— 那是一次性的剖析脚本，只在本地手跑、不进 CI；
