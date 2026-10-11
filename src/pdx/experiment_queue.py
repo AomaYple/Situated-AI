@@ -10,13 +10,123 @@ import sqlite3
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING, Any, TypeGuard
 
-from .deployment_state import digest, plain_path
+from .deployment_state import digest, plain_path, tree_digest
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+
+SCHEMA_VERSION = 1
+PURPOSES = frozenset({"reconnaissance", "instrument", "safety", "M3-A", "M3-B", "M4", "M4-noise"})
+ARMS = frozenset(
+    {
+        "control",
+        "candidate",
+        "neutrality",
+        "aggression",
+        "market-control",
+        "market",
+        "vanilla",
+        "fiscal",
+        "reform",
+        "combined",
+        "reform-positive-control",
+        "reform-global-positive-control",
+    }
+)
+
+
+def _text(value: object) -> TypeGuard[str]:
+    return (
+        isinstance(value, str)
+        and bool(value)
+        and value == value.strip()
+        and all(character.isprintable() for character in value)
+    )
+
+
+def _finite_number(value: object) -> bool:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def _sha(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def _hash_tree(value: object) -> str | None:
+    """运行器的来源结构是 mod 名称 -> 文件名 -> SHA；不接受布尔宣告。"""
+    if _sha(value):
+        return str(value)
+    if (
+        isinstance(value, dict)
+        and value
+        and all(_text(key) and _hash_tree(child) is not None for key, child in value.items())
+    ):
+        return hashlib.sha256(_json(value).encode("utf-8")).hexdigest()
+    return None
+
+
+def _stop_context(manifest: Mapping[str, Any]) -> dict[str, str]:
+    """仅已知运行输入能证明新前提；标签、预算、工具/文档指纹不能重开。"""
+    context: dict[str, str] = {}
+    if _sha(manifest.get("checkpoint")):
+        context["checkpoint"] = manifest["checkpoint"]
+    environment = manifest.get("environment")
+    if isinstance(environment, dict):
+        language = environment.get("language")
+        if _text(language):
+            context["language"] = language
+        game = environment.get("game")
+        if isinstance(game, dict):
+            for key in (
+                "caligula_branch",
+                "caligula_rev",
+                "clausewitz_branch",
+                "clausewitz_rev",
+                "version",
+                "sha256",
+            ):
+                value = game.get(key)
+                if _text(value) and (not key.endswith("sha256") or _sha(value)):
+                    context[f"game:{key}"] = value
+    game_hashes = manifest.get("game_hashes")
+    if (
+        isinstance(game_hashes, dict)
+        and game_hashes
+        and all(
+            _text(name)
+            and "\\" not in name
+            and ":" not in name
+            and not PurePosixPath(name).is_absolute()
+            and all(part not in {"", ".", ".."} for part in name.split("/"))
+            and _sha(value)
+            for name, value in game_hashes.items()
+        )
+    ):
+        for name, value in game_hashes.items():
+            context[f"game-file:{name}"] = value
+    # 尚无具体错误到探针/诊断依赖的因果映射，来源或 simulation 变化不能
+    # 自动证明原版错误前提已解除。它们仍受完整 manifest 冻结和兼容性审查。
+    return context
+
+
+def _same_stop_context(left: dict[str, str], right: dict[str, str]) -> bool:
+    # 缺失字段不能被补一个新标签/布尔值解释为前提不同。只有双方都有的真实
+    # 指纹或已知环境字段不同才允许重开；未知动态依赖不充当重开依据。
+    # 旧附表可能保存集合范围未声明的聚合内容指纹；观测包增删会改变集合，
+    # 即使原版文件一字未改也会改变摘要。只比较双方共有的实际文件内容。
+    return all(
+        left[key] == right[key]
+        for key in left.keys() & right.keys()
+        if key != "game:content_sha256"
+    )
 
 
 def _json(value: object) -> str:
@@ -25,16 +135,235 @@ def _json(value: object) -> str:
     )
 
 
+def _compatibility_facts(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    environment = manifest.get("environment")
+    environment = environment if isinstance(environment, dict) else {}
+    qualification = manifest.get("qualification")
+    qualification = qualification if isinstance(qualification, dict) else {}
+    context = qualification.get("context")
+    context = context if isinstance(context, dict) else {}
+    return {
+        "checkpoint": manifest.get("checkpoint"),
+        "sources": manifest.get("sources"),
+        "probe_sources": manifest.get("probe_sources"),
+        "environment.game": environment.get("game"),
+        "environment.language": environment.get("language"),
+        "environment.tools": environment.get("tools"),
+        "environment.disabled_dlc": environment.get("disabled_dlc"),
+        "environment.mount_allowlist": environment.get("mount_allowlist"),
+        "provenance": manifest.get("provenance"),
+        "months": manifest.get("months"),
+        "timeout": manifest.get("timeout"),
+        "profile": manifest.get("profile"),
+        "allow_save_upgrade": manifest.get("allow_save_upgrade"),
+        "keep_save": manifest.get("keep_save"),
+        "observation": manifest.get("observation", context.get("observation")),
+    }
+
+
+def _invalid_compatibility_fields(facts: dict[str, Any]) -> list[str]:
+    invalid: list[str] = []
+    if not _sha(facts["checkpoint"]):
+        invalid.append("checkpoint")
+    for field in ("sources", "probe_sources"):
+        value = facts[field]
+        if not isinstance(value, dict) or not all(
+            _text(key) and _hash_tree(child) is not None for key, child in value.items()
+        ):
+            invalid.append(field)
+    game = facts["environment.game"]
+    if (
+        not isinstance(game, dict)
+        or not _sha(game.get("content_sha256"))
+        or not (_text(game.get("caligula_branch")) or _text(game.get("version")))
+    ):
+        invalid.append("environment.game")
+    if not _text(facts["environment.language"]):
+        invalid.append("environment.language")
+    tools = facts["environment.tools"]
+    if (
+        not isinstance(tools, dict)
+        or not tools
+        or not all(_text(key) and _sha(value) for key, value in tools.items())
+    ):
+        invalid.append("environment.tools")
+    for field in ("environment.disabled_dlc", "environment.mount_allowlist"):
+        value = facts[field]
+        if (
+            not isinstance(value, list)
+            or not all(_text(item) for item in value)
+            or len(value) != len(set(value))
+            or (field.endswith("mount_allowlist") and not value)
+        ):
+            invalid.append(field)
+    invalid.extend(
+        field
+        for field in ("months", "timeout")
+        if not _finite_number(facts[field]) or facts[field] <= 0
+    )
+    invalid.extend(
+        field
+        for field in ("profile", "allow_save_upgrade", "keep_save")
+        if type(facts[field]) is not bool
+    )
+    observation = facts["observation"]
+    if (
+        not isinstance(observation, dict)
+        or not _text(observation.get("version"))
+        or not _text(observation.get("package"))
+    ):
+        invalid.append("observation")
+    return invalid
+
+
+def _known_provenance(value: object) -> bool:
+    """无来源回调和未知动态依赖不能因全模块指纹相同冒称已知。"""
+    if not isinstance(value, dict):
+        return False
+    files = value.get("files")
+    callback = value.get("callback")
+    runtime = value.get("runtime")
+    if (
+        type(value.get("schema")) is not int
+        or value["schema"] != 1
+        or value.get("dependency_scope") != "conservative-full"
+        or set(value) != {"schema", "files", "callback", "runtime", "dependency_scope"}
+        or not isinstance(files, dict)
+        or not files
+        or not all(_text(name) and _sha(digest) for name, digest in files.items())
+        or not isinstance(callback, dict)
+        or set(callback) != {"path", "sha256"}
+        or not _text(callback.get("path"))
+        or not _sha(callback.get("sha256"))
+        or files.get(callback["path"]) != callback["sha256"]
+        or not isinstance(runtime, dict)
+        or set(runtime) != {"python", "platform", "libraries"}
+        or not _text(runtime.get("python"))
+        or not _text(runtime.get("platform"))
+    ):
+        return False
+    libraries = runtime.get("libraries")
+    return (
+        isinstance(libraries, dict)
+        and bool(libraries)
+        and all(
+            _text(name) and (version is None or _text(version))
+            for name, version in libraries.items()
+        )
+    )
+
+
+def _changed_fields(previous: object, current: object, prefix: str = "") -> list[str]:
+    if isinstance(previous, dict) and isinstance(current, dict):
+        fields: list[str] = []
+        for key in sorted(previous.keys() | current.keys()):
+            field = f"{prefix}.{key}" if prefix else key
+            if key not in previous or key not in current:
+                fields.append(field)
+            else:
+                fields.extend(_changed_fields(previous[key], current[key], field))
+        return fields
+    return [] if _json(previous) == _json(current) else [prefix]
+
+
+def assess_compatibility(
+    previous_manifest: Mapping[str, Any] | None, current_manifest: Mapping[str, Any]
+) -> dict[str, Any]:
+    """只读比较已冻结事实；兼容不替代资格、原件复核或原样本身份。
+
+    旧记录缺少内容/观测字段以及未解释的工具或动态依赖变化均保持未知。
+    本轮没有已审核的纯解析职责 profile，因此不自动给出 must-reparse。
+    返回结果不修改账本、不刷新停止事实，也不允许复制独立样本。
+    """
+    result: dict[str, Any] = {
+        "schema": 1,
+        "state": "unknown",
+        "compatible": False,
+        "sample_reuse_authorized": False,
+        "requires_qualification_review": True,
+        "reasons": [],
+        "changed_fields": [],
+        "missing_fields": [],
+        "invalid_fields": [],
+    }
+    if previous_manifest is None:
+        result["reasons"] = ["manifest.previous_missing"]
+        result["missing_fields"] = ["previous_manifest"]
+        return result
+    if not isinstance(previous_manifest, dict) or not isinstance(current_manifest, dict):
+        result["reasons"] = ["manifest.shape_unknown"]
+        return result
+    try:
+        _json(previous_manifest)
+        _json(current_manifest)
+        result["changed_fields"] = _changed_fields(previous_manifest, current_manifest)
+        before = _compatibility_facts(previous_manifest)
+        after = _compatibility_facts(current_manifest)
+        result["missing_fields"] = sorted(
+            {field for facts in (before, after) for field, value in facts.items() if value is None}
+        )
+        result["invalid_fields"] = sorted(
+            set(_invalid_compatibility_fields(before)) | set(_invalid_compatibility_fields(after))
+        )
+        if result["missing_fields"] or result["invalid_fields"]:
+            result["reasons"] = ["manifest.facts_incomplete_or_invalid"]
+            return result
+        if any(
+            "dynamic_dependencies" in manifest for manifest in (previous_manifest, current_manifest)
+        ):
+            result["reasons"] = ["manifest.dynamic_dependencies_unreviewed"]
+            return result
+        if not all(_known_provenance(facts["provenance"]) for facts in (before, after)):
+            result["reasons"] = ["manifest.provenance_unreviewed"]
+            return result
+        actual_inputs = set(before) - {"environment.tools", "provenance"}
+        if any(_json(before[field]) != _json(after[field]) for field in actual_inputs):
+            result["state"] = "must-rerun"
+            result["reasons"] = ["manifest.run_inputs_changed"]
+        elif result["changed_fields"]:
+            result["reasons"] = ["manifest.change_scope_unreviewed"]
+        else:
+            result["state"] = "reusable"
+            result["compatible"] = True
+            result["reasons"] = ["manifest.frozen_facts_identical"]
+    except (TypeError, ValueError, OverflowError):
+        result["reasons"] = ["manifest.unserializable_or_invalid"]
+    return result
+
+
 def _failure_types(report: Mapping[str, Any]) -> list[str]:
+    from .game_run import ERROR_MARKERS, UNCLASSIFIED_ERROR_MARKERS  # noqa: PLC0415
+
     findings = report.get("log_findings", {})
     raw_errors = findings.get("errors", {}) if isinstance(findings, dict) else {}
-    errors = {key for key, count in raw_errors.items() if isinstance(count, int) and count > 0}
+    errors: set[str] = set()
+    if isinstance(raw_errors, dict):
+        for key, count in raw_errors.items():
+            if _text(key) and type(count) is int and count >= 0:
+                if count > 0:
+                    errors.add(key)
+            else:
+                errors.add("unclassified-error")
+    else:
+        errors.add("unclassified-error")
     if isinstance(findings, dict) and findings.get("mod_errors"):
         # 未枚举的模组错误统一保守计次，不被时间戳/对象 ID 的变化绕过。
         errors.add("unclassified-mod-error")
     if isinstance(findings, dict) and findings.get("unclassified_errors"):
         # 资源/VFS 等尚未逐类建模的错误同样必须进入停止计数，不能由旧字段缺失绕过。
         errors.add("unclassified-error")
+    if "early_stop" in report:
+        # 实时守卫已看到的首错独立于最终归档；汇总损坏不能清除该停止事实。
+        guard = report["early_stop"]
+        kind = guard.get("kind") if isinstance(guard, dict) else None
+        if isinstance(kind, str) and kind in ERROR_MARKERS:
+            errors.add(kind)
+        elif kind == "Mod error":
+            errors.add("unclassified-mod-error")
+        elif isinstance(kind, str) and kind in UNCLASSIFIED_ERROR_MARKERS:
+            errors.add("unclassified-error")
+        else:
+            errors.add("unclassified-error")
     return sorted(errors)
 
 
@@ -51,15 +380,25 @@ class RunRequest:
     min_available_mib: float = 4096
 
     def limits(self) -> dict[str, object]:
+        maximum_months = 120 if self.purpose in ("M4", "M4-noise", "safety") else 6
+        minimum_months = 24 if self.purpose == "M4" else 0
         if (
-            not all((self.plan_id, self.scene_id, self.arm))
+            not all(_text(value) for value in (self.plan_id, self.scene_id, self.arm, self.purpose))
+            or self.arm not in ARMS
+            or self.purpose not in PURPOSES
+            or type(self.max_scenes) is not int
             or not 1 <= self.max_scenes <= 2
+            or type(self.max_pairs) is not int
             or not 1 <= self.max_pairs <= 3
+            or type(self.pair) is not int
             or not 1 <= self.pair <= self.max_pairs
-            or not math.isfinite(self.max_months)
+            or not _finite_number(self.max_months)
+            or not minimum_months <= self.max_months <= maximum_months
             or self.max_months <= 0
-            or not math.isfinite(self.min_available_mib)
+            or not _finite_number(self.min_available_mib)
             or self.min_available_mib < 0
+            or (self.purpose == "M4" and self.max_pairs != 3)
+            or (self.purpose == "M4-noise" and self.arm not in {"control", "vanilla"})
         ):
             raise ValueError("实验身份或预算无效")
         return {
@@ -83,6 +422,10 @@ class ExperimentLedger:
         database.row_factory = sqlite3.Row
         try:
             database.execute("PRAGMA synchronous=FULL")
+            database.execute("BEGIN IMMEDIATE")
+            version = database.execute("PRAGMA user_version").fetchone()[0]
+            if version > SCHEMA_VERSION:
+                raise ValueError("实验账本 schema 版本较新，拒绝降级写入")
             database.execute(
                 "CREATE TABLE IF NOT EXISTS plans (id TEXT PRIMARY KEY, limits_json TEXT NOT NULL)"
             )
@@ -97,7 +440,13 @@ class ExperimentLedger:
                 "evidence TEXT NOT NULL, report_sha TEXT NOT NULL, errors TEXT NOT NULL, "
                 "PRIMARY KEY(plan,scene,evidence))"
             )
-            database.execute("BEGIN IMMEDIATE")
+            # 附表保存新导入记录的上下文；旧 plans/runs/prior_failures 原行不重写。
+            database.execute(
+                "CREATE TABLE IF NOT EXISTS prior_failure_contexts "
+                "(evidence TEXT PRIMARY KEY, context_json TEXT NOT NULL)"
+            )
+            if version < SCHEMA_VERSION:
+                database.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
             yield database
             database.commit()
         except BaseException:
@@ -110,6 +459,14 @@ class ExperimentLedger:
         """锁/资源/资格通过后预留身份，失败也占用有限探索预算。"""
         limits = _json(request.limits())
         frozen = _json(manifest)
+        if "months" in manifest and (
+            not _finite_number(manifest["months"])
+            or not 0 < manifest["months"] <= request.max_months
+            or (request.purpose == "M4" and manifest["months"] < 24)
+        ):
+            raise ValueError("运行输入窗口超出用途预算")
+        if request.purpose == "M4" and "months" not in manifest:
+            raise ValueError("正式 M4 必须冻结运行窗口")
         plain_path(evidence)
         with self._transaction() as database:
             plan = database.execute(
@@ -129,14 +486,10 @@ class ExperimentLedger:
                 raise ValueError("已达到场景预算")
             scene = [row for row in rows if row["scene"] == request.scene_id]
             prior_scene = [row for row in prior if row["scene"] == request.scene_id]
-            if len(scene) + len(prior_scene) >= request.max_pairs * 2:
+            arms_per_pair = 1 if request.purpose == "M4-noise" else 2
+            if len(scene) + len(prior_scene) >= request.max_pairs * arms_per_pair:
                 raise ValueError("已达到三组配对的运行预算（含失败）")
-            errors: dict[str, int] = {}
-            for row in [*scene, *prior_scene]:
-                for error in json.loads(row["errors"]):
-                    errors[error] = errors.get(error, 0) + 1
-            if any(count >= 2 for count in errors.values()):
-                raise ValueError("同场景同类引擎错误重复两次，停止派发")
+            self._require_not_stopped(database, manifest)
             for row in scene:
                 old_manifest = json.loads(row["manifest"])
                 for key in (set(old_manifest) | set(manifest)) - {"sources"}:
@@ -157,6 +510,11 @@ class ExperimentLedger:
                 "SELECT id FROM runs WHERE evidence=?", (str(evidence.resolve()),)
             ).fetchone():
                 raise ValueError("证据目录已被使用，重跑必须新身份")
+            if request.purpose in {"M3-A", "M3-B", "M4"} and request.arm not in {
+                "control",
+                "vanilla",
+            }:
+                self._require_control(database, request, manifest)
             run_id = uuid.uuid4().hex
             database.execute(
                 "INSERT INTO runs (id,plan,scene,arm,pair,manifest,evidence,status) VALUES (?,?,?,?,?,?,?,?)",
@@ -173,8 +531,181 @@ class ExperimentLedger:
             )
             return run_id
 
+    @staticmethod
+    def _require_control(
+        database: sqlite3.Connection, request: RunRequest, manifest: Mapping[str, Any]
+    ) -> None:
+        """正式候选只能接在同配对已完成且当前原件复核合格的控制局之后。"""
+        from . import experiment_evidence, game_run, m3a_screen  # noqa: PLC0415
+
+        control_arm = "vanilla" if request.purpose == "M4" else "control"
+        rows = database.execute(
+            "SELECT * FROM runs WHERE plan=? AND scene=? AND pair=? AND arm=? AND status='complete'",
+            (request.plan_id, request.scene_id, request.pair, control_arm),
+        ).fetchall()
+        if len(rows) != 1:
+            raise ValueError("控制先行门禁：同配对须有唯一已完成控制臂")
+        row = rows[0]
+        if not _sha(row["report_sha"]):
+            raise ValueError("控制先行门禁：控制报告缺少冻结指纹")
+        previous = json.loads(row["manifest"])
+        if any(
+            previous.get(key) != manifest.get(key)
+            for key in (previous.keys() | manifest.keys()) - {"sources"}
+        ):
+            raise ValueError("控制先行门禁：同配对冻结输入不同")
+        root = Path(row["evidence"])
+        path = root / "report.json"
+        try:
+            plain_path(path)
+            if digest(path) != row["report_sha"]:
+                raise ValueError("控制报告原件指纹改变")
+            sources = tree_digest(root / "sources")
+            logs = tree_digest(root / "logs")
+            report = game_run.read_reviewed_report(path)
+            game_run.require_clean_report(report)
+            facts = m3a_screen.load_report(path)
+            if not facts.clean:
+                raise ValueError("控制原件当前门禁未通过：" + ";".join(facts.gate_reasons))
+            expected = {
+                "run_id": row["id"],
+                "plan_id": request.plan_id,
+                "scene_id": request.scene_id,
+                "arm": control_arm,
+                "pair": request.pair,
+                "purpose": request.purpose,
+                "limits": request.limits(),
+                "manifest_sha256": hashlib.sha256(row["manifest"].encode("utf-8")).hexdigest(),
+            }
+            identity = report.get("experiment")
+            if (
+                not isinstance(identity, dict)
+                or any(_json(identity.get(key)) != _json(value) for key, value in expected.items())
+                or report.get("evidence") != row["evidence"]
+            ):
+                raise ValueError("控制报告实验身份与账本不同")
+            declared = previous.get("sources")
+            if (
+                not isinstance(declared, dict)
+                or not declared
+                or report.get("source_hashes") != declared
+            ):
+                raise ValueError("控制报告源码与冻结输入不同或缺失")
+            flattened = {
+                f"{name}/{relative}": fingerprint
+                for name, files in declared.items()
+                for relative, fingerprint in files.items()
+            }
+            if game_run.hashes(root / "sources") != flattened:
+                raise ValueError("控制源码原件集合或指纹不同")
+            probes = {
+                name: files
+                for name, files in declared.items()
+                if name != "sitai_decision_candidate"
+            }
+            if probes != previous.get("probe_sources"):
+                raise ValueError("控制探针与冻结输入不同")
+            environment = previous.get("environment")
+            if not isinstance(environment, dict) or not isinstance(environment.get("game"), dict):
+                raise ValueError("控制冻结环境缺失")
+            versions = {
+                key: value for key, value in environment["game"].items() if key != "content_sha256"
+            }
+            content_sha256 = environment["game"].get("content_sha256")
+            game_hashes = report.get("game_hashes")
+            if (
+                not _sha(content_sha256)
+                or not isinstance(game_hashes, dict)
+                or not game_hashes
+                or not all(_text(key) and _sha(value) for key, value in game_hashes.items())
+                or hashlib.sha256(
+                    json.dumps(game_hashes, sort_keys=True).encode("utf-8")
+                ).hexdigest()
+                != content_sha256
+            ):
+                raise ValueError("控制游戏内容指纹与冻结环境不同或缺失")
+            qualification = previous.get("qualification")
+            preflight = report.get("checkpoint_preflight")
+            qualification_path = previous.get("qualification_report")
+            if (
+                not isinstance(qualification, dict)
+                or not isinstance(preflight, dict)
+                or _json(preflight.get("qualification")) != _json(qualification)
+                or not _sha(qualification.get("report_sha256"))
+                or not _text(qualification_path)
+                or digest(Path(qualification_path)) != qualification["report_sha256"]
+            ):
+                raise ValueError("控制资格原件与冻结指纹不同或缺失")
+            qualification_context = qualification.get("context")
+            if not isinstance(qualification_context, dict):
+                raise ValueError("控制资格冻结上下文缺失")
+            if (
+                report.get("loaded_save", {}).get("sha256") != previous.get("checkpoint")
+                or report.get("game_version") != versions
+                or report.get("language") != environment.get("language")
+                or report.get("mount_allowlist") != qualification_context.get("mount_allowlist")
+                or report.get("disabled_dlc") != environment.get("disabled_dlc")
+                or report.get("qualification_registration_sha256")
+                != previous.get("qualification_registration_sha256")
+                or not _sha(previous.get("qualification_registration_sha256"))
+                or _json(report.get("months")) != _json(previous.get("months"))
+                or report.get("session_requested") is not True
+                or report.get("logs_isolated") is not True
+            ):
+                raise ValueError("控制检查点、窗口或运行环境与冻结输入不同")
+            context = dict(qualification_context)
+            context.update(
+                game_version=versions,
+                source_hashes=declared,
+                arm=control_arm,
+                months=previous["months"],
+                pair=request.pair,
+            )
+            reviewed = experiment_evidence.review_control(
+                path,
+                qualification_report=Path(qualification_path),
+                checkpoint_sha256=previous["checkpoint"],
+                expected_version=versions.get("caligula_branch", "").split("/")[-1],
+                purpose=request.purpose,
+                context=context,
+            )
+            if reviewed.get("allowed") is not True:
+                raise ValueError(
+                    "控制实际窗口/机会未通过：" + ";".join(reviewed.get("reasons", []))
+                )
+            if reviewed.get("report_sha256") != row["report_sha"]:
+                raise ValueError("控制独立复核指纹与账本不同")
+            if (
+                digest(path) != row["report_sha"]
+                or tree_digest(root / "sources") != sources
+                or tree_digest(root / "logs") != logs
+            ):
+                raise ValueError("控制报告、源码或日志在复核中变化")
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+            raise ValueError(f"控制先行门禁：{exc}") from exc
+
+    @staticmethod
+    def _require_not_stopped(database: sqlite3.Connection, manifest: Mapping[str, Any]) -> None:
+        context = _stop_context(manifest)
+        failures: dict[str, set[str]] = {}
+        for row in database.execute("SELECT manifest,evidence,errors FROM runs"):
+            if _same_stop_context(context, _stop_context(json.loads(row["manifest"]))):
+                for error in json.loads(row["errors"]):
+                    failures.setdefault(error, set()).add(row["evidence"])
+        for row in database.execute(
+            "SELECT p.evidence,p.errors,c.context_json FROM prior_failures p "
+            "LEFT JOIN prior_failure_contexts c ON p.evidence=c.evidence"
+        ):
+            previous = json.loads(row["context_json"]) if row["context_json"] else {}
+            if _same_stop_context(context, previous):
+                for error in json.loads(row["errors"]):
+                    # 同一原报告跨计划导入仍只是一局；也与 runs 原目录去重。
+                    failures.setdefault(error, set()).add(str(Path(row["evidence"]).parent))
+        if any(len(identities) >= 2 for identities in failures.values()):
+            raise ValueError("同输入/环境同类引擎错误重复两次，停止派发")
+
     def finish(self, run_id: str, report: Mapping[str, Any], *, report_sha256: str) -> None:
-        if not re.fullmatch(r"[0-9a-f]{64}", report_sha256):
+        if not _sha(report_sha256):
             raise ValueError("报告指纹无效")
         errors = _failure_types(report)
         with self._transaction() as database:
@@ -258,7 +789,8 @@ class ExperimentLedger:
         report = read_reviewed_report(path)
         errors = _failure_types(report)
         if (
-            report.get("loaded_save", {}).get("sha256") != checkpoint_sha256
+            not _sha(checkpoint_sha256)
+            or report.get("loaded_save", {}).get("sha256") != checkpoint_sha256
             or report.get("game_version") != game_version
             or not errors
             or digest(path) != report_sha
@@ -266,6 +798,16 @@ class ExperimentLedger:
             raise ValueError("历史失败的检查点、版本、错误或指纹不符")
         limits = _json(request.limits())
         evidence = str(path.resolve())
+        context = _stop_context(
+            {
+                "checkpoint": checkpoint_sha256,
+                "environment": {"game": game_version, "language": report.get("language")},
+                "game_hashes": report.get("game_hashes"),
+                "sources": report.get("source_hashes"),
+                "probe_sources": report.get("probe_sources", report.get("source_hashes")),
+                "simulation": report.get("simulation"),
+            }
+        )
         with self._transaction() as database:
             plan = database.execute(
                 "SELECT limits_json FROM plans WHERE id=?", (request.plan_id,)
@@ -283,20 +825,24 @@ class ExperimentLedger:
             if request.scene_id not in scenes and len(scenes) >= request.max_scenes:
                 raise ValueError("已达到场景预算，拒绝导入第三个场景")
             duplicate = database.execute(
-                "SELECT report_sha FROM prior_failures WHERE plan=? AND scene=? AND evidence=?",
-                (request.plan_id, request.scene_id, evidence),
+                "SELECT report_sha FROM prior_failures WHERE evidence=?",
+                (evidence,),
             ).fetchone()
             if duplicate is not None and duplicate[0] != report_sha:
                 raise ValueError("已导入的历史报告发生改变")
             existing = database.execute(
-                "SELECT id FROM runs WHERE plan=? AND scene=? AND evidence=?",
-                (request.plan_id, request.scene_id, str(path.parent.resolve())),
+                "SELECT id FROM runs WHERE evidence=?",
+                (str(path.parent.resolve()),),
             ).fetchone()
             if existing is not None:
                 raise ValueError("历史运行已在账本中，拒绝重复计次")
             database.execute(
                 "INSERT OR IGNORE INTO prior_failures VALUES (?,?,?,?,?)",
                 (request.plan_id, request.scene_id, evidence, report_sha, _json(errors)),
+            )
+            database.execute(
+                "INSERT OR IGNORE INTO prior_failure_contexts VALUES (?,?)",
+                (evidence, _json(context)),
             )
 
     def used_arms(self, plan_id: str, scene_id: str) -> int:

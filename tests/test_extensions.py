@@ -450,3 +450,88 @@ def test_全局政治正控明确隔离且不强制立法(tmp_path, monkeypatch)
     assert inspected
     assert not inspected[0].exists()
     assert not decisions.load_extensions().reform_enabled
+
+
+def test_显式性能噪声包生成与资格源码契约一致(tmp_path, monkeypatch):
+    import sys
+
+    from pdx import decision_probe, game_run
+    from tools.probe import decision_stability
+
+    monkeypatch.setattr(decision_stability.config, "OUT", tmp_path / "out")
+    monkeypatch.setattr(
+        decision_stability, "parse_file", lambda *_a: pytest.fail("性能包不读政治法律")
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "decision_stability.py",
+            "--arm",
+            "vanilla",
+            "--purpose",
+            "M4-noise",
+            "--save",
+            str(tmp_path / "input.v3"),
+            "--observation-package",
+            "vanilla-performance",
+            "--language",
+            "l_english",
+            "--months",
+            "24",
+            "--max-months",
+            "24",
+        ],
+    )
+    seen = []
+
+    def run(sources, **options):
+        assert set(sources) == {"zz_sitai_fiscal_observer"}
+        expected = decision_probe.build_observer(
+            tags=("RUS", "PRU"), policy_state=False, native_fiscal_inputs=True
+        )
+        root = sources["zz_sitai_fiscal_observer"]
+        assert {
+            path.relative_to(root).as_posix(): path.read_text(encoding="utf-8")
+            for path in root.rglob("*")
+            if path.is_file()
+        } == expected
+        assert options["qualification_context"]["observation"]["package"] == "vanilla-performance"
+        assert options["experiment"].purpose == "M4-noise"
+        assert options["months"] == options["experiment"].max_months == 24
+        seen.append(root)
+        return {"ok": True}
+
+    monkeypatch.setattr(game_run, "run", run)
+    assert decision_stability.main() == 0
+    assert seen
+    assert not seen[0].exists()
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"purpose": "instrument"},
+        {"natural_diplomacy": True},
+        {"localization_baseline": True},
+        {"legality_laws": "law_autocracy"},
+        {"qualification_registration": "later.json"},
+    ],
+)
+def test_性能包拒绝未登记混用仪器(extra):
+    import argparse
+
+    from tools.probe import decision_stability
+
+    values = {"purpose": "M4-noise", "observation_package": "vanilla-performance", **extra}
+    with pytest.raises(ValueError, match="性能观测包"):
+        decision_stability._check_performance_package(argparse.Namespace(**values))
+
+
+def test_正式性能目的不能默默删除原观测包():
+    import argparse
+
+    from tools.probe import decision_stability
+
+    with pytest.raises(ValueError, match="显式登记"):
+        decision_stability._check_performance_package(argparse.Namespace(purpose="M4"))

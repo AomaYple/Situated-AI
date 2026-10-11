@@ -60,11 +60,16 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期；安装版简体中文缺键时显式加 `--localization-baseline`，不豁免错误门禁 |
 | `tools/probe/save_migration_audit.py` | 递归盘点 `.v3` 版本、观察者状态、空规则和 SHA-256；只报告可用于跨版本升级实验的输入，不执行迁移 |
 | `python -m pdx.checkpoint_catalog` | 只读盘点存档与原局来源：复核日志/挂载/源/部署/收尾，按输出 SHA 关联复制或改名文件；失败或缺证来源拒绝，不提名正式机会 |
+| `tools/benchmarks/experiment_evidence.py` | 串行合成资格成本基线，分开计时、Python 分配与进程树 RSS；不是实机或加速对照 |
 | `tools/benchmarks/decision_runtime.py` | 分开测生成、日志/存档读取的墙钟与Python分配峰值；正式基线要求机器安静 |
 
 使用仓库虚拟环境，先执行只读输入盘点：`python -m pdx.checkpoint_catalog tools/out --output tools/out/checkpoints/catalog.json`；用户存档可另指定目录盘点。盘点的来源关联限于所给根目录；没有关联不证明来源干净，来源干净不等于新机会或正式后期资格。运行器会在部署前再次核对 `saves/` 下输入的同局来源；脱离原目录的复制件须保留并核对目录盘点结果，不能用改名绕过失败记录。
 
 `tools/probe/make_clean_checkpoint.py` 在 Windows 上准备纯原版观察者输入：日志和存档目录纳入持久隔离，失败存档保留在会话 `saves/` 中，只有完整日志、挂载和恢复通过才独占发布公开副本。来源复核用原版新局契约验证实际存档及明确为空的探针集合，不伪造载入证据；准备成功仍不提供外交机会或正式行为资格。
+
+`decision_behavior.py` 现可显式选择 `--purpose M3-A/M3-B`、`--experiment-scene`、`--language` 与 `--qualification-report`。正式模式必须 `--natural-opportunity --fiscal-injection none`，M3-A 只允许 control/neutrality；先通过当前资格原件，再通过同 pair 控制原件才派候选。缺证、分母未知、窗口/风险不一致或错误继续拒绝；允许启动不代表行为质量通过。准备资格使用 `--purpose instrument --arm control --natural-opportunity --fiscal-injection none --qualification-registration <登记JSON>`，显式场景/语言且不同时保存；运行器在副作用前重新生成并核对无注入源。登记和资格 schema、必须的 `sampling.max_overshoot_days`、完整原件和限制见[正式实验入口审计](../docs/audits/2026-10-11-正式实验入口.md)。
+
+`decision_stability.py --purpose M4-noise --arm vanilla --observation-package vanilla-performance` 显式生成与资格契约一致的原版性能观察源；长期窗口需事前登记 `--months` 和 `--max-months`（24–120 月）。完整政治/生命周期包仍为默认，新性能包尚无扰动实机验收。正式 `--purpose M4` 另需既有资格、同版本输入、显式语言与该包，禁止保存、升级和未验收扩展；M3 冻结质量出口尚不具可核验接口，当前仍明确拒绝。不能把 M4-noise 的工具接线当作正式 M4 通过。
 
 `decision_stability.py --language l_english` 为本局和恢复重启传递临时语言，并进入报告与实验冻结身份；不写用户语言设置。英文目前仅支持已提供的观察者检查点，英文新游戏菜单尚未验证，未知语言在事务前拒绝。`l_simp_chinese` 也可显式登记；两臂语言不一致或只有一臂记录时拒绝配对。日志中的 `VFSOpen Error` 与原有引擎/Mod 错误一样拒绝通过，并进入同场景重复错误停止计数；历史报告先验证原始日志指纹，不能沿用旧 `ok=true` 绕过当前门禁。
 
@@ -271,7 +276,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 111 个测试文件、2940 条用例（2026-10-11 工作区口径）。本轮工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 112 个测试文件、3355 条用例（2026-10-12 工作区口径）。本批正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

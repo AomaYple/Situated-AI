@@ -7,17 +7,20 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import math
 import mmap
 import os
+import platform
 import posixpath
 import re
 import shutil
 import threading
 import time
 from contextlib import suppress
-from pathlib import Path
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypedDict
 
 import psutil
@@ -27,7 +30,7 @@ from . import checkpoint_catalog, config, gametimer
 from . import game_auto as ga
 from .deployment_state import digest as file_sha
 from .deployment_state import durable_json, move_directory, plain_path, temporary_file, tree_digest
-from .experiment_queue import ExperimentLedger
+from .experiment_queue import ExperimentLedger, assess_compatibility
 from .performance import StageTimings
 from .textio import deploy_tree
 
@@ -293,9 +296,11 @@ class RunLock:
 
 def hashes(root: Path) -> dict[str, str]:
     """分块哈希，避免把存档或大日志整体读进内存。"""
+    plain_path(root)
     result: dict[str, str] = {}
     for path in sorted(root.rglob("*")):
-        if path.is_file() and not path.is_symlink():
+        plain_path(path)
+        if path.is_file():
             with path.open("rb") as stream:
                 result[path.relative_to(root).as_posix()] = hashlib.file_digest(
                     stream, "sha256"
@@ -1053,6 +1058,128 @@ def graceful_stop(hwnd: int, *, timeout: float = 30) -> dict[str, object]:
     raise TimeoutError("窗口关闭请求后游戏未在期限内正常退出")
 
 
+def _qualification_game_files(
+    path: Path, *, sources: Mapping[str, Path], registration: bool = False
+) -> dict[str, Path]:
+    """定位现场完整依赖集合；原件引用不决定本机读取路径。"""
+    plain_path(path)
+    document = json.loads(path.read_text(encoding="utf-8"))
+    originals = (
+        document.get("game_hashes" if registration else "game_files")
+        if isinstance(document, dict)
+        else None
+    )
+    if not isinstance(originals, dict) or not originals:
+        raise ValueError("资格报告缺少游戏原件集合")
+    versions = {
+        name + ".txt"
+        for name in ("caligula_branch", "caligula_rev", "clausewitz_branch", "clausewitz_rev")
+    }
+    required = set(versions)
+    directories = ["common/diplomatic_plays"]
+    if "zz_sitai_reform_observer" in sources:
+        directories.extend(("common/laws", "common/ai_strategies"))
+    for directory in directories:
+        plain_path(config.GAME / directory)
+        required.update(
+            p.relative_to(config.GAME).as_posix() for p in (config.GAME / directory).glob("*.txt")
+        )
+    if "zz_sitai_vanilla_localization_baseline" in sources:
+        for language in ("english", "simp_chinese"):
+            root = config.GAME / "localization" / language
+            plain_path(root)
+            required.update(p.relative_to(config.GAME).as_posix() for p in root.rglob("*.yml"))
+    if set(originals) != required:
+        raise ValueError("资格游戏原件与现场完整依赖文件集合不同")
+    actual: dict[str, Path] = {}
+    for name in sorted(originals):
+        relative = PurePosixPath(name)
+        if (
+            not name
+            or relative.is_absolute()
+            or PureWindowsPath(name).drive
+            or any(part in {"", ".", ".."} for part in name.split("/"))
+            or any(character in name for character in ("\\", ":", "\0"))
+        ):
+            raise ValueError("资格游戏路径必须为规范相对路径")
+        current = config.ROOT / name if name in versions else config.GAME.joinpath(*relative.parts)
+        plain_path(current)
+        actual[name] = current
+    return actual
+
+
+def qualification_game_hashes(
+    path: Path, *, sources: Mapping[str, Path], registration: bool = False
+) -> dict[str, str]:
+    """核对现场游戏原件；声明的 SHA 不充当现场事实，逐文件流式读取。"""
+    actual = {}
+    for name, current in _qualification_game_files(
+        path, sources=sources, registration=registration
+    ).items():
+        before = current.stat()
+        if not current.is_file():
+            raise ValueError("资格游戏原件必须为普通文件")
+        actual[name] = file_sha(current)
+        after = current.stat()
+        if (
+            before.st_dev,
+            before.st_ino,
+            before.st_size,
+            before.st_mtime_ns,
+            before.st_ctime_ns,
+        ) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError("现场游戏原件在读取期间变化")
+    return actual
+
+
+def execution_provenance(analyze: Callable[[Path], object] | None) -> dict[str, Any]:
+    """补齐入口、生成数据和运行时来源；未知回调不宣称依赖已审查。"""
+    own_files = [*sorted(Path(__file__).parent.glob("*.py"))]
+    own_files.extend(sorted((config.REPO / "mod/decisions").glob("*.toml")))
+    own_files.extend(sorted((config.REPO / "research/vanilla-ai").rglob("*.txt")))
+    own_files.extend(sorted(ga.UI_DIR.rglob("*.png")))
+    callback = None
+    if analyze is not None:
+        try:
+            source = inspect.getsourcefile(analyze)
+        except TypeError:
+            source = None
+        if source is not None:
+            path = Path(source)
+            if path.is_file():
+                own_files.append(path)
+                callback = {"path": str(path.resolve()), "sha256": file_sha(path)}
+    libraries: dict[str, str | None] = {}
+    for package in ("psutil", "filelock", "numpy", "opencv-python", "Pillow", "mss", "pywin32"):
+        try:
+            libraries[package] = version(package)
+        except PackageNotFoundError:
+            libraries[package] = None
+    return {
+        "schema": 1,
+        "files": {str(path.resolve()): file_sha(path) for path in sorted(set(own_files))},
+        "callback": callback,
+        "runtime": {
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+            "libraries": libraries,
+        },
+        "dependency_scope": "conservative-full",
+    }
+
+
+def _disabled_dlc() -> list[str]:
+    path = config.USERDIR / "content_load.json"
+    plain_path(path)
+    if not path.exists():
+        return []
+    content = json.loads(path.read_text(encoding="utf-8-sig"))
+    value = content.get("disabledDLC", []) if isinstance(content, dict) else None
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise ValueError("disabledDLC 必须是明确的字符串列表")
+    return value
+
+
 def run(
     sources: Mapping[str, Path],
     *,
@@ -1067,6 +1194,9 @@ def run(
     experiment: RunRequest | None = None,
     prior_failure_reports: tuple[Path, ...] = (),
     language: str | None = None,
+    qualification_report: Path | None = None,
+    qualification_context: Mapping[str, Any] | None = None,
+    qualification_registration: Path | None = None,
 ) -> dict[str, object]:
     """运行隔离观察者局，成功与失败都保留不可覆盖的原始证据。"""
     if not math.isfinite(months) or months <= 0:
@@ -1078,6 +1208,18 @@ def run(
         raise ValueError("实验必须提供存在的 mod 源目录")
     if prior_failure_reports and experiment is None:
         raise ValueError("导入历史失败必须有冻结实验身份")
+    formal = experiment is not None and experiment.purpose in {"M3-A", "M3-B", "M4"}
+    if qualification_report is not None and not formal:
+        raise ValueError("资格报告必须绑定正式实验目的")
+    if formal and (
+        qualification_report is None
+        or load_save is None
+        or keep_save
+        or allow_save_upgrade
+        or qualification_registration is not None
+        or language is None
+    ):
+        raise ValueError("正式实验需要既有资格、同版本输入及显式语言，不得同时制作或升级存档")
     with RunLock():
         ga.assert_no_game_running()
         Deployment.recover_pending(config.USERDIR)
@@ -1089,14 +1231,19 @@ def run(
             "input_fingerprints", lambda: {name: hashes(path) for name, path in sources.items()}
         )
         game_version = config.game_version()
+        disabled_dlc = _disabled_dlc()
+        predicted_mounts = mount_allowlist([config.USERDIR / "mod" / name for name in sources])
+        provenance = timings.call("execution_provenance", execution_provenance, analyze)
         report: dict[str, object] = {
             "evidence": str(evidence),
             "deployment_journal": str(deployment.journal),
             "recovery_root": str(deployment.recovery_root),
             "game_version": game_version,
             "language": language,
+            "disabled_dlc": disabled_dlc,
             "months": months,
             "source_hashes": source_hashes,
+            "provenance": provenance,
         }
         samples: list[dict[str, object]] = []
         previous = ga._foreground_window()
@@ -1117,6 +1264,28 @@ def run(
         checkpoint: dict[str, Any] | None = None
         logs_isolated = False
         session_requested = False
+        actual_game_hashes: dict[str, str] | None = None
+        game_fingerprint_path = qualification_report
+        registration: dict[str, Any] | None = None
+
+        def verify_game_content(phase: str) -> None:
+            if (formal or registration is not None) and (
+                _disabled_dlc() != disabled_dlc
+                or mount_allowlist([config.USERDIR / "mod" / name for name in sources])
+                != predicted_mounts
+            ):
+                raise ValueError(f"现场 DLC 配置或挂载集合在{phase}变化")
+            if actual_game_hashes is None:
+                return
+            if game_fingerprint_path is None:
+                raise ValueError("游戏内容复核缺少冻结原件登记")
+            if (
+                qualification_game_hashes(
+                    game_fingerprint_path, sources=sources, registration=registration is not None
+                )
+                != actual_game_hashes
+            ):
+                raise ValueError(f"现场游戏内容在{phase}变化")
 
         def sample() -> None:
             rss = cpu = 0.0
@@ -1170,6 +1339,16 @@ def run(
                 raise RuntimeError("实时证据采集失败，停止推进并保留现场")
 
         try:
+            actual_game_hashes = (
+                timings.call(
+                    "qualification_game_fingerprints",
+                    qualification_game_hashes,
+                    qualification_report,
+                    sources=sources,
+                )
+                if qualification_report is not None
+                else None
+            )
             if load_save is not None:
                 expected_version = config.game_version().get("caligula_branch", "").split("/")[-1]
                 checkpoint = timings.call(
@@ -1178,6 +1357,21 @@ def run(
                     load_save,
                     expected_version=expected_version,
                     allow_save_upgrade=allow_save_upgrade,
+                    qualification_report=qualification_report,
+                    purpose=experiment.purpose if experiment else "safety",
+                    qualification_context={
+                        **dict(qualification_context or {}),
+                        "game_version": game_version,
+                        "game_hashes": actual_game_hashes,
+                        "language": language,
+                        "disabled_dlc": disabled_dlc,
+                        "mount_allowlist": predicted_mounts,
+                        "source_hashes": source_hashes,
+                        "months": months,
+                        "plan_id": experiment.plan_id if experiment else None,
+                        "scene_id": experiment.scene_id if experiment else None,
+                        "arm": experiment.arm if experiment else None,
+                    },
                 )
                 preflight = checkpoint_catalog.preflight(
                     checkpoint,
@@ -1191,6 +1385,104 @@ def run(
                 )
                 if not preflight["allowed"]:
                     raise ValueError(f"检查点预检拒绝：{preflight['reasons']}")
+                if qualification_report is not None:
+                    # 资格文件已通过原件校验；再次绑定路径与登记原字节，供控制完成后复核。
+                    plain_path(qualification_report)
+                    qualification_bytes = qualification_report.read_bytes()
+                    qualification = json.loads(qualification_bytes)
+                    qualification_sha = checkpoint["qualification"]["report_sha256"]
+                    if (
+                        hashlib.sha256(qualification_bytes).hexdigest() != qualification_sha
+                        or file_sha(qualification_report) != qualification_sha
+                    ):
+                        raise ValueError("正式资格在预检后变化")
+                    reference = qualification["registration"]
+                    registration_original = qualification_report.parent.joinpath(
+                        *PurePosixPath(reference["path"]).parts
+                    )
+                    plain_path(registration_original)
+                    if file_sha(registration_original) != reference["sha256"]:
+                        raise ValueError("正式登记在预检后变化")
+                    report["qualification_report"] = str(qualification_report.resolve())
+                    report["qualification_registration_sha256"] = reference["sha256"]
+            if qualification_registration is not None:
+                from .experiment_evidence import validate_preparation  # noqa: PLC0415
+
+                if experiment is None or checkpoint is None:
+                    raise ValueError("资格预登记必须绑定检查点和实验身份")
+                plain_path(qualification_registration)
+                registration_bytes = qualification_registration.read_bytes()
+                registration = json.loads(registration_bytes.decode("utf-8"))
+                if (
+                    not isinstance(registration, dict)
+                    or type(registration.get("schema")) is not int
+                    or registration.get("schema") != 1
+                    or registration.get("plan_id") != experiment.plan_id
+                    or registration.get("scene_id") != experiment.scene_id
+                    or registration.get("checkpoint_sha256") != checkpoint["sha256"]
+                    or file_sha(qualification_registration)
+                    != hashlib.sha256(registration_bytes).hexdigest()
+                ):
+                    raise ValueError("资格预登记身份、输入或读取指纹不符")
+                actual_game_hashes = qualification_game_hashes(
+                    qualification_registration, sources=sources, registration=True
+                )
+                preparation = validate_preparation(
+                    registration_bytes,
+                    game_files=_qualification_game_files(
+                        qualification_registration, sources=sources, registration=True
+                    ),
+                    context={
+                        **dict(qualification_context or {}),
+                        "checkpoint_sha256": checkpoint["sha256"],
+                        "game_version": game_version,
+                        "game_hashes": actual_game_hashes,
+                        "language": language,
+                        "disabled_dlc": disabled_dlc,
+                        "mount_allowlist": predicted_mounts,
+                        "source_hashes": source_hashes,
+                        "months": months,
+                        "plan_id": experiment.plan_id,
+                        "scene_id": experiment.scene_id,
+                        "arm": experiment.arm,
+                    },
+                )
+                report["qualification_preparation"] = preparation
+                if not preparation["allowed"]:
+                    raise ValueError(f"资格准备预检拒绝：{preparation['reasons']}")
+                if (
+                    registration.get("source_hashes") != source_hashes
+                    or registration.get("disabled_dlc") != disabled_dlc
+                    or registration.get("mount_allowlist") != predicted_mounts
+                    or registration.get("game_hashes") != actual_game_hashes
+                    or registration.get("language") != language
+                    or registration.get("sampling", {}).get("window_days") != months * 30
+                    or registration.get("declared_differences", {}).get("fiscal_injection")
+                    != "none"
+                    or any(
+                        registration.get(key) != value
+                        for key, value in (qualification_context or {}).items()
+                        if key in {"observation", "declared_differences"}
+                    )
+                ):
+                    raise ValueError("资格预登记与现场源、游戏、语言、窗口或观测包不同")
+                # 保存原字节；原预登记不能在完成观察后补写或变更。
+                (evidence / "registration.json").write_bytes(registration_bytes)
+                report["qualification_registration_sha256"] = hashlib.sha256(
+                    registration_bytes
+                ).hexdigest()
+                game_fingerprint_path = evidence / "registration.json"
+                for name, current in _qualification_game_files(
+                    game_fingerprint_path, sources=sources, registration=True
+                ).items():
+                    destination = evidence / "game" / name
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(current, destination)
+                    if file_sha(destination) != actual_game_hashes[name]:
+                        raise ValueError("游戏原件在归档期间变化")
+            if actual_game_hashes is not None:
+                report["game_hashes"] = actual_game_hashes
+                verify_game_content("资格复核期间")
             if experiment is not None:
                 experiment.limits()
                 if checkpoint is None or months > experiment.max_months:
@@ -1218,35 +1510,60 @@ def run(
                 )
                 if not preflight["allowed"]:
                     raise ValueError(f"实验预算预检拒绝：{preflight['reasons']}")
-                run_id = ledger.reserve(
-                    experiment,
-                    manifest={
-                        "checkpoint": checkpoint["sha256"],
-                        "sources": source_hashes,
-                        "probe_sources": {
-                            k: v
-                            for k, v in source_hashes.items()
-                            if k != "sitai_decision_candidate"
+                manifest = {
+                    "checkpoint": checkpoint["sha256"],
+                    "sources": source_hashes,
+                    "probe_sources": {
+                        k: v for k, v in source_hashes.items() if k != "sitai_decision_candidate"
+                    },
+                    "environment": {
+                        "game": {
+                            **game_version,
+                            **(
+                                {
+                                    "content_sha256": hashlib.sha256(
+                                        json.dumps(actual_game_hashes, sort_keys=True).encode(
+                                            "utf-8"
+                                        )
+                                    ).hexdigest()
+                                }
+                                if actual_game_hashes is not None
+                                else {}
+                            ),
                         },
-                        "environment": {
-                            "game": report["game_version"],
-                            "language": language,
-                            "tools": {
-                                p.name: file_sha(p)
-                                for p in sorted(Path(__file__).parent.glob("*.py"))
-                            },
-                        },
-                        "months": months,
-                        "timeout": timeout,
-                        "profile": profile,
-                        "allow_save_upgrade": allow_save_upgrade,
-                        "keep_save": keep_save,
-                        "prior_failure_reports": {
-                            str(p.resolve()): file_sha(p) for p in prior_failure_reports
+                        "language": language,
+                        "disabled_dlc": disabled_dlc,
+                        "mount_allowlist": predicted_mounts,
+                        "tools": {
+                            p.name: file_sha(p) for p in sorted(Path(__file__).parent.glob("*.py"))
                         },
                     },
-                    evidence=evidence,
+                    "months": months,
+                    "game_hashes": actual_game_hashes,
+                    "timeout": timeout,
+                    "profile": profile,
+                    "allow_save_upgrade": allow_save_upgrade,
+                    "keep_save": keep_save,
+                    "provenance": provenance,
+                    "observation": (qualification_context or {}).get("observation"),
+                    "qualification": checkpoint.get("qualification"),
+                    "qualification_report": report.get("qualification_report"),
+                    "qualification_registration_sha256": report.get(
+                        "qualification_registration_sha256"
+                    ),
+                    "prior_failure_reports": {
+                        str(p.resolve()): file_sha(p) for p in prior_failure_reports
+                    },
+                }
+                previous_manifests = [
+                    json.loads(row["manifest"])
+                    for row in ledger.runs(experiment.plan_id)
+                    if row["scene"] == experiment.scene_id and row["arm"] == experiment.arm
+                ]
+                report["evidence_compatibility"] = assess_compatibility(
+                    previous_manifests[-1] if previous_manifests else None, manifest
                 )
+                run_id = ledger.reserve(experiment, manifest=manifest, evidence=evidence)
                 report["experiment"] = {
                     "run_id": run_id,
                     "plan_id": experiment.plan_id,
@@ -1262,8 +1579,8 @@ def run(
             for name, source in sources.items():
                 if Path(name).name != name or name in {"", ".", ".."}:
                     raise ValueError(f"mod目录名无效：{name}")
-                if any(p.is_symlink() for p in (source, *source.rglob("*"))):
-                    raise ValueError(f"实验源不允许符号链接：{source}")
+                for path in (source, *source.rglob("*")):
+                    plain_path(path)
                 if source.resolve() in evidence.resolve().parents:
                     raise ValueError("证据目录不能放在实验源内")
                 timings.call("source_archive", shutil.copytree, source, evidence / "sources" / name)
@@ -1284,6 +1601,8 @@ def run(
             destinations = timings.call("deployment", deployment.deploy, frozen_sources)
             report["deployed_hashes"] = {p.name: hashes(p) for p in destinations}
             expected_mounts = mount_allowlist(destinations)
+            if (formal or registration is not None) and expected_mounts != predicted_mounts:
+                raise ValueError("部署后的挂载集合与资格冻结不同")
             report["mount_allowlist"] = expected_mounts
             monitor = threading.Thread(target=observe, name="sitai-evidence", daemon=True)
             monitor.start()
@@ -1310,6 +1629,11 @@ def run(
                     "sha256": save_sha256,
                     "upgrade_requested": allow_save_upgrade,
                 }
+                if registration is not None:
+                    shutil.copy2(source_save, evidence / "input.v3")
+                    if file_sha(evidence / "input.v3") != save_sha256:
+                        raise ValueError("资格输入在归档期间变化")
+            verify_game_content("启动前")
             session_requested = True
             session = timings.call(
                 "startup_load",
@@ -1476,6 +1800,11 @@ def run(
                 report.setdefault("failure", "实机收尾失败；备份已保留")
             report["session_requested"] = session_requested
             report["logs_isolated"] = logs_isolated
+            if actual_game_hashes is not None:
+                try:
+                    verify_game_content("实验期间")
+                except (OSError, ValueError) as exc:
+                    report.setdefault("failure", f"游戏内容末次复核失败：{exc}")
             if analyze is not None and session_requested:
                 try:
                     report["analysis"] = timings.call("analysis", analyze, evidence / "logs")
@@ -1488,6 +1817,30 @@ def run(
                 "阶段区间覆盖输入指纹计算至分析结束；重叠区间不累加；旧 wall_seconds 不含初始指纹计算与分析；计时均不含报告写盘"
             )
             write_json(evidence / "report.json", report)
+            if registration is not None and (evidence / "input.v3").is_file():
+
+                def reference(path: Path) -> dict[str, str]:
+                    return {"path": path.relative_to(evidence).as_posix(), "sha256": file_sha(path)}
+
+                try:
+                    write_json(
+                        evidence / "qualification.json",
+                        {
+                            "schema": 1,
+                            "purpose": registration.get("purpose"),
+                            "checkpoint": reference(evidence / "input.v3"),
+                            "run_report": reference(evidence / "report.json"),
+                            "registration": reference(evidence / "registration.json"),
+                            "game_files": {
+                                name: reference(evidence / "game" / name)
+                                for name in actual_game_hashes or {}
+                            },
+                        },
+                    )
+                except (OSError, ValueError) as exc:
+                    report.setdefault("failure", f"资格候选归档失败：{exc}")
+                    report["ok"] = False
+                    write_json(evidence / "report.json", report)
             if ledger is not None and run_id is not None:
                 ledger.finish(run_id, report, report_sha256=file_sha(evidence / "report.json"))
             write_json(output / "latest.json", report)

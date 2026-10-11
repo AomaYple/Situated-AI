@@ -382,3 +382,107 @@ def test_自然响应入口在部署前拒绝候选和注入(monkeypatch, tmp_pa
     with pytest.raises(SystemExit) as result:
         decision_behavior.main()
     assert result.value.code == 2
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        [],
+        ["--fiscal-injection", "stress"],
+        ["--keep-save"],
+        ["--qualification-registration", "later.json"],
+        ["--arm", "candidate"],
+        ["--purpose", "M3-B", "--arm", "neutrality"],
+    ],
+)
+def test_正式行为入口缺证或未登记处理提前拒绝(monkeypatch, tmp_path, extra):
+    import sys
+
+    from tools.probe import decision_behavior
+
+    argv = [
+        "decision_behavior.py",
+        "--save",
+        str(tmp_path / "input.v3"),
+        "--arm",
+        "control",
+        "--purpose",
+        "M3-A",
+        "--experiment-scene",
+        "natural",
+        "--language",
+        "l_english",
+        "--natural-opportunity",
+    ]
+    if extra:
+        argv.extend(["--qualification-report", "report.json", *extra])
+    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr(decision_behavior, "execute", lambda *_args: pytest.fail("不得准备源"))
+    monkeypatch.setattr(decision_behavior.config, "OUT", tmp_path / "out")
+    with pytest.raises(SystemExit) as result:
+        decision_behavior.main()
+    assert result.value.code == 2
+    assert not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("field", ["arm", "language", "qualification_registration"])
+def test_直接调用行为入口也拒绝正式绕过(tmp_path, field):
+    import argparse
+
+    from tools.probe import decision_behavior
+
+    values = {
+        "purpose": "M3-A",
+        "qualification_report": tmp_path / "report.json",
+        "fiscal_injection": "none",
+        "natural_opportunity": True,
+        "experiment_scene": "scene",
+        "language": "l_english",
+        "arm": "control",
+        "qualification_registration": None,
+    }
+    values[field] = {
+        "arm": "candidate",
+        "language": None,
+        "qualification_registration": tmp_path / "registration.json",
+    }[field]
+    with pytest.raises(ValueError, match="正式实验"):
+        decision_behavior.execute(
+            argparse.Namespace(**values), tmp_path / "out", tmp_path / "sources"
+        )
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("purpose", "reconnaissance"),
+        ("arm", "neutrality"),
+        ("fiscal_injection", "stress"),
+        ("natural_opportunity", False),
+        ("experiment_scene", None),
+        ("language", None),
+        ("keep_save", True),
+    ],
+)
+def test_资格准备入口不依赖调用者的无注入声明(tmp_path, field, value):
+    import argparse
+
+    from tools.probe import decision_behavior
+
+    values = {
+        "purpose": "instrument",
+        "qualification_registration": tmp_path / "registration.json",
+        "fiscal_injection": "none",
+        "natural_opportunity": True,
+        "experiment_scene": "scene",
+        "language": "l_english",
+        "arm": "control",
+        "keep_save": False,
+    }
+    values[field] = value
+    with pytest.raises(ValueError, match="资格准备"):
+        decision_behavior.execute(
+            argparse.Namespace(**values), tmp_path / "out", tmp_path / "sources"
+        )
+    assert list(tmp_path.iterdir()) == []

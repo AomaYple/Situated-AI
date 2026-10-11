@@ -16,6 +16,140 @@ from pdx import game_run
 pytestmark = pytest.mark.unit
 
 
+@pytest.mark.parametrize(
+    "options",
+    [
+        {},
+        {"qualification_report": Path("qualification.json")},
+        {
+            "qualification_report": Path("qualification.json"),
+            "language": "l_english",
+            "keep_save": True,
+        },
+        {
+            "qualification_report": Path("qualification.json"),
+            "language": "l_english",
+            "allow_save_upgrade": True,
+        },
+        {
+            "qualification_report": Path("qualification.json"),
+            "language": "l_english",
+            "qualification_registration": Path("registration.json"),
+        },
+    ],
+)
+def test_正式目的缺证或准备混用在锁前拒绝(tmp_path, monkeypatch, options):
+    from pdx.experiment_queue import RunRequest
+
+    monkeypatch.setattr(game_run, "RunLock", lambda: pytest.fail("拒绝必须早于事务"))
+    with pytest.raises(ValueError, match="正式实验"):
+        game_run.run(
+            {"probe": tmp_path},
+            months=1,
+            output=tmp_path / "out",
+            load_save=tmp_path / "input.v3",
+            experiment=RunRequest("formal", "scene", "control", purpose="M3-A"),
+            **options,
+        )
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_非正式目的不能提交资格声明(tmp_path, monkeypatch):
+    monkeypatch.setattr(game_run, "RunLock", lambda: pytest.fail("不能开事务"))
+    with pytest.raises(ValueError, match="正式实验目的"):
+        game_run.run(
+            {"probe": tmp_path},
+            months=1,
+            output=tmp_path / "out",
+            qualification_report=tmp_path / "qualification.json",
+        )
+
+
+@pytest.fixture
+def qualification_game(tmp_path, monkeypatch):
+    root = tmp_path / "installation"
+    game = root / "game"
+    plays = game / "common/diplomatic_plays"
+    plays.mkdir(parents=True)
+    originals = {}
+    for key in ("caligula_branch", "caligula_rev", "clausewitz_branch", "clausewitz_rev"):
+        name = key + ".txt"
+        (root / name).write_bytes(key.encode())
+        originals[name] = {"sha256": "0" * 64, "path": "archived/" + name}
+    (plays / "00.txt").write_bytes(b"dp_humiliation = {}\n")
+    originals["common/diplomatic_plays/00.txt"] = {"sha256": "0" * 64, "path": "archived/plays.txt"}
+    document = tmp_path / "qualification.json"
+    document.write_text(json.dumps({"game_files": originals}), encoding="utf-8", newline="\n")
+    monkeypatch.setattr(game_run.config, "ROOT", root)
+    monkeypatch.setattr(game_run.config, "GAME", game)
+    return document, originals, root, game
+
+
+def test_现场游戏指纹读取当前字节而非报告声明(qualification_game):
+    document, originals, root, game = qualification_game
+    actual = game_run.qualification_game_hashes(document, sources={})
+    assert set(actual) == set(originals)
+    for name, value in actual.items():
+        current = root / name if "/" not in name else game / name
+        assert value == hashlib.sha256(current.read_bytes()).hexdigest()
+        assert value != originals[name]["sha256"]
+    (game / "common/diplomatic_plays/00.txt").write_bytes(b"dp_new = {}\n")
+    assert game_run.qualification_game_hashes(document, sources={}) != actual
+
+
+@pytest.mark.parametrize("kind", ["new-play", "missing-version", "escape", "missing-reform"])
+def test_现场完整依赖集合不得缺漏或逃逸(qualification_game, kind):
+    document, originals, _root, game = qualification_game
+    sources = {}
+    if kind == "new-play":
+        (game / "common/diplomatic_plays/01.txt").write_bytes(b"dp_new = {}\n")
+    elif kind == "missing-version":
+        originals.pop("clausewitz_rev.txt")
+    elif kind == "escape":
+        originals["../outside.txt"] = {"sha256": "0" * 64, "path": "../outside.txt"}
+    else:
+        laws = game / "common/laws"
+        laws.mkdir()
+        (laws / "00.txt").write_bytes(b"law_x = {}\n")
+        sources["zz_sitai_reform_observer"] = game
+    document.write_text(json.dumps({"game_files": originals}), encoding="utf-8", newline="\n")
+    with pytest.raises(ValueError, match="集合不同"):
+        game_run.qualification_game_hashes(document, sources=sources)
+
+
+def test_现场游戏读取期间改变拒绝(qualification_game, monkeypatch):
+    document, _originals, root, _game = qualification_game
+    digest = game_run.file_sha
+
+    def changed(path):
+        result = digest(path)
+        if path == root / "caligula_branch.txt":
+            path.write_bytes(b"changed")
+        return result
+
+    monkeypatch.setattr(game_run, "file_sha", changed)
+    with pytest.raises(ValueError, match="读取期间变化"):
+        game_run.qualification_game_hashes(document, sources={})
+
+
+def test_执行来源保留真实入口生成数据和未知回调(tmp_path, monkeypatch):
+    monkeypatch.setattr(game_run.config, "REPO", tmp_path)
+    monkeypatch.setattr(game_run.ga, "UI_DIR", tmp_path / "ui")
+    path = tmp_path / "mod/decisions/fiscal.toml"
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"schema = 1\n")
+    callback = tmp_path / "entry.py"
+    callback.write_bytes(b"def analyze(path): return None\n")
+    monkeypatch.setattr(game_run.inspect, "getsourcefile", lambda _function: str(callback))
+    before = game_run.execution_provenance(lambda _path: None)
+    assert before["callback"]["sha256"] == game_run.file_sha(callback)
+    assert before["files"][str(path.resolve())] == game_run.file_sha(path)
+    path.write_bytes(b"schema = 2\n")
+    assert game_run.execution_provenance(lambda _path: None)["files"] != before["files"]
+    assert game_run.execution_provenance(None)["callback"] is None
+    assert "psutil" in before["runtime"]["libraries"]
+
+
 def test_语言参数拒绝发生在锁和恢复事务之前(tmp_path, monkeypatch):
     monkeypatch.setattr(game_run, "RunLock", lambda: pytest.fail("无效语言不能开启事务"))
     with pytest.raises(ValueError, match="不支持的临时语言"):
@@ -629,6 +763,25 @@ def test_证据分块哈希和原子json(tmp_path):
     game_run.write_json(tmp_path / "report.json", {"name": "中文"})
     assert json.loads((tmp_path / "report.json").read_bytes()) == {"name": "中文"}
     assert b"\r" not in (tmp_path / "report.json").read_bytes()
+
+
+@pytest.mark.parametrize("linked", ["root", "nested", "file"])
+def test_源树散列先拒绝目录链接而不是物化目标(tmp_path, monkeypatch, linked):
+    root = tmp_path / "sources"
+    root.mkdir()
+    nested = root / "common"
+    nested.mkdir()
+    data = nested / "script.txt"
+    data.write_bytes(b"ordinary = yes\n")
+    forbidden = {"root": root, "nested": nested, "file": data}[linked]
+    original = Path.is_symlink
+
+    def is_link(path):
+        return path == forbidden or original(path)
+
+    monkeypatch.setattr(Path, "is_symlink", is_link)
+    with pytest.raises(ValueError, match="链接"):
+        game_run.hashes(root)
 
 
 def test_游戏改写的用户状态和自动存档可恢复(deployment):
