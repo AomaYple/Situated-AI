@@ -256,6 +256,8 @@ def test_硬链接原件拒绝(originals, tmp_path):
 @pytest.mark.skipif(sys.platform != "win32", reason="junction 是 Windows 路径类型")
 @pytest.mark.parametrize("location", ["source", "target", "output-parent", "game"])
 def test_真实junction拒绝且不写入目标(originals, tmp_path, location):
+    if sys.platform != "win32":
+        pytest.skip("junction 是 Windows 路径类型")
     import _winapi
 
     game, output = originals
