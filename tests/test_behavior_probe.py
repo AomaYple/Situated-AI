@@ -148,6 +148,30 @@ def test_观察国与旧模板标签相同也不会被替换():
     assert "DEPENDENCY_INIT" in text
 
 
+def test_受控机会可以延迟创建且事件源完整():
+    files = behavior_probe.build(initiator="GBR", target="TUR", creation_delay_days=90)
+    actions = files["common/on_actions/zz_sitai_opportunity.txt"]
+    events = files["events/zz_sitai_opportunity.txt"]
+    assert "trigger_event = { id = zz_sitai_opportunity.2 days = 90 }" in actions
+    assert "create_diplomatic_play" not in actions
+    assert "zz_sitai_opportunity.2" in events
+    assert "create_diplomatic_play" in events
+    assert "__SITAI_" not in events
+    assert "sample-0" in events
+    assert not parse_text(events, "events/zz_sitai_opportunity.txt").errors
+
+
+@pytest.mark.parametrize("delay", [-1, 366])
+def test_受控机会拒绝越界延迟(delay):
+    with pytest.raises(ValueError, match="延迟"):
+        behavior_probe.build(creation_delay_days=delay)
+
+
+def test_自然机会拒绝创建延迟():
+    with pytest.raises(ValueError, match="自然响应"):
+        behavior_probe.build(natural=True, play_types=("dp_humiliation",), creation_delay_days=1)
+
+
 @pytest.mark.parametrize(
     ("initiator", "target"), [("RUS", "AUS"), ("AUS", "PRU"), ("AUS", "AUS"), ("../", "SAR")]
 )
@@ -423,6 +447,48 @@ def test_正式行为入口缺证或未登记处理提前拒绝(monkeypatch, tmp
         decision_behavior.main()
     assert result.value.code == 2
     assert not (tmp_path / "out").exists()
+
+
+def test_资源诊断只允许仪器控制入口(monkeypatch, tmp_path):
+    import sys
+
+    from tools.probe import decision_behavior
+
+    argv = [
+        "decision_behavior.py",
+        "--save",
+        str(tmp_path / "input.v3"),
+        "--arm",
+        "candidate",
+        "--purpose",
+        "instrument",
+        "--resource-baseline",
+    ]
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(SystemExit) as result:
+        decision_behavior.main()
+    assert result.value.code == 2
+
+
+def test_仪器pilot可以显式从新局开始(monkeypatch):
+    import sys
+
+    from tools.probe import decision_behavior
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["decision_behavior.py", "--new-game", "--arm", "control", "--purpose", "instrument"],
+    )
+    captured: dict[str, object] = {}
+
+    def fake_execute(args, _output, _sources):
+        captured.update(new_game=args.new_game, save=args.save)
+        return 0
+
+    monkeypatch.setattr(decision_behavior, "execute", fake_execute)
+    assert decision_behavior.main() == 0
+    assert captured == {"new_game": True, "save": None}
 
 
 @pytest.mark.parametrize("field", ["arm", "language", "qualification_registration"])

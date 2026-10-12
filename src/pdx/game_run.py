@@ -1197,6 +1197,7 @@ def run(
     qualification_report: Path | None = None,
     qualification_context: Mapping[str, Any] | None = None,
     qualification_registration: Path | None = None,
+    allow_new_game_experiment: bool = False,
 ) -> dict[str, object]:
     """运行隔离观察者局，成功与失败都保留不可覆盖的原始证据。"""
     if not math.isfinite(months) or months <= 0:
@@ -1220,6 +1221,14 @@ def run(
         or language is None
     ):
         raise ValueError("正式实验需要既有资格、同版本输入及显式语言，不得同时制作或升级存档")
+    new_game_experiment = (
+        allow_new_game_experiment
+        and experiment is not None
+        and load_save is None
+        and experiment.purpose in {"instrument", "reconnaissance"}
+    )
+    if allow_new_game_experiment and experiment is not None and not new_game_experiment:
+        raise ValueError("新局实验只允许 instrument 或 reconnaissance，且不得用于正式目的")
     with RunLock():
         ga.assert_no_game_running()
         Deployment.recover_pending(config.USERDIR)
@@ -1485,7 +1494,9 @@ def run(
                 verify_game_content("资格复核期间")
             if experiment is not None:
                 experiment.limits()
-                if checkpoint is None or months > experiment.max_months:
+                if checkpoint is None and not new_game_experiment:
+                    raise ValueError("有预算实验必须提供检查点且不得超过冻结月份")
+                if months > experiment.max_months:
                     raise ValueError("有预算实验必须提供检查点且不得超过冻结月份")
                 available = psutil.virtual_memory().available / 1024**2
                 report["available_memory_mib"] = available
@@ -1493,17 +1504,55 @@ def run(
                     raise RuntimeError("可用内存不足预登记资源预算，暂不启动游戏")
                 ledger = ExperimentLedger(config.USERDIR / ".sitai-experiments.sqlite3")
                 ledger.interrupt_pending()
-                for path in prior_failure_reports:
-                    ledger.import_prior_failure(
-                        experiment,
-                        path,
-                        checkpoint_sha256=checkpoint["sha256"],
-                        game_version=game_version,
-                    )
+                if prior_failure_reports:
+                    if checkpoint is None:
+                        raise ValueError("新局实验不能导入依赖固定检查点的失败记录")
+                    for path in prior_failure_reports:
+                        ledger.import_prior_failure(
+                            experiment,
+                            path,
+                            checkpoint_sha256=checkpoint["sha256"],
+                            game_version=game_version,
+                        )
                 used = ledger.used_arms(experiment.plan_id, experiment.scene_id)
-                preflight = checkpoint_catalog.preflight(
-                    checkpoint, purpose=experiment.purpose, months=months, used_arms=used
-                )
+                if new_game_experiment:
+                    identity = hashlib.sha256(
+                        json.dumps(
+                            {
+                                "kind": "new-game",
+                                "game": game_version,
+                                "sources": source_hashes,
+                                "language": language,
+                                "disabled_dlc": disabled_dlc,
+                            },
+                            ensure_ascii=False,
+                            sort_keys=True,
+                        ).encode("utf-8")
+                    ).hexdigest()
+                    checkpoint = {
+                        "sha256": identity,
+                        "state": "new-game",
+                        "instrument_suitable": True,
+                        "formal_pair_suitable": False,
+                        "opportunity_count": None,
+                        "reasons": [],
+                        "origin_reports": [],
+                    }
+                    preflight = {
+                        "allowed": True,
+                        "purpose": experiment.purpose,
+                        "months": months,
+                        "used_arms": used,
+                        "remaining_arms": max(0, 6 - used),
+                        "state": "new-game",
+                        "opportunity_count": None,
+                        "reasons": [],
+                    }
+                else:
+                    assert checkpoint is not None
+                    preflight = checkpoint_catalog.preflight(
+                        checkpoint, purpose=experiment.purpose, months=months, used_arms=used
+                    )
                 report["experiment_preflight"] = preflight
                 write_json(
                     evidence / "preflight.json", {"checkpoint": checkpoint, "decision": preflight}

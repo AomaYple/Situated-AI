@@ -8,7 +8,15 @@ import tempfile
 from dataclasses import replace
 from pathlib import Path
 
-from pdx import behavior_probe, config, decision_probe, decisions, extension_probe, game_run
+from pdx import (
+    behavior_probe,
+    config,
+    decision_probe,
+    decisions,
+    extension_probe,
+    game_run,
+    resource_baseline,
+)
 from pdx.experiment_evidence import OBSERVATION_VERSION
 from pdx.experiment_queue import RunRequest
 from pdx.parser import parse_file
@@ -16,7 +24,12 @@ from pdx.parser import parse_file
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--save", type=Path, required=True)
+    parser.add_argument("--save", type=Path)
+    parser.add_argument(
+        "--new-game",
+        action="store_true",
+        help="仪器 pilot 从新局开始；仅允许非正式目的，不能替代固定检查点资格",
+    )
     parser.add_argument(
         "--arm",
         choices=("control", "candidate", "neutrality", "aggression", "market-control", "market"),
@@ -58,6 +71,12 @@ def main() -> int:
     parser.add_argument("--target", default="SAR", help="机会目标国；不能是观察国")
     parser.add_argument("--observers", nargs=2, default=("RUS", "PRU"))
     parser.add_argument(
+        "--opportunity-delay-days",
+        type=int,
+        default=0,
+        help="受控 instrument 在新局稳定后再创建机会；正式实验和自然观察禁止使用",
+    )
+    parser.add_argument(
         "--fiscal-injection",
         choices=("stress", "no-stress", "none"),
         help="正式模式固定 none；探索模式未指定时沿用 stress",
@@ -65,7 +84,16 @@ def main() -> int:
     parser.add_argument(
         "--localization-baseline", action="store_true", help="隔离实验补原版中文缺键；不豁免错误"
     )
+    parser.add_argument(
+        "--resource-baseline",
+        action="store_true",
+        help="显式复制原版维修图标供诊断；仅 instrument control，不豁免错误",
+    )
     args = parser.parse_args()
+    if args.new_game and args.save is not None:
+        parser.error("--new-game 不能同时指定 --save")
+    if not args.new_game and args.save is None:
+        parser.error("必须指定 --save，或显式使用 --new-game")
     formal = args.purpose in {"M3-A", "M3-B"}
     if args.fiscal_injection is None:
         args.fiscal_injection = "none" if formal else "stress"
@@ -75,6 +103,7 @@ def main() -> int:
         or args.keep_save
         or not args.experiment_scene
         or args.language is None
+        or args.new_game
     ):
         parser.error(
             "正式实验需要 --qualification-report、--experiment-scene、--language，且固定 --fiscal-injection none；不能同时制作存档"
@@ -101,6 +130,12 @@ def main() -> int:
         args.fiscal_injection != "none" or (not formal and args.arm != "control")
     ):
         parser.error("自然响应侦察仅允许 --arm control --fiscal-injection none，不派候选或制造机会")
+    if not 0 <= args.opportunity_delay_days <= 365:
+        parser.error("--opportunity-delay-days 必须在0到365之间")
+    if args.opportunity_delay_days and (args.natural_opportunity or formal):
+        parser.error("机会创建延迟只允许非正式受控 instrument")
+    if args.resource_baseline and (args.purpose != "instrument" or args.arm != "control"):
+        parser.error("资源诊断只允许 instrument control，不得进入正式或候选行为臂")
     if formal and not args.natural_opportunity:
         parser.error("正式模式只接受已验证的自然只读机会观察包，需要 --natural-opportunity")
     output = config.OUT / "decisions/behavior" / args.arm
@@ -118,6 +153,14 @@ def main() -> int:
 def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
     purpose = getattr(args, "purpose", "reconnaissance")
     formal = purpose in {"M3-A", "M3-B"}
+    new_game = getattr(args, "new_game", False)
+    if new_game and getattr(args, "save", None) is not None:
+        raise ValueError("--new-game 不能同时指定 --save")
+    opportunity_delay_days = getattr(args, "opportunity_delay_days", 0)
+    if type(opportunity_delay_days) is not int or not 0 <= opportunity_delay_days <= 365:
+        raise ValueError("机会创建延迟必须在0到365之间")
+    if opportunity_delay_days and (getattr(args, "natural_opportunity", False) or formal):
+        raise ValueError("机会创建延迟只允许非正式受控 instrument")
     if formal and (
         getattr(args, "qualification_report", None) is None
         or args.fiscal_injection != "none"
@@ -125,6 +168,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         or not getattr(args, "experiment_scene", None)
         or not getattr(args, "natural_opportunity", False)
         or getattr(args, "language", None) is None
+        or new_game
         or getattr(args, "qualification_registration", None) is not None
         or args.arm
         not in ({"control", "neutrality"} if purpose == "M3-A" else {"control", "aggression"})
@@ -140,6 +184,10 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         or getattr(args, "keep_save", False)
     ):
         raise ValueError("资格准备缺少无注入自然 control、场景、语言或包含存档制作")
+    if getattr(args, "resource_baseline", False) and (
+        purpose != "instrument" or args.arm != "control"
+    ):
+        raise ValueError("资源诊断只允许 instrument control，不得进入正式或候选行为臂")
     candidate, fiscal, opportunity = (
         source_root / "candidate",
         source_root / "fiscal",
@@ -181,6 +229,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
             market_readings=market_readings,
             natural=natural,
             play_types=tuple(play_types),
+            creation_delay_days=opportunity_delay_days,
         ),
     )
 
@@ -221,11 +270,17 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         decisions.write(baseline, decision_probe.build_localization_baseline(config.GAME))
         sources["zz_sitai_vanilla_localization_baseline"] = baseline
 
+    resource_manifest = None
+    if getattr(args, "resource_baseline", False):
+        baseline = source_root / "resource-baseline"
+        resource_manifest = resource_baseline.write(baseline, config.GAME)
+        sources["zz_sitai_resource_baseline"] = baseline
+
     report = game_run.run(
         sources,
         months=args.months,
         output=output,
-        load_save=args.save,
+        load_save=None if new_game else args.save,
         keep_save=getattr(args, "keep_save", False),
         timeout=getattr(args, "timeout", 3600),
         language=getattr(args, "language", None),
@@ -251,11 +306,14 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
                 "observers": list(tags),
                 "initiator": args.initiator,
                 "target": args.target,
+                "opportunity_delay_days": opportunity_delay_days,
                 "extra_fiscal": True,
                 "reform": True,
                 "localization_baseline": getattr(args, "localization_baseline", False),
+                "resource_baseline": resource_manifest,
             },
         },
+        allow_new_game_experiment=new_game,
     )
     print(
         json.dumps(

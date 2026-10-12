@@ -61,6 +61,7 @@ def build(
     market_readings: bool = False,
     natural: bool = False,
     play_types: tuple[str, ...] = (),
+    creation_delay_days: int = 0,
 ) -> dict[str, str]:
     if (
         any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in (initiator, target))
@@ -80,6 +81,10 @@ def build(
         raise ValueError("自然响应只读仪器需要规范全量类型，不能同时开启市场实验")
     if play_types and not natural:
         raise ValueError("博弈类型全集仅用于自然响应仪器")
+    if type(creation_delay_days) is not int or not 0 <= creation_delay_days <= 365:
+        raise ValueError("受控机会创建延迟必须是0到365之间的整数天")
+    if natural and creation_delay_days:
+        raise ValueError("自然响应不能延迟或创建机会")
     roles = []
     for tag in tags:
         for kind, method in (
@@ -151,16 +156,11 @@ def build(
                 }}
             }}"""
         )
-    script = """# 隔离机会仪器：不强制加入，不设置AI策略。
-on_monthly_pulse_country = { on_actions = { zz_sitai_opportunity } }
-zz_sitai_opportunity = { effect = {
-    if = { limit = { c:AUS ?= this }
-        if = { limit = { NOT = { has_variable = sitai_opportunity_created } exists = c:SAR }
-            set_variable = { name = sitai_opportunity_created value = 1 }
+    creation = """set_variable = { name = sitai_opportunity_created value = 1 }
             set_variable = { name = sitai_opportunity_watch value = 1 days = 370 }
             set_variable = { name = sitai_probe_opportunity_sample value = 0 }
             create_diplomatic_play = { name = sitai_opportunity_name target_country = c:SAR type = dp_humiliation }
-            debug_log = "SITAI OPPORTUNITY;CONTROL;CREATE;AUS_SAR;[TimeKeeper.GetCurrentDate.GetString]"
+            debug_log = "SITAI OPPORTUNITY;CONTROL;CREATE;AUS_SAR;__SITAI_CREATE_DATE__"
             c:AUS ?= { save_scope_as = sitai_init }
             c:SAR ?= { save_scope_as = sitai_target }
             __SITAI_COUNTRY_SCOPES__
@@ -169,11 +169,30 @@ zz_sitai_opportunity = { effect = {
                 save_scope_as = sitai_opportunity
             }
             # 已保存的scope随延迟事件传递；不能在读取GUI的同一事件内首次绑定。
-            trigger_event = { id = zz_sitai_opportunity.1 days = 1 }
+            trigger_event = { id = zz_sitai_opportunity.1 days = 1 }"""
+    if creation_delay_days:
+        script = f"""# 隔离机会仪器：不强制加入，不设置AI策略。
+on_monthly_pulse_country = {{ on_actions = {{ zz_sitai_opportunity }} }}
+zz_sitai_opportunity = {{ effect = {{
+    if = {{ limit = {{ c:AUS ?= this }}
+        if = {{ limit = {{ NOT = {{ has_variable = sitai_opportunity_created }} exists = c:SAR }}
+            trigger_event = {{ id = zz_sitai_opportunity.2 days = {creation_delay_days} }}
+        }}
+    }}
+}} }}
+"""
+    else:
+        script = """# 隔离机会仪器：不强制加入，不设置AI策略。
+on_monthly_pulse_country = { on_actions = { zz_sitai_opportunity } }
+zz_sitai_opportunity = { effect = {
+    if = { limit = { c:AUS ?= this }
+        if = { limit = { NOT = { has_variable = sitai_opportunity_created } exists = c:SAR }
+            __SITAI_CREATION__
         }
     }
 } }
 """
+        script = script.replace("__SITAI_CREATION__", creation)
     watch = (
         """namespace = zz_sitai_opportunity
 zz_sitai_opportunity.1 = {
@@ -195,6 +214,22 @@ zz_sitai_opportunity.1 = {
 }
 """
     )
+    if creation_delay_days:
+        delayed_event = f"""zz_sitai_opportunity.2 = {{
+    type = country_event
+    hidden = yes
+    immediate = {{
+        if = {{ limit = {{ c:AUS ?= this NOT = {{ has_variable = sitai_opportunity_created }} exists = c:SAR }}
+            {creation}
+        }}
+    }}
+}}
+"""
+        watch = watch.replace(
+            "namespace = zz_sitai_opportunity\n",
+            "namespace = zz_sitai_opportunity\n" + delayed_event,
+            1,
+        )
     if natural:
         # ROOT 就是引擎创建的那场博弈；只捕获首场，延迟事件持有同一 scope，
         # 不通过国家对重新搜索另一场博弈，也不调用创建/加入/注入效果。
@@ -250,12 +285,18 @@ zz_sitai_opportunity_bind = { effect = {
         "AUS_SAR", f"{initiator}_{target}"
     )
     watch = watch.replace("__SITAI_ROLE_READINGS__", "\n".join(roles))
+    watch = watch.replace(
+        "__SITAI_COUNTRY_SCOPES__",
+        "\n".join(f"c:{tag} ?= {{ save_scope_as = sitai_{tag.lower()} }}" for tag in tags),
+    )
     watch = watch.replace("__SITAI_SAMPLE_STEP__", decision_probe.sample_step(SAMPLE_VAR))
     watch = watch.replace(
         "[TimeKeeper.GetCurrentDate.GetString]",
         f"sample-[SCOPE.sCountry('sitai_init').MakeScope.Var('{SAMPLE_VAR}').GetValue|0]",
     )
     script = script.replace("[TimeKeeper.GetCurrentDate.GetString]", "sample-0")
+    script = script.replace("__SITAI_CREATE_DATE__", "sample-0")
+    watch = watch.replace("__SITAI_CREATE_DATE__", "sample-0")
     script = script.replace(
         "__SITAI_OBSERVER_GUARDS__", " ".join(f"exists = c:{tag}" for tag in tags)
     )
