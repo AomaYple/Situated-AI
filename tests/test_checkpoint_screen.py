@@ -623,6 +623,9 @@ def test_CLI允许来源根旁邻输出且报告保持不变(tmp_path, monkeypat
 @pytest.mark.parametrize("path_style", ["relative", "absolute"])
 def test_CLI相对绝对路径仍保护来源根(tmp_path, monkeypatch, path_style):
     path, report = preparation(tmp_path)
+    # GitHub Windows runner 的仓库和 pytest 临时目录可能位于不同盘符；
+    # 在证据根内生成相对参数，仍测试 CLI 的相对路径合同。
+    monkeypatch.chdir(tmp_path)
     target = report.parent / "logs" / "error.log"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(b"frozen evidence\n")
