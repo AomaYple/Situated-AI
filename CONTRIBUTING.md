@@ -2,7 +2,7 @@
 
 本指南面向贡献者和维护者，说明环境搭建、工程约定、验证和提交流程。编码代理的工作入口见 [AGENTS.md](AGENTS.md)，项目总览见 [README.md](README.md)，文档导航见 [docs/README.md](docs/README.md)。
 
-工程原则见 [工程原则](docs/principles/工程原则.md)，Mod 开发原则见 [Mod 开发原则](docs/principles/Mod开发原则.md)。具体工程契约以 [工程基线](docs/design/exec/工程基线-1.0.md) 为准；Mod 行为由 [处境决策设计](docs/design/03-处境决策设计.md) 定义，阶段出口由 [最终执行纲领](docs/design/exec/mod重设计-实施计划.md) 管理。实验参数和进度更新到结果页与 [backlog](docs/design/backlog.md)，历史报告保留当时事实。Mod 制作与验证提速遵循 [Mod 制作提速实施计划 2.1](docs/design/exec/速度优化计划-正确性优先.md)；已验收的工程提速结果作为基础能力复用，不重新建立并行专项。
+工程原则见 [工程原则](docs/principles/工程原则.md)，Mod 开发原则见 [Mod 开发原则](docs/principles/Mod开发原则.md)。具体工程契约以 [工程基线](docs/design/exec/工程基线-1.0.md) 为准；Mod 行为由 [处境决策设计](docs/design/03-处境决策设计.md) 定义，质量门和增量可玩版本由 [最终执行纲领 1.1](docs/design/exec/mod重设计-实施计划.md) 管理。实验参数和进度更新到结果页与 [backlog](docs/design/backlog.md)，历史报告保留当时事实。Mod 制作与验证提速遵循 [Mod 制作提速实施计划 2.3](docs/design/exec/速度优化计划-正确性优先.md)；已验收的工程提速结果作为基础能力复用，不重新建立并行专项。
 
 ## 开始贡献
 

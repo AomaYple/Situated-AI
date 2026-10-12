@@ -18,9 +18,9 @@
 本项目用 Python 分析、生成和验证 Victoria 3 Mod；游戏运行使用生成的游戏脚本，不依赖外部 Python 服务。
 
 - Mod 目标与行为边界：[处境决策设计](docs/design/03-处境决策设计.md)。
-- 制作顺序与阶段验收：[最终执行纲领](docs/design/exec/mod重设计-实施计划.md)；当前进展查看对应结果页及 [backlog](docs/design/backlog.md)。
+- 制作顺序、质量门与增量可玩版本：[最终执行纲领 1.1](docs/design/exec/mod重设计-实施计划.md)；当前进展查看对应结果页及 [backlog](docs/design/backlog.md)。
 - 工具链与证据边界：[工程基线](docs/design/exec/工程基线-1.0.md)；命令细节见 [工具手册](tools/README.md)。
-- 性能任务：Mod 制作与验证按 [Mod 制作提速实施计划 2.1](docs/design/exec/速度优化计划-正确性优先.md)执行；已验收的工程提速结果只作为基础能力复用；游戏运行效率按 [Mod 效率要求](docs/principles/Mod开发原则.md#开发与运行效率)和 M4 实机出口验证。
+- 性能任务：Mod 制作与验证按 [Mod 制作提速实施计划 2.3](docs/design/exec/速度优化计划-正确性优先.md)执行；已验收的工程提速结果只作为基础能力复用；游戏运行效率按 [Mod 效率要求](docs/principles/Mod开发原则.md#开发与运行效率)和 M4 实机出口验证。
 
 历史交接、台账与旧报告用于核对当时事实，不替代当前设计、验收条件或本次任务授权。
 
