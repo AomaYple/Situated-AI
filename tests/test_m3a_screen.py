@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from pdx import game_run, m3a_screen
 from pdx.textio import text_bytes
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 CONTROL_DIGEST = hashlib.sha256(b"control").hexdigest()
 TREATMENT_DIGEST = hashlib.sha256(b"treatment").hexdigest()
@@ -168,17 +170,37 @@ def test_missing_mounts_cannot_be_candidate(tmp_path: Path) -> None:
     assert "mount_allowlist.missing" in pair.reasons
 
 
-def test_screen_current_archive_does_not_promote_unreviewed_history() -> None:
-    if not any(Path("tools/out/decisions").rglob("report.json")):
-        pytest.skip("本机没有历史实机归档；合成证据契约由其它用例验证")
-    result = m3a_screen.screen(Path("tools/out/decisions"))
-    assert result["report_count"] >= 1
+@pytest.mark.parametrize("report_count", [1, 2])
+def test_screen_current_archive_does_not_promote_unreviewed_history(
+    tmp_path: Path, report_count: int
+) -> None:
+    paths = [_report(tmp_path / "left.json")]
+    if report_count == 2:
+        paths.append(_report(tmp_path / "right.json", neutrality="treatment"))
+    for path in paths:
+        data = json.loads(path.read_bytes())
+        del data["mount_allowlist"]
+        path.write_text(json.dumps(data), encoding="utf-8", newline="\n")
+    original = {
+        str(path.relative_to(tmp_path)): path.read_bytes()
+        for path in tmp_path.rglob("*")
+        if path.is_file()
+    }
+    result = m3a_screen.screen(tmp_path)
+    assert result["report_count"] == report_count
     assert result["qualified_count"] == 0
-    assert any(
-        "mount_allowlist.missing" in reason
-        for item in result["candidates"]
-        for reason in item["reasons"]
-    )
+    assert result["strict_clean_count"] == 0
+    if report_count == 1:
+        assert result["candidates"] == []
+        assert "mount_allowlist.missing" in m3a_screen.load_report(paths[0]).gate_reasons
+    else:
+        assert len(result["candidates"]) == 1
+        assert "mount_allowlist.missing" in result["candidates"][0]["reasons"]
+    assert {
+        str(path.relative_to(tmp_path)): path.read_bytes()
+        for path in tmp_path.rglob("*")
+        if path.is_file()
+    } == original
 
 
 def _edit(path, edit):

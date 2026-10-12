@@ -4,11 +4,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import tempfile
 from dataclasses import replace
 from pathlib import Path
 
-from pdx import config, decision_probe, decisions, extension_probe, game_run, natural_probe
+from pdx import (
+    config,
+    decision_probe,
+    decisions,
+    extension_probe,
+    game_run,
+    natural_probe,
+    resource_baseline,
+    war_probe,
+)
 from pdx.experiment_evidence import OBSERVATION_VERSION
 from pdx.experiment_queue import RunRequest
 from pdx.parser import parse_file
@@ -59,6 +69,19 @@ def main() -> int:
         "--localization-baseline", action="store_true", help="隔离实验补原版中文缺键；不豁免错误"
     )
     parser.add_argument(
+        "--resource-baseline",
+        action="store_true",
+        help="显式复制原版维修图标供诊断；仅 instrument/safety 的 vanilla，不豁免错误",
+    )
+    parser.add_argument(
+        "--war-calibration",
+        action="store_true",
+        help="有限日期单 host 战争关系诊断；仅 instrument/safety vanilla，默认关闭",
+    )
+    parser.add_argument(
+        "--war-dates", default="", help="战争诊断事前声明的连续 yyyy.m.d 列表，逗号分隔，最多90日"
+    )
+    parser.add_argument(
         "--natural-diplomacy", action="store_true", help="只读记录自然发起事实；不创建博弈"
     )
     parser.add_argument(
@@ -95,6 +118,11 @@ def main() -> int:
     )
     parser.add_argument("--fiscal-tags", default="RUS,PRU", help="财政只读观察的两个国家标签")
     args = parser.parse_args()
+    try:
+        _check_war_calibration(args)
+        _check_resource_baseline(args)
+    except ValueError as exc:
+        parser.error(str(exc))
     if args.purpose == "M4" and (
         args.qualification_report is None
         or args.allow_save_upgrade
@@ -137,6 +165,46 @@ def main() -> int:
         return execute(args, laws, output, Path(directory))
 
 
+def _check_resource_baseline(args: argparse.Namespace) -> None:
+    if getattr(args, "resource_baseline", False) and (
+        getattr(args, "purpose", "instrument") not in {"instrument", "safety"}
+        or args.arm != "vanilla"
+    ):
+        raise ValueError("维修图标资源诊断仅允许 instrument/safety 的 vanilla，不允许 M4 或候选")
+
+
+def _check_war_calibration(args: argparse.Namespace) -> tuple[str, ...]:
+    enabled = getattr(args, "war_calibration", False)
+    raw_dates = getattr(args, "war_dates", "")
+    if not enabled:
+        if raw_dates:
+            raise ValueError("--war-dates 需要 --war-calibration")
+        return ()
+    if (
+        getattr(args, "purpose", "instrument") not in {"instrument", "safety"}
+        or args.arm != "vanilla"
+        or getattr(args, "observation_package", "full") != "full"
+    ):
+        raise ValueError(
+            "战争校准仅允许 instrument/safety 的 vanilla 完整观察包，不允许正式目的或候选"
+        )
+    dates = war_probe.parse_dates(raw_dates)
+    fiscal_tags = tuple(part.strip() for part in getattr(args, "fiscal_tags", "RUS,PRU").split(","))
+    decision_probe._validate_tags(fiscal_tags)
+    legality_tags = tuple(
+        part.strip() for part in getattr(args, "legality_tags", "RUS,FRA").split(",")
+    )
+    if (
+        not legality_tags
+        or len(set(legality_tags)) != len(legality_tags)
+        or any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in legality_tags)
+    ):
+        raise ValueError("战争校准需要合法且唯一的既有政治观察国标签")
+    if getattr(args, "natural_diplomacy", False):
+        natural_probe.parse_tags(getattr(args, "natural_tags", "RUS,PRU"))
+    return dates
+
+
 def _check_performance_package(args: argparse.Namespace) -> None:
     purpose = getattr(args, "purpose", "instrument")
     package = getattr(args, "observation_package", "full")
@@ -159,6 +227,8 @@ def _check_performance_package(args: argparse.Namespace) -> None:
 
 
 def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root: Path) -> int:
+    war_dates = _check_war_calibration(args)
+    _check_resource_baseline(args)
     _check_performance_package(args)
     purpose = getattr(args, "purpose", "instrument")
     if purpose == "M4" and (
@@ -218,6 +288,17 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
         ),
     )
     sources = {"zz_sitai_fiscal_observer": fiscal}
+    war_manifest = None
+    if war_dates:
+        war_manifest = war_probe.configuration(war_dates)
+        war_source = source_root / "war-calibration"
+        decisions.write(war_source, war_probe.build(dates=war_dates))
+        sources[war_probe.SOURCE] = war_source
+    resource_manifest = None
+    if getattr(args, "resource_baseline", False):
+        baseline = source_root / "resource-baseline"
+        resource_manifest = resource_baseline.write(baseline, config.GAME)
+        sources["zz_sitai_resource_baseline"] = baseline
     if not performance_package:
         decisions.write(
             lifecycle,
@@ -339,8 +420,12 @@ def execute(args: argparse.Namespace, laws: list[str], output: Path, source_root
                 "approval_laws": approval_laws,
                 "native_fiscal_inputs": native_fiscal_inputs,
                 "fiscal_tags": fiscal_tags,
+                "resource_baseline": resource_manifest,
+                "war_calibration": war_manifest,
             },
         }
+        if war_dates:
+            result["war_calibration"] = war_probe.analyze(logdir, dates=war_dates)
         if natural:
             result["natural_diplomacy"] = natural_probe.analyze(logdir, tags=natural_tags)
             result["natural_tags"] = natural_tags

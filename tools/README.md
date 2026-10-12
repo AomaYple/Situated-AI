@@ -59,11 +59,21 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tools/probe/decision_stability.py` | 原版/财政/政治/组合的自然长局、存档迁移与可选后台引擎任务计时 |
 | `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期；安装版简体中文缺键时显式加 `--localization-baseline`，不豁免错误门禁 |
 | `tools/probe/save_migration_audit.py` | 递归盘点 `.v3` 版本、观察者状态、空规则和 SHA-256；只报告可用于跨版本升级实验的输入，不执行迁移 |
-| `python -m pdx.checkpoint_catalog` | 只读盘点存档与原局来源：复核日志/挂载/源/部署/收尾，按输出 SHA 关联复制或改名文件；失败或缺证来源拒绝，不提名正式机会 |
+| `python -m pdx.checkpoint_catalog` | 只读目录盘点或显式最多两份原件的有界财政/外交筛选；复核来源与完整 SHA，保留拒绝/未知，不自动放行实机 |
 | `tools/benchmarks/experiment_evidence.py` | 串行合成资格成本基线，分开计时、Python 分配与进程树 RSS；不是实机或加速对照 |
 | `tools/benchmarks/decision_runtime.py` | 分开测生成、日志/存档读取的墙钟与Python分配峰值；正式基线要求机器安静 |
 
 使用仓库虚拟环境，先执行只读输入盘点：`python -m pdx.checkpoint_catalog tools/out --output tools/out/checkpoints/catalog.json`；用户存档可另指定目录盘点。盘点的来源关联限于所给根目录；没有关联不证明来源干净，来源干净不等于新机会或正式后期资格。运行器会在部署前再次核对 `saves/` 下输入的同局来源；脱离原目录的复制件须保留并核对目录盘点结果，不能用改名绕过失败记录。
+
+有界原件筛选沿用同一入口，不传目录 root：
+
+```text
+python -m pdx.checkpoint_catalog --screen-save <原件一.v3> --expected-sha256 <完整小写SHA256> --screen-save <原件二.v3> --expected-sha256 <完整小写SHA256> --origin-report <来源report.json> --output tools/out/checkpoints/screen.json
+```
+
+`--screen-save` 与 `--expected-sha256` 按顺序配对；一至两份输入，不递归寻找来源，`--origin-report` 可重复。读取前后核对原件身份及完整 SHA，单国预算块最多 16KiB、外交表最多 256KiB、单档最多 1024 个记录，两档合计最多八个财政排序提名。保留全部已读明细、字节范围、缺项与落选理由；结果不得覆盖原件，也不得写入显式来源报告或 `saves/` 自动来源报告的整个证据目录（含日志、冻结源、部署及恢复记录）；输出路径拒绝链接和重解析点。来源仅接受完整独立复核且输出 SHA 匹配的 `vanilla_checkpoint_preparation`；仪器干净、历史压力档或无来源不等同无注入来源。
+
+`screen_remaining_credit_weeks` 是剩余信用与负余额的排序代理，缺本金不当零，不能替代引擎破产周数、DEFAULT/LOANS 或共同 ACTIVE。当前没有核实非战对象和未决 side 的序列化契约，可产生的财政条目只标 `risk-screen-only`；可运行 `nominations` 始终为空、整体 `no-supported-nomination`、正式资格 false、机会数量未知，不启动游戏。两份 1836.2.1 真实原件的结果及成本见[本轮审计](../docs/audits/2026-10-12-计划整合与资源诊断.md)。
 
 `tools/probe/make_clean_checkpoint.py` 在 Windows 上准备纯原版观察者输入：日志和存档目录纳入持久隔离，失败存档保留在会话 `saves/` 中，只有完整日志、挂载和恢复通过才独占发布公开副本。来源复核用原版新局契约验证实际存档及明确为空的探针集合，不伪造载入证据；准备成功仍不提供外交机会或正式行为资格。
 
@@ -72,6 +82,12 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 `decision_stability.py --purpose M4-noise --arm vanilla --observation-package vanilla-performance` 显式生成与资格契约一致的原版性能观察源；长期窗口需事前登记 `--months` 和 `--max-months`（24–120 月）。完整政治/生命周期包仍为默认，新性能包尚无扰动实机验收。正式 `--purpose M4` 另需既有资格、同版本输入、显式语言与该包，禁止保存、升级和未验收扩展；M3 冻结质量出口尚不具可核验接口，当前仍明确拒绝。不能把 M4-noise 的工具接线当作正式 M4 通过。
 
 `decision_stability.py --language l_english` 为本局和恢复重启传递临时语言，并进入报告与实验冻结身份；不写用户语言设置。英文目前仅支持已提供的观察者检查点，英文新游戏菜单尚未验证，未知语言在事务前拒绝。`l_simp_chinese` 也可显式登记；两臂语言不一致或只有一臂记录时拒绝配对。日志中的 `VFSOpen Error` 与原有引擎/Mod 错误一样拒绝通过，并进入同场景重复错误停止计数；历史报告先验证原始日志指纹，不能沿用旧 `ok=true` 绕过当前门禁。
+
+`decision_stability.py --purpose instrument --arm vanilla --resource-baseline --save <检查点>` 显式添加维修图标诊断资源挂载（默认关闭，`safety` 也可用）。生成前核对原版 `gui/texticons.gui` 实际引用缺失的 `alert_icons/repairing.dds`，并只复制本地 `generic_icons/repairing.dds` 的原始 DDS 字节；已修复安装、来源变化、坏 DDS、链接路径或已有输出均拒绝。挂载沿用现有部署、完整日志门禁、账本和恢复流程，来源/GUI/输出 SHA 与字节数在分析成功时写入 `analysis.experiment.resource_baseline`；完整 manifest 同时持久化在资源 `.metadata/metadata.json` 的 `game_custom_data.resource_baseline`，随既有源冻结保留，分析失败仍可追溯。它只证明字节来源，不证明模拟无扰动、AI 质量或正式资格；`M4`、`M4-noise` 和所有候选臂在生成与部署前拒绝。可组合现有原生财政只读或自然观测参数；此开关不启用政治危险 getter，也不豁免任何错误。
+
+`decision_stability.py --purpose instrument --arm vanilla --war-calibration --war-dates 1836.2.24,1836.2.25 --save <检查点>` 显式添加独立战争关系仪器（默认关闭，`safety` 也可用）。日期必须事前冻结、合法连续唯一且最多90游戏日；示例日期仅展示格式，实际列表由本局登记和预算决定，须覆盖输入日期起的完整声明区间，包括会话启动推进。分析读取归档全部仪器样本，不按 run simulation/activation 窗口截断；两者时间边界分别记录，不作正式资格。固定 host=MEX 在同一个月度 effect、同一日期分支与私有 sample 下记录 MEX/TEX、BRZ/TEX 和结构性自我阴性 MEX/MEX 的 presence 与 `has_war_with`，只修改仪器私有计数器。未遇到 host pulse 的声明日期只记为未观测，不制造样本。关闭时没有该 source，既有财政/政治观察器字节保持；日期参数缺开关、正式目的、M4-noise、候选、缺日期或非法观察国均在读取/生成/部署前拒绝。
+
+战争配置进入 source metadata 和 `analysis.experiment.war_calibration`，完整 source/分析器由既有运行器冻结 SHA 与 provenance；分析失败仍可从冻结 metadata 追溯。分析拒绝缺 DATE/presence/关系、非法布尔、缺国、重复/不连续 sample、未声明对象/日期及不同 host。DATE 与真实 `dedicated_server` 逐 tick 日志的壁钟前后包围区间交叉核验；同秒跨文件顺序不猜，跨日或无包围保持 `date_binding=unknown`，日期与区间冲突、时间倒退或午夜回绕拒绝。`instrument_safe` 由运行报告的严格日志、挂载与恢复门禁判断，仪器分析保留 `None`；没有同状态 tick 独立完整战争/side 真值时 `engine_interface_validated`、`relation_truth_validated` 永为 false，`quality_improvement_proven` 永为 false。自我阴性、DATE guard、首尾存档关系一致及加载成功均不能代替普通关系正反校准或正式资格；此入口不授予额外实机预算或启动授权。
 
 真实运行须提供 `--save`、对应阶段事前登记的实验身份、用途与月份上限，不能直接套用长局示例绕过 M3/M4 前提。参数和有限预算以 [M3](../docs/design/exec/M3-结果.md) / [M4 结果](../docs/design/exec/M4-结果.md)中的当前有效登记为准；历史已停止场景不重新运行。
 `--profile` 仅在清零/导出控制台计时时暂时到前台，模拟窗口退回后台并核实tick推进；
@@ -276,7 +292,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 112 个测试文件、3355 条用例（2026-10-12 工作区口径）。本批正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 116 个测试文件、3587 条用例（2026-10-12 工作区口径）。本批正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

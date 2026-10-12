@@ -625,6 +625,253 @@ def test_旧附表聚合上下文不解锁停止事实(tmp_path):
         ledger.reserve(request(), manifest=manifest, evidence=tmp_path / "new")
 
 
+def legacy_failures_with_originals(tmp_path, *, context=None, checkpoint="a" * 64):
+    from pdx import game_run
+
+    ledger = ExperimentLedger(tmp_path / "legacy.sqlite3")
+    ledger.runs("none")
+    for index in range(2):
+        old = ExperimentLedger(tmp_path / f"old-{index}.sqlite3")
+        directory = tmp_path / f"prior-{index}"
+        run_id = reserve(old, request(), directory)
+        path = published_failure(old, run_id, directory)
+        report = json.loads(path.read_text(encoding="utf-8"))
+        report["loaded_save"]["sha256"] = checkpoint
+        report["language"] = "l_english"
+        sources = directory / "sources/observer"
+        sources.mkdir(parents=True)
+        (sources / "observer.txt").write_bytes(b"frozen observer")
+        report["source_hashes"] = {"observer": game_run.hashes(sources)}
+        game_run.write_json(path, report)
+        with closing(sqlite3.connect(ledger.path)) as database, database:
+            database.execute(
+                "INSERT INTO prior_failures VALUES (?,?,?,?,?)",
+                (
+                    "legacy",
+                    "scene",
+                    str(path.resolve()),
+                    game_run.file_sha(path),
+                    '["Assertion failed"]',
+                ),
+            )
+            if context is not None:
+                database.execute(
+                    "INSERT INTO prior_failure_contexts VALUES (?,?)",
+                    (str(path.resolve()), json.dumps(context)),
+                )
+    return ledger
+
+
+@pytest.mark.parametrize("context", [None, {}])
+@pytest.mark.parametrize("different_input", [False, True])
+def test_旧未知上下文只读复核原件后按真实检查点停止(tmp_path, context, different_input):
+    ledger = legacy_failures_with_originals(tmp_path, context=context)
+    with closing(sqlite3.connect(ledger.path)) as database:
+        originals = {
+            table: database.execute(f"SELECT * FROM {table}").fetchall()
+            for table in ("prior_failures", "prior_failure_contexts")
+        }
+    manifest = stop_manifest()
+    if different_input:
+        manifest["checkpoint"] = "f" * 64
+        assert ledger.reserve(request(), manifest=manifest, evidence=tmp_path / "new")
+    else:
+        # 资源/探针或候选变化不能证明断言错误的前提解除。
+        manifest["probe_sources"]["zz_sitai_resource_baseline"] = "f" * 64
+        manifest["simulation"] = {"diagnostic": "f" * 64}
+        with pytest.raises(ValueError, match="错误重复"):
+            ledger.reserve(request(), manifest=manifest, evidence=tmp_path / "new")
+    with closing(sqlite3.connect(ledger.path)) as database:
+        for table, rows in originals.items():
+            assert database.execute(f"SELECT * FROM {table}").fetchall() == rows
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "missing-report",
+        "report-sha",
+        "missing-logs",
+        "log-sha",
+        "checkpoint",
+        "game",
+        "game-unknown",
+        "missing-sources",
+        "source-sha",
+        "source-extra",
+        "source-traversal",
+        "input-sha",
+    ],
+)
+def test_旧未知上下文原件缺证或指纹改变继续保守停止(tmp_path, damage):
+    from pdx import game_run
+
+    ledger = legacy_failures_with_originals(tmp_path)
+    for index in range(2):
+        directory = tmp_path / f"prior-{index}"
+        path = directory / "report.json"
+        if damage == "missing-report":
+            path.unlink()
+        elif damage == "report-sha":
+            path.write_bytes(path.read_bytes() + b" ")
+        elif damage == "missing-logs":
+            (directory / "logs/error.log").unlink()
+        elif damage == "log-sha":
+            (directory / "logs/error.log").write_bytes(b"changed")
+        elif damage == "source-sha":
+            (directory / "sources/observer/observer.txt").write_bytes(b"changed")
+        elif damage == "source-extra":
+            (directory / "sources/observer/extra.txt").write_bytes(b"extra")
+        elif damage == "input-sha":
+            (directory / "input.v3").write_bytes(b"different checkpoint")
+        else:
+            report = json.loads(path.read_text(encoding="utf-8"))
+            if damage == "missing-sources":
+                del report["source_hashes"]
+            elif damage == "source-traversal":
+                report["source_hashes"] = {"../observer": {"observer.txt": "b" * 64}}
+            else:
+                report["loaded_save" if damage == "checkpoint" else "game_version"] = (
+                    {"unrecognized": "value"} if damage == "game-unknown" else {}
+                )
+            game_run.write_json(path, report)
+            with closing(sqlite3.connect(ledger.path)) as database, database:
+                database.execute(
+                    "UPDATE prior_failures SET report_sha=? WHERE evidence=?",
+                    (game_run.file_sha(path), str(path.resolve())),
+                )
+    manifest = stop_manifest()
+    manifest["checkpoint"] = "f" * 64
+    with pytest.raises(ValueError, match="错误重复"):
+        ledger.reserve(request(), manifest=manifest, evidence=tmp_path / "new")
+
+
+@pytest.mark.parametrize("artifact", ["report", "logs", "sources", "input"])
+def test_恢复旧上下文时原件并发变化仍保守停止(tmp_path, monkeypatch, artifact):
+    from pdx import experiment_queue
+
+    checkpoint = hashlib.sha256(b"checkpoint").hexdigest()
+    ledger = legacy_failures_with_originals(tmp_path, checkpoint=checkpoint)
+    for index in range(2):
+        (tmp_path / f"prior-{index}/input.v3").write_bytes(b"checkpoint")
+    original = experiment_queue._stop_context
+
+    def change_after_context(manifest):
+        result = original(manifest)
+        if manifest.get("checkpoint") == checkpoint:
+            for index in range(2):
+                directory = tmp_path / f"prior-{index}"
+                changed = {
+                    "report": directory / "report.json",
+                    "logs": directory / "logs/error.log",
+                    "sources": directory / "sources/observer/observer.txt",
+                    "input": directory / "input.v3",
+                }[artifact]
+                changed.write_bytes(changed.read_bytes() + b"changed")
+        return result
+
+    monkeypatch.setattr(experiment_queue, "_stop_context", change_after_context)
+    manifest = stop_manifest()
+    manifest["checkpoint"] = "f" * 64
+    with pytest.raises(ValueError, match="错误重复"):
+        ledger.reserve(request(), manifest=manifest, evidence=tmp_path / "new")
+
+
+def test_保留归档输入字节匹配时可恢复旧检查点(tmp_path):
+    checkpoint = hashlib.sha256(b"checkpoint").hexdigest()
+    ledger = legacy_failures_with_originals(tmp_path, checkpoint=checkpoint)
+    for index in range(2):
+        (tmp_path / f"prior-{index}/input.v3").write_bytes(b"checkpoint")
+    assert ledger.reserve(request(), manifest=stop_manifest(), evidence=tmp_path / "new")
+
+
+@pytest.mark.parametrize(
+    "value",
+    [None, {}, [], True, {"../outside.txt": "b" * 64}, {"common/file.txt": "not-sha"}],
+)
+def test_旧报告声明畸形游戏指纹不能由检查点差异解锁(tmp_path, value):
+    from pdx import game_run
+
+    ledger = legacy_failures_with_originals(tmp_path)
+    for index in range(2):
+        path = tmp_path / f"prior-{index}/report.json"
+        report = json.loads(path.read_text(encoding="utf-8"))
+        report["game_hashes"] = value
+        game_run.write_json(path, report)
+        with closing(sqlite3.connect(ledger.path)) as database, database:
+            database.execute(
+                "UPDATE prior_failures SET report_sha=? WHERE evidence=?",
+                (game_run.file_sha(path), str(path.resolve())),
+            )
+    manifest = stop_manifest()
+    manifest["checkpoint"] = "f" * 64
+    with pytest.raises(ValueError, match="错误重复"):
+        ledger.reserve(request(), manifest=manifest, evidence=tmp_path / "new")
+
+
+@pytest.mark.parametrize(
+    "change", ["add", "remove", "replace", "dangling-link", "dangling-link-simulated"]
+)
+def test_旧归档输入读后增删或身份变化保持保守停止(tmp_path, monkeypatch, change):
+    import os
+    import stat
+    from pathlib import Path
+
+    from pdx import experiment_queue
+
+    checkpoint = hashlib.sha256(b"checkpoint").hexdigest()
+    ledger = legacy_failures_with_originals(tmp_path, checkpoint=checkpoint)
+    for index in range(2):
+        path = tmp_path / f"prior-{index}/input.v3"
+        if change in {"remove", "replace"}:
+            path.write_bytes(b"checkpoint")
+        elif change == "dangling-link":
+            probe = tmp_path / f"link-probe-{index}"
+            try:
+                probe.symlink_to(tmp_path / "missing-target")
+            except OSError as exc:
+                pytest.skip(f"当前平台未授予符号链接能力：{exc}")
+            probe.unlink()
+    original = experiment_queue._stop_context
+    recovered = 0
+    links = set()
+    original_lstat = Path.lstat
+
+    def linked_lstat(path, *args, **kwargs):
+        if path in links:
+            return os.stat_result((stat.S_IFLNK | 0o777, 1, 1, 1, 0, 0, 1, 0, 0, 0))
+        return original_lstat(path, *args, **kwargs)
+
+    if change == "dangling-link-simulated":
+        monkeypatch.setattr(Path, "lstat", linked_lstat)
+
+    def change_after_context(manifest):
+        nonlocal recovered
+        result = original(manifest)
+        if manifest.get("checkpoint") == checkpoint:
+            path = tmp_path / f"prior-{recovered}/input.v3"
+            recovered += 1
+            if change == "remove":
+                path.unlink(missing_ok=True)
+            elif change == "replace":
+                replacement = path.with_suffix(".replacement")
+                replacement.write_bytes(b"checkpoint")
+                replacement.replace(path)
+            elif change == "add":
+                path.write_bytes(b"checkpoint")
+            elif change == "dangling-link-simulated":
+                links.add(path)
+            else:
+                path.symlink_to(tmp_path / "missing-target")
+        return result
+
+    monkeypatch.setattr(experiment_queue, "_stop_context", change_after_context)
+    manifest = stop_manifest()
+    manifest["checkpoint"] = "f" * 64
+    with pytest.raises(ValueError, match="错误重复"):
+        ledger.reserve(request(), manifest=manifest, evidence=tmp_path / "new")
+
+
 def test_共有原版文件变化即使集合增删仍可登记新前提(tmp_path):
     ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
     previous = stop_manifest()

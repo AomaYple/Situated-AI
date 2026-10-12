@@ -348,13 +348,14 @@ def is_scriptable(rel_parts: tuple[str, ...], suffix: str) -> bool:
     return suffix in SCRIPTABLE_SUFFIXES
 
 
-def game_version() -> dict[str, str]:
+def game_version(root: Path | None = None) -> dict[str, str]:
     """读取版本指纹。找不到的文件返回空串，不抛异常。"""
+    base = ROOT if root is None else root
     files = {
-        "caligula_branch": ROOT / "caligula_branch.txt",
-        "caligula_rev": ROOT / "caligula_rev.txt",
-        "clausewitz_branch": ROOT / "clausewitz_branch.txt",
-        "clausewitz_rev": ROOT / "clausewitz_rev.txt",
+        "caligula_branch": base / "caligula_branch.txt",
+        "caligula_rev": base / "caligula_rev.txt",
+        "clausewitz_branch": base / "clausewitz_branch.txt",
+        "clausewitz_rev": base / "clausewitz_rev.txt",
     }
     out: dict[str, str] = {}
     for name, path in files.items():
