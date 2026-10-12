@@ -7,6 +7,7 @@ import json
 import math
 import re
 import sqlite3
+import stat
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from typing import TYPE_CHECKING, Any, TypeGuard
 from .deployment_state import digest, plain_path, tree_digest
 
 if TYPE_CHECKING:
+    import os
     from collections.abc import Iterator, Mapping
 
 SCHEMA_VERSION = 1
@@ -73,6 +75,52 @@ def _hash_tree(value: object) -> str | None:
     return None
 
 
+def _game_hashes(value: object) -> TypeGuard[dict[str, str]]:
+    """完整原版文件指纹表；拒绝无效路径、缺摘要与空表。"""
+    return (
+        isinstance(value, dict)
+        and bool(value)
+        and all(
+            _text(name)
+            and "\\" not in name
+            and ":" not in name
+            and not PurePosixPath(name).is_absolute()
+            and all(part not in {"", ".", ".."} for part in name.split("/"))
+            and _sha(fingerprint)
+            for name, fingerprint in value.items()
+        )
+    )
+
+
+def _archived_input_state(path: Path) -> tuple[tuple[int, ...], str] | None:
+    """归档输入允许缺失；存在时必须为稳定普通原件，链接不能冒充缺失。"""
+    plain_path(path)
+    try:
+        before = path.lstat()
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(before.st_mode):
+        raise ValueError("归档输入不是普通文件")
+    fingerprint = digest(path)
+    plain_path(path)
+    after = path.lstat()
+
+    def signature(info: os.stat_result) -> tuple[int, ...]:
+        return (
+            info.st_dev,
+            info.st_ino,
+            info.st_mode,
+            info.st_nlink,
+            info.st_size,
+            info.st_mtime_ns,
+            info.st_ctime_ns,
+        )
+
+    if signature(before) != signature(after):
+        raise ValueError("归档输入读取期间发生变化")
+    return signature(after), fingerprint
+
+
 def _stop_context(manifest: Mapping[str, Any]) -> dict[str, str]:
     """仅已知运行输入能证明新前提；标签、预算、工具/文档指纹不能重开。"""
     context: dict[str, str] = {}
@@ -97,24 +145,100 @@ def _stop_context(manifest: Mapping[str, Any]) -> dict[str, str]:
                 if _text(value) and (not key.endswith("sha256") or _sha(value)):
                     context[f"game:{key}"] = value
     game_hashes = manifest.get("game_hashes")
-    if (
-        isinstance(game_hashes, dict)
-        and game_hashes
-        and all(
-            _text(name)
-            and "\\" not in name
-            and ":" not in name
-            and not PurePosixPath(name).is_absolute()
-            and all(part not in {"", ".", ".."} for part in name.split("/"))
-            and _sha(value)
-            for name, value in game_hashes.items()
-        )
-    ):
+    if _game_hashes(game_hashes):
         for name, value in game_hashes.items():
             context[f"game-file:{name}"] = value
     # 尚无具体错误到探针/诊断依赖的因果映射，来源或 simulation 变化不能
     # 自动证明原版错误前提已解除。它们仍受完整 manifest 冻结和兼容性审查。
     return context
+
+
+def _recover_prior_failure_context(evidence: object, report_sha: object) -> dict[str, str]:
+    """只读恢复旧导入记录的停止上下文，不改写账本或原报告。
+
+    旧记录早于上下文附表；只有报告仍匹配账本 SHA 且原始日志通过现有
+    复核时，才能派生历史输入。缺证或原件变化返回空上下文，维持保守停止。
+    """
+    if not _text(evidence) or not _sha(report_sha):
+        return {}
+    from . import game_run  # noqa: PLC0415
+
+    path = Path(evidence)
+    try:
+        plain_path(path)
+        if digest(path) != report_sha:
+            return {}
+        report = game_run.read_reviewed_report(path)
+        review = report.get("review")
+        if (
+            not isinstance(review, dict)
+            or review.get("report_sha256") != report_sha
+            or review.get("logs_verified") is not True
+            or digest(path) != report_sha
+            or game_run.hashes(path.parent / "logs") != report.get("log_hashes")
+        ):
+            return {}
+        loaded = report.get("loaded_save")
+        game = report.get("game_version")
+        sources = report.get("source_hashes")
+        if "game_hashes" in report and not _game_hashes(report["game_hashes"]):
+            return {}
+        if (
+            not isinstance(loaded, dict)
+            or not _sha(loaded.get("sha256"))
+            or not isinstance(game, dict)
+            or not game
+            or not all(_text(key) and _text(value) for key, value in game.items())
+            or not isinstance(sources, dict)
+            or not sources
+        ):
+            return {}
+        flattened: dict[str, str] = {}
+        for name, files in sources.items():
+            if (
+                not _text(name)
+                or any(character in name for character in "/\\:")
+                or name in {".", ".."}
+                or not isinstance(files, dict)
+                or not files
+            ):
+                return {}
+            for relative, fingerprint in files.items():
+                if (
+                    not _text(relative)
+                    or "\\" in relative
+                    or ":" in relative
+                    or PurePosixPath(relative).is_absolute()
+                    or any(part in {"", ".", ".."} for part in relative.split("/"))
+                    or not _sha(fingerprint)
+                ):
+                    return {}
+                flattened[f"{name}/{relative}"] = fingerprint
+        source_root = path.parent / "sources"
+        source_signature = tree_digest(source_root)
+        if game_run.hashes(source_root) != flattened:
+            return {}
+        input_path = path.parent / "input.v3"
+        input_state = _archived_input_state(input_path)
+        if input_state is not None and input_state[1] != loaded["sha256"]:
+            return {}
+        manifest: dict[str, Any] = {
+            "checkpoint": loaded["sha256"],
+            "environment": {"game": game, "language": report.get("language")},
+            "game_hashes": report.get("game_hashes"),
+        }
+        context = _stop_context(manifest)
+        if (
+            digest(path) != report_sha
+            or game_run.hashes(path.parent / "logs") != report.get("log_hashes")
+            or tree_digest(source_root) != source_signature
+            or game_run.hashes(source_root) != flattened
+            or _archived_input_state(input_path) != input_state
+        ):
+            return {}
+        return context if any(key.startswith("game:") for key in context) else {}
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        return {}
 
 
 def _same_stop_context(left: dict[str, str], right: dict[str, str]) -> bool:
@@ -693,10 +817,12 @@ class ExperimentLedger:
                 for error in json.loads(row["errors"]):
                     failures.setdefault(error, set()).add(row["evidence"])
         for row in database.execute(
-            "SELECT p.evidence,p.errors,c.context_json FROM prior_failures p "
+            "SELECT p.evidence,p.report_sha,p.errors,c.context_json FROM prior_failures p "
             "LEFT JOIN prior_failure_contexts c ON p.evidence=c.evidence"
         ):
             previous = json.loads(row["context_json"]) if row["context_json"] else {}
+            if not previous:
+                previous = _recover_prior_failure_context(row["evidence"], row["report_sha"])
             if _same_stop_context(context, previous):
                 for error in json.loads(row["errors"]):
                     # 同一原报告跨计划导入仍只是一局；也与 runs 原目录去重。

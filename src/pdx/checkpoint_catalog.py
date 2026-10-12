@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -14,6 +15,32 @@ from typing import Any
 from .deployment_state import digest, plain_path
 
 STATES = ("instrument-suitable", "formal-pair-suitable", "rejected", "opportunity-unknown")
+
+
+def _protected_roots(
+    screen_saves: Sequence[Path], origin_reports: Sequence[Path]
+) -> tuple[Path, ...]:
+    """返回筛选输入及其来源证据根；screen 输入的来源根按 report 父目录保守保护。"""
+    roots: list[Path] = []
+    for report in origin_reports:
+        plain_path(report)
+        roots.append(report.parent)
+    for save in screen_saves:
+        plain_path(save)
+        roots.append(save)
+        if save.parent.name.casefold() == "saves":
+            report = save.parent.parent / "report.json"
+            if report.exists():
+                plain_path(report)
+                roots.append(report.parent)
+    return tuple(dict.fromkeys(Path(os.path.normcase(str(root.resolve()))) for root in roots))
+
+
+def _output_conflicts(output: Path, roots: Sequence[Path]) -> bool:
+    """检查输出是否落在受保护证据根内，兼容相对、大小写和重解析点路径。"""
+    plain_path(output)
+    candidate = Path(os.path.normcase(str(output.resolve())))
+    return any(candidate == root or root in candidate.parents for root in roots)
 
 
 def _review_preparation(path: Path, report: Mapping[str, Any]) -> list[str]:
@@ -112,6 +139,7 @@ def _review_report(path: Path) -> dict[str, Any]:
         if "header" in loaded and not isinstance(loaded["header"], Mapping):
             raise ValueError("报告字段 loaded_save.header 必须是对象")
         is_preparation = raw.get("kind") == "vanilla_checkpoint_preparation"
+        row["kind"] = raw.get("kind")
         del raw
         if is_preparation:
             reviewed = read_reviewed_report(path)
@@ -334,10 +362,39 @@ def main() -> int:
     from .save_migration import current_game_version  # noqa: PLC0415
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("root", type=Path)
+    parser.add_argument("root", type=Path, nargs="?")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--screen-save", type=Path, action="append", default=[])
+    parser.add_argument("--expected-sha256", action="append", default=[])
+    parser.add_argument("--origin-report", type=Path, action="append", default=[])
     args = parser.parse_args()
-    result = catalog(args.root, expected_version=current_game_version())
+    if args.screen_save:
+        from .checkpoint_screen import screen  # noqa: PLC0415
+
+        if args.root is not None:
+            parser.error("显式原件筛选不接受递归目录 root")
+        if len(args.screen_save) != len(args.expected_sha256):
+            parser.error("每份 --screen-save 必须对应一份完整 --expected-sha256")
+        try:
+            protected_roots = _protected_roots(args.screen_save, args.origin_report)
+            if args.output.suffix.lower() == ".v3" or _output_conflicts(
+                args.output, protected_roots
+            ):
+                parser.error("筛选结果不得覆盖原始存档或来源证据根")
+        except ValueError as exc:
+            parser.error(str(exc))
+        try:
+            result = screen(
+                list(zip(args.screen_save, args.expected_sha256, strict=True)),
+                expected_version=current_game_version(),
+                origin_report_paths=args.origin_report,
+            )
+        except ValueError as exc:
+            parser.error(str(exc))
+    else:
+        if args.root is None or args.expected_sha256 or args.origin_report:
+            parser.error("普通目录模式必须给 root；筛选附加参数需配合 --screen-save")
+        result = catalog(args.root, expected_version=current_game_version())
     write_json(args.output, result)
     print(json.dumps({"state_counts": result["state_counts"], "reports": len(result["reports"])}))
     return 0
