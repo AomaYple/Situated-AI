@@ -50,6 +50,7 @@ class Analysis(TypedDict):
     common_eligible_active_dates: list[str]
     usable_for_paired_behavior: bool
     time_basis: str
+    quality_observations: dict[str, object]
     natural_capture: NotRequired[dict[str, object]]
 
 
@@ -414,6 +415,14 @@ def analyze(
         "behavior_causality": False,
         "common_eligible_active_dates": sorted(eligible_active[tags[0]] & eligible_active[tags[1]]),
         "usable_for_paired_behavior": bool(eligible_active[tags[0]] & eligible_active[tags[1]]),
+        "quality_observations": {
+            "status": "unsupported",
+            "join_latency": None,
+            "leave_latency": None,
+            "action_cost": None,
+            "adverse_outcome": None,
+            "reason": "当前探针只读取资格、角色和评分，尚未读取实际行动代价或结果",
+        },
     }
     if natural_pair is not None:
         result["natural_capture"] = _natural_capture(rows, tags, natural_pair)

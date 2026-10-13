@@ -119,6 +119,21 @@ def test_两国资格与激活必须在同一天同时存在(tmp_path):
     assert behavior_probe.analyze(tmp_path)["common_eligible_active_dates"] == ["day1"]
 
 
+def test_分析显式标记质量观测尚未支持(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        "SITAI OPPORTUNITY;RUS;CAN_INIT;no;day1\n"
+        "SITAI OPPORTUNITY;PRU;CAN_INIT;no;day1\n",
+        encoding="utf-8",
+    )
+    report = behavior_probe.analyze(tmp_path)
+    quality = report["quality_observations"]
+    assert quality["status"] == "unsupported"
+    assert quality["join_latency"] is None
+    assert quality["leave_latency"] is None
+    assert quality["action_cost"] is None
+    assert quality["adverse_outcome"] is None
+
+
 def test_已经加入但未观察到资格不能充当机会分母(tmp_path):
     (tmp_path / "debug.log").write_text("SITAI OPPORTUNITY;RUS;BACKER;yes;day\n", encoding="utf-8")
     country = behavior_probe.analyze(tmp_path)["countries"]["RUS"]
