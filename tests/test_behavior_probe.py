@@ -121,8 +121,7 @@ def test_两国资格与激活必须在同一天同时存在(tmp_path):
 
 def test_分析显式标记质量观测尚未支持(tmp_path):
     (tmp_path / "debug.log").write_text(
-        "SITAI OPPORTUNITY;RUS;CAN_INIT;no;day1\n"
-        "SITAI OPPORTUNITY;PRU;CAN_INIT;no;day1\n",
+        "SITAI OPPORTUNITY;RUS;CAN_INIT;no;day1\nSITAI OPPORTUNITY;PRU;CAN_INIT;no;day1\n",
         encoding="utf-8",
     )
     report = behavior_probe.analyze(tmp_path)

@@ -57,6 +57,13 @@ pytest-cache-files-*/
 /tools/out/snapshots/*
 !/tools/out/snapshots/*.compact.json
 
+# 已入库的精简 G1 重开扫描是可复核证据；其他 evidence 输出仍保持忽略。
+!/tools/out/evidence/
+/tools/out/evidence/*
+!/tools/out/evidence/v0.1-g1-20261013/
+/tools/out/evidence/v0.1-g1-20261013/*
+!/tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json
+
 # 性能剖析的原始数据（cProfile .prof 是二进制、pyinstrument session 是 JSON），
 # 体积大且与机器相关。报告的结论请写进文档，原始数据不入库。
 /tools/prof/out/
