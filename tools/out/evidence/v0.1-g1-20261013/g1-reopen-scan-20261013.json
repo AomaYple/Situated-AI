@@ -1,0 +1,33 @@
+{
+  "schema": "sitai.g1-reopen-scan.v1",
+  "generated_at": "2026-10-13",
+  "plan_id": "v0.1-g1-20261013",
+  "purpose": "instrument",
+  "status": "NO_NEW_REOPENING_INPUT",
+  "scope": {
+    "reports_scanned": 155,
+    "sources": ["tools/out/decisions", "tools/out/recovery"],
+    "production_candidate_started": false,
+    "new_game_started": false
+  },
+  "findings": {
+    "new_complete_pre_treatment_input": false,
+    "common_active_window": false,
+    "complete_opportunity_denominator": null,
+    "quality_improvement_proven": false,
+    "new_supported_interface": false
+  },
+  "closed_inputs": [
+    "GBR-TUR input-none natural and delayed control windows",
+    "CHL-BOL natural response binding",
+    "PRU-FRA controlled response windows",
+    "stress instrument with vanilla metro event error"
+  ],
+  "reopen_requirements": [
+    "new source-complete checkpoint or supported runtime interface",
+    "pre-treatment common fiscal risk and valid diplomatic opportunity",
+    "two response countries with measurable role, action cost, and adverse outcome fields",
+    "zero Mod and engine errors under the declared mount and recovery contract"
+  ],
+  "decision": "Do not rerun a closed window, start candidate, or alter production switches until all reopen requirements are evidenced."
+}
