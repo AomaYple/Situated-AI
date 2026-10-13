@@ -33,7 +33,7 @@
 | 历史实验 Mod | `mod/data/*.toml` 与 `src/pdx/modgen.py`；只生成到 `mod/legacy/`，不进入生产包 |
 | 检查、性能与实机探针 | `tools/ci/`、`tools/benchmarks/`、`tools/probe/`；优先扩展已有入口 |
 | 生成文档 | 可执行面由对应 CLI 生成，知识库机械表格由 `pdx.doc_tables` 维护；不要手改 |
-| 快照、输出与原始证据 | `tools/out/`；忽略规则中的精简快照例外须保留 |
+| 快照、输出与原始证据 | `tools/out/`；忽略规则中的精简快照与逐件声明的精简证据例外须保留 |
 | 官方资料 | `research/official-docs.manifest.json` 入库，本地 `research/official-docs/` 原文镜像不入库 |
 
 改动数据源或生成器后运行 `v3 modgen --write`，再运行 `v3 modgen --check`；使用本工作区的虚拟环境入口。不要以手改生成物、更新黄金指纹或降低门槛掩盖不一致。删除、改名或调整忽略规则前核对消费者、生成入口和证据引用。

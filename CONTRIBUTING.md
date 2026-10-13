@@ -2,7 +2,7 @@
 
 本指南面向贡献者和维护者，说明环境搭建、工程约定、验证和提交流程。编码代理的工作入口见 [AGENTS.md](AGENTS.md)，项目总览见 [README.md](README.md)，文档导航见 [docs/README.md](docs/README.md)。
 
-工程原则见 [工程原则](docs/principles/工程原则.md)，Mod 开发原则见 [Mod 开发原则](docs/principles/Mod开发原则.md)。具体工程契约以 [工程基线](docs/design/exec/工程基线-1.0.md) 为准；Mod 行为由 [处境决策设计](docs/design/03-处境决策设计.md) 定义，质量门和增量可玩版本由 [最终执行纲领 1.1](docs/design/exec/mod重设计-实施计划.md) 管理。实验参数和进度更新到结果页与 [backlog](docs/design/backlog.md)，历史报告保留当时事实。Mod 制作与验证提速遵循 [Mod 制作提速实施计划 2.3](docs/design/exec/速度优化计划-正确性优先.md)；已验收的工程提速结果作为基础能力复用，不重新建立并行专项。
+工程原则见 [工程原则](docs/principles/工程原则.md)，Mod 开发原则见 [Mod 开发原则](docs/principles/Mod开发原则.md)。具体工程契约以 [工程基线](docs/design/exec/工程基线-1.0.md) 为准；Mod 行为由 [处境决策设计](docs/design/03-处境决策设计.md) 定义，质量门和增量可玩版本由 [最终执行纲领 1.1](docs/design/exec/mod重设计-实施计划.md) 管理。实验参数和进度更新到结果页与 [backlog](docs/design/backlog.md)，历史报告保留当时事实。Mod 制作与验证提速遵循 [Mod 制作提速实施计划 2.4](docs/design/exec/速度优化计划-正确性优先.md)；已验收的工程提速结果作为基础能力复用，不重新建立并行专项。
 
 ## 开始贡献
 
@@ -90,7 +90,7 @@ Python 写文本显式指定 `encoding="utf-8"`、`newline="\n"`；末尾换行�
 - 当前生产源 `mod/decisions/fiscal.toml` 与 `mod/decisions/extensions.toml` 由 `pdx.decisions` 读取并生成根级游戏产物；扩展开关关闭时仍读取并校验扩展配置。这两个入口之外的新 TOML 不会自动加载，新增定义须同步生成入口与测试。历史源 `mod/data/*.toml` 由 `pdx.modgen` 生成至 `mod/legacy/`，不进入生产包。
 - 改动数据或生成逻辑后先执行 `v3 modgen --write`，再执行 `v3 modgen --check`。源码、测试及对应生成物保持一致；生成文档和知识库机械表格使用各自生成入口维护。
 - 安装、打包时才为交付游戏脚本与本地化添加 BOM；转换不能写回仓库产物。交付入口是 `v3 package --output dist/situated-ai.zip`，文件指纹由交付 manifest 记录。
-- `tools/out/` 主要是忽略的输出与证据，但 `tools/out/snapshots/*.compact.json` 是入库例外。完整快照、本机测量、缓存和临时脚本不默认入库。
+- `tools/out/` 主要是忽略的输出与证据；`tools/out/snapshots/*.compact.json` 与 `.gitignore` 中逐件声明的精简证据是入库例外。当前精简证据为 `tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json`，不要放行整个证据目录。完整快照、本机测量、缓存和临时脚本不默认入库。
 - `tools/probe/frozen/`、历史报告和有引用的实机证据具有审计用途；清理前核查 Git 跟踪状态、消费者和引用，必要时保留恢复副本。不要用 `git clean -fdX` 代替盘点。
 - 官方文档原文镜像不入库；使用 `research/official-docs.manifest.json` 与 `v3 mirror` 维护来源和指纹。忽略文件仍可能有价值，忽略规则不构成删除依据。
 
