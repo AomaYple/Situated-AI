@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from pdx.automation_contract import AutomationPhase, AutomationTrace
@@ -64,3 +67,22 @@ def test_automation_trace_rejects_reordered_or_repeated_steps() -> None:
     trace = AutomationTrace().advance(AutomationPhase.FOREGROUND_READY)
     with pytest.raises(ValueError, match="非法自动化状态转移"):
         trace.advance(AutomationPhase.SPEED_SET)
+
+
+def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
+    root = Path(__file__).resolve().parents[1]
+    plan = (root / "docs/design/exec/速度优化计划-正确性优先.md").read_text(encoding="utf-8")
+    checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
+    quality = (root / "docs/design/exec/M3-可测性清单.md").read_text(encoding="utf-8")
+    assert "版本**：2.4" in plan
+    assert "P0 规则层" in plan
+    assert "R 运行层" in plan
+    assert "质量观测边界" in quality
+    assert "unsupported" in quality
+    assert "G1 重开扫描" in checklist
+
+    scan = root / "tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json"
+    data = json.loads(scan.read_text(encoding="utf-8"))
+    assert data["status"] == "NO_NEW_REOPENING_INPUT"
+    assert data["findings"]["new_complete_pre_treatment_input"] is False
+    assert data["findings"]["complete_opportunity_denominator"] is None
