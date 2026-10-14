@@ -292,7 +292,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 116 个测试文件、3595 条用例（2026-10-13 工作区口径）；最新完整 `n-auto` 为 **3576 passed、19 skipped**，4 个 worker、522.49 秒；`v3 cov` 收口为 **89.19%**，4 个 worker、575.85 秒，实测与跳过范围见[本轮审计](../docs/audits/2026-10-13-仓库原则收口.md#本轮验证)。本批正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 116 个测试文件、3595 条用例（2026-10-14 工作区口径）；本轮完整 `n-auto` 为 **3576 passed、19 skipped**，4 个 worker、520.80 秒；本轮用仓库 `.venv` 完成离线回归：**3355 passed、12 skipped**，单 worker、1290.67 秒；`v3 cov` 收口为 **89.19%**，4 个 worker、575.85 秒。当前读数、跳过范围和限制见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)。本批正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
