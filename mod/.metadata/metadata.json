@@ -1,11 +1,30 @@
 {
   "name": "Situated AI · 处境决策",
   "id": "sitai.decisions",
-  "version": "0.2.0",
+  "version": "0.1.0",
+  "tool_version": "0.3.0",
+  "status": "experimental",
   "supported_game_version": "1.14.5",
   "short_description": "真实财政与外部风险影响原版外交倾向；保留国家原有策略路线。",
   "tags": [],
   "relationships": [],
+  "enabled_modules": [
+    "fiscal"
+  ],
+  "parent_package": "vanilla-1.14.5",
+  "save_compatibility": "new-game-only",
+  "platforms": [
+    "windows",
+    "macos",
+    "linux"
+  ],
+  "platform_notes": "Python 生成与离线校验支持三平台；游戏 GUI 自动化当前仅有 Windows 实机证据。",
+  "source_fingerprint": {
+    "fiscal_source_sha256": "ea6fc9894095c97657b1c5bc409128aba0fe4dc394c34bb7a1cf75fe13f1f751",
+    "extensions_source_sha256": "4c76cd79e21051d80fef4ed164d422d8473036171b7031c0c3dffe22093a4d42",
+    "baseline_sha256": "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
+    "generator_sha256": "393457885f2cefb5a50d293ee1ba0111416756be5e134f9c3bb84388c9304b0c"
+  },
   "game_custom_data": {
     "multiplayer_synchronized": true
   }

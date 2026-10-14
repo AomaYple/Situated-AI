@@ -13,9 +13,11 @@ import math
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from pathlib import Path
 
-from . import config
+from packaging.version import InvalidVersion, Version
+
+from . import __version__, config
 from .lexer import LBRACE, RBRACE, tokenize
 from .model import Block
 from .parser import parse_text
@@ -28,20 +30,33 @@ from .vanilla_index import (
     vocabulary_dir,
 )
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 SOURCE = config.REPO / "mod" / "decisions" / "fiscal.toml"
 PRODUCT = config.REPO / "mod"
 BASELINE = config.REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
 RISK_VAR = "sitai_fiscal_risk"
 ACTIVE_TRIGGER = "sitai_fiscal_external_risk"
-VERSION = "0.2.0"
+TOOL_VERSION = __version__
 EXTENSIONS = SOURCE.with_name("extensions.toml")
+PACKAGE_STATUSES = frozenset({"experimental", "candidate", "accepted"})
+SAVE_COMPATIBILITY = frozenset({"new-game-only", "same-version-new-game", "same-candidate-save"})
+SUPPORTED_PLATFORMS = frozenset({"windows", "macos", "linux"})
+
+
+@dataclass(frozen=True, slots=True)
+class PackageContract:
+    """由生产数据源声明的可追溯交付契约。"""
+
+    product_version: str
+    status: str
+    parent: str
+    save_compatibility: str
+    platforms: tuple[str, ...]
+    platform_notes: str
 
 
 @dataclass(frozen=True, slots=True)
 class Policy:
+    enabled: bool
     game_version: str
     baseline_sha256: str
     entry_weeks: int
@@ -49,6 +64,8 @@ class Policy:
     ttl_days: int
     neutrality: float
     aggression: float
+    package: PackageContract
+    source_sha256: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,10 +77,12 @@ class Extensions:
     fragile_penalty: float = -0.5
     market_enabled: bool = False
     market_multiplier: float = 5
+    source_sha256: str = ""
 
 
 def load_extensions(source: Path = EXTENSIONS) -> Extensions:
-    data = tomllib.loads(source.read_text(encoding="utf-8"))
+    raw = source.read_bytes()
+    data = tomllib.loads(raw.decode("utf-8"))
     if (
         set(data) != {"schema_version", "reform", "market"}
         or type(data["schema_version"]) is not int
@@ -106,6 +125,7 @@ def load_extensions(source: Path = EXTENSIONS) -> Extensions:
         reform["penalty"],
         market["enabled"],
         market["multiplier"],
+        hashlib.sha256(raw).hexdigest(),
     )
 
 
@@ -151,9 +171,11 @@ def market_delta(own: float, other: float, *, multiplier: float) -> float:
 
 
 def load(source: Path = SOURCE) -> Policy:
-    data = tomllib.loads(source.read_text(encoding="utf-8"))
+    raw = source.read_bytes()
+    data = tomllib.loads(raw.decode("utf-8"))
     if (
-        set(data) != {"schema_version", "game_version", "baseline_sha256", "fiscal", "fields"}
+        set(data)
+        != {"schema_version", "game_version", "baseline_sha256", "package", "fiscal", "fields"}
         or type(data["schema_version"]) is not int
         or data["schema_version"] != 1
     ):
@@ -164,20 +186,71 @@ def load(source: Path = SOURCE) -> Policy:
         or not isinstance(data["baseline_sha256"], str)
         or len(data["baseline_sha256"]) != 64
         or any(c not in "0123456789abcdef" for c in data["baseline_sha256"])
+        or not isinstance(data["package"], dict)
         or not isinstance(data["fiscal"], dict)
         or not isinstance(data["fields"], dict)
     ):
         raise ValueError("决策版本、底本指纹或参数表无效；升级需重新审查")
-    fiscal, fields = data["fiscal"], data["fields"]
-    if set(fiscal) != {"entry_weeks", "exit_weeks", "ttl_days", "why"} or set(fields) != {
-        "diplomatic_play_neutrality",
-        "aggression",
-        "why",
-    }:
+    package, fiscal, fields = data["package"], data["fiscal"], data["fields"]
+    if (
+        set(package)
+        != {
+            "product_version",
+            "status",
+            "parent",
+            "save_compatibility",
+            "platforms",
+            "platform_notes",
+        }
+        or set(fiscal) != {"enabled", "entry_weeks", "exit_weeks", "ttl_days", "why"}
+        or set(fields)
+        != {
+            "diplomatic_play_neutrality",
+            "aggression",
+            "why",
+        }
+    ):
         raise ValueError("决策数据源含缺失或未知字段")
-    if any(not isinstance(v, str) or not v.strip() for v in (fiscal["why"], fields["why"])):
+    try:
+        product_version = Version(package["product_version"])
+    except (InvalidVersion, TypeError) as exc:
+        raise ValueError("产品版本必须是有效的 Python 打包版本") from exc
+    if (
+        not isinstance(package["product_version"], str)
+        or not isinstance(package["status"], str)
+        or not isinstance(package["save_compatibility"], str)
+        or not isinstance(package["platform_notes"], str)
+        or str(product_version) != package["product_version"]
+        or package["status"] not in PACKAGE_STATUSES
+        or package["save_compatibility"] not in SAVE_COMPATIBILITY
+        or not isinstance(package["parent"], str)
+        or not package["parent"].strip()
+        or not isinstance(package["platforms"], list)
+        or not package["platforms"]
+        or any(not isinstance(platform, str) for platform in package["platforms"])
+        or len(set(package["platforms"])) != len(package["platforms"])
+        or any(platform not in SUPPORTED_PLATFORMS for platform in package["platforms"])
+        or not package["platform_notes"].strip()
+    ):
+        raise ValueError("产品交付契约无效：版本、状态、父包、存档或平台声明不可靠")
+    if (
+        any(
+            not isinstance(v, str) or not v.strip()
+            for v in (package["parent"], package["platform_notes"], fiscal["why"], fields["why"])
+        )
+        or type(fiscal["enabled"]) is not bool
+    ):
         raise ValueError("每组决策参数必须给出依据")
+    contract = PackageContract(
+        package["product_version"],
+        package["status"],
+        package["parent"],
+        package["save_compatibility"],
+        tuple(package["platforms"]),
+        package["platform_notes"],
+    )
     policy = Policy(
+        fiscal["enabled"],
         data["game_version"],
         data["baseline_sha256"],
         fiscal["entry_weeks"],
@@ -185,6 +258,8 @@ def load(source: Path = SOURCE) -> Policy:
         fiscal["ttl_days"],
         fields["diplomatic_play_neutrality"],
         fields["aggression"],
+        contract,
+        hashlib.sha256(raw).hexdigest(),
     )
     if (
         any(
@@ -217,6 +292,8 @@ def risk_next(
     policy: Policy,
 ) -> bool:
     """与脚本共享的有限状态契约；未知读数停止干预，不默认为安全。"""
+    if not policy.enabled:
+        return False
     if in_default:
         return True
     if not taking_loans or credit is None or not math.isfinite(credit) or credit <= 0:
@@ -237,6 +314,8 @@ def fiscal_condition(weeks: int) -> str:
 
 
 def triggers(policy: Policy) -> str:
+    if not policy.enabled:
+        return ""
     return f"""# 由 pdx.decisions 生成；所有国家共享同一规则。
 sitai_fiscal_entry = {{
 {fiscal_condition(policy.entry_weeks)}
@@ -263,6 +342,8 @@ sitai_external_exposure = {{
 
 
 def effects(policy: Policy) -> str:
+    if not policy.enabled:
+        return ""
     return f"""# 由 pdx.decisions 生成；只有本更新器写入财政状态。
 sitai_update_fiscal = {{
     if = {{
@@ -274,7 +355,10 @@ sitai_update_fiscal = {{
 """
 
 
-def on_actions() -> str:
+def on_actions(policy: Policy | None = None) -> str:
+    policy = policy or load()
+    if not policy.enabled:
+        return ""
     return """# 由 pdx.decisions 生成；追加子钩子，不替换原版 effect。
 on_monthly_pulse_country = { on_actions = { sitai_fiscal_update } }
 on_country_default = { on_actions = { sitai_fiscal_update } }
@@ -306,7 +390,7 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
             ("diplomatic_play_neutrality", policy.neutrality),
             ("aggression", policy.aggression),
         )
-        if amount != 0
+        if policy.enabled and amount != 0
     }
     if extensions and extensions.reform_enabled:
         additions["change_law_chance"] = (
@@ -357,16 +441,84 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
     return result
 
 
-def metadata_payload(policy: Policy | None = None) -> dict[str, object]:
+def source_fingerprint(policy: Policy, extensions: Extensions, baseline: str) -> dict[str, str]:
+    """返回生成输入指纹，供 metadata 与交付清单共同引用。"""
+
+    return {
+        "fiscal_source_sha256": policy.source_sha256,
+        "extensions_source_sha256": extensions.source_sha256,
+        "baseline_sha256": hashlib.sha256(normalized_text(baseline).encode()).hexdigest(),
+        "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+    }
+
+
+def _module_names(
+    policy: Policy, extensions: Extensions, files: Mapping[str, str] | None = None
+) -> list[str]:
+    files = files or {}
+    modules: list[str] = []
+    if policy.enabled and (
+        not files
+        or {
+            "common/scripted_triggers/sitai_fiscal_triggers.txt",
+            "common/scripted_effects/sitai_fiscal_effects.txt",
+            "common/on_actions/sitai_fiscal_on_actions.txt",
+        }
+        <= files.keys()
+    ):
+        modules.append("fiscal")
+    if extensions.reform_enabled and (
+        not files
+        or {
+            "common/scripted_triggers/sitai_reform_triggers.txt",
+            "common/script_values/sitai_reform_values.txt",
+        }
+        <= files.keys()
+    ):
+        modules.append("reform")
+    if extensions.market_enabled and (
+        not files
+        or {
+            "localization/english/sitai_decisions_l_english.yml",
+            "localization/simp_chinese/sitai_decisions_l_simp_chinese.yml",
+        }
+        <= files.keys()
+    ):
+        modules.append("market")
+    return modules
+
+
+def metadata_payload(
+    policy: Policy | None = None,
+    extensions: Extensions | None = None,
+    *,
+    enabled_modules: list[str] | None = None,
+    baseline: str | None = None,
+) -> dict[str, object]:
     policy = policy or load()
+    extensions = extensions or load_extensions()
     return {
         "name": "Situated AI · 处境决策",
         "id": "sitai.decisions",
-        "version": VERSION,
+        "version": policy.package.product_version,
+        "tool_version": TOOL_VERSION,
+        "status": policy.package.status,
         "supported_game_version": policy.game_version,
         "short_description": "真实财政与外部风险影响原版外交倾向；保留国家原有策略路线。",
         "tags": [],
         "relationships": [],
+        "enabled_modules": enabled_modules
+        if enabled_modules is not None
+        else _module_names(policy, extensions),
+        "parent_package": policy.package.parent,
+        "save_compatibility": policy.package.save_compatibility,
+        "platforms": list(policy.package.platforms),
+        "platform_notes": policy.package.platform_notes,
+        "source_fingerprint": source_fingerprint(
+            policy,
+            extensions,
+            baseline if baseline is not None else BASELINE.read_text(encoding="utf-8"),
+        ),
         "game_custom_data": {"multiplayer_synchronized": True},
     }
 
@@ -382,14 +534,15 @@ def build(
     extensions = extensions or load_extensions()
     files = {
         "common/ai_strategies/00_default_strategy.txt": patch_default(baseline, policy, extensions),
-        "common/scripted_triggers/sitai_fiscal_triggers.txt": triggers(policy),
-        "common/scripted_effects/sitai_fiscal_effects.txt": effects(policy),
-        "common/on_actions/sitai_fiscal_on_actions.txt": on_actions(),
-        ".metadata/metadata.json": json.dumps(
-            metadata_payload(policy), ensure_ascii=False, indent=2
-        )
-        + "\n",
     }
+    if policy.enabled:
+        files.update(
+            {
+                "common/scripted_triggers/sitai_fiscal_triggers.txt": triggers(policy),
+                "common/scripted_effects/sitai_fiscal_effects.txt": effects(policy),
+                "common/on_actions/sitai_fiscal_on_actions.txt": on_actions(policy),
+            }
+        )
     if extensions.reform_enabled:
         files["common/scripted_triggers/sitai_reform_triggers.txt"] = extension_triggers(extensions)
         files["common/script_values/sitai_reform_values.txt"] = extension_values(extensions)
@@ -401,6 +554,19 @@ def build(
             files[f"localization/{language}/sitai_decisions_l_{language}.yml"] = (
                 f'l_{language}:\n SITAI_MARKET_DEPENDENCE_SUPPORT_REASON: "{label}"\n'
             )
+    files[".metadata/metadata.json"] = (
+        json.dumps(
+            metadata_payload(
+                policy,
+                extensions,
+                enabled_modules=_module_names(policy, extensions, files),
+                baseline=baseline,
+            ),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n"
+    )
     return files
 
 
@@ -412,6 +578,18 @@ def write(root: Path, files: Mapping[str, str] | None = None) -> list[Path]:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8", newline="\n")
         written.append(path)
+    # 新产物写入成功后才删除固定受控的旧文件；探针与用户文件交给 check 报告。
+    for name in (
+        "common/scripted_triggers/sitai_fiscal_triggers.txt",
+        "common/scripted_effects/sitai_fiscal_effects.txt",
+        "common/on_actions/sitai_fiscal_on_actions.txt",
+        "common/scripted_triggers/sitai_reform_triggers.txt",
+        "common/script_values/sitai_reform_values.txt",
+        "localization/english/sitai_decisions_l_english.yml",
+        "localization/simp_chinese/sitai_decisions_l_simp_chinese.yml",
+    ):
+        if name not in files:
+            (root / name).unlink(missing_ok=True)
     return written
 
 
@@ -444,34 +622,35 @@ def validate(
     对应 API 词汇证据；脚本解析成功不是引擎证据。快照域必须覆盖
     ``vocabulary``、``vanilla_keys`` 和 ``vanilla_variables``。
     """
-    interfaces = {
-        "is_ai",
-        "is_at_war",
-        "is_diplomatic_play_initiator",
-        "is_diplomatic_play_target",
-        "is_diplomatic_play_committed_participant",
-        "has_variable",
-        "in_default",
-        "taking_loans",
-        "credit",
-        "weeks_until_bankruptcy",
-        "set_variable",
-        "remove_variable",
-        "on_monthly_pulse_country",
-        "on_country_default",
-        "on_country_no_longer_default",
-    }
+    interfaces = set()
+    policy = load()
+    if policy.enabled:
+        interfaces |= {
+            "is_ai",
+            "is_at_war",
+            "is_diplomatic_play_initiator",
+            "is_diplomatic_play_target",
+            "is_diplomatic_play_committed_participant",
+            "has_variable",
+            "in_default",
+            "taking_loans",
+            "credit",
+            "weeks_until_bankruptcy",
+            "set_variable",
+            "remove_variable",
+            "on_monthly_pulse_country",
+            "on_country_default",
+            "on_country_no_longer_default",
+        }
     extensions = load_extensions()
     if extensions.reform_enabled:
         interfaces |= {"legitimacy", "any_insurrection_ongoing", "is_in_government"}
     if extensions.market_enabled:
         interfaces |= {"economic_dependence", "diplomatic_play_support"}
     # 财政值属于独立的原版 script value 参考，而不是四个通用词汇目录。
-    fiscal_words = vocabulary_dir(BASELINE.parent)
-    fiscal_words |= {
-        "credit",
-        "weeks_until_bankruptcy",
-    }
+    fiscal_words = vocabulary_dir(BASELINE.parent) if policy.enabled else set()
+    if policy.enabled:
+        fiscal_words |= {"credit", "weeks_until_bankruptcy"}
     if vocabulary is None:
         vocabulary_words: set[str] = set()
         vocabulary_uncovered = True
@@ -557,6 +736,7 @@ def validate(
             path.read_text(encoding="utf-8-sig")
         ) != BASELINE.read_text(encoding="utf-8"):
             issues.append("本机默认策略与锁定底本不一致，需重审版本")
+    if game is not None and policy.enabled:
         path = game / "common/script_values/war_support_values.txt"
         reference = BASELINE.parent / "war_support_values.txt"
         if not path.is_file() or normalized_text(

@@ -120,6 +120,66 @@ def test_load_report_extracts_two_eligible_countries(tmp_path: Path) -> None:
     assert facts.countries["PRU"].score_range == (10.0, 10.0)
 
 
+def test_load_and_pair保留质量边界但不把unsupported当资格(tmp_path: Path) -> None:
+    left = _report(tmp_path / "left.json")
+    right = _report(tmp_path / "right.json", neutrality="treatment")
+    for path, status in ((left, "unsupported"), (right, "complete")):
+        data = json.loads(path.read_bytes())
+        opportunity = data["analysis"]["opportunity"]
+        opportunity["quality_observations"] = {
+            "status": status,
+            "action_cost": None if status == "unsupported" else 12.5,
+            "adverse_outcome": None,
+        }
+        opportunity["role_timing"] = {
+            "quality_improvement_proven": False,
+            "countries": {"RUS": {"status": "observed"}},
+        }
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8", newline="\n")
+    control = m3a_screen.load_report(left)
+    treatment = m3a_screen.load_report(right)
+    assert control.quality_observations["status"] == "unsupported"
+    assert treatment.role_timing["quality_improvement_proven"] is False
+    pair = m3a_screen.pair_reports(
+        control,
+        treatment,
+        neutrality_resolver={CONTROL_DIGEST: (0.0, -0.2), TREATMENT_DIGEST: (25.0, -0.2)}.get,
+    )
+    assert pair.qualified
+    assert not pair.quality_ready
+    assert pair.as_dict()["structural_qualified"] is True
+    assert pair.as_dict()["quality_ready"] is False
+    assert pair.as_dict()["quality_observations"]["control"]["action_cost"] is None
+
+
+@pytest.mark.parametrize(
+    ("section", "key", "value", "reason"),
+    [
+        ("quality_observations", "status", "NaN", "quality_observations.status_invalid"),
+        (
+            "quality_observations",
+            "action_cost",
+            "not-a-number",
+            "quality_observations.action_cost_invalid",
+        ),
+        (
+            "role_timing",
+            "quality_improvement_proven",
+            "yes",
+            "role_timing.quality_improvement_proven_invalid",
+        ),
+    ],
+)
+def test_质量字段非法类型进入门禁而不改变历史文件(tmp_path: Path, section, key, value, reason):
+    path = _report(tmp_path / "report.json")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["analysis"]["opportunity"][section] = {key: value}
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8", newline="\n")
+    facts = m3a_screen.load_report(path)
+    assert not facts.clean
+    assert reason in facts.gate_reasons
+
+
 @pytest.mark.parametrize("other", [None, "l_simp_chinese"])
 def test_语言改变或缺证不属于同一冻结场景(tmp_path, other):
     left = _report(tmp_path / "left.json")

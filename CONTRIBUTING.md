@@ -89,7 +89,7 @@ Python 写文本显式指定 `encoding="utf-8"`、`newline="\n"`；末尾换行�
 - `src/pdx/` 是可复用包，`tests/` 是测试；`tools/ci/`、`tools/benchmarks/`、`tools/probe/` 分别放检查、基准与实机探针。
 - 当前生产源 `mod/decisions/fiscal.toml` 与 `mod/decisions/extensions.toml` 由 `pdx.decisions` 读取并生成根级游戏产物；扩展开关关闭时仍读取并校验扩展配置。这两个入口之外的新 TOML 不会自动加载，新增定义须同步生成入口与测试。历史源 `mod/data/*.toml` 由 `pdx.modgen` 生成至 `mod/legacy/`，不进入生产包。
 - 改动数据或生成逻辑后先执行 `v3 modgen --write`，再执行 `v3 modgen --check`。源码、测试及对应生成物保持一致；生成文档和知识库机械表格使用各自生成入口维护。
-- 安装、打包时才为交付游戏脚本与本地化添加 BOM；转换不能写回仓库产物。交付入口是 `v3 package --output dist/situated-ai.zip`，文件指纹由交付 manifest 记录。
+- 安装、打包时才为交付游戏脚本与本地化添加 BOM；转换不能写回仓库产物。交付入口是 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认生成全关安全包；测试当前实验源显式加 `--variant current`，零偏置财政控制加 `--variant control`。文件、实际参数和来源指纹由交付 manifest 记录。
 - `tools/out/` 主要是忽略的输出与证据；`tools/out/snapshots/*.compact.json` 与 `.gitignore` 中逐件声明的精简证据是入库例外。当前精简证据为 `tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json`，不要放行整个证据目录。完整快照、本机测量、缓存和临时脚本不默认入库。
 - `tools/probe/frozen/`、历史报告和有引用的实机证据具有审计用途；清理前核查 Git 跟踪状态、消费者和引用，必要时保留恢复副本。不要用 `git clean -fdX` 代替盘点。
 - 官方文档原文镜像不入库；使用 `research/official-docs.manifest.json` 与 `v3 mirror` 维护来源和指纹。忽略文件仍可能有价值，忽略规则不构成删除依据。

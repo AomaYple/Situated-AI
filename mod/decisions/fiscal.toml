@@ -2,7 +2,16 @@ schema_version = 1
 game_version = "1.14.5"
 baseline_sha256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
 
+[package]
+product_version = "0.1.0"
+status = "experimental"
+parent = "vanilla-1.14.5"
+save_compatibility = "new-game-only"
+platforms = ["windows", "macos", "linux"]
+platform_notes = "Python 生成与离线校验支持三平台；游戏 GUI 自动化当前仅有 Windows 实机证据。"
+
 [fiscal]
+enabled = true
 entry_weeks = 26
 exit_weeks = 52
 ttl_days = 62

@@ -302,7 +302,7 @@ def test_normalizer_cli_roundtrip(tmp_path, monkeypatch):
 def test_distribution_cli(tmp_path, monkeypatch):
     target = tmp_path / "delivery.zip"
     monkeypatch.setattr(
-        distribution, "package", lambda path: distribution.write_zip({"a.txt": "x"}, path)
+        distribution, "package", lambda path, **_: distribution.write_zip({"a.txt": "x"}, path)
     )
     monkeypatch.setattr(sys, "argv", ["distribution", "--output", str(target)])
     assert distribution.main() == 0

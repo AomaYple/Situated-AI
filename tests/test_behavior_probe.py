@@ -271,6 +271,68 @@ def natural_rows():
     return "".join(lines)
 
 
+def test_自然角色转换仅报告日采样区间而不是精确时延(tmp_path):
+    text = natural_rows()
+    text += (
+        "\n".join(
+            line.replace("sample-2", "sample-3") for line in text.splitlines() if "sample-2" in line
+        )
+        + "\n"
+    )
+    for kind in ("BACKER", "INIT_BACKER"):
+        text = text.replace(f";ARG;{kind};no;sample-2", f";ARG;{kind};yes;sample-2")
+    text = text.replace(";ARG;UNDECIDED;yes;sample-2", ";ARG;UNDECIDED;no;sample-2")
+    (tmp_path / "debug.log").write_text(text, encoding="utf-8", newline="\n")
+    report = behavior_probe.analyze(tmp_path, tags=("ARG", "BRA"), natural_pair=("CHL", "BOL"))
+    timing = report["role_timing"]
+    arg = timing["countries"]["ARG"]
+    assert arg["join_transitions"] == [
+        {
+            "transition_sample_interval": [1, 2],
+            "first_observed_eligible_sample": 1,
+            "delay_since_observed_eligibility": [0, 1],
+        }
+    ]
+    assert arg["backer_role_losses"] == [{"transition_sample_interval": [2, 3]}]
+    assert not timing["role_loss_is_voluntary_exit"]
+    assert report["quality_observations"]["leave_latency"] is None
+    assert report["quality_observations"]["status"] == "unsupported"
+
+
+def test_开窗前已加入是左截断且末尾支持不是退出(tmp_path):
+    text = natural_rows()
+    for sample in (1, 2):
+        for kind in ("BACKER", "INIT_BACKER"):
+            text = text.replace(
+                f";ARG;{kind};no;sample-{sample}", f";ARG;{kind};yes;sample-{sample}"
+            )
+        text = text.replace(
+            f";ARG;UNDECIDED;yes;sample-{sample}", f";ARG;UNDECIDED;no;sample-{sample}"
+        )
+    text += "SITAI OPPORTUNITY;CONTROL;END;CHL_BOL;sample-3\n"
+    (tmp_path / "debug.log").write_text(text, encoding="utf-8", newline="\n")
+    report = behavior_probe.analyze(tmp_path, tags=("ARG", "BRA"), natural_pair=("CHL", "BOL"))
+    arg = report["role_timing"]["countries"]["ARG"]
+    assert arg["already_backing_at_first_sample"]
+    assert arg["still_backing_at_last_sample"]
+    assert arg["join_transitions"] == arg["backer_role_losses"] == []
+    assert not arg["no_transition_proves_neutrality"]
+
+
+def test_未观测自然角色与历史日期都不补零时延(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        "SITAI OPPORTUNITY;CONTROL;READY;CHL_BOL;sample-0\n", encoding="utf-8", newline="\n"
+    )
+    report = behavior_probe.analyze(tmp_path, tags=("ARG", "BRA"), natural_pair=("CHL", "BOL"))
+    for country in report["role_timing"]["countries"].values():
+        assert country["status"] == "unobserved"
+        assert country["already_backing_at_first_sample"] is None
+    (tmp_path / "debug.log").write_text(
+        "SITAI OPPORTUNITY;RUS;BACKER;yes;历史日期\n", encoding="utf-8", newline="\n"
+    )
+    assert "role_timing" not in behavior_probe.analyze(tmp_path)
+
+
 def test_自然响应完整矩阵也不冒充同机会配对或安全验收(tmp_path):
     (tmp_path / "debug.log").write_text(natural_rows(), encoding="utf-8")
     result = behavior_probe.analyze(tmp_path, tags=("ARG", "BRA"), natural_pair=("CHL", "BOL"))

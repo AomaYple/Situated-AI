@@ -11,6 +11,7 @@ from pathlib import Path
 from pdx import (
     behavior_probe,
     config,
+    cost_probe,
     decision_probe,
     decisions,
     extension_probe,
@@ -57,6 +58,11 @@ def main() -> int:
     )
     parser.add_argument("--qualification-report", type=Path)
     parser.add_argument(
+        "--cost-calibration",
+        action="store_true",
+        help="隔离校准预算 getter；仅 instrument/control/none，不能证明行动净代价",
+    )
+    parser.add_argument(
         "--qualification-registration",
         type=Path,
         help="仪器准备局开始前归档冻结的资格观察登记，不自动构成正式资格",
@@ -97,6 +103,16 @@ def main() -> int:
     formal = args.purpose in {"M3-A", "M3-B"}
     if args.fiscal_injection is None:
         args.fiscal_injection = "none" if formal else "stress"
+    if args.cost_calibration:
+        try:
+            cost_probe.validate_mode(
+                purpose=args.purpose,
+                arm=args.arm,
+                injection=args.fiscal_injection,
+                natural=args.natural_opportunity,
+            )
+        except ValueError as exc:
+            parser.error(str(exc))
     if formal and (
         args.qualification_report is None
         or args.fiscal_injection != "none"
@@ -152,6 +168,14 @@ def main() -> int:
 
 def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
     purpose = getattr(args, "purpose", "reconnaissance")
+    cost_readings = getattr(args, "cost_calibration", False)
+    if cost_readings:
+        cost_probe.validate_mode(
+            purpose=purpose,
+            arm=args.arm,
+            injection=args.fiscal_injection,
+            natural=getattr(args, "natural_opportunity", False),
+        )
     formal = purpose in {"M3-A", "M3-B"}
     new_game = getattr(args, "new_game", False)
     if new_game and getattr(args, "save", None) is not None:
@@ -230,6 +254,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
             natural=natural,
             play_types=tuple(play_types),
             creation_delay_days=opportunity_delay_days,
+            cost_readings=cost_readings,
         ),
     )
 
@@ -238,6 +263,9 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
             "fiscal": decision_probe.analyze(logdir, strict=True, tags=tags),
             "opportunity": behavior_probe.analyze(
                 logdir, tags=tags, natural_pair=(args.initiator, args.target) if natural else None
+            ),
+            **(
+                {"cost_calibration": cost_probe.analyze(logdir, tags=tags)} if cost_readings else {}
             ),
         }
 
@@ -248,22 +276,23 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         "zz_probe_decision_opportunity": opportunity,
     }
     # ``none`` 禁用注入，但仍挂载只读观察器。
-    readonly = source_root / "fiscal-readonly"
-    decisions.write(readonly, decision_probe.build_observer(tags=tags))
-    sources["zz_sitai_fiscal_observer"] = readonly
-    # 各臂都保留自然检查点原只读仪器身份；不让观测源随输入实验改变。
-    laws: list[str] = []
-    for path in sorted((config.GAME / "common/laws").glob("*.txt")):
-        tree = parse_file(path)
-        if tree.errors:
-            raise ValueError(f"原版法律无法解析：{path}")
-        laws.extend(key for key in tree.top_keys if key.startswith("law_"))
-    observer = source_root / "politics"
-    decisions.write(
-        observer,
-        extension_probe.build(laws, strategies=extension_probe.political_keys(config.GAME)),
-    )
-    sources["zz_sitai_reform_observer"] = observer
+    if not cost_readings:
+        readonly = source_root / "fiscal-readonly"
+        decisions.write(readonly, decision_probe.build_observer(tags=tags))
+        sources["zz_sitai_fiscal_observer"] = readonly
+        # 保留正式/历史检查点的只读身份。独立预算校准不加载无关政治 getter。
+        laws: list[str] = []
+        for path in sorted((config.GAME / "common/laws").glob("*.txt")):
+            tree = parse_file(path)
+            if tree.errors:
+                raise ValueError(f"原版法律无法解析：{path}")
+            laws.extend(key for key in tree.top_keys if key.startswith("law_"))
+        observer = source_root / "politics"
+        decisions.write(
+            observer,
+            extension_probe.build(laws, strategies=extension_probe.political_keys(config.GAME)),
+        )
+        sources["zz_sitai_reform_observer"] = observer
 
     if getattr(args, "localization_baseline", False):
         baseline = source_root / "localization-baseline"
@@ -307,10 +336,11 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
                 "initiator": args.initiator,
                 "target": args.target,
                 "opportunity_delay_days": opportunity_delay_days,
-                "extra_fiscal": True,
-                "reform": True,
+                "extra_fiscal": not cost_readings,
+                "reform": not cost_readings,
                 "localization_baseline": getattr(args, "localization_baseline", False),
                 "resource_baseline": resource_manifest,
+                **({"cost_calibration": cost_probe.configuration()} if cost_readings else {}),
             },
         },
         allow_new_game_experiment=new_game,

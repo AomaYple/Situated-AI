@@ -6,7 +6,7 @@ import json
 import re
 from typing import TYPE_CHECKING, NotRequired, TypedDict
 
-from . import decision_probe, decisions, game_auto
+from . import cost_probe, decision_probe, decisions, game_auto
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,6 +41,23 @@ class CountryEvidence(TypedDict):
     eligible_active_days: int
 
 
+class CountryRoleTiming(TypedDict):
+    status: str
+    join_transitions: list[dict[str, object]]
+    backer_role_losses: list[dict[str, object]]
+    already_backing_at_first_sample: bool | None
+    still_backing_at_last_sample: bool | None
+    no_transition_proves_neutrality: bool
+
+
+class RoleTiming(TypedDict):
+    unit: str
+    countries: dict[str, CountryRoleTiming]
+    within_day_changes_may_be_missed: bool
+    role_loss_is_voluntary_exit: bool
+    quality_improvement_proven: bool
+
+
 class Analysis(TypedDict):
     rows: list[dict[str, str]]
     countries: dict[str, CountryEvidence]
@@ -52,6 +69,7 @@ class Analysis(TypedDict):
     time_basis: str
     quality_observations: dict[str, object]
     natural_capture: NotRequired[dict[str, object]]
+    role_timing: NotRequired[RoleTiming]
 
 
 def build(
@@ -63,6 +81,7 @@ def build(
     natural: bool = False,
     play_types: tuple[str, ...] = (),
     creation_delay_days: int = 0,
+    cost_readings: bool = False,
 ) -> dict[str, str]:
     if (
         any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in (initiator, target))
@@ -86,6 +105,10 @@ def build(
         raise ValueError("受控机会创建延迟必须是0到365之间的整数天")
     if natural and creation_delay_days:
         raise ValueError("自然响应不能延迟或创建机会")
+    if type(cost_readings) is not bool:
+        raise ValueError("预算观测开关必须是布尔值")
+    if cost_readings and (natural or market_readings):
+        raise ValueError("预算 getter 只允许独立受控校准，不能进入自然或市场观察包")
     roles = []
     for tag in tags:
         for kind, method in (
@@ -157,6 +180,8 @@ def build(
                 }}
             }}"""
         )
+        if cost_readings:
+            roles.append(cost_probe.readings(tag))
     creation = """set_variable = { name = sitai_opportunity_created value = 1 }
             set_variable = { name = sitai_opportunity_watch value = 1 days = 370 }
             set_variable = { name = sitai_probe_opportunity_sample value = 0 }
@@ -326,7 +351,10 @@ zz_sitai_opportunity_bind = { effect = {
                 else "受控机会与自主选边分开计数",
                 "tags": [],
                 "relationships": [],
-                "game_custom_data": {"multiplayer_synchronized": False},
+                "game_custom_data": {
+                    "multiplayer_synchronized": False,
+                    **({"cost_calibration": cost_probe.configuration()} if cost_readings else {}),
+                },
             },
             ensure_ascii=False,
             indent=2,
@@ -426,12 +454,74 @@ def analyze(
     }
     if natural_pair is not None:
         result["natural_capture"] = _natural_capture(rows, tags, natural_pair)
+        result["role_timing"] = _role_timing(rows, tags)
         result["sampling"] = (
             "首次自然 START 后每日采样；使用保存的确切博弈作用域；每局最多捕获一场博弈"
         )
         # 绑定或资格侦察不能自行成为配对因果样本。
         result["usable_for_paired_behavior"] = False
     return result
+
+
+def _role_timing(rows: list[dict[str, str]], tags: tuple[str, str]) -> RoleTiming:
+    """仅用于已通过自然绑定/完整性门禁的每日序列，不猜精确行动日。"""
+    states: dict[str, dict[int, dict[str, str]]] = {tag: {} for tag in tags}
+    for row in rows:
+        if row["tag"] in states and row["kind"] in BOOLEAN_KINDS:
+            number = int(row["date"].removeprefix("sample-"))
+            states[row["tag"]].setdefault(number, {})[row["kind"]] = row["value"]
+    countries: dict[str, CountryRoleTiming] = {}
+    for tag, series in states.items():
+        anchor: int | None = None
+        previous: dict[str, str] | None = None
+        joins: list[dict[str, object]] = []
+        losses: list[dict[str, object]] = []
+        for number, state in sorted(series.items()):
+            backing = state["BACKER"] == "yes"
+            eligible = state["UNDECIDED"] == "yes" and any(
+                state[kind] == "yes" for kind in ("CAN_INIT", "CAN_TARGET")
+            )
+            if previous is not None and previous["BACKER"] == "no" and backing:
+                joins.append(
+                    {
+                        "transition_sample_interval": [number - 1, number],
+                        "first_observed_eligible_sample": anchor,
+                        "delay_since_observed_eligibility": [
+                            max(0, number - anchor - 1),
+                            number - anchor,
+                        ]
+                        if anchor is not None
+                        else None,
+                    }
+                )
+            if previous is not None and previous["BACKER"] == "yes" and not backing:
+                losses.append({"transition_sample_interval": [number - 1, number]})
+            if eligible:
+                if anchor is None:
+                    anchor = number
+            else:
+                anchor = None
+            previous = state
+        ordered = sorted(series)
+        countries[tag] = {
+            "status": "observed" if ordered else "unobserved",
+            "join_transitions": joins,
+            "backer_role_losses": losses,
+            "already_backing_at_first_sample": series[ordered[0]]["BACKER"] == "yes"
+            if ordered
+            else None,
+            "still_backing_at_last_sample": series[ordered[-1]]["BACKER"] == "yes"
+            if ordered
+            else None,
+            "no_transition_proves_neutrality": False,
+        }
+    return {
+        "unit": "共享日采样间隔；不是精确日历、真实资格开始时刻或引擎响应延迟",
+        "countries": countries,
+        "within_day_changes_may_be_missed": True,
+        "role_loss_is_voluntary_exit": False,
+        "quality_improvement_proven": False,
+    }
 
 
 def _natural_capture(

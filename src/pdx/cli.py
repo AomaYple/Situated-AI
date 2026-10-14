@@ -44,7 +44,7 @@ import time
 # 解析命令签名，注解挪进 TYPE_CHECKING 块会让 ``v3 --help`` 直接 NameError（已实测）。
 # 另外 `v3 citations` 会真的构造 `Path`，所以它本来就是运行期依赖，不需要 TCH 豁免。
 from pathlib import Path
-from typing import Annotated, Any, NoReturn
+from typing import Annotated, Any, Literal, NoReturn
 
 import typer
 from rich.console import Console
@@ -2814,14 +2814,18 @@ def modgen_cmd(
 @app.command("package")
 def package_cmd(
     output: Annotated[Path, typer.Option("--output", help="游戏 ZIP 输出路径")] = Path(
-        "dist/situated-ai.zip"
+        "tools/out/releases/situated-ai-experimental.zip"
     ),
+    variant: Annotated[
+        Literal["current", "control", "disabled"],
+        typer.Option("--variant", help="current 当前源；control 零偏置财政；disabled 全关安全包"),
+    ] = "disabled",
 ) -> None:
     """校验生成物并打包；仅在游戏交付边界添加 BOM。"""
     from .distribution import package  # noqa: PLC0415 -- 交付命令独立边界
 
     try:
-        target = package(output)
+        target = package(output, variant=variant)
     except (ValueError, OSError) as exc:
         _fail(f"打包失败：{exc}", EXIT_FAILED)
     console.print(f"[green]已生成[/] {escape(str(target))}")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import replace
 
@@ -35,6 +36,32 @@ def test_生成会修复编码和同长度正文漂移(tmp_path):
 @pytest.fixture
 def policy():
     return decisions.load()
+
+
+def test_财政开关显式开启且交付契约来自数据源(policy):
+    assert policy.enabled
+    assert policy.package.product_version == "0.1.0"
+    assert policy.package.status == "experimental"
+    payload = decisions.metadata_payload(policy)
+    assert payload["version"] == policy.package.product_version
+    assert payload["tool_version"] == "0.3.0"
+    assert payload["enabled_modules"] == ["fiscal"]
+    fingerprint = payload["source_fingerprint"]
+    assert isinstance(fingerprint, dict)
+    assert fingerprint["baseline_sha256"] == policy.baseline_sha256
+
+
+def test_财政开关关闭不生成财政脚本且保留原版策略(policy):
+    disabled = replace(policy, enabled=False)
+    files = decisions.build(disabled)
+    assert set(files) == {"common/ai_strategies/00_default_strategy.txt", ".metadata/metadata.json"}
+    assert files["common/ai_strategies/00_default_strategy.txt"] == decisions.BASELINE.read_text(
+        encoding="utf-8"
+    )
+    assert decisions.triggers(disabled) == ""
+    assert decisions.effects(disabled) == ""
+    assert decisions.on_actions(disabled) == ""
+    assert json.loads(files[".metadata/metadata.json"])["enabled_modules"] == []
 
 
 @pytest.mark.parametrize(
@@ -203,6 +230,7 @@ def test_写盘检查发现篡改和遗留产物(tmp_path):
         "ttl_days = 62|ttl_days = 1",
         "aggression = 0|aggression = 20",
         "diplomatic_play_neutrality = 25|diplomatic_play_neutrality = nan",
+        "enabled = true|enabled = 1",
         "schema_version = 1|schema_version = 2",
     ],
 )
@@ -244,6 +272,38 @@ def test_拒绝错误类型和未审查游戏版本(tmp_path, mutation):
         decisions.load(source)
 
 
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        'status = "experimental"|status = "released"',
+        'save_compatibility = "new-game-only"|save_compatibility = "all"',
+        'platforms = ["windows", "macos", "linux"]|platforms = ["plan9"]',
+        'product_version = "0.1.0"|product_version = "not-a-version"',
+    ],
+)
+def test_拒绝不可靠的包契约(tmp_path, mutation):
+    before, after = mutation.split("|")
+    source = tmp_path / "bad.toml"
+    source.write_text(
+        decisions.SOURCE.read_text(encoding="utf-8").replace(before, after), encoding="utf-8"
+    )
+    with pytest.raises(ValueError):
+        decisions.load(source)
+
+
+def test_包契约缺失字段明确失败(tmp_path):
+    source = tmp_path / "missing.toml"
+    source.write_text(
+        decisions.SOURCE.read_text(encoding="utf-8").replace(
+            'platform_notes = "Python 生成与离线校验支持三平台；游戏 GUI 自动化当前仅有 Windows 实机证据。"\n',
+            "",
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="缺失"):
+        decisions.load(source)
+
+
 def test_新接口缺证据和本机底本漂移均拒绝(tmp_path):
     assert decisions.validate(None)
     assert decisions.validate(set())
@@ -274,6 +334,192 @@ def test_生产ZIP不携带历史档案(tmp_path):
 
     from pdx.distribution import package
 
-    with zipfile.ZipFile(package(tmp_path / "mod.zip")) as archive:
+    with zipfile.ZipFile(package(tmp_path / "mod.zip", variant="current")) as archive:
         assert set(archive.namelist()) == set(decisions.build()) | {"DISTRIBUTION-MANIFEST.json"}
         assert not any("legacy" in name or "ru_defeat" in name for name in archive.namelist())
+
+
+def test_生产ZIP清单携带实际包契约和源指纹(tmp_path):
+    import zipfile
+
+    from pdx.distribution import package
+
+    with zipfile.ZipFile(package(tmp_path / "mod.zip")) as archive:
+        manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
+        metadata = json.loads(archive.read(".metadata/metadata.json"))
+    assert manifest["schema"] == 2
+    assert manifest["contract"]["product_version"] == metadata["version"]
+    assert manifest["contract"]["enabled_modules"] == metadata["enabled_modules"]
+    assert manifest["contract"]["source_fingerprint"] == metadata["source_fingerprint"]
+
+
+@pytest.mark.parametrize("value", ["1", '"false"', "[]"])
+def test_财政开关拒绝非布尔值(tmp_path, value):
+    source = tmp_path / "fiscal.toml"
+    source.write_text(
+        decisions.SOURCE.read_text(encoding="utf-8").replace(
+            "enabled = true", f"enabled = {value}"
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    with pytest.raises(ValueError):
+        decisions.load(source)
+
+
+def test_财政开关缺失拒绝而关闭合法(tmp_path):
+    source = tmp_path / "fiscal.toml"
+    text = decisions.SOURCE.read_text(encoding="utf-8")
+    source.write_text(text.replace("enabled = true\n", ""), encoding="utf-8", newline="\n")
+    with pytest.raises(ValueError, match="缺失"):
+        decisions.load(source)
+    source.write_text(
+        text.replace("enabled = true", "enabled = false"), encoding="utf-8", newline="\n"
+    )
+    assert not decisions.load(source).enabled
+
+
+def test_关闭阻止默认挂载和内存风险状态(policy, monkeypatch):
+    disabled = replace(policy, enabled=False)
+    monkeypatch.setattr(decisions, "load", lambda: disabled)
+    assert decisions.on_actions() == ""
+    assert (
+        decisions.risk_next(
+            False, in_default=True, taking_loans=True, credit=100, weeks=0, policy=disabled
+        )
+        is False
+    )
+
+
+def test_开关往返清理旧生成物且保留未知文件(tmp_path, policy):
+    enabled = decisions.build(
+        policy, extensions=decisions.Extensions(reform_enabled=True, market_enabled=True)
+    )
+    disabled = decisions.build(replace(policy, enabled=False), extensions=decisions.Extensions())
+    decisions.write(tmp_path, enabled)
+    assert decisions.check(tmp_path, enabled) == []
+    decisions.write(tmp_path, disabled)
+    assert decisions.check(tmp_path, disabled) == []
+    assert not any((tmp_path / name).exists() for name in enabled.keys() - disabled.keys())
+    decisions.write(tmp_path, enabled)
+    assert decisions.check(tmp_path, enabled) == []
+    unknown = tmp_path / "common/on_actions/custom.txt"
+    unknown.write_text("# 用户文件\n", encoding="utf-8", newline="\n")
+    decisions.write(tmp_path, disabled)
+    assert unknown.read_text(encoding="utf-8") == "# 用户文件\n"
+    assert any("custom.txt" in issue for issue in decisions.check(tmp_path, disabled))
+
+
+@pytest.mark.parametrize(
+    ("reform", "market"), [(False, False), (True, False), (False, True), (True, True)]
+)
+def test_关闭财政仍验证共享策略底本(tmp_path, policy, monkeypatch, reform, market):
+    monkeypatch.setattr(decisions, "load", lambda: replace(policy, enabled=False))
+    monkeypatch.setattr(
+        decisions,
+        "load_extensions",
+        lambda: decisions.Extensions(reform_enabled=reform, market_enabled=market),
+    )
+    snapshot: dict[str, object] = {
+        "域": {
+            "vocabulary": {rel: [] for rel in decisions.VOCABULARY_DIRS},
+            "vanilla_keys": {rel: [] for rel in decisions.KEY_DIRS},
+            "vanilla_variables": {rel: [] for rel in decisions.VARIABLE_POOL_DIRS},
+        }
+    }
+    strategy = tmp_path / "common/ai_strategies/00_default_strategy.txt"
+    strategy.parent.mkdir(parents=True)
+    strategy.write_text("# 本机底本已漂移\n", encoding="utf-8", newline="\n")
+    issues = decisions.validate(set(), game=tmp_path, snapshot=snapshot)
+    assert "本机默认策略与锁定底本不一致，需重审版本" in issues
+    assert not any("本机财政接口参考" in issue for issue in issues)
+
+
+def test_指纹绑定实际替代源和生成器(tmp_path):
+    fiscal, extensions = tmp_path / "fiscal.toml", tmp_path / "extensions.toml"
+    fiscal.write_bytes(decisions.SOURCE.read_bytes() + b"\n# alternative fiscal\n")
+    extensions.write_bytes(decisions.EXTENSIONS.read_bytes() + b"\n# alternative extensions\n")
+    policy, extra = decisions.load(fiscal), decisions.load_extensions(extensions)
+    metadata = json.loads(decisions.build(policy, extensions=extra)[".metadata/metadata.json"])
+    fingerprint = metadata["source_fingerprint"]
+    assert fingerprint["fiscal_source_sha256"] == hashlib.sha256(fiscal.read_bytes()).hexdigest()
+    assert (
+        fingerprint["extensions_source_sha256"]
+        == hashlib.sha256(extensions.read_bytes()).hexdigest()
+    )
+    assert (
+        fingerprint["generator_sha256"]
+        == hashlib.sha256(decisions.Path(decisions.__file__).read_bytes()).hexdigest()
+    )
+
+
+@pytest.mark.parametrize("variant", ["current", "control", "disabled"])
+def test_交付变体实际内容参数编码和确定性(tmp_path, variant):
+    import codecs
+    import zipfile
+
+    from typer.testing import CliRunner
+
+    from pdx import cli
+
+    target = tmp_path / "variant.zip"
+    runner = CliRunner()
+    args = ["package", "--variant", variant, "--output", str(target)]
+    result = runner.invoke(cli.app, args)
+    assert result.exit_code == 0, result.output
+    raw = target.read_bytes()
+    assert runner.invoke(cli.app, args).exit_code == 0
+    assert target.read_bytes() == raw
+    with zipfile.ZipFile(target) as archive:
+        manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
+        generation = manifest["generation"]
+        assert generation["variant"] == variant
+        assert generation["fiscal"]["enabled"] == (variant != "disabled")
+        assert manifest["contract"]["enabled_modules"] == (
+            [] if variant == "disabled" else ["fiscal"]
+        )
+        strategy = archive.read("common/ai_strategies/00_default_strategy.txt").decode("utf-8-sig")
+        if variant == "control":
+            assert generation["fiscal"]["neutrality"] == generation["fiscal"]["aggression"] == 0
+        if variant != "current":
+            assert strategy == decisions.BASELINE.read_text(encoding="utf-8")
+        lifecycle = "common/on_actions/sitai_fiscal_on_actions.txt"
+        assert (lifecycle in archive.namelist()) == (variant != "disabled")
+        for name, digest in manifest["files"].items():
+            payload = archive.read(name)
+            assert hashlib.sha256(payload).hexdigest() == digest
+            assert b"\r" not in payload
+            assert payload.startswith(codecs.BOM_UTF8) == name.endswith((".txt", ".yml"))
+
+
+def test_非法变体保留已有交付包(tmp_path):
+    from typer.testing import CliRunner
+
+    from pdx import cli, distribution
+
+    target = tmp_path / "previous.zip"
+    target.write_bytes(b"previous release")
+    result = CliRunner().invoke(cli.app, ["package", "--variant", "wrong", "--output", str(target)])
+    assert result.exit_code == 2
+    with pytest.raises(ValueError, match="变体"):
+        distribution.package(target, variant="wrong")
+    assert target.read_bytes() == b"previous release"
+
+
+def test_未声明变体的交付默认全关(tmp_path):
+    import zipfile
+
+    from typer.testing import CliRunner
+
+    from pdx import cli, distribution
+
+    api_target, cli_target = tmp_path / "api.zip", tmp_path / "cli.zip"
+    distribution.package(api_target)
+    result = CliRunner().invoke(cli.app, ["package", "--output", str(cli_target)])
+    assert result.exit_code == 0, result.output
+    assert cli_target.read_bytes() == api_target.read_bytes()
+    with zipfile.ZipFile(api_target) as archive:
+        manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
+        assert manifest["generation"]["variant"] == "disabled"
+        assert manifest["contract"]["enabled_modules"] == []
+        assert "common/on_actions/sitai_fiscal_on_actions.txt" not in archive.namelist()

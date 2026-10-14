@@ -14,7 +14,7 @@ import math
 import re
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -159,6 +159,10 @@ class ReportFacts:
     window_start: str | None
     activation_tick: str | None
     language: str | None = None
+    # 质量字段是原始报告的事实摘录。它们不参与“机会资格”晋级，
+    # 但必须随候选一起输出，避免比较器丢掉 unsupported/null 边界。
+    quality_observations: Mapping[str, Any] = field(default_factory=dict)
+    role_timing: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def strategy_digest(self) -> str | None:
@@ -188,6 +192,7 @@ class PairCandidate:
     role_changes: Mapping[str, Mapping[str, bool | None]]
     score_deltas: Mapping[str, tuple[float, ...]]
     qualified: bool
+    quality_ready: bool
     reasons: tuple[str, ...]
 
     def as_dict(self) -> dict[str, Any]:
@@ -206,6 +211,16 @@ class PairCandidate:
             "common_eligible_active_dates": list(self.common_eligible_active_dates),
             "score_deltas": {key: list(value) for key, value in self.score_deltas.items()},
             "role_changes": {key: dict(value) for key, value in self.role_changes.items()},
+            "quality_observations": {
+                "control": dict(self.control.quality_observations),
+                "treatment": dict(self.treatment.quality_observations),
+            },
+            "role_timing": {
+                "control": dict(self.control.role_timing),
+                "treatment": dict(self.treatment.role_timing),
+            },
+            "structural_qualified": self.qualified,
+            "quality_ready": self.quality_ready,
             "qualified": self.qualified,
             "reasons": list(self.reasons),
         }
@@ -283,6 +298,36 @@ def load_report(path: Path) -> ReportFacts:
     analysis = report.get("analysis")
     opportunity = analysis.get("opportunity") if isinstance(analysis, Mapping) else None
     rows = opportunity.get("rows", []) if isinstance(opportunity, Mapping) else []
+    quality_observations = (
+        dict(opportunity.get("quality_observations", {}))
+        if isinstance(opportunity, Mapping)
+        and isinstance(opportunity.get("quality_observations"), Mapping)
+        else {}
+    )
+    role_timing = (
+        dict(opportunity.get("role_timing", {}))
+        if isinstance(opportunity, Mapping) and isinstance(opportunity.get("role_timing"), Mapping)
+        else {}
+    )
+    if quality_observations:
+        status = quality_observations.get("status")
+        if status is not None and status not in {"unknown", "unsupported", "observed", "complete"}:
+            reasons.append("quality_observations.status_invalid")
+        for key in ("action_cost", "adverse_outcome", "join_latency", "leave_latency"):
+            value = quality_observations.get(key)
+            if value is not None and (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
+                reasons.append(f"quality_observations.{key}_invalid")
+        proven = quality_observations.get("quality_improvement_proven")
+        if proven is not None and not isinstance(proven, bool):
+            reasons.append("quality_observations.quality_improvement_proven_invalid")
+    if role_timing:
+        proven = role_timing.get("quality_improvement_proven")
+        if proven is not None and not isinstance(proven, bool):
+            reasons.append("role_timing.quality_improvement_proven_invalid")
     grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     if isinstance(rows, list):
         for row in rows:
@@ -369,6 +414,8 @@ def load_report(path: Path) -> ReportFacts:
         if progress.get("activation_tick")
         else None,
         language=report.get("language") if isinstance(report.get("language"), str) else None,
+        quality_observations=quality_observations,
+        role_timing=role_timing,
     )
 
 
@@ -534,6 +581,7 @@ def pair_reports(
     if not shape_ok:
         reasons.extend(shape_reasons)
     qualified = not reasons and len(tags) == 2 and len(common_dates) > 0
+    quality_ready = _quality_ready(control) and _quality_ready(treatment)
     return PairCandidate(
         control=control,
         treatment=treatment,
@@ -543,7 +591,21 @@ def pair_reports(
         role_changes=role_changes,
         score_deltas=score_deltas,
         qualified=qualified,
+        quality_ready=quality_ready,
         reasons=tuple(dict.fromkeys(reasons)),
+    )
+
+
+def _quality_ready(report: ReportFacts) -> bool:
+    """判断质量出口是否具备；不影响结构性机会筛选。"""
+    quality = report.quality_observations
+    timing = report.role_timing
+    return (
+        quality.get("status") == "complete"
+        and quality.get("quality_improvement_proven") is True
+        and quality.get("action_cost") is not None
+        and quality.get("adverse_outcome") is not None
+        and timing.get("quality_improvement_proven") is True
     )
 
 
@@ -560,15 +622,7 @@ def _default_neutrality_resolver() -> Callable[[str], tuple[float, float] | None
         ):
             text = decisions.patch_default(
                 baseline,
-                policy.__class__(
-                    game_version=policy.game_version,
-                    baseline_sha256=policy.baseline_sha256,
-                    entry_weeks=policy.entry_weeks,
-                    exit_weeks=policy.exit_weeks,
-                    ttl_days=policy.ttl_days,
-                    neutrality=neutrality,
-                    aggression=aggression,
-                ),
+                replace(policy, neutrality=neutrality, aggression=aggression),
             )
             values[hashlib.sha256(text.encode("utf-8")).hexdigest()] = neutrality, aggression
         return values.get
@@ -620,6 +674,8 @@ def screen(
         "report_count": len(reports),
         "strict_clean_count": sum(report.clean for report in reports),
         "qualified_count": sum(pair.qualified for pair in candidates),
+        "structural_qualified_count": sum(pair.qualified for pair in candidates),
+        "quality_ready_count": sum(pair.qualified and pair.quality_ready for pair in candidates),
         "candidates": [pair.as_dict() for pair in candidates],
         "limits": [
             "筛选不会把评分差分、BACKER变化或强制创建机会当作质量通过",
