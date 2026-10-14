@@ -5,7 +5,7 @@
 ## 原则分层
 
 - [工程原则](docs/principles/工程原则.md)定义工程底线；[CONTRIBUTING.md](CONTRIBUTING.md)维护具体贡献流程，[工程基线](docs/design/exec/工程基线-1.0.md)维护工具与验证契约。
-- [Mod 开发原则](docs/principles/Mod开发原则.md)定义产品底线；[处境决策设计](docs/design/03-处境决策设计.md)维护架构，[最终执行纲领](docs/design/exec/mod重设计-实施计划.md)维护阶段出口。
+- [Mod 开发原则](docs/principles/Mod开发原则.md)定义产品底线；[处境决策设计](docs/design/03-处境决策设计.md)维护架构，[分阶段可玩开发计划 2.0](docs/design/exec/mod重设计-实施计划.md)维护阶段出口。
 - 两类原则共同要求正确性第一、速度第二、内存第三。通用性能取舍见[工程原则](docs/principles/工程原则.md#验证与性能)，游戏运行要求由 Mod 原则与 M4 落实；结论由对应测量验收。
 - 原则页只维护持续约束，结果页管理实测和阻塞；导航页不重复定义规则。文档分类与更新规则见 [文档维护](docs/README.md#文档维护)。
 
@@ -18,7 +18,7 @@
 本项目用 Python 分析、生成和验证 Victoria 3 Mod；游戏运行使用生成的游戏脚本，不依赖外部 Python 服务。
 
 - Mod 目标与行为边界：[处境决策设计](docs/design/03-处境决策设计.md)。
-- 制作顺序、质量门与增量可玩版本：[最终执行纲领 1.1](docs/design/exec/mod重设计-实施计划.md)；当前进展查看对应结果页及 [backlog](docs/design/backlog.md)。
+- 制作顺序、阶段出口与增量可玩版本：[分阶段可玩开发计划 2.0](docs/design/exec/mod重设计-实施计划.md)；当前进展查看 [当前工作清单](docs/design/当前工作清单.md)、对应结果页及 [backlog](docs/design/backlog.md)。
 - 工具链与证据边界：[工程基线](docs/design/exec/工程基线-1.0.md)；命令细节见 [工具手册](tools/README.md)。
 - 性能任务：Mod 制作与验证按 [Mod 制作提速实施计划 2.4](docs/design/exec/速度优化计划-正确性优先.md)执行；已验收的工程提速结果只作为基础能力复用；游戏运行效率按 [Mod 效率要求](docs/principles/Mod开发原则.md#开发与运行效率)和 M4 实机出口验证。
 
