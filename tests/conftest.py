@@ -2,9 +2,9 @@
 
 临时目录
 --------
-直接用 pytest 的 ``tmp_path``（会话级 basetemp 由 pytest 自行管理）。
-不再自己用 ``tempfile``/``uuid`` 造目录 —— 那是早先沙箱限制下的妥协，
-现已无必要。
+直接用 pytest 的 ``tmp_path``，但在未显式指定 ``--basetemp`` 时，
+先为本轮测试选择仓库外的系统临时根；受限 Windows 运行器无法访问系统 Temp 时，
+才回退到带专用前缀、已忽略且会话结束清理的仓库临时根。
 
 游戏可用性
 ----------
@@ -15,11 +15,16 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import sys
+import tempfile
+import uuid
 from collections.abc import Iterator, Sequence
 from functools import lru_cache
+from pathlib import Path
 from types import ModuleType
-from typing import TYPE_CHECKING, overload
+from typing import overload
 
 import pytest
 
@@ -27,8 +32,78 @@ from pdx import analyze, parallel
 from pdx import config as pdx_config
 from pdx.scan import walk_files
 
-if TYPE_CHECKING:
-    from pathlib import Path
+# pytest 在某些 Windows + xdist + coverage 组合下会把默认 basetemp 解析到
+# 当前工作树。仓库卫生测试必须扫描未忽略的工作区文件，因此临时文件一旦落在
+# 仓库内就会与其他 worker 产生真实竞态。每个主测试进程分配一个系统临时根，
+# 让 worker 的子目录仍由 pytest 管理，同时不污染仓库扫描范围。显式传入
+# ``--basetemp`` 时保持调用方的调试选择，不覆盖它。
+_AUTO_BASETEMPS: list[Path] = []
+
+
+def _系统临时根() -> Path:
+    """选择不位于仓库内的平台临时根，避免 pytest 回退污染工作树。"""
+    repo = pdx_config.REPO.resolve()
+    candidates = [os.environ.get(name) for name in ("TMPDIR", "TEMP", "TMP")]
+    if os.name == "nt":
+        candidates.append(str(Path(os.environ.get("LOCALAPPDATA", Path.home())) / "Temp"))
+    else:
+        candidates.append("/tmp")
+    for raw in candidates:
+        if not raw:
+            continue
+        try:
+            candidate = Path(raw).expanduser().resolve()
+            if candidate == repo or repo in candidate.parents:
+                continue
+            candidate.mkdir(parents=True, exist_ok=True)
+            if candidate.is_dir():
+                return candidate
+        except OSError:
+            continue
+    raise RuntimeError("找不到位于仓库外且可写的平台临时目录")
+
+
+def _创建临时根(parent: Path) -> Path:
+    """在平台临时根下创建唯一目录，并容忍 Windows 瞬时权限竞争。"""
+    for _ in range(64):
+        candidate = parent / f"sitai-pytest-{uuid.uuid4().hex[:12]}"
+        try:
+            candidate.mkdir(mode=0o700)
+        except OSError:
+            continue
+        return candidate
+    raise RuntimeError(f"无法在平台临时目录创建测试根：{parent}")
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_configure(config: pytest.Config) -> None:
+    """把未指定的 pytest 临时根固定在系统临时目录。"""
+    if config.getoption("basetemp", default=None) is not None:
+        return
+    # xdist worker 会继承 master 的命令行选项；只有极少数旧版本在 worker
+    # 侧重新初始化时才会走这里，届时各 worker 也会得到独立的系统临时根。
+    try:
+        root = _系统临时根()
+        base = _创建临时根(root)
+    except RuntimeError:
+        # 某些 Windows 沙箱允许普通 pytest 访问系统 Temp，却拒绝 v3.exe
+        # 子进程创建目录。回退目录带专用前缀，已在 .gitignore 中声明，且由
+        # pytest_sessionfinish 清理，避免把测试运行态混入仓库审计。
+        root = pdx_config.REPO
+        base = _创建临时根(root)
+    # pytest 的 tmp_path、嵌套 pytest 以及仓库代码中的 tempfile 调用都应共享
+    # 这个明确的外部根；不依赖 tempfile 在当前平台上的隐式回退策略。
+    tempfile.tempdir = str(root)
+    config.option.basetemp = str(base)
+    if getattr(config, "workerinput", None) is None:
+        _AUTO_BASETEMPS.append(base)
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
+    """清理由本进程创建的自动临时根；不触碰显式调试目录。"""
+    del exitstatus
+    while _AUTO_BASETEMPS:
+        shutil.rmtree(_AUTO_BASETEMPS.pop(), ignore_errors=True)
 
 
 def mock_game_auto_platform(monkeypatch: pytest.MonkeyPatch, platform: str) -> None:

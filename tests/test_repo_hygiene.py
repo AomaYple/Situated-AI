@@ -167,9 +167,17 @@ def _打开(path: Path) -> _Source | None:
 def _相对路径(path: Path) -> str:
     """转成仓库相对 POSIX 路径；不在仓库里（``tmp_path``）就原样返回。"""
     try:
-        return path.relative_to(config.REPO).as_posix()
+        relative = path.relative_to(config.REPO)
     except ValueError:
         return path.as_posix()
+    # v3.exe 在受限 Windows 环境下可能只能把 pytest 临时根放回仓库；
+    # 这些带专用前缀的运行态仍按临时路径保留绝对形式，避免与项目文件口径混淆。
+    if relative.parts and (
+        relative.parts[0].startswith(("sitai-pytest-", "pytest-of-"))
+        or relative.parts[0].startswith("tmp")
+    ):
+        return path.resolve().as_posix()
+    return relative.as_posix()
 
 
 def _是引擎侧(rel: str) -> bool:

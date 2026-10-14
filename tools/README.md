@@ -81,6 +81,8 @@ python -m pdx.checkpoint_catalog --screen-save <原件一.v3> --expected-sha256 
 
 `decision_behavior.py` 现可显式选择 `--purpose M3-A/M3-B`、`--experiment-scene`、`--language` 与 `--qualification-report`。正式模式必须 `--natural-opportunity --fiscal-injection none`，M3-A 只允许 control/neutrality；先通过当前资格原件，再通过同 pair 控制原件才派候选。缺证、分母未知、窗口/风险不一致或错误继续拒绝；允许启动不代表行为质量通过。准备资格使用 `--purpose instrument --arm control --natural-opportunity --fiscal-injection none --qualification-registration <登记JSON>`，显式场景/语言且不同时保存；运行器在副作用前重新生成并核对无注入源。登记和资格 schema、必须的 `sampling.max_overshoot_days`、完整原件和限制见[正式实验入口审计](../docs/audits/2026-10-11-正式实验入口.md)。
 
+`--response-hooks` 是默认关闭的独立 instrument，只允许 `instrument/control/无注入/自然观察`，不制作存档。它把 `on_diplo_play_join_side`、`on_diplo_play_abandon_side` 和 `on_diplo_play_war_start` 追加到独立包装器，记录根外交博弈的升级值和时间；解析器保留 `actor_scope_supported=false`，不把根事件当成逐国行动或质量证据。2026-10-15 修复了响应包装器多一个 `}` 的真实引擎解析错误；随后两次新游戏均无 Mod 解析错误并进入模拟，第二次六个月窗口因原版 `royal_wedding.txt`/`metro_events.txt` 脚本错误被严格门禁停止，尚未取得自然响应样本。固定失败输入和同类新游戏错误路线不再重复派发，只有独立 vanilla 基线、环境/版本修复或新的可核查输入才可重开；完整边界见 [A3 结果](../docs/design/exec/A3-结果.md) 和 [M3 可测性清单](../docs/design/exec/M3-可测性清单.md)。
+
 `decision_stability.py --purpose M4-noise --arm vanilla --observation-package vanilla-performance` 显式生成与资格契约一致的原版性能观察源；长期窗口需事前登记 `--months` 和 `--max-months`（24–120 月）。完整政治/生命周期包仍为默认，新性能包尚无扰动实机验收。正式 `--purpose M4` 另需既有资格、同版本输入、显式语言与该包，禁止保存、升级和未验收扩展；M3 冻结质量出口尚不具可核验接口，当前仍明确拒绝。不能把 M4-noise 的工具接线当作正式 M4 通过。
 
 `decision_stability.py --language l_english` 为本局和恢复重启传递临时语言，并进入报告与实验冻结身份；不写用户语言设置。英文目前仅支持已提供的观察者检查点，英文新游戏菜单尚未验证，未知语言在事务前拒绝。`l_simp_chinese` 也可显式登记；两臂语言不一致或只有一臂记录时拒绝配对。日志中的 `VFSOpen Error` 与原有引擎/Mod 错误一样拒绝通过，并进入同场景重复错误停止计数；历史报告先验证原始日志指纹，不能沿用旧 `ok=true` 绕过当前门禁。
@@ -294,7 +296,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 117 个测试文件、3657 条用例（2026-10-15 工作区口径）；本轮完整 `n-auto` 为 **3638 passed、19 skipped**，4 个 worker、498.15 秒；收口前两项新增测试后的格式和 README 机械数字问题已修复并由本次回归确认通过；`v3 cov` 收口为 **89.31%**，4 个 worker、496.02 秒。当前读数、跳过范围和限制见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)。本批正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 117 个测试文件、3665 条用例（2026-10-15 工作区口径）；本轮完整 `n-auto` 为 **3646 passed、19 skipped**，4 个 worker、499.63 秒；`v3 cov` 为 **89.32%**，4 个 worker、663.76 秒、1551 个 subtests，11 个核心模块下限全部通过。当前读数、跳过范围和限制见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)。本批正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 ROW = re.compile(
     r"SITAI OPPORTUNITY;(?P<tag>[A-Z]{3}|CONTROL);(?P<kind>[A-Z_]+);(?P<value>.*);(?P<date>[^;]*)$"
 )
+RESPONSE_ROW = re.compile(r"SITAI RESPONSE;(?P<hook>[a-z_]+);(?P<value>.*);(?P<date>[^;]*)$")
+RESPONSE_HOOKS = frozenset({"join_side", "abandon_side", "war_start"})
 BOOLEAN_KINDS = frozenset(
     {
         "UNDECIDED",
@@ -70,6 +72,7 @@ class Analysis(TypedDict):
     quality_observations: dict[str, object]
     natural_capture: NotRequired[dict[str, object]]
     role_timing: NotRequired[RoleTiming]
+    response_hooks: NotRequired[dict[str, object]]
 
 
 def build(
@@ -82,6 +85,7 @@ def build(
     play_types: tuple[str, ...] = (),
     creation_delay_days: int = 0,
     cost_readings: bool = False,
+    response_hooks: bool = False,
 ) -> dict[str, str]:
     if (
         any(not re.fullmatch(r"[A-Z]{3}", tag) for tag in (initiator, target))
@@ -105,6 +109,8 @@ def build(
         raise ValueError("受控机会创建延迟必须是0到365之间的整数天")
     if natural and creation_delay_days:
         raise ValueError("自然响应不能延迟或创建机会")
+    if response_hooks and not natural:
+        raise ValueError("外交响应钩子只允许自然响应 instrument")
     if type(cost_readings) is not bool:
         raise ValueError("预算观测开关必须是布尔值")
     if cost_readings and (natural or market_readings):
@@ -291,6 +297,20 @@ zz_sitai_opportunity_bind = { effect = {
             "initiator_is = c:AUS target_is = c:SAR __SITAI_OBSERVER_GUARDS__",
             1,
         )
+        if response_hooks:
+            hook_lines = []
+            for hook, action in (
+                ("on_diplo_play_join_side", "zz_sitai_response_join_side"),
+                ("on_diplo_play_abandon_side", "zz_sitai_response_abandon_side"),
+                ("on_diplo_play_war_start", "zz_sitai_response_war_start"),
+            ):
+                hook_lines.append(
+                    f"{hook} = {{ on_actions = {{ {action} }} }}\n"
+                    f"{action} = {{ effect = {{ if = {{ limit = {{ this = scope:sitai_opportunity }} "
+                    f'debug_log = "SITAI RESPONSE;{hook.removeprefix("on_diplo_play_")};'
+                    '[THIS.GetEscalation];__SITAI_RESPONSE_DATE__" } } }'
+                )
+            script += "\n" + "\n".join(hook_lines) + "\n"
         watch = watch.replace(
             "any_diplomatic_play = { initiator_is = c:AUS target_is = c:SAR }",
             "exists = scope:sitai_opportunity",
@@ -323,6 +343,7 @@ zz_sitai_opportunity_bind = { effect = {
     script = script.replace("[TimeKeeper.GetCurrentDate.GetString]", "sample-0")
     script = script.replace("__SITAI_CREATE_DATE__", "sample-0")
     watch = watch.replace("__SITAI_CREATE_DATE__", "sample-0")
+    script = script.replace("__SITAI_RESPONSE_DATE__", "[TimeKeeper.GetCurrentDate.GetString]")
     script = script.replace(
         "__SITAI_OBSERVER_GUARDS__", " ".join(f"exists = c:{tag}" for tag in tags)
     )
@@ -377,12 +398,16 @@ def analyze(
     natural_pair: tuple[str, str] | None = None,
 ) -> Analysis:
     rows: list[dict[str, str]] = []
+    response_rows: list[dict[str, str]] = []
     for path in game_auto.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
             for line in stream:
                 match = ROW.search(line.rstrip())
+                response_match = RESPONSE_ROW.search(line.rstrip())
                 if natural_pair is not None and "SITAI OPPORTUNITY;" in line and match is None:
                     raise ValueError("自然响应仪器行格式不完整")
+                if "SITAI RESPONSE;" in line and response_match is None:
+                    raise ValueError("外交响应钩子行格式不完整")
                 if match:
                     row = match.groupdict()
                     if row["date"].startswith("sample-") and not re.fullmatch(
@@ -408,6 +433,18 @@ def analyze(
                     } and not re.fullmatch(r"[+−-]?\d+(?:[.,]\d+)?", row["value"]):
                         raise ValueError(f"外交偏好分数未返回有限数值：{row}")
                     rows.append(row)
+                if response_match:
+                    response = response_match.groupdict()
+                    if response["hook"] not in RESPONSE_HOOKS:
+                        raise ValueError(f"未知外交响应钩子：{response['hook']}")
+                    if (
+                        not re.fullmatch(r"\d+", response["value"])
+                        or not 0 <= int(response["value"]) <= 100
+                    ):
+                        raise ValueError("外交响应钩子升级值必须是0到100之间的整数")
+                    if not response["date"]:
+                        raise ValueError("外交响应钩子缺少时间")
+                    response_rows.append(response)
     if not rows:
         raise ValueError("缺少本局机会自报，不能把无记录当保持中立")
     countries: dict[str, CountryEvidence] = {}
@@ -460,6 +497,15 @@ def analyze(
         )
         # 绑定或资格侦察不能自行成为配对因果样本。
         result["usable_for_paired_behavior"] = False
+    if response_rows:
+        result["response_hooks"] = {
+            "events": response_rows,
+            "count": len(response_rows),
+            "root_scope": "diplomatic_play",
+            "actor_scope_supported": False,
+            "attribution": "仅记录根钩子触发与升级值；没有逐国 actor 归因",
+            "quality_improvement_proven": False,
+        }
     return result
 
 

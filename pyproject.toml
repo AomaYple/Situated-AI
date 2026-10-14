@@ -140,8 +140,9 @@ addopts = [
     "--dist",
     "loadscope",
 ]
-# 不固定 --basetemp；测试使用 pytest 的独立临时目录或系统保证唯一的目录。
-# worker 之间不能用进程内计数器拼接共享目录名，避免并行写入冲突。
+# 不在 addopts 固定 --basetemp；tests/conftest.py 会为每轮测试选择系统临时根，
+# 并在受限 Windows 运行器下回退到带忽略规则的专用根。worker 之间不能用进程内
+# 计数器拼接共享目录名，避免并行写入冲突。
 
 markers = [
     "unit: 单元测试，不依赖游戏安装",

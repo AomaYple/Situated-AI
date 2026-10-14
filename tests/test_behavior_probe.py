@@ -186,6 +186,71 @@ def test_自然机会拒绝创建延迟():
         behavior_probe.build(natural=True, play_types=("dp_humiliation",), creation_delay_days=1)
 
 
+def test_外交响应钩子只生成独立根作用域仪器():
+    files = behavior_probe.build(
+        natural=True,
+        play_types=("dp_humiliation",),
+        response_hooks=True,
+    )
+    actions = files["common/on_actions/zz_sitai_opportunity.txt"]
+    assert "on_diplo_play_join_side" in actions
+    assert "on_diplo_play_abandon_side" in actions
+    assert "on_diplo_play_war_start" in actions
+    assert "this = scope:sitai_opportunity" in actions
+    assert "[THIS.GetEscalation]" in actions
+    assert "actor" not in actions
+    assert not parse_text(actions).errors
+    response_blocks = [
+        line for line in actions.splitlines() if line.startswith("zz_sitai_response_")
+    ]
+    assert len(response_blocks) == 3
+    assert all(line.count("{") == line.count("}") for line in response_blocks)
+    assert all(
+        line.count("{") == line.count("}")
+        for line in actions.splitlines()
+        if line.startswith("on_diplo_play_")
+    )
+
+
+def test_外交响应钩子拒绝进入受控或正式路线():
+    with pytest.raises(ValueError, match="自然响应"):
+        behavior_probe.build(response_hooks=True)
+
+
+def test_外交响应事件只记录根钩子不升级质量(tmp_path):
+    (tmp_path / "debug.log").write_text(
+        "SITAI OPPORTUNITY;RUS;CAN_TARGET;yes;sample-1\n"
+        "SITAI RESPONSE;join_side;50;1836.3.1\n"
+        "SITAI RESPONSE;war_start;100;1836.3.2\n",
+        encoding="utf-8",
+    )
+    result = behavior_probe.analyze(tmp_path)
+    hooks = result["response_hooks"]
+    assert hooks["count"] == 2
+    assert hooks["root_scope"] == "diplomatic_play"
+    assert hooks["actor_scope_supported"] is False
+    assert hooks["quality_improvement_proven"] is False
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "SITAI RESPONSE;unknown;50;1836.3.1\n",
+        "SITAI RESPONSE;join_side;101;1836.3.1\n",
+        "SITAI RESPONSE;join_side;bad;1836.3.1\n",
+        "SITAI RESPONSE;join_side;50;\n",
+        "SITAI RESPONSE;join_side;50\n",
+    ],
+)
+def test_外交响应钩子坏行拒绝升级结论(tmp_path, line):
+    (tmp_path / "debug.log").write_text(
+        "SITAI OPPORTUNITY;RUS;CAN_TARGET;yes;sample-1\n" + line,
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="外交响应"):
+        behavior_probe.analyze(tmp_path)
+
+
 @pytest.mark.parametrize(
     ("initiator", "target"), [("RUS", "AUS"), ("AUS", "PRU"), ("AUS", "AUS"), ("../", "SAR")]
 )

@@ -22,10 +22,14 @@ __pycache__/
 /.mypy_cache/
 /.ruff_cache/
 
-# pytest 的 tmp_path 落在系统 Temp 下（见 pyproject.toml 的「不设 --basetemp」）。
-# 但 pytest 在系统 Temp 不可写时会把 basetemp 落到仓库根目录，名字形如
-# pytest-cache-files-*，这里兜一层，防止某次被强杀的运行留下无法删除的残留。
+# pytest 的 tmp_path 默认落在系统 Temp 下；仓库的 conftest 也会为每轮测试
+# 分配系统临时根。但 pytest/xdist 的嵌套收集、系统临时目录不可写或进程被强杀
+# 时仍可能在仓库根留下这两类目录。它们是测试运行态，不能进入仓库扫描范围。
 pytest-cache-files-*/
+pytest-of-*/
+/sitai-pytest-*/
+/sitai-perf-restore-*/
+/tmp*
 
 # hypothesis 的属性测试数据库（记录反例，机器相关）
 /.hypothesis/

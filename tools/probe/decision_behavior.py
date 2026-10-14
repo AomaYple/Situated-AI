@@ -63,6 +63,11 @@ def main() -> int:
         help="隔离校准预算 getter；仅 instrument/control/none，不能证明行动净代价",
     )
     parser.add_argument(
+        "--response-hooks",
+        action="store_true",
+        help="隔离观察外交响应 on_action 根钩子；仅 instrument/control/自然观察，不提供逐国归因",
+    )
+    parser.add_argument(
         "--qualification-registration",
         type=Path,
         help="仪器准备局开始前归档冻结的资格观察登记，不自动构成正式资格",
@@ -113,6 +118,14 @@ def main() -> int:
             )
         except ValueError as exc:
             parser.error(str(exc))
+    if args.response_hooks and (
+        args.purpose != "instrument"
+        or args.arm != "control"
+        or args.fiscal_injection not in {None, "none"}
+        or not args.natural_opportunity
+        or args.keep_save
+    ):
+        parser.error("外交响应钩子仅允许 instrument/control/无注入自然观察，且不能制作存档")
     if formal and (
         args.qualification_report is None
         or args.fiscal_injection != "none"
@@ -169,6 +182,7 @@ def main() -> int:
 def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
     purpose = getattr(args, "purpose", "reconnaissance")
     cost_readings = getattr(args, "cost_calibration", False)
+    response_hooks = getattr(args, "response_hooks", False)
     if cost_readings:
         cost_probe.validate_mode(
             purpose=purpose,
@@ -176,6 +190,14 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
             injection=args.fiscal_injection,
             natural=getattr(args, "natural_opportunity", False),
         )
+    if response_hooks and (
+        purpose != "instrument"
+        or args.arm != "control"
+        or args.fiscal_injection != "none"
+        or not getattr(args, "natural_opportunity", False)
+        or getattr(args, "keep_save", False)
+    ):
+        raise ValueError("外交响应钩子仅允许 instrument/control/无注入自然观察，且不能制作存档")
     formal = purpose in {"M3-A", "M3-B"}
     new_game = getattr(args, "new_game", False)
     if new_game and getattr(args, "save", None) is not None:
@@ -255,6 +277,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
             play_types=tuple(play_types),
             creation_delay_days=opportunity_delay_days,
             cost_readings=cost_readings,
+            response_hooks=response_hooks,
         ),
     )
 
@@ -341,6 +364,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
                 "localization_baseline": getattr(args, "localization_baseline", False),
                 "resource_baseline": resource_manifest,
                 **({"cost_calibration": cost_probe.configuration()} if cost_readings else {}),
+                **({"response_hooks": True} if response_hooks else {}),
             },
         },
         allow_new_game_experiment=new_game,
