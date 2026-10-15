@@ -934,7 +934,7 @@ def test_处理后错误版本和准备输出不能作为处理前资格(bundle,
     assert not _validate(bundle)["allowed"]
 
 
-@pytest.mark.parametrize("instrument", ["candidate", "injection"])
+@pytest.mark.parametrize("instrument", ["candidate", "injection", "response-hooks"])
 def test_所有手填指纹同步仍不能把处理源码当处理前(bundle, instrument):
     registration = json.loads(bundle["registration_path"].read_bytes())
     if instrument == "candidate":
@@ -945,9 +945,19 @@ def test_所有手填指纹同步仍不能把处理源码当处理前(bundle, in
                 decisions.load_extensions(), market_enabled=False, reform_enabled=False
             ),
         )
-    else:
+    elif instrument == "injection":
         name = "zz_probe_decision_lifecycle"
         files = decision_probe.build(inject=True)
+    else:
+        name = "zz_probe_decision_opportunity"
+        files = behavior_probe.build(
+            initiator="AUS",
+            target="SAR",
+            tags=("RUS", "PRU"),
+            natural=True,
+            play_types=("dp_humiliation",),
+            response_hooks=True,
+        )
     source = bundle["run_path"].parent / "sources" / name
     shutil.rmtree(source)
     decisions.write(source, files)
