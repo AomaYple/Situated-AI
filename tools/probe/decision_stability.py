@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import tempfile
 from dataclasses import replace
@@ -39,7 +40,11 @@ def main() -> int:
         required=True,
     )
     parser.add_argument("--months", type=float, default=6)
-    parser.add_argument("--save", type=Path, required=True)
+    start = parser.add_mutually_exclusive_group(required=True)
+    start.add_argument("--save", type=Path)
+    start.add_argument(
+        "--vanilla-baseline", action="store_true", help="不挂载任何 Mod 的纯原版新游戏环境诊断"
+    )
     parser.add_argument("--experiment-plan", default="stability-exploration-20261010")
     parser.add_argument("--experiment-scene", default="fixed-checkpoint")
     parser.add_argument("--pair-index", type=int, default=1)
@@ -118,6 +123,11 @@ def main() -> int:
     )
     parser.add_argument("--fiscal-tags", default="RUS,PRU", help="财政只读观察的两个国家标签")
     args = parser.parse_args()
+    if args.vanilla_baseline:
+        try:
+            return _run_vanilla_baseline(args)
+        except ValueError as exc:
+            parser.error(str(exc))
     try:
         _check_war_calibration(args)
         _check_resource_baseline(args)
@@ -163,6 +173,61 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".sources-", dir=output) as directory:
         return execute(args, laws, output, Path(directory))
+
+
+def _run_vanilla_baseline(args: argparse.Namespace) -> int:
+    """排除所有脚本仪器，沿同一事务路径定位原版环境错误。"""
+    if (
+        args.arm != "vanilla"
+        or args.purpose != "instrument"
+        or args.observation_package != "full"
+        or not math.isfinite(args.months)
+        or not 0 < args.months <= 6
+        or any(
+            getattr(args, name)
+            for name in (
+                "keep_save",
+                "allow_save_upgrade",
+                "profile",
+                "localization_baseline",
+                "resource_baseline",
+                "war_calibration",
+                "war_dates",
+                "natural_diplomacy",
+                "natural_targets",
+                "legality_laws",
+                "enactment_details",
+                "approval_igs",
+                "approval_laws",
+                "native_fiscal_inputs",
+                "qualification_report",
+                "qualification_registration",
+                "prior_failure_report",
+            )
+        )
+    ):
+        raise ValueError(
+            "纯原版基线仅允许 instrument/vanilla 的最多六个月新游戏，不得混用仪器或资格"
+        )
+    report = game_run.run(
+        {},
+        months=args.months,
+        output=config.OUT / "decisions/vanilla-baseline",
+        timeout=args.timeout,
+        language=args.language,
+        vanilla_baseline=True,
+    )
+    print(
+        json.dumps(
+            {
+                key: report.get(key)
+                for key in ("ok", "failure", "evidence", "progress", "cleanup_errors")
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0 if report["ok"] else 1
 
 
 def _check_resource_baseline(args: argparse.Namespace) -> None:
