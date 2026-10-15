@@ -44,6 +44,76 @@ def test_无显式基线声明仍拒绝空源(tmp_path):
         game_run.run({}, months=1, output=tmp_path)
 
 
+@pytest.mark.parametrize("language", [None, "l_simp_chinese"])
+def test_新游戏换探针仍在部署和启动前执行历史停止门禁(tmp_path, monkeypatch, language):
+    from pdx.experiment_queue import ExperimentLedger, RunRequest
+
+    user = tmp_path / "user"
+    user.mkdir()
+    content = user / "content_load.json"
+    original = b'{"enabledMods":["user-mod"],"disabledDLC":[]}\r\n'
+    content.write_bytes(original)
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "probe.txt").write_bytes(b"new diagnostic source\n")
+    game = {"caligula_branch": "release/1.14.5", "caligula_rev": "engine-revision"}
+    old_sources = {"observer": {"probe.txt": "a" * 64}}
+    payload = {
+        "kind": "new-game",
+        "game": game,
+        "sources": old_sources,
+        "language": language,
+        "disabled_dlc": [],
+    }
+    old_manifest = {
+        "checkpoint": hashlib.sha256(
+            json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        ).hexdigest(),
+        "sources": old_sources,
+        "environment": {"game": game, "language": language, "disabled_dlc": []},
+    }
+    ledger = ExperimentLedger(user / ".sitai-experiments.sqlite3")
+    for index in range(2):
+        run_id = ledger.reserve(
+            RunRequest(f"old-{index}", "old-scene", "control"),
+            manifest=old_manifest,
+            evidence=tmp_path / f"old-{index}",
+        )
+        ledger.finish(
+            run_id,
+            {"ok": False, "log_findings": {"errors": {"Script system error!": 1}}},
+            report_sha256="b" * 64,
+        )
+    monkeypatch.setattr(game_run.config, "USERDIR", user)
+    monkeypatch.setattr(game_run.config, "game_version", lambda: game)
+    monkeypatch.setattr(game_run, "_base_mount_allowlist", list)
+    monkeypatch.setattr(game_run.ga, "assert_no_game_running", lambda: None)
+    monkeypatch.setattr(game_run.ga, "_foreground_window", lambda: 0)
+    monkeypatch.setattr(game_run.ga, "_process_pids", list)
+    monkeypatch.setattr(game_run.ga, "kill_owned_game", lambda: None)
+    monkeypatch.setattr(
+        game_run.ga, "run_session", lambda **_kw: pytest.fail("停止门禁后不能启动游戏")
+    )
+    monkeypatch.setattr(
+        game_run.Deployment, "deploy", lambda *_a: pytest.fail("停止门禁后不能部署")
+    )
+    report = game_run.run(
+        {"observer": source},
+        months=1,
+        output=tmp_path / "out",
+        language=language,
+        experiment=RunRequest("new", "new-scene", "control", min_available_mib=0),
+        allow_new_game_experiment=True,
+    )
+    assert report["ok"] is False
+    assert isinstance(report["failure"], str)
+    assert "错误重复" in report["failure"]
+    assert report["cleanup_errors"] == []
+    assert content.read_bytes() == original
+    assert ledger.runs("new") == []
+    assert not (user / "mod/observer").exists()
+
+
 def test_纯原版基线使用既有隔离恢复且不吞启动失败(tmp_path, monkeypatch):
     user = tmp_path / "user"
     user.mkdir()

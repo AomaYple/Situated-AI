@@ -30,7 +30,7 @@ from . import checkpoint_catalog, config, gametimer
 from . import game_auto as ga
 from .deployment_state import digest as file_sha
 from .deployment_state import durable_json, move_directory, plain_path, temporary_file, tree_digest
-from .experiment_queue import ExperimentLedger, assess_compatibility
+from .experiment_queue import ExperimentLedger, assess_compatibility, new_game_identity
 from .performance import StageTimings
 from .textio import deploy_tree
 
@@ -1545,19 +1545,12 @@ def run(
                         )
                 used = ledger.used_arms(experiment.plan_id, experiment.scene_id)
                 if new_game_experiment:
-                    identity = hashlib.sha256(
-                        json.dumps(
-                            {
-                                "kind": "new-game",
-                                "game": game_version,
-                                "sources": source_hashes,
-                                "language": language,
-                                "disabled_dlc": disabled_dlc,
-                            },
-                            ensure_ascii=False,
-                            sort_keys=True,
-                        ).encode("utf-8")
-                    ).hexdigest()
+                    identity = new_game_identity(
+                        game=game_version,
+                        sources=source_hashes,
+                        language=language,
+                        disabled_dlc=disabled_dlc,
+                    )
                     checkpoint = {
                         "sha256": identity,
                         "state": "new-game",

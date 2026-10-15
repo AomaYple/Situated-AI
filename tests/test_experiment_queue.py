@@ -508,6 +508,107 @@ def two_failures(ledger, tmp_path, manifest=None):
         )
 
 
+def new_game_manifest(
+    source="d" * 64, *, game_content=True, revision="engine-revision", language="l_english"
+):
+    """按运行器已发布的指纹配方构造旧记录，不调用停止上下文实现。"""
+    game = {"caligula_branch": "release/1.14.5", "caligula_rev": revision}
+    sources = {"observer": {"events/probe.txt": source}}
+    payload = {
+        "kind": "new-game",
+        "game": game,
+        "sources": sources,
+        "language": language,
+        "disabled_dlc": [],
+    }
+    return {
+        "checkpoint": hashlib.sha256(
+            json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        ).hexdigest(),
+        "sources": sources,
+        "probe_sources": sources,
+        "environment": {
+            "game": {**game, **({"content_sha256": "b" * 64} if game_content else {})},
+            "language": language,
+            "disabled_dlc": [],
+        },
+        "game_hashes": {"events/original.txt": "b" * 64},
+        "months": 1,
+    }
+
+
+@pytest.mark.parametrize("game_content", [False, True])
+def test_新游戏探针改动不能借合成检查点刷新失败预算(tmp_path, game_content):
+    ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
+    original = new_game_manifest(game_content=game_content)
+    two_failures(ledger, tmp_path, original)
+    changed = new_game_manifest("f" * 64, game_content=game_content)
+    assert changed["checkpoint"] != original["checkpoint"]
+    with pytest.raises(ValueError, match="错误重复"):
+        ExperimentLedger(ledger.path).reserve(
+            request(), manifest=changed, evidence=tmp_path / "new"
+        )
+    assert ledger.runs("test-plan") == []
+
+
+def test_不同探针的历史新游戏同类失败仍累计(tmp_path):
+    ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
+    for index, source in enumerate(("c" * 64, "d" * 64)):
+        run_id = ledger.reserve(
+            replace(request(), plan_id=f"old-{index}"),
+            manifest=new_game_manifest(source),
+            evidence=tmp_path / str(index),
+        )
+        ledger.finish(
+            run_id,
+            {"ok": False, "log_findings": {"errors": {"Script system error!": 1}}},
+            report_sha256="b" * 64,
+        )
+    with pytest.raises(ValueError, match="错误重复"):
+        ledger.reserve(request(), manifest=new_game_manifest("e" * 64), evidence=tmp_path / "new")
+
+
+@pytest.mark.parametrize("change", ["checkpoint", "game-version", "game-hash", "language"])
+def test_新游戏停止后真实新输入或环境仍可登记(tmp_path, change):
+    ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
+    two_failures(ledger, tmp_path, new_game_manifest())
+    changed = new_game_manifest("f" * 64)
+    if change == "checkpoint":
+        changed["checkpoint"] = "a" * 64
+    elif change == "game-version":
+        changed = new_game_manifest("f" * 64, revision="new-engine-revision")
+    elif change == "game-hash":
+        changed["game_hashes"]["events/original.txt"] = "f" * 64
+    else:
+        changed = new_game_manifest("f" * 64, language="l_simp_chinese")
+    assert ledger.reserve(request(), manifest=changed, evidence=tmp_path / "new")
+
+
+@pytest.mark.parametrize("change", ["dlc", "aggregate", "label"])
+def test_新游戏非因果配置变化仍不自动解除停止(tmp_path, change):
+    ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
+    two_failures(ledger, tmp_path, new_game_manifest())
+    changed = new_game_manifest("f" * 64)
+    if change == "dlc":
+        changed["environment"]["disabled_dlc"] = ["some-dlc"]
+        payload = {
+            "kind": "new-game",
+            "game": {"caligula_branch": "release/1.14.5", "caligula_rev": "engine-revision"},
+            "sources": changed["sources"],
+            "language": "l_english",
+            "disabled_dlc": ["some-dlc"],
+        }
+        changed["checkpoint"] = hashlib.sha256(
+            json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+    elif change == "aggregate":
+        changed["environment"]["game"]["content_sha256"] = "f" * 64
+    else:
+        changed.update(new_game=False, checkpoint_kind="saved-game")
+    with pytest.raises(ValueError, match="错误重复"):
+        ledger.reserve(request(), manifest=changed, evidence=tmp_path / "new")
+
+
 @pytest.mark.parametrize("purpose", ["instrument", "M3-A", "M4-noise", "M4"])
 def test_错误停止事实跨用途计划和场景共享(tmp_path, purpose):
     ledger = ExperimentLedger(tmp_path / "ledger.sqlite3")
