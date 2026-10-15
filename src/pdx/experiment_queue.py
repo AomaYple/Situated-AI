@@ -121,11 +121,57 @@ def _archived_input_state(path: Path) -> tuple[tuple[int, ...], str] | None:
     return signature(after), fingerprint
 
 
+def new_game_identity(
+    *,
+    game: Mapping[str, str],
+    sources: Mapping[str, Any],
+    language: str | None,
+    disabled_dlc: list[str],
+) -> str:
+    """冻结新局来源；这是运行配置摘要，不是真实存档字节的身份。"""
+    payload = {
+        "kind": "new-game",
+        "game": game,
+        "sources": sources,
+        "language": language,
+        "disabled_dlc": disabled_dlc,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+
+
+def _synthetic_checkpoint(manifest: Mapping[str, Any]) -> bool:
+    """按原配方识别已有新局记录，无需修改历史账本或信任新增布尔标签。"""
+    environment = manifest.get("environment")
+    if not isinstance(environment, dict):
+        return False
+    game = environment.get("game")
+    sources = manifest.get("sources")
+    if (
+        not isinstance(game, dict)
+        or not isinstance(sources, dict)
+        or "language" not in environment
+        or "disabled_dlc" not in environment
+    ):
+        return False
+    return manifest.get("checkpoint") == new_game_identity(
+        game={key: value for key, value in game.items() if key != "content_sha256"},
+        sources=sources,
+        language=environment["language"],
+        disabled_dlc=environment["disabled_dlc"],
+    )
+
+
 def _stop_context(manifest: Mapping[str, Any]) -> dict[str, str]:
     """仅已知运行输入能证明新前提；标签、预算、工具/文档指纹不能重开。"""
     context: dict[str, str] = {}
     if _sha(manifest.get("checkpoint")):
-        context["checkpoint"] = manifest["checkpoint"]
+        # 新局摘要包含探针源码，不能把代码改动当作真实检查点变化。
+        # 保留固定身份以区分新局与实际存档；完整摘要仍在 manifest 冻结。
+        context["checkpoint"] = (
+            "new-game" if _synthetic_checkpoint(manifest) else manifest["checkpoint"]
+        )
     environment = manifest.get("environment")
     if isinstance(environment, dict):
         language = environment.get("language")
