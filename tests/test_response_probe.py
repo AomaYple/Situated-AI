@@ -231,6 +231,14 @@ def test_实际生成唯一绑定写入有界引用且不转换未知actor():
         "actor": "declared-country-equality-unvalidated",
         "actor_tags": ["CHL", "BOL", "AUS", "PRU"],
         "unbound_root": True,
+        "war_outcomes": {
+            "version": 1,
+            "hooks": ["on_won_war", "on_lost_war"],
+            "observer_tags": ["AUS", "PRU"],
+            "identity": "persistent-play-reference-unvalidated",
+            "country_coverage_verified": False,
+            "quantitative_cost_supported": False,
+        },
     }
     for hook in ("join_side", "abandon_side", "war_start"):
         effect = _block(_block(tree.root, f"zz_sitai_response_{hook}"), "effect")
@@ -391,8 +399,9 @@ def test_诊断错误目的在任何源生成和游戏副作用前拒绝(tmp_pat
     assert not source.exists()
 
 
-@pytest.mark.parametrize("root_event", [False, True])
-def test_实际入口冻结诊断版本并将合成日志交给分析器(tmp_path, monkeypatch, root_event):
+@pytest.mark.parametrize("root_event", [False, True, "outcome"])
+@pytest.mark.parametrize("tags", [("RUS", "PRU"), ("ARG", "BRA")])
+def test_实际入口冻结诊断版本并将合成日志交给分析器(tmp_path, monkeypatch, root_event, tags):
     from pdx import config, game_run, response_probe
     from tools.probe import decision_behavior
 
@@ -409,24 +418,27 @@ def test_实际入口冻结诊断版本并将合成日志交给分析器(tmp_pat
     logdir = tmp_path / "logs"
     logdir.mkdir()
     rows = (
-        "SITAI DECISION;RUS;RISK;no;sample-1\n"
-        "SITAI DECISION;PRU;RISK;no;sample-1\n"
+        f"SITAI DECISION;{tags[0]};RISK;no;sample-1\n"
+        f"SITAI DECISION;{tags[1]};RISK;no;sample-1\n"
         "SITAI OPPORTUNITY;CONTROL;READY;AUS_SAR;sample-0\n"
     )
-    if root_event:
+    if root_event == "outcome":
+        rows += f"SITAI WAR OUTCOME;lost;{tags[0]};present;unbound;no;yes;1836.3.1\n"
+    elif root_event:
         rows += "SITAI RESPONSE ROOT;join_side;missing;5;50;1836.3.1\n"
     (logdir / "debug.log").write_text(rows, encoding="utf-8")
 
     def run(sources, **kwargs):
         observer = sources["zz_probe_decision_opportunity"]
         metadata = json.loads((observer / ".metadata/metadata.json").read_text(encoding="utf-8"))
-        assert (
-            metadata["game_custom_data"]["response_diagnostics"] == response_probe.configuration()
-        )
+        expected = response_probe.configuration(("AUS", "SAR", *tags), observers=tags)
+        assert metadata["game_custom_data"]["response_diagnostics"] == expected
         observation = kwargs["qualification_context"]["observation"]
-        assert observation["response_hooks"] == response_probe.configuration()
+        assert observation["response_hooks"] == expected
         result = kwargs["analyze"](logdir)["opportunity"]
-        assert result["response_diagnostics"]["count"] == int(root_event)
+        assert result["response_diagnostics"]["count"] == int(root_event is True)
+        assert result["war_outcome_diagnostics"]["count"] == int(root_event == "outcome")
+        assert result["war_outcome_diagnostics"]["country_coverage_verified"] is False
         assert result["natural_capture"]["captured"] is False
         assert result["quality_observations"]["status"] == "unsupported"
         assert result["usable_for_paired_behavior"] is False
@@ -440,7 +452,7 @@ def test_实际入口冻结诊断版本并将合成日志交给分析器(tmp_pat
         natural_opportunity=True,
         response_hooks=True,
         keep_save=False,
-        observers=("RUS", "PRU"),
+        observers=tags,
         initiator="AUS",
         target="SAR",
         months=1,
@@ -471,4 +483,12 @@ def test_生成诊断保留脚本链身份且元数据明确未验证():
         "actor": "declared-country-equality-unvalidated",
         "actor_tags": ["AUS", "SAR", "RUS", "PRU"],
         "unbound_root": True,
+        "war_outcomes": {
+            "version": 1,
+            "hooks": ["on_won_war", "on_lost_war"],
+            "observer_tags": ["RUS", "PRU"],
+            "identity": "persistent-play-reference-unvalidated",
+            "country_coverage_verified": False,
+            "quantitative_cost_supported": False,
+        },
     }

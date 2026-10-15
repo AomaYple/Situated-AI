@@ -371,7 +371,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
                 **(
                     {
                         "response_hooks": response_probe.configuration(
-                            (args.initiator, args.target, *tags)
+                            (args.initiator, args.target, *tags), observers=tags
                         )
                     }
                     if response_hooks
