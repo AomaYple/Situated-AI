@@ -1198,6 +1198,7 @@ def run(
     qualification_context: Mapping[str, Any] | None = None,
     qualification_registration: Path | None = None,
     allow_new_game_experiment: bool = False,
+    vanilla_baseline: bool = False,
 ) -> dict[str, object]:
     """运行隔离观察者局，成功与失败都保留不可覆盖的原始证据。"""
     if not math.isfinite(months) or months <= 0:
@@ -1205,7 +1206,25 @@ def run(
     if not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("timeout 必须为有限正数")
     ga.validate_session_language(language, loaded_observer=load_save is not None)
-    if not sources or any(not path.is_dir() for path in sources.values()):
+    if vanilla_baseline and (
+        sources
+        or load_save is not None
+        or keep_save
+        or allow_save_upgrade
+        or profile
+        or analyze is not None
+        or experiment is not None
+        or prior_failure_reports
+        or qualification_report is not None
+        or qualification_context is not None
+        or qualification_registration is not None
+        or allow_new_game_experiment
+        or months > 6
+    ):
+        raise ValueError("纯原版基线仅允许不挂载 Mod 的有界新游戏观察，不接受仪器、存档或正式资格")
+    if (not sources and not vanilla_baseline) or any(
+        not path.is_dir() for path in sources.values()
+    ):
         raise ValueError("实验必须提供存在的 mod 源目录")
     if prior_failure_reports and experiment is None:
         raise ValueError("导入历史失败必须有冻结实验身份")
@@ -1254,6 +1273,16 @@ def run(
             "source_hashes": source_hashes,
             "provenance": provenance,
         }
+        if vanilla_baseline:
+            report["kind"] = "vanilla_environment_baseline"
+            report["baseline_contract"] = {
+                "mods": "none",
+                "input": "new_game",
+                "max_months": 6,
+                "strict_errors": True,
+                "formal_pair_suitable": False,
+                "quality_improvement_proven": False,
+            }
         samples: list[dict[str, object]] = []
         previous = ga._foreground_window()
         original_input = ga.ALLOW_REAL_INPUT

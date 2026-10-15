@@ -85,6 +85,8 @@ python -m pdx.checkpoint_catalog --screen-save <原件一.v3> --expected-sha256 
 
 `decision_stability.py --purpose M4-noise --arm vanilla --observation-package vanilla-performance` 显式生成与资格契约一致的原版性能观察源；长期窗口需事前登记 `--months` 和 `--max-months`（24–120 月）。完整政治/生命周期包仍为默认，新性能包尚无扰动实机验收。正式 `--purpose M4` 另需既有资格、同版本输入、显式语言与该包，禁止保存、升级和未验收扩展；M3 冻结质量出口尚不具可核验接口，当前仍明确拒绝。不能把 M4-noise 的工具接线当作正式 M4 通过。
 
+`decision_stability.py --arm vanilla --vanilla-baseline --months 6 --timeout 1800` 是不挂载任何 Mod 的新游戏环境诊断，使用同一 `game_run` 的锁、部署、日志、严格错误检查和恢复事务。它与 `--save` 互斥，只允许 `instrument/vanilla`、最多六个月，拒绝观测器、资源/本地化补丁、候选、存档制作、资格登记与性能包；原有 `vanilla` 臂仍含观察器，两者不能混称。结果写入 `tools/out/decisions/vanilla-baseline/`，明确 `kind=vanilla_environment_baseline`，不产生正式配对或行为质量结论。2026-10-15 首次零 Mod 实机复现缺失维修图标及三条本地化脚本错误，恢复通过；完整证据和不同错误的归因边界见 [A3 结果](../docs/design/exec/A3-结果.md)。基线失败不放宽门禁；文件完整性、版本或接口前提未改变时不自动重跑同一局。
+
 `decision_stability.py --language l_english` 为本局和恢复重启传递临时语言，并进入报告与实验冻结身份；不写用户语言设置。英文目前仅支持已提供的观察者检查点，英文新游戏菜单尚未验证，未知语言在事务前拒绝。`l_simp_chinese` 也可显式登记；两臂语言不一致或只有一臂记录时拒绝配对。日志中的 `VFSOpen Error` 与原有引擎/Mod 错误一样拒绝通过，并进入同场景重复错误停止计数；历史报告先验证原始日志指纹，不能沿用旧 `ok=true` 绕过当前门禁。
 
 `decision_stability.py --purpose instrument --arm vanilla --resource-baseline --save <检查点>` 显式添加维修图标诊断资源挂载（默认关闭，`safety` 也可用）。生成前核对原版 `gui/texticons.gui` 实际引用缺失的 `alert_icons/repairing.dds`，并只复制本地 `generic_icons/repairing.dds` 的原始 DDS 字节；已修复安装、来源变化、坏 DDS、链接路径或已有输出均拒绝。挂载沿用现有部署、完整日志门禁、账本和恢复流程，来源/GUI/输出 SHA 与字节数在分析成功时写入 `analysis.experiment.resource_baseline`；完整 manifest 同时持久化在资源 `.metadata/metadata.json` 的 `game_custom_data.resource_baseline`，随既有源冻结保留，分析失败仍可追溯。它只证明字节来源，不证明模拟无扰动、AI 质量或正式资格；`M4`、`M4-noise` 和所有候选臂在生成与部署前拒绝。可组合现有原生财政只读或自然观测参数；此开关不启用政治危险 getter，也不豁免任何错误。
@@ -296,7 +298,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 117 个测试文件、3665 条用例（2026-10-15 工作区口径）；本轮完整 `n-auto` 为 **3646 passed、19 skipped**，4 个 worker、499.63 秒；`v3 cov` 为 **89.32%**，4 个 worker、663.76 秒、1551 个 subtests，11 个核心模块下限全部通过。当前读数、跳过范围和限制见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)。本批正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 118 个测试文件、3691 条用例（2026-10-15 工作区口径）；本轮完整 `v3 cov` 使用 `n-auto`，结果为 **3672 passed、19 skipped**，4 个 worker、521.18 秒、1551 个 subtests；包含行与分支的总覆盖率 **89.32%**，整体与 11 个核心模块下限全部通过。当前读数、首次失败、跳过范围和限制见 [A3 结果](../docs/design/exec/A3-结果.md#本批工程验证2026-10-15)。此前全仓审计见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)，正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

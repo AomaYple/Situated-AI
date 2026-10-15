@@ -19,6 +19,62 @@ pytestmark = pytest.mark.unit
 @pytest.mark.parametrize(
     "options",
     [
+        {"sources": {"probe": Path("probe")}},
+        {"load_save": Path("input.v3")},
+        {"keep_save": True},
+        {"allow_save_upgrade": True},
+        {"profile": True},
+        {"analyze": lambda _path: {}},
+        {"qualification_registration": Path("registration.json")},
+        {"qualification_context": {"observation": {}}},
+        {"allow_new_game_experiment": True},
+        {"months": 7},
+    ],
+)
+def test_纯原版基线拒绝混入仪器存档或无界运行(tmp_path, monkeypatch, options):
+    monkeypatch.setattr(game_run, "RunLock", lambda: pytest.fail("拒绝必须早于事务"))
+    values = {"sources": {}, "months": 1, "output": tmp_path, **options}
+    with pytest.raises(ValueError, match="纯原版基线"):
+        game_run.run(**values, vanilla_baseline=True)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_无显式基线声明仍拒绝空源(tmp_path):
+    with pytest.raises(ValueError, match="源目录"):
+        game_run.run({}, months=1, output=tmp_path)
+
+
+def test_纯原版基线使用既有隔离恢复且不吞启动失败(tmp_path, monkeypatch):
+    user = tmp_path / "user"
+    user.mkdir()
+    original = b'{"enabledMods":["user-mod"],"disabledDLC":[]}\r\n'
+    (user / "content_load.json").write_bytes(original)
+    monkeypatch.setattr(game_run.config, "USERDIR", user)
+    monkeypatch.setattr(game_run.ga, "assert_no_game_running", lambda: None)
+    monkeypatch.setattr(game_run.ga, "_foreground_window", lambda: 0)
+    monkeypatch.setattr(game_run.ga, "_process_pids", list)
+    monkeypatch.setattr(game_run.ga, "kill_owned_game", lambda: None)
+
+    def start(**kwargs):
+        content = json.loads((user / "content_load.json").read_bytes())
+        assert content["enabledMods"] == []
+        assert kwargs["save_name"] is None
+        raise RuntimeError("合成的原版启动失败")
+
+    monkeypatch.setattr(game_run.ga, "run_session", start)
+    report = game_run.run({}, months=1, output=tmp_path / "out", vanilla_baseline=True)
+    assert report["kind"] == "vanilla_environment_baseline"
+    assert report["source_hashes"] == report["deployed_hashes"] == {}
+    assert report["cleanup_errors"] == []
+    assert not report["ok"]
+    assert "合成的原版启动失败" in str(report["failure"])
+    assert (user / "content_load.json").read_bytes() == original
+    assert not (user / ".sitai-experiments.sqlite3").exists()
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
         {},
         {"qualification_report": Path("qualification.json")},
         {
