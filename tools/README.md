@@ -15,6 +15,8 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 游戏包使用 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认 `--variant disabled` 关闭财政及两个扩展，生成全关安全包；实验候选显式选 `--variant current`，零策略偏置但保留财政生命周期的控制组显式选 `--variant control`。三种变体都先核对仓库生成一致性，清单记录实际参数与输入/生成器指纹；非法变体保全已有目标。当前产品状态为 `experimental`，生成包不代表 V0.1 或行为质量已验收。独立安全实机记录见 [A1 结果](../docs/design/exec/A1-结果.md)。
 
+每个 ZIP 的 `README.md` 从变体转换后的实际参数和启用模块自动生成，含中英规则、安装、冲突和存档回退说明，SHA-256 由同包清单验证。它是随包使用说明，不是游戏内实时面板；全关包仍含默认策略底本，不能当作零 Mod 环境。验证与成本见 [A5 结果](../docs/design/exec/A5-结果.md)。
+
 ```
 .venv/                          Python 3.14 虚拟环境（已 gitignore）
 .venv\Scripts\python.exe        解释器
@@ -298,7 +300,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 119 个测试文件、3764 条用例（2026-10-15 工作区口径）；本轮完整 `v3 cov` 使用 `n-auto`，结果为 **3745 passed、19 skipped**，3 个 worker、643.42 秒、1551 个 subtests；包含行与分支的总覆盖率 **89.35%**，整体与 11 个核心模块下限全部通过。当前读数、跳过范围和限制见 [A3 新局停止门禁结果](../docs/design/exec/A3-结果.md#新游戏停止上下文修复2026-10-15-0445-utc-定时任务)，此前首次失败保留在原章节。此前全仓审计见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)，正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 119 个测试文件、3773 条用例（2026-10-15 工作区口径）；本轮完整 `v3 cov` 使用 `n-auto`，结果为 **3754 passed、19 skipped**，3 个 worker、643.73 秒、1551 个 subtests；包含行与分支的总覆盖率 **89.36%**，整体与 11 个核心模块下限全部通过。当前读数、跳过范围和限制见 [A5 交付准备结果](../docs/design/exec/A5-结果.md)，此前首次失败保留在原章节。此前全仓审计见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)，正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

@@ -99,7 +99,8 @@ macOS / Linux 从 `pyproject.toml` 安装对应平台依赖。
 
 仓库全部文本采用 **UTF-8 无 BOM、LF**。游戏脚本和本地化的 BOM 由安装或打包边界添加；
 因此安装时使用部署工具或 `python -m pdx.cli package --output dist/situated-ai.zip`，
-解压 ZIP 到独立 mod 目录后挂载该目录。ZIP 内的 `DISTRIBUTION-MANIFEST.json`
+解压 ZIP 到独立 mod 目录后挂载该目录。包内 `README.md` 按实际变体生成中英规则、安装与回退说明，
+不代表游戏内实时状态或行为质量验收。ZIP 内的 `DISTRIBUTION-MANIFEST.json`
 记录每个交付文件的 SHA-256。仓库里的 `mod/` 是无 BOM 的源码产物目录。
 
 ### 它做什么
@@ -175,7 +176,7 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 | 指标 | 值 |
 |---|---|
-| 测试 | **3764 条**用例（2026-10-15 收集）；最近一次完整覆盖率 `n-auto` 回归为 **3745 passed、19 skipped**，3 个 worker、643.42 秒、1551 个 subtests；包含行与分支的总覆盖率为 **89.35%**，整体与 11 个核心模块下限全部通过。新增诊断验证见 [A3 结果](docs/design/exec/A3-结果.md#新游戏停止上下文修复2026-10-15-0445-utc-定时任务)，此前失败和跳过范围保留在原章节。此前全仓审计见[仓库总览与清理审计](docs/audits/2026-10-14-仓库总览与清理.md)，工程优化见[工程提速复核](docs/audits/2026-10-11-工程提速.md)，检查点来源门禁见 [M4 结果](docs/design/exec/M4-结果.md)，有日期的三平台 CI 结果见[维护记录](docs/audits/2026-10-10-repository-maintenance.md) |
+| 测试 | **3773 条**用例（2026-10-15 收集）；最近一次完整覆盖率 `n-auto` 回归为 **3754 passed、19 skipped**，3 个 worker、643.73 秒、1551 个 subtests；包含行与分支的总覆盖率为 **89.36%**，整体与 11 个核心模块下限全部通过。本轮随包说明与验证见 [A5 结果](docs/design/exec/A5-结果.md)，此前失败和跳过范围保留在原章节。此前全仓审计见[仓库总览与清理审计](docs/audits/2026-10-14-仓库总览与清理.md)，工程优化见[工程提速复核](docs/audits/2026-10-11-工程提速.md)，检查点来源门禁见 [M4 结果](docs/design/exec/M4-结果.md)，有日期的三平台 CI 结果见[维护记录](docs/audits/2026-10-10-repository-maintenance.md) |
 | 测试文件 | **119 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 以 `v3 cov` 与 CI coverage artifact 的当前输出为准（门禁 86% 由 pyproject 强制 + 再按 11 个核心模块逐条设下限） |
 | Mod 制作提速 | [Mod 制作提速实施计划 2.4](docs/design/exec/速度优化计划-正确性优先.md)是执行效率附件；产品阶段和出口统一按[分阶段可玩开发计划 2.0](docs/design/exec/mod重设计-实施计划.md)的 V0.1–V1.0 和 M1–M4 逐阶段交付可玩版本；已验收的工程提速和历史测量见[速度执行记录](docs/audits/2026-10-10-speed-execution.md)与[工程提速复核](docs/audits/2026-10-11-工程提速.md)，不把历史读数当作新收益 |

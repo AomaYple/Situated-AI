@@ -18,6 +18,123 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
+def player_guide(
+    policy: decisions.Policy,
+    extensions: decisions.Extensions,
+    modules: list[str],
+    *,
+    variant: str,
+) -> str:
+    """为每个交付变体生成准确的中英使用说明。
+
+    说明是包的一部分而不是仓库手写副本，所有数值和启用模块都来自实际
+    打包参数。它解释规则和边界，不把建议、评分或加载成功写成 AI 行动。
+    """
+    if variant not in {"current", "control", "disabled"}:
+        raise ValueError("说明变体必须是 current、control 或 disabled")
+    module_text = "、".join(modules) if modules else "无（安全包）"
+    module_text_en = ", ".join(modules) if modules else "none (safe package)"
+    fiscal_state = "启用" if policy.enabled else "关闭"
+    bias = (
+        f"外交博弈中立偏置 +{policy.neutrality:g}，攻击性偏置 {policy.aggression:g}"
+        if policy.enabled
+        else "不写入财政状态或外交偏置"
+    )
+    bias_en = (
+        f"diplomatic-play neutrality +{policy.neutrality:g}; aggression {policy.aggression:g}"
+        if policy.enabled
+        else "no fiscal state or diplomatic bias is written"
+    )
+    return (
+        "Situated AI · 处境决策\n"
+        "===========================\n"
+        f"变体：{variant}\n"
+        f"产品版本 / Product version：{policy.package.product_version}\n"
+        f"父包 / Parent：{policy.package.parent}\n"
+        f"游戏版本：{policy.game_version}\n"
+        f"启用模块：{module_text}\n"
+        f"财政模块：{fiscal_state}\n"
+        f"状态 / Status：{policy.package.status}\n"
+        f"存档兼容声明 / Save compatibility：{policy.package.save_compatibility}\n\n"
+        "【中文】\n"
+        "本说明描述本 ZIP 的规则配置，不显示任何国家当前的实时状态。生成包不代表"
+        "V0.1 或 AI 行为质量已经验收；experimental 和 candidate 包仅供隔离测试。\n"
+        "以下财政规则仅在财政模块启用时执行，零偏置控制包也不产生新增外交倾向。\n"
+        f"AI 国家违约时进入财政风险；未违约时，需要正在借款、信用大于 0，且破产周数"
+        f"非负并小于 {policy.entry_weeks} 周。已有风险使用 {policy.exit_weeks} 周的维持线，"
+        "达到该线、不再借款或缺少必要的有效财政读数时不再维持；违约分支优先。\n"
+        f"月度以及违约/结束违约事件重新评估；最后一次续期后 {policy.ttl_days} 天没有更新，"
+        "风险状态自然失效。只有 AI 当前同时满足财政风险、维持条件与外部暴露条件时，"
+        f"才追加原版字段偏置：{bias}。这是倾向值，不是概率，也不表示已经加入或退出博弈。\n"
+        "外部暴露包括战争、外交博弈发起方、目标方、已承诺参与者和未选边参与者。"
+        "未选边表示风险暴露，不表示已作出承诺。上述状态不等于行动收益、净代价或不利结果。\n"
+        "该规则保留原版策略牌、国家身份、玩家和 AI 的共同世界规则；不提供免费资源、"
+        "强制行动或固定国家剧本。\n"
+        "安装：先退出游戏并保留原有配置与处理前存档，将 ZIP 解压至独立本地 Mod 目录，"
+        "在启动器的独立 playset 中登记并启用；不要覆盖游戏本体，也不要同时挂载本包的多个变体。"
+        "本包覆盖原版 00_default_strategy.txt；其他修改同一策略的 Mod 有兼容冲突风险。\n"
+        "回退：退出游戏后禁用或移除本 Mod；全关包仍含默认策略底本，因此不等于完全零 Mod。"
+        "已有变量可按剩余 TTL 失效，但关闭或卸载不会撤回已经发生的世界变化；"
+        "恢复处理前存档与当时挂载才是对应回退点。不承诺任意旧存档可安全迁移。\n"
+        "变体说明：current 是当前实验参数；control 保留财政生命周期但把新增偏置置零；"
+        "disabled 关闭本 Mod 的财政及扩展逻辑，可作为安全基线。\n\n"
+        f"扩展实际配置：reform={'启用' if extensions.reform_enabled else '关闭'}，"
+        f"market={'启用' if extensions.market_enabled else '关闭'}。"
+        "扩展关闭时不执行相应干预。改革扩展启用时，脆弱条件优先："
+        f"合法性低于 {extensions.fragile_legitimacy}、战争或叛乱使 change_law_chance 的"
+        f" default 贡献增加 {extensions.fragile_penalty:g}；否则合法性至少"
+        f" {extensions.reform_legitimacy}、和平、无叛乱且实业家或知识分子在政府内，"
+        f"增加 {extensions.reform_bonus:g}。市场扩展启用时，diplomatic_play_support 的"
+        f" default 贡献增加（对己方依赖−对敌方依赖）×{extensions.market_multiplier:g}。"
+        "这些贡献不是最终概率，也不证明具体法律或外交行动已发生。\n\n"
+        "[English]\n"
+        "This guide describes the rules configured in this ZIP, not the live state of any country."
+        " Building a package does not prove V0.1 completion or AI behavior quality; experimental"
+        " and candidate packages are for isolated testing.\n"
+        "The following fiscal rules run only while the fiscal module is enabled. The zero-bias"
+        " control package also adds no diplomatic tendency.\n"
+        f"An AI country in default enters fiscal risk. Otherwise it must be borrowing, have credit"
+        f" greater than 0, and have non-negative weeks to bankruptcy below {policy.entry_weeks}."
+        f" Existing risk uses a {policy.exit_weeks}-week hold threshold. Reaching it, no longer"
+        " borrowing, or missing required valid readings ends the hold; default takes precedence.\n"
+        "Monthly and default/end-of-default events reassess risk. The state expires"
+        f" {policy.ttl_days} days after the last renewal without another update. Only an AI country"
+        " currently meeting fiscal risk, hold, and external-exposure conditions receives the added"
+        f" vanilla-field bias: {bias_en}. This is a tendency, not a probability or proof of joining"
+        " or leaving a play.\n"
+        "External exposure includes war, diplomatic-play initiator, target, committed participant,"
+        " and undecided participant. Undecided means exposure, not a commitment. These states do"
+        " not measure action benefit, net cost, or adverse outcome.\n"
+        "Vanilla strategy cards, country identity, and the shared player/AI world rules remain in"
+        " place. The package does not grant free resources, force actions, or hard-code a country"
+        " script.\n"
+        "Install: exit the game, preserve your configuration and a pre-treatment save, extract"
+        " this ZIP into a separate local Mod directory, and register/enable it in an isolated"
+        " launcher playset. Do not overwrite the game installation or enable multiple variants"
+        " together. This package overrides vanilla 00_default_strategy.txt and may conflict with"
+        " other Mods that modify the same strategy.\n"
+        "Rollback: exit and disable/remove this Mod. The disabled package still contains the"
+        " vanilla strategy baseline, so it is not a zero-Mod environment. Existing variables can"
+        " expire by their remaining TTL, but disabling/uninstalling does not undo world changes."
+        " Restore the pre-treatment save and its original mounts for that rollback point."
+        " Arbitrary old-save migration is not guaranteed.\n"
+        f"Variant: current uses the experimental parameters; control keeps the fiscal lifecycle"
+        " with added bias set to zero; disabled turns off fiscal and extension logic for a safe"
+        " baseline.\n"
+        f"Enabled modules in this package: {module_text_en}.\n"
+        f"Actual extension configuration: reform={'enabled' if extensions.reform_enabled else 'disabled'};"
+        f" market={'enabled' if extensions.market_enabled else 'disabled'}. Disabled extensions do"
+        " not intervene. For enabled reform, fragile conditions take precedence: legitimacy below"
+        f" {extensions.fragile_legitimacy}, war, or insurrection adds {extensions.fragile_penalty:g}"
+        " to the default change_law_chance contribution. Otherwise legitimacy of at least"
+        f" {extensions.reform_legitimacy}, peace, no insurrection, and industrialists or"
+        f" intelligentsia in government adds {extensions.reform_bonus:g}. Enabled market adds"
+        f" (dependence on own side minus dependence on enemy side) x {extensions.market_multiplier:g}"
+        " to default diplomatic_play_support. These contributions are not final probabilities"
+        " or evidence of an enacted law or diplomatic action.\n"
+    )
+
+
 def payloads(files: Mapping[str, str]) -> dict[str, bytes]:
     result: dict[str, bytes] = {}
     portable_names: set[str] = set()
@@ -145,6 +262,8 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
         policy = replace(policy, enabled=False)
         extensions = replace(extensions, reform_enabled=False, market_enabled=False)
     files = current if variant == "current" else decisions.build(policy, extensions=extensions)
+    modules = json.loads(files[".metadata/metadata.json"])["enabled_modules"]
+    files["README.md"] = player_guide(policy, extensions, modules, variant=variant)
     return write_zip(
         files,
         destination,
