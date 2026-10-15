@@ -273,7 +273,7 @@ def analyze(directory: Path, *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dict:
         raise ValueError("缺少各观察国月度自报，不能把日志缺失当零发起")
     for tag, seen in pulses.items():
         samples = sorted(int(sample.removeprefix("sample-")) for sample in seen)
-        if samples != list(range(samples[0], samples[-1] + 1)):
+        if any(b != a + 1 for a, b in pairwise(samples)):
             raise ValueError(f"自然外交月度自报不连续：{tag}")
     if any(set(event) != {"START", "TYPE"} for event in starts.values()):
         raise ValueError("自然发起缺目标或类型，观测不完整")
@@ -287,6 +287,9 @@ def analyze(directory: Path, *, tags: tuple[str, ...] = DEFAULT_TAGS) -> dict:
             )
             if t == tag
         ]
+        samples = [int(event["sample"].removeprefix("sample-")) for event in events]
+        if any(b != a + 1 for a, b in pairwise(samples)):
+            raise ValueError(f"自然发起序号不连续：{tag}")
         countries[tag] = {
             "monthly_observations": len(pulses[tag]),
             "started": len(events),
