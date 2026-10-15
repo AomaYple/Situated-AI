@@ -335,7 +335,10 @@ def test_生产ZIP不携带历史档案(tmp_path):
     from pdx.distribution import package
 
     with zipfile.ZipFile(package(tmp_path / "mod.zip", variant="current")) as archive:
-        assert set(archive.namelist()) == set(decisions.build()) | {"DISTRIBUTION-MANIFEST.json"}
+        assert set(archive.namelist()) == set(decisions.build()) | {
+            "README.md",
+            "DISTRIBUTION-MANIFEST.json",
+        }
         assert not any("legacy" in name or "ru_defeat" in name for name in archive.namelist())
 
 
@@ -523,3 +526,179 @@ def test_未声明变体的交付默认全关(tmp_path):
         assert manifest["generation"]["variant"] == "disabled"
         assert manifest["contract"]["enabled_modules"] == []
         assert "common/on_actions/sitai_fiscal_on_actions.txt" not in archive.namelist()
+
+
+@pytest.mark.parametrize("variant", ["current", "control", "disabled"])
+def test_交付说明随变体生成并由清单验证(tmp_path, variant):
+    import zipfile
+
+    from pdx import distribution
+
+    with zipfile.ZipFile(distribution.package(tmp_path / "guide.zip", variant=variant)) as archive:
+        raw = archive.read("README.md")
+        text = raw.decode("utf-8")
+        manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
+        assert manifest["files"]["README.md"] == hashlib.sha256(raw).hexdigest()
+        assert f"变体：{variant}\n" in text
+        assert f"财政模块：{'关闭' if variant == 'disabled' else '启用'}\n" in text
+        assert "【中文】" in text
+        assert "[English]" in text
+        assert "产品版本 / Product version：0.1.0\n" in text
+        assert "状态 / Status：experimental\n" in text
+        assert "存档兼容声明 / Save compatibility：new-game-only\n" in text
+        assert not raw.startswith(b"\xef\xbb\xbf")
+        assert b"\r" not in raw
+        if variant == "current":
+            assert "外交博弈中立偏置 +25，攻击性偏置 0" in text
+            assert "neutrality +25; aggression 0" in text
+        elif variant == "control":
+            assert "外交博弈中立偏置 +0，攻击性偏置 0" in text
+            assert "neutrality +0; aggression 0" in text
+        else:
+            assert "不写入财政状态或外交偏置" in text
+            assert "Enabled modules in this package: none (safe package)." in text
+
+
+def test_说明使用实际替代参数而非硬编码生产阈值(policy):
+    from pdx.distribution import player_guide
+
+    alternate = replace(
+        policy,
+        entry_weeks=17,
+        exit_weeks=43,
+        ttl_days=73,
+        neutrality=7.5,
+        aggression=-0.25,
+        package=replace(
+            policy.package,
+            product_version="0.2.1",
+            status="candidate",
+            parent="accepted-parent",
+            save_compatibility="same-candidate-save",
+        ),
+    )
+    extensions = decisions.Extensions(
+        reform_enabled=True,
+        reform_legitimacy=81,
+        fragile_legitimacy=19,
+        reform_bonus=2.5,
+        fragile_penalty=-0.25,
+        market_enabled=True,
+        market_multiplier=3.5,
+    )
+    text = player_guide(alternate, extensions, ["fiscal", "reform", "market"], variant="current")
+    for expected in (
+        "产品版本 / Product version：0.2.1",
+        "状态 / Status：candidate",
+        "父包 / Parent：accepted-parent",
+        "Save compatibility：same-candidate-save",
+        "启用模块：fiscal、reform、market",
+        "非负并小于 17 周",
+        "43 周的维持线",
+        "73 天没有更新",
+        "外交博弈中立偏置 +7.5，攻击性偏置 -0.25",
+        "bankruptcy below 17",
+        "43-week hold threshold",
+        "73 days after the last renewal",
+        "neutrality +7.5; aggression -0.25",
+        "reform=启用，market=启用",
+        "合法性低于 19",
+        "合法性至少 81",
+        "增加 -0.25",
+        "增加 2.5",
+        "×3.5",
+        "reform=enabled; market=enabled",
+        "legitimacy below 19",
+        "at least 81",
+        "adds -0.25",
+        "adds 2.5",
+        "x 3.5",
+    ):
+        assert expected in text
+
+
+def test_说明保留回退和证据限制且不进入游戏生成树(policy):
+    from pdx.distribution import player_guide
+
+    text = player_guide(policy, decisions.Extensions(), ["fiscal"], variant="current")
+    for expected in (
+        "不显示任何国家当前的实时状态",
+        "不是概率",
+        "违约分支优先",
+        "未选边表示风险暴露，不表示已作出承诺",
+        "全关包仍含默认策略底本",
+        "关闭或卸载不会撤回已经发生的世界变化",
+        "恢复处理前存档与当时挂载",
+        "00_default_strategy.txt",
+        "not the live state of any country",
+        "default takes precedence",
+        "not a zero-Mod environment",
+        "does not undo world changes",
+        "pre-treatment save and its original mounts",
+    ):
+        assert expected in text
+    assert "README.md" not in decisions.build(policy)
+    with pytest.raises(ValueError, match="变体"):
+        player_guide(policy, decisions.Extensions(), [], variant="unknown")
+
+
+@pytest.mark.parametrize("variant", ["current", "control", "disabled"])
+def test_交付说明读取实际生成后的扩展与开关(tmp_path, monkeypatch, policy, variant):
+    import zipfile
+
+    from pdx import distribution
+
+    alternate = replace(policy, enabled=False, entry_weeks=17, exit_weeks=43)
+    extensions = decisions.Extensions(
+        reform_enabled=True, market_enabled=True, market_multiplier=3.5
+    )
+    product = tmp_path / "product"
+    decisions.write(product, decisions.build(alternate, extensions=extensions))
+    monkeypatch.setattr(decisions, "PRODUCT", product)
+    monkeypatch.setattr(decisions, "load", lambda: alternate)
+    monkeypatch.setattr(decisions, "load_extensions", lambda: extensions)
+    with zipfile.ZipFile(
+        distribution.package(tmp_path / "alternate.zip", variant=variant)
+    ) as archive:
+        guide = archive.read("README.md").decode("utf-8")
+        manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
+        metadata = json.loads(archive.read(".metadata/metadata.json"))
+        expected = {"current": ["reform", "market"], "control": ["fiscal"], "disabled": []}[variant]
+        assert metadata["enabled_modules"] == expected
+        assert manifest["contract"]["enabled_modules"] == expected
+        assert (
+            "Enabled modules in this package: "
+            + (", ".join(expected) if expected else "none (safe package)")
+            in guide
+        )
+        assert "财政模块：" + ("启用" if variant == "control" else "关闭") in guide
+        assert "bankruptcy below 17" in guide
+        assert "43-week hold threshold" in guide
+        assert (
+            "Actual extension configuration: "
+            + (
+                "reform=enabled; market=enabled"
+                if variant == "current"
+                else "reform=disabled; market=disabled"
+            )
+            in guide
+        )
+        assert "×3.5" in guide
+        assert manifest["generation"]["extensions"]["market_multiplier"] == 3.5
+    assert decisions.check(product, decisions.build(alternate, extensions=extensions)) == []
+    assert not (product / "README.md").exists()
+
+
+def test_说明生成失败保全已有ZIP(tmp_path, monkeypatch):
+    from pdx import distribution
+
+    target = tmp_path / "existing.zip"
+    target.write_bytes(b"previous package")
+
+    def fail(*args, **kwargs):
+        raise ValueError("说明生成失败")
+
+    monkeypatch.setattr(distribution, "player_guide", fail)
+    with pytest.raises(ValueError, match="说明生成失败"):
+        distribution.package(target)
+    assert target.read_bytes() == b"previous package"
