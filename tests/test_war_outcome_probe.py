@@ -20,20 +20,24 @@ ACTION_FILE = "common/on_actions/zz_sitai_opportunity.txt"
 def _block(parent, key):
     node = parent.first(key)
     assert node is not None
+    assert node.op == "="
     assert isinstance(node.value, Block)
     return node.value
 
 
 def _logs(body, scopes, root, seen):
-    """执行生成 AST 的条件子集，未知语句报错；不模拟引擎对象类型。"""
+    """只解释声明的条件和运算符，未知语义报错；不模拟引擎对象类型。"""
 
     def matches(limit, current):
         for node in limit.assignments():
             if isinstance(node.value, Block):
+                assert node.key == "scope:diplomatic_play"
+                assert node.op == "?="
                 target = scopes.get(node.key)
                 if target is None or not matches(node.value, target):
                     return False
             else:
+                assert node.op == "="
                 assert isinstance(node.value, Scalar)
                 value = node.value.unquoted
                 if node.key == "exists":
@@ -55,6 +59,7 @@ def _logs(body, scopes, root, seen):
     def execute(block):
         selected = False
         for node in block.assignments():
+            assert node.op == "="
             if node.key in {"if", "else_if", "else"}:
                 assert isinstance(node.value, Block)
                 if node.key == "if":
