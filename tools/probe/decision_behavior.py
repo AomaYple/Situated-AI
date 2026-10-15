@@ -368,7 +368,15 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
                 "localization_baseline": getattr(args, "localization_baseline", False),
                 "resource_baseline": resource_manifest,
                 **({"cost_calibration": cost_probe.configuration()} if cost_readings else {}),
-                **({"response_hooks": response_probe.configuration()} if response_hooks else {}),
+                **(
+                    {
+                        "response_hooks": response_probe.configuration(
+                            (args.initiator, args.target, *tags)
+                        )
+                    }
+                    if response_hooks
+                    else {}
+                ),
             },
         },
         allow_new_game_experiment=new_game,

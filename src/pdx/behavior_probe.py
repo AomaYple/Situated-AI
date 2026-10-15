@@ -298,8 +298,6 @@ zz_sitai_opportunity_bind = { effect = {
             "initiator_is = c:AUS target_is = c:SAR __SITAI_OBSERVER_GUARDS__",
             1,
         )
-        if response_hooks:
-            script += "\n" + response_probe.build_hooks()
         watch = watch.replace(
             "any_diplomatic_play = { initiator_is = c:AUS target_is = c:SAR }",
             "exists = scope:sitai_opportunity",
@@ -340,6 +338,16 @@ zz_sitai_opportunity_bind = { effect = {
         "__SITAI_COUNTRY_SCOPES__",
         "\n".join(f"c:{tag} ?= {{ save_scope_as = sitai_{tag.lower()} }}" for tag in tags),
     )
+    response_tags = (initiator, target, *tags)
+    if response_hooks:
+        script = script.replace(
+            "save_scope_as = sitai_opportunity\n",
+            "save_scope_as = sitai_opportunity\n" + response_probe.binding(),
+            1,
+        )
+        # 真实国家标签不再经过 AUS/SAR 模板替换，避免观察国被串改。
+        script += "\n" + response_probe.build_hooks(response_tags)
+        script = script.replace("__SITAI_RESPONSE_DATE__", "[TimeKeeper.GetCurrentDate.GetString]")
     if natural:
         for old, new in (
             (SAMPLE_VAR, "sitai_probe_natural_response_sample"),
@@ -365,7 +373,7 @@ zz_sitai_opportunity_bind = { effect = {
                     "multiplayer_synchronized": False,
                     **({"cost_calibration": cost_probe.configuration()} if cost_readings else {}),
                     **(
-                        {"response_diagnostics": response_probe.configuration()}
+                        {"response_diagnostics": response_probe.configuration(response_tags)}
                         if response_hooks
                         else {}
                     ),
@@ -400,6 +408,12 @@ def analyze(
             for line in stream:
                 root = response_probe.parse_line(line)
                 if root is not None:
+                    actor_tag = root.get("actor_tag")
+                    if actor_tag is not None and actor_tag not in (
+                        *(natural_pair or ()),
+                        *tags,
+                    ):
+                        raise ValueError("根钩子诊断返回未声明的 actor 国家")
                     root_rows.append(root)
                 match = ROW.search(line.rstrip())
                 response_match = RESPONSE_ROW.search(line.rstrip())
