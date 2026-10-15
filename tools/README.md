@@ -298,7 +298,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 119 个测试文件、3722 条用例（2026-10-15 工作区口径）；本轮完整 `v3 cov` 使用 `n-auto`，结果为 **3703 passed、19 skipped**，4 个 worker、574.37 秒、1551 个 subtests；包含行与分支的总覆盖率 **89.34%**，整体与 11 个核心模块下限全部通过。当前读数、跳过范围和限制见 [A3 独立诊断结果](../docs/design/exec/A3-结果.md#独立根事件诊断实现2026-10-15-后续定时任务)，此前首次失败保留在原章节。此前全仓审计见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)，正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 119 个测试文件、3752 条用例（2026-10-15 工作区口径）；本轮完整 `v3 cov` 使用 `n-auto`，结果为 **3733 passed、19 skipped**，4 个 worker、514.05 秒、1551 个 subtests；包含行与分支的总覆盖率 **89.35%**，整体与 11 个核心模块下限全部通过。当前读数、跳过范围和限制见 [A3 持久引用诊断结果](../docs/design/exec/A3-结果.md#持久引用候选与安全-actor-诊断的离线实施2026-10-15)，此前首次失败保留在原章节。此前全仓审计见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)，正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -358,7 +358,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 
 `tools/probe/decision_behavior.py --response-hooks` 仅允许显式 `--purpose instrument --arm control --fiscal-injection none --natural-opportunity`，不能制作存档或进入正式行为臂。默认关闭，不进入生产包。生成和解析由 `pdx.response_probe` 维护，冻结配置记录版本和未验证的作用域契约。
 
-日志协议为 `SITAI RESPONSE ROOT;<hook>;<saved_scope>;<actor_id>;<escalation>;<date_text>`：根钩子为 `join_side/abandon_side/war_start`，保存作用域状态为 `missing/same/different`，actor 缺失为 `missing`。存在性守卫内才读取 actor；其国家类型及传递语义仍未实测。分析单列 `response_diagnostics`，保留重复根事件；有根事件而无机会仍不能认定自然机会被捕获，不按国家对或日期归因，不把缺日志当作没有响应。旧 `SITAI RESPONSE;` 仅保留绑定匹配路径。
+当前生成诊断协议 v2 为 `SITAI RESPONSE ROOT2;<hook>;<saved_scope>;<persistent_scope>;<actor>;<escalation>;<date_text>`。脚本链状态仍为 missing/same/different；持久引用为 unbound/unavailable/same/different。唯一 BIND 写入 190 天的对象引用和 191 天的 seen 哨兵；unavailable 不能确定解释为过期，unbound 也不能证明从未绑定。actor 通过发起国、目标国和两个观察国的已知对象比较，输出匹配标签、missing 或 unmatched，不再强制转换未知 actor 类型；分析器拒绝未声明国家。旧 ROOT v1 继续解析，旧 `SITAI RESPONSE;` 仍仅保留脚本链绑定匹配路径。独立 `response_diagnostics` 不计算实际响应时延，不证明自然机会、无响应或质量；跨链存取、过期和真实 hook/actor 契约仍未实测。当前只允许原 instrument/control/none/自然观察路径，默认关闭且不制作存档，不能因协议升级重开已停止窗口；来源和验证见 [A3 离线实施](../docs/design/exec/A3-结果.md#持久引用候选与安全-actor-诊断的离线实施2026-10-15)。
 
 该诊断只为区分潜在跨链漏记；引擎日期文本未与每日序号校准，不能计算响应时延、行动代价或质量。运行必须沿用既有账本、严格错误和恢复门禁；历史失败窗口不会因新增诊断而自动重开。实测边界与下一前提见 [A3 结果](../docs/design/exec/A3-结果.md#独立根事件诊断实现2026-10-15-后续定时任务)。
 
