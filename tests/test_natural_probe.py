@@ -101,6 +101,44 @@ def test_同一发起的重复行不膨胀计数且国家序号互不覆盖(tmp_
     assert all(country["started"] == 1 for country in result["countries"].values())
 
 
+def natural_events(tag, samples):
+    return "".join(
+        f"SITAI NATURAL;{tag};{kind};{value};sample-{sample}\n"
+        for sample in samples
+        for kind, value in (("START", "France"), ("TYPE", "dp_humiliation"))
+    )
+
+
+@pytest.mark.parametrize("samples", [(1, 3), (4, 10**18)])
+def test_完整自然发起之间的内部缺号必须拒绝(tmp_path, samples):
+    (tmp_path / "debug.log").write_text(pulses() + natural_events("RUS", samples), encoding="utf-8")
+    with pytest.raises(ValueError, match=r"自然发起.*不连续.*RUS"):
+        natural_probe.analyze(tmp_path)
+
+
+@pytest.mark.parametrize("origins", [(9, 101), (10**18, 21)])
+def test_自然发起按各国继承起点恢复轮转乱序和重复行(tmp_path, origins):
+    expected = {
+        tag: [f"sample-{origin + offset}" for offset in range(3)]
+        for tag, origin in zip(("RUS", "PRU"), origins, strict=True)
+    }
+    rows = [
+        row
+        for tag, origin in zip(("RUS", "PRU"), origins, strict=True)
+        for row in natural_events(tag, (origin + 2, origin, origin + 1)).splitlines()
+    ]
+    (tmp_path / "debug.1.log").write_text(pulses() + "\n".join(rows[::2]) + "\n", encoding="utf-8")
+    (tmp_path / "debug.log").write_text(
+        "\n".join(reversed(rows[1::2] + rows)) + "\n", encoding="utf-8"
+    )
+    result = natural_probe.analyze(tmp_path)
+    for tag, samples in expected.items():
+        assert result["countries"][tag]["started"] == 3
+        assert [event["sample"] for event in result["countries"][tag]["events"]] == samples
+    assert result["opportunity_denominator"] is None
+    assert result["quality_improvement_proven"] is False
+
+
 @pytest.mark.parametrize(
     "extra",
     [

@@ -277,6 +277,161 @@ def _pair(left, right):
     )
 
 
+@pytest.fixture
+def complete_quality_reports(tmp_path):
+    paths = (
+        _report(tmp_path / "left.json"),
+        _report(tmp_path / "right.json", neutrality="treatment"),
+    )
+
+    def add_quality(data):
+        opportunity = data["analysis"]["opportunity"]
+        opportunity["quality_observations"] = {
+            "status": "complete",
+            "action_cost": 12.5,
+            "adverse_outcome": -2,
+            "join_latency": 3,
+            "leave_latency": 4.5,
+            "quality_improvement_proven": True,
+        }
+        opportunity["role_timing"] = {"quality_improvement_proven": True}
+
+    for path in paths:
+        _edit(path, add_quality)
+    return paths
+
+
+def test_完整两臂缺失时延不得晋升质量就绪(complete_quality_reports):
+    left, right = complete_quality_reports
+
+    def remove_latencies(data):
+        quality = data["analysis"]["opportunity"]["quality_observations"]
+        del quality["join_latency"]
+        del quality["leave_latency"]
+
+    for path in (left, right):
+        _edit(path, remove_latencies)
+    pair = _pair(left, right)
+    assert pair.qualified
+    assert not pair.quality_ready
+
+
+@pytest.mark.parametrize(
+    "field", ["action_cost", "adverse_outcome", "join_latency", "leave_latency"]
+)
+@pytest.mark.parametrize("mutation", ["missing", "null"])
+@pytest.mark.parametrize("arm", [0, 1])
+def test_任一臂质量字段缺失或null只阻止质量就绪(complete_quality_reports, field, mutation, arm):
+    def remove(data):
+        quality = data["analysis"]["opportunity"]["quality_observations"]
+        if mutation == "missing":
+            del quality[field]
+        else:
+            quality[field] = None
+
+    _edit(complete_quality_reports[arm], remove)
+    facts = m3a_screen.load_report(complete_quality_reports[arm])
+    assert facts.clean
+    pair = _pair(*complete_quality_reports)
+    assert pair.qualified
+    assert not pair.quality_ready
+
+
+@pytest.mark.parametrize(
+    "field", ["action_cost", "adverse_outcome", "join_latency", "leave_latency"]
+)
+@pytest.mark.parametrize("value", [True, False, float("nan"), float("inf"), -float("inf"), "3"])
+def test_质量数值非法有明确理由且不能质量就绪(complete_quality_reports, field, value):
+    def invalidate(data):
+        data["analysis"]["opportunity"]["quality_observations"][field] = value
+
+    _edit(complete_quality_reports[1], invalidate)
+    facts = m3a_screen.load_report(complete_quality_reports[1])
+    assert not facts.clean
+    assert f"quality_observations.{field}_invalid" in facts.gate_reasons
+    pair = _pair(*complete_quality_reports)
+    assert not pair.qualified
+    assert not pair.quality_ready
+
+
+@pytest.mark.parametrize("field", ["join_latency", "leave_latency"])
+def test_负时延有明确理由且不能质量就绪(complete_quality_reports, field):
+    def invalidate(data):
+        data["analysis"]["opportunity"]["quality_observations"][field] = -0.5
+
+    _edit(complete_quality_reports[1], invalidate)
+    facts = m3a_screen.load_report(complete_quality_reports[1])
+    assert not facts.clean
+    assert f"quality_observations.{field}_invalid" in facts.gate_reasons
+    pair = _pair(*complete_quality_reports)
+    assert not pair.qualified
+    assert not pair.quality_ready
+
+
+@pytest.mark.parametrize("fault", ["report", "structure"])
+def test_完整质量字段仍要求干净报告和结构合格(complete_quality_reports, fault):
+    def damage(data):
+        if fault == "report":
+            data["ok"] = False
+        else:
+            data["progress"]["start"] = "1836.4.2"
+
+    _edit(complete_quality_reports[1], damage)
+    facts = m3a_screen.load_report(complete_quality_reports[1])
+    assert facts.clean is (fault == "structure")
+    pair = _pair(*complete_quality_reports)
+    assert not pair.qualified
+    assert not pair.quality_ready
+
+
+@pytest.mark.parametrize("status", ["unknown", "unsupported", "observed", None])
+def test_质量就绪明确要求complete状态(complete_quality_reports, status):
+    def change(data):
+        data["analysis"]["opportunity"]["quality_observations"]["status"] = status
+
+    _edit(complete_quality_reports[0], change)
+    pair = _pair(*complete_quality_reports)
+    assert pair.qualified
+    assert not pair.quality_ready
+
+
+@pytest.mark.parametrize("section", ["quality_observations", "role_timing"])
+@pytest.mark.parametrize("proven", [False, None, "missing", 1, "yes"])
+def test_质量就绪要求两个proven显式为真(complete_quality_reports, section, proven):
+    def change(data):
+        quality = data["analysis"]["opportunity"][section]
+        if proven == "missing":
+            del quality["quality_improvement_proven"]
+        else:
+            quality["quality_improvement_proven"] = proven
+
+    _edit(complete_quality_reports[1], change)
+    pair = _pair(*complete_quality_reports)
+    assert pair.qualified is (proven in (False, None, "missing"))
+    assert not pair.quality_ready
+
+
+@pytest.mark.parametrize("values", [(0, 0.0, 0, 0.0), (-5, -2.5, 3.5, 4)])
+def test_完整有限质量字段和显式proven只证明机械筛选就绪(complete_quality_reports, values):
+    def change(data):
+        quality = data["analysis"]["opportunity"]["quality_observations"]
+        quality.update(
+            zip(
+                ("action_cost", "adverse_outcome", "join_latency", "leave_latency"),
+                values,
+                strict=True,
+            )
+        )
+
+    for path in complete_quality_reports:
+        _edit(path, change)
+    assert all(m3a_screen.load_report(path).clean for path in complete_quality_reports)
+    pair = _pair(*complete_quality_reports)
+    assert pair.qualified
+    assert pair.quality_ready
+    assert pair.as_dict()["quality_ready"] is True
+
+
 @pytest.mark.parametrize("fingerprint", ["source_hashes", "deployed_hashes"])
 def test_仅候选模组策略允许差异而探针同名路径必须一致(tmp_path, fingerprint):
     from dataclasses import replace

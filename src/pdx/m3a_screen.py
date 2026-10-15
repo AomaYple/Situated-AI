@@ -27,6 +27,17 @@ STRATEGY_PATH = "common/ai_strategies/00_default_strategy.txt"
 ERROR_KEYS = ERROR_MARKERS
 ROLE_KINDS = ("BACKER", "INIT_BACKER", "TARGET_BACKER")
 ELIGIBILITY_KINDS = ("CAN_INIT", "CAN_TARGET")
+QUALITY_FIELDS = ("action_cost", "adverse_outcome", "join_latency", "leave_latency")
+
+
+def _quality_value_valid(key: str, value: Any) -> bool:
+    """复用数值 schema；时延必须非负，不为成本和结果附加正负含义。"""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and (isinstance(value, int) or math.isfinite(value))
+        and (key not in {"join_latency", "leave_latency"} or value >= 0)
+    )
 
 
 def _sample_key(value: str) -> tuple[str, int, str]:
@@ -313,13 +324,9 @@ def load_report(path: Path) -> ReportFacts:
         status = quality_observations.get("status")
         if status is not None and status not in {"unknown", "unsupported", "observed", "complete"}:
             reasons.append("quality_observations.status_invalid")
-        for key in ("action_cost", "adverse_outcome", "join_latency", "leave_latency"):
+        for key in QUALITY_FIELDS:
             value = quality_observations.get(key)
-            if value is not None and (
-                isinstance(value, bool)
-                or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-            ):
+            if value is not None and not _quality_value_valid(key, value):
                 reasons.append(f"quality_observations.{key}_invalid")
         proven = quality_observations.get("quality_improvement_proven")
         if proven is not None and not isinstance(proven, bool):
@@ -581,7 +588,7 @@ def pair_reports(
     if not shape_ok:
         reasons.extend(shape_reasons)
     qualified = not reasons and len(tags) == 2 and len(common_dates) > 0
-    quality_ready = _quality_ready(control) and _quality_ready(treatment)
+    quality_ready = qualified and _quality_ready(control) and _quality_ready(treatment)
     return PairCandidate(
         control=control,
         treatment=treatment,
@@ -597,14 +604,14 @@ def pair_reports(
 
 
 def _quality_ready(report: ReportFacts) -> bool:
-    """判断质量出口是否具备；不影响结构性机会筛选。"""
+    """按既有字段和 proven 声明判断机械筛选就绪；不影响结构性机会筛选。"""
     quality = report.quality_observations
     timing = report.role_timing
     return (
-        quality.get("status") == "complete"
+        report.clean
+        and quality.get("status") == "complete"
         and quality.get("quality_improvement_proven") is True
-        and quality.get("action_cost") is not None
-        and quality.get("adverse_outcome") is not None
+        and all(_quality_value_valid(key, quality.get(key)) for key in QUALITY_FIELDS)
         and timing.get("quality_improvement_proven") is True
     )
 
