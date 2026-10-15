@@ -74,6 +74,7 @@ class Analysis(TypedDict):
     role_timing: NotRequired[RoleTiming]
     response_hooks: NotRequired[dict[str, object]]
     response_diagnostics: NotRequired[response_probe.Diagnostics]
+    war_outcome_diagnostics: NotRequired[response_probe.WarDiagnostics]
 
 
 def build(
@@ -346,7 +347,7 @@ zz_sitai_opportunity_bind = { effect = {
             1,
         )
         # 真实国家标签不再经过 AUS/SAR 模板替换，避免观察国被串改。
-        script += "\n" + response_probe.build_hooks(response_tags)
+        script += "\n" + response_probe.build_hooks(response_tags, observers=tags)
         script = script.replace("__SITAI_RESPONSE_DATE__", "[TimeKeeper.GetCurrentDate.GetString]")
     if natural:
         for old, new in (
@@ -373,7 +374,11 @@ zz_sitai_opportunity_bind = { effect = {
                     "multiplayer_synchronized": False,
                     **({"cost_calibration": cost_probe.configuration()} if cost_readings else {}),
                     **(
-                        {"response_diagnostics": response_probe.configuration(response_tags)}
+                        {
+                            "response_diagnostics": response_probe.configuration(
+                                response_tags, observers=tags
+                            )
+                        }
                         if response_hooks
                         else {}
                     ),
@@ -403,9 +408,13 @@ def analyze(
     rows: list[dict[str, str]] = []
     response_rows: list[dict[str, str]] = []
     root_rows: list[response_probe.RootEvent] = []
+    outcome_rows: list[response_probe.WarOutcome] = []
     for path in game_auto.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
             for line in stream:
+                outcome = response_probe.parse_outcome(line, observers=tags)
+                if outcome is not None:
+                    outcome_rows.append(outcome)
                 root = response_probe.parse_line(line)
                 if root is not None:
                     actor_tag = root.get("actor_tag")
@@ -458,7 +467,7 @@ def analyze(
                     if not response["date"]:
                         raise ValueError("外交响应钩子缺少时间")
                     response_rows.append(response)
-    if not rows and not root_rows:
+    if not rows and not root_rows and not outcome_rows:
         raise ValueError("缺少本局机会自报，不能把无记录当保持中立")
     countries: dict[str, CountryEvidence] = {}
     eligible_active: dict[str, set[str]] = {}
@@ -499,7 +508,11 @@ def analyze(
             "leave_latency": None,
             "action_cost": None,
             "adverse_outcome": None,
-            "reason": "当前探针只读取资格、角色和评分，尚未读取实际行动代价或结果",
+            "reason": (
+                "资格、角色、评分和未验证的结果回调都不能证明逐国实际行动代价或不利结果"
+                if outcome_rows
+                else "当前探针只读取资格、角色和评分，尚未读取实际行动代价或结果"
+            ),
         },
     }
     if natural_pair is not None:
@@ -521,6 +534,8 @@ def analyze(
         }
     if response_hooks or root_rows:
         result["response_diagnostics"] = response_probe.summarize(root_rows)
+    if response_hooks or outcome_rows:
+        result["war_outcome_diagnostics"] = response_probe.summarize_outcomes(outcome_rows)
     return result
 
 

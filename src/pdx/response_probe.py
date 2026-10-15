@@ -1,4 +1,4 @@
-"""外交根钩子的独立诊断协议；局部身份与 actor 读数尚非实机契约。"""
+"""外交响应与战后回调的独立诊断；身份、覆盖和对象读数尚非实机契约。"""
 
 from __future__ import annotations
 
@@ -15,6 +15,14 @@ _ROW2 = re.compile(
     r"SITAI RESPONSE ROOT2;(?P<hook>[a-z_]+);(?P<saved_scope>missing|same|different);"
     r"(?P<persistent_scope>unbound|unavailable|same|different);"
     r"(?P<actor_tag>missing|unmatched|[A-Z]{3});(?P<escalation>[0-9]+);"
+    r"(?P<date_text>[^;\[\]]+)$"
+)
+_OUTCOME_MARKER = "SITAI WAR OUTCOME;"
+_OUTCOME_ROW = re.compile(
+    r"SITAI WAR OUTCOME;(?P<hook>won|lost);(?P<tag>[A-Z]{3});"
+    r"(?P<war_scope>present|missing);"
+    r"(?P<play_reference>missing|unbound|unavailable|same|different);"
+    r"(?P<benefitted_from_wargoal>yes|no);(?P<victim_of_wargoal>yes|no);"
     r"(?P<date_text>[^;\[\]]+)$"
 )
 REFERENCE = "sitai_response_reference"
@@ -45,7 +53,33 @@ class Diagnostics(TypedDict):
     quality_improvement_proven: bool
 
 
-def configuration(tags: tuple[str, ...] = ("AUS", "SAR", "RUS", "PRU")) -> dict[str, object]:
+class WarOutcome(TypedDict):
+    hook: str
+    tag: str
+    war_scope: str
+    play_reference: str
+    benefitted_from_wargoal: bool
+    victim_of_wargoal: bool
+    date_text: str
+
+
+class WarDiagnostics(TypedDict):
+    status: str
+    events: list[WarOutcome]
+    count: int
+    scope: str
+    time_basis: str
+    opportunity_identity_verified: bool
+    country_coverage_verified: bool
+    absence_proves_no_harm: bool
+    quality_improvement_proven: bool
+
+
+def configuration(
+    tags: tuple[str, ...] = ("AUS", "SAR", "RUS", "PRU"),
+    *,
+    observers: tuple[str, str] = ("RUS", "PRU"),
+) -> dict[str, object]:
     """让冻结来源记录观测范围，而不是只有一个启用布尔值。"""
     return {
         "version": 2,
@@ -54,6 +88,14 @@ def configuration(tags: tuple[str, ...] = ("AUS", "SAR", "RUS", "PRU")) -> dict[
         "actor": "declared-country-equality-unvalidated",
         "actor_tags": list(tags),
         "unbound_root": True,
+        "war_outcomes": {
+            "version": 1,
+            "hooks": ["on_won_war", "on_lost_war"],
+            "observer_tags": list(observers),
+            "identity": "persistent-play-reference-unvalidated",
+            "country_coverage_verified": False,
+            "quantitative_cost_supported": False,
+        },
     }
 
 
@@ -98,7 +140,56 @@ def _diagnostic(hook: str, state: str, tags: tuple[str, ...]) -> str:
     )
 
 
-def build_hooks(tags: tuple[str, ...]) -> str:
+def _outcome_flags(prefix: str) -> str:
+    cases = []
+    for benefit in ("yes", "no"):
+        keyword = "if" if benefit == "yes" else "else"
+        limit = "limit = { exists = scope:benefitted_from_wargoal } " if benefit == "yes" else ""
+        cases.append(
+            f"{keyword} = {{ {limit}"
+            "if = { limit = { exists = scope:victim_of_wargoal } "
+            f'debug_log = "{prefix};{benefit};yes;__SITAI_RESPONSE_DATE__" }} '
+            f'else = {{ debug_log = "{prefix};{benefit};no;__SITAI_RESPONSE_DATE__" }} }}'
+        )
+    return " ".join(cases)
+
+
+def _outcome_reference(prefix: str) -> str:
+    return (
+        "if = { limit = { exists = scope:diplomatic_play } "
+        f"if = {{ limit = {{ exists = global_var:{REFERENCE} }} "
+        f"if = {{ limit = {{ scope:diplomatic_play ?= {{ this = global_var:{REFERENCE} }} }} "
+        f"{_outcome_flags(prefix + ';same')} }} "
+        f"else = {{ {_outcome_flags(prefix + ';different')} }} }} "
+        f"else = {{ if = {{ limit = {{ has_global_variable = {REFERENCE}_seen }} "
+        f"{_outcome_flags(prefix + ';unavailable')} }} "
+        f"else = {{ {_outcome_flags(prefix + ';unbound')} }} }} }} "
+        f"else = {{ {_outcome_flags(prefix + ';missing')} }}"
+    )
+
+
+def _outcome_hooks(observers: tuple[str, str]) -> str:
+    """只读两个声明国家的 Country 根回调；不推断第三方覆盖或对象存续。"""
+    actions = []
+    for hook in ("won", "lost"):
+        action = f"zz_sitai_outcome_{hook}"
+        countries = []
+        for tag in observers:
+            prefix = f"{_OUTCOME_MARKER}{hook};{tag}"
+            countries.append(
+                f"if = {{ limit = {{ exists = c:{tag} this = c:{tag} }} "
+                "if = { limit = { exists = scope:war } "
+                f"{_outcome_reference(prefix + ';present')} }} "
+                f"else = {{ {_outcome_reference(prefix + ';missing')} }} }}"
+            )
+        actions.append(
+            f"on_{hook}_war = {{ on_actions = {{ {action} }} }}\n"
+            f"{action} = {{ effect = {{ {' '.join(countries)} }} }}"
+        )
+    return "\n".join(actions) + "\n"
+
+
+def build_hooks(tags: tuple[str, ...], *, observers: tuple[str, str] = ("RUS", "PRU")) -> str:
     """每条根事件只命中一个存在性分支，输出诊断并保留原绑定记录。"""
     actions = []
     for hook in HOOKS:
@@ -114,7 +205,42 @@ def build_hooks(tags: tuple[str, ...]) -> str:
             "} }"
         )
         actions.append(f"on_diplo_play_{hook} = {{ on_actions = {{ {action} }} }}\n{body}")
-    return "\n".join(actions) + "\n"
+    return "\n".join(actions) + "\n" + _outcome_hooks(observers)
+
+
+def parse_outcome(line: str, *, observers: tuple[str, str]) -> WarOutcome | None:
+    """结果协议只接受声明的观察国；日期保留文本，不关联到机会或日采样。"""
+    if _OUTCOME_MARKER not in line:
+        return None
+    match = _OUTCOME_ROW.search(line.rstrip())
+    if match is None or not match["date_text"].strip():
+        raise ValueError("战后结果诊断行格式或存在性状态不完整")
+    if match["tag"] not in observers:
+        raise ValueError("战后结果诊断返回未声明的观察国")
+    return {
+        "hook": match["hook"],
+        "tag": match["tag"],
+        "war_scope": match["war_scope"],
+        "play_reference": match["play_reference"],
+        "benefitted_from_wargoal": match["benefitted_from_wargoal"] == "yes",
+        "victim_of_wargoal": match["victim_of_wargoal"] == "yes",
+        "date_text": match["date_text"],
+    }
+
+
+def summarize_outcomes(events: list[WarOutcome]) -> WarDiagnostics:
+    """保留回调顺序和重复；输赢与战目标标志都不是逐国净成本或质量指标。"""
+    return {
+        "status": "country_callbacks_observed" if events else "no_country_callbacks_observed",
+        "events": events,
+        "count": len(events),
+        "scope": "declared_observer_countries_all_wars",
+        "time_basis": "未校准的引擎日期文本，不是共享日采样序号或响应时延",
+        "opportunity_identity_verified": False,
+        "country_coverage_verified": False,
+        "absence_proves_no_harm": False,
+        "quality_improvement_proven": False,
+    }
 
 
 def parse_line(line: str) -> RootEvent | None:
