@@ -17,6 +17,7 @@ from pdx import (
     extension_probe,
     game_run,
     resource_baseline,
+    response_probe,
 )
 from pdx.experiment_evidence import OBSERVATION_VERSION
 from pdx.experiment_queue import RunRequest
@@ -285,7 +286,10 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
         return {
             "fiscal": decision_probe.analyze(logdir, strict=True, tags=tags),
             "opportunity": behavior_probe.analyze(
-                logdir, tags=tags, natural_pair=(args.initiator, args.target) if natural else None
+                logdir,
+                tags=tags,
+                natural_pair=(args.initiator, args.target) if natural else None,
+                response_hooks=response_hooks,
             ),
             **(
                 {"cost_calibration": cost_probe.analyze(logdir, tags=tags)} if cost_readings else {}
@@ -364,7 +368,7 @@ def execute(args: argparse.Namespace, output: Path, source_root: Path) -> int:
                 "localization_baseline": getattr(args, "localization_baseline", False),
                 "resource_baseline": resource_manifest,
                 **({"cost_calibration": cost_probe.configuration()} if cost_readings else {}),
-                **({"response_hooks": True} if response_hooks else {}),
+                **({"response_hooks": response_probe.configuration()} if response_hooks else {}),
             },
         },
         allow_new_game_experiment=new_game,

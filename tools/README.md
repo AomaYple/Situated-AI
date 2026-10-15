@@ -298,7 +298,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 118 个测试文件、3691 条用例（2026-10-15 工作区口径）；本轮完整 `v3 cov` 使用 `n-auto`，结果为 **3672 passed、19 skipped**，4 个 worker、521.18 秒、1551 个 subtests；包含行与分支的总覆盖率 **89.32%**，整体与 11 个核心模块下限全部通过。当前读数、首次失败、跳过范围和限制见 [A3 结果](../docs/design/exec/A3-结果.md#本批工程验证2026-10-15)。此前全仓审计见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)，正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 119 个测试文件、3722 条用例（2026-10-15 工作区口径）；本轮完整 `v3 cov` 使用 `n-auto`，结果为 **3703 passed、19 skipped**，4 个 worker、574.37 秒、1551 个 subtests；包含行与分支的总覆盖率 **89.34%**，整体与 11 个核心模块下限全部通过。当前读数、跳过范围和限制见 [A3 独立诊断结果](../docs/design/exec/A3-结果.md#独立根事件诊断实现2026-10-15-后续定时任务)，此前首次失败保留在原章节。此前全仓审计见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)，正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -353,6 +353,14 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 | `test_game_auto_verdict.py` | 闭环**最后两步**的看守（官方成绩单解析 / "我们的报错"只数我们的 / 两条假绿都挡住 / 等落盘是条件等待 / 接线与退出码）。两条假绿指的是：照 `[ FAIL ] Error log: N errors` 判会**每次假红**，而"零失败 + 零套件"会**假绿** |
 | `test_gametimer.py` | `gametimer.py` 的解析与统计（纯合成夹具，不依赖游戏）：表头识别、`Year/Month/Day` 三档聚合、坏行只打标不改写、按单元汇总与「最坏一天」、**「单帧量不出来」这件事本身**（`per_frame_measurable is False`）—— 预算判据不许把不可测的东西写成测过了 |
 | `test_mod_hygiene.py` | **P3 / G-EXIT-4 的文件面判据**：`mod/` 下的文件必须**正好**等于「生成结果 ∪ 数据源」。为什么需要它 —— `v3 modgen --check` 与 `v3 modguard` 都只认本档案前缀（`sitai_`），实测换一个前缀手写一个游戏侧文件（`zz_stray_handwritten.txt`）**两道门禁都报绿** |
+
+### 外交响应根事件诊断
+
+`tools/probe/decision_behavior.py --response-hooks` 仅允许显式 `--purpose instrument --arm control --fiscal-injection none --natural-opportunity`，不能制作存档或进入正式行为臂。默认关闭，不进入生产包。生成和解析由 `pdx.response_probe` 维护，冻结配置记录版本和未验证的作用域契约。
+
+日志协议为 `SITAI RESPONSE ROOT;<hook>;<saved_scope>;<actor_id>;<escalation>;<date_text>`：根钩子为 `join_side/abandon_side/war_start`，保存作用域状态为 `missing/same/different`，actor 缺失为 `missing`。存在性守卫内才读取 actor；其国家类型及传递语义仍未实测。分析单列 `response_diagnostics`，保留重复根事件；有根事件而无机会仍不能认定自然机会被捕获，不按国家对或日期归因，不把缺日志当作没有响应。旧 `SITAI RESPONSE;` 仅保留绑定匹配路径。
+
+该诊断只为区分潜在跨链漏记；引擎日期文本未与每日序号校准，不能计算响应时延、行动代价或质量。运行必须沿用既有账本、严格错误和恢复门禁；历史失败窗口不会因新增诊断而自动重开。实测边界与下一前提见 [A3 结果](../docs/design/exec/A3-结果.md#独立根事件诊断实现2026-10-15-后续定时任务)。
 
 ### 跑基准须串行并清除普通测试参数
 

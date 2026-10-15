@@ -6,7 +6,7 @@ import json
 import re
 from typing import TYPE_CHECKING, NotRequired, TypedDict
 
-from . import cost_probe, decision_probe, decisions, game_auto
+from . import cost_probe, decision_probe, decisions, game_auto, response_probe
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -15,7 +15,7 @@ ROW = re.compile(
     r"SITAI OPPORTUNITY;(?P<tag>[A-Z]{3}|CONTROL);(?P<kind>[A-Z_]+);(?P<value>.*);(?P<date>[^;]*)$"
 )
 RESPONSE_ROW = re.compile(r"SITAI RESPONSE;(?P<hook>[a-z_]+);(?P<value>.*);(?P<date>[^;]*)$")
-RESPONSE_HOOKS = frozenset({"join_side", "abandon_side", "war_start"})
+RESPONSE_HOOKS = frozenset(response_probe.HOOKS)
 BOOLEAN_KINDS = frozenset(
     {
         "UNDECIDED",
@@ -73,6 +73,7 @@ class Analysis(TypedDict):
     natural_capture: NotRequired[dict[str, object]]
     role_timing: NotRequired[RoleTiming]
     response_hooks: NotRequired[dict[str, object]]
+    response_diagnostics: NotRequired[response_probe.Diagnostics]
 
 
 def build(
@@ -298,19 +299,7 @@ zz_sitai_opportunity_bind = { effect = {
             1,
         )
         if response_hooks:
-            hook_lines = []
-            for hook, action in (
-                ("on_diplo_play_join_side", "zz_sitai_response_join_side"),
-                ("on_diplo_play_abandon_side", "zz_sitai_response_abandon_side"),
-                ("on_diplo_play_war_start", "zz_sitai_response_war_start"),
-            ):
-                hook_lines.append(
-                    f"{hook} = {{ on_actions = {{ {action} }} }}\n"
-                    f"{action} = {{ effect = {{ if = {{ limit = {{ this = scope:sitai_opportunity }} "
-                    f'debug_log = "SITAI RESPONSE;{hook.removeprefix("on_diplo_play_")};'
-                    '[THIS.GetEscalation];__SITAI_RESPONSE_DATE__" } } }'
-                )
-            script += "\n" + "\n".join(hook_lines) + "\n"
+            script += "\n" + response_probe.build_hooks()
         watch = watch.replace(
             "any_diplomatic_play = { initiator_is = c:AUS target_is = c:SAR }",
             "exists = scope:sitai_opportunity",
@@ -375,6 +364,11 @@ zz_sitai_opportunity_bind = { effect = {
                 "game_custom_data": {
                     "multiplayer_synchronized": False,
                     **({"cost_calibration": cost_probe.configuration()} if cost_readings else {}),
+                    **(
+                        {"response_diagnostics": response_probe.configuration()}
+                        if response_hooks
+                        else {}
+                    ),
                 },
             },
             ensure_ascii=False,
@@ -396,12 +390,17 @@ def analyze(
     *,
     tags: tuple[str, str] = ("RUS", "PRU"),
     natural_pair: tuple[str, str] | None = None,
+    response_hooks: bool = False,
 ) -> Analysis:
     rows: list[dict[str, str]] = []
     response_rows: list[dict[str, str]] = []
+    root_rows: list[response_probe.RootEvent] = []
     for path in game_auto.rotated_logs(directory, "debug"):
         with path.open(encoding="utf-8-sig", errors="replace") as stream:
             for line in stream:
+                root = response_probe.parse_line(line)
+                if root is not None:
+                    root_rows.append(root)
                 match = ROW.search(line.rstrip())
                 response_match = RESPONSE_ROW.search(line.rstrip())
                 if natural_pair is not None and "SITAI OPPORTUNITY;" in line and match is None:
@@ -445,7 +444,7 @@ def analyze(
                     if not response["date"]:
                         raise ValueError("外交响应钩子缺少时间")
                     response_rows.append(response)
-    if not rows:
+    if not rows and not root_rows:
         raise ValueError("缺少本局机会自报，不能把无记录当保持中立")
     countries: dict[str, CountryEvidence] = {}
     eligible_active: dict[str, set[str]] = {}
@@ -506,6 +505,8 @@ def analyze(
             "attribution": "仅记录根钩子触发与升级值；没有逐国 actor 归因",
             "quality_improvement_proven": False,
         }
+    if response_hooks or root_rows:
+        result["response_diagnostics"] = response_probe.summarize(root_rows)
     return result
 
 
