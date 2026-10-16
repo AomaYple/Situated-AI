@@ -126,15 +126,32 @@ def stats_for(path: Path, *, deep: bool = True) -> DirStats:
                 continue
         return st
 
-    for f in walk_files(path):
-        st.files += 1
-        st.size += f.size
-        st.by_suffix[f.suffix] += 1
-        if f.suffix in TEXT_SUFFIXES:
-            st.text_files += 1
-        else:
-            st.binary_files += 1
-    st.dirs = sum(1 for _ in _walk_dirs(path))
+    # 统计只需要 DirEntry 的元数据；同一次遍历也计数目录，
+    # 避免逐文件构造 Path/FileEntry 后再扫描整棵树。
+    stack: list[Path | str] = [path]
+    while stack:
+        current = stack.pop()
+        try:
+            with os.scandir(current) as entries:
+                for entry in entries:
+                    try:
+                        if entry.is_dir(follow_symlinks=False):
+                            st.dirs += 1
+                            stack.append(entry.path)
+                        elif entry.is_file(follow_symlinks=False):
+                            size = entry.stat(follow_symlinks=False).st_size
+                            suffix = Path(entry.name).suffix.lower()
+                            st.files += 1
+                            st.size += size
+                            st.by_suffix[suffix] += 1
+                            if suffix in TEXT_SUFFIXES:
+                                st.text_files += 1
+                            else:
+                                st.binary_files += 1
+                    except OSError:
+                        continue
+        except OSError:
+            continue
     return st
 
 
@@ -153,23 +170,6 @@ def _is_dir_no_link(p: Path) -> bool:
     否则同一个目录树在「深层统计」与「浅层统计」下会得出不同的目录数。
     """
     return p.is_dir() and not p.is_symlink()
-
-
-def _walk_dirs(root: Path) -> Iterator[Path]:
-    """递归产出全部子目录（``root`` 自身不含）。
-
-    这里用标准库 :func:`os.walk` 是合算的：它顺带给出每一层的目录名，
-    正好是这里需要的，而且**不需要 stat** —— 所以不存在
-    :func:`walk_files` 遇到的那个「丢掉 DirEntry 就得重新 stat」的性能坑。
-    ``os.walk`` 默认不跟随符号链接，但仍会把符号链接目录列进 ``dirnames``，
-    因此这里显式滤掉，与旧行为一致。
-    """
-    for dirpath, dirnames, _filenames in os.walk(root):
-        base = Path(dirpath)
-        for name in dirnames:
-            child = base / name
-            if not child.is_symlink():
-                yield child
 
 
 def subdir_stats(root: Path, *, deep: bool = True) -> list[DirStats]:

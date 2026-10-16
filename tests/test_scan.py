@@ -10,8 +10,14 @@ import contextlib
 import shutil
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
+import pytest
+
+from pdx import scan
 from pdx.scan import (
     TEXT_SUFFIXES,
     count_files,
@@ -126,12 +132,7 @@ class TestStats(unittest.TestCase):
         self.assertEqual(names, ["a", "b", "c"])
 
     def test_subdir_stats_深层统计目录数(self):
-        """深层统计必须靠 `_walk_dirs` 递归数出全部层级的目录。
-
-        这条对着一个真实踩过的坑：`_walk_dirs` 从手写栈换成 `os.walk` 之后，
-        符号链接目录的过滤语义要**保持不变**，否则同一个树在深浅两种口径下
-        会给出不同的目录数。
-        """
+        """深层统计包含全部子目录，但不包含被统计目录本身。"""
         with TempTree({"a/b/c/x.txt": "1", "a/y.txt": "2", "d/z.txt": "3"}) as root:
             stats = {s.name: s for s in subdir_stats(root)}
         self.assertEqual(sorted(stats), ["a", "d"])
@@ -219,6 +220,154 @@ class TestRealGameTree(unittest.TestCase):
         text = (GAME / "checksum_manifest.txt").read_text(encoding="utf-8-sig")
         for d in ("common", "events", "map_data", "gui", "localization"):
             self.assertIn(f"name = {d}", text)
+
+
+@pytest.mark.parametrize("deep", [False, True])
+@pytest.mark.parametrize("kind", ["empty", "file", "missing"])
+def test_stats_empty_or_non_directory(tmp_path, kind, deep):
+    path = tmp_path / kind
+    if kind == "empty":
+        path.mkdir()
+    elif kind == "file":
+        path.write_bytes(b"abc")
+    assert stats_for(path, deep=deep) == scan.DirStats(name=kind, path=path)
+
+
+def test_deep_stats_retains_all_fields_and_suffix_order(tmp_path):
+    (tmp_path / "empty").mkdir()
+    (tmp_path / "nested" / "empty").mkdir(parents=True)
+    for rel, content in {
+        "UPPER.TXT": b"abc",
+        "nested/中文.md": b"xy",
+        "nested/texture.dds": b"1234",
+        ".hidden": b"5",
+        "no_suffix": b"67",
+    }.items():
+        (tmp_path / rel).write_bytes(content)
+    result = stats_for(tmp_path)
+    assert (result.files, result.dirs, result.size) == (5, 3, 12)
+    assert (result.text_files, result.binary_files) == (2, 3)
+    assert result.by_suffix == {".txt": 1, ".md": 1, ".dds": 1, "": 2}
+    # 与公开文件流的首次出现顺序一致，避免序列化顺序漂移。
+    assert list(result.by_suffix) == list(dict.fromkeys(f.suffix for f in walk_files(tmp_path)))
+
+
+def test_shallow_stats_retains_unclassified_fields(tmp_path):
+    (tmp_path / "child").mkdir()
+    (tmp_path / "child" / "nested.md").write_bytes(b"hidden")
+    (tmp_path / "direct.TXT").write_bytes(b"abc")
+    result = stats_for(tmp_path, deep=False)
+    assert (result.files, result.dirs, result.size) == (1, 1, 3)
+    assert (result.text_files, result.binary_files) == (0, 0)
+    assert not result.by_suffix
+
+
+def test_stats_counts_hard_links_as_distinct_paths(tmp_path):
+    source = tmp_path / "source.txt"
+    source.write_bytes(b"abc")
+    try:
+        (tmp_path / "alias.txt").hardlink_to(source)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"当前平台不支持硬链接：{exc}")
+    result = stats_for(tmp_path)
+    assert (result.files, result.dirs, result.size) == (2, 0, 6)
+    assert result.by_suffix == {".txt": 2}
+
+
+@pytest.mark.parametrize("blocked_child", [False, True])
+def test_stats_isolates_unreadable_directories(tmp_path, monkeypatch, blocked_child):
+    blocked = tmp_path / "blocked" if blocked_child else tmp_path
+    (tmp_path / "blocked").mkdir()
+    (tmp_path / "blocked" / "secret.txt").write_bytes(b"hidden")
+    (tmp_path / "peer.txt").write_bytes(b"ok")
+    original = scan.os.scandir
+
+    def scandir(path):
+        if Path(path) == blocked:
+            raise PermissionError("拒绝读取目录")
+        return original(path)
+
+    monkeypatch.setattr(scan.os, "scandir", scandir)
+    result = stats_for(tmp_path)
+    assert (result.files, result.dirs, result.size) == ((1, 1, 2) if blocked_child else (0, 0, 0))
+    assert result.by_suffix == ({".txt": 1} if blocked_child else {})
+
+
+@pytest.mark.parametrize("operation", ["is_dir", "is_file", "stat"])
+def test_stats_isolates_entry_metadata_errors(tmp_path, monkeypatch, operation):
+    bad = SimpleNamespace(
+        name="bad.txt",
+        path=str(tmp_path / "bad.txt"),
+        is_dir=Mock(return_value=False),
+        is_file=Mock(return_value=True),
+        stat=Mock(return_value=SimpleNamespace(st_size=100)),
+    )
+    getattr(bad, operation).side_effect = FileNotFoundError("扫描过程中条目消失")
+    good = SimpleNamespace(
+        name="peer.txt",
+        path=str(tmp_path / "peer.txt"),
+        is_dir=Mock(return_value=False),
+        is_file=Mock(return_value=True),
+        stat=Mock(return_value=SimpleNamespace(st_size=2)),
+    )
+
+    @contextmanager
+    def scandir(_path):
+        yield iter([bad, good])
+
+    monkeypatch.setattr(scan.os, "scandir", scandir)
+    result = stats_for(tmp_path)
+    assert (result.files, result.dirs, result.size) == (1, 0, 2)
+    assert (result.text_files, result.binary_files) == (1, 0)
+    assert result.by_suffix == {".txt": 1}
+
+
+def test_stats_keeps_partial_results_and_closes_failed_iteration(tmp_path, monkeypatch):
+    entry = SimpleNamespace(
+        name="seen.txt",
+        path=str(tmp_path / "seen.txt"),
+        is_dir=Mock(return_value=False),
+        is_file=Mock(return_value=True),
+        stat=Mock(return_value=SimpleNamespace(st_size=3)),
+    )
+    closed = []
+
+    def entries():
+        yield entry
+        raise PermissionError("目录枚举中途失败")
+
+    @contextmanager
+    def scandir(_path):
+        try:
+            yield entries()
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(scan.os, "scandir", scandir)
+    result = stats_for(tmp_path)
+    assert (result.files, result.dirs, result.size) == (1, 0, 3)
+    assert result.by_suffix == {".txt": 1}
+    assert closed == [True]
+
+
+def test_stats_ignores_child_links_but_allows_link_as_root(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "real").mkdir()
+    (root / "real" / "file.txt").write_bytes(b"ok")
+    linked_root = tmp_path / "linked-root"
+    try:
+        linked_root.symlink_to(root, target_is_directory=True)
+        (root / "dir-link").symlink_to(root / "real", target_is_directory=True)
+        (root / "cycle").symlink_to(root, target_is_directory=True)
+        (root / "file-link.txt").symlink_to(root / "real" / "file.txt")
+        (root / "dangling").symlink_to(root / "missing")
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"当前平台未授予符号链接能力：{exc}")
+    for path in (root, linked_root):
+        result = stats_for(path)
+        assert (result.files, result.dirs, result.size) == (1, 1, 2)
+        assert result.by_suffix == {".txt": 1}
 
 
 if __name__ == "__main__":
