@@ -64,6 +64,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期；安装版简体中文缺键时显式加 `--localization-baseline`，不豁免错误门禁 |
 | `tools/probe/save_migration_audit.py` | 递归盘点 `.v3` 版本、观察者状态、空规则和 SHA-256；只报告可用于跨版本升级实验的输入，不执行迁移 |
 | `python -m pdx.checkpoint_catalog` | 只读目录盘点或显式最多两份原件的有界财政/外交筛选；复核来源与完整 SHA，保留拒绝/未知，不自动放行实机 |
+| `python -m pdx.explanation_probe --output tools/out/a5-explanation.zip` | 仅生成 A5 选中国家说明的隔离实验 ZIP，默认全关；不安装或运行，也不进入生产包，国家上下文与帧成本未实测 |
 | `tools/benchmarks/experiment_evidence.py` | 串行合成资格成本基线，分开计时、Python 分配与进程树 RSS；不是实机或加速对照 |
 | `tools/benchmarks/decision_runtime.py` | 分开测生成、日志/存档读取的墙钟与Python分配峰值；正式基线要求机器安静 |
 
@@ -300,7 +301,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 120 个测试文件、3871 条用例（2026-10-15 工作区口径）；本轮完整 `v3 cov` 使用 `n-auto`，结果为 **3852 passed、19 skipped**，643.26 秒、1711 个 subtests；包含行与分支的总覆盖率 **89.40%**，整体与 11 个核心模块下限全部通过。当前读数、跳过范围和限制见 [A3 战后诊断结果](../docs/design/exec/A3-结果.md#逐国战后回调诊断的离线实施2026-10-15-0953-utc-定时任务)，此前首次失败保留在原章节。此前全仓审计见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)，正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
+当前收集 121 个测试文件、3884 条用例（2026-10-15 工作区口径）；2026-10-15 暂停时本批完整回归中断，不提供当时的新覆盖率。此前完整 `v3 cov` 使用 `n-auto`，结果为 **3852 passed、19 skipped**，643.26 秒、1711 个 subtests；包含行与分支的总覆盖率 **89.40%**，整体与 11 个核心模块下限全部通过。当前读数、跳过范围和限制见 [A3 战后诊断结果](../docs/design/exec/A3-结果.md#逐国战后回调诊断的离线实施2026-10-15-0953-utc-定时任务)，此前首次失败保留在原章节。此前全仓审计见[仓库总览与清理审计](../docs/audits/2026-10-14-仓库总览与清理.md)，正式入口与资源成本见[资格与预算审计](../docs/audits/2026-10-11-正式实验入口.md)，工程速度与内存对照见[工程提速复核](../docs/audits/2026-10-11-工程提速.md)，检查点来源门禁与回归见 [M4 结果](../docs/design/exec/M4-结果.md)，此前完整回归与跳过原因见[语言与命名审计](../docs/audits/2026-10-10-language-naming.md)，清理结果见[清理记录](../docs/audits/2026-10-10-stale-cleanup.md)。此前覆盖率、核心模块下限和三平台离线 CI 结果见[仓库维护记录](../docs/audits/2026-10-10-repository-maintenance.md)，前轮提速的独立测量见[速度执行记录](../docs/audits/2026-10-10-speed-execution.md)。不同版本、测试集合、缓存与资源状态不能混为当前测量或受控提速对照。正式 M4 的冻结候选、后期与资源出口仍按 [M4 结果](../docs/design/exec/M4-结果.md)验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -598,3 +599,5 @@ Python 版将这些流程集中为可测试的代码；速度执行记录收集 
 > （域 `doc_tables`），`v3 tables --offline` 只读快照与文档即可逐行核对
 > （`--write` 可按快照恢复）。CI 运行表格检查；pre-commit 只运行离线断言核验等静态检查，
 > 表格检查与 `v3 verify --from-snapshot` 各自负责不同的一致性范围。
+
+本次 A5 候选的交付前联合工程验证见 [A5 工程复核](../docs/design/exec/A5-结果.md#交付前工程复核2026-10-16)；独立提交收集口径与联合工作树分别记录，不提供游戏内验收结论。

@@ -247,7 +247,10 @@ def write_zip(
     return destination
 
 
-def package(destination: Path, *, variant: str = "disabled") -> Path:
+def package_inputs(
+    variant: str,
+) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str]]:
+    """校验生产源后返回实际变体；隔离仪器复用同一转换，避免说明漂移。"""
     if variant not in {"current", "control", "disabled"}:
         raise ValueError("包变体必须是 current、control 或 disabled")
     policy, extensions = decisions.load(), decisions.load_extensions()
@@ -264,6 +267,11 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
     files = current if variant == "current" else decisions.build(policy, extensions=extensions)
     modules = json.loads(files[".metadata/metadata.json"])["enabled_modules"]
     files["README.md"] = player_guide(policy, extensions, modules, variant=variant)
+    return policy, extensions, files
+
+
+def package(destination: Path, *, variant: str = "disabled") -> Path:
+    policy, extensions, files = package_inputs(variant)
     return write_zip(
         files,
         destination,
