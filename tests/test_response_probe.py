@@ -109,11 +109,9 @@ def test_生成分支严格区分同对象另一个对象及不可用引用(
         seen=seen,
         countries=countries,
     )
-    roots = [line for line in logs if line.startswith("SITAI RESPONSE ROOT2;")]
-    assert roots == [
-        f"SITAI RESPONSE ROOT2;join_side;{want};[THIS.GetEscalation];[TimeKeeper.GetCurrentDate.GetString]"
-    ]
-    assert sum(line.startswith("SITAI RESPONSE;") for line in logs) == int(saved == root)
+    roots = [line for line in logs if line.startswith("SITAI RESPONSE ROOT3;")]
+    assert roots == [f"SITAI RESPONSE ROOT3;join_side;{want};unavailable;unavailable"]
+    assert not any("[" in line for line in logs)
 
 
 @pytest.mark.parametrize("reference", ["unbound", "unavailable", "same", "different"])
@@ -225,7 +223,8 @@ def test_实际生成唯一绑定写入有界引用且不转换未知actor():
     assert "c:AUS ?= { this = scope:actor }" in script
     metadata = json.loads(files[".metadata/metadata.json"])
     assert metadata["game_custom_data"]["response_diagnostics"] == {
-        "version": 2,
+        "version": 3,
+        "readings": "identity-actor-only-no-gui-getters",
         "identity": "persistent-reference-unvalidated",
         "reference_days": 190,
         "actor": "declared-country-equality-unvalidated",
@@ -244,7 +243,11 @@ def test_实际生成唯一绑定写入有界引用且不转换未知actor():
         effect = _block(_block(tree.root, f"zz_sitai_response_{hook}"), "effect")
         outer = _block(effect, "if")
         same = _block(outer, "if")
-        assert _text(same, "debug_log").startswith(f"SITAI RESPONSE;{hook};")
+        assert all(
+            "[" not in node.value.unquoted
+            for node in _assignments(effect)
+            if node.key == "debug_log" and isinstance(node.value, Scalar)
+        )
         for branch in (same, _block(outer, "else"), _block(effect, "else")):
             ref_exists = _block(branch, "if")
             assert (
@@ -279,7 +282,7 @@ def test_默认自然观察包不写入持久响应状态():
     files = behavior_probe.build(natural=True, play_types=("dp_humiliation",))
     script = files["common/on_actions/zz_sitai_opportunity.txt"]
     assert "sitai_response_reference" not in script
-    assert "SITAI RESPONSE ROOT2" not in script
+    assert "SITAI RESPONSE ROOT" not in script
 
 
 @pytest.mark.parametrize("binding", ["missing", "same", "different"])
@@ -474,10 +477,15 @@ def test_生成诊断保留脚本链身份且元数据明确未验证():
         assert _text(_block(outer, "limit"), "exists") == "scope:sitai_opportunity"
         same = _block(outer, "if")
         assert _text(_block(same, "limit"), "this") == "scope:sitai_opportunity"
-        assert _text(same, "debug_log").startswith(f"SITAI RESPONSE;{hook};")
+        assert all(
+            "[" not in node.value.unquoted
+            for node in _assignments(effect)
+            if node.key == "debug_log" and isinstance(node.value, Scalar)
+        )
     metadata = json.loads(files[".metadata/metadata.json"])
     assert metadata["game_custom_data"]["response_diagnostics"] == {
-        "version": 2,
+        "version": 3,
+        "readings": "identity-actor-only-no-gui-getters",
         "identity": "persistent-reference-unvalidated",
         "reference_days": 190,
         "actor": "declared-country-equality-unvalidated",
@@ -492,3 +500,44 @@ def test_生成诊断保留脚本链身份且元数据明确未验证():
             "quantitative_cost_supported": False,
         },
     }
+
+
+@pytest.mark.parametrize("reference", ["unbound", "unavailable", "same", "different"])
+@pytest.mark.parametrize("actor", ["missing", "unmatched", "RUS"])
+def test_纯脚本诊断显式缺少升级和日期且不晋级质量(tmp_path, reference, actor):
+    from pdx import response_probe
+
+    row = f"SITAI RESPONSE ROOT3;join_side;missing;{reference};{actor};unavailable;unavailable"
+    parsed = response_probe.parse_line(row)
+    assert parsed is not None
+    assert parsed["protocol_version"] == 3
+    assert parsed["escalation"] is None
+    assert parsed["date_text"] is None
+    assert parsed["persistent_scope"] == reference
+    assert parsed["actor_tag"] == (actor if actor == "RUS" else None)
+    (tmp_path / "debug.log").write_text(row + "\n", encoding="utf-8", newline="\n")
+    result = behavior_probe.analyze(tmp_path, natural_pair=("AUS", "SAR"))
+    assert result["response_diagnostics"]["count"] == 1
+    assert result["response_diagnostics"]["opportunity_identity_verified"] is False
+    assert result["response_diagnostics"]["actor_scope_supported"] is False
+    assert result["quality_observations"]["status"] == "unsupported"
+    assert result["quality_observations"]["join_latency"] is None
+    assert result["usable_for_paired_behavior"] is False
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "join_side;missing;same;RUS;0;unavailable",
+        "join_side;missing;same;RUS;unavailable;1836.3.1",
+        "join_side;missing;same;USA;unavailable;unavailable",
+        "join_side;missing;same;RUS;unavailable;unavailable;extra",
+        "join_side;missing;expired;RUS;unavailable;unavailable",
+    ],
+)
+def test_纯脚本坏行和未声明国家仍拒绝(tmp_path, payload):
+    (tmp_path / "debug.log").write_text(
+        "SITAI RESPONSE ROOT3;" + payload + "\n", encoding="utf-8", newline="\n"
+    )
+    with pytest.raises(ValueError, match=r"根钩子诊断|未声明"):
+        behavior_probe.analyze(tmp_path, natural_pair=("AUS", "SAR"))

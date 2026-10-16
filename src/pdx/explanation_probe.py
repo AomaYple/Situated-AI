@@ -1,6 +1,7 @@
 """A5 选中国家的只读解释候选；显式生成隔离实验 ZIP，不安装或运行游戏。
 
-控件作用域、隐藏控件求值及帧成本尚未通过引擎验证。探针组件只读；
+独立根控件已被实机否证；候选在原生国家面板内实例化，作用域及帧成本待验。
+探针组件只读；
 实验 ZIP 包含所选生产变体，保证配置说明与随包玩法来自同一输入。
 """
 
@@ -12,10 +13,12 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-from . import decisions, distribution
+from . import config, decisions, distribution
+from .lexer import STRING, tokenize
 
 PREFIX = "sitai_explain_probe"
 GUI = f"gui/{PREFIX}.gui"
+PANEL = "gui/country_panel.gui"
 SGUI = f"common/scripted_guis/{PREFIX}.txt"
 
 
@@ -132,18 +135,13 @@ def _localization(policy: decisions.Policy, extra: decisions.Extensions) -> dict
 def build(policy: decisions.Policy, extra: decisions.Extensions) -> dict[str, str]:
     """只返回命名空间隔离的只读组件；不生成生产机制或覆盖国家面板。"""
     files = {
-        f"gui/scripted_widgets/{PREFIX}.txt": f"{GUI} = {PREFIX}\n",
         GUI: f"""types {PREFIX}_types {{
     type {PREFIX} = widget {{
         name = "{PREFIX}"
         size = {{ 620 460 }}
-        position = {{ 700 160 }}
-        visible = "[InformationPanelBar.IsPanelOpen('country_panel')]"
-        widget = {{
-            datacontext = "[CountryPanel.GetCountry]"
-            size = {{ 100% 100% }}
+        position = {{ 560 160 }}
+        visible = "[Country.IsValid]"
             vbox = {{
-                visible = "[Country.IsValid]"
                 textbox = {{ text = "{PREFIX}_title" autoresize = yes }}
                 textbox = {{ raw_text = "[Country.GetNameNoFormatting]" autoresize = yes }}
                 textbox = {{
@@ -152,7 +150,6 @@ def build(policy: decisions.Policy, extra: decisions.Extensions) -> dict[str, st
                     raw_text = "[GetScriptedGui('{PREFIX}').ExecuteTooltip(GuiScope.SetRoot(Country.MakeScope).End)]"
                 }}
             }}
-        }}
     }}
 }}
 """,
@@ -162,9 +159,77 @@ def build(policy: decisions.Policy, extra: decisions.Extensions) -> dict[str, st
     return files
 
 
+def _extend_country_panel(text: str) -> str:
+    """只在唯一原生类型内追加实例；引号/注释内的括号不影响边界。
+
+    GUI 有命名 types 等专用语法，不能用通用脚本 AST 猜层级。复用词法器
+    定位确切类型与直接国家上下文；任何歧义均拒绝，不做模糊文本替换。
+    """
+    if "\r" in text or text.startswith("\ufeff"):
+        raise ValueError("国家面板底本必须先规范化为 UTF-8 无 BOM、LF")
+    tokens = tokenize(text)
+    depth = 0
+    depths = []
+    for token in tokens:
+        depths.append(depth)
+        if token.kind == STRING:
+            # 词法器容错保留未闭合字符串；生成覆盖文件必须拒绝它，包含末尾转义引号。
+            before_quote = token.value[:-1]
+            escapes = len(before_quote) - len(before_quote.rstrip("\\"))
+            if len(token.value) < 2 or not token.value.endswith('"') or escapes % 2:
+                raise ValueError("国家面板底本含未闭合字符串")
+        elif token.value == "{":
+            depth += 1
+        elif token.value == "}":
+            depth -= 1
+            if depth < 0:
+                raise ValueError("国家面板底本存在多余闭合边界")
+    if depth:
+        raise ValueError("国家面板底本缺少闭合边界")
+    starts = [
+        index
+        for index in range(len(tokens) - 2)
+        if [token.value for token in tokens[index : index + 3]] == ["type", "country_panel", "="]
+    ]
+    if len(starts) != 1 or any(token.value.strip('"') == PREFIX for token in tokens):
+        raise ValueError("国家面板底本类型不唯一、已注入或接口发生变化")
+    declaration = starts[0]
+    if depths[declaration] != 1 or [
+        token.value for token in tokens[declaration + 3 : declaration + 5]
+    ] != ["default_block_window_two_lines", "{"]:
+        raise ValueError("国家面板底本类型层级或基类发生变化")
+    start = starts[0] + 4
+    depth = 0
+    contexts = []
+    closing = None
+    for index in range(start, len(tokens)):
+        token = tokens[index]
+        if token.value == "{":
+            depth += 1
+        elif token.value == "}":
+            depth -= 1
+            if depth == 0:
+                closing = token
+                break
+        elif token.value == "datacontext" and depth == 1:
+            contexts.append([item.value for item in tokens[index + 1 : index + 3]])
+    if closing is None or contexts != [["=", '"[CountryPanel.GetCountry]"']]:
+        raise ValueError("国家面板底本缺少唯一直接国家上下文或闭合边界")
+    # 与词法器使用同一种 LF 行号；splitlines 会把字符串内的 U+2028 误算成新行。
+    offset = sum(len(line) + 1 for line in text.split("\n")[: closing.line - 1])
+    offset += closing.col - 1
+    return text[:offset] + f"\n\t\t{PREFIX} = {{}}\n\t" + text[offset:]
+
+
 def package(destination: Path, *, variant: str = "disabled") -> Path:
     """显式生成自包含实验包；保留生产变体字节，仅追加只读组件及探针身份。"""
     policy, extra, files = distribution.package_inputs(variant)
+    installed_version = config.game_version().get("caligula_branch", "").split("/")[-1]
+    if installed_version != policy.game_version:
+        raise ValueError("解释实验包需要与生产版本一致的本机国家面板底本")
+    panel_bytes = (config.GAME / PANEL).read_bytes()
+    panel = panel_bytes.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n")
+    files[PANEL] = _extend_country_panel(panel)
     files.update(build(policy, extra))
     metadata = json.loads(files[".metadata/metadata.json"])
     metadata["id"] = "sitai.explanation-probe"
@@ -177,6 +242,13 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
         "engine_verified": False,
         "quality_improvement_proven": False,
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "country_panel": {
+            "path": PANEL,
+            "source_sha256": hashlib.sha256(panel_bytes).hexdigest(),
+            "normalized_sha256": hashlib.sha256(panel.encode("utf-8")).hexdigest(),
+            "generated_sha256": hashlib.sha256(files[PANEL].encode("utf-8")).hexdigest(),
+            "compatibility": "overrides_native_country_panel",
+        },
         "fiscal": asdict(policy),
         "extensions": asdict(extra),
     }
@@ -187,9 +259,13 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
         "生成不安装、不启动、不登记游戏实验，也不解除已停止窗口。\n"
         "在合法实机窗口依次检查无国家面板、两个 AI 国家切换、玩家/观察者、开/关、"
         "状态退出、中英语言与可见/隐藏帧成本；发现错误停止并保留原件。"
+        "实验包从匹配版本本机底本生成 country_panel.gui 覆盖，只在原生国家上下文内追加实例；"
+        "不与其他国家面板覆盖兼容。底本和输出指纹入清单，不修改游戏安装。"
         "控件当前使用固定位置/尺寸，仅供作用域否证，不是可发布布局。\n"
         "Self-contained: mount this ZIP alone, never alongside production or another variant. "
         "Generation does not install, launch, register a run or reopen stopped windows. "
+        "The ZIP overrides country_panel.gui generated from a matching local game version; "
+        "it conflicts with other country-panel overrides and never edits the game installation. "
         "Context, refresh, layout and frame cost remain unverified; this is not a release.\n\n"
         + files["README.md"]
     )
