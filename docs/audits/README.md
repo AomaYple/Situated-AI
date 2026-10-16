@@ -1,6 +1,6 @@
 # 工程与证据审计索引
 
-本目录保存日期化的仓库、工程、性能和证据审计。审计描述特定时间、版本、输入和命令；当前工程原则见 [工程原则](../principles/工程原则.md)，具体流程与契约见 [CONTRIBUTING.md](../../CONTRIBUTING.md) 和 [工程基线 1.0](../design/exec/工程基线-1.0.md)。当前 Mod 状态见 [当前工作清单](../design/当前工作清单.md) 与 [M1–M5 结果索引](../design/exec/README.md)，执行顺序见 [分阶段可玩开发计划 2.0](../design/exec/mod重设计-实施计划.md)。
+本目录保存日期化的仓库、工程、性能和证据审计。审计描述特定时间、版本、输入和命令；当前工程原则见 [工程原则](../principles/工程原则.md)，具体流程与契约见 [CONTRIBUTING.md](../../CONTRIBUTING.md) 和 [工程基线 1.0](../design/exec/工程基线-1.0.md)。当前 Mod 状态见 [当前工作清单](../design/当前工作清单.md) 与 [M1–M5 结果索引](../design/exec/README.md)，执行顺序见 [完整候选实现与集中验证计划 3.0](../design/exec/mod重设计-实施计划.md)。
 
 ## 最近审计
 

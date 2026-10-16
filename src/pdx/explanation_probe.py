@@ -29,7 +29,7 @@ def _choice(condition: str, yes: str, no: str) -> str:
     )
 
 
-def _script(policy: decisions.Policy) -> str:
+def _script(policy: decisions.Policy, extra: decisions.Extensions) -> str:
     # ExecuteTooltip 只构建说明。闭合的效果子集不含 Execute、写变量或扫描。
     body = f"    custom_tooltip = {PREFIX}_config\n"
     if not policy.enabled:
@@ -44,6 +44,17 @@ def _script(policy: decisions.Policy) -> str:
         body += _choice("in_default = yes", "default", "not_default")
         body += "    } else = { custom_tooltip = " + PREFIX + "_human }\n"
     body += f"    custom_tooltip = {PREFIX}_rules\n"
+    if extra.reform_enabled:
+        body += "    if = { limit = { is_ai = yes }\n"
+        body += _choice("sitai_reform_fragile = yes", "reform_fragile", "reform_not_fragile")
+        body += _choice(
+            "sitai_reform_opportunity = yes", "reform_opportunity", "reform_no_opportunity"
+        )
+        body += "    }\n"
+    if extra.market_enabled:
+        body += f"    custom_tooltip = {PREFIX}_market_rules\n"
+    if extra.security_enabled:
+        body += f"    custom_tooltip = {PREFIX}_security_rules\n"
     body += f"    custom_tooltip = {PREFIX}_boundary\n"
     return f"{PREFIX} = {{\n    scope = country\n    effect = {{\n{body}    }}\n}}\n"
 
@@ -53,12 +64,14 @@ def _localization(policy: decisions.Policy, extra: decisions.Extensions) -> dict
     state_en = "enabled" if policy.enabled else "disabled"
     config_zh = (
         f"配置：财政{state_zh}；改革{'启用' if extra.reform_enabled else '关闭'}；"
-        f"市场{'启用' if extra.market_enabled else '关闭'}。"
+        f"市场{'启用' if extra.market_enabled else '关闭'}；"
+        f"security={'启用' if extra.security_enabled else '关闭'}。"
     )
     config_en = (
         f"Configuration: fiscal {state_en}; reform "
         f"{'enabled' if extra.reform_enabled else 'disabled'}; market "
-        f"{'enabled' if extra.market_enabled else 'disabled'}."
+        f"{'enabled' if extra.market_enabled else 'disabled'}; security "
+        f"{'enabled' if extra.security_enabled else 'disabled'}."
     )
     rows = {
         "title": ("处境说明 · 未验证探针", "Situated explanation - unverified probe"),
@@ -121,6 +134,37 @@ def _localization(policy: decisions.Policy, extra: decisions.Extensions) -> dict
             "Read-only candidate: country context/refresh unverified in engine; no final score, net cost, adverse outcome or AI quality conclusion. Unknown remains unknown.",
         ),
     }
+    if extra.reform_enabled:
+        rows.update(
+            {
+                "reform_fragile": (
+                    f"改革脆弱条件满足：default 启动贡献 {extra.fragile_penalty:+g}。",
+                    f"Reform fragile condition met: default start contribution {extra.fragile_penalty:+g}.",
+                ),
+                "reform_not_fragile": (
+                    "改革脆弱条件未满足。",
+                    "Reform fragile condition not met.",
+                ),
+                "reform_opportunity": (
+                    f"改革机会代理满足：脆弱条件不满足时 default 贡献 {extra.reform_bonus:+g}；不证明具体法律可行。",
+                    f"Reform opportunity proxy met: default contribution {extra.reform_bonus:+g} unless fragile; not proof of a feasible law.",
+                ),
+                "reform_no_opportunity": (
+                    "改革机会代理未满足；不等于没有可行法律。",
+                    "Reform opportunity proxy not met; does not prove no law is feasible.",
+                ),
+            }
+        )
+    if extra.market_enabled:
+        rows["market_rules"] = (
+            f"market：双方依赖差×{extra.market_multiplier:g}，支持贡献范围 ±{5 * extra.market_multiplier:g}；国家面板缺少明确博弈双方，不计算本次分数。",
+            f"market: dependence difference x {extra.market_multiplier:g}, bounded by +/-{5 * extra.market_multiplier:g}; this panel lacks play-side context and does not calculate a score.",
+        )
+    if extra.security_enabled:
+        rows["security_rules"] = (
+            f"security：防御条约/联盟 {extra.security_commitment_bonus:g}，邻国征服/附庸风险 {extra.security_threat_bonus:g}，只取最高理由；进攻方反向。面板缺少博弈双方，不声称当前贡献。",
+            f"security: defense treaty/alliance {extra.security_commitment_bonus:g}, threatened-neighbor defense {extra.security_threat_bonus:g}; maximum reason only, opposite sign for attacker. No current contribution without play-side context.",
+        )
     result = {}
     for column, language in enumerate(("simp_chinese", "english")):
         lines = [f"l_{language}:"]
@@ -153,7 +197,7 @@ def build(policy: decisions.Policy, extra: decisions.Extensions) -> dict[str, st
     }}
 }}
 """,
-        SGUI: _script(policy),
+        SGUI: _script(policy, extra),
     }
     files.update(_localization(policy, extra))
     return files
@@ -221,9 +265,11 @@ def _extend_country_panel(text: str) -> str:
     return text[:offset] + f"\n\t\t{PREFIX} = {{}}\n\t" + text[offset:]
 
 
-def package(destination: Path, *, variant: str = "disabled") -> Path:
-    """显式生成自包含实验包；保留生产变体字节，仅追加只读组件及探针身份。"""
-    policy, extra, files = distribution.package_inputs(variant)
+def attach(
+    files: dict[str, str], policy: decisions.Policy, extra: decisions.Extensions
+) -> dict[str, str]:
+    """给实际玩法附加同源只读候选；不修改传入映射或安装目录。"""
+    files = dict(files)
     installed_version = config.game_version().get("caligula_branch", "").split("/")[-1]
     if installed_version != policy.game_version:
         raise ValueError("解释实验包需要与生产版本一致的本机国家面板底本")
@@ -232,13 +278,10 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
     files[PANEL] = _extend_country_panel(panel)
     files.update(build(policy, extra))
     metadata = json.loads(files[".metadata/metadata.json"])
-    metadata["id"] = "sitai.explanation-probe"
-    metadata["name"] = "Situated AI - A5 未验证解释探针"
     metadata["status"] = "experimental"
     metadata["game_custom_data"]["multiplayer_synchronized"] = False
     metadata.setdefault("game_custom_data", {})["explanation_probe"] = {
         "schema": 1,
-        "variant": variant,
         "engine_verified": False,
         "quality_improvement_proven": False,
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -252,6 +295,22 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
         "fiscal": asdict(policy),
         "extensions": asdict(extra),
     }
+    metadata["source_fingerprint"]["explanation_generator_sha256"] = hashlib.sha256(
+        Path(__file__).read_bytes()
+    ).hexdigest()
+    metadata["source_fingerprint"]["country_panel_sha256"] = hashlib.sha256(panel_bytes).hexdigest()
+    files[".metadata/metadata.json"] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
+    return files
+
+
+def package(destination: Path, *, variant: str = "disabled") -> Path:
+    """显式生成自包含实验包；保留生产变体字节，仅追加只读组件及探针身份。"""
+    policy, extra, files = distribution.package_inputs(variant)
+    files = attach(files, policy, extra)
+    metadata = json.loads(files[".metadata/metadata.json"])
+    metadata["id"] = "sitai.explanation-probe"
+    metadata["name"] = "Situated AI - A5 未验证解释探针"
+    metadata["game_custom_data"]["explanation_probe"]["variant"] = variant
     files[".metadata/metadata.json"] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
     files["README.md"] = (
         "A5 未验证解释探针 / Unverified A5 explanation probe\n\n"

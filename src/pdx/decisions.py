@@ -17,7 +17,7 @@ from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
 
-from . import __version__, config
+from . import __version__, config, decision_security
 from .lexer import LBRACE, RBRACE, tokenize
 from .model import Block
 from .parser import parse_text
@@ -78,13 +78,20 @@ class Extensions:
     market_enabled: bool = False
     market_multiplier: float = 5
     source_sha256: str = ""
+    security_enabled: bool = False
+    security_commitment_bonus: float = 25
+    security_threat_bonus: float = 15
 
 
 def load_extensions(source: Path = EXTENSIONS) -> Extensions:
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
     if (
-        set(data) != {"schema_version", "reform", "market"}
+        set(data)
+        not in (
+            {"schema_version", "reform", "market"},
+            {"schema_version", "reform", "market", "security"},
+        )
         or type(data["schema_version"]) is not int
         or data["schema_version"] != 1
     ):
@@ -117,6 +124,31 @@ def load_extensions(source: Path = EXTENSIONS) -> Extensions:
         raise ValueError("扩展偏置必须有限且位于保守范围内")
     if any(not isinstance(v, str) or not v.strip() for v in (reform["why"], market["why"])):
         raise ValueError("扩展参数必须给出依据")
+    security = data.get(
+        "security",
+        {
+            "enabled": False,
+            "commitment_bonus": 25,
+            "threat_bonus": 15,
+            "why": "旧配置：外部模块关闭",
+        },
+    )
+    if (
+        not isinstance(security, dict)
+        or set(security) != {"enabled", "commitment_bonus", "threat_bonus", "why"}
+        or type(security["enabled"]) is not bool
+        or not isinstance(security["why"], str)
+        or not security["why"].strip()
+    ):
+        raise ValueError("外部防御配置字段、开关或依据无效")
+    for amount in (security["commitment_bonus"], security["threat_bonus"]):
+        if (
+            isinstance(amount, bool)
+            or not isinstance(amount, (int, float))
+            or not 0 <= amount <= 50
+            or not math.isfinite(amount)
+        ):
+            raise ValueError("外部防御权重必须是 0 到 50 的有限数值")
     return Extensions(
         reform["enabled"],
         reform["legitimacy"],
@@ -126,6 +158,9 @@ def load_extensions(source: Path = EXTENSIONS) -> Extensions:
         market["enabled"],
         market["multiplier"],
         hashlib.sha256(raw).hexdigest(),
+        security["enabled"],
+        security["commitment_bonus"],
+        security["threat_bonus"],
     )
 
 
@@ -407,6 +442,12 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
 \t\t\t}}
 \t\t}}
 """
+    if extensions and extensions.security_enabled:
+        security = decision_security.support_addition(extensions)
+        if security:
+            additions["diplomatic_play_support"] = (
+                additions.get("diplomatic_play_support", "") + security
+            )
     if not additions:
         return text
     fields: list[tuple[int, str]] = []
@@ -444,12 +485,17 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
 def source_fingerprint(policy: Policy, extensions: Extensions, baseline: str) -> dict[str, str]:
     """返回生成输入指纹，供 metadata 与交付清单共同引用。"""
 
-    return {
+    result = {
         "fiscal_source_sha256": policy.source_sha256,
         "extensions_source_sha256": extensions.source_sha256,
         "baseline_sha256": hashlib.sha256(normalized_text(baseline).encode()).hexdigest(),
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     }
+    if extensions.security_enabled:
+        result["security_generator_sha256"] = hashlib.sha256(
+            Path(decision_security.__file__).read_bytes()
+        ).hexdigest()
+    return result
 
 
 def _module_names(
@@ -485,6 +531,10 @@ def _module_names(
         <= files.keys()
     ):
         modules.append("market")
+    if extensions.security_enabled and (
+        not files or "common/scripted_triggers/sitai_security_triggers.txt" in files
+    ):
+        modules.append("security")
     return modules
 
 
@@ -504,7 +554,11 @@ def metadata_payload(
         "tool_version": TOOL_VERSION,
         "status": policy.package.status,
         "supported_game_version": policy.game_version,
-        "short_description": "真实财政与外部风险影响原版外交倾向；保留国家原有策略路线。",
+        "short_description": (
+            "财政、外部防御、市场依赖与政治约束的实验组合；保留原版策略与执行。"
+            if extensions.security_enabled or extensions.market_enabled or extensions.reform_enabled
+            else "真实财政与外部风险影响原版外交倾向；保留国家原有策略路线。"
+        ),
         "tags": [],
         "relationships": [],
         "enabled_modules": enabled_modules
@@ -546,13 +600,32 @@ def build(
     if extensions.reform_enabled:
         files["common/scripted_triggers/sitai_reform_triggers.txt"] = extension_triggers(extensions)
         files["common/script_values/sitai_reform_values.txt"] = extension_values(extensions)
-    if extensions.market_enabled:
-        for language, label in (
-            ("english", "Economic exposure to both sides"),
-            ("simp_chinese", "对博弈双方的经济依赖"),
-        ):
+    if extensions.security_enabled:
+        files["common/scripted_triggers/sitai_security_triggers.txt"] = decision_security.triggers()
+    if extensions.market_enabled or extensions.security_enabled:
+        for language, column in (("english", 0), ("simp_chinese", 1)):
+            reasons = {}
+            if extensions.market_enabled:
+                reasons["SITAI_MARKET_DEPENDENCE_SUPPORT_REASON"] = (
+                    "Economic exposure to both sides",
+                    "对博弈双方的经济依赖",
+                )
+            if extensions.security_enabled:
+                reasons.update(
+                    {
+                        "SITAI_SECURITY_COMMITMENT_REASON": (
+                            "Defense commitment (candidate)",
+                            "防御承诺（候选规则）",
+                        ),
+                        "SITAI_SECURITY_NEIGHBOR_REASON": (
+                            "Neighbor defense exposure (candidate)",
+                            "邻国受侵略的安全风险（候选规则）",
+                        ),
+                    }
+                )
             files[f"localization/{language}/sitai_decisions_l_{language}.yml"] = (
-                f'l_{language}:\n SITAI_MARKET_DEPENDENCE_SUPPORT_REASON: "{label}"\n'
+                f"l_{language}:\n"
+                + "".join(f' {key}: "{pair[column]}"\n' for key, pair in reasons.items())
             )
     files[".metadata/metadata.json"] = (
         json.dumps(
@@ -585,6 +658,7 @@ def write(root: Path, files: Mapping[str, str] | None = None) -> list[Path]:
         "common/on_actions/sitai_fiscal_on_actions.txt",
         "common/scripted_triggers/sitai_reform_triggers.txt",
         "common/script_values/sitai_reform_values.txt",
+        "common/scripted_triggers/sitai_security_triggers.txt",
         "localization/english/sitai_decisions_l_english.yml",
         "localization/simp_chinese/sitai_decisions_l_simp_chinese.yml",
     ):
@@ -647,6 +721,15 @@ def validate(
         interfaces |= {"legitimacy", "any_insurrection_ongoing", "is_in_government"}
     if extensions.market_enabled:
         interfaces |= {"economic_dependence", "diplomatic_play_support"}
+    if extensions.security_enabled:
+        interfaces |= {
+            "any_scope_treaty",
+            "binds",
+            "any_scope_article",
+            "has_type",
+            "is_adjacent_to_country",
+            "play_participant_has_war_goal_of_type_against",
+        }
     # 财政值属于独立的原版 script value 参考，而不是四个通用词汇目录。
     fiscal_words = vocabulary_dir(BASELINE.parent) if policy.enabled else set()
     if policy.enabled:
