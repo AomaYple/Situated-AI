@@ -2817,8 +2817,13 @@ def package_cmd(
         "tools/out/releases/situated-ai-experimental.zip"
     ),
     variant: Annotated[
-        Literal["current", "control", "disabled"],
-        typer.Option("--variant", help="current 当前源；control 零偏置财政；disabled 全关安全包"),
+        Literal[
+            "current", "control", "disabled", "complete", "fiscal", "security", "market", "reform"
+        ],
+        typer.Option(
+            "--variant",
+            help="complete 四模块实验候选；fiscal/security/market/reform 单模块；current 当前源；control 零偏置财政；disabled 全关安全包",
+        ),
     ] = "disabled",
 ) -> None:
     """校验生成物并打包；仅在游戏交付边界添加 BOM。"""

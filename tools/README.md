@@ -301,7 +301,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 121 个测试文件、3935 条用例（2026-10-16 工作区口径）；当前 3935 项集合完整覆盖率 n-auto 为 3915 passed、20 skipped、1743 个 subtests，pytest 599.58 秒、测试包装 603.38 秒；总覆盖率 89.47%，整体 86% 与 11 个核心模块门槛全部通过。 本批完整结果、失败/重测、跳过与资源口径见 [A5 工程验收](../docs/design/exec/A5-结果.md#当前源码完整工程验收2026-10-16)；旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
+当前收集 122 个测试文件、3954 条用例（2026-10-17 工作区口径）；当前 3954 项集合完整覆盖率 n-auto 为 3934 passed、20 skipped、1743 个 subtests，pytest 631.61 秒、测试与覆盖检查包装 634.06 秒；总覆盖率 89.51%，整体 86% 与 11 个核心模块门槛全部通过。 本批完整结果、失败/中止、跳过与资源口径见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#最终完整工程验收)；旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -567,7 +567,18 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 
 分析、快照、三平台工具链、测试和实机仪器的契约见 [工程基线](../docs/design/exec/工程基线-1.0.md)。有日期的速度、内存、事故与修复读数见 [审计索引](../docs/audits/README.md)；2026-10-03 的收尾只描述当时范围，不承诺工具永远没有缺陷。
 
-Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工作清单.md)，历史研究编号保留在 [backlog](../docs/design/backlog.md)。按 [分阶段可玩开发计划 2.0](../docs/design/exec/mod重设计-实施计划.md)推进；工具输出、模拟与 CI 不替代机制验收。
+Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工作清单.md)，历史研究编号保留在 [backlog](../docs/design/backlog.md)。按 [完整候选实现与集中验证计划 3.0](../docs/design/exec/mod重设计-实施计划.md)推进；工具输出、模拟与 CI 不替代机制验收。
+
+### 完整实验候选交付
+
+`v3 package --variant complete --output tools/out/releases/situated-ai-complete-experimental.zip`
+从同一数据源启用财政、外部防御、市场依赖和政治节奏，并附匹配本机游戏版本的原生国家面板只读说明。
+它覆盖默认策略和 `gui/country_panel.gui`，不与其它相同路径覆盖兼容；始终标记 experimental，GUI 与行为质量需另行实测。
+生成过程只读取本机底本，不安装、不启动游戏、不登记或重开实验。
+
+`--variant fiscal|security|market|reform` 分别生成单模块隔离包，用于集中实机定位和单因素对照；命令只选择其中一个值。
+`current` 仍读取当前源开关，`control` 仍保留零偏置财政生命周期，默认 `disabled` 仍全关。
+完整候选不修改 current 源，不使任何里程碑自动通过。先运行 `v3 modgen --write` 与 `v3 modgen --check`，再打包；Windows 使用仓库 `.venv\Scripts\python.exe -X utf8 -m pdx.cli` 替换 `v3`，其它平台使用 `.venv/bin/python`。
 
 ## 为什么全 Python 化
 

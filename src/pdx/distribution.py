@@ -11,11 +11,22 @@ from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
-from pdx import decisions
+from pdx import decisions, explanation_probe
 from pdx.textio import GAME_SUFFIXES, text_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+PACKAGE_VARIANTS = (
+    "current",
+    "control",
+    "disabled",
+    "complete",
+    "fiscal",
+    "security",
+    "market",
+    "reform",
+)
 
 
 def player_guide(
@@ -30,8 +41,8 @@ def player_guide(
     说明是包的一部分而不是仓库手写副本，所有数值和启用模块都来自实际
     打包参数。它解释规则和边界，不把建议、评分或加载成功写成 AI 行动。
     """
-    if variant not in {"current", "control", "disabled"}:
-        raise ValueError("说明变体必须是 current、control 或 disabled")
+    if variant not in PACKAGE_VARIANTS:
+        raise ValueError("说明变体无效：" + "、".join(PACKAGE_VARIANTS))
     module_text = "、".join(modules) if modules else "无（安全包）"
     module_text_en = ", ".join(modules) if modules else "none (safe package)"
     fiscal_state = "启用" if policy.enabled else "关闭"
@@ -80,13 +91,18 @@ def player_guide(
         "disabled 关闭本 Mod 的财政及扩展逻辑，可作为安全基线。\n\n"
         f"扩展实际配置：reform={'启用' if extensions.reform_enabled else '关闭'}，"
         f"market={'启用' if extensions.market_enabled else '关闭'}。"
+        f"security={'启用' if extensions.security_enabled else '关闭'}。"
         "扩展关闭时不执行相应干预。改革扩展启用时，脆弱条件优先："
         f"合法性低于 {extensions.fragile_legitimacy}、战争或叛乱使 change_law_chance 的"
         f" default 贡献增加 {extensions.fragile_penalty:g}；否则合法性至少"
         f" {extensions.reform_legitimacy}、和平、无叛乱且实业家或知识分子在政府内，"
         f"增加 {extensions.reform_bonus:g}。市场扩展启用时，diplomatic_play_support 的"
         f" default 贡献增加（对己方依赖−对敌方依赖）×{extensions.market_multiplier:g}。"
-        "这些贡献不是最终概率，也不证明具体法律或外交行动已发生。\n\n"
+        "这些贡献不是最终概率，也不证明具体法律或外交行动已发生。\n"
+        f"外部模块启用时，防御条约/联盟贡献为 {extensions.security_commitment_bonus:g}，"
+        f"相邻防御方遭征服/附庸目标威胁的贡献为 {extensions.security_threat_bonus:g}；"
+        "同时满足只取较大值。支持防御方加分、评价进攻方减分，仍由原版判断资格与行动。"
+        "complete 是四模块完整实验候选；fiscal/security/market/reform 是隔离变体，均未验收。\n\n"
         "[English]\n"
         "This guide describes the rules configured in this ZIP, not the live state of any country."
         " Building a package does not prove V0.1 completion or AI behavior quality; experimental"
@@ -132,6 +148,12 @@ def player_guide(
         f" (dependence on own side minus dependence on enemy side) x {extensions.market_multiplier:g}"
         " to default diplomatic_play_support. These contributions are not final probabilities"
         " or evidence of an enacted law or diplomatic action.\n"
+        f"Security is {'enabled' if extensions.security_enabled else 'disabled'}: defense commitments"
+        f" contribute {extensions.security_commitment_bonus:g}, threatened-neighbor defense"
+        f" contributes {extensions.security_threat_bonus:g}; only the maximum reason applies,"
+        " positive for the defender and negative for the attacker. This does not grant eligibility"
+        " or force participation. complete enables all four experimental modules;"
+        " fiscal/security/market/reform isolate one module for testing.\n"
     )
 
 
@@ -251,8 +273,8 @@ def package_inputs(
     variant: str,
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str]]:
     """校验生产源后返回实际变体；隔离仪器复用同一转换，避免说明漂移。"""
-    if variant not in {"current", "control", "disabled"}:
-        raise ValueError("包变体必须是 current、control 或 disabled")
+    if variant not in PACKAGE_VARIANTS:
+        raise ValueError("包变体无效：" + "、".join(PACKAGE_VARIANTS))
     policy, extensions = decisions.load(), decisions.load_extensions()
     current = decisions.build(policy, extensions=extensions)
     issues = decisions.check(decisions.PRODUCT, current)
@@ -260,10 +282,27 @@ def package_inputs(
         raise ValueError("生成物不一致，拒绝打包：\n" + "\n".join(issues))
     if variant == "control":
         policy = replace(policy, enabled=True, neutrality=0, aggression=0)
-        extensions = replace(extensions, reform_enabled=False, market_enabled=False)
+        extensions = replace(
+            extensions, reform_enabled=False, market_enabled=False, security_enabled=False
+        )
     elif variant == "disabled":
         policy = replace(policy, enabled=False)
-        extensions = replace(extensions, reform_enabled=False, market_enabled=False)
+        extensions = replace(
+            extensions, reform_enabled=False, market_enabled=False, security_enabled=False
+        )
+    elif variant != "current":
+        policy = replace(
+            policy,
+            enabled=variant in {"complete", "fiscal"},
+            aggression=0,
+            package=replace(policy.package, status="experimental"),
+        )
+        extensions = replace(
+            extensions,
+            reform_enabled=variant in {"complete", "reform"},
+            market_enabled=variant in {"complete", "market"},
+            security_enabled=variant in {"complete", "security"},
+        )
     files = current if variant == "current" else decisions.build(policy, extensions=extensions)
     modules = json.loads(files[".metadata/metadata.json"])["enabled_modules"]
     files["README.md"] = player_guide(policy, extensions, modules, variant=variant)
@@ -272,6 +311,14 @@ def package_inputs(
 
 def package(destination: Path, *, variant: str = "disabled") -> Path:
     policy, extensions, files = package_inputs(variant)
+    if variant == "complete":
+        files = explanation_probe.attach(files, policy, extensions)
+        files["README.md"] += (
+            "\n完整实验包包含原生国家面板的只读解释候选；覆盖 country_panel.gui，"
+            "不与其它同路径界面覆盖兼容。上下文、布局、刷新和成本尚未实机验收。\n"
+            "The complete experimental package includes an unverified read-only explanation"
+            " and overrides country_panel.gui; other overrides of that panel conflict.\n"
+        )
     return write_zip(
         files,
         destination,
@@ -292,7 +339,7 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--variant", choices=("current", "control", "disabled"), default="disabled")
+    parser.add_argument("--variant", choices=PACKAGE_VARIANTS, default="disabled")
     args = parser.parse_args()
     print(package(args.output, variant=args.variant))
     return 0
