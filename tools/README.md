@@ -64,7 +64,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期；安装版简体中文缺键时显式加 `--localization-baseline`，不豁免错误门禁 |
 | `tools/probe/save_migration_audit.py` | 递归盘点 `.v3` 版本、观察者状态、空规则和 SHA-256；只报告可用于跨版本升级实验的输入，不执行迁移 |
 | `python -m pdx.checkpoint_catalog` | 只读目录盘点或显式最多两份原件的有界财政/外交筛选；复核来源与完整 SHA，保留拒绝/未知，不自动放行实机 |
-| `python -m pdx.explanation_probe --output tools/out/a5-explanation.zip` | 仅生成 A5 选中国家说明的隔离实验 ZIP，默认全关；不安装或运行，也不进入生产包，国家上下文与帧成本未实测 |
+| `python -m pdx.explanation_probe --output tools/out/a5-explanation.zip` | 仅生成 A5 国家说明隔离实验 ZIP，默认全关；需匹配版本本机国家面板底本，追加只读实例并记录覆盖指纹；不安装或运行、不进入生产包，与其他国家面板覆盖不兼容，国家上下文与帧成本待验 |
 | `tools/benchmarks/experiment_evidence.py` | 串行合成资格成本基线，分开计时、Python 分配与进程树 RSS；不是实机或加速对照 |
 | `tools/benchmarks/decision_runtime.py` | 分开测生成、日志/存档读取的墙钟与Python分配峰值；正式基线要求机器安静 |
 
@@ -301,7 +301,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 121 个测试文件、3900 条用例（2026-10-16 工作区口径）；交付前复核的完整覆盖率 `n-auto` 为 **3880 passed、20 skipped**，包装墙钟 589.0 秒、1743 个 subtests，实际 4 个 worker；包含行与分支的总覆盖率 **89.44%**，整体与 11 个核心模块下限全部通过。进程树 RSS 峰值 3493.9 MiB，最高 worker OS 峰值 1278.6 MiB；局部优化与整套收益的边界、外部构建中止原件和跳过范围见[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。此前 A3 实施见 [A3 战后诊断结果](../docs/design/exec/A3-结果.md#逐国战后回调诊断的离线实施2026-10-15-0953-utc-定时任务)，此前失败保留在原章节；此前全仓审计见[仓库总览与清理](../docs/audits/2026-10-14-仓库总览与清理.md)。
+当前收集 121 个测试文件、3935 条用例（2026-10-16 工作区口径）；当前 3935 项集合完整覆盖率 n-auto 为 3915 passed、20 skipped、1743 个 subtests，pytest 599.58 秒、测试包装 603.38 秒；总覆盖率 89.47%，整体 86% 与 11 个核心模块门槛全部通过。 本批完整结果、失败/重测、跳过与资源口径见 [A5 工程验收](../docs/design/exec/A5-结果.md#当前源码完整工程验收2026-10-16)；旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -361,7 +361,7 @@ python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 
 `tools/probe/decision_behavior.py --response-hooks` 仅允许显式 `--purpose instrument --arm control --fiscal-injection none --natural-opportunity`，不能制作存档或进入正式行为臂。默认关闭，不进入生产包。生成和解析由 `pdx.response_probe` 维护，冻结配置记录版本和未验证的作用域契约。
 
-当前生成诊断协议 v2 为 `SITAI RESPONSE ROOT2;<hook>;<saved_scope>;<persistent_scope>;<actor>;<escalation>;<date_text>`。脚本链状态仍为 missing/same/different；持久引用为 unbound/unavailable/same/different。唯一 BIND 写入 190 天的对象引用和 191 天的 seen 哨兵；unavailable 不能确定解释为过期，unbound 也不能证明从未绑定。actor 通过发起国、目标国和两个观察国的已知对象比较，输出匹配标签、missing 或 unmatched，不再强制转换未知 actor 类型；分析器拒绝未声明国家。旧 ROOT v1 继续解析，旧 `SITAI RESPONSE;` 仍仅保留脚本链绑定匹配路径。独立 `response_diagnostics` 不计算实际响应时延，不证明自然机会、无响应或质量；跨链存取、过期和真实 hook/actor 契约仍未实测。当前只允许原 instrument/control/none/自然观察路径，默认关闭且不制作存档，不能因协议升级重开已停止窗口；来源和验证见 [A3 离线实施](../docs/design/exec/A3-结果.md#持久引用候选与安全-actor-诊断的离线实施2026-10-15)。
+当前生成响应诊断为 v3：`SITAI RESPONSE ROOT3;<hook>;<saved_scope>;<persistent_scope>;<actor>;unavailable;unavailable`。真实回调中的 `THIS.GetEscalation` 已因无合法数据上下文被否证；响应协议只使用脚本存在性/相等，不调用 GUI getter，升级值和日期解析为 `None`，不能用于时延。脚本链状态为 missing/same/different；持久引用为 unbound/unavailable/same/different。唯一 BIND 写入 190 天对象引用和 191 天 seen 哨兵；unavailable 不能确定解释为过期，unbound 也不能证明从未绑定。actor 通过发起国、目标国和两个观察国的已知对象比较，输出匹配标签、missing 或 unmatched；分析器拒绝未声明国家。旧 ROOT/ROOT2 与历史 `SITAI RESPONSE;` 日志继续解析，新生成器不再输出旧绑定响应行。独立 `response_diagnostics` 不证明自然机会、无响应或质量；受控跨月链引用已有实测，真实 hook/actor、190 天到期及销毁语义尚未通过。默认关闭，现有 instrument/control/none/自然观察入口限制不变，不制作存档；协议升级不解除既有停止条件。战后诊断是独立的未校准协议，不能因 ROOT3 推断其日期 getter 安全；来源、失败与验证见 [A3 结果](../docs/design/exec/A3-结果.md#真实响应钩子校准失败与纯脚本修复2026-10-16-0234-utc)。
 
 同一开关还追加 `on_won_war` / `on_lost_war` 的独立子 on-action，仅对 `--observers` 声明的两个观察国输出 `SITAI WAR OUTCOME;<won|lost>;<tag>;<war_scope>;<play_reference>;<benefitted_from_wargoal>;<victim_of_wargoal>;<date_text>`。`war_scope` 是 present/missing；`play_reference` 是 missing/unbound/unavailable/same/different，其中 missing 指回调的博弈对象不存在，其余为与有界持久引用的比较分支。两个结果标志独立为 yes/no，允许同时存在；日期只保留原始文本。解析器严格拒绝未知国家、非法或不完整行，按轮转顺序保留重复，不按国家对或日期合并博弈。独立 `war_outcome_diagnostics` 始终声明身份及逐国覆盖未验证、缺回调不证明无损害、质量未通过；不能把输赢、两个局部标志或引用 same 填作 `action_cost` / `adverse_outcome`、完整机会或正式样本。冻结配置嵌套记录结果协议 v1、回调集合及两个观察国。该功能只有离线生成、合成日志和入口接线证据，未在引擎执行；默认包逐字节保持，停止条件不变，详见 [A3 战后诊断](../docs/design/exec/A3-结果.md#逐国战后回调诊断的离线实施2026-10-15-0953-utc-定时任务)。
 

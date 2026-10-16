@@ -19,6 +19,26 @@ from pdx.parser import parse_text
 
 pytestmark = pytest.mark.unit
 
+PANEL_SOURCE = """# 可离线复核的最小原生契约夹具，不复制游戏原文。
+types country_panel_types {
+    type country_panel = default_block_window_two_lines {
+        name = "country_panel"
+        datacontext = "[CountryPanel.GetCountry]"
+        widget = { name = "nested } # not a boundary" }
+    }
+}
+"""
+
+
+@pytest.fixture(autouse=True)
+def panel_source(tmp_path, monkeypatch):
+    source = tmp_path / probe.PANEL
+    source.parent.mkdir(parents=True)
+    source.write_text(PANEL_SOURCE, encoding="utf-8", newline="\n")
+    monkeypatch.setattr(probe.config, "GAME", tmp_path)
+    monkeypatch.setattr(probe.config, "game_version", lambda: {"caligula_branch": "release/1.14.5"})
+    return source
+
 
 def _block(parent, key):
     node = parent.first(key)
@@ -143,23 +163,28 @@ def test_只读组件使用闭合允许子集并且无世界扫描或玩法写�
     tree = parse_text(files[probe.SGUI])
     assert not tree.errors
     check(tree.root)
-    assert len(files) == 5
+    assert len(files) == 4
     assert all(probe.PREFIX in name for name in files)
     assert not any(name.startswith("common/on_actions/") for name in files)
 
 
-def test_控件国家根和可见性守卫的静态层级():
+def test_控件仅在原生国家上下文内实例化():
     files = probe.build(decisions.load(), decisions.Extensions())
-    registration = f"gui/scripted_widgets/{probe.PREFIX}.txt"
-    tree = parse_text(files[registration])
-    assert tree.top_keys == [probe.GUI]
-    entry = tree.root.first(probe.GUI)
-    assert entry is not None
-    assert str(entry.value) == probe.PREFIX
+    assert not any(name.startswith("gui/scripted_widgets/") for name in files)
     # 通用脚本解析器不是 GUI 类型解析器；用明确的词法层级核对外层/内层。
     from pdx.lexer import tokenize
 
     tokens = list(tokenize(files[probe.GUI]))
+    assert [token.value for token in tokens[:8]] == [
+        "types",
+        f"{probe.PREFIX}_types",
+        "{",
+        "type",
+        probe.PREFIX,
+        "=",
+        "widget",
+        "{",
+    ]
     depth = 0
     contexts = []
     for token in tokens:
@@ -171,17 +196,73 @@ def test_控件国家根和可见性守卫的静态层级():
             contexts.append((depth, token.value))
     assert depth == 0
     assert contexts == [
-        (2, "\"[InformationPanelBar.IsPanelOpen('country_panel')]\""),
-        (3, '"[CountryPanel.GetCountry]"'),
-        (4, '"[Country.IsValid]"'),
-        (5, '"[Country.GetNameNoFormatting]"'),
+        (2, '"[Country.IsValid]"'),
+        (4, '"[Country.GetNameNoFormatting]"'),
         (
-            5,
+            4,
             f"\"[GetScriptedGui('{probe.PREFIX}').ExecuteTooltip(GuiScope.SetRoot(Country.MakeScope).End)]\"",
         ),
     ]
     assert ".Execute(" not in files[probe.GUI]
     assert "GetPlayer" not in files[probe.GUI]
+    patched = probe._extend_country_panel(PANEL_SOURCE)
+    addition = f"\n\t\t{probe.PREFIX} = {{}}\n\t"
+    assert patched.replace(addition, "", 1) == PANEL_SOURCE
+    assert patched.index(addition) > patched.index("nested }")
+    assert patched.index(addition) < patched.rindex("}")
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "",
+        PANEL_SOURCE * 2,
+        PANEL_SOURCE.replace("[CountryPanel.GetCountry]", "[GetPlayer]"),
+        PANEL_SOURCE.replace("datacontext =", "context ="),
+        PANEL_SOURCE.replace("default_block_window_two_lines", "new_base"),
+        PANEL_SOURCE.replace("\n", "\r\n"),
+        "\ufeff" + PANEL_SOURCE,
+        PANEL_SOURCE[: PANEL_SOURCE.index("        widget")],
+        PANEL_SOURCE.replace('name = "country_panel"', f'name = "{probe.PREFIX}"'),
+        PANEL_SOURCE + "}",
+        PANEL_SOURCE[:-2],
+        '"unterminated',
+        PANEL_SOURCE + '"unterminated\\"',
+        PANEL_SOURCE + "type country_panel = different_base {}",
+        PANEL_SOURCE.replace("types country_panel_types {", "types outer { widget = {") + "}\n",
+        PANEL_SOURCE + '\nwidget = { text = "unterminated',
+    ],
+)
+def test_底本漂移歧义和重复注入均拒绝(source):
+    with pytest.raises(ValueError, match="国家面板底本"):
+        probe._extend_country_panel(source)
+
+
+def test_底本合法引号转义和注释不改变精确插入边界():
+    source = PANEL_SOURCE.replace(
+        'name = "country_panel"',
+        'name = "country_panel"\n        text = "escaped \\" }\u2028" # ignored {\n',
+    )
+    patched = probe._extend_country_panel(source)
+    addition = f"\n\t\t{probe.PREFIX} = {{}}\n\t"
+    assert patched.count(addition) == 1
+    assert patched.replace(addition, "", 1) == source
+    # Unicode 行分隔符是字符串内容；词法器只以 LF 推进行号。
+    closing = source.rindex("    }\n}") + 4
+    assert patched[closing:].startswith(addition + "}")
+
+
+def test_游戏版本不匹配和缺失底本不破坏旧包(tmp_path, monkeypatch, panel_source):
+    target = tmp_path / "previous.zip"
+    target.write_bytes(b"previous")
+    monkeypatch.setattr(probe.config, "game_version", lambda: {"caligula_branch": "release/1.15"})
+    with pytest.raises(ValueError, match="版本一致"):
+        probe.package(target)
+    monkeypatch.setattr(probe.config, "game_version", lambda: {"caligula_branch": "release/1.14.5"})
+    panel_source.unlink()
+    with pytest.raises(FileNotFoundError):
+        probe.package(target)
+    assert target.read_bytes() == b"previous"
 
 
 def test_生成文案使用替代实际参数及一致键与占位符():
@@ -233,6 +314,11 @@ def test_实验包与实际生产变体配套且生产交付不含探针(tmp_pat
         assert facts["fiscal"]["enabled"] == (variant != "disabled")
         assert facts["fiscal"]["neutrality"] == (0 if variant == "control" else 25)
         assert facts["extensions"]["market_enabled"] is False
+        panel = facts["country_panel"]
+        assert panel["source_sha256"] == hashlib.sha256(PANEL_SOURCE.encode()).hexdigest()
+        assert panel["generated_sha256"] == hashlib.sha256(candidate.read(probe.PANEL)).hexdigest()
+        assert panel["compatibility"] == "overrides_native_country_panel"
+        assert probe.PREFIX.encode() in candidate.read(probe.PANEL)
         assert (
             facts["generator_sha256"]
             == hashlib.sha256(probe.Path(probe.__file__).read_bytes()).hexdigest()

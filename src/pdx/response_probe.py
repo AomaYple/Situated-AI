@@ -17,6 +17,11 @@ _ROW2 = re.compile(
     r"(?P<actor_tag>missing|unmatched|[A-Z]{3});(?P<escalation>[0-9]+);"
     r"(?P<date_text>[^;\[\]]+)$"
 )
+_ROW3 = re.compile(
+    r"SITAI RESPONSE ROOT3;(?P<hook>[a-z_]+);(?P<saved_scope>missing|same|different);"
+    r"(?P<persistent_scope>unbound|unavailable|same|different);"
+    r"(?P<actor_tag>missing|unmatched|[A-Z]{3});unavailable;unavailable$"
+)
 _OUTCOME_MARKER = "SITAI WAR OUTCOME;"
 _OUTCOME_ROW = re.compile(
     r"SITAI WAR OUTCOME;(?P<hook>won|lost);(?P<tag>[A-Z]{3});"
@@ -33,8 +38,8 @@ class RootEvent(TypedDict):
     hook: str
     saved_scope: str
     actor_id: str | None
-    escalation: int
-    date_text: str
+    escalation: int | None
+    date_text: str | None
     protocol_version: NotRequired[int]
     persistent_scope: NotRequired[str]
     actor_state: NotRequired[str]
@@ -82,7 +87,8 @@ def configuration(
 ) -> dict[str, object]:
     """让冻结来源记录观测范围，而不是只有一个启用布尔值。"""
     return {
-        "version": 2,
+        "version": 3,
+        "readings": "identity-actor-only-no-gui-getters",
         "identity": "persistent-reference-unvalidated",
         "reference_days": REFERENCE_DAYS,
         "actor": "declared-country-equality-unvalidated",
@@ -110,8 +116,9 @@ def binding() -> str:
 
 
 def _actor(hook: str, state: str, reference: str, tags: tuple[str, ...]) -> str:
-    prefix = f"SITAI RESPONSE ROOT2;{hook};{state};{reference};"
-    suffix = ";[THIS.GetEscalation];__SITAI_RESPONSE_DATE__"
+    prefix = f"SITAI RESPONSE ROOT3;{hook};{state};{reference};"
+    # 模拟回调没有已校准的 GUI 数据上下文；不以常量伪造升级值或游戏时间。
+    suffix = ";unavailable;unavailable"
     cases = []
     for index, tag in enumerate(tags):
         keyword = "if" if index == 0 else "else_if"
@@ -199,7 +206,6 @@ def build_hooks(tags: tuple[str, ...], *, observers: tuple[str, str] = ("RUS", "
             "if = { limit = { exists = scope:sitai_opportunity } "
             "if = { limit = { this = scope:sitai_opportunity } "
             f"{_diagnostic(hook, 'same', tags)} "
-            f'debug_log = "SITAI RESPONSE;{hook};[THIS.GetEscalation];__SITAI_RESPONSE_DATE__" '
             f"}} else = {{ {_diagnostic(hook, 'different', tags)} }} "
             f"}} else = {{ {_diagnostic(hook, 'missing', tags)} }} "
             "} }"
@@ -245,25 +251,27 @@ def summarize_outcomes(events: list[WarOutcome]) -> WarDiagnostics:
 
 def parse_line(line: str) -> RootEvent | None:
     """坏诊断即使与正常机会行混合也拒绝；不猜未展开读数。"""
-    version2 = "SITAI RESPONSE ROOT2;" in line
-    if _MARKER not in line and not version2:
+    version = 3 if "SITAI RESPONSE ROOT3;" in line else 2 if "SITAI RESPONSE ROOT2;" in line else 1
+    if _MARKER not in line and version == 1:
         return None
-    match = (_ROW2 if version2 else _ROW).search(line.rstrip())
+    pattern = _ROW3 if version == 3 else _ROW2 if version == 2 else _ROW
+    match = pattern.search(line.rstrip())
     if match is None:
         raise ValueError("根钩子诊断行格式、身份或 getter 读数不完整")
     values = match.groupdict()
-    if values["hook"] not in HOOKS or not 0 <= int(values["escalation"]) <= 100:
+    escalation = None if version == 3 else int(values["escalation"])
+    if values["hook"] not in HOOKS or (escalation is not None and not 0 <= escalation <= 100):
         raise ValueError("根钩子诊断包含未知钩子或越界升级值")
     result: RootEvent = {
         "hook": values["hook"],
         "saved_scope": values["saved_scope"],
-        "actor_id": None if version2 or values["actor_id"] == "missing" else values["actor_id"],
-        "escalation": int(values["escalation"]),
-        "date_text": values["date_text"],
+        "actor_id": None if version >= 2 or values["actor_id"] == "missing" else values["actor_id"],
+        "escalation": escalation,
+        "date_text": None if version == 3 else values["date_text"],
     }
-    if version2:
+    if version >= 2:
         actor = values["actor_tag"]
-        result["protocol_version"] = 2
+        result["protocol_version"] = version
         result["persistent_scope"] = values["persistent_scope"]
         result["actor_state"] = actor if actor in {"missing", "unmatched"} else "matched"
         result["actor_tag"] = None if actor in {"missing", "unmatched"} else actor
@@ -277,7 +285,7 @@ def summarize(events: list[RootEvent]) -> Diagnostics:
         "events": events,
         "count": len(events),
         "scope": "all_diplomatic_plays",
-        "time_basis": "未校准的引擎日期文本，不是共享日采样序号或响应时延",
+        "time_basis": "ROOT3 不含游戏日期或升级值；旧日期文本未校准，均不是响应时延",
         "opportunity_identity_verified": False,
         "actor_scope_supported": False,
         "absence_proves_no_response": False,

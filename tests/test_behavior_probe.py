@@ -197,7 +197,8 @@ def test_外交响应钩子只生成独立根作用域仪器():
     assert "on_diplo_play_abandon_side" in actions
     assert "on_diplo_play_war_start" in actions
     assert "this = scope:sitai_opportunity" in actions
-    assert "[THIS.GetEscalation]" in actions
+    assert "[THIS.GetEscalation]" not in actions
+    assert "SITAI RESPONSE ROOT3" in actions
     assert "exists = scope:actor" in actions
     assert not parse_text(actions).errors
     response_blocks = [
