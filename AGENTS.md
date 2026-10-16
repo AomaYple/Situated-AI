@@ -1,65 +1,69 @@
-# 项目代理指南
+# Situated AI 项目代理指南
 
-本文件适用于整个 Situated AI 仓库，补充通用协作原则。详细贡献流程与工程约定见 [CONTRIBUTING.md](CONTRIBUTING.md)；开始修改前读取与本次任务相关的章节。
+本文件是仓库级执行入口，适用于整个 Situated AI 仓库。它只说明任务路由、修改边界和容易误判的事项；完整贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。用户、系统和开发者指令优先于本文件，子目录若有更窄作用域的 AGENTS.md，按路径作用域补充本文件。
 
-## 原则分层
+仓库中没有 CONTRIBUTE.md；实际贡献文件是 CONTRIBUTING.md。不要为了匹配别名再创建第二份贡献指南。
 
-- [工程原则](docs/principles/工程原则.md)定义工程底线；[CONTRIBUTING.md](CONTRIBUTING.md)维护具体贡献流程，[工程基线](docs/design/exec/工程基线-1.0.md)维护工具与验证契约。
-- [Mod 开发原则](docs/principles/Mod开发原则.md)定义产品底线；[处境决策设计](docs/design/03-处境决策设计.md)维护架构，[分阶段可玩开发计划 2.0](docs/design/exec/mod重设计-实施计划.md)维护阶段出口。
-- 两类原则共同要求正确性第一、速度第二、内存第三。通用性能取舍见[工程原则](docs/principles/工程原则.md#验证与性能)，游戏运行要求由 Mod 原则与 M4 落实；结论由对应测量验收。
-- 原则页只维护持续约束，结果页管理实测和阻塞；导航页不重复定义规则。文档分类与更新规则见 [文档维护](docs/README.md#文档维护)。
+## 权威层级
 
-全仓规范按维护时最新且适用的现代 Python 仓库最佳实践持续更新；目录、元数据、配置与迁移的落实方式见 [现代 Python 仓库维护](CONTRIBUTING.md#现代-python-仓库维护)。
+同一问题只保留一个当前来源，其他文件只链接和摘要：
 
-语言与命名遵循 [工程原则](docs/principles/工程原则.md#语言与命名)；具体写作、命名与翻译边界见 [贡献指南](CONTRIBUTING.md#语言与命名)。
+| 问题 | 权威入口 | 维护内容 |
+|---|---|---|
+| 代理如何定位和修改 | 本文件 | 任务路由、范围、边界和接手顺序 |
+| 如何贡献、验证、提交和合并 | [CONTRIBUTING.md](CONTRIBUTING.md) | 工作流、验证矩阵、性能测量、分支与 Git |
+| 工程持续约束 | [工程原则](docs/principles/工程原则.md) | 正确性、跨平台、编码、依赖、测试、性能、清理和文档 |
+| Mod 持续约束 | [Mod 开发原则](docs/principles/Mod开发原则.md) | 产品目标、机制边界、公平性、运行效率和发布边界 |
+| 工具与证据契约 | [工程基线 1.0](docs/design/exec/工程基线-1.0.md) | 测试层级、快照、实机、恢复和证据口径 |
+| 产品顺序与阶段出口 | [分阶段可玩开发计划 2.0](docs/design/exec/mod重设计-实施计划.md) | V0.1–V1.0、M1–M4、重开条件和可玩交付 |
+| 当前状态与下一动作 | [当前工作清单](docs/design/当前工作清单.md) | 当前事实、队列、阻塞和下一步 |
+| 实测、失败和原始边界 | 对应结果页、审计和报告 | 日期、输入、命令、结果、限制和恢复证据 |
 
-## 先定位任务
+原则页只写持续约束；计划页只写产品顺序和出口；结果页写事实；导航页只写链接。发现冲突时，先按上述层级核对，不在摘要页另建规则。
 
-本项目用 Python 分析、生成和验证 Victoria 3 Mod；游戏运行使用生成的游戏脚本，不依赖外部 Python 服务。
+## 接手顺序与任务路由
 
-- Mod 目标与行为边界：[处境决策设计](docs/design/03-处境决策设计.md)。
-- 制作顺序、阶段出口与增量可玩版本：[分阶段可玩开发计划 2.0](docs/design/exec/mod重设计-实施计划.md)；当前进展查看 [当前工作清单](docs/design/当前工作清单.md)、对应结果页及 [backlog](docs/design/backlog.md)。
-- 工具链与证据边界：[工程基线](docs/design/exec/工程基线-1.0.md)；命令细节见 [工具手册](tools/README.md)。
-- 性能任务：Mod 制作与验证按 [Mod 制作提速实施计划 2.4](docs/design/exec/速度优化计划-正确性优先.md)执行；已验收的工程提速结果只作为基础能力复用；游戏运行效率按 [Mod 效率要求](docs/principles/Mod开发原则.md#开发与运行效率)和 M4 实机出口验证。
+开始任何非只读任务前，按以下顺序读取：
 
-历史交接、台账与旧报告用于核对当时事实，不替代当前设计、验收条件或本次任务授权。
+1. git status --short --branch、相关已有改动和适用的规则文件；
+2. [CONTRIBUTING.md](CONTRIBUTING.md) 中与任务类型对应的章节；
+3. [工程原则](docs/principles/工程原则.md)和 [Mod 开发原则](docs/principles/Mod开发原则.md)；
+4. [工程基线](docs/design/exec/工程基线-1.0.md)、主计划和当前工作清单；
+5. 只有需要历史事实时才读取结果页、审计、报告和 backlog。
 
-## 找到正确的修改入口
+| 任务 | 首选入口 | 必须保持的边界 |
+|---|---|---|
+| 可复用 Python | src/pdx/，测试在 tests/ | 使用项目 .venv、显式 UTF-8/LF、跨 Windows/macOS/Linux |
+| 生产 Mod | mod/decisions/*.toml、src/pdx/decisions.py | 改源和生成器后运行 v3 modgen --write、v3 modgen --check，不手改生成物 |
+| 历史实验 Mod | mod/data/*.toml、src/pdx/modgen.py | 只生成到 mod/legacy/，不进入生产包 |
+| 检查、基准和探针 | tools/ci/、tools/benchmarks/、tools/probe/ | 复用现有 CLI 和 pdx.game_run，一次性脚本写入忽略的输出目录 |
+| 生成文档和机械表格 | 对应 CLI、pdx.doc_tables | 修改来源后重新生成并检查，不手改数字或指纹 |
+| 快照、交付和证据 | tools/out/ | 绝大多数是可再生或本机证据；精简快照和逐件声明的例外按 .gitignore 入库 |
+| 官方资料 | research/official-docs.manifest.json | 本地原文镜像不入库，保留来源和指纹 |
 
-| 内容 | 修改入口与边界 |
+删除、改名或改变忽略规则前，使用 Python 盘点调用方、动态注册、CLI、测试、生成入口和证据引用；忽略状态本身不能证明内容可以删除。
+
+## 通用执行规则
+
+- 正确性第一、速度第二、内存第三，同时适用于工程和 Mod。速度或内存优化必须在相同正确性、输出和证据契约下用可重复测量确认。
+- 优先使用仓库已有 .venv 和成熟库；文本、路径、批量盘点、生成和验证优先用 Python。不要依赖 shell 默认编码或本机绝对路径。
+- 受控文本为 UTF-8 无 BOM、LF；游戏脚本和本地化只在安装/打包边界添加 BOM。原始游戏文件、第三方镜像、日志和冻结证据按各自字节契约保留。
+- 完整测试默认 -n auto --dist loadscope，worker 数由 CPU 与内存预算决定；性能基准必须清除普通测试参数并串行运行。测试通过、快照一致、脚本加载成功或评分变化都不能单独证明 Mod 行为质量。
+- Windows、macOS、Linux 的代码、CI、无头测试和 GUI 实机证据分开申报。当前 GUI 自动化实机支持范围以工程基线为准，未运行的层级必须写成未验证。
+- 实机只使用现有 pdx.game_run 的互斥、部署、日志、归档和恢复流程；游戏进程、存档、挂载和恢复指针未核对干净时，不启动下一次实验。
+- 实验账本的停止条件、错误分类和原始输入不可通过改名、改探针、增加预算、清账本或拼接不同会话绕过。遇到外部阻塞，完成不依赖它的离线工作并记录证据限制。
+
+## 验证与交付
+
+从仓库根目录使用对应平台的 .venv 入口。下面的命令文本只表达 Python/CLI 调用，不依赖特定 shell：
+
+| 平台 | Python 入口 |
 |---|---|
-| 可复用 Python 实现 | `src/pdx/`；测试放在 `tests/` |
-| 生产 Mod | 当前固定数据入口为 `mod/decisions/fiscal.toml`、`mod/decisions/extensions.toml`，生成器为 `src/pdx/decisions.py`；新增定义须接入生成器，根级游戏产物由生成器维护 |
-| 历史实验 Mod | `mod/data/*.toml` 与 `src/pdx/modgen.py`；只生成到 `mod/legacy/`，不进入生产包 |
-| 检查、性能与实机探针 | `tools/ci/`、`tools/benchmarks/`、`tools/probe/`；优先扩展已有入口 |
-| 生成文档 | 可执行面由对应 CLI 生成，知识库机械表格由 `pdx.doc_tables` 维护；不要手改 |
-| 快照、输出与原始证据 | `tools/out/`；忽略规则中的精简快照与逐件声明的精简证据例外须保留 |
-| 官方资料 | `research/official-docs.manifest.json` 入库，本地 `research/official-docs/` 原文镜像不入库 |
+| Windows | .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py <检查> |
+| macOS/Linux | .venv/bin/python -X utf8 tools/ci/run_check.py <检查> |
 
-改动数据源或生成器后运行 `v3 modgen --write`，再运行 `v3 modgen --check`；使用本工作区的虚拟环境入口。不要以手改生成物、更新黄金指纹或降低门槛掩盖不一致。删除、改名或调整忽略规则前核对消费者、生成入口和证据引用。
+可替换的检查包括 encoding、lint .、format --check .、types、test、test-offline、deadcode 和 baseline。具体选择、跳过分类、性能口径、实机矩阵和 Git 交付按 [CONTRIBUTING.md](CONTRIBUTING.md) 执行。
 
-## 运行与检查
+代码、规则、结构、生成物或兼容范围变更默认使用短期 codex/<topic> 分支和 PR；提交标题和说明使用中文。合并后核对本地/远端 main、工作区、树等价和必要证据，再删除短期分支。推送、合并和删除远端分支在任务已授权时直接完成；不得强制推送 main。
 
-优先使用本工作区已有的 `.venv`，不依赖激活脚本。Python 工具链须兼容 Windows、macOS、Linux；文件盘点、文本处理和批量操作优先用 Python。shell 可以用于启动命令，不能让其默认编码决定文件字节。
-
-| 平台 | 检查入口示例 |
-|---|---|
-| Windows | `.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py encoding` |
-| macOS / Linux | `.venv/bin/python -X utf8 tools/ci/run_check.py encoding` |
-
-将示例末尾的 `encoding` 替换为 `lint .`、`format --check .`、`types`、`test`、`test-offline`、`deadcode` 或 `baseline`。检查选择见 [验证矩阵](CONTRIBUTING.md#验证矩阵)，不要把会写盘的 `format` 当作只读检查。
-
-- 文档改动：检查编码、链接、命令与事实一致性；生成内容执行对应生成检查。
-- Python 改动：执行相关测试及适用的静态检查；广泛改动、阶段验收和交付前执行完整回归。
-- Mod 数据、生成或交付改动：执行生成一致性、离线基线和相关测试；运行期行为必须另有实机验收。
-- 完整 pytest 默认使用 `-n auto --dist loadscope`，worker 数由 CPU 与内存预算控制。测试写入独立临时目录；性能基准串行运行并清除普通 `addopts`。
-- 覆盖率与核心模块下限以 `pyproject.toml`、`pdx.covgate` 为准。性能变化测速度与峰值内存，不能把普通并行测试当作有效基准。
-
-## 容易误判的边界
-
-- 仓库受控文本为 UTF-8 无 BOM、LF；游戏脚本与本地化的 BOM 只由安装、打包边界添加。原始证据按字节契约保留，规范化使用可恢复副本。
-- 游戏位置通过 `V3_ROOT`、`V3_USERDIR`、`V3_WORKSHOP` 配置；不要新增本机绝对路径或本地路径配置文件。
-- 离线快照证明与记录输入一致，读取游戏文件的集成测试也不等于启动游戏。GUI 自动化当前支持 Windows；其他平台不得标记为已实机验证。
-- 实机使用现有 `pdx.game_run` 互斥与恢复流程；参数、输入指纹、时间窗口、日志和清理结果进入证据链。不得用另一个独立流程争用游戏、存档或挂载状态。
-- Mod 通过真实处境与原版 AI 接口影响选择；不以免费资源、暴力削弱、强制行动或固定国家剧本制造效果。评分通道、脚本强制机会和加载成功不等于 AI 行为质量。
-- 提交标题与说明使用中文，按完整目的组织变更；代码、规则或结构变更默认使用短期 `codex/<topic>` 分支和 PR，直接提交例外及合并、清理、授权边界见 [分支与合并](CONTRIBUTING.md#分支与合并)，具体提交要求见 [提交规范](CONTRIBUTING.md#提交前与提交信息)。收尾说明实际修改、验证、跳过项和证据限制。
+最终报告必须分别说明：实际修改、实际运行的检查、跳过和失败、实机/快照/模拟/推断的边界、提交/推送/合并状态，以及仍未完成的产品出口。不能把工程收口写成 V0.1 或整个 Mod 完成。

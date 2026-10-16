@@ -4,6 +4,8 @@ Victoria 3 的 AI 相关 mod 开发项目。
 
 开发与维护见 [CONTRIBUTING.md](CONTRIBUTING.md)，编码代理的项目入口见 [AGENTS.md](AGENTS.md)。两类开发原则分别见 [工程原则](docs/principles/工程原则.md)和 [Mod 开发原则](docs/principles/Mod开发原则.md)。
 
+接手任务时先读 [AGENTS.md](AGENTS.md) 的权威层级和任务路由，再读 [CONTRIBUTING.md](CONTRIBUTING.md) 的验证与交付流程，随后按 [工程基线](docs/design/exec/工程基线-1.0.md)、[分阶段可玩开发计划](docs/design/exec/mod重设计-实施计划.md) 和 [当前工作清单](docs/design/当前工作清单.md) 工作。仓库没有 CONTRIBUTE.md；规则、计划、结果和历史文档按各自职责维护，不在 README 里复制第二套规则。
+
 > **当前状态**：工程底座继续复用，包括 **21 篇的 mod 开发知识库**、
 > **可复现统计数据的 Python 工具链**和当前的**实验性 mod 实现**：
 > 生产数据源 `mod/decisions/fiscal.toml` 与 `mod/decisions/extensions.toml` 生成财政规则、扩展配置和默认策略的条件偏置；扩展当前默认关闭。

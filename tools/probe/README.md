@@ -16,7 +16,7 @@
 
 ## 三步用法
 
-```powershell
+```text
 .venv\Scripts\v3.exe experiment launch --risky   # 一键：装探针 → 只启用探针 → 以 -debug_mode 启动
 #  —— 进游戏/读档（on_game_started 会自动跑自检）、跑满一个月、退出 ——
 .venv\Scripts\v3.exe experiment collect          # 收割 logs/，按实验编号归位证据

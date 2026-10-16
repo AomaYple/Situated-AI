@@ -34,7 +34,7 @@ sitai_ui/
 
 ## 怎么收（首跑之前必须先侦察）
 
-```powershell
+```text
 # ① 侦察：按 ROI 起始值点，逐步抓帧（不需要模板）——帧落在 tools/out/auto/
 .venv\Scripts\python.exe -X utf8 -m tools.probe.stage6_ui_rerun --recon --lang l_simp_chinese
 # ② 从帧里裁模板（`python -m pdx.game_auto capture out.png` 抓整屏后裁剪，口径 §9）

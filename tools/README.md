@@ -23,7 +23,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\v3.exe            命令行入口（安装后生成）
 ```
 
-```powershell
+```text
 # 开发模式安装：装 pdx 包 + typer/rich + dev 依赖（pytest/ruff/mypy/pyinstrument）
 .venv\Scripts\python.exe -m pip install -e ".[dev]"
 ```
