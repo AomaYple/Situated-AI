@@ -35,11 +35,15 @@ DEFAULT_MONTHS = 0.1
 DEFAULT_OUTPUT = config.OUT / "f1-full-smoke"
 
 
-def _context(*, resource: bool, localization: bool) -> dict[str, Any]:
+def _context(
+    *, resource: bool, localization: bool, language: str | None, load_save: Path | None
+) -> dict[str, Any]:
     diagnostic = resource or localization
     return {
         "schema": "sitai-f1-full-smoke-v1",
         "candidate": "full",
+        "language": language,
+        "loaded_observer": load_save is not None,
         "candidate_kind": "diagnostic_candidate" if diagnostic else "production_candidate",
         "diagnostic_baselines": {
             "resource": resource,
@@ -86,13 +90,20 @@ def run(
     output: Path = DEFAULT_OUTPUT,
     resource: bool = False,
     localization: bool = False,
+    language: str | None = None,
+    load_save: Path | None = None,
     timeout: float = 3600,
 ) -> dict[str, Any]:
     """运行一次 F1 烟测并返回现有运行器报告。"""
 
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    context = _context(resource=resource, localization=localization)
+    context = _context(
+        resource=resource,
+        localization=localization,
+        language=language,
+        load_save=load_save,
+    )
     with tempfile.TemporaryDirectory(prefix=".sources-", dir=output) as directory:
         sources = _write_sources(Path(directory), resource=resource, localization=localization)
         report = game_run.run(
@@ -100,6 +111,8 @@ def run(
             months=months,
             timeout=timeout,
             output=output,
+            language=language,
+            load_save=load_save,
         )
     evidence = Path(str(report["evidence"]))
     game_run.write_json(evidence / "f1_context.json", context)
@@ -135,6 +148,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout", type=float, default=3600.0)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
+        "--load-save",
+        type=Path,
+        help="从已验证的观察者检查点启动；英语会话必须使用此选项",
+    )
+    parser.add_argument(
+        "--language",
+        choices=game_run.ga.SESSION_LANGUAGES,
+        help="显式冻结本局界面语言；只覆盖支持的自动化语言模板",
+    )
+    parser.add_argument(
         "--resource-baseline",
         action="store_true",
         help="挂载已确认的原版维修图标诊断源；不能进入生产包",
@@ -149,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
         months=args.months,
         timeout=args.timeout,
         output=args.output,
+        language=args.language,
+        load_save=args.load_save,
         resource=args.resource_baseline,
         localization=args.localization_baseline,
     )

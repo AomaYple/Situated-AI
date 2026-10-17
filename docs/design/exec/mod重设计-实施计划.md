@@ -136,9 +136,9 @@ F0 出口后，每次实机先使用现有 `pdx.game_run` 核对游戏版本、�
 
 **2026-10-17 F1 实际执行记录**：`full` 候选已完成生产环境启动和两次独立原版环境诊断。生产候选证据 `tools/out/f1-full-live/20261017-173621/`：实际挂载、观察者、快捷键 `5`、空格、后台推进和恢复完成，Mod 错误为 0，但因原版缺少 `gfx/interface/icons/alert_icons/repairing.dds` 的 `VFSOpen Error` 以 `ok=false` 结束。资源诊断证据 `tools/out/f1-resource-diagnostic/20261017-174241/`：补齐原版维修图标后 VFS 错误消失，仍因 5 条原版本地化 `Script system error!` 以 `ok=false` 结束。联合诊断证据 `tools/out/f1-clean-diagnostic/20261017-174651/`：同时补齐两项已登记原版基线后，游戏推进约 57.88 游戏日，`ok=true`，Mod 错误和所有已分类/未分类错误均为 0，`cleanup_errors=[]`。这三次运行均为启动/环境诊断，不构成真实消费者、AI 行为、解释 GUI、逐语言质量、玩家路径、保存/重载或 M4 性能通过；联合诊断基线不得进入生产包。最大 RSS 约 7,617–7,634 MiB 仅为启动诊断读数，不是正式性能基线。
 
-新增 `tools/probe/f1_full_smoke.py` 作为可复现薄入口：默认只挂载 `full` 生产候选，显式 `--resource-baseline` / `--localization-baseline` 才生成诊断候选；每次写入 `f1_context.json`，声明候选类型、基线范围和 `behavior_quality=not_evaluated`。入口复用现有 `pdx.game_run`，离线契约测试 `tests/test_f1_full_smoke.py` 已通过 13 项。后续从联合诊断建立的安全环境基线继续单模块真实消费者、生命周期、语言显示、玩家/保存重载、组合与 M3 行为验证；不把无错误启动或评分变化当作行为质量证据。
+新增 `tools/probe/f1_full_smoke.py` 作为可复现薄入口：默认只挂载 `full` 生产候选，显式 `--resource-baseline` / `--localization-baseline` 才生成诊断候选，并支持冻结语言和合法观察者检查点；每次写入 `f1_context.json`，声明候选类型、基线范围、语言、载入方式和 `behavior_quality=not_evaluated`。入口复用现有 `pdx.game_run`，当前 `tests/test_f1_full_smoke.py` 有 3 项契约测试，和 `tests/test_f1_module_smoke.py` 合计 6 项。后续从联合诊断建立的安全环境基线继续单模块真实消费者、生命周期、语言显示、玩家/保存重载、组合与 M3 行为验证；不把无错误启动或评分变化当作行为质量证据。
 
-**2026-10-17 F1 单模块实机补充**：在同一资源与本地化联合诊断基线下，`economy`、`diplomacy`、`subjects` 三个新增模块分别完成单模块启动、观察者、快捷键 `5`、空格、后台推进和恢复，三次均 `ok=true`、Mod/引擎错误为 0、`cleanup_errors=[]`。证据目录为 `tools/out/f1-module-smoke/economy/20261017-181510/`、`.../diplomacy/20261017-182002/` 和 `.../subjects/20261017-182427/`。这些结果只建立单模块运行期安全边界，不证明真实消费者字段、方向/量纲或 AI 行为质量；下一步先核对策略字段在当前引擎中的实际消费者，再派发有明确因果问题的行为实验。新增入口 `tools/probe/f1_module_smoke.py` 与 `tests/test_f1_module_smoke.py` 已加入，和 full 入口测试合计 16 项受影响测试通过。
+**2026-10-17 F1 单模块实机补充**：在同一资源与本地化联合诊断基线下，`economy`、`diplomacy`、`subjects` 三个新增模块分别完成单模块启动、观察者、快捷键 `5`、空格、后台推进和恢复，三次均 `ok=true`、Mod/引擎错误为 0、`cleanup_errors=[]`。证据目录为 `tools/out/f1-module-smoke/economy/20261017-181510/`、`.../diplomacy/20261017-182002/` 和 `.../subjects/20261017-182427/`。这些结果只建立单模块运行期安全边界，不证明真实消费者字段、方向/量纲或 AI 行为质量；下一步先核对策略字段在当前引擎中的实际消费者，再派发有明确因果问题的行为实验。新增入口 `tools/probe/f1_module_smoke.py` 与 `tests/test_f1_module_smoke.py` 已加入；当前 full 与 module 烟测契约测试合计 6 项。
 
 **2026-10-18 F0→F1 阶段收口与 F1 静态消费者准备**：F0 的离线实现出口已冻结，
 并新增 `src/pdx/consumer_audit.py`、
@@ -182,6 +182,20 @@ Windows 运行：观察者、快捷键 `5`、空格、后台推进、日志归�
 `origin.not_clean` 被拒绝，未绕过检查；使用仓库独立纯观察者检查点
 `sitai_clean_observer_20261009.v3` 重载成功，推进约 61.88 游戏日并安全恢复。该结果
 完成 M2 的合法检查点载入/清理证据，仍不产生七模块行为质量或正式交付资格。
+
+**2026-10-18 F1 本地化语言参数与观察者烟测**：`f1_full_smoke.py` 新增
+`--language` 与 `--load-save`，并在 `f1_context.json` 中记录语言和是否载入观察者检查点。
+英语新游戏菜单仍未验证，因此 `l_english` 使用独立纯观察者检查点
+`sitai_clean_observer_20261009.v3`，联合诊断基线下证据
+`tools/out/f1-language-smoke/english/20261017-223342/` 为 `ok=true`，快捷键、后台推进、
+恢复和错误门禁均通过。`l_simp_chinese` 新局证据
+`tools/out/f1-language-smoke/simp_chinese/20261017-222645/` 被原版动态
+`can_reach_target_country` 的 `capital` 目标失效错误拦截 3 次；Mod 错误为 0、清理完成，
+该失败与语言解析无关，按原版/引擎动态错误登记。随后用同一合规观察者检查点运行
+`l_simp_chinese`，证据 `tools/out/f1-language-smoke/simp_chinese-checkpoint/20261017-224329/`
+为 `ok=true`，错误门禁和清理均通过。两种语言都只证明已声明观察者自动化路径的加载和
+恢复边界，不证明翻译语义、解释 GUI、真实消费者、AI 行为质量、英语新游戏菜单或 11 种
+语言完成；另外 9 种解释语言仍待审校和 GUI 实机验证。
 
 ### 4.1 最少重复的验证顺序
 

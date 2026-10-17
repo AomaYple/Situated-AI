@@ -70,10 +70,14 @@ def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch):
     source_names = captured["sources"]
     assert isinstance(source_names, dict)
     assert set(source_names) == {"sitai_full_f1"}
+    kwargs = captured["kwargs"]
+    assert isinstance(kwargs, dict)
+    assert kwargs["language"] is None
     context = json.loads((tmp_path / "evidence/f1_context.json").read_text(encoding="utf-8"))
     assert context["candidate_kind"] == "production_candidate"
     assert context["production_package"] is True
     assert context["behavior_quality"] == "not_evaluated"
+    assert context["loaded_observer"] is False
     assert written
     assert written[0].name == "sitai_full_f1"
 
@@ -149,3 +153,55 @@ def test_诊断候选显式记录两种原版基线(tmp_path, monkeypatch):
     assert context["candidate_kind"] == "diagnostic_candidate"
     assert context["production_package"] is False
     assert context["diagnostic_baselines"] == {"resource": True, "localization": True}
+
+
+def test_显式语言传给运行器并写入证据上下文(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        f1_full_smoke.distribution,
+        "package_inputs",
+        lambda _variant: ("policy", "extensions", {}),
+    )
+    monkeypatch.setattr(
+        f1_full_smoke.explanation_probe,
+        "attach",
+        lambda files, _policy, _extensions: files,
+    )
+
+    def write(root: Path, files=None):
+        root.mkdir(parents=True, exist_ok=True)
+        (root / ".metadata").mkdir()
+        (root / ".metadata/metadata.json").write_text("{}\n", encoding="utf-8")
+
+    monkeypatch.setattr(f1_full_smoke.decisions, "write", write)
+    captured: dict[str, object] = {}
+
+    def fake_run(sources, **kwargs):
+        captured["sources"] = sources
+        captured["kwargs"] = kwargs
+        evidence = tmp_path / "evidence"
+        evidence.mkdir()
+        return {"ok": True, "evidence": str(evidence)}
+
+    monkeypatch.setattr(game_run, "run", fake_run)
+    monkeypatch.setattr(
+        game_run,
+        "write_json",
+        lambda path, value: Path(path).write_text(
+            json.dumps(value, ensure_ascii=False) + "\n", encoding="utf-8"
+        ),
+    )
+
+    report = f1_full_smoke.run(
+        output=tmp_path / "f1",
+        language="l_english",
+        load_save=tmp_path / "observer.v3",
+    )
+
+    assert report["ok"] is True
+    kwargs = captured["kwargs"]
+    assert isinstance(kwargs, dict)
+    assert kwargs["language"] == "l_english"
+    assert kwargs["load_save"] == tmp_path / "observer.v3"
+    context = json.loads((tmp_path / "evidence/f1_context.json").read_text(encoding="utf-8"))
+    assert context["language"] == "l_english"
+    assert context["loaded_observer"] is True
