@@ -121,3 +121,35 @@ def test_财政行为各臂保留检查点的两只读身份(tmp_path, monkeypat
     )
     assert decision_behavior.execute(arguments, tmp_path / "out", tmp_path / "sources") == 0
     assert {"sitai.probe.decisions", "sitai.probe.reform"} <= set(observed)
+
+
+def test_生命周期入口可显式挂载诊断基线(tmp_path, monkeypatch):
+    """生命周期重跑只通过显式诊断开关补齐已登记的原版环境问题。"""
+
+    from tools.probe import decision_lifecycle
+
+    def fake_resource(root, _game):
+        root.mkdir(parents=True)
+        (root / ".metadata").mkdir()
+        (root / ".metadata/metadata.json").write_text("{}\n", encoding="utf-8")
+        return {"files": 1}
+
+    monkeypatch.setattr(decision_lifecycle.resource_baseline, "write", fake_resource)
+    monkeypatch.setattr(
+        decision_lifecycle.decision_probe,
+        "build_localization_baseline",
+        lambda _game: {".metadata/metadata.json": "{}\n"},
+    )
+    sources = decision_lifecycle.build_sources(
+        tmp_path,
+        controlled=True,
+        resource=True,
+        localization=True,
+    )
+    assert {
+        "sitai_decision_candidate",
+        "zz_probe_decision_lifecycle",
+        "zz_sitai_resource_baseline",
+        "zz_sitai_vanilla_localization_baseline",
+    } == set(sources)
+    assert (sources["zz_sitai_resource_baseline"] / ".metadata/metadata.json").is_file()

@@ -56,7 +56,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 | 入口 | 用途 |
 |---|---|
-| `tools/probe/decision_lifecycle.py` | 隔离财政注入，核对进入、迟滞、退出和外交暴露 |
+| `tools/probe/decision_lifecycle.py` | 隔离财政注入，核对进入、迟滞、退出和外交暴露；`--resource-baseline` / `--localization-baseline` 只为已登记的原版环境问题提供诊断基线，不进入生产包 |
 | `tools/probe/decision_behavior.py` | 固定观察者存档的单字段外交/市场两臂；创建机会与AI选择分别统计 |
 | `tools/probe/decision_compare.py` | 检查neutrality单字段、完整检查点、版本和其他源一致，再核实际评分差分 |
 | `tools/probe/market_compare.py` | 同依赖输入、有资格窗口的支持评分方向与实际角色；不判总体质量通过 |
@@ -69,6 +69,12 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `python -m pdx.explanation_probe --output tools/out/a5-explanation.zip` | 仅生成 A5 国家说明隔离实验 ZIP，默认全关；需匹配版本本机国家面板底本，追加只读实例并记录覆盖指纹；不安装或运行、不进入生产包，与其他国家面板覆盖不兼容，国家上下文与帧成本待验 |
 | `tools/benchmarks/experiment_evidence.py` | 串行合成资格成本基线，分开计时、Python 分配与进程树 RSS；不是实机或加速对照 |
 | `tools/benchmarks/decision_runtime.py` | 分开测生成、日志/存档读取的墙钟与Python分配峰值；正式基线要求机器安静 |
+
+`decision_lifecycle.py --months 9 --controlled --resource-baseline --localization-baseline`
+已完成一次 F1 M2 诊断：`RUS`/`PRU` 严格连续样本均记录风险进入与退出，重跑证据为
+`tools/out/decisions/activation/20261017-214619/`。首轮未挂诊断基线的原版资源缺失失败
+保留在相邻证据目录；两次都不改变生产包，`behavior_causality=false`，不能当作七模块
+行为质量或正式性能通过。
 
 使用仓库虚拟环境，先执行只读输入盘点：`python -m pdx.checkpoint_catalog tools/out --output tools/out/checkpoints/catalog.json`；用户存档可另指定目录盘点。盘点的来源关联限于所给根目录；没有关联不证明来源干净，来源干净不等于新机会或正式后期资格。运行器会在部署前再次核对 `saves/` 下输入的同局来源；脱离原目录的复制件须保留并核对目录盘点结果，不能用改名绕过失败记录。
 
@@ -303,7 +309,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 128 个测试文件、3994 条用例（2026-10-18 F0 工作区口径）；受影响定向为 197 passed、32 subtests，串行完整回归为 3947 passed、25 skipped、1743 subtests，约 2603.07 秒。跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志；本机 n-auto 曾触发 Python 3.14/xdist 原生 access violation，不能写成并行通过。完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-18-f0-七模块离线实现出口收口)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
+当前收集 128 个测试文件、3995 条用例（2026-10-18 工作区口径）；受影响定向为 197 passed、32 subtests，串行完整回归为 3947 passed、25 skipped、1743 subtests，约 2603.07 秒。跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志；本机 n-auto 曾触发 Python 3.14/xdist 原生 access violation，不能写成并行通过。完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-18-f0-七模块离线实现出口收口)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

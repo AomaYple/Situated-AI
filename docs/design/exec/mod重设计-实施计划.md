@@ -170,6 +170,14 @@ Windows 运行：观察者、快捷键 `5`、空格、后台推进、日志归�
 `behavior_quality=not_evaluated`。下一步优先设计可观测真实消费者输出的有限反事实；若引擎
 没有可用读法，登记 unknown/unsupported，不把策略持有或评分变化提升为 M1/M3。
 
+**2026-10-18 F1 M2 财政生命周期诊断**：首次九个月 controlled 生命周期运行因已登记的
+原版 `repairing.dds` 缺失触发 `VFSOpen Error`；入口随后增加显式
+`--resource-baseline` / `--localization-baseline`，只在临时源中补齐诊断基线。重跑证据
+`tools/out/decisions/activation/20261017-214619/` 达到 `ok=true`，从
+`1836.1.8.6` 推进到 `1836.10.25.6`，两国严格连续样本都出现风险
+`no → yes → no`、进入/退出/active 均可观测，恢复无错误。该结果只建立财政生命周期的
+运行期证据；`behavior_causality=false`，不提升七模块 M1/M3、语言显示、玩家路径或 F2。
+
 ### 4.1 最少重复的验证顺序
 
 1. **静态与输入先行**：只重验相对 F0 已改变的源/接口和输入依赖；不在每局游戏前重复整套工程回归。先生成已支持的输入目录核验结果，正式资格不足时具体记录拒绝，同时判断独立诊断。
