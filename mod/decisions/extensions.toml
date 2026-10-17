@@ -18,3 +18,12 @@ enabled = false
 commitment_bonus = 25
 threat_bonus = 15
 why = "实验候选通过原版支持评分表达防御责任：防御方存在联盟/防御条约，或相邻防御方遭征服/附庸目标威胁时追加有限支持；评价进攻方时贡献反向。同一防御原因取最高值，不累加，不绕过资格或强制参战。条约方向、引擎作用域、实际行为与收益仍待集中实机验收；不接入方向尚未核实的保证独立。"
+
+[economy]
+enabled = false
+
+[diplomacy]
+enabled = false
+
+[subjects]
+enabled = false

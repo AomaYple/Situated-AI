@@ -4,7 +4,7 @@
 >
 > **优先级**：正确性第一、速度第二、内存第三。实现期保留必要的代码、生成、离线测试和恢复契约检查；集中实机、行为验收与正式性能在完整实现后进行。未经实机的引擎契约标记为假设，已知非法或被否证的读法不得复用。
 >
-> **当前边界**：四模块、组合、解释、生成和隔离打包已有代码；经济行政、外交目标与战争负担、宗主国与属国三个新增模块尚未实现，对应接口尚须核对；9 种语言仍回退英语。因此七模块 F0 未完成。已有工程通过不构成新组合的实机或行为通过；本次计划更新不新增任何游戏样本。
+> **当前边界**：四模块、组合、解释、生成和隔离打包已有代码；2026-10-17 已新增经济行政、外交目标与战争负担、宗主国与属国三个模块的离线参考模型、数据源、触发器、原版策略补丁和 `full` 七模块候选包。其真实接口、消费者作用域、跨模块反例、生命周期、行为质量和长期性能仍须核对；`full` 候选的 11 种语言结构已生成，旧实验包仍保留历史回退声明。七模块 F0 仍未完成。已有工程通过不构成新组合的实机或行为通过；本批没有新增游戏样本。
 
 ## 1. 目标、范围与完成定义
 
@@ -22,7 +22,7 @@
 
 **顺序固定为 F0 → F1 → F2。** F0 不等待某一模块的行为质量通过才实现其它模块；接口来源审查属于实现期，集中实机在 F1。F1 发现问题后按受影响范围修复和回归，不从头重做全部计划；核心机制失效时替换该机制并保留无关有效实现和证据。实验包与已验收可玩包分别标识。
 
-**现有包身份保持**：current/control/disabled 和现有 complete/fiscal/security/market/reform 的实际开关、四模块完整包及 manifest 不能因计划改版而冒充七模块。新增变体、命令或 manifest 契约须随生成器、CLI、打包和测试一起实施，并显式区分新旧配置；此处的产品里程碑不是现有 CLI 选项。
+**现有包身份保持**：current/control/disabled 和现有 complete/fiscal/security/market/reform 的实际开关、四模块完整包及 manifest 不能因计划改版而冒充七模块；`economy`、`diplomacy`、`subjects` 和 `full` 已作为独立的七模块扩展候选变体接入，但 `full` 仍是 experimental/candidate。新增变体、命令或 manifest 契约须随生成器、CLI、打包和测试一起实施，并显式区分新旧配置；此处的产品里程碑不是现有 CLI 选项。
 
 ## 2. 最终目标与实现对照
 
@@ -34,9 +34,9 @@
 | 外部安全与承诺 | extensions.toml → decision_security.py → diplomatic_play_support | 明确防御方、联盟/防御条约、邻国征服/附庸威胁；同类取最高、攻防反向、未知不干预 | 条约方向/作用域、支持和退出、机会收益与代价 |
 | 市场依赖 | extensions.toml → decisions.py → diplomatic_play_support | 双向依赖差值、0–5 标度、反对称、未知与无对象；共享字段只合并一次 | 双方真实方向、资格/行动/结果与财政安全冲突 |
 | 政治约束与身份偏好 | extensions.toml → decisions.py → change_law_chance，原版保留法律选择 | 合法性、战争、叛乱、执政 IG；优先级、正常改革/保守反例与国家偏好保留 | 真实法律可行性、实际立法和结果；启动节奏不冒充法律排名 |
-| 经济与行政能力 | 拟建 economy.toml / decision_economy.py；经 decisions 接入原版行政策略 | 以可核对的财政空间、行政能力、产业/资源约束比较发展倾向；先确认 building_group_weights、goods_stances、desired_tax_level 等字段能否表达与如何合并，不能把字段清单当已实现接口 | 同处境/单输入反事实、实际策略和经济选择、发展收益及财政安全反例；不能以权重改变冒充选址改善 |
-| 外交目标与战争负担 | 拟建 diplomatic_goals.toml / decision_diplomacy.py；原版外交策略适配 | 目标价值、已有战争负担、威胁与国际代价；核对 wargoal_weights、recklessness 等候选字段及作用域，不直接控制宣战、目标选择或和谈 | 合法机会分母、实际行动与目标代价、防御/有利行动反例；无可靠战争成本输入时保持未知 |
-| 宗主国与属国关系 | 拟建 subjects.toml / decision_subjects.py；原版属国外交策略适配 | 角色/关系方向、自治、安全保护、市场依赖和可观察实力；比较合作、自强、自治与独立倾向；核对 subject_* 路线资格/占槽及退出语义 | 宗主/属国双向角色、实际关系行动、依赖/保护/实力反事实和无宗属对象负例；不能强制独立或制造资格 |
+| 经济与行政能力 | `economy.toml` / `decision_economy.py`；经 `decisions` 接入原版行政策略 | 已有离线参考模型和生成触发器；仍需核对财政空间、行政能力、产业/资源约束及 building_group_weights、goods_stances、desired_tax_level 等字段能否表达与如何合并，不能把离线字段映射当已实现接口 | 同处境/单输入反事实、实际策略和经济选择、发展收益及财政安全反例；不能以权重改变冒充选址改善 |
+| 外交目标与战争负担 | `diplomatic_goals.toml` / `decision_diplomacy.py`；原版外交策略适配 | 已有离线参考模型和生成触发器；仍需核对目标价值、已有战争负担、威胁与国际代价，以及 wargoal_weights、recklessness 等候选字段及作用域，不直接控制宣战、目标选择或和谈 | 合法机会分母、实际行动与目标代价、防御/有利行动反例；无可靠战争成本输入时保持未知 |
+| 宗主国与属国关系 | `subjects.toml` / `decision_subjects.py`；原版属国外交策略适配 | 已有离线参考模型和生成触发器；仍需核对角色/关系方向、自治、安全保护、市场依赖和可观察实力，以及 subject_* 路线资格/占槽及退出语义 | 宗主/属国双向角色、实际关系行动、依赖/保护/实力反事实和无宗属对象负例；不能强制独立或制造资格 |
 | 统一仲裁、组合与原版适配 | decisions.patch_default 复用；共享逻辑按真实消费者拆分 | 按输出字段、作用域、量纲和合并语义管理七模块；硬资格优先、软代价有界、身份调整偏好；同一槽/字段只有一个写入者，原版底本保留 | 隔离/组合一致、模块关闭等价、冲突/极值/未知反例、字段不重写或重复计分 |
 | 解释与有限历史状态 | explanation_probe.attach、原生国家面板；有状态消费者按需扩展 | 解释跟随实际输入/规则/参数；缺博弈上下文不伪造分数；只对原版无法表达的必要历史建有期限状态，无用途不缓存 | 国家切换、GUI 上下文、进入/保持/退出/保存/关闭清理及帧开销 |
 | 全语言、玩家、存档与交付 | localization_languages、decisions、explanation_probe、distribution、game_run | 本体全部语言有实际翻译初稿，无英语回退/占位；AI/玩家边界、保存重载契约、禁用卸载与回退说明齐全 | 逐语言文本审校/加载、玩家游玩、保存重载、恢复和兼容 |
@@ -67,7 +67,7 @@
 
 ### C2 · 经济与行政能力
 
-**拟建**：`mod/decisions/economy.toml`、`src/pdx/decision_economy.py`、`tests/test_decision_economy.py`；**修改**：`src/pdx/decisions.py`、`src/pdx/distribution.py`、`tests/test_complete_candidate.py`。只有 C0 确认来源后才引入实际字段；新增 TOML 必须显式加载、校验，不能假定自动发现。
+**已落盘入口**：`mod/decisions/economy.toml`、`src/pdx/decision_economy.py`、`tests/test_decision_modules.py`；**修改**：`src/pdx/decisions.py`、`src/pdx/distribution.py`、`tests/test_complete_candidate.py`。当前是离线参考实现，只有 C0 确认真实消费者后才可扩大实际字段；新增 TOML 必须显式加载、校验，不能假定自动发现。
 
 - [ ] 固定财政/行政/产业与资源输入的来源、范围、未知值和重评估条件。模块读取财政状态约束发展路线，不重复施加财政惩罚或直接赠送能力。
 - [ ] 先为实际生成块编写财政不足、行政不足、资源约束改变、条件充足、未知输入、模块关闭与正常发展反例；确认旧实现缺失后实现经 C0 核对的原版策略适配，保留未干预底本。
@@ -75,7 +75,7 @@
 
 ### C3 · 外交目标与战争负担
 
-**拟建**：`mod/decisions/diplomatic_goals.toml`、`src/pdx/decision_diplomacy.py`、`tests/test_decision_diplomacy.py`；**修改**：`src/pdx/decisions.py`、`src/pdx/distribution.py`、`tests/test_complete_candidate.py`。
+**已落盘入口**：`mod/decisions/diplomatic_goals.toml`、`src/pdx/decision_diplomacy.py`、`tests/test_decision_modules.py`；**修改**：`src/pdx/decisions.py`、`src/pdx/distribution.py`、`tests/test_complete_candidate.py`。当前是离线参考实现，不能替代真实接口核对。
 
 - [ ] 复用财政、安全和市场事实，区分“承担能力”“保护责任”“目标价值/持续战争代价”；定义每种原因唯一所有者，不将同一债务或同一威胁在多个模块重复扣分。
 - [ ] 为无战争/多战争、弱负担/高负担、有利目标/无利目标、防御紧急例外、未知成本与关闭路径建立实际脚本反例，再实现有来源的外交字段/路线适配。战争时间本身不是可靠成本，不能自动当战败或失败。
@@ -83,7 +83,7 @@
 
 ### C4 · 宗主国与属国关系
 
-**拟建**：`mod/decisions/subjects.toml`、`src/pdx/decision_subjects.py`、`tests/test_decision_subjects.py`；**修改**：`src/pdx/decisions.py`、`src/pdx/distribution.py`、`tests/test_complete_candidate.py`。
+**已落盘入口**：`mod/decisions/subjects.toml`、`src/pdx/decision_subjects.py`、`tests/test_decision_modules.py`；**修改**：`src/pdx/decisions.py`、`src/pdx/distribution.py`、`tests/test_complete_candidate.py`。当前是离线参考实现，不能替代真实接口核对。
 
 - [ ] 明确宗主/属国、共同市场和条约的方向性，复用可观察的安全、经济依赖和政治事实；未确认的自治/实力字段显式未知，不读取玩家秘密意图。
 - [ ] 先覆盖无宗属关系、角色颠倒、依赖与保护充足、保护丧失、自强条件成立、独立条件不足、关系结束及关闭组合，再实现 C0 核对的策略/行为适配。
@@ -106,7 +106,7 @@
 **修改入口**：`src/pdx/localization_languages.py`、生产与解释生成器、对应文案数据源、distribution；测试为 `tests/test_localization_languages.py`、`tests/test_decisions.py`、`tests/test_explanation_probe.py`、`tests/test_complete_candidate.py`。
 
 - [ ] 从锁定游戏目录或快照确认语言集合；当前 1.14.5 是 11 种，不以中英 GUI 模板限制 Mod 语言。
-- [ ] 完成决策、解释及其它游戏可见自有键的全部语言翻译初稿，保留原版术语和占位符；9 种英语回退逐一替换。`fallback_languages` 为空才形成 F1 候选；英语相同的专有名词不机械当漏译，删掉回退标记不能代替实际翻译。
+- [ ] 完成决策、解释及其它游戏可见自有键的全部语言翻译初稿，保留原版术语和占位符；当前 `full` 候选的 `fallback_languages` 已为空，但仍需逐语言语义审校。若后续生成重新出现回退，必须逐项替换并保留清单；英语相同的专有名词不机械当漏译，删掉回退标记不能代替实际翻译。
 - [ ] 严格核验目录、文件名、语言头、重复键、键集合、占位符、转义与生成确定性。F0 证明文本已写全，F1 继续做语义审校与游戏内显示验证，不把空回退列表当翻译质量证据。
 
 ### C7 · 批次冻结与 F0 出口
@@ -115,7 +115,7 @@
 - [ ] 源批次冻结后执行编码、lint、format、types、deadcode、baseline、完整 `n-auto`/覆盖率；受影响 Python 调用链建立串行耗时、分配峰值与进程树内存成本，保持现有资源和核心覆盖门槛。
 - [ ] 冻结七模块完整候选的参数、游戏版本、包/源/探针 SHA、离线结果与实机待验列表。二进制包、全部语言与 manifest 一致，安装与回退契约检查齐全；不能引用四模块旧包作为七模块冻结物。
 
-**F0 出口**：第 2 节每个核心目标都有有来源的实际实现与消费者，C0–C7 无未完成的代码/文本/交付缺口，全部语言翻译初稿和必要工程检查通过。只有到此才转入 F1 集中实机；不能因包名含 complete、七个开关存在或旧测试通过提前退出。当前下一动作从 C0 的七模块目标/接口映射开始，随后 C1–C5 按依赖实现；C6 随文案形成增量完成，最后 C7 冻结。
+**F0 出口**：第 2 节每个核心目标都有有来源的实际实现与消费者，C0–C7 无未完成的代码/文本/交付缺口，全部语言翻译初稿和必要工程检查通过。只有到此才转入 F1 集中实机；不能因包名含 complete、七个开关存在或旧测试通过提前退出。当前仍需完成 C0 的完整七模块目标/接口映射复核，随后按依赖收口 C1、C5 和 C7；C2–C4 的离线实现可作为核对输入，C6 的结构覆盖需继续做语义审校。F1 曾启动但在启动阶段被用户暂停，恢复已完成；未取得任何加载、推进或行为质量结论。
 
 <a id="a5--稳定性玩家路径与首版交付"></a>
 
@@ -133,6 +133,8 @@ F0 出口后，每次实机先使用现有 `pdx.game_run` 核对游戏版本、�
 同输入/环境同类错误两次停止；既有 preparation、seed、新局配方及复制件的停止保持。新计划、新包、改名、改探针、资源增加、清记录或拼接会话不提供重开依据。真实独立输入、可核查环境变化或针对失败的因果修复仍由原规则判断。单项拒绝不泛化为所有实机都不可运行；仅缺图标时继续判断独立诊断，不改本体、不白名单错误。
 
 每次要求实机都记录四态之一：`已启动并完成`、`已启动但诊断失败`、`启动前被具体门禁拒绝`、`尚未派发，属于执行遗漏`。附候选与输入 SHA、版本、实际命令、窗口、原始日志、截图和恢复结果；不得用“未验证”掩盖执行遗漏。未知错误、脚本/模拟断言、挂载污染或恢复失败按基线停止。
+
+**2026-10-17 F1 实际执行记录**：`full` F1 候选已通过生成检查、版本/配置/进程/日志/资源静态门禁并生成 `tools/out/releases/situated-ai-full-f1-candidate.zip`。Windows 实机进程实际运行约 43.07 秒，记录阶段为 `startup`；用户在观察者、快捷键 `5`、空格推进和六游戏月采样前主动暂停。随后进程、部署指针、临时 Mod、日志、存档和 `content_load.json` 均恢复到启动前状态，RunLock 可重新获取。证据见 `tools/out/evidence/f1-full-smoke-20261017/20261017-104626/{live.json,pause-closeout.json,recovery-result.json,deployment.json}`。这次应标记为“用户主动暂停，启动阶段中断”，不归为诊断失败，也不产生加载、接口、行为质量或性能结论；后续从启动前门禁和一次完整烟测重新开始，源码未改变时不重复无关的完整离线回归。
 
 ### 4.1 最少重复的验证顺序
 

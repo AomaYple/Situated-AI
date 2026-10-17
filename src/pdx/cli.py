@@ -2818,11 +2818,22 @@ def package_cmd(
     ),
     variant: Annotated[
         Literal[
-            "current", "control", "disabled", "complete", "fiscal", "security", "market", "reform"
+            "current",
+            "control",
+            "disabled",
+            "complete",
+            "fiscal",
+            "security",
+            "market",
+            "reform",
+            "economy",
+            "diplomacy",
+            "subjects",
+            "full",
         ],
         typer.Option(
             "--variant",
-            help="complete 四模块实验候选；fiscal/security/market/reform 单模块；current 当前源；control 零偏置财政；disabled 全关安全包",
+            help="complete 四模块实验候选；economy/diplomacy/subjects 三个新增模块；full 七模块完整候选；其余为现有隔离包",
         ),
     ] = "disabled",
 ) -> None:

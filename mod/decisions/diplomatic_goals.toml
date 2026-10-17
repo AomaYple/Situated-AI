@@ -1,0 +1,7 @@
+schema_version = 1
+
+[diplomacy]
+enabled = false
+war_burden_penalty = -0.5
+peaceful_opportunity_bonus = 0.15
+why = "以原版 recklessness 策略字段表达战争负担和和平机会；不创建外交机会、不强制宣战或和谈。"
