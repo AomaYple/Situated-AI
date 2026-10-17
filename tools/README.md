@@ -76,6 +76,11 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 保留在相邻证据目录；两次都不改变生产包，`behavior_causality=false`，不能当作七模块
 行为质量或正式性能通过。
 
+保存/重载只接受独立来源的干净检查点；带 Mod 自动存档若被判为
+`opportunity.unverified` / `origin.not_clean` 必须保留拒绝，不得通过改名或重复运行绕过。
+本轮使用 `tools/out/checkpoints/sitai_clean_observer_20261009.v3` 的合规重载证据位于
+`tools/out/decisions/lifecycle/20261017-221239/`。
+
 使用仓库虚拟环境，先执行只读输入盘点：`python -m pdx.checkpoint_catalog tools/out --output tools/out/checkpoints/catalog.json`；用户存档可另指定目录盘点。盘点的来源关联限于所给根目录；没有关联不证明来源干净，来源干净不等于新机会或正式后期资格。运行器会在部署前再次核对 `saves/` 下输入的同局来源；脱离原目录的复制件须保留并核对目录盘点结果，不能用改名绕过失败记录。
 
 有界原件筛选沿用同一入口，不传目录 root：
