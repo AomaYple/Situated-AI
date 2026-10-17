@@ -163,7 +163,7 @@ def test_只读组件使用闭合允许子集并且无世界扫描或玩法写�
     tree = parse_text(files[probe.SGUI])
     assert not tree.errors
     check(tree.root)
-    assert len(files) == 4
+    assert len(files) == 2 + len(probe.DEFAULT_LANGUAGES)
     assert all(probe.PREFIX in name for name in files)
     assert not any(name.startswith("common/on_actions/") for name in files)
 
@@ -275,8 +275,12 @@ def test_生成文案使用替代实际参数及一致键与占位符():
         aggression=0.25,
     )
     files = probe.build(policy, decisions.Extensions(reform_enabled=True, market_enabled=True))
-    tables = [parse_loc_text(text) for name, text in files.items() if name.endswith(".yml")]
-    assert set(tables[0]) == set(tables[1])
+    localization = {
+        language: parse_loc_text(files[f"localization/{language}/{probe.PREFIX}_l_{language}.yml"])
+        for language in decisions.LANGUAGES
+    }
+    tables = list(localization.values())
+    assert set(localization["simp_chinese"]) == set(localization["english"])
     for table in tables:
         for key, text in table.items():
             assert re.findall(r"\[[^\]]*\]|\$[^$]*\$", text) == []
@@ -288,10 +292,10 @@ def test_生成文案使用替代实际参数及一致键与占位符():
         assert "+0.25" in active
     script = files[probe.SGUI]
     keys = re.findall(r"custom_tooltip = (\w+)", script)
-    assert set(keys) <= tables[0].keys()
-    assert "改革启用；市场启用" in tables[0][probe.PREFIX + "_config"]
-    assert "reform enabled; market enabled" in tables[1][probe.PREFIX + "_config"]
-    assert "未知保持未知" in tables[0][probe.PREFIX + "_boundary"]
+    assert set(keys) <= localization["simp_chinese"].keys()
+    assert "改革启用；市场启用" in localization["simp_chinese"][probe.PREFIX + "_config"]
+    assert "reform enabled; market enabled" in localization["english"][probe.PREFIX + "_config"]
+    assert "未知保持未知" in localization["simp_chinese"][probe.PREFIX + "_boundary"]
 
 
 @pytest.mark.parametrize("variant", ["current", "control", "disabled"])
@@ -335,9 +339,16 @@ def test_实验包与实际生产变体配套且生产交付不含探针(tmp_pat
             assert payload.startswith(b"\xef\xbb\xbf") == name.endswith((".txt", ".yml"))
         sgui = candidate.read(probe.SGUI).decode("utf-8-sig")
         assert ("sitai_fiscal_external_risk" in sgui) == (variant != "disabled")
-        english = parse_loc_text(
-            candidate.read(f"localization/english/{probe.PREFIX}_l_english.yml").decode("utf-8-sig")
-        )
+        localization = {
+            language: parse_loc_text(
+                candidate.read(f"localization/{language}/{probe.PREFIX}_l_{language}.yml").decode(
+                    "utf-8-sig"
+                )
+            )
+            for language in decisions.LANGUAGES
+        }
+        assert set(localization) == set(decisions.LANGUAGES)
+        english = localization["english"]
         assert ("neutrality +0," if variant == "control" else "neutrality +25,") in english[
             probe.PREFIX + "_active"
         ]

@@ -155,6 +155,29 @@ def test_财政外部暴露包含尚未选边的合法参与者(policy):
     assert "is_diplomatic_play_undecided_participant = yes" in triggers
 
 
+def test_生产扩展为本体每种语言生成完整键集(policy):
+    extra = replace(decisions.load_extensions(), market_enabled=True, security_enabled=True)
+    files = decisions.build(policy, extensions=extra)
+    expected = set(decisions.LANGUAGES)
+    actual = {
+        language
+        for language in decisions.LANGUAGES
+        if f"localization/{language}/sitai_decisions_l_{language}.yml" in files
+    }
+    assert actual == expected
+    metadata = json.loads(files[".metadata/metadata.json"])
+    assert metadata["localization"]["languages"] == sorted(expected)
+    assert set(metadata["localization"]["fallback_languages"]) == expected - {
+        "english",
+        "simp_chinese",
+    }
+
+
+def test_显式空语言集合不能静默退回默认集合(policy):
+    with pytest.raises(ValueError, match="至少需要一种"):
+        decisions.build(policy, languages=())
+
+
 @pytest.mark.parametrize(
     "body",
     [

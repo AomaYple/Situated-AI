@@ -19,6 +19,14 @@ from packaging.version import InvalidVersion, Version
 
 from . import __version__, config, decision_security
 from .lexer import LBRACE, RBRACE, tokenize
+from .localization_languages import (
+    DEFAULT_LANGUAGES,
+    Language,
+    localization_path,
+)
+from .localization_languages import (
+    normalize as normalize_languages,
+)
 from .model import Block
 from .parser import parse_text
 from .textio import normalized_text
@@ -40,6 +48,36 @@ EXTENSIONS = SOURCE.with_name("extensions.toml")
 PACKAGE_STATUSES = frozenset({"experimental", "candidate", "accepted"})
 SAVE_COMPATIBILITY = frozenset({"new-game-only", "same-version-new-game", "same-candidate-save"})
 SUPPORTED_PLATFORMS = frozenset({"windows", "macos", "linux"})
+
+# 生产 Mod 的本地化集合跟随当前锁定的 Victoria 3 本体语言；历史 legacy
+# 生成器仍保留自己的双语数据源契约，不影响生产包。
+LANGUAGES: dict[str, str] = {language.directory: language.header for language in DEFAULT_LANGUAGES}
+
+_DECISION_LOCALIZATION: dict[str, dict[str, str]] = {
+    "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON": {
+        "english": "Economic exposure to both sides",
+        "simp_chinese": "对博弈双方的经济依赖",
+    },
+    "SITAI_SECURITY_COMMITMENT_REASON": {
+        "english": "Defense commitment (candidate)",
+        "simp_chinese": "防御承诺（候选规则）",
+    },
+    "SITAI_SECURITY_NEIGHBOR_REASON": {
+        "english": "Neighbor defense exposure (candidate)",
+        "simp_chinese": "邻国受侵略的安全风险（候选规则）",
+    },
+}
+
+
+def _localized_decision_text(key: str, language: Language) -> str:
+    """返回一个有明确英语回退的生产本地化值。
+
+    当前实验候选先保证本体的全部语言都有同一组键；正式发布前必须把
+    ``fallback_languages`` 中的英语回退替换为经过审校的译文。
+    """
+
+    values = _DECISION_LOCALIZATION[key]
+    return values.get(language.directory, values["english"])
 
 
 @dataclass(frozen=True, slots=True)
@@ -499,7 +537,10 @@ def source_fingerprint(policy: Policy, extensions: Extensions, baseline: str) ->
 
 
 def _module_names(
-    policy: Policy, extensions: Extensions, files: Mapping[str, str] | None = None
+    policy: Policy,
+    extensions: Extensions,
+    files: Mapping[str, str] | None = None,
+    languages: tuple[Language, ...] = DEFAULT_LANGUAGES,
 ) -> list[str]:
     files = files or {}
     modules: list[str] = []
@@ -524,10 +565,7 @@ def _module_names(
         modules.append("reform")
     if extensions.market_enabled and (
         not files
-        or {
-            "localization/english/sitai_decisions_l_english.yml",
-            "localization/simp_chinese/sitai_decisions_l_simp_chinese.yml",
-        }
+        or {localization_path(language, "sitai_decisions") for language in languages}
         <= files.keys()
     ):
         modules.append("market")
@@ -544,9 +582,16 @@ def metadata_payload(
     *,
     enabled_modules: list[str] | None = None,
     baseline: str | None = None,
+    languages: tuple[Language, ...] | None = None,
 ) -> dict[str, object]:
     policy = policy or load()
     extensions = extensions or load_extensions()
+    languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
+    fallback_languages = [
+        language.directory
+        for language in languages
+        if language.directory not in {"english", "simp_chinese"}
+    ]
     return {
         "name": "Situated AI · 处境决策",
         "id": "sitai.decisions",
@@ -563,7 +608,13 @@ def metadata_payload(
         "relationships": [],
         "enabled_modules": enabled_modules
         if enabled_modules is not None
-        else _module_names(policy, extensions),
+        else _module_names(policy, extensions, languages=languages),
+        "localization": {
+            "languages": [language.directory for language in languages],
+            "headers": [language.header for language in languages],
+            "fallback_languages": fallback_languages,
+            "fallback_policy": "experimental-only-english-source",
+        },
         "parent_package": policy.package.parent,
         "save_compatibility": policy.package.save_compatibility,
         "platforms": list(policy.package.platforms),
@@ -582,10 +633,12 @@ def build(
     baseline: str | None = None,
     *,
     extensions: Extensions | None = None,
+    languages: tuple[Language, ...] | None = None,
 ) -> dict[str, str]:
     policy = policy or load()
     baseline = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
     extensions = extensions or load_extensions()
+    languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
     files = {
         "common/ai_strategies/00_default_strategy.txt": patch_default(baseline, policy, extensions),
     }
@@ -603,37 +656,42 @@ def build(
     if extensions.security_enabled:
         files["common/scripted_triggers/sitai_security_triggers.txt"] = decision_security.triggers()
     if extensions.market_enabled or extensions.security_enabled:
-        for language, column in (("english", 0), ("simp_chinese", 1)):
+        reason_keys: list[str] = []
+        if extensions.market_enabled:
+            reason_keys.append("SITAI_MARKET_DEPENDENCE_SUPPORT_REASON")
+        if extensions.security_enabled:
+            reason_keys.extend(
+                [
+                    "SITAI_SECURITY_COMMITMENT_REASON",
+                    "SITAI_SECURITY_NEIGHBOR_REASON",
+                ]
+            )
+        for language in languages:
             reasons = {}
             if extensions.market_enabled:
-                reasons["SITAI_MARKET_DEPENDENCE_SUPPORT_REASON"] = (
-                    "Economic exposure to both sides",
-                    "对博弈双方的经济依赖",
+                reasons["SITAI_MARKET_DEPENDENCE_SUPPORT_REASON"] = _localized_decision_text(
+                    "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON", language
                 )
             if extensions.security_enabled:
                 reasons.update(
                     {
-                        "SITAI_SECURITY_COMMITMENT_REASON": (
-                            "Defense commitment (candidate)",
-                            "防御承诺（候选规则）",
-                        ),
-                        "SITAI_SECURITY_NEIGHBOR_REASON": (
-                            "Neighbor defense exposure (candidate)",
-                            "邻国受侵略的安全风险（候选规则）",
-                        ),
+                        key: _localized_decision_text(key, language)
+                        for key in reason_keys
+                        if key != "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON"
                     }
                 )
-            files[f"localization/{language}/sitai_decisions_l_{language}.yml"] = (
-                f"l_{language}:\n"
-                + "".join(f' {key}: "{pair[column]}"\n' for key, pair in reasons.items())
+            files[localization_path(language, "sitai_decisions")] = (
+                f"{language.header}:\n"
+                + "".join(f' {key}: "{value}"\n' for key, value in reasons.items())
             )
     files[".metadata/metadata.json"] = (
         json.dumps(
             metadata_payload(
                 policy,
                 extensions,
-                enabled_modules=_module_names(policy, extensions, files),
+                enabled_modules=_module_names(policy, extensions, files, languages),
                 baseline=baseline,
+                languages=languages,
             ),
             ensure_ascii=False,
             indent=2,
@@ -652,16 +710,22 @@ def write(root: Path, files: Mapping[str, str] | None = None) -> list[Path]:
         path.write_text(text, encoding="utf-8", newline="\n")
         written.append(path)
     # 新产物写入成功后才删除固定受控的旧文件；探针与用户文件交给 check 报告。
-    for name in (
+    stale_names = {
         "common/scripted_triggers/sitai_fiscal_triggers.txt",
         "common/scripted_effects/sitai_fiscal_effects.txt",
         "common/on_actions/sitai_fiscal_on_actions.txt",
         "common/scripted_triggers/sitai_reform_triggers.txt",
         "common/script_values/sitai_reform_values.txt",
         "common/scripted_triggers/sitai_security_triggers.txt",
-        "localization/english/sitai_decisions_l_english.yml",
-        "localization/simp_chinese/sitai_decisions_l_simp_chinese.yml",
-    ):
+        *(localization_path(language, "sitai_decisions") for language in DEFAULT_LANGUAGES),
+    }
+    localization_root = root / "localization"
+    if localization_root.is_dir():
+        stale_names.update(
+            str(path.relative_to(root)).replace("\\", "/")
+            for path in localization_root.glob("*/sitai_decisions_l_*.yml")
+        )
+    for name in stale_names:
         if name not in files:
             (root / name).unlink(missing_ok=True)
     return written

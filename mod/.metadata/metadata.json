@@ -11,6 +11,46 @@
   "enabled_modules": [
     "fiscal"
   ],
+  "localization": {
+    "languages": [
+      "braz_por",
+      "english",
+      "french",
+      "german",
+      "japanese",
+      "korean",
+      "polish",
+      "russian",
+      "simp_chinese",
+      "spanish",
+      "turkish"
+    ],
+    "headers": [
+      "l_braz_por",
+      "l_english",
+      "l_french",
+      "l_german",
+      "l_japanese",
+      "l_korean",
+      "l_polish",
+      "l_russian",
+      "l_simp_chinese",
+      "l_spanish",
+      "l_turkish"
+    ],
+    "fallback_languages": [
+      "braz_por",
+      "french",
+      "german",
+      "japanese",
+      "korean",
+      "polish",
+      "russian",
+      "spanish",
+      "turkish"
+    ],
+    "fallback_policy": "experimental-only-english-source"
+  },
   "parent_package": "vanilla-1.14.5",
   "save_compatibility": "new-game-only",
   "platforms": [
@@ -23,7 +63,7 @@
     "fiscal_source_sha256": "ea6fc9894095c97657b1c5bc409128aba0fe4dc394c34bb7a1cf75fe13f1f751",
     "extensions_source_sha256": "fab9a099f810eb880be4265b100a8637baafeb05c98aa8f2e1c28f631937d863",
     "baseline_sha256": "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
-    "generator_sha256": "961c6a315524fd9ab00317b25b1f86d80946452ae6cc6a352e02763b4e214a73"
+    "generator_sha256": "c4af7b89ab59dec5f3f7c4ed293210b7095aaaad19a2f6335e73bc361ff7e507"
   },
   "game_custom_data": {
     "multiplayer_synchronized": true
