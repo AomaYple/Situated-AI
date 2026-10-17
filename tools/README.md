@@ -302,7 +302,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 124 个测试文件、3972 条用例（2026-10-18 F0 工作区口径）；受影响定向为 197 passed、32 subtests，串行完整回归为 3947 passed、25 skipped、1743 subtests，约 2603.07 秒。跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志；本机 n-auto 曾触发 Python 3.14/xdist 原生 access violation，不能写成并行通过。完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-18-f0-七模块离线实现出口收口)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
+当前收集 127 个测试文件、3980 条用例（2026-10-18 F0 工作区口径）；受影响定向为 197 passed、32 subtests，串行完整回归为 3947 passed、25 skipped、1743 subtests，约 2603.07 秒。跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志；本机 n-auto 曾触发 Python 3.14/xdist 原生 access violation，不能写成并行通过。完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-18-f0-七模块离线实现出口收口)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

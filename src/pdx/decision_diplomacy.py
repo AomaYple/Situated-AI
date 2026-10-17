@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import math
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-
-import tomllib
 
 SOURCE = Path(__file__).parents[2] / "mod" / "decisions" / "diplomatic_goals.toml"
 
@@ -67,9 +66,7 @@ def recklessness_delta(
     if not isinstance(in_war, bool) or not isinstance(taking_loans, bool):
         raise TypeError("外交输入必须是布尔值")
     return (
-        policy.war_burden_penalty
-        if in_war or taking_loans
-        else policy.peaceful_opportunity_bonus
+        policy.war_burden_penalty if in_war or taking_loans else policy.peaceful_opportunity_bonus
     )
 
 

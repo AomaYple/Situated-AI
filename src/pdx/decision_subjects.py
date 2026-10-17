@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import math
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-
-import tomllib
 
 SOURCE = Path(__file__).parents[2] / "mod" / "decisions" / "subjects.toml"
 
@@ -44,10 +43,7 @@ def load(source: Path = SOURCE) -> SubjectsPolicy:
         for v in numbers
     ):
         raise ValueError("宗属模块参数必须是有限数值")
-    if (
-        not 0 <= values["protected_bonus"] <= 25
-        or not 0 <= values["autonomy_bonus"] <= 25
-    ):
+    if not 0 <= values["protected_bonus"] <= 25 or not 0 <= values["autonomy_bonus"] <= 25:
         raise ValueError("宗属模块参数超出保守范围")
     return SubjectsPolicy(
         values["enabled"],

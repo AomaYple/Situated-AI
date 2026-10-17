@@ -11,13 +11,16 @@ import argparse
 import hashlib
 import json
 import re
-from collections.abc import Mapping
 from dataclasses import asdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from . import config, decisions, distribution
 from .lexer import STRING, tokenize
 from .localization_languages import DEFAULT_LANGUAGES, Language, localization_path
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 PREFIX = "sitai_explain_probe"
 GUI = f"gui/{PREFIX}.gui"
@@ -85,9 +88,7 @@ _DRAFT_SENTENCE = {
 }
 
 
-def _draft_localization(
-    language: Language, rows: Mapping[str, tuple[str, str]]
-) -> dict[str, str]:
+def _draft_localization(language: Language, rows: Mapping[str, tuple[str, str]]) -> dict[str, str]:
     """为非中英文生成显式候选草稿，避免静默英语回退。"""
 
     template = _DRAFT_SENTENCE.get(language.directory)
@@ -190,9 +191,7 @@ def _script(policy: decisions.Policy, extra: decisions.Extensions) -> str:
     body += f"    custom_tooltip = {PREFIX}_rules\n"
     if extra.reform_enabled:
         body += "    if = { limit = { is_ai = yes }\n"
-        body += _choice(
-            "sitai_reform_fragile = yes", "reform_fragile", "reform_not_fragile"
-        )
+        body += _choice("sitai_reform_fragile = yes", "reform_fragile", "reform_not_fragile")
         body += _choice(
             "sitai_reform_opportunity = yes",
             "reform_opportunity",
@@ -213,9 +212,7 @@ def _script(policy: decisions.Policy, extra: decisions.Extensions) -> str:
     return f"{PREFIX} = {{\n    scope = country\n    effect = {{\n{body}    }}\n}}\n"
 
 
-def _localization(
-    policy: decisions.Policy, extra: decisions.Extensions
-) -> dict[str, str]:
+def _localization(policy: decisions.Policy, extra: decisions.Extensions) -> dict[str, str]:
     state_zh = "启用" if policy.enabled else "关闭"
     state_en = "enabled" if policy.enabled else "disabled"
     config_zh = (
@@ -328,8 +325,7 @@ def _localization(
                 _MODULE_LOCALIZATION[key]["english"],
             )
     drafts = {
-        language.directory: _draft_localization(language, rows)
-        for language in DEFAULT_LANGUAGES
+        language.directory: _draft_localization(language, rows) for language in DEFAULT_LANGUAGES
     }
     result = {}
     for language in DEFAULT_LANGUAGES:
@@ -411,8 +407,7 @@ def _extend_country_panel(text: str) -> str:
     starts = [
         index
         for index in range(len(tokens) - 2)
-        if [token.value for token in tokens[index : index + 3]]
-        == ["type", "country_panel", "="]
+        if [token.value for token in tokens[index : index + 3]] == ["type", "country_panel", "="]
     ]
     if len(starts) != 1 or any(token.value.strip('"') == PREFIX for token in tokens):
         raise ValueError("国家面板底本类型不唯一、已注入或接口发生变化")
@@ -468,9 +463,7 @@ def attach(
             "path": PANEL,
             "source_sha256": hashlib.sha256(panel_bytes).hexdigest(),
             "normalized_sha256": hashlib.sha256(panel.encode("utf-8")).hexdigest(),
-            "generated_sha256": hashlib.sha256(
-                files[PANEL].encode("utf-8")
-            ).hexdigest(),
+            "generated_sha256": hashlib.sha256(files[PANEL].encode("utf-8")).hexdigest(),
             "compatibility": "overrides_native_country_panel",
         },
         "fiscal": asdict(policy),
@@ -500,12 +493,8 @@ def attach(
     metadata["source_fingerprint"]["explanation_generator_sha256"] = hashlib.sha256(
         Path(__file__).read_bytes()
     ).hexdigest()
-    metadata["source_fingerprint"]["country_panel_sha256"] = hashlib.sha256(
-        panel_bytes
-    ).hexdigest()
-    files[".metadata/metadata.json"] = (
-        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
-    )
+    metadata["source_fingerprint"]["country_panel_sha256"] = hashlib.sha256(panel_bytes).hexdigest()
+    files[".metadata/metadata.json"] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
     return files
 
 
@@ -517,9 +506,7 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
     metadata["id"] = "sitai.explanation-probe"
     metadata["name"] = "Situated AI - A5 未验证解释探针"
     metadata["game_custom_data"]["explanation_probe"]["variant"] = variant
-    files[".metadata/metadata.json"] = (
-        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
-    )
+    files[".metadata/metadata.json"] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
     files["README.md"] = (
         "A5 未验证解释探针 / Unverified A5 explanation probe\n\n"
         "本 ZIP 自包含所选生产变体与只读说明组件；只挂载这一包，不与生产包或其他变体并挂。"
@@ -545,12 +532,8 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--output", type=Path, required=True, help="隔离实验 ZIP 输出路径"
-    )
-    parser.add_argument(
-        "--variant", choices=("current", "control", "disabled"), default="disabled"
-    )
+    parser.add_argument("--output", type=Path, required=True, help="隔离实验 ZIP 输出路径")
+    parser.add_argument("--variant", choices=("current", "control", "disabled"), default="disabled")
     args = parser.parse_args(argv)
     try:
         target = package(args.output, variant=args.variant)
