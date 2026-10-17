@@ -150,6 +150,26 @@ F0 出口后，每次实机先使用现有 `pdx.game_run` 核对游戏版本、�
 从该台账派发同输入控制/候选运行期反事实，优先回答字段是否被真实消费者读取，再进入
 组合、生命周期、语言和 M3 配对实验。
 
+**2026-10-18 F1 `recklessness` 第一组控制/候选配对**：新增隔离探针
+`src/pdx/f1_field_probe.py`、`tools/probe/f1_field_observation.py` 及离线契约测试。
+修复全局启动钩子错误使用国家作用域后，`control` 与 `candidate` 各完成一局真实
+Windows 运行：观察者、快捷键 `5`、空格、后台推进、日志归档和恢复均完成，分别推进
+58.88/57.88 游戏日，Mod/引擎错误为 0。两个臂都观察到各自策略牌和同一外交博弈上下文，
+配对摘要 `context_equal=true`。本轮只证明探针和运行期上下文的可复核性；字段数值没有
+通用 getter，`runtime_field_value=unavailable`、`behavior_quality=not_evaluated`，
+不提升 M1/M3。结果与首次探针失败边界见[完整候选结果](完整候选-结果.md)。下一步按同一
+仪器和资源基线扩展 `economic_vs_government_spending_balance`、`subject_value`、
+`become_subject_value`，再进入组合、生命周期、语言和玩家路径验证。
+
+**2026-10-18 F1 四字段隔离批次完成**：沿用同一诊断基线完成
+`economic_vs_government_spending_balance`、`recklessness`、`subject_value`、
+`become_subject_value` 四个字段的八局控制/候选实机运行。全部窗口均
+`ok=true`、`automation_phase=complete`、错误计数为 0、恢复无错误；四组摘要均
+`context_equal=true`，控制/候选策略牌按臂区分。该批次只完成运行期仪器和上下文安全边界，
+仍不能证明字段被真实消费者读取，四字段均保持 `runtime_field_value=unavailable`、
+`behavior_quality=not_evaluated`。下一步优先设计可观测真实消费者输出的有限反事实；若引擎
+没有可用读法，登记 unknown/unsupported，不把策略持有或评分变化提升为 M1/M3。
+
 ### 4.1 最少重复的验证顺序
 
 1. **静态与输入先行**：只重验相对 F0 已改变的源/接口和输入依赖；不在每局游戏前重复整套工程回归。先生成已支持的输入目录核验结果，正式资格不足时具体记录拒绝，同时判断独立诊断。

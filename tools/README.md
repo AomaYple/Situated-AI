@@ -61,6 +61,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tools/probe/decision_compare.py` | 检查neutrality单字段、完整检查点、版本和其他源一致，再核实际评分差分 |
 | `tools/probe/market_compare.py` | 同依赖输入、有资格窗口的支持评分方向与实际角色；不判总体质量通过 |
 | `tools/probe/f1_consumer_audit.py` | 从锁定底本与精简 AI 面快照生成七模块字段消费者静态台账；不证明运行期行为质量 |
+| `tools/probe/f1_field_observation.py` | F1 四个新增策略字段的隔离控制/候选实机探针；使用 `pdx.game_run`，记录策略牌与国家/博弈上下文，并可用 `--compare-control-report` / `--compare-candidate-report` 生成保守配对摘要；没有通用字段 getter 时保持 `runtime_field_value=unavailable`，不把策略持有或评分变化当行为质量 |
 | `tools/probe/decision_stability.py` | 原版/财政/政治/组合的自然长局、存档迁移与可选后台引擎任务计时 |
 | `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期；安装版简体中文缺键时显式加 `--localization-baseline`，不豁免错误门禁 |
 | `tools/probe/save_migration_audit.py` | 递归盘点 `.v3` 版本、观察者状态、空规则和 SHA-256；只报告可用于跨版本升级实验的输入，不执行迁移 |
@@ -302,7 +303,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 127 个测试文件、3980 条用例（2026-10-18 F0 工作区口径）；受影响定向为 197 passed、32 subtests，串行完整回归为 3947 passed、25 skipped、1743 subtests，约 2603.07 秒。跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志；本机 n-auto 曾触发 Python 3.14/xdist 原生 access violation，不能写成并行通过。完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-18-f0-七模块离线实现出口收口)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
+当前收集 128 个测试文件、3994 条用例（2026-10-18 F0 工作区口径）；受影响定向为 197 passed、32 subtests，串行完整回归为 3947 passed、25 skipped、1743 subtests，约 2603.07 秒。跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志；本机 n-auto 曾触发 Python 3.14/xdist 原生 access violation，不能写成并行通过。完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-18-f0-七模块离线实现出口收口)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
