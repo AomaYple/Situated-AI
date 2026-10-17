@@ -215,7 +215,7 @@ class SupportArbitration:
 def merge_diplomatic_play_support(
     *,
     market: float | None = None,
-    security: Mapping[str, float] | None = None,
+    security: Mapping[str, float | None] | None = None,
     has_sides: bool = True,
     is_ai: bool = True,
 ) -> SupportArbitration:

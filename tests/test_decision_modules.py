@@ -86,6 +86,7 @@ def test_未知安全输入不干预且玩家边界静态检查():
 
 def test_七模块机器可读生命周期契约():
     policy, _extensions, files = distribution.package_inputs("full")
+    subjects_policy = decision_subjects.load()
     metadata = json.loads(files[".metadata/metadata.json"])
     contract = metadata["module_contract"]
     assert set(contract) == {
@@ -113,11 +114,15 @@ def test_七模块机器可读生命周期契约():
             assert item["direct_read"] is True
             assert item["ttl_or_none"] is None
     assert (
-        decision_subjects.subject_value_delta(already_subject=False, protected=False, policy=policy)
+        decision_subjects.subject_value_delta(
+            already_subject=False, protected=False, policy=subjects_policy
+        )
         == 0
     )
     assert (
-        decision_subjects.subject_value_delta(already_subject=True, protected=None, policy=policy)
+        decision_subjects.subject_value_delta(
+            already_subject=True, protected=None, policy=subjects_policy
+        )
         == 0
     )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import cast
 
 import pytest
 
@@ -33,8 +34,10 @@ def test_静态审计明确行为质量未评估() -> None:
     data = consumer_audit.report()
     assert data["evidence_kind"] == "static-source-and-snapshot"
     assert data["behavior_quality"] == "not_evaluated"
-    assert len(data["rows"]) == 8
-    assert "运行期消费者数值" in "".join(data["limits"])
+    rows = cast("list[object]", data["rows"])
+    limits = cast("list[str]", data["limits"])
+    assert len(rows) == 8
+    assert "运行期消费者数值" in "".join(limits)
 
 
 def test_报告渲染和写盘保持_utf8_lf(tmp_path) -> None:
