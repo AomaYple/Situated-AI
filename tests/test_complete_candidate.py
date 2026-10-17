@@ -281,7 +281,7 @@ def test_完整实验包包含原生解释及准确来源且重复打包确定(t
         script = archive.read(explanation_probe.SGUI).decode("utf-8-sig")
         assert "sitai_reform_fragile" in script
         assert "sitai_reform_opportunity" in script
-        for language in ("english", "simp_chinese"):
+        for language in decisions.LANGUAGES:
             loc = archive.read(
                 f"localization/{language}/{explanation_probe.PREFIX}_l_{language}.yml"
             ).decode("utf-8-sig")

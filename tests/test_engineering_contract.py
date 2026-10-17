@@ -75,13 +75,12 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     methods = (root / "docs/design/exec/速度优化计划-正确性优先.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     quality = (root / "docs/design/exec/M3-可测性清单.md").read_text(encoding="utf-8")
-    # 用户已将开发顺序改为完整候选优先；保护当前顺序及质量门，而非旧附件排期。
-    assert "完整候选实现与集中验证计划 · 3.0" in plan
+    # 保护全目标先实现、再集中验证的依赖及质量门，而非旧附件排期。
+    assert "全目标实现优先与集中验证计划 · 4.0" in plan
     phases = [
-        "第一阶段：完整实验候选实现",
-        "第二阶段：集中实机运行与修正",
-        "第三阶段：行为质量与迭代交付",
-        "第四阶段：稳定性、性能与正式交付",
+        "## 3. F0：最终目标完整实现",
+        "## 4. F1：集中验证与修正",
+        "## 5. F2：稳定性、性能与正式交付",
     ]
     positions = [plan.index(phase) for phase in phases]
     assert positions == sorted(positions)
@@ -89,11 +88,16 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "M3-B" in plan
     assert "同输入/环境同类错误两次停止" in plan
     assert "先三次 vanilla 测噪声" in plan
+    assert "安全诊断" in plan
+    assert "尚未派发，属于执行遗漏" in plan
+    assert "最终目标与实现对照" in plan
+    assert "fallback_languages" in plan
+    assert "全部语言翻译初稿" in plan
     assert "不创建另一套排期" in methods
     assert "原账本停止条件保持" in methods
     assert "质量观测边界" in quality
     assert "unsupported" in quality
-    assert "完整候选实现与集中验证计划 3.0" in checklist
+    assert "全目标实现优先与集中验证计划 4.0" in checklist
     assert "整个 Mod 尚未完成" in checklist
 
     scan = root / "tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json"

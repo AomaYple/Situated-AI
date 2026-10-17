@@ -15,11 +15,22 @@ from pathlib import Path
 
 from . import config, decisions, distribution
 from .lexer import STRING, tokenize
+from .localization_languages import DEFAULT_LANGUAGES, Language, localization_path
 
 PREFIX = "sitai_explain_probe"
 GUI = f"gui/{PREFIX}.gui"
 PANEL = "gui/country_panel.gui"
 SGUI = f"common/scripted_guis/{PREFIX}.txt"
+
+
+def _localized(pair: tuple[str, str], language: Language) -> str:
+    """实验候选的语言覆盖：中英文保留原文，其余语言显式使用英语源文本。
+
+    这样每个本体语言都有完整键集合，不会静默缺键；正式发布前由语言审校
+    把实验包的英语回退替换成对应语言的最终译文。
+    """
+
+    return {"simp_chinese": pair[0], "english": pair[1]}.get(language.directory, pair[1])
 
 
 def _choice(condition: str, yes: str, no: str) -> str:
@@ -166,13 +177,13 @@ def _localization(policy: decisions.Policy, extra: decisions.Extensions) -> dict
             f"security: defense treaty/alliance {extra.security_commitment_bonus:g}, threatened-neighbor defense {extra.security_threat_bonus:g}; maximum reason only, opposite sign for attacker. No current contribution without play-side context.",
         )
     result = {}
-    for column, language in enumerate(("simp_chinese", "english")):
-        lines = [f"l_{language}:"]
+    for language in DEFAULT_LANGUAGES:
+        lines = [f"{language.header}:"]
         for key, pair in rows.items():
             # 游戏本地化使用带引号单行文本；按 JSON 的共同转义子集处理引号与换行。
-            value = json.dumps(pair[column], ensure_ascii=False)
+            value = json.dumps(_localized(pair, language), ensure_ascii=False)
             lines.append(f" {PREFIX}_{key}:0 {value}")
-        result[f"localization/{language}/{PREFIX}_l_{language}.yml"] = "\n".join(lines) + "\n"
+        result[localization_path(language, PREFIX)] = "\n".join(lines) + "\n"
     return result
 
 
