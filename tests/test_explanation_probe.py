@@ -36,9 +36,7 @@ def panel_source(tmp_path, monkeypatch):
     source.parent.mkdir(parents=True)
     source.write_text(PANEL_SOURCE, encoding="utf-8", newline="\n")
     monkeypatch.setattr(probe.config, "GAME", tmp_path)
-    monkeypatch.setattr(
-        probe.config, "game_version", lambda: {"caligula_branch": "release/1.14.5"}
-    )
+    monkeypatch.setattr(probe.config, "game_version", lambda: {"caligula_branch": "release/1.14.5"})
     return source
 
 
@@ -70,9 +68,7 @@ def _messages(script, conditions):
                     item = limit[0]
                     assert item.op == "="
                     assert isinstance(item.value, Scalar)
-                    expected = (
-                        decisions.RISK_VAR if item.key == "has_variable" else "yes"
-                    )
+                    expected = decisions.RISK_VAR if item.key == "has_variable" else "yes"
                     assert item.value.unquoted == expected
                     matches = conditions[item.key]
                 else:
@@ -94,9 +90,7 @@ def test_实际脚本区分全部状态组合且风险不等于ACTIVE(subtests):
     policy = decisions.load()
     script = probe.build(policy, decisions.Extensions())[probe.SGUI]
     for ai, risk, hold, exposure, default in itertools.product((False, True), repeat=5):
-        with subtests.test(
-            ai=ai, risk=risk, hold=hold, exposure=exposure, default=default
-        ):
+        with subtests.test(ai=ai, risk=risk, hold=hold, exposure=exposure, default=default):
             conditions = {
                 "is_ai": ai,
                 "has_variable": risk,
@@ -141,9 +135,7 @@ def test_非AI分支不求值风险状态():
 
 @pytest.mark.parametrize("enabled", [False, True])
 def test_只读组件使用闭合允许子集并且无世界扫描或玩法写入(enabled):
-    files = probe.build(
-        replace(decisions.load(), enabled=enabled), decisions.Extensions()
-    )
+    files = probe.build(replace(decisions.load(), enabled=enabled), decisions.Extensions())
     allowed = {
         probe.PREFIX,
         "scope",
@@ -237,8 +229,7 @@ def test_控件仅在原生国家上下文内实例化():
         '"unterminated',
         PANEL_SOURCE + '"unterminated\\"',
         PANEL_SOURCE + "type country_panel = different_base {}",
-        PANEL_SOURCE.replace("types country_panel_types {", "types outer { widget = {")
-        + "}\n",
+        PANEL_SOURCE.replace("types country_panel_types {", "types outer { widget = {") + "}\n",
         PANEL_SOURCE + '\nwidget = { text = "unterminated',
     ],
 )
@@ -264,14 +255,10 @@ def test_底本合法引号转义和注释不改变精确插入边界():
 def test_游戏版本不匹配和缺失底本不破坏旧包(tmp_path, monkeypatch, panel_source):
     target = tmp_path / "previous.zip"
     target.write_bytes(b"previous")
-    monkeypatch.setattr(
-        probe.config, "game_version", lambda: {"caligula_branch": "release/1.15"}
-    )
+    monkeypatch.setattr(probe.config, "game_version", lambda: {"caligula_branch": "release/1.15"})
     with pytest.raises(ValueError, match="版本一致"):
         probe.package(target)
-    monkeypatch.setattr(
-        probe.config, "game_version", lambda: {"caligula_branch": "release/1.14.5"}
-    )
+    monkeypatch.setattr(probe.config, "game_version", lambda: {"caligula_branch": "release/1.14.5"})
     panel_source.unlink()
     with pytest.raises(FileNotFoundError):
         probe.package(target)
@@ -287,13 +274,9 @@ def test_生成文案使用替代实际参数及一致键与占位符():
         neutrality=-7.5,
         aggression=0.25,
     )
-    files = probe.build(
-        policy, decisions.Extensions(reform_enabled=True, market_enabled=True)
-    )
+    files = probe.build(policy, decisions.Extensions(reform_enabled=True, market_enabled=True))
     localization = {
-        language: parse_loc_text(
-            files[f"localization/{language}/{probe.PREFIX}_l_{language}.yml"]
-        )
+        language: parse_loc_text(files[f"localization/{language}/{probe.PREFIX}_l_{language}.yml"])
         for language in decisions.LANGUAGES
     }
     tables = list(localization.values())
@@ -310,13 +293,8 @@ def test_生成文案使用替代实际参数及一致键与占位符():
     script = files[probe.SGUI]
     keys = re.findall(r"custom_tooltip = (\w+)", script)
     assert set(keys) <= localization["simp_chinese"].keys()
-    assert (
-        "改革启用；市场启用" in localization["simp_chinese"][probe.PREFIX + "_config"]
-    )
-    assert (
-        "reform enabled; market enabled"
-        in localization["english"][probe.PREFIX + "_config"]
-    )
+    assert "改革启用；市场启用" in localization["simp_chinese"][probe.PREFIX + "_config"]
+    assert "reform enabled; market enabled" in localization["english"][probe.PREFIX + "_config"]
     assert "未知保持未知" in localization["simp_chinese"][probe.PREFIX + "_boundary"]
 
 
@@ -345,13 +323,8 @@ def test_实验包与实际生产变体配套且生产交付不含探针(tmp_pat
         assert facts["fiscal"]["neutrality"] == (0 if variant == "control" else 25)
         assert facts["extensions"]["market_enabled"] is False
         panel = facts["country_panel"]
-        assert (
-            panel["source_sha256"] == hashlib.sha256(PANEL_SOURCE.encode()).hexdigest()
-        )
-        assert (
-            panel["generated_sha256"]
-            == hashlib.sha256(candidate.read(probe.PANEL)).hexdigest()
-        )
+        assert panel["source_sha256"] == hashlib.sha256(PANEL_SOURCE.encode()).hexdigest()
+        assert panel["generated_sha256"] == hashlib.sha256(candidate.read(probe.PANEL)).hexdigest()
         assert panel["compatibility"] == "overrides_native_country_panel"
         assert probe.PREFIX.encode() in candidate.read(probe.PANEL)
         assert (
@@ -367,24 +340,22 @@ def test_实验包与实际生产变体配套且生产交付不含探针(tmp_pat
             payload = candidate.read(name)
             assert hashlib.sha256(payload).hexdigest() == digest
             assert b"\r" not in payload
-            assert payload.startswith(b"\xef\xbb\xbf") == name.endswith(
-                (".txt", ".yml")
-            )
+            assert payload.startswith(b"\xef\xbb\xbf") == name.endswith((".txt", ".yml"))
         sgui = candidate.read(probe.SGUI).decode("utf-8-sig")
         assert ("sitai_fiscal_external_risk" in sgui) == (variant != "disabled")
         localization = {
             language: parse_loc_text(
-                candidate.read(
-                    f"localization/{language}/{probe.PREFIX}_l_{language}.yml"
-                ).decode("utf-8-sig")
+                candidate.read(f"localization/{language}/{probe.PREFIX}_l_{language}.yml").decode(
+                    "utf-8-sig"
+                )
             )
             for language in decisions.LANGUAGES
         }
         assert set(localization) == set(decisions.LANGUAGES)
         english = localization["english"]
-        assert (
-            "neutrality +0," if variant == "control" else "neutrality +25,"
-        ) in english[probe.PREFIX + "_active"]
+        assert ("neutrality +0," if variant == "control" else "neutrality +25,") in english[
+            probe.PREFIX + "_active"
+        ]
         assert "mount this ZIP alone" in candidate.read("README.md").decode("utf-8")
     previous = experiment.read_bytes()
     probe.package(experiment, variant=variant)
@@ -397,9 +368,7 @@ def test_默认CLI全关且错误不破坏旧包(tmp_path, capsys, monkeypatch):
     assert str(target) in capsys.readouterr().out
     with zipfile.ZipFile(target) as archive:
         assert (
-            json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))["generation"][
-                "variant"
-            ]
+            json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))["generation"]["variant"]
             == "disabled"
         )
     previous = target.read_bytes()
@@ -442,9 +411,7 @@ def test_三新增模块解释键在全开时明确保持上下文未知():
     for key in ("economy_rules", "diplomacy_rules", "subjects_rules"):
         assert f"custom_tooltip = {probe.PREFIX}_{key}" in script
     for language in decisions.LANGUAGES:
-        table = parse_loc_text(
-            files[f"localization/{language}/{probe.PREFIX}_l_{language}.yml"]
-        )
+        table = parse_loc_text(files[f"localization/{language}/{probe.PREFIX}_l_{language}.yml"])
         for key in ("economy_rules", "diplomacy_rules", "subjects_rules"):
             value = table[f"{probe.PREFIX}_{key}"]
             assert value

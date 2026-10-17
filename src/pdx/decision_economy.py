@@ -10,10 +10,9 @@ from __future__ import annotations
 
 import hashlib
 import math
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-
-import tomllib
 
 SOURCE = Path(__file__).parents[2] / "mod" / "decisions" / "economy.toml"
 

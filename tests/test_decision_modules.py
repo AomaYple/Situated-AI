@@ -22,58 +22,34 @@ pytestmark = pytest.mark.unit
 
 def test_经济模块未知输入保守且边界有限():
     policy = replace(decision_economy.load(), enabled=True)
+    assert decision_economy.strategy_delta(taking_loans=None, bureaucracy=10, policy=policy) == 0
     assert (
-        decision_economy.strategy_delta(
-            taking_loans=None, bureaucracy=10, policy=policy
-        )
-        == 0
+        decision_economy.strategy_delta(taking_loans=True, bureaucracy=10, policy=policy) == -0.25
     )
-    assert (
-        decision_economy.strategy_delta(
-            taking_loans=True, bureaucracy=10, policy=policy
-        )
-        == -0.25
-    )
-    assert (
-        decision_economy.strategy_delta(
-            taking_loans=False, bureaucracy=10, policy=policy
-        )
-        == 0.1
-    )
+    assert decision_economy.strategy_delta(taking_loans=False, bureaucracy=10, policy=policy) == 0.1
     with pytest.raises(ValueError):
-        decision_economy.strategy_delta(
-            taking_loans=True, bureaucracy=float("nan"), policy=policy
-        )
+        decision_economy.strategy_delta(taking_loans=True, bureaucracy=float("nan"), policy=policy)
 
 
 def test_外交模块战争负担降低冒险且未知不猜测():
     policy = replace(decision_diplomacy.load(), enabled=True)
     assert (
-        decision_diplomacy.recklessness_delta(
-            in_war=True, taking_loans=False, policy=policy
-        )
+        decision_diplomacy.recklessness_delta(in_war=True, taking_loans=False, policy=policy)
         == -0.5
     )
     assert (
-        decision_diplomacy.recklessness_delta(
-            in_war=False, taking_loans=False, policy=policy
-        )
+        decision_diplomacy.recklessness_delta(in_war=False, taking_loans=False, policy=policy)
         == 0.15
     )
     assert (
-        decision_diplomacy.recklessness_delta(
-            in_war=None, taking_loans=False, policy=policy
-        )
-        == 0
+        decision_diplomacy.recklessness_delta(in_war=None, taking_loans=False, policy=policy) == 0
     )
 
 
 def test_宗属模块只在关系事实已知时计算():
     policy = replace(decision_subjects.load(), enabled=True)
     assert (
-        decision_subjects.subject_value_delta(
-            already_subject=True, protected=True, policy=policy
-        )
+        decision_subjects.subject_value_delta(already_subject=True, protected=True, policy=policy)
         == 15
     )
 
@@ -110,6 +86,7 @@ def test_未知安全输入不干预且玩家边界静态检查():
 
 def test_七模块机器可读生命周期契约():
     policy, _extensions, files = distribution.package_inputs("full")
+    subjects_policy = decision_subjects.load()
     metadata = json.loads(files[".metadata/metadata.json"])
     contract = metadata["module_contract"]
     assert set(contract) == {
@@ -138,13 +115,13 @@ def test_七模块机器可读生命周期契约():
             assert item["ttl_or_none"] is None
     assert (
         decision_subjects.subject_value_delta(
-            already_subject=False, protected=False, policy=policy
+            already_subject=False, protected=False, policy=subjects_policy
         )
         == 0
     )
     assert (
         decision_subjects.subject_value_delta(
-            already_subject=True, protected=None, policy=policy
+            already_subject=True, protected=None, policy=subjects_policy
         )
         == 0
     )
@@ -167,9 +144,7 @@ def test_七模块完整候选生成所有脚本和全语言无回退():
     assert localization["production_fallback_languages"] == []
     assert localization["explanation_fallback_languages"] == []
     assert localization["fallback_languages"] == []
-    assert set(localization["explanation_review_languages"]) == set(
-        decisions.LANGUAGES
-    ) - {
+    assert set(localization["explanation_review_languages"]) == set(decisions.LANGUAGES) - {
         "english",
         "simp_chinese",
     }
@@ -199,8 +174,7 @@ def test_控制和全关显式关闭新增模块开关(variant):
     assert not extensions.subjects_enabled
     metadata = json.loads(files[".metadata/metadata.json"])
     assert all(
-        module not in metadata["enabled_modules"]
-        for module in ("economy", "diplomacy", "subjects")
+        module not in metadata["enabled_modules"] for module in ("economy", "diplomacy", "subjects")
     )
 
 
@@ -219,9 +193,7 @@ def test_完整候选_zip在游戏边界添加BOM且确定性(tmp_path, monkeypa
     panel_path.parent.mkdir(parents=True)
     panel_path.write_text(panel, encoding="utf-8", newline="\n")
     monkeypatch.setattr(config, "GAME", panel_path.parent.parent)
-    monkeypatch.setattr(
-        config, "game_version", lambda: {"caligula_branch": "release/1.14.5"}
-    )
+    monkeypatch.setattr(config, "game_version", lambda: {"caligula_branch": "release/1.14.5"})
     target = tmp_path / "full.zip"
     distribution.package(target, variant="full")
     first = target.read_bytes()
@@ -230,7 +202,7 @@ def test_完整候选_zip在游戏边界添加BOM且确定性(tmp_path, monkeypa
     with zipfile.ZipFile(target) as archive:
         metadata = json.loads(archive.read(".metadata/metadata.json"))
         assert metadata["enabled_modules"][-3:] == ["economy", "diplomacy", "subjects"]
-        assert archive.read(
-            "localization/english/sitai_decisions_l_english.yml"
-        ).startswith(b"\xef\xbb\xbf")
+        assert archive.read("localization/english/sitai_decisions_l_english.yml").startswith(
+            b"\xef\xbb\xbf"
+        )
         assert archive.read(".metadata/metadata.json").startswith(b"{")
