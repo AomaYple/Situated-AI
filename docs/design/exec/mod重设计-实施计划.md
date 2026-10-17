@@ -134,7 +134,9 @@ F0 出口后，每次实机先使用现有 `pdx.game_run` 核对游戏版本、�
 
 每次要求实机都记录四态之一：`已启动并完成`、`已启动但诊断失败`、`启动前被具体门禁拒绝`、`尚未派发，属于执行遗漏`。附候选与输入 SHA、版本、实际命令、窗口、原始日志、截图和恢复结果；不得用“未验证”掩盖执行遗漏。未知错误、脚本/模拟断言、挂载污染或恢复失败按基线停止。
 
-**2026-10-17 F1 实际执行记录**：`full` F1 候选已通过生成检查、版本/配置/进程/日志/资源静态门禁并生成 `tools/out/releases/situated-ai-full-f1-candidate.zip`。Windows 实机进程实际运行约 43.07 秒，记录阶段为 `startup`；用户在观察者、快捷键 `5`、空格推进和六游戏月采样前主动暂停。随后进程、部署指针、临时 Mod、日志、存档和 `content_load.json` 均恢复到启动前状态，RunLock 可重新获取。证据见 `tools/out/evidence/f1-full-smoke-20261017/20261017-104626/{live.json,pause-closeout.json,recovery-result.json,deployment.json}`。这次应标记为“用户主动暂停，启动阶段中断”，不归为诊断失败，也不产生加载、接口、行为质量或性能结论；后续从启动前门禁和一次完整烟测重新开始，源码未改变时不重复无关的完整离线回归。
+**2026-10-17 F1 实际执行记录**：`full` 候选已完成生产环境启动和两次独立原版环境诊断。生产候选证据 `tools/out/f1-full-live/20261017-173621/`：实际挂载、观察者、快捷键 `5`、空格、后台推进和恢复完成，Mod 错误为 0，但因原版缺少 `gfx/interface/icons/alert_icons/repairing.dds` 的 `VFSOpen Error` 以 `ok=false` 结束。资源诊断证据 `tools/out/f1-resource-diagnostic/20261017-174241/`：补齐原版维修图标后 VFS 错误消失，仍因 5 条原版本地化 `Script system error!` 以 `ok=false` 结束。联合诊断证据 `tools/out/f1-clean-diagnostic/20261017-174651/`：同时补齐两项已登记原版基线后，游戏推进约 57.88 游戏日，`ok=true`，Mod 错误和所有已分类/未分类错误均为 0，`cleanup_errors=[]`。这三次运行均为启动/环境诊断，不构成真实消费者、AI 行为、解释 GUI、逐语言质量、玩家路径、保存/重载或 M4 性能通过；联合诊断基线不得进入生产包。最大 RSS 约 7,617–7,634 MiB 仅为启动诊断读数，不是正式性能基线。
+
+新增 `tools/probe/f1_full_smoke.py` 作为可复现薄入口：默认只挂载 `full` 生产候选，显式 `--resource-baseline` / `--localization-baseline` 才生成诊断候选；每次写入 `f1_context.json`，声明候选类型、基线范围和 `behavior_quality=not_evaluated`。入口复用现有 `pdx.game_run`，离线契约测试 `tests/test_f1_full_smoke.py` 已通过 13 项。后续从联合诊断建立的安全环境基线继续单模块真实消费者、生命周期、语言显示、玩家/保存重载、组合与 M3 行为验证；不把无错误启动或评分变化当作行为质量证据。
 
 ### 4.1 最少重复的验证顺序
 
