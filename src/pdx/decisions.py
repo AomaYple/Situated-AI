@@ -12,12 +12,19 @@ import json
 import math
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
 
-from . import __version__, config, decision_security
+from . import (
+    __version__,
+    config,
+    decision_diplomacy,
+    decision_economy,
+    decision_security,
+    decision_subjects,
+)
 from .lexer import LBRACE, RBRACE, tokenize
 from .localization_languages import (
     DEFAULT_LANGUAGES,
@@ -56,15 +63,81 @@ LANGUAGES: dict[str, str] = {language.directory: language.header for language in
 _DECISION_LOCALIZATION: dict[str, dict[str, str]] = {
     "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON": {
         "english": "Economic exposure to both sides",
+        "braz_por": "Exposição econômica aos dois lados",
+        "french": "Exposition économique aux deux camps",
+        "german": "Wirtschaftliche Abhängigkeit von beiden Seiten",
+        "japanese": "双方への経済的な依存",
+        "korean": "양측에 대한 경제적 노출",
+        "polish": "Gospodarcza zależność od obu stron",
+        "russian": "Экономическая зависимость от обеих сторон",
         "simp_chinese": "对博弈双方的经济依赖",
+        "spanish": "Exposición económica a ambos bandos",
+        "turkish": "İki tarafa ekonomik maruziyet",
     },
     "SITAI_SECURITY_COMMITMENT_REASON": {
         "english": "Defense commitment (candidate)",
+        "braz_por": "Compromisso de defesa (candidato)",
+        "french": "Engagement de défense (candidat)",
+        "german": "Verteidigungsverpflichtung (Kandidat)",
+        "japanese": "防衛上の約束（候補ルール）",
+        "korean": "방위 공약(후보 규칙)",
+        "polish": "Zobowiązanie obronne (kandydat)",
+        "russian": "Оборонное обязательство (кандидат)",
         "simp_chinese": "防御承诺（候选规则）",
+        "spanish": "Compromiso defensivo (candidato)",
+        "turkish": "Savunma taahhüdü (aday)",
     },
     "SITAI_SECURITY_NEIGHBOR_REASON": {
         "english": "Neighbor defense exposure (candidate)",
+        "braz_por": "Risco de defesa de vizinho (candidato)",
+        "french": "Exposition à la défense d'un voisin (candidat)",
+        "german": "Bedrohung eines Nachbarn (Kandidat)",
+        "japanese": "隣国防衛への関与（候補ルール）",
+        "korean": "이웃 국가 방위 노출(후보 규칙)",
+        "polish": "Zagrożenie obroną sąsiada (kandydat)",
+        "russian": "Угроза соседу и оборонное обязательство (кандидат)",
         "simp_chinese": "邻国受侵略的安全风险（候选规则）",
+        "spanish": "Riesgo de defensa de un vecino (candidato)",
+        "turkish": "Komşu savunma riski (aday)",
+    },
+    "SITAI_ECONOMY_CAPACITY_REASON": {
+        "english": "Economic and administrative capacity (candidate)",
+        "braz_por": "Capacidade econômica e administrativa (candidato)",
+        "french": "Capacité économique et administrative (candidat)",
+        "german": "Wirtschaftliche und administrative Kapazität (Kandidat)",
+        "japanese": "経済・行政能力（候補ルール）",
+        "korean": "경제 및 행정 역량(후보 규칙)",
+        "polish": "Zdolność gospodarcza i administracyjna (kandydat)",
+        "russian": "Экономическая и административная способность (кандидат)",
+        "simp_chinese": "经济与行政能力（候选规则）",
+        "spanish": "Capacidad económica y administrativa (candidato)",
+        "turkish": "Ekonomik ve idari kapasite (aday)",
+    },
+    "SITAI_DIPLOMACY_BURDEN_REASON": {
+        "english": "War burden and diplomatic capacity (candidate)",
+        "braz_por": "Custo da guerra e capacidade diplomática (candidato)",
+        "french": "Charge de guerre et capacité diplomatique (candidat)",
+        "german": "Kriegslast und diplomatische Kapazität (Kandidat)",
+        "japanese": "戦争負担と外交能力（候補ルール）",
+        "korean": "전쟁 부담과 외교 역량(후보 규칙)",
+        "polish": "Obciążenie wojną i zdolność dyplomatyczna (kandydat)",
+        "russian": "Военная нагрузка и дипломатический потенциал (кандидат)",
+        "simp_chinese": "战争负担与外交能力（候选规则）",
+        "spanish": "Carga bélica y capacidad diplomática (candidato)",
+        "turkish": "Savaş yükü ve diplomatik kapasite (aday)",
+    },
+    "SITAI_SUBJECT_RELATION_REASON": {
+        "english": "Overlord and subject relationship (candidate)",
+        "braz_por": "Relação entre suserano e súdito (candidato)",
+        "french": "Relation suzerain-sujet (candidat)",
+        "german": "Verhältnis zwischen Oberherr und Untertan (Kandidat)",
+        "japanese": "宗主国と従属国の関係（候補ルール）",
+        "korean": "종주국과 종속국 관계(후보 규칙)",
+        "polish": "Relacja zwierzchnik–podmiot (kandydat)",
+        "russian": "Отношения сюзерена и субъекта (кандидат)",
+        "simp_chinese": "宗主国与属国关系（候选规则）",
+        "spanish": "Relación entre soberano y súbdito (candidato)",
+        "turkish": "Süzeren ve tabi ülke ilişkisi (aday)",
     },
 }
 
@@ -119,17 +192,26 @@ class Extensions:
     security_enabled: bool = False
     security_commitment_bonus: float = 25
     security_threat_bonus: float = 15
+    economy_enabled: bool = False
+    diplomacy_enabled: bool = False
+    subjects_enabled: bool = False
 
 
 def load_extensions(source: Path = EXTENSIONS) -> Extensions:
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
+    allowed = {
+        "schema_version",
+        "reform",
+        "market",
+        "security",
+        "economy",
+        "diplomacy",
+        "subjects",
+    }
     if (
-        set(data)
-        not in (
-            {"schema_version", "reform", "market"},
-            {"schema_version", "reform", "market", "security"},
-        )
+        not set(data) <= allowed
+        or not {"schema_version", "reform", "market"} <= set(data)
         or type(data["schema_version"]) is not int
         or data["schema_version"] != 1
     ):
@@ -187,18 +269,25 @@ def load_extensions(source: Path = EXTENSIONS) -> Extensions:
             or not math.isfinite(amount)
         ):
             raise ValueError("外部防御权重必须是 0 到 50 的有限数值")
+    optional = {name: data.get(name, {}) for name in ("economy", "diplomacy", "subjects")}
+    for name, value in optional.items():
+        if value and (not isinstance(value, dict) or set(value) != {"enabled"}):
+            raise ValueError(f"{name} 扩展只允许声明 enabled；具体参数由模块数据源维护")
     return Extensions(
-        reform["enabled"],
-        reform["legitimacy"],
-        reform["fragile_legitimacy"],
-        reform["bonus"],
-        reform["penalty"],
-        market["enabled"],
-        market["multiplier"],
-        hashlib.sha256(raw).hexdigest(),
-        security["enabled"],
-        security["commitment_bonus"],
-        security["threat_bonus"],
+        reform_enabled=reform["enabled"],
+        reform_legitimacy=reform["legitimacy"],
+        fragile_legitimacy=reform["fragile_legitimacy"],
+        reform_bonus=reform["bonus"],
+        fragile_penalty=reform["penalty"],
+        market_enabled=market["enabled"],
+        market_multiplier=market["multiplier"],
+        source_sha256=hashlib.sha256(raw).hexdigest(),
+        security_enabled=security["enabled"],
+        security_commitment_bonus=security["commitment_bonus"],
+        security_threat_bonus=security["threat_bonus"],
+        economy_enabled=bool(optional["economy"].get("enabled", False)),
+        diplomacy_enabled=bool(optional["diplomacy"].get("enabled", False)),
+        subjects_enabled=bool(optional["subjects"].get("enabled", False)),
     )
 
 
@@ -486,6 +575,21 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
             additions["diplomatic_play_support"] = (
                 additions.get("diplomatic_play_support", "") + security
             )
+    if extensions and extensions.economy_enabled:
+        additions["economic_vs_government_spending_balance"] = decision_economy.strategy_addition(
+            replace(decision_economy.load(), enabled=True)
+        )
+    if extensions and extensions.diplomacy_enabled:
+        additions["recklessness"] = decision_diplomacy.strategy_addition(
+            replace(decision_diplomacy.load(), enabled=True)
+        )
+    if extensions and extensions.subjects_enabled:
+        additions["subject_value"] = decision_subjects.subject_addition(
+            replace(decision_subjects.load(), enabled=True)
+        )
+        additions["become_subject_value"] = decision_subjects.become_subject_addition(
+            replace(decision_subjects.load(), enabled=True)
+        )
     if not additions:
         return text
     fields: list[tuple[int, str]] = []
@@ -533,6 +637,12 @@ def source_fingerprint(policy: Policy, extensions: Extensions, baseline: str) ->
         result["security_generator_sha256"] = hashlib.sha256(
             Path(decision_security.__file__).read_bytes()
         ).hexdigest()
+    if extensions.economy_enabled:
+        result["economy_source_sha256"] = decision_economy.load().source_sha256
+    if extensions.diplomacy_enabled:
+        result["diplomacy_source_sha256"] = decision_diplomacy.load().source_sha256
+    if extensions.subjects_enabled:
+        result["subjects_source_sha256"] = decision_subjects.load().source_sha256
     return result
 
 
@@ -573,6 +683,18 @@ def _module_names(
         not files or "common/scripted_triggers/sitai_security_triggers.txt" in files
     ):
         modules.append("security")
+    if extensions.economy_enabled and (
+        not files or "common/scripted_triggers/sitai_economy_triggers.txt" in files
+    ):
+        modules.append("economy")
+    if extensions.diplomacy_enabled and (
+        not files or "common/scripted_triggers/sitai_diplomacy_triggers.txt" in files
+    ):
+        modules.append("diplomacy")
+    if extensions.subjects_enabled and (
+        not files or "common/scripted_triggers/sitai_subjects_triggers.txt" in files
+    ):
+        modules.append("subjects")
     return modules
 
 
@@ -583,15 +705,20 @@ def metadata_payload(
     enabled_modules: list[str] | None = None,
     baseline: str | None = None,
     languages: tuple[Language, ...] | None = None,
+    complete_localization: bool = False,
 ) -> dict[str, object]:
     policy = policy or load()
     extensions = extensions or load_extensions()
     languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
-    fallback_languages = [
-        language.directory
-        for language in languages
-        if language.directory not in {"english", "simp_chinese"}
-    ]
+    fallback_languages = (
+        []
+        if complete_localization
+        else [
+            language.directory
+            for language in languages
+            if language.directory not in {"english", "simp_chinese"}
+        ]
+    )
     return {
         "name": "Situated AI · 处境决策",
         "id": "sitai.decisions",
@@ -613,7 +740,9 @@ def metadata_payload(
             "languages": [language.directory for language in languages],
             "headers": [language.header for language in languages],
             "fallback_languages": fallback_languages,
-            "fallback_policy": "experimental-only-english-source",
+            "fallback_policy": "none"
+            if complete_localization
+            else "experimental-only-english-source",
         },
         "parent_package": policy.package.parent,
         "save_compatibility": policy.package.save_compatibility,
@@ -634,6 +763,7 @@ def build(
     *,
     extensions: Extensions | None = None,
     languages: tuple[Language, ...] | None = None,
+    complete_localization: bool = False,
 ) -> dict[str, str]:
     policy = policy or load()
     baseline = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
@@ -655,31 +785,40 @@ def build(
         files["common/script_values/sitai_reform_values.txt"] = extension_values(extensions)
     if extensions.security_enabled:
         files["common/scripted_triggers/sitai_security_triggers.txt"] = decision_security.triggers()
-    if extensions.market_enabled or extensions.security_enabled:
+    if extensions.economy_enabled:
+        files["common/scripted_triggers/sitai_economy_triggers.txt"] = decision_economy.triggers(
+            replace(decision_economy.load(), enabled=True)
+        )
+    if extensions.diplomacy_enabled:
+        files["common/scripted_triggers/sitai_diplomacy_triggers.txt"] = (
+            decision_diplomacy.triggers(replace(decision_diplomacy.load(), enabled=True))
+        )
+    if extensions.subjects_enabled:
+        files["common/scripted_triggers/sitai_subjects_triggers.txt"] = decision_subjects.triggers(
+            replace(decision_subjects.load(), enabled=True)
+        )
+    if (
+        extensions.market_enabled
+        or extensions.security_enabled
+        or extensions.economy_enabled
+        or extensions.diplomacy_enabled
+        or extensions.subjects_enabled
+    ):
         reason_keys: list[str] = []
         if extensions.market_enabled:
             reason_keys.append("SITAI_MARKET_DEPENDENCE_SUPPORT_REASON")
         if extensions.security_enabled:
             reason_keys.extend(
-                [
-                    "SITAI_SECURITY_COMMITMENT_REASON",
-                    "SITAI_SECURITY_NEIGHBOR_REASON",
-                ]
+                ["SITAI_SECURITY_COMMITMENT_REASON", "SITAI_SECURITY_NEIGHBOR_REASON"]
             )
+        if extensions.economy_enabled:
+            reason_keys.append("SITAI_ECONOMY_CAPACITY_REASON")
+        if extensions.diplomacy_enabled:
+            reason_keys.append("SITAI_DIPLOMACY_BURDEN_REASON")
+        if extensions.subjects_enabled:
+            reason_keys.append("SITAI_SUBJECT_RELATION_REASON")
         for language in languages:
-            reasons = {}
-            if extensions.market_enabled:
-                reasons["SITAI_MARKET_DEPENDENCE_SUPPORT_REASON"] = _localized_decision_text(
-                    "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON", language
-                )
-            if extensions.security_enabled:
-                reasons.update(
-                    {
-                        key: _localized_decision_text(key, language)
-                        for key in reason_keys
-                        if key != "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON"
-                    }
-                )
+            reasons = {key: _localized_decision_text(key, language) for key in reason_keys}
             files[localization_path(language, "sitai_decisions")] = (
                 f"{language.header}:\n"
                 + "".join(f' {key}: "{value}"\n' for key, value in reasons.items())
@@ -692,6 +831,7 @@ def build(
                 enabled_modules=_module_names(policy, extensions, files, languages),
                 baseline=baseline,
                 languages=languages,
+                complete_localization=complete_localization,
             ),
             ensure_ascii=False,
             indent=2,
@@ -717,6 +857,9 @@ def write(root: Path, files: Mapping[str, str] | None = None) -> list[Path]:
         "common/scripted_triggers/sitai_reform_triggers.txt",
         "common/script_values/sitai_reform_values.txt",
         "common/scripted_triggers/sitai_security_triggers.txt",
+        "common/scripted_triggers/sitai_economy_triggers.txt",
+        "common/scripted_triggers/sitai_diplomacy_triggers.txt",
+        "common/scripted_triggers/sitai_subjects_triggers.txt",
         *(localization_path(language, "sitai_decisions") for language in DEFAULT_LANGUAGES),
     }
     localization_root = root / "localization"
@@ -793,6 +936,17 @@ def validate(
             "has_type",
             "is_adjacent_to_country",
             "play_participant_has_war_goal_of_type_against",
+        }
+    if extensions.economy_enabled:
+        interfaces |= {"economic_vs_government_spending_balance", "taking_loans", "bureaucracy"}
+    if extensions.diplomacy_enabled:
+        interfaces |= {"recklessness", "in_default", "taking_loans"}
+    if extensions.subjects_enabled:
+        interfaces |= {
+            "subject_value",
+            "become_subject_value",
+            "is_subject_of",
+            "scope:overlord",
         }
     # 财政值属于独立的原版 script value 参考，而不是四个通用词汇目录。
     fiscal_words = vocabulary_dir(BASELINE.parent) if policy.enabled else set()

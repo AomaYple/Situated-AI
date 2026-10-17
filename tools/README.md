@@ -154,7 +154,7 @@ python -m pdx.checkpoint_catalog --screen-save <原件一.v3> --expected-sha256 
 | `tabular.py` | 表格类数据（`.csv`），分隔符靠 `csv.Sniffer` 嗅探 |
 | `engine_log.py` | 从游戏日志抽外部真值：枚举清单、脚本位置、token 位置 |
 | `console.py` | stdout/stderr 的 UTF-8 兜底（**必须在构造 rich Console 之前调用**） |
-| `decisions.py` | 生产生成器：显式读取 `fiscal.toml` 与 `extensions.toml`，按锁定游戏版本的本体语言集合生成根级脚本、本地化及默认策略覆盖；扩展开关关闭时仍校验参数。CLI `modgen` 同时检查生产与 legacy 生成物；实验候选的英语回退由 manifest 明示，正式发布前须清空。 |
+| `decisions.py` | 生产生成器：显式读取 `mod/decisions/*.toml` 的财政、扩展和三个新增模块数据源，按锁定游戏版本的本体语言集合生成根级脚本、本地化及默认策略覆盖；扩展开关关闭时仍校验参数。CLI `modgen` 同时检查生产与 legacy 生成物；实验候选的语言回退由 manifest 明示，正式发布前须清空。 |
 | `modgen.py` | **历史数据源 → legacy 产物**的生成器（阶段 3）：把 `mod/data/*.toml` 编译成脚本 + 本地化 + 档案文档。每个数字必须带 `why`，空 `why` 当场报错；产物一律由它生成，**不许手写**。可选表：`[reform_inputs]` 生成"第二处理段"（第二个效果 + 第二个修正，A/B 阶梯的 B2 臂靠它）；`[panel]`（P11 三行）生成三个解释键并**接进 JE 说明**（引擎显示的是 `journal_entry.gui:742` 的 `GetReason`）；`[difficulty]`（契约 J5，**mod 级**）生成 `common/game_rules/` 三档规则 + 玩家侧修正，并把"按档位给玩家加/减"接进冲击效果（机制只用原版有先例的 `flag` + `has_game_rule`，不用零先例的 `apply_modifier`） |
 | `modguard.py` | **legacy 五道闸门**（阶段 3；CLI 另运行生产生成、引用和默认策略覆盖检查）：键/路径与原版不相交、引用完整性、稀释预算（按阶段 2 的三槽价格表）、往返净度、生成可复现 + `why` 非空。引用类别含 `modifier_field`（修正字段名必须在原版 `static_modifiers` 里出现过 —— 让 P10 的「数值引原版同类用法」可机器核对） |
 | `ab_probe.py` | 阶段 3 的 **A/B 臂阶梯探针**生成器（**数值读数**：合法性 `LEGV`/`LEGF`、三个相关 IG 的政治力量 `CLOUTV`/`CLOUTP`、立法进度 `PROG` —— 都用原版自己的 data function，夹逼档位 `CLOUT;<档>` 保留给老归档；依据与两种写法都记的原因见 backlog B90）：点一次决议武装，之后按月度脉冲自动换臂（`A` 第 1–12 月 → `B` 第 13 月施加冲击 → `B2` 第 37 月追加改革侧输入；幂等靠 `stage` 变量）。同时生成 `tools/scripted_tests/` 套件（引擎每天判「是否开窗 / 是否换法」）与原版套件的收敛覆盖 |
@@ -301,7 +301,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 123 个测试文件、3961 条用例（2026-10-17 工作区口径）；交付前完整 `v3 cov` 为 3941 passed、20 skipped、1743 subtests passed，pytest 901.53 秒；完整收集 3961 项、123 个测试文件，默认 n-auto 实际使用 2 workers；总覆盖率 89.49%，整体 86% 与 11 个核心模块下限全部通过。20 项跳过来自 Windows 符号链接权限、FIFO 和缺失引擎日志；完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-17-交付前完整工程复核)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
+当前收集 124 个测试文件、3966 条用例（2026-10-17 F0 工作区口径）；上一轮四模块交付的完整 `v3 cov` 为 3941 passed、20 skipped、1743 subtests passed，pytest 901.53 秒；本次新增模块后完整回归结果按实际批次追加，默认 n-auto 使用自适应 worker。跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志；完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-17-交付前完整工程复核)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

@@ -26,6 +26,10 @@ PACKAGE_VARIANTS = (
     "security",
     "market",
     "reform",
+    "economy",
+    "diplomacy",
+    "subjects",
+    "full",
 )
 
 
@@ -92,6 +96,9 @@ def player_guide(
         f"扩展实际配置：reform={'启用' if extensions.reform_enabled else '关闭'}，"
         f"market={'启用' if extensions.market_enabled else '关闭'}。"
         f"security={'启用' if extensions.security_enabled else '关闭'}。"
+        f" economy={'启用' if extensions.economy_enabled else '关闭'}，"
+        f"diplomacy={'启用' if extensions.diplomacy_enabled else '关闭'}，"
+        f"subjects={'启用' if extensions.subjects_enabled else '关闭'}。"
         "扩展关闭时不执行相应干预。改革扩展启用时，脆弱条件优先："
         f"合法性低于 {extensions.fragile_legitimacy}、战争或叛乱使 change_law_chance 的"
         f" default 贡献增加 {extensions.fragile_penalty:g}；否则合法性至少"
@@ -139,7 +146,10 @@ def player_guide(
         " baseline.\n"
         f"Enabled modules in this package: {module_text_en}.\n"
         f"Actual extension configuration: reform={'enabled' if extensions.reform_enabled else 'disabled'};"
-        f" market={'enabled' if extensions.market_enabled else 'disabled'}. Disabled extensions do"
+        f" market={'enabled' if extensions.market_enabled else 'disabled'};"
+        f" economy={'enabled' if extensions.economy_enabled else 'disabled'};"
+        f" diplomacy={'enabled' if extensions.diplomacy_enabled else 'disabled'};"
+        f" subjects={'enabled' if extensions.subjects_enabled else 'disabled'}. Disabled extensions do"
         " not intervene. For enabled reform, fragile conditions take precedence: legitimacy below"
         f" {extensions.fragile_legitimacy}, war, or insurrection adds {extensions.fragile_penalty:g}"
         " to the default change_law_chance contribution. Otherwise legitimacy of at least"
@@ -153,7 +163,8 @@ def player_guide(
         f" contributes {extensions.security_threat_bonus:g}; only the maximum reason applies,"
         " positive for the defender and negative for the attacker. This does not grant eligibility"
         " or force participation. complete enables all four experimental modules;"
-        " fiscal/security/market/reform isolate one module for testing.\n"
+        " fiscal/security/market/reform isolate one module for testing. The full candidate"
+        " adds economy, diplomacy, and subjects and is still subject to F1/F2 validation.\n"
     )
 
 
@@ -293,17 +304,29 @@ def package_inputs(
     elif variant != "current":
         policy = replace(
             policy,
-            enabled=variant in {"complete", "fiscal"},
+            enabled=variant in {"complete", "fiscal", "economy", "diplomacy", "subjects", "full"},
             aggression=0,
-            package=replace(policy.package, status="experimental"),
+            package=replace(
+                policy.package,
+                status="candidate" if variant == "full" else "experimental",
+                product_version="1.0.0" if variant == "full" else policy.package.product_version,
+            ),
         )
         extensions = replace(
             extensions,
-            reform_enabled=variant in {"complete", "reform"},
-            market_enabled=variant in {"complete", "market"},
-            security_enabled=variant in {"complete", "security"},
+            reform_enabled=variant in {"complete", "reform", "full"},
+            market_enabled=variant in {"complete", "market", "full"},
+            security_enabled=variant in {"complete", "security", "full"},
+            economy_enabled=variant in {"economy", "full"},
+            diplomacy_enabled=variant in {"diplomacy", "full"},
+            subjects_enabled=variant in {"subjects", "full"},
         )
-    files = current if variant == "current" else decisions.build(policy, extensions=extensions)
+    full_localization = variant == "full"
+    files = (
+        current
+        if variant == "current"
+        else decisions.build(policy, extensions=extensions, complete_localization=full_localization)
+    )
     modules = json.loads(files[".metadata/metadata.json"])["enabled_modules"]
     files["README.md"] = player_guide(policy, extensions, modules, variant=variant)
     return policy, extensions, files
@@ -311,7 +334,7 @@ def package_inputs(
 
 def package(destination: Path, *, variant: str = "disabled") -> Path:
     policy, extensions, files = package_inputs(variant)
-    if variant == "complete":
+    if variant in {"complete", "full"}:
         files = explanation_probe.attach(files, policy, extensions)
         files["README.md"] += (
             "\n完整实验包包含原生国家面板的只读解释候选；覆盖 country_panel.gui，"

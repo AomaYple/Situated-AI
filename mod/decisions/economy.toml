@@ -1,0 +1,8 @@
+schema_version = 1
+
+[economy]
+enabled = false
+bureaucracy_floor = 0.0
+debt_penalty = -0.25
+capacity_bonus = 0.10
+why = "以原版经济与行政策略字段表达财政/行政约束；不赠送资源、不接管建筑选址，未知输入保守不干预。"
