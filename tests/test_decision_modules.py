@@ -88,7 +88,22 @@ def test_七模块完整候选生成所有脚本和全语言无回退():
         assert f"# SITAI BEGIN {field}" in strategy
 
 
-def test_完整候选_zip在游戏边界添加BOM且确定性(tmp_path):
+def test_完整候选_zip在游戏边界添加BOM且确定性(tmp_path, monkeypatch):
+    # 完整候选包含原生国家面板解释附件；用最小合法底本隔离测试对本机游戏安装的依赖。
+    from pdx import config, explanation_probe
+
+    panel = (
+        "types country_panel_types {\n"
+        " type country_panel = default_block_window_two_lines {\n"
+        '  datacontext = "[CountryPanel.GetCountry]"\n'
+        " }\n"
+        "}\n"
+    )
+    panel_path = tmp_path / "game" / explanation_probe.PANEL
+    panel_path.parent.mkdir(parents=True)
+    panel_path.write_text(panel, encoding="utf-8", newline="\n")
+    monkeypatch.setattr(config, "GAME", panel_path.parent.parent)
+    monkeypatch.setattr(config, "game_version", lambda: {"caligula_branch": "release/1.14.5"})
     target = tmp_path / "full.zip"
     distribution.package(target, variant="full")
     first = target.read_bytes()
