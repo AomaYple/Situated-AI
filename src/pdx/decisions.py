@@ -10,11 +10,13 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-import tomllib
+import re
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+import tomllib
 from packaging.version import InvalidVersion, Version
 
 from . import (
@@ -47,18 +49,24 @@ from .vanilla_index import (
 
 SOURCE = config.REPO / "mod" / "decisions" / "fiscal.toml"
 PRODUCT = config.REPO / "mod"
-BASELINE = config.REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
+BASELINE = (
+    config.REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
+)
 RISK_VAR = "sitai_fiscal_risk"
 ACTIVE_TRIGGER = "sitai_fiscal_external_risk"
 TOOL_VERSION = __version__
 EXTENSIONS = SOURCE.with_name("extensions.toml")
 PACKAGE_STATUSES = frozenset({"experimental", "candidate", "accepted"})
-SAVE_COMPATIBILITY = frozenset({"new-game-only", "same-version-new-game", "same-candidate-save"})
+SAVE_COMPATIBILITY = frozenset(
+    {"new-game-only", "same-version-new-game", "same-candidate-save"}
+)
 SUPPORTED_PLATFORMS = frozenset({"windows", "macos", "linux"})
 
 # 生产 Mod 的本地化集合跟随当前锁定的 Victoria 3 本体语言；历史 legacy
 # 生成器仍保留自己的双语数据源契约，不影响生产包。
-LANGUAGES: dict[str, str] = {language.directory: language.header for language in DEFAULT_LANGUAGES}
+LANGUAGES: dict[str, str] = {
+    language.directory: language.header for language in DEFAULT_LANGUAGES
+}
 
 _DECISION_LOCALIZATION: dict[str, dict[str, str]] = {
     "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON": {
@@ -197,6 +205,144 @@ class Extensions:
     subjects_enabled: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class SupportArbitration:
+    """外交博弈支持字段的离线仲裁结果。
+
+    ``market`` 与 ``security`` 都是同一原版字段的候选贡献。仲裁器只接受
+    已知双方和 AI 作用域；安全理由按绝对值取一个最高理由，并按键去重，
+    这样调用方不会把同一原因重复计分。
+    """
+
+    value: float
+    reasons: tuple[str, ...]
+
+
+def merge_diplomatic_play_support(
+    *,
+    market: float | None = None,
+    security: Mapping[str, float] | None = None,
+    has_sides: bool = True,
+    is_ai: bool = True,
+) -> SupportArbitration:
+    """合并市场/安全对 ``diplomatic_play_support`` 的有限贡献。
+
+    玩家、缺少博弈双方或任何未知安全输入都返回零贡献；市场贡献可以为
+    负值，安全贡献只选一个最高的已知理由。该函数不创建资格、不代表参战。
+    """
+
+    if not is_ai or not has_sides:
+        return SupportArbitration(0.0, ())
+    value = 0.0
+    reasons: list[str] = []
+    if market is not None:
+        if isinstance(market, bool) or not isinstance(market, (int, float)):
+            raise ValueError("市场支持贡献必须是有限数值或未知")
+        if not math.isfinite(market):
+            raise ValueError("市场支持贡献必须是有限数值或未知")
+        value += float(market)
+        reasons.append("market")
+    if security:
+        candidates: list[tuple[float, str]] = []
+        for reason, amount in security.items():
+            if not isinstance(reason, str) or not reason.strip():
+                raise ValueError("安全理由必须是非空字符串")
+            if amount is None:
+                return SupportArbitration(0.0, ())
+            if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+                raise TypeError("安全支持贡献必须是有限数值")
+            if not math.isfinite(amount):
+                raise ValueError("安全支持贡献必须是有限数值")
+            if amount:
+                candidates.append((float(amount), reason))
+        if candidates:
+            amount, reason = max(candidates, key=lambda item: (item[0], item[1]))
+            value += amount
+            if reason not in reasons:
+                reasons.append(reason)
+    return SupportArbitration(value, tuple(reasons))
+
+
+def player_boundary_issues(strategy: str) -> list[str]:
+    """静态检查所有新增默认策略字段块都显式约束 ``is_ai``。"""
+
+    marker = re.compile(r"# SITAI BEGIN ([^\n]+)\n(.*?)# SITAI END \1\n", re.DOTALL)
+    return [
+        f"{match.group(1)} 新增字段块缺少 is_ai = yes 玩家边界"
+        for match in marker.finditer(strategy)
+        if "is_ai = yes" not in match.group(2)
+    ]
+
+
+MODULE_LIFECYCLE_CONTRACT: dict[str, dict[str, object]] = {
+    "fiscal": {
+        "stateful": True,
+        "direct_read": False,
+        "hooks": [
+            "on_monthly_pulse_country",
+            "on_country_default",
+            "on_country_no_longer_default",
+        ],
+        "ttl_or_none": "policy.ttl_days",
+        "clear_on_disable": True,
+    },
+    "reform": {
+        "stateful": False,
+        "direct_read": True,
+        "hooks": [],
+        "ttl_or_none": None,
+        "clear_on_disable": True,
+    },
+    "market": {
+        "stateful": False,
+        "direct_read": True,
+        "hooks": [],
+        "ttl_or_none": None,
+        "clear_on_disable": True,
+    },
+    "security": {
+        "stateful": False,
+        "direct_read": True,
+        "hooks": [],
+        "ttl_or_none": None,
+        "clear_on_disable": True,
+    },
+    "economy": {
+        "stateful": False,
+        "direct_read": True,
+        "hooks": [],
+        "ttl_or_none": None,
+        "clear_on_disable": True,
+    },
+    "diplomacy": {
+        "stateful": False,
+        "direct_read": True,
+        "hooks": [],
+        "ttl_or_none": None,
+        "clear_on_disable": True,
+    },
+    "subjects": {
+        "stateful": False,
+        "direct_read": True,
+        "hooks": [],
+        "ttl_or_none": None,
+        "clear_on_disable": True,
+    },
+}
+
+
+def module_lifecycle_contract(
+    policy: Policy, _extensions: Extensions
+) -> dict[str, dict[str, object]]:
+    """返回七模块的机器可读状态、钩子、TTL、关闭清理和存档契约。"""
+
+    contract = deepcopy(MODULE_LIFECYCLE_CONTRACT)
+    contract["fiscal"]["ttl_or_none"] = policy.ttl_days if policy.enabled else None
+    for item in contract.values():
+        item["save_compatibility"] = policy.package.save_compatibility
+    return contract
+
+
 def load_extensions(source: Path = EXTENSIONS) -> Extensions:
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
@@ -220,21 +366,27 @@ def load_extensions(source: Path = EXTENSIONS) -> Extensions:
     if (
         not isinstance(reform, dict)
         or not isinstance(market, dict)
-        or set(reform) != {"enabled", "legitimacy", "fragile_legitimacy", "bonus", "penalty", "why"}
+        or set(reform)
+        != {"enabled", "legitimacy", "fragile_legitimacy", "bonus", "penalty", "why"}
         or set(market) != {"enabled", "multiplier", "why"}
     ):
         raise ValueError("扩展参数包含未知或缺失字段")
     if any(type(v) is not bool for v in (reform["enabled"], market["enabled"])):
         raise ValueError("扩展开关必须是布尔值")
     if (
-        any(type(v) is not int for v in (reform["legitimacy"], reform["fragile_legitimacy"]))
+        any(
+            type(v) is not int
+            for v in (reform["legitimacy"], reform["fragile_legitimacy"])
+        )
         or not 0 <= reform["fragile_legitimacy"] < reform["legitimacy"] <= 100
     ):
         raise ValueError("合法性阈值必须是0到100的有序整数")
     amounts = (reform["bonus"], reform["penalty"], market["multiplier"])
     if (
         any(
-            isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
+            isinstance(v, bool)
+            or not isinstance(v, (int, float))
+            or not math.isfinite(v)
             for v in amounts
         )
         or not 0 <= reform["bonus"] <= 5
@@ -242,7 +394,9 @@ def load_extensions(source: Path = EXTENSIONS) -> Extensions:
         or not 0 <= market["multiplier"] <= 10
     ):
         raise ValueError("扩展偏置必须有限且位于保守范围内")
-    if any(not isinstance(v, str) or not v.strip() for v in (reform["why"], market["why"])):
+    if any(
+        not isinstance(v, str) or not v.strip() for v in (reform["why"], market["why"])
+    ):
         raise ValueError("扩展参数必须给出依据")
     security = data.get(
         "security",
@@ -269,7 +423,9 @@ def load_extensions(source: Path = EXTENSIONS) -> Extensions:
             or not math.isfinite(amount)
         ):
             raise ValueError("外部防御权重必须是 0 到 50 的有限数值")
-    optional = {name: data.get(name, {}) for name in ("economy", "diplomacy", "subjects")}
+    optional = {
+        name: data.get(name, {}) for name in ("economy", "diplomacy", "subjects")
+    }
     for name, value in optional.items():
         if value and (not isinstance(value, dict) or set(value) != {"enabled"}):
             raise ValueError(f"{name} 扩展只允许声明 enabled；具体参数由模块数据源维护")
@@ -337,7 +493,14 @@ def load(source: Path = SOURCE) -> Policy:
     data = tomllib.loads(raw.decode("utf-8"))
     if (
         set(data)
-        != {"schema_version", "game_version", "baseline_sha256", "package", "fiscal", "fields"}
+        != {
+            "schema_version",
+            "game_version",
+            "baseline_sha256",
+            "package",
+            "fiscal",
+            "fields",
+        }
         or type(data["schema_version"]) is not int
         or data["schema_version"] != 1
     ):
@@ -398,7 +561,12 @@ def load(source: Path = SOURCE) -> Policy:
     if (
         any(
             not isinstance(v, str) or not v.strip()
-            for v in (package["parent"], package["platform_notes"], fiscal["why"], fields["why"])
+            for v in (
+                package["parent"],
+                package["platform_notes"],
+                fiscal["why"],
+                fields["why"],
+            )
         )
         or type(fiscal["enabled"]) is not bool
     ):
@@ -434,7 +602,9 @@ def load(source: Path = SOURCE) -> Policy:
         raise ValueError("财政阈值必须为正整数，退出线高于进入线，TTL覆盖一个月")
     if (
         any(
-            isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
+            isinstance(v, bool)
+            or not isinstance(v, (int, float))
+            or not math.isfinite(v)
             for v in (policy.neutrality, policy.aggression)
         )
         or not 0 <= policy.neutrality <= 100
@@ -473,6 +643,87 @@ def fiscal_condition(weeks: int) -> str:
         in_default = yes
         AND = {{ taking_loans = yes credit > 0 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < {weeks} }}
     }}"""
+
+
+def diplomatic_play_support_addition(extensions: Extensions) -> str:
+    """为共享的 ``diplomatic_play_support`` 字段生成唯一写入块。
+
+    市场差值与安全理由在同一 AI/双方上下文中评估；安全的承诺/威胁使用
+    ``else_if``，因此同一防御事实最多贡献一次，且按配置权重取最高理由。
+    """
+
+    if not (extensions.market_enabled or extensions.security_enabled):
+        return ""
+    amounts = (extensions.security_commitment_bonus, extensions.security_threat_bonus)
+    if any(
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0 <= value <= 50
+        or not math.isfinite(value)
+        for value in amounts
+    ):
+        raise ValueError("外部防御权重必须是 0 到 50 的有限数值")
+    lines = [
+        "\t\tif = {\n",
+        "\t\t\tlimit = { ROOT ?= { is_ai = yes } exists = scope:country exists = scope:enemy_country }\n",
+    ]
+    if extensions.market_enabled:
+        lines.extend(
+            [
+                "\t\t\tif = {\n",
+                "\t\t\t\tlimit = { ROOT ?= { exists = scope:country exists = scope:enemy_country } }\n",
+                "\t\t\t\tadd = {\n",
+                ' \t\t\t\t\tvalue = "ROOT.economic_dependence(scope:country)"\n',
+                ' \t\t\t\t\tsubtract = "ROOT.economic_dependence(scope:enemy_country)"\n',
+                f"\t\t\t\t\tmultiply = {extensions.market_multiplier:g}\n",
+                "\t\t\t\t\tdesc = SITAI_MARKET_DEPENDENCE_SUPPORT_REASON\n",
+                "\t\t\t\t}\n",
+                "\t\t\t}\n",
+            ]
+        )
+    if extensions.security_enabled:
+
+        def side(partner: str, opponent: str, sign: int) -> list[str]:
+            reasons = [
+                (
+                    amounts[0],
+                    f"sitai_defense_commitment = {{ PARTNER = {partner} }}",
+                    "COMMITMENT",
+                ),
+                (
+                    amounts[1],
+                    f"sitai_neighbor_defense = {{ PARTNER = {partner} OPPONENT = {opponent} }}",
+                    "NEIGHBOR",
+                ),
+            ]
+            result: list[str] = []
+            for amount, condition, reason in sorted(reasons, key=lambda row: -row[0]):
+                if amount == 0:
+                    continue
+                branch = "if" if not result else "else_if"
+                result.extend(
+                    [
+                        f"\t\t\t\t{branch} = {{\n",
+                        f"\t\t\t\t\tlimit = {{ ROOT ?= {{ {condition} }} }}\n",
+                        f"\t\t\t\t\tadd = {{ value = {sign * amount:g} desc = SITAI_SECURITY_{reason}_REASON }}\n",
+                        "\t\t\t\t}\n",
+                    ]
+                )
+            return result
+
+        lines.extend(
+            [
+                "\t\t\tif = {\n",
+                "\t\t\t\tlimit = { NOT = { exists = scope:is_initiator } }\n",
+                *side("scope:country", "scope:enemy_country", 1),
+                "\t\t\t}\n",
+                "\t\t\telse = {\n",
+                *side("scope:enemy_country", "scope:country", -1),
+                "\t\t\t}\n",
+            ]
+        )
+    lines.append("\t\t}\n")
+    return "".join(lines)
 
 
 def triggers(policy: Policy) -> str:
@@ -529,7 +780,9 @@ sitai_fiscal_update = { effect = { sitai_update_fiscal = yes } }
 """
 
 
-def patch_default(text: str, policy: Policy, extensions: Extensions | None = None) -> str:
+def patch_default(
+    text: str, policy: Policy, extensions: Extensions | None = None
+) -> str:
     """利用词法器定位闭括号，避免注释/字符串内的括号破坏补丁位置。"""
     text = normalized_text(text)
     if hashlib.sha256(text.encode()).hexdigest() != policy.baseline_sha256:
@@ -543,11 +796,11 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
         raise ValueError("底本必须恰好包含原版默认策略")
     block = parsed.top_assignments[0].value
     if not isinstance(block, Block):
-        raise ValueError("默认策略必须为块")
+        raise TypeError("默认策略必须为块")
     lines = text.splitlines(keepends=True)
     changes: list[tuple[int, str]] = []
     additions = {
-        field: f"\t\tif = {{\n\t\t\tlimit = {{ ROOT ?= {{ {ACTIVE_TRIGGER} = yes }} }}\n\t\t\tadd = {amount:g}\n\t\t}}\n"
+        field: f"\t\tif = {{\n\t\t\tlimit = {{ ROOT ?= {{ is_ai = yes {ACTIVE_TRIGGER} = yes }} }}\n\t\t\tadd = {amount:g}\n\t\t}}\n"
         for field, amount in (
             ("diplomatic_play_neutrality", policy.neutrality),
             ("aggression", policy.aggression),
@@ -558,26 +811,15 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
         additions["change_law_chance"] = (
             "\t\tif = { limit = { ROOT ?= { is_ai = yes } } add = sitai_reform_default_delta }\n"
         )
-    if extensions and extensions.market_enabled:
-        additions["diplomatic_play_support"] = f"""\t\tif = {{
-\t\t\tlimit = {{ ROOT ?= {{ is_ai = yes }} exists = scope:country exists = scope:enemy_country }}
-\t\t\tadd = {{
-\t\t\t\tvalue = "ROOT.economic_dependence(scope:country)"
-\t\t\t\tsubtract = "ROOT.economic_dependence(scope:enemy_country)"
-\t\t\t\tmultiply = {extensions.market_multiplier:g}
-\t\t\t\tdesc = SITAI_MARKET_DEPENDENCE_SUPPORT_REASON
-\t\t\t}}
-\t\t}}
-"""
-    if extensions and extensions.security_enabled:
-        security = decision_security.support_addition(extensions)
-        if security:
-            additions["diplomatic_play_support"] = (
-                additions.get("diplomatic_play_support", "") + security
-            )
+    if extensions:
+        support = diplomatic_play_support_addition(extensions)
+        if support:
+            additions["diplomatic_play_support"] = support
     if extensions and extensions.economy_enabled:
-        additions["economic_vs_government_spending_balance"] = decision_economy.strategy_addition(
-            replace(decision_economy.load(), enabled=True)
+        additions["economic_vs_government_spending_balance"] = (
+            decision_economy.strategy_addition(
+                replace(decision_economy.load(), enabled=True)
+            )
         )
     if extensions and extensions.diplomacy_enabled:
         additions["recklessness"] = decision_diplomacy.strategy_addition(
@@ -624,13 +866,17 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
     return result
 
 
-def source_fingerprint(policy: Policy, extensions: Extensions, baseline: str) -> dict[str, str]:
+def source_fingerprint(
+    policy: Policy, extensions: Extensions, baseline: str
+) -> dict[str, str]:
     """返回生成输入指纹，供 metadata 与交付清单共同引用。"""
 
     result = {
         "fiscal_source_sha256": policy.source_sha256,
         "extensions_source_sha256": extensions.source_sha256,
-        "baseline_sha256": hashlib.sha256(normalized_text(baseline).encode()).hexdigest(),
+        "baseline_sha256": hashlib.sha256(
+            normalized_text(baseline).encode()
+        ).hexdigest(),
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     }
     if extensions.security_enabled:
@@ -709,8 +955,10 @@ def metadata_payload(
 ) -> dict[str, object]:
     policy = policy or load()
     extensions = extensions or load_extensions()
-    languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
-    fallback_languages = (
+    languages = normalize_languages(
+        DEFAULT_LANGUAGES if languages is None else languages
+    )
+    production_fallback_languages = (
         []
         if complete_localization
         else [
@@ -728,7 +976,9 @@ def metadata_payload(
         "supported_game_version": policy.game_version,
         "short_description": (
             "财政、外部防御、市场依赖与政治约束的实验组合；保留原版策略与执行。"
-            if extensions.security_enabled or extensions.market_enabled or extensions.reform_enabled
+            if extensions.security_enabled
+            or extensions.market_enabled
+            or extensions.reform_enabled
             else "真实财政与外部风险影响原版外交倾向；保留国家原有策略路线。"
         ),
         "tags": [],
@@ -739,7 +989,11 @@ def metadata_payload(
         "localization": {
             "languages": [language.directory for language in languages],
             "headers": [language.header for language in languages],
-            "fallback_languages": fallback_languages,
+            # 保留旧字段供旧消费者读取，但新字段分别声明生产文本和解释探针。
+            "fallback_languages": production_fallback_languages,
+            "production_fallback_languages": production_fallback_languages,
+            # 生产源不包含解释探针；探针附加阶段会按实际文本覆盖更新此字段。
+            "explanation_fallback_languages": [],
             "fallback_policy": "none"
             if complete_localization
             else "experimental-only-english-source",
@@ -748,6 +1002,7 @@ def metadata_payload(
         "save_compatibility": policy.package.save_compatibility,
         "platforms": list(policy.package.platforms),
         "platform_notes": policy.package.platform_notes,
+        "module_contract": module_lifecycle_contract(policy, extensions),
         "source_fingerprint": source_fingerprint(
             policy,
             extensions,
@@ -766,12 +1021,23 @@ def build(
     complete_localization: bool = False,
 ) -> dict[str, str]:
     policy = policy or load()
-    baseline = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
+    baseline = (
+        baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
+    )
     extensions = extensions or load_extensions()
-    languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
+    languages = normalize_languages(
+        DEFAULT_LANGUAGES if languages is None else languages
+    )
     files = {
-        "common/ai_strategies/00_default_strategy.txt": patch_default(baseline, policy, extensions),
+        "common/ai_strategies/00_default_strategy.txt": patch_default(
+            baseline, policy, extensions
+        ),
     }
+    strategy_issues = player_boundary_issues(
+        files["common/ai_strategies/00_default_strategy.txt"]
+    )
+    if strategy_issues:
+        raise ValueError("生产策略违反玩家边界：" + "；".join(strategy_issues))
     if policy.enabled:
         files.update(
             {
@@ -781,21 +1047,29 @@ def build(
             }
         )
     if extensions.reform_enabled:
-        files["common/scripted_triggers/sitai_reform_triggers.txt"] = extension_triggers(extensions)
-        files["common/script_values/sitai_reform_values.txt"] = extension_values(extensions)
+        files["common/scripted_triggers/sitai_reform_triggers.txt"] = (
+            extension_triggers(extensions)
+        )
+        files["common/script_values/sitai_reform_values.txt"] = extension_values(
+            extensions
+        )
     if extensions.security_enabled:
-        files["common/scripted_triggers/sitai_security_triggers.txt"] = decision_security.triggers()
+        files["common/scripted_triggers/sitai_security_triggers.txt"] = (
+            decision_security.triggers()
+        )
     if extensions.economy_enabled:
-        files["common/scripted_triggers/sitai_economy_triggers.txt"] = decision_economy.triggers(
-            replace(decision_economy.load(), enabled=True)
+        files["common/scripted_triggers/sitai_economy_triggers.txt"] = (
+            decision_economy.triggers(replace(decision_economy.load(), enabled=True))
         )
     if extensions.diplomacy_enabled:
         files["common/scripted_triggers/sitai_diplomacy_triggers.txt"] = (
-            decision_diplomacy.triggers(replace(decision_diplomacy.load(), enabled=True))
+            decision_diplomacy.triggers(
+                replace(decision_diplomacy.load(), enabled=True)
+            )
         )
     if extensions.subjects_enabled:
-        files["common/scripted_triggers/sitai_subjects_triggers.txt"] = decision_subjects.triggers(
-            replace(decision_subjects.load(), enabled=True)
+        files["common/scripted_triggers/sitai_subjects_triggers.txt"] = (
+            decision_subjects.triggers(replace(decision_subjects.load(), enabled=True))
         )
     if (
         extensions.market_enabled
@@ -818,7 +1092,9 @@ def build(
         if extensions.subjects_enabled:
             reason_keys.append("SITAI_SUBJECT_RELATION_REASON")
         for language in languages:
-            reasons = {key: _localized_decision_text(key, language) for key in reason_keys}
+            reasons = {
+                key: _localized_decision_text(key, language) for key in reason_keys
+            }
             files[localization_path(language, "sitai_decisions")] = (
                 f"{language.header}:\n"
                 + "".join(f' {key}: "{value}"\n' for key, value in reasons.items())
@@ -860,7 +1136,10 @@ def write(root: Path, files: Mapping[str, str] | None = None) -> list[Path]:
         "common/scripted_triggers/sitai_economy_triggers.txt",
         "common/scripted_triggers/sitai_diplomacy_triggers.txt",
         "common/scripted_triggers/sitai_subjects_triggers.txt",
-        *(localization_path(language, "sitai_decisions") for language in DEFAULT_LANGUAGES),
+        *(
+            localization_path(language, "sitai_decisions")
+            for language in DEFAULT_LANGUAGES
+        ),
     }
     localization_root = root / "localization"
     if localization_root.is_dir():
@@ -879,7 +1158,8 @@ def check(root: Path, files: Mapping[str, str] | None = None) -> list[str]:
     issues = [
         f"{name} 与决策数据源不一致"
         for name, text in files.items()
-        if not (root / name).is_file() or (root / name).read_bytes() != text.encode("utf-8")
+        if not (root / name).is_file()
+        or (root / name).read_bytes() != text.encode("utf-8")
     ]
     issues.extend(
         f"{p.relative_to(root)} 是未声明产物"
@@ -938,7 +1218,11 @@ def validate(
             "play_participant_has_war_goal_of_type_against",
         }
     if extensions.economy_enabled:
-        interfaces |= {"economic_vs_government_spending_balance", "taking_loans", "bureaucracy"}
+        interfaces |= {
+            "economic_vs_government_spending_balance",
+            "taking_loans",
+            "bureaucracy",
+        }
     if extensions.diplomacy_enabled:
         interfaces |= {"recklessness", "in_default", "taking_loans"}
     if extensions.subjects_enabled:
@@ -1025,7 +1309,8 @@ def validate(
 
     evidence_words = vocabulary_words | key_words | variable_words | fiscal_words
     issues = [
-        f"决策生成接口未被原版证据覆盖：{name}" for name in sorted(interfaces - evidence_words)
+        f"决策生成接口未被原版证据覆盖：{name}"
+        for name in sorted(interfaces - evidence_words)
     ]
     if vocabulary_uncovered:
         issues.append("原版词汇快照缺少所需目录；接口词汇检查未覆盖，不算通过")

@@ -49,6 +49,18 @@
       "spanish",
       "turkish"
     ],
+    "production_fallback_languages": [
+      "braz_por",
+      "french",
+      "german",
+      "japanese",
+      "korean",
+      "polish",
+      "russian",
+      "spanish",
+      "turkish"
+    ],
+    "explanation_fallback_languages": [],
     "fallback_policy": "experimental-only-english-source"
   },
   "parent_package": "vanilla-1.14.5",
@@ -59,11 +71,73 @@
     "linux"
   ],
   "platform_notes": "Python 生成与离线校验支持三平台；游戏 GUI 自动化当前仅有 Windows 实机证据。",
+  "module_contract": {
+    "fiscal": {
+      "stateful": true,
+      "direct_read": false,
+      "hooks": [
+        "on_monthly_pulse_country",
+        "on_country_default",
+        "on_country_no_longer_default"
+      ],
+      "ttl_or_none": 62,
+      "clear_on_disable": true,
+      "save_compatibility": "new-game-only"
+    },
+    "reform": {
+      "stateful": false,
+      "direct_read": true,
+      "hooks": [],
+      "ttl_or_none": null,
+      "clear_on_disable": true,
+      "save_compatibility": "new-game-only"
+    },
+    "market": {
+      "stateful": false,
+      "direct_read": true,
+      "hooks": [],
+      "ttl_or_none": null,
+      "clear_on_disable": true,
+      "save_compatibility": "new-game-only"
+    },
+    "security": {
+      "stateful": false,
+      "direct_read": true,
+      "hooks": [],
+      "ttl_or_none": null,
+      "clear_on_disable": true,
+      "save_compatibility": "new-game-only"
+    },
+    "economy": {
+      "stateful": false,
+      "direct_read": true,
+      "hooks": [],
+      "ttl_or_none": null,
+      "clear_on_disable": true,
+      "save_compatibility": "new-game-only"
+    },
+    "diplomacy": {
+      "stateful": false,
+      "direct_read": true,
+      "hooks": [],
+      "ttl_or_none": null,
+      "clear_on_disable": true,
+      "save_compatibility": "new-game-only"
+    },
+    "subjects": {
+      "stateful": false,
+      "direct_read": true,
+      "hooks": [],
+      "ttl_or_none": null,
+      "clear_on_disable": true,
+      "save_compatibility": "new-game-only"
+    }
+  },
   "source_fingerprint": {
     "fiscal_source_sha256": "ea6fc9894095c97657b1c5bc409128aba0fe4dc394c34bb7a1cf75fe13f1f751",
     "extensions_source_sha256": "f03fe932827d03d3a040c6d3b703386acbf0133cbd1055df09e7a5509de99c24",
     "baseline_sha256": "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
-    "generator_sha256": "99069e9a79fb7108dc4094cb08ef90aeec09414d1b6924dbdcc12aca38665a9a"
+    "generator_sha256": "86e8891822b7a229c5502c0318e7c5ae9abdc6db186c8d317a4b979dc2464fc6"
   },
   "game_custom_data": {
     "multiplayer_synchronized": true

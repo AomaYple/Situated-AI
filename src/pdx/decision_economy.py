@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import hashlib
 import math
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+
+import tomllib
 
 SOURCE = Path(__file__).parents[2] / "mod" / "decisions" / "economy.toml"
 
@@ -44,7 +45,11 @@ def load(source: Path = SOURCE) -> EconomyPolicy:
         or not values["why"].strip()
     ):
         raise ValueError("经济模块开关和依据无效")
-    numbers = (values["bureaucracy_floor"], values["debt_penalty"], values["capacity_bonus"])
+    numbers = (
+        values["bureaucracy_floor"],
+        values["debt_penalty"],
+        values["capacity_bonus"],
+    )
     if any(
         isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
         for v in numbers
@@ -104,7 +109,7 @@ def strategy_addition(policy: EconomyPolicy | None = None) -> str:
     if not policy.enabled:
         return ""
     return f"""\t\t# SITAI ECONOMY BEGIN
-\t\tif = {{ limit = {{ sitai_economy_constraint = yes }} add = {policy.debt_penalty:g} }}
-\t\tif = {{ limit = {{ sitai_economy_capacity = yes }} add = {policy.capacity_bonus:g} }}
+\t\tif = {{ limit = {{ ROOT ?= {{ is_ai = yes }} sitai_economy_constraint = yes }} add = {policy.debt_penalty:g} }}
+\t\tif = {{ limit = {{ ROOT ?= {{ is_ai = yes }} sitai_economy_capacity = yes }} add = {policy.capacity_bonus:g} }}
 \t\t# SITAI ECONOMY END
 """

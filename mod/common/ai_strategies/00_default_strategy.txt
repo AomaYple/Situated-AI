@@ -889,7 +889,7 @@ ai_strategy_default = {
 		}
 		# SITAI BEGIN diplomatic_play_neutrality
 		if = {
-			limit = { ROOT ?= { sitai_fiscal_external_risk = yes } }
+			limit = { ROOT ?= { is_ai = yes sitai_fiscal_external_risk = yes } }
 			add = 25
 		}
 		# SITAI END diplomatic_play_neutrality

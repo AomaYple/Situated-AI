@@ -68,7 +68,7 @@ why = "10 年，与压力修正的 years = 10 同一时间尺度（两处必须�
 # 为什么单列一张表：它的产物是**单独一份**文件
 # （`common/on_actions/sitai_ru_defeat_on_actions.txt`），内容是给原版钩子
 # **追加**一个 `on_actions` 字段 —— 原版的 `effect` / `events` 字段一字不动。
-# 官方口径：`research/official-docs/game/common/on_actions/_on_actions.md:115`
+# 官方口径：`game/common/on_actions/_on_actions.md:115`
 # 明说不能给已有 `effect` 块的 on_action 再追加一个 effect 块（会冲突），
 # `:117-128` 给的写法就是 `<原版钩子> = { on_actions = { <我们自己的 on_action> } }`；
 # 本仓的探针（`tools/probe/zz_probe_h1/common/on_actions/zz_probe_h1_on_actions.txt`）
@@ -390,7 +390,7 @@ why = "路径②的挂载点：原版 on_action 名（`common/on_actions/00_code
 [[references]]
 kind = "trigger"
 name = "on_actions"
-why = "我们给原版钩子**追加的字段名**（不是 effect 块）：官方口径 research/official-docs/game/common/on_actions/_on_actions.md:115 写明不能给已有 effect 块的 on_action 再追加 effect 块，`:117-128` 给的就是这个字段；原版自己也用它（00_code_on_actions.txt:125 等 11 处），所以它在词汇表池里、闸门 ② 能核。"
+why = "我们给原版钩子**追加的字段名**（不是 effect 块）：官方口径 game/common/on_actions/_on_actions.md:115 写明不能给已有 effect 块的 on_action 再追加 effect 块，`:117-128` 给的就是这个字段；原版自己也用它（00_code_on_actions.txt:125 等 11 处），所以它在词汇表池里、闸门 ② 能核。"
 
 # 修正字段名：数值必须引原版同类用法（P10），所以逐条声明 + 由闸门 ② 核对
 # 「这个名字在原版 static_modifiers 里出现过」。没有这一条，字段名写错一个字母

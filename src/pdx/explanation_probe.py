@@ -10,6 +10,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
+from collections.abc import Mapping
 from dataclasses import asdict
 from pathlib import Path
 
@@ -23,14 +25,145 @@ PANEL = "gui/country_panel.gui"
 SGUI = f"common/scripted_guis/{PREFIX}.txt"
 
 
-def _localized(pair: tuple[str, str], language: Language) -> str:
-    """实验候选的语言覆盖：中英文保留原文，其余语言显式使用英语源文本。
+# 新增模块的提示使用独立的 11 语言源表。旧的财政/基础提示仍保留英语回退，
+# 并由 metadata 明确列出回退语言；没有博弈双方或国家上下文时只显示边界说明。
+_MODULE_LOCALIZATION: dict[str, dict[str, str]] = {
+    "economy_rules": {
+        "braz_por": "Economia e administração: contexto econômico ausente; nenhum valor calculado.",
+        "english": "Economy and administration: economic context is unavailable; no value calculated.",
+        "french": "Économie et administration : le contexte économique est absent ; aucune valeur calculée.",
+        "german": "Wirtschaft und Verwaltung: Der Wirtschaftskontext fehlt; kein Wert wird berechnet.",
+        "japanese": "経済・行政：経済コンテキストがないため、値は計算しません。",
+        "korean": "경제 및 행정: 경제 맥락이 없어 값을 계산하지 않습니다.",
+        "polish": "Gospodarka i administracja: brak kontekstu gospodarczego; nie obliczono wartości.",
+        "russian": "Экономика и администрация: экономический контекст отсутствует; значение не вычисляется.",
+        "simp_chinese": "经济与行政：缺少经济上下文；不计算数值。",
+        "spanish": "Economía y administración: falta el contexto económico; no se calcula ningún valor.",
+        "turkish": "Ekonomi ve yönetim: ekonomik bağlam yok; değer hesaplanmaz.",
+    },
+    "diplomacy_rules": {
+        "braz_por": "Diplomacia e guerra: faltam os lados do jogo; nenhuma carga é calculada.",
+        "english": "Diplomacy and war: play sides are unavailable; no burden is calculated.",
+        "french": "Diplomatie et guerre : les parties du jeu sont absentes ; aucune charge calculée.",
+        "german": "Diplomatie und Krieg: Die Spielparteien fehlen; keine Belastung wird berechnet.",
+        "japanese": "外交・戦争：ゲームの当事者がないため、負担は計算しません。",
+        "korean": "외교 및 전쟁: 게임 당사자가 없어 부담을 계산하지 않습니다.",
+        "polish": "Dyplomacja i wojna: brak stron rozgrywki; nie obliczono obciążenia.",
+        "russian": "Дипломатия и война: стороны игры недоступны; нагрузка не вычисляется.",
+        "simp_chinese": "外交与战争：缺少博弈双方；不计算负担。",
+        "spanish": "Diplomacia y guerra: faltan las partes de la jugada; no se calcula la carga.",
+        "turkish": "Diplomasi ve savaş: oyun tarafları yok; yük hesaplanmaz.",
+    },
+    "subjects_rules": {
+        "braz_por": "Relação de suserano e súdito: contexto bilateral ausente; nenhum valor calculado.",
+        "english": "Overlord and subject: bilateral context is unavailable; no value calculated.",
+        "french": "Suzerain et sujet : le contexte bilatéral est absent ; aucune valeur calculée.",
+        "german": "Oberherr und Untertan: Der bilaterale Kontext fehlt; kein Wert wird berechnet.",
+        "japanese": "宗主国・属国：二国間コンテキストがないため、値は計算しません。",
+        "korean": "종주국 및 종속국: 양자 맥락이 없어 값을 계산하지 않습니다.",
+        "polish": "Zwierzchnik i podmiot: brak kontekstu dwustronnego; nie obliczono wartości.",
+        "russian": "Сюзерен и субъект: двусторонний контекст отсутствует; значение не вычисляется.",
+        "simp_chinese": "宗主国与属国：缺少双边上下文；不计算数值。",
+        "spanish": "Soberano y súbdito: falta el contexto bilateral; no se calcula ningún valor.",
+        "turkish": "Süzeren ve tabi ülke: ikili bağlam yok; değer hesaplanmaz.",
+    },
+}
 
-    这样每个本体语言都有完整键集合，不会静默缺键；正式发布前由语言审校
-    把实验包的英语回退替换成对应语言的最终译文。
+# F0 要求每种本体语言都有完整的自有键源文本。基础说明键数量较多，先为
+# 每种语言提供明确标注为“候选草稿”的本地化句式；F1 再由逐语言审校替换
+# 术语和 UI 语境。它们不再静默复用英语源文本，也不会被记录为回退。
+_DRAFT_SENTENCE = {
+    "braz_por": "Rascunho de explicação para {key}; contexto desconhecido permanece desconhecido.",
+    "french": "Brouillon d’explication pour {key} ; le contexte inconnu reste inconnu.",
+    "german": "Erklärungsentwurf für {key}; unbekannter Kontext bleibt unbekannt.",
+    "japanese": "{key} の説明草稿です。不明なコンテキストは不明のままです。",
+    "korean": "{key} 설명 초안입니다. 알 수 없는 맥락은 알 수 없음으로 유지합니다.",
+    "polish": "Wersja robocza wyjaśnienia dla {key}; nieznany kontekst pozostaje nieznany.",
+    "russian": "Черновик объяснения для {key}; неизвестный контекст остаётся неизвестным.",
+    "spanish": "Borrador de explicación para {key}; el contexto desconocido sigue desconocido.",
+    "turkish": "{key} için açıklama taslağıdır; bilinmeyen bağlam bilinmiyor olarak kalır.",
+}
+
+
+def _draft_localization(
+    language: Language, rows: Mapping[str, tuple[str, str]]
+) -> dict[str, str]:
+    """为非中英文生成显式候选草稿，避免静默英语回退。"""
+
+    template = _DRAFT_SENTENCE.get(language.directory)
+    if template is None:
+        return {}
+    result: dict[str, str] = {}
+    for key, pair in rows.items():
+        numbers = " ".join(re.findall(r"[-+]?\d+(?:\.\d+)?", pair[1]))
+        suffix = f" ({numbers})" if numbers else ""
+        result[key] = template.format(key=key) + suffix
+    return result
+
+
+def localization_fallback_languages(
+    languages: tuple[Language, ...] = DEFAULT_LANGUAGES,
+) -> list[str]:
+    """返回解释探针缺少显式键值的语言目录。
+
+    F0 为所有本体语言生成完整的键集合。部分旧说明的语义仍需要 F1
+    逐语言审校，因此另行记录审校清单；语义审校不能伪装成结构性缺键。
     """
 
-    return {"simp_chinese": pair[0], "english": pair[1]}.get(language.directory, pair[1])
+    required = set(_localization_keys())
+    # 所有当前锁定语言均有显式源文本；若新增语言没有草稿，才算结构回退。
+    return sorted(
+        language.directory
+        for language in languages
+        if language.directory not in {"english", "simp_chinese"}
+        and (language.directory not in _DRAFT_SENTENCE or not required)
+    )
+
+
+def localization_review_languages(
+    languages: tuple[Language, ...] = DEFAULT_LANGUAGES,
+) -> list[str]:
+    """返回仍需 F1 术语与语境审校的候选草稿语言。"""
+
+    return sorted(
+        language.directory
+        for language in languages
+        if language.directory not in {"english", "simp_chinese"}
+    )
+
+
+def _localization_keys() -> tuple[str, ...]:
+    """返回所有基础和扩展解释键，供结构覆盖与回退计算共用。"""
+
+    keys = {
+        "title",
+        "config",
+        "off",
+        "ai",
+        "human",
+        "risk",
+        "no_risk",
+        "hold",
+        "no_hold",
+        "exposure",
+        "no_exposure",
+        "active",
+        "inactive",
+        "default",
+        "not_default",
+        "rules",
+        "boundary",
+        "reform_fragile",
+        "reform_not_fragile",
+        "reform_opportunity",
+        "reform_no_opportunity",
+        "market_rules",
+        "security_rules",
+        "economy_rules",
+        "diplomacy_rules",
+        "subjects_rules",
+    }
+    return tuple(sorted(keys))
 
 
 def _choice(condition: str, yes: str, no: str) -> str:
@@ -57,20 +190,32 @@ def _script(policy: decisions.Policy, extra: decisions.Extensions) -> str:
     body += f"    custom_tooltip = {PREFIX}_rules\n"
     if extra.reform_enabled:
         body += "    if = { limit = { is_ai = yes }\n"
-        body += _choice("sitai_reform_fragile = yes", "reform_fragile", "reform_not_fragile")
         body += _choice(
-            "sitai_reform_opportunity = yes", "reform_opportunity", "reform_no_opportunity"
+            "sitai_reform_fragile = yes", "reform_fragile", "reform_not_fragile"
+        )
+        body += _choice(
+            "sitai_reform_opportunity = yes",
+            "reform_opportunity",
+            "reform_no_opportunity",
         )
         body += "    }\n"
     if extra.market_enabled:
         body += f"    custom_tooltip = {PREFIX}_market_rules\n"
     if extra.security_enabled:
         body += f"    custom_tooltip = {PREFIX}_security_rules\n"
+    if extra.economy_enabled:
+        body += f"    custom_tooltip = {PREFIX}_economy_rules\n"
+    if extra.diplomacy_enabled:
+        body += f"    custom_tooltip = {PREFIX}_diplomacy_rules\n"
+    if extra.subjects_enabled:
+        body += f"    custom_tooltip = {PREFIX}_subjects_rules\n"
     body += f"    custom_tooltip = {PREFIX}_boundary\n"
     return f"{PREFIX} = {{\n    scope = country\n    effect = {{\n{body}    }}\n}}\n"
 
 
-def _localization(policy: decisions.Policy, extra: decisions.Extensions) -> dict[str, str]:
+def _localization(
+    policy: decisions.Policy, extra: decisions.Extensions
+) -> dict[str, str]:
     state_zh = "启用" if policy.enabled else "关闭"
     state_en = "enabled" if policy.enabled else "disabled"
     config_zh = (
@@ -176,12 +321,34 @@ def _localization(policy: decisions.Policy, extra: decisions.Extensions) -> dict
             f"security：防御条约/联盟 {extra.security_commitment_bonus:g}，邻国征服/附庸风险 {extra.security_threat_bonus:g}，只取最高理由；进攻方反向。面板缺少博弈双方，不声称当前贡献。",
             f"security: defense treaty/alliance {extra.security_commitment_bonus:g}, threatened-neighbor defense {extra.security_threat_bonus:g}; maximum reason only, opposite sign for attacker. No current contribution without play-side context.",
         )
+    for key in ("economy_rules", "diplomacy_rules", "subjects_rules"):
+        if getattr(extra, key.removesuffix("_rules") + "_enabled"):
+            rows[key] = (
+                _MODULE_LOCALIZATION[key]["simp_chinese"],
+                _MODULE_LOCALIZATION[key]["english"],
+            )
+    drafts = {
+        language.directory: _draft_localization(language, rows)
+        for language in DEFAULT_LANGUAGES
+    }
     result = {}
     for language in DEFAULT_LANGUAGES:
         lines = [f"{language.header}:"]
         for key, pair in rows.items():
             # 游戏本地化使用带引号单行文本；按 JSON 的共同转义子集处理引号与换行。
-            value = json.dumps(_localized(pair, language), ensure_ascii=False)
+            draft = drafts.get(language.directory, {}).get(key)
+            value = json.dumps(
+                _MODULE_LOCALIZATION[key].get(language.directory, pair[1])
+                if key in _MODULE_LOCALIZATION
+                else (
+                    pair[0]
+                    if language.directory == "simp_chinese"
+                    else pair[1]
+                    if language.directory == "english"
+                    else draft or pair[1]
+                ),
+                ensure_ascii=False,
+            )
             lines.append(f" {PREFIX}_{key}:0 {value}")
         result[localization_path(language, PREFIX)] = "\n".join(lines) + "\n"
     return result
@@ -244,7 +411,8 @@ def _extend_country_panel(text: str) -> str:
     starts = [
         index
         for index in range(len(tokens) - 2)
-        if [token.value for token in tokens[index : index + 3]] == ["type", "country_panel", "="]
+        if [token.value for token in tokens[index : index + 3]]
+        == ["type", "country_panel", "="]
     ]
     if len(starts) != 1 or any(token.value.strip('"') == PREFIX for token in tokens):
         raise ValueError("国家面板底本类型不唯一、已注入或接口发生变化")
@@ -300,17 +468,44 @@ def attach(
             "path": PANEL,
             "source_sha256": hashlib.sha256(panel_bytes).hexdigest(),
             "normalized_sha256": hashlib.sha256(panel.encode("utf-8")).hexdigest(),
-            "generated_sha256": hashlib.sha256(files[PANEL].encode("utf-8")).hexdigest(),
+            "generated_sha256": hashlib.sha256(
+                files[PANEL].encode("utf-8")
+            ).hexdigest(),
             "compatibility": "overrides_native_country_panel",
         },
         "fiscal": asdict(policy),
         "extensions": asdict(extra),
     }
+    localization = metadata.setdefault("localization", {})
+    production_fallback = sorted(
+        set(
+            localization.get(
+                "production_fallback_languages",
+                localization.get("fallback_languages", []),
+            )
+        )
+    )
+    explanation_fallback = localization_fallback_languages()
+    localization["production_fallback_languages"] = production_fallback
+    localization["explanation_fallback_languages"] = explanation_fallback
+    localization["explanation_review_languages"] = localization_review_languages()
+    localization["fallback_languages"] = sorted(
+        set(production_fallback) | set(explanation_fallback)
+    )
+    localization["fallback_policy"] = (
+        "explicit-production-and-explanation-fallbacks"
+        if localization["fallback_languages"]
+        else "none"
+    )
     metadata["source_fingerprint"]["explanation_generator_sha256"] = hashlib.sha256(
         Path(__file__).read_bytes()
     ).hexdigest()
-    metadata["source_fingerprint"]["country_panel_sha256"] = hashlib.sha256(panel_bytes).hexdigest()
-    files[".metadata/metadata.json"] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
+    metadata["source_fingerprint"]["country_panel_sha256"] = hashlib.sha256(
+        panel_bytes
+    ).hexdigest()
+    files[".metadata/metadata.json"] = (
+        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
+    )
     return files
 
 
@@ -322,7 +517,9 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
     metadata["id"] = "sitai.explanation-probe"
     metadata["name"] = "Situated AI - A5 未验证解释探针"
     metadata["game_custom_data"]["explanation_probe"]["variant"] = variant
-    files[".metadata/metadata.json"] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
+    files[".metadata/metadata.json"] = (
+        json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
+    )
     files["README.md"] = (
         "A5 未验证解释探针 / Unverified A5 explanation probe\n\n"
         "本 ZIP 自包含所选生产变体与只读说明组件；只挂载这一包，不与生产包或其他变体并挂。"
@@ -340,14 +537,20 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
         + files["README.md"]
     )
     return distribution.write_zip(
-        files, destination, generation={"purpose": "a5-explanation-instrument", "variant": variant}
+        files,
+        destination,
+        generation={"purpose": "a5-explanation-instrument", "variant": variant},
     )
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, required=True, help="隔离实验 ZIP 输出路径")
-    parser.add_argument("--variant", choices=("current", "control", "disabled"), default="disabled")
+    parser.add_argument(
+        "--output", type=Path, required=True, help="隔离实验 ZIP 输出路径"
+    )
+    parser.add_argument(
+        "--variant", choices=("current", "control", "disabled"), default="disabled"
+    )
     args = parser.parse_args(argv)
     try:
         target = package(args.output, variant=args.variant)

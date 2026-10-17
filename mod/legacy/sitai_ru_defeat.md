@@ -96,7 +96,7 @@
 | `country_tag` | `RUS` | JE 的单国门（c:RUS ?= this）。原版用法：country_definitions 里的 RUS。 |
 | `trigger` | `on_capitulation` | 路径①的挂载点：原版 on_action 名（`common/on_actions/00_code_on_actions.txt:4214`，Root = 投降国本身）。⚠️ 名字在池里 ≠ 接线正确：`common/on_actions` **不在反解表**里（src/pdx/modgen.py 的 `_FACT_READERS` 只有七类），这份产物的正确性由 tests/test_modgen.py 的用例看守（缺口如实记在报告里）。 |
 | `trigger` | `on_wargoal_enforced` | 路径②的挂载点：原版 on_action 名（`common/on_actions/00_code_on_actions.txt:6288`；`:6259` scope:target = 被强制执行的一方、`:6298` 给 root（赢家）写 recently_won_war）。池子与缺口同上一条。 |
-| `trigger` | `on_actions` | 我们给原版钩子**追加的字段名**（不是 effect 块）：官方口径 research/official-docs/game/common/on_actions/_on_actions.md:115 写明不能给已有 effect 块的 on_action 再追加 effect 块，`:117-128` 给的就是这个字段；原版自己也用它（00_code_on_actions.txt:125 等 11 处），所以它在词汇表池里、闸门 ② 能核。 |
+| `trigger` | `on_actions` | 我们给原版钩子**追加的字段名**（不是 effect 块）：官方口径 game/common/on_actions/_on_actions.md:115 写明不能给已有 effect 块的 on_action 再追加 effect 块，`:117-128` 给的就是这个字段；原版自己也用它（00_code_on_actions.txt:125 等 11 处），所以它在词汇表池里、闸门 ② 能核。 |
 | `modifier_field` | `country_legitimacy_base_add` | 合法性修正字段。原版 `common/static_modifiers/**` 下 157 处（`common/**` 全树 173 处），档位 ±5 / ±10 / ±20 / ±50（00_code_static_modifiers.txt:322-353 等）。 |
 | `modifier_field` | `interest_group_ig_landowners_pol_str_mult` | 贵族政治力量。原版 `common/static_modifiers/**` 下 26 处（全树 41 处）：+0.03（4 处，00_ip3_04_modifiers.txt:334、:341、:349、:357；该字段没有 -0.03）、-0.75（content_1_modifiers.txt:1465 幕府被迫开国）。 |
 | `modifier_field` | `country_loan_interest_rate_add` | 借债利率。原版**国家修正那一侧**（`common/static_modifiers/**`）实测只有一处：00_code_static_modifiers.txt:12 的 `base_values` 全局基准 +0.2（是全局基准的一部分，不是某个事件修正的档位）；**范围之外另算**：`common/**` 全树 **12 处**（含 `modifier_type_definitions` 定义行）/ **11 处**（不含）—— 口径与查法见 `mod/data/cn_intervention.toml:289`。 |

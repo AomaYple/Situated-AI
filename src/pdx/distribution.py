@@ -175,7 +175,13 @@ def payloads(files: Mapping[str, str]) -> dict[str, bytes]:
         if name.casefold() == "distribution-manifest.json":
             raise ValueError("交付清单文件名为保留名称")
         path = PurePosixPath(name)
-        if not name or path.is_absolute() or ".." in path.parts or "\\" in name or ":" in name:
+        if (
+            not name
+            or path.is_absolute()
+            or ".." in path.parts
+            or "\\" in name
+            or ":" in name
+        ):
             raise ValueError(f"非法交付路径：{name!r}")
         if path.as_posix() != name:
             raise ValueError(f"交付路径必须规范化：{name!r}")
@@ -202,7 +208,10 @@ def payloads(files: Mapping[str, str]) -> dict[str, bytes]:
 
 
 def write_zip(
-    files: Mapping[str, str], destination: Path, *, generation: Mapping[str, object] | None = None
+    files: Mapping[str, str],
+    destination: Path,
+    *,
+    generation: Mapping[str, object] | None = None,
 ) -> Path:
     """先完成并核验临时 ZIP，再原子替换目标；不修改仓库产物。"""
     data = payloads(files)
@@ -258,7 +267,9 @@ def write_zip(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
     )
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=destination.parent, suffix=".zip", delete=False) as stream:
+    with tempfile.NamedTemporaryFile(
+        dir=destination.parent, suffix=".zip", delete=False
+    ) as stream:
         temporary = Path(stream.name)
     try:
         with zipfile.ZipFile(
@@ -294,22 +305,37 @@ def package_inputs(
     if variant == "control":
         policy = replace(policy, enabled=True, neutrality=0, aggression=0)
         extensions = replace(
-            extensions, reform_enabled=False, market_enabled=False, security_enabled=False
+            extensions,
+            reform_enabled=False,
+            market_enabled=False,
+            security_enabled=False,
+            economy_enabled=False,
+            diplomacy_enabled=False,
+            subjects_enabled=False,
         )
     elif variant == "disabled":
         policy = replace(policy, enabled=False)
         extensions = replace(
-            extensions, reform_enabled=False, market_enabled=False, security_enabled=False
+            extensions,
+            reform_enabled=False,
+            market_enabled=False,
+            security_enabled=False,
+            economy_enabled=False,
+            diplomacy_enabled=False,
+            subjects_enabled=False,
         )
     elif variant != "current":
         policy = replace(
             policy,
-            enabled=variant in {"complete", "fiscal", "economy", "diplomacy", "subjects", "full"},
+            enabled=variant
+            in {"complete", "fiscal", "economy", "diplomacy", "subjects", "full"},
             aggression=0,
             package=replace(
                 policy.package,
                 status="candidate" if variant == "full" else "experimental",
-                product_version="1.0.0" if variant == "full" else policy.package.product_version,
+                product_version="1.0.0"
+                if variant == "full"
+                else policy.package.product_version,
             ),
         )
         extensions = replace(
@@ -325,8 +351,29 @@ def package_inputs(
     files = (
         current
         if variant == "current"
-        else decisions.build(policy, extensions=extensions, complete_localization=full_localization)
+        else decisions.build(
+            policy, extensions=extensions, complete_localization=full_localization
+        )
     )
+    if variant == "full":
+        metadata = json.loads(files[".metadata/metadata.json"])
+        localization = metadata.setdefault("localization", {})
+        localization["production_fallback_languages"] = list(
+            localization.get("production_fallback_languages", [])
+        )
+        localization["explanation_fallback_languages"] = (
+            explanation_probe.localization_fallback_languages()
+        )
+        localization["explanation_review_languages"] = (
+            explanation_probe.localization_review_languages()
+        )
+        localization["fallback_languages"] = sorted(
+            set(localization["production_fallback_languages"])
+            | set(localization["explanation_fallback_languages"])
+        )
+        files[".metadata/metadata.json"] = (
+            json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
+        )
     modules = json.loads(files[".metadata/metadata.json"])["enabled_modules"]
     files["README.md"] = player_guide(policy, extensions, modules, variant=variant)
     return policy, extensions, files
@@ -353,7 +400,9 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
                 if key not in {"package", "source_sha256"}
             },
             "extensions": {
-                key: value for key, value in asdict(extensions).items() if key != "source_sha256"
+                key: value
+                for key, value in asdict(extensions).items()
+                if key != "source_sha256"
             },
         },
     )

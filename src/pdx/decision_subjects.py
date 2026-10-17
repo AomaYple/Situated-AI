@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import math
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+
+import tomllib
 
 SOURCE = Path(__file__).parents[2] / "mod" / "decisions" / "subjects.toml"
 
@@ -43,7 +44,10 @@ def load(source: Path = SOURCE) -> SubjectsPolicy:
         for v in numbers
     ):
         raise ValueError("宗属模块参数必须是有限数值")
-    if not 0 <= values["protected_bonus"] <= 25 or not 0 <= values["autonomy_bonus"] <= 25:
+    if (
+        not 0 <= values["protected_bonus"] <= 25
+        or not 0 <= values["autonomy_bonus"] <= 25
+    ):
         raise ValueError("宗属模块参数超出保守范围")
     return SubjectsPolicy(
         values["enabled"],
@@ -59,7 +63,7 @@ def subject_value_delta(
     if not policy.enabled or already_subject is None or protected is None:
         return 0.0
     if not isinstance(already_subject, bool) or not isinstance(protected, bool):
-        raise ValueError("宗属输入必须是布尔值")
+        raise TypeError("宗属输入必须是布尔值")
     return (policy.protected_bonus if protected else 0.0) + (
         policy.autonomy_bonus if already_subject else 0.0
     )
@@ -71,10 +75,12 @@ def triggers(policy: SubjectsPolicy | None = None) -> str:
         return ""
     return """# 由 pdx.decision_subjects 生成；不创造宗属资格或强制独立。
 sitai_subject_protected = {
+    is_ai = yes
     is_subject_of = scope:target_country
     scope:target_country = { is_at_war = no }
 }
 sitai_subject_overlord_protected = {
+    is_ai = yes
     scope:overlord = { is_at_war = no }
     is_subject_of = scope:overlord
 }
@@ -86,8 +92,8 @@ def subject_addition(policy: SubjectsPolicy | None = None) -> str:
     if not policy.enabled:
         return ""
     return f"""\t\t# SITAI SUBJECTS BEGIN
-\t\tif = {{ limit = {{ sitai_subject_protected = yes }} add = {policy.protected_bonus:g} }}
-\t\tif = {{ limit = {{ scope:target_country = {{ is_subject_of = root }} }} add = {policy.autonomy_bonus:g} }}
+\t\tif = {{ limit = {{ ROOT ?= {{ is_ai = yes }} sitai_subject_protected = yes }} add = {policy.protected_bonus:g} }}
+\t\tif = {{ limit = {{ ROOT ?= {{ is_ai = yes }} scope:target_country = {{ is_subject_of = root }} }} add = {policy.autonomy_bonus:g} }}
 \t\t# SITAI SUBJECTS END
 """
 
@@ -97,6 +103,6 @@ def become_subject_addition(policy: SubjectsPolicy | None = None) -> str:
     if not policy.enabled:
         return ""
     return f"""\t\t# SITAI SUBJECTS BEGIN
-\t\tif = {{ limit = {{ sitai_subject_overlord_protected = yes }} add = {policy.protected_bonus:g} }}
+\t\tif = {{ limit = {{ ROOT ?= {{ is_ai = yes }} sitai_subject_overlord_protected = yes }} add = {policy.protected_bonus:g} }}
 \t\t# SITAI SUBJECTS END
 """
