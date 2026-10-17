@@ -60,6 +60,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tools/probe/decision_behavior.py` | 固定观察者存档的单字段外交/市场两臂；创建机会与AI选择分别统计 |
 | `tools/probe/decision_compare.py` | 检查neutrality单字段、完整检查点、版本和其他源一致，再核实际评分差分 |
 | `tools/probe/market_compare.py` | 同依赖输入、有资格窗口的支持评分方向与实际角色；不判总体质量通过 |
+| `tools/probe/f1_consumer_audit.py` | 从锁定底本与精简 AI 面快照生成七模块字段消费者静态台账；不证明运行期行为质量 |
 | `tools/probe/decision_stability.py` | 原版/财政/政治/组合的自然长局、存档迁移与可选后台引擎任务计时 |
 | `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期；安装版简体中文缺键时显式加 `--localization-baseline`，不豁免错误门禁 |
 | `tools/probe/save_migration_audit.py` | 递归盘点 `.v3` 版本、观察者状态、空规则和 SHA-256；只报告可用于跨版本升级实验的输入，不执行迁移 |
