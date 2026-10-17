@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -76,7 +77,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     quality = (root / "docs/design/exec/M3-可测性清单.md").read_text(encoding="utf-8")
     # 保护全目标先实现、再集中验证的依赖及质量门，而非旧附件排期。
-    assert "全目标实现优先与集中验证计划 · 4.0" in plan
+    assert "全目标实现优先与集中验证计划 · 5.0" in plan
     phases = [
         "## 3. F0：最终目标完整实现",
         "## 4. F1：集中验证与修正",
@@ -97,7 +98,22 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "原账本停止条件保持" in methods
     assert "质量观测边界" in quality
     assert "unsupported" in quality
-    assert "全目标实现优先与集中验证计划 4.0" in checklist
+    milestones = re.findall(r"^\| (V0\.[1-7]|V1\.0) \| ([^|]+?) \|", plan, re.MULTILINE)
+    assert milestones == [
+        ("V0.1", "财政存续"),
+        ("V0.2", "外部安全与承诺"),
+        ("V0.3", "市场依赖"),
+        ("V0.4", "政治约束与身份偏好"),
+        ("V0.5", "经济与行政能力"),
+        ("V0.6", "外交目标与战争负担"),
+        ("V0.7", "宗主国与属国关系"),
+        ("V1.0", "七模块组合"),
+    ]
+    # 防止当前清单仍派发上一版本的队列，或漏掉新增领域。
+    implementation_queue = re.findall(r"^### (C[0-7]) ·", plan, re.MULTILINE)
+    assert implementation_queue == [f"C{index}" for index in range(8)]
+    assert re.findall(r"^\| \*\*F0-(C[0-7]) ", checklist, re.MULTILINE) == implementation_queue
+    assert "全目标实现优先与集中验证计划 5.0" in checklist
     assert "整个 Mod 尚未完成" in checklist
 
     scan = root / "tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json"

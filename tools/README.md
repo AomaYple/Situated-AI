@@ -567,7 +567,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 
 分析、快照、三平台工具链、测试和实机仪器的契约见 [工程基线](../docs/design/exec/工程基线-1.0.md)。有日期的速度、内存、事故与修复读数见 [审计索引](../docs/audits/README.md)；2026-10-03 的收尾只描述当时范围，不承诺工具永远没有缺陷。
 
-Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工作清单.md)，历史研究编号保留在 [backlog](../docs/design/backlog.md)。按 [Mod 全目标实现优先与集中验证计划 4.0](../docs/design/exec/mod重设计-实施计划.md)推进；工具输出、模拟与 CI 不替代机制验收。
+Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工作清单.md)，历史研究编号保留在 [backlog](../docs/design/backlog.md)。按 [Mod 全目标实现优先与集中验证计划 5.0](../docs/design/exec/mod重设计-实施计划.md)推进；工具输出、模拟与 CI 不替代机制验收。
 
 ### 完整实验候选交付
 
