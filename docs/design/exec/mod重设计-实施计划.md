@@ -138,6 +138,8 @@ F0 出口后，每次实机先使用现有 `pdx.game_run` 核对游戏版本、�
 
 新增 `tools/probe/f1_full_smoke.py` 作为可复现薄入口：默认只挂载 `full` 生产候选，显式 `--resource-baseline` / `--localization-baseline` 才生成诊断候选；每次写入 `f1_context.json`，声明候选类型、基线范围和 `behavior_quality=not_evaluated`。入口复用现有 `pdx.game_run`，离线契约测试 `tests/test_f1_full_smoke.py` 已通过 13 项。后续从联合诊断建立的安全环境基线继续单模块真实消费者、生命周期、语言显示、玩家/保存重载、组合与 M3 行为验证；不把无错误启动或评分变化当作行为质量证据。
 
+**2026-10-17 F1 单模块实机补充**：在同一资源与本地化联合诊断基线下，`economy`、`diplomacy`、`subjects` 三个新增模块分别完成单模块启动、观察者、快捷键 `5`、空格、后台推进和恢复，三次均 `ok=true`、Mod/引擎错误为 0、`cleanup_errors=[]`。证据目录为 `tools/out/f1-module-smoke/economy/20261017-181510/`、`.../diplomacy/20261017-182002/` 和 `.../subjects/20261017-182427/`。这些结果只建立单模块运行期安全边界，不证明真实消费者字段、方向/量纲或 AI 行为质量；下一步先核对策略字段在当前引擎中的实际消费者，再派发有明确因果问题的行为实验。新增入口 `tools/probe/f1_module_smoke.py` 与 `tests/test_f1_module_smoke.py` 已加入，和 full 入口测试合计 16 项受影响测试通过。
+
 ### 4.1 最少重复的验证顺序
 
 1. **静态与输入先行**：只重验相对 F0 已改变的源/接口和输入依赖；不在每局游戏前重复整套工程回归。先生成已支持的输入目录核验结果，正式资格不足时具体记录拒绝，同时判断独立诊断。
