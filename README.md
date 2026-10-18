@@ -4,7 +4,7 @@ Victoria 3 的 AI 相关 mod 开发项目。
 
 开发与维护见 [CONTRIBUTING.md](CONTRIBUTING.md)，编码代理的项目入口见 [AGENTS.md](AGENTS.md)。两类开发原则分别见 [工程原则](docs/principles/工程原则.md)和 [Mod 开发原则](docs/principles/Mod开发原则.md)。
 
-接手任务时先读 [AGENTS.md](AGENTS.md) 的权威层级和任务路由，再读 [CONTRIBUTING.md](CONTRIBUTING.md) 的验证与交付流程，随后按 [工程基线](docs/design/exec/工程基线-1.0.md)、[Mod 全目标实现优先与集中验证计划 5.0](docs/design/exec/mod重设计-实施计划.md) 和 [当前工作清单](docs/design/当前工作清单.md) 工作。仓库没有 CONTRIBUTE.md；规则、计划、结果和历史文档按各自职责维护，不在 README 里复制第二套规则。
+接手任务时先读 [AGENTS.md](AGENTS.md) 的权威层级和任务路由，再读 [CONTRIBUTING.md](CONTRIBUTING.md) 的验证与交付流程，随后按 [工程基线](docs/design/exec/工程基线-1.0.md)、[Mod 全目标实现优先与集中验证计划 5.1](docs/design/exec/mod重设计-实施计划.md) 和 [当前工作清单](docs/design/当前工作清单.md) 工作。仓库没有 CONTRIBUTE.md；规则、计划、结果和历史文档按各自职责维护，不在 README 里复制第二套规则。
 
 > **当前状态**：工程底座继续复用，包括 **21 篇的 mod 开发知识库**、
 > **可复现统计数据的 Python 工具链**和当前的**实验性 mod 实现**：
@@ -182,7 +182,7 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 | 测试 | **3996 条**用例、128 个测试文件；上一轮四模块交付的完整 `v3 cov` 为 3941 passed、20 skipped、1743 subtests passed，pytest 901.53 秒；当前 F0 七模块批次与 F1 入口收口的收集数为 3996 项，相关定向测试已按实际批次记录，完整离线回归结果和任何失败按实际批次追加。默认 n-auto 使用自适应 worker；跳过项为 Windows 符号链接权限、FIFO 和缺失引擎日志；工程通过不代表 Mod 行为通过 |
 | 测试文件 | **128 个测试文件**（`tests/test_*.py`） |
 | 覆盖率 | 本地完整 `v3 cov` 同时检查整体 86% 和 11 个核心模块下限；本批实际读数见上行与结果页。无游戏 CI 验证另一测试范围，不替代装有游戏的本地覆盖率验收 |
-| Mod 制作提速 | [Mod 制作与验证提速协议](docs/design/exec/速度优化计划-正确性优先.md)是执行效率附件；先按[主计划 5.0](docs/design/exec/mod重设计-实施计划.md)完成 F0 七模块候选，再按 F1/F2 和 V0.1–V0.7/V1.0、M1–M4 集中验证并逐阶段交付可玩版本；已验收的工程提速和历史测量见[速度执行记录](docs/audits/2026-10-10-speed-execution.md)与[工程提速复核](docs/audits/2026-10-11-工程提速.md)，不把历史读数当作新收益 |
+| Mod 制作提速 | [Mod 制作与验证提速协议](docs/design/exec/速度优化计划-正确性优先.md)是执行效率附件；先按[主计划 5.1](docs/design/exec/mod重设计-实施计划.md)完成 F0 七模块候选，再按 F1/F2 和 V0.1–V0.7/V1.0、M1–M4 集中验证并逐阶段交付可玩版本；已验收的工程提速和历史测量见[速度执行记录](docs/audits/2026-10-10-speed-execution.md)与[工程提速复核](docs/audits/2026-10-11-工程提速.md)，不把历史读数当作新收益 |
 | 文件规模 | **3,964** 个 `.txt` / `.gui` 文件（`game\` 下 `.txt` 3,760 + `.gui` 204）+ **1,878** 个本地化 `.yml`；2026-10-10 由 `pdx.scan.walk_files` 核对，文件计数不等于运行期语义已验证 |
 | 范围声明 | **不说「全量」** —— 当前安装中 138 个 `common\` 子目录进入文件分析，运行期枚举另有历史日志背书；「所有相关信息」没有边界、无法证伪。本仓库只声明**能回答哪些任务**，见 [`tools/README.md`](tools/README.md) 末尾的「已知边界」 |
 
@@ -223,7 +223,7 @@ Situated AI/
 
 清理后完整工程回归见 [2026-10-10 过时内容清理](docs/audits/2026-10-10-stale-cleanup.md)。此前的分支覆盖率 88.79%、核心模块下限与三平台离线 CI 记录见 [仓库维护](docs/audits/2026-10-10-repository-maintenance.md)，这些测量属于各自记录的版本，不能当作本次重新测量。当前测试收集与机械统计由仓库测试持续核对。
 
-工程底座继续复用。按主计划 5.0，七模块 F0 离线实现、仲裁、生命周期、语言候选、冻结包和工程门禁已收口，F1 正在集中实机验证与修正。英语观察者检查点语言烟测已完成；简体中文新局仍被原版动态 `capital` 目标错误拦截，七模块真实消费者、行为质量和全语言质量仍未验收。current 源仍为财政开启、外部/市场/政治关闭；complete 显式隔离四模块，full 显式标为七模块 candidate。实际实现、检查和实机边界见[完整候选结果](docs/design/exec/完整候选-结果.md)，当前队列见[工作清单](docs/design/当前工作清单.md)。
+工程底座继续复用。按主计划 5.1，七模块 F0 离线实现、仲裁、生命周期、语言候选、冻结包和工程门禁已收口，F1 正在集中实机验证与修正。英语观察者检查点语言烟测已完成；简体中文新局仍被原版动态 `capital` 目标错误拦截，七模块真实消费者、行为质量和全语言质量仍未验收。current 源仍为财政开启、外部/市场/政治关闭；complete 显式隔离四模块，full 显式标为七模块 candidate。实际实现、检查和实机边界见[完整候选结果](docs/design/exec/完整候选-结果.md)，当前队列见[工作清单](docs/design/当前工作清单.md)。
 
 本次原则拆分和文档治理见 [2026-10-10 文档治理记录](docs/audits/2026-10-10-document-governance.md)，其他日期记录见 [工程审计索引](docs/audits/README.md)。工程通过不能替代 Mod 行为通过；Windows GUI 有实机证据，macOS/Linux 保持代码、CI 和无头验证口径。
 
