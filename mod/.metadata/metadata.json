@@ -133,11 +133,45 @@
       "save_compatibility": "new-game-only"
     }
   },
+  "information_contract": {
+    "schema": 1,
+    "domains": [
+      "political",
+      "fiscal",
+      "economy",
+      "market",
+      "diplomacy",
+      "subjects",
+      "military",
+      "geography",
+      "identity"
+    ],
+    "states": [
+      "discovered",
+      "runtime_readable",
+      "derived",
+      "consumer_mapped",
+      "behavior_verified",
+      "unsupported"
+    ],
+    "impact_levels": {
+      "A": "direct",
+      "B": "strategy",
+      "C": "qualification",
+      "D": "explanation",
+      "E": "no_consumer"
+    },
+    "unknown_policy": "preserve_unknown_and_fallback_vanilla",
+    "domain_list_kind": "target_scope_not_implementation_claim",
+    "arbitration": "see_candidate_decision_rules_contract",
+    "player_boundary": "is_ai_only",
+    "behavior_quality": "not_evaluated_until_f1"
+  },
   "source_fingerprint": {
     "fiscal_source_sha256": "ea6fc9894095c97657b1c5bc409128aba0fe4dc394c34bb7a1cf75fe13f1f751",
     "extensions_source_sha256": "f03fe932827d03d3a040c6d3b703386acbf0133cbd1055df09e7a5509de99c24",
     "baseline_sha256": "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
-    "generator_sha256": "cc86b108a8ca0e19b8c5f62d086a822f09d65481f2db43815e184f64911491b2"
+    "generator_sha256": "6361b4692e21c3f083c1f497599f92d1e842205be488c3ef86d96bc94b7f34fe"
   },
   "game_custom_data": {
     "multiplayer_synchronized": true

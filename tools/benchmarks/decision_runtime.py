@@ -16,6 +16,7 @@ from pdx import (
     config,
     decision_probe,
     decisions,
+    distribution,
     extension_probe,
     game_auto,
     game_run,
@@ -51,6 +52,9 @@ def main() -> int:
     parser.add_argument("--reform-logs", type=Path, help="额外测真实政治日志解析")
     parser.add_argument(
         "--localization-baseline", action="store_true", help="额外测原版中文缺键仪器生成"
+    )
+    parser.add_argument(
+        "--integrated", action="store_true", help="额外测锁定游戏原件的全域规则、生成和标准包"
     )
     args = parser.parse_args()
     if args.size_mib <= 0 or args.rounds <= 0:
@@ -108,6 +112,32 @@ def main() -> int:
             report["localization_baseline_build"] = measure(
                 lambda: decision_probe.build_localization_baseline(config.GAME), args.rounds
             )
+        if args.integrated:
+            # 先独立生成两次校验全部内容，再计时；不把同一产物自比较当确定性。
+            first = distribution.package_inputs("integrated")[2]
+            second = distribution.package_inputs("integrated")[2]
+            if first != second:
+                raise AssertionError("完整候选重复生成的内容不一致")
+            report["integrated_payload_sha256"] = hashlib.sha256(
+                b"".join(
+                    name.encode() + b"\0" + text.encode() + b"\0"
+                    for name, text in sorted(first.items())
+                )
+            ).hexdigest()
+            report["integrated_payload_bytes"] = sum(len(text.encode()) for text in first.values())
+            del first, second
+            report["integrated_rules_load"] = measure(decisions.decision_rules.load, args.rounds)
+            report["integrated_adapters_load"] = measure(
+                decisions.decision_adapters.load, args.rounds
+            )
+            report["integrated_build"] = measure(
+                lambda: distribution.package_inputs("integrated"), args.rounds
+            )
+            package_path = Path(directory) / "integrated.zip"
+            report["integrated_standard_package"] = measure(
+                lambda: distribution.package(package_path, variant="integrated"), args.rounds
+            )
+            report["integrated_zip_sha256"] = hashlib.sha256(package_path.read_bytes()).hexdigest()
     game_run.write_json(args.output, report)
     print(args.output)
     return 0

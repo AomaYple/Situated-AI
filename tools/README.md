@@ -13,7 +13,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 ## 环境与安装
 
-游戏包使用 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认 `--variant disabled` 关闭全部七模块，生成全关安全包；实验候选显式选 `--variant current`，零策略偏置但保留财政生命周期的控制组显式选 `--variant control`。七模块标准候选使用 `--variant full`，默认只生成真正的 Mod 内容；只有需要解释仪器时才显式加 `--with-explanation-probe`，把未验收的国家面板候选临时附加到本次验证副本。三种基础变体和 `full` 都先核对仓库生成一致性，清单记录实际参数、探针开关和输入/生成器指纹；非法变体保全已有目标。当前产品状态为 `experimental`，生成包不代表 V0.1 或行为质量已验收。独立安全实机记录见 [A1 结果](../docs/design/exec/A1-结果.md)。
+游戏包使用 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认 `--variant disabled` 关闭全部七模块，生成全关安全包；实验候选显式选 `--variant current`，零策略偏置但保留财政生命周期的控制组显式选 `--variant control`。旧 5.1 七模块实验候选使用 `--variant full`，默认只生成真正的 Mod 内容；只有需要解释仪器时才显式加 `--with-explanation-probe`，把未验收的国家面板候选临时附加到本次验证副本。三种基础变体和 `full` 都先核对仓库生成一致性，清单记录实际参数、探针开关和输入/生成器指纹；非法变体保全已有目标。当前产品状态为 `experimental`，生成包不代表 V0.1 或行为质量已验收。独立安全实机记录见 [A1 结果](../docs/design/exec/A1-结果.md)。
 
 每个 ZIP 的 `README.md` 从变体转换后的实际参数和启用模块自动生成，含中英规则、安装、冲突和存档回退说明，标准包目录固定为 `Victoria 3/mod/Situated AI`，稳定 Mod ID 为 `sitai.decisions`；探针包使用 `sitai.explanation-probe`；`pdx.distribution.validate_package` 在发布前逐项校验清单、路径和 SHA-256，并拒绝含解释探针的标准发布包。它是随包使用说明，不是游戏内实时面板；全关包仍含默认策略底本，不能当作零 Mod 环境。验证与成本见 [A5 结果](../docs/design/exec/A5-结果.md)。
 
@@ -56,7 +56,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 ## 当前处境决策实验
 
-生产固定读取 `mod/decisions/` 下由 `pdx.decisions` 显式接入的五份 TOML（`fiscal.toml`、`extensions.toml`、`economy.toml`、`diplomatic_goals.toml`、`subjects.toml`）；旧 `mod/data/` 仅生成到 `mod/legacy/`。
+生产固定读取 `mod/decisions/` 下由 `pdx.decisions` 显式接入的七份 TOML（`fiscal.toml`、`extensions.toml`、`economy.toml`、`diplomatic_goals.toml`、`subjects.toml`、`information.toml`、`adapters.toml`；后两者仅 `integrated` 启用）；旧 `mod/data/` 仅生成到 `mod/legacy/`。
 下表中的生产实验入口复用 `pdx.game_run` 资源事务：跨进程互斥、隔离旧存档菜单、配置和存档原字节恢复、
 持续日志归档、启动期及模拟期进程采样。恢复指针与必要备份受事务管理，实验结束后核对恢复结果。旧阶段探针的部署和恢复契约见下文历史入口说明。
 
@@ -68,7 +68,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tools/probe/market_compare.py` | 同依赖输入、有资格窗口的支持评分方向与实际角色；不判总体质量通过 |
 | `tools/probe/f1_consumer_audit.py` | 从锁定底本与精简 AI 面快照生成七模块字段消费者静态台账；不证明运行期行为质量 |
 | `tools/probe/f1_field_observation.py` | F1 四个新增策略字段的隔离控制/候选实机探针；使用 `pdx.game_run`，记录策略牌与国家/博弈上下文，并可用 `--compare-control-report` / `--compare-candidate-report` 生成保守配对摘要；没有通用字段 getter 时保持 `runtime_field_value=unavailable`，不把策略持有或评分变化当行为质量 |
-| `tools/probe/f1_full_smoke.py` | F1 七模块标准 `full` Mod 的薄实机入口；默认只生成并挂载标准 Mod，`--with-explanation-probe` 才在本次候选中临时附加解释探针，诊断基线显式启用；`--language` 冻结已声明 GUI 语言，`--load-save` 仅接受合规观察者检查点，证据写入 `f1_context.json`，不证明翻译质量或 AI 行为质量 |
+| `tools/probe/f1_full_smoke.py` | F1 标准 Mod 薄实机入口；2.0 必须显式 `--variant integrated`，默认 `full` 保留历史七模块身份；默认只生成并挂载标准 Mod，`--with-explanation-probe` 才在本次候选中临时附加解释探针，诊断基线显式启用；`--language` 冻结已声明 GUI 语言，`--load-save` 仅接受合规观察者检查点，证据写入 `f1_context.json`，不证明翻译质量或 AI 行为质量 |
 | `tools/probe/decision_stability.py` | 原版/财政/政治/组合的自然长局、存档迁移与可选后台引擎任务计时 |
 | `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期；安装版简体中文缺键时显式加 `--localization-baseline`，不豁免错误门禁 |
 | `tools/probe/save_migration_audit.py` | 递归盘点 `.v3` 版本、观察者状态、空规则和 SHA-256；只报告可用于跨版本升级实验的输入，不执行迁移 |
@@ -321,7 +321,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 129 个测试文件、4004 条用例（2026-10-18 工作区口径）；本轮最终 `n-auto` 回归为 3984 passed、20 skipped、1743 subtests passed，用时 632.27 秒。F0 七模块批次的串行历史回归和本轮失败修复仍按各自日期记录；跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志。完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-18-f0-七模块离线实现出口收口)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
+当前收集 135 个测试文件、4249 条用例（2026-10-19 实测）；当前 F0 完整回归、覆盖率、资源与失败修复见[完整候选结果](../docs/design/exec/完整候选-结果.md#2026-10-19-f0-全域候选收口)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、缺失引擎日志等前提分类。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -587,7 +587,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 
 分析、快照、三平台工具链、测试和实机仪器的契约见 [工程基线](../docs/design/exec/工程基线-1.0.md)。有日期的速度、内存、事故与修复读数见 [审计索引](../docs/audits/README.md)；2026-10-03 的收尾只描述当时范围，不承诺工具永远没有缺陷。
 
-Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工作清单.md)，历史研究编号保留在 [backlog](../docs/design/backlog.md)。按 [Mod 全目标实现优先与集中验证计划 5.1](../docs/design/exec/mod重设计-实施计划.md)推进；工具输出、模拟与 CI 不替代机制验收。
+Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工作清单.md)，历史研究编号保留在 [backlog](../docs/design/backlog.md)。按 [Mod 全目标实现优先与集中验证计划 6.0](../docs/design/exec/mod重设计-实施计划.md)推进；旧 `full` 工具入口属于历史候选，工具输出、模拟与 CI 不替代机制验收。
 
 ### 完整实验候选交付
 
@@ -630,3 +630,11 @@ Python 版将这些流程集中为可测试的代码；速度执行记录收集 
 > （域 `doc_tables`），`v3 tables --offline` 只读快照与文档即可逐行核对
 > （`--write` 可按快照恢复）。CI 运行表格检查；pre-commit 只运行离线断言核验等静态检查，
 > 表格检查与 `v3 verify --from-snapshot` 各自负责不同的一致性范围。
+
+## 全量信息目录与声明规则增量
+
+`v3 information-catalog` 从锁定的本机游戏、Jomini 和 Clausewitz 根生成开发期静态信息目录及流式本地化键 JSONL。`--consumer-matrix-output` 输出同名候选关联，明确不代表真实消费者接通；作用域未审计时保持 unknown，读取失败不能静默视为完整。
+
+`v3 package --variant integrated --output tools/out/releases/situated-ai-integrated.zip` 生成包含声明规则的 2.0 开发候选。规则参数来源是 `mod/decisions/information.toml` 和 `mod/decisions/adapters.toml`，实际读取器、单位、领域开关、条件、优先级、原版字段、反例及源指纹写入 `.metadata/metadata.json` 的 `decision_rules`。相同声明同时生成游戏脚本和离线参考结果；同字段按优先级只执行一条规则。该增量无持久状态或世界扫描，保留原版资格与实际执行，默认无探针。`full` 保留旧七模块身份；生成成功不能单独证明 F0 工程出口、游戏行为改善或正式交付；当前冻结和验收见结果页。
+
+`v3 information-catalog --candidate-metadata "tools/out/f0-closeout/candidate-20261019/Situated AI/.metadata/metadata.json" --candidate-coverage-output tools/out/f0-closeout/candidate-coverage-20261019.json` 在同一次目录扫描中连接实际候选。输入必须有规则与适配模块、内部一致生成指纹；报告给出精确/祖先深度、规则自身读取依赖及未关联稳定 ID，不提升目录状态。输入与各输出路径必须不同；校验失败返回 2，保全先前报告且明确旧文件不属于本次。SHA 只用于内部一致和复现，不是来源签名。

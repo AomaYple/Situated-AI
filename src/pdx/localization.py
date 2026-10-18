@@ -173,11 +173,18 @@ def _unquote_loc_value(raw: str) -> str:
     return "".join(out)
 
 
-def parse_loc_entries(text: str) -> tuple[str, list[tuple[str, str]]]:
-    """解析本地化键和值，返回语言和键值对列表。"""
+def parse_loc_entries_with_lines(
+    text: str,
+) -> tuple[str, list[tuple[str, str, int]]]:
+    """解析本地化键、值和源行号，返回语言与出现记录。
+
+    行号属于审计信息，不能从 ``parse_loc_entries`` 的兼容返回值中删掉；
+    单独提供这个详细入口可以让全量目录按流式方式记录键级来源，而不改变
+    现有本地化摘要和生成器的接口。
+    """
     lang = "?"
-    entries: list[tuple[str, str]] = []
-    for line in text.splitlines():
+    entries: list[tuple[str, str, int]] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
@@ -191,8 +198,14 @@ def parse_loc_entries(text: str) -> tuple[str, list[tuple[str, str]]]:
         if m:
             key = m.group(1).strip()
             if key:
-                entries.append((key, _unquote_loc_value(m.group(3))))
+                entries.append((key, _unquote_loc_value(m.group(3)), line_number))
     return lang, entries
+
+
+def parse_loc_entries(text: str) -> tuple[str, list[tuple[str, str]]]:
+    """解析本地化键和值，返回语言和键值对列表。"""
+    lang, detailed = parse_loc_entries_with_lines(text)
+    return lang, [(key, value) for key, value, _line in detailed]
 
 
 def parse_loc_text(text: str) -> tuple[str, list[str]]:

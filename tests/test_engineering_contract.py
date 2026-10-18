@@ -77,9 +77,9 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     quality = (root / "docs/design/exec/M3-可测性清单.md").read_text(encoding="utf-8")
     # 保护全目标先实现、再集中验证的依赖及质量门，而非旧附件排期。
-    assert "全目标实现优先与集中验证计划 · 5.1" in plan
+    assert "全目标实现优先与集中验证计划 · 6.0" in plan
     phases = [
-        "## 3. F0：最终目标完整实现",
+        "## 3. F0：全目标完整实现",
         "## 4. F1：集中验证与修正",
         "## 5. F2：稳定性、性能与正式交付",
     ]
@@ -91,9 +91,9 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "先三次 vanilla 测噪声" in plan
     assert "安全诊断" in plan
     assert "尚未派发，属于执行遗漏" in plan
-    assert "最终目标与实现对照" in plan
+    assert "信息覆盖与决策消费者矩阵" in plan
     assert "fallback_languages" in plan
-    assert "全部语言翻译初稿" in plan
+    assert "为每种语言生成完整自有键" in plan
     assert "不创建另一套排期" in methods
     assert "原账本停止条件保持" in methods
     assert "质量观测边界" in quality
@@ -107,13 +107,13 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
         ("V0.5", "经济与行政能力"),
         ("V0.6", "外交目标与战争负担"),
         ("V0.7", "宗主国与属国关系"),
-        ("V1.0", "七模块组合"),
+        ("V1.0", "全域组合"),
     ]
     # 防止当前清单仍派发上一版本的队列，或漏掉新增领域。
-    implementation_queue = re.findall(r"^### (C[0-7]) ·", plan, re.MULTILINE)
-    assert implementation_queue == [f"C{index}" for index in range(8)]
-    assert re.findall(r"^\| \*\*F0-(C[0-7]) ", checklist, re.MULTILINE) == implementation_queue
-    assert "全目标实现优先与集中验证计划 5.1" in checklist
+    implementation_queue = re.findall(r"^### (C[0-9]) ·", plan, re.MULTILINE)
+    assert implementation_queue == [f"C{index}" for index in range(10)]
+    assert re.findall(r"^\| \*\*F0-(C[0-9]) ", checklist, re.MULTILINE) == implementation_queue
+    assert "全目标实现优先与集中验证计划 6.0" in checklist
     assert "整个 Mod 尚未完成" in checklist
 
     scan = root / "tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json"

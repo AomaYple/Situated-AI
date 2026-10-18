@@ -13,11 +13,13 @@ from tools.probe import f1_full_smoke
 pytestmark = pytest.mark.unit
 
 
-def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch):
+@pytest.mark.parametrize("variant", ["full", "integrated"])
+def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch, variant):
     monkeypatch.setattr(config, "OUT", tmp_path)
     monkeypatch.setattr(f1_full_smoke, "DEFAULT_OUTPUT", tmp_path / "f1")
 
     def package_inputs(_variant):
+        assert _variant == variant
         return "policy", "extensions", {"README.md": "full"}
 
     monkeypatch.setattr(f1_full_smoke.distribution, "package_inputs", package_inputs)
@@ -64,7 +66,7 @@ def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch):
         ),
     )
 
-    report = f1_full_smoke.run(output=tmp_path / "f1")
+    report = f1_full_smoke.run(output=tmp_path / "f1", variant=variant)
 
     assert report["ok"] is True
     source_names = captured["sources"]
@@ -79,7 +81,8 @@ def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch):
     assert context["behavior_quality"] == "not_evaluated"
     assert context["loaded_observer"] is False
     assert context["delivery_contract"]["install_directory"] == "Situated AI"
-    assert context["delivery_contract"]["variant"] == "full"
+    assert context["delivery_contract"]["variant"] == variant
+    assert context["candidate"] == variant
     assert written
     assert written[0].name == f1_full_smoke.distribution.INSTALL_DIRECTORY_NAME
 

@@ -22,8 +22,11 @@ from packaging.version import InvalidVersion, Version
 from . import (
     __version__,
     config,
+    decision_adapters,
     decision_diplomacy,
     decision_economy,
+    decision_interfaces,
+    decision_rules,
     decision_security,
     decision_subjects,
 )
@@ -63,6 +66,45 @@ SUPPORTED_PLATFORMS = frozenset({"windows", "macos", "linux"})
 LANGUAGES: dict[str, str] = {language.directory: language.header for language in DEFAULT_LANGUAGES}
 
 _DECISION_LOCALIZATION: dict[str, dict[str, str]] = {
+    "SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON": {
+        "english": "Homeland ties and feasible national priorities (candidate)",
+        "braz_por": "Laços com a pátria e prioridades nacionais viáveis (candidato)",
+        "french": "Liens avec la patrie et priorités nationales réalisables (candidat)",
+        "german": "Heimatbindungen und umsetzbare nationale Prioritäten (Kandidat)",
+        "japanese": "故郷との結び付きと実行可能な国家の優先事項（候補ルール）",
+        "korean": "본토 유대와 실행 가능한 국가 우선순위(후보 규칙)",
+        "polish": "Więzi z ojczyzną i wykonalne priorytety narodowe (kandydat)",
+        "russian": "Связи с родиной и осуществимые национальные приоритеты (кандидат)",
+        "simp_chinese": "本土联系与可行的国家优先事项（候选规则）",
+        "spanish": "Vínculos con la patria y prioridades nacionales viables (candidato)",
+        "turkish": "Anavatan bağları ve uygulanabilir ulusal öncelikler (aday)",
+    },
+    "SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON": {
+        "english": "Isolation and financial commitment costs (candidate)",
+        "braz_por": "Isolamento e custos de compromissos financeiros (candidato)",
+        "french": "Isolement et coûts des engagements financiers (candidat)",
+        "german": "Isolation und Kosten finanzieller Verpflichtungen (Kandidat)",
+        "japanese": "孤立と財政上の負担（候補ルール）",
+        "korean": "고립과 재정적 부담 비용(후보 규칙)",
+        "polish": "Izolacja i koszty zobowiązań finansowych (kandydat)",
+        "russian": "Изоляция и стоимость финансовых обязательств (кандидат)",
+        "simp_chinese": "地理孤立与财政承诺成本（候选规则）",
+        "spanish": "Aislamiento y costes de los compromisos financieros (candidato)",
+        "turkish": "Yalıtım ve mali taahhüt maliyetleri (aday)",
+    },
+    "SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON": {
+        "english": "Treaty port position and fiscal capacity (candidate)",
+        "braz_por": "Posição do porto de tratado e capacidade fiscal (candidato)",
+        "french": "Position du port de traité et capacité budgétaire (candidat)",
+        "german": "Lage des Vertragshafens und finanzielle Kapazität (Kandidat)",
+        "japanese": "条約港の位置と財政能力（候補ルール）",
+        "korean": "조약항의 위치와 재정 역량(후보 규칙)",
+        "polish": "Położenie portu traktatowego i możliwości fiskalne (kandydat)",
+        "russian": "Положение договорного порта и финансовые возможности (кандидат)",
+        "simp_chinese": "条约港位置与财政能力（候选规则）",
+        "spanish": "Posición del puerto de tratado y capacidad fiscal (candidato)",
+        "turkish": "Antlaşma limanının konumu ve mali kapasite (aday)",
+    },
     "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON": {
         "english": "Economic exposure to both sides",
         "braz_por": "Exposição econômica aos dois lados",
@@ -323,6 +365,51 @@ MODULE_LIFECYCLE_CONTRACT: dict[str, dict[str, object]] = {
         "clear_on_disable": True,
     },
 }
+
+FULL_INFORMATION_DOMAINS = (
+    "political",
+    "fiscal",
+    "economy",
+    "market",
+    "diplomacy",
+    "subjects",
+    "military",
+    "geography",
+    "identity",
+)
+
+
+def information_contract() -> dict[str, object]:
+    """生产候选携带的全量信息实现契约。
+
+    这份契约描述 F0 的实现边界，不把静态目录或脚本加载宣称为行为质量；
+    未确认的运行时消费者必须继续回退原版。
+    """
+
+    return {
+        "schema": 1,
+        "domains": list(FULL_INFORMATION_DOMAINS),
+        "states": [
+            "discovered",
+            "runtime_readable",
+            "derived",
+            "consumer_mapped",
+            "behavior_verified",
+            "unsupported",
+        ],
+        "impact_levels": {
+            "A": "direct",
+            "B": "strategy",
+            "C": "qualification",
+            "D": "explanation",
+            "E": "no_consumer",
+        },
+        "unknown_policy": "preserve_unknown_and_fallback_vanilla",
+        "domain_list_kind": "target_scope_not_implementation_claim",
+        "arbitration": "see_candidate_decision_rules_contract",
+        "player_boundary": "is_ai_only",
+        "behavior_quality": "not_evaluated_until_f1",
+    }
 
 
 def module_lifecycle_contract(
@@ -973,6 +1060,7 @@ def metadata_payload(
         "platforms": list(policy.package.platforms),
         "platform_notes": policy.package.platform_notes,
         "module_contract": module_lifecycle_contract(policy, extensions),
+        "information_contract": information_contract(),
         "source_fingerprint": source_fingerprint(
             policy,
             extensions,
@@ -989,14 +1077,66 @@ def build(
     extensions: Extensions | None = None,
     languages: tuple[Language, ...] | None = None,
     complete_localization: bool = False,
+    information_rules: decision_rules.RuleSet | None = None,
+    consumer_adapters: decision_adapters.AdapterSet | None = None,
 ) -> dict[str, str]:
     policy = policy or load()
     baseline = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
     extensions = extensions or load_extensions()
+    # 每个输出只允许一个处境规则作者。旧模块不能在适配规则后继续叠加，
+    # 否则同一财政/宗属事实可能被重复计分；历史变体保持原实现。
+    field_owners: dict[tuple[str, ...], str] = {}
+    if policy.enabled:
+        field_owners.update(
+            {
+                ("diplomatic_play_neutrality",): "fiscal",
+                ("aggression",): "fiscal",
+            }
+        )
+    for enabled, owner, fields in (
+        (extensions.reform_enabled, "reform", ("change_law_chance",)),
+        (
+            extensions.market_enabled or extensions.security_enabled,
+            "support_composer",
+            ("diplomatic_play_support",),
+        ),
+        (extensions.economy_enabled, "economy", ("economic_vs_government_spending_balance",)),
+        (extensions.diplomacy_enabled, "diplomacy", ("recklessness",)),
+        (extensions.subjects_enabled, "subjects", ("subject_value", "become_subject_value")),
+    ):
+        if enabled:
+            field_owners.update({(field,): owner for field in fields})
+    if information_rules is not None:
+        for field in information_rules.groups():
+            if any(
+                field[: len(existing)] == existing or existing[: len(field)] == field
+                for existing in field_owners
+            ):
+                raise ValueError(f"旧模块与全域规则重复写入字段：{'.'.join(field)}")
+            field_owners[field] = "information_rules"
+    if consumer_adapters is not None:
+        for name, field, owner in decision_adapters.writes(consumer_adapters):
+            if name != "common/ai_strategies/00_default_strategy.txt":
+                continue
+            if field[0] != "ai_strategy_default":
+                raise ValueError("默认策略适配不能写入其它顶层键")
+            path = field[1:]
+            if any(
+                path[: len(existing)] == existing or existing[: len(path)] == path
+                for existing in field_owners
+            ):
+                raise ValueError(f"旧模块或全域规则与消费者适配重复写入字段：{'.'.join(path)}")
+            field_owners[path] = owner
     languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
     files = {
         "common/ai_strategies/00_default_strategy.txt": patch_default(baseline, policy, extensions),
     }
+    if information_rules is not None:
+        files["common/ai_strategies/00_default_strategy.txt"] = decision_rules.patch(
+            files["common/ai_strategies/00_default_strategy.txt"],
+            information_rules,
+            baseline=baseline,
+        )
     strategy_issues = player_boundary_issues(files["common/ai_strategies/00_default_strategy.txt"])
     if strategy_issues:
         raise ValueError("生产策略违反玩家边界：" + "；".join(strategy_issues))
@@ -1031,6 +1171,7 @@ def build(
         or extensions.economy_enabled
         or extensions.diplomacy_enabled
         or extensions.subjects_enabled
+        or information_rules is not None
     ):
         reason_keys: list[str] = []
         if extensions.market_enabled:
@@ -1045,22 +1186,91 @@ def build(
             reason_keys.append("SITAI_DIPLOMACY_BURDEN_REASON")
         if extensions.subjects_enabled:
             reason_keys.append("SITAI_SUBJECT_RELATION_REASON")
+        if information_rules is not None:
+            reason_keys.extend(
+                key
+                for rule in information_rules.rules
+                if rule.domain in information_rules.enabled_domains
+                and (key := decision_rules.description_key(rule)) is not None
+            )
         for language in languages:
             reasons = {key: _localized_decision_text(key, language) for key in reason_keys}
             files[localization_path(language, "sitai_decisions")] = (
                 f"{language.header}:\n"
                 + "".join(f' {key}: "{value}"\n' for key, value in reasons.items())
             )
+    metadata = metadata_payload(
+        policy,
+        extensions,
+        enabled_modules=_module_names(policy, extensions, files, languages),
+        baseline=baseline,
+        languages=languages,
+        complete_localization=complete_localization,
+    )
+    if information_rules is not None or consumer_adapters is not None:
+        metadata["default_field_owners"] = {
+            ".".join(field): owner for field, owner in sorted(field_owners.items())
+        }
+        metadata["vanilla_field_coverage"] = decision_interfaces.coverage(baseline, field_owners)
+    if information_rules is not None:
+        rules_contract = decision_rules.contract(information_rules)
+        metadata["decision_rules"] = rules_contract
+        fingerprint = metadata["source_fingerprint"]
+        enabled_modules = metadata["enabled_modules"]
+        lifecycle = metadata["module_contract"]
+        assert isinstance(fingerprint, dict)
+        assert isinstance(enabled_modules, list)
+        assert isinstance(lifecycle, dict)
+        fingerprint.update(
+            information_rules_source_sha256=information_rules.source_sha256,
+            information_rules_generator_sha256=rules_contract["generator_sha256"],
+        )
+        enabled_modules.append("information_rules")
+        lifecycle["information_rules"] = {
+            "stateful": False,
+            "direct_read": True,
+            "hooks": [],
+            "ttl_or_none": None,
+            "clear_on_disable": "no_persistent_state",
+            "save_compatibility": policy.package.save_compatibility,
+        }
+    if consumer_adapters is not None:
+        adapter_files, adapter_contract = decision_adapters.build(consumer_adapters, overlays=files)
+        collisions = files.keys() & adapter_files.keys()
+        if collisions - {"common/ai_strategies/00_default_strategy.txt"}:
+            raise ValueError("消费者适配存在多个写入者：" + "、".join(sorted(collisions)))
+        files.update(adapter_files)
+        metadata["consumer_adapters"] = adapter_contract
+        fingerprint = metadata["source_fingerprint"]
+        enabled_modules = metadata["enabled_modules"]
+        lifecycle = metadata["module_contract"]
+        assert isinstance(fingerprint, dict)
+        assert isinstance(enabled_modules, list)
+        assert isinstance(lifecycle, dict)
+        fingerprint.update(
+            consumer_adapters_source_sha256=consumer_adapters.source_sha256,
+            consumer_adapters_generator_sha256=adapter_contract["generator_sha256"],
+            production_inputs_generator_sha256=adapter_contract[
+                "production_inputs_generator_sha256"
+            ],
+            consumer_interfaces_sha256=hashlib.sha256(
+                Path(decision_interfaces.__file__).read_bytes()
+            ).hexdigest(),
+        )
+        enabled_modules.append("consumer_adapters")
+        lifecycle["consumer_adapters"] = {
+            "stateful": False,
+            "direct_read": True,
+            "hooks": [],
+            "ttl_or_none": None,
+            "clear_on_disable": "regenerate_without_adapter_files_and_restart",
+            "save_compatibility": policy.package.save_compatibility,
+        }
+        if player_boundary_issues(files["common/ai_strategies/00_default_strategy.txt"]):
+            raise ValueError("消费者适配违反玩家边界")
     files[".metadata/metadata.json"] = (
         json.dumps(
-            metadata_payload(
-                policy,
-                extensions,
-                enabled_modules=_module_names(policy, extensions, files, languages),
-                baseline=baseline,
-                languages=languages,
-                complete_localization=complete_localization,
-            ),
+            metadata,
             ensure_ascii=False,
             indent=2,
         )

@@ -30,6 +30,7 @@ PACKAGE_VARIANTS = (
     "diplomacy",
     "subjects",
     "full",
+    "integrated",
 )
 
 MOD_ID = "sitai.decisions"
@@ -429,30 +430,46 @@ def package_inputs(
     elif variant != "current":
         policy = replace(
             policy,
-            enabled=variant in {"complete", "fiscal", "economy", "diplomacy", "subjects", "full"},
+            enabled=variant
+            in {"complete", "fiscal", "economy", "diplomacy", "subjects", "full", "integrated"},
             aggression=0,
             package=replace(
                 policy.package,
                 status="candidate" if variant == "full" else "experimental",
-                product_version="1.0.0" if variant == "full" else policy.package.product_version,
+                product_version=(
+                    "2.0.0.dev0"
+                    if variant == "integrated"
+                    else "1.0.0"
+                    if variant == "full"
+                    else policy.package.product_version
+                ),
             ),
         )
         extensions = replace(
             extensions,
-            reform_enabled=variant in {"complete", "reform", "full"},
-            market_enabled=variant in {"complete", "market", "full"},
-            security_enabled=variant in {"complete", "security", "full"},
-            economy_enabled=variant in {"economy", "full"},
-            diplomacy_enabled=variant in {"diplomacy", "full"},
+            reform_enabled=variant in {"complete", "reform", "full", "integrated"},
+            market_enabled=variant in {"complete", "market", "full", "integrated"},
+            security_enabled=variant in {"complete", "security", "full", "integrated"},
+            economy_enabled=variant in {"economy", "full", "integrated"},
+            diplomacy_enabled=variant in {"diplomacy", "full", "integrated"},
+            # integrated 的宗属字段由声明式适配器统一负责，不能叠加旧作者。
             subjects_enabled=variant in {"subjects", "full"},
         )
-    full_localization = variant == "full"
+    full_localization = variant in {"full", "integrated"}
     files = (
         current
         if variant == "current"
-        else decisions.build(policy, extensions=extensions, complete_localization=full_localization)
+        else decisions.build(
+            policy,
+            extensions=extensions,
+            complete_localization=full_localization,
+            information_rules=decisions.decision_rules.load() if variant == "integrated" else None,
+            consumer_adapters=decisions.decision_adapters.load()
+            if variant == "integrated"
+            else None,
+        )
     )
-    if variant == "full":
+    if variant in {"full", "integrated"}:
         metadata = json.loads(files[".metadata/metadata.json"])
         localization = metadata.setdefault("localization", {})
         localization["production_fallback_languages"] = list(
@@ -471,6 +488,41 @@ def package_inputs(
         files[".metadata/metadata.json"] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
     modules = json.loads(files[".metadata/metadata.json"])["enabled_modules"]
     files["README.md"] = player_guide(policy, extensions, modules, variant=variant)
+    if variant == "integrated":
+        metadata = json.loads(files[".metadata/metadata.json"])
+        contract = metadata["decision_rules"]
+        files["README.md"] += (
+            "\n全域规则实验增量 / Integrated experimental rules\n"
+            "同一字段按优先级只使用第一条匹配规则；倍率只改变默认策略贡献，"
+            "不代表最终概率或行动。当前规则无持久状态，沿用原版消费者评估时机。"
+            "以下覆盖不代表 2.0 全目标已完成或行为已验收。\n"
+            "The first matching rule per field changes only the default contribution. "
+            "Vanilla qualification, costs, and actions remain in force; behavior is unverified.\n"
+            + "".join(
+                f"- {rule['id']}：{rule['field']} {rule['operation']} {rule['value']:g}；{rule['why']}。"
+                f"反例边界：{rule['counterexample']}。\n"
+                for rule in contract["rules"]
+            )
+        )
+        files["README.md"] += (
+            "\n锁定原版消费者补丁 / Source-locked consumer adapters\n"
+            "本变体从匹配的本体原件生成法律、科技和策略权重补丁；保留原版资格、效果、成本和其余内容。"
+            "商品读数属于本国所在市场，不能当作该国自身产量。"
+            "倍率保留原值零点；法律和部分外交/宗属评分使用有限增量，政治支持与 ai_will_do 仍由原版决定。"
+            "建筑规则读取本州实际启用的主要生产方式；商品供给立场仅追加原版未声明的商品，"
+            "不强制切换生产方式或创建贸易路线。"
+            "关闭需重新生成不含适配文件的包并重启；游戏更新后旧包不会自行卸载或自动恢复原版，必须停用并重新生成。\n"
+            "Source-locked edits retain vanilla qualification, effects and costs. Goods readings describe "
+            "the country's market. Adjustments use the declared add or multiply operation. "
+            "Building rules inspect active primary production methods; additional goods stances do not force trade. "
+            "Disable and rebuild after a game update; an installed ZIP cannot automatically undo its overrides.\n"
+            + "".join(
+                f"- {consumer['source']} / {rule['id']}：{rule['field']} "
+                f"{rule['operation']} {rule['value']:g}；{rule['why']}。反例边界：{rule['counterexample']}。\n"
+                for consumer in metadata["consumer_adapters"]["consumers"]
+                for rule in consumer["rules"]
+            )
+        )
     return policy, extensions, files
 
 

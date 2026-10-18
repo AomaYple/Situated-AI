@@ -1,0 +1,382 @@
+# 全域规则的唯一参数来源；所有方向和倍率都是待 F1 验证的设计假设。
+# 只补充原版数值消费者，不能把静态用例或继承的原版能力写成新增实现。
+schema = 1
+baseline_sha256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
+
+[domains]
+political = true
+fiscal = true
+economy = true
+market = true
+diplomacy = true
+subjects = true
+military = true
+geography = true
+identity = true
+
+[readers.default]
+engine = "in_default"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.war]
+engine = "is_at_war"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.population]
+engine = "total_population"
+scope = "root"
+unit = "persons"
+kind = "number"
+minimum = 0
+
+[readers.income]
+engine = "fixed_income"
+scope = "root"
+unit = "currency_per_week"
+kind = "number"
+
+[readers.navy]
+engine = "navy_size"
+scope = "root"
+unit = "ships"
+kind = "number"
+minimum = 0
+
+[readers.subject]
+engine = "is_subject"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.industrial_route]
+engine = "has_strategy"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "ai_strategy_industrial_expansion"
+
+[readers.resource_route]
+engine = "has_strategy"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "ai_strategy_resource_expansion"
+
+[readers.expansion_route]
+engine = "has_strategy"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "ai_strategy_territorial_expansion"
+
+[readers.artillery_tech]
+engine = "has_technology_researched"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "artillery"
+
+[readers.target_port]
+engine = "is_treaty_port"
+scope = "target_state"
+unit = "boolean"
+kind = "boolean"
+
+[readers.fervor]
+engine = "country_fervor_primary_culture"
+scope = "root"
+unit = "fervor_points"
+kind = "number"
+
+[readers.target_homeland]
+engine = "is_homeland_of_country_cultures"
+scope = "target_state"
+unit = "boolean"
+kind = "boolean"
+argument = "root"
+
+[readers.target_owned]
+engine = "owner"
+scope = "target_state"
+unit = "boolean"
+kind = "boolean"
+argument = "root"
+
+[readers.target_isolated]
+engine = "is_isolated_from_market"
+scope = "target_state"
+unit = "boolean"
+kind = "boolean"
+
+[readers.target_cultural_share]
+engine = "primary_cultures_percent_state"
+scope = "target_state"
+unit = "ratio"
+kind = "number"
+value_field = "value"
+parameters = { target_country = "root" }
+minimum = 0
+maximum = 1
+
+[[rules]]
+id = "fiscal_construction_guard"
+domain = "fiscal"
+field = "wanted_construction_output"
+priority = 100
+value = 0.85
+conditions = [
+  { fact = "default", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+]
+why = "和平且违约时降低新增建设目标；不取消已有施工或创造资金"
+counterexample = "战争时保留原版建设目标；原版零目标保持为零"
+
+[[rules]]
+id = "economic_development"
+domain = "economy"
+field = "wanted_construction_output"
+priority = 50
+value = 1.05
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "income", op = ">", value = 0 },
+  { fact = "industrial_route", op = "=", value = true },
+]
+why = "有持续收入且沿产业路线时适度提高建设目标"
+counterexample = "财政违约、战争、收入未知或无产业路线不奖励"
+
+[[rules]]
+id = "political_default_risk"
+domain = "political"
+field = "revolution_aversion"
+priority = 50
+value = 1.1
+conditions = [
+  { fact = "default", op = "=", value = true },
+]
+why = "财政违约提高避免革命的原版倾向，不禁止立法"
+counterexample = "非违约国家保持原版；不修改真实法律资格"
+
+[[rules]]
+id = "social_school_priority"
+domain = "political"
+field = "institution_scores.institution_schools"
+priority = 50
+value = 1.05
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "population", op = ">=", value = 2000000 },
+]
+why = "和平且有财政能力的大人口国家稍提高学校制度原版评分"
+counterexample = "既有原版容量和法律约束不变；不直接提高制度等级"
+
+[[rules]]
+id = "administrative_cost_guard"
+domain = "economy"
+field = "institution_scores.institution_social_security"
+priority = 50
+value = 0.9
+conditions = [
+  { fact = "default", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+]
+why = "违约且和平时降低新增社会保障制度的支出倾向"
+counterexample = "不减少实际福利、不修改制度或人口属性"
+
+[[rules]]
+id = "market_trade_peace"
+domain = "market"
+field = "treaty_category_scores.trade"
+priority = 50
+value = 1.1
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "income", op = ">", value = 0 },
+]
+why = "和平且有收入时优先搜索原版贸易合作条约"
+counterexample = "不创造贸易路线、商品、关税或条约资格"
+
+[[rules]]
+id = "diplomatic_economic_cooperation"
+domain = "diplomacy"
+field = "treaty_category_scores.economy"
+priority = 50
+value = 1.1
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+]
+why = "和平且未违约时提高经济合作类别的相对关注"
+counterexample = "没有可行条约仍由原版返回无候选"
+
+[[rules]]
+id = "subject_defense_cooperation"
+domain = "subjects"
+field = "treaty_category_scores.military_defense"
+priority = 50
+value = 1.1
+conditions = [
+  { fact = "subject", op = "=", value = true },
+  { fact = "default", op = "=", value = false },
+]
+why = "属国在可负担时稍重视防御合作类别"
+counterexample = "不制造独立资格或改变宗属关系；不可行条约仍由原版拒绝"
+
+[[rules]]
+id = "diplomatic_overextension"
+domain = "diplomacy"
+field = "max_active_stances"
+priority = 50
+value = 0.9
+conditions = [
+  { fact = "default", op = "=", value = true },
+]
+why = "违约时适度收缩同时维持的战略立场数量"
+counterexample = "非违约保持原版；不直接退出条约或战争"
+
+[[rules]]
+id = "military_peacetime_budget"
+domain = "military"
+field = "wanted_army_size"
+priority = 50
+value = 0.9
+conditions = [
+  { fact = "default", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+]
+why = "和平且违约时适度降低新增常备军目标"
+counterexample = "战争不削弱生存防御；不删除军队、不改变战斗属性"
+
+[[rules]]
+id = "naval_peacetime_budget"
+domain = "military"
+field = "wanted_navy_size"
+priority = 50
+value = 0.9
+conditions = [
+  { fact = "default", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+]
+why = "和平且违约时适度降低新增海军目标"
+counterexample = "战争保持原版目标；已有舰队和性能不变"
+
+[[rules]]
+id = "naval_design_affordability"
+domain = "military"
+field = "max_ship_design_complexity"
+priority = 50
+value = 0.9
+conditions = [
+  { fact = "default", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+]
+why = "和平违约期降低新舰设计复杂度目标"
+counterexample = "不改变既有舰船设计和战斗数值"
+
+[[rules]]
+id = "military_artillery_affordability"
+domain = "military"
+field = "combat_unit_group_weights.combat_unit_group_artillery"
+priority = 50
+value = 0.9
+conditions = [
+  { fact = "default", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+  { fact = "artillery_tech", op = "=", value = true },
+]
+why = "已有炮兵科技但和平违约时轻微调整昂贵编制的相对权重"
+counterexample = "未解锁科技时不新增炮兵权重；战争保持原版"
+
+[[rules]]
+id = "overseas_affordability"
+domain = "geography"
+field = "colonial_interest_ratio"
+priority = 50
+value = 0.85
+conditions = [
+  { fact = "default", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+]
+why = "和平违约时减少海外殖民利益分配倾向"
+counterexample = "零殖民资格不被创造；不直接撤销殖民地"
+
+[[rules]]
+id = "overseas_naval_feasibility"
+domain = "geography"
+field = "colonial_interest_ratio"
+priority = 60
+value = 0.9
+conditions = [
+  { fact = "navy", op = "<", value = 25 },
+]
+why = "海军不足时降低海外利益分配的原版比率"
+counterexample = "原版比率为零时保持零；不代替殖民法律和机构条件"
+
+[[rules]]
+id = "geographic_port_continuity"
+domain = "geography"
+field = "state_value"
+priority = 50
+value = 1.05
+conditions = [
+  { fact = "target_port", op = "=", value = true },
+  { fact = "default", op = "=", value = false },
+]
+why = "保留有财政能力国家对条约港位置的有限原版相对偏好"
+counterexample = "没有目标州不计算；不授予港口或战争目标"
+
+[[rules]]
+id = "identity_resource_cooperation"
+domain = "identity"
+field = "treaty_category_scores.economy"
+priority = 70
+value = 1.15
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "resource_route", op = "=", value = true },
+]
+why = "沿原有资源发展路线的国家优先考虑经济合作类别"
+counterexample = "不根据固定国家标签赋予特殊收益；违约和战争不奖励"
+
+[[rules]]
+id = "identity_expansion_defense"
+domain = "identity"
+field = "treaty_category_scores.military_defense"
+priority = 40
+value = 1.05
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "expansion_route", op = "=", value = true },
+]
+why = "沿原有扩张路线时保留可负担的防御合作关注"
+counterexample = "不提高宣战成功率、兵力或免费外交资格"
+
+
+[[rules]]
+id = "identity_feasible_homeland"
+domain = "identity"
+field = "state_value"
+priority = 100
+value = 1.05
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_homeland", op = "=", value = true }, { fact = "target_cultural_share", op = ">=", value = 0.25 }, { fact = "target_isolated", op = "=", value = false }, { fact = "fervor", op = ">", value = 10 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false }, { fact = "income", op = ">", value = 0 }, { fact = "expansion_route", op = "=", value = true } ]
+why = "本土认同、现有国家路线与可达经济条件一致时，提高候选州的有限战略价值"
+counterexample = "不以国家标签制造历史脚本；己有州、非本土、文化联系弱、孤立、违约、战争或未知输入不奖励；原版资格、军事胜负和外交代价保持，待F1"
+
+[[rules]]
+id = "geographic_isolation_financial_cost"
+domain = "geography"
+field = "state_value"
+priority = 200
+value = 0.95
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_isolated", op = "=", value = true }, { fact = "navy", op = "=", value = 0 }, { fact = "default", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "财政违约且没有海军的和平国家，对孤立的海外/外部州额外计入有界承诺成本"
+counterexample = "不改变已拥有州，不声称所有孤立州都是海外；不读取秘密计划，不制造海军或强制放弃州，保留原版地理和目标价值，待F1"
