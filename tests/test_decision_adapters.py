@@ -1300,6 +1300,7 @@ def _scopes_for_facts(policy, facts):
         ("02_welfare.txt", "law_wage_subsidies", {"radical_share": 0.1}, {"radical_share": 0.3}),
     ],
 )
+@pytest.mark.integration
 def test_stronger_social_need_does_not_accidentally_reduce_target_adjustment(
     real_generated_branches, source, field, before, after
 ):
@@ -1336,6 +1337,7 @@ def test_stronger_social_need_does_not_accidentally_reduce_target_adjustment(
 
 
 @pytest.mark.parametrize("war", [False, True])
+@pytest.mark.integration
 def test_liquidity_pressure_is_cross_domain_and_preserves_wartime_defense(
     real_generated_branches, war
 ):
@@ -1382,6 +1384,7 @@ def test_liquidity_pressure_is_cross_domain_and_preserves_wartime_defense(
 
 
 @pytest.mark.parametrize("fact", ["target_truce", "target_alliance", "target_relations"])
+@pytest.mark.integration
 def test_actual_diplomatic_commitment_is_a_bounded_cost_and_not_a_forced_action(
     real_generated_branches, fact
 ):
