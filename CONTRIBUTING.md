@@ -96,7 +96,7 @@ Python 写文本显式指定 `encoding="utf-8"`、`newline="\n"`；末尾换行�
 - 当前生产源 `mod/decisions/fiscal.toml` 与 `mod/decisions/extensions.toml` 由 `pdx.decisions` 读取并生成根级游戏产物；扩展开关关闭时仍读取并校验扩展配置。这两个入口之外的新 TOML 不会自动加载，新增定义须同步生成入口与测试。历史源 `mod/data/*.toml` 由 `pdx.modgen` 生成至 `mod/legacy/`，不进入生产包。
 - 生产生成器的本地化语言契约由 `pdx.localization_languages` 维护：`discover(game_root)` 读取实际语言头，`from_snapshot(snapshot)` 读取锁定快照，不能把 `game_auto` 当前只有中英模板的事实当成 Mod 语言范围。新增游戏版本时先更新语言快照与覆盖测试，再生成生产产物。
 - 改动数据或生成逻辑后先执行 `v3 modgen --write`，再执行 `v3 modgen --check`。源码、测试及对应生成物保持一致；生成文档和知识库机械表格使用各自生成入口维护。
-- 安装、打包时才为交付游戏脚本与本地化添加 BOM；转换不能写回仓库产物。交付入口是 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认生成全关安全包；测试当前实验源显式加 `--variant current`，零偏置财政控制加 `--variant control`。文件、实际参数和来源指纹由交付 manifest 记录。
+- 安装、打包时才为交付游戏脚本与本地化添加 BOM；转换不能写回仓库产物。交付入口是 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认生成全关安全包；测试当前实验源显式加 `--variant current`，零偏置财政控制加 `--variant control`，七模块标准候选使用 `--variant full`。国家面板解释探针必须显式加 `--with-explanation-probe`，只能临时写入本次验证副本，不能默认进入标准 Mod。文件、实际参数、探针开关和来源指纹由交付 manifest 记录。
 - `tools/out/` 主要是忽略的输出与证据；`tools/out/snapshots/*.compact.json` 与 `.gitignore` 中逐件声明的精简证据是入库例外。当前精简证据为 `tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json`，不要放行整个证据目录。完整快照、本机测量、缓存和临时脚本不默认入库。
 - `tools/probe/frozen/`、历史报告和有引用的实机证据具有审计用途；清理前核查 Git 跟踪状态、消费者和引用，必要时保留恢复副本。不要用 `git clean -fdX` 代替盘点。
 - 官方文档原文镜像不入库；使用 `research/official-docs.manifest.json` 与 `v3 mirror` 维护来源和指纹。忽略文件仍可能有价值，忽略规则不构成删除依据。

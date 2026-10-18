@@ -65,6 +65,29 @@ def test_模块烟测默认只挂载单一生产候选(tmp_path, monkeypatch):
     assert context["behavior_quality"] == "not_evaluated"
 
 
+def test_模块标准候选只有显式开关才附加解释探针(tmp_path, monkeypatch):
+    _patch_common(monkeypatch, tmp_path)
+    calls: list[bool] = []
+
+    def attach_probe(files, _policy, _extensions):
+        calls.append(True)
+        return files
+
+    monkeypatch.setattr(f1_module_smoke.explanation_probe, "attach", attach_probe)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+
+    def run_game(sources, **kwargs):
+        del sources, kwargs
+        return {"ok": True, "evidence": str(evidence)}
+
+    monkeypatch.setattr(game_run, "run", run_game)
+    f1_module_smoke.run("economy", output=tmp_path / "plain")
+    assert calls == []
+    f1_module_smoke.run("economy", output=tmp_path / "instrumented", with_explanation_probe=True)
+    assert calls == [True]
+
+
 def test_模块烟测诊断选项同时记录两项基线(tmp_path, monkeypatch):
     _patch_common(monkeypatch, tmp_path)
 

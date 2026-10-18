@@ -1,8 +1,9 @@
 """运行单个新增七模块的 F1 实机启动诊断。
 
-该入口只用来回答“单模块候选是否能被当前引擎挂载并完成观察者/后台推进/恢复”
+该入口只用来回答“单模块标准 Mod 是否能被当前引擎挂载并完成观察者/后台推进/恢复”
 以及“模块是否产生引擎日志错误”。它不注入机会、不创建战争、不修改原版安装，
-也不把策略权重或脚本加载成功写成 AI 行为质量通过。
+也不把策略权重或脚本加载成功写成 AI 行为质量通过。需要解释仪器时，使用
+``--with-explanation-probe`` 将探针临时写入本次标准 Mod，结束后由运行器清理。
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
@@ -31,15 +32,30 @@ DEFAULT_MONTHS = 0.1
 DEFAULT_OUTPUT = config.OUT / "f1-module-smoke"
 
 
-def _context(module: str, *, resource: bool, localization: bool) -> dict[str, Any]:
+def _context(
+    module: str,
+    *,
+    resource: bool,
+    localization: bool,
+    with_explanation_probe: bool,
+) -> dict[str, Any]:
     diagnostic = resource or localization
+    instrumented = with_explanation_probe and not diagnostic
     return {
         "schema": "sitai-f1-module-smoke-v1",
         "candidate": module,
-        "candidate_kind": "diagnostic_candidate" if diagnostic else "production_candidate",
+        "candidate_kind": (
+            "diagnostic_candidate"
+            if diagnostic
+            else "instrumented_candidate"
+            if instrumented
+            else "production_candidate"
+        ),
         "diagnostic_baselines": {"resource": resource, "localization": localization},
+        "standard_mod": True,
+        "temporary_probe": "explanation" if with_explanation_probe else None,
         "behavior_quality": "not_evaluated",
-        "production_package": not diagnostic,
+        "production_package": not diagnostic and not with_explanation_probe,
         "limits": (
             "单模块烟测只回答真实挂载、日志、自动化和恢复；不证明真实消费者作用域、"
             "AI 行为质量、解释 GUI、翻译质量、玩家路径、保存重载或长期性能。"
@@ -53,10 +69,12 @@ def _write_sources(
     *,
     resource: bool,
     localization: bool,
+    with_explanation_probe: bool,
 ) -> dict[str, Path]:
     root.mkdir(parents=True, exist_ok=True)
     policy, extensions, files = distribution.package_inputs(module)
-    files = explanation_probe.attach(files, policy, extensions)
+    if with_explanation_probe:
+        files = explanation_probe.attach(files, policy, extensions)
     candidate = root / f"sitai_{module}_f1"
     decisions.write(candidate, files)
     sources: dict[str, Path] = {f"sitai_{module}_f1": candidate}
@@ -78,22 +96,32 @@ def run(
     output: Path = DEFAULT_OUTPUT,
     resource: bool = False,
     localization: bool = False,
+    with_explanation_probe: bool = False,
     timeout: float = 3600,
 ) -> dict[str, Any]:
     if module not in MODULE_VARIANTS:
         raise ValueError(f"不支持的单模块：{module}；可选：{', '.join(MODULE_VARIANTS)}")
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    context = _context(module, resource=resource, localization=localization)
+    context = _context(
+        module,
+        resource=resource,
+        localization=localization,
+        with_explanation_probe=with_explanation_probe,
+    )
     with tempfile.TemporaryDirectory(prefix=".sources-", dir=output) as directory:
         sources = _write_sources(
-            Path(directory), module, resource=resource, localization=localization
+            Path(directory),
+            module,
+            resource=resource,
+            localization=localization,
+            with_explanation_probe=with_explanation_probe,
         )
         report = game_run.run(sources, months=months, timeout=timeout, output=output)
     evidence = Path(str(report["evidence"]))
     game_run.write_json(evidence / "f1_context.json", context)
     report["f1_context"] = context
-    return report
+    return cast("dict[str, Any]", report)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -104,6 +132,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--resource-baseline", action="store_true")
     parser.add_argument("--localization-baseline", action="store_true")
+    parser.add_argument(
+        "--with-explanation-probe",
+        action="store_true",
+        help="在本次标准 Mod 中临时附加未验收的只读解释探针；验证结束后随临时部署清理",
+    )
     args = parser.parse_args(argv)
     report = run(
         args.module,
@@ -112,6 +145,7 @@ def main(argv: list[str] | None = None) -> int:
         output=args.output / args.module,
         resource=args.resource_baseline,
         localization=args.localization_baseline,
+        with_explanation_probe=args.with_explanation_probe,
     )
     print(
         json.dumps(

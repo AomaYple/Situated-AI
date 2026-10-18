@@ -364,14 +364,27 @@ def package_inputs(
     return policy, extensions, files
 
 
-def package(destination: Path, *, variant: str = "disabled") -> Path:
+def package(
+    destination: Path,
+    *,
+    variant: str = "disabled",
+    with_explanation_probe: bool | None = None,
+) -> Path:
+    """生成标准游戏 Mod；解释面板只在显式仪器模式下附加。
+
+    ``complete`` 是既有四模块历史实验变体，继续保留它原来的解释候选。
+    新的七模块 ``full`` 默认只包含标准 Mod 内容；实机需要观测解释面板时，
+    必须显式传 ``with_explanation_probe=True``，避免把未验收 UI 当作生产内容。
+    """
     policy, extensions, files = package_inputs(variant)
-    if variant in {"complete", "full"}:
+    if with_explanation_probe is None:
+        with_explanation_probe = variant == "complete"
+    if with_explanation_probe:
         files = explanation_probe.attach(files, policy, extensions)
         files["README.md"] += (
-            "\n完整实验包包含原生国家面板的只读解释候选；覆盖 country_panel.gui，"
+            "\n本包包含原生国家面板的只读解释候选；覆盖 country_panel.gui，"
             "不与其它同路径界面覆盖兼容。上下文、布局、刷新和成本尚未实机验收。\n"
-            "The complete experimental package includes an unverified read-only explanation"
+            "This package includes an unverified read-only explanation"
             " and overrides country_panel.gui; other overrides of that panel conflict.\n"
         )
     return write_zip(
@@ -379,6 +392,7 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
         destination,
         generation={
             "variant": variant,
+            "with_explanation_probe": with_explanation_probe,
             "fiscal": {
                 key: value
                 for key, value in asdict(policy).items()

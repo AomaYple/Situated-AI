@@ -82,6 +82,48 @@ def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch):
     assert written[0].name == "sitai_full_f1"
 
 
+def test_默认标准候选不附加解释探针且显式开关才附加(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        f1_full_smoke.distribution,
+        "package_inputs",
+        lambda _variant: ("policy", "extensions", {"README.md": "full"}),
+    )
+    attached: list[bool] = []
+
+    def attach_probe(files, _policy, _extensions):
+        attached.append(True)
+        return files
+
+    monkeypatch.setattr(f1_full_smoke.explanation_probe, "attach", attach_probe)
+
+    def write_decisions(root, files=None):
+        del files
+        Path(root).mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(
+        f1_full_smoke.decisions,
+        "write",
+        write_decisions,
+    )
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+
+    def run_game(sources, **kwargs):
+        del sources, kwargs
+        return {"ok": True, "evidence": str(evidence)}
+
+    monkeypatch.setattr(game_run, "run", run_game)
+
+    def write_json(*_args):
+        return None
+
+    monkeypatch.setattr(game_run, "write_json", write_json)
+    f1_full_smoke.run(output=tmp_path / "plain")
+    assert attached == []
+    f1_full_smoke.run(output=tmp_path / "instrumented", with_explanation_probe=True)
+    assert attached == [True]
+
+
 def test_诊断候选显式记录两种原版基线(tmp_path, monkeypatch):
     def package_inputs(_variant):
         return "policy", "extensions", {"README.md": "full"}

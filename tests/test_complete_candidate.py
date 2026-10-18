@@ -66,8 +66,8 @@ def test_打包命令接通完整与单模块变体(tmp_path, monkeypatch):
 
     calls = []
 
-    def capture(destination, *, variant="disabled"):
-        calls.append((destination, variant))
+    def capture(destination, *, variant="disabled", with_explanation_probe=None):
+        calls.append((destination, variant, with_explanation_probe))
         return destination
 
     monkeypatch.setattr(distribution, "package", capture)
@@ -76,7 +76,7 @@ def test_打包命令接通完整与单模块变体(tmp_path, monkeypatch):
         output = tmp_path / f"{variant}.zip"
         result = runner.invoke(app, ["package", "--variant", variant, "--output", str(output)])
         assert result.exit_code == 0, result.output
-        assert calls[-1] == (output, variant)
+        assert calls[-1] == (output, variant, None)
 
 
 @pytest.mark.parametrize(
@@ -289,6 +289,7 @@ def test_完整实验包包含原生解释及准确来源且重复打包确定(t
             assert "market" in loc
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         assert manifest["generation"]["variant"] == "complete"
+        assert manifest["generation"]["with_explanation_probe"] is True
 
 
 def test_防御条件真正读取目标条约与敌方战争目标():

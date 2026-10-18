@@ -179,7 +179,7 @@ def test_控制和全关显式关闭新增模块开关(variant):
 
 
 def test_完整候选_zip在游戏边界添加BOM且确定性(tmp_path, monkeypatch):
-    # 完整候选包含原生国家面板解释附件；用最小合法底本隔离测试对本机游戏安装的依赖。
+    # full 默认是标准 Mod；解释附件必须显式打开。
     from pdx import config, explanation_probe
 
     panel = (
@@ -202,7 +202,15 @@ def test_完整候选_zip在游戏边界添加BOM且确定性(tmp_path, monkeypa
     with zipfile.ZipFile(target) as archive:
         metadata = json.loads(archive.read(".metadata/metadata.json"))
         assert metadata["enabled_modules"][-3:] == ["economy", "diplomacy", "subjects"]
+        assert explanation_probe.PANEL not in archive.namelist()
         assert archive.read("localization/english/sitai_decisions_l_english.yml").startswith(
             b"\xef\xbb\xbf"
         )
         assert archive.read(".metadata/metadata.json").startswith(b"{")
+
+    instrumented = tmp_path / "full-instrumented.zip"
+    distribution.package(instrumented, variant="full", with_explanation_probe=True)
+    with zipfile.ZipFile(instrumented) as archive:
+        assert explanation_probe.PANEL in archive.namelist()
+        manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
+        assert manifest["generation"]["with_explanation_probe"] is True

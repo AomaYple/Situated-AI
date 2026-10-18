@@ -2836,12 +2836,19 @@ def package_cmd(
             help="complete 四模块实验候选；economy/diplomacy/subjects 三个新增模块；full 七模块完整候选；其余为现有隔离包",
         ),
     ] = "disabled",
+    with_explanation_probe: Annotated[
+        bool | None,
+        typer.Option(
+            "--with-explanation-probe",
+            help="在本次标准 Mod 中临时附加未验收的只读解释探针；默认不附加",
+        ),
+    ] = None,
 ) -> None:
     """校验生成物并打包；仅在游戏交付边界添加 BOM。"""
     from .distribution import package  # noqa: PLC0415 -- 交付命令独立边界
 
     try:
-        target = package(output, variant=variant)
+        target = package(output, variant=variant, with_explanation_probe=with_explanation_probe)
     except (ValueError, OSError) as exc:
         _fail(f"打包失败：{exc}", EXIT_FAILED)
     console.print(f"[green]已生成[/] {escape(str(target))}")

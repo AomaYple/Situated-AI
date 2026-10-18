@@ -4,7 +4,7 @@
 >
 > **优先级**：正确性第一、速度第二、内存第三。实现期保留必要的代码、生成、离线测试和恢复契约检查；集中实机、行为验收与正式性能在完整实现后进行。未经实机的引擎契约标记为假设，已知非法或被否证的读法不得复用。
 >
-> **当前边界**：七模块的生产源、离线参考模型、统一仲裁、解释探针、生命周期契约、11 种语言候选、生成器、`full` 候选包和工程验证已在 F0 离线出口完成。真实引擎消费者、接口作用域、跨模块行为、逐语言语义/显示、玩家路径、长期稳定性和正式性能仍须在 F1/F2 验证；`full` 继续标记为 experimental。结构性 `fallback_languages=[]` 不等于翻译质量完成，9 种解释语言仍在 F1 语义审校清单。已有工程通过不构成游戏内行为通过。
+> **当前边界**：七模块的生产源、离线参考模型、统一仲裁、解释探针、生命周期契约、11 种语言候选、生成器、标准 `full` Mod 和工程验证已在 F0 离线出口完成。真实引擎消费者、接口作用域、跨模块行为、逐语言语义/显示、玩家路径、长期稳定性和正式性能仍须在 F1/F2 验证；`full` 继续标记为 experimental。标准 `full` 包默认不包含未验收的解释面板；需要观测解释时只在本次实机验证副本显式附加探针。结构性 `fallback_languages=[]` 不等于翻译质量完成，9 种解释语言仍在 F1 语义审校清单。已有工程通过不构成游戏内行为通过。
 
 ## 1. 目标、范围与完成定义
 
@@ -22,7 +22,7 @@
 
 **顺序固定为 F0 → F1 → F2。** F0 不等待某一模块的行为质量通过才实现其它模块；接口来源审查属于实现期，集中实机在 F1。F1 发现问题后按受影响范围修复和回归，不从头重做全部计划；核心机制失效时替换该机制并保留无关有效实现和证据。实验包与已验收可玩包分别标识。
 
-**现有包身份保持**：current/control/disabled 和现有 complete/fiscal/security/market/reform 的实际开关、四模块完整包及 manifest 不能因计划改版而冒充七模块；`economy`、`diplomacy`、`subjects` 和 `full` 已作为独立的七模块扩展候选变体接入，但 `full` 仍是 experimental/candidate。新增变体、命令或 manifest 契约须随生成器、CLI、打包和测试一起实施，并显式区分新旧配置；此处的产品里程碑不是现有 CLI 选项。
+**现有包身份保持**：current/control/disabled 和现有 complete/fiscal/security/market/reform 的实际开关、四模块完整包及 manifest 不能因计划改版而冒充七模块；`economy`、`diplomacy`、`subjects` 和 `full` 已作为独立的七模块扩展候选变体接入，但 `full` 仍是 experimental/candidate。`full` 的标准打包不附加解释面板；`--with-explanation-probe` 只为本次验证副本临时增加仪器，manifest 必须记录该开关。新增变体、命令或 manifest 契约须随生成器、CLI、打包和测试一起实施，并显式区分新旧配置；此处的产品里程碑不是现有 CLI 选项。
 
 ## 2. 最终目标与实现对照
 
@@ -136,7 +136,7 @@ F0 出口后，每次实机先使用现有 `pdx.game_run` 核对游戏版本、�
 
 **2026-10-17 F1 实际执行记录**：`full` 候选已完成生产环境启动和两次独立原版环境诊断。生产候选证据 `tools/out/f1-full-live/20261017-173621/`：实际挂载、观察者、快捷键 `5`、空格、后台推进和恢复完成，Mod 错误为 0，但因原版缺少 `gfx/interface/icons/alert_icons/repairing.dds` 的 `VFSOpen Error` 以 `ok=false` 结束。资源诊断证据 `tools/out/f1-resource-diagnostic/20261017-174241/`：补齐原版维修图标后 VFS 错误消失，仍因 5 条原版本地化 `Script system error!` 以 `ok=false` 结束。联合诊断证据 `tools/out/f1-clean-diagnostic/20261017-174651/`：同时补齐两项已登记原版基线后，游戏推进约 57.88 游戏日，`ok=true`，Mod 错误和所有已分类/未分类错误均为 0，`cleanup_errors=[]`。这三次运行均为启动/环境诊断，不构成真实消费者、AI 行为、解释 GUI、逐语言质量、玩家路径、保存/重载或 M4 性能通过；联合诊断基线不得进入生产包。最大 RSS 约 7,617–7,634 MiB 仅为启动诊断读数，不是正式性能基线。
 
-新增 `tools/probe/f1_full_smoke.py` 作为可复现薄入口：默认只挂载 `full` 生产候选，显式 `--resource-baseline` / `--localization-baseline` 才生成诊断候选，并支持冻结语言和合法观察者检查点；每次写入 `f1_context.json`，声明候选类型、基线范围、语言、载入方式和 `behavior_quality=not_evaluated`。入口复用现有 `pdx.game_run`，当前 `tests/test_f1_full_smoke.py` 有 3 项契约测试，和 `tests/test_f1_module_smoke.py` 合计 6 项。后续从联合诊断建立的安全环境基线继续单模块真实消费者、生命周期、语言显示、玩家/保存重载、组合与 M3 行为验证；不把无错误启动或评分变化当作行为质量证据。
+新增 `tools/probe/f1_full_smoke.py` 作为可复现薄入口：默认生成并挂载标准 `full` Mod，显式 `--with-explanation-probe` 才在本次副本临时附加解释探针，显式 `--resource-baseline` / `--localization-baseline` 才生成诊断候选，并支持冻结语言和合法观察者检查点；每次写入 `f1_context.json`，声明候选类型、标准 Mod 身份、临时探针、基线范围、语言、载入方式和 `behavior_quality=not_evaluated`。入口复用现有 `pdx.game_run`，当前 `tests/test_f1_full_smoke.py` 与 `tests/test_f1_module_smoke.py` 共同覆盖默认标准路径和显式探针路径。后续从联合诊断建立的安全环境基线继续单模块真实消费者、生命周期、语言显示、玩家/保存重载、组合与 M3 行为验证；不把无错误启动或评分变化当作行为质量证据。
 
 **2026-10-17 F1 单模块实机补充**：在同一资源与本地化联合诊断基线下，`economy`、`diplomacy`、`subjects` 三个新增模块分别完成单模块启动、观察者、快捷键 `5`、空格、后台推进和恢复，三次均 `ok=true`、Mod/引擎错误为 0、`cleanup_errors=[]`。证据目录为 `tools/out/f1-module-smoke/economy/20261017-181510/`、`.../diplomacy/20261017-182002/` 和 `.../subjects/20261017-182427/`。这些结果只建立单模块运行期安全边界，不证明真实消费者字段、方向/量纲或 AI 行为质量；下一步先核对策略字段在当前引擎中的实际消费者，再派发有明确因果问题的行为实验。新增入口 `tools/probe/f1_module_smoke.py` 与 `tests/test_f1_module_smoke.py` 已加入；当前 full 与 module 烟测契约测试合计 6 项。
 

@@ -1,9 +1,10 @@
 """运行 F1 七模块 ``full`` 候选的短实机烟测。
 
-默认只挂载生产候选，结果用于确认候选能否启动、进入观察者、用快捷键 ``5``
-设置速度、用空格开始推进、切回后台并安全恢复。``--resource-baseline`` 和
-``--localization-baseline`` 只允许诊断环境使用：它们补齐已确认的原版安装问题，
-不能进入生产包，也不能把无错误启动提升为 AI 行为质量通过。
+默认生成并挂载标准 ``full`` Mod，结果用于确认候选能否启动、进入观察者、用快捷键
+``5`` 设置速度、用空格开始推进、切回后台并安全恢复。``--with-explanation-probe``
+只在本次生成的标准 Mod 目录中临时附加解释探针；它不改变生产源，也不进入普通候选。
+``--resource-baseline`` 和 ``--localization-baseline`` 只允许诊断环境使用：它们补齐
+已确认的原版安装问题，不能进入生产包，也不能把无错误启动提升为 AI 行为质量通过。
 
 脚本只负责生成本局临时源并调用现有 :mod:`pdx.game_run`；部署、互斥、日志、
 进程、恢复和证据归档均由现有运行器负责。
@@ -16,7 +17,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
@@ -36,34 +37,56 @@ DEFAULT_OUTPUT = config.OUT / "f1-full-smoke"
 
 
 def _context(
-    *, resource: bool, localization: bool, language: str | None, load_save: Path | None
+    *,
+    resource: bool,
+    localization: bool,
+    with_explanation_probe: bool,
+    language: str | None,
+    load_save: Path | None,
 ) -> dict[str, Any]:
     diagnostic = resource or localization
+    instrumented = with_explanation_probe and not diagnostic
     return {
         "schema": "sitai-f1-full-smoke-v1",
         "candidate": "full",
         "language": language,
         "loaded_observer": load_save is not None,
-        "candidate_kind": "diagnostic_candidate" if diagnostic else "production_candidate",
+        "candidate_kind": (
+            "diagnostic_candidate"
+            if diagnostic
+            else "instrumented_candidate"
+            if instrumented
+            else "production_candidate"
+        ),
         "diagnostic_baselines": {
             "resource": resource,
             "localization": localization,
         },
+        "standard_mod": True,
+        "temporary_probe": "explanation" if with_explanation_probe else None,
         "behavior_quality": "not_evaluated",
-        "production_package": not diagnostic,
+        "production_package": not diagnostic and not with_explanation_probe,
         "limits": (
-            "生产候选运行只回答挂载、日志、自动化和恢复问题；诊断基线运行只回答已知原版环境问题。"
+            "标准 Mod 运行只回答挂载、日志、自动化和恢复问题；临时探针只回答其声明的仪器问题；"
+            "诊断基线运行只回答已知原版环境问题。"
             "两者都不能证明真实 AI 行为、消费者作用域、解释 GUI、语言质量、玩家路径、保存重载或长期性能。"
         ),
     }
 
 
-def _write_sources(root: Path, *, resource: bool, localization: bool) -> dict[str, Path]:
-    """在隔离临时目录内生成候选和可选诊断源。"""
+def _write_sources(
+    root: Path,
+    *,
+    resource: bool,
+    localization: bool,
+    with_explanation_probe: bool,
+) -> dict[str, Path]:
+    """在隔离临时目录内生成标准 Mod 和可选临时诊断源。"""
 
     root.mkdir(parents=True, exist_ok=True)
     policy, extensions, files = distribution.package_inputs(VARIANT)
-    files = explanation_probe.attach(files, policy, extensions)
+    if with_explanation_probe:
+        files = explanation_probe.attach(files, policy, extensions)
     candidate = root / "sitai_full_f1"
     decisions.write(candidate, files)
     sources: dict[str, Path] = {"sitai_full_f1": candidate}
@@ -90,6 +113,7 @@ def run(
     output: Path = DEFAULT_OUTPUT,
     resource: bool = False,
     localization: bool = False,
+    with_explanation_probe: bool = False,
     language: str | None = None,
     load_save: Path | None = None,
     timeout: float = 3600,
@@ -101,11 +125,17 @@ def run(
     context = _context(
         resource=resource,
         localization=localization,
+        with_explanation_probe=with_explanation_probe,
         language=language,
         load_save=load_save,
     )
     with tempfile.TemporaryDirectory(prefix=".sources-", dir=output) as directory:
-        sources = _write_sources(Path(directory), resource=resource, localization=localization)
+        sources = _write_sources(
+            Path(directory),
+            resource=resource,
+            localization=localization,
+            with_explanation_probe=with_explanation_probe,
+        )
         report = game_run.run(
             sources,
             months=months,
@@ -117,7 +147,7 @@ def run(
     evidence = Path(str(report["evidence"]))
     game_run.write_json(evidence / "f1_context.json", context)
     report["f1_context"] = context
-    return report
+    return cast("dict[str, Any]", report)
 
 
 def _summary(report: dict[str, Any]) -> dict[str, Any]:
@@ -158,6 +188,11 @@ def main(argv: list[str] | None = None) -> int:
         help="显式冻结本局界面语言；只覆盖支持的自动化语言模板",
     )
     parser.add_argument(
+        "--with-explanation-probe",
+        action="store_true",
+        help="在本次标准 Mod 中临时附加未验收的只读解释探针；验证结束后随临时部署清理",
+    )
+    parser.add_argument(
         "--resource-baseline",
         action="store_true",
         help="挂载已确认的原版维修图标诊断源；不能进入生产包",
@@ -174,6 +209,7 @@ def main(argv: list[str] | None = None) -> int:
         output=args.output,
         language=args.language,
         load_save=args.load_save,
+        with_explanation_probe=args.with_explanation_probe,
         resource=args.resource_baseline,
         localization=args.localization_baseline,
     )
