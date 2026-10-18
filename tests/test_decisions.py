@@ -428,8 +428,25 @@ def test_生产ZIP清单携带实际包契约和源指纹(tmp_path):
     assert manifest["generation"]["delivery_kind"] == "standard_mod"
 
 
-def test_standard_package_manifest_validation(tmp_path):
-    from pdx import distribution
+def test_standard_package_manifest_validation(tmp_path, monkeypatch, policy):
+    from pdx import config, distribution, explanation_probe
+
+    # 合成底本保留真实探针生成链，让清单契约在无游戏 CI 中也能验证。
+    game = tmp_path / "game"
+    panel = game / explanation_probe.PANEL
+    panel.parent.mkdir(parents=True)
+    panel.write_text(
+        "types country_panel_types {\n"
+        " type country_panel = default_block_window_two_lines {\n"
+        '  datacontext = "[CountryPanel.GetCountry]"\n'
+        " }\n}\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    monkeypatch.setattr(config, "GAME", game)
+    monkeypatch.setattr(
+        config, "game_version", lambda: {"caligula_branch": f"release/{policy.game_version}"}
+    )
 
     target = distribution.package(tmp_path / "mod.zip", variant="full")
     manifest = distribution.validate_package(target, expected_variant="full")
@@ -439,7 +456,10 @@ def test_standard_package_manifest_validation(tmp_path):
     )
     with pytest.raises(ValueError, match="解释探针"):
         distribution.validate_package(probe)
-    distribution.validate_package(probe, expected_variant="full", allow_probe=True)
+    probe_manifest = distribution.validate_package(probe, expected_variant="full", allow_probe=True)
+    probe_files = probe_manifest["files"]
+    assert isinstance(probe_files, dict)
+    assert explanation_probe.PANEL in probe_files
 
 
 @pytest.mark.parametrize("value", ["1", '"false"', "[]"])
