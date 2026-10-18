@@ -36,7 +36,7 @@
 
 ## 2. 最关键发现：**新增 ≫ 覆盖**
 
-**【实测】** 跨 23 个 mod 共 **4,841<!--claim:mod.files--> 个内容文件**（各 mod 的 `metadata.json` 不计入），
+**【实测】** 跨 23 个 mod 共 **4,840<!--claim:mod.files--> 个内容文件**（各 mod 的 `metadata.json` 不计入），
 去重后是 **4,814 个相对路径**：
 
 ```text

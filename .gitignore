@@ -21,6 +21,15 @@ __pycache__/
 # 实现细节，不是本仓库的意图；工具换版本、或缓存目录被拷到别处时就会漏。
 /.mypy_cache/
 /.ruff_cache/
+/.ruff-cache-*/
+
+# 其他常见 Python 工具的本机缓存；它们不属于源码或交付物。
+/.tox/
+/.nox/
+/.pytype/
+/.pyre/
+/.pyright/
+/.cache/
 
 # pytest 的 tmp_path 默认落在系统 Temp 下；仓库的 conftest 也会为每轮测试
 # 分配系统临时根。但 pytest/xdist 的嵌套收集、系统临时目录不可写或进程被强杀

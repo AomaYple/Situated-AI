@@ -64,7 +64,7 @@
 | Windows | .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py <检查> |
 | macOS/Linux | .venv/bin/python -X utf8 tools/ci/run_check.py <检查> |
 
-可替换的检查包括 encoding、lint .、format --check .、types、test、test-offline、deadcode 和 baseline。具体选择、跳过分类、性能口径、实机矩阵和 Git 交付按 [CONTRIBUTING.md](CONTRIBUTING.md) 执行。
+可替换的检查包括 encoding、hygiene、lint .、format --check .、types、test、test-offline、deadcode 和 baseline。`hygiene` 只检查根目录可再生缓存与 Python 字节码，报告写入忽略的 `tools/out/ci/`，不会扫描虚拟环境、历史证据或官方原文镜像。具体选择、跳过分类、性能口径、实机矩阵和 Git 交付按 [CONTRIBUTING.md](CONTRIBUTING.md) 执行。
 
 代码、规则、结构、生成物或兼容范围变更默认使用短期 codex/<topic> 分支和 PR；提交标题和说明使用中文。合并后核对本地/远端 main、工作区、树等价和必要证据，再删除短期分支。推送、合并和删除远端分支在任务已授权时直接完成；不得强制推送 main。
 

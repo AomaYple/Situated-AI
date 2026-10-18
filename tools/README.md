@@ -41,12 +41,18 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 ```text
 .venv\Scripts\python.exe tools\ci\run_check.py deadcode
+.venv\Scripts\python.exe tools\ci\run_check.py hygiene
 .venv\Scripts\python.exe tools\ci\run_check.py baseline
 ```
 
 `deadcode` 扫描受控及未忽略的新 Python 源码的函数和类引用面。它会把测试文件纳入索引，
 识别 `__all__`、`__main__`、pytest hook、插件装饰器和类方法等动态入口，把静态零引用定义列为失败候选；同名文本与动态入口豁免可能漏报，不能据此证明所有代码可达。`tools/probe/frozen/` 是历史证据，`tools/out/ci/` 下的 JSON
 和 Markdown 报告是可再生临时产物，均不作为可删除源码处理。
+
+`hygiene` 检查根目录缓存、Python 字节码和覆盖率运行态；入口使用 `-B` 避免检查自身写出
+字节码，并把 JSON 报告写入忽略的
+`tools/out/ci/repo-hygiene.json`。`.venv/`、`tools/out/`、`research/official-docs/`
+和冻结证据按各自契约排除；该检查不判断源码死代码，也不删除任何文件。
 
 ## 当前处境决策实验
 
@@ -315,7 +321,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 128 个测试文件、3996 条用例（2026-10-18 工作区口径）；F0 七模块批次的受影响定向为 197 passed、32 subtests，串行完整回归为 3947 passed、25 skipped、1743 subtests，约 2603.07 秒；本轮 F1 语言入口和文档收口的相关定向测试为 22 passed。跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志；本机 n-auto 曾触发 Python 3.14/xdist 原生 access violation，不能写成并行通过。完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-18-f0-七模块离线实现出口收口)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
+当前收集 129 个测试文件、4004 条用例（2026-10-18 工作区口径）；本轮最终 `n-auto` 回归为 3984 passed、20 skipped、1743 subtests passed，用时 632.27 秒。F0 七模块批次的串行历史回归和本轮失败修复仍按各自日期记录；跳过项来自 Windows 符号链接权限、FIFO 和缺失引擎日志。完整结果与失败修复见[完整候选工程验收](../docs/design/exec/完整候选-结果.md#2026-10-18-f0-七模块离线实现出口收口)，旧性能基线保留在[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -581,7 +587,7 @@ tools/out/snapshots/<版本>.json           完整快照，约 41 MiB（gitignor
 
 分析、快照、三平台工具链、测试和实机仪器的契约见 [工程基线](../docs/design/exec/工程基线-1.0.md)。有日期的速度、内存、事故与修复读数见 [审计索引](../docs/audits/README.md)；2026-10-03 的收尾只描述当时范围，不承诺工具永远没有缺陷。
 
-Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工作清单.md)，历史研究编号保留在 [backlog](../docs/design/backlog.md)。按 [Mod 全目标实现优先与集中验证计划 5.0](../docs/design/exec/mod重设计-实施计划.md)推进；工具输出、模拟与 CI 不替代机制验收。
+Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工作清单.md)，历史研究编号保留在 [backlog](../docs/design/backlog.md)。按 [Mod 全目标实现优先与集中验证计划 5.1](../docs/design/exec/mod重设计-实施计划.md)推进；工具输出、模拟与 CI 不替代机制验收。
 
 ### 完整实验候选交付
 

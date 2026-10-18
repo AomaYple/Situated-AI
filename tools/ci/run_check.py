@@ -22,6 +22,11 @@ COMMANDS = {
         "tools/out/repository-audit/source-encoding.json",
     ],
     "deadcode": ["tools.ci.deadcode_audit", "--check"],
+    "hygiene": [
+        "tools.ci.repo_hygiene",
+        "--output",
+        "tools/out/ci/repo-hygiene.json",
+    ],
 }
 
 BASELINE_COMMANDS = [
@@ -62,8 +67,9 @@ def main() -> int:
                 return result.returncode
         return 0
     command = COMMANDS[sys.argv[1]]
+    bytecode_flag = ["-B"] if sys.argv[1] == "hygiene" else []
     return subprocess.run(
-        [str(python), "-X", "utf8", "-m", *command, *sys.argv[2:]],
+        [str(python), *bytecode_flag, "-X", "utf8", "-m", *command, *sys.argv[2:]],
         cwd=ROOT,
         check=False,
     ).returncode

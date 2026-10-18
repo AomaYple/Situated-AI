@@ -77,7 +77,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     quality = (root / "docs/design/exec/M3-可测性清单.md").read_text(encoding="utf-8")
     # 保护全目标先实现、再集中验证的依赖及质量门，而非旧附件排期。
-    assert "全目标实现优先与集中验证计划 · 5.0" in plan
+    assert "全目标实现优先与集中验证计划 · 5.1" in plan
     phases = [
         "## 3. F0：最终目标完整实现",
         "## 4. F1：集中验证与修正",
@@ -113,7 +113,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     implementation_queue = re.findall(r"^### (C[0-7]) ·", plan, re.MULTILINE)
     assert implementation_queue == [f"C{index}" for index in range(8)]
     assert re.findall(r"^\| \*\*F0-(C[0-7]) ", checklist, re.MULTILINE) == implementation_queue
-    assert "全目标实现优先与集中验证计划 5.0" in checklist
+    assert "全目标实现优先与集中验证计划 5.1" in checklist
     assert "整个 Mod 尚未完成" in checklist
 
     scan = root / "tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json"

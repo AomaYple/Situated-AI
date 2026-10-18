@@ -15,7 +15,7 @@
 | 代理工作边界和修改入口 | [AGENTS.md](<../AGENTS.md>) |
 | 测试、分析、快照和证据契约 | [工程基线 1.0](design/exec/工程基线-1.0.md) |
 | 当前产品架构和行为边界 | [处境决策设计](design/03-处境决策设计.md) |
-| F0–F2、V0.1–V0.7/V1.0 阶段、M1–M4 出口和重开条件 | [Mod 全目标实现优先与集中验证计划 5.0](design/exec/mod重设计-实施计划.md) |
+| F0–F2、V0.1–V0.7/V1.0 阶段、M1–M4 出口和重开条件 | [Mod 全目标实现优先与集中验证计划 5.1](design/exec/mod重设计-实施计划.md) |
 | 当前阶段结果和阻塞 | [当前工作清单](design/当前工作清单.md)、[结果索引](design/exec/README.md)与 [backlog](design/backlog.md) |
 | 报告与独立复核 | [报告索引](reports/README.md)、[审计索引](audits/README.md) |
 | Victoria 3 文件和脚本知识库 | [知识库](victoria3-modding/README.md) |
@@ -34,7 +34,7 @@
 
 ## 当前设计与历史证据
 
-当前行为设计以 [03 · 处境决策设计](design/03-处境决策设计.md)为准，当前工程契约以 [工程基线](design/exec/工程基线-1.0.md)为准，当前执行顺序以 [Mod 全目标实现优先与集中验证计划 5.0](design/exec/mod重设计-实施计划.md)为准。[当前工作清单](design/当前工作清单.md)提供状态摘要，M1–M5 结果页记录实测和边界；backlog 保留当前触发条件以及已结案条目的历史编号。
+当前行为设计以 [03 · 处境决策设计](design/03-处境决策设计.md)为准，当前工程契约以 [工程基线](design/exec/工程基线-1.0.md)为准，当前执行顺序以 [Mod 全目标实现优先与集中验证计划 5.1](design/exec/mod重设计-实施计划.md)为准。[当前工作清单](design/当前工作清单.md)提供状态摘要，M1–M5 结果页记录实测和边界；backlog 保留当前触发条件以及已结案条目的历史编号。
 
 01、01a、有独立复核价值的旧实验、审计和 reports 保留当时的输入、失败和推断。它们可以支持复核，不能把旧阶段完成词句追认为当前能力。已被替代的流程、交接和重复总结从当前目录移除，原件留在 Git 历史。02 · 可执行面是当前生成的接口资料，生成入口见 [设计导航](design/README.md#生成文档)；生成文档和机械统计由对应工具维护，不手改。
 
@@ -62,6 +62,7 @@ Mod 总计划由人工维护目标、依赖、预算和出口；[当前工作清
 ## 常用命令
 
     .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py encoding
+    .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py hygiene
     .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py baseline
     .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
     .venv\Scripts\python.exe -X utf8 -m pdx.cli citations --offline

@@ -159,15 +159,16 @@ def test_zip_deterministic_manifest_and_game_encoding(tmp_path):
     files = {
         "common/a.txt": "\ufeffx = 1\r\n",
         "localization/a.yml": "l_english:\n",
-        ".metadata/metadata.json": "{}\n",
         "notes.md": "readme\n",
     }
-    a = distribution.write_zip(files, tmp_path / "a.zip")
-    b = distribution.write_zip(dict(reversed(list(files.items()))), tmp_path / "b.zip")
+    generation = distribution.generation_contract(variant="disabled", with_explanation_probe=False)
+    a = distribution.write_zip(files, tmp_path / "a.zip", generation=generation)
+    b = distribution.write_zip(
+        dict(reversed(list(files.items()))), tmp_path / "b.zip", generation=generation
+    )
     assert a.read_bytes() == b.read_bytes()
     with zipfile.ZipFile(a) as archive:
         assert archive.read("common/a.txt") == codecs.BOM_UTF8 + b"x = 1\n"
-        assert archive.read(".metadata/metadata.json") == b"{}\n"
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         for name, expected in manifest["files"].items():
             assert hashlib.sha256(archive.read(name)).hexdigest() == expected

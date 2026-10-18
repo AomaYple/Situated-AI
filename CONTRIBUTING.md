@@ -59,6 +59,7 @@ Python 工具当前面向完整仓库的可编辑安装，运行时使用仓库�
 | `test` | 完整 pytest 收集集合，默认自适应并行 |
 | `test-offline` | 排除 integration 与 benchmark 的测试 |
 | `deadcode` | 当前源码死代码审计 |
+| `hygiene` | 根目录缓存、Python 字节码和运行态卫生检查；使用 `-B` 避免检查自身生成字节码，报告写入忽略的 `tools/out/ci/` |
 | `baseline` | 依赖、离线快照、生成物、引用及死代码的闭环检查 |
 
 可选的提交钩子配置在 `.pre-commit-config.yaml`。钩子不运行完整 pytest，不能替代适用的测试和验收。CLI 可通过环境内的 `v3` 或对应解释器的 `-m pdx.cli` 调用；完整用法见 [工具手册](tools/README.md)。
