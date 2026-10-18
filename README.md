@@ -191,7 +191,7 @@ doc 19 的根目录与路径表、doc 03/04/05/06/10/11/14/15/16/17/18/20 那几
 
 ```
 Situated AI/
-├─ mod/                      生产产物（`decisions/fiscal.toml` 与 `extensions.toml` 生成）；`data/` → `legacy/` 仅为历史实验
+├─ mod/                      生产产物（`decisions/` 显式接入五份 TOML 生成）；`data/` → `legacy/` 仅为历史实验
 ├─ docs/design/              当前处境决策设计 + 历史方向依据 + `exec/` 实施与结果记录 + backlog
 ├─ docs/victoria3-modding/   20 篇主题文档 + 1 个索引
 ├─ docs/audits/              当前工程审计与历史测试快照
