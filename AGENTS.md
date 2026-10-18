@@ -15,7 +15,7 @@
 | 工程持续约束 | [工程原则](docs/principles/工程原则.md) | 正确性、跨平台、编码、依赖、测试、性能、清理和文档 |
 | Mod 持续约束 | [Mod 开发原则](docs/principles/Mod开发原则.md) | 产品目标、机制边界、公平性、运行效率和发布边界 |
 | 工具与证据契约 | [工程基线 1.0](docs/design/exec/工程基线-1.0.md) | 测试层级、快照、实机、恢复和证据口径 |
-| 产品顺序与阶段出口 | [Mod 全目标实现优先与集中验证计划 5.1](docs/design/exec/mod重设计-实施计划.md) | F0–F2、V0.1–V0.7/V1.0、M1–M4、重开条件和可玩交付 |
+| 产品顺序与阶段出口 | [Mod 全目标实现优先与集中验证计划 6.0](docs/design/exec/mod重设计-实施计划.md) | F0–F2、V0.1–V0.7/V1.0、M1–M4、重开条件和可玩交付 |
 | 当前状态与下一动作 | [当前工作清单](docs/design/当前工作清单.md) | 当前事实、队列、阻塞和下一步 |
 | 实测、失败和原始边界 | 对应结果页、审计和报告 | 日期、输入、命令、结果、限制和恢复证据 |
 
@@ -34,7 +34,7 @@
 | 任务 | 首选入口 | 必须保持的边界 |
 |---|---|---|
 | 可复用 Python | src/pdx/，测试在 tests/ | 使用项目 .venv、显式 UTF-8/LF、跨 Windows/macOS/Linux |
-| 生产 Mod | mod/decisions/*.toml、src/pdx/decisions.py | 改源和生成器后运行 v3 modgen --write、v3 modgen --check，不手改生成物 |
+| 生产 Mod | mod/decisions/*.toml、src/pdx/decisions.py、src/pdx/decision_rules.py、src/pdx/decision_adapters.py | 改源和生成器后运行 v3 modgen --write、v3 modgen --check，不手改生成物 |
 | 历史实验 Mod | mod/data/*.toml、src/pdx/modgen.py | 只生成到 mod/legacy/，不进入生产包 |
 | 检查、基准和探针 | tools/ci/、tools/benchmarks/、tools/probe/ | 复用现有 CLI 和 pdx.game_run，一次性脚本写入忽略的输出目录 |
 | 生成文档和机械表格 | 对应 CLI、pdx.doc_tables | 修改来源后重新生成并检查，不手改数字或指纹 |
@@ -52,7 +52,7 @@
 - 完整测试默认 -n auto --dist loadscope，worker 数由 CPU 与内存预算决定；性能基准必须清除普通测试参数并串行运行。测试通过、快照一致、脚本加载成功或评分变化都不能单独证明 Mod 行为质量。
 - Windows、macOS、Linux 的代码、CI、无头测试和 GUI 实机证据分开申报。当前 GUI 自动化实机支持范围以工程基线为准，未运行的层级必须写成未验证。
 - 实机只使用现有 pdx.game_run 的互斥、部署、日志、归档和恢复流程；游戏进程、存档、挂载和恢复指针未核对干净时，不启动下一次实验。
-- 实机验证默认生成并部署标准 Mod（例如 `--variant full`），直接验证游戏实际会加载的 Mod 内容；解释、日志或字段观测探针只能通过显式开关临时附加到本次验证副本，证据中标明 `instrumented_candidate`，运行结束随部署事务清理，不把探针内容写入标准生产候选。
+- 实机验证默认生成并部署标准 Mod（2.0 使用 `--variant integrated`，旧七模块使用 `--variant full`），直接验证游戏实际会加载的 Mod 内容；解释、日志或字段观测探针只能通过显式开关临时附加到本次验证副本，证据中标明 `instrumented_candidate`，运行结束随部署事务清理，不把探针内容写入标准生产候选。
 - 实验账本的停止条件、错误分类和原始输入不可通过改名、改探针、增加预算、清账本或拼接不同会话绕过。遇到外部阻塞，完成不依赖它的离线工作并记录证据限制。
 
 ## 验证与交付

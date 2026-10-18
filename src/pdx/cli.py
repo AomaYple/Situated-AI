@@ -60,8 +60,10 @@ from pdx import (
     assets,
     backlog,
     cache,
+    candidate_coverage,
     citations,
     config,
+    consumer_matrix,
     covgate,
     decisions,
     defines,
@@ -74,6 +76,7 @@ from pdx import (
     experiments,
     h1,
     h1_probe,
+    information_catalog,
     lockfile,
     modgen,
     modguard,
@@ -344,6 +347,117 @@ def analyze_cmd(
         console.print(table)
 
     console.print(f"\n总耗时 {elapsed:.1f} 秒")
+
+
+@app.command("information-catalog")
+def information_catalog_cmd(
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="能力目录 JSON 输出路径；默认写入 tools/out/game/"),
+    ] = None,
+    localization: Annotated[
+        bool,
+        typer.Option(
+            "--localization/--no-localization",
+            help="是否登记本体本地化文件入口并生成键级目录",
+        ),
+    ] = True,
+    localization_keys_output: Annotated[
+        Path | None,
+        typer.Option(
+            "--localization-keys-output",
+            help="键级本地化 JSONL 输出路径；默认与主目录一起写入 tools/out/game/",
+        ),
+    ] = None,
+    consumer_matrix_output: Annotated[
+        Path | None,
+        typer.Option(
+            "--consumer-matrix-output",
+            help="静态同名候选关联矩阵 JSON；不表示运行时消费者已接通",
+        ),
+    ] = None,
+    candidate_metadata: Annotated[
+        Path | None,
+        typer.Option("--candidate-metadata", help="实际 integrated 候选的 .metadata/metadata.json"),
+    ] = None,
+    candidate_coverage_output: Annotated[
+        Path | None,
+        typer.Option("--candidate-coverage-output", help="候选规则与目录的精确连接和未覆盖差集"),
+    ] = None,
+) -> None:
+    """生成锁定游戏版本的静态信息与消费者目录。
+
+    该命令只声明静态发现及原版文件中的同名候选关联；
+    运行时读取、行为质量和实机验证由 F0-C2/F1 单独推进。
+    """
+
+    if candidate_coverage_output is not None and candidate_metadata is None:
+        console.print("[red]--candidate-coverage-output 需要 --candidate-metadata[/]")
+        raise typer.Exit(EXIT_USAGE)
+    target = output or (config.OUT_GAME / "information-catalog.json")
+    matrix_target = consumer_matrix_output or (config.OUT_GAME / "consumer-matrix.json")
+    coverage_target = candidate_coverage_output or target.with_name("candidate-coverage.json")
+    localization_target = localization_keys_output or (
+        config.OUT_GAME / "information-localization.jsonl"
+    )
+    output_paths = [target, matrix_target]
+    if candidate_metadata is not None:
+        output_paths.append(coverage_target)
+    if localization:
+        output_paths.append(localization_target)
+    resolved = [path.resolve() for path in output_paths]
+    if len(set(resolved)) != len(resolved) or (
+        candidate_metadata is not None and candidate_metadata.resolve() in resolved
+    ):
+        console.print("[red]各输出路径和候选输入路径必须互不相同[/]")
+        raise typer.Exit(EXIT_USAGE)
+    metadata = None
+    if candidate_metadata is not None:
+        try:
+            metadata = json.loads(candidate_metadata.read_text(encoding="utf-8"))
+            if not isinstance(metadata, dict):
+                raise ValueError("候选清单必须为 JSON 对象")
+        except (OSError, ValueError) as exc:
+            console.print(f"[red]候选清单不可读：{escape(str(exc))}[/]")
+            raise typer.Exit(EXIT_USAGE) from exc
+    _require_game()
+    started = time.perf_counter()
+    catalog = information_catalog.build(include_localization=localization)
+    if metadata is not None:
+        try:
+            coverage_report = candidate_coverage.build(catalog, metadata)
+        except ValueError as exc:
+            console.print(
+                f"[red]候选连接失败：{escape(str(exc))}[/]；本次未写入报告，已有文件仅属于先前运行"
+            )
+            raise typer.Exit(EXIT_USAGE) from exc
+        _write_json(coverage_target, coverage_report)
+        console.print(
+            f"候选连接已生成：{_relative(coverage_target)}，"
+            f"{len(coverage_report['links'])} 条规则连接，"
+            f"{len(coverage_report['unresolved'])} 条未解决连接；不提升证据等级"
+        )
+    catalog.write(target)
+    consumer_matrix.ConsumerMatrix.from_catalog(catalog).write(matrix_target)
+    localization_stats: dict[str, int] | None = None
+    if localization:
+        localization_stats = information_catalog.write_localization_catalog(localization_target)
+    elapsed = time.perf_counter() - started
+    console.print(
+        f"[green]能力目录已生成[/] {_relative(target)}："
+        f"{len(catalog.items):,} 条，耗时 {elapsed:.1f} 秒"
+    )
+    if localization_stats is not None:
+        console.print(
+            f"键级本地化目录已生成：{localization_stats['files']:,} 个文件，"
+            f"{localization_stats['keys']:,} 个键，"
+            f"{localization_stats['errors']:,} 个 unsupported 记录"
+        )
+    console.print(f"静态消费者矩阵已生成：{_relative(matrix_target)}")
+    console.print(
+        "静态发现不等于运行时可读或行为通过；未确认项保持 discovered/unknown，"
+        "后续按主计划 F0-C2、F1 推进。"
+    )
 
 
 # ── defines ─────────────────────────────────────────────────
@@ -2830,10 +2944,11 @@ def package_cmd(
             "diplomacy",
             "subjects",
             "full",
+            "integrated",
         ],
         typer.Option(
             "--variant",
-            help="complete 四模块实验候选；economy/diplomacy/subjects 三个新增模块；full 七模块完整候选；其余为现有隔离包",
+            help="complete 四模块；full 旧七模块候选；integrated 含声明规则的全域实验增量；其余为隔离包",
         ),
     ] = "disabled",
     with_explanation_probe: Annotated[

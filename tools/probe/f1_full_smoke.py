@@ -1,4 +1,4 @@
-"""运行 F1 七模块 ``full`` 候选的短实机烟测。
+"""运行 F1 标准候选的短实机烟测（full / integrated）。
 
 默认生成并挂载标准 ``full`` Mod，结果用于确认候选能否启动、进入观察者、用快捷键
 ``5`` 设置速度、用空格开始推进、切回后台并安全恢复。``--with-explanation-probe``
@@ -43,15 +43,16 @@ def _context(
     with_explanation_probe: bool,
     language: str | None,
     load_save: Path | None,
+    variant: str = VARIANT,
 ) -> dict[str, Any]:
     diagnostic = resource or localization
     instrumented = with_explanation_probe and not diagnostic
     return {
         "schema": "sitai-f1-full-smoke-v1",
         "delivery_contract": distribution.generation_contract(
-            variant=VARIANT, with_explanation_probe=with_explanation_probe
+            variant=variant, with_explanation_probe=with_explanation_probe
         ),
-        "candidate": "full",
+        "candidate": variant,
         "language": language,
         "loaded_observer": load_save is not None,
         "candidate_kind": (
@@ -83,11 +84,12 @@ def _write_sources(
     resource: bool,
     localization: bool,
     with_explanation_probe: bool,
+    variant: str = VARIANT,
 ) -> dict[str, Path]:
     """在隔离临时目录内生成标准 Mod 和可选临时诊断源。"""
 
     root.mkdir(parents=True, exist_ok=True)
-    policy, extensions, files = distribution.package_inputs(VARIANT)
+    policy, extensions, files = distribution.package_inputs(variant)
     if with_explanation_probe:
         files = explanation_probe.attach(files, policy, extensions)
     candidate = root / distribution.INSTALL_DIRECTORY_NAME
@@ -120,9 +122,12 @@ def run(
     language: str | None = None,
     load_save: Path | None = None,
     timeout: float = 3600,
+    variant: str = VARIANT,
 ) -> dict[str, Any]:
     """运行一次 F1 烟测并返回现有运行器报告。"""
 
+    if variant not in {"full", "integrated"}:
+        raise ValueError("F1 标准候选变体必须是 full 或 integrated")
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     context = _context(
@@ -131,6 +136,7 @@ def run(
         with_explanation_probe=with_explanation_probe,
         language=language,
         load_save=load_save,
+        variant=variant,
     )
     with tempfile.TemporaryDirectory(prefix=".sources-", dir=output) as directory:
         sources = _write_sources(
@@ -138,6 +144,7 @@ def run(
             resource=resource,
             localization=localization,
             with_explanation_probe=with_explanation_probe,
+            variant=variant,
         )
         report = game_run.run(
             sources,
@@ -180,6 +187,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--months", type=float, default=DEFAULT_MONTHS)
     parser.add_argument("--timeout", type=float, default=3600.0)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--variant", choices=("full", "integrated"), default=VARIANT)
     parser.add_argument(
         "--load-save",
         type=Path,
@@ -215,6 +223,7 @@ def main(argv: list[str] | None = None) -> int:
         with_explanation_probe=args.with_explanation_probe,
         resource=args.resource_baseline,
         localization=args.localization_baseline,
+        variant=args.variant,
     )
     print(json.dumps(_summary(report), ensure_ascii=False, indent=2))
     return 0 if report.get("ok") else 1
