@@ -332,9 +332,13 @@ def test_实验包与实际生产变体配套且生产交付不含探针(tmp_pat
             == hashlib.sha256(probe.Path(probe.__file__).read_bytes()).hexdigest()
         )
         manifest = json.loads(candidate.read("DISTRIBUTION-MANIFEST.json"))
-        assert manifest["generation"] == {
+        generation = manifest["generation"]
+        assert generation == {
+            **distribution.generation_contract(
+                variant=variant,
+                with_explanation_probe=True,
+            ),
             "purpose": "a5-explanation-instrument",
-            "variant": variant,
         }
         for name, digest in manifest["files"].items():
             payload = candidate.read(name)
@@ -433,4 +437,24 @@ def test_源与受控产物不一致时拒绝实验包并保全旧文件(tmp_pat
     monkeypatch.setattr(decisions, "PRODUCT", product)
     with pytest.raises(ValueError, match="生成物不一致"):
         probe.package(target)
+    assert target.read_bytes() == b"previous package"
+
+
+def test_交付清单校验失败时保全已有ZIP(tmp_path, monkeypatch):
+    target = tmp_path / "previous.zip"
+    target.write_bytes(b"previous package")
+
+    def fail(*args, **kwargs):
+        raise ValueError("清单校验失败")
+
+    monkeypatch.setattr(distribution, "validate_package", fail)
+    with pytest.raises(ValueError, match="清单校验失败"):
+        distribution.write_zip(
+            {"common/example.txt": "example\n"},
+            target,
+            generation=distribution.generation_contract(
+                variant="disabled",
+                with_explanation_probe=False,
+            ),
+        )
     assert target.read_bytes() == b"previous package"

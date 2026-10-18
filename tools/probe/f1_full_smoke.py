@@ -48,6 +48,9 @@ def _context(
     instrumented = with_explanation_probe and not diagnostic
     return {
         "schema": "sitai-f1-full-smoke-v1",
+        "delivery_contract": distribution.generation_contract(
+            variant=VARIANT, with_explanation_probe=with_explanation_probe
+        ),
         "candidate": "full",
         "language": language,
         "loaded_observer": load_save is not None,
@@ -87,9 +90,9 @@ def _write_sources(
     policy, extensions, files = distribution.package_inputs(VARIANT)
     if with_explanation_probe:
         files = explanation_probe.attach(files, policy, extensions)
-    candidate = root / "sitai_full_f1"
+    candidate = root / distribution.INSTALL_DIRECTORY_NAME
     decisions.write(candidate, files)
-    sources: dict[str, Path] = {"sitai_full_f1": candidate}
+    sources: dict[str, Path] = {distribution.INSTALL_DIRECTORY_NAME: candidate}
 
     if resource:
         resource_root = root / "zz_sitai_resource_baseline"

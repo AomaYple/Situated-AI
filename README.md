@@ -103,7 +103,8 @@ macOS / Linux 从 `pyproject.toml` 安装对应平台依赖。
 仓库全部文本采用 **UTF-8 无 BOM、LF**。游戏脚本和本地化的 BOM 由安装或打包边界添加；
 因此安装时使用部署工具或 `python -m pdx.cli package --output dist/situated-ai.zip`，
 解压 ZIP 到独立 mod 目录后挂载该目录。包内 `README.md` 按实际变体生成中英规则、安装与回退说明，
-不代表游戏内实时状态或行为质量验收。ZIP 内的 `DISTRIBUTION-MANIFEST.json`
+不代表游戏内实时状态或行为质量验收。标准包应解压到 `Victoria 3/mod/Situated AI`；`Situated AI` 是用户可见安装目录名，稳定 Mod ID 仍为 `sitai.decisions`。解释探针只能显式附加到临时验证副本，不能进入标准包。
+ZIP 内的 `DISTRIBUTION-MANIFEST.json`
 记录每个交付文件的 SHA-256。仓库里的 `mod/` 是无 BOM 的源码产物目录。
 
 ### 它做什么

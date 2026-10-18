@@ -15,7 +15,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 游戏包使用 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认 `--variant disabled` 关闭财政及两个扩展，生成全关安全包；实验候选显式选 `--variant current`，零策略偏置但保留财政生命周期的控制组显式选 `--variant control`。七模块标准候选使用 `--variant full`，默认只生成真正的 Mod 内容；只有需要解释仪器时才显式加 `--with-explanation-probe`，把未验收的国家面板候选临时附加到本次验证副本。三种基础变体和 `full` 都先核对仓库生成一致性，清单记录实际参数、探针开关和输入/生成器指纹；非法变体保全已有目标。当前产品状态为 `experimental`，生成包不代表 V0.1 或行为质量已验收。独立安全实机记录见 [A1 结果](../docs/design/exec/A1-结果.md)。
 
-每个 ZIP 的 `README.md` 从变体转换后的实际参数和启用模块自动生成，含中英规则、安装、冲突和存档回退说明，SHA-256 由同包清单验证。它是随包使用说明，不是游戏内实时面板；全关包仍含默认策略底本，不能当作零 Mod 环境。验证与成本见 [A5 结果](../docs/design/exec/A5-结果.md)。
+每个 ZIP 的 `README.md` 从变体转换后的实际参数和启用模块自动生成，含中英规则、安装、冲突和存档回退说明，标准包目录固定为 `Victoria 3/mod/Situated AI`，稳定 Mod ID 为 `sitai.decisions`；探针包使用 `sitai.explanation-probe`；`pdx.distribution.validate_package` 在发布前逐项校验清单、路径和 SHA-256，并拒绝含解释探针的标准发布包。它是随包使用说明，不是游戏内实时面板；全关包仍含默认策略底本，不能当作零 Mod 环境。验证与成本见 [A5 结果](../docs/design/exec/A5-结果.md)。
 
 ```
 .venv/                          Python 3.14 虚拟环境（已 gitignore）

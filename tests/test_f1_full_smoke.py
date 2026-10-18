@@ -69,7 +69,7 @@ def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch):
     assert report["ok"] is True
     source_names = captured["sources"]
     assert isinstance(source_names, dict)
-    assert set(source_names) == {"sitai_full_f1"}
+    assert set(source_names) == {f1_full_smoke.distribution.INSTALL_DIRECTORY_NAME}
     kwargs = captured["kwargs"]
     assert isinstance(kwargs, dict)
     assert kwargs["language"] is None
@@ -78,8 +78,10 @@ def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch):
     assert context["production_package"] is True
     assert context["behavior_quality"] == "not_evaluated"
     assert context["loaded_observer"] is False
+    assert context["delivery_contract"]["install_directory"] == "Situated AI"
+    assert context["delivery_contract"]["variant"] == "full"
     assert written
-    assert written[0].name == "sitai_full_f1"
+    assert written[0].name == f1_full_smoke.distribution.INSTALL_DIRECTORY_NAME
 
 
 def test_默认标准候选不附加解释探针且显式开关才附加(tmp_path, monkeypatch):
@@ -187,7 +189,7 @@ def test_诊断候选显式记录两种原版基线(tmp_path, monkeypatch):
     source_names = captured["sources"]
     assert isinstance(source_names, dict)
     assert set(source_names) == {
-        "sitai_full_f1",
+        f1_full_smoke.distribution.INSTALL_DIRECTORY_NAME,
         "zz_sitai_resource_baseline",
         "zz_sitai_vanilla_localization_baseline",
     }

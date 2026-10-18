@@ -43,6 +43,9 @@ def _context(
     instrumented = with_explanation_probe and not diagnostic
     return {
         "schema": "sitai-f1-module-smoke-v1",
+        "delivery_contract": distribution.generation_contract(
+            variant=module, with_explanation_probe=with_explanation_probe
+        ),
         "candidate": module,
         "candidate_kind": (
             "diagnostic_candidate"
@@ -75,9 +78,10 @@ def _write_sources(
     policy, extensions, files = distribution.package_inputs(module)
     if with_explanation_probe:
         files = explanation_probe.attach(files, policy, extensions)
-    candidate = root / f"sitai_{module}_f1"
+    # 单模块烟测仍生成标准用户可见目录；模块差异由包 manifest 的 variant 记录。
+    candidate = root / distribution.INSTALL_DIRECTORY_NAME
     decisions.write(candidate, files)
-    sources: dict[str, Path] = {f"sitai_{module}_f1": candidate}
+    sources: dict[str, Path] = {distribution.INSTALL_DIRECTORY_NAME: candidate}
     if resource:
         baseline = root / "zz_sitai_resource_baseline"
         resource_baseline.write(baseline, config.GAME)

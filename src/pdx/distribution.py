@@ -32,6 +32,161 @@ PACKAGE_VARIANTS = (
     "full",
 )
 
+MOD_ID = "sitai.decisions"
+PROBE_MOD_ID = "sitai.explanation-probe"
+MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
+
+# 用户可见的本地 Mod 目录名。内部 metadata.id 保持 `sitai.decisions`，用于
+# 稳定识别、兼容性校验和既有工具；这个常量只约束生成/部署时的文件夹名称。
+INSTALL_DIRECTORY_NAME = "Situated AI"
+
+
+def generation_contract(*, variant: str, with_explanation_probe: bool) -> dict[str, object]:
+    """返回生成、部署、测试和发布共用的候选契约。
+
+    目录名是用户可见的交付接口；``MOD_ID`` 才是稳定的引擎/元数据身份。
+    探针只能改变本次候选的证据类型，不能改变生产源或生产包默认值。
+    """
+    if variant not in PACKAGE_VARIANTS:
+        raise ValueError("包变体无效：" + "、".join(PACKAGE_VARIANTS))
+    return {
+        "schema": "sitai-distribution-v1",
+        "mod_id": MOD_ID,
+        "install_directory": INSTALL_DIRECTORY_NAME,
+        "variant": variant,
+        "candidate_kind": (
+            "instrumented_candidate" if with_explanation_probe else "production_candidate"
+        ),
+        "delivery_kind": "instrumented_validation" if with_explanation_probe else "standard_mod",
+        "with_explanation_probe": with_explanation_probe,
+        "behavior_quality": "not_evaluated",
+    }
+
+
+def _manifest_for_payloads(
+    data: Mapping[str, bytes], *, generation: Mapping[str, object] | None = None
+) -> dict[str, object]:
+    """从最终交付字节构造清单；ZIP 与发布校验共用这一份逻辑。"""
+    manifest: dict[str, object] = {
+        "schema": 2,
+        "mod_id": MOD_ID,
+        "install_directory": INSTALL_DIRECTORY_NAME,
+        "encoding": "游戏 .txt/.yml：UTF-8 含 BOM、LF；其他文本：UTF-8 无 BOM、LF",
+        "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in data.items()},
+    }
+    metadata = data.get(".metadata/metadata.json")
+    if metadata is not None:
+        try:
+            contract = json.loads(metadata.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("交付元数据不是有效 JSON") from exc
+        required = {
+            "id",
+            "version",
+            "tool_version",
+            "status",
+            "supported_game_version",
+            "enabled_modules",
+            "parent_package",
+            "save_compatibility",
+            "platforms",
+            "platform_notes",
+            "source_fingerprint",
+        }
+        if not isinstance(contract, dict) or contract.get("id") not in {MOD_ID, PROBE_MOD_ID}:
+            raise ValueError("交付元数据缺少稳定 Mod 身份")
+        manifest["mod_id"] = contract["id"]
+        if not required <= contract.keys():
+            raise ValueError("交付元数据缺少包契约字段")
+        if (
+            not isinstance(contract["enabled_modules"], list)
+            or not isinstance(contract["source_fingerprint"], dict)
+            or not contract["source_fingerprint"]
+        ):
+            raise ValueError("交付元数据的启用模块或源指纹无效")
+        manifest["contract"] = {
+            "product_version": contract["version"],
+            "tool_version": contract["tool_version"],
+            "status": contract["status"],
+            "game_version": contract["supported_game_version"],
+            "enabled_modules": contract["enabled_modules"],
+            "parent_package": contract["parent_package"],
+            "save_compatibility": contract["save_compatibility"],
+            "platforms": contract["platforms"],
+            "platform_notes": contract["platform_notes"],
+            "source_fingerprint": contract["source_fingerprint"],
+        }
+    if generation is not None:
+        manifest["generation"] = dict(generation)
+    return manifest
+
+
+def validate_package(
+    archive_path: Path,
+    *,
+    expected_variant: str | None = None,
+    allow_probe: bool = False,
+) -> dict[str, object]:
+    """校验可发布 ZIP 的路径、清单、哈希和探针边界。"""
+    with zipfile.ZipFile(archive_path) as archive:
+        broken = archive.testzip()
+        if broken:
+            raise ValueError(f"交付 ZIP 校验失败：{broken}")
+        names = archive.namelist()
+        if len(names) != len(set(names)):
+            raise ValueError("交付 ZIP 含重复路径")
+        for name in names:
+            path = PurePosixPath(name)
+            if (
+                not name
+                or path.is_absolute()
+                or ".." in path.parts
+                or "\\" in name
+                or ":" in name
+                or path.as_posix() != name
+            ):
+                raise ValueError(f"交付 ZIP 含非法路径：{name!r}")
+        if MANIFEST_NAME not in names:
+            raise ValueError(f"交付 ZIP 缺少 {MANIFEST_NAME}")
+        try:
+            manifest = json.loads(archive.read(MANIFEST_NAME).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("交付清单不是有效 UTF-8 JSON") from exc
+        if not isinstance(manifest, dict):
+            raise ValueError("交付清单必须是 JSON 对象")
+        if manifest.get("schema") != 2:
+            raise ValueError("交付清单版本不受支持")
+        mod_id = manifest.get("mod_id")
+        if mod_id not in {MOD_ID, PROBE_MOD_ID}:
+            raise ValueError("交付清单的稳定 Mod 身份不符")
+        if manifest.get("install_directory") != INSTALL_DIRECTORY_NAME:
+            raise ValueError("交付清单的安装目录不符")
+        generation = manifest.get("generation")
+        if not isinstance(generation, dict):
+            raise ValueError("交付清单缺少生成契约")
+        if generation.get("install_directory") != INSTALL_DIRECTORY_NAME:
+            raise ValueError("生成契约的安装目录不符")
+        variant = generation.get("variant")
+        if not isinstance(variant, str) or variant not in PACKAGE_VARIANTS:
+            raise ValueError("生成契约的变体无效")
+        if expected_variant is not None and variant != expected_variant:
+            raise ValueError(f"交付变体为 {variant}，不是期望的 {expected_variant}")
+        with_probe = generation.get("with_explanation_probe") is True
+        if mod_id == PROBE_MOD_ID and not with_probe:
+            raise ValueError("探针身份与生成契约不一致")
+        if not allow_probe and with_probe:
+            raise ValueError("标准发布包不能包含解释探针")
+        files = manifest.get("files")
+        if not isinstance(files, dict) or set(files) != set(names) - {MANIFEST_NAME}:
+            raise ValueError("交付清单文件集合与 ZIP 不一致")
+        for name, expected in files.items():
+            if (
+                not isinstance(expected, str)
+                or hashlib.sha256(archive.read(name)).hexdigest() != expected
+            ):
+                raise ValueError(f"交付文件指纹不符：{name}")
+        return manifest
+
 
 def player_guide(
     policy: decisions.Policy,
@@ -86,7 +241,8 @@ def player_guide(
         "该规则保留原版策略牌、国家身份、玩家和 AI 的共同世界规则；不提供免费资源、"
         "强制行动或固定国家剧本。\n"
         "安装：先退出游戏并保留原有配置与处理前存档，将 ZIP 解压至独立本地 Mod 目录，"
-        "在启动器的独立 playset 中登记并启用；不要覆盖游戏本体，也不要同时挂载本包的多个变体。"
+        f"标准安装目录为 `Victoria 3/mod/{INSTALL_DIRECTORY_NAME}`；在启动器的独立 playset 中登记并启用；"
+        "不要覆盖游戏本体，也不要同时挂载本包的多个变体。"
         "本包覆盖原版 00_default_strategy.txt；其他修改同一策略的 Mod 有兼容冲突风险。\n"
         "回退：退出游戏后禁用或移除本 Mod；全关包仍含默认策略底本，因此不等于完全零 Mod。"
         "已有变量可按剩余 TTL 失效，但关闭或卸载不会撤回已经发生的世界变化；"
@@ -132,7 +288,7 @@ def player_guide(
         " place. The package does not grant free resources, force actions, or hard-code a country"
         " script.\n"
         "Install: exit the game, preserve your configuration and a pre-treatment save, extract"
-        " this ZIP into a separate local Mod directory, and register/enable it in an isolated"
+        f" this ZIP into `Victoria 3/mod/{INSTALL_DIRECTORY_NAME}`, and register/enable it in an isolated"
         " launcher playset. Do not overwrite the game installation or enable multiple variants"
         " together. This package overrides vanilla 00_default_strategy.txt and may conflict with"
         " other Mods that modify the same strategy.\n"
@@ -172,7 +328,7 @@ def payloads(files: Mapping[str, str]) -> dict[str, bytes]:
     result: dict[str, bytes] = {}
     portable_names: set[str] = set()
     for name, text in sorted(files.items()):
-        if name.casefold() == "distribution-manifest.json":
+        if name.casefold() == MANIFEST_NAME.casefold():
             raise ValueError("交付清单文件名为保留名称")
         path = PurePosixPath(name)
         if not name or path.is_absolute() or ".." in path.parts or "\\" in name or ":" in name:
@@ -209,57 +365,8 @@ def write_zip(
 ) -> Path:
     """先完成并核验临时 ZIP，再原子替换目标；不修改仓库产物。"""
     data = payloads(files)
-    manifest = {
-        "schema": 2,
-        "encoding": "游戏 .txt/.yml：UTF-8 含 BOM、LF；其他文本：UTF-8 无 BOM、LF",
-        "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in data.items()},
-    }
-    metadata = files.get(".metadata/metadata.json")
-    if metadata:
-        try:
-            contract = json.loads(metadata)
-        except json.JSONDecodeError as exc:
-            raise ValueError("交付元数据不是有效 JSON") from exc
-        required = {
-            "version",
-            "tool_version",
-            "status",
-            "supported_game_version",
-            "enabled_modules",
-            "parent_package",
-            "save_compatibility",
-            "platforms",
-            "platform_notes",
-            "source_fingerprint",
-        }
-        if not isinstance(contract, dict):
-            raise ValueError("交付元数据必须是 JSON 对象")
-        if contract.get("id") == "sitai.decisions":
-            if not required <= contract.keys():
-                raise ValueError("交付元数据缺少 A1 包契约字段")
-            if (
-                not isinstance(contract["enabled_modules"], list)
-                or not isinstance(contract["source_fingerprint"], dict)
-                or not contract["source_fingerprint"]
-            ):
-                raise ValueError("交付元数据的启用模块或源指纹无效")
-            manifest["contract"] = {
-                "product_version": contract["version"],
-                "tool_version": contract["tool_version"],
-                "status": contract["status"],
-                "game_version": contract["supported_game_version"],
-                "enabled_modules": contract["enabled_modules"],
-                "parent_package": contract["parent_package"],
-                "save_compatibility": contract["save_compatibility"],
-                "platforms": contract["platforms"],
-                "platform_notes": contract["platform_notes"],
-                "source_fingerprint": contract["source_fingerprint"],
-            }
-    if generation is not None:
-        manifest["generation"] = dict(generation)
-    data["DISTRIBUTION-MANIFEST.json"] = text_bytes(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
-    )
+    manifest = _manifest_for_payloads(data, generation=generation)
+    data[MANIFEST_NAME] = text_bytes(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=destination.parent, suffix=".zip", delete=False) as stream:
         temporary = Path(stream.name)
@@ -277,6 +384,9 @@ def write_zip(
             broken = archive.testzip()
             if broken:
                 raise ValueError(f"交付 ZIP 校验失败：{broken}")
+        # 在替换目标前校验完整交付清单。这样清单、路径或哈希失败时，
+        # 已有目标包仍然可以作为可恢复交付物保留。
+        validate_package(temporary, allow_probe=True)
         temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)
@@ -391,8 +501,7 @@ def package(
         files,
         destination,
         generation={
-            "variant": variant,
-            "with_explanation_probe": with_explanation_probe,
+            **generation_contract(variant=variant, with_explanation_probe=with_explanation_probe),
             "fiscal": {
                 key: value
                 for key, value in asdict(policy).items()

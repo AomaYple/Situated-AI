@@ -25,7 +25,7 @@ def test_生成会修复编码和同长度正文漂移(tmp_path):
     assert decisions.write(tmp_path, files) == paths
     for raw in (
         b"\xef\xbb\xbf" + files["common/a.txt"].encode(),
-        "同样内容\r\n".encode(),
+        "同样内容\n".encode(),
         "其他内容\n".encode(),
     ):
         path.write_bytes(raw)
@@ -419,6 +419,27 @@ def test_生产ZIP清单携带实际包契约和源指纹(tmp_path):
     assert manifest["contract"]["product_version"] == metadata["version"]
     assert manifest["contract"]["enabled_modules"] == metadata["enabled_modules"]
     assert manifest["contract"]["source_fingerprint"] == metadata["source_fingerprint"]
+    from pdx import distribution
+
+    assert manifest["mod_id"] == distribution.MOD_ID
+    assert manifest["install_directory"] == distribution.INSTALL_DIRECTORY_NAME
+    assert manifest["generation"]["install_directory"] == distribution.INSTALL_DIRECTORY_NAME
+    assert manifest["generation"]["candidate_kind"] == "production_candidate"
+    assert manifest["generation"]["delivery_kind"] == "standard_mod"
+
+
+def test_standard_package_manifest_validation(tmp_path):
+    from pdx import distribution
+
+    target = distribution.package(tmp_path / "mod.zip", variant="full")
+    manifest = distribution.validate_package(target, expected_variant="full")
+    assert manifest["install_directory"] == "Situated AI"
+    probe = distribution.package(
+        tmp_path / "probe.zip", variant="full", with_explanation_probe=True
+    )
+    with pytest.raises(ValueError, match="解释探针"):
+        distribution.validate_package(probe)
+    distribution.validate_package(probe, expected_variant="full", allow_probe=True)
 
 
 @pytest.mark.parametrize("value", ["1", '"false"', "[]"])

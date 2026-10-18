@@ -448,7 +448,7 @@ def attach(
     if installed_version != policy.game_version:
         raise ValueError("解释实验包需要与生产版本一致的本机国家面板底本")
     panel_bytes = (config.GAME / PANEL).read_bytes()
-    panel = panel_bytes.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n")
+    panel = panel_bytes.decode("utf-8-sig").replace("\n", "\n").replace("\r", "\n")
     files[PANEL] = _extend_country_panel(panel)
     files.update(build(policy, extra))
     metadata = json.loads(files[".metadata/metadata.json"])
@@ -526,7 +526,10 @@ def package(destination: Path, *, variant: str = "disabled") -> Path:
     return distribution.write_zip(
         files,
         destination,
-        generation={"purpose": "a5-explanation-instrument", "variant": variant},
+        generation={
+            **distribution.generation_contract(variant=variant, with_explanation_probe=True),
+            "purpose": "a5-explanation-instrument",
+        },
     )
 
 

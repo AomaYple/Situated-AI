@@ -58,11 +58,13 @@ def test_模块烟测默认只挂载单一生产候选(tmp_path, monkeypatch):
     assert report["ok"] is True
     sources = captured["sources"]
     assert isinstance(sources, dict)
-    assert set(sources) == {"sitai_economy_f1"}
+    assert set(sources) == {f1_module_smoke.distribution.INSTALL_DIRECTORY_NAME}
     context = json.loads((tmp_path / "evidence/f1_context.json").read_text(encoding="utf-8"))
     assert context["candidate"] == "economy"
     assert context["candidate_kind"] == "production_candidate"
     assert context["behavior_quality"] == "not_evaluated"
+    assert context["delivery_contract"]["install_directory"] == "Situated AI"
+    assert context["delivery_contract"]["variant"] == "economy"
 
 
 def test_模块标准候选只有显式开关才附加解释探针(tmp_path, monkeypatch):
@@ -122,7 +124,7 @@ def test_模块烟测诊断选项同时记录两项基线(tmp_path, monkeypatch)
     sources = captured["sources"]
     assert isinstance(sources, dict)
     assert set(sources) == {
-        "sitai_subjects_f1",
+        f1_module_smoke.distribution.INSTALL_DIRECTORY_NAME,
         "zz_sitai_resource_baseline",
         "zz_sitai_vanilla_localization_baseline",
     }
