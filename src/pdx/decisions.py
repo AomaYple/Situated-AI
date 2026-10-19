@@ -1131,11 +1131,19 @@ def build(
     files = {
         "common/ai_strategies/00_default_strategy.txt": patch_default(baseline, policy, extensions),
     }
+    adapter_inputs = (
+        decision_adapters.read_inputs(consumer_adapters) if consumer_adapters is not None else None
+    )
     if information_rules is not None:
         files["common/ai_strategies/00_default_strategy.txt"] = decision_rules.patch(
             files["common/ai_strategies/00_default_strategy.txt"],
             information_rules,
             baseline=baseline,
+            reader_words=(
+                frozenset(decision_adapters.reader_evidence(adapter_inputs))
+                if adapter_inputs is not None
+                else None
+            ),
         )
     strategy_issues = player_boundary_issues(files["common/ai_strategies/00_default_strategy.txt"])
     if strategy_issues:
@@ -1235,7 +1243,9 @@ def build(
             "save_compatibility": policy.package.save_compatibility,
         }
     if consumer_adapters is not None:
-        adapter_files, adapter_contract = decision_adapters.build(consumer_adapters, overlays=files)
+        adapter_files, adapter_contract = decision_adapters.build(
+            consumer_adapters, overlays=files, texts=adapter_inputs
+        )
         collisions = files.keys() & adapter_files.keys()
         if collisions - {"common/ai_strategies/00_default_strategy.txt"}:
             raise ValueError("消费者适配存在多个写入者：" + "、".join(sorted(collisions)))
@@ -1268,6 +1278,36 @@ def build(
         }
         if player_boundary_issues(files["common/ai_strategies/00_default_strategy.txt"]):
             raise ValueError("消费者适配违反玩家边界")
+    strategic_policies = ([information_rules] if information_rules is not None else []) + (
+        [row for _, row in consumer_adapters.policies] if consumer_adapters is not None else []
+    )
+    strategies = [row.strategy for row in strategic_policies if row.strategy is not None]
+    if strategies:
+        strategy = strategies[0]
+        if any(other != strategy for other in strategies[1:]):
+            raise ValueError("同一候选不能混合不同来源的战略意图")
+        active_rules = [
+            rule
+            for row in strategic_policies
+            for rule in row.rules
+            if rule.domain in row.enabled_domains and rule.intent is not None
+        ]
+        strategic_contract = strategy.contract(
+            {rule.intent for rule in active_rules if rule.intent}
+        )
+        metadata["strategic_coordination"] = {
+            **strategic_contract,
+            "rules_with_intent": len(active_rules),
+            "runtime_state": "none",
+            "behavior_verified": False,
+            "limits": "nonexclusive_constraints; no_global_planner_or_persistent_country_intent",
+        }
+        fingerprint = metadata["source_fingerprint"]
+        assert isinstance(fingerprint, dict)
+        fingerprint.update(
+            strategic_source_sha256=strategy.source_sha256,
+            strategic_generator_sha256=strategic_contract["generator_sha256"],
+        )
     files[".metadata/metadata.json"] = (
         json.dumps(
             metadata,

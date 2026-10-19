@@ -11,7 +11,7 @@ from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
-from pdx import decisions, explanation_probe
+from pdx import decision_intents, decisions, explanation_probe
 from pdx.textio import GAME_SUFFIXES, text_bytes
 
 if TYPE_CHECKING:
@@ -437,7 +437,7 @@ def package_inputs(
                 policy.package,
                 status="candidate" if variant == "full" else "experimental",
                 product_version=(
-                    "2.0.0.dev0"
+                    "2.0.0.dev1"
                     if variant == "integrated"
                     else "1.0.0"
                     if variant == "full"
@@ -456,6 +456,20 @@ def package_inputs(
             subjects_enabled=variant in {"subjects", "full"},
         )
     full_localization = variant in {"full", "integrated"}
+    strategy = decision_intents.load() if variant == "integrated" else None
+    information = decisions.decision_rules.load(strategy=strategy) if strategy is not None else None
+    adapters = decisions.decision_adapters.load(strategy=strategy) if strategy is not None else None
+    if strategy is not None and information is not None and adapters is not None:
+        consumed = {
+            rule.intent
+            for policy_rules in (information, *(row for _, row in adapters.policies))
+            for rule in policy_rules.rules
+            if rule.intent is not None
+        }
+        if {intent.id for intent in strategy.closure(consumed)} != {
+            intent.id for intent in strategy.intents
+        }:
+            raise ValueError("生产战略意图必须有实际规则消费者")
     files = (
         current
         if variant == "current"
@@ -463,10 +477,8 @@ def package_inputs(
             policy,
             extensions=extensions,
             complete_localization=full_localization,
-            information_rules=decisions.decision_rules.load() if variant == "integrated" else None,
-            consumer_adapters=decisions.decision_adapters.load()
-            if variant == "integrated"
-            else None,
+            information_rules=information,
+            consumer_adapters=adapters,
         )
     )
     if variant in {"full", "integrated"}:

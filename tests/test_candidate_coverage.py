@@ -339,6 +339,158 @@ def test_candidate_identity_and_contract_fingerprints_are_bound(inputs, change):
         candidate_coverage.build(catalog, metadata)
 
 
+@pytest.fixture
+def strategic_inputs(inputs):
+    catalog, metadata = inputs
+    base = {
+        "id": "capacity",
+        "requires": [],
+        "signals": ["solvent"],
+        "conditions": [{"fact": "debt", "op": ">=", "value": 0}],
+    }
+    development = {
+        "id": "development",
+        "requires": ["capacity"],
+        "signals": ["affordable"],
+        "conditions": [*base["conditions"], {"fact": "debt", "op": "<=", "value": 0.4}],
+    }
+    strategy = {
+        "source_sha256": "e" * 64,
+        "generator_sha256": "f" * 64,
+        "composition": "generation_time_and_dag; nonexclusive_current_input_constraints",
+        "priority": "existing_per_field_rule_priority; one_adjustment",
+        "graph_budget": {"signals": 32, "intents": 32, "depth": 8},
+        "intents": [base, development],
+    }
+    metadata["strategic_coordination"] = {
+        **copy.deepcopy(strategy),
+        "rules_with_intent": 2,
+        "runtime_state": "none",
+        "behavior_verified": False,
+    }
+    metadata["source_fingerprint"].update(
+        strategic_source_sha256="e" * 64, strategic_generator_sha256="f" * 64
+    )
+    info = metadata["decision_rules"]
+    adapter = metadata["consumer_adapters"]["consumers"][0]
+    for contract, intent in ((info, development), (adapter, base)):
+        contract["strategy"] = copy.deepcopy(strategy)
+        if contract is adapter:
+            contract["strategy"]["intents"] = [copy.deepcopy(base)]
+        contract["rules"][0].update(
+            intent=intent["id"], conditions=copy.deepcopy(intent["conditions"])
+        )
+    return catalog, metadata
+
+
+def test_strategy_fingerprint_chain_and_optional_adapter_aggregate_are_consistent(
+    strategic_inputs,
+):
+    catalog, metadata = strategic_inputs
+    assert len(candidate_coverage.build(catalog, metadata)["links"]) == 2
+    metadata["consumer_adapters"]["strategy"] = copy.deepcopy(
+        metadata["consumer_adapters"]["consumers"][0]["strategy"]
+    )
+    assert len(candidate_coverage.build(catalog, metadata)["links"]) == 2
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "missing_top",
+        "null_top",
+        "empty_top",
+        "missing_source",
+        "missing_generator",
+        "bad_source",
+        "bad_generator",
+        "top_source",
+        "top_generator",
+        "nested_source",
+        "nested_generator",
+        "missing_nested",
+        "null_nested",
+        "adapter_source",
+        "adapter_generator",
+        "missing_adapter_nested",
+        "aggregate_source",
+        "aggregate_generator",
+        "empty_nested",
+        "malformed_nested",
+    ],
+)
+def test_strategy_fingerprints_and_required_contracts_cannot_drift(strategic_inputs, change):
+    catalog, metadata = strategic_inputs
+    top = metadata["strategic_coordination"]
+    info = metadata["decision_rules"]
+    adapter = metadata["consumer_adapters"]["consumers"][0]
+    fingerprint = metadata["source_fingerprint"]
+    if change == "missing_top":
+        del metadata["strategic_coordination"]
+    elif change in {"null_top", "empty_top"}:
+        metadata["strategic_coordination"] = None if change == "null_top" else {}
+    elif change in {"missing_source", "missing_generator"}:
+        del fingerprint[f"strategic_{change.removeprefix('missing_')}_sha256"]
+    elif change in {"bad_source", "bad_generator"}:
+        fingerprint[f"strategic_{change.removeprefix('bad_')}_sha256"] = "invalid"
+    elif change in {"top_source", "top_generator"}:
+        top[change.removeprefix("top_") + "_sha256"] = "0" * 64
+    elif change in {"nested_source", "nested_generator"}:
+        info["strategy"][change.removeprefix("nested_") + "_sha256"] = "0" * 64
+    elif change == "missing_nested":
+        del info["strategy"]
+    elif change in {"null_nested", "empty_nested", "malformed_nested"}:
+        info["strategy"] = {"null_nested": None, "empty_nested": {}, "malformed_nested": []}[change]
+    elif change in {"adapter_source", "adapter_generator"}:
+        adapter["strategy"][change.removeprefix("adapter_") + "_sha256"] = "0" * 64
+    elif change == "missing_adapter_nested":
+        del adapter["strategy"]
+    else:
+        metadata["consumer_adapters"]["strategy"] = {
+            **adapter["strategy"],
+            change.removeprefix("aggregate_") + "_sha256": "0" * 64,
+        }
+    with pytest.raises(ValueError):
+        candidate_coverage.build(catalog, metadata)
+
+
+@pytest.mark.parametrize("trace", ["source", "generator", "info", "adapter", "aggregate", "intent"])
+def test_partial_strategy_metadata_cannot_fall_back_to_legacy_protocol(inputs, trace):
+    catalog, metadata = inputs
+    if trace in {"source", "generator"}:
+        metadata["source_fingerprint"][f"strategic_{trace}_sha256"] = "e" * 64
+    elif trace == "intent":
+        metadata["decision_rules"]["rules"][0]["intent"] = "capacity"
+    else:
+        contract = {
+            "info": metadata["decision_rules"],
+            "adapter": metadata["consumer_adapters"]["consumers"][0],
+            "aggregate": metadata["consumer_adapters"],
+        }[trace]
+        contract["strategy"] = {"source_sha256": "e" * 64, "generator_sha256": "f" * 64}
+    with pytest.raises(ValueError):
+        candidate_coverage.build(catalog, metadata)
+
+
+def test_disabled_strategy_contracts_accept_matching_fingerprints_with_inactive_definitions(
+    strategic_inputs,
+):
+    catalog, metadata = strategic_inputs
+    metadata["decision_rules"].update(enabled_domains=[], active_rule_count=0)
+    metadata["strategic_coordination"]["rules_with_intent"] = 1
+    metadata["strategic_coordination"]["intents"].pop()
+    assert len(candidate_coverage.build(catalog, metadata)["links"]) == 1
+
+
+def test_legacy_null_strategy_contracts_remain_compatible(inputs):
+    catalog, metadata = inputs
+    metadata["decision_rules"]["strategy"] = None
+    metadata["decision_rules"]["rules"][0]["intent"] = None
+    metadata["consumer_adapters"]["strategy"] = None
+    metadata["consumer_adapters"]["consumers"][0]["strategy"] = None
+    assert len(candidate_coverage.build(catalog, metadata)["links"]) == 2
+
+
 def test_deterministic_without_game_or_filesystem_reads(inputs, monkeypatch, tmp_path):
     catalog, metadata = inputs
     monkeypatch.setattr(config, "GAME", tmp_path / "game-does-not-exist")
@@ -415,11 +567,15 @@ def test_cli_rejects_invalid_candidate_instead_of_claiming_coverage(
     assert not coverage.exists()
 
 
+@pytest.mark.parametrize("change", ["identity", "strategic_fingerprint"])
 def test_cli_failed_validation_preserves_previous_reports_without_claiming_a_new_run(
-    inputs, monkeypatch, tmp_path
+    strategic_inputs, monkeypatch, tmp_path, change
 ):
-    catalog, metadata = inputs
-    metadata["id"] = "wrong"
+    catalog, metadata = strategic_inputs
+    if change == "identity":
+        metadata["id"] = "wrong"
+    else:
+        metadata["source_fingerprint"]["strategic_source_sha256"] = "0" * 64
     monkeypatch.setattr(cli, "_require_game", lambda: None)
     monkeypatch.setattr(cli.information_catalog, "build", lambda **_kwargs: catalog)
     source = tmp_path / "metadata.json"
@@ -442,7 +598,7 @@ def test_cli_failed_validation_preserves_previous_reports_without_claiming_a_new
         ],
     )
     assert result.exit_code == 2
-    assert "已有文件仅属于先前运行" in result.output
+    assert "已有文件仅属于先前运行" in "".join(result.output.split())
     assert output.read_bytes() == b"previous evidence\n"
     assert coverage.read_bytes() == b"previous evidence\n"
 

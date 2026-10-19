@@ -18,13 +18,29 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pdx import config, decision_rules, decisions, distribution, information_catalog
+from pdx import (
+    config,
+    decision_adapters,
+    decision_intents,
+    decision_rules,
+    decisions,
+    distribution,
+    information_catalog,
+)
 from pdx.consumer_matrix import ConsumerMatrix
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+# 合成语义测试的附加token，仅允许独立解释生成条件，不作为真实本体依据。
+# 真实依据另由integration用例对全部锁定原件核对SHA与接口签名。
+_SYNTHETIC_READER_EVIDENCE = (
+    "bureaucracy taking_loans scaled_debt net_total_income legitimacy "
+    "has_insurrectionary_interest_groups"
+)
 
 
 @pytest.mark.parametrize("excess", ["candidates", "field_predicates", "rule_predicates"])
@@ -45,12 +61,27 @@ def test_configuration_growth_cannot_bypass_static_runtime_budget(excess):
             }
         )
     with pytest.raises(ValueError, match="复杂度预算"):
-        decision_rules.from_data(data, source_sha256="a" * 64)
+        decision_rules.from_data(data, source_sha256="a" * 64, strategy=decision_intents.load())
 
 
 @pytest.fixture(scope="module")
 def rules() -> decision_rules.RuleSet:
     return decision_rules.load()
+
+
+@pytest.mark.integration
+def test_shared_information_readers_have_sha_locked_native_evidence(rules):
+    if not (config.GAME / "common/laws/readme.md").is_file():
+        pytest.skip("需要锁定版本的游戏原件")
+    inputs = decision_adapters.read_inputs(decision_adapters.load())
+    evidence = decision_adapters.reader_evidence(inputs)
+    assert all(reader.engine in evidence for reader in rules.readers)
+    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    script = decision_rules.patch(
+        baseline, rules, baseline=baseline, reader_words=frozenset(evidence)
+    )
+    assert "bureaucracy >= 0" in script
+    assert "has_insurrectionary_interest_groups = no" in script
 
 
 def _values(**overrides: object) -> dict[str, object]:
@@ -59,6 +90,12 @@ def _values(**overrides: object) -> dict[str, object]:
         "war": False,
         "population": 3000000,
         "income": 5000,
+        "net_surplus": 100,
+        "debt_ratio": 0.1,
+        "loans": False,
+        "bureaucracy": 100,
+        "legitimacy": 60,
+        "insurrection": False,
         "navy": 50,
         "subject": False,
         "industrial_route": True,
@@ -94,7 +131,9 @@ def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rule
         "identity",
     }
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
-    script = decision_rules.patch(baseline, rules, baseline=baseline)
+    script = decision_rules.patch(
+        baseline, rules, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+    )
     assert not parse_text(script).errors
     assert not decisions.player_boundary_issues(script)
     for field in rules.groups():
@@ -122,11 +161,22 @@ def test_unknown_player_and_empty_switches_preserve_vanilla(rules):
     )
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
     assert (
-        decision_rules.patch(baseline, rules, baseline=baseline, enabled_domains=frozenset())
+        decision_rules.patch(
+            baseline,
+            rules,
+            baseline=baseline,
+            enabled_domains=frozenset(),
+            reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+        )
         == baseline
     )
     disabled = replace(rules, enabled_domains=frozenset())
-    assert decision_rules.patch(baseline, disabled, baseline=baseline) == baseline
+    assert (
+        decision_rules.patch(
+            baseline, disabled, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+        )
+        == baseline
+    )
     assert decision_rules.contract(disabled)["active_rule_count"] == 0
     with pytest.raises(ValueError, match="布尔"):
         decision_rules.evaluate(rules, _values(), is_ai=cast("Any", None))
@@ -161,7 +211,9 @@ def test_single_line_nested_script_keeps_exact_bytes_and_float_precision(rules):
         readers=tuple(reader for reader in rules.readers if reader.key in selected),
         baseline_sha256=hashlib.sha256(baseline.encode()).hexdigest(),
     )
-    generated = decision_rules.patch(baseline, policy, baseline=baseline)
+    generated = decision_rules.patch(
+        baseline, policy, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+    )
     assert "multiply = 0.8765432109876543" in generated
     restored = re.sub(
         r"\n\t\t# SITAI BEGIN information:.*?# SITAI END information:[^\n]+\n\t",
@@ -331,7 +383,9 @@ def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_u
     top = replace(top, conditions=target_only if high_uses_target else root_only)
     lower = replace(lower, conditions=root_only if high_uses_target else lower.conditions)
     policy = replace(rules, rules=(top, lower), enabled_domains=frozenset({"geography"}))
-    text = decision_rules.patch(baseline, policy, baseline=baseline)
+    text = decision_rules.patch(
+        baseline, policy, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+    )
     match = re.search(r"# SITAI BEGIN information:state_value\n(.*?)# SITAI END", text, re.DOTALL)
     assert match is not None
     block = parse_text(match.group(1)).root
@@ -347,7 +401,9 @@ def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_u
         # 财政条件已知为假，足以排除高候选，不应将缺失目标当成全字段阻塞。
         top = replace(top, conditions=(*top.conditions, decision_rules.Predicate("war", "=", True)))
         changed = replace(policy, rules=(top, lower))
-        text = decision_rules.patch(baseline, changed, baseline=baseline)
+        text = decision_rules.patch(
+            baseline, changed, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+        )
         match = re.search(
             r"# SITAI BEGIN information:state_value\n(.*?)# SITAI END", text, re.DOTALL
         )
@@ -361,7 +417,9 @@ def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_u
 @pytest.fixture(scope="module")
 def generated_rule_blocks(rules):
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
-    generated = decision_rules.patch(baseline, rules, baseline=baseline)
+    generated = decision_rules.patch(
+        baseline, rules, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+    )
     blocks = {}
     for field in rules.groups():
         field_name = ".".join(field)
@@ -449,12 +507,16 @@ def test_drift_bad_path_and_unproven_reader_refuse_generation(rules):
         enabled_domains=frozenset({rules.rules[0].domain}),
     )
     with pytest.raises(ValueError, match="消费者"):
-        decision_rules.patch(baseline, broken, baseline=baseline)
+        decision_rules.patch(
+            baseline, broken, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+        )
     broken = replace(
         rules, readers=(replace(rules.readers[0], engine="invented_reader"), *rules.readers[1:])
     )
     with pytest.raises(ValueError, match="读取器"):
-        decision_rules.patch(baseline, broken, baseline=baseline)
+        decision_rules.patch(
+            baseline, broken, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+        )
 
 
 @pytest.mark.parametrize(
@@ -478,7 +540,7 @@ def test_invalid_configuration_fails_closed(tmp_path, before, after):
     path = tmp_path / "invalid.toml"
     path.write_text(text.replace(before, after, 1), encoding="utf-8", newline="\n")
     with pytest.raises(ValueError):
-        decision_rules.load(path)
+        decision_rules.load(path, strategy=decision_intents.load())
 
 
 @pytest.mark.parametrize("path", [["in_default"], ["market", "owner"], ["owner"]])
@@ -486,14 +548,14 @@ def test_known_words_cannot_be_recombined_into_invented_scopes(path):
     data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
     data["readers"]["default"]["path"] = path
     with pytest.raises(ValueError, match="作用域"):
-        decision_rules.from_data(data, source_sha256="0" * 64)
+        decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
 def test_parent_and_child_fields_cannot_have_separate_authors():
     data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
     data["rules"][0]["field"] = "institution_scores"
     with pytest.raises(ValueError, match="父子字段"):
-        decision_rules.from_data(data, source_sha256="0" * 64)
+        decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
 @pytest.mark.parametrize(
@@ -510,7 +572,7 @@ def test_compound_number_reader_rejects_ambiguous_shapes(overrides):
     data = copy.deepcopy(data)
     data["readers"]["income"].update(overrides)
     with pytest.raises(ValueError, match="复合数值"):
-        decision_rules.from_data(data, source_sha256="0" * 64)
+        decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
 @pytest.mark.parametrize(
@@ -528,7 +590,7 @@ def test_compound_boolean_reader_rejects_unsafe_parameters(parameters):
     data["readers"]["default"]["engine"] = "is_production_method_active"
     data["readers"]["default"]["parameters"] = parameters
     with pytest.raises(ValueError, match="复合布尔"):
-        decision_rules.from_data(data, source_sha256="0" * 64)
+        decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
 @pytest.mark.parametrize(
@@ -538,7 +600,7 @@ def test_unconsumed_or_invalid_shared_constraint_fails_closed(contexts):
     data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
     data["contexts"] = contexts
     with pytest.raises(ValueError, match="共享约束"):
-        decision_rules.from_data(data, source_sha256="0" * 64)
+        decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
 
 def test_shared_constraints_expand_into_real_fields_once(rules):
@@ -548,7 +610,9 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
     data["contexts"] = {"shared_fiscal_risk": conditions}
     selected["contexts"] = ["shared_fiscal_risk"]
     selected["conditions"] = conditions[:1]
-    policy = decision_rules.from_data(data, source_sha256="0" * 64)
+    policy = decision_rules.from_data(
+        data, source_sha256="0" * 64, strategy=decision_intents.load()
+    )
     rule = next(row for row in policy.rules if row.id == selected["id"])
     assert len(rule.conditions) == len(conditions)
     assert rule.contexts == ("shared_fiscal_risk",)
@@ -559,8 +623,10 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
                 rules, values, is_ai=True
             )
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
-    assert decision_rules.patch(baseline, policy, baseline=baseline) == decision_rules.patch(
-        baseline, rules, baseline=baseline
+    assert decision_rules.patch(
+        baseline, policy, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+    ) == decision_rules.patch(
+        baseline, rules, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
     )
 
 

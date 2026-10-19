@@ -171,7 +171,7 @@
     "fiscal_source_sha256": "ea6fc9894095c97657b1c5bc409128aba0fe4dc394c34bb7a1cf75fe13f1f751",
     "extensions_source_sha256": "f03fe932827d03d3a040c6d3b703386acbf0133cbd1055df09e7a5509de99c24",
     "baseline_sha256": "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
-    "generator_sha256": "6361b4692e21c3f083c1f497599f92d1e842205be488c3ef86d96bc94b7f34fe"
+    "generator_sha256": "89a1006c2de65f55a2f07e97a9b0dec4dbcc97b37eddea645751d7f42bf49d15"
   },
   "game_custom_data": {
     "multiplayer_synchronized": true

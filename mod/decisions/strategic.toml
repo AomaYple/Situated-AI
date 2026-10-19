@@ -1,0 +1,35 @@
+# 生成期共享意图图；非排他的当前约束，不是运行期国家状态或全局评分器。
+# 阈值与方向为待 F1 验证的设计假设；AND 展开后使用原有类型、未知和预算门禁。
+schema = 1
+
+[signals]
+peace = [{ fact = "war", op = "=", value = false }]
+fiscal_capacity = [{ fact = "default", op = "=", value = false }, { fact = "loans", op = "=", value = false }, { fact = "debt_ratio", op = "<=", value = 0.4 }, { fact = "net_surplus", op = ">=", value = 0 }, { fact = "bureaucracy", op = ">=", value = 0 }]
+political_support = [{ fact = "legitimacy", op = ">=", value = 50 }, { fact = "insurrection", op = "=", value = false }]
+insolvency = [{ fact = "default", op = "=", value = true }]
+liquidity_pressure = [{ fact = "default", op = "=", value = false }, { fact = "loans", op = "=", value = true }, { fact = "debt_ratio", op = ">=", value = 0.4 }, { fact = "bankruptcy_horizon", op = "<", value = 26 }]
+political_crisis = [{ fact = "legitimacy", op = "<", value = 25 }, { fact = "insurrection", op = "=", value = true }, { fact = "radical_share", op = ">=", value = 0.25 }]
+war = [{ fact = "war", op = "=", value = true }]
+
+# 所有积极发展、渐进改革与合作共享财政可承受性；本身不制造候选资格。
+[intents.peaceful_capacity]
+signals = ["peace", "fiscal_capacity"]
+
+[intents.supported_development]
+requires = ["peaceful_capacity"]
+signals = ["political_support"]
+
+# 恢复约束用于不同领域的新增承诺，战时明确不触发。
+[intents.fiscal_recovery]
+signals = ["peace", "insolvency"]
+
+[intents.liquidity_recovery]
+signals = ["peace", "liquidity_pressure"]
+
+# 稳定与改革由当前输入重算；危机不被推断为某种意识形态或永久禁止改革。
+[intents.stabilization]
+signals = ["political_crisis"]
+
+# 生存需要可与违约同时成立；各消费者继续声明具体军需与资格条件。
+[intents.wartime_defense]
+signals = ["war"]

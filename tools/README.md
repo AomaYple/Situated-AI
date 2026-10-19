@@ -56,7 +56,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 ## 当前处境决策实验
 
-生产固定读取 `mod/decisions/` 下由 `pdx.decisions` 显式接入的七份 TOML（`fiscal.toml`、`extensions.toml`、`economy.toml`、`diplomatic_goals.toml`、`subjects.toml`、`information.toml`、`adapters.toml`；后两者仅 `integrated` 启用）；旧 `mod/data/` 仅生成到 `mod/legacy/`。
+生产固定读取 `mod/decisions/` 下由 `pdx.decisions` 显式接入的八份 TOML（`fiscal.toml`、`extensions.toml`、`economy.toml`、`diplomatic_goals.toml`、`subjects.toml`、`information.toml`、`adapters.toml`、`strategic.toml`；后三者仅 `integrated` 启用）；旧 `mod/data/` 仅生成到 `mod/legacy/`。
 下表中的生产实验入口复用 `pdx.game_run` 资源事务：跨进程互斥、隔离旧存档菜单、配置和存档原字节恢复、
 持续日志归档、启动期及模拟期进程采样。恢复指针与必要备份受事务管理，实验结束后核对恢复结果。旧阶段探针的部署和恢复契约见下文历史入口说明。
 
@@ -321,7 +321,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 135 个测试文件、4249 条用例（2026-10-19 实测）；当前 F0 完整回归、覆盖率、资源与失败修复见[完整候选结果](../docs/design/exec/完整候选-结果.md#2026-10-19-f0-全域候选收口)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、缺失引擎日志等前提分类。这些工程结果不替代 GUI 或行为验收。
+当前收集 137 个测试文件、4322 条用例（2026-10-19 实测）；当前 F0 完整回归、覆盖率、资源与失败修复见[完整候选结果](../docs/design/exec/完整候选-结果.md#2026-10-19-f0-全域候选收口)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、缺失引擎日志等前提分类。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -610,7 +610,7 @@ Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工
 | 维护成本 | PowerShell 可使用 Pester 测试；本项目选择集中到现有 Python 工具链 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版将这些流程集中为可测试的代码；速度执行记录收集 2904 条用例，另有 234 条断言核验；此前仓库维护记录中的覆盖率回归收集 2923 条用例
+Python 版将这些流程集中为可测试的代码；速度执行记录收集 4322 条用例，另有 234 条断言核验；此前仓库维护记录中的覆盖率回归收集 4322 条用例
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
@@ -635,6 +635,6 @@ Python 版将这些流程集中为可测试的代码；速度执行记录收集 
 
 `v3 information-catalog` 从锁定的本机游戏、Jomini 和 Clausewitz 根生成开发期静态信息目录及流式本地化键 JSONL。`--consumer-matrix-output` 输出同名候选关联，明确不代表真实消费者接通；作用域未审计时保持 unknown，读取失败不能静默视为完整。
 
-`v3 package --variant integrated --output tools/out/releases/situated-ai-integrated.zip` 生成包含声明规则的 2.0 开发候选。规则参数来源是 `mod/decisions/information.toml` 和 `mod/decisions/adapters.toml`，实际读取器、单位、领域开关、条件、优先级、原版字段、反例及源指纹写入 `.metadata/metadata.json` 的 `decision_rules`。相同声明同时生成游戏脚本和离线参考结果；同字段按优先级只执行一条规则。该增量无持久状态或世界扫描，保留原版资格与实际执行，默认无探针。`full` 保留旧七模块身份；生成成功不能单独证明 F0 工程出口、游戏行为改善或正式交付；当前冻结和验收见结果页。
+`v3 package --variant integrated --output tools/out/releases/situated-ai-integrated.zip` 生成包含声明规则的 2.0 开发候选。规则参数来源是 `mod/decisions/information.toml`、`mod/decisions/adapters.toml` 以及共享信号/意图源 `mod/decisions/strategic.toml`，实际读取器、单位、领域开关、条件、优先级、原版字段、反例及源指纹写入 `.metadata/metadata.json` 的 `decision_rules`、`consumer_adapters` 与 `strategic_coordination`。信号/意图在生成期展开，相同声明同时生成游戏脚本和离线参考结果；同字段按优先级只执行一条规则。该增量无持久状态或世界扫描，保留原版资格与实际执行，默认无探针。`full` 保留旧七模块身份；生成成功不能单独证明 F0 工程出口、游戏行为改善或正式交付；当前冻结和验收见结果页。
 
 `v3 information-catalog --candidate-metadata "tools/out/f0-closeout/candidate-20261019/Situated AI/.metadata/metadata.json" --candidate-coverage-output tools/out/f0-closeout/candidate-coverage-20261019.json` 在同一次目录扫描中连接实际候选。输入必须有规则与适配模块、内部一致生成指纹；报告给出精确/祖先深度、规则自身读取依赖及未关联稳定 ID，不提升目录状态。输入与各输出路径必须不同；校验失败返回 2，保全先前报告且明确旧文件不属于本次。SHA 只用于内部一致和复现，不是来源签名。

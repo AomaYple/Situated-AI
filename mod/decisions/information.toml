@@ -122,8 +122,48 @@ parameters = { target_country = "root" }
 minimum = 0
 maximum = 1
 
+[readers.loans]
+engine = "taking_loans"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.debt_ratio]
+engine = "scaled_debt"
+scope = "root"
+unit = "debt_to_credit_ratio"
+kind = "number"
+minimum = 0
+
+[readers.net_surplus]
+engine = "net_total_income"
+scope = "root"
+unit = "currency_per_week"
+kind = "number"
+
+[readers.bureaucracy]
+engine = "bureaucracy"
+scope = "root"
+unit = "capacity_balance"
+kind = "number"
+
+[readers.legitimacy]
+engine = "legitimacy"
+scope = "root"
+unit = "legitimacy_0_100"
+kind = "number"
+minimum = 0
+maximum = 100
+
+[readers.insurrection]
+engine = "has_insurrectionary_interest_groups"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
 [[rules]]
 id = "fiscal_construction_guard"
+intent = "fiscal_recovery"
 domain = "fiscal"
 field = "wanted_construction_output"
 priority = 100
@@ -137,6 +177,7 @@ counterexample = "战争时保留原版建设目标；原版零目标保持为�
 
 [[rules]]
 id = "economic_development"
+intent = "supported_development"
 domain = "economy"
 field = "wanted_construction_output"
 priority = 50
@@ -164,6 +205,7 @@ counterexample = "非违约国家保持原版；不修改真实法律资格"
 
 [[rules]]
 id = "social_school_priority"
+intent = "supported_development"
 domain = "political"
 field = "institution_scores.institution_schools"
 priority = 50
@@ -178,6 +220,7 @@ counterexample = "既有原版容量和法律约束不变；不直接提高制�
 
 [[rules]]
 id = "administrative_cost_guard"
+intent = "fiscal_recovery"
 domain = "economy"
 field = "institution_scores.institution_social_security"
 priority = 50
@@ -191,6 +234,7 @@ counterexample = "不减少实际福利、不修改制度或人口属性"
 
 [[rules]]
 id = "market_trade_peace"
+intent = "supported_development"
 domain = "market"
 field = "treaty_category_scores.trade"
 priority = 50
@@ -205,6 +249,7 @@ counterexample = "不创造贸易路线、商品、关税或条约资格"
 
 [[rules]]
 id = "diplomatic_economic_cooperation"
+intent = "supported_development"
 domain = "diplomacy"
 field = "treaty_category_scores.economy"
 priority = 50
@@ -231,6 +276,7 @@ counterexample = "不制造独立资格或改变宗属关系；不可行条约�
 
 [[rules]]
 id = "diplomatic_overextension"
+intent = "fiscal_recovery"
 domain = "diplomacy"
 field = "max_active_stances"
 priority = 50
@@ -243,6 +289,7 @@ counterexample = "非违约保持原版；不直接退出条约或战争"
 
 [[rules]]
 id = "military_peacetime_budget"
+intent = "fiscal_recovery"
 domain = "military"
 field = "wanted_army_size"
 priority = 50
@@ -256,6 +303,7 @@ counterexample = "战争不削弱生存防御；不删除军队、不改变战�
 
 [[rules]]
 id = "naval_peacetime_budget"
+intent = "fiscal_recovery"
 domain = "military"
 field = "wanted_navy_size"
 priority = 50
@@ -269,6 +317,7 @@ counterexample = "战争保持原版目标；已有舰队和性能不变"
 
 [[rules]]
 id = "naval_design_affordability"
+intent = "fiscal_recovery"
 domain = "military"
 field = "max_ship_design_complexity"
 priority = 50
@@ -282,6 +331,7 @@ counterexample = "不改变既有舰船设计和战斗数值"
 
 [[rules]]
 id = "military_artillery_affordability"
+intent = "fiscal_recovery"
 domain = "military"
 field = "combat_unit_group_weights.combat_unit_group_artillery"
 priority = 50
@@ -296,6 +346,7 @@ counterexample = "未解锁科技时不新增炮兵权重；战争保持原版"
 
 [[rules]]
 id = "overseas_affordability"
+intent = "fiscal_recovery"
 domain = "geography"
 field = "colonial_interest_ratio"
 priority = 50
@@ -334,6 +385,7 @@ counterexample = "没有目标州不计算；不授予港口或战争目标"
 
 [[rules]]
 id = "identity_resource_cooperation"
+intent = "supported_development"
 domain = "identity"
 field = "treaty_category_scores.economy"
 priority = 70
@@ -363,6 +415,7 @@ counterexample = "不提高宣战成功率、兵力或免费外交资格"
 
 [[rules]]
 id = "identity_feasible_homeland"
+intent = "supported_development"
 domain = "identity"
 field = "state_value"
 priority = 100
@@ -373,6 +426,7 @@ counterexample = "不以国家标签制造历史脚本；己有州、非本土�
 
 [[rules]]
 id = "geographic_isolation_financial_cost"
+intent = "fiscal_recovery"
 domain = "geography"
 field = "state_value"
 priority = 200

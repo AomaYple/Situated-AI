@@ -94,7 +94,7 @@ Python 写文本显式指定 `encoding="utf-8"`、`newline="\n"`；末尾换行�
 ## 数据源、生成物与清理
 
 - `src/pdx/` 是可复用包，`tests/` 是测试；`tools/ci/`、`tools/benchmarks/`、`tools/probe/` 分别放检查、基准与实机探针。
-- 当前生产源为 `mod/decisions/` 下由生成器显式接入的七份 TOML：`fiscal.toml` 与 `extensions.toml` 始终读取；`economy.toml`、`diplomatic_goals.toml` 和 `subjects.toml` 由对应旧模块开关启用时读取并校验；`information.toml` 与 `adapters.toml` 由 `integrated` 显式启用。这些入口之外的新 TOML 不会自动加载，新增定义须同步生成入口与测试。历史源 `mod/data/*.toml` 由 `pdx.modgen` 生成至 `mod/legacy/`，不进入生产包。
+- 当前生产源为 `mod/decisions/` 下由生成器显式接入的八份 TOML：`fiscal.toml` 与 `extensions.toml` 始终读取；`economy.toml`、`diplomatic_goals.toml` 和 `subjects.toml` 由对应旧模块开关启用时读取并校验；`information.toml`、`adapters.toml` 与共享信号/意图源 `strategic.toml` 由 `integrated` 显式启用。这些入口之外的新 TOML 不会自动加载，新增定义须同步生成入口与测试。历史源 `mod/data/*.toml` 由 `pdx.modgen` 生成至 `mod/legacy/`，不进入生产包。
 - 生产生成器的本地化语言契约由 `pdx.localization_languages` 维护：`discover(game_root)` 读取实际语言头，`from_snapshot(snapshot)` 读取锁定快照，不能把 `game_auto` 当前只有中英模板的事实当成 Mod 语言范围。新增游戏版本时先更新语言快照与覆盖测试，再生成生产产物。
 - 改动数据或生成逻辑后先执行 `v3 modgen --write`，再执行 `v3 modgen --check`。源码、测试及对应生成物保持一致；生成文档和知识库机械表格使用各自生成入口维护。
 - 安装、打包时才为交付游戏脚本与本地化添加 BOM；转换不能写回仓库产物。交付入口是 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认生成全关安全包；测试当前实验源显式加 `--variant current`，零偏置财政控制加 `--variant control`，旧七模块标准候选使用 `--variant full`，2.0 全域候选使用 `--variant integrated`。国家面板解释探针必须显式加 `--with-explanation-probe`，只能临时写入本次验证副本，不能默认进入标准 Mod。文件、实际参数、探针开关和来源指纹由交付 manifest 记录。

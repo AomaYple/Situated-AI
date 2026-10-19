@@ -7659,6 +7659,7 @@ counterexample = "不是预测新建筑自动选择的生产方式，不读取�
 
 [[rules]]
 id = "admiralty_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "admiralty.ai_weight"
@@ -7689,6 +7690,7 @@ contexts = ["peaceful_capacity"]
 
 [[rules]]
 id = "ai_strategy_default_ship_construction_output_multiplier"
+intent = "fiscal_recovery"
 domain = "military"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.ship_construction_output_multiplier"
@@ -7703,6 +7705,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "ai_strategy_default_target_marine_formation_size"
+intent = "fiscal_recovery"
 domain = "military"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.target_marine_formation_size"
@@ -7749,6 +7752,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "ai_strategy_default_wanted_marines"
+intent = "fiscal_recovery"
 domain = "military"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wanted_marines"
@@ -7763,6 +7767,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "ai_strategy_default_wanted_num_supply_ships"
+intent = "wartime_defense"
 domain = "military"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wanted_num_supply_ships"
@@ -7780,6 +7785,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "ai_strategy_default_wargoal_maneuvers_fraction"
+intent = "fiscal_recovery"
 domain = "diplomacy"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_maneuvers_fraction"
@@ -7934,6 +7940,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "army_reserves_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "army_reserves.ai_weight"
@@ -7964,6 +7971,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "artillery_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "artillery.ai_weight"
@@ -8042,6 +8050,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "automatic_machine_guns_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "automatic_machine_guns.ai_weight"
@@ -8086,6 +8095,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "battlefleet_tactics_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "battlefleet_tactics.ai_weight"
@@ -8100,6 +8110,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "battleship_tech_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "battleship_tech.ai_weight"
@@ -8130,6 +8141,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "bolt_action_rifles_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "bolt_action_rifles.ai_weight"
@@ -8144,6 +8156,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "breech_loading_artillery_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "breech_loading_artillery.ai_weight"
@@ -8398,6 +8411,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "carrier_tech_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "carrier_tech.ai_weight"
@@ -8470,6 +8484,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "chemical_warfare_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "chemical_warfare.ai_weight"
@@ -11267,6 +11282,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "concrete_dockyards_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "concrete_dockyards.ai_weight"
@@ -11281,6 +11297,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "concrete_fortifications_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "concrete_fortifications.ai_weight"
@@ -11311,6 +11328,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "coordinated_annex_country_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.annex_country"
 domain = "fiscal"
@@ -11326,6 +11344,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_annex_country_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.annex_country"
 domain = "diplomacy"
@@ -11342,6 +11361,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "coordinated_antagonize_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.antagonize.score"
 domain = "diplomacy"
@@ -11357,6 +11377,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_antagonize_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.antagonize.score"
 domain = "political"
@@ -11373,6 +11394,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "coordinated_autonomy_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.reduce_autonomy"
 domain = "subjects"
@@ -11388,6 +11410,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "coordinated_colonization_rights_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.colonization_rights"
 domain = "fiscal"
@@ -11403,6 +11426,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_colonization_rights_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.colonization_rights"
 domain = "diplomacy"
@@ -11419,6 +11443,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "coordinated_conquer_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.conquer.score"
 domain = "diplomacy"
@@ -11434,6 +11459,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_conquer_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.conquer.score"
 domain = "political"
@@ -11450,6 +11476,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "coordinated_conquer_state_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.conquer_state"
 domain = "fiscal"
@@ -11465,6 +11492,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_conquer_state_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.conquer_state"
 domain = "diplomacy"
@@ -11481,6 +11509,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "coordinated_dominate_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.dominate.score"
 domain = "diplomacy"
@@ -11496,6 +11525,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_dominate_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.dominate.score"
 domain = "political"
@@ -11526,6 +11556,7 @@ counterexample = "保留原版资格、关系、资源成本和目标可达性�
 
 [[rules]]
 id = "coordinated_institution_colonial_affairs_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_colonial_affairs"
 domain = "fiscal"
@@ -11554,6 +11585,7 @@ counterexample = "保留原版资格、关系、资源成本和目标可达性�
 
 [[rules]]
 id = "coordinated_institution_health_system_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_health_system"
 domain = "fiscal"
@@ -11597,6 +11629,7 @@ counterexample = "保留原版资格、关系、资源成本和目标可达性�
 
 [[rules]]
 id = "coordinated_institution_home_affairs_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_home_affairs"
 domain = "fiscal"
@@ -11625,6 +11658,7 @@ counterexample = "保留原版资格、关系、资源成本和目标可达性�
 
 [[rules]]
 id = "coordinated_institution_police_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_police"
 domain = "fiscal"
@@ -11653,6 +11687,7 @@ counterexample = "保留原版资格、关系、资源成本和目标可达性�
 
 [[rules]]
 id = "coordinated_institution_workplace_safety_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_workplace_safety"
 domain = "fiscal"
@@ -11682,6 +11717,7 @@ contexts = ["peaceful_capacity"]
 
 [[rules]]
 id = "coordinated_make_subject_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.make_subject"
 domain = "fiscal"
@@ -11697,6 +11733,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_make_subject_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.make_subject"
 domain = "diplomacy"
@@ -11713,6 +11750,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "coordinated_overlord_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.subject_value"
 domain = "subjects"
@@ -11728,6 +11766,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_regime_change_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.regime_change"
 domain = "fiscal"
@@ -11743,6 +11782,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_regime_change_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.regime_change"
 domain = "diplomacy"
@@ -11776,6 +11816,7 @@ counterexample = "保留原版资格、关系、资源成本和目标可达性�
 
 [[rules]]
 id = "coordinated_strategic_region_stance_type_scores_stance_colonize_region_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.strategic_region_stance_type_scores.stance_colonize_region"
 domain = "fiscal"
@@ -11790,6 +11831,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_strategic_region_stance_type_scores_stance_colonize_region_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.strategic_region_stance_type_scores.stance_colonize_region"
 domain = "diplomacy"
@@ -11805,6 +11847,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "coordinated_strategic_region_stance_type_scores_stance_conquer_region_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.strategic_region_stance_type_scores.stance_conquer_region"
 domain = "fiscal"
@@ -11819,6 +11862,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_strategic_region_stance_type_scores_stance_conquer_region_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.strategic_region_stance_type_scores.stance_conquer_region"
 domain = "diplomacy"
@@ -11849,6 +11893,7 @@ counterexample = "保留原版资格、关系、资源成本和目标可达性�
 
 [[rules]]
 id = "coordinated_transfer_subject_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.transfer_subject"
 domain = "fiscal"
@@ -11864,6 +11909,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_transfer_subject_political_cost"
+intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.transfer_subject"
 domain = "diplomacy"
@@ -11926,6 +11972,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "defense_in_depth_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "defense_in_depth.ai_weight"
@@ -11940,6 +11987,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "destroyer_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "destroyer.ai_weight"
@@ -12001,6 +12049,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "dreadnought_tech_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "dreadnought_tech.ai_weight"
@@ -12015,6 +12064,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "drydocks_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "drydocks.ai_weight"
@@ -12077,6 +12127,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "electric_telegraph_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "electric_telegraph.ai_weight"
@@ -12154,6 +12205,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "enlistment_offices_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "enlistment_offices.ai_weight"
@@ -12168,6 +12220,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "field_works_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "field_works.ai_weight"
@@ -12182,6 +12235,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "flamethrowers_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "flamethrowers.ai_weight"
@@ -12212,6 +12266,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "floating_harbor_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "floating_harbor.ai_weight"
@@ -12242,6 +12297,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "gantry_cranes_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "gantry_cranes.ai_weight"
@@ -12256,6 +12312,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "general_staff_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "general_staff.ai_weight"
@@ -12286,6 +12343,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "gunsmithing_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "gunsmithing.ai_weight"
@@ -12316,6 +12374,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "handcranked_machine_gun_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "handcranked_machine_gun.ai_weight"
@@ -12330,6 +12389,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "hydraulic_cranes_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "hydraulic_cranes.ai_weight"
@@ -12406,6 +12466,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "ironclad_tech_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "ironclad_tech.ai_weight"
@@ -12420,6 +12481,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "jeune_ecole_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "jeune_ecole.ai_weight"
@@ -12434,6 +12496,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "landing_craft_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "landing_craft.ai_weight"
@@ -12745,6 +12808,7 @@ contexts = ["political_support_capacity", "peaceful_capacity"]
 
 [[rules]]
 id = "line_infantry_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "line_infantry.ai_weight"
@@ -12759,6 +12823,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "logistics_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "logistics.ai_weight"
@@ -12787,6 +12852,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "mandatory_service_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "mandatory_service.ai_weight"
@@ -12817,6 +12883,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "mechanical_tools_ai_weight"
+intent = "supported_development"
 domain = "economy"
 source = "common/technology/technologies/10_production.txt"
 field = "mechanical_tools.ai_weight"
@@ -12896,6 +12963,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "military_aviation_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "military_aviation.ai_weight"
@@ -12910,6 +12978,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "military_drill_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "military_drill.ai_weight"
@@ -12924,6 +12993,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "military_statistics_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "military_statistics.ai_weight"
@@ -12938,6 +13008,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "mobile_armor_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "mobile_armor.ai_weight"
@@ -12966,6 +13037,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "modern_nursing_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "modern_nursing.ai_weight"
@@ -12995,6 +13067,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "monitor_tech_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "monitor_tech.ai_weight"
@@ -13009,6 +13082,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "napoleonic_warfare_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "napoleonic_warfare.ai_weight"
@@ -13023,6 +13097,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "navigation_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "navigation.ai_weight"
@@ -13037,6 +13112,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "nco_training_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "nco_training.ai_weight"
@@ -13115,6 +13191,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "paddle_steamer_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "paddle_steamer.ai_weight"
@@ -13145,6 +13222,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "percussion_cap_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "percussion_cap.ai_weight"
@@ -13221,6 +13299,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "political_capacity_law_affirmative_action"
+intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_affirmative_action.ai_enact_weight_modifier"
 domain = "political"
@@ -13235,6 +13314,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_agrarianism"
+intent = "stabilization"
 source = "common/laws/01_economic_system.txt"
 field = "law_agrarianism.ai_enact_weight_modifier"
 domain = "political"
@@ -13249,6 +13329,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_anarchy"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_anarchy.ai_enact_weight_modifier"
 domain = "political"
@@ -13263,6 +13344,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_anti_strike_laws"
+intent = "stabilization"
 source = "common/laws/02_labour_associations.txt"
 field = "law_anti_strike_laws.ai_enact_weight_modifier"
 domain = "political"
@@ -13277,6 +13359,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_appointed_bureaucrats"
+intent = "stabilization"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
 domain = "political"
@@ -13291,6 +13374,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_autocracy"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_autocracy.ai_enact_weight_modifier"
 domain = "political"
@@ -13305,6 +13389,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_bakufu"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_bakufu.ai_enact_weight_modifier"
 domain = "political"
@@ -13319,6 +13404,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_canton_system"
+intent = "stabilization"
 source = "common/laws/01_trade_policy.txt"
 field = "law_canton_system.ai_enact_weight_modifier"
 domain = "political"
@@ -13333,6 +13419,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_censorship"
+intent = "stabilization"
 source = "common/laws/02_free_speech.txt"
 field = "law_censorship.ai_enact_weight_modifier"
 domain = "political"
@@ -13347,6 +13434,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_census_voting"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_census_voting.ai_enact_weight_modifier"
 domain = "political"
@@ -13361,6 +13449,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_charitable_health_system"
+intent = "stabilization"
 source = "common/laws/01_health_system.txt"
 field = "law_charitable_health_system.ai_enact_weight_modifier"
 domain = "political"
@@ -13375,6 +13464,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_chiefdom"
+intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_chiefdom.ai_enact_weight_modifier"
 domain = "political"
@@ -13389,6 +13479,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_chiefs_distribute_aid"
+intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_chiefs_distribute_aid.ai_enact_weight_modifier"
 domain = "political"
@@ -13403,6 +13494,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_child_labor_allowed"
+intent = "stabilization"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_child_labor_allowed.ai_enact_weight_modifier"
 domain = "political"
@@ -13417,6 +13509,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_closed_borders"
+intent = "stabilization"
 source = "common/laws/02_migration.txt"
 field = "law_closed_borders.ai_enact_weight_modifier"
 domain = "political"
@@ -13431,6 +13524,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_collectivized_agriculture"
+intent = "stabilization"
 source = "common/laws/01_land_reform.txt"
 field = "law_collectivized_agriculture.ai_enact_weight_modifier"
 domain = "political"
@@ -13445,6 +13539,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_colonial_exploitation"
+intent = "stabilization"
 source = "common/laws/01_colonial_affairs.txt"
 field = "law_colonial_exploitation.ai_enact_weight_modifier"
 domain = "political"
@@ -13459,6 +13554,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_colonial_resettlement"
+intent = "stabilization"
 source = "common/laws/01_colonial_affairs.txt"
 field = "law_colonial_resettlement.ai_enact_weight_modifier"
 domain = "political"
@@ -13473,6 +13569,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_colonial_slavery"
+intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_colonial_slavery.ai_enact_weight_modifier"
 domain = "political"
@@ -13487,6 +13584,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_combination_acts"
+intent = "stabilization"
 source = "common/laws/02_labour_associations.txt"
 field = "law_combination_acts.ai_enact_weight_modifier"
 domain = "political"
@@ -13501,6 +13599,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_command_economy"
+intent = "stabilization"
 source = "common/laws/01_economic_system.txt"
 field = "law_command_economy.ai_enact_weight_modifier"
 domain = "political"
@@ -13515,6 +13614,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_commercialized_agriculture"
+intent = "stabilization"
 source = "common/laws/01_land_reform.txt"
 field = "law_commercialized_agriculture.ai_enact_weight_modifier"
 domain = "political"
@@ -13529,6 +13629,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_compulsory_primary_school"
+intent = "stabilization"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
 domain = "political"
@@ -13543,6 +13644,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_consumption_based_taxation"
+intent = "stabilization"
 source = "common/laws/01_taxation.txt"
 field = "law_consumption_based_taxation.ai_enact_weight_modifier"
 domain = "political"
@@ -13557,6 +13659,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_cooperative_ownership"
+intent = "stabilization"
 source = "common/laws/01_economic_system.txt"
 field = "law_cooperative_ownership.ai_enact_weight_modifier"
 domain = "political"
@@ -13571,6 +13674,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_corporate_state"
+intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_corporate_state.ai_enact_weight_modifier"
 domain = "political"
@@ -13585,6 +13689,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_corporatized_unions"
+intent = "stabilization"
 source = "common/laws/02_labour_associations.txt"
 field = "law_corporatized_unions.ai_enact_weight_modifier"
 domain = "political"
@@ -13599,6 +13704,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_council_republic"
+intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_council_republic.ai_enact_weight_modifier"
 domain = "political"
@@ -13613,6 +13719,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_crownland_diets"
+intent = "stabilization"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_crownland_diets.ai_enact_weight_modifier"
 domain = "political"
@@ -13627,6 +13734,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_cultural_exclusion"
+intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_cultural_exclusion.ai_enact_weight_modifier"
 domain = "political"
@@ -13641,6 +13749,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_debt_slavery"
+intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_debt_slavery.ai_enact_weight_modifier"
 domain = "political"
@@ -13655,6 +13764,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_dedicated_police"
+intent = "stabilization"
 source = "common/laws/01_policing.txt"
 field = "law_dedicated_police.ai_enact_weight_modifier"
 domain = "political"
@@ -13669,6 +13779,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_diplomatic_navy"
+intent = "stabilization"
 source = "common/laws/00_navy_model.txt"
 field = "law_diplomatic_navy.ai_enact_weight_modifier"
 domain = "political"
@@ -13683,6 +13794,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_elder_council"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_elder_council.ai_enact_weight_modifier"
 domain = "political"
@@ -13697,6 +13809,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_elected_bureaucrats"
+intent = "stabilization"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_elected_bureaucrats.ai_enact_weight_modifier"
 domain = "political"
@@ -13711,6 +13824,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_ethnostate"
+intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_ethnostate.ai_enact_weight_modifier"
 domain = "political"
@@ -13725,6 +13839,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_expanded_latifundias"
+intent = "stabilization"
 source = "common/laws/01_land_reform.txt"
 field = "law_expanded_latifundias.ai_enact_weight_modifier"
 domain = "political"
@@ -13739,6 +13854,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_extraction_economy"
+intent = "stabilization"
 source = "common/laws/01_economic_system.txt"
 field = "law_extraction_economy.ai_enact_weight_modifier"
 domain = "political"
@@ -13753,6 +13869,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_factory_councils"
+intent = "stabilization"
 source = "common/laws/02_labour_associations.txt"
 field = "law_factory_councils.ai_enact_weight_modifier"
 domain = "political"
@@ -13767,6 +13884,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_free_trade"
+intent = "stabilization"
 source = "common/laws/01_trade_policy.txt"
 field = "law_free_trade.ai_enact_weight_modifier"
 domain = "political"
@@ -13781,6 +13899,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_freedom_of_conscience"
+intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_freedom_of_conscience.ai_enact_weight_modifier"
 domain = "political"
@@ -13795,6 +13914,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_frontier_colonization"
+intent = "stabilization"
 source = "common/laws/01_colonial_affairs.txt"
 field = "law_frontier_colonization.ai_enact_weight_modifier"
 domain = "political"
@@ -13809,6 +13929,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_graduated_taxation"
+intent = "stabilization"
 source = "common/laws/01_taxation.txt"
 field = "law_graduated_taxation.ai_enact_weight_modifier"
 domain = "political"
@@ -13823,6 +13944,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_guaranteed_liberties"
+intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_guaranteed_liberties.ai_enact_weight_modifier"
 domain = "political"
@@ -13837,6 +13959,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_guild_system"
+intent = "stabilization"
 source = "common/laws/02_labour_associations.txt"
 field = "law_guild_system.ai_enact_weight_modifier"
 domain = "political"
@@ -13851,6 +13974,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_hereditary_bureaucrats"
+intent = "stabilization"
 source = "common/laws/00_bureaucracy.txt"
 field = "law_hereditary_bureaucrats.ai_enact_weight_modifier"
 domain = "political"
@@ -13865,6 +13989,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_hindu_caste_codified"
+intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_hindu_caste_codified.ai_enact_weight_modifier"
 domain = "political"
@@ -13879,6 +14004,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_hindu_caste_enforced"
+intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_hindu_caste_enforced.ai_enact_weight_modifier"
 domain = "political"
@@ -13893,6 +14019,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_hindu_caste_not_enforced"
+intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_hindu_caste_not_enforced.ai_enact_weight_modifier"
 domain = "political"
@@ -13907,6 +14034,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_homesteading"
+intent = "stabilization"
 source = "common/laws/01_land_reform.txt"
 field = "law_homesteading.ai_enact_weight_modifier"
 domain = "political"
@@ -13921,6 +14049,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_industry_banned"
+intent = "stabilization"
 source = "common/laws/01_economic_system.txt"
 field = "law_industry_banned.ai_enact_weight_modifier"
 domain = "political"
@@ -13935,6 +14064,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_intermediate_edo_system"
+intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_intermediate_edo_system.ai_enact_weight_modifier"
 domain = "political"
@@ -13949,6 +14079,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_interventionism"
+intent = "stabilization"
 source = "common/laws/01_economic_system.txt"
 field = "law_interventionism.ai_enact_weight_modifier"
 domain = "political"
@@ -13963,6 +14094,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_isolationism"
+intent = "stabilization"
 source = "common/laws/01_trade_policy.txt"
 field = "law_isolationism.ai_enact_weight_modifier"
 domain = "political"
@@ -13977,6 +14109,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_jeune_ecole"
+intent = "stabilization"
 source = "common/laws/00_navy_model.txt"
 field = "law_jeune_ecole.ai_enact_weight_modifier"
 domain = "political"
@@ -13991,6 +14124,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_laissez_faire"
+intent = "stabilization"
 source = "common/laws/01_economic_system.txt"
 field = "law_laissez_faire.ai_enact_weight_modifier"
 domain = "political"
@@ -14005,6 +14139,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_land_based_taxation"
+intent = "stabilization"
 source = "common/laws/01_taxation.txt"
 field = "law_land_based_taxation.ai_enact_weight_modifier"
 domain = "political"
@@ -14019,6 +14154,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_landed_voting"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_landed_voting.ai_enact_weight_modifier"
 domain = "political"
@@ -14033,6 +14169,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_latifundias"
+intent = "stabilization"
 source = "common/laws/01_land_reform.txt"
 field = "law_latifundias.ai_enact_weight_modifier"
 domain = "political"
@@ -14047,6 +14184,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_lax_edo_system"
+intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_lax_edo_system.ai_enact_weight_modifier"
 domain = "political"
@@ -14061,6 +14199,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_legacy_slavery"
+intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_legacy_slavery.ai_enact_weight_modifier"
 domain = "political"
@@ -14075,6 +14214,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_local_police"
+intent = "stabilization"
 source = "common/laws/01_policing.txt"
 field = "law_local_police.ai_enact_weight_modifier"
 domain = "political"
@@ -14089,6 +14229,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_manorialism"
+intent = "stabilization"
 source = "common/laws/01_land_reform.txt"
 field = "law_manorialism.ai_enact_weight_modifier"
 domain = "political"
@@ -14103,6 +14244,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_mass_conscription"
+intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_mass_conscription.ai_enact_weight_modifier"
 domain = "political"
@@ -14117,6 +14259,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_mercantilism"
+intent = "stabilization"
 source = "common/laws/01_trade_policy.txt"
 field = "law_mercantilism.ai_enact_weight_modifier"
 domain = "political"
@@ -14131,6 +14274,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_merchant_navy"
+intent = "stabilization"
 source = "common/laws/00_navy_model.txt"
 field = "law_merchant_navy.ai_enact_weight_modifier"
 domain = "political"
@@ -14145,6 +14289,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_migration_controls"
+intent = "stabilization"
 source = "common/laws/02_migration.txt"
 field = "law_migration_controls.ai_enact_weight_modifier"
 domain = "political"
@@ -14159,6 +14304,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_militarized_police"
+intent = "stabilization"
 source = "common/laws/01_policing.txt"
 field = "law_militarized_police.ai_enact_weight_modifier"
 domain = "political"
@@ -14173,6 +14319,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_millet_system"
+intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_millet_system.ai_enact_weight_modifier"
 domain = "political"
@@ -14187,6 +14334,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_monarchy"
+intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_monarchy.ai_enact_weight_modifier"
 domain = "political"
@@ -14201,6 +14349,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_multicultural"
+intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_multicultural.ai_enact_weight_modifier"
 domain = "political"
@@ -14215,6 +14364,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_national_guard"
+intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_national_guard.ai_enact_weight_modifier"
 domain = "political"
@@ -14229,6 +14379,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_national_militia"
+intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_national_militia.ai_enact_weight_modifier"
 domain = "political"
@@ -14243,6 +14394,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_national_supremacy"
+intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_national_supremacy.ai_enact_weight_modifier"
 domain = "political"
@@ -14257,6 +14409,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_neo_absolutism"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_neo_absolutism.ai_enact_weight_modifier"
 domain = "political"
@@ -14271,6 +14424,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_colonial_affairs"
+intent = "stabilization"
 source = "common/laws/01_colonial_affairs.txt"
 field = "law_no_colonial_affairs.ai_enact_weight_modifier"
 domain = "political"
@@ -14285,6 +14439,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_health_system"
+intent = "stabilization"
 source = "common/laws/01_health_system.txt"
 field = "law_no_health_system.ai_enact_weight_modifier"
 domain = "political"
@@ -14299,6 +14454,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_home_affairs"
+intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_no_home_affairs.ai_enact_weight_modifier"
 domain = "political"
@@ -14313,6 +14469,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_migration_controls"
+intent = "stabilization"
 source = "common/laws/02_migration.txt"
 field = "law_no_migration_controls.ai_enact_weight_modifier"
 domain = "political"
@@ -14327,6 +14484,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_police"
+intent = "stabilization"
 source = "common/laws/01_policing.txt"
 field = "law_no_police.ai_enact_weight_modifier"
 domain = "political"
@@ -14341,6 +14499,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_schools"
+intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_no_schools.ai_enact_weight_modifier"
 domain = "political"
@@ -14355,6 +14514,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_social_security"
+intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_no_social_security.ai_enact_weight_modifier"
 domain = "political"
@@ -14369,6 +14529,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_womens_rights"
+intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_no_womens_rights.ai_enact_weight_modifier"
 domain = "political"
@@ -14383,6 +14544,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_no_workers_rights"
+intent = "stabilization"
 source = "common/laws/02_labor_rights.txt"
 field = "law_no_workers_rights.ai_enact_weight_modifier"
 domain = "political"
@@ -14397,6 +14559,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_old_age_pension"
+intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_old_age_pension.ai_enact_weight_modifier"
 domain = "political"
@@ -14411,6 +14574,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_oligarchy"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_oligarchy.ai_enact_weight_modifier"
 domain = "political"
@@ -14425,6 +14589,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_organic_regulation"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_organic_regulation.ai_enact_weight_modifier"
 domain = "political"
@@ -14439,6 +14604,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_outlawed_dissent"
+intent = "stabilization"
 source = "common/laws/02_free_speech.txt"
 field = "law_outlawed_dissent.ai_enact_weight_modifier"
 domain = "political"
@@ -14453,6 +14619,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_parliamentary_republic"
+intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_parliamentary_republic.ai_enact_weight_modifier"
 domain = "political"
@@ -14467,6 +14634,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_peasant_levies"
+intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_peasant_levies.ai_enact_weight_modifier"
 domain = "political"
@@ -14481,6 +14649,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_peasant_proprietorship"
+intent = "stabilization"
 source = "common/laws/01_land_reform.txt"
 field = "law_peasant_proprietorship.ai_enact_weight_modifier"
 domain = "political"
@@ -14495,6 +14664,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_people_of_the_book"
+intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_people_of_the_book.ai_enact_weight_modifier"
 domain = "political"
@@ -14509,6 +14679,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_per_capita_based_taxation"
+intent = "stabilization"
 source = "common/laws/01_taxation.txt"
 field = "law_per_capita_based_taxation.ai_enact_weight_modifier"
 domain = "political"
@@ -14523,6 +14694,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_poor_laws"
+intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_poor_laws.ai_enact_weight_modifier"
 domain = "political"
@@ -14537,6 +14709,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_presidential_republic"
+intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_presidential_republic.ai_enact_weight_modifier"
 domain = "political"
@@ -14551,6 +14724,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_private_health_insurance"
+intent = "stabilization"
 source = "common/laws/01_health_system.txt"
 field = "law_private_health_insurance.ai_enact_weight_modifier"
 domain = "political"
@@ -14565,6 +14739,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_private_schools"
+intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_private_schools.ai_enact_weight_modifier"
 domain = "political"
@@ -14579,6 +14754,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_professional_army"
+intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_professional_army.ai_enact_weight_modifier"
 domain = "political"
@@ -14593,6 +14769,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_professional_navy"
+intent = "stabilization"
 source = "common/laws/00_navy_model.txt"
 field = "law_professional_navy.ai_enact_weight_modifier"
 domain = "political"
@@ -14607,6 +14784,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_proportional_taxation"
+intent = "stabilization"
 source = "common/laws/01_taxation.txt"
 field = "law_proportional_taxation.ai_enact_weight_modifier"
 domain = "political"
@@ -14621,6 +14799,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_protected_speech"
+intent = "stabilization"
 source = "common/laws/02_free_speech.txt"
 field = "law_protected_speech.ai_enact_weight_modifier"
 domain = "political"
@@ -14635,6 +14814,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_protectionism"
+intent = "stabilization"
 source = "common/laws/01_trade_policy.txt"
 field = "law_protectionism.ai_enact_weight_modifier"
 domain = "political"
@@ -14649,6 +14829,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_public_health_insurance"
+intent = "stabilization"
 source = "common/laws/01_health_system.txt"
 field = "law_public_health_insurance.ai_enact_weight_modifier"
 domain = "political"
@@ -14663,6 +14844,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_public_schools"
+intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_public_schools.ai_enact_weight_modifier"
 domain = "political"
@@ -14677,6 +14859,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_racial_segregation"
+intent = "stabilization"
 source = "common/laws/00_citizenship.txt"
 field = "law_racial_segregation.ai_enact_weight_modifier"
 domain = "political"
@@ -14691,6 +14874,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_regulatory_bodies"
+intent = "stabilization"
 source = "common/laws/02_labor_rights.txt"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
 domain = "political"
@@ -14705,6 +14889,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_religious_schools"
+intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_religious_schools.ai_enact_weight_modifier"
 domain = "political"
@@ -14719,6 +14904,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_restricted_child_labor"
+intent = "stabilization"
 source = "common/laws/02_childrens_rights.txt"
 field = "law_restricted_child_labor.ai_enact_weight_modifier"
 domain = "political"
@@ -14733,6 +14919,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_right_of_assembly"
+intent = "stabilization"
 source = "common/laws/02_free_speech.txt"
 field = "law_right_of_assembly.ai_enact_weight_modifier"
 domain = "political"
@@ -14747,6 +14934,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_right_to_associate"
+intent = "stabilization"
 source = "common/laws/02_labour_associations.txt"
 field = "law_right_to_associate.ai_enact_weight_modifier"
 domain = "political"
@@ -14761,6 +14949,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_sakoku"
+intent = "stabilization"
 source = "common/laws/01_trade_policy.txt"
 field = "law_sakoku.ai_enact_weight_modifier"
 domain = "political"
@@ -14775,6 +14964,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_secret_police"
+intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_secret_police.ai_enact_weight_modifier"
 domain = "political"
@@ -14789,6 +14979,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_serfdom"
+intent = "stabilization"
 source = "common/laws/01_land_reform.txt"
 field = "law_serfdom.ai_enact_weight_modifier"
 domain = "political"
@@ -14803,6 +14994,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_shinsengumi"
+intent = "stabilization"
 source = "common/laws/00_internal_security.txt"
 field = "law_shinsengumi.ai_enact_weight_modifier"
 domain = "political"
@@ -14817,6 +15009,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_single_party_state"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_single_party_state.ai_enact_weight_modifier"
 domain = "political"
@@ -14831,6 +15024,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_slave_trade"
+intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_slave_trade.ai_enact_weight_modifier"
 domain = "political"
@@ -14845,6 +15039,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_slavery_banned"
+intent = "stabilization"
 source = "common/laws/02_slavery.txt"
 field = "law_slavery_banned.ai_enact_weight_modifier"
 domain = "political"
@@ -14859,6 +15054,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_social_monarchy"
+intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_social_monarchy.ai_enact_weight_modifier"
 domain = "political"
@@ -14873,6 +15069,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_state_atheism"
+intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_state_atheism.ai_enact_weight_modifier"
 domain = "political"
@@ -14887,6 +15084,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_state_religion"
+intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_state_religion.ai_enact_weight_modifier"
 domain = "political"
@@ -14901,6 +15099,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_strict_edo_system"
+intent = "stabilization"
 source = "common/laws/00_caste_hegemony.txt"
 field = "law_strict_edo_system.ai_enact_weight_modifier"
 domain = "political"
@@ -14915,6 +15114,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_technocracy"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_technocracy.ai_enact_weight_modifier"
 domain = "political"
@@ -14929,6 +15129,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_tenant_farmers"
+intent = "stabilization"
 source = "common/laws/01_land_reform.txt"
 field = "law_tenant_farmers.ai_enact_weight_modifier"
 domain = "political"
@@ -14943,6 +15144,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_terakoya"
+intent = "stabilization"
 source = "common/laws/01_education_system.txt"
 field = "law_terakoya.ai_enact_weight_modifier"
 domain = "political"
@@ -14957,6 +15159,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_theocracy"
+intent = "stabilization"
 source = "common/laws/00_governance_principles.txt"
 field = "law_theocracy.ai_enact_weight_modifier"
 domain = "political"
@@ -14971,6 +15174,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_total_separation"
+intent = "stabilization"
 source = "common/laws/00_church_and_state.txt"
 field = "law_total_separation.ai_enact_weight_modifier"
 domain = "political"
@@ -14985,6 +15189,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_traditionalism"
+intent = "stabilization"
 source = "common/laws/01_economic_system.txt"
 field = "law_traditionalism.ai_enact_weight_modifier"
 domain = "political"
@@ -14999,6 +15204,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_universal_suffrage"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_universal_suffrage.ai_enact_weight_modifier"
 domain = "political"
@@ -15013,6 +15219,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_wage_subsidies"
+intent = "stabilization"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
 domain = "political"
@@ -15027,6 +15234,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_warrior_caste"
+intent = "stabilization"
 source = "common/laws/00_army_model.txt"
 field = "law_warrior_caste.ai_enact_weight_modifier"
 domain = "political"
@@ -15041,6 +15249,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_wealth_voting"
+intent = "stabilization"
 source = "common/laws/00_distribution_of_power.txt"
 field = "law_wealth_voting.ai_enact_weight_modifier"
 domain = "political"
@@ -15055,6 +15264,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_women_in_the_fields"
+intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_women_in_the_fields.ai_enact_weight_modifier"
 domain = "political"
@@ -15069,6 +15279,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_women_in_the_workplace"
+intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_women_in_the_workplace.ai_enact_weight_modifier"
 domain = "political"
@@ -15083,6 +15294,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_women_own_property"
+intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_women_own_property.ai_enact_weight_modifier"
 domain = "political"
@@ -15097,6 +15309,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_womens_suffrage"
+intent = "stabilization"
 source = "common/laws/02_rights_of_women.txt"
 field = "law_womens_suffrage.ai_enact_weight_modifier"
 domain = "political"
@@ -15111,6 +15324,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "political_capacity_law_worker_protections"
+intent = "stabilization"
 source = "common/laws/02_labor_rights.txt"
 field = "law_worker_protections.ai_enact_weight_modifier"
 domain = "political"
@@ -15125,6 +15339,7 @@ contexts = ["political_capacity_crisis"]
 
 [[rules]]
 id = "power_of_the_purse_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "power_of_the_purse.ai_weight"
@@ -15139,6 +15354,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "pre_dreadnought_tech_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "pre_dreadnought_tech.ai_weight"
@@ -15283,6 +15499,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "repeaters_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "repeaters.ai_weight"
@@ -15297,6 +15514,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "rifling_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "rifling.ai_weight"
@@ -15343,6 +15561,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "screw_frigate_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "screw_frigate.ai_weight"
@@ -15357,6 +15576,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "sea_lane_strategies_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "sea_lane_strategies.ai_weight"
@@ -15371,6 +15591,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "self_propelled_torpedoes_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "self_propelled_torpedoes.ai_weight"
@@ -15433,6 +15654,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "shell_gun_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "shell_gun.ai_weight"
@@ -15517,6 +15739,7 @@ contexts = ["political_support_capacity", "peaceful_capacity"]
 
 [[rules]]
 id = "standing_army_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "standing_army.ai_weight"
@@ -15579,6 +15802,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "steelworking_ai_weight"
+intent = "supported_development"
 domain = "economy"
 source = "common/technology/technologies/10_production.txt"
 field = "steelworking.ai_weight"
@@ -15595,6 +15819,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "stormtroopers_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "stormtroopers.ai_weight"
@@ -15817,6 +16042,7 @@ contexts = []
 
 [[rules]]
 id = "structural_naval_research"
+intent = "wartime_defense"
 source = "common/technology/technologies/20_military.txt"
 field = "admiralty.ai_weight"
 domain = "military"
@@ -15901,6 +16127,7 @@ contexts = ["political_support_capacity", "peaceful_capacity"]
 
 [[rules]]
 id = "submarine_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "submarine.ai_weight"
@@ -15961,6 +16188,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "trench_works_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "trench_works.ai_weight"
@@ -15975,6 +16203,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "triage_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "triage.ai_weight"
@@ -16053,6 +16282,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "war_propaganda_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "war_propaganda.ai_weight"
@@ -16099,6 +16329,7 @@ counterexample = "不改变原版资格、成本、历史偏好及零权重；�
 
 [[rules]]
 id = "wargaming_ai_weight"
+intent = "wartime_defense"
 domain = "military"
 source = "common/technology/technologies/20_military.txt"
 field = "wargaming.ai_weight"
@@ -16161,6 +16392,7 @@ counterexample = "不改变原版资格、成本、历史偏好及零权重；�
 
 [[rules]]
 id = "watertube_boiler_ai_weight"
+intent = "supported_development"
 domain = "economy"
 source = "common/technology/technologies/10_production.txt"
 field = "watertube_boiler.ai_weight"
@@ -16177,6 +16409,7 @@ counterexample = "倍率保留原版零值、资格、成本及政治支持；�
 
 [[rules]]
 id = "coordinated_liquidity_wargoal_scores_annex_country"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.annex_country"
 domain = "fiscal"
@@ -16196,6 +16429,7 @@ counterexample = "战争、非借贷、信用压力较低或破产时间未知�
 
 [[rules]]
 id = "coordinated_liquidity_wargoal_scores_conquer_state"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.conquer_state"
 domain = "fiscal"
@@ -16215,6 +16449,7 @@ counterexample = "战争、非借贷、信用压力较低或破产时间未知�
 
 [[rules]]
 id = "coordinated_liquidity_wargoal_scores_make_subject"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.make_subject"
 domain = "fiscal"
@@ -16234,6 +16469,7 @@ counterexample = "战争、非借贷、信用压力较低或破产时间未知�
 
 [[rules]]
 id = "coordinated_liquidity_wargoal_scores_transfer_subject"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.transfer_subject"
 domain = "fiscal"
@@ -16253,6 +16489,7 @@ counterexample = "战争、非借贷、信用压力较低或破产时间未知�
 
 [[rules]]
 id = "coordinated_liquidity_wargoal_scores_regime_change"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.regime_change"
 domain = "fiscal"
@@ -16272,6 +16509,7 @@ counterexample = "战争、非借贷、信用压力较低或破产时间未知�
 
 [[rules]]
 id = "coordinated_liquidity_wargoal_scores_colonization_rights"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.colonization_rights"
 domain = "fiscal"
@@ -16291,6 +16529,7 @@ counterexample = "战争、非借贷、信用压力较低或破产时间未知�
 
 [[rules]]
 id = "coordinated_liquidity_secret_goal_scores_conquer_score"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.conquer.score"
 domain = "fiscal"
@@ -16310,6 +16549,7 @@ counterexample = "战争、非借贷、信用压力较低或破产时间未知�
 
 [[rules]]
 id = "coordinated_liquidity_secret_goal_scores_dominate_score"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.dominate.score"
 domain = "fiscal"
@@ -16329,6 +16569,7 @@ counterexample = "战争、非借贷、信用压力较低或破产时间未知�
 
 [[rules]]
 id = "coordinated_liquidity_secret_goal_scores_antagonize_score"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.antagonize.score"
 domain = "fiscal"
@@ -16348,6 +16589,7 @@ counterexample = "战争、非借贷、信用压力较低或破产时间未知�
 
 [[rules]]
 id = "coordinated_liquidity_ship_construction_output_multiplier"
+intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.ship_construction_output_multiplier"
 domain = "fiscal"
@@ -20089,6 +20331,7 @@ counterexample = "关系不是永久和平或成功概率，不绕过原版态�
 
 [[rules]]
 id = "comparative_friendly_subject"
+intent = "supported_development"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.subject_value"
 domain = "diplomacy"
@@ -20101,6 +20344,7 @@ counterexample = "GDP不是行政成本预测，不授予外交资格或强制�
 
 [[rules]]
 id = "comparative_friendly_overlord"
+intent = "supported_development"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.become_subject_value"
 domain = "diplomacy"
@@ -20113,6 +20357,7 @@ counterexample = "友好不是安全保证；只影响原版成为属国候选�
 
 [[rules]]
 id = "comparative_embargo_access"
+intent = "supported_development"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.treaty_port_value"
 domain = "diplomacy"
@@ -20149,6 +20394,7 @@ counterexample = "不从集团名称推断具体法律立场，不取消改革�
 
 [[rules]]
 id = "social_organized_labor_law_regulatory_bodies"
+intent = "supported_development"
 source = "common/laws/02_labor_rights.txt"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
 domain = "political"
@@ -20162,6 +20408,7 @@ counterexample = "不把工会一律视为支持某法律；原版法律偏好�
 
 [[rules]]
 id = "social_organized_labor_law_wage_subsidies"
+intent = "supported_development"
 source = "common/laws/02_welfare.txt"
 field = "law_wage_subsidies.ai_enact_weight_modifier"
 domain = "political"
@@ -20188,6 +20435,7 @@ contexts = [ "political_support_capacity" ]
 
 [[rules]]
 id = "structural_organized_negotiation"
+intent = "supported_development"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.negotiation_chance"
 domain = "political"
@@ -20201,6 +20449,7 @@ contexts = [ "political_support_capacity", "peaceful_capacity" ]
 
 [[rules]]
 id = "structural_ownership_financial_cost"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.nationalization_desire"
 domain = "economy"
@@ -20214,6 +20463,7 @@ contexts = [ "peaceful_insolvency" ]
 
 [[rules]]
 id = "structural_naval_capital_cost_battle_line"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.ai_ship_category_weights.ai_ship_category_battle_line"
 domain = "military"
@@ -20227,6 +20477,7 @@ contexts = [ "peaceful_insolvency" ]
 
 [[rules]]
 id = "structural_naval_capital_cost_carriers"
+intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.ai_ship_category_weights.ai_ship_category_carriers"
 domain = "military"
@@ -20240,6 +20491,7 @@ contexts = [ "peaceful_insolvency" ]
 
 [[rules]]
 id = "structural_wartime_supply_escort"
+intent = "wartime_defense"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
 domain = "military"
