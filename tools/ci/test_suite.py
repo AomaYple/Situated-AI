@@ -498,6 +498,10 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
     _write(out / "invocation.json", summary)
     mem.ensure_quiet(quiet_mb=200.0, min_avail_mb=4096.0, wait_s=0, allow=args.allow_concurrent)
     started = time.monotonic()
+    if sys.platform == "win32":
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        creationflags = 0
     with (out / "pytest.log").open("w", encoding="utf-8", newline="\n") as log:
         process = subprocess.Popen(
             argv,
@@ -505,7 +509,7 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
             env=env,
             stdout=log,
             stderr=subprocess.STDOUT,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
+            creationflags=creationflags,
             start_new_session=sys.platform != "win32",
         )
         sampler = None
