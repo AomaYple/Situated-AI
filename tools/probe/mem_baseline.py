@@ -627,7 +627,7 @@ class TreeSampler(threading.Thread):
 
 
 def kill_tree(pid: int) -> None:
-    """只停止指定子树；psutil 校验进程身份，避免 shell 拼接与 PID 重用误杀。"""
+    """只停止指定子树；根进程由调用方 Popen.wait 回收，保留真实退出码。"""
     try:
         parent = psutil.Process(pid)
         tree = [*parent.children(recursive=True), parent]
@@ -638,7 +638,8 @@ def kill_tree(pid: int) -> None:
             process.kill()
     with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
         parent.kill()
-    psutil.wait_procs(tree, timeout=3)
+    # POSIX waitpid 只能消费一次；提前回收根进程会使 Popen.wait 丢失被终止的状态。
+    psutil.wait_procs(tree[:-1], timeout=3)
 
 
 def spawn(argv: Sequence[str], env: dict[str, str], log_path: Path) -> tuple[Any, Any]:

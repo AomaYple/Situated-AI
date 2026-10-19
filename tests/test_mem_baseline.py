@@ -20,6 +20,7 @@ import os
 import subprocess
 import sys
 from typing import TYPE_CHECKING, Any
+from unittest.mock import Mock
 
 import pytest
 
@@ -68,6 +69,30 @@ def test_采样线程可以启动停止且不覆盖Thread内部方法(mem, monke
         sampler.join(timeout=5)
     assert not sampler.is_alive()
     assert result["sampler_errors"] == []
+
+
+def test_终止子树不抢先回收Popen拥有的根进程(mem, monkeypatch) -> None:
+    parent = Mock()
+    child = Mock()
+    parent.children.return_value = [child]
+    monkeypatch.setattr(mem.psutil, "Process", Mock(return_value=parent))
+    wait = Mock()
+    monkeypatch.setattr(mem.psutil, "wait_procs", wait)
+    mem.kill_tree(123)
+    child.kill.assert_called_once_with()
+    parent.kill.assert_called_once_with()
+    wait.assert_called_once_with([child], timeout=3)
+
+
+def test_真实终止后Popen保留非零退出码(mem) -> None:
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        mem.kill_tree(process.pid)
+        assert process.wait(timeout=5) != 0
+    finally:
+        if process.poll() is None:
+            process.kill()
+        process.wait(timeout=5)
 
 
 # ────────────────────────── 造数：一份「达标」的组读数与索引 ──────────────────────────
