@@ -43,6 +43,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 .venv\Scripts\python.exe tools\ci\run_check.py deadcode
 .venv\Scripts\python.exe tools\ci\run_check.py hygiene
 .venv\Scripts\python.exe tools\ci\run_check.py baseline
+.venv\Scripts\python.exe tools\ci\run_check.py full-acceptance --quiet
 ```
 
 `deadcode` 扫描受控及未忽略的新 Python 源码的函数和类引用面。它会把测试文件纳入索引，
@@ -53,6 +54,14 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 字节码，并把 JSON 报告写入忽略的
 `tools/out/ci/repo-hygiene.json`。`.venv/`、`tools/out/`、`research/official-docs/`
 和冻结证据按各自契约排除；该检查不判断源码死代码，也不删除任何文件。
+
+`full-acceptance` 是阶段完整验收入口：一次 pytest 写入独立的
+`tools/out/test-runs/<时间>-<随机标识>/`，同时验完整收集与真实执行次数、JUnit/跳过分类、
+总体及核心分支覆盖率、进程内外 RSS、worker/tree 预算、timeout/watchdog 和原退出状态。
+普通 `test` 继续用于定向反馈，`test-offline` 与无游戏 CI 保留各自范围。
+完整入口不允许筛选或降低门禁；调度/种子放在 `--` 后，例如
+`full-acceptance --quiet -- -n 4 --randomly-seed 1`。`--reference` 只核对测试身份多重集合，
+不替代受测源码、输入、实际并发和环境一致性的性能比较前提；串行基准仍独立错峰运行。
 
 ## 当前处境决策实验
 
@@ -321,7 +330,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 137 个测试文件、4322 条用例（2026-10-19 实测）；当前 F0 完整回归、覆盖率、资源与失败修复见[完整候选结果](../docs/design/exec/完整候选-结果.md#2026-10-19-f0-全域候选收口)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、缺失引擎日志等前提分类。这些工程结果不替代 GUI 或行为验收。
+当前收集 137 个测试文件、4409 条用例（2026-10-19 实测）；当前 F0 完整回归、覆盖率、资源与失败修复见[完整候选结果](../docs/design/exec/完整候选-结果.md#2026-10-19-f0-全域候选收口)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、缺失引擎日志等前提分类。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
@@ -610,7 +619,7 @@ Mod 当前缺口与重开条件见 [当前工作清单](../docs/design/当前工
 | 维护成本 | PowerShell 可使用 Pester 测试；本项目选择集中到现有 Python 工具链 |
 | Node 需要额外运行时 | 而 Python 的 `utf-8-sig` 编码名天然解决 BOM 问题 |
 
-Python 版将这些流程集中为可测试的代码；速度执行记录收集 4322 条用例，另有 234 条断言核验；此前仓库维护记录中的覆盖率回归收集 4322 条用例
+Python 版将这些流程集中为可测试的代码；速度执行记录收集 4409 条用例，另有 234 条断言核验；此前仓库维护记录中的覆盖率回归收集 4409 条用例
 （`v3 verify`，其中 `--fast` 跑不需要全库扫描的 211 条），
 外加一层**外部验证** —— `v3 crosscheck` 拿游戏自己的日志核对我们的解析。
 
