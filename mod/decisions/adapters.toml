@@ -2,6 +2,8 @@
 schema = 1
 
 [sources]
+"common/scripted_triggers/00_diplomacy_triggers.txt" = "6c5b17b5e88d81e5cab3bce8a7e0d5a6d3ebaa92cb32cb8d069be824fa591832"
+"common/ai_regional_objectives/00_ai_regional_objectives.txt" = "4cf75c09ebf4f275b77a015bd0c6e829e0c08d589a859d90c9cc18a44832755a"
 "common/diplomatic_actions/25_colonization_rights.txt" = "16fca6be8a75fc4de4c14171031b5039f0640a9a8b711cef8ce7df99cc0f35b1"
 "common/ai_strategies/02_diplomatic_strategies.txt" = "2b0ce7b4430d970eba2e878c8cff6fd38f6ee49274431721025819c0d646ccb4"
 "common/production_method_groups/06_urban_center.txt" = "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871"
@@ -3152,11 +3154,11 @@ unit = "boolean"
 argument = "root"
 
 [readers.target_alliance]
-engine = "has_diplomatic_pact"
+engine = "has_treaty_alliance_with"
 scope = "target_country"
 kind = "boolean"
 unit = "boolean"
-parameters = { who = "root", type = "alliance" }
+parameters = { TARGET = "root" }
 
 [readers.target_embargo]
 engine = "has_diplomatic_pact"

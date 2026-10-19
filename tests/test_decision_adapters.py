@@ -750,12 +750,16 @@ def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | No
             )
         if isinstance(value, Block):
             values = list(value.assignments())
-            if key in {"is_production_method_active", "has_diplomatic_pact"}:
-                expected_keys = (
-                    {"building_type", "production_method"}
-                    if key == "is_production_method_active"
-                    else {"who", "type"}
-                )
+            if key in {
+                "is_production_method_active",
+                "has_diplomatic_pact",
+                "has_treaty_alliance_with",
+            }:
+                expected_keys = {
+                    "is_production_method_active": {"building_type", "production_method"},
+                    "has_diplomatic_pact": {"who", "type"},
+                    "has_treaty_alliance_with": {"TARGET"},
+                }[key]
                 assert {item.key for item in values} == expected_keys
                 pairs = []
                 for item in values:
@@ -1543,7 +1547,7 @@ def test_pairwise_treaty_reader_rejects_unprovided_context_or_injected_contract(
         "scope": "target_country",
         "kind": "boolean",
         "unit": "boolean",
-        "parameters": {"who": "root", "type": "alliance"},
+        "parameters": {"who": "root", "type": "embargo"},
         **change,
     }
     data["rules"][0]["conditions"] = [
@@ -1552,6 +1556,83 @@ def test_pairwise_treaty_reader_rejects_unprovided_context_or_injected_contract(
     ]
     with pytest.raises(ValueError):
         decision_rules.from_data(data, source_sha256="a" * 64)
+
+
+@pytest.mark.parametrize("article", ["alliance", "defensive_pact"])
+def test_treaty_article_cannot_be_used_as_diplomatic_action_type(article):
+    _baseline, data = _relative_data()
+    data["readers"]["target"] = {
+        "engine": "has_diplomatic_pact",
+        "scope": "target_country",
+        "kind": "boolean",
+        "unit": "boolean",
+        "parameters": {"who": "root", "type": article},
+    }
+    data["rules"][0]["conditions"] = [
+        {"fact": "target", "op": "=", "value": True},
+        {"fact": "own", "op": ">=", "value": 0},
+    ]
+    with pytest.raises(ValueError, match="外交"):
+        decision_rules.from_data(data, source_sha256="a" * 64)
+
+
+def test_alliance_reader_uses_current_native_treaty_interface():
+    adapters = decision_adapters.load()
+    reader = next(
+        reader
+        for _source, policy in adapters.policies
+        for reader in policy.readers
+        if reader.key == "target_alliance"
+    )
+    assert reader.engine == "has_treaty_alliance_with"
+    assert dict(reader.parameters) == {"TARGET": "root"}
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"scope": "root"},
+        {"parameters": {}},
+        {"parameters": {"target": "root"}},
+        {"parameters": {"TARGET": "target_country"}},
+        {"parameters": {"TARGET": "root } add = 100"}},
+        {"parameters": {"TARGET": "root", "type": "alliance"}},
+    ],
+)
+def test_native_alliance_reader_rejects_missing_wrong_or_injected_context(change):
+    _baseline, data = _relative_data()
+    data["readers"]["target"] = {
+        "engine": "has_treaty_alliance_with",
+        "scope": "target_country",
+        "kind": "boolean",
+        "unit": "boolean",
+        "parameters": {"TARGET": "root"},
+        **change,
+    }
+    data["rules"][0]["conditions"] = [
+        {"fact": "target", "op": "=", "value": True},
+        {"fact": "own", "op": ">=", "value": 0},
+    ]
+    with pytest.raises(ValueError):
+        decision_rules.from_data(data, source_sha256="a" * 64)
+
+
+@pytest.mark.integration
+def test_native_alliance_definition_and_call_are_in_locked_sources():
+    inputs = decision_adapters.read_inputs(decision_adapters.load())
+    definition = inputs["common/scripted_triggers/00_diplomacy_triggers.txt"]
+    # 核对真实签名和条约/条款遍历，不能仅因某处出现同名词就认为调用有效。
+    match = re.search(
+        r"has_treaty_alliance_with\s*=\s*\{(?P<body>.*?)\n\}\n\nhas_treaty_defensive_pact_with",
+        definition,
+        re.DOTALL,
+    )
+    assert match is not None
+    body = match.group("body")
+    assert re.search(r"binds\s*=\s*\$TARGET\$", body)
+    assert re.search(r"any_scope_article\s*=\s*\{\s*has_type\s*=\s*alliance", body)
+    consumer = inputs["common/ai_regional_objectives/00_ai_regional_objectives.txt"]
+    assert re.search(r"has_treaty_alliance_with\s*=\s*\{\s*TARGET\s*=\s*root\s*\}", consumer)
 
 
 @given(
