@@ -13,7 +13,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 
 ## 环境与安装
 
-游戏包使用 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认 `--variant disabled` 关闭全部七模块，生成全关安全包；实验候选显式选 `--variant current`，零策略偏置但保留财政生命周期的控制组显式选 `--variant control`。旧 5.1 七模块实验候选使用 `--variant full`，默认只生成真正的 Mod 内容；只有需要解释仪器时才显式加 `--with-explanation-probe`，把未验收的国家面板候选临时附加到本次验证副本。三种基础变体和 `full` 都先核对仓库生成一致性，清单记录实际参数、探针开关和输入/生成器指纹；非法变体保全已有目标。当前产品状态为 `experimental`，生成包不代表 V0.1 或行为质量已验收。独立安全实机记录见 [A1 结果](../docs/design/exec/A1-结果.md)。
+游戏包使用 `v3 package --output tools/out/releases/situated-ai-experimental.zip`，默认 `--variant disabled` 关闭全部七模块，生成全关安全包；仓库当前配置显式选 `--variant current`，零策略偏置但保留财政生命周期的控制组显式选 `--variant control`。当前 2.0 全域完整候选必须显式加 `--variant integrated`，旧 5.1 七模块候选仍用 `--variant full`；`current` 不等于全域候选。标准包默认只生成真正的 Mod 内容，需要解释仪器时才加 `--with-explanation-probe`，临时附加到本次验证副本。打包前核对仓库生成一致性，清单记录实际变体、参数、探针和来源指纹；非法变体保全已有目标。当前状态及冻结包见[工作清单](../docs/design/当前工作清单.md)与[当前证据索引](../docs/design/exec/完整候选-结果.md#当前证据索引)，生成包不代表行为质量或正式发布已验收。
 
 每个 ZIP 的 `README.md` 从变体转换后的实际参数和启用模块自动生成，含中英规则、安装、冲突和存档回退说明，标准包目录固定为 `Victoria 3/mod/Situated AI`，稳定 Mod ID 为 `sitai.decisions`；探针包使用 `sitai.explanation-probe`；`pdx.distribution.validate_package` 在发布前逐项校验清单、路径和 SHA-256，并拒绝含解释探针的标准发布包。它是随包使用说明，不是游戏内实时面板；全关包仍含默认策略底本，不能当作零 Mod 环境。验证与成本见 [A5 结果](../docs/design/exec/A5-结果.md)。
 
@@ -330,7 +330,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 139 个测试文件、4419 条用例（2026-10-19 实测）；当前 F0 完整回归、覆盖率、资源与失败修复见[完整候选结果](../docs/design/exec/完整候选-结果.md#2026-10-19-f0-全域候选收口)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、缺失引擎日志等前提分类。这些工程结果不替代 GUI 或行为验收。
+当前收集 139 个测试文件、4419 条用例（2026-10-19 实测）；dev2 完整回归、覆盖率和资源见[最终工程验收](../docs/design/exec/完整候选-结果.md#dev2-最终完整工程验收)，本轮维护检查见[仓库总览审计](../docs/audits/2026-10-19-仓库总览与接续计划整理.md)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、缺失引擎日志等前提分类。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
