@@ -239,6 +239,7 @@ def from_data(
             ("radical_fraction", "number", "value"): {"pop_type"},
             ("loyalist_fraction", "number", "value"): {"pop_type"},
             ("has_diplomatic_pact", "boolean", None): {"who", "type"},
+            ("has_treaty_alliance_with", "boolean", None): {"TARGET"},
             ("primary_cultures_percent_state", "number", "value"): {"target_country"},
         }
         value_field = item.get("value_field")
@@ -272,10 +273,14 @@ def from_data(
             raise ValueError("复合布尔生产方式读取器必须声明完整参数")
         if item["engine"] == "has_diplomatic_pact" and (
             parameters.get("who") != "root"
-            or parameters.get("type") not in {"alliance", "defensive_pact", "embargo", "rivalry"}
+            or parameters.get("type") not in {"embargo", "rivalry"}
             or item["scope"] not in {"target_country", "overlord"}
         ):
             raise ValueError("外交条约读取器必须使用目标国/宗主与当前国家的已登记条约")
+        if item["engine"] == "has_treaty_alliance_with" and (
+            parameters != {"TARGET": "root"} or item["scope"] not in {"target_country", "overlord"}
+        ):
+            raise ValueError("外交同盟读取器必须使用原版条约触发器及目标国/宗主与当前国家")
         if item["engine"] == "primary_cultures_percent_state" and (
             parameters != {"target_country": "root"} or value_field != "value"
         ):

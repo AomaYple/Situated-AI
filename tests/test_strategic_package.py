@@ -27,7 +27,7 @@ def test_integrated_freezes_shared_strategy_and_actual_consumers():
         fingerprint["strategic_generator_sha256"]
         == hashlib.sha256(Path(decision_intents.__file__).read_bytes()).hexdigest()
     )
-    assert metadata["version"] == "2.0.0.dev1"
+    assert metadata["version"] == "2.0.0.dev2"
     assert contract["behavior_verified"] is False
     assert contract["rules_with_intent"] > len(strategy.intents)
 

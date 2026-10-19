@@ -28,6 +28,7 @@ _COUNTRY_BOOLEAN = frozenset(
         "has_technology_researched",
         "has_truce_with",
         "has_diplomatic_pact",
+        "has_treaty_alliance_with",
     }
 )
 _COUNTRY_NUMBER = frozenset(
