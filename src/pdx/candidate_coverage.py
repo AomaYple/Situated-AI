@@ -85,6 +85,41 @@ def _field(value: object) -> str:
     return result
 
 
+def _strategy_fingerprints(
+    data: dict[str, Any],
+    fingerprints: dict[str, Any],
+    adapters: dict[str, Any],
+    contracts: list[tuple[str, str, dict[str, Any]]],
+) -> None:
+    """战略字段一旦出现就核对整条指纹链，避免部分新合同降级为旧协议。"""
+    strategies = [adapters.get("strategy")]
+    for _, _, contract in contracts:
+        strategy = contract.get("strategy")
+        has_intent = any(
+            rule.get("intent") is not None for rule in _rows(contract.get("rules"), "rules")
+        )
+        if has_intent and strategy is None:
+            raise ValueError("战略规则缺少 strategy 合同")
+        strategies.append(strategy)
+    if (
+        "strategic_coordination" not in data
+        and not any(key.startswith("strategic_") for key in fingerprints)
+        and all(strategy is None for strategy in strategies)
+    ):
+        return
+
+    expected = {
+        key: _digest(fingerprints.get("strategic_" + key), "strategic_" + key)
+        for key in ("source_sha256", "generator_sha256")
+    }
+    top = _mapping(data.get("strategic_coordination"), "strategic_coordination")
+    for raw_strategy in [top, *(item for item in strategies if item is not None)]:
+        strategy = _mapping(raw_strategy, "strategy")
+        for key, digest in expected.items():
+            if _digest(strategy.get(key), "strategy." + key) != digest:
+                raise ValueError("候选战略生成指纹与战略合同不一致")
+
+
 def build(catalog: InformationCatalog, metadata: Mapping[str, object]) -> CoverageReport:
     """只按来源和完整字段路径连接，返回可 JSON 序列化的确定性报告。
 
@@ -154,6 +189,8 @@ def build(catalog: InformationCatalog, metadata: Mapping[str, object]) -> Covera
         if source not in sources:
             raise ValueError(f"消费者来源缺少锁定指纹：{source}")
         contracts.append(("consumer_adapters", source, contract))
+
+    _strategy_fingerprints(data, fingerprints, adapters, contracts)
 
     links: list[dict[str, Any]] = []
     unresolved: list[dict[str, Any]] = []

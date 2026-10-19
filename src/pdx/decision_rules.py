@@ -18,7 +18,7 @@ from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import config, decision_interfaces
+from . import config, decision_intents, decision_interfaces
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
@@ -32,7 +32,7 @@ _NAME = re.compile(r"[a-z][a-z0-9_]*\Z")
 _SCOPES = frozenset({"root", "target_country", "target_state", "overlord", "interest_group"})
 _OPS = {"=": operator.eq, "<": operator.lt, "<=": operator.le, ">": operator.gt, ">=": operator.ge}
 # 静态增长护栏，不是游戏运行耗时承诺；扩大须重新冻结并测量候选。
-STATIC_BUDGET = {"candidates_per_field": 32, "predicates_per_field": 160, "predicates_per_rule": 16}
+STATIC_BUDGET = decision_intents.STATIC_BUDGET
 
 
 def _finite(value: object) -> bool:
@@ -120,6 +120,7 @@ class Rule:
     counterexample: str
     operation: str = "multiply"
     contexts: tuple[str, ...] = ()
+    intent: str | None = None
 
     def input_keys(self) -> frozenset[str]:
         return frozenset(
@@ -140,6 +141,7 @@ class RuleSet:
     source_sha256: str
     enabled_domains: frozenset[str]
     actor_path: tuple[str, ...] = ()
+    strategy: decision_intents.Strategy | None = None
 
     def groups(
         self, enabled_domains: frozenset[str] | None = None
@@ -157,14 +159,18 @@ class RuleSet:
         }
 
 
-def load(source: Path = SOURCE) -> RuleSet:
+def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = None) -> RuleSet:
     """严格解析版本锁定的规则；不接受自由脚本、隐式数值或重复优先级。"""
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
-    return from_data(data, source_sha256=hashlib.sha256(raw).hexdigest())
+    if source == SOURCE and strategy is None:
+        strategy = decision_intents.load()
+    return from_data(data, source_sha256=hashlib.sha256(raw).hexdigest(), strategy=strategy)
 
 
-def from_data(data: dict, *, source_sha256: str) -> RuleSet:
+def from_data(
+    data: dict, *, source_sha256: str, strategy: decision_intents.Strategy | None = None
+) -> RuleSet:
     """解析共享规则结构；多文件适配器也使用同一验证和代码生成契约。"""
     if (
         set(data) - {"actor_path", "contexts"}
@@ -328,7 +334,7 @@ def from_data(data: dict, *, source_sha256: str) -> RuleSet:
     seen: set[str] = set()
     priorities: set[tuple[tuple[str, ...], int]] = set()
     for item in data["rules"]:
-        if not isinstance(item, dict) or set(item) - {"operation", "contexts"} != {
+        if not isinstance(item, dict) or set(item) - {"operation", "contexts", "intent"} != {
             "id",
             "domain",
             "field",
@@ -374,9 +380,17 @@ def from_data(data: dict, *, source_sha256: str) -> RuleSet:
         used_contexts.update(names)
         if not isinstance(item["conditions"], list):
             raise ValueError("规则条件必须是列表")
-        expanded = [condition for name in names for condition in contexts[name]] + item[
-            "conditions"
-        ]
+        intent = item.get("intent")
+        if "intent" in item and (
+            not isinstance(intent, str) or not _NAME.fullmatch(intent) or strategy is None
+        ):
+            raise ValueError("规则战略意图必须有显式共享定义")
+        intent_conditions = strategy.expand(intent) if strategy is not None and intent else []
+        expanded = (
+            intent_conditions
+            + [condition for name in names for condition in contexts[name]]
+            + item["conditions"]
+        )
         if not expanded:
             raise ValueError("规则不能无条件干预")
         predicates: list[Predicate] = []
@@ -454,6 +468,7 @@ def from_data(data: dict, *, source_sha256: str) -> RuleSet:
         source_sha256,
         frozenset(key for key, enabled in data["domains"].items() if enabled),
         tuple(actor_path),
+        strategy if any(rule.intent is not None for rule in rules) else None,
     )
     decision_interfaces.validate(policy)
     for candidates in policy.groups(frozenset(domains)).values():
@@ -841,6 +856,9 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
         "visibility": "public_script_scopes_only",
         "actor": "root_country" if not rules.actor_path else "root_state_owner",
         "world_scans": 0,
+        "strategy": rules.strategy.contract({rule.intent for rule in rules.rules if rule.intent})
+        if rules.strategy is not None
+        else None,
         "static_complexity_budget": dict(STATIC_BUDGET),
         "field_owners": {".".join(field): owner for field in rules.groups()},
         "maximum_cases_per_field": max(
@@ -912,6 +930,7 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
                     for condition in rule.conditions
                 ],
                 "contexts": list(rule.contexts),
+                "intent": rule.intent,
                 "why": rule.why,
                 "counterexample": rule.counterexample,
             }

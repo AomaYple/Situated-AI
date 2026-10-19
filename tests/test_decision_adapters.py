@@ -832,6 +832,110 @@ def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | No
     return None
 
 
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "rule_id",
+    [
+        "watertube_boiler_ai_weight",
+        "social_organized_labor_law_regulatory_bodies",
+        "social_organized_labor_law_wage_subsidies",
+        "comparative_friendly_subject",
+        "comparative_friendly_overlord",
+        "comparative_embargo_access",
+    ],
+)
+def test_shared_intent_reaches_production_consumers_and_preserves_counterexamples(
+    real_generated_branches, rule_id
+):
+    policy, blocks = next(
+        (policy, blocks)
+        for policy, blocks in real_generated_branches
+        if any(rule.id == rule_id for rule in policy.rules)
+    )
+    rule = next(rule for rule in policy.rules if rule.id == rule_id)
+    assert rule.intent == "supported_development"
+    facts = {
+        r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
+    }
+    facts.update(
+        legitimacy=60,
+        bureaucracy=100,
+        net_surplus=100,
+        debt_ratio=0.1,
+        industrial=True,
+        union_clout=0.2,
+        union_approval=-1,
+        radical_share=0.3,
+        target_relations=75,
+        overlord_relations=75,
+        target_embargo=True,
+        navy=50,
+        own_navy=50,
+        national_gdp=100000000,
+        candidate_gdp=1000000,
+    )
+    field = ".".join(rule.field)
+    actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, facts))
+    assert actual == (rule.operation, rule.value)
+    for change in (
+        {"loans": True},
+        {"debt_ratio": 0.6},
+        {"net_surplus": -1},
+        {"bureaucracy": -1},
+        {"legitimacy": 20},
+        {"insurrection": True},
+        {"war": True},
+        {"default": True},
+    ):
+        changed = {**facts, **change}
+        reference = decision_rules.evaluate(policy, changed, is_ai=True)
+        assert reference.get(field, (None,))[0] != rule_id
+        actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, changed))
+        # 允许其它原版/Mod 候选按已有优先级响应；本积极意图不得继续获奖。
+        assert actual is None or actual != (rule.operation, rule.value)
+    for fact in ("net_surplus", "legitimacy", "debt_ratio"):
+        unknown = decision_rules.evaluate(policy, {**facts, fact: None}, is_ai=True)
+        assert field not in unknown
+    assert not decision_rules.evaluate(policy, facts, is_ai=False)
+    assert not decision_rules.evaluate(policy, facts, is_ai=True, enabled_domains=frozenset())
+
+
+@pytest.mark.integration
+def test_wartime_defense_intent_survives_insolvency_in_generated_script(real_generated_branches):
+    policy, blocks = next(
+        (p, b)
+        for p, b in real_generated_branches
+        if any(r.id == "structural_wartime_supply_escort" for r in p.rules)
+    )
+    rule = next(r for r in policy.rules if r.id == "structural_wartime_supply_escort")
+    assert rule.intent == "wartime_defense"
+    facts = {
+        r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
+    }
+    facts.update(
+        war=True,
+        default=True,
+        loans=True,
+        net_surplus=-100,
+        debt_ratio=0.9,
+        legitimacy=10,
+        insurrection=True,
+        navy=20,
+        own_navy=20,
+        steamers_price=0.5,
+        steamers_balance=-10,
+    )
+    field = ".".join(rule.field)
+    assert _interpret_adjustments(blocks[field], _scopes_for_facts(policy, facts)) == (
+        "multiply",
+        1.1,
+    )
+    assert (
+        _interpret_adjustments(blocks[field], _scopes_for_facts(policy, {**facts, "war": False}))
+        is None
+    )
+
+
 @pytest.fixture(scope="module")
 def population_candidate():
     source = "law_demo = { ai_enact_weight_modifier = { value = 0 } }\n"

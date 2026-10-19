@@ -15,7 +15,7 @@ from itertools import pairwise
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
-from . import config, decision_rules, production_inputs
+from . import config, decision_intents, decision_rules, production_inputs
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
@@ -86,9 +86,11 @@ def writes(
     return tuple(values)
 
 
-def load(source: Path = SOURCE) -> AdapterSet:
+def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = None) -> AdapterSet:
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
+    if source == SOURCE and strategy is None:
+        strategy = decision_intents.load()
     if set(data) - {"actors", "initial_values", "contexts", "supply", "scalar_values"} != {
         "schema",
         "sources",
@@ -166,6 +168,13 @@ def load(source: Path = SOURCE) -> AdapterSet:
             conditions.extend(
                 condition for items in selected_contexts.values() for condition in items
             )
+            if strategy is not None:
+                for rule in rules:
+                    if "intent" in rule:
+                        intent = rule["intent"]
+                        if not isinstance(intent, str):
+                            raise ValueError("规则战略意图名称无效")
+                        conditions.extend(strategy.expand(intent))
             readers = {condition["fact"] for condition in conditions}
             readers.update(
                 condition["value"]["fact"]
@@ -184,6 +193,7 @@ def load(source: Path = SOURCE) -> AdapterSet:
                     "contexts": selected_contexts,
                 },
                 source_sha256=digest,
+                strategy=strategy,
             )
         except (KeyError, TypeError) as exc:
             raise ValueError("消费者适配缺少类型化输入或开关") from exc
@@ -464,20 +474,11 @@ def _initialize(
     return text
 
 
-def build(
-    adapters: AdapterSet,
-    *,
-    game: Path | None = None,
-    texts: Mapping[str, str] | None = None,
-    enabled_domains: frozenset[str] | None = None,
-    overlays: Mapping[str, str] | None = None,
-) -> tuple[dict[str, str], dict[str, object]]:
-    """全输入预检后生成；合成测试可显式注入文本，生产默认读取 config.GAME。"""
+def read_inputs(
+    adapters: AdapterSet, *, game: Path | None = None, texts: Mapping[str, str] | None = None
+) -> dict[str, str]:
+    """读取并核对全部锁定原件，供跨生产生成器共享同一证据合同。"""
     game = config.GAME if game is None else game
-    known_domains = {rule.domain for _, policy in adapters.policies for rule in policy.rules}
-    if enabled_domains is not None and enabled_domains - known_domains:
-        raise ValueError("消费者适配含未知领域开关")
-    owners = writes(adapters, enabled_domains)
     inputs = {}
     for name, expected in adapters.sources:
         try:
@@ -488,12 +489,35 @@ def build(
         if hashlib.sha256(text.encode("utf-8")).hexdigest() != expected:
             raise ValueError(f"消费者适配原件漂移：{name}")
         inputs[name] = text
-    # 一次词法扫描同时建立校验集合与原件定位，避免逐读取器反复扫描大文件。
+    return inputs
+
+
+def reader_evidence(inputs: Mapping[str, str]) -> dict[str, dict[str, object]]:
+    """只索引调用方已核对的锁定输入；一次词法扫描同时定位静态依据。"""
     evidence: dict[str, dict[str, object]] = {}
     for name, text in inputs.items():
         for token in tokenize(text):
             if token.kind == ATOM and token.value not in evidence:
                 evidence[token.value] = {"source": name, "line": token.line}
+    return evidence
+
+
+def build(
+    adapters: AdapterSet,
+    *,
+    game: Path | None = None,
+    texts: Mapping[str, str] | None = None,
+    enabled_domains: frozenset[str] | None = None,
+    overlays: Mapping[str, str] | None = None,
+) -> tuple[dict[str, str], dict[str, object]]:
+    """全输入预检后生成；合成测试可显式注入文本，生产默认读取 config.GAME。"""
+    known_domains = {rule.domain for _, policy in adapters.policies for rule in policy.rules}
+    if enabled_domains is not None and enabled_domains - known_domains:
+        raise ValueError("消费者适配含未知领域开关")
+    owners = writes(adapters, enabled_domains)
+    inputs = read_inputs(adapters, game=game, texts=texts)
+    # 一次词法扫描同时建立校验集合与原件定位，避免逐读取器反复扫描大文件。
+    evidence = reader_evidence(inputs)
     words = frozenset(evidence)
     files = {}
     contracts = []
