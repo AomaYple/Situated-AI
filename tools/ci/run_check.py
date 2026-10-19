@@ -12,6 +12,7 @@ COMMANDS = {
     "format": ["ruff", "format", "--force-exclude"],
     "types": ["mypy"],
     "test": ["pytest"],
+    "full-acceptance": ["tools.ci.test_suite"],
     # 用参数列表传递 marker 表达式，避免 Windows shell 把空格拆成路径。
     "test-offline": ["pytest", "-m", "not integration and not benchmark"],
     "offline": ["pdx.cli", "verify", "--from-snapshot"],

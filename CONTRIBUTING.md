@@ -58,6 +58,7 @@ Python 工具当前面向完整仓库的可编辑安装，运行时使用仓库�
 | `test tests/test_cli_docs.py` | 示例：运行指定测试文件 |
 | `test` | 完整 pytest 收集集合，默认自适应并行 |
 | `test-offline` | 排除 integration 与 benchmark 的测试 |
+| `full-acceptance --quiet` | 阶段完整验收：一次 pytest 生成并核对执行身份、JUnit、覆盖率、进程内外 RSS 和失败证据 |
 | `deadcode` | 当前源码死代码审计 |
 | `hygiene` | 根目录缓存、Python 字节码和运行态卫生检查；使用 `-B` 避免检查自身生成字节码，报告写入忽略的 `tools/out/ci/` |
 | `baseline` | 依赖、离线快照、生成物、引用及死代码的闭环检查 |
@@ -127,6 +128,10 @@ Python 写文本显式指定 `encoding="utf-8"`、`newline="\n"`；末尾换行�
 同义的 session 分析 fixture 统一复用 `conftest.py` 的定义，避免模块覆盖后重复构建并持有同一输入的结果。类级重型产物在 `tearDownClass` 中释放；流式比较须覆盖完整输出、顺序与结束位置，保留独立构建和差异诊断。
 
 持续增加有意义的测试种类并提高代码的有效覆盖率，优先覆盖尚未验证的行为与边界。覆盖率门槛来自 `pyproject.toml` 与 `pdx.covgate`，用于防止已有覆盖回退。完整覆盖率入口为 `v3 cov`；`v3 cov --check-only` 读取上次结果，不能声称重新测量。无游戏 CI 的覆盖范围与装有游戏的本地回归不同，不能混为一个通过结论。
+
+阶段完整验收统一使用 `python tools/ci/run_check.py full-acceptance --quiet`，每轮写入独立 `tools/out/test-runs/<时间>-<随机标识>/`。同一次 pytest 产生完整收集多重集合、真实开始/结束及各执行阶段、JUnit/跳过分类、覆盖率和双路 RSS，分别检查全部核心覆盖门槛、分支、worker/进程树预算、timeout、watchdog、采样及退出状态。串行时 controller 同样受单执行进程内存预算约束。失败保留所有可取得报告及原退出码，不能以最后一步成功覆盖前面的失败。
+
+完整入口只接受不改变选择集或执行次数的调度与种子参数，例如 `full-acceptance --quiet -- -n 4 --randomly-seed 1`；拒绝 `-k`、`-m`、路径筛选、`dist=each`、覆盖率/插件/外部配置覆盖。`--reference <先前的 full-acceptance.json>` 比较 nodeid 多重集合，仍须另外核对同一受测源码、输入、实际 worker、环境及测量口径后才可比较性能。被测用例启动的普通子进程不继承外层报告输出指针，独立子验收使用自己的目录。该入口不增加 collect-only 预跑，也不删现有测试自身的收集断言。日常定向反馈、无游戏 CI 与串行性能基准保留原入口；完整验收不能在无游戏机器上冒充本机完整覆盖率验收。
 
 基准必须串行、清除普通测试参数并显式启用计时。例如：
 
