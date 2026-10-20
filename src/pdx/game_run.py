@@ -1713,6 +1713,7 @@ def run(
                 force=True,
                 save_name=save_name,
                 language=language,
+                health_check=check_health,
             )
             report["session"] = session.as_dict()
             check_health()
@@ -1852,7 +1853,7 @@ def run(
             report["monitoring"] = {
                 "log_poll_seconds": 0.25,
                 "process_poll_seconds": 5,
-                "error_stop": "增量错误日志守卫：模拟中每 5 秒检查，等待存档时每 1 秒检查；阻塞式启动返回后检查。结束时仍须核验完整日志。",
+                "error_stop": "增量错误日志守卫：启动在窗口/加载、tick 与观察者等待的安全检查点协作检查；模拟中每 5 秒、等待存档时每 1 秒检查。阻塞调用仍须返回，结束时仍核验完整日志。",
                 "scope": "只测本次拥有的游戏 PID 的 RSS 与 CPU，覆盖启动和模拟阶段；记录采样峰值，不测帧耗时",
                 "limits": "轮询捕获已知轮转文件；轮转快于保留窗口时，可能遗漏尚未读取的字节。",
             }

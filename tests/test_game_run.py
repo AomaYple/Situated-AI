@@ -990,6 +990,7 @@ def test_控制台历史归档损坏则保留现场且支持修复后重试(depl
         "process",
         "summary",
         "engine-startup",
+        "engine-startup-wait",
         "engine-wait",
     ],
 )
@@ -1055,11 +1056,14 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
     def engine_error():
         captures[0].guard.feed("error.log", (1, 1), b"Assertion failed: invalid world\n")
 
-    def start(**_kwargs):
+    def start(*, health_check, **_kwargs):
         if phase == "startup":
             fail()
-        if phase == "engine-startup":
+        if phase in {"engine-startup", "engine-startup-wait"}:
             engine_error()
+        if phase == "engine-startup-wait":
+            health_check()
+            pytest.fail("启动守卫识别首错后不能继续界面流程")
         return session
 
     def wait(*_args, sample, **_kwargs):
@@ -1099,6 +1103,9 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
         assert isinstance(failure, str)
         assert "实时错误门禁" in failure
         assert "checkpoint" not in report
+        if phase == "engine-startup-wait":
+            assert "session" not in report
+            assert report["cleanup_errors"] == []
     assert (Path(str(report["evidence"])) / "report.json").is_file()
     stages = report["stage_timings"]
     assert isinstance(stages, list)
