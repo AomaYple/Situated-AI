@@ -77,6 +77,7 @@ def _context(
         "research_observation": {
             "tags": list(research_tags),
             "enabled": bool(research_tags),
+            "state_reader": "is_researching_technology" if research_tags else None,
             "runtime_getter": "not_verified",
             "ai_denominator": "not_verified",
         },

@@ -296,6 +296,8 @@ def test_显式研究观测只附加临时副本并解析完整日志(tmp_path, 
     assert context["candidate_kind"] == "instrumented_candidate"
     assert not context["production_package"]
     assert context["research_observation"]["technology_keys"] == ["a", "b"]
+    assert context["research_observation"]["state_reader"] == "is_researching_technology"
+    assert context["research_observation"]["runtime_getter"] == "not_verified"
     assert set(context["research_observation"]["technology_sources"]) == {
         "common/technology/technologies/production.txt"
     }

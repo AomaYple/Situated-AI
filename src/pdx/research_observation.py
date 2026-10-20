@@ -1,7 +1,7 @@
 """有界研究观测：完整科技集合、可研究集与主动研究状态分别记录。
 
-观测只能显式附加至临时验证副本。GUI 的 IsResearching 仍须实机核对，
-获取科技 hook 不提供来源分类，不能把传播或事件授予当作研究完成。
+观测只能显式附加至临时验证副本。研究状态使用原版国家 trigger，
+不调用 GUI getter；获取科技 hook 不提供来源分类，不能把传播或事件授予当作研究完成。
 """
 
 from __future__ import annotations
@@ -71,16 +71,16 @@ def build(keys: tuple[str, ...], *, tags: tuple[str, ...]) -> dict[str, str]:
     for tag in sorted(tags):
         readings = []
         for key in sorted(keys):
-            # 以原版国家 trigger 读取分母；不从 GUI 的显示过滤器推断完整资格。
-            # 当前研究 getter 单独标注为待证，不能仅凭生成/解析通过提升证据。
-            # 原 GUI 读取在启动 hook 中伴随状态访问断言；未证明安全前明确留空，
-            # 不以布尔假值掩盖当前研究缺口。
-            active = "unknown"
-
-            def leaf(
-                legal: int, owned: int, *, tag: str = tag, key: str = key, active: str = active
-            ) -> str:
-                return f'debug_log = "{PREFIX}{tag};TECH;{key};{legal};{owned};{active}"'
+            # 原版 trade_route_events 在国家 effect 的 limit 中使用该 trigger。
+            # 三种状态独立读取；正在研究的科技不必属于当时 can_research 集合。
+            # hook 的读取时序与运行期有效性仍须实机核对，不调用 GUI getter。
+            def leaf(legal: int, owned: int, *, tag: str = tag, key: str = key) -> str:
+                row = f"{PREFIX}{tag};TECH;{key};{legal};{owned}"
+                return (
+                    f"if = {{ limit = {{ is_researching_technology = {key} }} "
+                    f'debug_log = "{row};1" }} '
+                    f'else = {{ debug_log = "{row};0" }}'
+                )
 
             branches = [
                 f"if = {{ limit = {{ has_technology_researched = {key} }} {leaf(legal, 1)} }} "
@@ -219,5 +219,5 @@ def analyze_lines(
         "getter_runtime_verified": False,
         "ai_candidate_denominator_complete": False,
         "behavior_quality": "not_evaluated",
-        "limits": "can_research 集合不是已证明的 AI 内部排名；取得科技不区分传播、研究完成和事件授予；START 时序和 GUI getter 须另验；日志前缀仅是定位依据，不能冒充游戏日期；hook/快照不证明字段因果。",
+        "limits": "can_research 集合不是已证明的 AI 内部排名；取得科技不区分传播、研究完成和事件授予；原生研究 trigger 的运行期有效性和 START 时序须另验，历史 unknown 保持未知；日志前缀仅是定位依据，不能冒充游戏日期；hook/快照不证明字段因果。",
     }
