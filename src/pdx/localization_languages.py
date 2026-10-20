@@ -18,6 +18,10 @@ if TYPE_CHECKING:
 LANGUAGE_HEADER_RE = re.compile(r"^\s*(l_[A-Za-z0-9_]+)\s*:\s*$")
 LANGUAGE_NAME_RE = re.compile(r"l_[A-Za-z0-9_]+")
 
+# 锁定本体还在这些分类目录中放置多语言共用的引擎/修正文本。
+# 它们补充已有语言，不能自行声明一种语言或成为 Mod 的安装目录。
+_SHARED_LOCALIZATION_DIRS = frozenset({"jomini", "modifiers"})
+
 
 @dataclass(frozen=True, slots=True)
 class Language:
@@ -67,8 +71,9 @@ def _language_from_header(header: str, directory: str) -> Language:
 def discover(game_root: Path) -> tuple[Language, ...]:
     """从实际游戏内容根发现语言集合。
 
-    只读取 ``localization/<目录>/**/*.yml`` 的首个语言头；没有可读语言文件时
-    明确失败，避免在游戏目录不完整时退回一个看似成功的双语集合。
+    读取 ``localization/<目录>/**/*.yml`` 的首个语言头。已知共享分类
+    jomini/modifiers 只补充已发现语言，其未知语言仍报错；其它目录必须
+    一目录一语言。没有独立语言目录时明确失败，不用共享文本补造语言集合。
     """
 
     localization = game_root / "localization"
@@ -76,6 +81,7 @@ def discover(game_root: Path) -> tuple[Language, ...]:
         raise ValueError(f"游戏本地化目录不存在：{localization}")
     found: dict[str, Language] = {}
     directory_headers: dict[str, str] = {}
+    shared_headers: dict[str, Path] = {}
     for path in sorted(localization.glob("*/**/*.yml")):
         try:
             lines = path.read_text(encoding="utf-8-sig", errors="strict").splitlines()
@@ -85,6 +91,9 @@ def discover(game_root: Path) -> tuple[Language, ...]:
         if header is None:
             continue
         directory = path.relative_to(localization).parts[0]
+        if directory in _SHARED_LOCALIZATION_DIRS:
+            shared_headers.setdefault(header, path)
+            continue
         previous_header = directory_headers.get(directory)
         if previous_header is not None and previous_header != header:
             raise ValueError(
@@ -100,6 +109,9 @@ def discover(game_root: Path) -> tuple[Language, ...]:
         found[header] = language
     if not found:
         raise ValueError(f"游戏本地化目录没有发现语言头：{localization}")
+    for header, path in shared_headers.items():
+        if header not in found:
+            raise ValueError(f"共享本地化引用了独立语言目录中未发现的语言：{header!r} ({path})")
     return tuple(sorted(found.values(), key=lambda language: language.directory))
 
 
