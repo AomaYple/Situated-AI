@@ -1,11 +1,13 @@
 """研究分母与真实动作观测的离线契约，不启动游戏。"""
 
 import hashlib
+from itertools import product
 from pathlib import Path
 
 import pytest
 
 from pdx import research_observation as observation
+from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 
 
@@ -74,8 +76,59 @@ def test_生成明确国家作用域且只读无全世界扫描() -> None:
     assert effect.count("can_research =") == 4  # 每国每科技一次，分支不重复枚举。
     assert "GetTechnology(" not in effect
     assert "IsResearching" not in effect
-    assert "TECH;pan-nationalism;0;0;unknown" in effect
+    assert "is_researching_technology = pan-nationalism" in effect
+    assert "TECH;pan-nationalism;0;0;0" in effect
     assert ".metadata/metadata.json" not in files  # 只能显式附到本局标准候选。
+
+
+@pytest.mark.parametrize(("legal", "owned", "active"), list(product((False, True), repeat=3)))
+def test_实际生成分支独立输出三种原生状态(legal: bool, owned: bool, active: bool) -> None:
+    """错误嵌套或把研究状态当资格时，完整真值表必须抓出错误日志。"""
+    files = observation.build(("a",), tags=("RUS",))
+    parsed = parse_text(files["common/scripted_effects/zz_sitai_research_observation.txt"])
+    assert not parsed.errors
+    effect = parsed.root.first("sitai_research_observe_read_RUS")
+    assert effect is not None
+    effect_value = effect.value
+    assert isinstance(effect_value, Block)
+    state = {
+        "can_research": legal,
+        "has_technology_researched": owned,
+        "is_researching_technology": active,
+    }
+    messages: list[str] = []
+
+    def execute(block: Block) -> None:
+        previous = None
+        for item in block.assignments():
+            if item.key == "debug_log":
+                assert isinstance(item.value, Scalar)
+                messages.append(item.value.unquoted)
+            elif item.key == "if":
+                assert isinstance(item.value, Block)
+                limit = item.value.first("limit")
+                assert limit is not None
+                assert isinstance(limit.value, Block)
+                conditions = list(limit.value.assignments())
+                assert len(conditions) == 1
+                condition = conditions[0]
+                assert condition.key in state
+                assert isinstance(condition.value, Scalar)
+                assert condition.value.text == "a"
+                previous = state[condition.key]
+                if previous:
+                    execute(item.value)
+            elif item.key == "else":
+                assert previous is not None
+                assert isinstance(item.value, Block)
+                if not previous:
+                    execute(item.value)
+                previous = None
+            else:
+                assert item.key == "limit", f"观测出现未声明副作用：{item.key}"
+
+    execute(effect_value)
+    assert messages == [f"SITAI RESEARCH;RUS;TECH;a;{int(legal)};{int(owned)};{int(active)}"]
 
 
 @pytest.mark.parametrize(

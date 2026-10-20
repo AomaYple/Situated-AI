@@ -173,11 +173,25 @@ class LogCapture:
         offset = 0
         if previous := self.positions.get(stem):
             offset, prefix = previous
-            matches = [
-                index for index, path in enumerate(paths) if self._prefix(path, offset) == prefix
-            ]
-            if len(matches) != 1:
-                raise RuntimeError(f"日志原地截断或轮转世代不唯一，完整性不确定：{stem}")
+            for attempt in range(2):
+                matches = [
+                    index
+                    for index, path in enumerate(paths)
+                    if self._prefix(path, offset) == prefix
+                ]
+                if len(matches) == 1:
+                    break
+                refreshed = ga.rotated_logs(self.source, stem)
+                refreshed_snapshot = self._snapshot(refreshed)
+                # 枚举后才轮转时，旧路径会指向新世代；仅凭实际元数据变化重读一次。
+                # 稳定截断、重复前缀及持续竞态仍失败，不吞掉已经采集的字节或错误。
+                if attempt or refreshed_snapshot == snapshot:
+                    raise RuntimeError(
+                        f"日志原地截断或轮转世代不唯一，完整性不确定：{stem}"
+                        f"（匹配数 {len(matches)}，已读 {offset} 字节）"
+                    )
+                paths = all_paths = refreshed
+                snapshot = refreshed_snapshot
             paths = paths[matches[0] :]
         generations = [
             int(path.stem.rsplit(".", 1)[-1]) for path in paths if path.name != f"{stem}.log"

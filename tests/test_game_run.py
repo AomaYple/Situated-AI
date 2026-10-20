@@ -1424,6 +1424,59 @@ def test_轮转副本不含已采集前缀时仍拒绝截断(tmp_path):
     assert (capture.destination / "debug.log").read_bytes() == b"original content\n"
 
 
+def test_前缀检查期间轮转只在元数据变化时重新定位一次(tmp_path, monkeypatch):
+    source = tmp_path / "live"
+    source.mkdir()
+    log = source / "debug.log"
+    first = b"original generation\n"
+    log.write_bytes(first)
+    capture = game_run.LogCapture(source, tmp_path / "capture")
+    capture.poll()
+    with log.open("ab") as stream:
+        stream.write(b"tail\n")
+    original_prefix = capture._prefix
+    rotated = False
+
+    def rotate_during_prefix(path, size):
+        nonlocal rotated
+        if not rotated:
+            rotated = True
+            log.rename(source / "debug.1.log")
+            log.write_bytes(b"next\n")
+        return original_prefix(path, size)
+
+    monkeypatch.setattr(capture, "_prefix", rotate_during_prefix)
+    capture.poll()
+    assert rotated
+    assert capture.errors == []
+    assert (capture.destination / "debug.log").read_bytes() == first + b"tail\nnext\n"
+
+
+def test_连续轮转竞态不能无限重试或视为完整(tmp_path, monkeypatch):
+    source = tmp_path / "live"
+    source.mkdir()
+    log = source / "debug.log"
+    log.write_bytes(b"original generation\n")
+    capture = game_run.LogCapture(source, tmp_path / "capture")
+    capture.poll()
+    log.write_bytes(b"unrelated longer replacement\n")
+    original_prefix = capture._prefix
+    calls = 0
+
+    def continuously_mutate(path, size):
+        nonlocal calls
+        calls += 1
+        with log.open("ab") as stream:
+            stream.write(b"mutation\n")
+        return original_prefix(path, size)
+
+    monkeypatch.setattr(capture, "_prefix", continuously_mutate)
+    capture.poll()
+    assert calls <= 2
+    assert capture.errors
+    assert (capture.destination / "debug.log").read_bytes() == b"original generation\n"
+
+
 def test_覆写到更长但无连续前缀也不能当追加(tmp_path):
     source = tmp_path / "live"
     source.mkdir()
