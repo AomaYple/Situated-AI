@@ -905,8 +905,9 @@ def type_text(text: str, *, force: bool = False) -> None:
 #   * **要按两次回车** —— 第一次被自动补全吃掉（exe 明文有
 #     `SETTING_CONSOLE_AUTOCOMPLETE_MODE` 一族设置），第二次才执行。
 #
-# 判据全部走**画面**（不猜也不目测）：控制台开着时输入框那块 ROI 是暗的（均值 ≈31–48），
-# 关着时地图透出来（≈190）；输入框有字时标准差 ≈43–55、空的 ≈7–18。
+# 旧输入框亮暗判据只在已标定的背景有效；深色原生面板会造成假阳性。
+# 2026-10-20 实机已拍到控制台关闭后海域面板仍被判为打开，识别修复尚未完成。
+# 输入框有字/空白的标准差只用于已确认控制台上下文中的命令提交。
 
 #: 开控制台的键。
 CONSOLE_KEY = "`"
@@ -939,7 +940,7 @@ def _roi_stats(hwnd: int, roi_px: tuple[int, int, int, int]) -> tuple[float, flo
 
 
 def console_open(hwnd: int) -> bool:
-    """控制台现在开着吗？（判据：输入框 ROI 的均值，实测开着 ≈31–48、关着 ≈190）"""
+    """旧亮暗启发式；深色面板存在假阳性，不能单独证明控制台开关状态。"""
     mean, _std, _ink = _roi_stats(hwnd, CONSOLE_EDIT_ROI)
     return mean < CONSOLE_OPEN_MEAN
 
@@ -969,9 +970,8 @@ def open_console(hwnd: int, *, key: str = CONSOLE_KEY, force: bool = False) -> b
 def _focus_editbox(hwnd: int, *, force: bool) -> None:
     """把键盘焦点交给控制台输入框，并清空它（免得新命令粘在旧的后面）。
 
-    为什么必须点一下：控制台一旦打开就**关不掉**（实测 escape / 反引号 / shift+escape
-    都没用），于是它会在整局里一直挂着；而"让时间跑起来"那一步要按 5 速快捷键、按空格 ——
-    焦点就此离开输入框。下一次敲命令时字会**打进游戏而不是控制台**，
+    为什么必须点一下：控制台输入框可能已经失去焦点；"让时间跑起来"那一步要按
+    5 速快捷键、按空格，焦点会交还游戏。下一次敲命令时字可能**打进游戏而不是控制台**，
     `submit_console_command` 就会一直判"没提交成功"。**实测踩过**：一局里
     `clear` 成功、跑完 12 个月后的 `dump` 失败 ⇒ `ticktask_timings.csv` 没出现。
 

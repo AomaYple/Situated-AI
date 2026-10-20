@@ -178,10 +178,10 @@ def open_console(hwnd: int, *, key: str = "`") -> bool:
 
 
 def close_console(hwnd: int, *, key: str = "`") -> bool:
-    """把控制台关掉。**逐条试几个键并如实报告哪个管用**。
+    """历史关闭探针；亮暗判据不能可靠区分控制台与深色原生面板。
 
-    实测（2026-09-23）：**Esc 关不掉**（`console_open` 仍是 True）。所以别在这里
-    自作聪明挑一个键 —— 把候选列出来、量出结果，谁管用谁进结论。
+    2026-10-20 截图确认移开编辑焦点后反引号可关闭控制台，但海域面板仍被旧 ROI
+    判为打开。识别修复前返回值只作历史诊断，不作为玩家流程的充分验收。
     """
     if not console_open(hwnd):
         return True
@@ -191,7 +191,7 @@ def close_console(hwnd: int, *, key: str = "`") -> bool:
         if not console_open(hwnd):
             print(f"  （关控制台：{chord!r} 管用）")
             return True
-    print("  ⚠️ escape / 反引号 / shift+escape 都没关掉控制台 —— 留着它继续跑")
+    print("  ⚠️ 旧亮暗判据未确认控制台关闭；深色原生面板可能造成误判")
     return False
 
 
