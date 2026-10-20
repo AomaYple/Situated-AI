@@ -1391,6 +1391,8 @@ def run(
             "source_hashes": source_hashes,
             "provenance": provenance,
         }
+        if keep_save and load_save is None and experiment is None:
+            report["kind"] = "mod_checkpoint_preparation"
         if vanilla_baseline:
             report["kind"] = "vanilla_environment_baseline"
             report["baseline_contract"] = {

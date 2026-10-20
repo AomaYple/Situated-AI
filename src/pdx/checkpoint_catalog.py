@@ -94,6 +94,62 @@ def _review_preparation(path: Path, report: Mapping[str, Any]) -> list[str]:
     return reasons
 
 
+def _review_mod_preparation(path: Path, report: Mapping[str, Any]) -> list[str]:
+    """复用完整日志和部署审计，只为新局输出免除不存在的载入指纹。"""
+    from .game_run import (  # noqa: PLC0415
+        require_clean_report,
+        save_header,
+        validate_load_save_header,
+    )
+    from .m3a_screen import load_report  # noqa: PLC0415
+
+    require_clean_report(dict(report))
+    facts = load_report(path)
+    reasons = [reason for reason in facts.gate_reasons if reason != "loaded_save.sha256_missing"]
+    if "loaded_save" in report or any(
+        key in report for key in ("experiment", "qualification_report", "qualification_preparation")
+    ):
+        reasons.append("mod_preparation.not_new_game")
+    reasons.extend(
+        f"mod_preparation.{key}"
+        for key in ("session_requested", "logs_isolated")
+        if report.get(key) is not True
+    )
+    session, progress = report.get("session"), report.get("progress")
+    if (
+        not isinstance(session, Mapping)
+        or session.get("automation_phase") != "complete"
+        or session.get("speed_ok") is not True
+        or not isinstance(progress, Mapping)
+        or progress.get("reached") is not True
+    ):
+        reasons.append("mod_preparation.session_incomplete")
+    checkpoint = report.get("checkpoint")
+    if not isinstance(checkpoint, Mapping):
+        return [*reasons, "mod_preparation.checkpoint_missing"]
+    output = path.parent / "saves/autosave.v3"
+    plain_path(output)
+    before = digest(output)
+    header = save_header(output)
+    if checkpoint.get("hashes") != {output.name: before} or digest(output) != before:
+        reasons.append("mod_preparation.output_changed_or_incomplete")
+    if (
+        checkpoint.get("header") != header
+        or report.get("checkpoint_ready") != header
+        or header.get("observer") != "yes"
+    ):
+        reasons.append("mod_preparation.header_differs_or_not_observer")
+    version = report.get("game_version")
+    expected_version = version.get("caligula_branch") if isinstance(version, Mapping) else None
+    if not isinstance(expected_version, str) or not expected_version:
+        reasons.append("mod_preparation.game_version_missing")
+    else:
+        validate_load_save_header(
+            header, expected_version=expected_version.split("/")[-1], allow_save_upgrade=False
+        )
+    return list(dict.fromkeys(reasons))
+
+
 def _review_report(path: Path) -> dict[str, Any]:
     """保留输出指纹后复核原局，避免把失败局产物当作新输入。"""
     from .game_run import read_reviewed_report  # noqa: PLC0415
@@ -140,6 +196,23 @@ def _review_report(path: Path) -> dict[str, Any]:
             raise ValueError("报告字段 loaded_save.header 必须是对象")
         is_preparation = raw.get("kind") == "vanilla_checkpoint_preparation"
         row["kind"] = raw.get("kind")
+        # 旧运行器未写 kind；只读识别完整的新局保存结构，不改写原报告。
+        is_mod_preparation = raw.get("kind") == "mod_checkpoint_preparation" or (
+            "kind" not in raw
+            and "loaded_save" not in raw
+            and isinstance(raw.get("checkpoint_ready"), Mapping)
+            and isinstance(checkpoint, Mapping)
+        )
+        if is_mod_preparation:
+            reasons = _review_mod_preparation(path, raw)
+            output_sha = row["output_sha256"]
+            row.update(
+                kind="mod_checkpoint_preparation",
+                classification="reported" if "kind" in raw else "structural_legacy",
+                checkpoint_sha256=output_sha[0] if len(output_sha) == 1 else None,
+                clean=not reasons,
+                reasons=reasons,
+            )
         del raw
         if is_preparation:
             reviewed = read_reviewed_report(path)
@@ -150,7 +223,7 @@ def _review_report(path: Path) -> dict[str, Any]:
                 clean=not reasons,
                 reasons=reasons,
             )
-        else:
+        elif not is_mod_preparation:
             # 行为报告加载器已执行当前日志门禁；避免再次散列/扫描同一大归档。
             facts = load_report(path)
             row.update(
@@ -257,10 +330,16 @@ def inspect(
             context=qualification_context,
         )
         result["qualification"] = qualification
+        diagnostic_origin = any(
+            row.get("kind") == "mod_checkpoint_preparation" for row in result["origin_reports"]
+        )
+        if diagnostic_origin:
+            result["reasons"].append("origin.diagnostic_only")
         if (
             result["instrument_suitable"]
             and result["header"].get("version") == expected_version
             and qualification["allowed"]
+            and not diagnostic_origin
         ):
             result["formal_pair_suitable"] = True
             result["formal_purpose"] = purpose
