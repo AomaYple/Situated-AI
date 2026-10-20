@@ -1130,7 +1130,12 @@ def _set_foreground(hwnd: int) -> bool:
     库调用不抛异常 **不等于** 成功了（Windows 前台锁定会静默失败），所以判据是
     ``GetForegroundWindow()``，不是返回值 —— 见 :func:`ensure_foreground`。
     """
-    with suppress(gw.PyGetWindowException, OSError):
+    try:
+        window_error = gw.PyGetWindowException
+    except (AttributeError, WindowsOnlyError):
+        # 非 Windows 的惰性替身不能访问 pygetwindow 异常类型。
+        window_error = OSError
+    with suppress(window_error, OSError):
         _window(hwnd).activate()
     if _foreground_window() == hwnd:
         return True
