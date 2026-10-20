@@ -1284,6 +1284,7 @@ def run(
     months: float,
     output: Path,
     analyze: Callable[[Path], object] | None = None,
+    verify_inputs: Callable[[], None] | None = None,
     timeout: float = 3600,
     load_save: Path | None = None,
     keep_save: bool = False,
@@ -1311,6 +1312,7 @@ def run(
         or allow_save_upgrade
         or profile
         or analyze is not None
+        or verify_inputs is not None
         or experiment is not None
         or prior_failure_reports
         or qualification_report is not None
@@ -1405,6 +1407,8 @@ def run(
         registration: dict[str, Any] | None = None
 
         def verify_game_content(phase: str) -> None:
+            if verify_inputs is not None:
+                timings.call("input_verification", verify_inputs)
             if (formal or registration is not None) and (
                 _disabled_dlc() != disabled_dlc
                 or mount_allowlist([config.USERDIR / "mod" / name for name in sources])
@@ -1767,6 +1771,7 @@ def run(
             if ga.LAST_QUARANTINE_ERRORS:
                 raise RuntimeError(f"日志隔离失败：{ga.LAST_QUARANTINE_ERRORS}")
             logs_isolated = True
+            verify_game_content("部署前")
             destinations = timings.call("deployment", deployment.deploy, frozen_sources)
             report["deployed_hashes"] = {p.name: hashes(p) for p in destinations}
             expected_mounts = mount_allowlist(destinations)
@@ -1970,11 +1975,13 @@ def run(
                 report.setdefault("failure", "实机收尾失败；备份已保留")
             report["session_requested"] = session_requested
             report["logs_isolated"] = logs_isolated
-            if actual_game_hashes is not None:
+            if actual_game_hashes is not None or verify_inputs is not None:
                 try:
                     verify_game_content("实验期间")
-                except (OSError, ValueError) as exc:
-                    report.setdefault("failure", f"游戏内容末次复核失败：{exc}")
+                except Exception as exc:
+                    report.setdefault(
+                        "failure", f"游戏内容末次复核失败：{type(exc).__name__}: {exc}"
+                    )
             if analyze is not None and session_requested:
                 try:
                     report["analysis"] = timings.call("analysis", analyze, evidence / "logs")

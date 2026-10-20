@@ -157,6 +157,10 @@ def _unquote_loc_value(raw: str) -> str:
     value = raw.strip()
     if not value.startswith('"'):
         return value.split(" #", 1)[0].rstrip()
+    if "\\" not in value:
+        # 本体绝大多数值没有转义；由字符串原语定位闭引号，保持未闭合行的原语义。
+        end = value.find('"', 1)
+        return value[1:] if end == -1 else value[1:end]
     out: list[str] = []
     escaped = False
     for char in value[1:]:

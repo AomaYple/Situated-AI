@@ -32,6 +32,7 @@ from pdx import (
     distribution,
     explanation_probe,
     game_run,
+    law_observation,
     research_observation,
     resource_baseline,
 )
@@ -50,9 +51,13 @@ def _context(
     load_save: Path | None,
     variant: str = VARIANT,
     research_tags: tuple[str, ...] = (),
+    law_tags: tuple[str, ...] = (),
+    research_targets: bool = False,
 ) -> dict[str, Any]:
     diagnostic = resource or localization
-    instrumented = (with_explanation_probe or bool(research_tags)) and not diagnostic
+    instrumented = (
+        with_explanation_probe or bool(research_tags) or bool(law_tags)
+    ) and not diagnostic
     return {
         "schema": "sitai-f1-full-smoke-v1",
         "delivery_contract": distribution.generation_contract(
@@ -80,9 +85,16 @@ def _context(
             "state_reader": "is_researching_technology" if research_tags else None,
             "runtime_getter": "not_verified",
             "ai_denominator": "not_verified",
+            "hook_targets": research_targets,
+        },
+        "law_observation": {
+            "tags": list(law_tags),
+            "enabled": bool(law_tags),
+            "runtime_getter": "not_verified",
+            "ai_denominator": "not_verified",
         },
         "behavior_quality": "not_evaluated",
-        "production_package": not diagnostic and not with_explanation_probe and not research_tags,
+        "production_package": not diagnostic and not instrumented,
         "limits": (
             "标准 Mod 运行只回答挂载、日志、自动化和恢复问题；临时探针只回答其声明的仪器问题；"
             "诊断基线运行只回答已知原版环境问题。"
@@ -100,6 +112,9 @@ def _write_sources(
     variant: str = VARIANT,
     research_tags: tuple[str, ...] = (),
     research_keys: tuple[str, ...] = (),
+    law_tags: tuple[str, ...] = (),
+    law_keys: tuple[str, ...] = (),
+    research_targets: bool = False,
 ) -> dict[str, Path]:
     """在隔离临时目录内生成标准 Mod 和可选临时诊断源。"""
 
@@ -109,10 +124,19 @@ def _write_sources(
         files = explanation_probe.attach(files, policy, extensions)
     if research_tags:
         extra = research_observation.build(
-            research_keys or research_observation.technology_keys(config.GAME), tags=research_tags
+            research_keys or research_observation.technology_keys(config.GAME),
+            tags=research_tags,
+            with_targets=research_targets,
         )
         if files.keys() & extra.keys():
             raise ValueError("研究观测不能覆盖标准候选文件")
+        files = {**files, **extra}
+    if law_tags:
+        extra = law_observation.build(
+            law_keys or law_observation.law_snapshot(config.GAME)[0], tags=law_tags
+        )
+        if files.keys() & extra.keys():
+            raise ValueError("法律观测不能覆盖标准候选文件")
         files = {**files, **extra}
     candidate = root / distribution.INSTALL_DIRECTORY_NAME
     decisions.write(candidate, files)
@@ -146,11 +170,15 @@ def run(
     timeout: float = 3600,
     variant: str = VARIANT,
     research_tags: tuple[str, ...] = (),
+    law_tags: tuple[str, ...] = (),
+    research_targets: bool = False,
 ) -> dict[str, Any]:
     """运行一次 F1 烟测并返回现有运行器报告。"""
 
     if variant not in {"full", "integrated"}:
         raise ValueError("F1 标准候选变体必须是 full 或 integrated")
+    if research_targets and (not research_tags or language is None):
+        raise ValueError("研究目标必须显式提供观察国家和界面语言")
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     context = _context(
@@ -161,6 +189,8 @@ def run(
         load_save=load_save,
         variant=variant,
         research_tags=research_tags,
+        law_tags=law_tags,
+        research_targets=research_targets,
     )
     keys, technology_sources = (
         research_observation.technology_snapshot(config.GAME) if research_tags else ((), {})
@@ -173,6 +203,28 @@ def run(
                 "technology_sources": technology_sources,
             }
         )
+    law_keys, law_sources = law_observation.law_snapshot(config.GAME) if law_tags else ((), {})
+    if law_tags:
+        context["law_observation"].update(
+            {
+                "law_keys": list(law_keys),
+                "law_sources": law_sources,
+                "law_keys_sha256": hashlib.sha256("\n".join(law_keys).encode()).hexdigest(),
+            }
+        )
+    labels, label_sources, label_origins = (
+        research_observation.label_snapshot(config.GAME, keys, language=language)
+        if research_targets and language is not None
+        else ({}, {}, {})
+    )
+    if research_targets:
+        context["research_observation"].update(
+            {
+                "labels": labels,
+                "label_sources": label_sources,
+                "label_origins": label_origins,
+            }
+        )
     with tempfile.TemporaryDirectory(prefix=".sources-", dir=output) as directory:
         sources = _write_sources(
             Path(directory),
@@ -182,12 +234,28 @@ def run(
             variant=variant,
             research_tags=research_tags,
             research_keys=keys,
+            law_tags=law_tags,
+            law_keys=law_keys,
+            research_targets=research_targets,
         )
-        if research_tags and research_observation.technology_snapshot(config.GAME) != (
-            keys,
-            technology_sources,
-        ):
-            raise ValueError("科技原件在观测读取与候选生成之间发生变化，拒绝派发")
+
+        def verify_inputs() -> None:
+            if research_tags and research_observation.technology_snapshot(config.GAME) != (
+                keys,
+                technology_sources,
+            ):
+                raise ValueError("科技原件在观测冻结后发生变化，拒绝派发或接受结果")
+            if law_tags and law_observation.law_snapshot(config.GAME) != (law_keys, law_sources):
+                raise ValueError("法律原件在观测冻结后发生变化，拒绝派发或接受结果")
+            if (
+                research_targets
+                and language is not None
+                and research_observation.label_snapshot(config.GAME, keys, language=language)
+                != (labels, label_sources, label_origins)
+            ):
+                raise ValueError("科技名称原件在观测冻结后发生变化，拒绝派发或接受结果")
+
+        verify_inputs()
 
         def analyze(logdir: Path) -> dict[str, object]:
             def lines() -> Iterator[str]:
@@ -195,7 +263,31 @@ def run(
                     with path.open(encoding="utf-8-sig", errors="replace") as stream:
                         yield from stream
 
-            return research_observation.analyze_lines(lines(), keys, tags=research_tags)
+            research = (
+                research_observation.analyze_lines(
+                    lines(),
+                    keys,
+                    tags=research_tags,
+                    hook_labels=labels if research_targets else None,
+                )
+                if research_tags
+                else None
+            )
+            if not law_tags:
+                result = cast("dict[str, object]", research)
+                complete = bool(result["complete"])
+            else:
+                laws = law_observation.analyze_lines(lines(), law_keys, tags=law_tags)
+                result = {"laws": laws, "behavior_quality": "not_evaluated"}
+                complete = bool(laws["complete"])
+                if research is not None:
+                    result["research"] = research
+                    complete = complete and bool(research["complete"])
+            # 游戏运行成功不能覆盖仪器失败；原始坏帧与其它有效帧先独立留存。
+            game_run.write_json(logdir.parent / "f1-observation.json", result)
+            if not complete:
+                raise ValueError("请求的完整观测未完成，详见 f1-observation.json")
+            return result
 
         report = game_run.run(
             sources,
@@ -204,7 +296,8 @@ def run(
             output=output,
             language=language,
             load_save=load_save,
-            analyze=analyze if research_tags else None,
+            analyze=analyze if research_tags or law_tags else None,
+            verify_inputs=verify_inputs if research_tags or law_tags else None,
         )
     evidence = Path(str(report["evidence"]))
     game_run.write_json(evidence / "f1_context.json", context)
@@ -247,6 +340,17 @@ def main(argv: list[str] | None = None) -> int:
         help="显式附加临时研究观测，仅限列出的国家；可重复，不进入标准包或正式质量样本",
     )
     parser.add_argument(
+        "--law-tag",
+        action="append",
+        default=[],
+        help="显式附加临时法律状态及目标观测，仅限列出国家，不进入标准包",
+    )
+    parser.add_argument(
+        "--research-targets",
+        action="store_true",
+        help="独立核对研究 hook 目标；须提供 --research-tag 与 --language，冻结全部科技名称来源",
+    )
+    parser.add_argument(
         "--load-save",
         type=Path,
         help="从已验证的观察者检查点启动；英语会话必须使用此选项",
@@ -283,6 +387,8 @@ def main(argv: list[str] | None = None) -> int:
         localization=args.localization_baseline,
         variant=args.variant,
         research_tags=tuple(args.research_tag),
+        law_tags=tuple(args.law_tag),
+        research_targets=args.research_targets,
     )
     print(json.dumps(_summary(report), ensure_ascii=False, indent=2))
     return 0 if report.get("ok") else 1

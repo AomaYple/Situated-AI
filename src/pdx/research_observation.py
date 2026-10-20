@@ -8,23 +8,37 @@ from __future__ import annotations
 
 import hashlib
 import re
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from .model import Block
-from .parser import parse_text
+from .keyed_observation import (
+    FrameSchema,
+    boolean_reading,
+    definition_snapshot,
+    missing_country_errors,
+    parse_frames,
+    validate,
+)
+from .localization import parse_loc_entries_with_lines
+from .localization_languages import DEFAULT_LANGUAGE_BY_HEADER
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
     from pathlib import Path
 
-KEY = re.compile(r"[a-z][a-z0-9_-]*\Z")
-TAG = re.compile(r"[A-Z]{3}\Z")
 PREFIX = "SITAI RESEARCH;"
-ROW = re.compile(
-    r"SITAI RESEARCH;(?P<tag>[A-Z]{3});(?P<kind>BEGIN|TECH|END);"
-    r"(?P<body>[^\r\n]*)$"
-)
 REASONS = frozenset({"MONTHLY", "START", "ACQUIRED", "SPREAD"})
+SCHEMA = FrameSchema(
+    prefix=PREFIX,
+    row_kind="TECH",
+    entity="科技",
+    values_key="technologies",
+    fields=("can_research", "researched", "researching"),
+    reasons=REASONS,
+    single_active="researching",
+    active_description="研究",
+    legacy_unknown_field="researching",
+)
 
 
 def technology_keys(game: Path) -> tuple[str, ...]:
@@ -34,63 +48,75 @@ def technology_keys(game: Path) -> tuple[str, ...]:
 
 def technology_snapshot(game: Path) -> tuple[tuple[str, ...], dict[str, str]]:
     """键与指纹来自同一份原始字节，不将后读版本冒充解析输入。"""
-    paths = sorted((game / "common/technology/technologies").glob("*.txt"))
-    keys: set[str] = set()
+    return definition_snapshot(game, "common/technology/technologies", entity="科技")
+
+
+def _validate_labels(keys: tuple[str, ...], labels: Mapping[str, str]) -> None:
+    if (
+        set(labels) != set(keys)
+        or len(set(labels.values())) != len(keys)
+        or any(not value or any(c in value for c in "\r\n$[]\\#") for value in labels.values())
+    ):
+        raise ValueError("科技名称必须完整、无歧义且为可直接比较的静态文本")
+
+
+def label_snapshot(
+    game: Path, keys: tuple[str, ...], *, language: str
+) -> tuple[dict[str, str], dict[str, str], dict[str, dict[str, str | int]]]:
+    """复用本地化解析器；遍历该语言全部文件，拒绝缺项和覆盖歧义。"""
+    selected = DEFAULT_LANGUAGE_BY_HEADER.get(language)
+    if selected is None:
+        raise ValueError(f"未登记研究目标语言：{language}")
+    wanted = set(keys)
+    labels: dict[str, str] = {}
+    values: dict[str, str] = {}
+    duplicates: set[str] = set()
     sources: dict[str, str] = {}
-    for path in paths:
+    origins: dict[str, dict[str, str | int]] = {}
+    for path in sorted((game / "localization" / selected.directory).rglob("*.yml")):
         raw = path.read_bytes()
         relative = path.relative_to(game).as_posix()
         sources[relative] = hashlib.sha256(raw).hexdigest()
-        parsed = parse_text(raw.decode("utf-8-sig"), relative)
-        if parsed.errors:
-            raise ValueError(f"科技定义无法解析：{path}")
-        for assignment in parsed.root.assignments():
-            if (
-                not isinstance(assignment.value, Block)
-                or not KEY.fullmatch(assignment.key)
-                or assignment.key in keys
-            ):
-                raise ValueError(f"科技键无效或重复：{path}:{assignment.key}")
-            keys.add(assignment.key)
-    if not keys:
-        raise ValueError("完整科技定义集合为空")
-    return tuple(sorted(keys)), sources
+        header, entries = parse_loc_entries_with_lines(raw.decode("utf-8-sig"))
+        if header != language:
+            raise ValueError(f"研究名称来源语言不符：{relative}:{header}")
+        for key, value, line in entries:
+            if key in values:
+                duplicates.add(key)
+            values[key] = value
+            if key in wanted:
+                origins[key] = {"source": relative, "line": line}
+
+    def resolve(key: str, visiting: tuple[str, ...] = ()) -> str:
+        if key in visiting or len(visiting) >= 32 or key not in values or key in duplicates:
+            raise ValueError(f"科技名称或别名缺失、重复、循环或过深：{key}")
+        return re.sub(
+            r"\$([A-Za-z0-9_.-]+)\$", lambda m: resolve(m[1], (*visiting, key)), values[key]
+        )
+
+    labels = {key: resolve(key) for key in keys}
+    _validate_labels(keys, labels)
+    return labels, sources, origins
 
 
-def _validate(keys: tuple[str, ...], tags: tuple[str, ...]) -> None:
-    if not keys or len(keys) != len(set(keys)) or any(not KEY.fullmatch(k) for k in keys):
-        raise ValueError("必须提供无重复的完整科技键集合")
-    if not tags or len(tags) != len(set(tags)) or any(not TAG.fullmatch(t) for t in tags):
-        raise ValueError("观察国标签无效或重复")
-
-
-def build(keys: tuple[str, ...], *, tags: tuple[str, ...]) -> dict[str, str]:
+def build(
+    keys: tuple[str, ...], *, tags: tuple[str, ...], with_targets: bool = False
+) -> dict[str, str]:
     """仅生成显式选择国家的 hook，不写研究、策略、变量或世界状态。"""
-    _validate(keys, tags)
+    validate(keys, tags, entity="科技")
     effects = []
     for tag in sorted(tags):
-        readings = []
-        for key in sorted(keys):
-            # 原版 trade_route_events 在国家 effect 的 limit 中使用该 trigger。
-            # 三种状态独立读取；正在研究的科技不必属于当时 can_research 集合。
-            # hook 的读取时序与运行期有效性仍须实机核对，不调用 GUI getter。
-            def leaf(legal: int, owned: int, *, tag: str = tag, key: str = key) -> str:
-                row = f"{PREFIX}{tag};TECH;{key};{legal};{owned}"
-                return (
-                    f"if = {{ limit = {{ is_researching_technology = {key} }} "
-                    f'debug_log = "{row};1" }} '
-                    f'else = {{ debug_log = "{row};0" }}'
-                )
-
-            branches = [
-                f"if = {{ limit = {{ has_technology_researched = {key} }} {leaf(legal, 1)} }} "
-                f"else = {{ {leaf(legal, 0)} }}"
-                for legal in (1, 0)
-            ]
-            readings.append(
-                f"if = {{ limit = {{ can_research = {key} }} {branches[0]} }} "
-                f"else = {{ {branches[1]} }}"
+        readings = [
+            boolean_reading(
+                f"{PREFIX}{tag};TECH;{key}",
+                (
+                    f"can_research = {key}",
+                    f"has_technology_researched = {key}",
+                    f"is_researching_technology = {key}",
+                ),
             )
+            for key in sorted(keys)
+        ]
         effects.append(f"sitai_research_observe_read_{tag} = {{\n" + "\n".join(readings) + "\n}")
     # 同一个读取块由每个原因复用，避免四份完整科技枚举或逐日世界扫描。
     actions: list[str] = []
@@ -101,10 +127,16 @@ def build(keys: tuple[str, ...], *, tags: tuple[str, ...]) -> dict[str, str]:
         ("SPREAD", "on_spreading_technology"),
     ):
         name = f"sitai_research_observe_{reason.lower()}"
+        target = (
+            "[SCOPE.sTechnology('technology').GetNameNoFormatting]"
+            if with_targets and reason != "MONTHLY"
+            else None
+        )
         blocks = [
             f"if = {{ limit = {{ c:{tag} ?= this }} "
             f'debug_log = "{PREFIX}{tag};BEGIN;{reason}" '
-            f"sitai_research_observe_read_{tag} = yes "
+            + (f'debug_log = "{PREFIX}{tag};TARGET;{target}" ' if target else "")
+            + f"sitai_research_observe_read_{tag} = yes "
             f'debug_log = "{PREFIX}{tag};END;{reason}" }}'
             for tag in sorted(tags)
         ]
@@ -125,92 +157,34 @@ def analyze(text: str, keys: tuple[str, ...], *, tags: tuple[str, ...]) -> dict[
 
 
 def analyze_lines(
-    lines: Iterable[str], keys: tuple[str, ...], *, tags: tuple[str, ...]
+    lines: Iterable[str],
+    keys: tuple[str, ...],
+    *,
+    tags: tuple[str, ...],
+    hook_labels: Mapping[str, str] | None = None,
 ) -> dict[str, object]:
     """只接受完整同序的观测帧；残缺、重复、未知和不合法布尔值保留失败。"""
-    # 复用生成端输入验证，避免解析端接受生成端不会产生的身份。
-    _validate(keys, tags)
-    expected = set(keys)
-    frames: list[dict[str, object]] = []
-    errors: list[str] = []
-    current: tuple[str, str] | None = None
-    start_line = 0
-    start_prefix = ""
-    values: dict[str, dict[str, bool | None]] = {}
-    frame_invalid = False
-    for line_number, raw_line in enumerate(lines, 1):
-        line = raw_line.rstrip("\r\n")
-        if PREFIX not in line:
-            continue
-        match = ROW.search(line)
-        if match is None:
-            errors.append(f"第 {line_number} 行观测格式无效")
-            if current is not None:
-                frame_invalid = True
-            continue
-        tag, kind, body = match.group("tag", "kind", "body")
-        if tag not in tags:
-            errors.append(f"第 {line_number} 行出现未登记国家")
-            if current is not None:
-                frame_invalid = True
-            continue
-        if kind == "BEGIN":
-            if current is not None:
-                errors.append(f"第 {line_number} 行上一帧未结束")
-            if body not in REASONS:
-                errors.append(f"第 {line_number} 行观测原因无效")
-                current = None
-                continue
-            current, values = (tag, body), {}
-            frame_invalid = False
-            start_line, start_prefix = line_number, line[: match.start()]
-        elif kind == "TECH":
-            parts = body.split(";")
-            if current is None or current[0] != tag or len(parts) != 4:
-                errors.append(f"第 {line_number} 行科技记录不属于活动帧")
-                frame_invalid = True
-                continue
-            key, legal, owned, active = parts
-            if key not in expected or key in values:
-                errors.append(f"第 {line_number} 行科技键未知或重复")
-                frame_invalid = True
-                continue
+    schema = SCHEMA
+    if hook_labels is not None:
+        _validate_labels(keys, hook_labels)
+        schema = replace(
+            SCHEMA,
+            target_reasons=REASONS - {"MONTHLY"},
+            target_labels={label: key for key, label in hook_labels.items()},
+        )
+    frames, errors = parse_frames(lines, keys, tags=tags, schema=schema)
+    if hook_labels is not None:
+        valid_frames = []
+        for frame in frames:
             if (
-                legal not in {"0", "1"}
-                or owned not in {"0", "1"}
-                or active not in {"yes", "no", "0", "1", "unknown"}
+                frame["reason"] == "START"
+                and frame["technologies"][frame["target"]]["researching"] is not True
             ):
-                errors.append(f"第 {line_number} 行布尔值无效或 getter 不可读")
-                frame_invalid = True
-                continue
-            values[key] = {
-                "can_research": legal == "1",
-                "researched": owned == "1",
-                "researching": None if active == "unknown" else active in {"yes", "1"},
-            }
-        else:
-            if current != (tag, body) or set(values) != expected:
-                errors.append(f"第 {line_number} 行帧身份或完整科技集合不匹配")
-                frame_invalid = True
+                errors.append(f"第 {frame['start_line']} 行 START 目标与原生主动研究不一致或不可读")
             else:
-                if sum(value["researching"] is True for value in values.values()) > 1:
-                    errors.append(f"第 {line_number} 行存在多个当前研究，getter 或时序待证")
-                    frame_invalid = True
-                if not frame_invalid:
-                    frames.append(
-                        {
-                            "tag": tag,
-                            "reason": body,
-                            "technologies": values,
-                            "start_line": start_line,
-                            "end_line": line_number,
-                            "log_prefix": start_prefix,
-                        }
-                    )
-            current, values = None, {}
-            frame_invalid = False
-    if current is not None:
-        errors.append("日志结束时观测帧未完成")
+                valid_frames.append(frame)
+        frames = valid_frames
+    errors.extend(missing_country_errors(frames, tags))
     return {
         "frames": frames,
         "errors": errors,

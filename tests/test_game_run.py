@@ -26,6 +26,7 @@ pytestmark = pytest.mark.unit
         {"allow_save_upgrade": True},
         {"profile": True},
         {"analyze": lambda _path: {}},
+        {"verify_inputs": lambda: None},
         {"qualification_registration": Path("registration.json")},
         {"qualification_context": {"observation": {}}},
         {"allow_new_game_experiment": True},
@@ -1002,6 +1003,10 @@ def test_控制台历史归档损坏则保留现场且支持修复后重试(depl
         "engine-startup",
         "engine-startup-wait",
         "engine-wait",
+        "input-before-deploy",
+        "input-before-start",
+        "input-after-run",
+        "input-after-runtime",
     ],
 )
 def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypatch, phase):
@@ -1069,6 +1074,12 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
     def start(*, health_check, **_kwargs):
         if phase == "startup":
             fail()
+        if phase in {"input-after-run", "input-after-runtime"}:
+            logs = user / "logs"
+            logs.mkdir(parents=True, exist_ok=True)
+            (logs / "debug.log").write_text(
+                f"Mounted Data: {user / 'mod/probe'}\n", encoding="utf-8"
+            )
         if phase in {"engine-startup", "engine-startup-wait"}:
             engine_error()
         if phase == "engine-startup-wait":
@@ -1088,15 +1099,36 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
 
     monkeypatch.setattr(game_run.ga, "run_session", start)
     monkeypatch.setattr(game_run, "wait_progress", wait)
+    verifications = []
+
+    def verify_inputs():
+        verifications.append(True)
+        target = {
+            "input-before-deploy": 1,
+            "input-before-start": 2,
+            "input-after-run": 3,
+            "input-after-runtime": 3,
+        }[phase]
+        if len(verifications) >= target:
+            error = RuntimeError if phase == "input-after-runtime" else ValueError
+            raise error("controlled input drift")
+
     report = game_run.run(
         {"probe": source},
         months=1,
         output=tmp_path / "output",
         analyze=fail if phase == "analyze" else None,
+        verify_inputs=verify_inputs if phase.startswith("input-") else None,
     )
     assert not report["ok"]
     assert report["failure"]
     assert isinstance(report["cleanup_errors"], list)
+    if phase.startswith("input-"):
+        assert "controlled input drift" in str(report["failure"])
+        assert report["session_requested"] is (phase in {"input-after-run", "input-after-runtime"})
+        assert report["cleanup_errors"] == []
+        if phase == "input-before-deploy":
+            assert "deployed_hashes" not in report
     if phase == "process":
         # 未确认进程退出时保留挂载与恢复副本，避免移动运行中的文件。
         assert (user / "mod/probe").exists()
