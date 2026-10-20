@@ -72,7 +72,9 @@ def test_生成明确国家作用域且只读无全世界扫描() -> None:
     )
     effect = files["common/scripted_effects/zz_sitai_research_observation.txt"]
     assert effect.count("can_research =") == 4  # 每国每科技一次，分支不重复枚举。
-    assert "[GetTechnology('pan-nationalism').IsResearching(THIS.GetCountry.Self)]" in effect
+    assert "GetTechnology(" not in effect
+    assert "IsResearching" not in effect
+    assert "TECH;pan-nationalism;0;0;unknown" in effect
     assert ".metadata/metadata.json" not in files  # 只能显式附到本局标准候选。
 
 
@@ -174,6 +176,20 @@ def test_多个当前研究不作为有效帧验收() -> None:
     assert not result["complete"]
     assert result["errors"]
     assert result["frames"] == []
+
+
+def test_未知当前研究保持缺失而不冒充未研究() -> None:
+    result = observation.analyze(
+        frame().replace(";yes", ";unknown").replace(";no", ";unknown"),
+        ("a", "b"),
+        tags=("RUS",),
+    )
+    assert result["complete"]
+    assert not result["getter_runtime_verified"]
+    assert not result["ai_candidate_denominator_complete"]
+    frames = result["frames"]
+    assert isinstance(frames, list)
+    assert all(value["researching"] is None for value in frames[0]["technologies"].values())
 
 
 def test_重复后补齐的坏帧不泄漏为有效帧() -> None:
