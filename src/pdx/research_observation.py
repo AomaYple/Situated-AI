@@ -73,7 +73,9 @@ def build(keys: tuple[str, ...], *, tags: tuple[str, ...]) -> dict[str, str]:
         for key in sorted(keys):
             # 以原版国家 trigger 读取分母；不从 GUI 的显示过滤器推断完整资格。
             # 当前研究 getter 单独标注为待证，不能仅凭生成/解析通过提升证据。
-            active = f"[GetTechnology('{key}').IsResearching(THIS.GetCountry.Self)]"
+            # 原 GUI 读取在启动 hook 中伴随状态访问断言；未证明安全前明确留空，
+            # 不以布尔假值掩盖当前研究缺口。
+            active = "unknown"
 
             def leaf(
                 legal: int, owned: int, *, tag: str = tag, key: str = key, active: str = active
@@ -134,7 +136,7 @@ def analyze_lines(
     current: tuple[str, str] | None = None
     start_line = 0
     start_prefix = ""
-    values: dict[str, dict[str, bool]] = {}
+    values: dict[str, dict[str, bool | None]] = {}
     frame_invalid = False
     for line_number, raw_line in enumerate(lines, 1):
         line = raw_line.rstrip("\r\n")
@@ -176,7 +178,7 @@ def analyze_lines(
             if (
                 legal not in {"0", "1"}
                 or owned not in {"0", "1"}
-                or active not in {"yes", "no", "0", "1"}
+                or active not in {"yes", "no", "0", "1", "unknown"}
             ):
                 errors.append(f"第 {line_number} 行布尔值无效或 getter 不可读")
                 frame_invalid = True
@@ -184,14 +186,14 @@ def analyze_lines(
             values[key] = {
                 "can_research": legal == "1",
                 "researched": owned == "1",
-                "researching": active in {"yes", "1"},
+                "researching": None if active == "unknown" else active in {"yes", "1"},
             }
         else:
             if current != (tag, body) or set(values) != expected:
                 errors.append(f"第 {line_number} 行帧身份或完整科技集合不匹配")
                 frame_invalid = True
             else:
-                if sum(value["researching"] for value in values.values()) > 1:
+                if sum(value["researching"] is True for value in values.values()) > 1:
                     errors.append(f"第 {line_number} 行存在多个当前研究，getter 或时序待证")
                     frame_invalid = True
                 if not frame_invalid:
