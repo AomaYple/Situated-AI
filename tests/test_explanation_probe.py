@@ -402,6 +402,27 @@ def test_生成组件确定性与仓库字节规范():
         assert raw.endswith(b"\n")
 
 
+@pytest.mark.parametrize("newline", ["\n", "\r\n", "\r"], ids=["LF", "CRLF", "CR"])
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig"])
+def test_原生面板换行规范化不增行且保留原字节指纹(panel_source, newline, encoding):
+    raw = PANEL_SOURCE.replace("\n", newline).encode(encoding)
+    panel_source.write_bytes(raw)
+    policy, extra = decisions.load(), decisions.load_extensions()
+    production = decisions.build(policy, extensions=extra)
+    original = dict(production)
+
+    files = probe.attach(production, policy, extra)
+
+    assert production == original
+    assert panel_source.read_bytes() == raw
+    assert "\r" not in files[probe.PANEL]
+    metadata = json.loads(files[".metadata/metadata.json"])
+    panel = metadata["game_custom_data"]["explanation_probe"]["country_panel"]
+    assert panel["source_sha256"] == hashlib.sha256(raw).hexdigest()
+    assert panel["normalized_sha256"] == hashlib.sha256(PANEL_SOURCE.encode()).hexdigest()
+    assert panel["generated_sha256"] == hashlib.sha256(files[probe.PANEL].encode()).hexdigest()
+
+
 def test_三新增模块解释键在全开时明确保持上下文未知():
     policy = decisions.load()
     extra = replace(
