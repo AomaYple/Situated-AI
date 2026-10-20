@@ -87,6 +87,7 @@ def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch, variant)
     assert written[0].name == f1_full_smoke.distribution.INSTALL_DIRECTORY_NAME
     assert kwargs["analyze"] is None
     assert not context["research_observation"]["enabled"]
+    assert not context["law_observation"]["enabled"]
 
 
 def test_默认标准候选不附加解释探针且显式开关才附加(tmp_path, monkeypatch):
@@ -343,3 +344,215 @@ def test_观测读取与生成间科技原件变化必须在启动前拒绝(tmp_
     monkeypatch.setattr(game_run, "run", lambda *_a, **_k: pytest.fail("输入变化不得派发"))
     with pytest.raises(ValueError, match="科技原件"):
         f1_full_smoke.run(output=tmp_path / "run", research_tags=("RUS",))
+
+
+def test_法律观测临时部署并记录来源且流式解析(tmp_path, monkeypatch):
+    game = tmp_path / "game"
+    path = game / "common/laws/laws.txt"
+    path.parent.mkdir(parents=True)
+    path.write_text("a = {}\nb = {}\n", encoding="utf-8")
+    monkeypatch.setattr(config, "GAME", game)
+    original = {"README.md": "standard"}
+    monkeypatch.setattr(
+        f1_full_smoke.distribution, "package_inputs", lambda _v: (None, None, original)
+    )
+
+    def fake_run(sources, *, analyze, **_kwargs):
+        assert (sources["Situated AI"] / "common/on_actions/zz_sitai_law_observation.txt").is_file()
+        evidence = tmp_path / "evidence"
+        logs = evidence / "logs"
+        logs.mkdir(parents=True)
+        (logs / "debug.log").write_text(
+            "SITAI LAW;RUS;BEGIN;MONTHLY\n"
+            "SITAI LAW;RUS;LAW;a;1;0;1;0\n"
+            "SITAI LAW;RUS;LAW;b;1;1;0;0\n"
+            "SITAI LAW;RUS;END;MONTHLY\n",
+            encoding="utf-8",
+        )
+        result = analyze(logs)
+        assert result["laws"]["complete"]
+        assert result["laws"]["frames"][0]["laws"]["a"]["active"]
+        return {"ok": True, "evidence": str(evidence), "analysis": result}
+
+    monkeypatch.setattr(game_run, "run", fake_run)
+    report = f1_full_smoke.run(output=tmp_path / "run", law_tags=("RUS",), variant="integrated")
+    context = report["f1_context"]
+    assert context["candidate_kind"] == "instrumented_candidate"
+    assert not context["production_package"]
+    assert context["law_observation"]["law_keys"] == ["a", "b"]
+    assert set(context["law_observation"]["law_sources"]) == {"common/laws/laws.txt"}
+    assert original == {"README.md": "standard"}
+
+
+@pytest.mark.parametrize("change", ["content", "new-file"])
+@pytest.mark.parametrize("late", [False, True])
+def test_法律来源漂移在部署前拒绝(tmp_path, monkeypatch, change, late):
+    game = tmp_path / "game"
+    path = game / "common/laws/laws.txt"
+    path.parent.mkdir(parents=True)
+    path.write_text("a = {}\n", encoding="utf-8")
+    monkeypatch.setattr(config, "GAME", game)
+
+    def change_source():
+        target = path if change == "content" else path.with_name("extra.txt")
+        target.write_text(
+            "a = { group = x }\n" if change == "content" else "b = {}\n", encoding="utf-8"
+        )
+
+    def inputs(_variant):
+        if not late:
+            change_source()
+        return None, None, {}
+
+    def dispatch(_sources, **kwargs):
+        assert late
+        change_source()
+        kwargs["verify_inputs"]()
+        pytest.fail("漂移不得继续部署或启动")
+
+    monkeypatch.setattr(f1_full_smoke.distribution, "package_inputs", inputs)
+    monkeypatch.setattr(game_run, "run", dispatch)
+    with pytest.raises(ValueError, match="法律原件"):
+        f1_full_smoke.run(output=tmp_path / "run", law_tags=("RUS",))
+
+
+def test_法律观测碰撞拒绝(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        f1_full_smoke.distribution,
+        "package_inputs",
+        lambda _v: (None, None, {"common/on_actions/zz_sitai_law_observation.txt": "original"}),
+    )
+    with pytest.raises(ValueError, match="不能覆盖"):
+        f1_full_smoke._write_sources(
+            tmp_path,
+            resource=False,
+            localization=False,
+            with_explanation_probe=False,
+            law_tags=("RUS",),
+            law_keys=("a",),
+        )
+
+
+def test_研究目标必须显式国家与语言(tmp_path):
+    with pytest.raises(ValueError, match=r"国家.*语言"):
+        f1_full_smoke.run(output=tmp_path, research_targets=True)
+
+
+@pytest.mark.parametrize("drift", [False, True])
+def test_研究目标标签冻结与生成间漂移拒绝(tmp_path, monkeypatch, drift):
+    game = tmp_path / "game"
+    technology = game / "common/technology/technologies/production.txt"
+    technology.parent.mkdir(parents=True)
+    technology.write_text("a = {}\n", encoding="utf-8")
+    localization = game / "localization/simp_chinese/inventions.yml"
+    localization.parent.mkdir(parents=True)
+    localization.write_text('l_simp_chinese:\n a:0 "甲科技"\n', encoding="utf-8")
+    monkeypatch.setattr(config, "GAME", game)
+
+    def package_inputs(_variant):
+        if drift:
+            localization.write_text('l_simp_chinese:\n a:0 "漂移"\n', encoding="utf-8")
+        return None, None, {}
+
+    monkeypatch.setattr(f1_full_smoke.distribution, "package_inputs", package_inputs)
+
+    def fake_run(sources, *, analyze, **_kwargs):
+        assert not drift
+        action = sources["Situated AI"] / "common/on_actions/zz_sitai_research_observation.txt"
+        assert "SCOPE.sTechnology('technology')" in action.read_text(encoding="utf-8")
+        evidence = tmp_path / "evidence"
+        logs = evidence / "logs"
+        logs.mkdir(parents=True)
+        (logs / "debug.log").write_text(
+            "SITAI RESEARCH;RUS;BEGIN;START\nSITAI RESEARCH;RUS;TARGET;甲科技\n"
+            "SITAI RESEARCH;RUS;TECH;a;1;0;1\nSITAI RESEARCH;RUS;END;START\n",
+            encoding="utf-8",
+        )
+        result = analyze(logs)
+        assert result["frames"][0]["target"] == "a"
+        return {"ok": True, "evidence": str(evidence), "analysis": result}
+
+    monkeypatch.setattr(game_run, "run", fake_run)
+    if drift:
+        with pytest.raises(ValueError, match="名称原件"):
+            f1_full_smoke.run(
+                output=tmp_path / "run",
+                research_tags=("RUS",),
+                research_targets=True,
+                language="l_simp_chinese",
+            )
+    else:
+        report = f1_full_smoke.run(
+            output=tmp_path / "run",
+            research_tags=("RUS",),
+            research_targets=True,
+            language="l_simp_chinese",
+        )
+        observed = report["f1_context"]["research_observation"]
+        assert observed["labels"] == {"a": "甲科技"}
+        assert observed["label_origins"]["a"]["line"] == 2
+
+
+@pytest.mark.parametrize("missing_country", [False, True])
+def test_请求的观测帧无效必须使分析失败且保留独立报告(tmp_path, monkeypatch, missing_country):
+    game = tmp_path / "game"
+    path = game / "common/laws/laws.txt"
+    path.parent.mkdir(parents=True)
+    path.write_text("a = {}\n", encoding="utf-8")
+    monkeypatch.setattr(config, "GAME", game)
+    monkeypatch.setattr(f1_full_smoke.distribution, "package_inputs", lambda _v: (None, None, {}))
+
+    def fake_run(_sources, *, analyze, **_kwargs):
+        logs = tmp_path / "evidence/logs"
+        logs.mkdir(parents=True)
+        text = (
+            "SITAI LAW;RUS;BEGIN;MONTHLY\nSITAI LAW;RUS;LAW;a;1;1;1;0\nSITAI LAW;RUS;END;MONTHLY\n"
+            if missing_country
+            else "SITAI LAW;broken\n"
+        )
+        (logs / "debug.log").write_text(text, encoding="utf-8")
+        with pytest.raises(ValueError, match="观测未完成"):
+            analyze(logs)
+        detail = json.loads((logs.parent / "f1-observation.json").read_text(encoding="utf-8"))
+        assert detail["laws"]["errors"]
+        return {"ok": False, "evidence": str(logs.parent), "failure": "analysis"}
+
+    monkeypatch.setattr(game_run, "run", fake_run)
+    tags = ("RUS", "FRA") if missing_country else ("RUS",)
+    assert not f1_full_smoke.run(output=tmp_path / "run", law_tags=tags)["ok"]
+
+
+def test_CLI传递明确仪器开关但不隐式开启(monkeypatch, tmp_path):
+    captured = []
+
+    def run(**kwargs):
+        captured.append(kwargs)
+        return {"ok": True}
+
+    monkeypatch.setattr(f1_full_smoke, "run", run)
+    assert (
+        f1_full_smoke.main(
+            [
+                "--output",
+                str(tmp_path),
+                "--variant",
+                "integrated",
+                "--law-tag",
+                "RUS",
+                "--law-tag",
+                "FRA",
+                "--research-tag",
+                "FRA",
+                "--research-targets",
+                "--language",
+                "l_simp_chinese",
+            ]
+        )
+        == 0
+    )
+    assert captured[0]["law_tags"] == ("RUS", "FRA")
+    assert captured[0]["research_tags"] == ("FRA",)
+    assert captured[0]["research_targets"] is True
+    assert f1_full_smoke.main([]) == 0
+    assert captured[1]["law_tags"] == ()
+    assert captured[1]["research_targets"] is False

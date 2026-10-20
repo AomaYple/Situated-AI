@@ -160,6 +160,18 @@ def frame(reason: str = "START") -> str:
     )
 
 
+@pytest.mark.parametrize("second", ["", frame().replace(";RUS;", ";FRA;")])
+def test_全部显式观察国都必须取得有效帧(second: str) -> None:
+    result = observation.analyze(frame() + "\n" + second, ("a", "b"), tags=("RUS", "FRA"))
+    assert result["complete"] is bool(second)
+    if not second:
+        errors, frames = result["errors"], result["frames"]
+        assert isinstance(errors, list)
+        assert isinstance(frames, list)
+        assert any("FRA" in error for error in errors)
+        assert len(frames) == 1
+
+
 @pytest.mark.parametrize("reason", sorted(observation.REASONS))
 def test_完整帧保留原始原因和逐科技状态但不提升资格(reason: str) -> None:
     result = observation.analyze(frame(reason), ("a", "b"), tags=("RUS",))
@@ -272,3 +284,141 @@ def test_活动帧中格式或越界国家错误使整帧失效(injected: str) -
     )
     assert result["errors"]
     assert result["frames"] == []
+
+
+def test_显式研究目标使用独立hook名称且默认脚本保持不变() -> None:
+    plain = observation.build(("a", "b"), tags=("RUS",))
+    instrumented = observation.build(("a", "b"), tags=("RUS",), with_targets=True)
+    path = "common/on_actions/zz_sitai_research_observation.txt"
+    assert ";TARGET;" not in plain[path]
+    assert instrumented[path].count("SCOPE.sTechnology('technology').GetNameNoFormatting") == 3
+    assert instrumented[path].count("SITAI RESEARCH;RUS;TARGET;") == 3
+    assert "IsResearching" not in instrumented[path]
+    assert not parse_text(instrumented[path]).errors
+
+
+def target_frame(label: str = "甲科技", reason: str = "START") -> str:
+    return frame(reason).replace(
+        f"[debug] SITAI RESEARCH;RUS;BEGIN;{reason}",
+        f"[debug] SITAI RESEARCH;RUS;BEGIN;{reason}\n[debug] SITAI RESEARCH;RUS;TARGET;{label}",
+    )
+
+
+def test_独立目标映射并核对开始时原生主动研究() -> None:
+    result = observation.analyze_lines(
+        iter(target_frame().splitlines()),
+        ("a", "b"),
+        tags=("RUS",),
+        hook_labels={"a": "甲科技", "b": "乙科技"},
+    )
+    assert result["complete"]
+    frames = result["frames"]
+    assert isinstance(frames, list)
+    observed = frames[0]
+    assert observed["target"] == "a"
+    assert observed["target_label"] == "甲科技"
+    assert observed["start_line"] == 1
+    assert observed["end_line"] == 5
+    assert not result["getter_runtime_verified"]
+    assert result["behavior_quality"] == "not_evaluated"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        target_frame("未知名称"),
+        target_frame("乙科技"),
+        target_frame().replace(
+            ";TARGET;甲科技", ";TARGET;甲科技\nSITAI RESEARCH;RUS;TARGET;甲科技"
+        ),
+        frame(),
+        target_frame().replace(";yes", ";unknown"),
+        target_frame(reason="MONTHLY"),
+    ],
+)
+def test_目标未知重复缺失或START不匹配时整帧失效(text: str) -> None:
+    result = observation.analyze_lines(
+        text.splitlines(),
+        ("a", "b"),
+        tags=("RUS",),
+        hook_labels={"a": "甲科技", "b": "乙科技"},
+    )
+    assert not result["complete"]
+    assert result["errors"]
+    assert result["frames"] == []
+
+
+@pytest.mark.parametrize(
+    "labels", [{}, {"a": "甲科技"}, {"a": "同名", "b": "同名"}, {"a": "", "b": "乙科技"}]
+)
+def test_研究标签合同缺项或歧义不能解析(labels) -> None:
+    with pytest.raises(ValueError):
+        observation.analyze_lines([], ("a", "b"), tags=("RUS",), hook_labels=labels)
+
+
+def test_名称从该语言全部文件读取并冻结原件与源行号(tmp_path: Path) -> None:
+    root = tmp_path / "localization/simp_chinese"
+    root.mkdir(parents=True)
+    raw = '\ufeffl_simp_chinese:\r\n a:0 "甲科技"\r\n'.encode()
+    (root / "inventions.yml").write_bytes(raw)
+    (root / "goods.yml").write_text('l_simp_chinese:\n b:0 "乙科技"\n', encoding="utf-8")
+    labels, sources, origins = observation.label_snapshot(
+        tmp_path, ("a", "b"), language="l_simp_chinese"
+    )
+    assert labels == {"a": "甲科技", "b": "乙科技"}
+    assert origins["b"] == {"source": "localization/simp_chinese/goods.yml", "line": 2}
+    assert sources["localization/simp_chinese/inventions.yml"] == hashlib.sha256(raw).hexdigest()
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        'l_simp_chinese:\n a:0 "甲"\n',
+        'l_english:\n a:0 "甲"\n b:0 "乙"\n',
+        'l_simp_chinese:\n a:0 "甲"\n b:0 "甲"\n',
+        'l_simp_chinese:\n a:0 "甲"\n a:0 "甲"\n b:0 "乙"\n',
+        'l_simp_chinese:\n a:0 "$other$"\n b:0 "乙"\n',
+    ],
+)
+def test_名称缺失重复异语言或未求值表达式拒绝(tmp_path: Path, content: str) -> None:
+    root = tmp_path / "localization/simp_chinese"
+    root.mkdir(parents=True)
+    (root / "inventions.yml").write_text(content, encoding="utf-8")
+    with pytest.raises(ValueError):
+        observation.label_snapshot(tmp_path, ("a", "b"), language="l_simp_chinese")
+
+
+def test_名称允许递归静态别名并登记完整来源(tmp_path: Path) -> None:
+    root = tmp_path / "localization/simp_chinese"
+    root.mkdir(parents=True)
+    (root / "inventions.yml").write_text(
+        'l_simp_chinese:\n a:0 "$ship_name$"\n b:0 "乙科技"\n', encoding="utf-8"
+    )
+    (root / "ships.yml").write_text(
+        'l_simp_chinese:\n ship_name:0 "$ship_kind$"\n ship_kind:0 "战舰"\n', encoding="utf-8"
+    )
+    labels, sources, origins = observation.label_snapshot(
+        tmp_path, ("a", "b"), language="l_simp_chinese"
+    )
+    assert labels == {"a": "战舰", "b": "乙科技"}
+    assert len(sources) == 2
+    assert origins["a"]["line"] == 2
+
+
+@pytest.mark.parametrize(
+    "tail",
+    [
+        'ship_name:0 "$ship_name$"',
+        'ship_name:0 "$ship_kind$"\n ship_kind:0 "$ship_name$"',
+        'ship_name:0 "[Country.GetName]"',
+        'ship_name:0 "战舰"\n ship_name:0 "另一个"',
+    ],
+)
+def test_名称别名循环动态getter或歧义拒绝(tmp_path: Path, tail: str) -> None:
+    root = tmp_path / "localization/simp_chinese"
+    root.mkdir(parents=True)
+    (root / "names.yml").write_text(
+        f'l_simp_chinese:\n a:0 "$ship_name$"\n b:0 "乙科技"\n {tail}\n', encoding="utf-8"
+    )
+    with pytest.raises(ValueError):
+        observation.label_snapshot(tmp_path, ("a", "b"), language="l_simp_chinese")

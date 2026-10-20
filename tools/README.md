@@ -121,7 +121,9 @@ python -m pdx.checkpoint_catalog --screen-save <原件一.v3> --expected-sha256 
 
 `decision_stability.py --language l_english` 为本局和恢复重启传递临时语言，并进入报告与实验冻结身份；不写用户语言设置。英文目前仅支持已提供的观察者检查点，英文新游戏菜单尚未验证，未知语言在事务前拒绝。`l_simp_chinese` 也可显式登记；两臂语言不一致或只有一臂记录时拒绝配对。`f1_full_smoke.py` 使用相同语言门禁，英语必须显式提供 `--load-save`。日志中的 `VFSOpen Error` 与原有引擎/Mod 错误一样拒绝通过，并进入同场景重复错误停止计数；历史报告先验证原始日志指纹，不能沿用旧 `ok=true` 绕过当前门禁。
 
-`f1_full_smoke.py --variant integrated --research-tag RUS --research-tag FRA` 显式向本次临时标准候选附加研究观测，默认关闭，不进入生产包。科技键与来源 SHA 来自同一原始字节读取，生成后再次核对原件；变化时在派发前拒绝。只读取指定国家的月度、开始、取得和传播 hook，逐科技独立记录 `can_research`、已研究状态与原生国家 trigger `is_researching_technology`；无世界扫描或研究/策略/持久变量写入，不再调用曾触发断言的 GUI `IsResearching`。历史 `unknown` 解析为缺失值。流式解析拒绝残缺、重复、未知键、非法值及多个主动研究，坏帧不进入有效帧集合。2026-10-20 的资源/本地化诊断环境已取得启动与月度一致的原生主动研究帧；完整 AI 排名分母、hook 目标交叉核对及字段因果仍待证，自动分析不凭日志自行提升资格。具体事实见[原生研究状态实测](../docs/design/exec/完整候选-结果.md#2026-10-20-原生研究状态与轮转竞态复验)；本开关不授予原账本已停止场景的重开资格。
+`f1_full_smoke.py --variant integrated --research-tag RUS --research-tag FRA` 显式向本次临时标准候选附加研究观测，默认关闭，不进入生产包。科技键与来源 SHA 来自同一原始字节，生成后及部署前、启动前、运行末次均核对原件；漂移拒绝派发或接受结果。独立记录 `can_research`、已研究和原生 `is_researching_technology`，保留历史 unknown，不调用曾触发断言的 GUI `IsResearching`。再加 `--research-targets --language l_simp_chinese`，冻结该语言全部名称来源，解析静态别名，用 hook 的 `GetNameNoFormatting` 目标与 START 主动研究交叉核对；缺项、歧义、动态文本及源漂移拒绝。每个显式观察国至少有一帧有效完整输出，否则保留报告并判失败。研究目标与法定候选集合不能代表完整 AI 内部排名或字段因果。
+
+`--law-tag RUS --law-tag FRA` 显式附加法律观测，冻结全部法律定义；月度和立法/激活 hook 分别读取对象存在、`law_is_available`、现行法和立法中状态。缺对象的可用性保持 unknown，激活使用 law root/owner，其它 hook 使用 country root；未触发的 hook 仍未实测。请求仪器时残缺、重复、未知、跨国和冲突帧不进入有效集合，分析先写 `f1-observation.json` 再使失败传播，不能让游戏退出成功覆盖仪器失败。研究与法律共用键集/帧协议，游戏运行、部署和恢复仍复用 `pdx.game_run`。具体实测和原件保留边界见[联合原生观测](../docs/design/exec/完整候选-结果.md#2026-10-20-法律与研究目标联合观测)。这些开关不提供停止窗口重开或正式行为资格。
 
 `decision_stability.py --purpose instrument --arm vanilla --resource-baseline --save <检查点>` 显式添加维修图标诊断资源挂载（默认关闭，`safety` 也可用）。生成前核对原版 `gui/texticons.gui` 实际引用缺失的 `alert_icons/repairing.dds`，并只复制本地 `generic_icons/repairing.dds` 的原始 DDS 字节；已修复安装、来源变化、坏 DDS、链接路径或已有输出均拒绝。挂载沿用现有部署、完整日志门禁、账本和恢复流程，来源/GUI/输出 SHA 与字节数在分析成功时写入 `analysis.experiment.resource_baseline`；完整 manifest 同时持久化在资源 `.metadata/metadata.json` 的 `game_custom_data.resource_baseline`，随既有源冻结保留，分析失败仍可追溯。它只证明字节来源，不证明模拟无扰动、AI 质量或正式资格；`M4`、`M4-noise` 和所有候选臂在生成与部署前拒绝。可组合现有原生财政只读或自然观测参数；此开关不启用政治危险 getter，也不豁免任何错误。
 
@@ -332,7 +334,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 4502 条用例、141 个测试文件（2026-10-20 实测）；当前树完整回归、覆盖率和资源见[本轮工程验收](../docs/design/exec/完整候选-结果.md#本批工程验证)，集中批次与实机边界见[本轮执行记录](../docs/design/exec/完整候选-结果.md#2026-10-19-集中验证批次与零-mod-诊断)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、引擎日志不匹配等前提分类。这些工程结果不替代 GUI 或行为验收。
+当前收集 4600 条用例、142 个测试文件（2026-10-20 实测）；当前树完整回归、覆盖率和资源见[本轮工程验收](../docs/design/exec/完整候选-结果.md#本批工程验证)，集中批次与实机边界见[本轮执行记录](../docs/design/exec/完整候选-结果.md#2026-10-19-集中验证批次与零-mod-诊断)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、引擎日志不匹配等前提分类。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |
