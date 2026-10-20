@@ -32,6 +32,7 @@ from . import game_auto as ga
 from .deployment_state import digest as file_sha
 from .deployment_state import durable_json, move_directory, plain_path, temporary_file, tree_digest
 from .experiment_queue import ExperimentLedger, assess_compatibility, new_game_identity
+from .log_reread import SourceRereadArchive
 from .performance import StageTimings
 from .textio import deploy_tree
 
@@ -140,16 +141,32 @@ class LogCapture:
         self.snapshots: dict[str, tuple[tuple[str, int, int, int, int, int], ...]] = {}
         self.errors: list[str] = []
         self.guard = LiveLogGuard()
+        self.archive = SourceRereadArchive(
+            destination.with_name(f"{destination.name}-source-reread")
+        )
 
     def poll(self) -> None:
+        if self.errors:
+            return
         self.destination.mkdir(parents=True, exist_ok=True)
         for stream_id, stem in enumerate(("debug", "error")):
             try:
                 self._poll_stream(stem, (0, stream_id))
-            except (OSError, RuntimeError) as exc:
+            except (OSError, RuntimeError, ValueError) as exc:
                 message = f"持续日志归档失败：{exc}"
                 if message not in self.errors:
                     self.errors.append(message)
+                return
+
+    def verify(self) -> dict[str, Any]:
+        if self.errors:
+            raise RuntimeError("；".join(self.errors))
+        try:
+            return self.archive.verify(self.destination)
+        except (OSError, ValueError, RuntimeError) as exc:
+            message = f"源句柄复读证据核验失败：{type(exc).__name__}: {exc}"
+            self.errors.append(message)
+            raise RuntimeError(message) from exc
 
     @staticmethod
     def _prefix(path: Path, size: int) -> str | None:
@@ -202,8 +219,9 @@ class LogCapture:
         ):
             raise RuntimeError(f"轮转日志中间世代缺失，完整性不确定：{stem}")
         for path in paths:
-            with path.open("rb") as incoming:
-                size = os.fstat(incoming.fileno()).st_size
+            with path.open("rb", buffering=0) as incoming:
+                source_stat = os.fstat(incoming.fileno())
+                size = source_stat.st_size
                 digest = hashlib.sha256()
                 remaining = offset
                 while remaining:
@@ -215,6 +233,7 @@ class LogCapture:
                 if offset and digest.hexdigest() != self.positions[stem][1]:
                     raise RuntimeError(f"日志读取期间覆写，完整性不确定：{path}")
                 with (self.destination / f"{stem}.log").open("ab") as target:
+                    capture_start = target.tell()
                     remaining = size - offset
                     if remaining < 0:
                         raise RuntimeError(f"日志读取期间截断，完整性不确定：{path}")
@@ -227,18 +246,17 @@ class LogCapture:
                         self.guard.feed(path.name, identity, chunk)
                         remaining -= len(chunk)
                 if size:
-                    # 读后再次验证快照，复制截断发生在读取中途时不能提交为完整。
-                    incoming.seek(0)
-                    check = hashlib.sha256()
-                    remaining = size
-                    while remaining:
-                        chunk = incoming.read(min(remaining, 65536))
-                        if not chunk:
-                            raise RuntimeError(f"日志读取期间截断，完整性不确定：{path}")
-                        check.update(chunk)
-                        remaining -= len(chunk)
-                    if check.digest() != digest.digest():
-                        raise RuntimeError(f"日志读取期间覆写，完整性不确定：{path}")
+                    # 从同一原始源句柄独立复读；只保留新增区间，不能复制首次读取替代。
+                    self.archive.capture(
+                        incoming,
+                        stem=stem,
+                        observed_name=path.name,
+                        source_start=offset,
+                        source_end=size,
+                        source_stat=source_stat,
+                        prefix_sha256=digest.hexdigest(),
+                        capture_start=capture_start,
+                    )
                     self.positions[stem] = size, digest.hexdigest()
             offset = 0
         if self._snapshot(all_paths) == snapshot:
@@ -1900,6 +1918,18 @@ def run(
                         capture.poll()
                     except Exception as exc:
                         cleanup_errors.append(f"最终日志采集失败：{type(exc).__name__}: {exc}")
+            if logs_isolated and stopped and (monitor is None or not monitor.is_alive()):
+                try:
+                    report["source_reread"] = {
+                        "verified": True,
+                        **timings.call("source_reread_verify", capture.verify),
+                    }
+                except Exception as exc:
+                    report["source_reread"] = {
+                        "verified": False,
+                        "failure": f"{type(exc).__name__}: {exc}",
+                    }
+                    cleanup_errors.append(f"源句柄复读证据核验：{type(exc).__name__}: {exc}")
             cleanup_errors.extend(capture.errors)
             cleanup_errors.extend(monitor_errors)
             if stopped and keep_save and not report.get("failure"):
