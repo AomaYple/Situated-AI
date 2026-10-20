@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -872,14 +873,23 @@ def test_未列举的本模组错误也不能漏过门禁(tmp_path):
     assert findings["errors"]["Assertion failed"] == 1
 
 
-def test_未分类的VFS错误单独记录并触发实时守卫(tmp_path):
-    (tmp_path / "error.log").write_text("[x] VFSOpen Error: missing texture\n", encoding="utf-8")
+@pytest.mark.parametrize(
+    ("marker", "context"),
+    [("VFSOpen Error", "missing texture"), ("Invalid mission type", "'multiply' for fleet")],
+)
+def test_已发现的其它引擎错误单独记录并触发实时守卫(tmp_path, marker, context):
+    line = f"[x] {marker}: {context}"
+    (tmp_path / "error.log").write_text(line + "\n", encoding="utf-8")
     findings = game_run.log_findings(tmp_path, [])
-    assert findings["unclassified_errors"] == ["[x] VFSOpen Error: missing texture"]
+    assert findings["unclassified_errors"] == [line]
     guard = game_run.LiveLogGuard()
-    guard.feed("error.log", (1, 1), b"VFSOpen Error: missing texture\n")
+    # 错误标记跨块时也必须在整行写完前识别。
+    raw = (line + "\n").encode()
+    split = len(marker) // 2 + 4
+    guard.feed("error.log", (1, 1), raw[:split])
+    guard.feed("error.log", (1, 1), raw[split:])
     assert guard.failure is not None
-    assert guard.failure["kind"] == "VFSOpen Error"
+    assert guard.failure["kind"] == marker
 
 
 def test_证据分块哈希和原子json(tmp_path):
@@ -1376,6 +1386,119 @@ def test_持续日志原地截断不能悄悄当完整(tmp_path):
     log.write_bytes(b"short")
     capture.poll()
     assert any("截断" in e for e in capture.errors)
+
+
+def test_复制后截断轮转必须逐字节衔接而非复用文件偏移(tmp_path):
+    source = tmp_path / "live"
+    source.mkdir()
+    log = source / "debug.log"
+    first = b"first segment\n" * 5000
+    second = b"second segment\n" * 5000
+    log.write_bytes(first[:28672])
+    capture = game_run.LogCapture(source, tmp_path / "capture")
+    capture.poll()
+    with log.open("ab") as stream:
+        stream.write(first[28672:])
+    shutil.copyfile(log, source / "debug.1.log")
+    log.write_bytes(second)
+    shutil.copyfile(source / "debug.1.log", source / "debug.2.log")
+    shutil.copyfile(log, source / "debug.1.log")
+    log.write_bytes(b"third\n")
+    capture.poll()
+    capture.poll()
+    assert capture.errors == []
+    assert (capture.destination / "debug.log").read_bytes() == first + second + b"third\n"
+
+
+def test_轮转副本不含已采集前缀时仍拒绝截断(tmp_path):
+    source = tmp_path / "live"
+    source.mkdir()
+    log = source / "debug.log"
+    log.write_bytes(b"original content\n")
+    capture = game_run.LogCapture(source, tmp_path / "capture")
+    capture.poll()
+    (source / "debug.1.log").write_bytes(b"unrelated archive\n")
+    log.write_bytes(b"short\n")
+    capture.poll()
+    assert capture.errors
+    assert (capture.destination / "debug.log").read_bytes() == b"original content\n"
+
+
+def test_覆写到更长但无连续前缀也不能当追加(tmp_path):
+    source = tmp_path / "live"
+    source.mkdir()
+    log = source / "debug.log"
+    log.write_bytes(b"old\n")
+    capture = game_run.LogCapture(source, tmp_path / "capture")
+    capture.poll()
+    log.write_bytes(b"replacement is longer\n")
+    capture.poll()
+    assert capture.errors
+    assert (capture.destination / "debug.log").read_bytes() == b"old\n"
+
+
+def test_错误标记跨复制截断仍即时识别(tmp_path):
+    source = tmp_path / "live"
+    source.mkdir()
+    log = source / "error.log"
+    log.write_bytes(b"Unexpected to")
+    capture = game_run.LogCapture(source, tmp_path / "capture")
+    capture.poll()
+    shutil.copyfile(log, source / "error.1.log")
+    log.write_bytes(b"ken: bad\n")
+    capture.poll()
+    assert capture.errors == []
+    assert capture.guard.failure is not None
+    assert capture.guard.failure["kind"] == "Unexpected token"
+
+
+def test_多份匹配前缀无法确定世代时不猜测(tmp_path):
+    source = tmp_path / "live"
+    source.mkdir()
+    log = source / "debug.log"
+    log.write_bytes(b"same prefix\n")
+    capture = game_run.LogCapture(source, tmp_path / "capture")
+    capture.poll()
+    shutil.copyfile(log, source / "debug.1.log")
+    log.write_bytes(b"same prefix\nnew generation\n")
+    capture.poll()
+    assert capture.errors
+    assert (capture.destination / "debug.log").read_bytes() == b"same prefix\n"
+
+
+def test_无变化日志不反复读取整份历史(tmp_path, monkeypatch):
+    source = tmp_path / "live"
+    source.mkdir()
+    (source / "debug.log").write_bytes(b"stable\n")
+    capture = game_run.LogCapture(source, tmp_path / "capture")
+    capture.poll()
+    original_open = Path.open
+
+    def reject_reread(path, *args, **kwargs):
+        if path.parent == source:
+            pytest.fail("未变化的日志应复用已经验证的内容位置")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", reject_reread)
+    capture.poll()
+    assert capture.errors == []
+
+
+@pytest.mark.parametrize("already_started", [False, True])
+def test_轮转中间世代缺失不能拼成完整日志(tmp_path, already_started):
+    source = tmp_path / "live"
+    source.mkdir()
+    log = source / "debug.log"
+    log.write_bytes(b"first\n")
+    capture = game_run.LogCapture(source, tmp_path / "capture")
+    if already_started:
+        capture.poll()
+    log.rename(source / "debug.2.log")
+    log.write_bytes(b"third\n")
+    capture.poll()
+    assert capture.errors
+    target = capture.destination / "debug.log"
+    assert target.read_bytes() == b"first\n" if already_started else not target.exists()
 
 
 @pytest.mark.parametrize("argument", ["timeout", "poll"])

@@ -550,6 +550,79 @@ class TestWaitUntilRunning:
 # ────────────────────────── 前台：那条踩过的坑 ──────────────────────────
 
 
+class TestForegroundAttachment:
+    @pytest.mark.parametrize(
+        ("target_thread", "failure", "expected"),
+        [
+            (11, "", ["attach", "position", "foreground", "detach"]),
+            (11, "position", ["attach", "position", "detach"]),
+            (11, "foreground", ["attach", "position", "foreground", "detach"]),
+            (11, "attach", ["attach"]),
+            (11, "detach", ["attach", "position", "foreground", "detach"]),
+            (22, "", ["position", "foreground"]),
+            (0, "", ["position", "foreground"]),
+        ],
+    )
+    def test_原生输入连接必须成对且解除失败中止(
+        self, monkeypatch: pytest.MonkeyPatch, target_thread: int, failure: str, expected: list[str]
+    ) -> None:
+        """保留真实 BOOLAPI 的 None 成功语义；只替换会改变桌面的原生边界。"""
+        from types import SimpleNamespace
+
+        calls: list[str] = []
+        front = [0]
+        connected = [False]
+
+        def action(name: str) -> None:
+            calls.append(name)
+            if name == failure:
+                raise OSError(f"native {name} failed")
+
+        def attach(me: int, target: int, enabled: bool) -> None:
+            assert (me, target) == (22, 11)
+            action("attach" if enabled else "detach")
+            connected[0] = enabled
+
+        def set_foreground(hwnd: int) -> None:
+            action("foreground")
+            front[0] = hwnd
+
+        monkeypatch.setattr(ga, "_window", lambda _hwnd: SimpleNamespace(activate=lambda: None))
+        monkeypatch.setattr(ga, "_foreground_window", lambda: front[0])
+        monkeypatch.setattr(ga, "win32api", SimpleNamespace(GetCurrentThreadId=lambda: 22))
+        monkeypatch.setattr(
+            ga,
+            "win32process",
+            SimpleNamespace(
+                GetWindowThreadProcessId=lambda _hwnd: (target_thread, 123),
+                AttachThreadInput=attach,
+            ),
+        )
+        monkeypatch.setattr(
+            ga,
+            "win32gui",
+            SimpleNamespace(
+                SetWindowPos=lambda *_args: action("position"),
+                SetForegroundWindow=set_foreground,
+            ),
+        )
+        monkeypatch.setattr(
+            ga,
+            "win32con",
+            SimpleNamespace(HWND_TOP=0, SWP_NOMOVE=2, SWP_NOSIZE=1, SWP_NOACTIVATE=16),
+        )
+        if failure == "detach":
+            monkeypatch.setattr(ga, "ALLOW_REAL_INPUT", True)
+            with pytest.raises(ga.ForegroundLostError, match=r"解除.*输入") as caught:
+                ga.ensure_foreground(456)
+            assert isinstance(caught.value.__cause__, OSError)
+            assert connected[0] is True
+        else:
+            assert ga._set_foreground(456) is (not failure)
+            assert connected[0] is False
+        assert calls == expected
+
+
 class TestForeground:
     def test_已经是前台就直接过(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(ga, "_foreground_window", lambda: 777)

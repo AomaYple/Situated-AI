@@ -1429,6 +1429,7 @@ def test_旧附表探针和诊断上下文字段不能成为隐式重开依据(t
     [
         ("Assertion failed", "Assertion failed"),
         ("VFSOpen Error", "unclassified-error"),
+        ("Invalid mission type", "unclassified-error"),
         ("Mod error", "unclassified-mod-error"),
         ("future-error", "unclassified-error"),
         (True, "unclassified-error"),

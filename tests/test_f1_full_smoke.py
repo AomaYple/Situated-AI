@@ -85,6 +85,8 @@ def test_生产候选默认不挂载诊断基线(tmp_path, monkeypatch, variant)
     assert context["candidate"] == variant
     assert written
     assert written[0].name == f1_full_smoke.distribution.INSTALL_DIRECTORY_NAME
+    assert kwargs["analyze"] is None
+    assert not context["research_observation"]["enabled"]
 
 
 def test_默认标准候选不附加解释探针且显式开关才附加(tmp_path, monkeypatch):
@@ -252,3 +254,90 @@ def test_显式语言传给运行器并写入证据上下文(tmp_path, monkeypat
     context = json.loads((tmp_path / "evidence/f1_context.json").read_text(encoding="utf-8"))
     assert context["language"] == "l_english"
     assert context["loaded_observer"] is True
+
+
+def test_显式研究观测只附加临时副本并解析完整日志(tmp_path, monkeypatch):
+    game = tmp_path / "game"
+    technology = game / "common/technology/technologies/production.txt"
+    technology.parent.mkdir(parents=True)
+    technology.write_text("a = {}\nb = {}\n", encoding="utf-8")
+    monkeypatch.setattr(config, "GAME", game)
+    original = {"README.md": "standard", ".metadata/metadata.json": "{}\n"}
+    monkeypatch.setattr(
+        f1_full_smoke.distribution, "package_inputs", lambda _v: (None, None, original)
+    )
+    observed = []
+
+    def fake_run(sources, *, analyze, **_kwargs):
+        candidate = sources["Situated AI"]
+        assert (candidate / "README.md").read_text(encoding="utf-8") == "standard"
+        assert (candidate / "common/on_actions/zz_sitai_research_observation.txt").is_file()
+        assert (candidate / "common/scripted_effects/zz_sitai_research_observation.txt").is_file()
+        evidence = tmp_path / "evidence"
+        logs = evidence / "logs"
+        logs.mkdir(parents=True)
+        (logs / "debug.log").write_text(
+            "SITAI RESEARCH;RUS;BEGIN;MONTHLY\n"
+            "SITAI RESEARCH;RUS;TECH;a;1;0;1\n"
+            "SITAI RESEARCH;RUS;TECH;b;0;1;0\n"
+            "SITAI RESEARCH;RUS;END;MONTHLY\n",
+            encoding="utf-8",
+        )
+        result = analyze(logs)
+        observed.append(result)
+        assert result["complete"]
+        return {"ok": True, "evidence": str(evidence), "analysis": result}
+
+    monkeypatch.setattr(game_run, "run", fake_run)
+    report = f1_full_smoke.run(
+        output=tmp_path / "run", variant="integrated", research_tags=("RUS",)
+    )
+    context = report["f1_context"]
+    assert context["candidate_kind"] == "instrumented_candidate"
+    assert not context["production_package"]
+    assert context["research_observation"]["technology_keys"] == ["a", "b"]
+    assert set(context["research_observation"]["technology_sources"]) == {
+        "common/technology/technologies/production.txt"
+    }
+    assert observed
+    assert original == {"README.md": "standard", ".metadata/metadata.json": "{}\n"}
+
+
+def test_研究观测文件碰撞则在部署前拒绝(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        f1_full_smoke.distribution,
+        "package_inputs",
+        lambda _v: (
+            None,
+            None,
+            {
+                "common/on_actions/zz_sitai_research_observation.txt": "original",
+            },
+        ),
+    )
+    monkeypatch.setattr(f1_full_smoke.research_observation, "technology_keys", lambda _g: ("a",))
+    with pytest.raises(ValueError, match="不能覆盖"):
+        f1_full_smoke._write_sources(
+            tmp_path,
+            resource=False,
+            localization=False,
+            with_explanation_probe=False,
+            research_tags=("RUS",),
+        )
+
+
+def test_观测读取与生成间科技原件变化必须在启动前拒绝(tmp_path, monkeypatch):
+    game = tmp_path / "game"
+    technology = game / "common/technology/technologies/production.txt"
+    technology.parent.mkdir(parents=True)
+    technology.write_text("a = {}\n", encoding="utf-8")
+    monkeypatch.setattr(config, "GAME", game)
+
+    def changing_inputs(_variant):
+        technology.write_text("b = {}\n", encoding="utf-8")
+        return None, None, {"README.md": "standard"}
+
+    monkeypatch.setattr(f1_full_smoke.distribution, "package_inputs", changing_inputs)
+    monkeypatch.setattr(game_run, "run", lambda *_a, **_k: pytest.fail("输入变化不得派发"))
+    with pytest.raises(ValueError, match="科技原件"):
+        f1_full_smoke.run(output=tmp_path / "run", research_tags=("RUS",))

@@ -661,6 +661,11 @@ def test_integrated_is_a_real_standard_package_separate_from_historical_full(tmp
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt")
         assert strategy.startswith(codecs.BOM_UTF8)
         assert b"\r" not in strategy
+        fleet_value = archive.read("common/script_values/sitai_adapter_values.txt")
+        assert fleet_value.startswith(codecs.BOM_UTF8)
+        assert b"\r" not in fleet_value
+        assert b"protect_supply = sitai_adapter_fleet_supply_weight" in strategy
+        assert b"sitai_adapter_fleet_supply_weight = {" in fleet_value
         declared_fields = set(metadata["decision_rules"]["field_owners"])
         default_contract = next(
             row
@@ -670,7 +675,9 @@ def test_integrated_is_a_real_standard_package_separate_from_historical_full(tmp
         declared_fields.update(default_contract["field_owners"])
         actual_fields = {
             name.decode().removeprefix("ai_strategy_default.")
-            for name in re.findall(rb"# SITAI BEGIN information:([^\n]+)", strategy)
+            for name in re.findall(
+                rb"# SITAI BEGIN information:([^\n]+)", strategy + b"\n" + fleet_value
+            )
         }
         assert actual_fields == {
             name.removeprefix("ai_strategy_default.") for name in declared_fields

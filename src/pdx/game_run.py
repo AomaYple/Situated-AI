@@ -20,6 +20,7 @@ import threading
 import time
 from contextlib import suppress
 from importlib.metadata import PackageNotFoundError, version
+from itertools import pairwise
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -54,7 +55,7 @@ ERROR_MARKERS = (
 )
 # 不属于十类脚本门禁、但仍表示引擎/VFS错误的日志项单独记录，避免
 # “十类为零”被误读为画面与资源加载完全无错。
-UNCLASSIFIED_ERROR_MARKERS = ("VFSOpen Error",)
+UNCLASSIFIED_ERROR_MARKERS = ("VFSOpen Error", "Invalid mission type")
 OBSERVER_WARNING = "Variable 'sitai_fiscal_risk' is used but is never set."
 
 
@@ -130,38 +131,121 @@ class LogFindings(TypedDict):
 
 
 class LogCapture:
-    """按文件身份追踪追加字节，轮转改名不会重复读；原轮转件另存。"""
+    """按已采集内容连接轮转世代；支持改名与复制截断，歧义保持失败。"""
 
     def __init__(self, source: Path, destination: Path) -> None:
         self.source = source
         self.destination = destination
-        self.offsets: dict[tuple[int, int], int] = {}
+        self.positions: dict[str, tuple[int, str]] = {}
+        self.snapshots: dict[str, tuple[tuple[str, int, int, int, int, int], ...]] = {}
         self.errors: list[str] = []
         self.guard = LiveLogGuard()
 
     def poll(self) -> None:
         self.destination.mkdir(parents=True, exist_ok=True)
-        for stem in ("debug", "error"):
-            for path in ga.rotated_logs(self.source, stem):
-                try:
-                    with path.open("rb") as incoming:
-                        stat = os.fstat(incoming.fileno())
-                        identity = (stat.st_dev, stat.st_ino)
-                        offset = self.offsets.get(identity, 0)
-                        if stat.st_size < offset:
-                            raise RuntimeError(f"日志原地截断，完整性不确定：{path}")
-                        incoming.seek(offset)
-                        with (self.destination / f"{stem}.log").open("ab") as target:
-                            while chunk := incoming.read(65536):
-                                target.write(chunk)
-                                self.guard.feed(path.name, identity, chunk)
-                            self.offsets[identity] = incoming.tell()
-                except FileNotFoundError:
-                    continue
-                except (OSError, RuntimeError) as exc:
-                    message = f"持续日志归档失败：{exc}"
-                    if message not in self.errors:
-                        self.errors.append(message)
+        for stream_id, stem in enumerate(("debug", "error")):
+            try:
+                self._poll_stream(stem, (0, stream_id))
+            except (OSError, RuntimeError) as exc:
+                message = f"持续日志归档失败：{exc}"
+                if message not in self.errors:
+                    self.errors.append(message)
+
+    @staticmethod
+    def _prefix(path: Path, size: int) -> str | None:
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            remaining = size
+            while remaining:
+                chunk = stream.read(min(remaining, 65536))
+                if not chunk:
+                    return None
+                digest.update(chunk)
+                remaining -= len(chunk)
+        return digest.hexdigest()
+
+    def _poll_stream(self, stem: str, identity: tuple[int, int]) -> None:
+        paths = ga.rotated_logs(self.source, stem)
+        all_paths = paths
+        snapshot = self._snapshot(paths)
+        if snapshot == self.snapshots.get(stem):
+            return
+        offset = 0
+        if previous := self.positions.get(stem):
+            offset, prefix = previous
+            matches = [
+                index for index, path in enumerate(paths) if self._prefix(path, offset) == prefix
+            ]
+            if len(matches) != 1:
+                raise RuntimeError(f"日志原地截断或轮转世代不唯一，完整性不确定：{stem}")
+            paths = paths[matches[0] :]
+        generations = [
+            int(path.stem.rsplit(".", 1)[-1]) for path in paths if path.name != f"{stem}.log"
+        ]
+        if generations and (
+            generations[-1] != 1
+            or any(older - newer != 1 for older, newer in pairwise(generations))
+        ):
+            raise RuntimeError(f"轮转日志中间世代缺失，完整性不确定：{stem}")
+        for path in paths:
+            with path.open("rb") as incoming:
+                size = os.fstat(incoming.fileno()).st_size
+                digest = hashlib.sha256()
+                remaining = offset
+                while remaining:
+                    chunk = incoming.read(min(remaining, 65536))
+                    if not chunk:
+                        raise RuntimeError(f"日志读取期间截断，完整性不确定：{path}")
+                    digest.update(chunk)
+                    remaining -= len(chunk)
+                if offset and digest.hexdigest() != self.positions[stem][1]:
+                    raise RuntimeError(f"日志读取期间覆写，完整性不确定：{path}")
+                with (self.destination / f"{stem}.log").open("ab") as target:
+                    remaining = size - offset
+                    if remaining < 0:
+                        raise RuntimeError(f"日志读取期间截断，完整性不确定：{path}")
+                    while remaining:
+                        chunk = incoming.read(min(remaining, 65536))
+                        if not chunk:
+                            raise RuntimeError(f"日志读取期间截断，完整性不确定：{path}")
+                        target.write(chunk)
+                        digest.update(chunk)
+                        self.guard.feed(path.name, identity, chunk)
+                        remaining -= len(chunk)
+                if size:
+                    # 读后再次验证快照，复制截断发生在读取中途时不能提交为完整。
+                    incoming.seek(0)
+                    check = hashlib.sha256()
+                    remaining = size
+                    while remaining:
+                        chunk = incoming.read(min(remaining, 65536))
+                        if not chunk:
+                            raise RuntimeError(f"日志读取期间截断，完整性不确定：{path}")
+                        check.update(chunk)
+                        remaining -= len(chunk)
+                    if check.digest() != digest.digest():
+                        raise RuntimeError(f"日志读取期间覆写，完整性不确定：{path}")
+                    self.positions[stem] = size, digest.hexdigest()
+            offset = 0
+        if self._snapshot(all_paths) == snapshot:
+            self.snapshots[stem] = snapshot
+
+    @staticmethod
+    def _snapshot(paths: Sequence[Path]) -> tuple[tuple[str, int, int, int, int, int], ...]:
+        result = []
+        for path in paths:
+            stat = path.stat()
+            result.append(
+                (
+                    str(path),
+                    stat.st_dev,
+                    stat.st_ino,
+                    stat.st_size,
+                    stat.st_mtime_ns,
+                    stat.st_ctime_ns,
+                )
+            )
+        return tuple(result)
 
 
 class TickTaskCapture:

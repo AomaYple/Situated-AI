@@ -25,6 +25,16 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 SOURCE = config.REPO / "mod/decisions/adapters.toml"
+_FLEET_SOURCE = "common/ai_strategies/00_default_strategy.txt"
+_FLEET_FIELD = (
+    "ai_strategy_default",
+    "fleet_compositions",
+    "secondary_fleet",
+    "mission_type_weights",
+    "protect_supply",
+)
+_FLEET_VALUE = "sitai_adapter_fleet_supply_weight"
+_VALUE_SOURCE = "common/script_values/sitai_adapter_values.txt"
 
 
 @dataclass(frozen=True, slots=True)
@@ -285,19 +295,9 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             and len(scalar_path) == 2
             and scalar_path[1] == "ai_value"
         )
-        # 默认策略9545–9562明确允许任务权重使用国家作用域脚本值。
-        # 只放行当前已审计字段；不把税收枚举或其它常量自动改成脚本值。
-        fleet_scalar = (
-            source_name == "common/ai_strategies/00_default_strategy.txt"
-            and scalar_path
-            == (
-                "ai_strategy_default",
-                "fleet_compositions",
-                "secondary_fleet",
-                "mission_type_weights",
-                "protect_supply",
-            )
-        )
+        # 原版注释允许国家脚本值；实机拒绝内联任务权重，须生成具名引用。
+        # 此处仍只放行该已审计字段，动态求值与实际行动另按 F1 验收。
+        fleet_scalar = source_name == _FLEET_SOURCE and scalar_path == _FLEET_FIELD
         if (
             not (building_scalar or fleet_scalar)
             or source_name not in groups
@@ -363,6 +363,39 @@ def _wrap_scalars(text: str, fields: set[tuple[str, ...]]) -> str:
     for start, end, fragment in sorted(changes, reverse=True):
         text = text[:start] + fragment + text[end:]
     return text
+
+
+def _externalize_fleet_value(text: str) -> tuple[str, str]:
+    """只移动已登记的完整值块，保留条件、优先级、基值及所有外围字节。"""
+    starts = [0]
+    for line in text.splitlines(keepends=True):
+        starts.append(starts[-1] + len(line))
+    stack: list[str] = []
+    previous = before_previous = None
+    opening = None
+    spans = []
+    for token in tokenize(text):
+        if token.kind == LBRACE:
+            key = (
+                before_previous.value
+                if previous is not None
+                and previous.kind == OP
+                and before_previous is not None
+                and before_previous.kind == ATOM
+                else "<anonymous>"
+            )
+            stack.append(key)
+            if tuple(stack) == _FLEET_FIELD:
+                opening = starts[token.line - 1] + token.col - 1
+        elif token.kind == RBRACE:
+            if tuple(stack) == _FLEET_FIELD and opening is not None:
+                spans.append((opening, starts[token.line - 1] + token.col))
+            stack.pop()
+        before_previous, previous = previous, token
+    if len(spans) != 1:
+        raise ValueError("舰队具名评分缺少唯一完整值块")
+    start, end = spans[0]
+    return text[:start] + _FLEET_VALUE + text[end:], f"{_FLEET_VALUE} = {text[start:end]}\n"
 
 
 def _supply_patch(
@@ -525,6 +558,7 @@ def build(
     required_engines: set[str] = set()
     active_methods: set[tuple[str, str]] = set()
     definitions_cache: dict[str, Block] = {}
+    named_fleet = False
     for name, policy in adapters.policies:
         selected = (
             policy.enabled_domains
@@ -562,6 +596,11 @@ def build(
             default_strategy=False,
             reader_words=words,
         )
+        if name == _FLEET_SOURCE and _FLEET_FIELD in scalar_fields:
+            if _FLEET_VALUE in words or _VALUE_SOURCE in (overlays or {}):
+                raise ValueError("舰队具名评分与已有定义冲突")
+            files[name], files[_VALUE_SOURCE] = _externalize_fleet_value(files[name])
+            named_fleet = True
         used_keys = {
             key
             for rules in policy.groups(selected).values()
@@ -623,6 +662,16 @@ def build(
                 "source": source,
                 "field": ".".join(field),
                 "operation": "retain_native_constant_in_value_block",
+                **(
+                    {
+                        "operation": "retain_native_constant_in_named_value",
+                        "value_source": _VALUE_SOURCE,
+                        "value_name": _FLEET_VALUE,
+                        "runtime_evaluation_verified": False,
+                    }
+                    if named_fleet and source == _FLEET_SOURCE and field == _FLEET_FIELD
+                    else {}
+                ),
             }
             for source, field in adapters.scalar_values
             if any(

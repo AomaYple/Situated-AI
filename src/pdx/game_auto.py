@@ -1130,33 +1130,46 @@ def _set_foreground(hwnd: int) -> bool:
     库调用不抛异常 **不等于** 成功了（Windows 前台锁定会静默失败），所以判据是
     ``GetForegroundWindow()``，不是返回值 —— 见 :func:`ensure_foreground`。
     """
-    with suppress(gw.PyGetWindowException, OSError):
+    try:
+        window_error = gw.PyGetWindowException
+    except (AttributeError, WindowsOnlyError):
+        # 非 Windows 的惰性替身不能访问 pygetwindow 异常类型。
+        window_error = OSError
+    with suppress(window_error, OSError):
         _window(hwnd).activate()
     if _foreground_window() == hwnd:
         return True
     # 兜底：Windows 前台锁定会**静默拒绝**后台进程的置前请求（实测：前台一度是 0，
     # 于是 5 次重试全失败 ⇒ 整轮误报 ForegroundLostError）。pywin32 暴露了
-    # AttachThreadInput，接上目标线程的输入队列再置前，成功率明显更高。
+    # AttachThreadInput；连接只覆盖置前动作，任何出口都必须解除。
     try:
         target_tid, _pid = win32process.GetWindowThreadProcessId(hwnd)
         me = win32api.GetCurrentThreadId()
-        attached = bool(target_tid) and bool(win32process.AttachThreadInput(me, target_tid, True))
-        try:
-            win32gui.SetWindowPos(
-                hwnd,
-                win32con.HWND_TOP,
-                0,
-                0,
-                0,
-                0,
-                win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE,
-            )
-            win32gui.SetForegroundWindow(hwnd)
-        finally:
-            if attached:
-                win32process.AttachThreadInput(me, target_tid, False)
+        attached = bool(target_tid) and target_tid != me
+        if attached:
+            # pywin32 BOOLAPI 成功返回 None，失败抛异常，不能对其返回值取 bool。
+            win32process.AttachThreadInput(me, target_tid, True)
     except Exception:
         return False
+    try:
+        win32gui.SetWindowPos(
+            hwnd,
+            win32con.HWND_TOP,
+            0,
+            0,
+            0,
+            0,
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE,
+        )
+        win32gui.SetForegroundWindow(hwnd)
+    except Exception:
+        return False
+    finally:
+        if attached:
+            try:
+                win32process.AttachThreadInput(me, target_tid, False)
+            except Exception as exc:
+                raise ForegroundLostError("无法解除线程输入连接，已中止后续输入") from exc
     return _foreground_window() == hwnd
 
 
@@ -1407,7 +1420,7 @@ def ensure_foreground(hwnd: int, *, attempts: int = 5, force: bool = False) -> N
     :class:`RealInputBlockedError`）：把某个窗口提到最前会**把用户正在用的窗口挤到后面**，
     这件事不许"顺手"发生 —— 必须由显式入口（CLI / 探针）打开开关。
 
-    ``Window.activate()``（pygetwindow，内部自己做 ``AttachThreadInput`` + 置顶 + 置前）
+    ``Window.activate()``（pygetwindow，内部调用 ``SetForegroundWindow``）
     会**静默失败** —— Windows 有前台锁定，调用进程自己不是前台进程时会被拒；
     于是后续点击送给**别的窗口**，而截图看起来毫无变化，极容易被误读成"坐标不对"
     （实测为此白跑一整轮）。所以判据是 ``GetForegroundWindow()``，不是库调用的返回值。

@@ -77,7 +77,7 @@ Victoria 3 游戏本体与 mod 的信息处理工具链。核心解析与提取�
 | `tools/probe/market_compare.py` | 同依赖输入、有资格窗口的支持评分方向与实际角色；不判总体质量通过 |
 | `tools/probe/f1_consumer_audit.py` | 从锁定底本与精简 AI 面快照生成七模块字段消费者静态台账；不证明运行期行为质量 |
 | `tools/probe/f1_field_observation.py` | F1 四个新增策略字段的隔离控制/候选实机探针；使用 `pdx.game_run`，记录策略牌与国家/博弈上下文，并可用 `--compare-control-report` / `--compare-candidate-report` 生成保守配对摘要；没有通用字段 getter 时保持 `runtime_field_value=unavailable`，不把策略持有或评分变化当行为质量 |
-| `tools/probe/f1_full_smoke.py` | F1 标准 Mod 薄实机入口；2.0 必须显式 `--variant integrated`，默认 `full` 保留历史七模块身份；默认只生成并挂载标准 Mod，`--with-explanation-probe` 才在本次候选中临时附加解释探针，诊断基线显式启用；`--language` 冻结已声明 GUI 语言，`--load-save` 仅接受合规观察者检查点，证据写入 `f1_context.json`，不证明翻译质量或 AI 行为质量 |
+| `tools/probe/f1_full_smoke.py` | F1 标准 Mod 薄实机入口；2.0 必须显式 `--variant integrated`，默认 `full` 保留历史七模块身份；解释探针和逐国研究观测分别用 `--with-explanation-probe`、可重复的 `--research-tag RUS` 显式附加，诊断基线显式启用；`--language` 冻结已声明 GUI 语言，`--load-save` 仅接受合规观察者检查点，证据写入 `f1_context.json`，不证明翻译质量或 AI 行为质量 |
 | `tools/probe/decision_stability.py` | 原版/财政/政治/组合的自然长局、存档迁移与可选后台引擎任务计时 |
 | `tools/probe/decision_unload.py` | 只读检查卸载后的变量自然过期，不注入或续期；安装版简体中文缺键时显式加 `--localization-baseline`，不豁免错误门禁 |
 | `tools/probe/save_migration_audit.py` | 递归盘点 `.v3` 版本、观察者状态、空规则和 SHA-256；只报告可用于跨版本升级实验的输入，不执行迁移 |
@@ -120,6 +120,8 @@ python -m pdx.checkpoint_catalog --screen-save <原件一.v3> --expected-sha256 
 `decision_stability.py --arm vanilla --vanilla-baseline --months 6 --timeout 1800` 是不挂载任何 Mod 的新游戏环境诊断，使用同一 `game_run` 的锁、部署、日志、严格错误检查和恢复事务。它与 `--save` 互斥，只允许 `instrument/vanilla`、最多六个月，拒绝观测器、资源/本地化补丁、候选、存档制作、资格登记与性能包；原有 `vanilla` 臂仍含观察器，两者不能混称。结果写入 `tools/out/decisions/vanilla-baseline/`，明确 `kind=vanilla_environment_baseline`，不产生正式配对或行为质量结论。2026-10-15 首次零 Mod 实机复现缺失维修图标及三条本地化脚本错误，恢复通过；完整证据和不同错误的归因边界见 [A3 结果](../docs/design/exec/A3-结果.md)。基线失败不放宽门禁；文件完整性、版本或接口前提未改变时不自动重跑同一局。
 
 `decision_stability.py --language l_english` 为本局和恢复重启传递临时语言，并进入报告与实验冻结身份；不写用户语言设置。英文目前仅支持已提供的观察者检查点，英文新游戏菜单尚未验证，未知语言在事务前拒绝。`l_simp_chinese` 也可显式登记；两臂语言不一致或只有一臂记录时拒绝配对。`f1_full_smoke.py` 使用相同语言门禁，英语必须显式提供 `--load-save`。日志中的 `VFSOpen Error` 与原有引擎/Mod 错误一样拒绝通过，并进入同场景重复错误停止计数；历史报告先验证原始日志指纹，不能沿用旧 `ok=true` 绕过当前门禁。
+
+`f1_full_smoke.py --variant integrated --research-tag RUS --research-tag FRA` 显式向本次临时标准候选附加研究观测，默认关闭，不进入生产包。科技键与来源 SHA 来自同一原始字节读取，生成后再次核对原件；变化时在派发前拒绝。只读取指定国家的月度、开始、取得和传播 hook，逐科技记录 `can_research`、已研究状态及待证的 GUI `IsResearching` getter；无世界扫描或研究/策略/持久变量写入。流式解析拒绝残缺、重复、未知、非法值及多个主动研究，坏帧不进入有效帧集合。hook 时序、GUI getter 的脚本作用域、完整 AI 排名分母及字段因果仍须实机分别证明；本开关不授予原账本已停止场景的重开资格。
 
 `decision_stability.py --purpose instrument --arm vanilla --resource-baseline --save <检查点>` 显式添加维修图标诊断资源挂载（默认关闭，`safety` 也可用）。生成前核对原版 `gui/texticons.gui` 实际引用缺失的 `alert_icons/repairing.dds`，并只复制本地 `generic_icons/repairing.dds` 的原始 DDS 字节；已修复安装、来源变化、坏 DDS、链接路径或已有输出均拒绝。挂载沿用现有部署、完整日志门禁、账本和恢复流程，来源/GUI/输出 SHA 与字节数在分析成功时写入 `analysis.experiment.resource_baseline`；完整 manifest 同时持久化在资源 `.metadata/metadata.json` 的 `game_custom_data.resource_baseline`，随既有源冻结保留，分析失败仍可追溯。它只证明字节来源，不证明模拟无扰动、AI 质量或正式资格；`M4`、`M4-noise` 和所有候选臂在生成与部署前拒绝。可组合现有原生财政只读或自然观测参数；此开关不启用政治危险 getter，也不豁免任何错误。
 
@@ -330,7 +332,7 @@ python -m pytest -m "not slow"      # 跳过慢用例
 python -m pytest --cov=pdx          # 覆盖率（门槛 86%，见 pyproject）
 ```
 
-当前收集 140 个测试文件、4432 条用例（2026-10-19 实测）；当前树完整回归、覆盖率和资源见[本轮工程验收](../docs/design/exec/完整候选-结果.md#当前树验证与交付)，集中批次与实机边界见[本轮执行记录](../docs/design/exec/完整候选-结果.md#2026-10-19-集中验证批次与零-mod-诊断)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、引擎日志不匹配等前提分类。这些工程结果不替代 GUI 或行为验收。
+当前收集 141 个测试文件、4491 条用例（2026-10-20 实测）；当前树完整回归、覆盖率和资源见[本轮工程验收](../docs/design/exec/完整候选-结果.md#当前树验证与交付)，集中批次与实机边界见[本轮执行记录](../docs/design/exec/完整候选-结果.md#2026-10-19-集中验证批次与零-mod-诊断)。旧七模块批次及旧性能基线分别保留于日期化结果与[测试性能复核](../docs/audits/2026-10-16-测试性能复核.md)，不作为当前通过证据；跳过项按 Windows 符号链接权限、FIFO、引擎日志不匹配等前提分类。这些工程结果不替代 GUI 或行为验收。
 全部对应**实际踩过的坑**，不是凭空构造：
 
 | 测试文件 | 覆盖的坑 |

@@ -437,7 +437,7 @@ def package_inputs(
                 policy.package,
                 status="candidate" if variant == "full" else "experimental",
                 product_version=(
-                    "2.0.0.dev3"
+                    "2.0.0.dev4"
                     if variant == "integrated"
                     else "1.0.0"
                     if variant == "full"
