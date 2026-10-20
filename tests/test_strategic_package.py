@@ -27,7 +27,14 @@ def test_integrated_freezes_shared_strategy_and_actual_consumers():
         fingerprint["strategic_generator_sha256"]
         == hashlib.sha256(Path(decision_intents.__file__).read_bytes()).hexdigest()
     )
-    assert metadata["version"] == "2.0.0.dev3"
+    assert metadata["version"] == "2.0.0.dev4"
+    values_path = "common/script_values/sitai_adapter_values.txt"
+    assert (
+        "protect_supply = sitai_adapter_fleet_supply_weight"
+        in files["common/ai_strategies/00_default_strategy.txt"]
+    )
+    assert "sitai_adapter_fleet_supply_weight = { value = 1.0" in files[values_path]
+    assert "multiply = 1.1" in files[values_path]
     assert contract["behavior_verified"] is False
     assert contract["rules_with_intent"] > len(strategy.intents)
 

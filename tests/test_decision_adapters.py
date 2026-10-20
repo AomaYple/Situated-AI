@@ -481,18 +481,34 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
 def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
     adapters = decision_adapters.load()
     files, contract = decision_adapters.build(adapters)
-    assert len(files) == 38
+    assert len(files) == 39
     consumers = contract["consumers"]
     assert isinstance(consumers, list)
-    assert len(consumers) == len(files)
+    assert len(consumers) == 38
+    scalar_consumers = contract["scalar_consumers"]
+    assert isinstance(scalar_consumers, list)
+    named_values = {
+        row["source"]: row
+        for row in scalar_consumers
+        if row["operation"] == "retain_native_constant_in_named_value"
+    }
     for name, text in files.items():
+        inline_text = text
+        if name == "common/script_values/sitai_adapter_values.txt":
+            assert not parse_text(text).errors
+            continue
         baseline = normalized_text((config.GAME / name).read_text(encoding="utf-8-sig"))
         assert not parse_text(text).errors
         assert parse_text(text).top_keys == parse_text(baseline).top_keys
+        if name in named_values:
+            row = named_values[name]
+            definition = files[row["value_source"]]
+            opening, closing = definition.index("{"), definition.rindex("}") + 1
+            inline_text = text.replace(row["value_name"], definition[opening:closing])
         restored = re.sub(
             r"\n\t\t# SITAI BEGIN information:[^\n]+\n.*?# SITAI END information:[^\n]+\n\t",
             "",
-            text,
+            inline_text,
             flags=re.DOTALL,
         )
         restored = re.sub(
@@ -679,6 +695,106 @@ def test_scalar_consumer_retains_native_value_comments_and_disable(scalar_buildi
     assert metadata["reader_evidence"] == {}
 
 
+@pytest.fixture
+def fleet_scalar():
+    name = "common/ai_strategies/00_default_strategy.txt"
+    field = (
+        "ai_strategy_default",
+        "fleet_compositions",
+        "secondary_fleet",
+        "mission_type_weights",
+        "protect_supply",
+    )
+    source = (
+        "# 保留原件\nai_strategy_default = { possible = { bureaucracy >= 0 is_at_war = no }\n"
+        "fleet_compositions = { secondary_fleet = {\n"
+        "mission_type_weights = { protect_supply = 1.0 # 原注释\nraid_convoys = 0.5 }\n"
+        "} } }\n"
+    )
+    base = _synthetic()
+    policy = replace(
+        base.policies[0][1],
+        baseline_sha256=hashlib.sha256(source.encode()).hexdigest(),
+        rules=(
+            replace(base.policies[0][1].rules[0], field=field, operation="multiply", value=1.1),
+        ),
+    )
+    adapters = replace(
+        base,
+        sources=((name, policy.baseline_sha256),),
+        policies=((name, policy),),
+        scalar_values=((name, field),),
+    )
+    return name, field, source, adapters
+
+
+def test_fleet_scalar_uses_named_value_and_preserves_dynamic_body(fleet_scalar):
+    """实机拒绝任务权重内联块；不能靠删除条件或改成常量消除错误。"""
+    name, field, source, adapters = fleet_scalar
+    files, contract = decision_adapters.build(adapters, texts={name: source})
+    current: Block | Scalar | None = parse_text(files[name]).root
+    for key in field:
+        assert isinstance(current, Block)
+        assignment = current.first(key)
+        assert assignment is not None
+        current = assignment.value
+        if key != field[-1]:
+            assert isinstance(current, Block)
+    assert isinstance(current, Scalar), "任务权重必须引用具名值，不能输出已知解析错误的内联块"
+    values_path = "common/script_values/sitai_adapter_values.txt"
+    values = parse_text(files[values_path])
+    assert not values.errors
+    definition = values.root.first(current.text)
+    assert definition is not None
+    assert isinstance(definition.value, Block)
+    base_value = definition.value.first("value")
+    assert base_value is not None
+    assert isinstance(base_value.value, Scalar)
+    assert base_value.value.text == "1.0"
+    assert "multiply = 1.1" in files[values_path]
+    assert "bureaucracy >= 0" in files[values_path]
+    assert "is_ai = yes" in files[values_path]
+    assert "# 原注释" in files[name]
+    assert "raid_convoys = 0.5" in files[name]
+    scalars = contract["scalar_consumers"]
+    assert scalars == [
+        {
+            "source": name,
+            "field": ".".join(field),
+            "operation": "retain_native_constant_in_named_value",
+            "value_source": values_path,
+            "value_name": current.text,
+            "runtime_evaluation_verified": False,
+        }
+    ]
+    assert files == decision_adapters.build(adapters, texts={name: source})[0]
+    disabled, metadata = decision_adapters.build(
+        adapters,
+        texts={name: source},
+        enabled_domains=frozenset(),
+    )
+    assert disabled == {}
+    assert metadata["scalar_consumers"] == []
+
+
+@pytest.mark.parametrize("collision", ["input_name", "output_path"])
+def test_fleet_named_value_rejects_existing_definition(fleet_scalar, collision):
+    name, _, source, adapters = fleet_scalar
+    overlays = None
+    if collision == "input_name":
+        source += "sitai_adapter_fleet_supply_weight = { value = 4 }\n"
+        digest = hashlib.sha256(source.encode()).hexdigest()
+        adapters = replace(
+            adapters,
+            sources=((name, digest),),
+            policies=((name, replace(adapters.policies[0][1], baseline_sha256=digest)),),
+        )
+    else:
+        overlays = {"common/script_values/sitai_adapter_values.txt": "owned = 1\n"}
+    with pytest.raises(ValueError, match=r"具名评分.*冲突"):
+        decision_adapters.build(adapters, texts={name: source}, overlays=overlays)
+
+
 @pytest.mark.parametrize(
     "value",
     [
@@ -710,7 +826,14 @@ def real_generated_branches():
     if not (config.GAME / "common/laws/readme.md").is_file():
         pytest.skip("需要锁定版本的游戏原件")
     adapters = decision_adapters.load()
-    files, _ = decision_adapters.build(adapters)
+    files, contract = decision_adapters.build(adapters)
+    scalar_consumers = contract["scalar_consumers"]
+    assert isinstance(scalar_consumers, list)
+    named_sources = {
+        (row["source"], row["field"]): row["value_source"]
+        for row in scalar_consumers
+        if row["operation"] == "retain_native_constant_in_named_value"
+    }
     result = []
     for source, policy in adapters.policies:
         blocks = {}
@@ -718,7 +841,7 @@ def real_generated_branches():
             name = ".".join(field)
             match = re.search(
                 rf"# SITAI BEGIN information:{re.escape(name)}\n(.*?)# SITAI END information:",
-                files[source],
+                files[named_sources.get((source, name), source)],
                 re.DOTALL,
             )
             assert match is not None

@@ -13,11 +13,15 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
@@ -28,6 +32,7 @@ from pdx import (
     distribution,
     explanation_probe,
     game_run,
+    research_observation,
     resource_baseline,
 )
 
@@ -44,9 +49,10 @@ def _context(
     language: str | None,
     load_save: Path | None,
     variant: str = VARIANT,
+    research_tags: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     diagnostic = resource or localization
-    instrumented = with_explanation_probe and not diagnostic
+    instrumented = (with_explanation_probe or bool(research_tags)) and not diagnostic
     return {
         "schema": "sitai-f1-full-smoke-v1",
         "delivery_contract": distribution.generation_contract(
@@ -68,8 +74,14 @@ def _context(
         },
         "standard_mod": True,
         "temporary_probe": "explanation" if with_explanation_probe else None,
+        "research_observation": {
+            "tags": list(research_tags),
+            "enabled": bool(research_tags),
+            "runtime_getter": "not_verified",
+            "ai_denominator": "not_verified",
+        },
         "behavior_quality": "not_evaluated",
-        "production_package": not diagnostic and not with_explanation_probe,
+        "production_package": not diagnostic and not with_explanation_probe and not research_tags,
         "limits": (
             "标准 Mod 运行只回答挂载、日志、自动化和恢复问题；临时探针只回答其声明的仪器问题；"
             "诊断基线运行只回答已知原版环境问题。"
@@ -85,6 +97,8 @@ def _write_sources(
     localization: bool,
     with_explanation_probe: bool,
     variant: str = VARIANT,
+    research_tags: tuple[str, ...] = (),
+    research_keys: tuple[str, ...] = (),
 ) -> dict[str, Path]:
     """在隔离临时目录内生成标准 Mod 和可选临时诊断源。"""
 
@@ -92,6 +106,13 @@ def _write_sources(
     policy, extensions, files = distribution.package_inputs(variant)
     if with_explanation_probe:
         files = explanation_probe.attach(files, policy, extensions)
+    if research_tags:
+        extra = research_observation.build(
+            research_keys or research_observation.technology_keys(config.GAME), tags=research_tags
+        )
+        if files.keys() & extra.keys():
+            raise ValueError("研究观测不能覆盖标准候选文件")
+        files = {**files, **extra}
     candidate = root / distribution.INSTALL_DIRECTORY_NAME
     decisions.write(candidate, files)
     sources: dict[str, Path] = {distribution.INSTALL_DIRECTORY_NAME: candidate}
@@ -123,6 +144,7 @@ def run(
     load_save: Path | None = None,
     timeout: float = 3600,
     variant: str = VARIANT,
+    research_tags: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """运行一次 F1 烟测并返回现有运行器报告。"""
 
@@ -137,7 +159,19 @@ def run(
         language=language,
         load_save=load_save,
         variant=variant,
+        research_tags=research_tags,
     )
+    keys, technology_sources = (
+        research_observation.technology_snapshot(config.GAME) if research_tags else ((), {})
+    )
+    if research_tags:
+        context["research_observation"].update(
+            {
+                "technology_keys": list(keys),
+                "technology_keys_sha256": hashlib.sha256("\n".join(keys).encode()).hexdigest(),
+                "technology_sources": technology_sources,
+            }
+        )
     with tempfile.TemporaryDirectory(prefix=".sources-", dir=output) as directory:
         sources = _write_sources(
             Path(directory),
@@ -145,7 +179,23 @@ def run(
             localization=localization,
             with_explanation_probe=with_explanation_probe,
             variant=variant,
+            research_tags=research_tags,
+            research_keys=keys,
         )
+        if research_tags and research_observation.technology_snapshot(config.GAME) != (
+            keys,
+            technology_sources,
+        ):
+            raise ValueError("科技原件在观测读取与候选生成之间发生变化，拒绝派发")
+
+        def analyze(logdir: Path) -> dict[str, object]:
+            def lines() -> Iterator[str]:
+                for path in game_run.ga.rotated_logs(logdir, "debug"):
+                    with path.open(encoding="utf-8-sig", errors="replace") as stream:
+                        yield from stream
+
+            return research_observation.analyze_lines(lines(), keys, tags=research_tags)
+
         report = game_run.run(
             sources,
             months=months,
@@ -153,6 +203,7 @@ def run(
             output=output,
             language=language,
             load_save=load_save,
+            analyze=analyze if research_tags else None,
         )
     evidence = Path(str(report["evidence"]))
     game_run.write_json(evidence / "f1_context.json", context)
@@ -189,6 +240,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--variant", choices=("full", "integrated"), default=VARIANT)
     parser.add_argument(
+        "--research-tag",
+        action="append",
+        default=[],
+        help="显式附加临时研究观测，仅限列出的国家；可重复，不进入标准包或正式质量样本",
+    )
+    parser.add_argument(
         "--load-save",
         type=Path,
         help="从已验证的观察者检查点启动；英语会话必须使用此选项",
@@ -224,6 +281,7 @@ def main(argv: list[str] | None = None) -> int:
         resource=args.resource_baseline,
         localization=args.localization_baseline,
         variant=args.variant,
+        research_tags=tuple(args.research_tag),
     )
     print(json.dumps(_summary(report), ensure_ascii=False, indent=2))
     return 0 if report.get("ok") else 1
