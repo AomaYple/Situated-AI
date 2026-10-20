@@ -1943,6 +1943,8 @@ def test_完整运行按结束日期归档检查点且失败也恢复用户状�
     assert not (user / "save games/autosave.v3").exists()
     assert isinstance(report["evidence"], str)
     evidence = Path(report["evidence"])
+    assert report["kind"] == "mod_checkpoint_preparation"
+    assert json.loads((evidence / "report.json").read_bytes())["kind"] == report["kind"]
     if ready:
         assert game_run.save_header(evidence / "saves/autosave.v3")["game_date"] == "1900.1.10"
     else:

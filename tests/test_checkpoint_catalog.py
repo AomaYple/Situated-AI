@@ -266,6 +266,145 @@ def test_原版新局检查点来源独立复核不伪造载入或行为资格(t
         assert origin_row.get("checkpoint_sha256") == result["sha256"]
 
 
+def mod_preparation(tmp_path, *, legacy=False):
+    """新局实际产出，不伪造 loaded_save；保留来源与完整收尾字段。"""
+    path, report_path = origin(tmp_path)
+    report = json.loads(report_path.read_bytes())
+    report.pop("loaded_save")
+    report.update(
+        session_requested=True,
+        logs_isolated=True,
+        checkpoint_ready=game_run.save_header(path),
+        session={"automation_phase": "complete", "speed_ok": True},
+        progress={"reached": True},
+        source_reread={"verified": True},
+    )
+    report["checkpoint"]["header"] = game_run.save_header(path)
+    if not legacy:
+        report["kind"] = "mod_checkpoint_preparation"
+    game_run.write_json(report_path, report)
+    return path, report_path
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_Mod新局检查点可供安全重载但不追认行为报告(tmp_path, legacy):
+    from pdx import m3a_screen
+
+    path, report_path = mod_preparation(tmp_path, legacy=legacy)
+    original = path.read_bytes(), report_path.read_bytes()
+    result = checkpoint_catalog.inspect(path, expected_version="1.14.5")
+    assert result["instrument_suitable"] is True
+    assert result["formal_pair_suitable"] is False
+    assert result["opportunity_count"] is None
+    assert result["origin_reports"][0]["kind"] == "mod_checkpoint_preparation"
+    for purpose in ("safety", "instrument"):
+        assert checkpoint_catalog.preflight(result, purpose=purpose, months=1)["allowed"]
+    for purpose in ("M3-A", "M3-B", "M4"):
+        assert not checkpoint_catalog.preflight(result, purpose=purpose, months=24)["allowed"]
+    facts = m3a_screen.load_report(report_path)
+    assert not facts.clean
+    assert "loaded_save.sha256_missing" in facts.gate_reasons
+    assert (path.read_bytes(), report_path.read_bytes()) == original
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "source",
+        "deployed",
+        "logs",
+        "missing_log_hash",
+        "missing_cleanup",
+        "failed_cleanup",
+        "failure",
+        "error",
+        "mount",
+        "missing_finding",
+        "header",
+        "version",
+        "output",
+        "checkpoint_name",
+        "checkpoint_ready",
+        "session",
+        "progress",
+        "session_requested",
+        "logs_isolated",
+        "missing_checkpoint",
+        "loaded_save",
+        "experiment",
+    ],
+)
+def test_Mod检查点来源缺证或损坏仍拒绝且保留原件(tmp_path, damage):
+    path, report_path = mod_preparation(tmp_path)
+    report = json.loads(report_path.read_bytes())
+    if damage == "source":
+        (report_path.parent / "sources/probe/observer.txt").write_bytes(b"changed\n")
+    elif damage == "deployed":
+        report["deployed_hashes"]["probe"]["observer.txt"] = "b" * 64
+    elif damage == "logs":
+        (report_path.parent / "logs/error.log").write_bytes(b"changed\n")
+    elif damage == "missing_log_hash":
+        report.pop("log_hashes")
+    elif damage == "missing_cleanup":
+        report.pop("cleanup_errors")
+    elif damage == "failed_cleanup":
+        report["cleanup_errors"] = ["restore failed"]
+    elif damage == "failure":
+        report["failure"] = "failed run"
+    elif damage == "error":
+        report["log_findings"]["errors"]["Script system error!"] = 1
+    elif damage == "mount":
+        report["mount_allowlist"].append("undeclared")
+    elif damage == "missing_finding":
+        report["log_findings"].pop("mod_errors")
+    elif damage == "header":
+        report["checkpoint"]["header"]["observer"] = "no"
+    elif damage == "version":
+        report["game_version"]["caligula_branch"] = "release/1.15"
+    elif damage == "output":
+        path.write_bytes(path.read_bytes() + b"changed")
+    elif damage == "checkpoint_name":
+        report["checkpoint"]["hashes"] = {"../autosave.v3": game_run.file_sha(path)}
+    elif damage == "checkpoint_ready":
+        report["checkpoint_ready"]["game_date"] = "1840.1.1"
+    elif damage == "session":
+        report["session"]["automation_phase"] = "failed"
+    elif damage == "progress":
+        report["progress"]["reached"] = False
+    elif damage in {"session_requested", "logs_isolated"}:
+        report.pop(damage)
+    elif damage == "missing_checkpoint":
+        report.pop("checkpoint")
+    elif damage == "loaded_save":
+        report["loaded_save"] = {"sha256": "a" * 64}
+    elif damage == "experiment":
+        report["experiment"] = {"purpose": "M3-A"}
+    game_run.write_json(report_path, report)
+    original = path.read_bytes(), report_path.read_bytes()
+    result = checkpoint_catalog.inspect(path, expected_version="1.14.5")
+    assert result["instrument_suitable"] is False
+    assert result["state"] == "rejected"
+    assert (path.read_bytes(), report_path.read_bytes()) == original
+
+
+def test_Mod检查点不接受正式资格晋升(tmp_path, monkeypatch):
+    from pdx import experiment_evidence
+
+    path, _ = mod_preparation(tmp_path)
+    monkeypatch.setattr(
+        experiment_evidence, "validate", lambda *_a, **_k: {"allowed": True, "reasons": []}
+    )
+    result = checkpoint_catalog.inspect(
+        path,
+        expected_version="1.14.5",
+        qualification_report=tmp_path / "qualification.json",
+        purpose="M3-A",
+    )
+    assert result["instrument_suitable"] is True
+    assert result["formal_pair_suitable"] is False
+    assert "origin.diagnostic_only" in result["reasons"]
+
+
 def test_噪声准备只占三次单臂预算():
     checkpoint = {"instrument_suitable": True, "state": "instrument-suitable"}
     result = checkpoint_catalog.preflight(checkpoint, purpose="M4-noise", months=1, used_arms=2)
