@@ -998,6 +998,7 @@ def test_控制台历史归档损坏则保留现场且支持修复后重试(depl
         "analyze",
         "archive",
         "capture",
+        "source-reread",
         "process",
         "summary",
         "engine-startup",
@@ -1036,6 +1037,8 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
         monkeypatch.setattr(game_run.ga, "_process_pids", fail)
     if phase == "capture":
         monkeypatch.setattr(game_run.LogCapture, "poll", fail)
+    if phase == "source-reread":
+        monkeypatch.setattr(game_run.LogCapture, "verify", fail)
     if phase == "summary":
         original_hashes = game_run.hashes
 
@@ -1136,8 +1139,12 @@ def test_整体会话失败不吞错误且恢复用户资源(tmp_path, monkeypat
     else:
         assert (user / "content_load.json").read_bytes() == original
         assert not (user / "mod/probe").exists()
-    if phase in {"capture", "archive", "process", "summary"}:
+    if phase in {"capture", "source-reread", "archive", "process", "summary"}:
         assert any("controlled failure" in error for error in report["cleanup_errors"])
+    if phase == "source-reread":
+        reread = report["source_reread"]
+        assert isinstance(reread, dict)
+        assert reread["verified"] is False
     if phase.startswith("engine-"):
         early_stop, failure = report["early_stop"], report["failure"]
         assert isinstance(early_stop, dict)
