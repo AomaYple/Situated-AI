@@ -73,6 +73,7 @@ import tempfile
 import time
 import xml.etree.ElementTree as ET
 from contextlib import contextmanager, suppress
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -683,6 +684,30 @@ def find_template(
     return found
 
 
+_SESSION_HEALTH: ContextVar[Callable[[], None] | None] = ContextVar(
+    "sitai_session_health", default=None
+)
+
+
+def _check_session_health() -> None:
+    """在完整等待或输入动作之间检查；不在线程里强杀或打断按键按下/抬起。"""
+    check = _SESSION_HEALTH.get()
+    if check is not None:
+        check()
+
+
+@contextmanager
+def _session_health(check: Callable[[], None] | None) -> Iterator[None]:
+    token = _SESSION_HEALTH.set(check)
+    try:
+        _check_session_health()
+        yield
+        _check_session_health()
+    finally:
+        # 清理也会等待窗口和进程；先解除守卫，不能让原错误再次打断恢复。
+        _SESSION_HEALTH.reset(token)
+
+
 def wait_until(
     predicate: object,
     *,
@@ -701,9 +726,11 @@ def wait_until(
     if not callable(clock) or not callable(sleeper):
         raise TypeError("clock/sleeper 必须可调用")
     deadline = clock() + timeout
+    _check_session_health()
     last = predicate()
     while not last and clock() < deadline:
         sleeper(interval)
+        _check_session_health()
         last = predicate()
     return last
 
@@ -2278,6 +2305,7 @@ def wait_until_readable(
     pause: Sleeper = cast("Sleeper", _resolve(sleeper, _sleep, "sleeper"))
     started = tick_clock()
     while tick_clock() - started < timeout:
+        _check_session_health()
         mark = tick_mark(log)
         if mark.readable:
             return mark
@@ -2307,6 +2335,7 @@ def wait_until_running(
     start = before or tick_mark(log)
     started = tick_clock()
     while tick_clock() - started < timeout:
+        _check_session_health()
         now = tick_mark(log)
         if start.tick and is_later(start.tick, now.tick):
             return Advance(
@@ -2639,6 +2668,7 @@ def wait_for_boot_settle(
     progressed = False
     processes = 0
     while tick_clock() - started < timeout:
+        _check_session_health()
         processes = len(_process_pids())
         now_sizes = tuple(_log_size(item) for item in paths)
         now = tick_clock()
@@ -3645,6 +3675,7 @@ def _step_look(
     new_game_clicked = False
     setup_clicked = False
     while tick_clock() < deadline:
+        _check_session_health()
         try:
             image = screenshot(hwnd, roi=BOTTOM_ROI)
         except CaptureFailedError as exc:
@@ -3910,6 +3941,7 @@ def start_session(
 
     失败即抛错，**不返回半个结果**（P13）。这里没有回落链 —— 见模块开头的设计口径。
     """
+    _check_session_health()
     trace = AutomationTrace()
     try:
         hwnd = _route_to_foreground(hwnd, previous, force=force)
@@ -3939,10 +3971,12 @@ def start_session(
         auto_new_game=not loaded_observer,
         observe_template=observe_template,
     )
+    _check_session_health()
     _step_observe(
         hwnd, match, settle_timeout=settle_timeout, force=force, observe_template=observe_template
     )
     trace = trace.advance(AutomationPhase.OBSERVE_SELECTED)
+    _check_session_health()
 
     rate = 0.0
     attempts = 0
@@ -3959,6 +3993,7 @@ def start_session(
                 hwnd, speed_xy=speed_xy, threshold=threshold, index=0, force=force
             )
     trace = trace.advance(AutomationPhase.SPEED_SET)
+    _check_session_health()
 
     unpause_note, pressed, advance = _step_unpause(
         hwnd,
@@ -4171,25 +4206,29 @@ def run_session(
     background_seconds: float = 8.0,
     save_name: str | None = None,
     language: str | None = None,
+    health_check: Callable[[], None] | None = None,
 ) -> SessionStart:
-    """运行一次会话；失败时只清理本模块启动的进程。"""
+    """运行一次会话；可在安全等待点拒绝继续，失败时只清理本模块启动的进程。"""
+    if health_check is not None and not callable(health_check):
+        raise TypeError("health_check 必须可调用或为 None")
     try:
-        return _run_session_impl(
-            scripted_tests=scripted_tests,
-            lobby_timeout=lobby_timeout,
-            speed_xy=speed_xy,
-            speed_key=speed_key,
-            speed_keyboard=speed_keyboard,
-            skip_speed=skip_speed,
-            verify_minimized=verify_minimized,
-            keep_foreground=keep_foreground,
-            force=force,
-            foreground_recovery=foreground_recovery,
-            wait_tests=wait_tests,
-            background_seconds=background_seconds,
-            save_name=save_name,
-            language=language,
-        )
+        with _session_health(health_check):
+            return _run_session_impl(
+                scripted_tests=scripted_tests,
+                lobby_timeout=lobby_timeout,
+                speed_xy=speed_xy,
+                speed_key=speed_key,
+                speed_keyboard=speed_keyboard,
+                skip_speed=skip_speed,
+                verify_minimized=verify_minimized,
+                keep_foreground=keep_foreground,
+                force=force,
+                foreground_recovery=foreground_recovery,
+                wait_tests=wait_tests,
+                background_seconds=background_seconds,
+                save_name=save_name,
+                language=language,
+            )
     except BaseException:
         with suppress(Exception):
             kill_owned_game()
