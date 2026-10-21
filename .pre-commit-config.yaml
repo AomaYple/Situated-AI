@@ -1,31 +1,6 @@
-# 提交前自动跑静态检查。
-#
-# 为什么用 `repo: local` + `language: system` 而不是社区的 ruff/mypy 镜像：
-# 本项目的 ruff 与 mypy 依赖范围由 pyproject.toml 的 `dev` extra 声明，
-# 再让 pre-commit 去拉一份自己的副本会出现「pre-commit 过了、手动跑却失败」
-# 的分歧。这里直接调用 .venv 里已装好的那两个，与手动执行**完全同一份二进制**。
-# 附带好处：不需要联网拉 hook 仓库。
-#
-# 启用：`.venv\Scripts\pre-commit.exe install`
-# 手动全跑：`.venv\Scripts\pre-commit.exe run --all-files`
-#
-# 测试套件不放进来 —— 完整回归耗时较长，由 CI / 提交前手动执行，
-# 不是每次 commit 都该付的成本。
-#
-# 入口为 Python 驱动，自动选择 .venv/Scripts/python.exe 或 .venv/bin/python。
-# 无虚拟环境时使用当前 Python；Windows/macOS/Linux 使用同一份检查配置。
-#
-# 与 CI 的对应关系（**别让两边漂开**）
-# ----------------------------------
-#   ruff check        ↔ ci.yml 的「ruff —— 代码检查」
-#   ruff format       ↔ ci.yml 的「ruff —— 格式检查」
-#   mypy              ↔ ci.yml 的「mypy —— 类型检查」
-#   v3 verify --from-snapshot ↔ ci.yml 的同名步骤
-#   pytest            ← 有意不放（耗时）
-#
-# 最后一条是这轮补上的：它**离线可跑**（只读入库的精简快照与文档，不读游戏），
-# 却是最容易在提交时漏掉的一环 —— 改了文档里的数字或断言注册表而没重跑，
-# 本地全绿、CI 直接红。放进 hook 后提交前就会拦下。
+# 本地 hook 复用 run_check.py 选择的项目运行时，与手动检查及 CI 共用配置。
+# 启用：python -m pre_commit install；全量：python -m pre_commit run --all-files。
+# 完整测试按 CONTRIBUTING.md 单独执行，不加入每次提交的静态 hook。
 
 repos:
   - repo: local

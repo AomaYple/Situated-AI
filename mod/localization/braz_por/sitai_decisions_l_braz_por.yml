@@ -1,0 +1,9 @@
+l_braz_por:
+ SITAI_MARKET_DEPENDENCE_SUPPORT_REASON: "Exposição econômica aos dois lados"
+ SITAI_SECURITY_COMMITMENT_REASON: "Compromisso de defesa (candidato)"
+ SITAI_SECURITY_NEIGHBOR_REASON: "Risco de defesa de vizinho (candidato)"
+ SITAI_ECONOMY_CAPACITY_REASON: "Capacidade econômica e administrativa (candidato)"
+ SITAI_DIPLOMACY_BURDEN_REASON: "Custo da guerra e capacidade diplomática (candidato)"
+ SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON: "Isolamento e custos de compromissos financeiros (candidato)"
+ SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON: "Posição do porto de tratado e capacidade fiscal (candidato)"
+ SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON: "Laços com a pátria e prioridades nacionais viáveis (candidato)"

@@ -36,32 +36,10 @@ classifiers = [
 
 # 运行期依赖：只保留「标准库确实没有对应能力」的，每条写明用途。
 dependencies = [
-    "filelock>=3.19",         # 所有实机实验共享跨平台进程互斥锁
     "packaging>=26.0", # PEP 508 条件依赖使用成熟解析器，不自行实现表达式求值。
-    "psutil>=7.0",    # 三平台进程树 RSS / CPU / 内存测量；仪器读数不再绑 Win32。
-    "typer>=0.27",      # 统一 CLI 的命令与参数解析
-    "rich>=15.0",       # 终端表格与格式化输出。取代手写字符串对齐
-
-    # ── 游戏自动化 ─────────────────────────────────────────
-    # 图像处理由 pdx.game_auto 在运行时直接使用，因此属于运行期依赖。
-    # GUI 输入与窗口后端当前只支持 Windows；其他平台的能力边界见工程基线。
-    "Pillow>=11.0",     # game_auto.py：PNG 编解码 + 截图对象（模板匹配的输入/输出）
-    "numpy>=2.1",       # game_auto.py：把截图与模板当成像素数组（PIL↔cv2 的桥）
-    "opencv-python-headless>=4.10",
-                        # game_auto.py：`cv2.matchTemplate` 做归一化互相关。
-                        # 选 **headless** 而不是 `opencv-python`：我们只用匹配，
-                        # 不用 `imshow`/`waitKey`，而 headless 轮子不带 GUI 依赖
-                        # （少一层 GTK/Qt 的隐式依赖，也不会和游戏的窗口抢东西）。
-                        # 模板匹配复用成熟实现，遵循 docs/principles/工程原则.md。
-    "pydirectinput>=1.0.4; sys_platform == 'win32'",
-                        # 扫描码键盘与鼠标输入；前台校验、授权和失败恢复由 game_auto 统一管理。
-                        # 速度、暂停与控制台操作分别使用 tick、画面、回话或产物验收。
-                        # 输入库返回成功不证明游戏已接受动作；实测见工具手册及其证据链接。
-    "pygetwindow>=0.0.9; sys_platform == 'win32'",
-                        # 窗口枚举、标题、激活、最小化与还原，复用已有窗口库。
-    "pywin32>=306; sys_platform == 'win32'",
-                        # 补充客户区坐标、窗口状态、前台恢复与游戏线程键盘布局管理。
-                        # 使用成熟 Win32 绑定，避免自写 ctypes 结构体和函数声明。
+    "psutil>=7.0",     # 三平台进程树 RSS / CPU / 内存测量。
+    "typer>=0.27",     # 统一 CLI 的命令与参数解析。
+    "rich>=15.0",      # 终端表格与格式化输出，取代手写字符串对齐。
 ]
 
 [project.optional-dependencies]
@@ -97,7 +75,7 @@ dev = [
 v3 = "pdx.cli:app"
 
 [tool.setuptools]
-# Python 包源码位于 src/pdx；tools/ 放检查入口、基准、实机探针与证据输出。
+# Python 包源码位于 src/pdx；tools/ 放检查入口、基准、剖析脚本与证据输出。
 # 使用标准 src 布局，避免仓库根目录的工具脚本被误当成可导入包。
 package-dir = { "" = "src" }
 packages = ["pdx"]
@@ -157,7 +135,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-# 口径：只统计**装进包里**的代码（pdx），不含 tools/prof 与 tests。
+# 口径：只统计**装进包里**的代码（pdx），不含 tools/ 与 tests。
 source = ["pdx"]
 branch = true
 omit = ["*/tests/*"]
@@ -307,30 +285,11 @@ runner = "python -m pytest -x -q -p no:randomly --no-header -m 'not integration 
 # mypy —— 类型检查
 # ─────────────────────────────────────────────────────────────
 [tool.mypy]
-# ⚠️ 3.12 而不是 3.11（`requires-python = ">=3.11"`）—— 这是被**桩文件**逼出来的一步，
-# 起因与代价都写清楚，免得后人以为是随手抬的：
-#
-# 起因：`pdx.game_auto` 直接 import numpy（截图/模板是像素数组）与 cv2（模板匹配）。
-# numpy 2.5 的 `__init__.pyi` 用了 PEP 695 的 `type X = …` 语句（第 737 行起），
-# 那要求 `python_version >= 3.12`；钉在 3.11 时 mypy 会**在解析桩文件时就语法报错**
-# 并直接中止整个检查：`errors prevented further checking`。也就是"不检查"，
-# 比"按 3.12 检查"更糟。
-#
-# 试过但**不管用**的两条（都实测过，别再试）：
-#   * `[[tool.mypy.overrides]] follow_imports = "skip"` —— 2.3.1 在 skip 模式下
-#     照样解析桩文件，照样中止；加 `--ignore-missing-imports` 也无用。
-#   * 逐模块 `python_version` —— mypy 直接拒绝：
-#     `Per-module sections should only specify per-module flags (python_version)`。
-#
-# 代价：mypy 不再替我们拦「3.12 才有的语法」。
-# 兜底不靠它：`requires-python = ">=3.11"` 与 classifiers 里的 3.11 由
-# **CI 跑真实解释器**兜底（3.11 上 import 就会炸），ruff 的
-# `target-version = "py311"` 也仍然只按 3.11 给建议。
-# 检查范围由下面的 files 定义；实际文件数和结果记录在对应验证输出中。
+# 本机开发环境的可选 numpy 类型桩使用 Python 3.12 的 type 语句。
+# mypy 按 3.12 解析；最低 3.11 运行时由 Ruff 和三平台解释器矩阵核对。
 python_version = "3.12"
 # 覆盖范围：解析器包 + 测试。
-# **不含 `tools/prof/`** —— 那是一次性的剖析脚本，只在本地手跑、不进 CI；
-# 但它仍受 ruff 约束（ruff 扫全仓），不是完全无人看管。
+# tools/ 中的检查与基准入口受全仓 ruff 和对应工具合同测试约束。
 files = ["src/pdx", "tests"]
 # 渐进式收紧：先保证「不出现新错误」，再逐步加严。
 warn_unused_configs = true
@@ -344,10 +303,3 @@ disallow_untyped_defs = false   # 目标：逐步收紧到 true
 disallow_incomplete_defs = false
 show_error_codes = true
 pretty = true
-
-
-# 没有类型标注、也没有 `py.typed` 的第三方库 —— 明确列出来，别用全局
-# `ignore_missing_imports` 把"我们自己写错导入名"也一起放过。
-[[tool.mypy.overrides]]
-module = ["pydirectinput", "pygetwindow", "win32api", "win32con", "win32gui", "win32process"]
-ignore_missing_imports = true

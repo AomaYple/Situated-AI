@@ -1,0 +1,15 @@
+# 由 pdx.decisions 生成；改革派IG身份是机会代理，不指定法律。
+sitai_reform_fragile = {
+    is_ai = yes
+    OR = { legitimacy < 25 is_at_war = yes any_insurrection_ongoing = yes }
+}
+sitai_reform_opportunity = {
+    is_ai = yes
+    legitimacy >= 75
+    is_at_war = no
+    any_insurrection_ongoing = no
+    OR = {
+        ig:ig_industrialists ?= { is_in_government = yes }
+        ig:ig_intelligentsia ?= { is_in_government = yes }
+    }
+}

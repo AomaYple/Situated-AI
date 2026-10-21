@@ -1,0 +1,564 @@
+############# PLANTATIONS
+
+building_coffee_plantation = {
+	building_group = bg_plantations
+	icon = "gfx/interface/icons/building_icons/coffee_plantation.dds"
+	required_construction = construction_cost_low
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_coffee_plantation
+		pmg_drying_coffee_plantation
+		pmg_coffee_exploitation
+		pmg_train_automation_building_coffee_plantation
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
+
+	# SITAI BEGIN initialized:building_coffee_plantation.ai_value
+	ai_value = { value = 1000
+		# SITAI BEGIN information:building_coffee_plantation.ai_value
+		# actual_cost_building_coffee_plantation_building_coffee_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_coffee_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+		if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = pm_steam_rail_transport } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_coffee_plantation_building_coffee_plantation_coffee_plantation_mechanical_drying_tools [market]; 实际启用生产组 pmg_drying_coffee_plantation 的 tools 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_mechanical_drying } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_mechanical_drying } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_coffee_plantation_building_coffee_plantation_coffee_plantation_mechanical_drying_engines [market]; 实际启用生产组 pmg_drying_coffee_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_mechanical_drying } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_mechanical_drying } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# comparative_logistics_building_coffee_plantation [economy]; 市场可达性和基础设施同时不足时计入扩建物流成本，不改变铁路港口与现有生产
+		else_if = { limit = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 market_access < 0.9 infrastructure_delta < 0 exists = owner owner = { is_ai = yes } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 NOT = { market_access < 0.9 } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta < 0 } } } AND = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 } } } } } multiply = 1.0 }
+		# active_building_coffee_plantation_coffee_plantation_wet_process_mechanical_input_tools [market]; 已存在建筑的主要生产方式为 coffee_plantation_wet_process_mechanical，其 tools 投入高价短缺时保留有限的扩建机会成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = {  } } } } } } } } multiply = 1.0 }
+		# active_building_coffee_plantation_coffee_plantation_wet_process_mechanical_input_engines [market]; 已存在建筑的主要生产方式为 coffee_plantation_wet_process_mechanical，其 engines 投入高价短缺时保留有限的扩建机会成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# active_building_coffee_plantation_coffee_plantation_wet_process_manual_input_tools [market]; 已存在建筑的主要生产方式为 coffee_plantation_wet_process_manual，其 tools 投入高价短缺时保留有限的扩建机会成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_manual } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_manual } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = {  } } } } } } } } multiply = 1.0 }
+		# comparative_employment_active_building_coffee_plantation_coffee_plantation_wet_process_mechanical_output_coffee [economy]; 已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } state_unemployment_rate >= 0 state_unemployment_rate <= 1 state_unemployment_rate >= 0.1 exists = owner owner = { is_ai = yes in_default = no taking_loans = no gold_reserves > 0 exists = market market = { exists = mg:coffee mg:coffee = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:tools mg:tools = { market_goods_pricier <= 0.25 } } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 NOT = { state_unemployment_rate >= 0.1 } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { gold_reserves > 0 } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = {  } exists = mg:engines mg:engines = {  } exists = mg:tools mg:tools = {  } } } } } } } } multiply = 1.0 }
+		# comparative_employment_active_building_coffee_plantation_coffee_plantation_wet_process_manual_output_coffee [economy]; 已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_manual } state_unemployment_rate >= 0 state_unemployment_rate <= 1 state_unemployment_rate >= 0.1 exists = owner owner = { is_ai = yes in_default = no taking_loans = no gold_reserves > 0 exists = market market = { exists = mg:coffee mg:coffee = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:tools mg:tools = { market_goods_pricier <= 0.25 } } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_manual } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 NOT = { state_unemployment_rate >= 0.1 } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { gold_reserves > 0 } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = {  } exists = mg:tools mg:tools = {  } } } } } } } } multiply = 1.0 }
+		# comparative_employment_active_building_coffee_plantation_coffee_plantation_dry_process_output_coffee [economy]; 已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_dry_process } state_unemployment_rate >= 0 state_unemployment_rate <= 1 state_unemployment_rate >= 0.1 exists = owner owner = { is_ai = yes in_default = no taking_loans = no gold_reserves > 0 exists = market market = { exists = mg:coffee mg:coffee = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_dry_process } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 NOT = { state_unemployment_rate >= 0.1 } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { gold_reserves > 0 } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = {  } } } } } } } } multiply = 1.0 }
+		# active_building_coffee_plantation_coffee_plantation_wet_process_mechanical_output_coffee [economy]; 已启用主要生产方式 coffee_plantation_wet_process_mechanical 的 coffee 产出高价短缺，且财政、物流和其主要投入可负担时提高扩建候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coffee mg:coffee = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:tools mg:tools = { market_goods_pricier <= 0.25 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = {  } exists = mg:engines mg:engines = {  } exists = mg:tools mg:tools = {  } } } } } } } } multiply = 1.0 }
+		# active_building_coffee_plantation_coffee_plantation_wet_process_manual_output_coffee [economy]; 已启用主要生产方式 coffee_plantation_wet_process_manual 的 coffee 产出高价短缺，且财政、物流和其主要投入可负担时提高扩建候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_manual } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coffee mg:coffee = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:tools mg:tools = { market_goods_pricier <= 0.25 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_manual } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coffee mg:coffee = {  } exists = mg:tools mg:tools = {  } } } } } } } } multiply = 1.0 }
+		# active_building_coffee_plantation_coffee_plantation_dry_process_output_coffee [economy]; 已启用主要生产方式 coffee_plantation_dry_process 的 coffee 产出高价短缺，且财政、物流和其主要投入可负担时提高扩建候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_dry_process } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coffee mg:coffee = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		# SITAI END information:building_coffee_plantation.ai_value
+	}
+	# SITAI END initialized:building_coffee_plantation.ai_value
+}
+
+building_cotton_plantation = {
+	building_group = bg_plantations
+	icon = "gfx/interface/icons/building_icons/cotton_plantation.dds"
+	required_construction = construction_cost_low
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_cotton_plantation
+		pmg_cotton_exploitation
+		pmg_train_automation_building_cotton_plantation
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
+
+	ai_value = {
+		value = 1000
+
+		if = { # British dictates
+			limit = {
+				owner = {
+					has_journal_entry = je_british_dictate_plantations
+					var:dictate_plantation_type ?= 4
+				}
+			}
+			add = 2000
+		}
+
+		if = { # Colonisation of Korea
+			limit = {
+				owner ?= {
+					c:JAP ?= this
+					has_journal_entry = je_colonize_korea
+				}
+				is_in_geographic_region = geographic_region_korea
+			}
+			add = 2000
+		}
+
+		# SITAI BEGIN information:building_cotton_plantation.ai_value
+		# actual_output_building_cotton_plantation_building_cotton_plantation_automatic_irrigation_building_cotton_plantation_fabric [economy]; 实际主要配方的 fabric 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_cotton_plantation production_method = automatic_irrigation_building_cotton_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_cotton_plantation production_method = automatic_irrigation_building_cotton_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } exists = mg:fabric mg:fabric = {  } } } } } } } } multiply = 1.0 }
+		# actual_output_building_cotton_plantation_building_cotton_plantation_default_building_cotton_plantation_fabric [economy]; 实际主要配方的 fabric 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_cotton_plantation production_method = default_building_cotton_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_cotton_plantation production_method = default_building_cotton_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fabric mg:fabric = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fabric mg:fabric = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_cotton_plantation_building_cotton_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_cotton_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_cotton_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_cotton_plantation production_method = pm_steam_rail_transport } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_cotton_plantation_building_cotton_plantation_automatic_irrigation_building_cotton_plantation_engines [market]; 实际启用生产组 pmg_base_building_cotton_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_cotton_plantation production_method = automatic_irrigation_building_cotton_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_cotton_plantation production_method = automatic_irrigation_building_cotton_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# building_cotton_plantation_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		# SITAI END information:building_cotton_plantation.ai_value
+	}
+}
+
+building_dye_plantation = {
+	building_group = bg_plantations
+	icon = "gfx/interface/icons/building_icons/dye_plantation.dds"
+	required_construction = construction_cost_low
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_dye_plantation
+		pmg_dye_exploitation
+		pmg_train_automation_building_dye_plantation
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
+
+	ai_value = {
+		value = 1000
+
+		if = { # British dictates
+			limit = {
+				owner = {
+					has_journal_entry = je_british_dictate_plantations
+					var:dictate_plantation_type ?= 3
+				}
+			}
+			add = 2000
+		}
+
+		# SITAI BEGIN information:building_dye_plantation.ai_value
+		# actual_output_building_dye_plantation_building_dye_plantation_automatic_irrigation_building_dye_plantation_dye [economy]; 实际主要配方的 dye 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_dye_plantation production_method = automatic_irrigation_building_dye_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:dye mg:dye = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_dye_plantation production_method = automatic_irrigation_building_dye_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:dye mg:dye = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:dye mg:dye = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:dye mg:dye = {  } exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# actual_output_building_dye_plantation_building_dye_plantation_default_building_dye_plantation_dye [economy]; 实际主要配方的 dye 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_dye_plantation production_method = default_building_dye_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:dye mg:dye = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_dye_plantation production_method = default_building_dye_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:dye mg:dye = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:dye mg:dye = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:dye mg:dye = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_dye_plantation_building_dye_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_dye_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_dye_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_dye_plantation production_method = pm_steam_rail_transport } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_dye_plantation_building_dye_plantation_automatic_irrigation_building_dye_plantation_engines [market]; 实际启用生产组 pmg_base_building_dye_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_dye_plantation production_method = automatic_irrigation_building_dye_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_dye_plantation production_method = automatic_irrigation_building_dye_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# building_dye_plantation_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:dye mg:dye = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		# SITAI END information:building_dye_plantation.ai_value
+	}
+}
+
+building_opium_plantation = {
+	building_group = bg_plantations
+	icon = "gfx/interface/icons/building_icons/opium_plantation.dds"
+	required_construction = construction_cost_low
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_opium_plantation
+		pmg_train_automation_building_opium_plantation
+	}
+
+	can_build_government = {
+		owner = { NOT = { is_banning_goods = g:opium } }
+	}
+	can_build_private = {
+		owner = { NOT = { is_banning_goods = g:opium } }
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
+
+	ai_value = {
+		value = 1000
+
+		if = { # British dictates
+			limit = {
+				owner = {
+					has_journal_entry = je_british_dictate_plantations
+					var:dictate_plantation_type ?= 1
+				}
+			}
+			add = 2000
+		}
+
+		if = { # Colonisation of Korea
+			limit = {
+				owner ?= {
+					c:JAP ?= this
+					has_journal_entry = je_colonize_korea
+				}
+				is_in_geographic_region = geographic_region_korea
+			}
+			add = 2000
+		}
+
+		# SITAI BEGIN information:building_opium_plantation.ai_value
+		# actual_output_building_opium_plantation_building_opium_plantation_automatic_irrigation_building_opium_plantation_opium [economy]; 实际主要配方的 opium 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_opium_plantation production_method = automatic_irrigation_building_opium_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:opium mg:opium = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_opium_plantation production_method = automatic_irrigation_building_opium_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:opium mg:opium = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:opium mg:opium = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } exists = mg:opium mg:opium = {  } } } } } } } } multiply = 1.0 }
+		# actual_output_building_opium_plantation_building_opium_plantation_default_building_opium_plantation_opium [economy]; 实际主要配方的 opium 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_opium_plantation production_method = default_building_opium_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:opium mg:opium = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_opium_plantation production_method = default_building_opium_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:opium mg:opium = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:opium mg:opium = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:opium mg:opium = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_opium_plantation_building_opium_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_opium_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_opium_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_opium_plantation production_method = pm_steam_rail_transport } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_opium_plantation_building_opium_plantation_automatic_irrigation_building_opium_plantation_engines [market]; 实际启用生产组 pmg_base_building_opium_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_opium_plantation production_method = automatic_irrigation_building_opium_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_opium_plantation production_method = automatic_irrigation_building_opium_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# building_opium_plantation_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:opium mg:opium = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		# SITAI END information:building_opium_plantation.ai_value
+	}
+}
+
+building_tea_plantation = {
+	building_group = bg_plantations
+	icon = "gfx/interface/icons/building_icons/tea_plantation.dds"
+	required_construction = construction_cost_low
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_tea_plantation
+		pmg_tea_exploitation
+		pmg_train_automation_building_tea_plantation
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
+
+	ai_value = {
+		value = 1000
+
+		if = { # British dictates
+			limit = {
+				owner = {
+					has_journal_entry = je_british_dictate_plantations
+					var:dictate_plantation_type ?= 2
+				}
+			}
+			add = 2000
+		}
+
+		if = { # Colonisation of Korea
+			limit = {
+				owner ?= {
+					c:JAP ?= this
+					has_journal_entry = je_colonize_korea
+				}
+				is_in_geographic_region = geographic_region_korea
+			}
+			add = 2000
+		}
+
+		# SITAI BEGIN information:building_tea_plantation.ai_value
+		# actual_output_building_tea_plantation_building_tea_plantation_automatic_irrigation_building_tea_plantation_tea [economy]; 实际主要配方的 tea 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_tea_plantation production_method = automatic_irrigation_building_tea_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:tea mg:tea = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tea_plantation production_method = automatic_irrigation_building_tea_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tea mg:tea = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tea mg:tea = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } exists = mg:tea mg:tea = {  } } } } } } } } multiply = 1.0 }
+		# actual_output_building_tea_plantation_building_tea_plantation_default_building_tea_plantation_tea [economy]; 实际主要配方的 tea 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_tea_plantation production_method = default_building_tea_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:tea mg:tea = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tea_plantation production_method = default_building_tea_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tea mg:tea = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tea mg:tea = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tea mg:tea = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_tea_plantation_building_tea_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_tea_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tea_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tea_plantation production_method = pm_steam_rail_transport } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_tea_plantation_building_tea_plantation_automatic_irrigation_building_tea_plantation_engines [market]; 实际启用生产组 pmg_base_building_tea_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tea_plantation production_method = automatic_irrigation_building_tea_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tea_plantation production_method = automatic_irrigation_building_tea_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# building_tea_plantation_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:tea mg:tea = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		# SITAI END information:building_tea_plantation.ai_value
+	}
+}
+
+building_tobacco_plantation = {
+	building_group = bg_plantations
+	icon = "gfx/interface/icons/building_icons/tobacco_plantation.dds"
+	required_construction = construction_cost_low
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_tobacco_plantation
+		pmg_manufacture_tobacco
+		pmg_working_conditions_tobacco
+		pmg_train_automation_building_tobacco_plantation
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
+
+	ai_value = {
+		value = 1000
+
+		if = { # British dictates
+			limit = {
+				owner = {
+					has_journal_entry = je_british_dictate_plantations
+					var:dictate_plantation_type ?= 5
+				}
+			}
+			add = 2000
+		}
+
+		if = { # Colonisation of Korea
+			limit = {
+				owner ?= {
+					c:JAP ?= this
+					has_journal_entry = je_colonize_korea
+				}
+				is_in_geographic_region = geographic_region_korea
+			}
+			add = 2000
+		}
+
+		# SITAI BEGIN information:building_tobacco_plantation.ai_value
+		# actual_output_building_tobacco_plantation_building_tobacco_plantation_automatic_irrigation_building_tobacco_plantation_tobacco [economy]; 实际主要配方的 tobacco 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_tobacco_plantation production_method = automatic_irrigation_building_tobacco_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:tobacco mg:tobacco = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = automatic_irrigation_building_tobacco_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tobacco mg:tobacco = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tobacco mg:tobacco = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } exists = mg:tobacco mg:tobacco = {  } } } } } } } } multiply = 1.0 }
+		# actual_output_building_tobacco_plantation_building_tobacco_plantation_default_building_tobacco_plantation_tobacco [economy]; 实际主要配方的 tobacco 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_tobacco_plantation production_method = default_building_tobacco_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:tobacco mg:tobacco = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = default_building_tobacco_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tobacco mg:tobacco = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tobacco mg:tobacco = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:tobacco mg:tobacco = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_tobacco_plantation_building_tobacco_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_tobacco_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = pm_steam_rail_transport } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_tobacco_plantation_building_tobacco_plantation_radio_stations_tobacco_radios [market]; 实际启用生产组 pmg_working_conditions_tobacco 的 radios 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = radio_stations_tobacco } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:radios mg:radios = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = radio_stations_tobacco } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:radios mg:radios = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:radios mg:radios = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:radios mg:radios = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_tobacco_plantation_building_tobacco_plantation_electric_rollers_iron [market]; 实际启用生产组 pmg_manufacture_tobacco 的 iron 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = electric_rollers } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = electric_rollers } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_tobacco_plantation_building_tobacco_plantation_electric_rollers_electricity [market]; 实际启用生产组 pmg_manufacture_tobacco 的 electricity 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = electric_rollers } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:electricity mg:electricity = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = electric_rollers } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:electricity mg:electricity = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:electricity mg:electricity = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:electricity mg:electricity = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_tobacco_plantation_building_tobacco_plantation_molds_iron [market]; 实际启用生产组 pmg_manufacture_tobacco 的 iron 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = molds } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = molds } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:iron mg:iron = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_tobacco_plantation_building_tobacco_plantation_automatic_irrigation_building_tobacco_plantation_engines [market]; 实际启用生产组 pmg_base_building_tobacco_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = automatic_irrigation_building_tobacco_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = automatic_irrigation_building_tobacco_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# building_tobacco_plantation_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:tobacco mg:tobacco = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		# SITAI END information:building_tobacco_plantation.ai_value
+	}
+}
+
+building_sugar_plantation = {
+	building_group = bg_plantations
+	icon = "gfx/interface/icons/building_icons/sugar_plantation.dds"
+	required_construction = construction_cost_low
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_sugar_plantation
+		pmg_refinement_building_sugar_plantation
+		pmg_exploitation_sugar
+		pmg_train_automation_building_sugar_plantation
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
+
+	# SITAI BEGIN initialized:building_sugar_plantation.ai_value
+	ai_value = { value = 1000
+		# SITAI BEGIN information:building_sugar_plantation.ai_value
+		# actual_cost_building_sugar_plantation_building_sugar_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_sugar_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+		if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = pm_steam_rail_transport } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_sugar_plantation_building_sugar_plantation_centrifugal_machine_sugar_engines [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = centrifugal_machine_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = centrifugal_machine_sugar } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_sugar_plantation_building_sugar_plantation_centrifugal_machine_sugar_coal [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 coal 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = centrifugal_machine_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = centrifugal_machine_sugar } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_sugar_plantation_building_sugar_plantation_steam_powered_evaporation_sugar_engines [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = steam_powered_evaporation_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = steam_powered_evaporation_sugar } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_sugar_plantation_building_sugar_plantation_steam_powered_evaporation_sugar_coal [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 coal 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = steam_powered_evaporation_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = steam_powered_evaporation_sugar } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_sugar_plantation_building_sugar_plantation_vacuum_pan_sugar_coal [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 coal 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = vacuum_pan_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = vacuum_pan_sugar } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:coal mg:coal = {  } } } } } } } } multiply = 1.0 }
+		# comparative_logistics_building_sugar_plantation [economy]; 市场可达性和基础设施同时不足时计入扩建物流成本，不改变铁路港口与现有生产
+		else_if = { limit = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 market_access < 0.9 infrastructure_delta < 0 exists = owner owner = { is_ai = yes } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 NOT = { market_access < 0.9 } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta < 0 } } } AND = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 } } } } } multiply = 1.0 }
+		# active_building_sugar_plantation_automatic_irrigation_building_sugar_plantation_input_engines [market]; 已存在建筑的主要生产方式为 automatic_irrigation_building_sugar_plantation，其 engines 投入高价短缺时保留有限的扩建机会成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = automatic_irrigation_building_sugar_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = automatic_irrigation_building_sugar_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# comparative_employment_active_building_sugar_plantation_default_building_sugar_plantation_output_sugar [economy]; 已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_sugar_plantation production_method = default_building_sugar_plantation } state_unemployment_rate >= 0 state_unemployment_rate <= 1 state_unemployment_rate >= 0.1 exists = owner owner = { is_ai = yes in_default = no taking_loans = no gold_reserves > 0 exists = market market = { exists = mg:sugar mg:sugar = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = default_building_sugar_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:sugar mg:sugar = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:sugar mg:sugar = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 NOT = { state_unemployment_rate >= 0.1 } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { gold_reserves > 0 } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 exists = owner owner = { exists = market market = { exists = mg:sugar mg:sugar = {  } } } } } } } } multiply = 1.0 }
+		# comparative_employment_active_building_sugar_plantation_automatic_irrigation_building_sugar_plantation_output_sugar [economy]; 已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_sugar_plantation production_method = automatic_irrigation_building_sugar_plantation } state_unemployment_rate >= 0 state_unemployment_rate <= 1 state_unemployment_rate >= 0.1 exists = owner owner = { is_ai = yes in_default = no taking_loans = no gold_reserves > 0 exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:sugar mg:sugar = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = automatic_irrigation_building_sugar_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:sugar mg:sugar = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:sugar mg:sugar = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 NOT = { state_unemployment_rate >= 0.1 } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { gold_reserves > 0 } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } exists = mg:sugar mg:sugar = {  } } } } } } } } multiply = 1.0 }
+		# active_building_sugar_plantation_automatic_irrigation_building_sugar_plantation_output_sugar [economy]; 已启用主要生产方式 automatic_irrigation_building_sugar_plantation 的 sugar 产出高价短缺，且财政、物流和其主要投入可负担时提高扩建候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_sugar_plantation production_method = automatic_irrigation_building_sugar_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:sugar mg:sugar = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = automatic_irrigation_building_sugar_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:sugar mg:sugar = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:sugar mg:sugar = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } exists = mg:sugar mg:sugar = {  } } } } } } } } multiply = 1.0 }
+		# active_building_sugar_plantation_default_building_sugar_plantation_output_sugar [economy]; 已启用主要生产方式 default_building_sugar_plantation 的 sugar 产出高价短缺，且财政、物流和其主要投入可负担时提高扩建候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_sugar_plantation production_method = default_building_sugar_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:sugar mg:sugar = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		# SITAI END information:building_sugar_plantation.ai_value
+	}
+	# SITAI END initialized:building_sugar_plantation.ai_value
+}
+
+building_banana_plantation = {
+	building_group = bg_plantations
+	icon = "gfx/interface/icons/building_icons/banana_plantation.dds"
+	required_construction = construction_cost_low
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_banana_plantation
+		pmg_banana_exploitation
+		pmg_train_automation_building_banana_plantation
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
+
+	# SITAI BEGIN initialized:building_banana_plantation.ai_value
+	ai_value = { value = 1000
+		# SITAI BEGIN information:building_banana_plantation.ai_value
+		# actual_cost_building_banana_plantation_building_banana_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_banana_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+		if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_banana_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_banana_plantation production_method = pm_steam_rail_transport } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = {  } } } } } } } } multiply = 1.0 }
+		# comparative_logistics_building_banana_plantation [economy]; 市场可达性和基础设施同时不足时计入扩建物流成本，不改变铁路港口与现有生产
+		else_if = { limit = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 market_access < 0.9 infrastructure_delta < 0 exists = owner owner = { is_ai = yes } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 NOT = { market_access < 0.9 } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta < 0 } } } AND = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 } } } } } multiply = 1.0 }
+		# active_building_banana_plantation_automatic_irrigation_building_banana_plantation_input_engines [market]; 已存在建筑的主要生产方式为 automatic_irrigation_building_banana_plantation，其 engines 投入高价短缺时保留有限的扩建机会成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_banana_plantation production_method = automatic_irrigation_building_banana_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_banana_plantation production_method = automatic_irrigation_building_banana_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# comparative_employment_active_building_banana_plantation_default_building_banana_plantation_output_fruit [economy]; 已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_banana_plantation production_method = default_building_banana_plantation } state_unemployment_rate >= 0 state_unemployment_rate <= 1 state_unemployment_rate >= 0.1 exists = owner owner = { is_ai = yes in_default = no taking_loans = no gold_reserves > 0 exists = market market = { exists = mg:fruit mg:fruit = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_banana_plantation production_method = default_building_banana_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fruit mg:fruit = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fruit mg:fruit = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 NOT = { state_unemployment_rate >= 0.1 } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { gold_reserves > 0 } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 exists = owner owner = { exists = market market = { exists = mg:fruit mg:fruit = {  } } } } } } } } multiply = 1.0 }
+		# comparative_employment_active_building_banana_plantation_automatic_irrigation_building_banana_plantation_output_fruit [economy]; 已有失业、财政储备且实际主要配方产出短缺时提高可负担扩建的相对关注，不用人口数替代招聘和利润
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_banana_plantation production_method = automatic_irrigation_building_banana_plantation } state_unemployment_rate >= 0 state_unemployment_rate <= 1 state_unemployment_rate >= 0.1 exists = owner owner = { is_ai = yes in_default = no taking_loans = no gold_reserves > 0 exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:fruit mg:fruit = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_banana_plantation production_method = automatic_irrigation_building_banana_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fruit mg:fruit = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fruit mg:fruit = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 NOT = { state_unemployment_rate >= 0.1 } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { gold_reserves > 0 } } } } AND = { exists = ROOT ROOT = { state_unemployment_rate >= 0 state_unemployment_rate <= 1 exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } exists = mg:fruit mg:fruit = {  } } } } } } } } multiply = 1.0 }
+		# active_building_banana_plantation_automatic_irrigation_building_banana_plantation_output_fruit [economy]; 已启用主要生产方式 automatic_irrigation_building_banana_plantation 的 fruit 产出高价短缺，且财政、物流和其主要投入可负担时提高扩建候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_banana_plantation production_method = automatic_irrigation_building_banana_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:fruit mg:fruit = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_banana_plantation production_method = automatic_irrigation_building_banana_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fruit mg:fruit = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:fruit mg:fruit = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } exists = mg:fruit mg:fruit = {  } } } } } } } } multiply = 1.0 }
+		# active_building_banana_plantation_default_building_banana_plantation_output_fruit [economy]; 已启用主要生产方式 default_building_banana_plantation 的 fruit 产出高价短缺，且财政、物流和其主要投入可负担时提高扩建候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_banana_plantation production_method = default_building_banana_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:fruit mg:fruit = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		# SITAI END information:building_banana_plantation.ai_value
+	}
+	# SITAI END initialized:building_banana_plantation.ai_value
+}
+
+building_silk_plantation = {
+	building_group = bg_plantations
+	icon = "gfx/interface/icons/building_icons/silk_plantation.dds"
+	required_construction = construction_cost_low
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	city_type = farm
+	levels_per_mesh = 50
+
+	production_method_groups = {
+		pmg_base_building_silk_plantation
+		pmg_train_automation_building_silk_plantation
+	}
+	ownership_type = self
+
+	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_plantations.dds"
+
+	ai_value = {
+		value = 1000
+
+		if = { # Colonisation of Korea
+			limit = {
+				owner ?= {
+					c:JAP ?= this
+					has_journal_entry = je_colonize_korea
+				}
+				is_in_geographic_region = geographic_region_korea
+			}
+			add = 2000
+		}
+
+		# SITAI BEGIN information:building_silk_plantation.ai_value
+		# actual_output_building_silk_plantation_building_silk_plantation_automatic_irrigation_building_silk_plantation_silk [economy]; 实际主要配方的 silk 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_silk_plantation production_method = automatic_irrigation_building_silk_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:silk mg:silk = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_silk_plantation production_method = automatic_irrigation_building_silk_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:silk mg:silk = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:silk mg:silk = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier <= 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } exists = mg:silk mg:silk = {  } } } } } } } } multiply = 1.0 }
+		# actual_output_building_silk_plantation_building_silk_plantation_default_building_silk_plantation_silk [economy]; 实际主要配方的 silk 产出短缺且主要投入、财政和物流可承受时提高建设候选
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_silk_plantation production_method = default_building_silk_plantation } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:silk mg:silk = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = no } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = no } } } } AND = { exists = ROOT ROOT = { NOT = { infrastructure_delta >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_silk_plantation production_method = default_building_silk_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:silk mg:silk = { NOT = { market_goods_pricier > 0.25 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:silk mg:silk = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:silk mg:silk = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_silk_plantation_building_silk_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_silk_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_silk_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_silk_plantation production_method = pm_steam_rail_transport } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:transportation mg:transportation = {  } } } } } } } } multiply = 1.0 }
+		# actual_cost_building_silk_plantation_building_silk_plantation_automatic_irrigation_building_silk_plantation_engines [market]; 实际启用生产组 pmg_base_building_silk_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+		else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_silk_plantation production_method = automatic_irrigation_building_silk_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_production_method_active = { building_type = building_silk_plantation production_method = automatic_irrigation_building_silk_plantation } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.5 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } } AND = { exists = ROOT ROOT = { exists = owner owner = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } } multiply = 1.0 }
+		# building_silk_plantation_bottleneck [economy]; 所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行
+		else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:silk mg:silk = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } multiply = 1.15 }
+		# SITAI END information:building_silk_plantation.ai_value
+	}
+}

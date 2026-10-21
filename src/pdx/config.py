@@ -180,16 +180,11 @@ WORKSHOP = resolve(
     workshop_for(default_game_root()),
 )
 
-#: mod 的命名空间前缀（F7：策略 `ai_strategy_sitai_*`、变量/本地化 `sitai_*`、文件 `sitai_*.txt`）。
+#: Mod 脚本资源的命名空间前缀；稳定启动器身份由发行模块声明。
 #:
-#: 两处用途**必须同源**，所以它住在这里而不是生成器里：
-#:   * 生成器用它给策略 / 变量 / 本地化 / 文件起名（`modgen.NAMESPACE_PREFIX`）；
-#:   * 扫描器用它认出「用户 mod 目录里哪一个是**我们自己部署**的」
-#:     （`.metadata/metadata.json` 的 `id` 形如 `sitai.<档案 id…>`，见 `mods.OWN_MOD_ID_PREFIX`）。
+#: 生产生成链使用它生成脚本资源名，Mod 分析器据此构造稳定 ID 前缀，以便从本机 Mod 清单
+#: 排除本产品。它放在共享配置中，避免分析器依赖发行模块。
 #:
-#: 为什么不下沉到 `mods.py` 自己写一份字面量：那是 P9 的重复定义；
-#: 为什么不让 `mods.py` 去 import `modgen`：它是被 `analyze / verify / evidence`
-#: 共用的底层模块，为一个字符串把 2200 行的生成器拉进它的依赖里不值。
 NAMESPACE_PREFIX = "sitai_"
 
 #: 本仓库根目录（tools/ 的上一级）

@@ -1,14 +1,4 @@
-"""`tools/probe/mem_baseline.py` 的第一批用例（B107 / B108 / B109 三条硬伤的看门狗）。
-
-为什么要单独给它开一个文件：它是一把**量尺**，而量尺自己的三条硬伤已经真实咬过两次
-（`t13`：单组 `run` 把冻结的多组基线截断成一组；同一 tag 的第二条臂把第一条臂的明细覆盖掉），
-第三条是**跨平台硬伤**（`t14` 实测：GBK 控制台下 `print('✅')` 抛 `UnicodeEncodeError` ⇒
-同一条命令在 Windows 默认控制台判红、在 UTF-8 环境判绿）。它此前**一个用例都没有**。
-三条逐条登记在 `docs/design/backlog.md` 附⑤（B107 / B108 / B109）。
-
-⚠️ 本文件**不碰** `tools/out/mem/` 下任何冻结文件：单测把模块的 `OUT_DIR` 指到 `tmp_path`，
-子进程用例显式把 `--index` 指到临时目录（`check` 只读不写）。
-"""
+"""验证跨平台进程内存基线工具的采样、持久化和比较行为。"""
 
 from __future__ import annotations
 
@@ -33,13 +23,13 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.unit
 
-_SCRIPT = config.REPO / "tools" / "probe" / "mem_baseline.py"
+_SCRIPT = config.REPO / "tools" / "ci" / "mem_baseline.py"
 _IS_WIN = sys.platform == "win32"
 
 
 def _load() -> ModuleType:
-    """按路径 import（`tools/probe/` 不是包 —— 与 `test_probe_stage3.py` 同法）。"""
-    spec = importlib.util.spec_from_file_location("probe_mem_baseline", _SCRIPT)
+    """从工具目录按路径加载脚本。"""
+    spec = importlib.util.spec_from_file_location("mem_baseline", _SCRIPT)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)

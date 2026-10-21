@@ -1,0 +1,10 @@
+# 由 pdx.decision_economy 生成；只读取原版财政和行政事实。
+sitai_economy_constraint = {
+    is_ai = yes
+    OR = { taking_loans = yes bureaucracy < 0 }
+}
+sitai_economy_capacity = {
+    is_ai = yes
+    taking_loans = no
+    bureaucracy >= 0
+}

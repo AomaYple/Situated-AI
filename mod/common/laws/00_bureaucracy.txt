@@ -1,0 +1,232 @@
+law_hereditary_bureaucrats = {
+	group = lawgroup_bureaucracy
+
+	icon = "gfx/interface/icons/law_icons/hereditary_bureaucrats.dds"
+
+	progressiveness = -50
+
+	is_visible = {
+		NOR = {
+			c:AUS ?= this # For the Austrian Empire and its subjects
+			AND = {
+				exists = c:AUS
+				is_subject_of = c:AUS
+			}
+		}
+	}
+
+	modifier = {
+		state_bureaucracy_population_base_cost_factor_mult = -0.25
+		country_aristocrats_pol_str_mult = 0.25
+	}
+
+	on_enact = {
+		custom_tooltip = urban_aristocrats_int_ig_shift_effect_tt
+		if = {
+			limit = {
+				has_law_or_variant = law_type:law_elected_bureaucrats
+			}
+			custom_tooltip = bureaucrats_pb_ig_shift_effect_negative_tt
+		}
+	}
+
+	disallowing_laws = {
+		law_council_republic
+	}
+
+	ai_will_do = {
+		exists = ruler
+		ruler = {
+			has_ideology = ideology:ideology_traditionalist
+		}
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_hereditary_bureaucrats.ai_enact_weight_modifier
+		# political_capacity_law_hereditary_bureaucrats [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		# SITAI END information:law_hereditary_bureaucrats.ai_enact_weight_modifier
+	}
+}
+
+law_crownland_diets = {
+	group = lawgroup_bureaucracy
+	parent = law_hereditary_bureaucrats # Inherits ideological stances from parent
+
+	icon = "gfx/interface/icons/law_icons/crownland_diets.dds"
+
+	progressiveness = -50
+
+	is_visible = {
+		OR = {
+			c:AUS ?= this # For the Austrian Empire and its subjects
+			AND = {
+				exists = c:AUS
+				is_subject_of = c:AUS
+			}
+		}
+	}
+
+	modifier = {
+		state_bureaucracy_population_base_cost_factor_mult = -0.25
+		country_aristocrats_pol_str_mult = 0.10
+	}
+
+	on_enact = {
+		custom_tooltip = urban_aristocrats_int_ig_shift_effect_tt
+		if = {
+			limit = {
+				has_law_or_variant = law_type:law_elected_bureaucrats
+			}
+			custom_tooltip = bureaucrats_pb_ig_shift_effect_negative_tt
+		}
+	}
+
+	disallowing_laws = {
+		law_council_republic
+	}
+
+	ai_will_do = {
+		exists = ruler
+		ruler = {
+			has_ideology = ideology:ideology_traditionalist
+		}
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_crownland_diets.ai_enact_weight_modifier
+		# political_capacity_law_crownland_diets [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		# SITAI END information:law_crownland_diets.ai_enact_weight_modifier
+	}
+}
+
+law_appointed_bureaucrats = {
+	group = lawgroup_bureaucracy
+
+	icon = "gfx/interface/icons/law_icons/appointed_bureaucrats.dds"
+
+	progressiveness = 0
+
+	modifier = {
+		country_bureaucrats_pol_str_mult = 0.25
+		state_tax_capacity_mult = 0.25
+	}
+
+	on_enact = {
+		if = {
+			limit = {
+				has_law_or_variant = law_type:law_elected_bureaucrats
+			}
+			custom_tooltip = bureaucrats_pb_ig_shift_effect_negative_tt
+		}
+		if = {
+			limit = {
+				has_law_or_variant = law_type:law_hereditary_bureaucrats
+			}
+			custom_tooltip = urban_aristocrats_int_ig_shift_effect_negative_tt
+		}
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		if = {
+			limit = {
+				OR = {
+					has_journal_entry = je_sick_man_bureaucracy
+					has_journal_entry = je_great_reforms_bureaucratic
+				}
+				has_law_or_variant = law_type:law_hereditary_bureaucrats
+			}
+			add = 1000
+		}
+
+		if = {
+			limit = {
+				has_journal_entry = je_tenpo_crisis
+				has_variable = ai_tenpo_reform_agenda
+			}
+			add = 1000
+		}
+
+		# SITAI BEGIN information:law_appointed_bureaucrats.ai_enact_weight_modifier
+		# political_capacity_law_appointed_bureaucrats [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
+		# law_appointed_bureaucrats_ai_enact_weight_modifier [political]; 行政短缺时有限提高专业化行政候选；具体选项仍由原版政治支持与资格决定
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no in_default = no is_at_war = no bureaucracy < 0 } } add = 10.0 }
+		# SITAI END information:law_appointed_bureaucrats.ai_enact_weight_modifier
+	}
+}
+
+law_elected_bureaucrats = {
+	group = lawgroup_bureaucracy
+
+	icon = "gfx/interface/icons/law_icons/elected_bureaucrats.dds"
+
+	progressiveness = 50
+
+	disallowing_laws = {
+		law_technocracy
+		law_elder_council
+	}
+
+	on_enact = {
+		custom_tooltip = bureaucrats_pb_ig_shift_effect_tt
+		if = {
+			limit = {
+				has_law_or_variant = law_type:law_hereditary_bureaucrats
+			}
+			custom_tooltip = urban_aristocrats_int_ig_shift_effect_negative_tt
+		}
+	}
+
+	modifier = {
+		country_bureaucracy_investment_cost_factor_mult = -0.15
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		if = {
+			limit = {
+				has_journal_entry = je_tenpo_crisis
+				has_variable = ai_tenpo_reform_agenda
+			}
+			add = 1000
+		}
+
+		# SITAI BEGIN information:law_elected_bureaucrats.ai_enact_weight_modifier
+		# political_capacity_law_elected_bureaucrats [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
+		# law_elected_bureaucrats_ai_enact_weight_modifier [political]; 行政短缺时有限提高专业化行政候选；具体选项仍由原版政治支持与资格决定
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no in_default = no is_at_war = no bureaucracy < 0 } } add = 10.0 }
+		# SITAI END information:law_elected_bureaucrats.ai_enact_weight_modifier
+	}
+}

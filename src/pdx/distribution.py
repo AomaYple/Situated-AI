@@ -3,63 +3,57 @@
 from __future__ import annotations
 
 import argparse
+import codecs
 import hashlib
 import json
+import re
 import tempfile
 import zipfile
 from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from pdx import decision_intents, decisions, explanation_probe
+from pdx import decision_intents, decisions
+from pdx.localization import parse_loc_entries
 from pdx.textio import GAME_SUFFIXES, text_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-PACKAGE_VARIANTS = (
-    "current",
-    "control",
-    "disabled",
-    "complete",
-    "fiscal",
-    "security",
-    "market",
-    "reform",
-    "economy",
-    "diplomacy",
-    "subjects",
-    "full",
-    "integrated",
-)
-
 MOD_ID = "sitai.decisions"
-PROBE_MOD_ID = "sitai.explanation-probe"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
+RELEASE_VARIANT = "release"
+METADATA_NAME = ".metadata/metadata.json"
+LAUNCHER_METADATA_KEYS = (
+    "name",
+    "id",
+    "version",
+    "supported_game_version",
+    "short_description",
+    "tags",
+    "relationships",
+    "game_custom_data",
+)
 
 # 用户可见的本地 Mod 目录名。内部 metadata.id 保持 `sitai.decisions`，用于
 # 稳定识别、兼容性校验和既有工具；这个常量只约束生成/部署时的文件夹名称。
 INSTALL_DIRECTORY_NAME = "Situated AI"
 
 
-def generation_contract(*, variant: str, with_explanation_probe: bool) -> dict[str, object]:
+def generation_contract() -> dict[str, object]:
     """返回生成、部署、测试和发布共用的候选契约。
 
     目录名是用户可见的交付接口；``MOD_ID`` 才是稳定的引擎/元数据身份。
-    探针只能改变本次候选的证据类型，不能改变生产源或生产包默认值。
+    当前生成链只输出标准 Mod，长期行为验收由用户完成。
     """
-    if variant not in PACKAGE_VARIANTS:
-        raise ValueError("包变体无效：" + "、".join(PACKAGE_VARIANTS))
     return {
         "schema": "sitai-distribution-v1",
         "mod_id": MOD_ID,
         "install_directory": INSTALL_DIRECTORY_NAME,
-        "variant": variant,
-        "candidate_kind": (
-            "instrumented_candidate" if with_explanation_probe else "production_candidate"
-        ),
-        "delivery_kind": "instrumented_validation" if with_explanation_probe else "standard_mod",
-        "with_explanation_probe": with_explanation_probe,
+        "variant": RELEASE_VARIANT,
+        "candidate_kind": "production_candidate",
+        "delivery_kind": "standard_mod",
+        "with_explanation_probe": False,
         "behavior_quality": "not_evaluated",
     }
 
@@ -75,60 +69,59 @@ def _manifest_for_payloads(
         "encoding": "游戏 .txt/.yml：UTF-8 含 BOM、LF；其他文本：UTF-8 无 BOM、LF",
         "files": {name: hashlib.sha256(raw).hexdigest() for name, raw in data.items()},
     }
-    metadata = data.get(".metadata/metadata.json")
+    metadata = data.get(METADATA_NAME)
     if metadata is not None:
         try:
             contract = json.loads(metadata.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ValueError("交付元数据不是有效 JSON") from exc
         required = {
+            "name",
             "id",
             "version",
-            "tool_version",
-            "status",
             "supported_game_version",
-            "enabled_modules",
-            "parent_package",
-            "save_compatibility",
-            "platforms",
-            "platform_notes",
-            "source_fingerprint",
+            "short_description",
+            "tags",
+            "relationships",
         }
-        if not isinstance(contract, dict) or contract.get("id") not in {MOD_ID, PROBE_MOD_ID}:
+        if (
+            not isinstance(contract, dict)
+            or contract.get("id") != MOD_ID
+            or not isinstance(contract.get("name"), str)
+        ):
             raise ValueError("交付元数据缺少稳定 Mod 身份")
         manifest["mod_id"] = contract["id"]
         if not required <= contract.keys():
             raise ValueError("交付元数据缺少包契约字段")
-        if (
-            not isinstance(contract["enabled_modules"], list)
-            or not isinstance(contract["source_fingerprint"], dict)
-            or not contract["source_fingerprint"]
+        if not isinstance(contract["tags"], list) or not isinstance(
+            contract["relationships"], list
         ):
-            raise ValueError("交付元数据的启用模块或源指纹无效")
+            raise ValueError("启动器元数据的标签或关系字段无效")
         manifest["contract"] = {
             "product_version": contract["version"],
-            "tool_version": contract["tool_version"],
-            "status": contract["status"],
             "game_version": contract["supported_game_version"],
-            "enabled_modules": contract["enabled_modules"],
-            "parent_package": contract["parent_package"],
-            "save_compatibility": contract["save_compatibility"],
-            "platforms": contract["platforms"],
-            "platform_notes": contract["platform_notes"],
-            "source_fingerprint": contract["source_fingerprint"],
         }
     if generation is not None:
         manifest["generation"] = dict(generation)
+        product_contract = generation.get("product_contract")
+        if product_contract is not None:
+            if not isinstance(product_contract, dict):
+                raise ValueError("发布生成契约无效")
+            release_contract = manifest.setdefault("contract", {})
+            if not isinstance(release_contract, dict):
+                raise ValueError("发布包契约无效")
+            release_contract.update(product_contract)
     return manifest
 
 
-def validate_package(
+def _validate_archive(
     archive_path: Path,
     *,
-    expected_variant: str | None = None,
-    allow_probe: bool = False,
+    expected_data: Mapping[str, bytes] | None,
+    expected_generation: Mapping[str, object] | None,
+    release: bool,
 ) -> dict[str, object]:
-    """校验可发布 ZIP 的路径、清单、哈希和探针边界。"""
+    """校验 ZIP；公开发布校验额外要求与当前生产源逐字节一致。"""
     with zipfile.ZipFile(archive_path) as archive:
         broken = archive.testzip()
         if broken:
@@ -136,17 +129,7 @@ def validate_package(
         names = archive.namelist()
         if len(names) != len(set(names)):
             raise ValueError("交付 ZIP 含重复路径")
-        for name in names:
-            path = PurePosixPath(name)
-            if (
-                not name
-                or path.is_absolute()
-                or ".." in path.parts
-                or "\\" in name
-                or ":" in name
-                or path.as_posix() != name
-            ):
-                raise ValueError(f"交付 ZIP 含非法路径：{name!r}")
+        _validate_paths(names)
         if MANIFEST_NAME not in names:
             raise ValueError(f"交付 ZIP 缺少 {MANIFEST_NAME}")
         try:
@@ -158,179 +141,237 @@ def validate_package(
         if manifest.get("schema") != 2:
             raise ValueError("交付清单版本不受支持")
         mod_id = manifest.get("mod_id")
-        if mod_id not in {MOD_ID, PROBE_MOD_ID}:
+        if mod_id != MOD_ID:
             raise ValueError("交付清单的稳定 Mod 身份不符")
         if manifest.get("install_directory") != INSTALL_DIRECTORY_NAME:
             raise ValueError("交付清单的安装目录不符")
         generation = manifest.get("generation")
-        if not isinstance(generation, dict):
-            raise ValueError("交付清单缺少生成契约")
-        if generation.get("install_directory") != INSTALL_DIRECTORY_NAME:
-            raise ValueError("生成契约的安装目录不符")
-        variant = generation.get("variant")
-        if not isinstance(variant, str) or variant not in PACKAGE_VARIANTS:
-            raise ValueError("生成契约的变体无效")
-        if expected_variant is not None and variant != expected_variant:
-            raise ValueError(f"交付变体为 {variant}，不是期望的 {expected_variant}")
-        with_probe = generation.get("with_explanation_probe") is True
-        if mod_id == PROBE_MOD_ID and not with_probe:
-            raise ValueError("探针身份与生成契约不一致")
-        if not allow_probe and with_probe:
-            raise ValueError("标准发布包不能包含解释探针")
+        if expected_generation is not None:
+            if generation != dict(expected_generation):
+                raise ValueError("交付包生成契约与当前生产源不一致")
+        elif generation is not None and not isinstance(generation, dict):
+            raise ValueError("交付清单的生成契约无效")
         files = manifest.get("files")
         if not isinstance(files, dict) or set(files) != set(names) - {MANIFEST_NAME}:
             raise ValueError("交付清单文件集合与 ZIP 不一致")
+        data = {}
         for name, expected in files.items():
-            if (
-                not isinstance(expected, str)
-                or hashlib.sha256(archive.read(name)).hexdigest() != expected
-            ):
+            raw = archive.read(name)
+            if not isinstance(expected, str) or hashlib.sha256(raw).hexdigest() != expected:
                 raise ValueError(f"交付文件指纹不符：{name}")
+            data[name] = raw
+        for name, raw in {**data, MANIFEST_NAME: archive.read(MANIFEST_NAME)}.items():
+            game = PurePosixPath(name).suffix.lower() in GAME_SUFFIXES
+            try:
+                decoded = raw.decode("utf-8-sig" if game else "utf-8")
+            except UnicodeDecodeError as exc:
+                raise ValueError(f"交付文件不是 UTF-8：{name}") from exc
+            if raw.startswith(codecs.BOM_UTF8) != game or "\ufeff" in decoded or "\r" in decoded:
+                raise ValueError(f"交付文件 BOM/LF 不符：{name}")
+        regenerated = _manifest_for_payloads(data, generation=generation)
+        if manifest != regenerated:
+            raise ValueError("交付清单与元数据契约不一致")
+        if expected_data is not None:
+            if set(data) != set(expected_data):
+                raise ValueError("交付文件集合与当前生产源不一致")
+            for name, raw in expected_data.items():
+                if data[name] != raw:
+                    raise ValueError(f"交付内容与当前生产源不一致：{name}")
+        if release:
+            contract = manifest.get("contract")
+            if not isinstance(contract, dict):
+                raise ValueError("正式包缺少发布契约")
+            _validate_release(data, contract)
         return manifest
+
+
+def validate_package(archive_path: Path) -> dict[str, object]:
+    """校验正式 ZIP，并拒绝任何偏离当前 1.0.0 生产源的内容。"""
+    policy, extensions, internal_files = package_inputs(include_engineering_metadata=True)
+    metadata = json.loads(internal_files[METADATA_NAME])
+    files = _release_files(internal_files)
+    return _validate_archive(
+        archive_path,
+        expected_data=payloads(files),
+        expected_generation=_release_generation(policy, extensions, metadata),
+        release=True,
+    )
+
+
+def _validate_release(data: Mapping[str, bytes], contract: Mapping[str, object]) -> None:
+    """正式包只允许标准游戏目录、完整语言和固定发布身份。"""
+    required = {".metadata/metadata.json", "README.md"}
+    if not required <= data.keys():
+        raise ValueError("正式包缺少元数据或安装说明")
+    if any(
+        name not in required
+        and not (name.startswith("common/") and name.endswith(".txt"))
+        and not (name.startswith("localization/") and name.endswith(".yml"))
+        for name in data
+    ):
+        raise ValueError("正式包包含非生产路径")
+    if any("probe" in name.casefold() for name in data):
+        raise ValueError("正式包不能包含探针")
+    metadata = json.loads(data[METADATA_NAME])
+    if set(metadata) != set(LAUNCHER_METADATA_KEYS):
+        raise ValueError("正式包元数据必须只包含启动器字段")
+    if (
+        metadata.get("id") != MOD_ID
+        or metadata.get("version") != "1.0.0"
+        or metadata.get("supported_game_version") != "1.14.5"
+    ):
+        raise ValueError("正式包版本与锁定游戏不符")
+    if contract.get("fallback_languages") != []:
+        raise ValueError("正式包不能包含缺译回退")
+    # 使用同一个锁定语言来源，避免另维护一份语言列表。
+    expected = set(decisions.LANGUAGES)
+    declared_languages = contract.get("languages")
+    if (
+        not isinstance(declared_languages, list)
+        or not all(isinstance(language, str) for language in declared_languages)
+        or len(declared_languages) != len(expected)
+        or set(declared_languages) != expected
+    ):
+        raise ValueError("正式包语言契约不完整")
+    languages = {PurePosixPath(name).parts[1] for name in data if name.startswith("localization/")}
+    if languages != expected or not any(name.startswith("common/") for name in data):
+        raise ValueError("正式包脚本或本地化不完整")
+    localized: dict[str, dict[str, str]] = {}
+    for language, header in decisions.LANGUAGES.items():
+        name = f"localization/{language}/sitai_decisions_l_{language}.yml"
+        paths = [path for path in data if path.startswith(f"localization/{language}/")]
+        if paths != [name]:
+            raise ValueError(f"正式包本地化路径不符：{language}")
+        text = data[name].decode("utf-8-sig")
+        lines = [
+            line for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")
+        ]
+        if not lines or lines[0] != f"{header}:":
+            raise ValueError(f"正式包语言头不符：{language}")
+        if any(
+            re.fullmatch(r'\s+[A-Za-z0-9_.-]+:(?:[0-9]+)?\s+"(?:[^"\\]|\\.)*"\s*', line) is None
+            for line in lines[1:]
+        ):
+            raise ValueError(f"正式包本地化语法不符：{language}")
+        _, entries = parse_loc_entries(text)
+        values = dict(entries)
+        if (
+            not values
+            or len(values) != len(entries)
+            or any(not value.strip() for value in values.values())
+        ):
+            raise ValueError(f"正式包本地化为空或键重复：{language}")
+        localized[language] = values
+    reference = localized["english"]
+    for language, values in localized.items():
+        if values.keys() != reference.keys():
+            raise ValueError(f"正式包本地化键集合不符：{language}")
+        for key, value in values.items():
+            # 同时保留 $KEY$ 替换和 PDX 数据绑定；文字顺序可以因语言变化。
+            pattern = r"\$[^$\n]+\$|\[[^]\n]+\]"
+            if sorted(re.findall(pattern, value)) != sorted(re.findall(pattern, reference[key])):
+                raise ValueError(f"正式包本地化占位符不符：{language}/{key}")
 
 
 def player_guide(
     policy: decisions.Policy,
     extensions: decisions.Extensions,
     modules: list[str],
-    *,
-    variant: str,
 ) -> str:
-    """为每个交付变体生成准确的中英使用说明。
-
-    说明是包的一部分而不是仓库手写副本，所有数值和启用模块都来自实际
-    打包参数。它解释规则和边界，不把建议、评分或加载成功写成 AI 行动。
-    """
-    if variant not in PACKAGE_VARIANTS:
-        raise ValueError("说明变体无效：" + "、".join(PACKAGE_VARIANTS))
-    module_text = "、".join(modules) if modules else "无（安全包）"
-    module_text_en = ", ".join(modules) if modules else "none (safe package)"
-    fiscal_state = "启用" if policy.enabled else "关闭"
-    bias = (
-        f"外交博弈中立偏置 +{policy.neutrality:g}，攻击性偏置 {policy.aggression:g}"
-        if policy.enabled
-        else "不写入财政状态或外交偏置"
+    """生成面向玩家的简明中英安装说明。"""
+    module_text = "、".join(modules)
+    module_text_en = ", ".join(modules)
+    diplomacy_note = (
+        "宗属倾向由声明式原版消费者适配器统一实现。\n" if extensions.diplomacy_enabled else ""
     )
-    bias_en = (
-        f"diplomatic-play neutrality +{policy.neutrality:g}; aggression {policy.aggression:g}"
-        if policy.enabled
-        else "no fiscal state or diplomatic bias is written"
+    diplomacy_note_en = (
+        "Subject tendencies use declarative adapters for vanilla consumers.\n"
+        if extensions.diplomacy_enabled
+        else ""
     )
     return (
-        "Situated AI · 处境决策\n"
-        "===========================\n"
-        f"变体：{variant}\n"
+        "Situated AI 1.0.0\n"
+        "=================\n"
         f"产品版本 / Product version：{policy.package.product_version}\n"
-        f"父包 / Parent：{policy.package.parent}\n"
-        f"游戏版本：{policy.game_version}\n"
-        f"启用模块：{module_text}\n"
-        f"财政模块：{fiscal_state}\n"
-        f"状态 / Status：{policy.package.status}\n"
-        f"存档兼容声明 / Save compatibility：{policy.package.save_compatibility}\n\n"
+        f"支持的游戏版本 / Supported game version：{policy.game_version}\n"
+        f"启用模块 / Enabled modules：{module_text} / {module_text_en}\n"
+        f"存档兼容 / Save compatibility：{policy.package.save_compatibility}\n\n"
         "【中文】\n"
-        "本说明描述本 ZIP 的规则配置，不显示任何国家当前的实时状态。生成包不代表"
-        "V0.1 或 AI 行为质量已经验收；experimental 和 candidate 包仅供隔离测试。\n"
-        "以下财政规则仅在财政模块启用时执行，零偏置控制包也不产生新增外交倾向。\n"
-        f"AI 国家违约时进入财政风险；未违约时，需要正在借款、信用大于 0，且破产周数"
-        f"非负并小于 {policy.entry_weeks} 周。已有风险使用 {policy.exit_weeks} 周的维持线，"
-        "达到该线、不再借款或缺少必要的有效财政读数时不再维持；违约分支优先。\n"
-        f"月度以及违约/结束违约事件重新评估；最后一次续期后 {policy.ttl_days} 天没有更新，"
-        "风险状态自然失效。只有 AI 当前同时满足财政风险、维持条件与外部暴露条件时，"
-        f"才追加原版字段偏置：{bias}。这是倾向值，不是概率，也不表示已经加入或退出博弈。\n"
-        "外部暴露包括战争、外交博弈发起方、目标方、已承诺参与者和未选边参与者。"
-        "未选边表示风险暴露，不表示已作出承诺。上述状态不等于行动收益、净代价或不利结果。\n"
-        "该规则保留原版策略牌、国家身份、玩家和 AI 的共同世界规则；不提供免费资源、"
-        "强制行动或固定国家剧本。\n"
-        "安装：先退出游戏并保留原有配置与处理前存档，将 ZIP 解压至独立本地 Mod 目录，"
-        f"标准安装目录为 `Victoria 3/mod/{INSTALL_DIRECTORY_NAME}`；在启动器的独立 playset 中登记并启用；"
-        "不要覆盖游戏本体，也不要同时挂载本包的多个变体。"
-        "本包覆盖原版 00_default_strategy.txt；其他修改同一策略的 Mod 有兼容冲突风险。\n"
-        "回退：退出游戏后禁用或移除本 Mod；全关包仍含默认策略底本，因此不等于完全零 Mod。"
-        "已有变量可按剩余 TTL 失效，但关闭或卸载不会撤回已经发生的世界变化；"
-        "恢复处理前存档与当时挂载才是对应回退点。不承诺任意旧存档可安全迁移。\n"
-        "变体说明：current 是当前实验参数；control 保留财政生命周期但把新增偏置置零；"
-        "disabled 关闭本 Mod 的财政及扩展逻辑，可作为安全基线。\n\n"
-        f"扩展实际配置：reform={'启用' if extensions.reform_enabled else '关闭'}，"
-        f"market={'启用' if extensions.market_enabled else '关闭'}。"
-        f"security={'启用' if extensions.security_enabled else '关闭'}。"
-        f" economy={'启用' if extensions.economy_enabled else '关闭'}，"
-        f"diplomacy={'启用' if extensions.diplomacy_enabled else '关闭'}，"
-        f"subjects={'启用' if extensions.subjects_enabled else '关闭'}。"
-        "扩展关闭时不执行相应干预。改革扩展启用时，脆弱条件优先："
-        f"合法性低于 {extensions.fragile_legitimacy}、战争或叛乱使 change_law_chance 的"
-        f" default 贡献增加 {extensions.fragile_penalty:g}；否则合法性至少"
-        f" {extensions.reform_legitimacy}、和平、无叛乱且实业家或知识分子在政府内，"
-        f"增加 {extensions.reform_bonus:g}。市场扩展启用时，diplomatic_play_support 的"
-        f" default 贡献增加（对己方依赖−对敌方依赖）×{extensions.market_multiplier:g}。"
-        "这些贡献不是最终概率，也不证明具体法律或外交行动已发生。\n"
-        f"外部模块启用时，防御条约/联盟贡献为 {extensions.security_commitment_bonus:g}，"
-        f"相邻防御方遭征服/附庸目标威胁的贡献为 {extensions.security_threat_bonus:g}；"
-        "同时满足只取较大值。支持防御方加分、评价进攻方减分，仍由原版判断资格与行动。"
-        "complete 是四模块完整实验候选；fiscal/security/market/reform 是隔离变体，均未验收。\n\n"
+        "这是唯一正式生产包（当前 1.0.0 交付候选）。它依据国家的政治、人口、财政、经济、市场、贸易、"
+        "外交、宗属、军事、战争、殖民、地理、身份与科技处境调整原版 AI 权重。"
+        "原版资格、成本、效果与行动流程继续生效；本 Mod 不提供免费资源、不强制行动，"
+        "也不按国家编写固定剧本。\n"
+        f"模块开关：reform={'启用' if extensions.reform_enabled else '关闭'}，"
+        f"market={'启用' if extensions.market_enabled else '关闭'}，"
+        f"security={'启用' if extensions.security_enabled else '关闭'}，"
+        f"economy={'启用' if extensions.economy_enabled else '关闭'}，"
+        f"diplomacy={'启用' if extensions.diplomacy_enabled else '关闭'}。\n"
+        f"{diplomacy_note}"
+        f"财政风险在违约，或正在借款且距破产少于 {policy.entry_weeks} 周时进入；"
+        f"使用 {policy.exit_weeks} 周退出线与 {policy.ttl_days} 天状态有效期。"
+        f"外交博弈中立偏置为 {policy.neutrality:g}，攻击性偏置为 {policy.aggression:g}。"
+        "同一字段按优先级使用第一条匹配规则；倍率保留原版零值。\n"
+        "安装：退出游戏，将 ZIP 解压到文档目录的 `Paradox Interactive/Victoria 3/mod/"
+        f"{INSTALL_DIRECTORY_NAME}`，在启动器中登记并启用独立 playset。不要覆盖游戏本体。"
+        "本包覆盖部分原版 AI 消费者文件；其它 Mod 不在兼容范围内。支持锁定版本的全部 11 种本体语言。\n"
+        "回退：退出游戏后禁用或删除本 Mod，并恢复安装前存档。任意旧存档迁移不受保证。"
+        "游戏更新后应停用旧包，等待针对新版本重新生成。\n"
+        "工程检查证明生成、打包和锁定原版接口符合自动化契约；AI 长期行为、平衡、后期性能、"
+        "玩家体验与创意工坊发布由用户验收。\n\n"
         "[English]\n"
-        "This guide describes the rules configured in this ZIP, not the live state of any country."
-        " Building a package does not prove V0.1 completion or AI behavior quality; experimental"
-        " and candidate packages are for isolated testing.\n"
-        "The following fiscal rules run only while the fiscal module is enabled. The zero-bias"
-        " control package also adds no diplomatic tendency.\n"
-        f"An AI country in default enters fiscal risk. Otherwise it must be borrowing, have credit"
-        f" greater than 0, and have non-negative weeks to bankruptcy below {policy.entry_weeks}."
-        f" Existing risk uses a {policy.exit_weeks}-week hold threshold. Reaching it, no longer"
-        " borrowing, or missing required valid readings ends the hold; default takes precedence.\n"
-        "Monthly and default/end-of-default events reassess risk. The state expires"
-        f" {policy.ttl_days} days after the last renewal without another update. Only an AI country"
-        " currently meeting fiscal risk, hold, and external-exposure conditions receives the added"
-        f" vanilla-field bias: {bias_en}. This is a tendency, not a probability or proof of joining"
-        " or leaving a play.\n"
-        "External exposure includes war, diplomatic-play initiator, target, committed participant,"
-        " and undecided participant. Undecided means exposure, not a commitment. These states do"
-        " not measure action benefit, net cost, or adverse outcome.\n"
-        "Vanilla strategy cards, country identity, and the shared player/AI world rules remain in"
-        " place. The package does not grant free resources, force actions, or hard-code a country"
-        " script.\n"
-        "Install: exit the game, preserve your configuration and a pre-treatment save, extract"
-        f" this ZIP into `Victoria 3/mod/{INSTALL_DIRECTORY_NAME}`, and register/enable it in an isolated"
-        " launcher playset. Do not overwrite the game installation or enable multiple variants"
-        " together. This package overrides vanilla 00_default_strategy.txt and may conflict with"
-        " other Mods that modify the same strategy.\n"
-        "Rollback: exit and disable/remove this Mod. The disabled package still contains the"
-        " vanilla strategy baseline, so it is not a zero-Mod environment. Existing variables can"
-        " expire by their remaining TTL, but disabling/uninstalling does not undo world changes."
-        " Restore the pre-treatment save and its original mounts for that rollback point."
-        " Arbitrary old-save migration is not guaranteed.\n"
-        f"Variant: current uses the experimental parameters; control keeps the fiscal lifecycle"
-        " with added bias set to zero; disabled turns off fiscal and extension logic for a safe"
-        " baseline.\n"
-        f"Enabled modules in this package: {module_text_en}.\n"
-        f"Actual extension configuration: reform={'enabled' if extensions.reform_enabled else 'disabled'};"
-        f" market={'enabled' if extensions.market_enabled else 'disabled'};"
-        f" economy={'enabled' if extensions.economy_enabled else 'disabled'};"
-        f" diplomacy={'enabled' if extensions.diplomacy_enabled else 'disabled'};"
-        f" subjects={'enabled' if extensions.subjects_enabled else 'disabled'}. Disabled extensions do"
-        " not intervene. For enabled reform, fragile conditions take precedence: legitimacy below"
-        f" {extensions.fragile_legitimacy}, war, or insurrection adds {extensions.fragile_penalty:g}"
-        " to the default change_law_chance contribution. Otherwise legitimacy of at least"
-        f" {extensions.reform_legitimacy}, peace, no insurrection, and industrialists or"
-        f" intelligentsia in government adds {extensions.reform_bonus:g}. Enabled market adds"
-        f" (dependence on own side minus dependence on enemy side) x {extensions.market_multiplier:g}"
-        " to default diplomatic_play_support. These contributions are not final probabilities"
-        " or evidence of an enacted law or diplomatic action.\n"
-        f"Security is {'enabled' if extensions.security_enabled else 'disabled'}: defense commitments"
-        f" contribute {extensions.security_commitment_bonus:g}, threatened-neighbor defense"
-        f" contributes {extensions.security_threat_bonus:g}; only the maximum reason applies,"
-        " positive for the defender and negative for the attacker. This does not grant eligibility"
-        " or force participation. complete enables all four experimental modules;"
-        " fiscal/security/market/reform isolate one module for testing. The full candidate"
-        " adds economy, diplomacy, and subjects and is still subject to F1/F2 validation.\n"
+        "This is the only standard production package (the Situated AI 1.0.0 delivery candidate). "
+        "It adjusts vanilla AI weights using political,"
+        " population, fiscal, economic, market, trade, diplomatic, subject, military, war, colonial,"
+        " geographic, identity, and technology context. Vanilla eligibility, costs, effects, and actions"
+        " remain in force. The Mod grants no free resources, forces no action, and has no country script.\n"
+        f"Module switches: reform={'enabled' if extensions.reform_enabled else 'disabled'}; "
+        f"market={'enabled' if extensions.market_enabled else 'disabled'}; "
+        f"security={'enabled' if extensions.security_enabled else 'disabled'}; "
+        f"economy={'enabled' if extensions.economy_enabled else 'disabled'}; "
+        f"diplomacy={'enabled' if extensions.diplomacy_enabled else 'disabled'}.\n"
+        f"{diplomacy_note_en}"
+        f"Fiscal risk enters on default, or while borrowing with fewer than {policy.entry_weeks} weeks"
+        f" to bankruptcy. It uses a {policy.exit_weeks}-week exit threshold and a {policy.ttl_days}-day"
+        f" state lifetime. Diplomatic-play neutrality is {policy.neutrality:g}; aggression is"
+        f" {policy.aggression:g}. The first matching rule per field wins; multipliers preserve vanilla zero values.\n"
+        "Install after exiting the game. Extract the ZIP to the documents directory at"
+        f" `Paradox Interactive/Victoria 3/mod/{INSTALL_DIRECTORY_NAME}` and enable it in an isolated"
+        " launcher playset. Do not overwrite the game installation. Other Mods are outside the"
+        " compatibility scope. To roll back, exit, disable or remove this Mod, and restore a"
+        " pre-installation save. Disable the package after a game update until a matching release exists.\n"
+        "The package supports all 11 languages in the locked game version. Engineering checks cover"
+        " generation, archive structure, and locked vanilla interfaces. Long-run AI behavior, balance,"
+        " late-game performance, localization presentation, and Workshop publication remain for player acceptance.\n"
     )
 
 
-def payloads(files: Mapping[str, str]) -> dict[str, bytes]:
-    result: dict[str, bytes] = {}
+def launcher_metadata(metadata: Mapping[str, object]) -> dict[str, object]:
+    """只保留 Paradox Launcher 使用的 Mod 元数据字段。"""
+    missing = set(LAUNCHER_METADATA_KEYS) - metadata.keys()
+    if missing:
+        raise ValueError("启动器元数据缺少字段：" + "、".join(sorted(missing)))
+    result = {key: metadata[key] for key in LAUNCHER_METADATA_KEYS}
+    if not isinstance(result["game_custom_data"], dict):
+        raise ValueError("启动器自定义数据必须为对象")
+    return result
+
+
+def _release_files(files: Mapping[str, str]) -> dict[str, str]:
+    """返回不含生成器审计数据的标准 Mod 文件集。"""
+    result = dict(files)
+    metadata = json.loads(result[METADATA_NAME])
+    result[METADATA_NAME] = (
+        json.dumps(launcher_metadata(metadata), ensure_ascii=False, indent=2) + "\n"
+    )
+    return result
+
+
+def _validate_paths(names: list[str]) -> None:
+    """生成与外部 ZIP 校验共用的可移植文件路径约束。"""
     portable_names: set[str] = set()
-    for name, text in sorted(files.items()):
-        if name.casefold() == MANIFEST_NAME.casefold():
-            raise ValueError("交付清单文件名为保留名称")
+    for name in names:
+        if not isinstance(name, str):
+            raise ValueError("交付路径必须是文本")
         path = PurePosixPath(name)
         if not name or path.is_absolute() or ".." in path.parts or "\\" in name or ":" in name:
             raise ValueError(f"非法交付路径：{name!r}")
@@ -343,17 +384,28 @@ def payloads(files: Mapping[str, str]) -> dict[str, bytes]:
             "NUL",
             *(f"COM{i}" for i in range(1, 10)),
             *(f"LPT{i}" for i in range(1, 10)),
+            *(f"{prefix}{number}" for prefix in ("COM", "LPT") for number in "¹²³"),
         }
         if any(
             part.rstrip(" .") != part
             or part.split(".")[0].upper() in reserved
-            or any(c in part for c in '<>"|?*\0')
+            or any(c in part for c in '<>"|?*')
+            or any(ord(c) < 32 or ord(c) == 127 for c in part)
             for part in path.parts
         ):
             raise ValueError(f"交付路径不兼容 Windows：{name!r}")
         if name.casefold() in portable_names:
             raise ValueError(f"交付路径大小写冲突：{name!r}")
         portable_names.add(name.casefold())
+
+
+def payloads(files: Mapping[str, str]) -> dict[str, bytes]:
+    result: dict[str, bytes] = {}
+    _validate_paths(list(files))
+    for name, text in sorted(files.items()):
+        if name.casefold() == MANIFEST_NAME.casefold():
+            raise ValueError("交付清单文件名为保留名称")
+        path = PurePosixPath(name)
         result[name] = text_bytes(text, game=path.suffix.lower() in GAME_SUFFIXES)
     return result
 
@@ -363,6 +415,7 @@ def write_zip(
     destination: Path,
     *,
     generation: Mapping[str, object] | None = None,
+    release: bool = False,
 ) -> Path:
     """先完成并核验临时 ZIP，再原子替换目标；不修改仓库产物。"""
     data = payloads(files)
@@ -387,7 +440,12 @@ def write_zip(
                 raise ValueError(f"交付 ZIP 校验失败：{broken}")
         # 在替换目标前校验完整交付清单。这样清单、路径或哈希失败时，
         # 已有目标包仍然可以作为可恢复交付物保留。
-        validate_package(temporary, allow_probe=True)
+        _validate_archive(
+            temporary,
+            expected_data=payloads(files),
+            expected_generation=generation,
+            release=release,
+        )
         temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)
@@ -395,195 +453,121 @@ def write_zip(
 
 
 def package_inputs(
-    variant: str,
+    *, include_engineering_metadata: bool = False
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str]]:
-    """校验生产源后返回实际变体；隔离仪器复用同一转换，避免说明漂移。"""
-    if variant not in PACKAGE_VARIANTS:
-        raise ValueError("包变体无效：" + "、".join(PACKAGE_VARIANTS))
+    """构建 1.0.0 生产文件；仅工程测试可请求完整生成合同。"""
     policy, extensions = decisions.load(), decisions.load_extensions()
-    current = decisions.build(policy, extensions=extensions)
-    issues = decisions.check(decisions.PRODUCT, current)
-    if issues:
-        raise ValueError("生成物不一致，拒绝打包：\n" + "\n".join(issues))
-    if variant == "control":
-        policy = replace(policy, enabled=True, neutrality=0, aggression=0)
-        extensions = replace(
-            extensions,
-            reform_enabled=False,
-            market_enabled=False,
-            security_enabled=False,
-            economy_enabled=False,
-            diplomacy_enabled=False,
-            subjects_enabled=False,
-        )
-    elif variant == "disabled":
-        policy = replace(policy, enabled=False)
-        extensions = replace(
-            extensions,
-            reform_enabled=False,
-            market_enabled=False,
-            security_enabled=False,
-            economy_enabled=False,
-            diplomacy_enabled=False,
-            subjects_enabled=False,
-        )
-    elif variant != "current":
-        policy = replace(
-            policy,
-            enabled=variant
-            in {"complete", "fiscal", "economy", "diplomacy", "subjects", "full", "integrated"},
-            aggression=0,
-            package=replace(
-                policy.package,
-                status="candidate" if variant == "full" else "experimental",
-                product_version=(
-                    "2.0.0.dev4"
-                    if variant == "integrated"
-                    else "1.0.0"
-                    if variant == "full"
-                    else policy.package.product_version
-                ),
-            ),
-        )
-        extensions = replace(
-            extensions,
-            reform_enabled=variant in {"complete", "reform", "full", "integrated"},
-            market_enabled=variant in {"complete", "market", "full", "integrated"},
-            security_enabled=variant in {"complete", "security", "full", "integrated"},
-            economy_enabled=variant in {"economy", "full", "integrated"},
-            diplomacy_enabled=variant in {"diplomacy", "full", "integrated"},
-            # integrated 的宗属字段由声明式适配器统一负责，不能叠加旧作者。
-            subjects_enabled=variant in {"subjects", "full"},
-        )
-    full_localization = variant in {"full", "integrated"}
-    strategy = decision_intents.load() if variant == "integrated" else None
-    information = decisions.decision_rules.load(strategy=strategy) if strategy is not None else None
-    adapters = decisions.decision_adapters.load(strategy=strategy) if strategy is not None else None
-    if strategy is not None and information is not None and adapters is not None:
-        consumed = {
-            rule.intent
-            for policy_rules in (information, *(row for _, row in adapters.policies))
-            for rule in policy_rules.rules
-            if rule.intent is not None
-        }
-        if {intent.id for intent in strategy.closure(consumed)} != {
-            intent.id for intent in strategy.intents
-        }:
-            raise ValueError("生产战略意图必须有实际规则消费者")
-    files = (
-        current
-        if variant == "current"
-        else decisions.build(
-            policy,
-            extensions=extensions,
-            complete_localization=full_localization,
-            information_rules=information,
-            consumer_adapters=adapters,
-        )
+    policy = replace(
+        policy,
+        enabled=True,
+        aggression=0,
+        package=replace(policy.package, product_version="1.0.0", status="candidate"),
     )
-    if variant in {"full", "integrated"}:
-        metadata = json.loads(files[".metadata/metadata.json"])
-        localization = metadata.setdefault("localization", {})
-        localization["production_fallback_languages"] = list(
-            localization.get("production_fallback_languages", [])
-        )
-        localization["explanation_fallback_languages"] = (
-            explanation_probe.localization_fallback_languages()
-        )
-        localization["explanation_review_languages"] = (
-            explanation_probe.localization_review_languages()
-        )
-        localization["fallback_languages"] = sorted(
-            set(localization["production_fallback_languages"])
-            | set(localization["explanation_fallback_languages"])
-        )
-        files[".metadata/metadata.json"] = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
-    modules = json.loads(files[".metadata/metadata.json"])["enabled_modules"]
-    files["README.md"] = player_guide(policy, extensions, modules, variant=variant)
-    if variant == "integrated":
-        metadata = json.loads(files[".metadata/metadata.json"])
-        contract = metadata["decision_rules"]
-        files["README.md"] += (
-            "\n全域规则实验增量 / Integrated experimental rules\n"
-            "同一字段按优先级只使用第一条匹配规则；倍率只改变默认策略贡献，"
-            "不代表最终概率或行动。当前规则无持久状态，沿用原版消费者评估时机。"
-            "以下覆盖不代表 2.0 全目标已完成或行为已验收。\n"
-            "The first matching rule per field changes only the default contribution. "
-            "Vanilla qualification, costs, and actions remain in force; behavior is unverified.\n"
-            + "".join(
-                f"- {rule['id']}：{rule['field']} {rule['operation']} {rule['value']:g}；{rule['why']}。"
-                f"反例边界：{rule['counterexample']}。\n"
-                for rule in contract["rules"]
-            )
-        )
-        files["README.md"] += (
-            "\n锁定原版消费者补丁 / Source-locked consumer adapters\n"
-            "本变体从匹配的本体原件生成法律、科技和策略权重补丁；保留原版资格、效果、成本和其余内容。"
-            "商品读数属于本国所在市场，不能当作该国自身产量。"
-            "倍率保留原值零点；法律和部分外交/宗属评分使用有限增量，政治支持与 ai_will_do 仍由原版决定。"
-            "建筑规则读取本州实际启用的主要生产方式；商品供给立场仅追加原版未声明的商品，"
-            "不强制切换生产方式或创建贸易路线。"
-            "关闭需重新生成不含适配文件的包并重启；游戏更新后旧包不会自行卸载或自动恢复原版，必须停用并重新生成。\n"
-            "Source-locked edits retain vanilla qualification, effects and costs. Goods readings describe "
-            "the country's market. Adjustments use the declared add or multiply operation. "
-            "Building rules inspect active primary production methods; additional goods stances do not force trade. "
-            "Disable and rebuild after a game update; an installed ZIP cannot automatically undo its overrides.\n"
-            + "".join(
-                f"- {consumer['source']} / {rule['id']}：{rule['field']} "
-                f"{rule['operation']} {rule['value']:g}；{rule['why']}。反例边界：{rule['counterexample']}。\n"
-                for consumer in metadata["consumer_adapters"]["consumers"]
-                for rule in consumer["rules"]
-            )
+    extensions = replace(
+        extensions,
+        reform_enabled=True,
+        market_enabled=True,
+        security_enabled=True,
+        economy_enabled=True,
+        diplomacy_enabled=True,
+        # 宗属字段由声明式适配器统一拥有，避免叠加旧作者。
+        subjects_enabled=False,
+    )
+    strategy = decision_intents.load()
+    information = decisions.decision_rules.load(strategy=strategy)
+    adapters = decisions.decision_adapters.load(strategy=strategy)
+    consumed = {
+        rule.intent
+        for policy_rules in (information, *(row for _, row in adapters.policies))
+        for rule in policy_rules.rules
+        if rule.intent is not None
+    }
+    if {intent.id for intent in strategy.closure(consumed)} != {
+        intent.id for intent in strategy.intents
+    }:
+        raise ValueError("生产战略意图必须有实际规则消费者")
+    files = decisions.build(
+        policy,
+        extensions=extensions,
+        complete_localization=True,
+        information_rules=information,
+        consumer_adapters=adapters,
+    )
+    metadata = json.loads(files[".metadata/metadata.json"])
+    localization = metadata["localization"]
+    if localization["fallback_languages"] or localization["production_fallback_languages"]:
+        raise ValueError("正式包不能包含未翻译的生产本地化")
+    modules = metadata["enabled_modules"]
+    files["README.md"] = player_guide(policy, extensions, modules)
+    if not include_engineering_metadata:
+        files[METADATA_NAME] = (
+            json.dumps(launcher_metadata(metadata), ensure_ascii=False, indent=2) + "\n"
         )
     return policy, extensions, files
 
 
-def package(
-    destination: Path,
-    *,
-    variant: str = "disabled",
-    with_explanation_probe: bool | None = None,
-) -> Path:
-    """生成标准游戏 Mod；解释面板只在显式仪器模式下附加。
+def _release_generation(
+    policy: decisions.Policy,
+    extensions: decisions.Extensions,
+    metadata: Mapping[str, Any],
+) -> dict[str, object]:
+    """返回正式包的完整、可比较生成参数。"""
+    return {
+        **generation_contract(),
+        "fiscal": {
+            key: value
+            for key, value in asdict(policy).items()
+            if key not in {"package", "source_sha256"}
+        },
+        "extensions": {
+            key: value for key, value in asdict(extensions).items() if key != "source_sha256"
+        },
+        "product_contract": {
+            "tool_version": metadata["tool_version"],
+            "status": metadata["status"],
+            "enabled_modules": metadata["enabled_modules"],
+            "parent_package": metadata["parent_package"],
+            "save_compatibility": metadata["save_compatibility"],
+            "platforms": metadata["platforms"],
+            "platform_notes": metadata["platform_notes"],
+            "source_fingerprint": metadata["source_fingerprint"],
+            "languages": metadata["localization"]["languages"],
+            "fallback_languages": metadata["localization"]["fallback_languages"],
+            "field_owner_count": len(metadata["default_field_owners"]),
+            "vanilla_field_count": len(metadata["vanilla_field_coverage"]),
+            "information_rule_count": metadata["decision_rules"]["active_rule_count"],
+            "consumer_count": len(metadata["consumer_adapters"]["consumers"]),
+            "consumer_rule_count": sum(
+                len(consumer["rules"]) for consumer in metadata["consumer_adapters"]["consumers"]
+            ),
+            "strategic_intent_count": len(metadata["strategic_coordination"]["intents"]),
+            "behavior_quality": "not_evaluated",
+        },
+    }
 
-    ``complete`` 是既有四模块历史实验变体，继续保留它原来的解释候选。
-    新的七模块 ``full`` 默认只包含标准 Mod 内容；实机需要观测解释面板时，
-    必须显式传 ``with_explanation_probe=True``，避免把未验收 UI 当作生产内容。
-    """
-    policy, extensions, files = package_inputs(variant)
-    if with_explanation_probe is None:
-        with_explanation_probe = variant == "complete"
-    if with_explanation_probe:
-        files = explanation_probe.attach(files, policy, extensions)
-        files["README.md"] += (
-            "\n本包包含原生国家面板的只读解释候选；覆盖 country_panel.gui，"
-            "不与其它同路径界面覆盖兼容。上下文、布局、刷新和成本尚未实机验收。\n"
-            "This package includes an unverified read-only explanation"
-            " and overrides country_panel.gui; other overrides of that panel conflict.\n"
-        )
+
+def package(destination: Path) -> Path:
+    """核对仓库生成物后，生成唯一 1.0.0 正式包。"""
+    policy, extensions, internal_files = package_inputs(include_engineering_metadata=True)
+    metadata = json.loads(internal_files[METADATA_NAME])
+    files = _release_files(internal_files)
+    production_files = {name: text for name, text in files.items() if name != "README.md"}
+    issues = decisions.check(decisions.PRODUCT, production_files)
+    if issues:
+        raise ValueError("生成物不一致，拒绝打包：\n" + "\n".join(issues))
     return write_zip(
         files,
         destination,
-        generation={
-            **generation_contract(variant=variant, with_explanation_probe=with_explanation_probe),
-            "fiscal": {
-                key: value
-                for key, value in asdict(policy).items()
-                if key not in {"package", "source_sha256"}
-            },
-            "extensions": {
-                key: value for key, value in asdict(extensions).items() if key != "source_sha256"
-            },
-        },
+        generation=_release_generation(policy, extensions, metadata),
+        release=True,
     )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--variant", choices=PACKAGE_VARIANTS, default="disabled")
     args = parser.parse_args()
-    print(package(args.output, variant=args.variant))
+    print(package(args.output))
     return 0
 
 

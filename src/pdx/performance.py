@@ -137,7 +137,7 @@ def command(
 
 def workloads(*, rounds: int = 5) -> dict[str, object]:
     """有输出指纹的实际功能负载；每项独立，禁止为快而改变结果。"""
-    from pdx import citations, localization, modgen  # noqa: PLC0415 - 计时入口不预载生成工具链
+    from pdx import citations, distribution, localization  # noqa: PLC0415
 
     with tempfile.TemporaryDirectory(prefix="sitai-perf-") as folder:
         root = Path(folder)
@@ -155,10 +155,8 @@ def workloads(*, rounds: int = 5) -> dict[str, object]:
             return (len(result), sum(item.ok for item in result))
 
         def generator() -> object:
-            built = modgen.build_all(modgen.load_all())
-            return hashlib.sha256(
-                json.dumps(built.files, sort_keys=True).encode("utf-8")
-            ).hexdigest()
+            _, _, files = distribution.package_inputs()
+            return hashlib.sha256(json.dumps(files, sort_keys=True).encode("utf-8")).hexdigest()
 
         return {
             "schema": 1,
@@ -172,7 +170,7 @@ def workloads(*, rounds: int = 5) -> dict[str, object]:
                 "localization.header_large_file": measure(
                     lambda: dict(localization.language_header_counts(root)), rounds=rounds
                 ),
-                "modgen.all_archives": measure(generator, rounds=rounds),
+                "distribution.release_inputs": measure(generator, rounds=rounds),
             },
         }
 

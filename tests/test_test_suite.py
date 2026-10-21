@@ -274,7 +274,7 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
         "    assert child.returncode == 0\n"
         "    if value == 1:\n"
         "        child = subprocess.run([sys.executable, '-m', 'pytest', '--collect-only', '-q', '-n0',\n"
-        "            '-p', 'tools.ci.test_suite', '-p', 'tools.probe.mem_baseline', 'collect_probe.py'],\n"
+        "            '-p', 'tools.ci.test_suite', '-p', 'tools.ci.mem_baseline', 'collect_probe.py'],\n"
         "            capture_output=True, text=True, encoding='utf-8', check=False)\n"
         "        assert child.returncode == 0, child.stdout + child.stderr\n"
         "    for child in (1, 2):\n"

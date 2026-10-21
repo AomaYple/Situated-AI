@@ -44,17 +44,14 @@ import time
 # 解析命令签名，注解挪进 TYPE_CHECKING 块会让 ``v3 --help`` 直接 NameError（已实测）。
 # 另外 `v3 citations` 会真的构造 `Path`，所以它本来就是运行期依赖，不需要 TCH 豁免。
 from pathlib import Path
-from typing import Annotated, Any, Literal, NoReturn
+from typing import Annotated, Any, NoReturn
 
 import typer
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.markup import escape
 from rich.table import Table
 
 from pdx import (
-    ab,
-    ab_probe,
     ai_surface,
     analyze,
     assets,
@@ -67,32 +64,27 @@ from pdx import (
     covgate,
     decisions,
     defines,
+    distribution,
     doc_tables,
     docgen,
     docs_mirror,
     engine_log,
     evidence,
     exe_strings,
-    experiments,
-    h1,
-    h1_probe,
     information_catalog,
     lockfile,
-    modgen,
-    modguard,
-    objectives,
     political_surface,
-    preflight,
     snapshot,
     tables_offline,
     tabular,
     unknowns,
+    vanilla_index,
     verify,
 )
 from pdx import mods as mods_mod
 from pdx.console import enable_utf8_stdio
 from pdx.extract import extract_dir
-from pdx.parser import TOLERATED_ERRORS, parse_file
+from pdx.parser import TOLERATED_ERRORS, parse_file, parse_text
 
 # 必须在构造 Console 之前调用 —— 理由见 pdx/console.py 的模块文档：
 # rich 替代不了编码兜底，GBK 重定向下它自己就会抛 UnicodeEncodeError。
@@ -113,7 +105,7 @@ EXIT_USAGE = 2
 #: 判据是可测事实（行数），不看「我们认不认识那个 mod」。
 #:
 #: ⚠️ 不许把它读成「软化的红」：真错配（行号可比、token 就在别的行）仍然走
-#: :data:`EXIT_FAILED`。这一族教训见 ``src/pdx/game_auto.py:1848`` ——
+#: :data:`EXIT_FAILED`。这一族教训见历史审计 B85 ——
 #: 「我们在 error.log 里没看到」曾被当成「没有」，把「核不了」写成了「对不上」。
 EXIT_UNVERIFIABLE = 3
 
@@ -774,15 +766,14 @@ def snap_create(
     label: Annotated[str | None, typer.Option("--label", help="快照名（默认为游戏版本号）")] = None,
     compact: Annotated[
         bool,
-        typer.Option("--compact", help="精简模式：本地化只留计数与指纹，体积约 1/9，可入库"),
+        typer.Option("--compact", help="精简模式：本地化只留计数与指纹，可入库"),
     ] = False,
 ) -> None:
     """生成当前版本快照，写入 tools/out/snapshots/。
 
-    默认是**完整快照**（约 39 MiB，本地用，不入库）。
-    ``--compact`` 产出**精简快照**（约 6.0 MiB）：结构域原样保留，
-    只把 ``localization`` 的 14 万条键名换成「键数 + sha256」——
-    小到可以随仓库分发，让「升级前后 diff 出字段增删」在别的机器上也能做。
+    默认生成完整快照，供本机分析使用。``--compact`` 保留结构域，
+    将本地化条目压缩为计数与指纹，便于随仓库分发和比较版本变化。
+    实际体积和条目数取决于当前游戏版本，以生成结果为准。
     """
     _require_game()
     snap = snapshot.build(compact=compact, verbose=True)
@@ -1212,80 +1203,6 @@ def tables_cmd(
     raise typer.Exit(EXIT_FAILED)
 
 
-# ── objectives（9 国目标函数表）──────────────────────────────
-@app.command("objectives")
-def objectives_cmd(
-    check: Annotated[
-        bool, typer.Option("--check", help="跑 P1–P5 判据（不带则只印那张表）")
-    ] = False,
-) -> None:
-    """9 国目标函数表（`mod/data/*.toml` 的 `[objectives]`）：渲染 + 五条闸门 P1–P5。
-
-    判据的唯一定义在 `docs/design/exec/阶段5-目标函数表-口径.md`（住址 §1 / 形状 §2 /
-    来源 §3 / 闸门 §4）：P1 存在性、P2 档位合法、P3 引用可解（形态①复用 `v3 citations`、
-    形态②走别名表）、P4 裁定自洽（`kind` 由 `derive()` **算出**，不由人挑）、P5 渲染一致。
-
-    退出码三档（§4.1.2 ①）：**0 = 9 份全过；1 = 判据红**（数据在、判据不过）；
-    **2 = 前置缺失 ⇒ 判不了**（档案数 ≠ 9 / 某份缺 `[objectives]` / 支撑域过期 ⇒
-    先跑 `v3 snapshot create --compact` 刷新入库支撑）。
-
-    ⚠️ 为什么它**不是** `modguard` 的第 6 道：`01-大方向.md` 通篇写的是「**五道**闸门」，
-    加第 6 道等于改冻结措辞（要升格得队长裁）⇒ 本命令与 `tables` / `ai-surface` / `verify` 同类。
-
-    ⚠️ 为什么退出码的分档要读"结论"而不是只看数字：`unsupported`（支撑域过期）与
-    `missing`（引用写错）在新库里都可能表现为非零，判读时以逐条明细为准（§4.1.2 ①′）。
-    """
-    if not check:
-        table = Table(title="9 国目标函数表（[objectives]）", show_lines=False)
-        for title in (
-            "档案",
-            "国",
-            "存续",
-            "财政",
-            "合法性",
-            "军力",
-            "市场依赖",
-            "身份项",
-            "约束集",
-            "裁定",
-            "代价",
-        ):
-            table.add_column(title, overflow="fold")
-        for row in objectives.table_rows():
-            table.add_row(*(escape(cell) for cell in doc_tables.split_row(row)))
-        console.print(table)
-        console.print("判据：`v3 objectives --check`（P1–P5，退出码 0/1/2）")
-        return
-
-    report = objectives.check()
-    table = Table(title="目标函数表 · P1–P5", show_lines=False)
-    table.add_column("", width=2, justify="center")
-    table.add_column("档案")
-    table.add_column("命中的谓词", overflow="fold")
-    for entry in report.entries:
-        hits = "、".join(sorted({problem.predicate for problem in entry.problems}))
-        table.add_row("✅" if entry.ok else "❌", escape(entry.id), escape(hits or "全绿"))
-    console.print(table)
-    for entry in report.entries:
-        for problem in entry.problems:
-            console.print(
-                f"   [red]❌[/] {escape(entry.id)} · {problem.predicate} · "
-                f"{escape(problem.where)} · {escape(problem.detail)}"
-            )
-    for name, detail in report.broken:
-        console.print(f"   [red]❌[/] {escape(name)} 读不了：{escape(detail)}")
-    if report.prerequisites:
-        console.print(f"[yellow]{len(report.prerequisites)} 条前置缺失（判不了 = 退出码 2）[/]：")
-        for item in report.prerequisites:
-            console.print(f"   [yellow]· {escape(item)}[/]")
-    console.print(report.summary())
-    code = report.exit_code()
-    if code == 0:
-        console.print("[green]9 份档案的目标函数表全过 ✅[/]")
-        return
-    raise typer.Exit(code)
-
-
 def _tables_offline(*, write: bool, only: str) -> None:
     """``v3 tables --offline``：只读快照与文档，不读游戏。"""
     recorded = tables_offline.load_tables()
@@ -1462,8 +1379,8 @@ def verify_cmd(
     这个最要命的失效模式一直敞着。现在真的接上了（``--no-drift`` 可跳过）。
 
     ``--from-snapshot`` 是**给 CI 用的**：那里没有游戏，全部实测断言都会被
-    跳过，而精简快照（已入库、约 6.0 MiB）里带着 common 各目录的条目名、
-    defines 命名空间与 DLC 清单，足以核验其中约一半。它证明的是「断言注册表
+    跳过；入库精简快照里的 common 条目名、defines 命名空间与 DLC 清单只支持
+    部分断言，实际覆盖范围以命令输出为准。它证明的是「断言注册表
     仍与当时记录的真值一致」，**不**证明「游戏里现在还是这个数」。
 
     **``--fix``**：正文里带归属标记的数字（``205<!--claim:dip.group_files-->``）
@@ -1707,7 +1624,7 @@ def crosscheck_cmd(
     「token 在不在那一行」这个问题本身无从回答。打 3 而不是 0/1，
     是因为这一档既不是通过（0 会把"没核对"说成"核对通过"），
     也不是不一致（1 会把两套行号的差记到解析器头上）——
-    同族教训见 ``src/pdx/game_auto.py:1848``。
+    同族教训见历史审计 B85。
     """
     claims, version = engine_log.parse_logs()
     if not claims:
@@ -1980,144 +1897,6 @@ def strings_cmd(
         console.print(f"\n未使用候选（前 {min(limit, len(rows))} / {len(rows):,}）：")
         for name in rows[:limit]:
             console.print(f"  {escape(name)}")
-
-
-@app.command("experiment")
-def experiment_cmd(
-    action: Annotated[
-        str,
-        typer.Argument(help="plan / install / uninstall / collect / launch（一键启动）/ restore"),
-    ] = "plan",
-    only: Annotated[
-        list[str] | None, typer.Option("--only", help="只处理某些实验编号，如 --only P2 --only P11")
-    ] = None,
-    target: Annotated[
-        Path | None, typer.Option("--target", help="安装目标（默认本机 mod 目录）")
-    ] = None,
-    force: bool = typer.Option(False, "--force", help="install 时覆盖已存在的探针目录"),
-    no_debug: bool = typer.Option(False, "--no-debug", help="launch 时不加 -debug_mode"),
-    risky: bool = typer.Option(
-        False, "--risky", help="launch 时连「语法候选」探针一起启用（可能让游戏起不来）"
-    ),
-    content_load: Annotated[
-        Path | None, typer.Option("--content-load", help="content_load.json 路径（默认用户目录）")
-    ] = None,
-) -> None:
-    """游戏实测探针：一次启动收工。
-
-    知识库里还剩一批「只能进游戏才能定」的问题（引擎的加载语义、运行期字段行为、
-    调用语法 —— 见 `04-脚本系统.md` §13.1 的四条配方）。这个命令把探针 mod、
-    操作清单、日志收割做成一条流水线：
-
-    ```text
-    v3 experiment plan        # 打印操作清单（点什么、看什么、回传什么）
-    v3 experiment launch      # 一键：装探针 → 只启用探针 → 以 -debug_mode 启动游戏
-    （开新档、点两个决议、退出）
-    v3 experiment collect     # 收割 logs/，按实验编号归位证据
-    v3 experiment restore     # 还原原来的 mod 启用列表
-    v3 experiment uninstall   # 移除探针
-    ```
-
-    launch 凭什么能「一键」：**启用哪些 mod** 由用户目录的 content_load.json
-    决定（启动器写、游戏读），**调试模式**就是给 `victoria3.exe` 加 `-debug_mode`
-    （游戏自带 launcher-settings.json 里那条「以调试模式打开游戏」用的就是它）。
-    所以它先备份那份 json、只写上两个探针，再直接起 exe —— 不用点启动器。
-
-    判定优先走日志（`-debug_mode` 会把未知键/重复定义/scope 错误写进去），
-    只有三处需要肉眼：国库数字、是否弹窗、决议标题的 loc 文案。
-    `install` 只写**本机 mod 目录**（不是仓库），`collect` 只读日志。
-    """
-    name = action.strip().lower()
-    if name == "plan":
-        console.print(escape(experiments.plan(target)))
-        return
-
-    if name == "install":
-        try:
-            paths = experiments.install(target, mods=only, force=force)
-        except OSError as exc:
-            _fail(f"安装探针失败：{type(exc).__name__}: {exc}")
-        table = Table(title="探针已就位（在启动器里启用它们）", show_lines=False)
-        table.add_column("mod")
-        table.add_column("路径", style="dim")
-        for path in paths:
-            table.add_row(escape(path.name), escape(str(path)))
-        console.print(table)
-        console.print("接下来跑 `v3 experiment plan` 照清单做。")
-        return
-
-    if name == "uninstall":
-        # `--risky` 要跟着走：launch --risky 会把 zz_probe_risky 一起装上，
-        # 卸载时不带它就会留一个「探针残留」在本机 mod 目录（实测踩过）。
-        removed = experiments.uninstall(target, mods=only or None, risky=risky)
-        if not removed:
-            console.print("[yellow]本机 mod 目录里没有探针，无需移除[/]")
-            return
-        for path in removed:
-            console.print(f"已移除 {escape(str(path))}")
-        return
-
-    if name in {"launch", "start"}:
-        try:
-            # launch 时**强制刷新**探针目录：不覆盖的话，改了探针源码却装着旧副本，
-            # 实验会白跑（实测踩过：给 loc 补了 BOM，游戏里报的还是旧的 Missing BOM）。
-            paths = experiments.install(target, mods=only, force=True, risky=risky)
-            backup = experiments.set_enabled_mods(paths, path=content_load)
-        except OSError as exc:
-            _fail(f"准备启动失败：{type(exc).__name__}: {exc}")
-        console.print(f"启用列表已改成只有探针（原列表备份在 {escape(str(backup or '（无）'))}）：")
-        for path in paths:
-            console.print(f"  {escape(str(path))}")
-        try:
-            proc = experiments.launch(debug=not no_debug)
-        except (OSError, FileNotFoundError) as exc:
-            _fail(f"启动游戏失败：{type(exc).__name__}: {exc}")
-        console.print(
-            f"[green]游戏已启动（pid {proc.pid}，调试模式{'开' if not no_debug else '关'}）[/]"
-        )
-        console.print(
-            "照 `v3 experiment plan` 的清单做：开新档 → 记国库 → 点两个探针决议 → 等事件 → 退出。"
-        )
-        console.print(
-            "退出后跑 `v3 experiment collect`，然后 `v3 experiment restore` 还原 mod 列表。"
-        )
-        return
-
-    if name == "restore":
-        done = experiments.restore_content_load(path=content_load)
-        if done:
-            console.print("[green]content_load.json 已还原成启动探针之前的那份[/]")
-        else:
-            console.print("[yellow]没有找到备份（没跑过 launch 就不用还原）[/]")
-        return
-
-    if name == "collect":
-        report = experiments.collect()
-        table = Table(title=f"探针日志收割（扫了 {report.files_scanned} 个文件）", show_lines=False)
-        table.add_column("实验", style="cyan")
-        table.add_column("来源", style="dim")
-        table.add_column("证据", overflow="fold")
-        for finding in report.findings[:60]:
-            table.add_row(
-                escape(finding.experiment), escape(finding.source), escape(finding.line[:110])
-            )
-        console.print(table)
-        grouped = report.by_experiment()
-        console.print(
-            f"命中 {len(report.findings)} 行，覆盖 {len(grouped)} 个实验编号；"
-            f"实验清单共 {len(experiments.EXPERIMENTS)} 个。"
-        )
-        for hint in report.hints:
-            console.print(f"[yellow]{escape(hint)}[/]")
-        for miss in report.missing:
-            console.print(f"[yellow]{escape(miss)}[/]")
-        console.print(
-            "[dim]把这张表（或整份输出）贴回来即可；"
-            "需要肉眼看的三处见 `v3 experiment plan` 末尾。[/]"
-        )
-        return
-
-    _fail(f"不认识的 action：{action!r} —— 可用：plan / install / uninstall / collect")
 
 
 @app.command("lock")
@@ -2662,308 +2441,42 @@ def political_surface_cmd(
     )
 
 
-# ── h1（阶段 2：H1 生死门的实验结果）────────────────────────
-@app.command("h1")
-def h1_cmd(
-    logs: Annotated[
-        Path | None, typer.Option("--logs", help="日志目录（默认用户目录下的 logs）")
-    ] = None,
-    json_out: Annotated[bool, typer.Option("--json", help="输出机器可读的 JSON")] = False,
-    health_only: Annotated[
-        bool,
-        typer.Option(
-            "--health",
-            help="只跑**开局自检**（开局一分钟内判断这一局的数据有没有在正常产生）",
-        ),
-    ] = False,
-) -> None:
-    """H1 实验：**改权重能否推动 AI 策略落点**（阶段 2 的 G1 生死门）。
-
-    探针（`v3 h1-probe` 生成，装在 `tools/probe/zz_probe_h1/`）每月给每个国家写几行：
-
-    ```text
-    ZZPROBE H1;RUN;storm                              ← 本次启动的变体（用来切分多次启动）
-    ZZPROBE H1;DOSE;HIGH;Russia                       ← 随机分到的剂量组
-    ZZPROBE H1;POLI;sitai_probe_reform;Russia         ← 政治槽当前落点
-    ZZPROBE H1;ADMI;agricultural_expansion;Russia     ← 行政槽
-    ZZPROBE H1;DIPL;maintain_power_balance;Russia     ← 外交槽
-    ```
-
-    分组是**随机**的（探针里 `random_list` 25/25/25/25），组间唯一差异是我们那张牌的
-    `weight`（对照 10 / 低 50 / 中 100 / 高 250）—— 所以这是一次**随机对照试验**：
-    高剂量组的命中率显著高于对照组，就证明"权重能推动落点"（G1 通过）。
-
-    报告同时给出**三个槽位各自的剂量反应**与**重抽节奏**：后者决定"喂输入去改变原版
-    概率"这条路线在战役尺度上有没有用（政治槽实测 ≈1%/国家·月，即十年尺度才重抽）。
-
-    统计用 Wilson 区间（小样本友好），判定口径是**区间不重叠**。
-    """
-    result = h1.analyze(logs)
-    if health_only:
-        # 开局自检（P13）：探针挂载点写错时脚本侧**毫无报错**，只有 error.log 有痕迹 ——
-        # 阶段 2 因此白跑过一整局。这条让它在一分钟内红，而不是跑完才发现。
-        items = h1.health(result, log_dir=logs)
-        console.print(Markdown(h1.format_health(items)))
-        if not all(item.ok for item in items):
-            raise typer.Exit(1)
-        return
-    if json_out:
-        payload = {
-            "variant": result.variant,
-            "runs": list(result.runs),
-            "samples": len(result.samples),
-            "tags": result.tags,
-            "months": result.months,
-            "unpaired": result.unpaired,
-            "fourth_hits": result.fourth_hits,
-            "noloc_hits": result.noloc_hits,
-            "h3_events": list(result.h3_events),
-            "groups": {
-                dose: {
-                    "weight": h1.DOSE_WEIGHT.get(dose),
-                    "observations": group.observations,
-                    "probe_hits": group.probe_hits,
-                    "rate": group.rate,
-                    "wilson": group.wilson(),
-                    "countries": len(group.countries),
-                }
-                for dose, group in result.groups.items()
-            },
-            "by_slot": {
-                slot: {
-                    dose: {
-                        "observations": cell.observations,
-                        "hits": cell.hits,
-                        "rate": cell.rate,
-                        "wilson": cell.wilson(),
-                        "implied_rival_weight": cell.implied_rival_weight(),
-                    }
-                    for dose, cell in cells.items()
-                }
-                for slot, cells in result.by_slot.items()
-            },
-            "tempo": {
-                slot: {
-                    "observations": tempo.observations,
-                    "pairs": tempo.pairs,
-                    "changes": tempo.changes,
-                    "rate": tempo.rate,
-                    "top": [list(item) for item in tempo.top],
-                }
-                for slot, tempo in result.tempo.items()
-            },
-        }
-        console.print_json(json.dumps(payload, ensure_ascii=False))
-        return
-    if not result.samples:
-        console.print(
-            "[yellow]日志里没有 H1 的观测行[/] —— 检查三件事：探针是否启用、"
-            "是否进了一局游戏、日志目录是否是本机用户目录。"
-        )
-    console.print(Markdown(h1.format_report(result)))
-
-
-# ── h1-probe（阶段 2：探针本身是生成的，不是手写的）────────────
-@app.command("h1-probe")
-def h1_probe_cmd(
-    variant: Annotated[
-        str, typer.Option("--variant", "-v", help="natural（引擎真实节奏）| storm（每周重抽）")
-    ] = "natural",
-    deploy: Annotated[
-        bool, typer.Option("--deploy", help="同步进用户 mod 目录，并把 content_load.json 只留它")
-    ] = False,
-    archive: Annotated[
-        str | None, typer.Option("--archive", help="先把现有日志挪进归档目录（给个标签）")
-    ] = None,
-    watch: Annotated[
-        str | None,
-        typer.Option("--watch", help="跟着游戏跑：按版本快照日志（给个标签），游戏退出即收工"),
-    ] = None,
-    interval: Annotated[float, typer.Option("--interval", help="快照间隔秒数（默认 40）")] = 40.0,
-) -> None:
-    """生成 H1 探针（**不要手改探针文件**，改 `src/pdx/h1_probe.py`）。
-
-    生成的理由：日志链要按 `type` 枚举原版全部 34 张牌（手写会随版本漂移，
-    而漂移的表现是"某槽永远落进兜底桶"这种静默失真）；剂量阶梯又同时出现在牌文件
-    与分析器里，只能有一个来源。
-
-    两个变体：
-
-    * `natural` —— 引擎的真实重抽节奏。回答"原版节奏有多快"。
-    * `storm` —— 用独立小文件覆盖 `NAI` 的 `CHANGE_STRATEGY_THRESHOLD` 与
-      `CHANGE_STRATEGY_INCREASE_WEEKLY_CHANCE`（KB 05 §1.7 证明可按「块+参数」覆盖），
-      每周都可能重抽。回答"权重能不能推动落点"（大样本）与"mod 能不能接管重抽节奏"。
-    """
-    if watch:
-        # 日志按 512KB 轮转、会删最老的：长跑不做版本化快照就会丢早期月份
-        # （阶段 2 实测：自然局只剩最近约 4 个月）。这条跟着游戏跑到它退出。
-        dest, rounds, copied, skipped = h1_probe.watch(watch, interval=interval)
-        console.print(
-            f"快照收工：[bold]{dest}[/]（{rounds} 轮 / 复制 {copied} 个"
-            + (f" / 跳过 {skipped} 个被占用" if skipped else "")
-            + "）"
-        )
-        console.print(f'分析并集：`v3 h1 --logs "{dest}"`')
-        return
-    if archive:
-        dest, moved, skipped = h1_probe.archive_logs(archive)
-        console.print(f"日志已归档：[bold]{dest}[/]（挪走 {moved} 个文件）")
-        if skipped:
-            console.print(
-                f"[yellow]有 {skipped} 个日志挪不动[/] —— 游戏还开着时日志被独占，"
-                "请先退出游戏再归档。"
-            )
-    built = h1_probe.build(variant=variant)
-    written = h1_probe.write(variant=variant)
-    console.print(h1_probe.summary(built))
-    console.print(f"已写入 [bold]{len(written)}[/] 个文件 → {h1_probe.PROBE_DIR}")
-    if deploy:
-        dest = h1_probe.deploy(variant=variant)
-        console.print(
-            f"已部署到 [bold]{dest}[/]，`content_load.json` 只留这一个 mod（原列表已备份）"
-        )
-        console.print("接着：启动游戏 → 开一局 1836 新游戏 → 至少跑 3 个月 → 退出 → `v3 h1`。")
-
-
 @app.command("modgen")
 def modgen_cmd(
-    write: Annotated[
-        bool,
-        typer.Option("--write", help="生成生产 mod/ 与实验 mod/legacy/（旧档案清理过期产物）"),
-    ] = False,
-    check: Annotated[
-        bool,
-        typer.Option("--check", help="核对盘上产物与数据源一致（被手改 / 过期 / 多余即退出码 1）"),
-    ] = False,
-    why: Annotated[bool, typer.Option("--why", help="只列出每个数字与它的依据（P10）")] = False,
+    write: Annotated[bool, typer.Option("--write", help="生成唯一正式 Mod 的仓库产物")] = False,
+    check: Annotated[bool, typer.Option("--check", help="逐字节核对生成物，不写盘")] = False,
 ) -> None:
-    """把结构化数据源编译成 mod 产物：脚本 + 本地化 + 档案文档。
-
-    生产数据源是 `mod/decisions/fiscal.toml` 与 `mod/decisions/extensions.toml`，产物在 `mod/`；新 TOML 须显式接入。旧档案源 `mod/data/*.toml`
-    只生成至 `mod/legacy/`，用于复现历史实验；游戏 ZIP 只包含生产产物。
-    底本版本或指纹不符时拒绝生成。手改产物会被一致性检查发现。
-
-    三种用法：
-
-    ```text
-    v3 modgen             # 只编译并打摘要（不写盘）
-    v3 modgen --write     # 落盘，并清掉被取代的旧文件
-    v3 modgen --check     # 核对盘上产物 = 生成结果（手改/过期/多余即退出码 1）
-    v3 modgen --why       # 每个数字 + 它的依据（空 why 在编译期就会报错）
-    ```
-
-    数据源不合法的两种情形都在这里**当场**报错（退出码 2）：结构/类型不对、
-    以及任何一张表缺 `why` —— 后者是 P10 的机械检查，不是靠人记得。
-    """
+    """从生产 TOML 和锁定原版底本生成标准 Mod；生成物禁止手改。"""
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
-        archives = modgen.load_all()
-        built = modgen.build_all(archives)
-        decision_files = decisions.build()
-    except (modgen.DataError, ValueError, OSError) as exc:
-        _fail(f"数据源不合法：{exc}")
-
-    if why:
-        console.rule("生产处境决策 · mod/decisions/fiscal.toml")
-        console.print(escape(decisions.SOURCE.read_text(encoding="utf-8")))
-        for archive in archives:
-            console.rule(f"{archive.title}（{archive.source}）")
+        _, _, files = distribution.package_inputs()
+        production = {name: text for name, text in files.items() if name != "README.md"}
+        if write:
+            written = decisions.write(decisions.PRODUCT, production)
+            console.print(f"[green]已生成 {len(written)} 个生产文件：UTF-8 无 BOM、LF[/]")
+        elif check:
+            problems = decisions.check(decisions.PRODUCT, production)
+            if problems:
+                _fail("生成物不一致：\n" + "\n".join(problems), EXIT_FAILED)
+            console.print(f"[green]{len(production)} 个生产文件与源逐字节一致[/]")
+        else:
             console.print(
-                Markdown(
-                    "**每个数字与它的依据**\n\n"
-                    + modgen.why_report(archive)
-                    + "\n\n**每张表的依据**\n\n"
-                    + modgen.why_tables(archive)
-                )
+                f"Situated AI 1.0.0：{len(production)} 个生产文件；--write 生成 / --check 核对"
             )
-        return
-
-    if write:
-        try:
-            written = [*decisions.write(decisions.PRODUCT, decision_files), *modgen.write(built)]
-        except OSError as exc:
-            _fail(f"写盘失败：{type(exc).__name__}: {exc}")
-        table = Table(title=f"已写入 {len(written)} 个产物", show_lines=False)
-        table.add_column("产物", style="cyan")
-        table.add_column("字节", justify="right")
-        table.add_column("BOM", justify="center")
-        for path in written:
-            rel = _relative(path)
-            table.add_row(
-                escape(rel),
-                f"{path.stat().st_size:,}",
-                "✓" if path.read_bytes().startswith(b"\xef\xbb\xbf") else "",
-            )
-        console.print(table)
-        console.print(
-            "仓库产物均以 UTF-8 无 BOM、LF 写入；安装或打包时才为游戏文件添加 BOM。"
-            "接着跑 [bold]v3 modguard[/]——核对生产覆盖与 legacy 五道闸门。"
-        )
-        return
-
-    if check:
-        problems = [*decisions.check(decisions.PRODUCT, decision_files), *modgen.check(built)]
-        if problems:
-            table = Table(title=f"{len(problems)} 处与数据源不一致", show_lines=False)
-            table.add_column("问题", overflow="fold")
-            for line in problems[:30]:
-                table.add_row(escape(line))
-            console.print(table)
-            console.print("[yellow]跑 `v3 modgen --write` 重新生成（产物不许手改）[/]")
-            raise typer.Exit(EXIT_FAILED)
-        console.print(
-            f"[green]生产 {len(decision_files)} 个、legacy {len(built.files)} 个产物与数据源逐字节一致 ✅[/]"
-        )
-        return
-
-    console.print(
-        f"生产处境决策：{len(decision_files)} 个产物；有意覆盖原版 00_default_strategy.txt"
-    )
-    console.print("legacy 历史档案：")
-    console.print(escape(modgen.summary(built)))
-    console.print("[dim]--write 落盘 / --check 核对 / --why 列依据[/]")
+    except (ValueError, OSError) as exc:
+        _fail(f"生成失败：{exc}", EXIT_FAILED)
 
 
 @app.command("package")
 def package_cmd(
-    output: Annotated[Path, typer.Option("--output", help="游戏 ZIP 输出路径")] = Path(
-        "tools/out/releases/situated-ai-experimental.zip"
+    output: Annotated[Path, typer.Option("--output", help="正式 ZIP 输出路径")] = Path(
+        "dist/situated-ai-1.0.0.zip"
     ),
-    variant: Annotated[
-        Literal[
-            "current",
-            "control",
-            "disabled",
-            "complete",
-            "fiscal",
-            "security",
-            "market",
-            "reform",
-            "economy",
-            "diplomacy",
-            "subjects",
-            "full",
-            "integrated",
-        ],
-        typer.Option(
-            "--variant",
-            help="complete 四模块；full 旧七模块候选；integrated 含声明规则的全域实验增量；其余为隔离包",
-        ),
-    ] = "disabled",
-    with_explanation_probe: Annotated[
-        bool | None,
-        typer.Option(
-            "--with-explanation-probe",
-            help="在本次标准 Mod 中临时附加未验收的只读解释探针；默认不附加",
-        ),
-    ] = None,
 ) -> None:
-    """校验生成物并打包；仅在游戏交付边界添加 BOM。"""
-    from .distribution import package  # noqa: PLC0415 -- 交付命令独立边界
-
+    """核对生产生成物后打包；仅在游戏交付边界添加 BOM。"""
     try:
-        target = package(output, variant=variant, with_explanation_probe=with_explanation_probe)
+        target = distribution.package(output)
     except (ValueError, OSError) as exc:
         _fail(f"打包失败：{exc}", EXIT_FAILED)
     console.print(f"[green]已生成[/] {escape(str(target))}")
@@ -2973,20 +2486,10 @@ def package_cmd(
 def citations_cmd(
     paths: Annotated[
         list[str] | None,
-        typer.Argument(help="要扫的文件或目录（默认只扫数据源 mod/data）"),
+        typer.Argument(help="要扫描的说明文件或目录"),
     ] = None,
-    offline: Annotated[
-        bool,
-        typer.Option(
-            "--offline",
-            help="离线：不读游戏本体，只核「与入库快照一致」（CI 用，B77）",
-        ),
-    ] = False,
 ) -> None:
-    """核对数据源里的 `文件:行号` 引用**指得到真实文件的那一行**。
-
-    P10 要求"每个数字都要有依据"，而依据最常用的一句话是"原版某文件某一行就是这么写的"。
-    闸门 ⑤ 只查 `why` 非空 —— 它查不出**行号是编的**。这个命令补上那一步：
+    """核对说明文件里的 `文件:行号` 引用能否解析到当前游戏原版的唯一一行。
 
     ```text
     文件名写错（00_sikh_empire.txt 其实叫 04_sikh_empire.txt） ⇒ missing
@@ -2995,43 +2498,19 @@ def citations_cmd(
     同名文件有几十个（modifiers.txt）                          ⇒ ambiguous
     ```
 
-    ⚠️ **默认只扫 `mod/data`**：设计文档里的 `文件:行号` 有另一种含义（知识库章节、
-    仓库内文件），拿同一把尺子去量会得到一片假红 —— 要扫别处就显式给路径。
-
-    ⚠️ 它**不做语义判断**："那一行真的支持这条 why 吗"仍然要人看。这里只保证
-    "引用存在且唯一"，把人的注意力从找文件挪到读内容。
-
-    **``--offline``（B77）**：原来这条**进不了 CI** —— 它要打开原版文件，而 runner 上
-    没有游戏（其余门禁都有离线通道，这是最后一个缺口）。现在精简快照里多了一个
-    `citation_support` 域（`v3 snapshot create --compact` 写入）：每条引用记着
-    **被引那一行的文本指纹 + 文件行数**。离线核的是「与入库快照一致」，
-    **不是**「与现在的游戏一致」—— 后者是本机门禁的活（有游戏时本命令会顺手核
-    "被引那一行还是不是那句话"，那正是官方更新挪走我们依据的信号）。
+    必须显式提供路径，避免隐式扫描已删除的旧数据目录。此命令只检查引用路径、唯一性和行号，
+    不判断被引内容是否支持说明中的结论；生产接口由 `modguard` 单独核验。
     """
-    targets = [Path(item) for item in (paths or ["mod/data"])]
+    if not paths:
+        _fail("至少指定一个说明文件或目录")
+    targets = [Path(item) for item in paths]
     missing = [str(path) for path in targets if not path.exists()]
     if missing:
         _fail(f"找不到：{'、'.join(missing)}")
     found = citations.scan_paths(targets)
-    snap = verify.latest_compact_snapshot()
-    support = (snap.sections.get(citations.SECTION) or {}) if snap is not None else {}
-
-    if offline:
-        if snap is None:
-            _fail(
-                "没有精简快照（tools/out/snapshots/*.compact.json）—— 离线核对要靠它里的"
-                f"`{citations.SECTION}` 域；在装有游戏的机器上跑 `v3 snapshot create --compact`"
-            )
-        bad = citations.unsupported(found, support)
-        _report_support(found, bad, offline=True, support=support)
-        return
-
+    if not found:
+        _fail("指定路径中没有发现文件:行号引用")
     problems = [item for item in found if not item.ok]
-    malformed = [
-        (item, detail)
-        for item, detail in citations.unsupported(found, support, live=True)
-        if item.ok  # 已经报成 missing/ambiguous/out_of_range 的不重复报
-    ]
     table = Table(
         title=f"{len(found)} 条引用（{len(found) - len(problems)} 条指得到）",
         show_lines=False,
@@ -3047,454 +2526,44 @@ def citations_cmd(
             escape(item.where),
             escape(item.detail),
         )
-    for item, detail in malformed[:40]:
-        table.add_row(
-            "[red]unsupported[/]",
-            escape(f"{item.file}:{item.start}"),
-            escape(item.where),
-            escape(detail),
-        )
-    if problems or malformed:
+    if problems:
         console.print(table)
-        if problems:
-            console.print(
-                f"[yellow]{len(problems)} 条引用指不到唯一一行[/]"
-                " —— 要么改引用，要么把原版那一段原文贴进 why（P10）"
-            )
-        if malformed:
-            _report_relocations([item for item, _ in malformed], support)
-            console.print(
-                f"[yellow]{len(malformed)} 条引用与入库支撑域对不上[/]"
-                " —— 核对后跑 `v3 snapshot create --compact` 刷新（它是入库的）"
-            )
+        console.print(f"[yellow]{len(problems)} 条引用指不到唯一一行[/]")
         raise typer.Exit(EXIT_FAILED)
     console.print(f"[green]{len(found)} 条引用全部指得到唯一一行 ✅[/]")
 
 
-def _report_relocations(items: list[citations.Citation], support: dict[str, list[str]]) -> None:
-    """报「只是行号漂移」的那些引用：按**入库支撑域**里的行指纹找回它现在在哪一行。
-
-    为什么要专门说一句：编辑一个被大量引用的文件（`docs/design/backlog.md`、
-    `src/pdx/ab_probe.py` 这类）会让行号整体平移而内容一个字没变，
-    此时闸门只会说"第 N 行的内容变了（原版更新？）"—— 那句话会把人往**错的方向**引
-    （去看原版更新），而真相是自己刚编辑过那个文件。本轮实测踩过两次。
-    ⚠️ 比对基准必须是**入库快照**里的域，不能现算一份：现算出来的指纹必然与现在一致，
-    那样永远找不到漂移（第一版就是这么写错的）。
-    """
-    moves = citations.relocate(items, support)
-    if not moves:
-        return
-    console.print(f"[yellow]{len(moves)} 条只是**行号漂移**[/]（内容没变）：")
-    for move in moves[:40]:
-        console.print(f"   {escape(move.describe())}")
-    console.print(
-        "   改完引用行号后重跑本命令；改的是数据源就再接 `v3 modgen --write`，"
-        "最后 `v3 snapshot create --compact` 刷新入库支撑。"
-    )
-
-
-def _report_support(
-    found: list[citations.Citation],
-    bad: list[tuple[citations.Citation, str]],
-    *,
-    offline: bool,
-    support: dict[str, list[str]] | None = None,
-) -> None:
-    """离线/在线共用的「支撑域」结果表（CI 只看这一张）。"""
-    table = Table(
-        title=f"{len(found)} 条引用（{len(found) - len(bad)} 条与入库快照一致）",
-        show_lines=False,
-    )
-    table.add_column("结论", style="cyan")
-    table.add_column("引用", overflow="fold")
-    table.add_column("出处", overflow="fold")
-    table.add_column("说明", overflow="fold")
-    for item, detail in bad[:40]:
-        table.add_row(
-            "[red]unsupported[/]",
-            escape(f"{item.file}:{item.start}"),
-            escape(item.where),
-            escape(detail),
-        )
-    if bad:
-        console.print(table)
-        # 报"内容变了"之前先按**指纹**找一遍：多半只是行号被编辑平移了。
-        _report_relocations([item for item, _ in bad], support or {})
-        console.print(
-            f"[yellow]{len(bad)} 条引用与入库支撑域对不上[/]"
-            " —— 核对后跑 `v3 snapshot create --compact` 刷新（它是入库的）"
-        )
-        raise typer.Exit(EXIT_FAILED)
-    where = "离线：与入库快照一致" if offline else "在线"
-    console.print(f"[green]{len(found)} 条引用全部有入库支撑（{where}）✅[/]")
-
-
-@app.command("preflight")
-def preflight_cmd(
-    archive: Annotated[
-        str,
-        typer.Option(
-            "--archive", help="要跑的那份档案 id（给了就一并查它可不可跑、探针盯的是不是它）"
-        ),
-    ] = "",
-) -> None:
-    """开局前的**前置条件自检**（只读：不改配置、不动日志、不写盘）。
-
-    为什么要有这一条：一次实机会话的代价不是几秒钟 —— 起游戏到选国家界面实测约 137 秒，
-    还要把用户的屏幕借走、跑几十个游戏月，而**失败常常在开局十几分钟后才暴露**
-    （探针盯的国家不对、日志里混着上一局的自报、盘上产物是手改过的旧版本）。
-    这些条件**开局前全部可查**，而且不需要游戏在跑。
-
-    退出码与其它命令同一套口径：**0 = 可以开局；1 = 有该修的问题（如产物被手改、
-    上次实验没还原用户配置）；2 = 这台机器现在跑不了**（没有游戏 / 数据源坏了 / 没有
-    `content_load.json`）。它**只报告**，绝不顺带修 —— 检查脚本自己去改环境，
-    就成了第二个会留下烂摊子的东西。
-    """
-    report = preflight.run(archive=archive or None)
-    table = Table(title="开局前置条件", show_lines=False)
-    table.add_column("", width=2, justify="center")
-    table.add_column("条件")
-    table.add_column("结论", overflow="fold")
-    table.add_column("怎么修", overflow="fold")
-    for check in report.checks:
-        table.add_row(
-            "✅" if check.ok else "❌",
-            escape(check.name),
-            escape(check.detail),
-            escape(check.fix if not check.ok else ""),
-        )
-    console.print(table)
-    code = report.exit_code()
-    if code == 0:
-        console.print("[green]可以开局[/]")
-        if report.notes:
-            console.print(f"[yellow]另有 {len(report.notes)} 条提示[/]（不拦路，先看一眼）：")
-            for note in report.notes:
-                console.print(f"   [dim]{escape(note.describe())}[/]")
-        if archive:
-            console.print(
-                f"接着：`python tools/probe/stage3_rerun.py --months 66 --archive {archive} --fresh-logs`"
-            )
-        else:
-            console.print("接着：`python -m pdx.game_auto run --wait-tests <秒>`")
-        return
-    if code == 2:
-        _fail(f"{len(report.blocking)} 条前置条件缺失 —— 这台机器现在跑不了这一局")
-    _fail(f"{len(report.wrong)} 条该先修（否则这一局会白跑）")
-
-
 @app.command("modguard")
 def modguard_cmd(
-    only: Annotated[
-        str,
-        typer.Option(
-            "--only",
-            help="只核 legacy 某道闸门（1–5或键名）；省略时同时核生产处境决策",
-        ),
-    ] = "",
-    offline: Annotated[
-        bool,
-        typer.Option(
-            "--offline",
-            help="离线：①② 的原版真值改读入库精简快照（CI 用），不读游戏本体",
-        ),
-    ] = False,
+    offline: Annotated[bool, typer.Option("--offline", help="从入库快照核对原版接口")] = False,
 ) -> None:
-    """五道闸门：键/路径不相交、引用完整性、稀释预算、往返净度、生成可复现。
-
-    这是冻结文档 §5 里「每次生成后 / 每阶段结束」要跑的那套检查，逐条对应：
-
-    ```text
-    ① keys        键与路径与原版零交集（含 F7 命名空间与平铺不建子目录）
-    ② refs        我们引用的每个变量/JE/修正/图标/本地化键/defines 参数都存在
-    ③ dilution    递牌按阶段 2 的价格表定价，超预算即红（本档案 0 张牌）
-    ④ roundtrip   生成 → 按 PDX 语法解析回来 → 与数据源逐条一致
-    ⑤ determinism 两次生成逐字节一致 + 每个 why 非空 + 盘上产物确实由生成器产出
-    ```
-
-    `--offline`：①② 的原版真值改读**入库精简快照**
-    （`tools/out/snapshots/*.compact.json`），于是没有游戏本体的机器（CI）也能
-    真跑这两道闸门 —— 不是跳过它们。输出里逐项写明「本项由快照核验」，快照没
-    覆盖到的项单列成**「离线未覆盖」并注明不算通过**（未覆盖不报红，否则 CI
-    永远红；但也绝不算过，否则"没查"会被读成"通过"）。③④⑤ 本来就不读游戏。
-
-    退出码：0 全过（或全过且只余"离线未覆盖"项）；1 有闸门不过（**不许进游戏**）；
-    2 前置条件缺失（原版目录不可用、快照缺失或缺域、数据源不合法、`--only` 拼错）。
-
-    **缺前置条件不算通过**：没有游戏、也没要离线时 ①/② 报退出码 2 而不是静默
-    跳过 —— 跳过会被当成绿灯，这是这类门禁最危险的失效方式（P13）。
-    """
+    """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     try:
-        ctx = modguard.context(offline=offline)
-        if not only:
-            decision_issues = decisions.check(decisions.PRODUCT)
-            if decision_issues:
-                _fail("生产处境决策产物检查失败：\n" + "\n".join(decision_issues), EXIT_FAILED)
-            interface_issues = decisions.validate(
-                ctx.vanilla.vocabulary() if ctx.vanilla else None,
-                game=None if offline else ctx.game,
-                snapshot=(
-                    {"域": ctx.vanilla.sections} if offline and ctx.vanilla is not None else None
-                ),
+        policy, extensions, files = distribution.package_inputs()
+        production = {name: text for name, text in files.items() if name != "README.md"}
+        problems = decisions.check(decisions.PRODUCT, production)
+        index = vanilla_index.load(offline=offline)
+        if index is None:
+            _fail("缺少原版接口证据：请提供锁定游戏或使用入库快照")
+        problems.extend(
+            decisions.validate(
+                index.vocabulary(),
+                game=None if offline else config.GAME,
+                snapshot={"域": index.sections} if offline else None,
+                policy=policy,
+                extensions=extensions,
             )
-            if interface_issues:
-                _fail("生产处境决策证据检查失败：\n" + "\n".join(interface_issues))
-            console.print("[green]生产处境决策：生成一致、底本结构/指纹与新增接口检查通过 ✅[/]")
-            console.print(
-                "有意覆盖原版 00_default_strategy.txt；与修改默认策略的模组存在兼容成本。以下五道闸门仅核 legacy 历史档案。"
-            )
-        else:
-            console.print("本次仅核选定的 legacy 闸门；生产处境决策未检查。")
-        report = modguard.run(ctx, only)
-    except modgen.DataError as exc:
-        _fail(f"数据源不合法：{exc}")
-    except ValueError as exc:
-        _fail(f"{exc}")
-    except OSError as exc:
-        _fail(f"读产物/原版失败：{type(exc).__name__}: {exc}")
-
-    table = Table(title=f"legacy 历史档案闸门（{len(report.findings)} 道）", show_lines=False)
-    table.add_column("", width=2, justify="center")
-    table.add_column("闸门")
-    table.add_column("结论", overflow="fold")
-    for finding in report.findings:
-        mark = "✅" if finding.ok else ("⚠️" if finding.precondition else "❌")
-        table.add_row(mark, escape(finding.title), escape(finding.headline))
-    console.print(table)
-
-    # 离线时**过也要有明细**：哪一项由快照核验、哪些没覆盖，都写在明细里
-    # （P13：绿也得让人看得出"绿在哪"）。
-    for finding in report.findings:
-        if finding.ok and not offline:
-            continue
-        console.print(f"\n[bold]{escape(finding.title)}[/]")
-        for line in finding.details:
-            console.print(f"  {escape(line)}")
-
-    if offline:
-        console.print(
-            "[dim]离线模式：①/② 的原版真值来自入库精简快照（版本见各闸门明细）；"
-            "③/④/⑤ 本来就不读游戏。[/]"
         )
-    if report.uncovered:
-        console.print(
-            f"[yellow]⚠️ 离线未覆盖 {len(report.uncovered)} 项（**不算通过**）—— 明细见上面各闸门[/]"
-        )
-
-    if report.missing_precondition:
-        blockers = [f.headline for f in report.findings if f.precondition]
-        _fail("前置条件缺失：" + "；".join(blockers))
-    if not report.ok:
-        console.print("[red]有闸门不过 —— 按上面的明细修完再跑一次[/]")
-        raise typer.Exit(EXIT_FAILED)
-    console.print(
-        "[green]选定的 legacy 闸门通过 ✅[/]"
-        if only
-        else "[green]生产检查与 legacy 五道闸门全过 ✅[/]"
-    )
-
-
-@app.command("ab-probe")
-def ab_probe_cmd(
-    deploy: Annotated[
-        bool, typer.Option("--deploy", help="同步探针与legacy 档案 mod 进用户 mod 目录并只启用它们")
-    ] = False,
-    archive: Annotated[
-        str,
-        typer.Option(
-            "--archive",
-            help="盯哪一份档案（不给 = 数据源里按文件名排序的第一份，会在输出里写明）",
-        ),
-    ] = "",
-) -> None:
-    """生成阶段 3 的 A/B 探针（**不要手改探针文件**，改 `src/pdx/ab_probe.py`）。
-
-    两局点的是**同一个决议**，唯一差异是角色：A = 决议什么都不做，B = 决议调用legacy 档案 mod 的
-    `sitai_ru_defeat_shock`。自报只盯主角国家，每月记三个槽位落点 +
-    改革窗口 JE + 冲击变量 + 6 条改革相关法律 —— **行为层与策略层分开记**，
-    因为阶段 3 的失败长相写死了「只有策略层动 = H2 不成立」。
-
-    ``--archive`` 显式指定盯哪一份档案：不写就取数据源里**按文件名排序的第一份**，
-    而那个默认值会随着新档案入库而变（`au_revolution` 现在排在最前）——
-    所以想复现某次实验的探针，必须把档案名写出来。
-    """
-    archive_id = archive or None
-    built = ab_probe.build(target=ab_probe.load_target(archive_id))
-    ab_probe.write(archive_id=archive_id)
-    target = ab_probe.load_target(archive_id)
-    console.print(
-        f"盯的档案：[bold]{target.archive_id if target else '?'}[/]"
-        f"（{target.subject if target else '?'}）"
-        f"{'（按文件名排序的第一份）' if archive_id is None else ''}"
-    )
-    console.print(ab_probe.summary(built))
-    if deploy:
-        dest = ab_probe.deploy(archive_id=archive_id)
-        console.print(f"已部署 [bold]{dest}[/]（连同legacy 档案 mod 一起启用，原列表已备份）")
-        console.print(
-            f"接着：启动游戏 → 选 {target.subject if target else '主角国家'} 开 1836 → "
-            "点【A】或【B】→ 不做任何操作 → 跑 6-8 年 → 退出。"
-        )
-
-
-# ── ab（阶段 3：A/B 实验的差分，H2）──────────────────────────
-@app.command("ab")
-def ab_cmd(
-    logs: Annotated[
-        Path | None, typer.Option("--logs", help="日志目录（默认用户目录下的 logs）")
-    ] = None,
-    json_out: Annotated[bool, typer.Option("--json", help="输出机器可读的 JSON")] = False,
-    health_only: Annotated[
-        bool,
-        typer.Option(
-            "--health",
-            help="只跑**开局自检**（RUN / 玩家 / 观测 / 角色 / SHOCK / 报错；任一不过退出码 1）",
-        ),
-    ] = False,
-) -> None:
-    """A/B 实验：**真实冲击能不能改行为**（阶段 3 的 H2）。
-
-    探针（`v3 ab-probe` 生成）每月只给主角国家（俄罗斯）写几行：
-
-    ```text
-    ZZPROBE AB;RUN;A                          ← 开局标记：A=对照、B=处理（点哪个决议就写哪个）
-    ZZPROBE AB;PLAYER;yes;俄罗斯               ← 玩家是谁（开错国家时用来自检）
-    ZZPROBE AB;SHOCK;yes;俄罗斯                ← 冲击变量在不在（B 组点完决议后应为 yes）
-    ZZPROBE AB;JE;active;俄罗斯                ← 行为层①：改革窗口
-    ZZPROBE AB;LAW;law_serfdom;俄罗斯          ← 行为层②：当月生效的那条法律
-    ZZPROBE AB;POLI;reactionary_agenda;俄罗斯  ← 策略层：三个槽位落点
-    ```
-
-    报告**先行为层、再策略层**，两层分开报 —— 执行文档把失败长相写死了：
-    **只有策略层动 = H2 不成立（意图层是薄壳）**，那时该停下重估目标，不是加代码。
-    同一个角色的多次启动会被合并；两个角色都要有观测才谈得上差分。
-
-    判定分档（`Result.verdict`）：行为层有差分 → `g2_preliminary`（还要**两次同向**才定论）；
-    只有策略层动 → `h2_shell`；都没有 → `no_diff`；缺一组 → `insufficient`。
-    """
-    result = ab.analyze(logs)
-    if health_only:
-        # 开局自检（P13）：探针没跑、开错国家、冲击没生效这些失败在脚本侧毫无报错，
-        # 只有日志里的自报行能看出来 —— 这一条让它们在一分钟内红，而不是跑完才发现。
-        items = ab.health(result, log_dir=logs)
-        console.print(Markdown(ab.format_health(items)))
-        if not all(item.ok for item in items):
-            raise typer.Exit(EXIT_FAILED)
-        return
-    if json_out:
-        payload = {
-            "runs": list(result.runs),
-            "verdict": result.verdict,
-            "verdict_text": ab.verdict_text(result),
-            "months": result.months,
-            "tags": list(result.tags),
-            "unpaired": result.unpaired,
-            "player": result.player,
-            "subject": result.subject,
-            "behaviour_changed": result.behaviour_changed,
-            "strategy_changed": result.strategy_changed,
-            "segments": [
-                {
-                    "index": segment.index,
-                    "declared": segment.declared,
-                    "role": segment.role,
-                    "blocks": segment.blocks,
-                    "months": segment.months,
-                }
-                for segment in result.segments
-            ],
-            "roles": {
-                role: {
-                    "segments": behaviour.segments,
-                    "observations": behaviour.observations,
-                    "tags": list(behaviour.tags),
-                    "shock_yes": behaviour.shock_yes,
-                    "shock_rate": behaviour.shock_rate,
-                    "input_yes": behaviour.input_yes,
-                    "input_rate": behaviour.input_rate,
-                    "je_active": behaviour.je_active,
-                    "je_share": behaviour.je_share,
-                    "je_first": behaviour.je_first,
-                    "first_law": behaviour.first_law,
-                    "law_change": behaviour.law_change,
-                    "law_change_to": behaviour.law_change_to,
-                    "bands": [
-                        {"band": band.band, "months": band.months, "share": band.share}
-                        for band in behaviour.bands
-                    ],
-                    "laws": [
-                        {
-                            "law": stat.law,
-                            "months": stat.months,
-                            "share": stat.share,
-                            "first_month": stat.first_month,
-                        }
-                        for stat in behaviour.laws
-                    ],
-                }
-                for role, behaviour in result.roles.items()
-            },
-            "slots": {
-                role: {
-                    slot: {
-                        "observations": dist.observations,
-                        "most_common": list(dist.most_common) if dist.most_common else None,
-                        "counts": [list(item) for item in dist.counts],
-                    }
-                    for slot, dist in dists.items()
-                }
-                for role, dists in result.slots.items()
-            },
-            "behaviour_diffs": [
-                {
-                    "name": diff.name,
-                    "a": diff.a,
-                    "b": diff.b,
-                    "changed": diff.changed,
-                }
-                for diff in result.behaviour_diffs
-            ],
-            "strategy_diffs": [
-                {
-                    "name": diff.name,
-                    "a": diff.a,
-                    "b": diff.b,
-                    "changed": diff.changed,
-                    "note": diff.note,
-                }
-                for diff in result.strategy_diffs
-            ],
-            # 第二对照（B → B2，改革侧输入步）：与 ① / ② 同形状，单独一组键 ——
-            # 混进上面两组就分不出"哪一处处理起了作用"。
-            "input_behaviour_diffs": [
-                {
-                    "name": diff.name,
-                    "a": diff.a,
-                    "b": diff.b,
-                    "changed": diff.changed,
-                }
-                for diff in result.input_behaviour_diffs
-            ],
-            "input_strategy_diffs": [
-                {
-                    "name": diff.name,
-                    "a": diff.a,
-                    "b": diff.b,
-                    "changed": diff.changed,
-                    "note": diff.note,
-                }
-                for diff in result.input_strategy_diffs
-            ],
-            "verdict_roles": list(ab.VERDICT_ROLES),
-        }
-        console.print_json(json.dumps(payload, ensure_ascii=False))
-        return
-    if not result.samples:
-        console.print(
-            "[yellow]日志里没有 AB 的观测行[/] —— 检查三件事：A/B 探针是否启用、"
-            "是否进过一局游戏、`--logs` 是否指对了目录。"
-        )
-    console.print(Markdown(ab.format_report(result)))
+        for name, text in production.items():
+            if name.endswith(".txt"):
+                problems.extend(f"{name}: {error}" for error in parse_text(text, name).errors)
+        if problems:
+            _fail("生产工程检查失败：\n" + "\n".join(problems), EXIT_FAILED)
+    except (ValueError, OSError) as exc:
+        _fail(f"生产工程检查失败：{exc}", EXIT_FAILED)
+    console.print("[green]生产生成、脚本语法、锁定底本与原版接口检查通过[/]")
+    console.print("证据：" + ("入库快照（不证明当前游戏内容）" if offline else "本机原版目录"))
+    console.print("长期行为、平衡、玩家体验和游戏性能由用户验收。")
 
 
 @app.command("backlog")

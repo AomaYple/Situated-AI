@@ -1,3 +1,0 @@
-REPLACE_OR_CREATE:zzprobe_order = {
-	add_treasury = 4000000
-}

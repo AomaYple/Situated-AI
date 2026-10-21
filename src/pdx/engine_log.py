@@ -73,7 +73,7 @@ TEXTUAL_SUFFIXES = frozenset(
 #: * ``不可核对``：输入让结论**不可能得到** —— 行号不可比（覆盖版与原版行数不同、
 #:   整个文件被删、行数读不到），或 token 在当前安装里整份文件都不存在（日志比安装旧）。
 #:   这一档既不许冒充通过（0），也不许冒充不一致（1）。B85 一族的教训：
-#:   「我们在日志里没看到」不等于「没有」（``pdx/game_auto.py:1848`` 的轮转副本，
+#:   「我们在日志里没看到」不等于「没有」（历史 B85 的轮转副本，
 #:   ``sorted()`` 读不到旧副本的行 ⇒ 找不到被当成了不存在）。
 TOKEN_MATCH = "匹配"
 TOKEN_MISPLACED = "真错配"
@@ -437,13 +437,10 @@ def default_log_dir() -> Path:
     return config.USERDIR / "logs"
 
 
-#: 探针 mod 在日志里留下的标识。**每加一个探针 mod 都要往这里补一行** ——
-#: 判据是"这个名字只可能来自我们自己的探针"，不要用"排除原版"式的模糊条件
+#: 已知诊断 Mod 在日志里留下的标识。判据是"这个名字只可能来自历史诊断 Mod"，
+#: 不要用"排除原版"式的模糊条件
 #: （本机路径里就有 ``Victoria 3``，模糊条件会把每一行都当成 mod 行）。
-#: * ``zz_probe`` / ``ZZ Probe``：`tools/probe/` 早期探针的名字；
-#: * ``Sitai Perf Probe`` / ``zz_sitai_perf``：`tools/probe/perf_mod.py` 的
-#:   ``descriptor.mod`` 名字与 ``path``（G-EXIT-3 采样用的那个，实测在
-#:   ``debug.1/3/4.log`` 里都留了 2 条记录 —— 就是它让 18 条假红现形的）。
+#: 这些名称保留用于识别历史日志，避免旧实验内容混入原版交叉核对。
 PROBE_MARKERS: tuple[str, ...] = (
     "zz_probe",
     "ZZ Probe",
@@ -453,11 +450,11 @@ PROBE_MARKERS: tuple[str, ...] = (
 
 
 def probe_session(log_dir: Path | None = None) -> bool:
-    """当前日志集是不是**探针会话**（只加载了 `tools/probe/` 那几个 mod）。
+    """日志集是否残留历史探针会话，避免污染当前静态交叉核验。
 
     为什么要判它：`cross_check` 的整条逻辑是「拿游戏自己的日志当外部真值」——
     而日志里的位置与枚举清单**取决于那次会话加载了哪些 mod**。跑过
-    `v3 experiment launch` 之后，日志描述的是「只有探针 mod」的世界，
+    历史探针运行之后，日志描述的是「只有探针 mod」的世界，
     与仓库分析的「23 个 workshop mod」世界对不上，比对必然假红。
 
     ⚠️ **必须扫全部 ``*.log``，不能只看当前那份**（2026-09-22 实测踩到）：

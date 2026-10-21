@@ -1,8 +1,7 @@
-"""通用处境决策：真实财政状态与外部风险影响原版外交倾向。
+"""生产 Mod 生成器：整合处境信息、规则和原版消费者适配器。
 
-生成完整默认策略的版本锁定副本，仅在两个已验证为相加的字段尾部追加条件。
-不占三个策略槽，不改变重抽节奏，不保存或恢复开局牌。底本逐字保留并通过哈希
-守住升级边界；该覆盖与其他修改 ai_strategy_default 的模组有兼容成本。
+以锁定原版底本为基础生成策略、触发器、脚本值、事件与完整本地化。
+只为 AI 增加有界倾向，保留玩家路径与原版行动执行，按源和底本指纹拒绝漂移。
 """
 
 from __future__ import annotations
@@ -44,9 +43,11 @@ from .parser import parse_text
 from .textio import normalized_text
 from .vanilla_index import (
     KEY_DIRS,
+    SCRIPT_VALUE_ACCESSOR_DIR,
     VARIABLE_POOL_DIRS,
     VOCABULARY_DIRS,
     game_index,
+    script_value_accessors,
     vocabulary_dir,
 )
 
@@ -61,8 +62,7 @@ PACKAGE_STATUSES = frozenset({"experimental", "candidate", "accepted"})
 SAVE_COMPATIBILITY = frozenset({"new-game-only", "same-version-new-game", "same-candidate-save"})
 SUPPORTED_PLATFORMS = frozenset({"windows", "macos", "linux"})
 
-# 生产 Mod 的本地化集合跟随当前锁定的 Victoria 3 本体语言；历史 legacy
-# 生成器仍保留自己的双语数据源契约，不影响生产包。
+# 生产本地化集合跟随当前锁定的 Victoria 3 本体语言。
 LANGUAGES: dict[str, str] = {language.directory: language.header for language in DEFAULT_LANGUAGES}
 
 _DECISION_LOCALIZATION: dict[str, dict[str, str]] = {
@@ -415,7 +415,7 @@ def information_contract() -> dict[str, object]:
 def module_lifecycle_contract(
     policy: Policy, _extensions: Extensions
 ) -> dict[str, dict[str, object]]:
-    """返回七模块的机器可读状态、钩子、TTL、关闭清理和存档契约。"""
+    """返回各决策模块的状态、钩子、TTL、关闭清理和存档契约。"""
 
     contract = deepcopy(MODULE_LIFECYCLE_CONTRACT)
     contract["fiscal"]["ttl_or_none"] = policy.ttl_days if policy.enabled else None
@@ -742,8 +742,8 @@ def diplomatic_play_support_addition(extensions: Extensions) -> str:
                 "\t\t\tif = {\n",
                 "\t\t\t\tlimit = { ROOT ?= { exists = scope:country exists = scope:enemy_country } }\n",
                 "\t\t\t\tadd = {\n",
-                ' \t\t\t\t\tvalue = "ROOT.economic_dependence(scope:country)"\n',
-                ' \t\t\t\t\tsubtract = "ROOT.economic_dependence(scope:enemy_country)"\n',
+                '\t\t\t\t\tvalue = "ROOT.economic_dependence(scope:country)"\n',
+                '\t\t\t\t\tsubtract = "ROOT.economic_dependence(scope:enemy_country)"\n',
                 f"\t\t\t\t\tmultiply = {extensions.market_multiplier:g}\n",
                 "\t\t\t\t\tdesc = SITAI_MARKET_DEPENDENCE_SUPPORT_REASON\n",
                 "\t\t\t\t}\n",
@@ -915,7 +915,10 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
         depth += (tok.kind == LBRACE) - (tok.kind == RBRACE)
         if depth == 0:
             _, field = current
-            extra = f"\t\t# SITAI BEGIN {field}\n{additions[field]}\t\t# SITAI END {field}\n"
+            addition = re.sub(r"(?m)^ +(?=\t)", "", additions[field])
+            addition = re.sub(r"(?m)^[\t ]+$", "", addition)
+            addition = re.sub(r"[\t ]+(?=\n)", "", addition)
+            extra = f"\t\t# SITAI BEGIN {field}\n{addition}\t\t# SITAI END {field}\n"
             changes.append((tok.line - 1, extra))
             following = next(pending, None)
             if following is None:
@@ -1027,16 +1030,14 @@ def metadata_payload(
         ]
     )
     return {
-        "name": "Situated AI · 处境决策",
+        "name": "Situated AI",
         "id": "sitai.decisions",
         "version": policy.package.product_version,
         "tool_version": TOOL_VERSION,
         "status": policy.package.status,
         "supported_game_version": policy.game_version,
         "short_description": (
-            "财政、外部防御、市场依赖与政治约束的实验组合；保留原版策略与执行。"
-            if extensions.security_enabled or extensions.market_enabled or extensions.reform_enabled
-            else "真实财政与外部风险影响原版外交倾向；保留国家原有策略路线。"
+            "依据国家处境综合调整政治、经济、外交与军事 AI 倾向，保留原版资格、成本和行动执行。"
         ),
         "tags": [],
         "relationships": [],
@@ -1046,10 +1047,10 @@ def metadata_payload(
         "localization": {
             "languages": [language.directory for language in languages],
             "headers": [language.header for language in languages],
-            # 保留旧字段供旧消费者读取，但新字段分别声明生产文本和解释探针。
+            # 保留旧消费者字段；生产回退必须如实声明，打包时拒绝缺译。
             "fallback_languages": production_fallback_languages,
             "production_fallback_languages": production_fallback_languages,
-            # 生产源不包含解释探针；探针附加阶段会按实际文本覆盖更新此字段。
+            # 生产源不包含解释探针，保留空字段以便核对历史生成合同。
             "explanation_fallback_languages": [],
             "fallback_policy": "none"
             if complete_localization
@@ -1316,6 +1317,9 @@ def build(
         )
         + "\n"
     )
+    for name, text in files.items():
+        if name.endswith((".txt", ".yml")):
+            files[name] = re.sub(r"(?m)[\t ]+$", "", text)
     return files
 
 
@@ -1374,6 +1378,8 @@ def validate(
     *,
     game: Path | None = None,
     snapshot: object | None = None,
+    policy: Policy | None = None,
+    extensions: Extensions | None = None,
 ) -> list[str]:
     """检查决策生成器实际生成的引擎接口及锁定底本。
 
@@ -1382,7 +1388,7 @@ def validate(
     ``vocabulary``、``vanilla_keys`` 和 ``vanilla_variables``。
     """
     interfaces = set()
-    policy = load()
+    policy = policy or load()
     if policy.enabled:
         interfaces |= {
             "is_ai",
@@ -1401,7 +1407,7 @@ def validate(
             "on_country_default",
             "on_country_no_longer_default",
         }
-    extensions = load_extensions()
+    extensions = extensions or load_extensions()
     if extensions.reform_enabled:
         interfaces |= {"legitimacy", "any_insurrection_ongoing", "is_in_government"}
     if extensions.market_enabled:
@@ -1443,6 +1449,9 @@ def validate(
     key_words = vocabulary_dir(BASELINE.parent)
     variable_words: set[str] = set()
     variable_uncovered = False
+    script_value_interfaces = interfaces & {"economic_dependence"}
+    script_value_words: set[str] = set()
+    script_value_uncovered = bool(script_value_interfaces)
     if snapshot is not None:
         if not isinstance(snapshot, Mapping):
             return ["原版接口快照结构无效"]
@@ -1482,6 +1491,18 @@ def validate(
                 for word in variables_section.get(rel, [])
                 if isinstance(word, str)
             }
+        script_value_section = sections.get("script_value_accessors")
+        if (
+            script_value_interfaces
+            and isinstance(script_value_section, Mapping)
+            and SCRIPT_VALUE_ACCESSOR_DIR in script_value_section
+        ):
+            script_value_words = {
+                word
+                for word in script_value_section[SCRIPT_VALUE_ACCESSOR_DIR]
+                if isinstance(word, str)
+            }
+            script_value_uncovered = False
         if keys_uncovered:
             return ["原版键快照缺失所需目录，无法校验 on_action / effect 接口"]
     elif game is not None:
@@ -1500,15 +1521,27 @@ def validate(
             variable_uncovered = True
         else:
             variable_words = variables
+        if script_value_interfaces:
+            script_value_words = script_value_accessors(game / SCRIPT_VALUE_ACCESSOR_DIR)
+            script_value_uncovered = False
     else:
         # 兼容以往只检查通用词汇的调用，但把底本自带证据与自产物词汇分开；
         # 新模块所需接口不会被“所有目标词都存在于目标里”这件事验证。
         vocabulary_uncovered = True
 
     evidence_words = vocabulary_words | key_words | variable_words | fiscal_words
+    ordinary_interfaces = interfaces - script_value_interfaces
     issues = [
-        f"决策生成接口未被原版证据覆盖：{name}" for name in sorted(interfaces - evidence_words)
+        f"决策生成接口未被原版证据覆盖：{name}"
+        for name in sorted(ordinary_interfaces - evidence_words)
     ]
+    if script_value_uncovered and script_value_interfaces:
+        issues.append("原版脚本值 API 快照缺少 common/script_values 域，读取接口检查未覆盖")
+    else:
+        issues.extend(
+            f"决策生成接口未被原版脚本值证据覆盖：{name}"
+            for name in sorted(script_value_interfaces - script_value_words)
+        )
     if vocabulary_uncovered:
         issues.append("原版词汇快照缺少所需目录；接口词汇检查未覆盖，不算通过")
     if variable_uncovered and "has_variable" in interfaces:

@@ -112,11 +112,11 @@ def test_stream_inspection_matches_bytes(raw, chunk_size):
         ("research/official-docs/a.md", "third_party_mirror"),
         (".agent-teams/state.json", "local_runtime"),
         ("tools/out/a.py", "raw_evidence"),
-        ("tools/probe/zz_console_probe/a.txt", "raw_evidence"),
         ("tools/probe/frozen/a.py.frozen", "frozen_evidence"),
-        ("tools/probe/a.png", "binary_asset"),
+        ("mod/gfx/a.png", "binary_asset"),
         ("tests/a.py", "test"),
         ("src/pdx/a.py", "source"),
+        ("mod/decisions/fiscal.toml", "source"),
         ("mod/common/a.txt", "generated"),
         ("docs/a.md", "documentation"),
         ("pyproject.toml", "configuration_or_data"),
@@ -161,7 +161,7 @@ def test_zip_deterministic_manifest_and_game_encoding(tmp_path):
         "localization/a.yml": "l_english:\n",
         "notes.md": "readme\n",
     }
-    generation = distribution.generation_contract(variant="disabled", with_explanation_probe=False)
+    generation = distribution.generation_contract()
     a = distribution.write_zip(files, tmp_path / "a.zip", generation=generation)
     b = distribution.write_zip(
         dict(reversed(list(files.items()))), tmp_path / "b.zip", generation=generation

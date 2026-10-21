@@ -1,0 +1,11 @@
+# 由 pdx.decision_diplomacy 生成；不创建外交机会、不强制宣战。
+sitai_diplomatic_war_burden = {
+    is_ai = yes
+    OR = { is_at_war = yes taking_loans = yes in_default = yes }
+}
+sitai_diplomatic_capacity = {
+    is_ai = yes
+    is_at_war = no
+    in_default = no
+    taking_loans = no
+}

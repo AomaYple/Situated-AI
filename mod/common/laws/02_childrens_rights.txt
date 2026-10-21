@@ -1,0 +1,127 @@
+# group = this is the law_group a law belongs to
+# icon = graphical icon shown in-game
+# modifier = {} modifier on country for having adopted this law
+
+law_child_labor_allowed = {
+	group = lawgroup_childrens_rights
+
+	icon = "gfx/interface/icons/law_icons/child_labor_allowed.dds"
+
+	progressiveness = -50
+
+	modifier = {
+		state_laborers_mortality_mult = 0.05
+		state_machinists_mortality_mult = 0.05
+		state_farmers_mortality_mult = 0.05
+		state_peasants_mortality_mult = 0.05
+
+		state_dependent_wage_mult = 0.30
+	}
+
+	ai_will_do = {
+		exists = ruler
+		ruler = {
+			has_ideology = ideology:ideology_market_liberal
+		}
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_child_labor_allowed.ai_enact_weight_modifier
+		# political_capacity_law_child_labor_allowed [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		# SITAI END information:law_child_labor_allowed.ai_enact_weight_modifier
+	}
+}
+
+law_restricted_child_labor = {
+	group = lawgroup_childrens_rights
+
+	icon = "gfx/interface/icons/law_icons/restricted_child_labor.dds"
+
+	progressiveness = 0
+
+	unlocking_technologies = {
+		labor_movement
+	}
+
+	modifier = {
+		state_laborers_mortality_mult = 0.02
+		state_farmers_mortality_mult = 0.02
+		state_peasants_mortality_mult = 0.02
+
+		state_dependent_wage_mult = 0.15
+
+		country_institution_schools_max_investment_add = 1
+	}
+
+	ai_will_do = {
+		OR = {
+			has_law_or_variant = law_type:law_child_labor_allowed
+			AND = {
+				exists = ruler
+				ruler = {
+					has_ideology = ideology:ideology_market_liberal
+				}
+			}
+		}
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_restricted_child_labor.ai_enact_weight_modifier
+		# political_capacity_law_restricted_child_labor [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		# SITAI END information:law_restricted_child_labor.ai_enact_weight_modifier
+	}
+}
+
+law_compulsory_primary_school = {
+	group = lawgroup_childrens_rights
+
+	icon = "gfx/interface/icons/law_icons/compulsory_primary_school.dds"
+
+	progressiveness = 50
+
+	disallowing_laws = {
+		law_no_schools
+		law_terakoya
+	}
+
+	unlocking_technologies = {
+		human_rights
+	}
+
+	modifier = {
+		country_institution_schools_max_investment_add = 2
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_compulsory_primary_school.ai_enact_weight_modifier
+		# political_capacity_law_compulsory_primary_school [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
+		# structural_child_education [political]; 有工业就业且识字不足时比较童工与基础教育的长期机会成本
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 has_law_or_variant = law_type:law_child_labor_allowed literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } add = 5.0 }
+		# SITAI END information:law_compulsory_primary_school.ai_enact_weight_modifier
+	}
+}

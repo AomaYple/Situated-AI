@@ -36,7 +36,6 @@ def test_public_cli_commands_have_help() -> None:
         "modguard",
         "package",
         "citations",
-        "preflight",
         "tables",
         "ai-surface",
     }
@@ -54,7 +53,6 @@ def test_baseline_command_manifest_is_stable() -> None:
         "Mod 生成一致性",
         "离线 Mod 门禁",
         "离线 AI 可执行面",
-        "离线引用",
         "死代码审计",
     ]
     assert [command for _, command in BASELINE_COMMANDS] == [
@@ -64,7 +62,6 @@ def test_baseline_command_manifest_is_stable() -> None:
         ["pdx.cli", "modgen", "--check"],
         ["pdx.cli", "modguard", "--offline"],
         ["pdx.cli", "ai-surface", "--check", "--offline"],
-        ["pdx.cli", "citations", "--offline"],
         ["tools.ci.deadcode_audit", "--check"],
     ]
 

@@ -634,12 +634,22 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
 @pytest.mark.skipif(
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
-def test_integrated_is_a_real_standard_package_separate_from_historical_full(tmp_path):
-    path = distribution.package(tmp_path / "integrated.zip", variant="integrated")
+def test_release_is_a_real_standard_package(tmp_path):
+    path = distribution.package(tmp_path / "situated-ai-1.0.0.zip")
+    _, _, engineering_files = distribution.package_inputs(include_engineering_metadata=True)
+    assert all(
+        not line.endswith((" ", "\t"))
+        for name, text in engineering_files.items()
+        if name.endswith((".txt", ".yml"))
+        for line in text.splitlines()
+    )
+    engineering_metadata = json.loads(engineering_files[".metadata/metadata.json"])
     first = path.read_bytes()
-    distribution.package(path, variant="integrated")
+    distribution.package(path)
     assert path.read_bytes() == first
-    manifest = distribution.validate_package(path, expected_variant="integrated")
+    manifest = distribution.validate_package(path)
+    contract = manifest["contract"]
+    assert isinstance(contract, dict)
     generation = manifest["generation"]
     assert isinstance(generation, dict)
     assert generation["behavior_quality"] == "not_evaluated"
@@ -647,17 +657,25 @@ def test_integrated_is_a_real_standard_package_separate_from_historical_full(tmp
         names = archive.namelist()
         assert not any("probe" in name or name.startswith("gui/") for name in names)
         metadata = json.loads(archive.read(".metadata/metadata.json"))
-        assert metadata["status"] == "experimental"
-        assert metadata["decision_rules"]["behavior_verified"] is False
-        assert metadata["consumer_adapters"]["behavior_verified"] is False
-        assert metadata["default_field_owners"]["subject_value"] == "consumer_adapters"
-        assert metadata["default_field_owners"]["become_subject_value"] == "consumer_adapters"
-        assert "subjects" not in metadata["enabled_modules"]
+        assert metadata["name"] == "Situated AI"
+        assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
+        assert len(archive.read(".metadata/metadata.json")) < 2_000
+        assert metadata["version"] == "1.0.0"
+        assert contract["status"] == "candidate"
+        assert contract["behavior_quality"] == "not_evaluated"
+        assert engineering_metadata["decision_rules"]["behavior_verified"] is False
+        assert engineering_metadata["consumer_adapters"]["behavior_verified"] is False
+        assert engineering_metadata["default_field_owners"]["subject_value"] == "consumer_adapters"
+        assert (
+            engineering_metadata["default_field_owners"]["become_subject_value"]
+            == "consumer_adapters"
+        )
+        assert "subjects" not in contract["enabled_modules"]
         assert b"# SITAI SUBJECTS BEGIN" not in archive.read(
             "common/ai_strategies/00_default_strategy.txt"
         )
-        assert len(metadata["consumer_adapters"]["consumers"]) == 38
-        assert "information_rules" in metadata["enabled_modules"]
+        assert contract["consumer_count"] == 38
+        assert "information_rules" in contract["enabled_modules"]
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt")
         assert strategy.startswith(codecs.BOM_UTF8)
         assert b"\r" not in strategy
@@ -666,10 +684,10 @@ def test_integrated_is_a_real_standard_package_separate_from_historical_full(tmp
         assert b"\r" not in fleet_value
         assert b"protect_supply = sitai_adapter_fleet_supply_weight" in strategy
         assert b"sitai_adapter_fleet_supply_weight = {" in fleet_value
-        declared_fields = set(metadata["decision_rules"]["field_owners"])
+        declared_fields = set(engineering_metadata["decision_rules"]["field_owners"])
         default_contract = next(
             row
-            for row in metadata["consumer_adapters"]["consumers"]
+            for row in engineering_metadata["consumer_adapters"]["consumers"]
             if row["source"] == "common/ai_strategies/00_default_strategy.txt"
         )
         declared_fields.update(default_contract["field_owners"])
@@ -685,7 +703,7 @@ def test_integrated_is_a_real_standard_package_separate_from_historical_full(tmp
         assert len([name for name in names if name.startswith("localization/")]) == 11
         explanation_keys = {
             row["description_key"]
-            for row in metadata["decision_rules"]["rules"]
+            for row in engineering_metadata["decision_rules"]["rules"]
             if row["description_key"] is not None
         }
         assert explanation_keys
@@ -694,12 +712,6 @@ def test_integrated_is_a_real_standard_package_separate_from_historical_full(tmp
                 localization = archive.read(name).decode("utf-8-sig")
                 for key in explanation_keys:
                     assert f" {key}:" in localization, (name, key)
-    _, _, historical = distribution.package_inputs("full")
-    assert (
-        "# SITAI BEGIN information:"
-        not in historical["common/ai_strategies/00_default_strategy.txt"]
-    )
-    assert "decision_rules" not in json.loads(historical[".metadata/metadata.json"])
 
 
 def test_static_matrix_never_claims_execution_contract(tmp_path: Path):

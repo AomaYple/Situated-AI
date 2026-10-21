@@ -1,23 +1,4 @@
-"""`pdx.mods` 的第一层：**哪些目录算「本机的 mod」**。
-
-为什么单独一条用例（backlog **B83**）
--------------------------------------
-这一层判错一次，代价不是「统计差一点」，而是**整套 mod 侧断言与文档快照集体算错**，
-而且错得看不出来：
-
-* `verify._mods_total()` / `_mods_files()` 就是 `analyse_all()` 的长度与文件数之和。
-  我们**自己部署进用户 mod 目录**的那份真 mod 被数进来 ⇒ `mod.total` 23→24、
-  `mod.files` 4,777→4,828，而 `v3 verify` 报的是「文档过期」，指向完全错误的方向。
-* 同一个坑踩过**两次**，第二次还把它判成了
-  「用户新订阅了一份 mod」—— 所以修法必须是**结构性的**：认 mod 靠
-  `.metadata/metadata.json` 的 `id` 前缀（`OWN_MOD_ID_PREFIX`），**不看目录名**。
-
-为什么不能按目录名认
---------------------
-部署目录名 = 各档案 id 按字典序用 `-` 连接（`modgen.metadata_payload`）。
-档案集合一增删（6 份 → 8 份），上一版部署的目录就再也匹配不上 ——
-这正是下面 `test_档案集合变过之后旧副本仍然认得出来` 钉住的那件事。
-"""
+"""验证 Mod 扫描器按 metadata 身份排除本产品并保留其他本地 Mod。"""
 
 from __future__ import annotations
 
@@ -28,15 +9,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import config, modgen, mods
+from pdx import config, distribution, mods
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 pytestmark = pytest.mark.unit
-
-#: 批次 2（6 档案）部署时用过的目录名 —— 现在**再也拼不出来**了，但它仍然是我们的。
-_STALE_DIR = "au_revolution-cn_intervention-eg_debt-pe_great_game-ru_defeat-tr_defeat"
 
 
 def _write_metadata(root: Path, ident: str) -> None:
@@ -75,36 +53,18 @@ def test_按id前缀认出我们自己的mod(假环境) -> None:
     assert mods.own_mod(bare) is False, "没有 metadata 就不能认成我们的"
 
 
-def test_档案集合变过之后旧副本仍然认得出来(假环境) -> None:
-    """**回归**：目录名是上一版档案集合拼的，也必须认得出来。
-
-    这一条就是 B83 的现场：批次 2 留下的 `_STALE_DIR` 在批次 3（8 档案）之后
-    既删不掉、又被当成用户订阅的 mod。
-    """
-    local, _ = 假环境
-    stale = local / _STALE_DIR
-    _write_metadata(stale, f"sitai.{_STALE_DIR}")
-
-    # 仓库当前那一版是 8 档案 —— 名字不同，但 id 前缀相同。
-    current_id = str(modgen.metadata_payload(modgen.load_all())["id"])
-    assert _STALE_DIR not in current_id, "旧目录名不该再等于当前的名字（否则这条用例没意义）"
-    assert mods.own_mod(stale) is True
-    assert _STALE_DIR in [p.name for p in mods.own_mod_dirs()]
-
-
 def test_自己的mod不计入本机mod统计(假环境) -> None:
     local, workshop = 假环境
     (workshop / "1234567890").mkdir()  # 别人的一个 Workshop mod
     _write_metadata(workshop / "1234567890", "some_workshop_mod")
     (local / "some_real_mod").mkdir()
     _write_metadata(local / "some_real_mod", "handmade.mod")
-    _write_metadata(local / _STALE_DIR, f"sitai.{_STALE_DIR}")
-    (local / (mods.PROBE_PREFIX + "ab")).mkdir()
+    _write_metadata(local / "situated-ai-install", distribution.MOD_ID)
+    (local / "zz_probe_ab").mkdir()
 
     found = sorted(p.name for p in mods.discover_mods())
-    assert found == ["1234567890", "some_real_mod"]
-    assert _STALE_DIR not in found, "我们自己部署的 mod 不算「本机装了哪些 mod」"
-    assert not any(name.startswith(mods.PROBE_PREFIX) for name in found)
+    assert found == ["1234567890", "some_real_mod", "zz_probe_ab"]
+    assert "situated-ai-install" not in found, "本产品应通过 metadata ID 排除"
 
 
 def test_只数workshop时本地目录一个都不算(假环境) -> None:
@@ -116,27 +76,13 @@ def test_只数workshop时本地目录一个都不算(假环境) -> None:
     assert found == ["1234567890"]
 
 
-def test_own_mod_dirs只给我们的目录(假环境) -> None:
-    local, _ = 假环境
-    _write_metadata(local / _STALE_DIR, f"sitai.{_STALE_DIR}")
-    _write_metadata(local / "别人的mod", "someone_else.mod")
-    (local / (mods.PROBE_PREFIX + "ab")).mkdir()
-    (local / ".隐藏目录").mkdir()
-
-    assert sorted(p.name for p in mods.own_mod_dirs()) == [
-        _STALE_DIR,
-        mods.PROBE_PREFIX + "ab",
-    ]
-
-
 def test_命名空间常量只有一份() -> None:
     """生成器与扫描器必须读**同一个**前缀（P9：重复定义即红）。
 
-    扫描器不能 import 生成器（`mods.py` 是被 `analyze / verify / evidence` 共用的
+    扫描器不能 import 发行器（`mods.py` 是被 `analyze / verify / evidence` 共用的
     底层模块），所以常量住在 `config` 里，两边都从那里取。
     """
     assert config.NAMESPACE_PREFIX == "sitai_"
-    assert modgen.NAMESPACE_PREFIX is config.NAMESPACE_PREFIX
     assert mods.OWN_MOD_ID_PREFIX == "sitai."
 
 
@@ -146,8 +92,7 @@ def test_本仓库自己的mod元数据对得上判据() -> None:
     这条把「按 id 前缀认」这件事钉在**真实数据**上 —— 判据和产物一起漂是发现不了的，
     所以要拿真产物来对。
     """
-    payload = modgen.metadata_payload(modgen.load_all())
-    ident = str(payload["id"])
+    ident = distribution.MOD_ID
     assert ident.startswith(mods.OWN_MOD_ID_PREFIX)
     assert ident == f"{config.NAMESPACE_PREFIX.rstrip('_')}.{ident.split('.', 1)[1]}"
 

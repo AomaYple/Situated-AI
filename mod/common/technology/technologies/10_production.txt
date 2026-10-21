@@ -1,0 +1,1416 @@
+### ERA 1
+
+sericulture = {
+	# Unlocks Mulberry Groves PM on Rice Farms
+	era = era_1
+	texture = "gfx/interface/icons/invention_icons/sericulture.dds"
+	category = production
+	can_research = no
+
+	modifier = {
+		building_silk_plantation_throughput_add = 0.25
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:sericulture.ai_weight
+		# sericulture_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:sericulture.ai_weight
+	}
+}
+
+enclosure = {
+	# Unlocks construction of Farms and Plantations
+	era = era_1
+	texture = "gfx/interface/icons/invention_icons/enclosure.dds"
+	category = production
+
+	ai_weight = {
+		value = 3 # Very important tech in general
+
+		# SITAI BEGIN information:enclosure.ai_weight
+		# enclosure_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:enclosure.ai_weight
+	}
+}
+
+manufacturies = {
+	# Unlocks Mercantilism Law
+	# Unlocks Food Industry, Textile Mills, Furniture Manufacturies, Glassworks, Tooling Workshops, Paper Mills
+	era = era_1
+	texture = "gfx/interface/icons/invention_icons/manufacturies.dds"
+	category = production
+
+	ai_weight = {
+		value = 3 # Very important tech in general
+
+		# SITAI BEGIN information:manufacturies.ai_weight
+		# manufacturies_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:manufacturies.ai_weight
+	}
+}
+
+shaft_mining = {
+	# Unlocks Coal Mine, Iron Mine, Lead Mine, Sulfur Mine
+	era = era_1
+	texture = "gfx/interface/icons/invention_icons/shaft_mining.dds"
+	category = production
+
+	unlocking_technologies = {
+		enclosure
+		manufacturies
+	}
+
+	ai_weight = {
+		value = 2 # Important tech in general
+
+		# SITAI BEGIN information:shaft_mining.ai_weight
+		# shaft_mining_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = {  } } } } } } } multiply = 1.0 }
+		# shaft_mining_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:shaft_mining.ai_weight
+	}
+}
+
+cotton_gin = {
+	era = era_1
+	texture = "gfx/interface/icons/invention_icons/cotton_gin.dds"
+	category = production
+
+	modifier = {
+		building_cotton_plantation_throughput_add = 0.25
+	}
+
+	unlocking_technologies = {
+		manufacturies
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:cotton_gin.ai_weight
+		# cotton_gin_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:cotton_gin.ai_weight
+	}
+}
+
+lathe = {
+	# Unlocks Lathes PM in Furniture Manufacturies
+	era = era_1
+	texture = "gfx/interface/icons/invention_icons/lathe.dds"
+	category = production
+
+	unlocking_technologies = {
+		cotton_gin
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 1
+		}
+
+		# SITAI BEGIN information:lathe.ai_weight
+		# lathe_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:lathe.ai_weight
+	}
+}
+
+distillation = {
+	# Unlocks Pot Stills PM in Food Industry
+	# Unlocks Sweeteners PM in Food Industry
+	# Unlocks Fish Press PM in Fishing Wharfs
+	era = era_1
+	texture = "gfx/interface/icons/invention_icons/distillation.dds"
+	category = production
+
+	unlocking_technologies = {
+		manufacturies
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:distillation.ai_weight
+		# distillation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:distillation.ai_weight
+	}
+}
+
+steelworking = {
+	# Unlocks Steel Mills
+	era = era_1
+	texture = "gfx/interface/icons/invention_icons/steelworking.dds"
+	category = production
+
+	unlocking_technologies = {
+		shaft_mining
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 1
+		}
+
+		# SITAI BEGIN information:steelworking.ai_weight
+		# steelworking_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:steelworking.ai_weight
+	}
+}
+
+prospecting = {
+	# Unlocks possibility to discover Gold Fields
+	era = era_1
+	texture = "gfx/interface/icons/invention_icons/prospecting_tech.dds"
+	category = production
+
+	unlocking_technologies = {
+		shaft_mining
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:prospecting.ai_weight
+		# prospecting_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:prospecting.ai_weight
+	}
+}
+
+### ERA 2
+
+crystal_glass = {
+	# Unlocks Leaded Glass PM in Glassworks
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/crystal_glass.dds"
+	category = production
+
+	unlocking_technologies = {
+		lathe
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:crystal_glass.ai_weight
+		# crystal_glass_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:crystal_glass.ai_weight
+	}
+}
+
+intensive_agriculture = {
+	# Unlocks Chemical Plants
+	# Unlocks Intensive Agriculture PM on Rye Farms, Wheat Farms, Rice Farms, Maize Farms, Millet Farms
+	# Unlocks Intensize Grazing Ranch PM on Livestock Ranches
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/intensive_agriculture.dds"
+	category = production
+
+	unlocking_technologies = {
+		enclosure
+	}
+
+	ai_weight = {
+		value = 2 # Important tech for everyone
+
+		if = {
+			limit = {
+				OR = {
+					has_strategy = ai_strategy_agricultural_expansion
+					has_strategy = ai_strategy_plantation_economy
+				}
+			}
+			add = 2
+		}
+
+		# SITAI BEGIN information:intensive_agriculture.ai_weight
+		# intensive_agriculture_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = {  } } } } } } } multiply = 1.0 }
+		# intensive_agriculture_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:intensive_agriculture.ai_weight
+	}
+}
+
+fractional_distillation = {
+	# Unlocks Patent Stills PM in Food Industries
+	# Unlocks Cod Liver Oil PM in Fishing Wharfs
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/fractional_distillation.dds"
+	category = production
+
+	unlocking_technologies = {
+		distillation
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:fractional_distillation.ai_weight
+		# fractional_distillation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:fractional_distillation.ai_weight
+	}
+}
+
+canneries = {
+	# Unlocks Cannery PM in Food Industries
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/canneries.dds"
+	category = production
+
+	unlocking_technologies = {
+		lathe
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:canneries.ai_weight
+		# canneries_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:canneries.ai_weight
+	}
+}
+
+watertube_boiler = {
+	# Unlocks Watertube Boiler PM in Furniture Manufacturies, Tooling Workshops, Paper Mills, Steel Mills, Motor Industry
+	# Unlocks Condensing Engine Pump in Coal Mines, Iron Mines, Lead Mines, Sulfur Mines
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/watertube_boiler.dds"
+	category = production
+
+	unlocking_technologies = {
+		atmospheric_engine
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:watertube_boiler.ai_weight
+		# watertube_boiler_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:watertube_boiler.ai_weight
+	}
+}
+
+atmospheric_engine = {
+	# Unlocks Motor Industry
+	# Unlocks Atmospheric Engine Pump PM in Coal Mine, Iron Mine, Lead Mine, Sulfur Mine
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/atmospheric_engine.dds"
+	category = production
+
+	unlocking_technologies = {
+		shaft_mining
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				country_rank >= rank_value:unrecognized_major_power
+			}
+			add = 2
+		}
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 2
+		}
+
+		# SITAI BEGIN information:atmospheric_engine.ai_weight
+		# atmospheric_engine_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } multiply = 1.0 }
+		# atmospheric_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:atmospheric_engine.ai_weight
+	}
+}
+
+railways = {
+	# Unlocks Railways
+	# Unlocks Rail Transport PM in Coal, Iron, Lead, Sulfur Mines
+	# Unlocks Rail Transport PM in Coffee, Cotton, Dye, Opium, Tea, Tobacco, Sugar, Rubber, Banana Plantations
+	# Unlocks Rail Transport PM in Logging Camp
+	# Unlocks Rail Transport PM in Oil Rig
+	# Unlocks Public Trams in Urban Centers
+	# Increases Railway max level by 1
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/railways.dds"
+	category = production
+
+	unlocking_technologies = {
+		mechanical_tools
+		atmospheric_engine
+	}
+
+	ai_weight = {
+		value = 2 # Important tech for everyone
+
+		if = {
+			limit = {
+				country_rank >= rank_value:unrecognized_major_power
+			}
+			add = 2
+		}
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 2
+		}
+
+		# SITAI BEGIN information:railways.ai_weight
+		# railways_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:railways.ai_weight
+	}
+}
+
+chemical_bleaching = {
+	# Unlocks Bone China PM in Glassworks
+	# Unlocks Sulfite Pulping PM in Paper Mills
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/chemical_bleaching.dds"
+	category = production
+
+	unlocking_technologies = {
+		crystal_glass
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:chemical_bleaching.ai_weight
+		# chemical_bleaching_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:chemical_bleaching.ai_weight
+	}
+}
+
+nitroglycerin = {
+	# Unlocks Nitroglycerin PM in Coal, Iron, Lead, Sulfur Mines
+	# Unlocks Ammonia-Soda Process PM in Chemical Industries
+	# Countries get a +25% chance of discovering new resources
+
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/nitroglycerin.dds"
+	category = production
+
+	modifier = {
+		country_resource_discovery_chance_mult = 0.25
+	}
+
+	unlocking_technologies = {
+		intensive_agriculture
+		prospecting
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:nitroglycerin.ai_weight
+		# nitroglycerin_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:nitroglycerin.ai_weight
+	}
+}
+
+bessemer_process = {
+	# Unlocks Bessemer Process PM in Steel Mills
+	# Unlocks Steel [Tools] PM in Tooling Workshops
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/bessemer_process.dds"
+	category = production
+
+	unlocking_technologies = {
+		steelworking
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				 has_strategy = ai_strategy_industrial_expansion
+			}
+			add = 1
+		}
+
+		# SITAI BEGIN information:bessemer_process.ai_weight
+		# bessemer_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:bessemer_process.ai_weight
+	}
+}
+
+baking_powder = {
+	# Unlocks Baking Powder PM in Food Industries
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/baking_powder.dds"
+	category = production
+
+	unlocking_technologies = {
+		fractional_distillation
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:baking_powder.ai_weight
+		# baking_powder_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:baking_powder.ai_weight
+	}
+}
+
+mechanized_workshops = {
+	# Unlocks Slaughterhouses PM in Livestock Ranches
+	# Unlocks Sewing Machines PM and Mechanized Looms PM in Textile Mills
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/mechanized_workshops.dds"
+	category = production
+
+	modifier = {
+		building_economy_of_scale_level_cap_add = 10
+	}
+
+	unlocking_technologies = {
+		canneries
+		mechanical_tools
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				 has_strategy = ai_strategy_industrial_expansion
+			}
+			add = 1
+		}
+
+		# SITAI BEGIN information:mechanized_workshops.ai_weight
+		# mechanized_workshops_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:mechanized_workshops.ai_weight
+	}
+}
+
+mechanical_tools = {
+	# Unlocks Precision Tools PM in Furniture Workshops
+	era = era_2
+	texture = "gfx/interface/icons/invention_icons/mechanical_tools.dds"
+	category = production
+
+	unlocking_technologies = {
+		lathe
+		steelworking
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:mechanical_tools.ai_weight
+		# mechanical_tools_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = {  } } } } } } } multiply = 1.0 }
+		# mechanical_tools_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:mechanical_tools.ai_weight
+	}
+}
+
+### ERA 3
+
+improved_fertilizer = {
+	# Unlocks Improved Fertilizer PM in Chemical Plants
+	# Unlocks Fertilization PM in Rye, Wheat, Rice, Maize, Millet Farms
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/improved_fertilizer.dds"
+	category = production
+
+	unlocking_technologies = {
+		intensive_agriculture
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:improved_fertilizer.ai_weight
+		# improved_fertilizer_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:improved_fertilizer.ai_weight
+	}
+}
+
+steam_donkey = {
+	# Unlocks Steam Donkey PM in Logging Camps
+	# Unlocks Steam Donkey PM in Coal, Iron, Lead, Sulfur Mines
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/steam_donkey.dds"
+	category = production
+
+	unlocking_technologies = {
+		intensive_agriculture
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 2
+		}
+
+		# SITAI BEGIN information:steam_donkey.ai_weight
+		# steam_donkey_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:steam_donkey.ai_weight
+	}
+}
+
+dynamite = {
+	# Unlocks Vacuum Evaporation PM in Chemical Plants
+	# Unlocks Explosive Shells PM in Munitions Plants
+	# Unlocks Dynamite PM in Coal, Iron, Lean, Sulfur Mines
+	# Countries get a +25% chance of discovering new resources
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/dynamite.dds"
+	category = production
+
+	modifier = {
+		country_resource_discovery_chance_mult = 0.25
+	}
+
+	unlocking_technologies = {
+		nitroglycerin
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:dynamite.ai_weight
+		# dynamite_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:dynamite.ai_weight
+	}
+}
+
+rubber_mastication = {
+	# Unlocks Rubber Plantations
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/rubber.dds"
+	category = production
+
+	unlocking_technologies = {
+		fractional_distillation
+		chemical_bleaching
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 3
+		}
+
+		# SITAI BEGIN information:rubber_mastication.ai_weight
+		# rubber_mastication_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:rubber_mastication.ai_weight
+	}
+}
+
+rotary_valve_engine = {
+	# Unlocks Rotary Valve Engine PM in Furniture Manufacturies, Tooling Workshops, Paper Mills, Steel Mills, Motor Industry
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/rotary_valve_engine.dds"
+	category = production
+
+	unlocking_technologies = {
+		watertube_boiler
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:rotary_valve_engine.ai_weight
+		# rotary_valve_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:rotary_valve_engine.ai_weight
+	}
+}
+
+reinforced_concrete = {
+	# +15% construction throughput
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/reinforced_concrete.dds"
+	category = production
+
+	modifier = {
+		building_construction_sector_throughput_add = 0.15
+	}
+
+	unlocking_technologies = {
+		bessemer_process
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:reinforced_concrete.ai_weight
+		# reinforced_concrete_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:reinforced_concrete.ai_weight
+	}
+}
+
+threshing_machine = {
+	# Unlocks Steam Threshers PM on Rye, Wheat, Rice, Maize, Millet Farms
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/threshing_machine.dds"
+	category = production
+
+	unlocking_technologies = {
+		steam_donkey
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					has_strategy = ai_strategy_agricultural_expansion
+					has_strategy = ai_strategy_plantation_economy
+				}
+			}
+			add = 1
+		}
+
+		# SITAI BEGIN information:threshing_machine.ai_weight
+		# threshing_machine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:threshing_machine.ai_weight
+	}
+}
+
+pumpjacks = {
+	# Unlocks possibility to discover Oil (to build Oil Rigs)
+	# Unlocks Oil Rig building
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/pumpjacks.dds"
+	category = production
+
+	unlocking_technologies = {
+		steam_donkey
+		dynamite
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 2
+		}
+
+		# SITAI BEGIN information:pumpjacks.ai_weight
+		# pumpjacks_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:pumpjacks.ai_weight
+	}
+}
+
+aniline = {
+	# Unlocks Synthetic Plants building
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/aniline.dds"
+	category = production
+
+	unlocking_technologies = {
+		rubber_mastication
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:aniline.ai_weight
+		# aniline_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:aniline.ai_weight
+	}
+}
+
+open_hearth_process = {
+	# Unlocks Open Hearth Process PM in Steel Mills
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/open_hearth_process.dds"
+	category = production
+
+	unlocking_technologies = {
+		bessemer_process
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:open_hearth_process.ai_weight
+		# open_hearth_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:open_hearth_process.ai_weight
+	}
+}
+
+vulcanization = {
+	# Unlocks Elastics PM in Textile Mills
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/vulcanization.dds"
+	category = production
+
+	unlocking_technologies = {
+		rubber_mastication
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:vulcanization.ai_weight
+		# vulcanization_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:vulcanization.ai_weight
+	}
+}
+
+vacuum_canning = {
+	# Unlocks Vacuum Canning PM in Food Industries
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/vacuum_canning.dds"
+	category = production
+
+	unlocking_technologies = {
+		mechanized_workshops
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:vacuum_canning.ai_weight
+		# vacuum_canning_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:vacuum_canning.ai_weight
+	}
+}
+
+shift_work = {
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/shift_work.dds"
+	category = production
+
+	modifier = {
+		building_economy_of_scale_level_cap_add = 20
+	}
+
+	unlocking_technologies = {
+		mechanized_workshops
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:shift_work.ai_weight
+		# shift_work_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:shift_work.ai_weight
+	}
+}
+
+steel_railway_cars = {
+	# Unlocks Steel Passenger Carriages PM and Armored Cars PM in Railways
+	# Unlocks Tanker Cars PM in Oil Rig buildings
+	# Increases Railway max level by 1
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/steel_railway_cars.dds"
+	category = production
+
+	unlocking_technologies = {
+		railways
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:steel_railway_cars.ai_weight
+		# steel_railway_cars_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:steel_railway_cars.ai_weight
+	}
+}
+
+electrical_generation = {
+	# Unlocks Power Plants
+	# Unlocks Electric Sewing Machines PM and Automatic Power Looms PM in Textile Mills
+	# Unlocks Brine Electrolysis PM in Chemical Plants
+	# Unlocks Electric Fencing PM and Refrigerated Storage PM in Livestock Ranches
+	# Unlocks Refrigerated Storage PM in Fishing Wharfs
+	# Unlocks Electric Saw Mills PM in Logging Camps
+	# Unlocks Electric Streetlights PM in Urban Centers
+	era = era_3
+	texture = "gfx/interface/icons/invention_icons/electrical_generation.dds"
+	category = production
+
+	unlocking_technologies = {
+		rotary_valve_engine
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 2
+		}
+
+		# SITAI BEGIN information:electrical_generation.ai_weight
+		# electrical_generation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:electrical_generation.ai_weight
+	}
+}
+
+### ERA 4
+
+mechanized_farming = {
+	# Unlocks Tractors PM in Rye Farms, Wheat Farms, Millet Farms
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/mechanized_farming.dds"
+	category = production
+
+	unlocking_technologies = {
+		threshing_machine
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					has_strategy = ai_strategy_agricultural_expansion
+					has_strategy = ai_strategy_plantation_economy
+				}
+			}
+			add = 1
+		}
+
+		# SITAI BEGIN information:mechanized_farming.ai_weight
+		# mechanized_farming_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:mechanized_farming.ai_weight
+	}
+}
+
+art_silk = {
+	# Unlocks the Rayon PM in Synthetic Plants
+	# Unlocks the Bleached Paper PM in Paper Mills
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/art_silk.dds"
+	category = production
+
+	unlocking_technologies = {
+		aniline
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:art_silk.ai_weight
+		# art_silk_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:art_silk.ai_weight
+	}
+}
+
+automatic_bottle_blowers = {
+	# Unlocks the Automatic Bottle Blowers PM in Glassworks
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/automatic_bottle_blowers.dds"
+	category = production
+
+	unlocking_technologies = {
+		vulcanization
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:automatic_bottle_blowers.ai_weight
+		# automatic_bottle_blowers_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:automatic_bottle_blowers.ai_weight
+	}
+}
+
+conveyors = {
+	# Unlocks the Assembly Lines PM in Furniture Manufacturies, Tooling Workshops, Motor Industry
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/conveyers.dds"
+	category = production
+
+	unlocking_technologies = {
+		vulcanization
+		shift_work
+		electrical_generation
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:conveyors.ai_weight
+		# conveyors_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:conveyors.ai_weight
+	}
+}
+
+pasteurization = {
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/pasteurization.dds"
+	category = production
+
+	unlocking_technologies = {
+		vacuum_canning
+		electrical_capacitors
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:pasteurization.ai_weight
+		# pasteurization_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:pasteurization.ai_weight
+	}
+}
+
+electric_railway = {
+	# Unlocks Electric Trains PM in Railways
+	# Unlocks Log Carts PM in Logging Camps
+	# Unlocks Refrigerated Rail Carts in Fishing Wharfs
+	# Increases Railway max level by 1
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/electric_railway.dds"
+	category = production
+
+	unlocking_technologies = {
+		electrical_capacitors
+		steel_railway_cars
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 1
+		}
+
+		# SITAI BEGIN information:electric_railway.ai_weight
+		# electric_railway_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:electric_railway.ai_weight
+	}
+}
+
+combustion_engine = {
+	# Unlocks Automobile Production PM in Motor Industries
+	# Unlocks Diesel Pump PM in Coal, Iron, Lead, Sulfur Mines
+	# Unlocks Chainsaws PM in Logging Camps
+	# Unlocks Combustion Derricks PM in Oil Rigs
+	# Unlocks Public Motor Carriages PM in Urban Centers
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/combustion_engine.dds"
+	category = production
+
+	unlocking_technologies = {
+		rotary_valve_engine
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 1
+		}
+
+		# SITAI BEGIN information:combustion_engine.ai_weight
+		# combustion_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:combustion_engine.ai_weight
+	}
+}
+
+pneumatic_tools = {
+	# +15% construction throughput
+	# Countries get a +25% chance of discovering new resources
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/pneumatic_tools.dds"
+	category = production
+
+	modifier = {
+		building_construction_sector_throughput_add = 0.1
+		goods_output_hardwood_mult = 0.25
+		country_resource_discovery_chance_mult = 0.25
+	}
+
+	unlocking_technologies = {
+		rotary_valve_engine
+		reinforced_concrete
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:pneumatic_tools.ai_weight
+		# pneumatic_tools_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:pneumatic_tools.ai_weight
+	}
+}
+
+nitrogen_fixation = {
+	# Unlocks Nitrogen Fixation PM in Chemical Plants
+	# Unlocks Chemical Fertilizer PM in Rye, Wheat, Rice, Maize, Millet Farms
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/nitrogen_fixation.dds"
+	category = production
+
+	unlocking_technologies = {
+		improved_fertilizer
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:nitrogen_fixation.ai_weight
+		# nitrogen_fixation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:nitrogen_fixation.ai_weight
+	}
+}
+
+electric_arc_process = {
+	# Unlocks the Electric Arc Process PM in Steel Mills
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/electric_arc_process.dds"
+	category = production
+
+	unlocking_technologies = {
+		open_hearth_process
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:electric_arc_process.ai_weight
+		# electric_arc_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:electric_arc_process.ai_weight
+	}
+}
+
+steam_turbine = {
+	# Unlocks the Coal-Firing PM in Power Plants
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/steam_turbines.dds"
+	category = production
+
+	unlocking_technologies = {
+		electrical_generation
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:steam_turbine.ai_weight
+		# steam_turbine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:steam_turbine.ai_weight
+	}
+}
+
+plastics = {
+	# Unlocks the Houseware Plastics PM in Glassworks
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/plastics.dds"
+	category = production
+
+	unlocking_technologies = {
+		reinforced_concrete
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:plastics.ai_weight
+		# plastics_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:plastics.ai_weight
+	}
+}
+
+electrical_capacitors = {
+	# Unlocks Electric Sewing Machines PM and Automatic Power Looms PM in Textile Mills
+	# Unlocks Brine Electrolysis PM in Chemical Plants
+	# Unlocks Electric Saw Mills PM in Logging Camps
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/electrical_capacitors.dds"
+	category = production
+
+	unlocking_technologies = {
+		electrical_generation
+	}
+
+	ai_weight = {
+		value = 1
+
+		if = {
+			limit = {
+				OR = {
+					 has_strategy = ai_strategy_industrial_expansion
+					 has_strategy = ai_strategy_resource_expansion
+				}
+			}
+			add = 1
+		}
+
+		# SITAI BEGIN information:electrical_capacitors.ai_weight
+		# electrical_capacitors_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:electrical_capacitors.ai_weight
+	}
+}
+
+radio = {
+	# Unlocks Radios PM in Electrics Industry
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/radio.dds"
+	category = production
+
+	unlocking_technologies = {
+		telephone
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:radio.ai_weight
+		# radio_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:radio.ai_weight
+	}
+}
+
+telephone = {
+	# Unlocks Electrics Industry building
+	era = era_4
+	texture = "gfx/interface/icons/invention_icons/telephone.dds"
+	category = production
+
+	unlocking_technologies = {
+		shift_work
+		electrical_generation
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:telephone.ai_weight
+		# telephone_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:telephone.ai_weight
+	}
+}
+
+### ERA 5
+
+dough_rollers = {
+	# Unlocks the Automated Bakery PM in Food Industries
+	era = era_5
+	texture = "gfx/interface/icons/invention_icons/rollers.dds"
+	category = production
+
+	unlocking_technologies = {
+		conveyors
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:dough_rollers.ai_weight
+		# dough_rollers_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:dough_rollers.ai_weight
+	}
+}
+
+flash_freezing = {
+	# Unlocks Refrigerated Rail Cars PM in Livestock Ranches
+	# Unlocks Flash Freezing PM in Fishing Wharfs
+	era = era_5
+	texture = "gfx/interface/icons/invention_icons/flash_freezing.dds"
+	category = production
+
+	unlocking_technologies = {
+		pasteurization
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:flash_freezing.ai_weight
+		# flash_freezing_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:flash_freezing.ai_weight
+	}
+}
+
+oil_turbine = {
+	# Unlocks Oil-Fired Plant PM in Power Plants
+	era = era_5
+	texture = "gfx/interface/icons/invention_icons/oil_turbines.dds"
+	category = production
+
+	unlocking_technologies = {
+		steam_turbine
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:oil_turbine.ai_weight
+		# oil_turbine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:oil_turbine.ai_weight
+	}
+}
+
+arc_welding = {
+	# Unlocks Arc Welding Shipbuilding PM in Shipyards
+	# Unlocks Very Fast PM in Construction Camps
+	era = era_5
+	texture = "gfx/interface/icons/invention_icons/arc_welding.dds"
+	category = production
+
+	unlocking_technologies = {
+		electric_arc_process
+		pneumatic_tools
+	}
+
+	modifier = {
+		country_ship_group_capital_ships_construction_progress_max_add = 20
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:arc_welding.ai_weight
+		# arc_welding_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:arc_welding.ai_weight
+	}
+}
+
+compression_ignition = {
+	# Unlocks Diesel Trains PM in Railways
+	# Unlocks Compression Ignition Tractors PM in Rye Farms, Wheat Farms, Millet Farms
+	era = era_5
+	texture = "gfx/interface/icons/invention_icons/compression_ignition.dds"
+	category = production
+
+	unlocking_technologies = {
+		combustion_engine
+	}
+
+	ai_weight = {
+		value = 1
+
+		# SITAI BEGIN information:compression_ignition.ai_weight
+		# compression_ignition_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.1 }
+		# SITAI END information:compression_ignition.ai_weight
+	}
+}

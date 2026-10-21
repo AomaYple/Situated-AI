@@ -25,7 +25,7 @@ from typing import Any
 import pytest
 
 # 探针是可独立执行的脚本；按运行时接口复用，不把其历史单点实验纳入包类型检查。
-mem = importlib.import_module("tools.probe.mem_baseline")
+mem = importlib.import_module("tools.ci.mem_baseline")
 
 ROOT = Path(__file__).resolve().parents[2]
 _COLLECTION_ENV = "SITAI_TEST_COLLECTION"
@@ -431,7 +431,7 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
         "-p",
         "tools.ci.test_suite",
         "-p",
-        "tools.probe.mem_baseline",
+        "tools.ci.mem_baseline",
         "--cov=pdx",
         "--cov-report=json:" + str(out / "coverage.json"),
         "--junitxml=" + str(out / "junit.xml"),
@@ -485,7 +485,7 @@ def execute(out: Path, args: argparse.Namespace, pytest_args: list[str]) -> dict
                 ".coveragerc",
                 "tests/conftest.py",
                 "src/pdx/parallel.py",
-                "tools/probe/mem_baseline.py",
+                "tools/ci/mem_baseline.py",
             )
             if (ROOT / name).is_file()
         },

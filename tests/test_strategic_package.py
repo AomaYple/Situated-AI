@@ -10,8 +10,8 @@ from pdx import decision_intents, distribution
 
 
 @pytest.mark.integration
-def test_integrated_freezes_shared_strategy_and_actual_consumers():
-    _, _, files = distribution.package_inputs("integrated")
+def test_release_freezes_shared_strategy_and_actual_consumers():
+    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
     strategy = decision_intents.load()
     contract = metadata["strategic_coordination"]
@@ -27,7 +27,7 @@ def test_integrated_freezes_shared_strategy_and_actual_consumers():
         fingerprint["strategic_generator_sha256"]
         == hashlib.sha256(Path(decision_intents.__file__).read_bytes()).hexdigest()
     )
-    assert metadata["version"] == "2.0.0.dev4"
+    assert metadata["version"] == "1.0.0"
     values_path = "common/script_values/sitai_adapter_values.txt"
     assert (
         "protect_supply = sitai_adapter_fleet_supply_weight"
@@ -39,8 +39,36 @@ def test_integrated_freezes_shared_strategy_and_actual_consumers():
     assert contract["rules_with_intent"] > len(strategy.intents)
 
 
-def test_historical_package_has_no_new_strategy_contract():
-    _, _, files = distribution.package_inputs("disabled")
+def test_release_is_the_public_full_candidate():
+    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
-    assert "strategic_coordination" not in metadata
-    assert "strategic_source_sha256" not in metadata["source_fingerprint"]
+    assert metadata["version"] == "1.0.0"
+    assert metadata["status"] == "candidate"
+    assert metadata["enabled_modules"] == [
+        "fiscal",
+        "reform",
+        "market",
+        "security",
+        "economy",
+        "diplomacy",
+        "information_rules",
+        "consumer_adapters",
+    ]
+    assert metadata["localization"]["fallback_languages"] == []
+    assert all("probe" not in name.lower() for name in files)
+
+
+@pytest.mark.parametrize("key", ["fallback_languages", "production_fallback_languages"])
+def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch, key):
+    metadata: dict[str, dict[str, list[str]]] = {
+        "localization": {
+            "fallback_languages": [],
+            "production_fallback_languages": [],
+        }
+    }
+    metadata["localization"][key] = ["french"]
+    files = {".metadata/metadata.json": json.dumps(metadata)}
+    monkeypatch.setattr(distribution.decisions, "build", lambda *_args, **_kwargs: files)
+    with pytest.raises(ValueError, match="未翻译"):
+        distribution.package_inputs()
+    assert json.loads(files[".metadata/metadata.json"]) == metadata

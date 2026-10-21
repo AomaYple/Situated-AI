@@ -29,6 +29,6 @@ indent_size = 4
 insert_final_newline = true
 
 [*.txt]
-# V3 脚本（`mod/**`、`tools/probe/**` 的 `.txt`）惯用 TAB 缩进，行尾闸门明确
+# V3 脚本（`mod/**` 的 `.txt`）惯用 TAB 缩进，行尾闸门明确
 # 「TAB 不判」（见 `tests/test_repo_hygiene.py`）—— 编辑器别擅自换成空格。
 indent_style = tab

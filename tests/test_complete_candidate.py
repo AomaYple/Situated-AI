@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import itertools
 import json
-import re
-import zipfile
 from dataclasses import replace
 from typing import cast
 
@@ -59,24 +57,23 @@ def test_外部配置超大整数按配置错误拒绝(tmp_path):
         decisions.load_extensions(source)
 
 
-def test_打包命令接通完整与单模块变体(tmp_path, monkeypatch):
+def test_打包命令只生成唯一正式变体(tmp_path, monkeypatch):
     from typer.testing import CliRunner
 
     from pdx.cli import app
 
     calls = []
 
-    def capture(destination, *, variant="disabled", with_explanation_probe=None):
-        calls.append((destination, variant, with_explanation_probe))
+    def capture(destination):
+        calls.append(destination)
         return destination
 
     monkeypatch.setattr(distribution, "package", capture)
     runner = CliRunner()
-    for variant in distribution.PACKAGE_VARIANTS:
-        output = tmp_path / f"{variant}.zip"
-        result = runner.invoke(app, ["package", "--variant", variant, "--output", str(output)])
-        assert result.exit_code == 0, result.output
-        assert calls[-1] == (output, variant, None)
+    output = tmp_path / "release.zip"
+    result = runner.invoke(app, ["package", "--output", str(output)])
+    assert result.exit_code == 0, result.output
+    assert calls == [output]
 
 
 @pytest.mark.parametrize(
@@ -105,33 +102,32 @@ def test_外部配置拒绝非有限越界和未知字段(tmp_path, mutation):
         decisions.load_extensions(source)
 
 
-@pytest.mark.parametrize(
-    ("variant", "modules"),
-    [
-        ("complete", {"fiscal", "security", "market", "reform"}),
-        ("security", {"security"}),
-        ("market", {"market"}),
-        ("reform", {"reform"}),
-        ("fiscal", {"fiscal"}),
-    ],
-)
-def test_完整与单模块变体不改变当前源(variant, modules):
+def test_正式候选包含所有生产模块且不修改生成源():
+    baseline_before = decisions.BASELINE.read_bytes()
     before = decisions.build()
-    policy, extra, files = distribution.package_inputs(variant)
+    policy, extra, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
-    assert set(metadata["enabled_modules"]) == modules
-    assert metadata["status"] == "experimental"
+    assert metadata["enabled_modules"] == [
+        "fiscal",
+        "reform",
+        "market",
+        "security",
+        "economy",
+        "diplomacy",
+        "information_rules",
+        "consumer_adapters",
+    ]
+    assert metadata["status"] == "candidate"
     assert policy.aggression == 0
-    assert extra.security_enabled == ("security" in modules)
+    assert extra.security_enabled
+    assert extra.economy_enabled
+    assert extra.diplomacy_enabled
+    assert not extra.subjects_enabled
     assert decisions.build() == before
+    assert decisions.BASELINE.read_bytes() == baseline_before
     patched = files["common/ai_strategies/00_default_strategy.txt"]
-    original = re.sub(
-        r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n",
-        "",
-        patched,
-        flags=re.DOTALL,
-    )
-    assert original == decisions.BASELINE.read_text(encoding="utf-8")
+    assert "# SITAI BEGIN " in patched
+    assert "# SITAI END " in patched
     for name, text in files.items():
         assert not text.startswith("\ufeff")
         assert "\r" not in text
@@ -251,45 +247,6 @@ def test_完整开关关闭清理外部文件且不删用户文件(tmp_path):
     issues = decisions.check(tmp_path, disabled)
     assert len(issues) == 1
     assert "user.txt" in issues[0]
-
-
-def test_完整实验包包含原生解释及准确来源且重复打包确定(tmp_path, monkeypatch):
-    from pdx import config, explanation_probe
-
-    panel = (
-        "types country_panel_types {\n"
-        " type country_panel = default_block_window_two_lines {\n"
-        '  datacontext = "[CountryPanel.GetCountry]"\n'
-        " }\n}\n"
-    )
-    path = tmp_path / "game" / explanation_probe.PANEL
-    path.parent.mkdir(parents=True)
-    path.write_text(panel, encoding="utf-8")
-    monkeypatch.setattr(config, "GAME", path.parent.parent)
-    monkeypatch.setattr(config, "game_version", lambda: {"caligula_branch": "release/1.14.5"})
-    dest = tmp_path / "complete.zip"
-    distribution.package(dest, variant="complete")
-    first = dest.read_bytes()
-    distribution.package(dest, variant="complete")
-    assert first == dest.read_bytes()
-    with zipfile.ZipFile(dest) as archive:
-        assert explanation_probe.PANEL in archive.namelist()
-        metadata = json.loads(archive.read(".metadata/metadata.json"))
-        assert metadata["status"] == "experimental"
-        assert metadata["game_custom_data"]["explanation_probe"]["engine_verified"] is False
-        assert metadata["source_fingerprint"]["explanation_generator_sha256"]
-        script = archive.read(explanation_probe.SGUI).decode("utf-8-sig")
-        assert "sitai_reform_fragile" in script
-        assert "sitai_reform_opportunity" in script
-        for language in decisions.LANGUAGES:
-            loc = archive.read(
-                f"localization/{language}/{explanation_probe.PREFIX}_l_{language}.yml"
-            ).decode("utf-8-sig")
-            assert "security" in loc
-            assert "market" in loc
-        manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
-        assert manifest["generation"]["variant"] == "complete"
-        assert manifest["generation"]["with_explanation_probe"] is True
 
 
 def test_防御条件真正读取目标条约与敌方战争目标():

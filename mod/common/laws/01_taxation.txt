@@ -1,0 +1,340 @@
+# group = this is the law_group a law belongs to
+# icon = graphical icon shown in-game
+# modifier = {} modifier on country for having adopted this law
+
+law_consumption_based_taxation = {
+	group = lawgroup_taxation
+
+	progressiveness = -100
+
+	icon = "gfx/interface/icons/law_icons/consumption_based_taxation.dds"
+
+	modifier = {
+		state_bureaucracy_population_base_cost_factor_mult = -0.25
+		country_consumption_tax_cost_mult = -0.50
+	}
+
+	tax_modifier_very_low = {
+		tax_consumption_add = 0.15
+	}
+
+	tax_modifier_low = {
+		tax_consumption_add = 0.20
+	}
+
+	tax_modifier_medium = {
+		tax_consumption_add = 0.25
+	}
+
+	tax_modifier_high = {
+		tax_consumption_add = 0.30
+	}
+
+	tax_modifier_very_high = {
+		tax_consumption_add = 0.35
+	}
+
+	# AI shouldn't change to consumption-based-taxation as it's likely to wreck their economy
+	ai_will_do = {
+		always = no
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_consumption_based_taxation.ai_enact_weight_modifier
+		# political_capacity_law_consumption_based_taxation [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		# SITAI END information:law_consumption_based_taxation.ai_enact_weight_modifier
+	}
+}
+
+law_land_based_taxation = {
+	group = lawgroup_taxation
+
+	icon = "gfx/interface/icons/law_icons/land_based_taxation.dds"
+
+	progressiveness = -50
+
+	tax_modifier_very_low = {
+		tax_consumption_add = 0.15
+		tax_land_add = 0.40
+	}
+
+	tax_modifier_low = {
+		tax_consumption_add = 0.20
+		tax_land_add = 0.55
+	}
+
+	tax_modifier_medium = {
+		tax_consumption_add = 0.25
+		tax_land_add = 0.7
+	}
+
+	tax_modifier_high = {
+		tax_consumption_add = 0.30
+		tax_land_add = 0.85
+	}
+
+	tax_modifier_very_high = {
+		tax_consumption_add = 0.35
+		tax_land_add = 1.00
+	}
+
+	# AI shouldn't change to land based taxation from more advanced taxation forms
+	ai_will_do = {
+		has_law_or_variant = law_type:law_consumption_based_taxation
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_land_based_taxation.ai_enact_weight_modifier
+		# political_capacity_law_land_based_taxation [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		# SITAI END information:law_land_based_taxation.ai_enact_weight_modifier
+	}
+}
+
+law_per_capita_based_taxation = {
+	group = lawgroup_taxation
+
+	progressiveness = 0
+
+	icon = "gfx/interface/icons/law_icons/per_capita_based_taxation.dds"
+
+	disallowing_laws = {
+		law_traditionalism
+	}
+
+	unlocking_technologies = {
+		currency_standards
+	}
+
+	tax_modifier_very_low = {
+		tax_consumption_add = 0.15
+		tax_per_capita_add = 0.40
+		tax_land_add = 0.20
+		tax_income_add = 0.05
+	}
+
+	tax_modifier_low = {
+		tax_consumption_add = 0.20
+		tax_per_capita_add = 0.55
+		tax_land_add = 0.275
+		tax_income_add = 0.075
+	}
+
+	tax_modifier_medium = {
+		tax_consumption_add = 0.25
+		tax_per_capita_add = 0.70
+		tax_land_add = 0.35
+		tax_income_add = 0.10
+	}
+
+	tax_modifier_high = {
+		tax_consumption_add = 0.30
+		tax_per_capita_add = 0.85
+		tax_land_add = 0.425
+		tax_income_add = 0.125
+	}
+
+	tax_modifier_very_high = {
+		tax_consumption_add = 0.35
+		tax_per_capita_add = 1.0
+		tax_land_add = 0.50
+		tax_income_add = 0.15
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# Once the AI gets to a certain society tech level they should try to ditch Land Taxation for Per-Capital Taxtion
+		if = {
+			limit = {
+				OR = {
+					has_technology_researched = civilizing_mission
+					has_technology_researched = human_rights
+					has_technology_researched = pan-nationalism
+				}
+				has_law_or_variant = law_type:law_land_based_taxation
+			}
+
+			add = 1000
+		}
+
+		if = {
+			limit = {
+				OR = {
+					has_journal_entry = je_sick_man_bureaucracy
+					has_journal_entry = je_meiji_main
+					has_journal_entry = je_great_reforms_bureaucratic
+					has_journal_entry = je_hawaii
+					has_journal_entry = je_portugal_regeneration
+				}
+				has_law_or_variant = law_type:law_land_based_taxation
+			}
+			add = 5000
+		}
+
+		# SITAI BEGIN information:law_per_capita_based_taxation.ai_enact_weight_modifier
+		# political_capacity_law_per_capita_based_taxation [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		# SITAI END information:law_per_capita_based_taxation.ai_enact_weight_modifier
+	}
+}
+
+law_proportional_taxation = {
+	group = lawgroup_taxation
+
+	progressiveness = 50
+
+	icon = "gfx/interface/icons/law_icons/proportional_taxation.dds"
+
+	disallowing_laws = {
+		law_traditionalism
+	}
+
+	unlocking_technologies = {
+		egalitarianism
+	}
+
+	tax_modifier_very_low = {
+		tax_consumption_add = 0.15
+		tax_income_add = 0.10
+		tax_dividends_add = 0.025
+	}
+
+	tax_modifier_low = {
+		tax_consumption_add = 0.20
+		tax_income_add = 0.15
+		tax_dividends_add = 0.05
+	}
+
+	tax_modifier_medium = {
+		tax_consumption_add = 0.25
+		tax_income_add = 0.20
+		tax_dividends_add = 0.1
+	}
+
+	tax_modifier_high = {
+		tax_consumption_add = 0.30
+		tax_income_add = 0.25
+		tax_dividends_add = 0.15
+	}
+
+	tax_modifier_very_high = {
+		tax_consumption_add = 0.35
+		tax_income_add = 0.30
+		tax_dividends_add = 0.20
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		if = {
+			limit = {
+				OR = {
+					has_journal_entry = je_sick_man_bureaucracy
+					has_journal_entry = je_meiji_main
+					has_journal_entry = je_great_reforms_bureaucratic
+					has_journal_entry = je_hawaii
+					has_journal_entry = je_portugal_regeneration
+				}
+				has_law_or_variant = law_type:law_land_based_taxation
+			}
+			add = 5000
+		}
+
+		# SITAI BEGIN information:law_proportional_taxation.ai_enact_weight_modifier
+		# political_capacity_law_proportional_taxation [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
+		# law_proportional_taxation_ai_enact_weight_modifier [fiscal]; 持续借款时增加拓宽财政收入结构的合格法律关注；不直接增加税收或强制立法
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no in_default = no taking_loans = yes is_at_war = no } } add = 20.0 }
+		# SITAI END information:law_proportional_taxation.ai_enact_weight_modifier
+	}
+}
+
+law_graduated_taxation = {
+	group = lawgroup_taxation
+
+	progressiveness = 100
+
+	icon = "gfx/interface/icons/law_icons/graduated_taxation.dds"
+
+	disallowing_laws = {
+		law_traditionalism
+	}
+
+	unlocking_technologies = {
+		socialism
+	}
+
+	tax_modifier_very_low = {
+		tax_consumption_add = 0.15
+		tax_income_add = 0.10
+		tax_dividends_add = 0.1
+	}
+
+	tax_modifier_low = {
+		tax_consumption_add = 0.20
+		tax_income_add = 0.125
+		tax_dividends_add = 0.15
+	}
+
+	tax_modifier_medium = {
+		tax_consumption_add = 0.25
+		tax_income_add = 0.15
+		tax_dividends_add = 0.2
+	}
+
+	tax_modifier_high = {
+		tax_consumption_add = 0.30
+		tax_income_add = 0.175
+		tax_dividends_add = 0.25
+	}
+
+	tax_modifier_very_high = {
+		tax_consumption_add = 0.35
+		tax_income_add = 0.20
+		tax_dividends_add = 0.3
+	}
+
+	ai_enact_weight_modifier = { #Petitions
+		value = 0
+
+		if = {
+			limit = { ai_has_enact_weight_modifier_journal_entries = yes }
+			add = 750
+		}
+
+		# SITAI BEGIN information:law_graduated_taxation.ai_enact_weight_modifier
+		# political_capacity_law_graduated_taxation [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
+		# law_graduated_taxation_ai_enact_weight_modifier [fiscal]; 持续借款时增加拓宽财政收入结构的合格法律关注；不直接增加税收或强制立法
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no in_default = no taking_loans = yes is_at_war = no } } add = 20.0 }
+		# SITAI END information:law_graduated_taxation.ai_enact_weight_modifier
+	}
+}

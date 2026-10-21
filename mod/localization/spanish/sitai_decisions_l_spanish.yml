@@ -1,0 +1,9 @@
+l_spanish:
+ SITAI_MARKET_DEPENDENCE_SUPPORT_REASON: "Exposición económica a ambos bandos"
+ SITAI_SECURITY_COMMITMENT_REASON: "Compromiso defensivo (candidato)"
+ SITAI_SECURITY_NEIGHBOR_REASON: "Riesgo de defensa de un vecino (candidato)"
+ SITAI_ECONOMY_CAPACITY_REASON: "Capacidad económica y administrativa (candidato)"
+ SITAI_DIPLOMACY_BURDEN_REASON: "Carga bélica y capacidad diplomática (candidato)"
+ SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON: "Aislamiento y costes de los compromisos financieros (candidato)"
+ SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON: "Posición del puerto de tratado y capacidad fiscal (candidato)"
+ SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON: "Vínculos con la patria y prioridades nacionales viables (candidato)"
