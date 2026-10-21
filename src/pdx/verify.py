@@ -745,14 +745,8 @@ def _mods_total(_target: str) -> int:
 def _mods_files(_target: str) -> int:
     """全部 mod 的内容文件总数（``metadata.json`` 不计）。
 
-    为什么要单列：doc 12 与索引页关于「23 个 mod 一共有多少文件」的说法
-    长期停在 3,046，而实测是 4,777 —— 这个数字没进断言表，
-    所以它漂了多久都没人知道。
-
-    ⚠️ **口径 = 「本机装了哪些 mod」，不是「那个目录里有什么」**：`discover_mods()`
-    排除本仓库自己装进去的东西（探针 mod 与 `mods.own_mod`）。踩过的坑（B83）：
-    我们自己部署的真 mod 曾经被数进来，于是 `mod.total` 23→24、`mod.files` 4,777→4,828，
-    而 doc 12 一整批快照数跟着算错 —— 根因见 `mods.OWN_MOD_ID_PREFIX`。
+    统计本机安装清单可发现的 Mod；扫描器按 metadata 身份排除本产品自身，避免安装开发
+    候选后改变对外部 Mod 的统计。
     """
     return sum(m.files for m in analyse_all())
 

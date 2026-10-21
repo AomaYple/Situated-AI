@@ -1,0 +1,6 @@
+# 由 pdx.decisions 生成；本项是default贡献，不是最终AI总概率。
+sitai_reform_default_delta = {
+    value = 0
+    if = { limit = { sitai_reform_fragile = yes } add = -0.5 }
+    else_if = { limit = { sitai_reform_opportunity = yes } add = 1 }
+}

@@ -51,6 +51,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -95,6 +96,8 @@ MODIFIER_FIELD_DIR = "common/static_modifiers"
 #: 只抄词汇表那四个目录会漏掉 ``character_templates`` 这类写变量的地方，
 #: 又造出新的假红，故收宽到这两棵树（收宽只会更严：池越大，「原版写过」越难成立）。
 VARIABLE_POOL_DIRS: tuple[str, ...] = ("common", "events")
+SCRIPT_VALUE_ACCESSOR_DIR = "common/script_values"
+_SCRIPT_VALUE_ACCESSOR = re.compile(r"(?:^|[.:])([a-z][a-z0-9_]*)\(")
 
 #: 「创造变量」的效果名。``set_variable`` 写的变量由 ``has_variable`` 读；
 #: ``set_global_variable`` 写的是**另一套**（读侧 ``has_global_variable``），
@@ -135,6 +138,7 @@ SECTION_MODIFIER_FIELDS = "modifier_fields"
 SECTION_VARIABLES = "vanilla_variables"
 SECTION_PATHS = "mod_paths"
 SECTION_ICONS = "icon_paths"
+SECTION_SCRIPT_VALUE_ACCESSORS = "script_value_accessors"
 
 #: 本模块 :func:`snapshot_sections` 产出的全部域（顺序即写入顺序）。
 SECTIONS: tuple[str, ...] = (
@@ -144,31 +148,12 @@ SECTIONS: tuple[str, ...] = (
     SECTION_VARIABLES,
     SECTION_PATHS,
     SECTION_ICONS,
+    SECTION_SCRIPT_VALUE_ACCESSORS,
 )
 
 #: 快照里**已有**的 defines 参数池（由 :mod:`pdx.snapshot` 自己写，这里只读）。
 #: 不 import 那边的常量：``snapshot`` 反过来要 import 本模块，会成环。
 SNAPSHOT_DEFINES = "defines"
-
-#: 闸门 ① 离线时要用的域（缺域 ⇒ 报前置条件缺失，而不是"未覆盖"）。
-KEYS_GATE_SECTIONS: tuple[str, ...] = (SECTION_KEYS, SECTION_PATHS)
-
-#: 闸门 ② 离线时要用的域（缺域 ⇒ 报前置条件缺失，而不是"未覆盖"）。
-#:
-#: **变量池（:data:`SECTION_VARIABLES`）刻意不在这个元组里**：它是 2026-09-30
-#: 新加的域，入库快照要等到下一次 ``v3 snapshot create --compact`` 才会带上它。
-#: 并进去的话，所有老快照都会在闸门 ② 上判「前置条件缺失」（退出码 2）——
-#: 那是把「快照旧了一版」当成「我们的 mod 有问题」报红，比逐条记「未覆盖」更坏。
-#: 变量检查因此走「池缺 ⇒ 每条引用各记一条 ⬜ 未覆盖」，既不静默通过、
-#: 也不误报；快照刷新后可以再考虑并入（见 ``docs/reports/A1-modguard修复.md``）。
-REFS_GATE_SECTIONS: tuple[str, ...] = (
-    SECTION_KEYS,
-    SECTION_VOCABULARY,
-    SECTION_MODIFIER_FIELDS,
-    SECTION_PATHS,
-    SECTION_ICONS,
-    SNAPSHOT_DEFINES,
-)
 
 
 # ── 抽取（只有一份实现：game 源现算，快照源由它在生成时写入）──────
@@ -275,6 +260,23 @@ def variable_names(directory: Path) -> set[str]:
     return out
 
 
+def script_value_accessors(directory: Path) -> set[str]:
+    """收集原版数值表达式字符串中实际调用的具名脚本值读取器。"""
+    if not directory.is_dir():
+        return set()
+    out: set[str] = set()
+    for path in sorted(directory.rglob("*.txt")):
+        stack: list[Block] = [parse_cached(path).root]
+        while stack:
+            block = stack.pop()
+            for item in block.assignments():
+                if isinstance(item.value, Block):
+                    stack.append(item.value)
+                elif isinstance(item.value, Scalar):
+                    out.update(_SCRIPT_VALUE_ACCESSOR.findall(item.value.unquoted))
+    return out
+
+
 def dir_files(root: Path, rel: str) -> list[str]:
     """``root/rel`` 下全部文件的相对路径（posix，排序）。"""
     base = root / rel
@@ -305,6 +307,11 @@ def snapshot_sections(game: Path) -> dict[str, dict[str, list[str]]]:
         SECTION_VARIABLES: {rel: sorted(variable_names(game / rel)) for rel in VARIABLE_POOL_DIRS},
         SECTION_PATHS: {rel: dir_files(game, rel) for rel in snapshot_path_dirs(game)},
         SECTION_ICONS: {ICON_DIR: dir_files(game, ICON_DIR)},
+        SECTION_SCRIPT_VALUE_ACCESSORS: {
+            SCRIPT_VALUE_ACCESSOR_DIR: sorted(
+                script_value_accessors(game / SCRIPT_VALUE_ACCESSOR_DIR)
+            )
+        },
     }
 
 
@@ -415,6 +422,15 @@ class VanillaIndex:
         for rel in VARIABLE_POOL_DIRS:
             merged |= set(body[rel])
         return merged
+
+    def script_value_accessors(self) -> set[str] | None:
+        """原版脚本数值表达式实际调用的读取器名。"""
+        if self.source != "snapshot":
+            return script_value_accessors(self.game / SCRIPT_VALUE_ACCESSOR_DIR)
+        body = self.sections.get(SECTION_SCRIPT_VALUE_ACCESSORS)
+        if body is None or SCRIPT_VALUE_ACCESSOR_DIR not in body:
+            return None
+        return set(body[SCRIPT_VALUE_ACCESSOR_DIR])
 
     def path_exists(self, rel: str) -> bool | None:
         """``game/<rel>`` 这个文件在不在（``None`` = 离线未覆盖该目录）。
@@ -551,11 +567,13 @@ __all__ = [
     "KEY_DIRS",
     "MODIFIER_FIELD_DIR",
     "PATH_DIRS",
+    "SCRIPT_VALUE_ACCESSOR_DIR",
     "SECTIONS",
     "SECTION_ICONS",
     "SECTION_KEYS",
     "SECTION_MODIFIER_FIELDS",
     "SECTION_PATHS",
+    "SECTION_SCRIPT_VALUE_ACCESSORS",
     "SECTION_VARIABLES",
     "SECTION_VOCABULARY",
     "SNAPSHOT_DEFINES",
@@ -569,6 +587,7 @@ __all__ = [
     "game_index",
     "load",
     "modifier_field_names",
+    "script_value_accessors",
     "snapshot_index",
     "snapshot_sections",
     "vanilla_keys",

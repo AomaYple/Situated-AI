@@ -84,8 +84,6 @@ def category(rel: str) -> str:
         return "local_runtime"
     if rel.startswith("tools/out/") and not rel.endswith(".compact.json"):
         return "raw_evidence"
-    if rel.startswith("tools/probe/zz_console_probe/"):
-        return "raw_evidence"
     if rel.startswith("tools/probe/frozen/"):
         return "frozen_evidence"
     if path.suffix.lower() in BINARY_SUFFIXES or path.name.startswith(".coverage"):
@@ -94,7 +92,9 @@ def category(rel: str) -> str:
         return "test"
     if path.suffix == ".py":
         return "source"
-    if rel.startswith("mod/") and not rel.startswith("mod/data/"):
+    if rel.startswith("mod/decisions/"):
+        return "source"
+    if rel.startswith("mod/"):
         return "generated"
     if path.suffix == ".md":
         return "documentation"

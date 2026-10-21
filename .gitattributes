@@ -1,68 +1,29 @@
-# ─────────────────────────────────────────────────────────────
-# 行尾与文件类型规范
-#
-# 不加这个文件时，`core.autocrlf=true`（Windows 上的常见默认）会让
-# 每次 git add 都弹「LF will be replaced by CRLF」警告，并且同一个文件
-# 在不同机器上检出成不同的行尾 —— 对 Python 来说这不只是噪声：
-# 它会让 `git diff` 出现整文件级别的假差异，也会让基于内容哈希的
-# 校验（如黄金回归）在换机器后莫名其妙地失败。
-# ─────────────────────────────────────────────────────────────
-
-# 默认策略：由 git 自动判定文本，文本一律以 LF 入库
+# 所有受控文本统一 LF；编码门禁负责确认 UTF-8 无 BOM。
 * text=auto eol=lf
-
-# 仓库文本 UTF-8 无 BOM + LF。Git 只规范换行；BOM 由文本门禁检查。
-# 游戏脚本和本地化在安装/打包边界添加 BOM，源码不带。
-
-# ── 明确的文本类型 ─────────────────────────────────────────
-# 源文件面（`tools/` `docs/` `research/` `.github/` `mod/` 与仓库根文件）里
-# 这些后缀都真的有文件；`.ini` / `.cfg` / `.csv` 目前一个都没有，是前瞻规则
-# （留着比将来被行尾转换破坏掉划算）。"每个出现过的后缀都归了类"由
-# `tests/test_repo_hygiene.py` 盯着：新增后缀没在这里归类就红。
-*.py      text eol=lf
-*.md      text eol=lf
-*.txt     text eol=lf
-*.toml    text eol=lf
-*.ini     text eol=lf
-*.cfg     text eol=lf
-*.json    text eol=lf
-*.yml     text eol=lf
-*.yaml    text eol=lf
-*.csv     text eol=lf
-*.lock    text eol=lf
-*.frozen  text eol=lf
-
-# ── 无扩展名的根文件（`*` 兜底能覆盖，但显式声明才是"归类"）──
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.csv text eol=lf
+*.lock text eol=lf
+*.frozen text eol=lf
 /.gitattributes text eol=lf
-/.gitignore     text eol=lf
-/.editorconfig  text eol=lf
-/LICENSE        text eol=lf
+/.gitignore text eol=lf
+/.editorconfig text eol=lf
+/LICENSE text eol=lf
 
-# ── 二进制类型（禁止任何行尾转换）──────────────────────────
-#
-# 源文件面现在真有 16 个 PNG（`tools/probe/sitai_ui/**` 14 个 +
-# `tools/probe/zz_probe_ab/ui/**` 2 个），其余几条仍是前瞻规则。
-# `.txt` / `.yml` 是文本，必须能逐行审查差异。
-*.prof    binary
+# 二进制和原版镜像
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.dds binary
+*.ico binary
+*.prof binary
 *.pyisession binary
-*.png     binary
-*.jpg     binary
-*.jpeg    binary
-*.gif     binary
-*.webp    binary
-*.dds     binary
-*.tga     binary
-*.ico     binary
-*.xlsx    binary
-*.pptx    binary
-
-# ── diff 策略 ──────────────────────────────────────────────
-# research/official-docs/ 是逐字镜像，diff 只会是整文件噪声，不展开。
-# 注意这里**没有** `tools/out/** -diff` —— 该目录在 .gitignore 里，
-# git 不跟踪它，规则永远不会命中（曾经有这条，属空转）。
-research/official-docs/**  -diff
-
-# ── GitHub 语言统计 ────────────────────────────────────────
-# research/official-docs/ 是游戏官方文档的逐字镜像，不算本仓库的代码贡献
-research/official-docs/**    linguist-vendored
-tests/test_golden/**   linguist-generated
+research/official-docs/** -diff linguist-vendored
+tests/test_golden/** linguist-generated

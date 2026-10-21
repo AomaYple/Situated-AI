@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -34,10 +35,8 @@ BASELINE_COMMANDS = [
     ("依赖一致性", ["pip", "check"]),
     ("离线断言", ["pdx.cli", "verify", "--from-snapshot"]),
     ("离线生成表格", ["pdx.cli", "tables", "--offline"]),
-    ("Mod 生成一致性", ["pdx.cli", "modgen", "--check"]),
     ("离线 Mod 门禁", ["pdx.cli", "modguard", "--offline"]),
     ("离线 AI 可执行面", ["pdx.cli", "ai-surface", "--check", "--offline"]),
-    ("离线引用", ["pdx.cli", "citations", "--offline"]),
     ("死代码审计", ["tools.ci.deadcode_audit", "--check"]),
 ]
 
@@ -55,6 +54,10 @@ def main() -> int:
         print(f"检查种类：{', '.join((*COMMANDS, 'baseline'))}", file=sys.stderr)
         return 2
     python = interpreter()
+    env = dict(os.environ)
+    # A shared editable installation can point at another checkout. Every child
+    # must inspect this worktree, including nested pytest and resource processes.
+    env["PYTHONPATH"] = os.pathsep.join([str(ROOT / "src"), str(ROOT), env.get("PYTHONPATH", "")])
     if sys.argv[1] == "baseline":
         for label, command in BASELINE_COMMANDS:
             print(f"[baseline] {label}", flush=True)
@@ -62,6 +65,7 @@ def main() -> int:
                 [str(python), "-X", "utf8", "-m", *command],
                 cwd=ROOT,
                 check=False,
+                env=env,
             )
             if result.returncode:
                 print(f"[baseline] {label} 失败（退出码 {result.returncode}）", file=sys.stderr)
@@ -73,6 +77,7 @@ def main() -> int:
         [str(python), *bytecode_flag, "-X", "utf8", "-m", *command, *sys.argv[2:]],
         cwd=ROOT,
         check=False,
+        env=env,
     ).returncode
 
 

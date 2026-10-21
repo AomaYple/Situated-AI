@@ -1,22 +1,4 @@
-# 持续集成。
-#
-# 为什么现在才有：仓库在 2026-09 的那轮测试套件审计里就列出了「CI 完全缺失」，
-# 但当时工具链还没收敛（7 个散装入口脚本、配置分散在 pytest.ini /
-# requirements.txt）。现在配置全部集中在 pyproject.toml，才谈得上在 CI 上复现。
-#
-# ⚠️ **为什么这里没有覆盖率门禁**
-# `[tool.coverage.report] fail_under = 86` 是在**装有游戏本体**的机器上定的：
-# 全量分析、黄金回归、引擎日志交叉验证都要读真实游戏文件。CI runner 上没有
-# 游戏，这些集成用例会被 conftest 自动 skip，覆盖率会远低于 86%，
-# 门禁必然误报。因此 CI 只跑不依赖游戏的测试，
-# 覆盖率门禁留在本地 —— 这不是遗漏，是刻意的分工。
-#
-# ⚠️ **`-m "not integration"` 会在没有游戏时自动扩展成「跳过更多」**
-# conftest 的 `pytest_collection_modifyitems` 会把带 integration 标记的用例
-# 全部加上 skip。这条机制此前是坏的（形参 `config` 遮蔽了 `pdx.config` 模块，
-# 在没有游戏的机器上直接 INTERNALERROR）—— 也就是说**这份 CI 配置正是发现并
-# 验证该修复的手段**。`tests/test_conftest.py` 现在守着它。
-
+# 三平台 Python 工具和离线合同；无游戏 runner 不证明游戏行为。
 name: CI
 
 on:
@@ -25,15 +7,12 @@ on:
   pull_request:
   workflow_dispatch:
 
-# 同一分支连着推两次时，取消掉还在跑的那次
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   static:
-    # Ruff 读取同一份源码和 pyproject 配置，静态检查仅执行一次。
-    # 平台依赖、编码、类型和运行时行为仍由下面的完整矩阵验证。
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,13 +31,10 @@ jobs:
   check:
     runs-on: ${{ matrix.os }}
     env:
-      # 无游戏 runner 不需要按 CPU 数量无限扩张 xdist；固定上限降低内存峰值，
-      # 同时保留并行测试路径。需要压测时可在本机显式覆盖该变量。
       SITAI_XDIST_WORKERS: "2"
     strategy:
       fail-fast: false
       matrix:
-        # 覆盖 pyproject 声明的全部 Python 版本，避免只验证下界和当前开发版。
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.11", "3.12", "3.13", "3.14"]
 
@@ -89,8 +65,6 @@ jobs:
         run: python -c "from pathlib import Path; Path('tools/out/ci').mkdir(parents=True, exist_ok=True)"
 
       - name: pytest —— 不依赖游戏的用例
-        # 上一步已经覆盖 `docs` / `contract` / `property` 这些标记；
-        # 唯二被排除的是 integration（无游戏）与要显式传 -n0 的 benchmark。
         run: >-
           python -m pytest -m "not integration and not benchmark"
           --junitxml=tools/out/ci/test-results.xml
@@ -108,81 +82,18 @@ jobs:
           path: tools/out/ci/
 
       - name: v3 verify —— 用入库快照核验一部分断言
-        # 234 条断言里 43 条能用入库的离线真值核验，其余要读游戏本体 ——
-        # CI 上没有游戏，所以 test_verify 那一族会被跳过。
-        # 入库的精简快照（tools/out/snapshots/*.compact.json）
-        # 带着各目录条目名、defines 命名空间与 DLC 清单，官方文档清单带着 94 篇 .md 的篇数与字节数。
-        # 这条**不读游戏**，因此能在 CI 上真跑 —— 它就是精简快照入库的理由。
-        #
-        # 它证明「断言注册表仍与当时记录的真值一致」，不证明「游戏里现在还是
-        # 这个数」（那要游戏本体，只能在本地 `v3 verify`）。两者合起来才完整。
         run: v3 verify --from-snapshot
 
       - name: v3 tables --offline —— 用入库快照核验生成表
-        # 174 张生成表是文档里大部分数字的来源，而**算**它们要读游戏 ——
-        # 于是「表格被手改、或改了生成器却忘了重跑」在 CI 上一直没人守。
-        # 现在快照里带着每张表当时的数据行（域 doc_tables），这条只读快照与文档。
-        #
-        # 边界（别把它当成 `v3 tables`）：它证明「表与**入库快照**一致」，
-        # 不证明「表与**现在的游戏**一致」—— 后者仍是本机 `v3 refresh` 的活。
         run: v3 tables --offline
 
-      - name: v3 modgen --check —— 产物与数据源逐字节一致
-        # 这条**不读游戏**（实测：把 `V3_ROOT` 指到不存在的路径，退出码仍是 0）——
-        # 同时比对 decisions 的生产产物与 data 的 legacy 产物，因此能在 CI 上真跑。
-        # 守的是 P3「仓库里不存在手写的游戏侧产物」：谁手改了 `mod/` 下的产物，
-        # 或改了数据源却忘了重新生成，这里立刻红。
-        run: v3 modgen --check
-
-      - name: v3 modguard --offline —— 生产检查与 legacy 五闸（原版真值走入库快照）
-        # 阶段 4 的 G-EXIT-2：闸门 ①② 要与原版键名 / 修正字段池取交集，
-        # 原先因此只能在本机跑（CI 上会以「前置条件缺失」退出 2）。
-        # `--offline` 让这两道闸门改读入库精简快照里的 6 个域
-        # （`vanilla_keys` / `vocabulary` / `modifier_fields` / `mod_paths` /
-        # `icon_paths` / `ai_surface`），于是**无游戏环境也能真跑**。
-        #
-        # 三条口径（都在 `pdx.vanilla_index` 的模块文档里写死了）：
-        #   * 快照缺域 ⇒ 该闸门**报未覆盖并退出 2**，绝不静默通过（P13）；
-        #   * 未覆盖的那一项**列在闸门明细里**，不会被算成"通过"；
-        #   * 它证明的是「产物与**入库快照**一致」，不是「与现在的游戏一致」——
-        #     后者仍是本机 `v3 modguard` 的活。两条合起来才完整。
+      - name: v3 modguard --offline —— 锁定快照的生产接口门禁
         run: v3 modguard --offline
 
       - name: v3 ai-surface --check --offline —— 可执行面（同一份快照）
-        # 同一口径：`ai-surface` 的三件事全部枚举自原版 ai_strategies / defines，
-        # 离线时改读快照里的 `ai_surface` 域，并**复用同一个 render()** ——
-        # 所以两边渲染出来的文本逐字节相同（不是存了一份文档文本）。
         run: v3 ai-surface --check --offline
 
-      - name: v3 citations --offline —— P10 的引用在 CI 上也守得住
-        # 这一步补的是**当前 CI 的最后一个实质缺口**（backlog B77）：`v3 citations`
-        # 要打开原版文件确认那一行在不在，而 runner 上没有游戏。
-        # 现在精简快照里多了一个 `citation_support` 域：每条引用记着**被引那一行的
-        # 文本指纹 + 该文件行数**。离线核的是「与入库快照一致」——**不是**
-        # 「与现在的游戏一致」（后者永远是本机门禁的活，有游戏时 `v3 citations`
-        # 会顺手核「被引那一行还是不是那句话」，那正是官方更新挪走我们依据的信号）。
-        run: v3 citations --offline
-
-      # 注：不带 `--offline` 的 `v3 tables`（重算表格）**仍然不在这里** ——
-      # 它要读游戏本体才能算出内容，CI 上会以「前置条件缺失」退出 2。
-      # 它与 `v3 verify` 一样属于本地门禁，由 `pytest -m integration` 在装有
-      # 游戏的机器上覆盖。上一版曾误把它写进来，是因为把它与
-      # `v3 verify --from-snapshot` 混为一谈：那时快照里**没有**表格内容，
-      # 也算不出那些表 —— 这轮把表格内容也记进了快照，才有了 `--offline` 这条。
-
   bench:
-    # 基准进 CI（阶段 4 的出口判据之一：「闸门**与基准**进 CI」）。
-    #
-    # ⚠️ **为什么这一 job 不断言、只报告**（2026-09-24）：
-    # 绝对墙钟在共享 runner 上抖动极大（同一次提交能差一倍），拿它当门禁必然误报 ——
-    # 这正是这份 CI 此前把基准排除在外的原因（见上面 check job 里那句注）。
-    # 但「不进 CI」的代价是**性能没人看**：改动把某条热路径拖慢十倍也不会有人发现。
-    # 折中：**数字进 CI（进 job summary 与 artifact），断言留在本机** ——
-    #   * 本机的墙钟断言：`test_audit_leftovers.py::test_解析吞吐不低于下限`（带下限）；
-    #   * 本机的**确定性**不变量：`test_cache.py` / `test_audit_leftovers.py` 里
-    #     「并发下每个文件只真正解析一次」（misses == 文件数）—— 它不依赖墙钟，
-    #     所以它在**普通的并行套件**里就能跑，不需要单开 job。
-    # 于是 CI 这一 job 的职责是**可比性**：每次 push 都留一份同样口径的 JSON。
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -199,9 +110,6 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: pytest-benchmark —— 不需要游戏的基准
-        # 必须清掉 addopts：xdist 开着时 pytest-benchmark 会自己禁用（见 pyproject 的注）。
-        # runner 上没有游戏 ⇒ 带 `_needs_game` 的那几类会自动 skip，跑到的都是合成样本
-        # （`SMALL` / `MEDIUM` / `TRICKY`），因此这份数字**跨机器口径一致**。
         run: |
           python -m pytest tests/test_benchmarks.py \
             -o addopts="" --benchmark-only --benchmark-json=bench.json -q
@@ -220,22 +128,10 @@ jobs:
             performance.json
 
   lock:
-    # 依赖锁这条**单开一个 job，固定 windows-latest**。
-    #
-    # 为什么不在上面的矩阵里：`requirements.lock` 是**本机（Windows）解析出来的闭包**，
-    # 含平台相关依赖（如 `colorama`）。拿它去 ubuntu 上装，等于把「A 平台的解析结果」
-    # 当成「B 平台的承诺」—— 那是最容易被误读成「锁坏了」的一类失败。
-    # 固定在 Windows 上跑，锁与平台一致，这条才有意义。
-    #
-    # 它验的是三件事：锁**装得上**（`pip install -r`）、装的确实是锁
-    # （`pip install -e . --no-deps` 不触发重新解析）、
-    # 以及装出来的环境与锁**逐条一致**（`v3 lock`）。
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        # 只跑锁生成时的解释器版本（3.14）—— 换版本解析结果会变，
-        # 那是「锁该重生成」的信号，不是这条 CI 该背的锅。
         python-version: ["3.14"]
 
     steps:
@@ -254,9 +150,6 @@ jobs:
           python -m pip install -e . --no-deps
 
       - name: v3 lock —— 装出来的环境与锁逐条一致
-        # `v3 lock` 不带参数时是对账：本机闭包 vs 锁，有差异即退出码 1。
-        # pyproject 里全是下限，下限保证装得上、不保证装出来是同一套 ——
-        # 这条把「同一套」变成可验证的。
         run: v3 lock
 
       - name: pytest —— 在锁定的环境里跑不依赖游戏的用例

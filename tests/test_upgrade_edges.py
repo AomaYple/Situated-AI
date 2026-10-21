@@ -123,6 +123,7 @@ def test_delivery_case_collision():
         distribution.payloads({"common/A.txt": "x", "common/a.txt": "y"})
 
 
+@pytest.mark.integration
 def test_package_refuses_drift_without_touching_destination(tmp_path, monkeypatch):
     monkeypatch.setattr(distribution.decisions, "check", lambda *_: ["modified"])
     target = tmp_path / "existing.zip"
@@ -275,7 +276,7 @@ def test_performance_real_workloads_have_results():
     assert set(result["workloads"]) == {
         "citations.repeated_file",
         "localization.header_large_file",
-        "modgen.all_archives",
+        "decisions.core_inputs",
     }
     for metrics in result["workloads"].values():
         assert metrics["median_s"] > 0
@@ -307,9 +308,7 @@ def test_distribution_cli(tmp_path, monkeypatch):
         lambda path, **_: distribution.write_zip(
             {"a.txt": "x"},
             path,
-            generation=distribution.generation_contract(
-                variant="disabled", with_explanation_probe=False
-            ),
+            generation=distribution.generation_contract(),
         ),
     )
     monkeypatch.setattr(sys, "argv", ["distribution", "--output", str(target)])
@@ -318,6 +317,7 @@ def test_distribution_cli(tmp_path, monkeypatch):
         assert archive.read("a.txt") == codecs.BOM_UTF8 + b"x"
 
 
+@pytest.mark.integration
 def test_package_cli_success_and_refusal(tmp_path, monkeypatch):
     from typer.testing import CliRunner
 
@@ -401,40 +401,6 @@ def test_profile_summary_counts_real_calls(tmp_path, request):
     assert summary["modules"]["src/pdx/textio.py"]["calls"] == 1
     assert all(name.endswith(".py") for name in summary["modules"])
     assert profile_suite.summarize(tmp_path / "missing")["profiles"] == []
-
-
-def test_process_enumeration_uses_names_and_platform(tmp_path, monkeypatch):
-    from types import SimpleNamespace
-
-    from pdx import game_auto
-
-    monkeypatch.setattr(
-        game_auto.psutil,
-        "process_iter",
-        lambda _: [
-            SimpleNamespace(pid=10, info={"name": "Victoria3.EXE"}),
-            SimpleNamespace(pid=20, info={"name": "victoria3"}),
-            SimpleNamespace(pid=30, info={"name": None}),
-            SimpleNamespace(pid=40, info={"name": "other"}),
-        ],
-    )
-    monkeypatch.setattr(sys, "platform", "win32")
-    assert game_auto._process_pids() == [10]
-    monkeypatch.setattr(sys, "platform", "linux")
-    assert game_auto._process_pids() == [20]
-    assert game_auto._process_pids("VICTORIA3.EXE") == [10]
-
-
-def test_kill_ignores_process_that_already_exited(monkeypatch):
-    from pdx import game_auto
-
-    monkeypatch.setattr(game_auto, "_process_pids", lambda: [999])
-
-    def exited(pid):
-        raise game_auto.psutil.NoSuchProcess(pid)
-
-    monkeypatch.setattr(game_auto.psutil, "Process", exited)
-    assert game_auto.kill_game() == []
 
 
 @pytest.mark.parametrize("offline", [False, True])

@@ -37,10 +37,10 @@ _判据 = Callable[[Path, "_Source"], "str | None"]
 _BOM = bytes((0xEF, 0xBB, 0xBF))
 #: 二进制嗅探窗口。与 git 自己的文本启发式同源：前 8000 字节里出现 NUL 就当二进制。
 _BINARY_SNIFF = 8000
-#: 引擎会读的文本后缀（与 ``modgen.GAME_SIDE_SUFFIXES`` 同源）。
+#: 引擎会读的文本后缀（与 ``pdx.textio.GAME_SUFFIXES`` 同源）。
 _GAME_SIDE_SUFFIXES = (".txt", ".yml")
-#: 引擎侧目录前缀：这两处的 ``.txt`` / ``.yml`` 是**游戏侧文件**。
-_GAME_SIDE_PREFIXES = ("mod/", "tools/probe/")
+#: 引擎侧目录前缀：生产 Mod 中的 ``.txt`` / ``.yml`` 由游戏读取。
+_GAME_SIDE_PREFIXES = ("mod/",)
 
 # ── 读文件的两种方式 ────────────────────────────────────────────
 # 大于这个字节数的受控文件改成「映射 + 分块扫描」，不在内存里放整份。
@@ -50,7 +50,7 @@ _READ_WHOLE_MAX = 1 << 20
 #: 分块扫描的块大小。8 KiB 与 `mmap` 的页大小同量级，切分代价可忽略。
 _CHUNK = 8192
 #: 一定不是文本的后缀（``.gitattributes`` 的 binary 组同源）。
-#: 命中就**连读都不读** —— 探针 UI 的 3 个 PNG 走这条捷径。
+#: 命中就**连读都不读**；二进制后缀不进入文本编码扫描。
 _BINARY_SUFFIXES = (
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".dds", ".tga", ".ico",
     ".xlsx", ".pptx", ".prof", ".pyisession",
@@ -60,7 +60,7 @@ _BINARY_SUFFIXES = (
 #: 取略低的值：目录改名 / 口径写错时当场红，而正常增删文件不会误报。
 _MIN_TRACKED = 300
 _MIN_TEXT = 300
-_MIN_GAME_SIDE = 100
+_MIN_GAME_SIDE = 50
 
 
 #: 违规名单的两句人话抬头（测试与失败信息共用，避免两处各写一遍）。
@@ -181,9 +181,9 @@ def _相对路径(path: Path) -> str:
 
 
 def _是引擎侧(rel: str) -> bool:
-    """引擎侧 ⇔ 路径在 ``mod/`` 或 ``tools/probe/`` 下 **且** 后缀是 ``.txt`` / ``.yml``。
+    """引擎侧 ⇔ 路径在 ``mod/`` 下 **且** 后缀是 ``.txt`` / ``.yml``。
 
-    两个条件缺一不可：全仓只有两个 ``.yml`` 不在那两个目录下
+    两个条件缺一不可：仓库管理的 workflow YAML 与测试夹具
     （``.github/workflows/ci.yml`` 与本目录的 ``test_golden/test_artifact_digests.yml``），
     它们**必须不带 BOM** —— 任何「后缀即引擎侧」的写法都会当场判错。
     """
@@ -390,7 +390,7 @@ def test_全部受控文件_没有孤立CR与NUL() -> None:
     为什么与 CRLF 那条分开：``0D 0A`` 是"换行风格错了"，落单的 ``0D`` / ``00`` 是
     "文件里混进了控制字符" —— 后者在 ``git diff`` 里看不出来，而它会让别的工具把整行
     显示成怪字符（PowerShell 的 here-string 往台账文件上实测写出过 CR / NUL / TAB 三种）。
-    ⚠️ **TAB 不在这两条里**：V3 脚本用 TAB 缩进合法，``mod/**`` 与 ``tools/probe/**`` 全是大片 TAB。
+    ⚠️ **TAB 不在这两条里**：V3 脚本用 TAB 缩进合法，``mod/**`` 保留游戏脚本缩进。
     """
     engine, repo_side, _ = _分组()
     texts = engine + repo_side
@@ -418,7 +418,7 @@ def test_分块扫描跨块边界也判得出(tmp_path: Path, monkeypatch: pytes
     monkeypatch.setattr(sys.modules[__name__], "_CHUNK", 4)
     monkeypatch.setattr(sys.modules[__name__], "_READ_WHOLE_MAX", 1)  # 强制走分块那条路
 
-    straddle = tmp_path / "tools/probe/zz_probe_a/docs/straddle.txt"
+    straddle = tmp_path / "mod/common/straddle.txt"
     straddle.parent.mkdir(parents=True)
     # 偏移 3 = \r（首块末）、偏移 4 = \n（次块首）⇒ 那一处横跨两块；偏移 8 = 文件末尾的落单 \r
     straddle.write_bytes(b"abc\r\ndef\r")
@@ -458,7 +458,7 @@ def test_二进制必须由后缀声明而不是靠内容嗅探(tmp_path: Path) 
 
     盲区长这样：``_是二进制`` 见到前 8000 字节里有 NUL 就把文件整份跳过 ⇒ BOM、CRLF、
     落单 CR、NUL 四条判据**一条都套不上**，而闸门什么也不说 —— 正是"看起来没事"那一类。
-    今天现场 3 个二进制全是探针 UI 的 ``.png``（后缀都在表里）⇒ 这条判绿。
+    合法的二进制后缀不进入文本编码扫描；文本后缀始终检查 NUL，不能依赖嗅探跳过。
     """
     _, _, binary = _分组()
     undeclared = _嗅探出来的二进制(binary)
@@ -477,20 +477,6 @@ def test_二进制必须由后缀声明而不是靠内容嗅探(tmp_path: Path) 
     assert _嗅探出来的二进制([poisoned]), "阴性对照没点名 ⇒ 这条闸门是空转的"
 
 
-def test_二进制文件被排除() -> None:
-    """受控集里的二进制（现场 3 个探针 UI 的 PNG）既不判 BOM 也不判 LF。
-
-    跳过它们的第一道闸是**后缀**（``.png`` 命中就根本不读）；万一将来有人把后缀表删了，
-    还有第二道 NUL 嗅探兜底 —— 两条都在下面钉住。
-    """
-    _, _, binary = _分组()
-    assert binary, "一个二进制文件都没识别出来 —— 排除规则多半失效了"
-    for path in binary:
-        assert path.suffix.lower() in _BINARY_SUFFIXES or _是二进制(path.read_bytes()[:8000]), (
-            f"{_相对路径(path)} 被判成二进制，但后缀不在表里、字节里也没有 NUL"
-        )
-
-
 def test_大文件走分块扫描也判得出CRLF(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """超过 ``_READ_WHOLE_MAX`` 的文件走 ``mmap`` + 分块那条路（真仓库里是两份入库快照）。
 
@@ -499,7 +485,7 @@ def test_大文件走分块扫描也判得出CRLF(tmp_path: Path, monkeypatch: p
     """
     monkeypatch.setattr(sys.modules[__name__], "_READ_WHOLE_MAX", 64)
 
-    bad = tmp_path / "tools/probe/zz_probe_a/docs/big.txt"
+    bad = tmp_path / "mod/common/big.txt"
     bad.parent.mkdir(parents=True)
     bad.write_bytes(b"".join(f"line {i}\n".encode() for i in range(40)) + b"tail\r\n")
     assert bad.stat().st_size > 64, "这条用例要的正是「超过阈值」"
@@ -560,7 +546,7 @@ _实例 = (
     ),
     _Case(
         "引擎侧CRLF_判红",
-        "tools/probe/zz_probe_a/common/decisions/zz_probe_decisions.txt",
+        "mod/common/decisions/sitai_decisions.txt",
         _BOM + b"d = 1\r\n",
         _CRLF违规,
         "第 1 行（共 1 处）",
@@ -568,14 +554,14 @@ _实例 = (
     ),
     _Case(
         "二进制_后缀排除_判绿",
-        "tools/probe/zz_probe_ab/ui/btn_x.png",
+        "mod/gfx/btn_x.png",
         _BOM + b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR",
         _CRLF违规,
         None,
     ),
     _Case(
         "二进制_NUL嗅探排除_判绿",
-        "tools/probe/zz_probe_b/common/scripted_effects/blob.dat",
+        "mod/common/scripted_effects/blob.dat",
         _BOM + b"binary\r\n\x00\x01\x02",
         _CRLF违规,
         None,
@@ -615,7 +601,7 @@ def test_判据在反证文件上会红也会绿(tmp_path: Path, 实例: _Case) 
 
     assert _是引擎侧(实例.文件) is 实例.引擎侧, (
         f"`{实例.文件}` 的分类与用例声明的（引擎侧={实例.引擎侧}）不一致 —— "
-        "分类只看 `mod/`+`tools/probe/` 前缀与 `.txt`+`.yml` 后缀这两个条件"
+        "分类只看 `mod/` 前缀与 `.txt`+`.yml` 后缀这两个条件"
     )
     assert _判据适用于(实例.文件, 实例.判据), (
         f"这条判据（{getattr(实例.判据, '__name__', 实例.判据)}）不该套在 {实例.文件} 上 —— "
@@ -632,7 +618,7 @@ def test_判据在反证文件上会红也会绿(tmp_path: Path, 实例: _Case) 
 
 def test_检查范围不为空() -> None:
     """元测试：目录改名 / 口径写错后，这条检查不能变成「扫了 0 个文件、永远通过」。"""
-    engine, repo_side, binary = _分组()
+    engine, repo_side, _ = _分组()
     text = len(engine) + len(repo_side)
     assert len(_受控文件()) >= _MIN_TRACKED, f"受控文件只剩 {len(_受控文件())} 条"
     assert text >= _MIN_TEXT, f"只扫到 {text} 个文本文件 —— 检查范围多半失效了"
@@ -640,7 +626,6 @@ def test_检查范围不为空() -> None:
         f"引擎侧只剩 {len(engine)} 条（{'、'.join(_GAME_SIDE_PREFIXES)}）—— "
         "要么目录不见了，要么 `_是引擎侧` 的判法变了"
     )
-    assert binary, "一个二进制文件都没识别出来"
 
 
 @pytest.mark.parametrize("root", _GAME_SIDE_PREFIXES)
@@ -673,15 +658,15 @@ def test_引擎侧目录存在(root: str) -> None:
 #
 # **刻意不做的事**（免得这条扫查变成噪声源）：不执行代码；看不穿跨模块封装（把共享路径
 # 交给 `pdx.*` 里的函数去写，这里看不见 —— `t95` 的修法正是"改常量"而不是"改调用"，
-# 所以那条修法天然不触发本扫查）；**解析不了 `tools/probe/*` 那些不是包的脚本里的常量**
-# （它们要按路径加载才拿得到值，而 import 那些脚本可能带副作用）⇒ 那种写法的路径本身通常
+# 所以那条修法天然不触发本扫查）；**不解析非包工具脚本中的动态路径常量**
+# （按路径加载才能拿到值，而 import 这些脚本可能带副作用）⇒ 那种写法的路径本身通常
 # 仍会经过 `config.OUT` 或字面量 `tools/out`，落在本扫查里；不追 `getattr`/`eval`/
 # 子进程这类动态写法；不判 `_invoke(...)` 内部写到哪儿。
 #
 # ⚠️ **F8（t103 实测的反例，2026-09-25 改准）**：白名单**只给「看得见」的历史命中**留出口
 # （"看得见但决定先留着"）。**看不见的写法加白名单没用**：那种写法命中 0 条 ⇒ 条目会被判
 # 「已过期 ⇒ 删掉它们」而红 —— 这条语义由 `test_白名单开不了看不见的口子_F8` 钉住。
-# 看不见的那几类（`getattr` / 子进程 / 跨模块封装 / `tools/probe/*` 脚本常量）只能**改代码
+# 看不见的那几类（`getattr` / 子进程 / 跨模块封装 / 动态路径常量）只能**改代码
 # 或扩判据**，不能靠白名单豁免。
 #
 # ⚠️ **「本文件内一跳 `return` 是跟的」**：`def _目标(): return config.OUT / "x"` 之后

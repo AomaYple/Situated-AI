@@ -1,123 +1,63 @@
-# ─────────────────────────────────────────────────────────────
-# 本仓库的忽略规则
-#
-# 原则：交付内容（文档 + 可复现脚本 + 研究资料）全部入库；
-#       只排除「机器相关配置」「可重新生成的产物」与「工具垃圾」。
-# ─────────────────────────────────────────────────────────────
+# Situated AI：只忽略机器环境、缓存、可再生产物和本机证据。
 
-# ── 机器相关配置 ───────────────────────────────────────────
-
-# ── Python 虚拟环境 ────────────────────────────────────────
-# 本地开发环境，体积大且机器相关，不入库。
-# 依赖请记录到 pyproject.toml 的 [project.dependencies]（本仓库的唯一配置源）。
+# Python 环境和缓存
 .venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
-
-# 静态检查工具的缓存。mypy 与 ruff 会各自在缓存目录里写一个 `.gitignore`
-# （内容为 `*`）把自己藏起来，所以不写这两条也不会被提交 —— 但那是工具的
-# 实现细节，不是本仓库的意图；工具换版本、或缓存目录被拷到别处时就会漏。
 /.mypy_cache/
 /.ruff_cache/
 /.ruff-cache-*/
-
-# 其他常见 Python 工具的本机缓存；它们不属于源码或交付物。
 /.tox/
 /.nox/
-/.pytype/
-/.pyre/
-/.pyright/
-/.cache/
-
-# pytest 的 tmp_path 默认落在系统 Temp 下；仓库的 conftest 也会为每轮测试
-# 分配系统临时根。但 pytest/xdist 的嵌套收集、系统临时目录不可写或进程被强杀
-# 时仍可能在仓库根留下这两类目录。它们是测试运行态，不能进入仓库扫描范围。
-pytest-cache-files-*/
-pytest-of-*/
-/sitai-pytest-*/
-/sitai-perf-restore-*/
-/tmp*
-
-# hypothesis 的属性测试数据库（记录反例，机器相关）
 /.hypothesis/
-
-# 基准测试基线（体积小，但含机器性能特征，不入库）
+/.cache/
 /.benchmarks/
-
-# 覆盖率数据
 .coverage
 .coverage.*
 
-# ── tools/ 的中间产物 ──────────────────────────────────────
-# 本地分析输出、测量、恢复副本与原始实机证据。
-# 分析输出可由对应入口重建；原始证据和恢复副本不可据此删除。
+# 工具输出、报告和发布包
 /tools/out/*
+/tools/prof/out/
+/dist/
+/build/
+/evidence/
+/v3-parse-cache-*/
+/tools/.benchmarks/
+/tools/benchmarks/repo-audit-baseline.json
+/tools/benchmarks/repo-audit-modules.json
 
-# ⚠️ **版本快照分两种，只有精简版入库**：
-#
-#   完整快照  tools/out/snapshots/<版本>.json          ← 忽略
-#   精简快照  tools/out/snapshots/<版本>.compact.json  ← 入库
-#
-# 完整快照包含逐语言本地化键清单，而「Paradox 增删了
-# 哪些字段与条目」只需要结构域 —— 精简版保留全部结构域，只把本地化换成
-# 「键数 + sha256」。这样跨版本 diff 在**别人的机器上**也能做。
-#
-# 下面三行是「只放行精简快照」的写法：git 不会进入被忽略的目录，
-# 所以必须先把目录本身放开，再逐层排除。
+# 保留可复核的精简快照和明确登记的证据
 !/tools/out/snapshots/
 /tools/out/snapshots/*
 !/tools/out/snapshots/*.compact.json
-
-# 已入库的精简 G1 重开扫描是可复核证据；其他 evidence 输出仍保持忽略。
 !/tools/out/evidence/
 /tools/out/evidence/*
 !/tools/out/evidence/v0.1-g1-20261013/
 /tools/out/evidence/v0.1-g1-20261013/*
 !/tools/out/evidence/v0.1-g1-20261013/g1-reopen-scan-20261013.json
 
-# 性能剖析的原始数据（cProfile .prof 是二进制、pyinstrument session 是 JSON），
-# 体积大且与机器相关。报告的结论请写进文档，原始数据不入库。
-/tools/prof/out/
+# 官方原文镜像只保留 manifest，原始文件按版权和体积不入库
+/research/official-docs/
 
-# 控制台探针的产物（截图、report.json、抓回来的 profiling.log）。
-# 结论写进 `docs/design/exec/阶段4-性能仪表侦察.md`，原始数据不入库。
-/tools/probe/zz_console_probe/
-
-# M1源由Python按局生成，完整源快照随实机证据归档；旧生成落点不入库。
-/tools/probe/zz_probe_m1_diplomacy/
-
-# 一次性核对脚本与它们的输出（`tools/_probe.py` / `tools/_dump.txt` 这类）。
-#
-# 为什么要有这条：做「把数字脚本化」这件事时，每批都要写几个临时脚本去反解口径，
-# 它们**不该入库**（下一个人不需要、而且里面往往钉着当时的中间结论）。
-# 实测踩过：`git add -A` 把 `tools/_m10.txt`（提交信息草稿）一起提交了，
-# 只能 `--amend` + 强推补救。这类前缀约定本来只在脑子里，写进忽略规则才靠得住。
-#
-# `.md` 是后补的：取证中间产物常写成 markdown（一张表就能装下 27 条结论），
-# 而原先只挡了 `.py` 与 `.txt` —— 实测 `tools/_doc06_evidence.md` 直接暴露在
-# `git status` 里，只差一次 `git add -A` 就被提交。
+# 临时盘点、补丁和日志
 /tools/_*.py
 /tools/_*.txt
 /tools/_*.md
+*.tmp
+*.temp
+*.bak
+*.orig
+*.log
+.commitmsg*
 
-
-
-# 注意：docs/reports/ **已入库**。
-# 它们包含工程结论、历史判据及独立复核，保留稳定引用路径，
-# 入库才能让文档一致性测试在无游戏环境下也有据可查。
-
-
-# ── 操作系统垃圾 ───────────────────────────────────────────
+# 操作系统和编辑器
 Thumbs.db
 ehthumbs.db
 desktop.ini
 .DS_Store
 $RECYCLE.BIN/
-
-
-# ── 编辑器 / IDE ───────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
@@ -125,48 +65,6 @@ $RECYCLE.BIN/
 *~
 .project
 
-# ── 协作工具的运行时状态（不进仓库）────────────────────────
-# AgentTeams 把队伍/任务/邮件的状态写在这里。它是**工具的运行态**，
-# 不是我们的产物：入库只会带来无意义的 diff，而且协议明令不许手改它。
-# 与 .vscode/ 同类 —— 本机是什么状态，与仓库该长什么样无关。
+# 协作工具运行态
 .agent-teams/
 .settings/
-
-
-# ── 临时文件 ───────────────────────────────────────────────
-*.tmp
-*.temp
-*.bak
-*.orig
-*.log
-
-
-# ── 备注 ───────────────────────────────────────────────────
-# research/official-docs/ 是游戏自带官方 .md 的 UTF-8 无 BOM / LF 镜像（Paradox 版权内容），
-# 不入库；入库的是同目录下的 official-docs.manifest.json（原文的
-# 路径/字节/行数/sha256）—— 它承载镜像的版本比较价值
-# （检测「Paradox 改了官方文档」），而哈希与文件名是事实、不是创作内容。
-#
-# 本地镜像仍在，`.gitignore` 只是不让它进版本控制；装了游戏的机器随时可用
-# `v3 mirror write` 重建清单。详见 tools/README.md 的「官方文档清单」。
-#
-# ⚠️ 从 git 移除只影响**当前树**：是否存在旧原文由历史审计核查；此规则只声明当前目录不入库。
-/research/official-docs/
-#
-# 注意：*.log 被忽略，但游戏日志位于用户数据目录（本仓库之外），不受影响。
-#
-# 提交信息草稿（`git commit -F` 用的临时文件）。`.commitmsg*` 已覆盖
-# `.commitmsg` 本身与 `.commitmsg.txt` 这类变体，无需再列一条。
-.commitmsg*
-
-# 三平台可再生产的缓存与交付物
-/v3-parse-cache-*/
-/tools/.benchmarks/
-/dist/
-/build/
-# 含本机硬件和墙钟读数；可复现的结论保存在审计报告。
-/tools/benchmarks/repo-audit-baseline.json
-/tools/benchmarks/repo-audit-modules.json
-
-# 实机运行产生的截图与临时取证，不作为源码交付物；需要留档时复制到外部证据目录。
-/evidence/

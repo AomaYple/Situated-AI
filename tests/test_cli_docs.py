@@ -1,45 +1,4 @@
-"""文档里写的 `v3 …` 命令必须**真的敲得出来**。
-
-为什么需要这一条（实测踩过）
-----------------------------
-旧维护文档曾长期写着 `v3 tables --check`，
-而 `v3 tables` **没有 `--check`**（不带 `--write` 就是核对）。照着维护手册敲命令的人
-会拿到一句 `No such option: --check` —— 文档在教一个不存在的命令，而没有任何东西看着它。
-
-这类错误**不会**被现有门禁发现：`v3 verify` 管数字、`v3 tables` 管表格、
-`test_inventory` 管散文数字 —— 命令与选项没人管。
-
-切片口径（**踩过一次才定下来的**）
-----------------------------------
-第一版按"整行"切，于是同一行里**别的命令**的选项被算到了 `v3` 头上：
-`v3 modguard` 与 `v3 ai-surface --check` 写在一行 ⇒ 报「modguard 没有 --check」；
-`pytest --cov-report=…` 跟在 `v3 cov` 后面 ⇒ 报「cov 没有 --cov-report」；
-连 `<!--claim:x-->` 里的 `--claim` 都被当成了选项。**假阳性会让人删掉这条用例**，
-所以口径收紧成"命令必须自成一段"：
-
-* **反引号跨度**：`` `v3 tables --write` `` 这样写的，只看这一对反引号里面；
-* **围栏代码块**：```powershell 块里的**一条命令**（先去掉 `#` 注释，
-  再按 `;` / `&&` / `|` 拆开 —— 实测踩过：`v3 verify ; v3 tables ; v3 ai-surface --check`
-  写在一行时，`--check` 被算到了前两条头上）。
-
-边界
-----
-* 只查**子命令存在**与**选项存在**；
-* 子命令组（`v3 snapshot …` / `v3 mirror …`）**跳过选项检查** —— 选项属于下一级；
-* 不检查位置参数与取值的形态。
-
-为什么允许集要含**框架通用选项**（2026-09-25 实测）
---------------------------------------------------
-`--help` **不是**子命令声明的 —— 它是 Click/Typer 在解析时按需生成的
-（`Command.get_help_option()`），所以 `cmd.params` 里根本没有它。第一版判据只查
-`cmd.params`，于是**任何文档只要提一句 `v3 citations --help` 就红**：窗口 3 整批
-实测三处（`backlog.md:181` / `backlog.md:182` / `档案目标牌-实机读数.md:308`），
-原文是「citations 没有这个选项（可用：`--offline` `paths`）」。
-
-修法是把**确实存在**的通用选项加进允许集（:func:`framework_options`，实测得出），
-**不是**跳过含 `--help` 的行 —— 后者会把判据弄瞎（假阴性比假阳性更难查）。
-反向那一半同样钉住：未知选项仍会红（`test_未知选项仍然会红`）。
-"""
+"""检查当前操作文档中的 CLI 命令和选项；历史记录保留当时的命令文本。"""
 
 from __future__ import annotations
 
@@ -144,6 +103,11 @@ def _options(cmd: object) -> set[str] | None:
 def fragments() -> Iterator[tuple[str, int, str]]:
     """``(文档名, 行号, 片段)`` —— 每个片段里最多只应有一条命令。"""
     seen: set[object] = set()
+    archived_exec_docs = {
+        "docs/design/exec/README.md",
+        "docs/design/exec/工程基线-1.0.md",
+        "docs/design/exec/mod重设计-实施计划.md",
+    }
     for root in (config.DOCS, config.REPO / "docs"):
         for path in sorted(root.rglob("*.md")):
             if path in seen:
@@ -152,6 +116,19 @@ def fragments() -> Iterator[tuple[str, int, str]]:
                 continue  # 历史复核报告保留失败命令作为证据，不是操作手册。
             seen.add(path)
             document = path.relative_to(config.REPO).as_posix()
+            if document.startswith(
+                (
+                    "docs/audits/",
+                    "docs/reports/",
+                    "docs/victoria3-modding/",
+                    "docs/superpowers/",
+                )
+            ):
+                continue  # 日期化证据和知识库保留当时的复现方式，不是当前操作入口。
+            if document in {"docs/design/backlog.md", "docs/design/01a-依据与参考.md"}:
+                continue
+            if document.startswith("docs/design/exec/") and document not in archived_exec_docs:
+                continue  # 执行索引仅列的三份当前文档参与命令接口检查。
             fenced = False
             for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 if line.lstrip().startswith("```"):

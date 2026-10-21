@@ -5,6 +5,10 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+from typer.main import get_command
+
+from pdx import cli
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -61,3 +65,26 @@ def test_shard_test_files_is_stable_and_validates_count():
             pass
         else:
             raise AssertionError("invalid shard count must fail")
+
+
+def test_cli_measurements_reference_existing_commands():
+    module = _load_module()
+    tree = get_command(cli.app)
+    for case in (item for item in module.CASES if item["group"] == "cli"):
+        argv = case["argv"]
+        tokens = argv[argv.index("pdx.cli") + 1 :]
+        command = tree
+        traversed = False
+        for token in tokens:
+            if token.startswith("-"):
+                break
+            children = getattr(command, "commands", {})
+            if token in children:
+                command = children[token]
+                traversed = True
+                continue
+            break
+        if tokens and all(token.startswith("-") for token in tokens):
+            assert tokens == ["--help"], f"{case['id']} 含未知根级参数：{tokens}"
+        else:
+            assert traversed, f"{case['id']} 引用了不存在的 CLI 命令：{tokens}"

@@ -7,7 +7,7 @@
 用户第 7 条要求「所有 Python 代码做性能测试优化性能（速度与内存）」。没有可信的
 **基线**，后面的「优化」与「护栏」都是空话。这份脚本就是那把量尺的扩表：
 
-* 内存读数复用 ``tools/probe/mem_baseline.py`` 的 psutil 量尺。
+* 内存读数复用 ``tools/ci/mem_baseline.py`` 的 psutil 量尺。
   Windows 读取 peak_wset，Linux 补读 /proc 的 VmHWM，macOS 使用采样峰值；
   具体来源写在原始记录里，不把各平台的读数称为同一种精确值。
 * 覆盖面由 CASES 与动态分片表枚举；模块导入和 AST 成本不是函数运行成本。
@@ -75,7 +75,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
 REPO = Path(__file__).resolve().parents[2]
-MEM_SCRIPT = REPO / "tools" / "probe" / "mem_baseline.py"
+MEM_SCRIPT = REPO / "tools" / "ci" / "mem_baseline.py"
 BENCH_DIR = REPO / "tools" / "benchmarks"
 BASELINE_JSON = BENCH_DIR / "repo-audit-baseline.json"
 MODULES_JSON = BENCH_DIR / "repo-audit-modules.json"
@@ -105,7 +105,7 @@ ENV_EXTRA = {"PYTHONIOENCODING": "utf-8", "COLUMNS": "200"}
 
 
 def _load_mem() -> ModuleType:
-    """按路径 import 量尺（``tools/probe`` 不是包；与 ``test_mem_baseline.py`` 同法）。"""
+    """按路径加载 ``tools/ci/mem_baseline.py`` 的资源量尺。"""
     spec = importlib.util.spec_from_file_location("repo_audit_mem_baseline", MEM_SCRIPT)
     if spec is None or spec.loader is None:  # pragma: no cover - 文件必然存在
         raise SystemExit(f"找不到量尺：{MEM_SCRIPT}")
@@ -118,9 +118,7 @@ def _load_mem() -> ModuleType:
 #
 # ``tier`` 的含义（报告里逐条写明）：
 #   T1 真跑     —— 只读，或只写 %TEMP%；给的是这条命令的真成本。
-#   T2 只装配   —— 真跑会写受保护文件（tools/probe/** 探针）或需要实机；测的是
-#                  「CLI 装配 + import」这一段，并写明为什么到此为止。
-#   T3 需实机   —— 需要游戏日志 / 实机存档；无实机时测的是**拒绝路径**（启动即判红）的成本。
+#   T2 只装配   —— 只测命令帮助、CLI 装配和 import，不执行写入生产文件的动作。
 
 
 def _v3(*args: str) -> list[str]:
@@ -135,7 +133,7 @@ def _pytest(*args: str) -> list[str]:
 SUITE_ARGS = ["-n", "auto"]
 
 CASES: list[dict[str, Any]] = [
-    # ── T1：全量工具链命令（覆盖 `v3 --help` 现读的 34 个子命令）──────────────
+    # ── T1：当前工具链命令；入口存在性由测试与 CLI 注册表交叉核对 ──────────
     {
         "id": "cli.root-help",
         "group": "cli",
@@ -185,14 +183,6 @@ CASES: list[dict[str, Any]] = [
         "interval_s": INTERVAL_CLI_S,
     },
     {
-        "id": "cli.objectives-check",
-        "group": "cli",
-        "tier": "T1",
-        "argv": _v3("objectives", "--check"),
-        "interp": "9 国目标函数表 + P1–P5 五条闸门",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
         "id": "cli.verify",
         "group": "cli",
         "tier": "T1",
@@ -230,14 +220,6 @@ CASES: list[dict[str, Any]] = [
         "tier": "T1",
         "argv": _v3("strings", "--limit", "5"),
         "interp": "victoria3.exe 字符串开采（--limit 5 只影响打印量）",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
-        "id": "cli.experiment-plan",
-        "group": "cli",
-        "tier": "T1",
-        "argv": _v3("experiment"),
-        "interp": "实验编排默认动作 plan（只打印，不装探针、不动 content_load）",
         "interval_s": INTERVAL_CLI_S,
     },
     {
@@ -305,27 +287,11 @@ CASES: list[dict[str, Any]] = [
         "interval_s": INTERVAL_CLI_S,
     },
     {
-        "id": "cli.h1-health",
-        "group": "cli",
-        "tier": "T3",
-        "argv": _v3("h1", "--health"),
-        "interp": "H1 开局自检：实机日志不在盘上 ⇒ 测的是**拒绝路径**（启动即判红）",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
-        "id": "cli.h1-probe",
-        "group": "cli",
-        "tier": "T2",
-        "argv": _v3("h1-probe", "--help"),
-        "interp": "H1 探针生成器：真跑会写 tools/probe/zz_probe_h1/**（受保护面）⇒ 只测装配",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
         "id": "cli.modgen-check",
         "group": "cli",
         "tier": "T1",
         "argv": _v3("modgen", "--check"),
-        "interp": "mod 产物与数据源一致性（**这条必须保持绿**：69 个产物逐字节）",
+        "interp": "生产 Mod 产物与数据源一致性（生成文件逐字节核对）",
         "interval_s": INTERVAL_CLI_S,
     },
     {
@@ -337,51 +303,11 @@ CASES: list[dict[str, Any]] = [
         "interval_s": INTERVAL_CLI_S,
     },
     {
-        "id": "cli.citations-offline",
-        "group": "cli",
-        "tier": "T1",
-        "argv": _v3("citations", "--offline"),
-        "interp": "数据源 文件:行号 引用可解析性核对（离线）",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
-        "id": "cli.release",
-        "group": "cli",
-        "tier": "T1",
-        "argv": _v3("release"),
-        "interp": "发布说明 ↔ 档案 ↔ 元数据三边一致",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
-        "id": "cli.preflight",
-        "group": "cli",
-        "tier": "T1",
-        "argv": _v3("preflight"),
-        "interp": "开局前置条件自检（只读）",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
         "id": "cli.modguard-offline",
         "group": "cli",
         "tier": "T1",
         "argv": _v3("modguard", "--offline"),
         "interp": "五道闸门（离线：读入库精简快照）",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
-        "id": "cli.ab-probe",
-        "group": "cli",
-        "tier": "T2",
-        "argv": _v3("ab-probe", "--help"),
-        "interp": "A/B 探针生成器：真跑会重写 tools/probe/** 探针 ⇒ 只测装配",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
-        "id": "cli.ab-health",
-        "group": "cli",
-        "tier": "T3",
-        "argv": _v3("ab", "--health"),
-        "interp": "A/B 开局自检：实机日志不在盘上 ⇒ 测的是拒绝路径",
         "interval_s": INTERVAL_CLI_S,
     },
     {
@@ -882,13 +808,7 @@ FAMILIES: list[tuple[str, str, str]] = [
         "tests",
         "测试模块：测**套件内耗时**（junit xml 逐文件聚合），另给 AST 解析成本",
     ),
-    (
-        "tools/probe",
-        "probe",
-        "一次性探针脚本（非包）：导入即执行，**不测导入**；给 AST 解析成本 + 字节数",
-    ),
     ("tools/ci", "ci", "CI 辅助脚本（非包）：同上"),
-    ("tools/prof", "prof", "剖析脚本（非包）：同上"),
     (
         "tools/benchmarks",
         "benchmarks",

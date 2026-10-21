@@ -3,12 +3,12 @@ game_version = "1.14.5"
 baseline_sha256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
 
 [package]
-product_version = "0.1.0"
-status = "experimental"
+product_version = "1.0.0"
+status = "candidate"
 parent = "vanilla-1.14.5"
 save_compatibility = "new-game-only"
 platforms = ["windows", "macos", "linux"]
-platform_notes = "Python 生成与离线校验支持三平台；游戏 GUI 自动化当前仅有 Windows 实机证据。"
+platform_notes = "Python 生成与离线校验支持三平台；当前发布包的游戏运行、语言呈现和长期行为由用户验收。"
 
 [fiscal]
 enabled = true
@@ -20,4 +20,4 @@ why = "真实违约或持续借款且距破产不足半年视为财政风险；�
 [fields]
 diplomatic_play_neutrality = 25
 aggression = 0
-why = "当前只保留已完成评分通道复核的中立偏置：财政危机叠加战争，或作为发起方、目标方、承诺参与方及尚未选边的合法参与方暴露于外交博弈时，提高第三方中立倾向。未决定参与表示风险暴露，不表示已经承诺。aggression 的自然机会分母和单字段反事实出口尚未具备，因此生产值为0并不会写入默认策略；保留字段仅用于版本兼容和隔离实验。保留原版持牌、国家身份和防御选择，不改财政/IG/法律/军力。"
+why = "财政危机叠加战争，或作为发起方、目标方、承诺参与方及尚未选边的合法参与方暴露于外交博弈时，提高第三方中立倾向。未决定参与表示风险暴露，不表示已经承诺。aggression 为0，生产输出不写入该字段，进攻倾向继续由原版策略决定。保留原版持牌、国家身份和防御选择，不直接改变财政、利益集团、法律或军力。"

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE_PREFIXES = ("src/pdx/", "tools/ci/", "tools/benchmarks/", "tools/probe/")
+SOURCE_PREFIXES = ("src/pdx/", "tools/ci/", "tools/benchmarks/")
 EXCLUDED_PARTS = {"frozen", "__pycache__"}
 WORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 DECORATOR_HINTS = (

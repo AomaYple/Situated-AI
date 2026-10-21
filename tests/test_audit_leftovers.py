@@ -49,28 +49,28 @@ def test_ruff_check_通过() -> None:
     的环境变红。
     """
     result = subprocess.run(
-        [sys.executable, "-m", "ruff", "check", "."],
+        [sys.executable, "-m", "ruff", "check", "--no-cache", "."],
         cwd=str(config.REPO),
         capture_output=True,
         text=True,
         encoding="utf-8",
         check=False,
     )
-    if result.returncode not in (0, 1):  # pragma: no cover - ruff 不可用
+    if "No module named ruff" in result.stderr:  # pragma: no cover - 可选 dev 依赖
         pytest.skip(f"ruff 不可用：{result.stderr[-200:]}")
     assert result.returncode == 0, f"ruff 报错：\n{result.stdout[-2000:]}"
 
 
 def test_ruff_format_通过() -> None:
     result = subprocess.run(
-        [sys.executable, "-m", "ruff", "format", "--check", "."],
+        [sys.executable, "-m", "ruff", "format", "--no-cache", "--check", "."],
         cwd=str(config.REPO),
         capture_output=True,
         text=True,
         encoding="utf-8",
         check=False,
     )
-    if result.returncode not in (0, 1):  # pragma: no cover - ruff 不可用
+    if "No module named ruff" in result.stderr:  # pragma: no cover - 可选 dev 依赖
         pytest.skip(f"ruff 不可用：{result.stderr[-200:]}")
     assert result.returncode == 0, f"格式不一致：\n{result.stdout[-2000:]}"
 

@@ -1,0 +1,9 @@
+l_german:
+ SITAI_MARKET_DEPENDENCE_SUPPORT_REASON: "Wirtschaftliche Abhängigkeit von beiden Seiten"
+ SITAI_SECURITY_COMMITMENT_REASON: "Verteidigungsverpflichtung (Kandidat)"
+ SITAI_SECURITY_NEIGHBOR_REASON: "Sicherheitsrisiko durch die Bedrohung eines Nachbarlandes (Kandidat)"
+ SITAI_ECONOMY_CAPACITY_REASON: "Wirtschaftliche und administrative Kapazität (Kandidat)"
+ SITAI_DIPLOMACY_BURDEN_REASON: "Kriegslast und diplomatische Kapazität (Kandidat)"
+ SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON: "Geografische Isolation und Kosten finanzieller Verpflichtungen (Kandidat)"
+ SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON: "Lage des Vertragshafens und finanzielle Kapazität (Kandidat)"
+ SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON: "Heimatbindungen und umsetzbare nationale Prioritäten (Kandidat)"

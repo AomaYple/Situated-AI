@@ -11,7 +11,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pdx import decisions
+from pdx import decisions, vanilla_index
 from pdx.model import Block
 from pdx.parser import parse_text
 
@@ -40,8 +40,8 @@ def policy():
 
 def test_财政开关显式开启且交付契约来自数据源(policy):
     assert policy.enabled
-    assert policy.package.product_version == "0.1.0"
-    assert policy.package.status == "experimental"
+    assert policy.package.product_version == "1.0.0"
+    assert policy.package.status == "candidate"
     payload = decisions.metadata_payload(policy)
     assert payload["version"] == policy.package.product_version
     assert payload["tool_version"] == "0.3.0"
@@ -336,10 +336,10 @@ def test_拒绝错误类型和未审查游戏版本(tmp_path, mutation):
 @pytest.mark.parametrize(
     "mutation",
     [
-        'status = "experimental"|status = "released"',
+        'status = "candidate"|status = "released"',
         'save_compatibility = "new-game-only"|save_compatibility = "all"',
         'platforms = ["windows", "macos", "linux"]|platforms = ["plan9"]',
-        'product_version = "0.1.0"|product_version = "not-a-version"',
+        'product_version = "1.0.0"|product_version = "not-a-version"',
     ],
 )
 def test_拒绝不可靠的包契约(tmp_path, mutation):
@@ -355,13 +355,14 @@ def test_拒绝不可靠的包契约(tmp_path, mutation):
 
 def test_包契约缺失字段明确失败(tmp_path):
     source = tmp_path / "missing.toml"
-    source.write_text(
-        decisions.SOURCE.read_text(encoding="utf-8").replace(
-            'platform_notes = "Python 生成与离线校验支持三平台；游戏 GUI 自动化当前仅有 Windows 实机证据。"\n',
-            "",
-        ),
-        encoding="utf-8",
+    text, count = re.subn(
+        r"^platform_notes = .*\n",
+        "",
+        decisions.SOURCE.read_text(encoding="utf-8"),
+        flags=re.MULTILINE,
     )
+    assert count == 1
+    source.write_text(text, encoding="utf-8", newline="\n")
     with pytest.raises(ValueError, match="缺失"):
         decisions.load(source)
 
@@ -380,7 +381,42 @@ def test_扩展开启时新增接口必须有原版证据(monkeypatch, tmp_path)
     )
     issues = decisions.validate(set())
     assert any("legitimacy" in issue for issue in issues)
+    # 脚本值接口需要专用原版快照域，由下方的合同测试覆盖。
+
+
+def test_economic_dependence_requires_a_dedicated_vanilla_script_value_snapshot(tmp_path):
+    sections = vanilla_index.snapshot_sections(tmp_path)
+    policy = replace(decisions.load(), enabled=True)
+    extensions = replace(decisions.load_extensions(), market_enabled=True)
+
+    issues = decisions.validate(
+        None,
+        snapshot={"域": sections},
+        policy=policy,
+        extensions=extensions,
+    )
     assert any("economic_dependence" in issue for issue in issues)
+    assert not any("common/script_values 域" in issue for issue in issues)
+
+    sections[vanilla_index.SECTION_SCRIPT_VALUE_ACCESSORS][
+        vanilla_index.SCRIPT_VALUE_ACCESSOR_DIR
+    ].append("economic_dependence")
+    issues = decisions.validate(
+        None,
+        snapshot={"域": sections},
+        policy=policy,
+        extensions=extensions,
+    )
+    assert not any("economic_dependence" in issue for issue in issues)
+
+    sections.pop(vanilla_index.SECTION_SCRIPT_VALUE_ACCESSORS)
+    issues = decisions.validate(
+        None,
+        snapshot={"域": sections},
+        policy=policy,
+        extensions=extensions,
+    )
+    assert any("原版脚本值 API 快照缺少 common/script_values 域" in issue for issue in issues)
 
 
 def test_快照缺失扩展接口域明确报告未覆盖(tmp_path):
@@ -394,31 +430,37 @@ def test_快照缺失扩展接口域明确报告未覆盖(tmp_path):
     assert any("词汇快照缺少" in issue for issue in issues)
 
 
+@pytest.mark.integration
 def test_生产ZIP不携带历史档案(tmp_path):
     import zipfile
 
-    from pdx.distribution import package
+    from pdx import distribution
 
-    with zipfile.ZipFile(package(tmp_path / "mod.zip", variant="current")) as archive:
-        assert set(archive.namelist()) == set(decisions.build()) | {
+    with zipfile.ZipFile(distribution.package(tmp_path / "mod.zip")) as archive:
+        _, _, files = distribution.package_inputs()
+        assert set(archive.namelist()) == set(files) | {
             "README.md",
             "DISTRIBUTION-MANIFEST.json",
         }
         assert not any("legacy" in name or "ru_defeat" in name for name in archive.namelist())
 
 
+@pytest.mark.integration
 def test_生产ZIP清单携带实际包契约和源指纹(tmp_path):
     import zipfile
 
-    from pdx.distribution import package
+    from pdx import distribution
 
-    with zipfile.ZipFile(package(tmp_path / "mod.zip")) as archive:
+    with zipfile.ZipFile(distribution.package(tmp_path / "mod.zip")) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         metadata = json.loads(archive.read(".metadata/metadata.json"))
+    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+    source_metadata = json.loads(files[".metadata/metadata.json"])
     assert manifest["schema"] == 2
     assert manifest["contract"]["product_version"] == metadata["version"]
-    assert manifest["contract"]["enabled_modules"] == metadata["enabled_modules"]
-    assert manifest["contract"]["source_fingerprint"] == metadata["source_fingerprint"]
+    assert manifest["contract"]["enabled_modules"] == source_metadata["enabled_modules"]
+    assert manifest["contract"]["source_fingerprint"] == source_metadata["source_fingerprint"]
+    assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
     from pdx import distribution
 
     assert manifest["mod_id"] == distribution.MOD_ID
@@ -426,40 +468,6 @@ def test_生产ZIP清单携带实际包契约和源指纹(tmp_path):
     assert manifest["generation"]["install_directory"] == distribution.INSTALL_DIRECTORY_NAME
     assert manifest["generation"]["candidate_kind"] == "production_candidate"
     assert manifest["generation"]["delivery_kind"] == "standard_mod"
-
-
-def test_standard_package_manifest_validation(tmp_path, monkeypatch, policy):
-    from pdx import config, distribution, explanation_probe
-
-    # 合成底本保留真实探针生成链，让清单契约在无游戏 CI 中也能验证。
-    game = tmp_path / "game"
-    panel = game / explanation_probe.PANEL
-    panel.parent.mkdir(parents=True)
-    panel.write_text(
-        "types country_panel_types {\n"
-        " type country_panel = default_block_window_two_lines {\n"
-        '  datacontext = "[CountryPanel.GetCountry]"\n'
-        " }\n}\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    monkeypatch.setattr(config, "GAME", game)
-    monkeypatch.setattr(
-        config, "game_version", lambda: {"caligula_branch": f"release/{policy.game_version}"}
-    )
-
-    target = distribution.package(tmp_path / "mod.zip", variant="full")
-    manifest = distribution.validate_package(target, expected_variant="full")
-    assert manifest["install_directory"] == "Situated AI"
-    probe = distribution.package(
-        tmp_path / "probe.zip", variant="full", with_explanation_probe=True
-    )
-    with pytest.raises(ValueError, match="解释探针"):
-        distribution.validate_package(probe)
-    probe_manifest = distribution.validate_package(probe, expected_variant="full", allow_probe=True)
-    probe_files = probe_manifest["files"]
-    assert isinstance(probe_files, dict)
-    assert explanation_probe.PANEL in probe_files
 
 
 @pytest.mark.parametrize("value", ["1", '"false"', "[]"])
@@ -570,8 +578,8 @@ def test_指纹绑定实际替代源和生成器(tmp_path):
     )
 
 
-@pytest.mark.parametrize("variant", ["current", "control", "disabled"])
-def test_交付变体实际内容参数编码和确定性(tmp_path, variant):
+@pytest.mark.integration
+def test_正式包确定性清单编码与完整生产内容(tmp_path):
     import codecs
     import zipfile
 
@@ -579,9 +587,9 @@ def test_交付变体实际内容参数编码和确定性(tmp_path, variant):
 
     from pdx import cli
 
-    target = tmp_path / "variant.zip"
+    target = tmp_path / "release.zip"
     runner = CliRunner()
-    args = ["package", "--variant", variant, "--output", str(target)]
+    args = ["package", "--output", str(target)]
     result = runner.invoke(cli.app, args)
     assert result.exit_code == 0, result.output
     raw = target.read_bytes()
@@ -590,18 +598,16 @@ def test_交付变体实际内容参数编码和确定性(tmp_path, variant):
     with zipfile.ZipFile(target) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         generation = manifest["generation"]
-        assert generation["variant"] == variant
-        assert generation["fiscal"]["enabled"] == (variant != "disabled")
-        assert manifest["contract"]["enabled_modules"] == (
-            [] if variant == "disabled" else ["fiscal"]
-        )
+        assert generation["variant"] == "release"
+        assert generation["fiscal"]["enabled"] is True
+        assert generation["behavior_quality"] == "not_evaluated"
+        assert manifest["contract"]["product_version"] == "1.0.0"
+        assert len(manifest["contract"]["enabled_modules"]) == 8
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt").decode("utf-8-sig")
-        if variant == "control":
-            assert generation["fiscal"]["neutrality"] == generation["fiscal"]["aggression"] == 0
-        if variant != "current":
-            assert strategy == decisions.BASELINE.read_text(encoding="utf-8")
+        assert "# SITAI BEGIN information:" in strategy
         lifecycle = "common/on_actions/sitai_fiscal_on_actions.txt"
-        assert (lifecycle in archive.namelist()) == (variant != "disabled")
+        assert lifecycle in archive.namelist()
+        assert len([name for name in archive.namelist() if name.startswith("localization/")]) == 11
         for name, digest in manifest["files"].items():
             payload = archive.read(name)
             assert hashlib.sha256(payload).hexdigest() == digest
@@ -609,21 +615,8 @@ def test_交付变体实际内容参数编码和确定性(tmp_path, variant):
             assert payload.startswith(codecs.BOM_UTF8) == name.endswith((".txt", ".yml"))
 
 
-def test_非法变体保留已有交付包(tmp_path):
-    from typer.testing import CliRunner
-
-    from pdx import cli, distribution
-
-    target = tmp_path / "previous.zip"
-    target.write_bytes(b"previous release")
-    result = CliRunner().invoke(cli.app, ["package", "--variant", "wrong", "--output", str(target)])
-    assert result.exit_code == 2
-    with pytest.raises(ValueError, match="变体"):
-        distribution.package(target, variant="wrong")
-    assert target.read_bytes() == b"previous release"
-
-
-def test_未声明变体的交付默认全关(tmp_path):
+@pytest.mark.integration
+def test_正式包API和CLI输出逐字节一致(tmp_path):
     import zipfile
 
     from typer.testing import CliRunner
@@ -637,43 +630,33 @@ def test_未声明变体的交付默认全关(tmp_path):
     assert cli_target.read_bytes() == api_target.read_bytes()
     with zipfile.ZipFile(api_target) as archive:
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
-        assert manifest["generation"]["variant"] == "disabled"
-        assert manifest["contract"]["enabled_modules"] == []
-        assert "common/on_actions/sitai_fiscal_on_actions.txt" not in archive.namelist()
+        assert manifest["generation"]["variant"] == distribution.RELEASE_VARIANT
+        assert "fiscal" in manifest["contract"]["enabled_modules"]
+        assert "common/on_actions/sitai_fiscal_on_actions.txt" in archive.namelist()
 
 
-@pytest.mark.parametrize("variant", ["current", "control", "disabled"])
-def test_交付说明随变体生成并由清单验证(tmp_path, variant):
+@pytest.mark.integration
+def test_交付说明由清单覆盖且明确用户验收边界(tmp_path):
     import zipfile
 
     from pdx import distribution
 
-    with zipfile.ZipFile(distribution.package(tmp_path / "guide.zip", variant=variant)) as archive:
+    with zipfile.ZipFile(distribution.package(tmp_path / "guide.zip")) as archive:
         raw = archive.read("README.md")
         text = raw.decode("utf-8")
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         assert manifest["files"]["README.md"] == hashlib.sha256(raw).hexdigest()
-        assert f"变体：{variant}\n" in text
-        assert f"财政模块：{'关闭' if variant == 'disabled' else '启用'}\n" in text
+        assert "Situated AI 1.0.0" in text
         assert "【中文】" in text
         assert "[English]" in text
-        assert "产品版本 / Product version：0.1.0\n" in text
-        assert "状态 / Status：experimental\n" in text
-        assert "存档兼容声明 / Save compatibility：new-game-only\n" in text
+        assert "产品版本 / Product version：1.0.0\n" in text
+        assert "长期行为、平衡、后期性能" in text
+        assert "Long-run AI behavior" in text
         assert not raw.startswith(b"\xef\xbb\xbf")
         assert b"\r" not in raw
-        if variant == "current":
-            assert "外交博弈中立偏置 +25，攻击性偏置 0" in text
-            assert "neutrality +25; aggression 0" in text
-        elif variant == "control":
-            assert "外交博弈中立偏置 +0，攻击性偏置 0" in text
-            assert "neutrality +0; aggression 0" in text
-        else:
-            assert "不写入财政状态或外交偏置" in text
-            assert "Enabled modules in this package: none (safe package)." in text
 
 
-def test_说明使用实际替代参数而非硬编码生产阈值(policy):
+def test_说明使用调用方提供的版本与财政参数(policy):
     from pdx.distribution import player_guide
 
     alternate = replace(
@@ -700,113 +683,45 @@ def test_说明使用实际替代参数而非硬编码生产阈值(policy):
         market_enabled=True,
         market_multiplier=3.5,
     )
-    text = player_guide(alternate, extensions, ["fiscal", "reform", "market"], variant="current")
+    text = player_guide(alternate, extensions, ["fiscal", "reform", "market"])
     for expected in (
         "产品版本 / Product version：0.2.1",
-        "状态 / Status：candidate",
-        "父包 / Parent：accepted-parent",
-        "Save compatibility：same-candidate-save",
-        "启用模块：fiscal、reform、market",
-        "非负并小于 17 周",
-        "43 周的维持线",
-        "73 天没有更新",
-        "外交博弈中立偏置 +7.5，攻击性偏置 -0.25",
-        "bankruptcy below 17",
-        "43-week hold threshold",
-        "73 days after the last renewal",
-        "neutrality +7.5; aggression -0.25",
+        "Supported game version",
+        "Enabled modules",
+        "少于 17 周",
+        "fewer than 17 weeks",
+        "43 周退出线",
+        "73 天状态有效期",
+        "中立偏置为 7.5",
+        "攻击性偏置为 -0.25",
         "reform=启用，market=启用",
-        "合法性低于 19",
-        "合法性至少 81",
-        "增加 -0.25",
-        "增加 2.5",
-        "×3.5",
-        "reform=enabled; market=enabled",
-        "legitimacy below 19",
-        "at least 81",
-        "adds -0.25",
-        "adds 2.5",
-        "x 3.5",
+        "security=关闭",
+        "reform=enabled",
+        "market=enabled",
     ):
         assert expected in text
 
 
-def test_说明保留回退和证据限制且不进入游戏生成树(policy):
+def test_说明保留用户验收边界和回退且不进入游戏生成树(policy):
     from pdx.distribution import player_guide
 
-    text = player_guide(policy, decisions.Extensions(), ["fiscal"], variant="current")
+    extensions = replace(decisions.Extensions(), diplomacy_enabled=True)
+    text = player_guide(policy, extensions, ["fiscal", "diplomacy"])
     for expected in (
-        "不显示任何国家当前的实时状态",
-        "不是概率",
-        "违约分支优先",
-        "未选边表示风险暴露，不表示已作出承诺",
-        "全关包仍含默认策略底本",
-        "关闭或卸载不会撤回已经发生的世界变化",
-        "恢复处理前存档与当时挂载",
-        "00_default_strategy.txt",
-        "not the live state of any country",
-        "default takes precedence",
-        "not a zero-Mod environment",
-        "does not undo world changes",
-        "pre-treatment save and its original mounts",
+        "这是唯一正式生产包",
+        "原版资格、成本、效果与行动流程继续生效",
+        "AI 长期行为、平衡、后期性能、玩家体验与创意工坊发布由用户验收",
+        "回退：退出游戏后禁用或删除本 Mod",
+        "pre-installation save",
+        "宗属倾向由声明式原版消费者适配器统一实现",
+        "Long-run AI behavior",
+        "Subject tendencies use declarative adapters for vanilla consumers.",
     ):
         assert expected in text
     assert "README.md" not in decisions.build(policy)
-    with pytest.raises(ValueError, match="变体"):
-        player_guide(policy, decisions.Extensions(), [], variant="unknown")
 
 
-@pytest.mark.parametrize("variant", ["current", "control", "disabled"])
-def test_交付说明读取实际生成后的扩展与开关(tmp_path, monkeypatch, policy, variant):
-    import zipfile
-
-    from pdx import distribution
-
-    alternate = replace(policy, enabled=False, entry_weeks=17, exit_weeks=43)
-    extensions = decisions.Extensions(
-        reform_enabled=True, market_enabled=True, market_multiplier=3.5
-    )
-    product = tmp_path / "product"
-    decisions.write(product, decisions.build(alternate, extensions=extensions))
-    monkeypatch.setattr(decisions, "PRODUCT", product)
-    monkeypatch.setattr(decisions, "load", lambda: alternate)
-    monkeypatch.setattr(decisions, "load_extensions", lambda: extensions)
-    with zipfile.ZipFile(
-        distribution.package(tmp_path / "alternate.zip", variant=variant)
-    ) as archive:
-        guide = archive.read("README.md").decode("utf-8")
-        manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
-        metadata = json.loads(archive.read(".metadata/metadata.json"))
-        expected = {
-            "current": ["reform", "market"],
-            "control": ["fiscal"],
-            "disabled": [],
-        }[variant]
-        assert metadata["enabled_modules"] == expected
-        assert manifest["contract"]["enabled_modules"] == expected
-        assert (
-            "Enabled modules in this package: "
-            + (", ".join(expected) if expected else "none (safe package)")
-            in guide
-        )
-        assert "财政模块：" + ("启用" if variant == "control" else "关闭") in guide
-        assert "bankruptcy below 17" in guide
-        assert "43-week hold threshold" in guide
-        assert (
-            "Actual extension configuration: "
-            + (
-                "reform=enabled; market=enabled"
-                if variant == "current"
-                else "reform=disabled; market=disabled"
-            )
-            in guide
-        )
-        assert "×3.5" in guide
-        assert manifest["generation"]["extensions"]["market_multiplier"] == 3.5
-    assert decisions.check(product, decisions.build(alternate, extensions=extensions)) == []
-    assert not (product / "README.md").exists()
-
-
+@pytest.mark.integration
 def test_说明生成失败保全已有ZIP(tmp_path, monkeypatch):
     from pdx import distribution
 

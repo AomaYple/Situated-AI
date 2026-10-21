@@ -17,13 +17,11 @@ from __future__ import annotations
 
 import os
 import shutil
-import sys
 import tempfile
 import uuid
 from collections.abc import Iterator, Sequence
 from functools import lru_cache
 from pathlib import Path
-from types import ModuleType
 from typing import overload
 
 import pytest
@@ -104,15 +102,6 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     del exitstatus
     while _AUTO_BASETEMPS:
         shutil.rmtree(_AUTO_BASETEMPS.pop(), ignore_errors=True)
-
-
-def mock_game_auto_platform(monkeypatch: pytest.MonkeyPatch, platform: str) -> None:
-    """模块局部平台桩；其余 sys 属性实时转发，保留 pytest 的输出捕获。"""
-    from pdx import game_auto
-
-    proxy = ModuleType("game_auto_test_sys")
-    vars(proxy).update(platform=platform, __getattr__=lambda name: getattr(sys, name))
-    monkeypatch.setattr(game_auto, "sys", proxy)
 
 
 @lru_cache(maxsize=64)

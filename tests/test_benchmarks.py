@@ -28,9 +28,7 @@ from __future__ import annotations
 # ``tests`` 没有 ``__init__.py``（pytest 的 rootdir 插入机制让它可被平级导入），
 # 所以这里按**平级模块名**导入共享夹具，与 conftest 的用法一致。
 import gametimer_fixtures as fixtures
-import numpy as np
 import pytest
-from PIL import Image
 
 from pdx import config
 from pdx.lexer import tokenize
@@ -219,89 +217,3 @@ class TestGametimerBenchmarks:
         data = benchmark(gt.summarize, path)
         assert data["rows"] == self.TSV_DAYS * 4
         assert data["per_frame_measurable"] is False  # 这条判据不能被测跑偏
-
-
-class TestAutoCaptureBenchmarks:
-    """游戏自动化的**热路径**：找按钮 = 抓图 + 模板匹配。
-
-    为什么单列一组：这条路径以前是"整屏抓图 + 6 个尺度全试"，而等界面时一秒要跑好几遍。
-    2026-09-21 的优化把它改成"**只抓需要的 ROI** + **命中即停** + **模板只读一次盘**"。
-    P5 要求"每一项优化都要有前后对照" —— 这组基准就是那份对照数据，跑法：
-
-        pytest tests/test_benchmarks.py -q --benchmark-only \\
-               --benchmark-save=auto-capture
-
-    数字（本机 2026-09-21，`--benchmark-only`，均值 / 最坏）：
-    见 `docs/design/exec/自动化范式.md` §4.7 —— 那张表里的数就是这里跑出来的。
-    匹配 1146.5 ms → 15.3 ms（75×）；模板读盘 315.7 µs → 1.05 µs（300×）。
-    """
-
-    #: 底部状态栏 ROI（实测「观察」按钮在那里）：整屏的 1/10 面积
-    BOTTOM = (0.0, 0.90, 1.0, 1.0)
-
-    @staticmethod
-    def _frame_and_template():
-        from pdx import game_auto as ga
-
-        rng = np.random.default_rng(20260921)
-        frame = Image.fromarray(rng.integers(0, 255, (1080, 1920, 3), dtype=np.uint8), "RGB")
-        # 用一个真实的按钮模板贴进底部条：走完整路径，不拿假图案自欺
-        template_path = ga.UI_DIR / "btn_observe.png"
-        if template_path.is_file():
-            with Image.open(template_path) as handle:
-                patch = handle.convert("RGB")
-            frame.paste(patch, (755, 1037))
-        else:  # pragma: no cover - 模板是入库产物，缺了说明仓库不完整
-            patch = frame.crop((755, 1037, 973, 1073))
-        return np.array(frame), np.array(patch)
-
-    def test_match_fullframe_all_scales(self, benchmark) -> None:
-        """优化**前**的口径：整屏 + 6 个尺度全试。"""
-        from pdx import game_auto as ga
-
-        image, template = self._frame_and_template()
-        result = benchmark(
-            ga.match_template, image, template, name="btn_observe", scales=ga.DEFAULT_SCALES
-        )
-        assert result is not None
-
-    def test_match_roi_first_hit(self, benchmark) -> None:
-        """优化**后**的口径：只匹配底部条 + 命中即停。"""
-        from pdx import game_auto as ga
-
-        image, template = self._frame_and_template()
-        result = benchmark(
-            ga.match_template,
-            image,
-            template,
-            name="btn_observe",
-            scales=ga.DEFAULT_SCALES,
-            roi=self.BOTTOM,
-            first_hit=True,
-        )
-        assert result is not None
-
-    def test_load_template_cached(self, benchmark) -> None:
-        """模板命中缓存（等待界面时每帧都要取一次模板，重复读盘纯属浪费）。"""
-        from pdx import game_auto as ga
-
-        if not (ga.UI_DIR / "btn_observe.png").is_file():  # pragma: no cover
-            pytest.skip("按钮模板缺失")
-        ga.clear_template_cache()
-        ga.load_template("btn_observe")  # 预热
-        result = benchmark(ga.load_template, "btn_observe")
-        assert result.shape[2] == 3
-
-    def test_load_template_uncached(self, benchmark) -> None:
-        """优化**前**的口径：每次都 `open` + 解码 PNG（清缓存来还原旧行为）。"""
-        from pdx import game_auto as ga
-
-        if not (ga.UI_DIR / "btn_observe.png").is_file():  # pragma: no cover
-            pytest.skip("按钮模板缺失")
-
-        def read_from_disk():
-            ga.clear_template_cache()
-            return ga.load_template("btn_observe")
-
-        result = benchmark(read_from_disk)
-        assert result.shape[2] == 3

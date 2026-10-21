@@ -1,0 +1,9 @@
+l_russian:
+ SITAI_MARKET_DEPENDENCE_SUPPORT_REASON: "Экономическая зависимость от обеих сторон"
+ SITAI_SECURITY_COMMITMENT_REASON: "Оборонное обязательство (кандидат)"
+ SITAI_SECURITY_NEIGHBOR_REASON: "Риск для безопасности при угрозе соседней стране (кандидат)"
+ SITAI_ECONOMY_CAPACITY_REASON: "Экономическая и административная способность (кандидат)"
+ SITAI_DIPLOMACY_BURDEN_REASON: "Военная нагрузка и дипломатический потенциал (кандидат)"
+ SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON: "Изоляция и стоимость финансовых обязательств (кандидат)"
+ SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON: "Положение договорного порта и финансовые возможности (кандидат)"
+ SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON: "Связи с родиной и осуществимые национальные приоритеты (кандидат)"

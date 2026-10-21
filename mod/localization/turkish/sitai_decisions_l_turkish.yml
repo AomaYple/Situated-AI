@@ -1,0 +1,9 @@
+l_turkish:
+ SITAI_MARKET_DEPENDENCE_SUPPORT_REASON: "İki tarafa ekonomik maruziyet"
+ SITAI_SECURITY_COMMITMENT_REASON: "Savunma taahhüdü (aday)"
+ SITAI_SECURITY_NEIGHBOR_REASON: "Komşu savunma riski (aday)"
+ SITAI_ECONOMY_CAPACITY_REASON: "Ekonomik ve idari kapasite (aday)"
+ SITAI_DIPLOMACY_BURDEN_REASON: "Savaş yükü ve diplomatik kapasite (aday)"
+ SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON: "Coğrafi izolasyon ve mali taahhüt maliyetleri (aday)"
+ SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON: "Antlaşma limanının konumu ve mali kapasite (aday)"
+ SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON: "Anavatan bağları ve uygulanabilir ulusal öncelikler (aday)"

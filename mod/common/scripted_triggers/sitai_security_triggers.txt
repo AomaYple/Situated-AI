@@ -1,0 +1,24 @@
+# 由 pdx.decisions 生成；防御候选，无强制行动。
+sitai_defense_commitment = {
+    any_scope_treaty = {
+        binds = $PARTNER$
+        any_scope_article = {
+            OR = { has_type = alliance has_type = defensive_pact }
+        }
+    }
+}
+sitai_neighbor_defense = {
+    is_adjacent_to_country = $PARTNER$
+    $OPPONENT$ = {
+        OR = {
+            play_participant_has_war_goal_of_type_against = {
+                type = conquer_state
+                target = $PARTNER$
+            }
+            play_participant_has_war_goal_of_type_against = {
+                type = make_protectorate
+                target = $PARTNER$
+            }
+        }
+    }
+}

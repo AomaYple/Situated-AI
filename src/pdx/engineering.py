@@ -15,9 +15,8 @@ SNAPSHOT_FORMAT: Final[int] = 1
 
 TEST_TIERS: Final[dict[str, str]] = {
     "quick": "不依赖游戏的快速回归：单元、契约、属性与 CLI",
-    "offline": "无游戏离线门禁：快照、表格、modgen、modguard、引用与发布",
-    "full": "装有游戏的完整套件：分析、文档数字、引擎交叉验证与黄金产物",
-    "live": "真实 Victoria 3 GUI/运行期实验；只在具备对应平台和游戏时执行",
+    "offline": "无游戏离线门禁：快照、表格、Mod 生成、原版接口、引用与发布",
+    "full": "完整 Python 工程套件：分析、原版接口、文档数字与黄金产物",
 }
 
 
@@ -34,17 +33,15 @@ SKIP_CATEGORIES: Final[dict[str, SkipCategory]] = {
     "artifact": SkipCategory("artifact", "需要本地生成物、快照、语料或 UI 模板"),
     "platform": SkipCategory("platform", "需要特定操作系统能力或权限"),
     "tool": SkipCategory("tool", "需要 git、ruff 或其他开发工具"),
-    "live": SkipCategory("live", "需要真实游戏 GUI 或运行期会话"),
     "environment": SkipCategory("environment", "需要本机特定配置、安装或外部资源"),
 }
 
 # 规则按具体短语优先；最后的通用词只用于确实已经声明为环境缺失的旧用例。
 _SKIP_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("game", ("游戏目录", "没有游戏", "无游戏", "victoria3.exe", "引擎日志", "游戏本体")),
-    ("artifact", ("产物", "快照", "语料", "模板", "doc ", "mod/data", "样本文件")),
+    ("artifact", ("产物", "快照", "语料", "模板", "doc ", "mod/decisions", "样本文件")),
     ("platform", ("Windows", "Linux", "macOS", "chcp", "符号链接权限")),
     ("tool", ("ruff 不可用", "找不到 git", "开发工具")),
-    ("live", ("实机", "真实游戏", "GUI", "运行期", "会话")),
 )
 
 

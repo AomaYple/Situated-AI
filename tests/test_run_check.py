@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from types import SimpleNamespace
 
@@ -22,6 +23,7 @@ def test_profiles_preserve_arguments_and_exit_status(monkeypatch, profile):
         ]
     )
     calls = []
+    monkeypatch.setenv("PYTHONPATH", "preserved-path")
 
     def run(argv, **kwargs):
         calls.append((argv, kwargs))
@@ -34,3 +36,8 @@ def test_profiles_preserve_arguments_and_exit_status(monkeypatch, profile):
     assert calls[0][0][-len(supplied) :] == supplied
     assert calls[0][1]["cwd"] == run_check.ROOT
     assert calls[0][1]["check"] is False
+    assert calls[0][1]["env"]["PYTHONPATH"].split(os.pathsep) == [
+        str(run_check.ROOT / "src"),
+        str(run_check.ROOT),
+        "preserved-path",
+    ]
