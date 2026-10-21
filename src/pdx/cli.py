@@ -2454,9 +2454,13 @@ def modgen_cmd(
         production = {name: text for name, text in files.items() if name != "README.md"}
         if write:
             written = decisions.write(decisions.PRODUCT, production)
+            (decisions.PRODUCT / "generation-lock.json").write_text(
+                distribution.generation_lock(production), encoding="utf-8", newline="\n"
+            )
             console.print(f"[green]已生成 {len(written)} 个生产文件：UTF-8 无 BOM、LF[/]")
         elif check:
             problems = decisions.check(decisions.PRODUCT, production)
+            distribution.check_generation_lock()
             if problems:
                 _fail("生成物不一致：\n" + "\n".join(problems), EXIT_FAILED)
             console.print(f"[green]{len(production)} 个生产文件与源逐字节一致[/]")
@@ -2539,9 +2543,15 @@ def modguard_cmd(
 ) -> None:
     """检查唯一生产包的生成、语法、底本和原版接口；不推断 AI 行为质量。"""
     try:
-        policy, extensions, files = distribution.package_inputs()
-        production = {name: text for name, text in files.items() if name != "README.md"}
-        problems = decisions.check(decisions.PRODUCT, production)
+        if offline:
+            distribution.check_generation_lock()
+            policy, extensions = distribution.production_configuration()
+            production = distribution.read_production_files()
+            problems = []
+        else:
+            policy, extensions, files = distribution.package_inputs()
+            production = {name: text for name, text in files.items() if name != "README.md"}
+            problems = decisions.check(decisions.PRODUCT, production)
         index = vanilla_index.load(offline=offline)
         if index is None:
             _fail("缺少原版接口证据：请提供锁定游戏或使用入库快照")
@@ -2561,7 +2571,11 @@ def modguard_cmd(
             _fail("生产工程检查失败：\n" + "\n".join(problems), EXIT_FAILED)
     except (ValueError, OSError) as exc:
         _fail(f"生产工程检查失败：{exc}", EXIT_FAILED)
-    console.print("[green]生产生成、脚本语法、锁定底本与原版接口检查通过[/]")
+    console.print(
+        "[green]冻结源码/产物、脚本语法与快照接口检查通过[/]"
+        if offline
+        else "[green]生产生成、脚本语法、锁定底本与原版接口检查通过[/]"
+    )
     console.print("证据：" + ("入库快照（不证明当前游戏内容）" if offline else "本机原版目录"))
     console.print("长期行为、平衡、玩家体验和游戏性能由用户验收。")
 

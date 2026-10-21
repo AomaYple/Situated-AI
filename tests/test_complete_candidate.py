@@ -102,6 +102,7 @@ def test_外部配置拒绝非有限越界和未知字段(tmp_path, mutation):
         decisions.load_extensions(source)
 
 
+@pytest.mark.integration
 def test_正式候选包含所有生产模块且不修改生成源():
     baseline_before = decisions.BASELINE.read_bytes()
     before = decisions.build()

@@ -452,10 +452,8 @@ def write_zip(
     return destination
 
 
-def package_inputs(
-    *, include_engineering_metadata: bool = False
-) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str]]:
-    """构建 1.0.0 生产文件；仅工程测试可请求完整生成合同。"""
+def production_configuration() -> tuple[decisions.Policy, decisions.Extensions]:
+    """唯一生产开关；读取配置不需要本机原版。"""
     policy, extensions = decisions.load(), decisions.load_extensions()
     policy = replace(
         policy,
@@ -473,6 +471,63 @@ def package_inputs(
         # 宗属字段由声明式适配器统一拥有，避免叠加旧作者。
         subjects_enabled=False,
     )
+    return policy, extensions
+
+
+def read_production_files() -> dict[str, str]:
+    """读取受控生成物原始 UTF-8 字节，不折叠 CRLF 或移除 BOM。"""
+    return {
+        path.relative_to(decisions.PRODUCT).as_posix(): path.read_bytes().decode("utf-8")
+        for directory in ("common", "localization", ".metadata")
+        for path in sorted((decisions.PRODUCT / directory).rglob("*"))
+        if path.is_file()
+    }
+
+
+def generation_lock(files: Mapping[str, str] | None = None) -> str:
+    """冻结源码和产物字节；离线只能核对冻结一致性，不能重建原版。"""
+    root = decisions.PRODUCT.parent
+    sources = [
+        *sorted((root / "src/pdx").glob("*.py")),
+        *sorted((root / "mod/decisions").glob("*.toml")),
+        *sorted(decisions.BASELINE.parent.glob("*.txt")),
+    ]
+    if files is None:
+        files = read_production_files()
+    return (
+        json.dumps(
+            {
+                "schema": 1,
+                "evidence": "frozen_generation_not_current_game_verification",
+                "sources": {
+                    path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                    for path in sources
+                },
+                "files": {
+                    name: hashlib.sha256(text.encode("utf-8")).hexdigest()
+                    for name, text in sorted(files.items())
+                    if name != "README.md"
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n"
+    )
+
+
+def check_generation_lock() -> None:
+    """拒绝未冻结的源码或产物漂移；原版 SHA 仍由有游戏生成链核验。"""
+    path = decisions.PRODUCT / "generation-lock.json"
+    if path.read_bytes() != generation_lock().encode("utf-8"):
+        raise ValueError("生产源码或产物与冻结记录不一致：用锁定原版运行 modgen --write")
+
+
+def package_inputs(
+    *, include_engineering_metadata: bool = False
+) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str]]:
+    """构建 1.0.0 生产文件；需要锁定原版，不静默回退冻结产物。"""
+    policy, extensions = production_configuration()
     strategy = decision_intents.load()
     information = decisions.decision_rules.load(strategy=strategy)
     adapters = decisions.decision_adapters.load(strategy=strategy)

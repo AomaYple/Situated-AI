@@ -123,6 +123,7 @@ def test_delivery_case_collision():
         distribution.payloads({"common/A.txt": "x", "common/a.txt": "y"})
 
 
+@pytest.mark.integration
 def test_package_refuses_drift_without_touching_destination(tmp_path, monkeypatch):
     monkeypatch.setattr(distribution.decisions, "check", lambda *_: ["modified"])
     target = tmp_path / "existing.zip"
@@ -275,7 +276,7 @@ def test_performance_real_workloads_have_results():
     assert set(result["workloads"]) == {
         "citations.repeated_file",
         "localization.header_large_file",
-        "distribution.release_inputs",
+        "decisions.core_inputs",
     }
     for metrics in result["workloads"].values():
         assert metrics["median_s"] > 0
@@ -316,6 +317,7 @@ def test_distribution_cli(tmp_path, monkeypatch):
         assert archive.read("a.txt") == codecs.BOM_UTF8 + b"x"
 
 
+@pytest.mark.integration
 def test_package_cli_success_and_refusal(tmp_path, monkeypatch):
     from typer.testing import CliRunner
 

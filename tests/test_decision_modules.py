@@ -83,6 +83,7 @@ def test_未知安全输入不干预且玩家边界静态检查():
     ) == ["x 新增字段块缺少 is_ai = yes 玩家边界"]
 
 
+@pytest.mark.integration
 def test_正式包启用模块与生命周期契约一致():
     policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
@@ -122,6 +123,7 @@ def test_正式包启用模块与生命周期契约一致():
     assert not extensions.subjects_enabled
 
 
+@pytest.mark.integration
 def test_七模块完整候选生成所有脚本和全语言无回退():
     policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])

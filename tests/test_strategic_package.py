@@ -39,6 +39,7 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
     assert contract["rules_with_intent"] > len(strategy.intents)
 
 
+@pytest.mark.integration
 def test_release_is_the_public_full_candidate():
     _, _, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])

@@ -46,6 +46,11 @@ Python 3.14 的已安装依赖闭包；其他平台按 `pyproject.toml` 解析�
 `DISTRIBUTION-MANIFEST.json`、README、`common/` 和锁定游戏的全部生产语言；不得包含探针、Python、日志、
 缓存、本体资源或历史实验文件。`pdx.distribution.validate_package` 负责路径、重复项、哈希、编码和探针边界。
 
+`modgen --write/--check` 和 `package` 必须读取锁定原版；未安装游戏或底本漂移时硬失败，不从冻结产物静默重建。
+生成时同时更新仓库专用 `mod/generation-lock.json`，记录源码、TOML、底本和生成物的逐字节哈希；该文件不进入
+发布 ZIP。无游戏 CI 使用 `modguard --offline` 核对冻结一致性、脚本语法与入库快照接口，不能替代本机原版重生成。
+真实依赖原版的测试标记为 `integration`，由有游戏的完整回归执行；离线合同继续覆盖打包原语、拒绝分支和冻结漂移。
+
 ## 验证矩阵
 
 按风险选择最小充分检查；正式收口至少执行：

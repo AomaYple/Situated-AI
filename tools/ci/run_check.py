@@ -35,7 +35,6 @@ BASELINE_COMMANDS = [
     ("依赖一致性", ["pip", "check"]),
     ("离线断言", ["pdx.cli", "verify", "--from-snapshot"]),
     ("离线生成表格", ["pdx.cli", "tables", "--offline"]),
-    ("Mod 生成一致性", ["pdx.cli", "modgen", "--check"]),
     ("离线 Mod 门禁", ["pdx.cli", "modguard", "--offline"]),
     ("离线 AI 可执行面", ["pdx.cli", "ai-surface", "--check", "--offline"]),
     ("死代码审计", ["tools.ci.deadcode_audit", "--check"]),

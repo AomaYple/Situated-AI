@@ -430,6 +430,7 @@ def test_快照缺失扩展接口域明确报告未覆盖(tmp_path):
     assert any("词汇快照缺少" in issue for issue in issues)
 
 
+@pytest.mark.integration
 def test_生产ZIP不携带历史档案(tmp_path):
     import zipfile
 
@@ -444,6 +445,7 @@ def test_生产ZIP不携带历史档案(tmp_path):
         assert not any("legacy" in name or "ru_defeat" in name for name in archive.namelist())
 
 
+@pytest.mark.integration
 def test_生产ZIP清单携带实际包契约和源指纹(tmp_path):
     import zipfile
 
@@ -576,6 +578,7 @@ def test_指纹绑定实际替代源和生成器(tmp_path):
     )
 
 
+@pytest.mark.integration
 def test_正式包确定性清单编码与完整生产内容(tmp_path):
     import codecs
     import zipfile
@@ -612,6 +615,7 @@ def test_正式包确定性清单编码与完整生产内容(tmp_path):
             assert payload.startswith(codecs.BOM_UTF8) == name.endswith((".txt", ".yml"))
 
 
+@pytest.mark.integration
 def test_正式包API和CLI输出逐字节一致(tmp_path):
     import zipfile
 
@@ -631,6 +635,7 @@ def test_正式包API和CLI输出逐字节一致(tmp_path):
         assert "common/on_actions/sitai_fiscal_on_actions.txt" in archive.namelist()
 
 
+@pytest.mark.integration
 def test_交付说明由清单覆盖且明确用户验收边界(tmp_path):
     import zipfile
 
@@ -716,6 +721,7 @@ def test_说明保留用户验收边界和回退且不进入游戏生成树(poli
     assert "README.md" not in decisions.build(policy)
 
 
+@pytest.mark.integration
 def test_说明生成失败保全已有ZIP(tmp_path, monkeypatch):
     from pdx import distribution
 

@@ -87,9 +87,6 @@ jobs:
       - name: v3 tables --offline —— 用入库快照核验生成表
         run: v3 tables --offline
 
-      - name: v3 modgen --check —— 产物与数据源逐字节一致
-        run: v3 modgen --check
-
       - name: v3 modguard --offline —— 锁定快照的生产接口门禁
         run: v3 modguard --offline
 

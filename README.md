@@ -41,6 +41,7 @@ Windows：
 
 macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运行离线检查；有游戏时可用
 `V3_ROOT`、`V3_USERDIR` 指定路径，工具不会写入仓库外的用户状态，除非命令明确要求部署。
+`modgen --check` 和 `package` 需要锁定原版；无游戏环境使用 `modguard --offline` 核对冻结源码/产物和快照接口。
 
 ## 标准包
 

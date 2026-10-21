@@ -43,6 +43,9 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 - `v3 package`、`pdx.distribution.validate_package`：生成标准 `Situated AI 1.0.0` ZIP 和 manifest。
 - `v3 verify`、`tables --offline`：无游戏环境的快照与文档检查。`v3 citations <路径...>` 需要本机游戏文件。
 
+`modguard --offline` 通过 `mod/generation-lock.json` 核对冻结源码/产物原始字节，再审计脚本语法与快照接口；
+`modgen --write/--check` 和 `package` 始终需要锁定原版。无游戏 CI 不执行原版重生成，也不会回退打包旧产物。
+
 ## 已知边界
 
 工具能够回答的问题包括：锁定游戏文件中的静态字段、脚本值读取器、路径、AI 消费者、语言目录和文件级结构；
