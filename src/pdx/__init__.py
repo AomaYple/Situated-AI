@@ -13,7 +13,7 @@ config   路径与常量
 其余模块按用途分四类：**提取**（analyze / extract / defines / localization /
 modifiers / ai / usage / tabular / assets）、**核对**（verify / markers /
 doc_tables / docgen / snapshot / tables_offline）、**对话**（cli / console）、
-**取证**（evidence / unknowns / backlog / mods / engine_log / exe_strings）。
+**取证**（evidence / unknowns / mods / engine_log / exe_strings）。
 `pdx.__version__` 与 `pyproject.toml` 的 `version` 同步（0.3.0）。
 """
 

@@ -180,11 +180,10 @@ WORKSHOP = resolve(
     workshop_for(default_game_root()),
 )
 
-#: Mod 脚本资源的命名空间前缀；稳定启动器身份由发行模块声明。
-#:
-#: 生产生成链使用它生成脚本资源名，Mod 分析器据此构造稳定 ID 前缀，以便从本机 Mod 清单
-#: 排除本产品。它放在共享配置中，避免分析器依赖发行模块。
-#:
+#: 启动器 metadata.json 使用的稳定产品身份；与 PDX 脚本资源命名空间分开维护。
+MOD_ID = "situated-ai"
+
+#: Mod 脚本资源的命名空间前缀。它不再决定启动器 Mod ID。
 NAMESPACE_PREFIX = "sitai_"
 
 #: 本仓库根目录（tools/ 的上一级）
@@ -195,7 +194,7 @@ DOCS = REPO / "docs" / "victoria3-modding"
 RESEARCH = REPO / "research"
 
 #: 游戏自带官方 ``.md`` 的 UTF-8 无 BOM、LF 镜像（保留原始相对路径）。
-#: 原件与规范化镜像分别记录哈希，原始字节副本见审计备份。
+#: 原件与规范化镜像分别记录哈希；原始字节按外部来源契约保留，不复制进仓库。
 #: 由 ``tests/test_docs_mirror.py`` 在装有游戏的环境下看守其时效性 ——
 #: 游戏升级后镜像会静默过期，而照过期镜像写 mod 会漏掉新规则（真实踩过）。
 OFFICIAL_DOCS_MIRROR = RESEARCH / "official-docs"
@@ -208,8 +207,8 @@ OUT_GAME = OUT / "game"
 OUT_MODS = OUT / "mods"
 OUT_CROSS = OUT / "cross"
 
-#: 人可读报告目录
-REPORTS = REPO / "docs" / "reports"
+#: 人可读分析报告目录（可再生，忽略，不污染当前文档）
+REPORTS = OUT / "reports"
 
 #: 参与联机校验和的目录（来自 game/checksum_manifest.txt）
 CHECKSUMMED = ("common", "events", "map_data", "gui", "localization")

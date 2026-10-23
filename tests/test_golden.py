@@ -147,7 +147,7 @@ def test_落盘后能被原样读回(artifacts) -> None:
 
 
 def test_不污染正式产物目录(artifacts) -> None:
-    """测试不应改写 tools/out/ 与 docs/reports/ 里的正式产物。
+    """测试不应改写 tools/out/ 里的正式产物。
 
     这条用来防止 monkeypatch 失效、真的把正式产物覆盖掉。
     """

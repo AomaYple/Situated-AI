@@ -1,7 +1,7 @@
 # 工具目录
 
 这里保存可复现的工程检查、基准和一次性输出约定。游戏长期行为、压力和 UI 自动化探针已经从当前交付链移除；
-已停止的探针脚本和测试从当前源码移除；少量冻结脚本仅作为历史证据保留，不是可运行入口。发布包不包含工具。
+已停止的探针脚本、冻结实验和测试从当前源码移除；发布包不包含工具。
 
 ## 当前入口
 
@@ -24,7 +24,7 @@ Windows：
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py baseline
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.0.0.zip
+.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.0.1.zip
 ```
 
 macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安装，按
@@ -40,7 +40,7 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 
 - `v3 analyze`、`information-catalog`、`snapshot`：读取锁定游戏或快照，生成 mod 开发知识和版本差异。
 - `v3 modgen`、`modguard`：生成并检查仓库生产产物、锁定原版字段和生成一致性。
-- `v3 package`、`pdx.distribution.validate_package`：生成标准 `Situated AI 1.0.0` ZIP 和 manifest。
+- `v3 package`、`pdx.distribution.validate_package`：生成标准 `Situated AI 1.0.1` ZIP 和 manifest。
 - `v3 verify`、`tables --offline`：无游戏环境的快照与文档检查。`v3 citations <路径...>` 需要本机游戏文件。
 
 `modguard --offline` 通过 `mod/generation-lock.json` 核对冻结源码/产物原始字节，再审计脚本语法与快照接口；
@@ -52,4 +52,4 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 还可以核对项目生成源是否只使用快照或当前本机原版中存在的接口。
 
 静态分析不能回答引擎内部未暴露状态、脚本运行期语义、国家长期行为、平衡、游戏内性能或玩家体验。这些由用户
-在标准生产包上验收。历史证据和旧实验说明位于 `docs/audits/`、`docs/reports/` 与日期化结果页，不改变当前规则。
+在标准生产包上验收。历史证据和旧实验说明只在 Git 历史中保留，不改变当前规则。

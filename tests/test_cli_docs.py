@@ -1,4 +1,4 @@
-"""检查当前操作文档中的 CLI 命令和选项；历史记录保留当时的命令文本。"""
+"""检查当前操作文档中的 CLI 命令和选项。"""
 
 from __future__ import annotations
 
@@ -27,23 +27,6 @@ _SPLIT = re.compile(r";|&&|\|")
 
 #: 文档里提到的、**故意不检查**的目标：写清理由才许留。
 SKIP: dict[str, str] = {}
-
-#: 退役变更说明命令与未接线编排器。仅允许以下原始历史记录保留旧调用；
-#: 当前操作文档仍须通过命令存在性检查，其他未知命令不享有历史豁免。
-HISTORICAL_COMMAND_REFERENCES: dict[str, frozenset[str]] = {
-    "release": frozenset(
-        {
-            "docs/design/exec/阶段4-压力剧本-首跑.md",
-            "docs/design/exec/阶段7-版本演练-1.14.4.md",
-        }
-    ),
-    "ab-auto": frozenset(
-        {
-            "docs/design/exec/阶段3-结果.md",
-            "docs/design/exec/阶段3-实验记录.md",
-        }
-    ),
-}
 
 #: 框架通用选项的**候选名单**。判据不从这张表来 —— 它只是待验证的输入；
 #: 真正进允许集的是 :func:`framework_options` **实测**跑得通的那些。
@@ -103,32 +86,24 @@ def _options(cmd: object) -> set[str] | None:
 def fragments() -> Iterator[tuple[str, int, str]]:
     """``(文档名, 行号, 片段)`` —— 每个片段里最多只应有一条命令。"""
     seen: set[object] = set()
-    archived_exec_docs = {
-        "docs/design/exec/README.md",
-        "docs/design/exec/工程基线-1.0.md",
-        "docs/design/exec/mod重设计-实施计划.md",
-    }
     for root in (config.DOCS, config.REPO / "docs"):
         for path in sorted(root.rglob("*.md")):
             if path in seen:
                 continue
             if path.is_relative_to(config.REPORTS):
-                continue  # 历史复核报告保留失败命令作为证据，不是操作手册。
+                continue  # 分析报告是可再生输出，不是操作手册。
             seen.add(path)
             document = path.relative_to(config.REPO).as_posix()
-            if document.startswith(
-                (
-                    "docs/audits/",
-                    "docs/reports/",
-                    "docs/victoria3-modding/",
-                    "docs/superpowers/",
-                )
-            ):
-                continue  # 日期化证据和知识库保留当时的复现方式，不是当前操作入口。
-            if document in {"docs/design/backlog.md", "docs/design/01a-依据与参考.md"}:
+            if document.startswith("docs/victoria3-modding/"):
+                continue  # 知识库记录原版事实，不是当前操作手册。
+            if document == "docs/design/02-可执行面.md":
                 continue
-            if document.startswith("docs/design/exec/") and document not in archived_exec_docs:
-                continue  # 执行索引仅列的三份当前文档参与命令接口检查。
+            if document.startswith("docs/design/exec/") and document not in {
+                "docs/design/exec/README.md",
+                "docs/design/exec/工程基线-1.0.md",
+                "docs/design/exec/mod重设计-实施计划.md",
+            }:
+                continue
             fenced = False
             for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 if line.lstrip().startswith("```"):
@@ -150,40 +125,13 @@ def _command_offenders(frags: Iterable[tuple[str, int, str]] | None = None) -> l
         f"{doc}:{lineno} 未知子命令 {name!r} —— {frag.strip()[:80]}"
         for doc, lineno, frag in (fragments() if frags is None else frags)
         for name in _INVOCATION.findall(frag)
-        if name not in tree
-        and name not in SKIP
-        and doc not in HISTORICAL_COMMAND_REFERENCES.get(name, frozenset())
+        if name not in tree and name not in SKIP
     ]
 
 
 def test_文档里的v3命令都有对应的子命令() -> None:
     bad = _command_offenders()
     assert not bad, "文档提到了 CLI 里不存在的子命令：\n  " + "\n  ".join(bad[:15])
-
-
-@pytest.mark.parametrize(
-    ("command", "document"),
-    [
-        ("release", "docs/design/exec/阶段7-版本演练-1.14.4.md"),
-        ("ab-auto", "docs/design/exec/阶段3-实验记录.md"),
-    ],
-)
-def test_退役命令只允许出现在登记的历史记录中(command: str, document: str) -> None:
-    assert runner.invoke(cli.app, [command, "--help"]).exit_code == 2
-    bad = _command_offenders(
-        [
-            (document, 22, f"v3.exe {command} --help"),
-            ("CONTRIBUTING.md", 3, f"v3 {command}"),
-            (document, 24, "v3 definitely-missing"),
-            ("docs/guides/操作指南.md", 5, f"v3 {command}"),
-        ]
-    )
-    assert len(bad) == 3
-    assert "CONTRIBUTING.md:3" in bad[0]
-    assert f"'{command}'" in bad[0]
-    assert f"{document}:24" in bad[1]
-    assert "'definitely-missing'" in bad[1]
-    assert "docs/guides/操作指南.md:5" in bad[2]
 
 
 def _option_offenders(frags: Iterable[tuple[str, int, str]] | None = None) -> list[str]:

@@ -202,18 +202,18 @@ def _scan_prefixes(path: Path, rel_str: str, vanilla: Path, info: ModInfo) -> No
         bucket[rel_str.split("/", maxsplit=1)[0]] += 1
 
 
-#: 本仓库**自己的 mod** 在 `.metadata/metadata.json` 里的 `id` 前缀。
+#: 历史生产 Mod ID 前缀；新 ID 由 `config.MOD_ID` 精确匹配。
 #:
-#: `pdx.distribution` 写出的稳定正式包 id 为 ``sitai.decisions``。
-#:
-#: 扫描器从共享的配置模块读取命名空间，避免分析工具依赖生产生成器。
+#: 保留它可避免把旧版本仓库 Mod 误计入本机第三方 Mod 清单。
 OWN_MOD_ID_PREFIX = config.NAMESPACE_PREFIX.rstrip("_") + "."
 
 
 def own_mod(root: Path) -> bool:
     """这个目录是不是**本仓库自己部署**的 mod？（判据见 :data:`OWN_MOD_ID_PREFIX`）"""
     ident = read_metadata(root).get("id")
-    return isinstance(ident, str) and ident.startswith(OWN_MOD_ID_PREFIX)
+    return isinstance(ident, str) and (
+        ident == config.MOD_ID or ident.startswith(OWN_MOD_ID_PREFIX)
+    )
 
 
 def discover_mods(*, include_local: bool = True, include_workshop: bool = True) -> list[Path]:

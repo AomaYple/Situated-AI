@@ -1,7 +1,7 @@
 """`v3` 子命令的补充覆盖（CliRunner，不起子进程）。
 
 `test_cli.py` 覆盖了主路径，`test_cli_new_commands.py` 覆盖了这一轮新加的命令；
-这里补的是**剩下的分支**：取值分布的 `csv`、普查 `assets`、清单 `backlog`、
+这里补的是**剩下的分支**：取值分布的 `csv`、普查 `assets`、
 离线核验 `mirror check`、维护入口 `refresh --dry-run`、快照 diff/verify、
 以及 `verify --fix` 在「本来就一致」时的早退分支。
 
@@ -28,34 +28,6 @@ _needs_game = pytest.mark.skipif(not (config.GAME / "common").is_dir(), reason="
 
 def _run(*args: str):
     return runner.invoke(app, list(args))
-
-
-# ────────────────────────── backlog ──────────────────────────
-
-
-def test_backlog_给出单一数字() -> None:
-    result = _run("backlog")
-    assert result.exit_code == 0, result.output
-    assert "还开着的条目" in result.output
-    assert "文档" in result.output
-
-
-def test_backlog_按篇过滤() -> None:
-    result = _run("backlog", "-d", "04")
-    assert result.exit_code == 0
-    assert "04-脚本系统.md" in result.output
-
-
-def test_backlog_列出条目() -> None:
-    result = _run("backlog", "-d", "04", "--list", "-n", "3")
-    assert result.exit_code == 0
-    assert "条：" in result.output
-
-
-def test_backlog_不存在的篇是空清单() -> None:
-    result = _run("backlog", "-d", "99-没有这篇")
-    assert result.exit_code == 0
-    assert "没有还开着的条目" in result.output
 
 
 # ────────────────────────── assets / csv ──────────────────────────

@@ -11,6 +11,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from typing import Any, TypedDict
 
+from . import config
 from .information_catalog import InformationCatalog
 
 DEFAULT_SOURCE = "common/ai_strategies/00_default_strategy.txt"
@@ -142,7 +143,7 @@ def build(catalog: InformationCatalog, metadata: Mapping[str, object]) -> Covera
         json.dumps(data, allow_nan=False)
     except (TypeError, ValueError) as exc:
         raise ValueError("metadata 不是有限 JSON 数据") from exc
-    if data.get("id") != "sitai.decisions":
+    if data.get("id") != config.MOD_ID:
         raise ValueError("metadata 缺少正确的候选身份")
     product_version = _text(data.get("version"), "version")
     game_version = _text(data.get("supported_game_version"), "supported_game_version")

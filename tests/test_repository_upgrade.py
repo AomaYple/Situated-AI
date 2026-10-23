@@ -112,7 +112,7 @@ def test_stream_inspection_matches_bytes(raw, chunk_size):
         ("research/official-docs/a.md", "third_party_mirror"),
         (".agent-teams/state.json", "local_runtime"),
         ("tools/out/a.py", "raw_evidence"),
-        ("tools/probe/frozen/a.py.frozen", "frozen_evidence"),
+        ("tools/out/reports/a.json", "raw_evidence"),
         ("mod/gfx/a.png", "binary_asset"),
         ("tests/a.py", "test"),
         ("src/pdx/a.py", "source"),
