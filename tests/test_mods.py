@@ -39,16 +39,19 @@ def 假环境(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Pa
     return local, workshop
 
 
-def test_按id前缀认出我们自己的mod(假环境) -> None:
+def test_按当前id和历史前缀认出本项目mod(假环境) -> None:
     local, _ = 假环境
     ours = local / "whatever_name"
-    _write_metadata(ours, "sitai.ru_defeat")
+    _write_metadata(ours, config.MOD_ID)
+    legacy = local / "legacy_name"
+    _write_metadata(legacy, "sitai.ru_defeat")
     theirs = local / "别人的mod"
     _write_metadata(theirs, "someone_else.mod")
     bare = local / "没有元数据"
     bare.mkdir()
 
     assert mods.own_mod(ours) is True
+    assert mods.own_mod(legacy) is True
     assert mods.own_mod(theirs) is False
     assert mods.own_mod(bare) is False, "没有 metadata 就不能认成我们的"
 
@@ -77,24 +80,24 @@ def test_只数workshop时本地目录一个都不算(假环境) -> None:
 
 
 def test_命名空间常量只有一份() -> None:
-    """生成器与扫描器必须读**同一个**前缀（P9：重复定义即红）。
+    """脚本资源命名空间和启动器 ID 分离，旧 ID 前缀仍供兼容识别。
 
     扫描器不能 import 发行器（`mods.py` 是被 `analyze / verify / evidence` 共用的
     底层模块），所以常量住在 `config` 里，两边都从那里取。
     """
     assert config.NAMESPACE_PREFIX == "sitai_"
     assert mods.OWN_MOD_ID_PREFIX == "sitai."
+    assert config.MOD_ID == "situated-ai"
 
 
 def test_本仓库自己的mod元数据对得上判据() -> None:
-    """真产物自检：仓库里那份 `mod/.metadata/metadata.json` 必须能被认成我们自己的。
+    """真产物自检：仓库里那份 metadata 必须用当前身份并能被认成我们自己的。
 
-    这条把「按 id 前缀认」这件事钉在**真实数据**上 —— 判据和产物一起漂是发现不了的，
-    所以要拿真产物来对。
+    判据和产物一起漂时，纯逻辑测试发现不了；因此直接检查仓库的生成元数据。
     """
     ident = distribution.MOD_ID
-    assert ident.startswith(mods.OWN_MOD_ID_PREFIX)
-    assert ident == f"{config.NAMESPACE_PREFIX.rstrip('_')}.{ident.split('.', 1)[1]}"
+    assert ident == config.MOD_ID
+    assert mods.own_mod(config.REPO / "mod") is True
 
 
 def test_分析保留完整metadata并解析非txt脚本和本地化(tmp_path) -> None:

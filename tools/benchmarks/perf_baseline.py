@@ -36,7 +36,7 @@ CPU 时间也不能补回未被观察到的短命子进程，因此同时标记�
 
 * 临时件（每轮的 log / 采样 csv / 原始 json）：``%TEMP%/repo-audit-perf/``
 * 本机报告（忽略）：``tools/benchmarks/repo-audit-baseline.json``、
-  ``tools/benchmarks/repo-audit-modules.json``；可复核结论写入 docs/audits。
+  ``tools/benchmarks/repo-audit-modules.json``；需要留档时写入结果收据。
 
 用法
 ====
@@ -308,14 +308,6 @@ CASES: list[dict[str, Any]] = [
         "tier": "T1",
         "argv": _v3("modguard", "--offline"),
         "interp": "五道闸门（离线：读入库精简快照）",
-        "interval_s": INTERVAL_CLI_S,
-    },
-    {
-        "id": "cli.backlog-list",
-        "group": "cli",
-        "tier": "T1",
-        "argv": _v3("backlog", "--list"),
-        "interp": "未确认/待办合成计数",
         "interval_s": INTERVAL_CLI_S,
     },
     {
@@ -671,7 +663,7 @@ def build_baseline() -> dict[str, Any]:
                 "peak_sampled_mb": "采样 RSS 之和取最大（间隔 50ms/250ms，尖峰会漏）",
                 "max_proc_hwm_mb": "观察到的单进程最大高水位；不等于整棵进程树同时峰值",
                 "不确定度": "不保证两种读数夹住真值；来源不同的平台不能直接作精确峰值比较",
-                "交叉验证": "pdx.performance 独立采样；旧 Win32 四路实验保存在 tools/probe/frozen",
+                "交叉验证": "pdx.performance 独立采样；跨平台差异按当前运行环境记录",
             },
             "墙钟": "多轮取中位数；同行给 min/max/spread_pct。被外来重活抢过的轮次优先剔除",
             "cpu_total_s": "观察到的进程 CPU 时间合计，作为墙钟辅证，可能漏短命子进程",

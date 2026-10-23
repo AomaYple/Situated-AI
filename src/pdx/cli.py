@@ -55,7 +55,6 @@ from pdx import (
     ai_surface,
     analyze,
     assets,
-    backlog,
     cache,
     candidate_coverage,
     citations,
@@ -147,7 +146,7 @@ def _fail(message: str, code: int = EXIT_USAGE) -> NoReturn:
 #: 定、同日收口时删掉）：那就有两套判据，同一份输入两个结论 —— 生效文件整份缺失时
 #: 模块判「不可核对」，而命令层因为 ``line_counts.get(rel, (0, 0))`` 两值相等判「真错配」。
 #: 判据只能有一处；删掉之后的复现命令与本轮口径修正的来龙去脉见
-#: ``docs/reports/口径统一-engine_log-不可核对.md``。
+#: 用户提供日志后的分类只写入 `tools/out/`，不把运行期推断混入当前规则。
 
 
 def _relative(path: Path) -> str:
@@ -380,7 +379,8 @@ def information_catalog_cmd(
     """生成锁定游戏版本的静态信息与消费者目录。
 
     该命令只声明静态发现及原版文件中的同名候选关联；
-    运行时读取、行为质量和实机验证由 F0-C2/F1 单独推进。
+    运行时读取、行为质量和实机验证由用户在标准包上推进；本命令只登记静态能力，
+    后续按当前计划 F2 的规则扩展流程使用。
     """
 
     if candidate_coverage_output is not None and candidate_metadata is None:
@@ -448,7 +448,7 @@ def information_catalog_cmd(
     console.print(f"静态消费者矩阵已生成：{_relative(matrix_target)}")
     console.print(
         "静态发现不等于运行时可读或行为通过；未确认项保持 discovered/unknown，"
-        "后续按主计划 F0-C2、F1 推进。"
+        "后续按当前计划 F2 的规则扩展流程推进；静态登记不等于运行期行为通过。"
     )
 
 
@@ -2270,7 +2270,7 @@ def ai_surface_cmd(
 ) -> None:
     """原版 AI 意图层的**可执行面**：有哪些牌、牌在读什么、面有多大。
 
-    这是 mod 阶段 1 的产物生成器，回答三个问题（全部**枚举**自原版文件，不手抄）：
+    这是当前 Mod 信息目录的机械生成器，回答三个问题（全部**枚举**自原版文件，不手抄）：
 
     1. **有哪些牌**：`common/ai_strategies/*.txt` 里每张 `ai_strategy_*` 的槽位（`type =`）、
        权重基准、条件数、有无 `possible` 门、牌面上的字段数；
@@ -2466,7 +2466,7 @@ def modgen_cmd(
             console.print(f"[green]{len(production)} 个生产文件与源逐字节一致[/]")
         else:
             console.print(
-                f"Situated AI 1.0.0：{len(production)} 个生产文件；--write 生成 / --check 核对"
+                f"Situated AI {distribution.RELEASE_VERSION}：{len(production)} 个生产文件；--write 生成 / --check 核对"
             )
     except (ValueError, OSError) as exc:
         _fail(f"生成失败：{exc}", EXIT_FAILED)
@@ -2474,8 +2474,8 @@ def modgen_cmd(
 
 @app.command("package")
 def package_cmd(
-    output: Annotated[Path, typer.Option("--output", help="正式 ZIP 输出路径")] = Path(
-        "dist/situated-ai-1.0.0.zip"
+    output: Annotated[Path, typer.Option("--output", help="正式 ZIP 输出路径")] = (
+        distribution.DEFAULT_PACKAGE_PATH
     ),
 ) -> None:
     """核对生产生成物后打包；仅在游戏交付边界添加 BOM。"""
@@ -2578,49 +2578,6 @@ def modguard_cmd(
     )
     console.print("证据：" + ("入库快照（不证明当前游戏内容）" if offline else "本机原版目录"))
     console.print("长期行为、平衡、玩家体验和游戏性能由用户验收。")
-
-
-@app.command("backlog")
-def backlog_cmd(
-    doc: str | None = typer.Option(None, "--doc", "-d", help="只看某篇，例如 14"),
-    list_items: bool = typer.Option(False, "--list", help="逐条列出还开着的条目"),
-    limit: int = typer.Option(30, "--limit", "-n", help="--list 时最多列多少条"),
-) -> None:
-    """还开着的「未确认 / 待办」条目 —— 把两套计数合成一个数字。
-
-    知识库里有**两层**未解决项：
-
-    * `v3 unverified`：带 `【未确认】` 标记的行 —— 那是承诺（没证据就必须标）；
-    * 各篇末尾的「未确认项 / 待办 / 下一步」章节 —— 旧格式下**不带标记**，
-      标记数与章节条目数长期各说各话。
-
-    这个命令按章节里表格的**状态列**判定还开不开（`已答 / 已解决 / …` 即已关；
-    列表项没有状态列，一律算开着），给出一个可复算的总数。
-    ⚠️ 标记项大多也列在章节里，所以 **unverified ⊆ backlog**，两个数字不要相加。
-    """
-    if doc and not backlog.open_items(doc):
-        console.print(f"[green]doc {escape(doc)} 没有还开着的条目[/]")
-        return
-
-    opened, closed = backlog.totals(doc)
-    counts = backlog.counts_by_doc()
-    if doc:
-        counts = {k: v for k, v in counts.items() if k.startswith(doc) or doc in k}
-
-    table = Table(title=f"还开着的条目：{opened}（已关 {closed}）", show_lines=False)
-    table.add_column("文档")
-    table.add_column("未关", justify="right", style="cyan")
-    table.add_column("章节", style="dim")
-    secs = backlog.sections()
-    for name, n in counts.items():
-        table.add_row(escape(name), str(n), escape("；".join(secs.get(name, []))[:60]))
-    console.print(table)
-
-    if list_items:
-        rows = backlog.open_items(doc)
-        console.print(f"\n前 {min(limit, len(rows))} / {len(rows)} 条：")
-        for item in rows[:limit]:
-            console.print(f"  [dim]{escape(item.where)}[/] {escape(item.text[:96])}")
 
 
 @app.command("unverified")

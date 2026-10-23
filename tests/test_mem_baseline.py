@@ -635,7 +635,7 @@ def test_GBK下判红仍然是判红(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(not _IS_WIN, reason="chcp 是 Windows 控制台的东西（Linux/macOS 不适用）")
 def test_真实GBK控制台chcp936下不崩(tmp_path: Path) -> None:
-    """backlog 附⑤ 的复算入口：`cmd /c chcp 936` 之后跑同一条命令，断言 exit 0。
+    """历史编码复算入口：切换系统代码页后跑同一条命令，断言 exit 0。
 
     控制台代码页是**进程外**的共享状态 ⇒ 用前先读、用完立刻还原（别把 pytest 自己的输出弄花）。
     """

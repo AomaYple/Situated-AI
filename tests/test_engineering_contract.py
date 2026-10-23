@@ -47,11 +47,12 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     root = Path(__file__).resolve().parents[1]
     plan = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
-    assert "Situated AI 1.0.0 交付计划" in plan
+    assert "Situated AI 1.0.1 当前交付与后续计划" in plan
     assert all(f"## F{index}：" in plan for index in range(3))
-    assert "用户验收边界" in plan
-    assert "长期实机行为、平衡和玩家验收由用户负责" in plan
-    assert "确定性重建" in plan
+    assert "用户负责长期游戏行为、平衡和创意工坊验收" in plan
+    assert "用户负责：" in plan
+    assert "生成新的标准包交给用户进行长期观察" in plan
     assert "UTF-8 无 BOM/LF" in plan
-    assert "长期实机行为" in checklist
-    assert "dist/situated-ai-1.0.0.zip" in checklist
+    assert "长期行为、平衡、后期性能、语言呈现和工坊发布" in checklist
+    assert "situated-ai" in checklist
+    assert "dist/situated-ai-1.0.1.zip" in checklist

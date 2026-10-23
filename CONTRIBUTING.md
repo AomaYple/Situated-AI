@@ -2,7 +2,11 @@
 
 本指南定义如何修改、验证、提交和交付 Situated AI。代理接手路由见 [AGENTS.md](AGENTS.md)，持续约束见
 [工程原则](docs/principles/工程原则.md)和[Mod 开发原则](docs/principles/Mod开发原则.md)，当前出口见
-[1.0.0 交付计划](docs/design/exec/mod重设计-实施计划.md)。仓库没有 `CONTRIBUTE.md`，不要创建别名文件。
+[1.0.1 当前交付与后续计划](docs/design/exec/mod重设计-实施计划.md)。仓库没有 `CONTRIBUTE.md`，不要创建别名文件。
+
+当前职责边界是明确的：助手维护 Mod 源、生成器、原版字段合法性、静态分析和可交付包；用户负责启动游戏、长期
+观察、平衡、体验和工坊发布。日志、存档和最小复现由用户提供后，助手只据可复核证据辅助修复。长期 GUI、压力和行为
+自动化不属于默认工程出口。
 
 ## 开始工作
 
@@ -39,7 +43,7 @@ Python 3.14 的已安装依赖闭包；其他平台按 `pyproject.toml` 解析�
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --write
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.0.0.zip
+.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.0.1.zip
 ```
 
 生成的 `mod/common`、本地化和 metadata 不手改。标准包必须包含 `.metadata/metadata.json`、
@@ -79,7 +83,8 @@ Python 3.14 的已安装依赖闭包；其他平台按 `pyproject.toml` 解析�
 Python 生成器更新。删除或改名之前用 Python/`git grep` 盘点调用方、动态注册、测试、CLI、文档、生成入口和
 历史证据；缓存和运行态可以清理，历史证据与第三方原始字节按契约保留。规则、计划、结果和历史文档不要互相复制。
 
-长期实机/压力/行为探针不属于当前工程交付链；历史结论保留在 `docs/audits/`、`docs/reports/` 或 Git 历史。
+长期实机/压力/行为探针不属于当前工程交付链；历史结论只在 Git 历史中保留。当前工程事实写入少量
+`docs/design/exec/*-结果.md` 收据，可再生分析输出写入被忽略的 `tools/out/`。
 可复用的静态分析、生成、快照和离线检查按当前生产调用方保留。
 
 ## 分支、提交和合并
@@ -93,6 +98,6 @@ Python 生成器更新。删除或改名之前用 Python/`git grep` 盘点调用
 2. 不提交凭据、`.venv`、缓存、日志、`tools/out` 或临时文件；
 3. 推送主题分支并创建中文 PR，说明目的、关键设计、实际检查、跳过项和用户验收边界；
 4. CI 通过后合并到 `main`，核对本地/远端主线、树等价和工作树干净，再删除短期分支；
-5. 禁止强制推送 `main`，不移动已发布标签。正式包可在合并提交上打 `v1.0.0`，标签只指向冻结内容。
+5. 禁止强制推送 `main`，不移动已发布标签。正式包可在合并提交上打对应版本标签；`v1.0.0` 保持原冻结内容，当前候选使用 `v1.0.1`。
 
 最终报告分别写明实际修改、删除/保留、检查结果、失败/跳过、包路径和 SHA-256、Git/PR 状态，以及用户仍需完成的长期实机事项。

@@ -73,7 +73,7 @@ def inputs():
         version={"caligula_branch": "release/1.14.5"}, roots={}, items=(item, _item("static"))
     )
     metadata = {
-        "id": "sitai.decisions",
+        "id": config.MOD_ID,
         "version": "0.1.0",
         "supported_game_version": "1.14.5",
         "enabled_modules": ["information_rules", "consumer_adapters"],
@@ -336,6 +336,13 @@ def test_candidate_identity_and_contract_fingerprints_are_bound(inputs, change):
     else:
         metadata["source_fingerprint"]["information_rules_" + change + "_sha256"] = "f" * 64
     with pytest.raises(ValueError):
+        candidate_coverage.build(catalog, metadata)
+
+
+def test_candidate_rejects_the_previous_release_identity(inputs):
+    catalog, metadata = inputs
+    metadata["id"] = "sitai.decisions"
+    with pytest.raises(ValueError, match="正确的候选身份"):
         candidate_coverage.build(catalog, metadata)
 
 

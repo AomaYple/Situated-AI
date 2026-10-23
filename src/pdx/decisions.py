@@ -1031,7 +1031,7 @@ def metadata_payload(
     )
     return {
         "name": "Situated AI",
-        "id": "sitai.decisions",
+        "id": config.MOD_ID,
         "version": policy.package.product_version,
         "tool_version": TOOL_VERSION,
         "status": policy.package.status,

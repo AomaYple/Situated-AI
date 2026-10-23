@@ -84,8 +84,6 @@ def category(rel: str) -> str:
         return "local_runtime"
     if rel.startswith("tools/out/") and not rel.endswith(".compact.json"):
         return "raw_evidence"
-    if rel.startswith("tools/probe/frozen/"):
-        return "frozen_evidence"
     if path.suffix.lower() in BINARY_SUFFIXES or path.name.startswith(".coverage"):
         return "binary_asset"
     if rel.startswith("tests/"):

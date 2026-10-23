@@ -3,7 +3,7 @@
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让 AI 国家依据可读取的政治、人口、财政、经济、市场、
 贸易、外交、宗属、军事、战争、殖民、地理、身份和世界状态，在原版执行系统中重新评估可行路线。
 
-当前已生成 `Situated AI 1.0.0` 标准 Mod，工程回归结果见[交付记录](docs/design/exec/1.0.0-工程交付-结果.md)：
+当前已生成 `Situated AI 1.0.1` 标准 Mod，身份迁移和工程回归结果见[1.0.1 结果记录](docs/design/exec/1.0.1-ID迁移-结果.md)，原始 1.0.0 交付记录保留作历史参考：
 源数据使用锁定 Victoria 3 `1.14.5` 的原版字段和作用域，
 生成器负责规则、语言、manifest、路径和编码门禁，标准 ZIP 不含探针或历史实验。长期 AI 行为、平衡、性能、
 玩家体验和创意工坊发布由用户安装后验收；工程通过不能代替这些结论。
@@ -13,7 +13,7 @@ Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让 AI 国家依�
 1. [AGENTS.md](AGENTS.md)：代理接手顺序和修改边界。
 2. [CONTRIBUTING.md](CONTRIBUTING.md)：生成、检查、分支、提交、PR 和发布。
 3. [工程原则](docs/principles/工程原则.md)与[Mod 开发原则](docs/principles/Mod开发原则.md)。
-4. [1.0.0 交付计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
+4. [1.0.1 交付计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
 
 ## 目录
 
@@ -36,7 +36,7 @@ Windows：
 .venv\Scripts\python.exe -X utf8 -m pip install -e ".[dev]"
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.0.0.zip
+.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.0.1.zip
 ```
 
 macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运行离线检查；有游戏时可用
@@ -45,7 +45,7 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运�
 
 ## 标准包
 
-`dist/situated-ai-1.0.0.zip` 是唯一生产交付包。解压至独立 `Victoria 3/mod/Situated AI` 目录，在启动器
+`dist/situated-ai-1.0.1.zip` 是当前唯一生产交付包，metadata ID 为 `situated-ai`。解压至独立 `Victoria 3/mod/Situated AI` 目录，在启动器
 单独的 playset 中启用。包内包含：
 
 - `.metadata/metadata.json`：标准启动器名称、稳定 ID、版本和游戏版本；
@@ -65,8 +65,8 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运�
 ```
 
 完整矩阵、性能口径、删除和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。静态分析和快照只能证明文件、
-字段、生成和引用契约；不能证明引擎运行期语义、AI 行为质量或长期性能。历史实测保留在 `docs/audits/`、
-`docs/reports/` 和 `docs/design/exec/` 的日期化文件中。
+字段、生成和引用契约；不能证明引擎运行期语义、AI 行为质量或长期性能。历史实测只在 Git 历史中保留；当前
+工程事实写入 `docs/design/exec/` 的少量结果收据。
 
 ## 许可证
 

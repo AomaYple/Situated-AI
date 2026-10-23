@@ -101,7 +101,7 @@ addopts = [
     # ``loadscope`` 按模块或测试类分组，便于复用同一 worker 内的重型 fixture。
     # session fixture 和进程内解析缓存不会跨 worker 共享。
     # 完整测试的调度、速度与峰值内存复核见：
-    # docs/audits/2026-10-11-工程提速.md；后续读数按日期和输入追加到结果记录。
+    # 性能读数按日期和输入追加到结果收据。
     # 测试集合、覆盖率、worker 数和缓存状态不同的运行不能直接计算整体提速。
     #
     # ``-n auto`` 由 tests/conftest.py 的 hook 综合 CPU 与内存预算：
@@ -112,7 +112,7 @@ addopts = [
     # 基准串行运行并清除普通 addopts；并发时 pytest-benchmark 会禁用计时。
     # 用例通过不能替代有效的基准表和采样结果。命令示例：
     #     python -m pytest tests/test_benchmarks.py -o addopts="" --benchmark-only
-    # 历史判据与实测更正见 docs/reports/t34-CI-环境红灯-与-n0-口径更正.md。
+    # 基准口径见 CONTRIBUTING.md 的验证矩阵。
     "-n",
     "auto",
     "--dist",
@@ -149,7 +149,7 @@ omit = ["*/tests/*"]
 #
 # 整体下限由 fail_under 定义，核心模块下限由 pdx.covgate.FLOORS 定义。
 # 实测百分比、未覆盖分支与命令以对应运行的 coverage JSON 和日期化记录为准。
-# 2026-10-11 完整回归及其限制见 docs/audits/2026-10-11-工程提速.md。
+# 完整回归及限制写入对应结果收据，不把读数复制进配置。
 # 配置只维护门禁，不另存容易漂移的“当前覆盖率”或模块实测列表。
 fail_under = 86
 show_missing = true
@@ -176,7 +176,6 @@ extend-exclude = [
     # 排除产物与历史资料目录中可能出现的 Python 文件。
     # docstring-code-format 处理 Python 文档字符串内的代码示例，不处理独立 .md 文件。
     "tools/out",          # 产物目录，将来若落脚本也不该被 lint
-    "docs/reports",      # 历史报告与独立复核
     # research/official-docs/ 是游戏官方文档的逐字镜像，不是我们的代码；
     # research/ 根下若出现自有产物则仍需检查，故不整目录排除。
     "research/official-docs",

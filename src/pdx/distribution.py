@@ -13,14 +13,15 @@ from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
-from pdx import decision_intents, decisions
+from pdx import config, decision_intents, decisions
 from pdx.localization import parse_loc_entries
 from pdx.textio import GAME_SUFFIXES, text_bytes
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-MOD_ID = "sitai.decisions"
+MOD_ID = config.MOD_ID
+RELEASE_VERSION = "1.0.1"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -35,9 +36,9 @@ LAUNCHER_METADATA_KEYS = (
     "game_custom_data",
 )
 
-# 用户可见的本地 Mod 目录名。内部 metadata.id 保持 `sitai.decisions`，用于
-# 稳定识别、兼容性校验和既有工具；这个常量只约束生成/部署时的文件夹名称。
+# 用户可见的本地 Mod 目录名，与启动器 metadata.id 分开维护。
 INSTALL_DIRECTORY_NAME = "Situated AI"
+DEFAULT_PACKAGE_PATH = Path("dist") / f"situated-ai-{RELEASE_VERSION}.zip"
 
 
 def generation_contract() -> dict[str, object]:
@@ -186,7 +187,7 @@ def _validate_archive(
 
 
 def validate_package(archive_path: Path) -> dict[str, object]:
-    """校验正式 ZIP，并拒绝任何偏离当前 1.0.0 生产源的内容。"""
+    """校验正式 ZIP，并拒绝任何偏离当前生产源的内容。"""
     policy, extensions, internal_files = package_inputs(include_engineering_metadata=True)
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
@@ -217,7 +218,7 @@ def _validate_release(data: Mapping[str, bytes], contract: Mapping[str, object])
         raise ValueError("正式包元数据必须只包含启动器字段")
     if (
         metadata.get("id") != MOD_ID
-        or metadata.get("version") != "1.0.0"
+        or metadata.get("version") != RELEASE_VERSION
         or metadata.get("supported_game_version") != "1.14.5"
     ):
         raise ValueError("正式包版本与锁定游戏不符")
@@ -290,14 +291,14 @@ def player_guide(
         else ""
     )
     return (
-        "Situated AI 1.0.0\n"
+        f"Situated AI {RELEASE_VERSION}\n"
         "=================\n"
         f"产品版本 / Product version：{policy.package.product_version}\n"
         f"支持的游戏版本 / Supported game version：{policy.game_version}\n"
         f"启用模块 / Enabled modules：{module_text} / {module_text_en}\n"
         f"存档兼容 / Save compatibility：{policy.package.save_compatibility}\n\n"
         "【中文】\n"
-        "这是唯一正式生产包（当前 1.0.0 交付候选）。它依据国家的政治、人口、财政、经济、市场、贸易、"
+        f"这是唯一正式生产包（当前 {RELEASE_VERSION} 交付候选）。它依据国家的政治、人口、财政、经济、市场、贸易、"
         "外交、宗属、军事、战争、殖民、地理、身份与科技处境调整原版 AI 权重。"
         "原版资格、成本、效果与行动流程继续生效；本 Mod 不提供免费资源、不强制行动，"
         "也不按国家编写固定剧本。\n"
@@ -319,7 +320,7 @@ def player_guide(
         "工程检查证明生成、打包和锁定原版接口符合自动化契约；AI 长期行为、平衡、后期性能、"
         "玩家体验与创意工坊发布由用户验收。\n\n"
         "[English]\n"
-        "This is the only standard production package (the Situated AI 1.0.0 delivery candidate). "
+        f"This is the only standard production package (the Situated AI {RELEASE_VERSION} delivery candidate). "
         "It adjusts vanilla AI weights using political,"
         " population, fiscal, economic, market, trade, diplomatic, subject, military, war, colonial,"
         " geographic, identity, and technology context. Vanilla eligibility, costs, effects, and actions"
@@ -459,7 +460,7 @@ def production_configuration() -> tuple[decisions.Policy, decisions.Extensions]:
         policy,
         enabled=True,
         aggression=0,
-        package=replace(policy.package, product_version="1.0.0", status="candidate"),
+        package=replace(policy.package, product_version=RELEASE_VERSION, status="candidate"),
     )
     extensions = replace(
         extensions,
@@ -526,7 +527,7 @@ def check_generation_lock() -> None:
 def package_inputs(
     *, include_engineering_metadata: bool = False
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str]]:
-    """构建 1.0.0 生产文件；需要锁定原版，不静默回退冻结产物。"""
+    """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
     policy, extensions = production_configuration()
     strategy = decision_intents.load()
     information = decisions.decision_rules.load(strategy=strategy)
@@ -602,7 +603,7 @@ def _release_generation(
 
 
 def package(destination: Path) -> Path:
-    """核对仓库生成物后，生成唯一 1.0.0 正式包。"""
+    """核对仓库生成物后，生成唯一正式包。"""
     policy, extensions, internal_files = package_inputs(include_engineering_metadata=True)
     metadata = json.loads(internal_files[METADATA_NAME])
     files = _release_files(internal_files)
