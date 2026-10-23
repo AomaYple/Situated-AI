@@ -24,7 +24,9 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from typing import TYPE_CHECKING
+from urllib.parse import unquote
 
 import pytest
 
@@ -136,6 +138,27 @@ def test_每条断言的检查类型都已实现() -> None:
     """``claim.kind`` 必须在 ``_CHECKS`` 里有对应实现，否则核验时会报未知类型。"""
     unknown = sorted({c.kind for c in verify.CLAIMS} - set(verify._CHECKS))
     assert not unknown, f"以下检查类型没有实现：{unknown}"
+
+
+def test_所有相对_markdown_链接都指向仓库文件() -> None:
+    """导航页改名或清理文件时，不能留下静默失效的相对链接。"""
+    raw = subprocess.check_output(["git", "ls-files", "-z", "--", "*.md"])
+    paths = [p.decode("utf-8") for p in raw.split(b"\x00") if p]
+    pattern = re.compile(r"\[[^]]*\]\(([^)]+)\)")
+    missing: list[str] = []
+    for name in paths:
+        doc = config.REPO / name
+        for raw_link in pattern.findall(doc.read_text(encoding="utf-8")):
+            target = raw_link.strip()
+            if target.startswith("<") and ">" in target:
+                target = target[1 : target.index(">")]
+            target = target.split()[0]
+            if target.startswith(("#", "http://", "https://", "mailto:", "data:")):
+                continue
+            relative = unquote(target.split("#", 1)[0])
+            if relative and not (doc.parent / relative).resolve().exists():
+                missing.append(f"{name}: {target}")
+    assert not missing, "Markdown 存在失效相对链接：\n" + "\n".join(missing)
 
 
 def test_断言id唯一() -> None:

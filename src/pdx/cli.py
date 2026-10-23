@@ -61,6 +61,7 @@ from pdx import (
     config,
     consumer_matrix,
     covgate,
+    decision_report,
     decisions,
     defines,
     distribution,
@@ -2578,6 +2579,48 @@ def modguard_cmd(
     )
     console.print("证据：" + ("入库快照（不证明当前游戏内容）" if offline else "本机原版目录"))
     console.print("长期行为、平衡、玩家体验和游戏性能由用户验收。")
+
+
+@app.command("decision-audit")
+def decision_audit_cmd(
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="情境决策报告 JSON 输出路径；默认写入 tools/out/ci/"),
+    ] = None,
+    offline: bool = typer.Option(
+        False,
+        "--offline",
+        help="只使用入库源和锁定底本；适用于无游戏目录的 CI 静态合同检查",
+    ),
+) -> None:
+    """核对情境决策合同并生成可解释报告。
+
+    默认复用一次生产构建得到的 engineering metadata；``--offline`` 使用入库源和
+    锁定底本构造同一份静态合同，供无游戏目录的 CI 使用。它不启动游戏，也不把合同
+    通过升级为 AI 行为或平衡通过。
+    """
+    target = output or (config.OUT / "ci" / "decision-audit.json")
+    try:
+        if offline:
+            metadata = decision_report.source_metadata()
+        else:
+            _, _, files = distribution.package_inputs(include_engineering_metadata=True)
+            metadata = json.loads(files[".metadata/metadata.json"])
+            if not isinstance(metadata, dict):
+                raise ValueError("工程 metadata 顶层必须是对象")
+        report = decision_report.build(metadata)
+    except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError) as exc:
+        _fail(f"情境决策合同检查失败：{exc}", EXIT_FAILED)
+    _write_json(target, report)
+    domains = report["domains"]
+    mapped = sum(row["status"] == "consumer_mapped" for row in domains.values())
+    console.print(
+        f"[green]情境决策合同通过[/]：{mapped}/{len(domains)} 个域已连接原版消费者，"
+        f"{report['reader_count']} 个读取器（信息 {report['information_reader_count']}、"
+        f"消费者 {report['consumer_reader_count']}），"
+        f"{report['information_rule_count'] + report['consumer_rule_count']} 条规则"
+    )
+    console.print("证据：静态生成合同；行为、平衡和长期性能仍由用户实机验收。")
 
 
 @app.command("unverified")
