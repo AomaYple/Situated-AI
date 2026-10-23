@@ -43,6 +43,7 @@ Python 3.14 的已安装依赖闭包；其他平台按 `pyproject.toml` 解析�
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --write
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
+.venv\Scripts\python.exe -X utf8 -m pdx.cli decision-audit
 .venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.0.1.zip
 ```
 
@@ -54,6 +55,8 @@ Python 3.14 的已安装依赖闭包；其他平台按 `pyproject.toml` 解析�
 生成时同时更新仓库专用 `mod/generation-lock.json`，记录源码、TOML、底本和生成物的逐字节哈希；该文件不进入
 发布 ZIP。无游戏 CI 使用 `modguard --offline` 核对冻结一致性、脚本语法与入库快照接口，不能替代本机原版重生成。
 真实依赖原版的测试标记为 `integration`，由有游戏的完整回归执行；离线合同继续覆盖打包原语、拒绝分支和冻结漂移。
+`decision-audit` 复用一次生产构建的 engineering metadata，核对信息域、读取器、规则、原版消费者、解释字段和未知值回退；
+它只输出 `static_check` 证据，不启动游戏，也不宣称 AI 行为通过。
 
 ## 验证矩阵
 

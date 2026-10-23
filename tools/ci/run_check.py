@@ -17,6 +17,7 @@ COMMANDS = {
     # 用参数列表传递 marker 表达式，避免 Windows shell 把空格拆成路径。
     "test-offline": ["pytest", "-m", "not integration and not benchmark"],
     "offline": ["pdx.cli", "verify", "--from-snapshot"],
+    "decision-audit": ["pdx.cli", "decision-audit"],
     "encoding": [
         "pdx.repo_audit",
         "--project-only",
@@ -36,6 +37,7 @@ BASELINE_COMMANDS = [
     ("离线断言", ["pdx.cli", "verify", "--from-snapshot"]),
     ("离线生成表格", ["pdx.cli", "tables", "--offline"]),
     ("离线 Mod 门禁", ["pdx.cli", "modguard", "--offline"]),
+    ("情境决策合同", ["pdx.cli", "decision-audit"]),
     ("离线 AI 可执行面", ["pdx.cli", "ai-surface", "--check", "--offline"]),
     ("死代码审计", ["tools.ci.deadcode_audit", "--check"]),
 ]

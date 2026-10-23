@@ -51,6 +51,7 @@ def test_baseline_command_manifest_is_stable() -> None:
         "离线断言",
         "离线生成表格",
         "离线 Mod 门禁",
+        "情境决策合同",
         "离线 AI 可执行面",
         "死代码审计",
     ]
@@ -59,6 +60,7 @@ def test_baseline_command_manifest_is_stable() -> None:
         ["pdx.cli", "verify", "--from-snapshot"],
         ["pdx.cli", "tables", "--offline"],
         ["pdx.cli", "modguard", "--offline"],
+        ["pdx.cli", "decision-audit"],
         ["pdx.cli", "ai-surface", "--check", "--offline"],
         ["tools.ci.deadcode_audit", "--check"],
     ]
