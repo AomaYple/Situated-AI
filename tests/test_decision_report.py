@@ -5,15 +5,12 @@ from typing import Any
 
 import pytest
 
-from pdx import decision_report, distribution
+from pdx import decision_adapters, decision_intents, decision_report, decision_rules
 
 
 @pytest.fixture(scope="module")
 def engineering_metadata() -> dict[str, Any]:
-    _, _, files = distribution.package_inputs(include_engineering_metadata=True)
-    value = json.loads(files[".metadata/metadata.json"])
-    assert isinstance(value, dict)
-    return value
+    return decision_report.source_metadata()
 
 
 def test_decision_report_covers_all_declared_domains(engineering_metadata: dict[str, Any]) -> None:
@@ -23,8 +20,26 @@ def test_decision_report_covers_all_declared_domains(engineering_metadata: dict[
     assert report["behavior_verified"] is False
     assert set(report["domains"]) == set(decision_report.DOMAINS)
     assert all(row["status"] == "consumer_mapped" for row in report["domains"].values())
-    assert report["reader_count"] >= 1
+    assert report["reader_count"] == (
+        report["information_reader_count"] + report["consumer_reader_count"]
+    )
+    assert report["information_reader_count"] >= 1
+    assert report["consumer_reader_count"] >= 1
     assert report["consumer_rule_count"] >= 1
+
+
+def test_offline_metadata_reuses_the_shared_rule_contract(
+    engineering_metadata: dict[str, Any],
+) -> None:
+    strategy = decision_intents.load()
+    information = decision_rules.load(strategy=strategy)
+    adapters = decision_adapters.load(strategy=strategy)
+
+    assert engineering_metadata["decision_rules"] == decision_rules.contract(information)
+    assert engineering_metadata["consumer_adapters"]["consumers"] == [
+        {"source": source, **decision_rules.contract(rules, owner="consumer_adapters")}
+        for source, rules in adapters.policies
+    ]
 
 
 def test_decision_report_rejects_missing_rationale(engineering_metadata: dict[str, Any]) -> None:

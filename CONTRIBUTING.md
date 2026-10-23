@@ -44,6 +44,7 @@ Python 3.14 的已安装依赖闭包；其他平台按 `pyproject.toml` 解析�
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
 .venv\Scripts\python.exe -X utf8 -m pdx.cli decision-audit
+.venv\Scripts\python.exe -X utf8 -m pdx.cli decision-audit --offline
 .venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.0.1.zip
 ```
 
@@ -53,10 +54,14 @@ Python 3.14 的已安装依赖闭包；其他平台按 `pyproject.toml` 解析�
 
 `modgen --write/--check` 和 `package` 必须读取锁定原版；未安装游戏或底本漂移时硬失败，不从冻结产物静默重建。
 生成时同时更新仓库专用 `mod/generation-lock.json`，记录源码、TOML、底本和生成物的逐字节哈希；该文件不进入
-发布 ZIP。无游戏 CI 使用 `modguard --offline` 核对冻结一致性、脚本语法与入库快照接口，不能替代本机原版重生成。
+发布 ZIP。无游戏 CI 使用 `modguard --offline` 和 `decision-audit --offline` 核对冻结一致性、脚本语法、
+规则合同与入库快照接口，不能替代本机原版重生成。
 真实依赖原版的测试标记为 `integration`，由有游戏的完整回归执行；离线合同继续覆盖打包原语、拒绝分支和冻结漂移。
-`decision-audit` 复用一次生产构建的 engineering metadata，核对信息域、读取器、规则、原版消费者、解释字段和未知值回退；
-它只输出 `static_check` 证据，不启动游戏，也不宣称 AI 行为通过。
+`decision-audit` 默认复用一次生产构建的 engineering metadata；`--offline` 从入库规则源和锁定底本构造同一份静态合同。
+两种模式都核对信息域、读取器、规则、原版消费者、解释字段和未知值回退，只输出 `static_check` 证据，不启动游戏，
+也不宣称 AI 行为通过。
+离线合同必须调用生产规则模块公开的合同生成器；新增字段时先修改唯一来源，再由生产和离线两条输入路径共同覆盖，
+禁止在报告层手工复制规则字段。
 
 ## 验证矩阵
 

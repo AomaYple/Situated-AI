@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from . import decision_adapters, decision_intents, decision_rules, decisions
+
 DOMAINS = (
     "political",
     "fiscal",
@@ -22,6 +24,47 @@ DOMAINS = (
     "identity",
 )
 GOAL = "基于国家处境和可观测信息，在原版机制内持续做出受约束的相对最优决策"
+
+
+def source_metadata() -> dict[str, Any]:
+    """从入库源和锁定底本构造不依赖本机游戏目录的合同。
+
+    该路径只用于静态合同审计和无游戏 CI。生产生成仍必须经过
+    :func:`pdx.distribution.package_inputs`，以便核对当前原版文件的指纹、
+    作用域和消费者原件；这里绝不把源合同冒充当前游戏内容或行为验证。
+    """
+
+    policy = decisions.load()
+    extensions = decisions.load_extensions()
+    strategy = decision_intents.load()
+    information = decision_rules.load(strategy=strategy)
+    adapters = decision_adapters.load(strategy=strategy)
+
+    information_contract = decision_rules.contract(information)
+
+    consumers: list[dict[str, object]] = []
+    for source, rules in adapters.policies:
+        contract = decision_rules.contract(rules, owner="consumer_adapters")
+        contract["source"] = source
+        consumers.append(contract)
+
+    metadata = decisions.metadata_payload(
+        policy,
+        extensions,
+        enabled_modules=["information_rules", "consumer_adapters"],
+        baseline=decisions.BASELINE.read_text(encoding="utf-8"),
+        complete_localization=True,
+    )
+    metadata["decision_rules"] = information_contract
+    metadata["consumer_adapters"] = {
+        "schema": 1,
+        "evidence": "static_source_contract",
+        "behavior_verified": False,
+        "source_sha256": adapters.source_sha256,
+        "sources": dict(adapters.sources),
+        "consumers": consumers,
+    }
+    return metadata
 
 
 def _mapping(value: object, label: str) -> Mapping[str, Any]:
@@ -123,6 +166,10 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
         domain_counts[domain]["status"] = "consumer_mapped" if total else "discovered_only"
 
     reader_rows = _rows(information.get("readers"), "decision_rules.readers")
+    consumer_reader_count = sum(
+        len(_rows(consumer.get("readers"), f"consumer_adapters.consumers[{index}].readers"))
+        for index, consumer in enumerate(consumer_rows)
+    )
     return {
         "schema": 1,
         "goal": GOAL,
@@ -132,7 +179,9 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
         "candidate_version": metadata["version"],
         "enabled_modules": list(metadata["enabled_modules"]),
         "domains": domain_counts,
-        "reader_count": len(reader_rows),
+        "information_reader_count": len(reader_rows),
+        "consumer_reader_count": consumer_reader_count,
+        "reader_count": len(reader_rows) + consumer_reader_count,
         "consumer_count": len(consumer_rows),
         "information_rule_count": len(info_rules),
         "consumer_rule_count": len(adapter_rules),

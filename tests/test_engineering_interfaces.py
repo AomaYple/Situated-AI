@@ -60,7 +60,7 @@ def test_baseline_command_manifest_is_stable() -> None:
         ["pdx.cli", "verify", "--from-snapshot"],
         ["pdx.cli", "tables", "--offline"],
         ["pdx.cli", "modguard", "--offline"],
-        ["pdx.cli", "decision-audit"],
+        ["pdx.cli", "decision-audit", "--offline"],
         ["pdx.cli", "ai-surface", "--check", "--offline"],
         ["tools.ci.deadcode_audit", "--check"],
     ]

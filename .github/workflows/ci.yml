@@ -74,6 +74,9 @@ jobs:
           python tools/ci/test_summary.py tools/out/ci/test-results.xml
           --output tools/out/ci/test-summary.json
 
+      - name: 情境决策合同 —— 无游戏目录审计
+        run: python tools/ci/run_check.py decision-audit
+
       - name: 测试摘要归档
         if: always()
         uses: actions/upload-artifact@v4
