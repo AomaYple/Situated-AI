@@ -1,5 +1,8 @@
 # Situated AI
 
+[![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
+
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让 AI 国家依据可读取的政治、人口、财政、经济、市场、
 贸易、外交、宗属、军事、战争、殖民、地理、身份和世界状态，在原版执行系统中重新评估可行路线。
 
