@@ -1,17 +1,21 @@
 schema_version = 1
 
+# 默认开关用于开发和离线隔离；标准生产包只使用这个发布 profile。
+[profiles]
+release = ["reform", "market", "security", "economy", "diplomacy"]
+
 [reform]
 enabled = false
 legitimacy = 75
 fragile_legitimacy = 25
 bonus = 1.0
 penalty = -0.5
-why = "保持原版法律选择；高合法性、和平、无叛乱且政府有改革派IG时增加立法启动机会。战争、叛乱或极低合法性时降低启动节奏。IG身份只是代理，不承诺支持任意法律。实验验收前默认停用。"
+why = "保持原版法律选择；高合法性、和平、无叛乱且政府有改革派IG时增加立法启动机会。战争、叛乱或极低合法性时降低启动节奏。IG身份只是代理，不承诺支持任意法律。开发默认关闭，生产按 release profile 启用。"
 
 [market]
 enabled = false
 multiplier = 5.0
-why = "economic_dependence为0到5的方向性标度。比较评估国对博弈两侧的依赖，以有限分数表达关系破裂的经济代价；不改经济、资格或强制选边。权重是设计假设，实验验收前默认停用。"
+why = "economic_dependence为0到5的方向性标度。比较评估国对博弈两侧的依赖，以有限分数表达关系破裂的经济代价；不改经济、资格或强制选边。开发默认关闭，生产按 release profile 启用；权重仍待用户长期观察。"
 
 [security]
 enabled = false
@@ -23,7 +27,4 @@ why = "实验候选通过原版支持评分表达防御责任：防御方存在�
 enabled = false
 
 [diplomacy]
-enabled = false
-
-[subjects]
 enabled = false

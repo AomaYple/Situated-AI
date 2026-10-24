@@ -123,7 +123,7 @@ def test_正式候选包含所有生产模块且不修改生成源():
     assert extra.security_enabled
     assert extra.economy_enabled
     assert extra.diplomacy_enabled
-    assert not extra.subjects_enabled
+    assert decisions.load_extensions(profile="release") == extra
     assert decisions.build() == before
     assert decisions.BASELINE.read_bytes() == baseline_before
     patched = files["common/ai_strategies/00_default_strategy.txt"]

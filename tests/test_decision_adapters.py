@@ -1455,7 +1455,6 @@ def test_relative_comparison_cannot_mix_units_or_use_unproven_getters(change):
         ("aggression", "fiscal"),
         ("diplomatic_play_support", "support"),
         ("recklessness", "diplomacy"),
-        ("subject_value", "subjects"),
     ],
 )
 def test_legacy_and_information_field_owners_cannot_silently_stack(field, owner):
@@ -1467,7 +1466,6 @@ def test_legacy_and_information_field_owners_cannot_silently_stack(field, owner)
         decisions.load_extensions(),
         market_enabled=owner == "support",
         diplomacy_enabled=owner == "diplomacy",
-        subjects_enabled=owner == "subjects",
     )
     policy = replace(decisions.load(), enabled=owner == "fiscal")
     with pytest.raises(ValueError, match="重复写入"):

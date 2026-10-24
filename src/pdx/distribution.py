@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "1.0.1"
+RELEASE_VERSION = "1.0.2"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -454,23 +454,13 @@ def write_zip(
 
 
 def production_configuration() -> tuple[decisions.Policy, decisions.Extensions]:
-    """唯一生产开关；读取配置不需要本机原版。"""
-    policy, extensions = decisions.load(), decisions.load_extensions()
+    """读取唯一发布 profile；读取配置不需要本机原版。"""
+    policy, extensions = decisions.load(), decisions.load_extensions(profile="release")
     policy = replace(
         policy,
         enabled=True,
         aggression=0,
         package=replace(policy.package, product_version=RELEASE_VERSION, status="candidate"),
-    )
-    extensions = replace(
-        extensions,
-        reform_enabled=True,
-        market_enabled=True,
-        security_enabled=True,
-        economy_enabled=True,
-        diplomacy_enabled=True,
-        # 宗属字段由声明式适配器统一拥有，避免叠加旧作者。
-        subjects_enabled=False,
     )
     return policy, extensions
 

@@ -14,7 +14,7 @@
 | 工具、快照和证据边界 | [工程交付基线](design/exec/工程基线-1.0.md) |
 | 产品架构 | [处境决策设计](design/03-处境决策设计.md) |
 | 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面.md)、[政治候选面](design/02-政治候选面.md) |
-| 当前计划 | [Situated AI 1.0.1 当前交付与后续计划](design/exec/mod重设计-实施计划.md) |
+| 当前计划 | [Situated AI 1.0.2 当前交付与后续计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
 | 工具使用 | [工具手册](../tools/README.md) |
 | Victoria 3 知识库 | [victoria3-modding](victoria3-modding/README.md) |
