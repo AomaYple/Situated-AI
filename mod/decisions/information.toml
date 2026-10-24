@@ -1,4 +1,4 @@
-# 全域规则的唯一参数来源；所有方向和倍率都是待 F1 验证的设计假设。
+# 全域规则的唯一参数来源；方向和倍率仍待用户长期行为与平衡验收。
 # 只补充原版数值消费者，不能把静态用例或继承的原版能力写成新增实现。
 schema = 1
 baseline_sha256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
@@ -25,6 +25,13 @@ engine = "is_at_war"
 scope = "root"
 unit = "boolean"
 kind = "boolean"
+
+[readers.war_defeat]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "recently_lost_war"
 
 [readers.population]
 engine = "total_population"
@@ -174,6 +181,21 @@ conditions = [
 ]
 why = "和平且违约时降低新增建设目标；不取消已有施工或创造资金"
 counterexample = "战争时保留原版建设目标；原版零目标保持为零"
+
+[[rules]]
+id = "war_defeat_reconstruction"
+domain = "economy"
+field = "wanted_construction_output"
+priority = 75
+value = 1.05
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "war_defeat", op = "=", value = true },
+  { fact = "income", op = ">", value = 0 },
+]
+why = "原版记录的战争目标失败仍在有效期内且财政有收入时，适度提高复原建设目标"
+counterexample = "只覆盖原版写入 recently_lost_war 的战争目标受害方；违约、在战或收入未知时回退原版，不读取所有战败历史"
 
 [[rules]]
 id = "economic_development"
@@ -422,7 +444,7 @@ priority = 100
 value = 1.05
 conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_homeland", op = "=", value = true }, { fact = "target_cultural_share", op = ">=", value = 0.25 }, { fact = "target_isolated", op = "=", value = false }, { fact = "fervor", op = ">", value = 10 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false }, { fact = "income", op = ">", value = 0 }, { fact = "expansion_route", op = "=", value = true } ]
 why = "本土认同、现有国家路线与可达经济条件一致时，提高候选州的有限战略价值"
-counterexample = "不以国家标签制造历史脚本；己有州、非本土、文化联系弱、孤立、违约、战争或未知输入不奖励；原版资格、军事胜负和外交代价保持，待F1"
+counterexample = "不以国家标签制造历史脚本；己有州、非本土、文化联系弱、孤立、违约、战争或未知输入不奖励；原版资格、军事胜负和外交代价保持，待用户长期行为验收"
 
 [[rules]]
 id = "geographic_isolation_financial_cost"
@@ -433,4 +455,4 @@ priority = 200
 value = 0.95
 conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_isolated", op = "=", value = true }, { fact = "navy", op = "=", value = 0 }, { fact = "default", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
 why = "财政违约且没有海军的和平国家，对孤立的海外/外部州额外计入有界承诺成本"
-counterexample = "不改变已拥有州，不声称所有孤立州都是海外；不读取秘密计划，不制造海军或强制放弃州，保留原版地理和目标价值，待F1"
+counterexample = "不改变已拥有州，不声称所有孤立州都是海外；不读取秘密计划，不制造海军或强制放弃州，保留原版地理和目标价值，待用户长期行为验收"

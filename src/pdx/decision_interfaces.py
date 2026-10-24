@@ -23,6 +23,7 @@ _COUNTRY_BOOLEAN = frozenset(
         "is_subject",
         "is_subject_of",
         "has_insurrectionary_interest_groups",
+        "has_variable",
         "has_law_or_variant",
         "has_strategy",
         "has_technology_researched",
@@ -174,7 +175,7 @@ def consumer(field: tuple[str, ...], actor_path: tuple[str, ...]) -> dict[str, o
         "impact": "B",
         "root": "state" if actor_path else "country",
         "scope_evidence": source,
-        "scope_evidence_level": "static_vanilla_examples_pending_f1",
+        "scope_evidence_level": "static_vanilla_examples; runtime_behavior_unverified",
         "eligibility_costs_and_execution": "retained_vanilla",
         "refresh": "vanilla_consumer_evaluation",
         "world_scans": 0,
@@ -272,7 +273,7 @@ def _retained_reason(field: str) -> dict[str, str]:
                 "disposition": policy,
                 "reason": reason,
                 "alternative_and_limit": alternative,
-                "verification": "F1_native_behavior_and_no_suppression_counterexamples",
+                "verification": "static_native_placement; user_behavior_review_pending",
             }
     raise ValueError(f"保留的原版字段缺少逐项处置：{field}")
 

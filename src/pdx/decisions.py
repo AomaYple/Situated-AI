@@ -408,7 +408,7 @@ def information_contract() -> dict[str, object]:
         "domain_list_kind": "target_scope_not_implementation_claim",
         "arbitration": "see_candidate_decision_rules_contract",
         "player_boundary": "is_ai_only",
-        "behavior_quality": "not_evaluated_until_f1",
+        "behavior_quality": "user_long_term_review_pending",
     }
 
 
