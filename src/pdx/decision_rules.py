@@ -895,8 +895,8 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
                 "resolved_scope": decision_interfaces.reader_scope(reader, rules.actor_path),
                 "visibility": "public_script_scope",
                 "update": "read_at_consumer_evaluation_no_cache",
-                "cost": "bounded_scope_chain_no_world_scan; engine_cost_pending_f2",
-                "runtime_readability": "static_signature_pending_f1",
+                "cost": "bounded_scope_chain_no_world_scan; engine_runtime_cost_unmeasured",
+                "runtime_readability": "static_interface_signature; runtime_behavior_unverified",
             }
             for reader in rules.readers
         ],
@@ -911,7 +911,7 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
                 "unit": "vanilla_score_points"
                 if rule.operation == "add"
                 else "dimensionless_multiplier",
-                "calibration": "design_assumption_pending_f1",
+                "calibration": "design_assumption; user_behavior_and_balance_review_pending",
                 "consumer": decision_interfaces.consumer(rule.field, rules.actor_path),
                 "description_key": description_key(rule),
                 "unknown": "preserve_vanilla_and_block_lower_priority_if_not_known_false",
@@ -948,13 +948,9 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
                 "scope_depth": max(
                     len(reader.path)
                     for reader in rules.readers
-                    if any(
-                        reader.key == condition.fact
-                        for rule in candidates
-                        for condition in rule.conditions
-                    )
+                    if any(reader.key in rule.input_keys() for rule in candidates)
                 ),
-                "engine_runtime_cost": "unmeasured_pending_f2",
+                "engine_runtime_cost": "unmeasured; user_runtime_evidence_pending",
             }
             for field, candidates in rules.groups().items()
         },

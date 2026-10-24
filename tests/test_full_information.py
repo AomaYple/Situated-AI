@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 # 真实依据另由integration用例对全部锁定原件核对SHA与接口签名。
 _SYNTHETIC_READER_EVIDENCE = (
     "bureaucracy taking_loans scaled_debt net_total_income legitimacy "
-    "has_insurrectionary_interest_groups"
+    "has_insurrectionary_interest_groups has_variable recently_lost_war"
 )
 
 
@@ -88,6 +88,7 @@ def _values(**overrides: object) -> dict[str, object]:
     return {
         "default": False,
         "war": False,
+        "war_defeat": False,
         "population": 3000000,
         "income": 5000,
         "net_surplus": 100,
@@ -244,6 +245,27 @@ def test_priority_and_normal_defense_counterexamples(rules):
     }
 
 
+def test_vanilla_war_defeat_signal_is_bounded_and_unknown_safe(rules):
+    recovering = decision_rules.evaluate(rules, _values(war_defeat=True), is_ai=True)
+    assert recovering["wanted_construction_output"] == ("war_defeat_reconstruction", 1.05)
+    assert "change_law_chance" not in recovering
+
+    ordinary = decision_rules.evaluate(rules, _values(war_defeat=False), is_ai=True)
+    assert ordinary["wanted_construction_output"] == ("economic_development", 1.05)
+    assert "change_law_chance" not in ordinary
+
+    # 缺少该原版变量时不能把未知当作“没有战败”，也不能抢跑低优先级建设规则。
+    unknown_values = _values()
+    unknown_values.pop("war_defeat")
+    unknown = decision_rules.evaluate(rules, unknown_values, is_ai=True)
+    assert "wanted_construction_output" not in unknown
+    assert "change_law_chance" not in unknown
+
+    # 战争中所有建设倾向都回退原版；战争失败变量不绕过当前战争门槛。
+    wartime = decision_rules.evaluate(rules, _values(war_defeat=True, war=True), is_ai=True)
+    assert "wanted_construction_output" not in wartime
+
+
 def _evaluate_script(block: Block, engine_values: dict[str, object]) -> float:
     """独立解释生成的有限语法；不调用规则参考实现或重新生成预期字符串。"""
     operations = {
@@ -286,6 +308,7 @@ def _evaluate_script(block: Block, engine_values: dict[str, object]) -> float:
                 actual = True
             elif assignment.key in {
                 "has_strategy",
+                "has_variable",
                 "has_technology_researched",
                 "owner",
                 "is_homeland_of_country_cultures",

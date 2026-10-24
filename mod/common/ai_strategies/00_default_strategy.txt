@@ -5084,6 +5084,9 @@ ai_strategy_default = {
 		# fiscal_construction_guard [fiscal]; 和平且违约时降低新增建设目标；不取消已有施工或创造资金
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.85 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# war_defeat_reconstruction [economy]; 原版记录的战争目标失败仍在有效期内且财政有收入时，适度提高复原建设目标
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no is_at_war = no has_variable = recently_lost_war fixed_income > 0 } } multiply = 1.05 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { has_variable = recently_lost_war } } } AND = { exists = ROOT ROOT = { NOT = { fixed_income > 0 } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# economic_development [economy]; 有持续收入且沿产业路线时适度提高建设目标
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no fixed_income > 0 has_strategy = ai_strategy_industrial_expansion } } multiply = 1.05 }
 		# SITAI END information:wanted_construction_output
