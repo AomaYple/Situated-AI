@@ -8,6 +8,13 @@
 观察、平衡、体验和工坊发布。日志、存档和最小复现由用户提供后，助手只据可复核证据辅助修复。长期 GUI、压力和行为
 自动化不属于默认工程出口。
 
+普通问题使用仓库 Issues，并附上版本、最小复现和已脱敏的日志；安全问题请按 [SECURITY.md](SECURITY.md) 私密报告。
+依赖和 Action 由 Dependabot 每周检查，更新 PR 同样经过审查与 CI，不自动合并。Action 引用固定为完整提交 SHA；
+升级时保留可读版本注释。CodeQL 在 PR、`main` 推送和每周计划中扫描 Python 与工作流，结果见仓库 Security 页；
+这些安全检查不替代原版字段门禁、离线合同或用户实机验收。
+Dependabot 的 Python 更新以 `pyproject.toml` 为入口；`requirements.lock` 是本机依赖闭包，调整依赖后须在 Windows
+Python 3.14 环境核对并按需运行 `v3 lock --write` 更新，不能假定机器人会重建该文件。
+
 ## 开始工作
 
 从目标工作树运行：
