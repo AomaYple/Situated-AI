@@ -1,7 +1,0 @@
-schema_version = 1
-
-[subjects]
-enabled = false
-protected_bonus = 10.0
-autonomy_bonus = 5.0
-why = "以原版 subject_value 与 become_subject_value 表达保护和既有关系；不创造资格、不强制独立或转移宗属。"

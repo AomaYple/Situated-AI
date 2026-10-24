@@ -10,7 +10,6 @@ import pytest
 from pdx import (
     decision_diplomacy,
     decision_economy,
-    decision_subjects,
     decisions,
     distribution,
 )
@@ -42,14 +41,6 @@ def test_外交模块战争负担降低冒险且未知不猜测():
     )
     assert (
         decision_diplomacy.recklessness_delta(in_war=None, taking_loans=False, policy=policy) == 0
-    )
-
-
-def test_宗属模块只在关系事实已知时计算():
-    policy = replace(decision_subjects.load(), enabled=True)
-    assert (
-        decision_subjects.subject_value_delta(already_subject=True, protected=True, policy=policy)
-        == 15
     )
 
 
@@ -120,7 +111,10 @@ def test_正式包启用模块与生命周期契约一致():
     assert contract["consumer_adapters"]["clear_on_disable"] == (
         "regenerate_without_adapter_files_and_restart"
     )
-    assert not extensions.subjects_enabled
+    assert all(
+        getattr(extensions, f"{name}_enabled")
+        for name in ("reform", "market", "security", "economy", "diplomacy")
+    )
 
 
 @pytest.mark.integration
@@ -144,7 +138,10 @@ def test_七模块完整候选生成所有脚本和全语言无回退():
     assert localization["fallback_languages"] == []
     assert extensions.economy_enabled
     assert extensions.diplomacy_enabled
-    assert not extensions.subjects_enabled
+    assert all(
+        getattr(extensions, f"{name}_enabled")
+        for name in ("reform", "market", "security", "economy", "diplomacy")
+    )
     for name, text in files.items():
         assert "\r" not in text
         assert not text.startswith("\ufeff")

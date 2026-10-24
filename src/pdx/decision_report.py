@@ -114,7 +114,7 @@ def source_metadata() -> dict[str, Any]:
     """
 
     policy = decisions.load()
-    extensions = decisions.load_extensions()
+    extensions = decisions.load_extensions(profile="release")
     strategy = decision_intents.load()
     information = decision_rules.load(strategy=strategy)
     adapters = decision_adapters.load(strategy=strategy)
@@ -130,10 +130,13 @@ def source_metadata() -> dict[str, Any]:
     metadata = decisions.metadata_payload(
         policy,
         extensions,
-        enabled_modules=["information_rules", "consumer_adapters"],
         baseline=decisions.BASELINE.read_text(encoding="utf-8"),
         complete_localization=True,
     )
+    enabled_modules = metadata["enabled_modules"]
+    if not isinstance(enabled_modules, list):
+        raise TypeError("元数据的 enabled_modules 必须是列表")
+    enabled_modules.extend(("information_rules", "consumer_adapters"))
     metadata["decision_rules"] = information_contract
     metadata["consumer_adapters"] = {
         "schema": 1,

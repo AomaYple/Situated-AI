@@ -27,7 +27,6 @@ from . import (
     decision_interfaces,
     decision_rules,
     decision_security,
-    decision_subjects,
 )
 from .lexer import LBRACE, RBRACE, tokenize
 from .localization_languages import (
@@ -61,6 +60,7 @@ EXTENSIONS = SOURCE.with_name("extensions.toml")
 PACKAGE_STATUSES = frozenset({"experimental", "candidate", "accepted"})
 SAVE_COMPATIBILITY = frozenset({"new-game-only", "same-version-new-game", "same-candidate-save"})
 SUPPORTED_PLATFORMS = frozenset({"windows", "macos", "linux"})
+EXTENSION_PROFILE_MODULES = frozenset({"reform", "market", "security", "economy", "diplomacy"})
 
 # 生产本地化集合跟随当前锁定的 Victoria 3 本体语言。
 LANGUAGES: dict[str, str] = {language.directory: language.header for language in DEFAULT_LANGUAGES}
@@ -170,19 +170,6 @@ _DECISION_LOCALIZATION: dict[str, dict[str, str]] = {
         "spanish": "Carga bélica y capacidad diplomática (candidato)",
         "turkish": "Savaş yükü ve diplomatik kapasite (aday)",
     },
-    "SITAI_SUBJECT_RELATION_REASON": {
-        "english": "Overlord and subject relationship (candidate)",
-        "braz_por": "Relação entre suserano e súdito (candidato)",
-        "french": "Relation suzerain-sujet (candidat)",
-        "german": "Verhältnis zwischen Oberherr und Untertan (Kandidat)",
-        "japanese": "宗主国と従属国の関係（候補ルール）",
-        "korean": "종주국과 종속국 관계(후보 규칙)",
-        "polish": "Relacja zwierzchnik–podmiot (kandydat)",
-        "russian": "Отношения сюзерена и субъекта (кандидат)",
-        "simp_chinese": "宗主国与属国关系（候选规则）",
-        "spanish": "Relación entre soberano y súbdito (candidato)",
-        "turkish": "Süzeren ve tabi ülke ilişkisi (aday)",
-    },
 }
 
 
@@ -238,7 +225,6 @@ class Extensions:
     security_threat_bonus: float = 15
     economy_enabled: bool = False
     diplomacy_enabled: bool = False
-    subjects_enabled: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -424,7 +410,12 @@ def module_lifecycle_contract(
     return contract
 
 
-def load_extensions(source: Path = EXTENSIONS) -> Extensions:
+def load_extensions(source: Path = EXTENSIONS, *, profile: str | None = None) -> Extensions:
+    """读取扩展配置；发布 profile 是生产开关的唯一来源。
+
+    未指定 profile 时保留开发/离线默认开关，便于单元测试隔离模块。
+    ``release`` 由 ``extensions.toml`` 声明启用模块，再覆盖各模块的默认开关。
+    """
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
     allowed = {
@@ -434,7 +425,7 @@ def load_extensions(source: Path = EXTENSIONS) -> Extensions:
         "security",
         "economy",
         "diplomacy",
-        "subjects",
+        "profiles",
     }
     if (
         not set(data) <= allowed
@@ -496,25 +487,51 @@ def load_extensions(source: Path = EXTENSIONS) -> Extensions:
             or not math.isfinite(amount)
         ):
             raise ValueError("外部防御权重必须是 0 到 50 的有限数值")
-    optional = {name: data.get(name, {}) for name in ("economy", "diplomacy", "subjects")}
+    optional = {name: data.get(name, {}) for name in ("economy", "diplomacy")}
     for name, value in optional.items():
         if value and (not isinstance(value, dict) or set(value) != {"enabled"}):
             raise ValueError(f"{name} 扩展只允许声明 enabled；具体参数由模块数据源维护")
+    profiles = data.get("profiles", {})
+    if not isinstance(profiles, dict):
+        raise ValueError("扩展 profile 必须是表")
+    for name, modules in profiles.items():
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("扩展 profile 名称无效")
+        if (
+            not isinstance(modules, list)
+            or any(
+                not isinstance(module, str) or module not in EXTENSION_PROFILE_MODULES
+                for module in modules
+            )
+            or len(modules) != len(set(modules))
+        ):
+            raise ValueError(f"扩展 profile {name} 必须是无重复的已知模块列表")
+    if profile is not None:
+        if not isinstance(profile, str) or not profile.strip():
+            raise ValueError("扩展 profile 名称无效")
+        if profile not in profiles:
+            raise ValueError(f"扩展 profile 不存在：{profile}")
+    enabled_profile = set(profiles.get(profile, ())) if profile is not None else set()
     return Extensions(
-        reform_enabled=reform["enabled"],
+        reform_enabled=("reform" in enabled_profile) if profile is not None else reform["enabled"],
         reform_legitimacy=reform["legitimacy"],
         fragile_legitimacy=reform["fragile_legitimacy"],
         reform_bonus=reform["bonus"],
         fragile_penalty=reform["penalty"],
-        market_enabled=market["enabled"],
+        market_enabled=("market" in enabled_profile) if profile is not None else market["enabled"],
         market_multiplier=market["multiplier"],
         source_sha256=hashlib.sha256(raw).hexdigest(),
-        security_enabled=security["enabled"],
+        security_enabled=("security" in enabled_profile)
+        if profile is not None
+        else security["enabled"],
         security_commitment_bonus=security["commitment_bonus"],
         security_threat_bonus=security["threat_bonus"],
-        economy_enabled=bool(optional["economy"].get("enabled", False)),
-        diplomacy_enabled=bool(optional["diplomacy"].get("enabled", False)),
-        subjects_enabled=bool(optional["subjects"].get("enabled", False)),
+        economy_enabled=("economy" in enabled_profile)
+        if profile is not None
+        else bool(optional["economy"].get("enabled", False)),
+        diplomacy_enabled=("diplomacy" in enabled_profile)
+        if profile is not None
+        else bool(optional["diplomacy"].get("enabled", False)),
     )
 
 
@@ -890,13 +907,6 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
         additions["recklessness"] = decision_diplomacy.strategy_addition(
             replace(decision_diplomacy.load(), enabled=True)
         )
-    if extensions and extensions.subjects_enabled:
-        additions["subject_value"] = decision_subjects.subject_addition(
-            replace(decision_subjects.load(), enabled=True)
-        )
-        additions["become_subject_value"] = decision_subjects.become_subject_addition(
-            replace(decision_subjects.load(), enabled=True)
-        )
     if not additions:
         return text
     fields: list[tuple[int, str]] = []
@@ -951,8 +961,6 @@ def source_fingerprint(policy: Policy, extensions: Extensions, baseline: str) ->
         result["economy_source_sha256"] = decision_economy.load().source_sha256
     if extensions.diplomacy_enabled:
         result["diplomacy_source_sha256"] = decision_diplomacy.load().source_sha256
-    if extensions.subjects_enabled:
-        result["subjects_source_sha256"] = decision_subjects.load().source_sha256
     return result
 
 
@@ -1001,10 +1009,6 @@ def _module_names(
         not files or "common/scripted_triggers/sitai_diplomacy_triggers.txt" in files
     ):
         modules.append("diplomacy")
-    if extensions.subjects_enabled and (
-        not files or "common/scripted_triggers/sitai_subjects_triggers.txt" in files
-    ):
-        modules.append("subjects")
     return modules
 
 
@@ -1103,7 +1107,6 @@ def build(
         ),
         (extensions.economy_enabled, "economy", ("economic_vs_government_spending_balance",)),
         (extensions.diplomacy_enabled, "diplomacy", ("recklessness",)),
-        (extensions.subjects_enabled, "subjects", ("subject_value", "become_subject_value")),
     ):
         if enabled:
             field_owners.update({(field,): owner for field in fields})
@@ -1170,16 +1173,11 @@ def build(
         files["common/scripted_triggers/sitai_diplomacy_triggers.txt"] = (
             decision_diplomacy.triggers(replace(decision_diplomacy.load(), enabled=True))
         )
-    if extensions.subjects_enabled:
-        files["common/scripted_triggers/sitai_subjects_triggers.txt"] = decision_subjects.triggers(
-            replace(decision_subjects.load(), enabled=True)
-        )
     if (
         extensions.market_enabled
         or extensions.security_enabled
         or extensions.economy_enabled
         or extensions.diplomacy_enabled
-        or extensions.subjects_enabled
         or information_rules is not None
     ):
         reason_keys: list[str] = []
@@ -1193,8 +1191,6 @@ def build(
             reason_keys.append("SITAI_ECONOMY_CAPACITY_REASON")
         if extensions.diplomacy_enabled:
             reason_keys.append("SITAI_DIPLOMACY_BURDEN_REASON")
-        if extensions.subjects_enabled:
-            reason_keys.append("SITAI_SUBJECT_RELATION_REASON")
         if information_rules is not None:
             reason_keys.extend(
                 key
@@ -1341,7 +1337,6 @@ def write(root: Path, files: Mapping[str, str] | None = None) -> list[Path]:
         "common/scripted_triggers/sitai_security_triggers.txt",
         "common/scripted_triggers/sitai_economy_triggers.txt",
         "common/scripted_triggers/sitai_diplomacy_triggers.txt",
-        "common/scripted_triggers/sitai_subjects_triggers.txt",
         *(localization_path(language, "sitai_decisions") for language in DEFAULT_LANGUAGES),
     }
     localization_root = root / "localization"
@@ -1429,13 +1424,6 @@ def validate(
         }
     if extensions.diplomacy_enabled:
         interfaces |= {"recklessness", "in_default", "taking_loans"}
-    if extensions.subjects_enabled:
-        interfaces |= {
-            "subject_value",
-            "become_subject_value",
-            "is_subject_of",
-            "scope:overlord",
-        }
     # 财政值属于独立的原版 script value 参考，而不是四个通用词汇目录。
     fiscal_words = vocabulary_dir(BASELINE.parent) if policy.enabled else set()
     if policy.enabled:

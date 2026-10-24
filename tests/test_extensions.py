@@ -20,6 +20,31 @@ def test_未验收扩展默认停用():
     assert len(decisions.build()) == 5
 
 
+def test_发布_profile_是唯一生产扩展开关来源():
+    policy = decisions.load_extensions(profile="release")
+    assert all(
+        getattr(policy, f"{name}_enabled")
+        for name in ("reform", "market", "security", "economy", "diplomacy")
+    )
+    assert not hasattr(policy, "subjects_enabled")
+
+
+def test_未知发布_profile_或模块明确失败(tmp_path):
+    source = tmp_path / "extensions.toml"
+    text = decisions.EXTENSIONS.read_text(encoding="utf-8")
+    source.write_text(
+        text.replace(
+            'release = ["reform", "market", "security", "economy", "diplomacy"]',
+            'release = ["subjects"]',
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="profile"):
+        decisions.load_extensions(source, profile="release")
+    with pytest.raises(ValueError, match="不存在"):
+        decisions.load_extensions(profile="missing")
+
+
 def test_启用扩展只追加声明字段且原版逐字保留():
     policy = replace(decisions.load_extensions(), reform_enabled=True, market_enabled=True)
     files = decisions.build(extensions=policy)
