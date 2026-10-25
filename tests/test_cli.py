@@ -78,6 +78,7 @@ def test_help_exit0() -> None:
         "snapshot",
         "verify",
         "crosscheck",
+        "observe",
         "check-outputs",
         "show",
     ):
@@ -86,7 +87,17 @@ def test_help_exit0() -> None:
 
 @pytest.mark.parametrize(
     "cmd",
-    ["analyze", "defines", "index", "snapshot", "verify", "crosscheck", "check-outputs", "show"],
+    [
+        "analyze",
+        "defines",
+        "index",
+        "snapshot",
+        "verify",
+        "crosscheck",
+        "observe",
+        "check-outputs",
+        "show",
+    ],
 )
 def test_每个子命令的help都可用(cmd: str) -> None:
     r = _invoke(cmd, "--help")
