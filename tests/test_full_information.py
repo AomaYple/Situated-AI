@@ -403,6 +403,181 @@ def test_default_cost_precedes_weak_navy_without_guessing_invalid_input(
     assert _evaluate_script(blocks["colonial_interest_ratio"], engine) == (0.7 if default else 1)
 
 
+@pytest.mark.parametrize(("navy", "expected"), [(0, 0.8), (24, 0.8), (25, 1.0), (100, 1.0)])
+def test_overseas_naval_feasibility_has_a_bounded_threshold(generated_rule_blocks, navy, expected):
+    rules, blocks = generated_rule_blocks
+    values = _values(default=False, navy=navy)
+    engine = {
+        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        for reader in rules.readers
+    }
+    reference = decision_rules.evaluate(rules, values, is_ai=True).get(
+        "colonial_interest_ratio", ("vanilla", 1.0)
+    )
+    assert reference == (
+        ("overseas_naval_feasibility", expected) if expected < 1 else ("vanilla", 1.0)
+    )
+    assert _evaluate_script(blocks["colonial_interest_ratio"], engine) == expected
+
+
+@pytest.mark.parametrize("navy", [0, 100])
+def test_port_value_is_scoped_to_target_state_independent_of_national_navy(
+    generated_rule_blocks, navy
+):
+    rules, blocks = generated_rule_blocks
+    values = _values(default=False, target_port=True, target_isolated=False, navy=navy)
+    engine = {
+        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        for reader in rules.readers
+    }
+    engine["scope:target_state"] = True
+
+    assert decision_rules.evaluate(rules, values, is_ai=True)["state_value"] == (
+        "geographic_port_continuity",
+        1.15,
+    )
+    assert _evaluate_script(blocks["state_value"], engine) == 1.15
+
+
+def _walk_blocks(block: Block):
+    for assignment in block.assignments():
+        if isinstance(assignment.value, Block):
+            yield assignment.value
+            yield from _walk_blocks(assignment.value)
+
+
+def _geography_branch(block: Block, marker: str) -> Block:
+    for branch in _walk_blocks(block):
+        multiply = branch.first("multiply")
+        if multiply is None or not isinstance(multiply.value, Block):
+            continue
+        description = multiply.value.first("desc")
+        if (
+            description is not None
+            and isinstance(description.value, Scalar)
+            and description.value.unquoted == marker
+        ):
+            return cast("Block", branch)
+    raise AssertionError(f"Missing state_value geography branch: {marker}")
+
+
+def _geography_branch_matches(branch: Block, facts: dict[str, bool]) -> bool:
+    def matches(condition: Block, mode: str = "AND") -> bool:
+        outcomes = []
+        for assignment in condition.assignments():
+            if isinstance(assignment.value, Block):
+                outcomes.append(matches(assignment.value, assignment.key))
+                continue
+            assert isinstance(assignment.value, Scalar)
+            key = assignment.key
+            expected = assignment.value.unquoted
+            if key == "scope:target_state":
+                assert expected == "scope:target_state"
+                actual = facts["target_state_adjacent"]
+            elif key == "has_strategic_land_adjacency":
+                actual = (
+                    facts["strategic_country_adjacent"]
+                    if expected == "scope:target_country"
+                    else facts["target_state_adjacent"]
+                )
+            else:
+                actual = facts[key]
+            assert assignment.op in {"=", "=="}
+            expected_value = expected in {
+                "yes",
+                "true",
+                "scope:target_country",
+                "scope:target_state",
+            }
+            outcomes.append(actual is expected_value)
+        if mode == "NOT":
+            return not all(outcomes)
+        if mode == "OR":
+            return any(outcomes)
+        return all(outcomes)
+
+    limit = branch.first("limit")
+    assert limit is not None
+    assert isinstance(limit.value, Block)
+    return matches(limit.value)
+
+
+def _geography_branch_value(branch: Block, facts: dict[str, bool]) -> float:
+    if not _geography_branch_matches(branch, facts):
+        return 1.0
+    multiply = branch.first("multiply")
+    assert multiply is not None
+    assert isinstance(multiply.value, Block)
+    value = multiply.value.first("value")
+    assert value is not None
+    assert isinstance(value.value, Scalar)
+    return float(value.value.text)
+
+
+def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(rules):
+    baseline = decisions.BASELINE.read_text(encoding="utf-8")
+    generated = (config.REPO / "mod/common/ai_strategies/00_default_strategy.txt").read_text(
+        encoding="utf-8"
+    )
+    vanilla_strategy = parse_text(baseline).root.first("ai_strategy_default")
+    generated_strategy = parse_text(generated).root.first("ai_strategy_default")
+    assert vanilla_strategy is not None
+    assert generated_strategy is not None
+    assert isinstance(vanilla_strategy.value, Block)
+    assert isinstance(generated_strategy.value, Block)
+    vanilla_state_assignment = vanilla_strategy.value.first("state_value")
+    generated_state_assignment = generated_strategy.value.first("state_value")
+    assert vanilla_state_assignment is not None
+    assert generated_state_assignment is not None
+    assert isinstance(vanilla_state_assignment.value, Block)
+    assert isinstance(generated_state_assignment.value, Block)
+    vanilla_state_value = vanilla_state_assignment.value
+    generated_state_value = generated_state_assignment.value
+    geography_markers = (
+        "STATE_VALUE_UNREACHABLE_INLAND",
+        "STATE_VALUE_NOT_STRATEGICALLY_ADJACENT",
+        "STATE_VALUE_NOT_ADJACENT_TO_STATE",
+    )
+    profiles = {
+        "land_adjacent": {
+            "has_strategic_land_adjacency": True,
+            "is_adjacent_to_country": True,
+            "is_adjacent_to_state": True,
+            "is_coastal": True,
+            "strategic_country_adjacent": True,
+            "target_state_adjacent": True,
+        },
+        "remote_inland": {
+            "has_strategic_land_adjacency": False,
+            "is_adjacent_to_country": False,
+            "is_adjacent_to_state": False,
+            "is_coastal": False,
+            "strategic_country_adjacent": False,
+            "target_state_adjacent": False,
+        },
+    }
+    for marker in geography_markers:
+        vanilla_branch = _geography_branch(vanilla_state_value, marker)
+        generated_branch = _geography_branch(generated_state_value, marker)
+        for profile, facts in profiles.items():
+            vanilla_value = _geography_branch_value(vanilla_branch, facts)
+            generated_value = _geography_branch_value(generated_branch, facts)
+            assert generated_value == vanilla_value, (marker, profile)
+            expected = (
+                0.5
+                if marker == "STATE_VALUE_UNREACHABLE_INLAND" and profile == "remote_inland"
+                else 1.0
+            )
+            assert generated_value == expected, (marker, profile)
+
+    isolation = next(reader for reader in rules.readers if reader.key == "target_isolated")
+    assert (isolation.engine, isolation.scope) == ("is_isolated_from_market", "target_state")
+    isolation_cost = next(
+        rule for rule in rules.rules if rule.id == "geographic_isolation_financial_cost"
+    )
+    assert any(predicate.fact == "target_isolated" for predicate in isolation_cost.conditions)
+
+
 @pytest.mark.parametrize("high_uses_target", [True, False])
 def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_uses_target):
     baseline = decisions.BASELINE.read_text(encoding="utf-8")

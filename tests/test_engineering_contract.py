@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -47,8 +48,19 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     root = Path(__file__).resolve().parents[1]
     plan = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
-    assert "Situated AI 1.1.0 当前交付与后续计划" in plan
+    assert "# Situated AI 深化扩展计划" in plan
+    version = re.search(r"计划版本：(\d+)\.(\d+)", plan)
+    assert version is not None
+    assert (int(version.group(1)), int(version.group(2))) >= (12, 5)
     assert all(f"## F{index}：" in plan for index in range(3))
+    assert all(f"## F{index}：" in plan for index in range(9, 19))
+    assert "当前扩展队列：" in plan
+    assert "## 阶段状态机、产物和回退" in plan
+    assert "F9 固定候选分母" in plan
+    assert "## F15：Mod 内容与结构整合、更新、清理" in plan
+    assert "## F16：解释、本地化与计算成本综合收口" in plan
+    assert "## F17：Mod 开发原则最终符合性审计与整改" in plan
+    assert "完整 `full-acceptance` 留到 F18 在最终冻结候选上只运行一次" in plan
     assert "用户负责长期游戏行为、平衡、后期性能、GUI 和工坊验收" in plan
     assert "用户负责长期游戏行为" in plan
     assert "用户可据此进行长期游戏观察的版本出口" in plan

@@ -1566,6 +1566,106 @@ def test_political_crisis_replaces_stronger_reform_reward(real_generated_branche
     assert field not in unknown
 
 
+@pytest.mark.integration
+def test_same_government_benefit_is_gated_by_interest_group_resistance_in_generated_ast(
+    real_generated_branches,
+):
+    """The generated consumer keeps one benefit while political support changes around it."""
+
+    field = "ai_strategy_default.interest_group_government_weight"
+    policy, blocks = next(
+        (policy, blocks)
+        for policy, blocks in real_generated_branches
+        if any(rule.id == "structural_stable_government_member" for rule in policy.rules)
+    )
+    facts = {
+        reader.key: False if reader.kind == "boolean" else max(0.0, reader.minimum or 0.0)
+        for reader in policy.readers
+    }
+    facts.update(
+        legitimacy=60,
+        insurrection=False,
+        candidate_ig_clout=0.2,
+        candidate_ig_approval=1,
+        candidate_ig_government=True,
+    )
+    paired = {
+        "supported": facts,
+        "weak_clout": {**facts, "candidate_ig_clout": 0.19},
+        "disapproving": {**facts, "candidate_ig_approval": -1},
+        "outside_government": {**facts, "candidate_ig_government": False},
+        "low_legitimacy": {**facts, "legitimacy": 49},
+    }
+    rule_by_id = {rule.id: rule for rule in policy.rules}
+    for name, values in paired.items():
+        actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, values))
+        reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
+        expected = None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
+        assert actual == expected, name
+    assert _interpret_adjustments(
+        blocks[field], _scopes_for_facts(policy, paired["supported"])
+    ) == (
+        "add",
+        1.05,
+    )
+    for name in ("weak_clout", "disapproving", "outside_government", "low_legitimacy"):
+        assert (
+            _interpret_adjustments(blocks[field], _scopes_for_facts(policy, paired[name])) is None
+        )
+
+
+@pytest.mark.integration
+def test_same_political_resistance_changes_with_fiscal_capacity_in_generated_ast(
+    real_generated_branches,
+):
+    """The negotiation benefit survives only when the production fiscal gates remain healthy."""
+
+    field = "ai_strategy_default.negotiation_chance"
+    policy, blocks = next(
+        (policy, blocks)
+        for policy, blocks in real_generated_branches
+        if any(rule.id == "structural_organized_negotiation" for rule in policy.rules)
+    )
+    facts = {
+        reader.key: False if reader.kind == "boolean" else max(0.0, reader.minimum or 0.0)
+        for reader in policy.readers
+    }
+    facts.update(
+        war=False,
+        default=False,
+        loans=False,
+        debt_ratio=0.1,
+        net_surplus=100,
+        bureaucracy=100,
+        legitimacy=60,
+        insurrection=False,
+        candidate_ig_clout=0.2,
+        candidate_ig_approval=-1,
+        candidate_ig_government=False,
+        radical_share=0.3,
+    )
+    paired = {
+        "funded": facts,
+        "no_surplus": {**facts, "net_surplus": -1},
+        "high_debt": {**facts, "debt_ratio": 0.41},
+        "loan_dependent": {**facts, "loans": True},
+    }
+    rule_by_id = {rule.id: rule for rule in policy.rules}
+    for name, values in paired.items():
+        actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, values))
+        reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
+        expected = None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
+        assert actual == expected, name
+    assert _interpret_adjustments(blocks[field], _scopes_for_facts(policy, paired["funded"])) == (
+        "multiply",
+        1.25,
+    )
+    for name in ("no_surplus", "high_debt", "loan_dependent"):
+        assert (
+            _interpret_adjustments(blocks[field], _scopes_for_facts(policy, paired[name])) is None
+        )
+
+
 @pytest.mark.parametrize(
     ("source", "field", "before", "after"),
     [

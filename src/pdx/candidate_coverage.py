@@ -3,16 +3,26 @@
 from __future__ import annotations
 
 import copy
+import gzip
 import hashlib
 import json
 import math
+import os
 import re
+import tempfile
 from collections import defaultdict
-from collections.abc import Mapping
-from typing import Any, TypedDict
+from collections.abc import Iterable, Mapping
+from contextlib import suppress
+from pathlib import Path
+from typing import Any, Literal, TypedDict
 
 from . import config
-from .information_catalog import InformationCatalog
+from .information_catalog import (
+    ImpactLevel,
+    InformationCatalog,
+    InformationItem,
+    InformationStatus,
+)
 
 DEFAULT_SOURCE = "common/ai_strategies/00_default_strategy.txt"
 
@@ -121,7 +131,12 @@ def _strategy_fingerprints(
                 raise ValueError("候选战略生成指纹与战略合同不一致")
 
 
-def build(catalog: InformationCatalog, metadata: Mapping[str, object]) -> CoverageReport:
+def build(
+    catalog: InformationCatalog,
+    metadata: Mapping[str, object],
+    *,
+    metadata_origin: Literal["caller_supplied", "current_production_sources"] = "caller_supplied",
+) -> CoverageReport:
     """只按来源和完整字段路径连接，返回可 JSON 序列化的确定性报告。
 
     ``metadata`` 是 integrated 生成物 ``.metadata/metadata.json`` 的解析对象。
@@ -388,6 +403,13 @@ def build(catalog: InformationCatalog, metadata: Mapping[str, object]) -> Covera
     def row_key(row: dict[str, Any]) -> tuple[str, str, str]:
         return row["source"], row["consumer_field"], row.get("rule_id", "")
 
+    metadata_authenticity = {
+        "caller_supplied": "caller_supplied_metadata_with_internal_fingerprint_consistency_not_signed_provenance",
+        "current_production_sources": "generated_from_current_production_sources_not_release_zip_or_signed_artifact",
+    }.get(metadata_origin)
+    if metadata_authenticity is None:
+        raise ValueError("metadata 来源必须明确标记")
+
     return {
         "format_version": 1,
         "catalog_version": dict(sorted(catalog.version.items())),
@@ -395,7 +417,7 @@ def build(catalog: InformationCatalog, metadata: Mapping[str, object]) -> Covera
         "candidate_metadata_sha256": hashlib.sha256(
             json.dumps(data, sort_keys=True, ensure_ascii=False, allow_nan=False).encode("utf-8")
         ).hexdigest(),
-        "metadata_authenticity": "caller_supplied_metadata_with_internal_fingerprint_consistency_not_signed_provenance",
+        "metadata_authenticity": metadata_authenticity,
         "supported_game_version": game_version,
         "evidence": "static_catalog_to_generated_manifest_only",
         "status_promotion": "none",
@@ -405,3 +427,100 @@ def build(catalog: InformationCatalog, metadata: Mapping[str, object]) -> Covera
         "difference_semantics": "all_unlinked_catalog_ids_including_static_resources_not_automatic_product_defects",
         "retained_vanilla_fields": sorted(retained, key=lambda row: (row["source"], row["field"])),
     }
+
+
+def write_dispositions(
+    catalog: InformationCatalog,
+    report: CoverageReport,
+    path: Path,
+    *,
+    catalog_artifact: str = "information-catalog.json",
+) -> dict[str, object]:
+    """逐条处置目录信息，并流式写出静态证据 JSONL。"""
+
+    linked_rules: dict[str, set[str]] = defaultdict(set)
+    for link in report["links"]:
+        information_id = _text(link.get("information_id"), "link.information_id")
+        rule_id = _text(link.get("rule_id"), "link.rule_id")
+        linked_rules[information_id].add(rule_id)
+
+    def classify(item: InformationItem) -> tuple[str, str]:
+        if item.status is InformationStatus.UNSUPPORTED:
+            return "unsupported", "来源未形成可审计目录记录，不进入生产读取规则"
+        if item.id in linked_rules:
+            return "connected_to_candidate", "生产候选输入与目录来源静态连接；不证明运行期读取"
+        if item.impact is ImpactLevel.NO_CONSUMER:
+            return "no_consumer", "当前静态索引没有可靠原版消费者；不进入生产候选"
+        if item.impact is ImpactLevel.EXPLANATION:
+            return "explanation_only", "当前目录将其标为解释信息；不影响生产决策权重"
+        return "retained_vanilla", "候选没有该信息的生产规则连接，保留原版行为"
+
+    counts: dict[str, int] = defaultdict(int)
+    by_domain: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    unknown_fields: dict[str, int] = defaultdict(int)
+    for item in catalog.items:
+        disposition, _ = classify(item)
+        counts[disposition] += 1
+        by_domain[item.domain][disposition] += 1
+        for field in ("scope", "unit", "update", "visibility"):
+            if getattr(item, field) == "unknown":
+                unknown_fields[field] += 1
+
+    summary: dict[str, object] = {
+        "format_version": 1,
+        "catalog_version": dict(sorted(catalog.version.items())),
+        "candidate_version": report["candidate_version"],
+        "candidate_metadata_sha256": report["candidate_metadata_sha256"],
+        "evidence": "static_only_not_runtime_or_behavior",
+        "item_count": len(catalog.items),
+        "disposition_counts": dict(sorted(counts.items())),
+        "by_domain": {
+            domain: dict(sorted(values.items())) for domain, values in sorted(by_domain.items())
+        },
+        "unknown_contract_field_counts": dict(sorted(unknown_fields.items())),
+    }
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+
+    def encoded_rows() -> Iterable[bytes]:
+        header = {
+            "type": "header",
+            "format_version": 1,
+            "catalog_artifact": catalog_artifact,
+            "catalog_version": summary["catalog_version"],
+            "candidate_version": report["candidate_version"],
+            "candidate_metadata_sha256": report["candidate_metadata_sha256"],
+            "evidence": "static_only_not_runtime_or_behavior",
+            "item_count": len(catalog.items),
+        }
+        yield json.dumps(header, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n"
+        for item in catalog.items:
+            disposition, reason = classify(item)
+            row = {
+                "type": "item",
+                "information_id": item.id,
+                "disposition": disposition,
+                "reason": reason,
+                "candidate_rule_ids": sorted(linked_rules.get(item.id, ())),
+                "evidence": "static_only_not_runtime_or_behavior",
+            }
+            yield json.dumps(row, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n"
+
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            if path.suffix == ".gz":
+                with gzip.GzipFile(filename="", fileobj=stream, mode="wb", mtime=0) as compressed:
+                    for row in encoded_rows():
+                        compressed.write(row)
+            else:
+                for row in encoded_rows():
+                    stream.write(row)
+            stream.flush()
+            os.fsync(stream.fileno())
+        Path(temporary).replace(path)
+    except BaseException:
+        with suppress(FileNotFoundError):
+            Path(temporary).unlink()
+        raise
+    return summary

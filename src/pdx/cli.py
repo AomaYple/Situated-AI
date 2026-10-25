@@ -44,7 +44,7 @@ import time
 # 解析命令签名，注解挪进 TYPE_CHECKING 块会让 ``v3 --help`` 直接 NameError（已实测）。
 # 另外 `v3 citations` 会真的构造 `Path`，所以它本来就是运行期依赖，不需要 TCH 豁免。
 from pathlib import Path
-from typing import Annotated, Any, NoReturn
+from typing import Annotated, Any, Literal, NoReturn
 
 import typer
 from rich.console import Console
@@ -370,32 +370,64 @@ def information_catalog_cmd(
     ] = None,
     candidate_metadata: Annotated[
         Path | None,
-        typer.Option("--candidate-metadata", help="实际 integrated 候选的 .metadata/metadata.json"),
+        typer.Option(
+            "--candidate-metadata",
+            help="读取实际 integrated 候选合同；启动器 descriptor metadata 不含此合同",
+        ),
     ] = None,
+    candidate_production: Annotated[
+        bool,
+        typer.Option(
+            "--candidate-production",
+            help="从当前生产源生成 integrated 合同并连接，不手工导出候选 metadata",
+        ),
+    ] = False,
     candidate_coverage_output: Annotated[
         Path | None,
         typer.Option("--candidate-coverage-output", help="候选规则与目录的精确连接和未覆盖差集"),
+    ] = None,
+    candidate_dispositions_output: Annotated[
+        Path | None,
+        typer.Option(
+            "--candidate-dispositions-output", help="每条目录信息的静态处置 JSONL/JSONL.GZ"
+        ),
     ] = None,
 ) -> None:
     """生成锁定游戏版本的静态信息与消费者目录。
 
     该命令只声明静态发现及原版文件中的同名候选关联；
     运行时读取、行为质量和实机验证由用户在标准包上推进；本命令只登记静态能力，
-    后续按当前计划 F2 的规则扩展流程使用。
+    后续按权威实施计划逐步核对；静态登记不等于运行期行为通过。
     """
 
-    if candidate_coverage_output is not None and candidate_metadata is None:
-        console.print("[red]--candidate-coverage-output 需要 --candidate-metadata[/]")
+    if candidate_metadata is not None and candidate_production:
+        console.print("[red]--candidate-metadata 与 --candidate-production 只能选一个[/]")
+        raise typer.Exit(EXIT_USAGE)
+    has_candidate = candidate_metadata is not None or candidate_production
+    if candidate_coverage_output is not None and not has_candidate:
+        console.print(
+            "[red]--candidate-coverage-output 需要 --candidate-metadata 或 --candidate-production[/]"
+        )
+        raise typer.Exit(EXIT_USAGE)
+    if candidate_dispositions_output is not None and not has_candidate:
+        console.print(
+            "[red]--candidate-dispositions-output 需要 --candidate-metadata 或 --candidate-production[/]"
+        )
         raise typer.Exit(EXIT_USAGE)
     target = output or (config.OUT_GAME / "information-catalog.json")
     matrix_target = consumer_matrix_output or (config.OUT_GAME / "consumer-matrix.json")
     coverage_target = candidate_coverage_output or target.with_name("candidate-coverage.json")
+    dispositions_target = candidate_dispositions_output or target.with_name(
+        "candidate-dispositions.jsonl.gz"
+    )
+    disposition_stem = dispositions_target.name.removesuffix(".jsonl.gz").removesuffix(".jsonl")
+    disposition_summary_target = dispositions_target.with_name(f"{disposition_stem}-summary.json")
     localization_target = localization_keys_output or (
         config.OUT_GAME / "information-localization.jsonl"
     )
     output_paths = [target, matrix_target]
-    if candidate_metadata is not None:
-        output_paths.append(coverage_target)
+    if has_candidate:
+        output_paths.extend((coverage_target, dispositions_target, disposition_summary_target))
     if localization:
         output_paths.append(localization_target)
     resolved = [path.resolve() for path in output_paths]
@@ -405,6 +437,9 @@ def information_catalog_cmd(
         console.print("[red]各输出路径和候选输入路径必须互不相同[/]")
         raise typer.Exit(EXIT_USAGE)
     metadata = None
+    metadata_origin: Literal["caller_supplied", "current_production_sources"] = (
+        "current_production_sources" if candidate_production else "caller_supplied"
+    )
     if candidate_metadata is not None:
         try:
             metadata = json.loads(candidate_metadata.read_text(encoding="utf-8"))
@@ -413,22 +448,58 @@ def information_catalog_cmd(
         except (OSError, ValueError) as exc:
             console.print(f"[red]候选清单不可读：{escape(str(exc))}[/]")
             raise typer.Exit(EXIT_USAGE) from exc
+    elif candidate_production:
+        try:
+            _, _, production_files = distribution.package_inputs(include_engineering_metadata=True)
+            metadata_text = production_files.get(".metadata/metadata.json")
+            if metadata_text is None:
+                raise ValueError("生产候选缺少 integrated metadata")
+            metadata = json.loads(metadata_text)
+            if not isinstance(metadata, dict):
+                raise ValueError("生产候选合同必须为 JSON 对象")
+        except (KeyError, OSError, ValueError) as exc:
+            console.print(f"[red]当前生产候选合同不可用：{escape(str(exc))}[/]")
+            raise typer.Exit(EXIT_USAGE) from exc
     _require_game()
     started = time.perf_counter()
     catalog = information_catalog.build(include_localization=localization)
     if metadata is not None:
         try:
-            coverage_report = candidate_coverage.build(catalog, metadata)
+            coverage_report = candidate_coverage.build(
+                catalog, metadata, metadata_origin=metadata_origin
+            )
+            try:
+                catalog_artifact = target.resolve().relative_to(config.REPO.resolve()).as_posix()
+            except ValueError:
+                catalog_artifact = target.name
+            try:
+                disposition_summary = candidate_coverage.write_dispositions(
+                    catalog,
+                    coverage_report,
+                    dispositions_target,
+                    catalog_artifact=catalog_artifact,
+                )
+            except OSError as exc:
+                _fail(
+                    f"无法写入 {dispositions_target}：{type(exc).__name__}: {exc}",
+                    EXIT_FAILED,
+                )
         except ValueError as exc:
             console.print(
                 f"[red]候选连接失败：{escape(str(exc))}[/]；本次未写入报告，已有文件仅属于先前运行"
             )
             raise typer.Exit(EXIT_USAGE) from exc
         _write_json(coverage_target, coverage_report)
+        _write_json(disposition_summary_target, disposition_summary)
         console.print(
             f"候选连接已生成：{_relative(coverage_target)}，"
             f"{len(coverage_report['links'])} 条规则连接，"
             f"{len(coverage_report['unresolved'])} 条未解决连接；不提升证据等级"
+        )
+        console.print(
+            f"信息处置清单已生成：{_relative(dispositions_target)}，"
+            f"{disposition_summary['item_count']} 条；摘要："
+            f"{_relative(disposition_summary_target)}"
         )
     catalog.write(target)
     consumer_matrix.ConsumerMatrix.from_catalog(catalog).write(matrix_target)
@@ -449,7 +520,7 @@ def information_catalog_cmd(
     console.print(f"静态消费者矩阵已生成：{_relative(matrix_target)}")
     console.print(
         "静态发现不等于运行时可读或行为通过；未确认项保持 discovered/unknown，"
-        "后续按当前计划 F2 的规则扩展流程推进；静态登记不等于运行期行为通过。"
+        "候选连接只证明静态合同映射；后续阶段按权威实施计划推进。"
     )
 
 

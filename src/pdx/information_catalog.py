@@ -329,7 +329,7 @@ def _script_items(
                     status=status,
                     impact=impact,
                     consumers=matched,
-                    notes="静态发现；运行时作用域和读取成本待 F0-C2 核对",
+                    notes="静态发现；运行时作用域和引擎读取成本未知，须在进入生产规则前单独核对",
                 )
             )
             if not isinstance(assignment.value, Block):
@@ -382,7 +382,7 @@ def _unsupported_script_item(
         impact=ImpactLevel.NO_CONSUMER,
         notes=(
             "来源文件未形成可审计 AST；不得把部分结果当作完整能力。"
-            f" {reason}；F0-C2 需决定是否补充专用解析器或保持 unsupported"
+            f" {reason}；保持 unsupported，只有进入候选决策输入且存在可靠解析需求时才扩展解析器"
         ),
     )
 
@@ -498,7 +498,7 @@ def _localization_key_record(
         visibility="public_localization",
         status=InformationStatus.DISCOVERED,
         impact=ImpactLevel.NO_CONSUMER,
-        notes="键级静态发现；语言语义、GUI 模板和实际加载由 F0-C7/F1 验证",
+        notes="只登记键级静态信息；译文语义、GUI 模板及游戏内加载和呈现不由本目录验证",
     )
     return item.to_dict()
 
@@ -640,7 +640,7 @@ def _unsupported_localization_record(
         visibility="public_localization",
         status=InformationStatus.UNSUPPORTED,
         impact=ImpactLevel.NO_CONSUMER,
-        notes=f"本地化文件未形成键级目录：{reason}；F0-C2/C7 需处理",
+        notes=f"本地化文件未形成键级目录：{reason}；键级本地化能力保持 unsupported",
     )
     return item.to_dict()
 
@@ -654,7 +654,7 @@ def build(
     """构建能力目录。
 
     ``roots`` 只用于测试或明确的快照/安装根；默认复用当前配置的三个内容根。
-    目录建立在静态发现上，任何运行时状态都必须由后续 C2/F1 追加证据。
+    目录建立在静态发现上；扫描、同名关联和静态字段合同都不能升级为运行期行为证据。
     """
 
     if roots is None:
