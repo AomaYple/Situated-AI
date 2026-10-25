@@ -69,3 +69,17 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "situated-ai" in checklist
     assert "标准包" in checklist
     assert "1.1.0 候选已生成" in checklist
+
+
+def test_current_document_indexes_are_complete() -> None:
+    """当前入口应指向同一收口状态，避免索引回退到旧版本或漏列阶段收据。"""
+    root = Path(__file__).resolve().parents[1]
+    tools = (root / "tools/README.md").read_text(encoding="utf-8")
+    execution = (root / "docs/design/exec/README.md").read_text(encoding="utf-8")
+
+    assert "dist/situated-ai-1.1.0.zip" in tools
+    assert "Situated AI 1.1.0" in tools
+    assert "dist/situated-ai-1.0.1.zip" not in tools
+    assert all(f"F{index}-" in execution for index in range(9, 19))
+    assert "当前候选为 `Situated AI 1.1.0`" in execution
+    assert "不把本索引当成第二套待办队列" in execution

@@ -72,8 +72,8 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运�
 ```
 
 完整矩阵、性能口径、删除和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。静态分析和快照只能证明文件、
-字段、生成和引用契约；不能证明引擎运行期语义、AI 行为质量或长期性能。历史实测只在 Git 历史中保留；当前
-工程事实写入 `docs/design/exec/` 的少量结果收据。
+字段、生成和引用契约；不能证明引擎运行期语义、AI 行为质量或长期性能。历史实测、阶段收据和必要快照按各自
+证据合同保留；当前工程事实以 `docs/design/exec/` 的结果收据和[执行索引](docs/design/exec/README.md)为准。
 
 ## 许可证
 
