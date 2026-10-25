@@ -6,7 +6,7 @@
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让 AI 国家依据可读取的政治、人口、财政、经济、市场、
 贸易、外交、宗属、军事、战争、殖民、地理、身份和世界状态，在原版执行系统中重新评估可行路线。
 
-当前维护候选为 `Situated AI 1.1.0`；已安装的上一版 `1.0.2` 和身份迁移结果见[历史结果记录](docs/design/exec/1.0.2-配置收敛-结果.md)，原始 1.0.0 和 1.0.1 交付记录保留作历史参考：
+当前维护候选为 `Situated AI 1.1.1`；它在不可变的 `1.1.0` 基础上补齐启动器和 Workshop 封面。已安装的上一版 `1.0.2` 和身份迁移结果见[历史结果记录](docs/design/exec/1.0.2-配置收敛-结果.md)，原始 1.0.0、1.0.1 和 1.1.0 交付记录保留作历史参考：
 源数据使用锁定 Victoria 3 `1.14.5` 的原版字段和作用域，
 生成器负责规则、语言、manifest、路径和编码门禁，标准 ZIP 不含探针或历史实验。长期 AI 行为、平衡、性能、
 玩家体验和创意工坊发布由用户安装后验收；工程通过不能代替这些结论。
@@ -39,7 +39,7 @@ Windows：
 .venv\Scripts\python.exe -X utf8 -m pip install -e ".[dev]"
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.1.0.zip
+.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.1.1.zip
 ```
 
 macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运行离线检查；有游戏时可用
@@ -48,14 +48,15 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运�
 
 ## 标准包
 
-当前候选下载：[Situated AI 1.1.0](https://github.com/AomaYple/Situated-AI/releases/tag/v1.1.0)。
+当前候选尚未创建 Git 标签；发布前应从本分支构建 `Situated AI 1.1.1` 并创建对应 Release。
 全部版本的标签、交付包、源提交和 SHA-256 见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 下载 Release 附件中的 `situated-ai-<版本>.zip`；GitHub 自动生成的源码压缩包不是可安装 Mod。
 
-`dist/situated-ai-1.1.0.zip` 是当前候选生产包，metadata ID 为 `situated-ai`。解压至独立 `Victoria 3/mod/Situated AI` 目录，在启动器
+`dist/situated-ai-1.1.1.zip` 是当前候选生产包，metadata ID 为 `situated-ai`。解压至独立 `Victoria 3/mod/Situated AI` 目录，在启动器
 单独的 playset 中启用。包内包含：
 
 - `.metadata/metadata.json`：标准启动器名称、稳定 ID、版本和游戏版本；
+- `thumbnail.png`：1024×1024、低于 1 MB 的 Victoria 3 风格启动器/Workshop 封面；
 - `DISTRIBUTION-MANIFEST.json`：模块、语言、源指纹及每个文件的 SHA-256；
 - 生成的 `common/`、11 种本体语言的本地化和安装说明。
 

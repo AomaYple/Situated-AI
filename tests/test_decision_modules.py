@@ -143,6 +143,10 @@ def test_七模块完整候选生成所有脚本和全语言无回退():
         for name in ("reform", "market", "security", "economy", "diplomacy")
     )
     for name, text in files.items():
+        if isinstance(text, bytes):
+            assert name == distribution.THUMBNAIL_NAME
+            assert text.startswith(b"\x89PNG\r\n\x1a\n")
+            continue
         assert "\r" not in text
         assert not text.startswith("\ufeff")
         if name.endswith(".txt"):

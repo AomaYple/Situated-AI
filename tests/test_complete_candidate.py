@@ -130,6 +130,10 @@ def test_正式候选包含所有生产模块且不修改生成源():
     assert "# SITAI BEGIN " in patched
     assert "# SITAI END " in patched
     for name, text in files.items():
+        if isinstance(text, bytes):
+            assert name == distribution.THUMBNAIL_NAME
+            assert text.startswith(b"\x89PNG\r\n\x1a\n")
+            continue
         assert not text.startswith("\ufeff")
         assert "\r" not in text
         if name.endswith(".txt"):

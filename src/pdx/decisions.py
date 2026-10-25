@@ -1043,6 +1043,7 @@ def metadata_payload(
         "short_description": (
             "依据国家处境综合调整政治、经济、外交与军事 AI 倾向，保留原版资格、成本和行动执行。"
         ),
+        "picture": "thumbnail.png",
         "tags": [],
         "relationships": [],
         "enabled_modules": enabled_modules
@@ -1319,13 +1320,16 @@ def build(
     return files
 
 
-def write(root: Path, files: Mapping[str, str] | None = None) -> list[Path]:
+def write(root: Path, files: Mapping[str, str | bytes] | None = None) -> list[Path]:
     files = files if files is not None else build()
     written: list[Path] = []
     for name, text in sorted(files.items()):
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8", newline="\n")
+        if isinstance(text, bytes):
+            path.write_bytes(text)
+        else:
+            path.write_text(text, encoding="utf-8", newline="\n")
         written.append(path)
     # 新产物写入成功后才删除固定受控的旧文件；探针与用户文件交给 check 报告。
     stale_names = {
@@ -1351,12 +1355,13 @@ def write(root: Path, files: Mapping[str, str] | None = None) -> list[Path]:
     return written
 
 
-def check(root: Path, files: Mapping[str, str] | None = None) -> list[str]:
+def check(root: Path, files: Mapping[str, str | bytes] | None = None) -> list[str]:
     files = files if files is not None else build()
     issues = [
         f"{name} 与决策数据源不一致"
         for name, text in files.items()
-        if not (root / name).is_file() or (root / name).read_bytes() != text.encode("utf-8")
+        if not (root / name).is_file()
+        or (root / name).read_bytes() != (text if isinstance(text, bytes) else text.encode("utf-8"))
     ]
     issues.extend(
         f"{p.relative_to(root)} 是未声明产物"
