@@ -1,4 +1,4 @@
-"""工程基线契约的回归测试。"""
+"""工程基线和终极计划契约的回归测试。"""
 
 from __future__ import annotations
 
@@ -48,31 +48,27 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     root = Path(__file__).resolve().parents[1]
     plan = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
-    assert "# Situated AI 深化扩展计划" in plan
+    assert "# Situated AI 终极深化计划" in plan
     version = re.search(r"计划版本：(\d+)\.(\d+)", plan)
     assert version is not None
-    assert (int(version.group(1)), int(version.group(2))) >= (12, 5)
-    assert all(f"## F{index}：" in plan for index in range(3))
-    assert all(f"## F{index}：" in plan for index in range(9, 19))
-    assert "当前扩展队列：" in plan
-    assert "## 阶段状态机、产物和回退" in plan
-    assert "F9 固定候选分母" in plan
-    assert "## F15：Mod 内容与结构整合、更新、清理" in plan
-    assert "## F16：解释、本地化与计算成本综合收口" in plan
-    assert "## F17：Mod 开发原则最终符合性审计与整改" in plan
-    assert "完整 `full-acceptance` 留到 F18 在最终冻结候选上只运行一次" in plan
-    assert "用户负责长期游戏行为、平衡、后期性能、GUI 和工坊验收" in plan
-    assert "用户负责长期游戏行为" in plan
-    assert "用户可据此进行长期游戏观察的版本出口" in plan
-    assert "UTF-8 无 BOM/LF" in plan
-    assert "长期行为、平衡、后期性能、语言呈现和工坊发布" in checklist
+    assert (int(version.group(1)), int(version.group(2))) >= (13, 0)
+    stage_positions = [plan.index(f"### U{index}：") for index in range(13)]
+    assert stage_positions == sorted(stage_positions)
+    assert "F0–F18" in plan
+    assert "每个 U 阶段都必须从上一完整包增量生成一个可安装、可运行、可解释的标准 Mod 包" in plan
+    assert "正确性第一、速度第二、内存第三" in plan
+    assert "静态检查、日志、快照、模拟、实测、推断和玩家验收" in plan
+    assert "当前下一步" in plan
+    assert "U0" in checklist
+    assert "每阶段必须交付可玩包" in checklist
     assert "situated-ai" in checklist
     assert "标准包" in checklist
     assert "1.1.1 候选已生成" in checklist
+    assert "运行期观察工具 | 未列入当前交付" in checklist
 
 
 def test_current_document_indexes_are_complete() -> None:
-    """当前入口应指向同一收口状态，避免索引回退到旧版本或漏列阶段收据。"""
+    """当前入口指向同一终极队列，历史收据仍可追溯。"""
     root = Path(__file__).resolve().parents[1]
     tools = (root / "tools/README.md").read_text(encoding="utf-8")
     execution = (root / "docs/design/exec/README.md").read_text(encoding="utf-8")
@@ -81,5 +77,8 @@ def test_current_document_indexes_are_complete() -> None:
     assert "Situated AI 1.1.1" in tools
     assert "dist/situated-ai-1.0.1.zip" not in tools
     assert all(f"F{index}-" in execution for index in range(9, 19))
-    assert "当前维护候选为 `Situated AI 1.1.1`" in execution
-    assert "不把本索引当成第二套待办队列" in execution
+    assert "当前维护候选为 Situated AI 1.1.1" in execution
+    assert "U0–U12" in execution
+    assert "不另列第二套待办" in execution
+    assert "[Situated AI 终极深化计划](mod重设计-实施计划.md)" in execution
+    assert "[F18 集成、完整回归和交付](F18-集成交付-结果.md)" in execution
