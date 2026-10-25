@@ -9,12 +9,13 @@
 |---|---|
 | 代理接手和修改边界 | [根目录 AGENTS.md](../AGENTS.md) |
 | 贡献、检查、Git 和发布 | [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| 安全问题私密报告 | [SECURITY.md](../SECURITY.md) |
 | 工程原则 | [工程原则](principles/工程原则.md) |
 | Mod 原则 | [Mod 开发原则](principles/Mod开发原则.md) |
 | 工具、快照和证据边界 | [工程交付基线](design/exec/工程基线-1.0.md) |
 | 产品架构 | [处境决策设计](design/03-处境决策设计.md) |
 | 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面.md)、[政治候选面](design/02-政治候选面.md) |
-| 当前计划 | [Situated AI 1.1.0 当前交付与后续计划](design/exec/mod重设计-实施计划.md) |
+| 当前计划 | [Situated AI 深化扩展计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
 | 工具使用 | [工具手册](../tools/README.md) |
 | Victoria 3 知识库 | [victoria3-modding](victoria3-modding/README.md) |
@@ -29,7 +30,7 @@
 
 | 文档类型 | 唯一来源 | 更新方式 |
 |---|---|---|
-| 规则与贡献流程 | `AGENTS.md`、`CONTRIBUTING.md`、`docs/principles/` | 人工评审；不在导航页复制 |
+| 规则与贡献流程 | `AGENTS.md`、`CONTRIBUTING.md`、`SECURITY.md`、`docs/principles/` | 人工评审；不在导航页复制 |
 | 产品设计、计划、状态和结果 | `docs/design/` | 只在对应权威页更新，结果页记录证据类型 |
 | 原版机械统计、指纹和索引 | `docs/design/02-*.md`、`docs/victoria3-modding/08-目录全量清单.md`、`13-common全量键名索引.md` 等生成目标 | 使用仓库 Python CLI 生成或核对，禁止手改生成数据 |
 | Victoria 3 研究正文 | `docs/victoria3-modding/` | 保留历史采集值，但必须标明底本版本、快照时点和证据边界 |

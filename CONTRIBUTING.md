@@ -1,118 +1,119 @@
 # 贡献与维护规范
 
-本指南定义如何修改、验证、提交和交付 Situated AI。代理接手路由见 [AGENTS.md](AGENTS.md)，持续约束见
-[工程原则](docs/principles/工程原则.md)和[Mod 开发原则](docs/principles/Mod开发原则.md)，当前出口见
-[1.1.0 当前交付与后续计划](docs/design/exec/mod重设计-实施计划.md)。仓库没有 `CONTRIBUTE.md`，不要创建别名文件。
+本指南统一维护流程、验证命令和交付步骤。任务路由见 [AGENTS.md](AGENTS.md)，持续工程与产品约束见
+[工程原则](docs/principles/工程原则.md)和[Mod 开发原则](docs/principles/Mod开发原则.md)，生成与证据合同见
+[工程交付基线](docs/design/exec/工程基线-1.0.md)，当前阶段见[实施计划](docs/design/exec/mod重设计-实施计划.md)。
 
-当前职责边界是明确的：助手维护 Mod 源、生成器、原版字段合法性、静态分析和可交付包；用户负责启动游戏、长期
-观察、平衡、体验和工坊发布。日志、存档和最小复现由用户提供后，助手只据可复核证据辅助修复。长期 GUI、压力和行为
-自动化不属于默认工程出口。
+## 工作前与问题反馈
 
-普通问题使用仓库 Issues，并附上版本、最小复现和已脱敏的日志；安全问题请按 [SECURITY.md](SECURITY.md) 私密报告。
-依赖和 Action 由 Dependabot 每周检查，更新 PR 同样经过审查与 CI，不自动合并。Action 引用固定为完整提交 SHA；
-升级时保留可读版本注释。CodeQL 在 PR、`main` 推送和每周计划中扫描 Python 与工作流，结果见仓库 Security 页；
-这些安全检查不替代原版字段门禁、离线合同或用户实机验收。
-Dependabot 的 Python 更新以 `pyproject.toml` 为入口；`requirements.lock` 是本机依赖闭包，调整依赖后须在 Windows
-Python 3.14 环境核对并按需运行 `v3 lock --write` 更新，不能假定机器人会重建该文件。
+修改前检查 `git status --short --branch` 和 `git diff --check`，保留已有改动；按变更风险运行充分的检查。
+具体证据类别及其证明范围见工程交付基线。
 
-## 开始工作
+普通问题通过仓库 Issues 提交，并尽量提供游戏版本、Mod 版本与包 SHA-256、启用的 Mod 集、存档或新局条件、
+复现步骤和脱敏日志。安全问题使用 [SECURITY.md](SECURITY.md) 中的私密报告方式，不在公开 Issue 附利用细节或敏感数据。
 
-从目标工作树运行：
+依赖配置集中在 `pyproject.toml`；`requirements.lock` 是 Windows Python 3.14 的安装闭包。调整依赖后运行
+`pip check` 和 `v3 lock --write`，再复核锁文件差异。更新 GitHub Actions 时沿用工作流中的完整提交 SHA 固定方式，
+所有依赖和自动化更新均通过审查与 CI。
 
-```text
-.venv\Scripts\python.exe -X utf8 -c "import sys; print(sys.version)"
-git status --short --branch
-git diff --check
-```
+## 环境准备
 
-macOS/Linux 将解释器替换为 `.venv/bin/python`。优先使用仓库 `.venv`；依赖和检查配置只在
-`pyproject.toml` 维护。不要依赖激活脚本、默认编码或本机绝对路径。
-
-首次使用需要 Python 3.11+，在仓库根目录创建环境：
+需要 Python 3.11 或更新版本。优先使用仓库虚拟环境中的解释器，不依赖激活脚本、默认编码或本机绝对路径。
 
 ```text
 python -m venv .venv
+```
+
+Windows：
+
+```text
 .venv\Scripts\python.exe -X utf8 -m pip install -e ".[dev]"
 .venv\Scripts\python.exe -X utf8 -m pip check
 ```
 
-macOS/Linux 同样创建 `.venv`，后两条使用 `.venv/bin/python`。开发工具需在完整仓库中运行，以便读取
-`mod/decisions/`、测试、入库快照和文档；仅安装 Python 包不等于安装游戏 Mod。可用 `V3_ROOT` 指定游戏安装
-根目录、`V3_USERDIR` 指定用户数据目录；未安装游戏时仍可运行离线合同。`requirements.lock` 是 Windows
-Python 3.14 的已安装依赖闭包；其他平台按 `pyproject.toml` 解析，由三平台 CI 核验。
-
-## Mod 生成与发布
-
-生产源在 `mod/decisions/*.toml`，生成链由 `src/pdx/decisions.py`、`decision_rules.py`、
-`decision_adapters.py` 和 `distribution.py` 承担。修改源后运行：
+macOS/Linux：
 
 ```text
-.venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --write
-.venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
-.venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli decision-audit
-.venv\Scripts\python.exe -X utf8 -m pdx.cli decision-audit --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.1.0.zip
+.venv/bin/python -X utf8 -m pip install -e ".[dev]"
+.venv/bin/python -X utf8 -m pip check
 ```
 
-生成的 `mod/common`、本地化和 metadata 不手改。标准包必须包含 `.metadata/metadata.json`、
-`DISTRIBUTION-MANIFEST.json`、README、`common/` 和锁定游戏的全部生产语言；不得包含探针、Python、日志、
-缓存、本体资源或历史实验文件。`pdx.distribution.validate_package` 负责路径、重复项、哈希、编码和探针边界。
+开发命令应从完整仓库运行，以便读取 `mod/decisions/`、测试、快照和文档。可通过 `V3_ROOT` 指定游戏安装根目录，
+通过 `V3_USERDIR` 指定用户数据目录；未安装游戏时仍可运行离线检查。`requirements.lock` 仅适用于 Windows
+Python 3.14；其他平台依据 `pyproject.toml` 解析依赖，并由三平台 CI 核验。
 
-`modgen --write/--check` 和 `package` 必须读取锁定原版；未安装游戏或底本漂移时硬失败，不从冻结产物静默重建。
-生成时同时更新仓库专用 `mod/generation-lock.json`，记录源码、TOML、底本和生成物的逐字节哈希；该文件不进入
-发布 ZIP。无游戏 CI 使用 `modguard --offline` 和 `decision-audit --offline` 核对冻结一致性、脚本语法、
-规则合同与入库快照接口，不能替代本机原版重生成。
-真实依赖原版的测试标记为 `integration`，由有游戏的完整回归执行；离线合同继续覆盖打包原语、拒绝分支和冻结漂移。
-`decision-audit` 默认复用一次生产构建的 engineering metadata；`--offline` 从入库规则源和锁定底本构造同一份静态合同。
-两种模式都核对信息域、读取器、规则、原版消费者、解释字段和未知值回退，只输出 `static_check` 证据，不启动游戏，
-也不宣称 AI 行为通过。
-离线合同必须调用生产规则模块公开的合同生成器；新增字段时先修改唯一来源，再由生产和离线两条输入路径共同覆盖，
-禁止在报告层手工复制规则字段。
+## Mod 生成与打包
 
-## 验证矩阵
-
-按风险选择最小充分检查；正式收口至少执行：
+生产源位于 `mod/decisions/*.toml`。修改源后，先生成并核对仓库产物，再执行静态合同和打包检查：
 
 ```text
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py encoding
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py hygiene
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py lint .
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py format --check .
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py types
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py test-offline
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py baseline
-.venv\Scripts\python.exe -X utf8 tools/ci/run_check.py deadcode
+python -m pdx.cli modgen --write
+python -m pdx.cli modgen --check
+python -m pdx.cli modguard --offline
+python -m pdx.cli decision-audit
+python -m pdx.cli decision-audit --offline
+python -m pdx.cli package
 ```
 
-需要完整 Python 回归时运行 `test` 或 `full-acceptance --quiet`；默认可使用 `-n auto --dist loadscope`，
-但必须记录实际 worker、选择集、跳过项、覆盖率、墙钟和 RSS。基准清除普通 pytest 参数并串行运行。
-没有同口径基线时只报告绝对成本，不声称提速。
+命令使用当前虚拟环境的 Python；Windows 显式调用 `.venv\Scripts\python.exe -X utf8`，macOS/Linux 调用
+`.venv/bin/python -X utf8`。`mod/common/`、生成的本地化和 metadata 不手改。版本、包文件清单、编码、manifest、
+哈希和路径合同以工程交付基线及生产校验器为准。
 
-工程检查、静态快照、脚本加载和单次评分不能证明 AI 行为、平衡、长期性能或玩家体验。当前任务由用户自行
-进行长期实机和创意工坊验收；本仓库只保证 Mod 工程上合法、可生成、可部署、可审计。
+生产生成和打包须读取锁定 Victoria 3 原版；缺少游戏目录或底本漂移时应硬失败，不得从冻结产物静默重建。
+`mod/generation-lock.json` 用于离线比对源、底本和生成产物，不放入发布包。离线检查核对冻结合同和静态接口，
+不能代替读取本机原版重生成；`decision-audit` 的两种输入模式均只提供 `static_check` 证据，不启动游戏。
+离线合同复用生产规则模块提供的合同生成器；新增字段先修改唯一来源，再由生产和离线路径共同覆盖。
 
-## 文件、文档和清理
+标准包只包含 Mod 安装所需内容，不含探针、Python、日志、缓存、本体资源或历史实验。ZIP 路径使用 POSIX 形式；
+游戏文本的 BOM 只在游戏安装或打包边界添加。完整包内合同和恢复边界见工程交付基线。
 
-所有受控文本为 UTF-8 无 BOM、LF；游戏文本只在 ZIP/安装边界加 BOM。机械表、manifest、指纹和统计必须由
-Python 生成器更新。删除或改名之前用 Python/`git grep` 盘点调用方、动态注册、测试、CLI、文档、生成入口和
-历史证据；缓存和运行态可以清理，历史证据与第三方原始字节按契约保留。规则、计划、结果和历史文档不要互相复制。
+## 验证
 
-长期实机/压力/行为探针不属于当前工程交付链；历史结论只在 Git 历史中保留。当前工程事实写入少量
-`docs/design/exec/*-结果.md` 收据，可再生分析输出写入被忽略的 `tools/out/`。
-可复用的静态分析、生成、快照和离线检查按当前生产调用方保留。
+按风险选择检查。阶段开发运行改动域测试；冻结最终候选后运行一次完整回归。静态收口至少运行：
 
-## 分支、提交和合并
+```text
+python tools/ci/run_check.py encoding
+python tools/ci/run_check.py hygiene
+python tools/ci/run_check.py lint .
+python tools/ci/run_check.py format --check .
+python tools/ci/run_check.py types
+python tools/ci/run_check.py baseline
+python tools/ci/run_check.py deadcode
+```
 
-`main` 是唯一长期主线。普通任务使用 `codex/<topic>`，发布修复使用 `hotfix/<topic>`；不常设 `develop`。
-一次提交围绕一个完整目的，源码、测试、规则、文档和生成物契约一起提交；标题和正文使用中文，命令、路径和标识符保留原文。
+常规反馈或无游戏环境运行 `python tools/ci/run_check.py test-offline`；冻结最终候选运行
+`python tools/ci/run_check.py full-acceptance --quiet`。完整验收已经包含离线用例，不要在同一轮再重复运行 `test-offline`。
+pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录实际 worker、测试选择、跳过项、覆盖率、墙钟和进程 RSS。
+性能基准清除普通 pytest 参数并串行运行；输入、测试集合、环境和资源口径不一致时，只报告各自成本，不声称整体提速。
 
-提交前后：
+完整测试会创建 pytest、benchmark 和字节码缓存。测试结束后清理这些可再生目录，再运行 `hygiene` 作为最后的卫生检查；
+不要与测试并行运行 hygiene，否则会把测试正在创建的缓存误报成残留。
 
-1. 检查 `git status --short --branch`、`git diff --check`、暂存差异和验证结果；
-2. 不提交凭据、`.venv`、缓存、日志、`tools/out` 或临时文件；
-3. 推送主题分支并创建中文 PR，说明目的、关键设计、实际检查、跳过项和用户验收边界；
-4. CI 通过后合并到 `main`，核对本地/远端主线、树等价和工作树干净，再删除短期分支；
-5. 禁止强制推送 `main`，不移动已发布标签。版本标签指向对应交付的合并提交；标准包必须由该提交的生成器和源数据生成并校验。GitHub Release 附 ZIP 与 SHA-256 校验文件，候选状态如实标为 Pre-release；下载后复核字节，再更新[版本交付索引](docs/design/exec/版本交付-结果.md)。历史包不通过修改当前版本号重建。
+Mod 行为目标和用户实机验收边界见 Mod 开发原则。助手可基于用户提供的版本、包哈希、启用 Mod 集、存档和日志，
+使用仓库工具辅助定位；结果按工程交付基线标明证据类别，不扩展其证明范围。
 
-最终报告分别写明实际修改、删除/保留、检查结果、失败/跳过、包路径和 SHA-256、Git/PR 状态，以及用户仍需完成的长期实机事项。
+## 文档与清理
+
+受控文本使用 UTF-8 无 BOM、LF；原版、第三方及冻结证据按其原始字节契约保留。文档、统计表、指纹和 manifest
+由各自唯一来源维护；需要生成的内容通过 Python 工具更新，不手改生成物。
+
+删除或改名之前，用 Python 或 `git grep` 核对调用方、动态注册、测试、CLI、生成入口、链接和证据引用，并同步
+维护内容、链接、忽略规则及测试。缓存、运行态和可再生输出可按需清理；历史证据依契约保留。当前结果写入少量
+`docs/design/exec/*-结果.md` 收据，可再生的本机输出放在忽略的 `tools/out/`。
+
+## 分支、提交与合并
+
+`main` 是唯一长期主线。普通任务使用短期 `codex/<topic>` 分支，已发布版本的修复使用 `hotfix/<topic>`；不设置
+常驻 `develop`。提交围绕一个完整目的，相关源码、测试、规则、文档和生成合同一起交付。提交标题、正文和 PR 使用
+中文，命令、路径和代码标识符保留原文。
+
+提交和合并步骤：
+
+1. 检查工作树、暂存差异、`git diff --check`、编码和所需验证结果；排除凭据、`.venv`、缓存、日志、`tools/out/` 和临时产物。
+2. 推送主题分支并创建中文 PR，说明问题、方案、实际检查、跳过或失败项及验收边界。
+3. CI 通过并完成审查后合并至 `main`，核对本地和远端主线及工作树状态，再清理短期分支。
+4. 禁止强制推送 `main`，不移动已发布标签。版本标签指向交付合并提交；标准包从该提交的源和生成器构建并校验。
+   GitHub Release 附标准 ZIP 和 SHA-256 校验文件，候选版如实标为 Pre-release；历史包不得通过改写当前版本重建。
+
+最终说明实际修改、检查结果、失败或跳过项、交付包路径与哈希、Git/PR 状态，以及仍由用户验收的事项；明确区分
+静态检查、快照、模拟、实测和推断。
