@@ -134,7 +134,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:revolution_aversion
 		# political_default_risk [political]; 财政违约提高避免革命的原版倾向，不禁止立法
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } multiply = 1.2 }
 		# SITAI END information:revolution_aversion
 	}
 
@@ -189,7 +189,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.negotiation_chance
 		# structural_organized_negotiation [political]; 财政政治能承受时，社会激进化与有组织集团不满共同提高原版已经可行的立法协商倾向
-		if = { limit = { exists = scope:interest_group scope:interest_group = { ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.1 ig_approval < 0 } exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } multiply = 1.1 }
+		if = { limit = { exists = scope:interest_group scope:interest_group = { ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.1 ig_approval < 0 } exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } multiply = 1.25 }
 		# SITAI END information:ai_strategy_default.negotiation_chance
 	max = 1
 	}
@@ -1296,10 +1296,10 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.institution_scores.institution_colonial_affairs
 		# coordinated_institution_colonial_affairs_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；institution_colonial_affairs_financial_cost
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.75 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# coordinated_institution_colonial_affairs_administrative_cost [economy]; 共享约束下比较边际收益与机会成本；institution_colonial_affairs_administrative_cost
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.8 }
 		# SITAI END information:ai_strategy_default.institution_scores.institution_colonial_affairs
 	}
 		institution_social_security = {
@@ -1307,7 +1307,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:institution_scores.institution_social_security
 		# administrative_cost_guard [economy]; 违约且和平时降低新增社会保障制度的支出倾向
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.8 }
 		# SITAI END information:institution_scores.institution_social_security
 	}
 		institution_workplace_safety = {
@@ -1315,21 +1315,24 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.institution_scores.institution_workplace_safety
 		# coordinated_institution_workplace_safety_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；institution_workplace_safety_financial_cost
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.75 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# coordinated_institution_workplace_safety_administrative_cost [economy]; 共享约束下比较边际收益与机会成本；institution_workplace_safety_administrative_cost
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.8 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# coordinated_institution_workplace_safety_social_need [political]; 共享约束下比较边际收益与机会成本；institution_workplace_safety_social_need
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
 		# SITAI END information:ai_strategy_default.institution_scores.institution_workplace_safety
 	}
 		institution_schools = {
 			value = 10
 
 		# SITAI BEGIN information:institution_scores.institution_schools
+		# decisive_school_investment [political]; 人口规模与充分财政政治容量一致时更重视教育制度候选
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no legitimacy >= 75 scaled_debt <= 0.2 net_total_income > 0 bureaucracy > 0 total_population >= 0 total_population >= 2000000 } } multiply = 1.3 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 75 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.2 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { total_population >= 0 NOT = { total_population >= 2000000 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 total_population >= 0 } } } } } multiply = 1.0 }
 		# social_school_priority [political]; 和平且有财政能力的大人口国家稍提高学校制度原版评分
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no total_population >= 0 total_population >= 2000000 } } multiply = 1.05 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no total_population >= 0 total_population >= 2000000 } } multiply = 1.15 }
 		# SITAI END information:institution_scores.institution_schools
 	}
 		institution_police = {
@@ -1337,10 +1340,10 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.institution_scores.institution_police
 		# coordinated_institution_police_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；institution_police_financial_cost
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.75 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# coordinated_institution_police_administrative_cost [economy]; 共享约束下比较边际收益与机会成本；institution_police_administrative_cost
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.8 }
 		# SITAI END information:ai_strategy_default.institution_scores.institution_police
 	}
 		institution_health_system = {
@@ -1348,13 +1351,13 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.institution_scores.institution_health_system
 		# coordinated_institution_health_system_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；institution_health_system_financial_cost
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.75 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# coordinated_institution_health_system_administrative_cost [economy]; 共享约束下比较边际收益与机会成本；institution_health_system_administrative_cost
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.8 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# coordinated_institution_health_system_social_need [political]; 共享约束下比较边际收益与机会成本；institution_health_system_social_need
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
 		# SITAI END information:ai_strategy_default.institution_scores.institution_health_system
 	}
 		institution_home_affairs = {
@@ -1362,10 +1365,10 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.institution_scores.institution_home_affairs
 		# coordinated_institution_home_affairs_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；institution_home_affairs_financial_cost
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.75 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# coordinated_institution_home_affairs_administrative_cost [economy]; 共享约束下比较边际收益与机会成本；institution_home_affairs_administrative_cost
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.95 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.8 }
 		# SITAI END information:ai_strategy_default.institution_scores.institution_home_affairs
 	}
 	}
@@ -2799,13 +2802,13 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:state_value
 		# geographic_isolation_financial_cost [geography]; 财政违约且没有海军的和平国家，对孤立的海外/外部州额外计入有界承诺成本
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes navy_size >= 0 navy_size = 0 } exists = scope:target_state scope:target_state = { NOT = { owner = root } is_isolated_from_market = yes } } multiply = { value = 0.95 desc = SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON } }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes navy_size >= 0 navy_size = 0 } exists = scope:target_state scope:target_state = { NOT = { owner = root } is_isolated_from_market = yes } } multiply = { value = 0.8 desc = SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON } }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = scope:target_state scope:target_state = { NOT = { NOT = { owner = root } } } } AND = { exists = scope:target_state scope:target_state = { NOT = { is_isolated_from_market = yes } } } AND = { exists = ROOT ROOT = { navy_size >= 0 NOT = { navy_size = 0 } } } AND = { exists = ROOT ROOT = { navy_size >= 0 } exists = scope:target_state scope:target_state = {  } } } } } multiply = 1.0 }
 		# identity_feasible_homeland [identity]; 本土认同、现有国家路线与可达经济条件一致时，提高候选州的有限战略价值
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no country_fervor_primary_culture > 10 fixed_income > 0 has_strategy = ai_strategy_territorial_expansion } exists = scope:target_state scope:target_state = { NOT = { owner = root } is_homeland_of_country_cultures = root primary_cultures_percent_state = { target_country = root value >= 0 } primary_cultures_percent_state = { target_country = root value <= 1 } primary_cultures_percent_state = { target_country = root value >= 0.25 } is_isolated_from_market = no } } multiply = { value = 1.05 desc = SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON } }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no country_fervor_primary_culture > 10 fixed_income > 0 has_strategy = ai_strategy_territorial_expansion } exists = scope:target_state scope:target_state = { NOT = { owner = root } is_homeland_of_country_cultures = root primary_cultures_percent_state = { target_country = root value >= 0 } primary_cultures_percent_state = { target_country = root value <= 1 } primary_cultures_percent_state = { target_country = root value >= 0.25 } is_isolated_from_market = no } } multiply = { value = 1.2 desc = SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON } }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = scope:target_state scope:target_state = { NOT = { NOT = { owner = root } } } } AND = { exists = scope:target_state scope:target_state = { NOT = { is_homeland_of_country_cultures = root } } } AND = { exists = scope:target_state scope:target_state = { primary_cultures_percent_state = { target_country = root value >= 0 } primary_cultures_percent_state = { target_country = root value <= 1 } NOT = { primary_cultures_percent_state = { target_country = root value >= 0.25 } } } } AND = { exists = scope:target_state scope:target_state = { NOT = { is_isolated_from_market = no } } } AND = { exists = ROOT ROOT = { NOT = { country_fervor_primary_culture > 10 } } } AND = { exists = ROOT ROOT = { NOT = { fixed_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_territorial_expansion } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } exists = scope:target_state scope:target_state = { primary_cultures_percent_state = { target_country = root value >= 0 } primary_cultures_percent_state = { target_country = root value <= 1 } } } } } } multiply = 1.0 }
 		# geographic_port_continuity [geography]; 保留有财政能力国家对条约港位置的有限原版相对偏好
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no } exists = scope:target_state scope:target_state = { is_treaty_port = yes } } multiply = { value = 1.05 desc = SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON } }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no } exists = scope:target_state scope:target_state = { is_treaty_port = yes } } multiply = { value = 1.15 desc = SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON } }
 		# SITAI END information:state_value
 	min = {
 			value = 0
@@ -3280,7 +3283,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.subject_value
 		# comparative_large_subject_administration [subjects]; 新目标经济规模大于本国且行政力已不足时计入接管机会成本，不以GDP预测胜负
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { NOT = { is_subject_of = root } gdp >= 0 gdp > "ROOT.gdp" } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { NOT = { is_subject_of = root } gdp >= 0 gdp > "ROOT.gdp" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { NOT = { NOT = { is_subject_of = root } } } } AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 NOT = { gdp > "ROOT.gdp" } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 } } } } } multiply = 1.0 }
 		# coordinated_overlord_financial_cost [subjects]; 共享约束下比较边际收益与机会成本；overlord_financial_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -5082,13 +5085,19 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:wanted_construction_output
 		# fiscal_construction_guard [fiscal]; 和平且违约时降低新增建设目标；不取消已有施工或创造资金
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.85 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.75 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# war_defeat_reconstruction [economy]; 原版记录的战争目标失败仍在有效期内且财政有收入时，适度提高复原建设目标
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no is_at_war = no has_variable = recently_lost_war fixed_income > 0 } } multiply = 1.05 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { has_variable = recently_lost_war } } } AND = { exists = ROOT ROOT = { NOT = { fixed_income > 0 } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# liquidity_construction_guard [fiscal]; 持续借贷、高债务且距破产不足半年时降低新增建设目标，优先于复原和发展奖励
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } } multiply = 0.85 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } } } } } multiply = 1.0 }
+		# war_defeat_reconstruction [economy]; 原版失败记忆有效且财政、政治和和平条件可承受时提高复原建设目标
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_variable = recently_lost_war fixed_income > 0 } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { has_variable = recently_lost_war } } } AND = { exists = ROOT ROOT = { NOT = { fixed_income > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
+		# decisive_industrial_development [economy]; 低债务、有结余、行政富余和高合法性与原有工业路线共同成立时提高建设目标
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no legitimacy >= 75 scaled_debt <= 0.2 net_total_income > 0 bureaucracy > 0 has_strategy = ai_strategy_industrial_expansion fixed_income > 0 } } multiply = 1.3 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 75 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.2 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = { NOT = { fixed_income > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
 		# economic_development [economy]; 有持续收入且沿产业路线时适度提高建设目标
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no fixed_income > 0 has_strategy = ai_strategy_industrial_expansion } } multiply = 1.05 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no fixed_income > 0 has_strategy = ai_strategy_industrial_expansion } } multiply = 1.15 }
 		# SITAI END information:wanted_construction_output
 	}
 
@@ -5456,7 +5465,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:max_active_stances
 		# diplomatic_overextension [diplomacy]; 违约时适度收缩同时维持的战略立场数量
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.8 }
 		# SITAI END information:max_active_stances
 	min = 1
 		max = 10
@@ -5508,7 +5517,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:wanted_army_size
 		# military_peacetime_budget [military]; 和平且违约时适度降低新增常备军目标
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.85 }
 		# SITAI END information:wanted_army_size
 	}
 
@@ -5556,7 +5565,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:wanted_navy_size
 		# naval_peacetime_budget [military]; 和平且违约时适度降低新增海军目标
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.8 }
 		# SITAI END information:wanted_navy_size
 	}
 
@@ -5579,7 +5588,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.ship_construction_output_multiplier
 		# coordinated_liquidity_ship_construction_output_multiplier [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } } multiply = 0.8 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } } } } } multiply = 1.0 }
 		# ai_strategy_default_ship_construction_output_multiplier [military]; 和平违约时有限削减额外远征海军需求，战争和正常财政不适用；保留原版防御与行动约束
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
@@ -5630,7 +5639,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.ai_ship_category_weights.ai_ship_category_battle_line
 		# structural_naval_capital_cost_battle_line [military]; 和平违约且借贷时，适度降低资本密集船类的相对新增编制倾向
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 } } multiply = 0.95 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 } } multiply = 0.8 }
 		# SITAI END information:ai_strategy_default.ai_ship_category_weights.ai_ship_category_battle_line
 	}
 		ai_ship_category_coastal_defense = {
@@ -5716,7 +5725,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.ai_ship_category_weights.ai_ship_category_carriers
 		# structural_naval_capital_cost_carriers [military]; 和平违约且借贷时，适度降低资本密集船类的相对新增编制倾向
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 } } multiply = 0.95 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 } } multiply = 0.8 }
 		# SITAI END information:ai_strategy_default.ai_ship_category_weights.ai_ship_category_carriers
 	}
 		ai_ship_category_transports = {
@@ -5749,7 +5758,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:max_ship_design_complexity
 		# naval_design_affordability [military]; 和平违约期降低新舰设计复杂度目标
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.9 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.85 }
 		# SITAI END information:max_ship_design_complexity
 	}
 
@@ -5857,8 +5866,8 @@ ai_strategy_default = {
 			}
 
 		# SITAI BEGIN information:combat_unit_group_weights.combat_unit_group_artillery
-		# military_artillery_affordability [military]; 已有炮兵科技但和平违约时轻微调整昂贵编制的相对权重
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes has_technology_researched = artillery } } multiply = 0.9 }
+		# military_artillery_affordability [military]; 已有炮兵科技但和平违约时调整昂贵编制的相对权重
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes has_technology_researched = artillery } } multiply = 0.85 }
 		# SITAI END information:combat_unit_group_weights.combat_unit_group_artillery
 	}
 		combat_unit_group_cavalry = {
@@ -5961,7 +5970,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.nationalization_desire
 		# structural_ownership_financial_cost [economy]; 和平财政紧张时，对原版已经存在的国有化倾向计入有限流动性机会成本
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 } } multiply = 0.95 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 } } multiply = 0.8 }
 		# SITAI END information:ai_strategy_default.nationalization_desire
 	}
 
@@ -6180,11 +6189,11 @@ ai_strategy_default = {
 		}
 
 		# SITAI BEGIN information:colonial_interest_ratio
-		# overseas_naval_feasibility [geography]; 海军不足时降低海外利益分配的原版比率
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size < 25 } } multiply = 0.9 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { navy_size >= 0 NOT = { navy_size < 25 } } } AND = { exists = ROOT ROOT = { navy_size >= 0 } } } } } multiply = 1.0 }
 		# overseas_affordability [geography]; 和平违约时减少海外殖民利益分配倾向
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.85 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.7 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# overseas_naval_feasibility [geography]; 海军不足时降低海外利益分配的原版比率
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size < 25 } } multiply = 0.8 }
 		# SITAI END information:colonial_interest_ratio
 	}
 
@@ -7771,7 +7780,7 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 NOT = { relations:root >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 } } } } } multiply = 1.0 }
 		# coordinated_liquidity_secret_goal_scores_antagonize_score [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# coordinated_antagonize_political_cost [political]; 共享约束下比较边际收益与机会成本；antagonize_political_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -8239,7 +8248,7 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 NOT = { relations:root >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 } } } } } multiply = 1.0 }
 		# coordinated_liquidity_secret_goal_scores_conquer_score [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# coordinated_conquer_political_cost [political]; 共享约束下比较边际收益与机会成本；conquer_political_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -8680,7 +8689,7 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 NOT = { relations:root >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 } } } } } multiply = 1.0 }
 		# coordinated_liquidity_secret_goal_scores_dominate_score [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# coordinated_dominate_political_cost [political]; 共享约束下比较边际收益与机会成本；dominate_political_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -8698,10 +8707,13 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:treaty_category_scores.economy
 		# identity_resource_cooperation [identity]; 沿原有资源发展路线的国家优先考虑经济合作类别
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_resource_expansion } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_resource_expansion } } multiply = 1.3 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_resource_expansion } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
+		# decisive_economic_cooperation [diplomacy]; 国家财政政治余量充分时更主动评估经济合作候选
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no legitimacy >= 75 scaled_debt <= 0.2 net_total_income > 0 bureaucracy > 0 fixed_income > 0 } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 75 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.2 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { NOT = { fixed_income > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
 		# diplomatic_economic_cooperation [diplomacy]; 和平且未违约时提高经济合作类别的相对关注
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no } } multiply = 1.15 }
 		# SITAI END information:treaty_category_scores.economy
 	}
 
@@ -8709,8 +8721,11 @@ ai_strategy_default = {
 			value = 5
 
 		# SITAI BEGIN information:treaty_category_scores.trade
+		# decisive_trade_cooperation [market]; 高合法性、低债务与财政行政余量共同支持时提高贸易合作类别关注
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no legitimacy >= 75 scaled_debt <= 0.2 net_total_income > 0 bureaucracy > 0 fixed_income > 0 } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 75 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.2 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { NOT = { fixed_income > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
 		# market_trade_peace [market]; 和平且有收入时优先搜索原版贸易合作条约
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no fixed_income > 0 } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no fixed_income > 0 } } multiply = 1.15 }
 		# SITAI END information:treaty_category_scores.trade
 	}
 
@@ -8723,10 +8738,10 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:treaty_category_scores.military_defense
 		# subject_defense_cooperation [subjects]; 属国在可负担时稍重视防御合作类别
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes in_default = no } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes in_default = no } } multiply = 1.2 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_subject = yes } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# identity_expansion_defense [identity]; 沿原有扩张路线时保留可负担的防御合作关注
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no is_at_war = no has_strategy = ai_strategy_territorial_expansion } } multiply = 1.05 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no is_at_war = no has_strategy = ai_strategy_territorial_expansion } } multiply = 1.15 }
 		# SITAI END information:treaty_category_scores.military_defense
 	}
 
@@ -8795,16 +8810,16 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 NOT = { relations:root >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 } } } } } multiply = 1.0 }
 		# coordinated_liquidity_wargoal_scores_conquer_state [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# structural_military_cost_conquer_state [military]; 目标陆军规模更大且本市场轻武器明显短缺时计入有限进攻机会成本，不代替原版实力预测
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 NOT = { army_size > "ROOT.army_size" } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_pricier > 0.5 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { army_size >= 0 exists = market market = { exists = mg:small_arms mg:small_arms = {  } } } exists = scope:target_country scope:target_country = { army_size >= 0 } } } } } multiply = 1.0 }
 		# comparative_reputation_cost_conquer_state [diplomacy]; 和平且恶名已高时降低额外进攻目标的边际评分，保留防御、解放和独立路线
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { infamy >= 0 NOT = { infamy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { infamy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# comparative_administrative_burden_conquer_state [diplomacy]; 行政亏缺时对大于本国经济体量的新整合目标计入有限机会成本
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 NOT = { gdp > "ROOT.gdp" } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 } } } } } multiply = 1.0 }
 		# coordinated_conquer_state_political_cost [diplomacy]; 共享约束下比较边际收益与机会成本；conquer_state_political_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -8980,16 +8995,16 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 NOT = { relations:root >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 } } } } } multiply = 1.0 }
 		# coordinated_liquidity_wargoal_scores_transfer_subject [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# structural_military_cost_transfer_subject [military]; 目标陆军规模更大且本市场轻武器明显短缺时计入有限进攻机会成本，不代替原版实力预测
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 NOT = { army_size > "ROOT.army_size" } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_pricier > 0.5 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { army_size >= 0 exists = market market = { exists = mg:small_arms mg:small_arms = {  } } } exists = scope:target_country scope:target_country = { army_size >= 0 } } } } } multiply = 1.0 }
 		# comparative_reputation_cost_transfer_subject [diplomacy]; 和平且恶名已高时降低额外进攻目标的边际评分，保留防御、解放和独立路线
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { infamy >= 0 NOT = { infamy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { infamy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# comparative_administrative_burden_transfer_subject [diplomacy]; 行政亏缺时对大于本国经济体量的新整合目标计入有限机会成本
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 NOT = { gdp > "ROOT.gdp" } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 } } } } } multiply = 1.0 }
 		# coordinated_transfer_subject_political_cost [diplomacy]; 共享约束下比较边际收益与机会成本；transfer_subject_political_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -9110,16 +9125,16 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 NOT = { relations:root >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 } } } } } multiply = 1.0 }
 		# coordinated_liquidity_wargoal_scores_make_subject [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# structural_military_cost_make_subject [military]; 目标陆军规模更大且本市场轻武器明显短缺时计入有限进攻机会成本，不代替原版实力预测
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 NOT = { army_size > "ROOT.army_size" } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_pricier > 0.5 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { army_size >= 0 exists = market market = { exists = mg:small_arms mg:small_arms = {  } } } exists = scope:target_country scope:target_country = { army_size >= 0 } } } } } multiply = 1.0 }
 		# comparative_reputation_cost_make_subject [diplomacy]; 和平且恶名已高时降低额外进攻目标的边际评分，保留防御、解放和独立路线
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { infamy >= 0 NOT = { infamy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { infamy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# comparative_administrative_burden_make_subject [diplomacy]; 行政亏缺时对大于本国经济体量的新整合目标计入有限机会成本
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 NOT = { gdp > "ROOT.gdp" } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 } } } } } multiply = 1.0 }
 		# coordinated_make_subject_political_cost [diplomacy]; 共享约束下比较边际收益与机会成本；make_subject_political_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -9136,7 +9151,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.wargoal_scores.increase_autonomy
 		# wargoal_autonomy_increase_autonomy [subjects]; 高自治诉求与可负担条件同时存在时稍提高原有自主路线价值；不增加资格或保证独立，零候选保持零
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 in_default = no taking_loans = no } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 in_default = no taking_loans = no } } multiply = 1.2 }
 		# SITAI END information:ai_strategy_default.wargoal_scores.increase_autonomy
 	}
 
@@ -9181,7 +9196,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.wargoal_scores.reduce_autonomy
 		# comparative_administrative_burden_reduce_autonomy [diplomacy]; 行政亏缺时对大于本国经济体量的新整合目标计入有限机会成本
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 NOT = { gdp > "ROOT.gdp" } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 } } } } } multiply = 1.0 }
 		# coordinated_autonomy_political_cost [subjects]; 共享约束下比较边际收益与机会成本；autonomy_political_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -9299,10 +9314,10 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 NOT = { relations:root >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 } } } } } multiply = 1.0 }
 		# coordinated_liquidity_wargoal_scores_regime_change [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# structural_military_cost_regime_change [military]; 目标陆军规模更大且本市场轻武器明显短缺时计入有限进攻机会成本，不代替原版实力预测
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 NOT = { army_size > "ROOT.army_size" } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_pricier > 0.5 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { army_size >= 0 exists = market market = { exists = mg:small_arms mg:small_arms = {  } } } exists = scope:target_country scope:target_country = { army_size >= 0 } } } } } multiply = 1.0 }
 		# comparative_reputation_cost_regime_change [diplomacy]; 和平且恶名已高时降低额外进攻目标的边际评分，保留防御、解放和独立路线
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -9642,16 +9657,16 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 NOT = { relations:root >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 } } } } } multiply = 1.0 }
 		# coordinated_liquidity_wargoal_scores_annex_country [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# structural_military_cost_annex_country [military]; 目标陆军规模更大且本市场轻武器明显短缺时计入有限进攻机会成本，不代替原版实力预测
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 is_at_war = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } exists = scope:target_country scope:target_country = { army_size >= 0 army_size > "ROOT.army_size" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { army_size >= 0 } exists = scope:target_country scope:target_country = { army_size >= 0 NOT = { army_size > "ROOT.army_size" } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_pricier > 0.5 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { army_size >= 0 exists = market market = { exists = mg:small_arms mg:small_arms = {  } } } exists = scope:target_country scope:target_country = { army_size >= 0 } } } } } multiply = 1.0 }
 		# comparative_reputation_cost_annex_country [diplomacy]; 和平且恶名已高时降低额外进攻目标的边际评分，保留防御、解放和独立路线
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { infamy >= 0 NOT = { infamy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { infamy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# comparative_administrative_burden_annex_country [diplomacy]; 行政亏缺时对大于本国经济体量的新整合目标计入有限机会成本
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes gdp >= 0 bureaucracy < 0 is_at_war = no } exists = scope:target_country scope:target_country = { gdp >= 0 gdp > "ROOT.gdp" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 NOT = { gdp > "ROOT.gdp" } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { gdp >= 0 } exists = scope:target_country scope:target_country = { gdp >= 0 } } } } } multiply = 1.0 }
 		# coordinated_annex_country_political_cost [diplomacy]; 共享约束下比较边际收益与机会成本；annex_country_political_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -9675,10 +9690,10 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } add = -5.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 NOT = { relations:root >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_country scope:target_country = { relations:root >= -100 relations:root <= 100 } } } } } multiply = 1.0 }
 		# coordinated_liquidity_wargoal_scores_colonization_rights [fiscal]; 和平借贷且债务占信用比例较高、预计半年内破产时，计入新增海外军事或进攻承诺的流动性成本；不妨碍已发生战争的最低防御
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.4 weeks_until_bankruptcy >= 0 weeks_until_bankruptcy < 26 } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt >= 0.4 } } } AND = { exists = ROOT ROOT = { weeks_until_bankruptcy >= 0 NOT = { weeks_until_bankruptcy < 26 } } } AND = { exists = scope:target_country scope:target_country = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 weeks_until_bankruptcy >= 0 } exists = scope:target_country scope:target_country = { total_population >= 0 } } } } } multiply = 1.0 }
 		# structural_naval_cost [military]; 海军规模较小且目标海军更大时计入海外扩张成本，不将船数等同战力或可达性
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size < 25 is_at_war = no } exists = scope:target_country scope:target_country = { navy_size >= 0 navy_size > "ROOT.navy_size" } } add = -5.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size < 25 is_at_war = no } exists = scope:target_country scope:target_country = { navy_size >= 0 navy_size > "ROOT.navy_size" } } add = -8.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { navy_size >= 0 } exists = scope:target_country scope:target_country = { navy_size >= 0 NOT = { navy_size > "ROOT.navy_size" } } } AND = { exists = ROOT ROOT = { navy_size >= 0 NOT = { navy_size < 25 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { navy_size >= 0 } exists = scope:target_country scope:target_country = { navy_size >= 0 } } } } } multiply = 1.0 }
 		# comparative_reputation_cost_colonization_rights [diplomacy]; 和平且恶名已高时降低额外进攻目标的边际评分，保留防御、解放和独立路线
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes infamy >= 0 infamy >= 50 is_at_war = no } exists = scope:target_country scope:target_country = { total_population >= 0 total_population > 0 } } add = -5.0 }
@@ -9766,7 +9781,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.wargoal_scores.liberate_subject
 		# wargoal_autonomy_liberate_subject [subjects]; 高自治诉求与可负担条件同时存在时稍提高原有自主路线价值；不增加资格或保证独立，零候选保持零
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 in_default = no taking_loans = no } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 in_default = no taking_loans = no } } multiply = 1.2 }
 		# SITAI END information:ai_strategy_default.wargoal_scores.liberate_subject
 	min = 0
 			max = 100
@@ -9916,7 +9931,7 @@ ai_strategy_default = {
 
 		# SITAI BEGIN information:ai_strategy_default.wargoal_scores.independence
 		# wargoal_autonomy_independence [subjects]; 高自治诉求与可负担条件同时存在时稍提高原有自主路线价值；不增加资格或保证独立，零候选保持零
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 in_default = no taking_loans = no } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 in_default = no taking_loans = no } } multiply = 1.2 }
 		# SITAI END information:ai_strategy_default.wargoal_scores.independence
 	}
 

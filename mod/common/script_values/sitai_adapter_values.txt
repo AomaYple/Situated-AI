@@ -2,6 +2,6 @@ sitai_adapter_fleet_supply_weight = { value = 1.0 # SITAI wrapped-scalar:ai_stra
 
 		# SITAI BEGIN information:ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply
 		# structural_wartime_supply_escort [military]; 战时蒸汽船供给紧张且已有舰队时，在原版次要舰队已允许的护送任务内提高相对保护供给权重
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.25 }
 		# SITAI END information:ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply
 	}

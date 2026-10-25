@@ -168,13 +168,20 @@ scope = "root"
 unit = "boolean"
 kind = "boolean"
 
+[readers.bankruptcy_horizon]
+engine = "weeks_until_bankruptcy"
+scope = "root"
+unit = "weeks"
+kind = "number"
+minimum = 0
+
 [[rules]]
 id = "fiscal_construction_guard"
 intent = "fiscal_recovery"
 domain = "fiscal"
 field = "wanted_construction_output"
 priority = 100
-value = 0.85
+value = 0.75
 conditions = [
   { fact = "default", op = "=", value = true },
   { fact = "war", op = "=", value = false },
@@ -184,18 +191,19 @@ counterexample = "战争时保留原版建设目标；原版零目标保持为�
 
 [[rules]]
 id = "war_defeat_reconstruction"
+intent = "supported_development"
 domain = "economy"
 field = "wanted_construction_output"
 priority = 75
-value = 1.05
+value = 1.2
 conditions = [
   { fact = "default", op = "=", value = false },
   { fact = "war", op = "=", value = false },
   { fact = "war_defeat", op = "=", value = true },
   { fact = "income", op = ">", value = 0 },
 ]
-why = "原版记录的战争目标失败仍在有效期内且财政有收入时，适度提高复原建设目标"
-counterexample = "只覆盖原版写入 recently_lost_war 的战争目标受害方；违约、在战或收入未知时回退原版，不读取所有战败历史"
+why = "原版失败记忆有效且财政、政治和和平条件可承受时提高复原建设目标"
+counterexample = "只覆盖原版写入 recently_lost_war 的战争目标受害方；财政容量不足、政治不稳、在战或收入未知时不提供复原奖励，不读取所有战败历史"
 
 [[rules]]
 id = "economic_development"
@@ -203,7 +211,7 @@ intent = "supported_development"
 domain = "economy"
 field = "wanted_construction_output"
 priority = 50
-value = 1.05
+value = 1.15
 conditions = [
   { fact = "default", op = "=", value = false },
   { fact = "war", op = "=", value = false },
@@ -218,7 +226,7 @@ id = "political_default_risk"
 domain = "political"
 field = "revolution_aversion"
 priority = 50
-value = 1.1
+value = 1.2
 conditions = [
   { fact = "default", op = "=", value = true },
 ]
@@ -231,7 +239,7 @@ intent = "supported_development"
 domain = "political"
 field = "institution_scores.institution_schools"
 priority = 50
-value = 1.05
+value = 1.15
 conditions = [
   { fact = "default", op = "=", value = false },
   { fact = "war", op = "=", value = false },
@@ -246,7 +254,7 @@ intent = "fiscal_recovery"
 domain = "economy"
 field = "institution_scores.institution_social_security"
 priority = 50
-value = 0.9
+value = 0.8
 conditions = [
   { fact = "default", op = "=", value = true },
   { fact = "war", op = "=", value = false },
@@ -260,7 +268,7 @@ intent = "supported_development"
 domain = "market"
 field = "treaty_category_scores.trade"
 priority = 50
-value = 1.1
+value = 1.15
 conditions = [
   { fact = "default", op = "=", value = false },
   { fact = "war", op = "=", value = false },
@@ -275,7 +283,7 @@ intent = "supported_development"
 domain = "diplomacy"
 field = "treaty_category_scores.economy"
 priority = 50
-value = 1.1
+value = 1.15
 conditions = [
   { fact = "default", op = "=", value = false },
   { fact = "war", op = "=", value = false },
@@ -288,7 +296,7 @@ id = "subject_defense_cooperation"
 domain = "subjects"
 field = "treaty_category_scores.military_defense"
 priority = 50
-value = 1.1
+value = 1.2
 conditions = [
   { fact = "subject", op = "=", value = true },
   { fact = "default", op = "=", value = false },
@@ -302,7 +310,7 @@ intent = "fiscal_recovery"
 domain = "diplomacy"
 field = "max_active_stances"
 priority = 50
-value = 0.9
+value = 0.8
 conditions = [
   { fact = "default", op = "=", value = true },
 ]
@@ -315,7 +323,7 @@ intent = "fiscal_recovery"
 domain = "military"
 field = "wanted_army_size"
 priority = 50
-value = 0.9
+value = 0.85
 conditions = [
   { fact = "default", op = "=", value = true },
   { fact = "war", op = "=", value = false },
@@ -329,7 +337,7 @@ intent = "fiscal_recovery"
 domain = "military"
 field = "wanted_navy_size"
 priority = 50
-value = 0.9
+value = 0.8
 conditions = [
   { fact = "default", op = "=", value = true },
   { fact = "war", op = "=", value = false },
@@ -343,7 +351,7 @@ intent = "fiscal_recovery"
 domain = "military"
 field = "max_ship_design_complexity"
 priority = 50
-value = 0.9
+value = 0.85
 conditions = [
   { fact = "default", op = "=", value = true },
   { fact = "war", op = "=", value = false },
@@ -357,13 +365,13 @@ intent = "fiscal_recovery"
 domain = "military"
 field = "combat_unit_group_weights.combat_unit_group_artillery"
 priority = 50
-value = 0.9
+value = 0.85
 conditions = [
   { fact = "default", op = "=", value = true },
   { fact = "war", op = "=", value = false },
   { fact = "artillery_tech", op = "=", value = true },
 ]
-why = "已有炮兵科技但和平违约时轻微调整昂贵编制的相对权重"
+why = "已有炮兵科技但和平违约时调整昂贵编制的相对权重"
 counterexample = "未解锁科技时不新增炮兵权重；战争保持原版"
 
 [[rules]]
@@ -371,8 +379,8 @@ id = "overseas_affordability"
 intent = "fiscal_recovery"
 domain = "geography"
 field = "colonial_interest_ratio"
-priority = 50
-value = 0.85
+priority = 70
+value = 0.7
 conditions = [
   { fact = "default", op = "=", value = true },
   { fact = "war", op = "=", value = false },
@@ -385,7 +393,7 @@ id = "overseas_naval_feasibility"
 domain = "geography"
 field = "colonial_interest_ratio"
 priority = 60
-value = 0.9
+value = 0.8
 conditions = [
   { fact = "navy", op = "<", value = 25 },
 ]
@@ -397,7 +405,7 @@ id = "geographic_port_continuity"
 domain = "geography"
 field = "state_value"
 priority = 50
-value = 1.05
+value = 1.15
 conditions = [
   { fact = "target_port", op = "=", value = true },
   { fact = "default", op = "=", value = false },
@@ -411,7 +419,7 @@ intent = "supported_development"
 domain = "identity"
 field = "treaty_category_scores.economy"
 priority = 70
-value = 1.15
+value = 1.3
 conditions = [
   { fact = "default", op = "=", value = false },
   { fact = "war", op = "=", value = false },
@@ -425,7 +433,7 @@ id = "identity_expansion_defense"
 domain = "identity"
 field = "treaty_category_scores.military_defense"
 priority = 40
-value = 1.05
+value = 1.15
 conditions = [
   { fact = "default", op = "=", value = false },
   { fact = "war", op = "=", value = false },
@@ -441,7 +449,7 @@ intent = "supported_development"
 domain = "identity"
 field = "state_value"
 priority = 100
-value = 1.05
+value = 1.2
 conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_homeland", op = "=", value = true }, { fact = "target_cultural_share", op = ">=", value = 0.25 }, { fact = "target_isolated", op = "=", value = false }, { fact = "fervor", op = ">", value = 10 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false }, { fact = "income", op = ">", value = 0 }, { fact = "expansion_route", op = "=", value = true } ]
 why = "本土认同、现有国家路线与可达经济条件一致时，提高候选州的有限战略价值"
 counterexample = "不以国家标签制造历史脚本；己有州、非本土、文化联系弱、孤立、违约、战争或未知输入不奖励；原版资格、军事胜负和外交代价保持，待用户长期行为验收"
@@ -452,7 +460,71 @@ intent = "fiscal_recovery"
 domain = "geography"
 field = "state_value"
 priority = 200
-value = 0.95
+value = 0.8
 conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_isolated", op = "=", value = true }, { fact = "navy", op = "=", value = 0 }, { fact = "default", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
 why = "财政违约且没有海军的和平国家，对孤立的海外/外部州额外计入有界承诺成本"
 counterexample = "不改变已拥有州，不声称所有孤立州都是海外；不读取秘密计划，不制造海军或强制放弃州，保留原版地理和目标价值，待用户长期行为验收"
+
+[[rules]]
+id = "liquidity_construction_guard"
+intent = "liquidity_recovery"
+domain = "fiscal"
+field = "wanted_construction_output"
+priority = 90
+value = 0.85
+conditions = []
+why = "持续借贷、高债务且距破产不足半年时降低新增建设目标，优先于复原和发展奖励"
+counterexample = "不取消施工、不改变成本和战时防御；低债务、远离破产或未知输入不触发，违约另走更高优先级"
+
+[[rules]]
+id = "decisive_industrial_development"
+intent = "decisive_development"
+domain = "economy"
+field = "wanted_construction_output"
+priority = 60
+value = 1.3
+conditions = [
+  { fact = "industrial_route", op = "=", value = true },
+  { fact = "income", op = ">", value = 0 },
+]
+why = "低债务、有结余、行政富余和高合法性与原有工业路线共同成立时提高建设目标"
+counterexample = "仅为原版目标的单项倍率，不与普通发展累乘；不创造建设资金、劳动力或利润"
+
+[[rules]]
+id = "decisive_school_investment"
+intent = "decisive_development"
+domain = "political"
+field = "institution_scores.institution_schools"
+priority = 70
+value = 1.3
+conditions = [
+  { fact = "population", op = ">=", value = 2000000 },
+]
+why = "人口规模与充分财政政治容量一致时更重视教育制度候选"
+counterexample = "不提高实际制度等级，不绕过法律、成本或行政资格；未知容量不猜测"
+
+[[rules]]
+id = "decisive_trade_cooperation"
+intent = "decisive_development"
+domain = "market"
+field = "treaty_category_scores.trade"
+priority = 60
+value = 1.25
+conditions = [
+  { fact = "income", op = ">", value = 0 },
+]
+why = "高合法性、低债务与财政行政余量共同支持时提高贸易合作类别关注"
+counterexample = "仅调整类别权重，不强制签约、不保证贸易利润，不与普通合作规则叠加"
+
+[[rules]]
+id = "decisive_economic_cooperation"
+intent = "decisive_development"
+domain = "diplomacy"
+field = "treaty_category_scores.economy"
+priority = 60
+value = 1.25
+conditions = [
+  { fact = "income", op = ">", value = 0 },
+]
+why = "国家财政政治余量充分时更主动评估经济合作候选"
+counterexample = "资源路线仍按更高优先级单独仲裁，不累计奖励、不制造合作资格"

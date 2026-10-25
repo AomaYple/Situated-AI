@@ -380,7 +380,7 @@ ai_strategy_subject_strengthen_self = {
 
 		# SITAI BEGIN information:ai_strategy_subject_strengthen_self.weight
 		# ai_strategy_subject_strengthen_self_weight [subjects]; 属国根据自治诉求与财政能力调整原版合法路线，保留宗主关系、实力与机会约束，不强制独立或服从
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no bureaucracy >= 0 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no bureaucracy >= 0 } } multiply = 1.25 }
 		# SITAI END information:ai_strategy_subject_strengthen_self.weight
 	}
 }
@@ -500,7 +500,7 @@ ai_strategy_subject_maintain_autonomy = {
 
 		# SITAI BEGIN information:ai_strategy_subject_maintain_autonomy.weight
 		# ai_strategy_subject_maintain_autonomy_weight [subjects]; 属国根据自治诉求与财政能力调整原版合法路线，保留宗主关系、实力与机会约束，不强制独立或服从
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 is_at_war = no } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 is_at_war = no } } multiply = 1.25 }
 		# SITAI END information:ai_strategy_subject_maintain_autonomy.weight
 	}
 }
@@ -623,7 +623,7 @@ ai_strategy_subject_overlord_compliance = {
 
 		# SITAI BEGIN information:ai_strategy_subject_overlord_compliance.weight
 		# ai_strategy_subject_overlord_compliance_weight [subjects]; 属国根据自治诉求与财政能力调整原版合法路线，保留宗主关系、实力与机会约束，不强制独立或服从
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 in_default = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 in_default = yes } } multiply = 1.2 }
 		# SITAI END information:ai_strategy_subject_overlord_compliance.weight
 	}
 }

@@ -27,14 +27,14 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
         fingerprint["strategic_generator_sha256"]
         == hashlib.sha256(Path(decision_intents.__file__).read_bytes()).hexdigest()
     )
-    assert metadata["version"] == "1.0.2"
+    assert metadata["version"] == "1.1.0"
     values_path = "common/script_values/sitai_adapter_values.txt"
     assert (
         "protect_supply = sitai_adapter_fleet_supply_weight"
         in files["common/ai_strategies/00_default_strategy.txt"]
     )
     assert "sitai_adapter_fleet_supply_weight = { value = 1.0" in files[values_path]
-    assert "multiply = 1.1" in files[values_path]
+    assert "multiply = 1.25" in files[values_path]
     assert contract["behavior_verified"] is False
     assert contract["rules_with_intent"] > len(strategy.intents)
 
@@ -43,7 +43,7 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
 def test_release_is_the_public_full_candidate():
     _, _, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
-    assert metadata["version"] == "1.0.2"
+    assert metadata["version"] == "1.1.0"
     assert metadata["status"] == "candidate"
     assert metadata["enabled_modules"] == [
         "fiscal",

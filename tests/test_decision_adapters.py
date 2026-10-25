@@ -441,23 +441,23 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
             for rule in policy.rules:
                 assert rule.operation == "add"
                 if rule.id.startswith("political_capacity_"):
-                    assert rule.value == -5
+                    assert rule.value == -10
                     assert {condition.fact for condition in rule.conditions} == {
                         "legitimacy",
                         "insurrection",
                         "radical_share",
                     }
                 else:
-                    assert 0 < rule.value <= 20
+                    assert 0 < rule.value <= 30
         else:
             for rule in policy.rules:
                 if rule.operation == "add":
                     assert rule.id.startswith(("coordinated_", "comparative_", "structural_"))
-                    assert rule.value in {-5, 3, 1.05}
+                    assert rule.value in {-10, -8, -5, 3, 1.05}
                     assert rule.field[0] == "ai_strategy_default"
                 else:
                     assert rule.operation == "multiply"
-                    assert 0.9 <= rule.value <= 1.2
+                    assert 0.75 <= rule.value <= 1.3
     default_name = "common/ai_strategies/00_default_strategy.txt"
     default_policy = dict(adapters.policies)[default_name]
     changed = replace(
@@ -1055,7 +1055,7 @@ def test_wartime_defense_intent_survives_insolvency_in_generated_script(real_gen
     field = ".".join(rule.field)
     assert _interpret_adjustments(blocks[field], _scopes_for_facts(policy, facts)) == (
         "multiply",
-        1.1,
+        1.25,
     )
     assert (
         _interpret_adjustments(blocks[field], _scopes_for_facts(policy, {**facts, "war": False}))
@@ -1487,7 +1487,11 @@ def test_supply_append_uses_the_same_parent_child_writer_guard(supply_candidate,
 
 
 def _scopes_for_facts(policy, facts):
-    scopes: dict = {"ROOT": {"is_ai": True}}
+    scopes: dict = {"ROOT": {}}
+    actor = scopes["ROOT"]
+    for part in policy.actor_path:
+        actor = actor.setdefault(part, {})
+    actor["is_ai"] = True
     for reader in policy.readers:
         current = scopes.setdefault(
             "ROOT" if reader.scope == "root" else "scope:" + reader.scope, {}
@@ -1503,6 +1507,63 @@ def _scopes_for_facts(policy, facts):
         )
         current[key] = facts[reader.key]
     return scopes
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("change", "expected"),
+    [
+        ({}, 1.2),
+        ({"state_unemployment": 0.1}, 1.3),
+        ({"state_unemployment": 0.09999}, 1.2),
+        ({"state_unemployment": 0.1, "state_owner_reserves": 0}, 1.2),
+        ({"state_owner_steel_price": 0.25}, 1.0),
+        ({"state_owner_steel_balance": 0}, 1.0),
+        ({"state_owner_coal_price": 0.6, "state_owner_coal_balance": -10}, 0.8),
+        ({"state_market_access": 0.8, "state_infrastructure": -1}, 0.8),
+        ({"state_owner_loans": True}, 1.0),
+        ({"state_owner_default": True}, 1.0),
+    ],
+)
+def test_building_opportunity_tiers_and_input_cost_in_actual_script(
+    real_generated_branches, change, expected
+):
+    policy, blocks = next(
+        (p, b) for p, b in real_generated_branches if "building_steel_mill.ai_value" in b
+    )
+    facts = {
+        r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
+    }
+    facts.update(
+        pm_active_building_steel_mill_pm_bessemer_process=True,
+        state_owner_steel_price=0.4,
+        state_owner_steel_balance=-10,
+        state_owner_reserves=100,
+        state_market_access=1,
+    )
+    facts.update(change)
+    field = "building_steel_mill.ai_value"
+    reference = decision_rules.evaluate(policy, facts, is_ai=True)
+    assert reference.get(field, ("vanilla", 1.0))[1] == expected
+    actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, facts))
+    assert (actual[1] if actual else 1.0) == expected
+    assert not decision_rules.evaluate(policy, facts, is_ai=False)
+
+
+@pytest.mark.integration
+def test_political_crisis_replaces_stronger_reform_reward(real_generated_branches):
+    field = "law_regulatory_bodies.ai_enact_weight_modifier"
+    policy, blocks = next((p, b) for p, b in real_generated_branches if field in b)
+    facts = {
+        r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
+    }
+    facts.update(legitimacy=60, union_clout=0.2, union_approval=-1, radical_share=0.3)
+    assert _interpret_adjustments(blocks[field], _scopes_for_facts(policy, facts)) == ("add", 30)
+    crisis = {**facts, "legitimacy": 24, "insurrection": True}
+    assert _interpret_adjustments(blocks[field], _scopes_for_facts(policy, crisis)) == ("add", -10)
+    # 缺少危机输入时不能把未知当作安全，也不能继续领取改革奖励。
+    unknown = decision_rules.evaluate(policy, {**crisis, "radical_share": None}, is_ai=True)
+    assert field not in unknown
 
 
 @pytest.mark.parametrize(
