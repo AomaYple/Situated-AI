@@ -48,6 +48,10 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运�
 
 ## 标准包
 
+当前候选下载：[Situated AI 1.1.0](https://github.com/AomaYple/Situated-AI/releases/tag/v1.1.0)。
+全部版本的标签、交付包、源提交和 SHA-256 见[版本交付索引](docs/design/exec/版本交付-结果.md)。
+下载 Release 附件中的 `situated-ai-<版本>.zip`；GitHub 自动生成的源码压缩包不是可安装 Mod。
+
 `dist/situated-ai-1.1.0.zip` 是当前候选生产包，metadata ID 为 `situated-ai`。解压至独立 `Victoria 3/mod/Situated AI` 目录，在启动器
 单独的 playset 中启用。包内包含：
 
