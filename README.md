@@ -48,7 +48,7 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运�
 
 ## 标准包
 
-当前候选尚未创建 Git 标签；发布前应从本分支构建 `Situated AI 1.1.1` 并创建对应 Release。
+`v1.1.1` 已指向合并提交 `53ce21b`；发布包可从该标签构建。GitHub Release 和 Workshop 上传仍由发布者决定。
 全部版本的标签、交付包、源提交和 SHA-256 见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 下载 Release 附件中的 `situated-ai-<版本>.zip`；GitHub 自动生成的源码压缩包不是可安装 Mod。
 
