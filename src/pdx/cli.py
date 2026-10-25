@@ -73,6 +73,7 @@ from pdx import (
     exe_strings,
     information_catalog,
     lockfile,
+    observe,
     political_surface,
     snapshot,
     tables_offline,
@@ -1665,6 +1666,79 @@ def verify_cmd(
 
     if failed or drift or marker_issues:
         raise typer.Exit(EXIT_FAILED)
+
+
+# ── observe（运行期证据采集）───────────────────────────────
+@app.command("observe")
+def observe_cmd(
+    once: Annotated[
+        bool, typer.Option("--once", help="只采集当前日志和稳定 autosave，然后退出")
+    ] = False,
+    interval: Annotated[
+        float, typer.Option("--interval", min=0.2, help="连续观察的间隔秒数")
+    ] = 15.0,
+    stable_seconds: Annotated[
+        float, typer.Option("--stable-seconds", min=0.0, help="存档保持不变多久才读取")
+    ] = 1.0,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="证据目录；默认写入 tools/out/observations/<时间>"),
+    ] = None,
+    archive_saves: Annotated[
+        bool, typer.Option("--archive-saves", help="复制稳定 autosave 原始字节；默认只保存摘要")
+    ] = False,
+    max_iterations: Annotated[
+        int | None, typer.Option("--max-iterations", min=1, help="连续观察最多执行多少轮")
+    ] = None,
+) -> None:
+    """后台采集日志增量和稳定 autosave 摘要。
+
+    工具只读游戏用户目录，不启动或控制游戏。默认不复制百兆级存档；需要完整原始
+    存档时显式传 ``--archive-saves``。报告会标记 runtime、snapshot 和 inference
+    证据，并保留“状态变化不等于决策因果”的限制。
+    """
+    timestamp = time.strftime("%Y%m%dT%H%M%S")
+    root = output or (config.OUT / "observations" / timestamp)
+    session = observe.ObservationSession(
+        config.USERDIR, root, archive_saves=archive_saves, stable_seconds=stable_seconds
+    )
+    iterations = 0
+    try:
+        while True:
+            iterations += 1
+            new_saves, new_logs = session.poll()
+            # ``--once`` has no later polling turn to establish stability.  A
+            # second zero-delay pass lets a file that was already complete at
+            # startup be observed without weakening the collector's normal
+            # two-sample stability contract.
+            if once and stable_seconds == 0:
+                extra_saves, extra_logs = session.poll()
+                new_saves.extend(extra_saves)
+                new_logs.extend(extra_logs)
+            for event in new_saves:
+                console.print(
+                    f"[cyan]存档[/] {event['path']}："
+                    f"{event['metadata'].get('game_date') or '日期未知'}"
+                )
+            if new_logs:
+                console.print(f"[dim]日志增量：{len(new_logs)} 个文件块[/]")
+            if once or (max_iterations is not None and iterations >= max_iterations):
+                break
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        console.print("[yellow]收到停止信号，正在写入当前报告。[/]")
+
+    report = session.finish()
+    report.update(
+        {
+            "tool": "v3 observe",
+            "started_at": timestamp,
+            "iterations": iterations,
+            "userdir": str(config.USERDIR),
+            "archive_saves": archive_saves,
+        }
+    )
+    console.print(f"[green]观察报告已写入 {_relative(root)}[/]")
 
 
 # ── crosscheck（引擎交叉验证）───────────────────────────────

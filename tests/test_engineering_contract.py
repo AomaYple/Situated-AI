@@ -64,7 +64,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "situated-ai" in checklist
     assert "标准包" in checklist
     assert "1.1.1 候选已生成" in checklist
-    assert "运行期观察工具 | U11 待实现" in checklist
+    assert "运行期观察工具 | U11 工程候选已交付" in checklist
     assert "docs/publishing/创意工坊描述.md" in plan
     assert "src/pdx/observe.py" in plan
     assert "src/pdx/savegame.py" in plan
@@ -87,4 +87,4 @@ def test_current_document_indexes_are_complete() -> None:
     assert "不另列第二套待办" in execution
     assert "[Situated AI 终极深化计划](mod重设计-实施计划.md)" in execution
     assert "[F18 集成、完整回归和交付](F18-集成交付-结果.md)" in execution
-    assert "U11 明确交付可停止的日志/存档观察辅助" in execution
+    assert "观察器和 Workshop 文案已经是当前" in execution

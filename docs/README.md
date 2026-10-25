@@ -17,6 +17,7 @@
 | 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面.md)、[政治候选面](design/02-政治候选面.md) |
 | 当前计划 | [Situated AI 终极深化计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
+| 创意工坊发布文案 | [创意工坊描述](publishing/创意工坊描述.md) |
 | 工具使用 | [工具手册](../tools/README.md) |
 | Victoria 3 知识库 | [victoria3-modding](victoria3-modding/README.md) |
 
@@ -24,6 +25,7 @@
 
 - `docs/principles/`：持续工程和产品约束。
 - `docs/design/`：当前产品设计、计划和执行结果。
+- `docs/publishing/`：面向玩家的发布材料；版本和行为事实链接回当前包与结果收据。
 - `docs/victoria3-modding/`：由锁定游戏文件整理的研究知识库，版本和来源以各页说明为准。
 
 ## 文档维护边界
