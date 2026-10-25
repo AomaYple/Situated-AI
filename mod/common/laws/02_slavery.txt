@@ -104,7 +104,7 @@ law_slavery_banned = {
 
 		# SITAI BEGIN information:law_slavery_banned.ai_enact_weight_modifier
 		# political_capacity_law_slavery_banned [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_slavery_banned.ai_enact_weight_modifier
 	}
 
@@ -225,7 +225,7 @@ law_colonial_slavery = {
 
 		# SITAI BEGIN information:law_colonial_slavery.ai_enact_weight_modifier
 		# political_capacity_law_colonial_slavery [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_colonial_slavery.ai_enact_weight_modifier
 	}
 }
@@ -304,7 +304,7 @@ law_debt_slavery = {
 
 		# SITAI BEGIN information:law_debt_slavery.ai_enact_weight_modifier
 		# political_capacity_law_debt_slavery [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_debt_slavery.ai_enact_weight_modifier
 	}
 }
@@ -402,7 +402,7 @@ law_slave_trade = {
 
 		# SITAI BEGIN information:law_slave_trade.ai_enact_weight_modifier
 		# political_capacity_law_slave_trade [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_slave_trade.ai_enact_weight_modifier
 	}
 }
@@ -502,7 +502,7 @@ law_legacy_slavery = {
 
 		# SITAI BEGIN information:law_legacy_slavery.ai_enact_weight_modifier
 		# political_capacity_law_legacy_slavery [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_legacy_slavery.ai_enact_weight_modifier
 	}
 }

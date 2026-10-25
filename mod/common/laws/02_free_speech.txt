@@ -34,7 +34,7 @@ law_outlawed_dissent = {
 
 		# SITAI BEGIN information:law_outlawed_dissent.ai_enact_weight_modifier
 		# political_capacity_law_outlawed_dissent [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_outlawed_dissent.ai_enact_weight_modifier
 	}
 }
@@ -71,7 +71,7 @@ law_censorship = {
 
 		# SITAI BEGIN information:law_censorship.ai_enact_weight_modifier
 		# political_capacity_law_censorship [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_censorship.ai_enact_weight_modifier
 	}
 }
@@ -102,7 +102,7 @@ law_right_of_assembly = {
 
 		# SITAI BEGIN information:law_right_of_assembly.ai_enact_weight_modifier
 		# political_capacity_law_right_of_assembly [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_right_of_assembly.ai_enact_weight_modifier
 	}
 }
@@ -151,7 +151,7 @@ law_protected_speech = {
 
 		# SITAI BEGIN information:law_protected_speech.ai_enact_weight_modifier
 		# political_capacity_law_protected_speech [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_protected_speech.ai_enact_weight_modifier
 	}
 }

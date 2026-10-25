@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "1.0.2"
+RELEASE_VERSION = "1.1.0"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"

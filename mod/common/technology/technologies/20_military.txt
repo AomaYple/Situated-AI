@@ -11,7 +11,7 @@ standing_army = {
 
 		# SITAI BEGIN information:standing_army.ai_weight
 		# standing_army_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:standing_army.ai_weight
 	}
 }
@@ -29,7 +29,7 @@ navigation = {
 
 		# SITAI BEGIN information:navigation.ai_weight
 		# navigation_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:navigation.ai_weight
 	}
 }
@@ -55,7 +55,7 @@ drydocks = {
 
 		# SITAI BEGIN information:drydocks.ai_weight
 		# drydocks_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:drydocks.ai_weight
 	}
 }
@@ -80,7 +80,7 @@ mandatory_service = {
 
 		# SITAI BEGIN information:mandatory_service.ai_weight
 		# mandatory_service_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:mandatory_service.ai_weight
 	}
 }
@@ -104,7 +104,7 @@ gunsmithing = {
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = {  } } } } } } } multiply = 1.0 }
 		# gunsmithing_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:gunsmithing.ai_weight
 	}
 }
@@ -128,7 +128,7 @@ artillery = {
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:artillery mg:artillery = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:artillery mg:artillery = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:artillery mg:artillery = {  } } } } } } } multiply = 1.0 }
 		# artillery_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:artillery.ai_weight
 	}
 }
@@ -151,7 +151,7 @@ military_drill = {
 
 		# SITAI BEGIN information:military_drill.ai_weight
 		# military_drill_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:military_drill.ai_weight
 	}
 }
@@ -177,7 +177,7 @@ napoleonic_warfare = {
 
 		# SITAI BEGIN information:napoleonic_warfare.ai_weight
 		# napoleonic_warfare_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:napoleonic_warfare.ai_weight
 	}
 }
@@ -201,10 +201,10 @@ admiralty = {
 
 		# SITAI BEGIN information:admiralty.ai_weight
 		# structural_naval_research [military]; 已有海军且处于战争时有限提高海军组织研究的相对权重，不重复增益战斗数值
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 } } multiply = 1.2 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = { navy_size >= 0 NOT = { navy_size > 0 } } } AND = { exists = ROOT ROOT = { navy_size >= 0 } } } } } multiply = 1.0 }
 		# admiralty_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:admiralty.ai_weight
 	}
 }
@@ -228,7 +228,7 @@ army_reserves = {
 
 		# SITAI BEGIN information:army_reserves.ai_weight
 		# army_reserves_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:army_reserves.ai_weight
 	}
 }
@@ -249,7 +249,7 @@ line_infantry = {
 
 		# SITAI BEGIN information:line_infantry.ai_weight
 		# line_infantry_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:line_infantry.ai_weight
 	}
 }
@@ -279,7 +279,7 @@ paddle_steamer = {
 
 		# SITAI BEGIN information:paddle_steamer.ai_weight
 		# paddle_steamer_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:paddle_steamer.ai_weight
 	}
 }
@@ -307,7 +307,7 @@ field_works = {
 
 		# SITAI BEGIN information:field_works.ai_weight
 		# field_works_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:field_works.ai_weight
 	}
 }
@@ -347,7 +347,7 @@ logistics = {
 
 		# SITAI BEGIN information:logistics.ai_weight
 		# logistics_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:logistics.ai_weight
 	}
 }
@@ -374,7 +374,7 @@ triage = {
 
 		# SITAI BEGIN information:triage.ai_weight
 		# triage_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:triage.ai_weight
 	}
 }
@@ -394,7 +394,7 @@ shell_gun = {
 
 		# SITAI BEGIN information:shell_gun.ai_weight
 		# shell_gun_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:shell_gun.ai_weight
 	}
 }
@@ -415,7 +415,7 @@ percussion_cap = {
 
 		# SITAI BEGIN information:percussion_cap.ai_weight
 		# percussion_cap_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:percussion_cap.ai_weight
 	}
 }
@@ -442,7 +442,7 @@ rifling = {
 
 		# SITAI BEGIN information:rifling.ai_weight
 		# rifling_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:rifling.ai_weight
 	}
 }
@@ -465,7 +465,7 @@ general_staff = {
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:ammunition mg:ammunition = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:ammunition mg:ammunition = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:ammunition mg:ammunition = {  } } } } } } } multiply = 1.0 }
 		# general_staff_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:general_staff.ai_weight
 	}
 }
@@ -495,7 +495,7 @@ screw_frigate = {
 
 		# SITAI BEGIN information:screw_frigate.ai_weight
 		# screw_frigate_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:screw_frigate.ai_weight
 	}
 }
@@ -520,7 +520,7 @@ power_of_the_purse = {
 
 		# SITAI BEGIN information:power_of_the_purse.ai_weight
 		# power_of_the_purse_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:power_of_the_purse.ai_weight
 	}
 }
@@ -546,7 +546,7 @@ hydraulic_cranes = {
 
 		# SITAI BEGIN information:hydraulic_cranes.ai_weight
 		# hydraulic_cranes_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:hydraulic_cranes.ai_weight
 	}
 }
@@ -568,7 +568,7 @@ modern_nursing = {
 
 		# SITAI BEGIN information:modern_nursing.ai_weight
 		# modern_nursing_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:modern_nursing.ai_weight
 	}
 }
@@ -599,7 +599,7 @@ enlistment_offices = {
 
 		# SITAI BEGIN information:enlistment_offices.ai_weight
 		# enlistment_offices_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:enlistment_offices.ai_weight
 	}
 }
@@ -629,7 +629,7 @@ electric_telegraph = {
 
 		# SITAI BEGIN information:electric_telegraph.ai_weight
 		# electric_telegraph_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:electric_telegraph.ai_weight
 	}
 }
@@ -654,7 +654,7 @@ military_statistics = {
 
 		# SITAI BEGIN information:military_statistics.ai_weight
 		# military_statistics_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:military_statistics.ai_weight
 	}
 }
@@ -675,7 +675,7 @@ repeaters = {
 
 		# SITAI BEGIN information:repeaters.ai_weight
 		# repeaters_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:repeaters.ai_weight
 	}
 }
@@ -705,7 +705,7 @@ breech_loading_artillery = {
 
 		# SITAI BEGIN information:breech_loading_artillery.ai_weight
 		# breech_loading_artillery_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:breech_loading_artillery.ai_weight
 	}
 }
@@ -730,7 +730,7 @@ handcranked_machine_gun = {
 
 		# SITAI BEGIN information:handcranked_machine_gun.ai_weight
 		# handcranked_machine_gun_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:handcranked_machine_gun.ai_weight
 	}
 }
@@ -750,7 +750,7 @@ self_propelled_torpedoes = {
 
 		# SITAI BEGIN information:self_propelled_torpedoes.ai_weight
 		# self_propelled_torpedoes_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:self_propelled_torpedoes.ai_weight
 	}
 }
@@ -781,7 +781,7 @@ monitor_tech = {
 
 		# SITAI BEGIN information:monitor_tech.ai_weight
 		# monitor_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:monitor_tech.ai_weight
 	}
 }
@@ -809,7 +809,7 @@ ironclad_tech = {
 
 		# SITAI BEGIN information:ironclad_tech.ai_weight
 		# ironclad_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:ironclad_tech.ai_weight
 	}
 }
@@ -834,7 +834,7 @@ jeune_ecole = {
 
 		# SITAI BEGIN information:jeune_ecole.ai_weight
 		# jeune_ecole_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:jeune_ecole.ai_weight
 	}
 }
@@ -861,7 +861,7 @@ floating_harbor = {
 
 		# SITAI BEGIN information:floating_harbor.ai_weight
 		# floating_harbor_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:floating_harbor.ai_weight
 	}
 }
@@ -892,7 +892,7 @@ gantry_cranes = {
 
 		# SITAI BEGIN information:gantry_cranes.ai_weight
 		# gantry_cranes_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:gantry_cranes.ai_weight
 	}
 }
@@ -917,7 +917,7 @@ trench_works = {
 
 		# SITAI BEGIN information:trench_works.ai_weight
 		# trench_works_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:trench_works.ai_weight
 	}
 }
@@ -943,7 +943,7 @@ war_propaganda = {
 
 		# SITAI BEGIN information:war_propaganda.ai_weight
 		# war_propaganda_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:war_propaganda.ai_weight
 	}
 }
@@ -969,7 +969,7 @@ wargaming = {
 
 		# SITAI BEGIN information:wargaming.ai_weight
 		# wargaming_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:wargaming.ai_weight
 	}
 }
@@ -996,7 +996,7 @@ defense_in_depth = {
 
 		# SITAI BEGIN information:defense_in_depth.ai_weight
 		# defense_in_depth_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:defense_in_depth.ai_weight
 	}
 }
@@ -1017,7 +1017,7 @@ bolt_action_rifles = {
 
 		# SITAI BEGIN information:bolt_action_rifles.ai_weight
 		# bolt_action_rifles_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:bolt_action_rifles.ai_weight
 	}
 }
@@ -1039,7 +1039,7 @@ automatic_machine_guns = {
 
 		# SITAI BEGIN information:automatic_machine_guns.ai_weight
 		# automatic_machine_guns_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:automatic_machine_guns.ai_weight
 	}
 }
@@ -1063,7 +1063,7 @@ submarine = {
 
 		# SITAI BEGIN information:submarine.ai_weight
 		# submarine_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:submarine.ai_weight
 	}
 }
@@ -1083,7 +1083,7 @@ destroyer = {
 
 		# SITAI BEGIN information:destroyer.ai_weight
 		# destroyer_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:destroyer.ai_weight
 	}
 }
@@ -1103,7 +1103,7 @@ pre_dreadnought_tech = {
 
 		# SITAI BEGIN information:pre_dreadnought_tech.ai_weight
 		# pre_dreadnought_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:pre_dreadnought_tech.ai_weight
 	}
 }
@@ -1139,7 +1139,7 @@ dreadnought_tech = {
 
 		# SITAI BEGIN information:dreadnought_tech.ai_weight
 		# dreadnought_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:dreadnought_tech.ai_weight
 	}
 }
@@ -1164,7 +1164,7 @@ sea_lane_strategies = {
 
 		# SITAI BEGIN information:sea_lane_strategies.ai_weight
 		# sea_lane_strategies_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:sea_lane_strategies.ai_weight
 	}
 }
@@ -1190,7 +1190,7 @@ landing_craft = {
 
 		# SITAI BEGIN information:landing_craft.ai_weight
 		# landing_craft_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:landing_craft.ai_weight
 	}
 }
@@ -1225,7 +1225,7 @@ concrete_dockyards = {
 
 		# SITAI BEGIN information:concrete_dockyards.ai_weight
 		# concrete_dockyards_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:concrete_dockyards.ai_weight
 	}
 }
@@ -1252,7 +1252,7 @@ nco_training = {
 
 		# SITAI BEGIN information:nco_training.ai_weight
 		# nco_training_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:nco_training.ai_weight
 	}
 }
@@ -1272,7 +1272,7 @@ chemical_warfare = {
 
 		# SITAI BEGIN information:chemical_warfare.ai_weight
 		# chemical_warfare_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:chemical_warfare.ai_weight
 	}
 }
@@ -1299,7 +1299,7 @@ stormtroopers = {
 
 		# SITAI BEGIN information:stormtroopers.ai_weight
 		# stormtroopers_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:stormtroopers.ai_weight
 	}
 }
@@ -1325,7 +1325,7 @@ concrete_fortifications = {
 
 		# SITAI BEGIN information:concrete_fortifications.ai_weight
 		# concrete_fortifications_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:concrete_fortifications.ai_weight
 	}
 }
@@ -1347,7 +1347,7 @@ mobile_armor = {
 
 		# SITAI BEGIN information:mobile_armor.ai_weight
 		# mobile_armor_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:mobile_armor.ai_weight
 	}
 }
@@ -1373,7 +1373,7 @@ military_aviation = {
 
 		# SITAI BEGIN information:military_aviation.ai_weight
 		# military_aviation_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:military_aviation.ai_weight
 	}
 }
@@ -1397,7 +1397,7 @@ flamethrowers = {
 
 		# SITAI BEGIN information:flamethrowers.ai_weight
 		# flamethrowers_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:flamethrowers.ai_weight
 	}
 }
@@ -1423,7 +1423,7 @@ carrier_tech = {
 
 		# SITAI BEGIN information:carrier_tech.ai_weight
 		# carrier_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:carrier_tech.ai_weight
 	}
 }
@@ -1449,7 +1449,7 @@ battleship_tech = {
 
 		# SITAI BEGIN information:battleship_tech.ai_weight
 		# battleship_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:battleship_tech.ai_weight
 	}
 }
@@ -1475,7 +1475,7 @@ battlefleet_tactics = {
 
 		# SITAI BEGIN information:battlefleet_tactics.ai_weight
 		# battlefleet_tactics_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:battlefleet_tactics.ai_weight
 	}
 }

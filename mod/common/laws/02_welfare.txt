@@ -26,7 +26,7 @@ law_no_social_security = {
 
 		# SITAI BEGIN information:law_no_social_security.ai_enact_weight_modifier
 		# political_capacity_law_no_social_security [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_no_social_security.ai_enact_weight_modifier
 	}
 }
@@ -75,7 +75,7 @@ law_chiefs_distribute_aid = { #law variant designed to help c:MON campaign, whic
 
 		# SITAI BEGIN information:law_chiefs_distribute_aid.ai_enact_weight_modifier
 		# political_capacity_law_chiefs_distribute_aid [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		# SITAI END information:law_chiefs_distribute_aid.ai_enact_weight_modifier
 	}
 }
@@ -106,10 +106,10 @@ law_poor_laws = {
 
 		# SITAI BEGIN information:law_poor_laws.ai_enact_weight_modifier
 		# political_capacity_law_poor_laws [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
 		# law_poor_laws_ai_enact_weight_modifier [political]; 在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 15.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 22.0 }
 		# SITAI END information:law_poor_laws.ai_enact_weight_modifier
 	}
 }
@@ -140,16 +140,16 @@ law_wage_subsidies = {
 
 		# SITAI BEGIN information:law_wage_subsidies.ai_enact_weight_modifier
 		# political_capacity_law_wage_subsidies [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
 		# social_organized_labor_law_wage_subsidies [political]; 有组织劳动群体不满与社会激进化同时出现，且财政和政治有能力时提高有限的社会妥协候选
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.1 ig_approval < 0 is_in_government = no } } } add = 20.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_clout >= 0 ig_clout <= 1 ig_clout >= 0.1 ig_approval < 0 is_in_government = no } } } add = 30.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_clout >= 0 ig_clout <= 1 NOT = { ig_clout >= 0.1 } } } } AND = { exists = ROOT ROOT = { exists = ig:ig_trade_unions ig:ig_trade_unions = { NOT = { ig_approval < 0 } } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { exists = ig:ig_trade_unions ig:ig_trade_unions = { NOT = { is_in_government = no } } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } exists = ig:ig_trade_unions ig:ig_trade_unions = { ig_clout >= 0 ig_clout <= 1 } } } } } } multiply = 1.0 }
 		# social_welfare_capacity [political]; 低生活水平、激进人口比例较高时，把社会保障视为稳定投资，同时保留财政、法律和容量约束
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 20.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 30.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.15 } } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 scaled_debt >= 0 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } average_sol >= 0 } } } } } multiply = 1.0 }
 		# law_wage_subsidies_ai_enact_weight_modifier [political]; 在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 15.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 22.0 }
 		# SITAI END information:law_wage_subsidies.ai_enact_weight_modifier
 	}
 }
@@ -194,10 +194,10 @@ law_old_age_pension = {
 
 		# SITAI BEGIN information:law_old_age_pension.ai_enact_weight_modifier
 		# political_capacity_law_old_age_pension [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -5.0 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
 		# law_old_age_pension_ai_enact_weight_modifier [political]; 在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 15.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 22.0 }
 		# SITAI END information:law_old_age_pension.ai_enact_weight_modifier
 	}
 }

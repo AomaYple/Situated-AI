@@ -55,7 +55,7 @@ rationalism = {
 
 		# SITAI BEGIN information:rationalism.ai_weight
 		# rationalism_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
 		# SITAI END information:rationalism.ai_weight
 	}
 }
@@ -81,7 +81,7 @@ tech_bureaucracy = {
 
 		# SITAI BEGIN information:tech_bureaucracy.ai_weight
 		# tech_bureaucracy_ai_weight [fiscal]; 行政不足时提高相关行政知识关注；不直接增加行政力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.25 }
 		# SITAI END information:tech_bureaucracy.ai_weight
 	}
 }
@@ -107,7 +107,7 @@ currency_standards = {
 
 		# SITAI BEGIN information:currency_standards.ai_weight
 		# currency_standards_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
 		# SITAI END information:currency_standards.ai_weight
 	}
 }
@@ -195,7 +195,7 @@ centralization = {
 
 		# SITAI BEGIN information:centralization.ai_weight
 		# centralization_ai_weight [fiscal]; 行政不足时提高相关行政知识关注；不直接增加行政力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.25 }
 		# SITAI END information:centralization.ai_weight
 	}
 }
@@ -239,7 +239,7 @@ banking = {
 
 		# SITAI BEGIN information:banking.ai_weight
 		# banking_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
 		# SITAI END information:banking.ai_weight
 	}
 }
@@ -263,7 +263,7 @@ academia = {
 
 		# SITAI BEGIN information:academia.ai_weight
 		# academia_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
 		# SITAI END information:academia.ai_weight
 	}
 }
@@ -361,7 +361,7 @@ medical_degrees = {
 
 		# SITAI BEGIN information:medical_degrees.ai_weight
 		# medical_degrees_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
 		# SITAI END information:medical_degrees.ai_weight
 	}
 }
@@ -408,7 +408,7 @@ empiricism = {
 
 		# SITAI BEGIN information:empiricism.ai_weight
 		# empiricism_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
 		# SITAI END information:empiricism.ai_weight
 	}
 }
@@ -489,7 +489,7 @@ pharmaceuticals = {
 
 		# SITAI BEGIN information:pharmaceuticals.ai_weight
 		# pharmaceuticals_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
 		# SITAI END information:pharmaceuticals.ai_weight
 	}
 }
@@ -517,7 +517,7 @@ modern_sewerage = {
 
 		# SITAI BEGIN information:modern_sewerage.ai_weight
 		# modern_sewerage_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
 		# SITAI END information:modern_sewerage.ai_weight
 	}
 }
@@ -640,7 +640,7 @@ central_archives = {
 
 		# SITAI BEGIN information:central_archives.ai_weight
 		# central_archives_ai_weight [fiscal]; 行政不足时提高相关行政知识关注；不直接增加行政力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.25 }
 		# SITAI END information:central_archives.ai_weight
 	}
 }
@@ -665,7 +665,7 @@ central_banking = {
 
 		# SITAI BEGIN information:central_banking.ai_weight
 		# central_banking_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
 		# SITAI END information:central_banking.ai_weight
 	}
 }
@@ -710,7 +710,7 @@ dialectics = {
 
 		# SITAI BEGIN information:dialectics.ai_weight
 		# dialectics_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
 		# SITAI END information:dialectics.ai_weight
 	}
 }
@@ -1369,7 +1369,7 @@ philosophical_pragmatism = {
 
 		# SITAI BEGIN information:philosophical_pragmatism.ai_weight
 		# philosophical_pragmatism_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
 		# SITAI END information:philosophical_pragmatism.ai_weight
 	}
 }
@@ -1396,7 +1396,7 @@ identification_documents = {
 
 		# SITAI BEGIN information:identification_documents.ai_weight
 		# identification_documents_ai_weight [fiscal]; 行政不足时提高相关行政知识关注；不直接增加行政力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.25 }
 		# SITAI END information:identification_documents.ai_weight
 	}
 }
@@ -1693,7 +1693,7 @@ antibiotics = {
 
 		# SITAI BEGIN information:antibiotics.ai_weight
 		# antibiotics_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
 		# SITAI END information:antibiotics.ai_weight
 	}
 }
@@ -1743,7 +1743,7 @@ modern_financial_instruments = {
 
 		# SITAI BEGIN information:modern_financial_instruments.ai_weight
 		# modern_financial_instruments_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
 		# SITAI END information:modern_financial_instruments.ai_weight
 	}
 }
@@ -1768,7 +1768,7 @@ macroeconomics = {
 
 		# SITAI BEGIN information:macroeconomics.ai_weight
 		# macroeconomics_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.1 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
 		# SITAI END information:macroeconomics.ai_weight
 	}
 }
@@ -1812,7 +1812,7 @@ analytical_philosophy = {
 
 		# SITAI BEGIN information:analytical_philosophy.ai_weight
 		# analytical_philosophy_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.15 }
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
 		# SITAI END information:analytical_philosophy.ai_weight
 	}
 }

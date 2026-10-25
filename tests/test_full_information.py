@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 # 真实依据另由integration用例对全部锁定原件核对SHA与接口签名。
 _SYNTHETIC_READER_EVIDENCE = (
     "bureaucracy taking_loans scaled_debt net_total_income legitimacy "
-    "has_insurrectionary_interest_groups has_variable recently_lost_war"
+    "has_insurrectionary_interest_groups has_variable recently_lost_war weeks_until_bankruptcy"
 )
 
 
@@ -94,6 +94,7 @@ def _values(**overrides: object) -> dict[str, object]:
         "net_surplus": 100,
         "debt_ratio": 0.1,
         "loans": False,
+        "bankruptcy_horizon": 52,
         "bureaucracy": 100,
         "legitimacy": 60,
         "insurrection": False,
@@ -232,7 +233,7 @@ def test_priority_and_normal_defense_counterexamples(rules):
         assert peaceful[field][1] < 1
         assert field not in wartime
     result = decision_rules.evaluate(rules, _values(resource_route=True), is_ai=True)
-    assert result["treaty_category_scores.economy"] == ("identity_resource_cooperation", 1.15)
+    assert result["treaty_category_scores.economy"] == ("identity_resource_cooperation", 1.3)
     assert "wanted_army_size" not in result
     only = decision_rules.evaluate(
         rules, _values(default=True), is_ai=True, enabled_domains=frozenset({"military"})
@@ -247,11 +248,11 @@ def test_priority_and_normal_defense_counterexamples(rules):
 
 def test_vanilla_war_defeat_signal_is_bounded_and_unknown_safe(rules):
     recovering = decision_rules.evaluate(rules, _values(war_defeat=True), is_ai=True)
-    assert recovering["wanted_construction_output"] == ("war_defeat_reconstruction", 1.05)
+    assert recovering["wanted_construction_output"] == ("war_defeat_reconstruction", 1.2)
     assert "change_law_chance" not in recovering
 
     ordinary = decision_rules.evaluate(rules, _values(war_defeat=False), is_ai=True)
-    assert ordinary["wanted_construction_output"] == ("economic_development", 1.05)
+    assert ordinary["wanted_construction_output"] == ("economic_development", 1.15)
     assert "change_law_chance" not in ordinary
 
     # 缺少该原版变量时不能把未知当作“没有战败”，也不能抢跑低优先级建设规则。
@@ -386,13 +387,20 @@ def test_generated_conditions_equal_reference_on_legal_inputs(
 
 
 @pytest.mark.parametrize("navy", [-1, -100])
-def test_invalid_high_priority_fact_stops_generated_lower_priority(generated_rule_blocks, navy):
+@pytest.mark.parametrize("default", [False, True])
+def test_default_cost_precedes_weak_navy_without_guessing_invalid_input(
+    generated_rule_blocks, navy, default
+):
     rules, blocks = generated_rule_blocks
-    # 低优先级违约规则本来会匹配；非法的高优先级海军读数必须使其回退。
-    values = _values(default=True, navy=navy)
+    values = _values(default=default, navy=navy)
     engine = {reader.engine: values[reader.key] for reader in rules.readers}
-    assert "colonial_interest_ratio" not in decision_rules.evaluate(rules, values, is_ai=True)
-    assert _evaluate_script(blocks["colonial_interest_ratio"], engine) == 1
+    reference = decision_rules.evaluate(rules, values, is_ai=True)
+    if default:
+        # 已知违约优先，不被低优先级未知海军遮蔽。
+        assert reference["colonial_interest_ratio"] == ("overseas_affordability", 0.7)
+    else:
+        assert "colonial_interest_ratio" not in reference
+    assert _evaluate_script(blocks["colonial_interest_ratio"], engine) == (0.7 if default else 1)
 
 
 @pytest.mark.parametrize("high_uses_target", [True, False])
@@ -459,7 +467,72 @@ def generated_rule_blocks(rules):
 @pytest.mark.parametrize(
     ("change", "expected"),
     [
-        ({}, 1.05),
+        ({}, 1.3),
+        ({"legitimacy": 74}, 1.15),
+        ({"legitimacy": 75}, 1.3),
+        ({"debt_ratio": 0.2}, 1.3),
+        ({"debt_ratio": 0.20001}, 1.15),
+        ({"net_surplus": 0}, 1.15),
+        ({"bureaucracy": 0}, 1.15),
+        ({"war_defeat": True}, 1.2),
+        ({"default": True}, 0.75),
+        ({"loans": True, "debt_ratio": 0.4, "bankruptcy_horizon": 25}, 0.85),
+        ({"loans": True, "debt_ratio": 0.4, "bankruptcy_horizon": 26}, 1.0),
+        ({"loans": True, "debt_ratio": 0.39999, "bankruptcy_horizon": 25}, 1.0),
+        ({"loans": True, "debt_ratio": 0.6, "bankruptcy_horizon": None}, 1.0),
+        ({"war": True, "default": True}, 1.0),
+        ({"war": True}, 1.0),
+        ({"legitimacy": None}, 1.0),
+        ({"legitimacy": 49}, 1.0),
+        ({"net_surplus": -1}, 1.0),
+        ({"insurrection": True}, 1.0),
+        ({"industrial_route": False}, 1.0),
+        ({"war_defeat": True, "loans": True}, 1.0),
+    ],
+)
+def test_development_tiers_and_crisis_priority_in_generated_script(
+    generated_rule_blocks, change, expected
+):
+    rules, blocks = generated_rule_blocks
+    values = _values(**{"legitimacy": 80, **change})
+    engine = {
+        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        for reader in rules.readers
+    }
+    field = "wanted_construction_output"
+    reference = decision_rules.evaluate(rules, values, is_ai=True)
+    assert reference.get(field, ("vanilla", 1.0))[1] == expected
+    # 独立解释实际生成分支，证明强档替代普通档，而非把多个奖励累乘。
+    assert _evaluate_script(blocks[field], engine) == expected
+
+
+def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
+    generated_rule_blocks,
+):
+    rules, blocks = generated_rule_blocks
+    for legitimacy, education, trade, economy in [(60, 1.15, 1.15, 1.15), (80, 1.3, 1.25, 1.25)]:
+        values = _values(legitimacy=legitimacy)
+        for field, expected in [
+            ("institution_scores.institution_schools", education),
+            ("treaty_category_scores.trade", trade),
+            ("treaty_category_scores.economy", economy),
+        ]:
+            engine = {
+                r.engine + (":" + r.argument if r.argument else ""): values[r.key]
+                for r in rules.readers
+            }
+            assert _evaluate_script(blocks[field], engine) == expected
+        resource = decision_rules.evaluate(rules, {**values, "resource_route": True}, is_ai=True)
+        assert resource["treaty_category_scores.economy"] == ("identity_resource_cooperation", 1.3)
+    # 已知普通容量足够，但无法判断强档时，不能猜测普通档优先。
+    unknown = decision_rules.evaluate(rules, _values(legitimacy=None), is_ai=True)
+    assert "institution_scores.institution_schools" not in unknown
+
+
+@pytest.mark.parametrize(
+    ("change", "expected"),
+    [
+        ({}, 1.2),
         ({"target_owned": True}, 1.0),
         ({"target_homeland": False}, 1.0),
         ({"target_cultural_share": 0.24}, 1.0),
@@ -511,10 +584,10 @@ def test_geographic_cost_precedes_reward_and_missing_state_preserves_vanilla(
         for reader in rules.readers
     }
     engine["scope:target_state"] = True
-    assert _evaluate_script(blocks["state_value"], engine) == 0.95
+    assert _evaluate_script(blocks["state_value"], engine) == 0.8
     assert decision_rules.evaluate(rules, values, is_ai=True)["state_value"] == (
         "geographic_isolation_financial_cost",
-        0.95,
+        0.8,
     )
     engine.pop("scope:target_state")
     assert _evaluate_script(blocks["state_value"], engine) == 1.0
@@ -658,7 +731,7 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
 def test_release_is_a_real_standard_package(tmp_path):
-    path = distribution.package(tmp_path / "situated-ai-1.0.2.zip")
+    path = distribution.package(tmp_path / "situated-ai-1.1.0.zip")
     _, _, engineering_files = distribution.package_inputs(include_engineering_metadata=True)
     assert all(
         not line.endswith((" ", "\t"))
@@ -684,7 +757,7 @@ def test_release_is_a_real_standard_package(tmp_path):
         assert metadata["id"] == distribution.MOD_ID == "situated-ai"
         assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
         assert len(archive.read(".metadata/metadata.json")) < 2_000
-        assert metadata["version"] == "1.0.2"
+        assert metadata["version"] == "1.1.0"
         assert contract["status"] == "candidate"
         assert contract["behavior_quality"] == "not_evaluated"
         assert engineering_metadata["decision_rules"]["behavior_verified"] is False
