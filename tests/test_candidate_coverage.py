@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import gzip
 import json
 from dataclasses import replace
 
@@ -10,7 +11,12 @@ import pytest
 from typer.testing import CliRunner
 
 from pdx import candidate_coverage, cli, config
-from pdx.information_catalog import InformationCatalog, InformationItem, InformationStatus
+from pdx.information_catalog import (
+    ImpactLevel,
+    InformationCatalog,
+    InformationItem,
+    InformationStatus,
+)
 
 SOURCE = "common/ai_strategies/00_default_strategy.txt"
 
@@ -133,6 +139,43 @@ def test_exact_source_and_nearest_ancestor_preserve_depth_and_reader_dependencie
     assert metadata == before
     deep["readers"][0]["key"] = "changed"
     assert metadata == before
+
+
+def test_information_dispositions_cover_catalog_items_and_keep_static_evidence(inputs, tmp_path):
+    catalog, metadata = inputs
+    retained = replace(_item("retained"), impact=ImpactLevel.STRATEGY)
+    explanatory = replace(_item("explanation"), impact=ImpactLevel.EXPLANATION)
+    unsupported = replace(_item("parse-error", status=InformationStatus.UNSUPPORTED))
+    catalog = replace(catalog, items=(*catalog.items, retained, explanatory, unsupported))
+    report = candidate_coverage.build(catalog, metadata)
+    path = tmp_path / "dispositions.jsonl.gz"
+
+    counts = candidate_coverage.write_dispositions(catalog, report, path)
+    with gzip.open(path, "rt", encoding="utf-8", newline="\n") as stream:
+        header, *rows = [json.loads(line) for line in stream]
+
+    assert counts["item_count"] == 5
+    assert counts["disposition_counts"] == {
+        "connected_to_candidate": 1,
+        "explanation_only": 1,
+        "no_consumer": 1,
+        "retained_vanilla": 1,
+        "unsupported": 1,
+    }
+    assert counts["unknown_contract_field_counts"] == {
+        "scope": 5,
+        "unit": 5,
+    }
+    assert header["evidence"] == "static_only_not_runtime_or_behavior"
+    assert len(rows) == len(catalog.items)
+    assert {row["information_id"] for row in rows} == {item.id for item in catalog.items}
+    by_id = {row["information_id"]: row for row in rows}
+    assert by_id[catalog.items[0].id]["disposition"] == "connected_to_candidate"
+    assert by_id[catalog.items[0].id]["candidate_rule_ids"] == ["example"]
+    assert by_id[retained.id]["disposition"] == "retained_vanilla"
+    assert by_id[explanatory.id]["disposition"] == "explanation_only"
+    assert by_id[unsupported.id]["disposition"] == "unsupported"
+    assert all(row["evidence"] == "static_only_not_runtime_or_behavior" for row in rows)
 
 
 def test_missing_consumer_is_explicit_unresolved_without_false_field_match(inputs):
@@ -542,9 +585,113 @@ def test_cli_connects_actual_metadata_to_the_same_catalog(inputs, monkeypatch, t
     assert report == candidate_coverage.build(catalog, metadata)
     assert output.is_file()
     assert matrix.is_file()
+    assert (tmp_path / "candidate-dispositions.jsonl.gz").is_file()
+    assert (tmp_path / "candidate-dispositions-summary.json").is_file()
+    with gzip.open(tmp_path / "candidate-dispositions.jsonl.gz", "rt", encoding="utf-8") as stream:
+        header = json.loads(next(stream))
+    assert header["catalog_artifact"] == "catalog.json"
 
 
-@pytest.mark.parametrize("case", ["output_only", "missing", "invalid_json", "wrong_identity"])
+def test_cli_builds_integrated_contract_from_current_production_source(
+    inputs, monkeypatch, tmp_path
+):
+    catalog, metadata = inputs
+    calls = []
+
+    def build(**kwargs):
+        calls.append(kwargs)
+        return catalog
+
+    def package_inputs(*, include_engineering_metadata):
+        assert include_engineering_metadata is True
+        return None, None, {".metadata/metadata.json": json.dumps(metadata)}
+
+    monkeypatch.setattr(cli, "_require_game", lambda: None)
+    monkeypatch.setattr(cli.information_catalog, "build", build)
+    monkeypatch.setattr(cli.distribution, "package_inputs", package_inputs)
+    output = tmp_path / "catalog.json"
+    matrix = tmp_path / "matrix.json"
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "information-catalog",
+            "--no-localization",
+            "--output",
+            str(output),
+            "--consumer-matrix-output",
+            str(matrix),
+            "--candidate-production",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert calls == [{"include_localization": False}]
+    report = json.loads((tmp_path / "candidate-coverage.json").read_text(encoding="utf-8"))
+    assert report == candidate_coverage.build(
+        catalog, metadata, metadata_origin="current_production_sources"
+    )
+    assert (
+        report["metadata_authenticity"]
+        == "generated_from_current_production_sources_not_release_zip_or_signed_artifact"
+    )
+    assert output.is_file()
+    assert matrix.is_file()
+
+
+def test_cli_rejects_dispositions_output_without_candidate(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "_require_game", lambda: pytest.fail("must reject before game scan"))
+    output = tmp_path / "dispositions.jsonl.gz"
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "information-catalog",
+            "--no-localization",
+            "--candidate-dispositions-output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == cli.EXIT_USAGE, result.output
+    assert "--candidate-metadata" in result.output
+    assert "--candidate-production" in result.output
+    assert not output.exists()
+
+
+def test_cli_reports_disposition_output_io_failure_without_traceback(inputs, monkeypatch, tmp_path):
+    catalog, metadata = inputs
+    monkeypatch.setattr(cli, "_require_game", lambda: None)
+    monkeypatch.setattr(cli.information_catalog, "build", lambda **_kwargs: catalog)
+    source = tmp_path / "metadata.json"
+    source.write_text(json.dumps(metadata), encoding="utf-8", newline="\n")
+    invalid_parent = tmp_path / "not-a-directory"
+    invalid_parent.write_text("file blocks output path", encoding="utf-8", newline="\n")
+    output = tmp_path / "catalog.json"
+    matrix = tmp_path / "matrix.json"
+    result = CliRunner().invoke(
+        cli.app,
+        [
+            "information-catalog",
+            "--no-localization",
+            "--output",
+            str(output),
+            "--consumer-matrix-output",
+            str(matrix),
+            "--candidate-metadata",
+            str(source),
+            "--candidate-dispositions-output",
+            str(invalid_parent / "dispositions.jsonl.gz"),
+        ],
+    )
+
+    assert result.exit_code == cli.EXIT_FAILED, result.output
+    assert "无法写入" in result.output
+    assert "Traceback" not in result.output
+    assert not output.exists()
+    assert not matrix.exists()
+
+
+@pytest.mark.parametrize(
+    "case", ["output_only", "missing", "invalid_json", "wrong_identity", "both_sources"]
+)
 def test_cli_rejects_invalid_candidate_instead_of_claiming_coverage(
     inputs, monkeypatch, tmp_path, case
 ):
@@ -569,6 +716,8 @@ def test_cli_rejects_invalid_candidate_instead_of_claiming_coverage(
     ]
     if case != "output_only":
         args += ["--candidate-metadata", str(source)]
+    if case == "both_sources":
+        args += ["--candidate-production"]
     result = CliRunner().invoke(cli.app, args)
     assert result.exit_code == 2, result.output
     assert not coverage.exists()

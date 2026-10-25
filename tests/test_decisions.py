@@ -65,6 +65,14 @@ def test_财政开关关闭不生成财政脚本且保留原版策略(policy):
     assert decisions.effects(disabled) == ""
     assert decisions.on_actions(disabled) == ""
     assert json.loads(files[".metadata/metadata.json"])["enabled_modules"] == []
+    assert policy.package.save_compatibility == "new-game-only"
+    assert f"days = {policy.ttl_days}" in decisions.effects(policy)
+
+
+def test_旧存档缺少财政变量时活动触发器显式回退(policy):
+    triggers = decisions.triggers(policy)
+    active_trigger = triggers.split(f"{decisions.ACTIVE_TRIGGER} = {{", 1)[1].split("}", 1)[0]
+    assert f"has_variable = {decisions.RISK_VAR}" in active_trigger
 
 
 @pytest.mark.parametrize(

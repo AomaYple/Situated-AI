@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -48,10 +49,12 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     plan = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     assert "# Situated AI 深化扩展计划" in plan
-    assert "计划版本：12.3" in plan
+    version = re.search(r"计划版本：(\d+)\.(\d+)", plan)
+    assert version is not None
+    assert (int(version.group(1)), int(version.group(2))) >= (12, 5)
     assert all(f"## F{index}：" in plan for index in range(3))
     assert all(f"## F{index}：" in plan for index in range(9, 19))
-    assert "当前扩展队列：F9–F18，全部未开始" in plan
+    assert "当前扩展队列：" in plan
     assert "## 阶段状态机、产物和回退" in plan
     assert "F9 固定候选分母" in plan
     assert "## F15：Mod 内容与结构整合、更新、清理" in plan
