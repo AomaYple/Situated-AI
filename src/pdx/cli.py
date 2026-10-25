@@ -2637,7 +2637,7 @@ def modguard_cmd(
             )
         )
         for name, text in production.items():
-            if name.endswith(".txt"):
+            if name.endswith(".txt") and isinstance(text, str):
                 problems.extend(f"{name}: {error}" for error in parse_text(text, name).errors)
         if problems:
             _fail("生产工程检查失败：\n" + "\n".join(problems), EXIT_FAILED)

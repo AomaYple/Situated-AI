@@ -7,6 +7,7 @@ import codecs
 import hashlib
 import json
 import re
+import struct
 import tempfile
 import zipfile
 from dataclasses import asdict, replace
@@ -21,16 +22,18 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "1.1.0"
+RELEASE_VERSION = "1.1.1"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
+THUMBNAIL_NAME = "thumbnail.png"
 LAUNCHER_METADATA_KEYS = (
     "name",
     "id",
     "version",
     "supported_game_version",
     "short_description",
+    "picture",
     "tags",
     "relationships",
     "game_custom_data",
@@ -82,6 +85,7 @@ def _manifest_for_payloads(
             "version",
             "supported_game_version",
             "short_description",
+            "picture",
             "tags",
             "relationships",
         }
@@ -162,6 +166,9 @@ def _validate_archive(
                 raise ValueError(f"交付文件指纹不符：{name}")
             data[name] = raw
         for name, raw in {**data, MANIFEST_NAME: archive.read(MANIFEST_NAME)}.items():
+            # thumbnail.png 是二进制展示资源；其余交付条目是受控 UTF-8 文本。
+            if name == THUMBNAIL_NAME:
+                continue
             game = PurePosixPath(name).suffix.lower() in GAME_SUFFIXES
             try:
                 decoded = raw.decode("utf-8-sig" if game else "utf-8")
@@ -208,11 +215,13 @@ def _validate_release(data: Mapping[str, bytes], contract: Mapping[str, object])
         name not in required
         and not (name.startswith("common/") and name.endswith(".txt"))
         and not (name.startswith("localization/") and name.endswith(".yml"))
+        and name != THUMBNAIL_NAME
         for name in data
     ):
         raise ValueError("正式包包含非生产路径")
     if any("probe" in name.casefold() for name in data):
         raise ValueError("正式包不能包含探针")
+    _validate_thumbnail(data.get(THUMBNAIL_NAME))
     metadata = json.loads(data[METADATA_NAME])
     if set(metadata) != set(LAUNCHER_METADATA_KEYS):
         raise ValueError("正式包元数据必须只包含启动器字段")
@@ -220,6 +229,7 @@ def _validate_release(data: Mapping[str, bytes], contract: Mapping[str, object])
         metadata.get("id") != MOD_ID
         or metadata.get("version") != RELEASE_VERSION
         or metadata.get("supported_game_version") != "1.14.5"
+        or metadata.get("picture") != THUMBNAIL_NAME
     ):
         raise ValueError("正式包版本与锁定游戏不符")
     if contract.get("fallback_languages") != []:
@@ -272,6 +282,20 @@ def _validate_release(data: Mapping[str, bytes], contract: Mapping[str, object])
             pattern = r"\$[^$\n]+\$|\[[^]\n]+\]"
             if sorted(re.findall(pattern, value)) != sorted(re.findall(pattern, reference[key])):
                 raise ValueError(f"正式包本地化占位符不符：{language}/{key}")
+
+
+def _validate_thumbnail(raw: bytes | None) -> None:
+    """校验启动器/Workshop 封面是可移植且低于 1 MB 的方形 PNG。"""
+    if raw is None:
+        raise ValueError("正式包缺少 thumbnail.png")
+    if len(raw) >= 1_000_000:
+        raise ValueError("thumbnail.png 必须小于 1 MB，符合 Workshop 预览图限制")
+    signature = b"\x89PNG\r\n\x1a\n"
+    if not raw.startswith(signature) or len(raw) < 24:
+        raise ValueError("thumbnail.png 不是有效 PNG")
+    width, height = struct.unpack(">II", raw[16:24])
+    if not (256 <= width <= 4096 and 256 <= height <= 4096 and width == height):
+        raise ValueError("thumbnail.png 必须是 256-4096 像素的方形图片")
 
 
 def player_guide(
@@ -357,7 +381,7 @@ def launcher_metadata(metadata: Mapping[str, object]) -> dict[str, object]:
     return result
 
 
-def _release_files(files: Mapping[str, str]) -> dict[str, str]:
+def _release_files(files: Mapping[str, str | bytes]) -> dict[str, str | bytes]:
     """返回不含生成器审计数据的标准 Mod 文件集。"""
     result = dict(files)
     metadata = json.loads(result[METADATA_NAME])
@@ -400,19 +424,23 @@ def _validate_paths(names: list[str]) -> None:
         portable_names.add(name.casefold())
 
 
-def payloads(files: Mapping[str, str]) -> dict[str, bytes]:
+def payloads(files: Mapping[str, str | bytes]) -> dict[str, bytes]:
     result: dict[str, bytes] = {}
     _validate_paths(list(files))
     for name, text in sorted(files.items()):
         if name.casefold() == MANIFEST_NAME.casefold():
             raise ValueError("交付清单文件名为保留名称")
         path = PurePosixPath(name)
-        result[name] = text_bytes(text, game=path.suffix.lower() in GAME_SUFFIXES)
+        result[name] = (
+            text
+            if isinstance(text, bytes)
+            else text_bytes(text, game=path.suffix.lower() in GAME_SUFFIXES)
+        )
     return result
 
 
 def write_zip(
-    files: Mapping[str, str],
+    files: Mapping[str, str | bytes],
     destination: Path,
     *,
     generation: Mapping[str, object] | None = None,
@@ -465,17 +493,21 @@ def production_configuration() -> tuple[decisions.Policy, decisions.Extensions]:
     return policy, extensions
 
 
-def read_production_files() -> dict[str, str]:
+def read_production_files() -> dict[str, str | bytes]:
     """读取受控生成物原始 UTF-8 字节，不折叠 CRLF 或移除 BOM。"""
-    return {
+    files: dict[str, str | bytes] = {
         path.relative_to(decisions.PRODUCT).as_posix(): path.read_bytes().decode("utf-8")
         for directory in ("common", "localization", ".metadata")
         for path in sorted((decisions.PRODUCT / directory).rglob("*"))
         if path.is_file()
     }
+    thumbnail = decisions.PRODUCT / THUMBNAIL_NAME
+    if thumbnail.is_file():
+        files[THUMBNAIL_NAME] = thumbnail.read_bytes()
+    return files
 
 
-def generation_lock(files: Mapping[str, str] | None = None) -> str:
+def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
     """冻结源码和产物字节；离线只能核对冻结一致性，不能重建原版。"""
     root = decisions.PRODUCT.parent
     sources = [
@@ -495,7 +527,9 @@ def generation_lock(files: Mapping[str, str] | None = None) -> str:
                     for path in sources
                 },
                 "files": {
-                    name: hashlib.sha256(text.encode("utf-8")).hexdigest()
+                    name: hashlib.sha256(
+                        text if isinstance(text, bytes) else text.encode("utf-8")
+                    ).hexdigest()
                     for name, text in sorted(files.items())
                     if name != "README.md"
                 },
@@ -516,7 +550,7 @@ def check_generation_lock() -> None:
 
 def package_inputs(
     *, include_engineering_metadata: bool = False
-) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str]]:
+) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str | bytes]]:
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
     policy, extensions = production_configuration()
     strategy = decision_intents.load()
@@ -532,12 +566,14 @@ def package_inputs(
         intent.id for intent in strategy.intents
     }:
         raise ValueError("生产战略意图必须有实际规则消费者")
-    files = decisions.build(
-        policy,
-        extensions=extensions,
-        complete_localization=True,
-        information_rules=information,
-        consumer_adapters=adapters,
+    files: dict[str, str | bytes] = dict(
+        decisions.build(
+            policy,
+            extensions=extensions,
+            complete_localization=True,
+            information_rules=information,
+            consumer_adapters=adapters,
+        )
     )
     metadata = json.loads(files[".metadata/metadata.json"])
     localization = metadata["localization"]
@@ -545,6 +581,10 @@ def package_inputs(
         raise ValueError("正式包不能包含未翻译的生产本地化")
     modules = metadata["enabled_modules"]
     files["README.md"] = player_guide(policy, extensions, modules)
+    thumbnail = decisions.PRODUCT / THUMBNAIL_NAME
+    if not thumbnail.is_file():
+        raise ValueError(f"缺少正式包封面：{thumbnail}")
+    files[THUMBNAIL_NAME] = thumbnail.read_bytes()
     if not include_engineering_metadata:
         files[METADATA_NAME] = (
             json.dumps(launcher_metadata(metadata), ensure_ascii=False, indent=2) + "\n"

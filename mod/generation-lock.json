@@ -10,7 +10,7 @@
     "src/pdx/cache.py": "d1a1d88caabfdbaf9569bbb6ffe9c48c9f757bff949f51ec5d9b6ae4a6a8ff21",
     "src/pdx/candidate_coverage.py": "e007fa1ad06fe000a0037bbdb338fe142e7907f9d9303c5e78ddb2820a4521c6",
     "src/pdx/citations.py": "c46244d311fc2ef0469ce3b3f8751b6af61c3952d53bea262dbfb4aec64d2b76",
-    "src/pdx/cli.py": "86363aa1dcb7b9302dcd94c873e90df48ae802f8d65c8683775e6510e287c3de",
+    "src/pdx/cli.py": "61bfeabaa10afdea00560e00369d54a7e29161adc071d6c05ee817d5c4f19b10",
     "src/pdx/config.py": "82a95e2b2b54e7e769a7f11ae12dc4e333f1d0c08fdc5226ff9dafddfc98b394",
     "src/pdx/console.py": "30d793bbf38e165e8c73d13dc71f3f450141e83e329abc27df92afd02fb42b92",
     "src/pdx/consumer_audit.py": "415f15a67acdcf3b16aa61816a30a5679e2f70eac4ebcf28fd042dd14c138c82",
@@ -24,9 +24,9 @@
     "src/pdx/decision_report.py": "087e24fcb18c001de97aa910e2e77c1be621034db583d004363c2daa10ce1401",
     "src/pdx/decision_rules.py": "42405b44aa161ce5248cd4256227e1dea95d094f3740829b5706624e614e627f",
     "src/pdx/decision_security.py": "e85de5948ae27774cc6e0cd2008f3695a9fecd8888c7377213124f535f0a8bd8",
-    "src/pdx/decisions.py": "cbaf0405287710124606d93c32a2125120447544dba3142e937cdb52c344666e",
+    "src/pdx/decisions.py": "49facea0c8020e725b51022e540f7e0f7139e1a472641a299d051214451d6db0",
     "src/pdx/defines.py": "f0a09f456d2b787eb85409ae195b26ebace59a4ea0ca20efb16443a3d662c869",
-    "src/pdx/distribution.py": "737c0edfcdd70974fceea48501dd258424285502a1072f8d4e7f2d55fa1aef82",
+    "src/pdx/distribution.py": "07b3e99b771e6265d5c5b507d7c0215f5b7ff28ae35b2847e128f8065a92ec35",
     "src/pdx/doc04.py": "f5f5c33f02fa6a34da5df2ade2be2f3c580eab09a57e2f50e51c966a40fbce57",
     "src/pdx/doc14.py": "68b11eef4f857af2f0c8112bc070c309060dfc3affdf8494a3be87c5ff3cde13",
     "src/pdx/doc15.py": "81c35b33d89bff6701dc9b11258a4c10ac0c0cbd46505ddab202e27953478ef4",
@@ -76,14 +76,14 @@
     "mod/decisions/diplomatic_goals.toml": "cd771cbdd84da2f85d44b223dd489a968320910e73d526316b256bb6c8eb0319",
     "mod/decisions/economy.toml": "1df101cd289aaac2e0263409591cb3b6780350df60e6d12d870d6c3bb1bdd313",
     "mod/decisions/extensions.toml": "6c77a21e5854b77d87edcd8cce880b02035dbca2c6a1964fb4340522c577ebeb",
-    "mod/decisions/fiscal.toml": "5e6d5807570fa80ece0569fd7cc418d777439dc30e8fa80087a8add370162da0",
+    "mod/decisions/fiscal.toml": "295827b9b8a6ba404e6a4c608b05a29f4f3276e381fe30bf8501a0e9edc4a31c",
     "mod/decisions/information.toml": "224e2ab42dca42659e5552d78f18337de30d2b74e90bacc0c60c231be318722d",
     "mod/decisions/strategic.toml": "5229a35c80cd24b35b81ea14f19919b6adcbb67a73c3eb52d49b952495e76886",
     "research/vanilla-ai/1.14.5/00_default_strategy.txt": "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
     "research/vanilla-ai/1.14.5/war_support_values.txt": "547594557cd7cdcfd7cc3599f680aa2dfb2422a94bd7a23e4a8ff0c2fb637898"
   },
   "files": {
-    ".metadata/metadata.json": "0863231b098a31570b14365dec8751fb14f63f8fc0f320af03424dd3a9905536",
+    ".metadata/metadata.json": "08cb4da0e262490c165690bb048e37df4f8c6ac2d31e0c1fc5f2a491cde8e564",
     "common/ai_strategies/00_default_strategy.txt": "116f154dbf90f96a3628c600a9f3db68bf2c3ba0883f14cda20a53e70b71d6d9",
     "common/ai_strategies/01_admin_strategies.txt": "f6b6e75402cdc36f00ab4570e8933fb93b899d5018542d0511fa055d68e5b210",
     "common/ai_strategies/02_subject_diplomatic_strategies.txt": "e0d7e653ec2f672a8c067ed46d407be191569d51598f13031e186c47ea0b9317",
@@ -141,6 +141,7 @@
     "localization/russian/sitai_decisions_l_russian.yml": "963a435aa48331a1528da578899030671a48f25aba62306c04b89833db666827",
     "localization/simp_chinese/sitai_decisions_l_simp_chinese.yml": "59e58e03b08f9851b961458b08bab57216bacf2953240eea9cb68b4c682136da",
     "localization/spanish/sitai_decisions_l_spanish.yml": "3eda6db3c4b5c18d48125d4236e36c238774cc8c3685365546945cdd553fff9e",
-    "localization/turkish/sitai_decisions_l_turkish.yml": "f1da0aedd39196f0b384e85032dba54eb497c6910aa4b16f4d411d02517cce7c"
+    "localization/turkish/sitai_decisions_l_turkish.yml": "f1da0aedd39196f0b384e85032dba54eb497c6910aa4b16f4d411d02517cce7c",
+    "thumbnail.png": "d9dba46a83b9348372ad538e59c11badd1e4e7deae6a90e7fe6fecf68a77d2e8"
   }
 }

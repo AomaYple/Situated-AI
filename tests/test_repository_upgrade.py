@@ -5,6 +5,7 @@ from __future__ import annotations
 import codecs
 import hashlib
 import json
+import struct
 import subprocess
 import sys
 import zipfile
@@ -156,10 +157,15 @@ def test_distribution_rejects_unsafe_paths(name):
 
 
 def test_zip_deterministic_manifest_and_game_encoding(tmp_path):
-    files = {
+    thumbnail = b"\x89PNG\r\n\x1a\n" + b"\0" * 8 + struct.pack(">IIBBBBB", 256, 256, 8, 2, 0, 0, 0)
+    distribution._validate_thumbnail(thumbnail)
+    with pytest.raises(ValueError, match="小于 1 MB"):
+        distribution._validate_thumbnail(b"\x89PNG\r\n\x1a\n" + b"\0" * (1_000_000 - 8))
+    files: dict[str, str | bytes] = {
         "common/a.txt": "\ufeffx = 1\r\n",
         "localization/a.yml": "l_english:\n",
         "notes.md": "readme\n",
+        "thumbnail.png": thumbnail,
     }
     generation = distribution.generation_contract()
     a = distribution.write_zip(files, tmp_path / "a.zip", generation=generation)
@@ -169,6 +175,7 @@ def test_zip_deterministic_manifest_and_game_encoding(tmp_path):
     assert a.read_bytes() == b.read_bytes()
     with zipfile.ZipFile(a) as archive:
         assert archive.read("common/a.txt") == codecs.BOM_UTF8 + b"x = 1\n"
+        assert archive.read("thumbnail.png") == thumbnail
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         for name, expected in manifest["files"].items():
             assert hashlib.sha256(archive.read(name)).hexdigest() == expected
