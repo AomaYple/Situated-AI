@@ -17,7 +17,7 @@
 | 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面.md)、[政治候选面](design/02-政治候选面.md) |
 | 当前计划 | [Situated AI 终极深化计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
-| 创意工坊发布文案 | [创意工坊描述](publishing/创意工坊描述.md) |
+| 创意工坊发布文案（Steam BBCode，全文可直接粘贴） | [创意工坊描述](publishing/创意工坊描述.md) |
 | 工具使用 | [工具手册](../tools/README.md) |
 | Victoria 3 知识库 | [victoria3-modding](victoria3-modding/README.md) |
 
