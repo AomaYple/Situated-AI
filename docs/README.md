@@ -15,7 +15,7 @@
 | 工具、快照和证据边界 | [工程交付基线](design/exec/工程基线-1.0.md) |
 | 产品架构 | [处境决策设计](design/03-处境决策设计.md) |
 | 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面.md)、[政治候选面](design/02-政治候选面.md) |
-| 当前计划 | [Situated AI 终极深化计划](design/exec/mod重设计-实施计划.md) |
+| 当前计划 | [Situated AI 终极方案 2.0 实施计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
 | 创意工坊发布文案（Steam BBCode，全文可直接粘贴） | [创意工坊描述](publishing/创意工坊描述.md) |
 | 工具使用 | [工具手册](../tools/README.md) |
