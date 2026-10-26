@@ -1906,10 +1906,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "mod.files",
         "12-真实mod解剖与改造面地图.md",
-        "23 个 Workshop mod 共 4809 个内容文件",
+        "23 个 Workshop mod 共 4814 个内容文件",
         "mods_files",
         "",
-        4809,
+        4814,
         "不含各 mod 的 metadata.json（每 mod 1 个，共 23 个）；"
         "去重后的相对路径数量随当前订阅集变化，由本机快照复算。旧快照作为历史测量保留。"
         "⚠️ 4,828 那一版是把**我们自己部署的 mod** 也数了进去（B83），已修正",
@@ -1929,10 +1929,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "pfx.mods_total",
         "02-Mod结构与加载.md",
-        "全部 mod 共使用 2761 次功能前缀",
+        "全部 mod 共使用 2764 次功能前缀",
         "mods_prefix_total",
         "",
-        2761,
+        2764,
         "六个前缀之和见下面 6 条分项断言；分项由当前订阅快照复算，避免手抄数字漂移",
     ),
     # ── 六个前缀的**分项** ────────────────────────────────
@@ -1943,10 +1943,10 @@ CLAIMS: list[Claim] = [
     Claim(
         "pfx.replace_or_create",
         "02-Mod结构与加载.md",
-        "REPLACE_OR_CREATE 前缀在 mod 中使用 1140 次",
+        "REPLACE_OR_CREATE 前缀在 mod 中使用 1143 次",
         "prefix_in_mods",
         "REPLACE_OR_CREATE",
-        1140,
+        1143,
     ),
     Claim(
         "pfx.inject",

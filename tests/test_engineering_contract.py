@@ -48,27 +48,29 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     root = Path(__file__).resolve().parents[1]
     plan = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
-    assert "# Situated AI 终极深化计划" in plan
+    assert "# Situated AI 终极方案 2.0 实施计划" in plan
     version = re.search(r"计划版本：(\d+)\.(\d+)", plan)
     assert version is not None
-    assert (int(version.group(1)), int(version.group(2))) >= (14, 0)
-    stage_positions = [plan.index(f"### U{index}：") for index in range(14)]
+    assert (int(version.group(1)), int(version.group(2))) >= (17, 0)
+    stage_positions = [plan.index(f"| T{index} |") for index in range(14)]
     assert stage_positions == sorted(stage_positions)
     assert "F0–F18" in plan
-    assert "每个 U 阶段都必须从上一完整包增量生成一个可安装、可运行、可解释的标准 Mod 包" in plan
+    assert "每个阶段都必须从上一完整包生成一个可安装、可运行、可解释的标准 Mod 包" in plan
     assert "正确性第一、速度第二、内存第三" in plan
-    assert "静态检查、日志、快照、模拟、实测、推断和玩家验收" in plan
-    assert "当前下一步" in plan
-    assert "U0" in checklist
-    assert "每阶段必须交付可玩包" in checklist
+    assert "静态工程正确性和可交付性" in plan
+    assert "用户长期实机不作为本计划门禁" in plan
+    assert "Mod 结构与内容整合、更新、清理和优化" in plan
+    assert "Mod 改动后的全量结构与内容复核" in plan
+    assert "正式交付和维护" in plan
+    assert "当前状态与下一步" in plan
+    assert "T0" in checklist
+    assert "每个 T 阶段都必须生成可安装标准包" in checklist
     assert "situated-ai" in checklist
     assert "标准包" in checklist
-    assert "1.2.0 候选已生成" in checklist
-    assert "运行期观察工具 | U11 工程候选已交付" in checklist
+    assert "1.2.0 已生成并校验" in checklist
+    assert "运行期观察工具 | 工程能力已完成" in checklist
     assert "docs/publishing/创意工坊描述.md" in plan
-    assert "src/pdx/observe.py" in plan
-    assert "src/pdx/savegame.py" in plan
-    assert "日志增量读取有明确的输入目录" in plan
+    assert "日志、存档、快照和观察器只提供辅助证据" in plan
     assert "目标、内容、兼容性、支持的语言" in plan
 
 
@@ -82,9 +84,11 @@ def test_current_document_indexes_are_complete() -> None:
     assert "Situated AI 1.2.0" in tools
     assert "dist/situated-ai-1.0.1.zip" not in tools
     assert all(f"F{index}-" in execution for index in range(9, 19))
-    assert "当前维护候选为 Situated AI 1.2.0" in execution
-    assert "U0–U14" in execution
+    assert "当前生产基线为 Situated AI 1.2.0" in execution
+    assert "T0–T13" in execution
     assert "不另列第二套待办" in execution
-    assert "[Situated AI 终极深化计划](mod重设计-实施计划.md)" in execution
+    assert "[Situated AI 终极方案 2.0 实施计划](mod重设计-实施计划.md)" in execution
     assert "[F18 集成、完整回归和交付](F18-集成交付-结果.md)" in execution
     assert "观察器和 Workshop 文案已经是当前" in execution
+    assert "[T11 Mod 结构与内容整合结果](T11-Mod结构与内容整合-结果.md)" in execution
+    assert "[T12 Mod 全量复核结果](T12-Mod全量复核-结果.md)" in execution
