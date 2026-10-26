@@ -83,7 +83,7 @@ def test_current_document_indexes_are_complete() -> None:
     assert "dist/situated-ai-1.0.1.zip" not in tools
     assert all(f"F{index}-" in execution for index in range(9, 19))
     assert "当前维护候选为 Situated AI 1.2.0" in execution
-    assert "U0–U13" in execution
+    assert "U0–U14" in execution
     assert "不另列第二套待办" in execution
     assert "[Situated AI 终极深化计划](mod重设计-实施计划.md)" in execution
     assert "[F18 集成、完整回归和交付](F18-集成交付-结果.md)" in execution
