@@ -39,7 +39,8 @@ if TYPE_CHECKING:
 # 真实依据另由integration用例对全部锁定原件核对SHA与接口签名。
 _SYNTHETIC_READER_EVIDENCE = (
     "bureaucracy taking_loans scaled_debt net_total_income legitimacy "
-    "has_insurrectionary_interest_groups has_variable recently_lost_war weeks_until_bankruptcy"
+    "has_insurrectionary_interest_groups has_variable recently_lost_war weeks_until_bankruptcy "
+    "literacy_rate"
 )
 
 
@@ -90,6 +91,7 @@ def _values(**overrides: object) -> dict[str, object]:
         "war": False,
         "war_defeat": False,
         "population": 3000000,
+        "literacy": 0.8,
         "income": 5000,
         "net_surplus": 100,
         "debt_ratio": 0.1,
@@ -642,10 +644,10 @@ def generated_rule_blocks(rules):
 @pytest.mark.parametrize(
     ("change", "expected"),
     [
-        ({}, 1.3),
+        ({}, 1.25),
         ({"legitimacy": 74}, 1.15),
-        ({"legitimacy": 75}, 1.3),
-        ({"debt_ratio": 0.2}, 1.3),
+        ({"legitimacy": 75}, 1.25),
+        ({"debt_ratio": 0.2}, 1.25),
         ({"debt_ratio": 0.20001}, 1.15),
         ({"net_surplus": 0}, 1.15),
         ({"bureaucracy": 0}, 1.15),
@@ -685,7 +687,7 @@ def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
     generated_rule_blocks,
 ):
     rules, blocks = generated_rule_blocks
-    for legitimacy, education, trade, economy in [(60, 1.15, 1.15, 1.15), (80, 1.3, 1.25, 1.25)]:
+    for legitimacy, education, trade, economy in [(60, 1.15, 1.2, 1.2), (80, 1.3, 1.2, 1.2)]:
         values = _values(legitimacy=legitimacy)
         for field, expected in [
             ("institution_scores.institution_schools", education),
@@ -702,6 +704,65 @@ def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
     # 已知普通容量足够，但无法判断强档时，不能猜测普通档优先。
     unknown = decision_rules.evaluate(rules, _values(legitimacy=None), is_ai=True)
     assert "institution_scores.institution_schools" not in unknown
+
+
+def test_multifactor_capacity_rules_require_complete_context(generated_rule_blocks):
+    """U13 复合规则必须同时满足处境、能力和路线条件，并保持未知回退。"""
+    rules, blocks = generated_rule_blocks
+
+    def evaluate(values, field):
+        result = decision_rules.evaluate(rules, values, is_ai=True)
+        engine = {
+            reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+            for reader in rules.readers
+        }
+        return result.get(field), _evaluate_script(blocks[field], engine)
+
+    strong = _values(legitimacy=80, expansion_route=True)
+    for field, expected in {
+        "wanted_construction_output": ("coordinated_industrial_capacity", 1.25),
+        "colonial_interest_ratio": ("colonial_projection_capacity", 1.15),
+    }.items():
+        selected, generated = evaluate(strong, field)
+        assert selected == expected
+        assert generated == expected[1]
+
+    low_literacy = _values(legitimacy=60, literacy=0.4)
+    selected, generated = evaluate(low_literacy, "institution_scores.institution_schools")
+    assert selected == ("education_catchup_capacity", 1.25)
+    assert generated == 1.25
+
+    wartime = _values(war=True)
+    for field, expected in {
+        "wanted_army_size": ("wartime_army_capacity", 1.15),
+        "wanted_navy_size": ("wartime_navy_capacity", 1.12),
+    }.items():
+        selected, generated = evaluate(wartime, field)
+        assert selected == expected
+        assert generated == expected[1]
+
+    healthy = _values(legitimacy=60)
+    for field, expected in {
+        "treaty_category_scores.trade": ("trade_capacity_cooperation", 1.2),
+        "treaty_category_scores.economy": ("economic_diplomacy_capacity", 1.2),
+    }.items():
+        selected, generated = evaluate(healthy, field)
+        assert selected == expected
+        assert generated == expected[1]
+
+    resource = decision_rules.evaluate(
+        rules, _values(legitimacy=60, resource_route=True), is_ai=True
+    )
+    assert resource["treaty_category_scores.economy"] == (
+        "identity_resource_cooperation",
+        1.3,
+    )
+
+    constrained = decision_rules.evaluate(rules, _values(legitimacy=60, net_surplus=0), is_ai=True)
+    assert constrained["treaty_category_scores.trade"][0] != "trade_capacity_cooperation"
+    assert constrained["treaty_category_scores.economy"][0] != "economic_diplomacy_capacity"
+    unknown = decision_rules.evaluate(rules, _values(legitimacy=60, net_surplus=None), is_ai=True)
+    assert unknown == {}
 
 
 @pytest.mark.parametrize(
@@ -906,7 +967,7 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
 def test_release_is_a_real_standard_package(tmp_path):
-    path = distribution.package(tmp_path / "situated-ai-1.1.1.zip")
+    path = distribution.package(tmp_path / "situated-ai-1.2.0.zip")
     _, _, engineering_files = distribution.package_inputs(include_engineering_metadata=True)
     assert all(
         not line.endswith((" ", "\t"))
@@ -932,7 +993,7 @@ def test_release_is_a_real_standard_package(tmp_path):
         assert metadata["id"] == distribution.MOD_ID == "situated-ai"
         assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
         assert len(archive.read(".metadata/metadata.json")) < 2_000
-        assert metadata["version"] == "1.1.1"
+        assert metadata["version"] == "1.2.0"
         assert contract["status"] == "candidate"
         assert contract["behavior_quality"] == "not_evaluated"
         assert engineering_metadata["decision_rules"]["behavior_verified"] is False

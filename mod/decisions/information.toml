@@ -53,6 +53,14 @@ unit = "ships"
 kind = "number"
 minimum = 0
 
+[readers.literacy]
+engine = "literacy_rate"
+scope = "root"
+unit = "ratio"
+kind = "number"
+minimum = 0
+maximum = 1
+
 [readers.subject]
 engine = "is_subject"
 scope = "root"
@@ -528,3 +536,124 @@ conditions = [
 ]
 why = "国家财政政治余量充分时更主动评估经济合作候选"
 counterexample = "资源路线仍按更高优先级单独仲裁，不累计奖励、不制造合作资格"
+
+[[rules]]
+id = "coordinated_industrial_capacity"
+intent = "decisive_development"
+domain = "economy"
+field = "wanted_construction_output"
+priority = 85
+value = 1.25
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "war_defeat", op = "=", value = false },
+  { fact = "loans", op = "=", value = false },
+  { fact = "debt_ratio", op = "<=", value = 0.4 },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+  { fact = "industrial_route", op = "=", value = true },
+]
+why = "和平、未处于战败恢复、无违约、低债务、有结余且行政能力足够时，把产业路线与国家建设容量一起评估"
+counterexample = "战争、战败恢复、借贷、违约、债务过高、结余或行政能力未知时回退原版；不创造建设资金、劳动力或建筑队列"
+
+[[rules]]
+id = "wartime_army_capacity"
+intent = "wartime_defense"
+domain = "military"
+field = "wanted_army_size"
+priority = 80
+value = 1.15
+conditions = [
+  { fact = "war", op = "=", value = true },
+  { fact = "default", op = "=", value = false },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "战争中只有财政未违约且行政能力可用时，适度提高原版常备军目标"
+counterexample = "不创建军队、不改变战斗属性；违约、收入或行政能力未知时保持原版，资格和军费仍由原版处理"
+
+[[rules]]
+id = "wartime_navy_capacity"
+intent = "wartime_defense"
+domain = "military"
+field = "wanted_navy_size"
+priority = 80
+value = 1.12
+conditions = [
+  { fact = "war", op = "=", value = true },
+  { fact = "default", op = "=", value = false },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "战争中财政与行政能力仍可承受时，适度提高原版海军目标"
+counterexample = "不创造船只、港口或海军资格；违约或未知输入保持原版"
+
+[[rules]]
+id = "education_catchup_capacity"
+intent = "supported_development"
+domain = "political"
+field = "institution_scores.institution_schools"
+priority = 65
+value = 1.25
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "literacy", op = "<", value = 0.5 },
+  { fact = "population", op = ">=", value = 2000000 },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "和平且财政、行政能力可用的大人口低识字国家优先补足教育能力"
+counterexample = "不提高制度等级、不绕过法律或行政容量；战争、违约或未知输入保持原版"
+
+[[rules]]
+id = "trade_capacity_cooperation"
+intent = "supported_development"
+domain = "market"
+field = "treaty_category_scores.trade"
+priority = 65
+value = 1.2
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "debt_ratio", op = "<=", value = 0.4 },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "和平、低债务且财政和行政能力可用时，把贸易合作作为可承受的外部发展选项"
+counterexample = "不创建贸易路线、商品或条约资格；任何不可行候选仍由原版拒绝"
+
+[[rules]]
+id = "economic_diplomacy_capacity"
+intent = "supported_development"
+domain = "diplomacy"
+field = "treaty_category_scores.economy"
+priority = 65
+value = 1.2
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "debt_ratio", op = "<=", value = 0.4 },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "和平、低债务且行政能力可用时提高经济合作类别的相对关注"
+counterexample = "不强制签约、不保证收益；战争、违约或未知输入保持原版"
+
+[[rules]]
+id = "colonial_projection_capacity"
+intent = "decisive_development"
+domain = "geography"
+field = "colonial_interest_ratio"
+priority = 80
+value = 1.15
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "navy", op = ">=", value = 25 },
+  { fact = "income", op = ">", value = 0 },
+  { fact = "expansion_route", op = "=", value = true },
+]
+why = "和平、有收入、具备海军投射和既有扩张路线时提高殖民利益的有限原版权重"
+counterexample = "不创建殖民资格、舰队或机构；海军、收入或路线未知时回退原版"
