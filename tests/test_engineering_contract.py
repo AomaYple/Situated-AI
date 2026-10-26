@@ -51,8 +51,8 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "# Situated AI 终极深化计划" in plan
     version = re.search(r"计划版本：(\d+)\.(\d+)", plan)
     assert version is not None
-    assert (int(version.group(1)), int(version.group(2))) >= (13, 0)
-    stage_positions = [plan.index(f"### U{index}：") for index in range(13)]
+    assert (int(version.group(1)), int(version.group(2))) >= (14, 0)
+    stage_positions = [plan.index(f"### U{index}：") for index in range(14)]
     assert stage_positions == sorted(stage_positions)
     assert "F0–F18" in plan
     assert "每个 U 阶段都必须从上一完整包增量生成一个可安装、可运行、可解释的标准 Mod 包" in plan
@@ -63,7 +63,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "每阶段必须交付可玩包" in checklist
     assert "situated-ai" in checklist
     assert "标准包" in checklist
-    assert "1.1.1 候选已生成" in checklist
+    assert "1.2.0 候选已生成" in checklist
     assert "运行期观察工具 | U11 工程候选已交付" in checklist
     assert "docs/publishing/创意工坊描述.md" in plan
     assert "src/pdx/observe.py" in plan
@@ -78,12 +78,12 @@ def test_current_document_indexes_are_complete() -> None:
     tools = (root / "tools/README.md").read_text(encoding="utf-8")
     execution = (root / "docs/design/exec/README.md").read_text(encoding="utf-8")
 
-    assert "dist/situated-ai-1.1.1.zip" in tools
-    assert "Situated AI 1.1.1" in tools
+    assert "dist/situated-ai-1.2.0.zip" in tools
+    assert "Situated AI 1.2.0" in tools
     assert "dist/situated-ai-1.0.1.zip" not in tools
     assert all(f"F{index}-" in execution for index in range(9, 19))
-    assert "当前维护候选为 Situated AI 1.1.1" in execution
-    assert "U0–U12" in execution
+    assert "当前维护候选为 Situated AI 1.2.0" in execution
+    assert "U0–U13" in execution
     assert "不另列第二套待办" in execution
     assert "[Situated AI 终极深化计划](mod重设计-实施计划.md)" in execution
     assert "[F18 集成、完整回归和交付](F18-集成交付-结果.md)" in execution

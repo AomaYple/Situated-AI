@@ -40,7 +40,7 @@ def policy():
 
 def test_财政开关显式开启且交付契约来自数据源(policy):
     assert policy.enabled
-    assert policy.package.product_version == "1.1.1"
+    assert policy.package.product_version == "1.2.0"
     assert policy.package.status == "candidate"
     payload = decisions.metadata_payload(policy)
     assert payload["version"] == policy.package.product_version
@@ -347,7 +347,7 @@ def test_拒绝错误类型和未审查游戏版本(tmp_path, mutation):
         'status = "candidate"|status = "released"',
         'save_compatibility = "new-game-only"|save_compatibility = "all"',
         'platforms = ["windows", "macos", "linux"]|platforms = ["plan9"]',
-        'product_version = "1.1.1"|product_version = "not-a-version"',
+        'product_version = "1.2.0"|product_version = "not-a-version"',
     ],
 )
 def test_拒绝不可靠的包契约(tmp_path, mutation):
@@ -609,7 +609,7 @@ def test_正式包确定性清单编码与完整生产内容(tmp_path):
         assert generation["variant"] == "release"
         assert generation["fiscal"]["enabled"] is True
         assert generation["behavior_quality"] == "not_evaluated"
-        assert manifest["contract"]["product_version"] == "1.1.1"
+        assert manifest["contract"]["product_version"] == "1.2.0"
         assert len(manifest["contract"]["enabled_modules"]) == 8
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt").decode("utf-8-sig")
         assert "# SITAI BEGIN information:" in strategy
@@ -657,10 +657,10 @@ def test_交付说明由清单覆盖且明确用户验收边界(tmp_path):
         text = raw.decode("utf-8")
         manifest = json.loads(archive.read("DISTRIBUTION-MANIFEST.json"))
         assert manifest["files"]["README.md"] == hashlib.sha256(raw).hexdigest()
-        assert "Situated AI 1.1.1" in text
+        assert "Situated AI 1.2.0" in text
         assert "【中文】" in text
         assert "[English]" in text
-        assert "产品版本 / Product version：1.1.1\n" in text
+        assert "产品版本 / Product version：1.2.0\n" in text
         assert "长期行为、平衡、后期性能" in text
         assert "Long-run AI behavior" in text
         assert not raw.startswith(b"\xef\xbb\xbf")
