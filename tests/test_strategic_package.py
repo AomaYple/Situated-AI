@@ -71,6 +71,7 @@ def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch
     metadata["localization"][key] = ["french"]
     files = {".metadata/metadata.json": json.dumps(metadata)}
     monkeypatch.setattr(distribution.decisions, "build", lambda *_args, **_kwargs: files)
+    monkeypatch.setattr(distribution.country_state, "validate", lambda *_args, **_kwargs: None)
     with pytest.raises(ValueError, match="未翻译"):
         distribution.package_inputs()
     assert json.loads(files[".metadata/metadata.json"]) == metadata

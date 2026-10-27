@@ -6,6 +6,7 @@ import pytest
 from test_country_state import Script, facts
 
 from pdx import (
+    config,
     country_state,
     decision_adapters,
     decision_intents,
@@ -58,6 +59,7 @@ def test_all_routes_have_real_consumer_fields_and_root_scope(adapter_set):
         assert consumer["eligibility_costs_and_execution"] == "retained_vanilla"
 
 
+@pytest.mark.skipif(not config.GAME.is_dir(), reason="游戏目录不可用")
 def test_route_readers_are_owned_and_compiled_to_active_guards(adapter_set):
     expected = {f"sitai_route_{route}" for route in ROUTES}
     used = set()

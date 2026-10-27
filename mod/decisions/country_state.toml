@@ -1,1 +1,139 @@
-\n
+schema = 1
+variable_ttl_days = 100
+switch_cooldown_days = 62
+update_days = 30
+enabled = true
+
+[readers]
+war = { engine = "is_at_war", kind = "boolean", unit = "boolean" }
+default = { engine = "in_default", kind = "boolean", unit = "boolean" }
+loans = { engine = "taking_loans", kind = "boolean", unit = "boolean" }
+debt_ratio = { engine = "scaled_debt", kind = "number", unit = "debt_to_credit_ratio", min = 0 }
+net_surplus = { engine = "net_total_income", kind = "number", unit = "currency_per_week" }
+bureaucracy = { engine = "bureaucracy", kind = "number", unit = "capacity_balance" }
+legitimacy = { engine = "legitimacy", kind = "number", unit = "legitimacy_0_100", min = 0, max = 100 }
+literacy = { engine = "literacy_rate", kind = "number", unit = "ratio", min = 0, max = 1 }
+population = { engine = "total_population", kind = "number", unit = "persons", min = 0 }
+navy = { engine = "navy_size", kind = "number", unit = "ships", min = 0 }
+industrial_route = { engine = "has_strategy", kind = "boolean", unit = "boolean", argument = "ai_strategy_industrial_expansion" }
+resource_route = { engine = "has_strategy", kind = "boolean", unit = "boolean", argument = "ai_strategy_resource_expansion" }
+expansion_route = { engine = "has_strategy", kind = "boolean", unit = "boolean", argument = "ai_strategy_territorial_expansion" }
+insurrection = { engine = "has_insurrectionary_interest_groups", kind = "boolean", unit = "boolean" }
+war_defeat = { engine = "has_variable", kind = "boolean", unit = "boolean", argument = "recently_lost_war" }
+subject = { engine = "is_subject", kind = "boolean", unit = "boolean" }
+income = { engine = "fixed_income", kind = "number", unit = "currency_per_week" }
+artillery_tech = { engine = "has_technology_researched", kind = "boolean", unit = "boolean", argument = "artillery" }
+
+# 同一档位谓词同时编译到 Python 参考预算和 PDX 路线资格。
+# 零成本不依赖该预算事实；未知值只允许已被证明的最低能力。
+[budgets.fiscal]
+1 = [[{ fact = "debt_ratio", op = "<", value = 0.7 }]]
+2 = [[{ fact = "debt_ratio", op = "<", value = 0.4 }, { fact = "net_surplus", op = ">", value = 0 }]]
+
+[budgets.administrative]
+1 = [[{ fact = "bureaucracy", op = ">=", value = 0 }]]
+2 = [[{ fact = "bureaucracy", op = ">=", value = 100 }]]
+
+[budgets.security]
+1 = [[{ fact = "navy", op = ">", value = 0 }]]
+2 = [[{ fact = "navy", op = ">=", value = 25 }]]
+
+[dimensions]
+fiscal = { facts = ["debt_ratio", "net_surplus", "default", "loans"] }
+administrative = { facts = ["bureaucracy"] }
+political = { facts = ["legitimacy", "insurrection"] }
+social = { facts = ["population"] }
+industry = { facts = ["industrial_route", "net_surplus"] }
+market = { facts = ["net_surplus"] }
+diplomacy = { facts = ["subject"] }
+military = { facts = ["navy", "war"] }
+education = { facts = ["literacy", "artillery_tech"] }
+overseas = { facts = ["navy"] }
+identity = { facts = ["subject"] }
+crisis = { facts = ["war", "default", "insurrection", "war_defeat"] }
+
+[routes.fiscal_recovery]
+priority = 100
+emergency = true
+enter = [
+  [{ fact = "default", op = "=", value = true }],
+  [{ fact = "loans", op = "=", value = true }],
+  [{ fact = "debt_ratio", op = ">=", value = 0.6 }],
+]
+hold = [
+  [{ fact = "default", op = "=", value = true }],
+  [{ fact = "loans", op = "=", value = true }],
+  [{ fact = "debt_ratio", op = ">=", value = 0.4 }],
+]
+cost = { fiscal = 1, administrative = 1, security = 0 }
+
+[routes.stability]
+priority = 90
+emergency = true
+enter = [[{ fact = "insurrection", op = "=", value = true }]]
+hold = [[{ fact = "insurrection", op = "=", value = true }]]
+cost = { fiscal = 0, administrative = 1, security = 1 }
+
+[routes.defense]
+priority = 110
+emergency = true
+enter = [[{ fact = "war", op = "=", value = true }]]
+hold = [[{ fact = "war", op = "=", value = true }]]
+cost = { fiscal = 1, administrative = 1, security = 2 }
+
+[routes.industry]
+priority = 50
+emergency = false
+enter = [[
+  { fact = "war", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+  { fact = "industrial_route", op = "=", value = true },
+  { fact = "net_surplus", op = ">", value = 0 },
+]]
+hold = [[
+  { fact = "war", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+  { fact = "industrial_route", op = "=", value = true },
+  { fact = "net_surplus", op = ">", value = 0 },
+]]
+cost = { fiscal = 1, administrative = 1, security = 0 }
+
+[routes.education]
+priority = 60
+emergency = false
+enter = [[
+  { fact = "war", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+  { fact = "literacy", op = "<", value = 0.5 },
+  { fact = "population", op = ">", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+]]
+hold = [[
+  { fact = "war", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+  { fact = "literacy", op = "<", value = 0.6 },
+  { fact = "population", op = ">", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+]]
+cost = { fiscal = 1, administrative = 1, security = 0 }
+
+[routes.maritime]
+priority = 30
+emergency = false
+enter = [[
+  { fact = "war", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+  { fact = "expansion_route", op = "=", value = true },
+  { fact = "navy", op = ">=", value = 25 },
+  { fact = "income", op = ">", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+]]
+hold = [[
+  { fact = "war", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+  { fact = "expansion_route", op = "=", value = true },
+  { fact = "navy", op = ">=", value = 25 },
+  { fact = "income", op = ">", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+]]
+cost = { fiscal = 1, administrative = 1, security = 1 }
