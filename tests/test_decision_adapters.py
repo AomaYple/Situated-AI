@@ -14,7 +14,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pdx import config, decision_adapters, decision_rules, decisions
+from pdx import config, country_state, decision_adapters, decision_rules, decisions
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.textio import normalized_text
@@ -480,7 +480,7 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
 )
 def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
     adapters = decision_adapters.load()
-    files, contract = decision_adapters.build(adapters)
+    files, contract = decision_adapters.build(adapters, country_policy=country_state.load())
     assert len(files) == 39
     consumers = contract["consumers"]
     assert isinstance(consumers, list)
@@ -826,7 +826,7 @@ def real_generated_branches():
     if not (config.GAME / "common/laws/readme.md").is_file():
         pytest.skip("需要锁定版本的游戏原件")
     adapters = decision_adapters.load()
-    files, contract = decision_adapters.build(adapters)
+    files, contract = decision_adapters.build(adapters, country_policy=country_state.load())
     scalar_consumers = contract["scalar_consumers"]
     assert isinstance(scalar_consumers, list)
     named_sources = {
@@ -1185,6 +1185,12 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
                 else reader.engine
             )
             current[physical_key] = value
+            # The country-state interpreter separately proves active/TTL semantics.
+            # This layer tests the typed active interface against adapter branches.
+            if reader.engine == "has_variable" and (reader.argument or "").startswith(
+                "sitai_route_"
+            ):
+                current[f"{reader.argument}_active"] = value
             values[reader.key] = None if missing_target and reader.scope != "root" else value
         if missing_target:
             scopes.pop("scope:target_country")
@@ -1506,6 +1512,8 @@ def _scopes_for_facts(policy, facts):
             else reader.engine
         )
         current[key] = facts[reader.key]
+        if reader.engine == "has_variable" and (reader.argument or "").startswith("sitai_route_"):
+            current[f"{reader.argument}_active"] = facts[reader.key]
     return scopes
 
 

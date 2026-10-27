@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import math
 import operator
 import re
@@ -27,12 +28,18 @@ from .textio import normalized_text
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from .country_state import CountryPolicy
+
 SOURCE = config.REPO / "mod/decisions/information.toml"
 _NAME = re.compile(r"[a-z][a-z0-9_]*\Z")
 _SCOPES = frozenset({"root", "target_country", "target_state", "overlord", "interest_group"})
 _OPS = {"=": operator.eq, "<": operator.lt, "<=": operator.le, ">": operator.gt, ">=": operator.ge}
 # 静态增长护栏，不是游戏运行耗时承诺；扩大须重新冻结并测量候选。
 STATIC_BUDGET = decision_intents.STATIC_BUDGET
+
+
+def _country_state_module():
+    return importlib.import_module("pdx.country_state")
 
 
 def _finite(value: object) -> bool:
@@ -731,6 +738,9 @@ def patch(
     default_strategy: bool = True,
     reader_evidence: str = "",
     reader_words: frozenset[str] | None = None,
+    country_policy: CountryPolicy | None = None,
+    owned_variables: frozenset[str] | set[str] | None = None,
+    owned_triggers: frozenset[str] | set[str] | None = None,
 ) -> str:
     """向锁定底本的派生产物插入规则；关闭时逐字等价，不覆盖资格或值。"""
     if hashlib.sha256(normalized_text(baseline).encode()).hexdigest() != rules.baseline_sha256:
@@ -743,6 +753,42 @@ def patch(
         raise ValueError("默认策略不是块")
     decision_interfaces.validate(rules)
     groups = rules.groups(enabled_domains)
+    selected_reader_keys = {
+        predicate.fact
+        for candidates in groups.values()
+        for rule in candidates
+        for predicate in rule.conditions
+    }
+    selected_reader_keys.update(
+        predicate.value.key
+        for candidates in groups.values()
+        for rule in candidates
+        for predicate in rule.conditions
+        if isinstance(predicate.value, FactReference)
+    )
+    route_readers = {
+        reader.key: reader
+        for reader in rules.readers
+        if reader.engine == "has_variable"
+        and (reader.argument or "").startswith("sitai_route_")
+        and reader.key in selected_reader_keys
+    }
+    if route_readers and country_policy is None:
+        raise ValueError("route 读取器必须显式提供 country_policy")
+    if route_readers:
+        country_state = _country_state_module()
+        actual_variables = set(country_state.owned_variables(country_policy))
+        actual_triggers = set(country_state.owned_triggers(country_policy))
+        supplied_variables = actual_variables if owned_variables is None else set(owned_variables)
+        supplied_triggers = actual_triggers if owned_triggers is None else set(owned_triggers)
+        if not supplied_variables <= actual_variables or not supplied_triggers <= actual_triggers:
+            raise ValueError("country_policy owned_variables/owned_triggers 与状态合同不一致")
+        for reader in route_readers.values():
+            if (
+                reader.argument not in supplied_variables
+                or f"{reader.argument}_active" not in supplied_triggers
+            ):
+                raise ValueError(f"route 读取器变量不在 country_policy 所有权内：{reader.argument}")
     for field in groups:
         _block_at(root, field)
     prefix = ("ai_strategy_default",) if default_strategy else ()
@@ -767,10 +813,16 @@ def patch(
             token.value for token in tokenize(baseline + reader_evidence) if token.kind == ATOM
         )
     )
-    used_reader_keys = {predicate.fact for rule in rules.rules for predicate in rule.conditions}
+    used_reader_keys = {
+        predicate.fact
+        for candidates in groups.values()
+        for rule in candidates
+        for predicate in rule.conditions
+    }
     used_reader_keys.update(
         predicate.value.key
-        for rule in rules.rules
+        for candidates in groups.values()
+        for rule in candidates
         for predicate in rule.conditions
         if isinstance(predicate.value, FactReference)
     )
@@ -784,7 +836,11 @@ def patch(
         if (
             reader.engine not in words
             or not path_proven
-            or (reader.argument is not None and reader.argument not in words)
+            or (
+                reader.argument is not None
+                and reader.argument not in words
+                and reader.key not in route_readers
+            )
             or any(literal not in words for _, literal in reader.parameters)
         ):
             raise ValueError(f"读取器没有锁定原版依据：{reader.key}")
@@ -800,7 +856,17 @@ def patch(
             for predicate in rule.conditions:
                 reader = readers[predicate.fact]
                 key = (reader.scope, reader.path)
-                expression = reader.expression(predicate.op, predicate.value)
+                if reader.key in route_readers:
+                    route_guard = f"{reader.argument}_active = yes"
+                    expression = (
+                        "always = no"
+                        if country_policy is None or not country_policy.enabled
+                        else route_guard
+                        if predicate.value is True
+                        else f"NOT = {{ {route_guard} }}"
+                    )
+                else:
+                    expression = reader.expression(predicate.op, predicate.value)
                 bounds = _reader_bounds(reader)
                 conditions[key].extend([*bounds, expression])
                 valid[key].extend(bounds)
@@ -823,7 +889,11 @@ def patch(
             )
             if index + 1 < len(groups[field]):
                 # 已知假条件可继续下一候选；其余未知停止本字段干预。
-                known = " ".join([*false_conditions, f"AND = {{ {_scoped_conditions(valid)} }}"])
+                known_parts = list(false_conditions)
+                valid_scope = _scoped_conditions(valid)
+                if valid_scope:
+                    known_parts.append(f"AND = {{ {valid_scope} }}")
+                known = " ".join(known_parts)
                 chunks.append(
                     "\t\telse_if = { limit = { "
                     + _scoped_conditions({("root", rules.actor_path): ["is_ai = yes"]})

@@ -14,7 +14,7 @@ from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
-from pdx import config, decision_intents, decisions
+from pdx import config, country_state, decision_intents, decisions
 from pdx.localization import parse_loc_entries
 from pdx.textio import GAME_SUFFIXES, text_bytes
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "1.2.0"
+RELEASE_VERSION = "1.3.0"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -348,7 +348,8 @@ def player_guide(
         "It adjusts vanilla AI weights using political,"
         " population, fiscal, economic, market, trade, diplomatic, subject, military, war, colonial,"
         " geographic, identity, and technology context. Vanilla eligibility, costs, effects, and actions"
-        " remain in force. The Mod grants no free resources, forces no action, and has no country script.\n"
+        " remain in force. The Mod grants no free resources, forces no action, and uses only a bounded\n"
+        "country-state script for AI route memory; it does not replace the vanilla AI.\n"
         f"Module switches: reform={'enabled' if extensions.reform_enabled else 'disabled'}; "
         f"market={'enabled' if extensions.market_enabled else 'disabled'}; "
         f"security={'enabled' if extensions.security_enabled else 'disabled'}; "
@@ -514,6 +515,7 @@ def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
         *sorted((root / "src/pdx").glob("*.py")),
         *sorted((root / "mod/decisions").glob("*.toml")),
         *sorted(decisions.BASELINE.parent.glob("*.txt")),
+        *sorted(decisions.BASELINE.parent.glob("*.json")),
     ]
     if files is None:
         files = read_production_files()
@@ -553,6 +555,10 @@ def package_inputs(
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str | bytes]]:
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
     policy, extensions = production_configuration()
+    country_policy = country_state.load()
+    country_state.validate(country_policy, config.GAME)
+    if not country_policy.enabled:
+        raise ValueError("正式包必须启用 country_state")
     strategy = decision_intents.load()
     information = decisions.decision_rules.load(strategy=strategy)
     adapters = decisions.decision_adapters.load(strategy=strategy)
@@ -573,6 +579,7 @@ def package_inputs(
             complete_localization=True,
             information_rules=information,
             consumer_adapters=adapters,
+            country_policy=country_policy,
         )
     )
     metadata = json.loads(files[".metadata/metadata.json"])
@@ -627,6 +634,8 @@ def _release_generation(
                 len(consumer["rules"]) for consumer in metadata["consumer_adapters"]["consumers"]
             ),
             "strategic_intent_count": len(metadata["strategic_coordination"]["intents"]),
+            "country_state": metadata["country_state"],
+            "country_coordination": metadata["country_coordination"],
             "behavior_quality": "not_evaluated",
         },
     }

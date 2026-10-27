@@ -2,7 +2,7 @@
 
 原件不随源码入库；标准包携带实际修改后的同路径文件。生成前核对全部
 规范化 SHA，关闭时不输出覆盖文件。只改变明确登记的数值块，保留资格、
-成本、效果和其它条目，运行期作用域及消费者仍需 F1 验证。
+成本、效果和其它条目，运行期作用域与消费者以锁定原版接口合同为准；长期行为由用户实机验收。
 """
 
 from __future__ import annotations
@@ -23,6 +23,8 @@ from .textio import normalized_text
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from .country_state import CountryPolicy
 
 SOURCE = config.REPO / "mod/decisions/adapters.toml"
 _FLEET_SOURCE = "common/ai_strategies/00_default_strategy.txt"
@@ -296,7 +298,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             and scalar_path[1] == "ai_value"
         )
         # 原版注释允许国家脚本值；实机拒绝内联任务权重，须生成具名引用。
-        # 此处仍只放行该已审计字段，动态求值与实际行动另按 F1 验收。
+        # 此处只放行已审计字段；动态求值与实际行动仍由用户在固定包上验收。
         fleet_scalar = source_name == _FLEET_SOURCE and scalar_path == _FLEET_FIELD
         if (
             not (building_scalar or fleet_scalar)
@@ -542,6 +544,9 @@ def build(
     texts: Mapping[str, str] | None = None,
     enabled_domains: frozenset[str] | None = None,
     overlays: Mapping[str, str] | None = None,
+    country_policy: CountryPolicy | None = None,
+    owned_variables: frozenset[str] | set[str] | None = None,
+    owned_triggers: frozenset[str] | set[str] | None = None,
 ) -> tuple[dict[str, str], dict[str, object]]:
     """全输入预检后生成；合成测试可显式注入文本，生产默认读取 config.GAME。"""
     known_domains = {rule.domain for _, policy in adapters.policies for rule in policy.rules}
@@ -595,6 +600,9 @@ def build(
             enabled_domains=selected,
             default_strategy=False,
             reader_words=words,
+            country_policy=country_policy,
+            owned_variables=owned_variables,
+            owned_triggers=owned_triggers,
         )
         if name == _FLEET_SOURCE and _FLEET_FIELD in scalar_fields:
             if _FLEET_VALUE in words or _VALUE_SOURCE in (overlays or {}):

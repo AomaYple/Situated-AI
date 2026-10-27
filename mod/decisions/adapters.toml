@@ -1758,6 +1758,48 @@ scope = "root"
 unit = "boolean"
 kind = "boolean"
 
+[readers.route_fiscal_recovery]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_fiscal_recovery"
+
+[readers.route_stability]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_stability"
+
+[readers.route_defense]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_defense"
+
+[readers.route_industry]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_industry"
+
+[readers.route_education]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_education"
+
+[readers.route_maritime]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_maritime"
+
 [[initial_values]]
 source = "common/buildings/01_industry.txt"
 field = "building_food_industry.ai_value"
@@ -20504,3 +20546,183 @@ operation = "multiply"
 conditions = [ { fact = "war", op = "=", value = true }, { fact = "navy", op = ">", value = 0 }, { fact = "steamers_price", op = ">", value = 0.25 }, { fact = "steamers_balance", op = "<", value = 0 } ]
 why = "战时蒸汽船供给紧张且已有舰队时，在原版次要舰队已允许的护送任务内提高相对保护供给权重"
 counterexample = "不创建船只、不改任务资格、不把市场短缺误称真实护航缺口；保留其它任务和零权重，不改所有舰队角色，待用户长期行为验收"
+
+[[rules]]
+id = "coordinated_route_fiscal_recovery_ship_construction"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.ship_construction_output_multiplier"
+domain = "military"
+priority = 75
+operation = "multiply"
+value = 0.85
+conditions = [ { fact = "route_fiscal_recovery", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "财政整固路线在和平期压低新增造舰承诺，保留原版资格、现有防御和战时军需"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不删除舰队、不改造舰成本或原版执行"
+
+[[rules]]
+id = "coordinated_route_fiscal_recovery_colonial_commitment"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.colonization_rights"
+domain = "diplomacy"
+priority = 75
+operation = "add"
+value = -10
+conditions = [ { fact = "route_fiscal_recovery", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "财政整固路线在和平期降低新的殖民承诺分数，表达海外机会成本"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不改变殖民资格、外交谈判或已存在目标"
+
+[[rules]]
+id = "coordinated_route_fiscal_recovery_subject_commitment"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.subject_value"
+domain = "subjects"
+priority = 75
+operation = "add"
+value = -5
+conditions = [ { fact = "route_fiscal_recovery", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "财政整固路线在和平期降低新增宗属承诺，保留生存和原版宗属资格"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不强制释放、附庸或改变关系执行"
+
+[[rules]]
+id = "coordinated_route_stability_regime_change"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.regime_change"
+domain = "political"
+priority = 75
+operation = "add"
+value = -5
+conditions = [ { fact = "route_stability", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "政治稳定路线降低和平期激进政权更替承诺，保留原版外交资格和谈判"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不禁止改革、不改变战争结果或外交执行"
+
+[[rules]]
+id = "coordinated_route_defense_supply_ships"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wanted_num_supply_ships"
+domain = "military"
+priority = 75
+operation = "multiply"
+value = 1.15
+conditions = [
+  { fact = "route_defense", op = "=", value = true },
+  { fact = "war", op = "=", value = true },
+  { fact = "default", op = "=", value = false },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "防御路线在战争中提高原版补给舰需求权重，表达最低防御承诺"
+counterexample = "和平、路线未激活、未知输入或玩家国家不施加；不创建舰船、不改变资格和战斗执行"
+
+[[rules]]
+id = "coordinated_route_defense_colonial_commitment"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wargoal_scores.colonization_rights"
+domain = "military"
+priority = 74
+operation = "add"
+value = -10
+conditions = [ { fact = "route_defense", op = "=", value = true }, { fact = "war", op = "=", value = true } ]
+why = "防御路线压低战争期间新的殖民承诺，避免海外扩张与本土防御争用同一承诺空间"
+counterexample = "和平、路线未激活、未知输入或玩家国家不施加；不取消已有战争目标或殖民资格"
+
+[[rules]]
+id = "coordinated_route_defense_ship_construction"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.ship_construction_output_multiplier"
+domain = "military"
+priority = 74
+operation = "multiply"
+value = 1.1
+conditions = [
+  { fact = "route_defense", op = "=", value = true },
+  { fact = "war", op = "=", value = true },
+  { fact = "default", op = "=", value = false },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "防御路线在战争中提高原版造舰产出权重，保留战时军需和已有资格"
+counterexample = "和平、路线未激活、未知输入或玩家国家不施加；不赠送资源、不改造舰成本或战斗数值"
+
+[[rules]]
+id = "coordinated_route_industry_research"
+source = "common/technology/technologies/10_production.txt"
+field = "watertube_boiler.ai_weight"
+domain = "economy"
+priority = 75
+operation = "multiply"
+value = 1.15
+conditions = [ { fact = "route_industry", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "工业路线在和平期提高原版生产技术候选权重，促进工业能力"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不绕过前置科技、研究资格或研究成本"
+
+[[rules]]
+id = "coordinated_route_industry_ship_tradeoff"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.ship_construction_output_multiplier"
+domain = "economy"
+priority = 73
+operation = "multiply"
+value = 0.9
+conditions = [ { fact = "route_industry", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "工业路线在和平期有限压低造舰承诺，表达工业建设与海军扩张的竞争资源"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不删除舰队、不改造舰资格或执行"
+
+[[rules]]
+id = "coordinated_route_education_academia"
+source = "common/technology/technologies/30_society.txt"
+field = "academia.ai_weight"
+domain = "political"
+priority = 75
+operation = "multiply"
+value = 1.15
+conditions = [ { fact = "route_education", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "教育路线在和平期提高原版社会研究候选权重，促进教育追赶"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不绕过科技资格、研究成本或教育制度执行"
+
+[[rules]]
+id = "coordinated_route_education_military_tradeoff"
+source = "common/technology/technologies/20_military.txt"
+field = "wargaming.ai_weight"
+domain = "military"
+priority = 75
+operation = "multiply"
+value = 0.9
+conditions = [ { fact = "route_education", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "教育路线在和平期有限压低军事研究竞争权重，表达研究机会成本"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不禁止军事科技、不改变前置资格或研究成本"
+
+[[rules]]
+id = "coordinated_route_maritime_colonial_projection"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.strategic_region_stance_type_scores.stance_colonize_region"
+domain = "diplomacy"
+priority = 75
+operation = "add"
+value = 3
+conditions = [ { fact = "route_maritime", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "海洋路线在和平期提高原版殖民战略区域候选权重，表达海外投射机会"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不创建殖民地、不改变资格或外交执行"
+
+[[rules]]
+id = "coordinated_route_maritime_supply_ships"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.wanted_num_supply_ships"
+domain = "military"
+priority = 76
+operation = "multiply"
+value = 1.15
+conditions = [ { fact = "route_maritime", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "海洋路线在和平期提高原版补给舰准备权重，支持有限海外投射"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不创建舰船、不改变资格和战斗执行"
+
+[[rules]]
+id = "coordinated_route_maritime_ship_construction"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.ship_construction_output_multiplier"
+domain = "military"
+priority = 77
+operation = "multiply"
+value = 1.15
+conditions = [ { fact = "route_maritime", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
+why = "海洋路线在和平期提高原版造舰产出权重，表达港口和海外投射能力"
+counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不赠送资源、不改造舰资格或执行"

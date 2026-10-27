@@ -262,8 +262,11 @@ academia = {
 		value = 1.5 # Important in general
 
 		# SITAI BEGIN information:academia.ai_weight
+		# coordinated_route_education_academia [political]; 教育路线在和平期提高原版社会研究候选权重，促进教育追赶
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_education_active = yes is_at_war = no } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { sitai_route_education_active = yes } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# academia_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
 		# SITAI END information:academia.ai_weight
 	}
 }

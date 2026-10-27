@@ -316,8 +316,11 @@ watertube_boiler = {
 		value = 1
 
 		# SITAI BEGIN information:watertube_boiler.ai_weight
+		# coordinated_route_industry_research [economy]; 工业路线在和平期提高原版生产技术候选权重，促进工业能力
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_industry_active = yes is_at_war = no } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { sitai_route_industry_active = yes } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# watertube_boiler_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
 		# SITAI END information:watertube_boiler.ai_weight
 	}
 }

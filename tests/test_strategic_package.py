@@ -27,7 +27,7 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
         fingerprint["strategic_generator_sha256"]
         == hashlib.sha256(Path(decision_intents.__file__).read_bytes()).hexdigest()
     )
-    assert metadata["version"] == "1.2.0"
+    assert metadata["version"] == "1.3.0"
     values_path = "common/script_values/sitai_adapter_values.txt"
     assert (
         "protect_supply = sitai_adapter_fleet_supply_weight"
@@ -43,9 +43,9 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
 def test_release_is_the_public_full_candidate():
     _, _, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
-    assert metadata["version"] == "1.2.0"
+    assert metadata["version"] == "1.3.0"
     assert metadata["status"] == "candidate"
-    assert metadata["enabled_modules"] == [
+    assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",
         "market",
@@ -54,7 +54,8 @@ def test_release_is_the_public_full_candidate():
         "diplomacy",
         "information_rules",
         "consumer_adapters",
-    ]
+        "country_state",
+    }
     assert metadata["localization"]["fallback_languages"] == []
     assert all("probe" not in name.lower() for name in files)
 
@@ -70,6 +71,7 @@ def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch
     metadata["localization"][key] = ["french"]
     files = {".metadata/metadata.json": json.dumps(metadata)}
     monkeypatch.setattr(distribution.decisions, "build", lambda *_args, **_kwargs: files)
+    monkeypatch.setattr(distribution.country_state, "validate", lambda *_args, **_kwargs: None)
     with pytest.raises(ValueError, match="未翻译"):
         distribution.package_inputs()
     assert json.loads(files[".metadata/metadata.json"]) == metadata

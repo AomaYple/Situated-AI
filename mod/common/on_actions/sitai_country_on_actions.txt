@@ -1,0 +1,4 @@
+on_monthly_pulse_country = { on_actions = { sitai_refresh_country } }
+on_country_default = { on_actions = { sitai_refresh_country } }
+on_country_no_longer_default = { on_actions = { sitai_refresh_country } }
+sitai_refresh_country = { effect = { sitai_refresh_country_routes = yes } }

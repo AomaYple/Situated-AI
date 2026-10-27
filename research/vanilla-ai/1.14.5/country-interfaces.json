@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "evidence": "static_vanilla_examples_not_engine_execution",
+  "baseline_sha256": "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
+  "snapshot_sections_sha256": "51cb4a22b4f86f4552a901cb828807e33e287bea501e39757d1a0204b9813269",
+  "sources": {
+    "common/achievements/base_achievements.txt": "dc5a50c8313fffbe50d68f0a6b8c9b9d05f1794f46725d23f2c0e67f7369799f",
+    "common/achievements/ep1_sphere_of_influence_achievements.txt": "aa504255aabcf3cfecf6fc6196cf66803a7e87b8b15c2458034c97a95dec82e0",
+    "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
+    "common/ai_strategies/00_default_strategy.txt": "fd4b531d39bcd85c3491c703ecb08ea739094f795b13a176765cf559ece3fbee",
+    "common/ai_strategies/01_admin_strategies.txt": "71fd56e5c3d84d0d6a41a417f865d968b2e8dd6e7c5aaf6e104b43a8729989e3",
+    "common/ai_strategies/02_diplomatic_strategies.txt": "07ff62c2e5ce5a45fe6f9f91e18409e8881c630f5e47325a4216cc265de9feae",
+    "common/amendments/00_amendments_content_04.txt": "1c445abca6c91c2d13019544f975147161879595a40d275084b4ebe2f31c0953",
+    "common/amendments/00_amendments_ep2_04.txt": "e60112af5b58fbf42eaee69f9e5eb6e35668be260568798353897c410941ec2c",
+    "common/buildings/07_government.txt": "02a854fb0d6a1e78787ccec1211c66db8fa226bd603057baab548e32c6c26e6b",
+    "common/character_interactions/00_character_interactions.txt": "aafc6d5c9dbc01ee91974c39c1965a1363aa767509f86043b4b04ced564947e8",
+    "common/decisions/france_savoy.txt": "91a24a2bcb05551e397ea53311c4cebc3da9fc9efb75f18050288be6b035bef6",
+    "common/decisions/india_decisions.txt": "310cfdd220e1f3e8673801cff342bd5fd12334fe2d4dbbfe821ea943316eaf0e",
+    "common/journal_entries/06_portugal_politics.txt": "c72620de8c07b2553ce0ea3421450cc91c03f4c2d992cd70d544ee3cd2206acb",
+    "common/on_actions/00_code_on_actions.txt": "f5ddefa530c5bdd1a106b0accecdd97f231e046d2e0ac63ed08939f43944b57e",
+    "common/scripted_triggers/00_victoria_scripted_triggers.txt": "a5c2cf23b3629fe9acf81775d5eb79d7e11294240e1d172b9a7638f2c1c17010",
+    "common/technology/technologies/20_military.txt": "3f28d2e2395e9d337ca58cace117edd922e2cfc6e4f500c7c0e6385901ec6489"
+  },
+  "interfaces": {
+    "has_variable": {
+      "source": "common/achievements/base_achievements.txt",
+      "line": 6
+    },
+    "literacy_rate": {
+      "source": "common/achievements/base_achievements.txt",
+      "line": 523
+    },
+    "is_subject": {
+      "source": "common/achievements/ep1_sphere_of_influence_achievements.txt",
+      "line": 251
+    },
+    "is_at_war": {
+      "source": "common/achievements/ip4_iberian_twilight_achievements.txt",
+      "line": 50
+    },
+    "fixed_income": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 4803
+    },
+    "has_strategy": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 1154
+    },
+    "has_technology_researched": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 1475
+    },
+    "in_default": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 8222
+    },
+    "is_ai": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 4776
+    },
+    "navy_size": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 1668
+    },
+    "total_population": {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "line": 4812
+    },
+    "legitimacy": {
+      "source": "common/amendments/00_amendments_content_04.txt",
+      "line": 36
+    },
+    "remove_variable": {
+      "source": "common/amendments/00_amendments_ep2_04.txt",
+      "line": 44
+    },
+    "bureaucracy": {
+      "source": "common/buildings/07_government.txt",
+      "line": 17
+    },
+    "set_variable": {
+      "source": "common/character_interactions/00_character_interactions.txt",
+      "line": 330
+    },
+    "taking_loans": {
+      "source": "common/decisions/france_savoy.txt",
+      "line": 180
+    },
+    "scaled_debt": {
+      "source": "common/decisions/india_decisions.txt",
+      "line": 517
+    },
+    "net_total_income": {
+      "source": "common/journal_entries/06_portugal_politics.txt",
+      "line": 381
+    },
+    "on_actions": {
+      "source": "common/on_actions/00_code_on_actions.txt",
+      "line": 125
+    },
+    "on_country_default": {
+      "source": "common/on_actions/00_code_on_actions.txt",
+      "line": 3206
+    },
+    "on_country_no_longer_default": {
+      "source": "common/on_actions/00_code_on_actions.txt",
+      "line": 3225
+    },
+    "on_monthly_pulse_country": {
+      "source": "common/on_actions/00_code_on_actions.txt",
+      "line": 475
+    },
+    "has_insurrectionary_interest_groups": {
+      "source": "common/scripted_triggers/00_victoria_scripted_triggers.txt",
+      "line": 603
+    }
+  },
+  "arguments": [
+    {
+      "engine": "has_strategy",
+      "argument": "ai_strategy_industrial_expansion",
+      "source": "common/ai_strategies/01_admin_strategies.txt",
+      "line": 301
+    },
+    {
+      "engine": "has_strategy",
+      "argument": "ai_strategy_resource_expansion",
+      "source": "common/ai_strategies/01_admin_strategies.txt",
+      "line": 197
+    },
+    {
+      "engine": "has_strategy",
+      "argument": "ai_strategy_territorial_expansion",
+      "source": "common/ai_strategies/02_diplomatic_strategies.txt",
+      "line": 237
+    },
+    {
+      "engine": "has_technology_researched",
+      "argument": "artillery",
+      "source": "common/technology/technologies/20_military.txt",
+      "line": 84
+    },
+    {
+      "engine": "has_variable",
+      "argument": "recently_lost_war",
+      "source": "common/on_actions/00_code_on_actions.txt",
+      "line": 6773
+    }
+  ]
+}

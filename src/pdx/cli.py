@@ -60,6 +60,7 @@ from pdx import (
     citations,
     config,
     consumer_matrix,
+    country_state,
     covgate,
     decision_report,
     decisions,
@@ -2708,6 +2709,7 @@ def modguard_cmd(
                 snapshot={"域": index.sections} if offline else None,
                 policy=policy,
                 extensions=extensions,
+                country_policy=country_state.load(),
             )
         )
         for name, text in production.items():

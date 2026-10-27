@@ -3,32 +3,27 @@
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
 
-Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让 AI 国家依据可读取的政治、人口、财政、经济、市场、
-贸易、外交、宗属、军事、战争、殖民、地理、身份和世界状态，在原版执行系统中重新评估可行路线。
+Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
-当前生产基线为 `Situated AI 1.2.0`；它在 1.1.1 工程基线上加入可审计的多因素处境协同规则。终极方案 2.0 已完成 T0–T13 的静态工程收口并进入维护模式；新增能力仅在明确需求、原版版本漂移或可复现问题下重新立项。历史安装和身份迁移结果见[历史结果记录](docs/design/exec/1.0.2-配置收敛-结果.md)，原始 1.0.0、1.0.1 和 1.1.0 交付记录保留作历史参考：
-源数据使用锁定 Victoria 3 `1.14.5` 的原版字段和作用域，
-F0–F18 和 U0–U14 是已完成的历史工程基线；T0–T13 的静态出口已经完成，当前进入维护模式。长期行为、平衡、后期性能和 Workshop 体验由用户自行验收，不作为本计划门禁。
-生成器负责规则、语言、manifest、路径和编码门禁，标准 ZIP 不含探针或历史实验。长期 AI 行为、平衡、性能、
-玩家体验和创意工坊发布由用户安装后验收；工程通过不能代替这些结论。
+当前生产候选为 `Situated AI 1.3.0`，底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。它包含有限国家状态、六条动态路线、影子预算、TTL/冷却和原版消费者适配。终极方案 3.0 已落盘为当前唯一计划，但尚未执行 E1–E15；长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
 
 ## 先读什么
 
 1. [AGENTS.md](AGENTS.md)：代理接手顺序和修改边界。
 2. [CONTRIBUTING.md](CONTRIBUTING.md)：生成、检查、分支、提交、PR 和发布。
 3. [工程原则](docs/principles/工程原则.md)与[Mod 开发原则](docs/principles/Mod开发原则.md)。
-4. [终极方案 2.0 实施计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
+4. [终极方案 3.0 实施计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
 
 ## 目录
 
 ```text
-mod/                    生产源、策略生成物与本地化
-src/pdx/                Python 解析、全量分析、快照、Mod 生成和 ZIP 交付
-tests/                  单元、离线合同、生成和跨平台工具测试
+mod/                    生产源、策略生成物、脚本和本地化
+src/pdx/                Python 解析、全量分析、快照、生成、审计和 ZIP 交付
+tests/                  单元、属性、离线合同、生成和跨平台工具测试
 tools/ci/               工程质量门；tools/benchmarks/ 为串行 Python 基准
 tools/out/              可再生分析、报告和本机证据（忽略）
 docs/                   当前规则、设计、计划、结果、审计和知识库
-research/               原版资料清单；官方原文镜像不入库
+research/               原版资料清单与锁定接口证据
 dist/                   可再生发布 ZIP（忽略）
 ```
 
@@ -40,42 +35,25 @@ Windows：
 .venv\Scripts\python.exe -X utf8 -m pip install -e ".[dev]"
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.2.0.zip
+.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.3.0.zip
 ```
 
-macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运行离线检查；有游戏时可用
-`V3_ROOT`、`V3_USERDIR` 指定路径，工具不会写入仓库外的用户状态，除非命令明确要求部署。
-`modgen --check` 和 `package` 需要锁定原版；无游戏环境使用 `modguard --offline` 核对冻结源码/产物和快照接口。
+macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运行离线检查；有游戏时可用 `V3_ROOT`、`V3_USERDIR` 指定路径。生成和正式打包要求锁定原版底本，底本缺失或漂移时硬失败。
 
 ## 标准包
 
-`v1.2.0` 已指向历史交付合并提交；该版本发布包从该标签构建。GitHub Release 和 Workshop 上传仍由发布者决定。
-全部版本的标签、交付包、源提交和 SHA-256 见[版本交付索引](docs/design/exec/版本交付-结果.md)。
-下载 Release 附件中的 `situated-ai-<版本>.zip`；GitHub 自动生成的源码压缩包不是可安装 Mod。
+`1.3.0` 是当前阶段候选。包包含标准 metadata、生成的 `common/`、11 种本体语言、封面、manifest 和安装说明；不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。版本标签、包 SHA-256 和历史交付见[版本交付索引](docs/design/exec/版本交付-结果.md)。本轮不上传 Steam Workshop。
 
-`dist/situated-ai-1.2.0.zip` 是当前候选生产包，metadata ID 为 `situated-ai`。解压至独立 `Victoria 3/mod/Situated AI` 目录，在启动器
-单独的 playset 中启用。包内包含：
-
-- `.metadata/metadata.json`：标准启动器名称、稳定 ID、版本和游戏版本；
-- `thumbnail.png`：1024×1024、低于 1 MB 的 Victoria 3 风格启动器/Workshop 封面；
-- `DISTRIBUTION-MANIFEST.json`：模块、语言、源指纹及每个文件的 SHA-256；
-- 生成的 `common/`、11 种本体语言的本地化和安装说明。
-
-仓库源和文档统一 UTF-8 无 BOM、LF；只有游戏交付文件在 ZIP 边界添加 BOM。关闭或卸载不会撤回已经发生的
-世界变化，用户应保留原存档和原 playset。其它 Mod 若覆盖同一原版文件，可能产生正常的兼容冲突。
+安装时将 ZIP 解压到 `Paradox Interactive/Victoria 3/mod/Situated AI`，在启动器中登记并启用独立 playset；不要覆盖游戏本体。游戏文本只在打包边界使用 UTF-8 BOM，仓库源统一 UTF-8 无 BOM、LF。
 
 ## 验证边界
-
-工程检查使用仓库 `.venv`：
 
 ```text
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py baseline
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py test-offline
 ```
 
-完整矩阵、性能口径、删除和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。静态分析和快照只能证明文件、
-字段、生成和引用契约；用户提供的日志和存档可按工程交付基线辅助归因，但不能证明引擎运行期语义、AI 行为质量或长期性能。历史实测、阶段收据和必要快照按各自
-证据合同保留；当前工程事实以 `docs/design/exec/` 的结果收据和[执行索引](docs/design/exec/README.md)为准。
+完整矩阵、性能口径、清理和 Git 流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。静态检查、快照和模拟只能证明明确覆盖的工程合同；工程通过不能代替这些结论，日志、存档和观察器是用户长期验证的辅助证据，不自动证明引擎运行期语义、AI 行为质量或长期性能。
 
 ## 许可证
 

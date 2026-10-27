@@ -38,7 +38,19 @@ SKIP_CATEGORIES: Final[dict[str, SkipCategory]] = {
 
 # 规则按具体短语优先；最后的通用词只用于确实已经声明为环境缺失的旧用例。
 _SKIP_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("game", ("游戏目录", "没有游戏", "无游戏", "victoria3.exe", "引擎日志", "游戏本体")),
+    (
+        "game",
+        (
+            "游戏目录",
+            "没有游戏",
+            "无游戏",
+            "victoria3.exe",
+            "引擎日志",
+            "游戏本体",
+            "锁定原版",
+            "游戏原件",
+        ),
+    ),
     ("artifact", ("产物", "快照", "语料", "模板", "doc ", "mod/decisions", "样本文件")),
     ("platform", ("Windows", "Linux", "macOS", "chcp", "符号链接权限")),
     ("tool", ("ruff 不可用", "找不到 git", "开发工具")),

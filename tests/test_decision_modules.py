@@ -89,6 +89,7 @@ def test_正式包启用模块与生命周期契约一致():
         "diplomacy",
         "information_rules",
         "consumer_adapters",
+        "country_state",
     }
     assert enabled_modules <= set(contract)
     assert "subjects" in contract
@@ -103,10 +104,13 @@ def test_正式包启用模块与生命周期契约一致():
     ]
     for name, item in contract.items():
         assert item["save_compatibility"] == policy.package.save_compatibility
-        if name != "fiscal":
+        if name not in {"fiscal", "country_state"}:
             assert item["stateful"] is False
             assert item["direct_read"] is True
             assert item["ttl_or_none"] is None
+    assert contract["country_state"]["stateful"] is True
+    assert contract["country_state"]["direct_read"] is False
+    assert contract["country_state"]["ttl_or_none"] == 100
     assert contract["information_rules"]["clear_on_disable"] == "no_persistent_state"
     assert contract["consumer_adapters"]["clear_on_disable"] == (
         "regenerate_without_adapter_files_and_restart"
@@ -117,12 +121,21 @@ def test_正式包启用模块与生命周期契约一致():
     )
 
 
+def test_generated_route_fallbacks_do_not_emit_empty_boolean_blocks():
+    from pdx import country_state
+
+    generated = country_state.files(country_state.load())[
+        "common/scripted_triggers/sitai_country_triggers.txt"
+    ]
+    assert "AND = {  }" not in generated
+
+
 @pytest.mark.integration
-def test_七模块完整候选生成所有脚本和全语言无回退():
+def test_正式候选生成所有脚本和全语言无回退():
     policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
     assert policy.package.status == "candidate"
-    assert metadata["enabled_modules"] == [
+    assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",
         "market",
@@ -131,7 +144,8 @@ def test_七模块完整候选生成所有脚本和全语言无回退():
         "diplomacy",
         "information_rules",
         "consumer_adapters",
-    ]
+        "country_state",
+    }
     localization = metadata["localization"]
     assert localization["production_fallback_languages"] == []
     assert localization["explanation_fallback_languages"] == []

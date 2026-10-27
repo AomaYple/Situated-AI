@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import math
 import re
@@ -15,6 +16,7 @@ from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from packaging.version import InvalidVersion, Version
 
@@ -49,6 +51,14 @@ from .vanilla_index import (
     script_value_accessors,
     vocabulary_dir,
 )
+
+if TYPE_CHECKING:
+    from .country_state import CountryPolicy
+
+
+def _country_state_module():
+    return importlib.import_module("pdx.country_state")
+
 
 SOURCE = config.REPO / "mod" / "decisions" / "fiscal.toml"
 PRODUCT = config.REPO / "mod"
@@ -399,12 +409,21 @@ def information_contract() -> dict[str, object]:
 
 
 def module_lifecycle_contract(
-    policy: Policy, _extensions: Extensions
+    policy: Policy, _extensions: Extensions, country_policy: CountryPolicy | None = None
 ) -> dict[str, dict[str, object]]:
     """返回各决策模块的状态、钩子、TTL、关闭清理和存档契约。"""
 
     contract = deepcopy(MODULE_LIFECYCLE_CONTRACT)
     contract["fiscal"]["ttl_or_none"] = policy.ttl_days if policy.enabled else None
+    if country_policy is not None and country_policy.enabled:
+        contract["country_state"] = {
+            "stateful": True,
+            "direct_read": False,
+            "hooks": list(_country_state_module().HOOKS),
+            "ttl_or_none": country_policy.ttl_days,
+            "cooldown_days": country_policy.cooldown_days,
+            "clear_on_disable": "stop_refresh_and_expire_ttl",
+        }
     for item in contract.values():
         item["save_compatibility"] = policy.package.save_compatibility
     return contract
@@ -944,7 +963,12 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
     return result
 
 
-def source_fingerprint(policy: Policy, extensions: Extensions, baseline: str) -> dict[str, str]:
+def source_fingerprint(
+    policy: Policy,
+    extensions: Extensions,
+    baseline: str,
+    country_policy: CountryPolicy | None = None,
+) -> dict[str, str]:
     """返回生成输入指纹，供 metadata 与交付清单共同引用。"""
 
     result = {
@@ -961,6 +985,15 @@ def source_fingerprint(policy: Policy, extensions: Extensions, baseline: str) ->
         result["economy_source_sha256"] = decision_economy.load().source_sha256
     if extensions.diplomacy_enabled:
         result["diplomacy_source_sha256"] = decision_diplomacy.load().source_sha256
+    if country_policy is not None:
+        country_state = _country_state_module()
+
+        result.update(
+            country_state_source_sha256=country_policy.source_sha256,
+            country_state_generator_sha256=hashlib.sha256(
+                Path(country_state.__file__).read_bytes()
+            ).hexdigest(),
+        )
     return result
 
 
@@ -1020,6 +1053,7 @@ def metadata_payload(
     baseline: str | None = None,
     languages: tuple[Language, ...] | None = None,
     complete_localization: bool = False,
+    country_policy: CountryPolicy | None = None,
 ) -> dict[str, object]:
     policy = policy or load()
     extensions = extensions or load_extensions()
@@ -1065,15 +1099,42 @@ def metadata_payload(
         "save_compatibility": policy.package.save_compatibility,
         "platforms": list(policy.package.platforms),
         "platform_notes": policy.package.platform_notes,
-        "module_contract": module_lifecycle_contract(policy, extensions),
+        "module_contract": module_lifecycle_contract(policy, extensions, country_policy),
         "information_contract": information_contract(),
         "source_fingerprint": source_fingerprint(
             policy,
             extensions,
             baseline if baseline is not None else BASELINE.read_text(encoding="utf-8"),
+            country_policy,
         ),
         "game_custom_data": {"multiplayer_synchronized": True},
     }
+
+
+def attach_country_metadata(metadata: dict[str, object], country_policy: CountryPolicy) -> None:
+    """Attach the shared persistent state contract without relabeling stateless rules."""
+    country_state = _country_state_module()
+
+    state_contract = country_state.contract(country_policy)
+    metadata["country_state"] = state_contract
+    metadata["country_coordination"] = {
+        "runtime_state": "bounded_persistent_routes" if country_policy.enabled else "disabled",
+        "state_contract": state_contract,
+        "behavior_verified": False,
+        "evidence": "static_check",
+    }
+    modules = metadata["enabled_modules"]
+    fingerprint = metadata["source_fingerprint"]
+    assert isinstance(modules, list)
+    assert isinstance(fingerprint, dict)
+    if country_policy.enabled and "country_state" not in modules:
+        modules.append("country_state")
+    fingerprint.update(
+        country_state_source_sha256=country_policy.source_sha256,
+        country_state_generator_sha256=hashlib.sha256(
+            Path(country_state.__file__).read_bytes()
+        ).hexdigest(),
+    )
 
 
 def build(
@@ -1085,6 +1146,7 @@ def build(
     complete_localization: bool = False,
     information_rules: decision_rules.RuleSet | None = None,
     consumer_adapters: decision_adapters.AdapterSet | None = None,
+    country_policy: CountryPolicy | None = None,
 ) -> dict[str, str]:
     policy = policy or load()
     baseline = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
@@ -1132,7 +1194,19 @@ def build(
             ):
                 raise ValueError(f"旧模块或全域规则与消费者适配重复写入字段：{'.'.join(path)}")
             field_owners[path] = owner
+    country_state = _country_state_module()
+
     languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
+    state_owned_variables = (
+        frozenset(country_state.owned_variables(country_policy))
+        if country_policy is not None
+        else None
+    )
+    state_owned_triggers = (
+        frozenset(country_state.owned_triggers(country_policy))
+        if country_policy is not None
+        else None
+    )
     files = {
         "common/ai_strategies/00_default_strategy.txt": patch_default(baseline, policy, extensions),
     }
@@ -1149,6 +1223,9 @@ def build(
                 if adapter_inputs is not None
                 else None
             ),
+            country_policy=country_policy,
+            owned_variables=state_owned_variables,
+            owned_triggers=state_owned_triggers,
         )
     strategy_issues = player_boundary_issues(files["common/ai_strategies/00_default_strategy.txt"])
     if strategy_issues:
@@ -1205,6 +1282,8 @@ def build(
                 f"{language.header}:\n"
                 + "".join(f' {key}: "{value}"\n' for key, value in reasons.items())
             )
+    if country_policy is not None and country_policy.enabled:
+        files.update(country_state.files(country_policy))
     metadata = metadata_payload(
         policy,
         extensions,
@@ -1212,7 +1291,10 @@ def build(
         baseline=baseline,
         languages=languages,
         complete_localization=complete_localization,
+        country_policy=country_policy,
     )
+    if country_policy is not None:
+        attach_country_metadata(metadata, country_policy)
     if information_rules is not None or consumer_adapters is not None:
         metadata["default_field_owners"] = {
             ".".join(field): owner for field, owner in sorted(field_owners.items())
@@ -1242,7 +1324,12 @@ def build(
         }
     if consumer_adapters is not None:
         adapter_files, adapter_contract = decision_adapters.build(
-            consumer_adapters, overlays=files, texts=adapter_inputs
+            consumer_adapters,
+            overlays=files,
+            texts=adapter_inputs,
+            country_policy=country_policy,
+            owned_variables=state_owned_variables,
+            owned_triggers=state_owned_triggers,
         )
         collisions = files.keys() & adapter_files.keys()
         if collisions - {"common/ai_strategies/00_default_strategy.txt"}:
@@ -1333,6 +1420,9 @@ def write(root: Path, files: Mapping[str, str | bytes] | None = None) -> list[Pa
         written.append(path)
     # 新产物写入成功后才删除固定受控的旧文件；探针与用户文件交给 check 报告。
     stale_names = {
+        "common/scripted_triggers/sitai_country_triggers.txt",
+        "common/scripted_effects/sitai_country_effects.txt",
+        "common/on_actions/sitai_country_on_actions.txt",
         "common/scripted_triggers/sitai_fiscal_triggers.txt",
         "common/scripted_effects/sitai_fiscal_effects.txt",
         "common/on_actions/sitai_fiscal_on_actions.txt",
@@ -1380,6 +1470,7 @@ def validate(
     snapshot: object | None = None,
     policy: Policy | None = None,
     extensions: Extensions | None = None,
+    country_policy: CountryPolicy | None = None,
 ) -> list[str]:
     """检查决策生成器实际生成的引擎接口及锁定底本。
 
@@ -1388,6 +1479,14 @@ def validate(
     ``vocabulary``、``vanilla_keys`` 和 ``vanilla_variables``。
     """
     interfaces = set()
+    if country_policy is not None:
+        country_state = _country_state_module()
+
+        try:
+            country_state.validate(country_policy, game, snapshot=snapshot)
+        except (ValueError, OSError) as exc:
+            return [str(exc)]
+        interfaces |= {"is_ai", "has_variable", "set_variable", "remove_variable"}
     policy = policy or load()
     if policy.enabled:
         interfaces |= {
