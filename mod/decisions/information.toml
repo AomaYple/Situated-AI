@@ -183,6 +183,48 @@ unit = "weeks"
 kind = "number"
 minimum = 0
 
+[readers.route_fiscal_recovery]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_fiscal_recovery"
+
+[readers.route_stability]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_stability"
+
+[readers.route_defense]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_defense"
+
+[readers.route_industry]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_industry"
+
+[readers.route_education]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_education"
+
+[readers.route_maritime]
+engine = "has_variable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "sitai_route_maritime"
+
 [[rules]]
 id = "fiscal_construction_guard"
 intent = "fiscal_recovery"
@@ -196,6 +238,16 @@ conditions = [
 ]
 why = "和平且违约时降低新增建设目标；不取消已有施工或创造资金"
 counterexample = "战争时保留原版建设目标；原版零目标保持为零"
+
+[[rules]]
+id = "route_fiscal_recovery_construction"
+domain = "fiscal"
+field = "wanted_construction_output"
+priority = 310
+value = 0.75
+conditions = [ { fact = "route_fiscal_recovery", op = "=", value = true } ]
+why = "财政整固路线占用影子预算时降低新增建设目标，保留原版资格、成本和执行"
+counterexample = "路线变量缺失、未知、玩家或状态模块关闭时不调整；不取消已有施工或创造资金"
 
 [[rules]]
 id = "war_defeat_reconstruction"
@@ -240,6 +292,16 @@ conditions = [
 ]
 why = "财政违约提高避免革命的原版倾向，不禁止立法"
 counterexample = "非违约国家保持原版；不修改真实法律资格"
+
+[[rules]]
+id = "route_stability_revolution_aversion"
+domain = "political"
+field = "revolution_aversion"
+priority = 300
+value = 1.2
+conditions = [ { fact = "route_stability", op = "=", value = true } ]
+why = "政治稳定路线提高原版避免革命的有限倾向"
+counterexample = "不阻止立法、不改变利益集团或革命资格；没有有效路线时保持原版"
 
 [[rules]]
 id = "social_school_priority"
@@ -338,6 +400,21 @@ conditions = [
 ]
 why = "和平且违约时适度降低新增常备军目标"
 counterexample = "战争不削弱生存防御；不删除军队、不改变战斗属性"
+
+[[rules]]
+id = "route_defense_army_capacity"
+domain = "military"
+field = "wanted_army_size"
+priority = 300
+value = 1.2
+conditions = [
+  { fact = "route_defense", op = "=", value = true },
+  { fact = "default", op = "=", value = false },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "防御路线提高原版常备军目标，仍由原版资格和军费约束"
+counterexample = "不创建军队、不改变战斗属性；路线失效或输入未知时回退原版"
 
 [[rules]]
 id = "naval_peacetime_budget"
@@ -558,6 +635,16 @@ why = "和平、未处于战败恢复、无违约、低债务、有结余且行�
 counterexample = "战争、战败恢复、借贷、违约、债务过高、结余或行政能力未知时回退原版；不创造建设资金、劳动力或建筑队列"
 
 [[rules]]
+id = "route_industry_construction"
+domain = "economy"
+field = "wanted_construction_output"
+priority = 300
+value = 1.25
+conditions = [ { fact = "route_industry", op = "=", value = true } ]
+why = "产业路线在状态协调器确认财政、行政和市场条件后提高建设目标"
+counterexample = "不创造建设资金、劳动力或建筑队列；路线缺失、禁用或过期时保持原版"
+
+[[rules]]
 id = "wartime_army_capacity"
 intent = "wartime_defense"
 domain = "military"
@@ -606,6 +693,16 @@ conditions = [
 ]
 why = "和平且财政、行政能力可用的大人口低识字国家优先补足教育能力"
 counterexample = "不提高制度等级、不绕过法律或行政容量；战争、违约或未知输入保持原版"
+
+[[rules]]
+id = "route_education_schools"
+domain = "political"
+field = "institution_scores.institution_schools"
+priority = 300
+value = 1.25
+conditions = [ { fact = "route_education", op = "=", value = true } ]
+why = "教育追赶路线提高原版学校制度候选评分"
+counterexample = "不提高制度等级、不绕过法律和行政资格；路线无效时保持原版"
 
 [[rules]]
 id = "trade_capacity_cooperation"
@@ -657,3 +754,13 @@ conditions = [
 ]
 why = "和平、有收入、具备海军投射和既有扩张路线时提高殖民利益的有限原版权重"
 counterexample = "不创建殖民资格、舰队或机构；海军、收入或路线未知时回退原版"
+
+[[rules]]
+id = "route_maritime_projection"
+domain = "geography"
+field = "colonial_interest_ratio"
+priority = 300
+value = 1.2
+conditions = [ { fact = "route_maritime", op = "=", value = true } ]
+why = "商业海洋路线在国家状态确认投射能力后提高原版海外利益权重"
+counterexample = "不创建殖民资格、港口、舰队或机构；路线缺失或原版资格不足时保持原版"

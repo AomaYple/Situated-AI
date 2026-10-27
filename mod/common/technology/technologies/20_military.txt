@@ -968,8 +968,11 @@ wargaming = {
 		value = 1
 
 		# SITAI BEGIN information:wargaming.ai_weight
+		# coordinated_route_education_military_tradeoff [military]; 教育路线在和平期有限压低军事研究竞争权重，表达研究机会成本
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_education_active = yes is_at_war = no } } multiply = 0.9 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { sitai_route_education_active = yes } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# wargaming_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:wargaming.ai_weight
 	}
 }

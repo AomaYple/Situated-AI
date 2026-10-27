@@ -20,6 +20,7 @@ from hypothesis import strategies as st
 
 from pdx import (
     config,
+    country_state,
     decision_adapters,
     decision_intents,
     decision_rules,
@@ -79,7 +80,11 @@ def test_shared_information_readers_have_sha_locked_native_evidence(rules):
     assert all(reader.engine in evidence for reader in rules.readers)
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
     script = decision_rules.patch(
-        baseline, rules, baseline=baseline, reader_words=frozenset(evidence)
+        baseline,
+        rules,
+        baseline=baseline,
+        reader_words=frozenset(evidence),
+        country_policy=country_state.load(),
     )
     assert "bureaucracy >= 0" in script
     assert "has_insurrectionary_interest_groups = no" in script
@@ -112,6 +117,12 @@ def _values(**overrides: object) -> dict[str, object]:
         "target_owned": False,
         "target_isolated": False,
         "target_cultural_share": 0,
+        "route_fiscal_recovery": False,
+        "route_stability": False,
+        "route_defense": False,
+        "route_industry": False,
+        "route_education": False,
+        "route_maritime": False,
         **overrides,
     }
 
@@ -136,7 +147,11 @@ def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rule
     }
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
     script = decision_rules.patch(
-        baseline, rules, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+        baseline,
+        rules,
+        baseline=baseline,
+        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+        country_policy=country_state.load(),
     )
     assert not parse_text(script).errors
     assert not decisions.player_boundary_issues(script)
@@ -592,7 +607,11 @@ def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_u
     lower = replace(lower, conditions=root_only if high_uses_target else lower.conditions)
     policy = replace(rules, rules=(top, lower), enabled_domains=frozenset({"geography"}))
     text = decision_rules.patch(
-        baseline, policy, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+        baseline,
+        policy,
+        baseline=baseline,
+        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+        country_policy=country_state.load(),
     )
     match = re.search(r"# SITAI BEGIN information:state_value\n(.*?)# SITAI END", text, re.DOTALL)
     assert match is not None
@@ -610,7 +629,11 @@ def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_u
         top = replace(top, conditions=(*top.conditions, decision_rules.Predicate("war", "=", True)))
         changed = replace(policy, rules=(top, lower))
         text = decision_rules.patch(
-            baseline, changed, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+            baseline,
+            changed,
+            baseline=baseline,
+            reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+            country_policy=country_state.load(),
         )
         match = re.search(
             r"# SITAI BEGIN information:state_value\n(.*?)# SITAI END", text, re.DOTALL
@@ -626,7 +649,11 @@ def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_u
 def generated_rule_blocks(rules):
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
     generated = decision_rules.patch(
-        baseline, rules, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+        baseline,
+        rules,
+        baseline=baseline,
+        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+        country_policy=country_state.load(),
     )
     blocks = {}
     for field in rules.groups():
@@ -840,14 +867,22 @@ def test_drift_bad_path_and_unproven_reader_refuse_generation(rules):
     )
     with pytest.raises(ValueError, match="消费者"):
         decision_rules.patch(
-            baseline, broken, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+            baseline,
+            broken,
+            baseline=baseline,
+            reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+            country_policy=country_state.load(),
         )
     broken = replace(
         rules, readers=(replace(rules.readers[0], engine="invented_reader"), *rules.readers[1:])
     )
     with pytest.raises(ValueError, match="读取器"):
         decision_rules.patch(
-            baseline, broken, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+            baseline,
+            broken,
+            baseline=baseline,
+            reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+            country_policy=country_state.load(),
         )
 
 
@@ -956,9 +991,17 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
             )
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
     assert decision_rules.patch(
-        baseline, policy, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+        baseline,
+        policy,
+        baseline=baseline,
+        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+        country_policy=country_state.load(),
     ) == decision_rules.patch(
-        baseline, rules, baseline=baseline, reader_evidence=_SYNTHETIC_READER_EVIDENCE
+        baseline,
+        rules,
+        baseline=baseline,
+        reader_evidence=_SYNTHETIC_READER_EVIDENCE,
+        country_policy=country_state.load(),
     )
 
 
@@ -967,7 +1010,7 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
 def test_release_is_a_real_standard_package(tmp_path):
-    path = distribution.package(tmp_path / "situated-ai-1.2.0.zip")
+    path = distribution.package(tmp_path / "situated-ai-1.3.0.zip")
     _, _, engineering_files = distribution.package_inputs(include_engineering_metadata=True)
     assert all(
         not line.endswith((" ", "\t"))
@@ -993,7 +1036,7 @@ def test_release_is_a_real_standard_package(tmp_path):
         assert metadata["id"] == distribution.MOD_ID == "situated-ai"
         assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
         assert len(archive.read(".metadata/metadata.json")) < 2_000
-        assert metadata["version"] == "1.2.0"
+        assert metadata["version"] == "1.3.0"
         assert contract["status"] == "candidate"
         assert contract["behavior_quality"] == "not_evaluated"
         assert engineering_metadata["decision_rules"]["behavior_verified"] is False

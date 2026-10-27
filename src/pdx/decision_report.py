@@ -12,7 +12,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from typing import Any
 
-from . import decision_adapters, decision_intents, decision_rules, decisions
+from . import country_state, decision_adapters, decision_intents, decision_rules, decisions
 
 DOMAINS = (
     "political",
@@ -114,6 +114,7 @@ def source_metadata() -> dict[str, Any]:
     """
 
     policy = decisions.load()
+    country_policy = country_state.load()
     extensions = decisions.load_extensions(profile="release")
     strategy = decision_intents.load()
     information = decision_rules.load(strategy=strategy)
@@ -132,6 +133,7 @@ def source_metadata() -> dict[str, Any]:
         extensions,
         baseline=decisions.BASELINE.read_text(encoding="utf-8"),
         complete_localization=True,
+        country_policy=country_policy,
     )
     enabled_modules = metadata["enabled_modules"]
     if not isinstance(enabled_modules, list):
@@ -145,6 +147,13 @@ def source_metadata() -> dict[str, Any]:
         "source_sha256": adapters.source_sha256,
         "sources": dict(adapters.sources),
         "consumers": consumers,
+    }
+    metadata["country_state"] = country_state.contract(country_policy)
+    metadata["country_coordination"] = {
+        "runtime_state": "bounded_persistent_routes" if country_policy.enabled else "disabled",
+        "state_contract": metadata["country_state"],
+        "behavior_verified": False,
+        "evidence": "static_check",
     }
     return metadata
 
@@ -201,6 +210,27 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
         modules
     ):
         issues.append("必须同时启用 information_rules 和 consumer_adapters")
+
+    state = metadata.get("country_state")
+    coordination = metadata.get("country_coordination")
+    if not isinstance(state, Mapping) or not isinstance(coordination, Mapping):
+        issues.append("缺少 country_state/country_coordination 合同")
+    else:
+        try:
+            country_policy = country_state.load()
+            expected = country_state.contract(country_policy)
+            if dict(state) != expected:
+                issues.append("country_state 合同与生产源不一致")
+            fingerprint = metadata.get("source_fingerprint")
+            if (
+                not isinstance(fingerprint, Mapping)
+                or fingerprint.get("country_state_source_sha256") != country_policy.source_sha256
+            ):
+                issues.append("country_state source_fingerprint 不一致")
+            if coordination.get("state_contract") != dict(state):
+                issues.append("country_coordination 未引用同源 country_state 合同")
+        except (OSError, ValueError) as exc:
+            issues.append(f"country_state 合同无法加载：{exc}")
 
     contract = _mapping(metadata.get("information_contract"), "information_contract")
     declared = contract.get("domains")
@@ -425,9 +455,11 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
         "enabled_modules": list(metadata["enabled_modules"]),
         "domains": domains,
         "profile": {
-            "kind": "bounded_static_fact_classification_not_runtime_country_state",
+            "kind": "bounded_static_fact_classification_with_runtime_country_state",
             "dimensions": dict(sorted(role_counts.items())),
-            "runtime_state": "none",
+            "runtime_state": metadata.get("country_coordination", {}).get(
+                "runtime_state", "unknown"
+            ),
         },
         "shocks": {
             "scope": "information_rules_and_consumer_adapters_only",
@@ -443,7 +475,7 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
                 HISTORICAL_SHOCKS_WITHOUT_LOCKED_READER,
                 "unsupported_no_locked_runtime_reader",
             ),
-            "memory": "vanilla_recent_war_variable_read_without_mod_owned_state; other_shocks_recomputed_at_vanilla_consumer_evaluation",
+            "memory": "bounded_mod_owned_country_routes_with_ttl_and_cooldown; vanilla_recent_war_variable_read; other_shocks_recomputed_at_vanilla_consumer_evaluation",
         },
         "facts": facts,
         "consumer_fields": consumer_fields,

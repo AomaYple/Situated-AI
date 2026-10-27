@@ -108,7 +108,7 @@ def test_正式候选包含所有生产模块且不修改生成源():
     before = decisions.build()
     policy, extra, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
-    assert metadata["enabled_modules"] == [
+    assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",
         "market",
@@ -117,7 +117,8 @@ def test_正式候选包含所有生产模块且不修改生成源():
         "diplomacy",
         "information_rules",
         "consumer_adapters",
-    ]
+        "country_state",
+    }
     assert metadata["status"] == "candidate"
     assert policy.aggression == 0
     assert extra.security_enabled

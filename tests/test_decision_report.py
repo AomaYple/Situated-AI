@@ -34,7 +34,7 @@ def test_decision_report_covers_all_declared_domains(engineering_metadata: dict[
     assert sum(len(field["candidates"]) for field in report["consumer_fields"]) == (
         report["information_rule_count"] + report["consumer_rule_count"]
     )
-    assert report["profile"]["runtime_state"] == "none"
+    assert report["profile"]["runtime_state"] == "bounded_persistent_routes"
     assert report["shocks"]["current_facts"]["active_war"]["rule_count"] > 0
     assert report["shocks"]["current_facts"]["war_defeat"]["rule_count"] > 0
     assert set(report["shocks"]["historical_events"].values()) == {
