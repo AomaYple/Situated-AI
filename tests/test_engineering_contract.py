@@ -26,6 +26,8 @@ def test_engineering_baseline_has_stable_tiers() -> None:
     ("reason", "category"),
     [
         ("游戏目录不可用", "game"),
+        ("需要锁定原版", "game"),
+        ("需要锁定版本的游戏原件", "game"),
         ("没有精简快照", "artifact"),
         ("系统未授予符号链接权限", "platform"),
         ("ruff 不可用：命令不存在", "tool"),
