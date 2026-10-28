@@ -87,6 +87,28 @@ def test_entry_and_hold_thresholds_differ(policy):
     assert country_state.advance(policy, facts(literacy=0.61), entered, day=30).route is None
 
 
+@pytest.mark.parametrize(
+    ("overrides", "expected"),
+    [
+        ({"industrial_route": False, "resource_route": True}, "industry"),
+        ({"legitimacy": 20, "insurrection": False}, "stability"),
+    ],
+)
+def test_secondary_country_facts_drive_routes(policy, overrides, expected):
+    result = country_state.advance(policy, facts(**overrides), None, day=0)
+    assert result.route == expected
+
+
+def test_subjects_do_not_claim_maritime_route_without_independent_status(policy):
+    result = country_state.advance(
+        policy,
+        facts(subject=True, industrial_route=False, resource_route=False, expansion_route=True),
+        None,
+        day=0,
+    )
+    assert result.route is None
+
+
 def test_cooldown_is_not_refreshed_by_monthly_maintenance(policy):
     first = country_state.advance(policy, facts(), None, day=0)
     assert first.route == "industry"
@@ -133,6 +155,22 @@ def test_budgets_bound_route_cost_and_only_one_route_wins(policy):
     assert result.reserved_budget == {"fiscal": 1, "administrative": 1, "security": 0}
 
 
+def test_disabled_policy_never_reports_route_eligibility(policy):
+    disabled = replace(policy, enabled=False)
+    result = country_state.derive(disabled, facts())
+    assert result["is_ai"] is True
+    assert not any(result["eligible"].values())
+
+
+def test_parameterized_negative_route_predicate_is_rejected(policy):
+    data = tomllib.loads(country_state.SOURCE.read_text(encoding="utf-8"))
+    data["routes"]["industry"]["enter"][0].append(
+        {"fact": "industrial_route", "op": "=", "value": False}
+    )
+    with pytest.raises(ValueError, match="带参数布尔路线事实"):
+        country_state.from_data(data)
+
+
 def test_administrative_budget_has_distinct_capacity_tiers(policy):
     assert country_state.derive(policy, facts(bureaucracy=-1))["budgets"]["administrative"] == 0
     assert country_state.derive(policy, facts(bureaucracy=0))["budgets"]["administrative"] == 1
@@ -142,12 +180,52 @@ def test_administrative_budget_has_distinct_capacity_tiers(policy):
 def test_disabled_and_player_do_not_refresh_and_expire(policy):
     old = country_state.advance(policy, facts(), None, day=0)
     assert old.expires_day == 100
-    assert country_state.advance(policy, {}, old, day=99, enabled=False) == old
-    assert country_state.advance(policy, {}, old, day=99, is_ai=False) == old
+    disabled = country_state.advance(policy, {}, old, day=99, enabled=False)
+    player = country_state.advance(policy, {}, old, day=99, is_ai=False)
+    assert disabled.route == player.route == old.route
+    assert disabled.expires_day == player.expires_day == old.expires_day
+    assert disabled.cooldown_until == player.cooldown_until == 0
+    assert "sitai_route_cooldown" not in (disabled.variables or {})
     assert country_state.advance(policy, {}, old, day=100, enabled=False).route is None
     assert country_state.advance(policy, {}, old, day=100, is_ai=False).route is None
     assert not any(country_state.derive(policy, facts(), is_ai=False)["eligible"].values())
     assert all(not value for value in country_state.files(replace(policy, enabled=False)).values())
+
+
+@pytest.mark.parametrize("mode", ["player", "disabled", "policy_disabled"])
+def test_cooldown_only_state_expires_without_refresh(policy, mode):
+    script = Script(policy)
+    old = country_state.advance(policy, facts(), None, day=0)
+    assert script.update(facts(), 0) == "industry"
+    old = country_state.advance(policy, facts(bureaucracy=-1), old, day=1)
+    assert script.update(facts(bureaucracy=-1), 1) is None
+    assert old.route is None
+    assert old.cooldown_until == 62
+    kwargs = {"is_ai": False} if mode == "player" else {"enabled": False}
+    if mode == "policy_disabled":
+        policy = replace(policy, enabled=False)
+        kwargs = {}
+    for day in (30, 61, 62, 100):
+        old = country_state.advance(policy, {}, old, day=day, **kwargs)
+        script.update({}, day, is_ai=False)
+        assert set(old.variables or {}) == set(script.variables)
+        assert old.cooldown_until == (62 if day < 62 else 0)
+
+
+def test_route_loss_preserves_cooldown_and_war_waits_for_refresh(policy):
+    script = Script(policy)
+    assert script.update(facts(), 0) == "industry"
+    # 两次 hook 之间事实改变只影响实时消费者，不隐式调用刷新效果。
+    script.day = 1
+    assert not script.trigger(script.triggers["sitai_route_industry_active"], facts(war=True))
+    assert script.trigger(script.triggers["sitai_route_defense_candidate"], facts(war=True))
+    assert not script.trigger(script.triggers["sitai_route_defense_active"], facts(war=True))
+    assert script.update(facts(war=True), 30) == "defense"
+    script = Script(policy)
+    assert script.update(facts(), 0) == "industry"
+    assert script.update(facts(bureaucracy=-1), 1) is None
+    assert script.update(facts(literacy=0.3), 30) is None
+    assert script.update(facts(literacy=0.3), 62) == "education"
 
 
 def test_old_save_bad_state_day_and_switch_fail_explicitly(policy):
@@ -163,6 +241,20 @@ def test_old_save_bad_state_day_and_switch_fail_explicitly(policy):
             country_state.advance(policy, facts(), None, day=day)
     with pytest.raises(ValueError):
         country_state.advance(policy, facts(), None, day=1, enabled="yes")
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"route": "industry", "expires_day": "100"},
+        {"route": "industry", "expires_day": 1, "updated_day": 2},
+        {"route": "industry", "expires_day": 100, "reserved_budget": {"fiscal": 3}},
+        {"route": "industry", "expires_day": 100, "variables": {"x": 1}},
+    ],
+)
+def test_old_save_shape_is_strict(policy, bad):
+    with pytest.raises(ValueError):
+        country_state.advance(policy, facts(), bad, day=2)
 
 
 @pytest.mark.parametrize(

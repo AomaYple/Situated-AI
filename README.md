@@ -5,14 +5,14 @@
 
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
-当前工程交付候选为 `Situated AI 1.3.0`，底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。它包含有限国家状态、六条动态路线、影子预算、TTL/冷却和原版消费者适配。终极方案 3.0 的 E0–E15 已按静态工程出口执行完成；长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
+当前工程交付候选为 `Situated AI 1.3.0`，底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。它包含有限国家状态、六条动态路线、影子预算、TTL/冷却和原版消费者适配。终极方案 4.0 的 E0–E15 已达到静态工程出口；长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
 
 ## 先读什么
 
 1. [AGENTS.md](AGENTS.md)：代理接手顺序和修改边界。
 2. [CONTRIBUTING.md](CONTRIBUTING.md)：生成、检查、分支、提交、PR 和发布。
 3. [工程原则](docs/principles/工程原则.md)与[Mod 开发原则](docs/principles/Mod开发原则.md)。
-4. [终极方案 3.0 实施计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
+4. [终极方案 4.0 实施计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
 
 ## 目录
 
@@ -42,7 +42,7 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运�
 
 ## 标准包
 
-`1.3.0` 是当前工程交付候选。包包含标准 metadata、生成的 `common/`、11 种本体语言、封面、manifest 和安装说明；不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。版本标签、包 SHA-256 和历史交付见[版本交付索引](docs/design/exec/版本交付-结果.md)。本轮不上传 Steam Workshop。
+`1.3.0` 是当前工程交付候选。包包含标准 metadata、生成的 `common/`、11 种本体语言、封面、manifest 和安装说明；本轮包为 65 个条目，SHA-256 为 `7ece8f08d8aac3ce5dde070556925bbb839f5ccefa760df39840705eb5df1cad`。包不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。版本标签、包哈希和历史交付见[版本交付索引](docs/design/exec/版本交付-结果.md)。本轮不上传 Steam Workshop。
 
 安装时将 ZIP 解压到 `Paradox Interactive/Victoria 3/mod/Situated AI`，在启动器中登记并启用独立 playset；不要覆盖游戏本体。游戏文本只在打包边界使用 UTF-8 BOM，仓库源统一 UTF-8 无 BOM、LF。
 

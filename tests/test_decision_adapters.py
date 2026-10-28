@@ -14,13 +14,199 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pdx import config, country_state, decision_adapters, decision_rules, decisions
+from pdx import (
+    config,
+    country_state,
+    decision_adapters,
+    decision_intents,
+    decision_rules,
+    decisions,
+)
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.textio import normalized_text
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
+)
+def test_actual_input_pressure_precedes_output_opportunity():
+    """生产投入短缺必须先于同一建筑的产出机会，避免错误扩产。"""
+    adapters = decision_adapters.load()
+    checked = 0
+    for source, policy in adapters.policies:
+        by_field: dict[tuple[str, ...], dict[str, list[int]]] = {}
+        for rule in policy.rules:
+            if rule.id.startswith(("actual_cost_", "actual_output_")):
+                by_field.setdefault(rule.field, {"cost": [], "output": []})[
+                    "cost" if rule.id.startswith("actual_cost_") else "output"
+                ].append(rule.priority)
+        for field, groups in by_field.items():
+            if groups["cost"] and groups["output"]:
+                checked += 1
+                assert min(groups["cost"]) > max(groups["output"]), (source, field)
+    assert checked == 12
+
+
+def test_one_low_priority_input_rule_cannot_hide_behind_other_input_rules(tmp_path):
+    text = decision_adapters.SOURCE.read_text(encoding="utf-8")
+    changed, count = re.subn(
+        r'(id = "actual_cost_building_iron_mine_[^\n]+\n(?:[^\n]*\n){3}priority = )\d+',
+        r"\g<1>1",
+        text,
+        count=1,
+    )
+    assert count == 1
+    source = tmp_path / "adapters.toml"
+    source.write_text(changed, encoding="utf-8")
+    with pytest.raises(ValueError, match="输入短缺规则必须优先"):
+        decision_adapters.load(source, strategy=decision_intents.load())
+
+
+@pytest.mark.integration
+def test_default_subject_option_respects_both_countries_war_state():
+    policy = dict(decision_adapters.load().policies)["common/ai_strategies/00_default_strategy.txt"]
+    rule = next(rule for rule in policy.rules if rule.id == "coordinated_subject_debt_option")
+    values = {
+        reader.key: False if reader.kind == "boolean" else max(0, reader.minimum or 0)
+        for reader in policy.readers
+    }
+    values.update(
+        default=True,
+        war=False,
+        candidate_overlord_war=False,
+        prospective_overlord_population=100_000,
+    )
+    assert decision_rules.evaluate(policy, values, is_ai=True).get(
+        "ai_strategy_default.become_subject_value"
+    ) == (rule.id, 3)
+    for change in ({"war": True}, {"candidate_overlord_war": True}):
+        result = decision_rules.evaluate(policy, {**values, **change}, is_ai=True)
+        assert result.get("ai_strategy_default.become_subject_value", ("", 0))[0] != rule.id
+
+
+@pytest.mark.integration
+def test_insolvency_outweighs_friendship_and_route_on_colonial_commitment():
+    policy = dict(decision_adapters.load().policies)["common/ai_strategies/00_default_strategy.txt"]
+    values = {
+        reader.key: False if reader.kind == "boolean" else max(0, reader.minimum or 0)
+        for reader in policy.readers
+    }
+    field = "ai_strategy_default.wargoal_scores.colonization_rights"
+    values.update(
+        war=False,
+        default=False,
+        loans=True,
+        debt_ratio=0.5,
+        bankruptcy_horizon=10,
+        prospective_subject_population=100_000,
+        target_relations=75,
+        target_truce=True,
+        target_alliance=True,
+    )
+    result = decision_rules.evaluate(policy, values, is_ai=True)
+    assert result[field] == ("coordinated_liquidity_wargoal_scores_colonization_rights", -10)
+    recovered = decision_rules.evaluate(policy, {**values, "default": True}, is_ai=True)
+    assert recovered[field] == ("coordinated_colonization_rights_financial_cost", -10)
+
+
+@pytest.mark.integration
+def test_political_crisis_cost_is_not_applied_during_war():
+    policy = dict(decision_adapters.load().policies)["common/ai_strategies/00_default_strategy.txt"]
+    values = {
+        reader.key: False if reader.kind == "boolean" else max(0, reader.minimum or 0)
+        for reader in policy.readers
+    }
+    values.update(
+        war=False,
+        legitimacy=20,
+        insurrection=True,
+        radical_share=0.3,
+        prospective_subject_population=100_000,
+    )
+    field = "ai_strategy_default.wargoal_scores.reduce_autonomy"
+    assert decision_rules.evaluate(policy, values, is_ai=True)[field] == (
+        "coordinated_autonomy_political_cost",
+        -5,
+    )
+    wartime = decision_rules.evaluate(policy, {**values, "war": True}, is_ai=True)
+    assert wartime.get(field, ("", 0))[0] != "coordinated_autonomy_political_cost"
+
+
+@pytest.mark.integration
+def test_critical_diplomatic_rules_match_generated_script(real_generated_branches):
+    policy, blocks = next(
+        (policy, blocks)
+        for policy, blocks in real_generated_branches
+        if any(rule.id == "coordinated_subject_debt_option" for rule in policy.rules)
+    )
+    base = {
+        reader.key: False if reader.kind == "boolean" else max(0, reader.minimum or 0)
+        for reader in policy.readers
+    }
+    cases = [
+        (
+            "ai_strategy_default.become_subject_value",
+            {
+                **base,
+                "default": True,
+                "war": False,
+                "candidate_overlord_war": False,
+                "prospective_overlord_population": 100_000,
+            },
+            "coordinated_subject_debt_option",
+        ),
+        (
+            "ai_strategy_default.wargoal_scores.colonization_rights",
+            {
+                **base,
+                "default": True,
+                "war": False,
+                "prospective_subject_population": 100_000,
+                "target_truce": True,
+            },
+            "coordinated_colonization_rights_financial_cost",
+        ),
+    ]
+    by_id = {rule.id: rule for rule in policy.rules}
+    for field, values, identifier in cases:
+        selected = decision_rules.evaluate(policy, values, is_ai=True).get(field)
+        assert selected == (identifier, by_id[identifier].value)
+        actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, values))
+        assert actual == (by_id[identifier].operation, by_id[identifier].value)
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
+)
+def test_urban_research_requires_complete_development_capacity():
+    adapters = decision_adapters.load()
+    policy = dict(adapters.policies)["common/technology/technologies/30_society.txt"]
+    values = {
+        "population": 3_000_000,
+        "literacy": 0.4,
+        "bureaucracy": 100,
+        "net_surplus": 100,
+        "default": False,
+        "war": False,
+    }
+    result = decision_rules.evaluate(policy, values, is_ai=True)
+    assert result["urbanization.ai_weight"] == ("situational_urbanization_research", 1.2)
+    for key, value in (
+        ("war", True),
+        ("default", True),
+        ("bureaucracy", -1),
+        ("net_surplus", -1),
+        ("literacy", None),
+    ):
+        assert "urbanization.ai_weight" not in decision_rules.evaluate(
+            policy, {**values, key: value}, is_ai=True
+        )
 
 
 _NAME = "common/laws/synthetic.txt"

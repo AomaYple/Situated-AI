@@ -36,14 +36,14 @@ artillery_tech = { engine = "has_technology_researched", kind = "boolean", unit 
 
 [budgets.security]
 1 = [[{ fact = "navy", op = ">", value = 0 }]]
-2 = [[{ fact = "navy", op = ">=", value = 25 }]]
+2 = [[{ fact = "navy", op = ">=", value = 25 }, { fact = "artillery_tech", op = "=", value = true }]]
 
 [dimensions]
 fiscal = { facts = ["debt_ratio", "net_surplus", "default", "loans"] }
 administrative = { facts = ["bureaucracy"] }
-political = { facts = ["legitimacy", "insurrection"] }
+political = { facts = ["legitimacy", "insurrection", "subject"] }
 social = { facts = ["population"] }
-industry = { facts = ["industrial_route", "net_surplus"] }
+industry = { facts = ["industrial_route", "resource_route", "net_surplus", "war_defeat"] }
 market = { facts = ["net_surplus"] }
 diplomacy = { facts = ["subject"] }
 military = { facts = ["navy", "war"] }
@@ -70,8 +70,14 @@ cost = { fiscal = 1, administrative = 1, security = 0 }
 [routes.stability]
 priority = 90
 emergency = true
-enter = [[{ fact = "insurrection", op = "=", value = true }]]
-hold = [[{ fact = "insurrection", op = "=", value = true }]]
+enter = [
+  [{ fact = "insurrection", op = "=", value = true }],
+  [{ fact = "legitimacy", op = "<", value = 25 }],
+]
+hold = [
+  [{ fact = "insurrection", op = "=", value = true }],
+  [{ fact = "legitimacy", op = "<", value = 35 }],
+]
 cost = { fiscal = 0, administrative = 1, security = 1 }
 
 [routes.defense]
@@ -84,18 +90,48 @@ cost = { fiscal = 1, administrative = 1, security = 2 }
 [routes.industry]
 priority = 50
 emergency = false
-enter = [[
-  { fact = "war", op = "=", value = false },
-  { fact = "default", op = "=", value = false },
-  { fact = "industrial_route", op = "=", value = true },
-  { fact = "net_surplus", op = ">", value = 0 },
-]]
-hold = [[
-  { fact = "war", op = "=", value = false },
-  { fact = "default", op = "=", value = false },
-  { fact = "industrial_route", op = "=", value = true },
-  { fact = "net_surplus", op = ">", value = 0 },
-]]
+enter = [
+  [
+    { fact = "war", op = "=", value = false },
+    { fact = "default", op = "=", value = false },
+    { fact = "industrial_route", op = "=", value = true },
+    { fact = "net_surplus", op = ">", value = 0 },
+  ],
+  [
+    { fact = "war", op = "=", value = false },
+    { fact = "default", op = "=", value = false },
+    { fact = "resource_route", op = "=", value = true },
+    { fact = "net_surplus", op = ">", value = 0 },
+  ],
+  [
+    { fact = "war", op = "=", value = false },
+    { fact = "default", op = "=", value = false },
+    { fact = "war_defeat", op = "=", value = true },
+    { fact = "income", op = ">", value = 0 },
+    { fact = "net_surplus", op = ">", value = 0 },
+  ],
+]
+hold = [
+  [
+    { fact = "war", op = "=", value = false },
+    { fact = "default", op = "=", value = false },
+    { fact = "industrial_route", op = "=", value = true },
+    { fact = "net_surplus", op = ">", value = 0 },
+  ],
+  [
+    { fact = "war", op = "=", value = false },
+    { fact = "default", op = "=", value = false },
+    { fact = "resource_route", op = "=", value = true },
+    { fact = "net_surplus", op = ">", value = 0 },
+  ],
+  [
+    { fact = "war", op = "=", value = false },
+    { fact = "default", op = "=", value = false },
+    { fact = "war_defeat", op = "=", value = true },
+    { fact = "income", op = ">", value = 0 },
+    { fact = "net_surplus", op = ">", value = 0 },
+  ],
+]
 cost = { fiscal = 1, administrative = 1, security = 0 }
 
 [routes.education]
@@ -124,6 +160,7 @@ enter = [[
   { fact = "war", op = "=", value = false },
   { fact = "default", op = "=", value = false },
   { fact = "expansion_route", op = "=", value = true },
+  { fact = "subject", op = "=", value = false },
   { fact = "navy", op = ">=", value = 25 },
   { fact = "income", op = ">", value = 0 },
   { fact = "net_surplus", op = ">", value = 0 },
@@ -132,6 +169,7 @@ hold = [[
   { fact = "war", op = "=", value = false },
   { fact = "default", op = "=", value = false },
   { fact = "expansion_route", op = "=", value = true },
+  { fact = "subject", op = "=", value = false },
   { fact = "navy", op = ">=", value = 25 },
   { fact = "income", op = ">", value = 0 },
   { fact = "net_surplus", op = ">", value = 0 },

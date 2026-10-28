@@ -583,9 +583,9 @@ field = "institution_scores.institution_schools"
 priority = 70
 value = 1.3
 conditions = [
-  { fact = "population", op = ">=", value = 2000000 },
+  { fact = "population", op = ">", value = 0 },
 ]
-why = "人口规模与充分财政政治容量一致时更重视教育制度候选"
+why = "强财政政治容量且人口非零时更重视教育制度候选，不以人口规模排除小国"
 counterexample = "不提高实际制度等级，不绕过法律、成本或行政资格；未知容量不猜测"
 
 [[rules]]
@@ -593,12 +593,12 @@ id = "decisive_trade_cooperation"
 intent = "decisive_development"
 domain = "market"
 field = "treaty_category_scores.trade"
-priority = 60
+priority = 68
 value = 1.25
 conditions = [
   { fact = "income", op = ">", value = 0 },
 ]
-why = "高合法性、低债务与财政行政余量共同支持时提高贸易合作类别关注"
+why = "强政治合法性、低债务、财政盈余和行政余量共同支持时，提高贸易合作类别关注"
 counterexample = "仅调整类别权重，不强制签约、不保证贸易利润，不与普通合作规则叠加"
 
 [[rules]]
@@ -606,12 +606,12 @@ id = "decisive_economic_cooperation"
 intent = "decisive_development"
 domain = "diplomacy"
 field = "treaty_category_scores.economy"
-priority = 60
+priority = 68
 value = 1.25
 conditions = [
   { fact = "income", op = ">", value = 0 },
 ]
-why = "国家财政政治余量充分时更主动评估经济合作候选"
+why = "强政治合法性、低债务、财政盈余和行政余量共同支持时，更主动评估经济合作候选"
 counterexample = "资源路线仍按更高优先级单独仲裁，不累计奖励、不制造合作资格"
 
 [[rules]]
@@ -687,11 +687,11 @@ conditions = [
   { fact = "default", op = "=", value = false },
   { fact = "war", op = "=", value = false },
   { fact = "literacy", op = "<", value = 0.5 },
-  { fact = "population", op = ">=", value = 2000000 },
+  { fact = "population", op = ">", value = 0 },
   { fact = "net_surplus", op = ">", value = 0 },
   { fact = "bureaucracy", op = ">", value = 0 },
 ]
-why = "和平且财政、行政能力可用的大人口低识字国家优先补足教育能力"
+why = "和平且财政、行政能力可用的低识字国家优先补足教育能力，不以人口规模排除小国"
 counterexample = "不提高制度等级、不绕过法律或行政容量；战争、违约或未知输入保持原版"
 
 [[rules]]
