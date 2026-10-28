@@ -11447,6 +11447,7 @@ priority = 2000
 operation = "add"
 value = -5
 conditions = [
+  { fact = "war", op = "=", value = false },
   { fact = "prospective_subject_population", op = ">", value = 0 },
 ]
 why = "共享约束下比较边际收益与机会成本；autonomy_political_cost"
@@ -11459,9 +11460,9 @@ intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.colonization_rights"
 domain = "fiscal"
-priority = 2000
+priority = 3200
 operation = "add"
-value = -5
+value = -10
 conditions = [
   { fact = "prospective_subject_population", op = ">", value = 0 },
 ]
@@ -11930,6 +11931,8 @@ priority = 2000
 operation = "add"
 value = 3
 conditions = [
+  { fact = "war", op = "=", value = false },
+  { fact = "candidate_overlord_war", op = "=", value = false },
   { fact = "prospective_overlord_population", op = ">", value = 0 },
   { fact = "default", op = "=", value = true },
 ]
@@ -16458,7 +16461,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.annex_country"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "add"
 value = -10
 conditions = [
@@ -16478,7 +16481,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.conquer_state"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "add"
 value = -10
 conditions = [
@@ -16498,7 +16501,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.make_subject"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "add"
 value = -10
 conditions = [
@@ -16518,7 +16521,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.transfer_subject"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "add"
 value = -10
 conditions = [
@@ -16538,7 +16541,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.regime_change"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "add"
 value = -10
 conditions = [
@@ -16558,7 +16561,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.wargoal_scores.colonization_rights"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "add"
 value = -10
 conditions = [
@@ -16578,7 +16581,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.conquer.score"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "add"
 value = -10
 conditions = [
@@ -16598,7 +16601,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.dominate.score"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "add"
 value = -10
 conditions = [
@@ -16618,7 +16621,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.secret_goal_scores.antagonize.score"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "add"
 value = -10
 conditions = [
@@ -16638,7 +16641,7 @@ intent = "liquidity_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.ship_construction_output_multiplier"
 domain = "fiscal"
-priority = 2700
+priority = 3100
 operation = "multiply"
 value = 0.8
 conditions = [
@@ -16812,7 +16815,7 @@ id = "actual_cost_building_coal_mine_building_coal_mine_pm_picks_and_shovels_bui
 source = "common/buildings/03_mines.txt"
 field = "building_coal_mine.ai_value"
 domain = "market"
-priority = 191
+priority = 10191
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_coal_mine_pm_picks_and_shovels_building_coal_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -16837,7 +16840,7 @@ id = "actual_cost_building_coal_mine_building_coal_mine_pm_atmospheric_engine_pu
 source = "common/buildings/03_mines.txt"
 field = "building_coal_mine.ai_value"
 domain = "market"
-priority = 192
+priority = 10192
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_coal_mine_pm_atmospheric_engine_pump_building_coal_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -16862,7 +16865,7 @@ id = "actual_cost_building_coal_mine_building_coal_mine_pm_condensing_engine_pum
 source = "common/buildings/03_mines.txt"
 field = "building_coal_mine.ai_value"
 domain = "market"
-priority = 193
+priority = 10193
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_coal_mine_pm_condensing_engine_pump_building_coal_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -16887,7 +16890,7 @@ id = "actual_cost_building_coal_mine_building_coal_mine_pm_diesel_pump_building_
 source = "common/buildings/03_mines.txt"
 field = "building_coal_mine.ai_value"
 domain = "market"
-priority = 194
+priority = 10194
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_coal_mine_pm_diesel_pump_building_coal_mine", op = "=", value = true }, { fact = "state_owner_oil_price", op = ">", value = 0.5 }, { fact = "state_owner_oil_balance", op = "<", value = 0 } ]
@@ -16899,7 +16902,7 @@ id = "actual_cost_building_coal_mine_building_coal_mine_pm_diesel_pump_building_
 source = "common/buildings/03_mines.txt"
 field = "building_coal_mine.ai_value"
 domain = "market"
-priority = 195
+priority = 10195
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_coal_mine_pm_diesel_pump_building_coal_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -16924,7 +16927,7 @@ id = "actual_cost_building_coal_mine_building_coal_mine_pm_nitroglycerin_buildin
 source = "common/buildings/03_mines.txt"
 field = "building_coal_mine.ai_value"
 domain = "market"
-priority = 196
+priority = 10196
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_coal_mine_pm_nitroglycerin_building_coal_mine", op = "=", value = true }, { fact = "state_owner_explosives_price", op = ">", value = 0.5 }, { fact = "state_owner_explosives_balance", op = "<", value = 0 } ]
@@ -16936,7 +16939,7 @@ id = "actual_cost_building_coal_mine_building_coal_mine_pm_dynamite_building_coa
 source = "common/buildings/03_mines.txt"
 field = "building_coal_mine.ai_value"
 domain = "market"
-priority = 197
+priority = 10197
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_coal_mine_pm_dynamite_building_coal_mine", op = "=", value = true }, { fact = "state_owner_explosives_price", op = ">", value = 0.5 }, { fact = "state_owner_explosives_balance", op = "<", value = 0 } ]
@@ -16948,7 +16951,7 @@ id = "actual_cost_building_coal_mine_building_coal_mine_pm_steam_donkey_building
 source = "common/buildings/03_mines.txt"
 field = "building_coal_mine.ai_value"
 domain = "market"
-priority = 198
+priority = 10198
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_coal_mine_pm_steam_donkey_building_coal_mine", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -16960,7 +16963,7 @@ id = "actual_cost_building_coal_mine_building_coal_mine_pm_rail_transport_mine_t
 source = "common/buildings/03_mines.txt"
 field = "building_coal_mine.ai_value"
 domain = "market"
-priority = 199
+priority = 10199
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_coal_mine_pm_rail_transport_mine", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -17021,7 +17024,7 @@ id = "actual_cost_building_cotton_plantation_building_cotton_plantation_automati
 source = "common/buildings/04_plantations.txt"
 field = "building_cotton_plantation.ai_value"
 domain = "market"
-priority = 151
+priority = 10151
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_cotton_plantation_automatic_irrigation_building_cotton_plantation", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -17046,7 +17049,7 @@ id = "actual_cost_building_cotton_plantation_building_cotton_plantation_pm_steam
 source = "common/buildings/04_plantations.txt"
 field = "building_cotton_plantation.ai_value"
 domain = "market"
-priority = 152
+priority = 10152
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_cotton_plantation_pm_steam_rail_transport", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -17071,7 +17074,7 @@ id = "actual_cost_building_dye_plantation_building_dye_plantation_automatic_irri
 source = "common/buildings/04_plantations.txt"
 field = "building_dye_plantation.ai_value"
 domain = "market"
-priority = 151
+priority = 10151
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_dye_plantation_automatic_irrigation_building_dye_plantation", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -17096,7 +17099,7 @@ id = "actual_cost_building_dye_plantation_building_dye_plantation_pm_steam_rail_
 source = "common/buildings/04_plantations.txt"
 field = "building_dye_plantation.ai_value"
 domain = "market"
-priority = 152
+priority = 10152
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_dye_plantation_pm_steam_rail_transport", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -17696,7 +17699,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_picks_and_shovels_bui
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 191
+priority = 10191
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_picks_and_shovels_building_iron_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -17721,7 +17724,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_atmospheric_engine_pu
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 192
+priority = 10192
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_atmospheric_engine_pump_building_iron_mine", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -17733,7 +17736,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_atmospheric_engine_pu
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 193
+priority = 10193
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_atmospheric_engine_pump_building_iron_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -17758,7 +17761,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_condensing_engine_pum
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 194
+priority = 10194
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_condensing_engine_pump_building_iron_mine", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -17770,7 +17773,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_condensing_engine_pum
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 195
+priority = 10195
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_condensing_engine_pump_building_iron_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -17795,7 +17798,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_diesel_pump_building_
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 196
+priority = 10196
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_diesel_pump_building_iron_mine", op = "=", value = true }, { fact = "state_owner_oil_price", op = ">", value = 0.5 }, { fact = "state_owner_oil_balance", op = "<", value = 0 } ]
@@ -17807,7 +17810,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_diesel_pump_building_
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 197
+priority = 10197
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_diesel_pump_building_iron_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -17832,7 +17835,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_nitroglycerin_buildin
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 198
+priority = 10198
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_nitroglycerin_building_iron_mine", op = "=", value = true }, { fact = "state_owner_explosives_price", op = ">", value = 0.5 }, { fact = "state_owner_explosives_balance", op = "<", value = 0 } ]
@@ -17844,7 +17847,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_dynamite_building_iro
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 199
+priority = 10199
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_dynamite_building_iron_mine", op = "=", value = true }, { fact = "state_owner_explosives_price", op = ">", value = 0.5 }, { fact = "state_owner_explosives_balance", op = "<", value = 0 } ]
@@ -17856,7 +17859,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_steam_donkey_mine_coa
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 200
+priority = 10200
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_steam_donkey_mine", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -17868,7 +17871,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_steam_donkey_mine_eng
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 201
+priority = 10201
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_steam_donkey_mine", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -17880,7 +17883,7 @@ id = "actual_cost_building_iron_mine_building_iron_mine_pm_rail_transport_mine_t
 source = "common/buildings/03_mines.txt"
 field = "building_iron_mine.ai_value"
 domain = "market"
-priority = 202
+priority = 10202
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_iron_mine_pm_rail_transport_mine", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -17892,7 +17895,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_picks_and_shovels_bui
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 191
+priority = 10191
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_picks_and_shovels_building_lead_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -17917,7 +17920,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_atmospheric_engine_pu
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 192
+priority = 10192
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_atmospheric_engine_pump_building_lead_mine", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -17929,7 +17932,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_atmospheric_engine_pu
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 193
+priority = 10193
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_atmospheric_engine_pump_building_lead_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -17954,7 +17957,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_condensing_engine_pum
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 194
+priority = 10194
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_condensing_engine_pump_building_lead_mine", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -17966,7 +17969,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_condensing_engine_pum
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 195
+priority = 10195
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_condensing_engine_pump_building_lead_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -17991,7 +17994,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_diesel_pump_building_
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 196
+priority = 10196
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_diesel_pump_building_lead_mine", op = "=", value = true }, { fact = "state_owner_oil_price", op = ">", value = 0.5 }, { fact = "state_owner_oil_balance", op = "<", value = 0 } ]
@@ -18003,7 +18006,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_diesel_pump_building_
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 197
+priority = 10197
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_diesel_pump_building_lead_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -18028,7 +18031,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_nitroglycerin_buildin
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 198
+priority = 10198
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_nitroglycerin_building_lead_mine", op = "=", value = true }, { fact = "state_owner_explosives_price", op = ">", value = 0.5 }, { fact = "state_owner_explosives_balance", op = "<", value = 0 } ]
@@ -18040,7 +18043,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_dynamite_building_lea
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 199
+priority = 10199
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_dynamite_building_lead_mine", op = "=", value = true }, { fact = "state_owner_explosives_price", op = ">", value = 0.5 }, { fact = "state_owner_explosives_balance", op = "<", value = 0 } ]
@@ -18052,7 +18055,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_steam_donkey_mine_coa
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 200
+priority = 10200
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_steam_donkey_mine", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -18064,7 +18067,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_steam_donkey_mine_eng
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 201
+priority = 10201
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_steam_donkey_mine", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -18076,7 +18079,7 @@ id = "actual_cost_building_lead_mine_building_lead_mine_pm_rail_transport_mine_t
 source = "common/buildings/03_mines.txt"
 field = "building_lead_mine.ai_value"
 domain = "market"
-priority = 202
+priority = 10202
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_lead_mine_pm_rail_transport_mine", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -18581,7 +18584,7 @@ id = "actual_cost_building_opium_plantation_building_opium_plantation_automatic_
 source = "common/buildings/04_plantations.txt"
 field = "building_opium_plantation.ai_value"
 domain = "market"
-priority = 151
+priority = 10151
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_opium_plantation_automatic_irrigation_building_opium_plantation", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -18606,7 +18609,7 @@ id = "actual_cost_building_opium_plantation_building_opium_plantation_pm_steam_r
 source = "common/buildings/04_plantations.txt"
 field = "building_opium_plantation.ai_value"
 domain = "market"
-priority = 152
+priority = 10152
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_opium_plantation_pm_steam_rail_transport", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -18666,7 +18669,7 @@ id = "actual_cost_building_railway_building_railway_pm_early_trains_coal"
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 191
+priority = 10191
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_early_trains", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -18678,7 +18681,7 @@ id = "actual_cost_building_railway_building_railway_pm_early_trains_engines"
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 192
+priority = 10192
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_early_trains", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -18703,7 +18706,7 @@ id = "actual_cost_building_railway_building_railway_pm_steam_trains_coal"
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 193
+priority = 10193
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_steam_trains", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -18715,7 +18718,7 @@ id = "actual_cost_building_railway_building_railway_pm_steam_trains_engines"
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 194
+priority = 10194
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_steam_trains", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -18740,7 +18743,7 @@ id = "actual_cost_building_railway_building_railway_pm_steam_trains_principle_tr
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 195
+priority = 10195
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_steam_trains_principle_transport_3", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -18752,7 +18755,7 @@ id = "actual_cost_building_railway_building_railway_pm_steam_trains_principle_tr
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 196
+priority = 10196
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_steam_trains_principle_transport_3", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -18777,7 +18780,7 @@ id = "actual_cost_building_railway_building_railway_pm_electric_trains_electrici
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 197
+priority = 10197
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_electric_trains", op = "=", value = true }, { fact = "state_owner_electricity_price", op = ">", value = 0.5 }, { fact = "state_owner_electricity_balance", op = "<", value = 0 } ]
@@ -18789,7 +18792,7 @@ id = "actual_cost_building_railway_building_railway_pm_electric_trains_engines"
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 198
+priority = 10198
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_electric_trains", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -18814,7 +18817,7 @@ id = "actual_cost_building_railway_building_railway_pm_electric_trains_principle
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 199
+priority = 10199
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_electric_trains_principle_transport_3", op = "=", value = true }, { fact = "state_owner_electricity_price", op = ">", value = 0.5 }, { fact = "state_owner_electricity_balance", op = "<", value = 0 } ]
@@ -18826,7 +18829,7 @@ id = "actual_cost_building_railway_building_railway_pm_electric_trains_principle
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 200
+priority = 10200
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_electric_trains_principle_transport_3", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -18851,7 +18854,7 @@ id = "actual_cost_building_railway_building_railway_pm_diesel_trains_engines"
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 201
+priority = 10201
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_diesel_trains", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -18863,7 +18866,7 @@ id = "actual_cost_building_railway_building_railway_pm_diesel_trains_oil"
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 202
+priority = 10202
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_diesel_trains", op = "=", value = true }, { fact = "state_owner_oil_price", op = ">", value = 0.5 }, { fact = "state_owner_oil_balance", op = "<", value = 0 } ]
@@ -18888,7 +18891,7 @@ id = "actual_cost_building_railway_building_railway_pm_diesel_trains_principle_t
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 203
+priority = 10203
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_diesel_trains_principle_transport_3", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -18900,7 +18903,7 @@ id = "actual_cost_building_railway_building_railway_pm_diesel_trains_principle_t
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 204
+priority = 10204
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_diesel_trains_principle_transport_3", op = "=", value = true }, { fact = "state_owner_oil_price", op = ">", value = 0.5 }, { fact = "state_owner_oil_balance", op = "<", value = 0 } ]
@@ -18925,7 +18928,7 @@ id = "actual_cost_building_railway_building_railway_pm_wooden_passenger_carriage
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 205
+priority = 10205
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_wooden_passenger_carriages", op = "=", value = true }, { fact = "state_owner_wood_price", op = ">", value = 0.5 }, { fact = "state_owner_wood_balance", op = "<", value = 0 } ]
@@ -18937,7 +18940,7 @@ id = "actual_cost_building_railway_building_railway_pm_steel_passenger_carriages
 source = "common/buildings/11_private_infrastructure.txt"
 field = "building_railway.ai_value"
 domain = "market"
-priority = 206
+priority = 10206
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_railway_pm_steel_passenger_carriages", op = "=", value = true }, { fact = "state_owner_steel_price", op = ">", value = 0.5 }, { fact = "state_owner_steel_balance", op = "<", value = 0 } ]
@@ -19094,7 +19097,7 @@ id = "actual_cost_building_silk_plantation_building_silk_plantation_automatic_ir
 source = "common/buildings/04_plantations.txt"
 field = "building_silk_plantation.ai_value"
 domain = "market"
-priority = 151
+priority = 10151
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_silk_plantation_automatic_irrigation_building_silk_plantation", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -19119,7 +19122,7 @@ id = "actual_cost_building_silk_plantation_building_silk_plantation_pm_steam_rai
 source = "common/buildings/04_plantations.txt"
 field = "building_silk_plantation.ai_value"
 domain = "market"
-priority = 152
+priority = 10152
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_silk_plantation_pm_steam_rail_transport", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -19251,7 +19254,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_picks_and_shovels
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 191
+priority = 10191
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_picks_and_shovels_building_sulfur_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -19276,7 +19279,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_atmospheric_engin
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 192
+priority = 10192
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_atmospheric_engine_pump_building_sulfur_mine", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -19288,7 +19291,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_atmospheric_engin
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 193
+priority = 10193
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_atmospheric_engine_pump_building_sulfur_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -19313,7 +19316,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_condensing_engine
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 194
+priority = 10194
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_condensing_engine_pump_building_sulfur_mine", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -19325,7 +19328,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_condensing_engine
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 195
+priority = 10195
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_condensing_engine_pump_building_sulfur_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -19350,7 +19353,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_diesel_pump_build
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 196
+priority = 10196
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_diesel_pump_building_sulfur_mine", op = "=", value = true }, { fact = "state_owner_oil_price", op = ">", value = 0.5 }, { fact = "state_owner_oil_balance", op = "<", value = 0 } ]
@@ -19362,7 +19365,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_diesel_pump_build
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 197
+priority = 10197
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_diesel_pump_building_sulfur_mine", op = "=", value = true }, { fact = "state_owner_tools_price", op = ">", value = 0.5 }, { fact = "state_owner_tools_balance", op = "<", value = 0 } ]
@@ -19387,7 +19390,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_nitroglycerin_bui
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 198
+priority = 10198
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_nitroglycerin_building_sulfur_mine", op = "=", value = true }, { fact = "state_owner_explosives_price", op = ">", value = 0.5 }, { fact = "state_owner_explosives_balance", op = "<", value = 0 } ]
@@ -19399,7 +19402,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_dynamite_building
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 199
+priority = 10199
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_dynamite_building_sulfur_mine", op = "=", value = true }, { fact = "state_owner_explosives_price", op = ">", value = 0.5 }, { fact = "state_owner_explosives_balance", op = "<", value = 0 } ]
@@ -19411,7 +19414,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_steam_donkey_mine
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 200
+priority = 10200
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_steam_donkey_mine", op = "=", value = true }, { fact = "state_owner_coal_price", op = ">", value = 0.5 }, { fact = "state_owner_coal_balance", op = "<", value = 0 } ]
@@ -19423,7 +19426,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_steam_donkey_mine
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 201
+priority = 10201
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_steam_donkey_mine", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -19435,7 +19438,7 @@ id = "actual_cost_building_sulfur_mine_building_sulfur_mine_pm_rail_transport_mi
 source = "common/buildings/03_mines.txt"
 field = "building_sulfur_mine.ai_value"
 domain = "market"
-priority = 202
+priority = 10202
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_sulfur_mine_pm_rail_transport_mine", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -19472,7 +19475,7 @@ id = "actual_cost_building_tea_plantation_building_tea_plantation_automatic_irri
 source = "common/buildings/04_plantations.txt"
 field = "building_tea_plantation.ai_value"
 domain = "market"
-priority = 151
+priority = 10151
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_tea_plantation_automatic_irrigation_building_tea_plantation", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -19497,7 +19500,7 @@ id = "actual_cost_building_tea_plantation_building_tea_plantation_pm_steam_rail_
 source = "common/buildings/04_plantations.txt"
 field = "building_tea_plantation.ai_value"
 domain = "market"
-priority = 152
+priority = 10152
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_tea_plantation_pm_steam_rail_transport", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -19594,7 +19597,7 @@ id = "actual_cost_building_tobacco_plantation_building_tobacco_plantation_automa
 source = "common/buildings/04_plantations.txt"
 field = "building_tobacco_plantation.ai_value"
 domain = "market"
-priority = 151
+priority = 10151
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_tobacco_plantation_automatic_irrigation_building_tobacco_plantation", op = "=", value = true }, { fact = "state_owner_engines_price", op = ">", value = 0.5 }, { fact = "state_owner_engines_balance", op = "<", value = 0 } ]
@@ -19619,7 +19622,7 @@ id = "actual_cost_building_tobacco_plantation_building_tobacco_plantation_molds_
 source = "common/buildings/04_plantations.txt"
 field = "building_tobacco_plantation.ai_value"
 domain = "market"
-priority = 152
+priority = 10152
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_tobacco_plantation_molds", op = "=", value = true }, { fact = "state_owner_iron_price", op = ">", value = 0.5 }, { fact = "state_owner_iron_balance", op = "<", value = 0 } ]
@@ -19631,7 +19634,7 @@ id = "actual_cost_building_tobacco_plantation_building_tobacco_plantation_electr
 source = "common/buildings/04_plantations.txt"
 field = "building_tobacco_plantation.ai_value"
 domain = "market"
-priority = 153
+priority = 10153
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_tobacco_plantation_electric_rollers", op = "=", value = true }, { fact = "state_owner_electricity_price", op = ">", value = 0.5 }, { fact = "state_owner_electricity_balance", op = "<", value = 0 } ]
@@ -19643,7 +19646,7 @@ id = "actual_cost_building_tobacco_plantation_building_tobacco_plantation_electr
 source = "common/buildings/04_plantations.txt"
 field = "building_tobacco_plantation.ai_value"
 domain = "market"
-priority = 154
+priority = 10154
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_tobacco_plantation_electric_rollers", op = "=", value = true }, { fact = "state_owner_iron_price", op = ">", value = 0.5 }, { fact = "state_owner_iron_balance", op = "<", value = 0 } ]
@@ -19655,7 +19658,7 @@ id = "actual_cost_building_tobacco_plantation_building_tobacco_plantation_radio_
 source = "common/buildings/04_plantations.txt"
 field = "building_tobacco_plantation.ai_value"
 domain = "market"
-priority = 155
+priority = 10155
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_tobacco_plantation_radio_stations_tobacco", op = "=", value = true }, { fact = "state_owner_radios_price", op = ">", value = 0.5 }, { fact = "state_owner_radios_balance", op = "<", value = 0 } ]
@@ -19667,7 +19670,7 @@ id = "actual_cost_building_tobacco_plantation_building_tobacco_plantation_pm_ste
 source = "common/buildings/04_plantations.txt"
 field = "building_tobacco_plantation.ai_value"
 domain = "market"
-priority = 156
+priority = 10156
 operation = "multiply"
 value = 0.8
 conditions = [ { fact = "pm_active_building_tobacco_plantation_pm_steam_rail_transport", op = "=", value = true }, { fact = "state_owner_transportation_price", op = ">", value = 0.5 }, { fact = "state_owner_transportation_balance", op = "<", value = 0 } ]
@@ -20726,3 +20729,27 @@ value = 1.15
 conditions = [ { fact = "route_maritime", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
 why = "海洋路线在和平期提高原版造舰产出权重，表达港口和海外投射能力"
 counterexample = "战争、路线未激活、未知输入或玩家国家不施加；不赠送资源、不改造舰资格或执行"
+
+[[rules]]
+id = "situational_urbanization_research"
+source = "common/technology/technologies/30_society.txt"
+field = "urbanization.ai_weight"
+domain = "political"
+priority = 70
+operation = "multiply"
+value = 1.2
+conditions = [ { fact = "population", op = ">=", value = 2000000 }, { fact = "literacy", op = "<", value = 0.6 }, { fact = "bureaucracy", op = ">", value = 0 }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false } ]
+why = "人口、识字、行政和财政同时支持时，适度提高城市化研究机会"
+counterexample = "战争、违约、行政或财政不足、输入未知时回退原版；不绕过科技前置、研究成本或城市建设执行"
+
+[[rules]]
+id = "situational_urban_planning_research"
+source = "common/technology/technologies/30_society.txt"
+field = "urban_planning.ai_weight"
+domain = "political"
+priority = 70
+operation = "multiply"
+value = 1.2
+conditions = [ { fact = "population", op = ">=", value = 2000000 }, { fact = "literacy", op = "<", value = 0.6 }, { fact = "bureaucracy", op = ">", value = 0 }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false } ]
+why = "城市化压力与建设承受力同时存在时，适度提高原版城市规划研究机会"
+counterexample = "不创造研究资格、不改变前置或花费；任何未知输入、战争或财政危机保持原版"

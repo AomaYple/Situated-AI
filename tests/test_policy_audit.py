@@ -229,6 +229,6 @@ def test_country_registry_covers_routes_budgets_thresholds_and_lifecycle():
         "France_fiscal": "fiscal_recovery",
         "small_admin_shortage": None,
         "landlocked": None,
-        "colonial_subject": "maritime",
+        "colonial_subject": None,
         "default_and_war": "defense",
     }

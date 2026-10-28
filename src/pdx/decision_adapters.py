@@ -161,7 +161,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         raise ValueError("消费者适配读取器或开关无效")
     if actors.keys() - groups.keys():
         raise ValueError("消费者 AI 所有者不能缺少实际输出")
-    policies = []
+    policies: list[tuple[str, decision_rules.RuleSet]] = []
     used_readers: set[str] = set()
     used_domains: set[str] = set()
     contexts = data.get("contexts", {})
@@ -194,7 +194,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                 if isinstance(condition.get("value"), dict)
             )
             domains = {rule["domain"] for rule in rules}
-            policy = decision_rules.from_data(
+            rule_set: decision_rules.RuleSet = decision_rules.from_data(
                 {
                     "schema": 1,
                     "baseline_sha256": data["sources"][name],
@@ -209,7 +209,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             )
         except (KeyError, TypeError) as exc:
             raise ValueError("消费者适配缺少类型化输入或开关") from exc
-        policies.append((name, policy))
+        policies.append((name, rule_set))
         used_readers.update(readers)
         used_domains.update(domains)
         used_contexts.update(names)
@@ -251,8 +251,8 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             or (native_source, field_path) in seen_fields
         ):
             raise ValueError("建筑缺省评分路径无效或重复")
-        policy = dict(policies)[native_source]
-        if field_path not in {rule.field for rule in policy.rules}:
+        building_policy = dict(policies)[native_source]
+        if field_path not in {rule.field for rule in building_policy.rules}:
             raise ValueError("建筑缺省评分缺少实际规则消费者")
         seen_fields.add((native_source, field_path))
         initial_values.append(
@@ -309,6 +309,28 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         ):
             raise ValueError("建筑常量评分缺少唯一实际消费者")
         scalar_values.append((source_name, scalar_path))
+    # Actual input pressure must win over an output opportunity on the same
+    # building field. Otherwise a scarce input can be ignored whenever the
+    # output rule happens to have the higher priority. Keep this invariant in
+    # the source contract so future generated rules cannot regress it.
+    for source_name, loaded_set in policies:
+        priority_groups: dict[tuple[str, ...], dict[str, list[int]]] = {}
+        for loaded_rule in loaded_set.rules:
+            if loaded_rule.id.startswith("actual_cost_"):
+                priority_groups.setdefault(loaded_rule.field, {}).setdefault("cost", []).append(
+                    loaded_rule.priority
+                )
+            elif loaded_rule.id.startswith("actual_output_"):
+                priority_groups.setdefault(loaded_rule.field, {}).setdefault("output", []).append(
+                    loaded_rule.priority
+                )
+        for field, priority in priority_groups.items():
+            if (
+                priority.get("cost")
+                and priority.get("output")
+                and min(priority["cost"]) <= max(priority["output"])
+            ):
+                raise ValueError(f"输入短缺规则必须优先于产出规则：{source_name}/{'.'.join(field)}")
     adapters = AdapterSet(
         tuple(sorted(data["sources"].items())),
         tuple(policies),

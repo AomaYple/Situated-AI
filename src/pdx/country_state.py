@@ -137,6 +137,12 @@ def _tree(value, readers):
             if reader["kind"] == "boolean":
                 if op != "=" or type(literal) is not bool:
                     raise ValueError("布尔路线谓词必须等值")
+                # A parameterized PDX boolean cannot safely distinguish a
+                # false value from an unknown value through a bare NOT block.
+                # Keep the route contract three-valued by requiring positive
+                # evidence for argumented readers.
+                if reader.get("argument") and literal is False:
+                    raise ValueError("带参数布尔路线事实不允许否定谓词")
             elif not _finite(literal):
                 raise ValueError("数值路线谓词必须有限")
             if ("min" in reader and literal < reader["min"]) or (
@@ -392,7 +398,7 @@ def derive(policy, values, is_ai=True):
     budgets = _budgets(policy, facts)
     eligible = (
         {r: _route_enter(policy, r, facts, budgets) for r in ROUTES}
-        if is_ai
+        if is_ai and policy.enabled
         else dict.fromkeys(ROUTES, False)
     )
     return {
@@ -433,22 +439,72 @@ def _old(previous):
         route = previous.get("route")
         if route not in (*ROUTES, None) or (route and previous.get("expires_day") is None):
             raise ValueError("旧状态路线无效")
+        expires_day = previous.get("expires_day")
+        cooldown_until = previous.get("cooldown_until", 0)
+        updated_day = previous.get("updated_day")
+        variables = previous.get("variables", {})
+        reserved_budget = previous.get("reserved_budget", {})
+        if expires_day is not None and (type(expires_day) is not int or expires_day < 0):
+            raise ValueError("旧状态 expires_day 无效")
+        if type(cooldown_until) is not int or cooldown_until < 0:
+            raise ValueError("旧状态 cooldown_until 无效")
+        if updated_day is not None and (type(updated_day) is not int or updated_day < 0):
+            raise ValueError("旧状态 updated_day 无效")
+        if not isinstance(variables, Mapping) or not isinstance(reserved_budget, Mapping):
+            raise ValueError("旧状态变量结构无效")
+        if any(
+            not isinstance(key, str) or not isinstance(value, Mapping)
+            for key, value in variables.items()
+        ):
+            raise ValueError("旧状态变量条目无效")
+        if any(
+            not isinstance(key, str) or type(value) is not int or not 0 <= value <= 2
+            for key, value in reserved_budget.items()
+        ):
+            raise ValueError("旧状态预算无效")
         old = RuntimeState(
             route,
-            previous.get("expires_day"),
-            int(previous.get("cooldown_until", 0)),
-            dict(previous.get("variables", {})),
-            previous.get("updated_day"),
-            dict(previous.get("reserved_budget", {})),
+            expires_day,
+            cooldown_until,
+            dict(variables),
+            updated_day,
+            dict(reserved_budget),
         )
     else:
         raise ValueError("旧状态类型无效")
     if old.route not in (*ROUTES, None) or (old.route and old.expires_day is None):
         raise ValueError("旧状态路线无效")
+    if old.expires_day is not None and (type(old.expires_day) is not int or old.expires_day < 0):
+        raise ValueError("旧状态 expires_day 无效")
+    if type(old.cooldown_until) is not int or old.cooldown_until < 0:
+        raise ValueError("旧状态 cooldown_until 无效")
+    if old.updated_day is not None and (type(old.updated_day) is not int or old.updated_day < 0):
+        raise ValueError("旧状态 updated_day 无效")
+    if (old.variables is not None and not isinstance(old.variables, Mapping)) or (
+        old.reserved_budget is not None and not isinstance(old.reserved_budget, Mapping)
+    ):
+        raise ValueError("旧状态变量结构无效")
+    if any(
+        not isinstance(key, str) or not isinstance(value, Mapping)
+        for key, value in (old.variables or {}).items()
+    ):
+        raise ValueError("旧状态变量条目无效")
+    if any(
+        not isinstance(key, str) or type(value) is not int or not 0 <= value <= 2
+        for key, value in (old.reserved_budget or {}).items()
+    ):
+        raise ValueError("旧状态预算无效")
+    if (
+        old.expires_day is not None
+        and old.updated_day is not None
+        and old.expires_day < old.updated_day
+    ):
+        raise ValueError("旧状态 expires_day 早于 updated_day")
     return old
 
 
 def advance(policy, values, previous, *, day, is_ai=True, enabled=True):
+    """在一次合法 country 刷新时仲裁；本函数调用不代表引擎会在任意日触发 hook。"""
     if (
         type(day) is not int
         or isinstance(day, bool)
@@ -459,10 +515,25 @@ def advance(policy, values, previous, *, day, is_ai=True, enabled=True):
         raise ValueError("day/is_ai/enabled 参数无效")
     old = _old(previous)
     if not is_ai or not enabled or not policy.enabled:
-        return (
-            RuntimeState(variables={})
-            if old.route and old.expires_day is not None and day >= old.expires_day
-            else old
+        # 引擎即使不执行 Mod hook 也会分别到期路线和冷却变量。
+        # 只裁剪到期状态，绝不在关闭或玩家路径刷新 TTL。
+        route_live = old.route is not None and old.expires_day is not None and day < old.expires_day
+        cooldown = old.cooldown_until if old.cooldown_until > day else 0
+        variables = dict(old.variables or {})
+        if not route_live:
+            for route in ROUTES:
+                variables.pop(f"sitai_route_{route}", None)
+        if not cooldown:
+            variables.pop("sitai_route_cooldown", None)
+        if not route_live and not cooldown:
+            return RuntimeState(variables={})
+        return RuntimeState(
+            old.route if route_live else None,
+            old.expires_day if route_live else None,
+            cooldown,
+            variables,
+            old.updated_day,
+            dict(old.reserved_budget or {}) if route_live else {},
         )
     if not isinstance(values, Mapping):
         raise ValueError("事实输入无效")
@@ -597,15 +668,9 @@ def files(policy):
         lines.append(
             f"sitai_route_{route}_candidate = {{ is_ai = yes {_route_limit(policy, route, False)} }}"
         )
-    emergencies = [r for r in order if policy.data["routes"][r]["emergency"]]
-    emergency_guard = (
-        "is_ai = yes"
-        if not emergencies
-        else "is_ai = yes NOT = { OR = { "
-        + " ".join(f"sitai_route_{r}_candidate = yes" for r in emergencies)
-        + " } }"
-    )
-    lines.append(f"sitai_no_higher_emergency_route = {{ {emergency_guard} }}")
+    # Do not emit an unreferenced trigger; emergency precedence is inlined in
+    # the active-route guards below and an extra global symbol only expands the
+    # generated surface without changing behavior.
     for route in ROUTES:
         higher = [
             r

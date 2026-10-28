@@ -714,7 +714,7 @@ def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
     generated_rule_blocks,
 ):
     rules, blocks = generated_rule_blocks
-    for legitimacy, education, trade, economy in [(60, 1.15, 1.2, 1.2), (80, 1.3, 1.2, 1.2)]:
+    for legitimacy, education, trade, economy in [(60, 1.15, 1.2, 1.2), (80, 1.3, 1.25, 1.25)]:
         values = _values(legitimacy=legitimacy)
         for field, expected in [
             ("institution_scores.institution_schools", education),
@@ -730,6 +730,20 @@ def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
         assert resource["treaty_category_scores.economy"] == ("identity_resource_cooperation", 1.3)
     # 已知普通容量足够，但无法判断强档时，不能猜测普通档优先。
     unknown = decision_rules.evaluate(rules, _values(legitimacy=None), is_ai=True)
+    assert "institution_scores.institution_schools" not in unknown
+
+
+def test_small_low_literacy_countries_can_enter_education_capacity_tiers(rules):
+    values = _values(population=1_000_000, literacy=0.3)
+    assert decision_rules.evaluate(rules, values, is_ai=True)[
+        "institution_scores.institution_schools"
+    ] == ("education_catchup_capacity", 1.25)
+    strong = decision_rules.evaluate(rules, {**values, "legitimacy": 80}, is_ai=True)
+    assert strong["institution_scores.institution_schools"] == (
+        "decisive_school_investment",
+        1.3,
+    )
+    unknown = decision_rules.evaluate(rules, {**values, "population": None}, is_ai=True)
     assert "institution_scores.institution_schools" not in unknown
 
 

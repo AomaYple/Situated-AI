@@ -15,6 +15,11 @@ urbanization = {
 
 	ai_weight = {
 		value = 3 # Very important in general
+
+		# SITAI BEGIN information:urbanization.ai_weight
+		# situational_urbanization_research [political]; 人口、识字、行政和财政同时支持时，适度提高城市化研究机会
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 bureaucracy > 0 net_total_income > 0 in_default = no is_at_war = no } } multiply = 1.2 }
+		# SITAI END information:urbanization.ai_weight
 	}
 }
 
@@ -36,6 +41,11 @@ urban_planning = {
 
 	ai_weight = {
 		value = 2 # Important in general
+
+		# SITAI BEGIN information:urban_planning.ai_weight
+		# situational_urban_planning_research [political]; 城市化压力与建设承受力同时存在时，适度提高原版城市规划研究机会
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 bureaucracy > 0 net_total_income > 0 in_default = no is_at_war = no } } multiply = 1.2 }
+		# SITAI END information:urban_planning.ai_weight
 	}
 }
 
