@@ -53,7 +53,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "# Situated AI 终极方案 3.0 实施计划" in plan
     version = re.search(r"计划版本：(\d+)\.(\d+)", plan)
     assert version is not None
-    assert (int(version.group(1)), int(version.group(2))) >= (19, 0)
+    assert (int(version.group(1)), int(version.group(2))) >= (20, 0)
     stage_positions = [plan.index(f"| E{index} |") for index in range(16)]
     assert stage_positions == sorted(stage_positions)
     assert "T0–T13" in plan
@@ -63,7 +63,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "Mod 结构和内容全量整合" in plan
     assert "改动后的全仓全 Mod 复核" in plan
     assert "正式交付和维护" in plan
-    assert "E0" in checklist
+    assert "E0–E15：已完成" in checklist
     assert "1.3.0" in checklist
     assert "situated-ai" in checklist
     assert "标准包" in checklist
@@ -81,8 +81,19 @@ def test_current_document_indexes_are_complete() -> None:
     assert "dist/situated-ai-1.3.0.zip" in tools
     assert "Situated AI 1.3.0" in tools
     assert "dist/situated-ai-1.0.1.zip" not in tools
-    assert "当前生产候选为 `Situated AI 1.3.0`" in execution
+    assert "当前工程交付为 `Situated AI 1.3.0`" in execution
     assert "E0–E15" in execution
     assert "[Situated AI 终极方案 3.0 实施计划](mod重设计-实施计划.md)" in execution
-    assert "[1.3.0 阶段收口结果](阶段收口-1.3.0-结果.md)" in execution
+    assert "[终极方案 3.0 执行结果](终极方案3.0-执行结果.md)" in execution
     assert "历史收据" in execution
+
+
+def test_ultimate_plan_receipt_is_current() -> None:
+    root = Path(__file__).resolve().parents[1]
+    receipt = (root / "docs/design/exec/终极方案3.0-执行结果.md").read_text(encoding="utf-8")
+    assert "E0–E15" in receipt
+    assert "长期游戏行为" in receipt
+    assert "static_check" in receipt
+    assert "package" in receipt
+    for index in range(16):
+        assert f"| E{index} |" in receipt

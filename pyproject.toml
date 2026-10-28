@@ -47,7 +47,9 @@ dependencies = [
 dev = [
     "types-psutil>=7.0",       # 跨平台性能测量库的类型桩
     # ── 测试框架与插件 ────────────────────────────────────
-    "pytest>=9.0",
+    # pytest-benchmark 5.3.0 仍依赖 pytest 9.1 的私有节点属性；
+    # 等插件发布兼容版本后再放宽上限。与 requirements.lock 保持同一经过验证的闭包。
+    "pytest>=9.0,<9.2",
     "pytest-cov>=7.0",          # 覆盖率
     "pytest-benchmark>=5.3",    # 性能基准与回归门禁
     "pytest-timeout>=2.4",      # 卡死的测试必须失败而非永久挂住

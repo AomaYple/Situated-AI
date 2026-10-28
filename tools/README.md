@@ -44,7 +44,7 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 
 - `v3 analyze`、`information-catalog`、`snapshot`：读取锁定游戏或快照，生成 mod 开发知识和版本差异。
 - `v3 modgen`、`modguard`：生成并检查仓库生产产物、锁定原版字段和生成一致性。
-- `v3 package`、`pdx.distribution.validate_package`：生成当前版本的标准 ZIP 和 manifest；当前阶段候选为
+- `v3 package`、`pdx.distribution.validate_package`：生成当前版本的标准 ZIP 和 manifest；当前工程交付候选为
   `Situated AI 1.3.0`。
 - `v3 verify`、`tables --offline`：无游戏环境的快照与文档检查。`v3 citations <路径...>` 需要本机游戏文件。
 
