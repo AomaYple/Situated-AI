@@ -15,8 +15,8 @@
 | `tools/benchmarks/` | Python 解析、生成和资源基准；固定输入、串行运行，不代表游戏内性能 |
 | `src/pdx/` | CLI、全量静态分析、快照、Mod 生成、字段门禁和 ZIP 交付实现 |
 
-U11 已交付 `src/pdx/observe.py`、`src/pdx/savegame.py` 及 CLI 观察入口，用于只读分析用户提供的日志和存档；
-它们属于工程辅助能力，不进入标准 Mod 包。
+`src/pdx/observe.py`、`src/pdx/savegame.py` 及 CLI 观察入口用于只读分析用户提供的日志和存档；
+它们属于工程辅助能力，不进入标准 Mod 包，也不把日志或存档摘要升级为 AI 行为质量结论。
 
 ## 常用命令
 
