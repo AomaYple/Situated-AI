@@ -65,7 +65,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "正式交付和维护" in plan
     assert "E0–E15 已达到静态工程出口" in checklist
     assert "长期游戏行为" in checklist
-    assert "1.3.0" in checklist
+    assert "1.4.0" in checklist
     assert "situated-ai" in checklist
     assert "标准包" in checklist
     assert "运行期" in checklist
@@ -79,10 +79,10 @@ def test_current_document_indexes_are_complete() -> None:
     tools = (root / "tools/README.md").read_text(encoding="utf-8")
     execution = (root / "docs/design/exec/README.md").read_text(encoding="utf-8")
 
-    assert "dist/situated-ai-1.3.0.zip" in tools
-    assert "Situated AI 1.3.0" in tools
+    assert "dist/situated-ai-1.4.0.zip" in tools
+    assert "Situated AI 1.4.0" in tools
     assert "dist/situated-ai-1.0.1.zip" not in tools
-    assert "当前工程交付为 `Situated AI 1.3.0`" in execution
+    assert "当前工程交付为 `Situated AI 1.4.0`" in execution
     assert "E0–E15" in execution
     assert "[Situated AI 终极方案 4.0 实施计划](mod重设计-实施计划.md)" in execution
     assert "[终极方案 4.0 执行结果](终极方案4.0-执行结果.md)" in execution

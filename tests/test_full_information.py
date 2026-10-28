@@ -1024,7 +1024,7 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
 def test_release_is_a_real_standard_package(tmp_path):
-    path = distribution.package(tmp_path / "situated-ai-1.3.0.zip")
+    path = distribution.package(tmp_path / f"situated-ai-{distribution.RELEASE_VERSION}.zip")
     _, _, engineering_files = distribution.package_inputs(include_engineering_metadata=True)
     assert all(
         not line.endswith((" ", "\t"))
@@ -1050,7 +1050,7 @@ def test_release_is_a_real_standard_package(tmp_path):
         assert metadata["id"] == distribution.MOD_ID == "situated-ai"
         assert set(metadata) == set(distribution.LAUNCHER_METADATA_KEYS)
         assert len(archive.read(".metadata/metadata.json")) < 2_000
-        assert metadata["version"] == "1.3.0"
+        assert metadata["version"] == distribution.RELEASE_VERSION
         assert contract["status"] == "candidate"
         assert contract["behavior_quality"] == "not_evaluated"
         assert engineering_metadata["decision_rules"]["behavior_verified"] is False

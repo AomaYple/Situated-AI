@@ -27,7 +27,7 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
         fingerprint["strategic_generator_sha256"]
         == hashlib.sha256(Path(decision_intents.__file__).read_bytes()).hexdigest()
     )
-    assert metadata["version"] == "1.3.0"
+    assert metadata["version"] == distribution.RELEASE_VERSION
     values_path = "common/script_values/sitai_adapter_values.txt"
     assert (
         "protect_supply = sitai_adapter_fleet_supply_weight"
@@ -43,7 +43,7 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
 def test_release_is_the_public_full_candidate():
     _, _, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
-    assert metadata["version"] == "1.3.0"
+    assert metadata["version"] == distribution.RELEASE_VERSION
     assert metadata["status"] == "candidate"
     assert set(metadata["enabled_modules"]) == {
         "fiscal",
