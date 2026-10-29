@@ -1,7 +1,7 @@
 # 贡献与维护规范
 
 本指南统一维护流程、验证命令和交付步骤。产品计划入口为
-[终极 Mod 深化计划](docs/design/exec/mod重设计-实施计划.md)。任务路由见 [AGENTS.md](AGENTS.md)，持续工程与产品约束见
+[分层联动实施计划](docs/design/exec/mod重设计-实施计划.md)。任务路由见 [AGENTS.md](AGENTS.md)，持续工程与产品约束见
 [工程原则](docs/principles/工程原则.md)和[Mod 开发原则](docs/principles/Mod开发原则.md)，生成与证据合同见
 [工程交付基线](docs/design/exec/工程基线-1.0.md)。
 

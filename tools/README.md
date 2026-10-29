@@ -69,8 +69,8 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 
 - `v3 analyze`、`information-catalog`、`snapshot`：读取锁定游戏或快照，生成 mod 开发知识和版本差异。
 - `v3 modgen`、`modguard`：生成并检查仓库生产产物、锁定原版字段和生成一致性。
-- `v3 package`、`pdx.distribution.validate_package`：按生产源版本生成标准 ZIP 和 manifest。已发布基线为
-  `Situated AI 1.4.0`，当前目标 `1.5.0` 尚未发布；阶段与交付状态见
+- `v3 package`、`pdx.distribution.validate_package`：按生产源版本生成标准 ZIP 和 manifest。本轮由
+  `Situated AI 1.4.0` 升级至 `1.5.0`，标准包、标签和 Pre-release 已交付；阶段与交付状态见
   [分层联动实施计划](../docs/design/exec/mod重设计-实施计划.md)、[当前工作清单](../docs/design/当前工作清单.md)和
   [分层联动执行结果](../docs/design/exec/分层联动-执行结果.md)，不可由命令成功推断已发布。
 - `v3 verify`、`tables --offline`：无游戏环境的快照与文档检查。`v3 citations <路径...>` 需要本机游戏文件。
