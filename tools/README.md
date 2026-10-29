@@ -14,9 +14,34 @@
 | `tools/ci/test_suite.py` | 可选的完整 Python 回归、覆盖率、JUnit 和资源报告 |
 | `tools/benchmarks/` | Python 解析、生成和资源基准；固定输入、串行运行，不代表游戏内性能 |
 | `src/pdx/` | CLI、全量静态分析、快照、Mod 生成、字段门禁和 ZIP 交付实现 |
+| `tools/save_archive.py` | 后台按游戏日期归档稳定的 Victoria 3 自动存档；只读，不控制游戏 |
 
 `src/pdx/observe.py`、`src/pdx/savegame.py` 及 CLI 观察入口用于只读分析用户提供的日志和存档；
 它们属于工程辅助能力，不进入标准 Mod 包，也不把日志或存档摘要升级为 AI 行为质量结论。
+
+### 按游戏日期归档存档
+
+需要离开电脑时，可以让 `tools/save_archive.py` 监视游戏用户目录。它从存档头读取
+`game_date`，在目标日期附近选择最近的月份；只有文件连续稳定后才复制，并对副本做大小和
+SHA-256 校验。它不会启动、暂停、加速或向游戏窗口发送输入，也不能补回游戏尚未产生的存档。
+
+```text
+.venv\Scripts\python.exe -X utf8 -B tools/save_archive.py --userdir "游戏用户目录" --output tools/out/save-archive/session --target 1856.1.1 --target 1876.1.1 --target 1896.1.1 --target 1916.1.1 --target 1936.1.1
+```
+
+使用尚不存在的新输出目录；工具拒绝覆盖已有输出，也拒绝把归档写入游戏用户目录或云存档目录。
+默认从最新稳定本地 `autosave` 识别 `playthrough_id`，随后只接受同一局的文本存档。
+仅监视云目录时需显式传 `--playthrough-id`。`--window-months` 设置允许的月份距离，默认 12；
+精确日期立即完成，临近候选在窗口结束或游戏退出后的最后一次稳定读取后确定，并如实记录实际日期。
+可加 `--pid <游戏进程编号>`，使程序在该游戏进程退出后收尾；不传时持续运行到目标完成或手动停止。
+
+对格式为 Steam 云存档压缩包、但日期已由用户确认的开局档，可用
+`--target 1836.1.1 --baseline "1836.1.1=路径"` 原样复制；该日期以用户指定为依据，
+不会伪装成已解析压缩存档。状态和事件写入输出目录的 `status.json` 与
+`events.jsonl`。需要同时读取 Steam 云存档时，显式添加一个或多个
+`--cloud-dir ".../529340/remote/save games"`；工具不会修改云存档目录。macOS/Linux
+将解释器替换为 `.venv/bin/python`，并使用对应平台的用户目录。
+文件稳定和副本哈希只证明归档复制过程，不能替代游戏内读档验证；本工具不主动请求游戏保存。
 
 ## 常用命令
 
