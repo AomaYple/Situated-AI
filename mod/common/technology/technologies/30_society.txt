@@ -118,6 +118,9 @@ currency_standards = {
 		# SITAI BEGIN information:currency_standards.ai_weight
 		# currency_standards_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_currency_standards_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
 		# SITAI END information:currency_standards.ai_weight
 	}
 }
@@ -250,6 +253,9 @@ banking = {
 		# SITAI BEGIN information:banking.ai_weight
 		# banking_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_banking_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
 		# SITAI END information:banking.ai_weight
 	}
 }
@@ -277,6 +283,9 @@ academia = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { sitai_route_education_active = yes } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# academia_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_academia_education [political]; 教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes } } multiply = 1.2 }
 		# SITAI END information:academia.ai_weight
 	}
 }
@@ -375,6 +384,9 @@ medical_degrees = {
 		# SITAI BEGIN information:medical_degrees.ai_weight
 		# medical_degrees_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_medical_degrees_health [political]; 低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 total_population >= 0 total_population > 0 } } multiply = 1.2 }
 		# SITAI END information:medical_degrees.ai_weight
 	}
 }
@@ -422,6 +434,9 @@ empiricism = {
 		# SITAI BEGIN information:empiricism.ai_weight
 		# empiricism_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_empiricism_education [political]; 教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes } } multiply = 1.2 }
 		# SITAI END information:empiricism.ai_weight
 	}
 }
@@ -503,6 +518,9 @@ pharmaceuticals = {
 		# SITAI BEGIN information:pharmaceuticals.ai_weight
 		# pharmaceuticals_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_pharmaceuticals_health [political]; 低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 total_population >= 0 total_population > 0 } } multiply = 1.2 }
 		# SITAI END information:pharmaceuticals.ai_weight
 	}
 }
@@ -531,6 +549,9 @@ modern_sewerage = {
 		# SITAI BEGIN information:modern_sewerage.ai_weight
 		# modern_sewerage_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_modern_sewerage_health [political]; 低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 total_population >= 0 total_population > 0 } } multiply = 1.2 }
 		# SITAI END information:modern_sewerage.ai_weight
 	}
 }
@@ -679,6 +700,9 @@ central_banking = {
 		# SITAI BEGIN information:central_banking.ai_weight
 		# central_banking_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_central_banking_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
 		# SITAI END information:central_banking.ai_weight
 	}
 }
@@ -724,6 +748,9 @@ dialectics = {
 		# SITAI BEGIN information:dialectics.ai_weight
 		# dialectics_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_dialectics_education [political]; 教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes } } multiply = 1.2 }
 		# SITAI END information:dialectics.ai_weight
 	}
 }
@@ -1707,6 +1734,9 @@ antibiotics = {
 		# SITAI BEGIN information:antibiotics.ai_weight
 		# antibiotics_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_antibiotics_health [political]; 低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 total_population >= 0 total_population > 0 } } multiply = 1.2 }
 		# SITAI END information:antibiotics.ai_weight
 	}
 }
@@ -1757,6 +1787,9 @@ modern_financial_instruments = {
 		# SITAI BEGIN information:modern_financial_instruments.ai_weight
 		# modern_financial_instruments_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_modern_financial_instruments_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
 		# SITAI END information:modern_financial_instruments.ai_weight
 	}
 }
@@ -1782,6 +1815,9 @@ macroeconomics = {
 		# SITAI BEGIN information:macroeconomics.ai_weight
 		# macroeconomics_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_macroeconomics_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
 		# SITAI END information:macroeconomics.ai_weight
 	}
 }
@@ -1826,6 +1862,9 @@ analytical_philosophy = {
 		# SITAI BEGIN information:analytical_philosophy.ai_weight
 		# analytical_philosophy_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_analytical_philosophy_education [political]; 教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes } } multiply = 1.2 }
 		# SITAI END information:analytical_philosophy.ai_weight
 	}
 }

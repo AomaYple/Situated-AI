@@ -30,6 +30,9 @@ navigation = {
 		# SITAI BEGIN information:navigation.ai_weight
 		# navigation_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_navigation_overseas [military]; 海外投射需求提高航海与港口研究机会，不改变外交可达性
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes } } multiply = 1.2 }
 		# SITAI END information:navigation.ai_weight
 	}
 }
@@ -205,6 +208,9 @@ admiralty = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = { navy_size >= 0 NOT = { navy_size > 0 } } } AND = { exists = ROOT ROOT = { navy_size >= 0 } } } } } multiply = 1.0 }
 		# admiralty_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_admiralty_overseas [military]; 海外投射需求提高航海与港口研究机会，不改变外交可达性
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes } } multiply = 1.2 }
 		# SITAI END information:admiralty.ai_weight
 	}
 }
@@ -1143,6 +1149,9 @@ dreadnought_tech = {
 		# SITAI BEGIN information:dreadnought_tech.ai_weight
 		# dreadnought_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_dreadnought_tech_fiscal_tradeoff [military]; 和平财政压力降低昂贵远洋舰队科技的机会优先级
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes is_at_war = no } } multiply = 0.85 }
 		# SITAI END information:dreadnought_tech.ai_weight
 	}
 }
@@ -1168,6 +1177,9 @@ sea_lane_strategies = {
 		# SITAI BEGIN information:sea_lane_strategies.ai_weight
 		# sea_lane_strategies_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_sea_lane_strategies_overseas [military]; 海外投射需求提高航海与港口研究机会，不改变外交可达性
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes } } multiply = 1.2 }
 		# SITAI END information:sea_lane_strategies.ai_weight
 	}
 }
@@ -1229,6 +1241,9 @@ concrete_dockyards = {
 		# SITAI BEGIN information:concrete_dockyards.ai_weight
 		# concrete_dockyards_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_concrete_dockyards_overseas [military]; 海外投射需求提高航海与港口研究机会，不改变外交可达性
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes } } multiply = 1.2 }
 		# SITAI END information:concrete_dockyards.ai_weight
 	}
 }
@@ -1427,6 +1442,9 @@ carrier_tech = {
 		# SITAI BEGIN information:carrier_tech.ai_weight
 		# carrier_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_carrier_tech_fiscal_tradeoff [military]; 和平财政压力降低昂贵远洋舰队科技的机会优先级
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes is_at_war = no } } multiply = 0.85 }
 		# SITAI END information:carrier_tech.ai_weight
 	}
 }
@@ -1453,6 +1471,9 @@ battleship_tech = {
 		# SITAI BEGIN information:battleship_tech.ai_weight
 		# battleship_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_battleship_tech_fiscal_tradeoff [military]; 和平财政压力降低昂贵远洋舰队科技的机会优先级
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes is_at_war = no } } multiply = 0.85 }
 		# SITAI END information:battleship_tech.ai_weight
 	}
 }

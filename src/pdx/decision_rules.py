@@ -773,6 +773,11 @@ def patch(
         and (reader.argument or "").startswith("sitai_route_")
         and reader.key in selected_reader_keys
     }
+    coordination_readers = {
+        reader.key: reader
+        for reader in rules.readers
+        if reader.engine.startswith("sitai_context_") and reader.key in selected_reader_keys
+    }
     if route_readers and country_policy is None:
         raise ValueError("route 读取器必须显式提供 country_policy")
     if route_readers:
@@ -789,6 +794,17 @@ def patch(
                 or f"{reader.argument}_active" not in supplied_triggers
             ):
                 raise ValueError(f"route 读取器变量不在 country_policy 所有权内：{reader.argument}")
+    if coordination_readers:
+        if country_policy is None:
+            raise ValueError("协调读取器必须显式提供 country_policy")
+        country_state = _country_state_module()
+        actual_triggers = set(country_state.owned_triggers(country_policy))
+        supplied_triggers = actual_triggers if owned_triggers is None else set(owned_triggers)
+        if (
+            not supplied_triggers <= actual_triggers
+            or not {reader.engine for reader in coordination_readers.values()} <= supplied_triggers
+        ):
+            raise ValueError("协调读取器不在 country_policy 所有权内")
     for field in groups:
         _block_at(root, field)
     prefix = ("ai_strategy_default",) if default_strategy else ()
@@ -833,6 +849,10 @@ def patch(
             part in words or (part.startswith("mg:") and part[3:] in words and "mg:grain" in words)
             for part in reader.path
         )
+        if reader.key in coordination_readers:
+            if not path_proven:
+                raise ValueError(f"协调读取器没有锁定原版路径依据：{reader.key}")
+            continue
         if (
             reader.engine not in words
             or not path_proven
@@ -856,7 +876,13 @@ def patch(
             for predicate in rule.conditions:
                 reader = readers[predicate.fact]
                 key = (reader.scope, reader.path)
-                if reader.key in route_readers:
+                if reader.engine.startswith("sitai_context_"):
+                    expression = (
+                        "always = no"
+                        if country_policy is None or not country_policy.enabled
+                        else f"{reader.engine} = {'yes' if predicate.value is True else 'no'}"
+                    )
+                elif reader.key in route_readers:
                     route_guard = f"{reader.argument}_active = yes"
                     expression = (
                         "always = no"
@@ -868,6 +894,16 @@ def patch(
                 else:
                     expression = reader.expression(predicate.op, predicate.value)
                 bounds = _reader_bounds(reader)
+                if (
+                    reader.engine.startswith("sitai_context_")
+                    and country_policy is not None
+                    and country_policy.enabled
+                ):
+                    bounds.append(
+                        "sitai_context_known_"
+                        + reader.engine.removeprefix("sitai_context_")
+                        + " = yes"
+                    )
                 conditions[key].extend([*bounds, expression])
                 valid[key].extend(bounds)
                 false_parts = {key: [*bounds, f"NOT = {{ {expression} }}"]}

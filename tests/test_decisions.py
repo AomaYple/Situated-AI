@@ -347,7 +347,7 @@ def test_拒绝错误类型和未审查游戏版本(tmp_path, mutation):
         'status = "candidate"|status = "released"',
         'save_compatibility = "new-game-only"|save_compatibility = "all"',
         'platforms = ["windows", "macos", "linux"]|platforms = ["plan9"]',
-        'product_version = "1.4.0"|product_version = "not-a-version"',
+        f'product_version = "{distribution.RELEASE_VERSION}"|product_version = "not-a-version"',
     ],
 )
 def test_拒绝不可靠的包契约(tmp_path, mutation):

@@ -4,6 +4,46 @@ switch_cooldown_days = 62
 update_days = 30
 enabled = true
 
+# 承受能力与领域需求分离：低债务借款、负行政或低合法性不再关闭基础发展。
+# 仅严重违约/高债务进入恢复；研究候选本身不增加经常财政支出。
+[coordination.capacities.recovery]
+when = [[{ fact = "default", op = "=", value = true }], [{ fact = "debt_ratio", op = ">=", value = 0.75 }]]
+why = "严重偿付压力限制新增长期承诺，但允许寻找恢复能力的研究与合作"
+[coordination.capacities.development]
+when = [[{ fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false }, { fact = "debt_ratio", op = "<", value = 0.75 }, { fact = "income", op = ">", value = 0 }]]
+why = "基础发展不要求净盈余、行政富余、高合法性或既有工业路线；原版仍决定是否花钱"
+[coordination.capacities.stable_capacity]
+when = [[{ fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false }, { fact = "debt_ratio", op = "<=", value = 0.5 }, { fact = "income", op = ">", value = 0 }, { fact = "net_surplus", op = ">=", value = 0 }, { fact = "bureaucracy", op = ">=", value = 0 }]]
+why = "财政可持续且行政不欠账时扩大稳健投资，政治门槛留给改革消费者"
+[coordination.capacities.expansion_capacity]
+when = [[{ fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false }, { fact = "debt_ratio", op = "<=", value = 0.2 }, { fact = "income", op = ">", value = 0 }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "bureaucracy", op = ">=", value = 100 }, { fact = "legitimacy", op = ">=", value = 60 }, { fact = "insurrection", op = "=", value = false }]]
+why = "强财政、行政和政治容量才提高昂贵或长期扩张强度"
+
+[coordination.needs.fiscal]
+when = [[{ fact = "default", op = "=", value = true }], [{ fact = "debt_ratio", op = ">=", value = 0.5 }], [{ fact = "loans", op = "=", value = true }, { fact = "net_surplus", op = "<", value = 0 }]]
+why = "区分融资与危机，持续赤字借款或高债务需要修复偿付能力"
+[coordination.needs.administrative]
+when = [[{ fact = "bureaucracy", op = "<", value = 0 }]]
+why = "负行政容量转向行政建设和行政研究，不永久禁止补瓶颈"
+[coordination.needs.political]
+when = [[{ fact = "legitimacy", op = "<", value = 35 }], [{ fact = "insurrection", op = "=", value = true }]]
+why = "政治危机改变改革机会成本，不能统一推导意识形态"
+[coordination.needs.education]
+when = [[{ fact = "literacy", op = "<", value = 0.5 }, { fact = "population", op = ">", value = 0 }]]
+why = "教育差距按识字率而非国家规模识别，学校、大学和研究分别受消费者约束"
+[coordination.needs.industry]
+when = [[{ fact = "industrial_route", op = "=", value = true }], [{ fact = "resource_route", op = "=", value = true }], [{ fact = "war_defeat", op = "=", value = true }]]
+why = "原版产业路线或可观察战败恢复提高生产能力关注，不是工业发展的唯一资格"
+[coordination.needs.security]
+when = [[{ fact = "war", op = "=", value = true }]]
+why = "战争下军需与生存优先，财政约束只限制新增承诺"
+[coordination.needs.reconstruction]
+when = [[{ fact = "war_defeat", op = "=", value = true }, { fact = "war", op = "=", value = false }]]
+why = "仅原版 recently_lost_war 正面证据支持战后恢复，不推断所有战争历史"
+[coordination.needs.overseas]
+when = [[{ fact = "expansion_route", op = "=", value = true }, { fact = "navy", op = ">=", value = 25 }, { fact = "subject", op = "=", value = false }]]
+why = "海外需求需要既有投射和原版路线，财政强度由独立能力层控制"
+
 [readers]
 war = { engine = "is_at_war", kind = "boolean", unit = "boolean" }
 default = { engine = "in_default", kind = "boolean", unit = "boolean" }
@@ -57,12 +97,12 @@ priority = 100
 emergency = true
 enter = [
   [{ fact = "default", op = "=", value = true }],
-  [{ fact = "loans", op = "=", value = true }],
+  [{ fact = "loans", op = "=", value = true }, { fact = "net_surplus", op = "<", value = 0 }, { fact = "debt_ratio", op = ">=", value = 0.4 }],
   [{ fact = "debt_ratio", op = ">=", value = 0.6 }],
 ]
 hold = [
   [{ fact = "default", op = "=", value = true }],
-  [{ fact = "loans", op = "=", value = true }],
+  [{ fact = "loans", op = "=", value = true }, { fact = "net_surplus", op = "<", value = 0 }, { fact = "debt_ratio", op = ">=", value = 0.4 }],
   [{ fact = "debt_ratio", op = ">=", value = 0.4 }],
 ]
 cost = { fiscal = 1, administrative = 1, security = 0 }

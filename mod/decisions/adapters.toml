@@ -3298,6 +3298,104 @@ path = [ "market", "mg:steamers" ]
 unit = "sell_minus_buy_orders"
 kind = "number"
 
+[readers.coord_expansion_capacity]
+engine = "sitai_context_expansion_capacity"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_layer_expansion]
+engine = "sitai_context_layer_expansion"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_layer_foundation]
+engine = "sitai_context_layer_foundation"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_layer_recovery]
+engine = "sitai_context_layer_recovery"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_layer_stable]
+engine = "sitai_context_layer_stable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_need_administrative]
+engine = "sitai_context_need_administrative"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_need_education]
+engine = "sitai_context_need_education"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_need_fiscal]
+engine = "sitai_context_need_fiscal"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_evidence_need_industry]
+engine = "sitai_context_evidence_need_industry"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_evidence_need_overseas]
+engine = "sitai_context_evidence_need_overseas"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_need_political]
+engine = "sitai_context_need_political"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_evidence_need_reconstruction]
+engine = "sitai_context_evidence_need_reconstruction"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_need_security]
+engine = "sitai_context_need_security"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_stable_capacity]
+engine = "sitai_context_stable_capacity"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_owner_layer_expansion]
+engine = "sitai_context_layer_expansion"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+path = ["owner"]
+
+[readers.coord_owner_layer_recovery]
+engine = "sitai_context_layer_recovery"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+path = ["owner"]
+
 [[rules]]
 id = "academia_ai_weight"
 domain = "political"
@@ -20753,3 +20851,2475 @@ value = 1.2
 conditions = [ { fact = "population", op = ">=", value = 2000000 }, { fact = "literacy", op = "<", value = 0.6 }, { fact = "bureaucracy", op = ">", value = 0 }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false } ]
 why = "城市化压力与建设承受力同时存在时，适度提高原版城市规划研究机会"
 counterexample = "不创造研究资格、不改变前置或花费；任何未知输入、战争或财政危机保持原版"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_health_stable"
+field = "ai_strategy_default.institution_scores.institution_health_system"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_need_political", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "政治压力在具备稳健承受力时提高社会制度投入倾向"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_health_recovery"
+field = "ai_strategy_default.institution_scores.institution_health_system"
+domain = "fiscal"
+priority = 21
+operation = "multiply"
+value = 0.82
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "coord_layer_recovery", op = "=", value = true }]
+why = "财政恢复期降低新增制度承诺，保留原版最低制度和执行路径"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_safety_stable"
+field = "ai_strategy_default.institution_scores.institution_workplace_safety"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_need_political", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "政治压力在具备稳健承受力时提高社会制度投入倾向"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_safety_recovery"
+field = "ai_strategy_default.institution_scores.institution_workplace_safety"
+domain = "fiscal"
+priority = 21
+operation = "multiply"
+value = 0.82
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "coord_layer_recovery", op = "=", value = true }]
+why = "财政恢复期降低新增制度承诺，保留原版最低制度和执行路径"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_police_stable"
+field = "ai_strategy_default.institution_scores.institution_police"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_need_political", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "政治压力在具备稳健承受力时提高社会制度投入倾向"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_police_recovery"
+field = "ai_strategy_default.institution_scores.institution_police"
+domain = "fiscal"
+priority = 21
+operation = "multiply"
+value = 0.82
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "coord_layer_recovery", op = "=", value = true }]
+why = "财政恢复期降低新增制度承诺，保留原版最低制度和执行路径"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_home_stable"
+field = "ai_strategy_default.institution_scores.institution_home_affairs"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_need_political", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "政治压力在具备稳健承受力时提高社会制度投入倾向"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_home_recovery"
+field = "ai_strategy_default.institution_scores.institution_home_affairs"
+domain = "fiscal"
+priority = 21
+operation = "multiply"
+value = 0.82
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "coord_layer_recovery", op = "=", value = true }]
+why = "财政恢复期降低新增制度承诺，保留原版最低制度和执行路径"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_political_law_threshold"
+field = "ai_strategy_default.min_law_chance_to_pass"
+domain = "political"
+priority = 20
+operation = "add"
+value = 4
+conditions = [{ fact = "coord_need_political", op = "=", value = true }]
+why = "政治危机提高改革成功率要求，避免把不稳定误判为改革窗口"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_political_negotiation"
+field = "ai_strategy_default.negotiation_chance"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_need_political", op = "=", value = true }, { fact = "candidate_ig_clout", op = ">=", value = 0.1 }, { fact = "candidate_ig_approval", op = "<", value = 0 }]
+why = "有组织的反对派与政治需求共同提高谈判倾向，原版政治支持仍是最终约束"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_fiscal_nationalization"
+field = "ai_strategy_default.nationalization_desire"
+domain = "fiscal"
+priority = 20
+operation = "multiply"
+value = 0.8
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "偿付压力降低新增国有化承诺，避免把所有问题转成财政支出"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_annex_fiscal"
+field = "ai_strategy_default.wargoal_scores.annex_country"
+domain = "diplomacy"
+priority = 20
+operation = "add"
+value = -5
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "财政压力限制和平时期新增外部承诺，战争时保留原版防御评估"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_annex_reconstruction"
+field = "ai_strategy_default.wargoal_scores.annex_country"
+domain = "diplomacy"
+priority = 24
+operation = "add"
+value = -4
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }]
+why = "战后恢复期降低再次扩张的机会成本，保留原版目标资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_annex_expansion"
+field = "ai_strategy_default.wargoal_scores.annex_country"
+domain = "diplomacy"
+priority = 22
+operation = "add"
+value = 3
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "具备扩张承受力时增加原版外部目标的相对关注"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_conquer_fiscal"
+field = "ai_strategy_default.wargoal_scores.conquer_state"
+domain = "diplomacy"
+priority = 20
+operation = "add"
+value = -5
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "财政压力限制和平时期新增外部承诺，战争时保留原版防御评估"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_conquer_reconstruction"
+field = "ai_strategy_default.wargoal_scores.conquer_state"
+domain = "diplomacy"
+priority = 24
+operation = "add"
+value = -4
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }]
+why = "战后恢复期降低再次扩张的机会成本，保留原版目标资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_conquer_expansion"
+field = "ai_strategy_default.wargoal_scores.conquer_state"
+domain = "diplomacy"
+priority = 22
+operation = "add"
+value = 3
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "具备扩张承受力时增加原版外部目标的相对关注"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_subject_fiscal"
+field = "ai_strategy_default.wargoal_scores.make_subject"
+domain = "diplomacy"
+priority = 20
+operation = "add"
+value = -5
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "财政压力限制和平时期新增外部承诺，战争时保留原版防御评估"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_subject_reconstruction"
+field = "ai_strategy_default.wargoal_scores.make_subject"
+domain = "diplomacy"
+priority = 24
+operation = "add"
+value = -4
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }]
+why = "战后恢复期降低再次扩张的机会成本，保留原版目标资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_subject_expansion"
+field = "ai_strategy_default.wargoal_scores.make_subject"
+domain = "diplomacy"
+priority = 22
+operation = "add"
+value = 3
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "具备扩张承受力时增加原版外部目标的相对关注"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_transfer_fiscal"
+field = "ai_strategy_default.wargoal_scores.transfer_subject"
+domain = "diplomacy"
+priority = 20
+operation = "add"
+value = -5
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "财政压力限制和平时期新增外部承诺，战争时保留原版防御评估"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_transfer_reconstruction"
+field = "ai_strategy_default.wargoal_scores.transfer_subject"
+domain = "diplomacy"
+priority = 24
+operation = "add"
+value = -4
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }]
+why = "战后恢复期降低再次扩张的机会成本，保留原版目标资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_transfer_expansion"
+field = "ai_strategy_default.wargoal_scores.transfer_subject"
+domain = "diplomacy"
+priority = 22
+operation = "add"
+value = 3
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "具备扩张承受力时增加原版外部目标的相对关注"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_regime_change_fiscal"
+field = "ai_strategy_default.wargoal_scores.regime_change"
+domain = "diplomacy"
+priority = 20
+operation = "add"
+value = -5
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "财政压力限制和平时期新增外部承诺，战争时保留原版防御评估"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_regime_change_reconstruction"
+field = "ai_strategy_default.wargoal_scores.regime_change"
+domain = "diplomacy"
+priority = 24
+operation = "add"
+value = -4
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }]
+why = "战后恢复期降低再次扩张的机会成本，保留原版目标资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_regime_change_expansion"
+field = "ai_strategy_default.wargoal_scores.regime_change"
+domain = "diplomacy"
+priority = 22
+operation = "add"
+value = 3
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "具备扩张承受力时增加原版外部目标的相对关注"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_subject_existing_fiscal"
+field = "ai_strategy_default.subject_value"
+domain = "subjects"
+priority = 20
+operation = "add"
+value = 2
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "candidate_existing_subject", op = "=", value = true }]
+why = "财政压力下优先维护已有宗属关系，不把新增长期承诺混同为既有关系"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_subject_new_fiscal"
+field = "ai_strategy_default.subject_value"
+domain = "subjects"
+priority = 21
+operation = "add"
+value = -5
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "candidate_existing_subject", op = "=", value = false }]
+why = "财政压力下降低新增宗属承诺，原版外交可达性和成本继续生效"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+id = "coordinated_layered_subject_autonomy_recovery"
+field = "ai_strategy_subject_maintain_autonomy.weight"
+domain = "subjects"
+priority = 20
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_layer_recovery", op = "=", value = true }]
+why = "宗属自治倾向按宗主承受层级分层调整，不强制独立或改变宗属资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+id = "coordinated_layered_subject_autonomy_foundation"
+field = "ai_strategy_subject_maintain_autonomy.weight"
+domain = "subjects"
+priority = 21
+operation = "multiply"
+value = 1.02
+conditions = [{ fact = "coord_layer_foundation", op = "=", value = true }]
+why = "宗属自治倾向按宗主承受层级分层调整，不强制独立或改变宗属资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+id = "coordinated_layered_subject_autonomy_stable"
+field = "ai_strategy_subject_maintain_autonomy.weight"
+domain = "subjects"
+priority = 22
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_layer_stable", op = "=", value = true }]
+why = "宗属自治倾向按宗主承受层级分层调整，不强制独立或改变宗属资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+id = "coordinated_layered_subject_autonomy_expansion"
+field = "ai_strategy_subject_maintain_autonomy.weight"
+domain = "subjects"
+priority = 23
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "宗属自治倾向按宗主承受层级分层调整，不强制独立或改变宗属资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+id = "coordinated_layered_subject_liberty"
+field = "ai_strategy_subject_strengthen_self.weight"
+domain = "subjects"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "liberty", op = ">=", value = 50 }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "自治诉求与稳健能力共同提高宗属自强倾向"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_overseas_colonization"
+field = "ai_strategy_default.strategic_region_stance_type_scores.stance_colonize_region"
+domain = "diplomacy"
+priority = 20
+operation = "add"
+value = 4
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "coord_layer_expansion", op = "=", value = true }]
+why = "海外投射需求与扩张能力同时成立时提高殖民候选关注"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_overseas_treaty_port"
+field = "ai_strategy_default.treaty_port_value"
+domain = "diplomacy"
+priority = 20
+operation = "add"
+value = 3
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "coord_layer_expansion", op = "=", value = true }]
+why = "海外路线下提高原版港口候选的相对价值，不创造外交资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_security_supply_war"
+field = "ai_strategy_default.wanted_num_supply_ships"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_need_security", op = "=", value = true }, { fact = "war", op = "=", value = true }, { fact = "default", op = "=", value = false }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "bureaucracy", op = ">", value = 0 }]
+why = "战争中优先补给准备，不把财政压力转成取消基础防御"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_overseas_supply"
+field = "ai_strategy_default.wanted_num_supply_ships"
+domain = "military"
+priority = 21
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "海外路线与稳健能力共同支持补给准备"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_battle_line_fiscal"
+field = "ai_strategy_default.ai_ship_category_weights.ai_ship_category_battle_line"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 0.85
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "和平财政压力降低昂贵主力舰新增承诺，保留海军原版资格和维护"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_carriers_fiscal"
+field = "ai_strategy_default.ai_ship_category_weights.ai_ship_category_carriers"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 0.85
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "和平财政压力降低昂贵主力舰新增承诺，保留海军原版资格和维护"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_mechanical_tools_industry"
+field = "mechanical_tools.ai_weight"
+domain = "economy"
+priority = 22
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }]
+why = "产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_mechanical_tools_expansion"
+field = "mechanical_tools.ai_weight"
+domain = "economy"
+priority = 21
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "扩张能力提高生产升级研究的相对机会"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_steelworking_industry"
+field = "steelworking.ai_weight"
+domain = "economy"
+priority = 22
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }]
+why = "产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_steelworking_expansion"
+field = "steelworking.ai_weight"
+domain = "economy"
+priority = 21
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "扩张能力提高生产升级研究的相对机会"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_railways_industry"
+field = "railways.ai_weight"
+domain = "economy"
+priority = 22
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }]
+why = "产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_railways_expansion"
+field = "railways.ai_weight"
+domain = "economy"
+priority = 21
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "扩张能力提高生产升级研究的相对机会"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_electrical_generation_industry"
+field = "electrical_generation.ai_weight"
+domain = "economy"
+priority = 22
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }]
+why = "产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_electrical_generation_expansion"
+field = "electrical_generation.ai_weight"
+domain = "economy"
+priority = 21
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "扩张能力提高生产升级研究的相对机会"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_bessemer_process_industry"
+field = "bessemer_process.ai_weight"
+domain = "economy"
+priority = 22
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }]
+why = "产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_bessemer_process_expansion"
+field = "bessemer_process.ai_weight"
+domain = "economy"
+priority = 21
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "扩张能力提高生产升级研究的相对机会"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_intensive_agriculture_industry"
+field = "intensive_agriculture.ai_weight"
+domain = "economy"
+priority = 22
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }]
+why = "产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_intensive_agriculture_expansion"
+field = "intensive_agriculture.ai_weight"
+domain = "economy"
+priority = 21
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "扩张能力提高生产升级研究的相对机会"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_shaft_mining_industry"
+field = "shaft_mining.ai_weight"
+domain = "economy"
+priority = 22
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }]
+why = "产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/10_production.txt"
+id = "coordinated_layered_tech_shaft_mining_expansion"
+field = "shaft_mining.ai_weight"
+domain = "economy"
+priority = 21
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "扩张能力提高生产升级研究的相对机会"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_academia_education"
+field = "academia.ai_weight"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "coord_need_education", op = "=", value = true }]
+why = "教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_empiricism_education"
+field = "empiricism.ai_weight"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "coord_need_education", op = "=", value = true }]
+why = "教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_dialectics_education"
+field = "dialectics.ai_weight"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "coord_need_education", op = "=", value = true }]
+why = "教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_analytical_philosophy_education"
+field = "analytical_philosophy.ai_weight"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "coord_need_education", op = "=", value = true }]
+why = "教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_medical_degrees_health"
+field = "medical_degrees.ai_weight"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "sol", op = "<", value = 12 }, { fact = "population", op = ">", value = 0 }]
+why = "低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_modern_sewerage_health"
+field = "modern_sewerage.ai_weight"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "sol", op = "<", value = 12 }, { fact = "population", op = ">", value = 0 }]
+why = "低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_pharmaceuticals_health"
+field = "pharmaceuticals.ai_weight"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "sol", op = "<", value = 12 }, { fact = "population", op = ">", value = 0 }]
+why = "低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_antibiotics_health"
+field = "antibiotics.ai_weight"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "sol", op = "<", value = 12 }, { fact = "population", op = ">", value = 0 }]
+why = "低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_banking_fiscal"
+field = "banking.ai_weight"
+domain = "fiscal"
+priority = 20
+operation = "multiply"
+value = 1.22
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }]
+why = "偿付压力提高财政金融知识的研究机会，研究队列仍有限"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_central_banking_fiscal"
+field = "central_banking.ai_weight"
+domain = "fiscal"
+priority = 20
+operation = "multiply"
+value = 1.22
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }]
+why = "偿付压力提高财政金融知识的研究机会，研究队列仍有限"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_currency_standards_fiscal"
+field = "currency_standards.ai_weight"
+domain = "fiscal"
+priority = 20
+operation = "multiply"
+value = 1.22
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }]
+why = "偿付压力提高财政金融知识的研究机会，研究队列仍有限"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_macroeconomics_fiscal"
+field = "macroeconomics.ai_weight"
+domain = "fiscal"
+priority = 20
+operation = "multiply"
+value = 1.22
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }]
+why = "偿付压力提高财政金融知识的研究机会，研究队列仍有限"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/30_society.txt"
+id = "coordinated_layered_tech_modern_financial_instruments_fiscal"
+field = "modern_financial_instruments.ai_weight"
+domain = "fiscal"
+priority = 20
+operation = "multiply"
+value = 1.22
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }]
+why = "偿付压力提高财政金融知识的研究机会，研究队列仍有限"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/20_military.txt"
+id = "coordinated_layered_tech_admiralty_overseas"
+field = "admiralty.ai_weight"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }]
+why = "海外投射需求提高航海与港口研究机会，不改变外交可达性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/20_military.txt"
+id = "coordinated_layered_tech_navigation_overseas"
+field = "navigation.ai_weight"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }]
+why = "海外投射需求提高航海与港口研究机会，不改变外交可达性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/20_military.txt"
+id = "coordinated_layered_tech_sea_lane_strategies_overseas"
+field = "sea_lane_strategies.ai_weight"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }]
+why = "海外投射需求提高航海与港口研究机会，不改变外交可达性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/20_military.txt"
+id = "coordinated_layered_tech_concrete_dockyards_overseas"
+field = "concrete_dockyards.ai_weight"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }]
+why = "海外投射需求提高航海与港口研究机会，不改变外交可达性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/20_military.txt"
+id = "coordinated_layered_tech_dreadnought_tech_fiscal_tradeoff"
+field = "dreadnought_tech.ai_weight"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 0.85
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "和平财政压力降低昂贵远洋舰队科技的机会优先级"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/20_military.txt"
+id = "coordinated_layered_tech_battleship_tech_fiscal_tradeoff"
+field = "battleship_tech.ai_weight"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 0.85
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "和平财政压力降低昂贵远洋舰队科技的机会优先级"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/technology/technologies/20_military.txt"
+id = "coordinated_layered_tech_carrier_tech_fiscal_tradeoff"
+field = "carrier_tech.ai_weight"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 0.85
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "和平财政压力降低昂贵远洋舰队科技的机会优先级"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/00_bureaucracy.txt"
+id = "coordinated_layered_law_administrative_appointed_bureaucrats"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_administrative", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "landowner_clout", op = "<", value = 0.3 }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/00_bureaucracy.txt"
+id = "coordinated_layered_law_administrative_elected_bureaucrats"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_administrative", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "industrial_workforce", op = ">=", value = 0.15 }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_education_system.txt"
+id = "coordinated_layered_law_education_public_schools"
+field = "law_public_schools.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_education", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "bureaucracy", op = ">=", value = 0 }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_education_system.txt"
+id = "coordinated_layered_law_education_private_schools"
+field = "law_private_schools.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_education", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "sol", op = ">=", value = 15 }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_education_system.txt"
+id = "coordinated_layered_law_education_religious_schools"
+field = "law_religious_schools.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_education", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "peasant_share", op = ">=", value = 0.6 }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_taxation.txt"
+id = "coordinated_layered_law_fiscal_per_capita_based_taxation"
+field = "law_per_capita_based_taxation.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "peasant_share", op = ">=", value = 0.6 }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_taxation.txt"
+id = "coordinated_layered_law_fiscal_proportional_taxation"
+field = "law_proportional_taxation.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "industrial_workforce", op = ">=", value = 0.15 }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_taxation.txt"
+id = "coordinated_layered_law_fiscal_graduated_taxation"
+field = "law_graduated_taxation.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "industrial_workforce", op = ">=", value = 0.25 }, { fact = "union_clout", op = ">=", value = 0.1 }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/00_army_model.txt"
+id = "coordinated_layered_law_security_professional_army"
+field = "law_professional_army.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_security", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "default", op = "=", value = false }, { fact = "debt_ratio", op = "<=", value = 0.5 }, { fact = "net_surplus", op = ">=", value = 0 }, { fact = "bureaucracy", op = ">=", value = 0 }]
+why = "战时仍按独立财政和行政能力评估专业军制，不要求同时处于和平层级"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/00_internal_security.txt"
+id = "coordinated_layered_law_security_national_guard"
+field = "law_national_guard.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_security", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "bureaucracy", op = ">=", value = 0 }, { fact = "radical_share", op = ">=", value = 0.15 }]
+why = "可治理的社会压力形成渐进改革需要；保留政治可行性与具体财政行政约束"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/00_army_model.txt"
+id = "coordinated_layered_law_security_mass_conscription"
+field = "law_mass_conscription.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_need_security", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "war", op = "=", value = true }, { fact = "population", op = ">=", value = 2000000 }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/00_navy_model.txt"
+id = "coordinated_layered_law_naval_professional_navy"
+field = "law_professional_navy.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "coord_layer_expansion", op = "=", value = true }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/00_navy_model.txt"
+id = "coordinated_layered_law_naval_merchant_navy"
+field = "law_merchant_navy.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_trade_policy.txt"
+id = "coordinated_layered_law_trade_free_trade"
+field = "law_free_trade.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "coord_layer_expansion", op = "=", value = true }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_trade_policy.txt"
+id = "coordinated_layered_law_trade_protectionism"
+field = "law_protectionism.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "current_isolationism", op = "=", value = true }, { fact = "coord_layer_foundation", op = "=", value = true }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_economic_system.txt"
+id = "coordinated_layered_law_economic_interventionism"
+field = "law_interventionism.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "current_traditionalism", op = "=", value = true }, { fact = "coord_layer_foundation", op = "=", value = true }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_labor_rights.txt"
+id = "coordinated_layered_law_social_regulatory_bodies"
+field = "law_regulatory_bodies.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "union_clout", op = ">=", value = 0.1 }, { fact = "coord_stable_capacity", op = "=", value = true }, { fact = "radical_share", op = ">=", value = 0.15 }]
+why = "可治理的社会压力形成渐进改革需要；保留政治可行性与具体财政行政约束"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_welfare.txt"
+id = "coordinated_layered_law_welfare_wage_subsidies"
+field = "law_wage_subsidies.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "union_clout", op = ">=", value = 0.1 }, { fact = "coord_layer_expansion", op = "=", value = true }, { fact = "radical_share", op = ">=", value = 0.15 }]
+why = "可治理的社会压力形成渐进改革需要；保留政治可行性与具体财政行政约束"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_migration.txt"
+id = "coordinated_layered_law_migration_migration_controls"
+field = "law_migration_controls.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "current_closed_borders", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }, { fact = "radical_share", op = ">=", value = 0.15 }]
+why = "可治理的社会压力形成渐进改革需要；保留政治可行性与具体财政行政约束"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_colonial_affairs.txt"
+id = "coordinated_layered_law_colonial_colonial_resettlement"
+field = "law_colonial_resettlement.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 6
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "coord_layer_expansion", op = "=", value = true }]
+why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/01_admin_strategies.txt"
+id = "coordinated_layered_agricultural_foundation"
+field = "ai_strategy_agricultural_expansion.weight"
+domain = "economy"
+priority = 20
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "peasant_share", op = ">=", value = 0.6 }, { fact = "coord_layer_foundation", op = "=", value = true }]
+why = "农业人口占比较高且处于基础层时先改善农业能力，保留工业与资源候选"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/01_admin_strategies.txt"
+id = "coordinated_layered_industrial_foundation"
+field = "ai_strategy_industrial_expansion.weight"
+domain = "economy"
+priority = 20
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "industrial_workforce", op = ">=", value = 0.1 }, { fact = "coord_layer_foundation", op = "=", value = true }]
+why = "已有产业劳动力使基础工业升级可行，不以高合法性和行政富余作为所有工业发展的前提"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/01_admin_strategies.txt"
+id = "coordinated_layered_resource_reconstruction"
+field = "ai_strategy_resource_expansion.weight"
+domain = "economy"
+priority = 20
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }, { fact = "coord_evidence_need_industry", op = "=", value = true }]
+why = "战后恢复与产业需求联合提高原版资源路线关注，不规定特定国家走固定路线"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_naval_wanted_marines_overseas"
+field = "ai_strategy_default.wanted_marines"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "coord_expansion_capacity", op = "=", value = true }]
+why = "海外需求与强承受力支持海军组织和船舶准备；现有补给、军需成本规则优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_naval_target_marine_formation_size_overseas"
+field = "ai_strategy_default.target_marine_formation_size"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "coord_expansion_capacity", op = "=", value = true }]
+why = "海外需求与强承受力支持海军组织和船舶准备；现有补给、军需成本规则优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_naval_ship_construction_output_multiplier_overseas"
+field = "ai_strategy_default.ship_construction_output_multiplier"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "coord_expansion_capacity", op = "=", value = true }]
+why = "海外需求与强承受力支持海军组织和船舶准备；现有补给、军需成本规则优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_infantry_reconstruction"
+field = "ai_strategy_default.combat_unit_group_weights.combat_unit_group_infantry"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }, { fact = "small_arms_balance", op = ">=", value = 0 }]
+why = "战后已有轻武器供给时关注基础步兵重建，短缺时不制造无装备军队"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_conscription_pressure"
+field = "ai_strategy_default.conscript_battalion_ratio"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_need_security", op = "=", value = true }, { fact = "own_army", op = ">", value = 0 }, { fact = "small_arms_balance", op = ">=", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "bureaucracy", op = ">", value = 0 }]
+why = "战时在基础军队与军需可观察供给支持下提高有限征召倾向，原版动员资格和成本不变"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+id = "coordinated_layered_subject_cooperation_recovery"
+field = "ai_strategy_subject_overlord_compliance.weight"
+domain = "subjects"
+priority = 20
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "coord_layer_recovery", op = "=", value = true }, { fact = "liberty", op = "<", value = 50 }, { fact = "war", op = "=", value = false }]
+why = "低自治冲突且处于和平恢复期时提高合作倾向；此策略消费者没有宗主具名作用域，关系资格继续由原版处理"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "coordinated_layered_conquer_region_tradeoff"
+field = "ai_strategy_default.strategic_region_stance_type_scores.stance_conquer_region"
+domain = "diplomacy"
+priority = 20
+operation = "add"
+value = -4
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }]
+why = "恢复需求降低再次领土扩张的机会优先级，既有条约、关系和军力约束继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_health_system.txt"
+id = "coordinated_layered_civic_law_public_health_insurance"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "sol", op = "<", value = 12 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_health_system.txt"
+id = "coordinated_layered_civic_law_private_health_insurance"
+field = "law_private_health_insurance.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "sol", op = ">=", value = 15 }, { fact = "industrial_workforce", op = ">=", value = 0.15 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_childrens_rights.txt"
+id = "coordinated_layered_civic_law_compulsory_primary_school"
+field = "law_compulsory_primary_school.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "literacy", op = "<", value = 0.5 }, { fact = "current_child_labor", op = "=", value = true }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_childrens_rights.txt"
+id = "coordinated_layered_civic_law_restricted_child_labor"
+field = "law_restricted_child_labor.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "literacy", op = "<", value = 0.5 }, { fact = "industrial_workforce", op = ">=", value = 0.15 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_labor_rights.txt"
+id = "coordinated_layered_civic_law_worker_protections"
+field = "law_worker_protections.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "industrial_workforce", op = ">=", value = 0.25 }, { fact = "union_clout", op = ">=", value = 0.1 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_welfare.txt"
+id = "coordinated_layered_civic_law_old_age_pension"
+field = "law_old_age_pension.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "sol", op = "<", value = 12 }, { fact = "union_clout", op = ">=", value = 0.15 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_labour_associations.txt"
+id = "coordinated_layered_civic_law_right_to_associate"
+field = "law_right_to_associate.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "industrial_workforce", op = ">=", value = 0.15 }, { fact = "union_clout", op = ">=", value = 0.1 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_free_speech.txt"
+id = "coordinated_layered_civic_law_right_of_assembly"
+field = "law_right_of_assembly.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "radical_share", op = ">=", value = 0.15 }, { fact = "literacy", op = ">=", value = 0.3 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_rights_of_women.txt"
+id = "coordinated_layered_civic_law_women_in_the_workplace"
+field = "law_women_in_the_workplace.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "skilled_workforce", op = ">=", value = 0.1 }, { fact = "literacy", op = ">=", value = 0.5 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_land_reform.txt"
+id = "coordinated_layered_civic_law_homesteading"
+field = "law_homesteading.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "current_serfdom", op = "=", value = true }, { fact = "peasant_share", op = ">=", value = 0.5 }, { fact = "landowner_clout", op = "<", value = 0.3 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/01_land_reform.txt"
+id = "coordinated_layered_civic_law_commercialized_agriculture"
+field = "law_commercialized_agriculture.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "peasant_share", op = ">=", value = 0.3 }, { fact = "industrial_workforce", op = ">=", value = 0.2 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/00_distribution_of_power.txt"
+id = "coordinated_layered_civic_law_census_voting"
+field = "law_census_voting.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "literacy", op = ">=", value = 0.4 }, { fact = "industrial_workforce", op = ">=", value = 0.15 }, { fact = "landowner_clout", op = "<", value = 0.3 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/laws/02_free_speech.txt"
+id = "coordinated_layered_civic_law_protected_speech"
+field = "law_protected_speech.ai_enact_weight_modifier"
+domain = "political"
+priority = 20
+operation = "add"
+value = 5
+conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "literacy", op = ">=", value = 0.5 }, { fact = "radical_share", op = "<", value = 0.25 }]
+why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_arms_industry_recovery"
+field = "building_arms_industry.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_arms_industry_expansion"
+field = "building_arms_industry.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_artillery_foundry_recovery"
+field = "building_artillery_foundry.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_artillery_foundry_expansion"
+field = "building_artillery_foundry.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_automotive_industry_recovery"
+field = "building_automotive_industry.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_automotive_industry_expansion"
+field = "building_automotive_industry.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_chemical_plant_recovery"
+field = "building_chemical_plant.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_chemical_plant_expansion"
+field = "building_chemical_plant.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_electrics_industry_recovery"
+field = "building_electrics_industry.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_electrics_industry_expansion"
+field = "building_electrics_industry.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_explosives_factory_recovery"
+field = "building_explosives_factory.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_explosives_factory_expansion"
+field = "building_explosives_factory.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_food_industry_recovery"
+field = "building_food_industry.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_food_industry_expansion"
+field = "building_food_industry.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_furniture_manufactory_recovery"
+field = "building_furniture_manufactory.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_furniture_manufactory_expansion"
+field = "building_furniture_manufactory.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_glassworks_recovery"
+field = "building_glassworks.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_glassworks_expansion"
+field = "building_glassworks.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_motor_industry_recovery"
+field = "building_motor_industry.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_motor_industry_expansion"
+field = "building_motor_industry.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_munition_plant_recovery"
+field = "building_munition_plant.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_munition_plant_expansion"
+field = "building_munition_plant.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_paper_mill_recovery"
+field = "building_paper_mill.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_paper_mill_expansion"
+field = "building_paper_mill.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_shipyard_recovery"
+field = "building_shipyard.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_shipyard_expansion"
+field = "building_shipyard.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_steel_mill_recovery"
+field = "building_steel_mill.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_steel_mill_expansion"
+field = "building_steel_mill.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_synthetics_plant_recovery"
+field = "building_synthetics_plant.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_synthetics_plant_expansion"
+field = "building_synthetics_plant.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_textile_mill_recovery"
+field = "building_textile_mill.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_textile_mill_expansion"
+field = "building_textile_mill.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_tooling_workshop_recovery"
+field = "building_tooling_workshop.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "coordinated_layered_building_building_tooling_workshop_expansion"
+field = "building_tooling_workshop.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_livestock_ranch_recovery"
+field = "building_livestock_ranch.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_livestock_ranch_expansion"
+field = "building_livestock_ranch.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_maize_farm_recovery"
+field = "building_maize_farm.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_maize_farm_expansion"
+field = "building_maize_farm.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_millet_farm_recovery"
+field = "building_millet_farm.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_millet_farm_expansion"
+field = "building_millet_farm.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_rice_farm_recovery"
+field = "building_rice_farm.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_rice_farm_expansion"
+field = "building_rice_farm.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_rye_farm_recovery"
+field = "building_rye_farm.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_rye_farm_expansion"
+field = "building_rye_farm.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_vineyard_recovery"
+field = "building_vineyard.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_vineyard_expansion"
+field = "building_vineyard.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_wheat_farm_recovery"
+field = "building_wheat_farm.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/02_agro.txt"
+id = "coordinated_layered_building_building_wheat_farm_expansion"
+field = "building_wheat_farm.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_coal_mine_recovery"
+field = "building_coal_mine.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_coal_mine_expansion"
+field = "building_coal_mine.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_gold_mine_recovery"
+field = "building_gold_mine.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_gold_mine_expansion"
+field = "building_gold_mine.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_iron_mine_recovery"
+field = "building_iron_mine.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_iron_mine_expansion"
+field = "building_iron_mine.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_lead_mine_recovery"
+field = "building_lead_mine.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_lead_mine_expansion"
+field = "building_lead_mine.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_sulfur_mine_recovery"
+field = "building_sulfur_mine.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/03_mines.txt"
+id = "coordinated_layered_building_building_sulfur_mine_expansion"
+field = "building_sulfur_mine.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_banana_plantation_recovery"
+field = "building_banana_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_banana_plantation_expansion"
+field = "building_banana_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_coffee_plantation_recovery"
+field = "building_coffee_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_coffee_plantation_expansion"
+field = "building_coffee_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_cotton_plantation_recovery"
+field = "building_cotton_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_cotton_plantation_expansion"
+field = "building_cotton_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_dye_plantation_recovery"
+field = "building_dye_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_dye_plantation_expansion"
+field = "building_dye_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_opium_plantation_recovery"
+field = "building_opium_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_opium_plantation_expansion"
+field = "building_opium_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_silk_plantation_recovery"
+field = "building_silk_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_silk_plantation_expansion"
+field = "building_silk_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_sugar_plantation_recovery"
+field = "building_sugar_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_sugar_plantation_expansion"
+field = "building_sugar_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_tea_plantation_recovery"
+field = "building_tea_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_tea_plantation_expansion"
+field = "building_tea_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_tobacco_plantation_recovery"
+field = "building_tobacco_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/04_plantations.txt"
+id = "coordinated_layered_building_building_tobacco_plantation_expansion"
+field = "building_tobacco_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "coordinated_layered_building_building_university_recovery"
+field = "building_university.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "coordinated_layered_building_building_university_expansion"
+field = "building_university.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_fishing_wharf_recovery"
+field = "building_fishing_wharf.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_fishing_wharf_expansion"
+field = "building_fishing_wharf.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_logging_camp_recovery"
+field = "building_logging_camp.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_logging_camp_expansion"
+field = "building_logging_camp.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_oil_rig_recovery"
+field = "building_oil_rig.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_oil_rig_expansion"
+field = "building_oil_rig.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_rubber_plantation_recovery"
+field = "building_rubber_plantation.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_rubber_plantation_expansion"
+field = "building_rubber_plantation.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_whaling_station_recovery"
+field = "building_whaling_station.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/09_misc_resource.txt"
+id = "coordinated_layered_building_building_whaling_station_expansion"
+field = "building_whaling_station.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/11_private_infrastructure.txt"
+id = "coordinated_layered_building_building_railway_recovery"
+field = "building_railway.ai_value"
+domain = "economy"
+priority = -2
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
+why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/11_private_infrastructure.txt"
+id = "coordinated_layered_building_building_railway_expansion"
+field = "building_railway.ai_value"
+domain = "economy"
+priority = -1
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
+why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"

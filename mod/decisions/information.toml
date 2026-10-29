@@ -225,6 +225,72 @@ unit = "boolean"
 kind = "boolean"
 argument = "sitai_route_maritime"
 
+[readers.coord_layer_expansion]
+engine = "sitai_context_layer_expansion"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_layer_foundation]
+engine = "sitai_context_layer_foundation"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_layer_recovery]
+engine = "sitai_context_layer_recovery"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_layer_stable]
+engine = "sitai_context_layer_stable"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_need_administrative]
+engine = "sitai_context_need_administrative"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_need_education]
+engine = "sitai_context_need_education"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_evidence_need_industry]
+engine = "sitai_context_evidence_need_industry"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_evidence_need_overseas]
+engine = "sitai_context_evidence_need_overseas"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_need_political]
+engine = "sitai_context_need_political"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_evidence_need_reconstruction]
+engine = "sitai_context_evidence_need_reconstruction"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
+[readers.coord_need_security]
+engine = "sitai_context_need_security"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+
 [[rules]]
 id = "fiscal_construction_guard"
 intent = "fiscal_recovery"
@@ -764,3 +830,223 @@ value = 1.2
 conditions = [ { fact = "route_maritime", op = "=", value = true } ]
 why = "商业海洋路线在国家状态确认投射能力后提高原版海外利益权重"
 counterexample = "不创建殖民资格、港口、舰队或机构；路线缺失或原版资格不足时保持原版"
+
+[[rules]]
+id = "coordinated_layered_information_construction_recovery"
+field = "wanted_construction_output"
+domain = "economy"
+priority = 150
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_layer_recovery", op = "=", value = true }]
+why = "默认建设消费者读取国家承受层级，避免单一全局门槛"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_construction_foundation"
+field = "wanted_construction_output"
+domain = "economy"
+priority = 151
+operation = "multiply"
+value = 1.05
+conditions = [{ fact = "coord_layer_foundation", op = "=", value = true }]
+why = "默认建设消费者读取国家承受层级，避免单一全局门槛"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_construction_stable"
+field = "wanted_construction_output"
+domain = "economy"
+priority = 152
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_layer_stable", op = "=", value = true }]
+why = "默认建设消费者读取国家承受层级，避免单一全局门槛"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_construction_expansion"
+field = "wanted_construction_output"
+domain = "economy"
+priority = 153
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
+why = "默认建设消费者读取国家承受层级，避免单一全局门槛"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_reconstruction"
+field = "wanted_construction_output"
+domain = "economy"
+priority = 154
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }, { fact = "coord_layer_foundation", op = "=", value = true }]
+why = "战后优先修复基础建设机会"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_education_foundation"
+field = "institution_scores.institution_schools"
+domain = "political"
+priority = 150
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "coord_need_education", op = "=", value = true }, { fact = "coord_layer_foundation", op = "=", value = true }]
+why = "低识字国家在基础承受力下优先考虑教育制度"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_education_stable"
+field = "institution_scores.institution_schools"
+domain = "political"
+priority = 151
+operation = "multiply"
+value = 1.22
+conditions = [{ fact = "coord_need_education", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "教育需求与稳健能力共同提高学校制度倾向"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_social_stable"
+field = "institution_scores.institution_social_security"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_need_political", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "政治压力在稳健能力下提高社会保障制度倾向"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_revolution_recovery"
+field = "revolution_aversion"
+domain = "political"
+priority = 20
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "coord_layer_recovery", op = "=", value = true }]
+why = "恢复层级提高革命风险规避，保留原版政治和革命资格"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_navy_overseas"
+field = "wanted_navy_size"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.18
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
+why = "海外投射与稳健能力共同提高海军目标权重"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_artillery_war"
+field = "combat_unit_group_weights.combat_unit_group_artillery"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.2
+conditions = [{ fact = "coord_need_security", op = "=", value = true }, { fact = "default", op = "=", value = false }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "bureaucracy", op = ">", value = 0 }, { fact = "artillery_tech", op = "=", value = true }]
+why = "战争提高安全优先级，但新增军备目标仍需已知可承受；不削弱原版基本防御"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_stances_overseas"
+field = "max_active_stances"
+domain = "diplomacy"
+priority = 20
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }, { fact = "coord_layer_expansion", op = "=", value = true }]
+why = "海外投射能力提高原版兴趣范围上限的相对倾向"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_colony_overseas"
+field = "colonial_interest_ratio"
+domain = "diplomacy"
+priority = 20
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }]
+why = "海外需求提高殖民兴趣候选，但不改变殖民资格和行政成本"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_state_geography"
+field = "state_value"
+domain = "geography"
+priority = 20
+operation = "multiply"
+value = 0.9
+conditions = [{ fact = "coord_need_administrative", op = "=", value = true }, { fact = "target_owned", op = "=", value = false }, { fact = "war", op = "=", value = false }]
+why = "行政赤字提高新增领土管理机会成本，保留目标所有权与战争约束"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_state_identity"
+field = "state_value"
+domain = "identity"
+priority = 21
+operation = "multiply"
+value = 1.08
+conditions = [{ fact = "coord_layer_stable", op = "=", value = true }, { fact = "target_homeland", op = "=", value = true }, { fact = "target_cultural_share", op = ">=", value = 0.5 }]
+why = "稳健能力、家园身份与文化联系共同提高原版领土候选价值"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_state_recovery"
+field = "state_value"
+domain = "geography"
+priority = 22
+operation = "multiply"
+value = 0.92
+conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }, { fact = "target_owned", op = "=", value = false }]
+why = "战后恢复期减少新增外部领土承诺，避免恢复与扩张同时满载"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_trade_foundation"
+field = "treaty_category_scores.trade"
+domain = "market"
+priority = 150
+operation = "multiply"
+value = 1.1
+conditions = [{ fact = "coord_layer_foundation", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "基础承受力优先寻找低成本贸易机会，具体条款仍由原版决定"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_trade_recovery"
+field = "treaty_category_scores.trade"
+domain = "market"
+priority = 151
+operation = "multiply"
+value = 1.06
+conditions = [{ fact = "coord_layer_recovery", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "恢复期保留低成本贸易合作路径，不强制签约"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_economy_industry"
+field = "treaty_category_scores.economy"
+domain = "diplomacy"
+priority = 150
+operation = "multiply"
+value = 1.12
+conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }, { fact = "war", op = "=", value = false }]
+why = "产业需求与稳健能力提高经济合作候选"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+id = "coordinated_layered_information_defense_security"
+field = "treaty_category_scores.military_defense"
+domain = "military"
+priority = 20
+operation = "multiply"
+value = 1.15
+conditions = [{ fact = "coord_need_security", op = "=", value = true }]
+why = "安全需求提高原版防御合作候选，不替代外交可达性"
+counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"

@@ -107,6 +107,26 @@ _UNITS = {
 
 def reader_scope(reader: Reader, actor_path: tuple[str, ...]) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
+    # country_state 生成的协调触发器在国家消费者时机读取；它们是
+    # 无持久状态的布尔事实，不是原版 getter，也不需要伪造底本词汇证据。
+    if reader.engine.startswith("sitai_context_"):
+        from . import country_coordination  # noqa: PLC0415 - 不引入状态层循环依赖
+
+        if (
+            reader.engine
+            not in {country_coordination.PREFIX + name for name in country_coordination.NAMES}
+            or reader.kind != "boolean"
+            or reader.unit != "boolean"
+            or reader.scope != "root"
+            or reader.path != actor_path
+            or reader.argument is not None
+            or reader.parameters
+            or reader.value_field is not None
+            or reader.minimum is not None
+            or reader.maximum is not None
+        ):
+            raise ValueError(f"协调触发器必须使用已拥有的国家布尔合同：{reader.key}")
+        return "country"
     scope = {
         "target_state": "state",
         "interest_group": "interest_group",
