@@ -12,7 +12,8 @@ liquidity_pressure = [{ fact = "default", op = "=", value = false }, { fact = "l
 political_crisis = [{ fact = "legitimacy", op = "<", value = 25 }, { fact = "insurrection", op = "=", value = true }, { fact = "radical_share", op = ">=", value = 0.25 }]
 war = [{ fact = "war", op = "=", value = true }]
 
-# 所有积极发展、渐进改革与合作共享财政可承受性；本身不制造候选资格。
+# 既有高承受力意图保留财政合同；新增基础发展另由 country_state 分层协调。
+# 此处不是所有发展路径的全局前置，本身不制造候选资格。
 [intents.peaceful_capacity]
 signals = ["peace", "fiscal_capacity"]
 

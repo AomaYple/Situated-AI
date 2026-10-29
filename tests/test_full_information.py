@@ -12,6 +12,7 @@ import re
 import tomllib
 import zipfile
 from dataclasses import replace
+from functools import cache
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
@@ -20,6 +21,7 @@ from hypothesis import strategies as st
 
 from pdx import (
     config,
+    country_coordination,
     country_state,
     decision_adapters,
     decision_intents,
@@ -77,7 +79,11 @@ def test_shared_information_readers_have_sha_locked_native_evidence(rules):
         pytest.skip("需要锁定版本的游戏原件")
     inputs = decision_adapters.read_inputs(decision_adapters.load())
     evidence = decision_adapters.reader_evidence(inputs)
-    assert all(reader.engine in evidence for reader in rules.readers)
+    assert all(
+        reader.engine in evidence
+        or reader.engine in country_state.owned_triggers(country_state.load())
+        for reader in rules.readers
+    )
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
     script = decision_rules.patch(
         baseline,
@@ -88,6 +94,17 @@ def test_shared_information_readers_have_sha_locked_native_evidence(rules):
     )
     assert "bureaucracy >= 0" in script
     assert "has_insurrectionary_interest_groups = no" in script
+
+
+@cache
+def _coordination_values() -> dict[str, bool]:
+    # This test isolates the consumer generator. Explicit False suppresses all
+    # coordination rules, while the actual readers keep aliases in sync.
+    return {
+        reader.key: False
+        for reader in decision_rules.load().readers
+        if reader.engine.startswith(country_coordination.PREFIX)
+    }
 
 
 def _values(**overrides: object) -> dict[str, object]:
@@ -123,8 +140,19 @@ def _values(**overrides: object) -> dict[str, object]:
         "route_industry": False,
         "route_education": False,
         "route_maritime": False,
+        **_coordination_values(),
         **overrides,
     }
+
+
+def test_generator_defaults_follow_current_coordination_readers(rules):
+    coordinated = [reader for reader in rules.readers if reader.engine.startswith("sitai_context_")]
+    values = _values()
+
+    assert coordinated
+    for reader in coordinated:
+        assert values.get(reader.key) is False
+        assert _values(**{reader.key: True})[reader.key] is True
 
 
 def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rules):
@@ -324,6 +352,13 @@ def _evaluate_script(block: Block, engine_values: dict[str, object]) -> float:
             actual: object
             if assignment.key == "is_ai":
                 actual = True
+            elif assignment.key.startswith("sitai_context_known_"):
+                actual = (
+                    engine_values.get(
+                        "sitai_context_" + assignment.key.removeprefix("sitai_context_known_")
+                    )
+                    is not None
+                )
             elif assignment.key in {
                 "has_strategy",
                 "has_variable",

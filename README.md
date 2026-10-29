@@ -5,14 +5,15 @@
 
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
-当前工程交付候选为 `Situated AI 1.4.0`，底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。它包含有限国家状态、六条动态路线、影子预算、TTL/冷却和原版消费者适配。终极方案 4.0 的 E0–E15 已达到静态工程出口；长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
+已发布基线为 `Situated AI 1.4.0`，当前分层联动目标版本为 `1.5.0`，尚未发布。底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。当前设计将恢复、基础、稳健、扩张四层承受能力与八类领域需求分开，在原版消费者中协调发展瓶颈和机会成本；原有六条路线保留有限记忆。实际阶段、检查与交付状态分别见主计划、当前清单和结果收据，长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
 
 ## 先读什么
 
 1. [AGENTS.md](AGENTS.md)：代理接手顺序和修改边界。
 2. [CONTRIBUTING.md](CONTRIBUTING.md)：生成、检查、分支、提交、PR 和发布。
 3. [工程原则](docs/principles/工程原则.md)与[Mod 开发原则](docs/principles/Mod开发原则.md)。
-4. [终极方案 4.0 实施计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
+4. [分层联动实施计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
+5. [处境决策设计](docs/design/03-处境决策设计.md)与[分层联动执行结果](docs/design/exec/分层联动-执行结果.md)。
 
 ## 目录
 
@@ -35,14 +36,14 @@ Windows：
 .venv\Scripts\python.exe -X utf8 -m pip install -e ".[dev]"
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline
-.venv\Scripts\python.exe -X utf8 -m pdx.cli package --output dist/situated-ai-1.4.0.zip
+.venv\Scripts\python.exe -X utf8 -m pdx.cli package
 ```
 
 macOS/Linux 将解释器替换为 `.venv/bin/python`。没有游戏时仍可运行离线检查；有游戏时可用 `V3_ROOT`、`V3_USERDIR` 指定路径。生成和正式打包要求锁定原版底本，底本缺失或漂移时硬失败。
 
 ## 标准包
 
-`1.4.0` 是当前工程交付候选。包包含标准 metadata、生成的 `common/`、11 种本体语言、封面、manifest 和安装说明；本轮包为 65 个条目，大小为 1,042,691 字节，SHA-256 为 `9c90af4a3d2a19b990e06b8e5b420c9bef90401f77cfffc9748aecb51aca3a77`。包不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。版本标签、包哈希和 GitHub Release 状态见[版本交付索引](docs/design/exec/版本交付-结果.md)；Workshop 页面由发布者在固定包上单独验收和发布。
+包包含标准 metadata、生成的 `common/`、11 种本体语言、封面、manifest 和安装说明，不包含 Python、探针、日志、缓存、快照、报告、原始底本或历史实验。`package` 按生产源中的版本打包，不代表该版本已经发布。已发布基线与目标版本的标签、包哈希和 GitHub Release 状态只在[版本交付索引](docs/design/exec/版本交付-结果.md)维护；Workshop 页面由发布者在固定包上单独验收和发布。
 
 安装时将 ZIP 解压到 `Paradox Interactive/Victoria 3/mod/Situated AI`，在启动器中登记并启用独立 playset；不要覆盖游戏本体。游戏文本只在打包边界使用 UTF-8 BOM，仓库源统一 UTF-8 无 BOM、LF。
 

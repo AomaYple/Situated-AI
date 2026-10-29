@@ -37,6 +37,9 @@ law_merchant_navy = {
 		# SITAI BEGIN information:law_merchant_navy.ai_enact_weight_modifier
 		# political_capacity_law_merchant_navy [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
+		# coordinated_layered_law_naval_merchant_navy [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no sitai_context_known_layer_stable = yes sitai_context_layer_stable = yes } } add = 6.0 }
 		# SITAI END information:law_merchant_navy.ai_enact_weight_modifier
 	}
 }
@@ -148,6 +151,9 @@ law_professional_navy = {
 		# SITAI BEGIN information:law_professional_navy.ai_enact_weight_modifier
 		# political_capacity_law_professional_navy [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
+		# coordinated_layered_law_naval_professional_navy [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 6.0 }
 		# SITAI END information:law_professional_navy.ai_enact_weight_modifier
 	}
 }

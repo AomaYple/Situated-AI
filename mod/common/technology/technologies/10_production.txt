@@ -74,6 +74,12 @@ shaft_mining = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = {  } } } } } } } multiply = 1.0 }
 		# shaft_mining_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_shaft_mining_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_shaft_mining_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
 		# SITAI END information:shaft_mining.ai_weight
 	}
 }
@@ -179,6 +185,12 @@ steelworking = {
 		# SITAI BEGIN information:steelworking.ai_weight
 		# steelworking_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_steelworking_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_steelworking_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
 		# SITAI END information:steelworking.ai_weight
 	}
 }
@@ -256,6 +268,12 @@ intensive_agriculture = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = {  } } } } } } } multiply = 1.0 }
 		# intensive_agriculture_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_intensive_agriculture_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_intensive_agriculture_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
 		# SITAI END information:intensive_agriculture.ai_weight
 	}
 }
@@ -406,6 +424,12 @@ railways = {
 		# SITAI BEGIN information:railways.ai_weight
 		# railways_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_railways_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_railways_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
 		# SITAI END information:railways.ai_weight
 	}
 }
@@ -483,6 +507,12 @@ bessemer_process = {
 		# SITAI BEGIN information:bessemer_process.ai_weight
 		# bessemer_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_bessemer_process_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_bessemer_process_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
 		# SITAI END information:bessemer_process.ai_weight
 	}
 }
@@ -560,6 +590,12 @@ mechanical_tools = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = {  } } } } } } } multiply = 1.0 }
 		# mechanical_tools_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_mechanical_tools_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_mechanical_tools_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
 		# SITAI END information:mechanical_tools.ai_weight
 	}
 }
@@ -939,6 +975,12 @@ electrical_generation = {
 		# SITAI BEGIN information:electrical_generation.ai_weight
 		# electrical_generation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_electrical_generation_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
+		# coordinated_layered_tech_electrical_generation_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
 		# SITAI END information:electrical_generation.ai_weight
 	}
 }

@@ -115,6 +115,9 @@ ai_strategy_agricultural_expansion = {
 		# SITAI BEGIN information:ai_strategy_agricultural_expansion.weight
 		# ai_strategy_agricultural_expansion_weight [economy]; 财政行政可承受时让原版生产路线响应商品瓶颈，不跳过可能性、地理与路线资格
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 exists = market market = { exists = mg:grain mg:grain = {  } } } } } } } multiply = 1.0 }
+		# coordinated_layered_agricultural_foundation [economy]; 农业人口占比较高且处于基础层时先改善农业能力，保留工业与资源候选
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } sitai_context_known_layer_foundation = yes sitai_context_layer_foundation = yes } } multiply = 1.12 }
 		# SITAI END information:ai_strategy_agricultural_expansion.weight
 	}
 }
@@ -304,6 +307,9 @@ ai_strategy_resource_expansion = {
 		# SITAI BEGIN information:ai_strategy_resource_expansion.weight
 		# ai_strategy_resource_expansion_weight [economy]; 财政行政可承受时让原版生产路线响应商品瓶颈，不跳过可能性、地理与路线资格
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 exists = market market = { exists = mg:iron mg:iron = {  } } } } } } } multiply = 1.0 }
+		# coordinated_layered_resource_reconstruction [economy]; 战后恢复与产业需求联合提高原版资源路线关注，不规定特定国家走固定路线
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_reconstruction = yes sitai_context_evidence_need_reconstruction = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.15 }
 		# SITAI END information:ai_strategy_resource_expansion.weight
 	}
 }
@@ -480,6 +486,9 @@ ai_strategy_industrial_expansion = {
 		# SITAI BEGIN information:ai_strategy_industrial_expansion.weight
 		# ai_strategy_industrial_expansion_weight [economy]; 财政行政可承受时让原版生产路线响应商品瓶颈，不跳过可能性、地理与路线资格
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 exists = market market = { exists = mg:tools mg:tools = {  } } } } } } } multiply = 1.0 }
+		# coordinated_layered_industrial_foundation [economy]; 已有产业劳动力使基础工业升级可行，不以高合法性和行政富余作为所有工业发展的前提
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } sitai_context_known_layer_foundation = yes sitai_context_layer_foundation = yes } } multiply = 1.12 }
 		# SITAI END information:ai_strategy_industrial_expansion.weight
 	}
 }

@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from . import config
+from . import config, country_coordination
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -167,6 +167,7 @@ def from_data(data, *, source_sha256=""):
         "dimensions",
         "routes",
         "budgets",
+        "coordination",
     }
     if set(data) != required or data.get("schema") != 1 or type(data.get("enabled")) is not bool:
         raise ValueError("country state schema 无效")
@@ -225,6 +226,7 @@ def from_data(data, *, source_sha256=""):
         raise ValueError("必须定义恰好 6 条路线")
     priorities = []
     normalized = dict(data)
+    normalized["coordination"] = country_coordination.normalize(data["coordination"], readers)
     if not isinstance(data["budgets"], dict) or set(data["budgets"]) != set(_BUDGETS):
         raise ValueError("影子预算必须定义财政、行政和安全档位")
     normalized["budgets"] = {}
@@ -278,6 +280,7 @@ def contract(policy):
         "variable_ttl_days": policy.ttl_days,
         "switch_cooldown_days": policy.cooldown_days,
         "persistent_variables": [*(f"sitai_route_{r}" for r in ROUTES), "sitai_route_cooldown"],
+        "coordination": country_coordination.contract(policy),
     }
 
 
@@ -286,7 +289,10 @@ def owned_variables(_policy):
 
 
 def owned_triggers(_policy):
-    return tuple(f"sitai_route_{r}_active" for r in ROUTES)
+    return (
+        *tuple(f"sitai_route_{r}_active" for r in ROUTES),
+        *(f"{country_coordination.PREFIX}{name}" for name in country_coordination.NAMES),
+    )
 
 
 def validate(policy, root=None, *, snapshot=None):
@@ -407,6 +413,7 @@ def derive(policy, values, is_ai=True):
         "eligible": eligible,
         "is_ai": is_ai,
         "facts": facts,
+        "coordination": country_coordination.evaluate(policy, facts, is_ai=is_ai),
     }
 
 
@@ -688,7 +695,7 @@ def files(policy):
         lines.append(
             f"sitai_route_{route}_active = {{ is_ai = yes has_variable = sitai_route_{route} sitai_route_{route}_hold = yes{guard} }}"
         )
-    triggers = "\n".join(lines) + "\n"
+    triggers = "\n".join(lines) + "\n" + country_coordination.triggers(policy)
     remove = " ".join(f"remove_variable = sitai_route_{r}" for r in ROUTES)
     branches = []
     first = True

@@ -1,4 +1,4 @@
-"""工程基线和终极计划契约的回归测试。"""
+"""工程基线、当前分层计划入口和历史证据边界的回归测试。"""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from pdx import country_coordination, country_state, decision_report
 from pdx.engineering import (
     ENGINEERING_BASELINE,
     SKIP_CATEGORIES,
@@ -50,46 +51,91 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     root = Path(__file__).resolve().parents[1]
     plan = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
-    assert "# Situated AI 终极方案 4.0 实施计划" in plan
+    assert "# Situated AI 分层联动实施计划" in plan
     version = re.search(r"计划版本：(\d+)\.(\d+)", plan)
     assert version is not None
-    assert (int(version.group(1)), int(version.group(2))) >= (22, 0)
-    stage_positions = [plan.index(f"| E{index} |") for index in range(16)]
-    assert stage_positions == sorted(stage_positions)
-    assert "T0–T13" in plan
-    assert "每个阶段有静态出口" in plan
+    assert (int(version.group(1)), int(version.group(2))) >= (26, 0)
+    assert re.findall(r"^### (P\d+)：", plan, re.MULTILINE) == [f"P{index}" for index in range(8)]
+    assert "唯一当前产品计划" in plan
+    assert "阶段与可核查出口" in plan
     assert "正确性第一、速度第二、内存第三" in plan
-    assert "用户在固定包上验收" in plan
-    assert "Mod 结构和内容全量整合" in plan
-    assert "改动后的全仓全 Mod 复核" in plan
-    assert "正式交付和维护" in plan
-    assert "E0–E15 已达到静态工程出口" in checklist
-    assert "长期游戏行为" in checklist
+    assert "长期游戏行为" in plan
+    assert "由用户验收" in plan
+    assert "整个 Mod 复核与结构整理" in plan
+    assert "冻结候选与工程验收" in plan
+    assert "Git 与版本交付" in plan
+    assert "游戏目录部署与最终清理" in plan
+    assert "唯一当前计划" in checklist
+    assert "分层联动实施计划" in checklist
+    assert "长期行为" in checklist
     assert "1.4.0" in checklist
+    assert "1.5.0" in checklist
     assert "situated-ai" in checklist
     assert "标准包" in checklist
-    assert "运行期" in checklist
-    assert "日志解析、存档摘要、快照和根 hook" in plan
-    assert "11 种本体语言" in plan
+    assert "日志、存档" in checklist
+    assert "11 种语言" in plan
 
 
 def test_current_document_indexes_are_complete() -> None:
-    """当前入口指向同一终极队列，历史收据仍可追溯。"""
+    """导航统一指向当前计划和收据，旧方案只保留历史上下文。"""
     root = Path(__file__).resolve().parents[1]
     tools = (root / "tools/README.md").read_text(encoding="utf-8")
     execution = (root / "docs/design/exec/README.md").read_text(encoding="utf-8")
 
-    assert "dist/situated-ai-1.4.0.zip" in tools
+    assert "-m pdx.cli package" in tools
     assert "Situated AI 1.4.0" in tools
-    assert "dist/situated-ai-1.0.1.zip" not in tools
-    assert "当前工程交付为 `Situated AI 1.4.0`" in execution
-    assert "E0–E15" in execution
-    assert "[Situated AI 终极方案 4.0 实施计划](mod重设计-实施计划.md)" in execution
+    assert "1.5.0" in tools
+    assert "P0–P7" in execution
     assert "[终极方案 4.0 执行结果](终极方案4.0-执行结果.md)" in execution
     assert "历史收据" in execution
 
+    indexes = {
+        "README.md": "docs/design/exec/",
+        "tools/README.md": "../docs/design/exec/",
+        "docs/README.md": "design/exec/",
+        "docs/design/README.md": "exec/",
+        "docs/design/exec/README.md": "",
+    }
+    for path, prefix in indexes.items():
+        content = (root / path).read_text(encoding="utf-8")
+        assert f"[分层联动实施计划]({prefix}mod重设计-实施计划.md)" in content, path
+        assert f"[分层联动执行结果]({prefix}分层联动-执行结果.md)" in content, path
+        assert "终极方案 4.0 实施计划" not in content, path
+        assert "1.5.0" in content or path == "docs/README.md", path
 
-def test_ultimate_plan_receipt_is_current() -> None:
+
+def test_layered_design_tracks_production_contract_and_boundaries() -> None:
+    """设计必须覆盖生产分类与未知/原版边界，不能靠粗域开关宣称全深度。"""
+    root = Path(__file__).resolve().parents[1]
+    design = (root / "docs/design/03-处境决策设计.md").read_text(encoding="utf-8")
+    for name in (*country_coordination.LAYERS, *country_coordination.NEEDS):
+        assert f"`{name}`" in design
+    for key, label, *_ in decision_report.TAXONOMY:
+        assert f"| {label} `{key}` |" in design
+    for domain in decision_report.DOMAINS:
+        assert f"`{domain}`" in design
+    policy = country_state.load()
+    assert f"TTL {policy.ttl_days} 日" in design
+    assert f"冷却 {policy.cooldown_days} 日" in design
+    for boundary in (
+        "不新增持久变量",
+        "按需求值",
+        "已证实的低档",
+        "第一匹配胜出",
+        "只作为合同开关",
+        "政治可行性",
+        "战败重建优先于扩张",
+        "原版实际成本、资格、前置、政治支持、随机",
+        "终结零分",
+        "玩家决策路径不变",
+        "活跃原版策略定义的同名字段可能覆盖默认策略",
+        "不能擅自认定",
+        "用户在固定标准包上验收",
+    ):
+        assert boundary in design
+
+
+def test_ultimate_plan_receipt_retains_historical_context() -> None:
     root = Path(__file__).resolve().parents[1]
     receipt = (root / "docs/design/exec/终极方案4.0-执行结果.md").read_text(encoding="utf-8")
     assert "终极方案 4.0" in receipt

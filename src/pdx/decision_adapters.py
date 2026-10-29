@@ -675,7 +675,20 @@ def build(
             {"source": source, "field": ".".join(field), "owner": owner}
             for source, field, owner in owners
         ],
-        "reader_evidence": {engine: evidence[engine] for engine in sorted(required_engines)},
+        "reader_evidence": {
+            engine: evidence[engine]
+            for engine in sorted(required_engines)
+            if not engine.startswith("sitai_context_")
+        },
+        "generated_reader_evidence": {
+            engine: {
+                "source": "mod/decisions/country_state.toml",
+                "generator": "src/pdx/country_coordination.py",
+                "contract": "owned_country_boolean_trigger",
+            }
+            for engine in sorted(required_engines)
+            if engine.startswith("sitai_context_")
+        },
         "reader_evidence_limits": "token_locations_only; typed_signatures_are_static_contracts; engine_validity_pending_f1",
         "production_recipes": production_inputs.recipes(inputs, active_methods),
         "initialized_consumers": [

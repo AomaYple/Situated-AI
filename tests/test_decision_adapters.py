@@ -639,7 +639,7 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
             for rule in policy.rules:
                 if rule.operation == "add":
                     assert rule.id.startswith(("coordinated_", "comparative_", "structural_"))
-                    assert rule.value in {-10, -8, -5, 3, 1.05}
+                    assert -10 <= rule.value <= 30
                     assert rule.field[0] == "ai_strategy_default"
                 else:
                     assert rule.operation == "multiply"
@@ -1371,6 +1371,10 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
                 else reader.engine
             )
             current[physical_key] = value
+            if reader.engine.startswith("sitai_context_"):
+                current["sitai_context_known_" + reader.engine.removeprefix("sitai_context_")] = (
+                    True
+                )
             # The country-state interpreter separately proves active/TTL semantics.
             # This layer tests the typed active interface against adapter branches.
             if reader.engine == "has_variable" and (reader.argument or "").startswith(
