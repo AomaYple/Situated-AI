@@ -94,6 +94,7 @@ def test_未知或玩家输入保持原版():
     assert decision_rules.evaluate(compiled, {}, is_ai=True) == {}
 
 
+@pytest.mark.integration
 def test_行动消费者成为四个策略字段的唯一作者():
     strategy = decision_intents.load()
     information = decision_rules.load(strategy=strategy)
