@@ -1,0 +1,170 @@
+schema = 1
+
+[consumers.fiscal_neutrality]
+field = "diplomatic_play_neutrality"
+domain = "fiscal"
+max_delta = 10.0
+budget = 2
+vanilla_tail = "retain_qualification_cost_random_execution"
+
+[consumers.reform_chance]
+field = "change_law_chance"
+domain = "political"
+max_delta = 2.0
+budget = 1
+vanilla_tail = "retain_law_eligibility_support_and_failure"
+
+[consumers.economic_balance]
+field = "economic_vs_government_spending_balance"
+domain = "economy"
+max_delta = 3.0
+budget = 3
+vanilla_tail = "retain_construction_budget_and_goods_cost"
+
+[consumers.diplomatic_recklessness]
+field = "recklessness"
+domain = "diplomacy"
+max_delta = 5.0
+budget = 2
+vanilla_tail = "retain_play_eligibility_negotiation_and_randomness"
+
+[actions.fiscal_recovery]
+domain = "fiscal"
+consumer = "fiscal_neutrality"
+improves = ["solvency", "survival"]
+consumes = ["diplomatic_commitment"]
+requires_all = ["default"]
+requires_any = []
+blocked_by = []
+complements = []
+substitutes = ["wartime_defense"]
+conflicts = []
+exit_when = ["no_default"]
+base = 8.0
+stress = 8.0
+opportunity = 0.0
+commitment = 0.0
+max_delta = 8.0
+unknown_policy = "vanilla"
+explanation = "违约时优先保护偿付能力，解除违约后退出。"
+
+[actions.wartime_defense]
+domain = "military"
+consumer = "fiscal_neutrality"
+improves = ["survival", "security"]
+consumes = ["military_commitment"]
+requires_all = ["war"]
+requires_any = []
+blocked_by = []
+complements = []
+substitutes = []
+conflicts = []
+exit_when = ["peace"]
+base = 6.0
+stress = 6.0
+opportunity = 0.0
+commitment = 1.0
+max_delta = 6.0
+unknown_policy = "vanilla"
+explanation = "战争期间降低新的非必要外交承诺倾向，防止把原版资格误写成强制参战。"
+
+[actions.political_reform]
+domain = "political"
+consumer = "reform_chance"
+improves = ["legitimacy", "institutional_capacity"]
+consumes = ["political_capacity"]
+requires_all = ["peace", "no_insurrection"]
+requires_any = ["stable_legitimacy", "strong_legitimacy"]
+blocked_by = ["default"]
+complements = ["industrial_foundation"]
+substitutes = []
+conflicts = []
+exit_when = ["insurrection"]
+base = 1.0
+stress = 0.0
+opportunity = 1.0
+commitment = 0.0
+max_delta = 1.0
+unknown_policy = "vanilla"
+explanation = "和平、政治可行且没有叛乱时提高法律启动机会，原版支持和失败仍生效。"
+
+[actions.industrial_foundation]
+domain = "economy"
+consumer = "economic_balance"
+improves = ["industry", "employment", "construction_capacity"]
+consumes = ["fiscal_capacity", "bureaucracy"]
+requires_all = ["peace", "no_default"]
+requires_any = ["bureaucracy_positive", "strong_legitimacy"]
+blocked_by = []
+complements = ["education_and_research"]
+substitutes = []
+conflicts = []
+exit_when = ["default", "war"]
+base = 2.0
+stress = 0.0
+opportunity = 1.0
+commitment = 1.0
+max_delta = 2.0
+unknown_policy = "vanilla"
+explanation = "具备和平和最低行政基础时支持建设性支出，避免用单一总门槛锁死发展。"
+
+[actions.education_and_research]
+domain = "education"
+consumer = "economic_balance"
+improves = ["literacy", "technology", "administration"]
+consumes = ["fiscal_capacity", "bureaucracy"]
+requires_all = ["peace", "no_default", "literacy_low"]
+requires_any = ["stable_legitimacy", "bureaucracy_positive"]
+blocked_by = []
+complements = []
+substitutes = []
+conflicts = []
+exit_when = ["war", "default"]
+base = 2.0
+stress = 0.0
+opportunity = 1.0
+commitment = 1.0
+max_delta = 2.0
+unknown_policy = "vanilla"
+explanation = "低识字率是教育机会信号，不是所有经济建设的统一禁令。"
+
+[actions.diplomatic_restraint]
+domain = "diplomacy"
+consumer = "diplomatic_recklessness"
+improves = ["survival", "diplomatic_capacity"]
+consumes = ["opportunity"]
+requires_all = ["war"]
+requires_any = []
+blocked_by = []
+complements = []
+substitutes = ["diplomatic_opening"]
+conflicts = []
+exit_when = ["peace"]
+base = -4.0
+stress = 4.0
+opportunity = 0.0
+commitment = 0.0
+max_delta = 4.0
+unknown_policy = "vanilla"
+explanation = "战争时降低冒险外交倾向，仍由原版外交博弈资格和谈判决定结果。"
+
+[actions.diplomatic_opening]
+domain = "diplomacy"
+consumer = "diplomatic_recklessness"
+improves = ["trade", "security"]
+consumes = ["diplomatic_capacity"]
+requires_all = ["peace", "no_default"]
+requires_any = ["stable_legitimacy", "subject"]
+blocked_by = []
+complements = []
+substitutes = []
+conflicts = []
+exit_when = ["war", "default"]
+base = 2.0
+stress = 0.0
+opportunity = 1.0
+commitment = 1.0
+max_delta = 2.0
+unknown_policy = "vanilla"
+explanation = "和平和具备政治/宗属基础时允许有限外交主动性。"
+

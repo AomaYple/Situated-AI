@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "1.5.0"
+RELEASE_VERSION = "2.0.0"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -636,6 +636,9 @@ def _release_generation(
             "strategic_intent_count": len(metadata["strategic_coordination"]["intents"]),
             "country_state": metadata["country_state"],
             "country_coordination": metadata["country_coordination"],
+            "situated_action_count": metadata["situated_actions"]["candidate_limit"],
+            "situated_consumer_count": len(metadata["situated_actions"]["consumers"]),
+            "situated_source_fingerprints": metadata["situated_actions"]["source_fingerprints"],
             "behavior_quality": "not_evaluated",
         },
     }

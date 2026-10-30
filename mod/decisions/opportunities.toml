@@ -1,0 +1,11 @@
+schema = 1
+
+[opportunities.education]
+domain = "education"
+source_fact = "literacy_low"
+actions = ["education_and_research"]
+
+[opportunities.administrative_foundation]
+domain = "administrative"
+source_fact = "bureaucracy_positive"
+actions = ["industrial_foundation"]

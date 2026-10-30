@@ -1,0 +1,16 @@
+schema = 1
+
+[commitments.debt_service]
+domain = "fiscal"
+unit = "normalized"
+unknown = "vanilla"
+
+[commitments.military]
+domain = "military"
+unit = "normalized"
+unknown = "vanilla"
+
+[commitments.diplomatic]
+domain = "diplomacy"
+unit = "normalized"
+unknown = "vanilla"

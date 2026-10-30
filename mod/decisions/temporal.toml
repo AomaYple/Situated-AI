@@ -1,0 +1,7 @@
+schema = 1
+safety_refresh_days = 1
+structure_refresh_days = 30
+route_ttl_days = 100
+switch_cooldown_days = 62
+max_persistent_routes = 1
+max_reason_codes = 8

@@ -1,18 +1,20 @@
 # Situated AI
 
+当前生产交付基线为 `Situated AI 1.5.0`；处境行动内核 `2.0.0` 候选正在按当前计划收口。
+
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
 
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
-当前交付为 `Situated AI 1.5.0`，已发布标签和 GitHub Pre-release。底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。当前设计将恢复、基础、稳健、扩张四层承受能力与八类领域需求分开，在原版消费者中协调发展瓶颈和机会成本；原有六条路线保留有限记忆。实际阶段、检查与交付状态分别见主计划、当前清单和结果收据，长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
+当前交付为 `Situated AI 2.0.0`，已将处境事实、有限行动卡、关系和仲裁合同编译到原版 AI 消费者。底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。运行包只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。实际阶段、检查与交付状态分别见主计划、当前清单和结果收据，长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
 
 ## 先读什么
 
 1. [AGENTS.md](AGENTS.md)：代理接手顺序和修改边界。
 2. [CONTRIBUTING.md](CONTRIBUTING.md)：生成、检查、分支、提交、PR 和发布。
 3. [工程原则](docs/principles/工程原则.md)与[Mod 开发原则](docs/principles/Mod开发原则.md)。
-4. [分层联动实施计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
+4. [处境行动决策内核实施计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
 5. [处境决策设计](docs/design/03-处境决策设计.md)与[分层联动执行结果](docs/design/exec/分层联动-执行结果.md)。
 
 ## 目录

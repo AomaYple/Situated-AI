@@ -1,0 +1,123 @@
+schema = 1
+
+# 行动内核只登记已在 1.14.5 生产接线中核实过的根国家事实。
+# trigger 是生成期降低用的原版条件；unknown 不等于零值，未知时保留原版消费者。
+[facts.is_ai]
+domain = "identity"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "boolean"
+unit = "flag"
+refresh = "consumer"
+unknown = "vanilla"
+trigger = "is_ai = yes"
+
+[facts.peace]
+domain = "military"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "boolean"
+unit = "flag"
+refresh = "shock"
+unknown = "vanilla"
+trigger = "is_at_war = no"
+
+[facts.war]
+domain = "military"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "boolean"
+unit = "flag"
+refresh = "shock"
+unknown = "vanilla"
+trigger = "is_at_war = yes"
+
+[facts.default]
+domain = "fiscal"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "boolean"
+unit = "flag"
+refresh = "shock"
+unknown = "vanilla"
+trigger = "in_default = yes"
+
+[facts.no_default]
+domain = "fiscal"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "boolean"
+unit = "flag"
+refresh = "shock"
+unknown = "vanilla"
+trigger = "in_default = no"
+
+[facts.stable_legitimacy]
+domain = "political"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "number"
+unit = "points"
+refresh = "monthly"
+unknown = "vanilla"
+trigger = "legitimacy >= 50"
+
+[facts.strong_legitimacy]
+domain = "political"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "number"
+unit = "points"
+refresh = "monthly"
+unknown = "vanilla"
+trigger = "legitimacy >= 75"
+
+[facts.insurrection]
+domain = "political"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "boolean"
+unit = "flag"
+refresh = "shock"
+unknown = "vanilla"
+trigger = "any_insurrection_ongoing = yes"
+
+[facts.no_insurrection]
+domain = "political"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "boolean"
+unit = "flag"
+refresh = "shock"
+unknown = "vanilla"
+trigger = "any_insurrection_ongoing = no"
+
+[facts.bureaucracy_positive]
+domain = "administrative"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "number"
+unit = "points"
+refresh = "monthly"
+unknown = "vanilla"
+trigger = "bureaucracy > 0"
+
+[facts.literacy_low]
+domain = "education"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "ratio"
+unit = "ratio"
+refresh = "monthly"
+unknown = "vanilla"
+trigger = "literacy_rate < 0.5"
+
+[facts.subject]
+domain = "subjects"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "boolean"
+unit = "flag"
+refresh = "monthly"
+unknown = "vanilla"
+trigger = "is_subject = yes"

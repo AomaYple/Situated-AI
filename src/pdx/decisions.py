@@ -41,6 +41,9 @@ from .localization_languages import (
 )
 from .model import Block
 from .parser import parse_text
+from .situated import compiler as situated_compiler
+from .situated.compiler import load_model as load_situated_model
+from .situated.compiler import strategy_overlay as compile_situated_overlay
 from .textio import normalized_text
 from .vanilla_index import (
     KEY_DIRS,
@@ -924,7 +927,14 @@ sitai_fiscal_update = { effect = { sitai_update_fiscal = yes } }
 """
 
 
-def patch_default(text: str, policy: Policy, extensions: Extensions | None = None) -> str:
+def patch_default(
+    text: str,
+    policy: Policy,
+    extensions: Extensions | None = None,
+    *,
+    action_overlay: Mapping[str, str] | None = None,
+    suppress_fields: frozenset[str] = frozenset(),
+) -> str:
     """利用词法器定位闭括号，避免注释/字符串内的括号破坏补丁位置。"""
     text = normalized_text(text)
     if hashlib.sha256(text.encode()).hexdigest() != policy.baseline_sha256:
@@ -947,9 +957,9 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
             ("diplomatic_play_neutrality", policy.neutrality),
             ("aggression", policy.aggression),
         )
-        if policy.enabled and amount != 0
+        if policy.enabled and amount != 0 and field not in suppress_fields
     }
-    if extensions and extensions.reform_enabled:
+    if extensions and extensions.reform_enabled and "change_law_chance" not in suppress_fields:
         additions["change_law_chance"] = (
             "\t\tif = { limit = { ROOT ?= { is_ai = yes } } add = sitai_reform_default_delta }\n"
         )
@@ -957,14 +967,23 @@ def patch_default(text: str, policy: Policy, extensions: Extensions | None = Non
         support = diplomatic_play_support_addition(extensions)
         if support:
             additions["diplomatic_play_support"] = support
-    if extensions and extensions.economy_enabled:
+    if (
+        extensions
+        and extensions.economy_enabled
+        and "economic_vs_government_spending_balance" not in suppress_fields
+    ):
         additions["economic_vs_government_spending_balance"] = decision_economy.strategy_addition(
             replace(decision_economy.load(), enabled=True)
         )
-    if extensions and extensions.diplomacy_enabled:
+    if extensions and extensions.diplomacy_enabled and "recklessness" not in suppress_fields:
         additions["recklessness"] = decision_diplomacy.strategy_addition(
             replace(decision_diplomacy.load(), enabled=True)
         )
+    if action_overlay:
+        for field, overlay in sorted(action_overlay.items()):
+            if not overlay:
+                continue
+            additions[field] = additions.get(field, "") + overlay
     if not additions:
         return text
     fields: list[tuple[int, str]] = []
@@ -1016,6 +1035,16 @@ def source_fingerprint(
         "baseline_sha256": hashlib.sha256(normalized_text(baseline).encode()).hexdigest(),
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     }
+    situated_model = load_situated_model(baseline=baseline)
+    result.update(
+        {
+            f"situated_{name}_source_sha256": digest
+            for name, digest in situated_model.source_sha256.items()
+        },
+        situated_compiler_sha256=hashlib.sha256(
+            Path(situated_compiler.__file__).read_bytes()
+        ).hexdigest(),
+    )
     if extensions.security_enabled:
         result["security_generator_sha256"] = hashlib.sha256(
             Path(decision_security.__file__).read_bytes()
@@ -1190,36 +1219,89 @@ def build(
     policy = policy or load()
     baseline = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
     extensions = extensions or load_extensions()
+    situated_model = load_situated_model(baseline=baseline)
+    situated_compiled_contract: dict[str, object] | None = None
+    # 将全域信息规则和消费者适配器先经过统一的处境编译器，再进入既有
+    # patch/build 路径。这样目标、关系、未知回退和一次写入合同不会只停留
+    # 在参考 API，而会真正影响生产生成；底层原版资格、成本和执行尾部仍由
+    # 原有 patcher 保留。
+    if information_rules is not None and consumer_adapters is not None:
+        compiled_sources, situated_compiled_contract = situated_compiler.compile_sources(
+            information_rules,
+            consumer_adapters,
+            config_model=situated_model,
+        )
+        compiled_by_source = dict(compiled_sources)
+        information_rules = compiled_by_source["mod/decisions/information.toml"]
+        consumer_adapters = replace(
+            consumer_adapters,
+            policies=tuple(
+                (source, compiled_by_source.get(source, policy))
+                for source, policy in consumer_adapters.policies
+            ),
+        )
+    enabled_action_fields = {"diplomatic_play_neutrality"} if policy.enabled else set()
+    if extensions.reform_enabled:
+        enabled_action_fields.add("change_law_chance")
+    if extensions.economy_enabled:
+        enabled_action_fields.add("economic_vs_government_spending_balance")
+    if extensions.diplomacy_enabled:
+        enabled_action_fields.add("recklessness")
+    action_overlay = {
+        field: value
+        for field, value in compile_situated_overlay(situated_model).items()
+        if field in enabled_action_fields
+    }
     # 每个输出只允许一个处境规则作者。旧模块不能在适配规则后继续叠加，
     # 否则同一财政/宗属事实可能被重复计分；历史变体保持原实现。
     field_owners: dict[tuple[str, ...], str] = {}
-    if policy.enabled:
+    situated_fields = frozenset(action_overlay)
+    if policy.enabled and "diplomatic_play_neutrality" not in situated_fields:
         field_owners.update(
             {
                 ("diplomatic_play_neutrality",): "fiscal",
-                ("aggression",): "fiscal",
             }
         )
+    if policy.enabled and "aggression" not in situated_fields:
+        field_owners[("aggression",)] = "fiscal"
     for enabled, owner, fields in (
-        (extensions.reform_enabled, "reform", ("change_law_chance",)),
+        (
+            extensions.reform_enabled,
+            "reform",
+            tuple(field for field in ("change_law_chance",) if field not in situated_fields),
+        ),
         (
             extensions.market_enabled or extensions.security_enabled,
             "support_composer",
-            ("diplomatic_play_support",),
+            tuple(field for field in ("diplomatic_play_support",) if field not in situated_fields),
         ),
-        (extensions.economy_enabled, "economy", ("economic_vs_government_spending_balance",)),
-        (extensions.diplomacy_enabled, "diplomacy", ("recklessness",)),
+        (
+            extensions.economy_enabled,
+            "economy",
+            tuple(
+                field
+                for field in ("economic_vs_government_spending_balance",)
+                if field not in situated_fields
+            ),
+        ),
+        (
+            extensions.diplomacy_enabled,
+            "diplomacy",
+            tuple(field for field in ("recklessness",) if field not in situated_fields),
+        ),
     ):
         if enabled:
             field_owners.update({(field,): owner for field in fields})
+    for field_name in sorted(situated_fields):
+        field_owners[(field_name,)] = "situated_kernel"
     if information_rules is not None:
-        for field in information_rules.groups():
+        for field_path in information_rules.groups():
             if any(
-                field[: len(existing)] == existing or existing[: len(field)] == field
+                field_path[: len(existing)] == existing or existing[: len(field_path)] == field_path
                 for existing in field_owners
             ):
-                raise ValueError(f"旧模块与全域规则重复写入字段：{'.'.join(field)}")
-            field_owners[field] = "information_rules"
+                raise ValueError(f"旧模块与全域规则重复写入字段：{'.'.join(field_path)}")
+            field_owners[field_path] = "information_rules"
     if consumer_adapters is not None:
         for name, field, owner in decision_adapters.writes(consumer_adapters):
             if name != "common/ai_strategies/00_default_strategy.txt":
@@ -1247,7 +1329,13 @@ def build(
         else None
     )
     files = {
-        "common/ai_strategies/00_default_strategy.txt": patch_default(baseline, policy, extensions),
+        "common/ai_strategies/00_default_strategy.txt": patch_default(
+            baseline,
+            policy,
+            extensions,
+            action_overlay=action_overlay,
+            suppress_fields=frozenset(action_overlay),
+        ),
     }
     adapter_inputs = (
         decision_adapters.read_inputs(consumer_adapters) if consumer_adapters is not None else None
@@ -1332,6 +1420,15 @@ def build(
         complete_localization=complete_localization,
         country_policy=country_policy,
     )
+    metadata["situated_actions"] = {
+        **situated_model.contract(),
+        "enabled": bool(action_overlay),
+        "evidence": "static_check",
+    }
+    if situated_compiled_contract is not None:
+        situated_metadata = metadata["situated_actions"]
+        assert isinstance(situated_metadata, dict)
+        situated_metadata["compiled_sources"] = situated_compiled_contract
     if country_policy is not None:
         attach_country_metadata(metadata, country_policy)
     if information_rules is not None or consumer_adapters is not None:

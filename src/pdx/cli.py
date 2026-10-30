@@ -76,6 +76,7 @@ from pdx import (
     lockfile,
     observe,
     political_surface,
+    situated,
     snapshot,
     tables_offline,
     tabular,
@@ -120,6 +121,12 @@ app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
 )
+
+situated_app = typer.Typer(
+    help="处境行动内核的静态审计、报告和解释。",
+    no_args_is_help=True,
+)
+app.add_typer(situated_app, name="situated")
 
 
 # ── 公共辅助 ────────────────────────────────────────────────
@@ -2768,6 +2775,67 @@ def decision_audit_cmd(
         f"{report['information_rule_count'] + report['consumer_rule_count']} 条规则"
     )
     console.print("证据：静态生成合同；行为、平衡和长期性能仍由用户实机验收。")
+
+
+@situated_app.command("audit")
+def situated_audit_cmd() -> None:
+    """检查处境行动内核的源、关系、预算和生产接线合同。"""
+    try:
+        problems = situated.audit.check()
+    except (OSError, ValueError) as exc:
+        _fail(f"处境行动内核审计失败：{exc}", EXIT_FAILED)
+    if problems:
+        _fail("处境行动内核审计失败：\n" + "\n".join(problems), EXIT_FAILED)
+    model = situated.load_model()
+    console.print(
+        f"[green]处境行动内核审计通过[/]：{len(model.facts)} 个事实、"
+        f"{len(model.actions)} 张行动卡、{len(model.production_consumers)} 个生产消费者。"
+    )
+    console.print("证据：静态生成合同；不证明长期游戏行为质量。")
+
+
+@situated_app.command("report")
+def situated_report_cmd(
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="报告 JSON 输出路径；默认写入 tools/out/ci/"),
+    ] = None,
+) -> None:
+    """输出处境行动内核的可追溯合同报告。"""
+    target = output or (config.OUT / "ci" / "situated-report.json")
+    try:
+        payload = situated.load_model().contract()
+    except (OSError, ValueError) as exc:
+        _fail(f"处境行动报告失败：{exc}", EXIT_FAILED)
+    _write_json(target, payload)
+    console.print(f"[green]处境行动报告已写入[/]：{_relative(target)}")
+    console.print("证据：静态生成合同；不证明长期游戏行为质量。")
+
+
+@situated_app.command("explain")
+def situated_explain_cmd() -> None:
+    """列出行动卡、消费者和未知回退，供静态审查使用。"""
+    try:
+        model = situated.load_model()
+    except (OSError, ValueError) as exc:
+        _fail(f"处境行动解释失败：{exc}", EXIT_FAILED)
+    table = Table(title="处境行动卡（生成期合同）", show_lines=False)
+    table.add_column("行动")
+    table.add_column("领域")
+    table.add_column("消费者")
+    table.add_column("最大增量", justify="right")
+    table.add_column("解释", overflow="fold")
+    for action in model.actions:
+        consumer = next(item for item in model.consumers if item.id == action.consumer)
+        table.add_row(
+            action.id,
+            action.domain,
+            consumer.field,
+            f"{action.max_delta:g}",
+            action.explanation,
+        )
+    console.print(table)
+    console.print("未知、玩家和不可用路径回退原版；证据类别：simulation/static_check。")
 
 
 @app.command("unverified")

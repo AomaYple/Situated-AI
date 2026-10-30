@@ -964,8 +964,12 @@ ai_strategy_default = {
 		}
 		# SITAI BEGIN diplomatic_play_neutrality
 		if = {
-			limit = { ROOT ?= { is_ai = yes sitai_fiscal_external_risk = yes } }
-			add = 25
+			limit = { ROOT ?= {  AND = { is_ai = yes in_default = yes } } }
+			add = 8
+		}
+		else_if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes } } }
+			add = 6
 		}
 		# SITAI END diplomatic_play_neutrality
 	}
@@ -1288,7 +1292,10 @@ ai_strategy_default = {
 	change_law_chance = {
 		value = 1
 		# SITAI BEGIN change_law_chance
-		if = { limit = { ROOT ?= { is_ai = yes } } add = sitai_reform_default_delta }
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } } } }
+			add = 1
+		}
 		# SITAI END change_law_chance
 	}
 
@@ -4041,10 +4048,14 @@ ai_strategy_default = {
 			}
 		}
 		# SITAI BEGIN recklessness
-		# SITAI DIPLOMACY BEGIN
-		if = { limit = { ROOT ?= { is_ai = yes } sitai_diplomatic_war_burden = yes } add = -0.5 }
-		if = { limit = { ROOT ?= { is_ai = yes } sitai_diplomatic_capacity = yes } add = 0.15 }
-		# SITAI DIPLOMACY END
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes } } }
+			add = -4
+		}
+		else_if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } } } }
+			add = 2
+		}
 		# SITAI END recklessness
 	}
 
@@ -5610,10 +5621,14 @@ ai_strategy_default = {
 			add = 0.2
 		}
 		# SITAI BEGIN economic_vs_government_spending_balance
-		# SITAI ECONOMY BEGIN
-		if = { limit = { ROOT ?= { is_ai = yes } sitai_economy_constraint = yes } add = -0.25 }
-		if = { limit = { ROOT ?= { is_ai = yes } sitai_economy_capacity = yes } add = 0.1 }
-		# SITAI ECONOMY END
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } OR = { legitimacy >= 50 bureaucracy > 0 } } } }
+			add = 2
+		}
+		else_if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } } } }
+			add = 2
+		}
 		# SITAI END economic_vs_government_spending_balance
 	}
 

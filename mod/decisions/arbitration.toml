@@ -1,0 +1,5 @@
+schema = 1
+rank = ["crisis_protection", "bottleneck_relief", "capability_gain", "feasibility", "substitute_availability", "opportunity_value", "commitment_cost", "political_cost", "inertia"]
+max_candidates = 32
+max_delta_per_consumer = 10.0
+unknown_fallback = "vanilla"

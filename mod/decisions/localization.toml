@@ -1,0 +1,4 @@
+schema = 1
+languages = ["braz_por", "english", "french", "german", "japanese", "korean", "polish", "russian", "simp_chinese", "spanish", "turkish"]
+fallback = "none"
+placeholder_policy = "identical_key_sets"
