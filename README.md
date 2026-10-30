@@ -1,6 +1,6 @@
 # Situated AI
 
-当前生产交付基线为 `Situated AI 1.5.0`；处境行动内核 `2.0.0` 候选正在按当前计划收口。
+当前生产交付为 `Situated AI 2.0.0`；长期游戏行为、平衡和 Workshop 体验仍由用户在固定包上验收。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
