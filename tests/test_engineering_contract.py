@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from pdx import country_coordination, country_state, decision_report
+from pdx import country_coordination, country_state, decision_report, distribution
 from pdx.engineering import (
     ENGINEERING_BASELINE,
     SKIP_CATEGORIES,
@@ -82,7 +82,7 @@ def test_current_document_indexes_are_complete() -> None:
 
     assert "-m pdx.cli package" in tools
     assert "Situated AI 1.4.0" in tools
-    assert "1.5.0" in tools
+    assert f"Situated AI {distribution.RELEASE_VERSION}" in tools
     assert "K0–K13" in execution
     assert "[处境行动决策内核实施计划](mod重设计-实施计划.md)" in execution
     assert "历史收据" in execution
@@ -102,7 +102,7 @@ def test_current_document_indexes_are_complete() -> None:
         ), path
         assert f"[分层联动执行结果]({prefix}分层联动-执行结果.md)" in content, path
         assert "终极方案 4.0 实施计划" not in content, path
-        assert "1.5.0" in content or path == "docs/README.md", path
+        assert distribution.RELEASE_VERSION in content or path == "docs/README.md", path
 
 
 def test_layered_design_tracks_production_contract_and_boundaries() -> None:
