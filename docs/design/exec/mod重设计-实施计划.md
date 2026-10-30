@@ -2,7 +2,7 @@
 
 > **For agentic workers:** 执行本计划时按任务逐项推进，保持每个任务可独立审查、可独立验证；不得把计划勾选、文档更新或 Python 测试通过写成长期游戏行为已验证。
 >
-> 计划版本：27.2（2026-10-30）。这是仓库当前唯一的产品实施计划，替代上一轮已完成的 26.1；上一轮交付仍以 Git 历史、`1.5.0` 标签和执行结果页追溯。
+> 计划版本：27.3（2026-10-31）。这是仓库当前唯一的产品实施计划；K0–K11 的生成期合同已具备实现，但本轮复核发现 K8/K10 的统一 lowering、字段尾部和等价性仍需收口；K12–K13 负责本轮包、GitHub、部署和仓库终审。上一轮交付仍以 Git 历史、`1.5.0` 标签和执行结果页追溯。
 
 **Goal:** 在 Victoria 3 原版可合法观察和可接入的范围内，把 Situated AI 实现为一个以具体行动为中心的处境决策内核：每个国家根据自己的事实、压力、机会、既有承诺、政治可行性和时间冲击，持续选择相对更可执行的行动倾向，同时保留原版资格、成本、前置、随机、执行和失败机制。
 
@@ -10,12 +10,14 @@
 
 **Tech Stack:** Python 3.11+、仓库 `.venv`、现有 TOML 生产源、现有 PDX 生成器/解析器/校验器、pytest、Hypothesis（若已在开发依赖中；否则使用现有属性测试工具）、Victoria 3 `1.14.5` 底本。游戏运行期只加载生成的 PDX 脚本和本地化，不运行 Python 常驻进程。
 
+锁定本体当前提供 11 种语言；生产本地化合同必须逐语言覆盖，缺译文或键集合漂移时硬失败。
+
 **Spec:** [处境行动决策内核设计](../03-处境决策设计.md)。工程生成、包结构、证据和恢复合同见[工程基线](工程基线-1.0.md)；环境、检查和 Git 流程见根目录 [CONTRIBUTING.md](../../../CONTRIBUTING.md)。
 
 ## Global Constraints
 
 - 正确性第一、速度第二、内存第三；任何优化必须先证明语义、失败语义、覆盖和回退不变。
-- 目标版本为一次架构性大版本 `2.0.0`；只有生产源、生成物、静态合同、标准包和交付收据全部对应后才创建标签。
+- 目标版本为一次架构性大版本 `2.0.0`；只有生产源、生成物、静态合同、完整静态回归、标准包和交付收据全部对应后才创建标签。
 - 只使用原版已经存在或已核实的字段、作用域、消费者和本地化接口；未知字段、未知作用域、版本漂移和原版底本缺失必须硬失败。
 - 不替换整个 Victoria 3 AI，不接管前线微观战术，不强制原版没有的行动，不赠送资源，不改变玩家决策路径，不使用国家名称写死路线。
 - 只对原版消费者中的单项倾向做有界调整；原版资格、科技前置、政治支持、实际成本、随机、谈判、拒绝、执行、失败和终结零分仍由原版负责。
@@ -129,11 +131,12 @@ class EvidenceSpec:
     id: str
     source: str
     scope: str
-    kind: str              # number / boolean / enum / ratio
+    kind: str  # number / boolean / enum / ratio
     unit: str
-    refresh: str           # consumer / monthly / shock
-    unknown: str           # vanilla / conservative / lower_tier
+    refresh: str  # consumer / monthly / shock
+    unknown: str  # vanilla / conservative / lower_tier
     consumers: tuple[str, ...]
+
 
 @dataclass(frozen=True, slots=True)
 class EvidenceValue:
@@ -143,6 +146,7 @@ class EvidenceValue:
     stale: bool
     provenance: str
 
+
 @dataclass(frozen=True, slots=True)
 class StateVector:
     capacities: Mapping[str, float | None]
@@ -151,6 +155,7 @@ class StateVector:
     commitments: Mapping[str, float | None]
     shock: str | None
     route: str | None
+
 
 @dataclass(frozen=True, slots=True)
 class ActionCard:
@@ -166,6 +171,7 @@ class ActionCard:
     exit_when: tuple[str, ...]
     max_delta: float
     unknown_policy: str
+
 
 @dataclass(frozen=True, slots=True)
 class ArbitrationResult:

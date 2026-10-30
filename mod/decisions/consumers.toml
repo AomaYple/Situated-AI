@@ -1,0 +1,21 @@
+schema = 1
+
+[consumers.diplomatic_play_neutrality]
+field = "diplomatic_play_neutrality"
+scope = "ai_strategy_default"
+tail = "vanilla_qualification_cost_random_execution"
+
+[consumers.change_law_chance]
+field = "change_law_chance"
+scope = "ai_strategy_default"
+tail = "vanilla_law_eligibility_support_failure"
+
+[consumers.economic_vs_government_spending_balance]
+field = "economic_vs_government_spending_balance"
+scope = "ai_strategy_default"
+tail = "vanilla_budget_cost"
+
+[consumers.recklessness]
+field = "recklessness"
+scope = "ai_strategy_default"
+tail = "vanilla_diplomatic_execution"

@@ -1,0 +1,21 @@
+schema = 1
+
+[goals.survival]
+priority = 100
+horizon = "crisis"
+pressure = ["fiscal_default", "wartime"]
+
+[goals.recovery]
+priority = 80
+horizon = "short"
+pressure = ["fiscal_default", "political_instability"]
+
+[goals.capacity]
+priority = 60
+horizon = "medium"
+pressure = []
+
+[goals.structure]
+priority = 40
+horizon = "long"
+pressure = []

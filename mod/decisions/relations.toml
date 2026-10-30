@@ -1,0 +1,25 @@
+schema = 1
+
+[[relations]]
+source = "political_reform"
+target = "industrial_foundation"
+kind = "complements"
+strength = 1.0
+
+[[relations]]
+source = "industrial_foundation"
+target = "education_and_research"
+kind = "complements"
+strength = 1.0
+
+[[relations]]
+source = "fiscal_recovery"
+target = "wartime_defense"
+kind = "substitutes"
+strength = 1.0
+
+[[relations]]
+source = "diplomatic_restraint"
+target = "diplomatic_opening"
+kind = "substitutes"
+strength = 1.0

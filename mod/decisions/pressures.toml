@@ -1,0 +1,16 @@
+schema = 1
+
+[pressures.fiscal_default]
+domain = "fiscal"
+source_fact = "default"
+escape_actions = ["fiscal_recovery"]
+
+[pressures.wartime]
+domain = "military"
+source_fact = "war"
+escape_actions = ["wartime_defense"]
+
+[pressures.political_instability]
+domain = "political"
+source_fact = "insurrection"
+escape_actions = ["political_reform"]

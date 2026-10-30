@@ -1,0 +1,21 @@
+schema = 1
+
+[capacities.fiscal]
+unit = "normalized"
+direction = "higher_is_better"
+unknown = "vanilla"
+
+[capacities.administrative]
+unit = "normalized"
+direction = "higher_is_better"
+unknown = "vanilla"
+
+[capacities.political]
+unit = "normalized"
+direction = "higher_is_better"
+unknown = "vanilla"
+
+[capacities.security]
+unit = "normalized"
+direction = "higher_is_better"
+unknown = "vanilla"
