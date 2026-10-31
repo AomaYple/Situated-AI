@@ -1,16 +1,26 @@
 """处境行动内核的确定性、预算和回退合同。"""
 
 import json
+from dataclasses import replace
 
 import pytest
 
 from pdx import country_state, decision_adapters, decision_intents, decision_rules, decisions
 from pdx.parser import parse_text
+from pdx.situated import relations
 from pdx.situated.arbitration import Candidate, choose
+from pdx.situated.audit import report as audit_report
 from pdx.situated.commitment import marginal_cost, overcommitted
-from pdx.situated.compiler import compile_policy, load_model, strategy_overlay
+from pdx.situated.compiler import (
+    _relation_conditions,
+    compile_policy,
+    load_model,
+    strategy_overlay,
+)
 from pdx.situated.goals import Goal, prioritize
 from pdx.situated.pressure import severity
+from pdx.situated.schema import EvidenceValue
+from pdx.situated.state import derive
 
 pytestmark = pytest.mark.unit
 
@@ -28,7 +38,11 @@ def test_行动降低为有限原版消费者条件块():
     model = load_model()
     overlay = strategy_overlay(model)
     assert set(overlay) == {item.field for item in model.consumers}
-    assert all(text.count("add =") <= 3 for text in overlay.values())
+    for consumer in model.consumers:
+        text = overlay[consumer.field]
+        # 顶层候选受 consumer budget 限制；互补效果是候选内部的有界条件增量。
+        assert text.count("# ACTION") <= consumer.budget
+        assert text.count("add =") <= consumer.budget + 2
     assert all("is_ai = yes" in text for text in overlay.values())
     patched = decisions.patch_default(
         decisions.BASELINE.read_text(encoding="utf-8"),
@@ -38,6 +52,30 @@ def test_行动降低为有限原版消费者条件块():
     )
     assert not parse_text(patched).errors
     assert "set_strategy" not in patched
+
+
+def test_互补关系是软增量而不是全满足硬门槛():
+    overlay = strategy_overlay(load_model())
+    economy = overlay["economic_vs_government_spending_balance"]
+    # 教育与产业互补只能改变有界增量；不能把对方完整条件复制进
+    # 当前行动的 limit，避免重新形成全满足门槛。
+    assert economy.count("# ACTION") == 2
+    assert "industrial_foundation" in economy
+    assert "education_and_research" in economy
+    for block in economy.split("# ACTION ")[1:]:
+        top_level = block.split("\n\t\t\tadd =", 1)[0]
+        assert top_level.count("is_at_war = no") == 1
+
+
+def test_关系条件支持真假未知三值传播():
+    relation = next(
+        item
+        for item in load_model().relations
+        if item.source == "industrial_foundation" and item.target == "education_and_research"
+    )
+    assert _relation_conditions(relation, {"peace": True}) is True
+    assert _relation_conditions(relation, {"peace": False}) is False
+    assert _relation_conditions(relation, {}) is None
 
 
 def test_仲裁按固定排序限幅并保留证据():
@@ -60,6 +98,55 @@ def test_仲裁空候选回退原版():
     assert result.fallback == "vanilla"
 
 
+def test_仲裁同分使用升序稳定行动ID且拒绝非有限输入():
+    result = choose(
+        (Candidate("zeta", capability_gain=1), Candidate("alpha", capability_gain=1)),
+        max_delta=5,
+    )
+    assert result.action_id == "alpha"
+    with pytest.raises(ValueError, match="非有限"):
+        choose((Candidate("bad", capability_gain=float("nan")),), max_delta=5)
+
+
+def test_关系对称配对且仅使能关系禁止有向环():
+    model = load_model()
+    relation = next(
+        item
+        for item in model.relations
+        if item.source == "industrial_foundation" and item.target == "education_and_research"
+    )
+    assert relation.condition_facts == ("peace",)
+    assert relation.unknown_policy == "vanilla"
+    assert all(
+        (item.target, item.source, item.kind)
+        in {(row.source, row.target, row.kind) for row in model.relations}
+        for item in model.relations
+        if item.kind in {"complements", "substitutes", "conflicts"}
+    )
+    first, second = model.actions[:2]
+    cyclic = (
+        replace(first, enables=(second.id,)),
+        replace(second, enables=(first.id,)),
+        *model.actions[2:],
+    )
+    with pytest.raises(ValueError, match="循环"):
+        relations.validate(cyclic)
+
+
+def test_成本在非同分场景降低强度而不是只影响排序():
+    cheap = choose(
+        (Candidate("cheap", capability_gain=4, feasibility=8, commitment_cost=0),),
+        max_delta=20,
+    )
+    expensive = choose(
+        (Candidate("expensive", capability_gain=4, feasibility=8, commitment_cost=6),),
+        max_delta=20,
+    )
+    assert expensive.action_id == "expensive"
+    assert expensive.delta < cheap.delta
+    assert "commitment_cost" in expensive.reason_codes
+
+
 def test_生产元数据登记行动合同():
     payload = json.loads(
         decisions.build(extensions=decisions.load_extensions(profile="release"))[
@@ -70,6 +157,20 @@ def test_生产元数据登记行动合同():
     assert contract["schema"] == 1
     assert contract["candidate_limit"] == 7
     assert payload["source_fingerprint"]["situated_actions_source_sha256"]
+    assert payload["situated_actions"]["action_instances"]["count"] == 1401 + 7
+    assert payload["situated_actions"]["ir"]["count"] == 1401
+    ast = payload["situated_actions"]["ast_lowering_witness"]
+    assert ast["mismatches"] == []
+    assert ast["parsed_count"] == ast["witness_count"]
+    assert ast["write_count"] == ast["witness_count"]
+
+
+def test_覆盖报告只在逐实例生产见证齐全时完成():
+    report = audit_report()
+    assert report.status == "complete"
+    assert not report.blocked
+    assert not report.pending
+    assert all(row.status == "implemented" for row in report.rows)
 
 
 def test_统一编译器覆盖信息与适配器的全部生产消费者():
@@ -127,3 +228,18 @@ def test_状态辅助函数保留未知并提供确定性排序():
     assert severity({"default": None}, "default") is None
     goals = (Goal("capacity", 60, "medium", True), Goal("survival", 100, "crisis", True))
     assert [item.id for item in prioritize(goals)] == ["survival", "capacity"]
+
+
+def test_状态派生拒绝非有限数并保留未知维度():
+    vector = derive(
+        {
+            "bureaucracy_positive": EvidenceValue("bureaucracy_positive", 2, True),
+            "default": EvidenceValue("default", float("nan"), True),
+            "war": EvidenceValue("war", None, False),
+            "subject": EvidenceValue("subject", True, True),
+        }
+    )
+    assert dict(vector.capacities)["bureaucracy_positive"] == 2.0
+    assert dict(vector.pressures)["default"] is None
+    assert dict(vector.pressures)["war"] is None
+    assert dict(vector.opportunities)["subject"] is None

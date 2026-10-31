@@ -134,6 +134,34 @@ def evaluate(policy: CountryPolicy, facts, *, is_ai=True):
     return result
 
 
+def evaluate_typed(policy: CountryPolicy, facts, *, is_ai=True):
+    """返回与协调结果同一输入上的 K2 类型化状态快照。
+
+    这是参考器到统一状态合同的桥接，不改变既有 ``evaluate`` 的布尔
+    兼容接口。未知事实保持 ``EvidenceValue.known=False``，不会被补成
+    健康或危机；玩家/禁用路径返回全未知并由消费者回退原版。
+    """
+
+    from .situated.schema import EvidenceValue  # noqa: PLC0415
+    from .situated.state import derive_typed  # noqa: PLC0415
+
+    if not isinstance(facts, Mapping) or type(is_ai) is not bool:
+        raise ValueError("协调事实和 is_ai 参数无效")
+    if not policy.enabled or not is_ai:
+        return derive_typed({})
+    values = {
+        key: EvidenceValue(
+            spec_id=key,
+            value=value,
+            known=value is not None,
+            provenance="country_coordination",
+        )
+        for key, value in facts.items()
+        if key in policy.readers
+    }
+    return derive_typed(values)
+
+
 def triggers(policy: CountryPolicy):
     from .country_state import _predicate_text  # noqa: PLC0415
 
@@ -259,4 +287,9 @@ def contract(policy: CountryPolicy):
         "stacking": "first_matching_rule_per_field",
         "evidence": "static_check",
         "behavior_verified": False,
+        "typed_state": {
+            "producer": "pdx.situated.state.derive_typed",
+            "unknown": "preserve_and_fallback_vanilla",
+            "signals": "capacity_need_opportunity_commitment",
+        },
     }

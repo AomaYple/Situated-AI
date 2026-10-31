@@ -41,7 +41,10 @@ from .localization_languages import (
 )
 from .model import Block
 from .parser import parse_text
+from .situated import action_instances as situated_action_instances
 from .situated import compiler as situated_compiler
+from .situated import lowering as situated_lowering
+from .situated import pdx_eval as situated_pdx_eval
 from .situated.compiler import load_model as load_situated_model
 from .situated.compiler import strategy_overlay as compile_situated_overlay
 from .textio import normalized_text
@@ -1420,11 +1423,68 @@ def build(
         complete_localization=complete_localization,
         country_policy=country_policy,
     )
-    metadata["situated_actions"] = {
-        **situated_model.contract(),
-        "enabled": bool(action_overlay),
+    action_contract = situated_model.contract()
+    action_contract["enabled"] = bool(action_overlay)
+    action_contract["evidence"] = "static_check"
+    action_contract["action_instance_witnesses"] = {
+        "missing": list(
+            situated_action_instances.missing_witnesses(situated_model.action_instances, files)
+        ),
+        "witness_count": len(situated_action_instances.witness_ids(files)),
+        "required_rule_instances": sum(
+            item.kind == "rule_action" for item in situated_model.action_instances
+        ),
+    }
+    action_contract["action_instance_witness_contract"] = (
+        situated_action_instances.witness_contract(situated_model.action_instances, files)
+    )
+    generated_texts = {
+        name: text
+        for name, text in files.items()
+        if name.endswith(".txt") and isinstance(text, str)
+    }
+    action_contract["ir_lowering_witness"] = {
+        "missing": list(situated_lowering.missing(situated_model.action_ir, generated_texts)),
+        "mismatches": list(situated_lowering.mismatches(situated_model.action_ir, generated_texts)),
+        "witness_count": len(situated_lowering.witnesses(generated_texts)),
+        "required_count": len(situated_model.action_ir),
         "evidence": "static_check",
     }
+    ast_witnesses = situated_lowering.ast_witnesses(generated_texts)
+    action_contract["ast_lowering_witness"] = {
+        "mismatches": list(situated_lowering.ast_mismatches(generated_texts)),
+        "witness_count": len(ast_witnesses),
+        "parsed_count": sum(item.parsed for item in ast_witnesses),
+        "limit_count": sum(item.has_limit for item in ast_witnesses),
+        "write_count": sum(item.has_write for item in ast_witnesses),
+        "evidence": "independent_pdx_ast_structure",
+    }
+    semantic_facts = {
+        "is_ai": True,
+        "is_at_war": False,
+        "in_default": False,
+        "any_insurrection_ongoing": False,
+        "legitimacy": 60,
+        "bureaucracy": 1,
+        "literacy_rate": 0.3,
+        "is_subject": True,
+    }
+    action_contract["independent_pdx_semantics"] = {
+        "consumer_count": len(action_overlay),
+        "witnesses": {
+            field: {
+                "action_id": result.action_id,
+                "operation": result.operation,
+                "delta": result.delta,
+                "fallback": result.fallback,
+            }
+            for field, overlay in sorted(action_overlay.items())
+            for result in (situated_pdx_eval.select(overlay, semantic_facts),)
+        },
+        "evidence": "static_semantic_witness",
+        "behavior_quality": "not_evaluated",
+    }
+    metadata["situated_actions"] = action_contract
     if situated_compiled_contract is not None:
         situated_metadata = metadata["situated_actions"]
         assert isinstance(situated_metadata, dict)
@@ -1529,6 +1589,42 @@ def build(
             strategic_source_sha256=strategy.source_sha256,
             strategic_generator_sha256=strategic_contract["generator_sha256"],
         )
+    # 所有生产消费者适配器在此之前已经写入 files；见证必须基于最终候选，
+    # 不能只检查信息规则和行动 overlay 的中间状态。
+    generated_texts = {
+        name: text
+        for name, text in files.items()
+        if name.endswith(".txt") and isinstance(text, str)
+    }
+    action_contract["action_instance_witnesses"] = {
+        "missing": list(
+            situated_action_instances.missing_witnesses(situated_model.action_instances, files)
+        ),
+        "witness_count": len(situated_action_instances.witness_ids(files)),
+        "required_rule_instances": sum(
+            item.kind == "rule_action" for item in situated_model.action_instances
+        ),
+    }
+    action_contract["action_instance_witness_contract"] = (
+        situated_action_instances.witness_contract(situated_model.action_instances, files)
+    )
+    action_contract["ir_lowering_witness"] = {
+        "missing": list(situated_lowering.missing(situated_model.action_ir, generated_texts)),
+        "mismatches": list(situated_lowering.mismatches(situated_model.action_ir, generated_texts)),
+        "witness_count": len(situated_lowering.witnesses(generated_texts)),
+        "required_count": len(situated_model.action_ir),
+        "evidence": "static_check",
+    }
+    ast_witnesses = situated_lowering.ast_witnesses(generated_texts)
+    action_contract["ast_lowering_witness"] = {
+        "mismatches": list(situated_lowering.ast_mismatches(generated_texts)),
+        "witness_count": len(ast_witnesses),
+        "parsed_count": sum(item.parsed for item in ast_witnesses),
+        "limit_count": sum(item.has_limit for item in ast_witnesses),
+        "write_count": sum(item.has_write for item in ast_witnesses),
+        "evidence": "independent_pdx_ast_structure",
+    }
+    metadata["situated_actions"] = action_contract
     files[".metadata/metadata.json"] = (
         json.dumps(
             metadata,

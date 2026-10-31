@@ -66,12 +66,14 @@ class ActionCard:
     complements: tuple[str, ...]
     substitutes: tuple[str, ...]
     conflicts: tuple[str, ...]
+    enables: tuple[str, ...]
     exit_when: tuple[str, ...]
     base: float
     stress: float
     opportunity: float
     commitment: float
     max_delta: float
+    political_cost: float
     unknown_policy: UnknownPolicy
     explanation: str
 
@@ -82,6 +84,9 @@ class Relation:
     target: str
     kind: RelationKind
     strength: float
+    scope: str = "root"
+    condition_facts: tuple[str, ...] = ()
+    unknown_policy: UnknownPolicy = "vanilla"
 
 
 @dataclass(frozen=True, slots=True)

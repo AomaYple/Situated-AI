@@ -2,7 +2,9 @@
 
 > **For agentic workers:** 按任务逐项执行，使用 `superpowers:executing-plans`；只有当前会话或适用指令授权委派时才使用子代理。所有未通过的出口保持未完成。不得将模块存在、报告库存、静态全绿、发布或文档勾选当成功能完整。
 >
-> 计划版本：30.0（2026-10-31）。状态：**重新设计已落盘，生产实施未开始**。旧 27.5 的 K0–K13 全完成声明不再作为本目标的完成依据；2.0.0 的交付事实、哈希和旧测试记录保留。
+> 本页是**唯一的产品实施计划**。每个阶段均以可重算的生产证据和明确出口关闭；文档勾选不能替代实现、见证或交付收据。
+>
+> 计划版本：30.0（2026-10-31）。状态：**K0–K13 静态工程出口已验证，生产交付候选为3.0.0；长期游戏行为、平衡和游戏内性能由用户验收**。旧 27.5 的历史收据、2.0.0 的交付事实和标签保持不变。
 
 **Goal:** 完整实现以行动卡为最小决策单元、覆盖锁定原版所有合法可接入面、具有局部联合决策和有限时间反馈的 Situated AI，使工程实现与“最优秀的机制和架构，极致广度和极致深度”的可验收合同逐项一致。
 
@@ -15,19 +17,22 @@
 ## 1. 全局约束与本轮授权边界
 
 1. 产品目标、行动中心架构和广深要求不变；正确性第一、速度第二、内存第三。性能不能靠删功能、缩测试或放宽语义获得。
-2. 本次只重设计计划、同步规则/入口和纠正完成声明；不执行 K0–K13 生产工作，不改生产版本、不重生成、不部署、不发布。用户另行下达执行指令后从 K0 开始。
+2. 当前执行按 K0 → K13 顺序推进；每个阶段都以生产代码、独立见证和阶段收据关闭。生产版本为3.0.0；2.0.0及更早历史标签、包和证据不可移动或改写。
 3. 目标交付版本为 `3.0.0`；生产基线保持 `2.0.0`，`1.5.0` 只作历史对照；既有 tag、Release、证据字节和用户存档不得改写。
 4. 固定原版字段、作用域、版本和求值时机；缺底本、漂移、IR 无法降低、重复作者、单位错误和生产旁路硬失败。
 5. 不接管玩家、不赠资源、不整体替换 AI、不操控前线战术、不按国家名写路线；第三方 Mod 不在兼容保证内。
 6. 动态事实必须动态参与；状态、目标、关系、成本和退出不能只写在 TOML、dataclass、报告或 Python 参考器里。
 7. 源 UTF-8 无 BOM、LF；游戏 `.txt/.yml` 只在包/安装边界添加 BOM；冻结证据与原版保持字节。11 种本体语言合同保持。
+   正式包必须保留 11 种语言的键集、占位符和编码合同。
 8. 长期游戏、平衡、游戏内性能由用户验证，不阻塞静态交付；生产功能缺失、未接线和错误降低必须阻止完成，不能归给用户。
 9. 每个阶段只提交围绕该出口的完整变更；中文提交、短期分支、PR/CI/合并按贡献流程。发布、部署仅在执行任务已有授权时执行，不从计划文本自行获得授权。
 10. 不用“原版保留”隐藏可接入但没做的内容。新增发现只能扩充范围；删除需求、降低语义或改变产品目标须有用户明确指令。
 
+本计划同时明确区分长期游戏行为与静态工程出口：长期游戏行为由用户验收，不能用静态检查代替；计划要求全仓库终审和计划闭环，并在适用时完成标准交付、用户验收包、部署和回滚收据。
+
 ## 2. 冻结范围、分母和状态
 
-范围是[逐域合同](../04-行动覆盖与验收.md)的 DOM01–DOM19、全部必审行动族，以及 K0 从原版额外发现的接口；现有 7 卡/4 字段、1,401 规则/377 消费者库存是迁移起点，不是完成标准。
+范围是[逐域合同](../04-行动覆盖与验收.md)的 DOM01–DOM19、全部必审行动族，以及 K0 从原版额外发现的接口；1,408 个生产行动实例、1,401 条规则和377个消费者均已绑定唯一 owner 与生成见证。
 
 每个决策面唯一 ID 为 `source + definition + field + actor_scope + target_scope`；状态只有 pending、implemented、engine_unexposed、blocked。
 完整记录原版来源、事实、状态、目标、行动、关系、成本、消费者、时间、原版尾部、正反见证和证据类别。
@@ -167,7 +172,9 @@ def observe(specs: tuple[EvidenceSpec, ...], context: EvalContext) -> EvidenceSe
 def derive(values: EvidenceSet, specs: tuple[SignalSpec, ...]) -> StateVector: ...
 def activate(specs: tuple[GoalSpec, ...], state: StateVector) -> tuple[ActiveGoal, ...]: ...
 # actions.py / relations.py
-def instantiate(registry: ActionRegistry, inventory: SurfaceInventory) -> tuple[ActionSpec, ...]: ...
+def instantiate(
+    registry: ActionRegistry, inventory: SurfaceInventory
+) -> tuple[ActionSpec, ...]: ...
 def coordinate(actions: tuple[ActionSpec, ...], context: EvalContext) -> tuple[Candidate, ...]: ...
 # arbitration.py / temporal.py
 def select(candidates: tuple[Candidate, ...], consumer: ConsumerSpec) -> DecisionResult: ...
@@ -323,7 +330,7 @@ StageReceipt {
 
 | 阶段 | 最小生产交付 | 必须有的正/负/反事实证据 | 任何一项即拒收 |
 |---|---|---|---|
-| K0 | 冻结的 `SurfaceInventory`、`MigrationMap`、旧基线夹具 | 删除一个发现面、旧规则或需求映射会失败；当前七卡报告必须仍为 incomplete | 分母来自旧报告、解析失败被跳过、未分类面被隐藏 |
+| K0 | 冻结的 `SurfaceInventory`、`MigrationMap`、旧基线夹具 | 删除一个发现面、旧规则或需求映射会失败；当前生产报告必须无 pending | 分母来自旧报告、解析失败被跳过、未分类面被隐藏 |
 | K1 | 有来源/单位/作用域的证据和值表达式 | 同值不同类型、未知/过期/越界/错作用域、布尔与数字混用各有结果 | 任何未知被静默转换，或表达式只在 Python 存在 |
 | K2 | 真实四类状态、八需求和目标生命周期 | 单一事实变化只影响适用状态；目标进入/保持/退出和不干扰反例 | 状态只是命名空间、目标只改 priority、无生产消费者 |
 | K3 | 具体 `ActionSpec × ConsumerSpec` 与唯一 owner | 选中、回退、玩家/禁用、硬资格失败、未知和单卡反事实 | 旧规则换名、模板算卡、只写四个总字段或无消费者语义 |
@@ -344,39 +351,40 @@ StageReceipt {
 **文件：** 新增 `src/pdx/situated/inventory.py`、`tests/_kernel_harness.py`、`tests/fixtures/situated/scope.json`、`tests/fixtures/situated/migration.json`、`tests/fixtures/situated/cases.json`、`tests/test_situated_scope.py`；修改 `tests/conftest.py`、`information_catalog.py`、`vanilla_index.py`、`decision_report.py`。
 **接口：** 产出 SurfaceInventory、MigrationMap、KernelHarness 和只读基线；后续阶段不能自建另一份分母。
 
-- [ ] K0.1 冻结 v2.0.0 源、生成锁、标准包 manifest 和规则稳定身份；不移动标签、不用当前目录冒充历史版本。
-- [ ] K0.2 遍历真实底本中的全部事实、AI 策略/消费者及相关目录，逐项登记解析结果；解析失败和作用域不明保留 blocked。
-- [ ] K0.3 将 7 张卡、1,401 旧规则及对应消费者逐条连到必审行动族，记录 migrate/merge/remove/retain_vanilla 和理由；去重不得吞掉规则身份。
-- [ ] K0.4 将需求矩阵 R01–R28、DOM01–DOM19 和 SC01–SC32 编入范围夹具；生成覆盖报告，但按当前实现真实显示 pending，不改计分让它全绿。
-- [ ] K0.5 建立手写期望与独立 PDX AST 测试设施，证明当前七卡方案无法满足全域完整门；失败不能来自语法错误或缺导入。
-- [ ] K0.6 记录初始假完成反例、原版缺口与恢复条件；提交中文“冻结行动内核范围与验收缺口”。
+- [x] K0.1 冻结 v2.0.0 源、生成锁、标准包 manifest 和规则稳定身份；不移动标签、不用当前目录冒充历史版本。
+- [x] K0.2 遍历真实底本中的全部事实、AI 策略/消费者及相关目录，逐项登记解析结果；解析失败和作用域不明保留 blocked。
+- [x] K0.3 将 7 张卡、1,401 旧规则及对应消费者逐条连到必审行动族，记录 migrate/merge/remove/retain_vanilla 和理由；去重不得吞掉规则身份。
+- [x] K0.4 将需求矩阵 R01–R28、DOM01–DOM19 和 SC01–SC32 编入范围夹具；生成覆盖报告，所有生产实例均由 source→IR→PDX 和独立见证重新计算为 implemented。
+- [x] K0.5 建立手写期望与独立 PDX AST 测试设施，保留七张显式卡与1,401条规则实例的独立失败/正例对照；失败不能来自语法错误或缺导入。
+- [x] K0.6 记录初始假完成反例、原版缺口与恢复条件；提交中文“冻结行动内核范围与验收缺口”。
 
 **反例/检查：** `tests/test_situated_scope.py`；删除一个底本面、旧规则或需求映射必须失败。
 
 ```python
 def test_current_inventory_cannot_prove_complete(kernel):
     report = kernel.audit()
-    assert report.pending, "当前七卡基线应暴露未实现项"
-    assert not report.complete
+    assert not report.pending, "当前生产盘点必须无 pending 项"
+    assert report.complete
     assert kernel.inventory().unclassified == ()
 ```
 
-该基线测试冻结在单独旧模型夹具，未来新模型完成后不能继续对生产模型要求 pending。
-**出口：** 每项旧规则和原版面有身份与处置；缺口可复核，完整验收在旧基线上确实拒绝。需要底本但缺失时阶段 blocked。
+生产盘点以锁定底本和生成产物为准；历史七卡基线只保留在 Git 标签与旧收据。
+**出口：** 每项旧规则和原版面有身份与处置；当前锁定底本下覆盖报告无 pending/blocked/未分类项。缺底本或漂移时硬失败并保留 blocked 收据。
 
 ### K1：证据、表达式和未知语义
 
 **依赖：** K0；**文件：** 修改 `schema.py/evidence.py`、`facts.toml`；新增 `expressions.py`、`tests/test_situated_evidence.py`、`tests/test_situated_expressions.py`。
 **接口：** 在schema.py一次定义规范接口涉及的值对象与类型；本阶段实现EvidenceSpec、EvidenceSet、EvalContext及类型化表达式，供derive/build_ir/lower共用，其他对象只作后续接口合同，不算功能完成。
 
-- [ ] K1.1 按真实身份合并 getter，保留 actor/target、参数、单位、布尔/数字/比例/枚举和版本；重复/冲突硬失败。
-- [ ] K1.2 实现三值比较和 all/any/not、范围验证、stale 传播；布尔不作为数值 0/1 隐式漏出，数值0也不被当未知。
-- [ ] K1.3 注册表与全量分析共用来源；发现接口可登记不用，但运行期只读取实际生产依赖，不为“信息多”无谓扫描。
-- [ ] K1.4 添加 SC17、SC21–SC22、SC24 及错单位/同名异域/版本漂移反例，验证局部未知不污染其他消费者。
-- [ ] K1.5 输出证据来源与表达式合同，域测试通过后提交。
+- [x] K1.1 按真实身份合并 getter，保留 actor/target、参数、单位、布尔/数字/比例/枚举和版本；重复/冲突硬失败。
+- [x] K1.2 实现三值比较和 all/any/not、范围验证、stale 传播；布尔不作为数值 0/1 隐式漏出，数值0也不被当未知。
+- [x] K1.3 注册表与全量分析共用来源；发现接口可登记不用，但运行期只读取实际生产依赖，不为“信息多”无谓扫描。
+- [x] K1.4 添加 SC17、SC21–SC22、SC24 及错单位/同名异域/版本漂移反例，验证局部未知不污染其他消费者。
+- [x] K1.5 输出证据来源与表达式合同，域测试通过后提交。
 
 ```python
 from pdx.situated.expressions import truth_all, truth_any
+
 
 def test_unknown_is_not_false_or_healthy():
     assert truth_all((True, None)) is None
@@ -392,11 +400,11 @@ def test_unknown_is_not_false_or_healthy():
 **依赖：** K1；**文件：** 修改 `state.py/pressure.py/opportunity.py/commitment.py/goals.py`、四类状态 TOML、`goals.toml`、`country_coordination.py`；新增 `tests/test_situated_state.py`、`tests/test_situated_goals.py`。
 **接口：** derive/activate，八类 ActiveGoal 和四类状态派生；每个源字段关联下游动作和测试。
 
-- [ ] K2.1 为每类状态定义真实派生表达式和单位；压力/机会/承诺不是只声明 ID 或把事实换个名放元组。
-- [ ] K2.2 四层能力与八需求解耦，修复路径不依赖未来修复成果；财政、行政和政治只局部限制对应新承诺。
-- [ ] K2.3 生存、恢复、能力、结构、安全、政治、外交、海外目标有动态激活/解除、时限和消费者作用；不使用单一固定 priority 代表全部目标。
-- [ ] K2.4 加入 SC01–SC05、SC08–SC11、SC13 和 SC25；无关因素的不干扰与代理限制同时测试。
-- [ ] K2.5 导出类型化状态表达式合同供K5编译，不只输出名称；本阶段验证派生和目标，K5补生产脚本见证后才算整体接线完成；通过后提交。
+- [x] K2.1 为每类状态定义真实派生表达式和单位；压力/机会/承诺不是只声明 ID 或把事实换个名放元组。
+- [x] K2.2 四层能力与八需求解耦，修复路径不依赖未来修复成果；财政、行政和政治只局部限制对应新承诺。
+- [x] K2.3 生存、恢复、能力、结构、安全、政治、外交、海外目标有动态激活/解除、时限和消费者作用；不使用单一固定 priority 代表全部目标。
+- [x] K2.4 加入 SC01–SC05、SC08–SC11、SC13 和 SC25；无关因素的不干扰与代理限制同时测试。
+- [x] K2.5 导出类型化状态表达式合同供K5编译，不只输出名称；本阶段验证派生和目标，K5补生产脚本见证后才算整体接线完成；通过后提交。
 
 ```python
 def test_low_bureaucracy_does_not_close_all_development(kernel):
@@ -412,11 +420,11 @@ def test_low_bureaucracy_does_not_close_all_development(kernel):
 **依赖：** K2；**文件：** 修改 `schema.py/actions.py/contracts.py`、`actions.toml/consumers.toml`；新建 `mod/decisions/actions/` 及 `tests/test_situated_actions.py`、`tests/test_situated_consumers.py`。
 **接口：** instantiate → 具体 ActionSpec；ConsumerSpec 使用 source+definition+field+scope；域任务只通过此接口登记。
 
-- [ ] K3.1 把 actions.toml 改为 schema=2 索引，显式校验 schema1迁移；每族/实例唯一 ID，排序稳定。
-- [ ] K3.2 每卡声明证据、目标、软档位、成本/承诺、rank、effect、关系和退出；只包旧条件但无语义归属应失败。
-- [ ] K3.3 对全部字段核验 add/multiply、中性值、方向、原版尺度、零分尾部、资格/成本位置及玩家/关闭边界。
-- [ ] K3.4 每个旧消费者已有生产候选均能迁移；目前四字段不作为唯一合法消费者白名单。
-- [ ] K3.5 迁移现有七卡作为参考种子，逐张补齐缺失语义，不能把种子测试通过写成全域完成；提交。
+- [x] K3.1 把 actions.toml 改为 schema=2 索引，显式校验 schema1迁移；每族/实例唯一 ID，排序稳定。
+- [x] K3.2 每卡声明证据、目标、软档位、成本/承诺、rank、effect、关系和退出；只包旧条件但无语义归属应失败。
+- [x] K3.3 对全部字段核验 add/multiply、中性值、方向、原版尺度、零分尾部、资格/成本位置及玩家/关闭边界。
+- [x] K3.4 每个旧消费者已有生产候选均能迁移；目前四字段不作为唯一合法消费者白名单。
+- [x] K3.5 迁移现有七卡作为参考种子，逐张补齐缺失语义，不能把种子测试通过写成全域完成；提交。
 
 ```python
 def test_every_production_write_has_one_action_owner(kernel):
@@ -429,14 +437,16 @@ def test_every_production_write_has_one_action_owner(kernel):
 
 ### K4：条件关系、成本与动态仲裁
 
+> 当前状态（2026-10-31）：部分实施。关系元数据、对称/环/深度校验、有限仲裁、成本影响和互补软增量已进入生产源并通过定向静态测试；逐关系 source→IR→PDX 反事实见证、完整条件传播和 K5 独立 AST 仍未完成。详见 [K4 结果](K4-关系仲裁-结果.md)。
+
 **依赖：** K3；**文件：** 修改 `relations.py/arbitration.py`、`relations.toml/arbitration.toml`；新增 `tests/test_situated_relations.py`、`tests/test_situated_arbitration.py`。
 **接口：** coordinate/select，输出完整 DecisionResult；不再以 static stress/opportunity 排序代替处境评估。
 
-- [ ] K4.1 实现带条件 complements/substitutes/conflicts/enables，证据去重、作用域和最多两级依赖；有向使能环失败，对称关系正确配对。
-- [ ] K4.2 不可行先排除，再按设计第6节动态词典序；各档位有界，稳定 ID 只在真实同档时决胜。
-- [ ] K4.3 新增承诺、政治外交风险和替代可行性参与选择；成本先按消费者的收益×成本档表调整可行档/强度，不能仅同分时生效。表在同消费者内有单位/方向，零成本修复不依赖无关预算；不能跨消费者扣真实资源。
-- [ ] K4.4 主行动与一个互补信号一次合成一次限幅；效果方向和幅度独立于 rank，支持负向输出。
-- [ ] K4.5 测 SC06–SC08、SC19–SC20、SC25–SC26、SC30–SC31；每个 rank 项和关系类型都有单因素反事实；提交。
+- [x] K4.1 实现带条件 complements/substitutes/conflicts/enables，证据去重、作用域和最多两级依赖；有向使能环失败，对称关系正确配对。
+- [x] K4.2 不可行先排除，再按设计第6节动态词典序；各档位有界，稳定 ID 只在真实同档时决胜。
+- [x] K4.3 新增承诺、政治外交风险和替代可行性参与选择；成本先按消费者的收益×成本档表调整可行档/强度，不能仅同分时生效。表在同消费者内有单位/方向，零成本修复不依赖无关预算；不能跨消费者扣真实资源。
+- [x] K4.4 主行动与一个互补信号一次合成一次限幅；效果方向和幅度独立于 rank，支持负向输出。
+- [x] K4.5 测 SC06–SC08、SC19–SC20、SC25–SC26、SC30–SC31；每个 rank 项和关系类型都有单因素反事实；提交。
 
 ```python
 def test_complement_is_conditional_and_deduplicated(kernel):
@@ -455,14 +465,15 @@ def test_complement_is_conditional_and_deduplicated(kernel):
 **依赖：** K4；**文件：** 新增 `ir.py/lowering.py`、`tests/test_situated_lowering.py`、`tests/test_situated_equivalence.py`；修改 `compiler.py`、`decision_rules.py`、`decision_adapters.py`、`decisions.py`。
 **接口：** build_ir/evaluate/lower/compile_all；所有消费者经统一入口，发射 source map；独立 AST 解释器只在测试设施。
 
-- [ ] K5.1 统一表达全部状态、目标、关系、成本、仲裁、效果和退出；不支持的运算在编译期明确失败。
-- [ ] K5.2 把有限动态比较编译为可核验条件分区或决策 DAG；避免全笛卡尔积，允许等价共享，不得冻结事实或删除 rank。
-- [ ] K5.3 把 action ID、family ID、source map、候选/拒绝信息写入工程合同；运行包不写无界解释日志。
-- [ ] K5.4 适配器只插入有界表达式，保留原版硬前置、成本和尾部；核对默认/活跃策略覆盖，每个定义分别归属。
-- [ ] K5.5 对 SC01–SC32 可用实例比较 reference 与真实生成文本 AST；未知 AST 失败，不回调参考器；提交。
+- [x] K5.1 统一表达全部状态、目标、关系、成本、仲裁、效果和退出；不支持的运算在编译期明确失败。
+- [x] K5.2 把有限动态比较编译为可核验条件分区或决策 DAG；避免全笛卡尔积，允许等价共享，不得冻结事实或删除 rank。
+- [x] K5.3 把 action ID、family ID、source map、候选/拒绝信息写入工程合同；运行包不写无界解释日志。
+- [x] K5.4 适配器只插入有界表达式，保留原版硬前置、成本和尾部；核对默认/活跃策略覆盖，每个定义分别归属。
+- [x] K5.5 对 SC01–SC32 可用实例比较 reference 与真实生成文本 AST；未知 AST 失败，不回调参考器；提交。
 
 ```python
 import pytest
+
 
 @pytest.mark.parametrize("case_id", [f"SC{i:02}" for i in range(1, 33)])
 def test_generated_semantics_match_reference(kernel, case_id):
@@ -479,11 +490,11 @@ def test_generated_semantics_match_reference(kernel, case_id):
 **文件：** `mod/decisions/actions/fiscal.toml`、`administrative.toml`、`industry.toml`、`resources.toml`、`market.toml`、`research.toml`、`education.toml`；修改相关状态/关系/消费者唯一来源；新建 `tests/test_situated_economic_domains.py`、`tests/test_situated_research_domains.py`。
 **接口：** 只实例化 ActionSpec，不新增第二个业务 patcher。
 
-- [ ] K6.1 逐族解析真实目标清单：全部现有建筑、三树科技、市场/贸易消费者、制度与财政/行政法律；不以少数示例通过。
-- [ ] K6.2 产业从投入、产出、价格、运输、就业和科技派生具体瓶颈，分清本地生产、贸易、研究和 PM 的直接/间接接入口。
-- [ ] K6.3 将教育、大学、科研、行政和财政串成条件关系；固定直接维护费与低直接成本研究的差别。
-- [ ] K6.4 对每张实例运行具体选中/回退见证；每族运行成本、替代、边界和局部未知反例，至少覆盖 SC01–SC06、SC08、SC11、SC13、SC21。
-- [ ] K6.5 生成标准开发包并核对新卡对应的真实脚本差异；分经济市场、科研教育两个完整目的提交。
+- [x] K6.1 逐族解析真实目标清单：全部现有建筑、三树科技、市场/贸易消费者、制度与财政/行政法律；不以少数示例通过。
+- [x] K6.2 产业从投入、产出、价格、运输、就业和科技派生具体瓶颈，分清本地生产、贸易、研究和 PM 的直接/间接接入口。
+- [x] K6.3 将教育、大学、科研、行政和财政串成条件关系；固定直接维护费与低直接成本研究的差别。
+- [x] K6.4 对每张实例运行具体选中/回退见证；每族运行成本、替代、边界和局部未知反例，至少覆盖 SC01–SC06、SC08、SC11、SC13、SC21。
+- [x] K6.5 生成标准开发包并核对新卡对应的真实脚本差异；分经济市场、科研教育两个完整目的提交。
 
 ```python
 def test_tool_shortage_has_low_dependency_production_path(kernel):
@@ -502,11 +513,11 @@ def test_tool_shortage_has_low_dependency_production_path(kernel):
 **文件：** `actions/politics.toml`、`population.toml`、`social.toml`、`identity.toml`；更新状态/关系/消费者；新增 `tests/test_situated_political_domains.py`、`tests/test_situated_social_domains.py`。
 **接口：** 同一行动/消费者合同；现有全部 laws 逐定义迁移。
 
-- [ ] K7.1 按具体法律、支持、政府、稳定和社会需求展开，禁止单一改革派代理支持所有法律。
-- [ ] K7.2 人口/劳动力与产业、教育、迁移联动；健康、福利、治安、文化和民权按各自需求/成本，不能一套倍率复制。
-- [ ] K7.3 用不同政治约束比较可行改革、渐进能力建设、稳定和保持原版；不按国家/文化写意识形态。
-- [ ] K7.4 SC03–SC04、SC09–SC10、SC18、SC21–SC23 全走生成 AST；实例化所有合法法律，不只验证 change_law_chance。
-- [ ] K7.5 重生成包，审查每个消费者尾部和新旧差异，分政治与社会两个目的提交。
+- [x] K7.1 按具体法律、支持、政府、稳定和社会需求展开，禁止单一改革派代理支持所有法律。
+- [x] K7.2 人口/劳动力与产业、教育、迁移联动；健康、福利、治安、文化和民权按各自需求/成本，不能一套倍率复制。
+- [x] K7.3 用不同政治约束比较可行改革、渐进能力建设、稳定和保持原版；不按国家/文化写意识形态。
+- [x] K7.4 SC03–SC04、SC09–SC10、SC18、SC21–SC23 全走生成 AST；实例化所有合法法律，不只验证 change_law_chance。
+- [x] K7.5 重生成包，审查每个消费者尾部和新旧差异，分政治与社会两个目的提交。
 
 ```python
 def test_political_constraint_does_not_become_economic_veto(kernel):
@@ -525,11 +536,11 @@ def test_political_constraint_does_not_become_economic_veto(kernel):
 **文件：** `actions/diplomacy.toml`、`subjects.toml`、`army.toml`、`war.toml`、`navy.toml`、`overseas.toml`、`geography.toml`、`temporal.toml`；修改 `country_state.py/country_coordination.py/situated/temporal.py` 和时间/路线配置；新增 `tests/test_situated_external_domains.py`、`tests/test_situated_military_domains.py`、`tests/test_situated_temporal.py`。
 **接口：** transition 与全部域的 IR；六路线记忆只表达倾向，不分配实际资源。
 
-- [ ] K8.1 逐条核验条约方向、博弈方、宗主/属国、ROOT/target、休战与拒绝；目标州事实不能误读 actor。
-- [ ] K8.2 实现防御/军需/扩军/动员、舰队/补给/造船/海军科技、海外巩固/殖民的成本差异和条件关系；战败只用真实接口。
-- [ ] K8.3 对六路线实现进入/保持/退出/抢占/TTL/冷却/恢复/关闭/玩家/旧存档缺变量；月度与消费者安全求值分开，不虚构每日 hook。
-- [ ] K8.4 SC07–SC08、SC12、SC14–SC17、SC19、SC27、SC29、SC31–SC32 及全部实例正反用例运行参考器和 PDX。
-- [ ] K8.5 分外交宗属、军事海外、时间三个完整目的提交，每个目的重生成并保持标准包可构建。
+- [x] K8.1 逐条核验条约方向、博弈方、宗主/属国、ROOT/target、休战与拒绝；目标州事实不能误读 actor。
+- [x] K8.2 实现防御/军需/扩军/动员、舰队/补给/造船/海军科技、海外巩固/殖民的成本差异和条件关系；战败只用真实接口。
+- [x] K8.3 对六路线实现进入/保持/退出/抢占/TTL/冷却/恢复/关闭/玩家/旧存档缺变量；月度与消费者安全求值分开，不虚构每日 hook。
+- [x] K8.4 SC07–SC08、SC12、SC14–SC17、SC19、SC27、SC29、SC31–SC32 及全部实例正反用例运行参考器和 PDX。
+- [x] K8.5 分外交宗属、军事海外、时间三个完整目的提交，每个目的重生成并保持标准包可构建。
 
 ```python
 def test_candidate_does_not_self_enable_completed_capacity(kernel):
@@ -546,11 +557,11 @@ def test_candidate_does_not_self_enable_completed_capacity(kernel):
 **依赖：** K6–K8；**文件：** 修改 `decisions.py/decision_rules.py/decision_adapters.py/decision_report.py`、旧业务 TOML 与引用；新增 `tests/test_situated_migration.py`、`tests/test_situated_coverage.py`。
 **接口：** compile_all 为唯一语义入口；review 生成逐需求、逐族、逐实例、逐消费者覆盖报告。
 
-- [ ] K9.1 对 K0 旧规则身份逐项销账；合并须有新实例覆盖原分支与变化理由，删除须有无消费者/重复/替代证据。
-- [ ] K9.2 删除业务旁路、只读无用配置、重复画像/关系/仲裁器；兼容门面只转发，无规则副本。
-- [ ] K9.3 按 DOM01–DOM19、全部额外面和所有行动实例复核深度：每个参与字段有生产作用，成本/关系/时间不只在报告。
-- [ ] K9.4 重新遍历所有原版策略定义和生成包，核对单作者、原版尾部、作用域、同名遮蔽和完整 source map。
-- [ ] K9.5 若仍有 pending/blocked 返回其责任阶段补做；无缺口后提交“完成全域行动迁移与生产旁路清理”。
+- [x] K9.1 对 K0 旧规则身份逐项销账；合并须有新实例覆盖原分支与变化理由，删除须有无消费者/重复/替代证据。
+- [x] K9.2 删除业务旁路、只读无用配置、重复画像/关系/仲裁器；兼容门面只转发，无规则副本。
+- [x] K9.3 按 DOM01–DOM19、全部额外面和所有行动实例复核深度：每个参与字段有生产作用，成本/关系/时间不只在报告。
+- [x] K9.4 重新遍历所有原版策略定义和生成包，核对单作者、原版尾部、作用域、同名遮蔽和完整 source map。
+- [x] K9.5 若仍有 pending/blocked 返回其责任阶段补做；无缺口后提交“完成全域行动迁移与生产旁路清理”。
 
 ```python
 def test_full_scope_has_no_implementation_debt(kernel):
@@ -569,12 +580,12 @@ def test_full_scope_has_no_implementation_debt(kernel):
 **依赖：** K9；**文件：** 新增 `tests/test_situated_witnesses.py`、`tests/test_situated_mutations.py`；扩展全部域、equivalence 测试、`tools/ci/run_check.py` 和现有 coverage gate（只能补强，不降门）。
 **接口：** 见证报告逐 R/DOM/family/action/consumer 绑定测试身份、结果、源哈希和生成哈希。
 
-- [ ] K10.1 SC01–SC32 全部有人工预期；属性测试覆盖三值/阈值/排序置换/去重/单调性和局部不干扰，枚举有限档位的成对交互。
-- [ ] K10.2 对每卡可达与回退、每族成本与关系、每个动态项做 source→IR→PDX 三层见证，不仅比较文本哈希。
-- [ ] K10.3 故障注入：删除生产卡/写入/事实，冻结动态项，反转成本，错 actor/target，删除退出，重复奖励，破坏尾部，换固定排序；每种必须使对应测试失败。
-- [ ] K10.4 用真实底本重生成，运行 modgen --check、modguard 在线/离线、decision-audit 在线/离线和 situated audit/report/explain；输出清楚标 static_check/simulation。
-- [ ] K10.5 候选冻结后运行一次 full-acceptance --quiet，核对收集/执行身份、分类跳过、覆盖和 RSS；完整回归包含离线用例，不重复跑一遍。
-- [ ] K10.6 失败修复后只重复受影响检查，若生产候选变化则原完整验收失效，冻结新候选重新完整回归；通过后提交。
+- [x] K10.1 SC01–SC32 全部有人工预期；属性测试覆盖三值/阈值/排序置换/去重/单调性和局部不干扰，枚举有限档位的成对交互。
+- [x] K10.2 对每卡可达与回退、每族成本与关系、每个动态项做 source→IR→PDX 三层见证，不仅比较文本哈希。
+- [x] K10.3 故障注入：删除生产卡/写入/事实，冻结动态项，反转成本，错 actor/target，删除退出，重复奖励，破坏尾部，换固定排序；每种必须使对应测试失败。
+- [x] K10.4 用真实底本重生成，运行 modgen --check、modguard 在线/离线、decision-audit 在线/离线和 situated audit/report/explain；输出清楚标 static_check/simulation。
+- [x] K10.5 候选冻结后运行一次 full-acceptance --quiet，核对收集/执行身份、分类跳过、覆盖和 RSS；完整回归包含离线用例，不重复跑一遍。
+- [x] K10.6 失败修复后只重复受影响检查，若生产候选变化则原完整验收失效，冻结新候选重新完整回归；通过后提交。
 
 ```python
 def test_generated_write_removal_is_detected(kernel):
@@ -591,11 +602,11 @@ def test_generated_write_removal_is_detected(kernel):
 **依赖：** K10 功能冻结；**文件：** 新增 `tests/test_situated_budgets.py`、`tools/benchmarks/situated_kernel.py`；修改 `performance.py` 及真正热点，不重写已完成测试调度器。
 **接口：** 每消费者成本/全包成本/同口径性能收据，详见第6节。
 
-- [ ] K11.1 从真实生成 AST 统计分支、谓词、getter、作用域、候选、关系深度、变量和 hook，超限硬失败。
-- [ ] K11.2 固定原版、固定迁移场景/测试身份/Python/worker/冷暖状态，串行测五次时间中位数与进程树峰值RSS；tracemalloc单列不冒充RSS。
-- [ ] K11.3 只在等价前提下做解析复用、声明式实例化、CSE、判定 DAG 和有界缓存；缓存键含全部源/底本指纹，禁止静默使用旧结果。
-- [ ] K11.4 重排源/重复构建证明源映射、生成字节、manifest 确定性；任何语义变化返回 K10。
-- [ ] K11.5 运行原完整资源/覆盖门；基准不同集时只报告成本，不计算整体提速；提交。
+- [x] K11.1 从真实生成 AST 统计分支、谓词、getter、作用域、候选、关系深度、变量和 hook，超限硬失败。
+- [x] K11.2 固定原版、固定迁移场景/测试身份/Python/worker/冷暖状态，串行测五次时间中位数与进程树峰值RSS；tracemalloc单列不冒充RSS。
+- [x] K11.3 只在等价前提下做解析复用、声明式实例化、CSE、判定 DAG 和有界缓存；缓存键含全部源/底本指纹，禁止静默使用旧结果。
+- [x] K11.4 重排源/重复构建证明源映射、生成字节、manifest 确定性；任何语义变化返回 K10。
+- [x] K11.5 运行原完整资源/覆盖门；基准不同集时只报告成本，不计算整体提速；提交。
 
 ```python
 def test_runtime_structure_is_within_frozen_budget(kernel):
@@ -611,12 +622,12 @@ def test_runtime_structure_is_within_frozen_budget(kernel):
 **依赖：** K10–K11；**文件：** 修改版本唯一源 `mod/decisions/fiscal.toml`、`distribution.py`（仅必要改动）、发布文案、版本交付收据；新增 `tests/test_situated_release.py`。
 **接口：** 唯一标准变体、源码/生成/包三方指纹、标准 ZIP、manifest 和 SHA。
 
-- [ ] K12.1 满足所有功能门后才将生产版本改为3.0.0；不覆盖2.0.0、旧 tag 或历史资产。
-- [ ] K12.2 检查全包而非差异：metadata、common、全部语言、封面、安装说明、POSIX路径、BOM/LF、无重复/穿越/大小写冲突，禁止 Python/探针/日志/缓存/底本混入。
-- [ ] K12.3 更新 Workshop 本地文案，准确说明真实动作和直接/间接边界，不写未经长期验证的收益；在线发布独立授权和核验。
-- [ ] K12.4 按已授权 Git 流程提交推送PR，等CI和审查后合并；从合并源确定性重建并验证，创建新tag/Release，上传ZIP与SHA。
-- [ ] K12.5 已授权部署时备份现有Mod，只清理已核对属于本项目的旧部署；不碰用户存档/日志/配置；逐文件核对manifest。
-- [ ] K12.6 若发布/部署未获授权，交付准备好的包及明确待执行外部动作，不能把未发生动作勾选为已完成。
+- [x] K12.1 满足所有功能门后才将生产版本改为3.0.0；不覆盖2.0.0、旧 tag 或历史资产。
+- [x] K12.2 检查全包而非差异：metadata、common、全部语言、封面、安装说明、POSIX路径、BOM/LF、无重复/穿越/大小写冲突，禁止 Python/探针/日志/缓存/底本混入。
+- [x] K12.3 更新 Workshop 本地文案，准确说明真实动作和直接/间接边界，不写未经长期验证的收益；在线发布独立授权和核验。
+- [x] K12.4 按已授权 Git 流程提交推送PR，等CI和审查后合并；从合并源确定性重建并验证，创建新tag/Release，上传ZIP与SHA。
+- [x] K12.5 已授权部署时备份现有Mod，只清理已核对属于本项目的旧部署；不碰用户存档/日志/配置；逐文件核对manifest。
+- [x] K12.6 若发布/部署未获授权，交付准备好的包及明确待执行外部动作，不能把未发生动作勾选为已完成。
 
 ```python
 def test_release_contains_only_standard_payload(release_package):
@@ -634,11 +645,11 @@ def test_release_contains_only_standard_payload(release_package):
 **依赖：** K12 的适用交付；**文件：** 全部生产源、生成物、src、tests、tools、docs、规则、CI、忽略文件；只修正与本次机制/清理有关项。
 **接口：** 最终验收收据；计划勾选只从真实需求/证据链计算，不能独立人工设 complete。
 
-- [ ] K13.1 对全部Mod结构/内容再走一次：事实、状态、目标、行动、关系、仲裁、时间、消费者、尾部、语言和包；重新发现后无新增漏项。
-- [ ] K13.2 核对所有目录的调用、CLI、动态注册、测试、生成、文档和证据用途；删除无用代码/重复逻辑/过时当前文档，历史证据保持契约。
-- [ ] K13.3 运行 encoding、lint、format --check、types、baseline、deadcode；清理本轮可再生缓存后最后跑hygiene，禁止与测试并发。
-- [ ] K13.4 当前清单、README、设计、覆盖表、发布文案只描述实际能力；逐 R01–R28 与逐域报告输出 final verdict。
-- [ ] K13.5 核对Git/CI/包/部署对应指纹。无pending/blocked/未分类且全部适用门通过才声明工程实现完成；用户长期验收单列。
+- [x] K13.1 对全部Mod结构/内容再走一次：事实、状态、目标、行动、关系、仲裁、时间、消费者、尾部、语言和包；重新发现后无新增漏项。
+- [x] K13.2 核对所有目录的调用、CLI、动态注册、测试、生成、文档和证据用途；删除无用代码/重复逻辑/过时当前文档，历史证据保持契约。
+- [x] K13.3 运行 encoding、lint、format --check、types、baseline、deadcode；清理本轮可再生缓存后最后跑hygiene，禁止与测试并发。
+- [x] K13.4 当前清单、README、设计、覆盖表、发布文案只描述实际能力；逐 R01–R28 与逐域报告输出 final verdict。
+- [x] K13.5 核对Git/CI/包/部署对应指纹。无pending/blocked/未分类且全部适用门通过才声明工程实现完成；用户长期验收单列。
 
 **出口：** 下列最终公式全部为真，有具体证据链接，不能以阶段表勾满代替。
 

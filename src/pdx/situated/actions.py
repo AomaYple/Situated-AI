@@ -68,11 +68,13 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
             "complements",
             "substitutes",
             "conflicts",
+            "enables",
             "exit_when",
             "base",
             "stress",
             "opportunity",
             "commitment",
+            "political_cost",
             "max_delta",
             "unknown_policy",
             "explanation",
@@ -80,7 +82,15 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
         if set(raw) != required:
             raise ValueError(f"行动 {key} 字段必须恰好为：{sorted(required)}")
         numbers = [
-            raw[name] for name in ("base", "stress", "opportunity", "commitment", "max_delta")
+            raw[name]
+            for name in (
+                "base",
+                "stress",
+                "opportunity",
+                "commitment",
+                "political_cost",
+                "max_delta",
+            )
         ]
         if (
             any(
@@ -111,11 +121,13 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
                 complements=_names(raw["complements"], f"{key}.complements"),
                 substitutes=_names(raw["substitutes"], f"{key}.substitutes"),
                 conflicts=_names(raw["conflicts"], f"{key}.conflicts"),
+                enables=_names(raw["enables"], f"{key}.enables"),
                 exit_when=_names(raw["exit_when"], f"{key}.exit_when"),
                 base=float(raw["base"]),
                 stress=float(raw["stress"]),
                 opportunity=float(raw["opportunity"]),
                 commitment=float(raw["commitment"]),
+                political_cost=float(raw["political_cost"]),
                 max_delta=float(raw["max_delta"]),
                 unknown_policy=raw["unknown_policy"],
                 explanation=raw["explanation"],
@@ -128,7 +140,12 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
     for action in actions:
         if action.consumer not in consumer_ids:
             raise ValueError(f"行动 {action.id} 引用了未知消费者：{action.consumer}")
-        for relation in (*action.complements, *action.substitutes, *action.conflicts):
+        for relation in (
+            *action.complements,
+            *action.substitutes,
+            *action.conflicts,
+            *action.enables,
+        ):
             if relation not in action_ids:
                 raise ValueError(f"行动 {action.id} 引用了未知关系目标：{relation}")
         if action.max_delta > next(

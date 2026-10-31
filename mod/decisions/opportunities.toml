@@ -4,8 +4,10 @@ schema = 1
 domain = "education"
 source_fact = "literacy_low"
 actions = ["education_and_research"]
+ttl_days = 30
 
 [opportunities.administrative_foundation]
 domain = "administrative"
 source_fact = "bureaucracy_positive"
 actions = ["industrial_foundation"]
+ttl_days = 30

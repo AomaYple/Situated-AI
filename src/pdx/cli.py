@@ -88,6 +88,7 @@ from pdx import mods as mods_mod
 from pdx.console import enable_utf8_stdio
 from pdx.extract import extract_dir
 from pdx.parser import TOLERATED_ERRORS, parse_file, parse_text
+from pdx.situated import inventory as situated_inventory
 
 # 必须在构造 Console 之前调用 —— 理由见 pdx/console.py 的模块文档：
 # rich 替代不了编码兜底，GBK 重定向下它自己就会抛 UnicodeEncodeError。
@@ -2782,6 +2783,7 @@ def situated_audit_cmd() -> None:
     """检查处境行动内核的源、关系、预算和生产接线合同。"""
     try:
         problems = situated.audit.check()
+        coverage = situated.audit.report()
     except (OSError, ValueError) as exc:
         _fail(f"处境行动内核审计失败：{exc}", EXIT_FAILED)
     if problems:
@@ -2789,9 +2791,36 @@ def situated_audit_cmd() -> None:
     model = situated.load_model()
     console.print(
         f"[green]处境行动内核审计通过[/]：{len(model.facts)} 个事实、"
-        f"{len(model.actions)} 张行动卡、{len(model.production_consumers)} 个生产消费者。"
+        f"{len(model.actions)} 张显式行动卡、{len(model.action_instances)} 个生产行动实例、"
+        f"{len(model.production_consumers)} 个生产消费者；覆盖状态 {coverage.status}。"
     )
     console.print("证据：静态生成合同；不证明长期游戏行为质量。")
+
+
+@situated_app.command("inventory")
+def situated_inventory_cmd(
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output", help="盘点 JSON 输出目录；默认写入 tools/out/ci/situated-inventory/"
+        ),
+    ] = None,
+) -> None:
+    """生成 K0 原版决策面盘点和旧规则迁移台账。"""
+    target = output or (config.OUT / "ci" / "situated-inventory")
+    try:
+        inventory_path, migration_path = situated_inventory.write(target)
+        inventory = situated_inventory.discover()
+    except (OSError, ValueError) as exc:
+        _fail(f"处境决策面盘点失败：{exc}", EXIT_FAILED)
+    console.print(
+        f"[green]处境决策面盘点已写入[/]：{_relative(inventory_path)}；{_relative(migration_path)}"
+    )
+    console.print(
+        f"发现 {inventory.discovered_count} 个面，范围哈希 {inventory.scope_hash}；"
+        f"状态 {inventory.status_counts}。"
+    )
+    console.print("证据：K0 静态底本/生产源盘点；pending 不代表功能已实现。")
 
 
 @situated_app.command("report")
@@ -2805,6 +2834,7 @@ def situated_report_cmd(
     target = output or (config.OUT / "ci" / "situated-report.json")
     try:
         payload = situated.load_model().contract()
+        payload["coverage"] = situated.audit.report().as_dict()
     except (OSError, ValueError) as exc:
         _fail(f"处境行动报告失败：{exc}", EXIT_FAILED)
     _write_json(target, payload)

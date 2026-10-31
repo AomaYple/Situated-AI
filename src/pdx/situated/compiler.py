@@ -9,17 +9,20 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import re
 import tomllib
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .. import decision_adapters, decision_rules  # noqa: TID252
 from ..parser import parse_text  # noqa: TID252
+from . import action_instances, commitment, families, ir, opportunity, relations, state
 from . import actions as action_source
 from . import evidence as evidence_source
-from . import relations
+from . import goals as goal_source
+from .arbitration import Candidate, choose
 from .contracts import contract
 from .schema import ActionCard, ConsumerContract, EvidenceSpec, Relation
 
@@ -39,6 +42,7 @@ SUPPORTING_SOURCES = (
     "temporal.toml",
     "consumers.toml",
     "localization.toml",
+    "action_families.toml",
 )
 
 
@@ -65,6 +69,9 @@ class SituatedModel:
     production_rule_count: int = 0
     goals: tuple[tuple[str, int], ...] = ()
     support_sources: dict[str, dict[str, Any]] | None = None
+    action_instances: tuple[action_instances.ActionInstance, ...] = ()
+    action_ir: tuple[ir.ActionIR, ...] = ()
+    goal_specs: tuple[goal_source.Goal, ...] = ()
 
     def contract(self) -> dict[str, object]:
         result = contract(self.facts, self.consumers, self.actions, self.relations)
@@ -93,6 +100,23 @@ class SituatedModel:
             "world_scans": 0,
             "runtime_python": False,
             "relationship_depth": 2,
+        }
+        result["action_instances"] = action_instances.contract(self.action_instances)
+        result["ir"] = ir.contract(self.action_ir)
+        result["typed_state"] = state.contract()
+        supporting = self.support_sources or {}
+        result["goals"] = goal_source.contract(self.goal_specs)
+        result["opportunities"] = opportunity.contract(
+            supporting.get("opportunities.toml", {}).get("opportunities", {})
+        )
+        result["commitments"] = commitment.contract(
+            supporting.get("commitments.toml", {}).get("commitments", {})
+        )
+        result["action_families"] = {
+            "schema": 1,
+            "ids": list(families.FAMILIES),
+            "definitions": supporting.get("action_families.toml", {}).get("families", {}),
+            "classifier": "source_and_field_deterministic",
         }
         return result
 
@@ -190,12 +214,43 @@ def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[s
 
 
 def _validate_supporting_sources(sources, consumers, relation_list) -> None:
-    listed = {
-        (item["source"], item["target"], item["kind"])
-        for item in sources["relations.toml"].get("relations", [])
+    raw_relations = sources["relations.toml"].get("relations", [])
+    if not isinstance(raw_relations, list):
+        raise ValueError("relations.toml 的 relations 必须是列表")
+    listed: dict[tuple[str, str, str], tuple[float, str, tuple[str, ...], str]] = {}
+    for item in raw_relations:
+        if not isinstance(item, dict):
+            raise ValueError("relations.toml 含无效关系项")
+        raw_key = (item.get("source"), item.get("target"), item.get("kind"))
+        strength = item.get("strength")
+        scope = item.get("scope", "root")
+        condition_facts = item.get("condition_facts", [])
+        unknown_policy = item.get("unknown_policy", "vanilla")
+        if (
+            not all(isinstance(part, str) for part in raw_key)
+            or raw_key in listed
+            or isinstance(strength, bool)
+            or not isinstance(strength, (int, float))
+            or not math.isfinite(float(strength))
+            or float(strength) <= 0
+            or not isinstance(scope, str)
+            or not isinstance(condition_facts, list)
+            or any(not isinstance(fact, str) for fact in condition_facts)
+            or not isinstance(unknown_policy, str)
+        ):
+            raise ValueError(f"relations.toml 含无效或重复关系：{raw_key}")
+        key = cast("tuple[str, str, str]", raw_key)
+        listed[key] = (float(strength), scope, tuple(condition_facts), unknown_policy)
+    actual = {
+        (item.source, item.target, item.kind): (
+            item.strength,
+            item.scope,
+            item.condition_facts,
+            item.unknown_policy,
+        )
+        for item in relation_list
     }
-    actual = {(item.source, item.target, item.kind) for item in relation_list}
-    if listed != actual:
+    if set(listed) != set(actual) or any(listed[key] != actual[key] for key in listed):
         raise ValueError("relations.toml 与行动卡关系不一致")
     consumer_fields = {item.field for item in consumers}
     declared = sources["consumers.toml"].get("consumers", {})
@@ -213,6 +268,7 @@ def _validate_supporting_sources(sources, consumers, relation_list) -> None:
     localization = sources["localization.toml"]
     if localization.get("fallback") != "none" or len(localization.get("languages", [])) != 11:
         raise ValueError("本地化合同必须覆盖锁定本体的 11 种语言且不允许回退")
+    families.load_contract(DECISIONS / "action_families.toml")
 
 
 def load_model(
@@ -220,11 +276,18 @@ def load_model(
 ) -> SituatedModel:
     facts = _reader_facts(evidence_source.load(facts_path))
     consumers, actions = action_source.load(actions_path)
-    relation_list = relations.relations(actions)
-    relations.validate(actions)
     supporting = _load_supporting_sources()
+    relation_list = relations.relations(
+        actions,
+        supporting["relations.toml"].get("relations", []),
+    )
+    relations.validate(actions, specs=supporting["relations.toml"].get("relations", []))
     _validate_supporting_sources(supporting, consumers, relation_list)
     fact_ids = {item.id for item in facts}
+    relation_fact_ids = {fact for relation in relation_list for fact in relation.condition_facts}
+    missing_relation_facts = sorted(relation_fact_ids - fact_ids)
+    if missing_relation_facts:
+        raise ValueError(f"行动关系引用了未知事实：{missing_relation_facts}")
     for action in actions:
         references = (
             *action.requires_all,
@@ -243,12 +306,55 @@ def load_model(
     missing = [consumer.field for consumer in consumers if consumer.field not in available]
     if baseline is None and missing:
         raise ValueError(f"消费者字段不在默认策略底本：{missing[0]}")
+    information = decision_rules.load()
+    adapters = decision_adapters.load()
     production, count, production_hashes = _production_inventory()
-    goals = tuple(
-        (key, int(value.get("priority", 0)))
+    instances = action_instances.build(
+        information,
+        adapters,
+        actions,
+        consumer_fields={item.id: item.field for item in consumers},
+    )
+    action_ir = ir.from_rules(
+        [("mod/decisions/information.toml", item) for item in information.rules]
+        + [(source, item) for source, policy in adapters.policies for item in policy.rules]
+    )
+    goal_bindings = {
+        "survival": ("fiscal_neutrality", "diplomatic_recklessness"),
+        "recovery": ("economic_balance", "reform_chance"),
+        "capacity": ("economic_balance", "reform_chance"),
+        "structure": ("economic_balance", "reform_chance"),
+    }
+
+    def _goal_names(raw: object, label: str) -> tuple[str, ...]:
+        if raw is None:
+            return ()
+        if not isinstance(raw, list) or any(not isinstance(item, str) or not item for item in raw):
+            raise ValueError(f"goals.toml 的 {label} 必须是非空字符串列表")
+        return tuple(raw)
+
+    goal_specs = tuple(
+        goal_source.Goal(
+            id=key,
+            priority=int(value.get("priority", 0)),
+            horizon=str(value.get("horizon", "medium")),
+            active=True,
+            source_pressures=_goal_names(value.get("pressure"), "pressure"),
+            source_needs=_goal_names(value.get("need"), "need"),
+            consumer_bindings=_goal_names(
+                value.get("consumers", list(goal_bindings.get(key, ()))), "consumers"
+            ),
+            ttl_days=(int(value["ttl_days"]) if type(value.get("ttl_days")) is int else None),
+            unknown_policy=(
+                value.get("unknown", "vanilla")
+                if value.get("unknown", "vanilla") in {"vanilla", "conservative", "lower_tier"}
+                else "vanilla"
+            ),
+        )
         for key, value in sorted(supporting["goals.toml"].get("goals", {}).items())
         if isinstance(value, dict) and type(value.get("priority")) is int
     )
+    goals = tuple((item.id, item.priority) for item in goal_specs)
     hashes = {
         "facts": hashlib.sha256(facts_path.read_bytes()).hexdigest(),
         "actions": hashlib.sha256(actions_path.read_bytes()).hexdigest(),
@@ -259,7 +365,18 @@ def load_model(
         },
     }
     return SituatedModel(
-        facts, consumers, actions, relation_list, hashes, production, count, goals, supporting
+        facts,
+        consumers,
+        actions,
+        relation_list,
+        hashes,
+        production,
+        count,
+        goals,
+        supporting,
+        instances,
+        action_ir,
+        goal_specs,
     )
 
 
@@ -270,7 +387,7 @@ def _condition(facts, ids):
     return expressions[0] if len(expressions) == 1 else "AND = { " + " ".join(expressions) + " }"
 
 
-def _limit(action, facts):
+def _limit(action, facts, *, relation_guards: tuple[str, ...] = ()):
     all_expr = _condition(facts, action.requires_all)
     any_expr = (
         "OR = { " + " ".join(facts[item].trigger for item in action.requires_any) + " }"
@@ -284,7 +401,13 @@ def _limit(action, facts):
     )
     return (
         " AND = { "
-        + " ".join(["is_ai = yes", *(item for item in (all_expr, any_expr, blocked_expr) if item)])
+        + " ".join(
+            [
+                "is_ai = yes",
+                *(item for item in (all_expr, any_expr, blocked_expr) if item),
+                *relation_guards,
+            ]
+        )
         + " }"
     )
 
@@ -296,15 +419,39 @@ def strategy_overlay(model: SituatedModel) -> dict[str, str]:
     for action in model.actions:
         grouped[consumers[action.consumer].field].append(action)
     output = {}
+    by_id = {item.id: item for item in model.actions}
+    relations_by_source: dict[str, list[Relation]] = {}
+    for relation in model.relations:
+        relations_by_source.setdefault(relation.source, []).append(relation)
     for consumer in model.consumers:
         chosen = sorted(
             grouped[consumer.field], key=lambda item: (-item.stress, -item.opportunity, item.id)
         )[: consumer.budget]
         blocks = []
         for index, action in enumerate(chosen):
-            delta = min(action.max_delta, consumer.max_delta) * (-1 if action.base < 0 else 1)
+            delta = action.base + action.opportunity - action.commitment
+            limit = min(action.max_delta, consumer.max_delta)
+            delta = max(-limit, min(limit, delta))
+            relation_guards: list[str] = []
+            complement_effects: list[str] = []
+            for relation in relations_by_source.get(action.id, ()):
+                target = by_id[relation.target]
+                target_guard = _limit(target, facts)
+                if relation.condition_facts:
+                    relation_guard = _condition(facts, relation.condition_facts)
+                    target_guard = f" AND = {{ {relation_guard} {target_guard} }}"
+                if relation.kind == "enables":
+                    relation_guards.append(target_guard)
+                elif relation.kind in {"substitutes", "conflicts"}:
+                    relation_guards.append(f"NOT = {{ {target_guard} }}")
+                elif relation.kind == "complements":
+                    complement_effects.append(
+                        f"\n\t\t\tif = {{ limit = {{ ROOT ?= {{ {target_guard} }} }} add = {relation.strength:g} }}"
+                    )
             blocks.append(
-                f"\t\t{'if' if index == 0 else 'else_if'} = {{\n\t\t\tlimit = {{ ROOT ?= {{ {_limit(action, facts)} }} }}\n\t\t\tadd = {delta:g}\n\t\t}}\n"
+                f"\t\t# ACTION {action.id} [{action.domain}]; {action.explanation}\n"
+                f"\t\t{'if' if index == 0 else 'else_if'} = {{\n\t\t\tlimit = {{ ROOT ?= {{ {_limit(action, facts, relation_guards=tuple(relation_guards))} }} }}\n\t\t\tadd = {delta:g}"
+                f"{''.join(complement_effects)}\n\t\t}}\n"
             )
         output[consumer.field] = "".join(blocks)
     return output
@@ -448,6 +595,22 @@ def _action_conditions(action: ActionCard, values: dict[str, object]) -> bool | 
     return True
 
 
+def _relation_conditions(relation: Relation, values: dict[str, object]) -> bool | None:
+    """关系自己的条件采用三值逻辑；未知默认不额外改变原版。"""
+
+    if not relation.condition_facts:
+        return True
+    states = tuple(
+        None if name not in values or type(values[name]) is not bool else values[name]
+        for name in relation.condition_facts
+    )
+    if any(item is False for item in states):
+        return False
+    if any(item is None for item in states):
+        return None
+    return True
+
+
 def evaluate_policy(
     policy: decision_rules.RuleSet,
     values: dict[str, object],
@@ -477,24 +640,64 @@ def evaluate_policy(
         actions = action_by_field.get((field,))
         if not actions:
             continue
-        candidates = []
+        candidates: list[tuple[ActionCard, float, Candidate]] = []
         for action in actions:
             status = _action_conditions(action, values)
             if status is not True:
                 continue
             pressure = 1.0 if any(values.get(name) is True for name in action.consumes) else 0.0
-            delta = (
-                action.base
-                + action.stress * pressure
-                + action.opportunity
-                - action.commitment * pressure
+            relation_bonus = 0.0
+            relation_blocked = False
+            for relation in model.relations:
+                if relation.source != action.id:
+                    continue
+                relation_state = _relation_conditions(relation, values)
+                if relation_state is False or (
+                    relation_state is None
+                    and (
+                        relation.unknown_policy in {"vanilla", "lower_tier"}
+                        or relation.kind in {"complements", "enables"}
+                    )
+                ):
+                    continue
+                target = next(item for item in model.actions if item.id == relation.target)
+                target_status = _action_conditions(target, values)
+                if relation.kind in {"substitutes", "conflicts"} and target_status is True:
+                    relation_blocked = True
+                elif relation.kind == "complements" and target_status is True:
+                    relation_bonus += relation.strength
+            if relation_blocked:
+                continue
+            candidate = Candidate(
+                action_id=action.id,
+                crisis_protection=max(0.0, action.stress * pressure),
+                bottleneck_relief=max(0.0, action.base),
+                capability_gain=max(0.0, action.opportunity) + relation_bonus,
+                feasibility=1.0,
+                substitute_availability=1.0 if relation_bonus else 0.0,
+                opportunity_value=action.opportunity,
+                commitment_cost=action.commitment * pressure,
+                inertia=0.0,
+                # ``choose`` supplies the shared score components; this term
+                # preserves negative base deltas without counting positive base
+                # relief twice.
+                base_delta=action.base - max(0.0, action.base),
             )
-            candidates.append((action, max(-action.max_delta, min(action.max_delta, delta))))
+            candidates.append((action, 0.0, candidate))
         if not candidates:
             continue
-        # fixed rank and relation effects; one candidate is ever applied.
-        candidates.sort(key=lambda item: (item[1], item[0].id), reverse=True)
-        action, delta = candidates[0]
+        # All candidates are ranked together.  This keeps the reference path
+        # identical to the finite arbitration contract instead of selecting
+        # independently and then applying an accidental reverse tie-break.
+        arbitration = choose(
+            tuple(item[2] for item in candidates),
+            max_delta=max(item[0].max_delta for item in candidates),
+        )
+        if arbitration.action_id is None:
+            continue
+        selected = next(item for item in candidates if item[0].id == arbitration.action_id)
+        action = selected[0]
+        delta = max(-action.max_delta, min(action.max_delta, arbitration.delta))
         contract_item = by_field.get((field,))
         if contract_item is not None:
             delta = max(-contract_item.max_delta, min(contract_item.max_delta, delta))
