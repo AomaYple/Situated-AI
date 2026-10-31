@@ -8,9 +8,18 @@ strength = 1.0
 
 [[relations]]
 source = "industrial_foundation"
+target = "political_reform"
+kind = "complements"
+strength = 1.0
+
+[[relations]]
+source = "industrial_foundation"
 target = "education_and_research"
 kind = "complements"
 strength = 1.0
+scope = "root"
+condition_facts = ["peace"]
+unknown_policy = "vanilla"
 
 [[relations]]
 source = "fiscal_recovery"
@@ -19,7 +28,25 @@ kind = "substitutes"
 strength = 1.0
 
 [[relations]]
+source = "wartime_defense"
+target = "fiscal_recovery"
+kind = "substitutes"
+strength = 1.0
+
+[[relations]]
 source = "diplomatic_restraint"
 target = "diplomatic_opening"
 kind = "substitutes"
+strength = 1.0
+
+[[relations]]
+source = "diplomatic_opening"
+target = "diplomatic_restraint"
+kind = "substitutes"
+strength = 1.0
+
+[[relations]]
+source = "education_and_research"
+target = "industrial_foundation"
+kind = "complements"
 strength = 1.0

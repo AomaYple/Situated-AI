@@ -56,6 +56,17 @@ def test_recovery_preempts_other_capacities(policy):
     assert not result["expansion_capacity"]
 
 
+def test_typed_state_bridge_preserves_local_unknowns(policy):
+    result = country_coordination.evaluate_typed(policy, facts(war=True, literacy=None), is_ai=True)
+    security = next(item for item in result.needs if item.id == "need_security")
+    education = next(item for item in result.needs if item.id == "need_education")
+    assert security.known
+    assert security.value is True
+    assert education.known is False
+    assert education.value is None
+    assert result.as_dict()["unknown_policy"] == "unknown_never_inferred_false"
+
+
 def test_unknown_recovery_can_use_proven_lower_capacity(policy):
     # A missing auxiliary high-tier fact must not manufacture an expansion signal.
     values = facts(default=None, debt_ratio=0.1, net_surplus=100, bureaucracy=0)
@@ -98,6 +109,7 @@ def test_contract_marks_behavior_as_static_only(policy):
     contract = country_coordination.contract(policy)
     assert contract["persistent_variables"] == 0
     assert contract["world_scans"] == 0
+    assert contract["typed_state"]["producer"].endswith("derive_typed")
     assert contract["evidence"] == "static_check"
     assert contract["behavior_verified"] is False
 

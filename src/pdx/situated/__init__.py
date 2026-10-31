@@ -15,16 +15,22 @@ from .compiler import (
     strategy_overlay,
 )
 from .schema import ActionCard, EvidenceSpec, EvidenceValue, Relation, StateVector
+from .signals import CapacitySignal, CommitmentSignal, NeedSignal, OpportunitySignal, TypedState
 
 __all__ = [
     "ActionCard",
     "ArbitrationResult",
     "Candidate",
+    "CapacitySignal",
+    "CommitmentSignal",
     "EvidenceSpec",
     "EvidenceValue",
+    "NeedSignal",
+    "OpportunitySignal",
     "Relation",
     "SituatedModel",
     "StateVector",
+    "TypedState",
     "audit",
     "choose",
     "compile_policy",

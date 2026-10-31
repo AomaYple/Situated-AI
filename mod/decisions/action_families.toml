@@ -1,0 +1,59 @@
+schema = 1
+
+[families.fiscal]
+domain = "fiscal"
+description = "财政、偿付、债务与公共支出承受力"
+[families.administrative]
+domain = "administrative"
+description = "行政能力、官僚供给与制度承载"
+[families.industry]
+domain = "economy"
+description = "产业、建设、就业与生产能力"
+[families.resources]
+domain = "economy"
+description = "资源、农业、矿业、能源与上游供给"
+[families.market]
+domain = "market"
+description = "市场、价格、贸易、运输与商品平衡"
+[families.research]
+domain = "economy"
+description = "科技、研究与生产方法升级"
+[families.education]
+domain = "political"
+description = "教育、识字与知识扩散"
+[families.political]
+domain = "political"
+description = "法律、合法性、政治集团与改革"
+[families.population]
+domain = "political"
+description = "人口、迁移、出生、死亡与劳动力"
+[families.social]
+domain = "political"
+description = "社会保障、健康、权利与社会稳定"
+[families.identity]
+domain = "identity"
+description = "身份、文化、宗教与国家认同"
+[families.diplomacy]
+domain = "diplomacy"
+description = "外交关系、博弈、条约与国际姿态"
+[families.subjects]
+domain = "subjects"
+description = "宗主、属国、自主与依从关系"
+[families.army]
+domain = "military"
+description = "陆军、编制、动员与陆战能力"
+[families.war]
+domain = "military"
+description = "战争、战败、军需与防御承诺"
+[families.navy]
+domain = "military"
+description = "海军、舰队、造船与海上投射"
+[families.overseas]
+domain = "diplomacy"
+description = "殖民、海外利益与远程投射"
+[families.geography]
+domain = "geography"
+description = "地理、州、资源位置与空间约束"
+[families.temporal]
+domain = "temporal"
+description = "时间、冲击、冷却、TTL 与路线记忆"

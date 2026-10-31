@@ -4,18 +4,26 @@ schema = 1
 priority = 100
 horizon = "crisis"
 pressure = ["fiscal_default", "wartime"]
+ttl_days = 60
+consumers = ["fiscal_neutrality", "diplomatic_recklessness"]
 
 [goals.recovery]
 priority = 80
 horizon = "short"
 pressure = ["fiscal_default", "political_instability"]
+ttl_days = 180
+consumers = ["economic_balance", "reform_chance"]
 
 [goals.capacity]
 priority = 60
 horizon = "medium"
 pressure = []
+ttl_days = 365
+consumers = ["economic_balance", "reform_chance"]
 
 [goals.structure]
 priority = 40
 horizon = "long"
 pressure = []
+ttl_days = 730
+consumers = ["economic_balance", "reform_chance"]

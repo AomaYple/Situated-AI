@@ -414,6 +414,7 @@ def derive(policy, values, is_ai=True):
         "is_ai": is_ai,
         "facts": facts,
         "coordination": country_coordination.evaluate(policy, facts, is_ai=is_ai),
+        "typed_state": country_coordination.evaluate_typed(policy, facts, is_ai=is_ai).as_dict(),
     }
 
 
