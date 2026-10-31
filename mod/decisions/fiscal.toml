@@ -3,7 +3,7 @@ game_version = "1.14.5"
 baseline_sha256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
 
 [package]
-product_version = "3.0.0"
+product_version = "3.0.1"
 status = "candidate"
 parent = "vanilla-1.14.5"
 save_compatibility = "new-game-only"

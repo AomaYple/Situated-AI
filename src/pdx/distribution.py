@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "3.0.0"
+RELEASE_VERSION = "3.0.1"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -322,7 +322,7 @@ def player_guide(
         f"启用模块 / Enabled modules：{module_text} / {module_text_en}\n"
         f"存档兼容 / Save compatibility：{policy.package.save_compatibility}\n\n"
         "【中文】\n"
-        f"这是唯一正式生产包（当前 {RELEASE_VERSION} 交付候选）。它依据国家的政治、人口、财政、经济、市场、贸易、"
+        f"这是唯一正式生产包（当前 {RELEASE_VERSION} 交付）。它依据国家的政治、人口、财政、经济、市场、贸易、"
         "外交、宗属、军事、战争、殖民、地理、身份与科技处境调整原版 AI 权重。"
         "原版资格、成本、效果与行动流程继续生效；本 Mod 不提供免费资源、不强制行动，"
         "也不按国家编写固定剧本。\n"
@@ -344,7 +344,7 @@ def player_guide(
         "工程检查证明生成、打包和锁定原版接口符合自动化契约；AI 长期行为、平衡、后期性能、"
         "玩家体验与创意工坊发布由用户验收。\n\n"
         "[English]\n"
-        f"This is the only standard production package (the Situated AI {RELEASE_VERSION} delivery candidate). "
+        f"This is the only standard production package (the Situated AI {RELEASE_VERSION} delivery). "
         "It adjusts vanilla AI weights using political,"
         " population, fiscal, economic, market, trade, diplomatic, subject, military, war, colonial,"
         " geographic, identity, and technology context. Vanilla eligibility, costs, effects, and actions"
