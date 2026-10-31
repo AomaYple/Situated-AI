@@ -12,6 +12,7 @@ from pdx.situated.arbitration import Candidate, choose
 from pdx.situated.audit import report as audit_report
 from pdx.situated.commitment import marginal_cost, overcommitted
 from pdx.situated.compiler import (
+    _action_conditions,
     _relation_conditions,
     compile_policy,
     load_model,
@@ -42,7 +43,15 @@ def test_行动降低为有限原版消费者条件块():
         text = overlay[consumer.field]
         # 顶层候选受 consumer budget 限制；互补效果是候选内部的有界条件增量。
         assert text.count("# ACTION") <= consumer.budget
-        assert text.count("add =") <= consumer.budget + 2
+        rows = [row for row in model.decision_ir if row.consumer_id == consumer.id]
+        fact_ids = {item.id for item in model.facts}
+        expected_adds = sum(
+            1
+            + sum(relation.kind == "complements" for relation in row.relations)
+            + bool(row.commitment and any(fact in fact_ids for fact in row.consumes))
+            for row in rows
+        )
+        assert text.count("add =") == expected_adds
     assert all("is_ai = yes" in text for text in overlay.values())
     patched = decisions.patch_default(
         decisions.BASELINE.read_text(encoding="utf-8"),
@@ -76,6 +85,41 @@ def test_关系条件支持真假未知三值传播():
     assert _relation_conditions(relation, {"peace": True}) is True
     assert _relation_conditions(relation, {"peace": False}) is False
     assert _relation_conditions(relation, {}) is None
+
+
+def test_requires_any有一个真值时不被另一个未知值阻塞():
+    action = next(item for item in load_model().actions if item.id == "political_reform")
+    assert (
+        _action_conditions(
+            action,
+            {"peace": True, "no_insurrection": True, "stable_legitimacy": True, "default": False},
+        )
+        is True
+    )
+
+
+@pytest.mark.parametrize("unknown", [None, "yes", 0])
+def test_未知或非布尔阻断条件不能被当成安全状态(unknown):
+    action = next(item for item in load_model().actions if item.id == "political_reform")
+    values = {
+        "peace": True,
+        "no_insurrection": True,
+        "stable_legitimacy": True,
+        "default": unknown,
+    }
+    assert _action_conditions(action, values) is None
+    values.pop("default")
+    assert _action_conditions(action, values) is None
+    values["peace"] = False
+    assert _action_conditions(action, values) is False
+
+
+def test_政治成本进入实际候选强度():
+    with_cost = choose(
+        (Candidate("with", capability_gain=1, feasibility=1, political_cost=1),), max_delta=5
+    )
+    without_cost = choose((Candidate("without", capability_gain=1, feasibility=1),), max_delta=5)
+    assert with_cost.delta < without_cost.delta
 
 
 def test_仲裁按固定排序限幅并保留证据():
@@ -167,10 +211,15 @@ def test_生产元数据登记行动合同():
 
 def test_覆盖报告只在逐实例生产见证齐全时完成():
     report = audit_report()
-    assert report.status == "complete"
+    # 旧生产 writer 已逐项见证，但 D0 的独立原版范围仍包含 pending
+    # 面；覆盖报告不能把生产实例完成误报为全计划完成。
+    assert report.status == "incomplete"
+    assert report.scope_status in {"incomplete", "unverified"}
     assert not report.blocked
     assert not report.pending
     assert all(row.status == "implemented" for row in report.rows)
+    owners = {row.owner for row in report.rows if row.status == "implemented"}
+    assert {"information_rules", "consumer_adapters", "situated_kernel"} <= owners
 
 
 def test_统一编译器覆盖信息与适配器的全部生产消费者():

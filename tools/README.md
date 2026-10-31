@@ -10,6 +10,7 @@
 |---|---|
 | `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、baseline、deadcode |
 | `tools/ci/repo_hygiene.py` | 检查根目录可再生缓存、字节码和运行态目录 |
+| `tools/ci/situated_closeout.py` | 汇总 D11–D13 的生成锁、标准包禁带项、生产编码、ConsumerIR owner 和仓库卫生门禁；`--require-plan` 另检查 D0 原版范围出口 |
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
 | `tools/ci/test_suite.py` | 可选的完整 Python 回归、覆盖率、JUnit 和资源报告 |
 | `tools/benchmarks/` | Python 解析、生成和资源基准；固定输入、串行运行，不代表游戏内性能 |
@@ -50,6 +51,8 @@ Windows：
 ```text
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py encoding
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py hygiene
+.venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout
+.venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout --require-plan
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py baseline
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modguard --offline

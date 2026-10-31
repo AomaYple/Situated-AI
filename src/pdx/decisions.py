@@ -1224,6 +1224,16 @@ def build(
     extensions = extensions or load_extensions()
     situated_model = load_situated_model(baseline=baseline)
     situated_compiled_contract: dict[str, object] | None = None
+    # 在统一 IR 编译前保留字段 owner 的早期冲突门。这样篡改/拼接一条
+    # 旧适配规则时，调用方仍得到“重复写入”的领域错误，而不是先看到
+    # IR 与已冻结规则不一致的内部错误。
+    if information_rules is not None and consumer_adapters is not None:
+        information_fields = {rule.field for rule in information_rules.rules}
+        seen_adapter_fields: set[tuple[str, ...]] = set()
+        for _source, field, _owner in decision_adapters.writes(consumer_adapters):
+            if field in information_fields or field in seen_adapter_fields:
+                raise ValueError(f"旧模块或全域规则与消费者适配重复写入字段：{'.'.join(field)}")
+            seen_adapter_fields.add(field)
     # 将全域信息规则和消费者适配器先经过统一的处境编译器，再进入既有
     # patch/build 路径。这样目标、关系、未知回退和一次写入合同不会只停留
     # 在参考 API，而会真正影响生产生成；底层原版资格、成本和执行尾部仍由
@@ -1356,6 +1366,8 @@ def build(
             country_policy=country_policy,
             owned_variables=state_owned_variables,
             owned_triggers=state_owned_triggers,
+            consumer_ir=situated_model.consumer_ir,
+            consumer_source="mod/decisions/information.toml",
         )
     strategy_issues = player_boundary_issues(files["common/ai_strategies/00_default_strategy.txt"])
     if strategy_issues:
@@ -1526,6 +1538,7 @@ def build(
             country_policy=country_policy,
             owned_variables=state_owned_variables,
             owned_triggers=state_owned_triggers,
+            consumer_ir=situated_model.consumer_ir,
         )
         collisions = files.keys() & adapter_files.keys()
         if collisions - {"common/ai_strategies/00_default_strategy.txt"}:

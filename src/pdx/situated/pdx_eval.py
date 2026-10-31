@@ -135,6 +135,36 @@ def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[st
             operation = item
     if operation is None:
         raise UnsupportedPdxError("行动分支缺少写入")
+    if isinstance(operation.value, Block):
+        value_block = operation.value
+        initial = value_block.first("value")
+        if initial is None:
+            raise UnsupportedPdxError("行动增量缺少初值")
+        delta = _number(initial)
+        for item in value_block.assignments():
+            if item.key == "value":
+                continue
+            if item.key == "if":
+                if not isinstance(item.value, Block):
+                    raise UnsupportedPdxError("增量条件必须是块")
+                limit = item.value.first("limit")
+                addition = item.value.first("add")
+                if limit is None or not isinstance(limit.value, Block) or addition is None:
+                    raise UnsupportedPdxError("增量条件缺少 limit 或 add")
+                state = condition(limit.value, facts)
+                if state is True:
+                    delta += _number(addition)
+                elif state is None:
+                    # 互补/辅助增量未知时只丢弃该增量，保留行动的已知
+                    # 基础档；核心 limit 的未知仍由 select 回退 vanilla。
+                    continue
+            elif item.key == "min":
+                delta = max(delta, _number(item))
+            elif item.key == "max":
+                delta = min(delta, _number(item))
+            else:
+                raise UnsupportedPdxError(f"不支持的行动增量操作：{item.key}")
+        return operation.key, delta
     delta = _number(operation)
     for nested in branch.all("if"):
         if not isinstance(nested.value, Block):
@@ -151,7 +181,9 @@ def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[st
                 raise UnsupportedPdxError("嵌套 if 缺少 add")
             delta += _number(nested_write)
         elif result is None:
-            raise UnsupportedPdxError("嵌套条件未知，不能静默解释")
+            # 与游戏中的条件分支一致：未知的辅助增量不改变基础档，
+            # 不把可选互补误报成生成器错误。
+            continue
     return operation.key, delta
 
 

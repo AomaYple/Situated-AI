@@ -741,6 +741,8 @@ def patch(
     country_policy: CountryPolicy | None = None,
     owned_variables: frozenset[str] | set[str] | None = None,
     owned_triggers: frozenset[str] | set[str] | None = None,
+    consumer_ir: object | None = None,
+    consumer_source: str | None = None,
 ) -> str:
     """向锁定底本的派生产物插入规则；关闭时逐字等价，不覆盖资格或值。"""
     if hashlib.sha256(normalized_text(baseline).encode()).hexdigest() != rules.baseline_sha256:
@@ -753,6 +755,34 @@ def patch(
         raise ValueError("默认策略不是块")
     decision_interfaces.validate(rules)
     groups = rules.groups(enabled_domains)
+    bundle_writers: dict[tuple[str, str], object] = {}
+    if consumer_ir is not None:
+        raw_writers = getattr(consumer_ir, "writers", None)
+        if raw_writers is None or consumer_source is None:
+            raise ValueError("consumer_ir 接线必须同时提供 writers 和 consumer_source")
+        bundle_writers = {
+            (str(item.source), str(item.definition)): item
+            for item in raw_writers
+            if getattr(item, "kind", None) == "rule_action"
+        }
+        if not bundle_writers:
+            raise ValueError(f"consumer_ir 没有来源 {consumer_source!r} 的 legacy writer")
+        expected_source = str(consumer_source)
+        if not any(source == expected_source for source, _ in bundle_writers):
+            raise ValueError(f"consumer_ir 缺少来源 writer：{expected_source}")
+        for field_rules in groups.values():
+            for rule in field_rules:
+                writer = bundle_writers.get((expected_source, rule.id))
+                if writer is None:
+                    raise ValueError(f"consumer_ir 缺少生产 writer：{expected_source}:{rule.id}")
+                if (
+                    getattr(writer, "field", None) != ".".join(rule.field)
+                    or getattr(writer, "operation", None) != rule.operation
+                    or not getattr(writer, "owner", None)
+                ):
+                    raise ValueError(
+                        f"consumer_ir writer 与规则不一致：{expected_source}:{rule.id}"
+                    )
     selected_reader_keys = {
         predicate.fact
         for candidates in groups.values()

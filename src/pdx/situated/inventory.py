@@ -12,14 +12,17 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path  # noqa: TC003
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .. import config  # noqa: TID252
 from .action_instances import witness_ids
 from .compiler import BASELINE, load_model
 from .receipts import StageReceipt, digest
 
-PLAN_VERSION = "30.0"
+if TYPE_CHECKING:
+    from .vanilla_inventory import VanillaInventory
+
+PLAN_VERSION = "31.3"
 INVENTORY_SCHEMA = 1
 
 
@@ -139,9 +142,8 @@ def _field_name(field: object) -> str:
 def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
     """从当前锁定生产源发现所有规则、行动和消费者面。"""
 
-    model = load_model(
-        baseline=None if baseline == BASELINE else baseline.read_text(encoding="utf-8")
-    )
+    from .. import decision_adapters, decision_rules  # noqa: PLC0415, TID252
+
     source_hashes = {
         "baseline": _sha256(baseline),
         "facts": _sha256(config.REPO / "mod/decisions/facts.toml"),
@@ -425,6 +427,14 @@ __all__ = [
     "Surface",
     "SurfaceInventory",
     "discover",
+    "discover_vanilla",
     "migration",
     "write",
 ]
+
+
+def discover_vanilla(*, game: Path | None = None) -> VanillaInventory:
+    """独立读取锁定原版；不改变旧生产库存及 1,401 迁移分母。"""
+    from .vanilla_inventory import discover as discover_game  # noqa: PLC0415
+
+    return discover_game(game=game)

@@ -2789,10 +2789,17 @@ def situated_audit_cmd() -> None:
     if problems:
         _fail("处境行动内核审计失败：\n" + "\n".join(problems), EXIT_FAILED)
     model = situated.load_model()
+    label = (
+        "处境行动内核审计通过"
+        if coverage.status == "complete"
+        else "处境行动内核审计完成，覆盖仍未收口"
+    )
+    color = "green" if coverage.status == "complete" else "yellow"
     console.print(
-        f"[green]处境行动内核审计通过[/]：{len(model.facts)} 个事实、"
+        f"[{color}]{label}[/]：{len(model.facts)} 个事实、"
         f"{len(model.actions)} 张显式行动卡、{len(model.action_instances)} 个生产行动实例、"
-        f"{len(model.production_consumers)} 个生产消费者；覆盖状态 {coverage.status}。"
+        f"{len(model.production_consumers)} 个生产消费者；覆盖状态 {coverage.status}，"
+        f"原版范围状态 {coverage.scope_status}。"
     )
     console.print("证据：静态生成合同；不证明长期游戏行为质量。")
 

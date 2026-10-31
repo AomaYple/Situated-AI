@@ -512,7 +512,7 @@ def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
     """冻结源码和产物字节；离线只能核对冻结一致性，不能重建原版。"""
     root = decisions.PRODUCT.parent
     sources = [
-        *sorted((root / "src/pdx").glob("*.py")),
+        *sorted((root / "src/pdx").rglob("*.py")),
         *sorted((root / "mod/decisions").glob("*.toml")),
         *sorted(decisions.BASELINE.parent.glob("*.txt")),
         *sorted(decisions.BASELINE.parent.glob("*.json")),

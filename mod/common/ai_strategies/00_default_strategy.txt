@@ -965,13 +965,13 @@ ai_strategy_default = {
 		# SITAI BEGIN diplomatic_play_neutrality
 		# ACTION fiscal_recovery [fiscal]; 违约时优先保护偿付能力，解除违约后退出。
 		if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes in_default = yes NOT = {  AND = { is_ai = yes is_at_war = yes } } } } }
+			limit = { ROOT ?= {  AND = { is_ai = yes in_default = yes NOT = { OR = { in_default = no } } } } }
 			add = 8
 		}
 		# ACTION wartime_defense [military]; 战争期间降低新的非必要外交承诺倾向，防止把原版资格误写成强制参战。
 		else_if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = {  AND = { is_ai = yes in_default = yes } } } } }
-			add = 5
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } NOT = {  AND = { is_ai = yes in_default = yes NOT = { OR = { in_default = no } } } } } } }
+			add = 6
 		}
 		# SITAI END diplomatic_play_neutrality
 	}
@@ -1296,9 +1296,13 @@ ai_strategy_default = {
 		# SITAI BEGIN change_law_chance
 		# ACTION political_reform [political]; 和平、政治可行且没有叛乱时提高法律启动机会，原版支持和失败仍生效。
 		if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } } } }
-			add = 1
-			if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } } } } add = 1 }
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } } } }
+			add = {
+				value = 2
+				if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } NOT = { OR = { in_default = yes is_at_war = yes } } } } } add = 1 }
+				min = -1
+				max = 1
+			}
 		}
 		# SITAI END change_law_chance
 	}
@@ -4054,12 +4058,12 @@ ai_strategy_default = {
 		# SITAI BEGIN recklessness
 		# ACTION diplomatic_restraint [diplomacy]; 战争时降低冒险外交倾向，仍由原版外交博弈资格和谈判决定结果。
 		if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } } } } } }
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } }
 			add = -4
 		}
 		# ACTION diplomatic_opening [diplomacy]; 和平和具备政治/宗属基础时允许有限外交主动性。
 		else_if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = {  AND = { is_ai = yes is_at_war = yes } } } } }
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = { OR = { is_at_war = yes in_default = yes } } NOT = {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } } } }
 			add = 2
 		}
 		# SITAI END recklessness
@@ -5629,16 +5633,26 @@ ai_strategy_default = {
 		# SITAI BEGIN economic_vs_government_spending_balance
 		# ACTION education_and_research [education]; 低识字率是教育机会信号，不是所有经济建设的统一禁令。
 		if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } OR = { legitimacy >= 50 bureaucracy > 0 } } } }
-			add = 2
-			if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } } } } add = 1 }
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } OR = { legitimacy >= 50 bureaucracy > 0 } NOT = { OR = { is_at_war = yes in_default = yes } } } } }
+			add = {
+				value = 3
+				if = { limit = { ROOT ?= {  OR = { bureaucracy > 0 } } } add = -1 }
+				if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } NOT = { OR = { in_default = yes is_at_war = yes } } } } } add = 1 }
+				min = -2
+				max = 2
+			}
 		}
 		# ACTION industrial_foundation [economy]; 具备和平和最低行政基础时支持建设性支出，避免用单一总门槛锁死发展。
 		else_if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } } } }
-			add = 2
-			if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } } } } add = 1 }
-			if = { limit = { ROOT ?= {  AND = { is_at_war = no  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } OR = { legitimacy >= 50 bureaucracy > 0 } } } } } add = 1 }
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } NOT = { OR = { in_default = yes is_at_war = yes } } } } }
+			add = {
+				value = 3
+				if = { limit = { ROOT ?= {  OR = { bureaucracy > 0 } } } add = -1 }
+				if = { limit = { ROOT ?= {  AND = { is_at_war = no  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } OR = { legitimacy >= 50 bureaucracy > 0 } NOT = { OR = { is_at_war = yes in_default = yes } } } } } } add = 1 }
+				if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } } } } add = 1 }
+				min = -2
+				max = 2
+			}
 		}
 		# SITAI END economic_vs_government_spending_balance
 	}

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Iterable  # noqa: TC003
 from dataclasses import asdict, dataclass
+from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any, Literal
 
 ReceiptStatus = Literal["not_started", "in_progress", "verified", "blocked", "rejected"]
@@ -51,6 +53,7 @@ class AuditResult:
     rows: tuple[CoverageRow, ...]
     receipts: tuple[StageReceipt, ...]
     scope_hash: str
+    scope_status: str = "unverified"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -63,6 +66,7 @@ class AuditResult:
             "rows": [row.as_dict() for row in self.rows],
             "receipts": [receipt.as_dict() for receipt in self.receipts],
             "scope_hash": self.scope_hash,
+            "scope_status": self.scope_status,
         }
 
 
@@ -80,4 +84,47 @@ def status_for(rows: Iterable[CoverageRow]) -> str:
     return "complete"
 
 
-__all__ = ["AuditResult", "CoverageRow", "StageReceipt", "digest", "status_for"]
+_HASH = re.compile(r"^[a-f0-9]{64}$")
+_STATUSES = {"not_started", "in_progress", "verified", "blocked", "rejected"}
+
+
+def validate_receipt(receipt: StageReceipt, *, strict: bool = False) -> tuple[str, ...]:
+    """验证阶段收据的可复核身份，不把收据存在当成功能证明。"""
+
+    problems: list[str] = []
+    if not receipt.step_id or any(ch in receipt.step_id for ch in "\r\n"):
+        problems.append("step_id")
+    if receipt.status not in _STATUSES:
+        problems.append("status")
+    if not receipt.input_hashes or any(
+        not isinstance(key, str)
+        or not key.strip()
+        or not isinstance(value, str)
+        or not _HASH.fullmatch(value)
+        for key, value in receipt.input_hashes.items()
+    ):
+        problems.append("input_hashes")
+    if not receipt.output_paths or any(
+        not isinstance(item, str)
+        or not item
+        or PurePosixPath(item).is_absolute()
+        or bool(PureWindowsPath(item).drive)
+        or PureWindowsPath(item).is_absolute()
+        or ".." in PurePosixPath(item.replace("\\", "/")).parts
+        for item in receipt.output_paths
+    ):
+        problems.append("output_paths")
+    if not receipt.evidence_ids or any(
+        not isinstance(item, str) or not item for item in receipt.evidence_ids
+    ):
+        problems.append("evidence_ids")
+    if not receipt.dependencies or any(
+        not isinstance(item, str) or not item for item in receipt.dependencies
+    ):
+        problems.append("dependencies")
+    if strict and receipt.status == "verified" and receipt.failures:
+        raise ValueError("verified 收据不能包含 failures")
+    return tuple(problems)
+
+
+__all__ = ["AuditResult", "CoverageRow", "StageReceipt", "digest", "status_for", "validate_receipt"]

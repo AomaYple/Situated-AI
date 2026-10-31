@@ -50,7 +50,13 @@ def _id(source: str, rule_id: str) -> str:
     return f"rule_action_{value}"
 
 
-def _rule_instance(source: str, rule: decision_rules.Rule, *, owner: str) -> ActionInstance:
+def _rule_instance(
+    source: str,
+    rule: decision_rules.Rule,
+    *,
+    owner: str,
+    actor_scope: str,
+) -> ActionInstance:
     facts = tuple(
         sorted(
             {predicate.fact for predicate in rule.conditions}
@@ -75,7 +81,7 @@ def _rule_instance(source: str, rule: decision_rules.Rule, *, owner: str) -> Act
         vanilla_tail="retain_original_qualification_cost_random_execution",
         evidence=facts,
         family_id=classify(domain=rule.domain, field=".".join(rule.field), source=source),
-        actor_scope="owner" if source != "mod/decisions/information.toml" else "root",
+        actor_scope=actor_scope,
         target_scope="target_or_none"
         if rule.field and rule.field[-1] in {"state_value", "colonial_interest_ratio"}
         else "none",
@@ -91,12 +97,23 @@ def build(
     """从所有实际规则和显式卡构建稳定、无重复的实例目录。"""
 
     result: list[ActionInstance] = [
-        _rule_instance("mod/decisions/information.toml", rule, owner="information_rules")
+        _rule_instance(
+            "mod/decisions/information.toml",
+            rule,
+            owner="information_rules",
+            actor_scope="root",
+        )
         for rule in information.rules
     ]
     for source, policy in adapters.policies:
         result.extend(
-            _rule_instance(source, rule, owner="consumer_adapters") for rule in policy.rules
+            _rule_instance(
+                source,
+                rule,
+                owner="consumer_adapters",
+                actor_scope="owner" if policy.actor_path else "root",
+            )
+            for rule in policy.rules
         )
     result.extend(
         ActionInstance(

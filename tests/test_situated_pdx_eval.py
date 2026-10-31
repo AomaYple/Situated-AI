@@ -1,5 +1,7 @@
 """K5：对生成 PDX 行动文本执行独立语义见证。"""
 
+from dataclasses import replace
+
 import pytest
 
 from pdx.situated.compiler import load_model, strategy_overlay
@@ -37,14 +39,35 @@ def test_pdx_evaluator_changes_to_wartime_defense_without_reference_call() -> No
     result = select(
         _overlays()["diplomatic_play_neutrality"], _facts(is_at_war=True, in_default=False)
     )
-    assert result.action_id == "wartime_defense"
-    assert result.delta == 5.0
+    assert result == result.__class__("wartime_defense", "add", 6.0, "selected")
+
+
+def test_wartime_defense_yields_to_fiscal_recovery_while_in_default() -> None:
+    """The symmetric substitute pair is ordered once, rather than deadlocking."""
+
+    result = select(
+        _overlays()["diplomatic_play_neutrality"],
+        _facts(is_at_war=True, in_default=True),
+    )
+    assert result == result.__class__("fiscal_recovery", "add", 8.0, "selected")
+
+
+def test_diplomatic_restraint_keeps_its_negative_add_in_war() -> None:
+    result = select(_overlays()["recklessness"], _facts(is_at_war=True))
+    assert result == result.__class__("diplomatic_restraint", "add", -4.0, "selected")
+
+
+def test_unknown_peace_does_not_fall_through_to_diplomatic_opening() -> None:
+    """Unknown war/peace state is a vanilla boundary for the first candidate."""
+
+    result = select(_overlays()["recklessness"], _facts(is_at_war=None))
+    assert result == result.__class__("diplomatic_restraint", None, 0.0, "unknown")
 
 
 def test_pdx_evaluator_keeps_local_economy_and_education_paths_reachable() -> None:
     result = select(_overlays()["economic_vs_government_spending_balance"], _facts())
     assert result.action_id == "education_and_research"
-    assert result.delta == 3.0
+    assert result.delta == 2.0
 
 
 def test_unknown_core_fact_is_an_explicit_unknown_fallback() -> None:
@@ -66,11 +89,40 @@ def test_generated_unknown_condition_fails_loudly() -> None:
         )
 
 
-def test_nested_complement_is_part_of_the_generated_delta() -> None:
-    result = select(_overlays()["economic_vs_government_spending_balance"], _facts())
-    assert result.delta == 3.0
-    without_bureaucracy = select(
-        _overlays()["economic_vs_government_spending_balance"], _facts(bureaucracy=0)
+def test_unknown_complement_falls_back_to_known_base_delta() -> None:
+    result = select(
+        _overlays()["economic_vs_government_spending_balance"],
+        _facts(bureaucracy=None, legitimacy=60),
     )
+    assert result.action_id == "education_and_research"
+    assert result.fallback == "selected"
+    assert result.delta == 2.0
+
+
+def test_nested_complement_is_part_of_the_generated_delta() -> None:
+    model = load_model()
+    model = replace(
+        model,
+        actions=tuple(
+            replace(action, max_delta=3.0) if action.id == "education_and_research" else action
+            for action in model.actions
+        ),
+        decision_ir=tuple(
+            replace(row, max_delta=3.0) if row.action_id == "education_and_research" else row
+            for row in model.decision_ir
+        ),
+    )
+    overlay = strategy_overlay(model)["economic_vs_government_spending_balance"]
+    result = select(overlay, _facts())
+    assert result.delta == 3.0
+    without_bureaucracy = select(overlay, _facts(bureaucracy=0))
     assert without_bureaucracy.action_id == "education_and_research"
-    assert without_bureaucracy.delta == 2.0
+    assert without_bureaucracy.delta == 3.0
+
+
+def test_complement_must_not_exceed_action_limit() -> None:
+    model = load_model()
+    action = next(item for item in model.actions if item.id == "education_and_research")
+    result = select(_overlays()["economic_vs_government_spending_balance"], _facts())
+    assert result.action_id == action.id
+    assert abs(result.delta) <= action.max_delta

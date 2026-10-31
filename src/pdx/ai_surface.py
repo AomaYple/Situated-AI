@@ -188,7 +188,7 @@ FACTORS: tuple[Factor, ...] = (
 def strategy_files(game: Path | None = None) -> list[Path]:
     """策略文件列表（排序稳定，便于可复现）。"""
     base = (game or config.GAME) / STRATEGY_DIR
-    return sorted(p for p in base.glob("*.txt") if p.is_file())
+    return sorted(p for p in base.rglob("*.txt") if p.is_file())
 
 
 def _scalar_text(node: Node | None) -> str | None:
@@ -306,6 +306,8 @@ def read_cards(game: Path | None = None) -> list[Card]:
     for path in strategy_files(root):
         parsed = parse_cached(path)
         rel = path.relative_to(root).as_posix()
+        if parsed.errors:
+            raise ValueError(f"原版 AI 策略解析失败：{rel}: {'; '.join(parsed.errors)}")
         for assignment in parsed.top_assignments:
             if not assignment.key.startswith("ai_strategy_"):
                 continue

@@ -51,3 +51,18 @@ def test_k0_json_contract_is_recomputable(tmp_path) -> None:
     assert payload["scope_hash"] == inventory.discover().scope_hash
     assert payload["discovered_count"] == sum(payload["status_counts"].values())
     assert len(migration_payload["rows"]) == 1401
+
+
+def test_k0_equivalent_baseline_at_another_path_preserves_legacy_rule_denominator(tmp_path) -> None:
+    baseline = tmp_path / "baseline.txt"
+    baseline.write_bytes(inventory.BASELINE.read_bytes())
+    result = inventory.discover(baseline=baseline)
+    assert sum(item.kind == "legacy_rule" for item in result.surfaces) == 1401
+    assert len(inventory.migration(baseline=baseline, inventory=result).rows) == 1401
+
+
+def test_k0_invalid_alternate_baseline_keeps_strict_model_validation(tmp_path) -> None:
+    baseline = tmp_path / "broken-baseline.txt"
+    baseline.write_text("ai_strategy_default = {", encoding="utf-8", newline="\n")
+    with pytest.raises(ValueError, match="默认策略底本无法解析"):
+        inventory.discover(baseline=baseline)
