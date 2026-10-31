@@ -201,6 +201,21 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
             )
         except (OSError, ValueError):
             production_witnesses = set()
+        if not production_witnesses:
+            # CI 和无游戏环境仍有仓库内的已生成生产树。它是 modgen --check
+            # 的输入，足以提供结构见证；没有原版消费者原件时，不能把生成
+            # 失败误报成所有行动 pending。
+            from .. import decisions  # noqa: PLC0415, TID252
+
+            production_witnesses = witness_ids(
+                {
+                    name: path.read_text(encoding="utf-8-sig")
+                    for directory in ("common", "localization")
+                    for path in (decisions.PRODUCT / directory).rglob("*")
+                    if path.is_file() and path.suffix.lower() == ".txt"
+                    for name in (path.relative_to(decisions.PRODUCT).as_posix(),)
+                }
+            )
     for source, ruleset in (
         ("mod/decisions/information.toml", decision_rules.load()),
         *decision_adapters.load().policies,

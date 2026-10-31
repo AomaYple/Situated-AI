@@ -30,6 +30,7 @@ def test_every_production_instance_has_a_family_and_scope() -> None:
     assert set(FAMILIES) <= families
 
 
+@pytest.mark.integration
 def test_instance_witness_contract_is_complete_for_generated_rules() -> None:
     information = decision_rules.load()
     adapters = decision_adapters.load()

@@ -24,6 +24,7 @@ def test_ir_is_stable_and_complete_for_all_production_rules():
     assert all(item.vanilla_tail for item in items)
 
 
+@pytest.mark.integration
 def test_generated_production_text_is_independently_parseable():
     info = decision_rules.load()
     adapters = decision_adapters.load()
@@ -43,6 +44,7 @@ def test_generated_production_text_is_independently_parseable():
     assert not lowering.mismatches(ir.from_rules(_all_rules()), generated)
 
 
+@pytest.mark.integration
 def test_generated_action_blocks_have_independent_ast_shape():
     generated = {
         name: text
