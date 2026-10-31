@@ -4,7 +4,7 @@
 >
 > 本页是**唯一的产品实施计划**。每个阶段均以可重算的生产证据和明确出口关闭；文档勾选不能替代实现、见证或交付收据。
 >
-> 计划版本：30.0（2026-10-31）。状态：**K0–K13 静态工程出口已验证，生产交付为3.0.1；长期游戏行为、平衡和游戏内性能由用户验收**。旧 27.5 的历史收据、2.0.0 和 3.0.0 的交付事实及标签保持不变。
+> 计划版本：31.1（2026-10-31）。状态：**K0–K13/3.0.1 静态工程基线已验证；D0–D14 的广度与深度深化尚未执行；长期游戏行为、平衡和游戏内性能由用户验收**。本次 31.1 只细化执行和验收合同，不宣称新增 Mod 能力。旧 30.0、27.5、2.0.0 和 3.0.0 的交付事实及标签保持不变。
 
 **Goal:** 完整实现以行动卡为最小决策单元、覆盖锁定原版所有合法可接入面、具有局部联合决策和有限时间反馈的 Situated AI，使工程实现与“最优秀的机制和架构，极致广度和极致深度”的可验收合同逐项一致。
 
@@ -12,12 +12,381 @@
 
 **Tech Stack:** Python 3.11+、仓库 `.venv`、TOML、现有 PDX AST/底本索引、pytest、Hypothesis、现有覆盖率/资源门；游戏基线 Victoria 3 `1.14.5`。
 
-**Spec:** [目标设计](../03-处境决策设计.md)及[行动覆盖与验收](../04-行动覆盖与验收.md)共同约束本计划。状态见[工作清单](../当前工作清单.md)，工程与 Git 流程见 [CONTRIBUTING.md](../../../CONTRIBUTING.md)，交付合同见[工程基线](工程基线-1.0.md)。
+**Spec:** [目标设计](../03-处境决策设计.md)、[行动层深化设计](../05-行动层深化设计.md)及[行动覆盖与验收](../04-行动覆盖与验收.md)共同约束本计划。状态见[工作清单](../当前工作清单.md)，工程与 Git 流程见 [CONTRIBUTING.md](../../../CONTRIBUTING.md)，交付合同见[工程基线](工程基线-1.0.md)。
+
+## 0.1 31.1 前向深化计划（D0–D14）
+
+> **状态：未执行。** K0–K13 是 30.0/3.0.1 的已验证静态基线；当前前向执行以 D0 → D14 为唯一顺序。新阶段不得改写 3.0.1 的历史标签、Release、包哈希或交付证据。
+>
+> **最小步骤规则：** 每个步骤都必须有生产文件、测试文件和阶段收据（纯调查步骤除外）；步骤的“验收”是关闭条件。没有生产接线的配置、没有失败见证的报告和没有独立求值的“通过”均拒收。
+
+### 三层完成合同
+
+- `strategy_card`：最多一条有限主路线，不能直接写 PDX。
+- `domain_card`：覆盖 19 个领域；每张至少有事实、目标、收益、成本/承诺、消费者、基础/稳健/扩张档和未知回退。
+- `tool_action`：对应一个具体生产写入；必须能反查 strategy、domain、consumer、PDX AST、原版尾部和证据。
+- `rule_action`：只作为迁移别名；完成时不得存在无父级、无目标、无消费者或只进报告的孤立项。
+- 关系：互补、替代、冲突、使能均有条件、作用域、强度、失效和深度；使能无环，最大展开两级。
+- 分层：基础档只要求原版资格和本领域直接问题；稳健档加入本领域能力和成本；扩张档才要求长期承诺能力。缺高档条件只能降强度或换替代，不能关闭无关领域。
+
+## 0.2 逐步关账协议（每个最小步骤都必须遵守）
+
+`D<n>.<m>` 是可交付的最小步骤，不是进度标签。执行者必须为每个步骤建立一份可重算的关账记录；只修改文档、只增加配置、只增加报告或只让旧测试通过，均不能关闭步骤。
+
+### 0.2.1 固定关账产物
+
+每个步骤至少产生以下内容；纯调查步骤可以没有生产代码，但必须有调查结果和明确的 `engine_unexposed` 或 `pending` 结论：
+
+1. **范围声明**：记录 `step_id`、输入文件、适用原版底本、作用域、依赖阶段和不在范围内的内容。
+2. **生产变更**：列出实际被生成器读取并能影响 PDX 的源文件；若本步骤只建立拒错合同，必须列出该合同在生产入口上的调用位置。
+3. **聚焦测试**：至少一个正例和一个拒收/反例；涉及动态因素时还必须有成本变化、未知或玩家回退中的适用案例。
+4. **生成见证**：保存 source → IR → PDX AST → vanilla tail 的身份链，以及输入和输出 SHA-256；没有生产写入的步骤必须明确写 `no_production_write`。
+5. **阶段收据**：写入 `docs/design/exec/D<n>-结果.md` 或更新该阶段唯一收据，状态只能是 `verified`、`pending`、`blocked` 或 `engine_unexposed`。
+6. **状态更新**：只有收据为 `verified`，才可在[当前工作清单](../当前工作清单.md)中更新该步骤；不能先勾选再补证据。
+
+### 0.2.2 步骤关闭公式
+
+步骤 `D<n>.<m>` 只有同时满足以下条件才算 `verified`：
+
+```text
+scope_declared
+AND production_path_or_explicit_no_production_write
+AND focused_positive_case_passes
+AND applicable_negative_cases_pass
+AND source_ir_pdx_witness_is_recomputable
+AND input_and_output_digests_are_recorded
+AND dependency_receipts_are_valid
+AND limitations_are_explicit
+```
+
+缺少任一条件时保持 `pending`；缺少锁定底本、合法原版接口或可等价降低路径时保持 `blocked`，并记录恢复条件。只有经过底本和接口审计、确认没有合法消费者的内容才可以标记 `engine_unexposed`；“尚未实现”“实现困难”“暂时没测”不能使用该状态。
+
+### 0.2.3 依赖失效和重复验证规则
+
+- 修改步骤的生产源、schema、底本锁、生成器、PDX lowering、消费者合同或测试夹具时，该步骤及其所有下游收据自动失效；不得沿用旧的 `scope_hash` 或只复制旧结果页。
+- 只修改文档散文时，若没有改变唯一来源和生成物，可以不使生产收据失效，但必须运行链接、版本和状态一致性检查。
+- 每个阶段先运行该阶段的聚焦测试；跨阶段等价、突变、资源和完整回归集中到 D12–D13，避免为每个行动实例重复跑全仓测试。
+- 失败修复只重复受影响的聚焦检查；只要生产候选、生成字节、底本或覆盖分母变化，就必须重新冻结依赖并重新执行受影响阶段，最终重新运行 D13。
+- 阶段收据必须记录实际命令、实际测试选择、实际 worker、跳过分类、墙钟和 RSS；未运行的检查写 `not_run`，不能写成通过。
+
+### 0.2.4 阶段收据最小字段
+
+每个阶段收据至少包含：`plan_version`、`stage_id`、`status`、`step_ids`、`source_paths`、`production_paths`、`test_paths`、`commands`、`input_digests`、`output_digests`、`witness_ids`、`failure_ids`、`dependency_receipts`、`skips`、`limitations`、`next_action`。机器字段和人类说明必须来自同一份收据，不能维护两套互相独立的状态。
+
+## 0.3 19 个领域的最小验收矩阵
+
+下面的矩阵是 D4、D6、D7、D8 和 D12 的共同分母。每个领域必须逐实例完成事实、目标、成本、消费者、关系、未知和适用生命周期；表中的主题只是最低覆盖，不代表可以用一个模板替代全部合法生产写入。
+
+| 领域 | 最低必须展开的面 | 最小生产验收 | 必须拒收的捷径 |
+|---|---|---|---|
+| `fiscal` | 收入、债务、违约、借款、财政承诺 | 轻度借款、违约、未知各改变恢复/强度或原版回退 | 把所有赤字都判成违约 |
+| `administrative` | 官僚、行政赤字、制度维护能力 | 行政修复可低档进入，昂贵扩张受成本影响 | 用财政总分代替行政事实 |
+| `industry` | 建设、建筑、生产方式、投入瓶颈 | 低档修复不被无关全局条件锁死，扩张有承诺成本 | 只有一个全满足建设门槛 |
+| `resources` | 商品、供应、产能、目标消费者 | 商品级单位和未知回退可见于真实消费者 | 无库存接口却推断库存 |
+| `market` | 价格、缺口、贸易、运输 | 三类事实可分别改变行动或强度 | 把价格、缺口和运输合成一个健康分 |
+| `research` | 科技树、研究能力、产业/军需需求 | 研究优先级受处境影响但不直接赠科技 | 只改固定科技倍率 |
+| `education` | 识字率、教育机构、教育能力 | 低识字率提高教育收益但不关闭工业 | 教育成为全局硬开关 |
+| `political` | 合法性、政府、利益集团、法律、革命风险 | 改革候选局部受政治可行性影响，原版失败保留 | 国家名硬编码路线 |
+| `population` | 人口、迁移、劳动力、就业 | 人口事实只影响有合法消费者的目标 | 人口总量成为万能能力 |
+| `social` | 生活水平、健康、福利、治安、劳工 | 社会压力改变相关成本/机会，保留财政代价 | 无条件赠福利或稳定 |
+| `identity` | 文化、宗教、身份相关原版接口 | 作用域、来源和未知明确 | 常识推断或无接口写入 |
+| `diplomacy` | 关系、条约、博弈、防御/进攻方向 | 防御承诺与进攻承诺分开评估 | 强制宣战、独立或服从 |
+| `subjects` | 宗主、属国、自治、义务与安全 | 关系变化有局部作用域和退出 | 把宗属关系当全局路线 |
+| `army` | 军队规模、动员、补给、军需 | 战争提高必要防御，财政限制新增承诺 | 用和平/战争布尔替代军需链 |
+| `war` | 战争目标、战败、恢复、冲突风险 | 战败恢复有真实原版证据和生命周期 | 选中行动即视为成功 |
+| `navy` | 舰队、补给、造船、海军科技 | 海军能力与海外承诺成本分开 | 直接控制前线战术 |
+| `overseas` | 殖民、投射、海外承诺 | 有能力时扩张，无能力时低档替代或回退 | 只要有海外目标就强制扩张 |
+| `geography` | 合法州/地区目标、位置和作用域 | 目标缺失、错配、跨国泄漏均拒绝 | 新增世界级国家×州扫描 |
+| `temporal` | 进入、保持、退出、TTL、冷却、抢占、清理 | 有状态行动可恢复，旧存档和玩家路径安全 | 所有行动统一写永久变量 |
+
+矩阵的最小证据包是每个领域四组见证：正例、反例、成本变化、未知/玩家回退。任一领域缺一组，D12 和 D13 均保持未完成；同一测试不能通过复制输入同时冒充多个领域的因果见证。
+
+## 0.4 广度、深度和正确性的反捷径门
+
+以下任一情况出现，相关步骤和所有依赖阶段均保持未完成：
+
+- 用 7 张战略卡、19 个领域标签或 1,401 个实例的数量替代逐生产写入的三层追踪；
+- 只有 TOML、报告、Python 参考器或 metadata 有记录，实际 PDX 没有对应写入；
+- 任何合法可接入面仍未绑定，却被标记为 `engine_unexposed`；
+- 通过把未知补成 `false`、`0`、健康或高档，或把轻度借款、行政赤字和违约合并为同一事实；
+- 成本只在同分时排序、关系只写解释、时间只写字段、状态没有退出或生成器绕过唯一编译入口；
+- 通过删除候选、缩小测试分母、降低覆盖/资源门或跳过失败来获得速度或内存结果；
+- 把静态生成、脚本加载、根 hook、评分变化或 CI 通过写成长期 AI 行为、数值平衡、游戏内性能或 Workshop 体验通过。
+
+## 0.5 执行顺序和交付边界
+
+执行顺序固定为 `D0 → D1 → D2 → D3 → D4 → D5 → (D6, D7, D8) → D9 → D10 → D11 → D12 → D13 → D14`。D6、D7、D8 可在依赖满足后按领域分批实现，但每个领域必须先关闭自己的聚焦出口，再进入跨域 D9；不得并行修改同一生产源或共享测试输出。
+
+D14 只在用户另行授权发布、推送、合并、打 tag、Release 或部署时执行。完成 D13 只能说明锁定底本下的静态生产和工程合同通过；长期游戏行为、平衡、后期运行性能、本地化呈现和 Workshop 体验仍由用户验收。
+
+## 0.6 固定验证入口矩阵
+
+执行者可以增加针对性检查，但不能用更窄的命令替代本表规定的最小入口。命令均从仓库根目录运行，使用 `.venv` 中的 Python；实际 worker、跳过项、墙钟和 RSS 写入阶段收据。
+
+| 阶段 | 最小验证入口 | 必须额外保存的证据 | 关闭前不得出现 |
+|---|---|---|---|
+| D0 | `pytest tests/test_engineering_contract.py tests/test_docs_consistency.py tests/test_situated_depth_contract.py`；`v3 modgen --check`；`v3 modguard --offline`；`v3 decision-audit --offline` | 基线、底本、源、生成物和标准包指纹 | 3.0.1 字节变化、分母变化、未分类快照 |
+| D1 | `pytest tests/test_situated_layers.py tests/test_situated_schema.py`；schema 加载与拒错检查 | 层级树、关系图、父级和大小写错误样例 | 运行期事实写入 schema、父级环 |
+| D2 | `pytest tests/test_situated_inventory.py tests/test_situated_bindings.py`；inventory/migration 重算 | 1,401 个旧 ID 的逐项绑定、owner 和 source map | 缺失、重复、模糊绑定、只进报告 |
+| D3 | `pytest tests/test_situated_kernel.py tests/test_situated_lowering.py`；SC01–SC32 迁移对照 | 七张战略卡的主/替代/未知/玩家/尾部见证 | 迁移静默改行为、战略卡直接写 PDX |
+| D4 | `pytest tests/test_situated_domains.py tests/test_situated_families.py` | 19 域逐列卡数、工具数、消费者数和状态 | 只有标签没有生产叶子、合法面被批量 N/A |
+| D5 | `pytest tests/test_situated_evidence.py tests/test_situated_goals.py tests/test_situated_arbitration.py` | 单位、作用域、目标、成本、三值未知传播反例 | unknown 变成 false/0、成本只在同分排序 |
+| D6 | `pytest tests/test_layered_domains.py tests/test_decision_modules.py tests/test_production_inputs.py`；经济/教育聚焦生成 | 六域四组见证和经济—教育联合链 | 全条件发展门槛、资源赠送、世界级扫描 |
+| D7 | `pytest tests/test_political_surface.py tests/test_country_integration.py tests/test_decision_modules.py`；政治/社会聚焦生成 | 政治、人口、社会、身份逐域见证 | 国家名路线、人口万能能力、无条件福利 |
+| D8 | `pytest tests/test_country_state.py tests/test_country_coordination.py tests/test_decision_modules.py`；外交/军事/时间聚焦生成 | 方向、作用域、生命周期、旧存档和玩家回退 | 强制宣战、战败即成功、缺退出的持久状态 |
+| D9 | `pytest tests/test_situated_relations.py tests/test_situated_arbitration.py tests/test_situated_scenarios.py` | 关系图、机会成本和联合选择反事实 | 关系环、无限反馈、双写、跨消费者隐式循环 |
+| D10 | `pytest tests/test_consumer_audit.py tests/test_situated_inventory.py tests/test_decision_placement.py` | 每个 PDX 写入的唯一 owner 和前后指纹 | 孤立 rule_action、同字段多作者、报告冒充生产 |
+| D11 | `pytest tests/test_situated_state.py tests/test_perf_baseline.py tests/test_mem_baseline.py`；固定输入串行五次基准 | 候选/叶/ getter/变量/关系预算、时间中位数、峰值 RSS | 删功能、缩分母、缓存键缺指纹、静默旧结果 |
+| D12 | `pytest tests/test_situated_pdx_eval.py tests/test_situated_scenarios.py tests/test_situated_mutations.py` | 19 域四类见证、失败注入和独立求值 | 参考器与 PDX 求值器共享实现、surviving mutation |
+| D13 | `python tools/ci/run_check.py full-acceptance --quiet` 及贡献指南规定的静态门 | 最终覆盖、跳过分类、资源、卫生、深度报告 | 缓存/探针/历史实验入生产树，任何 pending/blocked |
+| D14 | `v3 package`、发布合同和经授权的 Git/Release/部署命令 | 包 manifest、SHA、tag、Release、部署和回滚收据 | 未授权外部动作、历史 tag 移动、长期行为冒充静态通过 |
+
+表中尚不存在的测试文件必须在对应阶段创建；在文件创建前，不能把该阶段标记为通过。若某个底本或平台使命令无法运行，收据必须记录分类后的 `skip` 和恢复条件，阶段保持 `blocked`，不能删掉该入口。
+
+## D0：冻结 3.0.1 基线和行动层合同
+
+**文件：** docs/design/05-行动层深化设计.md、docs/design/当前工作清单.md、tests/fixtures/situated/、tests/test_situated_depth_contract.py（新增）。
+
+- [ ] D0.1 运行 modgen --check、modguard --offline、decision-audit --offline 和完整静态回归。
+  - **验收：** 全部成功；收据记录命令、输入指纹、跳过分类和限制；任一失败阻止 D1。
+- [ ] D0.2 测试 strategy.<id>、domain.<id>、tool.<id> 的唯一性、父级、作用域和大小写。
+  - **验收：** 重复、缺父级、跨层、非法字符各有失败用例，合法三层样例通过。
+- [ ] D0.3 为 7 张显式卡和代表性规则保存参考器输出、PDX AST、原版尾部和玩家回退快照。
+  - **验收：** 删除 PDX 写入、改变尾部或写入玩家路径时对照失败。
+- [ ] D0.4 写 D0 结果收据。
+  - **验收：** 收据可反查命令、哈希、测试和限制，不写长期行为已证明。
+- **出口：** 3.0.1 可重建，生产 PDX 字节未变化，三层合同能拒错。
+
+## D1：实现三层 schema 和加载器
+
+**文件：** mod/decisions/action_layers.toml（新增）、src/pdx/situated/layers.py（新增）、src/pdx/situated/schema.py、src/pdx/situated/actions.py、tests/test_situated_layers.py（新增）。
+
+- [ ] D1.1 声明三层和 19 个领域，不写运行期事实。
+  - **验收：** 19 个领域唯一；运行期字段混入、未知层级和跨层父级硬失败。
+- [ ] D1.2 增加不可变层级、父级、生命周期和消费者绑定类型，兼容旧 ActionCard。
+  - **验收：** 7 张旧卡能作为 strategy 加载；类型检查通过。
+- [ ] D1.3 分开校验层级树和行动关系图。
+  - **验收：** 父级环、关系环、跨消费者使能和深度超限均失败。
+- [ ] D1.4 在没有绑定时保留旧生成路径。
+  - **验收：** 3.0.1 生成物、生成锁和包内容逐字节不变。
+- **出口：** schema 可加载、可拒错、可回退，没有新增 PDX 行为。
+
+## D2：把 1,401 个 rule_action 绑定到工具行动
+
+**文件：** mod/decisions/action_bindings.toml（新增）、src/pdx/situated/action_instances.py、inventory.py、contracts.py、tests/test_situated_inventory.py、tests/test_situated_bindings.py（新增）。
+
+- [ ] D2.1 生成 rule_action → tool_action → domain_card → strategy_card/consumer 的唯一清单。
+  - **验收：** 行数等于规则实例数；每个旧 ID 恰好一行；缺失、重复、模糊匹配和国家名硬编码失败。
+- [ ] D2.2 为每个工具行动补事实、目标、操作、尾部、未知策略和 owner。
+  - **验收：** 缺任一字段时 inventory 和完整门失败，不能靠迁移标签通过。
+- [ ] D2.3 从每个 PDX 写入反查三层父级和原始配置。
+  - **验收：** 漏写、双写、只进报告或 PDX 无登记均失败。
+- [ ] D2.4 写 D2 迁移收据。
+  - **验收：** pending 为零才关闭；不可接入必须有 engine_unexposed 证据。
+- **出口：** 1,401 个规则实例都有唯一三层追踪，旧生产字节等价。
+
+## D3：迁移 7 张完整显式行动卡
+
+**文件：** mod/decisions/actions.toml、src/pdx/situated/action_instances.py、compiler.py、tests/test_situated_kernel.py、tests/test_situated_lowering.py。
+
+- [ ] D3.1 把 7 张卡标为 strategy 层，补父级、领域、目标和路线作用域。
+  - **验收：** 七张卡都有唯一 strategy ID、合法领域、生命周期且不能直接写 PDX。
+- [ ] D3.2 为每张战略卡建立至少一个 domain 子卡。
+  - **验收：** 父子关系可追溯；继承字段不能覆盖子卡明确值。
+- [ ] D3.3 对 SC01–SC32 比较主行动、替代、未知、玩家回退和原版尾部。
+  - **验收：** 等价；差异必须有独立收据和授权。
+- **出口：** 七张卡成为三层运行样板。
+
+## D4：建立 19 个领域行动合同
+
+**文件：** mod/decisions/domain_actions.toml（新增）、src/pdx/situated/families.py、inventory.py、tests/test_situated_domains.py（新增）。
+
+- [ ] D4.1 每个领域声明目标、事实、消费者、基础/稳健/扩张档和未知策略。
+  - **验收：** 19 个领域均有唯一领域卡；只有标签没有生产叶子的卡失败。
+- [ ] D4.2 将 D2 工具行动挂到真实领域，一个实例只有一个主领域。
+  - **验收：** 全部实例主领域可反查；跨域关联独立登记，不复制规则。
+- [ ] D4.3 处置无合法消费者的面。
+  - **验收：** engine_unexposed 有底本路径、接口结论和原版保留；可接入但未做仍为 pending。
+- [ ] D4.4 写 D4 领域收据。
+  - **验收：** 收据逐列列出 19 个领域、卡数、工具行动数、消费者数、状态和证据。
+- **出口：** 19 个领域有可审计的领域层，没有孤立规则和假覆盖。
+
+## D5：统一事实、目标、成本、收益和未知传播
+
+**文件：** src/pdx/situated/evidence.py、goals.py、arbitration.py、ir.py、compiler.py、相关测试。
+
+- [ ] D5.1 每个工具行动生成 EvidenceSpec。
+  - **验收：** 裸 key、单位缺失、作用域不符和未知策略不一致硬失败。
+- [ ] D5.2 每个工具行动生成 GoalSpec。
+  - **验收：** 缺目标、无消费者、无叶行动或只进报告失败。
+- [ ] D5.3 把成本放入可行档或强度。
+  - **验收：** 成本上升至少导致一个非同分场景降档或替代；零成本修复不被无关财政门阻挡。
+- [ ] D5.4 固定 unknown、stale、unsupported 传播。
+  - **验收：** 三种未知均有原版回退，不产生奖励或伪造资格。
+- **出口：** 每个工具行动都有可计算的事实、目标、收益、成本和未知合同。
+
+## D6：经济、行政、资源、市场、研究和教育
+
+**文件：** mod/decisions 下相关 TOML、src/pdx/decision_economy.py、src/pdx/situated/compiler.py、经济/教育/信息测试。
+
+- [ ] D6.1 财政和行政：分开违约、债务、收入、官僚和行政赤字。
+  - **验收：** 轻度借款不等同违约；违约提高恢复但不赠资源；行政赤字允许修复；正反未知有见证。
+- [ ] D6.2 工业、建设和生产方式。
+  - **验收：** 不要求所有全局条件同时满足；有低依赖修复、稳健扩张和成本替代。
+- [ ] D6.3 资源和农业：按商品、目标消费者和单位展开。
+  - **验收：** 不观察库存不推断；商品未知回退原版。
+- [ ] D6.4 市场、贸易和运输：分开价格、缺口、运输。
+  - **验收：** 三类事实分别可改变行动/强度；运行期国家×州×商品扫描为零。
+- [ ] D6.5 研究和教育：连接识字率、教育机构、研究能力、产业和军需需求。
+  - **验收：** 低识字率不关闭工业；战争只压制昂贵承诺；不直接赠科技。
+- [ ] D6.6 经济—教育联合链：教育→研究→工业→市场→财政，最多两级。
+  - **验收：** 正面、断链、成本、未知四组场景改变选中/强度/回退；超两级硬失败或有截断收据。
+- [ ] D6.7 领域收口。
+  - **验收：** 源、IR、PDX、见证和文档一致；无未分类 pending；不得删领域或测试换性能。
+- **出口：** 经济、行政、资源、市场、研究和教育形成纵向联动，不重新引入全条件发展门槛。
+
+## D7：政治、人口、社会和身份
+
+**文件：** mod/decisions 下相关 TOML、src/pdx/political_surface.py、src/pdx/situated/、政治/社会测试。
+
+- [ ] D7.1 政治和法律：合法性、政府、利益集团、革命和法律候选局部化。
+  - **验收：** 只影响稳定/谈判或高风险改革；不指定固定意识形态；原版支持和失败保留。
+- [ ] D7.2 人口、迁移和劳动力。
+  - **验收：** 人口总量不成为万能能力；无消费者事实为 engine_unexposed 或原版保留。
+- [ ] D7.3 社会、健康和福利。
+  - **验收：** 社会压力改变相关机会/成本；不无条件抬高支出或绕过财政成本。
+- [ ] D7.4 身份、文化和宗教。
+  - **验收：** 事实有来源/作用域；国家名硬编码、常识推断和无消费者写入失败。
+- [ ] D7.5 领域收口。
+  - **验收：** 无孤立工具行动；生产写入可反查；静态和独立 PDX 对照通过。
+- **出口：** 政治、人口、社会和身份不会错误变成全局改革/发展开关。
+
+## D8：外交、宗属、军队、战争、海军、海外、地理和时间
+
+**文件：** mod/decisions 下相关 TOML、src/pdx/decision_diplomacy.py、src/pdx/country_state.py、外交/军事/状态测试。
+
+- [ ] D8.1 外交和宗属。
+  - **验收：** 防御/进攻方向不同；不强制宣战、独立或服从；条约作用域错误硬失败。
+- [ ] D8.2 陆军、战争和战后恢复。
+  - **验收：** 战争提高生存/军需；财政恶化降低新增承诺而不删除必要防御；战败恢复有真实证据。
+- [ ] D8.3 海军、海外和殖民。
+  - **验收：** 海外行动需要投射能力或低档替代；财政恢复降低新增海外承诺；未知回退原版。
+- [ ] D8.4 地理和目标。
+  - **验收：** 目标作用域缺失、错配和跨国泄漏失败；不新增世界扫描。
+- [ ] D8.5 时间和生命周期。
+  - **验收：** 有状态行动缺退出/清理失败；即时消费者不强行创建变量。
+- [ ] D8.6 领域收口。
+  - **验收：** 每条联合链有正面、断链、成本、未知见证；变量和刷新成本在预算内。
+- **出口：** 外交、宗属、军事、战争、海外、地理和时间都有局部、可退出、可追溯行动链。
+
+## D9：跨域关系、机会成本和有限反馈
+
+**文件：** mod/decisions/relations.toml、src/pdx/situated/relations.py、arbitration.py、关系/仲裁/反馈测试。
+
+- [ ] D9.1 关系声明 complements、substitutes、conflicts、enables，并带条件/作用域/失效。
+  - **验收：** 无条件永久奖励、重复奖励、方向错误和自我关系失败。
+- [ ] D9.2 局部联合选择。
+  - **验收：** 每消费者最多一个主工具行动和一个互补；一次合成；独立双写失败。
+- [ ] D9.3 机会成本。
+  - **验收：** 成本上升至少导致非同分场景降档或替代。
+- [ ] D9.4 反馈链收口。
+  - **验收：** 深度超两级、跨消费者隐式循环和世界级遍历硬失败。
+- **出口：** 多方面联动改变生产输出且有界可终止。
+
+## D10：唯一工具行动 owner
+
+**文件：** src/pdx/decision_adapters.py、decision_rules.py、situated/action_instances.py、situated/inventory.py、适配和库存测试。
+
+- [ ] D10.1 每个 PDX 写入反查 tool、consumer、vanilla tail。
+  - **验收：** 漏写、双写、同字段多 owner 和只写报告失败。
+- [ ] D10.2 清理孤立 rule_action，保留稳定 ID作迁移别名。
+  - **验收：** 孤立数量为零；删除任一绑定时 inventory/audit/完整门同时失败。
+- [ ] D10.3 逐域迁移并保存前后指纹。
+  - **验收：** 单域失败不污染其它领域；旧包可重建；各域可单独回滚。
+- [ ] D10.4 报告分别列 strategy/domain/tool/rule alias。
+  - **验收：** 不再用实例总数冒充完整卡数。
+- **出口：** 所有生产写入由唯一工具行动拥有。
+
+## D11：生命周期、确定性和性能
+
+**文件：** src/pdx/situated/temporal.py、src/pdx/country_coordination.py、src/pdx/performance.py、状态/性能测试和 tools/benchmarks/。
+
+- [ ] D11.1 使用既有消费者、月度和冲击 hook。
+  - **验收：** 新增世界枚举为零；每个刷新点有成本和原因。
+- [ ] D11.2 每国最多一条主路线、16 个 Mod 变量。
+  - **验收：** 所有变量有 set/remove/TTL/旧存档默认；无清理路径失败。
+- [ ] D11.3 保持每消费者候选 32、叶结果 512、getter 64、关系深度 2、reason code 8。
+  - **验收：** 最坏 AST 和候选计数不超限；超限测试失败。
+- [ ] D11.4 固定输入做至少 5 次串行基准。
+  - **验收：** 有中位数/离散度；正确性、覆盖率和失败语义不下降；RSS 门通过。
+- **出口：** 深化语义在速度和内存合同内。
+
+## D12：独立语义、失败注入和逐域验收
+
+**文件：** src/pdx/situated/pdx_eval.py、lowering.py、PDX/场景/突变测试。
+
+- [ ] D12.1 独立求值器覆盖三层。
+  - **验收：** 修改参考器不改 AST 时至少一个对照失败；固定场景两者一致。
+- [ ] D12.2 每领域正面、反面、成本、未知/玩家回退四类见证。
+  - **验收：** 19 个领域完整；缺一类收集门失败。
+- [ ] D12.3 注入无父级、错消费者、错误单位、关系环、缺退出、只进报告、玩家写入和原版零值抬高。
+  - **验收：** 每个注入均被拒绝。
+- [ ] D12.4 逐域生成结果页。
+  - **验收：** 任一 pending 或无证据 engine_unexposed 阻止 D13。
+- **出口：** 语义、反事实、失败和逐域证据可独立重算。
+
+## D13：全域静态回归和仓库卫生
+
+- [ ] D13.1 编码、hygiene、lint、format、types、baseline、deadcode、modgen --check、modguard --offline、decision-audit --offline 全通过。
+  - **验收：** 跳过有分类；生产目录无缓存、字节码、日志、探针、历史实验。
+- [ ] D13.2 运行 full-acceptance --quiet。
+  - **验收：** 0 失败；覆盖率不低于现有门；资源不超预算；不能缩测试或放宽门。
+- [ ] D13.3 复核 CLI、生成入口、测试、文档、Git 忽略和发布排除规则。
+  - **验收：** 无失效链接、死代码、重复业务源、过时当前文档或未登记生成物。
+- [ ] D13.4 生成最终深度报告。
+  - **验收：** strategy/domain/tool/rule alias、19 域、消费者、pending/blocked/engine_unexposed、A01–A12 和 D 合同均可重算。
+- **出口：** 全域静态和仓库卫生通过，未宣称游戏行为质量。
+
+## D14：标准包、版本、发布和部署（需单独授权）
+
+- [ ] D14.1 D13 通过后才定版本；3.0.1 历史对象不可移动。
+  - **验收：** 新版本源、生成物、包和 manifest 指纹一致。
+- [ ] D14.2 生成标准包。
+  - **验收：** 只含 PDX、本地化、metadata、封面、安装说明和 manifest；路径、编码、语言、占位符和 SHA通过。
+- [ ] D14.3 更新 Workshop 文案。
+  - **验收：** 区分战略卡、领域卡、工具行动和原版执行边界；没有未经验证的长期收益。
+- [ ] D14.4 仅在当次任务授权时提交、推送、合并、打 tag、Release 和部署。
+  - **验收：** Git、CI、Release、安装目录和回滚收据逐项核对；未授权动作保持未执行。
+- **出口：** 形成可交付标准包和可回滚收据；长期行为、数值、性能、本地化呈现和 Workshop 体验由用户验收。
+
+## 统一拒收条件
+
+用实例数量冒充完整卡深度、只写配置/报告没有 PDX、存在可接入但未绑定的规则行动、全局健康分、全条件发展门槛、成本只在同分时生效、未知当作 false/0、关系环/无限反馈/世界扫描、覆盖玩家或原版尾部、静态通过冒充长期行为、缩小分母或测试集，均保持阶段未完成。
+
+## 完成定义
+
+D14 只有在以下条件全部成立时关闭：
+
+all_19_domains_resolved
+AND every_legal_write_has_strategy_domain_tool_owner
+AND no_unbound_rule_action
+AND every_applicable_tool_action_has_fact_goal_cost_consumer_lifecycle
+AND every_declared_factor_has_counterfactual_or_noninterference_witness
+AND every_domain_has_positive_negative_cost_unknown_player_cases
+AND hierarchy_and_relation_graphs_are_acyclic_and_bounded
+AND vanilla_qualification_cost_random_execution_player_paths_preserved
+AND independent_pdx_equivalence_and_failure_injection_pass
+AND static_full_regression_and_resource_gates_pass
+AND repository_hygiene_and_package_contract_pass
+AND authorized_delivery_receipts_match
+
+完成只能表述为：在锁定 Victoria 3 1.14.5 底本和公开范围合同下，三层行动模型通过静态生产和工程验收；不能表述为所有国家重现历史路线、数值已平衡或长期表现已通过。
+
 
 ## 1. 全局约束与本轮授权边界
 
 1. 产品目标、行动中心架构和广深要求不变；正确性第一、速度第二、内存第三。性能不能靠删功能、缩测试或放宽语义获得。
-2. 当前执行按 K0 → K13 顺序推进；每个阶段都以生产代码、独立见证和阶段收据关闭。生产版本为3.0.1；3.0.0、2.0.0及更早历史标签、包和证据不可移动或改写。
+2. K0 → K13 是已验证的 30.0/3.0.1 基线；当前前向执行按 D0 → D14 顺序推进。每个阶段都以生产代码、独立见证和阶段收据关闭。生产版本仍为3.0.1；历史标签、包和证据不可移动或改写。
 3. 目标交付版本为 `3.0.1`；生产基线 `3.0.0`、`2.0.0` 和 `1.5.0` 只作不可移动历史对照；既有 tag、Release、证据字节和用户存档不得改写。
 4. 固定原版字段、作用域、版本和求值时机；缺底本、漂移、IR 无法降低、重复作者、单位错误和生产旁路硬失败。
 5. 不接管玩家、不赠资源、不整体替换 AI、不操控前线战术、不按国家名写路线；第三方 Mod 不在兼容保证内。
