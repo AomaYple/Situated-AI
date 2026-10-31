@@ -13,11 +13,12 @@
 | 工程原则 | [工程原则](principles/工程原则.md) |
 | Mod 原则 | [Mod 开发原则](principles/Mod开发原则.md) |
 | 工具、快照和证据边界 | [工程交付基线](design/exec/工程基线-1.0.md) |
-| 产品架构 | [处境决策设计](design/03-处境决策设计.md) |
+| 产品目标架构 | [处境决策设计](design/03-处境决策设计.md) |
+| 行动范围与功能验收 | [行动覆盖与验收](design/04-行动覆盖与验收.md) |
 | 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面.md)、[政治候选面](design/02-政治候选面.md) |
 | 当前计划 | [处境行动决策内核实施计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
-| 当前执行证据 | [分层联动执行结果](design/exec/分层联动-执行结果.md) |
+| 已交付基线证据 | [2.0.0行动内核收据](design/exec/处境行动内核-执行结果.md)、[1.5.0分层收据](design/exec/分层联动-执行结果.md) |
 | 创意工坊发布文案（Steam BBCode，全文可直接粘贴） | [创意工坊描述](publishing/创意工坊描述.md) |
 | 工具使用 | [工具手册](../tools/README.md) |
 | Victoria 3 知识库 | [victoria3-modding](victoria3-modding/README.md) |

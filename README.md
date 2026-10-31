@@ -1,13 +1,13 @@
 # Situated AI
 
-当前生产交付为 `Situated AI 2.0.0`；长期游戏行为、平衡和 Workshop 体验仍由用户在固定包上验收。
+当前生产交付为 `Situated AI 2.0.0`；完整行动内核方案已按30.0重新规划，尚未实施完成。长期行为、平衡和Workshop体验由用户在固定包上验收。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
 
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
-当前交付为 `Situated AI 2.0.0`，已将处境事实、有限行动卡、关系和仲裁合同编译到原版 AI 消费者。底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。运行包只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。实际阶段、检查与交付状态分别见主计划、当前清单和结果收据，长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
+当前交付为 `Situated AI 2.0.0`，包含广域条件权重、六路线和七张显式行动卡。完整的全域行动化、条件关系与动态仲裁仍有实现缺口，按[30.0计划](docs/design/exec/mod重设计-实施计划.md)重新推进；具体覆盖与验收见[行动覆盖合同](docs/design/04-行动覆盖与验收.md)。底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。运行包只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。实际阶段、检查与交付状态分别见主计划、当前清单和结果收据，长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
 
 ## 先读什么
 
