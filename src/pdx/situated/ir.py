@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable  # noqa: TC003
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, cast
 
-from ..decision_rules import FactReference, Rule  # noqa: TID252
+from ..decision_rules import FactReference, Predicate, Rule  # noqa: TID252
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +34,30 @@ class ActionIR:
     value: float
     predicates: tuple[PredicateIR, ...]
     vanilla_tail: str
+    priority: int = 0
+    why: str = ""
+    counterexample: str = ""
+    contexts: tuple[str, ...] = ()
+    intent: str | None = None
+    origin_priority: int | None = None
+
+    def to_rule(self) -> Rule:
+        return Rule(
+            id=self.action_id,
+            domain=self.domain,
+            field=tuple(self.field.split(".")),
+            priority=self.priority,
+            value=self.value,
+            conditions=tuple(
+                Predicate(p.fact, p.operator, cast("bool | float | FactReference", p.value))
+                for p in self.predicates
+            ),
+            why=self.why,
+            counterexample=self.counterexample,
+            operation=self.operation,
+            contexts=self.contexts,
+            intent=self.intent,
+        )
 
     def as_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -43,6 +67,11 @@ class ActionIR:
 
 def from_rule(rule: Rule, *, source: str) -> ActionIR:
     return ActionIR(
+        priority=rule.priority,
+        why=rule.why,
+        counterexample=rule.counterexample,
+        contexts=rule.contexts,
+        intent=rule.intent,
         action_id=rule.id,
         source=source,
         domain=rule.domain,

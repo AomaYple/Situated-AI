@@ -1,13 +1,15 @@
 # Situated AI
 
-当前生产交付为 `Situated AI 3.0.1`；30.0 计划的静态行动内核和工程收口已完成，长期行为、平衡和 Workshop 体验由用户在固定包上验收。
+当前开发候选为 `Situated AI 3.1.0rc1`，尚未发布或完成计划验收；已发布基线仍为 `3.0.1`。
+
+31.4 行动层深化计划正在实施，尚未完成。当前实现缺口与下一动作见[当前工作清单](docs/design/当前工作清单.md)。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
 
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
-当前交付为 `Situated AI 3.0.1`，已完成全域行动实例化、条件关系、动态仲裁、统一 IR、独立 PDX 见证和静态工程回归；具体覆盖与验收见[行动覆盖合同](docs/design/04-行动覆盖与验收.md)及[3.0.1 交付结果](docs/design/exec/3.0.1-交付结果.md)。底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。运行包只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。实际检查与交付状态见主计划、当前清单和结果收据，长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
+底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。运行包通过原版 AI 消费者调整局部倾向，只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。[3.0.1 交付结果](docs/design/exec/3.0.1-交付结果.md)记录当时的包与检查事实；本轮审计发现部分成本、排序、关系与原版尾部尚需修正，不能据历史工程通过声称完整设计已实现。目标覆盖见[行动覆盖合同](docs/design/04-行动覆盖与验收.md)，实际生产状态见主计划、当前清单和阶段收据。长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
 
 ## 先读什么
 

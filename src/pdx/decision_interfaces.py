@@ -211,6 +211,8 @@ def placement_contract(field: tuple[str, ...]) -> str:
         return "inside_regular_reachable_subject_branch_before_native_tail"
     if field == ("treaty_port_value",):
         return "before_native_market_reachability_and_clamp_tail"
+    if field == ("aggression",):
+        return "before_native_aggression_terminal_zero_tail"
     if field in {
         ("wargoal_scores", "conquer_state"),
         ("wargoal_scores", "transfer_subject"),

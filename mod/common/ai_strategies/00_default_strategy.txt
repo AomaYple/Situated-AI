@@ -210,12 +210,35 @@ ai_strategy_default = {
 	# Using a different value in a strategy will override this value
 	max_progressiveness = {
 		value = 25
+		# SITAI BEGIN max_progressiveness
+if = { limit = { ROOT ?= { NOT = {  OR = { legitimacy < 75 } } } }
+		# ACTION reform_progressive_window [political]; 政治稳定且具备合法性时扩大原版改革上限，改革资格和支持仍由原版决定。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } NOT = {  AND = { is_ai = yes is_at_war = no OR = { in_default = yes any_insurrection_ongoing = yes } } } } } }
+			add = 5
+		}
+}
+else = {
+		# ACTION reform_progressive_window [political]; 政治稳定且具备合法性时扩大原版改革上限，改革资格和支持仍由原版决定。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } NOT = {  AND = { is_ai = yes is_at_war = no OR = { in_default = yes any_insurrection_ongoing = yes } } } } } }
+			add = 4
+		}
+}
+		# SITAI END max_progressiveness
 	}
 
 	# How regressive is the AI willing to be when passing laws
 	# Using a different value in a strategy will override this value
 	max_regressiveness = {
 		value = 25
+		# SITAI BEGIN max_regressiveness
+		# ACTION reform_conservative_guard [political]; 违约或叛乱压力下保留原版可逆的保守政策空间，压力解除后退出。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = no OR = { in_default = yes any_insurrection_ongoing = yes } NOT = {  AND = { OR = { NOT = {  OR = { legitimacy < 75 } }  OR = { legitimacy < 75 } }  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } } } } } } }
+			add = 5
+		}
+		# SITAI END max_regressiveness
 	}
 
 	# Added to willingness to support a country in diplomatic plays
@@ -965,13 +988,13 @@ ai_strategy_default = {
 		# SITAI BEGIN diplomatic_play_neutrality
 		# ACTION fiscal_recovery [fiscal]; 违约时优先保护偿付能力，解除违约后退出。
 		if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes in_default = yes NOT = {  AND = { is_ai = yes is_at_war = yes } } } } }
+			limit = { ROOT ?= {  AND = { is_ai = yes in_default = yes NOT = { OR = { in_default = no } } } } }
 			add = 8
 		}
 		# ACTION wartime_defense [military]; 战争期间降低新的非必要外交承诺倾向，防止把原版资格误写成强制参战。
 		else_if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = {  AND = { is_ai = yes in_default = yes } } } } }
-			add = 5
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } NOT = {  AND = { is_ai = yes in_default = yes NOT = { OR = { in_default = no } } } } } } }
+			add = 6
 		}
 		# SITAI END diplomatic_play_neutrality
 	}
@@ -1179,6 +1202,40 @@ ai_strategy_default = {
 			}
 			add = 50
 		}
+		# SITAI BEGIN diplomatic_play_boldness
+if = { limit = { ROOT ?= { NOT = {  OR = { is_subject = yes } } } }
+if = { limit = { ROOT ?= { NOT = {  OR = { infamy >= 25 } } } }
+		# ACTION diplomatic_boldness_window [diplomacy]; 和平、财政稳定且具有政治或宗属支点时提高外交博弈主动性。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = { OR = { is_at_war = yes } } NOT = { OR = { is_at_war = yes in_default = yes } } } } }
+			add = 8
+		}
+}
+else = {
+		# ACTION diplomatic_boldness_window [diplomacy]; 和平、财政稳定且具有政治或宗属支点时提高外交博弈主动性。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = { OR = { is_at_war = yes } } NOT = { OR = { is_at_war = yes in_default = yes } } } } }
+			add = 7.5
+		}
+}
+}
+else = {
+if = { limit = { ROOT ?= { NOT = {  OR = { infamy >= 25 } } } }
+		# ACTION diplomatic_boldness_window [diplomacy]; 和平、财政稳定且具有政治或宗属支点时提高外交博弈主动性。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = { OR = { is_at_war = yes } } NOT = { OR = { is_at_war = yes in_default = yes } } } } }
+			add = 7.25
+		}
+}
+else = {
+		# ACTION diplomatic_boldness_window [diplomacy]; 和平、财政稳定且具有政治或宗属支点时提高外交博弈主动性。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = { OR = { is_at_war = yes } } NOT = { OR = { is_at_war = yes in_default = yes } } } } }
+			add = 6.75
+		}
+}
+}
+		# SITAI END diplomatic_play_boldness
 	}
 
 	# How many maneuvers are we OK with using up in the initial phase to add more wargoals
@@ -1294,12 +1351,30 @@ ai_strategy_default = {
 	change_law_chance = {
 		value = 1
 		# SITAI BEGIN change_law_chance
+if = { limit = { ROOT ?= { NOT = {  OR = { legitimacy < 75 } } } }
 		# ACTION political_reform [political]; 和平、政治可行且没有叛乱时提高法律启动机会，原版支持和失败仍生效。
 		if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } } } }
-			add = 1
-			if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } } } } add = 1 }
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } } } }
+			add = {
+				value = 0.5
+				if = { limit = { ROOT ?= {  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } } } add = 0.25 }
+				min = -1
+				max = 1
+			}
 		}
+}
+else = {
+		# ACTION political_reform [political]; 和平、政治可行且没有叛乱时提高法律启动机会，原版支持和失败仍生效。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } } } }
+			add = {
+				value = 0.25
+				if = { limit = { ROOT ?= {  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } } } add = 0.25 }
+				min = -1
+				max = 1
+			}
+		}
+}
 		# SITAI END change_law_chance
 	}
 
@@ -1332,6 +1407,9 @@ ai_strategy_default = {
 		# administrative_cost_guard [economy]; 违约且和平时降低新增社会保障制度的支出倾向
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.8 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# social_welfare_population_pressure [political]; 大人口国家生活水平较低且有行政承载时，提高社会保障制度的原版投资相对权重
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no is_at_war = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population >= 2000000 bureaucracy > 0 } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 8 } } } AND = { exists = ROOT ROOT = { total_population >= 0 NOT = { total_population >= 2000000 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 total_population >= 0 } } } } } multiply = 1.0 }
 		# coordinated_layered_information_social_stable [political]; 政治压力在稳健能力下提高社会保障制度倾向
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_political = yes sitai_context_need_political = yes sitai_context_known_layer_stable = yes sitai_context_layer_stable = yes } } multiply = 1.15 }
 		# SITAI END information:institution_scores.institution_social_security
@@ -1377,6 +1455,9 @@ ai_strategy_default = {
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { total_population >= 0 NOT = { total_population > 0 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 literacy_rate >= 0 literacy_rate <= 1 total_population >= 0 } } } } } multiply = 1.0 }
 		# social_school_priority [political]; 和平且有财政能力的大人口国家稍提高学校制度原版评分
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no total_population >= 0 total_population >= 2000000 } } multiply = 1.15 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { total_population >= 0 NOT = { total_population >= 2000000 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 total_population >= 0 } } } } } multiply = 1.0 }
+		# education_literacy_capacity [political]; 识字率极低时提供低强度教育基础倾向；不要求先满足财政或行政能力组合
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.35 } } multiply = 1.1 }
 		# SITAI END information:institution_scores.institution_schools
 	}
 		institution_police = {
@@ -1406,6 +1487,9 @@ ai_strategy_default = {
 		# coordinated_institution_health_system_administrative_cost [economy]; 共享约束下比较边际收益与机会成本；institution_health_system_administrative_cost
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 0.8 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# social_health_low_living_standard [political]; 生活水平偏低且行政能力可用时，提高原版医疗制度投资倾向
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 10 bureaucracy > 0 in_default = no } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 10 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 } } } } } multiply = 1.0 }
 		# coordinated_institution_health_system_social_need [political]; 共享约束下比较边际收益与机会成本；institution_health_system_social_need
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 average_sol >= 0 } } } } } multiply = 1.0 }
@@ -2872,6 +2956,9 @@ ai_strategy_default = {
 		# geographic_port_continuity [geography]; 保留有财政能力国家对条约港位置的有限原版相对偏好
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no } exists = scope:target_state scope:target_state = { is_treaty_port = yes } } multiply = { value = 1.15 desc = SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON } }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_state scope:target_state = { NOT = { is_treaty_port = yes } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = {  } exists = scope:target_state scope:target_state = {  } } } } } multiply = 1.0 }
+		# market_access_state_value [market]; 目标州市场接入良好且非孤立时提高原版州价值的有限相对权重
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } exists = scope:target_state scope:target_state = { market_access >= 0 market_access <= 1 market_access >= 0.8 is_isolated_from_market = no NOT = { owner = root } } } multiply = { value = 1.1 desc = SITAI_RULE_MARKET_ACCESS_STATE_VALUE_REASON } }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = scope:target_state scope:target_state = { market_access >= 0 market_access <= 1 NOT = { market_access >= 0.8 } } } AND = { exists = scope:target_state scope:target_state = { NOT = { is_isolated_from_market = no } } } AND = { exists = scope:target_state scope:target_state = { NOT = { NOT = { owner = root } } } } AND = { exists = scope:target_state scope:target_state = { market_access >= 0 market_access <= 1 } } } } } multiply = 1.0 }
 		# coordinated_layered_information_state_recovery [geography]; 战后恢复期减少新增外部领土承诺，避免恢复与扩张同时满载
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_reconstruction = yes sitai_context_evidence_need_reconstruction = yes } exists = scope:target_state scope:target_state = { NOT = { owner = root } } } multiply = { value = 0.92 desc = SITAI_RULE_COORDINATED_LAYERED_INFORMATION_STATE_RECOVERY_REASON } }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_reconstruction = yes NOT = { sitai_context_evidence_need_reconstruction = yes } } } AND = { exists = scope:target_state scope:target_state = { NOT = { NOT = { owner = root } } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_reconstruction = yes } exists = scope:target_state scope:target_state = {  } } } } } multiply = 1.0 }
@@ -4052,16 +4139,58 @@ ai_strategy_default = {
 			}
 		}
 		# SITAI BEGIN recklessness
+if = { limit = { ROOT ?= { NOT = {  OR = { is_subject = yes } } } }
+if = { limit = { ROOT ?= { NOT = {  OR = { infamy >= 25 } } } }
 		# ACTION diplomatic_restraint [diplomacy]; 战争时降低冒险外交倾向，仍由原版外交博弈资格和谈判决定结果。
 		if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } } } } } }
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } }
 			add = -4
 		}
 		# ACTION diplomatic_opening [diplomacy]; 和平和具备政治/宗属基础时允许有限外交主动性。
 		else_if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = {  AND = { is_ai = yes is_at_war = yes } } } } }
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = { OR = { is_at_war = yes in_default = yes } } NOT = {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } } } }
 			add = 2
 		}
+}
+else = {
+		# ACTION diplomatic_restraint [diplomacy]; 战争时降低冒险外交倾向，仍由原版外交博弈资格和谈判决定结果。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } }
+			add = -4
+		}
+		# ACTION diplomatic_opening [diplomacy]; 和平和具备政治/宗属基础时允许有限外交主动性。
+		else_if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = { OR = { is_at_war = yes in_default = yes } } NOT = {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } } } }
+			add = 1.25
+		}
+}
+}
+else = {
+if = { limit = { ROOT ?= { NOT = {  OR = { infamy >= 25 } } } }
+		# ACTION diplomatic_restraint [diplomacy]; 战争时降低冒险外交倾向，仍由原版外交博弈资格和谈判决定结果。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } }
+			add = -4
+		}
+		# ACTION diplomatic_opening [diplomacy]; 和平和具备政治/宗属基础时允许有限外交主动性。
+		else_if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = { OR = { is_at_war = yes in_default = yes } } NOT = {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } } } }
+			add = 1
+		}
+}
+else = {
+		# ACTION diplomatic_restraint [diplomacy]; 战争时降低冒险外交倾向，仍由原版外交博弈资格和谈判决定结果。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } }
+			add = -4
+		}
+		# ACTION diplomatic_opening [diplomacy]; 和平和具备政治/宗属基础时允许有限外交主动性。
+		else_if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { legitimacy >= 50 is_subject = yes } NOT = { OR = { is_at_war = yes in_default = yes } } NOT = {  AND = { is_ai = yes is_at_war = yes NOT = { OR = { is_at_war = no } } } } } } }
+			add = 0.25
+		}
+}
+}
 		# SITAI END recklessness
 	}
 
@@ -5009,6 +5138,40 @@ ai_strategy_default = {
 			multiply = 0.25
         }
 
+		# SITAI BEGIN aggression
+if = { limit = { ROOT ?= { NOT = {  OR = { is_at_war = yes } } } }
+if = { limit = { ROOT ?= { NOT = {  OR = { infamy >= 25 } } } }
+		# ACTION diplomatic_aggression_guard [diplomacy]; 国家具备财政或政治承受力时提供有限威慑增量，不绕过战争资格和目标选择。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes in_default = no OR = { is_at_war = yes legitimacy >= 50 } NOT = { OR = { in_default = yes } } } } }
+			add = 0.1
+		}
+}
+else = {
+		# ACTION diplomatic_aggression_guard [diplomacy]; 国家具备财政或政治承受力时提供有限威慑增量，不绕过战争资格和目标选择。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes in_default = no OR = { is_at_war = yes legitimacy >= 50 } NOT = { OR = { in_default = yes } } } } }
+			add = 0.075
+		}
+}
+}
+else = {
+if = { limit = { ROOT ?= { NOT = {  OR = { infamy >= 25 } } } }
+		# ACTION diplomatic_aggression_guard [diplomacy]; 国家具备财政或政治承受力时提供有限威慑增量，不绕过战争资格和目标选择。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes in_default = no OR = { is_at_war = yes legitimacy >= 50 } NOT = { OR = { in_default = yes } } } } }
+			add = 0.075
+		}
+}
+else = {
+		# ACTION diplomatic_aggression_guard [diplomacy]; 国家具备财政或政治承受力时提供有限威慑增量，不绕过战争资格和目标选择。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes in_default = no OR = { is_at_war = yes legitimacy >= 50 } NOT = { OR = { in_default = yes } } } } }
+			add = 0.05
+		}
+}
+}
+		# SITAI END aggression
 		if = { # The EIC/Raj should never go against its suzerain, as doing so is suicide
 			limit = {
 				exists = c:BIC
@@ -5173,8 +5336,11 @@ ai_strategy_default = {
 		min = 0
 
 		# SITAI BEGIN information:wanted_construction_output
+		# administrative_bureaucracy_repair [economy]; 行政赤字且和平时降低新增建设目标，把有限承载优先留给行政修复
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 in_default = no is_at_war = no } } multiply = 0.85 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { bureaucracy < 0 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# route_fiscal_recovery_construction [fiscal]; 财政整固路线占用影子预算时降低新增建设目标，保留原版资格、成本和执行
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_fiscal_recovery_active = yes } } multiply = 0.75 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_fiscal_recovery_active = yes } } multiply = 0.75 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { sitai_route_fiscal_recovery_active = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
 		# route_industry_construction [economy]; 产业路线在状态协调器确认财政、行政和市场条件后提高建设目标
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_industry_active = yes } } multiply = 1.25 }
@@ -5209,6 +5375,9 @@ ai_strategy_default = {
 		# decisive_industrial_development [economy]; 低债务、有结余、行政富余和高合法性与原有工业路线共同成立时提高建设目标
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no legitimacy >= 75 scaled_debt <= 0.2 net_total_income > 0 bureaucracy > 0 has_strategy = ai_strategy_industrial_expansion fixed_income > 0 } } multiply = 1.3 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 75 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.2 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = { NOT = { fixed_income > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
+		# population_employment_capacity [economy]; 大人口、低生活水平且有经济能力时提高原版建设目标，缓解就业与供给压力
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 5000000 average_sol >= 0 average_sol < 9 gdp >= 0 gdp > 0 in_default = no } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { total_population >= 0 NOT = { total_population >= 5000000 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 9 } } } AND = { exists = ROOT ROOT = { gdp >= 0 NOT = { gdp > 0 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { total_population >= 0 average_sol >= 0 gdp >= 0 } } } } } multiply = 1.0 }
 		# economic_development [economy]; 有持续收入且沿产业路线时适度提高建设目标
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no fixed_income > 0 has_strategy = ai_strategy_industrial_expansion } } multiply = 1.15 }
 		# SITAI END information:wanted_construction_output
@@ -5627,19 +5796,102 @@ ai_strategy_default = {
 			add = 0.2
 		}
 		# SITAI BEGIN economic_vs_government_spending_balance
+if = { limit = { ROOT ?= { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } } }
+if = { limit = { ROOT ?= { NOT = {  OR = { legitimacy < 75 } } } }
+		# ACTION industrial_foundation [economy]; 具备和平和最低行政基础时支持建设性支出，避免用单一总门槛锁死发展。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } }
+			add = {
+				value = 1.5
+				if = { limit = { ROOT ?= {  AND = { is_at_war = no  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } NOT = { OR = { is_at_war = yes in_default = yes } } } } } } } add = 0.25 }
+				if = { limit = { ROOT ?= {  AND = { OR = { NOT = {  OR = { legitimacy < 75 } }  OR = { legitimacy < 75 } }  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } } } } } add = 0.25 }
+				min = -2
+				max = 2
+			}
+		}
+		# ACTION education_and_research [education]; 低识字率是教育机会信号，不是所有经济建设的统一禁令。
+		else_if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } NOT = { OR = { is_at_war = yes in_default = yes } } } } }
+			add = {
+				value = 1
+				if = { limit = { ROOT ?= {  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } } } add = 0.25 }
+				min = -2
+				max = 2
+			}
+		}
+}
+else = {
+		# ACTION industrial_foundation [economy]; 具备和平和最低行政基础时支持建设性支出，避免用单一总门槛锁死发展。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } }
+			add = {
+				value = 1.25
+				if = { limit = { ROOT ?= {  AND = { is_at_war = no  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } NOT = { OR = { is_at_war = yes in_default = yes } } } } } } } add = 0.25 }
+				if = { limit = { ROOT ?= {  AND = { OR = { NOT = {  OR = { legitimacy < 75 } }  OR = { legitimacy < 75 } }  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } } } } } add = 0.25 }
+				min = -2
+				max = 2
+			}
+		}
+		# ACTION education_and_research [education]; 低识字率是教育机会信号，不是所有经济建设的统一禁令。
+		else_if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } NOT = { OR = { is_at_war = yes in_default = yes } } } } }
+			add = {
+				value = 0.9
+				if = { limit = { ROOT ?= {  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } } } add = 0.25 }
+				min = -2
+				max = 2
+			}
+		}
+}
+}
+else = {
+if = { limit = { ROOT ?= { NOT = {  OR = { legitimacy < 75 } } } }
 		# ACTION education_and_research [education]; 低识字率是教育机会信号，不是所有经济建设的统一禁令。
 		if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } OR = { legitimacy >= 50 bureaucracy > 0 } } } }
-			add = 2
-			if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } } } } add = 1 }
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } NOT = { OR = { is_at_war = yes in_default = yes } } } } }
+			add = {
+				value = 0.75
+				if = { limit = { ROOT ?= {  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } } } add = 0.25 }
+				min = -2
+				max = 2
+			}
 		}
 		# ACTION industrial_foundation [economy]; 具备和平和最低行政基础时支持建设性支出，避免用单一总门槛锁死发展。
 		else_if = {
-			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } OR = { bureaucracy > 0 legitimacy >= 75 } } } }
-			add = 2
-			if = { limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } } } } add = 1 }
-			if = { limit = { ROOT ?= {  AND = { is_at_war = no  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } OR = { legitimacy >= 50 bureaucracy > 0 } } } } } add = 1 }
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } }
+			add = {
+				value = 0.5
+				if = { limit = { ROOT ?= {  AND = { is_at_war = no  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } NOT = { OR = { is_at_war = yes in_default = yes } } } } } } } add = 0.25 }
+				if = { limit = { ROOT ?= {  AND = { OR = { NOT = {  OR = { legitimacy < 75 } }  OR = { legitimacy < 75 } }  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } } } } } add = 0.25 }
+				min = -2
+				max = 2
+			}
 		}
+}
+else = {
+		# ACTION education_and_research [education]; 低识字率是教育机会信号，不是所有经济建设的统一禁令。
+		if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } NOT = { OR = { is_at_war = yes in_default = yes } } } } }
+			add = {
+				value = 0.65
+				if = { limit = { ROOT ?= {  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } } } add = 0.25 }
+				min = -2
+				max = 2
+			}
+		}
+		# ACTION industrial_foundation [economy]; 具备和平和最低行政基础时支持建设性支出，避免用单一总门槛锁死发展。
+		else_if = {
+			limit = { ROOT ?= {  AND = { is_ai = yes AND = { is_at_war = no in_default = no } NOT = { OR = { in_default = yes is_at_war = yes } } } } }
+			add = {
+				value = 0.25
+				if = { limit = { ROOT ?= {  AND = { is_at_war = no  AND = { OR = { AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } } NOT = {  OR = { legitimacy < 75 } } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } NOT = {  OR = { legitimacy < 75 } } } AND = { NOT = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 } }  OR = { legitimacy < 75 } } AND = {  OR = { scaled_debt > 0.4 net_total_income < 0 bureaucracy < 0 }  OR = { legitimacy < 75 } } }  AND = { is_ai = yes AND = { is_at_war = no in_default = no literacy_rate < 0.5 } NOT = { OR = { is_at_war = yes in_default = yes } } } } } } } add = 0.25 }
+				if = { limit = { ROOT ?= {  AND = { OR = { NOT = {  OR = { legitimacy < 75 } }  OR = { legitimacy < 75 } }  AND = { is_ai = yes AND = { is_at_war = no any_insurrection_ongoing = no } OR = { legitimacy >= 50 legitimacy >= 75 } NOT = { OR = { in_default = yes } } NOT = { OR = { any_insurrection_ongoing = yes } } } } } } add = 0.25 }
+				min = -2
+				max = 2
+			}
+		}
+}
+}
 		# SITAI END economic_vs_government_spending_balance
 	}
 
@@ -5656,6 +5908,9 @@ ai_strategy_default = {
 		# wartime_army_capacity [military]; 战争中只有财政未违约且行政能力可用时，适度提高原版常备军目标
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 bureaucracy > 0 } } multiply = 1.15 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# army_threat_capacity [military]; 军力偏低、外部代价较高且经济可承受时提高原版常备军目标
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size < 50 infamy >= 0 infamy > 25 gdp >= 0 gdp > 0 in_default = no } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { army_size >= 0 NOT = { army_size < 50 } } } AND = { exists = ROOT ROOT = { infamy >= 0 NOT = { infamy > 25 } } } AND = { exists = ROOT ROOT = { gdp >= 0 NOT = { gdp > 0 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { army_size >= 0 infamy >= 0 gdp >= 0 } } } } } multiply = 1.0 }
 		# military_peacetime_budget [military]; 和平且违约时适度降低新增常备军目标
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.85 }
 		# SITAI END information:wanted_army_size
@@ -5713,6 +5968,9 @@ ai_strategy_default = {
 		# wartime_navy_capacity [military]; 战争中财政与行政能力仍可承受时，适度提高原版海军目标
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 bureaucracy > 0 } } multiply = 1.12 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
+		# navy_existing_capacity [military]; 经济与储备可承受且海军规模偏低时提高原版海军目标
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size < 10 gdp >= 0 gdp > 0 gold_reserves >= 0 gold_reserves >= 100 in_default = no } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { navy_size >= 0 NOT = { navy_size < 10 } } } AND = { exists = ROOT ROOT = { gdp >= 0 NOT = { gdp > 0 } } } AND = { exists = ROOT ROOT = { gold_reserves >= 0 NOT = { gold_reserves >= 100 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { navy_size >= 0 gdp >= 0 gold_reserves >= 0 } } } } } multiply = 1.0 }
 		# naval_peacetime_budget [military]; 和平且违约时适度降低新增海军目标
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.8 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
@@ -6392,6 +6650,9 @@ ai_strategy_default = {
 		# colonial_projection_capacity [geography]; 和平、有收入、具备海军投射和既有扩张路线时提高殖民利益的有限原版权重
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no legitimacy >= 75 scaled_debt <= 0.2 net_total_income > 0 bureaucracy > 0 navy_size >= 0 navy_size >= 25 fixed_income > 0 has_strategy = ai_strategy_territorial_expansion } } multiply = 1.15 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 75 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.2 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { navy_size >= 0 NOT = { navy_size >= 25 } } } AND = { exists = ROOT ROOT = { NOT = { fixed_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_territorial_expansion } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 navy_size >= 0 } } } } } multiply = 1.0 }
+		# overseas_naval_projection [geography]; 海军投射、经济能力和恶名约束同时满足时提高原版海外利益分配倾向
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size >= 50 gdp >= 0 gdp > 0 infamy >= 0 infamy < 25 in_default = no } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { navy_size >= 0 NOT = { navy_size >= 50 } } } AND = { exists = ROOT ROOT = { gdp >= 0 NOT = { gdp > 0 } } } AND = { exists = ROOT ROOT = { infamy >= 0 NOT = { infamy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { navy_size >= 0 gdp >= 0 infamy >= 0 } } } } } multiply = 1.0 }
 		# overseas_affordability [geography]; 和平违约时减少海外殖民利益分配倾向
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } multiply = 0.7 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
@@ -8945,6 +9206,9 @@ ai_strategy_default = {
 		# trade_capacity_cooperation [market]; 和平、低债务且财政和行政能力可用时，把贸易合作作为可承受的外部发展选项
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income > 0 bureaucracy > 0 } } multiply = 1.2 }
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income > 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy > 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
+		# trade_low_living_standard [market]; 和平且有经济活动、生活水平偏低时提高原版贸易合作类别的相对关注
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 gdp >= 0 gdp > 0 is_at_war = no } } multiply = 1.1 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { gdp >= 0 NOT = { gdp > 0 } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 gdp >= 0 } } } } } multiply = 1.0 }
 		# market_trade_peace [market]; 和平且有收入时优先搜索原版贸易合作条约
 		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no fixed_income > 0 } } multiply = 1.15 }
 		# SITAI END information:treaty_category_scores.trade

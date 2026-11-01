@@ -19,8 +19,8 @@ def _all_rules():
 
 def test_ir_is_stable_and_complete_for_all_production_rules():
     items = ir.from_rules(_all_rules())
-    assert len(items) == 1401
-    assert len({item.action_id for item in items}) == 1401
+    assert len(items) == 1414
+    assert len({item.action_id for item in items}) == 1414
     assert all(item.vanilla_tail for item in items)
 
 

@@ -50,7 +50,13 @@ def _id(source: str, rule_id: str) -> str:
     return f"rule_action_{value}"
 
 
-def _rule_instance(source: str, rule: decision_rules.Rule, *, owner: str) -> ActionInstance:
+def _rule_instance(
+    source: str,
+    rule: decision_rules.Rule,
+    *,
+    owner: str,
+    actor_scope: str,
+) -> ActionInstance:
     facts = tuple(
         sorted(
             {predicate.fact for predicate in rule.conditions}
@@ -75,10 +81,14 @@ def _rule_instance(source: str, rule: decision_rules.Rule, *, owner: str) -> Act
         vanilla_tail="retain_original_qualification_cost_random_execution",
         evidence=facts,
         family_id=classify(domain=rule.domain, field=".".join(rule.field), source=source),
-        actor_scope="owner" if source != "mod/decisions/information.toml" else "root",
-        target_scope="target_or_none"
-        if rule.field and rule.field[-1] in {"state_value", "colonial_interest_ratio"}
-        else "none",
+        actor_scope=actor_scope,
+        target_scope=(
+            "target_state"
+            if rule.field and rule.field[-1] == "state_value"
+            else "target_or_none"
+            if rule.field and rule.field[-1] == "colonial_interest_ratio"
+            else "none"
+        ),
     )
 
 
@@ -91,12 +101,23 @@ def build(
     """从所有实际规则和显式卡构建稳定、无重复的实例目录。"""
 
     result: list[ActionInstance] = [
-        _rule_instance("mod/decisions/information.toml", rule, owner="information_rules")
+        _rule_instance(
+            "mod/decisions/information.toml",
+            rule,
+            owner="information_rules",
+            actor_scope="root",
+        )
         for rule in information.rules
     ]
     for source, policy in adapters.policies:
         result.extend(
-            _rule_instance(source, rule, owner="consumer_adapters") for rule in policy.rules
+            _rule_instance(
+                source,
+                rule,
+                owner="consumer_adapters",
+                actor_scope="owner" if policy.actor_path else "root",
+            )
+            for rule in policy.rules
         )
     result.extend(
         ActionInstance(
@@ -168,14 +189,51 @@ def witness_ids(texts: dict[str, str]) -> set[str]:
     return found
 
 
+def _output_source(source: str, field: str = "") -> str:
+    """将生产源映射到生成产物中的实际文件。
+
+    information 规则统一降低到默认策略文件；adapter 规则保留各自的
+    生产路径。见证身份因此使用 ``(output_source, definition)``，不能只
+    使用 definition，否则不同来源的同名规则可能互相冒充。
+    """
+
+    if source == "mod/decisions/information.toml":
+        return "common/ai_strategies/00_default_strategy.txt"
+    # 舰队供给字段由 adapter 从默认策略外置到独立 script_value 文件；
+    # 其逻辑 source 仍是默认策略，见证 source 必须跟随实际生成文件。
+    if (
+        source == "common/ai_strategies/00_default_strategy.txt"
+        and field
+        == "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
+    ):
+        return "common/script_values/sitai_adapter_values.txt"
+    return source
+
+
+def witness_keys(texts: dict[str, str]) -> set[tuple[str, str]]:
+    """返回生成 marker 的精确 ``(产物来源, definition)`` 身份。"""
+
+    found: set[tuple[str, str]] = set()
+    for source, text in texts.items():
+        for line in text.splitlines():
+            match = re.search(
+                r"#\s+(?:ACTION\s+)?([a-z][a-z0-9_]*)\s+\[[a-z][a-z0-9_]*\];",
+                line,
+            )
+            if match:
+                found.add((source, match.group(1)))
+    return found
+
+
 def missing_witnesses(
     instances: tuple[ActionInstance, ...], texts: dict[str, str]
 ) -> tuple[str, ...]:
-    witnesses = witness_ids(texts)
+    witnesses = witness_keys(texts)
     return tuple(
         item.action_id
         for item in instances
-        if item.kind == "rule_action" and item.rule_id not in witnesses
+        if item.kind == "rule_action"
+        and (_output_source(item.source, item.consumer_field), item.rule_id) not in witnesses
     )
 
 
@@ -184,7 +242,7 @@ def witness_contract(
 ) -> dict[str, object]:
     """逐实例记录生成标记见证；不把结构见证冒充行为质量。"""
 
-    found = witness_ids(texts)
+    found = witness_keys(texts)
     rows = [
         {
             "action_id": item.action_id,
@@ -193,7 +251,10 @@ def witness_contract(
             "consumer_id": item.consumer_field,
             "actor_scope": item.actor_scope,
             "target_scope": item.target_scope,
-            "witnessed": item.rule_id in found,
+            "witnessed": (
+                item.kind != "rule_action"
+                or (_output_source(item.source, item.consumer_field), item.rule_id) in found
+            ),
             "evidence": "generated_marker_static_check",
         }
         for item in instances
@@ -208,8 +269,85 @@ def witness_contract(
     }
 
 
+def behavior_witness_contract(
+    instances: tuple[ActionInstance, ...], texts: dict[str, str]
+) -> dict[str, object]:
+    """核对每条 legacy action 的实际生成操作和值。
+
+    ``witness_contract`` 只检查 marker 是否存在；这里进一步解析生成文本，
+    对 source + rule_id 反查 operation/value。它仍是静态 AST 证据，不声称
+    游戏运行期已经执行了该分支。
+    """
+
+    from .lowering import witnesses  # noqa: PLC0415
+
+    # 生成文本同时包含显式行动卡和 legacy 规则 marker。只把当前实例目录中
+    # 真实 legacy writer 的精确 (产物来源, definition) 纳入重复检查；否则
+    # 成本分区会让同一张显式卡合法地出现在多个互斥叶中，却被误报为
+    # legacy 重复写入。
+    expected_keys = {
+        (_output_source(item.source, item.consumer_field), item.rule_id)
+        for item in instances
+        if item.kind == "rule_action"
+    }
+    generated = tuple(
+        item for item in witnesses(texts) if (item.source, item.action_id) in expected_keys
+    )
+    by_id: dict[tuple[str, str], Any] = {}
+    duplicate_ids: set[str] = set()
+    for item in generated:
+        key = (item.source, item.action_id)
+        if key in by_id:
+            duplicate_ids.add(item.action_id)
+        else:
+            by_id[key] = item
+    rows: list[dict[str, object]] = []
+    missing: list[str] = []
+    mismatches: list[str] = []
+    for instance in instances:
+        if instance.kind != "rule_action":
+            continue
+        output_source = _output_source(instance.source, instance.consumer_field)
+        witness = by_id.get((output_source, instance.rule_id))
+        target = instance.action_id
+        if witness is None:
+            missing.append(target)
+            continue
+        matched = (
+            instance.rule_id not in duplicate_ids
+            and witness.operation == instance.operation
+            and witness.value == instance.value
+        )
+        if not matched:
+            mismatches.append(target)
+        rows.append(
+            {
+                "action_id": target,
+                "source": instance.source,
+                "output_source": output_source,
+                "witness_source": witness.source,
+                "rule_id": instance.rule_id,
+                "operation": witness.operation,
+                "value": witness.value,
+                "matched": matched,
+                "evidence": "independent_ast_value_static_check",
+            }
+        )
+    return {
+        "schema": 1,
+        "count": len(rows),
+        "expected": sum(item.kind == "rule_action" for item in instances),
+        "missing": sorted(missing),
+        "mismatches": sorted(mismatches),
+        "duplicate_ids": sorted(duplicate_ids),
+        "rows": rows,
+        "behavior_quality": "not_evaluated",
+    }
+
+
 __all__ = [
     "ActionInstance",
+    "behavior_witness_contract",
     "build",
     "contract",
     "missing_witnesses",

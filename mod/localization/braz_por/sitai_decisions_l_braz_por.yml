@@ -10,3 +10,4 @@ l_braz_por:
  SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON: "Isolamento e custos de compromissos financeiros (candidato)"
  SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON: "Posição do porto de tratado e capacidade fiscal (candidato)"
  SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON: "Laços com a pátria e prioridades nacionais viáveis (candidato)"
+ SITAI_RULE_MARKET_ACCESS_STATE_VALUE_REASON: "Posição de mercado acessível e demanda local"

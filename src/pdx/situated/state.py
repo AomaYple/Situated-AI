@@ -50,7 +50,11 @@ def _fact(values: Mapping[str, EvidenceValue], name: str) -> tuple[Any, bool, bo
     item = values.get(name)
     if item is None or not item.known:
         return None, False, bool(item.stale) if item is not None else False
-    return item.value, True, item.stale
+    # 过期值仍保留 stale provenance，但不能继续作为已知事实驱动新决策。
+    # 否则旧存档/旧快照会被误当成当前健康状态，破坏 unknown 回退合同。
+    if item.stale:
+        return None, False, True
+    return item.value, True, False
 
 
 def _compare(

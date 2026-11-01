@@ -95,6 +95,13 @@ schema = 1
 "political" = true
 "subjects" = true
 
+[readers.average_sol]
+engine = "average_sol"
+scope = "root"
+unit = "standard_of_living"
+kind = "number"
+minimum = 0
+
 [actors]
 "common/buildings/01_industry.txt" = ["owner"]
 "common/buildings/02_agro.txt" = ["owner"]
@@ -1238,6 +1245,13 @@ unit = "boolean"
 kind = "boolean"
 path = ["owner"]
 
+[readers.state_owner_bureaucracy]
+engine = "bureaucracy"
+scope = "root"
+unit = "capacity_balance"
+kind = "number"
+path = ["owner"]
+
 [readers.state_owner_dye_balance]
 engine = "market_goods_delta"
 scope = "root"
@@ -1985,6 +1999,12 @@ source = "common/buildings/04_plantations.txt"
 field = "building_banana_plantation.ai_value"
 define_source = "common/defines/00_ai.txt"
 define = "NAI.PRODUCTION_BUILDING_BASE_VALUE"
+
+[[initial_values]]
+source = "common/buildings/07_government.txt"
+field = "building_government_administration.ai_value"
+define_source = "common/defines/00_ai.txt"
+define = "NAI.GOVERNMENT_BUILDING_BASE_VALUE"
 
 
 [readers.debt_ratio]
@@ -20866,6 +20886,22 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 
 [[rules]]
 source = "common/ai_strategies/00_default_strategy.txt"
+id = "social_health_low_living_standard"
+field = "ai_strategy_default.institution_scores.institution_health_system"
+domain = "political"
+priority = 611
+operation = "multiply"
+value = 1.10
+conditions = [
+  { fact = "average_sol", op = "<", value = 10 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+  { fact = "default", op = "=", value = false },
+]
+why = "生活水平偏低且行政能力可用时，提高原版医疗制度投资倾向"
+counterexample = "不创造医疗机构、生活水平或行政点数；财政违约、未知生活水平或原版资格不满足时不增量"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
 id = "coordinated_layered_health_recovery"
 field = "ai_strategy_default.institution_scores.institution_health_system"
 domain = "fiscal"
@@ -23323,3 +23359,39 @@ value = 1.18
 conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
 why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "administrative_government_building_bureaucracy_repair"
+field = "building_government_administration.ai_value"
+domain = "economy"
+priority = 100
+operation = "multiply"
+value = 1.25
+conditions = [{ fact = "state_owner_bureaucracy", op = "<", value = 0 }]
+why = "州所属国家官僚容量为负时，提高政府行政建筑的局部候选权重；原版行政建筑资格、就业、成本与执行尾部继续优先"
+counterexample = "官僚容量未知或非负时保留原版；该局部规则不把税收能力冒充为官僚容量，也不改变玩家路径、研究前置、资格和建造成本"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "fiscal_government_building_default_downgrade"
+field = "building_government_administration.ai_value"
+domain = "fiscal"
+priority = 110
+operation = "multiply"
+value = 0.75
+conditions = [{ fact = "state_owner_default", op = "=", value = true }]
+why = "州所属国家处于违约时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先"
+counterexample = "违约事实未知或为假时保留原版；违约与贷款分别表达为独立规则，不要求全局健康条件同时成立"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "fiscal_government_building_loans_downgrade"
+field = "building_government_administration.ai_value"
+domain = "fiscal"
+priority = 105
+operation = "multiply"
+value = 0.75
+conditions = [{ fact = "state_owner_loans", op = "=", value = true }]
+why = "州所属国家正在借贷时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先"
+counterexample = "贷款事实未知或为假时保留原版；违约与贷款分别表达为独立规则，不要求全局健康条件同时成立"

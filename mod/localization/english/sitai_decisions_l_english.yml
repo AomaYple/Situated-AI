@@ -10,3 +10,4 @@ l_english:
  SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON: "Isolation and financial commitment costs (candidate)"
  SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON: "Treaty port position and fiscal capacity (candidate)"
  SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON: "Homeland ties and feasible national priorities (candidate)"
+ SITAI_RULE_MARKET_ACCESS_STATE_VALUE_REASON: "Accessible market position and local demand"

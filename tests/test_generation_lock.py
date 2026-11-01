@@ -79,6 +79,23 @@ def test_missing_lock_is_an_error(frozen_product):
         distribution.check_generation_lock()
 
 
+@pytest.mark.parametrize("operation", ["add", "change", "delete"])
+def test_lock_tracks_nested_production_modules(frozen_product, operation):
+    path = frozen_product.parent / "src/pdx/situated/kernel.py"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if operation != "add":
+        path.write_bytes(b"VALUE = 1\n")
+    (frozen_product / "generation-lock.json").write_text(
+        distribution.generation_lock(), encoding="utf-8", newline="\n"
+    )
+    if operation == "delete":
+        path.unlink()
+    else:
+        path.write_bytes(b"VALUE = 2\n")
+    with pytest.raises(ValueError, match="冻结记录不一致"):
+        distribution.check_generation_lock()
+
+
 def test_no_game_offline_guard_uses_frozen_snapshot_contract(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "GAME", tmp_path / "missing-game")
     result = CliRunner().invoke(cli.app, ["modguard", "--offline"])

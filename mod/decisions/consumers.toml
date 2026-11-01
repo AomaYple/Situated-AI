@@ -19,3 +19,23 @@ tail = "vanilla_budget_cost"
 field = "recklessness"
 scope = "ai_strategy_default"
 tail = "vanilla_diplomatic_execution"
+
+[consumers.max_progressiveness]
+field = "max_progressiveness"
+scope = "ai_strategy_default"
+tail = "vanilla_progressiveness_bounds"
+
+[consumers.max_regressiveness]
+field = "max_regressiveness"
+scope = "ai_strategy_default"
+tail = "vanilla_regressiveness_bounds"
+
+[consumers.diplomatic_play_boldness]
+field = "diplomatic_play_boldness"
+scope = "ai_strategy_default"
+tail = "vanilla_diplomatic_execution"
+
+[consumers.aggression]
+field = "aggression"
+scope = "ai_strategy_default"
+tail = "vanilla_target_reach_and_war_eligibility"

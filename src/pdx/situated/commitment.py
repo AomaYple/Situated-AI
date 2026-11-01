@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 from .signals import CommitmentSignal
@@ -43,12 +44,16 @@ def derive(
         if not isinstance(source, str) or not source:
             raise ValueError(f"承诺 {name} 的 source_fact 无效")
         item = values.get(source)
-        known = item is not None and item.known
+        known = item is not None and item.known and not item.stale
         raw = item.value if item is not None and known else None
         if known and not isinstance(raw, bool) and not isinstance(raw, (int, float)):
             # 布尔承诺保留布尔单位；数值承诺保留原始数值，绝不静默归一化。
             known = False
             raw = None
+        elif known and isinstance(raw, (int, float)) and not isinstance(raw, bool):
+            if not math.isfinite(raw):
+                known = False
+                raw = None
         unit = str(spec.get("unit", "normalized"))
         binding_values = _bindings(spec)
         result.append(

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from .country_state import CountryPolicy
+    from .situated.decision_ir import ConsumerIRBundle
 
 SOURCE = config.REPO / "mod/decisions/adapters.toml"
 _FLEET_SOURCE = "common/ai_strategies/00_default_strategy.txt"
@@ -569,6 +570,7 @@ def build(
     country_policy: CountryPolicy | None = None,
     owned_variables: frozenset[str] | set[str] | None = None,
     owned_triggers: frozenset[str] | set[str] | None = None,
+    consumer_ir: ConsumerIRBundle | None = None,
 ) -> tuple[dict[str, str], dict[str, object]]:
     """全输入预检后生成；合成测试可显式注入文本，生产默认读取 config.GAME。"""
     known_domains = {rule.domain for _, policy in adapters.policies for rule in policy.rules}
@@ -625,6 +627,8 @@ def build(
             country_policy=country_policy,
             owned_variables=owned_variables,
             owned_triggers=owned_triggers,
+            consumer_ir=consumer_ir,
+            consumer_source=name,
         )
         if name == _FLEET_SOURCE and _FLEET_FIELD in scalar_fields:
             if _FLEET_VALUE in words or _VALUE_SOURCE in (overlays or {}):

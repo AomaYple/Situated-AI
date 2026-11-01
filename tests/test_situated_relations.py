@@ -6,7 +6,7 @@ import pytest
 
 from pdx import decisions
 from pdx.parser import parse_text
-from pdx.situated import relations
+from pdx.situated import pdx_eval, relations
 from pdx.situated.compiler import load_model, strategy_overlay
 
 pytestmark = pytest.mark.unit
@@ -19,8 +19,27 @@ def test_complement_is_soft_and_conditioned_in_generated_consumer() -> None:
     assert "# ACTION industrial_foundation" in text
     assert "# ACTION education_and_research" in text
     # 互补项以行动内部的条件增量出现，不能成为主行动的硬资格门。
-    assert "add = 1" in text
     assert "ROOT ?= {  AND = { is_ai = yes" in text
+    facts = {
+        "is_ai": True,
+        "is_at_war": False,
+        "in_default": False,
+        "any_insurrection_ongoing": False,
+        "legitimacy": 60,
+        "bureaucracy": 1,
+        "literacy_rate": 0.3,
+        "scaled_debt": 0.4,
+        "net_total_income": 1,
+    }
+    # 同一基础行动在两个、一个、零个互补条件成立时均可选中；
+    # 互补分别增加 0.25，不是把对方变成基础行动的资格门。
+    for changes, expected in (
+        ({}, 1.75),
+        ({"literacy_rate": 0.6}, 1.5),
+        ({"literacy_rate": 0.6, "any_insurrection_ongoing": True}, 1.25),
+    ):
+        result = pdx_eval.select(text, {**facts, **changes})
+        assert (result.action_id, result.delta) == ("industrial_foundation", expected)
     patched = decisions.patch_default(
         decisions.BASELINE.read_text(encoding="utf-8"),
         decisions.load(),

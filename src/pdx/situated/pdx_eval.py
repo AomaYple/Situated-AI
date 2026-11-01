@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -68,6 +68,11 @@ def _compare(left: object, operator: str, right: object) -> Truth:
             return None
     elif type(left) not in (int, float) or type(right) not in (int, float):
         return None
+    else:
+        left_number = float(cast("int | float", left))
+        right_number = float(cast("int | float", right))
+        if not math.isfinite(left_number) or not math.isfinite(right_number):
+            return None
     if operator == "=":
         return left == right
     left_number = float(left) if isinstance(left, (int, float)) else 0.0
@@ -135,6 +140,36 @@ def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[st
             operation = item
     if operation is None:
         raise UnsupportedPdxError("行动分支缺少写入")
+    if isinstance(operation.value, Block):
+        value_block = operation.value
+        initial = value_block.first("value")
+        if initial is None:
+            raise UnsupportedPdxError("行动增量缺少初值")
+        delta = _number(initial)
+        for item in value_block.assignments():
+            if item.key == "value":
+                continue
+            if item.key == "if":
+                if not isinstance(item.value, Block):
+                    raise UnsupportedPdxError("增量条件必须是块")
+                limit = item.value.first("limit")
+                addition = item.value.first("add")
+                if limit is None or not isinstance(limit.value, Block) or addition is None:
+                    raise UnsupportedPdxError("增量条件缺少 limit 或 add")
+                state = condition(limit.value, facts)
+                if state is True:
+                    delta += _number(addition)
+                elif state is None:
+                    # 互补/辅助增量未知时只丢弃该增量，保留行动的已知
+                    # 基础档；核心 limit 的未知仍由 select 回退 vanilla。
+                    continue
+            elif item.key == "min":
+                delta = max(delta, _number(item))
+            elif item.key == "max":
+                delta = min(delta, _number(item))
+            else:
+                raise UnsupportedPdxError(f"不支持的行动增量操作：{item.key}")
+        return operation.key, delta
     delta = _number(operation)
     for nested in branch.all("if"):
         if not isinstance(nested.value, Block):
@@ -151,7 +186,9 @@ def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[st
                 raise UnsupportedPdxError("嵌套 if 缺少 add")
             delta += _number(nested_write)
         elif result is None:
-            raise UnsupportedPdxError("嵌套条件未知，不能静默解释")
+            # 与游戏中的条件分支一致：未知的辅助增量不改变基础档，
+            # 不把可选互补误报成生成器错误。
+            continue
     return operation.key, delta
 
 
@@ -163,26 +200,65 @@ def evaluate(
     parsed = parse_text(text, path=path)
     if parsed.errors:
         raise UnsupportedPdxError("生成文本无法解析：" + "; ".join(parsed.errors))
-    markers = [match.group(1) for line in text.splitlines() if (match := _MARKER.match(line))]
-    branches = [item for item in parsed.root.assignments() if item.key in {"if", "else_if"}]
-    if len(markers) != len(branches):
-        raise UnsupportedPdxError("行动标记与分支数量不一致")
-    decisions: list[PdxDecision] = []
-    for action_id, branch_assignment in zip(markers, branches, strict=True):
-        if not isinstance(branch_assignment.value, Block):
-            raise UnsupportedPdxError("行动分支不是块")
-        limit = branch_assignment.value.first("limit")
-        if limit is None or not isinstance(limit.value, Block):
-            raise UnsupportedPdxError("行动分支缺少 limit 块")
-        result = condition(limit.value, facts)
-        if result is True:
-            operation, delta = _effect_delta(branch_assignment.value, facts)
-            decisions.append(PdxDecision(action_id, operation, delta, "selected"))
-        elif result is None:
-            decisions.append(PdxDecision(action_id, None, 0.0, "unknown"))
-        else:
-            decisions.append(PdxDecision(action_id, None, 0.0, "vanilla"))
-    return tuple(decisions)
+    lines = text.splitlines()
+    markers: dict[int, str] = {}
+    for index, line in enumerate(lines):
+        match = _MARKER.match(line)
+        if match is None:
+            continue
+        branch_line = index + 1
+        while branch_line < len(lines) and not lines[branch_line].strip():
+            branch_line += 1
+        markers[branch_line + 1] = match.group(1)
+
+    def walk(block: Block) -> list[PdxDecision]:
+        results: list[PdxDecision] = []
+        matched = False
+        for assignment in block.assignments():
+            if assignment.key not in {"if", "else_if", "else"}:
+                raise UnsupportedPdxError(f"未登记的行动分支：{assignment.key}")
+            if assignment.key == "if":
+                matched = False
+            if matched:
+                continue
+            if not isinstance(assignment.value, Block):
+                raise UnsupportedPdxError("行动分支不是块")
+            limit = assignment.value.first("limit")
+            if assignment.key == "else":
+                state: Truth = True
+            elif limit is None or not isinstance(limit.value, Block):
+                raise UnsupportedPdxError("行动分支缺少 limit 块")
+            else:
+                state = condition(limit.value, facts)
+            writes = any(item.key in {"add", "multiply"} for item in assignment.value.assignments())
+            if writes:
+                action_id = markers.get(assignment.line)
+                if action_id is None:
+                    raise UnsupportedPdxError("行动分支缺少身份标记")
+                if state is True:
+                    operation, delta = _effect_delta(assignment.value, facts)
+                    results.append(PdxDecision(action_id, operation, delta, "selected"))
+                    return results
+                if state is None:
+                    results.append(PdxDecision(action_id, None, 0.0, "unknown"))
+                    return results
+                results.append(PdxDecision(action_id, None, 0.0, "vanilla"))
+                continue
+            # A cost partition checks that a higher tier is *proven*. If that
+            # proof is false or unknown, its explicit else is the lower tier.
+            if state is True:
+                nested = Block(
+                    [
+                        item
+                        for item in assignment.value.items
+                        if not isinstance(item, Assignment) or item.key != "limit"
+                    ]
+                )
+                results.extend(walk(nested))
+                matched = True
+        return results
+
+    return tuple(walk(parsed.root))
 
 
 def marked_block(text: str, action_id: str, *, path: str = "<generated>") -> str:

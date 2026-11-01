@@ -1,17 +1,20 @@
 """处境行动内核的确定性、预算和回退合同。"""
 
 import json
+import re
 from dataclasses import replace
 
 import pytest
 
 from pdx import country_state, decision_adapters, decision_intents, decision_rules, decisions
+from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import relations
 from pdx.situated.arbitration import Candidate, choose
 from pdx.situated.audit import report as audit_report
 from pdx.situated.commitment import marginal_cost, overcommitted
 from pdx.situated.compiler import (
+    _action_conditions,
     _relation_conditions,
     compile_policy,
     load_model,
@@ -23,6 +26,21 @@ from pdx.situated.schema import EvidenceValue
 from pdx.situated.state import derive
 
 pytestmark = pytest.mark.unit
+
+
+def _max_exclusive_writes(block: Block) -> int:
+    """独立沿 AST 的互斥控制流计算最多实际执行的字段写入。"""
+    total = 0
+    alternatives: list[int] = []
+    for item in block.assignments():
+        if item.key in {"if", "else_if", "else"} and isinstance(item.value, Block):
+            if item.key == "if" and alternatives:
+                total += max(alternatives)
+                alternatives = []
+            alternatives.append(_max_exclusive_writes(item.value))
+        elif item.key in {"add", "multiply"}:
+            total += 1
+    return total + max(alternatives, default=0)
 
 
 def test_生产行动卡引用真实消费者且关系有限():
@@ -40,9 +58,16 @@ def test_行动降低为有限原版消费者条件块():
     assert set(overlay) == {item.field for item in model.consumers}
     for consumer in model.consumers:
         text = overlay[consumer.field]
-        # 顶层候选受 consumer budget 限制；互补效果是候选内部的有界条件增量。
-        assert text.count("# ACTION") <= consumer.budget
-        assert text.count("add =") <= consumer.budget + 2
+        # 成本分区会把同一候选复制到互斥叶；预算约束针对每个叶的
+        # 可同时评估候选，而不是整份脚本文本中的 marker 总数。
+        rows = [row for row in model.decision_ir if row.consumer_id == consumer.id]
+        assert len(rows) <= consumer.budget
+        ids = re.findall(r"# ACTION ([a-z][a-z0-9_]*) ", text)
+        assert set(ids) == {row.action_id for row in rows}
+        assert len(ids) <= 8 * consumer.budget
+        parsed = parse_text(text)
+        assert not parsed.errors
+        assert _max_exclusive_writes(parsed.root) == 1
     assert all("is_ai = yes" in text for text in overlay.values())
     patched = decisions.patch_default(
         decisions.BASELINE.read_text(encoding="utf-8"),
@@ -59,7 +84,10 @@ def test_互补关系是软增量而不是全满足硬门槛():
     economy = overlay["economic_vs_government_spending_balance"]
     # 教育与产业互补只能改变有界增量；不能把对方完整条件复制进
     # 当前行动的 limit，避免重新形成全满足门槛。
-    assert economy.count("# ACTION") == 2
+    assert set(re.findall(r"# ACTION ([a-z][a-z0-9_]*) ", economy)) == {
+        "industrial_foundation",
+        "education_and_research",
+    }
     assert "industrial_foundation" in economy
     assert "education_and_research" in economy
     for block in economy.split("# ACTION ")[1:]:
@@ -76,6 +104,41 @@ def test_关系条件支持真假未知三值传播():
     assert _relation_conditions(relation, {"peace": True}) is True
     assert _relation_conditions(relation, {"peace": False}) is False
     assert _relation_conditions(relation, {}) is None
+
+
+def test_requires_any有一个真值时不被另一个未知值阻塞():
+    action = next(item for item in load_model().actions if item.id == "political_reform")
+    assert (
+        _action_conditions(
+            action,
+            {"peace": True, "no_insurrection": True, "stable_legitimacy": True, "default": False},
+        )
+        is True
+    )
+
+
+@pytest.mark.parametrize("unknown", [None, "yes", 0])
+def test_未知或非布尔阻断条件不能被当成安全状态(unknown):
+    action = next(item for item in load_model().actions if item.id == "political_reform")
+    values = {
+        "peace": True,
+        "no_insurrection": True,
+        "stable_legitimacy": True,
+        "default": unknown,
+    }
+    assert _action_conditions(action, values) is None
+    values.pop("default")
+    assert _action_conditions(action, values) is None
+    values["peace"] = False
+    assert _action_conditions(action, values) is False
+
+
+def test_政治成本进入实际候选强度():
+    with_cost = choose(
+        (Candidate("with", capability_gain=1, feasibility=1, political_cost=1),), max_delta=5
+    )
+    without_cost = choose((Candidate("without", capability_gain=1, feasibility=1),), max_delta=5)
+    assert with_cost.delta < without_cost.delta
 
 
 def test_仲裁按固定排序限幅并保留证据():
@@ -155,10 +218,13 @@ def test_生产元数据登记行动合同():
     )
     contract = payload["situated_actions"]
     assert contract["schema"] == 1
-    assert contract["candidate_limit"] == 7
+    assert contract["candidate_limit"] == len(decisions.load_situated_model().actions)
     assert payload["source_fingerprint"]["situated_actions_source_sha256"]
-    assert payload["situated_actions"]["action_instances"]["count"] == 1401 + 7
-    assert payload["situated_actions"]["ir"]["count"] == 1401
+    assert (
+        payload["situated_actions"]["action_instances"]["count"]
+        == 1414 + contract["candidate_limit"]
+    )
+    assert payload["situated_actions"]["ir"]["count"] == 1414
     ast = payload["situated_actions"]["ast_lowering_witness"]
     assert ast["mismatches"] == []
     assert ast["parsed_count"] == ast["witness_count"]
@@ -167,21 +233,26 @@ def test_生产元数据登记行动合同():
 
 def test_覆盖报告只在逐实例生产见证齐全时完成():
     report = audit_report()
-    assert report.status == "complete"
+    # 旧生产 writer 已逐项见证，但 D0 的独立原版范围仍包含 pending
+    # 面；覆盖报告不能把生产实例完成误报为全计划完成。
+    assert report.status == "incomplete"
+    assert report.scope_status in {"incomplete", "unverified"}
     assert not report.blocked
     assert not report.pending
     assert all(row.status == "implemented" for row in report.rows)
+    owners = {row.owner for row in report.rows if row.status == "implemented"}
+    assert {"information_rules", "consumer_adapters", "situated_kernel"} <= owners
 
 
 def test_统一编译器覆盖信息与适配器的全部生产消费者():
     model = load_model()
-    assert model.production_rule_count == 1401
-    assert len(model.production_consumers) == 377
+    assert model.production_rule_count == 1414
+    assert len(model.production_consumers) == 378
     source = decision_rules.load()
     compiled, report = compile_policy(source, config_model=model)
     assert len(compiled.rules) == len(source.rules)
-    assert report["production_rule_count"] == 1401
-    assert report["production_consumer_count"] == 377
+    assert report["production_rule_count"] == 1414
+    assert report["production_consumer_count"] == 378
     assert all(
         item["write_once"] and item["unknown_fallback"] == "vanilla" for item in report["fields"]
     )

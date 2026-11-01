@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import decision_rules
+from pdx import decision_rules, decisions
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 
@@ -206,3 +206,61 @@ def test_liberation_special_goal_is_not_amplified_or_clamped_away():
         )
         == 1100
     )
+
+
+@pytest.mark.parametrize("refusal", [True, False])
+@pytest.mark.parametrize("is_ai", [True, False])
+def test_action_overlay_cannot_revive_native_aggression_zero(refusal, is_ai):
+    baseline = """ai_strategy_default = {
+    aggression = {
+        value = 2
+        if = { limit = { hard_refusal = yes } multiply = 0.0 }
+        if = { limit = { is_ai = yes } multiply = 0.5 }
+    }
+}
+"""
+    policy = replace(
+        decisions.load(),
+        enabled=False,
+        baseline_sha256=hashlib.sha256(baseline.encode()).hexdigest(),
+    )
+    generated = decisions.patch_default(
+        baseline,
+        policy,
+        action_overlay={"aggression": "if = { limit = { ROOT ?= { is_ai = yes } } add = 0.1 }\n"},
+    )
+    expected = 0 if refusal else 1.05 if is_ai else 2
+    assert (
+        _number(
+            _block(generated, "ai_strategy_default.aggression"),
+            {"is_ai": is_ai, "hard_refusal": refusal},
+        )
+        == expected
+    )
+
+
+def test_aggression_overlay_refuses_missing_native_zero_boundary():
+    baseline = "ai_strategy_default = { aggression = { value = 2 } }\n"
+    policy = replace(
+        decisions.load(),
+        enabled=False,
+        baseline_sha256=hashlib.sha256(baseline.encode()).hexdigest(),
+    )
+    with pytest.raises(ValueError, match="归零保护"):
+        decisions.patch_default(baseline, policy, action_overlay={"aggression": "add = 0.1"})
+
+
+@pytest.mark.parametrize("refusal", [True, False])
+@pytest.mark.parametrize("is_ai", [True, False])
+def test_rule_aggression_keeps_zero_boundary_and_later_native_multipliers(refusal, is_ai):
+    generated = _generate(
+        "aggression",
+        "value = 2 if = { limit = { hard_refusal = yes } multiply = 0.0 } "
+        "if = { limit = { is_ai = yes } multiply = 0.5 }",
+        "add",
+        0.1,
+    )
+    assert _number(
+        _block(generated, "ai_strategy_default.aggression"),
+        {"hard_refusal": refusal, "is_ai": is_ai, "in_default": False},
+    ) == pytest.approx(0 if refusal else 1.05 if is_ai else 2)

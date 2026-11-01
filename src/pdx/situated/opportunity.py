@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 from .signals import OpportunitySignal
@@ -38,11 +39,16 @@ def derive(
         if not isinstance(source, str) or not source:
             raise ValueError(f"机会 {name} 缺少 source_fact")
         item = values.get(source)
-        known = item is not None and item.known
+        known = item is not None and item.known and not item.stale
         raw = item.value if item is not None and known else None
         if known and type(raw) is bool:
             available_value = raw
-        elif known and isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        elif (
+            known
+            and isinstance(raw, (int, float))
+            and not isinstance(raw, bool)
+            and math.isfinite(raw)
+        ):
             available_value = raw > 0
         else:
             available_value = None

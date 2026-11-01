@@ -30,7 +30,6 @@ from . import (
     decision_rules,
     decision_security,
 )
-from .lexer import LBRACE, RBRACE, tokenize
 from .localization_languages import (
     DEFAULT_LANGUAGES,
     Language,
@@ -82,6 +81,19 @@ EXTENSION_PROFILE_MODULES = frozenset({"reform", "market", "security", "economy"
 LANGUAGES: dict[str, str] = {language.directory: language.header for language in DEFAULT_LANGUAGES}
 
 _DECISION_LOCALIZATION: dict[str, dict[str, str]] = {
+    "SITAI_RULE_MARKET_ACCESS_STATE_VALUE_REASON": {
+        "english": "Accessible market position and local demand",
+        "braz_por": "Posição de mercado acessível e demanda local",
+        "french": "Position de marché accessible et demande locale",
+        "german": "Zugängliche Marktposition und lokale Nachfrage",
+        "japanese": "市場へのアクセスと地域需要",
+        "korean": "접근 가능한 시장 입지와 지역 수요",
+        "polish": "Dostępna pozycja rynkowa i lokalny popyt",
+        "russian": "Доступ к рынку и местный спрос",
+        "simp_chinese": "良好的市场接入与本地需求",
+        "spanish": "Posición de mercado accesible y demanda local",
+        "turkish": "Erişilebilir pazar konumu ve yerel talep",
+    },
     "SITAI_RULE_COORDINATED_LAYERED_INFORMATION_STATE_GEOGRAPHY_REASON": {
         "english": "Administrative burden of new territory",
         "braz_por": "Custo administrativo de novos territórios",
@@ -952,8 +964,6 @@ def patch_default(
     block = parsed.top_assignments[0].value
     if not isinstance(block, Block):
         raise TypeError("默认策略必须为块")
-    lines = text.splitlines(keepends=True)
-    changes: list[tuple[int, str]] = []
     additions = {
         field: f"\t\tif = {{\n\t\t\tlimit = {{ ROOT ?= {{ is_ai = yes {ACTIVE_TRIGGER} = yes }} }}\n\t\t\tadd = {amount:g}\n\t\t}}\n"
         for field, amount in (
@@ -989,36 +999,29 @@ def patch_default(
             additions[field] = additions.get(field, "") + overlay
     if not additions:
         return text
-    fields: list[tuple[int, str]] = []
     for field in additions:
         matches = block.all(field)
         if len(matches) != 1 or not isinstance(matches[0].value, Block):
             raise ValueError(f"底本 {field} 必须为唯一脚本值块")
-        fields.append((matches[0].line, field))
-    del parsed, block, matches
-    pending = iter(sorted(fields))
-    current = next(pending)
-    depth = 0
-    for tok in tokenize(text):
-        if depth == 0 and not (tok.line >= current[0] and tok.kind == LBRACE):
-            continue
-        depth += (tok.kind == LBRACE) - (tok.kind == RBRACE)
-        if depth == 0:
-            _, field = current
-            addition = re.sub(r"(?m)^ +(?=\t)", "", additions[field])
-            addition = re.sub(r"(?m)^[\t ]+$", "", addition)
-            addition = re.sub(r"[\t ]+(?=\n)", "", addition)
-            extra = f"\t\t# SITAI BEGIN {field}\n{addition}\t\t# SITAI END {field}\n"
-            changes.append((tok.line - 1, extra))
-            following = next(pending, None)
-            if following is None:
-                break
-            current = following
-    if len(changes) != len(fields):
-        raise ValueError("找不到字段闭括号")
-    for index, extra in sorted(changes, reverse=True):
-        lines.insert(index, extra)
-    result = "".join(lines)
+    positions = decision_rules.insertion_offsets(
+        text, {(field,) for field in additions}, block, ("ai_strategy_default",)
+    )
+    result = text
+    for field_path, offset in sorted(positions.items(), key=lambda item: item[1], reverse=True):
+        name = field_path[0]
+        addition = re.sub(r"(?m)^ +(?=\t)", "", additions[name])
+        addition = re.sub(r"(?m)^[\t ]+$", "", addition)
+        addition = re.sub(r"[\t ]+(?=\n)", "", addition).rstrip("\n") + "\n"
+        # 常规底本在行首缩进前插入以保留原文；紧凑单行底本则在词法
+        # 位置换行，不能凭行号把补丁插到字段外。
+        start = result.rfind("\n", 0, offset) + 1
+        if result[start:offset].strip():
+            start = offset
+            leading = "\n"
+        else:
+            leading = ""
+        extra = f"{leading}\t\t# SITAI BEGIN {name}\n{addition}\t\t# SITAI END {name}\n"
+        result = result[:start] + extra + result[start:]
     if parse_text(result).errors:
         raise ValueError("默认策略补丁产物解析失败")
     return result
@@ -1224,6 +1227,33 @@ def build(
     extensions = extensions or load_extensions()
     situated_model = load_situated_model(baseline=baseline)
     situated_compiled_contract: dict[str, object] | None = None
+    # 在统一 IR 编译前保留字段 owner 的早期冲突门。这样篡改/拼接一条
+    # 旧适配规则时，调用方仍得到“重复写入”的领域错误，而不是先看到
+    # IR 与已冻结规则不一致的内部错误。
+    if information_rules is not None and consumer_adapters is not None:
+        # information.toml targets the body of the default strategy, so its
+        # fields are stored relative to ``ai_strategy_default``.  Adapter
+        # rules for that same consumer carry the root block in their field
+        # path.  Compare the two representations at this earliest owner
+        # gate, before the unified compiler lowers semantics; otherwise a
+        # deliberately duplicated writer can surface as a later IR-drift
+        # error and hide the more useful duplicate-write contract.
+        information_fields = {
+            rule.field
+            if rule.field and rule.field[0] == "ai_strategy_default"
+            else ("ai_strategy_default", *rule.field)
+            for rule in information_rules.rules
+        }
+        seen_adapter_fields: set[tuple[str, ...]] = set()
+        for source, field, _owner in decision_adapters.writes(consumer_adapters):
+            comparable = field
+            if source == "common/ai_strategies/00_default_strategy.txt" and field[:1] == (
+                "ai_strategy_default",
+            ):
+                comparable = field
+            if comparable in information_fields or comparable in seen_adapter_fields:
+                raise ValueError(f"旧模块或全域规则与消费者适配重复写入字段：{'.'.join(field)}")
+            seen_adapter_fields.add(comparable)
     # 将全域信息规则和消费者适配器先经过统一的处境编译器，再进入既有
     # patch/build 路径。这样目标、关系、未知回退和一次写入合同不会只停留
     # 在参考 API，而会真正影响生产生成；底层原版资格、成本和执行尾部仍由
@@ -1245,14 +1275,19 @@ def build(
         )
     enabled_action_fields = {"diplomatic_play_neutrality"} if policy.enabled else set()
     if extensions.reform_enabled:
-        enabled_action_fields.add("change_law_chance")
+        enabled_action_fields.update(
+            {"change_law_chance", "max_progressiveness", "max_regressiveness"}
+        )
     if extensions.economy_enabled:
         enabled_action_fields.add("economic_vs_government_spending_balance")
     if extensions.diplomacy_enabled:
-        enabled_action_fields.add("recklessness")
+        enabled_action_fields.update({"aggression", "recklessness", "diplomatic_play_boldness"})
     action_overlay = {
         field: value
-        for field, value in compile_situated_overlay(situated_model).items()
+        for field, value in compile_situated_overlay(
+            situated_model,
+            enabled_consumer_fields=enabled_action_fields,
+        ).items()
         if field in enabled_action_fields
     }
     # 每个输出只允许一个处境规则作者。旧模块不能在适配规则后继续叠加，
@@ -1265,8 +1300,8 @@ def build(
                 ("diplomatic_play_neutrality",): "fiscal",
             }
         )
-    if policy.enabled and "aggression" not in situated_fields:
-        field_owners[("aggression",)] = "fiscal"
+    if extensions.diplomacy_enabled and "aggression" not in situated_fields:
+        field_owners[("aggression",)] = "diplomacy"
     for enabled, owner, fields in (
         (
             extensions.reform_enabled,
@@ -1356,6 +1391,8 @@ def build(
             country_policy=country_policy,
             owned_variables=state_owned_variables,
             owned_triggers=state_owned_triggers,
+            consumer_ir=situated_model.consumer_ir,
+            consumer_source="mod/decisions/information.toml",
         )
     strategy_issues = player_boundary_issues(files["common/ai_strategies/00_default_strategy.txt"])
     if strategy_issues:
@@ -1426,39 +1463,6 @@ def build(
     action_contract = situated_model.contract()
     action_contract["enabled"] = bool(action_overlay)
     action_contract["evidence"] = "static_check"
-    action_contract["action_instance_witnesses"] = {
-        "missing": list(
-            situated_action_instances.missing_witnesses(situated_model.action_instances, files)
-        ),
-        "witness_count": len(situated_action_instances.witness_ids(files)),
-        "required_rule_instances": sum(
-            item.kind == "rule_action" for item in situated_model.action_instances
-        ),
-    }
-    action_contract["action_instance_witness_contract"] = (
-        situated_action_instances.witness_contract(situated_model.action_instances, files)
-    )
-    generated_texts = {
-        name: text
-        for name, text in files.items()
-        if name.endswith(".txt") and isinstance(text, str)
-    }
-    action_contract["ir_lowering_witness"] = {
-        "missing": list(situated_lowering.missing(situated_model.action_ir, generated_texts)),
-        "mismatches": list(situated_lowering.mismatches(situated_model.action_ir, generated_texts)),
-        "witness_count": len(situated_lowering.witnesses(generated_texts)),
-        "required_count": len(situated_model.action_ir),
-        "evidence": "static_check",
-    }
-    ast_witnesses = situated_lowering.ast_witnesses(generated_texts)
-    action_contract["ast_lowering_witness"] = {
-        "mismatches": list(situated_lowering.ast_mismatches(generated_texts)),
-        "witness_count": len(ast_witnesses),
-        "parsed_count": sum(item.parsed for item in ast_witnesses),
-        "limit_count": sum(item.has_limit for item in ast_witnesses),
-        "write_count": sum(item.has_write for item in ast_witnesses),
-        "evidence": "independent_pdx_ast_structure",
-    }
     semantic_facts = {
         "is_ai": True,
         "is_at_war": False,
@@ -1526,6 +1530,7 @@ def build(
             country_policy=country_policy,
             owned_variables=state_owned_variables,
             owned_triggers=state_owned_triggers,
+            consumer_ir=situated_model.consumer_ir,
         )
         collisions = files.keys() & adapter_files.keys()
         if collisions - {"common/ai_strategies/00_default_strategy.txt"}:
@@ -1607,6 +1612,12 @@ def build(
     }
     action_contract["action_instance_witness_contract"] = (
         situated_action_instances.witness_contract(situated_model.action_instances, files)
+    )
+    action_contract["legacy_behavior_witness_contract"] = (
+        situated_action_instances.behavior_witness_contract(
+            situated_model.action_instances,
+            generated_texts,
+        )
     )
     action_contract["ir_lowering_witness"] = {
         "missing": list(situated_lowering.missing(situated_model.action_ir, generated_texts)),

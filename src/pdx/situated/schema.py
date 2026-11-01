@@ -54,6 +54,16 @@ class StateVector:
 
 
 @dataclass(frozen=True, slots=True)
+class CostPredicate:
+    """A typed pressure test; values retain their reader's unit until tiering."""
+
+    fact: str
+    op: Literal["=", "<", "<=", ">", ">="]
+    value: bool | float
+    unit: str
+
+
+@dataclass(frozen=True, slots=True)
 class ActionCard:
     id: str
     domain: str
@@ -76,6 +86,9 @@ class ActionCard:
     political_cost: float
     unknown_policy: UnknownPolicy
     explanation: str
+    commitment_when: tuple[CostPredicate, ...] = ()
+    political_when: tuple[CostPredicate, ...] = ()
+    zero_cost_reason: str = ""
 
 
 @dataclass(frozen=True, slots=True)

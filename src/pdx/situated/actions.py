@@ -7,13 +7,36 @@ import re
 import tomllib
 from typing import TYPE_CHECKING
 
-from .schema import ActionCard, ConsumerContract
+from .schema import ActionCard, ConsumerContract, CostPredicate
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 _ID = re.compile(r"^[a-z][a-z0-9_]*$")
 _UNKNOWN = {"vanilla", "conservative", "lower_tier"}
+
+
+def _cost_predicates(value: object, label: str) -> tuple[CostPredicate, ...]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} 必须是有限成本谓词列表")
+    result = []
+    for item in value:
+        if (
+            not isinstance(item, dict)
+            or set(item) != {"fact", "op", "value", "unit"}
+            or not isinstance(item["fact"], str)
+            or not _ID.fullmatch(item["fact"])
+            or item["op"] not in {"=", "<", "<=", ">", ">="}
+            or not isinstance(item["unit"], str)
+            or not item["unit"]
+            or type(item["value"]) not in (bool, int, float)
+            or (type(item["value"]) is not bool and not math.isfinite(item["value"]))
+        ):
+            raise ValueError(f"{label} 含无效成本谓词")
+        result.append(CostPredicate(**item))
+    if len(result) != len(set(result)):
+        raise ValueError(f"{label} 重复成本证据")
+    return tuple(result)
 
 
 def _names(value: object, label: str) -> tuple[str, ...]:
@@ -79,7 +102,8 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
             "unknown_policy",
             "explanation",
         }
-        if set(raw) != required:
+        optional = {"commitment_when", "political_when", "zero_cost_reason"}
+        if set(raw) - optional != required:
             raise ValueError(f"行动 {key} 字段必须恰好为：{sorted(required)}")
         numbers = [
             raw[name]
@@ -131,6 +155,13 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
                 max_delta=float(raw["max_delta"]),
                 unknown_policy=raw["unknown_policy"],
                 explanation=raw["explanation"],
+                commitment_when=_cost_predicates(
+                    raw.get("commitment_when", []), f"{key}.commitment_when"
+                ),
+                political_when=_cost_predicates(
+                    raw.get("political_when", []), f"{key}.political_when"
+                ),
+                zero_cost_reason=raw.get("zero_cost_reason", ""),
             )
         )
     consumer_ids = {item.id for item in consumers}

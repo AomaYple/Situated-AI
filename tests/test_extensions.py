@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 
 from pdx import decisions
 from pdx.parser import parse_text
+from pdx.situated import pdx_eval
 
 pytestmark = pytest.mark.unit
 
@@ -53,7 +54,7 @@ def test_启用扩展只追加声明字段且原版逐字保留():
         r"\t\t# SITAI BEGIN [^\n]+\n.*?\t\t# SITAI END [^\n]+\n", "", patched, flags=re.DOTALL
     )
     assert restored == decisions.BASELINE.read_text(encoding="utf-8")
-    assert patched.count("# SITAI BEGIN") == 3
+    assert patched.count("# SITAI BEGIN") == 5
     for name, text in files.items():
         assert "\r" not in text
         assert not text.startswith("\ufeff")
@@ -63,6 +64,55 @@ def test_启用扩展只追加声明字段且原版逐字保留():
     assert "desc = SITAI_MARKET_DEPENDENCE_SUPPORT_REASON" in support
     assert "ROOT.economic_dependence(scope:country)" in support
     assert "subtract" in support
+
+
+def test_关闭经济模块时改革输出不保留跨模块关系():
+    """模块开关必须隔离行动关系，而不只是删除顶层消费者字段。"""
+    policy = replace(
+        decisions.load_extensions(),
+        reform_enabled=True,
+        economy_enabled=False,
+    )
+    patched = decisions.build(extensions=policy)["common/ai_strategies/00_default_strategy.txt"]
+    reform = patched.split("# SITAI BEGIN change_law_chance", 1)[1].split("# SITAI END", 1)[0]
+    assert "# ACTION political_reform" in reform
+
+    enabled = replace(policy, economy_enabled=True)
+    enabled_text = decisions.build(extensions=enabled)[
+        "common/ai_strategies/00_default_strategy.txt"
+    ]
+    enabled_reform = enabled_text.split("# SITAI BEGIN change_law_chance", 1)[1].split(
+        "# SITAI END", 1
+    )[0]
+    facts = {
+        "is_ai": True,
+        "is_at_war": False,
+        "in_default": False,
+        "any_insurrection_ongoing": False,
+        "legitimacy": 80,
+        "scaled_debt": 0.2,
+        "net_total_income": 1,
+        "bureaucracy": 1,
+        "literacy_rate": 0.3,
+    }
+    result = pdx_eval.select(reform, facts)
+    enabled_result = pdx_eval.select(enabled_reform, facts)
+    assert (result.action_id, result.delta) == ("political_reform", 0.5)
+    assert (enabled_result.action_id, enabled_result.delta) == ("political_reform", 0.75)
+
+
+@pytest.mark.parametrize("fiscal_enabled", [False, True])
+def test_外交开关隔离aggression消费者和所有权(fiscal_enabled):
+    fiscal = replace(decisions.load(), enabled=fiscal_enabled)
+    disabled = replace(decisions.load_extensions(), diplomacy_enabled=False)
+    disabled_files = decisions.build(fiscal, extensions=disabled)
+    disabled_text = disabled_files["common/ai_strategies/00_default_strategy.txt"]
+    assert "# ACTION diplomatic_aggression_guard" not in disabled_text
+
+    enabled = replace(disabled, diplomacy_enabled=True)
+    enabled_files = decisions.build(fiscal, extensions=enabled)
+    enabled_text = enabled_files["common/ai_strategies/00_default_strategy.txt"]
+    assert "# ACTION diplomatic_aggression_guard" in enabled_text
 
 
 @given(

@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 _SYNTHETIC_READER_EVIDENCE = (
     "bureaucracy taking_loans scaled_debt net_total_income legitimacy "
     "has_insurrectionary_interest_groups has_variable recently_lost_war weeks_until_bankruptcy "
-    "literacy_rate"
+    "literacy_rate army_size average_sol gold_reserves market_access"
 )
 
 
@@ -114,13 +114,18 @@ def _values(**overrides: object) -> dict[str, object]:
         "war_defeat": False,
         "population": 3000000,
         "literacy": 0.8,
+        "average_sol": 10,
+        "gdp": 100,
         "income": 5000,
         "net_surplus": 100,
         "debt_ratio": 0.1,
+        "gold_reserves": 0,
+        "infamy": 0,
         "loans": False,
         "bankruptcy_horizon": 52,
         "bureaucracy": 100,
         "legitimacy": 60,
+        "army": 0,
         "insurrection": False,
         "navy": 50,
         "subject": False,
@@ -133,6 +138,7 @@ def _values(**overrides: object) -> dict[str, object]:
         "target_homeland": False,
         "target_owned": False,
         "target_isolated": False,
+        "target_market_access": 0.5,
         "target_cultural_share": 0,
         "route_fiscal_recovery": False,
         "route_stability": False,
@@ -153,6 +159,10 @@ def test_generator_defaults_follow_current_coordination_readers(rules):
     for reader in coordinated:
         assert values.get(reader.key) is False
         assert _values(**{reader.key: True})[reader.key] is True
+
+
+def test_synthetic_values_cover_every_production_reader(rules):
+    assert {reader.key for reader in rules.readers} <= _values().keys()
 
 
 def test_rules_have_real_readers_fields_priorities_and_no_invented_consumer(rules):
@@ -455,8 +465,18 @@ def test_default_cost_precedes_weak_navy_without_guessing_invalid_input(
     assert _evaluate_script(blocks["colonial_interest_ratio"], engine) == (0.7 if default else 1)
 
 
-@pytest.mark.parametrize(("navy", "expected"), [(0, 0.8), (24, 0.8), (25, 1.0), (100, 1.0)])
-def test_overseas_naval_feasibility_has_a_bounded_threshold(generated_rule_blocks, navy, expected):
+@pytest.mark.parametrize(
+    ("navy", "rule_id", "expected"),
+    [
+        (0, "overseas_naval_feasibility", 0.8),
+        (24, "overseas_naval_feasibility", 0.8),
+        (25, "", 1.0),
+        (49, "", 1.0),
+        (50, "overseas_naval_projection", 1.1),
+        (100, "overseas_naval_projection", 1.1),
+    ],
+)
+def test_overseas_naval_threshold_and_projection(generated_rule_blocks, navy, rule_id, expected):
     rules, blocks = generated_rule_blocks
     values = _values(default=False, navy=navy)
     engine = {
@@ -466,10 +486,38 @@ def test_overseas_naval_feasibility_has_a_bounded_threshold(generated_rule_block
     reference = decision_rules.evaluate(rules, values, is_ai=True).get(
         "colonial_interest_ratio", ("vanilla", 1.0)
     )
-    assert reference == (
-        ("overseas_naval_feasibility", expected) if expected < 1 else ("vanilla", 1.0)
-    )
+    assert reference == ((rule_id, expected) if rule_id else ("vanilla", 1.0))
     assert _evaluate_script(blocks["colonial_interest_ratio"], engine) == expected
+
+
+@pytest.mark.parametrize(
+    ("change", "expected_rule", "expected"),
+    [
+        ({"target_market_access": 0.79}, "", 1.0),
+        ({"target_market_access": 0.8}, "market_access_state_value", 1.1),
+        (
+            {"target_market_access": 0.9, "target_port": True},
+            "geographic_port_continuity",
+            1.15,
+        ),
+        ({"target_market_access": 0.9, "target_owned": True}, "", 1.0),
+    ],
+)
+def test_market_access_is_local_and_yields_to_specific_state_values(
+    generated_rule_blocks, change, expected_rule, expected
+):
+    rules, blocks = generated_rule_blocks
+    values = _values(**change)
+    engine = {
+        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        for reader in rules.readers
+    }
+    engine["scope:target_state"] = True
+    reference = decision_rules.evaluate(rules, values, is_ai=True).get(
+        "state_value", ("vanilla", 1.0)
+    )
+    assert reference == ((expected_rule, expected) if expected_rule else ("vanilla", 1.0))
+    assert _evaluate_script(blocks["state_value"], engine) == expected
 
 
 @pytest.mark.parametrize("navy", [0, 100])
@@ -837,8 +885,18 @@ def test_multifactor_capacity_rules_require_complete_context(generated_rule_bloc
     constrained = decision_rules.evaluate(rules, _values(legitimacy=60, net_surplus=0), is_ai=True)
     assert constrained["treaty_category_scores.trade"][0] != "trade_capacity_cooperation"
     assert constrained["treaty_category_scores.economy"][0] != "economic_diplomacy_capacity"
-    unknown = decision_rules.evaluate(rules, _values(legitimacy=60, net_surplus=None), is_ai=True)
-    assert unknown == {}
+    unknown_values = _values(legitimacy=60, net_surplus=None)
+    unknown = decision_rules.evaluate(rules, unknown_values, is_ai=True)
+    assert not {
+        "wanted_construction_output",
+        "institution_scores.institution_schools",
+        "treaty_category_scores.trade",
+        "treaty_category_scores.economy",
+    }.intersection(unknown)
+    assert unknown == {"colonial_interest_ratio": ("overseas_naval_projection", 1.1)}
+    selected, generated = evaluate(unknown_values, "colonial_interest_ratio")
+    assert selected == unknown["colonial_interest_ratio"]
+    assert generated == selected[1]
 
 
 @pytest.mark.parametrize(
