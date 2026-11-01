@@ -1,5 +1,7 @@
 # 工具目录
 
+当前开发候选为 `Situated AI 3.1.0rc1`，尚未发布或完成计划验收；已发布基线仍为 `3.0.1`。
+
 这里保存可复现的工程检查、基准、静态分析、快照和一次性输出约定。游戏长期行为、压力长跑和 GUI 自动化不属于
 当前工程交付链；日志分析、快照核对和最小复现辅助仍可用于处理用户反馈。发布包不包含 Python 工具、日志或
 历史实验。
@@ -73,7 +75,7 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 - `v3 analyze`、`information-catalog`、`snapshot`：读取锁定游戏或快照，生成 mod 开发知识和版本差异。
 - `v3 modgen`、`modguard`：生成并检查仓库生产产物、锁定原版字段和生成一致性。
 - `v3 package`、`pdx.distribution.validate_package`：按生产源版本生成标准 ZIP 和 manifest。本轮由
-  `Situated AI 1.4.0` 经 `1.5.0`、`2.0.0` 升级至当前 `Situated AI 3.0.1`，标准包已完成生成和静态核对；标签、Release 与部署状态见
+  `Situated AI 1.4.0` 经 `1.5.0`、`2.0.0` 升级至已发布基线 `Situated AI 3.0.1`，标准包已完成生成和静态核对；标签、Release 与部署状态见
   [处境行动决策内核实施计划](../docs/design/exec/mod重设计-实施计划.md)、[当前工作清单](../docs/design/当前工作清单.md)和
   [分层联动执行结果](../docs/design/exec/分层联动-执行结果.md)，不可由命令成功推断已发布。
 - `v3 verify`、`tables --offline`：无游戏环境的快照与文档检查。`v3 citations <路径...>` 需要本机游戏文件。

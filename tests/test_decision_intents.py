@@ -261,6 +261,7 @@ def test_production_intents_coordinate_fiscal_recovery_development_and_cooperati
         net_surplus=10,
         debt_ratio=0.1,
         legitimacy=60,
+        literacy=0.8,
         industrial_route=True,
         population=3_000_000,
     )

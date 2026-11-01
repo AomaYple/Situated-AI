@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import tomllib
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TypedDict
 
 from pdx import decision_adapters, decision_rules
 
-from .action_instances import build
+from .action_instances import ActionInstance, build
 from .families import FAMILIES
 
 REPO = Path(__file__).resolve().parents[3]
@@ -23,6 +23,27 @@ class DomainCoverage:
     status: str
     unknown_policy: str
     evidence_contract: str
+
+
+@dataclass(frozen=True, slots=True)
+class TargetCoverage:
+    """一个真实生产 writer 的 D4 目标责任行。
+
+    目标身份来自 source + rule/action ID，而不是来自卡数量或领域标签。
+    consumer、作用域和 owner 直接取生产实例；unknown/cost/fallback 是该
+    writer 的显式责任，便于编译合同和审计逐行回查。
+    """
+
+    target_id: str
+    source: str
+    definition: str
+    consumer_id: str
+    actor: str
+    target: str
+    owner: str
+    unknown_policy: str
+    cost_contract: str
+    fallback: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +63,8 @@ class DomainSummary(TypedDict):
     actual_instances: int
     owners: list[str]
     action_ids: list[str]
+    targets: list[dict[str, str]]
+    explicit_targets: list[dict[str, str]]
 
 
 class ChainSummary(TypedDict):
@@ -214,6 +237,7 @@ def load(path: Path = DEFAULT_SOURCE) -> dict[str, DomainCoverage]:
     if not isinstance(data["chains"], list) or len(data["chains"]) != len(CHAINS):
         raise ValueError("联合链必须恰有14条")
     expected = {item.id: item for item in CHAINS}
+    seen_chains: set[str] = set()
     for raw in data["chains"]:
         if not isinstance(raw, dict) or set(raw) != {
             "id",
@@ -224,23 +248,31 @@ def load(path: Path = DEFAULT_SOURCE) -> dict[str, DomainCoverage]:
             "unknown_case",
         }:
             raise ValueError("联合链字段无效")
-        if raw["id"] not in expected or tuple(raw["domains"]) != expected[raw["id"]].domain_ids:
+        expected_chain = expected.get(raw["id"])
+        if expected_chain is None or tuple(raw["domains"]) != expected_chain.domain_ids:
             raise ValueError(f"联合链身份或领域顺序不一致：{raw.get('id')}")
+        if raw["id"] in seen_chains:
+            raise ValueError(f"联合链身份重复：{raw['id']}")
+        seen_chains.add(raw["id"])
+        for field in ("description", "break_case", "cost_case", "unknown_case"):
+            if raw[field] != getattr(expected_chain, field):
+                raise ValueError(f"联合链字段与合同不一致：{raw.get('id')}.{field}")
     return result
 
 
 def contract(
-    coverage: dict[str, DomainCoverage], instances: tuple[object, ...]
+    coverage: dict[str, DomainCoverage], instances: tuple[ActionInstance, ...]
 ) -> CoverageContract:
     """导出逐实例覆盖摘要；声明状态与实际生产计数分开保存。"""
 
-    by_domain: dict[str, list[object]] = {name: [] for name in FAMILIES}
+    by_domain: dict[str, list[ActionInstance]] = {name: [] for name in FAMILIES}
+    explicit_by_domain: dict[str, list[ActionInstance]] = {name: [] for name in FAMILIES}
     for instance in instances:
-        if getattr(instance, "kind", "rule_action") != "rule_action":
-            continue
         domain = getattr(instance, "family_id", "")
-        if domain in by_domain:
+        if domain in by_domain and getattr(instance, "kind", "rule_action") == "rule_action":
             by_domain[domain].append(instance)
+        elif domain in explicit_by_domain and getattr(instance, "kind", "") == "action_card":
+            explicit_by_domain[domain].append(instance)
     domains: dict[str, DomainSummary] = {
         name: {
             "declared_status": row.status,
@@ -249,9 +281,65 @@ def contract(
             "actual_instances": len(by_domain[name]),
             "owners": sorted({getattr(item, "owner", "") for item in by_domain[name]}),
             "action_ids": sorted(getattr(item, "action_id", "") for item in by_domain[name]),
+            "targets": [
+                asdict(
+                    TargetCoverage(
+                        target_id=(
+                            f"{getattr(item, 'source', '')}:{getattr(item, 'rule_id', '')}:"
+                            f"{getattr(item, 'consumer_field', '')}:"
+                            f"{getattr(item, 'actor_scope', '')}:"
+                            f"{getattr(item, 'target_scope', '')}"
+                        ),
+                        source=getattr(item, "source", ""),
+                        definition=getattr(item, "rule_id", ""),
+                        consumer_id=getattr(item, "consumer_field", ""),
+                        actor=getattr(item, "actor_scope", ""),
+                        target=getattr(item, "target_scope", ""),
+                        owner=getattr(item, "owner", ""),
+                        unknown_policy=row.unknown_policy,
+                        cost_contract="retained_vanilla_cost_and_qualification",
+                        fallback=getattr(item, "vanilla_tail", ""),
+                    )
+                )
+                for item in sorted(by_domain[name], key=lambda value: value.action_id)
+            ],
+            "explicit_targets": [
+                asdict(
+                    TargetCoverage(
+                        target_id=(
+                            f"{getattr(item, 'source', '')}:{getattr(item, 'rule_id', '')}:"
+                            f"{getattr(item, 'consumer_field', '')}:root:none"
+                        ),
+                        source=getattr(item, "source", ""),
+                        definition=getattr(item, "rule_id", ""),
+                        consumer_id=getattr(item, "consumer_field", ""),
+                        actor="root",
+                        target="none",
+                        owner=getattr(item, "owner", ""),
+                        unknown_policy="vanilla",
+                        cost_contract="retained_vanilla_cost_and_qualification",
+                        fallback=getattr(item, "vanilla_tail", ""),
+                    )
+                )
+                for item in sorted(explicit_by_domain[name], key=lambda value: value.action_id)
+            ],
         }
         for name, row in sorted(coverage.items())
     }
+    for name, summary in domains.items():
+        targets = summary["targets"]
+        target_ids = [item["target_id"] for item in targets]
+        if len(target_ids) != len(set(target_ids)):
+            raise ValueError(f"领域目标身份重复：{name}")
+        if any(
+            not item["consumer_id"] or not item["owner"] or not item["fallback"] for item in targets
+        ):
+            raise ValueError(f"领域目标缺少 consumer 或 owner：{name}")
+        if summary["declared_instances"] != len(targets):
+            raise ValueError(f"领域目标数量与声明不一致：{name}")
+        explicit_ids = [item["target_id"] for item in summary["explicit_targets"]]
+        if len(explicit_ids) != len(set(explicit_ids)):
+            raise ValueError(f"显式行动目标身份重复：{name}")
     chains: list[ChainSummary] = [
         {
             "id": item.id,
@@ -272,4 +360,12 @@ def contract(
     }
 
 
-__all__ = ["CHAINS", "DEFAULT_SOURCE", "DomainCoverage", "JointChain", "contract", "load"]
+__all__ = [
+    "CHAINS",
+    "DEFAULT_SOURCE",
+    "DomainCoverage",
+    "JointChain",
+    "TargetCoverage",
+    "contract",
+    "load",
+]

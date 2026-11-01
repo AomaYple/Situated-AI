@@ -1648,7 +1648,7 @@ def test_relative_comparison_cannot_mix_units_or_use_unproven_getters(change):
 @pytest.mark.parametrize(
     ("field", "owner"),
     [
-        ("aggression", "fiscal"),
+        ("aggression", "diplomacy"),
         ("diplomatic_play_support", "support"),
         ("recklessness", "diplomacy"),
     ],

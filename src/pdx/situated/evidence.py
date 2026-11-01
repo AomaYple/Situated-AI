@@ -43,6 +43,12 @@ def load(source: Path) -> tuple[EvidenceSpec, ...]:
             or raw.get("quality", "observed") not in {"observed", "derived", "declared", "unknown"}
         ):
             raise ValueError(f"事实 {key} 的类型、作用域、刷新、未知或 trigger 无效")
+        if raw["kind"] == "boolean" and any(
+            raw.get(bound) is not None for bound in ("minimum", "maximum")
+        ):
+            raise ValueError(f"布尔事实 {key} 不能声明数值边界")
+        if raw["kind"] == "ratio" and raw["unit"] not in {"ratio", "proportion", "percent"}:
+            raise ValueError(f"比例事实 {key} 的单位必须是 ratio/proportion/percent")
         for bound in ("minimum", "maximum"):
             value = raw.get(bound)
             if value is not None and (

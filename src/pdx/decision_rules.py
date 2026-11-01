@@ -14,7 +14,7 @@ import operator
 import re
 import tomllib
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from .country_state import CountryPolicy
+    from .situated.decision_ir import ConsumerIRBundle
+    from .situated.ir import ActionIR
 
 SOURCE = config.REPO / "mod/decisions/information.toml"
 _NAME = re.compile(r"[a-z][a-z0-9_]*\Z")
@@ -149,6 +151,7 @@ class RuleSet:
     enabled_domains: frozenset[str]
     actor_path: tuple[str, ...] = ()
     strategy: decision_intents.Strategy | None = None
+    semantic_ir: tuple[ActionIR, ...] = ()
 
     def groups(
         self, enabled_domains: frozenset[str] | None = None
@@ -157,7 +160,13 @@ class RuleSet:
         selected = self.enabled_domains if enabled_domains is None else enabled_domains
         if selected - {rule.domain for rule in self.rules}:
             raise ValueError("领域开关含未登记的名称")
-        for rule in self.rules:
+        from .situated.ir import from_rule  # noqa: PLC0415
+
+        semantic_rules = self.semantic_ir or tuple(
+            from_rule(rule, source="rule_set") for rule in self.rules
+        )
+        for item in semantic_rules:
+            rule = item.to_rule()
             if rule.domain in selected:
                 groups[rule.field].append(rule)
         return {
@@ -503,11 +512,34 @@ def evaluate(
     is_ai: bool,
     enabled_domains: frozenset[str] | None = None,
 ) -> dict[str, tuple[str, float]]:
+    """Compatibility adapter: lower the public RuleSet once before evaluation."""
+    from .situated.ir import from_rule  # noqa: PLC0415
+
+    semantic_ir = rules.semantic_ir or tuple(
+        from_rule(rule, source="rule_set") for rule in rules.rules
+    )
+    return evaluate_ir(
+        replace(rules, semantic_ir=semantic_ir),
+        values,
+        is_ai=is_ai,
+        enabled_domains=enabled_domains,
+    )
+
+
+def evaluate_ir(
+    rules: RuleSet,
+    values: Mapping[str, object],
+    *,
+    is_ai: bool,
+    enabled_domains: frozenset[str] | None = None,
+) -> dict[str, tuple[str, float]]:
     """输出字段的规则 ID/倍率；缺失、None、类型错或非有限输入回退原版。
 
     条件按优先级短路；未知的更高优先级规则不允许低优先级规则抢先生效。
     不把运行时未知值解释成条件为假。
     """
+    if rules.rules and not rules.semantic_ir:
+        raise ValueError("参考求值缺少完整 semantic IR")
     result: dict[str, tuple[str, float]] = {}
     if type(is_ai) is not bool:
         raise ValueError("玩家边界必须是明确布尔值")
@@ -660,6 +692,25 @@ def _protected_offsets(
                 raise ValueError("战争目标终结归零保护形状漂移")
             ordinal = sum(item.key == "if" for item in statements[:clamp_index]) - 1
             targets[(*address, ("if", ordinal))] = (field, "start")
+        elif mode == "before_native_aggression_terminal_zero_tail":
+            branches = block.all("if")
+            aggression_ordinal = next(
+                (
+                    index
+                    for index, branch in enumerate(branches)
+                    if isinstance(branch.value, Block)
+                    and any(
+                        item.key == "multiply"
+                        and isinstance(item.value, Scalar)
+                        and item.value.text in {"0", "0.0"}
+                        for item in branch.value.assignments()
+                    )
+                ),
+                None,
+            )
+            if aggression_ordinal is None:
+                raise ValueError("攻击倾向消费者缺少原版终结归零保护")
+            targets[(*address, ("if", aggression_ordinal))] = (field, "start")
         else:
             raise ValueError("未登记的消费者插入保护")
     starts = [0]
@@ -696,6 +747,23 @@ def _protected_offsets(
         previous = token
     if result.keys() != fields:
         raise ValueError("原版保护边界定位不完整")
+    return result
+
+
+def insertion_offsets(
+    text: str, fields: set[tuple[str, ...]], root: Block, prefix: tuple[str, ...] = ()
+) -> dict[tuple[str, ...], int]:
+    """复用字段级原版尾部合同，返回相对 ``root`` 的安全写入位置。"""
+
+    protected = {
+        field
+        for field in fields
+        if decision_interfaces.placement_contract(field) != "after_native_numeric_evaluation"
+    }
+    plain = fields - protected
+    offsets = _offsets(text, {(*prefix, *field) for field in plain}) if plain else {}
+    result = {field: offsets[(*prefix, *field)] for field in plain}
+    result.update(_protected_offsets(text, protected, root, prefix))
     return result
 
 
@@ -741,7 +809,7 @@ def patch(
     country_policy: CountryPolicy | None = None,
     owned_variables: frozenset[str] | set[str] | None = None,
     owned_triggers: frozenset[str] | set[str] | None = None,
-    consumer_ir: object | None = None,
+    consumer_ir: ConsumerIRBundle | None = None,
     consumer_source: str | None = None,
 ) -> str:
     """向锁定底本的派生产物插入规则；关闭时逐字等价，不覆盖资格或值。"""
@@ -754,6 +822,12 @@ def patch(
     if not isinstance(root, Block):
         raise ValueError("默认策略不是块")
     decision_interfaces.validate(rules)
+    if consumer_ir is not None:
+        from .situated.decision_ir import lower_legacy  # noqa: PLC0415
+
+        rules = lower_legacy(
+            rules, consumer_ir, source=str(consumer_source) if consumer_source is not None else None
+        )
     groups = rules.groups(enabled_domains)
     bundle_writers: dict[tuple[str, str], object] = {}
     if consumer_ir is not None:
@@ -838,18 +912,10 @@ def patch(
     for field in groups:
         _block_at(root, field)
     prefix = ("ai_strategy_default",) if default_strategy else ()
-    protected = {
-        field
-        for field in groups
-        if decision_interfaces.placement_contract(field) != "after_native_numeric_evaluation"
+    positions = {
+        (*prefix, *field): position
+        for field, position in insertion_offsets(text, set(groups), root, prefix).items()
     }
-    positions = _offsets(text, {(*prefix, *field) for field in groups if field not in protected})
-    positions.update(
-        {
-            (*prefix, *field): position
-            for field, position in _protected_offsets(text, protected, root, prefix).items()
-        }
-    )
     readers = {reader.key: reader for reader in rules.readers}
     # 所有读取器必须能在锁定底本找到同名原版用例；这仍只是静态依据。
     words = (

@@ -3,7 +3,7 @@ game_version = "1.14.5"
 baseline_sha256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
 
 [package]
-product_version = "3.0.1"
+product_version = "3.1.0rc1"
 status = "candidate"
 parent = "vanilla-1.14.5"
 save_compatibility = "new-game-only"
@@ -20,4 +20,4 @@ why = "真实违约或持续借款且距破产不足半年视为财政风险；�
 [fields]
 diplomatic_play_neutrality = 25
 aggression = 0
-why = "财政危机叠加战争，或作为发起方、目标方、承诺参与方及尚未选边的合法参与方暴露于外交博弈时，提高第三方中立倾向。未决定参与表示风险暴露，不表示已经承诺。aggression 为0，生产输出不写入该字段，进攻倾向继续由原版策略决定。保留原版持牌、国家身份和防御选择，不直接改变财政、利益集团、法律或军力。"
+why = "财政危机叠加战争，或作为发起方、目标方、承诺参与方及尚未选边的合法参与方暴露于外交博弈时，提高第三方中立倾向。未决定参与表示风险暴露，不表示已经承诺。aggression 的财政基线保持为0；外交模块单独启用时，才可通过有界且带原版尾部的威慑行动提供增量。保留原版持牌、国家身份和防御选择，不直接改变财政、利益集团、法律或军力。"

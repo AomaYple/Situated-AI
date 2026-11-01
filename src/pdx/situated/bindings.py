@@ -113,8 +113,11 @@ def load(path: Path = DEFAULT_SOURCE) -> tuple[Binding, ...]:
         if any(not isinstance(raw[key], str) or not raw[key].strip() for key in required):
             raise ValueError(f"绑定身份为空：{index}")
         result.append(Binding(**raw))
-    validate(tuple(result))
-    return tuple(result)
+    # 绑定文件是生成式台账；读取时按稳定身份排序，避免文件分段或
+    # 新增批次的物理插入位置改变 IR、报告和验收顺序。
+    ordered = tuple(sorted(result, key=lambda item: item.binding_id))
+    validate(ordered)
+    return ordered
 
 
 def validate(bindings: tuple[Binding, ...], *, check_complete: bool = True) -> None:

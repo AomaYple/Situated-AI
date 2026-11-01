@@ -1,6 +1,7 @@
 """K4 成本、稳定排序和失败语义。"""
 
 import math
+from typing import cast
 
 import pytest
 
@@ -30,3 +31,45 @@ def test_empty_or_invalid_budget_falls_back_to_vanilla() -> None:
     assert result.fallback == "vanilla"
     with pytest.raises(ValueError, match="正有限"):
         choose((), max_delta=0)
+
+
+def test_core_unknown_does_not_replace_vanilla_or_unlock_a_candidate() -> None:
+    result = choose(
+        (Candidate("unknown", capability_gain=100, core_evidence=(None,)),),
+        max_delta=20,
+    )
+    assert result.action_id is None
+    assert result.fallback == "vanilla"
+
+
+def test_auxiliary_unknown_keeps_only_the_known_base_tier() -> None:
+    result = choose(
+        (
+            Candidate(
+                "partial",
+                capability_gain=100,
+                base_delta=2,
+                auxiliary_evidence=(None,),
+            ),
+        ),
+        max_delta=20,
+    )
+    assert result.action_id == "partial"
+    assert result.delta == 2
+    assert result.fallback == "lower_tier"
+
+
+def test_false_core_evidence_is_a_qualification_failure() -> None:
+    result = choose(
+        (
+            Candidate("blocked", capability_gain=100, core_evidence=(False,)),
+            Candidate("eligible", base_delta=1, core_evidence=(True,)),
+        ),
+        max_delta=20,
+    )
+    assert result.action_id == "eligible"
+
+
+def test_malformed_evidence_fails_closed() -> None:
+    with pytest.raises(ValueError, match="bool/None"):
+        choose((Candidate("bad", core_evidence=(cast("bool | None", 1),)),), max_delta=5)

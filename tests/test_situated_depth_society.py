@@ -54,5 +54,10 @@ def test_society_local_relations_use_declared_scope_only():
     model = load_model()
     rows = [item for item in model.action_instances if item.family_id in SOCIETY_DOMAINS]
     assert all(item.actor_scope in {"root", "owner"} for item in rows)
-    assert all(item.target_scope in {"none", "target_or_none"} for item in rows)
+    assert all(item.target_scope in {"none", "target_state"} for item in rows)
+    assert all(
+        item.target_scope
+        == ("target_state" if item.consumer_field.endswith("state_value") else "none")
+        for item in rows
+    )
     assert all(relation.scope == "root" for relation in model.relations)

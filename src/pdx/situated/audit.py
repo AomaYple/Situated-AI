@@ -84,9 +84,15 @@ def report() -> AuditResult:
         vanilla_scope = vanilla_inventory.discover()
     except (OSError, ValueError):
         vanilla_scope = None
+    # D0 freezes the complete discovered range; implementation pending is an
+    # explicit input to the later D4--D13 responsibilities and must remain
+    # visible there.  Only unresolved scope identity or parse failure makes
+    # the independent range itself incomplete.
     scope_status = (
         "complete"
-        if vanilla_scope is not None and vanilla_scope.pending_count == 0
+        if vanilla_scope is not None
+        and not vanilla_scope.unknown_scopes
+        and not vanilla_scope.parse_failures
         else "incomplete"
         if vanilla_scope is not None
         else "unverified"
@@ -95,7 +101,7 @@ def report() -> AuditResult:
     if scope_status != "complete" and coverage_status == "complete":
         coverage_status = "incomplete"
     return AuditResult(
-        plan_version="31.3",
+        plan_version="31.4",
         status=coverage_status,
         pending=pending,
         blocked=blocked,

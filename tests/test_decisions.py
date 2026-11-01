@@ -175,7 +175,13 @@ def test_财政字段仅在有效root存在时调用国家触发器(policy):
             continue
         field = strategy.all(name)[0].value
         assert isinstance(field, Block)
-        condition = field.all("if")[-1].value
+        injected = [
+            branch.value
+            for branch in field.all("if")
+            if isinstance(branch.value, Block) and decisions.ACTIVE_TRIGGER in str(branch.value)
+        ]
+        assert len(injected) == 1
+        condition = injected[0]
         assert isinstance(condition, Block)
         guard = condition.all("limit")[0].value
         assert isinstance(guard, Block)
@@ -735,7 +741,7 @@ def test_说明保留用户验收边界和回退且不进入游戏生成树(poli
     extensions = replace(decisions.Extensions(), diplomacy_enabled=True)
     text = player_guide(policy, extensions, ["fiscal", "diplomacy"])
     for expected in (
-        "这是唯一正式生产包",
+        "这是标准安装包（当前 3.1.0rc1 候选）",
         "原版资格、成本、效果与行动流程继续生效",
         "AI 长期行为、平衡、后期性能、玩家体验与创意工坊发布由用户验收",
         "回退：退出游戏后禁用或删除本 Mod",

@@ -109,3 +109,31 @@ strategy = "diplomacy"
 neutral_local = true
 enables = []
 relations = ["diplomatic_restraint"]
+
+[tools.reform_progressive_window]
+domain = "political"
+strategy = "reform"
+neutral_local = true
+enables = []
+relations = ["reform_conservative_guard"]
+
+[tools.reform_conservative_guard]
+domain = "political"
+strategy = "survival"
+neutral_local = true
+enables = []
+relations = ["reform_progressive_window"]
+
+[tools.diplomatic_boldness_window]
+domain = "diplomacy"
+strategy = "diplomacy"
+neutral_local = true
+enables = []
+relations = []
+
+[tools.diplomatic_aggression_guard]
+domain = "diplomacy"
+strategy = "security"
+neutral_local = true
+enables = []
+relations = []

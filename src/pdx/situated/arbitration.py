@@ -23,6 +23,11 @@ class Candidate:
     political_cost: float = 0.0
     inertia: float = 0.0
     base_delta: float = 0.0
+    # ``False`` is a hard qualification failure and ``None`` is unknown.
+    # Unknown core evidence cannot safely replace the vanilla decision;
+    # unknown auxiliary evidence may keep only the candidate's base tier.
+    core_evidence: tuple[bool | None, ...] = ()
+    auxiliary_evidence: tuple[bool | None, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,7 +46,11 @@ def choose(
 
     if not math.isfinite(max_delta) or max_delta <= 0:
         raise ValueError("仲裁 max_delta 必须为正有限数")
+    eligible: list[tuple[Candidate, bool]] = []
     for candidate in candidates:
+        for value in (*candidate.core_evidence, *candidate.auxiliary_evidence):
+            if value is not None and type(value) is not bool:
+                raise ValueError(f"行动 {candidate.action_id} 的证据必须是 bool/None")
         values = (
             candidate.crisis_protection,
             candidate.bottleneck_relief,
@@ -56,7 +65,12 @@ def choose(
         )
         if any(not math.isfinite(value) for value in values):
             raise ValueError(f"行动 {candidate.action_id} 含非有限仲裁值")
-    if not candidates or any(not candidate.action_id for candidate in candidates):
+        if any(value is False for value in candidate.core_evidence):
+            continue
+        if any(value is None for value in candidate.core_evidence):
+            continue
+        eligible.append((candidate, any(value is None for value in candidate.auxiliary_evidence)))
+    if not eligible or any(not candidate.action_id for candidate, _ in eligible):
         return ArbitrationResult(
             None, 0.0, (), tuple(item.spec_id for item in evidence if item.known), "vanilla"
         )
@@ -67,29 +81,30 @@ def choose(
         return item.feasibility - item.commitment_cost - item.political_cost
 
     ranked = sorted(
-        candidates,
-        key=lambda item: (
-            -item.crisis_protection,
-            -item.bottleneck_relief,
-            -item.capability_gain,
-            -cost_adjusted_feasibility(item),
-            -item.substitute_availability,
-            -(item.opportunity_value - item.commitment_cost - item.political_cost),
-            -item.inertia,
-            item.action_id,
+        eligible,
+        key=lambda pair: (
+            -pair[0].crisis_protection,
+            -pair[0].bottleneck_relief,
+            -pair[0].capability_gain,
+            -cost_adjusted_feasibility(pair[0]),
+            -pair[0].substitute_availability,
+            -(pair[0].opportunity_value - pair[0].commitment_cost - pair[0].political_cost),
+            -pair[0].inertia,
+            pair[0].action_id,
         ),
     )
-    chosen = ranked[0]
-    raw = (
-        chosen.crisis_protection
-        + chosen.bottleneck_relief
-        + chosen.capability_gain
-        + 0.25 * max(0.0, chosen.feasibility)
-        + 0.25 * max(0.0, chosen.opportunity_value)
-        - 0.5 * max(0.0, chosen.commitment_cost)
-        - 0.5 * max(0.0, chosen.political_cost)
-        + chosen.base_delta
-    )
+    chosen, auxiliary_unknown = ranked[0]
+    raw = chosen.base_delta
+    if not auxiliary_unknown:
+        raw += (
+            chosen.crisis_protection
+            + chosen.bottleneck_relief
+            + chosen.capability_gain
+            + 0.25 * max(0.0, chosen.feasibility)
+            + 0.25 * max(0.0, chosen.opportunity_value)
+            - 0.5 * max(0.0, chosen.commitment_cost)
+            - 0.5 * max(0.0, chosen.political_cost)
+        )
     delta = max(-max_delta, min(max_delta, raw))
     reasons = tuple(
         code
@@ -110,5 +125,5 @@ def choose(
         delta,
         reasons,
         tuple(item.spec_id for item in evidence if item.known),
-        "selected",
+        "lower_tier" if auxiliary_unknown else "selected",
     )

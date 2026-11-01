@@ -30,6 +30,21 @@ building_government_administration = {
 	required_construction = construction_cost_very_low
 
 	background = "gfx/interface/icons/building_icons/backgrounds/building_panel_bg_monuments.dds"
+
+	# SITAI BEGIN initialized:building_government_administration.ai_value
+	ai_value = { value = 1000
+		# SITAI BEGIN information:building_government_administration.ai_value
+		# fiscal_government_building_default_downgrade [fiscal]; 州所属国家处于违约时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes } } } multiply = 0.75 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { in_default = yes } } } } AND = { exists = ROOT ROOT = { exists = owner owner = {  } } } } } } multiply = 1.0 }
+		# fiscal_government_building_loans_downgrade [fiscal]; 州所属国家正在借贷时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes taking_loans = yes } } } multiply = 0.75 }
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = owner owner = { NOT = { taking_loans = yes } } } } AND = { exists = ROOT ROOT = { exists = owner owner = {  } } } } } } multiply = 1.0 }
+		# administrative_government_building_bureaucracy_repair [economy]; 州所属国家官僚容量为负时，提高政府行政建筑的局部候选权重；原版行政建筑资格、就业、成本与执行尾部继续优先
+		else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes bureaucracy < 0 } } } multiply = 1.25 }
+		# SITAI END information:building_government_administration.ai_value
+	}
+	# SITAI END initialized:building_government_administration.ai_value
 }
 
 building_university = {

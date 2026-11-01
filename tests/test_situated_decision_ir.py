@@ -31,13 +31,13 @@ def test_统一生产bundle包含全部legacy和显式writer():
     model = load_model()
     assert model.consumer_ir is not None
     bundle = model.consumer_ir
-    assert len(bundle.writers) == len(model.action_instances) == 1408
-    assert sum(item.kind == "rule_action" for item in bundle.writers) == 1401
-    assert sum(item.kind == "action_card" for item in bundle.writers) == 7
+    assert len(bundle.writers) == len(model.action_instances)
+    assert sum(item.kind == "rule_action" for item in bundle.writers) == 1414
+    assert sum(item.kind == "action_card" for item in bundle.writers) == len(model.actions)
     payload = bundle.as_dict()
-    assert payload["legacy_writer_count"] == 1401
-    assert payload["legacy_semantic_count"] == 1401
-    assert payload["action_card_writer_count"] == 7
+    assert payload["legacy_writer_count"] == 1414
+    assert payload["legacy_semantic_count"] == 1414
+    assert payload["action_card_writer_count"] == len(model.actions)
     assert len(set(bundle.writer_ids())) == len(bundle.writers)
     assert all(item.vanilla_tail for item in bundle.writers)
 
@@ -68,8 +68,8 @@ def test_legacy_writer绑定与owner逐项反查且每个消费者字段只有�
     bindings = {(item.source, item.definition): item for item in model.binding_rows}
     writers = tuple(item for item in bundle.writers if item.kind == "rule_action")
 
-    assert len(instances) == 1401
-    assert len(bindings) == 1401
+    assert len(instances) == 1414
+    assert len(bindings) == 1414
     assert {(item.source, item.definition) for item in writers} == set(bindings)
 
     owners: dict[str, str] = {}
@@ -94,7 +94,7 @@ def test_legacy_writer携带完整规则语义而不是只有登记身份():
     model = load_model()
     assert model.consumer_ir is not None
     writers = tuple(item for item in model.consumer_ir.writers if item.kind == "rule_action")
-    assert len(writers) == 1401
+    assert len(writers) == 1414
     assert all(item.legacy is not None for item in writers)
     for writer in writers:
         assert writer.legacy is not None

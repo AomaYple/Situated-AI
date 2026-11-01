@@ -4,19 +4,19 @@ schema = 1
 source = "political_reform"
 target = "industrial_foundation"
 kind = "complements"
-strength = 1.0
+strength = 0.25
 
 [[relations]]
 source = "industrial_foundation"
 target = "political_reform"
 kind = "complements"
-strength = 1.0
+strength = 0.25
 
 [[relations]]
 source = "industrial_foundation"
 target = "education_and_research"
 kind = "complements"
-strength = 1.0
+strength = 0.25
 scope = "root"
 condition_facts = ["peace"]
 unknown_policy = "vanilla"
@@ -49,4 +49,16 @@ strength = 1.0
 source = "education_and_research"
 target = "industrial_foundation"
 kind = "complements"
+strength = 0.25
+
+[[relations]]
+source = "reform_conservative_guard"
+target = "reform_progressive_window"
+kind = "substitutes"
+strength = 1.0
+
+[[relations]]
+source = "reform_progressive_window"
+target = "reform_conservative_guard"
+kind = "substitutes"
 strength = 1.0

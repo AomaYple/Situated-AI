@@ -11,7 +11,7 @@ pytestmark = pytest.mark.unit
 
 def test_所有旧规则恰有一个精确绑定():
     bindings = load()
-    assert len(bindings) == 1401
+    assert len(bindings) == 1414
     assert len({item.binding_id for item in bindings}) == len(bindings)
     assert {item.disposition for item in bindings} <= {
         "migrate",

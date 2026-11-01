@@ -64,7 +64,11 @@ def test_external_local_relation_boundary_preserves_target_and_owner_scope_label
     assert all(item.actor_scope in {"root", "owner"} for item in rows)
     target_rows = [item for item in rows if item.target_scope != "none"]
     assert target_rows
-    assert all(item.target_scope == "target_or_none" for item in target_rows)
+    assert all(
+        item.target_scope
+        == ("target_state" if item.consumer_field.endswith("state_value") else "target_or_none")
+        for item in target_rows
+    )
     assert all(
         item.consumer_field.split(".")[-1] in {"state_value", "colonial_interest_ratio"}
         for item in target_rows

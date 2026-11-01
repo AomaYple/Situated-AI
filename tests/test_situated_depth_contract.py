@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from pdx import ai_surface
-from pdx.situated import inventory
+from pdx.situated import inventory, vanilla_inventory
 
 pytestmark = pytest.mark.unit
 
@@ -169,6 +169,261 @@ def test_d0_strategy_documentation_proves_country_score_maps(tmp_path) -> None:
     )
 
 
+def test_d0_default_strategy_header_does_not_prove_all_fields_country_scores(tmp_path) -> None:
+    game = _game(tmp_path)
+    source = "common/ai_strategies/00_default_strategy.txt"
+    path = game / source
+    original = path.read_text(encoding="utf-8").rstrip()
+    path.write_text(
+        "# All AIs always load data from this strategy\n"
+        + original[:-1]
+        + " desired_tax_level = medium\n"
+        " goods_stances = { grain = { stance = export } }\n"
+        ' metadata = "country-scoped default"\n'
+        ' icon = "default.dds"\n'
+        " type = political\n"
+        " possible = { always = yes }\n"
+        " weight = { value = 1 }\n"
+        " invented_score = { value = scope:target_country.foo }\n"
+        " will_invent = { always = yes }\n}\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    scopes = vanilla_inventory._strategy_scopes({source: path.read_bytes()})
+    assert set(scopes) == {"state_value"}
+    result = inventory.discover_vanilla(game=game)
+    rows = [
+        item
+        for item in result.surfaces
+        if item.definition == "ai_strategy_default" and item.field != "state_value"
+    ]
+    assert {item.field for item in rows} == {
+        "desired_tax_level",
+        "goods_stances.grain.stance",
+        "metadata",
+        "possible",
+        "weight",
+        "invented_score",
+        "will_invent",
+    }
+    for row in rows:
+        assert (row.actor_scope, row.target_scope, row.operation, row.capability) == (
+            "unknown",
+            "unknown",
+            "declared_field",
+            "pending",
+        )
+        assert not row.scope_evidence
+        assert row.getter is None
+        assert row.status == "pending"
+        assert row.surface_id in result.unknown_scopes
+
+
+def test_d0_strategy_allocation_description_does_not_prove_evaluation_scope(tmp_path) -> None:
+    game = _game(tmp_path)
+    path = game / "common/ai_strategies/00_default_strategy.txt"
+    original = path.read_text(encoding="utf-8")
+    path.write_text(
+        original.replace(
+            " state_value = { value = 1 }\n",
+            " state_value = { value = 1 }\n"
+            " # Trigger for whether this strategy can be randomly allocated to a country\n"
+            " possible = { always = yes }\n"
+            " # Chance that this strategy will be randomly allocated to a country\n"
+            " weight = { value = 2 }\n",
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    rows = {
+        item.field: item for item in result.surfaces if item.definition == "ai_strategy_default"
+    }
+    for field in ("possible", "weight"):
+        assert rows[field].capability == "pending"
+        assert rows[field].actor_scope == rows[field].target_scope == "unknown"
+
+
+def test_d0_strategy_possible_without_allocation_documentation_stays_pending(tmp_path) -> None:
+    game = _game(tmp_path)
+    path = game / "common/ai_strategies/00_default_strategy.txt"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            " state_value = { value = 1 }\n",
+            " state_value = { value = 1 }\n possible = { always = yes }\n weight = { value = 2 }\n",
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    rows = {
+        item.field: item for item in result.surfaces if item.definition == "ai_strategy_default"
+    }
+    for field in ("possible", "weight"):
+        assert rows[field].capability == "pending"
+        assert rows[field].actor_scope == rows[field].target_scope == "unknown"
+
+
+def test_d0_fleet_composition_documentation_proves_nested_country_contract(tmp_path) -> None:
+    game = _game(tmp_path)
+    path = game / "common/ai_strategies/00_default_strategy.txt"
+    original = path.read_text(encoding="utf-8").rstrip()
+    path.write_text(
+        original[:-1]
+        + "\n"
+        + " # All numeric fields accept script values, so weights can be tuned from country scope.\n"
+        + " # ai_ship_category_weights:\n"
+        + " # weights are summed per category\n"
+        + " # mission_type_weights:\n"
+        + " #   Multiplier applied when a fleet in this role picks which mission to pursue. 1.0 is neutral; 0.0 disables it for this role.\n"
+        + " #   any mission type not listed is treated as 0. Omit the whole block to leave every mission neutral.\n"
+        + " # min_ships_wanted:\n"
+        + " #   Soft floor on fleet size used during role-fit scoring.\n"
+        + " # num_fleets_wanted:\n"
+        + " #   How many fleets should take this role. Omitted means one. Evaluated in country scope; a value of 0 drops the role for that country.\n"
+        + " # potential:\n"
+        + " #   Country-scoped trigger. If it fails the role is dropped entirely.\n"
+        + " fleet_compositions = {\n"
+        + "  escort = {\n"
+        + "   ai_ship_category_weights = { screens = { value = 1 } }\n"
+        + "   mission_type_weights = { protect_supply = { value = 2 } }\n"
+        + "   min_ships_wanted = 3\n"
+        + "   num_fleets_wanted = { value = 1 }\n"
+        + "   potential = { always = yes }\n"
+        + "  }\n"
+        + " }\n}\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    scopes = vanilla_inventory._strategy_scopes(
+        {"common/ai_strategies/00_default_strategy.txt": path.read_bytes()}
+    )
+    assert scopes["fleet_compositions.escort.ai_ship_category_weights.screens"].actor == "country"
+    assert scopes["fleet_compositions.escort.ai_ship_category_weights.screens"].target == "none"
+    assert (
+        scopes["fleet_compositions.escort.ai_ship_category_weights.screens"].capability == "direct"
+    )
+    assert scopes["fleet_compositions.escort.ai_ship_category_weights.screens"].evidence
+    assert scopes["fleet_compositions.escort.mission_type_weights.protect_supply"].operation == (
+        "multiplicative_score"
+    )
+    assert scopes["fleet_compositions.escort.min_ships_wanted"].operation == "soft_floor"
+    assert scopes["fleet_compositions.escort.num_fleets_wanted"].operation == "fleet_count"
+    assert scopes["fleet_compositions.escort.potential"].operation == "predicate"
+
+
+def test_d0_fleet_composition_missing_header_stays_pending(tmp_path) -> None:
+    game = _game(tmp_path)
+    path = game / "common/ai_strategies/00_default_strategy.txt"
+    original = path.read_text(encoding="utf-8").rstrip()
+    path.write_text(
+        original[:-1]
+        + " fleet_compositions = { escort = { mission_type_weights = { protect_supply = { value = 2 } } } }\n}\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    scopes = vanilla_inventory._strategy_scopes(
+        {"common/ai_strategies/00_default_strategy.txt": path.read_bytes()}
+    )
+    assert not any(key.startswith("fleet_compositions.") for key in scopes)
+
+
+def test_d0_strategy_negotiation_chance_uses_declared_law_and_interest_group_scopes(
+    tmp_path,
+) -> None:
+    game = _game(tmp_path)
+    path = game / "common/ai_strategies/00_default_strategy.txt"
+    original = path.read_text(encoding="utf-8")
+    path.write_text(
+        original.replace(
+            " state_value = { value = 1 }\n",
+            " state_value = { value = 1 }\n"
+            " # The chance that the AI will negotiate with an IG when trying to enact a specific law\n"
+            " # Using this value in other strategies will function additively\n"
+            " # root = country\n"
+            " # scope:law = law type being enacted\n"
+            " # scope:interest_group = IG to negotiate with\n"
+            " negotiation_chance = { value = 2 }\n",
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(
+        item
+        for item in result.surfaces
+        if item.definition == "ai_strategy_default" and item.field == "negotiation_chance"
+    )
+    assert (row.actor_scope, row.target_scope, row.operation, row.capability) == (
+        "country",
+        "scope:law=law;scope:interest_group=interest_group",
+        "additive_score",
+        "direct",
+    )
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        " # root = country\n",
+        " # scope:target_state = state\n",
+        " # scope:target_country = state owner\n",
+        " # Using this value in other strategies will function additively\n",
+    ],
+)
+def test_d0_default_header_cannot_replace_missing_field_evidence(tmp_path, missing) -> None:
+    game = _game(tmp_path)
+    source = "common/ai_strategies/00_default_strategy.txt"
+    path = game / source
+    original = path.read_text(encoding="utf-8").replace(missing, "")
+    path.write_text(
+        "# All AIs always load data from this strategy\n"
+        + original.replace("}\n}", "}\n desired_tax_level = medium\n}"),
+        encoding="utf-8",
+        newline="\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    rows = [item for item in result.surfaces if item.field == "state_value"]
+    assert len(rows) == 2
+    assert all(item.capability == "pending" for item in rows)
+    assert all(not item.scope_evidence for item in rows)
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        "scope:first_state = the first state controlling the strait",
+        "scope:second_state = the second state controlling the strait",
+        "scope:is_sole_controller = yes/no",
+    ],
+)
+def test_d0_strategy_map_requires_evidence_for_every_reported_target(tmp_path, missing) -> None:
+    game = _game(tmp_path)
+    source = "common/ai_strategies/00_default_strategy.txt"
+    path = game / source
+    original = path.read_text(encoding="utf-8").rstrip()
+    comments = [
+        "Using this value in other strategies will function additively",
+        "root = country",
+        "scope:strait = the strait",
+        "scope:first_state = the first state controlling the strait",
+        "scope:second_state = the second state controlling the strait",
+        "scope:is_sole_controller = yes/no",
+    ]
+    path.write_text(
+        original[:-1]
+        + "".join(f" # {comment}\n" for comment in comments if comment != missing)
+        + " strait_scores = { status_scores = { open = { value = 1 } } }\n}\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.field.startswith("strait_scores."))
+    assert row.capability == "pending"
+    assert row.target_scope == "unknown"
+    assert not row.scope_evidence
+
+
 def test_d0_building_nationalization_documentation_proves_country_scope(tmp_path) -> None:
     game = _game(tmp_path)
     _write(
@@ -226,6 +481,135 @@ def test_d0_scope_comes_from_documentation_not_referenced_scope_strings(tmp_path
     assert result.unexposed_count == 0
 
 
+_DECISION_CHANCE_DOC = (
+    "# A decision is evaluated in country scope.\n"
+    "#######################################\n"
+    "# `ai_chance` value\n"
+    "#######################################\n"
+    "#\n"
+    "# The scripted weight which determines how likely AI is to take it amongst all "
+    "possible decisions (country scope).\n"
+    "# Similar to event options. If it evaluates to 0, AI will not take the decision. "
+    "Evaluates to 1 if unspecified\n"
+    "#\n"
+    "#######################################\n"
+    "# Localization\n"
+    "#######################################\n"
+    "# Example\n# ai_chance = { value = 20 }\n"
+)
+
+
+def test_d0_decision_chance_requires_its_own_documented_contract(tmp_path) -> None:
+    game = _game(tmp_path)
+    _write(game, "common/decisions/new.txt", "new_decision = { ai_chance = { value = 0 } }\n")
+    _write(game, "common/decisions/000_decisions_help.txt", _DECISION_CHANCE_DOC)
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.definition == "new_decision")
+    assert (row.actor_scope, row.target_scope, row.operation, row.capability) == (
+        "country",
+        "none",
+        "chance",
+        "direct",
+    )
+    assert row.legal
+    assert row.getter is None
+    assert row.status == "pending"
+    assert row.responsibility_step == "D4.06"
+    assert row.surface_id not in result.unknown_scopes
+    assert row.scope_evidence == (
+        "common/decisions/000_decisions_help.txt:3",
+        "common/decisions/000_decisions_help.txt:6",
+        "common/decisions/000_decisions_help.txt:7",
+    )
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        None,
+        "# `ai_chance` value\n",
+        (
+            "# The scripted weight which determines how likely AI is to take it amongst all "
+            "possible decisions (country scope).\n"
+        ),
+        (
+            "# Similar to event options. If it evaluates to 0, AI will not take the decision. "
+            "Evaluates to 1 if unspecified\n"
+        ),
+    ],
+)
+def test_d0_decision_chance_missing_field_evidence_stays_pending(tmp_path, missing) -> None:
+    game = _game(tmp_path)
+    _write(game, "common/decisions/new.txt", "new_decision = { ai_chance = { value = 1 } }\n")
+    if missing is not None:
+        _write(
+            game,
+            "common/decisions/000_decisions_help.txt",
+            _DECISION_CHANCE_DOC.replace(missing, ""),
+        )
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.definition == "new_decision")
+    assert (row.actor_scope, row.target_scope, row.operation, row.capability) == (
+        "unknown",
+        "unknown",
+        "declared_field",
+        "pending",
+    )
+    assert not row.scope_evidence
+    assert not row.legal
+    assert row.responsibility_step == "D0.03"
+    assert row.surface_id in result.unknown_scopes
+
+
+def test_d0_decision_chance_does_not_borrow_an_adjacent_fields_documentation(tmp_path) -> None:
+    game = _game(tmp_path)
+    _write(game, "common/decisions/new.txt", "new_decision = { ai_chance = { value = 1 } }\n")
+    _write(
+        game,
+        "common/decisions/000_decisions_help.txt",
+        _DECISION_CHANCE_DOC.replace(
+            "# `ai_chance` value\n",
+            "# `ai_chance` value\n#######################################\n"
+            "#\n#######################################\n# `ai_neighbor` value\n",
+        ),
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.definition == "new_decision")
+    assert row.capability == "pending"
+    assert not row.scope_evidence
+    assert row.surface_id in result.unknown_scopes
+
+
+@pytest.mark.parametrize("field", ["ai_is_valid", "ai_frequency", "ai_chance_new"])
+def test_d0_decision_chance_documentation_does_not_prove_neighboring_ai_fields(
+    tmp_path, field
+) -> None:
+    game = _game(tmp_path)
+    _write(game, "common/decisions/new.txt", f"new_decision = {{ {field} = 1 }}\n")
+    _write(game, "common/decisions/000_decisions_help.txt", _DECISION_CHANCE_DOC)
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.definition == "new_decision")
+    assert row.capability == "pending"
+    assert not row.scope_evidence
+    assert not row.legal
+    assert row.surface_id in result.unknown_scopes
+
+
+@pytest.mark.parametrize("field", [("ai_chance", "invented"), ("ai", "ai_chance")])
+def test_d0_nested_decision_chance_cannot_inherit_the_top_level_field_contract(field) -> None:
+    source = "common/decisions/new.txt"
+    definition = vanilla_inventory.parse_bytes(b"new_decision = {}", path=source).top_assignments[0]
+    scope = vanilla_inventory._scope(
+        "decisions",
+        field,
+        {"common/decisions/000_decisions_help.txt": _DECISION_CHANCE_DOC.encode()},
+        {},
+        definition,
+        source,
+    )
+    assert scope == vanilla_inventory._Scope()
+
+
 def test_d0_building_ai_value_has_state_actor_and_unproven_current_score_getter(tmp_path) -> None:
     result = inventory.discover_vanilla(game=_game(tmp_path))
     row = next(item for item in result.surfaces if item.definition == "building_new")
@@ -274,6 +658,9 @@ def test_d0_diplomatic_evaluation_and_selection_do_not_inherit_target_scope(tmp_
         game,
         "common/diplomatic_actions/diplomatic_action.md",
         "In the AI block, the AI country is always root and the other country always scope:target\n"
+        "accept_score = {}\n"
+        "evaluation_chance = {}\n"
+        "will_select_as_first_state = {}\n"
         "evaluation_chance only looks at the proposing AI country and has no data about targets\n"
         "will_select_as_first_state and will_select_as_second_state only contain the state as root in the scope and no other data\n",
     )
@@ -291,6 +678,59 @@ def test_d0_diplomatic_evaluation_and_selection_do_not_inherit_target_scope(tmp_
         rows["ai.will_select_as_first_state"].actor_scope,
         rows["ai.will_select_as_first_state"].target_scope,
     ) == ("state", "none")
+    assert rows["ai.evaluation_chance"].operation == "chance"
+    assert rows["ai.accept_score"].operation == "score"
+    assert rows["ai.will_select_as_first_state"].operation == "predicate"
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "accept_score",
+        "max_influence_spending_fraction",
+        "use_obligation_chance",
+        "owe_obligation_chance",
+        "check_acceptance_for_will_propose",
+        "check_acceptance_for_will_break",
+    ],
+)
+def test_d0_diplomatic_container_cannot_prove_undocumented_field(tmp_path, name) -> None:
+    game = _game(tmp_path)
+    _write(
+        game,
+        "common/diplomatic_actions/new.txt",
+        f"action_new = {{ ai = {{ {name} = 1 }} }}\n",
+    )
+    _write(
+        game,
+        "common/diplomatic_actions/diplomatic_action.md",
+        "In the AI block, the AI country is always root and the other country always scope:target\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.definition == "action_new")
+    assert (row.actor_scope, row.target_scope, row.operation, row.capability) == (
+        "unknown",
+        "unknown",
+        "declared_field",
+        "pending",
+    )
+    assert not row.scope_evidence
+
+
+def test_d0_diplomatic_nested_or_flat_field_cannot_inherit_ai_consumer_contract() -> None:
+    source = "common/diplomatic_actions/new.txt"
+    definition = vanilla_inventory.parse_bytes(b"action = {}", path=source).top_assignments[0]
+    inputs = {
+        "common/diplomatic_actions/diplomatic_action.md": (
+            b"In the AI block, the AI country is always root and the other country always "
+            b"scope:target\naccept_score = {}\n"
+        )
+    }
+    for field in [("ai", "accept_score", "unknown"), ("ai.accept_score",), ("accept_score",)]:
+        scope = vanilla_inventory._scope(
+            "diplomatic_actions", field, inputs, {}, definition, source
+        )
+        assert scope == vanilla_inventory._Scope()
 
 
 def test_d0_scripted_definition_stays_pending_without_call_scope_evidence(tmp_path) -> None:
@@ -445,6 +885,112 @@ def test_d0_treaty_field_scope_requires_exact_section_and_article_kind(tmp_path)
     evaluation = next(item for item in result.surfaces if item.field == "ai.evaluation_chance")
     assert evaluation.capability == "pending"
     assert evaluation.responsibility_step == "D0.03"
+
+
+def test_d0_treaty_metadata_and_acceptance_caps_are_observation_not_country_control(
+    tmp_path,
+) -> None:
+    game = _game(tmp_path)
+    _write(
+        game,
+        "common/treaty_articles/new.txt",
+        "article_one = { kind = directed ai = { treaty_categories = { trade } "
+        "article_ai_usage = { economy } combined_acceptance_cap_max = 3 "
+        "combined_acceptance_cap_min = 1 } }\n",
+    )
+    _write(
+        game,
+        "common/treaty_articles/treaty_articles.md",
+        "treaty_categories = { # Categories exist for AI evaluations\n}\n"
+        "article_ai_usage = { # AI filter metadata\n}\n"
+        "combined_acceptance_cap_max = value\n"
+        "combined_acceptance_cap_min = value\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    rows = [item for item in result.surfaces if item.definition == "article_one"]
+    assert {item.field for item in rows} == {
+        "ai.treaty_categories",
+        "ai.article_ai_usage",
+        "ai.combined_acceptance_cap_max",
+        "ai.combined_acceptance_cap_min",
+    }
+    for row in rows:
+        assert (row.actor_scope, row.target_scope, row.capability, row.operation) == (
+            "global",
+            "none",
+            "observation",
+            "ai_metadata" if "cap" not in row.field else "acceptance_cap",
+        )
+        assert not row.legal
+
+
+def test_d0_diplomatic_play_acceptance_cap_without_consumer_scope_is_observation(
+    tmp_path,
+) -> None:
+    game = _game(tmp_path)
+    _write(
+        game,
+        "common/diplomatic_plays/new.txt",
+        "play_new = { ai_acceptance_max = 75 }\n",
+    )
+    _write(
+        game,
+        "common/diplomatic_plays/diplomatic_plays.md",
+        "ai_acceptance_max = num # upper bound for AI acceptance\n"
+        "we use initiator as a root scope\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.definition == "play_new")
+    assert (row.actor_scope, row.target_scope, row.capability, row.operation) == (
+        "global",
+        "none",
+        "observation",
+        "acceptance_cap",
+    )
+    assert not row.legal
+
+
+def test_d0_ship_category_and_stance_capability_metadata_is_observation(tmp_path) -> None:
+    game = _game(tmp_path)
+    _write(
+        game,
+        "common/ship_types/new.txt",
+        "ship_new = { ai_ship_category = ai_ship_category_test }\n",
+    )
+    _write(
+        game,
+        "common/ship_types/ship_types.md",
+        "# Which AI-only category the ship type belongs to\n"
+        "ai_ship_category = <ai ship category key>\n"
+        "# used by the AI\n",
+    )
+    _write(
+        game,
+        "common/ai_strategic_region_stance_types/new.txt",
+        "stance_new = { can_send_fleets = yes }\n",
+    )
+    _write(
+        game,
+        "common/ai_strategic_region_stance_types/ai_strategic_region_stance_types.md",
+        "strategic_region_stance_type = {\ncan_send_fleets = <yes/no>\n}\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    ship = next(item for item in result.surfaces if item.definition == "ship_new")
+    stance = next(item for item in result.surfaces if item.definition == "stance_new")
+    assert (ship.actor_scope, ship.target_scope, ship.capability, ship.operation) == (
+        "global",
+        "none",
+        "observation",
+        "ai_metadata",
+    )
+    assert (stance.actor_scope, stance.target_scope, stance.capability, stance.operation) == (
+        "global",
+        "none",
+        "observation",
+        "stance_capability",
+    )
+    assert not ship.legal
+    assert not stance.legal
 
 
 def test_d0_parse_error_in_any_related_definition_hard_fails(tmp_path) -> None:
@@ -701,3 +1247,199 @@ def test_d0_strategy_reader_rejects_nested_partial_parse(tmp_path) -> None:
     _write(game, "common/ai_strategies/nested/broken.txt", "ai_strategy_broken = {\n")
     with pytest.raises(ValueError, match=r"nested/broken\.txt"):
         ai_surface.read_cards(game)
+
+
+@pytest.mark.parametrize(
+    ("directory", "definition", "doc_name", "doc"),
+    [
+        (
+            "company_types",
+            (
+                "company_new = { potential = { always = yes } attainable = { always = yes } "
+                "possible = { always = yes } ai_will_do = { always = yes } ai_weight = 1 "
+                "ai_construction_targets = { building_new = { level = 5 "
+                "state_trigger = { state_region = s:STATE_NEW } } } }\n"
+            ),
+            "companies.md",
+            (
+                "# The following three triggers are evaluated in country scope.\n"
+                "potential = {} attainable = {} possible = {}\n"
+                "ai_will_do = { # If this trigger is true, the AI may form the company\n}\n"
+                "# increased weight for certain building types in certain states\n"
+                "ai_construction_targets = { building_new = { level = 5 state_trigger = {} } }\n"
+                "ai_weight = {}\n"
+            ),
+        ),
+        (
+            "company_charter_types",
+            "charter_new = { ai_possible = { always = yes } ai_weight = 1 }\n",
+            "company_charter_types.md",
+            (
+                "possible = {} # A trigger evaluated in company scope\n"
+                "ai_possible = {} # If this charter is possible to be picked up by AI\n"
+                "ai_weight = {} # Check score for AI to pickup charter\n"
+            ),
+        ),
+        (
+            "production_method_groups",
+            "pmg_new = { ai_selection = most_productive }\n",
+            "production_method_groups.md",
+            "ai_selection = most_productive # Affects how the AI chooses between PMs\n",
+        ),
+        (
+            "naval_mission_types",
+            (
+                "mission_new = { ai_will_cancel_for_transportation = yes "
+                "ai_distance_penalty_multiplier = 1 }\n"
+            ),
+            "naval_mission_types.md",
+            "ai_will_do = {} # Trigger to enable/disable this for ai\nai_weight = {}\n",
+        ),
+        (
+            "war_goal_types",
+            "war_goal_new = { ai = { is_significant_demand = yes settles_grievance = no } }\n",
+            "war_goal_types.md",
+            (
+                "ai = { is_significant_demand = yes settles_grievance = no }\n"
+                "## Triggers and Effect\n### Scope\n"
+                "For all of the following the same scopes are available:\n"
+                "- root (holder country)\n- target_country\n- target_state\n"
+                "### Possible trigger\nThis determines whether the war goal is listed.\n"
+            ),
+        ),
+    ],
+)
+def test_d0_explicit_documentation_proves_documented_ai_scope(
+    tmp_path, directory, definition, doc_name, doc
+) -> None:
+    game = _game(tmp_path)
+    _write(game, f"common/{directory}/new.txt", definition)
+    _write(game, f"common/{directory}/{doc_name}", doc)
+    result = inventory.discover_vanilla(game=game)
+    rows = [item for item in result.surfaces if item.source == f"common/{directory}/new.txt"]
+    assert rows
+    if directory == "company_types":
+        by_field = {row.field: row for row in rows}
+        assert by_field["ai_will_do"].capability == "pending"
+        assert by_field["ai_will_do"].actor_scope == "unknown"
+        assert by_field["ai_will_do"].target_scope == "unknown"
+        assert not by_field["ai_will_do"].legal
+        assert by_field["ai_weight"].capability == "pending"
+        assert by_field["ai_weight"].surface_id in result.unknown_scopes
+        construction = [row for row in rows if row.field.startswith("ai_construction_targets.")]
+        assert construction
+        assert all(row.actor_scope == "unknown" for row in construction)
+        assert all(row.target_scope == "unknown" for row in construction)
+        assert all(row.capability == "pending" and not row.legal for row in construction)
+        return
+    if directory == "company_charter_types":
+        assert {row.field for row in rows} == {"ai_possible", "ai_weight"}
+        assert all(row.capability == "pending" for row in rows)
+        assert all(not row.legal for row in rows)
+        assert all(row.actor_scope == "unknown" for row in rows)
+        assert all(row.target_scope == "unknown" for row in rows)
+        return
+    if directory == "production_method_groups":
+        row = rows[0]
+        assert row.field == "ai_selection"
+        assert row.capability == "pending"
+        assert row.actor_scope == "unknown"
+        assert row.target_scope == "unknown"
+        assert row.surface_id in result.unknown_scopes
+        return
+    if directory == "war_goal_types":
+        assert {row.field for row in rows} == {
+            "ai.is_significant_demand",
+            "ai.settles_grievance",
+        }
+        assert all(row.capability == "pending" for row in rows)
+        assert all(row.actor_scope == "unknown" for row in rows)
+        assert all(row.target_scope == "unknown" for row in rows)
+        assert all(row.surface_id in result.unknown_scopes for row in rows)
+        return
+    for row in rows:
+        assert row.capability == "pending"
+        assert not row.legal
+        assert row.actor_scope == "unknown"
+        assert row.target_scope == "unknown"
+        assert row.getter is None
+        assert row.responsibility_step == "D0.03"
+        assert row.surface_id in result.unknown_scopes
+
+
+def test_d0_ship_modification_root_does_not_invent_a_target_scope(tmp_path) -> None:
+    game = _game(tmp_path)
+    _write(game, "common/ship_modifications/new.txt", "ship_mod_new = { ai_weight = 1 }\n")
+    _write(
+        game,
+        "common/ship_modifications/ship_modifications.md",
+        "# How important is this ship type to build for AI\n# root - country\n"
+        "ai_weight = fixed_point\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.definition == "ship_mod_new")
+    assert row.actor_scope == "country"
+    assert row.target_scope == "unknown"
+    assert row.operation == "score"
+    assert row.capability == "pending"
+    assert row.scope_evidence
+    assert not row.legal
+    assert row.responsibility_step == "D0.03"
+    assert row.surface_id in result.unknown_scopes
+
+
+@pytest.mark.parametrize(
+    ("field", "value"), [("invented_score", "1"), ("on_invented", "{}"), ("weight", "1")]
+)
+def test_d0_regional_objective_header_needs_the_exact_field_declaration(
+    tmp_path, field, value
+) -> None:
+    game = _game(tmp_path)
+    _write(
+        game, "common/ai_regional_objectives/new.txt", f"objective_new = {{ {field} = {value} }}\n"
+    )
+    _write(
+        game,
+        "common/ai_regional_objectives/ai_regional_objectives.md",
+        "### root = the AI country\n"
+        "### scope:target_region = the strategic region the objective applies to\n"
+        "### scope:target_stance = the regional stance being drawn for\n"
+        "objective = { possible = { <trigger> } }\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.definition == "objective_new")
+    assert row.capability == "pending"
+    assert not row.legal
+    assert row.surface_id in result.unknown_scopes
+
+
+@pytest.mark.parametrize(
+    ("field", "declaration", "operation", "capability"),
+    [
+        ("possible", "possible = { <trigger> }", "predicate", "direct"),
+        ("complete", "complete = { <trigger> }", "predicate", "direct"),
+        ("invalid", "invalid = { <trigger> }", "predicate", "direct"),
+        ("weight", "weight = <script value>", "relative_weight", "direct"),
+        ("on_create", "on_create = { <effect> }", "effect", "indirect"),
+        ("on_complete", "on_complete = { <effect> }", "effect", "indirect"),
+        ("on_invalid", "on_invalid = { <effect> }", "effect", "indirect"),
+        ("stances", "stances = { stance_key ... }", "declared_field", "pending"),
+    ],
+)
+def test_d0_regional_objective_operations_follow_the_field_contract(
+    tmp_path, field, declaration, operation, capability
+) -> None:
+    game = _game(tmp_path)
+    _write(game, "common/ai_regional_objectives/new.txt", f"objective_new = {{ {field} = {{}} }}\n")
+    _write(
+        game,
+        "common/ai_regional_objectives/ai_regional_objectives.md",
+        "### root = the AI country\n"
+        "### scope:target_region = the strategic region the objective applies to\n"
+        "### scope:target_stance = the regional stance being drawn for\n"
+        f"objective = {{ {declaration} }}\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(item for item in result.surfaces if item.definition == "objective_new")
+    assert (row.operation, row.capability) == (operation, capability)
+    assert row.legal is (capability != "pending")

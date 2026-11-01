@@ -23,7 +23,7 @@
       "expected": {
         "action_id": "political_reform",
         "fallback": "selected",
-        "delta": 1.0
+        "delta": 0.25
       }
     },
     {
@@ -35,7 +35,7 @@
       "expected": {
         "action_id": "education_and_research",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.65
       }
     },
     {
@@ -47,7 +47,7 @@
       "expected": {
         "action_id": "diplomatic_opening",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.25
       }
     },
     {
@@ -71,7 +71,7 @@
       "expected": {
         "action_id": "political_reform",
         "fallback": "selected",
-        "delta": 1.0
+        "delta": 0.25
       }
     },
     {
@@ -132,7 +132,7 @@
       "expected": {
         "action_id": "education_and_research",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.65
       }
     },
     {
@@ -169,7 +169,7 @@
       "expected": {
         "action_id": "political_reform",
         "fallback": "selected",
-        "delta": 1.0
+        "delta": 0.25
       }
     },
     {
@@ -181,7 +181,7 @@
       "expected": {
         "action_id": "education_and_research",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.65
       }
     },
     {
@@ -193,7 +193,7 @@
       "expected": {
         "action_id": "diplomatic_opening",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.25
       }
     },
     {
@@ -215,7 +215,7 @@
       "expected": {
         "action_id": "political_reform",
         "fallback": "selected",
-        "delta": 1.0
+        "delta": 0.25
       }
     },
     {
@@ -225,7 +225,7 @@
       "expected": {
         "action_id": "education_and_research",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.65
       }
     },
     {
@@ -235,7 +235,7 @@
       "expected": {
         "action_id": "diplomatic_opening",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.25
       }
     },
     {
@@ -281,7 +281,7 @@
       "expected": {
         "action_id": "diplomatic_opening",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.25
       }
     },
     {
@@ -303,7 +303,7 @@
       "expected": {
         "action_id": "political_reform",
         "fallback": "selected",
-        "delta": 1.0
+        "delta": 0.25
       }
     },
     {
@@ -313,7 +313,7 @@
       "expected": {
         "action_id": "education_and_research",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.65
       }
     },
     {
@@ -323,7 +323,7 @@
       "expected": {
         "action_id": "diplomatic_opening",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.25
       }
     },
     {
@@ -343,7 +343,7 @@
       "expected": {
         "action_id": "political_reform",
         "fallback": "selected",
-        "delta": 1.0
+        "delta": 0.25
       }
     },
     {
@@ -353,7 +353,7 @@
       "expected": {
         "action_id": "education_and_research",
         "fallback": "selected",
-        "delta": 2.0
+        "delta": 0.65
       }
     },
     {

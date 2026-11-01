@@ -57,6 +57,28 @@ def test_diplomatic_restraint_keeps_its_negative_add_in_war() -> None:
     assert result == result.__class__("diplomatic_restraint", "add", -4.0, "selected")
 
 
+def test_reform_layers_select_progressive_window_when_stable() -> None:
+    result = select(_overlays()["max_progressiveness"], _facts())
+    assert result == result.__class__("reform_progressive_window", "add", 4.0, "selected")
+
+
+def test_reform_layers_select_conservative_guard_under_domestic_crisis() -> None:
+    result = select(
+        _overlays()["max_regressiveness"],
+        _facts(in_default=True, any_insurrection_ongoing=True),
+    )
+    assert result == result.__class__("reform_conservative_guard", "add", 5.0, "selected")
+
+
+def test_diplomatic_layers_add_boldness_and_aggression_only_inside_capacity_window() -> None:
+    boldness = select(_overlays()["diplomatic_play_boldness"], _facts())
+    aggression = select(_overlays()["aggression"], _facts())
+    assert boldness == boldness.__class__("diplomatic_boldness_window", "add", 6.75, "selected")
+    assert aggression == aggression.__class__(
+        "diplomatic_aggression_guard", "add", 0.075, "selected"
+    )
+
+
 def test_unknown_peace_does_not_fall_through_to_diplomatic_opening() -> None:
     """Unknown war/peace state is a vanilla boundary for the first candidate."""
 
@@ -64,10 +86,20 @@ def test_unknown_peace_does_not_fall_through_to_diplomatic_opening() -> None:
     assert result == result.__class__("diplomatic_restraint", None, 0.0, "unknown")
 
 
+def test_unknown_high_priority_action_does_not_fall_through_to_known_lower_action() -> None:
+    """Unknown default status blocks the lower wartime candidate as in the reference path."""
+
+    result = select(
+        _overlays()["diplomatic_play_neutrality"],
+        _facts(in_default=None, is_at_war=True),
+    )
+    assert result == result.__class__("fiscal_recovery", None, 0.0, "unknown")
+
+
 def test_pdx_evaluator_keeps_local_economy_and_education_paths_reachable() -> None:
     result = select(_overlays()["economic_vs_government_spending_balance"], _facts())
     assert result.action_id == "education_and_research"
-    assert result.delta == 2.0
+    assert result.delta == 0.65
 
 
 def test_unknown_core_fact_is_an_explicit_unknown_fallback() -> None:
@@ -96,7 +128,7 @@ def test_unknown_complement_falls_back_to_known_base_delta() -> None:
     )
     assert result.action_id == "education_and_research"
     assert result.fallback == "selected"
-    assert result.delta == 2.0
+    assert result.delta == 0.65
 
 
 def test_nested_complement_is_part_of_the_generated_delta() -> None:
@@ -114,10 +146,10 @@ def test_nested_complement_is_part_of_the_generated_delta() -> None:
     )
     overlay = strategy_overlay(model)["economic_vs_government_spending_balance"]
     result = select(overlay, _facts())
-    assert result.delta == 3.0
+    assert result.delta == 0.65
     without_bureaucracy = select(overlay, _facts(bureaucracy=0))
     assert without_bureaucracy.action_id == "education_and_research"
-    assert without_bureaucracy.delta == 3.0
+    assert without_bureaucracy.delta == 0.65
 
 
 def test_complement_must_not_exceed_action_limit() -> None:

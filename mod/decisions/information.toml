@@ -291,6 +291,180 @@ scope = "root"
 unit = "boolean"
 kind = "boolean"
 
+
+[readers.gdp]
+engine = "gdp"
+scope = "root"
+unit = "annual_gdp_currency"
+kind = "number"
+minimum = 0
+
+[readers.average_sol]
+engine = "average_sol"
+scope = "root"
+unit = "standard_of_living"
+kind = "number"
+minimum = 0
+
+[readers.army]
+engine = "army_size"
+scope = "root"
+unit = "battalions"
+kind = "number"
+minimum = 0
+
+[readers.gold_reserves]
+engine = "gold_reserves"
+scope = "root"
+unit = "currency"
+kind = "number"
+minimum = 0
+
+[readers.infamy]
+engine = "infamy"
+scope = "root"
+unit = "infamy_points"
+kind = "number"
+minimum = 0
+
+[readers.target_market_access]
+engine = "market_access"
+scope = "target_state"
+unit = "ratio"
+kind = "number"
+minimum = 0
+maximum = 1
+
+
+# 31.3 逐领域深化：每条规则只使用一个局部事实组合；未知时由原版消费者回退。
+[[rules]]
+id = "education_literacy_capacity"
+domain = "political"
+field = "institution_scores.institution_schools"
+priority = 40
+value = 1.10
+conditions = [{ fact = "literacy", op = "<", value = 0.35 }]
+why = "识字率极低时提供低强度教育基础倾向；不要求先满足财政或行政能力组合"
+counterexample = "不直接提高识字率、学校等级或财政；原版资格和制度成本仍由原版处理"
+
+[[rules]]
+id = "social_welfare_population_pressure"
+domain = "political"
+field = "institution_scores.institution_social_security"
+priority = 45
+value = 1.10
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+  { fact = "average_sol", op = "<", value = 8 },
+  { fact = "population", op = ">=", value = 2000000 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "大人口国家生活水平较低且有行政承载时，提高社会保障制度的原版投资相对权重"
+counterexample = "人口、生活水平或行政能力未知时回退原版；不直接改变福利支付、人口或制度等级"
+
+[[rules]]
+id = "administrative_bureaucracy_repair"
+domain = "economy"
+field = "wanted_construction_output"
+priority = 613
+value = 0.85
+conditions = [
+  { fact = "bureaucracy", op = "<", value = 0 },
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+]
+why = "行政赤字且和平时降低新增建设目标，把有限承载优先留给行政修复"
+counterexample = "不删除已有建设、不创造官僚；战争、违约或任一事实未知时保留原版"
+
+[[rules]]
+id = "population_employment_capacity"
+domain = "economy"
+field = "wanted_construction_output"
+priority = 55
+value = 1.10
+conditions = [
+  { fact = "population", op = ">=", value = 5000000 },
+  { fact = "average_sol", op = "<", value = 9 },
+  { fact = "gdp", op = ">", value = 0 },
+  { fact = "default", op = "=", value = false },
+]
+why = "大人口、低生活水平且有经济能力时提高原版建设目标，缓解就业与供给压力"
+counterexample = "不指定建筑、不创造就业或商品；战争、违约、经济或人口事实未知时不增量"
+
+[[rules]]
+id = "navy_existing_capacity"
+domain = "military"
+field = "wanted_navy_size"
+priority = 75
+value = 1.10
+conditions = [
+  { fact = "navy", op = "<", value = 10 },
+  { fact = "gdp", op = ">", value = 0 },
+  { fact = "gold_reserves", op = ">=", value = 100 },
+  { fact = "default", op = "=", value = false },
+]
+why = "经济与储备可承受且海军规模偏低时提高原版海军目标"
+counterexample = "不直接创建舰船、港口或海军资格；事实未知、违约或原版军费约束不满足时回退原版"
+
+[[rules]]
+id = "army_threat_capacity"
+domain = "military"
+field = "wanted_army_size"
+priority = 75
+value = 1.10
+conditions = [
+  { fact = "army", op = "<", value = 50 },
+  { fact = "infamy", op = ">", value = 25 },
+  { fact = "gdp", op = ">", value = 0 },
+  { fact = "default", op = "=", value = false },
+]
+why = "军力偏低、外部代价较高且经济可承受时提高原版常备军目标"
+counterexample = "不直接创建军队或改变战斗数值；财政危机、事实未知或原版军制资格不满足时保留原版"
+
+[[rules]]
+id = "overseas_naval_projection"
+domain = "geography"
+field = "colonial_interest_ratio"
+priority = 75
+value = 1.10
+conditions = [
+  { fact = "navy", op = ">=", value = 50 },
+  { fact = "gdp", op = ">", value = 0 },
+  { fact = "infamy", op = "<", value = 25 },
+  { fact = "default", op = "=", value = false },
+]
+why = "海军投射、经济能力和恶名约束同时满足时提高原版海外利益分配倾向"
+counterexample = "不创造殖民资格、海外州或航线；事实未知、违约或原版资格不满足时回退原版"
+
+[[rules]]
+id = "market_access_state_value"
+domain = "market"
+field = "state_value"
+priority = 45
+value = 1.10
+conditions = [
+  { fact = "target_market_access", op = ">=", value = 0.80 },
+  { fact = "target_isolated", op = "=", value = false },
+  { fact = "target_owned", op = "=", value = false },
+]
+why = "目标州市场接入良好且非孤立时提高原版州价值的有限相对权重"
+counterexample = "不授予市场接入、所有权或战争目标；目标事实未知、孤立或原版资格不满足时保留原版"
+
+[[rules]]
+id = "trade_low_living_standard"
+domain = "market"
+field = "treaty_category_scores.trade"
+priority = 58
+value = 1.10
+conditions = [
+  { fact = "average_sol", op = "<", value = 12 },
+  { fact = "gdp", op = ">", value = 0 },
+  { fact = "war", op = "=", value = false },
+]
+why = "和平且有经济活动、生活水平偏低时提高原版贸易合作类别的相对关注"
+counterexample = "不创建贸易路线、商品或条约资格；战争、未知事实或无可行条约时由原版保留"
+
 [[rules]]
 id = "fiscal_construction_guard"
 intent = "fiscal_recovery"

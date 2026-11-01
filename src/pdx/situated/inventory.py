@@ -15,14 +15,15 @@ from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Any
 
 from .. import config  # noqa: TID252
-from .action_instances import witness_ids
+from . import bindings as binding_catalog
+from .action_instances import _output_source, witness_ids, witness_keys
 from .compiler import BASELINE, load_model
 from .receipts import StageReceipt, digest
 
 if TYPE_CHECKING:
     from .vanilla_inventory import VanillaInventory
 
-PLAN_VERSION = "31.3"
+PLAN_VERSION = "31.4"
 INVENTORY_SCHEMA = 1
 
 
@@ -51,6 +52,7 @@ class MigrationRow:
     reason: str
     evidence_ids: tuple[str, ...]
     replacement_or_vanilla_tail: str
+    binding_id: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,6 +179,7 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
         if item.kind == "rule_action"
     }
     production_witnesses: set[str] = set()
+    production_witness_keys: set[tuple[str, str]] = set()
     if baseline == BASELINE:
         # 生产盘点使用与正式包相同的生成入口；失败保持 pending，不能
         # 用 Python 规则数量替代真实 PDX 见证。
@@ -194,13 +197,13 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
                 country_policy=country_state.load(),
                 extensions=decisions.load_extensions(profile="release"),
             )
-            production_witnesses = witness_ids(
-                {
-                    name: text
-                    for name, text in generated.items()
-                    if name.endswith(".txt") and isinstance(text, str)
-                }
-            )
+            generated_texts = {
+                name: text
+                for name, text in generated.items()
+                if name.endswith(".txt") and isinstance(text, str)
+            }
+            production_witnesses = witness_ids(generated_texts)
+            production_witness_keys = witness_keys(generated_texts)
         except (OSError, ValueError):
             production_witnesses = set()
         if not production_witnesses:
@@ -209,15 +212,15 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
             # 失败误报成所有行动 pending。
             from .. import decisions  # noqa: PLC0415, TID252
 
-            production_witnesses = witness_ids(
-                {
-                    name: path.read_text(encoding="utf-8-sig")
-                    for directory in ("common", "localization")
-                    for path in (decisions.PRODUCT / directory).rglob("*")
-                    if path.is_file() and path.suffix.lower() == ".txt"
-                    for name in (path.relative_to(decisions.PRODUCT).as_posix(),)
-                }
-            )
+            generated_texts = {
+                name: path.read_text(encoding="utf-8-sig")
+                for directory in ("common", "localization")
+                for path in (decisions.PRODUCT / directory).rglob("*")
+                if path.is_file() and path.suffix.lower() == ".txt"
+                for name in (path.relative_to(decisions.PRODUCT).as_posix(),)
+            }
+            production_witnesses = witness_ids(generated_texts)
+            production_witness_keys = witness_keys(generated_texts)
     for source, ruleset in (
         ("mod/decisions/information.toml", decision_rules.load()),
         *decision_adapters.load().policies,
@@ -241,10 +244,18 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
                     domain=rule.domain,
                     # 旧规则已由唯一编译入口生成，并有逐实例 source→IR→PDX
                     # 见证；其原版资格、成本、随机和执行尾部继续由原版消费者处理。
-                    status="implemented" if rule.id in production_witnesses else "pending",
+                    status=(
+                        "implemented"
+                        if instance is not None
+                        and (_output_source(instance.source, instance.consumer_field), rule.id)
+                        in production_witness_keys
+                        else "pending"
+                    ),
                     evidence_state=(
                         "production_witnessed"
-                        if instance is not None and rule.id in production_witnesses
+                        if instance is not None
+                        and (_output_source(instance.source, instance.consumer_field), rule.id)
+                        in production_witness_keys
                         else "source_registered"
                     ),
                     evidence_ids=tuple(
@@ -263,7 +274,14 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
         instance.consumer_field
         for instance in model.action_instances
         if instance.kind in {"rule_action", "action_card"}
-        and instance.rule_id in production_witnesses
+        and (
+            (
+                instance.kind == "rule_action"
+                and (_output_source(instance.source, instance.consumer_field), instance.rule_id)
+                in production_witness_keys
+            )
+            or (instance.kind == "action_card" and instance.rule_id in production_witnesses)
+        )
     }
     for consumer in model.consumers:
         field = _field_name(consumer.field)
@@ -335,13 +353,29 @@ def migration(baseline: Path = BASELINE, inventory: SurfaceInventory | None = No
     model = load_model(
         baseline=None if baseline == BASELINE else baseline.read_text(encoding="utf-8")
     )
+    # D2 的迁移台账必须和编译器实际读取的精确绑定同源；不能仅凭
+    # 规则数量或 domain 名称生成一张“看起来完整”的映射。
+    binding_rows = binding_catalog.load()
+    binding_by_key: dict[tuple[str, str], list[binding_catalog.Binding]] = {}
+    for binding in binding_rows:
+        binding_by_key.setdefault((binding.source, binding.definition), []).append(binding)
     action_by_domain: dict[str, list[str]] = {}
     for action in model.actions:
         action_by_domain.setdefault(action.domain, []).append(action.id)
     rows: list[MigrationRow] = []
+    missing_old_rules: list[str] = []
+    duplicate_owners: list[str] = []
     for surface in inventory.surfaces:
         if surface.kind != "legacy_rule":
             continue
+        candidates_bindings = binding_by_key.get((surface.source, surface.definition), [])
+        if not candidates_bindings:
+            missing_old_rules.append(surface.surface_id)
+            binding_id = ""
+        else:
+            if len(candidates_bindings) > 1:
+                duplicate_owners.append(surface.surface_id)
+            binding_id = candidates_bindings[0].binding_id
         candidates = tuple(sorted(action_by_domain.get(surface.domain, ())))
         rows.append(
             MigrationRow(
@@ -357,13 +391,14 @@ def migration(baseline: Path = BASELINE, inventory: SurfaceInventory | None = No
                 ),
                 evidence_ids=surface.evidence_ids,
                 replacement_or_vanilla_tail="retain_vanilla_tail_in_existing_lowering",
+                binding_id=binding_id,
             )
         )
     return MigrationMap(
         baseline_id=inventory.baseline_id,
         rows=tuple(sorted(rows, key=lambda item: item.surface_id)),
-        missing_old_rules=(),
-        duplicate_owners=(),
+        missing_old_rules=tuple(sorted(missing_old_rules)),
+        duplicate_owners=tuple(sorted(duplicate_owners)),
         unclassified_rows=tuple(
             sorted(item.surface_id for item in inventory.surfaces if not item.disposition_id)
         ),
@@ -399,7 +434,12 @@ def write(output: Path) -> tuple[Path, Path]:
         step_id="K0.2-K0.4",
         status=(
             "blocked"
-            if inventory.parse_failures or migration_map.unclassified_rows
+            if (
+                inventory.parse_failures
+                or migration_map.unclassified_rows
+                or migration_map.missing_old_rules
+                or migration_map.duplicate_owners
+            )
             else "in_progress"
         ),
         input_hashes={**inventory.source_hashes, "scope": inventory.scope_hash},
@@ -409,7 +449,12 @@ def write(output: Path) -> tuple[Path, Path]:
         ),
         evidence_ids=(inventory.scope_hash, digest(migration_map.as_dict())),
         dependencies=("K0.1",),
-        failures=(*inventory.parse_failures, *migration_map.unclassified_rows),
+        failures=(
+            *inventory.parse_failures,
+            *migration_map.unclassified_rows,
+            *migration_map.missing_old_rules,
+            *migration_map.duplicate_owners,
+        ),
     )
     (output / "stage-receipt.json").write_text(
         json.dumps(receipt.as_dict(), ensure_ascii=False, indent=2) + "\n",

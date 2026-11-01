@@ -8,14 +8,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from pdx.decision_rules import RuleSet
+
     from .action_instances import ActionInstance
     from .bindings import Binding
     from .ir import ActionIR
-    from .schema import ActionCard, ConsumerContract, Relation
+    from .schema import ActionCard, ConsumerContract, CostPredicate, Relation
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +41,30 @@ class LegacyDecisionIR:
     value: float
     predicates: tuple[tuple[str, str, object], ...]
     vanilla_tail: str
+    priority: int = 0
+    why: str = ""
+    counterexample: str = ""
+    contexts: tuple[str, ...] = ()
+    intent: str | None = None
+
+    def to_action_ir(self) -> ActionIR:
+        from .ir import ActionIR, PredicateIR  # noqa: PLC0415
+
+        return ActionIR(
+            action_id=self.definition,
+            source=self.source,
+            domain=self.domain,
+            field=self.field,
+            operation=self.operation,
+            value=self.value,
+            predicates=tuple(PredicateIR(*p) for p in self.predicates),
+            vanilla_tail=self.vanilla_tail,
+            priority=self.priority,
+            why=self.why,
+            counterexample=self.counterexample,
+            contexts=self.contexts,
+            intent=self.intent,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,13 +99,16 @@ class ConsumerDecisionIR:
     political_cost: float = 0.0
     explanation: str = ""
     relations: tuple[Relation, ...] = ()
+    commitment_when: tuple[CostPredicate, ...] = ()
+    political_when: tuple[CostPredicate, ...] = ()
+    zero_cost_reason: str = ""
 
 
 @dataclass(frozen=True, slots=True)
 class WriterDecisionIR:
     """每一条实际生产写入的统一身份行。
 
-    legacy 行的业务谓词仍由原版 RuleSet 提供；这里保存精确的来源、
+    legacy 行的业务谓词由不可变 LegacyDecisionIR 提供；这里保存精确的来源、
     消费者、作用域、操作和尾部合同，使其不能只靠旧规则计数冒充已接入。
     显式行动卡通过 ``action`` 关联完整的动态行动行。
     """
@@ -167,6 +196,11 @@ class ConsumerIRBundle:
                             "target": item.legacy.target,
                             "operation": item.legacy.operation,
                             "value": item.legacy.value,
+                            "priority": item.legacy.priority,
+                            "why": item.legacy.why,
+                            "counterexample": item.legacy.counterexample,
+                            "contexts": list(item.legacy.contexts),
+                            "intent": item.legacy.intent,
                             "predicates": [
                                 [fact, operator, _json_value(value)]
                                 for fact, operator, value in item.legacy.predicates
@@ -249,6 +283,9 @@ def compile_decisions(
                 commitment=action.commitment,
                 political_cost=action.political_cost,
                 explanation=action.explanation,
+                commitment_when=action.commitment_when,
+                political_when=action.political_when,
+                zero_cost_reason=action.zero_cost_reason,
                 relations=tuple(
                     sorted(
                         (relation for relation in relations if relation.source == action.id),
@@ -325,6 +362,11 @@ def compile_consumer_ir(
                     target=binding.target,
                     operation=item.operation,
                     value=item.value,
+                    priority=item.priority,
+                    why=item.why,
+                    counterexample=item.counterexample,
+                    contexts=item.contexts,
+                    intent=item.intent,
                     predicates=tuple(
                         (predicate.fact, predicate.operator, predicate.value)
                         for predicate in item.predicates
@@ -376,3 +418,55 @@ __all__ = [
     "compile_consumer_ir",
     "compile_decisions",
 ]
+
+
+def lower_legacy(
+    policy: RuleSet, bundle: ConsumerIRBundle | None, *, source: str | None = None
+) -> RuleSet:
+    """Resolve exact immutable semantics before either reference evaluation or PDX lowering."""
+    from .ir import from_rule  # noqa: PLC0415
+
+    if bundle is None:
+        raise ValueError("生产规则缺少 ConsumerIR writer")
+    writers = [item for item in bundle.writers if item.kind == "rule_action"]
+    keys = [(item.source, item.definition) for item in writers]
+    if len(keys) != len(set(keys)):
+        raise ValueError("ConsumerIR legacy writer 重复")
+    native = {item.action_id: item for item in policy.semantic_ir}
+    result = []
+    for rule in policy.rules:
+        matches = [
+            w for w in writers if w.definition == rule.id and (source is None or w.source == source)
+        ]
+        if len(matches) != 1 or matches[0].legacy is None:
+            raise ValueError(f"生产规则缺少唯一 IR writer：{rule.id}")
+        writer = matches[0]
+        legacy = writer.legacy
+        assert legacy is not None
+        item = legacy.to_action_ir()
+        candidate = native.get(rule.id, from_rule(rule, source=writer.source))
+        base = (
+            replace(candidate, priority=candidate.origin_priority, origin_priority=None)
+            if candidate.origin_priority is not None
+            else candidate
+        )
+        if base != item or candidate.to_rule() != rule:
+            raise ValueError(f"ConsumerIR legacy 语义与生产规则不一致：{rule.id}")
+        if (
+            writer.writer_id != legacy.action_id
+            or writer.source != legacy.source
+            or writer.definition != legacy.definition
+            or writer.field != legacy.field
+            or writer.operation != legacy.operation
+            or writer.actor != legacy.actor
+            or writer.target != legacy.target
+            or writer.consumer_id != legacy.consumer_id
+            or writer.vanilla_tail != legacy.vanilla_tail
+            or writer.predicates != legacy.predicates
+            or not writer.owner
+        ):
+            raise ValueError(f"ConsumerIR writer 与规则不一致：{rule.id}")
+        result.append(
+            replace(item, priority=candidate.priority, origin_priority=candidate.origin_priority)
+        )
+    return replace(policy, semantic_ir=tuple(result))

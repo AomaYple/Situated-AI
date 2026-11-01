@@ -35,9 +35,12 @@ from . import actions as action_source
 from . import evidence as evidence_source
 from . import goals as goal_source
 from .contracts import contract
-from .schema import ActionCard, ConsumerContract, EvidenceSpec, Relation
+from .expressions import Truth, truth_all, truth_any, truth_not
+from .schema import ActionCard, ConsumerContract, CostPredicate, EvidenceSpec, Relation
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from .decision_ir import ConsumerIRBundle
 
 REPO = Path(__file__).resolve().parents[3]
@@ -405,6 +408,7 @@ def load_model(
         missing = sorted(set(references) - fact_ids)
         if missing:
             raise ValueError(f"行动 {action.id} 引用了未知事实：{missing}")
+        _validate_action_costs(action, {item.id: item for item in facts})
     baseline_text = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
     parsed = parse_text(baseline_text)
     if parsed.errors:
@@ -539,71 +543,196 @@ def _limit(action, facts, *, relation_guards: tuple[str, ...] = ()):
     )
 
 
-def _row_pressure(row: decision_ir.ConsumerDecisionIR, values: dict[str, object]) -> bool:
-    """只把已知为真的承诺事实计入压力；未知不伪造成本。"""
-
-    for name in row.consumes:
-        value = values.get(name)
-        if value is True:
-            return True
-        if isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0:
-            return True
-    return False
-
-
-def _fact_pressure_trigger(fact: EvidenceSpec) -> str:
-    if fact.kind in {"number", "ratio"} and not any(
-        operator in fact.trigger for operator in ("=", "<", ">")
+def _validate_action_costs(action: ActionCard, facts: dict[str, EvidenceSpec]) -> None:
+    for name in action.consumes:
+        if name not in facts:
+            raise ValueError(f"行动 {action.id} 成本事实不存在：{name}")
+    for amount, predicates in (
+        (action.commitment, action.commitment_when),
+        (action.political_cost, action.political_when),
     ):
-        return f"{fact.trigger} > 0"
-    return fact.trigger
+        if amount < 0 or (amount > 0 and not predicates):
+            raise ValueError(f"行动 {action.id} 成本必须非负且有明确成本谓词")
+        for predicate in predicates:
+            fact = facts.get(predicate.fact)
+            if fact is None or fact.scope != "root" or fact.unit != predicate.unit:
+                raise ValueError(
+                    f"行动 {action.id} 成本谓词的事实、单位或作用域无效：{predicate.fact}"
+                )
+            if (fact.kind == "boolean") != (type(predicate.value) is bool):
+                raise ValueError(f"行动 {action.id} 成本谓词类型不匹配：{predicate.fact}")
+            if type(predicate.value) is bool and predicate.op != "=":
+                raise ValueError(f"行动 {action.id} 布尔成本只支持相等判断")
+    if action.commitment == 0 and action.political_cost == 0 and not action.zero_cost_reason:
+        raise ValueError(f"行动 {action.id} 零成本必须逐卡说明原因")
+
+
+def _cost_state(predicates: tuple[CostPredicate, ...], values: Mapping[str, object]) -> Truth:
+    states: list[Truth] = []
+    for predicate in predicates:
+        value = values.get(predicate.fact)
+        if type(value) is bool or type(predicate.value) is bool:
+            valid = type(value) is bool and type(predicate.value) is bool
+        else:
+            valid = type(value) in (int, float) and math.isfinite(cast("float", value))
+        if not valid:
+            states.append(None)
+            continue
+        if predicate.op == "=":
+            states.append(value == predicate.value)
+        else:
+            left = cast("float", value)
+            right = float(predicate.value)
+            states.append(
+                {"<": left < right, "<=": left <= right, ">": left > right, ">=": left >= right}[
+                    predicate.op
+                ]
+            )
+    return truth_any(tuple(states)) if states else False
+
+
+def _row_cost(
+    row: decision_ir.ConsumerDecisionIR,
+    values: Mapping[str, object],
+    states: dict[tuple[CostPredicate, ...], bool] | None = None,
+) -> float:
+    def active(predicates: tuple[CostPredicate, ...]) -> bool:
+        if not predicates:
+            return False
+        return (
+            states[predicates]
+            if states is not None
+            # Only a proven absence of pressure permits the cheaper tier.
+            else _cost_state(predicates, values) in (True, None)
+        )
+
+    return (row.commitment if active(row.commitment_when) else 0.0) + (
+        row.political_cost if active(row.political_when) else 0.0
+    )
+
+
+def _row_magnitude(
+    row: decision_ir.ConsumerDecisionIR,
+    values: Mapping[str, object],
+    states: dict[tuple[CostPredicate, ...], bool] | None = None,
+) -> float:
+    magnitude = abs(row.base + row.opportunity)
+    cost = _row_cost(row, values, states)
+    return max(0.0, magnitude - cost)
+
+
+def _row_order(row, values, states=None):
+    # Compare the benefit that remains after the known/assumed cost first.
+    # Stress only breaks a tied benefit; otherwise a high-stress action
+    # could beat a materially better affordable alternative.
+    return (-_row_magnitude(row, values, states), -row.stress, -row.opportunity, row.action_id)
 
 
 def _row_delta(
     row: decision_ir.ConsumerDecisionIR,
-    values: dict[str, object],
+    values: Mapping[str, object],
     *,
     complement: float = 0.0,
 ) -> float:
-    delta = row.base + row.opportunity - (row.commitment if _row_pressure(row, values) else 0.0)
-    delta += complement
+    direction = -1.0 if row.base + row.opportunity < 0 else 1.0
+    magnitude = _row_magnitude(row, values)
+    delta = direction * magnitude + (complement if direction > 0 else min(complement, magnitude))
+    if direction < 0:
+        delta = min(0.0, delta)
     return max(-row.max_delta, min(row.max_delta, delta))
 
 
 def _row_delta_expression(
     row: decision_ir.ConsumerDecisionIR,
-    facts: dict[str, EvidenceSpec],
     *,
     max_delta: float | None = None,
     complement_effects: tuple[str, ...] = (),
+    cost_states: dict[tuple[CostPredicate, ...], bool] | None = None,
 ) -> str:
     """生成与 ``_row_delta`` 同构的有限 PDX value block。"""
 
     limit = row.max_delta if max_delta is None else min(row.max_delta, max_delta)
-    base = row.base + row.opportunity
+    direction = -1.0 if row.base + row.opportunity < 0 else 1.0
+    base = direction * _row_magnitude(row, {}, cost_states)
     effects = list(complement_effects)
-    known_commitments = [name for name in row.consumes if name in facts]
-    if known_commitments and row.commitment:
-        condition = (
-            " OR = { "
-            + " ".join(_fact_pressure_trigger(facts[name]) for name in known_commitments)
-            + " }"
-        )
-        effects.insert(
-            0,
-            f"\n\t\t\t\tif = {{ limit = {{ ROOT ?= {{ {condition} }} }} add = {-row.commitment:g} }}",
-        )
     if not effects:
         delta = max(-limit, min(limit, base))
         return f"add = {delta:g}"
     return (
         f"add = {{\n\t\t\t\tvalue = {base:g}"
         f"{''.join(effects)}"
-        f"\n\t\t\t\tmin = {-limit:g}\n\t\t\t\tmax = {limit:g}\n\t\t\t}}"
+        f"\n\t\t\t\tmin = {-limit:g}\n\t\t\t\tmax = {(0 if direction < 0 else limit):g}\n\t\t\t}}"
     )
 
 
-def strategy_overlay(model: SituatedModel) -> dict[str, str]:
+def _cost_trigger(predicates: tuple[CostPredicate, ...], facts: dict[str, EvidenceSpec]) -> str:
+    terms = []
+    for predicate in predicates:
+        trigger = facts[predicate.fact].trigger
+        if type(predicate.value) is bool:
+            terms.append(trigger if predicate.value else f"NOT = {{ {trigger} }}")
+        else:
+            if any(operator in trigger for operator in ("=", "<", ">")):
+                raise ValueError(f"数值成本必须引用原始 reader：{predicate.fact}")
+            terms.append(f"{trigger} {predicate.op} {predicate.value:g}")
+    return " OR = { " + " ".join(terms) + " }"
+
+
+def _cost_feasibility_trigger(row, facts: dict[str, EvidenceSpec]) -> str:
+    """Return a finite guard for a relation target's affordable status.
+
+    Cost predicates are OR within each cost tier and the tiers are additive.
+    Enumerating the finite tier combinations keeps the target relation guard
+    equivalent to the reference affordability check without introducing a
+    second dynamic selector.
+    """
+
+    groups = tuple(
+        (predicates, amount)
+        for predicates, amount in (
+            (row.commitment_when, row.commitment),
+            (row.political_when, row.political_cost),
+        )
+        if predicates and amount > 0
+    )
+    magnitude = abs(row.base + row.opportunity)
+    impossible = "NOT = { is_ai = yes }"
+    if not groups:
+        return ""
+    if magnitude <= 0:
+        return impossible
+    feasible_terms: list[str] = []
+    for mask in range(1 << len(groups)):
+        total = sum(amount for index, (_, amount) in enumerate(groups) if mask & (1 << index))
+        if magnitude <= total:
+            continue
+        terms = []
+        for index, (predicates, _) in enumerate(groups):
+            trigger = _cost_trigger(predicates, facts)
+            terms.append(trigger if mask & (1 << index) else f"NOT = {{ {trigger} }}")
+        feasible_terms.append(terms[0] if len(terms) == 1 else "AND = { " + " ".join(terms) + " }")
+    if not feasible_terms:
+        return impossible
+    return (
+        feasible_terms[0]
+        if len(feasible_terms) == 1
+        else "OR = { " + " ".join(feasible_terms) + " }"
+    )
+
+
+def strategy_overlay(
+    model: SituatedModel,
+    *,
+    enabled_consumer_fields: set[str] | frozenset[str] | None = None,
+) -> dict[str, str]:
+    """Lower the overlay while isolating disabled consumer modules.
+
+    Action relations may cross consumer fields.  When a module is disabled,
+    its target action must not leave a complement, alternative, conflict, or
+    enable guard in an enabled consumer's generated branch.  Filtering at the
+    lowering boundary keeps the production output consistent with the module
+    switch instead of filtering only the top-level fields afterwards.
+    """
     facts = {item.id: item for item in model.facts}
     # DecisionIR 是 lowering 的唯一行动输入。ActionCard 只在 load_model
     # 阶段校验和编译成 IR，避免生成器再次从源 TOML 拼出另一套语义。
@@ -614,6 +743,17 @@ def strategy_overlay(model: SituatedModel) -> dict[str, str]:
         rows_by_consumer[row.consumer_id].append(row)
     output = {}
     by_id = {item.action_id: item for item in model.decision_ir}
+    consumer_field_by_action = {
+        item.action_id: next(
+            consumer.field for consumer in model.consumers if consumer.id == item.consumer_id
+        )
+        for item in model.decision_ir
+    }
+    enabled_fields = (
+        frozenset(consumer.field for consumer in model.consumers)
+        if enabled_consumer_fields is None
+        else frozenset(enabled_consumer_fields)
+    )
     for consumer in model.consumers:
         declared = rows_by_consumer[consumer.id]
         if len(declared) > consumer.budget:
@@ -621,17 +761,50 @@ def strategy_overlay(model: SituatedModel) -> dict[str, str]:
                 f"消费者 {consumer.id} 的行动数 {len(declared)} 超过预算 {consumer.budget}；"
                 "不能静默丢弃候选"
             )
-        chosen = sorted(
-            declared, key=lambda item: (-item.stress, -item.opportunity, item.action_id)
-        )[: consumer.budget]
-        chosen_position = {item.action_id: index for index, item in enumerate(chosen)}
-        blocks = []
-        for index, row in enumerate(chosen):
+        groups = tuple(
+            dict.fromkeys(
+                predicates
+                for row in declared
+                for predicates, amount in (
+                    (row.commitment_when, row.commitment),
+                    (row.political_when, row.political_cost),
+                )
+                if predicates and amount > 0
+            )
+        )
+        # Explicit finite cost tiers only: never enumerate factual qualification
+        # combinations or silently prune candidates to meet the runtime budget.
+        if len(groups) > 3:
+            raise ValueError(f"消费者 {consumer.id} 成本分区超过 8 叶预算")
+
+        def leaf(states, declared=declared):
+            chosen = sorted(declared, key=lambda item: _row_order(item, {}, states))
+            chosen_position = {item.action_id: index for index, item in enumerate(chosen)}
+            blocks: list[str] = []
+            for row in chosen:
+                if _row_magnitude(row, {}, states) == 0:
+                    continue
+                blocks.append(branch(row, chosen_position, states, len(blocks)))
+            return "".join(blocks)
+
+        def branch(row, chosen_position, states, index, consumer=consumer):
             relation_guards: list[str] = []
             complement_effects: list[str] = []
             for relation in row.relations:
+                target_enabled = consumer_field_by_action[relation.target] in enabled_fields
+                if not target_enabled and relation.kind != "enables":
+                    continue
                 target = by_id[relation.target]
                 target_guard = _limit(target, facts)
+                if not target_enabled:
+                    # A disabled target cannot satisfy an enablement relation;
+                    # keep the source action conservative instead of turning
+                    # the missing module into an implicit pass-through.
+                    relation_guards.append("NOT = { is_ai = yes }")
+                    continue
+                feasibility = _cost_feasibility_trigger(target, facts)
+                if feasibility:
+                    target_guard = f" AND = {{ {feasibility} {target_guard} }}"
                 if relation.condition_facts:
                     relation_guard = _condition(facts, relation.condition_facts)
                     target_guard = f" AND = {{ {relation_guard} {target_guard} }}"
@@ -656,15 +829,28 @@ def strategy_overlay(model: SituatedModel) -> dict[str, str]:
             # commitment facts and optional complement additions.
             effect = _row_delta_expression(
                 row,
-                facts,
                 max_delta=consumer.max_delta,
                 complement_effects=tuple(complement_effects),
+                cost_states=states,
             )
-            blocks.append(
+            return (
                 f"\t\t# ACTION {row.action_id} [{row.domain}]; {row.explanation}\n"
                 f"\t\t{'if' if index == 0 else 'else_if'} = {{\n\t\t\tlimit = {{ ROOT ?= {{ {_limit(row, facts, relation_guards=tuple(relation_guards))} }} }}\n\t\t\t{effect}\n\t\t}}\n"
             )
-        output[consumer.field] = "".join(blocks)
+
+        def partition(index, states, groups=groups):
+            if index == len(groups):
+                return leaf(states)
+            group = groups[index]
+            low = partition(index + 1, {**states, group: False})
+            high = partition(index + 1, {**states, group: True})
+            guard = _cost_trigger(group, facts)
+            return (
+                f"if = {{ limit = {{ ROOT ?= {{ NOT = {{ {guard} }} }} }}\n{low}}}\n"
+                f"else = {{\n{high}}}\n"
+            )
+
+        output[consumer.field] = partition(0, {})
     return output
 
 
@@ -709,6 +895,9 @@ def compile_policy(
 ):
     """返回 ``(RuleSet, contract)``；谓词沿用原版 RuleSet，字段一次有界写入。"""
     model = config_model or load_model()
+    policy = decision_ir.lower_legacy(
+        policy, model.consumer_ir, source=str(source) if source is not None else None
+    )
     action_ranks = _action_ranks(model)
     source_key = str(source) if source is not None else None
     # Rule IDs are only unique inside their source file.  Resolving by the
@@ -795,7 +984,13 @@ def compile_policy(
             # missing binding stays at the vanilla priority rather than
             # inventing a global gate.
             bump = max(0, min(2, action_fields.get(".".join(rule.field), 0)))
-            compiled_rules.append(replace(rule, priority=rule.priority * 3 + bump))
+            compiled_rules.append(
+                replace(
+                    legacy.to_action_ir(),
+                    priority=legacy.priority * 3 + bump,
+                    origin_priority=legacy.priority,
+                )
+            )
         field_contract.append(
             {
                 "field": ".".join(field),
@@ -808,7 +1003,10 @@ def compile_policy(
                 "max_rank_adjustment": 2,
             }
         )
-    compiled = replace(policy, rules=tuple(sorted(compiled_rules, key=lambda item: item.id)))
+    compiled_ir = tuple(sorted(compiled_rules, key=lambda item: item.action_id))
+    compiled = replace(
+        policy, rules=tuple(item.to_rule() for item in compiled_ir), semantic_ir=compiled_ir
+    )
     compiled_contract = {
         "schema": 2,
         "rule_set": "pdx.decision_rules.RuleSet",
@@ -871,7 +1069,7 @@ def compile_sources(
 
 
 def _action_conditions(
-    action: ActionCard | decision_ir.ConsumerDecisionIR, values: dict[str, object]
+    action: ActionCard | decision_ir.ConsumerDecisionIR, values: Mapping[str, object]
 ) -> bool | None:
     """三值求值；未知不伪造负面证据。"""
 
@@ -895,7 +1093,7 @@ def _action_conditions(
     return True
 
 
-def _relation_conditions(relation: Relation, values: dict[str, object]) -> bool | None:
+def _relation_conditions(relation: Relation, values: Mapping[str, object]) -> bool | None:
     """关系自己的条件采用三值逻辑；未知默认不额外改变原版。"""
 
     if not relation.condition_facts:
@@ -911,9 +1109,115 @@ def _relation_conditions(relation: Relation, values: dict[str, object]) -> bool 
     return True
 
 
+def _action_status(action: decision_ir.ConsumerDecisionIR, values: Mapping[str, object]) -> Truth:
+    """Return the same complete qualification state used by lowering."""
+
+    exit_values: tuple[Truth, ...] = tuple(
+        None if name not in values or type(values[name]) is not bool else cast("bool", values[name])
+        for name in action.exit_when
+    )
+    exit_state = truth_not(truth_any(exit_values)) if exit_values else True
+    return truth_all((_action_conditions(action, values), exit_state))
+
+
+def _action_feasibility(
+    action: decision_ir.ConsumerDecisionIR, values: Mapping[str, object]
+) -> Truth:
+    """Return whether an action can contribute a non-zero adjustment.
+
+    A malformed or unknown cost fact is conservatively treated as costly for
+    magnitude selection, but relation consumers must preserve the uncertainty
+    instead of claiming that the target is definitely affordable/unaffordable.
+    """
+
+    groups = tuple(
+        (predicates, amount)
+        for predicates, amount in (
+            (action.commitment_when, action.commitment),
+            (action.political_when, action.political_cost),
+        )
+        if predicates and amount > 0
+    )
+    if not groups:
+        return True
+    states = tuple(_cost_state(predicates, values) for predicates, _ in groups)
+    feasible: list[Truth] = []
+    for mask in range(1 << len(groups)):
+        cost = sum(amount for index, (_, amount) in enumerate(groups) if mask & (1 << index))
+        if abs(action.base + action.opportunity) <= cost:
+            continue
+        feasible.append(
+            truth_all(
+                tuple(
+                    state if mask & (1 << index) else truth_not(state)
+                    for index, state in enumerate(states)
+                )
+            )
+        )
+    return truth_any(tuple(feasible)) if feasible else False
+
+
+def _select_action(
+    actions: list[decision_ir.ConsumerDecisionIR],
+    values: Mapping[str, object],
+    *,
+    all_actions: list[decision_ir.ConsumerDecisionIR] | None = None,
+) -> tuple[decision_ir.ConsumerDecisionIR, float] | None:
+    """按生成的候选顺序选择行动；核心条件未知时阻断更低优先级候选。
+
+    与独立 PDX 三值求值器保持相同的短路规则；未知核心条件不能被当成
+    “不匹配”后继续选择低优先级行动。all_actions 提供其他消费者的关系
+    目标资格，不要求目标在其消费者中已被选中或已经执行。
+    """
+
+    visible = actions if all_actions is None else all_actions
+    statuses = {row.action_id: _action_status(row, values) for row in visible}
+    feasible = {row.action_id: _action_feasibility(row, values) for row in visible}
+    ordered = sorted(actions, key=lambda item: _row_order(item, values))
+    position = {row.action_id: index for index, row in enumerate(ordered)}
+    for action in ordered:
+        if _row_magnitude(action, values) == 0:
+            continue
+        status = statuses[action.action_id]
+        if status is False:
+            continue
+        if status is None:
+            return None
+        blocked = False
+        complement = 0.0
+        for relation in action.relations:
+            target_status = truth_all(
+                (statuses.get(relation.target), feasible.get(relation.target))
+            )
+            relation_state = _relation_conditions(relation, values)
+            if relation.kind == "complements":
+                if relation_state is True and target_status is True:
+                    complement += relation.strength
+                continue
+            relation_guard = truth_all((relation_state, target_status))
+            if relation.kind == "enables" and relation_guard is not True:
+                if relation_guard is None:
+                    return None
+                blocked = True
+            elif relation.kind in {"substitutes", "conflicts"}:
+                if (
+                    relation.target in position
+                    and position[action.action_id] < position[relation.target]
+                ):
+                    continue
+                relation_guard = truth_not(relation_guard)
+                if relation_guard is None:
+                    return None
+                if relation_guard is False:
+                    blocked = True
+        if not blocked:
+            return action, complement
+    return None
+
+
 def evaluate_policy(
     policy: decision_rules.RuleSet,
-    values: dict[str, object],
+    values: Mapping[str, object],
     *,
     is_ai: bool,
     config_model: SituatedModel | None = None,
@@ -925,10 +1229,11 @@ def evaluate_policy(
     """
     if type(is_ai) is not bool:
         raise ValueError("is_ai 必须为明确布尔值")
-    baseline = decision_rules.evaluate(policy, values, is_ai=is_ai)
+    model = config_model or load_model()
+    policy = decision_ir.lower_legacy(policy, model.consumer_ir)
+    baseline = decision_rules.evaluate_ir(policy, values, is_ai=is_ai)
     if not is_ai:
         return baseline
-    model = config_model or load_model()
     by_field = {(item.field,): item for item in model.consumers}
     consumer_by_id = {item.id: item for item in model.consumers}
     action_by_field: dict[tuple[str, ...], list[decision_ir.ConsumerDecisionIR]] = {}
@@ -940,38 +1245,7 @@ def evaluate_policy(
         actions = action_by_field.get((field,))
         if not actions:
             continue
-        statuses = {row.action_id: _action_conditions(row, values) for row in actions}
-        ordered = sorted(
-            actions, key=lambda item: (-item.stress, -item.opportunity, item.action_id)
-        )
-        position = {row.action_id: index for index, row in enumerate(ordered)}
-        selected: tuple[decision_ir.ConsumerDecisionIR, float] | None = None
-        for action in ordered:
-            if statuses[action.action_id] is not True:
-                continue
-            exit_values = tuple(values.get(name) for name in action.exit_when)
-            if any(item is True for item in exit_values) or any(
-                item is None for item in exit_values
-            ):
-                continue
-            blocked = False
-            complement = 0.0
-            for relation in action.relations:
-                target_status = statuses.get(relation.target)
-                relation_state = _relation_conditions(relation, values)
-                if relation_state is not True:
-                    continue
-                if relation.kind == "enables" and target_status is not True:
-                    blocked = True
-                elif relation.kind in {"substitutes", "conflicts"} and target_status is True:
-                    if position[action.action_id] > position.get(relation.target, -1):
-                        blocked = True
-                elif relation.kind == "complements" and target_status is True:
-                    complement += relation.strength
-            if blocked:
-                continue
-            selected = (action, complement)
-            break
+        selected = _select_action(actions, values, all_actions=list(model.decision_ir))
         if selected is None:
             continue
         action, complement = selected

@@ -28,11 +28,40 @@ max_delta = 5.0
 budget = 2
 vanilla_tail = "retain_play_eligibility_negotiation_and_randomness"
 
+[consumers.max_progressiveness]
+field = "max_progressiveness"
+domain = "political"
+max_delta = 5.0
+budget = 1
+vanilla_tail = "retain_strategy_progressiveness_bounds"
+
+[consumers.max_regressiveness]
+field = "max_regressiveness"
+domain = "political"
+max_delta = 5.0
+budget = 1
+vanilla_tail = "retain_strategy_regressiveness_bounds"
+
+[consumers.diplomatic_play_boldness]
+field = "diplomatic_play_boldness"
+domain = "diplomacy"
+max_delta = 8.0
+budget = 1
+vanilla_tail = "retain_play_eligibility_negotiation_and_randomness"
+
+[consumers.aggression]
+field = "aggression"
+domain = "diplomacy"
+max_delta = 0.15
+budget = 1
+vanilla_tail = "retain_target_reach_and_war_eligibility"
+
 [actions.fiscal_recovery]
 domain = "fiscal"
 consumer = "fiscal_neutrality"
 improves = ["solvency", "survival"]
-consumes = ["diplomatic_commitment"]
+consumes = []
+zero_cost_reason = "本工具只提高外交中立倾向，不执行支出或新增承诺。"
 requires_all = ["default"]
 requires_any = []
 blocked_by = []
@@ -54,7 +83,8 @@ explanation = "违约时优先保护偿付能力，解除违约后退出。"
 domain = "military"
 consumer = "fiscal_neutrality"
 improves = ["survival", "security"]
-consumes = ["military_commitment"]
+consumes = []
+zero_cost_reason = "本工具只降低新的非必要外交承诺倾向，不扩军、不拨款。"
 requires_all = ["war"]
 requires_any = []
 blocked_by = []
@@ -66,8 +96,8 @@ exit_when = ["peace"]
 base = 6.0
 stress = 6.0
 opportunity = 0.0
-commitment = 1.0
-political_cost = 0.5
+commitment = 0.0
+political_cost = 0.0
 max_delta = 6.0
 unknown_policy = "vanilla"
 explanation = "战争期间降低新的非必要外交承诺倾向，防止把原版资格误写成强制参战。"
@@ -76,7 +106,8 @@ explanation = "战争期间降低新的非必要外交承诺倾向，防止把�
 domain = "political"
 consumer = "reform_chance"
 improves = ["legitimacy", "institutional_capacity"]
-consumes = ["political_capacity"]
+consumes = []
+political_when = [{ fact = "legitimacy", op = "<", value = 75, unit = "legitimacy_0_100" }]
 requires_all = ["peace", "no_insurrection"]
 requires_any = ["stable_legitimacy", "strong_legitimacy"]
 blocked_by = ["default"]
@@ -85,11 +116,11 @@ substitutes = []
 conflicts = []
 enables = []
 exit_when = ["insurrection"]
-base = 1.0
+base = 0.5
 stress = 0.0
-opportunity = 1.0
+opportunity = 0.0
 commitment = 0.0
-political_cost = 1.0
+political_cost = 0.25
 max_delta = 1.0
 unknown_policy = "vanilla"
 explanation = "和平、政治可行且没有叛乱时提高法律启动机会，原版支持和失败仍生效。"
@@ -98,20 +129,22 @@ explanation = "和平、政治可行且没有叛乱时提高法律启动机会�
 domain = "economy"
 consumer = "economic_balance"
 improves = ["industry", "employment", "construction_capacity"]
-consumes = ["fiscal_capacity", "bureaucracy"]
+consumes = ["debt_ratio", "net_surplus", "bureaucracy", "legitimacy"]
+commitment_when = [{ fact = "debt_ratio", op = ">", value = 0.4, unit = "debt_to_credit_ratio" }, { fact = "net_surplus", op = "<", value = 0, unit = "currency_per_week" }, { fact = "bureaucracy", op = "<", value = 0, unit = "capacity_balance" }]
+political_when = [{ fact = "legitimacy", op = "<", value = 75, unit = "legitimacy_0_100" }]
 requires_all = ["peace", "no_default"]
-requires_any = ["bureaucracy_positive", "strong_legitimacy"]
+requires_any = []
 blocked_by = []
 complements = ["political_reform", "education_and_research"]
 substitutes = []
 conflicts = []
 enables = []
 exit_when = ["default", "war"]
-base = 2.0
+base = 1.5
 stress = 0.0
-opportunity = 1.0
+opportunity = 0.0
 commitment = 1.0
-political_cost = 0.5
+political_cost = 0.25
 max_delta = 2.0
 unknown_policy = "vanilla"
 explanation = "具备和平和最低行政基础时支持建设性支出，避免用单一总门槛锁死发展。"
@@ -120,20 +153,22 @@ explanation = "具备和平和最低行政基础时支持建设性支出，避�
 domain = "education"
 consumer = "economic_balance"
 improves = ["literacy", "technology", "administration"]
-consumes = ["fiscal_capacity", "bureaucracy"]
+consumes = ["debt_ratio", "net_surplus", "bureaucracy", "legitimacy"]
+commitment_when = [{ fact = "debt_ratio", op = ">", value = 0.4, unit = "debt_to_credit_ratio" }, { fact = "net_surplus", op = "<", value = 0, unit = "currency_per_week" }, { fact = "bureaucracy", op = "<", value = 0, unit = "capacity_balance" }]
+political_when = [{ fact = "legitimacy", op = "<", value = 75, unit = "legitimacy_0_100" }]
 requires_all = ["peace", "no_default", "literacy_low"]
-requires_any = ["stable_legitimacy", "bureaucracy_positive"]
+requires_any = []
 blocked_by = []
 complements = ["industrial_foundation"]
 substitutes = []
 conflicts = []
 enables = []
 exit_when = ["war", "default"]
-base = 2.0
+base = 1.0
 stress = 0.0
-opportunity = 1.0
-commitment = 1.0
-political_cost = 0.25
+opportunity = 0.0
+commitment = 0.25
+political_cost = 0.1
 max_delta = 2.0
 unknown_policy = "vanilla"
 explanation = "低识字率是教育机会信号，不是所有经济建设的统一禁令。"
@@ -142,7 +177,8 @@ explanation = "低识字率是教育机会信号，不是所有经济建设的�
 domain = "diplomacy"
 consumer = "diplomatic_recklessness"
 improves = ["survival", "diplomatic_capacity"]
-consumes = ["opportunity"]
+consumes = []
+zero_cost_reason = "战争时压低冒险倾向，不申请资源或新增外交行动。"
 requires_all = ["war"]
 requires_any = []
 blocked_by = []
@@ -155,7 +191,7 @@ base = -4.0
 stress = 4.0
 opportunity = 0.0
 commitment = 0.0
-political_cost = 0.25
+political_cost = 0.0
 max_delta = 4.0
 unknown_policy = "vanilla"
 explanation = "战争时降低冒险外交倾向，仍由原版外交博弈资格和谈判决定结果。"
@@ -164,7 +200,9 @@ explanation = "战争时降低冒险外交倾向，仍由原版外交博弈资�
 domain = "diplomacy"
 consumer = "diplomatic_recklessness"
 improves = ["trade", "security"]
-consumes = ["diplomatic_capacity"]
+consumes = ["subject", "infamy"]
+commitment_when = [{ fact = "subject", op = "=", value = true, unit = "flag" }]
+political_when = [{ fact = "infamy", op = ">=", value = 25, unit = "infamy_points" }]
 requires_all = ["peace", "no_default"]
 requires_any = ["stable_legitimacy", "subject"]
 blocked_by = []
@@ -175,9 +213,103 @@ enables = []
 exit_when = ["war", "default"]
 base = 2.0
 stress = 0.0
-opportunity = 1.0
+opportunity = 0.0
 commitment = 1.0
 political_cost = 0.75
 max_delta = 2.0
 unknown_policy = "vanilla"
 explanation = "和平和具备政治/宗属基础时允许有限外交主动性。"
+
+[actions.reform_progressive_window]
+domain = "political"
+consumer = "max_progressiveness"
+improves = ["institutional_capacity", "rights"]
+consumes = ["legitimacy"]
+political_when = [{ fact = "legitimacy", op = "<", value = 75, unit = "legitimacy_0_100" }]
+requires_all = ["peace", "no_insurrection"]
+requires_any = ["stable_legitimacy", "strong_legitimacy"]
+blocked_by = ["default"]
+complements = []
+substitutes = ["reform_conservative_guard"]
+conflicts = []
+enables = []
+exit_when = ["insurrection"]
+base = 5.0
+stress = 0.0
+opportunity = 0.0
+commitment = 0.0
+political_cost = 1.0
+max_delta = 5.0
+unknown_policy = "vanilla"
+explanation = "政治稳定且具备合法性时扩大原版改革上限，改革资格和支持仍由原版决定。"
+
+[actions.reform_conservative_guard]
+domain = "political"
+consumer = "max_regressiveness"
+improves = ["continuity", "survival"]
+consumes = []
+zero_cost_reason = "保留压力下的可逆政策空间，不执行法律或支付政治资源。"
+requires_all = ["peace"]
+requires_any = ["default", "insurrection"]
+blocked_by = []
+complements = []
+substitutes = ["reform_progressive_window"]
+conflicts = []
+enables = []
+exit_when = []
+base = 5.0
+stress = 4.0
+opportunity = 0.0
+commitment = 0.0
+political_cost = 0.0
+max_delta = 5.0
+unknown_policy = "vanilla"
+explanation = "违约或叛乱压力下保留原版可逆的保守政策空间，压力解除后退出。"
+
+[actions.diplomatic_boldness_window]
+domain = "diplomacy"
+consumer = "diplomatic_play_boldness"
+improves = ["influence", "opportunity"]
+consumes = ["subject", "infamy"]
+commitment_when = [{ fact = "subject", op = "=", value = true, unit = "flag" }]
+political_when = [{ fact = "infamy", op = ">=", value = 25, unit = "infamy_points" }]
+requires_all = ["peace", "no_default"]
+requires_any = ["stable_legitimacy", "subject"]
+blocked_by = ["war"]
+complements = []
+substitutes = []
+conflicts = []
+enables = []
+exit_when = ["war", "default"]
+base = 8.0
+stress = 0.0
+opportunity = 0.0
+commitment = 0.75
+political_cost = 0.5
+max_delta = 8.0
+unknown_policy = "vanilla"
+explanation = "和平、财政稳定且具有政治或宗属支点时提高外交博弈主动性。"
+
+[actions.diplomatic_aggression_guard]
+domain = "diplomacy"
+consumer = "aggression"
+improves = ["security", "deterrence"]
+consumes = ["war", "infamy"]
+commitment_when = [{ fact = "war", op = "=", value = true, unit = "flag" }]
+political_when = [{ fact = "infamy", op = ">=", value = 25, unit = "infamy_points" }]
+requires_all = ["no_default"]
+requires_any = ["war", "stable_legitimacy"]
+blocked_by = []
+complements = []
+substitutes = []
+conflicts = []
+enables = []
+exit_when = ["default"]
+base = 0.1
+stress = 1.0
+opportunity = 0.0
+commitment = 0.025
+political_cost = 0.025
+max_delta = 0.1
+unknown_policy = "vanilla"
+explanation = "国家具备财政或政治承受力时提供有限威慑增量，不绕过战争资格和目标选择。"

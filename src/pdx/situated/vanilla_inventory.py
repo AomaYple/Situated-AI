@@ -93,23 +93,21 @@ _EXPRESSION_KEYS = frozenset(
         "trigger",
     }
 )
-_DIPLOMATIC_FIELDS = frozenset(
-    {
-        "evaluation_chance",
-        "will_select_as_first_state",
-        "will_select_as_second_state",
-        "will_propose_with_states",
-        "will_propose",
-        "will_break",
-        "will_propose_even_if_not_accepted",
-        "accept_score",
-        "accept_break_score",
-        "propose_score",
-        "propose_break_score",
-        "use_favor_chance",
-        "owe_favor_chance",
-    }
-)
+_DIPLOMATIC_OPERATIONS = {
+    "evaluation_chance": "chance",
+    "will_select_as_first_state": "predicate",
+    "will_select_as_second_state": "predicate",
+    "will_propose_with_states": "predicate",
+    "will_propose": "predicate",
+    "will_break": "predicate",
+    "will_propose_even_if_not_accepted": "predicate",
+    "accept_score": "score",
+    "accept_break_score": "score",
+    "propose_score": "score",
+    "propose_break_score": "score",
+    "use_favor_chance": "chance",
+    "owe_favor_chance": "chance",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,7 +213,7 @@ class VanillaInventory:
     def as_dict(self) -> dict[str, Any]:
         return {
             "schema": SCHEMA,
-            "plan_version": "31.3",
+            "plan_version": "31.4",
             "evidence": "static_discovery_not_implementation_or_engine_behavior",
             "baseline_id": self.baseline_id,
             "source_hashes": self.source_hashes,
@@ -460,9 +458,36 @@ def _treaty_scope(
             section="Quantity script value",
         )
     if name == "proposal_weight":
-        # The sample proves the root but does not specify the complete target
-        # context.  A missing statement is not evidence of target=none.
-        return _Scope()
+        return _doc_scope(
+            inputs,
+            doc,
+            ("proposal_weight = { script value }", "root is composing AI country"),
+            "country",
+            "none",
+            "proposal_score",
+        )
+    if name in {"treaty_categories", "article_ai_usage"}:
+        # These are static AI article metadata values. The official contract
+        # defines their vocabulary but no nested script scope.
+        return _doc_scope(
+            inputs,
+            doc,
+            (f"{name} = {{",),
+            "global",
+            "none",
+            "ai_metadata",
+            "observation",
+        )
+    if name in {"combined_acceptance_cap_max", "combined_acceptance_cap_min"}:
+        return _doc_scope(
+            inputs,
+            doc,
+            (f"{name} = value",),
+            "global",
+            "none",
+            "acceptance_cap",
+            "observation",
+        )
     if name not in {"inherent_accept_score", "contextual_accept_score", "wargoal_score_multiplier"}:
         return _Scope()
     kinds = definition.value.all("kind")
@@ -519,6 +544,9 @@ def _strategy_scopes(inputs: dict[str, bytes]) -> dict[str, _Scope]:
         raise ValueError(f"原版解析失败：{source}: {'; '.join(parsed.errors)}")
     lines = raw.decode("utf-8-sig").splitlines()
     scopes: dict[str, _Scope] = {}
+    # The default file is a source of field-level documentation, not proof
+    # that every child is an additive country score. Enums, metadata and
+    # future fields stay pending until an explicit contract is added here.
     specs = {
         "will_incorporate_state": (
             "root = country",
@@ -539,6 +567,11 @@ def _strategy_scopes(inputs: dict[str, bytes]) -> dict[str, _Scope]:
             "root = country",
             "scope:interest_group = IG",
             "scope:interest_group=interest_group",
+        ),
+        "negotiation_chance": (
+            "root = country",
+            "scope:law = law type being enacted",
+            "scope:law=law;scope:interest_group=interest_group",
         ),
         "ai_ship_category_weights": ("root = country", "function additively", "none"),
         "combat_unit_group_weights": (
@@ -585,14 +618,34 @@ def _strategy_scopes(inputs: dict[str, bytes]) -> dict[str, _Scope]:
             continue
         for assignment in definition.value.assignments():
             spec = specs.get(assignment.key)
-            if spec is None:
-                continue
             comments: list[str] = []
             for line in reversed(lines[: assignment.line - 1]):
                 if line.strip() and not line.lstrip().startswith("#"):
                     break
                 comments.append(line)
             text = "\n".join(reversed(comments))
+            if spec is None:
+                # A field-level merge description is useful evidence about
+                # the operation, but it does not establish the evaluation
+                # actor or target. Keep those dimensions unknown and retain
+                # the surface as pending instead of promoting a strategy
+                # container's country context to every child field.
+                operation = None
+                if "Using this value in other strategies will function additively" in text:
+                    operation = "additive_score"
+                elif "Using this value in other strategies will function multiplicatively" in text:
+                    operation = "multiplicative_score"
+                elif "Using a different value in a strategy will override" in text:
+                    operation = "override_value"
+                if operation is not None:
+                    scopes[assignment.key] = _Scope(
+                        "unknown",
+                        "unknown",
+                        operation,
+                        "pending",
+                        (f"{source}:{assignment.line}",),
+                    )
+                continue
             if assignment.key == "will_incorporate_state":
                 if (
                     "root = country" in text
@@ -612,11 +665,142 @@ def _strategy_scopes(inputs: dict[str, bytes]) -> dict[str, _Scope]:
                 and "root = country" not in text
             ):
                 continue
+            if assignment.key == "diplomatic_play_support" and (
+                "scope:enemy_country = the opposing side's leader" not in text
+            ):
+                continue
+            if assignment.key == "strait_scores" and not all(
+                marker in text
+                for marker in (
+                    "scope:first_state = the first state controlling the strait",
+                    "scope:second_state = the second state controlling the strait",
+                    "scope:is_sole_controller = yes/no",
+                )
+            ):
+                continue
             if spec[0] in text and spec[1] in text and "function additively" in text:
                 scopes[assignment.key] = _Scope(
                     "country", spec[2], "additive_score", "direct", (f"{source}:{assignment.line}",)
                 )
+
+        # ``fleet_compositions`` is a nested strategy surface.  Its header
+        # documents a different contract from the top-level strategy maps:
+        # numeric values are evaluated from country scope, mission weights
+        # are multipliers, and ``potential`` is a country-scoped predicate.
+        # Keep this deliberately narrow.  The header does not document every
+        # other strategy field, nor does it prove that these values are
+        # additive across strategies.
+        fleet = next(
+            (
+                item
+                for item in definition.value.assignments()
+                if item.key == "fleet_compositions" and isinstance(item.value, Block)
+            ),
+            None,
+        )
+        if fleet is None:
+            continue
+        fleet_comments: list[str] = []
+        for line in reversed(lines[: fleet.line - 1]):
+            if line.strip() and not line.lstrip().startswith("#"):
+                break
+            fleet_comments.append(line)
+        text = "\n".join(reversed(fleet_comments))
+        numeric_scope = (
+            "All numeric fields accept script values, so weights can be tuned from country scope."
+        )
+        contracts = {
+            "ai_ship_category_weights": (
+                "relative_allocation_weight",
+                (numeric_scope, "# ai_ship_category_weights:", "weights are summed per category"),
+            ),
+            "mission_type_weights": (
+                "multiplicative_score",
+                (
+                    numeric_scope,
+                    "# mission_type_weights:",
+                    "Multiplier applied when a fleet in this role picks which mission to pursue.",
+                    "1.0 is",
+                    "0.0 disables it for this role",
+                    "any mission type not listed is treated as 0",
+                    "Omit the whole block to leave every",
+                ),
+            ),
+            "min_ships_wanted": (
+                "soft_floor",
+                (
+                    numeric_scope,
+                    "# min_ships_wanted:",
+                    "Soft floor on fleet size used during role-fit scoring.",
+                ),
+            ),
+            "num_fleets_wanted": (
+                "fleet_count",
+                (
+                    "# num_fleets_wanted:",
+                    "How many fleets should take this role. Omitted means one. Evaluated in country scope",
+                    "a value of 0 drops the role for that country",
+                ),
+            ),
+            "potential": (
+                "predicate",
+                (
+                    "# potential:",
+                    "Country-scoped trigger. If it fails the role is dropped entirely",
+                ),
+            ),
+        }
+        for path, _child in _frontier(fleet, ("fleet_compositions",)):
+            if len(path) < 3:
+                continue
+            kind = path[2]
+            contract = contracts.get(kind)
+            if contract is None:
+                continue
+            operation, markers = contract
+            expected_depth = (
+                4 if kind in {"ai_ship_category_weights", "mission_type_weights"} else 3
+            )
+            if len(path) != expected_depth or not all(marker in text for marker in markers):
+                continue
+            evidence = tuple(
+                f"{source}:{fleet.line - len(fleet_comments) + text[: text.index(marker)].count(chr(10))}"
+                for marker in markers
+            )
+            scopes[".".join(path)] = _Scope("country", "none", operation, "direct", evidence)
     return scopes
+
+
+def _decision_chance_scope(inputs: dict[str, bytes]) -> _Scope:
+    source = "common/decisions/000_decisions_help.txt"
+    raw = inputs.get(source)
+    if raw is None:
+        return _Scope()
+    text = raw.decode("utf-8-sig")
+    # The country-scope introduction does not prove every adjacent AI field.
+    # Require the named field's own section, including its selection and zero
+    # semantics; comments in another section cannot complete this contract.
+    section = re.search(
+        r"^# `ai_chance` value[ \t]*\r?\n#+[ \t]*\r?\n(?P<body>.*?)(?=^#{3,}|\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if section is None:
+        return _Scope()
+    markers = (
+        (
+            "The scripted weight which determines how likely AI is to take it amongst all "
+            "possible decisions (country scope)."
+        ),
+        "If it evaluates to 0, AI will not take the decision. Evaluates to 1 if unspecified",
+    )
+    body = section.group("body")
+    if not all(marker in body for marker in markers):
+        return _Scope()
+    offsets = (section.start(), *(section.start("body") + body.index(marker) for marker in markers))
+    lines = (text[:offset].count("\n") + 1 for offset in offsets)
+    evidence = tuple(f"{source}:{line}" for line in lines)
+    return _Scope("country", "none", "chance", "direct", evidence)
 
 
 def _scope(
@@ -627,10 +811,271 @@ def _scope(
     definition: Assignment,
     source: str,
 ) -> _Scope:
+    # 这些消费者的作用域不是由字段名猜出来的，而是由锁定原版随附的
+    # ``*.md`` 规范明确给出。把规范证据集中在这里，避免把同一条
+    # actor/target 结论复制到多个扫描器；如果底本缺少对应文档，则保持
+    # pending，不能因为当前文件恰好有 ``ai_*`` 字段就放行。
+    if directory == "decisions" and field == ("ai_chance",):
+        return _decision_chance_scope(inputs)
+    if directory == "company_types":
+        # The companies guide gives country scope only for the three
+        # visibility triggers.  The adjacent AI fields describe behaviour but
+        # do not provide a field-level root/target contract; keep them
+        # discoverable and pending instead of inheriting the nearest scope.
+        if field in {("potential",), ("attainable",), ("possible",)}:
+            return _doc_scope(
+                inputs,
+                "common/company_types/companies.md",
+                (
+                    f"{field[0]} = {{",
+                    "evaluated in country scope",
+                ),
+                "country",
+                "none",
+                "predicate",
+                "direct",
+            )
+        if field == ("can_establish_in",):
+            return _doc_scope(
+                inputs,
+                "common/company_types/companies.md",
+                (
+                    "can_establish_in = {",
+                    "evaluated in state scope",
+                ),
+                "state",
+                "none",
+                "predicate",
+                "direct",
+            )
+    if directory == "company_charter_types" and field == ("possible",):
+        return _doc_scope(
+            inputs,
+            "common/company_charter_types/company_charter_types.md",
+            (
+                "possible = {}",
+                "evaluated in company scope",
+            ),
+            "company",
+            "none",
+            "predicate",
+            "direct",
+        )
+    # production_method_groups.ai_selection is a static enum.  Its
+    # description says which heuristic the AI uses for PM selection, but does
+    # not identify a building/PM actor-target consumer or a writable
+    # operation.  Leave it pending.
+    if directory == "amendments" and field == ("would_sponsor",):
+        return _doc_scope(
+            inputs,
+            "common/amendments/amendments.md",
+            (
+                "would_sponsor = {}",
+                "root = interest group",
+                "scope:approval = IG approval for parent law",
+            ),
+            "interest_group",
+            "scope:approval=approval",
+            "predicate",
+            "direct",
+        )
+    if directory == "war_goal_types":
+        docs = "common/war_goal_types/war_goal_types.md"
+        target = (
+            "scope:creator_country=country;scope:target_country=country;"
+            "scope:target_state=state;scope:target_region=strategic_region;"
+            "scope:stakeholder=country;scope:article_options=article_options"
+        )
+        if field in {("possible",), ("valid",)}:
+            return _doc_scope(
+                inputs,
+                docs,
+                (f"{field[0]} = {{", "scopes: root = holder, creator_country, diplomatic_play"),
+                "country",
+                target,
+                "predicate",
+                "indirect",
+            )
+        if field in {("maneuvers",), ("infamy",), ("impact_mult",)}:
+            return _doc_scope(
+                inputs,
+                docs,
+                (f"{field[0]} = {{", "scopes: root = holder, creator_country, diplomatic_play"),
+                "country",
+                target,
+                "value",
+                "indirect",
+            )
+        if field == ("on_enforced",):
+            return _doc_scope(
+                inputs,
+                docs,
+                ("on_enforced = {", "scopes: root = holder, creator_country, diplomatic_play"),
+                "country",
+                target,
+                "effect",
+                "indirect",
+            )
+        # The ``ai`` block is static metadata.  The nearby Triggers and
+        # Effect scope list belongs to possible/valid/value/effect fields and
+        # cannot be transferred to these flags.
+    if directory == "modifier_type_definitions" and field == ("game_data", "ai_value"):
+        # ``game_data.ai_value`` is a modifier-type metadata hook. It is an
+        # indirect engine consumer and has no script actor/target of its own;
+        # the official description explicitly limits it to code-side AI
+        # handling. Treating it as a global metadata surface is precise and
+        # prevents it from being mistaken for a country script getter.
+        return _doc_scope(
+            inputs,
+            "common/modifier_type_definitions/modifier_types.md",
+            ("game_data={", "the value to the AI of having this modifier"),
+            "global",
+            "none",
+            "modifier_ai_value",
+            "indirect",
+        )
+    if directory == "scripted_buttons" and field == ("ai_chance",):
+        return _doc_scope(
+            inputs,
+            "common/scripted_buttons/scripted_buttons.md",
+            ("#Country scope", "ai_chance = {"),
+            "country",
+            "none",
+            "chance",
+        )
+    # production_method_groups.ai_selection is a documented static enum;
+    # that declaration does not prove a building script or a PM target.
+    if directory == "ai_strategic_region_stance_types":
+        # These are static AI stance capabilities. The official definition
+        # documents no script actor or target, so record them as indirect
+        # global consumers instead of guessing a country scope.
+        if field == ("can_send_fleets",):
+            return _doc_scope(
+                inputs,
+                "common/ai_strategic_region_stance_types/ai_strategic_region_stance_types.md",
+                ("can_send_fleets = <yes/no>",),
+                "global",
+                "none",
+                "stance_capability",
+                "observation",
+            )
+        if field == ("add_diplomatic_relevance",):
+            return _doc_scope(
+                inputs,
+                "common/ai_strategic_region_stance_types/ai_strategic_region_stance_types.md",
+                ("add_diplomatic_relevance = <yes/no>",),
+                "global",
+                "none",
+                "stance_capability",
+                "indirect",
+            )
+    if directory == "ship_modifications" and field == ("ai_weight",):
+        return _doc_scope(
+            inputs,
+            "common/ship_modifications/ship_modifications.md",
+            ("ai_weight = fixed_point", "root - country"),
+            "country",
+            "unknown",
+            "score",
+            "pending",
+        )
+    if directory == "diplomatic_plays" and field == ("ai_acceptance_max",):
+        return _doc_scope(
+            inputs,
+            "common/diplomatic_plays/diplomatic_plays.md",
+            ("ai_acceptance_max = num", "upper bound for AI acceptance"),
+            "global",
+            "none",
+            "acceptance_cap",
+            "observation",
+        )
+    if directory == "diplomatic_catalysts" and field == ("ai_country_goal_recalculation",):
+        return _doc_scope(
+            inputs,
+            "common/diplomatic_catalysts/diplomatic_catalysts.md",
+            (
+                "ai_country_goal_recalculation = {",
+                "root = the country the catalyst was triggered for",
+                "scope:target_country = the country the catayst was triggered by",
+            ),
+            "country",
+            "scope:target_country=country",
+            "goal_recalculation",
+            "indirect",
+        )
+    if directory == "ship_types" and field == ("ai_ship_category",):
+        return _doc_scope(
+            inputs,
+            "common/ship_types/ship_types.md",
+            (
+                "ai_ship_category = <ai ship category key>",
+                "AI-only category",
+                "used by the AI",
+            ),
+            "global",
+            "none",
+            "ai_metadata",
+            "observation",
+        )
+    if directory == "character_interactions" and field[0] in {
+        "ai_chance",
+        "ai_will_do",
+        "ai_considers_exiles",
+    }:
+        return _doc_scope(
+            inputs,
+            "common/character_interactions/00_character_interactions.txt",
+            ("All scopes are character scopes with the interacting country stored as the actor",),
+            "character",
+            "scope:actor=country",
+            "chance" if field[0] == "ai_chance" else "predicate",
+        )
+    # The naval mission fields are absent from its shipped AI template.
+    # War-goal AI flags are static metadata; the separate "Triggers and
+    # Effect" scope section does not establish their evaluation context.
+    # A generic AI block proves only the container scope.  The field itself
+    # must be one of the documented diplomatic-action consumers before we
+    # promote it to a legal surface; unknown keys remain pending even when
+    # the surrounding documentation happens to mention the common scope.
+    if directory == "diplomatic_actions":
+        if len(field) != 2 or field[0] != "ai":
+            return _Scope()
+        name = field[1]
+        operation = _DIPLOMATIC_OPERATIONS.get(name)
+        if operation is None:
+            return _Scope()
+        docs = "common/diplomatic_actions/diplomatic_action.md"
+        declaration = f"{name} = {{}}"
+        if name == "evaluation_chance":
+            return _doc_scope(
+                inputs,
+                docs,
+                (declaration, "AI country is always root", "has no data about targets"),
+                "country",
+                "none",
+                "chance",
+            )
+        if name in {"will_select_as_first_state", "will_select_as_second_state"}:
+            return _doc_scope(
+                inputs,
+                docs,
+                (declaration, "only contain the state as root in the scope and no other data"),
+                "state",
+                "none",
+                "predicate",
+            )
+        return _doc_scope(
+            inputs,
+            docs,
+            (declaration, "AI country is always root", "other country always scope:target"),
+            "country",
+            "scope:target=country",
+            operation,
+        )
     if directory == "treaty_articles":
         return _treaty_scope(field, inputs, definition, source)
     if directory == "ai_strategies":
-        return strategies.get(field[0], _Scope())
+        return strategies.get(".".join(field), strategies.get(field[0], _Scope()))
     if directory == "laws" and field == ("ai_enact_weight_modifier",):
         return _doc_scope(
             inputs,
@@ -670,30 +1115,6 @@ def _scope(
             "none",
             "score",
         )
-    if directory == "diplomatic_actions" and field[0] == "ai" and len(field) > 1:
-        if field[1] not in _DIPLOMATIC_FIELDS:
-            return _Scope()
-        actor, target = "country", "scope:target=country"
-        diplomatic_markers: list[str] = [
-            "the AI country is always root and the other country always scope:target"
-        ]
-        if field[1] == "evaluation_chance":
-            target = "none"
-            diplomatic_markers.append("has no data about targets")
-        elif field[1] in {"will_select_as_first_state", "will_select_as_second_state"}:
-            actor, target = "state", "none"
-            diplomatic_markers.append(
-                "only contain the state as root in the scope and no other data"
-            )
-        operation = "predicate" if field[1].startswith("will_") else "score"
-        return _doc_scope(
-            inputs,
-            "common/diplomatic_actions/diplomatic_action.md",
-            tuple(diplomatic_markers),
-            actor,
-            target,
-            operation,
-        )
     if directory == "mobilization_options" and field == ("ai_weight",):
         return _doc_scope(
             inputs,
@@ -704,6 +1125,19 @@ def _scope(
             "multiplicative_score",
         )
     if directory == "ai_regional_objectives":
+        contracts = {
+            "possible": ("possible = { <trigger> }", "predicate", "direct"),
+            "complete": ("complete = { <trigger> }", "predicate", "direct"),
+            "invalid": ("invalid = { <trigger> }", "predicate", "direct"),
+            "weight": ("weight = <script value>", "relative_weight", "direct"),
+            "on_create": ("on_create = { <effect> }", "effect", "indirect"),
+            "on_complete": ("on_complete = { <effect> }", "effect", "indirect"),
+            "on_invalid": ("on_invalid = { <effect> }", "effect", "indirect"),
+        }
+        contract = contracts.get(field[0]) if len(field) == 1 else None
+        if contract is None:
+            return _Scope()
+        declaration, operation, capability = contract
         return _doc_scope(
             inputs,
             "common/ai_regional_objectives/ai_regional_objectives.md",
@@ -711,11 +1145,12 @@ def _scope(
                 "root = the AI country",
                 "scope:target_region = the strategic region",
                 "scope:target_stance = the regional stance",
+                declaration,
             ),
             "country",
             "scope:target_region=strategic_region;scope:target_stance=strategic_region_stance",
-            "effect" if field[0].startswith("on_") else "evaluate",
-            "indirect" if field[0].startswith("on_") else "direct",
+            operation,
+            capability,
         )
     return _Scope()
 
@@ -723,6 +1158,9 @@ def _scope(
 def _frontier(
     assignment: Assignment, path: tuple[str, ...], *, mapped: bool = False
 ) -> Iterator[tuple[tuple[str, ...], Assignment]]:
+    if len(path) == 3 and path[0] == "fleet_compositions" and path[2] == "potential":
+        yield path, assignment
+        return
     if isinstance(assignment.value, Block) and (mapped or assignment.key in _MAP_FIELDS):
         children = tuple(assignment.value.assignments())
         if children and not any(
@@ -775,7 +1213,14 @@ def _surface(
             )
         ),
         scope_evidence=scope.evidence,
-        responsibility_step="D4.06" if scope.actor != "unknown" else "D0.03",
+        responsibility_step=(
+            "D4.06"
+            if scope.actor != "unknown"
+            and scope.target != "unknown"
+            and scope.operation != "declared_field"
+            and scope.evidence
+            else "D0.03"
+        ),
         source_line=line,
     )
 
@@ -872,13 +1317,26 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
             if definition.is_variable:
                 continue
             if directory in _OBSERVATION_DIRS:
+                scope = (
+                    _doc_scope(
+                        inputs,
+                        "common/script_values/script_values.md",
+                        ("Formulas", "scope you're currently in"),
+                        "caller_scope",
+                        "caller_derived",
+                        "read",
+                        "observation",
+                    )
+                    if directory == "script_values"
+                    else _Scope(operation="read", capability="pending")
+                )
                 surfaces.append(
                     _surface(
                         source,
                         definition.key,
                         "__body__",
                         definition.line,
-                        _Scope(operation="read", capability="pending"),
+                        scope,
                     )
                 )
             elif directory == "defines" and isinstance(definition.value, Block):
