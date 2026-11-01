@@ -1388,6 +1388,58 @@ def test_d0_ship_modification_root_does_not_invent_a_target_scope(tmp_path) -> N
     assert row.surface_id in result.unknown_scopes
 
 
+def test_d0_country_rank_pool_multiplier_uses_its_explicit_template_contract(tmp_path) -> None:
+    game = _game(tmp_path)
+    _write(
+        game,
+        "common/country_ranks/00_country_ranks.txt",
+        "# ai_pool_character_multiplier = Multiplier on how many randomly generated pool characters "
+        "an AI country of this rank will get.\n"
+        "great_power = { ai_pool_character_multiplier = 1.0 }\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(
+        item
+        for item in result.surfaces
+        if item.source == "common/country_ranks/00_country_ranks.txt"
+        and item.field == "ai_pool_character_multiplier"
+    )
+    assert (row.actor_scope, row.target_scope, row.operation, row.capability) == (
+        "country",
+        "none",
+        "multiplier",
+        "indirect",
+    )
+    assert row.scope_evidence
+    assert row.legal
+    assert row.responsibility_step == "D4.06"
+
+
+def test_d0_country_rank_innovation_threshold_stays_pending_without_field_contract(
+    tmp_path,
+) -> None:
+    game = _game(tmp_path)
+    _write(
+        game,
+        "common/country_ranks/00_country_ranks.txt",
+        "great_power = { ai_innovation_critical_threshold = 1.0 }\n",
+    )
+    result = inventory.discover_vanilla(game=game)
+    row = next(
+        item
+        for item in result.surfaces
+        if item.source == "common/country_ranks/00_country_ranks.txt"
+        and item.field == "ai_innovation_critical_threshold"
+    )
+    assert (row.actor_scope, row.target_scope, row.operation, row.capability) == (
+        "unknown",
+        "unknown",
+        "declared_field",
+        "pending",
+    )
+    assert not row.legal
+
+
 @pytest.mark.parametrize(
     ("field", "value"), [("invented_score", "1"), ("on_invented", "{}"), ("weight", "1")]
 )

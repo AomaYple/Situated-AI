@@ -101,7 +101,7 @@
     "src/pdx/situated/signals.py": "564dff20c52d0dd2314afcbd6412f9bc59b67d2c2d07da9023e29b99cff6bb24",
     "src/pdx/situated/state.py": "7c8ab65381efe179717b29ab2f6c40af533d546fd7e5925b37c9f52bef3616f2",
     "src/pdx/situated/temporal.py": "657da254857a2b82235c0c344dd965bfcfdbf251651139f210f9f4039cfc4b5f",
-    "src/pdx/situated/vanilla_inventory.py": "b3d5c0a66bd3ea76938776575d3484c63679a7fa25902b2ceb2a19c66dedeccb",
+    "src/pdx/situated/vanilla_inventory.py": "00ee36d9a5a4013b592e94d6cb1a4b5f386632ed8b5250c5eff38b4ba09e5ccc",
     "src/pdx/snapshot.py": "b272506e761d633bf266891bcca1387a9365b3740aa50d69561d3c9a3f93ca45",
     "src/pdx/tables_offline.py": "41842c85cfaf740f5875832b599f56f88092cfe48b1a67b8877d899e9e706eb3",
     "src/pdx/tabular.py": "e6563f5ac599d2ebb8d533fce7645f8cedb375ad8ee8e418b7fc9a64bdf5eb49",

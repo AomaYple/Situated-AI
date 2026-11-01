@@ -92,6 +92,7 @@ def _government_values(policy):
     return {reader.key: False if reader.kind == "boolean" else 0 for reader in policy.readers}
 
 
+@pytest.mark.integration
 def test_government_administration_has_native_initial_value_and_production_reference():
     data = _government_adapter_data()
     initial = [
@@ -194,20 +195,15 @@ def test_government_administration_unknown_and_player_paths_preserve_vanilla():
     assert decision_rules.evaluate(policy, values, is_ai=False) == {}
 
 
-def _government_positive_pdx_overlay():
-    """从内存生成物提取三条实际写分支供独立 PDX 求值器见证。
+def _government_positive_pdx_overlay(text=None):
+    """从生产生成物提取三条实际写分支供独立 PDX 求值器见证。
 
     生产 building 规则带有 owner/ROOT 作用域；这里仅去掉已由生成器验证的
     作用域壳，保留叶子条件、分支顺序和写值，避免把 Python 参考结果当作
     PDX 语义的替代。
     """
-    adapters = decision_adapters.load()
-    files, _ = decision_adapters.build(
-        adapters,
-        enabled_domains=frozenset({"economy", "fiscal"}),
-        country_policy=country_state.load(),
-    )
-    text = files["common/buildings/07_government.txt"]
+    if text is None:
+        text = (config.REPO / "mod/common/buildings/07_government.txt").read_text(encoding="utf-8")
     lines = text.splitlines()
     ids = {
         "administrative_government_building_bureaucracy_repair",
@@ -258,6 +254,18 @@ def test_government_administration_cost_precedes_repair_in_reference_and_generat
             multiplier,
             "selected",
         )
+
+
+@pytest.mark.integration
+def test_government_frozen_branches_match_locked_vanilla_regeneration():
+    files, _ = decision_adapters.build(
+        decision_adapters.load(),
+        enabled_domains=frozenset({"economy", "fiscal"}),
+        country_policy=country_state.load(),
+    )
+    assert _government_positive_pdx_overlay(files["common/buildings/07_government.txt"]) == (
+        _government_positive_pdx_overlay()
+    )
 
 
 @pytest.mark.integration

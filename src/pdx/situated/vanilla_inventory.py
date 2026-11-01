@@ -1124,6 +1124,25 @@ def _scope(
             "none",
             "multiplicative_score",
         )
+    if directory == "country_ranks" and field == ("ai_pool_character_multiplier",):
+        # The shipped rank template gives this field its own actor and
+        # operation contract: it is a multiplier on the number of generated
+        # pool characters for an AI country of the rank.  There is no
+        # script-side target scope; the rank is the definition carrying the
+        # scalar, so keep target explicitly ``none`` rather than inventing a
+        # country/rank scope object.
+        return _doc_scope(
+            inputs,
+            "common/country_ranks/00_country_ranks.txt",
+            (
+                "# ai_pool_character_multiplier = Multiplier on how many randomly generated pool characters",
+                "ai_pool_character_multiplier =",
+            ),
+            "country",
+            "none",
+            "multiplier",
+            "indirect",
+        )
     if directory == "ai_regional_objectives":
         contracts = {
             "possible": ("possible = { <trigger> }", "predicate", "direct"),
