@@ -2,22 +2,27 @@
 
 当前开发候选为 `Situated AI 3.1.0rc2`，计划尚未完成，候选包须按最终冻结源重建；最近的非RC交付为 `3.0.1`。
 
-31.4 行动层深化计划正在实施，尚未完成。当前实现缺口与下一动作见[当前工作清单](docs/design/当前工作清单.md)。
+新一轮[架构主计划](docs/design/架构主计划.md)已落盘，待用户评审，实施未开始；实现分解见[架构子计划](docs/design/架构子计划.md)。
+旧 31.4 行动层深化保持暂停且未完成。当前源码事实、失败与下一动作见[当前工作清单](docs/design/当前工作清单.md)。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)
 
 Victoria 3 AI Mod 与 Python 开发工具链。项目目标是让每个国家基于自身处境和可观测信息，在原版机制内持续做出符合自身约束与利益的相对最优决策。
 
-底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。运行包通过原版 AI 消费者调整局部倾向，只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。[3.0.1 交付结果](docs/design/exec/3.0.1-交付结果.md)记录当时的包与检查事实；本轮审计发现部分成本、排序、关系与原版尾部尚需修正，不能据历史工程通过声称完整设计已实现。目标覆盖见[行动覆盖合同](docs/design/04-行动覆盖与验收.md)，实际生产状态见主计划、当前清单和阶段收据。长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
+底本为 Victoria 3 `1.14.5`，Mod ID 为 `situated-ai`。运行包通过原版 AI 消费者调整局部倾向，只包含 PDX、本地化、元数据和封面；生成器、静态审计、快照和证据工具留在仓库。
+
+新架构的范围与验收以架构主计划为准；[旧行动覆盖合同](docs/design/04-行动覆盖与验收.md)保留为迁移依据。
+[3.0.1 交付结果](docs/design/exec/3.0.1-交付结果.md)记录当时的包与检查事实，当前源码的功能缺口和失败见当前工作清单，不能据历史工程通过声称完整设计已实现。
+长期行为、平衡、后期性能、本地化呈现和 Workshop 体验由用户在固定包上验收。
 
 ## 先读什么
 
 1. [AGENTS.md](AGENTS.md)：代理接手顺序和修改边界。
 2. [CONTRIBUTING.md](CONTRIBUTING.md)：生成、检查、分支、提交、PR 和发布。
 3. [工程原则](docs/principles/工程原则.md)与[Mod 开发原则](docs/principles/Mod开发原则.md)。
-4. [处境行动决策内核实施计划](docs/design/exec/mod重设计-实施计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
-5. [处境决策设计](docs/design/03-处境决策设计.md)与[分层联动执行结果](docs/design/exec/分层联动-执行结果.md)。
+4. [架构主计划](docs/design/架构主计划.md)、[架构子计划](docs/design/架构子计划.md)与[当前工作清单](docs/design/当前工作清单.md)。
+5. 旧候选上下文：[处境行动决策内核实施计划](docs/design/exec/mod重设计-实施计划.md)、[处境决策设计](docs/design/03-处境决策设计.md)；历史证据见[分层联动执行结果](docs/design/exec/分层联动-执行结果.md)。
 
 ## 目录
 

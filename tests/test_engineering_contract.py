@@ -49,21 +49,37 @@ def test_unknown_or_empty_skip_reason_is_rejected() -> None:
 
 def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     root = Path(__file__).resolve().parents[1]
-    plan = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
+    plan = (root / "docs/design/架构主计划.md").read_text(encoding="utf-8")
+    subplans = (root / "docs/design/架构子计划.md").read_text(encoding="utf-8")
+    previous = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
-    assert "# Situated AI 处境行动决策内核实施计划" in plan
-    version = re.search(r"计划版本：(\d+)\.(\d+)", plan)
+    assert plan.startswith("# Situated AI 架构主计划\n")
+    assert "待用户评审；实现未开始" in plan
+    assert "[架构子计划](架构子计划.md)" in plan
+    assert "[架构主计划 A1.0](架构主计划.md)" in subplans
+    assert re.findall(r"^\| (A\d{2}) \|", plan, re.MULTILINE) == [
+        f"A{index:02}" for index in range(1, 21)
+    ]
+    assert re.findall(r"^## \d+\. (P\d+)：", subplans, re.MULTILINE) == [
+        f"P{index}" for index in range(12)
+    ]
+    assert "全部未开始" in subplans
+    assert "不是新架构完成门" in (root / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    assert "# Situated AI 处境行动决策内核实施计划" in previous
+    assert "旧计划已暂停，未完成" in previous
+    version = re.search(r"计划版本：(\d+)\.(\d+)", previous)
     assert version is not None
     assert (int(version.group(1)), int(version.group(2))) >= (26, 0)
-    assert re.findall(r"^### (K\d+)：", plan, re.MULTILINE) == [f"K{index}" for index in range(14)]
-    assert "唯一的产品实施计划" in plan
+    assert re.findall(r"^### (K\d+)：", previous, re.MULTILINE) == [
+        f"K{index}" for index in range(14)
+    ]
     assert "阶段" in plan
     assert "出口" in plan
     assert "正确性第一、速度第二、内存第三" in plan
     assert "长期游戏行为" in plan
     assert "由用户验收" in plan
-    assert "全仓库终审和计划闭环" in plan
-    assert "标准交付、用户验收包、部署和回滚" in plan
+    assert "全仓库终审和计划闭环" in previous
+    assert "标准交付、用户验收包、部署和回滚" in previous
     assert "唯一当前计划" in checklist
     assert "处境行动决策内核实施计划" in checklist
     assert "长期行为" in checklist
@@ -71,7 +87,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "situated-ai" in checklist
     assert "标准包" in checklist
     assert "日志、存档" in checklist
-    assert "11 种语言" in plan
+    assert "11 种语言" in previous
 
 
 def test_current_document_indexes_are_complete() -> None:
@@ -81,10 +97,10 @@ def test_current_document_indexes_are_complete() -> None:
     execution = (root / "docs/design/exec/README.md").read_text(encoding="utf-8")
 
     assert "-m pdx.cli package" in tools
-    assert "Situated AI 1.4.0" in tools
     assert f"Situated AI {distribution.RELEASE_VERSION}" in tools
     assert "K0–K13" in execution
     assert "[处境行动决策内核实施计划](mod重设计-实施计划.md)" in execution
+    assert "分层联动-执行结果.md" in execution
     assert "历史收据" in execution
 
     indexes = {
@@ -96,11 +112,13 @@ def test_current_document_indexes_are_complete() -> None:
     }
     for path, prefix in indexes.items():
         content = (root / path).read_text(encoding="utf-8")
+        design_prefix = prefix.removesuffix("exec/") if prefix else "../"
+        assert f"[架构主计划]({design_prefix}架构主计划.md)" in content, path
+        assert f"[架构子计划]({design_prefix}架构子计划.md)" in content, path
         assert (
             f"[处境行动决策内核实施计划]({prefix}mod重设计-实施计划.md)" in content
             or f"[分层联动实施计划]({prefix}mod重设计-实施计划.md)" in content
         ), path
-        assert f"[分层联动执行结果]({prefix}分层联动-执行结果.md)" in content, path
         assert "终极方案 4.0 实施计划" not in content, path
         assert distribution.RELEASE_VERSION in content or path == "docs/README.md", path
 

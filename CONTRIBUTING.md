@@ -1,7 +1,7 @@
 # 贡献与维护规范
 
 本指南统一维护流程、验证命令和交付步骤。产品计划入口为
-[处境行动决策内核实施计划](docs/design/exec/mod重设计-实施计划.md)。任务路由见 [AGENTS.md](AGENTS.md)，持续工程与产品约束见
+[架构主计划](docs/design/架构主计划.md)与[架构子计划](docs/design/架构子计划.md)。任务路由见 [AGENTS.md](AGENTS.md)，持续工程与产品约束见
 [工程原则](docs/principles/工程原则.md)和[Mod 开发原则](docs/principles/Mod开发原则.md)，生成与证据合同见
 [工程交付基线](docs/design/exec/工程基线-1.0.md)。
 
@@ -96,7 +96,8 @@ pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录�
 完整测试会创建 pytest、benchmark 和字节码缓存。测试结束后清理这些可再生目录，再运行 `hygiene` 作为最后的卫生检查；
 不要与测试并行运行 hygiene，否则会把测试正在创建的缓存误报成残留。
 
-`tools/ci/situated_closeout.py` 默认只报告静态工程收口。进入 D14 前使用 `--require-engineering`，核对 D0–D13
+当前 `tools/ci/situated_closeout.py` 仍实现旧 31.4 的 D 阶段合同，不是新架构完成门；接入新要求与子计划收据属于新计划 P0/P2/P10。
+默认只报告静态工程收口。旧计划进入 D14 前使用 `--require-engineering`，核对 D0–D13
 的功能收据、依赖和独立原版范围；最终交付后使用 `--require-plan`，继续核对 D14 的实际交付收据。两种严格门均
 重新读取锁定原版的 D0 独立盘点，未知字段级作用域、解析失败或适用阶段的 pending 均返回非零。未交付的 D14
 不阻塞进入交付阶段，但始终阻止最终完成结论；默认静态检查通过不能代替这两个门。
