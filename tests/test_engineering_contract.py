@@ -54,17 +54,16 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     previous = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     assert plan.startswith("# Situated AI 架构主计划\n")
-    assert "待用户评审；实现未开始" in plan
+    assert "已授权执行" in plan
     assert "[架构子计划](架构子计划.md)" in plan
-    assert "[架构主计划 A1.0](架构主计划.md)" in subplans
-    assert re.findall(r"^\| (A\d{2}) \|", plan, re.MULTILINE) == [
-        f"A{index:02}" for index in range(1, 21)
-    ]
-    assert re.findall(r"^## \d+\. (P\d+)：", subplans, re.MULTILINE) == [
-        f"P{index}" for index in range(12)
-    ]
-    assert "全部未开始" in subplans
+    assert "[架构主计划](架构主计划.md)" in subplans
+    assert re.findall(r"^\| (S\d+) ", plan, re.MULTILINE) == [f"S{i}" for i in range(7)]
+    assert re.findall(r"^## (B\d+) ", subplans, re.MULTILINE) == [f"B{i}" for i in range(9)]
+    assert "具体实现随证据调整" in subplans
     assert "不是新架构完成门" in (root / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    archive = root / "docs/design/archive"
+    assert (archive / "manifest.json").is_file()
+    assert "历史" in (archive / "README.md").read_text(encoding="utf-8")
     assert "# Situated AI 处境行动决策内核实施计划" in previous
     assert "旧计划已暂停，未完成" in previous
     version = re.search(r"计划版本：(\d+)\.(\d+)", previous)

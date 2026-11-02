@@ -96,7 +96,7 @@ pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录�
 完整测试会创建 pytest、benchmark 和字节码缓存。测试结束后清理这些可再生目录，再运行 `hygiene` 作为最后的卫生检查；
 不要与测试并行运行 hygiene，否则会把测试正在创建的缓存误报成残留。
 
-当前 `tools/ci/situated_closeout.py` 仍实现旧 31.4 的 D 阶段合同，不是新架构完成门；接入新要求与子计划收据属于新计划 P0/P2/P10。
+当前 `tools/ci/situated_closeout.py` 仍实现旧 31.4 的 D 阶段合同，不是新架构完成门；接入新要求与子计划收据属于新计划 S0/S1/S5。
 默认只报告静态工程收口。旧计划进入 D14 前使用 `--require-engineering`，核对 D0–D13
 的功能收据、依赖和独立原版范围；最终交付后使用 `--require-plan`，继续核对 D14 的实际交付收据。两种严格门均
 重新读取锁定原版的 D0 独立盘点，未知字段级作用域、解析失败或适用阶段的 pending 均返回非零。未交付的 D14
