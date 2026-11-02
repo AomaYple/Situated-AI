@@ -138,6 +138,90 @@ def _native_binding(instance: ActionInstance) -> NativeConsumerBinding | None:
     return NativeConsumerBinding(instance.source, definition, field)
 
 
+_R7_NUMERIC_CONTRACTS = {
+    "wanted_num_supply_ships": ("additive_supply_ship_count_target", "ships", "none", "multiply"),
+    "max_ship_design_complexity": (
+        "additive_ship_design_complexity_limit",
+        "modification_levels",
+        "none",
+        "multiply",
+    ),
+    "treaty_category_scores": ("additive_treaty_category_score", "score", "none", "multiply"),
+    "strategic_region_stance_type_scores": (
+        "additive_region_stance_score",
+        "score",
+        "scope:target_region=strategic_region;scope:region_score=scalar",
+        "add",
+    ),
+}
+
+
+def _r7_numeric_context_issue(instance: ActionInstance, surface: VanillaSurface) -> str | None:
+    """Join exact r7 numeric leaves; parent maps and object existence grant nothing."""
+    family, *children = surface.field.split(".")
+    operation, unit, target, writer_operation = _R7_NUMERIC_CONTRACTS[family]
+    data = json.loads(engine_scope.strategy_snapshot())
+    contract = data["consumers"][family]
+    expected = {
+        "actor_scope": "country",
+        "target_scope": target,
+        "operation": operation,
+        "unit": unit,
+        "capability": "direct",
+    }
+    if any(contract.get(key) != value for key, value in expected.items()):
+        return "numeric_consumer_contract_unproven"
+    if family in {"treaty_category_scores", "strategic_region_stance_type_scores"}:
+        keys = (
+            data["strategy_score_keys"][family]
+            if family == "treaty_category_scores"
+            else data["stance_definitions"]
+        )
+        if len(children) != 1 or children[0] not in keys:
+            return "numeric_consumer_contract_unproven"
+    elif children:
+        return "numeric_consumer_contract_unproven"
+    if (
+        surface.source != "common/ai_strategies/00_default_strategy.txt"
+        or surface.definition != "ai_strategy_default"
+        or surface.capability != "direct"
+        or not surface.legal
+        or surface.operation != operation
+        or surface.target_scope != target
+        or instance.operation != writer_operation
+    ):
+        return "numeric_consumer_contract_unproven"
+    if surface.actor_scope != "country" or instance.actor_scope != "root":
+        return "actor_type_mismatch"
+    context = instance.evaluation_context
+    if context is None or context.status != "observed" or context.actor_scope is None:
+        return "evaluation_context_unproven"
+    if (context.actor_scope.name, context.actor_scope.kind, context.actor_scope.role) != (
+        "root",
+        "country",
+        "actor",
+    ):
+        return "actor_type_mismatch"
+    expected_targets = (
+        (("target_region", "strategic_region", "target"),)
+        if family == "strategic_region_stance_type_scores"
+        else ()
+    )
+    expected_auxiliary = (
+        (("region_score", "scalar", "auxiliary"),)
+        if family == "strategic_region_stance_type_scores"
+        else ()
+    )
+    if (
+        tuple((row.name, row.kind, row.role) for row in context.targets) != expected_targets
+        or tuple((row.name, row.kind, row.role) for row in context.auxiliary_scopes)
+        != expected_auxiliary
+        or instance.target_scope not in {"none", "target_or_none"}
+    ):
+        return "target_type_mismatch"
+    return None
+
+
 def _native_context_issue(
     instance: ActionInstance, surface: VanillaSurface, *, state_owner_proven: bool = False
 ) -> str | None:
@@ -145,6 +229,8 @@ def _native_context_issue(
 
     if not instance.owner or not instance.vanilla_tail:
         return "production_ownership_or_tail_missing"
+    if surface.field.split(".")[0] in _R7_NUMERIC_CONTRACTS:
+        return _r7_numeric_context_issue(instance, surface)
     exact_numeric = {
         "subject_value": ("additive_subject_valuation", {"add"}),
         "become_subject_value": ("additive_subject_valuation", {"add"}),

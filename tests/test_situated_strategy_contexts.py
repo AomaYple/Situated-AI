@@ -40,6 +40,10 @@ def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
     )
     assert compiler._frozen_strategy_contexts() == snapshot
     assert set(snapshot) == {
+        "treaty_category_scores",
+        "strategic_region_stance_type_scores",
+        "wanted_num_supply_ships",
+        "max_ship_design_complexity",
         "recklessness",
         "wargoal_maneuvers_fraction",
         "wanted_construction_output",
@@ -328,6 +332,10 @@ def current_game_fixture(monkeypatch, tmp_path):
         data["institution_definition_sources"][source] = hashlib.sha256(
             path.read_bytes()
         ).hexdigest()
+    for source, raw_hex in data["stance_definition_bytes"].items():
+        path = game / source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(bytes.fromhex(raw_hex))
     manifest = tmp_path / "manifest.json"
 
     def freeze():

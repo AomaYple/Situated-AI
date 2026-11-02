@@ -59,6 +59,66 @@ def steel():
     return _generate("common/buildings/01_industry.txt", ("building_steel_mill", "ai_value"))
 
 
+@pytest.fixture(scope="module")
+def shipyard():
+    return _generate("common/buildings/01_industry.txt", ("building_shipyard", "ai_value"))
+
+
+@pytest.mark.parametrize(
+    ("active", "balance", "default", "infrastructure", "input_shortage", "expected"),
+    [
+        (True, -1, None, None, False, 1.08),
+        (True, -1, True, 0, False, 0.93),
+        (True, -1, True, -1, False, 0.83),
+        (True, -1, False, -1, True, 0.78),
+        (True, 0, False, 0, False, 1.0),
+        (None, -1, False, 0, False, 1.0),
+        (False, -1, False, 0, False, 1.0),
+        (True, None, True, None, False, 0.85),
+    ],
+)
+def test_shipyard_basic_need_does_not_require_all_capacity_and_input_gates(
+    shipyard, active, balance, default, infrastructure, input_shortage, expected
+):
+    policy, text, _, _ = shipyard
+    method = "pm_basic_shipbuilding"
+    values = {
+        f"pm_active_building_shipyard_{method}": active,
+        "state_owner_clippers_balance": balance,
+        "state_owner_default": default,
+        "state_infrastructure": infrastructure,
+        "state_owner_wood_price": 0.6 if input_shortage else None,
+        "state_owner_wood_balance": -1 if input_shortage else None,
+    }
+    facts = {
+        "ROOT": {
+            "infrastructure_delta": infrastructure,
+            "is_production_method_active": {"building_shipyard": {method: active}},
+            "owner": {
+                "is_ai": True,
+                "in_default": default,
+                "market": {
+                    "mg:clippers": {"market_goods_delta": balance},
+                    "mg:wood": {
+                        "market_goods_pricier": values["state_owner_wood_price"],
+                        "market_goods_delta": values["state_owner_wood_balance"],
+                    },
+                },
+            },
+        }
+    }
+    field = "building_shipyard.ai_value"
+    assert decision_rules.evaluate_ir(policy, values, is_ai=True).get(field, ("", 1))[1] == (
+        pytest.approx(expected)
+    )
+    program = next(
+        item for item in policy.consumer_programs if item.field == tuple(field.split("."))
+    )
+    assert pdx_eval.select(pdx_eval.marked_block(text, program.action_id), facts).delta == (
+        pytest.approx(expected)
+    )
+
+
 def _observations(changes, *, is_ai=True):
     values = {"state_owner_iron_balance": -1, **changes}
     owner: dict[str, Any] = {

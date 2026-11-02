@@ -15,9 +15,9 @@ REPO = Path(__file__).resolve().parents[3]
 MANIFEST = REPO / "research/situated/victoria3-1.14.5-technology-scope.json"
 MANIFEST_ID = "research/situated/victoria3-1.14.5-technology-scope.json"
 MANIFEST_SHA256 = "de12ca6de8d06b54f40f78e3fe807e15c271b987fafb45b576b896bc21284c90"
-STRATEGY_MANIFEST_ID = "research/situated/victoria3-1.14.5-strategy-scope-r6.json"
+STRATEGY_MANIFEST_ID = "research/situated/victoria3-1.14.5-strategy-scope-r7.json"
 STRATEGY_MANIFEST = REPO / STRATEGY_MANIFEST_ID
-STRATEGY_MANIFEST_SHA256 = "39b41be99801353ea76c64a1f6c0dbe4c8debe725f52488b045e4a5de8d7d528"
+STRATEGY_MANIFEST_SHA256 = "3f295f0a1a8fc1bd964ebe0949f81352de60fb3f28fa0b761358ba154aeab3f1"
 COUNTRY_MANIFEST_ID = "research/situated/victoria3-1.14.5-country-definition-scope.json"
 COUNTRY_MANIFEST = REPO / COUNTRY_MANIFEST_ID
 COUNTRY_MANIFEST_SHA256 = "55aca9f3024ce6d7c607926838df778e1711d5eaad6fcad307acbcf485734a88"
@@ -307,6 +307,53 @@ def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
             },
         }
     )
+    expected.update(
+        {
+            "treaty_category_scores": {
+                "actor_scope": "country",
+                "target_scope": "none",
+                "operation": "additive_treaty_category_score",
+                "unit": "score",
+                "capability": "direct",
+                "parser_va": "0x141640e0a",
+                "consumer_va": "0x141643aa9",
+                "member_offset": "0x1f0",
+                "child_projection": "exact enum child numeric body",
+            },
+            "strategic_region_stance_type_scores": {
+                "actor_scope": "country",
+                "target_scope": "scope:target_region=strategic_region;scope:region_score=scalar",
+                "operation": "additive_region_stance_score",
+                "unit": "score",
+                "capability": "direct",
+                "parser_va": "0x141641aa8",
+                "consumer_va": "0x14164842a",
+                "member_offset": "0x470",
+                "child_projection": "exact stance definition child numeric body",
+                "definition_key": "resolved strategic region stance definition pointer; not a named script scope",
+            },
+            "wanted_num_supply_ships": {
+                "actor_scope": "country",
+                "target_scope": "none",
+                "operation": "additive_supply_ship_count_target",
+                "unit": "ships",
+                "capability": "direct",
+                "parser_va": "0x141641bcb",
+                "consumer_va": "0x1415ad63f",
+                "member_offset": "0x1b20",
+            },
+            "max_ship_design_complexity": {
+                "actor_scope": "country",
+                "target_scope": "none",
+                "operation": "additive_ship_design_complexity_limit",
+                "unit": "modification_levels",
+                "capability": "direct",
+                "parser_va": "0x141641bb6",
+                "consumer_va": "0x1414b716c",
+                "member_offset": "0x1d60",
+            },
+        }
+    )
     for field, contract in expected.items():
         if data.get("consumers", {}).get(field) != contract:
             raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
@@ -340,6 +387,10 @@ def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
         "aggression",
         "wanted_navy_size",
         "wanted_construction_output",
+        "treaty_category_scores",
+        "strategic_region_stance_type_scores",
+        "wanted_num_supply_ships",
+        "max_ship_design_complexity",
     }:
         raise ValueError("锁定策略消费者字段合同集合不一致")
     if data.get("strategy_score_keys") != {
@@ -378,6 +429,17 @@ def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
             "unification",
             "unification_leadership",
             "custom",
+        ],
+        "treaty_category_scores": [
+            "economy",
+            "trade",
+            "military",
+            "military_defense",
+            "ideology",
+            "expansion",
+            "power_bloc",
+            "other",
+            "none",
         ],
         "secret_goal_scores": [
             "none",
@@ -427,6 +489,76 @@ def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
         "law_type_output_tag": "0x32",
     }:
         raise ValueError("锁定策略法律实例类型证据不一致")
+
+    if data.get("strategic_region_type") != {
+        "scope_tag": "0x52",
+        "native_database": "CStrategicRegionsDatabase",
+        "link_type_descriptor_va": "0x145721980",
+        "link_col_va": "0x144c32f08",
+        "link_vftable_va": "0x14471a600",
+        "link_method_va": "0x142784d40",
+        "resolver_va": "0x1411352c0",
+        "id_member": "0x10",
+    }:
+        raise ValueError("锁定策略区域实例类型证据不一致")
+    if data.get("stance_definition_sources") != {
+        "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt": "add54c251b0fb2a37a6038b308ed9e67709d44f7ec0a5aac0bc03346afccb91d"
+    }:
+        raise ValueError("锁定策略区域 stance 定义来源证据不一致")
+    if data.get("stance_definitions") != {
+        "stance_none": {
+            "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+            "line": 3,
+        },
+        "stance_conquer_region": {
+            "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+            "line": 7,
+        },
+        "stance_protect_region": {
+            "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+            "line": 14,
+        },
+        "stance_colonize_region": {
+            "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+            "line": 21,
+        },
+    }:
+        raise ValueError("锁定策略区域 stance 定义身份证据不一致")
+    stance_bytes = data.get("stance_definition_bytes", {})
+    if set(stance_bytes) != set(data["stance_definition_sources"]) or any(
+        hashlib.sha256(bytes.fromhex(raw)).hexdigest() != data["stance_definition_sources"][source]
+        for source, raw in stance_bytes.items()
+    ):
+        raise ValueError("锁定策略区域 stance 定义原始字节不一致")
+    if data.get("strategy_field_merges") != {
+        "treaty_category_scores": {
+            "default_call": "0x141598094",
+            "active_call": "0x1415980ba",
+            "add_va": "0x1415980bf",
+            "operation": "additive_treaty_category_score",
+        },
+        "strategic_region_stance_type_scores": {
+            "default_insert": "0x1415ca52d",
+            "active_append": "0x1415ca548",
+            "debug_call": "0x1415ca5c2",
+            "call": "0x1415ca65d",
+            "add_va": "0x1415ca666",
+            "operation": "additive_region_stance_score",
+        },
+        "wanted_num_supply_ships": {
+            "default_call": "0x1415ad63f",
+            "active_call": "0x1415ad7f2",
+            "add_va": "0x1415ad8cf",
+            "operation": "additive_supply_ship_count_target",
+        },
+        "max_ship_design_complexity": {
+            "default_call": "0x1414b716c",
+            "active_call": "0x1414b730f",
+            "add_va": "0x1414b73e3",
+            "operation": "additive_ship_design_complexity_limit",
+        },
+    }:
+        raise ValueError("锁定策略同字段默认及活动策略合并证据不一致")
 
 
 def strategy_evidence(game: Path, inputs: Mapping[str, bytes]) -> StrategyScopeEvidence:
@@ -491,9 +623,23 @@ def verify_strategy_game(game: Path) -> StrategyScopeEvidence:
     for source, digest in definition_sources.items():
         if hashlib.sha256((game / source).read_bytes()).hexdigest() != digest:
             raise ValueError("当前制度定义原件与锁定策略作用域证据不一致")
+    stance_sources = data["stance_definition_sources"]
+    actual_stance_sources = {
+        path.relative_to(game).as_posix()
+        for path in game.rglob("*.txt")
+        if path.is_file()
+        and "/common/ai_strategic_region_stance_types/" in "/" + path.relative_to(game).as_posix()
+    }
+    if actual_stance_sources != set(stance_sources):
+        raise ValueError("当前区域 stance 定义原件集合与锁定策略证据不同")
+    for source, digest in stance_sources.items():
+        if hashlib.sha256((game / source).read_bytes()).hexdigest() != digest:
+            raise ValueError("当前区域 stance 定义原件与锁定策略作用域证据不一致")
     return replace(
         proof,
-        source_hashes=tuple(sorted((*proof.source_hashes, *definition_sources.items()))),
+        source_hashes=tuple(
+            sorted((*proof.source_hashes, *definition_sources.items(), *stance_sources.items()))
+        ),
     )
 
 

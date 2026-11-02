@@ -1139,11 +1139,6 @@ building_shipyard = {
 		# ACTION program_e488bc2f3157adff [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_e488bc2f3157adff_negative
-			add = { value = 0
-				# coordinated_layered_building_building_shipyard_recovery [economy]; 恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes } } } add = -0.1 }
-			}
 			# GROUP program_e488bc2f3157adff_building_active_inputs_negative
 			add = { value = 0
 				# active_building_shipyard_pm_arc_welding_shipbuilding_input_steel [market]; 已存在建筑的主要生产方式为 pm_arc_welding_shipbuilding，其 steel 投入高价短缺时保留有限的扩建机会成本
@@ -1171,10 +1166,17 @@ building_shipyard = {
 				# active_building_shipyard_pm_basic_shipbuilding_input_fabric [market]; 已存在建筑的主要生产方式为 pm_basic_shipbuilding，其 fabric 投入高价短缺时保留有限的扩建机会成本
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_shipyard production_method = pm_basic_shipbuilding } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
+			# GROUP program_e488bc2f3157adff_building_financing_pressure_negative
+			add = { value = 0
+				# building_opportunity_building_shipyard_default_cost [market]; 所有者已实际违约，增加建设筹资压力；正常借款不触发，不是实际付款或资源预留
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes } } } add = -0.15 }
+			}
 			# GROUP program_e488bc2f3157adff_building_infrastructure_pressure_negative
 			add = { value = 0
 				# comparative_logistics_building_shipyard [economy]; 市场可达性和基础设施同时不足时计入扩建物流成本，不改变铁路港口与现有生产
 				if = { limit = { exists = ROOT ROOT = { market_access >= 0 market_access <= 1 market_access < 0.9 infrastructure_delta < 0 exists = owner owner = { is_ai = yes } } } add = -0.2 }
+				# building_opportunity_building_shipyard_infrastructure_cost [market]; 候选州基础设施余额为负，增加建设承载压力；静态偏好代价不改变原版费用或资格
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0.0 exists = owner owner = { is_ai = yes } } } add = -0.1 }
 			}
 			# GROUP program_e488bc2f3157adff_building_output_demand_positive
 			add = { value = 0
@@ -1194,10 +1196,16 @@ building_shipyard = {
 				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_shipyard production_method = pm_complex_shipbuilding } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:clippers mg:clippers = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:fabric mg:fabric = { market_goods_pricier <= 0.25 } exists = mg:hardwood mg:hardwood = { market_goods_pricier <= 0.25 } exists = mg:wood mg:wood = { market_goods_pricier <= 0.25 } } } } } add = 0.2 }
 				# active_building_shipyard_pm_basic_shipbuilding_output_clippers [economy]; 已启用主要生产方式 pm_basic_shipbuilding 的 clippers 产出高价短缺，且财政、物流和其主要投入可负担时提高扩建候选
 				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_shipyard production_method = pm_basic_shipbuilding } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:clippers mg:clippers = { market_goods_pricier > 0.25 market_goods_delta < 0 } exists = mg:fabric mg:fabric = { market_goods_pricier <= 0.25 } exists = mg:wood mg:wood = { market_goods_pricier <= 0.25 } } } } } add = 0.2 }
-				# coordinated_layered_building_building_shipyard_expansion [economy]; 扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } } add = 0.18 }
+				# building_method_opportunity_building_shipyard_pm_arc_welding_shipbuilding_steamers [market]; 本州已存在建筑实际启用pm_arc_welding_shipbuilding且其真实steamers产出短缺；基础需求不以财政物流与投入全满足为前提
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_shipyard production_method = pm_arc_welding_shipbuilding } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 } } } } } add = 0.08 }
+				# building_method_opportunity_building_shipyard_pm_metal_shipbuilding_steamers [market]; 本州已存在建筑实际启用pm_metal_shipbuilding且其真实steamers产出短缺；基础需求不以财政物流与投入全满足为前提
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_shipyard production_method = pm_metal_shipbuilding } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 } } } } } add = 0.08 }
+				# building_method_opportunity_building_shipyard_pm_complex_shipbuilding_clippers [market]; 本州已存在建筑实际启用pm_complex_shipbuilding且其真实clippers产出短缺；基础需求不以财政物流与投入全满足为前提
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_shipyard production_method = pm_complex_shipbuilding } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 } } } } } add = 0.08 }
+				# building_method_opportunity_building_shipyard_pm_basic_shipbuilding_clippers [market]; 本州已存在建筑实际启用pm_basic_shipbuilding且其真实clippers产出短缺；基础需求不以财政物流与投入全满足为前提
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_shipyard production_method = pm_basic_shipbuilding } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
-			min = 0.5000000000000001
+			min = 0.5
 			max = 1.3
 		} }
 		# SITAI END information:building_shipyard.ai_value

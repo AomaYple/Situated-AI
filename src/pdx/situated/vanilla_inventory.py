@@ -733,11 +733,31 @@ def _declared_type_keys(inputs: dict[str, bytes], directory: str) -> frozenset[s
     return frozenset(result)
 
 
-def _institution_definitions(inputs: dict[str, bytes]) -> dict[str, tuple[str, int]]:
+def _stance_definitions(inputs: dict[str, bytes]) -> dict[str, tuple[str, int]]:
+    """Only pinned complete actual stance definitions may select pointer map entries."""
+    data = json.loads(engine_scope.strategy_snapshot())
+    sources = {
+        source: raw
+        for source, raw in inputs.items()
+        if source.endswith(".txt") and "/common/ai_strategic_region_stance_types/" in "/" + source
+    }
+    if set(sources) != set(data["stance_definition_sources"]) or any(
+        hashlib.sha256(raw).hexdigest() != data["stance_definition_sources"][source]
+        for source, raw in sources.items()
+    ):
+        return {}
+    definitions = _ordinary_definitions(sources, "ai_strategic_region_stance_types")
+    expected = {
+        key: (row["source"], row["line"]) for key, row in data["stance_definitions"].items()
+    }
+    return definitions if definitions == expected else {}
+
+
+def _ordinary_definitions(inputs: dict[str, bytes], directory: str) -> dict[str, tuple[str, int]]:
     """Only unique ordinary actual definitions may identify institution map keys."""
     declarations: dict[str, list[tuple[str, Assignment]]] = {}
     for source, raw in inputs.items():
-        if not source.endswith(".txt") or "/common/institutions/" not in "/" + source:
+        if not source.endswith(".txt") or f"/common/{directory}/" not in "/" + source:
             continue
         parsed = parse_bytes(raw, path=source)
         if parsed.errors:
@@ -753,6 +773,11 @@ def _institution_definitions(inputs: dict[str, bytes]) -> dict[str, tuple[str, i
         and rows[0][1].prefix is None
         and isinstance(rows[0][1].value, Block)
     }
+
+
+def _institution_definitions(inputs: dict[str, bytes]) -> dict[str, tuple[str, int]]:
+    """Only unique ordinary actual definitions may identify institution map keys."""
+    return _ordinary_definitions(inputs, "institutions")
 
 
 def _institution_score_map(definition: Assignment, keys: frozenset[str]) -> Block | None:
@@ -2196,7 +2221,12 @@ def _scope(
     if directory == "treaty_articles":
         return _treaty_scope(field, inputs, definition, source)
     if directory == "ai_strategies":
-        if field[0] in {"wargoal_scores", "secret_goal_scores"}:
+        if field[0] in {
+            "wargoal_scores",
+            "secret_goal_scores",
+            "treaty_category_scores",
+            "strategic_region_stance_type_scores",
+        }:
             if (
                 strategy_proof is None
                 or not strategy_proof.verified
@@ -2206,7 +2236,19 @@ def _scope(
             goal_contract = next(
                 (item for item in strategy_proof.consumers if item.field == field[0]), None
             )
-            keys = json.loads(engine_scope.strategy_snapshot())["strategy_score_keys"][field[0]]
+            data = json.loads(engine_scope.strategy_snapshot())
+            stance_definitions = (
+                _stance_definitions(inputs)
+                if field[0] == "strategic_region_stance_type_scores"
+                else {}
+            )
+            keys = (
+                stance_definitions
+                if field[0] == "strategic_region_stance_type_scores"
+                else data["strategy_score_keys"][field[0]]
+            )
+            if not keys:
+                return _Scope()
             goal_scores = _strategy_score_map(definition, field[0], frozenset(keys))
             if goal_contract is None or goal_scores is None:
                 return _Scope()
@@ -2222,7 +2264,7 @@ def _scope(
                 return _Scope(
                     "definition_structure", "none", "secret_goal_entry", "observation", references
                 )
-            if (field[0] == "wargoal_scores" and len(field) == 2) or (
+            if (field[0] != "secret_goal_scores" and len(field) == 2) or (
                 field[0] == "secret_goal_scores" and field[2:] == ("score",)
             ):
                 return _Scope(
@@ -2230,7 +2272,17 @@ def _scope(
                     goal_contract.target,
                     goal_contract.operation,
                     goal_contract.capability,
-                    (*references, f"{source}:{child.line}"),
+                    (
+                        *references,
+                        f"{source}:{child.line}",
+                        *(
+                            (
+                                f"{stance_definitions[field[1]][0]}:{stance_definitions[field[1]][1]}",
+                            )
+                            if field[0] == "strategic_region_stance_type_scores"
+                            else ()
+                        ),
+                    ),
                 )
             return _Scope()
         if field[0] == "institution_scores":
@@ -2444,6 +2496,8 @@ def _candidates(directory: str, block: Block) -> Iterator[tuple[tuple[str, ...],
         if directory == "ai_strategies" and assignment.key in {
             "wargoal_scores",
             "secret_goal_scores",
+            "treaty_category_scores",
+            "strategic_region_stance_type_scores",
         }:
             yield (assignment.key,), assignment
             if isinstance(assignment.value, Block):

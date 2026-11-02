@@ -1443,7 +1443,19 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		# ACTION program_f5f8d2ca42dfbbf3 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_f5f8d2ca42dfbbf3_positive
+			# GROUP program_f5f8d2ca42dfbbf3_institution_administrative_pressure_negative
+			add = { value = 0
+				# social_security_administrative_pressure [political]; 行政赤字独立降低新增社保投资关注，与已知生活压力和违约成本共同计算
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = -0.1 }
+			}
+			# GROUP program_f5f8d2ca42dfbbf3_institution_financing_pressure_negative
+			add = { value = 0
+				# administrative_cost_guard [economy]; 违约且和平时降低新增社会保障制度的支出倾向
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.2 }
+				# social_security_default_pressure [fiscal]; 真实违约在战时和和平都形成社保融资代价；与既有和平违约成本同因择强，正常贷款不另扣分
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_f5f8d2ca42dfbbf3_social_security_need_positive
 			add = { value = 0
 				# coordinated_layered_information_social_stable [political]; 政治压力在稳健能力下提高社会保障制度倾向
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_political = yes sitai_context_need_political = yes sitai_context_known_layer_stable = yes sitai_context_layer_stable = yes } } add = 0.15 }
@@ -1452,6 +1464,8 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 bureaucracy > 0 net_total_income > 0 has_insurrectionary_interest_groups = no in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.12 }
 				# social_welfare_population_pressure [political]; 大人口国家生活水平较低且有行政承载时，提高社会保障制度的原版投资相对权重
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no is_at_war = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population >= 2000000 bureaucracy > 0 } } add = 0.1 }
+				# social_security_direct_living_pressure [political]; 已知低生活水平与实际人口形成社保基础需求；正常借款、净收入或行政不足不消灭需求，独立代价共同计算
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 } } add = 0.08 }
 				# SITAI CHAIN LJ07/LJ07.grain_social_foundation writer=rule_action_mod_decisions_information_toml_lj07_grain_social_foundation
 				# lj07_grain_social_foundation [political]; 根市场粮食价格和供需余额同时显示短缺时，提高社会保障制度的有限基础倾向；原版资格、行政承载、维护和执行继续优先
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy >= 0 net_total_income >= 0 in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.06 }
@@ -1461,12 +1475,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				# lj04_welfare_zero_administration_foundation [political]; 行政缺口实际修复到零且民生需求仍在时提供低强度制度关注，正余量继续使用既有档；不以行政候选当作已修复
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 8 total_population >= 0 total_population > 0 bureaucracy = 0 } } add = 0.02 }
 			}
-			# GROUP program_f5f8d2ca42dfbbf3_negative
-			add = { value = 0
-				# administrative_cost_guard [economy]; 违约且和平时降低新增社会保障制度的支出倾向
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.2 }
-			}
-			min = 0.8
+			min = 0.7000000000000001
 			max = 1.15
 		} }
 		# SITAI END information:institution_scores.institution_social_security
@@ -1506,7 +1515,17 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		# ACTION program_337277355525ba92 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_337277355525ba92_positive
+			# GROUP program_337277355525ba92_institution_administrative_pressure_negative
+			add = { value = 0
+				# school_administrative_pressure [political]; 行政不足独立降低新增学校制度投资关注，不以正行政作低识字基础需求的共同门
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = -0.1 }
+			}
+			# GROUP program_337277355525ba92_institution_financing_pressure_negative
+			add = { value = 0
+				# school_default_pressure [fiscal]; 违约独立降低学校制度新增承诺关注，与教育需求及行政成本共同计算，不因战争隐藏融资代价
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_337277355525ba92_school_education_need_positive
 			add = { value = 0
 				# decisive_school_investment [political]; 强财政政治容量且人口非零时更重视教育制度候选，不以人口规模排除小国
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no legitimacy >= 75 scaled_debt <= 0.2 net_total_income > 0 bureaucracy > 0 total_population >= 0 total_population > 0 } } add = 0.3 }
@@ -1523,7 +1542,7 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 				# education_literacy_capacity [political]; 识字率极低时提供低强度教育基础倾向；不要求先满足财政或行政能力组合
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.35 } } add = 0.1 }
 			}
-			min = 1
+			min = 0.75
 			max = 1.3
 		} }
 		# SITAI END information:institution_scores.institution_schools

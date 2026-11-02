@@ -775,3 +775,219 @@ def test_documented_country_context_cannot_mask_actual_shifted_actor(target, act
     report = native_coverage(_inventory(surface), (instance,))
     assert report["counts"]["actual_covered"] == 0
     assert report["rows"][0]["binding_issues"] == {"rule": "actor_type_mismatch"}
+
+
+_R7_FIELDS = (
+    ("wanted_num_supply_ships", "additive_supply_ship_count_target", "multiply", "none"),
+    ("max_ship_design_complexity", "additive_ship_design_complexity_limit", "multiply", "none"),
+    ("treaty_category_scores.trade", "additive_treaty_category_score", "multiply", "none"),
+    (
+        "strategic_region_stance_type_scores.stance_conquer_region",
+        "additive_region_stance_score",
+        "add",
+        "scope:target_region=strategic_region;scope:region_score=scalar",
+    ),
+)
+
+
+def _r7_context(field):
+    actor = ContextBinding("root", "country", "actor", "native/r7.json", 1)
+    region = field.startswith("strategic_region_stance_type_scores.")
+    return EvaluationContext(
+        actor_scope=actor,
+        targets=(
+            ContextBinding("target_region", "strategic_region", "target", "native/r7.json", 2),
+        )
+        if region
+        else (),
+        auxiliary_scopes=(
+            ContextBinding("region_score", "scalar", "auxiliary", "native/r7.json", 3),
+        )
+        if region
+        else (),
+        evidence=("native/r7.json:1", "native/r7.json:2", "native/r7.json:3"),
+    )
+
+
+@pytest.mark.parametrize(("field", "operation", "writer", "target"), _R7_FIELDS)
+def test_r7_exact_numeric_contracts_join_only_complete_current_objects(
+    field, operation, writer, target
+):
+    surface = _surface(field=field, operation=operation, target_scope=target)
+    instance = _instance(
+        consumer_field=field, operation=writer, evaluation_context=_r7_context(field)
+    )
+    report = native_coverage(_inventory(surface), (instance,))
+    assert report["counts"]["actual_covered"] == 1
+    assert report["binding_issue_count"] == 0
+    for wrong, reason in [
+        (
+            replace(instance, operation="add" if writer == "multiply" else "multiply"),
+            "numeric_consumer_contract_unproven",
+        ),
+        (replace(instance, actor_scope="owner"), "actor_type_mismatch"),
+        (replace(instance, actor_scope="state"), "actor_type_mismatch"),
+        (replace(instance, evaluation_context=None), "evaluation_context_unproven"),
+        (replace(instance, target_scope="target_country"), "target_type_mismatch"),
+    ]:
+        rejected = native_coverage(_inventory(surface), (wrong,))
+        assert rejected["counts"]["actual_covered"] == 0
+        assert rejected["rows"][0]["binding_issues"] == {"rule": reason}
+    for wrong in [
+        replace(surface, operation=operation + "_future"),
+        replace(surface, operation="score"),
+        replace(surface, target_scope="unknown"),
+        replace(surface, target_scope="scope:target_country=country"),
+        replace(surface, capability="observation"),
+        replace(surface, scope_evidence=()),
+    ]:
+        assert native_coverage(_inventory(wrong), (instance,))["counts"]["actual_covered"] == 0
+    other = replace(
+        surface, source="common/ai_strategies/01_admin_strategies.txt", definition="other"
+    )
+    mapped = replace(instance, source=other.source, consumer_field="other." + field)
+    assert native_coverage(_inventory(other), (mapped,))["counts"]["actual_covered"] == 0
+
+
+@pytest.mark.parametrize(("field", "operation", "writer", "target"), _R7_FIELDS)
+@pytest.mark.parametrize("member", ["unit", "operation", "actor_scope", "target_scope"])
+def test_r7_unit_operation_and_object_contract_cannot_be_reinterpreted(
+    monkeypatch, field, operation, writer, target, member
+):
+    data = json.loads(engine_scope.strategy_snapshot())
+    data["consumers"][field.split(".")[0]][member] = "unknown"
+    monkeypatch.setattr(engine_scope, "strategy_snapshot", lambda: json.dumps(data).encode())
+    surface = _surface(field=field, operation=operation, target_scope=target)
+    instance = _instance(
+        consumer_field=field, operation=writer, evaluation_context=_r7_context(field)
+    )
+    report = native_coverage(_inventory(surface), (instance,))
+    assert report["counts"]["actual_covered"] == 0
+    assert report["rows"][0]["binding_issues"] == {"rule": "numeric_consumer_contract_unproven"}
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "treaty_category_scores",
+        "treaty_category_scores.unknown",
+        "treaty_category_scores.trade_extra",
+        "treaty_category_scores.trade.value",
+        "strategic_region_stance_type_scores",
+        "strategic_region_stance_type_scores.unknown",
+        "strategic_region_stance_type_scores.stance_conquer_region_extra",
+        "strategic_region_stance_type_scores.stance_conquer_region.value",
+        "wanted_num_supply_ships.value",
+        "max_ship_design_complexity.value",
+    ],
+)
+def test_r7_parent_unknown_key_and_nonexact_path_never_borrow_numeric_authorization(field):
+    family = field.split(".")[0]
+    contract = json.loads(engine_scope.strategy_snapshot())["consumers"][family]
+    surface = _surface(
+        field=field, operation=contract["operation"], target_scope=contract["target_scope"]
+    )
+    instance = _instance(
+        consumer_field=field,
+        operation="add" if family == "strategic_region_stance_type_scores" else "multiply",
+        evaluation_context=_r7_context(field),
+    )
+    report = native_coverage(_inventory(surface), (instance,))
+    assert report["counts"]["actual_covered"] == 0
+    assert report["rows"][0]["binding_issues"] == {"rule": "numeric_consumer_contract_unproven"}
+
+
+@pytest.mark.parametrize(
+    "damage", ["region_missing", "scalar_missing", "region_wrong", "scalar_wrong", "extra_object"]
+)
+def test_r7_region_target_and_scalar_auxiliary_cannot_be_erased_or_replaced(damage):
+    field, operation, writer, target = _R7_FIELDS[-1]
+    context = _r7_context(field)
+    if damage == "region_missing":
+        context = replace(context, targets=())
+    elif damage == "scalar_missing":
+        context = replace(context, auxiliary_scopes=())
+    elif damage == "region_wrong":
+        context = replace(
+            context,
+            targets=(ContextBinding("target_country", "country", "target", "native/r7.json", 2),),
+        )
+    elif damage == "scalar_wrong":
+        context = replace(
+            context,
+            auxiliary_scopes=(ContextBinding("law", "law", "auxiliary", "native/r7.json", 3),),
+        )
+    else:
+        context = replace(
+            context,
+            auxiliary_scopes=(
+                *context.auxiliary_scopes,
+                ContextBinding("law", "law", "auxiliary", "native/r7.json", 3),
+            ),
+        )
+    surface = _surface(field=field, operation=operation, target_scope=target)
+    instance = _instance(consumer_field=field, operation=writer, evaluation_context=context)
+    report = native_coverage(_inventory(surface), (instance,))
+    assert report["counts"]["actual_covered"] == 0
+    assert report["rows"][0]["binding_issues"] == {"rule": "target_type_mismatch"}
+
+
+def test_r7_maps_keep_the_original_parent_denominator_and_exact_proven_key_set():
+    data = json.loads(engine_scope.strategy_snapshot())
+    for family in ("treaty_category_scores", "strategic_region_stance_type_scores"):
+        contract = data["consumers"][family]
+        keys = (
+            data["strategy_score_keys"][family]
+            if family == "treaty_category_scores"
+            else data["stance_definitions"]
+        )
+        parent = _surface(
+            field=family,
+            actor_scope="definition_structure",
+            operation="strategy_score_map",
+            capability="observation",
+        )
+        leaves = tuple(
+            _surface(
+                field=family + "." + key,
+                operation=contract["operation"],
+                target_scope=contract["target_scope"],
+            )
+            for key in keys
+        )
+        instances = tuple(
+            _instance(
+                key,
+                consumer_field=row.field,
+                operation="add" if family == "strategic_region_stance_type_scores" else "multiply",
+                evaluation_context=_r7_context(row.field),
+            )
+            for key, row in zip(keys, leaves, strict=True)
+        )
+        report = native_coverage(_inventory(parent, *leaves), instances)
+        assert report["denominator"] == len(keys) + 1
+        assert report["counts"]["actual_covered"] == len(keys)
+        assert report["observation"] == [parent.declaration_id]
+        assert report["binding_issue_count"] == 0
+
+
+def test_r7_all_current_27_production_writers_pass_the_exact_s4_numeric_join():
+    from pdx.situated import compiler
+    from pdx.situated.domain_coverage import _native_context_issue
+
+    model = compiler.load_model()
+    data = json.loads(engine_scope.strategy_snapshot())
+    selected = [
+        row
+        for row in model.action_instances
+        if row.consumer_field.removeprefix("ai_strategy_default.").split(".")[0]
+        in {row[0].split(".")[0] for row in _R7_FIELDS}
+    ]
+    assert len(selected) == 27
+    for instance in selected:
+        field = instance.consumer_field.removeprefix("ai_strategy_default.")
+        contract = data["consumers"][field.split(".")[0]]
+        surface = _surface(
+            field=field, operation=contract["operation"], target_scope=contract["target_scope"]
+        )
+        assert _native_context_issue(instance, surface) is None

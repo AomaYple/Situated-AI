@@ -22983,31 +22983,6 @@ why = "可观察社会结构决定具体改革议程，财政行政能力约束�
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
 
 [[rules]]
-source = "common/buildings/01_industry.txt"
-id = "coordinated_layered_building_building_shipyard_recovery"
-field = "building_shipyard.ai_value"
-domain = "economy"
-priority = -2
-operation = "multiply"
-value = 0.9
-conditions = [{ fact = "coord_owner_layer_recovery", op = "=", value = true }]
-why = "恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-source = "common/buildings/01_industry.txt"
-id = "coordinated_layered_building_building_shipyard_expansion"
-field = "building_shipyard.ai_value"
-domain = "economy"
-priority = -1
-contribution_group = "building_output_demand"
-operation = "multiply"
-value = 1.18
-conditions = [{ fact = "coord_owner_layer_expansion", op = "=", value = true }]
-why = "扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
 source = "common/buildings/03_mines.txt"
 id = "coordinated_layered_building_building_gold_mine_recovery"
 field = "building_gold_mine.ai_value"
@@ -25112,3 +25087,92 @@ conditions = [
 ]
 why = "所属市场已存在真实汽车总消费且汽车卖单不低于买单，为未来人口采用汽车并受益于道路消费基建系数提供低强度市场可用性机会代理；正消费排除只有供给却无人使用的情形，非负订单差排除当前市场供给不足，倍率只作有限设计判断"
 counterexample = "总消费可能来自公共马车、军队或同市场外国，不证明本国人口汽车消费、实际消费数量、同州基建缺口或精确新增基础设施；这些事实未作为已知输入。此规则明确采用较弱机会代理，不把市场sell_orders单独冒充消费，也不把公共马车投入当人口消费。任一核心读数未知、消费零或订单差负则局部退出；不要求候选科技已研究，不改原版elevator前置与研究成本。玩家与关闭模块保留原版"
+
+[readers.pm_active_building_government_administration_pm_horizontal_drawer_cabinets]
+engine = "is_production_method_active"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+parameters = { building_type = "building_government_administration", production_method = "pm_horizontal_drawer_cabinets" }
+
+[readers.pm_active_building_government_administration_pm_vertical_filing_cabinets]
+engine = "is_production_method_active"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+parameters = { building_type = "building_government_administration", production_method = "pm_vertical_filing_cabinets" }
+
+[readers.pm_active_building_government_administration_pm_switch_boards]
+engine = "is_production_method_active"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+parameters = { building_type = "building_government_administration", production_method = "pm_switch_boards" }
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "administrative_input_government_pm_horizontal_drawer_cabinets_paper"
+field = "building_government_administration.ai_value"
+domain = "economy"
+contribution_group = "administrative_active_inputs"
+priority = 45101
+operation = "multiply"
+value = 0.80
+conditions = [
+  { fact = "pm_active_building_government_administration_pm_horizontal_drawer_cabinets", op = "=", value = true },
+  { fact = "state_owner_paper_price", op = ">", value = 0.5 },
+  { fact = "state_owner_paper_balance", op = "<", value = 0 },
+]
+why = "政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强"
+counterexample = "未启用该配方或投入未知时只退出本代价；简单组织不耗纸，非交换机配方不因电话涨价受罚；不改变原版配方、行政产出、资格、实际成本或建造执行"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "administrative_input_government_pm_vertical_filing_cabinets_paper"
+field = "building_government_administration.ai_value"
+domain = "economy"
+contribution_group = "administrative_active_inputs"
+priority = 45102
+operation = "multiply"
+value = 0.80
+conditions = [
+  { fact = "pm_active_building_government_administration_pm_vertical_filing_cabinets", op = "=", value = true },
+  { fact = "state_owner_paper_price", op = ">", value = 0.5 },
+  { fact = "state_owner_paper_balance", op = "<", value = 0 },
+]
+why = "政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强"
+counterexample = "未启用该配方或投入未知时只退出本代价；简单组织不耗纸，非交换机配方不因电话涨价受罚；不改变原版配方、行政产出、资格、实际成本或建造执行"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "administrative_input_government_pm_switch_boards_paper"
+field = "building_government_administration.ai_value"
+domain = "economy"
+contribution_group = "administrative_active_inputs"
+priority = 45103
+operation = "multiply"
+value = 0.80
+conditions = [
+  { fact = "pm_active_building_government_administration_pm_switch_boards", op = "=", value = true },
+  { fact = "state_owner_paper_price", op = ">", value = 0.5 },
+  { fact = "state_owner_paper_balance", op = "<", value = 0 },
+]
+why = "政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强"
+counterexample = "未启用该配方或投入未知时只退出本代价；简单组织不耗纸，非交换机配方不因电话涨价受罚；不改变原版配方、行政产出、资格、实际成本或建造执行"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "administrative_input_government_pm_switch_boards_telephones"
+field = "building_government_administration.ai_value"
+domain = "economy"
+contribution_group = "administrative_active_inputs"
+priority = 45104
+operation = "multiply"
+value = 0.80
+conditions = [
+  { fact = "pm_active_building_government_administration_pm_switch_boards", op = "=", value = true },
+  { fact = "state_owner_telephones_price", op = ">", value = 0.5 },
+  { fact = "state_owner_telephones_balance", op = "<", value = 0 },
+]
+why = "政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强"
+counterexample = "未启用该配方或投入未知时只退出本代价；简单组织不耗纸，非交换机配方不因电话涨价受罚；不改变原版配方、行政产出、资格、实际成本或建造执行"

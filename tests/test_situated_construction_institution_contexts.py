@@ -38,7 +38,6 @@ def test_snapshot_authorizes_only_exact_construction_and_institution_consumers()
             "wanted_construction_input_goods_surplus_ratio",
             "wanted_construction_ratio",
             "desired_tax_level",
-            "max_ship_design_complexity",
             "max_institution_spending",
         }
         & contracts.keys()
@@ -75,6 +74,10 @@ def construction_institution_proof(tmp_path, monkeypatch):
         path.write_bytes(raw)
         inputs[source] = raw
         data["institution_definition_sources"][source] = hashlib.sha256(raw).hexdigest()
+    for source, raw_hex in data["stance_definition_bytes"].items():
+        path = game / source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(bytes.fromhex(raw_hex))
     manifest = tmp_path / "strategy.json"
 
     def freeze():
@@ -347,7 +350,7 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
         if row.field.removeprefix("ai_strategy_default.") == "wanted_construction_output"
         or row.field.removeprefix("ai_strategy_default.").startswith("institution_scores.")
     ]
-    assert len(selected) == 52
+    assert len(selected) == 57
     for writer in selected:
         instance = instances[writer.writer_id]
         assert writer.evaluation_context == instance.evaluation_context

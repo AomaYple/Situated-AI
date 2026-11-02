@@ -14,7 +14,7 @@ import tomllib
 from dataclasses import dataclass, replace
 from itertools import pairwise
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from . import (
     building_opportunities,
@@ -22,6 +22,7 @@ from . import (
     config,
     decision_intents,
     decision_rules,
+    equipment_opportunities,
     observation_queries,
     production_inputs,
 )
@@ -109,6 +110,16 @@ def writes(
     return tuple(values)
 
 
+def _merge_derivation(data: dict[str, Any], derived: Mapping[str, Any], label: str) -> None:
+    """Merge one derivation without accepting a conflicting source or reader."""
+    for collection in ("sources", "readers"):
+        for key, value in derived[collection].items():
+            if key in data[collection] and data[collection][key] != value:
+                raise ValueError(f"{label}与消费者源冲突：{collection}/{key}")
+            data[collection][key] = value
+    data["rules"].extend(derived["rules"])
+
+
 def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = None) -> AdapterSet:
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
@@ -124,6 +135,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         raise ValueError("消费者适配 schema 无效")
     sector_digest = None
     opportunity_digest = None
+    equipment_digest = None
     if source == SOURCE:
         if (
             not isinstance(data["sources"], dict)
@@ -138,26 +150,26 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         derived = {
             "sources": {**sectors["sources"], **company_sectors.query_source_hashes(sectors)},
             "readers": sectors["readers"],
+            "rules": sectors["rules"],
         }
-        for collection in ("sources", "readers"):
-            for key, value in derived[collection].items():
-                if key in data[collection] and data[collection][key] != value:
-                    raise ValueError(f"公司部门派生与消费者源冲突：{collection}/{key}")
-                data[collection][key] = value
-        data["rules"].extend(sectors["rules"])
+        _merge_derivation(data, derived, "公司部门派生")
         data.setdefault("initial_values", []).extend(company_sectors.initialized_fields(sectors))
         sector_digest = hashlib.sha256(company_sectors.BASELINE.read_bytes()).hexdigest()
         opportunity = building_opportunities.derive(data, sectors)
-        for collection in ("sources", "readers"):
-            for key, value in opportunity[collection].items():
-                if key in data[collection] and data[collection][key] != value:
-                    raise ValueError(f"建筑基础机会与消费者源冲突：{collection}/{key}")
-                data[collection][key] = value
-        data["rules"].extend(opportunity["rules"])
+        _merge_derivation(data, opportunity, "建筑基础机会")
         opportunity_digest = hashlib.sha256(
             building_opportunities.PARAMETERS.read_bytes()
             + b"\0generator:"
             + Path(building_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        equipment = equipment_opportunities.derive(data)
+        _merge_derivation(data, equipment, "舰船材料机会")
+        equipment_digest = hashlib.sha256(
+            equipment_opportunities.BASELINE.read_bytes()
+            + b"\0parameters:"
+            + equipment_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(equipment_opportunities.__file__).read_bytes()
         ).hexdigest()
     if not isinstance(data["sources"], dict) or not data["sources"]:
         raise ValueError("消费者适配必须锁定全部原件")
@@ -199,6 +211,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                 "common/technology/technologies/",
                 "common/buildings/",
                 "common/company_types/",
+                "common/ship_modifications/",
             )
         ):
             raise ValueError("只允许适配已登记的数值消费者；事件只能作为读取依据")
@@ -225,6 +238,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             if opportunity_digest
             else b""
         )
+        + (
+            b"\0equipment_opportunities:" + equipment_digest.encode("ascii")
+            if equipment_digest
+            else b""
+        )
     ).hexdigest()
     for name, rules in sorted(groups.items()):
         if name.startswith("common/company_types/") and any(
@@ -234,6 +252,13 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             for rule in rules
         ):
             raise ValueError("公司适配只许可已证明的正倍率基础候选评分字段")
+        if name.startswith("common/ship_modifications/") and any(
+            len(rule["field"].split(".")) != 2
+            or not rule["field"].endswith(".ai_weight")
+            or rule["operation"] != "multiply"
+            for rule in rules
+        ):
+            raise ValueError("舰船改装适配只许可已证明的具名候选评分块")
         expected_actor = ["owner"] if name.startswith("common/buildings/") else []
         if actors.get(name, []) != expected_actor:
             raise ValueError("消费者 AI 所有者与锁定接口作用域不一致")

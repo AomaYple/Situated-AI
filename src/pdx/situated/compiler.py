@@ -413,6 +413,34 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             ),
         }
     )
+    specs.update(
+        {
+            "treaty_category_scores": (
+                None,
+                "additive_treaty_category_score",
+                "score",
+                "0x141643aa9",
+            ),
+            "strategic_region_stance_type_scores": (
+                None,
+                "additive_region_stance_score",
+                "score",
+                "0x14164842a",
+            ),
+            "wanted_num_supply_ships": (
+                None,
+                "additive_supply_ship_count_target",
+                "ships",
+                "0x1415ad63f",
+            ),
+            "max_ship_design_complexity": (
+                None,
+                "additive_ship_design_complexity_limit",
+                "modification_levels",
+                "0x1414b716c",
+            ),
+        }
+    )
     result = {}
     source = engine_scope.STRATEGY_MANIFEST_ID
     for field, (target, operation, unit, address) in specs.items():
@@ -425,6 +453,8 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 if target is not None
                 else "definition_only:institution_type"
                 if field == "institution_scores"
+                else "scope:target_region=strategic_region;scope:region_score=scalar"
+                if field == "strategic_region_stance_type_scores"
                 else "scope:law=law"
                 if field == "min_law_chance_to_pass"
                 else "scope:diplomatic_play=diplomatic_play"
@@ -481,6 +511,12 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             if target_binding is not None and field == "wargoal_scores"
             else (target_binding,)
             if target_binding is not None
+            else (
+                decision_ir.ContextBinding(
+                    "target_region", "strategic_region", "target", source, locations["target_scope"]
+                ),
+            )
+            if field == "strategic_region_stance_type_scores"
             else (),
             auxiliary_scopes=(
                 decision_ir.ContextBinding(
@@ -498,6 +534,12 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 ),
             )
             if field == "diplomatic_play_boldness"
+            else (
+                decision_ir.ContextBinding(
+                    "region_score", "scalar", "auxiliary", source, locations["target_scope"]
+                ),
+            )
+            if field == "strategic_region_stance_type_scores"
             else (),
             evidence=(
                 f"{source}:{actor.line}",
@@ -557,10 +599,21 @@ def _frozen_strategy_score_contexts(
     parsed = parse_text(raw.decode("utf-8-sig"))
     definitions = [item for item in parsed.top_assignments if item.key == "ai_strategy_default"]
     result = {}
-    for family in ("wargoal_scores", "secret_goal_scores"):
+    for family in (
+        "wargoal_scores",
+        "secret_goal_scores",
+        "treaty_category_scores",
+        "strategic_region_stance_type_scores",
+    ):
         scores = (
             vanilla_inventory._strategy_score_map(
-                definitions[0], family, frozenset(data["strategy_score_keys"][family])
+                definitions[0],
+                family,
+                frozenset(
+                    data["stance_definitions"]
+                    if family == "strategic_region_stance_type_scores"
+                    else data["strategy_score_keys"][family]
+                ),
             )
             if not parsed.errors and len(definitions) == 1
             else None
@@ -613,6 +666,38 @@ def _frozen_company_context() -> decision_ir.EvaluationContext:
     )
 
 
+def _frozen_ship_modification_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Keep the actual named candidate even when material readers use only ROOT."""
+    from .. import equipment_opportunities  # noqa: PLC0415, TID252
+
+    data = equipment_opportunities.load_baseline()
+    raw = equipment_opportunities.BASELINE.read_text(encoding="utf-8")
+    source = equipment_opportunities.BASELINE.relative_to(REPO).as_posix()
+    actor_line = raw.count("\n", 0, raw.index('"actor": "country"')) + 1
+    target_line = (
+        raw.count("\n", 0, raw.index('"target": "scope:ship_modification_type=ship_modification"'))
+        + 1
+    )
+    context = decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, actor_line),
+        targets=(
+            decision_ir.ContextBinding(
+                "ship_modification_type", "ship_modification", "candidate", source, target_line
+            ),
+        ),
+        evidence=(
+            f"{source}:{actor_line}",
+            f"{source}:{target_line}",
+            f"{source}:sha256={equipment_opportunities.BASELINE_SHA256}",
+        ),
+    )
+    return {
+        (row["source"], f"{identity}.ai_weight"): context
+        for identity, row in data["candidates"].items()
+        if row["weight_shape"] == "block" and row["scope_status"] == "direct"
+    }
+
+
 def validate_context_readers(
     field: str,
     context: decision_ir.EvaluationContext,
@@ -630,9 +715,19 @@ def validate_context_readers(
             raise ValueError(f"消费者 {field} 不是已证明的精确制度数值子块")
         field = "institution_scores"
     family = field.split(".")[0]
-    if family in {"wargoal_scores", "secret_goal_scores"}:
+    if family in {
+        "wargoal_scores",
+        "secret_goal_scores",
+        "treaty_category_scores",
+        "strategic_region_stance_type_scores",
+    }:
         parts = field.split(".")
-        keys = json.loads(engine_scope.strategy_snapshot())["strategy_score_keys"][family]
+        score_data = json.loads(engine_scope.strategy_snapshot())
+        keys = (
+            score_data["stance_definitions"]
+            if family == "strategic_region_stance_type_scores"
+            else score_data["strategy_score_keys"][family]
+        )
         if (
             len(parts) != (3 if family == "secret_goal_scores" else 2)
             or parts[1] not in keys
@@ -678,6 +773,18 @@ def validate_context_readers(
         "root": ("country", "actor"),
         "target_country": ("country", "target"),
     }
+    shapes["treaty_category_scores"] = {"root": ("country", "actor")}
+    shapes["strategic_region_stance_type_scores"] = {
+        "root": ("country", "actor"),
+        "target_region": ("strategic_region", "target"),
+        "region_score": ("scalar", "auxiliary"),
+    }
+    shapes["ship_modification.ai_weight"] = {
+        "root": ("country", "actor"),
+        "ship_modification_type": ("ship_modification", "candidate"),
+    }
+    shapes["wanted_num_supply_ships"] = {"root": ("country", "actor")}
+    shapes["max_ship_design_complexity"] = {"root": ("country", "actor")}
     shapes["wanted_navy_size"] = {"root": ("country", "actor")}
     shapes["ship_construction_output_multiplier"] = {"root": ("country", "actor")}
     for scalar in (
@@ -720,6 +827,11 @@ def validate_context_readers(
     if (
         field
         in {
+            "treaty_category_scores",
+            "strategic_region_stance_type_scores",
+            "wanted_num_supply_ships",
+            "max_ship_design_complexity",
+            "ship_modification.ai_weight",
             "recklessness",
             "wargoal_maneuvers_fraction",
             "wanted_construction_output",
@@ -1409,6 +1521,7 @@ def load_model(
     observed_contexts.update(_frozen_strategy_score_contexts(observed_contexts))
     law_context = _frozen_law_context()
     company_context = _frozen_company_context()
+    ship_modification_contexts = _frozen_ship_modification_contexts()
     context_readers = {}
     instance_contexts = {}
     for source, policy in (("mod/decisions/information.toml", information), *adapters.policies):
@@ -1432,7 +1545,13 @@ def load_model(
                     "mod/decisions/information.toml",
                     "common/ai_strategies/00_default_strategy.txt",
                 }
-                and family in {"wargoal_scores", "secret_goal_scores"}
+                and family
+                in {
+                    "wargoal_scores",
+                    "secret_goal_scores",
+                    "treaty_category_scores",
+                    "strategic_region_stance_type_scores",
+                }
                 and (field == family or field not in observed_contexts)
             ):
                 raise ValueError(f"目标策略消费者不是精确普通数值子块：{field}")
@@ -1451,7 +1570,7 @@ def load_model(
                 if source.startswith("common/company_types/")
                 and len(rule.field) == 2
                 and rule.field[-1] == "ai_weight"
-                else None
+                else ship_modification_contexts.get((source, field))
             )
             if context is not None:
                 instance_contexts[(source, rule.id)] = context
@@ -1460,6 +1579,8 @@ def load_model(
                     if source.startswith("common/laws/")
                     else "company.ai_weight"
                     if source.startswith("common/company_types/")
+                    else "ship_modification.ai_weight"
+                    if (source, field) in ship_modification_contexts
                     else field
                 )
                 context_readers[(source, rule.id)] = validate_context_readers(
@@ -1475,6 +1596,8 @@ def load_model(
         *(reader for _, policy in adapters.policies for reader in policy.readers),
     )
     scalar_card_fields = {
+        "wanted_num_supply_ships",
+        "max_ship_design_complexity",
         "recklessness",
         "wargoal_maneuvers_fraction",
         "aggression",

@@ -2,8 +2,8 @@
 
 当前开发候选为 `Situated AI 3.1.0rc2`，计划尚未完成，候选包须按最终冻结源重建；最近的非RC交付为 `3.0.1`。
 
-新一轮[架构主计划](docs/design/架构主计划.md)已落盘，待用户评审，实施未开始；实现分解见[架构子计划](docs/design/架构子计划.md)。
-旧 31.4 行动层深化保持暂停且未完成。当前源码事实、失败与下一动作见[当前工作清单](docs/design/当前工作清单.md)。
+[架构主计划](docs/design/架构主计划.md)已经授权并持续实施；方向拆解见[架构子计划](docs/design/架构子计划.md)。
+旧计划只作迁移参考。当前源码事实、尚未完成的功能与下一动作见[当前工作清单](docs/design/当前工作清单.md)。
 
 [![CI](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml/badge.svg)](https://github.com/AomaYple/Situated-AI/actions/workflows/codeql.yml)

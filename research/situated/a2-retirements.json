@@ -400,6 +400,40 @@
     },
     {
       "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_shipyard_expansion",
+      "field": "building_shipyard.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "船厂改为已观察具体生产方式的基础产出需求及独立违约和物流成本；取消无具体需求的全国扩张/恢复通用倍率。",
+      "replacements": [
+        "building_method_opportunity_building_shipyard_pm_basic_shipbuilding_clippers",
+        "building_method_opportunity_building_shipyard_pm_complex_shipbuilding_clippers",
+        "building_method_opportunity_building_shipyard_pm_metal_shipbuilding_steamers",
+        "building_method_opportunity_building_shipyard_pm_arc_welding_shipbuilding_steamers"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py::test_shipyard_basic_need_does_not_require_all_capacity_and_input_gates"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_shipyard_recovery",
+      "field": "building_shipyard.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "船厂改为已观察具体生产方式的基础产出需求及独立违约和物流成本；取消无具体需求的全国扩张/恢复通用倍率。",
+      "replacements": [
+        "building_opportunity_building_shipyard_default_cost",
+        "building_opportunity_building_shipyard_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py::test_shipyard_basic_need_does_not_require_all_capacity_and_input_gates"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
       "definition": "coordinated_layered_building_building_steel_mill_expansion",
       "field": "building_steel_mill.ai_value",
       "actor": "owner",

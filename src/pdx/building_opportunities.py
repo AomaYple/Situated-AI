@@ -6,6 +6,9 @@ The result is a recipe opportunity, never proof of the current local output,
 profitability, resources, technology or vanilla construction eligibility.
 Observed default and local infrastructure deficits add independent preference
 costs. These static adjustments neither pay nor reserve construction resources.
+When mandatory alternatives have different market outputs, an independently
+registered exact active-method reader can identify a low-tier local opportunity;
+the potential output union alone never licenses such a rule.
 """
 
 from __future__ import annotations
@@ -142,6 +145,34 @@ def _outputs(sector: Mapping[str, Any]) -> tuple[list[str], list[dict[str, Any]]
     return sorted(market), reasons
 
 
+def _conditional_outputs(
+    sector: Mapping[str, Any], old_readers: Mapping[str, Any]
+) -> list[tuple[str, str, str]]:
+    """Observe an existing mandatory method; never guess a new building's PM."""
+    result: list[tuple[str, str, str]] = []
+    for group in sector["groups"]:
+        if not group["base"]:
+            continue
+        for method in group["methods"]:
+            key = f"pm_active_{sector['id']}_{method['id']}"
+            if key not in old_readers:
+                continue
+            expected = {
+                "engine": "is_production_method_active",
+                "scope": "root",
+                "kind": "boolean",
+                "unit": "boolean",
+                "parameters": {"building_type": sector["id"], "production_method": method["id"]},
+            }
+            if old_readers[key] != expected:
+                raise ValueError("建筑方法机会的active PM reader身份漂移")
+            result.extend(
+                (method["id"], key, good)
+                for good in sorted(set(method["outputs"]) & set(sector["market_outputs"]))
+            )
+    return result
+
+
 def derive(
     adapters: Mapping[str, Any],
     baseline: Mapping[str, Any] | None = None,
@@ -194,6 +225,7 @@ def derive(
     readers: dict[str, Any] = {}
     rules: list[dict[str, Any]] = []
     covered: list[dict[str, Any]] = []
+    conditional_covered: list[dict[str, Any]] = []
     uncovered: list[dict[str, Any]] = []
     cost_readers: dict[str, dict[str, Any]] = {
         "state_owner_default": {
@@ -223,6 +255,36 @@ def derive(
         uncovered.extend({**identity, **reason} for reason in reasons)
         if goods:
             covered.append({**identity, "goods": goods})
+        # Ordinary shared outputs already have an ungated basic tier. For a
+        # varying mandatory output, bind only to an exact existing PM reader.
+        # No source, default field, technology or active recipe is invented.
+        conditional = _conditional_outputs(sector, old_readers) if not goods else []
+        for method, fact, good in conditional:
+            balance_key = f"state_owner_{good}_balance"
+            expected = _reader(good, "balance")
+            if balance_key in old_readers and old_readers[balance_key] != expected:
+                raise ValueError("建筑方法机会state-owner reader身份漂移")
+            readers[balance_key] = expected
+            readers[fact] = old_readers[fact]
+            rules.append(
+                {
+                    "id": f"building_method_opportunity_{building}_{method}_{good}",
+                    "source": source,
+                    "field": field,
+                    "domain": "market",
+                    "operation": "multiply",
+                    "value": chosen["demand_multiplier"],
+                    "priority": int(chosen["priority_base"]) + len(rules),
+                    "contribution_group": "building_output_demand",
+                    "conditions": [
+                        {"fact": fact, "op": "=", "value": True},
+                        {"fact": balance_key, "op": "<", "value": 0.0},
+                    ],
+                    "why": f"本州已存在建筑实际启用{method}且其真实{good}产出短缺；基础需求不以财政物流与投入全满足为前提",
+                    "counterexample": "缺失或未知PM不推定新建配方；候选获分不代表建设或供给完成，独立成本与原版资格、费用、玩家和尾部保留",
+                }
+            )
+            conditional_covered.append({**identity, "method": method, "good": good, "reader": fact})
         for good in goods:
             for tier in ("balance", "price"):
                 key = f"state_owner_{good}_{tier}"
@@ -260,7 +322,7 @@ def derive(
                         "counterexample": "配方机会不是active PM或当前产出；未知局部退出，饱和退出，保留原版资格、实际成本、玩家与尾部",
                     }
                 )
-        if goods:
+        if goods or conditional:
             for name, fact, op, value, group, why in (
                 (
                     "default",
@@ -303,5 +365,6 @@ def derive(
         "readers": dict(sorted(readers.items())),
         "rules": rules,
         "covered": covered,
+        "conditional_covered": conditional_covered,
         "uncovered": uncovered,
     }

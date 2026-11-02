@@ -28,7 +28,7 @@ def test_min_law_contract_has_country_actor_and_actual_law_instance():
         "parser_va": "0x1416418b2",
         "member_offset": "0x9b8",
     }
-    assert len(data["observations"]) == 388
+    assert len(data["observations"]) == 452
     assert data["law_instance_type"]["scope_tag"] == "0x31"
     assert data["law_instance_type"]["native_type"] == "CCountryLaw"
 
@@ -62,6 +62,10 @@ def min_law_proof(tmp_path, monkeypatch):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(raw)
         data["institution_definition_sources"][source] = hashlib.sha256(raw).hexdigest()
+    for source, raw_hex in data["stance_definition_bytes"].items():
+        path = game / source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(bytes.fromhex(raw_hex))
     manifest = tmp_path / "strategy.json"
 
     def freeze():

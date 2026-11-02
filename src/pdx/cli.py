@@ -2610,6 +2610,7 @@ def modgen_cmd(
     try:
         if write:
             company_sectors.write_baseline(config.GAME)
+            distribution.equipment_opportunities.write_baseline(config.GAME)
             binding_count = situated_bindings.write()
             domain_count = situated_domain_coverage.write_counts()
             console.print(

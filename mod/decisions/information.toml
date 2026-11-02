@@ -374,6 +374,7 @@ maximum = 1
 id = "education_literacy_capacity"
 domain = "political"
 field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
 priority = 40
 value = 1.10
 conditions = [{ fact = "literacy", op = "<", value = 0.35 }]
@@ -384,6 +385,7 @@ counterexample = "不直接提高识字率、学校等级或财政；原版资�
 id = "lj04_welfare_zero_administration_foundation"
 domain = "political"
 field = "institution_scores.institution_social_security"
+contribution_group = "social_security_need"
 priority = 46
 value = 1.02
 conditions = [
@@ -399,6 +401,7 @@ counterexample = "零余量不创造制度等级或资格，原版实际成本�
 id = "social_welfare_population_pressure"
 domain = "political"
 field = "institution_scores.institution_social_security"
+contribution_group = "social_security_need"
 priority = 45
 value = 1.10
 conditions = [
@@ -415,6 +418,7 @@ counterexample = "人口、生活水平或行政能力未知时回退原版；�
 id = "social_welfare_local_foundation"
 domain = "political"
 field = "institution_scores.institution_social_security"
+contribution_group = "social_security_need"
 priority = 44
 value = 1.05
 conditions = [
@@ -430,6 +434,7 @@ counterexample = "违约、需求不成立或承载不足时不介入；未知�
 id = "lj07_grain_social_foundation"
 domain = "political"
 field = "institution_scores.institution_social_security"
+contribution_group = "social_security_need"
 priority = 42020
 operation = "multiply"
 value = 1.06
@@ -447,6 +452,7 @@ counterexample = "不把粮食压力改写成治安或免费福利；任一粮�
 id = "lj07_grain_social_capacity"
 domain = "political"
 field = "institution_scores.institution_social_security"
+contribution_group = "social_security_need"
 priority = 42021
 operation = "multiply"
 value = 1.12
@@ -649,6 +655,7 @@ id = "social_school_priority"
 intent = "supported_development"
 domain = "political"
 field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
 priority = 50
 value = 1.15
 conditions = [
@@ -664,6 +671,7 @@ id = "administrative_cost_guard"
 intent = "fiscal_recovery"
 domain = "economy"
 field = "institution_scores.institution_social_security"
+contribution_group = "institution_financing_pressure"
 priority = 50
 value = 0.8
 conditions = [
@@ -937,6 +945,7 @@ id = "decisive_school_investment"
 intent = "decisive_development"
 domain = "political"
 field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
 priority = 70
 value = 1.3
 conditions = [
@@ -1128,6 +1137,7 @@ id = "education_catchup_capacity"
 intent = "supported_development"
 domain = "political"
 field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
 priority = 65
 value = 1.25
 conditions = [
@@ -1145,6 +1155,7 @@ counterexample = "不提高制度等级、不绕过法律或行政容量；战�
 id = "route_education_schools"
 domain = "political"
 field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
 priority = 300
 value = 1.25
 conditions = [ { fact = "route_education", op = "=", value = true } ]
@@ -1270,6 +1281,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 id = "coordinated_layered_information_education_foundation"
 field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
 domain = "political"
 priority = 150
 operation = "multiply"
@@ -1281,6 +1293,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 id = "coordinated_layered_information_education_stable"
 field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
 domain = "political"
 priority = 151
 operation = "multiply"
@@ -1292,6 +1305,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 id = "coordinated_layered_information_social_stable"
 field = "institution_scores.institution_social_security"
+contribution_group = "social_security_need"
 domain = "political"
 priority = 20
 operation = "multiply"
@@ -1484,3 +1498,59 @@ conditions = [
 ]
 why = "本土目标也有行政整合负担；实际行政短缺先于文化联系奖励计入有限机会成本，不惩罚国内生产建设"
 counterexample = "不改变玩家、自有州或全国建设权重，不把文化认同当成征服资格，保留原版零分与限幅；行政恢复后立即退出"
+
+# S2 治理：同需求档位择强，财政与行政代价独立加入真实制度消费者。
+[[rules]]
+id = "social_security_direct_living_pressure"
+domain = "political"
+field = "institution_scores.institution_social_security"
+contribution_group = "social_security_need"
+priority = 45001
+value = 1.08
+conditions = [{ fact = "average_sol", op = "<", value = 8 }, { fact = "population", op = ">", value = 0 }]
+why = "已知低生活水平与实际人口形成社保基础需求；正常借款、净收入或行政不足不消灭需求，独立代价共同计算"
+counterexample = "只提高制度投资的相对关注，不赠福利或人口收益；生活水平或人口未知只退出本需求，原版制度、法律、预算和执行保留"
+
+[[rules]]
+id = "social_security_administrative_pressure"
+domain = "political"
+field = "institution_scores.institution_social_security"
+contribution_group = "institution_administrative_pressure"
+priority = 45002
+value = 0.90
+conditions = [{ fact = "bureaucracy", op = "<", value = 0 }]
+why = "行政赤字独立降低新增社保投资关注，与已知生活压力和违约成本共同计算"
+counterexample = "行政未知不视为健康或赤字，仅退出此成本；不关闭独立需求，不修改原版实际行政支出"
+
+[[rules]]
+id = "social_security_default_pressure"
+domain = "fiscal"
+field = "institution_scores.institution_social_security"
+contribution_group = "institution_financing_pressure"
+priority = 45003
+value = 0.85
+conditions = [{ fact = "default", op = "=", value = true }]
+why = "真实违约在战时和和平都形成社保融资代价；与既有和平违约成本同因择强，正常贷款不另扣分"
+counterexample = "违约未知只退出该成本；不将战争当免费承诺，也不将正常借款等同违约；实际付款与资格仍由原版执行"
+
+[[rules]]
+id = "school_administrative_pressure"
+domain = "political"
+field = "institution_scores.institution_schools"
+contribution_group = "institution_administrative_pressure"
+priority = 45004
+value = 0.90
+conditions = [{ fact = "bureaucracy", op = "<", value = 0 }]
+why = "行政不足独立降低新增学校制度投资关注，不以正行政作低识字基础需求的共同门"
+counterexample = "行政未知只退出本成本，低识字需求保持；不直接改变教育接入、识字率、制度等级和原版成本"
+
+[[rules]]
+id = "school_default_pressure"
+domain = "fiscal"
+field = "institution_scores.institution_schools"
+contribution_group = "institution_financing_pressure"
+priority = 45005
+value = 0.85
+conditions = [{ fact = "default", op = "=", value = true }]
+why = "违约独立降低学校制度新增承诺关注，与教育需求及行政成本共同计算，不因战争隐藏融资代价"
+counterexample = "正常贷款真假不触发违约扣分；违约未知不伪造健康或危机，原版投资资格、支出和执行仍生效"

@@ -29,7 +29,11 @@ FIELDS = (
 
 
 def test_r6_is_an_append_only_revision_with_ten_exact_consumers():
-    data = json.loads(engine_scope.strategy_snapshot())
+    data = json.loads(
+        (
+            engine_scope.REPO / "research/situated/victoria3-1.14.5-strategy-scope-r6.json"
+        ).read_bytes()
+    )
     assert len(data["consumers"]) == 29
     assert len(data["observations"]) == 388
     parent = json.loads(
@@ -44,7 +48,7 @@ def test_r6_is_an_append_only_revision_with_ten_exact_consumers():
 @pytest.fixture
 def scalar_proof(tmp_path, monkeypatch):
     data = json.loads(engine_scope.strategy_snapshot())
-    points = data["observations"][325:]
+    points = data["observations"][325:388]
     assert len(points) == 63
     image = bytearray()
     for point in points:
@@ -193,11 +197,7 @@ def test_native_non_additive_contracts_are_explicit():
         data["consumers"]["diplomatic_play_boldness"]["operation"]
         == "native_randomized_additive_boldness"
     )
-    assert not {
-        "wanted_num_supply_ships",
-        "max_ship_design_complexity",
-        "colonial_interest_ratio",
-    } & set(data["consumers"])
+    assert "colonial_interest_ratio" not in data["consumers"]
 
 
 @pytest.mark.parametrize("field", FIELDS)

@@ -415,6 +415,41 @@ def test_duplicate_adapter_rules_do_not_duplicate_opportunities(adapters, baseli
     assert _derive(adapters, baseline) == derived
 
 
+def test_varying_mandatory_outputs_require_an_exact_registered_active_method(adapters, baseline):
+    reader: dict[str, Any] = {
+        "engine": "is_production_method_active",
+        "scope": "root",
+        "kind": "boolean",
+        "unit": "boolean",
+        "parameters": {"building_type": "building_shipyard", "production_method": "sailing"},
+    }
+    key = "pm_active_building_shipyard_sailing"
+    adapters["readers"][key] = reader
+    derived = _derive(adapters, baseline)
+    assert derived["conditional_covered"] == [
+        {
+            "building": "building_shipyard",
+            "source": BUILDINGS,
+            "field": "building_shipyard.ai_value",
+            "method": "sailing",
+            "good": "clippers",
+            "reader": key,
+        }
+    ]
+    rules = [rule for rule in derived["rules"] if rule["field"] == "building_shipyard.ai_value"]
+    assert len(rules) == 3
+    assert rules[0]["conditions"] == [
+        {"fact": key, "op": "=", "value": True},
+        {"fact": "state_owner_clippers_balance", "op": "<", "value": 0.0},
+    ]
+    assert rules[0]["value"] == 1.08
+    assert "state_owner_steamers_balance" not in derived["readers"]
+    assert "contexts" not in rules[0]
+    reader["parameters"]["building_type"] = "building_mine"
+    with pytest.raises(ValueError, match="active PM reader"):
+        _derive(adapters, baseline)
+
+
 @pytest.mark.parametrize(
     ("key", "value"),
     [
@@ -482,11 +517,19 @@ def test_locked_recipe_consensus_keeps_actual_building_output_differences():
     assert "building_gold_mine" not in covered
     assert "building_railway" not in covered
     assert len(covered) == 41
-    assert len(derived["rules"]) == 168
-    assert len(derived["readers"]) == 72
+    assert len(derived["rules"]) == 174
+    assert len(derived["readers"]) == 78
+    assert {(row["method"], row["good"]) for row in derived["conditional_covered"]} == {
+        ("pm_basic_shipbuilding", "clippers"),
+        ("pm_complex_shipbuilding", "clippers"),
+        ("pm_metal_shipbuilding", "steamers"),
+        ("pm_arc_welding_shipbuilding", "steamers"),
+    }
     assert {rule["field"] for rule in derived["rules"]} <= {rule["field"] for rule in raw["rules"]}
     for key, reader in derived["readers"].items():
-        if key not in {"state_owner_default", "state_infrastructure"}:
+        if key not in {"state_owner_default", "state_infrastructure"} and not key.startswith(
+            "pm_active_"
+        ):
             assert reader["path"][:2] == ["owner", "market"]
         if key in raw["readers"]:
             assert reader == raw["readers"][key]

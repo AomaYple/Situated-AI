@@ -1,0 +1,4388 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.14.5-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54",
+    "bytes": 97774200
+  },
+  "script_hashes": {
+    "common/ai_strategies/00_default_strategy.txt": "fd4b531d39bcd85c3491c703ecb08ea739094f795b13a176765cf559ece3fbee",
+    "common/ai_strategies/01_admin_strategies.txt": "71fd56e5c3d84d0d6a41a417f865d968b2e8dd6e7c5aaf6e104b43a8729989e3",
+    "common/ai_strategies/02_diplomatic_strategies.txt": "07ff62c2e5ce5a45fe6f9f91e18409e8881c630f5e47325a4216cc265de9feae",
+    "common/ai_strategies/02_subject_diplomatic_strategies.txt": "497136d7190bbf02201c3b11adce01db3449ffd538f14820510dc9170100b3da",
+    "common/ai_strategies/03_political_strategies.txt": "c3e3cd9a4ec8d8385f1bbf66a9a6325d510e67101763c213cf1947338c4a1957"
+  },
+  "consumers": {
+    "weight": {
+      "actor_scope": "country",
+      "target_scope": "definition_only:ai_strategy",
+      "operation": "base_candidate_score",
+      "capability": "direct",
+      "unit": "candidate_score",
+      "consumer_va": "0x1414f6cf4"
+    },
+    "possible": {
+      "actor_scope": "country",
+      "target_scope": "definition_only:ai_strategy",
+      "operation": "eligibility",
+      "capability": "direct",
+      "unit": "predicate",
+      "consumer_va": "0x1414f6aeb"
+    },
+    "wanted_army_size": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_army_size_target",
+      "capability": "direct",
+      "unit": "barracks_levels",
+      "consumer_va": "0x14164428d"
+    },
+    "recklessness": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_strength_estimate_multiplier",
+      "capability": "direct",
+      "unit": "multiplier",
+      "consumer_va": "0x1416452bf"
+    },
+    "max_progressiveness": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "override_progressiveness_limit",
+      "capability": "direct",
+      "unit": "progressiveness",
+      "consumer_va": "0x141646ead"
+    },
+    "max_regressiveness": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "override_regressiveness_limit",
+      "capability": "direct",
+      "unit": "regressiveness",
+      "consumer_va": "0x14164703d"
+    },
+    "change_law_chance": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_percentage_chance",
+      "capability": "direct",
+      "unit": "percentage_points",
+      "consumer_va": "0x1416469dd"
+    },
+    "wargoal_maneuvers_fraction": {
+      "actor_scope": "country",
+      "target_scope": "scope:enemy_country=country",
+      "operation": "additive_maneuvers_fraction",
+      "capability": "direct",
+      "unit": "fraction",
+      "consumer_va": "0x141647b8f"
+    },
+    "obligation_value": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_obligation_valuation",
+      "capability": "direct",
+      "unit": "valuation",
+      "consumer_va": "0x14164561f"
+    },
+    "min_law_chance_to_pass": {
+      "actor_scope": "country",
+      "target_scope": "scope:law=law",
+      "operation": "override_pass_chance_threshold",
+      "capability": "direct",
+      "unit": "pass_chance",
+      "consumer_va": "0x141646d23",
+      "parser_va": "0x1416418b2",
+      "member_offset": "0x9b8"
+    },
+    "revolution_aversion": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "override_revolution_aversion",
+      "capability": "direct",
+      "unit": "daily_stop_tendency",
+      "consumer_va": "0x141646b6d"
+    },
+    "subject_value": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_subject_valuation",
+      "capability": "direct",
+      "unit": "valuation",
+      "consumer_va": "0x141645a9f"
+    },
+    "become_subject_value": {
+      "actor_scope": "country",
+      "target_scope": "scope:overlord=country",
+      "operation": "additive_subject_valuation",
+      "capability": "direct",
+      "unit": "valuation",
+      "consumer_va": "0x141645c4f"
+    },
+    "wanted_construction_output": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_construction_output_target",
+      "unit": "construction_output",
+      "capability": "direct",
+      "consumer_va": "0x141646580",
+      "parser_va": "0x14164185e",
+      "member_offset": "0x16a0"
+    },
+    "institution_scores": {
+      "actor_scope": "country",
+      "target_scope": "definition_only:institution_type",
+      "operation": "additive_score",
+      "unit": "score",
+      "capability": "direct",
+      "consumer_va": "0x141644a3a",
+      "parser_va": "0x1416417cc",
+      "member_offset": "0x3d0",
+      "definition_key": "resolved institution definition pointer; not a named script scope"
+    },
+    "wargoal_scores": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country;scope:target_state=state",
+      "operation": "additive_score",
+      "unit": "score",
+      "capability": "direct",
+      "parser_va": "0x141641285",
+      "consumer_va": "0x1416438ea",
+      "member_offset": "0x1d8",
+      "child_projection": "exact enum child numeric body"
+    },
+    "secret_goal_scores": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_score",
+      "unit": "score",
+      "capability": "direct",
+      "parser_va": "0x141641481",
+      "consumer_va": "0x1416436fd",
+      "member_offset": "0x2a0",
+      "child_projection": "exact enum child.score only; trigger remains native filter"
+    },
+    "wanted_navy_size": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_navy_size_target",
+      "unit": "naval_administration_levels",
+      "capability": "direct",
+      "parser_va": "0x141641888",
+      "member_offset": "0x1a60",
+      "consumer_va": "0x1415ad3b7"
+    },
+    "ship_construction_output_multiplier": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_ship_construction_output_multiplier",
+      "unit": "multiplier",
+      "capability": "direct",
+      "parser_va": "0x141641cb2",
+      "member_offset": "0x1be0",
+      "consumer_va": "0x1415adadb"
+    },
+    "aggression": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_country=country",
+      "operation": "additive_aggression",
+      "unit": "play_start_tendency",
+      "capability": "direct",
+      "parser_va": "0x14164154a",
+      "member_offset": "0x1160",
+      "consumer_va": "0x14164546f"
+    },
+    "nationalization_desire": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_nationalization_desire",
+      "unit": "desire",
+      "capability": "direct",
+      "parser_va": "0x141641a74",
+      "member_offset": "0xd78",
+      "consumer_va": "0x141647ecd"
+    },
+    "max_active_stances": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_active_stance_limit",
+      "unit": "count",
+      "capability": "direct",
+      "parser_va": "0x141641ca0",
+      "member_offset": "0x498",
+      "consumer_va": "0x14164805c"
+    },
+    "wanted_marines": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_marine_size_target",
+      "unit": "barracks_levels",
+      "capability": "direct",
+      "parser_va": "0x141641b77",
+      "member_offset": "0x18e0",
+      "consumer_va": "0x14164441d"
+    },
+    "economic_vs_government_spending_balance": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_spending_balance",
+      "unit": "debt_threshold_ratio",
+      "capability": "direct",
+      "parser_va": "0x141641b62",
+      "member_offset": "0x1760",
+      "consumer_va": "0x14164684d"
+    },
+    "target_marine_formation_size": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_marine_formation_size_target",
+      "unit": "units_per_formation",
+      "capability": "direct",
+      "parser_va": "0x141641b8c",
+      "member_offset": "0x19a0",
+      "consumer_va": "0x1416445ad"
+    },
+    "unacceptable_infamy_level": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "first_positive_infamy_limit_override",
+      "unit": "infamy",
+      "capability": "direct",
+      "parser_va": "0x14164145d",
+      "member_offset": "0xfe0",
+      "consumer_va": "0x1416440fd"
+    },
+    "undesirable_infamy_level": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "first_positive_infamy_limit_override",
+      "unit": "infamy",
+      "capability": "direct",
+      "parser_va": "0x14164146f",
+      "member_offset": "0xf20",
+      "consumer_va": "0x141643f6d"
+    },
+    "diplomatic_play_neutrality": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_positive_active_neutrality",
+      "unit": "score",
+      "capability": "direct",
+      "parser_va": "0x141641834",
+      "member_offset": "0x608",
+      "consumer_va": "0x14164783c"
+    },
+    "diplomatic_play_boldness": {
+      "actor_scope": "country",
+      "target_scope": "scope:diplomatic_play=diplomatic_play",
+      "operation": "native_randomized_additive_boldness",
+      "unit": "score",
+      "capability": "direct",
+      "parser_va": "0x141641849",
+      "member_offset": "0x6c0",
+      "consumer_va": "0x1416476aa"
+    },
+    "treaty_category_scores": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_treaty_category_score",
+      "unit": "score",
+      "capability": "direct",
+      "parser_va": "0x141640e0a",
+      "consumer_va": "0x141643aa9",
+      "member_offset": "0x1f0",
+      "child_projection": "exact enum child numeric body"
+    },
+    "strategic_region_stance_type_scores": {
+      "actor_scope": "country",
+      "target_scope": "scope:target_region=strategic_region;scope:region_score=scalar",
+      "operation": "additive_region_stance_score",
+      "unit": "score",
+      "capability": "direct",
+      "parser_va": "0x141641aa8",
+      "consumer_va": "0x14164842a",
+      "member_offset": "0x470",
+      "child_projection": "exact stance definition child numeric body",
+      "definition_key": "resolved strategic region stance definition pointer; not a named script scope"
+    },
+    "wanted_num_supply_ships": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_supply_ship_count_target",
+      "unit": "ships",
+      "capability": "direct",
+      "parser_va": "0x141641bcb",
+      "consumer_va": "0x1415ad63f",
+      "member_offset": "0x1b20"
+    },
+    "max_ship_design_complexity": {
+      "actor_scope": "country",
+      "target_scope": "none",
+      "operation": "additive_ship_design_complexity_limit",
+      "unit": "modification_levels",
+      "capability": "direct",
+      "parser_va": "0x141641bb6",
+      "consumer_va": "0x1414b716c",
+      "member_offset": "0x1d60"
+    }
+  },
+  "observations": [
+    {
+      "label": "vftable",
+      "va": "0x1445ada98",
+      "rva": "0x45ada98",
+      "file_offset": "0x45ace98",
+      "bytes": "486865410100000078797b400100000080d66240010000007072bf430100000050807b400100000080d662400100000090a1ab4401000000"
+    },
+    {
+      "label": "RTTICompleteObjectLocator",
+      "va": "0x144aba168",
+      "rva": "0x4aba168",
+      "file_offset": "0x4ab9568",
+      "bytes": "01000000b820000004000000e8c7460570b9970468a1ab04"
+    },
+    {
+      "label": "TypeDescriptor",
+      "va": "0x14546c7e8",
+      "rva": "0x546c7e8",
+      "file_offset": "0x546b3e8",
+      "bytes": "40d849440100000000000000000000002e3f4156434149537472617465677940"
+    },
+    {
+      "label": "vftable",
+      "va": "0x1445adad0",
+      "rva": "0x45adad0",
+      "file_offset": "0x45aced0",
+      "bytes": "005c634001000000102364410100000080d6624001000000f0a0ab4401000000608464410100000070966441010000009097644101000000"
+    },
+    {
+      "label": "RTTICompleteObjectLocator",
+      "va": "0x144aba190",
+      "rva": "0x4aba190",
+      "file_offset": "0x4ab9590",
+      "bytes": "010000000000000000000000e8c7460570b9970490a1ab04"
+    },
+    {
+      "label": "vftable",
+      "va": "0x1444ce1e0",
+      "rva": "0x44ce1e0",
+      "file_offset": "0x44cd5e0",
+      "bytes": "80d3624001000000102364410100000080d6624001000000f07698440100000048847b40010000000072bf4301000000a07de74001000000"
+    },
+    {
+      "label": "RTTICompleteObjectLocator",
+      "va": "0x1449877b8",
+      "rva": "0x49877b8",
+      "file_offset": "0x4986bb8",
+      "bytes": "010000000000000000000000e0c84605e8b99704b8779804"
+    },
+    {
+      "label": "TypeDescriptor",
+      "va": "0x14546c8e0",
+      "rva": "0x546c8e0",
+      "file_offset": "0x546b4e0",
+      "bytes": "40d849440100000000000000000000002e3f41563f24545064784e756c6c4f62"
+    },
+    {
+      "label": "vftable",
+      "va": "0x144546908",
+      "rva": "0x4546908",
+      "file_offset": "0x4545d08",
+      "bytes": "a0b6d940010000000072bf430100000080d662400100000050b7da4001000000508280410100000080d6624001000000772900001b280000"
+    },
+    {
+      "label": "RTTICompleteObjectLocator",
+      "va": "0x144a2f958",
+      "rva": "0x4a2f958",
+      "file_offset": "0x4a2ed58",
+      "bytes": "0100000000000000000000009051500550f8a20458f9a204"
+    },
+    {
+      "label": "TypeDescriptor",
+      "va": "0x145505190",
+      "rva": "0x5505190",
+      "file_offset": "0x5503d90",
+      "bytes": "40d849440100000000000000000000002e3f41563f244347616d654462536372"
+    },
+    {
+      "label": "vftable",
+      "va": "0x1445c9b20",
+      "rva": "0x45c9b20",
+      "file_offset": "0x45c8f20",
+      "bytes": "a0a6264101000000c0a861410100000050593543010000003057354301000000e05b354301000000505d35430100000090a6264101000000"
+    },
+    {
+      "label": "RTTICompleteObjectLocator",
+      "va": "0x144ade220",
+      "rva": "0x4ade220",
+      "file_offset": "0x4add620",
+      "bytes": "010000000000000000000000085c5c0590e1ad0420e2ad04"
+    },
+    {
+      "label": "TypeDescriptor",
+      "va": "0x1455c5c08",
+      "rva": "0x55c5c08",
+      "file_offset": "0x55c4808",
+      "bytes": "40d849440100000000000000000000002e3f41563f24434a6f6d696e69536372"
+    },
+    {
+      "label": "weight atom and pointer",
+      "va": "0x1447943f0",
+      "rva": "0x47943f0",
+      "file_offset": "0x47937f0",
+      "bytes": "510200000000000040c8754401000000"
+    },
+    {
+      "label": "possible atom and pointer",
+      "va": "0x14478ec50",
+      "rva": "0x478ec50",
+      "file_offset": "0x478e050",
+      "bytes": "2005000000000000d074754401000000"
+    },
+    {
+      "label": "CAIStrategy parser thunk",
+      "va": "0x1407b8050",
+      "rva": "0x7b8050",
+      "file_offset": "0x7b7450",
+      "bytes": "486341fc482bc8e9948ae800"
+    },
+    {
+      "label": "strategy parser cumulative token arithmetic",
+      "va": "0x141640b57",
+      "rva": "0x1640b57",
+      "file_offset": "0x163ff57",
+      "bytes": "4181e8b50000000f843a0200004183e82c0f84d80100004181e8700100000f84b90100004181e8cf0200000f841d010000"
+    },
+    {
+      "label": "strategy possible parser member and Country tag",
+      "va": "0x141640d09",
+      "rva": "0x1640d09",
+      "file_offset": "0x1640109",
+      "bytes": "4881c190dfffffe8bbf5d20141b805000000488b8790dfffff488bd6488d8f90dfffffff5020"
+    },
+    {
+      "label": "strategy weight parser member",
+      "va": "0x141640d34",
+      "rva": "0x1640d34",
+      "file_offset": "0x1640134",
+      "bytes": "4881c100e0ffff488b01ff5018e9bf100000"
+    },
+    {
+      "label": "strategy constructor main and parser vftables",
+      "va": "0x14163fde3",
+      "rva": "0x163fde3",
+      "file_offset": "0x163f1e3",
+      "bytes": "488d05e6dcf602488907488b470848634804488d059cdcf6024889443908"
+    },
+    {
+      "label": "strategy constructor possible and weight members",
+      "va": "0x14163fe13",
+      "rva": "0x163fe13",
+      "file_offset": "0x163f213",
+      "bytes": "4c8d2d2e50e9024c896f40488d4f48e8d9d6d201488d05ca60e90248894748488d4f70e8e59609ff488d05de5fe902488947484c8d25bb6af0024c89a7b8000000488d8fc0000000e880b775ff"
+    },
+    {
+      "label": "strategy null invokes constructor",
+      "va": "0x1406c7b13",
+      "rva": "0x6c7b13",
+      "file_offset": "0x6c6f13",
+      "bytes": "488b1d9efe360533d241b8c0200000488bcbe88656bb03488d05df41e00348894308c5f9efc0c5f811442430c5fa6f0d99822504c5fa7f4c244040887c24304533c94c8d442430baffffffff488bcbe8e981f70090"
+    },
+    {
+      "label": "strategy null main and parser replacement",
+      "va": "0x1406c7ba4",
+      "rva": "0x6c7ba4",
+      "file_offset": "0x6c6fa4",
+      "bytes": "488d053566e003488903488b430848634804488d05eb65e0034889441908488b430848634804"
+    },
+    {
+      "label": "strategy AI fetches CCountry",
+      "va": "0x1414f69fc",
+      "rva": "0x14f69fc",
+      "file_offset": "0x14f5dfc",
+      "bytes": "498d4d50e8bbdf2dff4889442430"
+    },
+    {
+      "label": "strategy AI candidate iteration",
+      "va": "0x1414f6a41",
+      "rva": "0x14f6a41",
+      "file_offset": "0x14f5e41",
+      "bytes": "4c8bb7800000004863878c0000004d8d3cc64c89bd200500004d3bf70f840c050000c4413957c0c5fb103d28904203498bc74c8b6c24300f1f8400000000004d8b3e4139b7902000000f85cb040000"
+    },
+    {
+      "label": "strategy possible Country tuple and trigger",
+      "va": "0x1414f6ad2",
+      "rva": "0x14f6ad2",
+      "file_offset": "0x14f5ed2",
+      "bytes": "b80500000066894590418b451848894598498d4f40488d5590e840c083ff0fb6f0488d"
+    },
+    {
+      "label": "strategy weight Country tuple",
+      "va": "0x1414f6c30",
+      "rva": "0x14f6c30",
+      "file_offset": "0x14f6030",
+      "bytes": "b80500000066894590418b451848894598"
+    },
+    {
+      "label": "strategy weight three Country slots and context",
+      "va": "0x1414f6caa",
+      "rva": "0x14f6caa",
+      "file_offset": "0x14f60aa",
+      "bytes": "488d4590488985d0000000488d4590488985d8000000488d4590488985e0000000488d85f0000000488985e8000000"
+    },
+    {
+      "label": "strategy weight evaluation",
+      "va": "0x1414f6cd9",
+      "rva": "0x14f6cd9",
+      "file_offset": "0x14f60d9",
+      "bytes": "498d8fc000000048897424204533c94c8d85d0000000488d542438e847338bff"
+    },
+    {
+      "label": "strategy nonpositive rejection",
+      "va": "0x1414f6eb2",
+      "rva": "0x14f6eb2",
+      "file_offset": "0x14f62b2",
+      "bytes": "48837c2438000f8e90000000"
+    },
+    {
+      "label": "strategy random score adjustment",
+      "va": "0x1414f6ebe",
+      "rva": "0x14f6ebe",
+      "file_offset": "0x14f62be",
+      "bytes": "4c8d8d280500004c8b0534d34d04488d542438488d4c2470e875020b00"
+    },
+    {
+      "label": "strategy best comparison",
+      "va": "0x1414f6edb",
+      "rva": "0x14f6edb",
+      "file_offset": "0x14f62db",
+      "bytes": "498b0424498bccff10488b4c243884c0745b483bcb7f56755a448b"
+    },
+    {
+      "label": "strategy scalar compressed dispatch",
+      "va": "0x141641785",
+      "rva": "0x1641785",
+      "file_offset": "0x1640b85",
+      "bytes": "4181c018a4ffff4181f8b00000000f874f0500004963c0488d155de89bfe0fb68402901e64018b8c82441e64014803caffe1"
+    },
+    {
+      "label": "wanted_army_size member parser",
+      "va": "0x141641873",
+      "rva": "0x1641873",
+      "file_offset": "0x1640c73",
+      "bytes": "488d8f68f7ffff488b01488bd6ff5018e97d050000"
+    },
+    {
+      "label": "recklessness member parser",
+      "va": "0x1416417e0",
+      "rva": "0x16417e0",
+      "file_offset": "0x1640be0",
+      "bytes": "488d8fe8efffff488b01488bd6ff5018e910060000"
+    },
+    {
+      "label": "wanted_army_size Country tuple and wrapper call",
+      "va": "0x141644256",
+      "rva": "0x1644256",
+      "file_offset": "0x1643656",
+      "bytes": "b80500000066894424308b431848894424384c89bd90000000488d8f20180000488d859000000048894424204533c94c8d442430488bd6e88eb575ff"
+    },
+    {
+      "label": "recklessness Country and second-Country tuples",
+      "va": "0x141645267",
+      "rva": "0x1645267",
+      "file_offset": "0x1644667",
+      "bytes": "b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b15b0f64404488d4c2458e82694cf01"
+    },
+    {
+      "label": "recklessness field wrapper call",
+      "va": "0x1416452a1",
+      "rva": "0x16452a1",
+      "file_offset": "0x16446a1",
+      "bytes": "488d8ea0100000488d85b000000048894424204533c94c8d442440498bd6e85ca575ff"
+    },
+    {
+      "label": "value wrapper adds eight and preserves scope",
+      "va": "0x140d9f8a3",
+      "rva": "0xd9f8a3",
+      "file_offset": "0xd9eca3",
+      "bytes": "48894424204c8bcd4d8bc6488bd3488d4f08e8068c0000"
+    },
+    {
+      "label": "value context three equal slots and evaluator",
+      "va": "0x140da84d7",
+      "rva": "0xda84d7",
+      "file_offset": "0xda78d7",
+      "bytes": "498bf9498bd8488bea488bf1498bd0488d4c2450e8e07259029048895c243048895c243848895c2440488d4424504889442448488b84242004000048894424204c8bcf4c8d442430488bd5488bcee8161b0000"
+    },
+    {
+      "label": "Country tag independent getter",
+      "va": "0x14161a8c0",
+      "rva": "0x161a8c0",
+      "file_offset": "0x1619cc0",
+      "bytes": "b805000000c3"
+    },
+    {
+      "label": "target_country registration name and global key",
+      "va": "0x14002eb24",
+      "rva": "0x2eb24",
+      "file_offset": "0x2df24",
+      "bytes": "c74424280e000000488d05fda450044889442420c644242c00c5f810442420c5f97f442420e8f201b8034c8d442420488bc8488d15e35da605e86efeb703e819a93103488d15d25da605488bc8e83a7b7a0048"
+    },
+    {
+      "label": "target_country name string",
+      "va": "0x144539030",
+      "rva": "0x4539030",
+      "file_offset": "0x4538430",
+      "bytes": "7461726765745f636f756e74727900"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641efe",
+      "rva": "0x1641efe",
+      "file_offset": "0x16412fe",
+      "bytes": "0d"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e78",
+      "rva": "0x1641e78",
+      "file_offset": "0x1641278",
+      "bytes": "73186401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641ed0",
+      "rva": "0x1641ed0",
+      "file_offset": "0x16412d0",
+      "bytes": "0c"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e74",
+      "rva": "0x1641e74",
+      "file_offset": "0x1641274",
+      "bytes": "e0176401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641ec3",
+      "rva": "0x1641ec3",
+      "file_offset": "0x16412c3",
+      "bytes": "05"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e58",
+      "rva": "0x1641e58",
+      "file_offset": "0x1641258",
+      "bytes": "49186401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641eb1",
+      "rva": "0x1641eb1",
+      "file_offset": "0x16412b1",
+      "bytes": "04"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e54",
+      "rva": "0x1641e54",
+      "file_offset": "0x1641254",
+      "bytes": "cc176401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641eaa",
+      "rva": "0x1641eaa",
+      "file_offset": "0x16412aa",
+      "bytes": "01"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e48",
+      "rva": "0x1641e48",
+      "file_offset": "0x1641248",
+      "bytes": "c7186401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641eab",
+      "rva": "0x1641eab",
+      "file_offset": "0x16412ab",
+      "bytes": "02"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e4c",
+      "rva": "0x1641e4c",
+      "file_offset": "0x164124c",
+      "bytes": "dc186401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641eac",
+      "rva": "0x1641eac",
+      "file_offset": "0x16412ac",
+      "bytes": "03"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e50",
+      "rva": "0x1641e50",
+      "file_offset": "0x1641250",
+      "bytes": "f1186401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641ec7",
+      "rva": "0x1641ec7",
+      "file_offset": "0x16412c7",
+      "bytes": "08"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e64",
+      "rva": "0x1641e64",
+      "file_offset": "0x1641264",
+      "bytes": "06196401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641ec8",
+      "rva": "0x1641ec8",
+      "file_offset": "0x16412c8",
+      "bytes": "09"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e68",
+      "rva": "0x1641e68",
+      "file_offset": "0x1641268",
+      "bytes": "f5176401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641ec9",
+      "rva": "0x1641ec9",
+      "file_offset": "0x16412c9",
+      "bytes": "0a"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e6c",
+      "rva": "0x1641e6c",
+      "file_offset": "0x164126c",
+      "bytes": "b2186401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641eca",
+      "rva": "0x1641eca",
+      "file_offset": "0x16412ca",
+      "bytes": "0b"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e70",
+      "rva": "0x1641e70",
+      "file_offset": "0x1641270",
+      "bytes": "9d186401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641f3d",
+      "rva": "0x1641f3d",
+      "file_offset": "0x164133d",
+      "bytes": "0f"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e80",
+      "rva": "0x1641e80",
+      "file_offset": "0x1641280",
+      "bytes": "0a186401"
+    },
+    {
+      "label": "jump selector",
+      "va": "0x141641f3e",
+      "rva": "0x1641f3e",
+      "file_offset": "0x164133e",
+      "bytes": "10"
+    },
+    {
+      "label": "jump destination",
+      "va": "0x141641e84",
+      "rva": "0x1641e84",
+      "file_offset": "0x1641284",
+      "bytes": "1f186401"
+    },
+    {
+      "label": "Country type5 plus ID",
+      "va": "0x141646e76",
+      "rva": "0x1646e76",
+      "file_offset": "0x1646276",
+      "bytes": "b80500000066894424308b43184889442438"
+    },
+    {
+      "label": "complete method prefix through field wrapper call",
+      "va": "0x141646e10",
+      "rva": "0x1646e10",
+      "file_offset": "0x1646210",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e81bad01ff488d4d30e86268fefe4c8d3543f022034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8f780a0000488d859000000048894424204533c94c8d442430488bd6e86e8975ff"
+    },
+    {
+      "label": "Country type5 plus ID",
+      "va": "0x141647006",
+      "rva": "0x1647006",
+      "file_offset": "0x1646406",
+      "bytes": "b80500000066894424308b43184889442438"
+    },
+    {
+      "label": "complete method prefix through field wrapper call",
+      "va": "0x141646fa0",
+      "rva": "0x1646fa0",
+      "file_offset": "0x16463a0",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e88bab01ff488d4d30e8d266fefe4c8d35b3ee22034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8f380b0000488d859000000048894424204533c94c8d442430488bd6e8de8775ff"
+    },
+    {
+      "label": "Country type5 plus ID",
+      "va": "0x1416469a6",
+      "rva": "0x16469a6",
+      "file_offset": "0x1645da6",
+      "bytes": "b80500000066894424308b43184889442438"
+    },
+    {
+      "label": "complete method prefix through field wrapper call",
+      "va": "0x141646940",
+      "rva": "0x1646940",
+      "file_offset": "0x1645d40",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e8ebb101ff488d4d30e8326dfefe4c8d3513f522034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8ff80b0000488d859000000048894424204533c94c8d442430488bd6e83e8e75ff"
+    },
+    {
+      "label": "Country type5 plus ID",
+      "va": "0x141647b37",
+      "rva": "0x1647b37",
+      "file_offset": "0x1646f37",
+      "bytes": "b90500000066894c24408b43184889442448"
+    },
+    {
+      "label": "complete method prefix through field wrapper call",
+      "va": "0x141647ad0",
+      "rva": "0x1647ad0",
+      "file_offset": "0x1646ed0",
+      "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e85aa001ff488d4d40e8a15bfefe4c8d3d82e322034c897d58c5f9efc0c5fa7f45604c896570b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b15bcce4404488d4c2458e8566bcf014c89a5b0000000488d8e78070000488d85b000000048894424204533c94c8d442440498bd6e88c7c75ff"
+    },
+    {
+      "label": "Country type5 plus ID",
+      "va": "0x1416455c7",
+      "rva": "0x16455c7",
+      "file_offset": "0x16449c7",
+      "bytes": "b90500000066894c24408b43184889442448"
+    },
+    {
+      "label": "complete method prefix through field wrapper call",
+      "va": "0x141645560",
+      "rva": "0x1645560",
+      "file_offset": "0x1644960",
+      "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e8cac501ff488d4d40e81181fefe4c8d3df20823034c897d58c5f9efc0c5fa7f45604c896570b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b1550f34404488d4c2458e8c690cf014c89a5b0000000488d8e20120000488d85b000000048894424204533c94c8d442440498bd6e8fca175ff"
+    },
+    {
+      "label": "Country type5 plus ID",
+      "va": "0x141646cc7",
+      "rva": "0x1646cc7",
+      "file_offset": "0x16460c7",
+      "bytes": "b80500000066894424408b43184889442448"
+    },
+    {
+      "label": "complete method prefix through field wrapper call",
+      "va": "0x141646c60",
+      "rva": "0x1646c60",
+      "file_offset": "0x1646060",
+      "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e8caae01ff488d4d40e8116afefe4c8d3df2f122034c897d58c5f9efc0c5fa7f45604c896570b80500000066894424408b43184889442448c7442430310000008b470848894424384c8d4424308b1550dd4404488d4c2458e8c279cf014c89a5b0000000488d8eb8090000488d85b000000048894424204533c94c8d442440498bd6e8f88a75ff"
+    },
+    {
+      "label": "Country type5 plus ID",
+      "va": "0x141646b36",
+      "rva": "0x1646b36",
+      "file_offset": "0x1645f36",
+      "bytes": "b80500000066894424308b43184889442438"
+    },
+    {
+      "label": "complete method prefix through field wrapper call",
+      "va": "0x141646ad0",
+      "rva": "0x1646ad0",
+      "file_offset": "0x1645ed0",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e85bb001ff488d4d30e8a26bfefe4c8d3583f322034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8ff8080000488d859000000048894424204533c94c8d442430488bd6e8ae8c75ff"
+    },
+    {
+      "label": "Country type5 plus ID",
+      "va": "0x141645a47",
+      "rva": "0x1645a47",
+      "file_offset": "0x1644e47",
+      "bytes": "b90500000066894c24408b43184889442448"
+    },
+    {
+      "label": "complete method prefix through field wrapper call",
+      "va": "0x1416459e0",
+      "rva": "0x16459e0",
+      "file_offset": "0x1644de0",
+      "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e84ac101ff488d4d40e8917cfefe4c8d3d720423034c897d58c5f9efc0c5fa7f45604c896570b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b15d0ee4404488d4c2458e8468ccf014c89a5b0000000488d8ee0120000488d85b000000048894424204533c94c8d442440498bd6e87c9d75ff"
+    },
+    {
+      "label": "Country type5 plus ID",
+      "va": "0x141645bf7",
+      "rva": "0x1645bf7",
+      "file_offset": "0x1644ff7",
+      "bytes": "b90500000066894c24408b43184889442448"
+    },
+    {
+      "label": "complete method prefix through field wrapper call",
+      "va": "0x141645b90",
+      "rva": "0x1645b90",
+      "file_offset": "0x1644f90",
+      "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e89abf01ff488d4d40e8e17afefe4c8d3dc20223034c897d58c5f9efc0c5fa7f45604c896570b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b15b8ed4404488d4c2458e8968acf014c89a5b0000000488d8ea0130000488d85b000000048894424204533c94c8d442440498bd6e8cc9b75ff"
+    },
+    {
+      "label": "named scope key string",
+      "va": "0x144539330",
+      "rva": "0x4539330",
+      "file_offset": "0x4538730",
+      "bytes": "6f7665726c6f726400"
+    },
+    {
+      "label": "name and key registration code",
+      "va": "0x14002f960",
+      "rva": "0x2f960",
+      "file_offset": "0x2ed60",
+      "bytes": "4883ec38c744242808000000488d05bd9950044889442420c644242c00c5f810442420c5f97f442420e8b2f3b7034c8d442420488bc8488d153b50a605e82ef0b703e8d99a3103488d152a50a605488bc8e8fa6c7a004883c438c3"
+    },
+    {
+      "label": "named scope key string",
+      "va": "0x144539438",
+      "rva": "0x4539438",
+      "file_offset": "0x4538838",
+      "bytes": "656e656d795f636f756e74727900"
+    },
+    {
+      "label": "name and key registration code",
+      "va": "0x14002ffc0",
+      "rva": "0x2ffc0",
+      "file_offset": "0x2f3c0",
+      "bytes": "4883ec38c74424280d000000488d05659450044889442420c644242c00c5f810442420c5f97f442420e852edb7034c8d442420488bc8488d151f4aa605e8cee9b703e879943103488d150e4aa605488bc8e89a667a004883c438c3"
+    },
+    {
+      "label": "named scope key string",
+      "va": "0x1445393d8",
+      "rva": "0x45393d8",
+      "file_offset": "0x45387d8",
+      "bytes": "6c617700"
+    },
+    {
+      "label": "name and key registration code",
+      "va": "0x140030380",
+      "rva": "0x30380",
+      "file_offset": "0x2f780",
+      "bytes": "4883ec38c744242803000000488d05459050044889442420c644242c00c5f810442420c5f97f442420e892e9b7034c8d442420488bc8488d158746a605e80ee6b703e8b9903103488d157646a605488bc8e8da627a004883c438c3"
+    },
+    {
+      "label": "named scope key string",
+      "va": "0x1444d70c8",
+      "rva": "0x44d70c8",
+      "file_offset": "0x44d64c8",
+      "bytes": "6469706c6f6d617469635f706c617900"
+    },
+    {
+      "label": "name and key registration code",
+      "va": "0x14002e700",
+      "rva": "0x2e700",
+      "file_offset": "0x2db00",
+      "bytes": "4883ec38c74424280f000000488d05b5894a044889442420c644242c00c5f810442420c5f97f442420e81206b8034c8d442420488bc8488d15d761a605e88e02b803e839ad3103488d15c661a605488bc8e85a7f7a004883c438c3"
+    },
+    {
+      "label": "wanted_army_size parser member",
+      "va": "0x141641873",
+      "rva": "0x1641873",
+      "file_offset": "0x1640c73",
+      "bytes": "488d8f68f7ffff488b01488bd6ff5018e97d050000"
+    },
+    {
+      "label": "recklessness parser member",
+      "va": "0x1416417e0",
+      "rva": "0x16417e0",
+      "file_offset": "0x1640be0",
+      "bytes": "488d8fe8efffff488b01488bd6ff5018e910060000"
+    },
+    {
+      "label": "max_progressiveness parser member",
+      "va": "0x1416418c7",
+      "rva": "0x16418c7",
+      "file_offset": "0x1640cc7",
+      "bytes": "488d8fc0e9ffff488b01488bd6ff5018e929050000"
+    },
+    {
+      "label": "max_regressiveness parser member",
+      "va": "0x1416418dc",
+      "rva": "0x16418dc",
+      "file_offset": "0x1640cdc",
+      "bytes": "488d8f80eaffff488b01488bd6ff5018e914050000"
+    },
+    {
+      "label": "change_law_chance parser member",
+      "va": "0x1416418f1",
+      "rva": "0x16418f1",
+      "file_offset": "0x1640cf1",
+      "bytes": "488d8f40ebffff488b01488bd6ff5018e9ff040000"
+    },
+    {
+      "label": "wargoal_maneuvers_fraction parser member",
+      "va": "0x141641906",
+      "rva": "0x1641906",
+      "file_offset": "0x1640d06",
+      "bytes": "488d8fc0e6ffff488b01488bd6ff5018e9ea040000"
+    },
+    {
+      "label": "obligation_value parser member",
+      "va": "0x1416417f5",
+      "rva": "0x16417f5",
+      "file_offset": "0x1640bf5",
+      "bytes": "488d8f68f1ffff488b01488bd6ff5018e9fb050000"
+    },
+    {
+      "label": "min_law_chance_to_pass parser member",
+      "va": "0x1416418b2",
+      "rva": "0x16418b2",
+      "file_offset": "0x1640cb2",
+      "bytes": "488d8f00e9ffff488b01488bd6ff5018e93e050000"
+    },
+    {
+      "label": "revolution_aversion parser member",
+      "va": "0x14164189d",
+      "rva": "0x164189d",
+      "file_offset": "0x1640c9d",
+      "bytes": "488d8f40e8ffff488b01488bd6ff5018e953050000"
+    },
+    {
+      "label": "subject_value parser member",
+      "va": "0x14164180a",
+      "rva": "0x164180a",
+      "file_offset": "0x1640c0a",
+      "bytes": "488d8f28f2ffff488b01488bd6ff5018e9e6050000"
+    },
+    {
+      "label": "become_subject_value parser member",
+      "va": "0x14164181f",
+      "rva": "0x164181f",
+      "file_offset": "0x1640c1f",
+      "bytes": "488d8fe8f2ffff488b01488bd6ff5018e9d1050000"
+    },
+    {
+      "label": "wanted_army_size atom mapping",
+      "va": "0x1447aee80",
+      "rva": "0x47aee80",
+      "file_offset": "0x47ae280",
+      "bytes": "565c00000000000090e2774401000000"
+    },
+    {
+      "label": "recklessness atom mapping",
+      "va": "0x1447aeba0",
+      "rva": "0x47aeba0",
+      "file_offset": "0x47adfa0",
+      "bytes": "285c000000000000e0ea774401000000"
+    },
+    {
+      "label": "diplomatic_play_boldness atom mapping",
+      "va": "0x1447aead0",
+      "rva": "0x47aead0",
+      "file_offset": "0x47aded0",
+      "bytes": "1b5c000000000000c0e9774401000000"
+    },
+    {
+      "label": "institution_scores atom mapping",
+      "va": "0x1447ae9c0",
+      "rva": "0x47ae9c0",
+      "file_offset": "0x47addc0",
+      "bytes": "095c00000000000018e8774401000000"
+    },
+    {
+      "label": "max_progressiveness atom mapping",
+      "va": "0x1447ae950",
+      "rva": "0x47ae950",
+      "file_offset": "0x47add50",
+      "bytes": "025c00000000000028e5774401000000"
+    },
+    {
+      "label": "max_regressiveness atom mapping",
+      "va": "0x1447ae960",
+      "rva": "0x47ae960",
+      "file_offset": "0x47add60",
+      "bytes": "035c00000000000040e5774401000000"
+    },
+    {
+      "label": "change_law_chance atom mapping",
+      "va": "0x1447ae970",
+      "rva": "0x47ae970",
+      "file_offset": "0x47add70",
+      "bytes": "045c00000000000090e7774401000000"
+    },
+    {
+      "label": "wargoal_maneuvers_fraction atom mapping",
+      "va": "0x1447aeb10",
+      "rva": "0x47aeb10",
+      "file_offset": "0x47adf10",
+      "bytes": "1f5c00000000000080e8774401000000"
+    },
+    {
+      "label": "obligation_value atom mapping",
+      "va": "0x1447aeb20",
+      "rva": "0x47aeb20",
+      "file_offset": "0x47adf20",
+      "bytes": "205c00000000000030e8774401000000"
+    },
+    {
+      "label": "min_law_chance_to_pass atom mapping",
+      "va": "0x1447aeb30",
+      "rva": "0x47aeb30",
+      "file_offset": "0x47adf30",
+      "bytes": "215c00000000000048e8774401000000"
+    },
+    {
+      "label": "revolution_aversion atom mapping",
+      "va": "0x1447aeb40",
+      "rva": "0x47aeb40",
+      "file_offset": "0x47adf40",
+      "bytes": "225c000000000000e0e8774401000000"
+    },
+    {
+      "label": "subject_value atom mapping",
+      "va": "0x1447af270",
+      "rva": "0x47af270",
+      "file_offset": "0x47ae670",
+      "bytes": "955c00000000000090f4774401000000"
+    },
+    {
+      "label": "become_subject_value atom mapping",
+      "va": "0x1447af280",
+      "rva": "0x47af280",
+      "file_offset": "0x47ae680",
+      "bytes": "965c000000000000a0f4774401000000"
+    },
+    {
+      "label": "wanted_construction_output exact atom and string pointer",
+      "va": "0x1447af2a0",
+      "rva": "0x47af2a0",
+      "file_offset": "0x47ae6a0",
+      "bytes": "985c00000000000030f5774401000000"
+    },
+    {
+      "label": "wanted_construction_output string",
+      "va": "0x14477f530",
+      "rva": "0x477f530",
+      "file_offset": "0x477e930",
+      "bytes": "77616e7465645f636f6e737472756374696f6e5f6f75747075740000"
+    },
+    {
+      "label": "wanted_construction_output compressed dispatch selector",
+      "va": "0x141641f40",
+      "rva": "0x1641f40",
+      "file_offset": "0x1641340",
+      "bytes": "11"
+    },
+    {
+      "label": "wanted_construction_output jump destination",
+      "va": "0x141641e88",
+      "rva": "0x1641e88",
+      "file_offset": "0x1641288",
+      "bytes": "5e186401"
+    },
+    {
+      "label": "wanted_construction_output parser uses strategy plus 0x16a0",
+      "va": "0x14164185e",
+      "rva": "0x164185e",
+      "file_offset": "0x1640c5e",
+      "bytes": "488d8fe8f5ffff488b01488bd6ff5018"
+    },
+    {
+      "label": "construction consumer argument preservation",
+      "va": "0x141646450",
+      "rva": "0x1646450",
+      "file_offset": "0x1645850",
+      "bytes": "4055535657415441564157488dac2490fbffff4881ec70050000c5f829b42460050000498bd8488bfa488bf14533ff44"
+    },
+    {
+      "label": "construction empty context and country tag five tuple",
+      "va": "0x14164647c",
+      "rva": "0x164647c",
+      "file_offset": "0x164587c",
+      "bytes": "4533ff44897d804c897d8844897d90488d4d98e8dcb601ff488d8d80000000e82072fefe4c8d2501fa22034c89a598000000c5f9efc0c5fa7f85a00000004c89bdb0000000b805000000668945808b431848894588"
+    },
+    {
+      "label": "construction three identical country slots and actual scalar call",
+      "va": "0x14164652d",
+      "rva": "0x164652d",
+      "file_offset": "0x164592d",
+      "bytes": "488d5580488d8dc0000000e89392cf0190488d45804889442460488d45804889442468488d45804889442470488d85c0000000488944247848895c24204533c94c8d442460488d95c0040000488d8ea8160000e8bb3a76ff"
+    },
+    {
+      "label": "construction default and active strategies summed",
+      "va": "0x1415ac4a2",
+      "rva": "0x15ac4a2",
+      "file_offset": "0x15ab8a2",
+      "bytes": "4c8bc6488bd7488b8b600f0000e89c9f0900488b5dc0486345cc4c8d34c3493bde742d6666660f1f8400000000004c8bc6488d5520488b0be8719f0900488b0848010f4883c308"
+    },
+    {
+      "label": "institution_scores exact atom and string pointer",
+      "va": "0x1447ae9c0",
+      "rva": "0x47ae9c0",
+      "file_offset": "0x47addc0",
+      "bytes": "095c00000000000018e8774401000000"
+    },
+    {
+      "label": "institution_scores string",
+      "va": "0x14477e818",
+      "rva": "0x477e818",
+      "file_offset": "0x477dc18",
+      "bytes": "696e737469747574696f6e5f73636f72657300"
+    },
+    {
+      "label": "institution_scores compressed dispatch selector",
+      "va": "0x141641eb1",
+      "rva": "0x1641eb1",
+      "file_offset": "0x16412b1",
+      "bytes": "04"
+    },
+    {
+      "label": "institution_scores jump destination",
+      "va": "0x141641e54",
+      "rva": "0x1641e54",
+      "file_offset": "0x1641254",
+      "bytes": "cc176401"
+    },
+    {
+      "label": "institution_scores parser invokes map parser at member 0x3d0",
+      "va": "0x1416417cc",
+      "rva": "0x16417cc",
+      "file_offset": "0x1640bcc",
+      "bytes": "488d9718e3ffff488bcee805c8ffffe925060000"
+    },
+    {
+      "label": "institution key string hash resolved to institution definition",
+      "va": "0x14163e16e",
+      "rva": "0x163e16e",
+      "file_offset": "0x163d56e",
+      "bytes": "e8ad0312ff488b184885db7526488d057ef0e702488945b0c745b81e000000885dbc4533c94c8d45b0ba04000000e85ff95b024d8b4608498b16e8337861028bd0488bcbe8d9c3b5ff488bf8488b08488b11488bc8ffd284c0"
+    },
+    {
+      "label": "explicit invalid institution type error",
+      "va": "0x1445ad500",
+      "rva": "0x45ad500",
+      "file_offset": "0x45ac900",
+      "bytes": "496e76616c696420696e737469747574696f6e207479706520277b7d2720696e2061695f73747261746567696573"
+    },
+    {
+      "label": "institution definition pointer key maps to script value at element plus 0x10",
+      "va": "0x14163e33b",
+      "rva": "0x163e33b",
+      "file_offset": "0x163d73b",
+      "bytes": "4c8d4d28488d55d0488b4e08e824e80000488b4dd04883c110488b01488bd3ff50184c8d"
+    },
+    {
+      "label": "institution consumer preserves country and institution key separately",
+      "va": "0x141644870",
+      "rva": "0x1644870",
+      "file_offset": "0x1643c70",
+      "bytes": "48895c240848896c24104889742418574881ec70010000498bd9498be8488bfa488bf1498b0149"
+    },
+    {
+      "label": "institution consumer reads exact map member plus 0x3d0",
+      "va": "0x1416448a9",
+      "rva": "0x16448a9",
+      "file_offset": "0x1643ca9",
+      "bytes": "83bee00300000074ed4c6386e40300004c8b8ed8030000"
+    },
+    {
+      "label": "institution pointer equality selects exact map key",
+      "va": "0x141644959",
+      "rva": "0x1644959",
+      "file_offset": "0x1643d59",
+      "bytes": "b1013848047217483b58080f84fc000000fec14805d00000003a480476e94881"
+    },
+    {
+      "label": "institution empty context and country-only tuple passed to value wrapper",
+      "va": "0x1416449bd",
+      "rva": "0x16449bd",
+      "file_offset": "0x1643dbd",
+      "bytes": "895c243048895c2438895c2440488d4c2448e89cd101ff488d8c2430010000e8df8cfefe488d05c01423034889842448010000c5f9efc0c5fa7f84245001000048899c2460010000b80500000066894424308b4518488944243848899c2498010000488d84249801000048894424204533c94c8d442430488bd7488bcee8e1ad75ff"
+    },
+    {
+      "label": "institution found-key branch rejoins element lookup before evaluation",
+      "va": "0x141644a66",
+      "rva": "0x1644a66",
+      "file_offset": "0x1643e66",
+      "bytes": "4881c6e8030000e920ffffff"
+    },
+    {
+      "label": "institution caller keeps country and definition pointer separate",
+      "va": "0x1415bbcce",
+      "rva": "0x15bbcce",
+      "file_offset": "0x15bb0ce",
+      "bytes": "488bf2488bf94d8b7018"
+    },
+    {
+      "label": "institution default and active strategy values summed",
+      "va": "0x1415bbd30",
+      "rva": "0x15bbd30",
+      "file_offset": "0x15bb130",
+      "bytes": "4d8bce4c8bc6488bd7488b8b600f0000e82b8b0800488b5c2440486344244c488d2cc3483bdd74320f1f8400000000004d8bce4c8bc6488d9424a0000000488b0be8fa8a0800488b0848010f4883c308483bdd75db"
+    },
+    {
+      "label": "context constructor starts with zero entries",
+      "va": "0x14062d6c0",
+      "rva": "0x62d6c0",
+      "file_offset": "0x62cac0",
+      "bytes": "40534883ec2033c0488bd948890148894108"
+    },
+    {
+      "label": "value wrapper forwards scope tuple without substituting institution key",
+      "va": "0x140d9f8a3",
+      "rva": "0xd9f8a3",
+      "file_offset": "0xd9eca3",
+      "bytes": "48894424204c8bcd4d8bc6488bd3488d4f08e8068c0000"
+    },
+    {
+      "label": "value wrapper uses identical root this from country tuple",
+      "va": "0x140da84d7",
+      "rva": "0xda84d7",
+      "file_offset": "0xda78d7",
+      "bytes": "498bf9498bd8488bea488bf1498bd0488d4c2450e8e07259029048895c243048895c243848895c2440488d4424504889442448488b84242004000048894424204c8bcf4c8d442430488bd5488bcee8161b0000"
+    },
+    {
+      "label": "independently identified CCountry scope tag five getter",
+      "va": "0x14161a8c0",
+      "rva": "0x161a8c0",
+      "file_offset": "0x1619cc0",
+      "bytes": "b805000000c3"
+    },
+    {
+      "label": "exact min_law parser member",
+      "va": "0x1416418b2",
+      "rva": "0x16418b2",
+      "file_offset": "0x1640cb2",
+      "bytes": "488d8f00e9ffff488b01488b"
+    },
+    {
+      "label": "consumer argument identities",
+      "va": "0x141646c7e",
+      "rva": "0x1646c7e",
+      "file_offset": "0x164607e",
+      "bytes": "498bf9498bd84c8bf2488bf14533e4"
+    },
+    {
+      "label": "empty context constructor",
+      "va": "0x141646ca6",
+      "rva": "0x1646ca6",
+      "file_offset": "0x16460a6",
+      "bytes": "488d4d40e8116afefe"
+    },
+    {
+      "label": "country ROOT tag5 and country id",
+      "va": "0x141646cc7",
+      "rva": "0x1646cc7",
+      "file_offset": "0x16460c7",
+      "bytes": "b80500000066894424408b43184889442448"
+    },
+    {
+      "label": "law tag31 id and named key",
+      "va": "0x141646cd9",
+      "rva": "0x1646cd9",
+      "file_offset": "0x16460d9",
+      "bytes": "c7442430310000008b470848894424384c8d4424308b1550dd4404488d4c2458e8c279cf01"
+    },
+    {
+      "label": "register named law scope",
+      "va": "0x141646cf9",
+      "rva": "0x1646cf9",
+      "file_offset": "0x16460f9",
+      "bytes": "e8c279cf01"
+    },
+    {
+      "label": "exact member9b8 and wrapper evaluation",
+      "va": "0x141646d05",
+      "rva": "0x1646d05",
+      "file_offset": "0x1646105",
+      "bytes": "488d8eb8090000488d85b000000048894424204533c94c8d442440498bd6e8f88a75ff"
+    },
+    {
+      "label": "CLawTypeLink TypeDescriptor",
+      "va": "0x145720b00",
+      "rva": "0x5720b00",
+      "file_offset": "0x571f700",
+      "bytes": "40d849440100000000000000000000002e3f4156434c6177547970654c696e6b4040"
+    },
+    {
+      "label": "CLawTypeLink complete object locator",
+      "va": "0x144c31540",
+      "rva": "0x4c31540",
+      "file_offset": "0x4c30940",
+      "bytes": "010000000000000000000000000b7205d8f4c2044015c304"
+    },
+    {
+      "label": "exact COL pointer and vftable slot28",
+      "va": "0x144717328",
+      "rva": "0x4717328",
+      "file_offset": "0x4716728",
+      "bytes": "4015c3440100000000d876420100000080d362400100000080d3624001000000005c63400100000080d662400100000040b3774201000000"
+    },
+    {
+      "label": "law_type link accepts tag31 and calls country law resolver",
+      "va": "0x14277b34a",
+      "rva": "0x277b34a",
+      "file_offset": "0x277a74a",
+      "bytes": "498b00488bda6683383175058b4808eb05b9ffffffff894c2440488d4c2440e8528953fe"
+    },
+    {
+      "label": "instance to law type pointer and output tag32",
+      "va": "0x14277b383",
+      "rva": "0x277b383",
+      "file_offset": "0x277a783",
+      "bytes": "488b4738c7033200000048894b084863401048894308"
+    },
+    {
+      "label": "country law database global",
+      "va": "0x140cb3cc4",
+      "rva": "0xcb3cc4",
+      "file_offset": "0xcb30c4",
+      "bytes": "488b05bd5fd8048b11"
+    },
+    {
+      "label": "resolver diagnostic references CCountryLaw RTTI",
+      "va": "0x140cb3cdb",
+      "rva": "0xcb3cdb",
+      "file_offset": "0xcb30db",
+      "bytes": "488d159e6fd104488d0da7857b04e8122b580348"
+    },
+    {
+      "label": "CCountryLaw TypeDescriptor",
+      "va": "0x14546c288",
+      "rva": "0x546c288",
+      "file_offset": "0x546ae88",
+      "bytes": "40d849440100000000000000000000002e3f415643436f756e7472794c6177404000"
+    },
+    {
+      "label": "CCountryLaw complete object locator",
+      "va": "0x144a36e28",
+      "rva": "0x4a36e28",
+      "file_offset": "0x4a36228",
+      "bytes": "01000000000000000000000088c24605e8b69704286ea304"
+    },
+    {
+      "label": "CCountryLaw exact COL pointer and vftable",
+      "va": "0x14454cae0",
+      "rva": "0x454cae0",
+      "file_offset": "0x454bee0",
+      "bytes": "286ea344010000006081e6400100000020c66c4001000000506ea344010000001823e74001000000"
+    },
+    {
+      "label": "country law id database resolution",
+      "va": "0x140cb3d39",
+      "rva": "0xcb3d39",
+      "file_offset": "0xcb3139",
+      "bytes": "8bca81e1ffffff003b482c7316488b40204803c9488b44c8084885c0740539500874"
+    },
+    {
+      "label": "caller law and country arguments",
+      "va": "0x1415b9815",
+      "rva": "0x15b9815",
+      "file_offset": "0x15b8c15",
+      "bytes": "4d8bf0488bf2488bf9"
+    },
+    {
+      "label": "first nonzero strategy result loop",
+      "va": "0x1415b9852",
+      "rva": "0x15b9852",
+      "file_offset": "0x15b8c52",
+      "bytes": "4d8bce4c8bc6488d9424a8000000488b0be8f8d30800488b8c24a80000004885c90f85a40000004883c308483bdd"
+    },
+    {
+      "label": "default strategy fallback call",
+      "va": "0x1415b98b9",
+      "rva": "0x15b98b9",
+      "file_offset": "0x15b8cb9",
+      "bytes": "4d8bce4c8bc6488d9424a8000000488b8b600f0000e88dd30800"
+    },
+    {
+      "label": "exact wargoal token dispatch",
+      "va": "0x141640b31",
+      "rva": "0x1640b31",
+      "file_offset": "0x163ff31",
+      "bytes": "4181f8325500000f8f77070000"
+    },
+    {
+      "label": "exact wargoal map member1d8 parser",
+      "va": "0x141641285",
+      "rva": "0x1641285",
+      "file_offset": "0x1640685",
+      "bytes": "488d9920e1ffff488bcbe88c7912ff488975d748895ddf48895d7f4c8d457f488d55d7488bcee8e0780000"
+    },
+    {
+      "label": "wargoal key parser searches exact34 token enum table",
+      "va": "0x14163e3b2",
+      "rva": "0x163e3b2",
+      "file_offset": "0x163d7b2",
+      "bytes": "488bcae8b61d5b02448bc0488d35f431f802488bd64c8d356231f802498bcee86a14bf02488be8483bc60f842b010000492bee48c1fd024080fd220f841a010000"
+    },
+    {
+      "label": "wargoal34-token enum table",
+      "va": "0x1445c1530",
+      "rva": "0x45c1530",
+      "file_offset": "0x45c0930",
+      "bytes": "4b4300005155000066620000295c000021540000d554000003640000026400000064000001640000dd600000205d0000d83300004e5500009d5c00008d2c00002c5f0000435f0000382b00003854000068620000182c00009c5c00004d55000075620000d3540000f15b0000d65400009e55000037540000ed54000047540000c759000054040000"
+    },
+    {
+      "label": "wargoal script score object vftable",
+      "va": "0x14163e421",
+      "rva": "0x163e421",
+      "file_offset": "0x163d821",
+      "bytes": "488d050074e902498906498d4e08e84c0c02ff"
+    },
+    {
+      "label": "wargoal enum byte and score pointer inserted",
+      "va": "0x14163e47b",
+      "rva": "0x163e47b",
+      "file_offset": "0x163d87b",
+      "bytes": "48634e0c4803c940882cc84c8974c808"
+    },
+    {
+      "label": "wargoal score object virtual parser",
+      "va": "0x14163e4f6",
+      "rva": "0x163e4f6",
+      "file_offset": "0x163d8f6",
+      "bytes": "488b06488b4cc8f8488b01498bd7ff5018"
+    },
+    {
+      "label": "score object exact virtual parser slot18",
+      "va": "0x1444d5828",
+      "rva": "0x44d5828",
+      "file_offset": "0x44d4c28",
+      "bytes": "60f16540010000000072bf430100000080d6624001000000607a6d4001000000"
+    },
+    {
+      "label": "score virtual parser routes object+8 to numeric parser",
+      "va": "0x1406d7a60",
+      "rva": "0x6d7a60",
+      "file_offset": "0x6d6e60",
+      "bytes": "4533c04883c108e904370500"
+    },
+    {
+      "label": "wargoal consumer argument country and state identities",
+      "va": "0x141643764",
+      "rva": "0x1643764",
+      "file_offset": "0x1642b64",
+      "bytes": "4d8be94d8bf84c8be24c8bf10fb6bdd80000004080ff22750733c0e95a02000033c98bf1"
+    },
+    {
+      "label": "wargoal exact map binarysearch and entry selection",
+      "va": "0x141643788",
+      "rva": "0x1643788",
+      "file_offset": "0x1642b88",
+      "bytes": "498b9ed80100004d6396e40100004d8bda49c1e3044c03db4c8bcb4d85d27e310f1f8400000000004d8bc249d1e84d2bd0498bd24d8bd0498bc04803c048c1e2044903d141383cc14c0f42ca4d85c075d74d3bcb0f84dd010000413a390f82d40100004c2bcb49c1f9044585c90f88c40100004963c14803c0488b5cc3"
+    },
+    {
+      "label": "wargoal empty context",
+      "va": "0x141643826",
+      "rva": "0x1643826",
+      "file_offset": "0x1642c26",
+      "bytes": "488d4d40e8919efefe"
+    },
+    {
+      "label": "wargoal country ROOT tag5",
+      "va": "0x141643849",
+      "rva": "0x1643849",
+      "file_offset": "0x1642c49",
+      "bytes": "be050000006689742440418b4424184889442448"
+    },
+    {
+      "label": "wargoal target_state tag4c registration",
+      "va": "0x14164385d",
+      "rva": "0x164385d",
+      "file_offset": "0x1642c5d",
+      "bytes": "c74424304c000000418b450848894424384c8d4424308b15ef104504488d4c2458e83daecf01"
+    },
+    {
+      "label": "wargoal target_country tag5 registration",
+      "va": "0x141643886",
+      "rva": "0x1643886",
+      "file_offset": "0x1642c86",
+      "bytes": "89742430418b471848894424384c8d4424308b15a2104504488d4c2458e818aecf01"
+    },
+    {
+      "label": "optional diplomatic_play tag1c registration",
+      "va": "0x1416438a8",
+      "rva": "0x16438a8",
+      "file_offset": "0x1642ca8",
+      "bytes": "8b85e000000083f8ff7422c74424301c00000048894424384c8d4424308b1549104504488d4c2458e8ebadcf01"
+    },
+    {
+      "label": "wargoal exact actualscore evaluation",
+      "va": "0x1416438d5",
+      "rva": "0x16438d5",
+      "file_offset": "0x1642cd5",
+      "bytes": "4c896c24304c8d4c24304533c0488d542440488bcbe8a10989ff8bf0488d05"
+    },
+    {
+      "label": "liberate_country enum12 native additive tail",
+      "va": "0x1416439bf",
+      "rva": "0x16439bf",
+      "file_offset": "0x1642dbf",
+      "bytes": "4080ff1275174c8b8dd00000004d8bc7498bd4498bcee8361d000003f0"
+    },
+    {
+      "label": "target_state exact key name registration",
+      "va": "0x14002eee0",
+      "rva": "0x2eee0",
+      "file_offset": "0x2e2e0",
+      "bytes": "4883ec38c74424280c000000488d05dda250044889442420c644242c00c5f810442420c5f97f442420e832feb7034c8d442420488bc8488d154b5aa605e8aefab703e859a53103488d153a5aa605488bc8e87a777a004883c438c3"
+    },
+    {
+      "label": "target_state key string",
+      "va": "0x1445391d0",
+      "rva": "0x45391d0",
+      "file_offset": "0x45385d0",
+      "bytes": "7461726765745f737461746500"
+    },
+    {
+      "label": "wargoal caller resolves target state",
+      "va": "0x1415afd6d",
+      "rva": "0x15afd6d",
+      "file_offset": "0x15af16d",
+      "bytes": "498d4e20e87ad823ff4c8bf8"
+    },
+    {
+      "label": "state resolver database and CState RTTI reference",
+      "va": "0x1407ed5f4",
+      "rva": "0x7ed5f4",
+      "file_offset": "0x7ec9f4",
+      "bytes": "488b05e5af24058b114885c0756783faff0f8481000000488d156ed61d05488d0d0f6da504e8e291a40348"
+    },
+    {
+      "label": "CState type descriptor",
+      "va": "0x145244320",
+      "rva": "0x5244320",
+      "file_offset": "0x5242f20",
+      "bytes": "40d849440100000000000000000000002e3f4156435374617465404000"
+    },
+    {
+      "label": "CState main complete object locator",
+      "va": "0x144a85538",
+      "rva": "0x4a85538",
+      "file_offset": "0x4a84938",
+      "bytes": "01000000000000000000000020432405a84199043855a804"
+    },
+    {
+      "label": "CState exact COL and main vftable",
+      "va": "0x144587c90",
+      "rva": "0x4587c90",
+      "file_offset": "0x4587090",
+      "bytes": "3855a84401000000809c28410100000020c66c40010000008056a84401000000205f2d4101000000"
+    },
+    {
+      "label": "wargoal default call with state target country and optional play id",
+      "va": "0x1415afdb1",
+      "rva": "0x15afdb1",
+      "file_offset": "0x15af1b1",
+      "bytes": "418b4610894424300fb685d000000088442428498b467848894424204d8bcf4d8bc4498bd5488b8e600f0000e85e390900"
+    },
+    {
+      "label": "wargoal active call and additive merge",
+      "va": "0x1415afe10",
+      "rva": "0x15afe10",
+      "file_offset": "0x15af210",
+      "bytes": "418b4610894424300fb685d000000088442428498b467848894424204d8bcf4d8bc4488bd3488b0ee80339090003f84883c608493bf575c889bc24180100"
+    },
+    {
+      "label": "exact secret_goal token dispatch",
+      "va": "0x1416412c8",
+      "rva": "0x16412c8",
+      "file_offset": "0x16406c8",
+      "bytes": "4181e83d5500000f84ac010000"
+    },
+    {
+      "label": "secret_goal exact member2a0 parser",
+      "va": "0x141641481",
+      "rva": "0x1641481",
+      "file_offset": "0x1640881",
+      "bytes": "488d91e8e1ffff488bcee860c2ffffe97009"
+    },
+    {
+      "label": "secret_goal enum dispatch lower tokens",
+      "va": "0x14163d8a3",
+      "rva": "0x163d8a3",
+      "file_offset": "0x163cca3",
+      "bytes": "488bcae8c5285b02448bc03d093000000f8f380100000f84280100004181e8650100000f84130100004181e84c2b00000f84fc0000004183e8010f84e80000004183f8010f8522010000"
+    },
+    {
+      "label": "secret_goal exact enum assignments",
+      "va": "0x14163d9cb",
+      "rva": "0x163d9cb",
+      "file_offset": "0x163cdcb",
+      "bytes": "bf04000000e91bffffffbf03000000e911ffffff418bfee909ffffffbf05000000e9fffeffff4181e831550000743a4183e80b742a4181e8f908000074174183f8017407bf09000000eb23bf08000000e9d0feffffbf07000000e9c6feffffbf02000000e9bcfeffffbf0600000083ff090f85ae"
+    },
+    {
+      "label": "secret_goal enum indexes pointer array",
+      "va": "0x14163d963",
+      "rva": "0x163d963",
+      "file_offset": "0x163cd63",
+      "bytes": "8bc7488d3cc500000000488b4608488b1c074c893407"
+    },
+    {
+      "label": "secret_goal object inner field parser call",
+      "va": "0x14163d99b",
+      "rva": "0x163d99b",
+      "file_offset": "0x163cd9b",
+      "bytes": "488b4608488b0c0748894d77488d5577488b0ee84dda0000"
+    },
+    {
+      "label": "secret_goal score and trigger token split",
+      "va": "0x14164b48b",
+      "rva": "0x164b48b",
+      "file_offset": "0x164a88b",
+      "bytes": "8b4330498b3f3d1f05000074253d1b300000740d488bcbe8b9785a02e9d7000000488b07488bd3488bcfff5018"
+    },
+    {
+      "label": "secret_goal score child original virtual parser",
+      "va": "0x14164b4ac",
+      "rva": "0x164b4ac",
+      "file_offset": "0x164a8ac",
+      "bytes": "488b07488bd3488bcfff5018e9c6000000"
+    },
+    {
+      "label": "secret_goal trigger parses separate memberb8",
+      "va": "0x14164b55d",
+      "rva": "0x164b55d",
+      "file_offset": "0x164a95d",
+      "bytes": "488d8fb8000000e8674dd20141b805000000488b87b8000000488bd3488d8fb8000000ff5020"
+    },
+    {
+      "label": "secret_goal exact member2a0 and enum indexed pointer",
+      "va": "0x14164361d",
+      "rva": "0x164361d",
+      "file_offset": "0x1642a1d",
+      "bytes": "498be94d8bf0488bda48638424b001000033ff83f809750848893ae9dc000000488d34c14883bea00200000074ea"
+    },
+    {
+      "label": "secret_goal empty context",
+      "va": "0x141643662",
+      "rva": "0x1643662",
+      "file_offset": "0x1642a62",
+      "bytes": "488d8c2440010000e851a0fefe"
+    },
+    {
+      "label": "secret_goal country actor target tags and named registration",
+      "va": "0x141643693",
+      "rva": "0x1643693",
+      "file_offset": "0x1642a93",
+      "bytes": "b90500000066894c2440418b46184889442448894c24308b451848894424384c8d4424308b1583124504488d4c2458e8f9afcf01"
+    },
+    {
+      "label": "secret_goal separate trigger gating and score evaluation",
+      "va": "0x1416436c7",
+      "rva": "0x16436c7",
+      "file_offset": "0x1642ac7",
+      "bytes": "488bb6a0020000488d8eb8000000488d542440e891add20184c0750548893beb2748897c24304c8d4c24304533c0488d542440488bcee88e0b89ff4863c84869c1a086010048890348"
+    },
+    {
+      "label": "secret_goal default score call",
+      "va": "0x1415a7cd1",
+      "rva": "0x15a7cd1",
+      "file_offset": "0x15a70d1",
+      "bytes": "488b8b600f00004c8bcd4d8bc6897c2420488bd6e816b90900"
+    },
+    {
+      "label": "secret_goal active call and additive merge",
+      "va": "0x1415a7d10",
+      "rva": "0x15a7d10",
+      "file_offset": "0x15a7110",
+      "bytes": "488b0b488d9424800000004c8bcd897c24204d8bc6e8d6b809004883c308488b0848010e493bdf75d7"
+    },
+    {
+      "label": "score wrapper calls object+8 numeric evaluator",
+      "va": "0x140ed4300",
+      "rva": "0xed4300",
+      "file_offset": "0xed3700",
+      "bytes": "488d9fa80000004c8bcb4c8bc5498bd6488d4f08e8176c0000"
+    },
+    {
+      "label": "numeric evaluator uses same actor tuple in allthree scopes",
+      "va": "0x140edaf5e",
+      "rva": "0xedaf5e",
+      "file_offset": "0xeda35e",
+      "bytes": "48895c242048895c242848895c2430488d44244048894424384c8bcf4c8bc6488d542420488bcde8761d0000"
+    },
+    {
+      "label": "exact enum atom annex_country",
+      "va": "0x1447a4120",
+      "rva": "0x47a4120",
+      "file_offset": "0x47a3520",
+      "bytes": "4b4300000000000098f6764401000000"
+    },
+    {
+      "label": "exact enum string annex_country",
+      "va": "0x14476f698",
+      "rva": "0x476f698",
+      "file_offset": "0x476ea98",
+      "bytes": "616e6e65785f636f756e74727900"
+    },
+    {
+      "label": "exact enum atom ban_slavery",
+      "va": "0x1447a7fe0",
+      "rva": "0x47a7fe0",
+      "file_offset": "0x47a73e0",
+      "bytes": "51550000000000009046774401000000"
+    },
+    {
+      "label": "exact enum string ban_slavery",
+      "va": "0x144774690",
+      "rva": "0x4774690",
+      "file_offset": "0x4773a90",
+      "bytes": "62616e5f736c617665727900"
+    },
+    {
+      "label": "exact enum atom break_enforced_treaties",
+      "va": "0x1447b4ce0",
+      "rva": "0x47b4ce0",
+      "file_offset": "0x47b40e0",
+      "bytes": "6662000000000000c863784401000000"
+    },
+    {
+      "label": "exact enum string break_enforced_treaties",
+      "va": "0x1447863c8",
+      "rva": "0x47863c8",
+      "file_offset": "0x47857c8",
+      "bytes": "627265616b5f656e666f726365645f747265617469657300"
+    },
+    {
+      "label": "exact enum atom colonization_rights",
+      "va": "0x1447aebb0",
+      "rva": "0x47aebb0",
+      "file_offset": "0x47adfb0",
+      "bytes": "295c000000000000f0ea774401000000"
+    },
+    {
+      "label": "exact enum string colonization_rights",
+      "va": "0x14477eaf0",
+      "rva": "0x477eaf0",
+      "file_offset": "0x477def0",
+      "bytes": "636f6c6f6e697a6174696f6e5f72696768747300"
+    },
+    {
+      "label": "exact enum atom conquer_state",
+      "va": "0x1447a6d10",
+      "rva": "0x47a6d10",
+      "file_offset": "0x47a6110",
+      "bytes": "2154000000000000782f774401000000"
+    },
+    {
+      "label": "exact enum string conquer_state",
+      "va": "0x144772f78",
+      "rva": "0x4772f78",
+      "file_offset": "0x4772378",
+      "bytes": "636f6e717565725f737461746500"
+    },
+    {
+      "label": "exact enum atom contain_threat",
+      "va": "0x1447a7850",
+      "rva": "0x47a7850",
+      "file_offset": "0x47a6c50",
+      "bytes": "d554000000000000503d774401000000"
+    },
+    {
+      "label": "exact enum string contain_threat",
+      "va": "0x144773d50",
+      "rva": "0x4773d50",
+      "file_offset": "0x4773150",
+      "bytes": "636f6e7461696e5f74687265617400"
+    },
+    {
+      "label": "exact enum atom demand_no_strait_closure",
+      "va": "0x1447b6680",
+      "rva": "0x47b6680",
+      "file_offset": "0x47b5a80",
+      "bytes": "03640000000000001885784401000000"
+    },
+    {
+      "label": "exact enum string demand_no_strait_closure",
+      "va": "0x144788518",
+      "rva": "0x4788518",
+      "file_offset": "0x4787918",
+      "bytes": "64656d616e645f6e6f5f7374726169745f636c6f7375726500"
+    },
+    {
+      "label": "exact enum atom demand_no_tolls",
+      "va": "0x1447b6670",
+      "rva": "0x47b6670",
+      "file_offset": "0x47b5a70",
+      "bytes": "0264000000000000f885784401000000"
+    },
+    {
+      "label": "exact enum string demand_no_tolls",
+      "va": "0x1447885f8",
+      "rva": "0x47885f8",
+      "file_offset": "0x47879f8",
+      "bytes": "64656d616e645f6e6f5f746f6c6c7300"
+    },
+    {
+      "label": "exact enum atom demand_strait_access",
+      "va": "0x1447b6650",
+      "rva": "0x47b6650",
+      "file_offset": "0x47b5a50",
+      "bytes": "00640000000000002086784401000000"
+    },
+    {
+      "label": "exact enum string demand_strait_access",
+      "va": "0x144788620",
+      "rva": "0x4788620",
+      "file_offset": "0x4787a20",
+      "bytes": "64656d616e645f7374726169745f61636365737300"
+    },
+    {
+      "label": "exact enum atom demand_toll_exemption",
+      "va": "0x1447b6660",
+      "rva": "0x47b6660",
+      "file_offset": "0x47b5a60",
+      "bytes": "0164000000000000e085784401000000"
+    },
+    {
+      "label": "exact enum string demand_toll_exemption",
+      "va": "0x1447885e0",
+      "rva": "0x47885e0",
+      "file_offset": "0x47879e0",
+      "bytes": "64656d616e645f746f6c6c5f6578656d7074696f6e00"
+    },
+    {
+      "label": "exact enum atom enforce_treaty_article",
+      "va": "0x1447b3490",
+      "rva": "0x47b3490",
+      "file_offset": "0x47b2890",
+      "bytes": "dd60000000000000883f784401000000"
+    },
+    {
+      "label": "exact enum string enforce_treaty_article",
+      "va": "0x144783f88",
+      "rva": "0x4783f88",
+      "file_offset": "0x4783388",
+      "bytes": "656e666f7263655f7472656174795f61727469636c6500"
+    },
+    {
+      "label": "exact enum atom force_nationalization",
+      "va": "0x1447ab150",
+      "rva": "0x47ab150",
+      "file_offset": "0x47aa550",
+      "bytes": "205d000000000000b08b774401000000"
+    },
+    {
+      "label": "exact enum string force_nationalization",
+      "va": "0x144778bb0",
+      "rva": "0x4778bb0",
+      "file_offset": "0x4777fb0",
+      "bytes": "666f7263655f6e6174696f6e616c697a6174696f6e00"
+    },
+    {
+      "label": "exact enum atom foreign_investment_rights",
+      "va": "0x1447a2640",
+      "rva": "0x47a2640",
+      "file_offset": "0x47a1a40",
+      "bytes": "d83300000000000050df764401000000"
+    },
+    {
+      "label": "exact enum string foreign_investment_rights",
+      "va": "0x14476df50",
+      "rva": "0x476df50",
+      "file_offset": "0x476d350",
+      "bytes": "666f726569676e5f696e766573746d656e745f72696768747300"
+    },
+    {
+      "label": "exact enum atom humiliation",
+      "va": "0x1447a7fb0",
+      "rva": "0x47a7fb0",
+      "file_offset": "0x47a73b0",
+      "bytes": "4e550000000000004046774401000000"
+    },
+    {
+      "label": "exact enum string humiliation",
+      "va": "0x144774640",
+      "rva": "0x4774640",
+      "file_offset": "0x4773a40",
+      "bytes": "68756d696c696174696f6e00"
+    },
+    {
+      "label": "exact enum atom increase_autonomy",
+      "va": "0x1447af2f0",
+      "rva": "0x47af2f0",
+      "file_offset": "0x47ae6f0",
+      "bytes": "9d5c000000000000c8855d4401000000"
+    },
+    {
+      "label": "exact enum string increase_autonomy",
+      "va": "0x1445d85c8",
+      "rva": "0x45d85c8",
+      "file_offset": "0x45d79c8",
+      "bytes": "696e6372656173655f6175746f6e6f6d7900"
+    },
+    {
+      "label": "exact enum atom independence",
+      "va": "0x14479ba20",
+      "rva": "0x479ba20",
+      "file_offset": "0x479ae20",
+      "bytes": "8d2c000000000000884d764401000000"
+    },
+    {
+      "label": "exact enum string independence",
+      "va": "0x144764d88",
+      "rva": "0x4764d88",
+      "file_offset": "0x4764188",
+      "bytes": "696e646570656e64656e636500"
+    },
+    {
+      "label": "exact enum atom join_power_bloc",
+      "va": "0x1447b10d0",
+      "rva": "0x47b10d0",
+      "file_offset": "0x47b04d0",
+      "bytes": "2c5f000000000000e09b654401000000"
+    },
+    {
+      "label": "exact enum string join_power_bloc",
+      "va": "0x144659be0",
+      "rva": "0x4659be0",
+      "file_offset": "0x4658fe0",
+      "bytes": "6a6f696e5f706f7765725f626c6f6300"
+    },
+    {
+      "label": "exact enum atom leave_power_bloc",
+      "va": "0x1447b1240",
+      "rva": "0x47b1240",
+      "file_offset": "0x47b0640",
+      "bytes": "435f000000000000a012784401000000"
+    },
+    {
+      "label": "exact enum string leave_power_bloc",
+      "va": "0x1447812a0",
+      "rva": "0x47812a0",
+      "file_offset": "0x47806a0",
+      "bytes": "6c656176655f706f7765725f626c6f6300"
+    },
+    {
+      "label": "exact enum atom liberate_country",
+      "va": "0x14479a6e0",
+      "rva": "0x479a6e0",
+      "file_offset": "0x4799ae0",
+      "bytes": "382b000000000000c83e764401000000"
+    },
+    {
+      "label": "exact enum string liberate_country",
+      "va": "0x144763ec8",
+      "rva": "0x4763ec8",
+      "file_offset": "0x47632c8",
+      "bytes": "6c696265726174655f636f756e74727900"
+    },
+    {
+      "label": "exact enum atom liberate_subject",
+      "va": "0x1447a6e80",
+      "rva": "0x47a6e80",
+      "file_offset": "0x47a6280",
+      "bytes": "38540000000000005830774401000000"
+    },
+    {
+      "label": "exact enum string liberate_subject",
+      "va": "0x144773058",
+      "rva": "0x4773058",
+      "file_offset": "0x4772458",
+      "bytes": "6c696265726174655f7375626a65637400"
+    },
+    {
+      "label": "exact enum atom make_subject",
+      "va": "0x1447b4d00",
+      "rva": "0x47b4d00",
+      "file_offset": "0x47b4100",
+      "bytes": "68620000000000006064784401000000"
+    },
+    {
+      "label": "exact enum string make_subject",
+      "va": "0x144786460",
+      "rva": "0x4786460",
+      "file_offset": "0x4785860",
+      "bytes": "6d616b655f7375626a65637400"
+    },
+    {
+      "label": "exact enum atom open_market",
+      "va": "0x14479b3b0",
+      "rva": "0x479b3b0",
+      "file_offset": "0x479a7b0",
+      "bytes": "182c000000000000d045764401000000"
+    },
+    {
+      "label": "exact enum string open_market",
+      "va": "0x1447645d0",
+      "rva": "0x47645d0",
+      "file_offset": "0x47639d0",
+      "bytes": "6f70656e5f6d61726b657400"
+    },
+    {
+      "label": "exact enum atom reduce_autonomy",
+      "va": "0x1447af2e0",
+      "rva": "0x47af2e0",
+      "file_offset": "0x47ae6e0",
+      "bytes": "9c5c00000000000000f4774401000000"
+    },
+    {
+      "label": "exact enum string reduce_autonomy",
+      "va": "0x14477f400",
+      "rva": "0x477f400",
+      "file_offset": "0x477e800",
+      "bytes": "7265647563655f6175746f6e6f6d7900"
+    },
+    {
+      "label": "exact enum atom regime_change",
+      "va": "0x1447a7fa0",
+      "rva": "0x47a7fa0",
+      "file_offset": "0x47a73a0",
+      "bytes": "4d55000000000000d8845d4401000000"
+    },
+    {
+      "label": "exact enum string regime_change",
+      "va": "0x1445d84d8",
+      "rva": "0x45d84d8",
+      "file_offset": "0x45d78d8",
+      "bytes": "726567696d655f6368616e676500"
+    },
+    {
+      "label": "exact enum atom release_as_subject",
+      "va": "0x1447b4dd0",
+      "rva": "0x47b4dd0",
+      "file_offset": "0x47b41d0",
+      "bytes": "75620000000000007065784401000000"
+    },
+    {
+      "label": "exact enum string release_as_subject",
+      "va": "0x144786570",
+      "rva": "0x4786570",
+      "file_offset": "0x4785970",
+      "bytes": "72656c656173655f61735f7375626a65637400"
+    },
+    {
+      "label": "exact enum atom return_state",
+      "va": "0x1447a7830",
+      "rva": "0x47a7830",
+      "file_offset": "0x47a6c30",
+      "bytes": "d354000000000000783d774401000000"
+    },
+    {
+      "label": "exact enum string return_state",
+      "va": "0x144773d78",
+      "rva": "0x4773d78",
+      "file_offset": "0x4773178",
+      "bytes": "72657475726e5f737461746500"
+    },
+    {
+      "label": "exact enum atom revoke_all_claims",
+      "va": "0x1447ae870",
+      "rva": "0x47ae870",
+      "file_offset": "0x47adc70",
+      "bytes": "f15b00000000000080e5774401000000"
+    },
+    {
+      "label": "exact enum string revoke_all_claims",
+      "va": "0x14477e580",
+      "rva": "0x477e580",
+      "file_offset": "0x477d980",
+      "bytes": "7265766f6b655f616c6c5f636c61696d7300"
+    },
+    {
+      "label": "exact enum atom revoke_claim",
+      "va": "0x1447a7860",
+      "rva": "0x47a7860",
+      "file_offset": "0x47a6c60",
+      "bytes": "d654000000000000783c774401000000"
+    },
+    {
+      "label": "exact enum string revoke_claim",
+      "va": "0x144773c78",
+      "rva": "0x4773c78",
+      "file_offset": "0x4773078",
+      "bytes": "7265766f6b655f636c61696d00"
+    },
+    {
+      "label": "exact enum atom secession",
+      "va": "0x1447a84a0",
+      "rva": "0x47a84a0",
+      "file_offset": "0x47a78a0",
+      "bytes": "9e550000000000007059774401000000"
+    },
+    {
+      "label": "exact enum string secession",
+      "va": "0x144775970",
+      "rva": "0x4775970",
+      "file_offset": "0x4774d70",
+      "bytes": "736563657373696f6e00"
+    },
+    {
+      "label": "exact enum atom take_treaty_port",
+      "va": "0x1447a6e70",
+      "rva": "0x47a6e70",
+      "file_offset": "0x47a6270",
+      "bytes": "37540000000000004030774401000000"
+    },
+    {
+      "label": "exact enum string take_treaty_port",
+      "va": "0x144773040",
+      "rva": "0x4773040",
+      "file_offset": "0x4772440",
+      "bytes": "74616b655f7472656174795f706f727400"
+    },
+    {
+      "label": "exact enum atom transfer_subject",
+      "va": "0x1447a79d0",
+      "rva": "0x47a79d0",
+      "file_offset": "0x47a6dd0",
+      "bytes": "ed54000000000000203e774401000000"
+    },
+    {
+      "label": "exact enum string transfer_subject",
+      "va": "0x144773e20",
+      "rva": "0x4773e20",
+      "file_offset": "0x4773220",
+      "bytes": "7472616e736665725f7375626a65637400"
+    },
+    {
+      "label": "exact enum atom unification",
+      "va": "0x1447a6f70",
+      "rva": "0x47a6f70",
+      "file_offset": "0x47a6370",
+      "bytes": "4754000000000000c031774401000000"
+    },
+    {
+      "label": "exact enum string unification",
+      "va": "0x1447731c0",
+      "rva": "0x47731c0",
+      "file_offset": "0x47725c0",
+      "bytes": "756e696669636174696f6e00"
+    },
+    {
+      "label": "exact enum atom unification_leadership",
+      "va": "0x1447ac6d0",
+      "rva": "0x47ac6d0",
+      "file_offset": "0x47abad0",
+      "bytes": "c75900000000000028b4774401000000"
+    },
+    {
+      "label": "exact enum string unification_leadership",
+      "va": "0x14477b428",
+      "rva": "0x477b428",
+      "file_offset": "0x477a828",
+      "bytes": "756e696669636174696f6e5f6c65616465727368697000"
+    },
+    {
+      "label": "exact enum atom custom",
+      "va": "0x14478e6c0",
+      "rva": "0x478e6c0",
+      "file_offset": "0x478dac0",
+      "bytes": "54040000000000007465754401000000"
+    },
+    {
+      "label": "exact enum string custom",
+      "va": "0x144756574",
+      "rva": "0x4756574",
+      "file_offset": "0x4755974",
+      "bytes": "637573746f6d00"
+    },
+    {
+      "label": "exact enum atom none",
+      "va": "0x1447935c0",
+      "rva": "0x47935c0",
+      "file_offset": "0x47929c0",
+      "bytes": "650100000000000048eb534401000000"
+    },
+    {
+      "label": "exact enum string none",
+      "va": "0x14453eb48",
+      "rva": "0x453eb48",
+      "file_offset": "0x453df48",
+      "bytes": "6e6f6e6500"
+    },
+    {
+      "label": "exact enum atom befriend",
+      "va": "0x14479bc80",
+      "rva": "0x479bc80",
+      "file_offset": "0x479b080",
+      "bytes": "b32c000000000000d04e764401000000"
+    },
+    {
+      "label": "exact enum string befriend",
+      "va": "0x144764ed0",
+      "rva": "0x4764ed0",
+      "file_offset": "0x47642d0",
+      "bytes": "6265667269656e6400"
+    },
+    {
+      "label": "exact enum atom reconcile",
+      "va": "0x1447a7e90",
+      "rva": "0x47a7e90",
+      "file_offset": "0x47a7290",
+      "bytes": "3c55000000000000e844774401000000"
+    },
+    {
+      "label": "exact enum string reconcile",
+      "va": "0x1447744e8",
+      "rva": "0x47744e8",
+      "file_offset": "0x47738e8",
+      "bytes": "7265636f6e63696c6500"
+    },
+    {
+      "label": "exact enum atom protect",
+      "va": "0x14479bc60",
+      "rva": "0x479bc60",
+      "file_offset": "0x479b060",
+      "bytes": "b12c000000000000e84e764401000000"
+    },
+    {
+      "label": "exact enum string protect",
+      "va": "0x144764ee8",
+      "rva": "0x4764ee8",
+      "file_offset": "0x47642e8",
+      "bytes": "70726f7465637400"
+    },
+    {
+      "label": "exact enum atom antagonize",
+      "va": "0x14479bc70",
+      "rva": "0x479bc70",
+      "file_offset": "0x479b070",
+      "bytes": "b22c000000000000c04e764401000000"
+    },
+    {
+      "label": "exact enum string antagonize",
+      "va": "0x144764ec0",
+      "rva": "0x4764ec0",
+      "file_offset": "0x47642c0",
+      "bytes": "616e7461676f6e697a6500"
+    },
+    {
+      "label": "exact enum atom conquer",
+      "va": "0x14479ed10",
+      "rva": "0x479ed10",
+      "file_offset": "0x479e110",
+      "bytes": "09300000000000005088764401000000"
+    },
+    {
+      "label": "exact enum string conquer",
+      "va": "0x144768850",
+      "rva": "0x4768850",
+      "file_offset": "0x4767c50",
+      "bytes": "636f6e7175657200"
+    },
+    {
+      "label": "exact enum atom dominate",
+      "va": "0x1447a7de0",
+      "rva": "0x47a7de0",
+      "file_offset": "0x47a71e0",
+      "bytes": "3155000000000000184f774401000000"
+    },
+    {
+      "label": "exact enum string dominate",
+      "va": "0x144774f18",
+      "rva": "0x4774f18",
+      "file_offset": "0x4774318",
+      "bytes": "646f6d696e61746500"
+    },
+    {
+      "label": "exact enum atom comply",
+      "va": "0x1447b0ae0",
+      "rva": "0x47b0ae0",
+      "file_offset": "0x47afee0",
+      "bytes": "355e000000000000dc07784401000000"
+    },
+    {
+      "label": "exact enum string comply",
+      "va": "0x1447807dc",
+      "rva": "0x47807dc",
+      "file_offset": "0x477fbdc",
+      "bytes": "636f6d706c7900"
+    },
+    {
+      "label": "exact enum atom defy",
+      "va": "0x1447b0af0",
+      "rva": "0x47b0af0",
+      "file_offset": "0x47afef0",
+      "bytes": "365e000000000000e407784401000000"
+    },
+    {
+      "label": "exact enum string defy",
+      "va": "0x1447807e4",
+      "rva": "0x47807e4",
+      "file_offset": "0x477fbe4",
+      "bytes": "6465667900"
+    },
+    {
+      "label": "wargoal_scores atom",
+      "va": "0x1447a7df0",
+      "rva": "0x47a7df0",
+      "file_offset": "0x47a71f0",
+      "bytes": "3255000000000000284f774401000000"
+    },
+    {
+      "label": "wargoal_scores exact string",
+      "va": "0x144774f28",
+      "rva": "0x4774f28",
+      "file_offset": "0x4774328",
+      "bytes": "776172676f616c5f73636f72657300"
+    },
+    {
+      "label": "secret_goal_scores atom",
+      "va": "0x1447a7ea0",
+      "rva": "0x47a7ea0",
+      "file_offset": "0x47a72a0",
+      "bytes": "3d55000000000000b044774401000000"
+    },
+    {
+      "label": "secret_goal_scores exact string",
+      "va": "0x1447744b0",
+      "rva": "0x47744b0",
+      "file_offset": "0x47738b0",
+      "bytes": "7365637265745f676f616c5f73636f72657300"
+    },
+    {
+      "label": "wanted_navy exact atom",
+      "va": "0x1447aee90",
+      "rva": "0x47aee90",
+      "file_offset": "0x47ae290",
+      "bytes": "575c000000000000a8e2774401000000"
+    },
+    {
+      "label": "wanted_navy exact NUL string",
+      "va": "0x14477e2a8",
+      "rva": "0x477e2a8",
+      "file_offset": "0x477d6a8",
+      "bytes": "77616e7465645f6e6176795f73697a6500"
+    },
+    {
+      "label": "wanted_navy compressed selector14",
+      "va": "0x141641eff",
+      "rva": "0x1641eff",
+      "file_offset": "0x16412ff",
+      "bytes": "0e"
+    },
+    {
+      "label": "wanted_navy dispatch target",
+      "va": "0x141641e7c",
+      "rva": "0x1641e7c",
+      "file_offset": "0x164127c",
+      "bytes": "88186401"
+    },
+    {
+      "label": "wanted_navy parser member1a60",
+      "va": "0x141641888",
+      "rva": "0x1641888",
+      "file_offset": "0x1640c88",
+      "bytes": "488d8fa8f9ffff488b01488bd6ff5018"
+    },
+    {
+      "label": "wanted_navy country argument",
+      "va": "0x1415ad1c1",
+      "rva": "0x15ad1c1",
+      "file_offset": "0x15ac5c1",
+      "bytes": "488bd94533f64489"
+    },
+    {
+      "label": "wanted_navy empty context constructor",
+      "va": "0x1415ad1e0",
+      "rva": "0x15ad1e0",
+      "file_offset": "0x15ac5e0",
+      "bytes": "488d4d20e8d70408ff"
+    },
+    {
+      "label": "wanted_navy country tag5 ROOT and call",
+      "va": "0x1415ad201",
+      "rva": "0x15ad201",
+      "file_offset": "0x15ac601",
+      "bytes": "b80500000066894424208b43184889442428488d542420488bcbe8f0000000"
+    },
+    {
+      "label": "wanted_navy exact helper argument identities",
+      "va": "0x1415ad325",
+      "rva": "0x15ad325",
+      "file_offset": "0x15ac725",
+      "bytes": "488bea488bd9"
+    },
+    {
+      "label": "wanted_navy default member1a60 and actual eval",
+      "va": "0x1415ad38e",
+      "rva": "0x15ad38e",
+      "file_offset": "0x15ac78e",
+      "bytes": "488b8b600f00004881c1601a0000488d8424b000000048894424204533c94c8bc5488d9424a0000000e864247fff"
+    },
+    {
+      "label": "wanted_navy active member1a60 eval and additive merge",
+      "va": "0x1415ad3e8",
+      "rva": "0x15ad3e8",
+      "file_offset": "0x15ac7e8",
+      "bytes": "488b0f4881c1601a0000488d8424a000000048894424204533c94c8bc5488d9424b0000000e80e247fff48039c24b0000000"
+    },
+    {
+      "label": "float wrapper passes tuple and member8",
+      "va": "0x140d9f8a8",
+      "rva": "0xd9f8a8",
+      "file_offset": "0xd9eca8",
+      "bytes": "4c8bcd4d8bc6488bd3488d4f08e8068c0000"
+    },
+    {
+      "label": "numeric eval uses same tuple allthree scopes",
+      "va": "0x140da84f1",
+      "rva": "0xda84f1",
+      "file_offset": "0xda78f1",
+      "bytes": "48895c243048895c243848895c2440488d4424504889442448488b84242004000048894424204c8bcf4c8d442430488bd5488bcee8161b0000"
+    },
+    {
+      "label": "ship construction exact atom",
+      "va": "0x1447b4930",
+      "rva": "0x47b4930",
+      "file_offset": "0x47b3d30",
+      "bytes": "2a620000000000005069784401000000"
+    },
+    {
+      "label": "ship construction exact NUL string",
+      "va": "0x144786950",
+      "rva": "0x4786950",
+      "file_offset": "0x4785d50",
+      "bytes": "736869705f636f6e737472756374696f6e5f6f75747075745f6d756c7469706c69657200"
+    },
+    {
+      "label": "ship construction exact token branch",
+      "va": "0x141641bf0",
+      "rva": "0x1641bf0",
+      "file_offset": "0x1640ff0",
+      "bytes": "4181e82a6200000f84b5000000"
+    },
+    {
+      "label": "ship construction parser member1be0",
+      "va": "0x141641cb2",
+      "rva": "0x1641cb2",
+      "file_offset": "0x16410b2",
+      "bytes": "4881c128fbffff488b01ff5018"
+    },
+    {
+      "label": "ship construction empty context",
+      "va": "0x1415ada3c",
+      "rva": "0x15ada3c",
+      "file_offset": "0x15ace3c",
+      "bytes": "488d8dc0000000e878fc07ff"
+    },
+    {
+      "label": "ship construction country tag5 ROOT",
+      "va": "0x1415ada69",
+      "rva": "0x15ada69",
+      "file_offset": "0x15ace69",
+      "bytes": "b805000000668945c08b4318488945c8"
+    },
+    {
+      "label": "ship construction default member1be0 actual eval",
+      "va": "0x1415adab7",
+      "rva": "0x15adab7",
+      "file_offset": "0x15aceb7",
+      "bytes": "488b8b600f00004881c1e01b0000488d851005000048894424204533c94c8d45c0498bd7e8401d7fff"
+    },
+    {
+      "label": "ship construction active member1be8 exact scalar eval and ROOT slots",
+      "va": "0x1415adb71",
+      "rva": "0x15adb71",
+      "file_offset": "0x15acf71",
+      "bytes": "488d45c04889442460488d45c04889442468488d45c04889442470488d85000100004889442478488d8ee81b000048897c24204533c94c8d442460488d9520050000e888c47fff"
+    },
+    {
+      "label": "ship construction additive merge",
+      "va": "0x1415adc90",
+      "rva": "0x15adc90",
+      "file_offset": "0x15ad090",
+      "bytes": "488b8520050000490107"
+    },
+    {
+      "label": "aggression: exact NUL field",
+      "va": "0x14477a578",
+      "rva": "0x477a578",
+      "file_offset": "0x4779978",
+      "bytes": "61676772657373696f6e00"
+    },
+    {
+      "label": "aggression: atom token/string",
+      "va": "0x1447ac500",
+      "rva": "0x47ac500",
+      "file_offset": "0x47ab900",
+      "bytes": "a45900000000000078a5774401000000"
+    },
+    {
+      "label": "aggression: exact parser member",
+      "va": "0x14164154a",
+      "rva": "0x164154a",
+      "file_offset": "0x164094a",
+      "bytes": "4881c1a8f0ffff488b01ff5018e9a9080000"
+    },
+    {
+      "label": "aggression: whole actual consumer country tuple/member/evaluator",
+      "va": "0x1416453b0",
+      "rva": "0x16453b0",
+      "file_offset": "0x16447b0",
+      "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e87ac701ff488d4d40e8c182fefe4c8d3da20a23034c897d58c5f9efc0c5fa7f45604c896570b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b1500f54404488d4c2458e87692cf014c89a5b0000000488d8e60110000488d85b000000048894424204533c94c8d442440498bd6e8aca375ff904c897d58488b5d704885db74334c39237426448b430c33d2488bcbe8fbefd6014489630c488b4b10488b01488b13ff50104c892344896308488bcbe8cba4bd02488b5d684885db742a48833b00741c488bcbe844e10eff488b4b10488b01488b13ff50104c892344896308488bcbe898a4bd02488b4d604885c9740a488b01ba01000000ff1048837d4000741f488d4d40e805e10eff488b4d50488b01488b5540ff50104c89654044896548488b5424584885d274104489642464488b4c2468488b01ff5010498bc64c8d9c2480010000498b5b38498b7340498be3415f415e415c5f5dc3"
+    },
+    {
+      "label": "aggression: exact default active call and merge",
+      "va": "0x1415aaba0",
+      "rva": "0x15aaba0",
+      "file_offset": "0x15a9fa0",
+      "bytes": "48895c241048896c2418488974242057415641574881ec800000004d8bf0488bf24c8bf9488d4c2440e8422d020090488d4e20e8189769ff488d542440488bc8e8dbc3f4ffe806dc1aff488b184885db752a488d050726f1024889442430c74424381e000000885c243c4533c94c8d442430ba04000000e8e42e65024d8bce4c8bc6488d9424a0000000488b8b600f0000e87aa70900488b5c2440486344244c488d2cc3488bbc24a0000000483bdd74224d8bce4c8bc6488d9424a0000000488b0be849a709004803384883c308483bdd75de"
+    },
+    {
+      "label": "nationalization_desire: exact NUL field",
+      "va": "0x1447810e0",
+      "rva": "0x47810e0",
+      "file_offset": "0x47804e0",
+      "bytes": "6e6174696f6e616c697a6174696f6e5f64657369726500"
+    },
+    {
+      "label": "nationalization_desire: atom token/string",
+      "va": "0x1447b1100",
+      "rva": "0x47b1100",
+      "file_offset": "0x47b0500",
+      "bytes": "2f5f000000000000e010784401000000"
+    },
+    {
+      "label": "nationalization_desire: exact parser member",
+      "va": "0x141641a74",
+      "rva": "0x1641a74",
+      "file_offset": "0x1640e74",
+      "bytes": "4881c1c0ecffff488b01ff5018e97f030000"
+    },
+    {
+      "label": "nationalization_desire: whole actual consumer country tuple/member/evaluator",
+      "va": "0x141647e30",
+      "rva": "0x1647e30",
+      "file_offset": "0x1647230",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e8fb9c01ff488d4d30e84258fefe4c8d3523e022034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8f780d0000488d859000000048894424204533c94c8d442430488bd6e84e7975ff904c897548488b5d604885db74334c393b7426448b430c33d2488bcbe89dc5d60144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe86d7abd02488b5d584885db742a48833b00741c488bcbe8e6b60eff488b4b10488b01488b13ff50104c893b44897b08488bcbe83a7abd02488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e8a7b60eff488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc64c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "nationalization_desire: exact default active call and merge",
+      "va": "0x14153f927",
+      "rva": "0x153f927",
+      "file_offset": "0x153ed27",
+      "bytes": "4d8bc6488d542468488b8b600f0000e8f5841000488b5d904863459c488d3cc3483bdf74290f1f40004d8bc6488d542440488b0be8d0841000488b0848014c2468"
+    },
+    {
+      "label": "max_active_stances: exact NUL field",
+      "va": "0x144786bc8",
+      "rva": "0x4786bc8",
+      "file_offset": "0x4785fc8",
+      "bytes": "6d61785f6163746976655f7374616e63657300"
+    },
+    {
+      "label": "max_active_stances: atom token/string",
+      "va": "0x1447b4a00",
+      "rva": "0x47b4a00",
+      "file_offset": "0x47b3e00",
+      "bytes": "3762000000000000c86b784401000000"
+    },
+    {
+      "label": "max_active_stances: exact parser member",
+      "va": "0x141641ca0",
+      "rva": "0x1641ca0",
+      "file_offset": "0x16410a0",
+      "bytes": "4881c1e0e3ffff488b01ff5018e953010000"
+    },
+    {
+      "label": "max_active_stances: whole actual consumer country tuple/member/evaluator",
+      "va": "0x141647fc0",
+      "rva": "0x1647fc0",
+      "file_offset": "0x16473c0",
+      "bytes": "48895c2410488974241855574156488d6c24904881ec70010000488bfa488d999804000083bba000000000750733c0e9370100004533f644897424304c897424384489742440488d4c2448e8609b01ff488d4d30e8a756fefe488d3588de220348897548c5f9efc0c5fa7f45504c897560b80500000066894424308b471848894424384c89b5900000004c8d8d900000004533c0488d542430488bcbe82fc288ff8bf848897548488b5d604885db74334c39337426448b430c33d2488bcbe80dc4d6014489730c488b4b10488b01488b13ff50104c893344897308488bcbe8dd78bd02488b5d584885db742a48833b00741c488bcbe856b50eff488b4b10488b01488b13ff50104c893344897308488bcbe8aa78bd02488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e817b50eff488b4d40488b01488b5530ff50104c89753044897538488b5424484885d274104489742454488b4c2458488b01ff50108bc74c8d9c2470010000498b5b28498b7330498be3415e5f5dc3"
+    },
+    {
+      "label": "max_active_stances: exact default active call and merge",
+      "va": "0x1415ca7d0",
+      "rva": "0x15ca7d0",
+      "file_offset": "0x15c9bd0",
+      "bytes": "48895c240848896c24104889742418574881ec80000000488bf1e801e018ff488b184885db752a488d05022aef024889442430c74424381e000000885c243c4533c94c8d442430ba04000000e8df326302488bd6488b8b600f0000e890d707008bf8488d4c2440e8d430000090488d4e20e8aa9a67ff488d542440488bc8e86dc7f2ff488b5c244048634c244c488d2ccb483bdd742566660f1f840000000000488bd6488b0be845d7070003f8"
+    },
+    {
+      "label": "wanted_marines: exact NUL field",
+      "va": "0x144786630",
+      "rva": "0x4786630",
+      "file_offset": "0x4785a30",
+      "bytes": "77616e7465645f6d6172696e657300"
+    },
+    {
+      "label": "wanted_marines: atom token/string",
+      "va": "0x1447b4750",
+      "rva": "0x47b4750",
+      "file_offset": "0x47b3b50",
+      "bytes": "0b620000000000003066784401000000"
+    },
+    {
+      "label": "wanted_marines: exact parser member",
+      "va": "0x141641b77",
+      "rva": "0x1641b77",
+      "file_offset": "0x1640f77",
+      "bytes": "488d8f28f8ffff488b01488bd6ff5018e979"
+    },
+    {
+      "label": "wanted_marines: whole actual consumer country tuple/member/evaluator",
+      "va": "0x141644380",
+      "rva": "0x1644380",
+      "file_offset": "0x1643780",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e8abd701ff488d4d30e8f292fefe4c8d35d31a23034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8fe0180000488d859000000048894424204533c94c8d442430488bd6e8feb375ff904c897548488b5d604885db74334c393b7426448b430c33d2488bcbe84d00d70144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe81db5bd02488b5d584885db742a48833b00741c488bcbe896f10eff488b4b10488b01488b13ff50104c893b44897b08488bcbe8eab4bd02488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e857f10eff488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc64c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "wanted_marines: exact default active call and merge",
+      "va": "0x1415acc92",
+      "rva": "0x15acc92",
+      "file_offset": "0x15ac092",
+      "bytes": "4c8bc6488d942490000000488b8b600f0000e8d7760900488b7c2440486344244c488d2cc7488b9c2490000000483bfd74300f1f40000f1f8400000000004c8bc6488d942490000000488b0fe89d760900480318"
+    },
+    {
+      "label": "economic_vs_government_spending_balance: exact NUL field",
+      "va": "0x144785c20",
+      "rva": "0x4785c20",
+      "file_offset": "0x4785020",
+      "bytes": "65636f6e6f6d69635f76735f676f7665726e6d656e745f7370656e64696e675f62616c616e636500"
+    },
+    {
+      "label": "economic_vs_government_spending_balance: atom token/string",
+      "va": "0x1447b3f90",
+      "rva": "0x47b3f90",
+      "file_offset": "0x47b3390",
+      "bytes": "8f61000000000000205c784401000000"
+    },
+    {
+      "label": "economic_vs_government_spending_balance: exact parser member",
+      "va": "0x141641b62",
+      "rva": "0x1641b62",
+      "file_offset": "0x1640f62",
+      "bytes": "488d8fa8f6ffff488b01488bd6ff5018e98e"
+    },
+    {
+      "label": "economic_vs_government_spending_balance: whole actual consumer country tuple/member/evaluator",
+      "va": "0x1416467b0",
+      "rva": "0x16467b0",
+      "file_offset": "0x1645bb0",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e87bb301ff488d4d30e8c26efefe4c8d35a3f622034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8f60170000488d859000000048894424204533c94c8d442430488bd6e8ce8f75ff904c897548488b5d604885db74334c393b7426448b430c33d2488bcbe81ddcd60144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe8ed90bd02488b5d584885db742a48833b00741c488bcbe866cd0eff488b4b10488b01488b13ff50104c893b44897b08488bcbe8ba90bd02488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e827cd0eff488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc64c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "economic_vs_government_spending_balance: exact default active call and merge",
+      "va": "0x141511cfc",
+      "rva": "0x1511cfc",
+      "file_offset": "0x15110fc",
+      "bytes": "4d8bc7488d9540090000488b88600f0000e89e4a1300488b5c2440486344244c488d34c3488bbd40090000483bde74270f1f40004d8bc7488d9540090000488b0be86e4a1300480338"
+    },
+    {
+      "label": "target_marine_formation_size: exact NUL field",
+      "va": "0x144786890",
+      "rva": "0x4786890",
+      "file_offset": "0x4785c90",
+      "bytes": "7461726765745f6d6172696e655f666f726d6174696f6e5f73697a6500"
+    },
+    {
+      "label": "target_marine_formation_size: atom token/string",
+      "va": "0x1447b47a0",
+      "rva": "0x47b47a0",
+      "file_offset": "0x47b3ba0",
+      "bytes": "10620000000000009068784401000000"
+    },
+    {
+      "label": "target_marine_formation_size: exact parser member",
+      "va": "0x141641b8c",
+      "rva": "0x1641b8c",
+      "file_offset": "0x1640f8c",
+      "bytes": "488d8fe8f8ffff488b01488bd6ff5018e964"
+    },
+    {
+      "label": "target_marine_formation_size: whole actual consumer country tuple/member/evaluator",
+      "va": "0x141644510",
+      "rva": "0x1644510",
+      "file_offset": "0x1643910",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e81bd601ff488d4d30e86291fefe4c8d35431923034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8fa0190000488d859000000048894424204533c94c8d442430488bd6e86eb275ff904c897548488b5d604885db74334c393b7426448b430c33d2488bcbe8bdfed60144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe88db3bd02488b5d584885db742a48833b00741c488bcbe806f00eff488b4b10488b01488b13ff50104c893b44897b08488bcbe85ab3bd02488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e8c7ef0eff488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc64c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "target_marine_formation_size: exact default active call and merge",
+      "va": "0x1415ad0c2",
+      "rva": "0x15ad0c2",
+      "file_offset": "0x15ac4c2",
+      "bytes": "4c8bc6488d942490000000488b8b600f0000e837740900488b7c2440486344244c488d2cc7488b9c2490000000483bfd74300f1f40000f1f8400000000004c8bc6488d942490000000488b0fe8fd730900480318"
+    },
+    {
+      "label": "unacceptable_infamy_level: exact NUL field",
+      "va": "0x144775698",
+      "rva": "0x4775698",
+      "file_offset": "0x4774a98",
+      "bytes": "756e61636365707461626c655f696e66616d795f6c6576656c00"
+    },
+    {
+      "label": "unacceptable_infamy_level: atom token/string",
+      "va": "0x1447a82e0",
+      "rva": "0x47a82e0",
+      "file_offset": "0x47a76e0",
+      "bytes": "81550000000000009856774401000000"
+    },
+    {
+      "label": "unacceptable_infamy_level: exact parser member",
+      "va": "0x14164145d",
+      "rva": "0x164145d",
+      "file_offset": "0x164085d",
+      "bytes": "4881c128efffff488b01ff5018e996090000"
+    },
+    {
+      "label": "unacceptable_infamy_level: whole actual consumer country tuple/member/evaluator",
+      "va": "0x141644060",
+      "rva": "0x1644060",
+      "file_offset": "0x1643460",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e8cbda01ff488d4d30e81296fefe4c8d35f31d23034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8fe00f0000488d859000000048894424204533c94c8d442430488bd6e81eb775ff904c897548488b5d604885db74334c393b7426448b430c33d2488bcbe86d03d70144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe83db8bd02488b5d584885db742a48833b00741c488bcbe8b6f40eff488b4b10488b01488b13ff50104c893b44897b08488bcbe80ab8bd02488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e877f40eff488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc64c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "unacceptable_infamy_level: exact default active call and merge",
+      "va": "0x1415aa7c3",
+      "rva": "0x15aa7c3",
+      "file_offset": "0x15a9bc3",
+      "bytes": "4c8bc6488d9424a0000000488b8b600f0000e886980900488b7c2440486344244c488d2cc7483bfd742c0f1f004c8bc6488d9424a8000000488b0fe85d980900488b9c24a80000004885db7f114883c708483bfd75d7488b9c24a0000000"
+    },
+    {
+      "label": "undesirable_infamy_level: exact NUL field",
+      "va": "0x144775678",
+      "rva": "0x4775678",
+      "file_offset": "0x4774a78",
+      "bytes": "756e646573697261626c655f696e66616d795f6c6576656c00"
+    },
+    {
+      "label": "undesirable_infamy_level: atom token/string",
+      "va": "0x1447a82d0",
+      "rva": "0x47a82d0",
+      "file_offset": "0x47a76d0",
+      "bytes": "80550000000000007856774401000000"
+    },
+    {
+      "label": "undesirable_infamy_level: exact parser member",
+      "va": "0x14164146f",
+      "rva": "0x164146f",
+      "file_offset": "0x164086f",
+      "bytes": "4881c168eeffff488b01ff5018e984090000"
+    },
+    {
+      "label": "undesirable_infamy_level: whole actual consumer country tuple/member/evaluator",
+      "va": "0x141643ed0",
+      "rva": "0x1643ed0",
+      "file_offset": "0x16432d0",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e85bdc01ff488d4d30e8a297fefe4c8d35831f23034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8f200f0000488d859000000048894424204533c94c8d442430488bd6e8aeb875ff904c897548488b5d604885db74334c393b7426448b430c33d2488bcbe8fd04d70144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe8cdb9bd02488b5d584885db742a48833b00741c488bcbe846f60eff488b4b10488b01488b13ff50104c893b44897b08488bcbe89ab9bd02488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e807f60eff488b4d40488b01488b5530ff50104c897d3044897d38488b5424484885d2741044897c2454488b4c2458488b01ff5010488bc64c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "undesirable_infamy_level: exact default active call and merge",
+      "va": "0x1415aa503",
+      "rva": "0x15aa503",
+      "file_offset": "0x15a9903",
+      "bytes": "4c8bc6488d9424a0000000488b8b600f0000e8b6990900488b7c2440486344244c488d2cc7483bfd742c0f1f004c8bc6488d9424a8000000488b0fe88d990900488b9c24a80000004885db7f114883c708483bfd75d7488b9c24a0000000"
+    },
+    {
+      "label": "diplomatic_play_neutrality: exact NUL field",
+      "va": "0x14477e978",
+      "rva": "0x477e978",
+      "file_offset": "0x477dd78",
+      "bytes": "6469706c6f6d617469635f706c61795f6e65757472616c69747900"
+    },
+    {
+      "label": "diplomatic_play_neutrality: atom token/string",
+      "va": "0x1447aeaf0",
+      "rva": "0x47aeaf0",
+      "file_offset": "0x47adef0",
+      "bytes": "1d5c00000000000078e9774401000000"
+    },
+    {
+      "label": "diplomatic_play_neutrality: exact parser member",
+      "va": "0x141641834",
+      "rva": "0x1641834",
+      "file_offset": "0x1640c34",
+      "bytes": "488d8f50e5ffff488b01488bd6ff5018e9bc"
+    },
+    {
+      "label": "diplomatic_play_neutrality: whole actual consumer country tuple/member/evaluator",
+      "va": "0x1416477a0",
+      "rva": "0x16477a0",
+      "file_offset": "0x1646ba0",
+      "bytes": "48895c2410488974241855574156488d6c24904881ec70010000488bfa488d990806000083bba000000000750733c0e9370100004533f644897424304c897424384489742440488d4c2448e880a301ff488d4d30e8c75efefe488d35a8e6220348897548c5f9efc0c5fa7f45504c897560b80500000066894424308b471848894424384c89b5900000004c8d8d900000004533c0488d542430488bcbe84fca88ff8bf848897548488b5d604885db74334c39337426448b430c33d2488bcbe82dccd6014489730c488b4b10488b01488b13ff50104c893344897308488bcbe8fd80bd02488b5d584885db742a48833b00741c488bcbe876bd0eff488b4b10488b01488b13ff50104c893344897308488bcbe8ca80bd02488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e837bd0eff488b4d40488b01488b5530ff50104c89753044897538488b5424484885d274104489742454488b4c2458488b01ff50108bc74c8d9c2470010000498b5b28498b7330498be3415e5f5dc3"
+    },
+    {
+      "label": "diplomatic_play_neutrality: exact default active call and merge",
+      "va": "0x1415b5660",
+      "rva": "0x15b5660",
+      "file_offset": "0x15b4a60",
+      "bytes": "44894c24204c894424184889542410555356574154415541564157488dac24a8fdffff4881ec58030000418bf94c8bf9c785a0020000000000004533f6e85e64f4ff498bd7488b88600f0000e8ef2009008bd8488bb5e002000085c00f84b2000000448bf04885f60f84a6000000488bcee8aa2608ffc5f9efc0c5f811442470c5f1efc9c5fa7f4d804533c0488d156f7df002488d4c2470e8638207ff90c5f9efc0c5f811442430c5f1efc9c5fa7f4c244041b80a000000488d153959f802488d4c2430e8378207ff90488d4424704889442420448bcb4d8bc7488d542430488d4dc0e818b0fdff90488bd0488bcee85cd85f0290488d4dc0e812b607ff90488d4c2430e807b607ff90488d4c2470e8fcb507ff488d4de0e89381010090498d4f20e869eb68ff488d55e0488bc8e82d18f4ff488b5de0486345ec4c8d2cc3493bdd0f849c0100000f1f840000000000488b3b498bd7488bcfe8e21f0900448be085c00f8e680100004403f0"
+    },
+    {
+      "label": "diplomatic_play_boldness: exact NUL field",
+      "va": "0x14477e9c0",
+      "rva": "0x477e9c0",
+      "file_offset": "0x477ddc0",
+      "bytes": "6469706c6f6d617469635f706c61795f626f6c646e65737300"
+    },
+    {
+      "label": "diplomatic_play_boldness: atom token/string",
+      "va": "0x1447aead0",
+      "rva": "0x47aead0",
+      "file_offset": "0x47aded0",
+      "bytes": "1b5c000000000000c0e9774401000000"
+    },
+    {
+      "label": "diplomatic_play_boldness: exact parser member",
+      "va": "0x141641849",
+      "rva": "0x1641849",
+      "file_offset": "0x1640c49",
+      "bytes": "488d8f08e6ffff488b01488bd6ff5018e9a7"
+    },
+    {
+      "label": "diplomatic_play_boldness: whole actual consumer country tuple/member/evaluator",
+      "va": "0x1416475e0",
+      "rva": "0x16475e0",
+      "file_offset": "0x16469e0",
+      "bytes": "48895c2410488974241848897c24205541564157488d6c24804881ec80010000498bf8488bf2488d99c006000083bba000000000750733c0e95c0100004533ff44897c24404c897c244844897c2450488d4c2458e837a501ff488d4d40e87e60fefe4c8d355fe822034c897558c5f9efc0c5fa7f45604c897d70b80500000066894424408b46184889442448c74424301c0000008b470848894424384c8d4424308b158dd24404488d4c2458e82f70cf014c89bda00000004c8d8da00000004533c0488d542440488bcbe8e1cb88ff8bf84c897558488b5d704885db74334c393b7426448b430c33d2488bcbe8bfcdd60144897b0c488b4b10488b01488b13ff50104c893b44897b08488bcbe88f82bd02488b5d684885db742a48833b00741c488bcbe808bf0eff488b4b10488b01488b13ff50104c893b44897b08488bcbe85c82bd02488b4d604885c9740a488b01ba01000000ff1048837d4000741f488d4d40e8c9be0eff488b4d50488b01488b5540ff50104c897d4044897d48488b5424584885d2741044897c2464488b4c2468488b01ff50108bc74c8d9c2480010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "diplomatic_play_boldness: exact default active call and merge",
+      "va": "0x1415b6d40",
+      "rva": "0x15b6d40",
+      "file_offset": "0x15b6140",
+      "bytes": "48895c241048896c241848897424205741544155415641574883ec704d8be04c8bf24c8bf9e8964df4ff4d8bc7498bd6488b88600f0000e8640809004c63c84969d9a0860100488d4c2430e8806b010090498d4e20e856d568ff488d542430488bc8e81902f4ff488b7c2430486344243c488d34c7bd33f304b549bd09e1d1c6116bf129483bfe0f84350100000f1f004d8bc7498bd6488b0fe8020809004c63c8458b04244169c8b385d64a418b5424042bd18bcac1e90833ca81c1a41de3688bd1c1e20833d169c2e9c4561b8bc8c1e90833c869d1a28cd692418d4001418904248bcac1e90833ca0fbaf11fb88f588b4ff7e18bc12bc2d1e803c2c1e81069c0a08601002bc84c63d1498bd14969c9a0860100488d042949b866e6096a01000000493bc077064c0fafd2eb4e4d8bc24c3bd14c0f4cc14c0f4fd1498bc549f7e8488bca48c1f90e488bc148c1e83f4803c84869c1a08601004c2bc04d0fafc2498bc549f7e848c1fa0e488bc248c1e83f4803d04c0fafd14c03d2498bc248c1e83f84c0498bc5498d8ab03cffff7507498d8a50c3000048f7e948c1fa0e488bc248c1e83f4803d04863c24869c8a08601004803d9"
+    },
+    {
+      "label": "aggression cumulative token dispatch",
+      "va": "0x141641523",
+      "rva": "0x1641523",
+      "file_offset": "0x1640923",
+      "bytes": "4181e8735900000f84a20100004183e8010f840a0100004183e805741c4183f82b0f859e0700004881c1a8f0ffff488b01ff5018e9a9080000"
+    },
+    {
+      "label": "nationalization exact token branch",
+      "va": "0x141641957",
+      "rva": "0x1641957",
+      "file_offset": "0x1640d57",
+      "bytes": "4181f82f5f00000f8f220100000f840a010000"
+    },
+    {
+      "label": "infamy exact cumulative token branch",
+      "va": "0x1416412c8",
+      "rva": "0x16412c8",
+      "file_offset": "0x16406c8",
+      "bytes": "4181e83d5500000f84ac0100004183e8430f84900100004183e8010f8474010000"
+    },
+    {
+      "label": "max_active_stances exact token branch",
+      "va": "0x141641bfd",
+      "rva": "0x1641bfd",
+      "file_offset": "0x1640ffd",
+      "bytes": "4183e80d0f8499000000"
+    },
+    {
+      "label": "marine and economic compressed dispatch",
+      "va": "0x141641b1b",
+      "rva": "0x1641b1b",
+      "file_offset": "0x1640f1b",
+      "bytes": "4181c0719effff4181f8980000000f87b90100004963c0488d15c7e49bfe0fb68402601f64018b8c82441f64014803caffe1"
+    },
+    {
+      "label": "marine economic dispatch tables",
+      "va": "0x141641f44",
+      "rva": "0x1641f44",
+      "file_offset": "0x1641344",
+      "bytes": "621b64014d1b6401a11b6401771b64018c1b6401b61b6401e81c6401000606060606060606060606060606060606060606060606060606060606060606060601060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060606060602060606060606060306060606040606060606060606060606060606060606060606060605"
+    },
+    {
+      "label": "diplomatic neutrality boldness dispatch tables",
+      "va": "0x141641e44",
+      "rva": "0x1641e44",
+      "file_offset": "0x1641244",
+      "bytes": "b7176401c7186401dc186401f1186401cc17640149186401341864011b19640106196401f5176401b21864019d186401e017640173186401881864010a1864011f1864015e186401e81c64010012121212121212121212121212121212121212121212121212010203121212120412121212121212121212121212121212120512060708090a0b12121212120c1212121212121212121212121212121212121212121212121212121212121212121212121212121212121212120d0e121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212121212120f101211"
+    },
+    {
+      "label": "CDiplomaticPlayWarLink TypeDescriptor",
+      "va": "0x145720d10",
+      "rva": "0x5720d10",
+      "file_offset": "0x571f910",
+      "bytes": "40d849440100000000000000000000002e3f4156434469706c6f6d61746963506c61795761724c696e6b40400000000040d8"
+    },
+    {
+      "label": "CDiplomaticPlayWarLink COL",
+      "va": "0x144c31608",
+      "rva": "0x4c31608",
+      "file_offset": "0x4c30a08",
+      "bytes": "010000000000000000000000100d7205c8f5c2040816c304"
+    },
+    {
+      "label": "CDiplomaticPlayWarLink vftable +28 actual method",
+      "va": "0x144716e80",
+      "rva": "0x4716e80",
+      "file_offset": "0x4716280",
+      "bytes": "00d876420100000080d362400100000080d3624001000000005c63400100000080d662400100000090ac774201000000"
+    },
+    {
+      "label": "CDiplomaticPlayWarLink accepts tag1c and resolves instance",
+      "va": "0x14277ac90",
+      "rva": "0x277ac90",
+      "file_offset": "0x277a090",
+      "bytes": "40534883ec20498b00488bda6683381c75058b4808eb05b9ffffffff894c2438488d4c2438e896c506fe8b8860020000894c2438488d4c2438e8329b57fe33c9c7035700000048894b088b400848894308488bc34883c4205b"
+    },
+    {
+      "label": "CDiplomaticPlay resolver diagnostic and object database",
+      "va": "0x1407e7250",
+      "rva": "0x7e7250",
+      "file_offset": "0x7e6650",
+      "bytes": "4883ec58488b053d1325058b114885c0756783faff0f8481000000488d150e3a1e05488d0daf49c804e882f5a4034889442468488d050ee2ce034889442440488d4424684889442430488d4424404889442428488d05c0731e05488944242048c74424482f000000e8b3d7feff488b058c0825054883c458c38bca81e1ffffff003b482c7316488b40204803c9488b44c8084885c074053950087407488b055d0825054883c458c3"
+    },
+    {
+      "label": "CDiplomaticPlay TypeDescriptor",
+      "va": "0x14546bc20",
+      "rva": "0x546bc20",
+      "file_offset": "0x546a820",
+      "bytes": "40d849440100000000000000000000002e3f4156434469706c6f6d61746963506c6179404000"
+    },
+    {
+      "label": "treaty_category_scores exact NUL string",
+      "va": "0x14476e4a0",
+      "rva": "0x476e4a0",
+      "file_offset": "0x476d8a0",
+      "bytes": "7472656174795f63617465676f72795f73636f72657300"
+    },
+    {
+      "label": "treaty_category_scores atom token/string",
+      "va": "0x1447a3390",
+      "rva": "0x47a3390",
+      "file_offset": "0x47a2790",
+      "bytes": "d337000000000000a0e4764401000000"
+    },
+    {
+      "label": "strategic_region_stance_type_scores exact NUL string",
+      "va": "0x144783de8",
+      "rva": "0x4783de8",
+      "file_offset": "0x47831e8",
+      "bytes": "7374726174656769635f726567696f6e5f7374616e63655f747970655f73636f72657300"
+    },
+    {
+      "label": "strategic_region_stance_type_scores atom token/string",
+      "va": "0x1447b31c0",
+      "rva": "0x47b31c0",
+      "file_offset": "0x47b25c0",
+      "bytes": "b060000000000000e83d784401000000"
+    },
+    {
+      "label": "wanted_num_supply_ships exact NUL string",
+      "va": "0x144786938",
+      "rva": "0x4786938",
+      "file_offset": "0x4785d38",
+      "bytes": "77616e7465645f6e756d5f737570706c795f736869707300"
+    },
+    {
+      "label": "wanted_num_supply_ships atom token/string",
+      "va": "0x1447b4920",
+      "rva": "0x47b4920",
+      "file_offset": "0x47b3d20",
+      "bytes": "29620000000000003869784401000000"
+    },
+    {
+      "label": "max_ship_design_complexity exact NUL string",
+      "va": "0x144786a00",
+      "rva": "0x4786a00",
+      "file_offset": "0x4785e00",
+      "bytes": "6d61785f736869705f64657369676e5f636f6d706c657869747900"
+    },
+    {
+      "label": "max_ship_design_complexity atom token/string",
+      "va": "0x1447b4900",
+      "rva": "0x47b4900",
+      "file_offset": "0x47b3d00",
+      "bytes": "2762000000000000006a784401000000"
+    },
+    {
+      "label": "treaty exact token dispatch",
+      "va": "0x141640b44",
+      "rva": "0x1640b44",
+      "file_offset": "0x163ff44",
+      "bytes": "4181f8d33700000f8fcd0200000f84b3020000"
+    },
+    {
+      "label": "treaty exact parser member",
+      "va": "0x141640e0a",
+      "rva": "0x1640e0a",
+      "file_offset": "0x164020a",
+      "bytes": "488d9138e1ffff488bcee837d8ffffe9e70f0000"
+    },
+    {
+      "label": "treaty key parser and numeric child",
+      "va": "0x14163e7d0",
+      "rva": "0x163e7d0",
+      "file_offset": "0x163dbd0",
+      "bytes": "48895c240848896c2410565741564881ec90000000488bfa488bf1488bcae87d195b02448bc0488d2d5f81f002488bd54c8d353181f002498bcee83110bf02488bd8483bc50f8489000000492bde48c1fb0280fb09747db9b8000000e85f12be02488bf84885c00f848a010000488d480833d241b8b0000000e862e9c302488d05d36fe902488907488d4f08e81f0802ff0fb6cb4c8d34cd00000000488b4608498b1c0649893c064885db7411488d4b08e82a0902ff488bcbe8f210be02488b4608498b0c06488b01488b16ff5018e9f200"
+    },
+    {
+      "label": "treaty enum token table",
+      "va": "0x144546938",
+      "rva": "0x4546938",
+      "file_offset": "0x4545d38",
+      "bytes": "772900001b28000078290000d03700000e2a0000d1370000145d00007329000065010000"
+    },
+    {
+      "label": "treaty consumer complete",
+      "va": "0x141643a00",
+      "rva": "0x1643a00",
+      "file_offset": "0x1642e00",
+      "bytes": "48895c2408488974241055574156488d6c24904881ec70010000488bfa4180f8090f8453010000410fb6c0488d1cc14883bbf0010000000f843d0100004533f644897424304c897424384489742440488d4c2448e817e101ff488d4d30e85e9cfefe488d353f24230348897548c5f9efc0c5fa7f45504c897560b80500000066894424308b471848894424384c89b5a80000004c8d8da80000004533c0488d542430488b8bf0010000e8e20789ff8bf848897548488b5d604885db74334c39337426448b430c33d2488bcbe8c009d7014489730c488b4b10488b01488b13ff50104c893344897308488bcbe890bebd02488b5d584885db742a48833b00741c488bcbe809fb0eff488b4b10488b01488b13ff50104c893344897308488bcbe85dbebd02488b4d504885c9740a488b01ba01000000ff1048837d3000741f488d4d30e8cafa0eff488b4d40488b01488b5530ff50104c89753044897538488b5424484885d274104489742454488b4c2458488b01ff50108bc7eb0233c04c8d9c2470010000498b5b20498b7328498be3415e5f5dc3"
+    },
+    {
+      "label": "treaty default active evaluation/add",
+      "va": "0x141598000",
+      "rva": "0x1598000",
+      "file_offset": "0x1597400",
+      "bytes": "48895c240848896c241048897424185741544155415641574881ec800000004c8bea4c8bf1488d4c2440e8e158030090498d4e20e8b7c26aff488d542440488bc8e87aeff5ff4533ff41b40932db488d35ab51f202e896071cff488b384885ff75244889742430c74424381e00000040887c243c4533c94c8d442430ba04000000e87a5a6602440fb6c3498bd6488b8f600f0000e867b90a008bf0488b7c244048634c244c488d2ccf483bfd74216690440fb6c3498bd6488b0fe841b90a0003f04883c708483bfd75e6488b7c244085"
+    },
+    {
+      "label": "stance exact token dispatch and parser member",
+      "va": "0x141641a86",
+      "rva": "0x1641a86",
+      "file_offset": "0x1640e86",
+      "bytes": "4181e8385f000074554183e866743b4183e80174214181f8110100000f8540020000488d91b8e3ffff488bcee8296d0000e949030000"
+    },
+    {
+      "label": "stance map numeric parser callback",
+      "va": "0x14164887e",
+      "rva": "0x164887e",
+      "file_offset": "0x1647c7e",
+      "bytes": "8491000000488bcbe825c15a028b434485c07509488d0dc94be702eb06488b4b38ffc848894c2420488d54244089442428488d4c2430c644242c00c5f810442420c5f97f442440e886000000"
+    },
+    {
+      "label": "stance definition lookup",
+      "va": "0x141648950",
+      "rva": "0x1648950",
+      "file_offset": "0x1647d50",
+      "bytes": "48895c2408488974241855574156488bec4881ec800000004c8bf2488bf1e87dfb10ff488b184885db7526488d057e48e702488945b0c745b81e000000885dbc4533c94c8d45b0ba04000000e85f515b024d8b4608498b16e833d060028bd0488bcbe839fd11ff488bf8488b08488b11488bc8ffd284c00f85dc000000"
+    },
+    {
+      "label": "stance definition pointer insert and numeric child",
+      "va": "0x141648aa9",
+      "rva": "0x1648aa9",
+      "file_offset": "0x1647ea9",
+      "bytes": "488b1e48897d28400fb6c735c59d1c8169c893010001488bc748c1e8080fb6c033c869d193010001488bc748c1e8100fb6c033d069ca93010001488bc748c1e8180fb6c033c869d193010001488bc748c1e8200fb6c033d069ca93010001488bc748c1e8280fb6c033c84469c193010001488bc748c1e8300fb6c04433c04169c09301000148c1ef3833c74469c0930100014c8d4d28488d55d0488b4e08e834650000488b4dd04883c110488b01488bd3ff5018"
+    },
+    {
+      "label": "stance actual consumer and full objects",
+      "va": "0x141648150",
+      "rva": "0x1648150",
+      "file_offset": "0x1647550",
+      "bytes": "48895c2408488974241048897c24185541564157488dac24e0feffff4881ec200200004d8bf14d8bf8488bfa488bf1498b01498bc9ff1084c00f84ac020000488b9d60010000488b03488bcbff1084c00f849502000083be80040000000f84880200004c6386840400004c8b8e78040000488bc348c1e8080fb6c80fb6c335c59d1c8169c09301000133c869d193010001488bc348c1e8100fb6c033d069ca93010001488bc348c1e8180fb6c033c869d193010001488bc348c1e8200fb6c033d069ca93010001488bc348c1e8280fb6c033c869d193010001488bc348c1e8300fb6c033d069ca93010001488bc348c1e83833c869c1930100014863c84923c84869c1d00000004903c1b1013848047217483b58080f84fb000000fec14805d00000003a480476e94881c6880400000fb606ffc04103c048984869c0d00000004903c10fb616ffc24103d04863ca4869d1d00000004903d1488d701033db483bc2480f44f34885f60f847f010000895de048895de8895df0488d4df8e89f9801ff488d8de0000000e8e353fefe488d05c4db2203488985f8000000c5f9efc0c5fa7f850001000048899d10010000b805000000668945e0418b4718488945e8c7442430520000004963461048894424384c8d4424308b1509c64404488d4df8e88c63cf0166895c2432418b4720898558010000488d8d58010000e8a1bf5fff49634e1085c9781b3b48247d16488b4018488b04c8eb0f4881c688040000e921ffffff488bc3b90100000066894c243048894424384c8d4424308b15b1c74404488d4df8e82863cf014c8bb5680100004d85f67466498bcee8d4f9fefe488d4c2440e83ad96aff90488d05d253f6024889442458c644246301488d4e084c8d442440488d55e0e8a6ff75ff488d54247048837d880f480f475424704c8b4580498bcee8ca743e0190488d4da8e800d86aff488d4c2470e86689fefe48899d58010000488d855801000048894424204533c94c8d45e0488bd7488bcee8f17375ff90488d4de0e8375901ffeb0533db48891f488bc74c8d9c2420020000498b5b20498b7328498b7b30498be3415f415e5dc3"
+    },
+    {
+      "label": "stance default active traversal and add",
+      "va": "0x1415ca4b0",
+      "rva": "0x15ca4b0",
+      "file_offset": "0x15c98b0",
+      "bytes": "48895c24204c89442418488954241048894c24085556574154415541564157488d6c24e14881ecb00000004d8be1488bfa4c8be9498b00498bc8ff1084c00f84b4010000498b0424498bccff1084c00f84a3010000e8f615f3ff488b88600f000048894d9f4533f6418bde488d4ddfe8ec33000090488d559f488d4ddfe82e5008ff8b472089459f488d4d9fe8af9d67ff488d55df488bc8e873caf2ffc5f9efc0c5f81145a7c5fa6f0d82583503c5fa7f4db7448875a7488b75df486345eb488d3cc6483bf70f84050100004c8b7d7f4d85ff0f84950000004c8bef0f1f4000488b0e4c8975b7488d45a748837dbf0f480f4745a7c60000488d45a748894424284c896424204c8b4d6f4c8b4567488d559fe889db0700488b7d9f4885ff743f488d05c92def02488945c7c745cf01000000c645d300488d55c7498bcfe8de985e02488d55a748837dbf0f480f4755a74c8b45b7498bcfe8b45246014803df4883c608493bf50f8574ffffffeb5f4c8b6d6f0f1f400066660f1f840000000000488b0e4c8975b7488d45a748837dbf0f480f4745a7c600004c897424284c896424204d8bcd4c8b4567488d559fe8eeda0700488b459f488d0c184885c0480f44cb488bd94883c608483bf775b34c8b6d5f49895d00488d4da7e8e26606ff90488b55df4885d27417448975eb488b4def488b01ff5010eb074533f64d897500498bc5488b9c24080100004881c4b0000000415f415e415d415c5f5e5dc3"
+    },
+    {
+      "label": "target_region exact string",
+      "va": "0x144538fd0",
+      "rva": "0x4538fd0",
+      "file_offset": "0x45383d0",
+      "bytes": "7461726765745f726567696f6e00"
+    },
+    {
+      "label": "target_region global key registration",
+      "va": "0x14002ea00",
+      "rva": "0x2ea00",
+      "file_offset": "0x2de00",
+      "bytes": "4883ec38c74424280d000000488d05bda550044889442420c644242c00c5f810442420c5f97f442420e81203b8034c8d442420488bc8488d15f75ea605e88effb703e839aa3103488d15e65ea605488bc8e85a7c7a004883c438c3"
+    },
+    {
+      "label": "region_score exact string",
+      "va": "0x144539878",
+      "rva": "0x4539878",
+      "file_offset": "0x4538c78",
+      "bytes": "726567696f6e5f73636f726500"
+    },
+    {
+      "label": "region_score global key registration",
+      "va": "0x140031b20",
+      "rva": "0x31b20",
+      "file_offset": "0x30f20",
+      "bytes": "4883ec38c74424280c000000488d05457d50044889442420c644242c00c5f810442420c5f97f442420e8f2d1b7034c8d442420488bc8488d15e32fa605e86eceb703e819793103488d15d22fa605488bc8e83a4b7a004883c438c3"
+    },
+    {
+      "label": "strategic region typed database link RTTI",
+      "va": "0x145721980",
+      "rva": "0x5721980",
+      "file_offset": "0x5720580",
+      "bytes": "40d849440100000000000000000000002e3f41563f244344617461626173654f626a6563744c696e6b405643537472617465676963526567696f6e7344617461626173654040403f4130783632363237633735404000000040d8494401000000"
+    },
+    {
+      "label": "strategic region typed link COL",
+      "va": "0x144c32f08",
+      "rva": "0x4c32f08",
+      "file_offset": "0x4c32308",
+      "bytes": "0100000000000000000000008019720560fac204082fc304"
+    },
+    {
+      "label": "strategic region typed link locator and vftable",
+      "va": "0x14471a5f8",
+      "rva": "0x471a5f8",
+      "file_offset": "0x47199f8",
+      "bytes": "082fc34401000000e0dd78420100000050ee76420100000080d3624001000000005c634001000000304e784201000000404d784201000000"
+    },
+    {
+      "label": "strategic region typed lookup and tag52 output",
+      "va": "0x142784d40",
+      "rva": "0x2784d40",
+      "file_offset": "0x2784140",
+      "bytes": "48895c240848896c24104889742418574883ec40498b5820498be8488bfa8b5b08e8da9f42018bd3488bc8e8c09e4201488bd8e8b867edfd488b304885f6752b488d057984d301c74424381e0000004533c948894424304c8d442430408874243cba04000000e8558d470148837b180f488bd37603488b13448b4310e81f0c4d018bd0488bcee8f5049bfe488bf0488b08488b11488bc8ffd284c0752248837b180f7603488b1b4c8bc3488d1557f5f801488bcde88790ffff33c08907eb1033c0c707520000004889470848634610488b5c2450488b6c2458488b74246048894708488bc74883c440"
+    },
+    {
+      "label": "stance definition native RTTI",
+      "va": "0x14523ff60",
+      "rva": "0x523ff60",
+      "file_offset": "0x523eb60",
+      "bytes": "40d849440100000000000000000000002e3f4156434149537472617465676963526567696f6e5374616e636554797065404000000000000040d8494401000000"
+    },
+    {
+      "label": "stance definition resolver typed diagnostic",
+      "va": "0x140768600",
+      "rva": "0x768600",
+      "file_offset": "0x767a00",
+      "bytes": "000000488d05be96d503488944242048897c2428488d4424204889442458488d542420488d0d3679ad04e8b19d480390488bc7488b9c24a80000004883c460415f415e415d415c5f5e5dc3488d0dee39"
+    },
+    {
+      "label": "supply exact dispatch compare",
+      "va": "0x141641b08",
+      "rva": "0x1641b08",
+      "file_offset": "0x1640f08",
+      "bytes": "4181f8296200000f8fc80000000f84b0000000"
+    },
+    {
+      "label": "supply exact parser member",
+      "va": "0x141641bcb",
+      "rva": "0x1641bcb",
+      "file_offset": "0x1640fcb",
+      "bytes": "4881c168faffff488b01ff5018e928020000"
+    },
+    {
+      "label": "supply country active strategies and empty context",
+      "va": "0x1415ad4a0",
+      "rva": "0x15ad4a0",
+      "file_offset": "0x15ac8a0",
+      "bytes": "488bc4488958205556574154415541564157488da8f8faffff4881ecd0050000c5f82970b8c5f82978a8c578294098488bd9488d4d80e83504020090488d4b20e80b6e69ff488d5580488bc8e8cf9af4ff4533ed44896dc04c896dc844896dd0488d4dd8e867460bff488d8dc0000000e8ab0108ff488d058c892c03488985d8000000c5f9efc0c5fa7f85e00000004c89adf0000000b805000000668945c08b4318488945c8e8a5b21aff488b384885"
+    },
+    {
+      "label": "supply default member numeric evaluation",
+      "va": "0x1415ad57e",
+      "rva": "0x15ad57e",
+      "file_offset": "0x15ac97e",
+      "bytes": "488bbf600f00004c89ad10050000488d9f281b0000c744243043090000488b83a800000048894424388b83b000000089442440c6442444004c896c2448c4413957c0c57b11442450c644245801488d4c2430e83b096aff904883bd100500000075094881c7d01b0000eb07488dbd10050000488d55c0488d8d00010000e8d021d90190488d45c04889442460488d45c04889442468488d45c04889442470488d8500010000488944247848897c24204533c94c8d442460488d9518050000488bcbe8fcc97fff"
+    },
+    {
+      "label": "supply active member numeric evaluation",
+      "va": "0x1415ad730",
+      "rva": "0x15ad730",
+      "file_offset": "0x15acb30",
+      "bytes": "488b9d180500004d3bfc0f84a30100004d8b374c89ad10050000c744243043090000498dbed01b0000488b074889442438418b86d81b000089442440c6442444004c896c2448c57b11442450c644245801488d4c2430e885076aff90488db5100500004883bd1005000000480f44f7488d55c0488d8d00010000e82120d90190488d45c04889442460488d45c04889442468488d45c04889442470488d85000100004889442478498d8e281b000048897424204533c94c8d442460488d9520050000e849c87fff"
+    },
+    {
+      "label": "supply active result additive merge and native rounding",
+      "va": "0x1415ad8cf",
+      "rva": "0x15ad8cf",
+      "file_offset": "0x15acccf",
+      "bytes": "48039d200500004983c7084d3bfc0f855dfeffff488bc348c1e83f84c048b809e1d1c6116bf12974094881c3b03cffffeb074881c350c3000048f7eb488bda48c1fb0e488bc348c1e83f4803d8488d8dd8"
+    },
+    {
+      "label": "complexity compressed dispatch",
+      "va": "0x141641b1b",
+      "rva": "0x1641b1b",
+      "file_offset": "0x1640f1b",
+      "bytes": "4181c0719effff4181f8980000000f87b90100004963c0488d15c7e49bfe0fb68402601f64018b8c82441f64014803caffe1"
+    },
+    {
+      "label": "complexity exact parser member",
+      "va": "0x141641bb6",
+      "rva": "0x1641bb6",
+      "file_offset": "0x1640fb6",
+      "bytes": "488d8fa8fcffff488b01488bd6ff5018e93a020000"
+    },
+    {
+      "label": "complexity country empty context",
+      "va": "0x1414b6ed0",
+      "rva": "0x14b6ed0",
+      "file_offset": "0x14b62d0",
+      "bytes": "3bdf0f8558fdffff4c8bb5881c00004c8d256b515104c785a0000000000000004c89ada80000004489adb0000000488d8db8000000e866ac1aff488d8da0010000e8aa6717ff488d058bef3b03488985b8010000c5f9efc0c5fa7f85c00100004c89add0010000b805000000668985a0000000418b4618488985a8000000488d8d80050000e8260f"
+    },
+    {
+      "label": "complexity active list default member",
+      "va": "0x1414b705c",
+      "rva": "0x14b705c",
+      "file_offset": "0x14b645c",
+      "bytes": "488d4d10e8ab68110090498d4e20e881d278ff488d5510488bc8e845ff0300e870172aff488b384885ff75244889742450c74424581e00000040887c245c4533c94c8d442450ba04000000e8546a7402488bbf600f00004c89ad781c0000488d9f681d0000"
+    },
+    {
+      "label": "complexity default country tuple and evaluator",
+      "va": "0x1414b7116",
+      "rva": "0x14b7116",
+      "file_offset": "0x14b6516",
+      "bytes": "488d95a0000000488d8de0010000e8a786e80190488d85a0000000488945c0488d85a0000000488945c8488d85a0000000488945d0488d85e0010000488945d848897c24204533c94c8d45c0488d95801c0000488bcbe8cf2e8fff"
+    },
+    {
+      "label": "complexity active member country tuple evaluator",
+      "va": "0x1414b7244",
+      "rva": "0x14b7244",
+      "file_offset": "0x14b6644",
+      "bytes": "4c8b7d104863451c4d8d24c7488b9d801c00004d3bfc0f84a00100004d8b374c89ad781c0000c7458043090000498dbe101e0000488b0748894588418b86181e0000894590c64594004c896d98c57b1145a0c645a801488d4d80e86d6c79ff90488db5781c00004883bd781c000000480f44f7488d95a0000000488d8de0010000e80685e80190488d85a0000000488945c0488d85a0000000488945c8488d85a0000000488945d0488d85e0010000488945d8498d8e681d000048897424204533c94c8d45c0488d542440e82c2d8fff"
+    },
+    {
+      "label": "complexity active additive merge and rounding",
+      "va": "0x1414b73e3",
+      "rva": "0x14b73e3",
+      "file_offset": "0x14b67e3",
+      "bytes": "48035c24404983c7084d3bfc0f856bfeffff4c8b7d104c8bb5881c00004d85ff741144896d1c488b4d20488b01498bd7ff5010488bc348c1e83f84c048b809e1d1c6116bf12974094881c3b03cffffeb074881c350c3000048f7eb488bfa48c1ff0e488bc748c1e83f4803f8"
+    },
+    {
+      "label": "inline numeric evaluator dispatch",
+      "va": "0x140daa040",
+      "rva": "0xdaa040",
+      "file_offset": "0xda9440",
+      "bytes": "488bc448895810488970185557415441564157488d68a94881ecb0000000c5f82970c8498bf14d8bf0488bfa488bd983b9a000000000750c488b4178488902e9ea01000048c745af430900004533e4c5f81081a8000000c5f81145b7448865c74c8965cfc5f957c0c5fb1145d7c645df01488d4dafe8a616000090488b8b980000004885c9742c4c89655f4883c108488b457f48894424204c8bce4d8bc6488d555fe829180000488b455f488907"
+    },
+    {
+      "label": "complexity exact token jump selector",
+      "va": "0x141641ff8",
+      "rva": "0x1641ff8",
+      "file_offset": "0x16413f8",
+      "bytes": "05"
+    },
+    {
+      "label": "complexity exact jump destination",
+      "va": "0x141641f58",
+      "rva": "0x1641f58",
+      "file_offset": "0x1641358",
+      "bytes": "b61b6401"
+    },
+    {
+      "label": "treaty enum economy exact NUL string",
+      "va": "0x144565fa0",
+      "rva": "0x4565fa0",
+      "file_offset": "0x45653a0",
+      "bytes": "65636f6e6f6d7900"
+    },
+    {
+      "label": "treaty enum economy exact atom",
+      "va": "0x144798cd0",
+      "rva": "0x4798cd0",
+      "file_offset": "0x47980d0",
+      "bytes": "7729000000000000a05f564401000000"
+    },
+    {
+      "label": "treaty enum trade exact NUL string",
+      "va": "0x144630270",
+      "rva": "0x4630270",
+      "file_offset": "0x462f670",
+      "bytes": "747261646500"
+    },
+    {
+      "label": "treaty enum trade exact atom",
+      "va": "0x1447978b0",
+      "rva": "0x47978b0",
+      "file_offset": "0x4796cb0",
+      "bytes": "1b280000000000007002634401000000"
+    },
+    {
+      "label": "treaty enum military exact NUL string",
+      "va": "0x144634fc0",
+      "rva": "0x4634fc0",
+      "file_offset": "0x46343c0",
+      "bytes": "6d696c697461727900"
+    },
+    {
+      "label": "treaty enum military exact atom",
+      "va": "0x144798ce0",
+      "rva": "0x4798ce0",
+      "file_offset": "0x47980e0",
+      "bytes": "7829000000000000c04f634401000000"
+    },
+    {
+      "label": "treaty enum military_defense exact NUL string",
+      "va": "0x14476e4d0",
+      "rva": "0x476e4d0",
+      "file_offset": "0x476d8d0",
+      "bytes": "6d696c69746172795f646566656e736500"
+    },
+    {
+      "label": "treaty enum military_defense exact atom",
+      "va": "0x1447a3370",
+      "rva": "0x47a3370",
+      "file_offset": "0x47a2770",
+      "bytes": "d037000000000000d0e4764401000000"
+    },
+    {
+      "label": "treaty enum ideology exact NUL string",
+      "va": "0x144645c20",
+      "rva": "0x4645c20",
+      "file_offset": "0x4645020",
+      "bytes": "6964656f6c6f677900"
+    },
+    {
+      "label": "treaty enum ideology exact atom",
+      "va": "0x1447995a0",
+      "rva": "0x47995a0",
+      "file_offset": "0x47989a0",
+      "bytes": "0e2a000000000000205c644401000000"
+    },
+    {
+      "label": "treaty enum expansion exact NUL string",
+      "va": "0x14476e490",
+      "rva": "0x476e490",
+      "file_offset": "0x476d890",
+      "bytes": "657870616e73696f6e00"
+    },
+    {
+      "label": "treaty enum expansion exact atom",
+      "va": "0x1447a3380",
+      "rva": "0x47a3380",
+      "file_offset": "0x47a2780",
+      "bytes": "d13700000000000090e4764401000000"
+    },
+    {
+      "label": "treaty enum power_bloc exact NUL string",
+      "va": "0x144539040",
+      "rva": "0x4539040",
+      "file_offset": "0x4538440",
+      "bytes": "706f7765725f626c6f6300"
+    },
+    {
+      "label": "treaty enum power_bloc exact atom",
+      "va": "0x1447afa50",
+      "rva": "0x47afa50",
+      "file_offset": "0x47aee50",
+      "bytes": "145d0000000000004090534401000000"
+    },
+    {
+      "label": "treaty enum other exact NUL string",
+      "va": "0x14453f914",
+      "rva": "0x453f914",
+      "file_offset": "0x453ed14",
+      "bytes": "6f7468657200"
+    },
+    {
+      "label": "treaty enum other exact atom",
+      "va": "0x144798c90",
+      "rva": "0x4798c90",
+      "file_offset": "0x4798090",
+      "bytes": "732900000000000014f9534401000000"
+    },
+    {
+      "label": "treaty enum none exact NUL string",
+      "va": "0x14453eb48",
+      "rva": "0x453eb48",
+      "file_offset": "0x453df48",
+      "bytes": "6e6f6e6500"
+    },
+    {
+      "label": "treaty enum none exact atom",
+      "va": "0x1447935c0",
+      "rva": "0x47935c0",
+      "file_offset": "0x47929c0",
+      "bytes": "650100000000000048eb534401000000"
+    }
+  ],
+  "rtti": [
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x1445ada98",
+        "rva": "0x45ada98",
+        "file_offset": "0x45ace98",
+        "bytes": "486865410100000078797b400100000080d66240010000007072bf430100000050807b400100000080d662400100000090a1ab4401000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144aba168",
+        "rva": "0x4aba168",
+        "file_offset": "0x4ab9568",
+        "bytes": "01000000b820000004000000e8c7460570b9970468a1ab04"
+      },
+      "subobject_offset": "0x20b8",
+      "constructor_displacement": 4,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x14546c7e8",
+        "rva": "0x546c7e8",
+        "file_offset": "0x546b3e8",
+        "bytes": "40d849440100000000000000000000002e3f4156434149537472617465677940"
+      },
+      "type_name": ".?AVCAIStrategy@@",
+      "hierarchy_rva": "0x497b970"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x1445adad0",
+        "rva": "0x45adad0",
+        "file_offset": "0x45aced0",
+        "bytes": "005c634001000000102364410100000080d6624001000000f0a0ab4401000000608464410100000070966441010000009097644101000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144aba190",
+        "rva": "0x4aba190",
+        "file_offset": "0x4ab9590",
+        "bytes": "010000000000000000000000e8c7460570b9970490a1ab04"
+      },
+      "subobject_offset": "0x0",
+      "constructor_displacement": 0,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x14546c7e8",
+        "rva": "0x546c7e8",
+        "file_offset": "0x546b3e8",
+        "bytes": "40d849440100000000000000000000002e3f4156434149537472617465677940"
+      },
+      "type_name": ".?AVCAIStrategy@@",
+      "hierarchy_rva": "0x497b970"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x1444ce1e0",
+        "rva": "0x44ce1e0",
+        "file_offset": "0x44cd5e0",
+        "bytes": "80d3624001000000102364410100000080d6624001000000f07698440100000048847b40010000000072bf4301000000a07de74001000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x1449877b8",
+        "rva": "0x49877b8",
+        "file_offset": "0x4986bb8",
+        "bytes": "010000000000000000000000e0c84605e8b99704b8779804"
+      },
+      "subobject_offset": "0x0",
+      "constructor_displacement": 0,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x14546c8e0",
+        "rva": "0x546c8e0",
+        "file_offset": "0x546b4e0",
+        "bytes": "40d849440100000000000000000000002e3f41563f24545064784e756c6c4f62"
+      },
+      "type_name": ".?AV?$TPdxNullObject@VCAIStrategy@@@@",
+      "hierarchy_rva": "0x497b9e8"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x144546908",
+        "rva": "0x4546908",
+        "file_offset": "0x4545d08",
+        "bytes": "a0b6d940010000000072bf430100000080d662400100000050b7da4001000000508280410100000080d6624001000000772900001b280000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144a2f958",
+        "rva": "0x4a2f958",
+        "file_offset": "0x4a2ed58",
+        "bytes": "0100000000000000000000009051500550f8a20458f9a204"
+      },
+      "subobject_offset": "0x0",
+      "constructor_displacement": 0,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x145505190",
+        "rva": "0x5505190",
+        "file_offset": "0x5503d90",
+        "bytes": "40d849440100000000000000000000002e3f41563f244347616d654462536372"
+      },
+      "type_name": ".?AV?$CGameDbScriptValue@V?$CJominiScriptValue@VCFixedPoint@@@@@@",
+      "hierarchy_rva": "0x4a2f850"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x1445c9b20",
+        "rva": "0x45c9b20",
+        "file_offset": "0x45c8f20",
+        "bytes": "a0a6264101000000c0a861410100000050593543010000003057354301000000e05b354301000000505d35430100000090a6264101000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144ade220",
+        "rva": "0x4ade220",
+        "file_offset": "0x4add620",
+        "bytes": "010000000000000000000000085c5c0590e1ad0420e2ad04"
+      },
+      "subobject_offset": "0x0",
+      "constructor_displacement": 0,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x1455c5c08",
+        "rva": "0x55c5c08",
+        "file_offset": "0x55c4808",
+        "bytes": "40d849440100000000000000000000002e3f41563f24434a6f6d696e69536372"
+      },
+      "type_name": ".?AV?$CJominiScriptScopeObject@VCCountry@@@@",
+      "hierarchy_rva": "0x4ade190"
+    }
+  ],
+  "scalar_dispatch": [
+    {
+      "field": "wanted_army_size",
+      "token": "0x5c56",
+      "jump_index": 13,
+      "jump_table_destination": "0x141641873",
+      "member_offset": "0x1820",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641efe",
+        "rva": "0x1641efe",
+        "file_offset": "0x16412fe",
+        "bytes": "0d"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e78",
+        "rva": "0x1641e78",
+        "file_offset": "0x1641278",
+        "bytes": "73186401"
+      }
+    },
+    {
+      "field": "recklessness",
+      "token": "0x5c28",
+      "jump_index": 12,
+      "jump_table_destination": "0x1416417e0",
+      "member_offset": "0x10a0",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641ed0",
+        "rva": "0x1641ed0",
+        "file_offset": "0x16412d0",
+        "bytes": "0c"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e74",
+        "rva": "0x1641e74",
+        "file_offset": "0x1641274",
+        "bytes": "e0176401"
+      }
+    },
+    {
+      "field": "diplomatic_play_boldness",
+      "token": "0x5c1b",
+      "jump_index": 5,
+      "jump_table_destination": "0x141641849",
+      "member_offset": "0x6c0",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641ec3",
+        "rva": "0x1641ec3",
+        "file_offset": "0x16412c3",
+        "bytes": "05"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e58",
+        "rva": "0x1641e58",
+        "file_offset": "0x1641258",
+        "bytes": "49186401"
+      }
+    },
+    {
+      "field": "institution_scores",
+      "token": "0x5c09",
+      "jump_index": 4,
+      "jump_table_destination": "0x1416417cc",
+      "member_offset": "0x3d0",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641eb1",
+        "rva": "0x1641eb1",
+        "file_offset": "0x16412b1",
+        "bytes": "04"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e54",
+        "rva": "0x1641e54",
+        "file_offset": "0x1641254",
+        "bytes": "cc176401"
+      }
+    },
+    {
+      "field": "max_progressiveness",
+      "token": "0x5c02",
+      "jump_index": 1,
+      "jump_table_destination": "0x1416418c7",
+      "member_offset": "0xa78",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641eaa",
+        "rva": "0x1641eaa",
+        "file_offset": "0x16412aa",
+        "bytes": "01"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e48",
+        "rva": "0x1641e48",
+        "file_offset": "0x1641248",
+        "bytes": "c7186401"
+      }
+    },
+    {
+      "field": "max_regressiveness",
+      "token": "0x5c03",
+      "jump_index": 2,
+      "jump_table_destination": "0x1416418dc",
+      "member_offset": "0xb38",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641eab",
+        "rva": "0x1641eab",
+        "file_offset": "0x16412ab",
+        "bytes": "02"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e4c",
+        "rva": "0x1641e4c",
+        "file_offset": "0x164124c",
+        "bytes": "dc186401"
+      }
+    },
+    {
+      "field": "change_law_chance",
+      "token": "0x5c04",
+      "jump_index": 3,
+      "jump_table_destination": "0x1416418f1",
+      "member_offset": "0xbf8",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641eac",
+        "rva": "0x1641eac",
+        "file_offset": "0x16412ac",
+        "bytes": "03"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e50",
+        "rva": "0x1641e50",
+        "file_offset": "0x1641250",
+        "bytes": "f1186401"
+      }
+    },
+    {
+      "field": "wargoal_maneuvers_fraction",
+      "token": "0x5c1f",
+      "jump_index": 8,
+      "jump_table_destination": "0x141641906",
+      "member_offset": "0x778",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641ec7",
+        "rva": "0x1641ec7",
+        "file_offset": "0x16412c7",
+        "bytes": "08"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e64",
+        "rva": "0x1641e64",
+        "file_offset": "0x1641264",
+        "bytes": "06196401"
+      }
+    },
+    {
+      "field": "obligation_value",
+      "token": "0x5c20",
+      "jump_index": 9,
+      "jump_table_destination": "0x1416417f5",
+      "member_offset": "0x1220",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641ec8",
+        "rva": "0x1641ec8",
+        "file_offset": "0x16412c8",
+        "bytes": "09"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e68",
+        "rva": "0x1641e68",
+        "file_offset": "0x1641268",
+        "bytes": "f5176401"
+      }
+    },
+    {
+      "field": "min_law_chance_to_pass",
+      "token": "0x5c21",
+      "jump_index": 10,
+      "jump_table_destination": "0x1416418b2",
+      "member_offset": "0x9b8",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641ec9",
+        "rva": "0x1641ec9",
+        "file_offset": "0x16412c9",
+        "bytes": "0a"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e6c",
+        "rva": "0x1641e6c",
+        "file_offset": "0x164126c",
+        "bytes": "b2186401"
+      }
+    },
+    {
+      "field": "revolution_aversion",
+      "token": "0x5c22",
+      "jump_index": 11,
+      "jump_table_destination": "0x14164189d",
+      "member_offset": "0x8f8",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641eca",
+        "rva": "0x1641eca",
+        "file_offset": "0x16412ca",
+        "bytes": "0b"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e70",
+        "rva": "0x1641e70",
+        "file_offset": "0x1641270",
+        "bytes": "9d186401"
+      }
+    },
+    {
+      "field": "subject_value",
+      "token": "0x5c95",
+      "jump_index": 15,
+      "jump_table_destination": "0x14164180a",
+      "member_offset": "0x12e0",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641f3d",
+        "rva": "0x1641f3d",
+        "file_offset": "0x164133d",
+        "bytes": "0f"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e80",
+        "rva": "0x1641e80",
+        "file_offset": "0x1641280",
+        "bytes": "0a186401"
+      }
+    },
+    {
+      "field": "become_subject_value",
+      "token": "0x5c96",
+      "jump_index": 16,
+      "jump_table_destination": "0x14164181f",
+      "member_offset": "0x13a0",
+      "jump_selector": {
+        "label": "jump selector",
+        "va": "0x141641f3e",
+        "rva": "0x1641f3e",
+        "file_offset": "0x164133e",
+        "bytes": "10"
+      },
+      "jump_destination": {
+        "label": "jump destination",
+        "va": "0x141641e84",
+        "rva": "0x1641e84",
+        "file_offset": "0x1641284",
+        "bytes": "1f186401"
+      }
+    }
+  ],
+  "additional_scalar_consumers": [
+    {
+      "field": "max_progressiveness",
+      "root_country_tuple": {
+        "label": "Country type5 plus ID",
+        "va": "0x141646e76",
+        "rva": "0x1646e76",
+        "file_offset": "0x1646276",
+        "bytes": "b80500000066894424308b43184889442438"
+      },
+      "consumer_to_evaluator": {
+        "label": "complete method prefix through field wrapper call",
+        "va": "0x141646e10",
+        "rva": "0x1646e10",
+        "file_offset": "0x1646210",
+        "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e81bad01ff488d4d30e86268fefe4c8d3543f022034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8f780a0000488d859000000048894424204533c94c8d442430488bd6e86e8975ff"
+      },
+      "field_member_offset": "0xa78",
+      "call_va": "0x141646ead"
+    },
+    {
+      "field": "max_regressiveness",
+      "root_country_tuple": {
+        "label": "Country type5 plus ID",
+        "va": "0x141647006",
+        "rva": "0x1647006",
+        "file_offset": "0x1646406",
+        "bytes": "b80500000066894424308b43184889442438"
+      },
+      "consumer_to_evaluator": {
+        "label": "complete method prefix through field wrapper call",
+        "va": "0x141646fa0",
+        "rva": "0x1646fa0",
+        "file_offset": "0x16463a0",
+        "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e88bab01ff488d4d30e8d266fefe4c8d35b3ee22034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8f380b0000488d859000000048894424204533c94c8d442430488bd6e8de8775ff"
+      },
+      "field_member_offset": "0xb38",
+      "call_va": "0x14164703d"
+    },
+    {
+      "field": "change_law_chance",
+      "root_country_tuple": {
+        "label": "Country type5 plus ID",
+        "va": "0x1416469a6",
+        "rva": "0x16469a6",
+        "file_offset": "0x1645da6",
+        "bytes": "b80500000066894424308b43184889442438"
+      },
+      "consumer_to_evaluator": {
+        "label": "complete method prefix through field wrapper call",
+        "va": "0x141646940",
+        "rva": "0x1646940",
+        "file_offset": "0x1645d40",
+        "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e8ebb101ff488d4d30e8326dfefe4c8d3513f522034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8ff80b0000488d859000000048894424204533c94c8d442430488bd6e83e8e75ff"
+      },
+      "field_member_offset": "0xbf8",
+      "call_va": "0x1416469dd"
+    },
+    {
+      "field": "wargoal_maneuvers_fraction",
+      "root_country_tuple": {
+        "label": "Country type5 plus ID",
+        "va": "0x141647b37",
+        "rva": "0x1647b37",
+        "file_offset": "0x1646f37",
+        "bytes": "b90500000066894c24408b43184889442448"
+      },
+      "consumer_to_evaluator": {
+        "label": "complete method prefix through field wrapper call",
+        "va": "0x141647ad0",
+        "rva": "0x1647ad0",
+        "file_offset": "0x1646ed0",
+        "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e85aa001ff488d4d40e8a15bfefe4c8d3d82e322034c897d58c5f9efc0c5fa7f45604c896570b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b15bcce4404488d4c2458e8566bcf014c89a5b0000000488d8e78070000488d85b000000048894424204533c94c8d442440498bd6e88c7c75ff"
+      },
+      "field_member_offset": "0x778",
+      "call_va": "0x141647b8f"
+    },
+    {
+      "field": "obligation_value",
+      "root_country_tuple": {
+        "label": "Country type5 plus ID",
+        "va": "0x1416455c7",
+        "rva": "0x16455c7",
+        "file_offset": "0x16449c7",
+        "bytes": "b90500000066894c24408b43184889442448"
+      },
+      "consumer_to_evaluator": {
+        "label": "complete method prefix through field wrapper call",
+        "va": "0x141645560",
+        "rva": "0x1645560",
+        "file_offset": "0x1644960",
+        "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e8cac501ff488d4d40e81181fefe4c8d3df20823034c897d58c5f9efc0c5fa7f45604c896570b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b1550f34404488d4c2458e8c690cf014c89a5b0000000488d8e20120000488d85b000000048894424204533c94c8d442440498bd6e8fca175ff"
+      },
+      "field_member_offset": "0x1220",
+      "call_va": "0x14164561f"
+    },
+    {
+      "field": "min_law_chance_to_pass",
+      "root_country_tuple": {
+        "label": "Country type5 plus ID",
+        "va": "0x141646cc7",
+        "rva": "0x1646cc7",
+        "file_offset": "0x16460c7",
+        "bytes": "b80500000066894424408b43184889442448"
+      },
+      "consumer_to_evaluator": {
+        "label": "complete method prefix through field wrapper call",
+        "va": "0x141646c60",
+        "rva": "0x1646c60",
+        "file_offset": "0x1646060",
+        "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e8caae01ff488d4d40e8116afefe4c8d3df2f122034c897d58c5f9efc0c5fa7f45604c896570b80500000066894424408b43184889442448c7442430310000008b470848894424384c8d4424308b1550dd4404488d4c2458e8c279cf014c89a5b0000000488d8eb8090000488d85b000000048894424204533c94c8d442440498bd6e8f88a75ff"
+      },
+      "field_member_offset": "0x9b8",
+      "call_va": "0x141646d23"
+    },
+    {
+      "field": "revolution_aversion",
+      "root_country_tuple": {
+        "label": "Country type5 plus ID",
+        "va": "0x141646b36",
+        "rva": "0x1646b36",
+        "file_offset": "0x1645f36",
+        "bytes": "b80500000066894424308b43184889442438"
+      },
+      "consumer_to_evaluator": {
+        "label": "complete method prefix through field wrapper call",
+        "va": "0x141646ad0",
+        "rva": "0x1646ad0",
+        "file_offset": "0x1645ed0",
+        "bytes": "48895c2410488974241848897c24205541564157488d6c24904881ec70010000498bd8488bf2488bf94533ff44897c24304c897c243844897c2440488d4c2448e85bb001ff488d4d30e8a26bfefe4c8d3583f322034c897548c5f9efc0c5fa7f45504c897d60b80500000066894424308b431848894424384c89bd90000000488d8ff8080000488d859000000048894424204533c94c8d442430488bd6e8ae8c75ff"
+      },
+      "field_member_offset": "0x8f8",
+      "call_va": "0x141646b6d"
+    },
+    {
+      "field": "subject_value",
+      "root_country_tuple": {
+        "label": "Country type5 plus ID",
+        "va": "0x141645a47",
+        "rva": "0x1645a47",
+        "file_offset": "0x1644e47",
+        "bytes": "b90500000066894c24408b43184889442448"
+      },
+      "consumer_to_evaluator": {
+        "label": "complete method prefix through field wrapper call",
+        "va": "0x1416459e0",
+        "rva": "0x16459e0",
+        "file_offset": "0x1644de0",
+        "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e84ac101ff488d4d40e8917cfefe4c8d3d720423034c897d58c5f9efc0c5fa7f45604c896570b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b15d0ee4404488d4c2458e8468ccf014c89a5b0000000488d8ee0120000488d85b000000048894424204533c94c8d442440498bd6e87c9d75ff"
+      },
+      "field_member_offset": "0x12e0",
+      "call_va": "0x141645a9f"
+    },
+    {
+      "field": "become_subject_value",
+      "root_country_tuple": {
+        "label": "Country type5 plus ID",
+        "va": "0x141645bf7",
+        "rva": "0x1645bf7",
+        "file_offset": "0x1644ff7",
+        "bytes": "b90500000066894c24408b43184889442448"
+      },
+      "consumer_to_evaluator": {
+        "label": "complete method prefix through field wrapper call",
+        "va": "0x141645b90",
+        "rva": "0x1645b90",
+        "file_offset": "0x1644f90",
+        "bytes": "48895c241048897424185557415441564157488d6c24804881ec80010000498bf9498bd84c8bf2488bf14533e444896424404c896424484489642450488d4c2458e89abf01ff488d4d40e8e17afefe4c8d3dc20223034c897d58c5f9efc0c5fa7f45604c896570b90500000066894c24408b43184889442448894c24308b471848894424384c8d4424308b15b8ed4404488d4c2458e8968acf014c89a5b0000000488d8ea0130000488d85b000000048894424204533c94c8d442440498bd6e8cc9b75ff"
+      },
+      "field_member_offset": "0x13a0",
+      "call_va": "0x141645c4f"
+    }
+  ],
+  "additional_scope_registrations": [
+    {
+      "key_va": "0x145a949d8",
+      "name": "overlord",
+      "string": {
+        "label": "named scope key string",
+        "va": "0x144539330",
+        "rva": "0x4539330",
+        "file_offset": "0x4538730",
+        "bytes": "6f7665726c6f726400"
+      },
+      "registration": {
+        "label": "name and key registration code",
+        "va": "0x14002f960",
+        "rva": "0x2f960",
+        "file_offset": "0x2ed60",
+        "bytes": "4883ec38c744242808000000488d05bd9950044889442420c644242c00c5f810442420c5f97f442420e8b2f3b7034c8d442420488bc8488d153b50a605e82ef0b703e8d99a3103488d152a50a605488bc8e8fa6c7a004883c438c3"
+      }
+    },
+    {
+      "key_va": "0x145a94a1c",
+      "name": "enemy_country",
+      "string": {
+        "label": "named scope key string",
+        "va": "0x144539438",
+        "rva": "0x4539438",
+        "file_offset": "0x4538838",
+        "bytes": "656e656d795f636f756e74727900"
+      },
+      "registration": {
+        "label": "name and key registration code",
+        "va": "0x14002ffc0",
+        "rva": "0x2ffc0",
+        "file_offset": "0x2f3c0",
+        "bytes": "4883ec38c74424280d000000488d05659450044889442420c644242c00c5f810442420c5f97f442420e852edb7034c8d442420488bc8488d151f4aa605e8cee9b703e879943103488d150e4aa605488bc8e89a667a004883c438c3"
+      }
+    },
+    {
+      "key_va": "0x145a94a44",
+      "name": "law",
+      "string": {
+        "label": "named scope key string",
+        "va": "0x1445393d8",
+        "rva": "0x45393d8",
+        "file_offset": "0x45387d8",
+        "bytes": "6c617700"
+      },
+      "registration": {
+        "label": "name and key registration code",
+        "va": "0x140030380",
+        "rva": "0x30380",
+        "file_offset": "0x2f780",
+        "bytes": "4883ec38c744242803000000488d05459050044889442420c644242c00c5f810442420c5f97f442420e892e9b7034c8d442420488bc8488d158746a605e80ee6b703e8b9903103488d157646a605488bc8e8da627a004883c438c3"
+      }
+    },
+    {
+      "key_va": "0x145a94914",
+      "name": "diplomatic_play",
+      "string": {
+        "label": "named scope key string",
+        "va": "0x1444d70c8",
+        "rva": "0x44d70c8",
+        "file_offset": "0x44d64c8",
+        "bytes": "6469706c6f6d617469635f706c617900"
+      },
+      "registration": {
+        "label": "name and key registration code",
+        "va": "0x14002e700",
+        "rva": "0x2e700",
+        "file_offset": "0x2db00",
+        "bytes": "4883ec38c74424280f000000488d05b5894a044889442420c644242c00c5f810442420c5f97f442420e81206b8034c8d442420488bc8488d15d761a605e88e02b803e839ad3103488d15c661a605488bc8e85a7f7a004883c438c3"
+      }
+    }
+  ],
+  "limits": [
+    "Only observed field-specific consumers; no inference from the strategy container.",
+    "definition_only identifies the evaluated definition, not a saved script scope.",
+    "Base candidate score is before downstream randomness and execution; strategy nonpositive rejection differs from technology.",
+    "Field merge contracts are additive or override as recorded, not a claim of complete downstream lowering equivalence.",
+    "Only exact pinned script sources are authorized; unknown or duplicate definitions remain pending.",
+    "wanted_construction_output is the exact member 0x16a0 consumer; no adjacent construction field is authorized.",
+    "institution_scores uses country ROOT; institution_type is a definition pointer selecting a map entry, never a named script scope or getter.",
+    "Institution child projection requires an ordinary map with unique valid institution definition keys and ordinary script-value entries; prefixes or scalar/nested substitutes are not authorized.",
+    "wanted_construction_input_goods_surplus_ratio is unresolved in this pinned version; wanted_construction_ratio is not substituted.",
+    "Institution spending defines are native constants, not additional dynamic script-value consumers.",
+    "Static bytes do not establish runtime behavior, final construction arithmetic, minimums, rounding or complete downstream lowering equivalence.",
+    "min_law_chance_to_pass binds country ROOT plus named law auxiliary, tag31 CCountryLaw instance; it never grants a law_type object or law getter.",
+    "min_law_chance_to_pass per-strategy values use first nonzero override and default fallback; downstream scaling, rounding and full lowering equivalence remain native.",
+    "No generic authorization to similarly named fields or other map/nested children.",
+    "wargoal_scores enum0x12 liberate_country includes an additional native score tail at0x1416439d5; preserve it.",
+    "Both caller paths add default and active strategy scores, then apply further native weight logic; this is not full downstream lowering proof.",
+    "The registered target_state is not wargoal; exact named key string and state resolver are independently anchored.",
+    "Current production readers use only country ROOT and target_country. Optional native play and invalid-state behavior must remain native unless separately modeled.",
+    "These exact member chains do not authorize wanted_num_supply_ships or another adjacent field.",
+    "wanted_navy_size consumer helper also has other callers receiving external evaluation tuples; this evidence anchors explicit country-tag production call0x1415ad21b and preserves native context behavior.",
+    "Navy rounding and downstream naval administration, ship maintenance, budgets and final construction arithmetic remain native; no full lowering equivalence is claimed.",
+    "No desired_tax_level or adjacent field authorization.",
+    "Infamy thresholds are first-positive active-strategy overrides with default fallback; they are not additive.",
+    "diplomatic_play_neutrality adds only positive active-strategy values; default score and native downstream behavior are preserved.",
+    "diplomatic_play_boldness evaluates country ROOT and a typed CDiplomaticPlay auxiliary; its native random weighting and additive merge remain unchanged.",
+    "A typed diplomatic_play auxiliary is not a new getter authorization. Existing wargoal optional-play projection remains unprojected.",
+    "colonial_interest_ratio has an exact parsed member but no independently proven actual evaluation chain and remains pending; it is not unsupported.",
+    "Treaty enum and stance definition maps grant only validated exact numeric child contexts; parent containers are structure observations, not numeric consumers.",
+    "Stance definition pointer selects the entry; target_region is a real strategic-region object and region_score a scalar auxiliary. Neither grants a new getter.",
+    "Supply count and complexity evaluate default and all active strategies additively with the same country ROOT; native rounding and downstream behavior are preserved."
+  ],
+  "revision": {
+    "id": 7,
+    "parent_manifest": "research/situated/victoria3-1.14.5-strategy-scope-r6.json",
+    "parent_sha256": "39b41be99801353ea76c64a1f6c0dbe4c8debe725f52488b045e4a5de8d7d528",
+    "added_consumers": [
+      "treaty_category_scores",
+      "strategic_region_stance_type_scores",
+      "wanted_num_supply_ships",
+      "max_ship_design_complexity"
+    ],
+    "added_observation_count": 64,
+    "method": "Exact independent atoms, parser members, enum or definition keys, full actual evaluation objects, default and active strategy traversal and additive merge. Colonial interest remains pending."
+  },
+  "institution_definition_sources": {
+    "common/institutions/00_institutions.txt": "9d3b8474e2e99a34cd23cc38343253b850d0b2991a0f9418c85577c68c8ece2b"
+  },
+  "institution_definitions": {
+    "institution_colonial_affairs": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 1
+    },
+    "institution_social_security": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 9
+    },
+    "institution_workplace_safety": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 18
+    },
+    "institution_schools": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 26
+    },
+    "institution_police": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 31
+    },
+    "institution_health_system": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 39
+    },
+    "institution_home_affairs": {
+      "source": "common/institutions/00_institutions.txt",
+      "line": 44
+    }
+  },
+  "law_instance_type": {
+    "scope_tag": "0x31",
+    "native_type": "CCountryLaw",
+    "type_descriptor_va": "0x14546c288",
+    "link_type_descriptor_va": "0x145720b00",
+    "link_vftable_va": "0x144717330",
+    "link_method_va": "0x14277b340",
+    "resolver_va": "0x140cb3cc0",
+    "law_type_output_tag": "0x32"
+  },
+  "strategy_score_keys": {
+    "wargoal_scores": [
+      "annex_country",
+      "ban_slavery",
+      "break_enforced_treaties",
+      "colonization_rights",
+      "conquer_state",
+      "contain_threat",
+      "demand_no_strait_closure",
+      "demand_no_tolls",
+      "demand_strait_access",
+      "demand_toll_exemption",
+      "enforce_treaty_article",
+      "force_nationalization",
+      "foreign_investment_rights",
+      "humiliation",
+      "increase_autonomy",
+      "independence",
+      "join_power_bloc",
+      "leave_power_bloc",
+      "liberate_country",
+      "liberate_subject",
+      "make_subject",
+      "open_market",
+      "reduce_autonomy",
+      "regime_change",
+      "release_as_subject",
+      "return_state",
+      "revoke_all_claims",
+      "revoke_claim",
+      "secession",
+      "take_treaty_port",
+      "transfer_subject",
+      "unification",
+      "unification_leadership",
+      "custom"
+    ],
+    "secret_goal_scores": [
+      "none",
+      "befriend",
+      "reconcile",
+      "protect",
+      "antagonize",
+      "conquer",
+      "dominate",
+      "comply",
+      "defy"
+    ],
+    "treaty_category_scores": [
+      "economy",
+      "trade",
+      "military",
+      "military_defense",
+      "ideology",
+      "expansion",
+      "power_bloc",
+      "other",
+      "none"
+    ]
+  },
+  "native_unprojected_contexts": {
+    "wargoal_scores": {
+      "diplomatic_play": {
+        "status": "unprojected_unknown",
+        "scope_tag": "0x1c",
+        "key_va": "0x145a94914",
+        "registration_va": "0x1416438d0",
+        "condition": "play id != -1",
+        "reader_authorization": false
+      }
+    }
+  },
+  "diplomatic_play_instance_type": {
+    "scope_tag": "0x1c",
+    "native_type": "CDiplomaticPlay",
+    "type_descriptor_va": "0x14546bc20",
+    "link_type_descriptor_va": "0x145720d10",
+    "link_col_va": "0x144c31608",
+    "link_vftable_va": "0x144716e80",
+    "link_method_va": "0x14277ac90",
+    "resolver_va": "0x1407e7250"
+  },
+  "stance_definition_sources": {
+    "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt": "add54c251b0fb2a37a6038b308ed9e67709d44f7ec0a5aac0bc03346afccb91d"
+  },
+  "stance_definitions": {
+    "stance_none": {
+      "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+      "line": 3
+    },
+    "stance_conquer_region": {
+      "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+      "line": 7
+    },
+    "stance_protect_region": {
+      "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+      "line": 14
+    },
+    "stance_colonize_region": {
+      "source": "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt",
+      "line": 21
+    }
+  },
+  "strategic_region_type": {
+    "scope_tag": "0x52",
+    "native_database": "CStrategicRegionsDatabase",
+    "link_type_descriptor_va": "0x145721980",
+    "link_col_va": "0x144c32f08",
+    "link_vftable_va": "0x14471a600",
+    "link_method_va": "0x142784d40",
+    "resolver_va": "0x1411352c0",
+    "id_member": "0x10"
+  },
+  "strategy_field_merges": {
+    "treaty_category_scores": {
+      "default_call": "0x141598094",
+      "active_call": "0x1415980ba",
+      "add_va": "0x1415980bf",
+      "operation": "additive_treaty_category_score"
+    },
+    "strategic_region_stance_type_scores": {
+      "default_insert": "0x1415ca52d",
+      "active_append": "0x1415ca548",
+      "debug_call": "0x1415ca5c2",
+      "call": "0x1415ca65d",
+      "add_va": "0x1415ca666",
+      "operation": "additive_region_stance_score"
+    },
+    "wanted_num_supply_ships": {
+      "default_call": "0x1415ad63f",
+      "active_call": "0x1415ad7f2",
+      "add_va": "0x1415ad8cf",
+      "operation": "additive_supply_ship_count_target"
+    },
+    "max_ship_design_complexity": {
+      "default_call": "0x1414b716c",
+      "active_call": "0x1414b730f",
+      "add_va": "0x1414b73e3",
+      "operation": "additive_ship_design_complexity_limit"
+    }
+  },
+  "stance_definition_bytes": {
+    "common/ai_strategic_region_stance_types/00_ai_strategic_region_stance_types.txt": "efbbbf232053747261746567696320526567696f6e204149205374616e6365730a0a7374616e63655f6e6f6e65203d207b0a0969636f6e203d20226766782f696e746572666163652f69636f6e732f7469657265645f696e746572657374732f61695f7374726174656769635f726567696f6e5f7374616e6365735f69636f6e732f7374616e63655f6e6f6e652e646473220a7d0a0a7374616e63655f636f6e717565725f726567696f6e203d207b0a0969636f6e203d20226766782f696e746572666163652f69636f6e732f7469657265645f696e746572657374732f61695f7374726174656769635f726567696f6e5f7374616e6365735f69636f6e732f7374616e63655f636f6e717565722e646473220a0a0963616e5f73656e645f666c65657473203d207965730a096164645f6469706c6f6d617469635f72656c6576616e6365203d207965730a7d0a0a7374616e63655f70726f746563745f726567696f6e203d207b0a0969636f6e203d20226766782f696e746572666163652f69636f6e732f7469657265645f696e746572657374732f61695f7374726174656769635f726567696f6e5f7374616e6365735f69636f6e732f7374616e63655f70726f746563742e646473220a0a0963616e5f73656e645f666c65657473203d207965730a096164645f6469706c6f6d617469635f72656c6576616e6365203d207965730a7d0a0a7374616e63655f636f6c6f6e697a655f726567696f6e203d207b0a0969636f6e203d20226766782f696e746572666163652f69636f6e732f7469657265645f696e746572657374732f61695f7374726174656769635f726567696f6e5f7374616e6365735f69636f6e732f7374616e63655f636f6c6f6e697a652e646473220a0a0963616e5f73656e645f666c65657473203d207965730a096164645f6469706c6f6d617469635f72656c6576616e6365203d207965730a7d0a"
+  }
+}
