@@ -23,8 +23,10 @@ from . import (
     decision_intents,
     decision_rules,
     equipment_opportunities,
+    mobilization_opportunities,
     observation_queries,
     production_inputs,
+    treaty_opportunities,
 )
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Block, Scalar
@@ -136,6 +138,10 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     sector_digest = None
     opportunity_digest = None
     equipment_digest = None
+    treaty_digest = None
+    treaty_fields = None
+    mobilization_digest = None
+    mobilization_fields = None
     if source == SOURCE:
         if (
             not isinstance(data["sources"], dict)
@@ -170,6 +176,33 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + equipment_opportunities.PARAMETERS.read_bytes()
             + b"\0generator:"
             + Path(equipment_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        treaties = treaty_opportunities.derive(data)
+        treaty_fields = {(row["source"], row["field"]) for row in treaties["covered"]}
+        _merge_derivation(data, treaties, "条约实际承诺机会")
+        treaty_digest = hashlib.sha256(
+            treaty_opportunities.BASELINE.read_bytes()
+            + b"\0parameters:"
+            + treaty_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(treaty_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        medical = mobilization_opportunities.derive(data)
+        mobilization_fields = {(row["source"], row["field"]) for row in medical["covered"]}
+        _merge_derivation(data, medical, "医疗动员实际投入机会")
+        actor_bindings = data.setdefault("actors", {})
+        if not isinstance(actor_bindings, dict):
+            raise ValueError("医疗动员AI所有者必须是映射")
+        for name, path in medical["actors"].items():
+            if name in actor_bindings and actor_bindings[name] != path:
+                raise ValueError("医疗动员AI所有者与编队原生ROOT冲突")
+            actor_bindings[name] = path
+        mobilization_digest = hashlib.sha256(
+            mobilization_opportunities.BASELINE.read_bytes()
+            + b"\0parameters:"
+            + mobilization_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(mobilization_opportunities.__file__).read_bytes()
         ).hexdigest()
     if not isinstance(data["sources"], dict) or not data["sources"]:
         raise ValueError("消费者适配必须锁定全部原件")
@@ -212,6 +245,8 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                 "common/buildings/",
                 "common/company_types/",
                 "common/ship_modifications/",
+                "common/treaty_articles/",
+                "common/mobilization_options/",
             )
         ):
             raise ValueError("只允许适配已登记的数值消费者；事件只能作为读取依据")
@@ -243,8 +278,40 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             if equipment_digest
             else b""
         )
+        + (b"\0treaty_opportunities:" + treaty_digest.encode("ascii") if treaty_digest else b"")
+        + (
+            b"\0mobilization_opportunities:" + mobilization_digest.encode("ascii")
+            if mobilization_digest
+            else b""
+        )
     ).hexdigest()
     for name, rules in sorted(groups.items()):
+        mobilization = name.startswith("common/mobilization_options/")
+        if mobilization:
+            if mobilization_fields is None:
+                mobilization_fields = {
+                    (row["source"], row["field"])
+                    for row in mobilization_opportunities.derive(data)["covered"]
+                }
+            if any(
+                (name, rule["field"]) not in mobilization_fields or rule["operation"] != "multiply"
+                for rule in rules
+            ):
+                raise ValueError("医疗动员只许可两项已冻结的精确编队权重块")
+        if name.startswith("common/treaty_articles/"):
+            if treaty_fields is None:
+                treaty_fields = {
+                    (row["source"], row["field"])
+                    for row in treaty_opportunities.derive(data)["covered"]
+                }
+            if any(
+                (name, rule["field"]) not in treaty_fields
+                or rule["operation"] != "multiply"
+                or len(rule["field"].split(".")) != 3
+                or not rule["field"].endswith(".ai.proposal_weight")
+                for rule in rules
+            ):
+                raise ValueError("条约适配只许可已核实的精确提议倍率块")
         if name.startswith("common/company_types/") and any(
             len(rule["field"].split(".")) != 2
             or not rule["field"].endswith(".ai_weight")
@@ -259,7 +326,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             for rule in rules
         ):
             raise ValueError("舰船改装适配只许可已证明的具名候选评分块")
-        expected_actor = ["owner"] if name.startswith("common/buildings/") else []
+        expected_actor = ["owner"] if name.startswith("common/buildings/") or mobilization else []
         if actors.get(name, []) != expected_actor:
             raise ValueError("消费者 AI 所有者与锁定接口作用域不一致")
         try:
@@ -289,6 +356,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                     "schema": 1,
                     "baseline_sha256": data["sources"][name],
                     "actor_path": actors.get(name, []),
+                    "native_root": "military_formation"
+                    if mobilization
+                    else "state"
+                    if expected_actor
+                    else "country",
                     "readers": {key: data["readers"][key] for key in readers},
                     "domains": {key: data["domains"][key] for key in domains},
                     "rules": rules,

@@ -49,7 +49,13 @@ class ContextBinding:
             "stall_chance": ("scalar", {"auxiliary"}),
         }
         expected = shapes.get(self.name)
-        if expected is None or self.kind != expected[0] or self.role not in expected[1]:
+        formation_binding = (self.name, self.kind, self.role) in {
+            ("root", "military_formation", "auxiliary"),
+            ("owner", "country", "actor"),
+        }
+        if not formation_binding and (
+            expected is None or self.kind != expected[0] or self.role not in expected[1]
+        ):
             raise ValueError("求值上下文绑定名称、类型或角色无效")
         if not self.source or type(self.line) is not int or self.line < 1:
             raise ValueError("求值上下文绑定缺少行级来源证据")

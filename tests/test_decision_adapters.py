@@ -7,11 +7,12 @@ import math
 import operator
 import re
 import tomllib
-from dataclasses import replace
+from dataclasses import dataclass, replace
+from dataclasses import field as dataclass_field
 from typing import TYPE_CHECKING
 
 import pytest
-from hypothesis import given
+from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
 from pdx import (
@@ -206,7 +207,7 @@ def test_critical_diplomatic_rules_match_generated_script(real_generated_branche
 @pytest.mark.skipif(
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
-def test_urban_research_requires_complete_development_capacity():
+def test_urban_research_population_need_is_not_a_development_payment_gate():
     adapters = decision_adapters.load()
     policy = dict(adapters.policies)["common/technology/technologies/30_society.txt"]
     values = {
@@ -218,7 +219,7 @@ def test_urban_research_requires_complete_development_capacity():
         "war": False,
     }
     result = decision_rules.evaluate(policy, values, is_ai=True)
-    assert result["urbanization.ai_weight"] == ("situational_urbanization_research", 1.2)
+    assert result["urbanization.ai_weight"] == ("situational_urbanization_research", 1.1)
     for key, value in (
         ("war", True),
         ("default", True),
@@ -226,8 +227,12 @@ def test_urban_research_requires_complete_development_capacity():
         ("net_surplus", -1),
         ("literacy", None),
     ):
+        assert decision_rules.evaluate(policy, {**values, key: value}, is_ai=True)[
+            "urbanization.ai_weight"
+        ] == ("situational_urbanization_research", 1.1)
+    for population in (None, 1_999_999):
         assert "urbanization.ai_weight" not in decision_rules.evaluate(
-            policy, {**values, key: value}, is_ai=True
+            policy, {**values, "population": population}, is_ai=True
         )
 
 
@@ -624,8 +629,24 @@ def test_event_evidence_cannot_become_a_mutable_consumer(tmp_path):
 def test_declared_sources_have_consumers_and_real_bounded_conditions():
     adapters = decision_adapters.load()
     rules = [rule for _, policy in adapters.policies for rule in policy.rules]
-    assert len(rules) == len(
-        tomllib.loads(decision_adapters.SOURCE.read_text(encoding="utf-8"))["rules"]
+    declared = tomllib.loads(decision_adapters.SOURCE.read_text(encoding="utf-8"))["rules"]
+    actual = {rule.id: rule for rule in rules}
+    # Native company/recipe/equipment/treaty/mobilization derivations add real consumers;
+    # they are not hand-written TOML rows. Keep every authored identity exact,
+    # and admit only the registered derived namespaces checked in their own
+    # complete source/AST contract suites.
+    for row in declared:
+        rule = actual[row["id"]]
+        assert (".".join(rule.field), rule.operation, rule.value) == (
+            row["field"],
+            row["operation"],
+            row["value"],
+        )
+    authored = {row["id"] for row in declared}
+    assert all(
+        rule.id.startswith(("company_", "building_", "equipment_", "treaty_", "mobilization_"))
+        for rule in rules
+        if rule.id not in authored
     )
     assert len({rule.id for rule in rules}) == len(rules)
     assert {rule.domain for rule in rules} == {
@@ -643,6 +664,13 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
         if "/buildings/" in name:
             assert policy.actor_path == ("owner",)
             assert all(rule.field[-1] == "ai_value" for rule in policy.rules)
+        elif name == "common/mobilization_options/00_mobilization_option.txt":
+            assert policy.native_root == "military_formation"
+            assert policy.actor_path == ("owner",)
+            assert {rule.field for rule in policy.rules} == {
+                ("mobilization_option_first_aid", "ai_weight"),
+                ("mobilization_option_field_hospitals", "ai_weight"),
+            }
         else:
             assert policy.actor_path == ()
         if "/laws/" in name:
@@ -655,17 +683,87 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                         "insurrection",
                         "radical_share",
                     }
+                elif rule.id.startswith("bureaucracy_reform_") and rule.value < 0:
+                    assert (rule.value, rule.contribution_group) == {
+                        **{
+                            f"bureaucracy_reform_appointed_elected_institution_cost_{key}": (
+                                -8,
+                                "bureaucracy_institution_cost",
+                            )
+                            for key in (
+                                "police",
+                                "home_affairs",
+                                "colonial_affairs",
+                                "health",
+                                "schools",
+                                "social_security",
+                                "workplace_safety",
+                            )
+                        },
+                        "bureaucracy_reform_elected_appointed_tax_loss": (
+                            -10,
+                            "bureaucracy_tax_capacity",
+                        ),
+                    }[rule.id]
+                elif rule.id.startswith("health_reform_") and rule.value < 0:
+                    health_costs = {
+                        **{
+                            f"health_reform_{candidate}_new_administrative_pressure": (
+                                -8,
+                                "health_administration",
+                            )
+                            for candidate in ("charity", "private", "public")
+                        },
+                        **{
+                            f"health_reform_{candidate}_new_default_pressure": (
+                                -6,
+                                "health_financing",
+                            )
+                            for candidate in ("charity", "private", "public")
+                        },
+                        "health_reform_public_private_administrative_loss": (
+                            -8,
+                            "health_administration",
+                        ),
+                        "health_reform_public_private_default_pressure": (-6, "health_financing"),
+                        "health_reform_public_charity_administrative_loss": (
+                            -4,
+                            "health_administration",
+                        ),
+                        "health_reform_public_charity_default_pressure": (-6, "health_financing"),
+                        "health_reform_private_charity_food_loss": (
+                            -4,
+                            "health_food_security_loss",
+                        ),
+                        "health_reform_public_charity_food_loss": (-4, "health_food_security_loss"),
+                        "health_reform_private_public_universal_access_loss": (
+                            -8,
+                            "health_universal_access_loss",
+                        ),
+                    }
+                    assert (rule.value, rule.contribution_group) == health_costs[rule.id]
+                elif rule.value < 0:
+                    assert (rule.id, rule.value) in {
+                        ("public_school_administrative_pressure", -8),
+                        ("public_school_default_pressure", -6),
+                    }
+                    assert rule.contribution_group
                 else:
                     assert 0 < rule.value <= 30
         else:
             for rule in policy.rules:
                 if rule.operation == "add":
-                    assert rule.id.startswith(("coordinated_", "comparative_", "structural_"))
+                    assert rule.id.startswith(
+                        ("coordinated_", "comparative_", "structural_", "lj08_", "lj12_")
+                    )
                     assert -10 <= rule.value <= 30
                     assert rule.field[0] == "ai_strategy_default"
                 else:
                     assert rule.operation == "multiply"
-                    assert 0.75 <= rule.value <= 1.3
+                    if rule.id == "d6_steelworking_tools_shortage_pressure":
+                        assert rule.value == 1.35
+                    else:
+                        assert 0.75 <= rule.value <= 1.3
     default_name = "common/ai_strategies/00_default_strategy.txt"
     default_policy = dict(adapters.policies)[default_name]
     changed = replace(
@@ -689,10 +787,11 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
 def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
     adapters = decision_adapters.load()
     files, contract = decision_adapters.build(adapters, country_policy=country_state.load())
-    assert len(files) == 39
     consumers = contract["consumers"]
     assert isinstance(consumers, list)
-    assert len(consumers) == 38
+    policy_sources = {source for source, _policy in adapters.policies}
+    assert {row["source"] for row in consumers} == policy_sources
+    assert len(consumers) == len(policy_sources)
     scalar_consumers = contract["scalar_consumers"]
     assert isinstance(scalar_consumers, list)
     named_values = {
@@ -700,6 +799,7 @@ def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
         for row in scalar_consumers
         if row["operation"] == "retain_native_constant_in_named_value"
     }
+    assert set(files) == policy_sources | {row["value_source"] for row in named_values.values()}
     for name, text in files.items():
         inline_text = text
         if name == "common/script_values/sitai_adapter_values.txt":
@@ -1029,6 +1129,74 @@ def test_scalar_consumer_rejects_invalid_ambiguous_or_block_values(scalar_buildi
         decision_adapters.build(adapters, texts={name: changed})
 
 
+@dataclass(frozen=True)
+class _GeneratedBranches:
+    # Hypothesis prints fixture arguments in a failing example. Keep the full
+    # fixture for evaluation without serializing thousands of rules and ASTs
+    # into every failure and exhausting the worker during error reporting.
+    branches: tuple = dataclass_field(repr=False)
+    scripts: dict[int, dict[str, str]] = dataclass_field(repr=False)
+
+    def __iter__(self):
+        return iter(self.branches)
+
+    def _repr_pretty_(self, printer, _cycle):
+        # Hypothesis's dataclass printer ignores repr=False. Its custom hook
+        # must also remain bounded when a real all-policy assertion fails.
+        printer.text(f"_GeneratedBranches(policies={len(self.branches)})")
+
+
+def test_generated_branches_have_bounded_hypothesis_failure_diagnostics():
+    from hypothesis.vendor.pretty import pretty
+
+    payload = "large generated rules and ASTs " * 100
+    fixture = _GeneratedBranches(((payload,),), {1: {"field": payload}})
+    assert pretty(fixture) == "_GeneratedBranches(policies=1)"
+    assert repr(fixture) == "_GeneratedBranches()"
+
+
+def _adapter_oracle_script(text):
+    """Label native-neutral exits for the strict oracle without changing their AST.
+
+    Legacy adapters emit unmarked multiply=1 fallback branches. pdx_eval needs
+    an identity on every writing branch; only those exact neutral exits may
+    receive a fixture label. Authored writer identities remain untouched.
+    """
+    lines = text.splitlines()
+    marked_lines = set()
+    for index, line in enumerate(lines):
+        if not re.match(r"\s*# (?:ACTION )?[a-z][a-z0-9_]* \[[a-z][a-z0-9_]*\];", line):
+            continue
+        branch = index + 1
+        while branch < len(lines) and not lines[branch].strip():
+            branch += 1
+        marked_lines.add(branch + 1)
+    original = parse_text(text)
+    assert not original.errors
+    neutral_lines = set()
+
+    def visit(block):
+        for item in block.assignments():
+            if not isinstance(item.value, Block):
+                continue
+            writes = [
+                child for child in item.value.assignments() if child.key in {"add", "multiply"}
+            ]
+            if item.key in {"if", "else_if", "else"} and writes and item.line not in marked_lines:
+                assert len(writes) == 1
+                assert writes[0].key == "multiply"
+                assert isinstance(writes[0].value, Scalar)
+                assert float(writes[0].value.unquoted) == 1
+                neutral_lines.add(item.line)
+            visit(item.value)
+
+    visit(original.root)
+    return "\n".join(
+        ("# ACTION adapter_neutral_fallback [oracle];\n" if index in neutral_lines else "") + line
+        for index, line in enumerate(lines, 1)
+    )
+
+
 @pytest.fixture(scope="module")
 def real_generated_branches():
     if not (config.GAME / "common/laws/readme.md").is_file():
@@ -1043,8 +1211,10 @@ def real_generated_branches():
         if row["operation"] == "retain_native_constant_in_named_value"
     }
     result = []
+    scripts: dict[int, dict[str, str]] = {}
     for source, policy in adapters.policies:
         blocks = {}
+        scripts[id(policy)] = {}
         for field in policy.groups():
             name = ".".join(field)
             match = re.search(
@@ -1056,8 +1226,9 @@ def real_generated_branches():
             parsed = parse_text(match.group(1))
             assert not parsed.errors
             blocks[name] = parsed.root
+            scripts[id(policy)][name] = _adapter_oracle_script(match.group(1))
         result.append((policy, blocks))
-    return result
+    return _GeneratedBranches(tuple(result), scripts)
 
 
 def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | None:
@@ -1231,7 +1402,6 @@ def test_adjustment_interpreter_executes_nested_conditional_chains(script, expec
 @pytest.mark.parametrize(
     "rule_id",
     [
-        "watertube_boiler_ai_weight",
         "social_organized_labor_law_regulatory_bodies",
         "social_organized_labor_law_wage_subsidies",
         "comparative_friendly_subject",
@@ -1399,7 +1569,210 @@ def test_population_selector_invalid_facts_preserve_vanilla(population_candidate
     assert decision_rules.evaluate(policy, {"peasants": bad}, is_ai=True) == {}
 
 
+def _adapter_collection_observations(seed):
+    """Sample owned objects, never a precomputed existential-query result.
+
+    Keep this RNG separate from scalar Reader sampling so existing seeds still
+    identify the same scalar/parameterized observations in every policy.
+    """
+    import random
+
+    rng = random.Random(f"adapter-owned-observations:{seed}")
+    methods = {
+        "building_art_academy": (
+            "pm_traditional_art",
+            "pm_realist_art",
+            "pm_photographic_art",
+        ),
+        "building_port": ("pm_basic_port", "pm_industrial_port", "pm_modern_port"),
+        "building_railway": ("pm_early_trains", "pm_steam_trains", "pm_electric_trains"),
+        "building_power_plant": ("pm_early_power_plant", "pm_coal-fired_plant"),
+        "building_gold_mine": ("pm_gold_mining",),
+        "building_trade_center": ("pm_trade_center",),
+    }
+    all_methods = tuple(method for group in methods.values() for method in group)
+
+    def building(kind):
+        method = rng.choice(methods[kind])
+        return {
+            "is_building_type": {
+                (("argument", candidate),): candidate == kind for candidate in methods
+            },
+            "has_active_production_method": {
+                (("argument", candidate),): candidate == method for candidate in all_methods
+            },
+            "level": rng.choice([None, 0, 1, 2, 5]),
+            "weekly_profit": rng.choice([None, -1, 0, 1, 100]),
+            "occupancy": rng.choice([None, 0, 0.74, 0.75, 0.89, 0.9, 1]),
+            "cash_reserves_ratio": rng.choice([None, 0, 0.5, 0.6, 1]),
+        }
+
+    def buildings():
+        # Missing and complete empty lists have different three-valued meaning.
+        state = rng.randrange(5)
+        if state == 0:
+            return None
+        if state == 1:
+            return []
+        return [building(kind) for kind in methods if rng.choice([True, False])]
+
+    def states():
+        state = rng.randrange(5)
+        if state == 0:
+            return None
+        return [
+            {
+                "any_scope_building": buildings(),
+                "market_access": rng.choice([None, 0, 0.89, 0.9, 0.99, 1]),
+                "is_incorporated": rng.choice([None, False, True]),
+                "tax_capacity": rng.choice([None, 0, 5, 10, 20]),
+                "tax_capacity_usage": rng.choice([None, 0, 5, 10, 20]),
+                "infrastructure_delta": rng.choice([None, -20, -1, 0, 10]),
+                "sg:transportation": {
+                    "state_goods_pricier": rng.choice([None, 0, 0.25, 0.26, 0.5, 0.51])
+                },
+                "sg:electricity": {
+                    "state_goods_pricier": rng.choice([None, 0, 0.25, 0.26, 0.5, 0.51])
+                },
+            }
+            for _ in range(state - 1)
+        ]
+
+    def political_members(engine, laws):
+        state = rng.randrange(5)
+        if state == 0:
+            return None
+        return [
+            {
+                engine: {
+                    (("law", f"law_type:{law}"),): rng.choice([None, -1, 0, 1]) for law in laws
+                },
+                "political_movement_support": rng.choice([None, 0, 0.09, 0.1, 0.11, 0.5]),
+            }
+            for _ in range(state - 1)
+        ]
+
+    owned_states = states()
+    # Country and state iterators describe the same owned world; incomplete
+    # state observations cannot become a complete country building list.
+    owned_buildings = (
+        None
+        if owned_states is None
+        or any(state["any_scope_building"] is None for state in owned_states)
+        else [member for state in owned_states for member in state["any_scope_building"]]
+    )
+    return {
+        "any_scope_building": owned_buildings,
+        "any_scope_state": owned_states,
+        "any_political_movement": political_members(
+            "law_enactment_stance", ("law_free_trade", "law_mercantilism")
+        ),
+        "any_interest_group": political_members("law_stance", ("law_anarchy",)),
+    }
+
+
+def _adapter_query_reference(reader, observations):
+    """Handwritten query semantics over members, independent of render/compiler/PDX."""
+
+    def conjunction(*values):
+        return False if False in values else None if None in values else True
+
+    def existential(members, predicate):
+        if members is None:
+            return None
+        values = [predicate(member) for member in members]
+        return True if True in values else None if None in values else False
+
+    def compare(actual, op, expected):
+        return None if actual is None else op(actual, expected)
+
+    def identity(member, engine, argument):
+        return member[engine][(("argument", argument),)]
+
+    def capacity(member, kind):
+        return conjunction(
+            identity(member, "is_building_type", kind),
+            compare(member["level"], operator.ge, 1),
+        )
+
+    parameters = dict(reader.parameters)
+    query = parameters.get("company_query")
+    if reader.engine == "any_scope_building":
+
+        def building(member):
+            if query == "existing_business":
+                strong = parameters["tier"] == "strong"
+                return conjunction(
+                    capacity(member, parameters["building"]),
+                    compare(member["weekly_profit"], operator.gt, 0),
+                    compare(member["occupancy"], operator.ge, 0.9 if strong else 0.75),
+                    compare(member["cash_reserves_ratio"], operator.gt, 0.5) if strong else True,
+                )
+            assert query in {None, "port_method"}
+            return conjunction(
+                capacity(member, parameters.get("building", "building_port")),
+                identity(member, "has_active_production_method", parameters["method"]),
+                compare(member["level"], operator.ge, int(parameters.get("min_level", "1"))),
+            )
+
+        return existential(observations[reader.engine], building)
+    if reader.engine == "any_scope_state":
+
+        def state(member):
+            if "threshold" in parameters:
+                return compare(member["market_access"], operator.lt, float(parameters["threshold"]))
+            if parameters == {"state_query": "tax_capacity_shortfall"}:
+                return conjunction(
+                    member["is_incorporated"],
+                    compare(member["tax_capacity"], operator.lt, member["tax_capacity_usage"])
+                    if member["tax_capacity_usage"] is not None
+                    else None,
+                )
+            assert query in {"rail_infrastructure", "power_scarcity"}
+            railway = query == "rail_infrastructure"
+            good = "transportation" if railway else "electricity"
+            return conjunction(
+                existential(
+                    member["any_scope_building"],
+                    lambda candidate: capacity(
+                        candidate, "building_railway" if railway else "building_power_plant"
+                    ),
+                ),
+                compare(member["infrastructure_delta"], operator.lt, 0) if railway else True,
+                compare(
+                    member[f"sg:{good}"]["state_goods_pricier"],
+                    operator.gt,
+                    float(parameters["minimum_price"]),
+                )
+                if "minimum_price" in parameters
+                else True,
+            )
+
+        return existential(observations[reader.engine], state)
+    assert reader.engine in {"any_political_movement", "any_interest_group"}
+
+    def political(member):
+        movement = reader.engine == "any_political_movement"
+        engine = "law_enactment_stance" if movement else "law_stance"
+        return conjunction(
+            compare(member[engine][(("law", "law_type:" + parameters["law"]),)], operator.gt, 0),
+            compare(
+                member["political_movement_support"],
+                operator.ge,
+                float(parameters["minimum_support"]),
+            )
+            if movement
+            else True,
+        )
+
+    return existential(observations[reader.engine], political)
+
+
 @pytest.mark.integration
+# This is an all-corpus correctness check with independent PDX parsing, not a
+# 200ms microbenchmark. Keep all 100 examples and the pytest 300-second limit.
+@settings(deadline=None)
+@example(seed=284, is_ai=True, missing_target=False)
 @given(seed=st.integers(0, 1000000), is_ai=st.booleans(), missing_target=st.booleans())
 def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
     real_generated_branches,
@@ -1409,7 +1782,11 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
 ):
     import random
 
+    from pdx import observation_queries
+    from pdx.situated import pdx_eval
+
     rng = random.Random(seed)
+    collections = _adapter_collection_observations(seed)
     for policy, blocks in real_generated_branches:
         scopes: dict = {
             "ROOT": {},
@@ -1441,18 +1818,36 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
                     )
                 )
             value = sampled[signature]
+            # This reader names the same physical actor already chosen above;
+            # it cannot be an independent random observation of another AI.
+            # Keep the draw so every other historical scalar input is unchanged.
+            if (
+                reader.engine == "is_ai"
+                and reader.scope == "root"
+                and reader.path == policy.actor_path
+            ):
+                value = is_ai
             scope = "ROOT" if reader.scope == "root" else "scope:" + reader.scope
             current = scopes[scope]
             for part in reader.path:
                 current = current.setdefault(part, {})
-            physical_key = (
-                (reader.engine, reader.parameters)
-                if reader.parameters
-                else (reader.engine, reader.argument)
-                if reader.argument is not None
-                else reader.engine
-            )
-            current[physical_key] = value
+            if reader.engine in observation_queries.QUERY_ENGINES:
+                assert reader.scope == "root"
+                assert not reader.path
+                current[reader.engine] = collections[reader.engine]
+                value = _adapter_query_reference(reader, collections)
+            elif reader.engine == "is_production_method_active":
+                parameters = dict(reader.parameters)
+                current.setdefault(reader.engine, {}).setdefault(parameters["building_type"], {})[
+                    parameters["production_method"]
+                ] = value
+            elif reader.parameters or reader.argument is not None or reader.value_field is not None:
+                parameters = dict(reader.parameters)
+                if reader.argument is not None:
+                    parameters["argument"] = reader.argument
+                current.setdefault(reader.engine, {})[tuple(sorted(parameters.items()))] = value
+            else:
+                current[reader.engine] = value
             if reader.engine.startswith("sitai_context_"):
                 current["sitai_context_known_" + reader.engine.removeprefix("sitai_context_")] = (
                     True
@@ -1471,8 +1866,13 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
             scopes.pop("scope:interest_group")
         reference = decision_rules.evaluate(policy, values, is_ai=is_ai)
         operations = {rule.id: rule.operation for rule in policy.rules}
-        for field, block in blocks.items():
-            actual = _interpret_adjustments(block, scopes)
+        for field in blocks:
+            observed = pdx_eval.select(
+                real_generated_branches.scripts[id(policy)][field], scopes, path=field
+            )
+            actual = (
+                (observed.operation, observed.delta) if observed.operation is not None else None
+            )
             expected = reference.get(field)
             if expected is None:
                 assert actual in (None, ("multiply", 1.0)), field
@@ -1899,18 +2299,6 @@ def test_same_political_resistance_changes_with_fiscal_capacity_in_generated_ast
     ("source", "field", "before", "after"),
     [
         (
-            "01_education_system.txt",
-            "law_public_schools",
-            {"peasant_share": 0.5},
-            {"peasant_share": 0.6},
-        ),
-        (
-            "01_education_system.txt",
-            "law_public_schools",
-            {"current_private_schools": False},
-            {"current_private_schools": True},
-        ),
-        (
             "02_labor_rights.txt",
             "law_regulatory_bodies",
             {"radical_share": 0.1},
@@ -1953,6 +2341,88 @@ def test_stronger_social_need_does_not_accidentally_reduce_target_adjustment(
             blocks[key], _scopes_for_facts(policy, {**facts, **after, **guard})
         )
         assert blocked is None or blocked[1] <= 0
+
+
+@pytest.fixture(scope="module")
+def public_school_joint_generated():
+    from pdx.situated import programs
+
+    source = "common/laws/01_education_system.txt"
+    adapters = decision_adapters.load()
+    policy = programs.enable(dict(adapters.policies)[source], source=source)
+    selected = replace(
+        adapters, policies=((source, policy),), initial_values=(), scalar_values=(), supply=None
+    )
+    files, _ = decision_adapters.build(selected, country_policy=country_state.load())
+    return policy, files[source]
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("before", "after", "expected"),
+    [
+        ({"peasant_share": 0.5}, {"peasant_share": 0.6}, (10, 12)),
+        ({"current_private_schools": False}, {"current_private_schools": True}, (0, 10)),
+    ],
+)
+def test_stronger_public_school_need_joins_exact_administrative_financial_and_political_costs(
+    public_school_joint_generated, before, after, expected
+):
+    from test_situated_joint_witnesses import _facts
+
+    from pdx.situated import pdx_eval
+
+    policy, generated = public_school_joint_generated
+    field = "law_public_schools.ai_enact_weight_modifier"
+    match = re.search(
+        rf"# SITAI BEGIN information:{re.escape(field)}\n(.*?)# SITAI END information:",
+        generated,
+        re.DOTALL,
+    )
+    assert match is not None
+    values: dict[str, object] = {
+        reader.key: False if reader.kind == "boolean" else 0 for reader in policy.readers
+    }
+    values.update(
+        current_private_schools=True,
+        literacy=0.3,
+        peasant_share=0.5,
+        bureaucracy=1,
+        default=False,
+        legitimacy=60,
+        insurrection=False,
+        radical_share=0.1,
+    )
+
+    def adjustment(changes):
+        facts = {**values, **changes}
+        observed = pdx_eval.select(match.group(1), _facts(policy, facts))
+        reference = decision_rules.evaluate(policy, facts, is_ai=True).get(field)
+        actual = observed.delta if observed.operation == "add" else 0
+        assert actual == pytest.approx(reference[1] if reference else 0)
+        return actual
+
+    assert (adjustment(before), adjustment(after)) == expected
+    for costs, delta in (
+        ({"bureaucracy": -1}, -8),
+        ({"default": True}, -6),
+        ({"bureaucracy": -1, "default": True}, -14),
+        ({"legitimacy": 20, "insurrection": True, "radical_share": 0.3}, -10),
+        (
+            {
+                "legitimacy": 20,
+                "insurrection": True,
+                "radical_share": 0.3,
+                "bureaucracy": -1,
+                "default": True,
+            },
+            -24,
+        ),
+        ({"war": True}, 0),
+        ({"loans": True}, 0),
+        ({"legitimacy": 0}, 0),
+    ):
+        assert adjustment({**after, **costs}) == expected[1] + delta
 
 
 @pytest.mark.parametrize("war", [False, True])

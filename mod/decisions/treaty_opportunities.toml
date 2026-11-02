@@ -1,0 +1,10 @@
+# 显式条款的ROOT防御需求与共同影响力/军事承诺成本；不猜测授予方或接受方。
+schema = 1
+
+[parameters]
+priority_base = 200000
+defensive_need_multiplier = 1.15
+war_commitment_multiplier = 0.85
+default_multiplier = 0.85
+influence_pressure_multiplier = 0.90
+influence_deficit_multiplier = 0.80

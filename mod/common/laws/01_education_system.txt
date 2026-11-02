@@ -432,26 +432,34 @@ law_public_schools = {
 		# ACTION program_4d1ae7b90d6da97b [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
 			value = 0
-			# GROUP program_4d1ae7b90d6da97b_positive
+			# GROUP program_4d1ae7b90d6da97b_public_school_access_need_positive
 			add = { value = 0
-				# structural_school_access [political]; 低识字、农民占比较高且当前依赖私立教育时，有限提高公共教育可及性候选
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 has_law_or_variant = law_type:law_private_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 30 }
-				# structural_school_secularization [political]; 工业劳动力存在教育需求时有限关注公共教育替代，不绕过宗教利益集团支持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 has_law_or_variant = law_type:law_religious_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } add = 29 }
-				# social_education_peasant_pressure [political]; 大量农民且识字率较低时，把教育作为有限的长期能力投资，与财政和战争状态共同评估
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 28 }
-				# law_public_schools_ai_enact_weight_modifier [political]; 在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 22 }
-				# coordinated_layered_law_education_public_schools [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no bureaucracy >= 0 } } add = 6 }
+				# public_school_no_schools_access [political]; 当前没有学校制度且识字偏低时，为引入公校普遍教育接入形成具体需求；原版已有无学校法律请愿加值完整保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 14 }
+				# public_school_private_peasant_access [political]; 低识字、当前私校且农民比例高时提高同一普遍教育接入需求档；农民比例只作覆盖压力代理，不是个人财富或政治支持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				# structural_school_access [political]; 当前私校按财富提供教育接入，低识字时有限关注公校普遍教育接入的具体改革需求，不把全国均值冒充个人财富
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 10 }
+				# structural_school_secularization [political]; 当前宗教学校每级普遍教育接入0.10，公校0.125；低识字时形成较小教育接入改善需求，不强制世俗路线或假定政治支持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_religious_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 8 }
 			}
-			# GROUP program_4d1ae7b90d6da97b_negative
+			# GROUP program_4d1ae7b90d6da97b_public_school_administrative_pressure_negative
+			add = { value = 0
+				# public_school_administrative_pressure [political]; 行政赤字独立计入公共学校改革的制度管理机会成本，不删除已知教育接入需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = -8 }
+			}
+			# GROUP program_4d1ae7b90d6da97b_public_school_financing_pressure_negative
+			add = { value = 0
+				# public_school_default_pressure [fiscal]; 已观察违约独立计入公共学校改革融资机会成本，与行政和政治压力同时计算，正常贷款本身不扣分
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -6 }
+			}
+			# GROUP program_4d1ae7b90d6da97b_public_school_political_pressure_negative
 			add = { value = 0
 				# political_capacity_law_public_schools [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 30
+			min = -24
+			max = 14
 		} }
 		# SITAI END information:law_public_schools.ai_enact_weight_modifier
 	}

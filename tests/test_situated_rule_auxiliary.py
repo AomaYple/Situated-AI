@@ -626,7 +626,7 @@ def test_required_known_is_a_real_core_input_and_rejects_ir_drift():
         [],
         ["missing"],
         ["state_owner_default", "state_owner_default"],
-        ["state_unemployment"],
+        [1],
         "state_owner_default",
     ],
 )
@@ -635,3 +635,50 @@ def test_required_known_declaration_rejects_invalid_reader_or_shape(declaration)
     data["rules"][0]["required_known_facts"] = declaration
     with pytest.raises(ValueError, match="核心知识"):
         decision_rules.from_data(data, source_sha256="0" * 64)
+
+
+@pytest.mark.parametrize("joint", [False, True])
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (0, 1.3),
+        (0.5, 1.3),
+        (1, 1.3),
+        (None, 1),
+        (-0.1, 1),
+        (1.1, 1),
+        (True, 1),
+        ("0.5", 1),
+        (float("nan"), 1),
+        (float("inf"), 1),
+    ],
+)
+def test_numeric_core_knowledge_checks_type_range_and_unknown_without_a_health_gate(
+    joint, value, expected
+):
+    data, baseline = _tier_data()
+    high = data["rules"][0]
+    high["conditions"] = [{"fact": "state_owner_default", "op": "=", "value": False}]
+    high["auxiliary_facts"] = []
+    high["required_known_facts"] = ["state_unemployment"]
+    data["rules"] = [high]
+    del data["readers"]["state_owner_literacy"]
+    policy = decision_rules.from_data(data, source_sha256="0" * 64)
+    if joint:
+        policy = programs.enable(policy, source="common/buildings/01_industry.txt")
+    text = decision_rules.patch(
+        baseline,
+        policy,
+        baseline=baseline,
+        default_strategy=False,
+        reader_evidence="owner in_default state_unemployment_rate",
+    )
+    values = {"state_owner_default": False, "state_unemployment": value}
+    actual = decision_rules.evaluate(policy, values, is_ai=True).get(
+        "building_food_industry.ai_value"
+    )
+    observed = pdx_eval.select(
+        _overlay(text, "building_food_industry.ai_value"), _facts(policy, values)
+    )
+    assert (actual[1] if actual else 1) == pytest.approx(expected)
+    assert (observed.delta if observed.operation == "multiply" else 1) == pytest.approx(expected)

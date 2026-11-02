@@ -28,6 +28,9 @@ pytestmark = pytest.mark.unit
 INFO = "mod/decisions/information.toml"
 _MARKER = re.compile(r"^\s*# ([a-z][a-z0-9_]*) \[[a-z][a-z0-9_]*\];")
 _OPS = {"=": operator.eq, "<": operator.lt, "<=": operator.le, ">": operator.gt, ">=": operator.ge}
+_COLLECTIONS = frozenset(
+    {"any_scope_state", "any_scope_building", "any_political_movement", "any_interest_group"}
+)
 
 
 @dataclass(frozen=True)
@@ -186,7 +189,7 @@ class _ParsedChain:
     ("rule_id", "key", "alias"),
     [
         ("ai_strategy_default_wanted_num_supply_ships", "navy", "own_navy"),
-        ("coordinated_institution_health_system_social_need", "sol", "average_sol"),
+        ("health_public_low_living_need", "average_sol", "sol"),
         ("lj07_grain_health_social_capacity", "average_sol", "sol"),
     ],
 )
@@ -416,6 +419,392 @@ def _truth(
     return None if unknown else True
 
 
+class _ObservedValues(dict[str, object]):
+    """Scalar observations and query results derived from one owned world."""
+
+    def __init__(self, values, collections):
+        super().__init__(values)
+        self.collections = collections
+
+
+def _query_reference(reader, collections):
+    """Handwritten member semantics; never use a renderer or PDX for expectations."""
+
+    def conjunction(*values):
+        return False if False in values else None if None in values else True
+
+    def exists(members, predicate):
+        if members is None:
+            return None
+        outcomes = [predicate(member) for member in members]
+        return True if True in outcomes else None if None in outcomes else False
+
+    def compare(value, op, expected):
+        return None if value is None or expected is None else op(value, expected)
+
+    def identity(member, engine, argument):
+        return member[engine].get((("argument", argument),))
+
+    def capacity(member, building):
+        return conjunction(
+            identity(member, "is_building_type", building),
+            compare(member.get("level"), operator.ge, 1),
+        )
+
+    params = dict(reader.parameters)
+    query = params.get("company_query")
+    if reader.engine == "any_scope_building":
+
+        def building(member):
+            if query == "existing_business":
+                strong = params["tier"] == "strong"
+                return conjunction(
+                    capacity(member, params["building"]),
+                    compare(member.get("weekly_profit"), operator.gt, 0),
+                    compare(member.get("occupancy"), operator.ge, 0.9 if strong else 0.75),
+                    compare(member.get("cash_reserves_ratio"), operator.gt, 0.5)
+                    if strong
+                    else True,
+                )
+            assert query in {None, "port_method"}
+            return conjunction(
+                capacity(member, params.get("building", "building_port")),
+                identity(member, "has_active_production_method", params["method"]),
+                compare(member.get("level"), operator.ge, int(params.get("min_level", "1"))),
+            )
+
+        return exists(collections[reader.engine], building)
+    if reader.engine == "any_scope_state":
+
+        def state(member):
+            if "threshold" in params:
+                return compare(member.get("market_access"), operator.lt, float(params["threshold"]))
+            if params == {"state_query": "tax_capacity_shortfall"}:
+                return conjunction(
+                    member.get("is_incorporated"),
+                    compare(
+                        member.get("tax_capacity"), operator.lt, member.get("tax_capacity_usage")
+                    ),
+                )
+            assert query in {"rail_infrastructure", "power_scarcity"}
+            railway = query == "rail_infrastructure"
+            good = "transportation" if railway else "electricity"
+            return conjunction(
+                exists(
+                    member.get("any_scope_building"),
+                    lambda candidate: capacity(
+                        candidate, "building_railway" if railway else "building_power_plant"
+                    ),
+                ),
+                compare(member.get("infrastructure_delta"), operator.lt, 0) if railway else True,
+                compare(
+                    member.get(f"sg:{good}", {}).get("state_goods_pricier"),
+                    operator.gt,
+                    float(params["minimum_price"]),
+                )
+                if "minimum_price" in params
+                else True,
+            )
+
+        return exists(collections[reader.engine], state)
+    assert reader.engine in {"any_political_movement", "any_interest_group"}
+
+    def political(member):
+        movement = reader.engine == "any_political_movement"
+        engine = "law_enactment_stance" if movement else "law_stance"
+        return conjunction(
+            compare(member[engine].get((("law", "law_type:" + params["law"]),)), operator.gt, 0),
+            compare(
+                member.get("political_movement_support"),
+                operator.ge,
+                float(params["minimum_support"]),
+            )
+            if movement
+            else True,
+        )
+
+    return exists(collections[reader.engine], political)
+
+
+def _observed_values(index, requested):
+    """Realize fixtures with real members, then recompute every query alias.
+
+    The old source fixture requests one Boolean per query independently. Those
+    requests are only witness construction hints: a strong business also makes
+    its base query true, and state/country buildings describe the same objects.
+    All expected rule results are recalculated from the resulting shared world.
+    """
+    query_readers = [reader for reader in index.readers.values() if reader.engine in _COLLECTIONS]
+    collections: dict[str, Any] = {
+        "any_scope_state": [],
+        "any_scope_building": [],
+        "any_political_movement": [],
+        "any_interest_group": [],
+    }
+    types = {
+        "building_art_academy",
+        "building_port",
+        "building_railway",
+        "building_power_plant",
+        "building_gold_mine",
+        "building_trade_center",
+    }
+    methods = {
+        dict(reader.parameters)["method"]
+        for reader in query_readers
+        if "method" in dict(reader.parameters)
+    }
+
+    def building(kind, method=None, *, strong=False):
+        return {
+            "is_building_type": {(("argument", item),): item == kind for item in types},
+            "has_active_production_method": {
+                (("argument", item),): item == method for item in methods
+            },
+            "level": 1,
+            "weekly_profit": 1,
+            "occupancy": 1 if strong else 0.75,
+            "cash_reserves_ratio": 1 if strong else 0,
+        }
+
+    def state():
+        return {
+            "any_scope_building": [],
+            "market_access": 1,
+            "is_incorporated": False,
+            "tax_capacity": 10,
+            "tax_capacity_usage": 0,
+            "infrastructure_delta": 0,
+            "sg:transportation": {"state_goods_pricier": 0},
+            "sg:electricity": {"state_goods_pricier": 0},
+        }
+
+    observed = set()
+    missing = set()
+    for reader in query_readers:
+        if reader.key not in requested:
+            continue
+        signature = (reader.engine, reader.parameters)
+        if signature in observed:
+            continue
+        observed.add(signature)
+        wanted = requested[reader.key]
+        if wanted is None:
+            missing.add(reader.engine)
+            continue
+        assert type(wanted) is bool
+        if not wanted:
+            continue
+        params = dict(reader.parameters)
+        query = params.get("company_query")
+        if reader.engine == "any_scope_building":
+            member = building(
+                params.get("building", "building_port"),
+                params.get("method"),
+                strong=params.get("tier") == "strong",
+            )
+            member["level"] = int(params.get("min_level", "1"))
+            owned = state()
+            owned["any_scope_building"].append(member)
+            collections["any_scope_state"].append(owned)
+        elif reader.engine == "any_scope_state":
+            owned = state()
+            if "threshold" in params:
+                owned["market_access"] = float(params["threshold"]) / 2
+            elif params == {"state_query": "tax_capacity_shortfall"}:
+                owned.update(is_incorporated=True, tax_capacity=0, tax_capacity_usage=1)
+            else:
+                assert query in {"rail_infrastructure", "power_scarcity"}
+                railway = query == "rail_infrastructure"
+                owned["any_scope_building"].append(
+                    building("building_railway" if railway else "building_power_plant")
+                )
+                owned["infrastructure_delta"] = -1 if railway else 0
+                good = "transportation" if railway else "electricity"
+                owned[f"sg:{good}"]["state_goods_pricier"] = (
+                    (float(params["minimum_price"]) + 0.75) / 2 if "minimum_price" in params else 0
+                )
+            collections["any_scope_state"].append(owned)
+        else:
+            movement = reader.engine == "any_political_movement"
+            engine = "law_enactment_stance" if movement else "law_stance"
+            laws = {
+                dict(item.parameters)["law"]
+                for item in query_readers
+                if item.engine == reader.engine
+            }
+            collections[reader.engine].append(
+                {
+                    engine: {
+                        (("law", "law_type:" + law),): int(law == params["law"]) for law in laws
+                    },
+                    "political_movement_support": float(params.get("minimum_support", "0")),
+                }
+            )
+    if "any_scope_state" in missing or "any_scope_building" in missing:
+        collections["any_scope_state"] = collections["any_scope_building"] = None
+    else:
+        collections["any_scope_building"] = [
+            member
+            for owned in collections["any_scope_state"]
+            for member in owned["any_scope_building"]
+        ]
+    for engine in missing - {"any_scope_state", "any_scope_building"}:
+        collections[engine] = None
+    result = _ObservedValues(requested, collections)
+    for reader in query_readers:
+        result[reader.key] = _query_reference(reader, collections)
+    return result
+
+
+def _collection_test_policy():
+    def query(key, engine, **parameters):
+        return decision_rules.Reader(
+            key, engine, "root", "boolean", "boolean", parameters=tuple(sorted(parameters.items()))
+        )
+
+    base = query(
+        "base",
+        "any_scope_building",
+        company_query="existing_business",
+        building="building_gold_mine",
+        tier="base",
+    )
+    return decision_rules.RuleSet(
+        readers=(
+            base,
+            replace(base, key="base_alias"),
+            query(
+                "strong",
+                "any_scope_building",
+                company_query="existing_business",
+                building="building_gold_mine",
+                tier="strong",
+            ),
+            query("rail", "any_scope_state", company_query="rail_infrastructure"),
+            query(
+                "rail_price",
+                "any_scope_state",
+                company_query="rail_infrastructure",
+                minimum_price="0.25",
+            ),
+            query(
+                "movement", "any_political_movement", law="law_free_trade", minimum_support="0.10"
+            ),
+            query("ig", "any_interest_group", law="law_anarchy"),
+        ),
+        rules=(),
+        baseline_sha256="0" * 64,
+        source_sha256="0" * 64,
+        enabled_domains=frozenset(),
+    )
+
+
+def test_collection_witnesses_recompute_shared_business_tiers_and_complete_aliases():
+    policy = _collection_test_policy()
+    index = _ReaderIndex.build(policy)
+    values = _observed_values(index, {"strong": True, "base": False})
+    assert values["strong"] is values["base"] is values["base_alias"] is True
+    members = values.collections["any_scope_building"]
+    assert len(members) == 1
+    assert members[0] is values.collections["any_scope_state"][0]["any_scope_building"][0]
+    facts = _facts(policy, values, is_ai=True, reader_index=index)
+    condition = parse_text(
+        "ROOT = { any_scope_building = { is_building_type = building_gold_mine "
+        "weekly_profit > 0 occupancy >= 0.75 level >= 1 } }"
+    ).root
+    assert pdx_eval.condition(condition, facts) is True
+
+
+@pytest.mark.parametrize("observation", ["missing", "empty", "unknown_member", "known_member"])
+def test_collection_reference_and_actual_pdx_keep_three_valued_member_semantics(observation):
+    policy = _collection_test_policy()
+    index = _ReaderIndex.build(policy)
+    values = _observed_values(
+        index, {"base": None if observation == "missing" else observation != "empty"}
+    )
+    if observation == "unknown_member":
+        values.collections["any_scope_building"][0]["occupancy"] = None
+    reader = index.readers["base"]
+    expected = {"missing": None, "empty": False, "unknown_member": None, "known_member": True}[
+        observation
+    ]
+    assert _query_reference(reader, values.collections) is expected
+    condition = parse_text(
+        "ROOT = { any_scope_building = { is_building_type = building_gold_mine "
+        "weekly_profit > 0 occupancy >= 0.75 level >= 1 } }"
+    ).root
+    assert (
+        pdx_eval.condition(condition, _facts(policy, values, is_ai=True, reader_index=index))
+        is expected
+    )
+
+
+def test_state_queries_share_members_prices_and_keep_same_state_identity():
+    policy = _collection_test_policy()
+    index = _ReaderIndex.build(policy)
+    values = _observed_values(index, {"rail_price": True, "rail": False})
+    assert values["rail"] is values["rail_price"] is True
+    condition = parse_text(
+        "ROOT = { any_scope_state = { any_scope_building = { "
+        "is_building_type = building_railway level >= 1 } infrastructure_delta < 0 } }"
+    ).root
+    owned = values.collections["any_scope_state"][0]
+    owned["infrastructure_delta"] = 0
+    values.collections["any_scope_state"].append(
+        {**owned, "any_scope_building": [], "infrastructure_delta": -1}
+    )
+    assert _query_reference(index.readers["rail"], values.collections) is False
+    assert (
+        pdx_eval.condition(condition, _facts(policy, values, is_ai=True, reader_index=index))
+        is False
+    )
+
+
+@pytest.mark.parametrize("key", ["movement", "ig"])
+def test_political_query_witnesses_keep_parameter_identity_and_unknown_stance(key):
+    policy = _collection_test_policy()
+    index = _ReaderIndex.build(policy)
+    values = _observed_values(index, {key: True})
+    reader = index.readers[key]
+    assert values[key] is True
+    member = values.collections[reader.engine][0]
+    engine = "law_enactment_stance" if key == "movement" else "law_stance"
+    law = "law_free_trade" if key == "movement" else "law_anarchy"
+    member[engine][(("law", "law_type:" + law),)] = None
+    assert _query_reference(reader, values.collections) is None
+    condition = parse_text(
+        f"ROOT = {{ {reader.engine} = {{ {engine} = {{ law = law_type:{law} value > neutral }} "
+        + ("political_movement_support >= 0.1 " if key == "movement" else "")
+        + "} }"
+    ).root
+    assert (
+        pdx_eval.condition(condition, _facts(policy, values, is_ai=True, reader_index=index))
+        is None
+    )
+
+
+def test_required_known_ai_observation_and_player_guard_use_same_physical_actor():
+    reader = decision_rules.Reader(
+        "owner_ai", "is_ai", "root", "boolean", "boolean", path=("owner",)
+    )
+    policy = decision_rules.RuleSet(
+        readers=(reader,),
+        rules=(),
+        baseline_sha256="0" * 64,
+        source_sha256="0" * 64,
+        enabled_domains=frozenset(),
+        actor_path=("owner",),
+        native_root="military_formation",
+    )
+    facts = _facts(policy, {"owner_ai": None}, is_ai=True)
+    assert cast("Any", facts["ROOT"])["owner"]["is_ai"] is None
+    assert (
+        cast("Any", _facts(policy, {"owner_ai": True}, is_ai=False)["ROOT"])["owner"]["is_ai"]
+        is False
+    )
+
+
 def _facts(
     policy: decision_rules.RuleSet,
     values: Mapping[str, object],
@@ -423,11 +812,16 @@ def _facts(
     is_ai: bool,
     reader_index: _ReaderIndex | None = None,
 ) -> dict[str, object]:
-    root: dict[str, Any] = {}
+    root: dict[str, Any] = dict(values.collections) if isinstance(values, _ObservedValues) else {}
     contexts: dict[str, dict[str, Any]] = {}
     readers = (reader_index or _ReaderIndex.build(policy)).readers
     for key, value in values.items():
         reader = readers[key]
+        if reader.engine in _COLLECTIONS:
+            assert isinstance(values, _ObservedValues), (
+                "query observations require real owned members"
+            )
+            continue
         current = (
             root if reader.scope == "root" else contexts.setdefault(f"scope:{reader.scope}", {})
         )
@@ -463,7 +857,17 @@ def _facts(
                 value is not None
             )
     actor = root.setdefault("owner", {}) if policy.actor_path else root
-    actor["is_ai"] = is_ai
+    observed_ai = [
+        values[reader.key]
+        for reader in readers.values()
+        if reader.engine == "is_ai"
+        and reader.scope == "root"
+        and reader.path == policy.actor_path
+        and reader.key in values
+    ]
+    # A required-known is_ai reader and the player guard inspect the same
+    # physical actor. Do not overwrite a missing observation with a known AI.
+    actor["is_ai"] = observed_ai[0] if is_ai and observed_ai else is_ai
     return {"ROOT": root, **contexts}
 
 
@@ -474,29 +878,43 @@ def _cases(
 ):
     index = reader_index or _ReaderIndex.build(policy)
     positive, candidates = policy_audit._fixture(policy, rule)
-    positive = index.normalize(positive)
-    assert _truth(rule, positive) is True, f"incoherent positive fixture: {rule.id}"
+    requested = index.normalize(positive)
+    for reader in index.readers.values():
+        if (
+            reader.engine == "is_ai"
+            and reader.scope == "root"
+            and reader.path == policy.actor_path
+            and reader.key in requested
+        ):
+            requested = index.change(requested, reader.key, True)
+    positive = _observed_values(index, requested)
+    assert _truth(rule, positive, index) is True, f"incoherent positive fixture: {rule.id}"
     yield "positive", positive, True
     yield "player", positive, False
     # Every declared input gets its own missing-observation witness. Checking
     # only the first key hid errors in later or parameterized readers.
-    for key in positive:
-        changed = index.change(positive, key, None)
+    for key in requested:
+        changed = _observed_values(index, index.change(requested, key, None))
         assert changed[key] is None
-        assert _truth(rule, changed) is None
+        assert _truth(rule, changed, index) is None
         yield f"unknown:{key}", changed, True
     negatives = [
         (key, value)
         for key, choices in candidates.items()
         for value in choices
-        if _truth(rule, index.change(positive, key, value)) is False
+        if _truth(rule, _observed_values(index, index.change(requested, key, value)), index)
+        is False
     ]
     assert negatives, f"no independent negative fixture: {rule.id}"
     seen: set[str] = set()
     for key, value in negatives:
         if key not in seen:
             seen.add(key)
-            yield f"negative:{key}", index.change(positive, key, value), True
+            yield (
+                f"negative:{key}",
+                _observed_values(index, index.change(requested, key, value)),
+                True,
+            )
     for predicate in rule.conditions:
         if type(predicate.value) in (int, float):
             numeric = float(cast("float", predicate.value))
@@ -509,7 +927,7 @@ def _cases(
             ):
                 yield (
                     f"threshold:{predicate.fact}:{value}",
-                    index.change(positive, predicate.fact, value),
+                    _observed_values(index, index.change(requested, predicate.fact, value)),
                     True,
                 )
 
@@ -626,6 +1044,8 @@ class _ParsedProgram:
 
     def select(self, facts):
         state = pdx_eval.condition(self.limit, facts)
+        if state is None:
+            return pdx_eval.PdxDecision(self.identity, None, 0.0, "unknown")
         if state is not True:
             return pdx_eval.PdxDecision(None, None, 0.0, "vanilla")
         # Actual numeric AST interpreter; no source rule, grouping or production
@@ -698,6 +1118,23 @@ def test_complete_consumer_priority_matches_independent_oracle(generated):
                     identity = (source, field, target.id, case)
                     if not is_ai:
                         assert actual == pdx_eval.PdxDecision(None, None, 0.0, "vanilla"), identity
+                        continue
+                    actor_ai = next(
+                        (
+                            values[reader.key]
+                            for reader in reader_index.readers.values()
+                            if reader.engine == "is_ai"
+                            and reader.scope == "root"
+                            and reader.path == policy.actor_path
+                            and reader.key in values
+                        ),
+                        True,
+                    )
+                    if actor_ai is None:
+                        assert actual == pdx_eval.PdxDecision(
+                            actual_program.identity, None, 0.0, "unknown"
+                        ), identity
+                        counts["local_unknown"] += 1
                         continue
                     operation, expected = _independent_net(
                         rules, values, reader_index, policy.enabled_domains

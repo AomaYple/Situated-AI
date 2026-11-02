@@ -130,7 +130,10 @@ def test_offline_metadata_reuses_the_shared_rule_contract(
 
     assert engineering_metadata["decision_rules"] == decision_rules.contract(information)
     assert engineering_metadata["consumer_adapters"]["consumers"] == [
-        {"source": source, **decision_rules.contract(rules, owner="consumer_adapters")}
+        {
+            "source": source,
+            **decision_rules.contract(rules, owner="consumer_adapters", source=source),
+        }
         for source, rules in adapters.policies
     ]
 
@@ -232,7 +235,9 @@ def test_decision_report_rejects_contract_drift(
         decision_report.build(broken)
 
 
-@pytest.mark.parametrize("mutation", ["missing", "number", "duplicate", "null", "undercount"])
+@pytest.mark.parametrize(
+    "mutation", ["missing", "untraced_numeric", "duplicate", "null", "undercount"]
+)
 def test_required_knowledge_is_typed_traced_and_counted(engineering_metadata, mutation):
     broken = json.loads(json.dumps(engineering_metadata))
     contract, rule = next(
@@ -243,7 +248,7 @@ def test_required_knowledge_is_typed_traced_and_counted(engineering_metadata, mu
     )
     if mutation == "missing":
         rule["required_known_facts"] = ["absent"]
-    elif mutation == "number":
+    elif mutation == "untraced_numeric":
         rule["required_known_facts"] = ["state_unemployment"]
     elif mutation == "duplicate":
         rule["required_known_facts"] *= 2
@@ -251,7 +256,7 @@ def test_required_knowledge_is_typed_traced_and_counted(engineering_metadata, mu
         rule["required_known_facts"] = None
     else:
         contract["cost_by_field"][rule["field"]]["predicates"] -= 1
-    with pytest.raises(ValueError, match=r"知识|台账"):
+    with pytest.raises(ValueError, match=r"知识|台账|inputs 与实际条件"):
         decision_report.build(broken)
 
 

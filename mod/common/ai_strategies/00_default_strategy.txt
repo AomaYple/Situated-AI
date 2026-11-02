@@ -1580,32 +1580,33 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		# ACTION program_0ae15f692b6a6549 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_0ae15f692b6a6549_positive
+			# GROUP program_0ae15f692b6a6549_health_administrative_pressure_negative
 			add = { value = 0
-				# coordinated_institution_health_system_social_need [political]; 共享约束下比较边际收益与机会成本；institution_health_system_social_need
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 0.2 }
-				# SITAI CHAIN LJ07/LJ07.grain_health_social_capacity writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj07_grain_health_social_capacity
-				# lj07_grain_health_social_capacity [political]; 粮食短缺同时伴随低生活水平、可用行政与净收入且无叛乱时，健康制度需求可升档；成本和政治承载是实际输入，不构造全局稳定门
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 bureaucracy > 0 net_total_income > 0 has_insurrectionary_interest_groups = no in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.16 }
-				# coordinated_layered_health_stable [political]; 政治压力在具备稳健承受力时提高社会制度投入倾向
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_political = yes sitai_context_need_political = yes sitai_context_known_layer_stable = yes sitai_context_layer_stable = yes } } add = 0.15 }
-				# social_health_low_living_standard [political]; 生活水平偏低且行政能力可用时，提高原版医疗制度投资倾向
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 10 bureaucracy > 0 in_default = no } } add = 0.1 }
-				# SITAI CHAIN LJ07/LJ07.grain_health_foundation writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj07_grain_health_foundation
-				# lj07_grain_health_foundation [political]; 根市场粮食价格和供需余额同时显示短缺时，提高合法健康制度消费者的有限基础倾向；原版制度资格、行政与财政成本继续优先
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy >= 0 net_total_income >= 0 in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.08 }
-			}
-			# GROUP program_0ae15f692b6a6549_negative
-			add = { value = 0
-				# coordinated_institution_health_system_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；institution_health_system_financial_cost
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.25 }
 				# coordinated_institution_health_system_administrative_cost [economy]; 共享约束下比较边际收益与机会成本；institution_health_system_administrative_cost
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = -0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = -0.2 }
+			}
+			# GROUP program_0ae15f692b6a6549_health_financing_pressure_negative
+			add = { value = 0
+				# health_default_pressure [fiscal]; 已观察违约在战争与和平都计入健康制度融资机会成本，同因旧违约和恢复压力择强
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.25 }
+				# coordinated_institution_health_system_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；institution_health_system_financial_cost
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.25 }
 				# coordinated_layered_health_recovery [fiscal]; 财政恢复期降低新增制度承诺，保留原版最低制度和执行路径
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes } } add = -0.18 }
 			}
-			min = 0.75
-			max = 1.2
+			# GROUP program_0ae15f692b6a6549_health_law_specific_need_positive
+			add = { value = 0
+				# SITAI CHAIN LJ07/LJ07.grain_health_social_capacity writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj07_grain_health_social_capacity
+				# lj07_grain_health_social_capacity [political]; 慈善医疗食品保障与实际粮食短缺、低生活水平同时相关时提高同一需求档；低生活水平仅作压力代理，不证明已观察死亡率收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system average_sol >= 0 average_sol < 8 exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.16 }
+				# health_public_low_living_need [political]; 当前公保每级普遍生活水平加0.5；已观察低生活水平时形成具体生活水平改善需求，保留独立行政和融资代价
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_health_insurance average_sol >= 0 average_sol < 10 } } add = 0.1 }
+				# SITAI CHAIN LJ07/LJ07.grain_health_foundation writer=rule_action_common_ai_strategies_00_default_strategy_txt_lj07_grain_health_foundation
+				# lj07_grain_health_foundation [political]; 当前慈善医疗每级提供食品保障；根市场粮价和余额同时显示短缺时形成有限食品保障需求，不由财政行政健康与否删除需求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 0.08 }
+			}
+			min = 0.55
+			max = 1.16
 		} }
 		# SITAI END information:ai_strategy_default.institution_scores.institution_health_system
 	}

@@ -120,7 +120,7 @@ _BINDINGS = (
         "LJ11",
         "social_recovery",
         "common/ai_strategies/00_default_strategy.txt",
-        "social_health_low_living_standard",
+        "health_public_low_living_need",
         "ai_strategy_default.institution_scores.institution_health_system",
         "recovery",
     ),
@@ -548,20 +548,15 @@ _EXPECTED_CONDITIONS = {
         ("state_infrastructure", ">=", 0),
     ),
     "lj07_grain_health_foundation": (
-        ("bureaucracy", ">=", 0),
-        ("net_surplus", ">=", 0),
+        ("current_charitable_health", "=", True),
         ("grain_price", ">", 0.5),
         ("grain_balance", "<", 0),
-        ("default", "=", False),
     ),
     "lj07_grain_health_social_capacity": (
+        ("current_charitable_health", "=", True),
         ("grain_price", ">", 0.5),
         ("grain_balance", "<", 0),
         ("average_sol", "<", 8),
-        ("bureaucracy", ">", 0),
-        ("net_surplus", ">", 0),
-        ("insurrection", "=", False),
-        ("default", "=", False),
     ),
     "lj07_grain_social_foundation": (
         ("bureaucracy", ">=", 0),
@@ -724,8 +719,8 @@ _COMPLETION_STATES = {
     "lj04_welfare_zero_administration_foundation": "zero_administration_capacity",
     "comparative_employment_active_building_food_industry_pm_bakery_output_groceries": "active_food_recipe_and_actual_unemployment",
     "lj06_employment_textile_unemployment_support": "active_textile_recipe_and_actual_unemployment",
-    "lj07_grain_health_foundation": "actual_grain_pressure_and_nonnegative_capacity",
-    "lj07_grain_health_social_capacity": "actual_grain_pressure_and_available_capacity",
+    "lj07_grain_health_foundation": "current_charitable_health_actual_grain_pressure",
+    "lj07_grain_health_social_capacity": "current_charitable_health_actual_grain_pressure_and_low_living_standard",
     "lj07_grain_social_foundation": "actual_grain_pressure_and_nonnegative_capacity",
     "lj07_grain_social_capacity": "actual_grain_pressure_and_available_capacity",
     "lj08_government_local_continuity": "actual_government_member_and_political_capacity",
@@ -878,6 +873,18 @@ def _reader_copy(reader: Any) -> ChainReaderSpec:
 def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
     """Frozen field-level contract for the observed local writer links."""
     additional = {
+        "current_charitable_health": (
+            "has_law_or_variant",
+            "boolean",
+            "root",
+            (),
+            "law_type:law_charitable_health_system",
+            (),
+            None,
+            "boolean",
+            None,
+            None,
+        ),
         "defensive_pact_articles": (
             "num_defensive_pacts",
             "number",

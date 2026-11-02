@@ -22,6 +22,8 @@ from pdx import (
     decision_interfaces,
     decisions,
     equipment_opportunities,
+    mobilization_opportunities,
+    treaty_opportunities,
 )
 from pdx.localization import parse_loc_entries
 from pdx.situated import engine_scope
@@ -570,6 +572,8 @@ def package_inputs(
     engine_scope.verify_company_defaults_game(config.GAME)
     company_sectors.verify_game(config.GAME)
     equipment_opportunities.verify_game(config.GAME)
+    treaty_opportunities.verify_game(config.GAME)
+    mobilization_opportunities.verify_game(config.GAME)
     country_policy = country_state.load()
     country_state.validate(country_policy, config.GAME)
     if not country_policy.enabled:

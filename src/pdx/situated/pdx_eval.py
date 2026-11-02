@@ -382,6 +382,14 @@ def _condition(
             expected: object = _literal(scalar)
             if isinstance(expected, str) and _REFERENCE.fullmatch(expected):
                 expected = _resolve_reference(expected, anchor)
+            elif not scalar.quoted and (item.key, item.op, expected) == (
+                "tax_capacity",
+                "<",
+                "tax_capacity_usage",
+            ):
+                # Exact same-state getter pair proved by the government
+                # consumer. No generic identifier or outer-country lookup.
+                expected = facts.get("tax_capacity_usage")
             values.append(_compare(actual, item.op, expected))
             continue
         if isinstance(item.value, Block) and item.key in _PARAMETER_QUERIES:
@@ -488,7 +496,7 @@ def _validate_numeric_operations(block: Block) -> None:
             if item.op != "=":
                 raise UnsupportedPdxError("desc 必须使用普通赋值")
             _scalar(item, label="desc")
-        elif item.key in {"add", "subtract", "multiply", "divide", "min", "max"}:
+        elif item.key in {"value", "add", "subtract", "multiply", "divide", "min", "max"}:
             _validate_numeric(item)
         else:
             raise UnsupportedPdxError(f"不支持的数值操作：{item.key}")
@@ -548,7 +556,7 @@ def _numeric_value(assignment: Assignment, facts: Mapping[str, object | None]) -
         chain_open = False
         selected = False
         for item in block.assignments():
-            if item.key in {"value", "limit"}:
+            if item.key == "limit":
                 continue
             if item.key in {"if", "else_if", "else"}:
                 if not isinstance(item.value, Block):
@@ -573,10 +581,12 @@ def _numeric_value(assignment: Assignment, facts: Mapping[str, object | None]) -
             if item.key == "desc":
                 _scalar(item, label="desc")
                 continue
-            if item.key not in {"add", "subtract", "multiply", "divide", "min", "max"}:
+            if item.key not in {"value", "add", "subtract", "multiply", "divide", "min", "max"}:
                 raise UnsupportedPdxError(f"不支持的数值操作：{item.key}")
             amount = _numeric_value(item, facts)
-            if item.key == "add":
+            if item.key == "value":
+                value = amount
+            elif item.key == "add":
                 value += amount
             elif item.key == "subtract":
                 value -= amount
@@ -592,7 +602,7 @@ def _numeric_value(assignment: Assignment, facts: Mapping[str, object | None]) -
                 value = min(value, amount)
         return value
 
-    return execute(assignment.value, _numeric_value(initial, facts))
+    return execute(assignment.value, 0.0)
 
 
 def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[str, float]:

@@ -1390,6 +1390,295 @@
         "tests/test_situated_building_joint.py",
         "tests/test_building_opportunities.py"
       ]
+    },
+    {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "definition": "coordinated_institution_health_system_social_need",
+      "field": "ai_strategy_default.institution_scores.institution_health_system",
+      "actor": "root",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "按当前法律实际效果与具体需求替代泛化人口/政治/容量奖励，独立成本共同计算，未知局部退出，不推断死亡率或法案支持",
+      "replacements": [
+        "health_public_low_living_need",
+        "lj07_grain_health_foundation",
+        "lj07_grain_health_social_capacity"
+      ],
+      "validation": [
+        "tests/test_situated_governance_laws_joint.py"
+      ]
+    },
+    {
+      "source": "common/ai_strategies/00_default_strategy.txt",
+      "definition": "coordinated_layered_health_stable",
+      "field": "ai_strategy_default.institution_scores.institution_health_system",
+      "actor": "root",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "按当前法律实际效果与具体需求替代泛化人口/政治/容量奖励，独立成本共同计算，未知局部退出，不推断死亡率或法案支持",
+      "replacements": [
+        "health_public_low_living_need",
+        "lj07_grain_health_foundation"
+      ],
+      "validation": [
+        "tests/test_situated_governance_laws_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/01_education_system.txt",
+      "definition": "law_public_schools_ai_enact_weight_modifier",
+      "field": "law_public_schools.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "按当前法律实际效果与具体需求替代泛化人口/政治/容量奖励，独立成本共同计算，未知局部退出，不推断死亡率或法案支持",
+      "replacements": [
+        "structural_school_access",
+        "structural_school_secularization",
+        "public_school_no_schools_access"
+      ],
+      "validation": [
+        "tests/test_situated_governance_laws_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/01_education_system.txt",
+      "definition": "social_education_peasant_pressure",
+      "field": "law_public_schools.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "按当前法律实际效果与具体需求替代泛化人口/政治/容量奖励，独立成本共同计算，未知局部退出，不推断死亡率或法案支持",
+      "replacements": [
+        "public_school_private_peasant_access"
+      ],
+      "validation": [
+        "tests/test_situated_governance_laws_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/01_education_system.txt",
+      "definition": "coordinated_layered_law_education_public_schools",
+      "field": "law_public_schools.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "按当前法律实际效果与具体需求替代泛化人口/政治/容量奖励，独立成本共同计算，未知局部退出，不推断死亡率或法案支持",
+      "replacements": [
+        "structural_school_access",
+        "structural_school_secularization",
+        "public_school_no_schools_access"
+      ],
+      "validation": [
+        "tests/test_situated_governance_laws_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/01_health_system.txt",
+      "definition": "coordinated_layered_civic_law_private_health_insurance",
+      "field": "law_private_health_insurance.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "用当前具体医疗法律、实际制度投资、候选福利与切换损失替代泛化低生活/容量奖励；独立行政、融资和政治成本共同计算，不虚构健康效果或立法支持",
+      "replacements": [
+        "health_reform_private_new_administrative_pressure",
+        "health_reform_private_new_default_pressure",
+        "health_reform_private_charity_food_loss",
+        "health_reform_private_charity_administrative_saving",
+        "health_reform_private_public_administrative_saving",
+        "health_reform_private_public_universal_access_loss"
+      ],
+      "validation": [
+        "tests/test_situated_health_reforms_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/01_health_system.txt",
+      "definition": "coordinated_layered_civic_law_public_health_insurance",
+      "field": "law_public_health_insurance.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "用当前具体医疗法律、实际制度投资、候选福利与切换损失替代泛化低生活/容量奖励；独立行政、融资和政治成本共同计算，不虚构健康效果或立法支持",
+      "replacements": [
+        "health_reform_public_new_universal_access",
+        "health_reform_public_new_administrative_pressure",
+        "health_reform_public_new_default_pressure",
+        "health_reform_public_private_universal_access",
+        "health_reform_public_private_administrative_loss",
+        "health_reform_public_private_default_pressure",
+        "health_reform_public_charity_universal_access",
+        "health_reform_public_charity_administrative_loss",
+        "health_reform_public_charity_default_pressure",
+        "health_reform_public_charity_food_loss"
+      ],
+      "validation": [
+        "tests/test_situated_health_reforms_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/01_health_system.txt",
+      "definition": "law_charitable_health_system_ai_enact_weight_modifier",
+      "field": "law_charitable_health_system.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "用当前具体医疗法律、实际制度投资、候选福利与切换损失替代泛化低生活/容量奖励；独立行政、融资和政治成本共同计算，不虚构健康效果或立法支持",
+      "replacements": [
+        "health_reform_charity_new_food_security",
+        "health_reform_charity_new_administrative_pressure",
+        "health_reform_charity_new_default_pressure"
+      ],
+      "validation": [
+        "tests/test_situated_health_reforms_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/01_health_system.txt",
+      "definition": "law_private_health_insurance_ai_enact_weight_modifier",
+      "field": "law_private_health_insurance.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "用当前具体医疗法律、实际制度投资、候选福利与切换损失替代泛化低生活/容量奖励；独立行政、融资和政治成本共同计算，不虚构健康效果或立法支持",
+      "replacements": [
+        "health_reform_private_new_administrative_pressure",
+        "health_reform_private_new_default_pressure",
+        "health_reform_private_charity_food_loss",
+        "health_reform_private_charity_administrative_saving",
+        "health_reform_private_public_administrative_saving",
+        "health_reform_private_public_universal_access_loss"
+      ],
+      "validation": [
+        "tests/test_situated_health_reforms_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/01_health_system.txt",
+      "definition": "law_public_health_insurance_ai_enact_weight_modifier",
+      "field": "law_public_health_insurance.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "用当前具体医疗法律、实际制度投资、候选福利与切换损失替代泛化低生活/容量奖励；独立行政、融资和政治成本共同计算，不虚构健康效果或立法支持",
+      "replacements": [
+        "health_reform_public_new_universal_access",
+        "health_reform_public_new_administrative_pressure",
+        "health_reform_public_new_default_pressure",
+        "health_reform_public_private_universal_access",
+        "health_reform_public_private_administrative_loss",
+        "health_reform_public_private_default_pressure",
+        "health_reform_public_charity_universal_access",
+        "health_reform_public_charity_administrative_loss",
+        "health_reform_public_charity_default_pressure",
+        "health_reform_public_charity_food_loss"
+      ],
+      "validation": [
+        "tests/test_situated_health_reforms_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/00_bureaucracy.txt",
+      "definition": "coordinated_layered_law_administrative_appointed_bureaucrats",
+      "field": "law_appointed_bureaucrats.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "全国行政负值不是州税容量缺口，也不是实际制度投资；以已整合州同州税容比较、已生效行政法律、实际制度投入及切换损失替代通用全满足奖励",
+      "replacements": [
+        "bureaucracy_reform_appointed_tax_collection",
+        "bureaucracy_reform_appointed_elected_institution_cost_police",
+        "bureaucracy_reform_appointed_elected_institution_cost_home_affairs",
+        "bureaucracy_reform_appointed_elected_institution_cost_colonial_affairs",
+        "bureaucracy_reform_appointed_elected_institution_cost_health",
+        "bureaucracy_reform_appointed_elected_institution_cost_schools",
+        "bureaucracy_reform_appointed_elected_institution_cost_social_security",
+        "bureaucracy_reform_appointed_elected_institution_cost_workplace_safety"
+      ],
+      "validation": [
+        "tests/test_situated_bureaucracy_reforms_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/00_bureaucracy.txt",
+      "definition": "coordinated_layered_law_administrative_elected_bureaucrats",
+      "field": "law_elected_bureaucrats.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "全国行政负值不是州税容量缺口，也不是实际制度投资；以已整合州同州税容比较、已生效行政法律、实际制度投入及切换损失替代通用全满足奖励",
+      "replacements": [
+        "bureaucracy_reform_elected_institution_saving_police_existing",
+        "bureaucracy_reform_elected_institution_saving_police_deficit",
+        "bureaucracy_reform_elected_institution_saving_home_affairs_existing",
+        "bureaucracy_reform_elected_institution_saving_home_affairs_deficit",
+        "bureaucracy_reform_elected_institution_saving_colonial_affairs_existing",
+        "bureaucracy_reform_elected_institution_saving_colonial_affairs_deficit",
+        "bureaucracy_reform_elected_institution_saving_health_existing",
+        "bureaucracy_reform_elected_institution_saving_health_deficit",
+        "bureaucracy_reform_elected_institution_saving_schools_existing",
+        "bureaucracy_reform_elected_institution_saving_schools_deficit",
+        "bureaucracy_reform_elected_institution_saving_social_security_existing",
+        "bureaucracy_reform_elected_institution_saving_social_security_deficit",
+        "bureaucracy_reform_elected_institution_saving_workplace_safety_existing",
+        "bureaucracy_reform_elected_institution_saving_workplace_safety_deficit",
+        "bureaucracy_reform_elected_appointed_tax_loss"
+      ],
+      "validation": [
+        "tests/test_situated_bureaucracy_reforms_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/00_bureaucracy.txt",
+      "definition": "law_appointed_bureaucrats_ai_enact_weight_modifier",
+      "field": "law_appointed_bureaucrats.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "全国行政负值不是州税容量缺口，也不是实际制度投资；以已整合州同州税容比较、已生效行政法律、实际制度投入及切换损失替代通用全满足奖励",
+      "replacements": [
+        "bureaucracy_reform_appointed_tax_collection",
+        "bureaucracy_reform_appointed_elected_institution_cost_police",
+        "bureaucracy_reform_appointed_elected_institution_cost_home_affairs",
+        "bureaucracy_reform_appointed_elected_institution_cost_colonial_affairs",
+        "bureaucracy_reform_appointed_elected_institution_cost_health",
+        "bureaucracy_reform_appointed_elected_institution_cost_schools",
+        "bureaucracy_reform_appointed_elected_institution_cost_social_security",
+        "bureaucracy_reform_appointed_elected_institution_cost_workplace_safety"
+      ],
+      "validation": [
+        "tests/test_situated_bureaucracy_reforms_joint.py"
+      ]
+    },
+    {
+      "source": "common/laws/00_bureaucracy.txt",
+      "definition": "law_elected_bureaucrats_ai_enact_weight_modifier",
+      "field": "law_elected_bureaucrats.ai_enact_weight_modifier",
+      "actor": "root",
+      "target": "none",
+      "operation": "add",
+      "reason": "全国行政负值不是州税容量缺口，也不是实际制度投资；以已整合州同州税容比较、已生效行政法律、实际制度投入及切换损失替代通用全满足奖励",
+      "replacements": [
+        "bureaucracy_reform_elected_institution_saving_police_existing",
+        "bureaucracy_reform_elected_institution_saving_police_deficit",
+        "bureaucracy_reform_elected_institution_saving_home_affairs_existing",
+        "bureaucracy_reform_elected_institution_saving_home_affairs_deficit",
+        "bureaucracy_reform_elected_institution_saving_colonial_affairs_existing",
+        "bureaucracy_reform_elected_institution_saving_colonial_affairs_deficit",
+        "bureaucracy_reform_elected_institution_saving_health_existing",
+        "bureaucracy_reform_elected_institution_saving_health_deficit",
+        "bureaucracy_reform_elected_institution_saving_schools_existing",
+        "bureaucracy_reform_elected_institution_saving_schools_deficit",
+        "bureaucracy_reform_elected_institution_saving_social_security_existing",
+        "bureaucracy_reform_elected_institution_saving_social_security_deficit",
+        "bureaucracy_reform_elected_institution_saving_workplace_safety_existing",
+        "bureaucracy_reform_elected_institution_saving_workplace_safety_deficit",
+        "bureaucracy_reform_elected_appointed_tax_loss"
+      ],
+      "validation": [
+        "tests/test_situated_bureaucracy_reforms_joint.py"
+      ]
     }
   ]
 }

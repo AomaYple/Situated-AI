@@ -166,6 +166,7 @@ class RuleSet:
     strategy: decision_intents.Strategy | None = None
     semantic_ir: tuple[ActionIR, ...] = ()
     consumer_programs: tuple[ConsumerProgram, ...] = ()
+    native_root: str = "country"
 
     def groups(
         self, enabled_domains: frozenset[str] | None = None
@@ -203,7 +204,7 @@ def from_data(
 ) -> RuleSet:
     """解析共享规则结构；多文件适配器也使用同一验证和代码生成契约。"""
     if (
-        set(data) - {"actor_path", "contexts"}
+        set(data) - {"actor_path", "contexts", "native_root"}
         != {"schema", "baseline_sha256", "readers", "rules", "domains"}
         or type(data["schema"]) is not int
         or data["schema"] != 1
@@ -218,7 +219,14 @@ def from_data(
         raise ValueError("全域规则必须锁定底本 SHA-256")
     actor_path = data.get("actor_path", [])
     if actor_path not in ([], ["owner"]):
-        raise ValueError("AI 边界只支持国家根或有原版依据的州所有者")
+        raise ValueError("AI 边界只支持国家根或有原版依据的所有者")
+    native_root = data.get("native_root", "state" if actor_path else "country")
+    if not isinstance(native_root, str) or (native_root, tuple(actor_path)) not in {
+        ("country", ()),
+        ("state", ("owner",)),
+        ("military_formation", ("owner",)),
+    }:
+        raise ValueError("原生ROOT类型与AI所有者路径不一致")
     readers: dict[str, Reader] = {}
     for key, item in data["readers"].items():
         if (
@@ -506,14 +514,13 @@ def from_data(
             or any(
                 not isinstance(key, str)
                 or key not in readers
-                or readers[key].kind != "boolean"
                 or readers[key].engine.startswith("sitai_context_")
                 or readers[key].engine == "has_variable"
                 for key in required_known
             )
             or len(set(required_known)) != len(required_known)
         ):
-            raise ValueError("核心知识声明必须是非空、唯一的实际布尔读取器；不接受派生上下文或变量")
+            raise ValueError("核心知识声明必须是非空、唯一的实际读取器；不接受派生上下文或变量")
         auxiliary = item.get("auxiliary_facts", [])
         inputs = {p.fact for p in predicates} | {
             p.value.key for p in predicates if isinstance(p.value, FactReference)
@@ -598,6 +605,7 @@ def from_data(
         frozenset(key for key, enabled in data["domains"].items() if enabled),
         tuple(actor_path),
         strategy if any(rule.intent is not None for rule in rules) else None,
+        native_root=native_root,
     )
     decision_interfaces.validate(policy)
     for candidates in policy.groups(frozenset(domains)).values():
@@ -1138,14 +1146,17 @@ def patch(
                 core_known.append("AND = { " + _scoped_conditions(knowledge) + " }")
         for known_fact_key in rule.required_known_facts:
             reader = readers[known_fact_key]
-            expression = reader.expression("=", True)
+            expression = (
+                reader.expression("=", True)
+                if reader.kind == "boolean"
+                else reader.expression(">=", 0)
+            )
             knowledge_expression = f"OR = {{ {expression} NOT = {{ {expression} }} }}"
             scope_key = (reader.scope, reader.path)
-            conditions[scope_key].append(knowledge_expression)
-            valid[scope_key].append(knowledge_expression)
-            core_known.append(
-                "AND = { " + _scoped_conditions({scope_key: [knowledge_expression]}) + " }"
-            )
+            known_terms = [*_reader_bounds(reader), knowledge_expression]
+            conditions[scope_key].extend(known_terms)
+            valid[scope_key].extend(known_terms)
+            core_known.append("AND = { " + _scoped_conditions({scope_key: known_terms}) + " }")
         return conditions, valid, false_conditions, core_known
 
     program_fields = {}
@@ -1256,7 +1267,8 @@ def contract(
             "disable": "regenerate_without_rules_and_restart; world_actions_are_not_reverted",
         },
         "visibility": "public_script_scopes_only",
-        "actor": "root_country" if not rules.actor_path else "root_state_owner",
+        "actor": "root_country" if not rules.actor_path else f"root_{rules.native_root}_owner",
+        "native_root": rules.native_root,
         "world_scans": 0,
         "strategy": rules.strategy.contract({rule.intent for rule in rules.rules if rule.intent})
         if rules.strategy is not None
@@ -1292,7 +1304,9 @@ def contract(
                 "path": list(reader.path),
                 "value_field": reader.value_field,
                 "parameters": dict(reader.parameters),
-                "resolved_scope": decision_interfaces.reader_scope(reader, rules.actor_path),
+                "resolved_scope": decision_interfaces.reader_scope(
+                    reader, rules.actor_path, native_root=rules.native_root
+                ),
                 "visibility": "public_script_scope",
                 "update": "read_at_consumer_evaluation_no_cache",
                 "cost": (
@@ -1317,7 +1331,7 @@ def contract(
                 else "dimensionless_multiplier",
                 "calibration": "design_assumption; user_behavior_and_balance_review_pending",
                 "consumer": decision_interfaces.consumer(
-                    rule.field, rules.actor_path, source=source
+                    rule.field, rules.actor_path, source=source, native_root=rules.native_root
                 ),
                 "description_key": description_key(rule),
                 "unknown": (

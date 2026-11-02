@@ -22,6 +22,7 @@ from .families import FAMILIES
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from .decision_ir import EvaluationContext
     from .vanilla_inventory import VanillaInventory, VanillaSurface
 
 REPO = Path(__file__).resolve().parents[3]
@@ -121,6 +122,21 @@ class NativeConsumerBinding:
             or any(not part for part in self.field.split("."))
         ):
             raise ValueError("原版消费者必须有精确相对来源、定义与字段")
+
+
+@dataclass(frozen=True, slots=True)
+class _ReviewedNumericContract:
+    """An exact frozen consumer, not a family-wide numeric permission."""
+
+    raw_hashes: dict[str, str]
+    baseline_sha256: str
+    actor_path: tuple[str, ...]
+    native_root: str
+    native_operation: str
+    native_line: int
+    scope_evidence: tuple[str, ...]
+    context: EvaluationContext
+    rules: dict[str, decision_rules.Rule]
 
 
 def _native_binding(instance: ActionInstance) -> NativeConsumerBinding | None:
@@ -351,9 +367,172 @@ class _NativeBindingProofs:
         self.policies = policies
         self.parsed: dict[str, Block] = {}
         self.company_defaults: dict[str, Any] | None = None
+        self.reviewed_numeric: dict[tuple[str, str, str], _ReviewedNumericContract] | None = None
         for source, raw in self.sources.items():
             if hashlib.sha256(raw).hexdigest() != inventory.source_hashes.get(source):
                 raise ValueError(f"原版覆盖证据与独立盘点字节不一致：{source}")
+
+    def _reviewed_numeric_contracts(self) -> dict[tuple[str, str, str], _ReviewedNumericContract]:
+        if self.reviewed_numeric is not None:
+            return self.reviewed_numeric
+        from pdx import mobilization_opportunities, treaty_opportunities  # noqa: PLC0415
+
+        from . import compiler, vanilla_inventory  # noqa: PLC0415
+
+        contracts = {}
+        for module, contexts, native_root, actor_path, operation in (
+            (
+                mobilization_opportunities,
+                compiler._frozen_mobilization_contexts(),
+                "military_formation",
+                ("owner",),
+                "multiplicative_score",
+            ),
+            (
+                treaty_opportunities,
+                compiler._frozen_treaty_contexts(),
+                "country",
+                (),
+                "proposal_score",
+            ),
+        ):
+            baseline = module.load_baseline()
+            derived = module.derive({"sources": {}, "readers": {}, "rules": []}, baseline)
+            raw_hashes = {source: row["sha256"] for source, row in baseline["originals"].items()}
+            inputs = {
+                source: bytes.fromhex(row["bytes"]) for source, row in baseline["originals"].items()
+            }
+            for row in derived["covered"]:
+                source, field = row["source"], row["field"]
+                definition, leaf = field.split(".", 1)
+                parsed = parse_bytes(inputs[source], path=source)
+                declaration = _ordinary(parsed.root, definition)
+                if parsed.errors or declaration is None:
+                    raise ValueError("已复核消费者冻结定义缺失或解析失败")
+                current = declaration.value
+                weight = None
+                for part in leaf.split("."):
+                    weight = _ordinary(current, part) if isinstance(current, Block) else None
+                    if weight is None:
+                        raise ValueError("已复核消费者冻结精确字段缺失")
+                    current = weight.value
+                if weight is None:
+                    raise ValueError("已复核消费者冻结精确字段为空")
+                scope = vanilla_inventory._scope(
+                    source.split("/")[-2], tuple(leaf.split(".")), inputs, {}, declaration, source
+                )
+                expected_rules = {}
+                for rule in derived["rules"]:
+                    if rule["source"] != source or rule["field"] != field:
+                        continue
+                    expected_rules[rule["id"]] = decision_rules.Rule(
+                        id=rule["id"],
+                        domain=rule["domain"],
+                        field=tuple(field.split(".")),
+                        priority=rule["priority"],
+                        value=rule["value"],
+                        conditions=tuple(
+                            decision_rules.Predicate(**condition)
+                            for condition in rule["conditions"]
+                        ),
+                        why=rule["why"],
+                        counterexample=rule["counterexample"],
+                        operation=rule["operation"],
+                        required_known_facts=tuple(rule.get("required_known_facts", ())),
+                        contribution_group=rule["contribution_group"],
+                    )
+                contracts[(source, definition, leaf)] = _ReviewedNumericContract(
+                    raw_hashes,
+                    baseline["sources"][source],
+                    actor_path,
+                    native_root,
+                    operation,
+                    weight.line,
+                    scope.evidence,
+                    contexts[(source, field)],
+                    expected_rules,
+                )
+        self.reviewed_numeric = contracts
+        return contracts
+
+    def context_issue(
+        self, instance: ActionInstance, surface: VanillaSurface, *, state_owner_proven: bool
+    ) -> str | None:
+        candidate = (
+            surface.source == "common/mobilization_options/00_mobilization_option.txt"
+            and surface.field == "ai_weight"
+        ) or (
+            surface.source.startswith("common/treaty_articles/")
+            and surface.field == "ai.proposal_weight"
+        )
+        contract = (
+            self._reviewed_numeric_contracts().get(
+                (surface.source, surface.definition, surface.field)
+            )
+            if candidate
+            else None
+        )
+        if contract is None:
+            return _native_context_issue(instance, surface, state_owner_proven=state_owner_proven)
+        if (
+            surface.capability != "direct"
+            or not surface.legal
+            or surface.ambiguity
+            or surface.operation != contract.native_operation
+            or surface.target_scope != "none"
+            or surface.actor_scope != contract.native_root
+            or surface.source_line != contract.native_line
+            or surface.scope_evidence != contract.scope_evidence
+            or instance.operation != "multiply"
+            or instance.kind != "rule_action"
+            or instance.source != surface.source
+            or instance.consumer_field != f"{surface.definition}.{surface.field}"
+        ):
+            return "numeric_consumer_contract_unproven"
+        if any(
+            (
+                source not in self.sources
+                or hashlib.sha256(self.sources[source]).hexdigest() != digest
+            )
+            for source, digest in contract.raw_hashes.items()
+            # Independent discovery inventories common/; this one frozen event
+            # only corroborates formation.owner=country. Its pinned bytes and
+            # exact context were checked above; the production package gate
+            # separately re-reads all five originals. Never exempt a consumer,
+            # document, or a source actually present in the native inventory.
+            if not (
+                source == "events/tech_events/trench_warfare.txt"
+                and source not in self.inventory.source_hashes
+                and source not in self.sources
+            )
+        ):
+            return "native_source_contract_unproven"
+        if (
+            instance.owner != "consumer_adapters"
+            or instance.vanilla_tail != "retain_original_qualification_cost_random_execution"
+        ):
+            return "production_ownership_or_tail_missing"
+        if instance.actor_scope != ("owner" if contract.actor_path else "root"):
+            return "actor_type_mismatch"
+        if instance.target_scope != "none":
+            return "target_type_mismatch"
+        if instance.evaluation_context != contract.context:
+            return "evaluation_context_unproven"
+        policy = self.policies.get(instance.source)
+        expected = contract.rules.get(instance.rule_id)
+        if (
+            policy is None
+            or expected is None
+            or policy.actor_path != contract.actor_path
+            or policy.native_root != contract.native_root
+            or policy.baseline_sha256 != contract.baseline_sha256
+            or [rule for rule in policy.rules if rule.id == instance.rule_id] != [expected]
+            or instance.value != expected.value
+            or instance.domain != expected.domain
+            or instance.condition_facts != tuple(sorted(expected.input_keys()))
+        ):
+            return "production_policy_contract_unproven"
+        return None
 
     def root(self, source: str) -> Block | None:
         if source not in self.sources:
@@ -700,7 +879,7 @@ def native_coverage(
             item.action_id: reason
             for item in candidates
             if (
-                reason := _native_context_issue(
+                reason := proofs.context_issue(
                     item, surface, state_owner_proven=item.action_id in state_owner
                 )
             )

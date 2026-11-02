@@ -77,6 +77,7 @@ def _values(policy: Any, **changes: Any) -> dict[str, Any]:
             "state_market_access": 1,
             "grain_price": 0.6,
             "grain_balance": -1,
+            "current_charitable_health": True,
             "default": False,
             "average_sol": 7,
             "bureaucracy": 1,
@@ -129,16 +130,19 @@ def test_lj06_actual_unemployment_pressure_is_local_and_candidate_does_not_compl
     [
         ({}, (1.16, 1.12)),
         ({"average_sol": 8}, (1.08, 1.06)),
-        ({"bureaucracy": 0}, (1.08, 1.06)),
-        ({"net_surplus": 0}, (1.08, 1.06)),
-        ({"insurrection": True}, (1.08, 1.06)),
+        ({"bureaucracy": 0}, (1.16, 1.06)),
+        ({"net_surplus": 0}, (1.16, 1.06)),
+        ({"insurrection": True}, (1.16, 1.06)),
+        ({"current_charitable_health": False}, (1.0, 1.12)),
+        ({"current_charitable_health": None}, (1.0, 1.12)),
+        ({"default": True}, (1.16, 1.0)),
         ({"grain_price": 0.5}, (1.0, 1.0)),
         ({"grain_balance": 0}, (1.0, 1.0)),
         ({"grain_price": None}, (1.0, 1.0)),
         ({"candidate_selected": True, "construction_queued": True}, (1.16, 1.12)),
     ],
 )
-def test_lj07_grain_health_and_social_have_independent_capacity_upgrades(
+def test_lj07_charity_food_need_and_social_capacity_have_independent_upgrades(
     policies: dict[str, Any], changes: dict[str, Any], expected: tuple[float, float]
 ) -> None:
     assert _factor(policies[STRATEGY], HEALTH, **changes) == pytest.approx(expected[0])
@@ -156,8 +160,8 @@ def test_lj06_and_lj07_reader_contracts_are_real_and_no_unimplemented_chain_fiel
     assert {r.key for r in policies[STRATEGY].readers} >= {
         "grain_price",
         "grain_balance",
-        "bureaucracy",
-        "net_surplus",
+        "current_charitable_health",
+        "average_sol",
     }
     assert {r.key for r in policies[INFO].readers} >= {
         "grain_price",
@@ -281,7 +285,7 @@ def test_each_local_writer_compiles_to_real_pdx_and_uses_handwritten_result(
         (INDUSTRY, TEXTILE, "state_unemployment"),
         (STRATEGY, HEALTH, "grain_balance"),
         (INFO, SOCIAL, "grain_price"),
-        (STRATEGY, HEALTH, "bureaucracy"),
+        (STRATEGY, HEALTH, "current_charitable_health"),
         (INFO, SOCIAL, "net_surplus"),
     ],
 )
@@ -399,15 +403,15 @@ def test_generated_building_qualification_cost_and_unrelated_definitions_stay_na
         (INDUSTRY, TEXTILE, {"state_owner_clothes_balance": 0}, 1),
         (INDUSTRY, FOOD, {"state_owner_default": True}, 1),
         (INDUSTRY, TEXTILE, {"state_owner_default": True}, 1),
-        (STRATEGY, HEALTH, {"net_surplus": 0}, 1.08),
+        (STRATEGY, HEALTH, {"net_surplus": 0}, 1.16),
         (INFO, SOCIAL, {"net_surplus": 0}, 1.06),
-        (STRATEGY, HEALTH, {"net_surplus": -1}, 1),
+        (STRATEGY, HEALTH, {"net_surplus": -1}, 1.16),
         (INFO, SOCIAL, {"bureaucracy": -1}, 1),
-        # Unknown social capacity removes the stronger tier, not the known
-        # grain/fiscal/administrative foundation.
+        # This local subset contains demand only. Health's independent costs
+        # are exercised by the complete governance consumer tests.
         (STRATEGY, HEALTH, {"average_sol": None}, 1.08),
         (INFO, SOCIAL, {"average_sol": None}, 1.06),
-        (STRATEGY, HEALTH, {"default": True}, 1),
+        (STRATEGY, HEALTH, {"default": True}, 1.16),
         (INFO, SOCIAL, {"default": True}, 1),
     ],
 )

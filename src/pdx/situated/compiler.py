@@ -698,6 +698,87 @@ def _frozen_ship_modification_contexts() -> dict[tuple[str, str], decision_ir.Ev
     }
 
 
+def _frozen_treaty_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Article identities are static; proposal evaluation exposes country ROOT."""
+    from .. import treaty_opportunities  # noqa: PLC0415, TID252
+
+    data = treaty_opportunities.load_baseline()
+    raw = treaty_opportunities.BASELINE.read_text(encoding="utf-8")
+    source = treaty_opportunities.BASELINE.relative_to(REPO).as_posix()
+    line = raw.count("\n", 0, raw.index('"actor": "country"')) + 1
+    context = decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, line),
+        evidence=(
+            f"{source}:{line}",
+            f"{source}:sha256={treaty_opportunities.BASELINE_SHA256}",
+            f"{source}:definition_only:treaty_article",
+        ),
+    )
+    return {
+        (row["source"], f"{identity}.ai.proposal_weight"): context
+        for identity, row in data["candidates"].items()
+        if row["weight_shape"] == "block"
+    }
+
+
+def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Medical weights expose a formation ROOT and its country owner actor."""
+    from .. import mobilization_opportunities  # noqa: PLC0415, TID252
+
+    data = mobilization_opportunities.load_baseline()
+    raw = mobilization_opportunities.BASELINE.read_text(encoding="utf-8")
+    source = mobilization_opportunities.BASELINE.relative_to(REPO).as_posix()
+    line = raw.count("\n", 0, raw.index('"native_root": "military_formation"')) + 1
+    context = decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("owner", "country", "actor", source, line),
+        auxiliary_scopes=(
+            decision_ir.ContextBinding("root", "military_formation", "auxiliary", source, line),
+        ),
+        evidence=(
+            f"{source}:{line}",
+            f"{source}:sha256={mobilization_opportunities.BASELINE_SHA256}",
+            f"{source}:definition_only:mobilization_option",
+        ),
+    )
+    return {(row["source"], row["field"]): context for row in data["candidates"].values()}
+
+
+def _mobilization_context_readers(
+    field: str,
+    context: decision_ir.EvaluationContext,
+    readers: dict[str, decision_rules.Reader],
+    predicates: tuple[decision_rules.Predicate, ...],
+    *,
+    actor_path: tuple[str, ...],
+    input_keys: tuple[str, ...],
+    source: str | None,
+    native_root: str | None,
+) -> tuple[tuple[str, str, str, str], ...]:
+    from .. import mobilization_opportunities  # noqa: PLC0415, TID252
+
+    if source is None or context != _frozen_mobilization_contexts().get((source, field)):
+        raise ValueError("医疗动员上下文必须来自两项精确冻结候选")
+    if native_root != "military_formation" or actor_path != ("owner",):
+        raise ValueError("医疗动员必须保持编队ROOT与所属国家AI所有者")
+    allowed = mobilization_opportunities.reader_specs(field.removesuffix(".ai_weight"))
+    result: set[tuple[str, str, str, str]] = set()
+    for key in {*input_keys, *(predicate.fact for predicate in predicates)}:
+        reader = readers.get(key)
+        spec = allowed.get(key)
+        if (
+            reader is None
+            or spec is None
+            or reader != decision_rules.Reader(key=key, **{**spec, "path": tuple(spec["path"])})
+        ):
+            raise ValueError(f"医疗动员读取器完整国家/市场/商品签名漂移：{key}")
+        decision_interfaces.reader_scope(reader, actor_path, native_root=native_root)
+        result.add((key, "root", "military_formation", "auxiliary"))
+        result.add((key, "owner", "country", "actor"))
+    if any(isinstance(predicate.value, decision_rules.FactReference) for predicate in predicates):
+        raise ValueError("医疗动员冻结贡献没有跨对象FactReference")
+    return tuple(sorted(result))
+
+
 def validate_context_readers(
     field: str,
     context: decision_ir.EvaluationContext,
@@ -706,8 +787,23 @@ def validate_context_readers(
     *,
     actor_path: tuple[str, ...] = (),
     input_keys: tuple[str, ...] = (),
+    source: str | None = None,
+    native_root: str | None = None,
 ) -> tuple[tuple[str, str, str, str], ...]:
     """Bind existing observations to evidenced objects, never authorize getters."""
+    if source == "common/mobilization_options/00_mobilization_option.txt" or field.startswith(
+        "mobilization_option_"
+    ):
+        return _mobilization_context_readers(
+            field,
+            context,
+            readers,
+            predicates,
+            actor_path=actor_path,
+            input_keys=input_keys,
+            source=source,
+            native_root=native_root,
+        )
     if field.startswith("institution_scores."):
         parts = field.split(".")
         definitions = json.loads(engine_scope.strategy_snapshot())["institution_definitions"]
@@ -761,6 +857,7 @@ def validate_context_readers(
     shapes["treaty_port_value"] = shapes["state_value"]
     shapes["ai_enact_weight_modifier"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
     shapes["company.ai_weight"] = {"root": ("country", "actor")}
+    shapes["treaty.ai.proposal_weight"] = {"root": ("country", "actor")}
     shapes["wanted_construction_output"] = {"root": ("country", "actor")}
     shapes["institution_scores"] = {"root": ("country", "actor")}
     shapes["min_law_chance_to_pass"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
@@ -832,6 +929,7 @@ def validate_context_readers(
             "wanted_num_supply_ships",
             "max_ship_design_complexity",
             "ship_modification.ai_weight",
+            "treaty.ai.proposal_weight",
             "recklessness",
             "wargoal_maneuvers_fraction",
             "wanted_construction_output",
@@ -910,7 +1008,7 @@ def validate_context_readers(
             )
         # Existing interface signatures keep output kind, unit and every path
         # conversion authoritative; an observed law is not a new law getter.
-        decision_interfaces.reader_scope(reader, actor_path)
+        decision_interfaces.reader_scope(reader, actor_path, native_root=native_root)
         if reader.argument is not None:
             bind_argument(reader, reader.argument)
         for parameter, literal in reader.parameters:
@@ -1522,6 +1620,8 @@ def load_model(
     law_context = _frozen_law_context()
     company_context = _frozen_company_context()
     ship_modification_contexts = _frozen_ship_modification_contexts()
+    treaty_contexts = _frozen_treaty_contexts()
+    mobilization_contexts = _frozen_mobilization_contexts()
     context_readers = {}
     instance_contexts = {}
     for source, policy in (("mod/decisions/information.toml", information), *adapters.policies):
@@ -1571,6 +1671,8 @@ def load_model(
                 and len(rule.field) == 2
                 and rule.field[-1] == "ai_weight"
                 else ship_modification_contexts.get((source, field))
+                or treaty_contexts.get((source, field))
+                or mobilization_contexts.get((source, field))
             )
             if context is not None:
                 instance_contexts[(source, rule.id)] = context
@@ -1581,6 +1683,8 @@ def load_model(
                     if source.startswith("common/company_types/")
                     else "ship_modification.ai_weight"
                     if (source, field) in ship_modification_contexts
+                    else "treaty.ai.proposal_weight"
+                    if (source, field) in treaty_contexts
                     else field
                 )
                 context_readers[(source, rule.id)] = validate_context_readers(
@@ -1590,6 +1694,8 @@ def load_model(
                     rule.conditions,
                     actor_path=policy.actor_path,
                     input_keys=tuple(rule.input_keys()),
+                    source=source,
+                    native_root=policy.native_root,
                 )
     original_readers = (
         *information.readers,
@@ -2315,6 +2421,41 @@ def compile_policy(
             actor_path = {"root": (), "owner": ("owner",)}.get(writer.actor)
             if actor_path is None or policy.actor_path != actor_path:
                 raise ValueError(f"生产 actor 路径与冻结 IR 不一致：{writer.source}:{rule.id}")
+            context = writer.evaluation_context
+            root_binding = (
+                next(
+                    (
+                        binding
+                        for binding in (context.actor_scope, *context.auxiliary_scopes)
+                        if binding is not None and binding.name == "root"
+                    ),
+                    None,
+                )
+                if context is not None
+                else None
+            )
+            expected_root = (
+                root_binding.kind
+                if root_binding is not None
+                else "state"
+                if writer.actor == "owner"
+                else "country"
+            )
+            if policy.native_root != expected_root:
+                raise ValueError(f"生产原生ROOT类型与冻结IR不一致：{writer.source}:{rule.id}")
+            if writer.source == "common/mobilization_options/00_mobilization_option.txt":
+                if context is None:
+                    raise ValueError("医疗动员生产writer缺少编队及owner上下文")
+                validate_context_readers(
+                    writer.field,
+                    context,
+                    {reader.key: reader for reader in policy.readers},
+                    rule.conditions,
+                    actor_path=policy.actor_path,
+                    input_keys=tuple(rule.input_keys()),
+                    source=writer.source,
+                    native_root=policy.native_root,
+                )
             legacy = writer.legacy
             expected_predicates = tuple(
                 (predicate.fact, predicate.op, predicate.value) for predicate in rule.conditions

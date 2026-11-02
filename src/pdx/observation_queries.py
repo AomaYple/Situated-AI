@@ -30,6 +30,7 @@ _AI = "common/scripted_triggers/00_ai_triggers.txt"
 _PORTUGAL = "common/journal_entries/06_portugal_politics.txt"
 _ART = "common/journal_entries/00_art_jes.txt"
 _BUILDING = "common/buildings/06_urban_center.txt"
+_GOVERNMENT_BUILDING = "common/buildings/07_government.txt"
 _GROUP = "common/production_method_groups/06_urban_center.txt"
 _METHOD = "common/production_methods/06_urban_center.txt"
 _COMMUNISM = "common/journal_entries/00_communism.txt"
@@ -49,6 +50,7 @@ SOURCE_HASHES = {
     _PORTUGAL: "3419343456182541870fc8de7c7c52c23bb6c9e7ec1deded06a7744d61e04316",
     _ART: "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5",
     _BUILDING: "c41ed5adb63e8f626e6394ce4f2f619bc8f229cafa3d8994271e2a66d1c2b0c5",
+    _GOVERNMENT_BUILDING: "01867816e5cf623ebf50927c94b0c2b92b189c8ed31d78fd55fa79ab67976872",
     _GROUP: "7b63fad3a75067d6157790917fcc5eeb411e5405318f7f3873373be9e6f94871",
     _METHOD: "d9f0e653d3d0c1783fd4e9880fb58a6ada795d0ed3a3fdec011f0d1ce28da71f",
     _COMMUNISM: "fbe2ce3af236a3f49e146f445ba56957952ac910b68022cc0f69e94e8010072f",
@@ -95,6 +97,11 @@ class AnyStateMarketAccessBelow:
 
 
 @dataclass(frozen=True, slots=True)
+class AnyIncorporatedStateTaxCapacityShortfall:
+    """A local comparison, without pooling capacity between different states."""
+
+
+@dataclass(frozen=True, slots=True)
 class OwnBuildingActiveMethod:
     building_id: str
     method_id: str
@@ -105,6 +112,7 @@ CountryQuery = (
     LawMovementSupport
     | LawInterestGroupSupport
     | AnyStateMarketAccessBelow
+    | AnyIncorporatedStateTaxCapacityShortfall
     | OwnBuildingActiveMethod
     | company_observations.CompanyQuery
 )
@@ -154,6 +162,8 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
         query = LawInterestGroupSupport(parameters["law"])
     elif engine == "any_scope_state" and set(parameters) == {"threshold"}:
         query = AnyStateMarketAccessBelow(_decimal(parameters["threshold"]))
+    elif engine == "any_scope_state" and parameters == {"state_query": "tax_capacity_shortfall"}:
+        query = AnyIncorporatedStateTaxCapacityShortfall()
     elif engine == "any_scope_building" and set(parameters) == {"building", "method", "min_level"}:
         level = parameters["min_level"]
         if not _INTEGER.fullmatch(level) or len(level) > 4:
@@ -188,6 +198,8 @@ def render(query: CountryQuery) -> str:
     if type(query) is AnyStateMarketAccessBelow:
         threshold = _ratio(query.threshold, positive=True)
         return f"any_scope_state = {{ market_access < {threshold!r} }}"
+    if type(query) is AnyIncorporatedStateTaxCapacityShortfall:
+        return "any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage }"
     if type(query) is OwnBuildingActiveMethod:
         if query.building_id != "building_art_academy" or query.method_id not in ART_METHODS:
             raise ValueError("建筑/PM组合没有已登记的本国艺术建筑消费者证据")
@@ -210,6 +222,8 @@ def required_sources(query: CountryQuery) -> tuple[str, ...]:
         return tuple(sorted({_COMMUNISM, _GOVERNANCE, LAW_SOURCES[query.law_id]}))
     if isinstance(query, AnyStateMarketAccessBelow):
         return (_PORTUGAL,)
+    if isinstance(query, AnyIncorporatedStateTaxCapacityShortfall):
+        return tuple(sorted({_PORTUGAL, _GOVERNMENT_BUILDING}))
     return tuple(sorted({_ART, _BUILDING, _GROUP, _METHOD}))
 
 
@@ -395,6 +409,36 @@ def compile_query(
         )
         references.append(f"{_AI}:{line}")
         collections = ("owned_political_movements",)
+    elif isinstance(query, AnyIncorporatedStateTaxCapacityShortfall):
+        completion = _child(
+            _child(roots[_PORTUGAL], "je_portugal_regeneration_public_works"), "complete"
+        )
+        line = _find_shape(
+            completion,
+            "any_scope_state",
+            (
+                ("filter", "=", (("is_incorporated", "=", "yes"),)),
+                ("has_building", "=", "building_railway"),
+                ("percent", "=", "1"),
+            ),
+        )
+        references.append(f"{_PORTUGAL}:{line}")
+        building = _child(roots[_GOVERNMENT_BUILDING], "building_government_administration")
+        tax_expected = (
+            ("occupancy", ">=", "0.8"),
+            (
+                "OR",
+                "=",
+                (
+                    ("state.tax_capacity", "<", "state.tax_capacity_usage"),
+                    ("owner", "=", (("bureaucracy", "<", "-10"),)),
+                ),
+            ),
+        )
+        if _shape(_child(building, "should_auto_expand")) != tax_expected:
+            raise ValueError("原版税容量观测缺少完整同州比较AST证据")
+        references.append(f"{_GOVERNMENT_BUILDING}:{building.all('should_auto_expand')[0].line}")
+        collections = ("owned_states",)
     elif isinstance(query, AnyStateMarketAccessBelow):
         completion = _child(
             _child(roots[_PORTUGAL], "je_portugal_regeneration_public_works"), "complete"

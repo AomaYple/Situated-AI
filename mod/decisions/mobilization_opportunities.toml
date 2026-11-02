@@ -1,0 +1,10 @@
+# 两项医疗动员的所属国家需求与各自投入压力；物料系数不是采购数量或货币。
+schema = 1
+
+[parameters]
+priority_base = 300000
+war_need_multiplier = 1.10
+scarcity_multiplier = 0.90
+price_pressure_multiplier = 0.80
+default_multiplier = 0.85
+pressure_price_threshold = 0.50

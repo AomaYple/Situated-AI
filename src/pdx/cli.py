@@ -2611,6 +2611,8 @@ def modgen_cmd(
         if write:
             company_sectors.write_baseline(config.GAME)
             distribution.equipment_opportunities.write_baseline(config.GAME)
+            distribution.treaty_opportunities.write_baseline(config.GAME)
+            distribution.mobilization_opportunities.write_baseline(config.GAME)
             binding_count = situated_bindings.write()
             domain_count = situated_domain_coverage.write_counts()
             console.print(
@@ -2854,12 +2856,18 @@ def situated_report_cmd(
         Path | None,
         typer.Option("--output", help="报告 JSON 输出路径；默认写入 tools/out/ci/"),
     ] = None,
+    native: bool = typer.Option(
+        False, "--native", help="读取锁定原版并重建生产输出，独立核对全范围映射与原版保护责任"
+    ),
 ) -> None:
     """输出处境行动内核的可追溯合同报告。"""
     target = output or (config.OUT / "ci" / "situated-report.json")
     try:
-        payload = situated.load_model().contract()
-        payload["coverage"] = situated.audit.report().as_dict()
+        if native:
+            payload = situated.audit.native_report()
+        else:
+            payload = situated.load_model().contract()
+            payload["coverage"] = situated.audit.report().as_dict()
     except (OSError, ValueError) as exc:
         _fail(f"处境行动报告失败：{exc}", EXIT_FAILED)
     _write_json(target, payload)

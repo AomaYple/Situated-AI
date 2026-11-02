@@ -2,6 +2,7 @@
 schema = 1
 
 [sources]
+"common/achievements/ip2_pivot_of_empire_achievements.txt" = "42a9c8cec20b6add6332b19a1354640d66fb7cfc45e464b95913315e824a4a04"
 "common/scripted_triggers/00_gfx_route_graphics_triggers.txt" = "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b"
 "common/journal_entries/00_communism.txt" = "fbe2ce3af236a3f49e146f445ba56957952ac910b68022cc0f69e94e8010072f"
 "events/law_events/state_atheism.txt" = "cb39c1a5badc168a6480bd3a19fb67dc82cfa80c8da7bd830b2fad747e80cf8e"
@@ -3391,12 +3392,6 @@ kind = "boolean"
 
 [readers.coord_layer_stable]
 engine = "sitai_context_layer_stable"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-
-[readers.coord_need_administrative]
-engine = "sitai_context_need_administrative"
 scope = "root"
 unit = "boolean"
 kind = "boolean"
@@ -12268,6 +12263,7 @@ domain = "economy"
 priority = 1900
 operation = "multiply"
 value = 0.8
+contribution_group = "health_administrative_pressure"
 conditions = [
   { fact = "bureaucracy", op = "<", value = 0 },
 ]
@@ -12283,26 +12279,12 @@ domain = "fiscal"
 priority = 2000
 operation = "multiply"
 value = 0.75
+contribution_group = "health_financing_pressure"
 conditions = [
 ]
 why = "共享约束下比较边际收益与机会成本；institution_health_system_financial_cost"
 counterexample = "保留原版资格、关系、资源成本和目标可达性；有限评分不强制行动，不替代原版预测。玩家、缺失作用域或未知输入回退；运行时语义及行为待用户长期行为验收。"
 contexts = ["peaceful_insolvency"]
-
-[[rules]]
-id = "coordinated_institution_health_system_social_need"
-source = "common/ai_strategies/00_default_strategy.txt"
-field = "ai_strategy_default.institution_scores.institution_health_system"
-domain = "political"
-priority = 50
-operation = "multiply"
-value = 1.2
-conditions = [
-  { fact = "sol", op = "<", value = 12 },
-]
-why = "共享约束下比较边际收益与机会成本；institution_health_system_social_need"
-counterexample = "保留原版资格、关系、资源成本和目标可达性；有限评分不强制行动，不替代原版预测。玩家、缺失作用域或未知输入回退；运行时语义及行为待用户长期行为验收。"
-contexts = ["peaceful_capacity"]
 
 [[rules]]
 id = "coordinated_institution_home_affairs_administrative_cost"
@@ -13188,61 +13170,6 @@ why = "已观察工业发展策略形成生产知识需求；研究不预付未�
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
-id = "law_appointed_bureaucrats_ai_enact_weight_modifier"
-domain = "political"
-source = "common/laws/00_bureaucracy.txt"
-field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
-operation = "add"
-value = 15
-priority = 50
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "bureaucracy", op = "<", value = 0 },
-  { fact = "legitimacy", op = ">=", value = 50 },
-  { fact = "insurrection", op = "=", value = false },
-]
-why = "行政短缺时有限提高专业化行政候选；具体选项仍由原版政治支持与资格决定"
-counterexample = "法律增量不绕过ai_will_do、政治支持、原版资格及成本；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
-
-contexts = ["political_support_capacity"]
-[[rules]]
-id = "law_charitable_health_system_ai_enact_weight_modifier"
-domain = "political"
-source = "common/laws/01_health_system.txt"
-field = "law_charitable_health_system.ai_enact_weight_modifier"
-operation = "add"
-value = 22
-priority = 50
-conditions = [
-  { fact = "legitimacy", op = ">=", value = 50 },
-  { fact = "insurrection", op = "=", value = false },
-  { fact = "sol", op = "<", value = 12 },
-]
-why = "在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重"
-counterexample = "法律增量不绕过ai_will_do、政治支持、原版资格及成本；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
-contexts = ["political_support_capacity", "peaceful_capacity"]
-
-[[rules]]
-id = "law_elected_bureaucrats_ai_enact_weight_modifier"
-domain = "political"
-source = "common/laws/00_bureaucracy.txt"
-field = "law_elected_bureaucrats.ai_enact_weight_modifier"
-operation = "add"
-value = 15
-priority = 50
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "bureaucracy", op = "<", value = 0 },
-  { fact = "legitimacy", op = ">=", value = 50 },
-  { fact = "insurrection", op = "=", value = false },
-]
-why = "行政短缺时有限提高专业化行政候选；具体选项仍由原版政治支持与资格决定"
-counterexample = "法律增量不绕过ai_will_do、政治支持、原版资格及成本；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
-
-contexts = ["political_support_capacity"]
-[[rules]]
 id = "law_free_trade_ai_enact_weight_modifier"
 domain = "market"
 source = "common/laws/01_trade_policy.txt"
@@ -13314,23 +13241,6 @@ counterexample = "法律增量不绕过ai_will_do、政治支持、原版资格�
 contexts = ["political_support_capacity", "peaceful_capacity"]
 
 [[rules]]
-id = "law_private_health_insurance_ai_enact_weight_modifier"
-domain = "political"
-source = "common/laws/01_health_system.txt"
-field = "law_private_health_insurance.ai_enact_weight_modifier"
-operation = "add"
-value = 22
-priority = 50
-conditions = [
-  { fact = "legitimacy", op = ">=", value = 50 },
-  { fact = "insurrection", op = "=", value = false },
-  { fact = "sol", op = "<", value = 12 },
-]
-why = "在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重"
-counterexample = "法律增量不绕过ai_will_do、政治支持、原版资格及成本；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
-contexts = ["political_support_capacity", "peaceful_capacity"]
-
-[[rules]]
 id = "law_private_schools_ai_enact_weight_modifier"
 domain = "political"
 source = "common/laws/01_education_system.txt"
@@ -13366,40 +13276,6 @@ why = "持续借款时增加拓宽财政收入结构的合格法律关注；不�
 counterexample = "法律增量不绕过ai_will_do、政治支持、原版资格及成本；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 contexts = ["political_support_capacity"]
-[[rules]]
-id = "law_public_health_insurance_ai_enact_weight_modifier"
-domain = "political"
-source = "common/laws/01_health_system.txt"
-field = "law_public_health_insurance.ai_enact_weight_modifier"
-operation = "add"
-value = 22
-priority = 50
-conditions = [
-  { fact = "legitimacy", op = ">=", value = 50 },
-  { fact = "insurrection", op = "=", value = false },
-  { fact = "sol", op = "<", value = 12 },
-]
-why = "在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重"
-counterexample = "法律增量不绕过ai_will_do、政治支持、原版资格及成本；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
-contexts = ["political_support_capacity", "peaceful_capacity"]
-
-[[rules]]
-id = "law_public_schools_ai_enact_weight_modifier"
-domain = "political"
-source = "common/laws/01_education_system.txt"
-field = "law_public_schools.ai_enact_weight_modifier"
-operation = "add"
-value = 22
-priority = 50
-conditions = [
-  { fact = "legitimacy", op = ">=", value = 50 },
-  { fact = "insurrection", op = "=", value = false },
-  { fact = "literacy", op = "<", value = 0.5 },
-]
-why = "在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重"
-counterexample = "法律增量不绕过ai_will_do、政治支持、原版资格及成本；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
-contexts = ["political_support_capacity", "peaceful_capacity"]
-
 [[rules]]
 id = "law_regulatory_bodies_ai_enact_weight_modifier"
 domain = "political"
@@ -14092,6 +13968,7 @@ source = "common/laws/01_health_system.txt"
 field = "law_charitable_health_system.ai_enact_weight_modifier"
 domain = "political"
 priority = 1000
+contribution_group = "health_political_risk"
 operation = "add"
 value = -10
 conditions = [
@@ -15082,6 +14959,7 @@ source = "common/laws/01_health_system.txt"
 field = "law_no_health_system.ai_enact_weight_modifier"
 domain = "political"
 priority = 1000
+contribution_group = "health_political_risk"
 operation = "add"
 value = -10
 conditions = [
@@ -15367,6 +15245,7 @@ source = "common/laws/01_health_system.txt"
 field = "law_private_health_insurance.ai_enact_weight_modifier"
 domain = "political"
 priority = 1000
+contribution_group = "health_political_risk"
 operation = "add"
 value = -10
 conditions = [
@@ -15472,6 +15351,7 @@ source = "common/laws/01_health_system.txt"
 field = "law_public_health_insurance.ai_enact_weight_modifier"
 domain = "political"
 priority = 1000
+contribution_group = "health_political_risk"
 operation = "add"
 value = -10
 conditions = [
@@ -15489,6 +15369,7 @@ domain = "political"
 priority = 1000
 operation = "add"
 value = -10
+contribution_group = "public_school_political_pressure"
 conditions = [
 ]
 why = "合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择"
@@ -16302,24 +16183,6 @@ why = "已观察工业发展策略形成生产知识需求；研究不预付未�
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
-id = "social_education_peasant_pressure"
-domain = "political"
-field = "law_public_schools.ai_enact_weight_modifier"
-priority = 700
-operation = "add"
-value = 28
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "peasant_share", op = ">=", value = 0.6 },
-  { fact = "literacy", op = "<", value = 0.5 },
-]
-why = "大量农民且识字率较低时，把教育作为有限的长期能力投资，与财政和战争状态共同评估"
-counterexample = "不直接提高识字率、制度等级或预算；缺失人口比例、识字率、资格或和平条件时回退原版"
-source = "common/laws/01_education_system.txt"
-contexts = ["political_support_capacity", "peaceful_capacity"]
-
-[[rules]]
 id = "social_radical_stability_pressure"
 domain = "political"
 field = "law_regulatory_bodies.ai_enact_weight_modifier"
@@ -16690,15 +16553,14 @@ field = "law_public_schools.ai_enact_weight_modifier"
 domain = "political"
 priority = 800
 operation = "add"
-value = 30
+value = 10
+contribution_group = "public_school_access_need"
 conditions = [
   { fact = "current_private_schools", op = "=", value = true },
   { fact = "literacy", op = "<", value = 0.5 },
-  { fact = "peasant_share", op = ">=", value = 0.6 },
 ]
-why = "低识字、农民占比较高且当前依赖私立教育时，有限提高公共教育可及性候选"
-counterexample = "保留原版政治支持、法律/科技/目标资格、成本、零权重与最终执行；未知输入、玩家、战争或容量不足不奖励。比例不代表利润、招聘能力或战争胜率；方向和运行时语义待用户长期行为验收。"
-contexts = ["political_support_capacity", "peaceful_capacity"]
+why = "当前私校按财富提供教育接入，低识字时有限关注公校普遍教育接入的具体改革需求，不把全国均值冒充个人财富"
+counterexample = "当前法律与识字率只定义具体改革需求，不代表个人教育收益或候选法案支持。正常借款、战争、全国合法性不作为通用资格；行政、违约与已观察政治危机成本独立计算，原版科技、法律互斥、支持、内战、请愿与执行保留"
 
 [[rules]]
 id = "structural_school_secularization"
@@ -16707,15 +16569,14 @@ field = "law_public_schools.ai_enact_weight_modifier"
 domain = "political"
 priority = 790
 operation = "add"
-value = 29
+value = 8
+contribution_group = "public_school_access_need"
 conditions = [
   { fact = "current_religious_schools", op = "=", value = true },
   { fact = "literacy", op = "<", value = 0.5 },
-  { fact = "industrial_workforce", op = ">=", value = 0.1 },
 ]
-why = "工业劳动力存在教育需求时有限关注公共教育替代，不绕过宗教利益集团支持"
-counterexample = "保留原版政治支持、法律/科技/目标资格、成本、零权重与最终执行；未知输入、玩家、战争或容量不足不奖励。比例不代表利润、招聘能力或战争胜率；方向和运行时语义待用户长期行为验收。"
-contexts = ["political_support_capacity", "peaceful_capacity"]
+why = "当前宗教学校每级普遍教育接入0.10，公校0.125；低识字时形成较小教育接入改善需求，不强制世俗路线或假定政治支持"
+counterexample = "当前法律与识字率只定义具体改革需求，不代表个人教育收益或候选法案支持。正常借款、战争、全国合法性不作为通用资格；行政、违约与已观察政治危机成本独立计算，原版科技、法律互斥、支持、内战、请愿与执行保留"
 
 [[rules]]
 id = "structural_trade_access"
@@ -21576,40 +21437,13 @@ counterexample = "识字、行政、净收入、借贷、违约和战争不构�
 
 [[rules]]
 source = "common/ai_strategies/00_default_strategy.txt"
-id = "coordinated_layered_health_stable"
-field = "ai_strategy_default.institution_scores.institution_health_system"
-domain = "political"
-priority = 20
-operation = "multiply"
-value = 1.15
-conditions = [{ fact = "coord_need_political", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
-why = "政治压力在具备稳健承受力时提高社会制度投入倾向"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-source = "common/ai_strategies/00_default_strategy.txt"
-id = "social_health_low_living_standard"
-field = "ai_strategy_default.institution_scores.institution_health_system"
-domain = "political"
-priority = 611
-operation = "multiply"
-value = 1.10
-conditions = [
-  { fact = "average_sol", op = "<", value = 10 },
-  { fact = "bureaucracy", op = ">", value = 0 },
-  { fact = "default", op = "=", value = false },
-]
-why = "生活水平偏低且行政能力可用时，提高原版医疗制度投资倾向"
-counterexample = "不创造医疗机构、生活水平或行政点数；财政违约、未知生活水平或原版资格不满足时不增量"
-
-[[rules]]
-source = "common/ai_strategies/00_default_strategy.txt"
 id = "coordinated_layered_health_recovery"
 field = "ai_strategy_default.institution_scores.institution_health_system"
 domain = "fiscal"
 priority = 21
 operation = "multiply"
 value = 0.82
+contribution_group = "health_financing_pressure"
 conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "coord_layer_recovery", op = "=", value = true }]
 why = "财政恢复期降低新增制度承诺，保留原版最低制度和执行路径"
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
@@ -22467,42 +22301,6 @@ why = "财政压力降低昂贵远洋舰队科技的机会优先级；战时防�
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
 
 [[rules]]
-source = "common/laws/00_bureaucracy.txt"
-id = "coordinated_layered_law_administrative_appointed_bureaucrats"
-field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
-domain = "political"
-priority = 20
-operation = "add"
-value = 6
-conditions = [{ fact = "coord_need_administrative", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "landowner_clout", op = "<", value = 0.3 }]
-why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-source = "common/laws/00_bureaucracy.txt"
-id = "coordinated_layered_law_administrative_elected_bureaucrats"
-field = "law_elected_bureaucrats.ai_enact_weight_modifier"
-domain = "political"
-priority = 20
-operation = "add"
-value = 6
-conditions = [{ fact = "coord_need_administrative", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "industrial_workforce", op = ">=", value = 0.15 }]
-why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-source = "common/laws/01_education_system.txt"
-id = "coordinated_layered_law_education_public_schools"
-field = "law_public_schools.ai_enact_weight_modifier"
-domain = "political"
-priority = 20
-operation = "add"
-value = 6
-conditions = [{ fact = "coord_need_education", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "bureaucracy", op = ">=", value = 0 }]
-why = "领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
 source = "common/laws/01_education_system.txt"
 id = "coordinated_layered_law_education_private_schools"
 field = "law_private_schools.ai_enact_weight_modifier"
@@ -22827,30 +22625,6 @@ why = "恢复需求降低再次领土扩张的机会优先级，既有条约、�
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
 
 [[rules]]
-source = "common/laws/01_health_system.txt"
-id = "coordinated_layered_civic_law_public_health_insurance"
-field = "law_public_health_insurance.ai_enact_weight_modifier"
-domain = "political"
-priority = 20
-operation = "add"
-value = 5
-conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "sol", op = "<", value = 12 }]
-why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-source = "common/laws/01_health_system.txt"
-id = "coordinated_layered_civic_law_private_health_insurance"
-field = "law_private_health_insurance.ai_enact_weight_modifier"
-domain = "political"
-priority = 20
-operation = "add"
-value = 5
-conditions = [{ fact = "coord_stable_capacity", op = "=", value = true }, { fact = "legitimacy", op = ">=", value = 35 }, { fact = "insurrection", op = "=", value = false }, { fact = "sol", op = ">=", value = 15 }, { fact = "industrial_workforce", op = ">=", value = 0.15 }]
-why = "可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
 source = "common/laws/02_childrens_rights.txt"
 id = "coordinated_layered_civic_law_compulsory_primary_school"
 field = "law_compulsory_primary_school.ai_enact_weight_modifier"
@@ -23162,15 +22936,14 @@ domain = "political"
 priority = 42010
 operation = "multiply"
 value = 1.08
+contribution_group = "health_law_specific_need"
 conditions = [
-  { fact = "bureaucracy", op = ">=", value = 0 },
-  { fact = "net_surplus", op = ">=", value = 0 },
+  { fact = "current_charitable_health", op = "=", value = true },
   { fact = "grain_price", op = ">", value = 0.5 },
   { fact = "grain_balance", op = "<", value = 0 },
-  { fact = "default", op = "=", value = false },
 ]
-why = "根市场粮食价格和供需余额同时显示短缺时，提高合法健康制度消费者的有限基础倾向；原版制度资格、行政与财政成本继续优先"
-counterexample = "单一生活水平或粮食价格不足以触发；粮食事实、违约或市场作用域未知时回退原版，不赠送健康、资源或制度等级"
+why = "当前慈善医疗每级提供食品保障；根市场粮价和余额同时显示短缺时形成有限食品保障需求，不由财政行政健康与否删除需求"
+counterexample = "只改变当前慈善医疗食品保障对应的有界需求偏好；粮价和余额是食品安全压力代理，不等于死亡率、污染或个人医疗接入。未知法律或粮食事实只退出该需求；行政与融资代价独立，原版制度资格、费用与执行保留"
 
 [[rules]]
 source = "common/ai_strategies/00_default_strategy.txt"
@@ -23180,17 +22953,15 @@ domain = "political"
 priority = 42011
 operation = "multiply"
 value = 1.16
+contribution_group = "health_law_specific_need"
 conditions = [
+  { fact = "current_charitable_health", op = "=", value = true },
   { fact = "grain_price", op = ">", value = 0.5 },
   { fact = "grain_balance", op = "<", value = 0 },
   { fact = "average_sol", op = "<", value = 8 },
-  { fact = "bureaucracy", op = ">", value = 0 },
-  { fact = "net_surplus", op = ">", value = 0 },
-  { fact = "insurrection", op = "=", value = false },
-  { fact = "default", op = "=", value = false },
 ]
-why = "粮食短缺同时伴随低生活水平、可用行政与净收入且无叛乱时，健康制度需求可升档；成本和政治承载是实际输入，不构造全局稳定门"
-counterexample = "缺少任一社会、行政、财政或政治事实时不升档；不把候选制度当作已完成，不免费修正生活水平或稳定，原版资格和维护执行保持"
+why = "慈善医疗食品保障与实际粮食短缺、低生活水平同时相关时提高同一需求档；低生活水平仅作压力代理，不证明已观察死亡率收益"
+counterexample = "只改变当前慈善医疗食品保障对应的有界需求偏好；粮价和余额是食品安全压力代理，不等于死亡率、污染或个人医疗接入。未知法律或粮食事实只退出该需求；行政与融资代价独立，原版制度资格、费用与执行保留"
 
 
 [[rules]]
@@ -25176,3 +24947,889 @@ conditions = [
 ]
 why = "政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强"
 counterexample = "未启用该配方或投入未知时只退出本代价；简单组织不耗纸，非交换机配方不因电话涨价受罚；不改变原版配方、行政产出、资格、实际成本或建造执行"
+
+[readers.current_charitable_health]
+engine = "has_law_or_variant"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "law_type:law_charitable_health_system"
+
+[readers.current_public_health]
+engine = "has_law_or_variant"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "law_type:law_public_health_insurance"
+
+[readers.current_no_schools]
+engine = "has_law_or_variant"
+scope = "root"
+unit = "boolean"
+kind = "boolean"
+argument = "law_type:law_no_schools"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "health_public_low_living_need"
+field = "ai_strategy_default.institution_scores.institution_health_system"
+domain = "political"
+contribution_group = "health_law_specific_need"
+priority = 45201
+operation = "multiply"
+value = 1.1
+conditions = [
+  { fact = "current_public_health", op = "=", value = true },
+  { fact = "average_sol", op = "<", value = 10 },
+]
+why = "当前公保每级普遍生活水平加0.5；已观察低生活水平时形成具体生活水平改善需求，保留独立行政和融资代价"
+counterexample = "不把私保的上层生活水平与财富死亡率机制套给贫困人口；不推断实际死亡率、污染或个人医疗收益。法律或生活水平未知只退出需求；原版资格、成本、玩家与执行保留"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "health_default_pressure"
+field = "ai_strategy_default.institution_scores.institution_health_system"
+domain = "fiscal"
+contribution_group = "health_financing_pressure"
+priority = 45202
+operation = "multiply"
+value = 0.75
+conditions = [
+  { fact = "default", op = "=", value = true },
+]
+why = "已观察违约在战争与和平都计入健康制度融资机会成本，同因旧违约和恢复压力择强"
+counterexample = "不把正常借款视为违约，不撤销已知慈善食品保障或公保生活水平需求；未知违约不计此代价，原版最低制度、资格与执行保留"
+
+[[rules]]
+source = "common/laws/01_education_system.txt"
+id = "public_school_private_peasant_access"
+field = "law_public_schools.ai_enact_weight_modifier"
+domain = "political"
+contribution_group = "public_school_access_need"
+priority = 45203
+operation = "add"
+value = 12
+conditions = [
+  { fact = "current_private_schools", op = "=", value = true },
+  { fact = "literacy", op = "<", value = 0.5 },
+  { fact = "peasant_share", op = ">=", value = 0.6 },
+]
+why = "低识字、当前私校且农民比例高时提高同一普遍教育接入需求档；农民比例只作覆盖压力代理，不是个人财富或政治支持"
+counterexample = "当前法律与识字率只定义具体改革需求，不代表个人教育收益或候选法案支持。正常借款、战争、全国合法性不作为通用资格；行政、违约与已观察政治危机成本独立计算，原版科技、法律互斥、支持、内战、请愿与执行保留"
+
+[[rules]]
+source = "common/laws/01_education_system.txt"
+id = "public_school_no_schools_access"
+field = "law_public_schools.ai_enact_weight_modifier"
+domain = "political"
+contribution_group = "public_school_access_need"
+priority = 45204
+operation = "add"
+value = 14
+conditions = [
+  { fact = "current_no_schools", op = "=", value = true },
+  { fact = "literacy", op = "<", value = 0.5 },
+]
+why = "当前没有学校制度且识字偏低时，为引入公校普遍教育接入形成具体需求；原版已有无学校法律请愿加值完整保留"
+counterexample = "当前法律与识字率只定义具体改革需求，不代表个人教育收益或候选法案支持。正常借款、战争、全国合法性不作为通用资格；行政、违约与已观察政治危机成本独立计算，原版科技、法律互斥、支持、内战、请愿与执行保留"
+
+[[rules]]
+source = "common/laws/01_education_system.txt"
+id = "public_school_administrative_pressure"
+field = "law_public_schools.ai_enact_weight_modifier"
+domain = "political"
+contribution_group = "public_school_administrative_pressure"
+priority = 45205
+operation = "add"
+value = -8
+conditions = [
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "行政赤字独立计入公共学校改革的制度管理机会成本，不删除已知教育接入需求"
+counterexample = "当前法律与识字率只定义具体改革需求，不代表个人教育收益或候选法案支持。正常借款、战争、全国合法性不作为通用资格；行政、违约与已观察政治危机成本独立计算，原版科技、法律互斥、支持、内战、请愿与执行保留"
+
+[[rules]]
+source = "common/laws/01_education_system.txt"
+id = "public_school_default_pressure"
+field = "law_public_schools.ai_enact_weight_modifier"
+domain = "fiscal"
+contribution_group = "public_school_financing_pressure"
+priority = 45206
+operation = "add"
+value = -6
+conditions = [
+  { fact = "default", op = "=", value = true },
+]
+why = "已观察违约独立计入公共学校改革融资机会成本，与行政和政治压力同时计算，正常贷款本身不扣分"
+counterexample = "当前法律与识字率只定义具体改革需求，不代表个人教育收益或候选法案支持。正常借款、战争、全国合法性不作为通用资格；行政、违约与已观察政治危机成本独立计算，原版科技、法律互斥、支持、内战、请愿与执行保留"
+
+[readers.current_no_health]
+engine = "has_law_or_variant"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "law_type:law_no_health_system"
+
+[readers.current_private_health]
+engine = "has_law_or_variant"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "law_type:law_private_health_insurance"
+
+[readers.health_investment]
+engine = "institution_investment_level"
+scope = "root"
+kind = "number"
+unit = "institution_level"
+minimum = 0
+value_field = "value"
+parameters = { institution = "institution_health_system" }
+
+[[rules]]
+id = "health_reform_charity_new_food_security"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_charitable_health_system.ai_enact_weight_modifier"
+operation = "add"
+value = 10
+priority = 61382
+contribution_group = "health_need"
+conditions = [
+  { fact = "current_no_health", op = "=", value = true },
+  { fact = "grain_price", op = ">", value = 0.5 },
+  { fact = "grain_balance", op = "<", value = 0 },
+]
+why = "无医保且实际粮食高价短缺时，慈善候选的原版食品保障形成直接需要；不推断当前死亡率"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_new_universal_access"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = 12
+priority = 61383
+contribution_group = "health_need"
+conditions = [
+  { fact = "current_no_health", op = "=", value = true },
+  { fact = "average_sol", op = "<", value = 10 },
+]
+why = "无医保且生活水平低时，公保的普遍生活与死亡率效果形成直接需要，不先要求财政行政全满足"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_charity_new_administrative_pressure"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_charitable_health_system.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 61384
+contribution_group = "health_administration"
+conditions = [
+  { fact = "current_no_health", op = "=", value = true },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "建立新医疗制度需行政承载；实际行政缺口作为独立成本，不抹去直接需要"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_charity_new_default_pressure"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_charitable_health_system.ai_enact_weight_modifier"
+operation = "add"
+value = -6
+priority = 61385
+contribution_group = "health_financing"
+conditions = [
+  { fact = "current_no_health", op = "=", value = true },
+  { fact = "default", op = "=", value = true },
+]
+why = "实际违约降低新增制度承诺支持；正常借款及战争本身不等于违约"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_private_new_administrative_pressure"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_private_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 61386
+contribution_group = "health_administration"
+conditions = [
+  { fact = "current_no_health", op = "=", value = true },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "建立新医疗制度需行政承载；实际行政缺口作为独立成本，不抹去直接需要"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_private_new_default_pressure"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_private_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -6
+priority = 61387
+contribution_group = "health_financing"
+conditions = [
+  { fact = "current_no_health", op = "=", value = true },
+  { fact = "default", op = "=", value = true },
+]
+why = "实际违约降低新增制度承诺支持；正常借款及战争本身不等于违约"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_new_administrative_pressure"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 61388
+contribution_group = "health_administration"
+conditions = [
+  { fact = "current_no_health", op = "=", value = true },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "建立新医疗制度需行政承载；实际行政缺口作为独立成本，不抹去直接需要"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_new_default_pressure"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -6
+priority = 61389
+contribution_group = "health_financing"
+conditions = [
+  { fact = "current_no_health", op = "=", value = true },
+  { fact = "default", op = "=", value = true },
+]
+why = "实际违约降低新增制度承诺支持；正常借款及战争本身不等于违约"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_private_universal_access"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = 12
+priority = 61390
+contribution_group = "health_need"
+conditions = [
+  { fact = "current_private_health", op = "=", value = true },
+  { fact = "average_sol", op = "<", value = 10 },
+]
+why = "当前私保效果依赖财富；低生活水平形成转向公保普遍覆盖的需求，不把候选高分当已生效"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_private_administrative_loss"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 61391
+contribution_group = "health_administration"
+conditions = [
+  { fact = "current_private_health", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "有实际医保投资时，退出私保的制度行政折扣且行政已不足，构成一次独立管理压力"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_private_default_pressure"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -6
+priority = 61392
+contribution_group = "health_financing"
+conditions = [
+  { fact = "current_private_health", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "default", op = "=", value = true },
+]
+why = "有实际医保投资且违约时，转出私保折扣的新增承诺有融资机会成本"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_charity_universal_access"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = 10
+priority = 61393
+contribution_group = "health_need"
+conditions = [
+  { fact = "current_charitable_health", op = "=", value = true },
+  { fact = "average_sol", op = "<", value = 10 },
+]
+why = "低生活水平时，慈善转公保的普遍生活和更强死亡率效果形成改善需要；不估算实际改善人数"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_charity_administrative_loss"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -4
+priority = 61394
+contribution_group = "health_administration"
+conditions = [
+  { fact = "current_charitable_health", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "有实际制度投资且行政不足时，退出慈善的20%制度行政成本折扣形成管理成本"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_charity_default_pressure"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -6
+priority = 61395
+contribution_group = "health_financing"
+conditions = [
+  { fact = "current_charitable_health", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "default", op = "=", value = true },
+]
+why = "已有医保实际投资且违约时，退出慈善折扣有融资压力；与行政原因分开"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_private_charity_food_loss"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_private_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -4
+priority = 61396
+contribution_group = "health_food_security_loss"
+conditions = [
+  { fact = "current_charitable_health", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "grain_price", op = ">", value = 0.5 },
+  { fact = "grain_balance", op = "<", value = 0 },
+]
+why = "实际慈善医保正在投资且食品紧张时，退出其食品保障有独立机会成本；投资零或未知不虚构现有效果"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_public_charity_food_loss"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_public_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -4
+priority = 61397
+contribution_group = "health_food_security_loss"
+conditions = [
+  { fact = "current_charitable_health", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "grain_price", op = ">", value = 0.5 },
+  { fact = "grain_balance", op = "<", value = 0 },
+]
+why = "实际慈善医保正在投资且食品紧张时，退出其食品保障有独立机会成本；投资零或未知不虚构现有效果"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_private_charity_administrative_saving"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_private_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = 4
+priority = 61398
+contribution_group = "health_administration"
+conditions = [
+  { fact = "current_charitable_health", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "行政不足且已有医保实际投资时，私保比慈善更大的制度行政折扣提供有限节约倾向"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_private_public_administrative_saving"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_private_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = 6
+priority = 61399
+contribution_group = "health_administration"
+conditions = [
+  { fact = "current_public_health", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "已有公保投资且行政不足时，私保的行政折扣形成节约机会，不当作实际发放资源"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+[[rules]]
+id = "health_reform_private_public_universal_access_loss"
+domain = "political"
+source = "common/laws/01_health_system.txt"
+field = "law_private_health_insurance.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 61400
+contribution_group = "health_universal_access_loss"
+conditions = [
+  { fact = "current_public_health", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "average_sol", op = "<", value = 10 },
+]
+why = "已有公保投资且低生活水平时，私保替代会失去普遍生活改善，作为独立社会代价共同权衡"
+counterexample = "只改变有界法律偏好，不估算金额、行政资源、人口福利或法案通过；当前法律和制度投资必须真实观察。需求与已知成本独立，未知只退出本项；原版资格、政治支持、请愿、技术、成本和执行保留，玩家及关闭不干预。"
+
+# S2: tax collection and actual institution administration are independent.
+
+[readers.current_appointed_bureaucrats]
+engine = "has_law_or_variant"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "law_type:law_appointed_bureaucrats"
+
+[readers.current_elected_bureaucrats]
+engine = "has_law_or_variant"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "law_type:law_elected_bureaucrats"
+
+[readers.schools_investment]
+engine = "institution_investment_level"
+scope = "root"
+kind = "number"
+unit = "institution_level"
+minimum = 0
+value_field = "value"
+parameters = { institution = "institution_schools" }
+
+[readers.social_security_investment]
+engine = "institution_investment_level"
+scope = "root"
+kind = "number"
+unit = "institution_level"
+minimum = 0
+value_field = "value"
+parameters = { institution = "institution_social_security" }
+
+[readers.workplace_safety_investment]
+engine = "institution_investment_level"
+scope = "root"
+kind = "number"
+unit = "institution_level"
+minimum = 0
+value_field = "value"
+parameters = { institution = "institution_workplace_safety" }
+
+[readers.owned_incorporated_tax_shortfall]
+engine = "any_scope_state"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+parameters = { state_query = "tax_capacity_shortfall" }
+
+[[rules]]
+id = "bureaucracy_reform_appointed_tax_collection"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 14
+priority = 63000
+contribution_group = "bureaucracy_tax_capacity"
+why = "原版任命制增加州税容量25%；已拥有且已整合的同一州存在真实税容量缺口时，支持具体税收治理改革，不用全国行政负值代替税容缺口"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_appointed_bureaucrats", op = "=", value = false },
+  { fact = "owned_incorporated_tax_shortfall", op = "=", value = true },
+]
+
+[[rules]]
+id = "bureaucracy_reform_appointed_elected_institution_cost_police"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 63001
+contribution_group = "bureaucracy_institution_cost"
+why = "当前民选制已有实际制度投资且行政短缺；转任命制失去原版制度行政成本15%折扣。多个制度只证明同一折扣暴露，不重复扣分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = true },
+  { fact = "police_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_police_existing"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 8
+priority = 63002
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "police_investment", op = ">=", value = 1 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_police_deficit"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 14
+priority = 63003
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "police_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_appointed_elected_institution_cost_home_affairs"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 63004
+contribution_group = "bureaucracy_institution_cost"
+why = "当前民选制已有实际制度投资且行政短缺；转任命制失去原版制度行政成本15%折扣。多个制度只证明同一折扣暴露，不重复扣分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = true },
+  { fact = "home_affairs_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_home_affairs_existing"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 8
+priority = 63005
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "home_affairs_investment", op = ">=", value = 1 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_home_affairs_deficit"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 14
+priority = 63006
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "home_affairs_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_appointed_elected_institution_cost_colonial_affairs"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 63007
+contribution_group = "bureaucracy_institution_cost"
+why = "当前民选制已有实际制度投资且行政短缺；转任命制失去原版制度行政成本15%折扣。多个制度只证明同一折扣暴露，不重复扣分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = true },
+  { fact = "colonial_affairs_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_colonial_affairs_existing"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 8
+priority = 63008
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "colonial_affairs_investment", op = ">=", value = 1 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_colonial_affairs_deficit"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 14
+priority = 63009
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "colonial_affairs_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_appointed_elected_institution_cost_health"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 63010
+contribution_group = "bureaucracy_institution_cost"
+why = "当前民选制已有实际制度投资且行政短缺；转任命制失去原版制度行政成本15%折扣。多个制度只证明同一折扣暴露，不重复扣分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = true },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_health_existing"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 8
+priority = 63011
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "health_investment", op = ">=", value = 1 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_health_deficit"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 14
+priority = 63012
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "health_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_appointed_elected_institution_cost_schools"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 63013
+contribution_group = "bureaucracy_institution_cost"
+why = "当前民选制已有实际制度投资且行政短缺；转任命制失去原版制度行政成本15%折扣。多个制度只证明同一折扣暴露，不重复扣分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = true },
+  { fact = "schools_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_schools_existing"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 8
+priority = 63014
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "schools_investment", op = ">=", value = 1 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_schools_deficit"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 14
+priority = 63015
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "schools_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_appointed_elected_institution_cost_social_security"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 63016
+contribution_group = "bureaucracy_institution_cost"
+why = "当前民选制已有实际制度投资且行政短缺；转任命制失去原版制度行政成本15%折扣。多个制度只证明同一折扣暴露，不重复扣分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = true },
+  { fact = "social_security_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_social_security_existing"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 8
+priority = 63017
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "social_security_investment", op = ">=", value = 1 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_social_security_deficit"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 14
+priority = 63018
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "social_security_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_appointed_elected_institution_cost_workplace_safety"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_appointed_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = -8
+priority = 63019
+contribution_group = "bureaucracy_institution_cost"
+why = "当前民选制已有实际制度投资且行政短缺；转任命制失去原版制度行政成本15%折扣。多个制度只证明同一折扣暴露，不重复扣分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = true },
+  { fact = "workplace_safety_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_workplace_safety_existing"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 8
+priority = 63020
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "workplace_safety_investment", op = ">=", value = 1 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_institution_saving_workplace_safety_deficit"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = 14
+priority = 63021
+contribution_group = "bureaucracy_institution_cost"
+why = "原版民选制降低制度行政成本15%；已观察正制度投入形成实际成本节约机会，行政缺口加强同因档位。零投入、未知投入不假设节约，多制度不重复加分"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_elected_bureaucrats", op = "=", value = false },
+  { fact = "workplace_safety_investment", op = ">=", value = 1 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+
+[[rules]]
+id = "bureaucracy_reform_elected_appointed_tax_loss"
+domain = "political"
+source = "common/laws/00_bureaucracy.txt"
+field = "law_elected_bureaucrats.ai_enact_weight_modifier"
+operation = "add"
+value = -10
+priority = 63022
+contribution_group = "bureaucracy_tax_capacity"
+why = "当前任命制已生效且已整合州税容量仍短缺；转民选制失去原版25%税容量效果，独立于制度行政节约共同权衡"
+counterexample = "分数是有界偏好，不是税收、行政资源或立法通过率换算；只用本国已整合州缺税容量和实际制度投入，未知局部退出。正常贷款、战争、低合法性本身不作共同总门；原版人口行政效果、政治支持、资格、请愿、事件和执行完整保留。"
+conditions = [
+  { fact = "current_appointed_bureaucrats", op = "=", value = true },
+  { fact = "owned_incorporated_tax_shortfall", op = "=", value = true },
+]

@@ -230,3 +230,38 @@ def test_overlord_interest_group_and_named_interest_group_scopes_are_explicit() 
     group = _condition_block("limit = { ROOT = { ig:ig_landowners = { ig_clout >= 0.5 } } }")
     assert condition(group, {"ROOT": {"ig:ig_landowners": {"ig_clout": 0.7}}}) is True
     assert condition(group, {"ROOT": {"ig:ig_trade_unions": {"ig_clout": 0.7}}}) is None
+
+
+@pytest.mark.parametrize(
+    ("expression", "facts", "expected"),
+    [
+        ("add = 99 value = 2 multiply = 3", {}, 6.0),
+        (
+            "value = 2 add = 4 if = { limit = { in_default = yes } value = 0 }",
+            {"in_default": True},
+            0.0,
+        ),
+        (
+            "value = 2 add = 4 if = { limit = { in_default = yes } value = 0 }",
+            {"in_default": False},
+            6.0,
+        ),
+        ("value = 2 add = 4 if = { limit = { in_default = yes } value = 0 }", {}, 6.0),
+        ("value = 5 if = { limit = { always = yes } value = { value = 3 add = 1 } }", {}, 4.0),
+        (
+            "value = 5 if = { limit = { always = no } value = 0 } else = { value = 7 } multiply = 2",
+            {},
+            14.0,
+        ),
+    ],
+)
+def test_numeric_value_assignment_preserves_source_order_and_conditional_resets(
+    expression: str, facts: dict[str, object | None], expected: float
+) -> None:
+    text = (
+        "# numeric_reset [diplomacy];\n"
+        "if = { limit = { always = yes } multiply = { " + expression + " } }\n"
+    )
+    result = select(text, facts)
+    assert (result.operation, result.fallback) == ("multiply", "selected")
+    assert result.delta == pytest.approx(expected)

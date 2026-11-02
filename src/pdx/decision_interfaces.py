@@ -135,6 +135,7 @@ def proven_reader_words() -> frozenset[str]:
 
 _COUNTRY_BOOLEAN = frozenset(
     {
+        "is_ai",
         "in_default",
         "is_at_war",
         "taking_loans",
@@ -180,6 +181,7 @@ _COUNTRY_NUMBER = frozenset(
         "num_companies",
         "max_num_companies",
         "authority",
+        "influence",
         "institution_investment_level",
         "prestige",
         "num_alliances",
@@ -210,6 +212,7 @@ _UNITS = {
     "average_sol": "standard_of_living",
     "bureaucracy": "capacity_balance",
     "authority": "capacity_balance",
+    "influence": "capacity_balance",
     "num_companies": "company_count",
     "max_num_companies": "company_count",
     "institution_investment_level": "institution_level",
@@ -246,8 +249,17 @@ _UNITS = {
 }
 
 
-def reader_scope(reader: Reader, actor_path: tuple[str, ...]) -> str:
+def reader_scope(
+    reader: Reader, actor_path: tuple[str, ...], *, native_root: str | None = None
+) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
+    root = native_root if native_root is not None else "state" if actor_path else "country"
+    if not isinstance(root, str) or (root, actor_path) not in {
+        ("country", ()),
+        ("state", ("owner",)),
+        ("military_formation", ("owner",)),
+    }:
+        raise ValueError("读取器原生ROOT类型与AI所有者路径不一致")
     if reader.engine == "any_insurrection_ongoing":
         scripted_trigger_snapshot()
         if (
@@ -402,10 +414,10 @@ def reader_scope(reader: Reader, actor_path: tuple[str, ...]) -> str:
         "target_state": "state",
         "interest_group": "interest_group",
     }.get(reader.scope, "country")
-    if reader.scope == "root" and actor_path:
-        scope = "state"
+    if reader.scope == "root":
+        scope = root
     for part in reader.path:
-        if scope == "state" and part == "owner":
+        if scope in {"state", "military_formation"} and part == "owner":
             scope = "country"
         elif scope == "country" and part == "market":
             scope = "market"
@@ -428,9 +440,22 @@ def validate(rules: RuleSet) -> None:
     """同时核对消费者提供的具名上下文和每步读取类型。"""
     readers = {reader.key: reader for reader in rules.readers}
     for reader in rules.readers:
-        reader_scope(reader, rules.actor_path)
+        reader_scope(reader, rules.actor_path, native_root=rules.native_root)
     for rule in rules.rules:
         field = rule.field[1:] if rule.field[0] == "ai_strategy_default" else rule.field
+        if (
+            rules.native_root == "military_formation" or field[0].startswith("mobilization_option_")
+        ) and (
+            rules.native_root != "military_formation"
+            or rules.actor_path != ("owner",)
+            or field
+            not in {
+                ("mobilization_option_first_aid", "ai_weight"),
+                ("mobilization_option_field_hospitals", "ai_weight"),
+            }
+            or rule.operation != "multiply"
+        ):
+            raise ValueError("医疗动员只支持精确候选、编队ROOT及owner国家边界")
         if field == ("wanted_construction_output",) and (
             rule.operation != "multiply" or not math.isfinite(rule.value) or rule.value <= 0
         ):
@@ -455,12 +480,21 @@ def validate(rules: RuleSet) -> None:
 
 
 def consumer(
-    field: tuple[str, ...], actor_path: tuple[str, ...], *, source: str | None = None
+    field: tuple[str, ...],
+    actor_path: tuple[str, ...],
+    *,
+    source: str | None = None,
+    native_root: str | None = None,
 ) -> dict[str, object]:
     """解释实际数值写入的角色、影响级别与不可越过的引擎职责。"""
     leaf = field[-1]
     evidence = "common/ai_strategies/00_default_strategy.txt"
     role = "vanilla_strategy_numeric_evaluation"
+    if (
+        native_root == "military_formation"
+        and source != "common/mobilization_options/00_mobilization_option.txt"
+    ):
+        raise ValueError("编队ROOT消费者必须提供精确医疗动员原件身份")
     if leaf == "ai_enact_weight_modifier":
         evidence, role = "common/laws/readme.md", "vanilla_law_candidate_weight"
     elif leaf == "ai_weight" and source is not None and source.startswith("common/company_types/"):
@@ -468,14 +502,35 @@ def consumer(
             "research/situated/victoria3-1.14.5-company-scope.json",
             "vanilla_company_base_candidate_weight",
         )
+    elif leaf == "ai_weight" and source == "common/mobilization_options/00_mobilization_option.txt":
+        if (
+            native_root != "military_formation"
+            or actor_path != ("owner",)
+            or field[0]
+            not in {"mobilization_option_first_aid", "mobilization_option_field_hospitals"}
+        ):
+            raise ValueError("医疗动员消费者必须保留精确编队ROOT及所属国家角色")
+        evidence, role = (
+            "research/situated/mobilization-opportunities.json",
+            "vanilla_mobilization_utility_multiplier_before_monetary_cost",
+        )
     elif leaf == "ai_weight":
         evidence, role = "common/technology/technologies/", "vanilla_research_candidate_weight"
     elif leaf == "ai_value":
         evidence, role = "common/buildings/buildings.md", "vanilla_state_building_candidate_weight"
+    elif (
+        leaf == "proposal_weight"
+        and source is not None
+        and source.startswith("common/treaty_articles/")
+    ):
+        evidence, role = (
+            "research/situated/treaty-opportunities.json",
+            "vanilla_treaty_article_proposal_multiplier",
+        )
     return {
         "role": role,
         "impact": "B",
-        "root": "state" if actor_path else "country",
+        "root": native_root if native_root is not None else "state" if actor_path else "country",
         "scope_evidence": evidence,
         "scope_evidence_level": "static_vanilla_examples; runtime_behavior_unverified",
         "eligibility_costs_and_execution": "retained_vanilla",

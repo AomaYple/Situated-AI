@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pdx import config, decision_adapters
 
-from . import domain_coverage, inventory, vanilla_inventory
+from . import domain_coverage, inventory, native_treatments, vanilla_inventory
 from .compiler import audit, load_model
 from .families import classify
 from .receipts import AuditResult, CoverageRow, ReceiptStatus, StageReceipt, digest, status_for
@@ -19,6 +19,65 @@ def check() -> list[str]:
         if not item.owner
     )
     return problems
+
+
+def native_report() -> dict[str, object]:
+    """Compare the full native inventory with freshly built production bytes.
+
+    Unlike the legacy production inventory, this denominator does not come
+    from our current rules. Native inheritance is a protection responsibility,
+    never evidence of a newly implemented decision or completed architecture.
+    All game/source verification failures propagate to the caller.
+    """
+    from pdx import distribution  # noqa: PLC0415
+
+    _policy, _extensions, generated = distribution.package_inputs()
+    model = load_model()
+    scope = vanilla_inventory.discover()
+    sources = {
+        source: (config.GAME / source).read_bytes()
+        for source in scope.source_hashes
+        if not source.startswith("@")
+    }
+    coverage = domain_coverage.native_coverage(
+        scope,
+        model.action_instances,
+        explicit_consumers={
+            item.action_id: domain_coverage.NativeConsumerBinding(
+                "common/ai_strategies/00_default_strategy.txt",
+                "ai_strategy_default",
+                item.consumer_field,
+            )
+            for item in model.action_instances
+            if item.kind == "action_card"
+        },
+        native_sources=sources,
+        production_policies=dict(decision_adapters.load().policies),
+    )
+    treatments = native_treatments.native_treatments(
+        scope,
+        sources,
+        {
+            name: text.encode("utf-8") if isinstance(text, str) else text
+            for name, text in generated.items()
+        },
+        coverage=coverage,
+        production_complete=True,
+    )
+    return {
+        "schema": 1,
+        "plan_version": "A2",
+        "evidence_category": "static_check",
+        "scope": scope.as_dict(),
+        "native_coverage": coverage,
+        "native_treatments": treatments,
+        "business_complete": False,
+        "limits": [
+            "native protections and numeric mappings are separate responsibilities",
+            "functional witnesses and stage exits remain independent requirements",
+            "runtime AI behavior, balance and performance are not verified",
+        ],
+    }
 
 
 def report() -> AuditResult:

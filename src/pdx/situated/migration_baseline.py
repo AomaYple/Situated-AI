@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 DEFAULT_SOURCE = Path(__file__).resolve().parents[3] / "research/situated/v3.0.1-migration.json"
 RETIREMENTS_SOURCE = DEFAULT_SOURCE.with_name("a2-retirements.json")
 _MANIFEST_SHA256 = "fcce11e045e9933c13644a361da3a448330208c0b712ac3df615eed307aa55e6"
-_RETIREMENTS_SHA256 = "8a1dca70cd2cc2242b5010c7dc1c3765458bee2571421143cccc2a8e886a7611"
+_RETIREMENTS_SHA256 = "11672a5d20bd20d9d21db36858ba5ded7a9e659462e2a26c3f5470941e8766f1"
 _COMMIT = "74492fc05321c0767cb07202a91797a7663e7ee0"
 _FIELDS = ("source", "definition", "field", "actor", "target", "operation")
 _TAIL = "retain_original_qualification_cost_random_execution"

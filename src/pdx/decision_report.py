@@ -69,7 +69,7 @@ TAXONOMY = (
     (
         "administrative",
         "行政与国家能力",
-        ("bureaucracy", "infrastructure"),
+        ("bureaucracy", "infrastructure", "tax_shortfall", "institution_investment_level"),
         ("institution_", "ai_weight", "bureaucrat"),
         ("fiscal", "political"),
     ),
@@ -111,7 +111,7 @@ TAXONOMY = (
     (
         "diplomacy",
         "外交与条约",
-        ("relations", "alliance", "truce", "diplomatic", "infamy", "embargo"),
+        ("relations", "alliance", "truce", "diplomatic", "infamy", "embargo", "influence"),
         ("treaty", "secret_goal", "wargoal", "recklessness"),
         ("diplomacy",),
     ),
@@ -125,8 +125,8 @@ TAXONOMY = (
     (
         "military",
         "陆军与动员",
-        ("army", "conscription", "artillery", "small_arms", "ammunition"),
-        ("wanted_army", "combat_unit", "conscript", "fleet"),
+        ("army", "conscription", "artillery", "small_arms", "ammunition", "mobilization"),
+        ("wanted_army", "combat_unit", "conscript", "fleet", "mobilization_option"),
         ("military",),
     ),
     (
@@ -160,7 +160,7 @@ TAXONOMY = (
     (
         "identity",
         "身份、文化与路线",
-        ("culture", "identity", "fervor", "homeland", "subject"),
+        ("culture", "identity", "fervor", "homeland", "subject", "is_ai"),
         ("state_value", "economy", "military_defense"),
         ("identity", "diplomacy"),
     ),
@@ -180,6 +180,7 @@ PROFILE_ROLES = {
     engine: role
     for role, engines in {
         "current_guard": (
+            "is_ai",
             "has_truce_with",
             "in_default",
             "is_in_government",
@@ -200,6 +201,7 @@ PROFILE_ROLES = {
             "navy_size",
             "total_population",
             "authority",
+            "influence",
             "max_num_companies",
             "institution_investment_level",
         ),
@@ -298,7 +300,7 @@ def source_metadata() -> dict[str, Any]:
 
     consumers: list[dict[str, object]] = []
     for source, rules in adapters.policies:
-        contract = decision_rules.contract(rules, owner="consumer_adapters")
+        contract = decision_rules.contract(rules, owner="consumer_adapters", source=source)
         contract["source"] = source
         consumers.append(contract)
 
@@ -706,14 +708,14 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
                 or any(
                     not isinstance(key, str)
                     or key not in readers
-                    or readers[key].get("kind") != "boolean"
+                    or readers[key].get("kind") not in {"boolean", "number"}
                     or str(readers[key].get("engine", "")).startswith("sitai_context_")
                     or readers[key].get("engine") == "has_variable"
                     for key in required_known
                 )
                 or len(set(required_known)) != len(required_known)
             ):
-                issues.append(f"{label} 核心知识声明必须是非空、唯一的实际布尔读取器")
+                issues.append(f"{label} 核心知识声明必须是非空、唯一的实际读取器")
             else:
                 referenced.update(required_known)
             for condition in conditions:
