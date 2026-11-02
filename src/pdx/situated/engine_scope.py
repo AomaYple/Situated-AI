@@ -24,6 +24,9 @@ COUNTRY_MANIFEST_SHA256 = "55aca9f3024ce6d7c607926838df778e1711d5eaad6fcad307acb
 COMPANY_MANIFEST_ID = "research/situated/victoria3-1.14.5-company-scope.json"
 COMPANY_MANIFEST = REPO / COMPANY_MANIFEST_ID
 COMPANY_MANIFEST_SHA256 = "fb28823262158216c31b892e3f8fae62852e14d9b79a14f7e75c0adcc8229f8d"
+LAW_MANIFEST_ID = "research/situated/victoria3-1.14.5-law-scope.json"
+LAW_MANIFEST = REPO / LAW_MANIFEST_ID
+LAW_MANIFEST_SHA256 = "eb96a222582705af59147adc6da9e6f2b11533e05a73eb9583e55171f79b0ba9"
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +65,14 @@ class CountryScopeEvidence:
 
 @dataclass(frozen=True, slots=True)
 class CompanyScopeEvidence:
+    verified: bool
+    source_hashes: tuple[tuple[str, str], ...]
+    sources: tuple[str, ...] = ()
+    references: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class LawScopeEvidence:
     verified: bool
     source_hashes: tuple[tuple[str, str], ...]
     sources: tuple[str, ...] = ()
@@ -182,6 +193,41 @@ def company_evidence(game: Path, inputs: Mapping[str, bytes]) -> CompanyScopeEvi
     )
 
 
+def law_evidence(game: Path, inputs: Mapping[str, bytes]) -> LawScopeEvidence:
+    """仅证明法律候选的国家资格门与定义身份，不授予脚本 law 目标。"""
+    data, hashes, verified = _verified_manifest(
+        game,
+        inputs,
+        LAW_MANIFEST,
+        LAW_MANIFEST_ID,
+        LAW_MANIFEST_SHA256,
+        "锁定法律作用域证据",
+    )
+    if data.get("contract") != {
+        "family": "laws",
+        "hook": "ai_will_do",
+        "actor": "country",
+        "target": "definition_only:law_type",
+        "operation": "eligibility",
+        "capability": "direct",
+        "named_targets_proven": [],
+    }:
+        raise ValueError("锁定法律作用域证据的字段合同不一致")
+    if not verified:
+        return LawScopeEvidence(False, hashes)
+    return LawScopeEvidence(
+        True,
+        hashes,
+        tuple(sorted(data["script_hashes"])),
+        (
+            f"{LAW_MANIFEST_ID}:sha256={LAW_MANIFEST_SHA256}",
+            "@engine/binaries/victoria3.exe:0x141548e39",  # 实际候选资格门
+            "@engine/binaries/victoria3.exe:0x14170c2a0",  # 国家触发器包装器
+            "@engine/binaries/victoria3.exe:0x141709d64",  # ai_will_do 精确解析分支
+        ),
+    )
+
+
 def technology_evidence(game: Path, inputs: Mapping[str, bytes]) -> TechnologyScopeEvidence:
     """核对原始字节而不执行游戏；缺少对应平台证据时保持未证明。
 
@@ -216,11 +262,13 @@ def technology_evidence(game: Path, inputs: Mapping[str, bytes]) -> TechnologySc
 __all__ = [
     "CompanyScopeEvidence",
     "CountryScopeEvidence",
+    "LawScopeEvidence",
     "StrategyConsumerEvidence",
     "StrategyScopeEvidence",
     "TechnologyScopeEvidence",
     "company_evidence",
     "country_evidence",
+    "law_evidence",
     "strategy_evidence",
     "technology_evidence",
 ]

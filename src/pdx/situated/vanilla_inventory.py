@@ -1611,11 +1611,31 @@ def _scope(
     strategy_proof: engine_scope.StrategyScopeEvidence | None = None,
     country_proof: engine_scope.CountryScopeEvidence | None = None,
     company_proof: engine_scope.CompanyScopeEvidence | None = None,
+    law_proof: engine_scope.LawScopeEvidence | None = None,
 ) -> _Scope:
     # 这些消费者的作用域不是由字段名猜出来的，而是由锁定原版随附的
     # ``*.md`` 规范明确给出。把规范证据集中在这里，避免把同一条
     # actor/target 结论复制到多个扫描器；如果底本缺少对应文档，则保持
     # pending，不能因为当前文件恰好有 ``ai_*`` 字段就放行。
+    if directory == "laws" and field == ("ai_will_do",):
+        if (
+            law_proof is None
+            or not law_proof.verified
+            or source not in law_proof.sources
+            or definition.op != "="
+            or definition.prefix is not None
+            or not isinstance(definition.value, Block)
+            or (child := _ordinary_child(definition.value, "ai_will_do")) is None
+            or not isinstance(child.value, Block)
+        ):
+            return _Scope()
+        return _Scope(
+            "country",
+            "definition_only:law_type",
+            "eligibility",
+            "direct",
+            (*law_proof.references, f"{source}:{definition.line}"),
+        )
     if directory in {"country_creation", "country_formation"} and field == ("ai_will_do",):
         if (
             country_proof is None
@@ -2360,6 +2380,8 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
     hashes.update(country_proof.source_hashes)
     company_proof = engine_scope.company_evidence(root, inputs)
     hashes.update(company_proof.source_hashes)
+    law_proof = engine_scope.law_evidence(root, inputs)
+    hashes.update(law_proof.source_hashes)
     for name in version:
         hashes[f"@version/{name}.txt"] = hashlib.sha256(
             (root.parent / f"{name}.txt").read_bytes()
@@ -2389,6 +2411,7 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
     strategy_owners: dict[str, set[tuple[str, int]]] = {}
     country_owners: dict[tuple[str, str], set[tuple[str, int]]] = {}
     company_owners: dict[str, set[tuple[str, int]]] = {}
+    law_owners: dict[str, set[tuple[str, int]]] = {}
     parsed_files = 0
     parse_failures: list[str] = []
     for source, raw in sorted(inputs.items()):
@@ -2410,6 +2433,8 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
                 technology_owners.setdefault(definition.key, set()).add((source, definition_index))
             if directory == "ai_strategies":
                 strategy_owners.setdefault(definition.key, set()).add((source, definition_index))
+            if directory == "laws":
+                law_owners.setdefault(definition.key, set()).add((source, definition_index))
             if directory == "company_types":
                 company_owners.setdefault(definition.key, set()).add((source, definition_index))
             if directory in {"country_creation", "country_formation"}:
@@ -2488,6 +2513,7 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
                                 strategy_proof,
                                 country_proof,
                                 company_proof,
+                                law_proof,
                             ),
                         )
                     )
@@ -2528,6 +2554,13 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
                 responsibility_step="D0.03",
             )
         directory = item.source.removeprefix("common/").split("/common/")[-1].split("/")[0]
+        if directory == "laws" and len(law_owners[item.definition]) > 1:
+            item = replace(
+                item,
+                ambiguity="duplicate_law_definition_merge_semantics_unknown",
+                capability="pending",
+                responsibility_step="D0.03",
+            )
         if directory == "company_types" and len(company_owners[item.definition]) > 1:
             item = replace(
                 item,

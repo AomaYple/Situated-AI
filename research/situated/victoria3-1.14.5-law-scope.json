@@ -1,0 +1,749 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.14.5-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54",
+    "bytes": 97774200,
+    "image_base": "0x140000000"
+  },
+  "build_identity": {
+    "caligula_branch": "release/1.14.5",
+    "caligula_rev": "9f8281a37e85639359b3b0c2c5df0196e975ca4b",
+    "clausewitz_branch": "caligula/release/1.14.x",
+    "clausewitz_rev": "fd5e1dbd038c3c4a3f48a36abf60ebb42dd0ceef"
+  },
+  "contract": {
+    "family": "laws",
+    "hook": "ai_will_do",
+    "actor": "country",
+    "target": "definition_only:law_type",
+    "operation": "eligibility",
+    "capability": "direct",
+    "named_targets_proven": []
+  },
+  "script_hashes": {
+    "common/laws/00_army_model.txt": "86c32fb873dd2c192728088b572466d73ef8e0f9cd78130e1e0121803dea17e3",
+    "common/laws/00_bureaucracy.txt": "3d4b720fa18a75f361075504dfc1cf9e0ba1a90200a5b2e6bff9c3a1bad8f98f",
+    "common/laws/00_church_and_state.txt": "ad4e366533b268a86f29813c13aeae6f7472d94de84c35bfe51ce960fd8bb015",
+    "common/laws/00_citizenship.txt": "c006054323511c81b40502810c4ed8f6a806ebde02bf0a3023538e756ec9bb10",
+    "common/laws/00_distribution_of_power.txt": "014b5fcb89d4e4abb86c98c013364117a183daf569c9cb8d4ab0bb5ff833cd04",
+    "common/laws/00_governance_principles.txt": "e676448ea64c17079677ddbf2cbfdbec0ffdefa465286f16c1e6107a14e7f4cf",
+    "common/laws/00_internal_security.txt": "3e7b3fb954ee6d71e87f7e9a5878cadcb8acf9f4704b492c21d20552997caab2",
+    "common/laws/00_navy_model.txt": "6605480a4c4c8cf066822629a2c4b7b0076d95beb6fd854a947e898a507fb414",
+    "common/laws/01_colonial_affairs.txt": "102e57f8941f391b3e80dab5b892051f07a02b8bc8874349f505296eccdd5b1a",
+    "common/laws/01_economic_system.txt": "5ccac1062b2589dd2fb11b5b3c261fb037aa1a5d06a9af4333d11756af492b76",
+    "common/laws/01_education_system.txt": "94508a8b3fe6612b2510aa99466304839e8d69114179deb16031e34cfff16275",
+    "common/laws/01_health_system.txt": "4d015438098f9eea1350bdeb4ffe308e86857c9245e24226ab2e643566e317ed",
+    "common/laws/01_land_reform.txt": "2a6c33fb5c9c44c5876dfb066fc34379b48f382fafa322f483d6d4df02f57a9b",
+    "common/laws/01_policing.txt": "8d6938f1eb556f412ba5353056cd43797f4eea3fb7ea8d6ef6e7e9eeb4a80be3",
+    "common/laws/01_taxation.txt": "dd028ab3863ed9e3754ab91d17e07455661cc2bad2e77f98bfb4b64b59a7c317",
+    "common/laws/01_trade_policy.txt": "f6e0ca1e180c57f994aae1a04ea3e407bfadd4ede85f75f67c303ed16d734e6d",
+    "common/laws/02_childrens_rights.txt": "5c3659a8cfd083511b47ec0637c0ceb570a823029d9fc082f16ad854598d8818",
+    "common/laws/02_labour_associations.txt": "a74414c223efcd5f75a25d4118f9966636146ae5b82e7306fc4c13f07ee12528",
+    "common/laws/02_rights_of_women.txt": "8dcfab1ce6746d59b44070e4a367e3d016affc68eb3dff5353f71f0df730886f",
+    "common/laws/02_slavery.txt": "5771d1e2fbef2c649aed1678b29bac9a94af756d445f9db94faed9e51c9cbd51",
+    "common/laws/02_welfare.txt": "42594f77b4566637631453c60749318f21e154e23d554be166ac68c7cac44784"
+  },
+  "inventory_snapshot": {
+    "declarations": 59,
+    "predicate_sources": 21,
+    "all_law_text_sources": 25,
+    "without_ai_will_do": [
+      "common/laws/00_caste_hegemony.txt",
+      "common/laws/02_free_speech.txt",
+      "common/laws/02_labor_rights.txt",
+      "common/laws/02_migration.txt"
+    ],
+    "declaration_sites": [
+      {
+        "definition": "law_peasant_levies",
+        "source": "common/laws/00_army_model.txt",
+        "source_line": 57
+      },
+      {
+        "definition": "law_warrior_caste",
+        "source": "common/laws/00_army_model.txt",
+        "source_line": 103
+      },
+      {
+        "definition": "law_national_militia",
+        "source": "common/laws/00_army_model.txt",
+        "source_line": 250
+      },
+      {
+        "definition": "law_hereditary_bureaucrats",
+        "source": "common/laws/00_bureaucracy.txt",
+        "source_line": 37
+      },
+      {
+        "definition": "law_crownland_diets",
+        "source": "common/laws/00_bureaucracy.txt",
+        "source_line": 91
+      },
+      {
+        "definition": "law_state_religion",
+        "source": "common/laws/00_church_and_state.txt",
+        "source_line": 66
+      },
+      {
+        "definition": "law_millet_system",
+        "source": "common/laws/00_church_and_state.txt",
+        "source_line": 222
+      },
+      {
+        "definition": "law_people_of_the_book",
+        "source": "common/laws/00_church_and_state.txt",
+        "source_line": 332
+      },
+      {
+        "definition": "law_subjecthood",
+        "source": "common/laws/00_citizenship.txt",
+        "source_line": 116
+      },
+      {
+        "definition": "law_anarchy",
+        "source": "common/laws/00_distribution_of_power.txt",
+        "source_line": 1196
+      },
+      {
+        "definition": "law_single_party_state",
+        "source": "common/laws/00_distribution_of_power.txt",
+        "source_line": 1365
+      },
+      {
+        "definition": "law_monarchy",
+        "source": "common/laws/00_governance_principles.txt",
+        "source_line": 81
+      },
+      {
+        "definition": "law_colonial_administration",
+        "source": "common/laws/00_governance_principles.txt",
+        "source_line": 325
+      },
+      {
+        "definition": "law_presidential_republic",
+        "source": "common/laws/00_governance_principles.txt",
+        "source_line": 396
+      },
+      {
+        "definition": "law_parliamentary_republic",
+        "source": "common/laws/00_governance_principles.txt",
+        "source_line": 543
+      },
+      {
+        "definition": "law_theocracy",
+        "source": "common/laws/00_governance_principles.txt",
+        "source_line": 721
+      },
+      {
+        "definition": "law_council_republic",
+        "source": "common/laws/00_governance_principles.txt",
+        "source_line": 874
+      },
+      {
+        "definition": "law_corporate_state",
+        "source": "common/laws/00_governance_principles.txt",
+        "source_line": 997
+      },
+      {
+        "definition": "law_social_monarchy",
+        "source": "common/laws/00_governance_principles.txt",
+        "source_line": 1249
+      },
+      {
+        "definition": "law_no_home_affairs",
+        "source": "common/laws/00_internal_security.txt",
+        "source_line": 8
+      },
+      {
+        "definition": "law_national_guard",
+        "source": "common/laws/00_internal_security.txt",
+        "source_line": 49
+      },
+      {
+        "definition": "law_merchant_navy",
+        "source": "common/laws/00_navy_model.txt",
+        "source_line": 25
+      },
+      {
+        "definition": "law_no_colonial_affairs",
+        "source": "common/laws/01_colonial_affairs.txt",
+        "source_line": 19
+      },
+      {
+        "definition": "law_frontier_colonization",
+        "source": "common/laws/01_colonial_affairs.txt",
+        "source_line": 116
+      },
+      {
+        "definition": "law_colonial_resettlement",
+        "source": "common/laws/01_colonial_affairs.txt",
+        "source_line": 206
+      },
+      {
+        "definition": "law_colonial_exploitation",
+        "source": "common/laws/01_colonial_affairs.txt",
+        "source_line": 313
+      },
+      {
+        "definition": "law_traditionalism",
+        "source": "common/laws/01_economic_system.txt",
+        "source_line": 43
+      },
+      {
+        "definition": "law_agrarianism",
+        "source": "common/laws/01_economic_system.txt",
+        "source_line": 176
+      },
+      {
+        "definition": "law_industry_banned",
+        "source": "common/laws/01_economic_system.txt",
+        "source_line": 331
+      },
+      {
+        "definition": "law_extraction_economy",
+        "source": "common/laws/01_economic_system.txt",
+        "source_line": 439
+      },
+      {
+        "definition": "law_command_economy",
+        "source": "common/laws/01_economic_system.txt",
+        "source_line": 665
+      },
+      {
+        "definition": "law_no_schools",
+        "source": "common/laws/01_education_system.txt",
+        "source_line": 22
+      },
+      {
+        "definition": "law_no_health_system",
+        "source": "common/laws/01_health_system.txt",
+        "source_line": 11
+      },
+      {
+        "definition": "law_charitable_health_system",
+        "source": "common/laws/01_health_system.txt",
+        "source_line": 48
+      },
+      {
+        "definition": "law_serfdom",
+        "source": "common/laws/01_land_reform.txt",
+        "source_line": 60
+      },
+      {
+        "definition": "law_manorialism",
+        "source": "common/laws/01_land_reform.txt",
+        "source_line": 126
+      },
+      {
+        "definition": "law_latifundias",
+        "source": "common/laws/01_land_reform.txt",
+        "source_line": 273
+      },
+      {
+        "definition": "law_expanded_latifundias",
+        "source": "common/laws/01_land_reform.txt",
+        "source_line": 323
+      },
+      {
+        "definition": "law_no_police",
+        "source": "common/laws/01_policing.txt",
+        "source_line": 16
+      },
+      {
+        "definition": "law_local_police",
+        "source": "common/laws/01_policing.txt",
+        "source_line": 61
+      },
+      {
+        "definition": "law_consumption_based_taxation",
+        "source": "common/laws/01_taxation.txt",
+        "source_line": 38
+      },
+      {
+        "definition": "law_land_based_taxation",
+        "source": "common/laws/01_taxation.txt",
+        "source_line": 85
+      },
+      {
+        "definition": "law_mercantilism",
+        "source": "common/laws/01_trade_policy.txt",
+        "source_line": 26
+      },
+      {
+        "definition": "law_isolationism",
+        "source": "common/laws/01_trade_policy.txt",
+        "source_line": 206
+      },
+      {
+        "definition": "law_canton_system",
+        "source": "common/laws/01_trade_policy.txt",
+        "source_line": 267
+      },
+      {
+        "definition": "law_sakoku",
+        "source": "common/laws/01_trade_policy.txt",
+        "source_line": 327
+      },
+      {
+        "definition": "law_child_labor_allowed",
+        "source": "common/laws/02_childrens_rights.txt",
+        "source_line": 21
+      },
+      {
+        "definition": "law_restricted_child_labor",
+        "source": "common/laws/02_childrens_rights.txt",
+        "source_line": 59
+      },
+      {
+        "definition": "law_guild_system",
+        "source": "common/laws/02_labour_associations.txt",
+        "source_line": 45
+      },
+      {
+        "definition": "law_corporatized_unions",
+        "source": "common/laws/02_labour_associations.txt",
+        "source_line": 326
+      },
+      {
+        "definition": "law_factory_councils",
+        "source": "common/laws/02_labour_associations.txt",
+        "source_line": 409
+      },
+      {
+        "definition": "law_no_womens_rights",
+        "source": "common/laws/02_rights_of_women.txt",
+        "source_line": 25
+      },
+      {
+        "definition": "law_women_in_the_fields",
+        "source": "common/laws/02_rights_of_women.txt",
+        "source_line": 78
+      },
+      {
+        "definition": "law_women_own_property",
+        "source": "common/laws/02_rights_of_women.txt",
+        "source_line": 105
+      },
+      {
+        "definition": "law_women_in_the_workplace",
+        "source": "common/laws/02_rights_of_women.txt",
+        "source_line": 146
+      },
+      {
+        "definition": "law_debt_slavery",
+        "source": "common/laws/02_slavery.txt",
+        "source_line": 283
+      },
+      {
+        "definition": "law_slave_trade",
+        "source": "common/laws/02_slavery.txt",
+        "source_line": 373
+      },
+      {
+        "definition": "law_no_social_security",
+        "source": "common/laws/02_welfare.txt",
+        "source_line": 9
+      },
+      {
+        "definition": "law_chiefs_distribute_aid",
+        "source": "common/laws/02_welfare.txt",
+        "source_line": 63
+      }
+    ]
+  },
+  "control_flow_checks": [
+    {
+      "label": "candidate false skips current",
+      "instruction_va": "0x141548e45",
+      "instruction_bytes": "0f848d020000",
+      "target_va": "0x1415490d8"
+    },
+    {
+      "label": "law trigger wrapper",
+      "instruction_va": "0x1415b9cf7",
+      "instruction_bytes": "e8a4251500",
+      "target_va": "0x14170c2a0"
+    },
+    {
+      "label": "CLawType constructor",
+      "instruction_va": "0x14170d48e",
+      "instruction_bytes": "e81daeffff",
+      "target_va": "0x1417082b0"
+    },
+    {
+      "label": "CCountryLaw constructor",
+      "instruction_va": "0x140efb791",
+      "instruction_bytes": "e80ac9f6ff",
+      "target_va": "0x140e680a0"
+    },
+    {
+      "label": "candidate qualification wrapper",
+      "instruction_va": "0x141548e39",
+      "instruction_bytes": "e8e20c0700",
+      "target_va": "0x1415b9b20"
+    }
+  ],
+  "observations": [
+    {
+      "label": "law-type-vtable",
+      "va": "0x1445b8638",
+      "rva": "0x45b8638",
+      "file_offset": "0x45b7a38",
+      "bytes": "005c634001000000d08970410100000080d66240010000007085ac440100000010bc70410100000050bc70410100000010d1704101000000"
+    },
+    {
+      "label": "law-type-rtti",
+      "va": "0x144ac8598",
+      "rva": "0x4ac8598",
+      "file_offset": "0x4ac7998",
+      "bytes": "010000000000000000000000180e4705d0cb97049885ac04"
+    },
+    {
+      "label": "law-type-name",
+      "va": "0x145470e18",
+      "rva": "0x5470e18",
+      "file_offset": "0x546fa18",
+      "bytes": "40d849440100000000000000000000002e3f4156434c6177547970654040"
+    },
+    {
+      "label": "law-parser-vtable",
+      "va": "0x1445b8600",
+      "rva": "0x45b8600",
+      "file_offset": "0x45b7a00",
+      "bytes": "840d71410100000030787b400100000080d66240010000007072bf4301000000d8767b400100000080d6624001000000"
+    },
+    {
+      "label": "law-parser-rtti",
+      "va": "0x144ac85c0",
+      "rva": "0x4ac85c0",
+      "file_offset": "0x4ac79c0",
+      "bytes": "010000004807000004000000180e4705d0cb9704c085ac04"
+    },
+    {
+      "label": "law-parser-vbtable",
+      "va": "0x1444cbc48",
+      "rva": "0x44cbc48",
+      "file_offset": "0x44cb048",
+      "bytes": "f8ffffff40070000"
+    },
+    {
+      "label": "law-type-constructor",
+      "va": "0x1417082b0",
+      "rva": "0x17082b0",
+      "file_offset": "0x17076b0",
+      "bytes": "48895c242048894c24085556574154415541564157488bec4883ec70498bd8488bf14533f64585c9740d488d056739dc0248894108eb04488b410849637810498378180f7603498b18488d0d90cadc0248890e48634004488d0d4acadc0248894c3008895610448bc7488bd3e8bfd65402894614488d4e18c5f9efc0c5f811014c8971104c8971184c8bc7488bd3e81d56f2fe4c897638488d05ea02eb02488906488b460848634804488d05a002eb024889443108488b4608486348048d91c0f8ffff8954310448"
+    },
+    {
+      "label": "law-trigger-member-construction",
+      "va": "0x14170869e",
+      "rva": "0x170869e",
+      "file_offset": "0x1707a9e",
+      "bytes": "4c89aed0040000488d8ed8040000e84f4ec6014c89a6d8040000488d8e00050000e85c0efdfe4c89b6d8040000"
+    },
+    {
+      "label": "law-parser-thunk",
+      "va": "0x1407b76d8",
+      "rva": "0x7b76d8",
+      "file_offset": "0x7b6ad8",
+      "bytes": "486341fc482bc8e90c23f500"
+    },
+    {
+      "label": "law-parser-entry",
+      "va": "0x1417099f0",
+      "rva": "0x17099f0",
+      "file_offset": "0x1708df0",
+      "bytes": "48895c240848897424105557415441564157488d6c24c94881eca0000000488bda488bf94533ff4181f80d5400000f8fa90700000f84d30600004181f8883700000f8fc70300000f84ad0300004181f81f0c00000f8fc60100000f84ac0100004183e83f0f84870000004183e848746a4183f82e"
+    },
+    {
+      "label": "law-parser-low-dispatch",
+      "va": "0x141709c10",
+      "rva": "0x1709c10",
+      "file_offset": "0x1709010",
+      "bytes": "4181e8df2900000f84470100004181e8cf0900000f84ab000000"
+    },
+    {
+      "label": "ai-will-do-atom",
+      "va": "0x1447992e0",
+      "rva": "0x47992e0",
+      "file_offset": "0x47986e0",
+      "bytes": "df29000000000000e01e764401000000"
+    },
+    {
+      "label": "ai-will-do-name",
+      "va": "0x144761ee0",
+      "rva": "0x4761ee0",
+      "file_offset": "0x47612e0",
+      "bytes": "61695f77696c6c5f646f00"
+    },
+    {
+      "label": "law-parser-trigger-dispatch",
+      "va": "0x141709d64",
+      "rva": "0x1709d64",
+      "file_offset": "0x1709164",
+      "bytes": "4439b9c4fdffff7452c5f9efc0c5f8114507b930000000e8906bf2fe48894507c5fa6f0594622103c5fa7f4517c5fc100d3fecdc02c5fc11088b0d55ecdc0289482044887824488d5507488bcbc5f877e857904e0290e9cbfeffff4881c190fdffffe80565c60141b805000000488b8790fdffff488bd3488d8f90fdffffff5020e9a4060000488d9148fa"
+    },
+    {
+      "label": "law-trigger-wrapper",
+      "va": "0x14170c2a0",
+      "rva": "0x170c2a0",
+      "file_offset": "0x170b6a0",
+      "bytes": "48895c2408488974241048897c24184c8974242055488d6c24a04881ec60010000488bda488bf94533f644897424204c897424284489742430488d4c2438e88d58f5fe488d4d20e8d413f2fe488d35b59b160348897538c5f9efc0c5fa7f45404c897550b80500000066894424208b43184889442428488d8fd0040000488d542420e8096862ff0fb6f848897538488b5d504885db74334c39337426448b430c33d2488bcbe84681ca014489730c488b4b10488b01488b13ff50104c893344897308488bcbe81636b102488b5d484885db742a48833b00741c488bcbe88f7202ff488b4b10488b01488b13ff50104c893344897308488bcbe8e335b102488b4d404885c9740a488b01ba01000000ff1048837d2000741f488d4d20e8507202ff488b4d30488b01488b5520ff50104c89752044897528488b5424384885d274104489742444488b4c2448488b01ff5010400fb6c74c8d9c2460010000498b5b10498b7318498b7b204d8b7328498be35dc3"
+    },
+    {
+      "label": "country-scope-vtable",
+      "va": "0x1445c9b20",
+      "rva": "0x45c9b20",
+      "file_offset": "0x45c8f20",
+      "bytes": "a0a6264101000000c0a861410100000050593543010000003057354301000000e05b354301000000505d35430100000090a6264101000000"
+    },
+    {
+      "label": "country-scope-type",
+      "va": "0x14161a8c0",
+      "rva": "0x161a8c0",
+      "file_offset": "0x1619cc0",
+      "bytes": "b805000000c3"
+    },
+    {
+      "label": "candidate-actor-lookup",
+      "va": "0x141548797",
+      "rva": "0x1548797",
+      "file_offset": "0x1547b97",
+      "bytes": "4d8bf9498bf0488bd9488b4110488945408b40508985c8000000488d8dc8000000e803c228ff4c8be04889442450"
+    },
+    {
+      "label": "candidate-country-law-database",
+      "va": "0x1415487ed",
+      "rva": "0x15487ed",
+      "file_offset": "0x1547bed",
+      "bytes": "488bb908060000488b87200100004805e80e0000488945d0498bd4488bc8e8d0639bff"
+    },
+    {
+      "label": "candidate-law-group-enumeration",
+      "va": "0x141548bec",
+      "rva": "0x1548bec",
+      "file_offset": "0x1547fec",
+      "bytes": "dfe8ae8a8dff4c8bb8800000004863808c000000498d04c7488945584c3bf80f84f00400004d8b374d8bc6418b542418488b4dd0e86b2e9bff48894548488b48"
+    },
+    {
+      "label": "candidate-law-type-enumeration",
+      "va": "0x141548c4d",
+      "rva": "0x1548c4d",
+      "file_offset": "0x154804d",
+      "bytes": "498b4640488945d849634e4c488d0cc848894d50483bc10f84890400004c8b75286690488b00488985c8000000418b4c24188bc125ffff"
+    },
+    {
+      "label": "candidate-country-law-lookup",
+      "va": "0x141548dc2",
+      "rva": "0x1548dc2",
+      "file_offset": "0x15481c2",
+      "bytes": "8bc225ffffff00413b402c73198bc84803c9498b40204c8b6cc8084d85ed74064139550874074c8b2db1ec4e04"
+    },
+    {
+      "label": "candidate-inactive-law-guard",
+      "va": "0x141548df0",
+      "rva": "0x1548df0",
+      "file_offset": "0x15481f0",
+      "bytes": "8b4500498bcdff500884c00f84d702000041807d44007424498b45384c8b6040498d4d40e8a7bb28ff488bd0498bcce8ccef1b0084c00f85a70200"
+    },
+    {
+      "label": "candidate-qualification-arguments",
+      "va": "0x141548e2b",
+      "rva": "0x1548e2b",
+      "file_offset": "0x154822b",
+      "bytes": "004c8bcf4c8bc6488b5538498bcde8e20c07004c8b64245084c00f848d020000"
+    },
+    {
+      "label": "candidate-false-skip",
+      "va": "0x141548e43",
+      "rva": "0x1548e43",
+      "file_offset": "0x1548243",
+      "bytes": "84c00f848d020000"
+    },
+    {
+      "label": "candidate-loop-advance",
+      "va": "0x1415490d8",
+      "rva": "0x15490d8",
+      "file_offset": "0x15484d8",
+      "bytes": "4c8b6c2448488b45d84883c008488945d8483b45500f857dfbffff4983c7084c3b7d580f8510fbffff498b"
+    },
+    {
+      "label": "law-qualification-entry",
+      "va": "0x1415b9b20",
+      "rva": "0x15b9b20",
+      "file_offset": "0x15b8f20",
+      "bytes": "488bc4488958104889681856574154415641574883ec604c8b71384c8be2488bd1498bf9498bd8488be933f64c8d4008498bce8970084533c9897098e82f1b150039b424900000000f"
+    },
+    {
+      "label": "law-qualification-country-lookup",
+      "va": "0x1415b9b6e",
+      "rva": "0x15b9b6e",
+      "file_offset": "0x15b8f6e",
+      "bytes": "8b4540488d8c249000000089842490000000e83bae21ff498bd6488bc84c8bf8e85d456eff84c07407b001e962010000"
+    },
+    {
+      "label": "law-qualification-trigger-call",
+      "va": "0x1415b9cef",
+      "rva": "0x15b9cef",
+      "file_offset": "0x15b90ef",
+      "bytes": "7f0d498bd7498bcee8a4251500eb0232c0"
+    },
+    {
+      "label": "law-qualification-prior-checks",
+      "va": "0x1415b9b9e",
+      "rva": "0x15b9b9e",
+      "file_offset": "0x15b8f9e",
+      "bytes": "4889742430488d54244048897424284533c9440fb7c64889742420488bcd6689b42490000000e877088bff4c8bc5488d8c2490000000498bd7488b30e821fcffff483b300f8c16010000498b0424498bccff1084c00f84f8000000498bb648050000488bcd492bb42448050000e8d0feffff84c00f84ba000000498bd7488d8c2490000000e878f8ffff488b0d69914104ba"
+    },
+    {
+      "label": "country-law-vtable",
+      "va": "0x14454cae8",
+      "rva": "0x454cae8",
+      "file_offset": "0x454bee8",
+      "bytes": "6081e6400100000020c66c4001000000"
+    },
+    {
+      "label": "country-law-rtti",
+      "va": "0x144a36e28",
+      "rva": "0x4a36e28",
+      "file_offset": "0x4a36228",
+      "bytes": "01000000000000000000000088c24605e8b69704286ea304"
+    },
+    {
+      "label": "country-law-name",
+      "va": "0x14546c288",
+      "rva": "0x546c288",
+      "file_offset": "0x546ae88",
+      "bytes": "40d849440100000000000000000000002e3f415643436f756e7472794c61774040"
+    },
+    {
+      "label": "country-law-constructor",
+      "va": "0x140e680a0",
+      "rva": "0xe680a0",
+      "file_offset": "0xe674a0",
+      "bytes": "48895c24084889742410574883ec20488d05324f6603c74108ffffffff488901488bf14883c118418bd8488bfae8ee557cff48897e38488d050b4a6e03488906488d05194a6e03c74630ffffffff48894610895e40488b5c243066c746440000488b053975640348894648488b05fef6bc0448894650488b05237564034889465833c0488946604889467089466848894678898680000000488b050175640348898684000000488bc6488b7424384883c4205fc3"
+    },
+    {
+      "label": "country-law-database-vtable",
+      "va": "0x144551de0",
+      "rva": "0x4551de0",
+      "file_offset": "0x45511e0",
+      "bytes": "70b3ef400100000080d6624001000000f08864400100000080d6624001000000c0b5ef4001000000a07763400100000080d662400100000010b4ef4001000000d0b5ef400100000080d6624001000000b07eee4001000000a00ca44401000000"
+    },
+    {
+      "label": "country-law-db-registration",
+      "va": "0x140efaf60",
+      "rva": "0xefaf60",
+      "file_offset": "0xefa360",
+      "bytes": "48894c2408535556574154415641574883ec30488bf9488d05036e6503488901488d05c16d650348894108488d71104889742478488d5e0848899c24800000004533f64c8976184c89334c89730841bc4000000065488b042558000000488b28418b042c39057610ad040f8f5a0200004c8d3de98d2f044c897b104c8973284c8973184c897320418b042c39054f10ad040f8f690200004c897b28c74330ffffffff44897334c74338ffffff00c7433cffffff0066c743400000c6434200ba00040000488bcbe8856993ff84c0740eba00040000488bcbe8048a93ff90488d05c42e5e03488906c6465000488b0536ecb3044885c07429483bc6741f488d050101b4044889442428488d0d694f6503e86c6cca02488b050decb3044885c0750748893501ecb304c6476001488d5f6848895c2478488bcbe8242673ff904883c31848899c2480000000488d0518926903488903488d5308c5f9efc0c5f811024c89721048c742180f000000c60200488bcbe82ac6510090488d050a355e034889034c8973284c897330418b042c39054d0fad040f8f9d0100004c897b384c8973404c897348418b042c3905310fad040f8fb70100004c897b50488d4b58e89e2573ff44897370488d05b36c6503488907488d05096d650348894708488d05366d6503488987f80000004c89b7000100004c89b708010000418b042c3905df0ead040f8f9b0100004c89bf100100004c89b7180100004c89b7200100004c89b728010000418b042c3905b30ead040f8fa50100004c89bf30010000c5f9efc033c0c5fc11873801000048898758010000c5f877e8295294ff488987400100004c89b748010000c6875001000000c787540100006666663f418b042c3905600ead047f194c89bf58010000488bc74883c430415f41"
+    },
+    {
+      "label": "country-law-db-owner-registration",
+      "va": "0x14106a76f",
+      "rva": "0x106a76f",
+      "file_offset": "0x1069b6f",
+      "bytes": "488d8fe80e0000e8e507e9ff90"
+    },
+    {
+      "label": "country-law-creation",
+      "va": "0x140efb600",
+      "rva": "0xefb600",
+      "file_offset": "0xefaa00",
+      "bytes": "4c8944241855415441554157488bec4883ec58498b004c8be9498bc84d8bf94c8be2ff1084c00f8416030000488b4d38498bd7488b4940e8b4c7800084c00f84fe0200004c8b4d38488d55e8458b4718498bcde8d8070000488bc8e86086dbff488b08488b5108488bc8ffd284c00f85ce02000048899c2480000000418b5f184889b424880000004889bc24980000004c89742450413845580f85fd000000413845590f85f300000041817d50ffffff00752d418b4d3cbafeffff008d04093dffffff000f42d03bca0f84cd000000498d4d18e8d86293ff84c00f84bc000000458b7550498d4d18418d5601e84f8393ff84c00f84a3000000498b4d18418bc625ff030000418bd648c1ea0a458bc64d03c0488d34c048c1e604480334d1498b4d30428b04c141894550428b04c13dffffff0073174803c0c744c104ffffff00498b453042c704c0ffffff0041ff454c41c6455a01498b45308b4e0881e1000000ff81c1000000014a8974c008418b454883f8ff7405443bf0760445897548440bf14885f67415488b5538448bc3488bcee80ac9f6ff44897608eb07488b35fdc2b3048b4608488d4dd88945d8e8ee680000498d4d68488945e8488d55e8e89d3d75ff418b5f18498db580000000448bf34181e6ffffff00443b7634730e488b462842391cf04a8d14f0743d8bd3488bcee8ba69000084c07546488d05b735650348c745f018000000488945e8488d45e84889442428488d0534f9b3044889442420e8b9998cffeb1748634204486bc870488b4640807c0168000f8419010000443b7634720433dbeb21488b462842391cf075f24a6344f004486bd87048035e40807b68000f84ee000000488d55d8488bcbe839ae8dff0fb645384c8d4d3835c59d1c8169c8930100010fb6453933c80fb6453a69d19301000133d00fb6453b69ca9301000133c80fb6453c69d193010001488d4b1833d00fb6453d4469c2930100014433c00fb6453e4169d09301000133d00fb6453f4469c293010001488d55e84433c0488d45d84569c0930100014889442428e866700000418b5718488d4de848c745e814000000e8918ad4ff8b45d8488bbc2498000000488bb42488000000488b9c24800000004c8b74245041890424498bc44883c458415f415d415c5dc341c70424ffffffff498bc44883c458415f415d415c5dc3e8d21a73ffcc"
+    },
+    {
+      "label": "country-law-type-and-country-constructor-arguments",
+      "va": "0x140efb787",
+      "rva": "0xefb787",
+      "file_offset": "0xefab87",
+      "bytes": "488b5538448bc3488bcee80ac9f6ff"
+    },
+    {
+      "label": "country-law-by-type-lookup",
+      "va": "0x140efbe30",
+      "rva": "0xefbe30",
+      "file_offset": "0xefb230",
+      "bytes": "4c894c2420534883ec20418bc0488bda25ffffff003b81b4000000737e448bc8488b81a8000000463904c8756e4a6344c8044c6bd8704c0399c000000041807b680074664c8d442448488d542430498d4b18e82917dcff418b432c450fb64330ffc04103c04898488d0c40498b4320488d14c8488b442430483bc2740e8b4810488bc3890b4883c4205bc3b9ffffffff488bc3890b4883c4205bc3c702ffffff"
+    },
+    {
+      "label": "country-law-by-group-lookup",
+      "va": "0x140efba90",
+      "rva": "0xefba90",
+      "file_offset": "0xefae90",
+      "bytes": "4c89442418574883ec208bc225ffffff003b81b40000000f83b4000000448bc0488b81a8000000423914c00f85a00000004a6344c0044c6bd8704c0399c000000041807b68000f84920000004c8d442440c7442438ffffffff488d542430498d4b40e8b91adcff418b4354450fb64358ffc04103c04898488d0c40498b4348488d14c8488b442430488d4810483bc27505488d4c2438e89581dbff488bf880784400742d488b483848895c2448488b5940488d4840e8768e8dff488bd0488bcbe89bc28000488b5c244884c0488bc77507488b0538bfb3044883c4205fc3e8bd"
+    },
+    {
+      "label": "law-type-construction-call",
+      "va": "0x14170d47e",
+      "rva": "0x170d47e",
+      "file_offset": "0x170c87e",
+      "bytes": "41b9010000004c8d4424308bd7488bcee81daeffff"
+    },
+    {
+      "label": "law-type-db-construction-call",
+      "va": "0x14170ec70",
+      "rva": "0x170ec70",
+      "file_offset": "0x170e070",
+      "bytes": "e8ebecf1fe9041b9010000004c8d4597418bd4498bcfe82596ffff"
+    },
+    {
+      "label": "candidate-downstream-scoring",
+      "va": "0x141549004",
+      "rva": "0x1549004",
+      "file_offset": "0x1548404",
+      "bytes": "488d45e048894424204c8d4db84d8bc5498bd4488d4db0e860000700488b45b04885c00f8eab0000004c3bf0"
+    },
+    {
+      "label": "candidate-score-positive-guard",
+      "va": "0x141549020",
+      "rva": "0x1549020",
+      "file_offset": "0x1548420",
+      "bytes": "488b45b04885c00f8eab0000004c3bf00f8da20000004c8b8dd80000"
+    },
+    {
+      "label": "country-law-database-rtti",
+      "va": "0x144a40c78",
+      "rva": "0x4a40c78",
+      "file_offset": "0x4a40078",
+      "bytes": "01000000000000000000000040a55105d009a404780ca404"
+    },
+    {
+      "label": "country-law-database-name",
+      "va": "0x14551a540",
+      "rva": "0x551a540",
+      "file_offset": "0x5519140",
+      "bytes": "40d849440100000000000000000000002e3f415643436f756e7472794c61774d616e61676572404000"
+    },
+    {
+      "label": "country-scope-rtti",
+      "va": "0x144ade220",
+      "rva": "0x4ade220",
+      "file_offset": "0x4add620",
+      "bytes": "010000000000000000000000085c5c0590e1ad0420e2ad04"
+    },
+    {
+      "label": "country-scope-name",
+      "va": "0x1455c5c08",
+      "rva": "0x55c5c08",
+      "file_offset": "0x55c4808",
+      "bytes": "40d849440100000000000000000000002e3f41563f24434a6f6d696e6953637269707453636f70654f626a656374405643436f756e7472794040404000"
+    }
+  ],
+  "interpretation": [
+    "CLawType RTTI identifies the object at 0x1445b8638; its constructor installs the parser vtable at virtual-base offset 0x740.",
+    "The ai_will_do atom is 0x29df. The field parser branches to 0x141709d64, selects parser receiver -0x270 (= CLawType +0x4d0/0x4d8 trigger pair), and passes country scope tag 5 to its parser interface.",
+    "Candidate iteration resolves a CCountryLaw for the actor and candidate law type. CCountryLaw stores law type at +0x38 and actor country ID at +0x40; its RTTI and constructor are separately frozen.",
+    "The candidate qualification call at 0x141548e39 enters 0x1415b9b20. The observed successful prior-check path calls the CLawType trigger wrapper at 0x1415b9cf7 with the candidate type and resolved country.",
+    "The trigger wrapper at 0x14170c2a0 evaluates the +0x4d0 member in a tag-5 context containing country +0x18. Candidate type identity is available to the native caller; this does not establish a named script law scope.",
+    "A false qualification return branches to 0x1415490d8, advancing the current candidate loop. Downstream scoring and positive-score rejection execute separately and remain vanilla-owned."
+  ],
+  "limits": [
+    "Only the observed laws.ai_will_do eligibility consumer is proven, for exact hashed sources and this Windows executable.",
+    "Definition identity does not authorize scope:law, a named saved scope, a generic getter, numeric score lowering, adjacent AI fields, or production integration.",
+    "A true predicate passes this observed gate only; other eligibility, political support, costs, randomization, command execution and fallback behavior remain authoritative.",
+    "This is read-only executable and script static evidence. It does not execute the game or prove AI behavior, balance, selection frequency or engine performance.",
+    "The 21 script hashes cover the 59 existing predicate declarations. All 25 law text files remain in discovery; four without ai_will_do acquire no predicate proof from this manifest."
+  ]
+}

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import struct
 
 import pytest
 
@@ -189,3 +190,53 @@ def test_frozen_law_manifest_retains_complete_source_and_control_flow_evidence()
     assert points["country-law-db-registration"]["va"] == "0x140efaf60"
     assert len(bytes.fromhex(points["country-law-creation"]["bytes"])) == 0x35F
     assert len(data["observations"]) >= 40
+
+
+def test_frozen_law_control_flow_targets_follow_attested_instruction_bytes():
+    data = json.loads(engine_scope.LAW_MANIFEST.read_bytes())
+    points = data["observations"]
+    for check in data["control_flow_checks"]:
+        address = int(check["instruction_va"], 16)
+        raw = bytes.fromhex(check["instruction_bytes"])
+        assert raw[:1] == b"\xe8" or raw[:2] == b"\x0f\x84"
+        displacement = struct.unpack_from("<i", raw, len(raw) - 4)[0]
+        assert address + len(raw) + displacement == int(check["target_va"], 16)
+        assert any(
+            address - int(point["va"], 16) >= 0
+            and bytes.fromhex(point["bytes"])[
+                address - int(point["va"], 16) : address - int(point["va"], 16) + len(raw)
+            ]
+            == raw
+            for point in points
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("family", "companies"),
+        ("hook", "ai_weight"),
+        ("actor", "law"),
+        ("operation", "base_candidate_score"),
+        ("capability", "indirect"),
+        ("named_targets_proven", ["scope:law"]),
+    ],
+)
+def test_law_attestation_cannot_authorize_an_adjacent_contract(law_proof, field, value):
+    game, _, _, inputs, data, freeze = law_proof
+    data["contract"][field] = value
+    freeze()
+    with pytest.raises(ValueError, match="锁定法律作用域证据的字段合同不一致"):
+        engine_scope.law_evidence(game, inputs)
+
+
+def test_verified_law_evidence_is_limited_to_frozen_sources(law_proof):
+    game, exe, source, inputs, _, _ = law_proof
+    evidence = engine_scope.law_evidence(game, inputs)
+    assert evidence.verified
+    assert evidence.sources == (source,)
+    assert any("0x141548e39" in ref for ref in evidence.references)
+    exe.unlink()
+    unavailable = engine_scope.law_evidence(game, inputs)
+    assert not unavailable.verified
+    assert unavailable.sources == unavailable.references == ()

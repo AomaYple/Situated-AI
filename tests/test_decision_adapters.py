@@ -1050,6 +1050,10 @@ def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | No
 
     def condition(assignment, current):
         key, value = assignment.key, assignment.value
+        if key == "always":
+            assert isinstance(value, Scalar)
+            assert value.unquoted in {"yes", "no"}
+            return value.unquoted == "yes"
         if key == "exists":
             assert isinstance(value, Scalar)
             return value.unquoted in (
@@ -1124,25 +1128,81 @@ def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | No
             return isinstance(other, (int, float)) and operators[assignment.op](actual, other)
         return operators[assignment.op](actual, float(literal))
 
-    matched = False
-    for branch in block.assignments():
-        assert branch.key in {"if", "else_if"}
-        assert isinstance(branch.value, Block)
-        if branch.key == "if":
-            matched = False
-        if matched:
-            continue
-        limit = branch.value.first("limit")
-        assert limit is not None
-        assert isinstance(limit.value, Block)
-        if all(condition(item, {}) for item in limit.value.assignments()):
-            matched = True
-            adjustments = [item for item in branch.value.assignments() if item.key != "limit"]
-            assert len(adjustments) == 1
-            adjustment = adjustments[0]
-            assert isinstance(adjustment.value, Scalar)
-            return adjustment.key, float(adjustment.value.unquoted)
-    return None
+    def execute(statements: Block) -> tuple[str, float] | None:
+        matched = False
+        result = None
+        for statement in statements.assignments():
+            if statement.key == "limit":
+                continue
+            if statement.key in {"if", "else_if", "else"}:
+                assert isinstance(statement.value, Block)
+                if statement.key == "if":
+                    matched = False
+                if matched:
+                    continue
+                limit = statement.value.first("limit")
+                if statement.key != "else":
+                    assert limit is not None
+                    assert isinstance(limit.value, Block)
+                    if not all(condition(item, {}) for item in limit.value.assignments()):
+                        continue
+                else:
+                    assert limit is None
+                matched = True
+                adjustment = execute(statement.value)
+                if adjustment is not None:
+                    assert result is None
+                    result = adjustment
+            else:
+                assert statement.key in {"add", "multiply"}
+                assert isinstance(statement.value, Scalar)
+                assert result is None
+                result = statement.key, float(statement.value.unquoted)
+        return result
+
+    return execute(block)
+
+
+@pytest.mark.parametrize(
+    ("script", "expected"),
+    [
+        (
+            "if = { limit = { always = yes } if = { limit = { always = yes } add = 2 } }",
+            ("add", 2.0),
+        ),
+        (
+            (
+                "if = { limit = { always = yes } "
+                "if = { limit = { always = no } add = 2 } } "
+                "else_if = { limit = { always = yes } add = 3 } "
+                "else = { add = 4 }"
+            ),
+            None,
+        ),
+        (
+            (
+                "if = { limit = { always = no } add = 2 } "
+                "else_if = { limit = { always = yes } "
+                "if = { limit = { always = no } add = 3 } "
+                "else = { multiply = 1.3 } } "
+                "else = { add = 4 }"
+            ),
+            ("multiply", 1.3),
+        ),
+        (
+            (
+                "if = { limit = { always = no } add = 2 } "
+                "else_if = { limit = { always = no } add = 3 } "
+                "else = { add = 4 }"
+            ),
+            ("add", 4.0),
+        ),
+    ],
+)
+def test_adjustment_interpreter_executes_nested_conditional_chains(script, expected):
+    parsed = parse_text(script)
+    assert not parsed.errors
+    assert _interpret_adjustments(parsed.root, {}) == expected
 
 
 @pytest.mark.integration
