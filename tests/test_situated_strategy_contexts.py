@@ -45,6 +45,10 @@ def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
         "wanted_construction_output",
         "institution_scores",
         "min_law_chance_to_pass",
+        "wargoal_scores",
+        "secret_goal_scores",
+        "wanted_navy_size",
+        "ship_construction_output_multiplier",
     }
     context = snapshot[field]
     assert context.status == "observed"

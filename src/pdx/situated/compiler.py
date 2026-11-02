@@ -339,6 +339,20 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             "pass_chance",
             "0x141646d23",
         ),
+        "wargoal_scores": ("target_country", "additive_score", "score", "0x1416438ea"),
+        "secret_goal_scores": ("target_country", "additive_score", "score", "0x1416436fd"),
+        "wanted_navy_size": (
+            None,
+            "additive_navy_size_target",
+            "naval_administration_levels",
+            "0x1415ad3b7",
+        ),
+        "ship_construction_output_multiplier": (
+            None,
+            "additive_ship_construction_output_multiplier",
+            "multiplier",
+            "0x1415adadb",
+        ),
     }
     result = {}
     source = engine_scope.STRATEGY_MANIFEST_ID
@@ -346,7 +360,9 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
         expected = {
             "actor_scope": "country",
             "target_scope": (
-                f"scope:{target}=country"
+                "scope:target_country=country;scope:target_state=state"
+                if field == "wargoal_scores"
+                else f"scope:{target}=country"
                 if target is not None
                 else "definition_only:institution_type"
                 if field == "institution_scores"
@@ -363,13 +379,23 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
         if (
             any(actual.get(key) != value for key, value in expected.items())
             if field
-            in {"wanted_construction_output", "institution_scores", "min_law_chance_to_pass"}
+            in {
+                "wanted_construction_output",
+                "institution_scores",
+                "min_law_chance_to_pass",
+                "wargoal_scores",
+                "secret_goal_scores",
+                "wanted_navy_size",
+                "ship_construction_output_multiplier",
+            }
             else actual != expected
         ):
             raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
         entries = list(
             re.finditer(
-                rf'^\s*"{field}"\s*:\s*\{{(?P<body>.*?)^\s*\}}', text, re.MULTILINE | re.DOTALL
+                rf'^    "{field}"\s*:\s*\{{(?P<body>\s*"actor_scope".*?)^    \}}',
+                text,
+                re.MULTILINE | re.DOTALL,
             )
         )
         if len(entries) != 1:
@@ -394,7 +420,16 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
         )
         result[field] = decision_ir.EvaluationContext(
             actor_scope=actor,
-            targets=(target_binding,) if target_binding is not None else (),
+            targets=(
+                target_binding,
+                decision_ir.ContextBinding(
+                    "target_state", "state", "target", source, locations["target_scope"]
+                ),
+            )
+            if target_binding is not None and field == "wargoal_scores"
+            else (target_binding,)
+            if target_binding is not None
+            else (),
             auxiliary_scopes=(
                 decision_ir.ContextBinding(
                     "law", "law", "auxiliary", source, locations["target_scope"]
@@ -443,6 +478,38 @@ def _frozen_institution_contexts(
     if scores is None:
         raise ValueError("制度策略必须有唯一合法制度定义 key 的普通数值子块")
     return {f"institution_scores.{item.key}": context for item in scores.assignments()}
+
+
+def _frozen_strategy_score_contexts(
+    contexts: dict[str, decision_ir.EvaluationContext],
+) -> dict[str, decision_ir.EvaluationContext]:
+    """Project pinned enum numeric children without authorizing the map or trigger."""
+    data = json.loads(engine_scope.strategy_snapshot())
+    raw = BASELINE.read_bytes()
+    source = "common/ai_strategies/00_default_strategy.txt"
+    if data["script_hashes"][source] not in {
+        hashlib.sha256(raw).hexdigest(),
+        hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest(),
+    }:
+        raise ValueError("冻结目标策略原件 SHA 与引擎证据不一致")
+    parsed = parse_text(raw.decode("utf-8-sig"))
+    definitions = [item for item in parsed.top_assignments if item.key == "ai_strategy_default"]
+    result = {}
+    for family in ("wargoal_scores", "secret_goal_scores"):
+        scores = (
+            vanilla_inventory._strategy_score_map(
+                definitions[0], family, frozenset(data["strategy_score_keys"][family])
+            )
+            if not parsed.errors and len(definitions) == 1
+            else None
+        )
+        if scores is None:
+            raise ValueError(f"目标策略必须有唯一合法枚举 key 的普通数值子块：{family}")
+        suffix = ".score" if family == "secret_goal_scores" else ""
+        result.update(
+            {f"{family}.{item.key}{suffix}": contexts[family] for item in scores.assignments()}
+        )
+    return result
 
 
 def _frozen_company_context() -> decision_ir.EvaluationContext:
@@ -500,6 +567,17 @@ def validate_context_readers(
         if len(parts) != 2 or parts[1] not in definitions:
             raise ValueError(f"消费者 {field} 不是已证明的精确制度数值子块")
         field = "institution_scores"
+    family = field.split(".")[0]
+    if family in {"wargoal_scores", "secret_goal_scores"}:
+        parts = field.split(".")
+        keys = json.loads(engine_scope.strategy_snapshot())["strategy_score_keys"][family]
+        if (
+            len(parts) != (3 if family == "secret_goal_scores" else 2)
+            or parts[1] not in keys
+            or (family == "secret_goal_scores" and parts[2] != "score")
+        ):
+            raise ValueError(f"消费者 {field} 不是已证明的精确枚举数值子块")
+        field = family
     shapes = {
         "subject_value": {"root": ("country", "actor"), "target_country": ("country", "target")},
         "recklessness": {"root": ("country", "actor"), "target_country": ("country", "target")},
@@ -529,6 +607,17 @@ def validate_context_readers(
     shapes["wanted_construction_output"] = {"root": ("country", "actor")}
     shapes["institution_scores"] = {"root": ("country", "actor")}
     shapes["min_law_chance_to_pass"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
+    shapes["wargoal_scores"] = {
+        "root": ("country", "actor"),
+        "target_country": ("country", "target"),
+        "target_state": ("state", "target"),
+    }
+    shapes["secret_goal_scores"] = {
+        "root": ("country", "actor"),
+        "target_country": ("country", "target"),
+    }
+    shapes["wanted_navy_size"] = {"root": ("country", "actor")}
+    shapes["ship_construction_output_multiplier"] = {"root": ("country", "actor")}
     formation_shape = {
         "root": ("country", "actor"),
         "military_formation": ("military_formation", "auxiliary"),
@@ -555,6 +644,10 @@ def validate_context_readers(
             "wanted_construction_output",
             "institution_scores",
             "min_law_chance_to_pass",
+            "wargoal_scores",
+            "secret_goal_scores",
+            "wanted_navy_size",
+            "ship_construction_output_multiplier",
         }
         and {name: (binding.kind, binding.role) for name, binding in bindings.items()}
         != shapes[field]
@@ -1204,6 +1297,7 @@ def load_model(
     observed_contexts = evaluation_contexts(baseline_text)
     observed_contexts.update(_frozen_strategy_contexts())
     observed_contexts.update(_frozen_institution_contexts(observed_contexts["institution_scores"]))
+    observed_contexts.update(_frozen_strategy_score_contexts(observed_contexts))
     law_context = _frozen_law_context()
     company_context = _frozen_company_context()
     context_readers = {}
@@ -1222,6 +1316,17 @@ def load_model(
                 and (field == "institution_scores" or field not in observed_contexts)
             ):
                 raise ValueError(f"制度策略消费者不是精确普通数值子块：{field}")
+            family = field.split(".")[0]
+            if (
+                source
+                in {
+                    "mod/decisions/information.toml",
+                    "common/ai_strategies/00_default_strategy.txt",
+                }
+                and family in {"wargoal_scores", "secret_goal_scores"}
+                and (field == family or field not in observed_contexts)
+            ):
+                raise ValueError(f"目标策略消费者不是精确普通数值子块：{field}")
             context = (
                 observed_contexts.get(field)
                 if source

@@ -15,9 +15,9 @@ REPO = Path(__file__).resolve().parents[3]
 MANIFEST = REPO / "research/situated/victoria3-1.14.5-technology-scope.json"
 MANIFEST_ID = "research/situated/victoria3-1.14.5-technology-scope.json"
 MANIFEST_SHA256 = "de12ca6de8d06b54f40f78e3fe807e15c271b987fafb45b576b896bc21284c90"
-STRATEGY_MANIFEST_ID = "research/situated/victoria3-1.14.5-strategy-scope-r3.json"
+STRATEGY_MANIFEST_ID = "research/situated/victoria3-1.14.5-strategy-scope-r5.json"
 STRATEGY_MANIFEST = REPO / STRATEGY_MANIFEST_ID
-STRATEGY_MANIFEST_SHA256 = "83b369cd1f40e588428410912cfb9fcea43f823f0604ee38283bcbf7677adba3"
+STRATEGY_MANIFEST_SHA256 = "e852bcd7f73d5da44f50c314a6ed921fa9aad4c32e2dbabf31ee536d3e6be463"
 COUNTRY_MANIFEST_ID = "research/situated/victoria3-1.14.5-country-definition-scope.json"
 COUNTRY_MANIFEST = REPO / COUNTRY_MANIFEST_ID
 COUNTRY_MANIFEST_SHA256 = "55aca9f3024ce6d7c607926838df778e1711d5eaad6fcad307acbcf485734a88"
@@ -157,9 +157,140 @@ def _validate_strategy_contracts(data: Mapping[str, Any]) -> None:
             "member_offset": "0x9b8",
         },
     }
+    expected.update(
+        {
+            "wargoal_scores": {
+                "actor_scope": "country",
+                "target_scope": "scope:target_country=country;scope:target_state=state",
+                "operation": "additive_score",
+                "unit": "score",
+                "capability": "direct",
+                "parser_va": "0x141641285",
+                "consumer_va": "0x1416438ea",
+                "member_offset": "0x1d8",
+                "child_projection": "exact enum child numeric body",
+            },
+            "secret_goal_scores": {
+                "actor_scope": "country",
+                "target_scope": "scope:target_country=country",
+                "operation": "additive_score",
+                "unit": "score",
+                "capability": "direct",
+                "parser_va": "0x141641481",
+                "consumer_va": "0x1416436fd",
+                "member_offset": "0x2a0",
+                "child_projection": "exact enum child.score only; trigger remains native filter",
+            },
+            "wanted_navy_size": {
+                "actor_scope": "country",
+                "target_scope": "none",
+                "operation": "additive_navy_size_target",
+                "unit": "naval_administration_levels",
+                "capability": "direct",
+                "parser_va": "0x141641888",
+                "member_offset": "0x1a60",
+                "consumer_va": "0x1415ad3b7",
+            },
+            "ship_construction_output_multiplier": {
+                "actor_scope": "country",
+                "target_scope": "none",
+                "operation": "additive_ship_construction_output_multiplier",
+                "unit": "multiplier",
+                "capability": "direct",
+                "parser_va": "0x141641cb2",
+                "member_offset": "0x1be0",
+                "consumer_va": "0x1415adadb",
+            },
+        }
+    )
     for field, contract in expected.items():
         if data.get("consumers", {}).get(field) != contract:
             raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
+    if set(data.get("consumers", {})) != {
+        "max_progressiveness",
+        "obligation_value",
+        "revolution_aversion",
+        "wanted_navy_size",
+        "ship_construction_output_multiplier",
+        "secret_goal_scores",
+        "institution_scores",
+        "wargoal_maneuvers_fraction",
+        "become_subject_value",
+        "change_law_chance",
+        "max_regressiveness",
+        "wanted_construction_output",
+        "wargoal_scores",
+        "weight",
+        "subject_value",
+        "min_law_chance_to_pass",
+        "possible",
+        "wanted_army_size",
+        "recklessness",
+    }:
+        raise ValueError("锁定策略消费者字段合同集合不一致")
+    if data.get("strategy_score_keys") != {
+        "wargoal_scores": [
+            "annex_country",
+            "ban_slavery",
+            "break_enforced_treaties",
+            "colonization_rights",
+            "conquer_state",
+            "contain_threat",
+            "demand_no_strait_closure",
+            "demand_no_tolls",
+            "demand_strait_access",
+            "demand_toll_exemption",
+            "enforce_treaty_article",
+            "force_nationalization",
+            "foreign_investment_rights",
+            "humiliation",
+            "increase_autonomy",
+            "independence",
+            "join_power_bloc",
+            "leave_power_bloc",
+            "liberate_country",
+            "liberate_subject",
+            "make_subject",
+            "open_market",
+            "reduce_autonomy",
+            "regime_change",
+            "release_as_subject",
+            "return_state",
+            "revoke_all_claims",
+            "revoke_claim",
+            "secession",
+            "take_treaty_port",
+            "transfer_subject",
+            "unification",
+            "unification_leadership",
+            "custom",
+        ],
+        "secret_goal_scores": [
+            "none",
+            "befriend",
+            "reconcile",
+            "protect",
+            "antagonize",
+            "conquer",
+            "dominate",
+            "comply",
+            "defy",
+        ],
+    }:
+        raise ValueError("锁定策略评分枚举证据不一致")
+    if data.get("native_unprojected_contexts") != {
+        "wargoal_scores": {
+            "diplomatic_play": {
+                "status": "unprojected_unknown",
+                "scope_tag": "0x1c",
+                "key_va": "0x145a94914",
+                "registration_va": "0x1416438d0",
+                "condition": "play id != -1",
+                "reader_authorization": False,
+            }
+        }
+    }:
+        raise ValueError("锁定策略未投影上下文证据不一致")
     if data.get("law_instance_type") != {
         "scope_tag": "0x31",
         "native_type": "CCountryLaw",

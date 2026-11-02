@@ -1415,4 +1415,3 @@ company_b_grimm = {
 		# SITAI END information:company_b_grimm.ai_weight
 	}
 }
-

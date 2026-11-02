@@ -28,6 +28,10 @@ _PRIVATE_METHOD = "common/production_methods/11_private_infrastructure.txt"
 _POWER_METHOD = "common/production_methods/06_urban_center.txt"
 _GOODS = "common/goods/00_goods.txt"
 _ART = "common/journal_entries/00_art_jes.txt"
+_OPIUM = "common/journal_entries/00_opium.txt"
+_MINES_BUILDING = "common/buildings/03_mines.txt"
+_MINES_GROUP = "common/production_method_groups/03_mines.txt"
+_MINES_METHOD = "common/production_methods/03_mines.txt"
 SOURCE_HASHES = {
     _COMPANY: "59546f6105092bad8935498d917a6012aa508c58bea873e462dd66a5850f2f1d",
     _PRIVATE_BUILDING: "3438f826295bb37ae52823121209734042e759c64c453754bde6876d44f9f35b",
@@ -39,6 +43,10 @@ SOURCE_HASHES = {
     _POWER_METHOD: "d9f0e653d3d0c1783fd4e9880fb58a6ada795d0ed3a3fdec011f0d1ce28da71f",
     _GOODS: "496810f9b21012cb3ae764e4c0cd65aafa85b6079f96d3d2a6b3dece92a0afcc",
     _ART: "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5",
+    _OPIUM: "c8e51f799ffe192b1789c91ab6d0772d9dd028b5610529907e6a1a7760509dc8",
+    _MINES_BUILDING: "6b3e9846022b6e4f998be0b131fc7c465a2a592d70c7c6ff6786e158aec68992",
+    _MINES_GROUP: "995d2a9a19c99c5b64c3136c886be439c9a7e578d0a796980a1eebdbeddba0bd",
+    _MINES_METHOD: "80eaa71892c2c6da5b5c4e1d954161ec7d4172386a35a6b4fd47603a0565fb39",
 }
 PORT_METHODS = frozenset({"pm_basic_port", "pm_industrial_port", "pm_modern_port"})
 QUERY_ENGINES = frozenset({"any_scope_state", "any_scope_building"})
@@ -64,7 +72,19 @@ class PortMethod:
     method_id: str
 
 
-CompanyQuery = RailInfrastructure | PowerScarcity | PortMethod
+@dataclass(frozen=True, slots=True)
+class ExistingBusiness:
+    """Operating business, not trade-capacity scarcity or JE completion.
+
+    Level one deliberately identifies existing operations. The original opium
+    JE requires ten levels for its own objective; that objective is not copied.
+    """
+
+    building_id: str
+    strong: bool = False
+
+
+CompanyQuery = RailInfrastructure | PowerScarcity | PortMethod | ExistingBusiness
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +147,13 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CompanyQuery:
         and set(parameters) == {"company_query", "method"}
     ):
         query = PortMethod(parameters["method"])
+    elif (
+        engine == "any_scope_building"
+        and tag == "existing_business"
+        and set(parameters) == {"company_query", "building", "tier"}
+        and parameters["tier"] in {"base", "strong"}
+    ):
+        query = ExistingBusiness(parameters["building"], parameters["tier"] == "strong")
     else:
         raise ValueError("公司查询引擎、标识或参数形状未登记")
     render(query)
@@ -134,6 +161,19 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CompanyQuery:
 
 
 def render(query: CompanyQuery) -> str:
+    if type(query) is ExistingBusiness:
+        if (
+            not isinstance(query.building_id, str)
+            or query.building_id not in {"building_gold_mine", "building_trade_center"}
+            or type(query.strong) is not bool
+        ):
+            raise ValueError("经营机会只允许金矿/贸易中心与明确布尔档位")
+        cash = " cash_reserves_ratio > 0.5" if query.strong else ""
+        occupancy = "0.9" if query.strong else "0.75"
+        return (
+            f"any_scope_building = {{ is_building_type = {query.building_id} "
+            f"weekly_profit > 0{cash} occupancy >= {occupancy} level >= 1 }}"
+        )
     if type(query) is RailInfrastructure:
         price = ""
         if query.minimum_transport_price is not None:
@@ -174,10 +214,18 @@ def reader_spec(query: CompanyQuery) -> dict[str, Any]:
             "company_query": "power_scarcity",
             "minimum_price": repr(_price(query.minimum_price)),
         }
+    elif isinstance(query, ExistingBusiness):
+        parameters = {
+            "company_query": "existing_business",
+            "building": query.building_id,
+            "tier": "strong" if query.strong else "base",
+        }
     else:
         parameters = {"company_query": "port_method", "method": query.method_id}
     return {
-        "engine": "any_scope_building" if isinstance(query, PortMethod) else "any_scope_state",
+        "engine": "any_scope_building"
+        if isinstance(query, (PortMethod, ExistingBusiness))
+        else "any_scope_state",
         "parameters": parameters,
         "scope": "root",
         "kind": "boolean",
@@ -187,6 +235,10 @@ def reader_spec(query: CompanyQuery) -> dict[str, Any]:
 
 def required_sources(query: CompanyQuery) -> tuple[str, ...]:
     render(query)
+    if isinstance(query, ExistingBusiness):
+        if query.building_id == "building_gold_mine":
+            return tuple(sorted({_OPIUM, _MINES_BUILDING, _MINES_GROUP, _MINES_METHOD, _GOODS}))
+        return tuple(sorted({_OPIUM, _PRIVATE_BUILDING, _RAIL_GROUP, _PRIVATE_METHOD}))
     common = {_PRIVATE_BUILDING, _GOODS}
     if isinstance(query, PortMethod):
         return tuple(sorted(common | {_ART, _PORT_GROUP, _PRIVATE_METHOD}))
@@ -288,13 +340,86 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
     references = []
     collections: tuple[str, ...]
     chain: tuple[str, ...]
+    methods: tuple[str, ...]
 
     def reference(source: str, key: str) -> Block:
         block = _child(roots[source], key)
         references.append(f"{source}:{_entry(roots[source], key).line}")
         return block
 
-    if isinstance(query, PortMethod):
+    if isinstance(query, ExistingBusiness):
+        native = _child(reference(_OPIUM, "je_opium"), "complete")
+        line = _exact(
+            native,
+            "any_scope_building",
+            "is_building_type = building_opium_plantation cash_reserves_ratio > 0.5 "
+            "weekly_profit > 0 occupancy >= 0.75 level >= 10",
+        )
+        references.append(f"{_OPIUM}:{line}")
+        if query.building_id == "building_gold_mine":
+            building = reference(_MINES_BUILDING, query.building_id)
+            group_id = "pmg_mining_equipment_building_gold_mine"
+            if group_id not in _list(building, "production_method_groups"):
+                raise ValueError("金矿经营查询失去实际基础开采组")
+            group = reference(_MINES_GROUP, group_id)
+            methods = (
+                "pm_picks_and_shovels_building_gold_mine",
+                "pm_atmospheric_engine_pump_building_gold_mine",
+                "pm_condensing_engine_pump_building_gold_mine",
+                "pm_diesel_pump_building_gold_mine",
+            )
+            if _list(group, "production_methods") != methods:
+                raise ValueError("金矿基础开采组必须完整非空且身份精确")
+            for method_id, output, tools, fuel, amount, minting in zip(
+                methods,
+                (8, 15, 25, 30),
+                (5, 10, 15, 15),
+                (None, "coal", "coal", "oil"),
+                (0, 10, 15, 5),
+                (250, 500, 750, 1000),
+                strict=True,
+            ):
+                method = reference(_MINES_METHOD, method_id)
+                recipe = {
+                    "goods_output_gold_add": float(output),
+                    "goods_input_tools_add": float(tools),
+                }
+                if fuel is not None:
+                    recipe[f"goods_input_{fuel}_add"] = float(amount)
+                _recipe(method, recipe)
+                country = _child(_child(method, "country_modifiers"), "workforce_scaled")
+                if _scalar(country, "country_minting_add") != str(minting):
+                    raise ValueError("金矿基础PM失去已证明的正就业规模铸币收入")
+            good = reference(_GOODS, "gold")
+            if _scalar(good, "fixed_price") != "yes" or _scalar(good, "tradeable") != "no":
+                raise ValueError("金矿经营查询失去固定价/不可贸易机制")
+        else:
+            building = reference(_PRIVATE_BUILDING, query.building_id)
+            group_id = "pmg_base_building_trade_center"
+            if group_id not in _list(building, "production_method_groups"):
+                raise ValueError("贸易经营查询失去实际服务PM组")
+            group = reference(_RAIL_GROUP, group_id)
+            methods = ("pm_trade_center", "pm_trade_center_principle_external_trade_2")
+            if _list(group, "production_methods") != methods:
+                raise ValueError("贸易基础服务组必须完整非空且身份精确")
+            for method_id in methods:
+                method = reference(_PRIVATE_METHOD, method_id)
+                state = _child(_child(method, "state_modifiers"), "workforce_scaled")
+                if (
+                    _scalar(state, "state_weekly_trades_add") != "1"
+                    or _scalar(state, "state_trade_capacity_add") != "10"
+                ):
+                    raise ValueError("贸易基础PM失去真实每周贸易/贸易容量服务")
+        collections = ("owned_buildings",)
+        chain = (
+            "country:any_scope_building->owned_building",
+            "building:is_building_type+level[building_levels]",
+            "building:weekly_profit[currency_per_week]>0",
+            "building:occupancy[ratio]>=.75"
+            if not query.strong
+            else "building:occupancy[ratio]>=.9+cash_reserves_ratio[ratio]>.5",
+        )
+    elif isinstance(query, PortMethod):
         native = _child(reference(_ART, "je_romanticism"), "complete")
         line = _exact(
             native,
@@ -354,7 +479,18 @@ def compile_query(query: CompanyQuery, texts: Mapping[str, str]) -> CompiledQuer
             group = reference(_RAIL_GROUP, "pmg_base_building_railway")
             if "pmg_base_building_railway" not in _list(railway, "production_method_groups"):
                 raise ValueError("铁路查询失去实际建筑到PM组关系")
-            for method_id in _list(group, "production_methods"):
+            methods = (
+                "pm_early_trains",
+                "pm_steam_trains",
+                "pm_steam_trains_principle_transport_3",
+                "pm_electric_trains",
+                "pm_electric_trains_principle_transport_3",
+                "pm_diesel_trains",
+                "pm_diesel_trains_principle_transport_3",
+            )
+            if _list(group, "production_methods") != methods:
+                raise ValueError("铁路基础组必须完整非空且方式身份精确")
+            for method_id in methods:
                 method = reference(_PRIVATE_METHOD, method_id)
                 scaled = _child(_child(method, "building_modifiers"), "workforce_scaled")
                 if (

@@ -178,16 +178,23 @@ railco = { building_types = { building_railway } ai_weight = { value = 3 } }
 powerco = { building_types = { building_power_plant } ai_weight = { value = 3 } }
 portco = { building_types = { building_port } ai_weight = { value = 3 } }
 combinedco = { building_types = { building_railway building_power_plant building_port } ai_weight = { value = 3 } }
+goldco = { building_types = { building_gold_mine } ai_weight = { value = 3 } }
+tradeco = { building_types = { building_trade_center } ai_weight = { value = 3 } }
+businessmixed = { building_types = { building_gold_mine building_trade_center } ai_weight = { value = 3 } }
 """
     inputs[BUILDING] += """
 building_railway = { production_method_groups = { rail } }
 building_power_plant = { production_method_groups = { electric } }
 building_port = { production_method_groups = { ports } }
+building_gold_mine = { production_method_groups = { businessgold } }
+building_trade_center = { production_method_groups = { businesstrade } }
 """
     inputs[GROUP] += """
 rail = { production_methods = { rail } }
 electric = { production_methods = { electric } }
 ports = { production_methods = { pm_anchorage pm_basic_port pm_industrial_port pm_modern_port } }
+businessgold = { production_methods = { businessgold } }
+businesstrade = { production_methods = { businesstrade } }
 """
     inputs[METHOD] += """
 rail = { building_modifiers = { workforce_scaled = { goods_input_engines_add = 5 goods_output_transportation_add = 20 } } }
@@ -196,6 +203,8 @@ pm_anchorage = { }
 pm_basic_port = { building_modifiers = { workforce_scaled = { goods_input_clippers_add = 6 goods_output_merchant_marine_add = 9 } } }
 pm_industrial_port = { building_modifiers = { workforce_scaled = { goods_input_steamers_add = 5 goods_input_coal_add = 5 goods_output_merchant_marine_add = 20 } } }
 pm_modern_port = { building_modifiers = { workforce_scaled = { goods_input_steamers_add = 5 goods_input_oil_add = 10 goods_output_merchant_marine_add = 30 } } }
+businessgold = { building_modifiers = { workforce_scaled = { goods_input_tools_add = 5 goods_output_gold_add = 8 } } country_modifiers = { workforce_scaled = { country_minting_add = 250 } } }
+businesstrade = { state_modifiers = { workforce_scaled = { state_weekly_trades_add = 1 state_trade_capacity_add = 10 } } }
 """
     inputs[GOODS] += (
         "\ntransportation = { cost = 30 local = yes }\nclippers = { cost = 60 }\nsteamers = { cost = 70 }\n"
@@ -207,7 +216,13 @@ def _observed_building(kind, method=None):
     result: dict[str, Any] = {
         "is_building_type": {
             (("argument", name),): name == kind
-            for name in ("building_railway", "building_power_plant", "building_port")
+            for name in (
+                "building_railway",
+                "building_power_plant",
+                "building_port",
+                "building_gold_mine",
+                "building_trade_center",
+            )
         },
         "level": 1,
     }
@@ -986,18 +1001,97 @@ def test_locked_full_company_scope_has_handwritten_department_and_default_denomi
     assert derived["profiles"]["company_basic_metalworks"]["common_inputs"] == []
     assert any(row["field"] == "company_basic_steel.ai_weight" for row in derived["rules"])
     initialized = company_sectors.initialized_fields(derived)
-    assert len(initialized) == 25
-    assert not any(row["field"] == "company_basic_gold_mining.ai_weight" for row in initialized)
-    assert len({row["field"] for row in derived["rules"]}) == 219
-    assert not any(row["field"] == "company_de_beers.ai_weight" for row in derived["rules"])
+    assert len(initialized) == 26
+    assert any(row["field"] == "company_basic_gold_mining.ai_weight" for row in initialized)
+    assert len({row["field"] for row in derived["rules"]}) == 221
+    assert any(row["field"] == "company_de_beers.ai_weight" for row in derived["rules"])
     gaps = company_sectors.unsupported_facets(derived)
-    assert {(row["company"], row["building"]) for row in gaps} == {
-        ("company_basic_gold_mining", "building_gold_mine"),
-        ("company_broken_hill_proprietary_company", "building_gold_mine"),
-        ("company_de_beers", "building_gold_mine"),
-        ("company_lanfang_kongsi", "building_gold_mine"),
-        ("company_oriental_consolidated_mining", "building_gold_mine"),
-        ("company_panama_company", "building_trade_center"),
-        ("company_suez_company", "building_trade_center"),
+    assert gaps == []
+    assert len(company_sectors.query_source_hashes(derived)) == 14
+
+
+@pytest.mark.parametrize(
+    ("company", "building", "prefix"),
+    [("goldco", "building_gold_mine", "gold"), ("tradeco", "building_trade_center", "trade")],
+)
+def test_gold_and_trade_operating_business_benefits_use_real_same_building(
+    special_inputs, company, building, prefix
+):
+    derived = company_sectors.derive(special_inputs)
+    assert any(row["field"] == f"{company}.ai_weight" for row in derived["rules"])
+    obj = {
+        **_observed_building(building),
+        "weekly_profit": 1,
+        "occupancy": 0.9,
+        "cash_reserves_ratio": 0.6,
     }
-    assert len(company_sectors.query_source_hashes(derived)) == 10
+    facts = {f"company_{prefix}_need": True, f"company_{prefix}_pressure": True}
+    _assert_joint(derived, company, facts, 1.20, observations={"any_scope_building": [obj]})
+    _assert_joint(
+        derived, company, facts, 1, observations={"any_scope_building": [obj]}, is_ai=False
+    )
+    assert not any(key.startswith("country_goods_gold_") for key in derived["readers"])
+    assert not any(row["company"] == company for row in company_sectors.unsupported_facets(derived))
+
+
+def test_gold_tools_cost_and_solvency_remain_independent_of_unknown_or_strong_business(
+    special_inputs,
+):
+    derived = company_sectors.derive(special_inputs)
+    obj = {**_observed_building("building_gold_mine"), "weekly_profit": 1, "occupancy": 0.75}
+    _assert_joint(
+        derived,
+        "goldco",
+        {
+            "company_gold_need": True,
+            "company_gold_pressure": None,
+            "country_goods_tools_price": 0.5,
+        },
+        0.97,
+        observations={"any_scope_building": [obj]},
+    )
+    _assert_joint(
+        derived,
+        "goldco",
+        {
+            "company_gold_need": None,
+            "company_gold_pressure": None,
+            "country_goods_tools_price": 0.5,
+        },
+        0.85,
+    )
+    obj.update({"occupancy": 0.9, "cash_reserves_ratio": 0.6})
+    _assert_joint(
+        derived,
+        "goldco",
+        {
+            "company_gold_need": True,
+            "company_gold_pressure": True,
+            "country_goods_tools_price": 0.5,
+            "default": True,
+        },
+        0.85,
+        observations={"any_scope_building": [obj]},
+    )
+
+
+def test_gold_and_trade_opportunities_select_one_business_cause_not_two_rewards(special_inputs):
+    derived = company_sectors.derive(special_inputs)
+    objects = [
+        {
+            **_observed_building(kind),
+            "weekly_profit": 1,
+            "occupancy": 0.9,
+            "cash_reserves_ratio": 0.6,
+        }
+        for kind in ("building_gold_mine", "building_trade_center")
+    ]
+    facts = {
+        "company_gold_need": True,
+        "company_gold_pressure": True,
+        "company_trade_need": True,
+        "company_trade_pressure": True,
+    }
+    _assert_joint(
+        derived, "businessmixed", facts, 1.20, observations={"any_scope_building": objects}
+    )

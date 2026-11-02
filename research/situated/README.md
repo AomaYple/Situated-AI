@@ -9,7 +9,9 @@
 |---|---|---|---|
 | 初版 | [strategy-scope.json](victoria3-1.14.5-strategy-scope.json) | `93947c66bfddd6123633528d66b10a15f334a925b6800ccfa8a4413db85b1944` | 保留原始字节与当时的授权边界，不再作为当前入口 |
 | 修订 2 | [strategy-scope-r2.json](victoria3-1.14.5-strategy-scope-r2.json) | `e0b60c432cfe74a5b85c86d7dd401ac7305450446312f9da73c644b729385ae4` | 保留 15 个逐字段消费者，148 段原始字节观察 |
-| 修订 3 | [strategy-scope-r3.json](victoria3-1.14.5-strategy-scope-r3.json) | `83b369cd1f40e588428410912cfb9fcea43f823f0604ee38283bcbf7677adba3` | 当前 15 个逐字段消费者，169 段原始字节观察；补齐法律实例类型 |
+| 修订 3 | [strategy-scope-r3.json](victoria3-1.14.5-strategy-scope-r3.json) | `83b369cd1f40e588428410912cfb9fcea43f823f0604ee38283bcbf7677adba3` | 保留 15 个逐字段消费者，169 段原始字节观察；补齐法律实例类型 |
+| 修订 4 | [strategy-scope-r4.json](victoria3-1.14.5-strategy-scope-r4.json) | `1012740c43d88e4a6665ac72cb9f0caea7fc516fd0974dd2b710075e9fa4bf8e` | 保留 17 个逐字段消费者，303 段原始字节观察；补齐两个目标评分枚举与精确对象 |
+| 修订 5 | [strategy-scope-r5.json](victoria3-1.14.5-strategy-scope-r5.json) | `e852bcd7f73d5da44f50c314a6ed921fa9aad4c32e2dbabf31ee536d3e6be463` | 当前 19 个逐字段消费者，325 段原始字节观察；追加海军目标与造船输出成员链 |
 
 修订 2 保留初版全部合同与观察，追加两条精确消费者链和 28 段观察，并更正初版对 `institution_scores`
 尚未授权的限制。初版文件原字节不变。共同锁定 Victoria 3 1.14.5 Windows x64 EXE：
@@ -78,9 +80,53 @@ COL `0x144c31540`、vftable `0x144717330` 和虚槽 `+0x28` 精确连接至 `0x1
 compiler 将 `law` 登记为 `law` 类型辅助上下文，无 target；现有三个生产 writer 的全部实际输入仍读取国家 ROOT。
 `law` 对象证据不授予新 getter，错误类型、角色、额外对象和 actor 路径必须拒绝。
 
+### wargoal_scores 与 secret_goal_scores
+
+修订 4 沿用修订 3 原件，追加 134 段观察。wargoal parser `0x141641285` 定位成员 `0x1d8`，
+由 `0x14163e390` 在原始 34 项 token 表中取得精确 enum index；secret parser `0x141641481`
+定位成员 `0x2a0`，专用 key parser 的九项实际派发顺序为 none、befriend、reconcile、protect、
+antagonize、conquer、dominate、comply、defy，不能用脚本选项顺序替代。
+
+wargoal 消费者 `0x141643740` 分别保存 RDX 国家 ROOT、R8 target country 和 R9 CState。
+`0x141643849` 构建国家 tag 5，`0x14164385d` 注册 tag `0x4c` 的 `target_state`，
+`0x141643886` 注册 tag 5 的 `target_country`，`0x1416438ea` 调用实际评分 wrapper。
+`target_state` 的全局 key `0x145a94968` 由独立字符串注册链定位，调用者以 `0x1407ed5f0`
+解析状态 ID，其诊断直接引用 CState TypeDescriptor `0x145244320`；它不能误记为 wargoal 对象。
+仅 play ID 非 -1 时另注册 tag `0x1c`；目前没有完整类型证明，因此该对象明确记录为
+`unprojected_unknown`、`reader_authorization=false`，compiler 不产生对应 binding。
+
+secret 消费者 `0x141643600` 保存 R8 actor country 与 R9 target country；`0x141643693`、
+`0x1416436a6` 产生两个国家 tuple，`0x1416436c2` 注册 `target_country`。
+parser `0x14164b400` 独立区分 `score` 与 `trigger`，消费者先在 `0x1416436da` 执行原生 trigger，
+仅通过时才在 `0x1416436fd` 计算 score。两个评分路径调用原 wrapper `0x140ed4290`。
+上层默认／活动策略合并为加法；wargoal 的 liberate_country 还包含额外原生 tail，均保持原调用。
+
+独立 inventory 将两个 map 和 secret enum entry 登记为结构观察，仅精确普通 `wargoal_scores.<enum>`
+及 `secret_goal_scores.<enum>.score` 登记 direct 动态评分。未知、重复、前缀、scalar、替代嵌套形状、
+重复 score 与容器 writer 均拒绝。compiler 用同一校验解析固定底本的 21 个 wargoal 和七个 secret score，
+验证每个实际 reader；trigger 保持原生筛选器，不从容器或评分上下文继承授权。
+
+### wanted_navy_size 与 ship_construction_output_multiplier
+
+修订 5 追加 22 段观察。navy atom token `0x5c57` 经 selector 14 定位 parser `0x141641888`，
+以 parser subobject `0x20b8-0x658` 精确定位成员 `0x1a60`。
+实际 helper `0x1415ad310` 在 `0x1415ad3b7` 和 `0x1415ad40d` 分别求值默认与活动策略，
+`0x1415ad412` 相加。主调用者从空上下文构建 country tag 5 ROOT，`0x1415ad21b` 调用 helper；
+wrapper `0x140d9f820` 把同一 tuple 传入三个求值槽。该 helper 的其他调用者部分接受外部上下文，
+此证据只锚定已证明的国家主调用路径，并保留其他原生调用语义。
+
+ship construction token `0x622a` 精确定位 parser `0x141641cb2` 和成员 `0x1be0`。
+消费者 `0x1415ada43` 构建空上下文，`0x1415ada69` 置 country tag 5 ROOT，
+默认成员在 `0x1415adadb` 求值；活动策略内联读取同一成员 `+8` 并在三个槽使用同一 country tuple。
+`0x1415adc97` 将结果相加，所以合同为 `additive_ship_construction_output_multiplier`。
+字段名中的 multiplier 不能把实际策略合并运算误写为乘法。
+
+上述证据不替换原生海军舍入、维护、预算及最终造船运算。`wanted_num_supply_ships` 只找到解析成员
+`0x1b20`，尚未找到真实消费者；它继续 pending，不能从相邻 navy/ship 成员继承国家上下文。
+
 ## 入口与未证明范围
 
-`pdx.situated.engine_scope.strategy_snapshot()` 固定修订 3 身份并验证新增精确合同，不声称当前游戏验证；
+`pdx.situated.engine_scope.strategy_snapshot()` 固定修订 5 身份并验证新增精确合同，不声称当前游戏验证；
 `strategy_evidence(game, inputs)` 核对 EXE、所有原始字节观察及全部来源 SHA；
 `verify_strategy_game(game)` 在生产边界读取真实五份原件并硬失败，不回退离线快照。
 该生产接口也验证制度定义原件集合和 SHA，保留五份 `strategy_sources` 的既有含义，并把制度来源指纹附入返回证据。

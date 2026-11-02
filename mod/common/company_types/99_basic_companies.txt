@@ -1020,6 +1020,41 @@ company_basic_gold_mining = {
 			}
 		}
 	}
+
+	# SITAI BEGIN initialized:company_basic_gold_mining.ai_weight
+	ai_weight = { value = 1
+		# SITAI BEGIN information:company_basic_gold_mining.ai_weight
+		# ACTION program_834f5316a9e80047 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_834f5316a9e80047_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_basic_gold_mining_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_834f5316a9e80047_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_basic_gold_mining_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_834f5316a9e80047_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_basic_gold_mining_building_gold_mine_pressure [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
+				# company_sector_company_basic_gold_mining_building_gold_mine_need [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
+			}
+			# GROUP program_834f5316a9e80047_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_basic_gold_mining_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_basic_gold_mining.ai_weight
+	}
+	# SITAI END initialized:company_basic_gold_mining.ai_weight
 }
 
 company_basic_metal_mining = {

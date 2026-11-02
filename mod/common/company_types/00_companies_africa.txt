@@ -321,12 +321,16 @@ company_suez_company = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
 				# company_sector_company_suez_company_port_basic_pressure [market]; 同一航运机会同时商船高价，升档需求；不同港口方式不重复奖励
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_suez_company_building_trade_center_pressure [market]; 本国同一贸易中心已有正周利润与充分就业，形成贸易经营/组织机会；现金与高就业升档。不是贸易容量短缺，不预记prosperity或税收
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
 				# company_sector_company_suez_company_port_modern_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_modern_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_suez_company_port_industrial_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
 				# company_sector_company_suez_company_port_basic_need [market]; 本国已有真实产商船的active港口方式，国家商船买单缺口形成航运机会；锚地不算产出
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_suez_company_building_trade_center_need [market]; 本国同一贸易中心已有正周利润与充分就业，形成贸易经营/组织机会；现金与高就业升档。不是贸易容量短缺，不预记prosperity或税收
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
 			}
 			# GROUP program_685673e8146eeab1_company_solvency_negative
 			add = { value = 0

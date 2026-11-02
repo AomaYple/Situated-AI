@@ -28,7 +28,7 @@ def test_min_law_contract_has_country_actor_and_actual_law_instance():
         "parser_va": "0x1416418b2",
         "member_offset": "0x9b8",
     }
-    assert len(data["observations"]) == 169
+    assert len(data["observations"]) == 325
     assert data["law_instance_type"]["scope_tag"] == "0x31"
     assert data["law_instance_type"]["native_type"] == "CCountryLaw"
 
@@ -36,7 +36,7 @@ def test_min_law_contract_has_country_actor_and_actual_law_instance():
 @pytest.fixture
 def min_law_proof(tmp_path, monkeypatch):
     data = json.loads(engine_scope.strategy_snapshot())
-    points = data["observations"][148:]
+    points = data["observations"][148:169]
     assert len(points) == 21
     image = bytearray()
     for point in points:

@@ -361,7 +361,7 @@ def _initialized(profile, identities) -> bool:
     default = profile["default_define"]
     return (
         not profile["explicit_weight"]
-        and bool(profile["market_outputs"])
+        and bool(profile["market_outputs"] or _special_sectors(profile))
         and identities.get(profile["id"])
         == (profile["source"], profile["line"], default["source"], default["field"])
         and type(default["value"]) is int
@@ -375,11 +375,16 @@ def _special_sectors(profile) -> set[str]:
         "building_railway": "transportation",
         "building_power_plant": "electricity",
         "building_port": "merchant_marine",
+        "building_gold_mine": "gold",
+        "building_trade_center": None,
     }
     return {
         sector["id"]
         for sector in profile["base_recipes"]
-        if sector["id"] in expected and expected[sector["id"]] in sector["potential_outputs"]
+        if sector["id"] in expected
+        and (
+            expected[sector["id"]] is None or expected[sector["id"]] in sector["potential_outputs"]
+        )
     }
 
 
@@ -485,6 +490,18 @@ def _rules(profile, parameters):
             "company_power_pressure",
             "本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格",
         ),
+        (
+            "building_gold_mine",
+            "company_gold_need",
+            "company_gold_pressure",
+            "本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口",
+        ),
+        (
+            "building_trade_center",
+            "company_trade_need",
+            "company_trade_pressure",
+            "本国同一贸易中心已有正周利润与充分就业，形成贸易经营/组织机会；现金与高就业升档。不是贸易容量短缺，不预记prosperity或税收",
+        ),
     ):
         if building not in sectors:
             continue
@@ -589,6 +606,12 @@ def _readers(
         "company_port_basic": company_observations.PortMethod("pm_basic_port"),
         "company_port_industrial": company_observations.PortMethod("pm_industrial_port"),
         "company_port_modern": company_observations.PortMethod("pm_modern_port"),
+        "company_gold_need": company_observations.ExistingBusiness("building_gold_mine"),
+        "company_gold_pressure": company_observations.ExistingBusiness("building_gold_mine", True),
+        "company_trade_need": company_observations.ExistingBusiness("building_trade_center"),
+        "company_trade_pressure": company_observations.ExistingBusiness(
+            "building_trade_center", True
+        ),
     }
     for key in sorted(required):
         if key in query_readers:

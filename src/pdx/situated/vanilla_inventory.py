@@ -808,6 +808,78 @@ def _institution_score_map(definition: Assignment, keys: frozenset[str]) -> Bloc
     return scores.value
 
 
+def _strategy_score_map(definition: Assignment, field: str, keys: frozenset[str]) -> Block | None:
+    """Validate exact enum elements; secret triggers stay native eligibility filters."""
+    if (
+        definition.op != "="
+        or definition.prefix is not None
+        or not isinstance(definition.value, Block)
+    ):
+        return None
+    scores = _ordinary_child(definition.value, field)
+    if scores is None or not isinstance(scores.value, Block):
+        return None
+    children = tuple(scores.value.assignments())
+    if len(children) != len(scores.value.items) or len({item.key for item in children}) != len(
+        children
+    ):
+        return None
+    operations = {
+        "value",
+        "add",
+        "subtract",
+        "multiply",
+        "divide",
+        "min",
+        "max",
+        "round",
+        "ceiling",
+        "floor",
+        "if",
+        "else_if",
+        "else",
+        "desc",
+    }
+    for child in children:
+        if (
+            child.key not in keys
+            or child.op != "="
+            or child.prefix is not None
+            or not isinstance(child.value, Block)
+        ):
+            return None
+        numeric = child.value
+        if field == "secret_goal_scores":
+            members = tuple(numeric.assignments())
+            if (
+                len(members) != len(numeric.items)
+                or len({item.key for item in members}) != len(members)
+                or any(
+                    item.key not in {"trigger", "score"}
+                    or item.op != "="
+                    or item.prefix is not None
+                    or not isinstance(item.value, Block)
+                    for item in members
+                )
+            ):
+                return None
+            score = _ordinary_child(numeric, "score")
+            if score is None or not isinstance(score.value, Block):
+                return None
+            numeric = score.value
+        expressions = tuple(numeric.assignments())
+        if (
+            not expressions
+            or len(expressions) != len(numeric.items)
+            or any(
+                item.key not in operations or item.op != "=" or item.prefix is not None
+                for item in expressions
+            )
+        ):
+            return None
+    return scores.value
+
+
 def _company_construction_doc(inputs: dict[str, bytes]) -> _Scope:
     source = "common/company_types/companies.md"
     raw = inputs.get(source)
@@ -2124,6 +2196,43 @@ def _scope(
     if directory == "treaty_articles":
         return _treaty_scope(field, inputs, definition, source)
     if directory == "ai_strategies":
+        if field[0] in {"wargoal_scores", "secret_goal_scores"}:
+            if (
+                strategy_proof is None
+                or not strategy_proof.verified
+                or source not in strategy_proof.strategy_sources
+            ):
+                return _Scope()
+            goal_contract = next(
+                (item for item in strategy_proof.consumers if item.field == field[0]), None
+            )
+            keys = json.loads(engine_scope.strategy_snapshot())["strategy_score_keys"][field[0]]
+            goal_scores = _strategy_score_map(definition, field[0], frozenset(keys))
+            if goal_contract is None or goal_scores is None:
+                return _Scope()
+            references = (*goal_contract.references, f"{source}:{definition.line}")
+            if len(field) == 1:
+                return _Scope(
+                    "definition_structure", "none", "strategy_score_map", "observation", references
+                )
+            child = _ordinary_child(goal_scores, field[1])
+            if child is None:
+                return _Scope()
+            if field[0] == "secret_goal_scores" and len(field) == 2:
+                return _Scope(
+                    "definition_structure", "none", "secret_goal_entry", "observation", references
+                )
+            if (field[0] == "wargoal_scores" and len(field) == 2) or (
+                field[0] == "secret_goal_scores" and field[2:] == ("score",)
+            ):
+                return _Scope(
+                    goal_contract.actor,
+                    goal_contract.target,
+                    goal_contract.operation,
+                    goal_contract.capability,
+                    (*references, f"{source}:{child.line}"),
+                )
+            return _Scope()
         if field[0] == "institution_scores":
             if (
                 strategy_proof is None
@@ -2178,22 +2287,6 @@ def _scope(
                     engine_contract.capability,
                     (*engine_contract.references, f"{source}:{definition.line}"),
                 )
-        if (
-            field[0] == "wargoal_scores"
-            and strategies.get("wargoal_scores", _Scope()).target != "unknown"
-        ):
-            if (
-                definition.op != "="
-                or definition.prefix is not None
-                or not isinstance(definition.value, Block)
-            ):
-                return _Scope()
-            scores = _ordinary_child(definition.value, "wargoal_scores")
-            if scores is None or not isinstance(scores.value, Block) or len(field) != 2:
-                return _Scope()
-            score = _ordinary_child(scores.value, field[1])
-            if score is None or not isinstance(score.value, Block):
-                return _Scope()
         return strategies.get(".".join(field), strategies.get(field[0], _Scope()))
     if directory == "laws" and field == ("ai_enact_weight_modifier",):
         return _doc_scope(
@@ -2347,6 +2440,18 @@ def _frontier(
 def _candidates(directory: str, block: Block) -> Iterator[tuple[tuple[str, ...], Assignment]]:
     for assignment in block.assignments():
         if assignment.is_variable:
+            continue
+        if directory == "ai_strategies" and assignment.key in {
+            "wargoal_scores",
+            "secret_goal_scores",
+        }:
+            yield (assignment.key,), assignment
+            if isinstance(assignment.value, Block):
+                for child in assignment.value.assignments():
+                    yield (assignment.key, child.key), child
+                    if assignment.key == "secret_goal_scores" and isinstance(child.value, Block):
+                        for member in child.value.assignments():
+                            yield (assignment.key, child.key, member.key), member
             continue
         if directory == "ai_strategies" and assignment.key == "institution_scores":
             yield (assignment.key,), assignment

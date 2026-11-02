@@ -11035,6 +11035,28 @@ disposition = "migrate"
 consumer = "company_misr.ai_weight"
 
 [[bindings]]
+binding_id = "binding_common_company_types_00_companies_africa_txt_company_sector_company_suez_company_building_trade_center_need"
+source = "common/company_types/00_companies_africa.txt"
+definition = "company_sector_company_suez_company_building_trade_center_need"
+field = "company_suez_company.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_suez_company.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_africa_txt_company_sector_company_suez_company_building_trade_center_pressure"
+source = "common/company_types/00_companies_africa.txt"
+definition = "company_sector_company_suez_company_building_trade_center_pressure"
+field = "company_suez_company.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_suez_company.ai_weight"
+
+[[bindings]]
 binding_id = "binding_common_company_types_00_companies_africa_txt_company_sector_company_suez_company_default"
 source = "common/company_types/00_companies_africa.txt"
 definition = "company_sector_company_suez_company_default"
@@ -11924,6 +11946,28 @@ target = "none"
 operation = "multiply"
 disposition = "migrate"
 consumer = "company_la_rosada.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_americas_txt_company_sector_company_panama_company_building_trade_center_need"
+source = "common/company_types/00_companies_americas.txt"
+definition = "company_sector_company_panama_company_building_trade_center_need"
+field = "company_panama_company.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_panama_company.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_americas_txt_company_sector_company_panama_company_building_trade_center_pressure"
+source = "common/company_types/00_companies_americas.txt"
+definition = "company_sector_company_panama_company_building_trade_center_pressure"
+field = "company_panama_company.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_panama_company.ai_weight"
 
 [[bindings]]
 binding_id = "binding_common_company_types_00_companies_americas_txt_company_sector_company_panama_company_default"
@@ -14698,6 +14742,28 @@ disposition = "migrate"
 consumer = "company_a_markwald_and_company.ai_weight"
 
 [[bindings]]
+binding_id = "binding_common_company_types_00_companies_ep2_txt_company_sector_company_broken_hill_proprietary_company_building_gold_mine_need"
+source = "common/company_types/00_companies_ep2.txt"
+definition = "company_sector_company_broken_hill_proprietary_company_building_gold_mine_need"
+field = "company_broken_hill_proprietary_company.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_broken_hill_proprietary_company.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_ep2_txt_company_sector_company_broken_hill_proprietary_company_building_gold_mine_pressure"
+source = "common/company_types/00_companies_ep2.txt"
+definition = "company_sector_company_broken_hill_proprietary_company_building_gold_mine_pressure"
+field = "company_broken_hill_proprietary_company.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_broken_hill_proprietary_company.ai_weight"
+
+[[bindings]]
 binding_id = "binding_common_company_types_00_companies_ep2_txt_company_sector_company_broken_hill_proprietary_company_default"
 source = "common/company_types/00_companies_ep2.txt"
 definition = "company_sector_company_broken_hill_proprietary_company_default"
@@ -15158,6 +15224,28 @@ target = "none"
 operation = "multiply"
 disposition = "migrate"
 consumer = "company_noda_shoyu.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_ep2_txt_company_sector_company_oriental_consolidated_mining_building_gold_mine_need"
+source = "common/company_types/00_companies_ep2.txt"
+definition = "company_sector_company_oriental_consolidated_mining_building_gold_mine_need"
+field = "company_oriental_consolidated_mining.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_oriental_consolidated_mining.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_ep2_txt_company_sector_company_oriental_consolidated_mining_building_gold_mine_pressure"
+source = "common/company_types/00_companies_ep2.txt"
+definition = "company_sector_company_oriental_consolidated_mining_building_gold_mine_pressure"
+field = "company_oriental_consolidated_mining.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_oriental_consolidated_mining.ai_weight"
 
 [[bindings]]
 binding_id = "binding_common_company_types_00_companies_ep2_txt_company_sector_company_oriental_consolidated_mining_default"
@@ -23443,6 +23531,61 @@ disposition = "migrate"
 consumer = "company_compania_sansinena_de_carnes_congeladas.ai_weight"
 
 [[bindings]]
+binding_id = "binding_common_company_types_00_companies_mp1_txt_company_sector_company_de_beers_building_gold_mine_need"
+source = "common/company_types/00_companies_mp1.txt"
+definition = "company_sector_company_de_beers_building_gold_mine_need"
+field = "company_de_beers.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_de_beers.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_mp1_txt_company_sector_company_de_beers_building_gold_mine_pressure"
+source = "common/company_types/00_companies_mp1.txt"
+definition = "company_sector_company_de_beers_building_gold_mine_pressure"
+field = "company_de_beers.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_de_beers.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_mp1_txt_company_sector_company_de_beers_default"
+source = "common/company_types/00_companies_mp1.txt"
+definition = "company_sector_company_de_beers_default"
+field = "company_de_beers.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_de_beers.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_mp1_txt_company_sector_company_de_beers_tools_input"
+source = "common/company_types/00_companies_mp1.txt"
+definition = "company_sector_company_de_beers_tools_input"
+field = "company_de_beers.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_de_beers.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_mp1_txt_company_sector_company_de_beers_workforce"
+source = "common/company_types/00_companies_mp1.txt"
+definition = "company_sector_company_de_beers_workforce"
+field = "company_de_beers.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_de_beers.ai_weight"
+
+[[bindings]]
 binding_id = "binding_common_company_types_00_companies_mp1_txt_company_sector_company_gebruder_thonet_default"
 source = "common/company_types/00_companies_mp1.txt"
 definition = "company_sector_company_gebruder_thonet_default"
@@ -23914,6 +24057,28 @@ target = "none"
 operation = "multiply"
 disposition = "migrate"
 consumer = "company_konigliche_porzellan_manufaktur_meissen.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_mp1_txt_company_sector_company_lanfang_kongsi_building_gold_mine_need"
+source = "common/company_types/00_companies_mp1.txt"
+definition = "company_sector_company_lanfang_kongsi_building_gold_mine_need"
+field = "company_lanfang_kongsi.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_lanfang_kongsi.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_00_companies_mp1_txt_company_sector_company_lanfang_kongsi_building_gold_mine_pressure"
+source = "common/company_types/00_companies_mp1.txt"
+definition = "company_sector_company_lanfang_kongsi_building_gold_mine_pressure"
+field = "company_lanfang_kongsi.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_lanfang_kongsi.ai_weight"
 
 [[bindings]]
 binding_id = "binding_common_company_types_00_companies_mp1_txt_company_sector_company_lanfang_kongsi_default"
@@ -27786,6 +27951,61 @@ target = "none"
 operation = "multiply"
 disposition = "migrate"
 consumer = "company_basic_forestry.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_99_basic_companies_txt_company_sector_company_basic_gold_mining_building_gold_mine_need"
+source = "common/company_types/99_basic_companies.txt"
+definition = "company_sector_company_basic_gold_mining_building_gold_mine_need"
+field = "company_basic_gold_mining.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_basic_gold_mining.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_99_basic_companies_txt_company_sector_company_basic_gold_mining_building_gold_mine_pressure"
+source = "common/company_types/99_basic_companies.txt"
+definition = "company_sector_company_basic_gold_mining_building_gold_mine_pressure"
+field = "company_basic_gold_mining.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_basic_gold_mining.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_99_basic_companies_txt_company_sector_company_basic_gold_mining_default"
+source = "common/company_types/99_basic_companies.txt"
+definition = "company_sector_company_basic_gold_mining_default"
+field = "company_basic_gold_mining.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_basic_gold_mining.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_99_basic_companies_txt_company_sector_company_basic_gold_mining_tools_input"
+source = "common/company_types/99_basic_companies.txt"
+definition = "company_sector_company_basic_gold_mining_tools_input"
+field = "company_basic_gold_mining.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_basic_gold_mining.ai_weight"
+
+[[bindings]]
+binding_id = "binding_common_company_types_99_basic_companies_txt_company_sector_company_basic_gold_mining_workforce"
+source = "common/company_types/99_basic_companies.txt"
+definition = "company_sector_company_basic_gold_mining_workforce"
+field = "company_basic_gold_mining.ai_weight"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "company_basic_gold_mining.ai_weight"
 
 [[bindings]]
 binding_id = "binding_common_company_types_99_basic_companies_txt_company_sector_company_basic_home_goods_default"

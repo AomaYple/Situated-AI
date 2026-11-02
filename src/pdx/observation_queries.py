@@ -167,14 +167,7 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
 
 def render(query: CountryQuery) -> str:
     """Pure fixed-template lowering, including type, ID and numeric guards."""
-    if isinstance(
-        query,
-        (
-            company_observations.RailInfrastructure,
-            company_observations.PowerScarcity,
-            company_observations.PortMethod,
-        ),
-    ):
+    if isinstance(query, company_observations.CompanyQuery):
         return company_observations.render(query)
     if type(query) is LawMovementSupport:
         if not isinstance(query.law_id, str) or query.law_id not in LAW_SOURCES:
@@ -209,14 +202,7 @@ def render(query: CountryQuery) -> str:
 
 def required_sources(query: CountryQuery) -> tuple[str, ...]:
     render(query)
-    if isinstance(
-        query,
-        (
-            company_observations.RailInfrastructure,
-            company_observations.PowerScarcity,
-            company_observations.PortMethod,
-        ),
-    ):
+    if isinstance(query, company_observations.CompanyQuery):
         return company_observations.required_sources(query)
     if isinstance(query, LawMovementSupport):
         return tuple(sorted({_ECONOMY, _AI, LAW_SOURCES[query.law_id]}))
@@ -355,14 +341,7 @@ def compile_query(
     query: CountryQuery, texts: Mapping[str, str]
 ) -> CompiledQuery | company_observations.CompiledQuery:
     """Verify supplied pinned sources and complete consumers, without I/O."""
-    if isinstance(
-        query,
-        (
-            company_observations.RailInfrastructure,
-            company_observations.PowerScarcity,
-            company_observations.PortMethod,
-        ),
-    ):
+    if isinstance(query, company_observations.CompanyQuery):
         return company_observations.compile_query(query, texts)
     expression = render(query)
     roots, hashes = _verified_sources(required_sources(query), texts)

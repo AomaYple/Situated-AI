@@ -146,3 +146,110 @@ def test_interest_group_actual_law_stance_is_not_movement_or_current_law_prefere
     assert evaluate(expression, {"any_interest_group": [group]}) is expected
     assert evaluate(expression, {"any_interest_group": []}, any_interest_group=[group]) is False
     assert evaluate(expression, {"any_interest_group": None}, any_interest_group=[group]) is None
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "INJECT:flag = yes",
+        "REPLACE:always = yes",
+        "INJECT:exists = ROOT",
+        "INJECT:ROOT = { always = yes }",
+        "INJECT:law_stance = { law = law_type:law_anarchy value > neutral }",
+        "law_stance = { law = law_type:law_anarchy INJECT:value > neutral }",
+        "law_stance = { INJECT:law = law_type:law_anarchy value > neutral }",
+        "law_stance = { law = law_type:law_anarchy law = law_type:law_anarchy value > neutral }",
+        "law_stance = { law = law_type:law_anarchy value > neutral value > neutral }",
+        "law_stance = { law = law_type:law_anarchy value > { neutral } }",
+        "law_stance = { law = law_type:law_anarchy unexpected value > neutral }",
+        "institution_investment_level = { institution = institution_police value > nan }",
+        "flag != yes",
+        "flag ?= yes",
+        "any_scope_state = { INJECT:market_access < 1 }",
+        "ROOT = { INJECT:flag = yes }",
+        *[
+            f"{prefix}{key} {operator} {{ always = yes }}"
+            for key in ("AND", "OR", "NOT")
+            for prefix, operator in (("INJECT:", "="), ("", "!="), ("", "?="))
+        ],
+    ],
+)
+@pytest.mark.parametrize("known", [False, True])
+def test_unsupported_condition_ast_is_rejected_even_when_observations_are_missing(
+    expression, known
+):
+    facts = (
+        {
+            "flag": True,
+            "ROOT": {"flag": True},
+            "any_scope_state": [],
+            "law_stance": {(("law", "law_type:law_anarchy"),): 1},
+        }
+        if known
+        else {}
+    )
+    parsed = parse_text(expression)
+    assert not parsed.errors
+    with pytest.raises(pdx_eval.UnsupportedPdxError):
+        pdx_eval.condition(parsed.root, facts)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "INJECT:add = 1",
+        "add != 1",
+        "add = { value = 1 value = 2 }",
+        "add = { INJECT:value = 1 }",
+        "add = { value != 1 }",
+        "add = { value = 1 unexpected }",
+        "add = { value = 1 {} }",
+        "add = { value = 1 INJECT:multiply = 2 }",
+        "add = { value = 1 multiply != 2 }",
+        "add = { value = 1 if != { limit = { always = yes } add = 2 } }",
+        "add = { value = 1 if = { INJECT:limit = { always = yes } add = 2 } }",
+        "add = { value = 1 if = { limit = { always = no } value = 7 } }",
+        "add = { value = 1 if = { limit = { always = yes } limit = { always = no } add = 2 } }",
+        "add = { value = 1 if = { limit = { always = no } INJECT:add = 2 } }",
+        "add = { value = 1 if = { limit = { always = no } add = 2 } else = { limit = { always = no } add = 3 } }",
+        "add = 1 limit = { always = no }",
+        "add = 1 unexpected = 4",
+    ],
+)
+def test_numeric_ast_and_duplicate_control_fields_fail_closed(body):
+    text = "# ACTION strict [test];\nif = { limit = { always = yes } " + body + " }"
+    with pytest.raises(pdx_eval.UnsupportedPdxError):
+        pdx_eval.select(text, {})
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "INJECT:if = { limit = { always = yes } add = 1 }",
+        "if != { limit = { always = yes } add = 1 }",
+        "if = { INJECT:limit = { always = yes } add = 1 }",
+        "if = { limit = { always = yes } add = 1 } unexpected",
+        "if = { limit = { always = no } add = 1 } else = { limit = { always = no } add = 2 }",
+        "if = { limit = { always = yes } add = 1 } else = { INJECT:multiply = 2 }",
+    ],
+)
+def test_action_control_ast_cannot_discard_unsupported_syntax(text):
+    with pytest.raises(pdx_eval.UnsupportedPdxError):
+        pdx_eval.select("# ACTION strict [test];\n" + text, {})
+
+
+def test_valid_optional_scope_unknown_and_repeated_numeric_operations_are_preserved():
+    assert evaluate("ROOT ?= { flag = yes }", None) is None
+    assert evaluate("ROOT = { flag = yes }", None) is False
+    assert evaluate("ROOT ?= { flag = yes }", {}) is None
+    assert evaluate("ROOT = { flag >= 1 flag <= 2 }", {"flag": 1}) is True
+    text = """# ACTION strict [test];
+if = { limit = { always = yes }
+    add = { value = 1 add = 2 add = 3
+        if = { limit = { missing = yes } add = 100 }
+        if = { limit = { always = no } add = 100 }
+        else_if = { limit = { always = yes } multiply = 2 }
+        else = { add = 100 }
+    }
+}"""
+    assert pdx_eval.select(text, {}).delta == 12

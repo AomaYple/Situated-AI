@@ -1,6 +1,7 @@
 """Company local opportunities: typed queries, native provenance and real objects."""
 
 import hashlib
+import re
 from pathlib import Path
 from typing import Any, cast
 
@@ -340,5 +341,217 @@ def test_missing_or_rehashed_broken_native_type_chains_cannot_authorize_query(
             source,
             hashlib.sha256(normalized_text(texts[source]).encode()).hexdigest(),
         )
+    with pytest.raises(ValueError):
+        queries.compile_query(query, texts)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("methods", ["", "pm_early_trains", "pm_early_trains pm_early_trains"])
+def test_rail_group_cannot_pass_vacuously_or_with_missing_or_duplicate_methods(
+    native_texts, monkeypatch, methods
+):
+    texts = dict(native_texts)
+    source = "common/production_method_groups/11_private_infrastructure.txt"
+    texts[source], count = re.subn(
+        r"(pmg_base_building_railway\s*=\s*\{.*?production_methods\s*=\s*)\{[^}]*\}",
+        lambda match: match[1] + "{ " + methods + " }",
+        texts[source],
+        count=1,
+        flags=re.DOTALL,
+    )
+    assert count == 1
+    monkeypatch.setitem(
+        queries.SOURCE_HASHES,
+        source,
+        hashlib.sha256(normalized_text(texts[source]).encode()).hexdigest(),
+    )
+    with pytest.raises(ValueError, match="铁路"):
+        queries.compile_query(queries.RailInfrastructure(), texts)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("building", "tier", "expected"),
+    [
+        (
+            "building_gold_mine",
+            "base",
+            "any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 occupancy >= 0.75 level >= 1 }",
+        ),
+        (
+            "building_gold_mine",
+            "strong",
+            "any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 }",
+        ),
+        (
+            "building_trade_center",
+            "base",
+            "any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 occupancy >= 0.75 level >= 1 }",
+        ),
+        (
+            "building_trade_center",
+            "strong",
+            "any_scope_building = { is_building_type = building_trade_center weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 }",
+        ),
+    ],
+)
+def test_existing_business_is_a_finite_real_operation_not_a_capacity_shortage(
+    building, tier, expected
+):
+    params = {"company_query": "existing_business", "building": building, "tier": tier}
+    query = queries.from_reader("any_scope_building", params)
+    assert queries.render(query) == expected
+    assert queries.reader_spec(query)["parameters"] == params
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"building": "building_gold_field"},
+        {"building": "building_railway"},
+        {"building": "building_gold_mine } always = yes"},
+        {"tier": "high"},
+        {"tier": True},
+        {"minimum_level": "10"},
+        {"country": "foreign"},
+        {"weekly_profit": "0"},
+    ],
+)
+def test_business_reader_accepts_only_two_fixed_building_ids_and_tiers(changes):
+    params = {
+        "company_query": "existing_business",
+        "building": "building_gold_mine",
+        "tier": "base",
+        **changes,
+    }
+    with pytest.raises(ValueError):
+        queries.from_reader("any_scope_building", cast("Any", params))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("building", [None, [], True, "building_gold_field"])
+def test_typed_business_rejects_nonidentity_buildings(building):
+    with pytest.raises(ValueError):
+        queries.render(queries.ExistingBusiness(cast("Any", building)))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("strong", [0, 1, "true", None])
+def test_typed_business_tier_is_an_exact_boolean(strong):
+    with pytest.raises(ValueError):
+        queries.render(queries.ExistingBusiness("building_gold_mine", cast("Any", strong)))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("building", ["building_gold_mine", "building_trade_center"])
+@pytest.mark.parametrize(
+    ("profit", "occupancy", "cash", "level", "base", "strong"),
+    [
+        (1, 0.75, 0.6, 1, True, False),
+        (1, 0.9, 0.5, 1, True, False),
+        (1, 0.9, 0.501, 1, True, True),
+        (0, 1, 1, 1, False, False),
+        (-1, 1, 1, 1, False, False),
+        (1, 0.749, 1, 1, False, False),
+        (1, 0.9, None, 1, True, None),
+        (None, 0.9, 1, 1, None, None),
+        (1, 0.9, 1, 0, False, False),
+    ],
+)
+def test_business_tiers_use_same_owned_positive_profit_capacity_and_cash(
+    building, profit, occupancy, cash, level, base, strong
+):
+    obj = {
+        "is_building_type": {(("argument", building),): True},
+        "weekly_profit": profit,
+        "occupancy": occupancy,
+        "cash_reserves_ratio": cash,
+        "level": level,
+    }
+    for tier, expected in (("base", base), ("strong", strong)):
+        query = queries.from_reader(
+            "any_scope_building",
+            {"company_query": "existing_business", "building": building, "tier": tier},
+        )
+        assert _evaluate(query, {"any_scope_building": [obj]}) is expected
+        assert _evaluate(query, {"any_scope_building": []}, any_scope_building=[obj]) is False
+
+
+@pytest.mark.unit
+def test_business_high_tier_does_not_pool_profit_and_cash_from_distinct_operations():
+    query = queries.ExistingBusiness("building_gold_mine", True)
+    profitable = {
+        "is_building_type": {(("argument", "building_gold_mine"),): True},
+        "weekly_profit": 1,
+        "occupancy": 0.9,
+        "cash_reserves_ratio": 0.1,
+        "level": 1,
+    }
+    wealthy = {**profitable, "weekly_profit": -1, "cash_reserves_ratio": 1}
+    assert _evaluate(query, {"any_scope_building": [profitable, wealthy]}) is False
+    assert (
+        _evaluate(query, {"any_scope_building": [{**profitable, "cash_reserves_ratio": 0.6}]})
+        is True
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("building", ["building_gold_mine", "building_trade_center"])
+def test_current_business_query_compiles_full_operating_and_production_chain(
+    native_texts, building
+):
+    query = queries.from_reader(
+        "any_scope_building",
+        {"company_query": "existing_business", "building": building, "tier": "strong"},
+    )
+    compiled = queries.compile_query(query, native_texts)
+    assert compiled.expression == queries.render(query)
+    assert compiled.local_collections == ("owned_buildings",)
+    assert any("weekly_profit" in item for item in compiled.scope_chain)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "damage", ["gold_minting", "gold_input", "trade_service", "business_template"]
+)
+def test_rehashed_broken_gold_minting_inputs_and_trade_service_cannot_authorize_business(
+    native_texts, monkeypatch, damage
+):
+    texts = dict(native_texts)
+    source, old, new = {
+        "gold_minting": (
+            "common/production_methods/03_mines.txt",
+            "country_minting_add = 250",
+            "country_minting_add = 0",
+        ),
+        "gold_input": (
+            "common/production_methods/03_mines.txt",
+            "goods_input_tools_add = 5",
+            "goods_input_wood_add = 5",
+        ),
+        "trade_service": (
+            "common/production_methods/11_private_infrastructure.txt",
+            "state_trade_capacity_add = 10",
+            "state_trade_capacity_add = 0",
+        ),
+        "business_template": (
+            "common/journal_entries/00_opium.txt",
+            "weekly_profit > 0",
+            "weekly_profit < 0",
+        ),
+    }[damage]
+    assert old in texts[source]
+    texts[source] = texts[source].replace(old, new)
+    monkeypatch.setitem(
+        queries.SOURCE_HASHES,
+        source,
+        hashlib.sha256(normalized_text(texts[source]).encode()).hexdigest(),
+    )
+    building = "building_trade_center" if damage == "trade_service" else "building_gold_mine"
+    query = queries.from_reader(
+        "any_scope_building",
+        {"company_query": "existing_business", "building": building, "tier": "base"},
+    )
     with pytest.raises(ValueError):
         queries.compile_query(query, texts)

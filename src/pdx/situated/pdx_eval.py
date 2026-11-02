@@ -114,7 +114,7 @@ def _parameter_query(assignment: Assignment, facts: Mapping[str, object | None])
     mapping remains unknown rather than becoming a global boolean.
     """
 
-    if assignment.op != "=":
+    if assignment.op != "=" or assignment.prefix is not None:
         raise UnsupportedPdxError(f"参数化查询 {assignment.key} 必须使用等号")
     if assignment.key == "is_production_method_active":
         if not isinstance(assignment.value, Block):
@@ -179,7 +179,11 @@ def _parameter_query(assignment: Assignment, facts: Mapping[str, object | None])
         if value_items:
             value_field = value_items[0].key
             value_op = value_items[0].op
-            if value_field not in {"value", "percent"} or value_op not in _NUMERIC_OPS:
+            if (
+                value_items[0].prefix is not None
+                or value_field not in {"value", "percent"}
+                or value_op not in _NUMERIC_OPS
+            ):
                 raise UnsupportedPdxError(f"参数化查询 {assignment.key} 的数值比较无效")
             if required_value != value_field:
                 raise UnsupportedPdxError(f"参数化查询 {assignment.key} 数值字段不匹配")
@@ -392,7 +396,129 @@ def _condition(
 def condition(block: Block, facts: Mapping[str, object | None]) -> Truth:
     """独立求值一个 ``limit`` 内的条件块。"""
 
+    _validate_condition(block)
     return _condition(block, facts)
+
+
+def _ordinary_items(block: Block) -> list[Assignment]:
+    items = []
+    for item in block.items:
+        if not isinstance(item, Assignment) or item.prefix is not None:
+            raise UnsupportedPdxError("脚本块必须使用无前缀的赋值项")
+        items.append(item)
+    return items
+
+
+def _validate_condition(block: Block) -> None:
+    """Validate syntax even under missing scopes or complete empty collections."""
+    for item in _ordinary_items(block):
+        if isinstance(item.value, Block) and (
+            item.key in _SCOPES
+            or _GOODS_SCOPE.fullmatch(item.key)
+            or _INTEREST_GROUP_SCOPE.fullmatch(item.key)
+        ):
+            if item.op not in {"=", "?="}:
+                raise UnsupportedPdxError("作用域必须使用赋值或可选赋值")
+            _validate_condition(item.value)
+        elif item.key in {
+            "AND",
+            "OR",
+            "NOT",
+            "any_political_movement",
+            "any_interest_group",
+            "any_scope_state",
+            "any_scope_building",
+        }:
+            if item.op != "=" or not isinstance(item.value, Block):
+                raise UnsupportedPdxError("逻辑或集合条件必须使用普通赋值块")
+            _validate_condition(item.value)
+        elif item.key in _PARAMETER_QUERIES:
+            _parameter_query(item, {})
+        elif item.key in {"always", "exists"}:
+            _condition(Block([item]), {})
+        elif isinstance(item.value, Scalar):
+            if item.op not in _NUMERIC_OPS:
+                raise UnsupportedPdxError(f"不支持的条件运算符：{item.op}")
+            _literal(item.value)
+        else:
+            raise UnsupportedPdxError(f"未登记的 PDX 条件：{item.key}")
+
+
+def _control_body(assignment: Assignment) -> Block:
+    if assignment.op != "=" or not isinstance(assignment.value, Block):
+        raise UnsupportedPdxError("条件控制必须使用普通赋值块")
+    items = _ordinary_items(assignment.value)
+    limits = [item for item in items if item.key == "limit"]
+    if len(limits) != (0 if assignment.key == "else" else 1):
+        raise UnsupportedPdxError("条件控制的 limit 数量不符合合同")
+    for limit in limits:
+        if limit.op != "=" or not isinstance(limit.value, Block):
+            raise UnsupportedPdxError("limit 必须使用普通赋值块")
+        _validate_condition(limit.value)
+    return Block([item for item in items if item.key != "limit"])
+
+
+def _validate_numeric(assignment: Assignment) -> None:
+    if assignment.op != "=" or assignment.prefix is not None:
+        raise UnsupportedPdxError("数值表达式必须使用普通赋值")
+    if isinstance(assignment.value, Scalar):
+        _number(assignment)
+        return
+    if not isinstance(assignment.value, Block):
+        raise UnsupportedPdxError("数值表达式必须是标量或块")
+    items = _ordinary_items(assignment.value)
+    initial = [item for item in items if item.key == "value"]
+    if len(initial) != 1:
+        raise UnsupportedPdxError("数值表达式必须有且只有一个 value 初值")
+    _validate_numeric(initial[0])
+    _validate_numeric_operations(Block([item for item in items if item.key != "value"]))
+
+
+def _validate_numeric_operations(block: Block) -> None:
+    chain_open = False
+    for item in _ordinary_items(block):
+        if item.key in {"if", "else_if", "else"}:
+            if item.key != "if" and not chain_open:
+                raise UnsupportedPdxError("数值 else 分支缺少前置 if")
+            chain_open = item.key != "else"
+            _validate_numeric_operations(_control_body(item))
+            continue
+        chain_open = False
+        if item.key == "desc":
+            if item.op != "=":
+                raise UnsupportedPdxError("desc 必须使用普通赋值")
+            _scalar(item, label="desc")
+        elif item.key in {"add", "subtract", "multiply", "divide", "min", "max"}:
+            _validate_numeric(item)
+        else:
+            raise UnsupportedPdxError(f"不支持的数值操作：{item.key}")
+
+
+def _validate_actions(block: Block) -> None:
+    chain_open = False
+    for item in _ordinary_items(block):
+        if item.key not in {"if", "else_if", "else"}:
+            raise UnsupportedPdxError(f"未登记的行动分支：{item.key}")
+        if item.key != "if" and not chain_open:
+            raise UnsupportedPdxError("行动 else 分支缺少前置 if")
+        chain_open = item.key != "else"
+        body = _control_body(item)
+        writes = [child for child in body.assignments() if child.key in {"add", "multiply"}]
+        if not writes:
+            _validate_actions(body)
+            continue
+        if len(writes) != 1:
+            raise UnsupportedPdxError("一个行动分支必须有且只有一个顶层写入")
+        _validate_numeric(writes[0])
+        for child in body.assignments():
+            if child is writes[0]:
+                continue
+            if child.key != "if":
+                raise UnsupportedPdxError(f"未登记的行动写入旁项：{child.key}")
+            additions = _ordinary_items(_control_body(child))
+            if len(additions) != 1 or additions[0].key != "add":
+                raise UnsupportedPdxError("嵌套 if 必须有一个 add")
+            _validate_numeric(additions[0])
 
 
 def _number(assignment: Assignment) -> float:
@@ -499,6 +625,7 @@ def evaluate(
     parsed = parse_text(text, path=path)
     if parsed.errors:
         raise UnsupportedPdxError("生成文本无法解析：" + "; ".join(parsed.errors))
+    _validate_actions(parsed.root)
     lines = text.splitlines()
     markers: dict[int, str] = {}
     for index, line in enumerate(lines):

@@ -1685,7 +1685,7 @@ def build(
     )
     for name, text in files.items():
         if name.endswith((".txt", ".yml")):
-            files[name] = re.sub(r"(?m)[\t ]+$", "", text)
+            files[name] = re.sub(r"(?m)[\t ]+$", "", text).rstrip("\n") + "\n"
     return files
 
 

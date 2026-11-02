@@ -753,8 +753,12 @@ company_broken_hill_proprietary_company = {
 			}
 			# GROUP program_3f3599e054747eac_company_output_demand_positive
 			add = { value = 0
+				# company_sector_company_broken_hill_proprietary_company_building_gold_mine_pressure [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
 				# company_sector_company_broken_hill_proprietary_company_lead_pressure [market]; lead缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_broken_hill_proprietary_company_building_gold_mine_need [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
 				# company_sector_company_broken_hill_proprietary_company_lead_need [market]; 主业基础配方可能产出lead；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
@@ -988,8 +992,12 @@ company_oriental_consolidated_mining = {
 			}
 			# GROUP program_41ec3e08321c8a7e_company_output_demand_positive
 			add = { value = 0
+				# company_sector_company_oriental_consolidated_mining_building_gold_mine_pressure [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 cash_reserves_ratio > 0.5 occupancy >= 0.9 level >= 1 } } } add = 0.2 }
 				# company_sector_company_oriental_consolidated_mining_wood_pressure [market]; wood缺口且相对基价高，升档同一主业需求，不能重复奖励
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_oriental_consolidated_mining_building_gold_mine_need [market]; 本国同一金矿已有正周利润与充分就业，形成经营机会；现金与高就业升档。所有基础开采PM共同产黄金并按就业增加铸币，不使用普通黄金价格/缺口
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_gold_mine weekly_profit > 0 occupancy >= 0.75 level >= 1 } } } add = 0.12 }
 				# company_sector_company_oriental_consolidated_mining_wood_need [market]; 主业基础配方可能产出wood；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 } } } } add = 0.12 }
 			}
