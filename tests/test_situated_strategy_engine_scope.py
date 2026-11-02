@@ -30,6 +30,13 @@ def strategy_proof(tmp_path, monkeypatch):
     data["exe"] = {"sha256": hashlib.sha256(exe.read_bytes()).hexdigest(), "bytes": 20}
     data["script_hashes"] = {source: hashlib.sha256(inputs[source]).hexdigest()}
     data["observations"] = [{"label": "fixture", "file_offset": "0x0", "bytes": b"fixed".hex()}]
+    for definition_source in data["institution_definition_sources"]:
+        raw = "\n".join(f"{key} = {{}}" for key in data["institution_definitions"]).encode()
+        path = game / definition_source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(raw)
+        inputs[definition_source] = raw
+        data["institution_definition_sources"][definition_source] = hashlib.sha256(raw).hexdigest()
     manifest = tmp_path / "strategy.json"
 
     def freeze():
@@ -71,7 +78,7 @@ def strategy_proof(tmp_path, monkeypatch):
             "additive_obligation_valuation",
             "direct",
         ),
-        ("min_law_chance_to_pass", "unknown", "override_pass_chance_threshold", "pending"),
+        ("min_law_chance_to_pass", "scope:law=law", "override_pass_chance_threshold", "direct"),
         ("revolution_aversion", "none", "override_revolution_aversion", "direct"),
         ("subject_value", "scope:target_country=country", "additive_subject_valuation", "direct"),
         ("become_subject_value", "scope:overlord=country", "additive_subject_valuation", "direct"),
@@ -115,7 +122,8 @@ def test_strategy_proof_missing_or_drift_is_not_inherited(strategy_proof, change
 
 
 @pytest.mark.parametrize(
-    "field", ["diplomatic_play_boldness", "institution_scores", "desired_tax_level", "future"]
+    "field",
+    ["diplomatic_play_boldness", "wanted_construction_ratio", "desired_tax_level", "future"],
 )
 def test_adjacent_unproven_fields_do_not_inherit_country(strategy_proof, field):
     game, _, inputs, _, _ = strategy_proof
@@ -232,12 +240,12 @@ def test_frozen_manifest_preserves_distinct_scope_keys_and_operation_units():
     assert hashlib.sha256(raw).hexdigest() == engine_scope.STRATEGY_MANIFEST_SHA256
     data = json.loads(raw)
     contracts = data["consumers"]
-    assert len(contracts) == 13
+    assert len(contracts) == 15
     assert contracts["recklessness"]["target_scope"] == "scope:target_country=country"
     assert contracts["wargoal_maneuvers_fraction"]["target_scope"] == "scope:enemy_country=country"
     assert contracts["become_subject_value"]["target_scope"] == "scope:overlord=country"
-    assert contracts["min_law_chance_to_pass"]["target_scope"] == "unknown"
-    assert contracts["min_law_chance_to_pass"]["capability"] == "pending"
+    assert contracts["min_law_chance_to_pass"]["target_scope"] == "scope:law=law"
+    assert contracts["min_law_chance_to_pass"]["capability"] == "direct"
     assert contracts["weight"]["unit"] == "candidate_score"
     assert contracts["change_law_chance"]["unit"] == "percentage_points"
     assert contracts["wargoal_maneuvers_fraction"]["unit"] == "fraction"
@@ -247,7 +255,7 @@ def test_production_strategy_verification_reads_actual_files(strategy_proof):
     game, _, inputs, _, _ = strategy_proof
     for source, raw in inputs.items():
         path = game / source
-        path.parent.mkdir(parents=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(raw)
     proof = engine_scope.verify_strategy_game(game)
     assert proof.verified
@@ -259,7 +267,7 @@ def test_production_strategy_verification_never_uses_offline_fallback(strategy_p
     game, exe, inputs, _, _ = strategy_proof
     for source, raw in inputs.items():
         path = game / source
-        path.parent.mkdir(parents=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(raw)
     if damage == "exe":
         exe.write_bytes(b"changed engine")

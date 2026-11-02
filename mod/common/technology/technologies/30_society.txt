@@ -234,6 +234,22 @@ romanticism = {
 
 	ai_weight = {
 		value = 3 # Very important in general
+
+		# SITAI BEGIN information:romanticism.ai_weight
+		# ACTION program_f1d2987f45758d6e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f1d2987f45758d6e_fine_art_demand_positive
+			add = { value = 0
+				# s2_remainder_romanticism_art_shortage_price [political]; 艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.12 }
+				# s2_remainder_romanticism_art_shortage [political]; 实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:romanticism.ai_weight
 	}
 }
 
@@ -250,6 +266,22 @@ international_trade = {
 
 	ai_weight = {
 		value = 3 # Very important in general
+
+		# SITAI BEGIN information:international_trade.ai_weight
+		# ACTION program_b112fc63b55565ad [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b112fc63b55565ad_supported_trade_option_positive
+			add = { value = 0
+				# s2_remainder_international_trade_movement_mercantilism [political]; 本国已有政治运动对精确贸易法律表达正向立法立场且支持比例至少百分之十，本国尚未采用该法律，形成科技开放此法律选项的有限需求；不把孤立主义等同必须自由贸易，不声称必能立法或有外国供给
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_mercantilism value > neutral } political_movement_support >= 0.1 } NOT = { has_law_or_variant = law_type:law_mercantilism } } } add = 0.08 }
+				# s2_remainder_international_trade_movement_free_trade [political]; 本国已有政治运动对精确贸易法律表达正向立法立场且支持比例至少百分之十，本国尚未采用该法律，形成科技开放此法律选项的有限需求；不把孤立主义等同必须自由贸易，不声称必能立法或有外国供给
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_free_trade value > neutral } political_movement_support >= 0.1 } NOT = { has_law_or_variant = law_type:law_free_trade } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.08
+		} }
+		# SITAI END information:international_trade.ai_weight
 	}
 }
 
@@ -308,6 +340,22 @@ corporate_charters = {
 
 	ai_weight = {
 		value = 3 # very important tech
+
+		# SITAI BEGIN information:corporate_charters.ai_weight
+		# ACTION program_3268042b4f45a7df [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3268042b4f45a7df_company_slot_pressure_positive
+			add = { value = 0
+				# s2_capacity_corporate_charters_company_capacity_reached [political]; 真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 num_companies >= "ROOT.max_num_companies" max_num_companies >= 0 } } add = 0.15 }
+				# s2_capacity_corporate_charters_companies_in_use [political]; 原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:corporate_charters.ai_weight
 	}
 }
 
@@ -403,6 +451,22 @@ colonization = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:colonization.ai_weight
+		# ACTION program_f4281cc1364e9d05 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f4281cc1364e9d05_institution_capacity_use_positive
+			add = { value = 0
+				# s2_institution_colonization_investment_3 [political]; 原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 3 } } } add = 0.12 }
+				# s2_institution_colonization_investment_1 [political]; 原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:colonization.ai_weight
 	}
 }
 
@@ -417,6 +481,20 @@ international_relations = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:international_relations.ai_weight
+		# ACTION program_1a29f0136d172df1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1a29f0136d172df1_defensive_diplomacy_option_positive
+			add = { value = 0
+				# s2_remainder_international_relations_diplomatic_play_target [political]; 实际是外交行动目标，原版科技解锁防御协定与联盟等，形成有限防御选项需求代理；不声称存在可签对象、外交自主、关系或利益条件已满足，不保证研究来得及本次危机
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_diplomatic_play_target = yes } } add = 0.08 }
+			}
+			min = 1
+			max = 1.08
+		} }
+		# SITAI END information:international_relations.ai_weight
 	}
 }
 
@@ -437,6 +515,22 @@ law_enforcement = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:law_enforcement.ai_weight
+		# ACTION program_4eb6e154905bc727 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4eb6e154905bc727_institution_capacity_use_positive
+			add = { value = 0
+				# s2_institution_law_enforcement_investment_3 [political]; 原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } } } add = 0.12 }
+				# s2_institution_law_enforcement_investment_1 [political]; 原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:law_enforcement.ai_weight
 	}
 }
 
@@ -455,6 +549,22 @@ stock_exchange = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:stock_exchange.ai_weight
+		# ACTION program_a7eced261d026d69 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a7eced261d026d69_local_market_exposure_positive
+			add = { value = 0
+				# s2_remainder_stock_exchange_deep_local_market_exposure [political]; 本国任一州市场接入低于零点九支持同一市场暴露原因较高设计档；不声称精确价格改善、飞艇生产或系泊PM已可采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 0.9 } } } add = 0.1 }
+				# s2_remainder_stock_exchange_local_market_exposure [political]; 原版增加市场接入价格影响系数，本国任一州市场接入低于一支持有限价格传导暴露代理；不称提高铁路运输容量、修复基建缺口或实际MAPI饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 1.0 } } } add = 0.06 }
+			}
+			min = 1
+			max = 1.1
+		} }
+		# SITAI END information:stock_exchange.ai_weight
 	}
 }
 
@@ -509,6 +619,22 @@ mass_communication = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:mass_communication.ai_weight
+		# ACTION program_39c900909d71c34f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_39c900909d71c34f_authority_capacity_pressure_positive
+			add = { value = 0
+				# s2_capacity_mass_communication_authority_deep_deficit [political]; 原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < -10 } } add = 0.15 }
+				# s2_capacity_mass_communication_authority_deficit [political]; 原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:mass_communication.ai_weight
 	}
 }
 
@@ -779,6 +905,22 @@ organized_sports = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:organized_sports.ai_weight
+		# ACTION program_36b9d4333a2b9beb [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_36b9d4333a2b9beb_prestige_scale_positive
+			add = { value = 0
+				# s2_remainder_organized_sports_prestige_100 [political]; 原版提升声望系数百分之十，当前声望规模作为有限受益规模代理；不声称精确新增点数、低声望需求、体育赛事或下一排名缺口，不以未承认国家标签屏蔽
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes prestige >= 0 prestige >= 100 } } add = 0.08 }
+				# s2_remainder_organized_sports_prestige_50 [political]; 原版提升声望系数百分之十，当前声望规模作为有限受益规模代理；不声称精确新增点数、低声望需求、体育赛事或下一排名缺口，不以未承认国家标签屏蔽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes prestige >= 0 prestige >= 50 } } add = 0.04 }
+			}
+			min = 1
+			max = 1.08
+		} }
+		# SITAI END information:organized_sports.ai_weight
 	}
 }
 
@@ -904,6 +1046,22 @@ joint_stock_companies = {
 
 	ai_weight = {
 		value = 2 # important tech
+
+		# SITAI BEGIN information:joint_stock_companies.ai_weight
+		# ACTION program_f52341f395201a08 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f52341f395201a08_company_slot_pressure_positive
+			add = { value = 0
+				# s2_capacity_joint_stock_companies_company_capacity_reached [political]; 真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 num_companies >= "ROOT.max_num_companies" max_num_companies >= 0 } } add = 0.15 }
+				# s2_capacity_joint_stock_companies_companies_in_use [political]; 原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:joint_stock_companies.ai_weight
 	}
 }
 
@@ -994,6 +1152,27 @@ realism = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:realism.ai_weight
+		# ACTION program_0c4b871f17b4fa87 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_0c4b871f17b4fa87_fine_art_demand_positive
+			add = { value = 0
+				# s2_remainder_realism_art_shortage_price [political]; 艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.12 }
+				# s2_remainder_realism_art_shortage [political]; 实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.08 }
+			}
+			# GROUP program_0c4b871f17b4fa87_observed_art_base_positive
+			add = { value = 0
+				# s2_remainder_realism_prior_art_method [political]; 艺术品有缺口且本国至少一级艺术学院实际采用前一阶段艺术生产方式，支持独立有限升级承接；不要求尚受本科技锁定的新PM，不以配方投入作研究付款门
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_art_academy has_active_production_method = pm_traditional_art level >= 1 } exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.1600000000000001
+		} }
+		# SITAI END information:realism.ai_weight
 	}
 }
 
@@ -1054,6 +1233,22 @@ nationalism = {
 			}
 			multiply = 4
 		}
+
+		# SITAI BEGIN information:nationalism.ai_weight
+		# ACTION program_bb54f51cdc0af2f4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bb54f51cdc0af2f4_authority_capacity_pressure_positive
+			add = { value = 0
+				# s2_capacity_nationalism_authority_deep_deficit [political]; 原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < -10 } } add = 0.15 }
+				# s2_capacity_nationalism_authority_deficit [political]; 原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:nationalism.ai_weight
 	}
 }
 
@@ -1388,6 +1583,22 @@ civilizing_mission = {
 			}
 			add = 1
 		}
+
+		# SITAI BEGIN information:civilizing_mission.ai_weight
+		# ACTION program_1c80dc94210621ac [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1c80dc94210621ac_institution_capacity_use_positive
+			add = { value = 0
+				# s2_institution_civilizing_mission_investment_3 [political]; 原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 3 } } } add = 0.12 }
+				# s2_institution_civilizing_mission_investment_1 [political]; 原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:civilizing_mission.ai_weight
 	}
 }
 
@@ -1421,6 +1632,22 @@ anarchism = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:anarchism.ai_weight
+		# ACTION program_5553928ddc052658 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5553928ddc052658_supported_anarchy_option_positive
+			add = { value = 0
+				# s2_final_anarchism_supported_cooperative_option [political]; 同一被支持法律选项需求下，本国已具备law_anarchy实际要求的合作社所有制法律，减少未来采用的一个已证实法律前置缺口；该经济法律可经socialism或corporatism路径先于anarchism存在。与低档同原因取高，不重复累计
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_interest_group = { law_stance = { law = law_type:law_anarchy value > neutral } } NOT = { has_law_or_variant = law_type:law_anarchy } has_law_or_variant = law_type:law_cooperative_ownership } } add = 0.08 }
+				# s2_final_anarchism_supported_option [political]; 本国现有利益集团对精确law_anarchy具有实际正向law_stance，支持研究开放一个被支持的法律选项；贸易工会默认populist立场证明该需求可以研究前存在，不以尚未创建的anarchist运动作循环门
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_interest_group = { law_stance = { law = law_type:law_anarchy value > neutral } } NOT = { has_law_or_variant = law_type:law_anarchy } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.08
+		} }
+		# SITAI END information:anarchism.ai_weight
 	}
 }
 
@@ -1654,6 +1881,22 @@ pan-nationalism = {
 			}
 			add = 5
 		}
+
+		# SITAI BEGIN information:pan-nationalism.ai_weight
+		# ACTION program_df25247b3376b4ab [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_df25247b3376b4ab_authority_capacity_pressure_positive
+			add = { value = 0
+				# s2_capacity_pan_nationalism_authority_deep_deficit [political]; 原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < -10 } } add = 0.15 }
+				# s2_capacity_pan_nationalism_authority_deficit [political]; 原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:pan-nationalism.ai_weight
 	}
 }
 
@@ -1712,6 +1955,22 @@ investment_banks = {
 
 	ai_weight = {
 		value = 2 # important tech
+
+		# SITAI BEGIN information:investment_banks.ai_weight
+		# ACTION program_fc6ef75885f65005 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_fc6ef75885f65005_company_slot_pressure_positive
+			add = { value = 0
+				# s2_capacity_investment_banks_company_capacity_reached [political]; 真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 num_companies >= "ROOT.max_num_companies" max_num_companies >= 0 } } add = 0.15 }
+				# s2_capacity_investment_banks_companies_in_use [political]; 原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:investment_banks.ai_weight
 	}
 }
 
@@ -1731,6 +1990,27 @@ camera = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:camera.ai_weight
+		# ACTION program_93c7ec520ab4190a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_93c7ec520ab4190a_fine_art_demand_positive
+			add = { value = 0
+				# s2_remainder_camera_art_shortage_price [political]; 艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.12 }
+				# s2_remainder_camera_art_shortage [political]; 实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.08 }
+			}
+			# GROUP program_93c7ec520ab4190a_observed_art_base_positive
+			add = { value = 0
+				# s2_remainder_camera_prior_art_method [political]; 艺术品有缺口且本国至少一级艺术学院实际采用前一阶段艺术生产方式，支持独立有限升级承接；不要求尚受本科技锁定的新PM，不以配方投入作研究付款门
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_art_academy has_active_production_method = pm_realist_art level >= 1 } exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.1600000000000001
+		} }
+		# SITAI END information:camera.ai_weight
 	}
 }
 
@@ -1863,6 +2143,22 @@ zeppelins = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:zeppelins.ai_weight
+		# ACTION program_dcbac5ae0a659178 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_dcbac5ae0a659178_local_market_exposure_positive
+			add = { value = 0
+				# s2_remainder_zeppelins_deep_local_market_exposure [political]; 本国任一州市场接入低于零点九支持同一市场暴露原因较高设计档；不声称精确价格改善、飞艇生产或系泊PM已可采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 0.9 } } } add = 0.1 }
+				# s2_remainder_zeppelins_local_market_exposure [political]; 原版增加市场接入价格影响系数，本国任一州市场接入低于一支持有限价格传导暴露代理；不称提高铁路运输容量、修复基建缺口或实际MAPI饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 1.0 } } } add = 0.06 }
+			}
+			min = 1
+			max = 1.1
+		} }
+		# SITAI END information:zeppelins.ai_weight
 	}
 }
 
@@ -1994,6 +2290,27 @@ political_agitation = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:political_agitation.ai_weight
+		# ACTION program_7f7c3f89a807c483 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_7f7c3f89a807c483_authority_capacity_pressure_positive
+			add = { value = 0
+				# s2_capacity_political_agitation_authority_deep_deficit [political]; 原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < -10 } } add = 0.15 }
+				# s2_capacity_political_agitation_authority_deficit [political]; 原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 0 } } add = 0.08 }
+			}
+			# GROUP program_7f7c3f89a807c483_reform_expectation_negative
+			add = { value = 0
+				# s2_capacity_political_agitation_reform_expectation [political]; 原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；权威收益未知不消除此成本，成本未知不消除已观察权威收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			min = 0.92
+			max = 1.15
+		} }
+		# SITAI END information:political_agitation.ai_weight
 	}
 }
 
@@ -2050,6 +2367,22 @@ corporate_management = {
 
 	ai_weight = {
 		value = 2 # important tech
+
+		# SITAI BEGIN information:corporate_management.ai_weight
+		# ACTION program_d95d3c312d66995f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d95d3c312d66995f_company_slot_pressure_positive
+			add = { value = 0
+				# s2_capacity_corporate_management_company_capacity_reached [political]; 真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 num_companies >= "ROOT.max_num_companies" max_num_companies >= 0 } } add = 0.15 }
+				# s2_capacity_corporate_management_companies_in_use [political]; 原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:corporate_management.ai_weight
 	}
 }
 
@@ -2105,6 +2438,27 @@ film = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:film.ai_weight
+		# ACTION program_a1930806182e1ee3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a1930806182e1ee3_fine_art_demand_positive
+			add = { value = 0
+				# s2_remainder_film_art_shortage_price [political]; 艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.12 }
+				# s2_remainder_film_art_shortage [political]; 实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.08 }
+			}
+			# GROUP program_a1930806182e1ee3_observed_art_base_positive
+			add = { value = 0
+				# s2_remainder_film_prior_art_method [political]; 艺术品有缺口且本国至少一级艺术学院实际采用前一阶段艺术生产方式，支持独立有限升级承接；不要求尚受本科技锁定的新PM，不以配方投入作研究付款门
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_art_academy has_active_production_method = pm_photographic_art level >= 1 } exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.1600000000000001
+		} }
+		# SITAI END information:film.ai_weight
 	}
 }
 
@@ -2130,6 +2484,27 @@ multilateral_alliances = {
 			limit = { country_rank >= rank_value:great_power }
 			add = 2
 		}
+
+		# SITAI BEGIN information:multilateral_alliances.ai_weight
+		# ACTION program_2c1016b3d3a97089 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2c1016b3d3a97089_alliance_capacity_use_positive
+			add = { value = 0
+				# s2_remainder_multilateral_alliances_alliances_in_use [political]; 原版允许多个联盟，当前已有联盟仅形成已使用联盟能力的有限容量需求代理；不声称已找到第二盟友、已用尽真实槽位或必然可达成协定
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_alliances >= 0 num_alliances >= 1 } } add = 0.08 }
+			}
+			# GROUP program_2c1016b3d3a97089_diplomatic_play_maneuvers_positive
+			add = { value = 0
+				# s2_remainder_multilateral_alliances_diplomatic_play_initiator [political]; 原版外交行动数加成百分之五十，实际处于外交行动主要发起或目标角色支持有限研究子收益；两角色同原因去重，不把战争泛化为外交行动或保证研究赶得上本次行动
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_diplomatic_play_initiator = yes } } add = 0.08 }
+				# s2_remainder_multilateral_alliances_diplomatic_play_target [political]; 原版外交行动数加成百分之五十，实际处于外交行动主要发起或目标角色支持有限研究子收益；两角色同原因去重，不把战争泛化为外交行动或保证研究赶得上本次行动
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_diplomatic_play_target = yes } } add = 0.08 }
+			}
+			min = 1
+			max = 1.1600000000000001
+		} }
+		# SITAI END information:multilateral_alliances.ai_weight
 	}
 }
 
@@ -2155,6 +2530,22 @@ mass_surveillance = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mass_surveillance.ai_weight
+		# ACTION program_f39ab7477f4c5241 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f39ab7477f4c5241_institution_capacity_use_positive
+			add = { value = 0
+				# s2_institution_mass_surveillance_investment_3 [political]; 原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } } } add = 0.12 }
+				# s2_institution_mass_surveillance_investment_1 [political]; 原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:mass_surveillance.ai_weight
 	}
 }
 
@@ -2394,5 +2785,19 @@ paved_roads = {
 
 	ai_weight = {
 		value = 2 # Important for those nice-looking roads!
+
+		# SITAI BEGIN information:paved_roads.ai_weight
+		# ACTION program_0084f52bc15d2ef5 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_0084f52bc15d2ef5_market_automobile_opportunity_positive
+			add = { value = 0
+				# s2_final_paved_roads_market_automobile_opportunity [political]; 所属市场已存在真实汽车总消费且汽车卖单不低于买单，为未来人口采用汽车并受益于道路消费基建系数提供低强度市场可用性机会代理；正消费排除只有供给却无人使用的情形，非负订单差排除当前市场供给不足，倍率只作有限设计判断
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_consumption >= 0 market_goods_consumption > 0 market_goods_delta >= 0 } } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.04
+		} }
+		# SITAI END information:paved_roads.ai_weight
 	}
 }

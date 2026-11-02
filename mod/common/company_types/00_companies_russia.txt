@@ -1,0 +1,732 @@
+# Vinnaia Monopoliia
+company_vodka_monopoly = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/russian_vodka_monopoly.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_farm_wheat.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_INGRIA STATE_MOSCOW }
+
+	building_types = {
+		building_food_industry
+		building_vineyard
+	}
+
+	extension_building_types = {
+		building_wheat_farm
+		building_rye_farm
+	}
+
+	possible_prestige_goods = {
+		prestige_good_smirnoff_vodka
+	}
+
+	potential = {
+		country_has_primary_culture = cu:russian
+	}
+
+	possible = {
+		NOT = { has_law_or_variant = law_type:law_laissez_faire }
+		any_scope_state = {
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_food_industry
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		state_radicals_from_political_movements_mult = -0.15
+	}
+
+	ai_will_do = {
+		NOT = { has_law_or_variant = law_type:law_laissez_faire }
+		any_scope_state = {
+			OR = {
+				state_region = s:STATE_INGRIA
+				state_region = s:STATE_MOSCOW
+			}
+		}
+	}
+
+	ai_construction_targets = {
+		building_food_industry = {
+			level = 5
+			state_trigger = {
+				OR = {
+					state_region = s:STATE_INGRIA
+					state_region = s:STATE_MOSCOW
+				}
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_vodka_monopoly.ai_weight
+		# ACTION program_071f2ba66f9e87bf [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_071f2ba66f9e87bf_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_vodka_monopoly_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_071f2ba66f9e87bf_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_vodka_monopoly_grain_input [market]; 主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_071f2ba66f9e87bf_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_vodka_monopoly_wine_pressure [market]; wine缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wine mg:wine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_vodka_monopoly_groceries_pressure [market]; groceries缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_vodka_monopoly_wine_need [market]; 主业基础配方可能产出wine；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wine mg:wine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_vodka_monopoly_groceries_need [market]; 主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_071f2ba66f9e87bf_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_vodka_monopoly_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_vodka_monopoly.ai_weight
+	}
+}
+
+# Society of Putilov Factories
+company_putilov_company = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/russian_putilov.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_INGRIA }
+
+	building_types = {
+		building_motor_industry
+		building_artillery_foundry
+		building_shipyard
+	}
+
+	extension_building_types = {
+		building_munition_plant
+		building_explosives_factory
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_artillery
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_artillery_complete_tt
+			has_variable = prestige_good_generic_artillery_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_russia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_INGRIA
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = railways
+		any_scope_state = {
+			state_region = s:STATE_INGRIA
+			is_incorporated = yes
+			any_scope_building = {
+				OR = {
+					is_building_type = building_motor_industry
+					is_building_type = building_artillery_foundry
+					is_building_type = building_shipyard
+				}
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		building_railway_throughput_add = 0.1
+		state_infrastructure_mult = 0.05
+	}
+
+	ai_will_do = {
+		has_technology_researched = railways
+		any_scope_state = {
+			state_region = s:STATE_INGRIA
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_shipyard = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_INGRIA
+			}
+		}
+		building_artillery_foundry = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_INGRIA
+			}
+		}
+		building_motor_industry = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_INGRIA
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_putilov_company.ai_weight
+		# ACTION program_bbbe2456a26ab694 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bbbe2456a26ab694_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_putilov_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_bbbe2456a26ab694_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_putilov_company_steel_input [market]; 主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_bbbe2456a26ab694_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_putilov_company_steamers_pressure [market]; steamers缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_putilov_company_engines_pressure [market]; engines缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_putilov_company_clippers_pressure [market]; clippers缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_putilov_company_artillery_pressure [market]; artillery缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_putilov_company_steamers_need [market]; 主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_putilov_company_engines_need [market]; 主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_putilov_company_clippers_need [market]; 主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_putilov_company_artillery_need [market]; 主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_bbbe2456a26ab694_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_putilov_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_putilov_company.ai_weight
+	}
+}
+
+# The Petroleum Production Company Nobel Brothers, Limited
+company_branobel = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/russian_branobel.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_oil_drills.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_AZERBAIJAN }
+
+	building_types = {
+		building_oil_rig
+	}
+
+	extension_building_types = {
+		building_power_plant
+	}
+
+	possible_prestige_goods = {
+		prestige_good_baku_oil
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_greater_persia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_AZERBAIJAN
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = pumpjacks
+		any_scope_state = {
+			state_region = s:STATE_AZERBAIJAN
+			any_scope_building = {
+				is_building_type = building_oil_rig
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		state_migration_pull_mult = 0.1
+		building_railway_throughput_add = 0.05
+	}
+
+	ai_will_do = {
+		has_technology_researched = pumpjacks
+		any_scope_state = {
+			state_region = s:STATE_AZERBAIJAN
+		}
+	}
+
+	ai_construction_targets = {
+		building_oil_rig = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_AZERBAIJAN
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_branobel.ai_weight
+		# ACTION program_ebf851946b9eead2 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ebf851946b9eead2_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_branobel_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_ebf851946b9eead2_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_branobel_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_ebf851946b9eead2_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_branobel_oil_pressure [market]; oil缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_branobel_oil_need [market]; 主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_ebf851946b9eead2_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_branobel_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_branobel.ai_weight
+	}
+}
+
+# Izhevsk Arms Plant
+company_izhevsk_arms_plant = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/russian_izhevsk_arms_plant.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_PERM }
+
+	building_types = {
+		building_arms_industry
+		building_munition_plant
+	}
+
+	extension_building_types = {
+		building_artillery_foundry
+		building_steel_mill
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_small_arms
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_small_arms_complete_tt
+			has_variable = prestige_good_generic_small_arms_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_siberia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_PERM
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = rifling # corresponds roughly with the Izhevsk plant's incorporation as a private commercial enterprise, and not a state arsenal.
+		any_scope_state = {
+			state_region = s:STATE_PERM
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_arms_industry
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		building_arms_industry_throughput_add = 0.1
+		building_artillery_foundry_throughput_add = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = rifling
+		any_scope_state = {
+			state_region = s:STATE_PERM
+		}
+	}
+
+	ai_construction_targets = {
+		building_arms_industry = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_PERM
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_izhevsk_arms_plant.ai_weight
+		# ACTION program_2823b52977fcc192 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2823b52977fcc192_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_izhevsk_arms_plant_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_2823b52977fcc192_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_izhevsk_arms_plant_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				# company_sector_company_izhevsk_arms_plant_hardwood_input [market]; 主业某必选基础配方组所有方法共同需要hardwood；高价为配方机会成本，不是当前实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				# company_sector_company_izhevsk_arms_plant_explosives_input [market]; 主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:explosives mg:explosives = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_2823b52977fcc192_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_izhevsk_arms_plant_small_arms_pressure [market]; small_arms缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_izhevsk_arms_plant_ammunition_pressure [market]; ammunition缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_izhevsk_arms_plant_small_arms_need [market]; 主业基础配方可能产出small_arms；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_izhevsk_arms_plant_ammunition_need [market]; 主业基础配方可能产出ammunition；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_2823b52977fcc192_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_izhevsk_arms_plant_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_izhevsk_arms_plant.ai_weight
+	}
+}
+
+# Savva Morozov & Sons Cotton Textile Mfg. Co.
+company_savva_morozov = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/russian_savva_morozov_and_sons.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_MOSCOW }
+
+	building_types = {
+		building_textile_mill
+	}
+
+	extension_building_types = {
+		building_cotton_plantation
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_clothes
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_clothes_complete_tt
+			has_variable = prestige_good_generic_clothes_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_russia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_MOSCOW
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = joint_stock_companies
+		any_scope_state = {
+			state_region = s:STATE_MOSCOW
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_textile_mill
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		country_prestige_mult = 0.1
+		interest_group_ig_industrialists_pop_attraction_mult = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = joint_stock_companies
+		any_scope_state = {
+			state_region = s:STATE_MOSCOW
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_arms_industry = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_MOSCOW
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_savva_morozov.ai_weight
+		# ACTION program_b04ea1f8add8a2e7 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b04ea1f8add8a2e7_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_savva_morozov_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_b04ea1f8add8a2e7_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_savva_morozov_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_b04ea1f8add8a2e7_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_savva_morozov_clothes_pressure [market]; clothes缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_savva_morozov_clothes_need [market]; 主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_b04ea1f8add8a2e7_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_savva_morozov_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_savva_morozov.ai_weight
+	}
+}
+
+# New Russia Company Limited
+company_john_hughes = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/russian_new_russia_company.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_mining.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_KHARKOV STATE_TAURIDA }
+
+	building_types = {
+		building_steel_mill
+		building_coal_mine
+		building_iron_mine
+	}
+
+	extension_building_types = {
+		building_railway
+	}
+
+	possible_prestige_goods = {
+		prestige_good_russia_iron
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_eastern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				OR = {
+					state_region = s:STATE_KHARKOV
+					state_region = s:STATE_TAURIDA
+				}
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = bessemer_process
+		any_scope_state = {
+			OR = {
+				state_region = s:STATE_KHARKOV
+				state_region = s:STATE_TAURIDA
+			}
+			is_incorporated = yes
+			any_scope_building = {
+				OR = {
+					is_building_type = building_steel_mill
+					is_building_type = building_coal_mine
+					is_building_type = building_iron_mine
+				}
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		building_railway_throughput_add = 0.1
+		interest_group_ig_industrialists_approval_add = 2
+	}
+
+	ai_will_do = {
+		has_technology_researched = bessemer_process
+		any_scope_state = {
+			OR = {
+				state_region = s:STATE_KHARKOV
+				state_region = s:STATE_TAURIDA
+			}
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_steel_mill = {
+			level = 5
+			state_trigger = {
+				OR = {
+					state_region = s:STATE_KHARKOV
+					state_region = s:STATE_TAURIDA
+				}
+				is_incorporated = yes
+			}
+		}
+		building_coal_mine = {
+			level = 5
+			state_trigger = {
+				OR = {
+					state_region = s:STATE_KHARKOV
+					state_region = s:STATE_TAURIDA
+				}
+				is_incorporated = yes
+			}
+		}
+		building_iron_mine = {
+			level = 5
+			state_trigger = {
+				OR = {
+					state_region = s:STATE_KHARKOV
+					state_region = s:STATE_TAURIDA
+				}
+				is_incorporated = yes
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_john_hughes.ai_weight
+		# ACTION program_e82c8ceb43ed532c [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_e82c8ceb43ed532c_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_john_hughes_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_e82c8ceb43ed532c_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_john_hughes_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				# company_sector_company_john_hughes_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				# company_sector_company_john_hughes_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_e82c8ceb43ed532c_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_john_hughes_steel_pressure [market]; steel缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_john_hughes_iron_pressure [market]; iron缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_john_hughes_coal_pressure [market]; coal缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_john_hughes_steel_need [market]; 主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_john_hughes_iron_need [market]; 主业基础配方可能产出iron；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_john_hughes_coal_need [market]; 主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_e82c8ceb43ed532c_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_john_hughes_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_john_hughes.ai_weight
+	}
+}

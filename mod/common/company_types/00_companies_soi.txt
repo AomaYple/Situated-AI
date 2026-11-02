@@ -1,0 +1,2027 @@
+# Də Afḡān Nasājī Šerkat
+company_da_afghan_nassaji_sherkat = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/da_afghan_nassaji_sherkat.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_BALKH }
+
+	building_types = {
+		building_textile_mill
+	}
+
+	extension_building_types = {
+		building_cotton_plantation
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_clothes
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_clothes_complete_tt
+			has_variable = prestige_good_generic_clothes_var
+		}
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_greater_persia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_BALKH
+			}
+		}
+	}
+
+	possible = {
+		any_scope_state = {
+			state_region = s:STATE_BALKH
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_textile_mill
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		state_trade_capacity_mult = 0.05
+		building_cotton_plantation_throughput_add = 0.1
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_BALKH
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_textile_mill = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_BALKH
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_da_afghan_nassaji_sherkat.ai_weight
+		# ACTION program_d528482bd0e8d6a3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d528482bd0e8d6a3_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_da_afghan_nassaji_sherkat_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_d528482bd0e8d6a3_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_da_afghan_nassaji_sherkat_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_d528482bd0e8d6a3_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_da_afghan_nassaji_sherkat_clothes_pressure [market]; clothes缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_da_afghan_nassaji_sherkat_clothes_need [market]; 主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_d528482bd0e8d6a3_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_da_afghan_nassaji_sherkat_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_da_afghan_nassaji_sherkat.ai_weight
+	}
+}
+
+# Iranian State Railway
+company_iranian_state_railway = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/trans_iranian_railway.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_railways.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	building_types = {
+		building_railway
+	}
+
+	extension_building_types = {
+		building_motor_industry
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_greater_persia
+		country_has_primary_culture = cu:persian
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = {
+					is_homeland = cu:persian
+				}
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = railways
+		any_scope_state = {
+			region = sr:region_greater_persia
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_railway
+				level >= 5
+			}
+			count >= 2
+		}
+	}
+
+	prosperity_modifier = {
+		state_assimilation_mult = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = railways
+		any_scope_state = {
+			region = sr:region_greater_persia
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_railway = {
+			level = 5
+			state_trigger = {
+				region = sr:region_greater_persia
+				is_incorporated = yes
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_iranian_state_railway.ai_weight
+		# ACTION program_16696598bb448678 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_16696598bb448678_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_iranian_state_railway_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_16696598bb448678_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_iranian_state_railway_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_16696598bb448678_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_iranian_state_railway_building_railway_pressure [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 sg:transportation = { state_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_iranian_state_railway_building_railway_need [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 } } } add = 0.12 }
+			}
+			# GROUP program_16696598bb448678_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_iranian_state_railway_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_iranian_state_railway.ai_weight
+	}
+}
+
+# Tashkent Railroad
+company_tashkent_railroad = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/tashkent_railroad.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_railways.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_FERGANA }
+
+	building_types = {
+		building_railway
+	}
+
+	extension_building_types = {
+		building_motor_industry
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_central_asia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_FERGANA
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = railways
+		any_scope_state = {
+			state_region = s:STATE_FERGANA
+			is_incorporated = yes
+			has_building = building_railway
+			custom_tooltip = {
+				text = has_at_least_5_levels_of_railway_tt
+				any_scope_building = {
+					is_building_type = building_railway
+					level >= 5
+				}
+			}
+		}
+		any_scope_state = {
+			region = sr:region_central_asia
+			is_incorporated = yes
+			custom_tooltip = {
+				text = has_at_least_5_levels_of_railway_tt
+				any_scope_building = {
+					is_building_type = building_railway
+					level >= 5
+				}
+			}
+			count >= 2
+		}
+	}
+
+	prosperity_modifier = {
+		building_cotton_plantation_throughput_add = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = railways
+		any_scope_state = {
+			region = sr:region_central_asia
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_railway = {
+			level = 5
+			state_trigger = {
+				region = sr:region_central_asia
+				is_incorporated = yes
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_tashkent_railroad.ai_weight
+		# ACTION program_b6ca12926e134097 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b6ca12926e134097_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_tashkent_railroad_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_b6ca12926e134097_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_tashkent_railroad_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_b6ca12926e134097_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_tashkent_railroad_building_railway_pressure [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 sg:transportation = { state_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_tashkent_railroad_building_railway_need [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 } } } add = 0.12 }
+			}
+			# GROUP program_b6ca12926e134097_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_tashkent_railroad_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_tashkent_railroad.ai_weight
+	}
+}
+
+# West Ural Petroleum Company, Limited
+company_west_ural_petroleum = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/historical_west_ural_petroleum_company_limited.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_oil_drills.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_URALSK }
+
+	building_types = {
+		building_oil_rig
+	}
+
+	extension_building_types = {
+		building_power_plant
+		building_railway
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_central_asia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_URALSK
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = pumpjacks
+		any_scope_state = {
+			state_region = s:STATE_URALSK
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_oil_rig
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		state_colony_growth_speed_mult = 0.1
+		building_power_plant_throughput_add = 0.05
+	}
+
+	ai_will_do = {
+		has_technology_researched = pumpjacks
+		any_scope_state = {
+			state_region = s:STATE_URALSK
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_oil_rig = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_URALSK
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_west_ural_petroleum.ai_weight
+		# ACTION program_91d1bea7ca98e68f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_91d1bea7ca98e68f_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_west_ural_petroleum_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_91d1bea7ca98e68f_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_west_ural_petroleum_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_91d1bea7ca98e68f_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_west_ural_petroleum_oil_pressure [market]; oil缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_west_ural_petroleum_oil_need [market]; 主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_91d1bea7ca98e68f_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_west_ural_petroleum_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_west_ural_petroleum.ai_weight
+	}
+}
+
+# Šerkat-e Etteḥādīya-ye Welāyat-e Šemālī
+company_sherkat_shemali = {
+	icon = "gfx/interface/icons/company_icons/basic_colonial_plantations_2.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	category = aristocrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_BALKH }
+
+	building_types = {
+		building_cotton_plantation
+	}
+
+	extension_building_types = {
+		building_textile_mill
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_greater_persia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_BALKH
+			}
+		}
+	}
+
+	possible = {
+		any_scope_state = {
+			state_region = s:STATE_BALKH
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_cotton_plantation
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		building_opium_plantation_throughput_add = 0.2
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_BALKH
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_cotton_plantation = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_BALKH
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_sherkat_shemali.ai_weight
+		# ACTION program_d078279c7d40c7aa [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d078279c7d40c7aa_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_sherkat_shemali_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_d078279c7d40c7aa_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_sherkat_shemali_fabric_pressure [market]; fabric缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_sherkat_shemali_fabric_need [market]; 主业基础配方可能产出fabric；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_d078279c7d40c7aa_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_sherkat_shemali_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_sherkat_shemali.ai_weight
+	}
+}
+
+# Bongāh-e Enḥeṣār-e Ṣāderāt-e Taryāk
+company_opium_export_monopoly = {
+	icon = "gfx/interface/icons/company_icons/basic_colonial_plantations_1.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_plantation.dds"
+
+	category = aristocrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_ISFAHAN }
+
+	building_types = {
+		building_opium_plantation
+	}
+
+	extension_building_types = {
+		building_tobacco_plantation
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_opium
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_opium_complete_tt
+			has_variable = prestige_good_generic_opium_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_greater_persia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = {
+					is_homeland = cu:persian
+				}
+			}
+		}
+	}
+
+	possible = {
+		any_scope_state = {
+			region = sr:region_greater_persia
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_opium_plantation
+				level >= 5
+			}
+			count >= 2
+		}
+	}
+
+	prosperity_modifier = {
+		state_radicals_from_political_movements_mult = -0.1
+		unit_morale_recovery_mult = 0.1
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			region = sr:region_greater_persia
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_opium_plantation = {
+			level = 5
+			state_trigger = {
+				region = sr:region_greater_persia
+				is_incorporated = yes
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_opium_export_monopoly.ai_weight
+		# ACTION program_f651a8d434b3921e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f651a8d434b3921e_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_opium_export_monopoly_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_f651a8d434b3921e_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_opium_export_monopoly_opium_pressure [market]; opium缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:opium mg:opium = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_opium_export_monopoly_opium_need [market]; 主业基础配方可能产出opium；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:opium mg:opium = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_f651a8d434b3921e_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_opium_export_monopoly_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_opium_export_monopoly.ai_weight
+	}
+}
+
+# Šerkat-e Eslāmiya
+company_sherkate_eslamiya = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/historical_serkat_e_eslamiya.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_ISFAHAN }
+
+	building_types = {
+		building_textile_mill
+	}
+
+	extension_building_types = {
+		building_cotton_plantation
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_clothes
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_clothes_complete_tt
+			has_variable = prestige_good_generic_clothes_var
+		}
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_greater_persia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_ISFAHAN
+			}
+		}
+	}
+
+	possible = {
+		any_scope_state = {
+			state_region = s:STATE_ISFAHAN
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_textile_mill
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		country_state_religion_wages_mult = 0.2
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_ISFAHAN
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_textile_mill = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_ISFAHAN
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_sherkate_eslamiya.ai_weight
+		# ACTION program_d28ac26253297c96 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d28ac26253297c96_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_sherkate_eslamiya_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_d28ac26253297c96_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_sherkate_eslamiya_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_d28ac26253297c96_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_sherkate_eslamiya_clothes_pressure [market]; clothes缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_sherkate_eslamiya_clothes_need [market]; 主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_d28ac26253297c96_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_sherkate_eslamiya_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_sherkate_eslamiya.ai_weight
+	}
+}
+
+# MM. Nicolas Portalis et Cie.
+company_nicolas_portalis = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/historical_mm_nicolas_portalis_et_cie.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_plantation.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_LEBANON }
+
+	building_types = {
+		building_silk_plantation
+	}
+
+	extension_building_types = {
+		building_cotton_plantation
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_arabia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_LEBANON
+			}
+		}
+	}
+
+	possible = {
+		any_scope_state = {
+			state_region = s:STATE_LEBANON
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_silk_plantation
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		country_prestige_mult = 0.1
+		state_radicalism_increases_violent_hostility_mult = -0.05
+		state_radicalism_increases_cultural_erasure_mult = -0.05
+		state_radicalism_increases_open_prejudice_mult = -0.05
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_LEBANON
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_silk_plantation = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_LEBANON
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_nicolas_portalis.ai_weight
+		# ACTION program_12daaea805163134 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_12daaea805163134_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_nicolas_portalis_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_12daaea805163134_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_nicolas_portalis_silk_pressure [market]; silk缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:silk mg:silk = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_nicolas_portalis_silk_need [market]; 主业基础配方可能产出silk；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:silk mg:silk = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_12daaea805163134_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_nicolas_portalis_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_nicolas_portalis.ai_weight
+	}
+}
+
+# Hanseong Jeongi Hoesa
+company_hanseong_jeongi_hoesa = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/hanseong_jeongi_hoesa.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_SEOUL }
+
+	building_types = {
+		building_power_plant
+	}
+
+	extension_building_types = {
+		building_railway
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_northeast_asia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_SEOUL
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = electrical_generation
+		any_scope_state = {
+			state_region = s:STATE_SEOUL
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_power_plant
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		building_art_academy_throughput_add = 0.05
+		building_railway_throughput_add = 0.05
+	}
+
+	ai_will_do = {
+		has_technology_researched = electrical_generation
+		any_scope_state = {
+			state_region = s:STATE_SEOUL
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_power_plant = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_SEOUL
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_hanseong_jeongi_hoesa.ai_weight
+		# ACTION program_603ca34d381b96b8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_603ca34d381b96b8_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_hanseong_jeongi_hoesa_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_603ca34d381b96b8_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_hanseong_jeongi_hoesa_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_603ca34d381b96b8_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_hanseong_jeongi_hoesa_building_power_plant_pressure [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.5 } } } } add = 0.2 }
+				# company_sector_company_hanseong_jeongi_hoesa_building_power_plant_need [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.25 } } } } add = 0.12 }
+			}
+			# GROUP program_603ca34d381b96b8_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_hanseong_jeongi_hoesa_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_hanseong_jeongi_hoesa.ai_weight
+	}
+}
+
+# Kirgizian Mining Joint Stock Company
+company_kirgizian_mining_company= {
+	icon = "gfx/interface/icons/company_icons/basic_metal_mining.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_mining.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_SEMIRECHE }
+
+	building_types = {
+		building_coal_mine
+	}
+
+	extension_building_types = {
+		building_iron_mine
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_central_asia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_SEMIRECHE
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = steam_donkey
+		has_technology_researched = railways
+		any_scope_state = {
+			state_region = s:STATE_SEMIRECHE
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_coal_mine
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		building_power_plant_throughput_add = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = steam_donkey
+		has_technology_researched = railways
+		any_scope_state = {
+			state_region = s:STATE_SEMIRECHE
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_coal_mine = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_SEMIRECHE
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_kirgizian_mining_company.ai_weight
+		# ACTION program_f7f49c2d2a9842f1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f7f49c2d2a9842f1_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_kirgizian_mining_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_f7f49c2d2a9842f1_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_kirgizian_mining_company_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_f7f49c2d2a9842f1_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_kirgizian_mining_company_coal_pressure [market]; coal缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_kirgizian_mining_company_coal_need [market]; 主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_f7f49c2d2a9842f1_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_kirgizian_mining_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_kirgizian_mining_company.ai_weight
+	}
+}
+
+# Persshelk
+company_persshelk = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/historical_persshelk.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_plantation.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	building_types = {
+		building_silk_plantation
+	}
+
+	extension_building_types = {
+		building_textile_mill
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_greater_persia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = {
+					is_homeland = cu:persian
+				}
+			}
+		}
+	}
+
+	possible = {
+		OR = {
+			country_has_primary_culture = cu:russian
+			any_scope_ally = {
+				country_has_primary_culture = cu:russian
+			}
+		}
+		any_scope_state = {
+			region = sr:region_greater_persia
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_silk_plantation
+				level >= 5
+			}
+			count >= 2
+		}
+	}
+
+	prosperity_modifier = {
+		country_prestige_mult = 0.05
+		interest_group_ig_petty_bourgeoisie_pop_attraction_mult = 0.1
+	}
+
+	ai_will_do = {
+		OR = {
+			country_has_primary_culture = cu:russian
+			any_scope_ally = {
+				country_has_primary_culture = cu:russian
+			}
+		}
+		any_scope_state = {
+			region = sr:region_greater_persia
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_silk_plantation = {
+			level = 5
+			state_trigger = {
+				region = sr:region_greater_persia
+				is_incorporated = yes
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_persshelk.ai_weight
+		# ACTION program_b6b6fc195f08b16d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b6b6fc195f08b16d_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_persshelk_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_b6b6fc195f08b16d_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_persshelk_silk_pressure [market]; silk缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:silk mg:silk = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_persshelk_silk_need [market]; 主业基础配方可能产出silk；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:silk mg:silk = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_b6b6fc195f08b16d_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_persshelk_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_persshelk.ai_weight
+	}
+}
+
+# Perskhlopok
+company_perskhlopok = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/historical_perskhlopok.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_plantation.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	building_types = {
+		building_cotton_plantation
+	}
+
+	extension_building_types = {
+		building_textile_mill
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_greater_persia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = {
+					is_homeland = cu:persian
+				}
+			}
+		}
+	}
+
+	possible = {
+		OR = {
+			country_has_primary_culture = cu:russian
+			any_scope_ally = {
+				country_has_primary_culture = cu:russian
+			}
+		}
+		any_scope_state = {
+			region = sr:region_greater_persia
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_cotton_plantation
+				level >= 5
+			}
+			count >= 2
+		}
+	}
+
+	prosperity_modifier = {
+		building_textile_mill_throughput_add = 0.05
+		interest_group_ig_rural_folk_approval_add = 2
+	}
+
+	ai_will_do = {
+		OR = {
+			country_has_primary_culture = cu:russian
+			any_scope_ally = {
+				country_has_primary_culture = cu:russian
+			}
+		}
+		any_scope_state = {
+			region = sr:region_greater_persia
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_cotton_plantation = {
+			level = 5
+			state_trigger = {
+				region = sr:region_greater_persia
+				is_incorporated = yes
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_perskhlopok.ai_weight
+		# ACTION program_26c3148f2fd7718e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_26c3148f2fd7718e_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_perskhlopok_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_26c3148f2fd7718e_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_perskhlopok_fabric_pressure [market]; fabric缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_perskhlopok_fabric_need [market]; 主业基础配方可能产出fabric；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_26c3148f2fd7718e_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_perskhlopok_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_perskhlopok.ai_weight
+	}
+}
+
+# Moscow Irrigation Company
+company_moscow_irrigation_company = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/historical_moscow_irrigation_company.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_plantation.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_FERGANA }
+
+	building_types = {
+		building_cotton_plantation
+		building_rice_farm
+	}
+
+	extension_building_types = {
+		building_wheat_farm
+		building_opium_plantation
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_grain
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_grain_complete_tt
+			has_variable = prestige_good_generic_grain_var
+		}
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_greater_persia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_FERGANA
+			}
+
+			OR = {
+				any_scope_state = {
+					state_region = s:STATE_MOSCOW
+				}
+				any_scope_ally = {
+					any_scope_state = {
+						state_region = s:STATE_MOSCOW
+					}
+				}
+			}
+		}
+	}
+
+	possible = {
+		OR = {
+			any_scope_state = {
+				state_region = s:STATE_MOSCOW
+			}
+			any_scope_ally = {
+				any_scope_state = {
+					state_region = s:STATE_MOSCOW
+				}
+			}
+		}
+		any_scope_state = {
+			state_region = s:STATE_FERGANA
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_cotton_plantation
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		building_cotton_plantation_throughput_add = 0.2
+		interest_group_ig_industrialists_pop_attraction_mult = 0.05
+	}
+
+	ai_will_do = {
+		OR = {
+			any_scope_state = {
+				state_region = s:STATE_MOSCOW
+			}
+			any_scope_ally = {
+				any_scope_state = {
+					state_region = s:STATE_MOSCOW
+				}
+			}
+		}
+		any_scope_state = {
+			state_region = s:STATE_FERGANA
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_cotton_plantation = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_FERGANA
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_moscow_irrigation_company.ai_weight
+		# ACTION program_be78c453271fec27 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_be78c453271fec27_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_moscow_irrigation_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_be78c453271fec27_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_moscow_irrigation_company_grain_pressure [market]; grain缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_moscow_irrigation_company_fabric_pressure [market]; fabric缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_moscow_irrigation_company_grain_need [market]; 主业基础配方可能产出grain；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_moscow_irrigation_company_fabric_need [market]; 主业基础配方可能产出fabric；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_be78c453271fec27_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_moscow_irrigation_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_moscow_irrigation_company.ai_weight
+	}
+}
+
+# Arthur Guinness Son & Co. Ltd
+company_guinness = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/arthur_guinness_son.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_farm_wheat.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_LEINSTER }
+
+	building_types = {
+		building_food_industry
+	}
+
+	extension_building_types = {
+		building_wheat_farm
+		building_rye_farm
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_groceries
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_groceries_complete_tt
+			has_variable = prestige_good_generic_groceries_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_western_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_LEINSTER
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = corporate_charters
+		any_scope_state = {
+			state_region = s:STATE_LEINSTER
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_food_industry
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		state_radicals_from_political_movements_mult = -0.1
+		state_radicalism_increases_violent_hostility_mult = -0.05
+		state_radicalism_increases_cultural_erasure_mult = -0.05
+		state_radicalism_increases_open_prejudice_mult = -0.05
+	}
+
+	ai_will_do = {
+		has_technology_researched = corporate_charters
+		any_scope_state = {
+			state_region = s:STATE_LEINSTER
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_food_industry = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_LEINSTER
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_guinness.ai_weight
+		# ACTION program_37645b506fcd95cc [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_37645b506fcd95cc_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_guinness_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_37645b506fcd95cc_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_guinness_grain_input [market]; 主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_37645b506fcd95cc_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_guinness_groceries_pressure [market]; groceries缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_guinness_groceries_need [market]; 主业基础配方可能产出groceries；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_37645b506fcd95cc_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_guinness_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_guinness.ai_weight
+	}
+}
+
+# Oriental Development Company
+company_oriental_development_company = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/oriental_development_company.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_plantation.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_SEOUL }
+
+	building_types = {
+		building_rice_farm
+		building_millet_farm
+		building_wheat_farm
+	}
+
+	extension_building_types = {
+		building_maize_farm
+		building_food_industry
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_grain
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_grain_complete_tt
+			has_variable = prestige_good_generic_grain_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_northeast_asia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = {
+					is_homeland = cu:korean
+				}
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = civilizing_mission
+		any_scope_state = {
+			state_region = {
+				is_homeland = cu:korean
+			}
+			is_incorporated = yes
+			any_scope_building = {
+				OR = {
+					is_building_type = building_rice_farm
+					is_building_type = building_millet_farm
+					is_building_type = building_wheat_farm
+				}
+				level >= 5
+			}
+			count >= 4
+		}
+	}
+
+	prosperity_modifier = {
+		building_railway_throughput_add = 0.05
+		state_migration_pull_mult = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = civilizing_mission
+		any_scope_state = {
+			state_region = {
+				is_homeland = cu:korean
+			}
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_rice_farm = {
+			level = 5
+			state_trigger = {
+				state_region = {
+					is_homeland = cu:korean
+				}
+				is_incorporated = yes
+			}
+		}
+		building_millet_farm = {
+			level = 5
+			state_trigger = {
+				state_region = {
+					is_homeland = cu:korean
+				}
+				is_incorporated = yes
+			}
+		}
+		building_wheat_farm = {
+			level = 5
+			state_trigger = {
+				state_region = {
+					is_homeland = cu:korean
+				}
+				is_incorporated = yes
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+		if = {
+			limit = {
+				has_journal_entry = je_colonize_korea
+				NOT = {
+					any_company = {
+						is_company_type = company_type:company_mantetsu # Only one needed
+					}
+				}
+			}
+			add = 6
+		}
+
+		# SITAI BEGIN information:company_oriental_development_company.ai_weight
+		# ACTION program_7d1ea20b0b57696a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_7d1ea20b0b57696a_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_oriental_development_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_7d1ea20b0b57696a_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_oriental_development_company_grain_pressure [market]; grain缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_oriental_development_company_grain_need [market]; 主业基础配方可能产出grain；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_7d1ea20b0b57696a_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_oriental_development_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_oriental_development_company.ai_weight
+	}
+}
+
+# Turkish Petroleum Company
+company_turkish_petroleum = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/turkish_petroleum_company.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_oil_drills.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_BAGHDAD STATE_BASRA STATE_MOSUL }
+
+	building_types = {
+		building_oil_rig
+	}
+
+	extension_building_types = {
+		building_power_plant
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_arabia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				OR = {
+					state_region = s:STATE_BAGHDAD
+					state_region = s:STATE_BASRA
+					state_region = s:STATE_MOSUL
+				}
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = pumpjacks
+		any_scope_state = {
+			OR = {
+				state_region = s:STATE_BAGHDAD
+				state_region = s:STATE_BASRA
+				state_region = s:STATE_MOSUL
+			}
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_oil_rig
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		state_trade_capacity_mult = 0.05
+		building_railway_throughput_add = 0.05
+	}
+
+	ai_will_do = {
+		has_technology_researched = pumpjacks
+		any_scope_state = {
+			OR = {
+				state_region = s:STATE_BAGHDAD
+				state_region = s:STATE_BASRA
+				state_region = s:STATE_MOSUL
+			}
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_oil_rig = {
+			level = 5
+			state_trigger = {
+				OR = {
+					state_region = s:STATE_BAGHDAD
+					state_region = s:STATE_BASRA
+					state_region = s:STATE_MOSUL
+				}
+				is_incorporated = yes
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_turkish_petroleum.ai_weight
+		# ACTION program_9f10774eb04b7e00 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_9f10774eb04b7e00_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_turkish_petroleum_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_9f10774eb04b7e00_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_turkish_petroleum_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_9f10774eb04b7e00_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_turkish_petroleum_oil_pressure [market]; oil缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_turkish_petroleum_oil_need [market]; 主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_9f10774eb04b7e00_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_turkish_petroleum_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_turkish_petroleum.ai_weight
+	}
+}
+
+# Anglo-Persian Oil Company
+company_anglo_persian_oil = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/anglo_persian_oil_company.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_oil_drills.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_KHUZESTAN }
+
+	building_types = {
+		building_oil_rig
+	}
+
+	extension_building_types = {
+		building_power_plant
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_greater_persia
+		OR = {
+			country_has_primary_culture = cu:british
+			country_has_primary_culture = cu:persian
+		}
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_KHUZESTAN
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = pumpjacks
+		OR = {
+			country_has_primary_culture = cu:british
+			any_scope_ally = {
+				country_has_primary_culture = cu:british
+			}
+		}
+		custom_tooltip = {
+			text = company_anglo_persian_oil_tt
+			NOT = {
+				has_company = company_type:company_national_iranian_oil
+			}
+		}
+		any_scope_state = {
+			state_region = s:STATE_KHUZESTAN
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_oil_rig
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		building_group_bg_oil_extraction_throughput_add = 0.3
+	}
+
+	ai_will_do = {
+		has_technology_researched = pumpjacks
+		OR = {
+			country_has_primary_culture = cu:british
+			any_scope_ally = {
+				country_has_primary_culture = cu:british
+			}
+		}
+		NOT = {
+			has_company = company_type:company_national_iranian_oil
+		}
+		any_scope_state = {
+			state_region = s:STATE_KHUZESTAN
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_oil_rig = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_KHUZESTAN
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_anglo_persian_oil.ai_weight
+		# ACTION program_061bd11614d0df8a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_061bd11614d0df8a_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_anglo_persian_oil_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_061bd11614d0df8a_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_anglo_persian_oil_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_061bd11614d0df8a_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_anglo_persian_oil_oil_pressure [market]; oil缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_anglo_persian_oil_oil_need [market]; 主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_061bd11614d0df8a_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_anglo_persian_oil_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_anglo_persian_oil.ai_weight
+	}
+}
+
+# National Iranian Oil Company
+company_national_iranian_oil = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/national_iranian_oil_company.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_oil_drills.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_KHUZESTAN }
+
+	building_types = {
+		building_oil_rig
+	}
+
+	extension_building_types = {
+		building_power_plant
+	}
+
+	potential = {
+		has_dlc_feature = ep1_content
+		has_interest_marker_in_region = sr:region_greater_persia
+		country_has_primary_culture = cu:persian
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_KHUZESTAN
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = pumpjacks
+		NOR = {
+			country_has_primary_culture = cu:british
+			any_scope_ally = {
+				country_has_primary_culture = cu:british
+			}
+		}
+		custom_tooltip = {
+			text = company_national_iranian_oil_tt
+			NOT = {
+				has_company = company_type:company_anglo_persian_oil
+			}
+		}
+		any_scope_state = {
+			state_region = s:STATE_KHUZESTAN
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_oil_rig
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		interest_group_ig_industrialists_pop_attraction_mult = 0.1
+		country_loyalists_from_legitimacy_mult = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = pumpjacks
+		NOR = {
+			country_has_primary_culture = cu:british
+			any_scope_ally = {
+				country_has_primary_culture = cu:british
+			}
+		}
+		NOT = {
+			has_company = company_type:company_anglo_persian_oil
+		}
+		any_scope_state = {
+			state_region = s:STATE_KHUZESTAN
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_oil_rig = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_KHUZESTAN
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_national_iranian_oil.ai_weight
+		# ACTION program_bf8f97c958f0b0f0 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bf8f97c958f0b0f0_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_national_iranian_oil_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_bf8f97c958f0b0f0_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_national_iranian_oil_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_bf8f97c958f0b0f0_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_national_iranian_oil_oil_pressure [market]; oil缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_national_iranian_oil_oil_need [market]; 主业基础配方可能产出oil；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_bf8f97c958f0b0f0_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_national_iranian_oil_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_national_iranian_oil.ai_weight
+	}
+}

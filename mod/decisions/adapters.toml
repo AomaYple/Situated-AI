@@ -2,6 +2,22 @@
 schema = 1
 
 [sources]
+"common/scripted_triggers/00_gfx_route_graphics_triggers.txt" = "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b"
+"common/journal_entries/00_communism.txt" = "fbe2ce3af236a3f49e146f445ba56957952ac910b68022cc0f69e94e8010072f"
+"events/law_events/state_atheism.txt" = "cb39c1a5badc168a6480bd3a19fb67dc82cfa80c8da7bd830b2fad747e80cf8e"
+"common/ideologies/00_ig_ideologies.txt" = "2e3f1940ebe12e8a36230f57710a81f7b14e84b221438ed41c9b6cffdf7277d4"
+"common/interest_groups/00_trade_unions.txt" = "b1759c80f901533b7b83495da8958a2f13edb88be7c007ccd1e5af798bd66c43"
+"common/journal_entries/00_art_jes.txt" = "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5"
+"common/production_methods/06_urban_center.txt" = "d9f0e653d3d0c1783fd4e9880fb58a6ada795d0ed3a3fdec011f0d1ce28da71f"
+"common/treaty_articles/00_alliance.txt" = "505cfc849cb7d66a460b95c36a4e1c4794cae4c4c8e48f3c1a7c6b55dd56564b"
+"common/institutions/00_institutions.txt" = "77a48abeb8e5ce35a36652c0ae5f6dd58f4d6dc55a508181a6e5840f55e9763f"
+"common/achievements/base_achievements.txt" = "2d3e7fa2cc1239682b12377605e03aea4b530d2eeffcfb9d7c6ec2f73c8fef3d"
+"common/political_movements/00_ideological_movements.txt" = "4462653e5fa326f3d84f03b6a551ddc76e9dead91409678adad56dcdb7f11035"
+"common/alert_types/00_alert_types.txt" = "399eaa0ed4bb11e29bac7d0de29e2fa1e191cbdbf3b1290fba5abac9b622f912"
+"common/journal_entries/00_tutorial.txt" = "dbd90b3993566ccb0c777912a9429013186367449b2d6b6e88b91acdb4e356da"
+"common/character_interactions/01_additional_interactions.txt" = "d7cfbfccdd9b7b0b504908e4db43e38646838c26cb29c834abe5595210a22b53"
+"common/company_types/00_companies_europe.txt" = "e2c92439747665afbc3114af2dd5dcf5427b6823cef27203c1c8dfdbd165c1e6"
+"common/company_types/00_companies_mp1.txt" = "6b7f02c5d109b68477fae6a2c16bbbc0de96b9a974da1e2eb7050df8740a62ba"
 "common/scripted_triggers/00_diplomacy_triggers.txt" = "6c5b17b5e88d81e5cab3bce8a7e0d5a6d3ebaa92cb32cb8d069be824fa591832"
 "common/ai_regional_objectives/00_ai_regional_objectives.txt" = "4cf75c09ebf4f275b77a015bd0c6e829e0c08d589a859d90c9cc18a44832755a"
 "common/diplomatic_actions/25_colonization_rights.txt" = "16fca6be8a75fc4de4c14171031b5039f0640a9a8b711cef8ce7df99cc0f35b1"
@@ -124,6 +140,27 @@ peaceful_capacity = [{ fact = "net_surplus", op = ">=", value = 0 }, { fact = "d
 political_capacity_crisis = [{ fact = "legitimacy", op = "<", value = 25 }, { fact = "insurrection", op = "=", value = true }, { fact = "radical_share", op = ">=", value = 0.25 }]
 peaceful_insolvency = [{ fact = "default", op = "=", value = true }, { fact = "war", op = "=", value = false }]
 state_building_capacity = [{ fact = "state_owner_default", op = "=", value = false }, { fact = "state_owner_loans", op = "=", value = false }, { fact = "state_infrastructure", op = ">=", value = 0 }]
+
+[readers.num_companies]
+engine = "num_companies"
+scope = "root"
+unit = "company_count"
+kind = "number"
+minimum = 0
+
+[readers.max_num_companies]
+engine = "max_num_companies"
+scope = "root"
+unit = "company_count"
+kind = "number"
+minimum = 0
+
+[readers.authority]
+engine = "authority"
+scope = "root"
+unit = "capacity_balance"
+kind = "number"
+
 
 [readers.ammunition_balance]
 engine = "market_goods_delta"
@@ -24476,3 +24513,968 @@ conditions = [
 ]
 why = "原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和"
 counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+# 主业需求与公共必需投入；劳工结构不是失业，违约不是设立时付款。
+[[rules]]
+id = "s2_capacity_corporate_charters_companies_in_use"
+source = "common/technology/technologies/30_society.txt"
+field = "corporate_charters.ai_weight"
+domain = "political"
+priority = 43300
+operation = "multiply"
+value = 1.08
+contribution_group = "company_slot_pressure"
+conditions = [
+  { fact = "num_companies", op = ">", value = 0 },
+]
+why = "原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_corporate_charters_company_capacity_reached"
+source = "common/technology/technologies/30_society.txt"
+field = "corporate_charters.ai_weight"
+domain = "political"
+priority = 43301
+operation = "multiply"
+value = 1.15
+contribution_group = "company_slot_pressure"
+conditions = [
+  { fact = "num_companies", op = ">", value = 0 },
+  { fact = "num_companies", op = ">=", value = { fact = "max_num_companies" } },
+]
+why = "真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_joint_stock_companies_companies_in_use"
+source = "common/technology/technologies/30_society.txt"
+field = "joint_stock_companies.ai_weight"
+domain = "political"
+priority = 43302
+operation = "multiply"
+value = 1.08
+contribution_group = "company_slot_pressure"
+conditions = [
+  { fact = "num_companies", op = ">", value = 0 },
+]
+why = "原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_joint_stock_companies_company_capacity_reached"
+source = "common/technology/technologies/30_society.txt"
+field = "joint_stock_companies.ai_weight"
+domain = "political"
+priority = 43303
+operation = "multiply"
+value = 1.15
+contribution_group = "company_slot_pressure"
+conditions = [
+  { fact = "num_companies", op = ">", value = 0 },
+  { fact = "num_companies", op = ">=", value = { fact = "max_num_companies" } },
+]
+why = "真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_investment_banks_companies_in_use"
+source = "common/technology/technologies/30_society.txt"
+field = "investment_banks.ai_weight"
+domain = "political"
+priority = 43304
+operation = "multiply"
+value = 1.08
+contribution_group = "company_slot_pressure"
+conditions = [
+  { fact = "num_companies", op = ">", value = 0 },
+]
+why = "原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_investment_banks_company_capacity_reached"
+source = "common/technology/technologies/30_society.txt"
+field = "investment_banks.ai_weight"
+domain = "political"
+priority = 43305
+operation = "multiply"
+value = 1.15
+contribution_group = "company_slot_pressure"
+conditions = [
+  { fact = "num_companies", op = ">", value = 0 },
+  { fact = "num_companies", op = ">=", value = { fact = "max_num_companies" } },
+]
+why = "真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_corporate_management_companies_in_use"
+source = "common/technology/technologies/30_society.txt"
+field = "corporate_management.ai_weight"
+domain = "political"
+priority = 43306
+operation = "multiply"
+value = 1.08
+contribution_group = "company_slot_pressure"
+conditions = [
+  { fact = "num_companies", op = ">", value = 0 },
+]
+why = "原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_corporate_management_company_capacity_reached"
+source = "common/technology/technologies/30_society.txt"
+field = "corporate_management.ai_weight"
+domain = "political"
+priority = 43307
+operation = "multiply"
+value = 1.15
+contribution_group = "company_slot_pressure"
+conditions = [
+  { fact = "num_companies", op = ">", value = 0 },
+  { fact = "num_companies", op = ">=", value = { fact = "max_num_companies" } },
+]
+why = "真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_mass_communication_authority_deficit"
+source = "common/technology/technologies/30_society.txt"
+field = "mass_communication.ai_weight"
+domain = "political"
+priority = 43308
+operation = "multiply"
+value = 1.08
+contribution_group = "authority_capacity_pressure"
+conditions = [
+  { fact = "authority", op = "<", value = 0 },
+]
+why = "原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_mass_communication_authority_deep_deficit"
+source = "common/technology/technologies/30_society.txt"
+field = "mass_communication.ai_weight"
+domain = "political"
+priority = 43309
+operation = "multiply"
+value = 1.15
+contribution_group = "authority_capacity_pressure"
+conditions = [
+  { fact = "authority", op = "<", value = -10 },
+]
+why = "原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_nationalism_authority_deficit"
+source = "common/technology/technologies/30_society.txt"
+field = "nationalism.ai_weight"
+domain = "political"
+priority = 43310
+operation = "multiply"
+value = 1.08
+contribution_group = "authority_capacity_pressure"
+conditions = [
+  { fact = "authority", op = "<", value = 0 },
+]
+why = "原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_nationalism_authority_deep_deficit"
+source = "common/technology/technologies/30_society.txt"
+field = "nationalism.ai_weight"
+domain = "political"
+priority = 43311
+operation = "multiply"
+value = 1.15
+contribution_group = "authority_capacity_pressure"
+conditions = [
+  { fact = "authority", op = "<", value = -10 },
+]
+why = "原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_pan_nationalism_authority_deficit"
+source = "common/technology/technologies/30_society.txt"
+field = "pan-nationalism.ai_weight"
+domain = "political"
+priority = 43312
+operation = "multiply"
+value = 1.08
+contribution_group = "authority_capacity_pressure"
+conditions = [
+  { fact = "authority", op = "<", value = 0 },
+]
+why = "原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_pan_nationalism_authority_deep_deficit"
+source = "common/technology/technologies/30_society.txt"
+field = "pan-nationalism.ai_weight"
+domain = "political"
+priority = 43313
+operation = "multiply"
+value = 1.15
+contribution_group = "authority_capacity_pressure"
+conditions = [
+  { fact = "authority", op = "<", value = -10 },
+]
+why = "原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_political_agitation_authority_deficit"
+source = "common/technology/technologies/30_society.txt"
+field = "political_agitation.ai_weight"
+domain = "political"
+priority = 43314
+operation = "multiply"
+value = 1.08
+contribution_group = "authority_capacity_pressure"
+conditions = [
+  { fact = "authority", op = "<", value = 0 },
+]
+why = "原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_political_agitation_authority_deep_deficit"
+source = "common/technology/technologies/30_society.txt"
+field = "political_agitation.ai_weight"
+domain = "political"
+priority = 43315
+operation = "multiply"
+value = 1.15
+contribution_group = "authority_capacity_pressure"
+conditions = [
+  { fact = "authority", op = "<", value = -10 },
+]
+why = "原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+[[rules]]
+id = "s2_capacity_political_agitation_reform_expectation"
+source = "common/technology/technologies/30_society.txt"
+field = "political_agitation.ai_weight"
+domain = "political"
+priority = 43316
+operation = "multiply"
+value = 0.92
+contribution_group = "reform_expectation"
+conditions = [
+  { fact = "literacy", op = ">=", value = 0.5 },
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；权威收益未知不消除此成本，成本未知不消除已观察权威收益"
+counterexample = "倍率与阈值为有界设计选择，不是原版引擎参数；同因果档位去重，独立收益和成本联合；未知只退出依赖该观测的分量，不把未知当零。玩家与关闭模块保留原版；研究不等于公司成立、制度升级、法律通过或生产方式采用，不把未来公司成本、制度维护、建造或PM投入当研究付款门。原版资格、前置、研究时间、成本、思想事件、策略和文化分支均保留"
+
+# S2 institutions: 4 fields / 8 rules. Only used observations registered.
+
+[readers.has_police_institution]
+engine = "has_institution"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "institution_police"
+
+[readers.police_investment]
+engine = "institution_investment_level"
+scope = "root"
+kind = "number"
+unit = "institution_level"
+minimum = 0
+value_field = "value"
+parameters = { institution = "institution_police" }
+
+[readers.has_home_affairs_institution]
+engine = "has_institution"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "institution_home_affairs"
+
+[readers.home_affairs_investment]
+engine = "institution_investment_level"
+scope = "root"
+kind = "number"
+unit = "institution_level"
+minimum = 0
+value_field = "value"
+parameters = { institution = "institution_home_affairs" }
+
+[readers.has_colonial_affairs_institution]
+engine = "has_institution"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "institution_colonial_affairs"
+
+[readers.colonial_affairs_investment]
+engine = "institution_investment_level"
+scope = "root"
+kind = "number"
+unit = "institution_level"
+minimum = 0
+value_field = "value"
+parameters = { institution = "institution_colonial_affairs" }
+
+[[rules]]
+id = "s2_institution_law_enforcement_investment_1"
+source = "common/technology/technologies/30_society.txt"
+field = "law_enforcement.ai_weight"
+domain = "political"
+priority = 43400
+operation = "multiply"
+value = 1.08
+contribution_group = "institution_capacity_use"
+conditions = [
+  { fact = "has_police_institution", op = "=", value = true },
+  { fact = "police_investment", op = ">=", value = 1 },
+]
+why = "原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划"
+counterexample = "两档同一制度容量使用原因去重，非重复加奖；制度存在与等级均须精确国家ROOT和制度ID，任一未知只退出该分量，不把未知当零。殖民制度存在和已有投资不证明存在殖民目标、正在殖民或争夺。等级不证明制度上限或饱和；研究不等于制度升级、法律通过、建筑完成或PM采用，不设置未来维护、制度付款、净收入、战争或违约门。未观测当前制度最高级getter，保留未知；不引入世界扫描。保留玩家、关闭模块与原版资格、前置、成本、策略、文化尾部和on_researched"
+
+[[rules]]
+id = "s2_institution_law_enforcement_investment_3"
+source = "common/technology/technologies/30_society.txt"
+field = "law_enforcement.ai_weight"
+domain = "political"
+priority = 43401
+operation = "multiply"
+value = 1.12
+contribution_group = "institution_capacity_use"
+conditions = [
+  { fact = "has_police_institution", op = "=", value = true },
+  { fact = "police_investment", op = ">=", value = 3 },
+]
+why = "原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划"
+counterexample = "两档同一制度容量使用原因去重，非重复加奖；制度存在与等级均须精确国家ROOT和制度ID，任一未知只退出该分量，不把未知当零。殖民制度存在和已有投资不证明存在殖民目标、正在殖民或争夺。等级不证明制度上限或饱和；研究不等于制度升级、法律通过、建筑完成或PM采用，不设置未来维护、制度付款、净收入、战争或违约门。未观测当前制度最高级getter，保留未知；不引入世界扫描。保留玩家、关闭模块与原版资格、前置、成本、策略、文化尾部和on_researched"
+
+[[rules]]
+id = "s2_institution_mass_surveillance_investment_1"
+source = "common/technology/technologies/30_society.txt"
+field = "mass_surveillance.ai_weight"
+domain = "political"
+priority = 43402
+operation = "multiply"
+value = 1.08
+contribution_group = "institution_capacity_use"
+conditions = [
+  { fact = "has_home_affairs_institution", op = "=", value = true },
+  { fact = "home_affairs_investment", op = ">=", value = 1 },
+]
+why = "原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划"
+counterexample = "两档同一制度容量使用原因去重，非重复加奖；制度存在与等级均须精确国家ROOT和制度ID，任一未知只退出该分量，不把未知当零。殖民制度存在和已有投资不证明存在殖民目标、正在殖民或争夺。等级不证明制度上限或饱和；研究不等于制度升级、法律通过、建筑完成或PM采用，不设置未来维护、制度付款、净收入、战争或违约门。未观测当前制度最高级getter，保留未知；不引入世界扫描。保留玩家、关闭模块与原版资格、前置、成本、策略、文化尾部和on_researched"
+
+[[rules]]
+id = "s2_institution_mass_surveillance_investment_3"
+source = "common/technology/technologies/30_society.txt"
+field = "mass_surveillance.ai_weight"
+domain = "political"
+priority = 43403
+operation = "multiply"
+value = 1.12
+contribution_group = "institution_capacity_use"
+conditions = [
+  { fact = "has_home_affairs_institution", op = "=", value = true },
+  { fact = "home_affairs_investment", op = ">=", value = 3 },
+]
+why = "原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划"
+counterexample = "两档同一制度容量使用原因去重，非重复加奖；制度存在与等级均须精确国家ROOT和制度ID，任一未知只退出该分量，不把未知当零。殖民制度存在和已有投资不证明存在殖民目标、正在殖民或争夺。等级不证明制度上限或饱和；研究不等于制度升级、法律通过、建筑完成或PM采用，不设置未来维护、制度付款、净收入、战争或违约门。未观测当前制度最高级getter，保留未知；不引入世界扫描。保留玩家、关闭模块与原版资格、前置、成本、策略、文化尾部和on_researched"
+
+[[rules]]
+id = "s2_institution_colonization_investment_1"
+source = "common/technology/technologies/30_society.txt"
+field = "colonization.ai_weight"
+domain = "political"
+priority = 43404
+operation = "multiply"
+value = 1.08
+contribution_group = "institution_capacity_use"
+conditions = [
+  { fact = "has_colonial_affairs_institution", op = "=", value = true },
+  { fact = "colonial_affairs_investment", op = ">=", value = 1 },
+]
+why = "原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划"
+counterexample = "两档同一制度容量使用原因去重，非重复加奖；制度存在与等级均须精确国家ROOT和制度ID，任一未知只退出该分量，不把未知当零。殖民制度存在和已有投资不证明存在殖民目标、正在殖民或争夺。等级不证明制度上限或饱和；研究不等于制度升级、法律通过、建筑完成或PM采用，不设置未来维护、制度付款、净收入、战争或违约门。未观测当前制度最高级getter，保留未知；不引入世界扫描。保留玩家、关闭模块与原版资格、前置、成本、策略、文化尾部和on_researched"
+
+[[rules]]
+id = "s2_institution_colonization_investment_3"
+source = "common/technology/technologies/30_society.txt"
+field = "colonization.ai_weight"
+domain = "political"
+priority = 43405
+operation = "multiply"
+value = 1.12
+contribution_group = "institution_capacity_use"
+conditions = [
+  { fact = "has_colonial_affairs_institution", op = "=", value = true },
+  { fact = "colonial_affairs_investment", op = ">=", value = 3 },
+]
+why = "原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划"
+counterexample = "两档同一制度容量使用原因去重，非重复加奖；制度存在与等级均须精确国家ROOT和制度ID，任一未知只退出该分量，不把未知当零。殖民制度存在和已有投资不证明存在殖民目标、正在殖民或争夺。等级不证明制度上限或饱和；研究不等于制度升级、法律通过、建筑完成或PM采用，不设置未来维护、制度付款、净收入、战争或违约门。未观测当前制度最高级getter，保留未知；不引入世界扫描。保留玩家、关闭模块与原版资格、前置、成本、策略、文化尾部和on_researched"
+
+[[rules]]
+id = "s2_institution_civilizing_mission_investment_1"
+source = "common/technology/technologies/30_society.txt"
+field = "civilizing_mission.ai_weight"
+domain = "political"
+priority = 43406
+operation = "multiply"
+value = 1.08
+contribution_group = "institution_capacity_use"
+conditions = [
+  { fact = "has_colonial_affairs_institution", op = "=", value = true },
+  { fact = "colonial_affairs_investment", op = ">=", value = 1 },
+]
+why = "原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划"
+counterexample = "两档同一制度容量使用原因去重，非重复加奖；制度存在与等级均须精确国家ROOT和制度ID，任一未知只退出该分量，不把未知当零。殖民制度存在和已有投资不证明存在殖民目标、正在殖民或争夺。等级不证明制度上限或饱和；研究不等于制度升级、法律通过、建筑完成或PM采用，不设置未来维护、制度付款、净收入、战争或违约门。未观测当前制度最高级getter，保留未知；不引入世界扫描。保留玩家、关闭模块与原版资格、前置、成本、策略、文化尾部和on_researched"
+
+[[rules]]
+id = "s2_institution_civilizing_mission_investment_3"
+source = "common/technology/technologies/30_society.txt"
+field = "civilizing_mission.ai_weight"
+domain = "political"
+priority = 43407
+operation = "multiply"
+value = 1.12
+contribution_group = "institution_capacity_use"
+conditions = [
+  { fact = "has_colonial_affairs_institution", op = "=", value = true },
+  { fact = "colonial_affairs_investment", op = ">=", value = 3 },
+]
+why = "原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划"
+counterexample = "两档同一制度容量使用原因去重，非重复加奖；制度存在与等级均须精确国家ROOT和制度ID，任一未知只退出该分量，不把未知当零。殖民制度存在和已有投资不证明存在殖民目标、正在殖民或争夺。等级不证明制度上限或饱和；研究不等于制度升级、法律通过、建筑完成或PM采用，不设置未来维护、制度付款、净收入、战争或违约门。未观测当前制度最高级getter，保留未知；不引入世界扫描。保留玩家、关闭模块与原版资格、前置、成本、策略、文化尾部和on_researched"
+
+# S2 society remainder: 10 fields / 23 rules; anarchism and paved_roads retain vanilla.
+
+[readers.prestige]
+engine = "prestige"
+scope = "root"
+kind = "number"
+unit = "prestige_points"
+minimum = 0
+
+[readers.num_alliances]
+engine = "num_alliances"
+scope = "root"
+kind = "number"
+unit = "alliance_count"
+minimum = 0
+
+[readers.is_diplomatic_play_target]
+engine = "is_diplomatic_play_target"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+
+[readers.is_diplomatic_play_initiator]
+engine = "is_diplomatic_play_initiator"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+
+[readers.own_state_market_exposure]
+engine = "any_scope_state"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+parameters = { threshold = "1.0" }
+
+[readers.own_state_deep_market_exposure]
+engine = "any_scope_state"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+parameters = { threshold = "0.9" }
+
+[readers.own_traditional_art]
+engine = "any_scope_building"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+parameters = { building = "building_art_academy", method = "pm_traditional_art", min_level = "1" }
+
+[readers.own_realist_art]
+engine = "any_scope_building"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+parameters = { building = "building_art_academy", method = "pm_realist_art", min_level = "1" }
+
+[readers.own_photographic_art]
+engine = "any_scope_building"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+parameters = { building = "building_art_academy", method = "pm_photographic_art", min_level = "1" }
+
+[readers.free_trade_movement_support]
+engine = "any_political_movement"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+parameters = { law = "law_free_trade", minimum_support = "0.10" }
+
+[readers.mercantilism_movement_support]
+engine = "any_political_movement"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+parameters = { law = "law_mercantilism", minimum_support = "0.10" }
+
+[readers.current_free_trade]
+engine = "has_law_or_variant"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "law_type:law_free_trade"
+
+[readers.current_mercantilism]
+engine = "has_law_or_variant"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "law_type:law_mercantilism"
+
+[[rules]]
+id = "s2_remainder_romanticism_art_shortage"
+source = "common/technology/technologies/30_society.txt"
+field = "romanticism.ai_weight"
+domain = "political"
+priority = 43500
+operation = "multiply"
+value = 1.08
+contribution_group = "fine_art_demand"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+]
+why = "实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_romanticism_art_shortage_price"
+source = "common/technology/technologies/30_society.txt"
+field = "romanticism.ai_weight"
+domain = "political"
+priority = 43501
+operation = "multiply"
+value = 1.12
+contribution_group = "fine_art_demand"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+  { fact = "country_goods_fine_art_price", op = ">", value = 0.25 },
+]
+why = "艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_realism_art_shortage"
+source = "common/technology/technologies/30_society.txt"
+field = "realism.ai_weight"
+domain = "political"
+priority = 43502
+operation = "multiply"
+value = 1.08
+contribution_group = "fine_art_demand"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+]
+why = "实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_realism_art_shortage_price"
+source = "common/technology/technologies/30_society.txt"
+field = "realism.ai_weight"
+domain = "political"
+priority = 43503
+operation = "multiply"
+value = 1.12
+contribution_group = "fine_art_demand"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+  { fact = "country_goods_fine_art_price", op = ">", value = 0.25 },
+]
+why = "艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_camera_art_shortage"
+source = "common/technology/technologies/30_society.txt"
+field = "camera.ai_weight"
+domain = "political"
+priority = 43504
+operation = "multiply"
+value = 1.08
+contribution_group = "fine_art_demand"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+]
+why = "实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_camera_art_shortage_price"
+source = "common/technology/technologies/30_society.txt"
+field = "camera.ai_weight"
+domain = "political"
+priority = 43505
+operation = "multiply"
+value = 1.12
+contribution_group = "fine_art_demand"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+  { fact = "country_goods_fine_art_price", op = ">", value = 0.25 },
+]
+why = "艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_film_art_shortage"
+source = "common/technology/technologies/30_society.txt"
+field = "film.ai_weight"
+domain = "political"
+priority = 43506
+operation = "multiply"
+value = 1.08
+contribution_group = "fine_art_demand"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+]
+why = "实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_film_art_shortage_price"
+source = "common/technology/technologies/30_society.txt"
+field = "film.ai_weight"
+domain = "political"
+priority = 43507
+operation = "multiply"
+value = 1.12
+contribution_group = "fine_art_demand"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+  { fact = "country_goods_fine_art_price", op = ">", value = 0.25 },
+]
+why = "艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_realism_prior_art_method"
+source = "common/technology/technologies/30_society.txt"
+field = "realism.ai_weight"
+domain = "political"
+priority = 43508
+operation = "multiply"
+value = 1.04
+contribution_group = "observed_art_base"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+  { fact = "own_traditional_art", op = "=", value = true },
+]
+why = "艺术品有缺口且本国至少一级艺术学院实际采用前一阶段艺术生产方式，支持独立有限升级承接；不要求尚受本科技锁定的新PM，不以配方投入作研究付款门"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_camera_prior_art_method"
+source = "common/technology/technologies/30_society.txt"
+field = "camera.ai_weight"
+domain = "political"
+priority = 43509
+operation = "multiply"
+value = 1.04
+contribution_group = "observed_art_base"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+  { fact = "own_realist_art", op = "=", value = true },
+]
+why = "艺术品有缺口且本国至少一级艺术学院实际采用前一阶段艺术生产方式，支持独立有限升级承接；不要求尚受本科技锁定的新PM，不以配方投入作研究付款门"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_film_prior_art_method"
+source = "common/technology/technologies/30_society.txt"
+field = "film.ai_weight"
+domain = "political"
+priority = 43510
+operation = "multiply"
+value = 1.04
+contribution_group = "observed_art_base"
+conditions = [
+  { fact = "country_goods_fine_art_balance", op = "<", value = 0 },
+  { fact = "own_photographic_art", op = "=", value = true },
+]
+why = "艺术品有缺口且本国至少一级艺术学院实际采用前一阶段艺术生产方式，支持独立有限升级承接；不要求尚受本科技锁定的新PM，不以配方投入作研究付款门"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_organized_sports_prestige_50"
+source = "common/technology/technologies/30_society.txt"
+field = "organized_sports.ai_weight"
+domain = "political"
+priority = 43511
+operation = "multiply"
+value = 1.04
+contribution_group = "prestige_scale"
+conditions = [
+  { fact = "prestige", op = ">=", value = 50 },
+]
+why = "原版提升声望系数百分之十，当前声望规模作为有限受益规模代理；不声称精确新增点数、低声望需求、体育赛事或下一排名缺口，不以未承认国家标签屏蔽"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_organized_sports_prestige_100"
+source = "common/technology/technologies/30_society.txt"
+field = "organized_sports.ai_weight"
+domain = "political"
+priority = 43512
+operation = "multiply"
+value = 1.08
+contribution_group = "prestige_scale"
+conditions = [
+  { fact = "prestige", op = ">=", value = 100 },
+]
+why = "原版提升声望系数百分之十，当前声望规模作为有限受益规模代理；不声称精确新增点数、低声望需求、体育赛事或下一排名缺口，不以未承认国家标签屏蔽"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_multilateral_alliances_alliances_in_use"
+source = "common/technology/technologies/30_society.txt"
+field = "multilateral_alliances.ai_weight"
+domain = "political"
+priority = 43513
+operation = "multiply"
+value = 1.08
+contribution_group = "alliance_capacity_use"
+conditions = [
+  { fact = "num_alliances", op = ">=", value = 1 },
+]
+why = "原版允许多个联盟，当前已有联盟仅形成已使用联盟能力的有限容量需求代理；不声称已找到第二盟友、已用尽真实槽位或必然可达成协定"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_multilateral_alliances_diplomatic_play_target"
+source = "common/technology/technologies/30_society.txt"
+field = "multilateral_alliances.ai_weight"
+domain = "political"
+priority = 43514
+operation = "multiply"
+value = 1.08
+contribution_group = "diplomatic_play_maneuvers"
+conditions = [
+  { fact = "is_diplomatic_play_target", op = "=", value = true },
+]
+why = "原版外交行动数加成百分之五十，实际处于外交行动主要发起或目标角色支持有限研究子收益；两角色同原因去重，不把战争泛化为外交行动或保证研究赶得上本次行动"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_multilateral_alliances_diplomatic_play_initiator"
+source = "common/technology/technologies/30_society.txt"
+field = "multilateral_alliances.ai_weight"
+domain = "political"
+priority = 43515
+operation = "multiply"
+value = 1.08
+contribution_group = "diplomatic_play_maneuvers"
+conditions = [
+  { fact = "is_diplomatic_play_initiator", op = "=", value = true },
+]
+why = "原版外交行动数加成百分之五十，实际处于外交行动主要发起或目标角色支持有限研究子收益；两角色同原因去重，不把战争泛化为外交行动或保证研究赶得上本次行动"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_international_relations_diplomatic_play_target"
+source = "common/technology/technologies/30_society.txt"
+field = "international_relations.ai_weight"
+domain = "political"
+priority = 43516
+operation = "multiply"
+value = 1.08
+contribution_group = "defensive_diplomacy_option"
+conditions = [
+  { fact = "is_diplomatic_play_target", op = "=", value = true },
+]
+why = "实际是外交行动目标，原版科技解锁防御协定与联盟等，形成有限防御选项需求代理；不声称存在可签对象、外交自主、关系或利益条件已满足，不保证研究来得及本次危机"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_stock_exchange_local_market_exposure"
+source = "common/technology/technologies/30_society.txt"
+field = "stock_exchange.ai_weight"
+domain = "political"
+priority = 43517
+operation = "multiply"
+value = 1.06
+contribution_group = "local_market_exposure"
+conditions = [
+  { fact = "own_state_market_exposure", op = "=", value = true },
+]
+why = "原版增加市场接入价格影响系数，本国任一州市场接入低于一支持有限价格传导暴露代理；不称提高铁路运输容量、修复基建缺口或实际MAPI饱和"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_stock_exchange_deep_local_market_exposure"
+source = "common/technology/technologies/30_society.txt"
+field = "stock_exchange.ai_weight"
+domain = "political"
+priority = 43518
+operation = "multiply"
+value = 1.1
+contribution_group = "local_market_exposure"
+conditions = [
+  { fact = "own_state_deep_market_exposure", op = "=", value = true },
+]
+why = "本国任一州市场接入低于零点九支持同一市场暴露原因较高设计档；不声称精确价格改善、飞艇生产或系泊PM已可采用"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_zeppelins_local_market_exposure"
+source = "common/technology/technologies/30_society.txt"
+field = "zeppelins.ai_weight"
+domain = "political"
+priority = 43519
+operation = "multiply"
+value = 1.06
+contribution_group = "local_market_exposure"
+conditions = [
+  { fact = "own_state_market_exposure", op = "=", value = true },
+]
+why = "原版增加市场接入价格影响系数，本国任一州市场接入低于一支持有限价格传导暴露代理；不称提高铁路运输容量、修复基建缺口或实际MAPI饱和"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_zeppelins_deep_local_market_exposure"
+source = "common/technology/technologies/30_society.txt"
+field = "zeppelins.ai_weight"
+domain = "political"
+priority = 43520
+operation = "multiply"
+value = 1.1
+contribution_group = "local_market_exposure"
+conditions = [
+  { fact = "own_state_deep_market_exposure", op = "=", value = true },
+]
+why = "本国任一州市场接入低于零点九支持同一市场暴露原因较高设计档；不声称精确价格改善、飞艇生产或系泊PM已可采用"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_international_trade_movement_free_trade"
+source = "common/technology/technologies/30_society.txt"
+field = "international_trade.ai_weight"
+domain = "political"
+priority = 43521
+operation = "multiply"
+value = 1.08
+contribution_group = "supported_trade_option"
+conditions = [
+  { fact = "free_trade_movement_support", op = "=", value = true },
+  { fact = "current_free_trade", op = "=", value = false },
+]
+why = "本国已有政治运动对精确贸易法律表达正向立法立场且支持比例至少百分之十，本国尚未采用该法律，形成科技开放此法律选项的有限需求；不把孤立主义等同必须自由贸易，不声称必能立法或有外国供给"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+[[rules]]
+id = "s2_remainder_international_trade_movement_mercantilism"
+source = "common/technology/technologies/30_society.txt"
+field = "international_trade.ai_weight"
+domain = "political"
+priority = 43522
+operation = "multiply"
+value = 1.08
+contribution_group = "supported_trade_option"
+conditions = [
+  { fact = "mercantilism_movement_support", op = "=", value = true },
+  { fact = "current_mercantilism", op = "=", value = false },
+]
+why = "本国已有政治运动对精确贸易法律表达正向立法立场且支持比例至少百分之十，本国尚未采用该法律，形成科技开放此法律选项的有限需求；不把孤立主义等同必须自由贸易，不声称必能立法或有外国供给"
+counterexample = "阈值与倍率为有限设计判断；同原因档位或重复角色去重，独立原因增量联合。未知仅退出依赖该观测分量，不把未知当零；候选不等于已完成。国家ROOT与本国对象集合精确绑定，不扫描世界。研究不等于建筑完成、生产方式采用、外交协定签署或法律通过，不把未来纸工具电力、制度或建造付款当研究门，实际研究成本保留原版。玩家或关闭模块保留原版；资格、前置、成本、策略文化尾部不改"
+
+# Final society two: 2 fields / 3 rules / 4 new readers.
+# Reuse sector reader country_goods_automobiles_balance, ROOT.market.mg:automobiles.
+
+[readers.anarchy_interest_group_support]
+engine = "any_interest_group"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+parameters = { law = "law_anarchy" }
+
+[readers.current_anarchy]
+engine = "has_law_or_variant"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "law_type:law_anarchy"
+
+[readers.current_cooperative_ownership]
+engine = "has_law_or_variant"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+argument = "law_type:law_cooperative_ownership"
+
+[readers.market_automobile_total_consumption]
+engine = "market_goods_consumption"
+scope = "root"
+path = ["market", "mg:automobiles"]
+kind = "number"
+unit = "total_consumption_units"
+minimum = 0
+
+[[rules]]
+id = "s2_final_anarchism_supported_option"
+source = "common/technology/technologies/30_society.txt"
+field = "anarchism.ai_weight"
+domain = "political"
+priority = 43523
+operation = "multiply"
+value = 1.04
+contribution_group = "supported_anarchy_option"
+conditions = [
+  { fact = "anarchy_interest_group_support", op = "=", value = true },
+  { fact = "current_anarchy", op = "=", value = false },
+]
+why = "本国现有利益集团对精确law_anarchy具有实际正向law_stance，支持研究开放一个被支持的法律选项；贸易工会默认populist立场证明该需求可以研究前存在，不以尚未创建的anarchist运动作循环门"
+counterexample = "law_stance是实际绝对立场，既非仅意识形态标签，也非law_enactment_stance对当前制度的相对偏好；不保证集团强大、入阁、最终立法支持多数或AI将采用此法。未知核心观测退出，当前已采用退出。未来法律authority副作用不是研究付款，原版研究成本、法案资格与结果均保留"
+
+[[rules]]
+id = "s2_final_anarchism_supported_cooperative_option"
+source = "common/technology/technologies/30_society.txt"
+field = "anarchism.ai_weight"
+domain = "political"
+priority = 43524
+operation = "multiply"
+value = 1.08
+contribution_group = "supported_anarchy_option"
+conditions = [
+  { fact = "anarchy_interest_group_support", op = "=", value = true },
+  { fact = "current_anarchy", op = "=", value = false },
+  { fact = "current_cooperative_ownership", op = "=", value = true },
+]
+why = "同一被支持法律选项需求下，本国已具备law_anarchy实际要求的合作社所有制法律，减少未来采用的一个已证实法律前置缺口；该经济法律可经socialism或corporatism路径先于anarchism存在。与低档同原因取高，不重复累计"
+counterexample = "未采用合作社所有制或该观测未知只退出此较高档，不封基础研究选项需求；不证明其他立法条件、通过率、相对当前法的偏好或最终采用已经成立。玩家与关闭模块保留原版"
+
+[[rules]]
+id = "s2_final_paved_roads_market_automobile_opportunity"
+source = "common/technology/technologies/30_society.txt"
+field = "paved_roads.ai_weight"
+domain = "political"
+priority = 43525
+operation = "multiply"
+value = 1.04
+contribution_group = "market_automobile_opportunity"
+conditions = [
+  { fact = "market_automobile_total_consumption", op = ">", value = 0 },
+  { fact = "country_goods_automobiles_balance", op = ">=", value = 0 },
+]
+why = "所属市场已存在真实汽车总消费且汽车卖单不低于买单，为未来人口采用汽车并受益于道路消费基建系数提供低强度市场可用性机会代理；正消费排除只有供给却无人使用的情形，非负订单差排除当前市场供给不足，倍率只作有限设计判断"
+counterexample = "总消费可能来自公共马车、军队或同市场外国，不证明本国人口汽车消费、实际消费数量、同州基建缺口或精确新增基础设施；这些事实未作为已知输入。此规则明确采用较弱机会代理，不把市场sell_orders单独冒充消费，也不把公共马车投入当人口消费。任一核心读数未知、消费零或订单差负则局部退出；不要求候选科技已研究，不改原版elevator前置与研究成本。玩家与关闭模块保留原版"

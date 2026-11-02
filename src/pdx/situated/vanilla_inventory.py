@@ -49,6 +49,7 @@ _REQUIRED_DIRS = frozenset(
         "buildings",
         "building_groups",
         "interest_groups",
+        "institutions",
         "technology",
         "diplomatic_actions",
         "treaty_articles",
@@ -730,6 +731,81 @@ def _declared_type_keys(inputs: dict[str, bytes], directory: str) -> frozenset[s
             and isinstance(item.value, Block)
         )
     return frozenset(result)
+
+
+def _institution_definitions(inputs: dict[str, bytes]) -> dict[str, tuple[str, int]]:
+    """Only unique ordinary actual definitions may identify institution map keys."""
+    declarations: dict[str, list[tuple[str, Assignment]]] = {}
+    for source, raw in inputs.items():
+        if not source.endswith(".txt") or "/common/institutions/" not in "/" + source:
+            continue
+        parsed = parse_bytes(raw, path=source)
+        if parsed.errors:
+            return {}
+        for item in parsed.top_assignments:
+            if not item.is_variable:
+                declarations.setdefault(item.key, []).append((source, item))
+    return {
+        key: (rows[0][0], rows[0][1].line)
+        for key, rows in declarations.items()
+        if len(rows) == 1
+        and rows[0][1].op == "="
+        and rows[0][1].prefix is None
+        and isinstance(rows[0][1].value, Block)
+    }
+
+
+def _institution_score_map(definition: Assignment, keys: frozenset[str]) -> Block | None:
+    """A map selects definitions; only its ordinary numeric children are consumers."""
+    if (
+        definition.op != "="
+        or definition.prefix is not None
+        or not isinstance(definition.value, Block)
+    ):
+        return None
+    scores = _ordinary_child(definition.value, "institution_scores")
+    if scores is None or not isinstance(scores.value, Block):
+        return None
+    children = tuple(scores.value.assignments())
+    if len(children) != len(scores.value.items) or len({child.key for child in children}) != len(
+        children
+    ):
+        return None
+    operations = {
+        "value",
+        "add",
+        "subtract",
+        "multiply",
+        "divide",
+        "min",
+        "max",
+        "round",
+        "ceiling",
+        "floor",
+        "if",
+        "else_if",
+        "else",
+        "desc",
+    }
+    for child in children:
+        if (
+            child.key not in keys
+            or child.op != "="
+            or child.prefix is not None
+            or not isinstance(child.value, Block)
+        ):
+            return None
+        expressions = tuple(child.value.assignments())
+        if (
+            not expressions
+            or len(expressions) != len(child.value.items)
+            or any(
+                item.key not in operations or item.op != "=" or item.prefix is not None
+                for item in expressions
+            )
+        ):
+            return None
+    return scores.value
 
 
 def _company_construction_doc(inputs: dict[str, bytes]) -> _Scope:
@@ -2048,6 +2124,40 @@ def _scope(
     if directory == "treaty_articles":
         return _treaty_scope(field, inputs, definition, source)
     if directory == "ai_strategies":
+        if field[0] == "institution_scores":
+            if (
+                strategy_proof is None
+                or not strategy_proof.verified
+                or source not in strategy_proof.strategy_sources
+            ):
+                return _Scope()
+            engine_contract = next(
+                (item for item in strategy_proof.consumers if item.field == "institution_scores"),
+                None,
+            )
+            definitions = _institution_definitions(inputs)
+            institution_scores = _institution_score_map(definition, frozenset(definitions))
+            if engine_contract is None or institution_scores is None:
+                return _Scope()
+            references = (*engine_contract.references, f"{source}:{definition.line}")
+            if len(field) == 1:
+                return _Scope(
+                    "definition_structure",
+                    "definition_only:institution_type",
+                    "institution_score_map",
+                    "observation",
+                    references,
+                )
+            if len(field) != 2 or (child := _ordinary_child(institution_scores, field[1])) is None:
+                return _Scope()
+            definition_source, definition_line = definitions[field[1]]
+            return _Scope(
+                engine_contract.actor,
+                engine_contract.target,
+                engine_contract.operation,
+                engine_contract.capability,
+                (*references, f"{source}:{child.line}", f"{definition_source}:{definition_line}"),
+            )
         if strategy_proof is not None and strategy_proof.verified and len(field) == 1:
             engine_contract = next(
                 (item for item in strategy_proof.consumers if item.field == field[0]), None
@@ -2238,6 +2348,12 @@ def _candidates(directory: str, block: Block) -> Iterator[tuple[tuple[str, ...],
     for assignment in block.assignments():
         if assignment.is_variable:
             continue
+        if directory == "ai_strategies" and assignment.key == "institution_scores":
+            yield (assignment.key,), assignment
+            if isinstance(assignment.value, Block):
+                for child in assignment.value.assignments():
+                    yield (assignment.key, child.key), child
+            continue
         if assignment.key == "ai" and isinstance(assignment.value, Block):
             for child in assignment.value.assignments():
                 yield from _frontier(child, ("ai", child.key))
@@ -2380,6 +2496,8 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
     hashes.update(country_proof.source_hashes)
     company_proof = engine_scope.company_evidence(root, inputs)
     hashes.update(company_proof.source_hashes)
+    company_default_proof = engine_scope.company_default_evidence(root, inputs)
+    hashes.update(company_default_proof.source_hashes)
     law_proof = engine_scope.law_evidence(root, inputs)
     hashes.update(law_proof.source_hashes)
     for name in version:

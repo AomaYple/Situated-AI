@@ -14,7 +14,7 @@ from dataclasses import asdict, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
-from pdx import config, country_state, decision_intents, decisions
+from pdx import company_sectors, config, country_state, decision_intents, decisions
 from pdx.localization import parse_loc_entries
 from pdx.situated import engine_scope
 from pdx.textio import GAME_SUFFIXES, text_bytes
@@ -558,6 +558,8 @@ def package_inputs(
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
     policy, extensions = production_configuration()
     engine_scope.verify_strategy_game(config.GAME)
+    engine_scope.verify_company_defaults_game(config.GAME)
+    company_sectors.verify_game(config.GAME)
     country_policy = country_state.load()
     country_state.validate(country_policy, config.GAME)
     if not country_policy.enabled:

@@ -98,6 +98,11 @@ def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch
     monkeypatch.setattr(distribution.decisions, "build", lambda *_args, **_kwargs: files)
     monkeypatch.setattr(distribution.country_state, "validate", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", lambda *_args: None)
+    monkeypatch.setattr(distribution.engine_scope, "verify_company_game", lambda *_args: None)
+    monkeypatch.setattr(
+        distribution.engine_scope, "verify_company_defaults_game", lambda *_args: None
+    )
+    monkeypatch.setattr(distribution.company_sectors, "verify_game", lambda *_args: None)
     with pytest.raises(ValueError, match="未翻译"):
         distribution.package_inputs()
     assert json.loads(files[".metadata/metadata.json"]) == metadata

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import tomllib
 from collections import Counter
@@ -14,6 +15,7 @@ from pdx import decision_adapters, decision_rules
 from pdx.model import Assignment, Block
 from pdx.parser import parse_bytes
 
+from . import engine_scope
 from .action_instances import ActionInstance, build
 from .families import FAMILIES
 
@@ -147,6 +149,8 @@ def _native_context_issue(
         "subject_value": ("additive_subject_valuation", {"add"}),
         "become_subject_value": ("additive_subject_valuation", {"add"}),
         "wanted_army_size": ("additive_army_size_target", {"multiply"}),
+        "wanted_construction_output": ("additive_construction_output_target", {"multiply"}),
+        "min_law_chance_to_pass": ("override_pass_chance_threshold", {"add"}),
         "revolution_aversion": ("override_revolution_aversion", {"multiply"}),
         "change_law_chance": ("additive_percentage_chance", {"add"}),
         "max_progressiveness": ("override_progressiveness_limit", {"add"}),
@@ -245,6 +249,7 @@ class _NativeBindingProofs:
         self.sources = dict(sources)
         self.policies = policies
         self.parsed: dict[str, Block] = {}
+        self.company_defaults: dict[str, Any] | None = None
         for source, raw in self.sources.items():
             if hashlib.sha256(raw).hexdigest() != inventory.source_hashes.get(source):
                 raise ValueError(f"原版覆盖证据与独立盘点字节不一致：{source}")
@@ -377,6 +382,105 @@ class _NativeBindingProofs:
             "evidence": [*evidence, f"{binding.source}:{definition.line}"],
         }
 
+    def implicit_company(self, binding: NativeConsumerBinding) -> dict[str, Any] | None:
+        """Exact missing fields backed by the pinned consumer/default branch.
+
+        This does not add implicit objects to the discovered declaration
+        denominator or authorize arbitrary company fields. Every native
+        company file and the define bytes must be independently available.
+        """
+        if (
+            binding.source != "common/company_types/99_basic_companies.txt"
+            or binding.field != "ai_weight"
+        ):
+            return None
+        if self.company_defaults is None:
+            self.company_defaults = json.loads(engine_scope.company_default_snapshot())
+        data = self.company_defaults
+        parent = json.loads(engine_scope.company_snapshot())
+        expected = {**parent["script_hashes"], **data["script_hashes"]}
+        all_company_sources = {
+            name
+            for name in self.inventory.source_hashes
+            if (name.startswith("common/company_types/") or "/common/company_types/" in name)
+            and name.endswith(".txt")
+        }
+        if all_company_sources != set(parent["script_hashes"]):
+            return None
+        if any(
+            name not in self.sources or hashlib.sha256(self.sources[name]).hexdigest() != digest
+            for name, digest in expected.items()
+        ):
+            return None
+        permitted = {row["id"]: row["line"] for row in data["implicit_companies"]}
+        if binding.definition not in permitted:
+            return None
+        declarations = [
+            (name, item)
+            for name in all_company_sources
+            if (root := self.root(name)) is not None
+            for item in root.all(binding.definition)
+        ]
+        if len(declarations) != 1 or declarations[0][0] != binding.source:
+            return None
+        definition = declarations[0][1]
+        if (
+            definition.prefix is not None
+            or definition.op != "="
+            or definition.line != permitted[binding.definition]
+            or not isinstance(definition.value, Block)
+            or definition.value.all("ai_weight")
+        ):
+            return None
+        row = data["contracts"][0]
+        return {
+            **asdict(binding),
+            "actor_scope": "country",
+            "target_scope": "definition_only:company_type",
+            "operation": "base_candidate_score",
+            "default": row["define_field"],
+            "default_value": row["default_value"],
+            "evidence": [
+                engine_scope.COMPANY_DEFAULT_MANIFEST_ID,
+                f"{row['define_source']}:{row['define_line']}",
+                f"{binding.source}:{definition.line}",
+            ],
+        }
+
+    def company_actor(self, instance: ActionInstance, binding: NativeConsumerBinding) -> bool:
+        policy = self.policies.get(instance.source)
+        raw = self.sources.get(binding.source)
+        if policy is None or raw is None or policy.actor_path:
+            return False
+        baseline = hashlib.sha256(
+            raw.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+        ).hexdigest()
+        if policy.baseline_sha256 != baseline:
+            return False
+        rules = [item for item in policy.rules if item.id == instance.rule_id]
+        context = instance.evaluation_context
+        return (
+            len(rules) == 1
+            and ".".join(rules[0].field) == instance.consumer_field
+            and rules[0].operation == instance.operation == "multiply"
+            and rules[0].value == instance.value
+            and tuple(sorted(rules[0].input_keys())) == instance.condition_facts
+            and instance.actor_scope == "root"
+            and instance.target_scope in {"none", "target_or_none"}
+            and context is not None
+            and context.status == "observed"
+            and context.actor_scope is not None
+            and context.actor_scope.name == "root"
+            and context.actor_scope.kind == "country"
+            and context.actor_scope.source == engine_scope.COMPANY_MANIFEST_ID
+            and not context.targets
+            and not context.auxiliary_scopes
+            and f"{engine_scope.COMPANY_MANIFEST_ID}:sha256={engine_scope.COMPANY_MANIFEST_SHA256}"
+            in context.evidence
+            and f"{engine_scope.COMPANY_MANIFEST_ID}:definition_only:company_type"
+            in context.evidence
+        )
+
 
 def native_coverage(
     inventory: VanillaInventory,
@@ -439,14 +543,21 @@ def native_coverage(
                 }
         if proofs.state_owner(instance, binding):
             state_owner.add(instance.action_id)
-        if not native_candidates and (proof := proofs.implicit_building(binding)) is not None:
+        proof = (
+            proofs.implicit_building(binding) or proofs.implicit_company(binding)
+            if not native_candidates
+            else None
+        )
+        if proof is not None:
             row = implicit.setdefault(
                 (binding.source, binding.definition, binding.field),
                 {**proof, "matched_actions": [], "covered_actions": [], "binding_issues": {}},
             )
             row["matched_actions"].append(instance.action_id)
-            if instance.action_id not in state_owner:
+            if proof["actor_scope"] == "state" and instance.action_id not in state_owner:
                 row["binding_issues"][instance.action_id] = "state_owner_policy_unproven"
+            elif proof["actor_scope"] == "country" and not proofs.company_actor(instance, binding):
+                row["binding_issues"][instance.action_id] = "company_root_policy_unproven"
             elif (
                 not instance.owner
                 or not instance.vanilla_tail

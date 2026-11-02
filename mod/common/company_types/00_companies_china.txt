@@ -1,0 +1,452 @@
+# Kaiping Mining Company
+company_kaiping_mining = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/chinese_kaiping_mining_company.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_mining.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_BEIJING STATE_ZHILI }
+
+	building_types = {
+		building_coal_mine
+		building_railway
+	}
+
+	extension_building_types = {
+		building_iron_mine
+		building_lead_mine
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_north_china
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				OR = {
+					state_region = s:STATE_BEIJING
+					state_region = s:STATE_ZHILI
+				}
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = steam_donkey
+		has_technology_researched = railways
+		any_scope_state = {
+			OR = {
+				state_region = s:STATE_BEIJING
+				state_region = s:STATE_ZHILI
+			}
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_coal_mine
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		country_tech_spread_mult = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = steam_donkey
+		has_technology_researched = railways
+		any_scope_state = {
+			OR = {
+				state_region = s:STATE_BEIJING
+				state_region = s:STATE_ZHILI
+			}
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_coal_mine = {
+			level = 5
+			state_trigger = {
+				OR = {
+					state_region = s:STATE_BEIJING
+					state_region = s:STATE_ZHILI
+				}
+				is_incorporated = yes
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_kaiping_mining.ai_weight
+		# ACTION program_ae7b775b4a85922a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ae7b775b4a85922a_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_kaiping_mining_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_ae7b775b4a85922a_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_kaiping_mining_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				# company_sector_company_kaiping_mining_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_ae7b775b4a85922a_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_kaiping_mining_building_railway_pressure [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 sg:transportation = { state_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_kaiping_mining_coal_pressure [market]; coal缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_kaiping_mining_building_railway_need [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 } } } add = 0.12 }
+				# company_sector_company_kaiping_mining_coal_need [market]; 主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_ae7b775b4a85922a_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_kaiping_mining_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_kaiping_mining.ai_weight
+	}
+}
+
+# Hanyang Arsenal
+company_hanyang_arsenal = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/chinese_hanyang_arsenal.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_EASTERN_HUBEI }
+
+	building_types = {
+		building_arms_industry
+		building_artillery_foundry
+		building_munition_plant
+	}
+
+	extension_building_types = {
+		building_explosives_factory
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_small_arms
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_small_arms_complete_tt
+			has_variable = prestige_good_generic_small_arms_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_south_china
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_EASTERN_HUBEI
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = breech_loading_artillery
+		any_scope_state = {
+			state_region = s:STATE_EASTERN_HUBEI
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_arms_industry
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		unit_combat_unit_type_shrapnel_artillery_offense_mult = 0.2
+		unit_morale_recovery_mult = 0.15
+	}
+
+	ai_will_do = {
+		has_technology_researched = breech_loading_artillery
+		any_scope_state = {
+			state_region = s:STATE_EASTERN_HUBEI
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_arms_industry = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_EASTERN_HUBEI
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_hanyang_arsenal.ai_weight
+		# ACTION program_29ec89375d6ce33f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_29ec89375d6ce33f_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_hanyang_arsenal_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_29ec89375d6ce33f_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_hanyang_arsenal_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				# company_sector_company_hanyang_arsenal_hardwood_input [market]; 主业某必选基础配方组所有方法共同需要hardwood；高价为配方机会成本，不是当前实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+				# company_sector_company_hanyang_arsenal_explosives_input [market]; 主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:explosives mg:explosives = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_29ec89375d6ce33f_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_hanyang_arsenal_small_arms_pressure [market]; small_arms缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_hanyang_arsenal_artillery_pressure [market]; artillery缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_hanyang_arsenal_ammunition_pressure [market]; ammunition缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_hanyang_arsenal_small_arms_need [market]; 主业基础配方可能产出small_arms；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_hanyang_arsenal_artillery_need [market]; 主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_hanyang_arsenal_ammunition_need [market]; 主业基础配方可能产出ammunition；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_29ec89375d6ce33f_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_hanyang_arsenal_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_hanyang_arsenal.ai_weight
+	}
+}
+
+# Foochow Arsenal
+company_foochow_arsenal = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/chinese_foochow_arsenal.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_harbor_shipbuilding.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_FUJIAN }
+
+	building_types = {
+		building_shipyard
+		building_artillery_foundry
+	}
+
+	extension_building_types = {
+		building_steel_mill
+		building_tooling_workshop
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_south_china
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_FUJIAN
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = ironclad_tech
+		has_technology_researched = gantry_cranes
+		any_scope_state = {
+			state_region = s:STATE_FUJIAN
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_shipyard
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		ship_hull_damage_mult = 0.025
+		building_port_throughput_add = 0.10
+	}
+
+	ai_will_do = {
+		has_technology_researched = ironclad_tech
+		has_technology_researched = gantry_cranes
+		any_scope_state = {
+			state_region = s:STATE_FUJIAN
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_shipyard = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_FUJIAN
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_foochow_arsenal.ai_weight
+		# ACTION program_955d16e07ddd1383 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_955d16e07ddd1383_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_foochow_arsenal_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_955d16e07ddd1383_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_foochow_arsenal_steamers_pressure [market]; steamers缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_foochow_arsenal_clippers_pressure [market]; clippers缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_foochow_arsenal_artillery_pressure [market]; artillery缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_foochow_arsenal_steamers_need [market]; 主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_foochow_arsenal_clippers_need [market]; 主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_foochow_arsenal_artillery_need [market]; 主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_955d16e07ddd1383_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_foochow_arsenal_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_foochow_arsenal.ai_weight
+	}
+}
+
+# Jingdezhen Porcelain
+company_jingdezhen = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/chinese_jingdezhen_kilns.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_JIANGXI }
+
+	building_types = {
+		building_glassworks
+	}
+
+	extension_building_types = {
+		building_lead_mine
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_south_china
+	}
+
+	possible_prestige_goods = {
+		prestige_good_canton_porcelain
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_JIANGXI
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = chemical_bleaching
+		any_scope_state = {
+			state_region = s:STATE_JIANGXI
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_glassworks
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		country_prestige_mult = 0.15
+		building_lead_mine_throughput_add = 0.05
+	}
+
+	ai_will_do = {
+		has_technology_researched = chemical_bleaching
+		any_scope_state = {
+			state_region = s:STATE_JIANGXI
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_glassworks = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_JIANGXI
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_jingdezhen.ai_weight
+		# ACTION program_50a491d068a1383d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_50a491d068a1383d_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_jingdezhen_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_50a491d068a1383d_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_jingdezhen_glass_pressure [market]; glass缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:glass mg:glass = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_jingdezhen_glass_need [market]; 主业基础配方可能产出glass；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:glass mg:glass = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_50a491d068a1383d_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_jingdezhen_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_jingdezhen.ai_weight
+	}
+}

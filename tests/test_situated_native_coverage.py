@@ -1,11 +1,13 @@
 """Independent native denominator and exact production binding counterexamples."""
 
 import hashlib
+import json
 from dataclasses import replace
 
 import pytest
 
 from pdx import decision_rules
+from pdx.situated import engine_scope
 from pdx.situated.action_instances import ActionInstance
 from pdx.situated.decision_ir import ContextBinding, EvaluationContext
 from pdx.situated.domain_coverage import NativeConsumerBinding, native_coverage
@@ -238,6 +240,131 @@ def test_one_valid_writer_cannot_hide_another_incompatible_binding():
     assert result["binding_issue_count"] == 1
     assert result["rows"][0]["binding_issues"] == {"bad": "actor_type_mismatch"}
     assert not result["binding_complete"]
+
+
+@pytest.fixture
+def implicit_company(monkeypatch):
+    source = "common/company_types/99_basic_companies.txt"
+    extra = "common/company_types/00_named.txt"
+    define = "common/defines/00_ai.txt"
+    sources = {
+        source: b"company_test = { building_types = { building_test } }\n",
+        extra: b"company_other = { ai_weight = {value=2} }\n",
+        define: b"NAI = { COMPANY_TYPE_DEFAULT_BASE_WEIGHT = 1 }\n",
+    }
+    hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in sources.items()}
+    parent = {"script_hashes": {name: hashes[name] for name in (source, extra)}}
+    default = {
+        "script_hashes": {name: hashes[name] for name in (source, define)},
+        "implicit_companies": [{"id": "company_test", "line": 1}],
+        "contracts": [
+            {
+                "define_field": "NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+                "default_value": 1,
+                "define_source": define,
+                "define_line": 1,
+            }
+        ],
+    }
+    # Snapshot contract and byte authenticity are covered independently by
+    # engine-scope tests; this fixture isolates the coverage join semantics.
+    monkeypatch.setattr(engine_scope, "company_snapshot", lambda: json.dumps(parent).encode())
+    monkeypatch.setattr(
+        engine_scope, "company_default_snapshot", lambda: json.dumps(default).encode()
+    )
+    context = EvaluationContext(
+        actor_scope=ContextBinding("root", "country", "actor", engine_scope.COMPANY_MANIFEST_ID, 1),
+        evidence=(
+            f"{engine_scope.COMPANY_MANIFEST_ID}:1",
+            f"{engine_scope.COMPANY_MANIFEST_ID}:sha256={engine_scope.COMPANY_MANIFEST_SHA256}",
+            f"{engine_scope.COMPANY_MANIFEST_ID}:definition_only:company_type",
+        ),
+    )
+    instance = _instance(
+        source=source,
+        consumer_field="company_test.ai_weight",
+        operation="multiply",
+        value=1.12,
+        evaluation_context=context,
+    )
+    policy = _building_policy(sources[source], instance, actor_path=())
+    return sources, instance, policy
+
+
+def test_implicit_company_uses_exact_default_and_real_root_policy(implicit_company):
+    sources, instance, policy = implicit_company
+    inventory = _source_inventory((_surface(),), sources)
+    result = native_coverage(
+        inventory,
+        (instance,),
+        native_sources=sources,
+        production_policies={instance.source: policy},
+    )
+    assert result["denominator"] == 1
+    assert result["unmatched_production"] == []
+    assert len(result["implicit_covered"]) == 1
+    row = result["implicit_rows"][0]
+    assert row["default_value"] == 1
+    assert row["target_scope"] == "definition_only:company_type"
+    assert row["covered_actions"] == [instance.action_id]
+    assert not result["binding_complete"]  # The unrelated native field is still open.
+
+
+@pytest.mark.parametrize("damage", ["policy_missing", "owner", "baseline", "rule", "context"])
+def test_implicit_company_requires_real_policy_and_frozen_context(implicit_company, damage):
+    sources, instance, policy = implicit_company
+    if damage == "owner":
+        policy = replace(policy, actor_path=("owner",))
+    elif damage == "baseline":
+        policy = replace(policy, baseline_sha256="0" * 64)
+    elif damage == "rule":
+        policy = replace(policy, rules=(replace(policy.rules[0], value=1.20),))
+    elif damage == "context":
+        instance = replace(instance, evaluation_context=None)
+    result = native_coverage(
+        _source_inventory((), sources),
+        (instance,),
+        native_sources=sources,
+        production_policies={} if damage == "policy_missing" else {instance.source: policy},
+    )
+    assert not result["implicit_covered"]
+    assert result["implicit_rows"][0]["binding_issues"] == {
+        instance.action_id: "company_root_policy_unproven"
+    }
+
+
+@pytest.mark.parametrize(
+    "damage", ["missing_file", "missing_define", "define_drift", "shadow", "explicit", "wrong_id"]
+)
+def test_implicit_company_cannot_hide_native_bytes_or_borrow_initialization(
+    implicit_company, damage
+):
+    sources, instance, policy = implicit_company
+    inventory = _source_inventory((), sources)
+    sources = dict(sources)
+    if damage == "missing_file":
+        del sources["common/company_types/00_named.txt"]
+    elif damage == "missing_define":
+        del sources["common/defines/00_ai.txt"]
+    elif damage == "define_drift":
+        sources["common/defines/00_ai.txt"] = b"NAI = { COMPANY_TYPE_DEFAULT_BASE_WEIGHT = 5 }"
+        inventory = _source_inventory((), sources)
+    elif damage == "shadow":
+        sources["dlc/test/common/company_types/shadow.txt"] = b"company_test={}"
+        inventory = _source_inventory((), sources)
+    elif damage == "explicit":
+        sources[instance.source] = b"company_test = { ai_weight = {} }"
+        inventory = _source_inventory((), sources)
+    else:
+        instance = replace(instance, consumer_field="company_other.ai_weight")
+    result = native_coverage(
+        inventory,
+        (instance,),
+        native_sources=sources,
+        production_policies={instance.source: policy},
+    )
+    assert result["implicit_rows"] == []
+    assert result["unmatched_production"][0]["reason"] == "native_surface_missing"
 
 
 def test_empty_discovery_is_never_complete_by_vacuous_zero_counts():
@@ -487,12 +614,18 @@ def test_secret_goal_projection_cannot_guess_ambiguous_or_adjacent_structure(goa
         ("max_progressiveness", "override_progressiveness_limit", "add", "none", None),
         ("max_regressiveness", "override_regressiveness_limit", "add", "none", None),
         (
-            "recklessness", "additive_strength_estimate_multiplier", "add",
-            "scope:target_country=country", _context("target_country", "country", "target"),
+            "recklessness",
+            "additive_strength_estimate_multiplier",
+            "add",
+            "scope:target_country=country",
+            _context("target_country", "country", "target"),
         ),
         (
-            "wargoal_maneuvers_fraction", "additive_maneuvers_fraction", "multiply",
-            "scope:enemy_country=country", _context("enemy_country", "country", "target"),
+            "wargoal_maneuvers_fraction",
+            "additive_maneuvers_fraction",
+            "multiply",
+            "scope:enemy_country=country",
+            _context("enemy_country", "country", "target"),
         ),
     ],
 )

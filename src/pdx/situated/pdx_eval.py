@@ -53,6 +53,12 @@ _PARAMETER_QUERIES = frozenset(
         "pop_type_percent_country",
         "primary_cultures_percent_state",
         "radical_fraction",
+        "has_institution",
+        "institution_investment_level",
+        "is_building_type",
+        "has_active_production_method",
+        "law_enactment_stance",
+        "law_stance",
     }
 )
 _PARAMETER_QUERY_BLOCKS: dict[str, tuple[frozenset[str], str | None]] = {
@@ -61,6 +67,9 @@ _PARAMETER_QUERY_BLOCKS: dict[str, tuple[frozenset[str], str | None]] = {
     "pop_type_percent_country": (frozenset({"pop_type"}), "percent"),
     "primary_cultures_percent_state": (frozenset({"target_country"}), "value"),
     "radical_fraction": (frozenset(), "value"),
+    "institution_investment_level": (frozenset({"institution"}), "value"),
+    "law_enactment_stance": (frozenset({"law"}), "value"),
+    "law_stance": (frozenset({"law"}), "value"),
 }
 
 
@@ -174,7 +183,12 @@ def _parameter_query(assignment: Assignment, facts: Mapping[str, object | None])
                 raise UnsupportedPdxError(f"参数化查询 {assignment.key} 的数值比较无效")
             if required_value != value_field:
                 raise UnsupportedPdxError(f"参数化查询 {assignment.key} 数值字段不匹配")
-            expected = _number(value_items[0])
+            if assignment.key in {"law_enactment_stance", "law_stance"}:
+                if _scalar(value_items[0], label="law stance").unquoted != "neutral":
+                    raise UnsupportedPdxError("法律运动立场仅支持相对 neutral 的有序比较")
+                expected = 0.0
+            else:
+                expected = _number(value_items[0])
         elif required_value is not None:
             raise UnsupportedPdxError(f"参数化查询 {assignment.key} 缺少数值比较")
     else:
@@ -282,6 +296,30 @@ def _condition(
     for item in block.items:
         if not isinstance(item, Assignment):
             raise UnsupportedPdxError("条件块包含匿名或裸值")
+        if item.key in {
+            "any_political_movement",
+            "any_interest_group",
+            "any_scope_state",
+            "any_scope_building",
+        }:
+            if item.op != "=" or item.prefix is not None or not isinstance(item.value, Block):
+                raise UnsupportedPdxError("本国集合查询必须是普通赋值块")
+            collection = facts.get(item.key)
+            if collection is None:
+                values.append(None)
+                continue
+            if not isinstance(collection, (list, tuple)) or any(
+                not isinstance(candidate, Mapping) for candidate in collection
+            ):
+                raise UnsupportedPdxError("本国集合观测必须是完整对象列表，不能预先传入聚合布尔")
+            values.append(
+                truth_any(
+                    tuple(
+                        _condition(item.value, candidate, root=anchor) for candidate in collection
+                    )
+                )
+            )
+            continue
         if item.key in {"AND", "OR", "NOT"}:
             if not isinstance(item.value, Block):
                 raise UnsupportedPdxError(f"{item.key} 条件必须是块")

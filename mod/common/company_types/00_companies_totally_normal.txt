@@ -1,0 +1,111 @@
+# Ingolstadt Electrical Company
+company_ingolstadt_electrical_company = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/ingolstadt_electrical_company.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_BAVARIA }
+
+	building_types = {
+		building_power_plant
+	}
+
+	extension_building_types = {
+		building_textile_mill
+		building_livestock_ranch
+	}
+
+	possible_prestige_goods = {
+	}
+
+	potential = {
+	}
+
+	attainable = {
+		custom_tooltip = {
+			text = funded_frankensteins_work_tt
+			has_variable = frankenstein_factory_operational_var
+		}
+	}
+
+	possible = {
+		has_technology_researched = electrical_generation
+		custom_tooltip = {
+			text = funded_frankensteins_work_tt
+			has_variable = frankenstein_factory_operational_var
+		}
+		s:STATE_BAVARIA = {
+			any_scope_state = {
+				any_scope_building = {
+					is_building_type = building_power_plant
+					level >= 10
+				}
+				any_scope_building = {
+					is_building_type = building_university
+				}
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		country_frankenstein_company_bool = yes
+		state_mortality_mult = 0.05
+		state_radicals_from_political_movements_mult = 0.1
+		country_tech_research_speed_mult = 0.10
+	}
+
+	ai_will_do = {
+		always = yes
+	}
+
+	ai_construction_targets = {
+		building_power_plant = {
+			level = 10
+			state_trigger = {
+				state_region = s:STATE_BAVARIA
+			}
+		}
+		building_university = {
+			level = 1
+			state_trigger = {
+				state_region = s:STATE_BAVARIA
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_ingolstadt_electrical_company.ai_weight
+		# ACTION program_f5f8839a996ff533 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f5f8839a996ff533_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_ingolstadt_electrical_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_f5f8839a996ff533_company_mandatory_input_negative
+			add = { value = 0
+				# company_sector_company_ingolstadt_electrical_company_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_f5f8839a996ff533_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_ingolstadt_electrical_company_building_power_plant_pressure [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.5 } } } } add = 0.2 }
+				# company_sector_company_ingolstadt_electrical_company_building_power_plant_need [market]; 本国同一州已有电厂且本州电价高，体现本地电力稀缺，不读取全国电力价格
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_power_plant level >= 1 } sg:electricity = { state_goods_pricier > 0.25 } } } } add = 0.12 }
+			}
+			# GROUP program_f5f8839a996ff533_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_ingolstadt_electrical_company_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_ingolstadt_electrical_company.ai_weight
+	}
+}

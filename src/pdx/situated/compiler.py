@@ -37,6 +37,7 @@ from . import (
     relations,
     state,
     support_signals,
+    vanilla_inventory,
 )
 from . import actions as action_source
 from . import evidence as evidence_source
@@ -325,19 +326,46 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             "fraction",
             "0x141647b8f",
         ),
+        "wanted_construction_output": (
+            None,
+            "additive_construction_output_target",
+            "construction_output",
+            "0x141646580",
+        ),
+        "institution_scores": (None, "additive_score", "score", "0x141644a3a"),
+        "min_law_chance_to_pass": (
+            None,
+            "override_pass_chance_threshold",
+            "pass_chance",
+            "0x141646d23",
+        ),
     }
     result = {}
     source = engine_scope.STRATEGY_MANIFEST_ID
     for field, (target, operation, unit, address) in specs.items():
         expected = {
             "actor_scope": "country",
-            "target_scope": f"scope:{target}=country",
+            "target_scope": (
+                f"scope:{target}=country"
+                if target is not None
+                else "definition_only:institution_type"
+                if field == "institution_scores"
+                else "scope:law=law"
+                if field == "min_law_chance_to_pass"
+                else "none"
+            ),
             "operation": operation,
             "capability": "direct",
             "unit": unit,
             "consumer_va": address,
         }
-        if data.get("consumers", {}).get(field) != expected:
+        actual = data.get("consumers", {}).get(field, {})
+        if (
+            any(actual.get(key) != value for key, value in expected.items())
+            if field
+            in {"wanted_construction_output", "institution_scores", "min_law_chance_to_pass"}
+            else actual != expected
+        ):
             raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
         entries = list(
             re.finditer(
@@ -357,21 +385,103 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
         actor = decision_ir.ContextBinding(
             "root", "country", "actor", source, locations["actor_scope"]
         )
-        target_binding = decision_ir.ContextBinding(
-            target, "country", "target", source, locations["target_scope"]
+        target_binding = (
+            decision_ir.ContextBinding(
+                target, "country", "target", source, locations["target_scope"]
+            )
+            if target is not None
+            else None
         )
         result[field] = decision_ir.EvaluationContext(
             actor_scope=actor,
-            targets=(target_binding,),
+            targets=(target_binding,) if target_binding is not None else (),
+            auxiliary_scopes=(
+                decision_ir.ContextBinding(
+                    "law", "law", "auxiliary", source, locations["target_scope"]
+                ),
+            )
+            if field == "min_law_chance_to_pass"
+            else (),
             evidence=(
                 f"{source}:{actor.line}",
-                f"{source}:{target_binding.line}",
+                f"{source}:{locations['target_scope']}",
                 f"{source}:sha256={engine_scope.STRATEGY_MANIFEST_SHA256}",
                 f"{source}:consumer={field}:va={address}",
                 f"{source}:evidence=frozen_engine_snapshot",
+                *(
+                    (f"{source}:definition_only:institution_type",)
+                    if field == "institution_scores"
+                    else ()
+                ),
             ),
         )
     return result
+
+
+def _frozen_institution_contexts(
+    context: decision_ir.EvaluationContext,
+) -> dict[str, decision_ir.EvaluationContext]:
+    """Project only exact numeric children of the pinned original ordinary map."""
+    data = json.loads(engine_scope.strategy_snapshot())
+    raw = BASELINE.read_bytes()
+    source = "common/ai_strategies/00_default_strategy.txt"
+    # Repository snapshots omit the native UTF-8 BOM by the text contract.
+    if data["script_hashes"][source] not in {
+        hashlib.sha256(raw).hexdigest(),
+        hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest(),
+    }:
+        raise ValueError("冻结制度策略原件 SHA 与引擎证据不一致")
+    parsed = parse_text(raw.decode("utf-8-sig"))
+    definitions = [item for item in parsed.top_assignments if item.key == "ai_strategy_default"]
+    scores = (
+        vanilla_inventory._institution_score_map(
+            definitions[0], frozenset(data["institution_definitions"])
+        )
+        if not parsed.errors and len(definitions) == 1
+        else None
+    )
+    if scores is None:
+        raise ValueError("制度策略必须有唯一合法制度定义 key 的普通数值子块")
+    return {f"institution_scores.{item.key}": context for item in scores.assignments()}
+
+
+def _frozen_company_context() -> decision_ir.EvaluationContext:
+    """公司基础评分的国家对象来源，不授权章程、建设目标或新getter。"""
+    raw = engine_scope.company_snapshot()
+    data = json.loads(raw)
+    matches = [row for row in data["contracts"] if row["field"] == "ai_weight"]
+    if len(matches) != 1:
+        raise ValueError("公司基础评分缺少唯一作用域合同")
+    row = matches[0]
+    if any(
+        row[key] != value
+        for key, value in {
+            "actor": "country",
+            "target": "definition_only:company_type",
+            "operation": "base_candidate_score",
+            "capability": "direct",
+            "consumer": "0x14169a3b0",
+            "actual_call": "0x1415c9855",
+            "numeric_member": "0x390",
+            "parser": "0x141698300",
+            "parser_receiver": "0x598",
+            "nonpositive_rejection": "0x141510b30",
+        }.items()
+    ):
+        raise ValueError("公司基础评分作用域合同漂移")
+    text = raw.decode("utf-8")
+    section = text.index('"field": "ai_weight"')
+    line = text.count("\n", 0, text.index('"actor": "country"', section)) + 1
+    source = engine_scope.COMPANY_MANIFEST_ID
+    return decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, line),
+        evidence=(
+            f"{source}:{line}",
+            f"{source}:sha256={engine_scope.COMPANY_MANIFEST_SHA256}",
+            f"{source}:evidence=frozen_engine_snapshot",
+            f"{source}:definition_only:company_type",
+        ),
+    )
 
 
 def validate_context_readers(
@@ -384,6 +494,12 @@ def validate_context_readers(
     input_keys: tuple[str, ...] = (),
 ) -> tuple[tuple[str, str, str, str], ...]:
     """Bind existing observations to evidenced objects, never authorize getters."""
+    if field.startswith("institution_scores."):
+        parts = field.split(".")
+        definitions = json.loads(engine_scope.strategy_snapshot())["institution_definitions"]
+        if len(parts) != 2 or parts[1] not in definitions:
+            raise ValueError(f"消费者 {field} 不是已证明的精确制度数值子块")
+        field = "institution_scores"
     shapes = {
         "subject_value": {"root": ("country", "actor"), "target_country": ("country", "target")},
         "recklessness": {"root": ("country", "actor"), "target_country": ("country", "target")},
@@ -409,6 +525,10 @@ def validate_context_readers(
     }
     shapes["treaty_port_value"] = shapes["state_value"]
     shapes["ai_enact_weight_modifier"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
+    shapes["company.ai_weight"] = {"root": ("country", "actor")}
+    shapes["wanted_construction_output"] = {"root": ("country", "actor")}
+    shapes["institution_scores"] = {"root": ("country", "actor")}
+    shapes["min_law_chance_to_pass"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
     formation_shape = {
         "root": ("country", "actor"),
         "military_formation": ("military_formation", "auxiliary"),
@@ -428,7 +548,14 @@ def validate_context_readers(
         if binding is not None
     }
     if (
-        field in {"recklessness", "wargoal_maneuvers_fraction"}
+        field
+        in {
+            "recklessness",
+            "wargoal_maneuvers_fraction",
+            "wanted_construction_output",
+            "institution_scores",
+            "min_law_chance_to_pass",
+        }
         and {name: (binding.kind, binding.role) for name, binding in bindings.items()}
         != shapes[field]
     ):
@@ -1076,13 +1203,25 @@ def load_model(
     )
     observed_contexts = evaluation_contexts(baseline_text)
     observed_contexts.update(_frozen_strategy_contexts())
+    observed_contexts.update(_frozen_institution_contexts(observed_contexts["institution_scores"]))
     law_context = _frozen_law_context()
+    company_context = _frozen_company_context()
     context_readers = {}
     instance_contexts = {}
     for source, policy in (("mod/decisions/information.toml", information), *adapters.policies):
         readers = {reader.key: reader for reader in policy.readers}
         for rule in policy.rules:
             field = ".".join(rule.field).removeprefix("ai_strategy_default.")
+            if (
+                source
+                in {
+                    "mod/decisions/information.toml",
+                    "common/ai_strategies/00_default_strategy.txt",
+                }
+                and (field == "institution_scores" or field.startswith("institution_scores."))
+                and (field == "institution_scores" or field not in observed_contexts)
+            ):
+                raise ValueError(f"制度策略消费者不是精确普通数值子块：{field}")
             context = (
                 observed_contexts.get(field)
                 if source
@@ -1094,12 +1233,20 @@ def load_model(
                 if source.startswith("common/laws/")
                 and len(rule.field) == 2
                 and rule.field[-1] == "ai_enact_weight_modifier"
+                else company_context
+                if source.startswith("common/company_types/")
+                and len(rule.field) == 2
+                and rule.field[-1] == "ai_weight"
                 else None
             )
             if context is not None:
                 instance_contexts[(source, rule.id)] = context
                 reader_field = (
-                    "ai_enact_weight_modifier" if source.startswith("common/laws/") else field
+                    "ai_enact_weight_modifier"
+                    if source.startswith("common/laws/")
+                    else "company.ai_weight"
+                    if source.startswith("common/company_types/")
+                    else field
                 )
                 context_readers[(source, rule.id)] = validate_context_readers(
                     reader_field,
@@ -1168,6 +1315,7 @@ def load_model(
     hashes = {
         "law_enact_context_document": _LAW_DOC_SHA256,
         "strategy_context_snapshot": engine_scope.STRATEGY_MANIFEST_SHA256,
+        "company_context_snapshot": engine_scope.COMPANY_MANIFEST_SHA256,
         "migration_baseline": hashlib.sha256(
             migration_baseline.DEFAULT_SOURCE.read_bytes()
         ).hexdigest(),

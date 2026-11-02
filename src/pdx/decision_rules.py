@@ -19,7 +19,7 @@ from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import config, decision_intents, decision_interfaces
+from . import config, decision_intents, decision_interfaces, observation_queries
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
@@ -85,6 +85,13 @@ class Reader:
         return ".".join((scope, *self.path, self.engine))
 
     def expression(self, op: str, value: bool | float | FactReference) -> str:
+        if self.engine in observation_queries.QUERY_ENGINES:
+            if self.kind != "boolean" or op != "=" or type(value) is not bool:
+                raise ValueError("本国聚合查询只接受布尔等值条件")
+            statement = observation_queries.render(
+                observation_queries.from_reader(self.engine, dict(self.parameters))
+            )
+            return statement if value else f"NOT = {{ {statement} }}"
         if self.parameters and self.kind == "boolean":
             body = " ".join(f"{key} = {literal}" for key, literal in self.parameters)
             statement = f"{self.engine} = {{ {body} }}"
@@ -264,6 +271,7 @@ def from_data(
             ("has_diplomatic_pact", "boolean", None): {"who", "type"},
             ("has_treaty_alliance_with", "boolean", None): {"TARGET"},
             ("primary_cultures_percent_state", "number", "value"): {"target_country"},
+            ("institution_investment_level", "number", "value"): {"institution"},
         }
         value_field = item.get("value_field")
         parameter_shape = (
@@ -271,12 +279,31 @@ def from_data(
             item["kind"],
             value_field if isinstance(value_field, str) else None,
         )
-        if parameters and (
-            argument is not None
-            or set(parameters) != parameter_keys.get(parameter_shape)
-            or any(
-                not isinstance(literal, str) or not re.fullmatch(r"[a-z][a-z0-9_-]*", literal)
-                for literal in parameters.values()
+        local_query = item["engine"] in observation_queries.QUERY_ENGINES
+        if local_query:
+            if (
+                item["kind"] != "boolean"
+                or argument is not None
+                or value_field is not None
+                or item["scope"] != "root"
+                or item.get("path")
+                or item.get("minimum") is not None
+                or item.get("maximum") is not None
+                or item["unit"] != "boolean"
+                or actor_path
+            ):
+                raise ValueError("本国聚合查询必须保持精确国家ROOT布尔签名")
+            observation_queries.from_reader(item["engine"], parameters)
+        if (
+            parameters
+            and not local_query
+            and (
+                argument is not None
+                or set(parameters) != parameter_keys.get(parameter_shape)
+                or any(
+                    not isinstance(literal, str) or not re.fullmatch(r"[a-z][a-z0-9_-]*", literal)
+                    for literal in parameters.values()
+                )
             )
         ):
             label = "复合布尔" if item["kind"] == "boolean" else "复合数值"
@@ -294,6 +321,10 @@ def from_data(
             raise ValueError("人口比例读取器必须声明 percent 和 pop_type 参数")
         if item["engine"] == "is_production_method_active" and not parameters:
             raise ValueError("复合布尔生产方式读取器必须声明完整参数")
+        if item["engine"] == "institution_investment_level" and (
+            value_field != "value" or not parameters
+        ):
+            raise ValueError("制度投资读取器必须声明 institution 参数及 value 比较")
         if item["engine"] == "has_diplomatic_pact" and (
             parameters.get("who") != "root"
             or parameters.get("type") not in {"embargo", "rivalry"}
@@ -394,7 +425,7 @@ def from_data(
         ):
             raise ValueError("规则身份无效或重复")
         field = tuple(item["field"].split("."))
-        if not field or any(not _NAME.fullmatch(part) for part in field):
+        if not field or any(not re.fullmatch(r"[a-z][a-z0-9_-]*", part) for part in field):
             raise ValueError("消费者字段路径无效")
         priority = item["priority"]
         if type(priority) is not int or (field, priority) in priorities:
@@ -1035,6 +1066,11 @@ def patch(
             if not path_proven:
                 raise ValueError(f"协调读取器没有锁定原版路径依据：{reader.key}")
             continue
+        if reader.engine in observation_queries.QUERY_ENGINES:
+            # Full AST/source proof is checked by the adapter build boundary;
+            # numeric query parameters are not native vocabulary atoms.
+            observation_queries.from_reader(reader.engine, dict(reader.parameters))
+            continue
         if (
             reader.engine not in words
             or not path_proven
@@ -1199,7 +1235,9 @@ def description_key(rule: Rule) -> str | None:
     return f"SITAI_RULE_{rule.id.upper()}_REASON" if rule.field[-1] == "state_value" else None
 
 
-def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, object]:
+def contract(
+    rules: RuleSet, *, owner: str = "information_rules", source: str | None = None
+) -> dict[str, object]:
     """机器可读的实际生成覆盖；只列真实规则，实机全部保持待验。"""
     from .situated.programs import contract as program_contract  # noqa: PLC0415
 
@@ -1257,7 +1295,11 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
                 "resolved_scope": decision_interfaces.reader_scope(reader, rules.actor_path),
                 "visibility": "public_script_scope",
                 "update": "read_at_consumer_evaluation_no_cache",
-                "cost": "bounded_scope_chain_no_world_scan; engine_runtime_cost_unmeasured",
+                "cost": (
+                    "owned_candidate_traversal_no_world_scan; engine_runtime_cost_unmeasured"
+                    if reader.engine in observation_queries.QUERY_ENGINES
+                    else "bounded_scope_chain_no_world_scan; engine_runtime_cost_unmeasured"
+                ),
                 "runtime_readability": "static_interface_signature; runtime_behavior_unverified",
             }
             for reader in rules.readers
@@ -1274,7 +1316,9 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
                 if rule.operation == "add"
                 else "dimensionless_multiplier",
                 "calibration": "design_assumption; user_behavior_and_balance_review_pending",
-                "consumer": decision_interfaces.consumer(rule.field, rules.actor_path),
+                "consumer": decision_interfaces.consumer(
+                    rule.field, rules.actor_path, source=source
+                ),
                 "description_key": description_key(rule),
                 "unknown": (
                     "unknown_local_variant_skipped_independent_groups_continue"

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import tomllib
 from dataclasses import dataclass, replace
@@ -15,7 +16,14 @@ from itertools import pairwise
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
-from . import config, decision_intents, decision_rules, production_inputs
+from . import (
+    company_sectors,
+    config,
+    decision_intents,
+    decision_rules,
+    observation_queries,
+    production_inputs,
+)
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
@@ -42,7 +50,7 @@ _VALUE_SOURCE = "common/script_values/sitai_adapter_values.txt"
 
 @dataclass(frozen=True, slots=True)
 class InitialValue:
-    """只为缺省的建筑评分显式恢复锁定 defines 中的原版基值。"""
+    """只为已证明的缺省评分恢复锁定原版基值。"""
 
     source: str
     field: tuple[str, ...]
@@ -67,6 +75,7 @@ class AdapterSet:
     initial_values: tuple[InitialValue, ...] = ()
     supply: SupplyPlan | None = None
     scalar_values: tuple[tuple[str, tuple[str, ...]], ...] = ()
+    company_sectors_sha256: str | None = None
 
 
 def writes(
@@ -112,6 +121,30 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         "rules",
     } or (type(data["schema"]) is not int or data["schema"] != 1):
         raise ValueError("消费者适配 schema 无效")
+    sector_digest = None
+    if source == SOURCE:
+        if (
+            not isinstance(data["sources"], dict)
+            or not isinstance(data["readers"], dict)
+            or not isinstance(data["rules"], list)
+            or not isinstance(data.get("initial_values", []), list)
+        ):
+            raise ValueError("公司部门消费者源集合类型无效")
+        # One source of sector semantics: the frozen, structurally verified
+        # derivation. Loading it is not a claim about the current installation.
+        sectors = company_sectors.load_baseline()
+        derived = {
+            "sources": {**sectors["sources"], **company_sectors.query_source_hashes(sectors)},
+            "readers": sectors["readers"],
+        }
+        for collection in ("sources", "readers"):
+            for key, value in derived[collection].items():
+                if key in data[collection] and data[collection][key] != value:
+                    raise ValueError(f"公司部门派生与消费者源冲突：{collection}/{key}")
+                data[collection][key] = value
+        data["rules"].extend(sectors["rules"])
+        data.setdefault("initial_values", []).extend(company_sectors.initialized_fields(sectors))
+        sector_digest = hashlib.sha256(company_sectors.BASELINE.read_bytes()).hexdigest()
     if not isinstance(data["sources"], dict) or not data["sources"]:
         raise ValueError("消费者适配必须锁定全部原件")
     for name, digest in data["sources"].items():
@@ -151,6 +184,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                 "common/laws/",
                 "common/technology/technologies/",
                 "common/buildings/",
+                "common/company_types/",
             )
         ):
             raise ValueError("只允许适配已登记的数值消费者；事件只能作为读取依据")
@@ -169,8 +203,19 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     if not isinstance(contexts, dict):
         raise ValueError("共享约束必须是映射")
     used_contexts: set[str] = set()
-    digest = hashlib.sha256(raw).hexdigest()
+    digest = hashlib.sha256(
+        raw
+        if sector_digest is None
+        else raw + b"\0company_sectors:" + sector_digest.encode("ascii")
+    ).hexdigest()
     for name, rules in sorted(groups.items()):
+        if name.startswith("common/company_types/") and any(
+            len(rule["field"].split(".")) != 2
+            or not rule["field"].endswith(".ai_weight")
+            or rule["operation"] != "multiply"
+            for rule in rules
+        ):
+            raise ValueError("公司适配只许可已证明的正倍率基础候选评分字段")
         expected_actor = ["owner"] if name.startswith("common/buildings/") else []
         if actors.get(name, []) != expected_actor:
             raise ValueError("消费者 AI 所有者与锁定接口作用域不一致")
@@ -234,25 +279,40 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         native_source, field, define_source, define = (
             item[key] for key in ("source", "field", "define_source", "define")
         )
+        company_default = (
+            native_source == "common/company_types/99_basic_companies.txt"
+            and define_source == "common/defines/00_ai.txt"
+            and define == "NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT"
+        )
+        allowed_defines = (
+            {"NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT"}
+            if company_default
+            else {"NAI.PRODUCTION_BUILDING_BASE_VALUE", "NAI.GOVERNMENT_BUILDING_BASE_VALUE"}
+        )
         if (
             not all(
                 isinstance(value, str) for value in (native_source, field, define_source, define)
             )
             or native_source not in groups
-            or not native_source.startswith("common/buildings/")
+            or not (native_source.startswith("common/buildings/") or company_default)
             or define_source not in data["sources"]
             or not define_source.startswith("common/defines/")
-            or define
-            not in {"NAI.PRODUCTION_BUILDING_BASE_VALUE", "NAI.GOVERNMENT_BUILDING_BASE_VALUE"}
+            or define not in allowed_defines
         ):
             raise ValueError("建筑缺省评分必须引用锁定的原版建筑与 defines")
         field_path = tuple(field.split("."))
         if (
             len(field_path) != 2
-            or field_path[1] != "ai_value"
+            or field_path[1] != ("ai_weight" if company_default else "ai_value")
             or (native_source, field_path) in seen_fields
         ):
             raise ValueError("建筑缺省评分路径无效或重复")
+        if company_default:
+            from .situated import engine_scope  # noqa: PLC0415
+
+            proof = json.loads(engine_scope.company_default_snapshot())
+            if field_path[0] not in {row["id"] for row in proof["implicit_companies"]}:
+                raise ValueError("公司缺省评分不在精确引擎证据集合中")
         building_policy = dict(policies)[native_source]
         if field_path not in {rule.field for rule in building_policy.rules}:
             raise ValueError("建筑缺省评分缺少实际规则消费者")
@@ -340,6 +400,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         tuple(initial_values),
         supply,
         tuple(sorted(scalar_values)),
+        sector_digest,
     )
     writes(adapters)
     return adapters
@@ -492,6 +553,21 @@ def _initialize(
             raise ValueError("建筑缺省评分父块不唯一")
         if parent.value.first(item.field[1]) is not None:
             raise ValueError("建筑评分已经存在，不能覆写或使用缺省值")
+        if item.source.startswith("common/company_types/"):
+            from .situated import engine_scope  # noqa: PLC0415
+
+            proof = json.loads(engine_scope.company_default_snapshot())
+            allowed = {row["id"]: row["line"] for row in proof["implicit_companies"]}
+            if (
+                item.source != "common/company_types/99_basic_companies.txt"
+                or item.field[1] != "ai_weight"
+                or item.define != ("NAI", "COMPANY_TYPE_DEFAULT_BASE_WEIGHT")
+                or item.define_source != "common/defines/00_ai.txt"
+                or allowed.get(item.field[0]) != parent.line
+                or parent.op != "="
+                or parent.prefix is not None
+            ):
+                raise ValueError("公司缺省评分偏离精确原版字段与初始化证据")
         definitions = definitions_cache.get(item.define_source)
         if definitions is None:
             result = parse_text(inputs[item.define_source])
@@ -516,6 +592,8 @@ def _initialize(
         value = definition.value.unquoted
         if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", value):
             raise ValueError("建筑缺省评分必须是非负数值常量")
+        if item.source.startswith("common/company_types/") and value != "1":
+            raise ValueError("公司缺省评分必须保留已证明的原版常量1")
         values[item.field] = value
     # 使用与补丁编译器相同的词法定位，不能按字符串或行尾猜括号。
     offsets = decision_rules._offsets(text, {(item.field[0],) for item in items})
@@ -526,7 +604,7 @@ def _initialize(
         key = ".".join(path)
         fragment = (
             f"\n\t# SITAI BEGIN initialized:{key}\n"
-            f"\tai_value = {{ value = {value} }}\n"
+            f"\t{path[1]} = {{ value = {value} }}\n"
             f"\t# SITAI END initialized:{key}\n"
         )
         text = text[:position] + fragment + text[position:]
@@ -579,6 +657,8 @@ def build(
         raise ValueError("消费者适配含未知领域开关")
     owners = writes(adapters, enabled_domains)
     inputs = read_inputs(adapters, game=game, texts=texts)
+    if adapters.company_sectors_sha256 is not None:
+        company_sectors.verify_baseline(inputs)
     # 一次词法扫描同时建立校验集合与原件定位，避免逐读取器反复扫描大文件。
     evidence = reader_evidence(inputs)
     words = frozenset(evidence)
@@ -588,6 +668,8 @@ def build(
     required_engines: set[str] = set()
     active_methods: set[tuple[str, str]] = set()
     definitions_cache: dict[str, Block] = {}
+    query_evidence = {}
+    consumption_evidence = False
     named_fleet = False
     for name, policy in adapters.policies:
         selected = (
@@ -597,6 +679,14 @@ def build(
         )
         if not selected:
             continue
+        for reader in policy.readers:
+            if reader.engine == "market_goods_consumption" and not consumption_evidence:
+                observation_queries.verify_market_consumption_sources(inputs)
+                consumption_evidence = True
+            if reader.engine in observation_queries.QUERY_ENGINES:
+                query = observation_queries.from_reader(reader.engine, dict(reader.parameters))
+                if query not in query_evidence:
+                    query_evidence[query] = observation_queries.compile_query(query, inputs)
         text = overlays.get(name, inputs[name]) if overlays is not None else inputs[name]
         initial_values = [
             item
@@ -653,7 +743,9 @@ def build(
             {
                 "source": name,
                 **decision_rules.contract(
-                    replace(policy, enabled_domains=selected), owner="consumer_adapters"
+                    replace(policy, enabled_domains=selected),
+                    owner="consumer_adapters",
+                    source=name,
                 ),
             }
         )

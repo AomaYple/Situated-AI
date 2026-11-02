@@ -39,7 +39,13 @@ def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
         lambda *_: pytest.fail("loading frozen contexts must not inspect the current EXE"),
     )
     assert compiler._frozen_strategy_contexts() == snapshot
-    assert set(snapshot) == {"recklessness", "wargoal_maneuvers_fraction"}
+    assert set(snapshot) == {
+        "recklessness",
+        "wargoal_maneuvers_fraction",
+        "wanted_construction_output",
+        "institution_scores",
+        "min_law_chance_to_pass",
+    }
     context = snapshot[field]
     assert context.status == "observed"
     assert context.actor_scope is not None
@@ -276,7 +282,7 @@ def test_production_instances_and_writers_share_frozen_context_offline(monkeypat
                 instance.condition_facts
             )
     assert all(
-        instance.evaluation_context is None
+        instance.evaluation_context is not None
         for instance in offline.action_instances
         if instance.consumer_field.endswith("min_law_chance_to_pass")
     )
@@ -301,6 +307,13 @@ def current_game_fixture(monkeypatch, tmp_path):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(source.encode())
         data["script_hashes"][source] = hashlib.sha256(path.read_bytes()).hexdigest()
+    for source in data["institution_definition_sources"]:
+        path = game / source
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(source.encode())
+        data["institution_definition_sources"][source] = hashlib.sha256(
+            path.read_bytes()
+        ).hexdigest()
     manifest = tmp_path / "manifest.json"
 
     def freeze():

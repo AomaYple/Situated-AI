@@ -58,6 +58,7 @@ from pdx import (
     cache,
     candidate_coverage,
     citations,
+    company_sectors,
     config,
     consumer_matrix,
     country_state,
@@ -2608,6 +2609,7 @@ def modgen_cmd(
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
         if write:
+            company_sectors.write_baseline(config.GAME)
             binding_count = situated_bindings.write()
             domain_count = situated_domain_coverage.write_counts()
             console.print(

@@ -12,6 +12,7 @@ import math
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from . import observation_queries
 from .model import Block
 from .parser import parse_text
 
@@ -61,6 +62,9 @@ _COUNTRY_BOOLEAN = frozenset(
         "has_truce_with",
         "has_diplomatic_pact",
         "has_treaty_alliance_with",
+        "has_institution",
+        "is_diplomatic_play_target",
+        "is_diplomatic_play_initiator",
     }
 )
 _COUNTRY_NUMBER = frozenset(
@@ -87,6 +91,12 @@ _COUNTRY_NUMBER = frozenset(
         "num_defensive_pacts",
         "wanted_army_size_script_value",
         "wanted_marines_size_script_value",
+        "num_companies",
+        "max_num_companies",
+        "authority",
+        "institution_investment_level",
+        "prestige",
+        "num_alliances",
     }
 )
 _STATE_NUMBER = frozenset({"infrastructure_delta", "market_access", "state_unemployment_rate"})
@@ -106,12 +116,19 @@ _INPUTS = {
     "state_goods_pricier": ("state_goods", "number"),
     "market_goods_pricier": ("market_goods", "number"),
     "market_goods_delta": ("market_goods", "number"),
+    "market_goods_consumption": ("market_goods", "number"),
 }
 _UNITS = {
     "army_size": "battalions",
     "navy_size": "ships",
     "average_sol": "standard_of_living",
     "bureaucracy": "capacity_balance",
+    "authority": "capacity_balance",
+    "num_companies": "company_count",
+    "max_num_companies": "company_count",
+    "institution_investment_level": "institution_level",
+    "prestige": "prestige_points",
+    "num_alliances": "alliance_count",
     "fixed_income": "currency_per_week",
     "net_total_income": "currency_per_week",
     "gdp": "annual_gdp_currency",
@@ -139,11 +156,102 @@ _UNITS = {
     "state_goods_pricier": "price_above_base_ratio",
     "market_goods_pricier": "price_above_base_ratio",
     "market_goods_delta": "sell_minus_buy_orders",
+    "market_goods_consumption": "total_consumption_units",
 }
 
 
 def reader_scope(reader: Reader, actor_path: tuple[str, ...]) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
+    if reader.engine == "market_goods_consumption" and (
+        reader.scope != "root"
+        or actor_path
+        or reader.path != ("market", "mg:automobiles")
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+        or reader.minimum != 0
+        or reader.maximum is not None
+    ):
+        raise ValueError(f"汽车消费代理必须保持精确所属市场总消费签名：{reader.key}")
+    if reader.engine in observation_queries.QUERY_ENGINES:
+        if (
+            reader.scope != "root"
+            or actor_path
+            or reader.path
+            or reader.kind != "boolean"
+            or reader.unit != "boolean"
+            or reader.argument is not None
+            or reader.value_field is not None
+            or reader.minimum is not None
+            or reader.maximum is not None
+        ):
+            raise ValueError(f"本国聚合观测必须保持国家ROOT布尔合同：{reader.key}")
+        observation_queries.from_reader(reader.engine, dict(reader.parameters))
+        return "country"
+    if reader.engine in {"has_institution", "institution_investment_level"}:
+        institutions = {
+            "institution_police",
+            "institution_schools",
+            "institution_health_system",
+            "institution_social_security",
+            "institution_workplace_safety",
+            "institution_home_affairs",
+            "institution_colonial_affairs",
+        }
+        numeric = reader.engine == "institution_investment_level"
+        identifier = dict(reader.parameters).get("institution") if numeric else reader.argument
+        if (
+            reader.scope != "root"
+            or actor_path
+            or reader.path
+            or identifier not in institutions
+            or (
+                numeric
+                and (
+                    reader.argument is not None
+                    or reader.value_field != "value"
+                    or set(dict(reader.parameters)) != {"institution"}
+                    or reader.minimum != 0
+                )
+            )
+            or (
+                not numeric
+                and (
+                    reader.parameters
+                    or reader.value_field is not None
+                    or reader.minimum is not None
+                )
+            )
+            or reader.maximum is not None
+        ):
+            raise ValueError(f"制度读取器偏离已证明的国家 ROOT、制度定义与参数合同：{reader.key}")
+    if reader.engine in {
+        "prestige",
+        "num_alliances",
+        "is_diplomatic_play_target",
+        "is_diplomatic_play_initiator",
+    } and (
+        reader.scope != "root"
+        or actor_path
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+        or reader.maximum is not None
+        or reader.minimum != (0 if reader.engine in {"prestige", "num_alliances"} else None)
+    ):
+        raise ValueError(f"外交/声望观测必须保持精确本国 ROOT 签名：{reader.key}")
+    if reader.engine in {"num_companies", "max_num_companies", "authority"} and (
+        reader.scope != "root"
+        or actor_path
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+        or reader.maximum is not None
+        or reader.minimum != (None if reader.engine == "authority" else 0)
+    ):
+        raise ValueError(f"公司容量与权威余额仅支持已证明的国家 ROOT 数值合同：{reader.key}")
     # 1.14.5 Windows reader/consumer证据只授权本国根；条款数量不是履约或军力。
     # 固定依据见 research/situated/victoria3-1.14.5-defensive-pact-reader.json。
     if reader.engine == "num_defensive_pacts" and (
@@ -244,22 +352,29 @@ def validate(rules: RuleSet) -> None:
             raise ValueError(f"消费者没有提供读取器的具名作用域：{rule.id}")
 
 
-def consumer(field: tuple[str, ...], actor_path: tuple[str, ...]) -> dict[str, object]:
+def consumer(
+    field: tuple[str, ...], actor_path: tuple[str, ...], *, source: str | None = None
+) -> dict[str, object]:
     """解释实际数值写入的角色、影响级别与不可越过的引擎职责。"""
     leaf = field[-1]
-    source = "common/ai_strategies/00_default_strategy.txt"
+    evidence = "common/ai_strategies/00_default_strategy.txt"
     role = "vanilla_strategy_numeric_evaluation"
     if leaf == "ai_enact_weight_modifier":
-        source, role = "common/laws/readme.md", "vanilla_law_candidate_weight"
+        evidence, role = "common/laws/readme.md", "vanilla_law_candidate_weight"
+    elif leaf == "ai_weight" and source is not None and source.startswith("common/company_types/"):
+        evidence, role = (
+            "research/situated/victoria3-1.14.5-company-scope.json",
+            "vanilla_company_base_candidate_weight",
+        )
     elif leaf == "ai_weight":
-        source, role = "common/technology/technologies/", "vanilla_research_candidate_weight"
+        evidence, role = "common/technology/technologies/", "vanilla_research_candidate_weight"
     elif leaf == "ai_value":
-        source, role = "common/buildings/buildings.md", "vanilla_state_building_candidate_weight"
+        evidence, role = "common/buildings/buildings.md", "vanilla_state_building_candidate_weight"
     return {
         "role": role,
         "impact": "B",
         "root": "state" if actor_path else "country",
-        "scope_evidence": source,
+        "scope_evidence": evidence,
         "scope_evidence_level": "static_vanilla_examples; runtime_behavior_unverified",
         "eligibility_costs_and_execution": "retained_vanilla",
         "refresh": "vanilla_consumer_evaluation",
