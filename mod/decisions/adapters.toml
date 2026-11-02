@@ -24237,3 +24237,242 @@ conditions = [
 ]
 why = "行政赤字且两项融资状态均已证实健康时使用修复强档；正常借款走弱档，违约走基础档，未知只退出强化而不虚构健康；候选不是已建成能力"
 counterexample = "行政缺口解除退出；融资未知保留1.05最低修复，借贷与违约成本在独立因果组同时参与且不重复累加；原版资格、成本、玩家路径与执行不变"
+
+# S2 社会科技第二切片：7字段15规则，待主代理统一追加生产源及生成绑定。
+
+[[rules]]
+id = "s2_next_steel_frame_buildings_population_capacity"
+source = "common/technology/technologies/30_society.txt"
+field = "steel_frame_buildings.ai_weight"
+domain = "political"
+priority = 43200
+operation = "multiply"
+value = 1.1
+contribution_group = "population_urban_capacity"
+conditions = [
+  { fact = "population", op = ">=", value = 2000000 },
+]
+why = "原版人口基础设施与施工容量增量支持人口规模代理的基础研究需求；两百万人为设计阈值，不声称已观察拥堵、施工饱和或实际基建缺口"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_steel_frame_buildings_observed_absorption"
+source = "common/technology/technologies/30_society.txt"
+field = "steel_frame_buildings.ai_weight"
+domain = "political"
+priority = 43201
+operation = "multiply"
+value = 1.08
+contribution_group = "observed_urban_absorption"
+auxiliary_facts = ["industrial_workforce", "bureaucracy", "net_surplus"]
+conditions = [
+  { fact = "population", op = ">=", value = 2000000 },
+  { fact = "industrial_workforce", op = ">=", value = 0.15 },
+  { fact = "bureaucracy", op = ">=", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+]
+why = "已有实际劳工基础、行政余额非负与净收入为正支持人口基建和施工容量的额外承接机会；这是独立承接代理，不是基础研究的全满足门或建造付款"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_elevator_population_capacity"
+source = "common/technology/technologies/30_society.txt"
+field = "elevator.ai_weight"
+domain = "political"
+priority = 43202
+operation = "multiply"
+value = 1.1
+contribution_group = "population_urban_capacity"
+conditions = [
+  { fact = "population", op = ">=", value = 2000000 },
+]
+why = "原版人口基础设施与施工容量增量支持人口规模代理的基础研究需求；两百万人为设计阈值，不声称已观察拥堵、施工饱和或实际基建缺口"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_elevator_observed_absorption"
+source = "common/technology/technologies/30_society.txt"
+field = "elevator.ai_weight"
+domain = "political"
+priority = 43203
+operation = "multiply"
+value = 1.08
+contribution_group = "observed_urban_absorption"
+auxiliary_facts = ["industrial_workforce", "bureaucracy", "net_surplus"]
+conditions = [
+  { fact = "population", op = ">=", value = 2000000 },
+  { fact = "industrial_workforce", op = ">=", value = 0.15 },
+  { fact = "bureaucracy", op = ">=", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+]
+why = "已有实际劳工基础、行政余额非负与净收入为正支持人口基建和施工容量的额外承接机会；这是独立承接代理，不是基础研究的全满足门或建造付款"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_socialism_workplace_protection"
+source = "common/technology/technologies/30_society.txt"
+field = "socialism.ai_weight"
+domain = "political"
+priority = 43204
+operation = "multiply"
+value = 1.15
+contribution_group = "workplace_protection"
+conditions = [
+  { fact = "industrial_workforce", op = ">=", value = 0.15 },
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版工作安全制度容量增加二级，实际劳工比例与低生活水平共同支持劳动保护研究需求代理；不假定法律支持、事故发生、制度投资或实际容量饱和"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_mass_propaganda_battle_support"
+source = "common/technology/technologies/30_society.txt"
+field = "mass_propaganda.ai_weight"
+domain = "political"
+priority = 43205
+operation = "multiply"
+value = 1.15
+contribution_group = "battle_war_support"
+conditions = [
+  { fact = "war", op = "=", value = true },
+]
+why = "原版增加战斗带来的战争支持收益并减轻战斗造成的战争支持损失，已观察战时形成有限研究受益；不假定已发生战斗或必胜，不把候选当收音机生产"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_socialism_reform_expectation"
+source = "common/technology/technologies/30_society.txt"
+field = "socialism.ai_weight"
+domain = "political"
+priority = 43206
+operation = "multiply"
+value = 0.92
+contribution_group = "reform_expectation"
+conditions = [
+  { fact = "literacy", op = ">=", value = 0.5 },
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；该项与具体受益联合，不指定统一政治路线"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_mass_propaganda_reform_expectation"
+source = "common/technology/technologies/30_society.txt"
+field = "mass_propaganda.ai_weight"
+domain = "political"
+priority = 43207
+operation = "multiply"
+value = 0.92
+contribution_group = "reform_expectation"
+conditions = [
+  { fact = "literacy", op = ">=", value = 0.5 },
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；该项与具体受益联合，不指定统一政治路线"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_egalitarianism_reform_expectation"
+source = "common/technology/technologies/30_society.txt"
+field = "egalitarianism.ai_weight"
+domain = "political"
+priority = 43208
+operation = "multiply"
+value = 0.92
+contribution_group = "reform_expectation"
+conditions = [
+  { fact = "literacy", op = ">=", value = 0.5 },
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；该项与具体受益联合，不指定统一政治路线"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_democracy_social_capacity_foundation"
+source = "common/technology/technologies/30_society.txt"
+field = "democracy.ai_weight"
+domain = "political"
+priority = 43209
+operation = "multiply"
+value = 1.08
+contribution_group = "social_security_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_democracy_social_capacity_pressure"
+source = "common/technology/technologies/30_society.txt"
+field = "democracy.ai_weight"
+domain = "political"
+priority = 43210
+operation = "multiply"
+value = 1.12
+contribution_group = "social_security_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 8 },
+]
+why = "原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_egalitarianism_social_capacity_foundation"
+source = "common/technology/technologies/30_society.txt"
+field = "egalitarianism.ai_weight"
+domain = "political"
+priority = 43211
+operation = "multiply"
+value = 1.08
+contribution_group = "social_security_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_egalitarianism_social_capacity_pressure"
+source = "common/technology/technologies/30_society.txt"
+field = "egalitarianism.ai_weight"
+domain = "political"
+priority = 43212
+operation = "multiply"
+value = 1.12
+contribution_group = "social_security_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 8 },
+]
+why = "原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_feminism_social_capacity_foundation"
+source = "common/technology/technologies/30_society.txt"
+field = "feminism.ai_weight"
+domain = "political"
+priority = 43213
+operation = "multiply"
+value = 1.08
+contribution_group = "social_security_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"
+
+[[rules]]
+id = "s2_next_feminism_social_capacity_pressure"
+source = "common/technology/technologies/30_society.txt"
+field = "feminism.ai_weight"
+domain = "political"
+priority = 43214
+operation = "multiply"
+value = 1.12
+contribution_group = "social_security_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 8 },
+]
+why = "原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和"
+counterexample = "倍率和阈值均为有界设计选择；核心未知只退出相关分量，辅助未知只退出额外承接项，独立正负贡献联合。同方向档位按明确因果去重。玩家或关闭模块保留原版；条件解除只退出本项，不能证明实际容量饱和。研究不等于法律通过、制度升级、建筑完工或生产方式采用，不把未来制度维护、建造或配方现价当当前研究付款；原版资格、前置、研究时间、成本、思想事件、策略文化分支和尾部保持"

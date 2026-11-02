@@ -151,6 +151,8 @@ def _native_context_issue(
         "change_law_chance": ("additive_percentage_chance", {"add"}),
         "max_progressiveness": ("override_progressiveness_limit", {"add"}),
         "max_regressiveness": ("override_regressiveness_limit", {"add"}),
+        "recklessness": ("additive_strength_estimate_multiplier", {"add"}),
+        "wargoal_maneuvers_fraction": ("additive_maneuvers_fraction", {"multiply"}),
     }
     contract = exact_numeric.get(surface.field)
     exact_proven = (

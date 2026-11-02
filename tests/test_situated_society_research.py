@@ -24,8 +24,20 @@ ADMIN = ("psychiatry", "psychoanalysis", "behaviorism")
 FINANCE = ("mutual_funds", "international_exchange_standards")
 HEALTH = ("quinine", "malaria_prevention")
 LABOR = ("labor_movement", "human_rights")
-URBAN = ("urbanization", "urban_planning")
-TECHNOLOGIES = (*ADMIN, *FINANCE, *HEALTH, *LABOR, *URBAN, "postal_savings", "corporatism")
+URBAN = ("urbanization", "urban_planning", "steel_frame_buildings", "elevator")
+WELFARE = ("democracy", "egalitarianism", "feminism")
+TECHNOLOGIES = (
+    *ADMIN,
+    *FINANCE,
+    *HEALTH,
+    *LABOR,
+    *URBAN,
+    *WELFARE,
+    "postal_savings",
+    "corporatism",
+    "socialism",
+    "mass_propaganda",
+)
 
 
 def _field(technology: str) -> str:
@@ -125,6 +137,60 @@ CASES += [
         ({"bureaucracy": 0}, 1),
         ({"bureaucracy": None}, 1),
         ({"bureaucracy": -1, "default": True, "war": True, "literacy": None}, 1.15),
+    )
+]
+
+# New consumers use actual workplace capacity or battle-war-support effects.
+# Their expected-SOL side effect is an independent negative contribution.
+CASES += [
+    ("socialism", changes, expected)
+    for changes, expected in (
+        ({"industrial_workforce": 0.15, "sol": 10, "literacy": 0.4}, 1.15),
+        ({"industrial_workforce": 0.15, "sol": 10, "literacy": 0.5}, 1.07),
+        ({"industrial_workforce": 0.149, "sol": 10, "literacy": 0.5}, 0.92),
+        ({"industrial_workforce": 0.2, "sol": 12, "literacy": 0.5}, 1),
+        ({"industrial_workforce": None, "sol": 10, "literacy": 0.5}, 0.92),
+        ({"industrial_workforce": 0.2, "sol": 10, "literacy": None}, 1.15),
+        ({"industrial_workforce": 0.2, "sol": None, "literacy": 0.5}, 1),
+        (
+            {
+                "industrial_workforce": 0.2,
+                "sol": 10,
+                "literacy": 0.5,
+                "war": True,
+                "default": True,
+                "loans": True,
+            },
+            1.07,
+        ),
+    )
+]
+CASES += [
+    ("mass_propaganda", changes, expected)
+    for changes, expected in (
+        ({"war": True, "sol": 12, "literacy": 0.5}, 1.15),
+        ({"war": True, "sol": 10, "literacy": 0.5}, 1.07),
+        ({"war": False, "sol": 10, "literacy": 0.5}, 0.92),
+        ({"war": None, "sol": 10, "literacy": 0.5}, 0.92),
+        ({"war": True, "sol": 10, "literacy": None}, 1.15),
+        ({"war": True, "sol": None, "literacy": 0.5}, 1.15),
+        ({"war": None, "sol": None, "literacy": None}, 1),
+        ({"war": True, "default": True, "loans": True}, 1.15),
+    )
+]
+CASES += [
+    (technology, {"sol": sol, "literacy": 0.4}, expected)
+    for technology in WELFARE
+    for sol, expected in ((7, 1.12), (8, 1.08), (11.999, 1.08), (12, 1), (None, 1))
+]
+CASES += [
+    ("egalitarianism", changes, expected)
+    for changes, expected in (
+        ({"sol": 7, "literacy": 0.5}, 1.04),
+        ({"sol": 10, "literacy": 0.5}, 1),
+        ({"sol": 7, "literacy": None}, 1.12),
+        ({"sol": None, "literacy": 0.5}, 1),
+        ({"sol": 7, "literacy": 0.5, "default": True, "war": True}, 1.04),
     )
 ]
 CASES += [
@@ -286,6 +352,9 @@ POSITIVES = [
     *((technology, {"population": 2000000}, 1.10) for technology in URBAN),
     ("postal_savings", {"skilled_workforce": 0.05}, 1.12),
     ("corporatism", {"radical_share": 0.25, "insurrection": True}, 1.12),
+    *((technology, {"sol": 7, "literacy": 0.4}, 1.12) for technology in WELFARE),
+    ("socialism", {"industrial_workforce": 0.2, "sol": 10, "literacy": 0.4}, 1.15),
+    ("mass_propaganda", {"war": True}, 1.15),
 ]
 
 
@@ -358,8 +427,8 @@ def test_disabled_module_patches_exactly_no_native_source(production):
 
 def test_explicit_causal_groups_and_actual_country_reader_identities(production):
     policy, _native, _generated = production
-    assert len(policy.rules) == 24
-    assert len(policy.consumer_programs) == 13
+    assert len(policy.rules) == 39
+    assert len(policy.consumer_programs) == 20
     assert all(rule.contribution_group for rule in policy.rules)
     readers = {reader.key: reader for reader in policy.readers}
     assert set(readers) == {
@@ -375,6 +444,7 @@ def test_explicit_causal_groups_and_actual_country_reader_identities(production)
         "insurrection",
         "population",
         "net_surplus",
+        "war",
     }
     assert all(reader.scope == "root" and reader.path == () for reader in readers.values())
     for key, pop_type in (
@@ -412,6 +482,7 @@ def test_explicit_causal_groups_and_actual_country_reader_identities(production)
         ("postal_savings", "skilled_workforce", "laborers"),
         ("labor_movement", "industrial_workforce", "peasants"),
         ("human_rights", "industrial_workforce", "machinists"),
+        ("socialism", "industrial_workforce", "peasants"),
     ],
 )
 def test_another_population_query_cannot_supply_the_required_observation(
@@ -441,6 +512,13 @@ def test_research_benefits_are_grounded_in_actual_vanilla_modifiers(production):
         "corporatism": ("state_radicals_from_political_movements_mult", -0.1),
         "urbanization": ("state_infrastructure_from_population_add", 2),
         "urban_planning": ("state_infrastructure_from_population_add", 1),
+        "steel_frame_buildings": ("state_infrastructure_from_population_add", 1),
+        "elevator": ("state_infrastructure_from_population_add", 1),
+        "socialism": ("country_institution_workplace_safety_max_investment_add", 2),
+        "mass_propaganda": ("country_war_support_battles_increase_mult", 0.25),
+        "democracy": ("country_institution_social_security_max_investment_add", 2),
+        "egalitarianism": ("country_institution_social_security_max_investment_add", 1),
+        "feminism": ("country_institution_social_security_max_investment_add", 1),
     }
     for technology, (effect, expected) in effects.items():
         definition = root.first(technology)
@@ -453,3 +531,74 @@ def test_research_benefits_are_grounded_in_actual_vanilla_modifiers(production):
         assert value is not None
         assert isinstance(value.value, Scalar)
         assert float(value.value.unquoted) == expected
+
+
+@pytest.mark.parametrize(
+    "technology", ["labor_movement", "socialism", "egalitarianism", "mass_propaganda"]
+)
+def test_expectation_cost_exists_in_actual_vanilla_and_matches_only_its_causal_group(
+    production, technology
+):
+    policy, native, _generated = production
+    definition = parse_text(native).root.first(technology)
+    assert definition is not None
+    assert isinstance(definition.value, Block)
+    modifier = definition.value.first("modifier")
+    assert modifier is not None
+    assert isinstance(modifier.value, Block)
+    effect = modifier.value.first("state_expected_sol_from_literacy")
+    assert effect is not None
+    assert isinstance(effect.value, Scalar)
+    assert float(effect.value.unquoted) == 1
+    costs = [
+        rule
+        for rule in policy.rules
+        if ".".join(rule.field) == _field(technology) and rule.value < 1
+    ]
+    assert len(costs) == 1
+    assert costs[0].contribution_group == "reform_expectation"
+    assert costs[0].value == 0.92
+
+
+@pytest.mark.parametrize("technology", URBAN)
+def test_population_capacity_rule_does_not_claim_unobserved_construction_payment(
+    production, technology
+):
+    policy, native, _generated = production
+    definition = parse_text(native).root.first(technology)
+    assert definition is not None
+    assert isinstance(definition.value, Block)
+    modifier = definition.value.first("modifier")
+    assert modifier is not None
+    assert isinstance(modifier.value, Block)
+    for key in (
+        "state_building_construction_sector_max_level_add",
+        "country_max_weekly_construction_progress_add",
+    ):
+        effect = modifier.value.first(key)
+        assert effect is not None
+        assert isinstance(effect.value, Scalar)
+        assert float(effect.value.unquoted) > 0
+    rules = [rule for rule in policy.rules if ".".join(rule.field) == _field(technology)]
+    assert {rule.contribution_group for rule in rules} == {
+        "population_urban_capacity",
+        "observed_urban_absorption",
+    }
+    foundation = next(
+        rule for rule in rules if rule.contribution_group == "population_urban_capacity"
+    )
+    assert foundation.input_keys() == frozenset({"population"})
+    _assert_result(
+        production,
+        technology,
+        {
+            "population": 2000000,
+            "industrial_workforce": None,
+            "bureaucracy": None,
+            "net_surplus": None,
+            "default": True,
+            "war": True,
+            "literacy": None,
+        },
+        1.10,
+    )

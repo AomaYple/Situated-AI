@@ -26,6 +26,7 @@ from . import (
     commitment,
     decision_ir,
     domain_coverage,
+    engine_scope,
     families,
     ir,
     joint_chain_contract,
@@ -302,6 +303,77 @@ def _frozen_law_context() -> decision_ir.EvaluationContext:
     return context
 
 
+def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
+    """Use manifest document lines, never pretend they are native script lines.
+
+    This is historical static evidence in both online and offline contracts.
+    Production entry points separately require current scripts and EXE bytes.
+    """
+    raw = engine_scope.strategy_snapshot()
+    text = raw.decode("utf-8")
+    data = json.loads(raw)
+    specs = {
+        "recklessness": (
+            "target_country",
+            "additive_strength_estimate_multiplier",
+            "multiplier",
+            "0x1416452bf",
+        ),
+        "wargoal_maneuvers_fraction": (
+            "enemy_country",
+            "additive_maneuvers_fraction",
+            "fraction",
+            "0x141647b8f",
+        ),
+    }
+    result = {}
+    source = engine_scope.STRATEGY_MANIFEST_ID
+    for field, (target, operation, unit, address) in specs.items():
+        expected = {
+            "actor_scope": "country",
+            "target_scope": f"scope:{target}=country",
+            "operation": operation,
+            "capability": "direct",
+            "unit": unit,
+            "consumer_va": address,
+        }
+        if data.get("consumers", {}).get(field) != expected:
+            raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
+        entries = list(
+            re.finditer(
+                rf'^\s*"{field}"\s*:\s*\{{(?P<body>.*?)^\s*\}}', text, re.MULTILINE | re.DOTALL
+            )
+        )
+        if len(entries) != 1:
+            raise ValueError(f"锁定策略消费者缺少独立行级证据：{field}")
+        entry = entries[0]
+        locations = {}
+        for key in ("actor_scope", "target_scope"):
+            members = list(re.finditer(rf'^[ \t]*"{key}"\s*:', entry["body"], re.MULTILINE))
+            if len(members) != 1:
+                raise ValueError(f"锁定策略消费者缺少精确对象证据：{field}/{key}")
+            position = entry.start("body") + members[0].start()
+            locations[key] = text.count("\n", 0, position) + 1
+        actor = decision_ir.ContextBinding(
+            "root", "country", "actor", source, locations["actor_scope"]
+        )
+        target_binding = decision_ir.ContextBinding(
+            target, "country", "target", source, locations["target_scope"]
+        )
+        result[field] = decision_ir.EvaluationContext(
+            actor_scope=actor,
+            targets=(target_binding,),
+            evidence=(
+                f"{source}:{actor.line}",
+                f"{source}:{target_binding.line}",
+                f"{source}:sha256={engine_scope.STRATEGY_MANIFEST_SHA256}",
+                f"{source}:consumer={field}:va={address}",
+                f"{source}:evidence=frozen_engine_snapshot",
+            ),
+        )
+    return result
+
+
 def validate_context_readers(
     field: str,
     context: decision_ir.EvaluationContext,
@@ -314,6 +386,11 @@ def validate_context_readers(
     """Bind existing observations to evidenced objects, never authorize getters."""
     shapes = {
         "subject_value": {"root": ("country", "actor"), "target_country": ("country", "target")},
+        "recklessness": {"root": ("country", "actor"), "target_country": ("country", "target")},
+        "wargoal_maneuvers_fraction": {
+            "root": ("country", "actor"),
+            "enemy_country": ("country", "target"),
+        },
         "become_subject_value": {"root": ("country", "actor"), "overlord": ("country", "target")},
         "interest_group_government_weight": {
             "root": ("country", "actor"),
@@ -350,6 +427,12 @@ def validate_context_readers(
         for binding in (context.actor_scope, *context.targets, *context.auxiliary_scopes)
         if binding is not None
     }
+    if (
+        field in {"recklessness", "wargoal_maneuvers_fraction"}
+        and {name: (binding.kind, binding.role) for name, binding in bindings.items()}
+        != shapes[field]
+    ):
+        raise ValueError(f"消费者 {field} 对象上下文偏离精确冻结证据")
     result: set[tuple[str, str, str, str]] = set()
 
     def bind(key: str, scope: str, *, argument_kind: str | None = None) -> None:
@@ -774,6 +857,57 @@ def _reader_shapes(
     return {key: tuple(value) for key, value in result.items()}
 
 
+def _action_context_readers(
+    action: decision_ir.ConsumerDecisionIR,
+    context: decision_ir.EvaluationContext,
+    declared_facts: tuple[EvidenceSpec, ...],
+    signals: support_signals.SupportSignals,
+    original_readers: tuple[decision_rules.Reader, ...],
+) -> tuple[tuple[str, str, str, str], ...]:
+    """Resolve every card input to existing readers, including costs and aliases."""
+    keys = {
+        *action.requires_all,
+        *action.requires_any,
+        *action.blocked_by,
+        *action.exit_when,
+        *action.consumes,
+        *(term.fact for term in action.rank_terms),
+        *(term.fact for term in (*action.commitment_when, *action.political_when)),
+        *(fact for relation in action.relations for fact in relation.condition_facts),
+    }
+    aliases = {item.alias: item.source_fact for item in signals.signals}
+    declared = {item.id: item for item in declared_facts}
+    originals = {reader.key: reader for reader in original_readers}
+    result: set[tuple[str, str, str, str]] = set()
+    for key in sorted(keys):
+        source_key = aliases.get(key, key)
+        reader = originals.get(source_key)
+        if reader is None:
+            fact = declared.get(source_key)
+            engine = evidence_source.scalar_predicate_engine(fact.trigger) if fact else None
+            # A declared one-scalar predicate may reuse that original scalar's
+            # signature; its result being boolean does not change the getter.
+            candidates = {
+                _reader_signature(item): item
+                for item in original_readers
+                if fact is not None
+                and item.engine == engine
+                and item.scope == fact.scope
+                and not item.path
+                and item.argument is None
+                and not item.parameters
+                and item.value_field is None
+            }
+            if len(candidates) != 1:
+                raise ValueError(f"显式行动 {action.action_id} 缺少唯一真实读取器：{key}")
+            reader = next(iter(candidates.values()))
+        reader = replace(reader, key=key)
+        result.update(
+            validate_context_readers(action.field, context, {key: reader}, (), input_keys=(key,))
+        )
+    return tuple(sorted(result))
+
+
 def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[str, str]]:
     consumers: list[ProductionConsumer] = []
     fingerprints: dict[str, str] = {}
@@ -941,6 +1075,7 @@ def load_model(
         consumer_contracts={item.id: item for item in consumers},
     )
     observed_contexts = evaluation_contexts(baseline_text)
+    observed_contexts.update(_frozen_strategy_contexts())
     law_context = _frozen_law_context()
     context_readers = {}
     instance_contexts = {}
@@ -974,12 +1109,33 @@ def load_model(
                     actor_path=policy.actor_path,
                     input_keys=tuple(rule.input_keys()),
                 )
+    original_readers = (
+        *information.readers,
+        *(reader for _, policy in adapters.policies for reader in policy.readers),
+    )
+    for decision_row in decision_rows:
+        if decision_row.field not in {"recklessness", "wargoal_maneuvers_fraction"}:
+            continue
+        context = observed_contexts[decision_row.field]
+        key = ("mod/decisions/actions.toml", decision_row.action_id)
+        instance_contexts[key] = context
+        context_readers[key] = _action_context_readers(
+            decision_row, context, declared_facts, support_model, original_readers
+        )
     instances = tuple(
         replace(
             instance, evaluation_context=instance_contexts.get((instance.source, instance.rule_id))
         )
         for instance in instances
     )
+    if any(
+        instance.evaluation_context is not None
+        and instance.consumer_field.removeprefix("ai_strategy_default.")
+        in {"recklessness", "wargoal_maneuvers_fraction"}
+        and instance.actor_scope != "root"
+        for instance in instances
+    ):
+        raise ValueError("锁定策略消费者的 actor 必须保持国家 ROOT")
     action_ir = ir.from_rules(
         [("mod/decisions/information.toml", item) for item in information.rules]
         + [(source, item) for source, policy in adapters.policies for item in policy.rules]
@@ -1011,6 +1167,7 @@ def load_model(
     goals = tuple((item.id, item.priority) for item in goal_specs)
     hashes = {
         "law_enact_context_document": _LAW_DOC_SHA256,
+        "strategy_context_snapshot": engine_scope.STRATEGY_MANIFEST_SHA256,
         "migration_baseline": hashlib.sha256(
             migration_baseline.DEFAULT_SOURCE.read_bytes()
         ).hexdigest(),

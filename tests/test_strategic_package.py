@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from pdx import decision_intents, distribution
+from pdx.situated import pdx_eval
 
 
 @pytest.mark.integration
@@ -34,7 +35,31 @@ def test_release_freezes_shared_strategy_and_actual_consumers():
         in files["common/ai_strategies/00_default_strategy.txt"]
     )
     assert "sitai_adapter_fleet_supply_weight = { value = 1.0" in files[values_path]
-    assert "multiply = 1.25" in files[values_path]
+    fleet_field = (
+        "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
+    )
+    program = (
+        "program_"
+        + hashlib.sha256(
+            f"common/ai_strategies/00_default_strategy.txt:{fleet_field}".encode()
+        ).hexdigest()[:16]
+    )
+    script = files[values_path]
+    assert isinstance(script, str)
+    overlay = pdx_eval.marked_block(script, program)
+    actual = pdx_eval.select(
+        overlay,
+        {
+            "ROOT": {
+                "is_ai": True,
+                "is_at_war": True,
+                "navy_size": 1,
+                "market": {"mg:steamers": {"market_goods_pricier": 0.3, "market_goods_delta": -1}},
+            }
+        },
+    )
+    assert actual.operation == "multiply"
+    assert actual.delta == pytest.approx(1.25)
     assert contract["behavior_verified"] is False
     assert contract["rules_with_intent"] > len(strategy.intents)
 
@@ -72,6 +97,20 @@ def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch
     files = {".metadata/metadata.json": json.dumps(metadata)}
     monkeypatch.setattr(distribution.decisions, "build", lambda *_args, **_kwargs: files)
     monkeypatch.setattr(distribution.country_state, "validate", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", lambda *_args: None)
     with pytest.raises(ValueError, match="未翻译"):
         distribution.package_inputs()
     assert json.loads(files[".metadata/metadata.json"]) == metadata
+
+
+def test_production_generation_rejects_unproven_engine_before_build(monkeypatch):
+    def reject(_game):
+        raise ValueError("策略引擎证据漂移")
+
+    def must_not_build(*_args, **_kwargs):
+        pytest.fail("unverified engine reached the production generator")
+
+    monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", reject)
+    monkeypatch.setattr(distribution.decisions, "build", must_not_build)
+    with pytest.raises(ValueError, match="策略引擎证据漂移"):
+        distribution.package_inputs()

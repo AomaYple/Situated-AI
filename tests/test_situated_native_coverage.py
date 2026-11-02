@@ -486,6 +486,14 @@ def test_secret_goal_projection_cannot_guess_ambiguous_or_adjacent_structure(goa
         ("change_law_chance", "additive_percentage_chance", "add", "none", None),
         ("max_progressiveness", "override_progressiveness_limit", "add", "none", None),
         ("max_regressiveness", "override_regressiveness_limit", "add", "none", None),
+        (
+            "recklessness", "additive_strength_estimate_multiplier", "add",
+            "scope:target_country=country", _context("target_country", "country", "target"),
+        ),
+        (
+            "wargoal_maneuvers_fraction", "additive_maneuvers_fraction", "multiply",
+            "scope:enemy_country=country", _context("enemy_country", "country", "target"),
+        ),
     ],
 )
 def test_exact_evidenced_numeric_contracts_preserve_field_operation_actor_and_target(
@@ -541,9 +549,15 @@ def test_unbound_engine_named_targets_and_pending_threshold_remain_unproven(
     surface = _surface(field=field, operation=operation, target_scope=target)
     if field == "min_law_chance_to_pass":
         surface = replace(surface, capability="pending")
-    report = native_coverage(_inventory(surface), (_instance(consumer_field=field),))
+    instance = _instance(
+        consumer_field=field,
+        operation="multiply" if field == "wargoal_maneuvers_fraction" else "add",
+    )
+    report = native_coverage(_inventory(surface), (instance,))
     assert report["counts"]["actual_covered"] == 0
     assert report["binding_issue_count"] == 1
+    if field != "min_law_chance_to_pass":
+        assert report["rows"][0]["binding_issues"] == {"rule": "evaluation_context_unproven"}
 
 
 def test_documented_law_and_formation_contexts_bind_only_exact_named_objects():

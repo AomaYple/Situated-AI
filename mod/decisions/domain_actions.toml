@@ -44,7 +44,7 @@ unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.political]
-production_instances = 183
+production_instances = 196
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
@@ -56,7 +56,7 @@ unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.social]
-production_instances = 56
+production_instances = 58
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"

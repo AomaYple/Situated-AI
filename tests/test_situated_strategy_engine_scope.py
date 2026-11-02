@@ -241,3 +241,33 @@ def test_frozen_manifest_preserves_distinct_scope_keys_and_operation_units():
     assert contracts["weight"]["unit"] == "candidate_score"
     assert contracts["change_law_chance"]["unit"] == "percentage_points"
     assert contracts["wargoal_maneuvers_fraction"]["unit"] == "fraction"
+
+
+def test_production_strategy_verification_reads_actual_files(strategy_proof):
+    game, _, inputs, _, _ = strategy_proof
+    for source, raw in inputs.items():
+        path = game / source
+        path.parent.mkdir(parents=True)
+        path.write_bytes(raw)
+    proof = engine_scope.verify_strategy_game(game)
+    assert proof.verified
+    assert engine_scope.strategy_snapshot() == engine_scope.STRATEGY_MANIFEST.read_bytes()
+
+
+@pytest.mark.parametrize("damage", ["exe", "script", "missing_exe", "missing_script"])
+def test_production_strategy_verification_never_uses_offline_fallback(strategy_proof, damage):
+    game, exe, inputs, _, _ = strategy_proof
+    for source, raw in inputs.items():
+        path = game / source
+        path.parent.mkdir(parents=True)
+        path.write_bytes(raw)
+    if damage == "exe":
+        exe.write_bytes(b"changed engine")
+    elif damage == "script":
+        path.write_bytes(b"changed script")
+    elif damage == "missing_exe":
+        exe.unlink()
+    else:
+        path.unlink()
+    with pytest.raises((ValueError, FileNotFoundError)):
+        engine_scope.verify_strategy_game(game)

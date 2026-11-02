@@ -153,6 +153,24 @@ def strategy_evidence(game: Path, inputs: Mapping[str, bytes]) -> StrategyScopeE
     )
 
 
+def strategy_snapshot() -> bytes:
+    """Read pinned historical evidence, without claiming current EXE verification."""
+    raw = STRATEGY_MANIFEST.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != STRATEGY_MANIFEST_SHA256:
+        raise ValueError("锁定策略作用域证据已变化，必须重新独立复核")
+    return raw
+
+
+def verify_strategy_game(game: Path) -> StrategyScopeEvidence:
+    """Require actual pinned scripts and EXE at the production boundary."""
+    data = json.loads(strategy_snapshot())
+    inputs = {source: (game / source).read_bytes() for source in data["script_hashes"]}
+    proof = strategy_evidence(game, inputs)
+    if not proof.verified:
+        raise ValueError("当前原版策略脚本或 EXE 与锁定策略作用域证据不一致")
+    return proof
+
+
 def country_evidence(game: Path, inputs: Mapping[str, bytes]) -> CountryScopeEvidence:
     """固定两类国家定义的实际消费者和全部来源。"""
     data, hashes, verified = _verified_manifest(
@@ -270,5 +288,7 @@ __all__ = [
     "country_evidence",
     "law_evidence",
     "strategy_evidence",
+    "strategy_snapshot",
     "technology_evidence",
+    "verify_strategy_game",
 ]

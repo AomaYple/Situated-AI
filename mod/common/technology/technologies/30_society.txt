@@ -197,6 +197,22 @@ democracy = {
 
 	ai_weight = {
 		value = 3 # Very important in general
+
+		# SITAI BEGIN information:democracy.ai_weight
+		# ACTION program_eebebf991157aff0 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_eebebf991157aff0_social_security_capacity_positive
+			add = { value = 0
+				# s2_next_democracy_social_capacity_pressure [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.12 }
+				# s2_next_democracy_social_capacity_foundation [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:democracy.ai_weight
 	}
 }
 
@@ -588,6 +604,27 @@ egalitarianism = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:egalitarianism.ai_weight
+		# ACTION program_a25f7b63ade216f8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a25f7b63ade216f8_reform_expectation_negative
+			add = { value = 0
+				# s2_next_egalitarianism_reform_expectation [political]; 原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；该项与具体受益联合，不指定统一政治路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			# GROUP program_a25f7b63ade216f8_social_security_capacity_positive
+			add = { value = 0
+				# s2_next_egalitarianism_social_capacity_pressure [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.12 }
+				# s2_next_egalitarianism_social_capacity_foundation [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.08 }
+			}
+			min = 0.92
+			max = 1.12
+		} }
+		# SITAI END information:egalitarianism.ai_weight
 	}
 }
 
@@ -1256,6 +1293,22 @@ feminism = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:feminism.ai_weight
+		# ACTION program_b105a3710b9c2fc4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b105a3710b9c2fc4_social_security_capacity_positive
+			add = { value = 0
+				# s2_next_feminism_social_capacity_pressure [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.12 }
+				# s2_next_feminism_social_capacity_foundation [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:feminism.ai_weight
 	}
 }
 
@@ -1278,6 +1331,25 @@ steel_frame_buildings = {
 
 	ai_weight = {
 		value = 2 # Important in general
+
+		# SITAI BEGIN information:steel_frame_buildings.ai_weight
+		# ACTION program_dfd3a65f5100e04d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_dfd3a65f5100e04d_observed_urban_absorption_positive
+			add = { value = 0
+				# s2_next_steel_frame_buildings_observed_absorption [political]; 已有实际劳工基础、行政余额非负与净收入为正支持人口基建和施工容量的额外承接机会；这是独立承接代理，不是基础研究的全满足门或建造付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+			}
+			# GROUP program_dfd3a65f5100e04d_population_urban_capacity_positive
+			add = { value = 0
+				# s2_next_steel_frame_buildings_population_capacity [political]; 原版人口基础设施与施工容量增量支持人口规模代理的基础研究需求；两百万人为设计阈值，不声称已观察拥堵、施工饱和或实际基建缺口
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.1800000000000002
+		} }
+		# SITAI END information:steel_frame_buildings.ai_weight
 	}
 }
 
@@ -1400,6 +1472,25 @@ socialism = {
 			}
 			add = 1
 		}
+
+		# SITAI BEGIN information:socialism.ai_weight
+		# ACTION program_ca72ef8189d9d752 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ca72ef8189d9d752_reform_expectation_negative
+			add = { value = 0
+				# s2_next_socialism_reform_expectation [political]; 原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；该项与具体受益联合，不指定统一政治路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			# GROUP program_ca72ef8189d9d752_workplace_protection_positive
+			add = { value = 0
+				# s2_next_socialism_workplace_protection [political]; 原版工作安全制度容量增加二级，实际劳工比例与低生活水平共同支持劳动保护研究需求代理；不假定法律支持、事故发生、制度投资或实际容量饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
+			}
+			min = 0.92
+			max = 1.15
+		} }
+		# SITAI END information:socialism.ai_weight
 	}
 }
 
@@ -1735,6 +1826,25 @@ elevator = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:elevator.ai_weight
+		# ACTION program_8bc267ba16e88ca8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8bc267ba16e88ca8_observed_urban_absorption_positive
+			add = { value = 0
+				# s2_next_elevator_observed_absorption [political]; 已有实际劳工基础、行政余额非负与净收入为正支持人口基建和施工容量的额外承接机会；这是独立承接代理，不是基础研究的全满足门或建造付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+			}
+			# GROUP program_8bc267ba16e88ca8_population_urban_capacity_positive
+			add = { value = 0
+				# s2_next_elevator_population_capacity [political]; 原版人口基础设施与施工容量增量支持人口规模代理的基础研究需求；两百万人为设计阈值，不声称已观察拥堵、施工饱和或实际基建缺口
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.1800000000000002
+		} }
+		# SITAI END information:elevator.ai_weight
 	}
 }
 
@@ -2107,6 +2217,25 @@ mass_propaganda = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mass_propaganda.ai_weight
+		# ACTION program_9b6b4631498e8c38 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_9b6b4631498e8c38_battle_war_support_positive
+			add = { value = 0
+				# s2_next_mass_propaganda_battle_support [political]; 原版增加战斗带来的战争支持收益并减轻战斗造成的战争支持损失，已观察战时形成有限研究受益；不假定已发生战斗或必胜，不把候选当收音机生产
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } add = 0.15 }
+			}
+			# GROUP program_9b6b4631498e8c38_reform_expectation_negative
+			add = { value = 0
+				# s2_next_mass_propaganda_reform_expectation [political]; 原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；该项与具体受益联合，不指定统一政治路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			min = 0.92
+			max = 1.15
+		} }
+		# SITAI END information:mass_propaganda.ai_weight
 	}
 }
 

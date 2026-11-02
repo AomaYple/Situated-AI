@@ -34,6 +34,7 @@ class ContextBinding:
         shapes = {
             "root": ("country", {"actor"}),
             "target_country": ("country", {"target", "auxiliary"}),
+            "enemy_country": ("country", {"target"}),
             "overlord": ("country", {"target"}),
             "target_state": ("state", {"target"}),
             "interest_group": ("interest_group", {"candidate"}),
@@ -47,7 +48,7 @@ class ContextBinding:
         if expected is None or self.kind != expected[0] or self.role not in expected[1]:
             raise ValueError("求值上下文绑定名称、类型或角色无效")
         if not self.source or type(self.line) is not int or self.line < 1:
-            raise ValueError("求值上下文绑定缺少原版行级证据")
+            raise ValueError("求值上下文绑定缺少行级来源证据")
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -530,6 +531,9 @@ def compile_consumer_ir(
             vanilla_tail=action.vanilla_tail,
             owner="situated_kernel",
             action=action,
+            evaluation_context=instance_by_key[
+                ("mod/decisions/actions.toml", action.action_id)
+            ].evaluation_context,
         )
         for action in action_rows
     )
