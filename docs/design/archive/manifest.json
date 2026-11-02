@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "role": "historical_reference_only",
+  "files": [
+    {
+      "path": "docs/design/exec/mod重设计-实施计划.md",
+      "sha256": "6661104271c30e93779dfb774eda0da8e9e85d843db62516ded1330004623365",
+      "bytes": 130854,
+      "commit": "c91569521ab4aad9cd38db0b242836cf8bda64ab"
+    },
+    {
+      "path": "docs/design/架构主计划.md",
+      "sha256": "7087f800dcf417dbb01c7125bed6f39cddaefd3760ce91601019b849183ab4a6",
+      "bytes": 39543,
+      "commit": "c91569521ab4aad9cd38db0b242836cf8bda64ab"
+    },
+    {
+      "path": "docs/design/架构子计划.md",
+      "sha256": "50d26df22efca8c6602ff04e36afe5c5e1b6a4df02376439e557f719cf227c7a",
+      "bytes": 22575,
+      "commit": "c91569521ab4aad9cd38db0b242836cf8bda64ab"
+    },
+    {
+      "path": "docs/design/03-处境决策设计.md",
+      "sha256": "07df1c15a53490a5b4f739a668981154cd8c3e6bc5851e19906503e1bea9c060",
+      "bytes": 18573,
+      "commit": "c91569521ab4aad9cd38db0b242836cf8bda64ab"
+    },
+    {
+      "path": "docs/design/04-行动覆盖与验收.md",
+      "sha256": "038b68c6513c66294906e3172bd5a8fdaaa8a85ff38172ecab5f75cf3f79a31b",
+      "bytes": 28759,
+      "commit": "c91569521ab4aad9cd38db0b242836cf8bda64ab"
+    },
+    {
+      "path": "docs/design/05-行动层深化设计.md",
+      "sha256": "054e7cb1c716f4bfd401d3bcf7dd6079a77d04526c3f6e34111a19af2fc6fb58",
+      "bytes": 15487,
+      "commit": "c91569521ab4aad9cd38db0b242836cf8bda64ab"
+    },
+    {
+      "path": "docs/design/当前工作清单.md",
+      "sha256": "16a9f048c4bcca4601cf11f852e48c475e4803804b25fa6d696041a91b32b96f",
+      "bytes": 11518,
+      "commit": "c91569521ab4aad9cd38db0b242836cf8bda64ab"
+    }
+  ]
+}
