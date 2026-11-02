@@ -4,8 +4,10 @@ from dataclasses import replace
 
 import pytest
 
+from pdx.model import Block
+from pdx.parser import parse_text
 from pdx.situated.compiler import load_model, strategy_overlay
-from pdx.situated.pdx_eval import UnsupportedPdxError, select
+from pdx.situated.pdx_eval import UnsupportedPdxError, condition, select
 
 pytestmark = pytest.mark.unit
 
@@ -133,15 +135,29 @@ def test_unknown_complement_falls_back_to_known_base_delta() -> None:
 
 def test_nested_complement_is_part_of_the_generated_delta() -> None:
     model = load_model()
+    rows = tuple(
+        replace(row, max_delta=3.0) if row.action_id == "education_and_research" else row
+        for row in model.decision_ir
+    )
+    bundle = model.consumer_ir
+    assert bundle is not None
+    by_id = {row.action_id: row for row in rows}
     model = replace(
         model,
         actions=tuple(
             replace(action, max_delta=3.0) if action.id == "education_and_research" else action
             for action in model.actions
         ),
-        decision_ir=tuple(
-            replace(row, max_delta=3.0) if row.action_id == "education_and_research" else row
-            for row in model.decision_ir
+        decision_ir=rows,
+        consumer_ir=replace(
+            bundle,
+            actions=rows,
+            writers=tuple(
+                replace(writer, action=by_id[writer.definition])
+                if writer.kind == "action_card"
+                else writer
+                for writer in bundle.writers
+            ),
         ),
     )
     overlay = strategy_overlay(model)["economic_vs_government_spending_balance"]
@@ -158,3 +174,71 @@ def test_complement_must_not_exceed_action_limit() -> None:
     result = select(_overlays()["economic_vs_government_spending_balance"], _facts())
     assert result.action_id == action.id
     assert abs(result.delta) <= action.max_delta
+
+
+def _condition_block(text: str) -> Block:
+    parsed = parse_text(text)
+    assert not parsed.errors
+    assignment = parsed.root.first("limit")
+    assert assignment is not None
+    assert isinstance(assignment.value, Block)
+    return assignment.value
+
+
+def test_fact_reference_uses_explicit_root_path_and_preserves_missing_unknown() -> None:
+    block = _condition_block('limit = { ROOT = { gdp > "ROOT.population" } }')
+    assert condition(block, {"ROOT": {"gdp": 9.0, "population": 9.0}}) is False
+    assert condition(block, {"ROOT": {"gdp": 11.0, "population": 9.0}}) is True
+    assert condition(block, {"ROOT": {}}) is None
+
+
+def test_complete_parameter_identity_handles_arguments_and_numeric_value_fields() -> None:
+    boolean = _condition_block("limit = { has_strategy = ai_strategy_industrial_expansion }")
+    facts = {
+        "has_strategy": {
+            (("argument", "ai_strategy_industrial_expansion"),): True,
+            (("argument", "ai_strategy_resource_expansion"),): False,
+        }
+    }
+    assert condition(boolean, facts) is True
+    assert condition(boolean, {}) is None
+
+    numeric = _condition_block(
+        "limit = { pop_type_percent_country = { pop_type = laborers percent >= 0.2 } }"
+    )
+    numeric_facts = {
+        "pop_type_percent_country": {
+            (("pop_type", "laborers"),): 0.25,
+            (("pop_type", "peasants"),): 0.75,
+        }
+    }
+    assert condition(numeric, numeric_facts) is True
+    assert condition(numeric, {"pop_type_percent_country": {}}) is None
+
+
+def test_parameterized_production_method_keeps_legal_hyphen_identity() -> None:
+    block = _condition_block(
+        "limit = { is_production_method_active = { "
+        "building_type = building_explosives_factory "
+        "production_method = pm_ammonia-soda_process } }"
+    )
+    facts = {
+        "is_production_method_active": {
+            "building_explosives_factory": {"pm_ammonia-soda_process": True}
+        }
+    }
+    assert condition(block, facts) is True
+    assert (
+        condition(block, {"is_production_method_active": {"building_explosives_factory": {}}})
+        is None
+    )
+
+
+def test_overlord_interest_group_and_named_interest_group_scopes_are_explicit() -> None:
+    overlord = _condition_block("limit = { scope:overlord = { is_at_war = yes } }")
+    assert condition(overlord, {"scope:overlord": {"is_at_war": True}}) is True
+    assert condition(overlord, {}) is None
+
+    group = _condition_block("limit = { ROOT = { ig:ig_landowners = { ig_clout >= 0.5 } } }")
+    assert condition(group, {"ROOT": {"ig:ig_landowners": {"ig_clout": 0.7}}}) is True
+    assert condition(group, {"ROOT": {"ig:ig_trade_unions": {"ig_clout": 0.7}}}) is None

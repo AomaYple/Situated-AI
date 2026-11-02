@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from .country_state import CountryPolicy
-    from .situated.decision_ir import ConsumerIRBundle
+    from .situated.decision_ir import ConsumerIRBundle, WriterDecisionIR
     from .situated.ir import ActionIR
 
 SOURCE = config.REPO / "mod/decisions/information.toml"
@@ -130,10 +130,14 @@ class Rule:
     operation: str = "multiply"
     contexts: tuple[str, ...] = ()
     intent: str | None = None
+    # Explicit benefit-tier inputs only; every other predicate remains core.
+    auxiliary_facts: tuple[str, ...] = ()
+    required_known_facts: tuple[str, ...] = ()
 
     def input_keys(self) -> frozenset[str]:
         return frozenset(
-            {condition.fact for condition in self.conditions}
+            set(self.required_known_facts)
+            | {condition.fact for condition in self.conditions}
             | {
                 condition.value.key
                 for condition in self.conditions
@@ -355,7 +359,13 @@ def from_data(
     seen: set[str] = set()
     priorities: set[tuple[tuple[str, ...], int]] = set()
     for item in data["rules"]:
-        if not isinstance(item, dict) or set(item) - {"operation", "contexts", "intent"} != {
+        if not isinstance(item, dict) or set(item) - {
+            "operation",
+            "contexts",
+            "intent",
+            "auxiliary_facts",
+            "required_known_facts",
+        } != {
             "id",
             "domain",
             "field",
@@ -449,6 +459,61 @@ def from_data(
                 predicate = Predicate(**condition)
             if predicate not in predicates:
                 predicates.append(predicate)
+        required_known = item.get("required_known_facts", [])
+        if (
+            not isinstance(required_known, list)
+            or ("required_known_facts" in item and not required_known)
+            or any(
+                not isinstance(key, str)
+                or key not in readers
+                or readers[key].kind != "boolean"
+                or readers[key].engine.startswith("sitai_context_")
+                or readers[key].engine == "has_variable"
+                for key in required_known
+            )
+            or len(set(required_known)) != len(required_known)
+        ):
+            raise ValueError("核心知识声明必须是非空、唯一的实际布尔读取器；不接受派生上下文或变量")
+        auxiliary = item.get("auxiliary_facts", [])
+        inputs = {p.fact for p in predicates} | {
+            p.value.key for p in predicates if isinstance(p.value, FactReference)
+        }
+        hard_inputs = {c["fact"] for c in expanded[: len(expanded) - len(item["conditions"])]}
+        hard_inputs.update(
+            c["value"]["fact"]
+            for c in expanded[: len(expanded) - len(item["conditions"])]
+            if isinstance(c["value"], dict)
+        )
+        if (
+            not isinstance(auxiliary, list)
+            or any(not isinstance(key, str) or key not in inputs for key in auxiliary)
+            or len(set(auxiliary)) != len(auxiliary)
+            or set(auxiliary) & set(required_known)
+            or (auxiliary and (set(auxiliary) == inputs or set(auxiliary) & hard_inputs))
+            or (auxiliary and (item["value"] <= (1 if operation == "multiply" else 0)))
+            or any(
+                readers[key].engine
+                in {
+                    "in_default",
+                    "taking_loans",
+                    "is_production_method_active",
+                    "owner",
+                    "has_technology_researched",
+                    "has_law_or_variant",
+                    "can_enact_law",
+                    "is_ai",
+                }
+                for key in auxiliary
+                if isinstance(key, str) and key in readers
+            )
+        ):
+            raise ValueError("辅助事实必须是收益升档的已用输入真子集，不能包含共享条件或硬资格")
+        for predicate in predicates:
+            dependencies = {predicate.fact} | (
+                {predicate.value.key} if isinstance(predicate.value, FactReference) else set()
+            )
+            if dependencies & set(auxiliary) and not dependencies <= set(auxiliary):
+                raise ValueError("辅助相对比较必须声明完整的事实依赖，不能混用核心和辅助输入")
         rules.append(
             Rule(
                 **{
@@ -457,12 +522,15 @@ def from_data(
                     "conditions": tuple(predicates),
                     "value": float(item["value"]),
                     "contexts": tuple(names),
+                    "auxiliary_facts": tuple(auxiliary),
+                    "required_known_facts": tuple(required_known),
                 }
             )
         )
         seen.add(item["id"])
         priorities.add((field, priority))
     used = {condition.fact for rule in rules for condition in rule.conditions}
+    used.update(key for rule in rules for key in rule.required_known_facts)
     used.update(
         condition.value.key
         for rule in rules
@@ -495,10 +563,12 @@ def from_data(
     for candidates in policy.groups(frozenset(domains)).values():
         if (
             len(candidates) > STATIC_BUDGET["candidates_per_field"]
-            or sum(len(rule.conditions) for rule in candidates)
+            or sum(len(rule.conditions) + len(rule.required_known_facts) for rule in candidates)
             > STATIC_BUDGET["predicates_per_field"]
             or any(
-                len(rule.conditions) > STATIC_BUDGET["predicates_per_rule"] for rule in candidates
+                len(rule.conditions) + len(rule.required_known_facts)
+                > STATIC_BUDGET["predicates_per_rule"]
+                for rule in candidates
             )
         ):
             raise ValueError("规则超过静态复杂度预算；先复核语义和性能再调整预算")
@@ -536,7 +606,7 @@ def evaluate_ir(
     """输出字段的规则 ID/倍率；缺失、None、类型错或非有限输入回退原版。
 
     条件按优先级短路；未知的更高优先级规则不允许低优先级规则抢先生效。
-    不把运行时未知值解释成条件为假。
+    显式辅助升档缺证时只尝试下一档，不把运行时未知值解释成假或健康。
     """
     if rules.rules and not rules.semantic_ir:
         raise ValueError("参考求值缺少完整 semantic IR")
@@ -569,8 +639,15 @@ def evaluate_ir(
                 for p, value, right, valid in inputs
             ):
                 continue
-            if any(not valid for _p, _value, _right, valid in inputs):
+            if any(not readers[key].accepts(values.get(key)) for key in rule.required_known_facts):
                 break
+            if any(
+                not valid and p.fact not in rule.auxiliary_facts
+                for p, _value, _right, valid in inputs
+            ):
+                break
+            if any(not valid for _p, _value, _right, valid in inputs):
+                continue
             result[".".join(field)] = (rule.id, rule.value)
             break
     return result
@@ -829,7 +906,7 @@ def patch(
             rules, consumer_ir, source=str(consumer_source) if consumer_source is not None else None
         )
     groups = rules.groups(enabled_domains)
-    bundle_writers: dict[tuple[str, str], object] = {}
+    bundle_writers: dict[tuple[str, str], WriterDecisionIR] = {}
     if consumer_ir is not None:
         raw_writers = getattr(consumer_ir, "writers", None)
         if raw_writers is None or consumer_source is None:
@@ -858,18 +935,9 @@ def patch(
                         f"consumer_ir writer 与规则不一致：{expected_source}:{rule.id}"
                     )
     selected_reader_keys = {
-        predicate.fact
-        for candidates in groups.values()
-        for rule in candidates
-        for predicate in rule.conditions
+        key for candidates in groups.values() for rule in candidates for key in rule.input_keys()
     }
-    selected_reader_keys.update(
-        predicate.value.key
-        for candidates in groups.values()
-        for rule in candidates
-        for predicate in rule.conditions
-        if isinstance(predicate.value, FactReference)
-    )
+
     route_readers = {
         reader.key: reader
         for reader in rules.readers
@@ -917,7 +985,7 @@ def patch(
         for field, position in insertion_offsets(text, set(groups), root, prefix).items()
     }
     readers = {reader.key: reader for reader in rules.readers}
-    # 所有读取器必须能在锁定底本找到同名原版用例；这仍只是静态依据。
+    # 原版文本用例或逐字节锁定的引擎/脚本证据；两者均只是静态依据。
     words = (
         reader_words
         if reader_words is not None
@@ -926,18 +994,19 @@ def patch(
         )
     )
     used_reader_keys = {
-        predicate.fact
-        for candidates in groups.values()
-        for rule in candidates
-        for predicate in rule.conditions
+        key for candidates in groups.values() for rule in candidates for key in rule.input_keys()
     }
-    used_reader_keys.update(
-        predicate.value.key
-        for candidates in groups.values()
-        for rule in candidates
-        for predicate in rule.conditions
-        if isinstance(predicate.value, FactReference)
-    )
+    if any(
+        readers[key].engine
+        in {
+            "num_defensive_pacts",
+            "wanted_army_size_script_value",
+            "wanted_marines_size_script_value",
+        }
+        for key in used_reader_keys
+    ):
+        words |= decision_interfaces.proven_reader_words()
+
     for reader in rules.readers:
         if reader.key not in used_reader_keys:
             continue
@@ -968,6 +1037,7 @@ def patch(
             conditions: dict[tuple[str, tuple[str, ...]], list[str]] = defaultdict(list)
             valid: dict[tuple[str, tuple[str, ...]], list[str]] = defaultdict(list)
             false_conditions = []
+            core_known = []
             conditions[("root", rules.actor_path)].append("is_ai = yes")
             for predicate in rule.conditions:
                 reader = readers[predicate.fact]
@@ -1011,18 +1081,51 @@ def patch(
                     valid[other_key].extend(other_bounds)
                     false_parts.setdefault(other_key, []).extend(other_bounds)
                 false_conditions.append("AND = { " + _scoped_conditions(false_parts) + " }")
+                if predicate.fact not in rule.auxiliary_facts:
+                    knowledge = {
+                        key: [*bounds, f"OR = {{ {expression} NOT = {{ {expression} }} }}"]
+                    }
+                    if isinstance(predicate.value, FactReference):
+                        knowledge.setdefault(other_key, []).extend(other_bounds)
+                    core_known.append("AND = { " + _scoped_conditions(knowledge) + " }")
+            for known_fact_key in rule.required_known_facts:
+                reader = readers[known_fact_key]
+                expression = reader.expression("=", True)
+                knowledge_expression = f"OR = {{ {expression} NOT = {{ {expression} }} }}"
+                scope_key = (reader.scope, reader.path)
+                conditions[scope_key].append(knowledge_expression)
+                valid[scope_key].append(knowledge_expression)
+                core_known.append(
+                    "AND = { " + _scoped_conditions({scope_key: [knowledge_expression]}) + " }"
+                )
             branch = "if" if index == 0 else "else_if"
+            writer = bundle_writers.get((str(consumer_source), rule.id))
+            if writer is not None:
+                for chain_id, link_id in writer.chain_refs:
+                    chunks.append(
+                        f"\t\t# SITAI CHAIN {chain_id}/{link_id} writer={writer.writer_id}\n"
+                    )
             chunks.append(f"\t\t# {rule.id} [{rule.domain}]; {rule.why}\n")
             adjustment = repr(rule.value)
             if (description := description_key(rule)) is not None:
                 adjustment = f"{{ value = {adjustment} desc = {description} }}"
-            chunks.append(
-                f"\t\t{branch} = {{ limit = {{ {_scoped_conditions(conditions)} }} {rule.operation} = {adjustment} }}\n"
-            )
+            if rule.auxiliary_facts:
+                # A write-free proof only enters a high tier when every benefit
+                # predicate is proven. Unknown auxiliary evidence cannot write.
+                chunks.append(
+                    f"\t\t{branch} = {{ limit = {{ {_scoped_conditions(conditions)} }} "
+                    f"if = {{ limit = {{ always = yes }} {rule.operation} = {adjustment} }} }}\n"
+                )
+            else:
+                chunks.append(
+                    f"\t\t{branch} = {{ limit = {{ {_scoped_conditions(conditions)} }} {rule.operation} = {adjustment} }}\n"
+                )
             if index + 1 < len(groups[field]):
                 # 已知假条件可继续下一候选；其余未知停止本字段干预。
                 known_parts = list(false_conditions)
-                valid_scope = _scoped_conditions(valid)
+                valid_scope = (
+                    " ".join(core_known) if rule.auxiliary_facts else _scoped_conditions(valid)
+                )
                 if valid_scope:
                     known_parts.append(f"AND = {{ {valid_scope} }}")
                 known = " ".join(known_parts)
@@ -1116,10 +1219,21 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
                 "calibration": "design_assumption; user_behavior_and_balance_review_pending",
                 "consumer": decision_interfaces.consumer(rule.field, rules.actor_path),
                 "description_key": description_key(rule),
-                "unknown": "preserve_vanilla_and_block_lower_priority_if_not_known_false",
+                "unknown": (
+                    "auxiliary_unproven_try_lower_tier_core_unknown_preserve_vanilla"
+                    if rule.auxiliary_facts
+                    else "preserve_vanilla_and_block_lower_priority_if_not_known_false"
+                ),
+                **({"auxiliary_facts": list(rule.auxiliary_facts)} if rule.auxiliary_facts else {}),
                 "arbitration": "one_complete_adjustment_not_an_increment_on_other_mod_rules",
+                **(
+                    {"required_known_facts": list(rule.required_known_facts)}
+                    if rule.required_known_facts
+                    else {}
+                ),
                 "inputs": sorted(
-                    {condition.fact for condition in rule.conditions}
+                    set(rule.required_known_facts)
+                    | {condition.fact for condition in rule.conditions}
                     | {
                         condition.value.key
                         for condition in rule.conditions
@@ -1146,7 +1260,9 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
         "cost_by_field": {
             ".".join(field): {
                 "candidates": len(candidates),
-                "predicates": sum(len(rule.conditions) for rule in candidates),
+                "predicates": sum(
+                    len(rule.conditions) + len(rule.required_known_facts) for rule in candidates
+                ),
                 "scope_depth": max(
                     len(reader.path)
                     for reader in rules.readers

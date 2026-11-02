@@ -447,8 +447,14 @@ rifling = {
 		}
 
 		# SITAI BEGIN information:rifling.ai_weight
+		# d6_rifling_small_arms_shortage_pressure [military]; 轻武器实际缺口和高价共同支持军需研究压力档，价格未知只退到已证基础档
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } if = { limit = { always = yes } multiply = 1.3 } }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { OR = { market_goods_delta < 0 NOT = { market_goods_delta < 0 } } } } } } } } } } multiply = 1.0 }
+		# d6_rifling_small_arms_shortage_foundation [military]; 实际轻武器缺口在和平时也支持可解锁步枪生产方式的基础研究，不把战争作为全部军需知识的共同前提
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 } } } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = {  } } } } } } } multiply = 1.0 }
 		# rifling_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:rifling.ai_weight
 	}
 }
@@ -897,8 +903,14 @@ gantry_cranes = {
 		}
 
 		# SITAI BEGIN information:gantry_cranes.ai_weight
+		# d6_gantry_cranes_steamers_shortage_pressure [military]; 运输船真实缺口与高价共同支持供给研究压力档，价格缺失不关闭已经证明的低档
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } if = { limit = { always = yes } multiply = 1.3 } }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steamers mg:steamers = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steamers mg:steamers = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steamers mg:steamers = { OR = { market_goods_delta < 0 NOT = { market_goods_delta < 0 } } } } } } } } } } multiply = 1.0 }
+		# d6_gantry_cranes_steamers_shortage_foundation [military]; 运输船订单缺口支持可解锁金属造船方式的研究机会；海运供给与陆军军需分开，不要求先有大型海军
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0 } } } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steamers mg:steamers = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:steamers mg:steamers = {  } } } } } } } multiply = 1.0 }
 		# gantry_cranes_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
 		# SITAI END information:gantry_cranes.ai_weight
 	}
 }

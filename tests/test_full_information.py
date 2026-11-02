@@ -25,6 +25,7 @@ from pdx import (
     country_state,
     decision_adapters,
     decision_intents,
+    decision_interfaces,
     decision_rules,
     decisions,
     distribution,
@@ -43,7 +44,8 @@ if TYPE_CHECKING:
 _SYNTHETIC_READER_EVIDENCE = (
     "bureaucracy taking_loans scaled_debt net_total_income legitimacy "
     "has_insurrectionary_interest_groups has_variable recently_lost_war weeks_until_bankruptcy "
-    "literacy_rate army_size average_sol gold_reserves market_access"
+    "literacy_rate army_size average_sol gold_reserves market_access "
+    "market mg:grain grain market_goods_delta market_goods_pricier"
 )
 
 
@@ -79,8 +81,10 @@ def test_shared_information_readers_have_sha_locked_native_evidence(rules):
         pytest.skip("需要锁定版本的游戏原件")
     inputs = decision_adapters.read_inputs(decision_adapters.load())
     evidence = decision_adapters.reader_evidence(inputs)
+    native_readers = decision_interfaces.proven_reader_words()
     assert all(
         reader.engine in evidence
+        or reader.engine in native_readers
         or reader.engine in country_state.owned_triggers(country_state.load())
         for reader in rules.readers
     )
@@ -89,7 +93,7 @@ def test_shared_information_readers_have_sha_locked_native_evidence(rules):
         baseline,
         rules,
         baseline=baseline,
-        reader_words=frozenset(evidence),
+        reader_words=frozenset(evidence) | native_readers,
         country_policy=country_state.load(),
     )
     assert "bureaucracy >= 0" in script
@@ -126,6 +130,9 @@ def _values(**overrides: object) -> dict[str, object]:
         "bureaucracy": 100,
         "legitimacy": 60,
         "army": 0,
+        "defensive_pact_articles": 0,
+        "native_army_capacity": 100,
+        "native_marine_capacity": 10,
         "insurrection": False,
         "navy": 50,
         "subject": False,
@@ -140,6 +147,10 @@ def _values(**overrides: object) -> dict[str, object]:
         "target_isolated": False,
         "target_market_access": 0.5,
         "target_cultural_share": 0,
+        # Existing scenarios isolate other consumers. Food pressure is known
+        # neutral here; its non-neutral/unknown paths have their own witnesses.
+        "grain_balance": 0,
+        "grain_price": 0,
         "route_fiscal_recovery": False,
         "route_stability": False,
         "route_defense": False,
@@ -380,13 +391,18 @@ def _evaluate_script(block: Block, engine_values: dict[str, object]) -> float:
                 raw = "yes"
             else:
                 actual = engine_values.get(assignment.key)
-            expected: bool | float = (
-                {"yes": True, "no": False}[raw] if raw in {"yes", "no"} else float(raw)
+            expected: object = (
+                engine_values.get(raw.removeprefix("ROOT."))
+                if raw.startswith("ROOT.")
+                else {"yes": True, "no": False}[raw]
+                if raw in {"yes", "no"}
+                else float(raw)
             )
-            if actual is None:
+            if actual is None or expected is None:
                 results.append(False)
                 continue
             assert isinstance(actual, (bool, int, float))
+            assert isinstance(expected, (bool, int, float))
             results.append(operations[assignment.op](actual, expected))
         if mode == "OR":
             return any(results)
@@ -436,7 +452,7 @@ def test_generated_conditions_equal_reference_on_legal_inputs(
     engine = {
         (
             reader.engine + ":" + reader.argument if reader.argument is not None else reader.engine
-        ): values[reader.key]
+        ): values.get(reader.key)
         for reader in rules.readers
     }
     engine["scope:target_state"] = True
@@ -455,7 +471,7 @@ def test_default_cost_precedes_weak_navy_without_guessing_invalid_input(
 ):
     rules, blocks = generated_rule_blocks
     values = _values(default=default, navy=navy)
-    engine = {reader.engine: values[reader.key] for reader in rules.readers}
+    engine = {reader.engine: values.get(reader.key) for reader in rules.readers}
     reference = decision_rules.evaluate(rules, values, is_ai=True)
     if default:
         # 已知违约优先，不被低优先级未知海军遮蔽。
@@ -480,7 +496,7 @@ def test_overseas_naval_threshold_and_projection(generated_rule_blocks, navy, ru
     rules, blocks = generated_rule_blocks
     values = _values(default=False, navy=navy)
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
         for reader in rules.readers
     }
     reference = decision_rules.evaluate(rules, values, is_ai=True).get(
@@ -509,7 +525,7 @@ def test_market_access_is_local_and_yields_to_specific_state_values(
     rules, blocks = generated_rule_blocks
     values = _values(**change)
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
         for reader in rules.readers
     }
     engine["scope:target_state"] = True
@@ -527,7 +543,7 @@ def test_port_value_is_scoped_to_target_state_independent_of_national_navy(
     rules, blocks = generated_rule_blocks
     values = _values(default=False, target_port=True, target_isolated=False, navy=navy)
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
         for reader in rules.readers
     }
     engine["scope:target_state"] = True
@@ -783,7 +799,7 @@ def test_development_tiers_and_crisis_priority_in_generated_script(
     rules, blocks = generated_rule_blocks
     values = _values(**{"legitimacy": 80, **change})
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
         for reader in rules.readers
     }
     field = "wanted_construction_output"
@@ -805,7 +821,7 @@ def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
             ("treaty_category_scores.economy", economy),
         ]:
             engine = {
-                r.engine + (":" + r.argument if r.argument else ""): values[r.key]
+                r.engine + (":" + r.argument if r.argument else ""): values.get(r.key)
                 for r in rules.readers
             }
             assert _evaluate_script(blocks[field], engine) == expected
@@ -837,7 +853,9 @@ def test_multifactor_capacity_rules_require_complete_context(generated_rule_bloc
     def evaluate(values, field):
         result = decision_rules.evaluate(rules, values, is_ai=True)
         engine = {
-            reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+            reader.engine + (":" + reader.argument if reader.argument else ""): values.get(
+                reader.key
+            )
             for reader in rules.readers
         }
         return result.get(field), _evaluate_script(blocks[field], engine)
@@ -908,17 +926,24 @@ def test_multifactor_capacity_rules_require_complete_context(generated_rule_bloc
         ({"target_cultural_share": 0.24}, 1.0),
         ({"target_cultural_share": 1.1}, 1.0),
         ({"target_cultural_share": None}, 1.0),
-        ({"target_isolated": True}, 1.0),
-        ({"fervor": 10}, 1.0),
+        ({"target_isolated": True}, 0.9),
+        ({"fervor": 10}, 1.05),
         ({"default": True}, 1.0),
-        ({"war": True}, 1.0),
-        ({"income": 0}, 1.0),
-        ({"expansion_route": False}, 1.0),
+        ({"war": True}, 1.05),
+        ({"income": 0}, 1.05),
+        ({"expansion_route": False}, 1.05),
+        ({"target_homeland": None}, 1.0),
+        ({"target_isolated": None}, 1.0),
+        ({"fervor": None, "expansion_route": False}, 1.05),
+        ({"fervor": 10, "candidate_selected": True, "construction_queued": True}, 1.05),
     ],
 )
-def test_identity_reward_requires_cultural_and_material_feasibility(
+def test_identity_high_tier_and_local_foundation_have_distinct_requirements(
     generated_rule_blocks, change, expected
 ):
+    # High tier requires material/political expansion capacity; the local tier
+    # only prices an unowned connected homeland with observed cultural share.
+    # Its 1.05 changes target valuation, never war/colonisation eligibility.
     rules, blocks = generated_rule_blocks
     values = _values(
         **dict(
@@ -932,7 +957,7 @@ def test_identity_reward_requires_cultural_and_material_feasibility(
         )
     )
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
         for reader in rules.readers
     }
     engine["scope:target_state"] = True
@@ -950,7 +975,7 @@ def test_geographic_cost_precedes_reward_and_missing_state_preserves_vanilla(
     rules, blocks = generated_rule_blocks
     values = _values(default=True, target_isolated=True, navy=0, target_port=True)
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values[reader.key]
+        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
         for reader in rules.readers
     }
     engine["scope:target_state"] = True

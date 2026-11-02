@@ -156,6 +156,25 @@ scope = "root"
 unit = "currency_per_week"
 kind = "number"
 
+[readers.defensive_pact_articles]
+engine = "num_defensive_pacts"
+scope = "root"
+unit = "treaty_article_count"
+kind = "number"
+minimum = 0
+
+[readers.native_army_capacity]
+engine = "wanted_army_size_script_value"
+scope = "root"
+unit = "battalions"
+kind = "number"
+
+[readers.native_marine_capacity]
+engine = "wanted_marines_size_script_value"
+scope = "root"
+unit = "battalions"
+kind = "number"
+
 [readers.bureaucracy]
 engine = "bureaucracy"
 scope = "root"
@@ -306,6 +325,20 @@ unit = "standard_of_living"
 kind = "number"
 minimum = 0
 
+[readers.grain_balance]
+engine = "market_goods_delta"
+scope = "root"
+path = ["market", "mg:grain"]
+unit = "sell_minus_buy_orders"
+kind = "number"
+
+[readers.grain_price]
+engine = "market_goods_pricier"
+scope = "root"
+path = ["market", "mg:grain"]
+unit = "price_above_base_ratio"
+kind = "number"
+
 [readers.army]
 engine = "army_size"
 scope = "root"
@@ -348,6 +381,21 @@ why = "识字率极低时提供低强度教育基础倾向；不要求先满足�
 counterexample = "不直接提高识字率、学校等级或财政；原版资格和制度成本仍由原版处理"
 
 [[rules]]
+id = "lj04_welfare_zero_administration_foundation"
+domain = "political"
+field = "institution_scores.institution_social_security"
+priority = 46
+value = 1.02
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "average_sol", op = "<", value = 8 },
+  { fact = "population", op = ">", value = 0 },
+  { fact = "bureaucracy", op = "=", value = 0 },
+]
+why = "行政缺口实际修复到零且民生需求仍在时提供低强度制度关注，正余量继续使用既有档；不以行政候选当作已修复"
+counterexample = "零余量不创造制度等级或资格，原版实际成本仍优先；负余量、未知、玩家或无民生需求时保留原版，不写持久完成状态"
+
+[[rules]]
 id = "social_welfare_population_pressure"
 domain = "political"
 field = "institution_scores.institution_social_security"
@@ -362,6 +410,57 @@ conditions = [
 ]
 why = "大人口国家生活水平较低且有行政承载时，提高社会保障制度的原版投资相对权重"
 counterexample = "人口、生活水平或行政能力未知时回退原版；不直接改变福利支付、人口或制度等级"
+
+[[rules]]
+id = "social_welfare_local_foundation"
+domain = "political"
+field = "institution_scores.institution_social_security"
+priority = 44
+value = 1.05
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "average_sol", op = "<", value = 8 },
+  { fact = "population", op = ">", value = 0 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+]
+why = "已知有居民、生活水平较低且具备财政和行政承载时，提供低强度社会保障投资倾向；不以大国或和平为前提"
+counterexample = "违约、需求不成立或承载不足时不介入；未知保留原版；不直接支付福利或改变制度等级，原版资格、成本和政治支持仍由原版处理"
+
+[[rules]]
+id = "lj07_grain_social_foundation"
+domain = "political"
+field = "institution_scores.institution_social_security"
+priority = 42020
+operation = "multiply"
+value = 1.06
+conditions = [
+  { fact = "bureaucracy", op = ">=", value = 0 },
+  { fact = "net_surplus", op = ">=", value = 0 },
+  { fact = "grain_price", op = ">", value = 0.5 },
+  { fact = "grain_balance", op = "<", value = 0 },
+  { fact = "default", op = "=", value = false },
+]
+why = "根市场粮食价格和供需余额同时显示短缺时，提高社会保障制度的有限基础倾向；原版资格、行政承载、维护和执行继续优先"
+counterexample = "不把粮食压力改写成治安或免费福利；任一粮食事实、违约或市场作用域未知时回退原版，不改变生活水平或制度等级"
+
+[[rules]]
+id = "lj07_grain_social_capacity"
+domain = "political"
+field = "institution_scores.institution_social_security"
+priority = 42021
+operation = "multiply"
+value = 1.12
+conditions = [
+  { fact = "grain_price", op = ">", value = 0.5 },
+  { fact = "grain_balance", op = "<", value = 0 },
+  { fact = "average_sol", op = "<", value = 8 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "insurrection", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+]
+why = "粮食短缺与低生活水平、行政和净收入承载同时存在且无叛乱时，社会保障倾向有限升档；健康、稳定和粮食仍由不同消费者表达"
+counterexample = "缺少任一社会、行政、财政或政治事实时不升档；候选制度不等于已实施，不免费修正民生、稳定或财政，原版资格和成本保持"
 
 [[rules]]
 id = "administrative_bureaucracy_repair"
@@ -502,8 +601,8 @@ conditions = [
   { fact = "war_defeat", op = "=", value = true },
   { fact = "income", op = ">", value = 0 },
 ]
-why = "原版失败记忆有效且财政、政治和和平条件可承受时提高复原建设目标"
-counterexample = "只覆盖原版写入 recently_lost_war 的战争目标受害方；财政容量不足、政治不稳、在战或收入未知时不提供复原奖励，不读取所有战败历史"
+why = "原版失败记忆有效、和平、未违约且收入为正时提高复原建设目标"
+counterexample = "仅覆盖原版 on_capitulation/on_lost_war 写入且持续1825日的 recently_lost_war；记忆缺失、在战、违约或收入非正/未知时不应用本规则，更高优先级的同字段规则仍优先，不推断所有战败历史"
 
 [[rules]]
 id = "economic_development"
@@ -655,6 +754,23 @@ conditions = [
 ]
 why = "防御路线提高原版常备军目标，仍由原版资格和军费约束"
 counterexample = "不创建军队、不改变战斗属性；路线失效或输入未知时回退原版"
+
+[[rules]]
+id = "lj10_defensive_pact_flow_pressure"
+domain = "military"
+field = "wanted_army_size"
+priority = 60
+value = 0.95
+conditions = [
+  { fact = "war", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+  { fact = "route_defense", op = "=", value = false },
+  { fact = "net_surplus", op = "<", value = 0 },
+  { fact = "defensive_pact_articles", op = ">=", value = 1 },
+  { fact = "native_army_capacity", op = ">", value = { fact = "native_marine_capacity" } },
+]
+why = "和平且净流量承压时，本国已关联的防御协定标记条款作为小幅减少重复新增军备承诺的信号；高优先防御及明确威胁仍优先"
+counterexample = "条款数不等于伙伴数、履约、军力或完全安全，不保证active/ratified状态；不按数量累乘，不删除军队，不把提案或选中条约当当前关系；核心未知回退原版，玩家与关闭不变"
 
 [[rules]]
 id = "naval_peacetime_budget"
@@ -1224,3 +1340,55 @@ value = 1.15
 conditions = [{ fact = "coord_need_security", op = "=", value = true }]
 why = "安全需求提高原版防御合作候选，不替代外交可达性"
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
+
+
+[[rules]]
+id = "lj14_connected_homeland_foundation"
+domain = "identity"
+field = "state_value"
+operation = "multiply"
+value = 1.05
+priority = 90
+conditions = [
+  { fact = "target_owned", op = "=", value = false },
+  { fact = "target_homeland", op = "=", value = true },
+  { fact = "target_cultural_share", op = ">=", value = 0.25 },
+  { fact = "target_isolated", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+]
+why = "对具体目标州的本土与人口文化联系提供低档价值；不要求民族热情、既有扩张路线和收入同时满足，完整承受条件仍可升级"
+counterexample = "只看当前目标州且不制造资格；自有州、非本土、文化联系弱、孤立、违约或未知事实不奖励；保留原版终结零分和州价值限幅"
+
+
+[[rules]]
+id = "lj14_homeland_isolation_cost"
+domain = "geography"
+field = "state_value"
+operation = "multiply"
+value = 0.9
+priority = 150
+conditions = [
+  { fact = "target_owned", op = "=", value = false },
+  { fact = "target_homeland", op = "=", value = true },
+  { fact = "target_isolated", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+]
+why = "本土联系不能抵消当前目标州的市场隔离；和平时先计入局部可达与整合机会成本，不等到全国破产才识别"
+counterexample = "隔离不等于所有海军或战争不可达，不强制放弃目标，保留原版目标、路径、零分与成本；不读取其他州代替当前州"
+
+
+[[rules]]
+id = "lj14_homeland_administrative_cost"
+domain = "identity"
+field = "state_value"
+operation = "multiply"
+value = 0.92
+priority = 140
+conditions = [
+  { fact = "target_owned", op = "=", value = false },
+  { fact = "target_homeland", op = "=", value = true },
+  { fact = "bureaucracy", op = "<", value = 0 },
+  { fact = "war", op = "=", value = false },
+]
+why = "本土目标也有行政整合负担；实际行政短缺先于文化联系奖励计入有限机会成本，不惩罚国内生产建设"
+counterexample = "不改变玩家、自有州或全国建设权重，不把文化认同当成征服资格，保留原版零分与限幅；行政恢复后立即退出"

@@ -62,7 +62,7 @@ consumer = "fiscal_neutrality"
 improves = ["solvency", "survival"]
 consumes = []
 zero_cost_reason = "本工具只提高外交中立倾向，不执行支出或新增承诺。"
-requires_all = ["default"]
+requires_all = ["support_fiscal_default"]
 requires_any = []
 blocked_by = []
 complements = []
@@ -85,7 +85,7 @@ consumer = "fiscal_neutrality"
 improves = ["survival", "security"]
 consumes = []
 zero_cost_reason = "本工具只降低新的非必要外交承诺倾向，不扩军、不拨款。"
-requires_all = ["war"]
+requires_all = ["support_wartime"]
 requires_any = []
 blocked_by = []
 complements = []
@@ -107,7 +107,7 @@ domain = "political"
 consumer = "reform_chance"
 improves = ["legitimacy", "institutional_capacity"]
 consumes = []
-political_when = [{ fact = "legitimacy", op = "<", value = 75, unit = "legitimacy_0_100" }]
+political_when = [{ fact = "support_political", op = "<", value = 75, unit = "legitimacy_0_100" }]
 requires_all = ["peace", "no_insurrection"]
 requires_any = ["stable_legitimacy", "strong_legitimacy"]
 blocked_by = ["default"]
@@ -115,7 +115,7 @@ complements = ["industrial_foundation"]
 substitutes = []
 conflicts = []
 enables = []
-exit_when = ["insurrection"]
+exit_when = ["ongoing_insurrection"]
 base = 0.5
 stress = 0.0
 opportunity = 0.0
@@ -126,12 +126,13 @@ unknown_policy = "vanilla"
 explanation = "和平、政治可行且没有叛乱时提高法律启动机会，原版支持和失败仍生效。"
 
 [actions.industrial_foundation]
+rank_terms = [{ fact = "support_industry_need", goal = "structure", tier = 1, unit = "flag" }]
 domain = "economy"
 consumer = "economic_balance"
 improves = ["industry", "employment", "construction_capacity"]
-consumes = ["debt_ratio", "net_surplus", "bureaucracy", "legitimacy"]
-commitment_when = [{ fact = "debt_ratio", op = ">", value = 0.4, unit = "debt_to_credit_ratio" }, { fact = "net_surplus", op = "<", value = 0, unit = "currency_per_week" }, { fact = "bureaucracy", op = "<", value = 0, unit = "capacity_balance" }]
-political_when = [{ fact = "legitimacy", op = "<", value = 75, unit = "legitimacy_0_100" }]
+consumes = ["support_debt_service", "support_fiscal", "support_administrative", "support_political"]
+commitment_when = [{ fact = "support_debt_service", op = ">", value = 0.4, unit = "debt_to_credit_ratio" }, { fact = "support_fiscal", op = "<", value = 0, unit = "currency_per_week" }, { fact = "support_administrative", op = "<", value = 0, unit = "capacity_balance" }]
+political_when = [{ fact = "support_political", op = "<", value = 75, unit = "legitimacy_0_100" }]
 requires_all = ["peace", "no_default"]
 requires_any = []
 blocked_by = []
@@ -150,13 +151,14 @@ unknown_policy = "vanilla"
 explanation = "具备和平和最低行政基础时支持建设性支出，避免用单一总门槛锁死发展。"
 
 [actions.education_and_research]
+rank_terms = [{ fact = "support_education_need", goal = "capacity", tier = 1, unit = "flag" }]
 domain = "education"
 consumer = "economic_balance"
 improves = ["literacy", "technology", "administration"]
-consumes = ["debt_ratio", "net_surplus", "bureaucracy", "legitimacy"]
-commitment_when = [{ fact = "debt_ratio", op = ">", value = 0.4, unit = "debt_to_credit_ratio" }, { fact = "net_surplus", op = "<", value = 0, unit = "currency_per_week" }, { fact = "bureaucracy", op = "<", value = 0, unit = "capacity_balance" }]
-political_when = [{ fact = "legitimacy", op = "<", value = 75, unit = "legitimacy_0_100" }]
-requires_all = ["peace", "no_default", "literacy_low"]
+consumes = ["support_debt_service", "support_fiscal", "support_administrative", "support_political"]
+commitment_when = [{ fact = "support_debt_service", op = ">", value = 0.4, unit = "debt_to_credit_ratio" }, { fact = "support_fiscal", op = "<", value = 0, unit = "currency_per_week" }, { fact = "support_administrative", op = "<", value = 0, unit = "capacity_balance" }]
+political_when = [{ fact = "support_political", op = "<", value = 75, unit = "legitimacy_0_100" }]
+requires_all = ["peace", "no_default", "support_education"]
 requires_any = []
 blocked_by = []
 complements = ["industrial_foundation"]
@@ -200,8 +202,8 @@ explanation = "战争时降低冒险外交倾向，仍由原版外交博弈资�
 domain = "diplomacy"
 consumer = "diplomatic_recklessness"
 improves = ["trade", "security"]
-consumes = ["subject", "infamy"]
-commitment_when = [{ fact = "subject", op = "=", value = true, unit = "flag" }]
+consumes = ["support_diplomatic", "infamy"]
+commitment_when = [{ fact = "support_diplomatic", op = "=", value = true, unit = "flag" }]
 political_when = [{ fact = "infamy", op = ">=", value = 25, unit = "infamy_points" }]
 requires_all = ["peace", "no_default"]
 requires_any = ["stable_legitimacy", "subject"]
@@ -224,8 +226,8 @@ explanation = "和平和具备政治/宗属基础时允许有限外交主动性�
 domain = "political"
 consumer = "max_progressiveness"
 improves = ["institutional_capacity", "rights"]
-consumes = ["legitimacy"]
-political_when = [{ fact = "legitimacy", op = "<", value = 75, unit = "legitimacy_0_100" }]
+consumes = ["support_political"]
+political_when = [{ fact = "support_political", op = "<", value = 75, unit = "legitimacy_0_100" }]
 requires_all = ["peace", "no_insurrection"]
 requires_any = ["stable_legitimacy", "strong_legitimacy"]
 blocked_by = ["default"]
@@ -233,7 +235,7 @@ complements = []
 substitutes = ["reform_conservative_guard"]
 conflicts = []
 enables = []
-exit_when = ["insurrection"]
+exit_when = ["ongoing_insurrection"]
 base = 5.0
 stress = 0.0
 opportunity = 0.0
@@ -250,7 +252,7 @@ improves = ["continuity", "survival"]
 consumes = []
 zero_cost_reason = "保留压力下的可逆政策空间，不执行法律或支付政治资源。"
 requires_all = ["peace"]
-requires_any = ["default", "insurrection"]
+requires_any = ["default", "ongoing_insurrection"]
 blocked_by = []
 complements = []
 substitutes = ["reform_progressive_window"]
@@ -270,8 +272,8 @@ explanation = "违约或叛乱压力下保留原版可逆的保守政策空间�
 domain = "diplomacy"
 consumer = "diplomatic_play_boldness"
 improves = ["influence", "opportunity"]
-consumes = ["subject", "infamy"]
-commitment_when = [{ fact = "subject", op = "=", value = true, unit = "flag" }]
+consumes = ["support_diplomatic", "infamy"]
+commitment_when = [{ fact = "support_diplomatic", op = "=", value = true, unit = "flag" }]
 political_when = [{ fact = "infamy", op = ">=", value = 25, unit = "infamy_points" }]
 requires_all = ["peace", "no_default"]
 requires_any = ["stable_legitimacy", "subject"]
@@ -294,8 +296,8 @@ explanation = "和平、财政稳定且具有政治或宗属支点时提高外�
 domain = "diplomacy"
 consumer = "aggression"
 improves = ["security", "deterrence"]
-consumes = ["war", "infamy"]
-commitment_when = [{ fact = "war", op = "=", value = true, unit = "flag" }]
+consumes = ["support_military", "infamy"]
+commitment_when = [{ fact = "support_military", op = "=", value = true, unit = "flag" }]
 political_when = [{ fact = "infamy", op = ">=", value = 25, unit = "infamy_points" }]
 requires_all = ["no_default"]
 requires_any = ["war", "stable_legitimacy"]

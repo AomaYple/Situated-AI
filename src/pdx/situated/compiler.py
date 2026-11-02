@@ -16,7 +16,8 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from .. import decision_adapters, decision_rules  # noqa: TID252
+from .. import decision_adapters, decision_interfaces, decision_rules  # noqa: TID252
+from ..model import Block  # noqa: TID252
 from ..parser import parse_text  # noqa: TID252
 from . import (
     action_instances,
@@ -26,10 +27,13 @@ from . import (
     domain_coverage,
     families,
     ir,
+    joint_chain_contract,
     layers,
+    migration_baseline,
     opportunity,
     relations,
     state,
+    support_signals,
 )
 from . import actions as action_source
 from . import evidence as evidence_source
@@ -66,6 +70,255 @@ SUPPORTING_SOURCES = (
     "action_bindings.toml",
     "domain_actions.toml",
 )
+_RANK_ORDER = ("need_tier", "net_benefit", "stress", "opportunity", "goal_priority", "action_id")
+
+
+def evaluation_contexts(text: str) -> dict[str, decision_ir.EvaluationContext]:
+    """Observe exact field-local vanilla comments without changing writer IDs."""
+    source = "common/ai_strategies/00_default_strategy.txt"
+    # name, engine type, semantic role, exact documentary statement
+    common = ("root", "country", "actor", "root = country")
+    specs = {
+        "subject_value": (
+            (
+                "root",
+                "country",
+                "actor",
+                "root is the AI doing the evaluation, scope:target_country is prospective subject",
+            ),
+            (
+                "target_country",
+                "country",
+                "target",
+                "root is the AI doing the evaluation, scope:target_country is prospective subject",
+            ),
+        ),
+        "become_subject_value": (
+            (
+                "root",
+                "country",
+                "actor",
+                "root is the AI doing the evaluation, scope:overlord is prospective overlord",
+            ),
+            (
+                "overlord",
+                "country",
+                "target",
+                "root is the AI doing the evaluation, scope:overlord is prospective overlord",
+            ),
+        ),
+        "interest_group_government_weight": (
+            common,
+            ("interest_group", "interest_group", "candidate", "scope:interest_group = IG"),
+        ),
+        "negotiation_chance": (
+            common,
+            (
+                "interest_group",
+                "interest_group",
+                "candidate",
+                "scope:interest_group = IG to negotiate with",
+            ),
+            ("law", "law", "auxiliary", "scope:law = law type being enacted"),
+            (
+                "amenability",
+                "scalar",
+                "auxiliary",
+                "scope:amenability = IG amenability to negotiation divided by MAX_AMENABILITY (ie, if MAX_AMENABILITY is 100 and IG amenability is 50, this value will be 0.5)",
+            ),
+            (
+                "advance_chance",
+                "scalar",
+                "auxiliary",
+                "scope:advance_chance = Chance to advance law enactment",
+            ),
+            (
+                "stall_chance",
+                "scalar",
+                "auxiliary",
+                "scope:stall_chance = Chance for law enactment to stall",
+            ),
+        ),
+        "state_value": (
+            common,
+            ("target_state", "state", "target", "scope:target_state = state"),
+            ("target_country", "country", "auxiliary", "scope:target_country = state owner"),
+        ),
+    }
+    parsed = parse_text(text)
+    if parsed.errors:
+        raise ValueError("求值上下文默认策略底本无法解析")
+    definitions = [item for item in parsed.root.assignments() if item.key == "ai_strategy_default"]
+    if len(definitions) != 1:
+        return {
+            field: decision_ir.EvaluationContext(status="ambiguous" if definitions else "unknown")
+            for field in specs
+        }
+    if (
+        not isinstance(definitions[0].value, Block)
+        or definitions[0].op != "="
+        or definitions[0].prefix is not None
+    ):
+        return {field: decision_ir.EvaluationContext(status="unknown") for field in specs}
+    result = {}
+    lines = text.splitlines()
+    for field, expected in specs.items():
+        fields = [item for item in definitions[0].value.assignments() if item.key == field]
+        if len(fields) != 1:
+            result[field] = decision_ir.EvaluationContext(
+                status="ambiguous" if fields else "unknown"
+            )
+            continue
+        if fields[0].op != "=" or fields[0].prefix is not None:
+            result[field] = decision_ir.EvaluationContext(status="unknown")
+            continue
+        field_line = lines[fields[0].line - 1].strip()
+        if re.match(rf"{re.escape(field)}\s*=", field_line) is None:
+            # A same-line preceding assignment has no reliable field-local
+            # comment boundary; never borrow the previous field's evidence.
+            result[field] = decision_ir.EvaluationContext(status="unknown")
+            continue
+        comments: dict[str, list[int]] = {}
+        for index in range(fields[0].line - 2, definitions[0].line - 1, -1):
+            line = lines[index].strip()
+            if line and not line.startswith("#"):
+                break
+            if line.startswith("#"):
+                comments.setdefault(line[1:].strip(), []).append(index + 1)
+        expected_markers = {marker for *_, marker in expected}
+        contradictory = any(
+            re.search(r"\broot\s*(?:=|is\b)|\bscope\s*:\s*[a-z][a-z0-9_]*\s*(?:=|is\b)", marker)
+            and marker not in expected_markers
+            for marker in comments
+        )
+        if contradictory:
+            result[field] = decision_ir.EvaluationContext(status="unknown")
+            continue
+        if any(len(comments.get(marker, ())) != 1 for *_, marker in expected):
+            result[field] = decision_ir.EvaluationContext(status="unknown")
+            continue
+        bindings = tuple(
+            decision_ir.ContextBinding(name, kind, role, source, comments[marker][0])
+            for name, kind, role, marker in expected
+        )
+        result[field] = decision_ir.EvaluationContext(
+            actor_scope=bindings[0],
+            targets=tuple(b for b in bindings[1:] if b.role in {"target", "candidate"}),
+            auxiliary_scopes=tuple(b for b in bindings[1:] if b.role == "auxiliary"),
+            evidence=tuple(sorted({f"{b.source}:{b.line}" for b in bindings})),
+        )
+    return result
+
+
+def validate_context_readers(
+    field: str,
+    context: decision_ir.EvaluationContext,
+    readers: dict[str, decision_rules.Reader],
+    predicates: tuple[decision_rules.Predicate, ...],
+    *,
+    actor_path: tuple[str, ...] = (),
+) -> tuple[tuple[str, str, str, str], ...]:
+    """Bind existing observations to evidenced objects, never authorize getters."""
+    shapes = {
+        "subject_value": {"root": ("country", "actor"), "target_country": ("country", "target")},
+        "become_subject_value": {"root": ("country", "actor"), "overlord": ("country", "target")},
+        "interest_group_government_weight": {
+            "root": ("country", "actor"),
+            "interest_group": ("interest_group", "candidate"),
+        },
+        "negotiation_chance": {
+            "root": ("country", "actor"),
+            "interest_group": ("interest_group", "candidate"),
+            "law": ("law", "auxiliary"),
+        },
+        "state_value": {
+            "root": ("country", "actor"),
+            "target_state": ("state", "target"),
+            "target_country": ("country", "auxiliary"),
+        },
+    }
+    if field not in shapes or context.status != "observed":
+        return ()
+    bindings = {
+        binding.name: binding
+        for binding in (context.actor_scope, *context.targets, *context.auxiliary_scopes)
+        if binding is not None
+    }
+    result: set[tuple[str, str, str, str]] = set()
+
+    def bind(key: str, scope: str, *, argument_kind: str | None = None) -> None:
+        binding = bindings.get(scope)
+        expected = shapes[field].get(scope)
+        if binding is None or expected is None or (binding.kind, binding.role) != expected:
+            raise ValueError(f"消费者 {field} 读取器 {key} 作用域/类型/角色缺少上下文证据：{scope}")
+        if argument_kind is not None and binding.kind != argument_kind:
+            raise ValueError(
+                f"消费者 {field} 读取器 {key} 参数 {scope} 必须为 {argument_kind}，实际为 {binding.kind}"
+            )
+        result.add((key, binding.name, binding.kind, binding.role))
+
+    def bind_argument(reader: decision_rules.Reader, literal: str, parameter: str = "") -> None:
+        # These are object-argument signatures of existing readers, not a
+        # getter registry. Interpret root only after choosing the signature:
+        # has_variable = root names a variable, not the actor country.
+        country_arguments = {
+            ("is_subject_of", ""),
+            ("has_truce_with", ""),
+            ("is_homeland_of_country_cultures", ""),
+            ("owner", ""),
+            ("has_diplomatic_pact", "who"),
+            ("has_treaty_alliance_with", "TARGET"),
+            ("primary_cultures_percent_state", "target_country"),
+        }
+        if (reader.engine, parameter) not in country_arguments:
+            if literal.startswith("scope:"):
+                raise ValueError(
+                    f"消费者 {field} 读取器 {reader.key} 参数不支持对象作用域：{literal}"
+                )
+            return
+        scope = "root" if literal.lower() == "root" else literal.removeprefix("scope:")
+        if scope == literal and scope != "root":
+            return
+        bind(reader.key, scope, argument_kind="country")
+
+    def check(key: str) -> decision_rules.Reader:
+        reader = readers.get(key)
+        if reader is None:
+            raise ValueError(f"消费者 {field} 缺少真实读取器：{key}")
+        bind(key, reader.scope)
+        if reader.scope not in {
+            "root",
+            "target_country",
+            "overlord",
+            "interest_group",
+            "target_state",
+        }:
+            raise ValueError(
+                f"消费者 {field} 读取器没有已审计的作用域 getter：{key}/{reader.scope}"
+            )
+        # Existing interface signatures keep output kind, unit and every path
+        # conversion authoritative; an observed law is not a new law getter.
+        decision_interfaces.reader_scope(reader, actor_path)
+        if reader.argument is not None:
+            bind_argument(reader, reader.argument)
+        for parameter, literal in reader.parameters:
+            bind_argument(reader, literal, parameter)
+        for literal in reader.path:
+            if literal.lower() == "root":
+                bind(key, "root")
+            elif literal.startswith("scope:"):
+                bind(key, literal.removeprefix("scope:"))
+        if reader.engine == "relations:root":
+            bind(key, "root", argument_kind="country")
+        return reader
+
+    for predicate in predicates:
+        check(predicate.fact)
+        if isinstance(predicate.value, decision_rules.FactReference):
+            other = check(predicate.value.key)
+            if predicate.value.expression != other.reference():
+                raise ValueError(f"消费者 {field} FactReference 右侧与读取器不一致：{other.key}")
+    return tuple(sorted(result))
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,14 +351,29 @@ class SituatedModel:
     binding_rows: tuple[bindings.Binding, ...] = ()
     decision_ir: tuple[decision_ir.ConsumerDecisionIR, ...] = ()
     consumer_ir: ConsumerIRBundle | None = None
+    support_signals: support_signals.SupportSignals | None = None
 
     def contract(self) -> dict[str, object]:
         result = contract(self.facts, self.consumers, self.actions, self.relations)
         result["source_fingerprints"] = dict(self.source_sha256)
-        result["production"] = {
-            "rule_count": self.production_rule_count,
-            "consumer_count": len(self.production_consumers),
-            "fields": [
+        owners_by_source_field: dict[tuple[str, str], set[str]] = {}
+        for instance in self.action_instances:
+            if instance.kind != "rule_action":
+                continue
+            key = (instance.source, instance.consumer_field)
+            owners_by_source_field.setdefault(key, set()).add(instance.owner)
+        production_fields = []
+        for item in self.production_consumers:
+            owners = owners_by_source_field.get((item.source, ".".join(item.field)))
+            if not owners:
+                raise ValueError(
+                    f"生产消费者缺少实际 producer owner：{item.source}:{'.'.join(item.field)}"
+                )
+            if len(owners) != 1:
+                raise ValueError(
+                    f"生产消费者存在多个 producer owner：{item.source}:{'.'.join(item.field)}"
+                )
+            production_fields.append(
                 {
                     "id": item.id,
                     "field": ".".join(item.field),
@@ -115,11 +383,14 @@ class SituatedModel:
                     "rule_count": item.rule_count,
                     "max_delta": item.max_delta,
                     "vanilla_tail": item.vanilla_tail,
-                    "owner": "situated_kernel",
+                    "owner": next(iter(owners)),
                     "write_once": True,
                 }
-                for item in self.production_consumers
-            ],
+            )
+        result["production"] = {
+            "rule_count": self.production_rule_count,
+            "consumer_count": len(self.production_consumers),
+            "fields": production_fields,
             "goal_ranking": dict(self.goals),
             "unknown": "preserve_unknown_and_fallback_vanilla",
             "player_boundary": "is_ai_only; no player writes",
@@ -131,12 +402,38 @@ class SituatedModel:
         result["ir"] = ir.contract(self.action_ir)
         result["typed_state"] = state.contract()
         supporting = self.support_sources or {}
-        result["goals"] = goal_source.contract(self.goal_specs)
+        result["goals"] = {
+            **goal_source.contract(self.goal_specs),
+            "activation": "per_action_live_rank_fact_sets_need_tier",
+            "deactivation": "rank_fact_false_or_unknown_restores_neutral_tier",
+            "unknown": "rank_fact_unknown_uses_neutral_tier",
+            "persistent_state": False,
+            "priority_role": "tie_break_after_need_and_net_benefit",
+            "reserved": {
+                key: value["reason"]
+                for key, value in supporting.get("goals.toml", {}).get("goals", {}).items()
+                if value.get("reserved") is True
+            },
+        }
+        if self.support_signals is not None:
+            result["supporting_signals"] = support_signals.contract(self.support_signals)
         result["opportunities"] = opportunity.contract(
-            supporting.get("opportunities.toml", {}).get("opportunities", {})
+            {
+                key: value
+                for key, value in supporting.get("opportunities.toml", {})
+                .get("opportunities", {})
+                .items()
+                if value.get("reserved") is not True
+            }
         )
         result["commitments"] = commitment.contract(
-            supporting.get("commitments.toml", {}).get("commitments", {})
+            {
+                key: value
+                for key, value in supporting.get("commitments.toml", {})
+                .get("commitments", {})
+                .items()
+                if value.get("reserved") is not True
+            }
         )
         result["action_families"] = {
             "schema": 1,
@@ -197,6 +494,10 @@ class SituatedModel:
                     "opportunity": item.opportunity,
                     "commitment": item.commitment,
                     "political_cost": item.political_cost,
+                    "rank_terms": [
+                        {"fact": term.fact, "goal": term.goal, "tier": term.tier, "unit": term.unit}
+                        for term in item.rank_terms
+                    ],
                     "relations": [
                         {
                             "target": relation.target,
@@ -228,9 +529,55 @@ def _load_supporting_sources() -> dict[str, dict[str, Any]]:
     return result
 
 
+def _reader_signature(reader: decision_rules.Reader) -> tuple[object, ...]:
+    """Identify the observation, independently of the file reusing it.
+
+    Boolean unit spellings and parameter order have the same engine meaning;
+    every other field participates in identity, including numeric validity.
+    """
+    return (
+        reader.engine,
+        reader.scope,
+        "boolean" if reader.unit in {"flag", "boolean"} else reader.unit,
+        reader.kind,
+        reader.argument,
+        reader.minimum,
+        reader.maximum,
+        reader.path,
+        reader.value_field,
+        tuple(sorted(reader.parameters)),
+    )
+
+
+def _declared_reader_matches(fact: EvidenceSpec, reader: decision_rules.Reader) -> bool:
+    """A direct declaration may reuse a reader, but cannot flatten its meaning."""
+    fact_kind = "number" if fact.kind == "ratio" else fact.kind
+    units_match = fact.unit == reader.unit or {fact.unit, reader.unit} <= {"flag", "boolean"}
+    if (
+        not units_match
+        or fact.scope != reader.scope
+        or fact_kind != reader.kind
+        or fact.minimum != reader.minimum
+        or fact.maximum != reader.maximum
+        or reader.path
+        or reader.parameters
+        or reader.value_field is not None
+    ):
+        return False
+    expected = reader.expression("=", True) if reader.kind == "boolean" else reader.engine
+    return "".join(fact.trigger.split()) == "".join(expected.split())
+
+
 def _reader_facts(model_facts: tuple[EvidenceSpec, ...]) -> tuple[EvidenceSpec, ...]:
     """从 information/adapters 的 readers 补齐事实签名，不复制业务谓词。"""
+    for item in model_facts:
+        if any(op in item.trigger for op in ("=", "<", ">")) and (
+            item.kind != "boolean" or item.unit not in {"flag", "boolean"}
+        ):
+            raise ValueError(f"事实 {item.id} 与 reader 谓词类型不一致：比较结果必须是布尔值")
     by_id = {item.id: item for item in model_facts}
+    declared_by_id = dict(by_id)
+    observations: dict[str, tuple[decision_rules.Reader, str]] = {}
     information = decision_rules.load()
     adapters = decision_adapters.load()
     readers: list[tuple[str, Any, str]] = [
@@ -239,11 +586,14 @@ def _reader_facts(model_facts: tuple[EvidenceSpec, ...]) -> tuple[EvidenceSpec, 
     for source, policy in adapters.policies:
         readers.extend(("adapter", reader, source) for reader in policy.readers)
     for owner, reader, source in readers:
+        prior = observations.get(reader.key)
+        if prior is not None and _reader_signature(prior[0]) != _reader_signature(reader):
+            raise ValueError(f"事实 {reader.key} 的 reader 完整语义不一致：{prior[1]} / {source}")
+        observations[reader.key] = (reader, source)
+        declared = declared_by_id.get(reader.key)
+        if declared is not None and not _declared_reader_matches(declared, reader):
+            raise ValueError(f"事实 {reader.key} 与原版 reader 的完整语义不一致：{source}")
         if reader.key in by_id:
-            item = by_id[reader.key]
-            compatible_units = {item.unit, reader.unit} <= {"flag", "boolean"}
-            if (item.unit != reader.unit and not compatible_units) or item.scope != reader.scope:
-                raise ValueError(f"事实 {reader.key} 与原版 reader 的作用域/单位不一致")
             continue
         trigger = reader.engine
         if reader.argument is not None:
@@ -266,6 +616,39 @@ def _reader_facts(model_facts: tuple[EvidenceSpec, ...]) -> tuple[EvidenceSpec, 
             quality="derived" if reader.engine.startswith("sitai_") else "observed",
         )
     return tuple(by_id[key] for key in sorted(by_id))
+
+
+def _reader_shapes(
+    declared_facts: tuple[EvidenceSpec, ...] = (),
+) -> dict[str, tuple[decision_rules.Reader, ...]]:
+    """Expose original reader shape for support-source lowering guards."""
+    information = decision_rules.load()
+    adapters = decision_adapters.load()
+    result: dict[str, list[decision_rules.Reader]] = {}
+    for reader in information.readers:
+        result.setdefault(reader.key, []).append(reader)
+    for _source, policy in adapters.policies:
+        for reader in policy.readers:
+            result.setdefault(reader.key, []).append(reader)
+    # Direct facts.toml predicates are a separate explicit source, not the
+    # flattened adapter evidence.  Admit only their flat scalar form, and never
+    # overwrite a raw Reader (whose full scope/path must still be checked).
+    for fact in declared_facts:
+        match = re.fullmatch(
+            r"([a-z][a-z0-9_]*)\s*(?:=|<|<=|>|>=)\s*(?:yes|no|-?\d+(?:\.\d+)?)",
+            fact.trigger,
+        )
+        if fact.id not in result and fact.scope == "root" and match:
+            result[fact.id] = [
+                decision_rules.Reader(
+                    key=fact.id,
+                    engine=match.group(1),
+                    scope="root",
+                    unit=fact.unit,
+                    kind="boolean",
+                )
+            ]
+    return {key: tuple(value) for key, value in result.items()}
 
 
 def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[str, str]]:
@@ -358,6 +741,7 @@ def _validate_supporting_sources(sources, consumers, relation_list) -> None:
         or arbitration.get("max_candidates", 0) > 32
     ):
         raise ValueError("仲裁合同必须有原版未知回退和 32 个候选上限")
+    _rank_order(arbitration)
     temporal = sources["temporal.toml"]
     if temporal.get("max_persistent_routes") != 1 or temporal.get("max_reason_codes", 0) > 8:
         raise ValueError("时间合同必须限制持久路线和解释记录")
@@ -373,7 +757,8 @@ def _validate_supporting_sources(sources, consumers, relation_list) -> None:
 def load_model(
     *, facts_path: Path = FACTS, actions_path: Path = ACTIONS, baseline: str | None = None
 ) -> SituatedModel:
-    facts = _reader_facts(evidence_source.load(facts_path))
+    declared_facts = evidence_source.load(facts_path)
+    facts = _reader_facts(declared_facts)
     layer_model = layers.load(LAYERS)
     binding_rows = bindings.load(BINDINGS)
     consumers, actions = action_source.load(actions_path)
@@ -385,6 +770,11 @@ def load_model(
             f"缺失={sorted(action_ids - tool_ids)} 多余={sorted(tool_ids - action_ids)}"
         )
     supporting = _load_supporting_sources()
+    support_model = support_signals.load(
+        supporting, facts, actions, reader_shapes=_reader_shapes(declared_facts)
+    )
+    facts = (*facts, *(item.evidence() for item in support_model.signals))
+    goal_specs = support_signals.load_goals(supporting, actions, consumers)
     relation_list = relations.relations(
         actions,
         supporting["relations.toml"].get("relations", []),
@@ -425,6 +815,39 @@ def load_model(
         adapters,
         actions,
         consumer_fields={item.id: item.field for item in consumers},
+        consumer_contracts={item.id: item for item in consumers},
+    )
+    observed_contexts = evaluation_contexts(baseline_text)
+    context_readers = {}
+    for source, policy in (("mod/decisions/information.toml", information), *adapters.policies):
+        if source not in {
+            "mod/decisions/information.toml",
+            "common/ai_strategies/00_default_strategy.txt",
+        }:
+            continue
+        readers = {reader.key: reader for reader in policy.readers}
+        for rule in policy.rules:
+            field = ".".join(rule.field).removeprefix("ai_strategy_default.")
+            context = observed_contexts.get(field)
+            if context is not None:
+                context_readers[(source, rule.id)] = validate_context_readers(
+                    field,
+                    context,
+                    readers,
+                    rule.conditions,
+                    actor_path=policy.actor_path,
+                )
+    instances = tuple(
+        replace(
+            instance,
+            evaluation_context=observed_contexts.get(
+                instance.consumer_field.removeprefix("ai_strategy_default.")
+            )
+            if instance.source
+            in {"mod/decisions/information.toml", "common/ai_strategies/00_default_strategy.txt"}
+            else None,
+        )
+        for instance in instances
     )
     action_ir = ir.from_rules(
         [("mod/decisions/information.toml", item) for item in information.rules]
@@ -439,43 +862,26 @@ def load_model(
         instances,
         source_hashes=production_hashes,
     )
-    goal_bindings = {
-        "survival": ("fiscal_neutrality", "diplomatic_recklessness"),
-        "recovery": ("economic_balance", "reform_chance"),
-        "capacity": ("economic_balance", "reform_chance"),
-        "structure": ("economic_balance", "reform_chance"),
-    }
-
-    def _goal_names(raw: object, label: str) -> tuple[str, ...]:
-        if raw is None:
-            return ()
-        if not isinstance(raw, list) or any(not isinstance(item, str) or not item for item in raw):
-            raise ValueError(f"goals.toml 的 {label} 必须是非空字符串列表")
-        return tuple(raw)
-
-    goal_specs = tuple(
-        goal_source.Goal(
-            id=key,
-            priority=int(value.get("priority", 0)),
-            horizon=str(value.get("horizon", "medium")),
-            active=True,
-            source_pressures=_goal_names(value.get("pressure"), "pressure"),
-            source_needs=_goal_names(value.get("need"), "need"),
-            consumer_bindings=_goal_names(
-                value.get("consumers", list(goal_bindings.get(key, ()))), "consumers"
-            ),
-            ttl_days=(int(value["ttl_days"]) if type(value.get("ttl_days")) is int else None),
-            unknown_policy=(
-                value.get("unknown", "vanilla")
-                if value.get("unknown", "vanilla") in {"vanilla", "conservative", "lower_tier"}
-                else "vanilla"
-            ),
-        )
-        for key, value in sorted(supporting["goals.toml"].get("goals", {}).items())
-        if isinstance(value, dict) and type(value.get("priority")) is int
+    consumer_bundle = replace(
+        consumer_bundle,
+        writers=tuple(
+            replace(
+                writer,
+                reader_context_bindings=context_readers.get((writer.source, writer.definition), ()),
+            )
+            for writer in consumer_bundle.writers
+        ),
+    )
+    migration_baseline.validate_bundle(consumer_bundle)
+    consumer_bundle = joint_chain_contract.bind_bundle(
+        consumer_bundle,
+        ((joint_chain_contract.INFO_SOURCE, information), *adapters.policies),
     )
     goals = tuple((item.id, item.priority) for item in goal_specs)
     hashes = {
+        "migration_baseline": hashlib.sha256(
+            migration_baseline.DEFAULT_SOURCE.read_bytes()
+        ).hexdigest(),
         "facts": hashlib.sha256(facts_path.read_bytes()).hexdigest(),
         "actions": hashlib.sha256(actions_path.read_bytes()).hexdigest(),
         "action_layers": hashlib.sha256(LAYERS.read_bytes()).hexdigest(),
@@ -503,6 +909,7 @@ def load_model(
         binding_rows,
         decision_rows,
         consumer_bundle,
+        support_model,
     )
 
 
@@ -567,7 +974,11 @@ def _validate_action_costs(action: ActionCard, facts: dict[str, EvidenceSpec]) -
         raise ValueError(f"行动 {action.id} 零成本必须逐卡说明原因")
 
 
-def _cost_state(predicates: tuple[CostPredicate, ...], values: Mapping[str, object]) -> Truth:
+def _cost_state(
+    predicates: tuple[CostPredicate, ...],
+    values: Mapping[str, object],
+    facts: Mapping[str, EvidenceSpec] | None = None,
+) -> Truth:
     states: list[Truth] = []
     for predicate in predicates:
         value = values.get(predicate.fact)
@@ -575,6 +986,12 @@ def _cost_state(predicates: tuple[CostPredicate, ...], values: Mapping[str, obje
             valid = type(value) is bool and type(predicate.value) is bool
         else:
             valid = type(value) in (int, float) and math.isfinite(cast("float", value))
+        spec = facts.get(predicate.fact) if facts is not None else None
+        if valid and spec is not None and type(value) is not bool:
+            number = cast("float", value)
+            valid = (spec.minimum is None or number >= spec.minimum) and (
+                spec.maximum is None or number <= spec.maximum
+            )
         if not valid:
             states.append(None)
             continue
@@ -595,7 +1012,11 @@ def _row_cost(
     row: decision_ir.ConsumerDecisionIR,
     values: Mapping[str, object],
     states: dict[tuple[CostPredicate, ...], bool] | None = None,
+    model: SituatedModel | None = None,
 ) -> float:
+    if model is not None and model.support_signals is not None:
+        values = model.support_signals.values(values)
+
     def active(predicates: tuple[CostPredicate, ...]) -> bool:
         if not predicates:
             return False
@@ -603,7 +1024,8 @@ def _row_cost(
             states[predicates]
             if states is not None
             # Only a proven absence of pressure permits the cheaper tier.
-            else _cost_state(predicates, values) in (True, None)
+            else _cost_state(predicates, values, {f.id: f for f in model.facts} if model else None)
+            in (True, None)
         )
 
     return (row.commitment if active(row.commitment_when) else 0.0) + (
@@ -615,17 +1037,50 @@ def _row_magnitude(
     row: decision_ir.ConsumerDecisionIR,
     values: Mapping[str, object],
     states: dict[tuple[CostPredicate, ...], bool] | None = None,
+    model: SituatedModel | None = None,
 ) -> float:
     magnitude = abs(row.base + row.opportunity)
-    cost = _row_cost(row, values, states)
+    cost = _row_cost(row, values, states, model)
     return max(0.0, magnitude - cost)
 
 
-def _row_order(row, values, states=None):
-    # Compare the benefit that remains after the known/assumed cost first.
-    # Stress only breaks a tied benefit; otherwise a high-stress action
-    # could beat a materially better affordable alternative.
-    return (-_row_magnitude(row, values, states), -row.stress, -row.opportunity, row.action_id)
+def _rank_order(arbitration):
+    raw = arbitration.get("rank", _RANK_ORDER)
+    if not isinstance(raw, (list, tuple)) or any(not isinstance(key, str) for key in raw):
+        raise ValueError("rank 必须是词典序维度列表")
+    order = tuple(raw)
+    if len(order) != len(_RANK_ORDER) or set(order) != set(_RANK_ORDER) or order[-1] != "action_id":
+        raise ValueError("rank 必须完整且唯一，稳定 action_id 必须最后比较")
+    return order
+
+
+def _row_order(row, values, states=None, rank_states=None, model=None):
+    if model is not None and model.support_signals is not None:
+        values = model.support_signals.values(values)
+    goals = dict(model.goals) if model else {}
+    active = [
+        term
+        for term in row.rank_terms
+        if (
+            rank_states.get(term.fact, False)
+            if rank_states is not None
+            else values.get(term.fact) is True
+        )
+    ]
+    tier, priority = max(((term.tier, goals.get(term.goal, 0)) for term in active), default=(0, 0))
+    metrics = {
+        "need_tier": tier,
+        "goal_priority": priority,
+        "net_benefit": _row_magnitude(row, values, states, model),
+        "stress": row.stress,
+        "opportunity": row.opportunity,
+    }
+    order = (
+        _rank_order((model.support_sources or {}).get("arbitration.toml", {}))
+        if model
+        else _RANK_ORDER
+    )
+    return (*(-metrics[key] for key in order[:-1]), row.action_id)
 
 
 def _row_delta(
@@ -633,9 +1088,10 @@ def _row_delta(
     values: Mapping[str, object],
     *,
     complement: float = 0.0,
+    model: SituatedModel | None = None,
 ) -> float:
     direction = -1.0 if row.base + row.opportunity < 0 else 1.0
-    magnitude = _row_magnitude(row, values)
+    magnitude = _row_magnitude(row, values, model=model)
     delta = direction * magnitude + (complement if direction > 0 else min(complement, magnitude))
     if direction < 0:
         delta = min(0.0, delta)
@@ -676,6 +1132,34 @@ def _cost_trigger(predicates: tuple[CostPredicate, ...], facts: dict[str, Eviden
                 raise ValueError(f"数值成本必须引用原始 reader：{predicate.fact}")
             terms.append(f"{trigger} {predicate.op} {predicate.value:g}")
     return " OR = { " + " ".join(terms) + " }"
+
+
+def _cheap_cost_trigger(predicates, facts):
+    bounds = []
+    for predicate in predicates:
+        fact = facts[predicate.fact]
+        if type(predicate.value) is bool:
+            continue
+        if fact.minimum is not None:
+            bounds.append(f"{fact.trigger} >= {fact.minimum:g}")
+        if fact.maximum is not None:
+            bounds.append(f"{fact.trigger} <= {fact.maximum:g}")
+    return "AND = { " + " ".join(bounds) + " NOT = { " + _cost_trigger(predicates, facts) + " } }"
+
+
+def _bounded_cost_specs(actions, visible, facts):
+    """Only this consumer and its direct relation targets affect its fallback."""
+    by_id = {row.action_id: row for row in visible}
+    relevant = [
+        *actions,
+        *(by_id[rel.target] for row in actions for rel in row.relations if rel.target in by_id),
+    ]
+    names = {p.fact for row in relevant for p in (*row.commitment_when, *row.political_when)}
+    return tuple(
+        facts[name]
+        for name in sorted(names)
+        if name in facts and (facts[name].minimum is not None or facts[name].maximum is not None)
+    )
 
 
 def _cost_feasibility_trigger(row, facts: dict[str, EvidenceSpec]) -> str:
@@ -720,6 +1204,102 @@ def _cost_feasibility_trigger(row, facts: dict[str, EvidenceSpec]) -> str:
     )
 
 
+def _production_action_rows(model: SituatedModel) -> tuple[decision_ir.ConsumerDecisionIR, ...]:
+    """Reject divergent explicit-card identities before any production lowering.
+
+    The compatibility decision rows, canonical bundle rows and writer source map
+    must describe the same actions.  A missing writer cannot leave an anonymous
+    card in the generated output or the reference evaluator.
+    """
+    for binding in model.binding_rows:
+        bindings.validate_disposition(binding)
+    bundle = model.consumer_ir
+    if bundle is None:
+        raise ValueError("显式行动缺少 ConsumerIR bundle")
+    rows = {row.action_id: row for row in model.decision_ir}
+    canonical = {row.action_id: row for row in bundle.actions}
+    if (
+        len(rows) != len(model.decision_ir)
+        or len(canonical) != len(bundle.actions)
+        or rows != canonical
+    ):
+        raise ValueError("显式行动 DecisionIR 与 ConsumerIR 行重复或不一致")
+    if len(set(bundle.writer_ids())) != len(bundle.writers):
+        raise ValueError("ConsumerIR 生产 writer ID 重复")
+    writers = [writer for writer in bundle.writers if writer.kind == "action_card"]
+    by_action = {writer.definition: writer for writer in writers}
+    if len(by_action) != len(writers) or set(by_action) != set(canonical):
+        raise ValueError("显式行动缺少唯一 ConsumerIR writer")
+    consumers = {consumer.id: consumer for consumer in model.consumers}
+    if len(consumers) != len(model.consumers):
+        raise ValueError("显式行动消费者身份重复")
+    for action_id, row in canonical.items():
+        writer = by_action[action_id]
+        consumer = consumers.get(row.consumer_id)
+        if consumer is None or (
+            writer.writer_id != f"card_{action_id}"
+            or writer.source != "mod/decisions/actions.toml"
+            or writer.consumer_id != row.consumer_id
+            or writer.field != row.field
+            or writer.operation != row.operation
+            or writer.vanilla_tail != row.vanilla_tail
+            or writer.actor != consumer.scope
+            or writer.target != "none"
+            or writer.owner != consumer.owner
+            or writer.action != row
+            or writer.legacy is not None
+            or writer.predicates
+            or row.field != consumer.field
+            or row.operation != consumer.operation
+            or row.vanilla_tail != consumer.vanilla_tail
+        ):
+            raise ValueError(f"显式行动 ConsumerIR writer 与消费者/行动不一致：{action_id}")
+        facts = {fact.id: fact for fact in model.facts}
+        goals = {goal.id: goal for goal in model.goal_specs}
+        seen = set()
+        for term in row.rank_terms:
+            fact = facts.get(term.fact)
+            goal = goals.get(term.goal)
+            if (
+                fact is None
+                or fact.kind != "boolean"
+                or fact.scope != "root"
+                or {fact.unit, term.unit} - {"flag", "boolean"}
+                or goal is None
+                or row.consumer_id not in goal.consumer_bindings
+                or term.fact in seen
+            ):
+                raise ValueError(
+                    f"行动 rank 事实/目标/单位/消费者无效或重复：{action_id}:{term.fact}"
+                )
+            seen.add(term.fact)
+    return bundle.actions
+
+
+def _ordered_relations(row: decision_ir.ConsumerDecisionIR) -> tuple[Relation, ...]:
+    """Choose strongest complements first, with stable identities breaking ties."""
+    for relation in row.relations:
+        if (
+            type(relation.strength) not in (int, float)
+            or not math.isfinite(relation.strength)
+            or relation.strength <= 0
+        ):
+            raise ValueError(f"行动关系强度必须为正有限数：{row.action_id}->{relation.target}")
+    return tuple(
+        sorted(
+            row.relations,
+            key=lambda relation: (
+                relation.kind,
+                -relation.strength,
+                relation.target,
+                relation.scope,
+                relation.condition_facts,
+                relation.unknown_policy,
+            ),
+        )
+    )
+
+
 def strategy_overlay(
     model: SituatedModel,
     *,
@@ -733,21 +1313,22 @@ def strategy_overlay(
     lowering boundary keeps the production output consistent with the module
     switch instead of filtering only the top-level fields afterwards.
     """
+    action_rows = _production_action_rows(model)
     facts = {item.id: item for item in model.facts}
     # DecisionIR 是 lowering 的唯一行动输入。ActionCard 只在 load_model
     # 阶段校验和编译成 IR，避免生成器再次从源 TOML 拼出另一套语义。
     rows_by_consumer: dict[str, list[decision_ir.ConsumerDecisionIR]] = {
         item.id: [] for item in model.consumers
     }
-    for row in model.decision_ir:
+    for row in action_rows:
         rows_by_consumer[row.consumer_id].append(row)
     output = {}
-    by_id = {item.action_id: item for item in model.decision_ir}
+    by_id = {item.action_id: item for item in action_rows}
     consumer_field_by_action = {
         item.action_id: next(
             consumer.field for consumer in model.consumers if consumer.id == item.consumer_id
         )
-        for item in model.decision_ir
+        for item in action_rows
     }
     enabled_fields = (
         frozenset(consumer.field for consumer in model.consumers)
@@ -772,13 +1353,18 @@ def strategy_overlay(
                 if predicates and amount > 0
             )
         )
+        rank_facts = tuple(sorted({term.fact for row in declared for term in row.rank_terms}))
         # Explicit finite cost tiers only: never enumerate factual qualification
         # combinations or silently prune candidates to meet the runtime budget.
+        if len(groups) + len(rank_facts) > 9:
+            raise ValueError(f"消费者 {consumer.id} rank/成本分区超过 512 叶预算")
         if len(groups) > 3:
             raise ValueError(f"消费者 {consumer.id} 成本分区超过 8 叶预算")
 
-        def leaf(states, declared=declared):
-            chosen = sorted(declared, key=lambda item: _row_order(item, {}, states))
+        def leaf(states, rank_states, declared=declared):
+            chosen = sorted(
+                declared, key=lambda item: _row_order(item, {}, states, rank_states, model)
+            )
             chosen_position = {item.action_id: index for index, item in enumerate(chosen)}
             blocks: list[str] = []
             for row in chosen:
@@ -790,7 +1376,7 @@ def strategy_overlay(
         def branch(row, chosen_position, states, index, consumer=consumer):
             relation_guards: list[str] = []
             complement_effects: list[str] = []
-            for relation in row.relations:
+            for relation in _ordered_relations(row):
                 target_enabled = consumer_field_by_action[relation.target] in enabled_fields
                 if not target_enabled and relation.kind != "enables":
                     continue
@@ -820,8 +1406,11 @@ def strategy_overlay(
                     ):
                         relation_guards.append(f"NOT = {{ {target_guard} }}")
                 elif relation.kind == "complements":
+                    # An auxiliary unknown does not prevent the next proven
+                    # complement; the if/else_if chain contributes at most one.
+                    branch_key = "else_if" if complement_effects else "if"
                     complement_effects.append(
-                        f"\n\t\t\t\tif = {{ limit = {{ ROOT ?= {{ {target_guard} }} }} add = {relation.strength:g} }}"
+                        f"\n\t\t\t\t{branch_key} = {{ limit = {{ ROOT ?= {{ {target_guard} }} }} add = {relation.strength:g} }}"
                     )
             # Clamp the adjustment inside its own script value, so vanilla's
             # accumulated score is not clamped along with the Mod delta.  The
@@ -838,54 +1427,45 @@ def strategy_overlay(
                 f"\t\t{'if' if index == 0 else 'else_if'} = {{\n\t\t\tlimit = {{ ROOT ?= {{ {_limit(row, facts, relation_guards=tuple(relation_guards))} }} }}\n\t\t\t{effect}\n\t\t}}\n"
             )
 
+        def rank_partition(index, states, rank_states, rank_facts=rank_facts):
+            if index == len(rank_facts):
+                return leaf(states, rank_states)
+            name = rank_facts[index]
+            high = rank_partition(index + 1, states, {**rank_states, name: True})
+            low = rank_partition(index + 1, states, {**rank_states, name: False})
+            return (
+                f"if = {{ limit = {{ ROOT ?= {{ {facts[name].trigger} }} }}\n{high}}}\n"
+                f"else = {{\n{low}}}\n"
+            )
+
         def partition(index, states, groups=groups):
             if index == len(groups):
-                return leaf(states)
+                return rank_partition(0, states, {})
             group = groups[index]
             low = partition(index + 1, {**states, group: False})
             high = partition(index + 1, {**states, group: True})
-            guard = _cost_trigger(group, facts)
-            return (
-                f"if = {{ limit = {{ ROOT ?= {{ NOT = {{ {guard} }} }} }}\n{low}}}\n"
-                f"else = {{\n{high}}}\n"
+            guard = _cheap_cost_trigger(group, facts)
+            return f"if = {{ limit = {{ ROOT ?= {{ {guard} }} }}\n{low}}}\nelse = {{\n{high}}}\n"
+
+        generated = partition(0, {})
+        invalid_terms = []
+        enabled_rows = [
+            row for row in action_rows if consumer_field_by_action[row.action_id] in enabled_fields
+        ]
+        for fact in _bounded_cost_specs(declared, enabled_rows, facts):
+            if fact.minimum is not None:
+                invalid_terms.append(f"{fact.trigger} < {fact.minimum:g}")
+            if fact.maximum is not None:
+                invalid_terms.append(f"{fact.trigger} > {fact.maximum:g}")
+        if invalid_terms:
+            invalid = "OR = { " + " ".join(invalid_terms) + " }"
+            # An out-of-contract input is locally unknown, never a healthy
+            # cheap tier or a proof that a relation target is affordable.
+            generated = (
+                f"if = {{ limit = {{ ROOT ?= {{ {invalid} }} }} }}\nelse = {{\n{generated}}}\n"
             )
-
-        output[consumer.field] = partition(0, {})
+        output[consumer.field] = generated
     return output
-
-
-def _action_ranks(model):
-    goals = dict(model.goals)
-    structure_goal = goals.get("structure") or 0
-    domain_goal: dict[str, int] = {
-        "fiscal": goals.get("survival", 0),
-        "military": goals.get("survival", 0),
-        "political": goals.get("recovery", 0),
-        "economy": goals.get("capacity", 0),
-        "education": goals.get("capacity", 0),
-    }
-    strategy_goal = {
-        "survival": goals.get("survival", 0),
-        "recovery": goals.get("recovery", 0),
-        "capacity": goals.get("capacity", 0),
-        "structure": goals.get("structure", 0),
-        "reform": goals.get("recovery", 0),
-        "diplomacy": goals.get("structure", 0),
-        "security": goals.get("survival", 0),
-    }
-    tools = {item.id: item for item in (model.layer_model.tools if model.layer_model else ())}
-    ranks = {}
-    for action in model.actions:
-        domain_value = domain_goal.get(action.domain, structure_goal)
-        tool = tools.get(action.id)
-        strategy_value = strategy_goal.get(tool.strategy_id, 0) if tool and tool.strategy_id else 0
-        ranks[action.id] = max(0, min(2, max(domain_value, strategy_value) // 50))
-    for relation in model.relations:
-        if relation.kind == "complements":
-            ranks[relation.target] = min(2, ranks.get(relation.target, 0) + 1)
-        elif relation.kind in {"substitutes", "conflicts"}:
-            ranks[relation.target] = max(0, ranks.get(relation.target, 0) - 1)
-    return ranks
 
 
 def compile_policy(
@@ -895,10 +1475,10 @@ def compile_policy(
 ):
     """返回 ``(RuleSet, contract)``；谓词沿用原版 RuleSet，字段一次有界写入。"""
     model = config_model or load_model()
+    _production_action_rows(model)
     policy = decision_ir.lower_legacy(
         policy, model.consumer_ir, source=str(source) if source is not None else None
     )
-    action_ranks = _action_ranks(model)
     source_key = str(source) if source is not None else None
     # Rule IDs are only unique inside their source file.  Resolving by the
     # pair is part of the production contract; a same-named adapter rule must
@@ -911,14 +1491,6 @@ def compile_policy(
         if item.kind == "rule_action"
     }
     owner_by_key = {(item.source, item.rule_id): item.owner for item in model.action_instances}
-    action_fields: dict[str, int] = {}
-    for action in model.actions:
-        action_field = next(
-            (item.field for item in model.consumers if item.id == action.consumer), ""
-        )
-        action_fields[action_field] = max(
-            action_fields.get(action_field, 0), action_ranks.get(action.id, 0)
-        )
     compiled_rules = []
     field_contract = []
     for field, rules in policy.groups().items():
@@ -980,14 +1552,12 @@ def compile_policy(
                 raise ValueError(f"IR 与生产规则不一致（重复写入或字段漂移）：{rule.id}")
             if source is not None and binding.source != str(source):
                 raise ValueError(f"绑定来源与生产规则不一致：{rule.id}")
-            # Apply the selected action rank to the exact consumer field.  A
-            # missing binding stays at the vanilla priority rather than
-            # inventing a global gate.
-            bump = max(0, min(2, action_fields.get(".".join(rule.field), 0)))
+            # Legacy defaults preserve their actual ordering.  Explicit cards
+            # have their own finite fact/goal rank, not a field-wide constant.
             compiled_rules.append(
                 replace(
                     legacy.to_action_ir(),
-                    priority=legacy.priority * 3 + bump,
+                    priority=legacy.priority,
                     origin_priority=legacy.priority,
                 )
             )
@@ -1000,7 +1570,7 @@ def compile_policy(
                 "unknown_fallback": "vanilla",
                 "player_fallback": "vanilla",
                 "vanilla_tail": "retain_qualification_cost_random_execution",
-                "max_rank_adjustment": 2,
+                "max_rank_adjustment": 0,
             }
         )
     compiled_ir = tuple(sorted(compiled_rules, key=lambda item: item.action_id))
@@ -1033,7 +1603,7 @@ def compile_policy(
         "player": "is_ai_only",
         "runtime_python": False,
         "world_scans": 0,
-        "adjustment_application": "one_matching_rule_per_field; bounded_priority_tiebreak",
+        "adjustment_application": "legacy_order_preserved; explicit_finite_fact_goal_rank",
         "ir_to_pdx": "consumer_ir_writer_to_exact_rule_lowering",
     }
     return compiled, compiled_contract
@@ -1121,7 +1691,9 @@ def _action_status(action: decision_ir.ConsumerDecisionIR, values: Mapping[str, 
 
 
 def _action_feasibility(
-    action: decision_ir.ConsumerDecisionIR, values: Mapping[str, object]
+    action: decision_ir.ConsumerDecisionIR,
+    values: Mapping[str, object],
+    model: SituatedModel | None = None,
 ) -> Truth:
     """Return whether an action can contribute a non-zero adjustment.
 
@@ -1140,7 +1712,8 @@ def _action_feasibility(
     )
     if not groups:
         return True
-    states = tuple(_cost_state(predicates, values) for predicates, _ in groups)
+    facts = {fact.id: fact for fact in model.facts} if model else None
+    states = tuple(_cost_state(predicates, values, facts) for predicates, _ in groups)
     feasible: list[Truth] = []
     for mask in range(1 << len(groups)):
         cost = sum(amount for index, (_, amount) in enumerate(groups) if mask & (1 << index))
@@ -1162,6 +1735,7 @@ def _select_action(
     values: Mapping[str, object],
     *,
     all_actions: list[decision_ir.ConsumerDecisionIR] | None = None,
+    model: SituatedModel | None = None,
 ) -> tuple[decision_ir.ConsumerDecisionIR, float] | None:
     """按生成的候选顺序选择行动；核心条件未知时阻断更低优先级候选。
 
@@ -1170,13 +1744,28 @@ def _select_action(
     目标资格，不要求目标在其消费者中已被选中或已经执行。
     """
 
+    if model is not None and model.support_signals is not None:
+        values = model.support_signals.values(values)
     visible = actions if all_actions is None else all_actions
+    if model is not None:
+        specs = _bounded_cost_specs(actions, visible, {fact.id: fact for fact in model.facts})
+        for fact in specs:
+            value = values.get(fact.id)
+            if (
+                type(value) in (int, float)
+                and math.isfinite(cast("float", value))
+                and (
+                    (fact.minimum is not None and value < fact.minimum)
+                    or (fact.maximum is not None and value > fact.maximum)
+                )
+            ):
+                return None
     statuses = {row.action_id: _action_status(row, values) for row in visible}
-    feasible = {row.action_id: _action_feasibility(row, values) for row in visible}
-    ordered = sorted(actions, key=lambda item: _row_order(item, values))
+    feasible = {row.action_id: _action_feasibility(row, values, model) for row in visible}
+    ordered = sorted(actions, key=lambda item: _row_order(item, values, model=model))
     position = {row.action_id: index for index, row in enumerate(ordered)}
     for action in ordered:
-        if _row_magnitude(action, values) == 0:
+        if _row_magnitude(action, values, model=model) == 0:
             continue
         status = statuses[action.action_id]
         if status is False:
@@ -1185,14 +1774,14 @@ def _select_action(
             return None
         blocked = False
         complement = 0.0
-        for relation in action.relations:
+        for relation in _ordered_relations(action):
             target_status = truth_all(
                 (statuses.get(relation.target), feasible.get(relation.target))
             )
             relation_state = _relation_conditions(relation, values)
             if relation.kind == "complements":
-                if relation_state is True and target_status is True:
-                    complement += relation.strength
+                if complement == 0.0 and relation_state is True and target_status is True:
+                    complement = relation.strength
                 continue
             relation_guard = truth_all((relation_state, target_status))
             if relation.kind == "enables" and relation_guard is not True:
@@ -1215,6 +1804,65 @@ def _select_action(
     return None
 
 
+def evaluate_actions(
+    model: SituatedModel,
+    values: Mapping[str, object],
+    *,
+    is_ai: bool,
+    enabled_consumer_fields: set[str] | frozenset[str] | None = None,
+) -> dict[str, tuple[str, float]]:
+    """Evaluate the real explicit overlay, independent of legacy rule matches.
+
+    The returned values are Mod deltas, never final vanilla scores or executed
+    actions. Disabled optional relation targets are isolated exactly as in
+    ``strategy_overlay``; a disabled enables target cannot become fulfilled.
+    """
+
+    if type(is_ai) is not bool:
+        raise ValueError("is_ai 必须为明确布尔值")
+    rows = _production_action_rows(model)
+    if not is_ai:
+        return {}
+    if model.support_signals is not None:
+        values = model.support_signals.values(values)
+    consumers = {consumer.id: consumer for consumer in model.consumers}
+    enabled = (
+        frozenset(consumer.field for consumer in model.consumers)
+        if enabled_consumer_fields is None
+        else frozenset(enabled_consumer_fields)
+    )
+    field_by_action = {row.action_id: row.field for row in rows}
+    visible = [
+        replace(
+            row,
+            relations=tuple(
+                relation
+                for relation in row.relations
+                if field_by_action[relation.target] in enabled or relation.kind == "enables"
+            ),
+        )
+        for row in rows
+        if row.field in enabled
+    ]
+    result: dict[str, tuple[str, float]] = {}
+    for consumer in model.consumers:
+        candidates = [row for row in visible if row.consumer_id == consumer.id]
+        if not candidates:
+            continue
+        if len(candidates) > consumer.budget:
+            raise ValueError(f"消费者 {consumer.id} 的行动数超过预算；不能静默丢弃候选")
+        selected = _select_action(candidates, values, all_actions=visible, model=model)
+        if selected is None:
+            continue
+        action, complement = selected
+        delta = _row_delta(action, values, complement=complement, model=model)
+        bound = consumers[action.consumer_id].max_delta
+        delta = max(-bound, min(bound, delta))
+        if delta != 0:
+            result[consumer.field] = (action.action_id, delta)
+    return result
+
+
 def evaluate_policy(
     policy: decision_rules.RuleSet,
     values: Mapping[str, object],
@@ -1230,31 +1878,20 @@ def evaluate_policy(
     if type(is_ai) is not bool:
         raise ValueError("is_ai 必须为明确布尔值")
     model = config_model or load_model()
+    _production_action_rows(model)
+    if model.support_signals is not None:
+        values = model.support_signals.values(values)
     policy = decision_ir.lower_legacy(policy, model.consumer_ir)
     baseline = decision_rules.evaluate_ir(policy, values, is_ai=is_ai)
     if not is_ai:
         return baseline
-    by_field = {(item.field,): item for item in model.consumers}
-    consumer_by_id = {item.id: item for item in model.consumers}
-    action_by_field: dict[tuple[str, ...], list[decision_ir.ConsumerDecisionIR]] = {}
-    for row in model.decision_ir:
-        consumer = consumer_by_id[row.consumer_id]
-        action_by_field.setdefault((consumer.field,), []).append(row)
+    adjustments = evaluate_actions(model, values, is_ai=True)
     result = dict(baseline)
     for field, (rule_id, raw) in baseline.items():
-        actions = action_by_field.get((field,))
-        if not actions:
+        adjustment = adjustments.get(field)
+        if adjustment is None:
             continue
-        selected = _select_action(actions, values, all_actions=list(model.decision_ir))
-        if selected is None:
-            continue
-        action, complement = selected
-        delta = _row_delta(action, values, complement=complement)
-        contract_item = by_field.get((field,))
-        if contract_item is not None:
-            delta = max(-contract_item.max_delta, min(contract_item.max_delta, delta))
-        if delta == 0:
-            continue
+        _, delta = adjustment
         selected_rule = next((rule for rule in policy.rules if rule.id == rule_id), None)
         if selected_rule is None:
             continue

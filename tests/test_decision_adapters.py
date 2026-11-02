@@ -1768,7 +1768,7 @@ def test_political_crisis_replaces_stronger_reform_reward(real_generated_branche
 def test_same_government_benefit_is_gated_by_interest_group_resistance_in_generated_ast(
     real_generated_branches,
 ):
-    """The generated consumer keeps one benefit while political support changes around it."""
+    """Political resistance downgrades continuity before hard boundaries remove it."""
 
     field = "ai_strategy_default.interest_group_government_weight"
     policy, blocks = next(
@@ -1788,35 +1788,30 @@ def test_same_government_benefit_is_gated_by_interest_group_resistance_in_genera
         candidate_ig_government=True,
     )
     paired = {
-        "supported": facts,
-        "weak_clout": {**facts, "candidate_ig_clout": 0.19},
-        "disapproving": {**facts, "candidate_ig_approval": -1},
-        "outside_government": {**facts, "candidate_ig_government": False},
-        "low_legitimacy": {**facts, "legitimacy": 49},
+        "supported": (facts, ("add", 1.05)),
+        "weak_clout": ({**facts, "candidate_ig_clout": 0.19}, ("add", 0.5)),
+        "below_foundation_clout": ({**facts, "candidate_ig_clout": 0.09999}, None),
+        "disapproving": ({**facts, "candidate_ig_approval": -1}, None),
+        "outside_government": ({**facts, "candidate_ig_government": False}, None),
+        "low_legitimacy": ({**facts, "legitimacy": 49}, ("add", 0.5)),
+        "below_foundation_legitimacy": ({**facts, "legitimacy": 34.99999}, None),
     }
     rule_by_id = {rule.id: rule for rule in policy.rules}
-    for name, values in paired.items():
+    for name, (values, expected) in paired.items():
         actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, values))
         reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
-        expected = None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
-        assert actual == expected, name
-    assert _interpret_adjustments(
-        blocks[field], _scopes_for_facts(policy, paired["supported"])
-    ) == (
-        "add",
-        1.05,
-    )
-    for name in ("weak_clout", "disapproving", "outside_government", "low_legitimacy"):
-        assert (
-            _interpret_adjustments(blocks[field], _scopes_for_facts(policy, paired[name])) is None
+        reference = (
+            None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
         )
+        assert reference == expected, name
+        assert actual == expected, name
 
 
 @pytest.mark.integration
 def test_same_political_resistance_changes_with_fiscal_capacity_in_generated_ast(
     real_generated_branches,
 ):
-    """The negotiation benefit survives only when the production fiscal gates remain healthy."""
+    """Fiscal costs remove the high tier while a political foundation remains reachable."""
 
     field = "ai_strategy_default.negotiation_chance"
     policy, blocks = next(
@@ -1843,25 +1838,20 @@ def test_same_political_resistance_changes_with_fiscal_capacity_in_generated_ast
         radical_share=0.3,
     )
     paired = {
-        "funded": facts,
-        "no_surplus": {**facts, "net_surplus": -1},
-        "high_debt": {**facts, "debt_ratio": 0.41},
-        "loan_dependent": {**facts, "loans": True},
+        "funded": (facts, ("multiply", 1.25)),
+        "no_surplus": ({**facts, "net_surplus": -1}, ("multiply", 1.1)),
+        "high_debt": ({**facts, "debt_ratio": 0.41}, ("multiply", 1.1)),
+        "loan_dependent": ({**facts, "loans": True}, ("multiply", 1.1)),
     }
     rule_by_id = {rule.id: rule for rule in policy.rules}
-    for name, values in paired.items():
+    for name, (values, expected) in paired.items():
         actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, values))
         reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
-        expected = None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
-        assert actual == expected, name
-    assert _interpret_adjustments(blocks[field], _scopes_for_facts(policy, paired["funded"])) == (
-        "multiply",
-        1.25,
-    )
-    for name in ("no_surplus", "high_debt", "loan_dependent"):
-        assert (
-            _interpret_adjustments(blocks[field], _scopes_for_facts(policy, paired[name])) is None
+        reference = (
+            None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
         )
+        assert reference == expected, name
+        assert actual == expected, name
 
 
 @pytest.mark.parametrize(

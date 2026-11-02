@@ -232,6 +232,48 @@ def test_decision_report_rejects_contract_drift(
         decision_report.build(broken)
 
 
+@pytest.mark.parametrize("mutation", ["missing", "number", "duplicate", "null", "undercount"])
+def test_required_knowledge_is_typed_traced_and_counted(engineering_metadata, mutation):
+    broken = json.loads(json.dumps(engineering_metadata))
+    contract, rule = next(
+        (contract, rule)
+        for contract in broken["consumer_adapters"]["consumers"]
+        for rule in contract["rules"]
+        if rule.get("required_known_facts")
+    )
+    if mutation == "missing":
+        rule["required_known_facts"] = ["absent"]
+    elif mutation == "number":
+        rule["required_known_facts"] = ["state_unemployment"]
+    elif mutation == "duplicate":
+        rule["required_known_facts"] *= 2
+    elif mutation == "null":
+        rule["required_known_facts"] = None
+    else:
+        contract["cost_by_field"][rule["field"]]["predicates"] -= 1
+    with pytest.raises(ValueError, match=r"知识|台账"):
+        decision_report.build(broken)
+
+
+def test_native_target_readers_are_demand_not_actual_force(engineering_metadata):
+    report = decision_report.build(engineering_metadata)
+    roles = {
+        row["engine"]: row["profile_dimension"]
+        for row in report["facts"]
+        if row["engine"]
+        in {
+            "wanted_army_size_script_value",
+            "wanted_marines_size_script_value",
+            "num_defensive_pacts",
+        }
+    }
+    assert roles == {
+        "wanted_army_size_script_value": "native_demand",
+        "wanted_marines_size_script_value": "native_demand",
+        "num_defensive_pacts": "external_opportunity",
+    }
+
+
 def _school_taxonomy(
     fact: dict[str, Any], *, other: dict[str, Any] | None = None
 ) -> dict[str, Any]:

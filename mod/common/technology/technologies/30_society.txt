@@ -1538,6 +1538,11 @@ central_planning = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:central_planning.ai_weight
+		# d6_central_planning_administrative_repair [political]; 实际官僚赤字提高可解锁电话交换台行政生产方式的研究机会；财政危机不抹去低直接支出的知识修复路径
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.1 }
+		# SITAI END information:central_planning.ai_weight
 	}
 }
 

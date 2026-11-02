@@ -32,9 +32,9 @@ def test_complement_is_soft_and_conditioned_in_generated_consumer() -> None:
         "net_total_income": 1,
     }
     # 同一基础行动在两个、一个、零个互补条件成立时均可选中；
-    # 互补分别增加 0.25，不是把对方变成基础行动的资格门。
+    # 最多一个互补增加 0.25，不把对方变成基础行动的资格门。
     for changes, expected in (
-        ({}, 1.75),
+        ({}, 1.5),
         ({"literacy_rate": 0.6}, 1.5),
         ({"literacy_rate": 0.6, "any_insurrection_ongoing": True}, 1.25),
     ):

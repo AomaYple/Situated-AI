@@ -189,6 +189,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                             raise ValueError("规则战略意图名称无效")
                         conditions.extend(strategy.expand(intent))
             readers = {condition["fact"] for condition in conditions}
+            readers.update(key for rule in rules for key in rule.get("required_known_facts", []))
             readers.update(
                 condition["value"]["fact"]
                 for condition in conditions

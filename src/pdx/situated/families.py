@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 import tomllib
 from typing import TYPE_CHECKING, Final
 
@@ -56,7 +57,10 @@ def classify(*, domain: str, field: str, source: str = "") -> str:
     """返回一个稳定的细分行动族，不读取国家名称或历史标签。"""
 
     lowered = f"{source}/{field}".casefold()
-    if "temporal" in lowered or "cooldown" in lowered or "ttl" in lowered:
+    # Lifecycle keys are identifiers, not arbitrary letter sequences inside
+    # battle, bottle or resettlement. Keep their explicit source/key tokens.
+    tokens = set(re.split(r"[^a-z0-9]+", lowered))
+    if tokens & {"temporal", "cooldown", "ttl"}:
         return "temporal"
     if domain == "fiscal":
         return "fiscal"
@@ -71,12 +75,21 @@ def classify(*, domain: str, field: str, source: str = "") -> str:
             return "overseas"
         return "diplomacy"
     if domain == "military":
-        if any(word in lowered for word in ("navy", "ship", "admiralty", "sea_lane", "dockyard")):
+        field_parts = field.casefold().split(".")
+        field_tokens = set(re.split(r"[^a-z0-9]+", field.casefold()))
+        if (
+            any(word in lowered for word in ("navy", "ship", "admiralty", "sea_lane", "dockyard"))
+            or field_tokens & {"fleet", "battlefleet", "naval", "marine", "marines", "submarine"}
+            or "fleet_compositions" in field_parts
+            or "protect_supply" in field_parts
+        ):
             return "navy"
         if any(word in lowered for word in ("war", "wargoal", "battle", "combat", "mobil")):
             return "war"
         return "army"
     if domain == "political":
+        if source.casefold() == "common/laws/01_colonial_affairs.txt":
+            return "overseas"
         if any(
             word in lowered
             for word in ("school", "education", "academia", "literacy", "university")

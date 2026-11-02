@@ -35,7 +35,7 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(monkeypatc
     calls = []
 
     def witness(instances, texts):
-        assert len([item for item in instances if item.kind == "rule_action"]) == 1414
+        assert len([item for item in instances if item.kind == "rule_action"]) == 1455
         assert "common/ai_strategies/00_default_strategy.txt" in texts
         assert all(name.endswith(".txt") for name in texts)
         calls.append(texts)
@@ -49,8 +49,8 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(monkeypatc
 
 
 def _assert_legacy_contract(witness) -> None:
-    assert witness["expected"] == 1414
-    assert witness["count"] == 1414
+    assert witness["expected"] == 1455
+    assert witness["count"] == 1455
     assert witness["missing"] == []
     assert witness["mismatches"] == []
     assert witness["duplicate_ids"] == []

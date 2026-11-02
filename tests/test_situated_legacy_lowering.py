@@ -36,7 +36,7 @@ def test_compiler_rejects_duplicate_legacy_writer():
         compiler.compile_policy(decision_rules.load(), config_model=model)
 
 
-def test_all_1414_bindings_lower_from_complete_ir():
+def test_all_bindings_lower_from_complete_ir():
     model = compiler.load_model()
     policies = (
         ("mod/decisions/information.toml", decision_rules.load()),
@@ -55,7 +55,7 @@ def test_all_1414_bindings_lower_from_complete_ir():
             count += 1
         assert decision_rules.evaluate(compiled, {}, is_ai=False) == {}
         assert decision_rules.evaluate(compiled, {}, is_ai=True) == {}
-    assert count == 1414
+    assert count == 1455
 
 
 def test_reference_action_selection_blocks_lower_candidate_when_higher_core_is_unknown():

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pdx import decision_rules, decisions
+from pdx import decision_interfaces, decision_rules, decisions
 from pdx.model import Block, Scalar
 from pdx.parser import parse_text
 
@@ -41,8 +41,16 @@ def _condition(node, facts, mode="AND"):
             expected = {"yes": True, "no": False}.get(item.value.text)
             if item.key == "is_subject_of":
                 values.append(facts["existing_subject"])
+            elif expected is None:
+                comparison = {
+                    "=": operator.eq,
+                    "<": operator.lt,
+                    "<=": operator.le,
+                    ">": operator.gt,
+                    ">=": operator.ge,
+                }[item.op]
+                values.append(comparison(facts[item.key], float(item.value.text)))
             else:
-                assert expected is not None
                 values.append(facts[item.key] == expected)
     return any(values) if mode == "OR" else not all(values) if mode == "NOT" else all(values)
 
@@ -159,6 +167,63 @@ def test_complete_numeric_consumer_retains_native_bounds(
 def test_subject_guard_drift_refuses_generation():
     with pytest.raises(ValueError, match="可达性保护"):
         _generate("subject_value", "value = 0 if = { limit = { is_ai = yes } add = 10 }", "add", 3)
+
+
+@pytest.mark.parametrize(
+    "field", ["wanted_construction_output", "ai_strategy_default.wanted_construction_output"]
+)
+@pytest.mark.parametrize(
+    ("operation", "adjustment"),
+    [
+        ("add", 3),
+        ("subtract", -3),
+        ("multiply", -1),
+        ("multiply", 0),
+        ("multiply", float("nan")),
+        ("multiply", float("inf")),
+    ],
+)
+def test_construction_consumer_rejects_operations_that_break_native_zero_or_direction(
+    field, operation, adjustment
+):
+    """接口禁止零分后加法复活和非正乘数改变原版数值方向。"""
+    rules = decision_rules.load()
+    rule = replace(
+        rules.rules[0], field=tuple(field.split(".")), operation=operation, value=adjustment
+    )
+    policy = replace(rules, rules=(rule,), semantic_ir=())
+    with pytest.raises(ValueError, match=r"建设目标.*正乘数"):
+        decision_interfaces.validate(policy)
+
+
+@pytest.mark.parametrize("operation", ["add", "subtract"])
+def test_construction_patch_rejects_additive_bypass(operation):
+    with pytest.raises(ValueError, match=r"建设目标.*正乘数"):
+        _generate("wanted_construction_output", "value = 0 min = 0", operation, 3)
+
+
+@pytest.mark.parametrize("population", [250000, 250001])
+@pytest.mark.parametrize("is_ai", [True, False])
+def test_construction_positive_multiplier_keeps_native_population_zero_and_clamp(population, is_ai):
+    """独立解释完整合成字段，核对人口边界和玩家的最终数值。"""
+    body = """value = 100
+    if = { limit = { total_population <= 250000 } multiply = 0 }
+    min = 0
+    """
+    generated = _generate("wanted_construction_output", body, "multiply", 1.3)
+    value = _number(
+        _block(generated, "ai_strategy_default.wanted_construction_output"),
+        {"is_ai": is_ai, "in_default": False, "total_population": population},
+    )
+    assert value == (0 if population <= 250000 else 130 if is_ai else 100)
+
+
+def test_current_construction_rules_satisfy_positive_multiplier_contract():
+    rules = decision_rules.load()
+    selected = tuple(rule for rule in rules.rules if rule.field == ("wanted_construction_output",))
+    assert len(selected) == 15
+    assert all(rule.operation == "multiply" and rule.value > 0 for rule in selected)
+    decision_interfaces.validate(replace(rules, rules=selected, semantic_ir=()))
 
 
 @pytest.mark.parametrize("refusal", [True, False])

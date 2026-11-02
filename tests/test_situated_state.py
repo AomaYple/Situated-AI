@@ -123,6 +123,36 @@ def test_nonfinite_opportunity_and_commitment_values_are_unknown() -> None:
     assert commitment.derive(invalid, commitment_specs)[0].known is False
 
 
+@pytest.mark.parametrize("invalid", [float("nan"), float("inf"), -float("inf")])
+def test_nonfinite_numeric_fact_cannot_prove_typed_capacity(invalid) -> None:
+    result = state.derive_typed(values(debt_ratio=invalid, bureaucracy=invalid))
+    by_id = {item.id: item for item in result.capacities}
+    for name in ("layer_foundation", "layer_stable", "layer_expansion", "administrative_capacity"):
+        assert by_id[name].known is False
+        assert by_id[name].value is None
+
+
+@pytest.mark.parametrize("bound", ["minimum", "maximum"])
+@pytest.mark.parametrize("invalid", [float("nan"), float("inf"), -float("inf"), True])
+def test_evidence_type_rejects_nonfinite_or_boolean_numeric_bounds(bound, invalid) -> None:
+    from pdx.situated.schema import EvidenceSpec
+
+    kwargs = {
+        "id": "bounded",
+        "domain": "fiscal",
+        "source": "test.txt",
+        "scope": "root",
+        "kind": "number",
+        "unit": "currency",
+        "refresh": "consumer",
+        "unknown": "vanilla",
+        "trigger": "net_total_income",
+        bound: invalid,
+    }
+    with pytest.raises(ValueError, match=r"范围|边界|有限"):
+        EvidenceSpec(**kwargs)
+
+
 def test_fact_schema_rejects_mixed_units_and_boolean_bounds(tmp_path) -> None:
     source = tmp_path / "facts.toml"
     source.write_text(

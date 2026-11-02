@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import tomllib
+from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TypedDict
@@ -198,6 +200,62 @@ CHAINS: tuple[JointChain, ...] = (
         "unknown_local_fallback",
     ),
 )
+
+
+def render_counts(path: Path = DEFAULT_SOURCE) -> str:
+    """Update only generated per-domain instance counts in the source ledger."""
+
+    text = path.read_text(encoding="utf-8")
+    data = tomllib.loads(text)
+    if data.get("schema") != 1 or not isinstance(data.get("domains"), dict):
+        raise ValueError("领域覆盖源无法安全更新：schema/domains 无效")
+    if set(data["domains"]) != set(FAMILIES):
+        raise ValueError("领域覆盖必须精确覆盖19个行动族")
+
+    counts: Counter[str] = Counter()
+    for item in build(decision_rules.load(), decision_adapters.load()):
+        counts[item.family_id] += 1
+
+    lines = text.splitlines()
+    current_domain: str | None = None
+    seen: set[str] = set()
+    for index, line in enumerate(lines):
+        section = re.fullmatch(r"\[domains\.([a-z][a-z0-9_]*)\]", line)
+        if section:
+            current_domain = section[1]
+        elif line.startswith("["):
+            current_domain = None
+        elif current_domain is not None and line.startswith("production_instances"):
+            if current_domain in seen or not re.fullmatch(r"production_instances\s*=\s*\d+", line):
+                raise ValueError(f"领域生产数量字段无效：{current_domain}")
+            lines[index] = f"production_instances = {counts[current_domain]}"
+            seen.add(current_domain)
+    if seen != set(FAMILIES):
+        raise ValueError(f"领域生产数量字段不完整：缺失={sorted(set(FAMILIES) - seen)}")
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
+def write_counts(path: Path = DEFAULT_SOURCE) -> int:
+    """Refresh generated counts while preserving manually maintained contracts."""
+
+    content = render_counts(path)
+    path.write_text(content, encoding="utf-8", newline="\n")
+    return len(FAMILIES)
+
+
+def check_counts(path: Path = DEFAULT_SOURCE) -> list[str]:
+    """Return a clear error when checked-in generated counts are stale."""
+
+    try:
+        actual = path.read_text(encoding="utf-8")
+        expected = render_counts(path)
+    except FileNotFoundError:
+        return [f"领域覆盖源缺失：{path}"]
+    except (OSError, UnicodeError, ValueError) as exc:
+        return [f"领域覆盖源不可核对：{path}: {exc}"]
+    if actual != expected:
+        return [f"领域生产实例数与当前规则不一致：{path}"]
+    return []
 
 
 def load(path: Path = DEFAULT_SOURCE) -> dict[str, DomainCoverage]:

@@ -58,13 +58,15 @@ def test_行动降低为有限原版消费者条件块():
     assert set(overlay) == {item.field for item in model.consumers}
     for consumer in model.consumers:
         text = overlay[consumer.field]
-        # 成本分区会把同一候选复制到互斥叶；预算约束针对每个叶的
+        # 需求与成本分区会把同一候选复制到互斥叶；预算约束针对每个叶的
         # 可同时评估候选，而不是整份脚本文本中的 marker 总数。
         rows = [row for row in model.decision_ir if row.consumer_id == consumer.id]
         assert len(rows) <= consumer.budget
         ids = re.findall(r"# ACTION ([a-z][a-z0-9_]*) ", text)
         assert set(ids) == {row.action_id for row in rows}
-        assert len(ids) <= 8 * consumer.budget
+        # 当前真实经济消费者是两个成本档 × 两个需求事实，共16个互斥叶。
+        # 固定当前16叶上限，比计划的512叶硬预算更严格，不能无限扩张。
+        assert len(ids) <= 16 * consumer.budget
         parsed = parse_text(text)
         assert not parsed.errors
         assert _max_exclusive_writes(parsed.root) == 1
@@ -222,9 +224,9 @@ def test_生产元数据登记行动合同():
     assert payload["source_fingerprint"]["situated_actions_source_sha256"]
     assert (
         payload["situated_actions"]["action_instances"]["count"]
-        == 1414 + contract["candidate_limit"]
+        == 1455 + contract["candidate_limit"]
     )
-    assert payload["situated_actions"]["ir"]["count"] == 1414
+    assert payload["situated_actions"]["ir"]["count"] == 1455
     ast = payload["situated_actions"]["ast_lowering_witness"]
     assert ast["mismatches"] == []
     assert ast["parsed_count"] == ast["witness_count"]
@@ -246,13 +248,13 @@ def test_覆盖报告只在逐实例生产见证齐全时完成():
 
 def test_统一编译器覆盖信息与适配器的全部生产消费者():
     model = load_model()
-    assert model.production_rule_count == 1414
-    assert len(model.production_consumers) == 378
+    assert model.production_rule_count == 1455
+    assert len(model.production_consumers) == 379
     source = decision_rules.load()
     compiled, report = compile_policy(source, config_model=model)
     assert len(compiled.rules) == len(source.rules)
-    assert report["production_rule_count"] == 1414
-    assert report["production_consumer_count"] == 378
+    assert report["production_rule_count"] == 1455
+    assert report["production_consumer_count"] == 379
     assert all(
         item["write_once"] and item["unknown_fallback"] == "vanilla" for item in report["fields"]
     )
@@ -304,13 +306,44 @@ def test_状态辅助函数保留未知并提供确定性排序():
 def test_状态派生拒绝非有限数并保留未知维度():
     vector = derive(
         {
-            "bureaucracy_positive": EvidenceValue("bureaucracy_positive", 2, True),
+            "bureaucracy_positive": EvidenceValue("bureaucracy_positive", True, True),
             "default": EvidenceValue("default", float("nan"), True),
             "war": EvidenceValue("war", None, False),
             "subject": EvidenceValue("subject", True, True),
         }
     )
-    assert dict(vector.capacities)["bureaucracy_positive"] == 2.0
+    assert dict(vector.capacities)["bureaucracy_positive"] == 1.0
     assert dict(vector.pressures)["default"] is None
     assert dict(vector.pressures)["war"] is None
-    assert dict(vector.opportunities)["subject"] is None
+    assert dict(vector.opportunities)["subject"] == 1.0
+
+
+@pytest.mark.parametrize(
+    ("raw", "known", "stale", "expected"),
+    [
+        (True, True, False, 1.0),
+        (False, True, False, 0.0),
+        (None, False, False, None),
+        (True, False, False, None),
+        (True, True, True, None),
+        (0, True, False, None),
+        (1, True, False, None),
+        (2, True, False, None),
+        (0.0, True, False, None),
+        ("yes", True, False, None),
+    ],
+)
+def test_布尔状态保留真假未知且不接受原始数值冒充(raw, known, stale, expected):
+    names = (
+        "stable_legitimacy",
+        "strong_legitimacy",
+        "bureaucracy_positive",
+        "default",
+        "war",
+        "insurrection",
+        "literacy_low",
+        "subject",
+    )
+    vector = derive({name: EvidenceValue(name, raw, known, stale=stale) for name in names})
+    actual = dict((*vector.capacities, *vector.pressures, *vector.opportunities))
+    assert all(actual[name] == expected for name in names)

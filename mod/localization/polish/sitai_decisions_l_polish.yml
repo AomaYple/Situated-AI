@@ -10,4 +10,7 @@ l_polish:
  SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON: "Izolacja i koszty zobowiązań finansowych (kandydat)"
  SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON: "Położenie portu traktatowego i możliwości fiskalne (kandydat)"
  SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON: "Więzi z ojczyzną i wykonalne priorytety narodowe (kandydat)"
+ SITAI_RULE_LJ14_CONNECTED_HOMELAND_FOUNDATION_REASON: "Więzi z ojczyzną i połączenie z rynkiem"
+ SITAI_RULE_LJ14_HOMELAND_ADMINISTRATIVE_COST_REASON: "Koszt administracyjny integracji ziem ojczystych"
+ SITAI_RULE_LJ14_HOMELAND_ISOLATION_COST_REASON: "Izolacja rynkowa docelowej ziemi ojczystej"
  SITAI_RULE_MARKET_ACCESS_STATE_VALUE_REASON: "Dostępna pozycja rynkowa i lokalny popyt"

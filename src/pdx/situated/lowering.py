@@ -7,7 +7,7 @@ from collections.abc import Iterable  # noqa: TC003
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from ..model import Block  # noqa: TID252
+from ..model import Assignment, Block, Scalar  # noqa: TID252
 from ..parser import parse_text  # noqa: TID252
 
 if TYPE_CHECKING:
@@ -53,6 +53,53 @@ def _block_text(lines: list[str], start: int) -> str:
     return "\n".join(parts)
 
 
+def _transparent_write(item: Assignment) -> bool:
+    """Recognise only the exact unconditional wrapper emitted by lowering.
+
+    A direct numeric write is valid.  The auxiliary branch may add one
+    transparent ``if`` whose sole limit is ``always = yes``; arbitrary
+    nested conditions and writes inside a limit block must not satisfy
+    the witness, because they can change runtime semantics.
+    """
+
+    if item.op != "=" or item.prefix is not None:
+        return False
+    if item.key in {"add", "multiply"}:
+        value = item.value
+        if isinstance(value, Block):
+            values = value.all("value")
+            value = (
+                values[0].value
+                if len(values) == 1 and values[0].op == "=" and values[0].prefix is None
+                else None
+            )
+        return isinstance(value, Scalar) and bool(
+            re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?", value.text)
+        )
+    if item.key != "if" or not isinstance(item.value, Block):
+        return False
+    nested = list(item.value.assignments())
+    limits = [child for child in nested if child.key == "limit" and child.is_block]
+    writes = [child for child in nested if child.key in {"add", "multiply"}]
+    if len(limits) != 1 or len(writes) != 1 or len(item.value.items) != 2:
+        return False
+    limit = limits[0].value
+    assert isinstance(limit, Block)
+    limit_items = list(limit.assignments())
+    if (
+        len(limit.items) != 1
+        or len(limit_items) != 1
+        or limit_items[0].key != "always"
+        or limit_items[0].op != "="
+        or limit_items[0].prefix is not None
+        or limits[0].op != "="
+        or limits[0].prefix is not None
+    ):
+        return False
+    always = limit_items[0].value
+    return isinstance(always, Scalar) and always.text == "yes" and _transparent_write(writes[0])
+
+
 def ast_witnesses(texts: dict[str, str]) -> tuple[ASTWitness, ...]:
     """从生成文本 AST 独立检查 action 块的 limit/write 结构。"""
 
@@ -76,7 +123,8 @@ def ast_witnesses(texts: dict[str, str]) -> tuple[ASTWitness, ...]:
                 continue
             assignments = list(root.value.assignments())
             has_limit = any(item.key == "limit" and item.is_block for item in assignments)
-            has_write = any(item.key in {"add", "multiply"} for item in assignments)
+
+            has_write = any(_transparent_write(item) for item in assignments)
             nested = sum(
                 1 for item in assignments if item.key in {"if", "else_if"} and item.is_block
             )

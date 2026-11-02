@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping  # noqa: TC003
-from typing import Any
+from typing import Any, cast
 
 from .schema import EvidenceValue, StateVector
 from .signals import (
@@ -22,8 +22,8 @@ def derive(values: Mapping[str, EvidenceValue]) -> StateVector:
     def number(*names: str) -> tuple[tuple[str, float | None], ...]:
         result: list[tuple[str, float | None]] = []
         for name in names:
-            item = values.get(name)
-            value = item.value if item and item.known and type(item.value) in (int, float) else None
+            value, known, _stale = _fact(values, name)
+            value = value if known and type(value) in (int, float) else None
             numeric = (
                 value
                 if isinstance(value, (int, float))
@@ -34,9 +34,18 @@ def derive(values: Mapping[str, EvidenceValue]) -> StateVector:
             result.append((name, float(numeric) if numeric is not None else None))
         return tuple(result)
 
-    pressure = number("default", "war", "insurrection", "literacy_low")
-    capacity = number("stable_legitimacy", "strong_legitimacy", "bureaucracy_positive")
-    opportunities = number("subject", "trade", "technology")
+    def flags(*names: str) -> tuple[tuple[str, float | None], ...]:
+        # StateVector keeps dimensionless truth as 0/1; this is not the
+        # original reader's raw points/ratio or a combined utility score.
+        result: list[tuple[str, float | None]] = []
+        for name in names:
+            value, known, _stale = _fact(values, name)
+            result.append((name, float(value) if known and type(value) is bool else None))
+        return tuple(result)
+
+    pressure = flags("default", "war", "insurrection", "literacy_low")
+    capacity = flags("stable_legitimacy", "strong_legitimacy", "bureaucracy_positive")
+    opportunities = (*flags("subject"), *number("trade", "technology"))
     commitments = number("diplomatic_commitment", "military_commitment", "political_capacity")
     return StateVector(
         capacities=capacity,
@@ -54,6 +63,8 @@ def _fact(values: Mapping[str, EvidenceValue], name: str) -> tuple[Any, bool, bo
     # 否则旧存档/旧快照会被误当成当前健康状态，破坏 unknown 回退合同。
     if item.stale:
         return None, False, True
+    if type(item.value) in (int, float) and not math.isfinite(cast("int | float", item.value)):
+        return None, False, False
     return item.value, True, False
 
 

@@ -117,6 +117,8 @@ price_threshold = 0.25
 goods = ["automobiles", "clothes", "coffee", "explosives", "fabric", "fertilizer", "fine_art", "fish", "fruit", "furniture", "glass", "groceries", "iron", "lead", "liquor", "luxury_clothes", "luxury_furniture", "meat", "merchant_marine", "oil", "opium", "porcelain", "radios", "rubber", "steel", "sugar", "sulfur", "tea", "telephones", "tobacco", "tools", "wine", "wood"]
 
 [contexts]
+state_borrowing_local = [{ fact = "state_owner_default", op = "=", value = false }, { fact = "state_owner_loans", op = "=", value = true }]
+state_borrowing_foundation = [{ fact = "state_owner_default", op = "=", value = false }, { fact = "state_owner_loans", op = "=", value = true }, { fact = "state_infrastructure", op = ">=", value = 0 }]
 political_support_capacity = [{ fact = "legitimacy", op = ">=", value = 50 }, { fact = "insurrection", op = "=", value = false }]
 peaceful_capacity = [{ fact = "net_surplus", op = ">=", value = 0 }, { fact = "debt_ratio", op = "<=", value = 0.4 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false }, { fact = "loans", op = "=", value = false }, { fact = "bureaucracy", op = ">=", value = 0 }]
 political_capacity_crisis = [{ fact = "legitimacy", op = "<", value = 25 }, { fact = "insurrection", op = "=", value = true }, { fact = "radical_share", op = ">=", value = 0.25 }]
@@ -1470,6 +1472,14 @@ kind = "number"
 path = ["owner"]
 minimum = 0
 maximum = 1
+
+[readers.state_owner_academia_completed]
+engine = "has_technology_researched"
+scope = "root"
+path = ["owner"]
+unit = "boolean"
+kind = "boolean"
+argument = "academia"
 
 [readers.state_owner_loans]
 engine = "taking_loans"
@@ -8395,6 +8405,104 @@ conditions = [
 why = "所在市场的该类产出价格偏高且供不应求、州物流仍有余量时提高原有资源建设候选；原版利润、投入、就业和资源上限继续决定执行"
 counterexample = "不改变原版资格、成本、历史偏好及零权重；玩家所有州、所有者或商品作用域缺失时不干预；市场供需不等于本国供需，实际作用域与效果待用户长期行为验收验证"
 contexts = ["state_building_capacity"]
+
+[[rules]]
+id = "lj01_iron_tooling_input_repair"
+source = "common/buildings/03_mines.txt"
+field = "building_iron_mine.ai_value"
+domain = "economy"
+priority = 11000
+operation = "multiply"
+value = 1.05
+conditions = [
+  { fact = "pm_active_building_iron_mine_pm_picks_and_shovels_building_iron_mine", op = "=", value = true },
+  { fact = "pm_active_building_tooling_workshop_pm_pig_iron", op = "=", value = true },
+  { fact = "state_owner_default", op = "=", value = false },
+  { fact = "state_owner_loans", op = "=", value = false },
+  { fact = "state_infrastructure", op = ">=", value = 0 },
+  { fact = "state_owner_iron_price", op = ">", value = 0.5 },
+  { fact = "state_owner_iron_balance", op = "<", value = 0 },
+  { fact = "state_owner_tools_price", op = ">", value = 0.5 },
+  { fact = "state_owner_tools_balance", op = "<", value = 0 },
+  { fact = "state_owner_wood_price", op = "<=", value = 0.25 },
+]
+why = "本州铁矿与生铁工具配方已实际启用且铁和工具均短缺时，保留低强度上游修复；工具投入成本使此档弱于健康扩张"
+counterexample = "只对真实本州配方和市场读数生效，不把选中矿山或工具候选当供应完成，不转移其它州PM，不创造资源或绕过原版建造资格与成本"
+
+[[rules]]
+id = "lj02_coal_output_transport_foundation"
+source = "common/buildings/03_mines.txt"
+field = "building_coal_mine.ai_value"
+domain = "economy"
+priority = 11010
+operation = "multiply"
+value = 1.20
+conditions = [
+  { fact = "pm_active_building_coal_mine_pm_picks_and_shovels_building_coal_mine", op = "=", value = true },
+  { fact = "state_owner_default", op = "=", value = false },
+  { fact = "state_owner_loans", op = "=", value = false },
+  { fact = "state_infrastructure", op = ">=", value = 0 },
+  { fact = "state_owner_coal_price", op = ">", value = 0.5 },
+  { fact = "state_owner_coal_balance", op = "<", value = 0 },
+]
+why = "实际启用基础采煤方式且本州煤炭真实高价短缺、物流与财政可承受时，有限提高煤炭供给候选，为运输修复提供原版投入基础"
+counterexample = "只读实际生产方式和所有者市场；不把铁路候选、建设队列或其它州供应当完成事实；违约、借款、物流不足、未知和玩家保留原版"
+
+[[rules]]
+id = "lj02_coal_transport_railway_support"
+source = "common/buildings/11_private_infrastructure.txt"
+field = "building_railway.ai_value"
+domain = "economy"
+priority = 11011
+operation = "multiply"
+value = 1.10
+conditions = [
+  { fact = "pm_active_building_railway_pm_early_trains", op = "=", value = true },
+  { fact = "state_owner_default", op = "=", value = false },
+  { fact = "state_owner_loans", op = "=", value = false },
+  { fact = "state_infrastructure", op = "<", value = 0 },
+  { fact = "state_transport_price", op = ">", value = 0.25 },
+  { fact = "state_owner_engines_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_coal_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_coal_balance", op = ">=", value = 0 },
+]
+why = "实际铁路生产方式、州基础设施缺口与运输昂贵同时成立且煤炭和引擎投入可承受时，有限提高铁路修复候选"
+counterexample = "不把煤矿选中或排队当作煤炭供给，不创造运输或引擎；投入、补贴、资格、成本和执行仍由原版处理，未知回退"
+
+[[rules]]
+id = "lj03_university_completed_knowledge_foundation"
+source = "common/buildings/07_government.txt"
+field = "building_university.ai_value"
+domain = "political"
+priority = 100
+operation = "multiply"
+value = 1.15
+conditions = [
+  { fact = "state_owner_academia_completed", op = "=", value = true },
+  { fact = "state_owner_literacy", op = "<", value = 0.5 },
+  { fact = "state_owner_default", op = "=", value = false },
+  { fact = "state_owner_loans", op = "=", value = false },
+  { fact = "state_owner_paper_price", op = "<=", value = 0.25 },
+]
+why = "所属国家已完成学术基础且实际识字不足时，有限关注大学知识能力；纸张实际投入成本仍优先"
+counterexample = "Academia候选不等于已研究，大学候选不等于识字增长；保留原版科技资格、费用、政治支持和玩家边界，未知完成态不猜测"
+
+[[rules]]
+id = "lj03_mechanical_tools_actual_literacy"
+source = "common/technology/technologies/10_production.txt"
+field = "mechanical_tools.ai_weight"
+domain = "economy"
+priority = 90
+operation = "multiply"
+value = 1.30
+conditions = [
+  { fact = "default", op = "=", value = false },
+  { fact = "literacy", op = ">=", value = 0.5 },
+  { fact = "tools_price", op = ">", value = 0.25 },
+  { fact = "tools_balance", op = "<", value = 0 },
+]
+why = "实际识字能力与工具瓶颈共同支持工业科研档；低识字国家仍保留原有瓶颈研究，不将教育候选视为能力完成"
+counterexample = "不完成科技、不解锁或切换精密工具生产方式；资格和研究成本仍由原版处理，未知识字保留原版，不改变基础工业候选"
 
 [[rules]]
 id = "building_iron_mine_bottleneck"
@@ -20669,6 +20777,32 @@ why = "战时蒸汽船供给紧张且已有舰队时，在原版次要舰队已�
 counterexample = "不创建船只、不改任务资格、不把市场短缺误称真实护航缺口；保留其它任务和零权重，不改所有舰队角色，待用户长期行为验收"
 
 [[rules]]
+id = "structural_wartime_supply_price_escort"
+intent = "wartime_defense"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
+domain = "military"
+priority = 99
+value = 1.10
+operation = "multiply"
+conditions = [ { fact = "war", op = "=", value = true }, { fact = "navy", op = ">", value = 0 }, { fact = "steamers_price", op = ">", value = 0.25 } ]
+why = "战时已有舰队且蒸汽船价格压力已知时，在原版次要舰队已允许的护送任务内提供有限保护倾向"
+counterexample = "价格是供给压力代理而非真实航线损失；不创建船只、不改任务资格、不抬升原版零值；数量压力、未知事实、玩家和关闭状态保留原版"
+
+[[rules]]
+id = "structural_wartime_supply_balance_escort"
+intent = "wartime_defense"
+source = "common/ai_strategies/00_default_strategy.txt"
+field = "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
+domain = "military"
+priority = 98
+value = 1.10
+operation = "multiply"
+conditions = [ { fact = "war", op = "=", value = true }, { fact = "navy", op = ">", value = 0 }, { fact = "steamers_balance", op = "<", value = 0 } ]
+why = "战时已有舰队且蒸汽船订单余额压力已知时，在原版次要舰队已允许的护送任务内提供有限保护倾向"
+counterexample = "订单余额是供给压力代理而非真实航线损失；不创建船只、不改任务资格、不抬升原版零值；价格压力、未知事实、玩家和关闭状态保留原版"
+
+[[rules]]
 id = "coordinated_route_fiscal_recovery_ship_construction"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.ship_construction_output_multiplier"
@@ -23362,6 +23496,37 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 
 [[rules]]
 source = "common/buildings/07_government.txt"
+id = "administrative_government_building_emergency_repair"
+field = "building_government_administration.ai_value"
+domain = "economy"
+priority = 120
+operation = "multiply"
+value = 1.05
+conditions = [
+    { fact = "state_owner_default", op = "=", value = true },
+    { fact = "state_owner_bureaucracy", op = "<", value = 0 },
+]
+why = "违约且行政赤字时保留有界的紧急行政修复；它解决当前承载约束而不把违约视为健康，也不放宽实际成本与资格"
+counterexample = "赤字解除即退出修复档；违约、行政或所属国家未知时不假设健康；不影响其他建筑、玩家、原版建造成本与执行"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
+id = "administrative_government_building_borrowed_repair"
+field = "building_government_administration.ai_value"
+domain = "economy"
+priority = 115
+operation = "multiply"
+value = 1.10
+conditions = [
+    { fact = "state_owner_default", op = "=", value = false },
+    { fact = "state_owner_loans", op = "=", value = true },
+    { fact = "state_owner_bureaucracy", op = "<", value = 0 },
+]
+why = "正常借贷且行政赤字时保留比健康档弱的局部修复；借贷增加承诺成本但不一刀切关闭解决承载瓶颈的行动"
+counterexample = "赤字解除后回到借贷承诺保护；违约走更低紧急档；财政事实未知不能升健康档，不把候选行政建筑当成已建成能力"
+
+[[rules]]
+source = "common/buildings/07_government.txt"
 id = "administrative_government_building_bureaucracy_repair"
 field = "building_government_administration.ai_value"
 domain = "economy"
@@ -23395,3 +23560,427 @@ value = 0.75
 conditions = [{ fact = "state_owner_loans", op = "=", value = true }]
 why = "州所属国家正在借贷时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先"
 counterexample = "贷款事实未知或为假时保留原版；违约与贷款分别表达为独立规则，不要求全局健康条件同时成立"
+
+# LJ06 局部就业链：实际商品需求保留基础候选，失业仅升档；缺工/资格/迁移流量仍未读。
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "lj06_employment_food_unemployment_support"
+auxiliary_facts = ["state_unemployment"]
+required_known_facts = ["state_owner_loans"]
+field = "building_food_industry.ai_value"
+domain = "economy"
+priority = 6001
+operation = "multiply"
+value = 1.30
+conditions = [
+  { fact = "pm_active_building_food_industry_pm_bakery", op = "=", value = true },
+  { fact = "state_owner_groceries_price", op = ">", value = 0.25 },
+  { fact = "state_owner_groceries_balance", op = "<", value = 0 },
+  { fact = "state_unemployment", op = ">=", value = 0.1 },
+  { fact = "state_owner_default", op = "=", value = false },
+  { fact = "state_owner_grain_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_grain_balance", op = ">=", value = 0 },
+  { fact = "state_infrastructure", op = ">=", value = 0 },
+]
+why = "实际启用基础配方且产出商品缺口为负时保留局部扩建基础候选，真实州失业率只提高同一候选档；升档本身要求实际投入价格与余额、基础设施及融资事实已知合法；工资、资格、实际成本和执行仍由原版处理"
+counterexample = "未知实际配方、产出需求、投入成本、基础设施或融资事实回退原版；借款真假均合法，不把未知借款当无借款；失业未知只保留基础档。不把候选或排队当作完工，不把人口等同缺工、迁移和资格，不直接选择生产方式"
+
+[[rules]]
+source = "common/buildings/01_industry.txt"
+id = "lj06_employment_textile_unemployment_support"
+auxiliary_facts = ["state_unemployment"]
+required_known_facts = ["state_owner_loans"]
+field = "building_textile_mill.ai_value"
+domain = "economy"
+priority = 6003
+operation = "multiply"
+value = 1.30
+conditions = [
+  { fact = "pm_active_building_textile_mill_pm_handsewn_clothes", op = "=", value = true },
+  { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
+  { fact = "state_owner_clothes_balance", op = "<", value = 0 },
+  { fact = "state_unemployment", op = ">=", value = 0.1 },
+  { fact = "state_owner_default", op = "=", value = false },
+  { fact = "state_owner_fabric_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_fabric_balance", op = ">=", value = 0 },
+  { fact = "state_infrastructure", op = ">=", value = 0 },
+]
+why = "实际启用基础配方且产出商品缺口为负时保留局部扩建基础候选，真实州失业率只提高同一候选档；升档本身要求实际投入价格与余额、基础设施及融资事实已知合法；工资、资格、实际成本和执行仍由原版处理"
+counterexample = "未知实际配方、产出需求、投入成本、基础设施或融资事实回退原版；借款真假均合法，不把未知借款当无借款；失业未知只保留基础档。不把候选或排队当作完工，不把人口等同缺工、迁移和资格，不直接选择生产方式"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "lj07_grain_health_foundation"
+field = "ai_strategy_default.institution_scores.institution_health_system"
+domain = "political"
+priority = 42010
+operation = "multiply"
+value = 1.08
+conditions = [
+  { fact = "bureaucracy", op = ">=", value = 0 },
+  { fact = "net_surplus", op = ">=", value = 0 },
+  { fact = "grain_price", op = ">", value = 0.5 },
+  { fact = "grain_balance", op = "<", value = 0 },
+  { fact = "default", op = "=", value = false },
+]
+why = "根市场粮食价格和供需余额同时显示短缺时，提高合法健康制度消费者的有限基础倾向；原版制度资格、行政与财政成本继续优先"
+counterexample = "单一生活水平或粮食价格不足以触发；粮食事实、违约或市场作用域未知时回退原版，不赠送健康、资源或制度等级"
+
+[[rules]]
+source = "common/ai_strategies/00_default_strategy.txt"
+id = "lj07_grain_health_social_capacity"
+field = "ai_strategy_default.institution_scores.institution_health_system"
+domain = "political"
+priority = 42011
+operation = "multiply"
+value = 1.16
+conditions = [
+  { fact = "grain_price", op = ">", value = 0.5 },
+  { fact = "grain_balance", op = "<", value = 0 },
+  { fact = "average_sol", op = "<", value = 8 },
+  { fact = "bureaucracy", op = ">", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+  { fact = "insurrection", op = "=", value = false },
+  { fact = "default", op = "=", value = false },
+]
+why = "粮食短缺同时伴随低生活水平、可用行政与净收入且无叛乱时，健康制度需求可升档；成本和政治承载是实际输入，不构造全局稳定门"
+counterexample = "缺少任一社会、行政、财政或政治事实时不升档；不把候选制度当作已完成，不免费修正生活水平或稳定，原版资格和维护执行保持"
+
+
+[[rules]]
+id = "lj08_government_local_continuity"
+source = "common/ai_strategies/00_default_strategy.txt"
+domain = "political"
+field = "ai_strategy_default.interest_group_government_weight"
+operation = "add"
+value = 0.5
+priority = 90
+conditions = [
+  { fact = "candidate_ig_clout", op = ">=", value = 0.1 },
+  { fact = "candidate_ig_approval", op = ">=", value = 0 },
+  { fact = "candidate_ig_government", op = "=", value = true },
+  { fact = "legitimacy", op = ">=", value = 35 },
+  { fact = "insurrection", op = "=", value = false },
+]
+why = "只对当前已执政且有实际实力与非负认可的候选集团保留较低档惯性；中等合法性不必等待完整财政健康才有合法政府比较"
+counterexample = "不是特定法律支持；不改变原版政府组合合法性及最高合法性候选筛选，非执政、叛乱和未知集团不奖励"
+
+
+[[rules]]
+id = "lj08_negotiation_local_political_capacity"
+source = "common/ai_strategies/00_default_strategy.txt"
+domain = "political"
+field = "ai_strategy_default.negotiation_chance"
+operation = "multiply"
+value = 1.1
+priority = 90
+conditions = [
+  { fact = "candidate_ig_clout", op = ">=", value = 0.1 },
+  { fact = "candidate_ig_approval", op = "<", value = 0 },
+  { fact = "radical_share", op = ">=", value = 0.15 },
+  { fact = "legitimacy", op = ">=", value = 35 },
+  { fact = "insurrection", op = "=", value = false },
+]
+why = "实际有组织不满与激进压力在尚有政治承受力时支持低档协商，不把行政财政全满足作为所有协商的前置"
+counterexample = "不从不满推断任何特定法律支持；保留原版法律、集团意识形态、amenability、advance/stall、零机会和概率限幅，严重政治危机不奖励"
+
+
+[[rules]]
+id = "lj12_existing_subject_insolvency_continuity"
+source = "common/ai_strategies/00_default_strategy.txt"
+domain = "subjects"
+field = "ai_strategy_default.subject_value"
+operation = "add"
+value = 1
+priority = 2100
+conditions = [
+  { fact = "candidate_existing_subject", op = "=", value = true },
+  { fact = "default", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+]
+why = "在和平违约中区分维持已存在的属国关系和新承诺；现有关系统治价值只给小幅保留而非套用新接管成本"
+counterexample = "不是免除贡赋或行政成本，不强制维持关系；潜在属国、未知目标和战时不套用，原版可达性和接受意愿继续决定行动"
+
+
+[[rules]]
+id = "lj12_existing_overlord_autonomy_cost"
+source = "common/ai_strategies/00_default_strategy.txt"
+domain = "subjects"
+field = "ai_strategy_default.become_subject_value"
+operation = "add"
+value = -3
+priority = 2200
+conditions = [
+  { fact = "current_overlord_relation", op = "=", value = true },
+  { fact = "liberty", op = ">=", value = 75 },
+  { fact = "candidate_overlord_war", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+]
+why = "确认正是当前宗主且高自治诉求时，计入继续臣属的有限主权成本，优先于单纯友好或债务收益"
+counterexample = "既有关系不是永久安全保证；其他潜在宗主不继承此成本，不自动独立、不预测保护效果，原版外交资格和执行保留"
+
+
+[[rules]]
+id = "lj12_autonomy_insolvency_cost"
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+domain = "subjects"
+field = "ai_strategy_subject_maintain_autonomy.weight"
+operation = "multiply"
+value = 0.95
+priority = 60
+conditions = [
+  { fact = "liberty", op = ">=", value = 50 },
+  { fact = "default", op = "=", value = true },
+  { fact = "war", op = "=", value = false },
+]
+why = "高自治诉求与和平违约并存时，对自治路线计入小幅资源机会成本，而不是无条件沿用完整健康奖励"
+counterexample = "保留原版宗属资格、零权重和自治诉求，不产生服从命令或消除独立路线；未知财政和战争不套用"
+
+
+[[rules]]
+id = "lj12_self_strength_administrative_repair"
+source = "common/ai_strategies/02_subject_diplomatic_strategies.txt"
+domain = "subjects"
+field = "ai_strategy_subject_strengthen_self.weight"
+operation = "multiply"
+value = 1.05
+priority = 60
+conditions = [
+  { fact = "liberty", op = ">=", value = 50 },
+  { fact = "bureaucracy", op = "<", value = 0 },
+  { fact = "default", op = "=", value = false },
+  { fact = "war", op = "=", value = false },
+]
+why = "高自治诉求但行政缺口时仍保留较低档自强关注，区别于完整行政能力下的更强倾向，不把行政修复需求当成全面停摆"
+counterexample = "只是原版自强路线的有限倾向，不直接建设、不赠送行政或资金，违约、战时或未知关键事实不奖励"
+
+[[rules]]
+id = "borrowing_foundation_building_tooling_workshop"
+source = "common/buildings/01_industry.txt"
+field = "building_tooling_workshop.ai_value"
+domain = "economy"
+priority = 6000
+operation = "multiply"
+value = 1.05
+contexts = ["state_borrowing_foundation"]
+conditions = [
+  { fact = "pm_active_building_tooling_workshop_pm_crude_tools", op = "=", value = true },
+  { fact = "state_owner_tools_price", op = ">", value = 0.25 },
+  { fact = "state_owner_tools_balance", op = "<", value = 0 },
+  { fact = "state_owner_wood_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_wood_balance", op = ">=", value = 0 },
+]
+why = "正常借款且实际基础配方产出存在直接短缺时，保留有界的基础建设倾向；真实投入成本优先"
+counterexample = "借款不代表低债、健康或可盈利；不推断债务规模，不赠资源或建设力。未知配方、市场或成本保留原版；违约继续原有恢复与成本路径，玩家、原版资格和执行不变"
+
+[[rules]]
+id = "borrowing_foundation_building_iron_mine"
+source = "common/buildings/03_mines.txt"
+field = "building_iron_mine.ai_value"
+domain = "economy"
+priority = 6000
+operation = "multiply"
+value = 1.05
+contexts = ["state_borrowing_foundation"]
+conditions = [
+  { fact = "pm_active_building_iron_mine_pm_picks_and_shovels_building_iron_mine", op = "=", value = true },
+  { fact = "state_owner_iron_price", op = ">", value = 0.25 },
+  { fact = "state_owner_iron_balance", op = "<", value = 0 },
+  { fact = "state_owner_tools_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_tools_balance", op = ">=", value = 0 },
+]
+why = "正常借款且实际基础配方产出存在直接短缺时，保留有界的基础建设倾向；真实投入成本优先"
+counterexample = "借款不代表低债、健康或可盈利；不推断债务规模，不赠资源或建设力。未知配方、市场或成本保留原版；违约继续原有恢复与成本路径，玩家、原版资格和执行不变"
+
+[[rules]]
+id = "borrowing_foundation_building_coal_mine"
+source = "common/buildings/03_mines.txt"
+field = "building_coal_mine.ai_value"
+domain = "economy"
+priority = 6000
+operation = "multiply"
+value = 1.05
+contexts = ["state_borrowing_foundation"]
+conditions = [
+  { fact = "pm_active_building_coal_mine_pm_picks_and_shovels_building_coal_mine", op = "=", value = true },
+  { fact = "state_owner_coal_price", op = ">", value = 0.25 },
+  { fact = "state_owner_coal_balance", op = "<", value = 0 },
+  { fact = "state_owner_tools_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_tools_balance", op = ">=", value = 0 },
+]
+why = "正常借款且实际基础配方产出存在直接短缺时，保留有界的基础建设倾向；真实投入成本优先"
+counterexample = "借款不代表低债、健康或可盈利；不推断债务规模，不赠资源或建设力。未知配方、市场或成本保留原版；违约继续原有恢复与成本路径，玩家、原版资格和执行不变"
+
+[[rules]]
+id = "borrowing_foundation_building_university"
+source = "common/buildings/07_government.txt"
+field = "building_university.ai_value"
+domain = "economy"
+priority = 80
+operation = "multiply"
+value = 1.05
+contexts = ["state_borrowing_local"]
+conditions = [
+  { fact = "state_owner_academia_completed", op = "=", value = true },
+  { fact = "state_owner_literacy", op = "<", value = 0.5 },
+  { fact = "state_owner_paper_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_paper_balance", op = ">=", value = 0 },
+]
+why = "正常借款不全局禁止直接需求已知的局部基础修复；实际投入成本和已证高档继续优先"
+counterexample = "借款不代表低债、健康或盈利；不赠科技、建设力、资源或人口。不以候选排队代替真实配方、完工或需求，未知关键事实、玩家和关闭时保留原版，资格及执行不变"
+
+[[rules]]
+id = "d6_steelworking_tools_shortage_foundation"
+domain = "economy"
+source = "common/technology/technologies/10_production.txt"
+field = "steelworking.ai_weight"
+operation = "multiply"
+value = 1.25
+priority = 90
+conditions = [{ fact = "tools_balance", op = "<", value = 0 }]
+why = "工具订单缺口有限提高可解锁生铁工具生产方式的研究机会，不要求所有产业链、财政或主路线先满足"
+counterexample = "原版前置、研究成本、随机和执行保持；研究候选不是已完成科技，不立即制造工具或启用生产方式，核心缺口未知时保留原版；本规则只调整研究需求强度，不建立实际投资、维护或额外支出承诺，成本降档不适用。未来可选生产方式的投入现价不是当前研究付款；原版研究时间和成本保留，不能据候选推断已采用生产方式"
+
+[[rules]]
+id = "d6_steelworking_tools_shortage_pressure"
+domain = "economy"
+source = "common/technology/technologies/10_production.txt"
+field = "steelworking.ai_weight"
+operation = "multiply"
+value = 1.35
+priority = 95
+auxiliary_facts = ["tools_price"]
+conditions = [
+  { fact = "tools_balance", op = "<", value = 0 },
+  { fact = "tools_price", op = ">", value = 0.25 },
+]
+why = "工具缺口与高价共同支持压力档；辅助价格未知只保留已经证明的缺口基础档"
+counterexample = "价格不是利润；两档只选一项不叠乘，未知缺口不升档，不赠送研究点、投入或资格；本规则只调整研究需求强度，不建立实际投资、维护或额外支出承诺，成本降档不适用。未来可选生产方式的投入现价不是当前研究付款；原版研究时间和成本保留，不能据候选推断已采用生产方式"
+
+[[rules]]
+id = "d6_central_planning_administrative_repair"
+domain = "political"
+source = "common/technology/technologies/30_society.txt"
+field = "central_planning.ai_weight"
+operation = "multiply"
+value = 1.1
+priority = 90
+conditions = [{ fact = "bureaucracy", op = "<", value = 0 }]
+why = "实际官僚赤字提高可解锁电话交换台行政生产方式的研究机会；财政危机不抹去低直接支出的知识修复路径"
+counterexample = "官僚不是税收损失，研究不等于已建行政或已启用交换台，不强制经济法律；原版前置、纸张电话投入、成本和执行保持；本规则只调整研究需求强度，不建立实际投资、维护或额外支出承诺，成本降档不适用。未来可选生产方式的投入现价不是当前研究付款；原版研究时间和成本保留，不能据候选推断已采用生产方式"
+
+[[rules]]
+id = "d6_rifling_small_arms_shortage_foundation"
+domain = "military"
+source = "common/technology/technologies/20_military.txt"
+field = "rifling.ai_weight"
+operation = "multiply"
+value = 1.2
+priority = 90
+conditions = [{ fact = "small_arms_balance", op = "<", value = 0 }]
+why = "实际轻武器缺口在和平时也支持可解锁步枪生产方式的基础研究，不把战争作为全部军需知识的共同前提"
+counterexample = "只改变候选相对倾向，不赠武器、不改部队或强制研究；前置、研究执行和步枪生产方式的钢材硬木工具成本保持原版；本规则只调整研究需求强度，不建立实际投资、维护或额外支出承诺，成本降档不适用。未来可选生产方式的投入现价不是当前研究付款；原版研究时间和成本保留，不能据候选推断已采用生产方式"
+
+[[rules]]
+id = "d6_rifling_small_arms_shortage_pressure"
+domain = "military"
+source = "common/technology/technologies/20_military.txt"
+field = "rifling.ai_weight"
+operation = "multiply"
+value = 1.3
+priority = 95
+auxiliary_facts = ["small_arms_price"]
+conditions = [
+  { fact = "small_arms_balance", op = "<", value = 0 },
+  { fact = "small_arms_price", op = ">", value = 0.25 },
+]
+why = "轻武器实际缺口和高价共同支持军需研究压力档，价格未知只退到已证基础档"
+counterexample = "不把军需价格当军力或盈利，不绕过原版研究资格，需求解除即退出本局部档且不叠乘旧战争档；本规则只调整研究需求强度，不建立实际投资、维护或额外支出承诺，成本降档不适用。未来可选生产方式的投入现价不是当前研究付款；原版研究时间和成本保留，不能据候选推断已采用生产方式"
+
+[[rules]]
+id = "d6_gantry_cranes_steamers_shortage_foundation"
+domain = "military"
+source = "common/technology/technologies/20_military.txt"
+field = "gantry_cranes.ai_weight"
+operation = "multiply"
+value = 1.2
+priority = 90
+conditions = [{ fact = "steamers_balance", op = "<", value = 0 }]
+why = "运输船订单缺口支持可解锁金属造船方式的研究机会；海运供给与陆军军需分开，不要求先有大型海军"
+counterexample = "运输船缺口不是封锁预测，研究候选不创造船舶或海上安全；金属造船的钢煤引擎投入与原版资格、执行保持；本规则只调整研究需求强度，不建立实际投资、维护或额外支出承诺，成本降档不适用。未来可选生产方式的投入现价不是当前研究付款；原版研究时间和成本保留，不能据候选推断已采用生产方式"
+
+[[rules]]
+id = "d6_gantry_cranes_steamers_shortage_pressure"
+domain = "military"
+source = "common/technology/technologies/20_military.txt"
+field = "gantry_cranes.ai_weight"
+operation = "multiply"
+value = 1.3
+priority = 95
+auxiliary_facts = ["steamers_price"]
+conditions = [
+  { fact = "steamers_balance", op = "<", value = 0 },
+  { fact = "steamers_price", op = ">", value = 0.25 },
+]
+why = "运输船真实缺口与高价共同支持供给研究压力档，价格缺失不关闭已经证明的低档"
+counterexample = "不把运输船市场压力等同路线损失，不对所有军事科技统一加权；核心未知、玩家或关闭时保持原版；本规则只调整研究需求强度，不建立实际投资、维护或额外支出承诺，成本降档不适用。未来可选生产方式的投入现价不是当前研究付款；原版研究时间和成本保留，不能据候选推断已采用生产方式"
+
+[[rules]]
+id = "borrowing_foundation_building_railway"
+source = "common/buildings/11_private_infrastructure.txt"
+field = "building_railway.ai_value"
+domain = "economy"
+priority = 6000
+operation = "multiply"
+value = 1.05
+contexts = ["state_borrowing_local"]
+conditions = [
+  { fact = "pm_active_building_railway_pm_early_trains", op = "=", value = true },
+  { fact = "state_infrastructure", op = "<", value = 0 },
+  { fact = "state_owner_coal_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_coal_balance", op = ">=", value = 0 },
+  { fact = "state_owner_engines_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_engines_balance", op = ">=", value = 0 },
+]
+why = "正常借款不全局禁止直接需求已知的局部基础修复；实际投入成本和已证高档继续优先"
+counterexample = "借款不代表低债、健康或盈利；不赠科技、建设力、资源或人口。不以候选排队代替真实配方、完工或需求，未知关键事实、玩家和关闭时保留原版，资格及执行不变"
+
+[[rules]]
+id = "borrowing_foundation_building_food_industry"
+source = "common/buildings/01_industry.txt"
+field = "building_food_industry.ai_value"
+domain = "economy"
+priority = 4000
+operation = "multiply"
+value = 1.05
+contexts = ["state_borrowing_local"]
+conditions = [
+  { fact = "pm_active_building_food_industry_pm_bakery", op = "=", value = true },
+  { fact = "state_owner_groceries_price", op = ">", value = 0.25 },
+  { fact = "state_owner_groceries_balance", op = "<", value = 0 },
+  { fact = "state_owner_grain_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_grain_balance", op = ">=", value = 0 },
+  { fact = "state_infrastructure", op = ">=", value = 0 },
+]
+why = "正常借款不全局禁止直接需求已知的局部基础修复；实际投入成本和已证高档继续优先"
+counterexample = "借款不代表低债、健康或盈利；不赠科技、建设力、资源或人口。不以候选排队代替真实配方、完工或需求，未知关键事实、玩家和关闭时保留原版，资格及执行不变"
+
+[[rules]]
+id = "borrowing_foundation_building_textile_mill"
+source = "common/buildings/01_industry.txt"
+field = "building_textile_mill.ai_value"
+domain = "economy"
+priority = 4000
+operation = "multiply"
+value = 1.05
+contexts = ["state_borrowing_local"]
+conditions = [
+  { fact = "pm_active_building_textile_mill_pm_handsewn_clothes", op = "=", value = true },
+  { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
+  { fact = "state_owner_clothes_balance", op = "<", value = 0 },
+  { fact = "state_owner_fabric_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_fabric_balance", op = ">=", value = 0 },
+  { fact = "state_infrastructure", op = ">=", value = 0 },
+]
+why = "正常借款不全局禁止直接需求已知的局部基础修复；实际投入成本和已证高档继续优先"
+counterexample = "借款不代表低债、健康或盈利；不赠科技、建设力、资源或人口。不以候选排队代替真实配方、完工或需求，未知关键事实、玩家和关闭时保留原版，资格及执行不变"

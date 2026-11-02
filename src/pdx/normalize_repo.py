@@ -1,4 +1,4 @@
-"""全仓文本规范化：每个修改先备份原始字节，二进制不做文本转换。"""
+"""受控文本规范化：先备份原始字节，跳过第三方、缓存和冻结证据。"""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import codecs
 import hashlib
 import json
 import os
+import stat
 import zipfile
 from pathlib import Path
 
@@ -97,6 +98,74 @@ BINARY_EXTRA = frozenset(
     ]
 )
 
+# 这些目录中的字节属于环境、运行态或缓存，不属于可批量规范化的文本。
+# 名称规则也适用于显式临时 root；仓库专属的证据路径则只相对于 REPO 判断。
+PROTECTED_DIRECTORY_NAMES = frozenset(
+    {
+        ".git",
+        ".hg",
+        ".svn",
+        ".venv",
+        "__pycache__",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".pytest_cache",
+        ".hypothesis",
+        ".benchmarks",
+        ".cache",
+        ".tox",
+        ".nox",
+        ".agent-teams",
+        ".agents",
+        ".codex",
+        ".superpowers",
+    }
+)
+PROTECTED_REPOSITORY_ROOTS = (
+    "research/official-docs",
+    "research/vanilla-ai",
+    "research/situated",
+    "tools/out",
+    "tools/prof/out",
+    "evidence",
+    "build",
+    "dist",
+)
+
+
+def _protected(path: Path, repo: Path) -> bool:
+    if any(
+        part.lower() in PROTECTED_DIRECTORY_NAMES
+        or part.lower().startswith(("v3-parse-cache-", ".ruff-cache-"))
+        or part.lower().endswith(".egg-info")
+        for part in path.parts
+    ):
+        return True
+    return any(path.is_relative_to(repo / relative) for relative in PROTECTED_REPOSITORY_ROOTS)
+
+
+def _linked(path: Path) -> bool:
+    """不跟随链接；Windows junction 也是重解析点，但不一定是 is_symlink。"""
+    info = path.lstat()
+    return stat.S_ISLNK(info.st_mode) or bool(
+        getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+    )
+
+
+def _linked_ancestor(path: Path) -> bool:
+    return any(_linked(part) for part in (path, *path.parents))
+
+
+def _normalizable(path: Path, root: Path, repo: Path) -> bool:
+    info = path.lstat()
+    return (
+        # 原地改写多链接文件会同时改变受保护路径的原件；不拆断文件身份。
+        (stat.S_ISDIR(info.st_mode) or (stat.S_ISREG(info.st_mode) and info.st_nlink == 1))
+        and not _linked_ancestor(path)
+        and path.resolve().is_relative_to(root)
+        and not _protected(path.resolve(), repo)
+    )
+
 
 def normalize_bytes(raw: bytes, suffix: str) -> tuple[bytes | None, str]:
     """严格按 BOM 识别 UTF-16/32；无标记坏字节只做可审计转义，不猜代码页。"""
@@ -125,17 +194,27 @@ def normalize_bytes(raw: bytes, suffix: str) -> tuple[bytes | None, str]:
 
 
 def normalize(root: Path, backup: Path) -> list[dict[str, object]]:
-    """备份 ZIP 中含恢复清单；使用独占创建，绝不覆盖上一轮原件。"""
-    root = root.resolve()
+    """受保护或链接 root 显式失败；备份独占创建且在写源文件前逐件验证。"""
+    root = root.absolute()
+    if not root.is_dir():
+        if not root.exists():
+            raise FileNotFoundError(f"规范化根目录不存在：{root}")
+        raise NotADirectoryError(f"规范化根路径不是目录：{root}")
+    if _linked_ancestor(root):
+        raise ValueError(f"规范化根路径包含链接或重解析点：{root}")
+    root = root.resolve(strict=True)
+    repo = REPO.resolve()
+    if _protected(root, repo):
+        raise ValueError(f"规范化根路径受保护：{root}")
     backup = backup.resolve()
     backup.parent.mkdir(parents=True, exist_ok=True)
     changes: list[dict[str, object]] = []
     with zipfile.ZipFile(backup, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for base, dirs, names in os.walk(root, followlinks=False):
-            dirs[:] = sorted(d for d in dirs if d not in {".git", "__pycache__"})
+            dirs[:] = sorted(d for d in dirs if _normalizable(Path(base) / d, root, repo))
             for name in sorted(names):
                 path = Path(base) / name
-                if path.resolve() == backup or path.is_symlink():
+                if path.resolve() == backup or not _normalizable(path, root, repo):
                     continue
                 suffix = path.suffix.lower()
                 if suffix in BINARY_SUFFIXES | BINARY_EXTRA or name.startswith(".coverage"):
@@ -168,6 +247,8 @@ def normalize(root: Path, backup: Path) -> list[dict[str, object]]:
         # 完整 ZIP 已关闭并逐件验证，之后才写源文件，避免中断留下不可读备份。
         for change in changes:
             path = root / str(change["path"])
+            if not _normalizable(path, root, repo):
+                raise ValueError(f"备份后源路径越界、受保护或变为共享链接：{change['path']}")
             if hashlib.sha256(path.read_bytes()).hexdigest() != change["before_sha256"]:
                 raise ValueError(f"备份后源文件被再次编辑：{change['path']}")
             converted, _method = normalize_bytes(

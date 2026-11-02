@@ -10,4 +10,7 @@ l_german:
  SITAI_RULE_GEOGRAPHIC_ISOLATION_FINANCIAL_COST_REASON: "Geografische Isolation und Kosten finanzieller Verpflichtungen (Kandidat)"
  SITAI_RULE_GEOGRAPHIC_PORT_CONTINUITY_REASON: "Lage des Vertragshafens und finanzielle Kapazität (Kandidat)"
  SITAI_RULE_IDENTITY_FEASIBLE_HOMELAND_REASON: "Heimatbindungen und umsetzbare nationale Prioritäten (Kandidat)"
+ SITAI_RULE_LJ14_CONNECTED_HOMELAND_FOUNDATION_REASON: "Heimatbindungen und Marktanbindung"
+ SITAI_RULE_LJ14_HOMELAND_ADMINISTRATIVE_COST_REASON: "Verwaltungskosten der Eingliederung von Heimatgebieten"
+ SITAI_RULE_LJ14_HOMELAND_ISOLATION_COST_REASON: "Marktisolation des angestrebten Heimatgebiets"
  SITAI_RULE_MARKET_ACCESS_STATE_VALUE_REASON: "Zugängliche Marktposition und lokale Nachfrage"

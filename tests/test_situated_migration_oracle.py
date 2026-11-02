@@ -9,6 +9,7 @@ not prove engine runtime behaviour or package byte equivalence.
 
 from __future__ import annotations
 
+import json
 import math
 import operator
 from dataclasses import replace
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 import pytest
 
 from pdx import decision_adapters, decision_rules, policy_audit
-from pdx.situated import compiler, decision_ir
+from pdx.situated import compiler, decision_ir, migration_baseline
 
 pytestmark = pytest.mark.unit
 
@@ -31,6 +32,76 @@ _OPS = {
     ">": operator.gt,
     ">=": operator.ge,
 }
+
+
+def test_published_1401_identities_survive_same_count_replacement() -> None:
+    """Today's source/IR agreement cannot replace the published identity oracle."""
+    model = compiler.load_model()
+    bundle = model.consumer_ir
+    assert bundle is not None
+    migration_baseline.validate_bundle(bundle)
+    historical = next(
+        writer
+        for writer in bundle.writers
+        if writer.source == "mod/decisions/information.toml"
+        and writer.definition == "administrative_cost_guard"
+    )
+    replacement = replace(historical, definition="new_rule_same_count", writer_id="new_writer")
+    changed = replace(
+        bundle,
+        writers=tuple(replacement if item is historical else item for item in bundle.writers),
+    )
+    assert len(changed.writers) == len(bundle.writers)
+    with pytest.raises(ValueError, match="历史迁移身份缺失"):
+        migration_baseline.validate_bundle(changed)
+
+
+@pytest.mark.parametrize(("field", "value"), [("actor", "owner"), ("operation", "add")])
+def test_published_identity_cannot_drift_consumer_contract(field: str, value: str) -> None:
+    bundle = compiler.load_model().consumer_ir
+    assert bundle is not None
+    historical = next(
+        writer
+        for writer in bundle.writers
+        if writer.source == "mod/decisions/information.toml"
+        and writer.definition == "administrative_cost_guard"
+    )
+    changed = replace(
+        bundle,
+        writers=tuple(
+            (replace(item, actor=value) if field == "actor" else replace(item, operation=value))
+            if item is historical
+            else item
+            for item in bundle.writers
+        ),
+    )
+    with pytest.raises(ValueError, match="历史迁移消费者合同漂移"):
+        migration_baseline.validate_bundle(changed)
+
+
+def test_published_card_identity_is_not_replaced_by_an_extra_card() -> None:
+    bundle = compiler.load_model().consumer_ir
+    assert bundle is not None
+    changed = replace(
+        bundle,
+        writers=tuple(
+            replace(item, definition="replacement_card")
+            if item.kind == "action_card" and item.definition == "fiscal_recovery"
+            else item
+            for item in bundle.writers
+        ),
+    )
+    with pytest.raises(ValueError, match="历史显式卡身份缺失"):
+        migration_baseline.validate_bundle(changed)
+
+
+def test_published_manifest_bytes_are_immutable(tmp_path) -> None:
+    bundle = compiler.load_model().consumer_ir
+    assert bundle is not None
+    changed = tmp_path / "migration.json"
+    changed.write_bytes(migration_baseline.DEFAULT_SOURCE.read_bytes() + b" ")
+    with pytest.raises(ValueError, match="历史迁移 manifest 原始字节漂移"):
+        migration_baseline.validate_bundle(bundle, path=changed)
 
 
 def _known(reader: decision_rules.Reader, value: object) -> bool:
@@ -73,6 +144,7 @@ def _oracle(
         candidates.sort(key=lambda item: -item.priority)
         for rule in candidates:
             unknown = False
+            core_unknown = False
             failed = False
             for predicate in rule.conditions:
                 left = values.get(predicate.fact)
@@ -88,14 +160,19 @@ def _oracle(
                 )
                 if not valid:
                     unknown = True
+                    core_unknown |= predicate.fact not in rule.auxiliary_facts
                     continue
                 if not _OPS[predicate.op](cast("Any", left), cast("Any", right)):
                     failed = True
                     break
             if failed:
                 continue
-            if unknown:
+            if core_unknown or any(
+                not _known(readers[key], values.get(key)) for key in rule.required_known_facts
+            ):
                 break
+            if unknown:
+                continue
             result[".".join(field)] = (rule.id, rule.value)
             break
     return result
@@ -143,11 +220,13 @@ def _cases(
 def test_all_legacy_rules_match_independent_migration_oracle() -> None:
     model = compiler.load_model()
     assert model.consumer_ir is not None
-    legacy_count = 0
+    visited: set[tuple[str, str]] = set()
     for source, policy in _policies():
         lowered = decision_ir.lower_legacy(policy, model.consumer_ir, source=source)
         for rule in policy.rules:
-            legacy_count += 1
+            identity = (source, rule.id)
+            assert identity not in visited, f"重复迁移身份：{identity}"
+            visited.add(identity)
             isolated = replace(
                 policy, rules=(rule,), enabled_domains=frozenset({rule.domain}), semantic_ir=()
             )
@@ -180,8 +259,14 @@ def test_all_legacy_rules_match_independent_migration_oracle() -> None:
             expected = _oracle(policy, values, is_ai=True)
             assert decision_rules.evaluate(policy, values, is_ai=True) == expected
             assert decision_rules.evaluate(lowered, values, is_ai=True) == expected
-    assert legacy_count >= 1401
-    assert legacy_count == 1414
+    historical = json.loads(migration_baseline.DEFAULT_SOURCE.read_bytes())
+    frozen = {(row["source"], row["definition"]) for row in historical["rules"]}
+    assert len(frozen) == 1401
+    assert frozen <= visited
+    writers = tuple(writer for writer in model.consumer_ir.writers if writer.kind == "rule_action")
+    identities = {(writer.source, writer.definition) for writer in writers}
+    assert len(identities) == len(writers)
+    assert visited == identities
 
 
 def test_migration_oracle_detects_writer_semantic_drift() -> None:

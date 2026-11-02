@@ -13,13 +13,17 @@ EXTERNAL_DOMAINS = frozenset(
 )
 
 
-def test_external_domains_cover_the_remaining_eight_families_and_all_chain_nodes():
+def test_external_domains_keep_time_pending_without_inventing_a_rule_writer():
     model = load_model()
     coverage = load()
     assert set(FAMILIES) >= EXTERNAL_DOMAINS
     rows = [item for item in model.action_instances if item.family_id in EXTERNAL_DOMAINS]
-    assert {item.family_id for item in rows} == EXTERNAL_DOMAINS
-    assert all(coverage[name].production_instances > 0 for name in EXTERNAL_DOMAINS)
+    assert {item.family_id for item in rows} == EXTERNAL_DOMAINS - {"temporal"}
+    assert {name for name in EXTERNAL_DOMAINS if coverage[name].production_instances} == (
+        EXTERNAL_DOMAINS - {"temporal"}
+    )
+    assert coverage["temporal"].production_instances == 0
+    assert coverage["temporal"].status == "pending"
     chains = [chain for chain in CHAINS if set(chain.domain_ids) & EXTERNAL_DOMAINS]
     assert {chain.id for chain in chains} == {
         "LJ02",

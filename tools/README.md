@@ -1,6 +1,6 @@
 # 工具目录
 
-当前开发候选为 `Situated AI 3.1.0rc1`，尚未发布或完成计划验收；已发布基线仍为 `3.0.1`。
+当前开发候选为 `Situated AI 3.1.0rc2`，计划尚未完成，候选包须按最终冻结源重建；最近的非RC交付为 `3.0.1`。
 
 这里保存可复现的工程检查、基准、静态分析、快照和一次性输出约定。游戏长期行为、压力长跑和 GUI 自动化不属于
 当前工程交付链；日志分析、快照核对和最小复现辅助仍可用于处理用户反馈。发布包不包含 Python 工具、日志或
@@ -12,7 +12,7 @@
 |---|---|
 | `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、baseline、deadcode |
 | `tools/ci/repo_hygiene.py` | 检查根目录可再生缓存、字节码和运行态目录 |
-| `tools/ci/situated_closeout.py` | 汇总 D11–D13 的生成锁、标准包禁带项、生产编码、ConsumerIR owner 和仓库卫生门禁；`--require-plan` 另检查 D0 原版范围出口 |
+| `tools/ci/situated_closeout.py` | 汇总生成锁、标准包禁带项、生产编码、ConsumerIR owner 和卫生；`--require-engineering` 核对 D0–D13 及独立原版范围，`--require-plan` 继续核对 D14 实际交付 |
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
 | `tools/ci/test_suite.py` | 可选的完整 Python 回归、覆盖率、JUnit 和资源报告 |
 | `tools/benchmarks/` | Python 解析、生成和资源基准；固定输入、串行运行，不代表游戏内性能 |
@@ -54,6 +54,7 @@ Windows：
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py encoding
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py hygiene
 .venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout
+.venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout --require-engineering
 .venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout --require-plan
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py baseline
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
@@ -74,10 +75,8 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 
 - `v3 analyze`、`information-catalog`、`snapshot`：读取锁定游戏或快照，生成 mod 开发知识和版本差异。
 - `v3 modgen`、`modguard`：生成并检查仓库生产产物、锁定原版字段和生成一致性。
-- `v3 package`、`pdx.distribution.validate_package`：按生产源版本生成标准 ZIP 和 manifest。本轮由
-  `Situated AI 1.4.0` 经 `1.5.0`、`2.0.0` 升级至已发布基线 `Situated AI 3.0.1`，标准包已完成生成和静态核对；标签、Release 与部署状态见
-  [处境行动决策内核实施计划](../docs/design/exec/mod重设计-实施计划.md)、[当前工作清单](../docs/design/当前工作清单.md)和
-  [分层联动执行结果](../docs/design/exec/分层联动-执行结果.md)，不可由命令成功推断已发布。
+- `v3 package`、`pdx.distribution.validate_package`：按生产源版本生成并核对标准 ZIP 和 manifest；标签、Release 和包哈希见
+  [版本交付索引](../docs/design/exec/版本交付-结果.md)，候选与部署事实见[当前工作清单](../docs/design/当前工作清单.md)。命令成功不能证明已发布或已部署。
 - `v3 verify`、`tables --offline`：无游戏环境的快照与文档检查。`v3 citations <路径...>` 需要本机游戏文件。
 
 `modguard --offline` 通过 `mod/generation-lock.json` 核对冻结源码/产物原始字节，再审计脚本语法与快照接口；

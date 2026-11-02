@@ -88,6 +88,8 @@ from pdx import mods as mods_mod
 from pdx.console import enable_utf8_stdio
 from pdx.extract import extract_dir
 from pdx.parser import TOLERATED_ERRORS, parse_file, parse_text
+from pdx.situated import bindings as situated_bindings
+from pdx.situated import domain_coverage as situated_domain_coverage
 from pdx.situated import inventory as situated_inventory
 
 # 必须在构造 Console 之前调用 —— 理由见 pdx/console.py 的模块文档：
@@ -2605,6 +2607,19 @@ def modgen_cmd(
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
+        if write:
+            binding_count = situated_bindings.write()
+            domain_count = situated_domain_coverage.write_counts()
+            console.print(
+                f"[green]已重建 {binding_count} 条原版消费者绑定和 {domain_count} 个领域统计[/]"
+            )
+        elif check:
+            source_problems = [
+                *situated_bindings.check(),
+                *situated_domain_coverage.check_counts(),
+            ]
+            if source_problems:
+                _fail("生成合同不一致：\n" + "\n".join(source_problems), EXIT_FAILED)
         _, _, files = distribution.package_inputs()
         production = {name: text for name, text in files.items() if name != "README.md"}
         if write:

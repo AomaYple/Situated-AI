@@ -82,6 +82,12 @@ python tools/ci/run_check.py baseline
 python tools/ci/run_check.py deadcode
 ```
 
+涉及 Python 包布局、构建配置或正式交付时，额外构建 wheel 并核对所有源码模块都在包内：
+
+```text
+python tools/ci/python_package.py
+```
+
 常规反馈或无游戏环境运行 `python tools/ci/run_check.py test-offline`；冻结最终候选运行
 `python tools/ci/run_check.py full-acceptance --quiet`。完整验收已经包含离线用例，不要在同一轮再重复运行 `test-offline`。
 pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录实际 worker、测试选择、跳过项、覆盖率、墙钟和进程 RSS。

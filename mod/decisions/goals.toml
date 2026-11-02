@@ -1,29 +1,23 @@
 schema = 1
 
 [goals.survival]
-priority = 100
-horizon = "crisis"
-pressure = ["fiscal_default", "wartime"]
-ttl_days = 60
-consumers = ["fiscal_neutrality", "diplomatic_recklessness"]
+reserved = true
+reason = "Crisis actions currently use direct qualification and bounded magnitude, not a dynamic survival rank or TTL."
 
 [goals.recovery]
-priority = 80
-horizon = "short"
-pressure = ["fiscal_default", "political_instability"]
-ttl_days = 180
-consumers = ["economic_balance", "reform_chance"]
+reserved = true
+reason = "No recovery rank term is compiled; no timed state is claimed."
 
 [goals.capacity]
 priority = 60
 horizon = "medium"
-pressure = []
-ttl_days = 365
-consumers = ["economic_balance", "reform_chance"]
+consumers = ["economic_balance"]
+source_needs = ["support_education_need"]
+unknown = "vanilla"
 
 [goals.structure]
 priority = 40
 horizon = "long"
-pressure = []
-ttl_days = 730
-consumers = ["economic_balance", "reform_chance"]
+consumers = ["economic_balance"]
+source_needs = ["support_industry_need"]
+unknown = "vanilla"

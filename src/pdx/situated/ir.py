@@ -40,6 +40,8 @@ class ActionIR:
     contexts: tuple[str, ...] = ()
     intent: str | None = None
     origin_priority: int | None = None
+    auxiliary_facts: tuple[str, ...] = ()
+    required_known_facts: tuple[str, ...] = ()
 
     def to_rule(self) -> Rule:
         return Rule(
@@ -57,6 +59,8 @@ class ActionIR:
             operation=self.operation,
             contexts=self.contexts,
             intent=self.intent,
+            auxiliary_facts=self.auxiliary_facts,
+            required_known_facts=self.required_known_facts,
         )
 
     def as_dict(self) -> dict[str, Any]:
@@ -72,6 +76,8 @@ def from_rule(rule: Rule, *, source: str) -> ActionIR:
         counterexample=rule.counterexample,
         contexts=rule.contexts,
         intent=rule.intent,
+        auxiliary_facts=rule.auxiliary_facts,
+        required_known_facts=rule.required_known_facts,
         action_id=rule.id,
         source=source,
         domain=rule.domain,

@@ -19,9 +19,34 @@ def _all_rules():
 
 def test_ir_is_stable_and_complete_for_all_production_rules():
     items = ir.from_rules(_all_rules())
-    assert len(items) == 1414
-    assert len({item.action_id for item in items}) == 1414
+    assert len(items) == 1455
+    assert len({item.action_id for item in items}) == 1455
     assert all(item.vanilla_tail for item in items)
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ("multiply = 1.3", ()),
+        ("multiply = { value = 1.3 desc = SAMPLE_REASON }", ()),
+        ("add = { value = 0.5 min = -1 max = 1 }", ()),
+        ("multiply = { desc = SAMPLE_REASON }", ("sample",)),
+        ("multiply = { value > 1.3 }", ("sample",)),
+        ("if = { limit = { always = yes } multiply = 1.3 }", ()),
+        ("if = { limit = { always = no } multiply = 1.3 }", ("sample",)),
+        ("if = { limit = { always != yes } multiply = 1.3 }", ("sample",)),
+        ("if = { limit = { always = yes is_ai = yes } multiply = 1.3 }", ("sample",)),
+        ("if = { limit = { always = yes } multiply = 1.3 else = {} }", ("sample",)),
+        ("if = { limit = { always = yes } multiply = 1.3 stray }", ("sample",)),
+        ("if = { limit = { always = yes } }", ("sample",)),
+        ("limit = { multiply = 1.3 }", ("sample",)),
+    ],
+)
+def test_ast_witness_checks_write_through_exact_unconditional_lowering(body, expected):
+    text = (
+        "# sample [economy]; local auxiliary proof\nif = { limit = { is_ai = yes } " + body + " }"
+    )
+    assert lowering.ast_mismatches({"sample.txt": text}) == expected
 
 
 @pytest.mark.integration

@@ -4,7 +4,7 @@
 >
 > 本页是**唯一的产品实施计划**。每个阶段均以可重算的生产证据和明确出口关闭；文档勾选不能替代实现、见证或交付收据。
 >
-> 计划版本：31.4（2026-11-01）。状态：**D0 收据为 incomplete；D1–D5 均有局部实现但尚未验收关闭；当前候选为 1,425 个 writer（1,414 个当前规则：1,401 个历史基线、13 个前向新增；11 张显式卡）；D6–D14 尚未完成；长期游戏行为、平衡和游戏内性能由用户验收**。31.3 引入逐目标广度、局部因果深度和原子验收合同，不以登记或局部测试宣称新增 Mod 能力。旧 30.0、27.5、2.0.0 和 3.0.0 的交付事实及标签保持不变。
+> 计划版本：31.4（2026-11-01，状态更新于2026-11-02）。状态：**D0 收据为 incomplete；D1–D5 均有局部实现但尚未验收关闭；当前候选为 1,466 个 writer（1,455 个当前规则：1,401 个历史基线、54 个前向新增；11 张显式卡）；D6–D9 已有提前实施的局部改动，D10 已开展局部尾部复核，全部 D 阶段仍未关闭；长期游戏行为、平衡和游戏内性能由用户验收**。31.3 引入逐目标广度、局部因果深度和原子验收合同，不以登记或局部测试宣称新增 Mod 能力。旧 30.0、27.5、2.0.0 和 3.0.0 的交付事实及标签保持不变。
 
 **Goal:** 完整实现以行动卡为最小决策单元、覆盖锁定原版所有合法可接入面、具有局部联合决策和有限时间反馈的 Situated AI，使工程实现与“最优秀的机制和架构，极致广度和极致深度”的可验收合同逐项一致。
 
@@ -13,6 +13,8 @@
 **Tech Stack:** Python 3.11+、仓库 `.venv`、TOML、现有 PDX AST/底本索引、pytest、Hypothesis、现有覆盖率/资源门；游戏基线 Victoria 3 `1.14.5`。
 
 **Spec:** [目标设计](../03-处境决策设计.md)、[行动层深化设计](../05-行动层深化设计.md)及[行动覆盖与验收](../04-行动覆盖与验收.md)共同约束本计划。状态见[工作清单](../当前工作清单.md)，工程与 Git 流程见 [CONTRIBUTING.md](../../../CONTRIBUTING.md)，交付合同见[工程基线](工程基线-1.0.md)。
+
+> 2026-11-02阶段性收尾：按用户要求暂停实施并保存本地阶段快照；31.4的目标、顺序和验收边界不变。当前存在适配器语义失败、完整回归被内存看门狗终止及法律证据测试接口缺失，所有D阶段继续未关闭。恢复入口与验证记录分别见[工作清单](../当前工作清单.md)和[D11–D13结果](D11-D13-结果.md)；本次提交不能替代最终验收或交付。
 
 ## 0.1 当前前向深化计划（D0–D14）
 
@@ -126,7 +128,7 @@ D9 的 LJ01–LJ14 各需正例、断链、成本、未知、不干扰、候选�
 
 ## D0：冻结基线并独立发现新增范围
 
-- **状态：** `in_progress`（D0.03 作用域证据仍有 pending；详见 D0 收据）。
+- **状态：** `in_progress`（2026-11-02 已将 263 个 ship-modification `ai_weight` 目标按完整原版公式链分类；仍有 871 个 unknown-scope 面，D0.03 未关闭，详见 D0 收据）。
 - **依赖：** 无；读取当前 3.0.1 合并源与锁定底本。
 - **输入：** `mod/generation-lock.json`、现有生产源、锁定原版脚本树、3.0.1 交付收据。
 - **生产/配置入口：** `src/pdx/situated/inventory.py`、`src/pdx/ai_surface.py`、`src/pdx/consumer_audit.py`；只补范围发现与审计，不改变 PDX。
@@ -254,7 +256,7 @@ D9 的 LJ01–LJ14 各需正例、断链、成本、未知、不干扰、候选�
 
 ## D6：经济、行政、产业、资源、市场与知识链深化
 
-- **状态：** `not_started`。
+- **状态：** `in_progress`；七个借款基础建设目标及其他局部实现已接线，全部合法目标和前置出口尚未闭合。
 - **依赖：** D5；成本与基本关系原语已可降低，D9只补全跨域联合验收。
 - **输入：** 七个经济/知识领域的全部合法目标和消费者。
 - **生产/配置入口：** `mod/decisions/economy.toml`、`fiscal.toml`、`information.toml`、`adapters.toml`、`domain_actions.toml`、`relations.toml`；`src/pdx/decision_economy.py`、`src/pdx/situated/compiler.py`、`lowering.py`。
@@ -297,7 +299,7 @@ D9 的 LJ01–LJ14 各需正例、断链、成本、未知、不干扰、候选�
 
 ## D7：政治、人口、社会与身份的差异化深化
 
-- **状态：** `not_started`。
+- **状态：** `in_progress`；福利、粮食和局部政治/身份路径提前实施，逐法律、制度与人口目标仍未验收关闭。
 - **依赖：** D5；与 D6 可分批，但禁止同时写同一 TOML/编译器文件。
 - **输入：** 四领域的所有法律、利益集团、人口与社会合法目标。
 - **生产/配置入口：** `mod/decisions/domain_actions.toml`、`information.toml`、`adapters.toml`、`relations.toml`；`src/pdx/political_surface.py`、`src/pdx/situated/compiler.py`、`lowering.py`。
@@ -328,7 +330,7 @@ D9 的 LJ01–LJ14 各需正例、断链、成本、未知、不干扰、候选�
 
 ## D8：外交、安全、海外、地理与时间深化
 
-- **状态：** `not_started`。
+- **状态：** `in_progress`；外部供给保护、宗属及州目标已有局部接线，八域完整范围与生命周期出口尚未闭合。
 - **依赖：** D5；与 D6/D7 按文件所有权顺序整合。
 - **输入：** 八领域的具体策略、条约、战争目标、州和生命周期接口。
 - **生产/配置入口：** `mod/decisions/diplomatic_goals.toml`、`strategic.toml`、`country_state.toml`、`temporal.toml`、`domain_actions.toml`、`adapters.toml`、`relations.toml`；`src/pdx/decision_diplomacy.py`、`country_state.py`、`src/pdx/situated/temporal.py`、`compiler.py`。
@@ -375,13 +377,13 @@ D9 的 LJ01–LJ14 各需正例、断链、成本、未知、不干扰、候选�
 
 ## 2026-11-01 执行审计补充
 
-- 当前独立盘点的最新 `scope_hash` 为 `9c30a9c6f79ad022d58e4f148dbc8cad1a430286a358717e94872eee856a3ea1`；`unknown_scopes=3848`、`capability_pending=3878`。任何阶段收据的旧 scope hash 只能作为历史证据，不能关闭当前阶段。
+- 当前独立盘点的最新 `scope_hash` 为 `c56d0e8f1cd1140d4b8a51f84764e68532e25d5e7ac31acdc50f5b3e66fd0693`；`unknown_scopes=871`、`capability_pending=901`。任何阶段收据的旧 scope hash 只能作为历史证据，不能关闭当前阶段。
 - `fleet_compositions` 只允许按原版字段级文档逐项接入：数值字段、任务权重、舰队数量和 potential 条件各有不同 operation；不能将整个嵌套块泛化为一个 additive score。
-- D9 的 LJ01–LJ14 目前仍是覆盖登记。完成前必须为每条链绑定真实规则或相邻 tool action 的 `chain_id/link_id`，贯穿 `DecisionIR`、lowering 和实际生成 PDX，并各自提供正例、断链、成本、未知、不干扰、候选未完成六组独立反事实。单纯追加链标签仍属登记，不构成功能完成；不能把 14 条链实现成全局 AND 门。
+- D9 的 14 条完整链仍未验收，已有34条局部生产链接贯穿IR/PDX；局部证据不等于全链关闭。完成前必须为每条链绑定真实规则或相邻 tool action 的 `chain_id/link_id`，贯穿 `DecisionIR`、lowering 和实际生成 PDX，并各自提供正例、断链、成本、未知、不干扰、候选未完成六组独立反事实。单纯追加链标签仍属登记，不构成功能完成；不能把 14 条链实现成全局 AND 门。
 
 ## D9：跨领域局部联合决策与有限反馈
 
-- **状态：** `not_started`。
+- **状态：** `in_progress`；34条精确局部绑定已贯穿IR/PDX，14条完整链及D6–D8依赖仍未关闭。
 - **依赖：** D6、D7、D8 各自出口通过；已有关系原语必须在 D5 与各域同步接线。
 - **输入：** 所有领域工具、实际消费者与真实已完成能力。
 - **生产/配置入口：** `mod/decisions/relations.toml`、`arbitration.toml`；`src/pdx/situated/relations.py`、`arbitration.py`、`lowering.py`。
@@ -412,7 +414,7 @@ D9 的 LJ01–LJ14 各需正例、断链、成本、未知、不干扰、候选�
 
 ## D10：全生产所有权、数值复核和清理
 
-- **状态：** `not_started`。
+- **状态：** `in_progress`；已开始所有权与尾部审计，并增加建设需求的终结零分保护；全字段与新增范围尚未闭合。
 - **依赖：** D9。
 - **输入：** 旧迁移处置、全部新facet、完整生成AST和逐字段数值合同。
 - **生产/配置入口：** `src/pdx/decision_rules.py`、`decision_adapters.py`、`src/pdx/situated/action_instances.py`、`inventory.py`、`audit.py`；只清理已证明由新路径替代的代码/配置。
@@ -565,7 +567,7 @@ D14 未获授权的外部动作单列 `delivery_pending`，不伪装为完成；
 
 > 以下第 2–5 节保留 30.0/K0–K13 的需求、接口和历史任务分解，作为兼容与迁移基线；其中 K 编号不再是当前执行顺序，不证明新增 D 功能完成。31.3 的步骤、状态、依赖、范围扩展和关账协议以第 0 节及 D0–D14 为准。A01–A12、R01–R28 和历史场景仍需逐条映射到 D 阶段见证；适用语义不因迁移而删除。
 
-范围是[逐域合同](../04-行动覆盖与验收.md)的 DOM01–DOM19、全部必审行动族，以及 K0 从原版额外发现的接口；当前 1,425 个生产行动实例（1,414 条当前规则、11 张显式卡）和 378 个消费者均已绑定唯一 owner 与生成见证。历史 1,401 条规则仍作为迁移基线单独保留。
+范围是[逐域合同](../04-行动覆盖与验收.md)的 DOM01–DOM19、全部必审行动族，以及 K0 从原版额外发现的接口；当前 1,451 个生产行动实例（1,440 条当前规则、11 张显式卡）和 378 个消费者均已绑定唯一 owner 与生成见证。历史 1,401 条规则仍作为迁移基线单独保留。
 
 前向每个决策面唯一 ID 为 `source + definition + field + actor_scope + target_scope + operation`；状态只有 pending、implemented、engine_unexposed、blocked。
 完整记录原版来源、事实、状态、目标、行动、关系、成本、消费者、时间、原版尾部、正反见证和证据类别。

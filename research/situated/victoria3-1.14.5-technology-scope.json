@@ -1,0 +1,372 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.14.5-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54",
+    "bytes": 97774200,
+    "image_base": "0x140000000"
+  },
+  "script_hashes": {
+    "common/technology/technologies/10_production.txt": "8de32b3b3b3a93454ea04833c1f9e169ff0fa5492fa109d9b8484700c44d4e39",
+    "common/technology/technologies/20_military.txt": "3f28d2e2395e9d337ca58cace117edd922e2cfc6e4f500c7c0e6385901ec6489",
+    "common/technology/technologies/30_society.txt": "39fb1574d4dafdb67293b4e0e465a82b82bee63e4ac810f9715727d48a0fd918",
+    "common/defines/00_ai.txt": "1f63ecef20095aa8e576ef672b64ea2cf91355d132d449d768d601e93fb597a1"
+  },
+  "consumer": {
+    "directory": "technology",
+    "field": "ai_weight",
+    "actor_scope": "country",
+    "target_scope": "definition_only:technology",
+    "operation": "base_candidate_score",
+    "capability": "direct"
+  },
+  "rtti": [
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x1445bee18",
+        "rva": "0x45bee18",
+        "file_offset": "0x45be218",
+        "bytes": "d86c7841010000004c857b400100000080d66240010000007072bf4301000000fc747b400100000080d66240010000001009ad4401000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144ad08e8",
+        "rva": "0x4ad08e8",
+        "file_offset": "0x4acfce8",
+        "bytes": "01000000a801000004000000a0f82305c8c19704e808ad04"
+      },
+      "subobject_offset": "0x1a8",
+      "constructor_displacement": 4,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x14523f8a0",
+        "rva": "0x523f8a0",
+        "file_offset": "0x523e4a0",
+        "bytes": "40d849440100000000000000000000002e3f415643546563686e6f6c6f677954"
+      },
+      "type_name": ".?AVCTechnologyType@@",
+      "hierarchy_rva": "0x497c1c8"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x144546908",
+        "rva": "0x4546908",
+        "file_offset": "0x4545d08",
+        "bytes": "a0b6d940010000000072bf430100000080d662400100000050b7da4001000000508280410100000080d6624001000000772900001b280000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144a2f958",
+        "rva": "0x4a2f958",
+        "file_offset": "0x4a2ed58",
+        "bytes": "0100000000000000000000009051500550f8a20458f9a204"
+      },
+      "subobject_offset": "0x0",
+      "constructor_displacement": 0,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x145505190",
+        "rva": "0x5505190",
+        "file_offset": "0x5503d90",
+        "bytes": "40d849440100000000000000000000002e3f41563f244347616d654462536372"
+      },
+      "type_name": ".?AV?$CGameDbScriptValue@V?$CJominiScriptValue@VCFixedPoint@@@@@@",
+      "hierarchy_rva": "0x4a2f850"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x1445c9b20",
+        "rva": "0x45c9b20",
+        "file_offset": "0x45c8f20",
+        "bytes": "a0a6264101000000c0a861410100000050593543010000003057354301000000e05b354301000000505d35430100000090a6264101000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144ade220",
+        "rva": "0x4ade220",
+        "file_offset": "0x4add620",
+        "bytes": "010000000000000000000000085c5c0590e1ad0420e2ad04"
+      },
+      "subobject_offset": "0x0",
+      "constructor_displacement": 0,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x1455c5c08",
+        "rva": "0x55c5c08",
+        "file_offset": "0x55c4808",
+        "bytes": "40d849440100000000000000000000002e3f41563f24434a6f6d696e69536372"
+      },
+      "type_name": ".?AV?$CJominiScriptScopeObject@VCCountry@@@@",
+      "hierarchy_rva": "0x4ade190"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x1444cd958",
+        "rva": "0x44cd958",
+        "file_offset": "0x44ccd58",
+        "bytes": "b06f7b40010000004c857b400100000080d66240010000007072bf4301000000fc747b400100000080d66240010000007083984401000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144988348",
+        "rva": "0x4988348",
+        "file_offset": "0x4987748",
+        "bytes": "01000000a80100000400000068e04605e0c1970448839804"
+      },
+      "subobject_offset": "0x1a8",
+      "constructor_displacement": 4,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x14546e068",
+        "rva": "0x546e068",
+        "file_offset": "0x546cc68",
+        "bytes": "40d849440100000000000000000000002e3f41563f24545064784e756c6c4f62"
+      },
+      "type_name": ".?AV?$TPdxNullObject@VCTechnologyType@@@@",
+      "hierarchy_rva": "0x497c1e0"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x1444d2098",
+        "rva": "0x44d2098",
+        "file_offset": "0x44d1498",
+        "bytes": "40bb6d4001000000a0456a4001000000c0466a4001000000809264400100000040486a400100000080d662400100000000486a4001000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x1449884d8",
+        "rva": "0x49884d8",
+        "file_offset": "0x49878d8",
+        "bytes": "01000000000000000000000050e54605b8c29704d8849804"
+      },
+      "subobject_offset": "0x0",
+      "constructor_displacement": 0,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x14546e550",
+        "rva": "0x546e550",
+        "file_offset": "0x546d150",
+        "bytes": "40d849440100000000000000000000002e3f41563f244347616d654461746162"
+      },
+      "type_name": ".?AV?$CGameDatabase@VCTechnologyDatabase@@VCTechnologyType@@VCGameDatabaseAssertAccess@@$00@@",
+      "hierarchy_rva": "0x497c2b8"
+    }
+  ],
+  "observations": [
+    {
+      "label": "ai_weight atom id and string pointer",
+      "va": "0x1447a6820",
+      "rva": "0x47a6820",
+      "file_offset": "0x47a5c20",
+      "bytes": "ce53000000000000f827774401000000"
+    },
+    {
+      "label": "ai_weight string",
+      "va": "0x1447727f8",
+      "rva": "0x47727f8",
+      "file_offset": "0x4771bf8",
+      "bytes": "61695f77656967687400000000000000"
+    },
+    {
+      "label": "technology adjustor thunk",
+      "va": "0x1407b74fc",
+      "rva": "0x7b74fc",
+      "file_offset": "0x7b68fc",
+      "bytes": "486341fc482bc8e9c8c5fc00"
+    },
+    {
+      "label": "technology parser ai_weight comparison",
+      "va": "0x141783e29",
+      "rva": "0x1783e29",
+      "file_offset": "0x1783229",
+      "bytes": "4181f8ce5300000f84d90000004181f8305d"
+    },
+    {
+      "label": "technology parser ai_weight member call",
+      "va": "0x141783f0f",
+      "rva": "0x1783f0f",
+      "file_offset": "0x178330f",
+      "bytes": "4881c1c0feffff488b01ff5018e988000000"
+    },
+    {
+      "label": "technology constructor member vftable",
+      "va": "0x1417839e5",
+      "rva": "0x17839e5",
+      "file_offset": "0x1782de5",
+      "bytes": "488d051c2fdc0248894768488d4f70e8e77b61ff"
+    },
+    {
+      "label": "Country scope type tag getter",
+      "va": "0x14161a8c0",
+      "rva": "0x161a8c0",
+      "file_offset": "0x1619cc0",
+      "bytes": "b805000000c3"
+    },
+    {
+      "label": "CCountry lookup type_info reference",
+      "va": "0x1407d49e2",
+      "rva": "0x7d49e2",
+      "file_offset": "0x7d3de2",
+      "bytes": "488d0d1ff9a604e8121ea603488944246848"
+    },
+    {
+      "label": "CCountry type_info decorated name",
+      "va": "0x145244310",
+      "rva": "0x5244310",
+      "file_offset": "0x5242f10",
+      "bytes": "2e3f415643436f756e747279404000"
+    },
+    {
+      "label": "Country lookup ID and returned object",
+      "va": "0x1407d4a39",
+      "rva": "0x7d4a39",
+      "file_offset": "0x7d3e39",
+      "bytes": "8bca81e1ffffff003b482c7316488b40204803c9488b44c8084885c074053950187407488b05a53a26054883c458c3"
+    },
+    {
+      "label": "AI function calls CCountry lookup",
+      "va": "0x14153891d",
+      "rva": "0x153891d",
+      "file_offset": "0x1537d1d",
+      "bytes": "488b41108b4850898d68050000488d8d68050000e88ac029ff488bf0488945"
+    },
+    {
+      "label": "AI constructs type-tag 5 with CCountry ID",
+      "va": "0x141538a1c",
+      "rva": "0x1538a1c",
+      "file_offset": "0x1537e1c",
+      "bytes": "b805000000668945008b461848894508"
+    },
+    {
+      "label": "AI three scope tuple slots and context pointer",
+      "va": "0x141538b56",
+      "rva": "0x1538b56",
+      "file_offset": "0x1537f56",
+      "bytes": "488d4500488945d8488d4500488945e0488d4500488945e8488d8540010000488945f0"
+    },
+    {
+      "label": "AI candidate base script value evaluation",
+      "va": "0x141538b79",
+      "rva": "0x1538b79",
+      "file_offset": "0x1537f79",
+      "bytes": "498d4e7048897424204533c94c8d45d8488d9568050000e8ab1487ff904883bd68"
+    },
+    {
+      "label": "AI eligibility call",
+      "va": "0x141538adc",
+      "rva": "0x1538adc",
+      "file_offset": "0x1537edc",
+      "bytes": "4533c0498bd6e8e9f8e1ff84c00f84a7040000"
+    },
+    {
+      "label": "AI cost computation",
+      "va": "0x141538c61",
+      "rva": "0x1538c61",
+      "file_offset": "0x1538061",
+      "bytes": "48897c24204d8bce488b75c04c8bc6488d55c8498bcfe8642ae2ff488b4dc84885c90f8e810200"
+    },
+    {
+      "label": "AI cost denominator stage",
+      "va": "0x141538c89",
+      "rva": "0x1538c89",
+      "file_offset": "0x1538089",
+      "bytes": "498b46408b5040b8010000003bd00f4fc248984c69d8a086010048bfa38d23d6e25300004d85db0f857e000000b9ffffffff4c8b0dfeab49044d8bc14c"
+    },
+    {
+      "label": "AI cost factor read",
+      "va": "0x141538df0",
+      "rva": "0x1538df0",
+      "file_offset": "0x15381f0",
+      "bytes": "4c8b0dc9aa4904ba33f304b5488d041149b866e6096a01"
+    },
+    {
+      "label": "AI randomized adjusted score and selection",
+      "va": "0x141538f0a",
+      "rva": "0x1538f0a",
+      "file_offset": "0x153830a",
+      "bytes": "488bbd780500004c8bcf4c8b05ada94904488d9568050000488d4c2430e824e20600498b4500498bcdff10488b8d6805000084c07450483bcb7f4b754f448b0f41"
+    },
+    {
+      "label": "AI tie and max update",
+      "va": "0x141538f40",
+      "rva": "0x1538f40",
+      "file_offset": "0x1538340",
+      "bytes": "483bcb7f4b754f448b0f4169c1b385d64a8b57042bd08bc2c1e80833c205a41de3688bd0c1e20833d069c2e9c4561b8bd0c1ea0833d04469c2a28cd692418d41018907418bc0c1e8084133c0a80174064d8bee488bd9"
+    },
+    {
+      "label": "randomizer nonpositive guard",
+      "va": "0x1415a7161",
+      "rva": "0x15a7161",
+      "file_offset": "0x15a6561",
+      "bytes": "4d85c00f8e0504000048833a000f8efb030000"
+    },
+    {
+      "label": "randomizer nonpositive return",
+      "va": "0x1415a756f",
+      "rva": "0x15a756f",
+      "file_offset": "0x15a696f",
+      "bytes": "488b5c2430488bc648c701a0860100415e5ec3"
+    },
+    {
+      "label": "normal technology validity returns true",
+      "va": "0x140635c00",
+      "rva": "0x635c00",
+      "file_offset": "0x635000",
+      "bytes": "b001c3"
+    },
+    {
+      "label": "null technology validity returns false",
+      "va": "0x14062d380",
+      "rva": "0x62d380",
+      "file_offset": "0x62c780",
+      "bytes": "32c0c3"
+    },
+    {
+      "label": "technology null construction invokes technology constructor",
+      "va": "0x1406cd823",
+      "rva": "0x6cd823",
+      "file_offset": "0x6ccc23",
+      "bytes": "488b1d06a0360533d241b8b0010000488bcbe876f9ba03488d0537e4df0348894308c5f9efc0c5f811442430c5fa6f0d89252504c5fa7f4c244040887c24304533c94c8d442430baffffffff488bcbe879600b01"
+    },
+    {
+      "label": "TECH_COST_PENALTY_FACTOR registration",
+      "va": "0x1408de333",
+      "rva": "0x8de333",
+      "file_offset": "0x8dd733",
+      "bytes": "4c8d0d86550f05488d15bb86c3034c8d0550cdc303e913193400cccccc4c8d0d69550f054c8d053acdc303488d15"
+    },
+    {
+      "label": "TECH_RANDOM_FACTOR registration",
+      "va": "0x1408dde03",
+      "rva": "0x8dde03",
+      "file_offset": "0x8dd203",
+      "bytes": "4c8d0dbe5a0f05488d15eb8bc3034c8d05a0d2c303e9431e3400cccccc4c8d0da15a0f054c8d058ad2c303488d15"
+    }
+  ],
+  "bounded_evaluator_xrefs": {
+    "direct_call_or_jump_count": 187,
+    "explicit_plus70_within_80_prior_bytes": [
+      {
+        "label": "direct evaluator call preceded by explicit +0x70 this",
+        "va": "0x141538b90",
+        "rva": "0x1538b90",
+        "file_offset": "0x1537f90",
+        "bytes": "e8ab1487ff"
+      }
+    ],
+    "limit": "Does not cover arbitrary register dataflow, inlining or indirect calls"
+  },
+  "limits": [
+    "Evidence identifies the technology definition under evaluation, not a script-addressable saved scope.",
+    "Country scope is established for the observed AI research-candidate evaluator. Unobserved indirect or differently compiled call sites are not claimed.",
+    "The base value is evaluated before engine eligibility, cost, random, tie-selection and command checks complete. A zero base score is not a terminal rejection.",
+    "No generic reader, named scope, expression lowering, engine performance, balance or long-run behavior is authorized by this discovery proof."
+  ]
+}

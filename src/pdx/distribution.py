@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "3.1.0rc1"
+RELEASE_VERSION = "3.1.0rc2"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -516,6 +516,7 @@ def generation_lock(files: Mapping[str, str | bytes] | None = None) -> str:
         *sorted((root / "mod/decisions").glob("*.toml")),
         *sorted(decisions.BASELINE.parent.glob("*.txt")),
         *sorted(decisions.BASELINE.parent.glob("*.json")),
+        *sorted((root / "research/situated").glob("*.json")),
     ]
     if files is None:
         files = read_production_files()

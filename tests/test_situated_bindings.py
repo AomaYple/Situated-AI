@@ -4,14 +4,14 @@ from dataclasses import replace
 
 import pytest
 
-from pdx.situated.bindings import build, load, validate
+from pdx.situated.bindings import build, check, load, render, validate, write
 
 pytestmark = pytest.mark.unit
 
 
 def test_所有旧规则恰有一个精确绑定():
     bindings = load()
-    assert len(bindings) == 1414
+    assert len(bindings) == 1455
     assert len({item.binding_id for item in bindings}) == len(bindings)
     assert {item.disposition for item in bindings} <= {
         "migrate",
@@ -28,6 +28,31 @@ def test_绑定身份包含actor_target和操作且可由生产源重建():
     actual = load()
     assert tuple(item.binding_id for item in actual) == tuple(item.binding_id for item in expected)
     assert all(item.actor and item.target and item.operation for item in actual)
+
+
+def test_绑定台账可由唯一生成器稳定重建(tmp_path):
+    expected = build()
+    rendered = render(expected)
+    target = tmp_path / "action_bindings.toml"
+
+    assert rendered == render(expected)
+    assert rendered.endswith("\n")
+    assert "lj02_coal_output_transport_foundation" in rendered
+    assert "lj02_coal_transport_railway_support" in rendered
+    assert write(target) == len(expected)
+    assert target.read_text(encoding="utf-8") == rendered
+    assert load(target) == expected
+    assert check(target) == []
+
+
+def test_绑定生成物与生产规则漂移时校验失败(tmp_path):
+    target = tmp_path / "action_bindings.toml"
+    target.write_text("schema = 1\n", encoding="utf-8", newline="\n")
+
+    problems = check(target)
+
+    assert problems
+    assert "生产绑定源不一致" in problems[0]
 
 
 def test_重复或缺失绑定被拒绝():
@@ -60,3 +85,11 @@ def test_绑定内容篡改不能只凭ID通过(field):
 def test_缺少绑定源文件必须失败(tmp_path):
     with pytest.raises(FileNotFoundError):
         load(tmp_path / "missing.toml")
+
+
+@pytest.mark.parametrize("disposition", ["merge", "remove", "retain_vanilla"])
+def test_无法表达目标或证据的处置必须拒绝而非静默迁移(disposition):
+    rows = build()
+    changed = (replace(rows[0], disposition=disposition), *rows[1:])
+    with pytest.raises(ValueError, match=r"处置.*(证据|目标|未支持)"):
+        validate(changed, check_complete=False)

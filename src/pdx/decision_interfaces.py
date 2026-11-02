@@ -6,6 +6,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import math
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .model import Block
@@ -13,6 +17,33 @@ from .parser import parse_text
 
 if TYPE_CHECKING:
     from .decision_rules import Reader, RuleSet
+
+
+_LJ10_EVIDENCE = Path(__file__).resolve().parents[2] / (
+    "research/situated/victoria3-1.14.5-defensive-pact-reader.json"
+)
+_LJ10_EVIDENCE_SHA256 = "2237b33ebdb232e2c2061a995d471e98ca015ce06725cc00f4e7d252c63c20c6"
+
+
+def proven_reader_words() -> frozenset[str]:
+    """Pinned 1.14.5 static reader evidence; current game identity is a separate gate.
+
+    The manifest contains verified executable observations and original script
+    hashes. It extends token discovery only; reader_scope still enforces exact
+    own-Country signatures and does not grant arbitrary foreign-scope access.
+    """
+    raw = _LJ10_EVIDENCE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _LJ10_EVIDENCE_SHA256:
+        raise ValueError("LJ10 读取器冻结证据字节漂移")
+    manifest = json.loads(raw)
+    if manifest["exe"]["sha256"] != (
+        "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54"
+    ):
+        raise ValueError("LJ10 读取器原版引擎身份漂移")
+    return frozenset(
+        [manifest["reader"]["engine"]]
+        + [item["engine"] for item in manifest["positive_native_guard"]["readers"]]
+    )
 
 
 _COUNTRY_BOOLEAN = frozenset(
@@ -53,6 +84,9 @@ _COUNTRY_NUMBER = frozenset(
         "weeks_until_bankruptcy",
         "relations:root",
         "country_fervor_primary_culture",
+        "num_defensive_pacts",
+        "wanted_army_size_script_value",
+        "wanted_marines_size_script_value",
     }
 )
 _STATE_NUMBER = frozenset({"infrastructure_delta", "market_access", "state_unemployment_rate"})
@@ -99,6 +133,9 @@ _UNITS = {
     "infrastructure_delta": "infrastructure_points",
     "market_access": "ratio",
     "state_unemployment_rate": "ratio",
+    "num_defensive_pacts": "treaty_article_count",
+    "wanted_army_size_script_value": "battalions",
+    "wanted_marines_size_script_value": "battalions",
     "state_goods_pricier": "price_above_base_ratio",
     "market_goods_pricier": "price_above_base_ratio",
     "market_goods_delta": "sell_minus_buy_orders",
@@ -107,6 +144,30 @@ _UNITS = {
 
 def reader_scope(reader: Reader, actor_path: tuple[str, ...]) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
+    # 1.14.5 Windows reader/consumer证据只授权本国根；条款数量不是履约或军力。
+    # 固定依据见 research/situated/victoria3-1.14.5-defensive-pact-reader.json。
+    if reader.engine == "num_defensive_pacts" and (
+        reader.scope != "root"
+        or actor_path
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+        or reader.minimum != 0
+        or reader.maximum is not None
+    ):
+        raise ValueError(f"防御协定条款计数只支持本国根的无参数计数合同：{reader.key}")
+    if reader.engine in {"wanted_army_size_script_value", "wanted_marines_size_script_value"} and (
+        reader.scope != "root"
+        or actor_path
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+        or reader.minimum is not None
+        or reader.maximum is not None
+    ):
+        raise ValueError(f"原版军备基值只支持本国根的无参数数值合同：{reader.key}")
     # country_state 生成的协调触发器在国家消费者时机读取；它们是
     # 无持久状态的布尔事实，不是原版 getter，也不需要伪造底本词汇证据。
     if reader.engine.startswith("sitai_context_"):
@@ -160,6 +221,10 @@ def validate(rules: RuleSet) -> None:
         reader_scope(reader, rules.actor_path)
     for rule in rules.rules:
         field = rule.field[1:] if rule.field[0] == "ai_strategy_default" else rule.field
+        if field == ("wanted_construction_output",) and (
+            rule.operation != "multiply" or not math.isfinite(rule.value) or rule.value <= 0
+        ):
+            raise ValueError("建设目标消费者只能使用正乘数；其原版人口终止零分位于新增调整之前")
         named = {"root"}
         if field[0] in {
             "state_value",

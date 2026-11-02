@@ -232,7 +232,9 @@ PROFILE_ROLES = {
             "is_isolated_from_market",
             "is_treaty_port",
             "relations:root",
+            "num_defensive_pacts",
         ),
+        "native_demand": ("wanted_army_size_script_value", "wanted_marines_size_script_value"),
         "current_shock": ("has_insurrectionary_interest_groups", "is_at_war", "has_variable"),
     }.items()
     for engine in engines
@@ -681,6 +683,23 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
                 continue
             conditions = _rows(rule.get("conditions"), f"{label}.conditions")
             referenced: set[str] = set()
+            required_known = rule.get("required_known_facts", [])
+            if (
+                not isinstance(required_known, list)
+                or ("required_known_facts" in rule and not required_known)
+                or any(
+                    not isinstance(key, str)
+                    or key not in readers
+                    or readers[key].get("kind") != "boolean"
+                    or str(readers[key].get("engine", "")).startswith("sitai_context_")
+                    or readers[key].get("engine") == "has_variable"
+                    for key in required_known
+                )
+                or len(set(required_known)) != len(required_known)
+            ):
+                issues.append(f"{label} 核心知识声明必须是非空、唯一的实际布尔读取器")
+            else:
+                referenced.update(required_known)
             for condition in conditions:
                 fact = condition.get("fact")
                 if not isinstance(fact, str) or fact not in readers:
@@ -740,7 +759,15 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
                 for key in row.get("inputs", [])
                 if isinstance(key, str) and key in readers
             }
-            expected_predicates = sum(len(row["conditions"]) for row in candidates)
+            expected_predicates = sum(
+                len(row["conditions"])
+                + (
+                    len(row["required_known_facts"])
+                    if isinstance(row.get("required_known_facts"), list)
+                    else 0
+                )
+                for row in candidates
+            )
             expected_depth = max(
                 (len(readers[key].get("path") or []) for key in input_keys), default=0
             )

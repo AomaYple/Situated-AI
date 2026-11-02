@@ -1,5 +1,7 @@
 """D5 ConsumerDecisionIR 的当前登记合同。"""
 
+from typing import cast
+
 import pytest
 
 from pdx.situated.compiler import load_model
@@ -32,11 +34,11 @@ def test_统一生产bundle包含全部legacy和显式writer():
     assert model.consumer_ir is not None
     bundle = model.consumer_ir
     assert len(bundle.writers) == len(model.action_instances)
-    assert sum(item.kind == "rule_action" for item in bundle.writers) == 1414
+    assert sum(item.kind == "rule_action" for item in bundle.writers) == 1455
     assert sum(item.kind == "action_card" for item in bundle.writers) == len(model.actions)
     payload = bundle.as_dict()
-    assert payload["legacy_writer_count"] == 1414
-    assert payload["legacy_semantic_count"] == 1414
+    assert payload["legacy_writer_count"] == 1455
+    assert payload["legacy_semantic_count"] == 1455
     assert payload["action_card_writer_count"] == len(model.actions)
     assert len(set(bundle.writer_ids())) == len(bundle.writers)
     assert all(item.vanilla_tail for item in bundle.writers)
@@ -68,8 +70,8 @@ def test_legacy_writer绑定与owner逐项反查且每个消费者字段只有�
     bindings = {(item.source, item.definition): item for item in model.binding_rows}
     writers = tuple(item for item in bundle.writers if item.kind == "rule_action")
 
-    assert len(instances) == 1414
-    assert len(bindings) == 1414
+    assert len(instances) == 1455
+    assert len(bindings) == 1455
     assert {(item.source, item.definition) for item in writers} == set(bindings)
 
     owners: dict[str, str] = {}
@@ -94,7 +96,7 @@ def test_legacy_writer携带完整规则语义而不是只有登记身份():
     model = load_model()
     assert model.consumer_ir is not None
     writers = tuple(item for item in model.consumer_ir.writers if item.kind == "rule_action")
-    assert len(writers) == 1414
+    assert len(writers) == 1455
     assert all(item.legacy is not None for item in writers)
     for writer in writers:
         assert writer.legacy is not None
@@ -107,3 +109,35 @@ def test_legacy_writer携带完整规则语义而不是只有登记身份():
         assert writer.legacy.target == writer.target
         assert writer.legacy.vanilla_tail == writer.vanilla_tail
         assert writer.legacy.predicates == writer.predicates
+
+
+def test_production_contract_owner_matches_actual_legacy_instances():
+    model = load_model()
+    production = cast("dict[str, object]", model.contract()["production"])
+    fields = cast("list[dict[str, object]]", production["fields"])
+    rows = {(row["source"], row["field"]): row for row in fields}
+    expected = {
+        (item.source, item.consumer_field): item.owner
+        for item in model.action_instances
+        if item.kind == "rule_action"
+    }
+    assert set(rows) == set(expected)
+    assert {key: rows[key]["owner"] for key in expected} == expected
+
+
+def test_action_card_instance_matches_consumer_and_writer_contracts():
+    model = load_model()
+    assert model.consumer_ir is not None
+    consumers = {item.id: item for item in model.consumers}
+    writers = {item.writer_id: item for item in model.consumer_ir.writers}
+    instances = [item for item in model.action_instances if item.kind == "action_card"]
+    assert instances
+    for instance in instances:
+        writer = writers[instance.action_id]
+        action = writer.action
+        assert action is not None
+        consumer = consumers[action.consumer_id]
+        assert instance.consumer_field == consumer.field == writer.field == action.field
+        assert instance.operation == consumer.operation == writer.operation == action.operation
+        assert instance.actor_scope == consumer.scope == writer.actor
+        assert instance.vanilla_tail == consumer.vanilla_tail == writer.vanilla_tail

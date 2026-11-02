@@ -2,12 +2,37 @@ schema = 1
 
 [opportunities.education]
 domain = "education"
+mode = "predicate"
 source_fact = "literacy_low"
+unit = "flag"
+scope = "root"
+unknown = "vanilla"
+op = "="
+value = true
 actions = ["education_and_research"]
-ttl_days = 30
+
+[opportunities.industry_need]
+domain = "economy"
+mode = "predicate"
+source_fact = "coord_evidence_need_industry"
+unit = "boolean"
+scope = "root"
+unknown = "vanilla"
+op = "="
+value = true
+actions = ["industrial_foundation"]
+
+[opportunities.education_need]
+domain = "education"
+mode = "predicate"
+source_fact = "coord_need_education"
+unit = "boolean"
+scope = "root"
+unknown = "vanilla"
+op = "="
+value = true
+actions = ["education_and_research"]
 
 [opportunities.administrative_foundation]
-domain = "administrative"
-source_fact = "bureaucracy_positive"
-actions = ["industrial_foundation"]
-ttl_days = 30
+reserved = true
+reason = "Positive bureaucracy is not an independent opportunity score; the actual balance drives administrative cost."

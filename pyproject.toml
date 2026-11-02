@@ -80,7 +80,10 @@ v3 = "pdx.cli:app"
 # Python 包源码位于 src/pdx；tools/ 放检查入口、基准、剖析脚本与证据输出。
 # 使用标准 src 布局，避免仓库根目录的工具脚本被误当成可导入包。
 package-dir = { "" = "src" }
-packages = ["pdx"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["pdx*"]
 
 # ─────────────────────────────────────────────────────────────
 # pytest
