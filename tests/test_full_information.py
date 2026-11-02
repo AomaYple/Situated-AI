@@ -13,7 +13,7 @@ import tomllib
 import zipfile
 from dataclasses import replace
 from functools import cache
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 import pytest
 from hypothesis import given
@@ -297,7 +297,11 @@ def test_priority_and_normal_defense_counterexamples(rules):
     wartime = decision_rules.evaluate(rules, _values(default=True, war=True), is_ai=True)
     for field in ("wanted_army_size", "wanted_navy_size", "wanted_construction_output"):
         assert peaceful[field][1] < 1
-        assert field not in wartime
+    # Raw API retains first-tier compatibility; the compiled production path
+    # separately verifies simultaneous known demand and financing cost.
+    assert wartime["wanted_army_size"] == ("wartime_army_administrative_capacity", 1.11)
+    assert wartime["wanted_navy_size"] == ("wartime_navy_administrative_capacity", 1.09)
+    assert "wanted_construction_output" not in wartime
     result = decision_rules.evaluate(rules, _values(resource_route=True), is_ai=True)
     assert result["treaty_category_scores.economy"] == ("identity_resource_cooperation", 1.3)
     assert "wanted_army_size" not in result
@@ -371,7 +375,7 @@ def _evaluate_script(block: Block, engine_values: dict[str, object]) -> float:
             assert isinstance(assignment.value, Scalar)
             raw = assignment.value.unquoted
             actual: object
-            if assignment.key == "is_ai":
+            if assignment.key in {"is_ai", "always"}:
                 actual = True
             elif assignment.key.startswith("sitai_context_known_"):
                 actual = (
@@ -411,13 +415,19 @@ def _evaluate_script(block: Block, engine_values: dict[str, object]) -> float:
         return all(results)
 
     for branch in block.assignments():
+        if branch.key == "limit":
+            continue
         assert isinstance(branch.value, Block)
         limit = branch.value.first("limit")
         assert limit is not None
         assert isinstance(limit.value, Block)
         if condition(limit.value):
             value = branch.value.first("multiply")
-            assert value is not None
+            if value is None:
+                # Auxiliary observations create a nested known/unknown branch.
+                # Evaluate it independently instead of assuming one flat tier.
+                assert any(child.key in {"if", "else_if"} for child in branch.value.assignments())
+                return _evaluate_script(branch.value, engine_values)
             if isinstance(value.value, Block):
                 assert value.value.first("desc") is not None
                 value = value.value.first("value")
@@ -744,6 +754,16 @@ def test_missing_scope_obeys_priority_without_blocking_known_false(rules, high_u
         assert decision_rules.evaluate(changed, values, is_ai=True)["state_value"][1] == 0.9
 
 
+class GeneratedRuleBlocks(NamedTuple):
+    rules: decision_rules.RuleSet
+    blocks: dict[str, Block]
+
+    def __repr__(self) -> str:
+        # Failure reports retain sampled values and the involved fields without
+        # serializing the same large rules/AST fixture on every shrink attempt.
+        return f"GeneratedRuleBlocks(fields={tuple(self.blocks)!r})"
+
+
 @pytest.fixture(scope="module")
 def generated_rule_blocks(rules):
     baseline = decisions.BASELINE.read_text(encoding="utf-8")
@@ -764,7 +784,7 @@ def generated_rule_blocks(rules):
         )
         assert match is not None
         blocks[field_name] = parse_text(match.group(1)).root
-    return rules, blocks
+    return GeneratedRuleBlocks(rules, blocks)
 
 
 @pytest.mark.parametrize(

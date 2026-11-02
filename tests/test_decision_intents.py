@@ -288,5 +288,6 @@ def test_production_intents_coordinate_fiscal_recovery_development_and_cooperati
     assert recovering["wanted_army_size"][1] < 1
     assert recovering["institution_scores.institution_social_security"][1] < 1
     wartime = decision_rules.evaluate(policy, {**values, "default": True, "war": True}, is_ai=True)
-    assert "wanted_army_size" not in wartime
+    # Raw compatibility selects one tier; production jointly includes default cost.
+    assert wartime["wanted_army_size"] == ("wartime_army_foundation", 1.08)
     assert "max_active_stances" not in wartime

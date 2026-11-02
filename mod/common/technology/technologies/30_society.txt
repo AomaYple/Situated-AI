@@ -20,13 +20,18 @@ urbanization = {
 		# ACTION program_9bbe3ab00bd4d6a1 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_9bbe3ab00bd4d6a1_positive
+			# GROUP program_9bbe3ab00bd4d6a1_observed_urban_absorption_positive
 			add = { value = 0
-				# situational_urbanization_research [political]; 人口、识字、行政和财政同时支持时，适度提高城市化研究机会
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 bureaucracy > 0 net_total_income > 0 in_default = no is_at_war = no } } add = 0.2 }
+				# s2_urbanization_observed_absorption [political]; 原版人口基础设施与施工容量在已有劳工基础、行政余额非负及净收入为正时具有额外承接机会；这些是已观察承接代理，不是研究付款条件，缺失任何辅助事实只退出本项
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+			}
+			# GROUP program_9bbe3ab00bd4d6a1_population_urban_capacity_positive
+			add = { value = 0
+				# situational_urbanization_research [political]; 原版人口基础设施与施工容量效果支持人口规模代理的基础研究需求；两百万人阈值是设计选择，不声称已观察真实城市拥堵或容量饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
 			}
 			min = 1
-			max = 1.2
+			max = 1.1800000000000002
 		} }
 		# SITAI END information:urbanization.ai_weight
 	}
@@ -55,13 +60,18 @@ urban_planning = {
 		# ACTION program_36bccecef4292ce1 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_36bccecef4292ce1_positive
+			# GROUP program_36bccecef4292ce1_observed_urban_absorption_positive
 			add = { value = 0
-				# situational_urban_planning_research [political]; 城市化压力与建设承受力同时存在时，适度提高原版城市规划研究机会
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 bureaucracy > 0 net_total_income > 0 in_default = no is_at_war = no } } add = 0.2 }
+				# s2_urban_planning_observed_absorption [political]; 原版人口基础设施与施工容量在已有劳工基础、行政余额非负及净收入为正时具有额外承接机会；这些是已观察承接代理，不是研究付款条件，缺失任何辅助事实只退出本项
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+			}
+			# GROUP program_36bccecef4292ce1_population_urban_capacity_positive
+			add = { value = 0
+				# situational_urban_planning_research [political]; 原版人口基础设施与施工容量效果支持人口规模代理的基础研究需求；两百万人阈值是设计选择，不声称已观察真实城市拥堵或容量饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
 			}
 			min = 1
-			max = 1.2
+			max = 1.1800000000000002
 		} }
 		# SITAI END information:urban_planning.ai_weight
 	}
@@ -698,6 +708,22 @@ quinine = {
 				add = 3
 			}
 		}
+
+		# SITAI BEGIN information:quinine.ai_weight
+		# ACTION program_cf0049ff7dd791cd [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_cf0049ff7dd791cd_health_capacity_positive
+			add = { value = 0
+				# s2_quinine_health_pressure [political]; 原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.15 }
+				# s2_quinine_health_foundation [political]; 原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:quinine.ai_weight
 	}
 }
 
@@ -898,6 +924,20 @@ psychiatry = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:psychiatry.ai_weight
+		# ACTION program_5c32c322f80d1382 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5c32c322f80d1382_population_administration_positive
+			add = { value = 0
+				# s2_psychiatry_population_administration [political]; 原版降低人口行政基础成本系数，实际行政余额为负支持修复研究；不把科技名称当作心理健康效果
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = 0.15 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:psychiatry.ai_weight
 	}
 }
 
@@ -1023,6 +1063,30 @@ labor_movement = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:labor_movement.ai_weight
+		# ACTION program_2a1231d34149f960 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2a1231d34149f960_child_education_positive
+			add = { value = 0
+				# s2_labor_movement_child_education [political]; 原版限制童工或义务小学的真实解锁，在现行允许童工且识字不足时形成儿童教育研究受益；不把解锁当作法律已通过
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 } } add = 0.12 }
+			}
+			# GROUP program_2a1231d34149f960_reform_expectation_negative
+			add = { value = 0
+				# s2_labor_movement_reform_expectation [political]; 原版增加识字带来的生活水平预期；在已识字且生活水平偏低时计入独立负向预期压力，不让前面的教育或劳动安全奖励遮蔽
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			# GROUP program_2a1231d34149f960_workplace_protection_positive
+			add = { value = 0
+				# s2_labor_movement_workplace_protection [political]; 原版劳动监管或劳动保护解锁，与实际劳工比例和低生活水平共同构成独立的劳动安全受益代理；不假定已观察事故或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
+			}
+			min = 0.92
+			max = 1.27
+		} }
+		# SITAI END information:labor_movement.ai_weight
 	}
 }
 
@@ -1046,6 +1110,22 @@ postal_savings = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:postal_savings.ai_weight
+		# ACTION program_bf4653c91bd233b9 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bf4653c91bd233b9_machinist_savings_positive
+			add = { value = 0
+				# s2_postal_savings_machinist_pressure [political]; 原版明确提高机械师投资池效率，真实机械师比例构成一个受益分支；比例阈值为设计选择，不把农民或劳工冒充机械师，也不声称已观察全部储蓄受益者
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } pop_type_percent_country = { pop_type = machinists percent >= 0.05 } } } add = 0.12 }
+				# s2_postal_savings_machinist_foundation [political]; 原版明确提高机械师投资池效率，真实机械师比例构成一个受益分支；比例阈值为设计选择，不把农民或劳工冒充机械师，也不声称已观察全部储蓄受益者
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } pop_type_percent_country = { pop_type = machinists percent >= 0.02 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:postal_savings.ai_weight
 	}
 }
 
@@ -1095,6 +1175,25 @@ human_rights = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:human_rights.ai_weight
+		# ACTION program_bb6616ee860c8a01 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bb6616ee860c8a01_child_education_positive
+			add = { value = 0
+				# s2_human_rights_child_education [political]; 原版限制童工或义务小学的真实解锁，在现行允许童工且识字不足时形成儿童教育研究受益；不把解锁当作法律已通过
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 } } add = 0.12 }
+			}
+			# GROUP program_bb6616ee860c8a01_workplace_protection_positive
+			add = { value = 0
+				# s2_human_rights_workplace_protection [political]; 原版劳动监管或劳动保护解锁，与实际劳工比例和低生活水平共同构成独立的劳动安全受益代理；不假定已观察事故或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
+			}
+			min = 1
+			max = 1.27
+		} }
+		# SITAI END information:human_rights.ai_weight
 	}
 }
 
@@ -1408,6 +1507,22 @@ corporatism = {
 			}
 			add = 1.5
 		}
+
+		# SITAI BEGIN information:corporatism.ai_weight
+		# ACTION program_58541201419676b1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_58541201419676b1_movement_radical_pressure_positive
+			add = { value = 0
+				# s2_corporatism_movement_pressure_upgrade [political]; 激进人口比例更高且已观察叛乱利益集团时采用同因果较强档；叛乱辅助未知只退回已证低档，不指定宗教或国家路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } has_insurrectionary_interest_groups = yes } } add = 0.12 }
+				# s2_corporatism_movement_pressure_foundation [political]; 原版降低来自政治运动的激进化系数，全国激进人口比例仅作为有损压力代理；不假定激进人口确实来自某一运动或指定意识形态
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.15 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:corporatism.ai_weight
 	}
 }
 
@@ -1469,6 +1584,22 @@ mutual_funds = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mutual_funds.ai_weight
+		# ACTION program_f84bbcff529d463d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f84bbcff529d463d_borrowing_interest_positive
+			add = { value = 0
+				# s2_mutual_funds_borrowing_pressure [political]; 实际借贷且债务信用比达到设计阈值时升到同因果较强档；债务比未知保留已证借贷基础档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.6 } } add = 0.22 }
+				# s2_mutual_funds_borrowing_foundation [political]; 原版贷款利率降低，已观察正在借贷支持利息负担基础研究；借贷本身不证明破产或健康
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } add = 0.15 }
+			}
+			min = 1
+			max = 1.22
+		} }
+		# SITAI END information:mutual_funds.ai_weight
 	}
 }
 
@@ -1657,6 +1788,22 @@ malaria_prevention = {
 			}
 			add = 1
 		}
+
+		# SITAI BEGIN information:malaria_prevention.ai_weight
+		# ACTION program_74a5c8018ddb1439 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_74a5c8018ddb1439_health_capacity_positive
+			add = { value = 0
+				# s2_malaria_prevention_health_pressure [political]; 原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.15 }
+				# s2_malaria_prevention_health_foundation [political]; 原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:malaria_prevention.ai_weight
 	}
 }
 
@@ -1758,6 +1905,22 @@ international_exchange_standards = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:international_exchange_standards.ai_weight
+		# ACTION program_77f62bba5e0f640b [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_77f62bba5e0f640b_borrowing_interest_positive
+			add = { value = 0
+				# s2_international_exchange_standards_borrowing_pressure [political]; 实际借贷且债务信用比达到设计阈值时升到同因果较强档；债务比未知保留已证借贷基础档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.6 } } add = 0.22 }
+				# s2_international_exchange_standards_borrowing_foundation [political]; 原版贷款利率降低，已观察正在借贷支持利息负担基础研究；借贷本身不证明破产或健康
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } add = 0.15 }
+			}
+			min = 1
+			max = 1.22
+		} }
+		# SITAI END information:international_exchange_standards.ai_weight
 	}
 }
 
@@ -1799,6 +1962,20 @@ psychoanalysis = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:psychoanalysis.ai_weight
+		# ACTION program_e316fe188768d502 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_e316fe188768d502_population_administration_positive
+			add = { value = 0
+				# s2_psychoanalysis_population_administration [political]; 原版降低人口行政基础成本系数，实际行政余额为负支持修复研究；不把科技名称当作心理健康效果
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = 0.15 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:psychoanalysis.ai_weight
 	}
 }
 
@@ -2021,6 +2198,20 @@ behaviorism = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:behaviorism.ai_weight
+		# ACTION program_3fd4781961b037f5 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3fd4781961b037f5_population_administration_positive
+			add = { value = 0
+				# s2_behaviorism_population_administration [political]; 原版降低人口行政基础成本系数，实际行政余额为负支持修复研究；不把科技名称当作心理健康效果
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = 0.15 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:behaviorism.ai_weight
 	}
 }
 

@@ -5,6 +5,7 @@ import re
 from dataclasses import replace
 
 import pytest
+from _situated_sources import production_sources
 
 from pdx import country_state, decision_adapters, decision_intents, decision_rules, decisions
 from pdx.model import Block
@@ -227,9 +228,9 @@ def test_生产元数据登记行动合同():
     assert payload["source_fingerprint"]["situated_actions_source_sha256"]
     assert (
         payload["situated_actions"]["action_instances"]["count"]
-        == 1455 + contract["candidate_limit"]
+        == len(production_sources().rules) + contract["candidate_limit"]
     )
-    assert payload["situated_actions"]["ir"]["count"] == 1455
+    assert payload["situated_actions"]["ir"]["count"] == len(production_sources().rules)
     ast = payload["situated_actions"]["ast_lowering_witness"]
     assert ast["mismatches"] == []
     assert ast["parsed_count"] == ast["witness_count"]
@@ -251,13 +252,21 @@ def test_覆盖报告只在逐实例生产见证齐全时完成():
 
 def test_统一编译器覆盖信息与适配器的全部生产消费者():
     model = load_model()
-    assert model.production_rule_count == 1455
-    assert len(model.production_consumers) == 379
+    assert model.production_rule_count == len(production_sources().rules)
+    assert len(model.production_consumers) == len(production_sources().consumers)
+    assert {
+        (item.source, ".".join(item.field)) for item in model.production_consumers
+    } == production_sources().consumers
+    assert {
+        (item.source, item.rule_id, item.consumer_field)
+        for item in model.action_instances
+        if item.kind == "rule_action"
+    } == production_sources().rules
     source = decision_rules.load()
     compiled, report = compile_policy(source, config_model=model)
     assert len(compiled.rules) == len(source.rules)
-    assert report["production_rule_count"] == 1455
-    assert report["production_consumer_count"] == 379
+    assert report["production_rule_count"] == len(production_sources().rules)
+    assert report["production_consumer_count"] == len(production_sources().consumers)
     assert all(
         item["write_once"] and item["unknown_fallback"] == "vanilla" for item in report["fields"]
     )

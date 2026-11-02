@@ -123,7 +123,7 @@ def government_generated_text(government_compiled):
 @pytest.mark.parametrize(
     ("bureaucracy", "default", "loans", "expected"),
     [
-        (-1, False, False, ("administrative_government_building_bureaucracy_repair", 1.25)),
+        (-1, False, False, ("administrative_government_building_funded_repair", 1.25)),
         (-1, False, True, ("administrative_government_building_borrowed_repair", 1.10)),
         (-1, True, False, ("administrative_government_building_emergency_repair", 1.05)),
         (-1, True, True, ("administrative_government_building_emergency_repair", 1.05)),
@@ -152,27 +152,28 @@ def test_raw_compatibility_government_repair_has_handwritten_cost_and_exit_witne
     assert decision_rules.evaluate(policy, values, is_ai=False) == {}
 
 
-# All five TOML rules share the default causal envelope: the known +0.25
-# bureaucracy repair is the strongest positive tier even during a crisis;
-# default/loans share one -0.25 tier. Thus repair plus fiscal pressure nets 1.0,
-# while an unknown fiscal fact cannot discard the known bureaucracy contribution.
+# Administrative demand and financing pressure are independent causes.
+# Known health permits +.25, borrowing +.10, default/unknown only +.05.
+# Financing pressure subtracts .25 once, even with both default and loans.
+# An unknown financial fact cannot imply health or discard the base repair.
 GOVERNMENT_WITNESSES = [
     (-0.001, False, False, 1.25),
-    (-1, False, True, 1),
-    (-1, True, False, 1),
-    (-1, True, True, 1),
+    (-1, False, True, 0.85),
+    (-1, True, False, 0.8),
+    (-1, True, True, 0.8),
     (0, False, False, 1),
     (0.001, False, False, 1),
     (0, False, True, 0.75),
     (0, True, False, 0.75),
-    (-1, None, False, 1.25),
-    (-1, False, None, 1.25),
+    (-1, None, False, 1.05),
+    (-1, False, None, 1.05),
     (None, False, False, 1),
     (None, None, None, 1),
     (None, True, False, 0.75),
     (None, False, True, 0.75),
-    (-1, None, True, 1),
-    (-1, True, None, 1),
+    (-1, None, True, 0.8),
+    (-1, True, None, 0.8),
+    (-1, None, None, 1.05),
 ]
 
 
@@ -235,7 +236,7 @@ def test_government_owner_boundary_is_evaluated_without_removing_production_scop
         result = pdx_eval.select(overlay, {"ROOT": {"owner": owner}, "bureaucracy": 100})
         assert result.action_id == GOVERNMENT_PROGRAM
         assert result.operation == "multiply"
-        assert result.delta == (1 if bureaucracy < 0 else 0.75)
+        assert result.delta == pytest.approx(0.8 if bureaucracy < 0 else 0.75)
 
 
 @pytest.mark.integration
@@ -293,7 +294,7 @@ def test_government_administration_rules_are_local_and_split_for_fiscal_crisis()
 @pytest.mark.parametrize(
     ("change", "selected"),
     [
-        ({"state_owner_bureaucracy": -1}, "administrative_government_building_bureaucracy_repair"),
+        ({"state_owner_bureaucracy": -1}, "administrative_government_building_funded_repair"),
         ({"state_owner_default": True}, "fiscal_government_building_default_downgrade"),
         ({"state_owner_loans": True}, "fiscal_government_building_loans_downgrade"),
     ],
@@ -344,7 +345,7 @@ def test_raw_compatibility_government_unknown_and_player_paths_preserve_vanilla(
 @pytest.mark.integration
 @pytest.mark.parametrize(
     ("default", "loans", "multiplier"),
-    [(False, False, 1.25), (True, False, 1), (False, True, 1), (True, True, 1)],
+    [(False, False, 1.25), (True, False, 0.8), (False, True, 0.85), (True, True, 0.8)],
 )
 @pytest.mark.parametrize("evaluator", ["reference", "generated_pdx"])
 def test_government_administration_joint_cost_in_reference_and_generated_pdx(

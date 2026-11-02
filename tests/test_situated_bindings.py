@@ -3,15 +3,74 @@
 from dataclasses import replace
 
 import pytest
+from _situated_sources import production_sources
 
 from pdx.situated.bindings import build, check, load, render, validate, write
 
 pytestmark = pytest.mark.unit
 
 
+def test_source_expectations_keep_source_rule_and_field_identity(tmp_path):
+    information = tmp_path / "information.toml"
+    adapters = tmp_path / "adapters.toml"
+    information.write_text(
+        '[[rules]]\nid = "shared"\nfield = "wanted_army_size"\n'
+        '[[rules]]\nid = "other"\nfield = "wanted_army_size"\n',
+        encoding="utf-8",
+    )
+    adapters.write_text(
+        '[[rules]]\nsource = "common/other.txt"\nid = "shared"\nfield = "weight"\n',
+        encoding="utf-8",
+    )
+
+    sources = production_sources(information, adapters)
+
+    assert sources.rules == {
+        ("mod/decisions/information.toml", "shared", "wanted_army_size"),
+        ("mod/decisions/information.toml", "other", "wanted_army_size"),
+        ("common/other.txt", "shared", "weight"),
+    }
+    assert sources.consumers == {
+        ("mod/decisions/information.toml", "wanted_army_size"),
+        ("common/other.txt", "weight"),
+    }
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ('[[rules]]\nid = "rule"\nfield = "weight"\n', "source"),
+        ('[[rules]]\nsource = ""\nid = "rule"\nfield = "weight"\n', "source"),
+        ('[[rules]]\nsource = "common/other.txt"\nfield = "weight"\n', "id"),
+        ('[[rules]]\nsource = "common/other.txt"\nid = "rule"\n', "field"),
+        ('[[rules]]\nsource = "common/other.txt"\nid = "rule"\nfield = 2\n', "field"),
+        (
+            (
+                '[[rules]]\nsource = "common/other.txt"\nid = "rule"\nfield = "weight"\n'
+                '[[rules]]\nsource = "common/other.txt"\nid = "rule"\nfield = "different"\n'
+            ),
+            "duplicate",
+        ),
+        ("schema = 1\n", "rules"),
+        ("rules = []\n", "rules"),
+    ],
+)
+def test_source_expectations_reject_incomplete_or_duplicate_identities(tmp_path, body, message):
+    information = tmp_path / "information.toml"
+    adapters = tmp_path / "adapters.toml"
+    information.write_text('[[rules]]\nid = "info"\nfield = "weight"\n', encoding="utf-8")
+    adapters.write_text(body, encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        production_sources(information, adapters)
+
+
 def test_所有旧规则恰有一个精确绑定():
     bindings = load()
-    assert len(bindings) == 1455
+    assert len(bindings) == len(production_sources().rules)
+    assert {
+        (item.source, item.definition, item.field) for item in bindings
+    } == production_sources().rules
     assert len({item.binding_id for item in bindings}) == len(bindings)
     assert {item.disposition for item in bindings} <= {
         "migrate",

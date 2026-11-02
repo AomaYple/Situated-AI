@@ -143,29 +143,64 @@ def _native_context_issue(
 
     if not instance.owner or not instance.vanilla_tail:
         return "production_ownership_or_tail_missing"
-    if instance.operation not in {"add", "multiply"} or surface.operation not in {
-        "additive_score",
-        "multiplicative_score",
-        "score",
-        "chance",
-        "base_candidate_score",
-        "relative_weight",
-        "multiplier",
-    }:
+    exact_numeric = {
+        "subject_value": ("additive_subject_valuation", {"add"}),
+        "become_subject_value": ("additive_subject_valuation", {"add"}),
+        "wanted_army_size": ("additive_army_size_target", {"multiply"}),
+        "revolution_aversion": ("override_revolution_aversion", {"multiply"}),
+        "change_law_chance": ("additive_percentage_chance", {"add"}),
+        "max_progressiveness": ("override_progressiveness_limit", {"add"}),
+        "max_regressiveness": ("override_regressiveness_limit", {"add"}),
+    }
+    contract = exact_numeric.get(surface.field)
+    exact_proven = (
+        surface.source == "common/ai_strategies/00_default_strategy.txt"
+        and surface.definition == "ai_strategy_default"
+        and surface.capability == "direct"
+        and surface.legal
+        and contract is not None
+        and surface.operation == contract[0]
+        and instance.operation in contract[1]
+    )
+    if not exact_proven and (
+        instance.operation not in {"add", "multiply"}
+        or surface.operation
+        not in {
+            "additive_score",
+            "multiplicative_score",
+            "score",
+            "chance",
+            "base_candidate_score",
+            "relative_weight",
+            "multiplier",
+        }
+    ):
         return "numeric_consumer_contract_unproven"
     context = instance.evaluation_context
     if context is not None and context.status != "observed":
         return "evaluation_context_unproven"
+    if (
+        context is not None
+        and context.actor_scope is not None
+        and context.actor_scope.name == "root"
+        and context.actor_scope.kind == "country"
+        and instance.actor_scope != "root"
+    ):
+        # A country object reached through owner is not the documented ROOT.
+        # State/building owner proofs below retain their separate contract.
+        return "actor_type_mismatch"
     actor_kind = (
         "state"
         if state_owner_proven
-        else context.actor_scope.kind
-        if context is not None and context.actor_scope is not None
         else "country"
         if instance.actor_scope in {"root", "owner"}
         else instance.actor_scope
     )
-    if surface.actor_scope != actor_kind:
+    if (
+        context is not None
+        and context.actor_scope is not None
+        and context.actor_scope.kind != actor_kind
+    ) or surface.actor_scope != actor_kind:
         return "actor_type_mismatch"
     if surface.target_scope == "none" or surface.target_scope.startswith("definition_only:"):
         # Definition identity is already exact; it is not a script-side target.

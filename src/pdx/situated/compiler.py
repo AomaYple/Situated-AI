@@ -9,6 +9,7 @@ Python 服务、世界扫描或新增的无界状态。
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import re
 import tomllib
@@ -16,7 +17,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from .. import decision_adapters, decision_interfaces, decision_rules  # noqa: TID252
+from .. import config, decision_adapters, decision_interfaces, decision_rules  # noqa: TID252
 from ..model import Block  # noqa: TID252
 from ..parser import parse_text  # noqa: TID252
 from . import (
@@ -55,6 +56,10 @@ ACTIONS = DECISIONS / "actions.toml"
 LAYERS = DECISIONS / "action_layers.toml"
 BINDINGS = DECISIONS / "action_bindings.toml"
 BASELINE = REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
+_LAW_DOC = REPO / "research/official-docs/game/common/laws/readme.md"
+_LAW_DOC_MANIFEST = REPO / "research/official-docs.manifest.json"
+_LAW_DOC_SHA256 = "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076"
+_LAW_NATIVE_SHA256 = "2e172974c75e5a544777f0a21099019043ca0164d499927786e10572b8956a0c"
 SUPPORTING_SOURCES = (
     "capacities.toml",
     "pressures.toml",
@@ -145,6 +150,29 @@ def evaluation_contexts(text: str) -> dict[str, decision_ir.EvaluationContext]:
             ("target_state", "state", "target", "scope:target_state = state"),
             ("target_country", "country", "auxiliary", "scope:target_country = state owner"),
         ),
+        "treaty_port_value": (
+            common,
+            ("target_state", "state", "target", "scope:target_state = state"),
+            ("target_country", "country", "auxiliary", "scope:target_country = state owner"),
+        ),
+        "combat_unit_group_weights": (
+            common,
+            (
+                "military_formation",
+                "military_formation",
+                "auxiliary",
+                "scope:military_formation = military formation",
+            ),
+        ),
+        "conscript_battalion_ratio": (
+            common,
+            (
+                "military_formation",
+                "military_formation",
+                "auxiliary",
+                "scope:military_formation = military formation",
+            ),
+        ),
     }
     parsed = parse_text(text)
     if parsed.errors:
@@ -188,7 +216,11 @@ def evaluation_contexts(text: str) -> dict[str, decision_ir.EvaluationContext]:
                 comments.setdefault(line[1:].strip(), []).append(index + 1)
         expected_markers = {marker for *_, marker in expected}
         contradictory = any(
-            re.search(r"\broot\s*(?:=|is\b)|\bscope\s*:\s*[a-z][a-z0-9_]*\s*(?:=|is\b)", marker)
+            re.search(
+                r"\broot\s*(?:=|is\b)|\bscope\s*:\s*[a-z][a-z0-9_]*\s*(?:=|is\b)",
+                marker,
+                re.IGNORECASE,
+            )
             and marker not in expected_markers
             for marker in comments
         )
@@ -208,7 +240,66 @@ def evaluation_contexts(text: str) -> dict[str, decision_ir.EvaluationContext]:
             auxiliary_scopes=tuple(b for b in bindings[1:] if b.role == "auxiliary"),
             evidence=tuple(sorted({f"{b.source}:{b.line}" for b in bindings})),
         )
+    # Only this documented map projects its parent's country/formation context
+    # to ordinary, unique numeric child blocks. Other maps remain independent.
+    parent = definitions[0].value.all("combat_unit_group_weights")
+    if len(parent) == 1 and isinstance(parent[0].value, Block):
+        context = result["combat_unit_group_weights"]
+        for child in parent[0].value.assignments():
+            field = f"combat_unit_group_weights.{child.key}"
+            siblings = parent[0].value.all(child.key)
+            result[field] = (
+                decision_ir.EvaluationContext(status="ambiguous")
+                if len(siblings) != 1
+                else context
+                if child.op == "=" and child.prefix is None and isinstance(child.value, Block)
+                else decision_ir.EvaluationContext(status="unknown")
+            )
     return result
+
+
+def law_evaluation_context(text: str) -> decision_ir.EvaluationContext:
+    """The enact-weight README proves country/law, never ai_will_do or a getter."""
+    lines = text.splitlines()
+    heading = "# Documentation for ai_enact_weight_modifier"
+    statement = "Root scope is AI country, scope:law contains the relevant law for that country"
+    headings = [i for i, line in enumerate(lines) if line.strip() == heading]
+    statements = [i for i, line in enumerate(lines) if line.strip() == statement]
+    example = [i for i, line in enumerate(lines) if line.strip() == "# Example"]
+    if len(headings) != 1 or len(statements) != 1 or len(example) != 1:
+        return decision_ir.EvaluationContext(status="unknown")
+    start, location, end = headings[0], statements[0], example[0]
+    if not start < location < end or any(
+        re.search(r"Root\s+scope|scope\s*:\s*law", line) and line.strip() != statement
+        for line in lines[start + 1 : end]
+    ):
+        return decision_ir.EvaluationContext(status="unknown")
+    source = "common/laws/readme.md"
+    line = location + 1
+    return decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, line),
+        auxiliary_scopes=(decision_ir.ContextBinding("law", "law", "auxiliary", source, line),),
+        evidence=(f"{source}:{line}",),
+    )
+
+
+def _frozen_law_context() -> decision_ir.EvaluationContext:
+    raw = _LAW_DOC.read_bytes()
+    manifest = json.loads(_LAW_DOC_MANIFEST.read_text(encoding="utf-8"))
+    entry = manifest["文档"]["game/common/laws/readme.md"]
+    if (
+        hashlib.sha256(raw).hexdigest() != _LAW_DOC_SHA256
+        or entry["镜像sha256"] != _LAW_DOC_SHA256
+        or entry["sha256"] != _LAW_NATIVE_SHA256
+    ):
+        raise ValueError("法律 enact weight 冻结文档证据漂移")
+    native = config.GAME / "common/laws/readme.md"
+    if native.is_file() and hashlib.sha256(native.read_bytes()).hexdigest() != _LAW_NATIVE_SHA256:
+        raise ValueError("法律 enact weight 原版文档证据漂移")
+    context = law_evaluation_context(raw.decode("utf-8"))
+    if context.status != "observed":
+        raise ValueError("法律 enact weight 文档没有精确上下文")
+    return context
 
 
 def validate_context_readers(
@@ -218,6 +309,7 @@ def validate_context_readers(
     predicates: tuple[decision_rules.Predicate, ...],
     *,
     actor_path: tuple[str, ...] = (),
+    input_keys: tuple[str, ...] = (),
 ) -> tuple[tuple[str, str, str, str], ...]:
     """Bind existing observations to evidenced objects, never authorize getters."""
     shapes = {
@@ -238,8 +330,21 @@ def validate_context_readers(
             "target_country": ("country", "auxiliary"),
         },
     }
+    shapes["treaty_port_value"] = shapes["state_value"]
+    shapes["ai_enact_weight_modifier"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
+    formation_shape = {
+        "root": ("country", "actor"),
+        "military_formation": ("military_formation", "auxiliary"),
+    }
+    shapes["conscript_battalion_ratio"] = formation_shape
+    if field.startswith("combat_unit_group_weights.") and field.count(".") == 1:
+        shapes[field] = formation_shape
     if field not in shapes or context.status != "observed":
         return ()
+    # These contracts document a country ROOT. Reaching a country again via
+    # owner cannot preserve that actor's identity after a caller-side offset.
+    if actor_path:
+        raise ValueError(f"消费者 {field} 读取器 actor 路径偏离已证明的国家 ROOT")
     bindings = {
         binding.name: binding
         for binding in (context.actor_scope, *context.targets, *context.auxiliary_scopes)
@@ -313,6 +418,8 @@ def validate_context_readers(
             bind(key, "root", argument_kind="country")
         return reader
 
+    for key in input_keys:
+        check(key)
     for predicate in predicates:
         check(predicate.fact)
         if isinstance(predicate.value, decision_rules.FactReference):
@@ -834,34 +941,42 @@ def load_model(
         consumer_contracts={item.id: item for item in consumers},
     )
     observed_contexts = evaluation_contexts(baseline_text)
+    law_context = _frozen_law_context()
     context_readers = {}
+    instance_contexts = {}
     for source, policy in (("mod/decisions/information.toml", information), *adapters.policies):
-        if source not in {
-            "mod/decisions/information.toml",
-            "common/ai_strategies/00_default_strategy.txt",
-        }:
-            continue
         readers = {reader.key: reader for reader in policy.readers}
         for rule in policy.rules:
             field = ".".join(rule.field).removeprefix("ai_strategy_default.")
-            context = observed_contexts.get(field)
+            context = (
+                observed_contexts.get(field)
+                if source
+                in {
+                    "mod/decisions/information.toml",
+                    "common/ai_strategies/00_default_strategy.txt",
+                }
+                else law_context
+                if source.startswith("common/laws/")
+                and len(rule.field) == 2
+                and rule.field[-1] == "ai_enact_weight_modifier"
+                else None
+            )
             if context is not None:
+                instance_contexts[(source, rule.id)] = context
+                reader_field = (
+                    "ai_enact_weight_modifier" if source.startswith("common/laws/") else field
+                )
                 context_readers[(source, rule.id)] = validate_context_readers(
-                    field,
+                    reader_field,
                     context,
                     readers,
                     rule.conditions,
                     actor_path=policy.actor_path,
+                    input_keys=tuple(rule.input_keys()),
                 )
     instances = tuple(
         replace(
-            instance,
-            evaluation_context=observed_contexts.get(
-                instance.consumer_field.removeprefix("ai_strategy_default.")
-            )
-            if instance.source
-            in {"mod/decisions/information.toml", "common/ai_strategies/00_default_strategy.txt"}
-            else None,
+            instance, evaluation_context=instance_contexts.get((instance.source, instance.rule_id))
         )
         for instance in instances
     )
@@ -895,6 +1010,7 @@ def load_model(
     )
     goals = tuple((item.id, item.priority) for item in goal_specs)
     hashes = {
+        "law_enact_context_document": _LAW_DOC_SHA256,
         "migration_baseline": hashlib.sha256(
             migration_baseline.DEFAULT_SOURCE.read_bytes()
         ).hexdigest(),

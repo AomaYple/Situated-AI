@@ -20,8 +20,8 @@ sericulture = {
 			value = 1
 			# GROUP program_b3099e12aacdd05f_positive
 			add = { value = 0
-				# sericulture_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# sericulture_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -45,8 +45,8 @@ enclosure = {
 			value = 1
 			# GROUP program_b88ed7c281b8c91f_positive
 			add = { value = 0
-				# enclosure_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# enclosure_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -71,8 +71,8 @@ manufacturies = {
 			value = 1
 			# GROUP program_b577f5b9d1fca758_positive
 			add = { value = 0
-				# manufacturies_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# manufacturies_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -103,10 +103,10 @@ shaft_mining = {
 			add = { value = 0
 				# coordinated_layered_tech_shaft_mining_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
-				# shaft_mining_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
-				# shaft_mining_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# shaft_mining_ai_weight_bottleneck [market]; 真实商品高价与供给缺口形成相关技术的研究需求；融资或违约不取消知识修复，未来生产投入和成本仍由实际执行处理
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
+				# shaft_mining_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 				# coordinated_layered_tech_shaft_mining_expansion [economy]; 扩张能力提高生产升级研究的相对机会
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
 			}
@@ -139,8 +139,8 @@ cotton_gin = {
 			value = 1
 			# GROUP program_c9999a5620730e5e_positive
 			add = { value = 0
-				# cotton_gin_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# cotton_gin_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -178,8 +178,8 @@ lathe = {
 			value = 1
 			# GROUP program_8364f99fc32101e3_positive
 			add = { value = 0
-				# lathe_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# lathe_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -209,8 +209,8 @@ distillation = {
 			value = 1
 			# GROUP program_0ead035cf98750bc_positive
 			add = { value = 0
-				# distillation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# distillation_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -254,8 +254,8 @@ steelworking = {
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 0.25 }
 				# coordinated_layered_tech_steelworking_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
-				# steelworking_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# steelworking_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 				# coordinated_layered_tech_steelworking_expansion [economy]; 扩张能力提高生产升级研究的相对机会
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
 			}
@@ -285,8 +285,8 @@ prospecting = {
 			value = 1
 			# GROUP program_77df3518d81b3ee9_positive
 			add = { value = 0
-				# prospecting_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# prospecting_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -316,8 +316,8 @@ crystal_glass = {
 			value = 1
 			# GROUP program_6b0e1fb77a468236_positive
 			add = { value = 0
-				# crystal_glass_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# crystal_glass_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -359,10 +359,10 @@ intensive_agriculture = {
 			add = { value = 0
 				# coordinated_layered_tech_intensive_agriculture_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
-				# intensive_agriculture_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
-				# intensive_agriculture_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# intensive_agriculture_ai_weight_bottleneck [market]; 真实商品高价与供给缺口形成相关技术的研究需求；融资或违约不取消知识修复，未来生产投入和成本仍由实际执行处理
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
+				# intensive_agriculture_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 				# coordinated_layered_tech_intensive_agriculture_expansion [economy]; 扩张能力提高生产升级研究的相对机会
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
 			}
@@ -393,8 +393,8 @@ fractional_distillation = {
 			value = 1
 			# GROUP program_f17c32e4a1485347_positive
 			add = { value = 0
-				# fractional_distillation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# fractional_distillation_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -422,8 +422,8 @@ canneries = {
 			value = 1
 			# GROUP program_90c48f94b28647fb_positive
 			add = { value = 0
-				# canneries_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# canneries_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -452,8 +452,8 @@ watertube_boiler = {
 			value = 1
 			# GROUP program_b78c1157a1fde9f3_positive
 			add = { value = 0
-				# watertube_boiler_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# watertube_boiler_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 				# coordinated_route_industry_research [economy]; 工业路线在和平期提高原版生产技术候选权重，促进工业能力
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_industry_active = yes is_at_war = no } } add = 0.15 }
 			}
@@ -501,10 +501,10 @@ atmospheric_engine = {
 			value = 1
 			# GROUP program_38bd6915628c8096_positive
 			add = { value = 0
-				# atmospheric_engine_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
-				# atmospheric_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# atmospheric_engine_ai_weight_bottleneck [market]; 真实商品高价与供给缺口形成相关技术的研究需求；融资或违约不取消知识修复，未来生产投入和成本仍由实际执行处理
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
+				# atmospheric_engine_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -558,8 +558,8 @@ railways = {
 			add = { value = 0
 				# coordinated_layered_tech_railways_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
-				# railways_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# railways_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 				# coordinated_layered_tech_railways_expansion [economy]; 扩张能力提高生产升级研究的相对机会
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
 			}
@@ -590,8 +590,8 @@ chemical_bleaching = {
 			value = 1
 			# GROUP program_53e5fb70fa9eeea4_positive
 			add = { value = 0
-				# chemical_bleaching_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# chemical_bleaching_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -627,8 +627,8 @@ nitroglycerin = {
 			value = 1
 			# GROUP program_6f1fadd501b27fa2_positive
 			add = { value = 0
-				# nitroglycerin_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# nitroglycerin_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -666,8 +666,8 @@ bessemer_process = {
 			add = { value = 0
 				# coordinated_layered_tech_bessemer_process_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
-				# bessemer_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# bessemer_process_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 				# coordinated_layered_tech_bessemer_process_expansion [economy]; 扩张能力提高生产升级研究的相对机会
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
 			}
@@ -697,8 +697,8 @@ baking_powder = {
 			value = 1
 			# GROUP program_4dfe1a12e1a8fa1e_positive
 			add = { value = 0
-				# baking_powder_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# baking_powder_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -739,8 +739,8 @@ mechanized_workshops = {
 			value = 1
 			# GROUP program_04a551926bcf3ce6_positive
 			add = { value = 0
-				# mechanized_workshops_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# mechanized_workshops_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -774,10 +774,10 @@ mechanical_tools = {
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.3 }
 				# coordinated_layered_tech_mechanical_tools_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
-				# mechanical_tools_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
-				# mechanical_tools_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# mechanical_tools_ai_weight_bottleneck [market]; 真实商品高价与供给缺口形成相关技术的研究需求；融资或违约不取消知识修复，未来生产投入和成本仍由实际执行处理
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
+				# mechanical_tools_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 				# coordinated_layered_tech_mechanical_tools_expansion [economy]; 扩张能力提高生产升级研究的相对机会
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
 			}
@@ -810,8 +810,8 @@ improved_fertilizer = {
 			value = 1
 			# GROUP program_e4a50aeff9058f47_positive
 			add = { value = 0
-				# improved_fertilizer_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# improved_fertilizer_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -850,8 +850,8 @@ steam_donkey = {
 			value = 1
 			# GROUP program_bf45554268f84766_positive
 			add = { value = 0
-				# steam_donkey_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# steam_donkey_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -886,8 +886,8 @@ dynamite = {
 			value = 1
 			# GROUP program_4899a3dd9558b12e_positive
 			add = { value = 0
-				# dynamite_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# dynamite_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -926,8 +926,8 @@ rubber_mastication = {
 			value = 1
 			# GROUP program_9d4d0f77baa2fda2_positive
 			add = { value = 0
-				# rubber_mastication_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# rubber_mastication_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -955,8 +955,8 @@ rotary_valve_engine = {
 			value = 1
 			# GROUP program_7c26ba11ee2edc34_positive
 			add = { value = 0
-				# rotary_valve_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# rotary_valve_engine_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -988,8 +988,8 @@ reinforced_concrete = {
 			value = 1
 			# GROUP program_c98b7a5879b5c796_positive
 			add = { value = 0
-				# reinforced_concrete_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# reinforced_concrete_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1027,8 +1027,8 @@ threshing_machine = {
 			value = 1
 			# GROUP program_8df2dd47722c1b77_positive
 			add = { value = 0
-				# threshing_machine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# threshing_machine_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1068,8 +1068,8 @@ pumpjacks = {
 			value = 1
 			# GROUP program_f210a193b8eb342c_positive
 			add = { value = 0
-				# pumpjacks_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# pumpjacks_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1097,8 +1097,8 @@ aniline = {
 			value = 1
 			# GROUP program_26121389bcbb253f_positive
 			add = { value = 0
-				# aniline_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# aniline_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1126,8 +1126,8 @@ open_hearth_process = {
 			value = 1
 			# GROUP program_ce9114a38b1631c5_positive
 			add = { value = 0
-				# open_hearth_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# open_hearth_process_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1155,8 +1155,8 @@ vulcanization = {
 			value = 1
 			# GROUP program_d4643e787b0b7be4_positive
 			add = { value = 0
-				# vulcanization_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# vulcanization_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1184,8 +1184,8 @@ vacuum_canning = {
 			value = 1
 			# GROUP program_1c9644ef03d88466_positive
 			add = { value = 0
-				# vacuum_canning_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# vacuum_canning_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1216,8 +1216,8 @@ shift_work = {
 			value = 1
 			# GROUP program_b5ca5cd97d48bda6_positive
 			add = { value = 0
-				# shift_work_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# shift_work_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1247,8 +1247,8 @@ steel_railway_cars = {
 			value = 1
 			# GROUP program_553bc8d5c9e38810_positive
 			add = { value = 0
-				# steel_railway_cars_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# steel_railway_cars_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1294,8 +1294,8 @@ electrical_generation = {
 			add = { value = 0
 				# coordinated_layered_tech_electrical_generation_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
-				# electrical_generation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# electrical_generation_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 				# coordinated_layered_tech_electrical_generation_expansion [economy]; 扩张能力提高生产升级研究的相对机会
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
 			}
@@ -1337,8 +1337,8 @@ mechanized_farming = {
 			value = 1
 			# GROUP program_960b819a96a74134_positive
 			add = { value = 0
-				# mechanized_farming_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# mechanized_farming_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1367,8 +1367,8 @@ art_silk = {
 			value = 1
 			# GROUP program_5b9ee99523037a64_positive
 			add = { value = 0
-				# art_silk_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# art_silk_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1396,8 +1396,8 @@ automatic_bottle_blowers = {
 			value = 1
 			# GROUP program_ce0b73523e1c83b1_positive
 			add = { value = 0
-				# automatic_bottle_blowers_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# automatic_bottle_blowers_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1427,8 +1427,8 @@ conveyors = {
 			value = 1
 			# GROUP program_229a19b620fdc7e1_positive
 			add = { value = 0
-				# conveyors_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# conveyors_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1456,8 +1456,8 @@ pasteurization = {
 			value = 1
 			# GROUP program_865f027e797884b7_positive
 			add = { value = 0
-				# pasteurization_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# pasteurization_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1499,8 +1499,8 @@ electric_railway = {
 			value = 1
 			# GROUP program_48dacb811e9c4c23_positive
 			add = { value = 0
-				# electric_railway_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# electric_railway_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1542,8 +1542,8 @@ combustion_engine = {
 			value = 1
 			# GROUP program_be2eb34351eaa132_positive
 			add = { value = 0
-				# combustion_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# combustion_engine_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1579,8 +1579,8 @@ pneumatic_tools = {
 			value = 1
 			# GROUP program_1ea8356660c2d221_positive
 			add = { value = 0
-				# pneumatic_tools_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# pneumatic_tools_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1609,8 +1609,8 @@ nitrogen_fixation = {
 			value = 1
 			# GROUP program_3805b2a919c70e2b_positive
 			add = { value = 0
-				# nitrogen_fixation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# nitrogen_fixation_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1638,8 +1638,8 @@ electric_arc_process = {
 			value = 1
 			# GROUP program_80148f59253db0f3_positive
 			add = { value = 0
-				# electric_arc_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# electric_arc_process_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1667,8 +1667,8 @@ steam_turbine = {
 			value = 1
 			# GROUP program_8fa4861531de5b86_positive
 			add = { value = 0
-				# steam_turbine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# steam_turbine_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1696,8 +1696,8 @@ plastics = {
 			value = 1
 			# GROUP program_155049008d877673_positive
 			add = { value = 0
-				# plastics_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# plastics_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1737,8 +1737,8 @@ electrical_capacitors = {
 			value = 1
 			# GROUP program_6feb1bf663d8601c_positive
 			add = { value = 0
-				# electrical_capacitors_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# electrical_capacitors_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1766,8 +1766,8 @@ radio = {
 			value = 1
 			# GROUP program_3ca8538ca4b2cb41_positive
 			add = { value = 0
-				# radio_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# radio_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1796,8 +1796,8 @@ telephone = {
 			value = 1
 			# GROUP program_1e819cc57f7745b7_positive
 			add = { value = 0
-				# telephone_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# telephone_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1827,8 +1827,8 @@ dough_rollers = {
 			value = 1
 			# GROUP program_3a0d0aa38c968353_positive
 			add = { value = 0
-				# dough_rollers_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# dough_rollers_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1857,8 +1857,8 @@ flash_freezing = {
 			value = 1
 			# GROUP program_15104434d6850f84_positive
 			add = { value = 0
-				# flash_freezing_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# flash_freezing_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1886,8 +1886,8 @@ oil_turbine = {
 			value = 1
 			# GROUP program_319a81d5d9e73ffb_positive
 			add = { value = 0
-				# oil_turbine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# oil_turbine_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1921,8 +1921,8 @@ arc_welding = {
 			value = 1
 			# GROUP program_6d4774f6cd96de71_positive
 			add = { value = 0
-				# arc_welding_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# arc_welding_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2
@@ -1951,8 +1951,8 @@ compression_ignition = {
 			value = 1
 			# GROUP program_6ce85bd3e15e9cb4_positive
 			add = { value = 0
-				# compression_ignition_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# compression_ignition_ai_weight [economy]; 已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
 			}
 			min = 1
 			max = 1.2

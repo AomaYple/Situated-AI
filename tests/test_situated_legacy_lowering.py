@@ -1,6 +1,7 @@
 from dataclasses import replace
 
 import pytest
+from _situated_sources import production_sources
 
 from pdx import decision_adapters, decision_rules
 from pdx.situated import compiler, ir, pdx_eval
@@ -69,6 +70,7 @@ def test_all_bindings_lower_from_complete_ir():
         *decision_adapters.load().policies,
     )
     count = 0
+    identities = set()
     for source, policy in policies:
         compiled, _ = compiler.compile_policy(policy, source, model)
         originals = {rule.id: rule for rule in policy.rules}
@@ -78,10 +80,12 @@ def test_all_bindings_lower_from_complete_ir():
                 replace(item, priority=item.origin_priority, origin_priority=None).to_rule()
                 == originals[item.action_id]
             )
+            identities.add((item.source, item.action_id, item.field))
             count += 1
         assert decision_rules.evaluate(compiled, {}, is_ai=False) == {}
         assert decision_rules.evaluate(compiled, {}, is_ai=True) == {}
-    assert count == 1455
+    assert count == len(production_sources().rules)
+    assert identities == production_sources().rules
 
 
 def test_reference_action_selection_blocks_lower_candidate_when_higher_core_is_unknown():

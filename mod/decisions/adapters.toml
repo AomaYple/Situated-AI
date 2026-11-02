@@ -8073,11 +8073,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8104,11 +8102,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8135,11 +8131,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8182,11 +8176,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8198,11 +8190,10 @@ operation = "multiply"
 value = 1.2
 priority = 80
 conditions = [
-  { fact = "default", op = "=", value = false },
   { fact = "engines_price", op = ">", value = 0.25 },
   { fact = "engines_balance", op = "<", value = 0 },
 ]
-why = "相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设"
+why = "真实商品高价与供给缺口形成相关技术的研究需求；融资或违约不取消知识修复，未来生产投入和成本仍由实际执行处理"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8214,11 +8205,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8245,11 +8234,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8305,11 +8292,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8673,11 +8658,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8746,11 +8729,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -8777,11 +8758,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -11544,11 +11523,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -11590,11 +11567,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12207,11 +12182,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12223,11 +12196,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12298,11 +12269,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12314,11 +12283,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12360,11 +12327,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12376,11 +12341,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12392,11 +12355,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12423,11 +12384,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12439,11 +12398,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12470,11 +12427,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12531,11 +12486,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12562,11 +12515,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12699,11 +12650,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12715,11 +12664,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12731,11 +12678,10 @@ operation = "multiply"
 value = 1.2
 priority = 80
 conditions = [
-  { fact = "default", op = "=", value = false },
   { fact = "grain_price", op = ">", value = 0.25 },
   { fact = "grain_balance", op = "<", value = 0 },
 ]
-why = "相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设"
+why = "真实商品高价与供给缺口形成相关技术的研究需求；融资或违约不取消知识修复，未来生产投入和成本仍由实际执行处理"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -12792,11 +12738,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13148,16 +13092,13 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
 id = "mechanical_tools_ai_weight"
-intent = "supported_development"
 domain = "economy"
 source = "common/technology/technologies/10_production.txt"
 field = "mechanical_tools.ai_weight"
@@ -13165,11 +13106,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13181,11 +13120,10 @@ operation = "multiply"
 value = 1.2
 priority = 80
 conditions = [
-  { fact = "default", op = "=", value = false },
   { fact = "tools_price", op = ">", value = 0.25 },
   { fact = "tools_balance", op = "<", value = 0 },
 ]
-why = "相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设"
+why = "真实商品高价与供给缺口形成相关技术的研究需求；融资或违约不取消知识修复，未来生产投入和成本仍由实际执行处理"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13197,11 +13135,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13213,11 +13149,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13408,11 +13342,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13424,11 +13356,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13440,11 +13370,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13456,11 +13384,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13487,11 +13413,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13548,11 +13472,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -13564,11 +13486,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15650,11 +15570,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15666,11 +15584,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15682,11 +15598,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15733,11 +15647,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15764,11 +15676,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15810,11 +15720,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15826,11 +15734,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15887,11 +15793,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15903,11 +15807,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15919,11 +15821,10 @@ operation = "multiply"
 value = 1.2
 priority = 80
 conditions = [
-  { fact = "default", op = "=", value = false },
   { fact = "iron_price", op = ">", value = 0.25 },
   { fact = "iron_balance", op = "<", value = 0 },
 ]
-why = "相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设"
+why = "真实商品高价与供给缺口形成相关技术的研究需求；融资或违约不取消知识修复，未来生产投入和成本仍由实际执行处理"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -15950,11 +15851,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -16035,11 +15934,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -16051,11 +15948,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -16067,16 +15962,13 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
 id = "steelworking_ai_weight"
-intent = "supported_development"
 domain = "economy"
 source = "common/technology/technologies/10_production.txt"
 field = "steelworking.ai_weight"
@@ -16084,11 +15976,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -16437,11 +16327,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -16453,11 +16341,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -16531,11 +16417,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -16547,11 +16431,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -16666,7 +16548,6 @@ counterexample = "不改变原版资格、成本、历史偏好及零权重；�
 
 [[rules]]
 id = "watertube_boiler_ai_weight"
-intent = "supported_development"
 domain = "economy"
 source = "common/technology/technologies/10_production.txt"
 field = "watertube_boiler.ai_weight"
@@ -16674,11 +16555,9 @@ operation = "multiply"
 value = 1.2
 priority = 50
 conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
   { fact = "industrial", op = "=", value = true },
 ]
-why = "原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持"
+why = "已观察工业发展策略形成生产知识需求；研究不预付未来建筑或生产方式投入，借贷、战争或行政短板不封锁基础研究；原版前置、研究点与机会成本仍保留"
 counterexample = "倍率保留原版零值、资格、成本及政治支持；玩家及缺失作用域不干预，数值方向等待用户长期行为验收验证"
 
 [[rules]]
@@ -20989,10 +20868,11 @@ field = "urbanization.ai_weight"
 domain = "political"
 priority = 70
 operation = "multiply"
-value = 1.2
-conditions = [ { fact = "population", op = ">=", value = 2000000 }, { fact = "literacy", op = "<", value = 0.6 }, { fact = "bureaucracy", op = ">", value = 0 }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false } ]
-why = "人口、识字、行政和财政同时支持时，适度提高城市化研究机会"
-counterexample = "战争、违约、行政或财政不足、输入未知时回退原版；不绕过科技前置、研究成本或城市建设执行"
+value = 1.10
+contribution_group = "population_urban_capacity"
+conditions = [{ fact = "population", op = ">=", value = 2000000 }]
+why = "原版人口基础设施与施工容量效果支持人口规模代理的基础研究需求；两百万人阈值是设计选择，不声称已观察真实城市拥堵或容量饱和"
+counterexample = "识字、行政、净收入、借贷、违约和战争不构成基础研究全局禁令；人口核心未知只退出此项。研究不等于建设付款、完工或切换生产方式，原版科技前置、研究时间、成本和尾部保留"
 
 [[rules]]
 id = "situational_urban_planning_research"
@@ -21001,10 +20881,11 @@ field = "urban_planning.ai_weight"
 domain = "political"
 priority = 70
 operation = "multiply"
-value = 1.2
-conditions = [ { fact = "population", op = ">=", value = 2000000 }, { fact = "literacy", op = "<", value = 0.6 }, { fact = "bureaucracy", op = ">", value = 0 }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false } ]
-why = "城市化压力与建设承受力同时存在时，适度提高原版城市规划研究机会"
-counterexample = "不创造研究资格、不改变前置或花费；任何未知输入、战争或财政危机保持原版"
+value = 1.10
+contribution_group = "population_urban_capacity"
+conditions = [{ fact = "population", op = ">=", value = 2000000 }]
+why = "原版人口基础设施与施工容量效果支持人口规模代理的基础研究需求；两百万人阈值是设计选择，不声称已观察真实城市拥堵或容量饱和"
+counterexample = "识字、行政、净收入、借贷、违约和战争不构成基础研究全局禁令；人口核心未知只退出此项。研究不等于建设付款、完工或切换生产方式，原版科技前置、研究时间、成本和尾部保留"
 
 [[rules]]
 source = "common/ai_strategies/00_default_strategy.txt"
@@ -21870,8 +21751,8 @@ domain = "military"
 priority = 20
 operation = "multiply"
 value = 0.85
-conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
-why = "和平财政压力降低昂贵远洋舰队科技的机会优先级"
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }]
+why = "财政压力降低昂贵远洋舰队科技的机会优先级；战时防御研究需求仍在同消费者共同权衡，战争不抹去财政压力；不把研究当作立即支付舰队造价"
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
 
 [[rules]]
@@ -21882,8 +21763,8 @@ domain = "military"
 priority = 20
 operation = "multiply"
 value = 0.85
-conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
-why = "和平财政压力降低昂贵远洋舰队科技的机会优先级"
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }]
+why = "财政压力降低昂贵远洋舰队科技的机会优先级；战时防御研究需求仍在同消费者共同权衡，战争不抹去财政压力；不把研究当作立即支付舰队造价"
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
 
 [[rules]]
@@ -21894,8 +21775,8 @@ domain = "military"
 priority = 20
 operation = "multiply"
 value = 0.85
-conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }, { fact = "war", op = "=", value = false }]
-why = "和平财政压力降低昂贵远洋舰队科技的机会优先级"
+conditions = [{ fact = "coord_need_fiscal", op = "=", value = true }]
+why = "财政压力降低昂贵远洋舰队科技的机会优先级；战时防御研究需求仍在同消费者共同权衡，战争不抹去财政压力；不把研究当作立即支付舰队造价"
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
 
 [[rules]]
@@ -23500,6 +23381,7 @@ id = "administrative_government_building_emergency_repair"
 field = "building_government_administration.ai_value"
 domain = "economy"
 priority = 120
+contribution_group = "administrative_capacity_repair"
 operation = "multiply"
 value = 1.05
 conditions = [
@@ -23515,6 +23397,7 @@ id = "administrative_government_building_borrowed_repair"
 field = "building_government_administration.ai_value"
 domain = "economy"
 priority = 115
+contribution_group = "administrative_capacity_repair"
 operation = "multiply"
 value = 1.10
 conditions = [
@@ -23531,10 +23414,11 @@ id = "administrative_government_building_bureaucracy_repair"
 field = "building_government_administration.ai_value"
 domain = "economy"
 priority = 100
+contribution_group = "administrative_capacity_repair"
 operation = "multiply"
-value = 1.25
+value = 1.05
 conditions = [{ fact = "state_owner_bureaucracy", op = "<", value = 0 }]
-why = "州所属国家官僚容量为负时，提高政府行政建筑的局部候选权重；原版行政建筑资格、就业、成本与执行尾部继续优先"
+why = "已知行政赤字形成最低修复需求；财政状态未知也不升健康档，仅保留1.05基础，已知融资代价在独立组共同参与"
 counterexample = "官僚容量未知或非负时保留原版；该局部规则不把税收能力冒充为官僚容量，也不改变玩家路径、研究前置、资格和建造成本"
 
 [[rules]]
@@ -23543,6 +23427,7 @@ id = "fiscal_government_building_default_downgrade"
 field = "building_government_administration.ai_value"
 domain = "fiscal"
 priority = 110
+contribution_group = "administrative_financing_pressure"
 operation = "multiply"
 value = 0.75
 conditions = [{ fact = "state_owner_default", op = "=", value = true }]
@@ -23555,6 +23440,7 @@ id = "fiscal_government_building_loans_downgrade"
 field = "building_government_administration.ai_value"
 domain = "fiscal"
 priority = 105
+contribution_group = "administrative_financing_pressure"
 operation = "multiply"
 value = 0.75
 conditions = [{ fact = "state_owner_loans", op = "=", value = true }]
@@ -23984,3 +23870,370 @@ conditions = [
 ]
 why = "正常借款不全局禁止直接需求已知的局部基础修复；实际投入成本和已证高档继续优先"
 counterexample = "借款不代表低债、健康或盈利；不赠科技、建设力、资源或人口。不以候选排队代替真实配方、完工或需求，未知关键事实、玩家和关闭时保留原版，资格及执行不变"
+
+# S2 社会科技：真实效果子集与显式因果分组；不能代表其余社会科技覆盖完成。
+[[rules]]
+id = "s2_psychiatry_population_administration"
+source = "common/technology/technologies/30_society.txt"
+field = "psychiatry.ai_weight"
+domain = "political"
+priority = 43100
+operation = "multiply"
+value = 1.15
+contribution_group = "population_administration"
+conditions = [
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "原版降低人口行政基础成本系数，实际行政余额为负支持修复研究；不把科技名称当作心理健康效果"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_psychoanalysis_population_administration"
+source = "common/technology/technologies/30_society.txt"
+field = "psychoanalysis.ai_weight"
+domain = "political"
+priority = 43101
+operation = "multiply"
+value = 1.15
+contribution_group = "population_administration"
+conditions = [
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "原版降低人口行政基础成本系数，实际行政余额为负支持修复研究；不把科技名称当作心理健康效果"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_behaviorism_population_administration"
+source = "common/technology/technologies/30_society.txt"
+field = "behaviorism.ai_weight"
+domain = "political"
+priority = 43102
+operation = "multiply"
+value = 1.15
+contribution_group = "population_administration"
+conditions = [
+  { fact = "bureaucracy", op = "<", value = 0 },
+]
+why = "原版降低人口行政基础成本系数，实际行政余额为负支持修复研究；不把科技名称当作心理健康效果"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_mutual_funds_borrowing_foundation"
+source = "common/technology/technologies/30_society.txt"
+field = "mutual_funds.ai_weight"
+domain = "political"
+priority = 43103
+operation = "multiply"
+value = 1.15
+contribution_group = "borrowing_interest"
+conditions = [
+  { fact = "loans", op = "=", value = true },
+]
+why = "原版贷款利率降低，已观察正在借贷支持利息负担基础研究；借贷本身不证明破产或健康"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_mutual_funds_borrowing_pressure"
+source = "common/technology/technologies/30_society.txt"
+field = "mutual_funds.ai_weight"
+domain = "political"
+priority = 43104
+operation = "multiply"
+value = 1.22
+contribution_group = "borrowing_interest"
+auxiliary_facts = ["debt_ratio"]
+conditions = [
+  { fact = "loans", op = "=", value = true },
+  { fact = "debt_ratio", op = ">=", value = 0.6 },
+]
+why = "实际借贷且债务信用比达到设计阈值时升到同因果较强档；债务比未知保留已证借贷基础档"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_international_exchange_standards_borrowing_foundation"
+source = "common/technology/technologies/30_society.txt"
+field = "international_exchange_standards.ai_weight"
+domain = "political"
+priority = 43105
+operation = "multiply"
+value = 1.15
+contribution_group = "borrowing_interest"
+conditions = [
+  { fact = "loans", op = "=", value = true },
+]
+why = "原版贷款利率降低，已观察正在借贷支持利息负担基础研究；借贷本身不证明破产或健康"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_international_exchange_standards_borrowing_pressure"
+source = "common/technology/technologies/30_society.txt"
+field = "international_exchange_standards.ai_weight"
+domain = "political"
+priority = 43106
+operation = "multiply"
+value = 1.22
+contribution_group = "borrowing_interest"
+auxiliary_facts = ["debt_ratio"]
+conditions = [
+  { fact = "loans", op = "=", value = true },
+  { fact = "debt_ratio", op = ">=", value = 0.6 },
+]
+why = "实际借贷且债务信用比达到设计阈值时升到同因果较强档；债务比未知保留已证借贷基础档"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_postal_savings_machinist_foundation"
+source = "common/technology/technologies/30_society.txt"
+field = "postal_savings.ai_weight"
+domain = "political"
+priority = 43107
+operation = "multiply"
+value = 1.08
+contribution_group = "machinist_savings"
+conditions = [
+  { fact = "skilled_workforce", op = ">=", value = 0.02 },
+]
+why = "原版明确提高机械师投资池效率，真实机械师比例构成一个受益分支；比例阈值为设计选择，不把农民或劳工冒充机械师，也不声称已观察全部储蓄受益者"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_postal_savings_machinist_pressure"
+source = "common/technology/technologies/30_society.txt"
+field = "postal_savings.ai_weight"
+domain = "political"
+priority = 43108
+operation = "multiply"
+value = 1.12
+contribution_group = "machinist_savings"
+conditions = [
+  { fact = "skilled_workforce", op = ">=", value = 0.05 },
+]
+why = "原版明确提高机械师投资池效率，真实机械师比例构成一个受益分支；比例阈值为设计选择，不把农民或劳工冒充机械师，也不声称已观察全部储蓄受益者"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_quinine_health_foundation"
+source = "common/technology/technologies/30_society.txt"
+field = "quinine.ai_weight"
+domain = "political"
+priority = 43109
+operation = "multiply"
+value = 1.1
+contribution_group = "health_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_quinine_health_pressure"
+source = "common/technology/technologies/30_society.txt"
+field = "quinine.ai_weight"
+domain = "political"
+priority = 43110
+operation = "multiply"
+value = 1.15
+contribution_group = "health_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 8 },
+]
+why = "原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_malaria_prevention_health_foundation"
+source = "common/technology/technologies/30_society.txt"
+field = "malaria_prevention.ai_weight"
+domain = "political"
+priority = 43111
+operation = "multiply"
+value = 1.1
+contribution_group = "health_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_malaria_prevention_health_pressure"
+source = "common/technology/technologies/30_society.txt"
+field = "malaria_prevention.ai_weight"
+domain = "political"
+priority = 43112
+operation = "multiply"
+value = 1.15
+contribution_group = "health_capacity"
+conditions = [
+  { fact = "sol", op = "<", value = 8 },
+]
+why = "原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_labor_movement_child_education"
+source = "common/technology/technologies/30_society.txt"
+field = "labor_movement.ai_weight"
+domain = "political"
+priority = 43113
+operation = "multiply"
+value = 1.12
+contribution_group = "child_education"
+conditions = [
+  { fact = "current_child_labor", op = "=", value = true },
+  { fact = "literacy", op = "<", value = 0.6 },
+]
+why = "原版限制童工或义务小学的真实解锁，在现行允许童工且识字不足时形成儿童教育研究受益；不把解锁当作法律已通过"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_labor_movement_workplace_protection"
+source = "common/technology/technologies/30_society.txt"
+field = "labor_movement.ai_weight"
+domain = "political"
+priority = 43114
+operation = "multiply"
+value = 1.15
+contribution_group = "workplace_protection"
+conditions = [
+  { fact = "industrial_workforce", op = ">=", value = 0.15 },
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版劳动监管或劳动保护解锁，与实际劳工比例和低生活水平共同构成独立的劳动安全受益代理；不假定已观察事故或制度饱和"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_human_rights_child_education"
+source = "common/technology/technologies/30_society.txt"
+field = "human_rights.ai_weight"
+domain = "political"
+priority = 43115
+operation = "multiply"
+value = 1.12
+contribution_group = "child_education"
+conditions = [
+  { fact = "current_child_labor", op = "=", value = true },
+  { fact = "literacy", op = "<", value = 0.6 },
+]
+why = "原版限制童工或义务小学的真实解锁，在现行允许童工且识字不足时形成儿童教育研究受益；不把解锁当作法律已通过"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_human_rights_workplace_protection"
+source = "common/technology/technologies/30_society.txt"
+field = "human_rights.ai_weight"
+domain = "political"
+priority = 43116
+operation = "multiply"
+value = 1.15
+contribution_group = "workplace_protection"
+conditions = [
+  { fact = "industrial_workforce", op = ">=", value = 0.15 },
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版劳动监管或劳动保护解锁，与实际劳工比例和低生活水平共同构成独立的劳动安全受益代理；不假定已观察事故或制度饱和"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_labor_movement_reform_expectation"
+source = "common/technology/technologies/30_society.txt"
+field = "labor_movement.ai_weight"
+domain = "political"
+priority = 43117
+operation = "multiply"
+value = 0.92
+contribution_group = "reform_expectation"
+conditions = [
+  { fact = "literacy", op = ">=", value = 0.5 },
+  { fact = "sol", op = "<", value = 12 },
+]
+why = "原版增加识字带来的生活水平预期；在已识字且生活水平偏低时计入独立负向预期压力，不让前面的教育或劳动安全奖励遮蔽"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_corporatism_movement_pressure_foundation"
+source = "common/technology/technologies/30_society.txt"
+field = "corporatism.ai_weight"
+domain = "political"
+priority = 43118
+operation = "multiply"
+value = 1.08
+contribution_group = "movement_radical_pressure"
+conditions = [
+  { fact = "radical_share", op = ">=", value = 0.15 },
+]
+why = "原版降低来自政治运动的激进化系数，全国激进人口比例仅作为有损压力代理；不假定激进人口确实来自某一运动或指定意识形态"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_corporatism_movement_pressure_upgrade"
+source = "common/technology/technologies/30_society.txt"
+field = "corporatism.ai_weight"
+domain = "political"
+priority = 43119
+operation = "multiply"
+value = 1.12
+contribution_group = "movement_radical_pressure"
+auxiliary_facts = ["insurrection"]
+conditions = [
+  { fact = "radical_share", op = ">=", value = 0.25 },
+  { fact = "insurrection", op = "=", value = true },
+]
+why = "激进人口比例更高且已观察叛乱利益集团时采用同因果较强档；叛乱辅助未知只退回已证低档，不指定宗教或国家路线"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_urbanization_observed_absorption"
+source = "common/technology/technologies/30_society.txt"
+field = "urbanization.ai_weight"
+domain = "political"
+priority = 43120
+operation = "multiply"
+value = 1.08
+contribution_group = "observed_urban_absorption"
+auxiliary_facts = ["industrial_workforce", "bureaucracy", "net_surplus"]
+conditions = [
+  { fact = "population", op = ">=", value = 2000000 },
+  { fact = "industrial_workforce", op = ">=", value = 0.15 },
+  { fact = "bureaucracy", op = ">=", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+]
+why = "原版人口基础设施与施工容量在已有劳工基础、行政余额非负及净收入为正时具有额外承接机会；这些是已观察承接代理，不是研究付款条件，缺失任何辅助事实只退出本项"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "s2_urban_planning_observed_absorption"
+source = "common/technology/technologies/30_society.txt"
+field = "urban_planning.ai_weight"
+domain = "political"
+priority = 43121
+operation = "multiply"
+value = 1.08
+contribution_group = "observed_urban_absorption"
+auxiliary_facts = ["industrial_workforce", "bureaucracy", "net_surplus"]
+conditions = [
+  { fact = "population", op = ">=", value = 2000000 },
+  { fact = "industrial_workforce", op = ">=", value = 0.15 },
+  { fact = "bureaucracy", op = ">=", value = 0 },
+  { fact = "net_surplus", op = ">", value = 0 },
+]
+why = "原版人口基础设施与施工容量在已有劳工基础、行政余额非负及净收入为正时具有额外承接机会；这些是已观察承接代理，不是研究付款条件，缺失任何辅助事实只退出本项"
+counterexample = "阈值和倍率是有界设计选择；核心未知只退出对应贡献，同因果强档不叠加，独立贡献联合。玩家或关闭模块保留原版；需求条件解除只退出本项，不证明实际容量饱和。不把未来制度维护、施工投入或生产方式现价当作当前研究付款；原版资格、科技前置、研究时间、成本、意识形态及尾部保持，研究候选不等于实施或完成"
+
+[[rules]]
+id = "administrative_government_building_funded_repair"
+source = "common/buildings/07_government.txt"
+field = "building_government_administration.ai_value"
+domain = "economy"
+priority = 125
+contribution_group = "administrative_capacity_repair"
+operation = "multiply"
+value = 1.25
+conditions = [
+  { fact = "state_owner_bureaucracy", op = "<", value = 0 },
+  { fact = "state_owner_default", op = "=", value = false },
+  { fact = "state_owner_loans", op = "=", value = false },
+]
+why = "行政赤字且两项融资状态均已证实健康时使用修复强档；正常借款走弱档，违约走基础档，未知只退出强化而不虚构健康；候选不是已建成能力"
+counterexample = "行政缺口解除退出；融资未知保留1.05最低修复，借贷与违约成本在独立因果组同时参与且不重复累加；原版资格、成本、玩家路径与执行不变"

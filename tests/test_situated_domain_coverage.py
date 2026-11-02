@@ -1,6 +1,7 @@
 """D6-D8 领域覆盖目录和联合链合同。"""
 
 import pytest
+from _situated_sources import production_sources
 
 from pdx.situated import domain_coverage
 from pdx.situated.compiler import load_model
@@ -69,7 +70,10 @@ def test_领域覆盖逐目标保留消费者作用域成本和回退责任():
     model = load_model()
     summary = contract(coverage, model.action_instances)
     targets = [target for row in summary["domains"].values() for target in row["targets"]]
-    assert len(targets) == 1455
+    assert len(targets) == len(production_sources().rules)
+    assert {
+        (target["source"], target["definition"], target["consumer_id"]) for target in targets
+    } == production_sources().rules
     assert len({target["target_id"] for target in targets}) == len(targets)
     assert all(
         target["consumer_id"]

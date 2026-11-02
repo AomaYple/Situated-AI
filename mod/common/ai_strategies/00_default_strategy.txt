@@ -5957,22 +5957,28 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		# ACTION program_411c7092a1697cba [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_411c7092a1697cba_positive
-			add = { value = 0
-				# route_defense_army_capacity [military]; 防御路线提高原版常备军目标，仍由原版资格和军费约束
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_defense_active = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.2 }
-				# wartime_army_capacity [military]; 战争中只有财政未违约且行政能力可用时，适度提高原版常备军目标
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.15 }
-				# army_threat_capacity [military]; 军力偏低、外部代价较高且经济可承受时提高原版常备军目标
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size < 50 infamy >= 0 infamy > 25 gdp >= 0 gdp > 0 in_default = no } } add = 0.1 }
-			}
 			# GROUP program_411c7092a1697cba_negative
 			add = { value = 0
-				# military_peacetime_budget [military]; 和平且违约时适度降低新增常备军目标
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.15 }
+				# military_peacetime_budget [military]; 违约使新增常备军目标承担独立财政代价；战争需求仍在同一消费者中联合评估，不因战争而删除已知成本
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
 				# SITAI CHAIN LJ10/LJ10.defensive_pact_flow_pressure writer=rule_action_mod_decisions_information_toml_lj10_defensive_pact_flow_pressure
 				# lj10_defensive_pact_flow_pressure [military]; 和平且净流量承压时，本国已关联的防御协定标记条款作为小幅减少重复新增军备承诺的信号；高优先防御及明确威胁仍优先
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no NOT = { sitai_route_defense_active = yes } net_total_income < 0 num_defensive_pacts >= 0 num_defensive_pacts >= 1 wanted_army_size_script_value > "ROOT.wanted_marines_size_script_value" } } add = -0.05 }
+			}
+			# GROUP program_411c7092a1697cba_military_target_demand_positive
+			add = { value = 0
+				# route_defense_army_capacity [military]; 防御路线提高原版常备军目标，仍由原版资格和军费约束
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_defense_active = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.2 }
+				# wartime_army_capacity [military]; 非违约、净流量与行政正余量共同证明完整承载升档；它是已有战争需求的最高容量档，不再是战争基础需求的总开关
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.15 }
+				# wartime_army_fiscal_capacity [military]; 战争需求在已证非违约且净流量为正时使用财政承载中档，不要求行政余量同时为正；只选最强档，不与基础档累乘或累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 } } add = 0.12 }
+				# wartime_army_administrative_capacity [military]; 已证行政正余量允许战争需求使用行政承载中档；财政成本另算，不把行政余量当偿付健康，也不要求先有盈余
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes bureaucracy > 0 } } add = 0.11 }
+				# army_threat_capacity [military]; 军力偏低、外部代价较高且经济可承受时提高原版常备军目标
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size < 50 infamy >= 0 infamy > 25 gdp >= 0 gdp > 0 in_default = no } } add = 0.1 }
+				# wartime_army_foundation [military]; 已知战争独立证明基础防御需求，常备军目标小幅提高；财政盈余、行政余量与非违约不再成为全部需求的共同门
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } add = 0.08 }
 			}
 			min = 0.85
 			max = 1.2
@@ -6054,20 +6060,26 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		# ACTION program_41fedd6d9777c5f3 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_41fedd6d9777c5f3_positive
+			# GROUP program_41fedd6d9777c5f3_negative
+			add = { value = 0
+				# naval_peacetime_budget [military]; 违约独立压低新增海军目标，战争只增加有界需求而不取消财政代价；实际海军目标仍由原版数量基值求值
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			# GROUP program_41fedd6d9777c5f3_military_target_demand_positive
 			add = { value = 0
 				# coordinated_layered_information_navy_overseas [military]; 海外投射与稳健能力共同提高海军目标权重
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes sitai_context_known_layer_stable = yes sitai_context_layer_stable = yes } } add = 0.18 }
-				# wartime_navy_capacity [military]; 战争中财政与行政能力仍可承受时，适度提高原版海军目标
+				# wartime_navy_capacity [military]; 非违约、净流量与行政正余量共同支持完整海军容量高档；高档与基础、单项容量及既有海外需求互为最强已知档
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 bureaucracy > 0 } } add = 0.12 }
 				# SITAI CHAIN LJ13/LJ13.navy_existing_capacity writer=rule_action_mod_decisions_information_toml_navy_existing_capacity
 				# navy_existing_capacity [military]; 经济与储备可承受且海军规模偏低时提高原版海军目标
 				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size < 10 gdp >= 0 gdp > 0 gold_reserves >= 0 gold_reserves >= 100 in_default = no } } add = 0.1 }
-			}
-			# GROUP program_41fedd6d9777c5f3_negative
-			add = { value = 0
-				# naval_peacetime_budget [military]; 和平且违约时适度降低新增海军目标
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.2 }
+				# wartime_navy_fiscal_capacity [military]; 已证非违约与净流量盈余使战争海军需求升到财政中档；行政未知不抹去已证财政容量，最强同因果档只取一次
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes in_default = no net_total_income > 0 } } add = 0.09 }
+				# wartime_navy_administrative_capacity [military]; 已证行政正余量让战争海军需求升到行政中档，财政成本独立净算；相同强度的财政与行政中档互为容量档，不重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes bureaucracy > 0 } } add = 0.09 }
+				# wartime_navy_foundation [military]; 已知战争证明有限的海军基础防御需求，不以偿付健康、财政盈余和行政充足全满足作为开启条件
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } add = 0.06 }
 			}
 			min = 0.8
 			max = 1.18

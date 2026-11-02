@@ -37,16 +37,18 @@ building_government_administration = {
 		# ACTION program_23cf35935032bc42 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_23cf35935032bc42_positive
+			# GROUP program_23cf35935032bc42_administrative_capacity_repair_positive
 			add = { value = 0
-				# administrative_government_building_bureaucracy_repair [economy]; 州所属国家官僚容量为负时，提高政府行政建筑的局部候选权重；原版行政建筑资格、就业、成本与执行尾部继续优先
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes bureaucracy < 0 } } } add = 0.25 }
+				# administrative_government_building_funded_repair [economy]; 行政赤字且两项融资状态均已证实健康时使用修复强档；正常借款走弱档，违约走基础档，未知只退出强化而不虚构健康；候选不是已建成能力
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes bureaucracy < 0 in_default = no taking_loans = no } } } add = 0.25 }
 				# administrative_government_building_borrowed_repair [economy]; 正常借贷且行政赤字时保留比健康档弱的局部修复；借贷增加承诺成本但不一刀切关闭解决承载瓶颈的行动
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = no taking_loans = yes bureaucracy < 0 } } } add = 0.1 }
 				# administrative_government_building_emergency_repair [economy]; 违约且行政赤字时保留有界的紧急行政修复；它解决当前承载约束而不把违约视为健康，也不放宽实际成本与资格
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes bureaucracy < 0 } } } add = 0.05 }
+				# administrative_government_building_bureaucracy_repair [economy]; 已知行政赤字形成最低修复需求；财政状态未知也不升健康档，仅保留1.05基础，已知融资代价在独立组共同参与
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes bureaucracy < 0 } } } add = 0.05 }
 			}
-			# GROUP program_23cf35935032bc42_negative
+			# GROUP program_23cf35935032bc42_administrative_financing_pressure_negative
 			add = { value = 0
 				# fiscal_government_building_default_downgrade [fiscal]; 州所属国家处于违约时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先
 				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes } } } add = -0.25 }

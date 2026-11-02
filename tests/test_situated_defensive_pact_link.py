@@ -167,7 +167,9 @@ CASES = [
         {"native_army_capacity": 1.00001, "native_marine_capacity": 1},
         0.95,
     ),
-    ("wartime_defense", {"war": True}, None),
+    # Observed war now proves the base demand despite this fixture's negative
+    # flow and zero administrative balance: 1 + .08 = 1.08.
+    ("wartime_defense", {"war": True}, 1.08),
     ("default_recovery", {"default": True}, 0.85),
     ("defense_route", {"route_defense": True}, None),
     (

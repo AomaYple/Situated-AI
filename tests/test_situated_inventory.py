@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from _situated_sources import production_sources
 
 from pdx.situated import inventory
 
@@ -28,9 +29,15 @@ def test_k0_inventory_contains_legacy_rules_consumers_and_cards() -> None:
     result = inventory.discover()
     kinds = {item.kind for item in result.surfaces}
     assert kinds == {"legacy_rule", "consumer_contract", "action_card"}
-    # 1,401 is the historical 3.0.1 baseline; the current production source
-    # Adds 54 forward rules while the immutable published set remains 1,401.
-    assert sum(item.kind == "legacy_rule" for item in result.surfaces) == 1455
+    # Current production identities are read independently from authored TOML.
+    assert sum(item.kind == "legacy_rule" for item in result.surfaces) == len(
+        production_sources().rules
+    )
+    assert {
+        (item.source, item.definition, item.field)
+        for item in result.surfaces
+        if item.kind == "legacy_rule"
+    } == production_sources().rules
     assert sum(item.kind == "consumer_contract" for item in result.surfaces) >= 8
     assert sum(item.kind == "action_card" for item in result.surfaces) >= 11
 
@@ -38,7 +45,7 @@ def test_k0_inventory_contains_legacy_rules_consumers_and_cards() -> None:
 def test_k0_migration_preserves_every_current_production_rule() -> None:
     result = inventory.discover()
     migration = inventory.migration(inventory=result)
-    assert len(migration.rows) == 1455
+    assert len(migration.rows) == len(production_sources().rules)
     assert migration.missing_old_rules == ()
     assert migration.duplicate_owners == ()
     assert migration.unclassified_rows == ()
@@ -55,15 +62,19 @@ def test_k0_json_contract_is_recomputable(tmp_path) -> None:
     migration_payload = json.loads(migration_path.read_text(encoding="utf-8"))
     assert payload["scope_hash"] == inventory.discover().scope_hash
     assert payload["discovered_count"] == sum(payload["status_counts"].values())
-    assert len(migration_payload["rows"]) == 1455
+    assert len(migration_payload["rows"]) == len(production_sources().rules)
 
 
 def test_k0_equivalent_baseline_at_another_path_preserves_legacy_rule_denominator(tmp_path) -> None:
     baseline = tmp_path / "baseline.txt"
     baseline.write_bytes(inventory.BASELINE.read_bytes())
     result = inventory.discover(baseline=baseline)
-    assert sum(item.kind == "legacy_rule" for item in result.surfaces) == 1455
-    assert len(inventory.migration(baseline=baseline, inventory=result).rows) == 1455
+    assert sum(item.kind == "legacy_rule" for item in result.surfaces) == len(
+        production_sources().rules
+    )
+    assert len(inventory.migration(baseline=baseline, inventory=result).rows) == len(
+        production_sources().rules
+    )
 
 
 def test_k0_invalid_alternate_baseline_keeps_strict_model_validation(tmp_path) -> None:

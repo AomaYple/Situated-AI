@@ -338,6 +338,9 @@ def test_existing_state_building_actor_uses_documented_root_and_actual_owner_pat
     assert report["counts"]["actual_covered"] == 1
     assert report["implicit_covered"] == []
     assert report["rows"][0]["actor_scope"] == "state"
+    assert report["rows"][0]["covered_actions"] == [instance.action_id]
+    assert report["rows"][0]["binding_issues"] == {}
+    assert report["binding_issue_count"] == 0
     no_doc = native_coverage(
         _source_inventory((surface,), sources),
         (instance,),
@@ -459,3 +462,109 @@ def test_secret_goal_projection_cannot_guess_ambiguous_or_adjacent_structure(goa
     )
     assert result["actual_covered"] == []
     assert result["unmatched_production"]
+
+
+@pytest.mark.parametrize(
+    ("field", "native_operation", "writer_operation", "target", "context"),
+    [
+        (
+            "subject_value",
+            "additive_subject_valuation",
+            "add",
+            "scope:target_country=country",
+            _context("target_country", "country", "target"),
+        ),
+        (
+            "become_subject_value",
+            "additive_subject_valuation",
+            "add",
+            "scope:overlord=country",
+            _context("overlord", "country", "target"),
+        ),
+        ("wanted_army_size", "additive_army_size_target", "multiply", "none", None),
+        ("revolution_aversion", "override_revolution_aversion", "multiply", "none", None),
+        ("change_law_chance", "additive_percentage_chance", "add", "none", None),
+        ("max_progressiveness", "override_progressiveness_limit", "add", "none", None),
+        ("max_regressiveness", "override_regressiveness_limit", "add", "none", None),
+    ],
+)
+def test_exact_evidenced_numeric_contracts_preserve_field_operation_actor_and_target(
+    field, native_operation, writer_operation, target, context
+):
+    surface = _surface(field=field, operation=native_operation, target_scope=target)
+    instance = _instance(
+        consumer_field=field, operation=writer_operation, evaluation_context=context
+    )
+    good = native_coverage(_inventory(surface), (instance,))
+    assert good["counts"]["actual_covered"] == 1
+    assert good["binding_issue_count"] == 0
+    for damaged in (
+        replace(surface, operation=native_operation + "_future"),
+        replace(surface, field="unproven_" + field),
+        replace(surface, actor_scope="unknown", capability="pending"),
+        replace(surface, scope_evidence=()),
+    ):
+        report = native_coverage(_inventory(damaged), (instance,))
+        assert report["counts"]["actual_covered"] == 0
+    wrong_operation = replace(
+        instance, operation="multiply" if writer_operation == "add" else "add"
+    )
+    assert native_coverage(_inventory(surface), (wrong_operation,))["rows"][0][
+        "binding_issues"
+    ] == {"rule": "numeric_consumer_contract_unproven"}
+    wrong_actor = replace(instance, actor_scope="state", evaluation_context=None)
+    assert native_coverage(_inventory(surface), (wrong_actor,))["rows"][0]["binding_issues"] == {
+        "rule": "actor_type_mismatch"
+    }
+    other = replace(
+        surface, source="common/ai_strategies/01_admin_strategies.txt", definition="other"
+    )
+    mapped = replace(instance, source=other.source, consumer_field="other." + field)
+    assert native_coverage(_inventory(other), (mapped,))["counts"]["actual_covered"] == 0
+
+
+@pytest.mark.parametrize(
+    ("field", "operation", "target"),
+    [
+        ("recklessness", "additive_strength_estimate_multiplier", "scope:target_country=country"),
+        (
+            "wargoal_maneuvers_fraction",
+            "additive_maneuvers_fraction",
+            "scope:enemy_country=country",
+        ),
+        ("min_law_chance_to_pass", "override_pass_chance_threshold", "unknown"),
+    ],
+)
+def test_unbound_engine_named_targets_and_pending_threshold_remain_unproven(
+    field, operation, target
+):
+    surface = _surface(field=field, operation=operation, target_scope=target)
+    if field == "min_law_chance_to_pass":
+        surface = replace(surface, capability="pending")
+    report = native_coverage(_inventory(surface), (_instance(consumer_field=field),))
+    assert report["counts"]["actual_covered"] == 0
+    assert report["binding_issue_count"] == 1
+
+
+def test_documented_law_and_formation_contexts_bind_only_exact_named_objects():
+    for name, kind in (("law", "law"), ("military_formation", "military_formation")):
+        context = _context(name, kind, "auxiliary")
+        surface = _surface(target_scope=f"scope:{name}={kind}")
+        instance = _instance(evaluation_context=context)
+        assert native_coverage(_inventory(surface), (instance,))["counts"]["actual_covered"] == 1
+        wrong = replace(
+            instance, evaluation_context=_context("target_country", "country", "target")
+        )
+        report = native_coverage(_inventory(surface), (wrong,))
+        assert report["rows"][0]["binding_issues"] == {"rule": "target_type_mismatch"}
+
+
+@pytest.mark.parametrize("target", ["none", "scope:law=law"])
+@pytest.mark.parametrize("actor", ["state", "owner"])
+def test_documented_country_context_cannot_mask_actual_shifted_actor(target, actor):
+    context = _context("law", "law", "auxiliary")
+    surface = _surface(target_scope=target)
+    instance = _instance(actor_scope=actor, evaluation_context=context)
+    report = native_coverage(_inventory(surface), (instance,))
+    assert report["counts"]["actual_covered"] == 0
+    assert report["rows"][0]["binding_issues"] == {"rule": "actor_type_mismatch"}
