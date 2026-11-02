@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable  # noqa: TC003
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from ..model import Assignment, Block, Scalar  # noqa: TID252
@@ -149,11 +150,26 @@ def witnesses(texts: dict[str, str]) -> tuple[LoweringWitness, ...]:
         if parsed.errors:
             raise ValueError(f"PDX 产物无法解析：{source}")
         lines = text.splitlines()
+        program_operation: str | None = None
         for index, line in enumerate(lines):
+            if "# SITAI END information:" in line:
+                program_operation = None
             marker = _MARKER.match(line)
             if marker is None:
                 continue
             action_id = marker.group(1) or marker.group(2)
+            if action_id.startswith("program_"):
+                body = _block_text(lines, index + 1)
+                root = next(parse_text(body).root.assignments(), None)
+                if root is None or not isinstance(root.value, Block):
+                    raise ValueError(f"消费者程序没有实际数值写入：{source}:{index + 1}")
+                effects = [
+                    item for item in root.value.assignments() if item.key in {"add", "multiply"}
+                ]
+                if len(effects) != 1:
+                    raise ValueError(f"消费者程序写入不唯一：{source}:{index + 1}")
+                program_operation = effects[0].key
+                continue
             next_marker = next(
                 (pos for pos in range(index + 1, len(lines)) if _MARKER.match(lines[pos])),
                 len(lines),
@@ -161,12 +177,21 @@ def witnesses(texts: dict[str, str]) -> tuple[LoweringWitness, ...]:
             write = _WRITE.search("\n".join(lines[index:next_marker]))
             if write is None:
                 continue
+            operation, value = write.group(1), float(write.group(2))
+            if program_operation is not None:
+                if operation != "add":
+                    raise ValueError(f"消费者贡献变体不是局部增量：{source}:{index + 1}")
+                operation = program_operation
+                # Decode the emitted decimal delta exactly. Binary addition
+                # would turn the literal -0.18 + 1 into 0.8200000000000001 and
+                # falsely reject a source multiplier of exactly 0.82.
+                value = float(Decimal(write.group(2)) + (1 if operation == "multiply" else 0))
             result.append(
                 LoweringWitness(
                     action_id=action_id,
                     source=source,
-                    operation=write.group(1),
-                    value=float(write.group(2)),
+                    operation=operation,
+                    value=value,
                     parsed=True,
                 )
             )
@@ -185,7 +210,7 @@ def mismatches(ir: Iterable[ActionIR], texts: dict[str, str]) -> tuple[str, ...]
         wanted = expected.get(item.action_id)
         if wanted is None:
             continue
-        if item.operation != wanted.operation or item.value != wanted.value:
+        if item.operation != wanted.operation or abs(item.value - wanted.value) > 1e-12:
             problems.append(item.action_id)
     return tuple(sorted(problems))
 

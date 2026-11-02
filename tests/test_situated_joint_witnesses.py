@@ -6,6 +6,11 @@ claim that the game engine executes the generated branches as observed here.
 
 from __future__ import annotations
 
+import hashlib
+import math
+import operator as comparison_ops
+from collections import defaultdict
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -28,13 +33,17 @@ def generated():
     model = compiler.load_model()
     assert model.consumer_ir is not None
     inputs = decision_adapters.read_inputs(adapters)
+    compiled, _report = compiler.compile_sources(
+        decision_rules.load(), adapters, config_model=model
+    )
+    adapters = replace(adapters, policies=compiled[1:])
     files, _ = decision_adapters.build(
         adapters,
         texts=inputs,
         country_policy=country_state.load(),
         consumer_ir=model.consumer_ir,
     )
-    info_policy = compiler.compile_policy(decision_rules.load(), INFO, model)[0]
+    info_policy = compiled[0][1]
     info_text = decision_rules.patch(
         compiler.BASELINE.read_text(encoding="utf-8"),
         info_policy,
@@ -264,10 +273,10 @@ def test_local_links_preserve_each_condition_unknown_and_player_boundary(generat
         assert semantic_facts == tuple(reader.key for reader in item.spec.readers)
         cases = _cases(policy, rule)
         positive = pdx_eval.select(text, _facts(policy, cases["positive"]), path=rule.id)
-        assert (positive.action_id, positive.operation, positive.delta) == (
-            rule.id,
-            rule.operation,
-            rule.value,
+        assert positive.action_id == rule.id
+        assert positive.operation == "add"
+        assert positive.delta == pytest.approx(
+            rule.value - (1.0 if rule.operation == "multiply" else 0.0)
         )
         for fact, operator, value in item.spec.condition_semantics:
             opposite = (
@@ -368,14 +377,7 @@ def _complete_overlay(files: dict[str, str], info_text: str, source: str, field:
         text = files["common/script_values/sitai_adapter_values.txt"]
     begin = text.index(marker)
     end = text.index(f"# SITAI END information:{field}", begin)
-    lines: list[str] = []
-    for line in text[begin:end].splitlines()[1:]:
-        if line.lstrip().startswith(("if =", "else_if =")) and (
-            not lines or not lines[-1].lstrip().startswith("# ")
-        ):
-            lines.append("# unknown_guard [test]; native unchanged")
-        lines.append(line)
-    return "\n".join(lines)
+    return "\n".join(text[begin:end].splitlines()[1:])
 
 
 # Values and expected winners are authored independently of the rule evaluator.
@@ -482,7 +484,7 @@ REMAINING_CASES: list[tuple[str, str, dict[str, object], str | None, float]] = [
         FLEET,
         {"war": True, "navy": 1, "steamers_price": None, "steamers_balance": -1},
         None,
-        1,
+        1.1,
     ),
     (
         DEFAULT_STRATEGY,
@@ -521,19 +523,17 @@ def test_remaining_local_links_use_complete_field_priority_and_handwritten_outco
     overlay = _complete_overlay(files, info_text, source, field)
     facts = _facts(policy, values)
     actual = pdx_eval.select(overlay, facts)
-    if writer is None:
-        assert actual.operation is None or (
-            actual.action_id == "unknown_guard" and actual.delta == 1
-        )
-    else:
-        assert (actual.action_id, actual.operation, actual.delta) == (writer, "multiply", factor)
+    identity = "program_" + hashlib.sha256(f"{source}:{field}".encode()).hexdigest()[:16]
+    assert actual.action_id == identity
+    assert actual.operation == "multiply"
+    assert actual.delta == pytest.approx(factor)
     # No completion credit can be fabricated from selection or queued construction.
     facts["ROOT"]["candidate_selected"] = True
     facts["ROOT"]["construction_queued"] = True
     facts["other_country"] = {"navy_size": 100, "gold_reserves": 1000000}
     assert pdx_eval.select(overlay, facts) == actual
     player = pdx_eval.select(overlay, _facts(policy, values, is_ai=False))
-    assert player.operation is None or (player.action_id == "unknown_guard" and player.delta == 1)
+    assert player == pdx_eval.PdxDecision(None, None, 0.0, "vanilla")
 
 
 def test_war_defeat_chain_uses_original_expiring_memory_not_a_new_permanent_flag(generated):
@@ -646,6 +646,57 @@ def _assert_memory_source_contract(text: str) -> None:
             )
 
 
+def _source_net(policy, field, values):
+    """Independent complete-field check from source predicates and declared causes."""
+    readers = {reader.key: reader for reader in policy.readers}
+    operations = {
+        "=": comparison_ops.eq,
+        "<": comparison_ops.lt,
+        "<=": comparison_ops.le,
+        ">": comparison_ops.gt,
+        ">=": comparison_ops.ge,
+    }
+
+    def known(key):
+        reader, value = readers[key], values.get(key)
+        if reader.kind == "boolean":
+            return type(value) is bool
+        return (
+            type(value) in (int, float)
+            and math.isfinite(value)
+            and (reader.minimum is None or value >= reader.minimum)
+            and (reader.maximum is None or value <= reader.maximum)
+        )
+
+    def applies(rule):
+        if any(not known(key) for key in rule.required_known_facts):
+            return False
+        for predicate in rule.conditions:
+            right = predicate.value
+            if isinstance(right, decision_rules.FactReference):
+                if not known(right.key):
+                    return False
+                right = values[right.key]
+            if not known(predicate.fact) or not operations[predicate.op](
+                values[predicate.fact], right
+            ):
+                return False
+        return True
+
+    groups = defaultdict(list)
+    for rule in policy.rules:
+        if ".".join(rule.field) == field:
+            groups[(rule.contribution_group, rule.value >= 1)].append(rule)
+    lower = max(0.5, 1 + sum(min(0, *(r.value - 1 for r in g)) for g in groups.values()))
+    upper = min(1.5, 1 + sum(max(0, *(r.value - 1 for r in g)) for g in groups.values()))
+    net = 1.0
+    for (_cause, positive), group in groups.items():
+        amounts = [r.value - 1 for r in group if r.domain in policy.enabled_domains and applies(r)]
+        if amounts:
+            net += max(amounts) if positive else min(amounts)
+    return max(lower, min(upper, net))
+
+
 _REMAINING_STRICT_WRITERS = {
     "fiscal_construction_guard",
     "liquidity_construction_guard",
@@ -673,23 +724,34 @@ def test_every_added_link_breaks_each_predicate_and_unknown_reader_in_its_comple
         values = _complete_values(policy, field, changes)
         overlay = _complete_overlay(files, info_text, source, field)
         positive = pdx_eval.select(overlay, _facts(policy, values))
-        assert (positive.action_id, positive.delta) == (writer, factor)
+        assert positive.operation == "multiply"
+        assert positive.delta == pytest.approx(factor)
+        local = _branch(_source_text(source, files, info_text, writer), writer)
+        isolated = pdx_eval.select(local, _facts(policy, values))
+        assert isolated.action_id == writer
+        assert isolated.operation == "add"
+        rule = next(rule for rule in policy.rules if rule.id == writer)
+        assert isolated.delta == pytest.approx(rule.value - 1.0)
         link = next(item for item in evidence if item.spec.rule_id == writer)
         for fact, operator, value in link.spec.condition_semantics:
             broken = {**values, fact: _opposite_value(operator, value)}
-            actual = pdx_eval.select(overlay, _facts(policy, broken))
+            actual = pdx_eval.select(local, _facts(policy, broken))
             assert actual.action_id != writer or actual.operation is None, (
                 writer,
                 fact,
                 "predicate",
             )
-            selected = decision_rules.evaluate(policy, broken, is_ai=True).get(field)
-            assert selected is None or selected[0] != writer
+            complete = pdx_eval.select(overlay, _facts(policy, broken))
+            assert complete.operation == "multiply"
+            assert complete.action_id == positive.action_id
+            assert complete.delta == pytest.approx(_source_net(policy, field, broken))
             unknown = {**values, fact: None}
-            actual = pdx_eval.select(overlay, _facts(policy, unknown))
+            actual = pdx_eval.select(local, _facts(policy, unknown))
             assert actual.action_id != writer or actual.operation is None, (writer, fact, "unknown")
-            selected = decision_rules.evaluate(policy, unknown, is_ai=True).get(field)
-            assert selected is None or selected[0] != writer
+            complete = pdx_eval.select(overlay, _facts(policy, unknown))
+            assert complete.operation == "multiply"
+            assert complete.action_id == positive.action_id
+            assert complete.delta == pytest.approx(_source_net(policy, field, unknown))
     assert witnessed == _REMAINING_STRICT_WRITERS
 
 

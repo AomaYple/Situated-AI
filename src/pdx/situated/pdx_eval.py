@@ -365,82 +365,91 @@ def _number(assignment: Assignment) -> float:
     return float(value)
 
 
-def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[str, float]:
-    operation: Assignment | None = None
-    for item in branch.assignments():
-        if item.key in {"add", "multiply"}:
-            if operation is not None:
-                raise UnsupportedPdxError("一个行动分支包含多个顶层写入")
-            operation = item
-    if operation is None:
-        raise UnsupportedPdxError("行动分支缺少写入")
-    if isinstance(operation.value, Block):
-        value_block = operation.value
-        initial = value_block.first("value")
-        if initial is None:
-            raise UnsupportedPdxError("行动增量缺少初值")
-        delta = _number(initial)
+def _numeric_value(assignment: Assignment, facts: Mapping[str, object | None]) -> float:
+    """Interpret the generated numeric AST independently of the compiler.
+
+    PDX script values execute operations in source order. Conditional blocks
+    update the surrounding numeric accumulator; nested value blocks have a
+    separate accumulator. Unknown optional conditions do not prove a branch.
+    """
+    if isinstance(assignment.value, Scalar):
+        return _number(assignment)
+    if not isinstance(assignment.value, Block):
+        raise UnsupportedPdxError("数值表达式必须是标量或块")
+    initial = assignment.value.first("value")
+    if initial is None:
+        raise UnsupportedPdxError("数值表达式缺少 value 初值")
+
+    def execute(block: Block, value: float) -> float:
         chain_open = False
-        chain_selected = False
-        for item in value_block.assignments():
-            if item.key == "value":
-                chain_open = False
+        selected = False
+        for item in block.assignments():
+            if item.key in {"value", "limit"}:
                 continue
-            if item.key in {"if", "else_if"}:
-                if item.key == "if":
-                    chain_open = True
-                    chain_selected = False
-                elif not chain_open:
-                    raise UnsupportedPdxError("辅助 else_if 分支缺少前置 if")
+            if item.key in {"if", "else_if", "else"}:
                 if not isinstance(item.value, Block):
-                    raise UnsupportedPdxError("增量条件必须是块")
+                    raise UnsupportedPdxError("数值条件必须是块")
+                if item.key == "if":
+                    chain_open, selected = True, False
+                elif not chain_open:
+                    raise UnsupportedPdxError("数值 else 分支缺少前置 if")
                 limit = item.value.first("limit")
-                addition = item.value.first("add")
-                if limit is None or not isinstance(limit.value, Block) or addition is None:
-                    raise UnsupportedPdxError("增量条件缺少 limit 或 add")
-                if [part.key for part in item.value.assignments()] != ["limit", "add"]:
-                    raise UnsupportedPdxError("辅助增量分支包含未登记的操作")
-                amount = _number(addition)
-                if chain_selected:
-                    continue
-                state = condition(limit.value, facts)
-                if state is True:
-                    delta += amount
-                    chain_selected = True
-                # 未知辅助条件只跳过该互补，后续已知互补仍可用。
-                # 核心 limit 的未知仍由 select 回退 vanilla。
-            elif item.key == "min":
-                chain_open = False
-                delta = max(delta, _number(item))
-            elif item.key == "max":
-                chain_open = False
-                delta = min(delta, _number(item))
-            elif item.key == "desc":
-                # Generated localization metadata does not affect the numeric
-                # writer effect and is retained in the parsed source.
+                if item.key == "else":
+                    state: Truth = True
+                    chain_open = False
+                elif limit is None or not isinstance(limit.value, Block):
+                    raise UnsupportedPdxError("数值条件缺少 limit")
+                else:
+                    state = condition(limit.value, facts)
+                if not selected and state is True:
+                    value = execute(item.value, value)
+                    selected = True
+                continue
+            chain_open = False
+            if item.key == "desc":
                 _scalar(item, label="desc")
-            else:
-                raise UnsupportedPdxError(f"不支持的行动增量操作：{item.key}")
-        return operation.key, delta
-    delta = _number(operation)
+                continue
+            if item.key not in {"add", "subtract", "multiply", "divide", "min", "max"}:
+                raise UnsupportedPdxError(f"不支持的数值操作：{item.key}")
+            amount = _numeric_value(item, facts)
+            if item.key == "add":
+                value += amount
+            elif item.key == "subtract":
+                value -= amount
+            elif item.key == "multiply":
+                value *= amount
+            elif item.key == "divide":
+                if amount == 0:
+                    raise UnsupportedPdxError("数值表达式除零")
+                value /= amount
+            elif item.key == "min":
+                value = max(value, amount)
+            elif item.key == "max":
+                value = min(value, amount)
+        return value
+
+    return execute(assignment.value, _numeric_value(initial, facts))
+
+
+def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[str, float]:
+    operations = [item for item in branch.assignments() if item.key in {"add", "multiply"}]
+    if len(operations) != 1:
+        raise UnsupportedPdxError("一个行动分支必须有且只有一个顶层写入")
+    operation = operations[0]
+    delta = _numeric_value(operation, facts)
+    # Legacy branches can carry an optional conditional addition beside the
+    # primary scalar write. Numeric value blocks handle their own conditions.
     for nested in branch.all("if"):
         if not isinstance(nested.value, Block):
             raise UnsupportedPdxError("嵌套 if 必须是块")
         limit = nested.value.first("limit")
         if limit is None or not isinstance(limit.value, Block):
             raise UnsupportedPdxError("嵌套 if 缺少 limit 块")
-        result = condition(limit.value, facts)
-        if result is True:
-            nested_write = next(
-                (item for item in nested.value.assignments() if item.key == "add"), None
-            )
-            if nested_write is None:
-                raise UnsupportedPdxError("嵌套 if 缺少 add")
-            delta += _number(nested_write)
-        elif result is None:
-            # 与游戏中的条件分支一致：未知的辅助增量不改变基础档，
-            # 不把可选互补误报成生成器错误。
-            continue
+        if condition(limit.value, facts) is True:
+            additions = nested.value.all("add")
+            if len(additions) != 1:
+                raise UnsupportedPdxError("嵌套 if 必须有一个 add")
+            delta += _numeric_value(additions[0], facts)
     return operation.key, delta
 
 

@@ -15,8 +15,17 @@ sericulture = {
 		value = 1
 
 		# SITAI BEGIN information:sericulture.ai_weight
-		# sericulture_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_b3099e12aacdd05f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b3099e12aacdd05f_positive
+			add = { value = 0
+				# sericulture_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:sericulture.ai_weight
 	}
 }
@@ -31,8 +40,17 @@ enclosure = {
 		value = 3 # Very important tech in general
 
 		# SITAI BEGIN information:enclosure.ai_weight
-		# enclosure_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_b88ed7c281b8c91f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b88ed7c281b8c91f_positive
+			add = { value = 0
+				# enclosure_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:enclosure.ai_weight
 	}
 }
@@ -48,8 +66,17 @@ manufacturies = {
 		value = 3 # Very important tech in general
 
 		# SITAI BEGIN information:manufacturies.ai_weight
-		# manufacturies_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_b577f5b9d1fca758 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b577f5b9d1fca758_positive
+			add = { value = 0
+				# manufacturies_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:manufacturies.ai_weight
 	}
 }
@@ -69,17 +96,23 @@ shaft_mining = {
 		value = 2 # Important tech in general
 
 		# SITAI BEGIN information:shaft_mining.ai_weight
-		# shaft_mining_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:iron mg:iron = {  } } } } } } } multiply = 1.0 }
-		# shaft_mining_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_shaft_mining_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_shaft_mining_expansion [economy]; 扩张能力提高生产升级研究的相对机会
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
+		# ACTION program_7dae3eb44563634e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_7dae3eb44563634e_positive
+			add = { value = 0
+				# coordinated_layered_tech_shaft_mining_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
+				# shaft_mining_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
+				# shaft_mining_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# coordinated_layered_tech_shaft_mining_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
+			}
+			min = 1
+			max = 1.25
+		} }
 		# SITAI END information:shaft_mining.ai_weight
 	}
 }
@@ -101,8 +134,17 @@ cotton_gin = {
 		value = 1
 
 		# SITAI BEGIN information:cotton_gin.ai_weight
-		# cotton_gin_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_c9999a5620730e5e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_c9999a5620730e5e_positive
+			add = { value = 0
+				# cotton_gin_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:cotton_gin.ai_weight
 	}
 }
@@ -131,8 +173,17 @@ lathe = {
 		}
 
 		# SITAI BEGIN information:lathe.ai_weight
-		# lathe_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_8364f99fc32101e3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8364f99fc32101e3_positive
+			add = { value = 0
+				# lathe_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:lathe.ai_weight
 	}
 }
@@ -153,8 +204,17 @@ distillation = {
 		value = 1
 
 		# SITAI BEGIN information:distillation.ai_weight
-		# distillation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_0ead035cf98750bc [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_0ead035cf98750bc_positive
+			add = { value = 0
+				# distillation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:distillation.ai_weight
 	}
 }
@@ -183,20 +243,25 @@ steelworking = {
 		}
 
 		# SITAI BEGIN information:steelworking.ai_weight
-		# d6_steelworking_tools_shortage_pressure [economy]; 工具缺口与高价共同支持压力档；辅助价格未知只保留已经证明的缺口基础档
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } if = { limit = { always = yes } multiply = 1.35 } }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { OR = { market_goods_delta < 0 NOT = { market_goods_delta < 0 } } } } } } } } } } multiply = 1.0 }
-		# d6_steelworking_tools_shortage_foundation [economy]; 工具订单缺口有限提高可解锁生铁工具生产方式的研究机会，不要求所有产业链、财政或主路线先满足
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = {  } } } } } } } multiply = 1.0 }
-		# steelworking_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_steelworking_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_steelworking_expansion [economy]; 扩张能力提高生产升级研究的相对机会
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
+		# ACTION program_5bfcdbb4ac97450d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5bfcdbb4ac97450d_positive
+			add = { value = 0
+				# d6_steelworking_tools_shortage_pressure [economy]; 工具缺口与高价共同支持压力档；辅助价格未知只保留已经证明的缺口基础档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.35 }
+				# d6_steelworking_tools_shortage_foundation [economy]; 工具订单缺口有限提高可解锁生铁工具生产方式的研究机会，不要求所有产业链、财政或主路线先满足
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 0.25 }
+				# coordinated_layered_tech_steelworking_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
+				# steelworking_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# coordinated_layered_tech_steelworking_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
+			}
+			min = 1
+			max = 1.35
+		} }
 		# SITAI END information:steelworking.ai_weight
 	}
 }
@@ -215,8 +280,17 @@ prospecting = {
 		value = 1
 
 		# SITAI BEGIN information:prospecting.ai_weight
-		# prospecting_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_77df3518d81b3ee9 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_77df3518d81b3ee9_positive
+			add = { value = 0
+				# prospecting_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:prospecting.ai_weight
 	}
 }
@@ -237,8 +311,17 @@ crystal_glass = {
 		value = 1
 
 		# SITAI BEGIN information:crystal_glass.ai_weight
-		# crystal_glass_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_6b0e1fb77a468236 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_6b0e1fb77a468236_positive
+			add = { value = 0
+				# crystal_glass_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:crystal_glass.ai_weight
 	}
 }
@@ -269,17 +352,23 @@ intensive_agriculture = {
 		}
 
 		# SITAI BEGIN information:intensive_agriculture.ai_weight
-		# intensive_agriculture_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:grain mg:grain = {  } } } } } } } multiply = 1.0 }
-		# intensive_agriculture_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_intensive_agriculture_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_intensive_agriculture_expansion [economy]; 扩张能力提高生产升级研究的相对机会
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
+		# ACTION program_a6e420548ea4eece [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a6e420548ea4eece_positive
+			add = { value = 0
+				# coordinated_layered_tech_intensive_agriculture_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
+				# intensive_agriculture_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
+				# intensive_agriculture_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# coordinated_layered_tech_intensive_agriculture_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
+			}
+			min = 1
+			max = 1.25
+		} }
 		# SITAI END information:intensive_agriculture.ai_weight
 	}
 }
@@ -299,8 +388,17 @@ fractional_distillation = {
 		value = 1
 
 		# SITAI BEGIN information:fractional_distillation.ai_weight
-		# fractional_distillation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_f17c32e4a1485347 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f17c32e4a1485347_positive
+			add = { value = 0
+				# fractional_distillation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:fractional_distillation.ai_weight
 	}
 }
@@ -319,8 +417,17 @@ canneries = {
 		value = 1
 
 		# SITAI BEGIN information:canneries.ai_weight
-		# canneries_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_90c48f94b28647fb [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_90c48f94b28647fb_positive
+			add = { value = 0
+				# canneries_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:canneries.ai_weight
 	}
 }
@@ -340,11 +447,19 @@ watertube_boiler = {
 		value = 1
 
 		# SITAI BEGIN information:watertube_boiler.ai_weight
-		# coordinated_route_industry_research [economy]; 工业路线在和平期提高原版生产技术候选权重，促进工业能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_industry_active = yes is_at_war = no } } multiply = 1.15 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { sitai_route_industry_active = yes } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# watertube_boiler_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_b78c1157a1fde9f3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b78c1157a1fde9f3_positive
+			add = { value = 0
+				# watertube_boiler_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# coordinated_route_industry_research [economy]; 工业路线在和平期提高原版生产技术候选权重，促进工业能力
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_industry_active = yes is_at_war = no } } add = 0.15 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:watertube_boiler.ai_weight
 	}
 }
@@ -381,11 +496,19 @@ atmospheric_engine = {
 		}
 
 		# SITAI BEGIN information:atmospheric_engine.ai_weight
-		# atmospheric_engine_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:engines mg:engines = {  } } } } } } } multiply = 1.0 }
-		# atmospheric_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_38bd6915628c8096 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_38bd6915628c8096_positive
+			add = { value = 0
+				# atmospheric_engine_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
+				# atmospheric_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:atmospheric_engine.ai_weight
 	}
 }
@@ -428,14 +551,21 @@ railways = {
 		}
 
 		# SITAI BEGIN information:railways.ai_weight
-		# railways_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_railways_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_railways_expansion [economy]; 扩张能力提高生产升级研究的相对机会
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
+		# ACTION program_a2923495d1c509cf [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a2923495d1c509cf_positive
+			add = { value = 0
+				# coordinated_layered_tech_railways_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
+				# railways_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# coordinated_layered_tech_railways_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
+			}
+			min = 1
+			max = 1.25
+		} }
 		# SITAI END information:railways.ai_weight
 	}
 }
@@ -455,8 +585,17 @@ chemical_bleaching = {
 		value = 1
 
 		# SITAI BEGIN information:chemical_bleaching.ai_weight
-		# chemical_bleaching_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_53e5fb70fa9eeea4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_53e5fb70fa9eeea4_positive
+			add = { value = 0
+				# chemical_bleaching_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:chemical_bleaching.ai_weight
 	}
 }
@@ -483,8 +622,17 @@ nitroglycerin = {
 		value = 1
 
 		# SITAI BEGIN information:nitroglycerin.ai_weight
-		# nitroglycerin_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_6f1fadd501b27fa2 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_6f1fadd501b27fa2_positive
+			add = { value = 0
+				# nitroglycerin_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:nitroglycerin.ai_weight
 	}
 }
@@ -511,14 +659,21 @@ bessemer_process = {
 		}
 
 		# SITAI BEGIN information:bessemer_process.ai_weight
-		# bessemer_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_bessemer_process_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_bessemer_process_expansion [economy]; 扩张能力提高生产升级研究的相对机会
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
+		# ACTION program_4577cb00b3caafa2 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4577cb00b3caafa2_positive
+			add = { value = 0
+				# coordinated_layered_tech_bessemer_process_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
+				# bessemer_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# coordinated_layered_tech_bessemer_process_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
+			}
+			min = 1
+			max = 1.25
+		} }
 		# SITAI END information:bessemer_process.ai_weight
 	}
 }
@@ -537,8 +692,17 @@ baking_powder = {
 		value = 1
 
 		# SITAI BEGIN information:baking_powder.ai_weight
-		# baking_powder_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_4dfe1a12e1a8fa1e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4dfe1a12e1a8fa1e_positive
+			add = { value = 0
+				# baking_powder_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:baking_powder.ai_weight
 	}
 }
@@ -570,8 +734,17 @@ mechanized_workshops = {
 		}
 
 		# SITAI BEGIN information:mechanized_workshops.ai_weight
-		# mechanized_workshops_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_04a551926bcf3ce6 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_04a551926bcf3ce6_positive
+			add = { value = 0
+				# mechanized_workshops_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:mechanized_workshops.ai_weight
 	}
 }
@@ -591,21 +764,26 @@ mechanical_tools = {
 		value = 1
 
 		# SITAI BEGIN information:mechanical_tools.ai_weight
-		# SITAI CHAIN LJ03/LJ03.mechanical_tools_actual_literacy writer=rule_action_common_technology_technologies_10_production_txt_lj03_mechanical_tools_actual_literacy
-		# lj03_mechanical_tools_actual_literacy [economy]; 实际识字能力与工具瓶颈共同支持工业科研档；低识字国家仍保留原有瓶颈研究，不将教育候选视为能力完成
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.3 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate >= 0.5 } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 exists = market market = { exists = mg:tools mg:tools = {  } } } } } } } multiply = 1.0 }
-		# mechanical_tools_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:tools mg:tools = {  } } } } } } } multiply = 1.0 }
-		# mechanical_tools_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 legitimacy >= 0 legitimacy <= 100 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_mechanical_tools_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_mechanical_tools_expansion [economy]; 扩张能力提高生产升级研究的相对机会
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
+		# ACTION program_f9c0f98ea3f2211d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f9c0f98ea3f2211d_positive
+			add = { value = 0
+				# SITAI CHAIN LJ03/LJ03.mechanical_tools_actual_literacy writer=rule_action_common_technology_technologies_10_production_txt_lj03_mechanical_tools_actual_literacy
+				# lj03_mechanical_tools_actual_literacy [economy]; 实际识字能力与工具瓶颈共同支持工业科研档；低识字国家仍保留原有瓶颈研究，不将教育候选视为能力完成
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.3 }
+				# coordinated_layered_tech_mechanical_tools_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
+				# mechanical_tools_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.2 }
+				# mechanical_tools_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = no taking_loans = no scaled_debt >= 0 scaled_debt <= 0.4 net_total_income >= 0 bureaucracy >= 0 legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# coordinated_layered_tech_mechanical_tools_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
+			}
+			min = 1
+			max = 1.3
+		} }
 		# SITAI END information:mechanical_tools.ai_weight
 	}
 }
@@ -627,8 +805,17 @@ improved_fertilizer = {
 		value = 1
 
 		# SITAI BEGIN information:improved_fertilizer.ai_weight
-		# improved_fertilizer_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_e4a50aeff9058f47 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_e4a50aeff9058f47_positive
+			add = { value = 0
+				# improved_fertilizer_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:improved_fertilizer.ai_weight
 	}
 }
@@ -658,8 +845,17 @@ steam_donkey = {
 		}
 
 		# SITAI BEGIN information:steam_donkey.ai_weight
-		# steam_donkey_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_bf45554268f84766 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bf45554268f84766_positive
+			add = { value = 0
+				# steam_donkey_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:steam_donkey.ai_weight
 	}
 }
@@ -685,8 +881,17 @@ dynamite = {
 		value = 1
 
 		# SITAI BEGIN information:dynamite.ai_weight
-		# dynamite_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_4899a3dd9558b12e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4899a3dd9558b12e_positive
+			add = { value = 0
+				# dynamite_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:dynamite.ai_weight
 	}
 }
@@ -716,8 +921,17 @@ rubber_mastication = {
 		}
 
 		# SITAI BEGIN information:rubber_mastication.ai_weight
-		# rubber_mastication_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_9d4d0f77baa2fda2 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_9d4d0f77baa2fda2_positive
+			add = { value = 0
+				# rubber_mastication_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:rubber_mastication.ai_weight
 	}
 }
@@ -736,8 +950,17 @@ rotary_valve_engine = {
 		value = 1
 
 		# SITAI BEGIN information:rotary_valve_engine.ai_weight
-		# rotary_valve_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_7c26ba11ee2edc34 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_7c26ba11ee2edc34_positive
+			add = { value = 0
+				# rotary_valve_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:rotary_valve_engine.ai_weight
 	}
 }
@@ -760,8 +983,17 @@ reinforced_concrete = {
 		value = 1
 
 		# SITAI BEGIN information:reinforced_concrete.ai_weight
-		# reinforced_concrete_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_c98b7a5879b5c796 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_c98b7a5879b5c796_positive
+			add = { value = 0
+				# reinforced_concrete_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:reinforced_concrete.ai_weight
 	}
 }
@@ -790,8 +1022,17 @@ threshing_machine = {
 		}
 
 		# SITAI BEGIN information:threshing_machine.ai_weight
-		# threshing_machine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_8df2dd47722c1b77 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8df2dd47722c1b77_positive
+			add = { value = 0
+				# threshing_machine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:threshing_machine.ai_weight
 	}
 }
@@ -822,8 +1063,17 @@ pumpjacks = {
 		}
 
 		# SITAI BEGIN information:pumpjacks.ai_weight
-		# pumpjacks_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_f210a193b8eb342c [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f210a193b8eb342c_positive
+			add = { value = 0
+				# pumpjacks_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:pumpjacks.ai_weight
 	}
 }
@@ -842,8 +1092,17 @@ aniline = {
 		value = 1
 
 		# SITAI BEGIN information:aniline.ai_weight
-		# aniline_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_26121389bcbb253f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_26121389bcbb253f_positive
+			add = { value = 0
+				# aniline_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:aniline.ai_weight
 	}
 }
@@ -862,8 +1121,17 @@ open_hearth_process = {
 		value = 1
 
 		# SITAI BEGIN information:open_hearth_process.ai_weight
-		# open_hearth_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_ce9114a38b1631c5 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ce9114a38b1631c5_positive
+			add = { value = 0
+				# open_hearth_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:open_hearth_process.ai_weight
 	}
 }
@@ -882,8 +1150,17 @@ vulcanization = {
 		value = 1
 
 		# SITAI BEGIN information:vulcanization.ai_weight
-		# vulcanization_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_d4643e787b0b7be4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d4643e787b0b7be4_positive
+			add = { value = 0
+				# vulcanization_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:vulcanization.ai_weight
 	}
 }
@@ -902,8 +1179,17 @@ vacuum_canning = {
 		value = 1
 
 		# SITAI BEGIN information:vacuum_canning.ai_weight
-		# vacuum_canning_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_1c9644ef03d88466 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1c9644ef03d88466_positive
+			add = { value = 0
+				# vacuum_canning_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:vacuum_canning.ai_weight
 	}
 }
@@ -925,8 +1211,17 @@ shift_work = {
 		value = 1
 
 		# SITAI BEGIN information:shift_work.ai_weight
-		# shift_work_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_b5ca5cd97d48bda6 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b5ca5cd97d48bda6_positive
+			add = { value = 0
+				# shift_work_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:shift_work.ai_weight
 	}
 }
@@ -947,8 +1242,17 @@ steel_railway_cars = {
 		value = 1
 
 		# SITAI BEGIN information:steel_railway_cars.ai_weight
-		# steel_railway_cars_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_553bc8d5c9e38810 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_553bc8d5c9e38810_positive
+			add = { value = 0
+				# steel_railway_cars_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:steel_railway_cars.ai_weight
 	}
 }
@@ -983,14 +1287,21 @@ electrical_generation = {
 		}
 
 		# SITAI BEGIN information:electrical_generation.ai_weight
-		# electrical_generation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_electrical_generation_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes NOT = { sitai_context_evidence_need_industry = yes } } } AND = { exists = ROOT ROOT = { sitai_context_known_evidence_need_industry = yes } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_electrical_generation_expansion [economy]; 扩张能力提高生产升级研究的相对机会
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } multiply = 1.1 }
+		# ACTION program_4d62d925b6c004c2 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4d62d925b6c004c2_positive
+			add = { value = 0
+				# coordinated_layered_tech_electrical_generation_industry [economy]; 产业或资源瓶颈提高对应生产科技的研究机会，不增加研究速度或绕过前置
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes } } add = 0.25 }
+				# electrical_generation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+				# coordinated_layered_tech_electrical_generation_expansion [economy]; 扩张能力提高生产升级研究的相对机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
+			}
+			min = 1
+			max = 1.25
+		} }
 		# SITAI END information:electrical_generation.ai_weight
 	}
 }
@@ -1021,8 +1332,17 @@ mechanized_farming = {
 		}
 
 		# SITAI BEGIN information:mechanized_farming.ai_weight
-		# mechanized_farming_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_960b819a96a74134 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_960b819a96a74134_positive
+			add = { value = 0
+				# mechanized_farming_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:mechanized_farming.ai_weight
 	}
 }
@@ -1042,8 +1362,17 @@ art_silk = {
 		value = 1
 
 		# SITAI BEGIN information:art_silk.ai_weight
-		# art_silk_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_5b9ee99523037a64 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5b9ee99523037a64_positive
+			add = { value = 0
+				# art_silk_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:art_silk.ai_weight
 	}
 }
@@ -1062,8 +1391,17 @@ automatic_bottle_blowers = {
 		value = 1
 
 		# SITAI BEGIN information:automatic_bottle_blowers.ai_weight
-		# automatic_bottle_blowers_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_ce0b73523e1c83b1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ce0b73523e1c83b1_positive
+			add = { value = 0
+				# automatic_bottle_blowers_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:automatic_bottle_blowers.ai_weight
 	}
 }
@@ -1084,8 +1422,17 @@ conveyors = {
 		value = 1
 
 		# SITAI BEGIN information:conveyors.ai_weight
-		# conveyors_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_229a19b620fdc7e1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_229a19b620fdc7e1_positive
+			add = { value = 0
+				# conveyors_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:conveyors.ai_weight
 	}
 }
@@ -1104,8 +1451,17 @@ pasteurization = {
 		value = 1
 
 		# SITAI BEGIN information:pasteurization.ai_weight
-		# pasteurization_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_865f027e797884b7 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_865f027e797884b7_positive
+			add = { value = 0
+				# pasteurization_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:pasteurization.ai_weight
 	}
 }
@@ -1138,8 +1494,17 @@ electric_railway = {
 		}
 
 		# SITAI BEGIN information:electric_railway.ai_weight
-		# electric_railway_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_48dacb811e9c4c23 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_48dacb811e9c4c23_positive
+			add = { value = 0
+				# electric_railway_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:electric_railway.ai_weight
 	}
 }
@@ -1172,8 +1537,17 @@ combustion_engine = {
 		}
 
 		# SITAI BEGIN information:combustion_engine.ai_weight
-		# combustion_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_be2eb34351eaa132 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_be2eb34351eaa132_positive
+			add = { value = 0
+				# combustion_engine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:combustion_engine.ai_weight
 	}
 }
@@ -1200,8 +1574,17 @@ pneumatic_tools = {
 		value = 1
 
 		# SITAI BEGIN information:pneumatic_tools.ai_weight
-		# pneumatic_tools_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_1ea8356660c2d221 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1ea8356660c2d221_positive
+			add = { value = 0
+				# pneumatic_tools_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:pneumatic_tools.ai_weight
 	}
 }
@@ -1221,8 +1604,17 @@ nitrogen_fixation = {
 		value = 1
 
 		# SITAI BEGIN information:nitrogen_fixation.ai_weight
-		# nitrogen_fixation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_3805b2a919c70e2b [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3805b2a919c70e2b_positive
+			add = { value = 0
+				# nitrogen_fixation_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:nitrogen_fixation.ai_weight
 	}
 }
@@ -1241,8 +1633,17 @@ electric_arc_process = {
 		value = 1
 
 		# SITAI BEGIN information:electric_arc_process.ai_weight
-		# electric_arc_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_80148f59253db0f3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_80148f59253db0f3_positive
+			add = { value = 0
+				# electric_arc_process_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:electric_arc_process.ai_weight
 	}
 }
@@ -1261,8 +1662,17 @@ steam_turbine = {
 		value = 1
 
 		# SITAI BEGIN information:steam_turbine.ai_weight
-		# steam_turbine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_8fa4861531de5b86 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8fa4861531de5b86_positive
+			add = { value = 0
+				# steam_turbine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:steam_turbine.ai_weight
 	}
 }
@@ -1281,8 +1691,17 @@ plastics = {
 		value = 1
 
 		# SITAI BEGIN information:plastics.ai_weight
-		# plastics_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_155049008d877673 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_155049008d877673_positive
+			add = { value = 0
+				# plastics_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:plastics.ai_weight
 	}
 }
@@ -1313,8 +1732,17 @@ electrical_capacitors = {
 		}
 
 		# SITAI BEGIN information:electrical_capacitors.ai_weight
-		# electrical_capacitors_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_6feb1bf663d8601c [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_6feb1bf663d8601c_positive
+			add = { value = 0
+				# electrical_capacitors_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:electrical_capacitors.ai_weight
 	}
 }
@@ -1333,8 +1761,17 @@ radio = {
 		value = 1
 
 		# SITAI BEGIN information:radio.ai_weight
-		# radio_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_3ca8538ca4b2cb41 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3ca8538ca4b2cb41_positive
+			add = { value = 0
+				# radio_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:radio.ai_weight
 	}
 }
@@ -1354,8 +1791,17 @@ telephone = {
 		value = 1
 
 		# SITAI BEGIN information:telephone.ai_weight
-		# telephone_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_1e819cc57f7745b7 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1e819cc57f7745b7_positive
+			add = { value = 0
+				# telephone_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:telephone.ai_weight
 	}
 }
@@ -1376,8 +1822,17 @@ dough_rollers = {
 		value = 1
 
 		# SITAI BEGIN information:dough_rollers.ai_weight
-		# dough_rollers_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_3a0d0aa38c968353 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3a0d0aa38c968353_positive
+			add = { value = 0
+				# dough_rollers_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:dough_rollers.ai_weight
 	}
 }
@@ -1397,8 +1852,17 @@ flash_freezing = {
 		value = 1
 
 		# SITAI BEGIN information:flash_freezing.ai_weight
-		# flash_freezing_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_15104434d6850f84 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_15104434d6850f84_positive
+			add = { value = 0
+				# flash_freezing_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:flash_freezing.ai_weight
 	}
 }
@@ -1417,8 +1881,17 @@ oil_turbine = {
 		value = 1
 
 		# SITAI BEGIN information:oil_turbine.ai_weight
-		# oil_turbine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_319a81d5d9e73ffb [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_319a81d5d9e73ffb_positive
+			add = { value = 0
+				# oil_turbine_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:oil_turbine.ai_weight
 	}
 }
@@ -1443,8 +1916,17 @@ arc_welding = {
 		value = 1
 
 		# SITAI BEGIN information:arc_welding.ai_weight
-		# arc_welding_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_6d4774f6cd96de71 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_6d4774f6cd96de71_positive
+			add = { value = 0
+				# arc_welding_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:arc_welding.ai_weight
 	}
 }
@@ -1464,8 +1946,17 @@ compression_ignition = {
 		value = 1
 
 		# SITAI BEGIN information:compression_ignition.ai_weight
-		# compression_ignition_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } multiply = 1.2 }
+		# ACTION program_6ce85bd3e15e9cb4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_6ce85bd3e15e9cb4_positive
+			add = { value = 0
+				# compression_ignition_ai_weight [economy]; 原有工业路线在可承受条件下更关注生产研究；原版前置科技与研究资格保持
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no has_strategy = ai_strategy_industrial_expansion } } add = 0.2 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:compression_ignition.ai_weight
 	}
 }

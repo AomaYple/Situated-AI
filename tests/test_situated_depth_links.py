@@ -64,11 +64,23 @@ def _subset(policy, fields):
 
 
 @pytest.fixture(scope="module")
-def policies():
+def legacy_policies():
     adapters = decision_adapters.load()
     selected = tuple((s, _subset(p, FIELDS[s])) for s, p in adapters.policies if s in FIELDS)
     info = _subset(decision_rules.load(), FIELDS[INFO])
     return dict((*selected, (INFO, info)))
+
+
+@pytest.fixture(scope="module")
+def policies(legacy_policies):
+    """Production references use the same compilation boundary as generated PDX."""
+    model = compiler.load_model()
+    return {
+        source: compiler.compile_policy(
+            policy, "mod/decisions/information.toml" if source == INFO else source, model
+        )[0]
+        for source, policy in legacy_policies.items()
+    }
 
 
 def _values(policy, **changes):
@@ -115,7 +127,10 @@ LJ01_INPUTS = {
     "state_owner_furniture_balance": -1,
 }
 LJ01_CASES = [
-    ({}, (1050, 1600, 800)),
+    # Iron's generic shortage tier (+.15) and active tools cost (-.20)
+    # jointly give .95; repair (+.05) and input pressure (-.05) are weaker
+    # alternatives in the same positive/negative envelopes.
+    ({}, (950, 1600, 800)),
     (
         {
             "state_owner_iron_price": 0.2,
@@ -134,8 +149,10 @@ LJ01_CASES = [
         (1000, 2000, 1200),
     ),
     ({"state_owner_default": True}, (800, 1600, 800)),
-    ({PM_TOOLS: None}, (1000, 2000, 800)),
-    ({PM_TOOLS: False}, (800, 2000, 800)),
+    # Losing this workshop's observation removes its repair/output tiers,
+    # while the mine's own active recipe and observed shortage remain known.
+    ({PM_TOOLS: None}, (950, 2000, 800)),
+    ({PM_TOOLS: False}, (950, 2000, 800)),
 ]
 
 
@@ -161,7 +178,9 @@ LJ03_CASES = [
     ({"state_owner_paper_price": 0.6, "state_owner_paper_balance": -1}, (11, 1600, 1.2)),
     (
         {"state_owner_academia_completed": None, "literacy": None, "state_owner_literacy": None},
-        (10, 2000, 1),
+        # Unknown literacy blocks the 1.3 absorption tier, but not the
+        # independently observed tools bottleneck's known 1.2 tier.
+        (10, 2000, 1.2),
     ),
     ({"tools_price": 0.2, "tools_balance": 0}, (11, 2300, 1)),
 ]
@@ -190,7 +209,9 @@ LJ04_CASES = [
             "default": True,
             "state_owner_default": True,
         },
-        (1050, 8, 7.5),
+        # Administrative repair +.25 offsets default -.25; emergency +.05
+        # is a weaker repair tier. Health's -.25 wins over its -.20 tier.
+        (1000, 8, 7.5),
     ),
     ({"bureaucracy": None, "state_owner_bureaucracy": None}, (1000, 10, 10)),
     ({"bureaucracy": 0, "state_owner_bureaucracy": 0, "average_sol": 8}, (1000, 10, 10)),
@@ -200,6 +221,44 @@ LJ04_CASES = [
 @pytest.mark.parametrize(("changes", "expected"), LJ04_CASES)
 def test_lj04_only_actual_administrative_balance_advances_welfare(policies, changes, expected):
     assert _scores(policies, changes, LJ04_FIELDS) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    ("chain", "changes", "expected"),
+    [
+        ("LJ01", {}, (1050, 1600, 800)),
+        ("LJ01", {PM_TOOLS: None}, (1000, 2000, 800)),
+        (
+            "LJ03",
+            {
+                "state_owner_academia_completed": None,
+                "literacy": None,
+                "state_owner_literacy": None,
+            },
+            (10, 2000, 1),
+        ),
+        (
+            "LJ04",
+            {
+                "bureaucracy": -1,
+                "state_owner_bureaucracy": -1,
+                "default": True,
+                "state_owner_default": True,
+            },
+            (1050, 8, 7.5),
+        ),
+    ],
+)
+def test_raw_ruleset_legacy_priority_and_unknown_are_separate_from_production(
+    legacy_policies, chain, changes, expected
+):
+    fields, inputs = {
+        "LJ01": (LJ01_FIELDS, LJ01_INPUTS),
+        "LJ03": (LJ03_FIELDS, LJ03_INPUTS),
+        "LJ04": (LJ04_FIELDS, {}),
+    }[chain]
+    assert all(not policy.consumer_programs for policy in legacy_policies.values())
+    assert _scores(legacy_policies, {**inputs, **changes}, fields) == pytest.approx(expected)
 
 
 @pytest.mark.parametrize("chain", ["LJ01", "LJ03", "LJ04"])
@@ -246,11 +305,7 @@ def generated(policies):
     adapters = decision_adapters.load()
     model = compiler.load_model()
     assert model.consumer_ir is not None
-    sources = tuple(
-        (source, compiler.compile_policy(policy, source, model)[0])
-        for source, policy in policies.items()
-        if source != INFO
-    )
+    sources = tuple((source, policy) for source, policy in policies.items() if source != INFO)
     fields = {(s, r.field) for s, p in sources for r in p.rules}
     selected = replace(
         adapters,
@@ -269,7 +324,7 @@ def generated(policies):
     baseline = BASELINE.read_text(encoding="utf-8")
     files[INFO] = decision_rules.patch(
         baseline,
-        compiler.compile_policy(policies[INFO], "mod/decisions/information.toml", model)[0],
+        policies[INFO],
         baseline=baseline,
         reader_words=frozenset(decision_adapters.reader_evidence(inputs)),
         country_policy=country_state.load(),
@@ -282,14 +337,7 @@ def generated(policies):
 def _overlay(text, field):
     begin = text.index(f"# SITAI BEGIN information:{field}")
     end = text.index(f"# SITAI END information:{field}", begin)
-    lines: list[str] = []
-    for line in text[begin:end].splitlines()[1:]:
-        if line.lstrip().startswith(("if =", "else_if =")) and (
-            not lines or not lines[-1].lstrip().startswith("# ")
-        ):
-            lines.append("# joint_unknown_guard [test]; retain native")
-        lines.append(line)
-    return "\n".join(lines)
+    return text[begin:end]
 
 
 def _engine_facts(policy, values, *, is_ai=True):
@@ -424,7 +472,9 @@ def test_lj01_other_state_and_country_methods_never_repair_this_states_inputs(po
     facts.update(decoy)
     facts["other_country"] = {"in_default": False, **decoy}
     actual = pdx_eval.select(_overlay(generated[1][MINES], "building_iron_mine.ai_value"), facts)
-    assert actual.delta == pytest.approx(0.8)
+    # The local mine still has generic shortage +.15 and active tools cost
+    # -.20; an unrelated workshop cannot supply the repair predicate.
+    assert actual.delta == pytest.approx(0.95)
 
 
 @pytest.mark.parametrize(
@@ -445,10 +495,12 @@ def test_lj04_signed_capacity_zero_is_distinct_from_unknown_and_deficit(
         (0.499, 1.2),
         (0.5, 1.3),
         (0.501, 1.3),
-        (-1, 1),
-        (None, 1),
-        (float("nan"), 1),
-        (float("inf"), 1),
+        # Invalid/unknown literacy excludes only the 1.3 tier. The known
+        # tools shortage still proves the lower 1.2 technology preference.
+        (-1, 1.2),
+        (None, 1.2),
+        (float("nan"), 1.2),
+        (float("inf"), 1.2),
     ],
 )
 def test_lj03_real_absorption_capacity_has_ratio_and_finite_boundaries(

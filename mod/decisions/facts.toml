@@ -60,7 +60,7 @@ kind = "boolean"
 unit = "flag"
 refresh = "monthly"
 unknown = "vanilla"
-trigger = "legitimacy >= 50"
+trigger = "AND = { legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 }"
 
 [facts.strong_legitimacy]
 domain = "political"
@@ -70,7 +70,7 @@ kind = "boolean"
 unit = "flag"
 refresh = "monthly"
 unknown = "vanilla"
-trigger = "legitimacy >= 75"
+trigger = "AND = { legitimacy >= 0 legitimacy <= 100 legitimacy >= 75 }"
 
 # 正在发生的起义不同于 legacy reader 的 has_insurrectionary_interest_groups。
 # 两者可各自为真或未知，不能共用事实 ID。
@@ -112,7 +112,7 @@ kind = "boolean"
 unit = "flag"
 refresh = "monthly"
 unknown = "vanilla"
-trigger = "literacy_rate < 0.5"
+trigger = "AND = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 }"
 
 [facts.subject]
 domain = "subjects"
@@ -134,3 +134,13 @@ refresh = "monthly"
 unknown = "vanilla"
 trigger = "infamy"
 minimum = 0
+
+[facts.literacy_ready]
+domain = "education"
+source = "common/ai_strategies/00_default_strategy.txt"
+scope = "root"
+kind = "boolean"
+unit = "flag"
+refresh = "consumer"
+unknown = "vanilla"
+trigger = "AND = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 }"

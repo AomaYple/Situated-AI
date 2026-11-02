@@ -2,17 +2,25 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import tomllib
 from collections import Counter
 from dataclasses import asdict, dataclass
-from pathlib import Path
-from typing import TypedDict
+from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from pdx import decision_adapters, decision_rules
+from pdx.model import Assignment, Block
+from pdx.parser import parse_bytes
 
 from .action_instances import ActionInstance, build
 from .families import FAMILIES
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from .vanilla_inventory import VanillaInventory, VanillaSurface
 
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_SOURCE = REPO / "mod" / "decisions" / "domain_actions.toml"
@@ -84,6 +92,437 @@ class CoverageContract(TypedDict):
     domains: dict[str, DomainSummary]
     chains: list[ChainSummary]
     evidence: str
+
+
+@dataclass(frozen=True, slots=True)
+class NativeConsumerBinding:
+    """An explicit card's exact native declaration, supplied by its real caller.
+
+    This identity grants no scope or implementation evidence. The independent
+    inventory and the production instance still have to agree on those facts.
+    """
+
+    source: str
+    definition: str
+    field: str
+
+    def __post_init__(self) -> None:
+        source = PurePosixPath(self.source)
+        if (
+            not self.source
+            or "\\" in self.source
+            or source.is_absolute()
+            or PureWindowsPath(self.source).drive
+            or any(part in {"", ".", ".."} for part in self.source.split("/"))
+            or not (self.source.startswith("common/") or "/common/" in self.source)
+            or not self.definition
+            or any(not part for part in self.field.split("."))
+        ):
+            raise ValueError("原版消费者必须有精确相对来源、定义与字段")
+
+
+def _native_binding(instance: ActionInstance) -> NativeConsumerBinding | None:
+    if instance.kind != "rule_action":
+        return None
+    if instance.source == "mod/decisions/information.toml":
+        return NativeConsumerBinding(
+            "common/ai_strategies/00_default_strategy.txt",
+            "ai_strategy_default",
+            instance.consumer_field,
+        )
+    definition, separator, field = instance.consumer_field.partition(".")
+    if not separator:
+        return None
+    return NativeConsumerBinding(instance.source, definition, field)
+
+
+def _native_context_issue(
+    instance: ActionInstance, surface: VanillaSurface, *, state_owner_proven: bool = False
+) -> str | None:
+    """Check documented object types; writer labels never invent named scopes."""
+
+    if not instance.owner or not instance.vanilla_tail:
+        return "production_ownership_or_tail_missing"
+    if instance.operation not in {"add", "multiply"} or surface.operation not in {
+        "additive_score",
+        "multiplicative_score",
+        "score",
+        "chance",
+        "base_candidate_score",
+        "relative_weight",
+        "multiplier",
+    }:
+        return "numeric_consumer_contract_unproven"
+    context = instance.evaluation_context
+    if context is not None and context.status != "observed":
+        return "evaluation_context_unproven"
+    actor_kind = (
+        "state"
+        if state_owner_proven
+        else context.actor_scope.kind
+        if context is not None and context.actor_scope is not None
+        else "country"
+        if instance.actor_scope in {"root", "owner"}
+        else instance.actor_scope
+    )
+    if surface.actor_scope != actor_kind:
+        return "actor_type_mismatch"
+    if surface.target_scope == "none" or surface.target_scope.startswith("definition_only:"):
+        # Definition identity is already exact; it is not a script-side target.
+        if instance.target_scope not in {"none", "target_or_none"}:
+            return "target_type_mismatch"
+        return None
+    targets = surface.target_scope.split(";")
+    expected: dict[str, str] = {}
+    for target in targets:
+        match = re.fullmatch(r"scope:([a-z][a-z0-9_]*)=([a-z][a-z0-9_]*)", target)
+        if match is None:
+            return "named_target_contract_unproven"
+        expected[match[1]] = match[2]
+    if context is None:
+        return "evaluation_context_unproven"
+    observed = {item.name: item.kind for item in (*context.targets, *context.auxiliary_scopes)}
+    if any(observed.get(name) != kind for name, kind in expected.items()):
+        return "target_type_mismatch"
+    return None
+
+
+def _ordinary(block: Block, key: str) -> Assignment | None:
+    declarations = block.all(key)
+    if len(declarations) != 1:
+        return None
+    item = declarations[0]
+    return item if item.op == "=" and item.prefix is None else None
+
+
+class _NativeBindingProofs:
+    """Optional source bytes and real policies, never inferred from writer names."""
+
+    def __init__(
+        self,
+        inventory: VanillaInventory,
+        sources: Mapping[str, bytes],
+        policies: Mapping[str, decision_rules.RuleSet],
+    ) -> None:
+        self.inventory = inventory
+        self.sources = dict(sources)
+        self.policies = policies
+        self.parsed: dict[str, Block] = {}
+        for source, raw in self.sources.items():
+            if hashlib.sha256(raw).hexdigest() != inventory.source_hashes.get(source):
+                raise ValueError(f"原版覆盖证据与独立盘点字节不一致：{source}")
+
+    def root(self, source: str) -> Block | None:
+        if source not in self.sources:
+            return None
+        if source not in self.parsed:
+            parsed = parse_bytes(self.sources[source], path=source)
+            if parsed.errors:
+                raise ValueError(f"原版覆盖证据解析失败：{source}")
+            self.parsed[source] = parsed.root
+        return self.parsed[source]
+
+    def definition(self, binding: NativeConsumerBinding) -> Assignment | None:
+        root = self.root(binding.source)
+        return _ordinary(root, binding.definition) if root is not None else None
+
+    def building_evidence(self) -> tuple[str, ...]:
+        source = "common/buildings/buildings.md"
+        raw = self.sources.get(source)
+        if raw is None:
+            return ()
+        lines = raw.decode("utf-8-sig").splitlines()
+        markers = (
+            "# base AI value, default NAI.BUILDING_BASE_VALUE or NAI.GOVERNMENT_BUILDING_BASE_VALUE",
+            "# scope is state the building is located in",
+            "ai_value = script value",
+        )
+        locations = [
+            [index + 1 for index, line in enumerate(lines) if line.strip() == marker]
+            for marker in markers
+        ]
+        if any(len(found) != 1 for found in locations):
+            return ()
+        positions = [found[0] for found in locations]
+        if positions != sorted(positions) or positions[-1] - positions[0] > 4:
+            return ()
+        return tuple(f"{source}:{line}" for line in positions)
+
+    def state_owner(self, instance: ActionInstance, binding: NativeConsumerBinding) -> bool:
+        if (
+            instance.kind != "rule_action"
+            or not binding.source.startswith("common/buildings/")
+            or binding.field != "ai_value"
+            or not self.building_evidence()
+        ):
+            return False
+        policy = self.policies.get(instance.source)
+        raw = self.sources.get(binding.source)
+        # Adapter baselines intentionally hash read_text(utf-8-sig), including
+        # universal-newline decoding, whereas inventory hashes original bytes.
+        baseline = (
+            hashlib.sha256(
+                raw.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+            ).hexdigest()
+            if raw is not None
+            else None
+        )
+        if policy is None or policy.actor_path != ("owner",) or policy.baseline_sha256 != baseline:
+            return False
+        rules = [item for item in policy.rules if item.id == instance.rule_id]
+        return (
+            len(rules) == 1
+            and ".".join(rules[0].field) == instance.consumer_field
+            and rules[0].operation == instance.operation
+            and rules[0].value == instance.value
+            and tuple(sorted(rules[0].input_keys())) == instance.condition_facts
+            and instance.actor_scope == "owner"
+        )
+
+    def secret_goal_parent(self, binding: NativeConsumerBinding) -> str | None:
+        match = re.fullmatch(r"secret_goal_scores\.([a-z][a-z0-9_]*)\.score", binding.field)
+        if match is None or not binding.source.startswith("common/ai_strategies/"):
+            return None
+        definition = self.definition(binding)
+        if definition is None or not isinstance(definition.value, Block):
+            return None
+        groups = _ordinary(definition.value, "secret_goal_scores")
+        if groups is None or not isinstance(groups.value, Block):
+            return None
+        goal = _ordinary(groups.value, match[1])
+        if goal is None or not isinstance(goal.value, Block):
+            return None
+        score = _ordinary(goal.value, "score")
+        if score is None or not isinstance(score.value, Block):
+            return None
+        return f"secret_goal_scores.{match[1]}"
+
+    def implicit_building(self, binding: NativeConsumerBinding) -> dict[str, Any] | None:
+        evidence = self.building_evidence()
+        if (
+            not evidence
+            or not binding.source.startswith("common/buildings/")
+            or binding.field != "ai_value"
+        ):
+            return None
+        # All discovered building files must participate, so a duplicate object
+        # in another file cannot be hidden by providing only the preferred file.
+        all_sources = [
+            source
+            for source in self.inventory.source_hashes
+            if (source.startswith("common/buildings/") or "/common/buildings/" in source)
+            and source.endswith(".txt")
+        ]
+        if any(source not in self.sources for source in all_sources):
+            return None
+        declarations = [
+            (source, item)
+            for source in all_sources
+            if (root := self.root(source)) is not None
+            for item in root.all(binding.definition)
+        ]
+        if len(declarations) != 1 or declarations[0][0] != binding.source:
+            return None
+        definition = declarations[0][1]
+        if (
+            definition.prefix is not None
+            or definition.op != "="
+            or not isinstance(definition.value, Block)
+            or definition.value.all("ai_value")
+        ):
+            return None
+        return {
+            **asdict(binding),
+            "actor_scope": "state",
+            "target_scope": "none",
+            "operation": "score",
+            "default": "NAI.BUILDING_BASE_VALUE_or_NAI.GOVERNMENT_BUILDING_BASE_VALUE",
+            "evidence": [*evidence, f"{binding.source}:{definition.line}"],
+        }
+
+
+def native_coverage(
+    inventory: VanillaInventory,
+    instances: tuple[ActionInstance, ...],
+    *,
+    explicit_consumers: Mapping[str, NativeConsumerBinding] | None = None,
+    native_sources: Mapping[str, bytes] | None = None,
+    production_policies: Mapping[str, decision_rules.RuleSet] | None = None,
+) -> dict[str, Any]:
+    """Join real production bindings to an independently discovered denominator.
+
+    The caller supplies an existing inventory; this function never discovers
+    game files or loads the production model. ``actual_covered`` means a legal
+    native declaration has an exact production binding with compatible numeric
+    and object contracts. It does not prove functional depth, PDX equivalence,
+    or engine behavior. Raw pending states and evidence remain in every row.
+    Optional ``native_sources`` bytes must match inventory hashes; missing
+    sources stay unproven. ``production_policies`` provide real state-owner
+    actor paths. Documented implicit consumers are separate from the denominator.
+    """
+
+    explicit = dict(explicit_consumers or {})
+    proofs = _NativeBindingProofs(inventory, native_sources or {}, production_policies or {})
+    by_id = {item.action_id: item for item in instances}
+    if len(by_id) != len(instances):
+        raise ValueError("原版覆盖映射的生产行动身份重复")
+    if set(explicit) - set(by_id) or any(by_id[key].kind != "action_card" for key in explicit):
+        raise ValueError("显式消费者映射只能引用实际显式行动卡")
+    identities: dict[tuple[str, str, str], list[VanillaSurface]] = {}
+    for surface in inventory.surfaces:
+        identities.setdefault((surface.source, surface.definition, surface.field), []).append(
+            surface
+        )
+    matches: dict[str, list[ActionInstance]] = {}
+    state_owner: set[str] = set()
+    projections: dict[str, dict[str, str]] = {}
+    implicit: dict[tuple[str, str, str], dict[str, Any]] = {}
+    unmatched: list[dict[str, Any]] = []
+    for instance in sorted(instances, key=lambda item: item.action_id):
+        binding = explicit.get(instance.action_id) or _native_binding(instance)
+        if binding is None:
+            unmatched.append({"action_id": instance.action_id, "reason": "native_binding_missing"})
+            continue
+        if instance.kind == "action_card" and binding.field != instance.consumer_field:
+            unmatched.append(
+                {
+                    "action_id": instance.action_id,
+                    "reason": "explicit_field_mismatch",
+                    "binding": asdict(binding),
+                }
+            )
+            continue
+        native_candidates = identities.get((binding.source, binding.definition, binding.field), [])
+        if not native_candidates and (parent := proofs.secret_goal_parent(binding)) is not None:
+            native_candidates = identities.get((binding.source, binding.definition, parent), [])
+            if len(native_candidates) == 1:
+                projections[instance.action_id] = {
+                    "writer_field": binding.field,
+                    "consumer_field": parent,
+                }
+        if proofs.state_owner(instance, binding):
+            state_owner.add(instance.action_id)
+        if not native_candidates and (proof := proofs.implicit_building(binding)) is not None:
+            row = implicit.setdefault(
+                (binding.source, binding.definition, binding.field),
+                {**proof, "matched_actions": [], "covered_actions": [], "binding_issues": {}},
+            )
+            row["matched_actions"].append(instance.action_id)
+            if instance.action_id not in state_owner:
+                row["binding_issues"][instance.action_id] = "state_owner_policy_unproven"
+            elif (
+                not instance.owner
+                or not instance.vanilla_tail
+                or instance.operation not in {"add", "multiply"}
+            ):
+                row["binding_issues"][instance.action_id] = "production_contract_unproven"
+            else:
+                row["covered_actions"].append(instance.action_id)
+            continue
+        if len(native_candidates) != 1:
+            unmatched.append(
+                {
+                    "action_id": instance.action_id,
+                    "reason": "native_identity_ambiguous"
+                    if native_candidates
+                    else "native_surface_missing",
+                    "binding": asdict(binding),
+                }
+            )
+            continue
+        matches.setdefault(native_candidates[0].declaration_id, []).append(instance)
+    categories: dict[str, list[str]] = {
+        name: []
+        for name in (
+            "actual_covered",
+            "unimplemented_legal",
+            "pending",
+            "unknown",
+            "observation",
+            "unsupported",
+        )
+    }
+    unknown_scopes = set(inventory.unknown_scopes)
+    rows = []
+    binding_issue_count = 0
+    for surface in sorted(inventory.surfaces, key=lambda item: item.declaration_id):
+        candidates = matches.get(surface.declaration_id, [])
+        issues = {
+            item.action_id: reason
+            for item in candidates
+            if (
+                reason := _native_context_issue(
+                    item, surface, state_owner_proven=item.action_id in state_owner
+                )
+            )
+            is not None
+        }
+        binding_issue_count += len(issues)
+        covered = sorted(item.action_id for item in candidates if item.action_id not in issues)
+        if surface.ambiguity:
+            status = "unknown"
+        elif surface.capability == "observation":
+            status = "observation"
+        elif surface.capability == "unexposed":
+            status = "unsupported" if surface.scope_evidence else "unknown"
+        elif surface.capability == "pending":
+            status = "pending"
+        elif surface.legal and surface.surface_id not in unknown_scopes:
+            status = "actual_covered" if covered else "unimplemented_legal"
+        else:
+            status = "unknown"
+        categories[status].append(surface.declaration_id)
+        rows.append(
+            {
+                **asdict(surface),
+                "declaration_id": surface.declaration_id,
+                "legal": surface.legal,
+                "unknown_scope": surface.surface_id in unknown_scopes,
+                "coverage_status": status,
+                "matched_actions": sorted(item.action_id for item in candidates),
+                "covered_actions": covered if status == "actual_covered" else [],
+                "binding_issues": issues,
+                "field_projections": {
+                    key: projections[key]
+                    for key in sorted(projections)
+                    if key in {item.action_id for item in candidates}
+                },
+            }
+        )
+    unresolved = (
+        len(categories["unimplemented_legal"])
+        + len(categories["pending"])
+        + len(categories["unknown"])
+    )
+    implicit_rows = list(implicit.values())
+    binding_issue_count += sum(len(row["binding_issues"]) for row in implicit_rows)
+    return {
+        "schema": 1,
+        "baseline_id": inventory.baseline_id,
+        "scope_hash": inventory.scope_hash,
+        "source_hashes": dict(inventory.source_hashes),
+        "denominator": inventory.discovered_count,
+        "legal_count": inventory.legal_count,
+        "capability_counts": inventory.capability_counts,
+        "inventory_status_counts": inventory.status_counts,
+        "unknown_scopes": list(inventory.unknown_scopes),
+        "parse_failures": list(inventory.parse_failures),
+        "counts": {name: len(ids) for name, ids in categories.items()},
+        **categories,
+        "unmatched_production": unmatched,
+        "binding_issue_count": binding_issue_count,
+        "rows": rows,
+        "implicit_covered": [
+            {key: row[key] for key in ("source", "definition", "field")}
+            for row in implicit_rows
+            if row["covered_actions"]
+        ],
+        "implicit_rows": implicit_rows,
+        "implicit_denominator_policy": "documented_optional_consumers_separate_from_discovered_denominator",
+        "binding_complete": bool(inventory.surfaces)
+        and not (unresolved or unmatched or binding_issue_count or inventory.parse_failures),
+        "evidence": "static_exact_production_binding_not_functional_or_behavior_acceptance",
+    }
 
 
 CHAINS: tuple[JointChain, ...] = (
@@ -423,7 +862,9 @@ __all__ = [
     "DEFAULT_SOURCE",
     "DomainCoverage",
     "JointChain",
+    "NativeConsumerBinding",
     "TargetCoverage",
     "contract",
     "load",
+    "native_coverage",
 ]

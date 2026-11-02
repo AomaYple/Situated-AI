@@ -1,5 +1,6 @@
 """LJ06/LJ07 局部就业与粮食—社会链见证。"""
 
+import hashlib
 from dataclasses import replace
 from typing import Any
 
@@ -13,11 +14,15 @@ from pdx.situated import compiler, pdx_eval
 pytestmark = pytest.mark.unit
 INDUSTRY = "common/buildings/01_industry.txt"
 STRATEGY = "common/ai_strategies/00_default_strategy.txt"
-INFO = "information"
+INFO = "mod/decisions/information.toml"
 FOOD = "building_food_industry.ai_value"
 TEXTILE = "building_textile_mill.ai_value"
 HEALTH = "ai_strategy_default.institution_scores.institution_health_system"
 SOCIAL = "institution_scores.institution_social_security"
+
+
+def _program_id(source: str, field: str) -> str:
+    return "program_" + hashlib.sha256(f"{source}:{field}".encode()).hexdigest()[:16]
 
 
 def _subset(policy: Any, ids: set[str]) -> Any:
@@ -36,7 +41,7 @@ def _subset(policy: Any, ids: set[str]) -> Any:
 def policies() -> dict[str, Any]:
     adapters = decision_adapters.load()
     by_source = dict(adapters.policies)
-    return {
+    selected = {
         INDUSTRY: _subset(
             by_source[INDUSTRY],
             {
@@ -51,6 +56,11 @@ def policies() -> dict[str, Any]:
         INFO: _subset(
             decision_rules.load(), {"lj07_grain_social_foundation", "lj07_grain_social_capacity"}
         ),
+    }
+    model = compiler.load_model()
+    return {
+        source: compiler.compile_policy(policy, source, model)[0]
+        for source, policy in selected.items()
     }
 
 
@@ -176,14 +186,7 @@ def _engine_facts(policy: Any, values: dict[str, Any], *, is_ai: bool = True) ->
 def _overlay(text: str, field: str) -> str:
     begin = text.index(f"# SITAI BEGIN information:{field}")
     end = text.index(f"# SITAI END information:{field}", begin)
-    lines: list[str] = []
-    for line in text[begin:end].splitlines()[1:]:
-        if line.lstrip().startswith(("if =", "else_if =")) and (
-            not lines or not lines[-1].lstrip().startswith("# ")
-        ):
-            lines.append("# local_unknown_guard [test]; retain native")
-        lines.append(line)
-    return "\n".join(lines)
+    return "\n".join(text[begin:end].splitlines()[1:])
 
 
 @pytest.fixture(scope="module")
@@ -192,11 +195,7 @@ def generated(policies: dict[str, Any]) -> tuple[dict[str, str], dict[str, str]]
     adapters = decision_adapters.load()
     model = compiler.load_model()
     assert model.consumer_ir is not None
-    compiled = tuple(
-        (source, compiler.compile_policy(policy, source, model)[0])
-        for source, policy in policies.items()
-        if source != INFO
-    )
+    compiled = tuple((source, policy) for source, policy in policies.items() if source != INFO)
     fields = {(source, rule.field) for source, policy in compiled for rule in policy.rules}
     selected = replace(
         adapters,
@@ -214,12 +213,12 @@ def generated(policies: dict[str, Any]) -> tuple[dict[str, str], dict[str, str]]
     baseline = compiler.BASELINE.read_text(encoding="utf-8")
     files[INFO] = decision_rules.patch(
         baseline,
-        compiler.compile_policy(policies[INFO], "mod/decisions/information.toml", model)[0],
+        policies[INFO],
         baseline=baseline,
         reader_words=frozenset(decision_adapters.reader_evidence(inputs)),
         country_policy=country_state.load(),
         consumer_ir=model.consumer_ir,
-        consumer_source="mod/decisions/information.toml",
+        consumer_source=INFO,
     )
     return inputs, files
 
@@ -249,14 +248,15 @@ def test_each_local_writer_compiles_to_real_pdx_and_uses_handwritten_result(
     overlay = _overlay(generated[1][source], field)
     values = _values(policy, **changes)
     actual = pdx_eval.select(overlay, _engine_facts(policy, values))
-    assert (actual.action_id, actual.operation, actual.delta) == (writer, "multiply", expected)
+    assert any(rule.id == writer and ".".join(rule.field) == field for rule in policy.rules)
+    assert (actual.action_id, actual.operation) == (_program_id(source, field), "multiply")
+    assert actual.delta == pytest.approx(expected)
     assert _factor(policy, field, **changes) == pytest.approx(expected)
     for candidate in ({"candidate_selected": True}, {"construction_queued": True}):
         assert pdx_eval.select(overlay, _engine_facts(policy, {**values, **candidate})) == actual
     player = pdx_eval.select(overlay, _engine_facts(policy, values, is_ai=False))
-    assert player.operation is None or (
-        player.action_id == "local_unknown_guard" and player.delta == 1
-    )
+    assert player.operation is None
+    assert decision_rules.evaluate(policy, values, is_ai=False) == {}
     assert 0 * actual.delta == 0
 
 
@@ -282,8 +282,10 @@ def test_actual_pdx_unknown_observations_preserve_native(
     policy = policies[source]
     values = _values(policy, **{key: None})
     actual = pdx_eval.select(_overlay(generated[1][source], field), _engine_facts(policy, values))
-    assert actual.operation is None or (
-        actual.action_id == "local_unknown_guard" and actual.delta == 1
+    assert (actual.action_id, actual.operation, actual.delta) == (
+        _program_id(source, field),
+        "multiply",
+        1,
     )
     assert _factor(policy, field, **{key: None}) == 1
 
@@ -300,13 +302,23 @@ def test_local_pdx_never_reads_other_states_methods_or_owner_market(
     decoy = {"is_production_method_active": {"building_food_industry": {"pm_bakery": True}}}
     facts["other_state"] = decoy
     facts["ROOT"]["owner"].update(decoy)
-    assert pdx_eval.select(_overlay(generated[1][INDUSTRY], FOOD), facts).operation is None
+    result = pdx_eval.select(_overlay(generated[1][INDUSTRY], FOOD), facts)
+    assert (result.action_id, result.operation, result.delta) == (
+        _program_id(INDUSTRY, FOOD),
+        "multiply",
+        1,
+    )
     for source, field in ((STRATEGY, HEALTH), (INFO, SOCIAL)):
         policy = policies[source]
         facts = _engine_facts(policy, _values(policy, grain_price=None))
         facts["other_country"] = {"market": {"mg:grain": {"market_goods_pricier": 0.6}}}
         facts["market_goods_pricier"] = 0.6
-        assert pdx_eval.select(_overlay(generated[1][source], field), facts).operation is None
+        result = pdx_eval.select(_overlay(generated[1][source], field), facts)
+        assert (result.action_id, result.operation, result.delta) == (
+            _program_id(source, field),
+            "multiply",
+            1,
+        )
 
 
 @pytest.mark.integration
@@ -378,8 +390,10 @@ def test_generated_building_qualification_cost_and_unrelated_definitions_stay_na
         (INFO, SOCIAL, {"net_surplus": 0}, 1.06),
         (STRATEGY, HEALTH, {"net_surplus": -1}, 1),
         (INFO, SOCIAL, {"bureaucracy": -1}, 1),
-        (STRATEGY, HEALTH, {"average_sol": None}, 1),
-        (INFO, SOCIAL, {"average_sol": None}, 1),
+        # Unknown social capacity removes the stronger tier, not the known
+        # grain/fiscal/administrative foundation.
+        (STRATEGY, HEALTH, {"average_sol": None}, 1.08),
+        (INFO, SOCIAL, {"average_sol": None}, 1.06),
         (STRATEGY, HEALTH, {"default": True}, 1),
         (INFO, SOCIAL, {"default": True}, 1),
     ],
@@ -420,7 +434,9 @@ def test_each_writer_disabled_module_and_unrelated_fact_preserve_semantics(
     facts = _engine_facts(policy, values)
     facts["unrelated_country"] = {"is_ai": True, "state_unemployment_rate": 1}
     result = pdx_eval.select(_overlay(generated[1][source], field), facts)
-    assert (result.action_id, result.delta) == (writer, expected)
+    assert any(rule.id == writer for rule in policy.rules)
+    assert result.action_id == _program_id(source, field)
+    assert result.delta == pytest.approx(expected)
 
 
 def test_exact_scope_and_parameters_are_not_country_level_or_unrelated_methods(
@@ -492,7 +508,7 @@ def complete_industry_field_pdx() -> tuple[Any, str]:
         country_policy=country_state.load(),
         consumer_ir=model.consumer_ir,
     )
-    return policy, files[INDUSTRY]
+    return compiled, files[INDUSTRY]
 
 
 @pytest.mark.integration
@@ -502,12 +518,22 @@ def complete_industry_field_pdx() -> tuple[Any, str]:
         ({}, (1.3, 1.3)),
         ({"state_owner_grain_price": 0.6, "state_owner_grain_balance": -1}, (0.8, 1.3)),
         ({"state_owner_fabric_price": 0.6, "state_owner_fabric_balance": -1}, (1.3, 0.8)),
+        (
+            {
+                "state_owner_grain_price": 0.6,
+                "state_owner_grain_balance": -1,
+                "coord_owner_layer_expansion": True,
+            },
+            # Expansion +0.18 and actual grain cost -0.20 jointly apply;
+            # textile keeps its stronger employment tier +0.30.
+            (0.98, 1.3),
+        ),
         ({"state_owner_default": True}, (1, 1)),
         ({"state_unemployment": None}, (1.2, 1.2)),
         ({"candidate_selected": True, "construction_queued": True}, (1.3, 1.3)),
     ],
 )
-def test_complete_field_priority_keeps_real_costs_above_local_employment_writers(
+def test_complete_field_joint_program_keeps_real_costs_and_local_employment(
     complete_industry_field_pdx: tuple[Any, str],
     changes: dict[str, Any],
     expected: tuple[float, float],

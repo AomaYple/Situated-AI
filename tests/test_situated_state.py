@@ -10,6 +10,24 @@ from pdx.situated.schema import EvidenceValue
 pytestmark = pytest.mark.unit
 
 
+@pytest.mark.parametrize(
+    "trigger",
+    [
+        "AND = {}",
+        "AND = { literacy_rate > 0 }",
+        "AND = { literacy_rate >= 0 legitimacy < 50 }",
+        "AND = { literacy_rate >= 0 OR = { literacy_rate < 1 } }",
+        'AND = { literacy_rate >= 0 literacy_rate < "1" }',
+        "AND = { literacy_rate >= 0 INJECT:literacy_rate < 1 }",
+        "AND = { literacy_rate >= 0 literacy_rate < 1 } always = yes",
+        "AND = { literacy_rate >= 0 literacy_rate < 1",
+        "AND = { " + "literacy_rate >= 0 " * 9 + "}",
+    ],
+)
+def test_fact_predicate_rejects_unbounded_or_ambiguous_expression(trigger):
+    assert evidence.scalar_predicate_engine(trigger) is None
+
+
 def values(**overrides: object) -> dict[str, EvidenceValue]:
     defaults: dict[str, object] = {
         "default": False,

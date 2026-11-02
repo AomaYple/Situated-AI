@@ -1,5 +1,7 @@
 schema = 1
 
+# stress is deprecated compatibility metadata; observed demand amounts and explicit costs own utility.
+
 [consumers.fiscal_neutrality]
 field = "diplomatic_play_neutrality"
 domain = "fiscal"
@@ -17,7 +19,7 @@ vanilla_tail = "retain_law_eligibility_support_and_failure"
 [consumers.economic_balance]
 field = "economic_vs_government_spending_balance"
 domain = "economy"
-max_delta = 3.0
+max_delta = 0.25
 budget = 3
 vanilla_tail = "retain_construction_budget_and_goods_cost"
 
@@ -71,7 +73,7 @@ conflicts = []
 enables = []
 exit_when = ["no_default"]
 base = 8.0
-stress = 8.0
+stress = 0.0
 opportunity = 0.0
 commitment = 0.0
 political_cost = 0.0
@@ -94,7 +96,7 @@ conflicts = []
 enables = []
 exit_when = ["peace"]
 base = 6.0
-stress = 6.0
+stress = 0.0
 opportunity = 0.0
 commitment = 0.0
 political_cost = 0.0
@@ -126,54 +128,54 @@ unknown_policy = "vanilla"
 explanation = "和平、政治可行且没有叛乱时提高法律启动机会，原版支持和失败仍生效。"
 
 [actions.industrial_foundation]
-rank_terms = [{ fact = "support_industry_need", goal = "structure", tier = 1, unit = "flag" }]
+rank_terms = [{ fact = "support_industry_need", goal = "structure", tier = 1, unit = "flag", amount = 0.025, evidence_group = "industry_need" }]
 domain = "economy"
 consumer = "economic_balance"
 improves = ["industry", "employment", "construction_capacity"]
-consumes = ["support_debt_service", "support_fiscal", "support_administrative", "support_political"]
+consumes = ["support_debt_service", "support_fiscal", "support_administrative"]
 commitment_when = [{ fact = "support_debt_service", op = ">", value = 0.4, unit = "debt_to_credit_ratio" }, { fact = "support_fiscal", op = "<", value = 0, unit = "currency_per_week" }, { fact = "support_administrative", op = "<", value = 0, unit = "capacity_balance" }]
-political_when = [{ fact = "support_political", op = "<", value = 75, unit = "legitimacy_0_100" }]
-requires_all = ["peace", "no_default"]
+political_when = []
+requires_all = ["no_default"]
 requires_any = []
 blocked_by = []
 complements = ["political_reform", "education_and_research"]
 substitutes = []
 conflicts = []
 enables = []
-exit_when = ["default", "war"]
-base = 1.5
+exit_when = ["default"]
+base = 0.15
 stress = 0.0
 opportunity = 0.0
-commitment = 1.0
-political_cost = 0.25
-max_delta = 2.0
+commitment = 0.10
+political_cost = 0.0
+max_delta = 0.25
 unknown_policy = "vanilla"
-explanation = "具备和平和最低行政基础时支持建设性支出，避免用单一总门槛锁死发展。"
+explanation = "适度放宽生产建设借款阈值，同时承认会收紧政府预算；债务、净流量与行政成本降低净支持，战争本身不禁止基础建设。"
 
 [actions.education_and_research]
-rank_terms = [{ fact = "support_education_need", goal = "capacity", tier = 1, unit = "flag" }]
+rank_terms = [{ fact = "support_education_need", goal = "capacity", tier = 1, unit = "flag", amount = 0.025, evidence_group = "education_need" }]
 domain = "education"
 consumer = "economic_balance"
 improves = ["literacy", "technology", "administration"]
 consumes = ["support_debt_service", "support_fiscal", "support_administrative", "support_political"]
 commitment_when = [{ fact = "support_debt_service", op = ">", value = 0.4, unit = "debt_to_credit_ratio" }, { fact = "support_fiscal", op = "<", value = 0, unit = "currency_per_week" }, { fact = "support_administrative", op = "<", value = 0, unit = "capacity_balance" }]
 political_when = [{ fact = "support_political", op = "<", value = 75, unit = "legitimacy_0_100" }]
-requires_all = ["peace", "no_default", "support_education"]
+requires_all = ["no_default", "support_education"]
 requires_any = []
 blocked_by = []
 complements = ["industrial_foundation"]
 substitutes = []
 conflicts = []
 enables = []
-exit_when = ["war", "default"]
-base = 1.0
+exit_when = ["default"]
+base = -0.10
 stress = 0.0
 opportunity = 0.0
-commitment = 0.25
-political_cost = 0.1
-max_delta = 2.0
+commitment = 0.08
+political_cost = 0.02
+max_delta = 0.25
 unknown_policy = "vanilla"
-explanation = "低识字率是教育机会信号，不是所有经济建设的统一禁令。"
+explanation = "低识字率时适度放宽政府支出相对预算，代价是收紧生产建设借款阈值；成本削弱这个方向。教育制度、大学和科技仍由各自原版消费者单独评估，本卡不直接投资或研究。"
 
 [actions.diplomatic_restraint]
 domain = "diplomacy"
@@ -190,7 +192,7 @@ conflicts = []
 enables = []
 exit_when = ["peace"]
 base = -4.0
-stress = 4.0
+stress = 0.0
 opportunity = 0.0
 commitment = 0.0
 political_cost = 0.0
@@ -260,7 +262,7 @@ conflicts = []
 enables = []
 exit_when = []
 base = 5.0
-stress = 4.0
+stress = 0.0
 opportunity = 0.0
 commitment = 0.0
 political_cost = 0.0
@@ -308,7 +310,7 @@ conflicts = []
 enables = []
 exit_when = ["default"]
 base = 0.1
-stress = 1.0
+stress = 0.0
 opportunity = 0.0
 commitment = 0.025
 political_cost = 0.025

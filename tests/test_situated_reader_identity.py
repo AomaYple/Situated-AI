@@ -26,6 +26,50 @@ _NUMBER = decision_rules.Reader("observation", "legitimacy", "root", "points", "
 _BOOL = decision_rules.Reader("observation", "is_at_war", "root", "boolean", "boolean")
 
 
+@pytest.fixture(scope="module")
+def frozen_model_and_government_policy():
+    source = "common/buildings/07_government.txt"
+    return compiler.load_model(), source, dict(decision_adapters.load().policies)[source]
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        {"argument": "empiricism"},
+        {"path": ()},
+        {"scope": "target_country"},
+        {"parameters": (("TECHNOLOGY", "empiricism"),)},
+        {"value_field": "value"},
+        {"minimum": 0},
+        {"maximum": 1},
+        {"unit": "ratio"},
+    ],
+)
+def test_compilation_cannot_replace_reader_after_ir_was_frozen(
+    frozen_model_and_government_policy, damage
+):
+    model, source, policy = frozen_model_and_government_policy
+    key = "state_owner_academia_completed"
+    changed = replace(
+        policy,
+        readers=tuple(
+            replace(reader, **damage) if reader.key == key else reader for reader in policy.readers
+        ),
+    )
+    with pytest.raises(ValueError, match=r"reader.*身份.*不一致"):
+        compiler.compile_policy(changed, source, model)
+
+
+@pytest.mark.parametrize("path", [("owner", "market"), ("other_country",), ()])
+def test_compilation_cannot_replace_actor_path_after_ir_was_frozen(
+    frozen_model_and_government_policy, path
+):
+    model, source, policy = frozen_model_and_government_policy
+    changed = replace(policy, actor_path=path)
+    with pytest.raises(ValueError, match=r"actor.*路径.*不一致"):
+        compiler.compile_policy(changed, source, model)
+
+
 @pytest.mark.parametrize(
     "damage",
     [
@@ -188,7 +232,10 @@ def test_ongoing_insurrection_and_insurrectionary_ig_are_independent(production,
             assert field not in reference
             assert generated.delta == 0
             if ongoing is None:
-                assert generated.fallback == "unknown"
+                # Unknown belongs to the local contribution; the joint program
+                # still executes its neutral result without inventing a fact.
+                assert generated.action_id == f"joint_{field}"
+                assert generated.operation == "add"
 
 
 @pytest.mark.parametrize(
@@ -228,10 +275,11 @@ def test_boolean_threshold_boundaries_and_unknown_match_actual_pdx(
     generated = pdx_eval.select(overlays[field], engine)
     assert generated.delta == delta
     if delta:
-        assert reference[field] == ("reform_progressive_window", delta)
+        assert reference[field] == (f"joint_{field}", delta)
     else:
         assert field not in reference
-        assert generated.fallback == ("unknown" if legitimacy is None else "vanilla")
+        assert generated.action_id == f"joint_{field}"
+        assert generated.operation == "add"
 
 
 @pytest.mark.parametrize("bad", [50, 75, 1.0, "yes", None])

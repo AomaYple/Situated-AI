@@ -5,9 +5,8 @@ from dataclasses import replace
 
 import pytest
 
-from pdx import decision_rules
 from pdx.situated import actions as action_source
-from pdx.situated import compiler, decision_ir, evidence, ir, pdx_eval, support_signals
+from pdx.situated import compiler, evidence, pdx_eval, support_signals
 
 pytestmark = pytest.mark.unit
 
@@ -25,49 +24,10 @@ def _load_with_sources(monkeypatch, model, change):
 
 
 def _reference(model, field, values):
-    native = decision_rules.Rule(
-        "native", "test", (field,), 1, 10.0, (), "native", "native", operation="add"
-    )
-    native_ir = ir.from_rule(native, source="support_test")
-    consumer = next(item for item in model.consumers if item.field == field)
-    legacy = decision_ir.LegacyDecisionIR(
-        action_id="support_test_native",
-        source="support_test",
-        definition="native",
-        domain="test",
-        consumer_id=consumer.id,
-        field=field,
-        actor="root",
-        target="none",
-        operation="add",
-        value=10.0,
-        predicates=(),
-        vanilla_tail=native_ir.vanilla_tail,
-        priority=1,
-        why="native",
-        counterexample="native",
-    )
-    writer = decision_ir.WriterDecisionIR(
-        "support_test_native",
-        "rule_action",
-        "support_test",
-        "native",
-        consumer.id,
-        field,
-        "root",
-        "none",
-        "add",
-        native_ir.vanilla_tail,
-        consumer.owner,
-        legacy=legacy,
-    )
-    candidate = replace(
-        model, consumer_ir=replace(model.consumer_ir, writers=(*model.consumer_ir.writers, writer))
-    )
-    policy = decision_rules.RuleSet(
-        (), (native,), "", "", frozenset({"test"}), semantic_ir=(native_ir,)
-    )
-    return compiler.evaluate_policy(policy, values, is_ai=True, config_model=candidate)[field][1]
+    # The handwritten original consumer baseline is 10. Do not manufacture a
+    # production binding to bypass exact source/IR validation in these unit tests.
+    actions = compiler.evaluate_actions(model, values, is_ai=True)
+    return 10.0 + actions.get(field, ("", 0.0))[1]
 
 
 def test_every_active_signal_has_real_ir_users_and_reader_provenance(model):
@@ -87,7 +47,9 @@ def test_every_active_signal_has_real_ir_users_and_reader_provenance(model):
     assert model.contract()["goals"]["dynamic"] is True
     assert model.contract()["goals"]["activation"] == "per_action_live_rank_fact_sets_need_tier"
     assert model.contract()["goals"]["unknown"] == "rank_fact_unknown_uses_neutral_tier"
-    assert model.contract()["goals"]["priority_role"] == "tie_break_after_need_and_net_benefit"
+    assert model.contract()["goals"]["priority_role"] == (
+        "legacy_metadata_not_utility; observed_rank_terms_contribute_amount"
+    )
 
 
 def test_pressure_source_counterfactual_changes_production_and_reference(monkeypatch, model):
@@ -103,8 +65,11 @@ def test_pressure_source_counterfactual_changes_production_and_reference(monkeyp
     engine = {"ROOT": {"is_ai": True, "in_default": True, "is_at_war": False}}
     before = pdx_eval.select(compiler.strategy_overlay(model)[field], engine)
     after = pdx_eval.select(compiler.strategy_overlay(changed)[field], engine)
-    assert (before.action_id, before.delta) == ("fiscal_recovery", 8.0)
-    assert after.fallback == "vanilla"
+    assert (before.action_id, before.delta) == ("joint_fiscal_neutrality", 8.0)
+    assert after.action_id == "joint_fiscal_neutrality"
+    assert after.operation == "add"
+    assert after.fallback == "selected"
+    assert after.delta == 0.0
     assert _reference(model, field, values) == 18
     assert _reference(changed, field, values) == 10
     assert compiler.strategy_overlay(model)[field] != compiler.strategy_overlay(changed)[field]
@@ -148,6 +113,7 @@ def test_capacity_source_counterfactual_changes_actual_cost(monkeypatch, model):
         "no_default": True,
         "default": False,
         "literacy_low": False,
+        "literacy_ready": True,
         "debt_ratio": 0,
         "net_surplus": 1,
         "income": -1,
@@ -177,9 +143,10 @@ def test_capacity_source_counterfactual_changes_actual_cost(monkeypatch, model):
             "sitai_context_need_education": False,
         }
     }
-    for candidate, expected in ((model, 1.5), (changed, 0.5)):
+    for candidate, expected in ((model, 0.175), (changed, 0.075)):
         selected = pdx_eval.select(compiler.strategy_overlay(candidate)[field], engine)
-        assert (selected.action_id, selected.delta) == ("industrial_foundation", expected)
+        assert selected.action_id == "joint_economic_balance"
+        assert selected.delta == pytest.approx(expected)
         assert _reference(candidate, field, values) == pytest.approx(10 + expected)
 
 
@@ -249,6 +216,7 @@ def _rank_inputs():
         "default": False,
         "no_default": True,
         "literacy_low": True,
+        "literacy_ready": False,
         "debt_ratio": 0,
         "net_surplus": 1,
         "bureaucracy": 0,
@@ -295,33 +263,33 @@ def test_opportunity_and_goal_counterfactuals_change_actual_rank_or_qualificatio
         values["coord_evidence_need_industry"] = False
         engine["ROOT"]["sitai_context_evidence_need_industry"] = False
     field = "economic_vs_government_spending_balance"
-    expected_before = (
-        "education_and_research" if category == "opportunities" else "industrial_foundation"
-    )
-    for candidate, action in ((model, expected_before), (changed, "industrial_foundation")):
+    # Removing the education opportunity cancels its -.10 base and -.025 need;
+    # changing rank metadata cannot select away either signed contribution.
+    expected_before = 0.025 if category == "opportunities" else 0.05
+    expected_after = 0.15 if category == "opportunities" else 0.05
+    for candidate, expected in ((model, expected_before), (changed, expected_after)):
         selected = pdx_eval.select(compiler.strategy_overlay(candidate)[field], engine)
-        assert selected.action_id == action
-        assert _reference(candidate, field, values) == pytest.approx(10 + selected.delta)
-    if category == "opportunities":
-        assert compiler.strategy_overlay(model)[field] != compiler.strategy_overlay(changed)[field]
-    else:
-        # Goal priority is a deterministic tie-break; it cannot overrule a
-        # better cost-adjusted net benefit across active local goals.
-        assert compiler.strategy_overlay(model)[field] == compiler.strategy_overlay(changed)[field]
+        assert selected.action_id == "joint_economic_balance"
+        assert selected.delta == pytest.approx(expected)
+        assert _reference(candidate, field, values) == pytest.approx(10 + expected)
+    assert (
+        compiler.strategy_overlay(model)[field] == compiler.strategy_overlay(changed)[field]
+    ) is (category == "goals")
 
 
 @pytest.mark.parametrize(
-    ("debt", "expected_action"),
-    [(0.0, "industrial_foundation"), (0.5, "education_and_research")],
+    ("debt", "expected_delta"),
+    [(0.0, 0.05), (0.5, 0.03)],
     ids=["affordable-industry", "debt-cost-switches-to-education"],
 )
-def test_actual_economy_cost_changes_selection_between_live_goals(model, debt, expected_action):
+def test_actual_economy_cost_changes_selection_between_live_goals(model, debt, expected_delta):
     values, engine = _rank_inputs()
     values["debt_ratio"] = debt
     engine["ROOT"]["scaled_debt"] = debt
     field = "economic_vs_government_spending_balance"
     selected = pdx_eval.select(compiler.strategy_overlay(model)[field], engine)
-    assert selected.action_id == expected_action
+    assert selected.action_id == "joint_economic_balance"
+    assert selected.delta == pytest.approx(expected_delta)
     assert _reference(model, field, values) == pytest.approx(10 + selected.delta)
 
 
@@ -357,7 +325,9 @@ def test_commitment_source_counterfactual_uses_numeric_reader_not_caller_alias(m
     }
     before = pdx_eval.select(compiler.strategy_overlay(model)[field], engine)
     after = pdx_eval.select(compiler.strategy_overlay(changed)[field], engine)
-    assert before.action_id == after.action_id == "diplomatic_opening"
+    assert before.action_id == after.action_id == "joint_diplomatic_recklessness"
+    assert before.delta == 1.0
+    assert after.delta == 2.0
     assert before.delta != after.delta
     for candidate, selection in ((model, before), (changed, after)):
         assert _reference(candidate, field, typed) == pytest.approx(10 + selection.delta)
@@ -391,7 +361,7 @@ def test_numeric_cost_missing_or_nonfinite_stays_unknown_and_expensive(model):
     for debt in (None, False, float("nan"), float("inf")):
         typed = {"debt_ratio": debt, "net_surplus": 1, "bureaucracy": 0, "legitimacy": 75}
         assert model.support_signals.values(typed)["support_debt_service"] is None
-        assert compiler._row_delta(row, typed, model=model) == 0.5
+        assert compiler._row_delta(row, typed, model=model) == pytest.approx(0.05)
 
 
 def test_bounded_numeric_predicate_is_explicitly_unsupported(monkeypatch, model):

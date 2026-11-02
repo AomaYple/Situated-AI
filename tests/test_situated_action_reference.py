@@ -57,6 +57,7 @@ def _typed(engine: dict[str, object]) -> dict[str, object]:
         ("legitimacy", "strong_legitimacy", ">=", 75),
         ("bureaucracy", "bureaucracy_positive", ">", 0),
         ("literacy_rate", "literacy_low", "<", 0.5),
+        ("literacy_rate", "literacy_ready", ">=", 0.5),
     ):
         raw = engine.get(source)
         if type(raw) in (int, float):
@@ -77,21 +78,73 @@ def production():
     return model, compiler.strategy_overlay(model)
 
 
+# The JSON retains the original observation corpus. Expectations below are
+# handwritten for signed contributions, local unknowns and one consumer clamp.
+_SC_DELTAS = (
+    0,
+    0.25,
+    0.05,
+    0.25,
+    0,
+    0.35,
+    0.025,
+    -4,
+    0,
+    0,
+    0.025,
+    -4,
+    8,
+    0.35,
+    0.025,
+    0.25,
+    0,
+    0.35,
+    0.025,
+    0.25,
+    0,
+    0,
+    0,
+    0.25,
+    8,
+    0.35,
+    0.025,
+    0.25,
+    0,
+    0.35,
+    0.025,
+    -4,
+)
+_JOINT_IDS = {
+    "diplomatic_play_neutrality": "joint_fiscal_neutrality",
+    "change_law_chance": "joint_reform_chance",
+    "economic_vs_government_spending_balance": "joint_economic_balance",
+    "recklessness": "joint_diplomatic_recklessness",
+}
+
+
 @pytest.mark.parametrize("case", _CASES, ids=lambda case: case["id"])
 def test_sc01_to_sc32_use_real_reference_entry(production, case):
     model, overlays = production
     engine = {**_BASE, **case["facts"]}
     field = case["consumer"]
-    expected = case["expected"]
+    delta = _SC_DELTAS[int(case["id"][2:]) - 1]
     reference = compiler.evaluate_actions(model, _typed(engine), is_ai=engine["is_ai"])
     generated = pdx_eval.select(overlays[field], engine)
-    assert generated.action_id == expected["action_id"]
-    assert generated.delta == pytest.approx(expected["delta"])
-    if expected["action_id"] is None or expected["delta"] == 0:
+    assert generated.delta == pytest.approx(delta)
+    if delta == 0:
         assert field not in reference
+        if engine["is_ai"] is False:
+            assert generated.action_id is None
+            assert generated.operation is None
+            assert generated.fallback == "vanilla"
+        else:
+            assert generated.action_id == _JOINT_IDS[field]
+            assert generated.operation == "add"
+            assert generated.fallback == "selected"
     else:
-        assert reference[field][0] == expected["action_id"]
-        assert reference[field][1] == pytest.approx(expected["delta"])
+        assert generated.action_id == _JOINT_IDS[field]
+        assert reference[field][0] == _JOINT_IDS[field]
+        assert reference[field][1] == pytest.approx(delta)
 
 
 _COMPLETE = {
@@ -108,18 +161,18 @@ _COMPLETE = {
 _CARD_CASES = [
     ("fiscal_recovery", "diplomatic_play_neutrality", {"in_default": True}, 8.0),
     ("wartime_defense", "diplomatic_play_neutrality", {"is_at_war": True}, 6.0),
-    ("political_reform", "change_law_chance", {}, 0.75),
-    ("industrial_foundation", "economic_vs_government_spending_balance", {}, 1.75),
+    ("political_reform", "change_law_chance", {}, 0.6),
+    ("industrial_foundation", "economic_vs_government_spending_balance", {}, 0.2),
     (
         "education_and_research",
         "economic_vs_government_spending_balance",
         {"literacy_rate": 0.3, "sitai_context_need_education": True},
-        1.25,
+        0.025,
     ),
     ("diplomatic_restraint", "recklessness", {"is_at_war": True}, -4.0),
     ("diplomatic_opening", "recklessness", {}, 2.0),
     ("reform_progressive_window", "max_progressiveness", {}, 5.0),
-    ("reform_conservative_guard", "max_regressiveness", {"in_default": True}, 5.0),
+    ("reform_conservative_guard", "max_regressiveness", {"in_default": True}, 4.0),
     ("diplomatic_boldness_window", "diplomatic_play_boldness", {}, 8.0),
     ("diplomatic_aggression_guard", "aggression", {}, 0.1),
 ]
@@ -134,8 +187,10 @@ def test_all_eleven_actual_cards_have_handwritten_three_way_witnesses(
     engine = {**_COMPLETE, **changes}
     reference = compiler.evaluate_actions(model, _typed(engine), is_ai=True)
     generated = pdx_eval.select(overlays[field], engine)
-    assert reference[field][0] == generated.action_id == action
-    assert reference[field][1] == generated.delta == pytest.approx(delta)
+    consumer = next(row for row in model.consumers if row.field == field)
+    assert reference[field][0] == generated.action_id == f"joint_{consumer.id}"
+    assert reference[field][1] == pytest.approx(delta)
+    assert generated.delta == pytest.approx(delta)
 
 
 def test_one_observation_evaluates_multiple_real_consumers(production):
@@ -149,7 +204,8 @@ def test_one_observation_evaluates_multiple_real_consumers(production):
         "diplomatic_play_boldness",
         "aggression",
     } == set(result)
-    assert result["economic_vs_government_spending_balance"] == ("industrial_foundation", 1.75)
+    assert result["economic_vs_government_spending_balance"][0] == "joint_economic_balance"
+    assert result["economic_vs_government_spending_balance"][1] == pytest.approx(0.2)
 
 
 @pytest.mark.parametrize("enabled", [frozenset(), frozenset({"recklessness"})])
@@ -173,7 +229,7 @@ def test_disabled_optional_cross_consumer_complement_does_not_block_base(product
     actual = pdx_eval.select(
         compiler.strategy_overlay(model, enabled_consumer_fields={field})[field], _COMPLETE
     )
-    assert result[field] == ("industrial_foundation", 1.5)
+    assert result[field] == ("joint_economic_balance", 0.175)
     assert (actual.action_id, actual.delta) == result[field]
 
 
@@ -191,8 +247,10 @@ def test_unknown_cost_uses_conservative_tier_without_fabricating_health(producti
     field = "economic_vs_government_spending_balance"
     reference = compiler.evaluate_actions(model, _typed(engine), is_ai=True)
     actual = pdx_eval.select(overlays[field], engine)
-    assert reference[field] == ("industrial_foundation", 0.75)
-    assert (actual.action_id, actual.delta) == reference[field]
+    assert reference[field][0] == "joint_economic_balance"
+    assert reference[field][1] == pytest.approx(0.1)
+    assert actual.action_id == reference[field][0]
+    assert actual.delta == pytest.approx(reference[field][1])
 
 
 def test_reference_rejects_non_boolean_actor_flag(production):

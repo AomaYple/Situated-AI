@@ -3,6 +3,7 @@
 数值期望手写；生成路径读取完整生产模型和锁定原版。局部静态见证不关闭整条联合链。
 """
 
+import hashlib
 import re
 from dataclasses import replace
 from typing import Any
@@ -25,6 +26,10 @@ OVERLORD = "ai_strategy_default.become_subject_value"
 AUTONOMY = "ai_strategy_subject_maintain_autonomy.weight"
 SELF = "ai_strategy_subject_strengthen_self.weight"
 STATE = "state_value"
+
+
+def _program_id(source: str, field: str) -> str:
+    return "program_" + hashlib.sha256(f"{source}:{field}".encode()).hexdigest()[:16]
 
 
 def _fields(policy: Any, fields: set[str]) -> Any:
@@ -86,8 +91,8 @@ def _values(policy: Any, changes: dict[str, object]) -> dict[str, object]:
     values: dict[str, object] = {
         r.key: False if r.kind == "boolean" else max(r.minimum or 0, 0) for r in policy.readers
     }
-    # Explicit known observations ensure unrelated higher-priority branches are
-    # known false. Individual unknown tests replace exactly one observation.
+    # Explicit known observations keep unrelated contributions known false.
+    # Individual unknown tests replace exactly one observation.
     values.update(
         default=False,
         war=False,
@@ -142,14 +147,7 @@ def _engine(policy: Any, values: dict[str, object], *, is_ai: bool = True) -> di
 def _overlay(text: str, field: str) -> str:
     start = text.index(f"# SITAI BEGIN information:{field}")
     end = text.index(f"# SITAI END information:{field}", start)
-    lines: list[str] = []
-    for line in text[start:end].splitlines()[1:]:
-        if line.lstrip().startswith(("if =", "else_if =")) and (
-            not lines or not lines[-1].lstrip().startswith("# ")
-        ):
-            lines.append("# unknown_guard [test]; native unchanged")
-        lines.append(line)
-    return "\n".join(lines)
+    return "\n".join(text[start:end].splitlines()[1:])
 
 
 CASES = [
@@ -217,7 +215,7 @@ CASES = [
         {"candidate_existing_subject": True, "default": True},
         "lj12_existing_subject_insolvency_continuity",
         "add",
-        1,
+        -4,  # Insolvency continuity +1 and financial cost -5 jointly apply.
     ),
     (
         STRATEGY,
@@ -241,7 +239,7 @@ CASES = [
         {"current_overlord_relation": True, "liberty": 80},
         "lj12_existing_overlord_autonomy_cost",
         "add",
-        -3,
+        0,  # Existing protection +3 offsets the autonomy cost -3.
     ),
     (
         STRATEGY,
@@ -249,7 +247,7 @@ CASES = [
         {"current_overlord_relation": True, "liberty": 80, "default": True},
         "lj12_existing_overlord_autonomy_cost",
         "add",
-        -3,
+        0,  # The debt option +3 offsets the autonomy cost -3.
     ),
     (
         STRATEGY,
@@ -265,7 +263,7 @@ CASES = [
         {"liberty": 60, "default": True},
         "lj12_autonomy_insolvency_cost",
         "multiply",
-        0.95,
+        1.20,  # Autonomy +0.25 and insolvency -0.05 jointly apply.
     ),
     (
         SUBJECTS,
@@ -329,7 +327,7 @@ CASES = [
         },
         "lj14_homeland_administrative_cost",
         "multiply",
-        0.92,
+        0.97,  # Connected homeland +0.05 and administration -0.08.
     ),
     (
         INFO,
@@ -359,9 +357,17 @@ def test_complete_field_competition_has_handwritten_outcomes(
     policy = policies[source]
     values = _values(policy, changes)
     actual = pdx_eval.select(_overlay(files[source], field), _engine(policy, values))
-    assert (actual.action_id, actual.operation, actual.delta) == (writer, operation, value)
+    program_id = _program_id(source, field)
+    assert any(rule.id == writer and ".".join(rule.field) == field for rule in policy.rules)
+    assert (actual.action_id, actual.operation) == (program_id, operation)
+    assert actual.delta == pytest.approx(value)
     reference = decision_rules.evaluate(policy, values, is_ai=True)
-    assert reference[field] == (writer, value)
+    neutral = 1 if operation == "multiply" else 0
+    if value == neutral:
+        assert field not in reference
+    else:
+        assert reference[field][0] == program_id
+        assert reference[field][1] == pytest.approx(value)
     # Selecting or queueing a candidate is not observed current membership,
     # actual administrative capacity, culture share, or market connection.
     annotated = {**values, "candidate_selected": True, "construction_queued": True}
@@ -369,7 +375,7 @@ def test_complete_field_competition_has_handwritten_outcomes(
 
 
 @pytest.mark.parametrize(
-    ("source", "field", "changes", "broken"),
+    ("source", "field", "changes", "broken", "operation", "expected"),
     [
         (
             STRATEGY,
@@ -380,51 +386,91 @@ def test_complete_field_competition_has_handwritten_outcomes(
                 "candidate_ig_government": True,
             },
             "candidate_ig_government",
+            "add",
+            0,
         ),
         (
             STRATEGY,
             NEGOTIATION,
             {"candidate_ig_clout": 0.15, "candidate_ig_approval": -1, "radical_share": 0.2},
             "candidate_ig_clout",
+            "multiply",
+            1,
         ),
         (
             STRATEGY,
             SUBJECT,
             {"candidate_existing_subject": True, "default": True},
             "candidate_existing_subject",
+            "add",
+            -5,  # The cost does not depend on observed membership.
         ),
         (
             STRATEGY,
             OVERLORD,
             {"current_overlord_relation": True, "liberty": 80},
             "current_overlord_relation",
+            "add",
+            0,
         ),
-        (SUBJECTS, AUTONOMY, {"liberty": 60, "default": True}, "liberty"),
-        (SUBJECTS, SELF, {"liberty": 60, "bureaucracy": -1}, "bureaucracy"),
+        (
+            STRATEGY,
+            OVERLORD,
+            {"current_overlord_relation": True, "liberty": 80, "default": True},
+            "current_overlord_relation",
+            "add",
+            3,  # The known debt option survives unknown current membership.
+        ),
+        (SUBJECTS, AUTONOMY, {"liberty": 60, "default": True}, "liberty", "multiply", 1),
+        (SUBJECTS, SELF, {"liberty": 60, "bureaucracy": -1}, "bureaucracy", "multiply", 1),
         (
             INFO,
             STATE,
             {"target_homeland": True, "target_cultural_share": 0.3},
             "target_cultural_share",
+            "multiply",
+            1,
         ),
-        (INFO, STATE, {"target_homeland": True, "target_isolated": True}, "target_isolated"),
+        (
+            INFO,
+            STATE,
+            {"target_homeland": True, "target_isolated": True},
+            "target_isolated",
+            "multiply",
+            1,
+        ),
+        (
+            INFO,
+            STATE,
+            {"target_homeland": True, "target_cultural_share": 0.3},
+            "bureaucracy",
+            "multiply",
+            1.05,  # Unknown cost cannot erase known connected-homeland support.
+        ),
     ],
 )
-def test_critical_unknown_and_player_keep_native(production, source, field, changes, broken):
+def test_unknown_exits_only_its_contribution_and_player_keeps_native(
+    production, source, field, changes, broken, operation, expected
+):
     policies, _inputs, files = production
     policy = policies[source]
     overlay = _overlay(files[source], field)
     values = _values(policy, changes)
     unknown_values = {**values, broken: None}
     actual = pdx_eval.select(overlay, _engine(policy, unknown_values))
-    assert actual.operation is None or (
-        actual.action_id == "unknown_guard" and actual.delta in {0, 1}
-    )
-    assert field not in decision_rules.evaluate(policy, unknown_values, is_ai=True)
+    assert (actual.action_id, actual.operation) == (_program_id(source, field), operation)
+    assert actual.delta == pytest.approx(expected)
+    reference = decision_rules.evaluate(policy, unknown_values, is_ai=True).get(field)
+    neutral = 1 if operation == "multiply" else 0
+    if expected == neutral:
+        assert reference is None
+    else:
+        assert reference is not None
+        assert reference[0] == _program_id(source, field)
+        assert reference[1] == pytest.approx(expected)
     player = pdx_eval.select(overlay, _engine(policy, values, is_ai=False))
-    assert player.operation is None or (
-        player.action_id == "unknown_guard" and player.delta in {0, 1}
-    )
+    assert player.operation is None
+    assert decision_rules.evaluate(policy, values, is_ai=False) == {}
 
 
 def _normalize(node: Any) -> Any:
@@ -465,7 +511,7 @@ def test_named_scope_decoys_cannot_replace_real_group_overlord_or_state(producti
             },
             "scope:interest_group",
         ),
-        (STRATEGY, OVERLORD, {"current_overlord_relation": True, "liberty": 80}, "scope:overlord"),
+        (STRATEGY, OVERLORD, {"current_overlord_relation": True, "liberty": 60}, "scope:overlord"),
         (
             INFO,
             STATE,
@@ -477,15 +523,25 @@ def test_named_scope_decoys_cannot_replace_real_group_overlord_or_state(producti
         policy = policies[source]
         facts = _engine(policy, _values(policy, changes))
         positive = pdx_eval.select(_overlay(files[source], field), facts)
-        assert positive.operation is not None
+        assert positive.delta != (1 if positive.operation == "multiply" else 0)
         facts["other_country"] = facts.pop(scope)
         # The same-looking observation on ROOT or another target is not the
         # selected native scope, even if the candidate is already selected.
         facts["ROOT"]["candidate_selected"] = True
         facts["ROOT"]["construction_queued"] = True
         actual = pdx_eval.select(_overlay(files[source], field), facts)
-        assert actual.operation is None or (
-            actual.action_id == "unknown_guard" and actual.delta in {0, 1}
+        assert actual.delta == (1 if actual.operation == "multiply" else 0)
+        assert field not in decision_rules.evaluate(
+            policy,
+            {
+                **_values(policy, changes),
+                **{
+                    reader.key: None
+                    for reader in policy.readers
+                    if f"scope:{reader.scope}" == scope
+                },
+            },
+            is_ai=True,
         )
 
 
@@ -505,12 +561,12 @@ def test_political_break_and_identity_cost_exit_do_not_disable_other_domains(pro
     identity = policies[INFO]
     common = {"target_homeland": True, "target_cultural_share": 0.3}
     cases: list[tuple[dict[str, object], float]] = [
-        ({"bureaucracy": -1}, 0.92),
+        ({"bureaucracy": -1}, 0.97),
         ({"bureaucracy": 0}, 1.05),
         ({"target_isolated": True}, 0.9),
     ]
     for changes, expected in cases:
         values = _values(identity, {**common, **changes})
         actual = pdx_eval.select(_overlay(files[INFO], STATE), _engine(identity, values))
-        assert actual.delta == expected
+        assert actual.delta == pytest.approx(expected)
         assert not any(rule.field == ("wanted_construction_output",) for rule in identity.rules)

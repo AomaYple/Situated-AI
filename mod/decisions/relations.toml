@@ -4,21 +4,27 @@ schema = 1
 source = "political_reform"
 target = "industrial_foundation"
 kind = "complements"
-strength = 0.25
+strength = 0.1
+scope = "root"
+condition_facts = ["bureaucracy_positive"]
+unknown_policy = "vanilla"
 
 [[relations]]
 source = "industrial_foundation"
 target = "political_reform"
 kind = "complements"
-strength = 0.25
+strength = 0.025
+scope = "root"
+condition_facts = ["strong_legitimacy", "no_insurrection"]
+unknown_policy = "vanilla"
 
 [[relations]]
 source = "industrial_foundation"
 target = "education_and_research"
 kind = "complements"
-strength = 0.25
+strength = 0.025
 scope = "root"
-condition_facts = ["peace"]
+condition_facts = ["literacy_ready"]
 unknown_policy = "vanilla"
 
 [[relations]]
@@ -26,39 +32,60 @@ source = "fiscal_recovery"
 target = "wartime_defense"
 kind = "substitutes"
 strength = 1.0
+scope = "root"
+condition_facts = ["war"]
+unknown_policy = "vanilla"
 
 [[relations]]
 source = "wartime_defense"
 target = "fiscal_recovery"
 kind = "substitutes"
 strength = 1.0
+scope = "root"
+condition_facts = ["default"]
+unknown_policy = "vanilla"
 
 [[relations]]
 source = "diplomatic_restraint"
 target = "diplomatic_opening"
 kind = "substitutes"
 strength = 1.0
+scope = "root"
+condition_facts = ["default"]
+unknown_policy = "vanilla"
 
 [[relations]]
 source = "diplomatic_opening"
 target = "diplomatic_restraint"
 kind = "substitutes"
 strength = 1.0
+scope = "root"
+condition_facts = ["war"]
+unknown_policy = "vanilla"
 
 [[relations]]
 source = "education_and_research"
 target = "industrial_foundation"
 kind = "complements"
-strength = 0.25
+strength = 0.025
+scope = "root"
+condition_facts = ["bureaucracy_positive"]
+unknown_policy = "vanilla"
 
 [[relations]]
 source = "reform_conservative_guard"
 target = "reform_progressive_window"
 kind = "substitutes"
 strength = 1.0
+scope = "root"
+condition_facts = ["strong_legitimacy", "no_insurrection"]
+unknown_policy = "vanilla"
 
 [[relations]]
 source = "reform_progressive_window"
 target = "reform_conservative_guard"
 kind = "substitutes"
 strength = 1.0
+scope = "root"
+condition_facts = ["ongoing_insurrection"]
+unknown_policy = "vanilla"

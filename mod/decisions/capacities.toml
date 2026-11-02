@@ -25,7 +25,7 @@ source_fact = "legitimacy"
 unit = "legitimacy_0_100"
 scope = "root"
 unknown = "vanilla"
-actions = ["political_reform", "industrial_foundation", "education_and_research", "reform_progressive_window"]
+actions = ["political_reform", "education_and_research", "reform_progressive_window"]
 
 [capacities.security]
 reserved = true

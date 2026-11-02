@@ -1,4 +1,4 @@
-"""生产行动的唯一 IR 来源与单互补合同。"""
+"""生产行动的唯一 IR 来源与线性联合贡献合同。"""
 
 from dataclasses import replace
 
@@ -135,6 +135,7 @@ def _economy_values():
         "stable_legitimacy": True,
         "strong_legitimacy": False,
         "literacy_low": True,
+        "bureaucracy_positive": True,
         "legitimacy": 60,
         "bureaucracy": 1,
         "debt_ratio": 0.4,
@@ -156,11 +157,12 @@ def _economy_values():
 
 @pytest.mark.parametrize(
     ("stronger", "unknown", "expected"),
-    [(False, False, 1.5), (True, False, 1.75), (True, True, 1.5)],
+    [(False, False, 0.2), (True, False, 0.225), (True, True, 0.175)],
 )
 def test_only_one_proven_complement_contributes_to_production_delta(
     production_model, stronger, unknown, expected
 ):
+    """Historical identity: both independent observed complements now contribute."""
     model = production_model
     if stronger:
         model = _rows(
@@ -169,7 +171,7 @@ def test_only_one_proven_complement_contributes_to_production_delta(
                 replace(
                     row,
                     relations=tuple(
-                        replace(rel, strength=0.5) if rel.target == "political_reform" else rel
+                        replace(rel, strength=0.05) if rel.target == "political_reform" else rel
                         for rel in row.relations
                     ),
                 )
@@ -179,20 +181,19 @@ def test_only_one_proven_complement_contributes_to_production_delta(
             ),
         )
     values, facts = _economy_values()
+    # Real completion evidence is strong legitimacy and ready literacy; the
+    # education intention itself is ineligible here, yet its completed fact counts.
+    values.update(legitimacy=80, strong_legitimacy=True, literacy_ready=True, literacy_low=False)
+    facts.update(legitimacy=80, literacy_rate=0.8)
     if unknown:
         values.update(no_insurrection=None, insurrection=None, ongoing_insurrection=None)
         facts["any_insurrection_ongoing"] = None
-    actions = [row for row in model.decision_ir if row.consumer_id == "economic_balance"]
-    chosen = compiler._select_action(
-        actions, values, all_actions=list(model.decision_ir), model=model
-    )
-    assert chosen is not None
-    assert chosen[0].action_id == "industrial_foundation"
-    assert compiler._row_delta(chosen[0], values, complement=chosen[1], model=model) == expected
-    generated = pdx_eval.select(
-        compiler.strategy_overlay(model)["economic_vs_government_spending_balance"], facts
-    )
-    assert (generated.action_id, generated.delta) == ("industrial_foundation", expected)
+    field = "economic_vs_government_spending_balance"
+    actual = compiler.evaluate_actions(model, values, is_ai=True)
+    assert actual[field][1] == pytest.approx(expected)
+    generated = pdx_eval.select(compiler.strategy_overlay(model)[field], facts)
+    assert generated.action_id == "joint_economic_balance"
+    assert generated.delta == pytest.approx(expected)
 
 
 def test_complement_order_is_deterministic_under_source_permutation(production_model):
@@ -221,12 +222,7 @@ def test_complement_strength_must_be_finite_and_positive_before_ordering(
         compiler.strategy_overlay(model)
     values, _ = _economy_values()
     with pytest.raises(ValueError, match=r"关系|互补"):
-        compiler._select_action(
-            [row for row in model.decision_ir if row.consumer_id == "economic_balance"],
-            values,
-            all_actions=list(model.decision_ir),
-            model=model,
-        )
+        compiler.evaluate_actions(model, values, is_ai=True)
 
 
 def test_auxiliary_if_chain_selects_only_first_proven_branch():
@@ -272,7 +268,7 @@ def test_auxiliary_branch_rejects_unregistered_operations():
 if = { limit = { is_ai = yes } add = { value = 1
 if = { limit = { weaker = yes } add = 0.25 mystery = 1 } } }
 """
-    with pytest.raises(pdx_eval.UnsupportedPdxError, match="未登记"):
+    with pytest.raises(pdx_eval.UnsupportedPdxError, match=r"未登记|不支持"):
         pdx_eval.select(text, {"is_ai": True, "weaker": True})
 
 
@@ -302,78 +298,60 @@ def test_in_memory_disposition_cannot_bypass_production_validation(
 @pytest.mark.parametrize(
     ("industry", "education", "expected_action", "expected_delta"),
     [
-        (False, False, "industrial_foundation", 1.5),
-        (True, False, "industrial_foundation", 1.5),
-        (False, True, "education_and_research", 1.15),
-        (None, None, "industrial_foundation", 1.5),
+        (False, False, "joint_economic_balance", 0.045),
+        (True, False, "joint_economic_balance", 0.070),
+        (False, True, "joint_economic_balance", 0.020),
+        (None, None, "joint_economic_balance", 0.045),
     ],
 )
 def test_production_need_rank_changes_actual_consumer_selection(
     production_model, industry, education, expected_action, expected_delta
 ):
+    """Observed demand amounts change the joint delta, without selecting one card."""
     values, facts = _economy_values()
     values.update(coord_evidence_need_industry=industry, coord_need_education=education)
     facts.update(
         sitai_context_evidence_need_industry=industry, sitai_context_need_education=education
     )
-    actions = [row for row in production_model.decision_ir if row.consumer_id == "economic_balance"]
-    chosen = compiler._select_action(
-        actions, values, all_actions=list(production_model.decision_ir), model=production_model
-    )
-    assert chosen is not None
-    assert chosen[0].action_id == expected_action
-    assert compiler._row_delta(
-        chosen[0], values, complement=chosen[1], model=production_model
-    ) == pytest.approx(expected_delta)
-    actual = pdx_eval.select(
-        compiler.strategy_overlay(production_model)["economic_vs_government_spending_balance"],
-        facts,
-    )
+    field = "economic_vs_government_spending_balance"
+    reference = compiler.evaluate_actions(production_model, values, is_ai=True)
+    assert reference[field][0] == expected_action
+    assert reference[field][1] == pytest.approx(expected_delta)
+    actual = pdx_eval.select(compiler.strategy_overlay(production_model)[field], facts)
     assert actual.action_id == expected_action
     assert actual.delta == pytest.approx(expected_delta)
 
 
 def test_production_goal_priority_can_break_tied_need_tiers(production_model):
+    """Historical priority identity: static priority cannot alter actual utility."""
     values, facts = _economy_values()
     values.update(coord_evidence_need_industry=True, coord_need_education=True)
     facts.update(sitai_context_evidence_need_industry=True, sitai_context_need_education=True)
-    # 净收益与需求档相同后，目标优先级只打破平局。
-    actions = [row for row in production_model.decision_ir if row.consumer_id == "economic_balance"]
-    tied_actions = [
-        replace(row, base=row.base + 0.35) if row.action_id == "education_and_research" else row
-        for row in actions
-    ]
-    tied_model = _rows(
-        production_model,
-        [
-            row
-            if row.consumer_id != "economic_balance"
-            else next(
-                (candidate for candidate in tied_actions if candidate.action_id == row.action_id),
-                row,
-            )
-            for row in production_model.decision_ir
-        ],
-    )
-    expected = [("structure", "industrial_foundation"), ("capacity", "education_and_research")]
-    for goal_id, action_id in expected:
+    field = "economic_vs_government_spending_balance"
+    for goal_id in ("structure", "capacity"):
         model = replace(
-            tied_model,
-            goals=tuple((key, 100 if key == goal_id else 0) for key, _ in tied_model.goals),
+            production_model,
+            goals=tuple((key, 100 if key == goal_id else 0) for key, _ in production_model.goals),
+            goal_specs=tuple(
+                replace(goal, priority=100 if goal.id == goal_id else 0)
+                for goal in production_model.goal_specs
+            ),
         )
-        actual = pdx_eval.select(
-            compiler.strategy_overlay(model)["economic_vs_government_spending_balance"], facts
+        assert compiler.evaluate_actions(model, values, is_ai=True)[field][1] == pytest.approx(
+            0.045
         )
-        assert actual.action_id == action_id
+        actual = pdx_eval.select(compiler.strategy_overlay(model)[field], facts)
+        assert actual.action_id == "joint_economic_balance"
+        assert actual.delta == pytest.approx(0.045)
 
 
 @pytest.mark.parametrize(
     ("debt", "expected_action", "expected_delta"),
     [
-        (-0.01, None, 0.0),
-        (0.0, "industrial_foundation", 1.5),
-        (0.4, "industrial_foundation", 1.5),
-        (0.41, "education_and_research", 0.9),
+        (-0.01, "joint_economic_balance", 0.025),
+        (0.0, "joint_economic_balance", 0.045),
+        (0.4, "joint_economic_balance", 0.045),
+        (0.41, "joint_economic_balance", 0.025),
     ],
 )
 def test_cost_boundaries_preserve_zero_and_reject_negative_debt(
@@ -382,24 +360,13 @@ def test_cost_boundaries_preserve_zero_and_reject_negative_debt(
     values, facts = _economy_values()
     values["debt_ratio"] = debt
     facts["scaled_debt"] = debt
-    actions = [row for row in production_model.decision_ir if row.consumer_id == "economic_balance"]
-    chosen = compiler._select_action(
-        actions, values, all_actions=list(production_model.decision_ir), model=production_model
-    )
-    if expected_action is None:
-        assert chosen is None
-    else:
-        assert chosen is not None
-        assert chosen[0].action_id == expected_action
-        assert compiler._row_delta(
-            chosen[0], values, complement=chosen[1], model=production_model
-        ) == pytest.approx(expected_delta)
-    actual = pdx_eval.select(
-        compiler.strategy_overlay(production_model)["economic_vs_government_spending_balance"],
-        facts,
-    )
-    assert actual.action_id == expected_action
-    assert actual.delta == pytest.approx(expected_delta)
+    field = "economic_vs_government_spending_balance"
+    actual = compiler.evaluate_actions(production_model, values, is_ai=True)
+    assert actual[field][0] == expected_action
+    assert actual[field][1] == pytest.approx(expected_delta)
+    generated = pdx_eval.select(compiler.strategy_overlay(production_model)[field], facts)
+    assert generated.action_id == expected_action
+    assert generated.delta == pytest.approx(expected_delta)
 
 
 @pytest.mark.parametrize(
@@ -408,29 +375,27 @@ def test_cost_boundaries_preserve_zero_and_reject_negative_debt(
 def test_out_of_range_cost_is_local_unknown_and_preserves_vanilla(production_model, name, value):
     values, facts = _economy_values()
     values[name] = value
+    if name == "legitimacy":
+        values.update(stable_legitimacy=False, strong_legitimacy=False)
     facts[{"debt_ratio": "scaled_debt", "legitimacy": "legitimacy"}[name]] = value
-    actions = [row for row in production_model.decision_ir if row.consumer_id == "economic_balance"]
-    assert (
-        compiler._select_action(
-            actions, values, all_actions=list(production_model.decision_ir), model=production_model
-        )
-        is None
-    )
-    actual = pdx_eval.select(
-        compiler.strategy_overlay(production_model)["economic_vs_government_spending_balance"],
-        facts,
-    )
-    assert actual.action_id is None
-    assert actual.delta == 0
-    # 同一个非法债务数值不关闭只读取战争事实的外交克制工具。
+    field = "economic_vs_government_spending_balance"
+    # Invalid pressure charges only the relevant conservative cost; it does not
+    # veto both known action qualifications or unrelated consumers.
+    expected = 0.025 if name == "debt_ratio" else 0.045
+    reference = compiler.evaluate_actions(production_model, values, is_ai=True)
+    assert reference[field][1] == pytest.approx(expected)
+    actual = pdx_eval.select(compiler.strategy_overlay(production_model)[field], facts)
+    assert actual.action_id == "joint_economic_balance"
+    assert actual.delta == pytest.approx(expected)
     unaffected = pdx_eval.select(
         compiler.strategy_overlay(production_model)["recklessness"], {**facts, "is_at_war": True}
     )
-    assert unaffected.action_id == "diplomatic_restraint"
+    assert unaffected.action_id == "joint_diplomatic_recklessness"
+    assert unaffected.delta == -4.0
 
 
 @pytest.mark.parametrize(
-    ("debt", "expected"), [(0.4, "education_and_research"), (0.41, "education_and_research")]
+    ("debt", "expected"), [(0.4, "joint_economic_balance"), (0.41, "joint_economic_balance")]
 )
 def test_demand_rank_still_reduces_expensive_commitment(production_model, debt, expected):
     _values, facts = _economy_values()
@@ -444,7 +409,7 @@ def test_demand_rank_still_reduces_expensive_commitment(production_model, debt, 
         facts,
     )
     assert actual.action_id == expected
-    assert actual.delta == pytest.approx(1.15 if debt == 0.4 else 0.9)
+    assert actual.delta == pytest.approx(0.020 if debt == 0.4 else 0.0)
 
 
 def test_rank_declarations_reject_missing_or_duplicate_fact_and_goal(production_model):
@@ -470,20 +435,21 @@ def test_rank_declarations_reject_missing_or_duplicate_fact_and_goal(production_
 
 
 def test_rank_partition_budget_is_frozen_for_real_consumers(production_model):
-    model = production_model
-    for consumer in model.consumers:
-        rows = [row for row in model.decision_ir if row.consumer_id == consumer.id]
-        costs = {
-            predicates
+    """Bound actual emitted branches, not the retired Cartesian state count."""
+    for consumer in production_model.consumers:
+        rows = [row for row in production_model.decision_ir if row.consumer_id == consumer.id]
+        terms = sum(
+            1
+            + len(row.rank_terms)
+            + bool(row.commitment_when)
+            + bool(row.political_when)
+            + len(row.relations)
             for row in rows
-            for predicates, amount in (
-                (row.commitment_when, row.commitment),
-                (row.political_when, row.political_cost),
-            )
-            if predicates and amount > 0
-        }
-        needs = {term.fact for row in rows for term in row.rank_terms}
-        assert 2 ** (len(costs) + len(needs)) <= 16
+        )
+        text = compiler.strategy_overlay(production_model)[consumer.field]
+        # One qualification per contribution and one extra cheap-cost test.
+        assert text.count("limit =") <= 1 + terms + 2 * len(rows)
+        assert text.count("min =") == text.count("max =") == 1
 
 
 def test_rank_terms_survive_source_ir_and_instance_dependency_maps(production_model):
@@ -504,31 +470,63 @@ def test_rank_terms_survive_source_ir_and_instance_dependency_maps(production_mo
 
 @pytest.mark.parametrize("order", [None, 1, ["need_tier"] * 6, ["unknown"]])
 def test_invalid_rank_order_is_rejected_explicitly(production_model, order):
-    support = {**production_model.support_sources, "arbitration.toml": {"rank": order}}
+    # The legacy schema is checked at the source boundary. An already-built
+    # model's retired rank metadata is never a second production utility source.
+    support = {
+        **production_model.support_sources,
+        "arbitration.toml": {**production_model.support_sources["arbitration.toml"], "rank": order},
+    }
     with pytest.raises(ValueError, match="rank"):
-        compiler.strategy_overlay(replace(production_model, support_sources=support))
+        compiler._validate_supporting_sources(
+            support, production_model.consumers, production_model.relations
+        )
 
 
 def test_rank_partition_overflow_rejects_without_pruning_candidates(production_model):
     from pdx.situated.schema import RankTerm
 
     names = tuple(
-        f.id for f in production_model.facts if f.kind == "boolean" and f.scope == "root"
+        f.id
+        for f in production_model.facts
+        if f.kind == "boolean" and f.scope == "root" and f.unit == "flag"
     )[:10]
     assert len(names) == 10
-    rows = tuple(
-        replace(row, rank_terms=tuple(RankTerm(name, "capacity", 1, "flag") for name in names))
-        if row.action_id == "industrial_foundation"
-        else row
-        for row in production_model.decision_ir
+    # Ten independent demand inputs used to imply 1024 truth-table partitions.
+    # All now survive as ten linear contributions; no pruning or overflow escape.
+    source = next(
+        row for row in production_model.decision_ir if row.action_id == "industrial_foundation"
     )
-    model = _rows(production_model, rows)
-    with pytest.raises(ValueError, match="512"):
-        compiler.strategy_overlay(model)
+
+    def expanded(count):
+        rows = tuple(
+            replace(
+                row,
+                rank_terms=tuple(
+                    RankTerm(name, "structure", 1, "flag", 0.001) for name in names[:count]
+                ),
+            )
+            if row == source
+            else row
+            for row in production_model.decision_ir
+        )
+        model = _rows(production_model, rows)
+        text = compiler.strategy_overlay(model)["economic_vs_government_spending_balance"]
+        return model, text
+
+    _, small = expanded(2)
+    model, large = expanded(10)
+    assert len(large) < 5 * len(small)
+    assert large.count("limit =") - small.count("limit =") == 8
+    assert (
+        len(next(row for row in model.decision_ir if row.action_id == source.action_id).rank_terms)
+        == 10
+    )
 
 
 def test_arbitration_order_is_consumed_by_actual_pdx_rank(production_model):
-    _values, facts = _economy_values()
+    """Retired rank order cannot resurrect the old single-card winner path."""
+    values, facts = _economy_values()
+    values.update(coord_evidence_need_industry=False, coord_need_education=True)
     facts.update(sitai_context_need_education=True, sitai_context_evidence_need_industry=False)
     support = {
         **production_model.support_sources,
@@ -545,15 +543,18 @@ def test_arbitration_order_is_consumed_by_actual_pdx_rank(production_model):
         },
     }
     field = "economic_vs_government_spending_balance"
-    assert (
-        pdx_eval.select(compiler.strategy_overlay(production_model)[field], facts).action_id
-        == "education_and_research"
-    )
     changed = replace(production_model, support_sources=support)
     assert (
-        pdx_eval.select(compiler.strategy_overlay(changed)[field], facts).action_id
-        == "industrial_foundation"
+        compiler.strategy_overlay(changed)[field]
+        == compiler.strategy_overlay(production_model)[field]
     )
+    for model in (production_model, changed):
+        assert compiler.evaluate_actions(model, values, is_ai=True)[field][1] == pytest.approx(
+            0.020
+        )
+        assert pdx_eval.select(
+            compiler.strategy_overlay(model)[field], facts
+        ).delta == pytest.approx(0.020)
 
 
 @pytest.mark.parametrize(
@@ -619,3 +620,70 @@ def test_generated_rank_paths_stay_within_128_predicate_budget(production_model)
     for field, text in compiler.strategy_overlay(production_model).items():
         count = worst(parse_text(text).root)
         assert count <= 128, (field, count)
+
+
+@pytest.mark.parametrize(
+    ("name", "raw_key", "raw", "expected"),
+    [
+        ("stable_legitimacy", "legitimacy", -0.01, False),
+        ("stable_legitimacy", "legitimacy", 0, False),
+        ("stable_legitimacy", "legitimacy", 50, True),
+        ("stable_legitimacy", "legitimacy", 100, True),
+        ("stable_legitimacy", "legitimacy", 100.01, False),
+        ("strong_legitimacy", "legitimacy", -0.01, False),
+        ("strong_legitimacy", "legitimacy", 74.99, False),
+        ("strong_legitimacy", "legitimacy", 75, True),
+        ("strong_legitimacy", "legitimacy", 100, True),
+        ("strong_legitimacy", "legitimacy", 100.01, False),
+        ("literacy_low", "literacy_rate", -0.01, False),
+        ("literacy_low", "literacy_rate", 0, True),
+        ("literacy_low", "literacy_rate", 0.499, True),
+        ("literacy_low", "literacy_rate", 0.5, False),
+        ("literacy_low", "literacy_rate", 1.01, False),
+        ("literacy_ready", "literacy_rate", -0.01, False),
+        ("literacy_ready", "literacy_rate", 0.499, False),
+        ("literacy_ready", "literacy_rate", 0.5, True),
+        ("literacy_ready", "literacy_rate", 1, True),
+        ("literacy_ready", "literacy_rate", 1.01, False),
+        ("stable_legitimacy", "legitimacy", None, None),
+        ("strong_legitimacy", "legitimacy", None, None),
+        ("literacy_low", "literacy_rate", None, None),
+        ("literacy_ready", "literacy_rate", None, None),
+    ],
+)
+def test_derived_flags_observe_raw_reader_bounds(production_model, name, raw_key, raw, expected):
+    from pdx.parser import parse_text
+
+    fact = next(fact for fact in production_model.facts if fact.id == name)
+    trigger = parse_text(fact.trigger).root
+    assert pdx_eval.condition(trigger, {raw_key: raw}) is expected
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (-0.01, 0.15),
+        (1.01, 0.15),
+        (None, 0.15),
+        (0, 0.045),
+        (0.499, 0.045),
+        (0.5, 0.175),
+        (1, 0.175),
+    ],
+)
+def test_invalid_literacy_neither_opens_education_nor_rewards_ready_complement(
+    production_model, raw, expected
+):
+    values, facts = _economy_values()
+    valid = raw is not None and 0 <= raw <= 1
+    values.update(
+        literacy_low=raw < 0.5 if valid else None if raw is None else False,
+        literacy_ready=raw >= 0.5 if valid else None if raw is None else False,
+    )
+    facts["literacy_rate"] = raw
+    field = "economic_vs_government_spending_balance"
+    assert compiler.evaluate_actions(production_model, values, is_ai=True)[field][
+        1
+    ] == pytest.approx(expected)
+    generated = pdx_eval.select(compiler.strategy_overlay(production_model)[field], facts)
+    assert generated.delta == pytest.approx(expected)

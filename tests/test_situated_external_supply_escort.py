@@ -1,5 +1,6 @@
 """D8.19：既有次要舰队护送的单压力低档与双压力高档。"""
 
+import hashlib
 import re
 from dataclasses import replace
 
@@ -16,6 +17,7 @@ SOURCE = "common/ai_strategies/00_default_strategy.txt"
 VALUE_SOURCE = "common/script_values/sitai_adapter_values.txt"
 VALUE_NAME = "sitai_adapter_fleet_supply_weight"
 FIELD = "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply"
+PROGRAM = "program_" + hashlib.sha256(f"{SOURCE}:{FIELD}".encode()).hexdigest()[:16]
 HIGH = ("structural_wartime_supply_escort", 1.25)
 PRICE = ("structural_wartime_supply_price_escort", 1.10)
 BALANCE = ("structural_wartime_supply_balance_escort", 1.10)
@@ -44,6 +46,36 @@ WITNESSES = [
 ]
 
 
+# Raw compatibility short-circuits on core unknown; the production program instead
+# keeps the independently proven single-pressure tier when the other is unknown.
+PRODUCTION_WITNESSES = [
+    ({}, 1.25),
+    ({"steamers_price": 0.249}, 1.10),
+    ({"steamers_price": 0.25}, 1.10),
+    ({"steamers_price": 0.251}, 1.25),
+    ({"steamers_balance": -0.001}, 1.25),
+    ({"steamers_balance": 0}, 1.10),
+    ({"steamers_balance": 0.001}, 1.10),
+    ({"steamers_price": 0.25, "steamers_balance": 0}, 1),
+    ({"steamers_price": None}, 1.10),
+    ({"steamers_balance": None}, 1.10),
+    ({"steamers_price": float("nan")}, 1.10),
+    ({"steamers_balance": float("inf")}, 1.10),
+    ({"steamers_price": True}, 1.10),
+    ({"steamers_price": None, "steamers_balance": None}, 1),
+    ({"steamers_price": None, "steamers_balance": 0}, 1),
+    ({"steamers_balance": None, "steamers_price": 0.25}, 1),
+    ({"war": False}, 1),
+    ({"war": None}, 1),
+    ({"navy": 0}, 1),
+    ({"navy": -1}, 1),
+    ({"navy": None}, 1),
+    ({"default": True}, 1.25),
+    ({"default": True, "steamers_balance": 0}, 1.10),
+    ({"default": True, "steamers_price": 0.25}, 1.10),
+]
+
+
 def _values(**changes):
     return {"war": True, "navy": 1, "steamers_price": 0.3, "steamers_balance": -1, **changes}
 
@@ -66,7 +98,7 @@ def escort_adapters():
 
 
 @pytest.mark.parametrize(("changes", "expected"), WITNESSES)
-def test_existing_fleet_protection_has_handwritten_pressure_tiers(
+def test_raw_compatibility_fleet_protection_has_handwritten_pressure_tiers(
     escort_adapters, changes, expected
 ):
     policy = dict(escort_adapters.policies)[SOURCE]
@@ -91,16 +123,7 @@ def escort_generated(escort_adapters):
         consumer_ir=model.consumer_ir,
     )
     script = files[VALUE_SOURCE]
-    begin = script.index(f"# SITAI BEGIN information:{FIELD}")
-    end = script.index(f"# SITAI END information:{FIELD}", begin)
-    lines: list[str] = []
-    for line in script[begin:end].splitlines()[1:]:
-        if line.lstrip().startswith(("if =", "else_if =")) and (
-            not lines or not lines[-1].lstrip().startswith("# ")
-        ):
-            lines.append("# escort_unknown_guard [military]; preserve native value")
-        lines.append(line)
-    return inputs, files, "\n".join(lines)
+    return inputs, files, pdx_eval.marked_block(script, PROGRAM), dict(compiled)[SOURCE]
 
 
 def _facts(values, *, is_ai=True, root_exists=True, market_exists=True):
@@ -121,22 +144,24 @@ def _facts(values, *, is_ai=True, root_exists=True, market_exists=True):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize(("changes", "expected"), WITNESSES)
+@pytest.mark.parametrize(("changes", "expected"), PRODUCTION_WITNESSES)
 def test_generated_fleet_pdx_keeps_complete_scopes_and_local_unknown(
     escort_generated, changes, expected
 ):
-    _, _, overlay = escort_generated
-    actual = pdx_eval.select(overlay, _facts(_values(**changes)))
-    if expected is None:
-        assert actual.fallback in {"vanilla", "unknown"} or (
-            actual.action_id == "escort_unknown_guard" and actual.delta == 1
-        )
+    _, _, overlay, policy = escort_generated
+    values = _values(**changes)
+    reference = decision_rules.evaluate(policy, values, is_ai=True).get(FIELD)
+    if expected == 1:
+        assert reference is None
     else:
-        assert (actual.action_id, actual.delta) == expected
-        assert actual.operation == "multiply"
-    factor = actual.delta if actual.operation == "multiply" else 1
-    assert factor == pytest.approx(expected[1] if expected else 1)
-    assert 0 * factor == 0
+        assert reference is not None
+        assert reference[0] == PROGRAM
+        assert reference[1] == pytest.approx(expected)
+    actual = pdx_eval.select(overlay, _facts(values))
+    assert actual.action_id == PROGRAM
+    assert actual.operation == "multiply"
+    assert actual.delta == pytest.approx(expected)
+    assert 0 * actual.delta == 0
 
 
 def _at(text, path):
@@ -163,7 +188,7 @@ def _tree(node):
 def test_fleet_native_roles_qualification_zero_and_disabled_paths_are_preserved(
     escort_adapters, escort_generated
 ):
-    inputs, files, overlay = escort_generated
+    inputs, files, overlay, compiled_policy = escort_generated
     native = inputs[SOURCE]
     generated = files[SOURCE]
     fleet = "ai_strategy_default.fleet_compositions"
@@ -188,10 +213,13 @@ def test_fleet_native_roles_qualification_zero_and_disabled_paths_are_preserved(
         escort_adapters, texts=inputs, enabled_domains=frozenset()
     )
     assert disabled == {}
-    policy = dict(escort_adapters.policies)[SOURCE]
-    assert decision_rules.evaluate(policy, _values(), is_ai=False) == {}
+    assert decision_rules.evaluate(compiled_policy, _values(), is_ai=False) == {}
+    assert (
+        decision_rules.evaluate(compiled_policy, _values(), is_ai=True, enabled_domains=frozenset())
+        == {}
+    )
     for context in ({"is_ai": False}, {"root_exists": False}, {"market_exists": False}):
         actual = pdx_eval.select(overlay, _facts(_values(), **context))
         assert actual.fallback in {"vanilla", "unknown"} or (
-            actual.action_id == "escort_unknown_guard" and actual.delta == 1
+            actual.action_id == PROGRAM and actual.operation == "multiply" and actual.delta == 1
         )

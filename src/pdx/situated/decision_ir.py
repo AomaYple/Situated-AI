@@ -127,6 +127,7 @@ class LegacyDecisionIR:
     intent: str | None = None
     auxiliary_facts: tuple[str, ...] = ()
     required_known_facts: tuple[str, ...] = ()
+    contribution_group: str = ""
 
     def to_action_ir(self) -> ActionIR:
         from .ir import ActionIR, PredicateIR  # noqa: PLC0415
@@ -147,6 +148,7 @@ class LegacyDecisionIR:
             intent=self.intent,
             auxiliary_facts=self.auxiliary_facts,
             required_known_facts=self.required_known_facts,
+            contribution_group=self.contribution_group,
         )
 
 
@@ -186,6 +188,11 @@ class ConsumerDecisionIR:
     political_when: tuple[CostPredicate, ...] = ()
     zero_cost_reason: str = ""
     rank_terms: tuple[RankTerm, ...] = ()
+    variant_group: str = ""
+    variant_priority: int = 0
+    cause_group: str = ""
+    commitment_cost_id: str = ""
+    political_cost_id: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -402,6 +409,11 @@ def compile_decisions(
                 political_when=action.political_when,
                 zero_cost_reason=action.zero_cost_reason,
                 rank_terms=action.rank_terms,
+                variant_group=action.variant_group,
+                variant_priority=action.variant_priority,
+                cause_group=action.cause_group,
+                commitment_cost_id=action.commitment_cost_id,
+                political_cost_id=action.political_cost_id,
                 relations=tuple(
                     sorted(
                         (relation for relation in relations if relation.source == action.id),
@@ -490,6 +502,7 @@ def compile_consumer_ir(
                     intent=item.intent,
                     auxiliary_facts=item.auxiliary_facts,
                     required_known_facts=item.required_known_facts,
+                    contribution_group=item.contribution_group,
                     predicates=tuple(
                         (predicate.fact, predicate.operator, predicate.value)
                         for predicate in item.predicates

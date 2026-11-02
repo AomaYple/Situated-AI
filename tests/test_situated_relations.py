@@ -31,15 +31,20 @@ def test_complement_is_soft_and_conditioned_in_generated_consumer() -> None:
         "scaled_debt": 0.4,
         "net_total_income": 1,
     }
-    # 同一基础行动在两个、一个、零个互补条件成立时均可选中；
-    # 最多一个互补增加 0.25，不把对方变成基础行动的资格门。
+    # 工业基础 +.15；低识字教育方向 -.10、政治成本 +.02、
+    # 已有行政承载互补 -.025，合计 .045。需求信号未提供，不能假定成立。
+    # 识字改善后教育项退出，工业的知识互补 +.025；合法性达到75且
+    # 没有起义时另有政治互补 +.025。关系只改贡献，不成为工业资格门。
     for changes, expected in (
-        ({}, 1.5),
-        ({"literacy_rate": 0.6}, 1.5),
-        ({"literacy_rate": 0.6, "any_insurrection_ongoing": True}, 1.25),
+        ({}, 0.045),
+        ({"literacy_rate": 0.6}, 0.175),
+        ({"literacy_rate": 0.6, "legitimacy": 80}, 0.2),
+        ({"literacy_rate": 0.6, "legitimacy": 80, "any_insurrection_ongoing": True}, 0.175),
     ):
         result = pdx_eval.select(text, {**facts, **changes})
-        assert (result.action_id, result.delta) == ("industrial_foundation", expected)
+        assert result.action_id == "joint_economic_balance"
+        assert result.operation == "add"
+        assert result.delta == pytest.approx(expected)
     patched = decisions.patch_default(
         decisions.BASELINE.read_text(encoding="utf-8"),
         decisions.load(),

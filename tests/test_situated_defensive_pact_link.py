@@ -1,5 +1,6 @@
 """LJ10 本国条款计数与净流量压力：手写预期、完整消费者 PDX。"""
 
+import hashlib
 from dataclasses import replace
 
 import pytest
@@ -11,6 +12,7 @@ pytestmark = pytest.mark.unit
 INFO = "mod/decisions/information.toml"
 FIELD = "wanted_army_size"
 RULE = "lj10_defensive_pact_flow_pressure"
+PROGRAM = "program_" + hashlib.sha256(f"{INFO}:{FIELD}".encode()).hexdigest()[:16]
 
 
 def test_pact_reader_is_an_exact_local_country_signature():
@@ -133,16 +135,7 @@ def generated():
         consumer_ir=model.consumer_ir,
         consumer_source=INFO,
     )
-    start = text.index(f"# SITAI BEGIN information:{FIELD}")
-    end = text.index(f"# SITAI END information:{FIELD}", start)
-    lines: list[str] = []
-    for line in text[start:end].splitlines()[1:]:
-        if line.lstrip().startswith(("if =", "else_if =")) and (
-            not lines or not lines[-1].lstrip().startswith("# ")
-        ):
-            lines.append("# unknown_guard [military]; native unchanged")
-        lines.append(line)
-    return policy, "\n".join(lines), model
+    return compiled, pdx_eval.marked_block(text, PROGRAM), model
 
 
 def _facts(values, *, is_ai=True):
@@ -160,31 +153,32 @@ def _facts(values, *, is_ai=True):
 
 
 CASES = [
-    ("positive", {}, (RULE, 0.95)),
+    ("positive", {}, 0.95),
     ("broken_link", {"defensive_pact_articles": 0}, None),
     ("cost_pressure_relief", {"net_surplus": 0}, None),
     ("positive_flow", {"net_surplus": 0.00001}, None),
-    ("flow_boundary_below", {"net_surplus": -0.00001}, (RULE, 0.95)),
-    ("more_pressure", {"net_surplus": -1000}, (RULE, 0.95)),
-    ("more_articles_not_stack", {"defensive_pact_articles": 100}, (RULE, 0.95)),
+    ("flow_boundary_below", {"net_surplus": -0.00001}, 0.95),
+    ("more_pressure", {"net_surplus": -1000}, 0.95),
+    ("more_articles_not_stack", {"defensive_pact_articles": 100}, 0.95),
     ("zero_native_target", {"native_army_capacity": 1, "native_marine_capacity": 1}, None),
     ("negative_native_target", {"native_army_capacity": 1, "native_marine_capacity": 2}, None),
     (
         "positive_native_boundary",
         {"native_army_capacity": 1.00001, "native_marine_capacity": 1},
-        (RULE, 0.95),
+        0.95,
     ),
     ("wartime_defense", {"war": True}, None),
-    ("default_recovery", {"default": True}, ("military_peacetime_budget", 0.85)),
+    ("default_recovery", {"default": True}, 0.85),
     ("defense_route", {"route_defense": True}, None),
     (
         "defense_capacity",
         {"route_defense": True, "net_surplus": 1, "bureaucracy": 1},
-        ("route_defense_army_capacity", 1.2),
+        1.2,
     ),
-    ("explicit_threat", {"army": 49, "infamy": 26}, ("army_threat_capacity", 1.1)),
-    ("borrowed_not_default", {"loans": True}, (RULE, 0.95)),
-    ("low_literacy_unrelated", {"literacy": 0.01}, (RULE, 0.95)),
+    # Independent opposite directions: 1 + (1.10 - 1) + (0.95 - 1) = 1.05.
+    ("explicit_threat", {"army": 49, "infamy": 26}, 1.05),
+    ("borrowed_not_default", {"loans": True}, 0.95),
+    ("low_literacy_unrelated", {"literacy": 0.01}, 0.95),
     (
         "selected_pact_not_relationship",
         {"defensive_pact_articles": 0, "candidate_selected": True},
@@ -204,11 +198,16 @@ def test_complete_army_chain_reference_and_actual_pdx(generated, case, changes, 
     values = _values(**changes)
     reference = decision_rules.evaluate(policy, values, is_ai=True).get(FIELD)
     actual = pdx_eval.select(overlay, _facts(values))
-    assert reference == expected, case
+    if expected is None:
+        assert reference is None, case
+    else:
+        assert reference is not None, case
+        assert reference[0] == PROGRAM, case
+        assert reference[1] == pytest.approx(expected), case
     factor = actual.delta if actual.operation == "multiply" else 1
-    assert factor == pytest.approx(expected[1] if expected else 1), case
+    assert factor == pytest.approx(expected or 1), case
     if expected:
-        assert actual.action_id == expected[0]
+        assert actual.action_id == PROGRAM
     assert factor > 0
     assert 0 * factor == 0
     native_target = values["native_army_capacity"] - values["native_marine_capacity"]
@@ -237,6 +236,19 @@ def test_every_core_unknown_is_local_native_fallback(generated, key, unknown):
     assert actual.operation is None or (actual.operation == "multiply" and actual.delta == 1)
 
 
+@pytest.mark.parametrize("unknown", [None, float("nan"), float("inf"), "invalid"])
+def test_unknown_pact_does_not_erase_known_threat(generated, unknown):
+    policy, overlay, _ = generated
+    values = _values(army=49, infamy=26, defensive_pact_articles=unknown)
+    reference = decision_rules.evaluate(policy, values, is_ai=True)[FIELD]
+    assert reference[0] == PROGRAM
+    assert reference[1] == pytest.approx(1.10)
+    actual = pdx_eval.select(overlay, _facts(values))
+    assert actual.action_id == PROGRAM
+    assert actual.operation == "multiply"
+    assert actual.delta == pytest.approx(1.10)
+
+
 def test_player_disabled_and_foreign_decoys_do_not_create_local_relationship(generated):
     policy, overlay, _ = generated
     values = _values()
@@ -246,7 +258,10 @@ def test_player_disabled_and_foreign_decoys_do_not_create_local_relationship(gen
     facts = _facts(_values(defensive_pact_articles=0))
     facts["scope:target_country"] = {"num_defensive_pacts": 10}
     facts["ROOT"]["candidate_selected"] = True
-    assert pdx_eval.select(overlay, facts).action_id != RULE
+    actual = pdx_eval.select(overlay, facts)
+    assert actual.action_id == PROGRAM
+    assert actual.operation == "multiply"
+    assert actual.delta == 1
 
 
 def test_lj10_has_exact_production_chain_provenance(generated):

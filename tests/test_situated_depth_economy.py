@@ -1,12 +1,13 @@
 """D6 经济域静态合同：覆盖、回退、并行和局部关系边界。"""
 
-import re
+import hashlib
 import tomllib
+from dataclasses import replace
 
 import pytest
 
 from pdx import config, country_state, decision_adapters, decision_rules
-from pdx.situated import pdx_eval
+from pdx.situated import compiler, pdx_eval
 from pdx.situated.compiler import load_model
 from pdx.situated.domain_coverage import CHAINS, contract, load
 from pdx.situated.families import FAMILIES
@@ -15,6 +16,12 @@ pytestmark = pytest.mark.unit
 
 ECONOMY_DOMAINS = frozenset(
     {"fiscal", "administrative", "industry", "resources", "market", "research", "education"}
+)
+
+GOVERNMENT_SOURCE = "common/buildings/07_government.txt"
+GOVERNMENT_FIELD = "building_government_administration.ai_value"
+GOVERNMENT_PROGRAM = (
+    "program_" + hashlib.sha256(f"{GOVERNMENT_SOURCE}:{GOVERNMENT_FIELD}".encode()).hexdigest()[:16]
 )
 
 
@@ -93,13 +100,24 @@ def _government_values(policy):
 
 
 @pytest.fixture(scope="module")
-def government_generated_text():
+def government_compiled():
+    model = load_model()
+    assert model.consumer_ir is not None
+    policy = compiler.compile_policy(_government_policy(), GOVERNMENT_SOURCE, model)[0]
+    adapters = decision_adapters.load()
+    adapters = replace(adapters, policies=((GOVERNMENT_SOURCE, policy),), supply=None)
     files, _ = decision_adapters.build(
-        decision_adapters.load(),
+        adapters,
         enabled_domains=frozenset({"economy", "fiscal"}),
         country_policy=country_state.load(),
+        consumer_ir=model.consumer_ir,
     )
-    return files["common/buildings/07_government.txt"]
+    return policy, files[GOVERNMENT_SOURCE]
+
+
+@pytest.fixture(scope="module")
+def government_generated_text(government_compiled):
+    return government_compiled[1]
 
 
 @pytest.mark.parametrize(
@@ -119,7 +137,7 @@ def government_generated_text():
         (None, False, False, None),
     ],
 )
-def test_government_local_repair_has_handwritten_cost_and_exit_witnesses(
+def test_raw_compatibility_government_repair_has_handwritten_cost_and_exit_witnesses(
     bureaucracy, default, loans, expected
 ):
     policy = _government_policy()
@@ -134,27 +152,50 @@ def test_government_local_repair_has_handwritten_cost_and_exit_witnesses(
     assert decision_rules.evaluate(policy, values, is_ai=False) == {}
 
 
+# All five TOML rules share the default causal envelope: the known +0.25
+# bureaucracy repair is the strongest positive tier even during a crisis;
+# default/loans share one -0.25 tier. Thus repair plus fiscal pressure nets 1.0,
+# while an unknown fiscal fact cannot discard the known bureaucracy contribution.
+GOVERNMENT_WITNESSES = [
+    (-0.001, False, False, 1.25),
+    (-1, False, True, 1),
+    (-1, True, False, 1),
+    (-1, True, True, 1),
+    (0, False, False, 1),
+    (0.001, False, False, 1),
+    (0, False, True, 0.75),
+    (0, True, False, 0.75),
+    (-1, None, False, 1.25),
+    (-1, False, None, 1.25),
+    (None, False, False, 1),
+    (None, None, None, 1),
+    (None, True, False, 0.75),
+    (None, False, True, 0.75),
+    (-1, None, True, 1),
+    (-1, True, None, 1),
+]
+
+
 @pytest.mark.integration
-@pytest.mark.parametrize(
-    ("bureaucracy", "default", "loans", "expected"),
-    [
-        (-0.001, False, False, ("administrative_government_building_bureaucracy_repair", 1.25)),
-        (-1, False, True, ("administrative_government_building_borrowed_repair", 1.10)),
-        (-1, True, False, ("administrative_government_building_emergency_repair", 1.05)),
-        (-1, True, True, ("administrative_government_building_emergency_repair", 1.05)),
-        (0, False, False, None),
-        (0.001, False, False, None),
-        (0, False, True, ("fiscal_government_building_loans_downgrade", 0.75)),
-        (0, True, False, ("fiscal_government_building_default_downgrade", 0.75)),
-        (-1, None, False, None),
-        (-1, False, None, None),
-        (None, False, False, None),
-    ],
-)
+@pytest.mark.parametrize(("bureaucracy", "default", "loans", "expected"), GOVERNMENT_WITNESSES)
 def test_government_actual_pdx_has_repair_cost_exit_and_unknown_witnesses(
-    government_generated_text, bureaucracy, default, loans, expected
+    government_compiled, bureaucracy, default, loans, expected
 ):
-    overlay = _government_scoped_pdx_overlay(government_generated_text)
+    policy, text = government_compiled
+    overlay = _government_scoped_pdx_overlay(text)
+    values = _government_values(policy)
+    values.update(
+        state_owner_bureaucracy=bureaucracy,
+        state_owner_default=default,
+        state_owner_loans=loans,
+    )
+    reference = decision_rules.evaluate(policy, values, is_ai=True).get(GOVERNMENT_FIELD)
+    if expected == 1:
+        assert reference is None
+    else:
+        assert reference is not None
+        assert reference[0] == GOVERNMENT_PROGRAM
+        assert reference[1] == pytest.approx(expected)
     facts = {
         "is_ai": True,
         "bureaucracy": bureaucracy,
@@ -163,13 +204,11 @@ def test_government_actual_pdx_has_repair_cost_exit_and_unknown_witnesses(
     }
     scoped = {"ROOT": {"owner": facts}}
     actual = pdx_eval.select(overlay, scoped)
-    if expected is None:
-        assert actual.fallback in {"vanilla", "unknown"}
-        assert actual.operation is None
-        assert actual.delta == 0
-    else:
-        assert (actual.action_id, actual.delta) == expected
-        assert actual.operation == "multiply"
+    assert actual.action_id == GOVERNMENT_PROGRAM
+    assert actual.operation == "multiply"
+    assert actual.delta == pytest.approx(expected)
+    assert 0 * actual.delta == 0
+    assert decision_rules.evaluate(policy, values, is_ai=True, enabled_domains=frozenset()) == {}
     assert (
         pdx_eval.select(overlay, {"ROOT": {"owner": {**facts, "is_ai": False}}}).fallback
         == "vanilla"
@@ -177,14 +216,7 @@ def test_government_actual_pdx_has_repair_cost_exit_and_unknown_witnesses(
 
 
 def _government_scoped_pdx_overlay(text):
-    start = text.index("# SITAI BEGIN information:building_government_administration.ai_value")
-    end = text.index("# SITAI END information:building_government_administration.ai_value")
-    result: list[str] = []
-    for line in text[start:end].splitlines()[1:]:
-        if "multiply = 1.0 }" in line:
-            result.append(f"# government_unknown_guard_{len(result)} [generated];")
-        result.append(line)
-    return "\n".join(result) + "\n"
+    return pdx_eval.marked_block(text, GOVERNMENT_PROGRAM)
 
 
 @pytest.mark.integration
@@ -201,7 +233,9 @@ def test_government_owner_boundary_is_evaluated_without_removing_production_scop
     for bureaucracy in (-1, 0, -1):
         owner = {**actor, "bureaucracy": bureaucracy}
         result = pdx_eval.select(overlay, {"ROOT": {"owner": owner}, "bureaucracy": 100})
-        assert result.delta == (1.05 if bureaucracy < 0 else 0.75)
+        assert result.action_id == GOVERNMENT_PROGRAM
+        assert result.operation == "multiply"
+        assert result.delta == (1 if bureaucracy < 0 else 0.75)
 
 
 @pytest.mark.integration
@@ -264,7 +298,7 @@ def test_government_administration_rules_are_local_and_split_for_fiscal_crisis()
         ({"state_owner_loans": True}, "fiscal_government_building_loans_downgrade"),
     ],
 )
-def test_government_administration_handwritten_positive_boundaries(change, selected):
+def test_raw_compatibility_government_handwritten_positive_boundaries(change, selected):
     policy = _government_policy()
     values = _government_values(policy)
     values.update(change)
@@ -280,7 +314,7 @@ def test_government_administration_handwritten_positive_boundaries(change, selec
         {"state_owner_default": True, "state_owner_loans": True},
     ],
 )
-def test_government_administration_handwritten_negative_boundaries(change):
+def test_raw_compatibility_government_handwritten_negative_boundaries(change):
     policy = _government_policy()
     values = _government_values(policy)
     values.update(change)
@@ -294,7 +328,7 @@ def test_government_administration_handwritten_negative_boundaries(change):
         assert "building_government_administration.ai_value" not in result
 
 
-def test_government_administration_unknown_and_player_paths_preserve_vanilla():
+def test_raw_compatibility_government_unknown_and_player_paths_preserve_vanilla():
     policy = _government_policy()
     values = _government_values(policy)
     values["state_owner_bureaucracy"] = None
@@ -307,90 +341,51 @@ def test_government_administration_unknown_and_player_paths_preserve_vanilla():
     assert decision_rules.evaluate(policy, values, is_ai=False) == {}
 
 
-def _government_positive_pdx_overlay(text=None):
-    """从生产生成物提取五条实际写分支供独立 PDX 求值器见证。
-
-    生产 building 规则带有 owner/ROOT 作用域；这里仅去掉已由生成器验证的
-    作用域壳，保留叶子条件、分支顺序和写值，避免把 Python 参考结果当作
-    PDX 语义的替代。
-    """
-    if text is None:
-        text = (config.REPO / "mod/common/buildings/07_government.txt").read_text(encoding="utf-8")
-    lines = text.splitlines()
-    ids = {
-        "administrative_government_building_bureaucracy_repair",
-        "administrative_government_building_borrowed_repair",
-        "administrative_government_building_emergency_repair",
-        "fiscal_government_building_default_downgrade",
-        "fiscal_government_building_loans_downgrade",
-    }
-    result = []
-    for index, line in enumerate(lines):
-        marker = next((item for item in ids if f"# {item} [" in line), None)
-        if marker is None:
-            continue
-        branch = lines[index + 1]
-        branch = re.sub(
-            r"exists = ROOT ROOT = \{ exists = owner owner = \{ (.*?) \} \} \} (?=multiply)",
-            r"\1 } ",
-            branch,
-        )
-        result.append(f"# {marker} [generated];\n{branch}")
-    return "\n".join(result) + "\n"
-
-
+@pytest.mark.integration
 @pytest.mark.parametrize(
-    ("default", "loans", "selected", "multiplier"),
-    [
-        (False, False, "administrative_government_building_bureaucracy_repair", 1.25),
-        (True, False, "administrative_government_building_emergency_repair", 1.05),
-        (False, True, "administrative_government_building_borrowed_repair", 1.10),
-        (True, True, "administrative_government_building_emergency_repair", 1.05),
-    ],
+    ("default", "loans", "multiplier"),
+    [(False, False, 1.25), (True, False, 1), (False, True, 1), (True, True, 1)],
 )
 @pytest.mark.parametrize("evaluator", ["reference", "generated_pdx"])
-def test_government_administration_cost_scales_local_repair_in_reference_and_generated_pdx(
-    default, loans, selected, multiplier, evaluator
+def test_government_administration_joint_cost_in_reference_and_generated_pdx(
+    government_compiled, default, loans, multiplier, evaluator
 ):
-    """违约优先于借贷且降低修复幅度；两者均不切断真实行政赤字修复。"""
-    policy = _government_policy()
+    """财政压力与最强已知行政需求同字段合并，不再让优先分支遮蔽成本。"""
+    policy, text = government_compiled
     values = _government_values(policy)
     values.update(state_owner_bureaucracy=-1, state_owner_default=default, state_owner_loans=loans)
     if evaluator == "reference":
-        reference = decision_rules.evaluate(policy, values, is_ai=True)
-        assert reference["building_government_administration.ai_value"] == (selected, multiplier)
+        reference = decision_rules.evaluate(policy, values, is_ai=True).get(GOVERNMENT_FIELD)
+        if multiplier == 1:
+            assert reference is None
+        else:
+            assert reference is not None
+            assert reference[0] == GOVERNMENT_PROGRAM
+            assert reference[1] == pytest.approx(multiplier)
     else:
         facts = {"is_ai": True, "bureaucracy": -1, "in_default": default, "taking_loans": loans}
-        generated = pdx_eval.select(_government_positive_pdx_overlay(), facts)
-        assert (generated.action_id, generated.operation, generated.delta, generated.fallback) == (
-            selected,
-            "multiply",
-            multiplier,
-            "selected",
+        generated = pdx_eval.select(
+            _government_scoped_pdx_overlay(text), {"ROOT": {"owner": facts}}
         )
+        assert generated.action_id == GOVERNMENT_PROGRAM
+        assert generated.operation == "multiply"
+        assert generated.delta == pytest.approx(multiplier)
+        assert generated.fallback == "selected"
 
 
 @pytest.mark.integration
-def test_government_frozen_branches_match_locked_vanilla_regeneration():
-    files, _ = decision_adapters.build(
-        decision_adapters.load(),
-        enabled_domains=frozenset({"economy", "fiscal"}),
-        country_policy=country_state.load(),
-    )
-    assert _government_positive_pdx_overlay(files["common/buildings/07_government.txt"]) == (
-        _government_positive_pdx_overlay()
+def test_government_frozen_program_matches_locked_vanilla_regeneration(government_generated_text):
+    frozen = (config.REPO / "mod/common/buildings/07_government.txt").read_text(encoding="utf-8")
+    assert _government_scoped_pdx_overlay(government_generated_text) == (
+        _government_scoped_pdx_overlay(frozen)
     )
 
 
 @pytest.mark.integration
-def test_government_administration_generation_keeps_cost_and_vanilla_tail():
-    adapters = decision_adapters.load()
-    files, _ = decision_adapters.build(
-        adapters,
-        enabled_domains=frozenset({"economy", "fiscal"}),
-        country_policy=country_state.load(),
-    )
-    generated = files["common/buildings/07_government.txt"]
+def test_government_administration_generation_keeps_cost_and_vanilla_tail(
+    government_generated_text,
+):
+    generated = government_generated_text
     assert "ai_value = { value = 1000" in generated
     assert "# SITAI BEGIN information:building_government_administration.ai_value" in generated
     assert "is_ai = yes" in generated

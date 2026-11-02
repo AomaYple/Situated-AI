@@ -1,8 +1,8 @@
 """声明式处境规则：同一来源生成原版脚本、参考结果和接口清单。
 
-只修改明确登记的脚本值；每字段按优先级选一条规则，在字段专属安全位置
-调整常规评分，再执行原版拒绝、截断和特殊尾项。没有读取依据时不生成，缺失参考输入
-时不猜测。这里不实现引擎内部行动选择器，也不把静态依据当成实机证据。
+只修改明确登记的脚本值，在字段专属安全位置调整常规评分，再执行原版
+拒绝、截断和特殊尾项。生产编译可显式启用类型化消费者贡献程序；未迁移的
+RuleSet 输入保留历史兼容语义。没有读取依据时不生成，也不把静态依据当实机证据。
 """
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from .country_state import CountryPolicy
     from .situated.decision_ir import ConsumerIRBundle, WriterDecisionIR
     from .situated.ir import ActionIR
+    from .situated.programs import ConsumerProgram
 
 SOURCE = config.REPO / "mod/decisions/information.toml"
 _NAME = re.compile(r"[a-z][a-z0-9_]*\Z")
@@ -133,6 +134,7 @@ class Rule:
     # Explicit benefit-tier inputs only; every other predicate remains core.
     auxiliary_facts: tuple[str, ...] = ()
     required_known_facts: tuple[str, ...] = ()
+    contribution_group: str = ""
 
     def input_keys(self) -> frozenset[str]:
         return frozenset(
@@ -156,6 +158,7 @@ class RuleSet:
     actor_path: tuple[str, ...] = ()
     strategy: decision_intents.Strategy | None = None
     semantic_ir: tuple[ActionIR, ...] = ()
+    consumer_programs: tuple[ConsumerProgram, ...] = ()
 
     def groups(
         self, enabled_domains: frozenset[str] | None = None
@@ -365,6 +368,7 @@ def from_data(
             "intent",
             "auxiliary_facts",
             "required_known_facts",
+            "contribution_group",
         } != {
             "id",
             "domain",
@@ -396,6 +400,11 @@ def from_data(
         if type(priority) is not int or (field, priority) in priorities:
             raise ValueError("同一消费者优先级必须唯一且为整数")
         operation = item.get("operation", "multiply")
+        if "contribution_group" in item and (
+            not isinstance(item["contribution_group"], str)
+            or not _NAME.fullmatch(item["contribution_group"])
+        ):
+            raise ValueError("因果贡献组必须是明确的小写标识符")
         if operation not in ("multiply", "add") or not _finite(item["value"]):
             raise ValueError("规则必须为有限的倍率或增量")
         lower, upper = (0.5, 1.5) if operation == "multiply" else (-50, 50)
@@ -605,8 +614,9 @@ def evaluate_ir(
 ) -> dict[str, tuple[str, float]]:
     """输出字段的规则 ID/倍率；缺失、None、类型错或非有限输入回退原版。
 
-    条件按优先级短路；未知的更高优先级规则不允许低优先级规则抢先生效。
-    显式辅助升档缺证时只尝试下一档，不把运行时未知值解释成假或健康。
+    已启用的消费者程序联合评估正负方向，未知只跳过当前变体。
+    原始兼容 RuleSet 仍按优先级短路，辅助升档缺证只尝试下一档。
+    两种模式都不会把运行时未知值解释成假或健康。
     """
     if rules.rules and not rules.semantic_ir:
         raise ValueError("参考求值缺少完整 semantic IR")
@@ -615,6 +625,13 @@ def evaluate_ir(
         raise ValueError("玩家边界必须是明确布尔值")
     if not is_ai:
         return result
+    if rules.consumer_programs:
+        from .situated import programs  # noqa: PLC0415
+
+        selected = rules.enabled_domains if enabled_domains is None else enabled_domains
+        if selected - {rule.domain for rule in rules.rules}:
+            raise ValueError("领域开关含未登记的名称")
+        return programs.evaluate(rules, values, selected)
     readers = {reader.key: reader for reader in rules.readers}
     for field, candidates in rules.groups(enabled_domains).items():
         for rule in candidates:
@@ -1031,73 +1048,108 @@ def patch(
             raise ValueError(f"读取器没有锁定原版依据：{reader.key}")
     if any(part not in words for part in rules.actor_path):
         raise ValueError("AI 所有者没有锁定原版依据")
+
+    def guard_parts(rule):
+        conditions: dict[tuple[str, tuple[str, ...]], list[str]] = defaultdict(list)
+        valid: dict[tuple[str, tuple[str, ...]], list[str]] = defaultdict(list)
+        false_conditions = []
+        core_known = []
+        conditions[("root", rules.actor_path)].append("is_ai = yes")
+        for predicate in rule.conditions:
+            reader = readers[predicate.fact]
+            key = (reader.scope, reader.path)
+            if reader.engine.startswith("sitai_context_"):
+                expression = (
+                    "always = no"
+                    if country_policy is None or not country_policy.enabled
+                    else f"{reader.engine} = {'yes' if predicate.value is True else 'no'}"
+                )
+            elif reader.key in route_readers:
+                route_guard = f"{reader.argument}_active = yes"
+                expression = (
+                    "always = no"
+                    if country_policy is None or not country_policy.enabled
+                    else route_guard
+                    if predicate.value is True
+                    else f"NOT = {{ {route_guard} }}"
+                )
+            else:
+                expression = reader.expression(predicate.op, predicate.value)
+            bounds = _reader_bounds(reader)
+            if (
+                reader.engine.startswith("sitai_context_")
+                and country_policy is not None
+                and country_policy.enabled
+            ):
+                bounds.append(
+                    "sitai_context_known_" + reader.engine.removeprefix("sitai_context_") + " = yes"
+                )
+            conditions[key].extend([*bounds, expression])
+            valid[key].extend(bounds)
+            false_parts = {key: [*bounds, f"NOT = {{ {expression} }}"]}
+            if isinstance(predicate.value, FactReference):
+                other = readers[predicate.value.key]
+                other_key = (other.scope, other.path)
+                other_bounds = _reader_bounds(other)
+                conditions[other_key].extend(other_bounds)
+                valid[other_key].extend(other_bounds)
+                false_parts.setdefault(other_key, []).extend(other_bounds)
+            false_conditions.append("AND = { " + _scoped_conditions(false_parts) + " }")
+            if predicate.fact not in rule.auxiliary_facts:
+                knowledge = {key: [*bounds, f"OR = {{ {expression} NOT = {{ {expression} }} }}"]}
+                if isinstance(predicate.value, FactReference):
+                    knowledge.setdefault(other_key, []).extend(other_bounds)
+                core_known.append("AND = { " + _scoped_conditions(knowledge) + " }")
+        for known_fact_key in rule.required_known_facts:
+            reader = readers[known_fact_key]
+            expression = reader.expression("=", True)
+            knowledge_expression = f"OR = {{ {expression} NOT = {{ {expression} }} }}"
+            scope_key = (reader.scope, reader.path)
+            conditions[scope_key].append(knowledge_expression)
+            valid[scope_key].append(knowledge_expression)
+            core_known.append(
+                "AND = { " + _scoped_conditions({scope_key: [knowledge_expression]}) + " }"
+            )
+        return conditions, valid, false_conditions, core_known
+
+    program_fields = {}
+    if rules.consumer_programs:
+        from .situated import programs  # noqa: PLC0415
+
+        programs.validate(rules)
+        program_fields = {program.field: program for program in rules.consumer_programs}
+        if set(groups) - set(program_fields):
+            raise ValueError("贡献程序缺少实际生产字段")
     for field in sorted(groups, key=lambda field: positions[(*prefix, *field)], reverse=True):
         chunks = [f"\n\t\t# SITAI BEGIN information:{'.'.join(field)}\n"]
-        for index, rule in enumerate(groups[field]):
-            conditions: dict[tuple[str, tuple[str, ...]], list[str]] = defaultdict(list)
-            valid: dict[tuple[str, tuple[str, ...]], list[str]] = defaultdict(list)
-            false_conditions = []
-            core_known = []
-            conditions[("root", rules.actor_path)].append("is_ai = yes")
-            for predicate in rule.conditions:
-                reader = readers[predicate.fact]
-                key = (reader.scope, reader.path)
-                if reader.engine.startswith("sitai_context_"):
-                    expression = (
-                        "always = no"
-                        if country_policy is None or not country_policy.enabled
-                        else f"{reader.engine} = {'yes' if predicate.value is True else 'no'}"
+        if field in program_fields:
+            guards, descriptions, producer_markers = {}, {}, {}
+            for rule in groups[field]:
+                conditions, _valid, _false, _core = guard_parts(rule)
+                guards[rule.id] = _scoped_conditions(conditions)
+                if (description := description_key(rule)) is not None:
+                    descriptions[rule.id] = description
+                writer = bundle_writers.get((str(consumer_source), rule.id))
+                if writer is not None:
+                    producer_markers[rule.id] = "".join(
+                        f"\t\t\t\t# SITAI CHAIN {chain_id}/{link_id} writer={writer.writer_id}\n"
+                        for chain_id, link_id in writer.chain_refs
                     )
-                elif reader.key in route_readers:
-                    route_guard = f"{reader.argument}_active = yes"
-                    expression = (
-                        "always = no"
-                        if country_policy is None or not country_policy.enabled
-                        else route_guard
-                        if predicate.value is True
-                        else f"NOT = {{ {route_guard} }}"
-                    )
-                else:
-                    expression = reader.expression(predicate.op, predicate.value)
-                bounds = _reader_bounds(reader)
-                if (
-                    reader.engine.startswith("sitai_context_")
-                    and country_policy is not None
-                    and country_policy.enabled
-                ):
-                    bounds.append(
-                        "sitai_context_known_"
-                        + reader.engine.removeprefix("sitai_context_")
-                        + " = yes"
-                    )
-                conditions[key].extend([*bounds, expression])
-                valid[key].extend(bounds)
-                false_parts = {key: [*bounds, f"NOT = {{ {expression} }}"]}
-                if isinstance(predicate.value, FactReference):
-                    other = readers[predicate.value.key]
-                    other_key = (other.scope, other.path)
-                    other_bounds = _reader_bounds(other)
-                    conditions[other_key].extend(other_bounds)
-                    valid[other_key].extend(other_bounds)
-                    false_parts.setdefault(other_key, []).extend(other_bounds)
-                false_conditions.append("AND = { " + _scoped_conditions(false_parts) + " }")
-                if predicate.fact not in rule.auxiliary_facts:
-                    knowledge = {
-                        key: [*bounds, f"OR = {{ {expression} NOT = {{ {expression} }} }}"]
-                    }
-                    if isinstance(predicate.value, FactReference):
-                        knowledge.setdefault(other_key, []).extend(other_bounds)
-                    core_known.append("AND = { " + _scoped_conditions(knowledge) + " }")
-            for known_fact_key in rule.required_known_facts:
-                reader = readers[known_fact_key]
-                expression = reader.expression("=", True)
-                knowledge_expression = f"OR = {{ {expression} NOT = {{ {expression} }} }}"
-                scope_key = (reader.scope, reader.path)
-                conditions[scope_key].append(knowledge_expression)
-                valid[scope_key].append(knowledge_expression)
-                core_known.append(
-                    "AND = { " + _scoped_conditions({scope_key: [knowledge_expression]}) + " }"
+            chunks.append(
+                programs.render(
+                    program_fields[field],
+                    guards=guards,
+                    ai_guard=_scoped_conditions({("root", rules.actor_path): ["is_ai = yes"]}),
+                    descriptions=descriptions,
+                    producer_markers=producer_markers,
                 )
+            )
+            chunks.append(f"\t\t# SITAI END information:{'.'.join(field)}\n\t")
+            position = positions[(*prefix, *field)]
+            text = text[:position] + "".join(chunks) + text[position:]
+            continue
+        for index, rule in enumerate(groups[field]):
+            conditions, valid, false_conditions, core_known = guard_parts(rule)
             branch = "if" if index == 0 else "else_if"
             writer = bundle_writers.get((str(consumer_source), rule.id))
             if writer is not None:
@@ -1149,6 +1201,8 @@ def description_key(rule: Rule) -> str | None:
 
 def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, object]:
     """机器可读的实际生成覆盖；只列真实规则，实机全部保持待验。"""
+    from .situated.programs import contract as program_contract  # noqa: PLC0415
+
     return {
         "schema": 1,
         "evidence": "static_vanilla_examples_and_generated_scripts",
@@ -1174,12 +1228,15 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
         "maximum_cases_per_field": max(
             (len(items) for items in rules.groups().values()), default=0
         ),
-        "merge": "first_matching_priority_adjustment_preserving_vanilla_eligibility",
+        "merge": "signed_envelope_joint_consumer_program"
+        if rules.consumer_programs
+        else "first_matching_priority_adjustment_preserving_vanilla_eligibility",
         "unknown_policy": "preserve_unknown_and_fallback_vanilla",
         "baseline_sha256": rules.baseline_sha256,
         "source_sha256": rules.source_sha256,
         "enabled_domains": sorted(rules.enabled_domains),
         "active_rule_count": sum(len(values) for values in rules.groups().values()),
+        "consumer_programs": (program_contract(rules) if rules.consumer_programs else None),
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "interface_generator_sha256": hashlib.sha256(
             Path(decision_interfaces.__file__).read_bytes()
@@ -1220,12 +1277,16 @@ def contract(rules: RuleSet, *, owner: str = "information_rules") -> dict[str, o
                 "consumer": decision_interfaces.consumer(rule.field, rules.actor_path),
                 "description_key": description_key(rule),
                 "unknown": (
-                    "auxiliary_unproven_try_lower_tier_core_unknown_preserve_vanilla"
+                    "unknown_local_variant_skipped_independent_groups_continue"
+                    if rules.consumer_programs
+                    else "auxiliary_unproven_try_lower_tier_core_unknown_preserve_vanilla"
                     if rule.auxiliary_facts
                     else "preserve_vanilla_and_block_lower_priority_if_not_known_false"
                 ),
                 **({"auxiliary_facts": list(rule.auxiliary_facts)} if rule.auxiliary_facts else {}),
-                "arbitration": "one_complete_adjustment_not_an_increment_on_other_mod_rules",
+                "arbitration": "variant_inside_signed_envelope_joint_consumer_program"
+                if rules.consumer_programs
+                else "one_complete_adjustment_not_an_increment_on_other_mod_rules",
                 **(
                     {"required_known_facts": list(rule.required_known_facts)}
                     if rule.required_known_facts

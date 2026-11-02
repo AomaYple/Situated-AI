@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -69,12 +70,18 @@ class CostPredicate:
 
 @dataclass(frozen=True, slots=True)
 class RankTerm:
-    """A finite demand tier supported by one boolean fact and an existing goal."""
+    """Observed demand benefit, measured in consumer delta units.
+
+    An explicit evidence group takes its strongest known benefit only. Empty
+    groups remain independent; tier is provenance, not an invented multiplier.
+    """
 
     fact: str
     goal: str
     tier: int
     unit: str
+    amount: float = 0.0
+    evidence_group: str = ""
 
     def __post_init__(self) -> None:
         if (
@@ -85,6 +92,11 @@ class RankTerm:
             or type(self.tier) is not int
             or not 1 <= self.tier <= 2
             or self.unit != "flag"
+            or type(self.amount) not in (int, float)
+            or not math.isfinite(self.amount)
+            or self.amount < 0
+            or not isinstance(self.evidence_group, str)
+            or (self.evidence_group and not re.fullmatch(r"[a-z][a-z0-9_]*", self.evidence_group))
         ):
             raise ValueError("RankTerm 必须绑定事实、目标与 1..2 的 flag 需求档")
 
@@ -116,6 +128,27 @@ class ActionCard:
     political_when: tuple[CostPredicate, ...] = ()
     zero_cost_reason: str = ""
     rank_terms: tuple[RankTerm, ...] = ()
+    variant_group: str = ""
+    variant_priority: int = 0
+    cause_group: str = ""
+    commitment_cost_id: str = ""
+    political_cost_id: str = ""
+
+    def __post_init__(self) -> None:
+        for value in (
+            self.variant_group,
+            self.cause_group,
+            self.commitment_cost_id,
+            self.political_cost_id,
+        ):
+            if not isinstance(value, str) or (
+                value and not re.fullmatch(r"[a-z][a-z0-9_]*", value)
+            ):
+                raise ValueError("行动分组和共享成本必须使用小写 ID")
+        if type(self.variant_priority) is not int or (
+            self.variant_priority and not self.variant_group
+        ):
+            raise ValueError("variant_priority 必须是显式 variant_group 的整数优先级")
 
 
 @dataclass(frozen=True, slots=True)

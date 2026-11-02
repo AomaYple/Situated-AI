@@ -6,6 +6,8 @@ import re
 import tomllib
 from typing import TYPE_CHECKING
 
+from ..model import Assignment, Block, Scalar  # noqa: TID252
+from ..parser import parse_text  # noqa: TID252
 from .schema import EvidenceSpec
 
 if TYPE_CHECKING:
@@ -17,6 +19,46 @@ _TRIGGER = re.compile(
 )
 _REFRESH = {"consumer", "monthly", "shock"}
 _UNKNOWN = {"vanilla", "conservative", "lower_tier"}
+
+
+def scalar_predicate_engine(trigger: str) -> str | None:
+    """Accept an atom or a bounded conjunction on one scalar, without scopes.
+
+    Range checks belong to the same observation as its threshold. Arbitrary
+    nested expressions, mixed readers, prefixes and quoted values are rejected.
+    """
+    if _TRIGGER.fullmatch(trigger):
+        match = re.match(r"[a-z][a-z0-9_]*", trigger)
+        assert match is not None
+        return match[0]
+    if len(trigger) > 2048:
+        return None
+    parsed = parse_text(trigger)
+    if parsed.errors or len(parsed.root.items) != 1:
+        return None
+    outer = parsed.root.items[0]
+    if (
+        not isinstance(outer, Assignment)
+        or outer.key != "AND"
+        or outer.op != "="
+        or outer.prefix is not None
+        or not isinstance(outer.value, Block)
+        or not 2 <= len(outer.value.items) <= 8
+    ):
+        return None
+    engine = None
+    for atom in outer.value.items:
+        if (
+            not isinstance(atom, Assignment)
+            or atom.prefix is not None
+            or not isinstance(atom.value, Scalar)
+            or atom.value.quoted
+            or not _TRIGGER.fullmatch(f"{atom.key} {atom.op} {atom.value.text}")
+            or (engine is not None and atom.key != engine)
+        ):
+            return None
+        engine = atom.key
+    return engine
 
 
 def load(source: Path) -> tuple[EvidenceSpec, ...]:
@@ -39,7 +81,8 @@ def load(source: Path) -> tuple[EvidenceSpec, ...]:
             or raw["unknown"] not in _UNKNOWN
             or raw["kind"] not in {"boolean", "number", "ratio", "enum"}
             or raw["scope"] not in {"root", "target_country", "target_state"}
-            or not _TRIGGER.fullmatch(raw["trigger"])
+            or scalar_predicate_engine(raw["trigger"]) is None
+            or (not _TRIGGER.fullmatch(raw["trigger"]) and raw["kind"] != "boolean")
             or raw.get("quality", "observed") not in {"observed", "derived", "declared", "unknown"}
         ):
             raise ValueError(f"事实 {key} 的类型、作用域、刷新、未知或 trigger 无效")

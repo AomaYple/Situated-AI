@@ -33,7 +33,7 @@ def _facts(**updates: object | None) -> dict[str, object | None]:
 
 def test_pdx_evaluator_selects_crisis_before_normal_capacity() -> None:
     result = select(_overlays()["diplomatic_play_neutrality"], _facts(in_default=True))
-    assert (result.action_id, result.fallback) == ("fiscal_recovery", "selected")
+    assert (result.action_id, result.fallback) == ("joint_fiscal_neutrality", "selected")
     assert result.operation == "add"
 
 
@@ -41,27 +41,27 @@ def test_pdx_evaluator_changes_to_wartime_defense_without_reference_call() -> No
     result = select(
         _overlays()["diplomatic_play_neutrality"], _facts(is_at_war=True, in_default=False)
     )
-    assert result == result.__class__("wartime_defense", "add", 6.0, "selected")
+    assert result == result.__class__("joint_fiscal_neutrality", "add", 6.0, "selected")
 
 
 def test_wartime_defense_yields_to_fiscal_recovery_while_in_default() -> None:
-    """The symmetric substitute pair is ordered once, rather than deadlocking."""
+    """Both pressures contribute 8-1 and 6-1, then the consumer clamps 12 to 10."""
 
     result = select(
         _overlays()["diplomatic_play_neutrality"],
         _facts(is_at_war=True, in_default=True),
     )
-    assert result == result.__class__("fiscal_recovery", "add", 8.0, "selected")
+    assert result == result.__class__("joint_fiscal_neutrality", "add", 10.0, "selected")
 
 
 def test_diplomatic_restraint_keeps_its_negative_add_in_war() -> None:
     result = select(_overlays()["recklessness"], _facts(is_at_war=True))
-    assert result == result.__class__("diplomatic_restraint", "add", -4.0, "selected")
+    assert result == result.__class__("joint_diplomatic_recklessness", "add", -4.0, "selected")
 
 
 def test_reform_layers_select_progressive_window_when_stable() -> None:
     result = select(_overlays()["max_progressiveness"], _facts())
-    assert result == result.__class__("reform_progressive_window", "add", 4.0, "selected")
+    assert result == result.__class__("joint_max_progressiveness", "add", 4.0, "selected")
 
 
 def test_reform_layers_select_conservative_guard_under_domestic_crisis() -> None:
@@ -69,45 +69,49 @@ def test_reform_layers_select_conservative_guard_under_domestic_crisis() -> None
         _overlays()["max_regressiveness"],
         _facts(in_default=True, any_insurrection_ongoing=True),
     )
-    assert result == result.__class__("reform_conservative_guard", "add", 5.0, "selected")
+    assert result == result.__class__("joint_max_regressiveness", "add", 5.0, "selected")
 
 
 def test_diplomatic_layers_add_boldness_and_aggression_only_inside_capacity_window() -> None:
     boldness = select(_overlays()["diplomatic_play_boldness"], _facts())
     aggression = select(_overlays()["aggression"], _facts())
-    assert boldness == boldness.__class__("diplomatic_boldness_window", "add", 6.75, "selected")
-    assert aggression == aggression.__class__(
-        "diplomatic_aggression_guard", "add", 0.075, "selected"
+    assert boldness == boldness.__class__("joint_diplomatic_play_boldness", "add", 6.75, "selected")
+    assert (aggression.action_id, aggression.operation, aggression.fallback) == (
+        "joint_aggression",
+        "add",
+        "selected",
     )
+    assert aggression.delta == pytest.approx(0.075)
 
 
 def test_unknown_peace_does_not_fall_through_to_diplomatic_opening() -> None:
-    """Unknown war/peace state is a vanilla boundary for the first candidate."""
+    """Each contribution needs war or peace; neither can infer the missing fact."""
 
     result = select(_overlays()["recklessness"], _facts(is_at_war=None))
-    assert result == result.__class__("diplomatic_restraint", None, 0.0, "unknown")
+    assert result == result.__class__("joint_diplomatic_recklessness", "add", 0.0, "selected")
 
 
 def test_unknown_high_priority_action_does_not_fall_through_to_known_lower_action() -> None:
-    """Unknown default status blocks the lower wartime candidate as in the reference path."""
+    """Unknown default removes fiscal recovery but preserves independently known war."""
 
     result = select(
         _overlays()["diplomatic_play_neutrality"],
         _facts(in_default=None, is_at_war=True),
     )
-    assert result == result.__class__("fiscal_recovery", None, 0.0, "unknown")
+    assert result == result.__class__("joint_fiscal_neutrality", "add", 6.0, "selected")
 
 
 def test_pdx_evaluator_keeps_local_economy_and_education_paths_reachable() -> None:
     result = select(_overlays()["economic_vs_government_spending_balance"], _facts())
-    assert result.action_id == "education_and_research"
-    assert result.delta == 0.65
+    assert result.action_id == "joint_economic_balance"
+    assert result.delta == pytest.approx(0.025)
 
 
 def test_unknown_core_fact_is_an_explicit_unknown_fallback() -> None:
     result = select(_overlays()["economic_vs_government_spending_balance"], _facts(is_at_war=None))
-    assert result.fallback == "unknown"
-    assert result.action_id == "education_and_research"
+    assert result.fallback == "selected"
+    assert result.delta == pytest.approx(0.025)
+    assert result.action_id == "joint_economic_balance"
 
 
 def test_player_boundary_falls_back_to_vanilla() -> None:
@@ -128,52 +132,36 @@ def test_unknown_complement_falls_back_to_known_base_delta() -> None:
         _overlays()["economic_vs_government_spending_balance"],
         _facts(bureaucracy=None, legitimacy=60),
     )
-    assert result.action_id == "education_and_research"
+    assert result.action_id == "joint_economic_balance"
     assert result.fallback == "selected"
-    assert result.delta == 0.65
+    assert result.delta == pytest.approx(0.05)
 
 
 def test_nested_complement_is_part_of_the_generated_delta() -> None:
-    model = load_model()
-    rows = tuple(
-        replace(row, max_delta=3.0) if row.action_id == "education_and_research" else row
-        for row in model.decision_ir
-    )
-    bundle = model.consumer_ir
-    assert bundle is not None
-    by_id = {row.action_id: row for row in rows}
-    model = replace(
-        model,
-        actions=tuple(
-            replace(action, max_delta=3.0) if action.id == "education_and_research" else action
-            for action in model.actions
-        ),
-        decision_ir=rows,
-        consumer_ir=replace(
-            bundle,
-            actions=rows,
-            writers=tuple(
-                replace(writer, action=by_id[writer.definition])
-                if writer.kind == "action_card"
-                else writer
-                for writer in bundle.writers
-            ),
-        ),
-    )
-    overlay = strategy_overlay(model)["economic_vs_government_spending_balance"]
+    overlay = _overlays()["economic_vs_government_spending_balance"]
     result = select(overlay, _facts())
-    assert result.delta == 0.65
+    # With conservative cost: industry .05, education 0, and the explicit
+    # bureaucracy complement adds -.025 to the education direction.
+    assert result.delta == pytest.approx(0.025)
     without_bureaucracy = select(overlay, _facts(bureaucracy=0))
-    assert without_bureaucracy.action_id == "education_and_research"
-    assert without_bureaucracy.delta == 0.65
+    assert without_bureaucracy.action_id == "joint_economic_balance"
+    assert without_bureaucracy.delta == pytest.approx(0.05)
 
 
 def test_complement_must_not_exceed_action_limit() -> None:
     model = load_model()
-    action = next(item for item in model.actions if item.id == "education_and_research")
-    result = select(_overlays()["economic_vs_government_spending_balance"], _facts())
-    assert result.action_id == action.id
-    assert abs(result.delta) <= action.max_delta
+    # The consumer owns the final limit; a smaller bound clamps the signed sum
+    # once, after the industry and education contributions and their links.
+    model = replace(
+        model,
+        consumers=tuple(
+            replace(consumer, max_delta=0.01) if consumer.id == "economic_balance" else consumer
+            for consumer in model.consumers
+        ),
+    )
+    result = select(strategy_overlay(model)["economic_vs_government_spending_balance"], _facts())
+    assert result.action_id == "joint_economic_balance"
+    assert result.delta == pytest.approx(0.01)
 
 
 def _condition_block(text: str) -> Block:

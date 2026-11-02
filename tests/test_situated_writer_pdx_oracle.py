@@ -301,9 +301,7 @@ def generated():
     assert model.consumer_ir is not None
     inputs = decision_adapters.read_inputs(adapters)
     policies = ((INFO, info), *adapters.policies)
-    compiled = tuple(
-        (source, compiler.compile_policy(policy, source, model)[0]) for source, policy in policies
-    )
+    compiled, _report = compiler.compile_sources(info, adapters, config_model=model)
     by_source = dict(compiled)
     country = country_state.load()
     files, _ = decision_adapters.build(
@@ -538,7 +536,7 @@ def test_every_legacy_writer_has_generated_ast_semantics(generated):
             limit = branch.first("limit")
             assert limit is not None, identity
             assert isinstance(limit.value, Block), identity
-            write = branch.first(rule.operation)
+            write = branch.first("add")
             assert write is not None, identity
             if isinstance(write.value, Block):
                 literal = write.value.first("value")
@@ -547,7 +545,8 @@ def test_every_legacy_writer_has_generated_ast_semantics(generated):
             assert literal is not None, identity
             assert not isinstance(literal.value, Block), identity
             assert literal.value is not None, identity
-            assert float(literal.value.unquoted) == rule.value, identity
+            neutral = 1.0 if rule.operation == "multiply" else 0.0
+            assert float(literal.value.unquoted) == pytest.approx(rule.value - neutral), identity
             for case, values, is_ai in _cases(policy, rule, reader_index):
                 counts[case.split(":", 1)[0]] += 1
                 expected = _truth(rule, values, reader_index) if is_ai else False
@@ -572,8 +571,8 @@ def test_every_legacy_writer_has_generated_ast_semantics(generated):
                 if expected is True:
                     assert (selected.action_id, selected.operation, selected.delta) == (
                         rule.id,
-                        rule.operation,
-                        rule.value,
+                        "add",
+                        pytest.approx(rule.value - neutral),
                     ), f"{source}:{rule.id}/{case}: {selected}"
                 elif expected is False:
                     neutral_noop = selected.operation == "multiply" and selected.delta == 1.0
@@ -598,37 +597,90 @@ def _consumer_overlay(text: str, field: str) -> str:
     """Keep the entire production priority chain, including unknown guards."""
     begin = text.index(f"# SITAI BEGIN information:{field}")
     end = text.index(f"# SITAI END information:{field}", begin)
-    lines: list[str] = []
-    for line in text[begin:end].splitlines()[1:]:
-        if line.lstrip().startswith(("if =", "else_if =")) and (
-            not lines or _MARKER.match(lines[-1]) is None
-        ):
-            # Guards have no public writer identity. Give only the independent
-            # interpreter a label, without changing their conditions or effects.
-            lines.append("# unknown_guard [context]; preserve original")
-        lines.append(line)
-    return "\n".join(lines)
+    return "\n".join(text[begin:end].splitlines()[1:])
+
+
+@dataclass(frozen=True)
+class _ParsedProgram:
+    identity: str
+    limit: Block
+    effect: Assignment
+
+    @classmethod
+    def build(cls, text: str):
+        parsed = parse_text(text)
+        assert not parsed.errors, parsed.errors
+        branches = _ordinary_assignments(parsed.root)
+        assert len(branches) == 1
+        branch = branches[0]
+        assert branch.key == "if"
+        assert isinstance(branch.value, Block)
+        limit, effect = _ordinary_assignments(branch.value)
+        assert limit.key == "limit"
+        assert isinstance(limit.value, Block)
+        assert effect.key in {"add", "multiply"}
+        assert isinstance(effect.value, Block)
+        marker = re.search(r"# ACTION (program_[0-9a-f]+) ", text)
+        assert marker is not None
+        return cls(marker.group(1), limit.value, effect)
+
+    def select(self, facts):
+        state = pdx_eval.condition(self.limit, facts)
+        if state is not True:
+            return pdx_eval.PdxDecision(None, None, 0.0, "vanilla")
+        # Actual numeric AST interpreter; no source rule, grouping or production
+        # reference selector participates in this evaluation.
+        return pdx_eval.PdxDecision(
+            self.identity, self.effect.key, pdx_eval._numeric_value(self.effect, facts), "selected"
+        )
+
+
+def _independent_net(rules, values, reader_index, selected):
+    """Source-level oracle: strongest known tier per declared cause/direction."""
+    operation = rules[0].operation
+    neutral = 1.0 if operation == "multiply" else 0.0
+    envelopes = defaultdict(list)
+    for rule in rules:
+        envelopes[(rule.contribution_group, rule.value >= neutral)].append(rule)
+    lower = neutral + sum(
+        min(0.0, *(r.value - neutral for r in group)) for group in envelopes.values()
+    )
+    upper = neutral + sum(
+        max(0.0, *(r.value - neutral for r in group)) for group in envelopes.values()
+    )
+    lower, upper = (
+        (max(0.5, lower), min(1.5, upper)) if neutral else (max(-50, lower), min(50, upper))
+    )
+    net = neutral
+    for (_cause, positive), group in sorted(envelopes.items()):
+        matches = [
+            rule.value - neutral
+            for rule in group
+            if rule.domain in selected and _truth(rule, values, reader_index) is True
+        ]
+        if matches:
+            net += max(matches) if positive else min(matches)
+    return operation, max(lower, min(upper, net))
 
 
 def test_complete_consumer_priority_matches_independent_oracle(generated):
-    """An isolated branch passing cannot prove its place in the real consumer."""
+    """Every writer's states exercise the complete bounded consumer program."""
     policies, _model, files, info_text, _inputs, _baseline = generated
     counts: Counter[str] = Counter()
     fields_checked = 0
     for source, policy in policies:
         reader_index = _ReaderIndex.build(policy)
-        fields: dict[tuple[str, ...], list[decision_rules.Rule]] = {}
+        fields = defaultdict(list)
         for rule in policy.rules:
             if rule.domain in policy.enabled_domains:
-                fields.setdefault(rule.field, []).append(rule)
+                fields[rule.field].append(rule)
         for field, rules in fields.items():
-            rules.sort(key=lambda rule: -rule.priority)
             output = (
                 INFO if source == INFO else action_instances._output_source(source, ".".join(field))
             )
             text = info_text if source == INFO else files[output]
             overlay = _consumer_overlay(text, ".".join(field))
-            parsed_chain = _ParsedChain.build(overlay)
+            actual_program = _ParsedProgram.build(overlay)
             fields_checked += 1
             compared_text_states = set()
             for target in rules:
@@ -637,57 +689,31 @@ def test_complete_consumer_priority_matches_independent_oracle(generated):
                     kind = case.split(":", 1)[0]
                     target_cases[kind] += 1
                     counts[kind] += 1
-                    expected = None
-                    expected_unknown = False
-                    for candidate in rules if is_ai else ():
-                        truth = _truth(candidate, values, reader_index)
-                        if truth is None and candidate.auxiliary_facts:
-                            core = replace(
-                                candidate,
-                                conditions=tuple(
-                                    p
-                                    for p in candidate.conditions
-                                    if p.fact not in candidate.auxiliary_facts
-                                ),
-                            )
-                            if _truth(core, values, reader_index) is True:
-                                truth = False
-                        if truth is None:
-                            expected_unknown = True
-                            break
-                        if truth is True:
-                            expected = candidate
-                            break
-                    engine_facts = _facts(policy, values, is_ai=is_ai, reader_index=reader_index)
-                    actual = parsed_chain.select(engine_facts)
-                    # Validate the independent immutable AST evaluator against the
-                    # public text interpreter for each observed control state
-                    # of every actual complete field, including player.
-                    state = (is_ai, actual.fallback, actual.operation)
+                    engine = _facts(policy, values, is_ai=is_ai, reader_index=reader_index)
+                    actual = actual_program.select(engine)
+                    state = (is_ai, actual.operation, actual.delta)
                     if state not in compared_text_states:
-                        assert actual == pdx_eval.select(overlay, engine_facts)
+                        assert actual == pdx_eval.select(overlay, engine)
                         compared_text_states.add(state)
                     identity = (source, field, target.id, case)
-                    if expected is None:
-                        assert actual.operation is None or (
-                            actual.operation == "multiply" and actual.delta == 1
-                        ), (identity, actual)
-                        counts["unknown_priority" if expected_unknown else "no_match"] += 1
-                    else:
-                        assert (actual.action_id, actual.operation, actual.delta) == (
-                            expected.id,
-                            expected.operation,
-                            expected.value,
-                        ), (identity, expected, actual)
-                        counts["selected"] += 1
+                    if not is_ai:
+                        assert actual == pdx_eval.PdxDecision(None, None, 0.0, "vanilla"), identity
+                        continue
+                    operation, expected = _independent_net(
+                        rules, values, reader_index, policy.enabled_domains
+                    )
+                    assert actual.action_id == actual_program.identity, identity
+                    assert actual.operation == operation, identity
+                    assert actual.delta == pytest.approx(expected), (identity, expected, actual)
+                    counts["local_unknown" if kind == "unknown" else "known_state"] += 1
                 assert target_cases["positive"] == target_cases["player"] == 1
                 assert target_cases["unknown"] >= len(target.input_keys())
                 assert target_cases["negative"] >= 1
-                numeric_conditions = sum(type(p.value) in (int, float) for p in target.conditions)
-                assert target_cases["threshold"] == numeric_conditions * 3
+                numeric = sum(type(p.value) in (int, float) for p in target.conditions)
+                assert target_cases["threshold"] == numeric * 3
     expected_count = sum(len(policy.rules) for _, policy in policies)
     assert counts["positive"] == counts["player"] == expected_count
-    assert counts["unknown_priority"] > 0
-    assert counts["selected"] > 0
+    assert counts["local_unknown"] > 0
+    assert counts["known_state"] > 0
     assert fields_checked > 0
     print("writer_oracle_complete", {"fields": fields_checked, **dict(counts)})

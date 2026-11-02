@@ -17,6 +17,20 @@ def _all_rules():
     )
 
 
+def test_joint_variant_witness_decodes_decimal_neutral_without_binary_rounding():
+    text = (
+        "# ACTION program_example [joint]; consumer\n"
+        "if = { limit = { is_ai = yes } multiply = { value = 1\n"
+        "# tier [fiscal]; local contribution\n"
+        "if = { limit = { in_default = yes } add = -0.18 }\n"
+        "min = 0.5 max = 1.5 } }\n"
+    )
+    (witness,) = lowering.witnesses({"sample.txt": text})
+    assert witness.action_id == "tier"
+    assert witness.operation == "multiply"
+    assert witness.value == 0.82
+
+
 def test_ir_is_stable_and_complete_for_all_production_rules():
     items = ir.from_rules(_all_rules())
     assert len(items) == 1455

@@ -58,15 +58,13 @@ def test_行动降低为有限原版消费者条件块():
     assert set(overlay) == {item.field for item in model.consumers}
     for consumer in model.consumers:
         text = overlay[consumer.field]
-        # 需求与成本分区会把同一候选复制到互斥叶；预算约束针对每个叶的
-        # 可同时评估候选，而不是整份脚本文本中的 marker 总数。
+        # Each action contributes exactly once to one bounded numeric program;
+        # joint lowering must not duplicate candidates into combinatorial leaves.
         rows = [row for row in model.decision_ir if row.consumer_id == consumer.id]
         assert len(rows) <= consumer.budget
         ids = re.findall(r"# ACTION ([a-z][a-z0-9_]*) ", text)
-        assert set(ids) == {row.action_id for row in rows}
-        # 当前真实经济消费者是两个成本档 × 两个需求事实，共16个互斥叶。
-        # 固定当前16叶上限，比计划的512叶硬预算更严格，不能无限扩张。
-        assert len(ids) <= 16 * consumer.budget
+        assert set(ids) == {f"joint_{consumer.id}", *(row.action_id for row in rows)}
+        assert len(ids) == len(rows) + 1
         parsed = parse_text(text)
         assert not parsed.errors
         assert _max_exclusive_writes(parsed.root) == 1
@@ -87,14 +85,19 @@ def test_互补关系是软增量而不是全满足硬门槛():
     # 教育与产业互补只能改变有界增量；不能把对方完整条件复制进
     # 当前行动的 limit，避免重新形成全满足门槛。
     assert set(re.findall(r"# ACTION ([a-z][a-z0-9_]*) ", economy)) == {
+        "joint_economic_balance",
         "industrial_foundation",
         "education_and_research",
     }
     assert "industrial_foundation" in economy
     assert "education_and_research" in economy
-    for block in economy.split("# ACTION ")[1:]:
-        top_level = block.split("\n\t\t\tadd =", 1)[0]
-        assert top_level.count("is_at_war = no") == 1
+    # World facts annotate each signed contribution. Neither opportunity
+    # copies the other action's full qualification or uses peace as a gate.
+    assert "literacy_rate >= 0.5" in economy
+    assert "bureaucracy > 0" in economy
+    assert "is_at_war = no" not in economy
+    assert "value = -0.1" in economy
+    assert "value = 0.15" in economy
 
 
 def test_关系条件支持真假未知三值传播():
@@ -103,8 +106,8 @@ def test_关系条件支持真假未知三值传播():
         for item in load_model().relations
         if item.source == "industrial_foundation" and item.target == "education_and_research"
     )
-    assert _relation_conditions(relation, {"peace": True}) is True
-    assert _relation_conditions(relation, {"peace": False}) is False
+    assert _relation_conditions(relation, {"literacy_ready": True}) is True
+    assert _relation_conditions(relation, {"literacy_ready": False}) is False
     assert _relation_conditions(relation, {}) is None
 
 
@@ -180,7 +183,7 @@ def test_关系对称配对且仅使能关系禁止有向环():
         for item in model.relations
         if item.source == "industrial_foundation" and item.target == "education_and_research"
     )
-    assert relation.condition_facts == ("peace",)
+    assert relation.condition_facts == ("literacy_ready",)
     assert relation.unknown_policy == "vanilla"
     assert all(
         (item.target, item.source, item.kind)
