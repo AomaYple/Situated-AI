@@ -1,20 +1,54 @@
-"""Auxiliary tier semantics: explicit source -> IR -> real generated PDX."""
+"""Named production employment slices: source -> IR -> real generated PDX."""
+
+from dataclasses import replace
 
 import pytest
 import test_situated_local_foundations as foundations
 from test_situated_local_foundations import (
     _facts,
     _overlay,
-    _values,
+)
+from test_situated_local_foundations import (
+    _values as _foundation_values,
 )
 
-from pdx import decision_rules
-from pdx.situated import pdx_eval
+from pdx import decision_adapters, decision_rules
+from pdx.situated import pdx_eval, programs
 
-production = foundations.production
 generated = foundations.generated
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(scope="module")
+def production():
+    """Keep the exact employment/input/base variants; full consumers live elsewhere."""
+    source = "common/buildings/01_industry.txt"
+    adapters = decision_adapters.load()
+    policy = dict(adapters.policies)[source]
+    identities = {
+        "active_building_food_industry_pm_bakery_input_grain",
+        "active_building_food_industry_pm_bakery_output_groceries",
+        "comparative_employment_active_building_food_industry_pm_bakery_output_groceries",
+        "active_building_textile_mill_pm_handsewn_clothes_input_fabric",
+        "active_building_textile_mill_pm_handsewn_clothes_output_clothes",
+        "borrowing_foundation_building_textile_mill",
+        "lj06_employment_textile_unemployment_support",
+    }
+    rules = tuple(rule for rule in policy.rules if rule.id in identities)
+    assert {rule.id for rule in rules} == identities
+    keys = {key for rule in rules for key in rule.input_keys()}
+    selected = replace(
+        policy, rules=rules, readers=tuple(r for r in policy.readers if r.key in keys)
+    )
+    return adapters, {source: programs.enable(selected, source=source)}
+
+
+def _values(policy, target, pm):
+    values = _foundation_values(policy, target, pm)
+    if target == "food_industry":
+        values.update(state_owner_loans=False, state_owner_reserves=1)
+    return values
 
 
 @pytest.mark.integration
@@ -26,7 +60,9 @@ pytestmark = pytest.mark.unit
     ("case", "expected"),
     [("aux_unknown", 1.05), ("core_unknown", 1), ("aux_proven", 1.3)],
 )
-def test_complete_real_consumer_auxiliary_tiers(production, generated, target, pm, case, expected):
+def test_named_production_employment_tiers(production, generated, target, pm, case, expected):
+    if target == "food_industry" and case == "aux_unknown":
+        expected = 1.2
     source = "common/buildings/01_industry.txt"
     policy = production[1][source]
     values = _values(policy, target, pm)
@@ -82,6 +118,21 @@ def test_complete_real_consumer_auxiliary_tiers(production, generated, target, p
 def test_handwritten_real_tier_boundaries(
     production, generated, target, pm, cost, output, case, expected
 ):
+    if target == "food_industry" and case in {
+        "none",
+        "nan",
+        "inf",
+        "invalid",
+        "bool",
+        "out_low",
+        "out_high",
+        "missing",
+        "below",
+        "cost_balance_unknown",
+    }:
+        # Unknown unemployment skips this exact variant; the demand base remains.
+        # Grain balance is intentionally absent from both canonical conditions.
+        expected = 1.2
     source = "common/buildings/01_industry.txt"
     policy = production[1][source]
     values = _values(policy, target, pm)
@@ -250,7 +301,10 @@ def test_explicit_auxiliary_opt_ins_and_ir_drift_are_checked_per_source():
     from pdx.situated import compiler, decision_ir, ir
 
     model = compiler.load_model()
-    policies = decision_adapters.load().policies
+    policies = (
+        ("mod/decisions/information.toml", decision_rules.load()),
+        *decision_adapters.load().policies,
+    )
     opted = [
         (source, policy, rule)
         for source, policy in policies
@@ -258,13 +312,40 @@ def test_explicit_auxiliary_opt_ins_and_ir_drift_are_checked_per_source():
         if rule.auxiliary_facts
     ]
     assert {rule.id: rule.auxiliary_facts for _, _, rule in opted} == {
-        "lj06_employment_food_unemployment_support": ("state_unemployment",),
         "lj06_employment_textile_unemployment_support": ("state_unemployment",),
         "d6_steelworking_tools_shortage_pressure": ("tools_price",),
         "d6_rifling_small_arms_shortage_pressure": ("small_arms_price",),
         "d6_gantry_cranes_steamers_shortage_pressure": ("steamers_price",),
+        "s2_corporatism_movement_pressure_upgrade": ("insurrection",),
+        "s2_international_exchange_standards_borrowing_pressure": ("debt_ratio",),
+        "s2_mutual_funds_borrowing_pressure": ("debt_ratio",),
+        "s2_next_elevator_observed_absorption": (
+            "industrial_workforce",
+            "bureaucracy",
+            "net_surplus",
+        ),
+        "s2_next_steel_frame_buildings_observed_absorption": (
+            "industrial_workforce",
+            "bureaucracy",
+            "net_surplus",
+        ),
+        "s2_urban_planning_observed_absorption": (
+            "industrial_workforce",
+            "bureaucracy",
+            "net_surplus",
+        ),
+        "s2_urbanization_observed_absorption": (
+            "industrial_workforce",
+            "bureaucracy",
+            "net_surplus",
+        ),
+        "wartime_army_administrative_capacity": ("bureaucracy",),
+        "wartime_army_capacity": ("net_surplus", "bureaucracy"),
+        "wartime_army_fiscal_capacity": ("net_surplus",),
+        "wartime_navy_administrative_capacity": ("bureaucracy",),
+        "wartime_navy_capacity": ("net_surplus", "bureaucracy"),
+        "wartime_navy_fiscal_capacity": ("net_surplus",),
     }
-    assert not any(r.auxiliary_facts for r in decision_rules.load().rules)
     assert model.consumer_ir is not None
     for source, policy, rule in opted:
         assert ir.from_rule(rule, source="test").to_rule() == rule
@@ -373,7 +454,8 @@ def test_review_p1_auxiliary_proven_cannot_bypass_unknown_cost_or_financing(
     observed = pdx_eval.select(_overlay(generated[1][source], field), _facts(policy, values))
     # Both channels are evaluated before asserting so the first red records both.
     actual = (result[1] if result else 1, observed.delta if observed.operation == "multiply" else 1)
-    assert actual == pytest.approx((1, 1)), (target, key, result, observed)
+    expected = 1.3 if target == "food_industry" and unknown == "balance" else 1
+    assert actual == pytest.approx((expected, expected)), (target, key, result, observed)
 
 
 @pytest.mark.integration
@@ -419,7 +501,12 @@ def test_review_p1_crosses_auxiliary_with_each_invalid_core(
     values[key] = invalid
     field = f"building_{target}.ai_value"
     reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
-    assert (reference[1] if reference else 1) == 1
+    expected = (
+        (1.3 if auxiliary == 0.1 else 1.2)
+        if target == "food_industry" and key_kind == "input_balance"
+        else 1
+    )
+    assert (reference[1] if reference else 1) == expected
     if key_kind == "pm" and invalid is not None:
         # Parameterized observations retain the interpreter's existing strict
         # type contract; malformed observation data is rejected, not coerced.
@@ -427,7 +514,7 @@ def test_review_p1_crosses_auxiliary_with_each_invalid_core(
             pdx_eval.select(_overlay(generated[1][source], field), _facts(policy, values))
         return
     actual = pdx_eval.select(_overlay(generated[1][source], field), _facts(policy, values))
-    assert actual.operation is None or actual.delta == 1
+    assert (actual.delta if actual.operation == "multiply" else 1) == expected
 
 
 @pytest.mark.integration
@@ -439,9 +526,11 @@ def test_review_p1_crosses_auxiliary_with_each_invalid_core(
     ("loans", "auxiliary", "expected"),
     [(True, 0.1, 1.3), (False, 0.1, 1.3), (True, None, 1.05), (False, None, 1.2)],
 )
-def test_known_financing_does_not_require_taking_loans(
+def test_known_financing_respects_each_production_employment_contract(
     production, generated, target, pm, loans, auxiliary, expected
 ):
+    if target == "food_industry":
+        expected = 1 if loans else (1.3 if auxiliary == 0.1 else 1.2)
     source = "common/buildings/01_industry.txt"
     policy = production[1][source]
     values = _values(policy, target, pm)
@@ -451,6 +540,46 @@ def test_known_financing_does_not_require_taking_loans(
     actual = pdx_eval.select(_overlay(generated[1][source], field), _facts(policy, values))
     assert (reference[1] if reference else 1) == pytest.approx(expected)
     assert actual.delta == pytest.approx(expected)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("key", "value", "expected"),
+    [
+        ("state_owner_reserves", 1, 1.3),
+        ("state_owner_reserves", 0, 1.2),
+        ("state_owner_reserves", -1, 1.2),
+        ("state_owner_reserves", None, 1.2),
+        ("state_owner_reserves", "invalid", 1.2),
+        ("state_owner_reserves", float("nan"), 1.2),
+        ("state_owner_loans", True, 1),
+        ("state_owner_loans", None, 1),
+        ("state_unemployment", 0.099, 1.2),
+        ("state_unemployment", 0.1, 1.3),
+        ("state_unemployment", None, 1.2),
+        ("state_owner_grain_balance", -1, 1.3),
+        ("state_owner_grain_balance", None, 1.3),
+        ("state_owner_grain_price", 0.25, 1.3),
+        ("state_owner_grain_price", 0.251, 1),
+        ("state_owner_groceries_price", 0.25, 1),
+    ],
+)
+def test_canonical_food_employment_gates_reach_generated_pdx(
+    production, generated, key, value, expected
+):
+    source = "common/buildings/01_industry.txt"
+    policy = production[1][source]
+    values = _values(policy, "food_industry", "pm_bakery")
+    values["state_unemployment"] = 0.1
+    values[key] = value
+    reference = decision_rules.evaluate(policy, values, is_ai=True).get(
+        "building_food_industry.ai_value"
+    )
+    actual = pdx_eval.select(
+        _overlay(generated[1][source], "building_food_industry.ai_value"), _facts(policy, values)
+    )
+    assert (reference[1] if reference else 1) == pytest.approx(expected)
+    assert (actual.delta if actual.operation == "multiply" else 1) == pytest.approx(expected)
 
 
 def test_required_known_is_a_real_core_input_and_rejects_ir_drift():

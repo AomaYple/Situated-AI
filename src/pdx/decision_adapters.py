@@ -17,6 +17,7 @@ from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 from . import (
+    building_opportunities,
     company_sectors,
     config,
     decision_intents,
@@ -122,6 +123,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     } or (type(data["schema"]) is not int or data["schema"] != 1):
         raise ValueError("消费者适配 schema 无效")
     sector_digest = None
+    opportunity_digest = None
     if source == SOURCE:
         if (
             not isinstance(data["sources"], dict)
@@ -145,6 +147,18 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         data["rules"].extend(sectors["rules"])
         data.setdefault("initial_values", []).extend(company_sectors.initialized_fields(sectors))
         sector_digest = hashlib.sha256(company_sectors.BASELINE.read_bytes()).hexdigest()
+        opportunity = building_opportunities.derive(data, sectors)
+        for collection in ("sources", "readers"):
+            for key, value in opportunity[collection].items():
+                if key in data[collection] and data[collection][key] != value:
+                    raise ValueError(f"建筑基础机会与消费者源冲突：{collection}/{key}")
+                data[collection][key] = value
+        data["rules"].extend(opportunity["rules"])
+        opportunity_digest = hashlib.sha256(
+            building_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(building_opportunities.__file__).read_bytes()
+        ).hexdigest()
     if not isinstance(data["sources"], dict) or not data["sources"]:
         raise ValueError("消费者适配必须锁定全部原件")
     for name, digest in data["sources"].items():
@@ -205,8 +219,12 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     used_contexts: set[str] = set()
     digest = hashlib.sha256(
         raw
-        if sector_digest is None
-        else raw + b"\0company_sectors:" + sector_digest.encode("ascii")
+        + (b"\0company_sectors:" + sector_digest.encode("ascii") if sector_digest else b"")
+        + (
+            b"\0building_opportunities:" + opportunity_digest.encode("ascii")
+            if opportunity_digest
+            else b""
+        )
     ).hexdigest()
     for name, rules in sorted(groups.items()):
         if name.startswith("common/company_types/") and any(
@@ -371,28 +389,18 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         ):
             raise ValueError("建筑常量评分缺少唯一实际消费者")
         scalar_values.append((source_name, scalar_path))
-    # Actual input pressure must win over an output opportunity on the same
-    # building field. Otherwise a scarce input can be ignored whenever the
-    # output rule happens to have the higher priority. Keep this invariant in
-    # the source contract so future generated rules cannot regress it.
+    # Joint consumers retain both directions. Priority only breaks ties within
+    # one cause/strength, so it cannot serve as an input-vs-output veto chain.
     for source_name, loaded_set in policies:
-        priority_groups: dict[tuple[str, ...], dict[str, list[int]]] = {}
         for loaded_rule in loaded_set.rules:
-            if loaded_rule.id.startswith("actual_cost_"):
-                priority_groups.setdefault(loaded_rule.field, {}).setdefault("cost", []).append(
-                    loaded_rule.priority
-                )
-            elif loaded_rule.id.startswith("actual_output_"):
-                priority_groups.setdefault(loaded_rule.field, {}).setdefault("output", []).append(
-                    loaded_rule.priority
-                )
-        for field, priority in priority_groups.items():
-            if (
-                priority.get("cost")
-                and priority.get("output")
-                and min(priority["cost"]) <= max(priority["output"])
+            is_cost = loaded_rule.id.startswith("actual_cost_")
+            is_output = loaded_rule.id.startswith("actual_output_")
+            if (is_cost or is_output) and (
+                loaded_rule.operation != "multiply"
+                or (is_cost and loaded_rule.value >= 1)
+                or (is_output and loaded_rule.value <= 1)
             ):
-                raise ValueError(f"输入短缺规则必须优先于产出规则：{source_name}/{'.'.join(field)}")
+                raise ValueError(f"实际投入/产出贡献方向错误：{source_name}/{loaded_rule.id}")
     adapters = AdapterSet(
         tuple(sorted(data["sources"].items())),
         tuple(policies),

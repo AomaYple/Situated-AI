@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from . import observation_queries
-from .model import Block
+from .model import Assignment, Block, Scalar
 from .parser import parse_text
 
 if TYPE_CHECKING:
@@ -24,6 +24,92 @@ _LJ10_EVIDENCE = Path(__file__).resolve().parents[2] / (
     "research/situated/victoria3-1.14.5-defensive-pact-reader.json"
 )
 _LJ10_EVIDENCE_SHA256 = "2237b33ebdb232e2c2061a995d471e98ca015ce06725cc00f4e7d252c63c20c6"
+SCRIPTED_PREDICATE_SOURCE = Path(__file__).resolve().parents[2] / (
+    "research/situated/victoria3-1.14.5-scripted-predicate.json"
+)
+SCRIPTED_PREDICATE_SHA256 = "128c85f83fdc007a42d19c97dad7bf8d61351be42121095e680ed1028a38918c"
+
+
+def scripted_trigger_snapshot() -> bytes:
+    """Identify the exact historical scripted predicate, never a builtin getter."""
+    raw = SCRIPTED_PREDICATE_SOURCE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != SCRIPTED_PREDICATE_SHA256:
+        raise ValueError("原版脚本布尔谓词冻结证据漂移")
+    data = json.loads(raw)
+    if data.get("reader") != {
+        "engine": "any_insurrection_ongoing",
+        "origin": "scripted_trigger",
+        "scope": "root",
+        "result": "boolean",
+        "unit": "boolean",
+        "source": "common/scripted_triggers/00_scripted_triggers.txt",
+        "line": 1117,
+        "definition": (
+            "any_insurrection_ongoing = { any_political_movement = { is_insurrectionary = yes } }"
+        ),
+    }:
+        raise ValueError("原版脚本布尔谓词精确合同漂移")
+    return raw
+
+
+def _insurrection_predicate_definition(item: Assignment) -> bool:
+    if item.op != "=" or item.prefix is not None or not isinstance(item.value, Block):
+        return False
+    if len(item.value.items) != 1:
+        return False
+    movement = item.value.items[0]
+    if (
+        not isinstance(movement, Assignment)
+        or movement.key != "any_political_movement"
+        or movement.op != "="
+        or movement.prefix is not None
+        or not isinstance(movement.value, Block)
+        or len(movement.value.items) != 1
+    ):
+        return False
+    predicate = movement.value.items[0]
+    return (
+        isinstance(predicate, Assignment)
+        and predicate.key == "is_insurrectionary"
+        and predicate.op == "="
+        and predicate.prefix is None
+        and isinstance(predicate.value, Scalar)
+        and not predicate.value.quoted
+        and predicate.value.text == "yes"
+    )
+
+
+def verify_scripted_trigger_game(game: Path) -> tuple[tuple[str, str], ...]:
+    """Require pinned native sources and one exact AST at production boundaries."""
+    data = json.loads(scripted_trigger_snapshot())
+    sources = data["sources"]
+    actual = {
+        path.relative_to(game).as_posix(): path
+        for path in (game / "common/scripted_triggers").rglob("*.txt")
+        if path.is_file()
+    }
+    if set(actual) != set(sources):
+        raise ValueError("原版脚本布尔谓词来源集合漂移")
+    definitions: list[tuple[str, Assignment]] = []
+    for source, path in sorted(actual.items()):
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != sources[source]:
+            raise ValueError(f"原版脚本布尔谓词来源SHA漂移：{source}")
+        parsed = parse_text(raw.decode("utf-8-sig"))
+        if parsed.errors:
+            raise ValueError(f"原版脚本布尔谓词来源无法解析：{source}")
+        definitions.extend(
+            (source, item)
+            for item in parsed.top_assignments
+            if item.key == "any_insurrection_ongoing"
+        )
+    if (
+        len(definitions) != 1
+        or definitions[0][0] != data["reader"]["source"]
+        or not _insurrection_predicate_definition(definitions[0][1])
+    ):
+        raise ValueError("原版脚本布尔谓词缺少唯一精确AST定义")
+    return tuple(sorted(sources.items()))
 
 
 def proven_reader_words() -> frozenset[str]:
@@ -162,6 +248,22 @@ _UNITS = {
 
 def reader_scope(reader: Reader, actor_path: tuple[str, ...]) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
+    if reader.engine == "any_insurrection_ongoing":
+        scripted_trigger_snapshot()
+        if (
+            reader.scope != "root"
+            or actor_path
+            or reader.kind != "boolean"
+            or reader.unit != "boolean"
+            or reader.argument is not None
+            or reader.path
+            or reader.parameters
+            or reader.value_field is not None
+            or reader.minimum is not None
+            or reader.maximum is not None
+        ):
+            raise ValueError(f"原版脚本布尔谓词必须保持精确国家ROOT无参数合同：{reader.key}")
+        return "country"
     if reader.engine == "market_goods_consumption" and (
         reader.scope != "root"
         or actor_path

@@ -262,7 +262,9 @@ def test_all_legacy_rules_match_independent_migration_oracle() -> None:
     historical = json.loads(migration_baseline.DEFAULT_SOURCE.read_bytes())
     frozen = {(row["source"], row["definition"]) for row in historical["rules"]}
     assert len(frozen) == 1401
-    assert frozen <= visited
+    retired = migration_baseline.validated_retirements(model.consumer_ir)
+    assert not retired & visited
+    assert frozen == (frozen & visited) | retired
     writers = tuple(writer for writer in model.consumer_ir.writers if writer.kind == "rule_action")
     identities = {(writer.source, writer.definition) for writer in writers}
     assert len(identities) == len(writers)

@@ -38,7 +38,7 @@ def test_snapshot_authorizes_only_exact_construction_and_institution_consumers()
             "wanted_construction_input_goods_surplus_ratio",
             "wanted_construction_ratio",
             "desired_tax_level",
-            "diplomatic_play_boldness",
+            "max_ship_design_complexity",
             "max_institution_spending",
         }
         & contracts.keys()

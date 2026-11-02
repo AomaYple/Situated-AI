@@ -98,6 +98,9 @@ def test_release_rejects_localization_fallback_instead_of_erasing_it(monkeypatch
     monkeypatch.setattr(distribution.decisions, "build", lambda *_args, **_kwargs: files)
     monkeypatch.setattr(distribution.country_state, "validate", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", lambda *_args: None)
+    monkeypatch.setattr(
+        distribution.decision_interfaces, "verify_scripted_trigger_game", lambda *_args: ()
+    )
     monkeypatch.setattr(distribution.engine_scope, "verify_company_game", lambda *_args: None)
     monkeypatch.setattr(
         distribution.engine_scope, "verify_company_defaults_game", lambda *_args: None
@@ -118,4 +121,18 @@ def test_production_generation_rejects_unproven_engine_before_build(monkeypatch)
     monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", reject)
     monkeypatch.setattr(distribution.decisions, "build", must_not_build)
     with pytest.raises(ValueError, match="策略引擎证据漂移"):
+        distribution.package_inputs()
+
+
+def test_production_generation_rejects_drifted_scripted_predicate_before_build(monkeypatch):
+    def reject(_game):
+        raise ValueError("scripted trigger 来源SHA漂移")
+
+    def must_not_build(*_args, **_kwargs):
+        pytest.fail("unverified scripted predicate reached the production generator")
+
+    monkeypatch.setattr(distribution.engine_scope, "verify_strategy_game", lambda *_args: None)
+    monkeypatch.setattr(distribution.decision_interfaces, "verify_scripted_trigger_game", reject)
+    monkeypatch.setattr(distribution.decisions, "build", must_not_build)
+    with pytest.raises(ValueError, match="来源SHA漂移"):
         distribution.package_inputs()

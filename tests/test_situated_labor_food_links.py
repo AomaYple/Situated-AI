@@ -19,6 +19,7 @@ FOOD = "building_food_industry.ai_value"
 TEXTILE = "building_textile_mill.ai_value"
 HEALTH = "ai_strategy_default.institution_scores.institution_health_system"
 SOCIAL = "institution_scores.institution_social_security"
+FOOD_EMPLOYMENT = "comparative_employment_active_building_food_industry_pm_bakery_output_groceries"
 
 
 def _program_id(source: str, field: str) -> str:
@@ -45,7 +46,7 @@ def policies() -> dict[str, Any]:
         INDUSTRY: _subset(
             by_source[INDUSTRY],
             {
-                "lj06_employment_food_unemployment_support",
+                FOOD_EMPLOYMENT,
                 "lj06_employment_textile_unemployment_support",
             },
         ),
@@ -70,6 +71,10 @@ def _values(policy: Any, **changes: Any) -> dict[str, Any]:
         {
             "state_unemployment": 0.2,
             "state_owner_default": False,
+            "state_owner_loans": False,
+            "state_owner_reserves": 1,
+            "state_infrastructure": 0,
+            "state_market_access": 1,
             "grain_price": 0.6,
             "grain_balance": -1,
             "default": False,
@@ -101,6 +106,14 @@ def _factor(policy: Any, field: str, **changes: Any) -> float:
         ({"state_unemployment": 0.099}, (1.0, 1.0)),
         ({"state_unemployment": None}, (1.0, 1.0)),
         ({"state_owner_default": True}, (1.0, 1.0)),
+        ({"state_owner_loans": True}, (1.0, 1.3)),
+        ({"state_owner_loans": None}, (1.0, 1.0)),
+        ({"state_owner_reserves": 0}, (1.0, 1.3)),
+        ({"state_owner_reserves": None}, (1.0, 1.3)),
+        ({"state_owner_grain_price": 0.251}, (1.0, 1.3)),
+        ({"state_owner_grain_balance": -1}, (1.3, 1.3)),
+        ({"state_owner_grain_balance": None}, (1.3, 1.3)),
+        ({"state_infrastructure": -1}, (1.0, 1.0)),
         ({"candidate_selected": True, "construction_queued": True}, (1.3, 1.3)),
     ],
 )
@@ -224,7 +237,7 @@ def generated(policies: dict[str, Any]) -> tuple[dict[str, str], dict[str, str]]
 
 
 WRITERS = [
-    (INDUSTRY, FOOD, "lj06_employment_food_unemployment_support", {}, 1.30),
+    (INDUSTRY, FOOD, FOOD_EMPLOYMENT, {}, 1.30),
     (INDUSTRY, TEXTILE, "lj06_employment_textile_unemployment_support", {}, 1.30),
     (STRATEGY, HEALTH, "lj07_grain_health_foundation", {"average_sol": 8}, 1.08),
     (STRATEGY, HEALTH, "lj07_grain_health_social_capacity", {}, 1.16),
@@ -480,6 +493,24 @@ def test_exact_scope_and_parameters_are_not_country_level_or_unrelated_methods(
         assert readers["grain_balance"].path == ("market", "mg:grain")
 
 
+def test_canonical_food_employment_uses_exact_capacity_and_reserves_without_grain_balance(
+    policies: dict[str, Any],
+) -> None:
+    rule = next(rule for rule in policies[INDUSTRY].rules if rule.id == FOOD_EMPLOYMENT)
+    assert rule.required_known_facts == ()
+    assert {(p.fact, p.op, p.value) for p in rule.conditions} == {
+        ("state_owner_default", "=", False),
+        ("state_owner_loans", "=", False),
+        ("state_infrastructure", ">=", 0),
+        ("pm_active_building_food_industry_pm_bakery", "=", True),
+        ("state_owner_groceries_price", ">", 0.25),
+        ("state_owner_groceries_balance", "<", 0),
+        ("state_owner_grain_price", "<=", 0.25),
+        ("state_unemployment", ">=", 0.1),
+        ("state_owner_reserves", ">", 0),
+    }
+
+
 @pytest.fixture(scope="module")
 def complete_industry_field_pdx() -> tuple[Any, str]:
     """Keep every competing writer on the two actual fields, including native costs."""
@@ -488,6 +519,9 @@ def complete_industry_field_pdx() -> tuple[Any, str]:
     policy = _subset(
         original, {r.id for r in original.rules if ".".join(r.field) in (FOOD, TEXTILE)}
     )
+    assert {rule.id for rule in policy.rules} == {
+        rule.id for rule in original.rules if ".".join(rule.field) in (FOOD, TEXTILE)
+    }
     model = compiler.load_model()
     compiled, _ = compiler.compile_policy(policy, INDUSTRY, model)
     fields = {r.field for r in compiled.rules}
@@ -516,19 +550,29 @@ def complete_industry_field_pdx() -> tuple[Any, str]:
     ("changes", "expected"),
     [
         ({}, (1.3, 1.3)),
-        ({"state_owner_grain_price": 0.6, "state_owner_grain_balance": -1}, (0.8, 1.3)),
-        ({"state_owner_fabric_price": 0.6, "state_owner_fabric_balance": -1}, (1.3, 0.8)),
+        # Basic observed demand +0.12 remains when actual PM input cost -0.20
+        # removes the affordable advanced tier: 1 + .12 - .20 = .92.
+        ({"state_owner_grain_price": 0.6, "state_owner_grain_balance": -1}, (0.92, 1.3)),
+        ({"state_owner_fabric_price": 0.6, "state_owner_fabric_balance": -1}, (1.3, 0.92)),
         (
             {
                 "state_owner_grain_price": 0.6,
                 "state_owner_grain_balance": -1,
                 "coord_owner_layer_expansion": True,
             },
-            # Expansion +0.18 and actual grain cost -0.20 jointly apply;
-            # textile keeps its stronger employment tier +0.30.
-            (0.98, 1.3),
+            # Retired expansion is an irrelevant decoy. Basic demand +.12
+            # and actual input -.20 remain; textile employment stays +.30.
+            (0.92, 1.3),
         ),
-        ({"state_owner_default": True}, (1, 1)),
+        # Default removes the capacity tiers, but independent observed basic
+        # demand remains: 1 + .12 - .15 = .97, rather than a global veto.
+        ({"state_owner_default": True}, (0.97, 0.97)),
+        ({"state_infrastructure": -1}, (1.02, 1.02)),
+        ({"state_infrastructure": -1, "state_owner_default": True}, (0.87, 0.87)),
+        ({"state_owner_groceries_price": None}, (1.08, 1.3)),
+        ({"state_owner_grain_price": None}, (1.12, 1.3)),
+        ({"pm_active_building_food_industry_pm_bakery": None}, (1.12, 1.3)),
+        ({"state_owner_loans": True}, (1.12, 1.3)),
         ({"state_unemployment": None}, (1.2, 1.2)),
         ({"candidate_selected": True, "construction_queued": True}, (1.3, 1.3)),
     ],

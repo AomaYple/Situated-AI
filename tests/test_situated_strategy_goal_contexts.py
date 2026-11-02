@@ -45,8 +45,8 @@ def test_new_exact_strategy_consumers_have_proven_country_root(field):
 @pytest.fixture
 def goal_proof(tmp_path, monkeypatch):
     data = json.loads(engine_scope.strategy_snapshot())
-    assert len(data["observations"]) == 325
-    points = data["observations"][169:]
+    assert len(data["observations"]) == 388
+    points = data["observations"][169:325]
     image = bytearray()
     for point in points:
         point["file_offset"] = hex(len(image))

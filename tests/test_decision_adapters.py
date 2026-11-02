@@ -34,25 +34,38 @@ if TYPE_CHECKING:
 @pytest.mark.skipif(
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
-def test_actual_input_pressure_precedes_output_opportunity():
-    """生产投入短缺必须先于同一建筑的产出机会，避免错误扩产。"""
+def test_actual_input_pressure_and_output_use_opposite_joint_groups():
+    """投入和产出都必须进入联合程序，不用优先级屏蔽另一方向。"""
+    from pdx.situated import programs
+
     adapters = decision_adapters.load()
     checked = 0
     for source, policy in adapters.policies:
-        by_field: dict[tuple[str, ...], dict[str, list[int]]] = {}
+        by_field: dict[tuple[str, ...], dict[str, list[str]]] = {}
         for rule in policy.rules:
             if rule.id.startswith(("actual_cost_", "actual_output_")):
                 by_field.setdefault(rule.field, {"cost": [], "output": []})[
                     "cost" if rule.id.startswith("actual_cost_") else "output"
-                ].append(rule.priority)
+                ].append(rule.id)
+        compiled = programs.enable(policy, source=source)
         for field, groups in by_field.items():
             if groups["cost"] and groups["output"]:
                 checked += 1
-                assert min(groups["cost"]) > max(groups["output"]), (source, field)
+                program = next(p for p in compiled.consumer_programs if p.field == field)
+                positive = {
+                    v.action_id for g in program.groups if g.direction > 0 for v in g.variants
+                }
+                negative = {
+                    v.action_id for g in program.groups if g.direction < 0 for v in g.variants
+                }
+                assert set(groups["cost"]) <= negative
+                assert set(groups["output"]) <= positive
     assert checked == 12
 
 
-def test_one_low_priority_input_rule_cannot_hide_behind_other_input_rules(tmp_path):
+def test_one_low_priority_input_rule_still_enters_joint_program(tmp_path, monkeypatch):
+    from pdx.situated import programs
+
     text = decision_adapters.SOURCE.read_text(encoding="utf-8")
     changed, count = re.subn(
         r'(id = "actual_cost_building_iron_mine_[^\n]+\n(?:[^\n]*\n){3}priority = )\d+',
@@ -63,8 +76,17 @@ def test_one_low_priority_input_rule_cannot_hide_behind_other_input_rules(tmp_pa
     assert count == 1
     source = tmp_path / "adapters.toml"
     source.write_text(changed, encoding="utf-8")
-    with pytest.raises(ValueError, match="输入短缺规则必须优先"):
-        decision_adapters.load(source, strategy=decision_intents.load())
+    monkeypatch.setattr(decision_adapters, "SOURCE", source)
+    adapters = decision_adapters.load(source, strategy=decision_intents.load())
+    policy = dict(adapters.policies)["common/buildings/03_mines.txt"]
+    compiled = programs.enable(policy, source="common/buildings/03_mines.txt")
+    program = next(
+        p for p in compiled.consumer_programs if p.field == ("building_iron_mine", "ai_value")
+    )
+    selected = [v for g in program.groups if g.direction < 0 for v in g.variants if v.priority == 1]
+    assert len(selected) == 1
+    assert selected[0].action_id.startswith("actual_cost_building_iron_mine_")
+    assert selected[0].value == 0.8
 
 
 @pytest.mark.integration
@@ -1765,47 +1787,6 @@ def _scopes_for_facts(policy, facts):
         if reader.engine == "has_variable" and (reader.argument or "").startswith("sitai_route_"):
             current[f"{reader.argument}_active"] = facts[reader.key]
     return scopes
-
-
-@pytest.mark.integration
-@pytest.mark.parametrize(
-    ("change", "expected"),
-    [
-        ({}, 1.2),
-        ({"state_unemployment": 0.1}, 1.3),
-        ({"state_unemployment": 0.09999}, 1.2),
-        ({"state_unemployment": 0.1, "state_owner_reserves": 0}, 1.2),
-        ({"state_owner_steel_price": 0.25}, 1.0),
-        ({"state_owner_steel_balance": 0}, 1.0),
-        ({"state_owner_coal_price": 0.6, "state_owner_coal_balance": -10}, 0.8),
-        ({"state_market_access": 0.8, "state_infrastructure": -1}, 0.8),
-        ({"state_owner_loans": True}, 1.0),
-        ({"state_owner_default": True}, 1.0),
-    ],
-)
-def test_building_opportunity_tiers_and_input_cost_in_actual_script(
-    real_generated_branches, change, expected
-):
-    policy, blocks = next(
-        (p, b) for p, b in real_generated_branches if "building_steel_mill.ai_value" in b
-    )
-    facts = {
-        r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
-    }
-    facts.update(
-        pm_active_building_steel_mill_pm_bessemer_process=True,
-        state_owner_steel_price=0.4,
-        state_owner_steel_balance=-10,
-        state_owner_reserves=100,
-        state_market_access=1,
-    )
-    facts.update(change)
-    field = "building_steel_mill.ai_value"
-    reference = decision_rules.evaluate(policy, facts, is_ai=True)
-    assert reference.get(field, ("vanilla", 1.0))[1] == expected
-    actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, facts))
-    assert (actual[1] if actual else 1.0) == expected
-    assert not decision_rules.evaluate(policy, facts, is_ai=False)
 
 
 @pytest.mark.integration

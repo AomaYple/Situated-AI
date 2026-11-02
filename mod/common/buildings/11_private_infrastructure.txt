@@ -212,33 +212,14 @@ building_railway = {
 		# ACTION program_4e3945f519d8b3e6 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_4e3945f519d8b3e6_positive
-			add = { value = 0
-				# actual_output_building_railway_building_railway_pm_diesel_trains_principle_transport_3_transportation [economy]; 实际主要配方的 transportation 产出短缺且主要投入、财政和物流可承受时提高建设候选
-				if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_railway production_method = pm_diesel_trains_principle_transport_3 } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_pricier <= 0.25 } exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
-				# actual_output_building_railway_building_railway_pm_diesel_trains_transportation [economy]; 实际主要配方的 transportation 产出短缺且主要投入、财政和物流可承受时提高建设候选
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_railway production_method = pm_diesel_trains } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_pricier <= 0.25 } exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
-				# actual_output_building_railway_building_railway_pm_electric_trains_principle_transport_3_transportation [economy]; 实际主要配方的 transportation 产出短缺且主要投入、财政和物流可承受时提高建设候选
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_railway production_method = pm_electric_trains_principle_transport_3 } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:electricity mg:electricity = { market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
-				# actual_output_building_railway_building_railway_pm_electric_trains_transportation [economy]; 实际主要配方的 transportation 产出短缺且主要投入、财政和物流可承受时提高建设候选
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_railway production_method = pm_electric_trains } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:electricity mg:electricity = { market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
-				# actual_output_building_railway_building_railway_pm_steam_trains_principle_transport_3_transportation [economy]; 实际主要配方的 transportation 产出短缺且主要投入、财政和物流可承受时提高建设候选
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_railway production_method = pm_steam_trains_principle_transport_3 } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
-				# actual_output_building_railway_building_railway_pm_steam_trains_transportation [economy]; 实际主要配方的 transportation 产出短缺且主要投入、财政和物流可承受时提高建设候选
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_railway production_method = pm_steam_trains } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
-				# actual_output_building_railway_building_railway_pm_early_trains_transportation [economy]; 实际主要配方的 transportation 产出短缺且主要投入、财政和物流可承受时提高建设候选
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 is_production_method_active = { building_type = building_railway production_method = pm_early_trains } exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
-				# railway_logistics_deficit [economy]; 州基础设施不足且本地运输昂贵、铁路关键投入未明显昂贵时提高原版铁路建设偏好；不改变补贴和运营成本
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } } } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.25 } } } add = 0.2 }
-				# coordinated_layered_building_building_railway_expansion [economy]; 扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } } add = 0.18 }
-				# SITAI CHAIN LJ02/LJ02.coal_transport_railway_support writer=rule_action_common_buildings_11_private_infrastructure_txt_lj02_coal_transport_railway_support
-				# lj02_coal_transport_railway_support [economy]; 实际铁路生产方式、州基础设施缺口与运输昂贵同时成立且煤炭和引擎投入可承受时，有限提高铁路修复候选
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_early_trains } infrastructure_delta < 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } } } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.25 } } } add = 0.1 }
-				# borrowing_foundation_building_railway [economy]; 正常借款不全局禁止直接需求已知的局部基础修复；实际投入成本和已证高档继续优先
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_early_trains } infrastructure_delta < 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } } } } } add = 0.05 }
-			}
 			# GROUP program_4e3945f519d8b3e6_negative
+			add = { value = 0
+				# coordinated_layered_building_building_railway_recovery [economy]; 恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes } } } add = -0.1 }
+				# railway_engine_pressure [market]; 物流已有余量而引擎紧缺时降低额外铁路偏好；物流缺口保留原版紧急修复路径
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.05 }
+			}
+			# GROUP program_4e3945f519d8b3e6_building_active_inputs_negative
 			add = { value = 0
 				# actual_cost_building_railway_building_railway_pm_steel_passenger_carriages_steel [market]; 实际启用生产组 pmg_passenger_trains 的 steel 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_steel_passenger_carriages } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
@@ -272,12 +253,34 @@ building_railway = {
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_early_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 				# actual_cost_building_railway_building_railway_pm_early_trains_coal [market]; 实际启用生产组 pmg_base_building_railway 的 coal 投入同时高价且短缺时计入扩建成本
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_early_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# coordinated_layered_building_building_railway_recovery [economy]; 恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes } } } add = -0.1 }
-				# railway_engine_pressure [market]; 物流已有余量而引擎紧缺时降低额外铁路偏好；物流缺口保留原版紧急修复路径
-				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta >= 0 exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.05 }
 			}
-			min = 0.8
+			# GROUP program_4e3945f519d8b3e6_building_output_demand_positive
+			add = { value = 0
+				# actual_output_building_railway_building_railway_pm_diesel_trains_principle_transport_3_transportation [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_diesel_trains_principle_transport_3 } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				# actual_output_building_railway_building_railway_pm_diesel_trains_transportation [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_diesel_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				# actual_output_building_railway_building_railway_pm_electric_trains_principle_transport_3_transportation [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_electric_trains_principle_transport_3 } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				# actual_output_building_railway_building_railway_pm_electric_trains_transportation [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_electric_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				# actual_output_building_railway_building_railway_pm_steam_trains_principle_transport_3_transportation [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_steam_trains_principle_transport_3 } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				# actual_output_building_railway_building_railway_pm_steam_trains_transportation [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_steam_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				# actual_output_building_railway_building_railway_pm_early_trains_transportation [economy]; 实际主要配方与产出短缺已被观察时提高建设机会；投入与偿付代价由独立分量共同计入
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_early_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } } add = 0.2 }
+				# railway_logistics_deficit [economy]; 州基础设施不足且本地运输昂贵、铁路关键投入未明显昂贵时提高原版铁路建设偏好；不改变补贴和运营成本
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= 0.25 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } } } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.25 } } } add = 0.2 }
+				# coordinated_layered_building_building_railway_expansion [economy]; 扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } } add = 0.18 }
+				# SITAI CHAIN LJ02/LJ02.coal_transport_railway_support writer=rule_action_common_buildings_11_private_infrastructure_txt_lj02_coal_transport_railway_support
+				# lj02_coal_transport_railway_support [economy]; 实际铁路生产方式、州基础设施缺口与运输昂贵同时成立且煤炭和引擎投入可承受时，有限提高铁路修复候选
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_early_trains } infrastructure_delta < 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = no exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 } } } exists = sg:transportation sg:transportation = { state_goods_pricier > 0.25 } } } add = 0.1 }
+				# borrowing_foundation_building_railway [economy]; 正常借款不全局禁止直接需求已知的局部基础修复；实际投入成本和已证高档继续优先
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_railway production_method = pm_early_trains } infrastructure_delta < 0 exists = owner owner = { is_ai = yes in_default = no taking_loans = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } exists = mg:engines mg:engines = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } } } } } add = 0.05 }
+			}
+			min = 0.7000000000000001
 			max = 1.2
 		} }
 		# SITAI END information:building_railway.ai_value

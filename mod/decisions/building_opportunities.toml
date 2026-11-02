@@ -1,0 +1,11 @@
+# 普通市场商品的基础建设机会；不推断当前PM、利润或实际可执行资格。
+schema = 1
+
+[parameters]
+priority_base = 80000
+shortage_balance = 0.0
+output_price_threshold = 0.25
+demand_multiplier = 1.08
+pressure_multiplier = 1.12
+default_multiplier = 0.85
+infrastructure_multiplier = 0.90

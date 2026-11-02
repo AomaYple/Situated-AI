@@ -1,0 +1,1361 @@
+{
+  "schema": 1,
+  "baseline_tag": "v3.0.1",
+  "retirements": [
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_arms_industry_expansion",
+      "field": "building_arms_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_arms_industry_small_arms_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_arms_industry_recovery",
+      "field": "building_arms_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_arms_industry_default_cost",
+        "building_opportunity_building_arms_industry_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_artillery_foundry_expansion",
+      "field": "building_artillery_foundry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_artillery_foundry_artillery_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_artillery_foundry_recovery",
+      "field": "building_artillery_foundry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_artillery_foundry_default_cost",
+        "building_opportunity_building_artillery_foundry_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_automotive_industry_expansion",
+      "field": "building_automotive_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_automotive_industry_automobiles_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_automotive_industry_recovery",
+      "field": "building_automotive_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_automotive_industry_default_cost",
+        "building_opportunity_building_automotive_industry_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_chemical_plant_expansion",
+      "field": "building_chemical_plant.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_chemical_plant_fertilizer_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_chemical_plant_recovery",
+      "field": "building_chemical_plant.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_chemical_plant_default_cost",
+        "building_opportunity_building_chemical_plant_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_electrics_industry_expansion",
+      "field": "building_electrics_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_electrics_industry_telephones_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_electrics_industry_recovery",
+      "field": "building_electrics_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_electrics_industry_default_cost",
+        "building_opportunity_building_electrics_industry_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_explosives_factory_expansion",
+      "field": "building_explosives_factory.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_explosives_factory_explosives_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_explosives_factory_recovery",
+      "field": "building_explosives_factory.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_explosives_factory_default_cost",
+        "building_opportunity_building_explosives_factory_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_food_industry_expansion",
+      "field": "building_food_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_food_industry_groceries_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_food_industry_recovery",
+      "field": "building_food_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_food_industry_default_cost",
+        "building_opportunity_building_food_industry_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_furniture_manufactory_expansion",
+      "field": "building_furniture_manufactory.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_furniture_manufactory_furniture_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_furniture_manufactory_recovery",
+      "field": "building_furniture_manufactory.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_furniture_manufactory_default_cost",
+        "building_opportunity_building_furniture_manufactory_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_glassworks_expansion",
+      "field": "building_glassworks.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_glassworks_glass_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_glassworks_recovery",
+      "field": "building_glassworks.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_glassworks_default_cost",
+        "building_opportunity_building_glassworks_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_motor_industry_expansion",
+      "field": "building_motor_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_motor_industry_engines_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_motor_industry_recovery",
+      "field": "building_motor_industry.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_motor_industry_default_cost",
+        "building_opportunity_building_motor_industry_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_munition_plant_expansion",
+      "field": "building_munition_plant.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_munition_plant_ammunition_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_munition_plant_recovery",
+      "field": "building_munition_plant.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_munition_plant_default_cost",
+        "building_opportunity_building_munition_plant_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_paper_mill_expansion",
+      "field": "building_paper_mill.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_paper_mill_paper_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_paper_mill_recovery",
+      "field": "building_paper_mill.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_paper_mill_default_cost",
+        "building_opportunity_building_paper_mill_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_steel_mill_expansion",
+      "field": "building_steel_mill.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_steel_mill_steel_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_steel_mill_recovery",
+      "field": "building_steel_mill.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_steel_mill_default_cost",
+        "building_opportunity_building_steel_mill_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_synthetics_plant_expansion",
+      "field": "building_synthetics_plant.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_synthetics_plant_dye_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_synthetics_plant_recovery",
+      "field": "building_synthetics_plant.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_synthetics_plant_default_cost",
+        "building_opportunity_building_synthetics_plant_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_textile_mill_expansion",
+      "field": "building_textile_mill.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_textile_mill_clothes_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_textile_mill_recovery",
+      "field": "building_textile_mill.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_textile_mill_default_cost",
+        "building_opportunity_building_textile_mill_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_tooling_workshop_expansion",
+      "field": "building_tooling_workshop.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_tooling_workshop_tools_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/01_industry.txt",
+      "definition": "coordinated_layered_building_building_tooling_workshop_recovery",
+      "field": "building_tooling_workshop.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_tooling_workshop_default_cost",
+        "building_opportunity_building_tooling_workshop_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_livestock_ranch_expansion",
+      "field": "building_livestock_ranch.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_livestock_ranch_fabric_demand",
+        "building_opportunity_building_livestock_ranch_meat_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_livestock_ranch_recovery",
+      "field": "building_livestock_ranch.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_livestock_ranch_default_cost",
+        "building_opportunity_building_livestock_ranch_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_maize_farm_expansion",
+      "field": "building_maize_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_maize_farm_grain_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_maize_farm_recovery",
+      "field": "building_maize_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_maize_farm_default_cost",
+        "building_opportunity_building_maize_farm_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_millet_farm_expansion",
+      "field": "building_millet_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_millet_farm_grain_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_millet_farm_recovery",
+      "field": "building_millet_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_millet_farm_default_cost",
+        "building_opportunity_building_millet_farm_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_rice_farm_expansion",
+      "field": "building_rice_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_rice_farm_grain_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_rice_farm_recovery",
+      "field": "building_rice_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_rice_farm_default_cost",
+        "building_opportunity_building_rice_farm_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_rye_farm_expansion",
+      "field": "building_rye_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_rye_farm_grain_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_rye_farm_recovery",
+      "field": "building_rye_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_rye_farm_default_cost",
+        "building_opportunity_building_rye_farm_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_vineyard_expansion",
+      "field": "building_vineyard.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_vineyard_wine_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_vineyard_recovery",
+      "field": "building_vineyard.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_vineyard_default_cost",
+        "building_opportunity_building_vineyard_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_wheat_farm_expansion",
+      "field": "building_wheat_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_wheat_farm_grain_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/02_agro.txt",
+      "definition": "coordinated_layered_building_building_wheat_farm_recovery",
+      "field": "building_wheat_farm.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_wheat_farm_default_cost",
+        "building_opportunity_building_wheat_farm_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "definition": "coordinated_layered_building_building_coal_mine_expansion",
+      "field": "building_coal_mine.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_coal_mine_coal_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "definition": "coordinated_layered_building_building_coal_mine_recovery",
+      "field": "building_coal_mine.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_coal_mine_default_cost",
+        "building_opportunity_building_coal_mine_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "definition": "coordinated_layered_building_building_iron_mine_expansion",
+      "field": "building_iron_mine.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_iron_mine_iron_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "definition": "coordinated_layered_building_building_iron_mine_recovery",
+      "field": "building_iron_mine.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_iron_mine_default_cost",
+        "building_opportunity_building_iron_mine_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "definition": "coordinated_layered_building_building_lead_mine_expansion",
+      "field": "building_lead_mine.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_lead_mine_lead_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "definition": "coordinated_layered_building_building_lead_mine_recovery",
+      "field": "building_lead_mine.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_lead_mine_default_cost",
+        "building_opportunity_building_lead_mine_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "definition": "coordinated_layered_building_building_sulfur_mine_expansion",
+      "field": "building_sulfur_mine.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_sulfur_mine_sulfur_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/03_mines.txt",
+      "definition": "coordinated_layered_building_building_sulfur_mine_recovery",
+      "field": "building_sulfur_mine.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_sulfur_mine_default_cost",
+        "building_opportunity_building_sulfur_mine_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_banana_plantation_expansion",
+      "field": "building_banana_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_banana_plantation_fruit_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_banana_plantation_recovery",
+      "field": "building_banana_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_banana_plantation_default_cost",
+        "building_opportunity_building_banana_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_coffee_plantation_expansion",
+      "field": "building_coffee_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_coffee_plantation_coffee_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_coffee_plantation_recovery",
+      "field": "building_coffee_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_coffee_plantation_default_cost",
+        "building_opportunity_building_coffee_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_cotton_plantation_expansion",
+      "field": "building_cotton_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_cotton_plantation_fabric_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_cotton_plantation_recovery",
+      "field": "building_cotton_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_cotton_plantation_default_cost",
+        "building_opportunity_building_cotton_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_dye_plantation_expansion",
+      "field": "building_dye_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_dye_plantation_dye_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_dye_plantation_recovery",
+      "field": "building_dye_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_dye_plantation_default_cost",
+        "building_opportunity_building_dye_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_opium_plantation_expansion",
+      "field": "building_opium_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_opium_plantation_opium_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_opium_plantation_recovery",
+      "field": "building_opium_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_opium_plantation_default_cost",
+        "building_opportunity_building_opium_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_silk_plantation_expansion",
+      "field": "building_silk_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_silk_plantation_silk_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_silk_plantation_recovery",
+      "field": "building_silk_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_silk_plantation_default_cost",
+        "building_opportunity_building_silk_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_sugar_plantation_expansion",
+      "field": "building_sugar_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_sugar_plantation_sugar_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_sugar_plantation_recovery",
+      "field": "building_sugar_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_sugar_plantation_default_cost",
+        "building_opportunity_building_sugar_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_tea_plantation_expansion",
+      "field": "building_tea_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_tea_plantation_tea_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_tea_plantation_recovery",
+      "field": "building_tea_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_tea_plantation_default_cost",
+        "building_opportunity_building_tea_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_tobacco_plantation_expansion",
+      "field": "building_tobacco_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_tobacco_plantation_tobacco_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/04_plantations.txt",
+      "definition": "coordinated_layered_building_building_tobacco_plantation_recovery",
+      "field": "building_tobacco_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_tobacco_plantation_default_cost",
+        "building_opportunity_building_tobacco_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_fishing_wharf_expansion",
+      "field": "building_fishing_wharf.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_fishing_wharf_fish_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_fishing_wharf_recovery",
+      "field": "building_fishing_wharf.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_fishing_wharf_default_cost",
+        "building_opportunity_building_fishing_wharf_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_logging_camp_expansion",
+      "field": "building_logging_camp.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_logging_camp_wood_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_logging_camp_recovery",
+      "field": "building_logging_camp.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_logging_camp_default_cost",
+        "building_opportunity_building_logging_camp_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_oil_rig_expansion",
+      "field": "building_oil_rig.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_oil_rig_oil_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_oil_rig_recovery",
+      "field": "building_oil_rig.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_oil_rig_default_cost",
+        "building_opportunity_building_oil_rig_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_rubber_plantation_expansion",
+      "field": "building_rubber_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_rubber_plantation_rubber_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_rubber_plantation_recovery",
+      "field": "building_rubber_plantation.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_rubber_plantation_default_cost",
+        "building_opportunity_building_rubber_plantation_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_whaling_station_expansion",
+      "field": "building_whaling_station.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "全国扩张能力不是该建筑具体需求；以同消费者必选配方对应商品的基础机会替代，无需求时退出",
+      "replacements": [
+        "building_opportunity_building_whaling_station_meat_demand",
+        "building_opportunity_building_whaling_station_oil_demand"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    },
+    {
+      "source": "common/buildings/09_misc_resource.txt",
+      "definition": "coordinated_layered_building_building_whaling_station_recovery",
+      "field": "building_whaling_station.ai_value",
+      "actor": "owner",
+      "target": "none",
+      "operation": "multiply",
+      "reason": "聚合恢复状态混合实际成本；拆成已观察违约与本州基础设施压力，正常贷款不惩罚，未知局部退出",
+      "replacements": [
+        "building_opportunity_building_whaling_station_default_cost",
+        "building_opportunity_building_whaling_station_infrastructure_cost"
+      ],
+      "validation": [
+        "tests/test_situated_building_joint.py",
+        "tests/test_building_opportunities.py"
+      ]
+    }
+  ]
+}

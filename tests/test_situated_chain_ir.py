@@ -297,7 +297,7 @@ def test_strict_knowledge_declaration_cannot_be_removed_or_changed(mode):
     bundle, policies = _fixture()
     source = "common/buildings/01_industry.txt"
     policy = policies[source]
-    target = "lj06_employment_food_unemployment_support"
+    target = "lj06_employment_textile_unemployment_support"
     rules = tuple(
         _copy_with(rule, required_known_facts=() if mode == "missing" else ("state_owner_default",))
         if rule.id == target
@@ -313,7 +313,7 @@ def test_chain_ir_keeps_required_knowledge_as_structured_guard():
     bundle, policies = _fixture()
     rows = contract.build_strict(bundle, policies)
     target = next(
-        row for row in rows if row.spec.rule_id == "lj06_employment_food_unemployment_support"
+        row for row in rows if row.spec.rule_id == "lj06_employment_textile_unemployment_support"
     )
     assert target.spec.required_known_facts == ("state_owner_loans",)
     assert "state_owner_loans" in {reader.key for reader in target.spec.readers}

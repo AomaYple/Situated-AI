@@ -123,7 +123,7 @@ def test_strategy_proof_missing_or_drift_is_not_inherited(strategy_proof, change
 
 @pytest.mark.parametrize(
     "field",
-    ["diplomatic_play_boldness", "wanted_construction_ratio", "desired_tax_level", "future"],
+    ["max_ship_design_complexity", "wanted_construction_ratio", "desired_tax_level", "future"],
 )
 def test_adjacent_unproven_fields_do_not_inherit_country(strategy_proof, field):
     game, _, inputs, _, _ = strategy_proof
@@ -240,7 +240,7 @@ def test_frozen_manifest_preserves_distinct_scope_keys_and_operation_units():
     assert hashlib.sha256(raw).hexdigest() == engine_scope.STRATEGY_MANIFEST_SHA256
     data = json.loads(raw)
     contracts = data["consumers"]
-    assert len(contracts) == 19
+    assert len(contracts) == 29
     assert contracts["recklessness"]["target_scope"] == "scope:target_country=country"
     assert contracts["wargoal_maneuvers_fraction"]["target_scope"] == "scope:enemy_country=country"
     assert contracts["become_subject_value"]["target_scope"] == "scope:overlord=country"

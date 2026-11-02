@@ -39,6 +39,7 @@ class ContextBinding:
             "target_state": ("state", {"target"}),
             "interest_group": ("interest_group", {"candidate"}),
             "law": ("law", {"auxiliary"}),
+            "diplomatic_play": ("diplomatic_play", {"auxiliary"}),
             "military_formation": ("military_formation", {"auxiliary"}),
             "amenability": ("scalar", {"auxiliary"}),
             "advance_chance": ("scalar", {"auxiliary"}),

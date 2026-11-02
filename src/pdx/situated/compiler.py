@@ -354,6 +354,65 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
             "0x1415adadb",
         ),
     }
+    specs.update(
+        {
+            "aggression": (
+                "target_country",
+                "additive_aggression",
+                "play_start_tendency",
+                "0x14164546f",
+            ),
+            "nationalization_desire": (
+                None,
+                "additive_nationalization_desire",
+                "desire",
+                "0x141647ecd",
+            ),
+            "max_active_stances": (None, "additive_active_stance_limit", "count", "0x14164805c"),
+            "wanted_marines": (
+                None,
+                "additive_marine_size_target",
+                "barracks_levels",
+                "0x14164441d",
+            ),
+            "economic_vs_government_spending_balance": (
+                None,
+                "additive_spending_balance",
+                "debt_threshold_ratio",
+                "0x14164684d",
+            ),
+            "target_marine_formation_size": (
+                None,
+                "additive_marine_formation_size_target",
+                "units_per_formation",
+                "0x1416445ad",
+            ),
+            "unacceptable_infamy_level": (
+                None,
+                "first_positive_infamy_limit_override",
+                "infamy",
+                "0x1416440fd",
+            ),
+            "undesirable_infamy_level": (
+                None,
+                "first_positive_infamy_limit_override",
+                "infamy",
+                "0x141643f6d",
+            ),
+            "diplomatic_play_neutrality": (
+                None,
+                "additive_positive_active_neutrality",
+                "score",
+                "0x14164783c",
+            ),
+            "diplomatic_play_boldness": (
+                None,
+                "native_randomized_additive_boldness",
+                "score",
+                "0x1416476aa",
+            ),
+        }
+    )
     result = {}
     source = engine_scope.STRATEGY_MANIFEST_ID
     for field, (target, operation, unit, address) in specs.items():
@@ -368,6 +427,8 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 if field == "institution_scores"
                 else "scope:law=law"
                 if field == "min_law_chance_to_pass"
+                else "scope:diplomatic_play=diplomatic_play"
+                if field == "diplomatic_play_boldness"
                 else "none"
             ),
             "operation": operation,
@@ -377,18 +438,9 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
         }
         actual = data.get("consumers", {}).get(field, {})
         if (
-            any(actual.get(key) != value for key, value in expected.items())
-            if field
-            in {
-                "wanted_construction_output",
-                "institution_scores",
-                "min_law_chance_to_pass",
-                "wargoal_scores",
-                "secret_goal_scores",
-                "wanted_navy_size",
-                "ship_construction_output_multiplier",
-            }
-            else actual != expected
+            actual != expected
+            if field in {"recklessness", "wargoal_maneuvers_fraction"}
+            else any(actual.get(key) != value for key, value in expected.items())
         ):
             raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
         entries = list(
@@ -436,6 +488,16 @@ def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
                 ),
             )
             if field == "min_law_chance_to_pass"
+            else (
+                decision_ir.ContextBinding(
+                    "diplomatic_play",
+                    "diplomatic_play",
+                    "auxiliary",
+                    source,
+                    locations["target_scope"],
+                ),
+            )
+            if field == "diplomatic_play_boldness"
             else (),
             evidence=(
                 f"{source}:{actor.line}",
@@ -618,6 +680,25 @@ def validate_context_readers(
     }
     shapes["wanted_navy_size"] = {"root": ("country", "actor")}
     shapes["ship_construction_output_multiplier"] = {"root": ("country", "actor")}
+    for scalar in (
+        "nationalization_desire",
+        "max_active_stances",
+        "wanted_marines",
+        "economic_vs_government_spending_balance",
+        "target_marine_formation_size",
+        "unacceptable_infamy_level",
+        "undesirable_infamy_level",
+        "diplomatic_play_neutrality",
+    ):
+        shapes[scalar] = {"root": ("country", "actor")}
+    shapes["aggression"] = {
+        "root": ("country", "actor"),
+        "target_country": ("country", "target"),
+    }
+    shapes["diplomatic_play_boldness"] = {
+        "root": ("country", "actor"),
+        "diplomatic_play": ("diplomatic_play", "auxiliary"),
+    }
     formation_shape = {
         "root": ("country", "actor"),
         "military_formation": ("military_formation", "auxiliary"),
@@ -648,6 +729,16 @@ def validate_context_readers(
             "secret_goal_scores",
             "wanted_navy_size",
             "ship_construction_output_multiplier",
+            "aggression",
+            "nationalization_desire",
+            "max_active_stances",
+            "wanted_marines",
+            "economic_vs_government_spending_balance",
+            "target_marine_formation_size",
+            "unacceptable_infamy_level",
+            "undesirable_infamy_level",
+            "diplomatic_play_neutrality",
+            "diplomatic_play_boldness",
         }
         and {name: (binding.kind, binding.role) for name, binding in bindings.items()}
         != shapes[field]
@@ -1118,9 +1209,27 @@ def _action_context_readers(
                 and not item.parameters
                 and item.value_field is None
             }
-            if len(candidates) != 1:
+            if (
+                not candidates
+                and fact is not None
+                and re.fullmatch(r"[a-z][a-z0-9_]*\s*=\s*(?:yes|no)", fact.trigger)
+                and fact.kind == "boolean"
+                and fact.unit in {"flag", "boolean"}
+            ):
+                # The declaration is the actual boolean source template. Keep
+                # its engine identity; never borrow a similarly named reader.
+                reader = decision_rules.Reader(
+                    key=source_key,
+                    engine=cast("str", engine),
+                    scope=fact.scope,
+                    unit="boolean",
+                    kind="boolean",
+                )
+                decision_interfaces.reader_scope(reader, ())
+            elif len(candidates) != 1:
                 raise ValueError(f"显式行动 {action.action_id} 缺少唯一真实读取器：{key}")
-            reader = next(iter(candidates.values()))
+            else:
+                reader = next(iter(candidates.values()))
         reader = replace(reader, key=key)
         result.update(
             validate_context_readers(action.field, context, {key: reader}, (), input_keys=(key,))
@@ -1365,8 +1474,22 @@ def load_model(
         *information.readers,
         *(reader for _, policy in adapters.policies for reader in policy.readers),
     )
+    scalar_card_fields = {
+        "recklessness",
+        "wargoal_maneuvers_fraction",
+        "aggression",
+        "nationalization_desire",
+        "max_active_stances",
+        "wanted_marines",
+        "economic_vs_government_spending_balance",
+        "target_marine_formation_size",
+        "unacceptable_infamy_level",
+        "undesirable_infamy_level",
+        "diplomatic_play_neutrality",
+        "diplomatic_play_boldness",
+    }
     for decision_row in decision_rows:
-        if decision_row.field not in {"recklessness", "wargoal_maneuvers_fraction"}:
+        if decision_row.field not in scalar_card_fields:
             continue
         context = observed_contexts[decision_row.field]
         key = ("mod/decisions/actions.toml", decision_row.action_id)
@@ -1382,8 +1505,7 @@ def load_model(
     )
     if any(
         instance.evaluation_context is not None
-        and instance.consumer_field.removeprefix("ai_strategy_default.")
-        in {"recklessness", "wargoal_maneuvers_fraction"}
+        and instance.consumer_field.removeprefix("ai_strategy_default.") in scalar_card_fields
         and instance.actor_scope != "root"
         for instance in instances
     ):
@@ -1423,6 +1545,12 @@ def load_model(
         "company_context_snapshot": engine_scope.COMPANY_MANIFEST_SHA256,
         "migration_baseline": hashlib.sha256(
             migration_baseline.DEFAULT_SOURCE.read_bytes()
+        ).hexdigest(),
+        "migration_retirements": hashlib.sha256(
+            migration_baseline.RETIREMENTS_SOURCE.read_bytes()
+        ).hexdigest(),
+        "scripted_predicate_snapshot": hashlib.sha256(
+            decision_interfaces.scripted_trigger_snapshot()
         ).hexdigest(),
         "facts": hashlib.sha256(facts_path.read_bytes()).hexdigest(),
         "actions": hashlib.sha256(actions_path.read_bytes()).hexdigest(),

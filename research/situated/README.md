@@ -11,7 +11,8 @@
 | 修订 2 | [strategy-scope-r2.json](victoria3-1.14.5-strategy-scope-r2.json) | `e0b60c432cfe74a5b85c86d7dd401ac7305450446312f9da73c644b729385ae4` | 保留 15 个逐字段消费者，148 段原始字节观察 |
 | 修订 3 | [strategy-scope-r3.json](victoria3-1.14.5-strategy-scope-r3.json) | `83b369cd1f40e588428410912cfb9fcea43f823f0604ee38283bcbf7677adba3` | 保留 15 个逐字段消费者，169 段原始字节观察；补齐法律实例类型 |
 | 修订 4 | [strategy-scope-r4.json](victoria3-1.14.5-strategy-scope-r4.json) | `1012740c43d88e4a6665ac72cb9f0caea7fc516fd0974dd2b710075e9fa4bf8e` | 保留 17 个逐字段消费者，303 段原始字节观察；补齐两个目标评分枚举与精确对象 |
-| 修订 5 | [strategy-scope-r5.json](victoria3-1.14.5-strategy-scope-r5.json) | `e852bcd7f73d5da44f50c314a6ed921fa9aad4c32e2dbabf31ee536d3e6be463` | 当前 19 个逐字段消费者，325 段原始字节观察；追加海军目标与造船输出成员链 |
+| 修订 5 | [strategy-scope-r5.json](victoria3-1.14.5-strategy-scope-r5.json) | `e852bcd7f73d5da44f50c314a6ed921fa9aad4c32e2dbabf31ee536d3e6be463` | 保留 19 个逐字段消费者，325 段原始字节观察；追加海军目标与造船输出成员链 |
+| 修订 6 | [strategy-scope-r6.json](victoria3-1.14.5-strategy-scope-r6.json) | `39b41be99801353ea76c64a1f6c0dbe4c8debe725f52488b045e4a5de8d7d528` | 当前 29 个逐字段消费者，388 段原始字节观察；追加十条独立标量链及博弈实例类型 |
 
 修订 2 保留初版全部合同与观察，追加两条精确消费者链和 28 段观察，并更正初版对 `institution_scores`
 尚未授权的限制。初版文件原字节不变。共同锁定 Victoria 3 1.14.5 Windows x64 EXE：
@@ -92,7 +93,7 @@ wargoal 消费者 `0x141643740` 分别保存 RDX 国家 ROOT、R8 target country
 `0x141643886` 注册 tag 5 的 `target_country`，`0x1416438ea` 调用实际评分 wrapper。
 `target_state` 的全局 key `0x145a94968` 由独立字符串注册链定位，调用者以 `0x1407ed5f0`
 解析状态 ID，其诊断直接引用 CState TypeDescriptor `0x145244320`；它不能误记为 wargoal 对象。
-仅 play ID 非 -1 时另注册 tag `0x1c`；目前没有完整类型证明，因此该对象明确记录为
+仅 play ID 非 -1 时另注册 tag `0x1c`；修订 4 没有完整类型证明，因此该对象明确记录为
 `unprojected_unknown`、`reader_authorization=false`，compiler 不产生对应 binding。
 
 secret 消费者 `0x141643600` 保存 R8 actor country 与 R9 target country；`0x141643693`、
@@ -124,9 +125,56 @@ ship construction token `0x622a` 精确定位 parser `0x141641cb2` 和成员 `0x
 上述证据不替换原生海军舍入、维护、预算及最终造船运算。`wanted_num_supply_ships` 只找到解析成员
 `0x1b20`，尚未找到真实消费者；它继续 pending，不能从相邻 navy/ship 成员继承国家上下文。
 
+### 十条标量链与博弈实例
+
+修订 6 保留修订 5 的全部合同和前 325 段观察，新增十个精确字段及 63 段原始字节。
+每条链独立核对精确 NUL 字符串、atom token、压缩派发、成员、真实求值器及上层消费者。
+它们均构建 country tag 5 ROOT；下表的额外对象只适用于对应字段。
+
+| 字段 | 成员 | 实际求值 VA | 额外对象与原生合并 |
+|---|---|---|---|
+| `aggression` | `0x1160` | `0x14164546f` | `target_country` 为 country；默认与活动策略相加 |
+| `nationalization_desire` | `0xd78` | `0x141647ecd` | 无；默认与活动策略相加 |
+| `max_active_stances` | `0x498` | `0x14164805c` | 无；默认与活动策略相加 |
+| `wanted_marines` | `0x18e0` | `0x14164441d` | 无；默认与活动策略相加，保留后续舍入 |
+| `economic_vs_government_spending_balance` | `0x1760` | `0x14164684d` | 无；默认与活动策略相加 |
+| `target_marine_formation_size` | `0x19a0` | `0x1416445ad` | 无；默认与活动策略相加，保留后续舍入 |
+| `unacceptable_infamy_level` | `0xfe0` | `0x1416440fd` | 无；首个正值活动策略覆盖，否则使用默认值 |
+| `undesirable_infamy_level` | `0xf20` | `0x141643f6d` | 无；首个正值活动策略覆盖，否则使用默认值 |
+| `diplomatic_play_neutrality` | `0x608` | `0x14164783c` | 无；只累加正值活动策略 |
+| `diplomatic_play_boldness` | `0x6c0` | `0x1416476aa` | `diplomatic_play` 为博弈实例；活动策略经原生随机缩放后相加 |
+
+两个 infamy 字段的 `first_positive_infamy_limit_override` 不能降格为 additive。
+neutrality 的正值筛选与 boldness 的原生随机程序也保留原调用，不声称完整下游数值等价。
+
+boldness 消费者以 tag `0x1c` 和传入对象的 ID 注册 named `diplomatic_play`。
+类型证明来自独立的 `CDiplomaticPlayWarLink` RTTI：TypeDescriptor `0x145720d10`、
+COL `0x144c31608`、vftable `0x144716e80` 的虚槽 `+0x28` 指向 `0x14277ac90`。
+该方法验证 tag `0x1c` 后调用 ID resolver `0x1407e7250`，其数据库缺失诊断直接引用
+`CDiplomaticPlay` TypeDescriptor `0x14546bc20` 的 `+8`；随后从实例读取 war ID 并输出不同 tag。
+这排除了仅按 tag 数字猜类型。compiler 只给 boldness 添加精确 `diplomatic_play` 辅助 binding，
+没有新增 play getter；原 r5 wargoal 可选对象的 `unprojected_unknown` 合同保持不变。
+
+inventory 复用逐字段 verified 证据入口，拒绝缺失证明、未知来源、相邻名称、额外路径、重复及非普通赋值。
+compiler 对新增标量规则和显式卡片逐个验证实际输入及 country ROOT，不能因 reader 只读取 ROOT
+就擦除 aggression 的 target 或 boldness 的辅助对象。
+
+### 显式布尔事实使用的原版脚本谓词
+
+[scripted-predicate.json](victoria3-1.14.5-scripted-predicate.json) 固定 SHA-256
+`128c85f83fdc007a42d19c97dad7bf8d61351be42121095e680ed1028a38918c`，记录锁定原版
+25 份 `common/scripted_triggers` 来源的独立 SHA 与 `any_insurrection_ongoing` 的唯一 AST。
+该定义是 `any_political_movement = { is_insurrectionary = yes }`；它不是 builtin，
+也不能替换为 `has_insurrectionary_interest_groups`。
+
+显式卡片的 `no_insurrection` 直接布尔模板读取该谓词的否定值，保留原 engine 身份与国家 ROOT。
+接口仅接受无参数、无路径、无数值边界的精确布尔签名。生产边界须调用
+`decision_interfaces.verify_scripted_trigger_game(game)` 重读来源集合、原始 SHA 和唯一精确 AST；
+`scripted_trigger_snapshot()` 只核对历史证据身份，不证明当前安装或游戏行为。
+
 ## 入口与未证明范围
 
-`pdx.situated.engine_scope.strategy_snapshot()` 固定修订 5 身份并验证新增精确合同，不声称当前游戏验证；
+`pdx.situated.engine_scope.strategy_snapshot()` 固定修订 6 身份并验证新增精确合同，不声称当前游戏验证；
 `strategy_evidence(game, inputs)` 核对 EXE、所有原始字节观察及全部来源 SHA；
 `verify_strategy_game(game)` 在生产边界读取真实五份原件并硬失败，不回退离线快照。
 该生产接口也验证制度定义原件集合和 SHA，保留五份 `strategy_sources` 的既有含义，并把制度来源指纹附入返回证据。
@@ -134,8 +182,10 @@ ship construction token `0x622a` 精确定位 parser `0x141641cb2` 和成员 `0x
 
 `wanted_construction_input_goods_surplus_ratio` 在锁定原版文本与 EXE 精确 NUL atom 中未找到，任务身份仍未解决。
 近似的 `wanted_construction_ratio` 不能替代它。`00_ai.txt` 719–722 行的机构 spending 项是原生常量，
-不是额外动态 script-value 消费者。`desired_tax_level`、`diplomatic_play_boldness` 和其他相邻字段仍未授权；
+不是额外动态 script-value 消费者。`desired_tax_level` 和其他相邻字段仍未授权；
 法律阈值以外的字段不能继承新增法律实例证据。
+`wanted_num_supply_ships`、`max_ship_design_complexity`、`colonial_interest_ratio` 及尚未证明的策略 map
+继续 pending；找到解析成员或临近消费者不能替代完整读取链。
 
 `company_default_evidence(game, inputs)` 为独立 inventory 验证缺省公司权重的原始 EXE 字节、实际
 `common/defines/00_ai.txt`、基础公司原件和完整父公司来源集合，并返回对应真实指纹。

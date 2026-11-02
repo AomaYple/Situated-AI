@@ -25,7 +25,31 @@ def legacy_policies():
         if source not in (MINES, RAIL):
             continue
         field = COAL if source == MINES else RAILWAY
-        rules = tuple(r for r in policy.rules if ".".join(r.field) == field)
+        # This fixture exercises the established LJ02 recipe/logistics slice.
+        # Whole-consumer opportunity envelopes have separate joint witnesses.
+        identities = (
+            {
+                "borrowing_foundation_building_coal_mine",
+                "building_coal_mine_bottleneck",
+                "building_coal_mine_input_pressure",
+                "lj02_coal_output_transport_foundation",
+                "actual_output_building_coal_mine_building_coal_mine_pm_picks_and_shovels_building_coal_mine_coal",
+            }
+            if source == MINES
+            else {
+                "borrowing_foundation_building_railway",
+                "coordinated_layered_building_building_railway_expansion",
+                "coordinated_layered_building_building_railway_recovery",
+                "lj02_coal_transport_railway_support",
+                "railway_engine_pressure",
+                "railway_logistics_deficit",
+                "actual_cost_building_railway_building_railway_pm_early_trains_coal",
+                "actual_cost_building_railway_building_railway_pm_early_trains_engines",
+            }
+        )
+        rules = tuple(r for r in policy.rules if r.id in identities)
+        assert {r.id for r in rules} == identities
+        assert all(".".join(r.field) == field for r in rules)
         keys = frozenset(k for rule in rules for k in rule.input_keys())
         result[source] = replace(
             policy,
@@ -138,10 +162,29 @@ def test_lj06_and_lj07_use_only_the_proven_local_reader_contract() -> None:
         if rule.id.startswith(("lj06_", "lj07_"))
     }
     assert ids == {
-        "lj06_employment_food_unemployment_support",
         "lj06_employment_textile_unemployment_support",
         "lj07_grain_health_foundation",
         "lj07_grain_health_social_capacity",
+    }
+    food = [
+        rule
+        for _, policy in adapters.policies
+        for rule in policy.rules
+        if rule.id
+        == "comparative_employment_active_building_food_industry_pm_bakery_output_groceries"
+    ]
+    assert len(food) == 1
+    assert food[0].auxiliary_facts == food[0].required_known_facts == ()
+    assert {p.fact for p in food[0].conditions} == {
+        "state_owner_default",
+        "state_owner_loans",
+        "state_infrastructure",
+        "pm_active_building_food_industry_pm_bakery",
+        "state_owner_groceries_price",
+        "state_owner_groceries_balance",
+        "state_owner_grain_price",
+        "state_unemployment",
+        "state_owner_reserves",
     }
     info_ids = {rule.id for rule in decision_rules.load().rules if rule.id.startswith("lj07_")}
     assert info_ids == {"lj07_grain_social_foundation", "lj07_grain_social_capacity"}
@@ -260,7 +303,9 @@ def test_raw_ruleset_legacy_priority_and_unknown_are_separate_from_production(
     [
         ({}, (1.2, 0.8)),
         ({COAL_PM: False}, (1.15, 0.8)),
-        ({"state_owner_default": True}, (1.0, 0.8)),
+        # The actual-output recipe observes demand independently of fiscal
+        # eligibility; default disables LJ02, while this local +.20 remains.
+        ({"state_owner_default": True}, (1.2, 0.8)),
         # Unknown mine method skips recipe tiers, retaining the independently
         # observed generic coal shortage 1.15; railway coal cost stays -.20.
         ({COAL_PM: None}, (1.15, 0.8)),

@@ -10,6 +10,45 @@ from pdx.situated import compiler, joint_chain_contract
 pytestmark = pytest.mark.unit
 
 
+FOOD_EMPLOYMENT = "comparative_employment_active_building_food_industry_pm_bakery_output_groceries"
+
+
+def test_food_employment_chain_targets_the_unique_canonical_production_rule():
+    source = "common/buildings/01_industry.txt"
+    policy = dict(decision_adapters.load().policies)[source]
+    rules = [rule for rule in policy.rules if rule.id == FOOD_EMPLOYMENT]
+    assert len(rules) == 1
+    assert not any(rule.id == "lj06_employment_food_unemployment_support" for rule in policy.rules)
+    expected = (
+        ("state_owner_default", "=", False),
+        ("state_owner_loans", "=", False),
+        ("state_infrastructure", ">=", 0),
+        ("pm_active_building_food_industry_pm_bakery", "=", True),
+        ("state_owner_groceries_price", ">", 0.25),
+        ("state_owner_groceries_balance", "<", 0),
+        ("state_owner_grain_price", "<=", 0.25),
+        ("state_unemployment", ">=", 0.1),
+        ("state_owner_reserves", ">", 0),
+    )
+    assert tuple((p.fact, p.op, p.value) for p in rules[0].conditions) == expected
+    assert rules[0].required_known_facts == ()
+    assert rules[0].auxiliary_facts == ()
+    target = next(
+        row
+        for row in joint_chain_contract._STRICT_TARGETS
+        if row[1] == "LJ06.employment_food_unemployment_support"
+    )
+    assert target[2:] == (
+        source,
+        FOOD_EMPLOYMENT,
+        "building_food_industry.ai_value",
+        "owner",
+        "none",
+        "multiply",
+    )
+    assert joint_chain_contract._EXPECTED_CONDITIONS[FOOD_EMPLOYMENT] == expected
+
+
 @pytest.fixture(scope="module")
 def production():
     adapters = decision_adapters.load()
@@ -52,6 +91,92 @@ def test_complete_model_binds_only_the_thirty_four_proven_local_writers(producti
     assert joint_chain_contract.strict_contract(evidence)["pending_chain_closure"] == [
         f"LJ{index:02d}" for index in range(1, 15)
     ]
+
+
+@pytest.mark.parametrize("mutation", ["missing", "duplicate", "legacy_id", "knowledge"])
+def test_food_chain_rejects_missing_ambiguous_or_relabelled_rule(production, mutation):
+    model, _adapters, policies = production
+    source = "common/buildings/01_industry.txt"
+    policy = dict(policies)[source]
+    food = next(rule for rule in policy.rules if rule.id == FOOD_EMPLOYMENT)
+    others = tuple(rule for rule in policy.rules if rule.id != FOOD_EMPLOYMENT)
+    rules = {
+        "missing": others,
+        "duplicate": (*policy.rules, food),
+        "legacy_id": (*others, replace(food, id="lj06_employment_food_unemployment_support")),
+        "knowledge": (*others, replace(food, required_known_facts=("state_owner_loans",))),
+    }[mutation]
+    changed = tuple(
+        (name, replace(item, rules=rules) if name == source else item) for name, item in policies
+    )
+    with pytest.raises(ValueError, match=r"规则必须唯一|核心知识声明漂移"):
+        joint_chain_contract.bind_bundle(model.consumer_ir, changed)
+
+
+@pytest.mark.parametrize(
+    "fact",
+    [
+        "state_owner_loans",
+        "state_owner_reserves",
+        "state_unemployment",
+        "pm_active_building_food_industry_pm_bakery",
+        "state_owner_groceries_balance",
+        "state_owner_groceries_price",
+        "state_owner_grain_price",
+        "state_owner_default",
+        "state_infrastructure",
+    ],
+)
+def test_food_chain_revalidates_every_canonical_condition(production, fact):
+    model, _adapters, policies = production
+    source = "common/buildings/01_industry.txt"
+    policy = dict(policies)[source]
+    rules = tuple(
+        replace(rule, conditions=tuple(p for p in rule.conditions if p.fact != fact))
+        if rule.id == FOOD_EMPLOYMENT
+        else rule
+        for rule in policy.rules
+    )
+    changed = tuple(
+        (name, replace(item, rules=rules) if name == source else item) for name, item in policies
+    )
+    with pytest.raises(ValueError, match="谓词、运算符或阈值漂移"):
+        joint_chain_contract.bind_bundle(model.consumer_ir, changed)
+
+
+@pytest.mark.parametrize(
+    "key",
+    ["state_owner_reserves", "state_unemployment", "pm_active_building_food_industry_pm_bakery"],
+)
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("engine", "changed"),
+        ("kind", "changed"),
+        ("scope", "owner"),
+        ("path", ("market",)),
+        ("argument", "changed"),
+        ("parameters", (("production_method", "pm_changed"),)),
+        ("value_field", "changed"),
+        ("unit", "changed"),
+        ("minimum", -2),
+        ("maximum", 2),
+    ],
+)
+def test_food_chain_revalidates_complete_reader_identity(production, key, field, value):
+    model, _adapters, policies = production
+    source = "common/buildings/01_industry.txt"
+    policy = dict(policies)[source]
+    readers = tuple(
+        replace(reader, **{field: value}) if reader.key == key else reader
+        for reader in policy.readers
+    )
+    changed = tuple(
+        (name, replace(item, readers=readers) if name == source else item)
+        for name, item in policies
+    )
+    with pytest.raises(ValueError, match="读取器字段级来源、作用域或类型漂移"):
+        joint_chain_contract.bind_bundle(model.consumer_ir, changed)
 
 
 @pytest.mark.parametrize("mutation", ["missing", "cross_chain", "duplicate"])

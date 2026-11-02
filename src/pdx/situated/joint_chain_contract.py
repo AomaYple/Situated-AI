@@ -190,7 +190,7 @@ _STRICT_TARGETS = (
         "LJ06",
         "LJ06.employment_food_unemployment_support",
         "common/buildings/01_industry.txt",
-        "lj06_employment_food_unemployment_support",
+        "comparative_employment_active_building_food_industry_pm_bakery_output_groceries",
         "building_food_industry.ai_value",
         "owner",
         "none",
@@ -526,15 +526,16 @@ _EXPECTED_CONDITIONS = {
         ("population", ">", 0),
         ("bureaucracy", "=", 0),
     ),
-    "lj06_employment_food_unemployment_support": (
+    "comparative_employment_active_building_food_industry_pm_bakery_output_groceries": (
+        ("state_owner_default", "=", False),
+        ("state_owner_loans", "=", False),
+        ("state_infrastructure", ">=", 0),
         ("pm_active_building_food_industry_pm_bakery", "=", True),
         ("state_owner_groceries_price", ">", 0.25),
         ("state_owner_groceries_balance", "<", 0),
-        ("state_unemployment", ">=", 0.1),
-        ("state_owner_default", "=", False),
         ("state_owner_grain_price", "<=", 0.25),
-        ("state_owner_grain_balance", ">=", 0),
-        ("state_infrastructure", ">=", 0),
+        ("state_unemployment", ">=", 0.1),
+        ("state_owner_reserves", ">", 0),
     ),
     "lj06_employment_textile_unemployment_support": (
         ("pm_active_building_textile_mill_pm_handsewn_clothes", "=", True),
@@ -721,7 +722,7 @@ _COMPLETION_STATES = {
     "lj03_university_completed_knowledge_foundation": "completed_knowledge_foundation",
     "lj03_mechanical_tools_actual_literacy": "actual_literacy_and_tool_pressure",
     "lj04_welfare_zero_administration_foundation": "zero_administration_capacity",
-    "lj06_employment_food_unemployment_support": "active_food_recipe_and_actual_unemployment",
+    "comparative_employment_active_building_food_industry_pm_bakery_output_groceries": "active_food_recipe_and_actual_unemployment",
     "lj06_employment_textile_unemployment_support": "active_textile_recipe_and_actual_unemployment",
     "lj07_grain_health_foundation": "actual_grain_pressure_and_nonnegative_capacity",
     "lj07_grain_health_social_capacity": "actual_grain_pressure_and_available_capacity",
@@ -752,7 +753,6 @@ _COMPLETION_STATES = {
 
 
 _EXPECTED_REQUIRED_KNOWN = {
-    "lj06_employment_food_unemployment_support": ("state_owner_loans",),
     "lj06_employment_textile_unemployment_support": ("state_owner_loans",),
 }
 
@@ -1090,6 +1090,19 @@ def _expected_reader_signature(key: str) -> tuple[Any, ...] | None:
             (),
             None,
             "boolean",
+            None,
+            None,
+        )
+    if key == "state_owner_reserves":
+        return (
+            "gold_reserves",
+            "number",
+            "root",
+            ("owner",),
+            None,
+            (),
+            None,
+            "currency",
             None,
             None,
         )

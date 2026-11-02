@@ -49,6 +49,16 @@ def test_snapshot_context_uses_actual_manifest_lines_without_live_claim(
         "secret_goal_scores",
         "wanted_navy_size",
         "ship_construction_output_multiplier",
+        "aggression",
+        "nationalization_desire",
+        "max_active_stances",
+        "wanted_marines",
+        "economic_vs_government_spending_balance",
+        "target_marine_formation_size",
+        "unacceptable_infamy_level",
+        "undesirable_infamy_level",
+        "diplomatic_play_neutrality",
+        "diplomatic_play_boldness",
     }
     context = snapshot[field]
     assert context.status == "observed"
