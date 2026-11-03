@@ -534,23 +534,39 @@ def _companion_fields(surface: VanillaSurface) -> list[str]:
 
 
 class _Sources:
-    def __init__(self, sources: Mapping[str, bytes]) -> None:
+    """Read-only AST indexes owned by one audit, with exact-byte local reuse.
+
+    Native and effective sources are read, never mutated by this module. Only
+    an identical path and immutable byte payload can share a parsed root;
+    owner indexes remain separate and retain the supplied declaration order.
+    Nothing is retained across audits or grants new source permissions.
+    """
+
+    def __init__(self, sources: Mapping[str, bytes], *, reuse: _Sources | None = None) -> None:
+        self._bytes = dict(sources)
         self.roots: dict[str, Block] = {}
         self.failures: set[str] = set()
         self.owners: dict[tuple[str, str], list[str]] = defaultdict(list)
         for source, raw in sources.items():
             if not source.endswith(".txt"):
                 continue
-            try:
-                parsed = parse_bytes(raw, path=source)
-            except UnicodeDecodeError:
-                self.failures.add(source)
-                continue
-            if parsed.errors:
-                self.failures.add(source)
-                continue
-            self.roots[source] = parsed.root
-            for node in parsed.root.assignments():
+            if reuse is not None and reuse._bytes.get(source) == raw:
+                if source in reuse.failures:
+                    self.failures.add(source)
+                    continue
+                root = reuse.roots[source]
+            else:
+                try:
+                    parsed = parse_bytes(raw, path=source)
+                except UnicodeDecodeError:
+                    self.failures.add(source)
+                    continue
+                if parsed.errors:
+                    self.failures.add(source)
+                    continue
+                root = parsed.root
+            self.roots[source] = root
+            for node in root.assignments():
                 if not node.is_variable:
                     self.owners[_family(source), node.key].append(source)
 
@@ -2952,7 +2968,7 @@ def native_treatments(
         raise ValueError("native treatment declaration IDs are duplicated")
     native = _Sources(native_sources)
     effective_bytes = {**native_sources, **generated_sources}
-    effective = _Sources(effective_bytes)
+    effective = _Sources(effective_bytes, reuse=native)
     dependencies = _Dependencies(
         native,
         effective,
