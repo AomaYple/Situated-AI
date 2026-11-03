@@ -221,7 +221,14 @@ def test_construction_positive_multiplier_keeps_native_population_zero_and_clamp
 def test_current_construction_rules_satisfy_positive_multiplier_contract():
     rules = decision_rules.load()
     selected = tuple(rule for rule in rules.rules if rule.field == ("wanted_construction_output",))
-    assert len(selected) == 15
+    assert {rule.id for rule in selected} == {
+        "fiscal_construction_guard",
+        "liquidity_construction_guard",
+        "remaining_industrial_construction_need",
+        "remaining_industrial_construction_need_funded",
+        "remaining_reconstruction_need",
+        "remaining_reconstruction_need_funded",
+    }
     assert all(rule.operation == "multiply" and rule.value > 0 for rule in selected)
     decision_interfaces.validate(replace(rules, rules=selected, semantic_ir=()))
 

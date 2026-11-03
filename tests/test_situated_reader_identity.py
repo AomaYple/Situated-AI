@@ -322,7 +322,8 @@ def test_every_declared_predicate_has_boolean_metadata_and_raw_reader_is_numeric
     for fact in facts:
         has_comparison = any(op in fact.trigger for op in ("=", "<", ">"))
         if has_comparison:
-            assert (fact.kind, fact.unit) == ("boolean", "flag"), fact.id
+            assert fact.kind == "boolean", fact.id
+            assert fact.unit in {"flag", "boolean"}, fact.id
         else:
             assert fact.kind in {"number", "ratio"}, fact.id
     raw = {reader.key: reader for reader in decision_rules.load().readers}

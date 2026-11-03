@@ -350,7 +350,18 @@ def test_all_actual_construction_institution_variants_bind_every_input_and_write
         if row.field.removeprefix("ai_strategy_default.") == "wanted_construction_output"
         or row.field.removeprefix("ai_strategy_default.").startswith("institution_scores.")
     ]
-    assert len(selected) == 57
+    from collections import Counter
+
+    assert Counter(row.field.removeprefix("ai_strategy_default.") for row in selected) == {
+        "wanted_construction_output": 6,
+        "institution_scores.institution_schools": 6,
+        "institution_scores.institution_health_system": 7,
+        "institution_scores.institution_social_security": 9,
+        "institution_scores.institution_workplace_safety": 6,
+        "institution_scores.institution_home_affairs": 6,
+        "institution_scores.institution_police": 6,
+        "institution_scores.institution_colonial_affairs": 2,
+    }
     for writer in selected:
         instance = instances[writer.writer_id]
         assert writer.evaluation_context == instance.evaluation_context
@@ -370,7 +381,7 @@ def numeric_production():
     rules = tuple(
         rule
         for rule in policy.rules
-        if rule.id in {"fiscal_construction_guard", "social_school_priority"}
+        if rule.id in {"fiscal_construction_guard", "remaining_school_catchup_need"}
     )
     assert len(rules) == 2
     keys = frozenset(key for rule in rules for key in rule.input_keys())
@@ -417,30 +428,10 @@ def _numeric_overlay(text, field):
         ),
         (
             "institution_scores.institution_schools",
-            {
-                "default": False,
-                "war": False,
-                "population": 3000000,
-                "loans": False,
-                "debt_ratio": 0.1,
-                "net_surplus": 1,
-                "bureaucracy": 1,
-                "legitimacy": 80,
-                "insurrection": False,
-            },
-            {
-                "in_default": False,
-                "is_at_war": False,
-                "total_population": 3000000,
-                "taking_loans": False,
-                "scaled_debt": 0.1,
-                "net_total_income": 1,
-                "bureaucracy": 1,
-                "legitimacy": 80,
-                "has_insurrectionary_interest_groups": False,
-            },
+            {"literacy": 0.3, "population": 3000000},
+            {"literacy_rate": 0.3, "total_population": 3000000},
             10,
-            11.5,
+            11,
         ),
     ],
 )
@@ -462,7 +453,10 @@ def test_generated_numeric_targets_preserve_player_disabled_unknown_and_country_
     for key in root:
         changed = {**root, key: None, "is_ai": True}
         outcome = pdx_eval.select(overlay, {"ROOT": changed, "other_country": root})
-        assert outcome.delta == 1
+        # War is no longer a shared all-known gate for observed default costs.
+        # Schools still need the actual literacy and population observations.
+        expected_partial = 0.75 if key == "is_at_war" else 1
+        assert outcome.delta == pytest.approx(expected_partial)
     assert pdx_eval.select(overlay, {"ROOT": {"is_ai": True}, "other_country": root}).delta == 1
     # No scope can make a native terminal zero positive through this multiplier.
     assert 0 * result.delta == 0

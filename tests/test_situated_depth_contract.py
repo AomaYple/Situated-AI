@@ -459,9 +459,20 @@ def test_d0_target_maps_preserve_full_field_path(tmp_path) -> None:
     result = inventory.discover_vanilla(game=game)
     fields = {item.field for item in result.surfaces if item.definition == "ai_strategy_map"}
     assert fields == {
+        "institution_scores",
         "institution_scores.institution_education",
         "institution_scores.institution_health_system",
     }
+    parent = next(
+        item
+        for item in result.surfaces
+        if item.definition == "ai_strategy_map" and item.field == "institution_scores"
+    )
+    # Retaining the map parent does not inherit the children's numeric scope.
+    # This fixture has no independent container declaration evidence.
+    assert parent.capability == "pending"
+    assert parent.operation == "declared_field"
+    assert not parent.legal
 
 
 def test_d0_scope_comes_from_documentation_not_referenced_scope_strings(tmp_path) -> None:

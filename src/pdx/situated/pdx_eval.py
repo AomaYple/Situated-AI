@@ -704,11 +704,82 @@ def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[st
     return operation.key, delta
 
 
-def evaluate(
-    text: str, facts: Mapping[str, object | None], *, path: str = "<generated>"
-) -> tuple[PdxDecision, ...]:
-    """求值生成的行动 overlay，返回按字段顺序的决策。"""
+@dataclass(frozen=True, slots=True, repr=False)
+class PreparedActions:
+    """An owned validated AST reused for independent observations, without global cache."""
 
+    _root: Block
+    _markers: Mapping[int, str]
+
+    def evaluate(self, facts: Mapping[str, object | None]) -> tuple[PdxDecision, ...]:
+        """Evaluate fresh observations without retaining or mutating their values."""
+
+        def walk(block: Block, ancestor_marker: str | None = None) -> list[PdxDecision]:
+            results: list[PdxDecision] = []
+            matched = False
+            chain_open = False
+            for assignment in block.assignments():
+                if assignment.key not in {"if", "else_if", "else"}:
+                    raise UnsupportedPdxError(f"未登记的行动分支：{assignment.key}")
+                if assignment.key == "if":
+                    matched = False
+                    chain_open = True
+                elif not chain_open:
+                    raise UnsupportedPdxError(f"{assignment.key} 分支缺少前置 if")
+                if assignment.key == "else":
+                    chain_open = False
+                if matched:
+                    continue
+                if not isinstance(assignment.value, Block):
+                    raise UnsupportedPdxError("行动分支不是块")
+                limit = assignment.value.first("limit")
+                if assignment.key == "else":
+                    state: Truth = True
+                elif limit is None or not isinstance(limit.value, Block):
+                    raise UnsupportedPdxError("行动分支缺少 limit 块")
+                else:
+                    state = condition(limit.value, facts)
+                writes = any(
+                    item.key in {"add", "multiply"} for item in assignment.value.assignments()
+                )
+                if writes:
+                    action_id = self._markers.get(assignment.line, ancestor_marker)
+                    if action_id is None:
+                        raise UnsupportedPdxError("行动分支缺少身份标记")
+                    if state is True:
+                        operation, delta = _effect_delta(assignment.value, facts)
+                        results.append(PdxDecision(action_id, operation, delta, "selected"))
+                        return results
+                    if state is None:
+                        results.append(PdxDecision(action_id, None, 0.0, "unknown"))
+                        return results
+                    results.append(PdxDecision(action_id, None, 0.0, "vanilla"))
+                    continue
+                # A write-free proof enters a tier only when its condition is true.
+                # Unproven cost/benefit partitions continue along their outer chain;
+                # writing branches above still stop on generic unknown conditions.
+                if state is True:
+                    nested = Block(
+                        [
+                            item
+                            for item in assignment.value.items
+                            if not isinstance(item, Assignment) or item.key != "limit"
+                        ]
+                    )
+                    results.extend(
+                        walk(nested, self._markers.get(assignment.line, ancestor_marker))
+                    )
+                    matched = True
+            return results
+
+        return tuple(walk(self._root))
+
+    def select(self, facts: Mapping[str, object | None]) -> PdxDecision:
+        return _selected(self.evaluate(facts))
+
+
+def prepare(text: str, *, path: str = "<generated>") -> PreparedActions:
+    """Parse and validate the exact source once; caller owns its bounded lifetime."""
     parsed = parse_text(text, path=path)
     if parsed.errors:
         raise UnsupportedPdxError("生成文本无法解析：" + "; ".join(parsed.errors))
@@ -724,61 +795,14 @@ def evaluate(
             branch_line += 1
         markers[branch_line + 1] = match.group(1)
 
-    def walk(block: Block, ancestor_marker: str | None = None) -> list[PdxDecision]:
-        results: list[PdxDecision] = []
-        matched = False
-        chain_open = False
-        for assignment in block.assignments():
-            if assignment.key not in {"if", "else_if", "else"}:
-                raise UnsupportedPdxError(f"未登记的行动分支：{assignment.key}")
-            if assignment.key == "if":
-                matched = False
-                chain_open = True
-            elif not chain_open:
-                raise UnsupportedPdxError(f"{assignment.key} 分支缺少前置 if")
-            if assignment.key == "else":
-                chain_open = False
-            if matched:
-                continue
-            if not isinstance(assignment.value, Block):
-                raise UnsupportedPdxError("行动分支不是块")
-            limit = assignment.value.first("limit")
-            if assignment.key == "else":
-                state: Truth = True
-            elif limit is None or not isinstance(limit.value, Block):
-                raise UnsupportedPdxError("行动分支缺少 limit 块")
-            else:
-                state = condition(limit.value, facts)
-            writes = any(item.key in {"add", "multiply"} for item in assignment.value.assignments())
-            if writes:
-                action_id = markers.get(assignment.line, ancestor_marker)
-                if action_id is None:
-                    raise UnsupportedPdxError("行动分支缺少身份标记")
-                if state is True:
-                    operation, delta = _effect_delta(assignment.value, facts)
-                    results.append(PdxDecision(action_id, operation, delta, "selected"))
-                    return results
-                if state is None:
-                    results.append(PdxDecision(action_id, None, 0.0, "unknown"))
-                    return results
-                results.append(PdxDecision(action_id, None, 0.0, "vanilla"))
-                continue
-            # A write-free proof enters a tier only when its condition is true.
-            # Unproven cost/benefit partitions continue along their outer chain;
-            # writing branches above still stop on generic unknown conditions.
-            if state is True:
-                nested = Block(
-                    [
-                        item
-                        for item in assignment.value.items
-                        if not isinstance(item, Assignment) or item.key != "limit"
-                    ]
-                )
-                results.extend(walk(nested, markers.get(assignment.line, ancestor_marker)))
-                matched = True
-        return results
+    return PreparedActions(parsed.root, markers)
 
-    return tuple(walk(parsed.root))
+
+def evaluate(
+    text: str, facts: Mapping[str, object | None], *, path: str = "<generated>"
+) -> tuple[PdxDecision, ...]:
+    """Evaluate the generated overlay without caching source or observations."""
+    return prepare(text, path=path).evaluate(facts)
 
 
 def marked_block(text: str, action_id: str, *, path: str = "<generated>") -> str:
@@ -826,7 +850,10 @@ def select(
 ) -> PdxDecision:
     """按生成的 ``if/else_if`` 顺序选择一个分支。"""
 
-    decisions = evaluate(text, facts, path=path)
+    return _selected(evaluate(text, facts, path=path))
+
+
+def _selected(decisions: tuple[PdxDecision, ...]) -> PdxDecision:
     for item in decisions:
         if item.fallback == "selected":
             return item
@@ -837,9 +864,11 @@ def select(
 
 __all__ = [
     "PdxDecision",
+    "PreparedActions",
     "UnsupportedPdxError",
     "condition",
     "evaluate",
     "marked_block",
+    "prepare",
     "select",
 ]

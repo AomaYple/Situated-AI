@@ -971,7 +971,7 @@ def test_r7_maps_keep_the_original_parent_denominator_and_exact_proven_key_set()
         assert report["binding_issue_count"] == 0
 
 
-def test_r7_all_current_27_production_writers_pass_the_exact_s4_numeric_join():
+def test_r7_all_current_production_writers_pass_the_exact_s4_numeric_join():
     from pdx.situated import compiler
     from pdx.situated.domain_coverage import _native_context_issue
 
@@ -983,7 +983,16 @@ def test_r7_all_current_27_production_writers_pass_the_exact_s4_numeric_join():
         if row.consumer_field.removeprefix("ai_strategy_default.").split(".")[0]
         in {row[0].split(".")[0] for row in _R7_FIELDS}
     ]
-    assert len(selected) == 27
+    from collections import Counter
+
+    assert Counter(
+        w.consumer_field.removeprefix("ai_strategy_default.").split(".")[0] for w in selected
+    ) == {
+        "treaty_category_scores": 13,
+        "strategic_region_stance_type_scores": 3,
+        "wanted_num_supply_ships": 3,
+        "max_ship_design_complexity": 1,
+    }
     for instance in selected:
         field = instance.consumer_field.removeprefix("ai_strategy_default.")
         contract = data["consumers"][field.split(".")[0]]

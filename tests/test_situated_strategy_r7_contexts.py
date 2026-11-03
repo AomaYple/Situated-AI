@@ -404,7 +404,16 @@ def test_every_actual_new_strategy_and_shipmod_writer_binds_complete_inputs(monk
             for binding in writer.evaluation_context.targets
         )
     ]
-    assert len(strategy) == 27
+    from collections import Counter
+
+    assert Counter(
+        w.field.removeprefix("ai_strategy_default.").split(".")[0] for w in strategy
+    ) == {
+        "treaty_category_scores": 13,
+        "strategic_region_stance_type_scores": 3,
+        "wanted_num_supply_ships": 3,
+        "max_ship_design_complexity": 1,
+    }
     assert len(equipment) == 1517
     for writer in [*strategy, *equipment]:
         instance = instances[writer.writer_id]

@@ -1238,6 +1238,7 @@ class _GeneratedBranches:
     # into every failure and exhausting the worker during error reporting.
     branches: tuple = dataclass_field(repr=False)
     scripts: dict[int, dict[str, str]] = dataclass_field(repr=False)
+    prepared: dict = dataclass_field(default_factory=dict, repr=False)
 
     def __iter__(self):
         return iter(self.branches)
@@ -1330,7 +1331,13 @@ def real_generated_branches():
             blocks[name] = parsed.root
             scripts[id(policy)][name] = _adapter_oracle_script(match.group(1))
         result.append((policy, blocks))
-    return _GeneratedBranches(tuple(result), scripts)
+    from pdx.situated import pdx_eval
+
+    prepared = {
+        identity: {field: pdx_eval.prepare(script, path=field) for field, script in rows.items()}
+        for identity, rows in scripts.items()
+    }
+    return _GeneratedBranches(tuple(result), scripts, prepared)
 
 
 @pytest.fixture(scope="module")
@@ -1374,7 +1381,13 @@ def social_reform_joint_branches():
             blocks[name] = parsed.root
             scripts[id(policy)][name] = _adapter_oracle_script(match.group(1))
         result.append((policy, blocks))
-    return _GeneratedBranches(tuple(result), scripts)
+    from pdx.situated import pdx_eval
+
+    prepared = {
+        identity: {field: pdx_eval.prepare(script, path=field) for field, script in rows.items()}
+        for identity, rows in scripts.items()
+    }
+    return _GeneratedBranches(tuple(result), scripts, prepared)
 
 
 def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | None:
@@ -1944,7 +1957,6 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
     import random
 
     from pdx import observation_queries
-    from pdx.situated import pdx_eval
 
     rng = random.Random(seed)
     collections = _adapter_collection_observations(seed)
@@ -2033,9 +2045,7 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
         reference = decision_rules.evaluate(policy, values, is_ai=is_ai)
         operations = {rule.id: rule.operation for rule in policy.rules}
         for field in blocks:
-            observed = pdx_eval.select(
-                real_generated_branches.scripts[id(policy)][field], scopes, path=field
-            )
+            observed = real_generated_branches.prepared[id(policy)][field].select(scopes)
             actual = (
                 (observed.operation, observed.delta) if observed.operation is not None else None
             )

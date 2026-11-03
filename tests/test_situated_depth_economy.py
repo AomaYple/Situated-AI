@@ -41,7 +41,7 @@ def test_economy_domains_have_static_base_contract_and_all_chain_nodes():
     chain_rows = [chain for chain in CHAINS if set(chain.domain_ids) & ECONOMY_DOMAINS]
     assert chain_rows
     assert all(
-        any(item.family_id == domain for item in _instances())
+        any(item.family_id == domain for item in model.action_instances)
         for chain in chain_rows
         for domain in chain.domain_ids
     )

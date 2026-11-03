@@ -442,7 +442,7 @@ def architecture_candidate(tmp_path, monkeypatch):
                 "evidence_ids": ["S4.legal_scope_disposition"],
             }
         )
-    package = root / "tools/out/package.zip"
+    package = root / "fixture-package.zip"
     with zipfile.ZipFile(package, "w") as archive:
         archive.writestr("common/fixture.txt", b"candidate={weight=1}\n")
     deployed = root / "deployment"
@@ -462,9 +462,9 @@ def architecture_candidate(tmp_path, monkeypatch):
         "release_url": "https://example.org/release/v-test",
         "workshop_url": "https://example.org/workshop/1",
     }
-    checksum = root / "tools/out/package.zip.sha256"
+    checksum = root / "fixture-package.zip.sha256"
     checksum.write_text(
-        f"{_ref(root, 'tools/out/package.zip')['sha256']}  package.zip\n", encoding="utf-8"
+        f"{_ref(root, 'fixture-package.zip')['sha256']}  {package.name}\n", encoding="utf-8"
     )
     data["delivery"] = {
         **{
@@ -479,8 +479,8 @@ def architecture_candidate(tmp_path, monkeypatch):
             )
         },
         "status": "verified",
-        "zip": _ref(root, "tools/out/package.zip"),
-        "checksum": _ref(root, "tools/out/package.zip.sha256"),
+        "zip": _ref(root, "fixture-package.zip"),
+        "checksum": _ref(root, "fixture-package.zip.sha256"),
         "publication_result": _write(root, "tools/out/publication.json", publication),
         "deployment": {
             "root": str(deployed),
@@ -525,7 +525,7 @@ def architecture_candidate(tmp_path, monkeypatch):
 def test_S阶段完整证据图可区分工程和最终交付(architecture_candidate, capsys):
     candidate = architecture_candidate
     gate = situated_closeout.plan_gate(candidate.root)
-    assert gate["ready"]
+    assert gate["ready"], json.dumps(gate, ensure_ascii=False)
     assert gate["engineering_ready"]
     assert gate["pending"] == 3  # physical discovery pending is not implementation truth
     candidate.stages["S6"]["status"] = "in_progress"

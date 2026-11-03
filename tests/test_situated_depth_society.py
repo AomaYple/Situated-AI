@@ -1,5 +1,6 @@
 """D7 社会域静态合同：覆盖、未知保留、并行和作用域边界。"""
 
+import hashlib
 from dataclasses import replace
 from typing import Any
 
@@ -17,18 +18,22 @@ pytestmark = pytest.mark.unit
 
 SOCIETY_DOMAINS = frozenset({"political", "population", "social", "identity"})
 WELFARE_FIELD = "institution_scores.institution_social_security"
+WELFARE_PROGRAM = (
+    "program_"
+    + hashlib.sha256(f"mod/decisions/information.toml:{WELFARE_FIELD}".encode()).hexdigest()[:16]
+)
 WELFARE_SIZE_WITNESSES = [
-    (1, False, ("social_welfare_local_foundation", 1.05)),
-    (1_999_999, False, ("social_welfare_local_foundation", 1.05)),
-    (2_000_000, False, ("social_welfare_population_pressure", 1.10)),
-    (2_000_001, False, ("social_welfare_population_pressure", 1.10)),
-    (1, True, ("social_welfare_local_foundation", 1.05)),
-    (1_999_999, True, ("social_welfare_local_foundation", 1.05)),
-    (2_000_000, True, ("social_welfare_local_foundation", 1.05)),
-    (2_000_001, True, ("social_welfare_local_foundation", 1.05)),
+    (1, False, (WELFARE_PROGRAM, 1.08)),
+    (1_999_999, False, (WELFARE_PROGRAM, 1.08)),
+    (2_000_000, False, (WELFARE_PROGRAM, 1.10)),
+    (2_000_001, False, (WELFARE_PROGRAM, 1.10)),
+    (1, True, (WELFARE_PROGRAM, 1.08)),
+    (1_999_999, True, (WELFARE_PROGRAM, 1.08)),
+    (2_000_000, True, (WELFARE_PROGRAM, 1.08)),
+    (2_000_001, True, (WELFARE_PROGRAM, 1.08)),
 ]
 WELFARE_BOUNDARY_WITNESSES = [
-    ({"average_sol": 7.999}, ("social_welfare_local_foundation", 1.05)),
+    ({"average_sol": 7.999}, (WELFARE_PROGRAM, 1.08)),
     ({"average_sol": 8}, None),
     ({"average_sol": 8.001}, None),
     ({"average_sol": None}, None),
@@ -41,27 +46,34 @@ WELFARE_BOUNDARY_WITNESSES = [
     ({"population": None}, None),
     # Zero spare administration is a cost tier; LJ04 keeps its low-cost local
     # welfare repair available instead of imposing a global hard gate.
-    ({"bureaucracy": 0}, ("lj04_welfare_zero_administration_foundation", 1.02)),
-    ({"bureaucracy": -1}, None),
-    ({"bureaucracy": None}, None),
-    ({"default": True}, ("administrative_cost_guard", 0.8)),
-    ({"default": True, "war": True}, None),
-    ({"default": None}, None),
-    ({"war": None}, ("social_welfare_local_foundation", 1.05)),
-    ({"population": 2_000_000, "war": None}, None),
-    ({"coord_need_political": None}, ("social_welfare_local_foundation", 1.05)),
+    ({"bureaucracy": 0}, (WELFARE_PROGRAM, 1.08)),
+    ({"bureaucracy": -1}, (WELFARE_PROGRAM, 0.98)),
+    ({"bureaucracy": None}, (WELFARE_PROGRAM, 1.08)),
+    ({"default": True}, (WELFARE_PROGRAM, 0.88)),
+    ({"default": True, "war": True}, (WELFARE_PROGRAM, 0.93)),
+    ({"default": None}, (WELFARE_PROGRAM, 1.08)),
+    ({"war": None}, (WELFARE_PROGRAM, 1.08)),
+    ({"population": 2_000_000, "war": None}, (WELFARE_PROGRAM, 1.08)),
+    ({"coord_need_political": None}, (WELFARE_PROGRAM, 1.08)),
 ]
 
 
 @pytest.fixture(scope="module")
 def welfare_policy():
     policy = decision_rules.load()
-    return replace(
+    from pdx.situated import compiler
+
+    selected = replace(
         policy,
         rules=tuple(rule for rule in policy.rules if ".".join(rule.field) == WELFARE_FIELD),
-        enabled_domains=frozenset({"economy", "political"}),
+        enabled_domains=frozenset(
+            rule.domain for rule in policy.rules if ".".join(rule.field) == WELFARE_FIELD
+        ),
         semantic_ir=(),
     )
+    return compiler.compile_policy(
+        selected, "mod/decisions/information.toml", compiler.load_model()
+    )[0]
 
 
 def _welfare_values(**changes):
@@ -93,7 +105,8 @@ def test_welfare_foundation_does_not_require_large_population_or_peace(
     result = decision_rules.evaluate(
         welfare_policy, _welfare_values(population=population, war=war), is_ai=True
     )
-    assert result[WELFARE_FIELD] == expected
+    assert result[WELFARE_FIELD][0] == expected[0]
+    assert result[WELFARE_FIELD][1] == pytest.approx(expected[1])
 
 
 @pytest.mark.parametrize(
@@ -104,7 +117,13 @@ def test_welfare_foundation_preserves_need_cost_and_unknown_boundaries(
     welfare_policy, changes, expected
 ):
     result = decision_rules.evaluate(welfare_policy, _welfare_values(**changes), is_ai=True)
-    assert result.get(WELFARE_FIELD) == expected
+    actual = result.get(WELFARE_FIELD)
+    if expected is None:
+        assert actual is None
+    else:
+        assert actual is not None
+        assert actual[0] == expected[0]
+        assert actual[1] == pytest.approx(expected[1])
 
 
 def test_welfare_foundation_preserves_player_and_disabled_paths(welfare_policy):
@@ -162,7 +181,20 @@ def _existence_paths(block: Block, path: tuple[str, ...] = ()) -> set[tuple[str,
         elif isinstance(item.value, Block):
             child_path = (
                 path
-                if item.key in {"if", "else_if", "limit", "AND", "OR", "NOT"}
+                if item.key
+                in {
+                    "if",
+                    "else_if",
+                    "limit",
+                    "AND",
+                    "OR",
+                    "NOT",
+                    "add",
+                    "multiply",
+                    "min",
+                    "max",
+                    "divide",
+                }
                 else (*path, item.key)
             )
             paths.update(_existence_paths(item.value, child_path))
@@ -209,10 +241,11 @@ def test_welfare_actual_pdx_preserves_need_cost_unknown_and_size_tiers(
     )
     if expected is None:
         assert actual.fallback in {"vanilla", "unknown"} or (
-            actual.action_id == "welfare_unknown_guard" and actual.delta == 1.0
+            actual.operation == "multiply" and actual.delta == 1.0
         )
     else:
-        assert (actual.action_id, actual.delta) == expected
+        assert actual.action_id == expected[0]
+        assert actual.delta == pytest.approx(expected[1])
         assert actual.operation == "multiply"
     # Native score is ten, so a neutral/unknown path retains ten rather than
     # granting institutions, cash, eligibility or an unconditional score.
@@ -264,22 +297,26 @@ def test_welfare_missing_grain_observation_keeps_native_score(
 ):
     _, _, overlay, _ = welfare_generated
     values = _welfare_values(grain_price=0.6, grain_balance=-1, net_surplus=1)
-    expected = ("lj07_grain_social_capacity", 1.12)
-    assert decision_rules.evaluate(welfare_policy, values, is_ai=True)[WELFARE_FIELD] == expected
+    expected = 1.12
+    assert decision_rules.evaluate(welfare_policy, values, is_ai=True)[WELFARE_FIELD][
+        1
+    ] == pytest.approx(expected)
     ready = pdx_eval.select(overlay, _welfare_pdx_facts(welfare_policy, values))
-    assert (ready.action_id, ready.delta) == expected
+    assert ready.action_id == WELFARE_PROGRAM
+    assert ready.delta == pytest.approx(expected)
     if missing:
         del values[key]
     else:
         values[key] = None
-    assert decision_rules.evaluate(welfare_policy, values, is_ai=True) == {}
+    # Losing a grain observation exits that optional tier, while independently
+    # observed low living standards retain the 1.08 local need.
+    reference = decision_rules.evaluate(welfare_policy, values, is_ai=True)[WELFARE_FIELD]
+    assert reference[1] == pytest.approx(1.08)
     actual = pdx_eval.select(overlay, _welfare_pdx_facts(welfare_policy, values))
-    assert actual.action_id == "lj07_grain_social_capacity"
-    assert actual.fallback == "unknown"
-    assert actual.operation is None
-    assert actual.delta == 0
-    factor = actual.delta if actual.operation == "multiply" else 1.0
-    assert 10 * factor == 10
+    assert actual.action_id == WELFARE_PROGRAM
+    assert actual.operation == "multiply"
+    assert actual.delta == pytest.approx(1.08)
+    assert 10 * actual.delta == pytest.approx(10.8)
 
 
 def test_society_domains_and_chain_nodes_are_completely_declared():

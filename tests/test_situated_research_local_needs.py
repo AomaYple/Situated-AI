@@ -1,4 +1,4 @@
-"""D6 科研局部需求：完整消费者的手写预期与生产 PDX，不证明引擎行为。"""
+"""科技联合消费者：局部供给、全局信号隔离与原版科研尾部。"""
 
 from copy import deepcopy
 from dataclasses import replace
@@ -15,16 +15,35 @@ pytestmark = pytest.mark.unit
 PRODUCTION = "common/technology/technologies/10_production.txt"
 MILITARY = "common/technology/technologies/20_military.txt"
 SOCIETY = "common/technology/technologies/30_society.txt"
-# All four native formulae have strictly positive bases and only nonnegative adds.
-# This batch does not infer a universal nonpositive-score terminal rule.
+# Concrete market supply needs remain available without route or fiscal gates.
+# Productive-recipe queries are observed through complete native collections;
+# these local supply scenarios deliberately use known-empty owned collections.
 TARGETS = {
-    # Keep the new local need at least as strong as the strongest existing
-    # consumer for the field; a shortage must never erase an established
-    # industrial/coordination signal.
-    "steelworking": (PRODUCTION, "tools_balance", "tools_price", "economy", 1.25, 1.35),
-    "central_planning": (SOCIETY, "bureaucracy", None, "political", 1.10, 1.10),
-    "rifling": (MILITARY, "small_arms_balance", "small_arms_price", "military", 1.20, 1.30),
-    "gantry_cranes": (MILITARY, "steamers_balance", "steamers_price", "military", 1.20, 1.30),
+    "steelworking": (
+        PRODUCTION,
+        "country_goods_tools_balance",
+        "country_goods_tools_price",
+        "economy",
+        1.12,
+        1.20,
+    ),
+    "central_planning": (SOCIETY, "literacy", None, "political", 1.25, 1.25),
+    "rifling": (
+        MILITARY,
+        "country_goods_small_arms_balance",
+        "country_goods_small_arms_price",
+        "military",
+        1.12,
+        1.20,
+    ),
+    "gantry_cranes": (
+        MILITARY,
+        "country_goods_steamers_balance",
+        "country_goods_steamers_price",
+        "military",
+        1.12,
+        1.20,
+    ),
 }
 
 
@@ -45,14 +64,21 @@ def policies():
             enabled_domains=frozenset(rule.domain for rule in rules),
             semantic_ir=(),
         )
-    return selected
+    model = compiler.load_model()
+    return {
+        source: compiler.compile_policy(policy, source, model)[0]
+        for source, policy in selected.items()
+    }
 
 
 def _values(policy, target, **changes):
-    values = {reader.key: False if reader.kind == "boolean" else 0 for reader in policy.readers}
+    values: dict[str, bool | int | float | None] = {
+        reader.key: False if reader.kind == "boolean" else 0 for reader in policy.readers
+    }
     # Known neutral signals exclude legacy route, war and broad coordination branches.
     values.update({reader.key: 0.2 for reader in policy.readers if reader.key.endswith("_price")})
-    values[TARGETS[target][1]] = -1
+    values["literacy"] = 0.8
+    values[TARGETS[target][1]] = 0.3 if target == "central_planning" else -1
     values.update(changes)
     return values
 
@@ -113,8 +139,10 @@ def _overlay(text, target):
 
 
 def _facts(policy, values, *, ai=True):
-    root = {"is_ai": ai}
+    root = {"is_ai": ai, "any_scope_state": [], "any_scope_building": []}
     for reader in policy.readers:
+        if reader.engine in {"any_scope_state", "any_scope_building"}:
+            continue
         assert reader.scope == "root"
         current = root
         for part in reader.path:
@@ -148,27 +176,27 @@ def _pdx_factor(policies, generated, target, values, *, ai=True, disabled=False)
 
 
 CASES = [
-    ("foundation", 1.25),
-    ("pressure", 1.35),
-    ("price_at_threshold", 1.25),
-    ("price_below_threshold", 1.25),
-    ("price_above_threshold", 1.35),
-    ("aux_unknown", 1.25),
-    ("aux_nan", 1.25),
-    ("aux_bool", 1.25),
+    ("foundation", 1.12),
+    ("pressure", 1.20),
+    ("price_at_threshold", 1.12),
+    ("price_below_threshold", 1.12),
+    ("price_above_threshold", 1.20),
+    ("aux_unknown", 1.12),
+    ("aux_nan", 1.12),
+    ("aux_bool", 1.12),
     ("core_unknown", 1),
     ("core_nan", 1),
     ("core_inf", 1),
     ("core_bool", 1),
-    ("need_before_threshold", 1.25),
+    ("need_before_threshold", 1.12),
     ("need_at_threshold", 1),
     ("need_after_threshold", 1),
-    ("normal_borrowing", 1.25),
-    ("default", 1.25),
-    ("low_literacy", 1.25),
-    ("bureaucracy_deficit", 1.25),
-    ("unrelated_unknown", 1.25),
-    ("candidate_not_completion", 1.25),
+    ("normal_borrowing", 1.12),
+    ("default", 1.12),
+    ("low_literacy", 1.12),
+    ("bureaucracy_deficit", 1.12),
+    ("unrelated_unknown", 1.12),
+    ("candidate_not_completion", 1.12),
     ("player", 1),
     ("disabled", 1),
 ]
@@ -181,8 +209,6 @@ def test_goods_research_full_field_handwritten_reference_and_pdx(
     policies, generated, target, case, expected
 ):
     source, core, auxiliary, _, _, _ = TARGETS[target]
-    if target in {"rifling", "gantry_cranes"}:
-        expected = {1.25: 1.20, 1.35: 1.30}.get(expected, expected)
     policy = policies[source]
     values = _values(policy, target)
     if case in {"pressure", "price_above_threshold"}:
@@ -233,7 +259,7 @@ def test_goods_research_full_field_handwritten_reference_and_pdx(
 @pytest.mark.integration
 @pytest.mark.parametrize(
     ("bureaucracy", "expected"),
-    [(-0.001, 1.1), (0, 1), (0.001, 1), (None, 1), (float("nan"), 1), (True, 1)],
+    [(-0.001, 1.25), (0, 1.25), (0.001, 1.25), (None, 1.25), (float("nan"), 1.25), (True, 1.25)],
 )
 def test_administrative_research_signed_need_is_not_a_health_gate(
     policies, generated, bureaucracy, expected
@@ -268,17 +294,17 @@ def test_local_research_no_world_scan_or_state_mutation_and_isolated_actors(
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    ("target", "signal", "old_factor", "foundation", "pressure"),
+    ("target", "signal"),
     [
-        ("steelworking", "industrial", 1.2, 1.25, 1.35),
-        ("steelworking", "coord_evidence_need_industry", 1.25, 1.25, 1.35),
-        ("steelworking", "coord_layer_expansion", 1.1, 1.25, 1.35),
-        ("rifling", "war", 1.2, 1.2, 1.3),
-        ("gantry_cranes", "war", 1.2, 1.2, 1.3),
+        ("steelworking", "industrial"),
+        ("steelworking", "coord_evidence_need_industry"),
+        ("steelworking", "coord_layer_expansion"),
+        ("rifling", "war"),
+        ("gantry_cranes", "war"),
     ],
 )
-def test_shortage_never_weakens_complete_existing_priority_chain(
-    policies, generated, target, signal, old_factor, foundation, pressure
+def test_local_need_does_not_require_retired_route_or_generic_global_signal(
+    policies, generated, target, signal
 ):
     source, core, auxiliary, *_ = TARGETS[target]
     policy = policies[source]
@@ -287,15 +313,23 @@ def test_shortage_never_weakens_complete_existing_priority_chain(
         lambda facts: _factor(policy, target, facts),
         lambda facts: _pdx_factor(policies, generated, target, facts),
     ):
-        assert evaluate(values) == pytest.approx(old_factor)
-        assert evaluate(values | {core: -1}) == pytest.approx(foundation)
-        assert evaluate(values | {core: -1, auxiliary: None}) == pytest.approx(foundation)
-        assert evaluate(values | {core: -1, auxiliary: 0.251}) == pytest.approx(pressure)
-        assert evaluate(values | {core: 0, auxiliary: 0.251}) == pytest.approx(old_factor)
-    old_rules = [
-        rule for rule in policy.rules if rule.field[0] == target and not rule.id.startswith("d6_")
-    ]
-    assert max(rule.value for rule in old_rules) <= foundation
+        assert evaluate(values) == pytest.approx(1)
+        assert evaluate(values | {core: -1}) == pytest.approx(1.12)
+        assert evaluate(values | {core: -1, auxiliary: None}) == pytest.approx(1.12)
+        assert evaluate(values | {core: -1, auxiliary: 0.251}) == pytest.approx(1.20)
+        assert evaluate(values | {core: 0, auxiliary: 0.251}) == pytest.approx(1)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(("war", "expected"), [(False, 1.20), (True, 1.27)])
+def test_existing_navy_and_supply_need_are_independent_contributions(
+    policies, generated, war, expected
+):
+    policy = policies[MILITARY]
+    values = _values(policy, "gantry_cranes", own_navy=5, war=war)
+    # Supply +.12 joins navy +.08 or wartime navy +.15, then one final bound.
+    assert _factor(policy, "gantry_cranes", values) == pytest.approx(expected)
+    assert _pdx_factor(policies, generated, "gantry_cranes", values) == pytest.approx(expected)
 
 
 @pytest.mark.integration
@@ -303,7 +337,7 @@ def test_shortage_never_weakens_complete_existing_priority_chain(
 @pytest.mark.parametrize("disabled", [False, True])
 def test_administrative_research_player_and_real_domain_switch(policies, generated, ai, disabled):
     values = _values(policies[SOCIETY], "central_planning")
-    expected = 1.1 if ai and not disabled else 1
+    expected = 1.25 if ai and not disabled else 1
     assert _factor(
         policies[SOCIETY],
         "central_planning",

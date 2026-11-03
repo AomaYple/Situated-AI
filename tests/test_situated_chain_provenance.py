@@ -59,13 +59,13 @@ def production():
     return model, adapters, policies
 
 
-def test_complete_model_binds_only_the_thirty_four_proven_local_writers(production):
+def test_complete_model_binds_only_the_current_proven_local_writers(production):
     model, _adapters, policies = production
     bundle = model.consumer_ir
     assert bundle is not None
     joint_chain_contract.validate_bundle_refs(bundle)
-    assert len(bundle.chain_bindings) == 34
-    assert len({writer for writer, _chain, _link in bundle.chain_bindings}) == 34
+    assert len(bundle.chain_bindings) == 31
+    assert len({writer for writer, _chain, _link in bundle.chain_bindings}) == 31
     assert {chain for _writer, chain, _link in bundle.chain_bindings} == {
         "LJ01",
         "LJ02",
@@ -85,9 +85,9 @@ def test_complete_model_binds_only_the_thirty_four_proven_local_writers(producti
     rebound = joint_chain_contract.bind_bundle(bundle, policies)
     assert rebound == bundle
     rows = bundle.as_dict()["writers"]
-    assert sum(bool(row["chain_refs"]) for row in rows) == 34
+    assert sum(bool(row["chain_refs"]) for row in rows) == 31
     evidence = joint_chain_contract.build_strict(bundle, policies)
-    assert len(evidence) == 34
+    assert len(evidence) == 31
     assert joint_chain_contract.strict_contract(evidence)["pending_chain_closure"] == [
         f"LJ{index:02d}" for index in range(1, 15)
     ]
@@ -291,7 +291,7 @@ def test_real_pdx_contains_exact_chain_source_map_for_each_bound_writer(producti
         if line.strip().startswith("# SITAI CHAIN ")
     }
     assert actual == expected
-    assert len(actual) == 34
+    assert len(actual) == 31
 
 
 def test_removing_all_trace_fields_from_bound_bundle_cannot_bypass_validation(production):

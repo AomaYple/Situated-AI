@@ -127,17 +127,16 @@ LJ01_INPUTS = {
     "state_owner_furniture_balance": -1,
 }
 LJ01_CASES = [
-    # Iron's generic shortage tier (+.15) and active tools cost (-.20)
-    # jointly give .95; repair (+.05) and input pressure (-.05) are weaker
-    # alternatives in the same positive/negative envelopes.
-    ({}, (950, 1600, 800)),
+    # Observed active output +.20 and its actual input -.20 cancel for iron
+    # and tools. Furniture has only generic supply +.12 against input -.20.
+    ({}, (1000, 2000, 920)),
     (
         {
             "state_owner_iron_price": 0.2,
             "state_owner_iron_balance": 0,
             "state_owner_tools_price": 0.3,
         },
-        (1000, 2400, 1000),
+        (1000, 2400, 1120),
     ),
     (
         {
@@ -148,11 +147,11 @@ LJ01_CASES = [
         },
         (1000, 2000, 1200),
     ),
-    ({"state_owner_default": True}, (800, 1600, 800)),
-    # Losing this workshop's observation removes its repair/output tiers,
-    # while the mine's own active recipe and observed shortage remain known.
-    ({PM_TOOLS: None}, (950, 2000, 800)),
-    ({PM_TOOLS: False}, (950, 2000, 800)),
+    ({"state_owner_default": True}, (850, 1700, 770)),
+    # Losing the workshop recipe removes only its observed output/cost tiers;
+    # its independently known market supply opportunity remains +.12.
+    ({PM_TOOLS: None}, (1000, 2240, 920)),
+    ({PM_TOOLS: False}, (1000, 2240, 920)),
 ]
 
 
@@ -168,21 +167,21 @@ LJ03_FIELDS = (
 )
 LJ03_INPUTS = {
     "state_owner_academia_completed": True,
-    "tools_price": 0.3,
-    "tools_balance": -1,
+    "country_goods_tools_price": 0.3,
+    "country_goods_tools_balance": -1,
     "pm_active_building_university_pm_scholastic_education": True,
 }
 LJ03_CASES = [
-    ({}, (11, 2300, 1.2)),
-    ({"literacy": 0.5, "state_owner_literacy": 0.5}, (10, 2000, 1.3)),
-    ({"state_owner_paper_price": 0.6, "state_owner_paper_balance": -1}, (11, 1600, 1.2)),
+    ({}, (11, 2400, 1.2)),
+    ({"literacy": 0.5, "state_owner_literacy": 0.5}, (10, 2000, 1.2)),
+    ({"state_owner_paper_price": 0.6, "state_owner_paper_balance": -1}, (11, 1900, 1.2)),
     (
         {"state_owner_academia_completed": None, "literacy": None, "state_owner_literacy": None},
-        # Unknown literacy blocks the 1.3 absorption tier, but not the
-        # independently observed tools bottleneck's known 1.2 tier.
+        # Unknown literacy exits school/university needs; the independently
+        # observed tools market shortage retains its own 1.2 research tier.
         (10, 2000, 1.2),
     ),
-    ({"tools_price": 0.2, "tools_balance": 0}, (11, 2300, 1)),
+    ({"country_goods_tools_price": 0.2, "country_goods_tools_balance": 0}, (11, 2400, 1)),
 ]
 
 
@@ -199,9 +198,9 @@ LJ04_FIELDS = (
     (STRATEGY, "ai_strategy_default.institution_scores.institution_health_system"),
 )
 LJ04_CASES = [
-    ({"bureaucracy": -1, "state_owner_bureaucracy": -1}, (1250, 10, 8)),
-    ({"bureaucracy": 0, "state_owner_bureaucracy": 0}, (1000, 10.2, 10)),
-    ({"bureaucracy": 1, "state_owner_bureaucracy": 1}, (1000, 10.5, 11)),
+    ({"bureaucracy": -1, "state_owner_bureaucracy": -1}, (1250, 9.8, 8)),
+    ({"bureaucracy": 0, "state_owner_bureaucracy": 0}, (1000, 10.8, 10)),
+    ({"bureaucracy": 1, "state_owner_bureaucracy": 1}, (1000, 10.8, 10)),
     (
         {
             "bureaucracy": -1,
@@ -209,11 +208,12 @@ LJ04_CASES = [
             "default": True,
             "state_owner_default": True,
         },
-        # Administrative repair +.25 offsets default -.25; emergency +.05
-        # is a weaker repair tier. Health's -.25 wins over its -.20 tier.
-        (1000, 8, 7.5),
+        # Under default the known base repair +.05 joins financing -.25.
+        # Welfare .08 need joins -.10 administration and -.20 financing;
+        # health joins -.20 administration and -.25 financing.
+        (800, 7.8, 5.5),
     ),
-    ({"bureaucracy": None, "state_owner_bureaucracy": None}, (1000, 10, 10)),
+    ({"bureaucracy": None, "state_owner_bureaucracy": None}, (1000, 10.8, 10)),
     ({"bureaucracy": 0, "state_owner_bureaucracy": 0, "average_sol": 8}, (1000, 10, 10)),
 ]
 
@@ -226,8 +226,8 @@ def test_lj04_only_actual_administrative_balance_advances_welfare(policies, chan
 @pytest.mark.parametrize(
     ("chain", "changes", "expected"),
     [
-        ("LJ01", {}, (1050, 1600, 800)),
-        ("LJ01", {PM_TOOLS: None}, (1000, 2000, 800)),
+        ("LJ01", {}, (1120, 2240, 1120)),
+        ("LJ01", {PM_TOOLS: None}, (1120, 2240, 1120)),
         (
             "LJ03",
             {
@@ -235,7 +235,7 @@ def test_lj04_only_actual_administrative_balance_advances_welfare(policies, chan
                 "literacy": None,
                 "state_owner_literacy": None,
             },
-            (10, 2000, 1),
+            (10, 2000, 1.2),
         ),
         (
             "LJ04",
@@ -245,7 +245,7 @@ def test_lj04_only_actual_administrative_balance_advances_welfare(policies, chan
                 "default": True,
                 "state_owner_default": True,
             },
-            (1050, 8, 7.5),
+            (1050, 8.5, 7.5),
         ),
     ],
 )
@@ -343,8 +343,10 @@ def _overlay(text, field):
 def _engine_facts(policy, values, *, is_ai=True):
     # These are actual scoped reader observations. Parameterized queries keep
     # their technology/building/method identity; no selector result is an input.
-    root: dict[str, Any] = {}
+    root: dict[str, Any] = {"any_scope_state": [], "any_scope_building": []}
     for reader in policy.readers:
+        if reader.engine in {"any_scope_state", "any_scope_building"}:
+            continue
         current = root
         assert reader.scope == "root"
         for part in reader.path:
@@ -378,7 +380,7 @@ def _engine_facts(policy, values, *, is_ai=True):
     ("source", "key", "other_argument"),
     [
         (GOV, "state_owner_academia_completed", "empiricism"),
-        (TECH, "industrial", "ai_strategy_conservative"),
+        (STRATEGY, "current_public_health", "law_type:law_charitable_health_system"),
     ],
 )
 def test_engine_observations_keep_parameter_queries_independent(
@@ -472,14 +474,14 @@ def test_lj01_other_state_and_country_methods_never_repair_this_states_inputs(po
     facts.update(decoy)
     facts["other_country"] = {"in_default": False, **decoy}
     actual = pdx_eval.select(_overlay(generated[1][MINES], "building_iron_mine.ai_value"), facts)
-    # The local mine still has generic shortage +.15 and active tools cost
-    # -.20; an unrelated workshop cannot supply the repair predicate.
-    assert actual.delta == pytest.approx(0.95)
+    # The local mine's observed output +.20 cancels its tools input -.20;
+    # an unrelated workshop cannot create another local repair bonus.
+    assert actual.delta == pytest.approx(1.0)
 
 
 @pytest.mark.parametrize(
     ("bureaucracy", "expected"),
-    [(-0.001, (1250, 10, 8)), (0, (1000, 10.2, 10)), (0.001, (1000, 10.5, 11))],
+    [(-0.001, (1250, 9.8, 8)), (0, (1000, 10.8, 10)), (0.001, (1000, 10.8, 10))],
 )
 def test_lj04_signed_capacity_zero_is_distinct_from_unknown_and_deficit(
     policies, generated, bureaucracy, expected
@@ -493,10 +495,10 @@ def test_lj04_signed_capacity_zero_is_distinct_from_unknown_and_deficit(
     ("literacy", "expected"),
     [
         (0.499, 1.2),
-        (0.5, 1.3),
-        (0.501, 1.3),
-        # Invalid/unknown literacy excludes only the 1.3 tier. The known
-        # tools shortage still proves the lower 1.2 technology preference.
+        (0.5, 1.2),
+        (0.501, 1.2),
+        # Literacy is not a proxy for having adopted this technology's recipe.
+        # Its unknown value does not erase a known tools market shortage.
         (-1, 1.2),
         (None, 1.2),
         (float("nan"), 1.2),
@@ -597,10 +599,10 @@ def test_all_depth_links_disabled_retain_exact_native_and_source_selection_canno
         "candidate_selected": True,
         "construction_queued": True,
     }
-    # Existing generic literacy preference remains 1.1 even for an ineligible
-    # candidate; native unlocking_technologies still controls its availability.
-    # Selection cannot manufacture the new completed-knowledge factor 1.15.
-    assert _scores(policies, values, ((GOV, "building_university.ai_value"),)) == (2200,)
+    # Observed existing university PM plus prepared paper supports 1.2;
+    # the false academia observation cannot be repaired by a queued intention.
+    # Native unlocking_technologies continues to decide actual availability.
+    assert _scores(policies, values, ((GOV, "building_university.ai_value"),)) == (2400,)
     assert _pdx_scores(policies, generated, values, ((GOV, "building_university.ai_value"),)) == (
-        2200,
+        2400,
     )

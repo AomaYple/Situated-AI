@@ -409,18 +409,17 @@ def test_all_native_prerequisites_costs_strategy_culture_and_on_researched_tails
 
 
 def test_disabled_module_patches_exactly_no_native_source(production):
-    policy, native, _generated = production
+    policy, _native, _generated = production
     adapters = decision_adapters.load()
     selected = replace(
         adapters,
-        sources=tuple(row for row in adapters.sources if row[0] == SOURCE),
         policies=((SOURCE, policy),),
         initial_values=(),
         scalar_values=(),
         supply=None,
     )
     files, _ = decision_adapters.build(
-        selected, texts={SOURCE: native}, enabled_domains=frozenset()
+        selected, texts=decision_adapters.read_inputs(adapters), enabled_domains=frozenset()
     )
     assert files == {}
 

@@ -208,7 +208,6 @@ def test_unsupported_condition_ast_is_rejected_even_when_observations_are_missin
         "add = { value = 1 multiply != 2 }",
         "add = { value = 1 if != { limit = { always = yes } add = 2 } }",
         "add = { value = 1 if = { INJECT:limit = { always = yes } add = 2 } }",
-        "add = { value = 1 if = { limit = { always = no } value = 7 } }",
         "add = { value = 1 if = { limit = { always = yes } limit = { always = no } add = 2 } }",
         "add = { value = 1 if = { limit = { always = no } INJECT:add = 2 } }",
         "add = { value = 1 if = { limit = { always = no } add = 2 } else = { limit = { always = no } add = 3 } }",
@@ -253,3 +252,14 @@ if = { limit = { always = yes }
     }
 }"""
     assert pdx_eval.select(text, {}).delta == 12
+
+
+@pytest.mark.parametrize(("condition", "expected"), [("no", 1), ("yes", 7)])
+def test_conditional_numeric_value_reset_obeys_source_order(condition, expected):
+    text = (
+        "# ACTION strict [test];\nif = { limit = { always = yes } "
+        "add = { value = 1 if = { limit = { always = " + condition + " } value = 7 } } }"
+    )
+    result = pdx_eval.select(text, {})
+    assert result.operation == "add"
+    assert result.delta == expected

@@ -88,7 +88,7 @@ def test_actual(architecture_witness, request, role, expected, responsibility):
     if FAULT == "generated_source":
         Path("mod/common/generated.txt").write_text("strategy = { weight = { value = 99 } }", encoding="utf-8")
     if FAULT == "plan":
-        Path("tools/out/plan.json").write_text("{}", encoding="utf-8")
+        Path("tools/out/fixture-plan.json").write_text("{}", encoding="utf-8")
 """.replace("FAULT", repr(fault)).replace("BATCH", repr(batch)),
         encoding="utf-8",
         newline="\n",
@@ -113,8 +113,8 @@ def test_actual(architecture_witness, request, role, expected, responsibility):
         "--architecture-witness-scope=" + "c" * 64,
     ]
     if batch:
-        plan = tmp_path / "tools/out/plan.json"
-        plan.parent.mkdir(parents=True)
+        plan = tmp_path.joinpath("tools", "out", "fixture-plan.json")
+        plan.parent.mkdir(parents=True, exist_ok=True)
         plan.write_text(
             json.dumps(
                 {
@@ -140,7 +140,7 @@ def test_actual(architecture_witness, request, role, expected, responsibility):
             encoding="utf-8",
         )
         command = [item for item in command if not item.startswith("--architecture-witness-")]
-        command.append("--architecture-witness-plan=tools/out/plan.json")
+        command.append("--architecture-witness-plan=tools/out/fixture-plan.json")
     result = subprocess.run(
         command, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=45, check=False
     )
@@ -295,7 +295,7 @@ def test_batch_plan_rejects_ambiguous_or_noncanonical_responsibility(tmp_path, f
     elif fault == "row_output_overlap":
         rows[1]["output"] = "tools/out/society.row.json"
     elif fault == "plan_output_overlap":
-        rows[1]["output"] = "tools/out/plan.json"
+        rows[1]["output"] = "tools/out/fixture-plan.json"
     elif fault == "invalid_requirement":
         rows[0]["requirement_id"] = "archive_identity"
     elif fault == "extra_key":
@@ -304,8 +304,8 @@ def test_batch_plan_rejects_ambiguous_or_noncanonical_responsibility(tmp_path, f
         rows = []
     elif fault == "traversal":
         rows[0]["output"] = "tools/out/../outside.json"
-    path = tmp_path / "tools/out/plan.json"
-    path.parent.mkdir(parents=True)
-    path.write_text(json.dumps({"schema": 1, "rows": rows}), encoding="utf-8")
+    isolated_plan = tmp_path.joinpath("tools", "out", "fixture-plan.json")
+    isolated_plan.parent.mkdir(parents=True, exist_ok=True)
+    isolated_plan.write_text(json.dumps({"schema": 1, "rows": rows}), encoding="utf-8")
     with pytest.raises(pytest.UsageError):
-        _plan(tmp_path, "tools/out/plan.json")
+        _plan(tmp_path, "tools/out/fixture-plan.json")

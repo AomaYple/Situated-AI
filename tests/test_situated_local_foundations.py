@@ -1,4 +1,4 @@
-"""D6 批次2：借款不全局禁止大学、交通和民生基础修复。"""
+"""完整联合消费者：基础需求独立，真实投入升档，成本同时参与。"""
 
 import re
 from copy import deepcopy
@@ -36,7 +36,13 @@ def production():
             rules=rules,
             readers=tuple(r for r in policy.readers if r.key in keys),
             semantic_ir=(),
+            enabled_domains=frozenset(r.domain for r in rules),
         )
+    model = compiler.load_model()
+    policies = {
+        source: compiler.compile_policy(policy, source, model)[0]
+        for source, policy in policies.items()
+    }
     return adapters, policies
 
 
@@ -64,14 +70,9 @@ def test_borrowing_direct_need_reaches_real_foundation(
     values = _values(policy, target, pm)
     before = deepcopy(values)
     result = decision_rules.evaluate(policy, values, is_ai=True)
-    assert result[f"building_{target}.ai_value"] == (
-        f"borrowing_foundation_building_{target}",
-        1.05,
-    )
-    assert (
-        next(r.priority for r in policy.rules if r.id == f"borrowing_foundation_building_{target}")
-        == priority
-    )
+    expected = 1.2 if target in {"university", "railway"} else 1.12
+    assert result[f"building_{target}.ai_value"][1] == pytest.approx(expected)
+    assert policy.consumer_programs
     assert values == before
 
 
@@ -180,18 +181,14 @@ def test_complete_field_and_actual_pdx_local_foundation(
 ):
     policy = production[1][source]
     values = _values(policy, target, pm)
-    expected = 1.05
-    actual_key = (
-        "state_owner_academia_completed"
-        if target == "university"
-        else f"pm_active_building_{target}_{pm}"
-    )
+    expected = 1.2 if target in {"university", "railway"} else 1.12
+    actual_key = f"pm_active_building_{target}_{pm}"
     if scenario == "input_cost":
         values.update({f"state_owner_{cost}_price": 0.6, f"state_owner_{cost}_balance": -1})
-        expected = 0.8
+        expected = {"university": 0.95, "railway": 0.9}.get(target, 0.92)
     elif scenario == "input_unknown":
         values[f"state_owner_{cost}_price"] = None
-        expected = 1
+        expected = {"university": 1.15, "railway": 1.1}.get(target, 1.12)
     elif scenario == "need_resolved":
         if target == "university":
             values["state_owner_literacy"] = 0.5
@@ -205,10 +202,9 @@ def test_complete_field_and_actual_pdx_local_foundation(
         expected = 1
     elif scenario == "loan_unknown":
         values["state_owner_loans"] = None
-        expected = 1
     elif scenario == "loan_false":
         values["state_owner_loans"] = False
-        expected = 1.15 if target == "university" else 1 if target == "railway" else 1.2
+        expected = 1.2
     elif scenario in {"player", "missing_owner"}:
         expected = 1
     elif scenario == "unrelated":
@@ -216,16 +212,16 @@ def test_complete_field_and_actual_pdx_local_foundation(
     elif scenario in {"candidate_false", "candidate_unknown"}:
         values[actual_key] = False if scenario == "candidate_false" else None
         values.update(candidate_selected=True, construction_queued=True)
-        expected = 1
+        expected = {"university": 1.15, "railway": 1.1}.get(target, 1.12)
     elif scenario == "default":
         values["state_owner_default"] = True
-        expected = 1
+        expected = 1.05 if target in {"university", "railway"} else 0.97
     elif scenario == "cost_above_edge":
         values[f"state_owner_{cost}_price"] = 0.251
-        expected = 1
+        expected = {"university": 1.15, "railway": 1.1}.get(target, 1.12)
     elif scenario == "cost_balance_unknown":
         values[f"state_owner_{cost}_balance"] = None
-        expected = 1
+        expected = {"university": 1.15, "railway": 1.1}.get(target, 1.12)
     elif scenario == "cost_edge":
         values[f"state_owner_{cost}_price"] = 0.25
     elif scenario in {"need_edge", "need_above"}:
@@ -316,8 +312,8 @@ def test_existing_employment_high_tier_wins_but_is_not_required_for_base(
     source = "common/buildings/01_industry.txt"
     policy = production[1][source]
     values = _values(policy, target, pm)
-    values["state_unemployment"] = unemployment
-    expected = 1.3 if unemployment is not None and unemployment >= 0.1 else 1.05
+    values.update(state_unemployment=unemployment, state_owner_loans=False, state_owner_reserves=1)
+    expected = 1.3 if unemployment is not None and unemployment >= 0.1 else 1.2
     reference = decision_rules.evaluate(policy, values, is_ai=True).get(
         f"building_{target}.ai_value"
     )
@@ -331,7 +327,7 @@ def test_existing_employment_high_tier_wins_but_is_not_required_for_base(
 @pytest.mark.integration
 @pytest.mark.parametrize(
     ("engine_price", "engine_balance", "expected"),
-    [(0.25, 0, 1.05), (0.251, 0, 1), (0.6, -1, 0.8), (None, 0, 1)],
+    [(0.25, 0, 1.2), (0.251, 0, 1.1), (0.6, -1, 0.9), (None, 0, 1.1)],
 )
 def test_railway_checks_second_real_input_without_infrastructure_surplus_gate(
     production, generated, engine_price, engine_balance, expected

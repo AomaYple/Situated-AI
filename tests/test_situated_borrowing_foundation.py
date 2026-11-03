@@ -1,4 +1,4 @@
-"""D6.01/.03：借款保留基础建设，真实成本继续优先；不是低债证明。"""
+"""借款不禁止基础机会；已观察配方、投入、偿付和物流共同参与。"""
 
 import re
 from copy import deepcopy
@@ -47,7 +47,13 @@ def production():
             rules=rules,
             readers=tuple(r for r in policy.readers if r.key in keys),
             semantic_ir=(),
+            enabled_domains=frozenset(r.domain for r in rules),
         )
+    model = compiler.load_model()
+    policies = {
+        source: compiler.compile_policy(policy, source, model)[0]
+        for source, policy in policies.items()
+    }
     return adapters, policies
 
 
@@ -167,19 +173,19 @@ def test_complete_field_borrowing_and_cost_reference(
 ):
     policy = production[1][source]
     values = _values(policy, target, good, pm)
-    factor = 1.05
+    factor = 1.2
     if scenario == "no_loans":
         values["state_owner_loans"] = False
         factor = 1.2
     elif scenario == "cost":
         values.update({f"state_owner_{cost}_price": 0.6, f"state_owner_{cost}_balance": -1})
-        factor = 0.8
+        factor = 1.0
     elif scenario == "exit":
         values[f"state_owner_{good}_balance"] = 0
         factor = 1
     elif scenario == "default":
         values["state_owner_default"] = True
-        factor = 1
+        factor = 1.05
     elif scenario.endswith("unknown"):
         key = {
             "loans_unknown": "state_owner_loans",
@@ -188,17 +194,17 @@ def test_complete_field_borrowing_and_cost_reference(
             "cost_unknown": f"state_owner_{cost}_price",
         }[scenario]
         values[key] = None
-        factor = 1
+        factor = 1.12 if scenario == "pm_unknown" else 1.2
     elif scenario == "player":
         factor = 1
     elif scenario == "price_threshold":
         values[f"state_owner_{good}_price"] = 0.25
-        factor = 1
+        factor = 1.08
     elif scenario == "price_above_threshold":
         values[f"state_owner_{good}_price"] = 0.251
     elif scenario == "infra_deficit":
         values["state_infrastructure"] = -0.001
-        factor = 1
+        factor = 1.1
     elif scenario == "candidate_only":
         values.update(candidate_selected=True, construction_queued=True)
     result = decision_rules.evaluate(policy, values, is_ai=scenario != "player").get(
@@ -206,7 +212,9 @@ def test_complete_field_borrowing_and_cost_reference(
     )
     assert (result[1] if result else 1) == pytest.approx(factor)
     if scenario in {"borrow", "candidate_only", "price_above_threshold"}:
-        assert result == (f"borrowing_foundation_building_{target}", 1.05)
+        assert result is not None
+        assert result[0].startswith("program_")
+        assert result[1] == pytest.approx(1.2)
 
 
 @pytest.mark.integration
@@ -219,16 +227,16 @@ def test_actual_pdx_preserves_borrowing_cost_and_scopes(
 ):
     policy = production[1][source]
     values = _values(policy, target, good, pm)
-    expected = 1.05
+    expected = 1.2
     if scenario == "cost":
         values.update({f"state_owner_{cost}_price": 0.6, f"state_owner_{cost}_balance": -1})
-        expected = 0.8
+        expected = 1.0
     elif scenario == "exit":
         values[f"state_owner_{good}_balance"] = 0
         expected = 1
     elif scenario == "unknown":
         values["state_owner_loans"] = None
-        expected = 1
+        expected = 1.2
     facts = _facts(policy, values, ai=scenario != "player")
     if scenario == "missing_owner":
         del facts["ROOT"]["owner"]
@@ -280,8 +288,9 @@ def test_fiscal_insolvency_does_not_bypass_real_input_cost(
     values = _values(policy, target, good, pm, state_owner_default=True)
     values.update({f"state_owner_{cost}_price": 0.6, f"state_owner_{cost}_balance": -1})
     result = decision_rules.evaluate(policy, values, is_ai=True)[f"building_{target}.ai_value"]
-    assert result[1] == 0.8
-    assert "actual_cost" in result[0]
+    # Demand +.20, observed input -.20 and default -.15 all participate.
+    assert result[1] == pytest.approx(0.85)
+    assert result[0].startswith("program_")
 
 
 @pytest.mark.integration
@@ -302,12 +311,19 @@ def test_candidate_or_queue_cannot_replace_actual_recipe_or_need(
     values.update(candidate_selected=True, construction_queued=True)
     before = deepcopy(values)
     reference = decision_rules.evaluate(policy, values, is_ai=True)
-    assert f"building_{target}.ai_value" not in reference
+    expected = 1.12 if missing in {"method_false", "method_unknown"} else 1.0
+    result = reference.get(f"building_{target}.ai_value")
+    assert (result[1] if result else 1) == pytest.approx(expected)
+    assert reference == decision_rules.evaluate(
+        policy,
+        {k: v for k, v in values.items() if k not in {"candidate_selected", "construction_queued"}},
+        is_ai=True,
+    )
     assert values == before
     facts = _facts(policy, values)
     facts["ROOT"].update(candidate_selected=True, construction_queued=True)
     before_facts = deepcopy(facts)
-    result = pdx_eval.select(_overlay(generated[1][source], f"building_{target}.ai_value"), facts)
-    assert (result.delta if result.operation == "multiply" else 1) == 1
+    actual = pdx_eval.select(_overlay(generated[1][source], f"building_{target}.ai_value"), facts)
+    assert (actual.delta if actual.operation == "multiply" else 1) == pytest.approx(expected)
     assert values == before
     assert facts == before_facts

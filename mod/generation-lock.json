@@ -102,7 +102,7 @@
     "src/pdx/situated/migration_baseline.py": "1066d1af7f7a12423ee1d562f2d22c037b87170cc36646e517a63a8b1c2cfe24",
     "src/pdx/situated/native_treatments.py": "57063105ac87621662e58008325a0d26495addcabeee205106b6f2375c7daa64",
     "src/pdx/situated/opportunity.py": "5e2df75392640d7fa67b2a7917264fd640c9cd0ded045453f8282e5d194e386c",
-    "src/pdx/situated/pdx_eval.py": "3f9cf99f4f2bd5abdc17a8f9e5e2debadb4200d6d25458cc376d0a4779f7b49d",
+    "src/pdx/situated/pdx_eval.py": "7cd49f77a3140fc30a04b101ec47d74e3db7cc3214a5c6c513f42dd11f567370",
     "src/pdx/situated/pressure.py": "a57a7a0261ff816d49230476ff716ee82ab4fab761ed7e1154e067a0c73afa8c",
     "src/pdx/situated/programs.py": "9a51886ae9e4d5549fff0dbbe81464a95cd000b56a836347001785a90d87303c",
     "src/pdx/situated/receipts.py": "d5f3f8cc38deb05b31b52afc6322d7f95da7e453c107be76e05784840f9433e6",
