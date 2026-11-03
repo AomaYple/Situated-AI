@@ -324,6 +324,32 @@ def test_each_legacy_physical_consumer_has_six_executed_roles(
         "src/pdx/situated/compiler.py",
         "src/pdx/decision_rules.py",
     ]
+    linked_consumer = None
+    if output.endswith("sitai_adapter_values.txt"):
+        # The numeric body is reached through a separate physical strategy
+        # field. Prove both ends; body-only evidence cannot close that field.
+        linked_consumer = {
+            "path": "mod/" + source,
+            "definition": field[0],
+            "field": ".".join(field[1:]),
+        }
+        for text in (
+            candidate["files"][source],
+            (config.REPO / linked_consumer["path"]).read_text(encoding="utf-8-sig"),
+        ):
+            link, state = _resolve(_root(candidate, text), field[0], ".".join(field[1:]))
+            assert state == "found"
+            assert link is not None
+            assert isinstance(link.value, Scalar)
+            assert link.value.unquoted == "sitai_adapter_fleet_supply_weight"
+        disabled_strategy = candidate["disabled"].get(source, candidate["inputs"][source])
+        disabled_link, state = _resolve(
+            _root(candidate, disabled_strategy), field[0], ".".join(field[1:])
+        )
+        assert state == "found"
+        assert disabled_link is not None
+        assert isinstance(disabled_link.value, Scalar)
+        assert float(disabled_link.value.unquoted) == 1.0
 
     def record(role, observations, expected, reference, actual):
         assert expected == reference == actual
@@ -344,6 +370,25 @@ def test_each_legacy_physical_consumer_has_six_executed_roles(
             production=production,
             consumers=[consumer],
         )
+        if linked_consumer is not None:
+            # Each case still binds exactly one consumer. Resolving the proven
+            # scalar link gives precisely the executed body's result above;
+            # disabled generation restores the independently known native 1.
+            architecture_witness(
+                evidence_ids=evidence_ids,
+                case_id=f"legacy.{base_id}.strategy_link.{role}",
+                role=role,
+                input={
+                    "script_value": "sitai_adapter_fleet_supply_weight",
+                    "disabled_native_value": 1,
+                    **_json_observation(observations),
+                },
+                expected=expected,
+                reference=reference,
+                generated=actual,
+                production=production,
+                consumers=[linked_consumer],
+            )
 
     for role, (case, values, is_ai) in choices.items():
         expected = oracle._independent_net(rules, values, index, raw.enabled_domains)
