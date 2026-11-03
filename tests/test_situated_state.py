@@ -10,6 +10,24 @@ from pdx.situated.schema import EvidenceValue
 pytestmark = pytest.mark.unit
 
 
+@pytest.mark.parametrize(
+    "trigger",
+    [
+        "AND = {}",
+        "AND = { literacy_rate > 0 }",
+        "AND = { literacy_rate >= 0 legitimacy < 50 }",
+        "AND = { literacy_rate >= 0 OR = { literacy_rate < 1 } }",
+        'AND = { literacy_rate >= 0 literacy_rate < "1" }',
+        "AND = { literacy_rate >= 0 INJECT:literacy_rate < 1 }",
+        "AND = { literacy_rate >= 0 literacy_rate < 1 } always = yes",
+        "AND = { literacy_rate >= 0 literacy_rate < 1",
+        "AND = { " + "literacy_rate >= 0 " * 9 + "}",
+    ],
+)
+def test_fact_predicate_rejects_unbounded_or_ambiguous_expression(trigger):
+    assert evidence.scalar_predicate_engine(trigger) is None
+
+
 def values(**overrides: object) -> dict[str, EvidenceValue]:
     defaults: dict[str, object] = {
         "default": False,
@@ -121,6 +139,36 @@ def test_nonfinite_opportunity_and_commitment_values_are_unknown() -> None:
     invalid = values(literacy=float("nan"), debt_ratio=float("inf"))
     assert opportunity.derive(invalid, opportunity_specs)[0].known is False
     assert commitment.derive(invalid, commitment_specs)[0].known is False
+
+
+@pytest.mark.parametrize("invalid", [float("nan"), float("inf"), -float("inf")])
+def test_nonfinite_numeric_fact_cannot_prove_typed_capacity(invalid) -> None:
+    result = state.derive_typed(values(debt_ratio=invalid, bureaucracy=invalid))
+    by_id = {item.id: item for item in result.capacities}
+    for name in ("layer_foundation", "layer_stable", "layer_expansion", "administrative_capacity"):
+        assert by_id[name].known is False
+        assert by_id[name].value is None
+
+
+@pytest.mark.parametrize("bound", ["minimum", "maximum"])
+@pytest.mark.parametrize("invalid", [float("nan"), float("inf"), -float("inf"), True])
+def test_evidence_type_rejects_nonfinite_or_boolean_numeric_bounds(bound, invalid) -> None:
+    from pdx.situated.schema import EvidenceSpec
+
+    kwargs = {
+        "id": "bounded",
+        "domain": "fiscal",
+        "source": "test.txt",
+        "scope": "root",
+        "kind": "number",
+        "unit": "currency",
+        "refresh": "consumer",
+        "unknown": "vanilla",
+        "trigger": "net_total_income",
+        bound: invalid,
+    }
+    with pytest.raises(ValueError, match=r"范围|边界|有限"):
+        EvidenceSpec(**kwargs)
 
 
 def test_fact_schema_rejects_mixed_units_and_boolean_bounds(tmp_path) -> None:

@@ -43,6 +43,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # S0 verifies frozen archive blobs, including after a squash merge.
+          fetch-depth: 0
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -70,6 +73,7 @@ jobs:
       - name: pytest —— 不依赖游戏的用例
         run: >-
           python -m pytest -m "not integration and not benchmark"
+          --max-worker-restart=0 -vv --durations=25
           --junitxml=tools/out/ci/test-results.xml
 
       - name: 测试跳过项 —— 分类并拒绝未知原因
@@ -142,6 +146,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -159,4 +165,6 @@ jobs:
         run: v3 lock
 
       - name: pytest —— 在锁定的环境里跑不依赖游戏的用例
-        run: python -m pytest -m "not integration and not benchmark"
+        run: >-
+          python -m pytest -m "not integration and not benchmark"
+          --max-worker-restart=0 -vv --durations=25

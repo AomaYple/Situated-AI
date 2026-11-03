@@ -1,0 +1,778 @@
+# Société Mokta El Hadid
+company_societe_mokta_el_hadid = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/france_société_mokta_el_hadid.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_mining.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_CONSTANTINE }
+
+	building_types = {
+		building_iron_mine
+		building_sulfur_mine
+	}
+
+	extension_building_types = {
+		building_lead_mine
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_north_africa
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_CONSTANTINE
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = bessemer_process
+		any_scope_state = {
+			state_region = s:STATE_CONSTANTINE
+			any_scope_building = {
+				is_building_type = building_iron_mine
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		state_non_homeland_colony_growth_speed_mult = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = bessemer_process
+		any_scope_state = {
+			state_region = s:STATE_CONSTANTINE
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_iron_mine = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_CONSTANTINE
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_societe_mokta_el_hadid.ai_weight
+		# ACTION program_4ddb9ff085476727 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4ddb9ff085476727_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_societe_mokta_el_hadid_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_4ddb9ff085476727_company_mandatory_input_tools_negative
+			add = { value = 0
+				# company_sector_company_societe_mokta_el_hadid_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_4ddb9ff085476727_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_societe_mokta_el_hadid_sulfur_pressure [market]; sulfur缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_societe_mokta_el_hadid_iron_pressure [market]; iron缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_societe_mokta_el_hadid_sulfur_need [market]; 主业基础配方可能产出sulfur；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_societe_mokta_el_hadid_iron_need [market]; 主业基础配方可能产出iron；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_4ddb9ff085476727_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_societe_mokta_el_hadid_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_societe_mokta_el_hadid.ai_weight
+	}
+}
+
+# Schneider et Cie
+company_schneider_creusot = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/france_schneider_et_cie.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_BURGUNDY }
+
+	building_types = {
+		building_steel_mill
+		building_artillery_foundry
+		building_motor_industry
+	}
+
+	extension_building_types = {
+		building_automotive_industry
+		building_shipyard
+	}
+
+	possible_prestige_goods = {
+		prestige_good_schneider_guns
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_western_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_BURGUNDY
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = steelworking
+		any_scope_state = {
+			state_region = s:STATE_BURGUNDY
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_steel_mill
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		unit_morale_loss_mult = -0.1
+		unit_morale_recovery_mult = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = steelworking
+		any_scope_state = {
+			state_region = s:STATE_BURGUNDY
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_steel_mill = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_BURGUNDY
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_schneider_creusot.ai_weight
+		# ACTION program_dcfc71a807ab7e59 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_dcfc71a807ab7e59_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_schneider_creusot_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_dcfc71a807ab7e59_company_mandatory_input_coal_negative
+			add = { value = 0
+				# company_sector_company_schneider_creusot_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_dcfc71a807ab7e59_company_mandatory_input_iron_negative
+			add = { value = 0
+				# company_sector_company_schneider_creusot_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_dcfc71a807ab7e59_company_mandatory_input_steel_negative
+			add = { value = 0
+				# company_sector_company_schneider_creusot_steel_input [market]; 主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_dcfc71a807ab7e59_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_schneider_creusot_steel_pressure [market]; steel缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_schneider_creusot_engines_pressure [market]; engines缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_schneider_creusot_artillery_pressure [market]; artillery缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_schneider_creusot_steel_need [market]; 主业基础配方可能产出steel；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_schneider_creusot_engines_need [market]; 主业基础配方可能产出engines；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_schneider_creusot_artillery_need [market]; 主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_dcfc71a807ab7e59_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_schneider_creusot_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_schneider_creusot.ai_weight
+	}
+}
+
+# Dollfus-Mieg et Compagnie
+company_dmc = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/france_dmc.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_BURGUNDY }
+
+	building_types = {
+		building_textile_mill
+		building_coal_mine
+	}
+
+	extension_building_types = {
+		building_dye_plantation
+		building_cotton_plantation
+	}
+
+	possible_prestige_goods = {
+		prestige_good_generic_clothes
+	}
+
+	prestige_goods_trigger = {
+		custom_tooltip = {
+			text = je_prestige_goods_clothes_complete_tt
+			has_variable = prestige_good_generic_clothes_var
+		}
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_western_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_BURGUNDY
+			}
+		}
+	}
+
+	possible = {
+		any_scope_state = {
+			state_region = s:STATE_BURGUNDY
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_textile_mill
+				level >= 5
+			}
+		}
+		has_technology_researched = cotton_gin
+	}
+
+	prosperity_modifier = {
+		state_assimilation_mult = 0.1
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_BURGUNDY
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_textile_mill = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_BURGUNDY
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_dmc.ai_weight
+		# ACTION program_7a3b8d850f72d5b0 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_7a3b8d850f72d5b0_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_dmc_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_7a3b8d850f72d5b0_company_mandatory_input_fabric_negative
+			add = { value = 0
+				# company_sector_company_dmc_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_7a3b8d850f72d5b0_company_mandatory_input_tools_negative
+			add = { value = 0
+				# company_sector_company_dmc_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_7a3b8d850f72d5b0_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_dmc_coal_pressure [market]; coal缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_dmc_clothes_pressure [market]; clothes缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_dmc_coal_need [market]; 主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_dmc_clothes_need [market]; 主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_7a3b8d850f72d5b0_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_dmc_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_dmc.ai_weight
+	}
+}
+
+# Confédération générale des vignerons
+company_cgv = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/france_cgv.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_farm_rice.dds"
+
+	category = shopkeeper_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_CHAMPAGNE }
+
+	building_types = {
+		building_vineyard
+	}
+
+	extension_building_types = {
+		building_food_industry
+	}
+
+	possible_prestige_goods = {
+		prestige_good_champagne
+	}
+
+	potential = {
+		OR = {
+			country_has_primary_culture = cu:french
+			country_has_primary_culture = cu:occitan
+		}
+	}
+
+	possible = {
+		has_technology_researched = joint_stock_companies
+		any_scope_state = {
+			state_region = s:STATE_CHAMPAGNE
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_vineyard
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		country_prestige_mult = 0.15
+		building_vineyard_throughput_add = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = central_planning
+		any_scope_state = {
+			state_region = s:STATE_CHAMPAGNE
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_vineyard = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_CHAMPAGNE
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_cgv.ai_weight
+		# ACTION program_7155b638cc559e93 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_7155b638cc559e93_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_cgv_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_7155b638cc559e93_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_cgv_wine_pressure [market]; wine缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wine mg:wine = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_cgv_wine_need [market]; 主业基础配方可能产出wine；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wine mg:wine = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_7155b638cc559e93_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_cgv_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.8
+			max = 1.24
+		} }
+		# SITAI END information:company_cgv.ai_weight
+	}
+}
+
+
+# Manufacture d'armes de Saint-Étienne
+company_saint_etienne = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/france_saint_etienne.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_RHONE }
+
+	building_types = {
+		building_arms_industry
+		building_artillery_foundry
+		building_munition_plant
+	}
+
+	extension_building_types = {
+		building_explosives_factory
+	}
+
+	possible_prestige_goods = {
+		prestige_good_saint_etienne_rifles
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_southern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_RHONE
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = bolt_action_rifles
+		any_scope_state = {
+			state_region = s:STATE_RHONE
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_arms_industry
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		unit_offense_mult = 0.05
+		unit_defense_mult = 0.05
+	}
+
+	ai_will_do = {
+		has_technology_researched = bolt_action_rifles
+		any_scope_state = {
+			state_region = s:STATE_RHONE
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_arms_industry = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_RHONE
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_saint_etienne.ai_weight
+		# ACTION program_95ac9b5b8918d5ef [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_95ac9b5b8918d5ef_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_saint_etienne_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_95ac9b5b8918d5ef_company_mandatory_input_explosives_negative
+			add = { value = 0
+				# company_sector_company_saint_etienne_explosives_input [market]; 主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:explosives mg:explosives = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_95ac9b5b8918d5ef_company_mandatory_input_hardwood_negative
+			add = { value = 0
+				# company_sector_company_saint_etienne_hardwood_input [market]; 主业某必选基础配方组所有方法共同需要hardwood；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_95ac9b5b8918d5ef_company_mandatory_input_lead_negative
+			add = { value = 0
+				# company_sector_company_saint_etienne_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_95ac9b5b8918d5ef_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_saint_etienne_small_arms_pressure [market]; small_arms缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_saint_etienne_artillery_pressure [market]; artillery缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_saint_etienne_ammunition_pressure [market]; ammunition缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_saint_etienne_small_arms_need [market]; 主业基础配方可能产出small_arms；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_saint_etienne_artillery_need [market]; 主业基础配方可能产出artillery；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_saint_etienne_ammunition_need [market]; 主业基础配方可能产出ammunition；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_95ac9b5b8918d5ef_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_saint_etienne_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_saint_etienne.ai_weight
+	}
+}
+
+# Société Nouvelle des Forges et Chantiers de la Méditerranée
+company_fcm = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/france_forges_et_chantiers_de_la_méditerranée.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_harbor_shipbuilding.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_PROVENCE }
+
+	building_types = {
+		building_shipyard
+		building_automotive_industry # Produced the Char 2C
+	}
+
+	extension_building_types = {
+		building_steel_mill
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_southern_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_PROVENCE
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = ironclad_tech
+		any_scope_state = {
+			state_region = s:STATE_PROVENCE
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_shipyard
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		ship_hull_damage_mult = 0.025
+		unit_combat_unit_type_heavy_tank_offense_mult = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = ironclad_tech
+		any_scope_state = {
+			state_region = s:STATE_PROVENCE
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_shipyard = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_PROVENCE
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_fcm.ai_weight
+		# ACTION program_8cfcd53e57088917 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8cfcd53e57088917_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_fcm_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_8cfcd53e57088917_company_mandatory_input_engines_negative
+			add = { value = 0
+				# company_sector_company_fcm_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_8cfcd53e57088917_company_mandatory_input_oil_negative
+			add = { value = 0
+				# company_sector_company_fcm_oil_input [market]; 主业某必选基础配方组所有方法共同需要oil；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_8cfcd53e57088917_company_mandatory_input_rubber_negative
+			add = { value = 0
+				# company_sector_company_fcm_rubber_input [market]; 主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:rubber mg:rubber = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_8cfcd53e57088917_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_fcm_steamers_pressure [market]; steamers缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_fcm_clippers_pressure [market]; clippers缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_fcm_automobiles_pressure [market]; automobiles缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_fcm_steamers_need [market]; 主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_fcm_clippers_need [market]; 主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_fcm_automobiles_need [market]; 主业基础配方可能产出automobiles；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_8cfcd53e57088917_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_fcm_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_fcm.ai_weight
+	}
+}
+
+# Compagnie des mines d'Anzin
+company_mines_anzin = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/france_compagnie_des_mines_danzin.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_mining.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_FRENCH_LOW_COUNTRIES }
+
+	building_types = {
+		building_coal_mine
+	}
+
+	extension_building_types = {
+		building_iron_mine
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_western_europe
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_FRENCH_LOW_COUNTRIES
+			}
+		}
+	}
+
+	possible = {
+		any_scope_state = {
+			state_region = s:STATE_FRENCH_LOW_COUNTRIES
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_coal_mine
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		building_steel_mill_throughput_add = 0.05
+		building_railway_throughput_add = 0.1
+	}
+
+	ai_will_do = {
+		any_scope_state = {
+			state_region = s:STATE_FRENCH_LOW_COUNTRIES
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_coal_mine = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_FRENCH_LOW_COUNTRIES
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_mines_anzin.ai_weight
+		# ACTION program_8f30b991b1a65742 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8f30b991b1a65742_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_mines_anzin_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_8f30b991b1a65742_company_mandatory_input_tools_negative
+			add = { value = 0
+				# company_sector_company_mines_anzin_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_8f30b991b1a65742_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_mines_anzin_coal_pressure [market]; coal缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mines_anzin_coal_need [market]; 主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_8f30b991b1a65742_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_mines_anzin_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_mines_anzin.ai_weight
+	}
+}

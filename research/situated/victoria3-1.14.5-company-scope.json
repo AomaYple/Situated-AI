@@ -1,0 +1,281 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.14.5-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54",
+    "bytes": 97774200
+  },
+  "script_hashes": {
+    "common/company_types/00_companies_africa.txt": "f59ba1f5cb472b2d5eb92840102111a88c6f2f9ee16ab792fd123cc2056eef19",
+    "common/company_types/00_companies_americas.txt": "f8c40a3bccc063ee55b9e55cb8829a6c7b2452bb858a5a43100865aa391f2aa4",
+    "common/company_types/00_companies_asia.txt": "2520c6e1388630f4871bf14f667e406af8b18499693d400197e8b40388c1e67c",
+    "common/company_types/00_companies_austria_hungary.txt": "7713fa613c85260172412ece7066eeffc8e94cbf3141b383c7ed8b59aa9ead1e",
+    "common/company_types/00_companies_china.txt": "3a150d9b2f344f07032f512a3b073ca87885663b41bb5025b05bb6a8807d3537",
+    "common/company_types/00_companies_cots.txt": "1c391432856c9444fb2cde4e3f4bb83c7433d0bbe6859c3aad988ed4e7b43ece",
+    "common/company_types/00_companies_ep2.txt": "d36e4b2ff7d3094764f33f66e908bfbe029487b6eb4960b198d35d86cb0184c6",
+    "common/company_types/00_companies_europe.txt": "15c2eff77d6f9830ba0258aede08f8116b19287c737e4147db91560c276f8817",
+    "common/company_types/00_companies_france.txt": "f4078c4ccd97956e681ece7df5b2a43c07943cbb35cd54baac7812ef8f202b2a",
+    "common/company_types/00_companies_germany.txt": "b2019ff4f5e719f54c20b3c6b18c731f7a61940d00df0233fc8117a1547275fc",
+    "common/company_types/00_companies_great_britain.txt": "be234202d67a73b9af52747789e80cda363e043fc5c11c8a75687b83874c2b44",
+    "common/company_types/00_companies_ip2.txt": "e173f2f50f48549e2430ede30f8a3aab9acad700404153d2597b1d9ec0a94fb6",
+    "common/company_types/00_companies_ip3.txt": "f8e6f3f40ffa46cf27a6d68ab61f67dce90b02afa8c79fcf57ae0e8f329d3b10",
+    "common/company_types/00_companies_ip4.txt": "298a2354955beac5550d586ab96d59cf4fdaaa1d3d4dde5bef8ef2cdaa1e341b",
+    "common/company_types/00_companies_italy.txt": "8e5b9b3ca19a15f086296c35329c0af6d9e699005a6e72a67bfbeebf383561e0",
+    "common/company_types/00_companies_japan.txt": "f626e624c2ae3ec808d8e550b108b85a7f3af51659f57ed9a316cce96b02904e",
+    "common/company_types/00_companies_mp1.txt": "1132f75ce38f1571c8290829bcc105eb0ed4bcf0ebe69a213ad6ceb03640d101",
+    "common/company_types/00_companies_russia.txt": "ff0b4a82fe800545d6635c6d5ac065696708dfb1548c7e1a2cd4cf36a751a42b",
+    "common/company_types/00_companies_soi.txt": "ac1c635aa555d094724cacde33c823e34d52454900f336668dc45855fa220946",
+    "common/company_types/00_companies_totally_normal.txt": "82091c4b63f6f99044f9d5342e798c459eeef44cdc1bf174a8e1f8f4076d246b",
+    "common/company_types/00_companies_usa.txt": "a647fccfa789480f82717f8b749fa7dde94d66e82698d8b5f6b5c5664c4bb59f",
+    "common/company_types/99_basic_companies.txt": "8da8c02afc1e1ede66937862865fc206c73f9697346082acc10ffe5dc90e6623"
+  },
+  "contracts": [
+    {
+      "field": "ai_will_do",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "eligibility",
+      "capability": "direct",
+      "parser": "0x141698300",
+      "parser_receiver": "0x598",
+      "trigger_member": "0x318",
+      "parser_interface_member": "0x320",
+      "consumer": "0x14169a220",
+      "actual_call": "0x1415c9837",
+      "false_result": "zero_candidate_score"
+    },
+    {
+      "field": "ai_weight",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "base_candidate_score",
+      "capability": "direct",
+      "parser": "0x141698300",
+      "parser_receiver": "0x598",
+      "numeric_member": "0x390",
+      "consumer": "0x14169a3b0",
+      "actual_call": "0x1415c9855",
+      "nonpositive_rejection": "0x141510b30"
+    }
+  ],
+  "limits": [
+    "Static proof establishes actor, definition identity and separate eligibility/score operations; it does not prove behavioral quality or selection frequency.",
+    "Candidate CompanyType is a definition identity, not a script-visible company or target Country.",
+    "ai_construction_targets and charter fields are not licensed by these observations.",
+    "The vanilla eligibility, downstream costs, nonpositive rejection and action execution remain authoritative."
+  ],
+  "observations": [
+    {
+      "label": "company parser vbtable",
+      "va": "0x1444cc208",
+      "rva": "0x44cc208",
+      "file_offset": "0x44cb608",
+      "bytes": "f8ffffff90050000"
+    },
+    {
+      "label": "company parser RTTI",
+      "va": "0x144abffe0",
+      "rva": "0x4abffe0",
+      "file_offset": "0x4abf3e0",
+      "bytes": "010000009805000004000000d88e4605889e9704e0ffab04"
+    },
+    {
+      "label": "company type name",
+      "va": "0x145468ed8",
+      "rva": "0x5468ed8",
+      "file_offset": "0x5467ad8",
+      "bytes": "40d849440100000000000000000000002e3f415643436f6d70616e795479706540400000"
+    },
+    {
+      "label": "company parser vtable",
+      "va": "0x1445b1a58",
+      "rva": "0x45b1a58",
+      "file_offset": "0x45b0e58",
+      "bytes": "341a6a410100000040797b400100000080d66240010000007072bf43010000006c7f7b400100000080d6624001000000"
+    },
+    {
+      "label": "company numeric vtable",
+      "va": "0x144546908",
+      "rva": "0x4546908",
+      "file_offset": "0x4545d08",
+      "bytes": "a0b6d940010000000072bf430100000080d662400100000050b7da4001000000508280410100000080d6624001000000"
+    },
+    {
+      "label": "country scope vtable",
+      "va": "0x1445c9b20",
+      "rva": "0x45c9b20",
+      "file_offset": "0x45c8f20",
+      "bytes": "a0a6264101000000c0a861410100000050593543010000003057354301000000e05b354301000000505d35430100000090a6264101000000"
+    },
+    {
+      "label": "country scope type",
+      "va": "0x14161a8c0",
+      "rva": "0x161a8c0",
+      "file_offset": "0x1619cc0",
+      "bytes": "b805000000c3"
+    },
+    {
+      "label": "company parser setup",
+      "va": "0x141697faf",
+      "rva": "0x1697faf",
+      "file_offset": "0x16973af",
+      "bytes": "488d05da9af102488907488b470848634804488d05909af1024889443908488b4708486348048d9170faffff89543904"
+    },
+    {
+      "label": "company parser displacement",
+      "va": "0x141697fcd",
+      "rva": "0x1697fcd",
+      "file_offset": "0x16973cd",
+      "bytes": "488b4708486348048d9170faffff89543904"
+    },
+    {
+      "label": "company selection trigger member",
+      "va": "0x14169815b",
+      "rva": "0x169815b",
+      "file_offset": "0x169755b",
+      "bytes": "4889b718030000488d8f20030000e89253cd014c89b720030000488d8f48030000e89f1304ff4c89bf20030000"
+    },
+    {
+      "label": "company numeric member",
+      "va": "0x141698188",
+      "rva": "0x1698188",
+      "file_offset": "0x1697588",
+      "bytes": "488d0579e7ea0248898790030000488d8f98030000e83e3470ff"
+    },
+    {
+      "label": "company field parser thunk",
+      "va": "0x1407b7f6c",
+      "rva": "0x7b7f6c",
+      "file_offset": "0x7b736c",
+      "bytes": "486341fc482bc8e98803ee00"
+    },
+    {
+      "label": "company selection atom",
+      "va": "0x1447992e0",
+      "rva": "0x47992e0",
+      "file_offset": "0x47986e0",
+      "bytes": "df29000000000000e01e764401000000"
+    },
+    {
+      "label": "company selection name",
+      "va": "0x144761ee0",
+      "rva": "0x4761ee0",
+      "file_offset": "0x47612e0",
+      "bytes": "61695f77696c6c5f646f00"
+    },
+    {
+      "label": "company weight atom",
+      "va": "0x1447a6820",
+      "rva": "0x47a6820",
+      "file_offset": "0x47a5c20",
+      "bytes": "ce53000000000000f827774401000000"
+    },
+    {
+      "label": "company weight name",
+      "va": "0x1447727f8",
+      "rva": "0x47727f8",
+      "file_offset": "0x4771bf8",
+      "bytes": "61695f77656967687400"
+    },
+    {
+      "label": "company parser low dispatch",
+      "va": "0x14169831d",
+      "rva": "0x169831d",
+      "file_offset": "0x169771d",
+      "bytes": "4181f8a95c00000f8f3a0300000f84200300004181f86f2c00000f8f7a0200000f84f40100004181e89c0000000f84d30100004183e8190f84b50100004181e8650200000f846a0100004181e8060200000f84d40000004181f8bf2400000f85c9040000"
+    },
+    {
+      "label": "company trigger parser",
+      "va": "0x141698423",
+      "rva": "0x1698423",
+      "file_offset": "0x1697823",
+      "bytes": "4881c188fdffffe8a17ecd0141b805000000488b8388fdffff488d8b88fdffffe91d050000"
+    },
+    {
+      "label": "company weight dispatch",
+      "va": "0x1416985b7",
+      "rva": "0x16985b7",
+      "file_offset": "0x16979b7",
+      "bytes": "4181e8ce530000747e"
+    },
+    {
+      "label": "company weight parser",
+      "va": "0x14169863e",
+      "rva": "0x169863e",
+      "file_offset": "0x1697a3e",
+      "bytes": "4881c1f8fdffff488b01ff5018"
+    },
+    {
+      "label": "company trigger parser vcall",
+      "va": "0x141698965",
+      "rva": "0x1698965",
+      "file_offset": "0x1697d65",
+      "bytes": "488bd7ff5020"
+    },
+    {
+      "label": "company eligibility arguments",
+      "va": "0x14169a240",
+      "rva": "0x169a240",
+      "file_offset": "0x1699640",
+      "bytes": "488bf2488bf983b95403000000750732c0e93c010000"
+    },
+    {
+      "label": "company eligibility scope and member",
+      "va": "0x14169a296",
+      "rva": "0x169a296",
+      "file_offset": "0x1699696",
+      "bytes": "b80500000066894424208b46184889442428488d8f180300004439713c750540b701eb11488d542420e86c8869ff0fb6f8"
+    },
+    {
+      "label": "company numeric arguments and member",
+      "va": "0x14169a3d0",
+      "rva": "0x169a3d0",
+      "file_offset": "0x16997d0",
+      "bytes": "498bf0488bfa488d999003000083bba800000000750f"
+    },
+    {
+      "label": "company numeric country scope",
+      "va": "0x14169a432",
+      "rva": "0x169a432",
+      "file_offset": "0x1699832",
+      "bytes": "b80500000066894424308b461848894424384c89bd90000000488d859000000048894424204533c94c8d442430488bd7488bcbe8b65370ff"
+    },
+    {
+      "label": "company score gate",
+      "va": "0x1415c9822",
+      "rva": "0x15c9822",
+      "file_offset": "0x15c8c22",
+      "bytes": "4d8bf84c8bf2488bf933f6448bee89742430498bc8e8e4090d0084c0750b488937488bc7e9de0b00004d8bc6488d55a7498bcfe8560b0d"
+    },
+    {
+      "label": "company score weight call",
+      "va": "0x1415c984b",
+      "rva": "0x15c984b",
+      "file_offset": "0x15c8c4b",
+      "bytes": "4d8bc6488d55a7498bcfe8560b0d00"
+    },
+    {
+      "label": "company AI owner lookup",
+      "va": "0x14151096d",
+      "rva": "0x151096d",
+      "file_offset": "0x150fd6d",
+      "bytes": "4c8bf94883c108e847402cff488bf0"
+    },
+    {
+      "label": "company AI selection arguments",
+      "va": "0x141510af1",
+      "rva": "0x1510af1",
+      "file_offset": "0x150fef1",
+      "bytes": "4533c94c8d4597488bd6498bcee8dd851800"
+    },
+    {
+      "label": "company AI scoring and positive guard",
+      "va": "0x141510b19",
+      "rva": "0x1510b19",
+      "file_offset": "0x150ff19",
+      "bytes": "4533c94d8bc6488bd6488d4d8fe8c58c0b0048837d8f000f8e6b040000"
+    }
+  ]
+}

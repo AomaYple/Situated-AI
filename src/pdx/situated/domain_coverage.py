@@ -2,15 +2,29 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 import tomllib
+from collections import Counter
 from dataclasses import asdict, dataclass
-from pathlib import Path
-from typing import TypedDict
+from pathlib import Path, PurePosixPath, PureWindowsPath
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from pdx import decision_adapters, decision_rules
+from pdx.model import Assignment, Block, Scalar
+from pdx.parser import parse_bytes
+from pdx.textio import normalized_text
 
+from . import engine_scope
 from .action_instances import ActionInstance, build
 from .families import FAMILIES
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from .decision_ir import EvaluationContext, WriterDecisionIR
+    from .vanilla_inventory import VanillaInventory, VanillaSurface
 
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_SOURCE = REPO / "mod" / "decisions" / "domain_actions.toml"
@@ -82,6 +96,1114 @@ class CoverageContract(TypedDict):
     domains: dict[str, DomainSummary]
     chains: list[ChainSummary]
     evidence: str
+
+
+@dataclass(frozen=True, slots=True)
+class NativeConsumerBinding:
+    """An explicit card's exact native declaration, supplied by its real caller.
+
+    This identity grants no scope or implementation evidence. The independent
+    inventory and the production instance still have to agree on those facts.
+    """
+
+    source: str
+    definition: str
+    field: str
+
+    def __post_init__(self) -> None:
+        source = PurePosixPath(self.source)
+        if (
+            not self.source
+            or "\\" in self.source
+            or source.is_absolute()
+            or PureWindowsPath(self.source).drive
+            or any(part in {"", ".", ".."} for part in self.source.split("/"))
+            or not (self.source.startswith("common/") or "/common/" in self.source)
+            or not self.definition
+            or any(not part for part in self.field.split("."))
+        ):
+            raise ValueError("原版消费者必须有精确相对来源、定义与字段")
+
+
+@dataclass(frozen=True, slots=True)
+class ContinuousProgramBinding:
+    """A continuous writer corroborated against one actual production output.
+
+    This is a separate interface binding, never a fabricated rule or card.
+    Output hashes identify the metadata and bytes checked by the caller.
+    """
+
+    writer: WriterDecisionIR
+    native: NativeConsumerBinding
+    unit: str
+    production_source: str
+    production_sha256: str
+    overlay_sha256: str
+    metadata_sha256: str
+
+
+def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
+    """Validate the exact finite writer identity without inventing native evidence."""
+    from .decision_ir import ConsumerIRBundle  # noqa: PLC0415
+    from .support_program import SupportProgram  # noqa: PLC0415
+
+    writer = binding.writer
+    if not isinstance(writer.program, SupportProgram):
+        return "continuous_program_missing"
+    program = writer.program
+    try:
+        ConsumerIRBundle(1, (), (writer,)).as_dict()
+    except ValueError:
+        return "continuous_writer_contract_mismatch"
+    if (
+        writer.kind != "support_program"
+        or writer.writer_id != "diplomatic_play_support_program"
+        or writer.action is not None
+        or writer.legacy is not None
+        or writer.predicates
+        or writer.chain_refs
+        or writer.reader_context_bindings
+        or program.description != "SITAI_SUPPORT_BALANCE_REASON"
+        or (
+            program.market is not None
+            and program.market.description != "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON"
+        )
+        or any(
+            reason.description != f"SITAI_SECURITY_{reason.name.upper()}_REASON"
+            for reason in program.defense
+        )
+        or binding.unit != "score"
+        or binding.production_source != "common/ai_strategies/00_default_strategy.txt"
+        or any(
+            re.fullmatch(r"[0-9a-f]{64}", value) is None
+            for value in (
+                binding.production_sha256,
+                binding.overlay_sha256,
+                binding.metadata_sha256,
+            )
+        )
+        or binding.overlay_sha256 != hashlib.sha256(program.render().encode()).hexdigest()
+    ):
+        return "continuous_writer_contract_mismatch"
+    context = writer.evaluation_context
+    source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
+    if context is None or context.status != "observed" or context.actor_scope is None:
+        return "evaluation_context_unproven"
+    if asdict(context.actor_scope) != {
+        "name": "root",
+        "kind": "country",
+        "role": "actor",
+        "source": source,
+        "line": 183,
+    }:
+        return "actor_type_mismatch"
+    expected_targets = (
+        {
+            "name": "target_country",
+            "kind": "country",
+            "role": "target",
+            "source": source,
+            "line": 184,
+        },
+        {
+            "name": "enemy_country",
+            "kind": "country",
+            "role": "target",
+            "source": source,
+            "line": 185,
+        },
+    )
+    if (
+        tuple(asdict(row) for row in context.targets) != expected_targets
+        or context.auxiliary_scopes
+        or context.evidence != tuple(f"{source}:{line}" for line in (183, 184, 185))
+    ):
+        return "target_type_mismatch"
+    return None
+
+
+@dataclass(frozen=True, slots=True)
+class _ReviewedNumericContract:
+    """An exact frozen consumer, not a family-wide numeric permission."""
+
+    raw_hashes: dict[str, str]
+    baseline_sha256: str
+    actor_path: tuple[str, ...]
+    native_root: str
+    native_operation: str
+    native_line: int
+    scope_evidence: tuple[str, ...]
+    context: EvaluationContext
+    rules: dict[str, decision_rules.Rule]
+
+
+def _native_binding(instance: ActionInstance) -> NativeConsumerBinding | None:
+    if instance.kind != "rule_action":
+        return None
+    if instance.source == "mod/decisions/information.toml":
+        return NativeConsumerBinding(
+            "common/ai_strategies/00_default_strategy.txt",
+            "ai_strategy_default",
+            instance.consumer_field,
+        )
+    definition, separator, field = instance.consumer_field.partition(".")
+    if not separator:
+        return None
+    return NativeConsumerBinding(instance.source, definition, field)
+
+
+_R7_NUMERIC_CONTRACTS = {
+    "wanted_num_supply_ships": ("additive_supply_ship_count_target", "ships", "none", "multiply"),
+    "max_ship_design_complexity": (
+        "additive_ship_design_complexity_limit",
+        "modification_levels",
+        "none",
+        "multiply",
+    ),
+    "treaty_category_scores": ("additive_treaty_category_score", "score", "none", "multiply"),
+    "strategic_region_stance_type_scores": (
+        "additive_region_stance_score",
+        "score",
+        "scope:target_region=strategic_region;scope:region_score=scalar",
+        "add",
+    ),
+}
+
+
+def _r7_numeric_context_issue(instance: ActionInstance, surface: VanillaSurface) -> str | None:
+    """Join exact r7 numeric leaves; parent maps and object existence grant nothing."""
+    family, *children = surface.field.split(".")
+    operation, unit, target, writer_operation = _R7_NUMERIC_CONTRACTS[family]
+    data = json.loads(engine_scope.strategy_snapshot())
+    contract = data["consumers"][family]
+    expected = {
+        "actor_scope": "country",
+        "target_scope": target,
+        "operation": operation,
+        "unit": unit,
+        "capability": "direct",
+    }
+    if any(contract.get(key) != value for key, value in expected.items()):
+        return "numeric_consumer_contract_unproven"
+    if family in {"treaty_category_scores", "strategic_region_stance_type_scores"}:
+        keys = (
+            data["strategy_score_keys"][family]
+            if family == "treaty_category_scores"
+            else data["stance_definitions"]
+        )
+        if len(children) != 1 or children[0] not in keys:
+            return "numeric_consumer_contract_unproven"
+    elif children:
+        return "numeric_consumer_contract_unproven"
+    if (
+        surface.source != "common/ai_strategies/00_default_strategy.txt"
+        or surface.definition != "ai_strategy_default"
+        or surface.capability != "direct"
+        or not surface.legal
+        or surface.operation != operation
+        or surface.target_scope != target
+        or instance.operation != writer_operation
+    ):
+        return "numeric_consumer_contract_unproven"
+    if surface.actor_scope != "country" or instance.actor_scope != "root":
+        return "actor_type_mismatch"
+    context = instance.evaluation_context
+    if context is None or context.status != "observed" or context.actor_scope is None:
+        return "evaluation_context_unproven"
+    if (context.actor_scope.name, context.actor_scope.kind, context.actor_scope.role) != (
+        "root",
+        "country",
+        "actor",
+    ):
+        return "actor_type_mismatch"
+    expected_targets = (
+        (("target_region", "strategic_region", "target"),)
+        if family == "strategic_region_stance_type_scores"
+        else ()
+    )
+    expected_auxiliary = (
+        (("region_score", "scalar", "auxiliary"),)
+        if family == "strategic_region_stance_type_scores"
+        else ()
+    )
+    if (
+        tuple((row.name, row.kind, row.role) for row in context.targets) != expected_targets
+        or tuple((row.name, row.kind, row.role) for row in context.auxiliary_scopes)
+        != expected_auxiliary
+        or instance.target_scope not in {"none", "target_or_none"}
+    ):
+        return "target_type_mismatch"
+    return None
+
+
+def _native_context_issue(
+    instance: ActionInstance, surface: VanillaSurface, *, state_owner_proven: bool = False
+) -> str | None:
+    """Check documented object types; writer labels never invent named scopes."""
+
+    if not instance.owner or not instance.vanilla_tail:
+        return "production_ownership_or_tail_missing"
+    if surface.field.split(".")[0] in _R7_NUMERIC_CONTRACTS:
+        return _r7_numeric_context_issue(instance, surface)
+    exact_numeric = {
+        "subject_value": ("additive_subject_valuation", {"add"}),
+        "become_subject_value": ("additive_subject_valuation", {"add"}),
+        "wanted_army_size": ("additive_army_size_target", {"multiply"}),
+        "wanted_navy_size": ("additive_navy_size_target", {"multiply"}),
+        "ship_construction_output_multiplier": (
+            "additive_ship_construction_output_multiplier",
+            {"multiply"},
+        ),
+        "wanted_construction_output": ("additive_construction_output_target", {"multiply"}),
+        "aggression": ("additive_aggression", {"add"}),
+        "nationalization_desire": ("additive_nationalization_desire", {"multiply"}),
+        "max_active_stances": ("additive_active_stance_limit", {"multiply"}),
+        "wanted_marines": ("additive_marine_size_target", {"multiply"}),
+        "economic_vs_government_spending_balance": ("additive_spending_balance", {"add"}),
+        "target_marine_formation_size": ("additive_marine_formation_size_target", {"multiply"}),
+        "unacceptable_infamy_level": ("first_positive_infamy_limit_override", {"multiply"}),
+        "undesirable_infamy_level": ("first_positive_infamy_limit_override", {"multiply"}),
+        "diplomatic_play_neutrality": ("additive_positive_active_neutrality", {"add"}),
+        "diplomatic_play_boldness": ("native_randomized_additive_boldness", {"add"}),
+        "min_law_chance_to_pass": ("override_pass_chance_threshold", {"add"}),
+        "revolution_aversion": ("override_revolution_aversion", {"multiply"}),
+        "change_law_chance": ("additive_percentage_chance", {"add"}),
+        "max_progressiveness": ("override_progressiveness_limit", {"add"}),
+        "max_regressiveness": ("override_regressiveness_limit", {"add"}),
+        "recklessness": ("additive_strength_estimate_multiplier", {"add"}),
+        "wargoal_maneuvers_fraction": ("additive_maneuvers_fraction", {"multiply"}),
+    }
+    contract = exact_numeric.get(surface.field)
+    exact_proven = (
+        surface.source == "common/ai_strategies/00_default_strategy.txt"
+        and surface.definition == "ai_strategy_default"
+        and surface.capability == "direct"
+        and surface.legal
+        and contract is not None
+        and surface.operation == contract[0]
+        and instance.operation in contract[1]
+    )
+    if not exact_proven and (
+        instance.operation not in {"add", "multiply"}
+        or surface.operation
+        not in {
+            "additive_score",
+            "multiplicative_score",
+            "score",
+            "chance",
+            "base_candidate_score",
+            "relative_weight",
+            "multiplier",
+        }
+    ):
+        return "numeric_consumer_contract_unproven"
+    context = instance.evaluation_context
+    if context is not None and context.status != "observed":
+        return "evaluation_context_unproven"
+    if (
+        context is not None
+        and context.actor_scope is not None
+        and context.actor_scope.name == "root"
+        and context.actor_scope.kind == "country"
+        and instance.actor_scope != "root"
+    ):
+        # A country object reached through owner is not the documented ROOT.
+        # State/building owner proofs below retain their separate contract.
+        return "actor_type_mismatch"
+    actor_kind = (
+        "state"
+        if state_owner_proven
+        else "country"
+        if instance.actor_scope in {"root", "owner"}
+        else instance.actor_scope
+    )
+    if (
+        context is not None
+        and context.actor_scope is not None
+        and context.actor_scope.kind != actor_kind
+    ) or surface.actor_scope != actor_kind:
+        return "actor_type_mismatch"
+    if surface.target_scope == "none" or surface.target_scope.startswith("definition_only:"):
+        # Definition identity is already exact; it is not a script-side target.
+        if instance.target_scope not in {"none", "target_or_none"}:
+            return "target_type_mismatch"
+        return None
+    targets = surface.target_scope.split(";")
+    expected: dict[str, str] = {}
+    for target in targets:
+        match = re.fullmatch(r"scope:([a-z][a-z0-9_]*)=([a-z][a-z0-9_]*)", target)
+        if match is None:
+            return "named_target_contract_unproven"
+        expected[match[1]] = match[2]
+    if context is None:
+        return "evaluation_context_unproven"
+    observed = {item.name: item.kind for item in (*context.targets, *context.auxiliary_scopes)}
+    if any(observed.get(name) != kind for name, kind in expected.items()):
+        return "target_type_mismatch"
+    return None
+
+
+def _ordinary(block: Block, key: str) -> Assignment | None:
+    declarations = block.all(key)
+    if len(declarations) != 1:
+        return None
+    item = declarations[0]
+    return item if item.op == "=" and item.prefix is None else None
+
+
+class _NativeBindingProofs:
+    """Optional source bytes and real policies, never inferred from writer names."""
+
+    def __init__(
+        self,
+        inventory: VanillaInventory,
+        sources: Mapping[str, bytes],
+        policies: Mapping[str, decision_rules.RuleSet],
+    ) -> None:
+        self.inventory = inventory
+        self.sources = dict(sources)
+        self.policies = policies
+        self.parsed: dict[str, Block] = {}
+        self.company_defaults: dict[str, Any] | None = None
+        self.reviewed_numeric: dict[tuple[str, str, str], _ReviewedNumericContract] | None = None
+        for source, raw in self.sources.items():
+            if hashlib.sha256(raw).hexdigest() != inventory.source_hashes.get(source):
+                raise ValueError(f"原版覆盖证据与独立盘点字节不一致：{source}")
+
+    def _reviewed_numeric_contracts(self) -> dict[tuple[str, str, str], _ReviewedNumericContract]:
+        if self.reviewed_numeric is not None:
+            return self.reviewed_numeric
+        from pdx import mobilization_opportunities, treaty_opportunities  # noqa: PLC0415
+
+        from . import compiler, vanilla_inventory  # noqa: PLC0415
+
+        contracts = {}
+        for module, contexts, native_root, actor_path, operation in (
+            (
+                mobilization_opportunities,
+                compiler._frozen_mobilization_contexts(),
+                "military_formation",
+                ("owner",),
+                "multiplicative_score",
+            ),
+            (
+                treaty_opportunities,
+                compiler._frozen_treaty_contexts(),
+                "country",
+                (),
+                "proposal_score",
+            ),
+        ):
+            baseline = module.load_baseline()
+            derived = module.derive({"sources": {}, "readers": {}, "rules": []}, baseline)
+            raw_hashes = {source: row["sha256"] for source, row in baseline["originals"].items()}
+            inputs = {
+                source: bytes.fromhex(row["bytes"]) for source, row in baseline["originals"].items()
+            }
+            for row in derived["covered"]:
+                source, field = row["source"], row["field"]
+                definition, leaf = field.split(".", 1)
+                parsed = parse_bytes(inputs[source], path=source)
+                declaration = _ordinary(parsed.root, definition)
+                if parsed.errors or declaration is None:
+                    raise ValueError("已复核消费者冻结定义缺失或解析失败")
+                current = declaration.value
+                weight = None
+                for part in leaf.split("."):
+                    weight = _ordinary(current, part) if isinstance(current, Block) else None
+                    if weight is None:
+                        raise ValueError("已复核消费者冻结精确字段缺失")
+                    current = weight.value
+                if weight is None:
+                    raise ValueError("已复核消费者冻结精确字段为空")
+                scope = vanilla_inventory._scope(
+                    source.split("/")[-2], tuple(leaf.split(".")), inputs, {}, declaration, source
+                )
+                expected_rules = {}
+                for rule in derived["rules"]:
+                    if rule["source"] != source or rule["field"] != field:
+                        continue
+                    expected_rules[rule["id"]] = decision_rules.Rule(
+                        id=rule["id"],
+                        domain=rule["domain"],
+                        field=tuple(field.split(".")),
+                        priority=rule["priority"],
+                        value=rule["value"],
+                        conditions=tuple(
+                            decision_rules.Predicate(**condition)
+                            for condition in rule["conditions"]
+                        ),
+                        why=rule["why"],
+                        counterexample=rule["counterexample"],
+                        operation=rule["operation"],
+                        required_known_facts=tuple(rule.get("required_known_facts", ())),
+                        contribution_group=rule["contribution_group"],
+                    )
+                contracts[(source, definition, leaf)] = _ReviewedNumericContract(
+                    raw_hashes,
+                    baseline["sources"][source],
+                    actor_path,
+                    native_root,
+                    operation,
+                    weight.line,
+                    scope.evidence,
+                    contexts[(source, field)],
+                    expected_rules,
+                )
+        self.reviewed_numeric = contracts
+        return contracts
+
+    def context_issue(
+        self, instance: ActionInstance, surface: VanillaSurface, *, state_owner_proven: bool
+    ) -> str | None:
+        candidate = (
+            surface.source == "common/mobilization_options/00_mobilization_option.txt"
+            and surface.field == "ai_weight"
+        ) or (
+            surface.source.startswith("common/treaty_articles/")
+            and surface.field == "ai.proposal_weight"
+        )
+        contract = (
+            self._reviewed_numeric_contracts().get(
+                (surface.source, surface.definition, surface.field)
+            )
+            if candidate
+            else None
+        )
+        if contract is None:
+            return _native_context_issue(instance, surface, state_owner_proven=state_owner_proven)
+        if (
+            surface.capability != "direct"
+            or not surface.legal
+            or surface.ambiguity
+            or surface.operation != contract.native_operation
+            or surface.target_scope != "none"
+            or surface.actor_scope != contract.native_root
+            or surface.source_line != contract.native_line
+            or surface.scope_evidence != contract.scope_evidence
+            or instance.operation != "multiply"
+            or instance.kind != "rule_action"
+            or instance.source != surface.source
+            or instance.consumer_field != f"{surface.definition}.{surface.field}"
+        ):
+            return "numeric_consumer_contract_unproven"
+        if any(
+            (
+                source not in self.sources
+                or hashlib.sha256(self.sources[source]).hexdigest() != digest
+            )
+            for source, digest in contract.raw_hashes.items()
+            # Independent discovery inventories common/; this one frozen event
+            # only corroborates formation.owner=country. Its pinned bytes and
+            # exact context were checked above; the production package gate
+            # separately re-reads all five originals. Never exempt a consumer,
+            # document, or a source actually present in the native inventory.
+            if not (
+                source == "events/tech_events/trench_warfare.txt"
+                and source not in self.inventory.source_hashes
+                and source not in self.sources
+            )
+        ):
+            return "native_source_contract_unproven"
+        if (
+            instance.owner != "consumer_adapters"
+            or instance.vanilla_tail != "retain_original_qualification_cost_random_execution"
+        ):
+            return "production_ownership_or_tail_missing"
+        if instance.actor_scope != ("owner" if contract.actor_path else "root"):
+            return "actor_type_mismatch"
+        if instance.target_scope != "none":
+            return "target_type_mismatch"
+        if instance.evaluation_context != contract.context:
+            return "evaluation_context_unproven"
+        policy = self.policies.get(instance.source)
+        expected = contract.rules.get(instance.rule_id)
+        if (
+            policy is None
+            or expected is None
+            or policy.actor_path != contract.actor_path
+            or policy.native_root != contract.native_root
+            or policy.baseline_sha256 != contract.baseline_sha256
+            or [rule for rule in policy.rules if rule.id == instance.rule_id] != [expected]
+            or instance.value != expected.value
+            or instance.domain != expected.domain
+            or instance.condition_facts != tuple(sorted(expected.input_keys()))
+        ):
+            return "production_policy_contract_unproven"
+        return None
+
+    def root(self, source: str) -> Block | None:
+        if source not in self.sources:
+            return None
+        if source not in self.parsed:
+            parsed = parse_bytes(self.sources[source], path=source)
+            if parsed.errors:
+                raise ValueError(f"原版覆盖证据解析失败：{source}")
+            self.parsed[source] = parsed.root
+        return self.parsed[source]
+
+    def definition(self, binding: NativeConsumerBinding) -> Assignment | None:
+        root = self.root(binding.source)
+        return _ordinary(root, binding.definition) if root is not None else None
+
+    def building_evidence(self) -> tuple[str, ...]:
+        source = "common/buildings/buildings.md"
+        raw = self.sources.get(source)
+        if raw is None:
+            return ()
+        lines = raw.decode("utf-8-sig").splitlines()
+        markers = (
+            "# base AI value, default NAI.BUILDING_BASE_VALUE or NAI.GOVERNMENT_BUILDING_BASE_VALUE",
+            "# scope is state the building is located in",
+            "ai_value = script value",
+        )
+        locations = [
+            [index + 1 for index, line in enumerate(lines) if line.strip() == marker]
+            for marker in markers
+        ]
+        if any(len(found) != 1 for found in locations):
+            return ()
+        positions = [found[0] for found in locations]
+        if positions != sorted(positions) or positions[-1] - positions[0] > 4:
+            return ()
+        return tuple(f"{source}:{line}" for line in positions)
+
+    def state_owner(self, instance: ActionInstance, binding: NativeConsumerBinding) -> bool:
+        if (
+            instance.kind != "rule_action"
+            or not binding.source.startswith("common/buildings/")
+            or binding.field != "ai_value"
+            or not self.building_evidence()
+        ):
+            return False
+        policy = self.policies.get(instance.source)
+        raw = self.sources.get(binding.source)
+        # Adapter baselines intentionally hash read_text(utf-8-sig), including
+        # universal-newline decoding, whereas inventory hashes original bytes.
+        baseline = (
+            hashlib.sha256(
+                raw.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+            ).hexdigest()
+            if raw is not None
+            else None
+        )
+        if policy is None or policy.actor_path != ("owner",) or policy.baseline_sha256 != baseline:
+            return False
+        rules = [item for item in policy.rules if item.id == instance.rule_id]
+        return (
+            len(rules) == 1
+            and ".".join(rules[0].field) == instance.consumer_field
+            and rules[0].operation == instance.operation
+            and rules[0].value == instance.value
+            and tuple(sorted(rules[0].input_keys())) == instance.condition_facts
+            and instance.actor_scope == "owner"
+        )
+
+    def secret_goal_parent(self, binding: NativeConsumerBinding) -> str | None:
+        match = re.fullmatch(r"secret_goal_scores\.([a-z][a-z0-9_]*)\.score", binding.field)
+        if match is None or not binding.source.startswith("common/ai_strategies/"):
+            return None
+        definition = self.definition(binding)
+        if definition is None or not isinstance(definition.value, Block):
+            return None
+        groups = _ordinary(definition.value, "secret_goal_scores")
+        if groups is None or not isinstance(groups.value, Block):
+            return None
+        goal = _ordinary(groups.value, match[1])
+        if goal is None or not isinstance(goal.value, Block):
+            return None
+        score = _ordinary(goal.value, "score")
+        if score is None or not isinstance(score.value, Block):
+            return None
+        return f"secret_goal_scores.{match[1]}"
+
+    def implicit_building(self, binding: NativeConsumerBinding) -> dict[str, Any] | None:
+        evidence = self.building_evidence()
+        if (
+            not evidence
+            or not binding.source.startswith("common/buildings/")
+            or binding.field != "ai_value"
+        ):
+            return None
+        # All discovered building files must participate, so a duplicate object
+        # in another file cannot be hidden by providing only the preferred file.
+        all_sources = [
+            source
+            for source in self.inventory.source_hashes
+            if (source.startswith("common/buildings/") or "/common/buildings/" in source)
+            and source.endswith(".txt")
+        ]
+        if any(source not in self.sources for source in all_sources):
+            return None
+        declarations = [
+            (source, item)
+            for source in all_sources
+            if (root := self.root(source)) is not None
+            for item in root.all(binding.definition)
+        ]
+        if len(declarations) != 1 or declarations[0][0] != binding.source:
+            return None
+        definition = declarations[0][1]
+        if (
+            definition.prefix is not None
+            or definition.op != "="
+            or not isinstance(definition.value, Block)
+            or definition.value.all("ai_value")
+        ):
+            return None
+        return {
+            **asdict(binding),
+            "actor_scope": "state",
+            "target_scope": "none",
+            "operation": "score",
+            "default": "NAI.BUILDING_BASE_VALUE_or_NAI.GOVERNMENT_BUILDING_BASE_VALUE",
+            "evidence": [*evidence, f"{binding.source}:{definition.line}"],
+        }
+
+    def implicit_company(self, binding: NativeConsumerBinding) -> dict[str, Any] | None:
+        """Exact missing fields backed by the pinned consumer/default branch.
+
+        This does not add implicit objects to the discovered declaration
+        denominator or authorize arbitrary company fields. Every native
+        company file and the define bytes must be independently available.
+        """
+        if (
+            binding.source != "common/company_types/99_basic_companies.txt"
+            or binding.field != "ai_weight"
+        ):
+            return None
+        if self.company_defaults is None:
+            self.company_defaults = json.loads(engine_scope.company_default_snapshot())
+        data = self.company_defaults
+        parent = json.loads(engine_scope.company_snapshot())
+        expected = {**parent["script_hashes"], **data["script_hashes"]}
+        all_company_sources = {
+            name
+            for name in self.inventory.source_hashes
+            if (name.startswith("common/company_types/") or "/common/company_types/" in name)
+            and name.endswith(".txt")
+        }
+        if all_company_sources != set(parent["script_hashes"]):
+            return None
+        if any(
+            name not in self.sources or hashlib.sha256(self.sources[name]).hexdigest() != digest
+            for name, digest in expected.items()
+        ):
+            return None
+        permitted = {row["id"]: row["line"] for row in data["implicit_companies"]}
+        if binding.definition not in permitted:
+            return None
+        declarations = [
+            (name, item)
+            for name in all_company_sources
+            if (root := self.root(name)) is not None
+            for item in root.all(binding.definition)
+        ]
+        if len(declarations) != 1 or declarations[0][0] != binding.source:
+            return None
+        definition = declarations[0][1]
+        if (
+            definition.prefix is not None
+            or definition.op != "="
+            or definition.line != permitted[binding.definition]
+            or not isinstance(definition.value, Block)
+            or definition.value.all("ai_weight")
+        ):
+            return None
+        row = data["contracts"][0]
+        return {
+            **asdict(binding),
+            "actor_scope": "country",
+            "target_scope": "definition_only:company_type",
+            "operation": "base_candidate_score",
+            "default": row["define_field"],
+            "default_value": row["default_value"],
+            "evidence": [
+                engine_scope.COMPANY_DEFAULT_MANIFEST_ID,
+                f"{row['define_source']}:{row['define_line']}",
+                f"{binding.source}:{definition.line}",
+            ],
+        }
+
+    def company_actor(self, instance: ActionInstance, binding: NativeConsumerBinding) -> bool:
+        policy = self.policies.get(instance.source)
+        raw = self.sources.get(binding.source)
+        if policy is None or raw is None or policy.actor_path:
+            return False
+        baseline = hashlib.sha256(
+            raw.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+        ).hexdigest()
+        if policy.baseline_sha256 != baseline:
+            return False
+        rules = [item for item in policy.rules if item.id == instance.rule_id]
+        context = instance.evaluation_context
+        return (
+            len(rules) == 1
+            and ".".join(rules[0].field) == instance.consumer_field
+            and rules[0].operation == instance.operation == "multiply"
+            and rules[0].value == instance.value
+            and tuple(sorted(rules[0].input_keys())) == instance.condition_facts
+            and instance.actor_scope == "root"
+            and instance.target_scope in {"none", "target_or_none"}
+            and context is not None
+            and context.status == "observed"
+            and context.actor_scope is not None
+            and context.actor_scope.name == "root"
+            and context.actor_scope.kind == "country"
+            and context.actor_scope.source == engine_scope.COMPANY_MANIFEST_ID
+            and not context.targets
+            and not context.auxiliary_scopes
+            and f"{engine_scope.COMPANY_MANIFEST_ID}:sha256={engine_scope.COMPANY_MANIFEST_SHA256}"
+            in context.evidence
+            and f"{engine_scope.COMPANY_MANIFEST_ID}:definition_only:company_type"
+            in context.evidence
+        )
+
+
+def _continuous_native_issue(
+    binding: ContinuousProgramBinding,
+    surface: VanillaSurface,
+    proofs: _NativeBindingProofs,
+) -> tuple[str | None, dict[str, Any]]:
+    """Only the pinned native support consumer and exact country getter are known."""
+    problem = continuous_writer_issue(binding)
+    if problem is not None:
+        return problem, {}
+    source = "common/ai_strategies/00_default_strategy.txt"
+    identity = (source, "ai_strategy_default", "diplomatic_play_support")
+    if (binding.native.source, binding.native.definition, binding.native.field) != identity or (
+        surface.source,
+        surface.definition,
+        surface.field,
+    ) != identity:
+        return "continuous_native_identity_mismatch", {}
+    if (
+        surface.actor_scope != "country"
+        or surface.target_scope != "scope:country=country;scope:enemy_country=country"
+        or surface.operation != "additive_score"
+        or surface.capability != "direct"
+        or not surface.legal
+        or surface.ambiguity
+    ):
+        return "continuous_native_context_unproven", {}
+    native = json.loads(engine_scope.strategy_snapshot())
+    raw = proofs.sources.get(source)
+    if raw is None or hashlib.sha256(raw).hexdigest() != native["script_hashes"].get(source):
+        return "continuous_native_bytes_unproven", {}
+    root = proofs.root(source)
+    definition = _ordinary(root, "ai_strategy_default") if root is not None else None
+    node = (
+        _ordinary(definition.value, "diplomatic_play_support")
+        if definition is not None and isinstance(definition.value, Block)
+        else None
+    )
+    if (
+        node is None
+        or not isinstance(node.value, Block)
+        or surface.source_line != node.line
+        or surface.scope_evidence != (f"{source}:{node.line}",)
+    ):
+        return "continuous_native_context_unproven", {}
+    evidence: dict[str, Any] = {
+        "native_source_sha256": hashlib.sha256(raw).hexdigest(),
+        "scope_evidence": [f"{source}:{line}" for line in (183, 184, 185, 187, node.line)],
+        "actor": "ROOT=country",
+        "targets": ["scope:country=country", "scope:enemy_country=country"],
+        "operation": "additive_score",
+        "unit": "score",
+    }
+    program = binding.writer.program
+    assert program is not None
+    if program.market is not None:
+        # Reuse a pinned original-file identity, not the equipment capability.
+        # The numeric getter remains an exact country-to-country call and does
+        # not authorize arbitrary quoted functions or derived expressions.
+        from pdx import equipment_opportunities  # noqa: PLC0415
+
+        getter_source = "common/script_values/01_power_bloc_values.txt"
+        getter_raw = proofs.sources.get(getter_source)
+        frozen_hash = equipment_opportunities.load_baseline()["sources"][getter_source]
+        if (
+            getter_raw is None
+            or hashlib.sha256(normalized_text(getter_raw.decode("utf-8-sig")).encode()).hexdigest()
+            != frozen_hash
+        ):
+            return "continuous_getter_bytes_unproven", {}
+        getter_root = proofs.root(getter_source)
+        stack = [getter_root] if getter_root is not None else []
+        lines = []
+        while stack:
+            for item in stack.pop().assignments():
+                if isinstance(item.value, Block):
+                    stack.append(item.value)
+                elif (
+                    item.key == "multiply"
+                    and item.op == "="
+                    and item.prefix is None
+                    and isinstance(item.value, Scalar)
+                    and item.value.quoted
+                    and item.value.unquoted == "scope:target.economic_dependence(ROOT)"
+                ):
+                    lines.append(item.line)
+        if lines != [30]:
+            return "continuous_getter_contract_unproven", {}
+        evidence["numeric_getters"] = {
+            "economic_dependence": {
+                "actor": "country",
+                "argument": "country",
+                "arity": 1,
+                "expressions": [program.market.country_getter, program.market.enemy_getter],
+                "source": getter_source,
+                "line": 30,
+                "normalized_source_sha256": frozen_hash,
+                "raw_source_sha256": hashlib.sha256(getter_raw).hexdigest(),
+                "evidence": "static_native_numeric_country_argument_call",
+            }
+        }
+    return None, evidence
+
+
+def native_coverage(
+    inventory: VanillaInventory,
+    instances: tuple[ActionInstance, ...],
+    *,
+    explicit_consumers: Mapping[str, NativeConsumerBinding] | None = None,
+    native_sources: Mapping[str, bytes] | None = None,
+    production_policies: Mapping[str, decision_rules.RuleSet] | None = None,
+    continuous_programs: tuple[ContinuousProgramBinding, ...] = (),
+) -> dict[str, Any]:
+    """Join real production bindings to an independently discovered denominator.
+
+    The caller supplies an existing inventory; this function never discovers
+    game files or loads the production model. ``actual_covered`` means a legal
+    native declaration has an exact production binding with compatible numeric
+    and object contracts. It does not prove functional depth, PDX equivalence,
+    or engine behavior. Raw pending states and evidence remain in every row.
+    Optional ``native_sources`` bytes must match inventory hashes; missing
+    sources stay unproven. ``production_policies`` provide real state-owner
+    actor paths. Documented implicit consumers are separate from the denominator.
+    """
+
+    explicit = dict(explicit_consumers or {})
+    proofs = _NativeBindingProofs(inventory, native_sources or {}, production_policies or {})
+    by_id = {item.action_id: item for item in instances}
+    if len(by_id) != len(instances):
+        raise ValueError("原版覆盖映射的生产行动身份重复")
+    program_ids = [item.writer.writer_id for item in continuous_programs]
+    if len(program_ids) != len(set(program_ids)) or set(program_ids) & set(by_id):
+        raise ValueError("连续程序与生产行动的writer身份重复")
+    if set(explicit) - set(by_id) or any(by_id[key].kind != "action_card" for key in explicit):
+        raise ValueError("显式消费者映射只能引用实际显式行动卡")
+    identities: dict[tuple[str, str, str], list[VanillaSurface]] = {}
+    for surface in inventory.surfaces:
+        identities.setdefault((surface.source, surface.definition, surface.field), []).append(
+            surface
+        )
+    matches: dict[str, list[ActionInstance]] = {}
+    state_owner: set[str] = set()
+    projections: dict[str, dict[str, str]] = {}
+    implicit: dict[tuple[str, str, str], dict[str, Any]] = {}
+    unmatched: list[dict[str, Any]] = []
+    for instance in sorted(instances, key=lambda item: item.action_id):
+        binding = explicit.get(instance.action_id) or _native_binding(instance)
+        if binding is None:
+            unmatched.append({"action_id": instance.action_id, "reason": "native_binding_missing"})
+            continue
+        if instance.kind == "action_card" and binding.field != instance.consumer_field:
+            unmatched.append(
+                {
+                    "action_id": instance.action_id,
+                    "reason": "explicit_field_mismatch",
+                    "binding": asdict(binding),
+                }
+            )
+            continue
+        native_candidates = identities.get((binding.source, binding.definition, binding.field), [])
+        if not native_candidates and (parent := proofs.secret_goal_parent(binding)) is not None:
+            native_candidates = identities.get((binding.source, binding.definition, parent), [])
+            if len(native_candidates) == 1:
+                projections[instance.action_id] = {
+                    "writer_field": binding.field,
+                    "consumer_field": parent,
+                }
+        if proofs.state_owner(instance, binding):
+            state_owner.add(instance.action_id)
+        proof = (
+            proofs.implicit_building(binding) or proofs.implicit_company(binding)
+            if not native_candidates
+            else None
+        )
+        if proof is not None:
+            row = implicit.setdefault(
+                (binding.source, binding.definition, binding.field),
+                {**proof, "matched_actions": [], "covered_actions": [], "binding_issues": {}},
+            )
+            row["matched_actions"].append(instance.action_id)
+            if proof["actor_scope"] == "state" and instance.action_id not in state_owner:
+                row["binding_issues"][instance.action_id] = "state_owner_policy_unproven"
+            elif proof["actor_scope"] == "country" and not proofs.company_actor(instance, binding):
+                row["binding_issues"][instance.action_id] = "company_root_policy_unproven"
+            elif (
+                not instance.owner
+                or not instance.vanilla_tail
+                or instance.operation not in {"add", "multiply"}
+            ):
+                row["binding_issues"][instance.action_id] = "production_contract_unproven"
+            else:
+                row["covered_actions"].append(instance.action_id)
+            continue
+        if len(native_candidates) != 1:
+            unmatched.append(
+                {
+                    "action_id": instance.action_id,
+                    "reason": "native_identity_ambiguous"
+                    if native_candidates
+                    else "native_surface_missing",
+                    "binding": asdict(binding),
+                }
+            )
+            continue
+        matches.setdefault(native_candidates[0].declaration_id, []).append(instance)
+    continuous_matches: dict[str, list[ContinuousProgramBinding]] = {}
+    continuous_records: dict[str, dict[str, Any]] = {}
+    for program_binding in continuous_programs:
+        writer = program_binding.writer
+        binding = program_binding.native
+        program_candidates = identities.get((binding.source, binding.definition, binding.field), [])
+        continuous_records[writer.writer_id] = {
+            "writer_id": writer.writer_id,
+            "kind": "support_program",
+            "native": asdict(binding),
+            "owner": writer.owner,
+            "production_source": program_binding.production_source,
+            "production_sha256": program_binding.production_sha256,
+            "overlay_sha256": program_binding.overlay_sha256,
+            "metadata_sha256": program_binding.metadata_sha256,
+            "program": writer.program.as_dict() if writer.program is not None else None,
+            "binding_status": "unproven",
+            "business_complete": False,
+        }
+        if len(program_candidates) != 1:
+            unmatched.append(
+                {
+                    "action_id": writer.writer_id,
+                    "reason": "native_identity_ambiguous"
+                    if program_candidates
+                    else "native_surface_missing",
+                    "binding": asdict(binding),
+                }
+            )
+        else:
+            continuous_matches.setdefault(program_candidates[0].declaration_id, []).append(
+                program_binding
+            )
+    categories: dict[str, list[str]] = {
+        name: []
+        for name in (
+            "actual_covered",
+            "unimplemented_legal",
+            "pending",
+            "unknown",
+            "observation",
+            "unsupported",
+        )
+    }
+    unknown_scopes = set(inventory.unknown_scopes)
+    rows = []
+    binding_issue_count = 0
+    for surface in sorted(inventory.surfaces, key=lambda item: item.declaration_id):
+        candidates = matches.get(surface.declaration_id, [])
+        continuous = continuous_matches.get(surface.declaration_id, [])
+        issues = {
+            item.action_id: reason
+            for item in candidates
+            if (
+                reason := proofs.context_issue(
+                    item, surface, state_owner_proven=item.action_id in state_owner
+                )
+            )
+            is not None
+        }
+        for program_binding in continuous:
+            writer_id = program_binding.writer.writer_id
+            reason, evidence = _continuous_native_issue(program_binding, surface, proofs)
+            if reason is not None:
+                issues[writer_id] = reason
+            else:
+                continuous_records[writer_id].update(
+                    binding_status="interface_bound",
+                    native_evidence=evidence,
+                )
+        binding_issue_count += len(issues)
+        matched_ids = [item.action_id for item in candidates] + [
+            item.writer.writer_id for item in continuous
+        ]
+        covered = sorted(writer_id for writer_id in matched_ids if writer_id not in issues)
+        if surface.ambiguity:
+            status = "unknown"
+        elif surface.capability == "observation":
+            status = "observation"
+        elif surface.capability == "unexposed":
+            status = "unsupported" if surface.scope_evidence else "unknown"
+        elif surface.capability == "pending":
+            status = "pending"
+        elif surface.legal and surface.surface_id not in unknown_scopes:
+            status = "actual_covered" if covered else "unimplemented_legal"
+        else:
+            status = "unknown"
+        categories[status].append(surface.declaration_id)
+        rows.append(
+            {
+                **asdict(surface),
+                "declaration_id": surface.declaration_id,
+                "legal": surface.legal,
+                "unknown_scope": surface.surface_id in unknown_scopes,
+                "coverage_status": status,
+                "matched_actions": sorted(matched_ids),
+                "covered_actions": covered if status == "actual_covered" else [],
+                "binding_issues": issues,
+                "field_projections": {
+                    key: projections[key]
+                    for key in sorted(projections)
+                    if key in {item.action_id for item in candidates}
+                },
+            }
+        )
+    unresolved = (
+        len(categories["unimplemented_legal"])
+        + len(categories["pending"])
+        + len(categories["unknown"])
+    )
+    implicit_rows = list(implicit.values())
+    binding_issue_count += sum(len(row["binding_issues"]) for row in implicit_rows)
+    return {
+        "schema": 1,
+        "baseline_id": inventory.baseline_id,
+        "scope_hash": inventory.scope_hash,
+        "source_hashes": dict(inventory.source_hashes),
+        "denominator": inventory.discovered_count,
+        "legal_count": inventory.legal_count,
+        "capability_counts": inventory.capability_counts,
+        "inventory_status_counts": inventory.status_counts,
+        "unknown_scopes": list(inventory.unknown_scopes),
+        "parse_failures": list(inventory.parse_failures),
+        "counts": {name: len(ids) for name, ids in categories.items()},
+        **categories,
+        "unmatched_production": unmatched,
+        "binding_issue_count": binding_issue_count,
+        "rows": rows,
+        "implicit_covered": [
+            {key: row[key] for key in ("source", "definition", "field")}
+            for row in implicit_rows
+            if row["covered_actions"]
+        ],
+        "implicit_rows": implicit_rows,
+        "continuous_programs": list(continuous_records.values()),
+        "implicit_denominator_policy": "documented_optional_consumers_separate_from_discovered_denominator",
+        "binding_complete": bool(inventory.surfaces)
+        and not (unresolved or unmatched or binding_issue_count or inventory.parse_failures),
+        "evidence": "static_exact_production_binding_not_functional_or_behavior_acceptance",
+    }
 
 
 CHAINS: tuple[JointChain, ...] = (
@@ -200,7 +1322,68 @@ CHAINS: tuple[JointChain, ...] = (
 )
 
 
-def load(path: Path = DEFAULT_SOURCE) -> dict[str, DomainCoverage]:
+def render_counts(path: Path = DEFAULT_SOURCE) -> str:
+    """Update only generated per-domain instance counts in the source ledger."""
+
+    text = path.read_text(encoding="utf-8")
+    data = tomllib.loads(text)
+    if data.get("schema") != 1 or not isinstance(data.get("domains"), dict):
+        raise ValueError("领域覆盖源无法安全更新：schema/domains 无效")
+    if set(data["domains"]) != set(FAMILIES):
+        raise ValueError("领域覆盖必须精确覆盖19个行动族")
+
+    counts: Counter[str] = Counter()
+    for item in build(decision_rules.load(), decision_adapters.load()):
+        counts[item.family_id] += 1
+
+    lines = text.splitlines()
+    current_domain: str | None = None
+    seen: set[str] = set()
+    for index, line in enumerate(lines):
+        section = re.fullmatch(r"\[domains\.([a-z][a-z0-9_]*)\]", line)
+        if section:
+            current_domain = section[1]
+        elif line.startswith("["):
+            current_domain = None
+        elif current_domain is not None and line.startswith("production_instances"):
+            if current_domain in seen or not re.fullmatch(r"production_instances\s*=\s*\d+", line):
+                raise ValueError(f"领域生产数量字段无效：{current_domain}")
+            lines[index] = f"production_instances = {counts[current_domain]}"
+            seen.add(current_domain)
+    if seen != set(FAMILIES):
+        raise ValueError(f"领域生产数量字段不完整：缺失={sorted(set(FAMILIES) - seen)}")
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
+def write_counts(path: Path = DEFAULT_SOURCE) -> int:
+    """Refresh generated counts while preserving manually maintained contracts."""
+
+    content = render_counts(path)
+    path.write_text(content, encoding="utf-8", newline="\n")
+    return len(FAMILIES)
+
+
+def check_counts(path: Path = DEFAULT_SOURCE) -> list[str]:
+    """Return a clear error when checked-in generated counts are stale."""
+
+    try:
+        actual = path.read_text(encoding="utf-8")
+        expected = render_counts(path)
+    except FileNotFoundError:
+        return [f"领域覆盖源缺失：{path}"]
+    except (OSError, UnicodeError, ValueError) as exc:
+        return [f"领域覆盖源不可核对：{path}: {exc}"]
+    if actual != expected:
+        return [f"领域生产实例数与当前规则不一致：{path}"]
+    return []
+
+
+def load(
+    path: Path = DEFAULT_SOURCE,
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> dict[str, DomainCoverage]:
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     if data.get("schema") != 1 or set(data) != {"schema", "domains", "chains"}:
         raise ValueError("domain_actions.toml schema 无效")
@@ -208,7 +1391,9 @@ def load(path: Path = DEFAULT_SOURCE) -> dict[str, DomainCoverage]:
     if not isinstance(raw_domains, dict) or set(raw_domains) != set(FAMILIES):
         raise ValueError("领域覆盖必须精确覆盖19个行动族")
     counts = dict.fromkeys(FAMILIES, 0)
-    for item in build(decision_rules.load(), decision_adapters.load()):
+    information = decision_rules.load() if information is None else information
+    adapters = decision_adapters.load() if adapters is None else adapters
+    for item in build(information, adapters):
         counts[item.family_id] += 1
     result: dict[str, DomainCoverage] = {}
     for key in FAMILIES:
@@ -363,9 +1548,13 @@ def contract(
 __all__ = [
     "CHAINS",
     "DEFAULT_SOURCE",
+    "ContinuousProgramBinding",
     "DomainCoverage",
     "JointChain",
+    "NativeConsumerBinding",
     "TargetCoverage",
+    "continuous_writer_issue",
     "contract",
     "load",
+    "native_coverage",
 ]

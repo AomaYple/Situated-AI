@@ -53,8 +53,24 @@ law_traditionalism = {
 		}
 
 		# SITAI BEGIN information:law_traditionalism.ai_enact_weight_modifier
-		# political_capacity_law_traditionalism [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_960c99517416f905 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_960c99517416f905_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_traditionalism_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_traditionalism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_traditionalism_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_traditionalism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_960c99517416f905_law_political_pressure_negative
+			add = { value = 0
+				# law_context_law_traditionalism_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 10
+		} }
 		# SITAI END information:law_traditionalism.ai_enact_weight_modifier
 	}
 }
@@ -144,14 +160,43 @@ law_interventionism = {
 		}
 
 		# SITAI BEGIN information:law_interventionism.ai_enact_weight_modifier
-		# political_capacity_law_interventionism [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
-		# structural_industrial_system [economy]; 已有工业方向和熟练劳动力时有限关注从传统主义转型的可行经济制度
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 has_law_or_variant = law_type:law_traditionalism has_strategy = ai_strategy_industrial_expansion pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } pop_type_percent_country = { pop_type = machinists percent >= 0.05 } } } add = 10.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_traditionalism } } } AND = { exists = ROOT ROOT = { NOT = { has_strategy = ai_strategy_industrial_expansion } } } AND = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } NOT = { pop_type_percent_country = { pop_type = machinists percent >= 0.05 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 scaled_debt >= 0 pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } } } } } } multiply = 1.0 }
-		# coordinated_layered_law_economic_interventionism [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_industry = yes sitai_context_evidence_need_industry = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no has_law_or_variant = law_type:law_traditionalism sitai_context_known_layer_foundation = yes sitai_context_layer_foundation = yes } } add = 6.0 }
+		# ACTION program_8e66dd3a537e7c8d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_8e66dd3a537e7c8d_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_interventionism_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_interventionism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_interventionism_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_interventionism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_8e66dd3a537e7c8d_law_political_pressure_negative
+			add = { value = 0
+				# law_context_law_interventionism_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			# GROUP program_8e66dd3a537e7c8d_law_population_administration_negative
+			add = { value = 0
+				# law_context_law_interventionism_population_administration_loss [fiscal]; 离开传统主义失去人口基础行政折扣，已有行政缺口独立计入，不能被生产需求奖励覆盖
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_traditionalism bureaucracy < 0 } } add = -6 }
+			}
+			# GROUP program_8e66dd3a537e7c8d_law_productive_constraint_relief_positive
+			add = { value = 0
+				# law_context_law_interventionism_coal_productive_option [economy]; 从传统主义转换实际移除投资效率和本地价格传导惩罚，响应具体生产瓶颈；不同商品是同一制度机会，不能无限叠加
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_traditionalism exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0 } } } } add = 10 }
+				# law_context_law_interventionism_iron_productive_option [economy]; 从传统主义转换实际移除投资效率和本地价格传导惩罚，响应具体生产瓶颈；不同商品是同一制度机会，不能无限叠加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_traditionalism exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0 } } } } add = 10 }
+				# law_context_law_interventionism_tools_productive_option [economy]; 从传统主义转换实际移除投资效率和本地价格传导惩罚，响应具体生产瓶颈；不同商品是同一制度机会，不能无限叠加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_traditionalism exists = market market = { exists = mg:tools mg:tools = { market_goods_delta < 0 } } } } add = 10 }
+			}
+			# GROUP program_8e66dd3a537e7c8d_law_tax_capacity_relief_positive
+			add = { value = 0
+				# law_context_law_interventionism_tax_capacity_relief [fiscal]; 从传统主义转换移除州税容量惩罚，响应同一已整合州真实税容不足；不是全国官僚余额的同义词
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_traditionalism any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage } } } add = 6 }
+			}
+			min = -16
+			max = 26
+		} }
 		# SITAI END information:law_interventionism.ai_enact_weight_modifier
 	}
 }
@@ -253,8 +298,24 @@ law_agrarianism = {
 		}
 
 		# SITAI BEGIN information:law_agrarianism.ai_enact_weight_modifier
-		# political_capacity_law_agrarianism [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_8fcf36a20690553d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_8fcf36a20690553d_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_agrarianism_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_agrarianism value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_agrarianism_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_agrarianism value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_8fcf36a20690553d_law_political_pressure_negative
+			add = { value = 0
+				# law_context_law_agrarianism_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 10
+		} }
 		# SITAI END information:law_agrarianism.ai_enact_weight_modifier
 	}
 }
@@ -365,8 +426,24 @@ law_industry_banned = {
 		}
 
 		# SITAI BEGIN information:law_industry_banned.ai_enact_weight_modifier
-		# political_capacity_law_industry_banned [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_f62d3ef62a415ada [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_f62d3ef62a415ada_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_industry_banned_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_industry_banned value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_industry_banned_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_industry_banned value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_f62d3ef62a415ada_law_political_pressure_negative
+			add = { value = 0
+				# law_context_law_industry_banned_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 10
+		} }
 		# SITAI END information:law_industry_banned.ai_enact_weight_modifier
 	}
 }
@@ -475,8 +552,24 @@ law_extraction_economy = {
 		}
 
 		# SITAI BEGIN information:law_extraction_economy.ai_enact_weight_modifier
-		# political_capacity_law_extraction_economy [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_1e42f61029f7e17e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_1e42f61029f7e17e_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_extraction_economy_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_extraction_economy value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_extraction_economy_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_extraction_economy value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_1e42f61029f7e17e_law_political_pressure_negative
+			add = { value = 0
+				# law_context_law_extraction_economy_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 10
+		} }
 		# SITAI END information:law_extraction_economy.ai_enact_weight_modifier
 	}
 }
@@ -556,8 +649,24 @@ law_laissez_faire = {
 		}
 
 		# SITAI BEGIN information:law_laissez_faire.ai_enact_weight_modifier
-		# political_capacity_law_laissez_faire [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_e46db52c6154858a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_e46db52c6154858a_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_laissez_faire_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_laissez_faire value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_laissez_faire_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_laissez_faire value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_e46db52c6154858a_law_political_pressure_negative
+			add = { value = 0
+				# law_context_law_laissez_faire_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 10
+		} }
 		# SITAI END information:law_laissez_faire.ai_enact_weight_modifier
 	}
 }
@@ -619,8 +728,24 @@ law_cooperative_ownership = {
 		}
 
 		# SITAI BEGIN information:law_cooperative_ownership.ai_enact_weight_modifier
-		# political_capacity_law_cooperative_ownership [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_fc254a85174f730c [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_fc254a85174f730c_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_cooperative_ownership_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_cooperative_ownership value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_cooperative_ownership_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_cooperative_ownership value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_fc254a85174f730c_law_political_pressure_negative
+			add = { value = 0
+				# law_context_law_cooperative_ownership_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 10
+		} }
 		# SITAI END information:law_cooperative_ownership.ai_enact_weight_modifier
 	}
 
@@ -739,8 +864,24 @@ law_command_economy = {
 		}
 
 		# SITAI BEGIN information:law_command_economy.ai_enact_weight_modifier
-		# political_capacity_law_command_economy [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_62173eccd1eb53ea [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_62173eccd1eb53ea_law_observed_agenda_positive
+			add = { value = 0
+				# law_context_law_command_economy_agenda_strong [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_command_economy value > neutral } political_movement_support >= 0.25 } } } add = 10 }
+				# law_context_law_command_economy_agenda_base [political]; 本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_command_economy value > neutral } political_movement_support >= 0.1 } } } add = 6 }
+			}
+			# GROUP program_62173eccd1eb53ea_law_political_pressure_negative
+			add = { value = 0
+				# law_context_law_command_economy_crisis_cost [political]; 已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 10
+		} }
 		# SITAI END information:law_command_economy.ai_enact_weight_modifier
 	}
 

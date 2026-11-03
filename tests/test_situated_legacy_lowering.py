@@ -1,9 +1,10 @@
 from dataclasses import replace
 
 import pytest
+from _situated_sources import production_policy_sources
 
 from pdx import decision_adapters, decision_rules
-from pdx.situated import compiler, ir
+from pdx.situated import compiler, ir, pdx_eval
 
 pytestmark = pytest.mark.unit
 
@@ -25,6 +26,32 @@ def test_reference_rejects_missing_legacy_writer():
         compiler.evaluate_policy(policy, {}, is_ai=True, config_model=model)
 
 
+def test_default_strategy_reference_keeps_explicit_consumers_without_old_rule_matches():
+    model = compiler.load_model()
+    values = {"war": True, "default": False, "no_default": True, "peace": False}
+    policy = decision_rules.load()
+    assert decision_rules.evaluate(policy, values, is_ai=True) == {}
+    result = compiler.evaluate_policy(policy, values, is_ai=True, config_model=model)
+    assert result["diplomatic_play_neutrality"] == ("joint_fiscal_neutrality", 6.0)
+    assert result["recklessness"] == ("joint_diplomatic_recklessness", -4.0)
+    assert compiler.evaluate_policy(policy, values, is_ai=False, config_model=model) == {}
+
+
+def test_explicit_neutral_owner_does_not_restore_old_writer():
+    model = compiler.load_model()
+    policy = decision_rules.load()
+    values: dict[str, object] = {
+        reader.key: False if reader.kind == "boolean" else 0 for reader in policy.readers
+    }
+    values.update(war=True, default=False, no_default=None, peace=False, infamy=30)
+    # The old field could have a result, but production suppresses its writer
+    # whenever the explicit consumer owns the field, including neutral cases.
+    result = compiler.evaluate_policy(policy, values, is_ai=True, config_model=model)
+    explicit = compiler.evaluate_actions(model, values, is_ai=True)
+    for consumer in model.consumers:
+        assert result.get(consumer.field) == explicit.get(consumer.field)
+
+
 def test_compiler_rejects_duplicate_legacy_writer():
     model = compiler.load_model()
     assert model.consumer_ir is not None
@@ -36,13 +63,14 @@ def test_compiler_rejects_duplicate_legacy_writer():
         compiler.compile_policy(decision_rules.load(), config_model=model)
 
 
-def test_all_1414_bindings_lower_from_complete_ir():
+def test_all_bindings_lower_from_complete_ir():
     model = compiler.load_model()
     policies = (
         ("mod/decisions/information.toml", decision_rules.load()),
         *decision_adapters.load().policies,
     )
     count = 0
+    identities = set()
     for source, policy in policies:
         compiled, _ = compiler.compile_policy(policy, source, model)
         originals = {rule.id: rule for rule in policy.rules}
@@ -52,40 +80,56 @@ def test_all_1414_bindings_lower_from_complete_ir():
                 replace(item, priority=item.origin_priority, origin_priority=None).to_rule()
                 == originals[item.action_id]
             )
+            identities.add((item.source, item.action_id, item.field))
             count += 1
         assert decision_rules.evaluate(compiled, {}, is_ai=False) == {}
         assert decision_rules.evaluate(compiled, {}, is_ai=True) == {}
-    assert count == 1414
+    assert count == len(production_policy_sources().rules)
+    assert identities == production_policy_sources().rules
 
 
 def test_reference_action_selection_blocks_lower_candidate_when_higher_core_is_unknown():
-    """未知的高优先级核心条件必须保持原版，不能落到低档行动。"""
+    """A local unknown cancels fiscal recovery, while known war still contributes."""
 
     model = compiler.load_model()
-    consumer = next(item for item in model.consumers if item.id == "fiscal_neutrality")
-    actions = [item for item in model.decision_ir if item.consumer_id == consumer.id]
-    selected = compiler._select_action(
-        actions,
-        {
-            "default": None,
-            "war": True,
-            "peace": False,
-            "no_default": None,
-        },
+    field = "diplomatic_play_neutrality"
+    result = compiler.evaluate_actions(
+        model,
+        {"default": None, "war": True, "peace": False, "no_default": None},
+        is_ai=True,
     )
-    assert selected is None
+    assert result[field] == ("joint_fiscal_neutrality", 6.0)
+    actual = pdx_eval.select(
+        compiler.strategy_overlay(model)[field],
+        {"is_ai": True, "in_default": None, "is_at_war": True},
+    )
+    assert (actual.action_id, actual.operation, actual.fallback) == (
+        "joint_fiscal_neutrality",
+        "add",
+        "selected",
+    )
+    assert actual.delta == 6.0
 
 
 def test_reference_action_exit_unknown_keeps_vanilla_boundary() -> None:
-    """未知退出条件与生成的 NOT/OR 门一致，不能落到低档候选。"""
+    """Unknown exit evidence removes its own card at the public typed boundary."""
 
     model = compiler.load_model()
-    action = next(item for item in model.decision_ir if item.action_id == "fiscal_recovery")
-    selected = compiler._select_action(
-        [replace(action, requires_all=("peace",), exit_when=("default",))],
-        {"peace": True, "default": None},
+    field = "diplomatic_play_neutrality"
+    values = {"default": True, "no_default": None, "war": False, "peace": True}
+    assert field not in compiler.evaluate_actions(model, values, is_ai=True)
+    known = compiler.evaluate_actions(model, {**values, "no_default": False}, is_ai=True)
+    assert known[field] == ("joint_fiscal_neutrality", 8.0)
+    # The same local unknown must not erase a separately known wartime term.
+    wartime = compiler.evaluate_actions(model, {**values, "war": True, "peace": False}, is_ai=True)
+    assert wartime[field] == ("joint_fiscal_neutrality", 6.0)
+    # The typed API can receive an unknown exit independently. Actual PDX reads
+    # in_default once, so known default activates fiscal 8 + war 6, clamped to 10.
+    actual = pdx_eval.select(
+        compiler.strategy_overlay(model)[field],
+        {"is_ai": True, "in_default": True, "is_at_war": True},
     )
-    assert selected is None
+    assert (actual.action_id, actual.delta) == ("joint_fiscal_neutrality", 10.0)
 
 
 @pytest.mark.parametrize(

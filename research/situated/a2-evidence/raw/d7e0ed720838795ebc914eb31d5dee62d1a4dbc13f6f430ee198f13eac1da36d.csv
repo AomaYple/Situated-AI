@@ -1,0 +1,7 @@
+pid,name,role,level,first_t_s,last_t_s,samples,rss_max_mb,hwm_mb,cpu_s,peak_source
+23688,python.exe,worker,3,1.701,304.735,1078,590.8,659.2,297.45,hwm
+12964,python.exe,worker,3,1.416,304.735,1079,397.0,398.8,298.67,hwm
+1872,python.exe,root,1,0.3,304.735,1083,111.5,111.5,4.5,hwm
+4188,python.exe,helper,2,1.701,304.735,1078,4.2,4.2,0.0,hwm
+8360,python.exe,helper,2,1.416,304.735,1079,4.2,4.2,0.0,hwm
+25116,python.exe,launcher,0,0.023,304.735,1084,4.2,4.2,0.0,hwm

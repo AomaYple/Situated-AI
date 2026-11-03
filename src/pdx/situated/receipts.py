@@ -54,6 +54,7 @@ class AuditResult:
     receipts: tuple[StageReceipt, ...]
     scope_hash: str
     scope_status: str = "unverified"
+    native_coverage: dict[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -67,6 +68,7 @@ class AuditResult:
             "receipts": [receipt.as_dict() for receipt in self.receipts],
             "scope_hash": self.scope_hash,
             "scope_status": self.scope_status,
+            "native_coverage": self.native_coverage,
         }
 
 

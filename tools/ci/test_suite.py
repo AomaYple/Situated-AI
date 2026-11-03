@@ -82,8 +82,10 @@ def validate_pytest_args(args: list[str]) -> list[str]:
 class ExecutionRecorder:
     """controller 接收串行或 xdist 转发的真实执行事件，不从收集数量推断执行。"""
 
-    def __init__(self, state: dict[str, Any]) -> None:
+    def __init__(self, state: dict[str, Any], failure_path: Path) -> None:
         self.state = state
+        self.failure_path = failure_path
+        self.failure_path.write_text("", encoding="utf-8")
 
     def pytest_runtest_logstart(self, nodeid: str, location: Any) -> None:
         del location  # pytest hookspec 参数名必须保持。
@@ -99,15 +101,20 @@ class ExecutionRecorder:
         if worker is None and node is not None:
             gateway = getattr(node, "gateway", None)
             worker = getattr(gateway, "id", None)
-        self.state["reports"].append(
-            {
-                "nodeid": report.nodeid,
-                "when": report.when,
-                "outcome": report.outcome,
-                "worker": worker or "master",
-                "subtest": hasattr(report, "context") or type(report).__name__ == "SubTestReport",
-            }
-        )
+        row = {
+            "nodeid": report.nodeid,
+            "when": report.when,
+            "outcome": report.outcome,
+            "worker": worker or "master",
+            "subtest": hasattr(report, "context") or type(report).__name__ == "SubTestReport",
+        }
+        self.state["reports"].append(row)
+        if report.outcome == "failed":
+            # 每次失败立即落盘；超时或 worker 崩溃不能抹去已收到的诊断。
+            with self.failure_path.open("a", encoding="utf-8", newline="\n") as stream:
+                stream.write(
+                    json.dumps({**row, "longrepr": str(report.longrepr)}, ensure_ascii=False) + "\n"
+                )
 
 
 def _effective_config(config: Any) -> dict[str, Any]:
@@ -139,7 +146,12 @@ def pytest_configure(config: Any) -> None:
             "effective": effective,
         }
         if not hasattr(config, "workerinput") and hasattr(config, "pluginmanager"):
-            config.pluginmanager.register(ExecutionRecorder(config._sitai_collection))
+            config.pluginmanager.register(
+                ExecutionRecorder(
+                    config._sitai_collection,
+                    Path(os.environ[_COLLECTION_ENV]).with_name("failures.jsonl"),
+                )
+            )
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)

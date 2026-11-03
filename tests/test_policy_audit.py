@@ -119,7 +119,7 @@ def test_markdown_report_contains_scope_and_limits(tmp_path):
 def test_relative_comparison_fixture_uses_distinct_valid_same_unit_values():
     policy = _policy()
     income = policy.readers[0]
-    other = replace(income, key="other")
+    other = replace(income, key="other", engine="other_fixed_income")
     condition = decision_rules.Predicate(
         income.key, ">", decision_rules.FactReference(other.key, other.reference())
     )
@@ -147,6 +147,39 @@ def test_contradictory_or_missing_reader_contract_cannot_be_reported_as_passed()
         policy_audit.audit_rule(replace(policy, rules=(rule,)), rule, consumer="contradictory")
     with pytest.raises(ValueError, match="缺少"):
         policy_audit.audit_rule(replace(policy, readers=()), policy.rules[0], consumer="missing")
+
+
+def test_physical_aliases_cannot_invent_a_relative_comparison():
+    policy = _policy()
+    income = policy.readers[0]
+    alias = replace(income, key="alias")
+    predicate = decision_rules.Predicate(
+        income.key, ">", decision_rules.FactReference(alias.key, alias.reference())
+    )
+    rule = replace(policy.rules[0], conditions=(predicate,))
+    with pytest.raises(ValueError, match="无法构造满足"):
+        policy_audit._fixture(replace(policy, readers=(income, alias), rules=(rule,)), rule)
+
+
+def test_physical_aliases_share_a_satisfying_observation():
+    policy = _policy()
+    income = policy.readers[0]
+    alias = replace(income, key="alias")
+    rule = replace(
+        policy.rules[0],
+        conditions=(
+            decision_rules.Predicate(income.key, ">", 0),
+            decision_rules.Predicate(alias.key, ">", 10),
+        ),
+    )
+    values, _candidates = policy_audit._fixture(
+        replace(policy, readers=(income, alias), rules=(rule,)), rule
+    )
+    assert values[income.key] == values[alias.key]
+    value = values[income.key]
+    assert isinstance(value, (int, float))
+    assert not isinstance(value, bool)
+    assert value > 10
 
 
 def test_exact_production_counts_are_computed_from_source_not_discovery_index():
@@ -204,31 +237,19 @@ def test_broken_reference_result_cannot_be_hidden(monkeypatch):
         policy_audit.audit_rule(policy, policy.rules[0], consumer="broken")
 
 
-def test_country_registry_covers_routes_budgets_thresholds_and_lifecycle():
+def test_country_registry_covers_stateless_coordination_thresholds():
     report = country_parameters.audit()
     paths = {tuple(row["path"]) for row in report["parameters"]}
-    assert {("variable_ttl_days",), ("switch_cooldown_days",), ("update_days",)} <= paths
-    assert {"routes", "budgets"} <= {path[0] for path in paths}
-    assert {path[1] for path in paths if path[0] == "routes"} == {
-        "defense",
-        "fiscal_recovery",
-        "stability",
-        "industry",
-        "education",
-        "maritime",
-    }
+    assert report["parameter_count"] == len(paths) == 19
+    assert {path[0] for path in paths} == {"coordination"}
+    assert {path[1] for path in paths} == {"needs", "capacities"}
+    assert report["evaluation"] == "vanilla_consumer_demand"
     assert all(
         row["why"] and row["counterexample"] and row["sensitivity"] for row in report["parameters"]
     )
-    assert {name: row["route"] for name, row in report["scenarios"].items()} == {
-        "Russia_education": "education",
-        "Russia_war": "defense",
-        "Netherlands_maritime": "maritime",
-        "Prussia_industry": "industry",
-        "Austria_stability": "stability",
-        "France_fiscal": "fiscal_recovery",
-        "small_admin_shortage": None,
-        "landlocked": None,
-        "colonial_subject": None,
-        "default_and_war": "defense",
-    }
+    scenarios = {name: row["coordination"] for name, row in report["scenarios"].items()}
+    assert scenarios["war_and_education"]["need_security"] is True
+    assert scenarios["war_and_education"]["need_education"] is True
+    assert scenarios["political_crisis"]["need_political"] is True
+    assert scenarios["landlocked"]["need_overseas"] is False
+    assert scenarios["colonial_subject"]["need_overseas"] is False

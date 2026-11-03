@@ -10,7 +10,7 @@ from typing import cast
 import pytest
 
 from pdx import decisions, distribution
-from pdx.model import Block, Scalar
+from pdx.model import Block
 from pdx.parser import parse_text
 
 pytestmark = pytest.mark.unit
@@ -149,59 +149,31 @@ def _block(parent, key):
 
 
 def _security_delta(text, *, initiator, commitment, threat, ai=True, complete=True):
-    """执行生成支持分支，条件叶子单独注入；不是游戏作用域校准。"""
-    block = _block(parse_text("probe = { value = 0\n" + text + "\n}").root, "probe")
+    """独立执行实际数值AST，保留每种真实helper参数的分支见证。"""
+    from pdx.situated import pdx_eval
 
-    def condition(body):
-        result = []
-        for node in body.assignments():
-            if node.key == "NOT":
-                result.append(not condition(node.value))
-            elif node.key == "exists":
-                assert isinstance(node.value, Scalar)
-                result.append(
-                    initiator if node.value.unquoted == "scope:is_initiator" else complete
-                )
-            elif node.key == "ROOT":
-                assert node.op == "?="
-                result.append(condition(node.value))
-            elif node.key == "is_ai":
-                result.append(ai)
-            elif node.key == "sitai_defense_commitment":
-                partner = node.value.first("PARTNER").value.unquoted
-                assert partner == ("scope:enemy_country" if initiator else "scope:country")
-                result.append(commitment)
-            elif node.key == "sitai_neighbor_defense":
-                partner = node.value.first("PARTNER").value.unquoted
-                opponent = node.value.first("OPPONENT").value.unquoted
-                assert partner == ("scope:enemy_country" if initiator else "scope:country")
-                assert opponent == ("scope:country" if initiator else "scope:enemy_country")
-                result.append(threat)
-            else:
-                raise AssertionError(f"未实现的生成条件：{node.key}")
-        return all(result)
-
-    def execute(body):
-        total = 0.0
-        selected = False
-        for node in body.assignments():
-            if node.key in {"if", "else_if", "else"}:
-                if node.key == "if":
-                    selected = False
-                if not selected and (node.key == "else" or condition(_block(node.value, "limit"))):
-                    selected = True
-                    total += execute(node.value)
-            elif node.key == "add":
-                value = node.value
-                if isinstance(value, Block):
-                    amount = value.first("value")
-                    assert amount is not None
-                    value = amount.value
-                assert isinstance(value, Scalar)
-                total += float(value.unquoted)
-        return total
-
-    return execute(block)
+    if not text:
+        return 0
+    partner, opponent = (
+        ("scope:enemy_country", "scope:country")
+        if initiator
+        else ("scope:country", "scope:enemy_country")
+    )
+    return pdx_eval.select(
+        text,
+        {
+            "ROOT": {
+                "is_ai": ai,
+                "sitai_defense_commitment": {(("PARTNER", partner),): commitment},
+                "sitai_neighbor_defense": {
+                    tuple(sorted((("PARTNER", partner), ("OPPONENT", opponent)))): threat
+                },
+            },
+            "scope:country": {} if complete else None,
+            "scope:enemy_country": {} if complete else None,
+            "scope:is_initiator": initiator,
+        },
+    ).delta
 
 
 def test_实际外部生成分支防御对称不重复加分且有上下文保护():

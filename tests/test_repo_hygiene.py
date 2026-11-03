@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import ast
 import functools
+import gzip
 import importlib
 import mmap
 import subprocess
@@ -29,6 +30,7 @@ from pathlib import Path
 import pytest
 
 from pdx import config
+from pdx.repo_audit import BINARY_SUFFIXES as _BINARY_SUFFIXES
 
 #: 一条判据：读到的字节（可能是分块流）→ 违规说明（``None`` = 合规）。
 _判据 = Callable[[Path, "_Source"], "str | None"]
@@ -49,12 +51,8 @@ _GAME_SIDE_PREFIXES = ("mod/",)
 _READ_WHOLE_MAX = 1 << 20
 #: 分块扫描的块大小。8 KiB 与 `mmap` 的页大小同量级，切分代价可忽略。
 _CHUNK = 8192
-#: 一定不是文本的后缀（``.gitattributes`` 的 binary 组同源）。
-#: 命中就**连读都不读**；二进制后缀不进入文本编码扫描。
-_BINARY_SUFFIXES = (
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".dds", ".tga", ".ico",
-    ".xlsx", ".pptx", ".prof", ".pyisession",
-)  # fmt: skip
+# 二进制声明与生产编码审计共用；gzip、标准包和原始字节证据不转码。
+# 文本后缀仍须通过下方独立的 NUL、BOM、CRLF 和孤立 CR 反例。
 
 #: 扫描范围的下限（元测试用）。当前精简仓库有 299 个受控文件；
 #: 取略低的值，目录改名或口径写错时仍会当场红，而正常小幅增删文件不会误报。
@@ -475,6 +473,15 @@ def test_二进制必须由后缀声明而不是靠内容嗅探(tmp_path: Path) 
     poisoned.write_bytes(b"# title\x00tail\n")
     assert _打开(poisoned) is None, "前提：嗅探确实会把它当二进制跳过"
     assert _嗅探出来的二进制([poisoned]), "阴性对照没点名 ⇒ 这条闸门是空转的"
+
+    # 原始进程换行和 gzip 封装均须保留字节；与文本污染反例分别判断。
+    original = b"captured stdout\r\n"
+    for suffix, raw in ((".bin", original), (".gz", gzip.compress(original, mtime=0))):
+        evidence = tmp_path / ("immutable-evidence" + suffix)
+        evidence.write_bytes(raw)
+        assert _打开(evidence) is None
+        assert not _嗅探出来的二进制([evidence])
+        assert evidence.read_bytes() == raw
 
 
 def test_大文件走分块扫描也判得出CRLF(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

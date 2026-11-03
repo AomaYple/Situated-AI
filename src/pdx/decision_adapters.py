@@ -8,17 +8,33 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import tomllib
 from dataclasses import dataclass, replace
 from itertools import pairwise
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from . import config, decision_intents, decision_rules, production_inputs
+from . import (
+    building_opportunities,
+    company_sectors,
+    config,
+    decision_intents,
+    decision_rules,
+    equipment_opportunities,
+    law_opportunities,
+    mobilization_opportunities,
+    observation_queries,
+    production_inputs,
+    technology_opportunities,
+    treaty_opportunities,
+)
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
+from .situated import supply_program
+from .situated.supply_program import SupplyAction, SupplyProgram
 from .textio import normalized_text
 
 if TYPE_CHECKING:
@@ -42,7 +58,7 @@ _VALUE_SOURCE = "common/script_values/sitai_adapter_values.txt"
 
 @dataclass(frozen=True, slots=True)
 class InitialValue:
-    """只为缺省的建筑评分显式恢复锁定 defines 中的原版基值。"""
+    """只为已证明的缺省评分恢复锁定原版基值。"""
 
     source: str
     field: tuple[str, ...]
@@ -58,6 +74,18 @@ class SupplyPlan:
     goods: tuple[str, ...]
     price_threshold: float
 
+    def actions(self) -> tuple[SupplyProgram, ...]:
+        if (
+            not isinstance(self.goods, tuple)
+            or not self.goods
+            or len(set(self.goods)) != len(self.goods)
+        ):
+            raise ValueError("商品供给计划商品身份缺失或重复")
+        return tuple(
+            SupplyProgram(SupplyAction(self.source, good, self.price_threshold))
+            for good in self.goods
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class AdapterSet:
@@ -67,6 +95,9 @@ class AdapterSet:
     initial_values: tuple[InitialValue, ...] = ()
     supply: SupplyPlan | None = None
     scalar_values: tuple[tuple[str, tuple[str, ...]], ...] = ()
+    company_sectors_sha256: str | None = None
+    law_opportunities_sha256: str | None = None
+    technology_opportunities_sha256: str | None = None
 
 
 def writes(
@@ -99,6 +130,16 @@ def writes(
     return tuple(values)
 
 
+def _merge_derivation(data: dict[str, Any], derived: Mapping[str, Any], label: str) -> None:
+    """Merge one derivation without accepting a conflicting source or reader."""
+    for collection in ("sources", "readers"):
+        for key, value in derived[collection].items():
+            if key in data[collection] and data[collection][key] != value:
+                raise ValueError(f"{label}与消费者源冲突：{collection}/{key}")
+            data[collection][key] = value
+    data["rules"].extend(derived["rules"])
+
+
 def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = None) -> AdapterSet:
     raw = source.read_bytes()
     data = tomllib.loads(raw.decode("utf-8"))
@@ -112,6 +153,91 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         "rules",
     } or (type(data["schema"]) is not int or data["schema"] != 1):
         raise ValueError("消费者适配 schema 无效")
+    sector_digest = None
+    opportunity_digest = None
+    equipment_digest = None
+    treaty_digest = None
+    treaty_fields = None
+    mobilization_digest = None
+    mobilization_fields = None
+    law_digest = None
+    technology_digest = None
+    if source == SOURCE:
+        if (
+            not isinstance(data["sources"], dict)
+            or not isinstance(data["readers"], dict)
+            or not isinstance(data["rules"], list)
+            or not isinstance(data.get("initial_values", []), list)
+        ):
+            raise ValueError("公司部门消费者源集合类型无效")
+        # One source of sector semantics: the frozen, structurally verified
+        # derivation. Loading it is not a claim about the current installation.
+        sectors = company_sectors.load_baseline()
+        derived = {
+            "sources": {**sectors["sources"], **company_sectors.query_source_hashes(sectors)},
+            "readers": sectors["readers"],
+            "rules": sectors["rules"],
+        }
+        _merge_derivation(data, derived, "公司部门派生")
+        data.setdefault("initial_values", []).extend(company_sectors.initialized_fields(sectors))
+        sector_digest = hashlib.sha256(company_sectors.BASELINE.read_bytes()).hexdigest()
+        opportunity = building_opportunities.derive(data, sectors)
+        _merge_derivation(data, opportunity, "建筑基础机会")
+        opportunity_digest = hashlib.sha256(
+            building_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(building_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        equipment = equipment_opportunities.derive(data)
+        _merge_derivation(data, equipment, "舰船材料机会")
+        equipment_digest = hashlib.sha256(
+            equipment_opportunities.BASELINE.read_bytes()
+            + b"\0parameters:"
+            + equipment_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(equipment_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        treaties = treaty_opportunities.derive(data)
+        treaty_fields = {(row["source"], row["field"]) for row in treaties["covered"]}
+        _merge_derivation(data, treaties, "条约实际承诺机会")
+        treaty_digest = hashlib.sha256(
+            treaty_opportunities.BASELINE.read_bytes()
+            + b"\0parameters:"
+            + treaty_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(treaty_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        medical = mobilization_opportunities.derive(data)
+        mobilization_fields = {(row["source"], row["field"]) for row in medical["covered"]}
+        _merge_derivation(data, medical, "医疗动员实际投入机会")
+        actor_bindings = data.setdefault("actors", {})
+        if not isinstance(actor_bindings, dict):
+            raise ValueError("医疗动员AI所有者必须是映射")
+        for name, path in medical["actors"].items():
+            if name in actor_bindings and actor_bindings[name] != path:
+                raise ValueError("医疗动员AI所有者与编队原生ROOT冲突")
+            actor_bindings[name] = path
+        mobilization_digest = hashlib.sha256(
+            mobilization_opportunities.BASELINE.read_bytes()
+            + b"\0parameters:"
+            + mobilization_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(mobilization_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        laws = law_opportunities.derive(data)
+        _merge_derivation(data, laws, "具体法律处境机会")
+        law_digest = hashlib.sha256(
+            law_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(law_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        technologies = technology_opportunities.derive(data)
+        _merge_derivation(data, technologies, "具体科技机制机会")
+        technology_digest = hashlib.sha256(
+            technology_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(technology_opportunities.__file__).read_bytes()
+        ).hexdigest()
     if not isinstance(data["sources"], dict) or not data["sources"]:
         raise ValueError("消费者适配必须锁定全部原件")
     for name, digest in data["sources"].items():
@@ -151,6 +277,10 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                 "common/laws/",
                 "common/technology/technologies/",
                 "common/buildings/",
+                "common/company_types/",
+                "common/ship_modifications/",
+                "common/treaty_articles/",
+                "common/mobilization_options/",
             )
         ):
             raise ValueError("只允许适配已登记的数值消费者；事件只能作为读取依据")
@@ -169,9 +299,74 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     if not isinstance(contexts, dict):
         raise ValueError("共享约束必须是映射")
     used_contexts: set[str] = set()
-    digest = hashlib.sha256(raw).hexdigest()
+    digest = hashlib.sha256(
+        raw
+        + (b"\0company_sectors:" + sector_digest.encode("ascii") if sector_digest else b"")
+        + (
+            b"\0building_opportunities:" + opportunity_digest.encode("ascii")
+            if opportunity_digest
+            else b""
+        )
+        + (
+            b"\0equipment_opportunities:" + equipment_digest.encode("ascii")
+            if equipment_digest
+            else b""
+        )
+        + (b"\0treaty_opportunities:" + treaty_digest.encode("ascii") if treaty_digest else b"")
+        + (b"\0law_opportunities:" + law_digest.encode("ascii") if law_digest else b"")
+        + (
+            b"\0technology_opportunities:" + technology_digest.encode("ascii")
+            if technology_digest
+            else b""
+        )
+        + (
+            b"\0mobilization_opportunities:" + mobilization_digest.encode("ascii")
+            if mobilization_digest
+            else b""
+        )
+    ).hexdigest()
     for name, rules in sorted(groups.items()):
-        expected_actor = ["owner"] if name.startswith("common/buildings/") else []
+        mobilization = name.startswith("common/mobilization_options/")
+        if mobilization:
+            if mobilization_fields is None:
+                mobilization_fields = {
+                    (row["source"], row["field"])
+                    for row in mobilization_opportunities.derive(data)["covered"]
+                }
+            if any(
+                (name, rule["field"]) not in mobilization_fields or rule["operation"] != "multiply"
+                for rule in rules
+            ):
+                raise ValueError("医疗动员只许可两项已冻结的精确编队权重块")
+        if name.startswith("common/treaty_articles/"):
+            if treaty_fields is None:
+                treaty_fields = {
+                    (row["source"], row["field"])
+                    for row in treaty_opportunities.derive(data)["covered"]
+                }
+            if any(
+                (name, rule["field"]) not in treaty_fields
+                or rule["operation"] != "multiply"
+                or len(rule["field"].split(".")) != 3
+                or not rule["field"].endswith(".ai.proposal_weight")
+                for rule in rules
+            ):
+                raise ValueError("条约适配只许可已核实的精确提议倍率块")
+        if name.startswith("common/company_types/") and any(
+            len(rule["field"].split(".")) != 2
+            or not rule["field"].endswith(".ai_weight")
+            or rule["operation"] != "multiply"
+            for rule in rules
+        ):
+            raise ValueError("公司适配只许可已证明的正倍率基础候选评分字段")
+        if name.startswith("common/ship_modifications/") and any(
+            len(rule["field"].split(".")) != 2
+            or not rule["field"].endswith(".ai_weight")
+            or rule["operation"] != "multiply"
+            for rule in rules
+        ):
+            raise ValueError("舰船改装适配只许可已证明的具名候选评分块")
+        expected_actor = ["owner"] if name.startswith("common/buildings/") or mobilization else []
         if actors.get(name, []) != expected_actor:
             raise ValueError("消费者 AI 所有者与锁定接口作用域不一致")
         try:
@@ -189,6 +384,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                             raise ValueError("规则战略意图名称无效")
                         conditions.extend(strategy.expand(intent))
             readers = {condition["fact"] for condition in conditions}
+            readers.update(key for rule in rules for key in rule.get("required_known_facts", []))
             readers.update(
                 condition["value"]["fact"]
                 for condition in conditions
@@ -200,6 +396,11 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                     "schema": 1,
                     "baseline_sha256": data["sources"][name],
                     "actor_path": actors.get(name, []),
+                    "native_root": "military_formation"
+                    if mobilization
+                    else "state"
+                    if expected_actor
+                    else "country",
                     "readers": {key: data["readers"][key] for key in readers},
                     "domains": {key: data["domains"][key] for key in domains},
                     "rules": rules,
@@ -233,25 +434,40 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         native_source, field, define_source, define = (
             item[key] for key in ("source", "field", "define_source", "define")
         )
+        company_default = (
+            native_source == "common/company_types/99_basic_companies.txt"
+            and define_source == "common/defines/00_ai.txt"
+            and define == "NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT"
+        )
+        allowed_defines = (
+            {"NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT"}
+            if company_default
+            else {"NAI.PRODUCTION_BUILDING_BASE_VALUE", "NAI.GOVERNMENT_BUILDING_BASE_VALUE"}
+        )
         if (
             not all(
                 isinstance(value, str) for value in (native_source, field, define_source, define)
             )
             or native_source not in groups
-            or not native_source.startswith("common/buildings/")
+            or not (native_source.startswith("common/buildings/") or company_default)
             or define_source not in data["sources"]
             or not define_source.startswith("common/defines/")
-            or define
-            not in {"NAI.PRODUCTION_BUILDING_BASE_VALUE", "NAI.GOVERNMENT_BUILDING_BASE_VALUE"}
+            or define not in allowed_defines
         ):
             raise ValueError("建筑缺省评分必须引用锁定的原版建筑与 defines")
         field_path = tuple(field.split("."))
         if (
             len(field_path) != 2
-            or field_path[1] != "ai_value"
+            or field_path[1] != ("ai_weight" if company_default else "ai_value")
             or (native_source, field_path) in seen_fields
         ):
             raise ValueError("建筑缺省评分路径无效或重复")
+        if company_default:
+            from .situated import engine_scope  # noqa: PLC0415
+
+            proof = json.loads(engine_scope.company_default_snapshot())
+            if field_path[0] not in {row["id"] for row in proof["implicit_companies"]}:
+                raise ValueError("公司缺省评分不在精确引擎证据集合中")
         building_policy = dict(policies)[native_source]
         if field_path not in {rule.field for rule in building_policy.rules}:
             raise ValueError("建筑缺省评分缺少实际规则消费者")
@@ -310,28 +526,18 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         ):
             raise ValueError("建筑常量评分缺少唯一实际消费者")
         scalar_values.append((source_name, scalar_path))
-    # Actual input pressure must win over an output opportunity on the same
-    # building field. Otherwise a scarce input can be ignored whenever the
-    # output rule happens to have the higher priority. Keep this invariant in
-    # the source contract so future generated rules cannot regress it.
+    # Joint consumers retain both directions. Priority only breaks ties within
+    # one cause/strength, so it cannot serve as an input-vs-output veto chain.
     for source_name, loaded_set in policies:
-        priority_groups: dict[tuple[str, ...], dict[str, list[int]]] = {}
         for loaded_rule in loaded_set.rules:
-            if loaded_rule.id.startswith("actual_cost_"):
-                priority_groups.setdefault(loaded_rule.field, {}).setdefault("cost", []).append(
-                    loaded_rule.priority
-                )
-            elif loaded_rule.id.startswith("actual_output_"):
-                priority_groups.setdefault(loaded_rule.field, {}).setdefault("output", []).append(
-                    loaded_rule.priority
-                )
-        for field, priority in priority_groups.items():
-            if (
-                priority.get("cost")
-                and priority.get("output")
-                and min(priority["cost"]) <= max(priority["output"])
+            is_cost = loaded_rule.id.startswith("actual_cost_")
+            is_output = loaded_rule.id.startswith("actual_output_")
+            if (is_cost or is_output) and (
+                loaded_rule.operation != "multiply"
+                or (is_cost and loaded_rule.value >= 1)
+                or (is_output and loaded_rule.value <= 1)
             ):
-                raise ValueError(f"输入短缺规则必须优先于产出规则：{source_name}/{'.'.join(field)}")
+                raise ValueError(f"实际投入/产出贡献方向错误：{source_name}/{loaded_rule.id}")
     adapters = AdapterSet(
         tuple(sorted(data["sources"].items())),
         tuple(policies),
@@ -339,6 +545,9 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         tuple(initial_values),
         supply,
         tuple(sorted(scalar_values)),
+        sector_digest,
+        law_digest,
+        technology_digest,
     )
     writes(adapters)
     return adapters
@@ -424,17 +633,29 @@ def _externalize_fleet_value(text: str) -> tuple[str, str]:
 
 
 def _supply_patch(
-    text: str, plan: SupplyPlan, inputs: Mapping[str, str], words: frozenset[str]
+    text: str,
+    plan: SupplyPlan,
+    inputs: Mapping[str, str],
+    words: frozenset[str],
+    programs: tuple[SupplyProgram, ...],
 ) -> str:
     """保留已有商品立场与资格，只追加缺省的、按市场稀缺激活的立场。"""
     parsed = parse_text(text)
     if parsed.errors:
         raise ValueError("供给计划原件无法解析")
     strategy = parsed.root.first("ai_strategy_default")
-    if strategy is None or not isinstance(strategy.value, Block):
+    if (
+        len(parsed.root.all("ai_strategy_default")) != 1
+        or strategy is None
+        or not isinstance(strategy.value, Block)
+    ):
         raise ValueError("供给计划缺少默认策略")
     goods_stances = strategy.value.first("goods_stances")
-    if goods_stances is None or not isinstance(goods_stances.value, Block):
+    if (
+        len(strategy.value.all("goods_stances")) != 1
+        or goods_stances is None
+        or not isinstance(goods_stances.value, Block)
+    ):
         raise ValueError("供给计划缺少唯一商品立场表")
     definitions = parse_text(inputs["common/goods/00_goods.txt"])
     if (
@@ -456,18 +677,47 @@ def _supply_patch(
         ("ai_strategy_default", "goods_stances")
     ]
     rows = ["\n\t\t# SITAI BEGIN supply:goods_stances\n"]
-    rows.extend(
-        f"\t\t{good} = {{ stance = wants_high_supply trigger = {{ "
-        f"is_ai = yes exists = market market = {{ exists = mg:{good} mg:{good} = {{ "
-        f"market_goods_pricier > {plan.price_threshold!r} market_goods_delta < 0 "
-        "} } } }\n"
-        for good in plan.goods
-    )
+    rows.extend(program.render() for program in programs)
     rows.append("\t\t# SITAI END supply:goods_stances\n\t")
     result = text[:position] + "".join(rows) + text[position:]
     if parse_text(result).errors:
         raise ValueError("商品供给计划产物无法解析")
     return result
+
+
+def _supply_programs(
+    plan: SupplyPlan | None, bundle: ConsumerIRBundle | None, *, enabled: bool
+) -> tuple[SupplyProgram, ...]:
+    expected = plan.actions() if plan is not None else ()
+    if bundle is None:
+        return expected if enabled else ()
+    bundle.validate_chain_refs()
+    rows = [writer for writer in bundle.writers if writer.kind == "supply_program"]
+    programs = tuple(writer.validate_supply_program() for writer in rows)
+    if any(
+        writer.supply_program is not None and writer.kind != "supply_program"
+        for writer in bundle.writers
+    ):
+        raise ValueError("非供给writer不能携带供给程序")
+    if len({program.good for program in programs}) != len(programs):
+        raise ValueError("供给枚举writer重复")
+    if enabled and {program.good: program for program in programs} != {
+        program.good: program for program in expected
+    }:
+        raise ValueError("供给计划与冻结ConsumerIR完整程序不一致")
+    if not enabled:
+        # A build may narrow an enabled bundle to a disabled domain.  Any
+        # retained configured rows must still be exact; no row is emitted.
+        if (
+            plan is not None
+            and programs
+            and {program.good: program for program in programs}
+            != {program.good: program for program in expected}
+        ):
+            raise ValueError("关闭的供给计划与冻结ConsumerIR不一致")
+        return ()
+    by_good = {program.good: program for program in programs}
+    return tuple(by_good[program.good] for program in expected)
 
 
 def _initialize(
@@ -491,6 +741,21 @@ def _initialize(
             raise ValueError("建筑缺省评分父块不唯一")
         if parent.value.first(item.field[1]) is not None:
             raise ValueError("建筑评分已经存在，不能覆写或使用缺省值")
+        if item.source.startswith("common/company_types/"):
+            from .situated import engine_scope  # noqa: PLC0415
+
+            proof = json.loads(engine_scope.company_default_snapshot())
+            allowed = {row["id"]: row["line"] for row in proof["implicit_companies"]}
+            if (
+                item.source != "common/company_types/99_basic_companies.txt"
+                or item.field[1] != "ai_weight"
+                or item.define != ("NAI", "COMPANY_TYPE_DEFAULT_BASE_WEIGHT")
+                or item.define_source != "common/defines/00_ai.txt"
+                or allowed.get(item.field[0]) != parent.line
+                or parent.op != "="
+                or parent.prefix is not None
+            ):
+                raise ValueError("公司缺省评分偏离精确原版字段与初始化证据")
         definitions = definitions_cache.get(item.define_source)
         if definitions is None:
             result = parse_text(inputs[item.define_source])
@@ -515,6 +780,8 @@ def _initialize(
         value = definition.value.unquoted
         if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", value):
             raise ValueError("建筑缺省评分必须是非负数值常量")
+        if item.source.startswith("common/company_types/") and value != "1":
+            raise ValueError("公司缺省评分必须保留已证明的原版常量1")
         values[item.field] = value
     # 使用与补丁编译器相同的词法定位，不能按字符串或行尾猜括号。
     offsets = decision_rules._offsets(text, {(item.field[0],) for item in items})
@@ -525,7 +792,7 @@ def _initialize(
         key = ".".join(path)
         fragment = (
             f"\n\t# SITAI BEGIN initialized:{key}\n"
-            f"\tai_value = {{ value = {value} }}\n"
+            f"\t{path[1]} = {{ value = {value} }}\n"
             f"\t# SITAI END initialized:{key}\n"
         )
         text = text[:position] + fragment + text[position:]
@@ -568,7 +835,6 @@ def build(
     enabled_domains: frozenset[str] | None = None,
     overlays: Mapping[str, str] | None = None,
     country_policy: CountryPolicy | None = None,
-    owned_variables: frozenset[str] | set[str] | None = None,
     owned_triggers: frozenset[str] | set[str] | None = None,
     consumer_ir: ConsumerIRBundle | None = None,
 ) -> tuple[dict[str, str], dict[str, object]]:
@@ -578,6 +844,12 @@ def build(
         raise ValueError("消费者适配含未知领域开关")
     owners = writes(adapters, enabled_domains)
     inputs = read_inputs(adapters, game=game, texts=texts)
+    if adapters.company_sectors_sha256 is not None:
+        company_sectors.verify_baseline(inputs)
+    if adapters.law_opportunities_sha256 is not None:
+        law_opportunities.verify_inputs(inputs)
+    if adapters.technology_opportunities_sha256 is not None:
+        technology_opportunities.verify_inputs(inputs)
     # 一次词法扫描同时建立校验集合与原件定位，避免逐读取器反复扫描大文件。
     evidence = reader_evidence(inputs)
     words = frozenset(evidence)
@@ -587,6 +859,8 @@ def build(
     required_engines: set[str] = set()
     active_methods: set[tuple[str, str]] = set()
     definitions_cache: dict[str, Block] = {}
+    query_evidence = {}
+    consumption_evidence = False
     named_fleet = False
     for name, policy in adapters.policies:
         selected = (
@@ -596,6 +870,14 @@ def build(
         )
         if not selected:
             continue
+        for reader in policy.readers:
+            if reader.engine == "market_goods_consumption" and not consumption_evidence:
+                observation_queries.verify_market_consumption_sources(inputs)
+                consumption_evidence = True
+            if reader.engine in observation_queries.QUERY_ENGINES:
+                query = observation_queries.from_reader(reader.engine, dict(reader.parameters))
+                if query not in query_evidence:
+                    query_evidence[query] = observation_queries.compile_query(query, inputs)
         text = overlays.get(name, inputs[name]) if overlays is not None else inputs[name]
         initial_values = [
             item
@@ -625,7 +907,6 @@ def build(
             default_strategy=False,
             reader_words=words,
             country_policy=country_policy,
-            owned_variables=owned_variables,
             owned_triggers=owned_triggers,
             consumer_ir=consumer_ir,
             consumer_source=name,
@@ -652,7 +933,9 @@ def build(
             {
                 "source": name,
                 **decision_rules.contract(
-                    replace(policy, enabled_domains=selected), owner="consumer_adapters"
+                    replace(policy, enabled_domains=selected),
+                    owner="consumer_adapters",
+                    source=name,
                 ),
             }
         )
@@ -662,15 +945,19 @@ def build(
         if enabled_domains is None
         else "market" in enabled_domains
     )
+    supply_programs = _supply_programs(supply, consumer_ir, enabled=supply_enabled)
     if supply is not None and supply_enabled:
         text = files.get(supply.source, (overlays or {}).get(supply.source, inputs[supply.source]))
-        files[supply.source] = _supply_patch(text, supply, inputs, words)
+        files[supply.source] = _supply_patch(text, supply, inputs, words, supply_programs)
     return files, {
         "schema": 1,
         "evidence": "source_locked_generated_consumer_patches",
         "behavior_verified": False,
         "source_sha256": adapters.source_sha256,
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "supply_program_generator_sha256": hashlib.sha256(
+            Path(supply_program.__file__).read_bytes()
+        ).hexdigest(),
         "production_inputs_generator_sha256": hashlib.sha256(
             Path(production_inputs.__file__).read_bytes()
         ).hexdigest(),
@@ -733,6 +1020,7 @@ def build(
             "goods": list(supply.goods),
             "price_threshold": supply.price_threshold,
             "stance": "wants_high_supply",
+            "consumer_programs": [program.as_dict() for program in supply_programs],
             "conditions": [
                 "is_ai",
                 "existing_market_goods",

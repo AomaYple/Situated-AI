@@ -31,15 +31,34 @@ def test_complement_is_soft_and_conditioned_in_generated_consumer() -> None:
         "scaled_debt": 0.4,
         "net_total_income": 1,
     }
-    # 同一基础行动在两个、一个、零个互补条件成立时均可选中；
-    # 互补分别增加 0.25，不是把对方变成基础行动的资格门。
+    # 工业基础 +.15；低识字教育方向 -.10、政治成本 +.02，合计 .07。
+    # 需求和已实施学校观测未提供，不能假定成立。高识字使教育项退出，
+    # 但识字和合法性本身不能制造学校互补。关系不成为工业资格门。
     for changes, expected in (
-        ({}, 1.75),
-        ({"literacy_rate": 0.6}, 1.5),
-        ({"literacy_rate": 0.6, "any_insurrection_ongoing": True}, 1.25),
+        ({}, 0.07),
+        ({"literacy_rate": 0.6}, 0.15),
+        ({"literacy_rate": 0.6, "legitimacy": 80}, 0.15),
+        ({"literacy_rate": 0.6, "legitimacy": 80, "any_insurrection_ongoing": True}, 0.15),
+        (
+            {
+                "has_law_or_variant": {(("argument", "law_type:law_public_schools"),): True},
+                "has_institution": {(("argument", "institution_schools"),): True},
+            },
+            0.045,
+        ),
+        (
+            {
+                "literacy_rate": 0.6,
+                "has_law_or_variant": {(("argument", "law_type:law_public_schools"),): True},
+                "has_institution": {(("argument", "institution_schools"),): True},
+            },
+            0.175,
+        ),
     ):
         result = pdx_eval.select(text, {**facts, **changes})
-        assert (result.action_id, result.delta) == ("industrial_foundation", expected)
+        assert result.action_id == "joint_economic_balance"
+        assert result.operation == "add"
+        assert result.delta == pytest.approx(expected)
     patched = decisions.patch_default(
         decisions.BASELINE.read_text(encoding="utf-8"),
         decisions.load(),
@@ -52,17 +71,15 @@ def test_complement_is_soft_and_conditioned_in_generated_consumer() -> None:
 def test_duplicate_and_asymmetric_relations_fail_closed() -> None:
     model = load_model()
     first = next(item for item in model.actions if item.id == "industrial_foundation")
-    duplicate = replace(first, complements=(*first.complements, "political_reform"))
+    duplicate = replace(first, complements=(*first.complements, "education_and_research"))
     with pytest.raises(ValueError, match="重复"):
         relations.validate((duplicate, *(item for item in model.actions if item.id != first.id)))
 
-    political = next(item for item in model.actions if item.id == "political_reform")
-    asymmetric = replace(first, complements=("education_and_research",))
+    asymmetric = replace(first, complements=())
     with pytest.raises(ValueError, match="对称配对"):
         relations.validate(
             (
                 asymmetric,
-                political,
-                *(item for item in model.actions if item.id not in {first.id, political.id}),
+                *(item for item in model.actions if item.id != first.id),
             )
         )

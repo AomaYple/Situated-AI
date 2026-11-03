@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.14.5-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54",
+    "bytes": 97774200
+  },
+  "parent_scope_manifest": {
+    "path": "research/situated/victoria3-1.14.5-company-scope.json",
+    "sha256": "fb28823262158216c31b892e3f8fae62852e14d9b79a14f7e75c0adcc8229f8d"
+  },
+  "script_hashes": {
+    "common/defines/00_ai.txt": "1f63ecef20095aa8e576ef672b64ea2cf91355d132d449d768d601e93fb597a1",
+    "common/company_types/99_basic_companies.txt": "8da8c02afc1e1ede66937862865fc206c73f9697346082acc10ffe5dc90e6623"
+  },
+  "contracts": [
+    {
+      "field": "ai_weight",
+      "actor": "country",
+      "target": "definition_only:company_type",
+      "operation": "missing_base_candidate_score",
+      "capability": "exact_default_initializer",
+      "consumer": "0x14169a3b0",
+      "numeric_member": "0x390",
+      "empty_expression_member": "0xa8",
+      "empty_expression_branch": "0x14169a3dd",
+      "nonempty_expression_branch": "0x14169a3f5",
+      "default_load": "0x14169a3e6",
+      "default_global": "0x1459d2a08",
+      "result_store": "0x14169a3ed",
+      "result_return": "0x14169a531",
+      "define_namespace": "NAI",
+      "define_key": "COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "define_field": "NAI.COMPANY_TYPE_DEFAULT_BASE_WEIGHT",
+      "define_source": "common/defines/00_ai.txt",
+      "define_line": 1161,
+      "default_value": 1,
+      "define_setter": "0x140975a20",
+      "define_global_write": "0x140975a56",
+      "define_binding": "0x140975a70",
+      "define_registration": "0x140975a90",
+      "actual_call": "0x1415c9855",
+      "nonpositive_rejection": "0x141510b30",
+      "source_requirement": "exactly_missing_ai_weight_only",
+      "explicit_empty_requirement": "reject_initializer",
+      "explicit_nonpositive_requirement": "preserve_native_score_and_rejection"
+    }
+  ],
+  "implicit_companies": [
+    {
+      "id": "company_basic_agriculture_1",
+      "line": 1
+    },
+    {
+      "id": "company_basic_agriculture_2",
+      "line": 68
+    },
+    {
+      "id": "company_basic_fabrics",
+      "line": 139
+    },
+    {
+      "id": "company_basic_colonial_plantations_1",
+      "line": 207
+    },
+    {
+      "id": "company_basic_colonial_plantations_2",
+      "line": 273
+    },
+    {
+      "id": "company_basic_silk_and_dye",
+      "line": 343
+    },
+    {
+      "id": "company_basic_wine_and_fruit",
+      "line": 400
+    },
+    {
+      "id": "company_basic_fishing",
+      "line": 456
+    },
+    {
+      "id": "company_basic_forestry",
+      "line": 524
+    },
+    {
+      "id": "company_basic_oil",
+      "line": 583
+    },
+    {
+      "id": "company_basic_gold_mining",
+      "line": 631
+    },
+    {
+      "id": "company_basic_metal_mining",
+      "line": 680
+    },
+    {
+      "id": "company_basic_mineral_mining",
+      "line": 737
+    },
+    {
+      "id": "company_basic_food",
+      "line": 793
+    },
+    {
+      "id": "company_basic_paper",
+      "line": 857
+    },
+    {
+      "id": "company_basic_home_goods",
+      "line": 918
+    },
+    {
+      "id": "company_basic_textiles",
+      "line": 987
+    },
+    {
+      "id": "company_basic_steel",
+      "line": 1049
+    },
+    {
+      "id": "company_basic_metalworks",
+      "line": 1111
+    },
+    {
+      "id": "company_basic_shipyards",
+      "line": 1178
+    },
+    {
+      "id": "company_basic_chemicals",
+      "line": 1228
+    },
+    {
+      "id": "company_basic_motors",
+      "line": 1297
+    },
+    {
+      "id": "company_basic_munitions",
+      "line": 1355
+    },
+    {
+      "id": "company_basic_electrics",
+      "line": 1424
+    },
+    {
+      "id": "company_basic_weapons",
+      "line": 1473
+    },
+    {
+      "id": "company_construction_power_bloc",
+      "line": 1543
+    }
+  ],
+  "observations": [
+    {
+      "label": "company empty expression default branch",
+      "va": "0x14169a3d0",
+      "rva": "0x169a3d0",
+      "file_offset": "0x16997d0",
+      "bytes": "498bf0488bfa488d999003000083bba800000000750f488b051b863304488902e93c010000"
+    },
+    {
+      "label": "company score country numeric evaluation",
+      "va": "0x14169a432",
+      "rva": "0x169a432",
+      "file_offset": "0x1699832",
+      "bytes": "b80500000066894424308b461848894424384c89bd90000000488d859000000048894424204533c94c8d442430488bd7488bcbe8b65370ff"
+    },
+    {
+      "label": "company score return",
+      "va": "0x14169a531",
+      "rva": "0x169a531",
+      "file_offset": "0x1699931",
+      "bytes": "488bc74c8d9c2470010000498b5b28498b7330498b7b38498be3415f415e5dc3"
+    },
+    {
+      "label": "define typed setter and global write",
+      "va": "0x140975a20",
+      "rva": "0x975a20",
+      "file_offset": "0x974e20",
+      "bytes": "48895c2408574883ec20488b1a488bfa4883e3fee83708e1ff483bd8740433c0eb0cf60701488d47087403488b00488b00488b5c2430488905abcf05054883c4205fc3"
+    },
+    {
+      "label": "define namespace key and global bridge",
+      "va": "0x140975a70",
+      "rva": "0x975a70",
+      "file_offset": "0x974e70",
+      "bytes": "488bca4c8d0d8ecf0505488d157b0fba034c8d0590b1ba03e9d3a12a00"
+    },
+    {
+      "label": "define namespace key and global registration",
+      "va": "0x140975a90",
+      "rva": "0x975a90",
+      "file_offset": "0x974e90",
+      "bytes": "4c8d0d71cf05054c8d057ab1ba03488d15570fba03e926722a00"
+    },
+    {
+      "label": "NAI namespace literal",
+      "va": "0x1445169fc",
+      "rva": "0x45169fc",
+      "file_offset": "0x4515dfc",
+      "bytes": "4e414900"
+    },
+    {
+      "label": "default weight key literal",
+      "va": "0x144520c18",
+      "rva": "0x4520c18",
+      "file_offset": "0x4520018",
+      "bytes": "434f4d50414e595f545950455f44454641554c545f424153455f57454947485400"
+    }
+  ],
+  "limits": [
+    "The frozen parent scope manifest establishes CompanyType field parsing, country actor, actual candidate call and downstream nonpositive rejection; both manifests must pass independently.",
+    "Only exactly absent ai_weight is authorized for initialization with the locked define value 1; explicit empty, zero, negative or nonempty fields are not authorized for replacement.",
+    "The numeric expression consumer checks an empty expression, which may include explicitly empty script blocks; this initializer deliberately has a narrower exactly-missing-source contract.",
+    "The global lies in the virtual zero-initialized .data tail; no raw-file value at that virtual address is evidence for its runtime initialized value. The define script and namespace/key/global bridge establish the fallback value.",
+    "No script-visible company target, charter or construction field is authorized. Native potential, attainable, possible, ai_will_do, cost and execution remain authoritative.",
+    "This static evidence does not establish runtime behavior, selection frequency, balance or game performance."
+  ]
+}

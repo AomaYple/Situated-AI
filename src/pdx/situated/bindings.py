@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import tomllib
 from dataclasses import asdict, dataclass
@@ -40,16 +41,16 @@ def _binding_id(source: str, rule_id: str) -> str:
 
 
 def _target(field: tuple[str, ...]) -> str:
-    return (
-        "target_state"
-        if field and field[-1] in {"state_value", "colonial_interest_ratio"}
-        else "none"
-    )
+    return "target_state" if field and field[-1] == "state_value" else "none"
 
 
-def build() -> tuple[Binding, ...]:
+def build(
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> tuple[Binding, ...]:
     result: list[Binding] = []
-    info = decision_rules.load()
+    info = decision_rules.load() if information is None else information
     for rule in info.rules:
         source = "mod/decisions/information.toml"
         result.append(
@@ -65,7 +66,7 @@ def build() -> tuple[Binding, ...]:
                 ".".join(rule.field),
             )
         )
-    adapters = decision_adapters.load()
+    adapters = decision_adapters.load() if adapters is None else adapters
     for source, policy in adapters.policies:
         actor = "owner" if policy.actor_path else "root"
         result.extend(
@@ -87,7 +88,12 @@ def build() -> tuple[Binding, ...]:
     return tuple(result)
 
 
-def load(path: Path = DEFAULT_SOURCE) -> tuple[Binding, ...]:
+def load(
+    path: Path = DEFAULT_SOURCE,
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> tuple[Binding, ...]:
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     if (
         data.get("schema") != 1
@@ -116,19 +122,77 @@ def load(path: Path = DEFAULT_SOURCE) -> tuple[Binding, ...]:
     # 绑定文件是生成式台账；读取时按稳定身份排序，避免文件分段或
     # 新增批次的物理插入位置改变 IR、报告和验收顺序。
     ordered = tuple(sorted(result, key=lambda item: item.binding_id))
-    validate(ordered)
+    validate(ordered, information=information, adapters=adapters)
     return ordered
 
 
-def validate(bindings: tuple[Binding, ...], *, check_complete: bool = True) -> None:
+def render(rows: tuple[Binding, ...] | None = None) -> str:
+    """Render the exact binding ledger derived from current production rules."""
+
+    bindings = build() if rows is None else tuple(rows)
+    validate(bindings, check_complete=False)
+    lines = ["# 由 src/pdx/situated/bindings.py 生成；每条旧规则只允许一个精确处置。", "schema = 1"]
+    for item in bindings:
+        lines.extend(("", "[[bindings]]"))
+        for field in Binding.__dataclass_fields__:
+            value = json.dumps(getattr(item, field), ensure_ascii=False)
+            lines.append(f"{field} = {value}")
+    return "\n".join(lines) + "\n"
+
+
+def write(path: Path = DEFAULT_SOURCE) -> int:
+    """Write the generated binding ledger using repository text conventions."""
+
+    bindings = build()
+    path.write_text(render(bindings), encoding="utf-8", newline="\n")
+    return len(bindings)
+
+
+def check(path: Path = DEFAULT_SOURCE) -> list[str]:
+    """Compare the checked-in ledger with the current deterministic source."""
+
+    try:
+        actual = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return [f"绑定生成物缺失：{path}"]
+    except (OSError, UnicodeError) as exc:
+        return [f"绑定生成物不可读：{path}: {exc}"]
+    if actual != render():
+        return [f"生产绑定源不一致：{path}"]
+    return []
+
+
+def validate_disposition(item: Binding) -> None:
+    """Only migrate has executable semantics in schema 1.
+
+    Keep every original identity; a future merge/removal requires a target or
+    disposition evidence and a production lowering contract before acceptance.
+    """
+    if item.disposition not in _DISPOSITIONS:
+        raise ValueError(f"绑定处置无效：{item.binding_id}")
+    if item.disposition != "migrate":
+        requirement = (
+            "合并目标与原分支映射证据" if item.disposition == "merge" else "处置证据与原版保留映射"
+        )
+        raise ValueError(
+            f"绑定处置 {item.disposition} 未支持：schema 1 缺少{requirement}：{item.binding_id}"
+        )
+
+
+def validate(
+    bindings: tuple[Binding, ...],
+    *,
+    check_complete: bool = True,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> None:
     if not bindings:
         raise ValueError("绑定目录不能为空")
     ids = [item.binding_id for item in bindings]
     if len(ids) != len(set(ids)):
         raise ValueError("绑定 ID 重复")
     for item in bindings:
-        if item.disposition not in _DISPOSITIONS:
-            raise ValueError(f"绑定处置无效：{item.binding_id}")
+        validate_disposition(item)
         if item.operation not in {"add", "multiply"}:
             raise ValueError(f"绑定 operation 无效：{item.binding_id}")
         if item.actor not in {"root", "owner"} or item.target not in {"none", "target_state"}:
@@ -136,7 +200,9 @@ def validate(bindings: tuple[Binding, ...], *, check_complete: bool = True) -> N
         if not item.field or not item.consumer:
             raise ValueError(f"绑定字段为空：{item.binding_id}")
     if check_complete:
-        expected_rows = {item.binding_id: item for item in build()}
+        expected_rows = {
+            item.binding_id: item for item in build(information=information, adapters=adapters)
+        }
         expected = set(expected_rows)
         actual = set(ids)
         if actual != expected:
@@ -159,6 +225,8 @@ def validate(bindings: tuple[Binding, ...], *, check_complete: bool = True) -> N
 
 
 def contract(bindings: tuple[Binding, ...]) -> dict[str, object]:
+    for item in bindings:
+        validate_disposition(item)
     return {
         "schema": 1,
         "count": len(bindings),
@@ -170,4 +238,15 @@ def contract(bindings: tuple[Binding, ...]) -> dict[str, object]:
     }
 
 
-__all__ = ["DEFAULT_SOURCE", "Binding", "build", "contract", "load", "validate"]
+__all__ = [
+    "DEFAULT_SOURCE",
+    "Binding",
+    "build",
+    "check",
+    "contract",
+    "load",
+    "render",
+    "validate",
+    "validate_disposition",
+    "write",
+]

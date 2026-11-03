@@ -160,8 +160,6 @@ def discover(*, baseline: Path = BASELINE) -> SurfaceInventory:
         "commitments.toml",
         "goals.toml",
         "relations.toml",
-        "arbitration.toml",
-        "temporal.toml",
         "consumers.toml",
         "localization.toml",
     ):

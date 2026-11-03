@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from pdx.decision_rules import RuleSet
@@ -17,7 +17,100 @@ if TYPE_CHECKING:
     from .action_instances import ActionInstance
     from .bindings import Binding
     from .ir import ActionIR
-    from .schema import ActionCard, ConsumerContract, CostPredicate, Relation
+    from .schema import ActionCard, ConsumerContract, CostPredicate, RankTerm, Relation
+    from .supply_program import SupplyProgram
+    from .support_program import SupportProgram
+
+
+@dataclass(frozen=True, slots=True)
+class ContextBinding:
+    """One documented evaluation object; never a historical writer target."""
+
+    name: str
+    kind: str
+    role: str
+    source: str
+    line: int
+
+    def __post_init__(self) -> None:
+        shapes = {
+            "root": ("country", {"actor"}),
+            "target_country": ("country", {"target", "auxiliary"}),
+            "enemy_country": ("country", {"target"}),
+            "overlord": ("country", {"target"}),
+            "target_state": ("state", {"target"}),
+            "target_region": ("strategic_region", {"target"}),
+            "region_score": ("scalar", {"auxiliary"}),
+            "ship_modification_type": ("ship_modification", {"candidate"}),
+            "interest_group": ("interest_group", {"candidate"}),
+            "law": ("law", {"auxiliary"}),
+            "diplomatic_play": ("diplomatic_play", {"auxiliary"}),
+            "military_formation": ("military_formation", {"auxiliary"}),
+            "amenability": ("scalar", {"auxiliary"}),
+            "advance_chance": ("scalar", {"auxiliary"}),
+            "stall_chance": ("scalar", {"auxiliary"}),
+        }
+        expected = shapes.get(self.name)
+        formation_binding = (self.name, self.kind, self.role) in {
+            ("root", "military_formation", "auxiliary"),
+            ("owner", "country", "actor"),
+        }
+        if not formation_binding and (
+            expected is None or self.kind != expected[0] or self.role not in expected[1]
+        ):
+            raise ValueError("求值上下文绑定名称、类型或角色无效")
+        if not self.source or type(self.line) is not int or self.line < 1:
+            raise ValueError("求值上下文绑定缺少行级来源证据")
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "kind": self.kind,
+            "role": self.role,
+            "source": self.source,
+            "line": self.line,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class EvaluationContext:
+    """Read-only consumer scope evidence, independent of migration identity."""
+
+    actor_scope: ContextBinding | None = None
+    targets: tuple[ContextBinding, ...] = ()
+    auxiliary_scopes: tuple[ContextBinding, ...] = ()
+    evidence: tuple[str, ...] = ()
+    status: Literal["observed", "unknown", "ambiguous"] = "observed"
+
+    def __post_init__(self) -> None:
+        if self.status not in {"observed", "unknown", "ambiguous"}:
+            raise ValueError("求值上下文状态无效")
+        if self.status != "observed":
+            if self.actor_scope is not None or self.targets or self.auxiliary_scopes:
+                raise ValueError("未知或歧义上下文不能携带已证明绑定")
+            return
+        if self.actor_scope is None or self.actor_scope.role != "actor":
+            raise ValueError("求值上下文 actor 角色无效")
+        if any(item.role not in {"target", "candidate"} for item in self.targets):
+            raise ValueError("求值上下文 target 角色无效")
+        if any(item.role != "auxiliary" for item in self.auxiliary_scopes):
+            raise ValueError("求值上下文辅助角色无效")
+        bindings = (self.actor_scope, *self.targets, *self.auxiliary_scopes)
+        if len({item.name for item in bindings}) != len(bindings):
+            raise ValueError("求值上下文绑定名称重复")
+        if not self.evidence or any(
+            f"{item.source}:{item.line}" not in self.evidence for item in bindings
+        ):
+            raise ValueError("求值上下文缺少逐绑定来源证据")
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "actor_scope": self.actor_scope.as_dict() if self.actor_scope is not None else None,
+            "targets": [item.as_dict() for item in self.targets],
+            "auxiliary_scopes": [item.as_dict() for item in self.auxiliary_scopes],
+            "evidence": list(self.evidence),
+            "status": self.status,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +139,9 @@ class LegacyDecisionIR:
     counterexample: str = ""
     contexts: tuple[str, ...] = ()
     intent: str | None = None
+    auxiliary_facts: tuple[str, ...] = ()
+    required_known_facts: tuple[str, ...] = ()
+    contribution_group: str = ""
 
     def to_action_ir(self) -> ActionIR:
         from .ir import ActionIR, PredicateIR  # noqa: PLC0415
@@ -64,6 +160,9 @@ class LegacyDecisionIR:
             counterexample=self.counterexample,
             contexts=self.contexts,
             intent=self.intent,
+            auxiliary_facts=self.auxiliary_facts,
+            required_known_facts=self.required_known_facts,
+            contribution_group=self.contribution_group,
         )
 
 
@@ -102,6 +201,12 @@ class ConsumerDecisionIR:
     commitment_when: tuple[CostPredicate, ...] = ()
     political_when: tuple[CostPredicate, ...] = ()
     zero_cost_reason: str = ""
+    rank_terms: tuple[RankTerm, ...] = ()
+    variant_group: str = ""
+    variant_priority: int = 0
+    cause_group: str = ""
+    commitment_cost_id: str = ""
+    political_cost_id: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +232,54 @@ class WriterDecisionIR:
     action: ConsumerDecisionIR | None = None
     legacy: LegacyDecisionIR | None = None
     predicates: tuple[tuple[str, str, object], ...] = ()
+    chain_refs: tuple[tuple[str, str], ...] = ()
+    evaluation_context: EvaluationContext | None = None
+    reader_context_bindings: tuple[tuple[str, str, str, str], ...] = ()
+    program: SupportProgram | None = None
+    supply_program: SupplyProgram | None = None
+
+    def validate_supply_program(self) -> SupplyProgram:
+        from .supply_program import SupplyProgram  # noqa: PLC0415
+
+        program = self.supply_program
+        if (
+            not isinstance(program, SupplyProgram)
+            or (
+                self.kind,
+                self.writer_id,
+                self.source,
+                self.definition,
+                self.consumer_id,
+                self.field,
+                self.actor,
+                self.target,
+                self.operation,
+                self.owner,
+                self.vanilla_tail,
+            )
+            != (
+                "supply_program",
+                program.writer_id,
+                program.source,
+                program.good,
+                program.consumer_id,
+                program.field,
+                "root",
+                "market_goods",
+                "append",
+                "supply_plan",
+                "preserve",
+            )
+            or self.program is not None
+            or self.action is not None
+            or self.legacy is not None
+            or self.predicates
+            or self.chain_refs
+            or self.evaluation_context is not None
+            or self.reader_context_bindings
+        ):
+            raise ValueError("供给枚举writer与完整语义、身份或作用域不一致")
+        return program
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,17 +288,71 @@ class ConsumerIRBundle:
     actions: tuple[ConsumerDecisionIR, ...]
     writers: tuple[WriterDecisionIR, ...]
     source_hashes: tuple[tuple[str, str], ...] = ()
+    chain_bindings: tuple[tuple[str, str, str], ...] = ()
+    chains_bound: bool = False
 
     def writer_ids(self) -> tuple[str, ...]:
         return tuple(item.writer_id for item in self.writers)
 
     def as_dict(self) -> dict[str, Any]:
+        self.validate_chain_refs()
+        ids = [item.writer_id for item in self.writers]
+        identities = [(item.source, item.definition) for item in self.writers]
+        if len(set(ids)) != len(ids) or len(set(identities)) != len(identities):
+            raise ValueError("统一生产 writer 身份重复")
+
         def predicate_dict(predicate: tuple[str, str, object]) -> list[object]:
             return [predicate[0], predicate[1], _json_value(predicate[2])]
 
         field_owners: dict[str, set[str]] = {}
         source_field_owners: dict[tuple[str, str], set[str]] = {}
         for item in self.writers:
+            if item.kind == "supply_program":
+                item.validate_supply_program()
+                for other in self.writers:
+                    if other is item or other.source != item.source:
+                        continue
+                    if (
+                        other.field == item.field
+                        or other.field.startswith(item.field + ".")
+                        or item.field.startswith(other.field + ".")
+                    ):
+                        raise ValueError("供给枚举消费者父子字段重复写入")
+            elif item.supply_program is not None:
+                raise ValueError("非供给writer不能携带供给程序")
+            if item.kind == "support_program":
+                program = item.program
+                if (
+                    program is None
+                    or not program.enabled
+                    or (
+                        item.writer_id,
+                        item.definition,
+                        item.source,
+                        item.consumer_id,
+                        item.field,
+                        item.operation,
+                        item.actor,
+                        item.target,
+                        item.owner,
+                        item.vanilla_tail,
+                    )
+                    != (
+                        program.writer_id,
+                        program.writer_id,
+                        "mod/decisions/extensions.toml",
+                        "diplomatic_play_support",
+                        "diplomatic_play_support",
+                        "add",
+                        "root",
+                        "target_country",
+                        "situated_kernel",
+                        "preserve",
+                    )
+                ):
+                    raise ValueError("支持程序writer与完整语义不一致")
+            elif item.program is not None:
+                raise ValueError("非支持writer不能携带支持程序")
             field_owners.setdefault(item.field, set()).add(item.owner)
             source_field_owners.setdefault((item.source, item.field), set()).add(item.owner)
         conflicting = {
@@ -169,6 +376,13 @@ class ConsumerIRBundle:
             "action_card_writer_count": sum(
                 item.kind == "action_card" and item.action is not None for item in self.writers
             ),
+            "support_program_writer_count": sum(
+                item.kind == "support_program" and item.program is not None for item in self.writers
+            ),
+            "supply_program_writer_count": sum(
+                item.kind == "supply_program" and item.supply_program is not None
+                for item in self.writers
+            ),
             "writers": [
                 {
                     "writer_id": item.writer_id,
@@ -182,8 +396,23 @@ class ConsumerIRBundle:
                     "operation": item.operation,
                     "vanilla_tail": item.vanilla_tail,
                     "owner": item.owner,
+                    "evaluation_context": (
+                        item.evaluation_context.as_dict()
+                        if item.evaluation_context is not None
+                        else None
+                    ),
+                    "reader_context_bindings": [
+                        list(binding) for binding in item.reader_context_bindings
+                    ],
+                    "chain_refs": [list(reference) for reference in item.chain_refs],
                     "predicates": [predicate_dict(predicate) for predicate in item.predicates],
                     "action_id": item.action.action_id if item.action is not None else None,
+                    **({"program": item.program.as_dict()} if item.program is not None else {}),
+                    **(
+                        {"supply_program": item.supply_program.as_dict()}
+                        if item.supply_program is not None
+                        else {}
+                    ),
                     "legacy_action": (
                         {
                             "action_id": item.legacy.action_id,
@@ -201,6 +430,8 @@ class ConsumerIRBundle:
                             "counterexample": item.legacy.counterexample,
                             "contexts": list(item.legacy.contexts),
                             "intent": item.legacy.intent,
+                            "auxiliary_facts": list(item.legacy.auxiliary_facts),
+                            "required_known_facts": list(item.legacy.required_known_facts),
                             "predicates": [
                                 [fact, operator, _json_value(value)]
                                 for fact, operator, value in item.legacy.predicates
@@ -214,6 +445,8 @@ class ConsumerIRBundle:
                 for item in self.writers
             ],
             "source_hashes": dict(self.source_hashes),
+            "chain_bindings": [list(binding) for binding in self.chain_bindings],
+            "chains_bound": self.chains_bound,
             "field_owners": {
                 field: next(iter(owners)) for field, owners in sorted(field_owners.items())
             },
@@ -222,6 +455,17 @@ class ConsumerIRBundle:
                 for (source, field), owners in sorted(source_field_owners.items())
             },
         }
+
+    def validate_chain_refs(self) -> None:
+        """Check production chain traceability without reloading the compiler."""
+        if (
+            self.chains_bound
+            or self.chain_bindings
+            or any(writer.chain_refs for writer in self.writers)
+        ):
+            from .joint_chain_contract import validate_bundle_refs  # noqa: PLC0415
+
+            validate_bundle_refs(self)
 
 
 def _json_value(value: object) -> object:
@@ -286,6 +530,12 @@ def compile_decisions(
                 commitment_when=action.commitment_when,
                 political_when=action.political_when,
                 zero_cost_reason=action.zero_cost_reason,
+                rank_terms=action.rank_terms,
+                variant_group=action.variant_group,
+                variant_priority=action.variant_priority,
+                cause_group=action.cause_group,
+                commitment_cost_id=action.commitment_cost_id,
+                political_cost_id=action.political_cost_id,
                 relations=tuple(
                     sorted(
                         (relation for relation in relations if relation.source == action.id),
@@ -316,6 +566,10 @@ def compile_consumer_ir(
     因而任何来源、字段、actor/target 或 operation 漂移都会在生成期失败。
     """
     action_rows = compile_decisions(actions, consumers, relations)
+    from .bindings import validate_disposition  # noqa: PLC0415
+
+    for binding_row in bindings:
+        validate_disposition(binding_row)
     binding_by_key = {(item.source, item.definition): item for item in bindings}
     instance_by_key = {(item.source, item.rule_id): item for item in instances}
     writers: list[WriterDecisionIR] = []
@@ -351,6 +605,7 @@ def compile_consumer_ir(
                 operation=item.operation,
                 vanilla_tail=item.vanilla_tail,
                 owner=instance.owner,
+                evaluation_context=instance.evaluation_context,
                 legacy=LegacyDecisionIR(
                     action_id=instance.action_id,
                     source=item.source,
@@ -367,6 +622,9 @@ def compile_consumer_ir(
                     counterexample=item.counterexample,
                     contexts=item.contexts,
                     intent=item.intent,
+                    auxiliary_facts=item.auxiliary_facts,
+                    required_known_facts=item.required_known_facts,
+                    contribution_group=item.contribution_group,
                     predicates=tuple(
                         (predicate.fact, predicate.operator, predicate.value)
                         for predicate in item.predicates
@@ -393,6 +651,9 @@ def compile_consumer_ir(
             vanilla_tail=action.vanilla_tail,
             owner="situated_kernel",
             action=action,
+            evaluation_context=instance_by_key[
+                ("mod/decisions/actions.toml", action.action_id)
+            ].evaluation_context,
         )
         for action in action_rows
     )
@@ -413,6 +674,8 @@ def compile_consumer_ir(
 __all__ = [
     "ConsumerDecisionIR",
     "ConsumerIRBundle",
+    "ContextBinding",
+    "EvaluationContext",
     "LegacyDecisionIR",
     "WriterDecisionIR",
     "compile_consumer_ir",
@@ -428,6 +691,7 @@ def lower_legacy(
 
     if bundle is None:
         raise ValueError("生产规则缺少 ConsumerIR writer")
+    bundle.validate_chain_refs()
     writers = [item for item in bundle.writers if item.kind == "rule_action"]
     keys = [(item.source, item.definition) for item in writers]
     if len(keys) != len(set(keys)):

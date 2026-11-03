@@ -1,6 +1,12 @@
 # 工具目录
 
-当前开发候选为 `Situated AI 3.1.0rc1`，尚未发布或完成计划验收；已发布基线仍为 `3.0.1`。
+当前实施状态见[工作清单](../docs/design/当前工作清单.md)和[架构阶段收据](../docs/design/exec/架构阶段收据.json)；版本与交付身份统一见[版本交付索引](../docs/design/exec/版本交付-结果.md)。
+
+当前架构与实施分解见[架构主计划](../docs/design/架构主计划.md)与[架构子计划](../docs/design/架构子计划.md)。
+生产已接入具体观测与行动、同因分档取强、独立收益成本联合和消费者末端一次限幅；国家协调按需读取当前事实，全国排他路线已退役，独立财政迟滞保留。
+收口工具核验 A2 的 S0–S6 机器收据、当前源码、独立原版范围和真实见证；阶段当前状态见[工作清单](../docs/design/当前工作清单.md)，不能凭工具存在或默认静态通过声称架构完成。
+旧合同见[处境行动决策内核实施计划](../docs/design/exec/mod重设计-实施计划.md)；
+历史证据见[分层联动执行结果](../docs/design/exec/分层联动-执行结果.md)。
 
 这里保存可复现的工程检查、基准、静态分析、快照和一次性输出约定。游戏长期行为、压力长跑和 GUI 自动化不属于
 当前工程交付链；日志分析、快照核对和最小复现辅助仍可用于处理用户反馈。发布包不包含 Python 工具、日志或
@@ -12,15 +18,19 @@
 |---|---|
 | `tools/ci/run_check.py` | 统一调用 encoding、hygiene、lint、format、types、test、test-offline、baseline、deadcode |
 | `tools/ci/repo_hygiene.py` | 检查根目录可再生缓存、字节码和运行态目录 |
-| `tools/ci/situated_closeout.py` | 汇总 D11–D13 的生成锁、标准包禁带项、生产编码、ConsumerIR owner 和仓库卫生门禁；`--require-plan` 另检查 D0 原版范围出口 |
+| `tools/ci/situated_closeout.py` | 汇总生成锁、标准包禁带项、生产编码、ConsumerIR owner 和卫生；`--require-engineering` 核对 A2/S0–S5 的功能、依赖、来源、真实见证与独立原版范围，`--require-plan` 继续核对 S6 实际发布与部署 |
 | `tools/ci/deadcode_audit.py` | AST 级零引用候选审计；动态入口需人工复核 |
-| `tools/ci/test_suite.py` | 可选的完整 Python 回归、覆盖率、JUnit 和资源报告 |
+| `tools/ci/test_suite.py` | 最终候选的完整 Python 回归、覆盖率、JUnit、测试身份与资源报告；统一入口为 `run_check.py full-acceptance --quiet` |
 | `tools/benchmarks/` | Python 解析、生成和资源基准；固定输入、串行运行，不代表游戏内性能 |
 | `src/pdx/` | CLI、全量静态分析、快照、Mod 生成、字段门禁和 ZIP 交付实现 |
 | `tools/save_archive.py` | 后台按游戏日期归档稳定的 Victoria 3 自动存档；只读，不控制游戏 |
 
 `src/pdx/observe.py`、`src/pdx/savegame.py` 及 CLI 观察入口用于只读分析用户提供的日志和存档；
 它们属于工程辅助能力，不进入标准 Mod 包，也不把日志或存档摘要升级为 AI 行为质量结论。
+
+逐项见证与范围处置由[架构阶段收据](../docs/design/exec/架构阶段收据.json)绑定。`implemented` 需要相同物理消费者的实际 PDX 见证；
+保留原版需要完整来源、父结构、变量与引用闭包证明，不代签新增功能。跨域关系只消费已观察世界事实，不把候选评分或调整倾向当作执行完成。
+源码、测试、生成物、scope 或测试身份漂移后，原证据不能自动沿用；完整资源回归也不能由局部用例相加代替。
 
 ### 按游戏日期归档存档
 
@@ -54,6 +64,7 @@ Windows：
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py encoding
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py hygiene
 .venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout
+.venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout --require-engineering
 .venv\Scripts\python.exe -X utf8 -m tools.ci.situated_closeout --require-plan
 .venv\Scripts\python.exe -X utf8 tools/ci/run_check.py baseline
 .venv\Scripts\python.exe -X utf8 -m pdx.cli modgen --check
@@ -74,10 +85,8 @@ macOS/Linux 将解释器替换为 `.venv/bin/python`。如果 `.venv` 尚未安�
 
 - `v3 analyze`、`information-catalog`、`snapshot`：读取锁定游戏或快照，生成 mod 开发知识和版本差异。
 - `v3 modgen`、`modguard`：生成并检查仓库生产产物、锁定原版字段和生成一致性。
-- `v3 package`、`pdx.distribution.validate_package`：按生产源版本生成标准 ZIP 和 manifest。本轮由
-  `Situated AI 1.4.0` 经 `1.5.0`、`2.0.0` 升级至已发布基线 `Situated AI 3.0.1`，标准包已完成生成和静态核对；标签、Release 与部署状态见
-  [处境行动决策内核实施计划](../docs/design/exec/mod重设计-实施计划.md)、[当前工作清单](../docs/design/当前工作清单.md)和
-  [分层联动执行结果](../docs/design/exec/分层联动-执行结果.md)，不可由命令成功推断已发布。
+- `v3 package`、`pdx.distribution.validate_package`：按生产源版本生成并核对标准 ZIP 和 manifest；标签、Release 和包哈希见
+  [版本交付索引](../docs/design/exec/版本交付-结果.md)，候选与部署事实见[当前工作清单](../docs/design/当前工作清单.md)。命令成功不能证明已发布或已部署。
 - `v3 verify`、`tables --offline`：无游戏环境的快照与文档检查。`v3 citations <路径...>` 需要本机游戏文件。
 
 `modguard --offline` 通过 `mod/generation-lock.json` 核对冻结源码/产物原始字节，再审计脚本语法与快照接口；

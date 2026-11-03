@@ -1,0 +1,11 @@
+# 已证非零效用的具体付费动员：所属国家需求与候选直接投入压力联合。
+# 保留基础补给、强行军和未证效用路由的航空侦察原版权重；物料系数不是采购数量或货币。
+schema = 1
+
+[parameters]
+priority_base = 300000
+war_need_multiplier = 1.10
+scarcity_multiplier = 0.90
+price_pressure_multiplier = 0.80
+default_multiplier = 0.85
+pressure_price_threshold = 0.50

@@ -2,15 +2,26 @@ schema = 1
 
 [pressures.fiscal_default]
 domain = "fiscal"
+mode = "predicate"
 source_fact = "default"
-escape_actions = ["fiscal_recovery"]
+unit = "flag"
+scope = "root"
+unknown = "vanilla"
+op = "="
+value = true
+actions = ["fiscal_recovery"]
 
 [pressures.wartime]
 domain = "military"
+mode = "predicate"
 source_fact = "war"
-escape_actions = ["wartime_defense"]
+unit = "flag"
+scope = "root"
+unknown = "vanilla"
+op = "="
+value = true
+actions = ["wartime_defense"]
 
 [pressures.political_instability]
-domain = "political"
-source_fact = "insurrection"
-escape_actions = ["political_reform"]
+reserved = true
+reason = "Existing insurrection exit guards remain direct facts; no extra pressure rank is compiled."

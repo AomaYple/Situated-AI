@@ -628,10 +628,10 @@ def test_正式包确定性清单编码与完整生产内容(tmp_path):
             "consumer_adapters",
             "country_state",
         } <= enabled_modules
-        assert manifest["contract"]["country_state"]["variable_ttl_days"] == 100
+        assert manifest["contract"]["country_state"]["persistent_variables"] == []
         assert (
             manifest["contract"]["country_coordination"]["runtime_state"]
-            == "bounded_persistent_routes"
+            == "stateless_consumer_observations"
         )
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt").decode("utf-8-sig")
         assert "# SITAI BEGIN information:" in strategy
@@ -741,7 +741,10 @@ def test_说明保留用户验收边界和回退且不进入游戏生成树(poli
     extensions = replace(decisions.Extensions(), diplomacy_enabled=True)
     text = player_guide(policy, extensions, ["fiscal", "diplomacy"])
     for expected in (
-        "这是标准安装包（当前 3.1.0rc1 候选）",
+        "这是标准安装包。",
+        "独立收益与成本联合评估",
+        "消费者末端一次限幅",
+        "no exclusive country route",
         "原版资格、成本、效果与行动流程继续生效",
         "AI 长期行为、平衡、后期性能、玩家体验与创意工坊发布由用户验收",
         "回退：退出游戏后禁用或删除本 Mod",

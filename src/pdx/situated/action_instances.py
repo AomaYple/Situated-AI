@@ -12,11 +12,12 @@ from collections.abc import Iterable, Mapping  # noqa: TC003
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
 
-from .. import decision_adapters, decision_rules  # noqa: TID252
 from .families import classify
 
 if TYPE_CHECKING:
-    from .schema import ActionCard
+    from .. import decision_adapters, decision_rules  # noqa: TID252
+    from .decision_ir import EvaluationContext
+    from .schema import ActionCard, ConsumerContract
 
 _SAFE = re.compile(r"[^a-z0-9_]+")
 
@@ -40,6 +41,7 @@ class ActionInstance:
     family_id: str = ""
     actor_scope: str = "root"
     target_scope: str = "none"
+    evaluation_context: EvaluationContext | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -57,16 +59,7 @@ def _rule_instance(
     owner: str,
     actor_scope: str,
 ) -> ActionInstance:
-    facts = tuple(
-        sorted(
-            {predicate.fact for predicate in rule.conditions}
-            | {
-                predicate.value.key
-                for predicate in rule.conditions
-                if isinstance(predicate.value, decision_rules.FactReference)
-            }
-        )
-    )
+    facts = tuple(sorted(rule.input_keys()))
     return ActionInstance(
         action_id=_id(source, rule.id),
         kind="rule_action",
@@ -82,13 +75,7 @@ def _rule_instance(
         evidence=facts,
         family_id=classify(domain=rule.domain, field=".".join(rule.field), source=source),
         actor_scope=actor_scope,
-        target_scope=(
-            "target_state"
-            if rule.field and rule.field[-1] == "state_value"
-            else "target_or_none"
-            if rule.field and rule.field[-1] == "colonial_interest_ratio"
-            else "none"
-        ),
+        target_scope=("target_state" if rule.field and rule.field[-1] == "state_value" else "none"),
     )
 
 
@@ -97,6 +84,7 @@ def build(
     adapters: decision_adapters.AdapterSet,
     explicit: Iterable[ActionCard] = (),
     consumer_fields: Mapping[str, str] | None = None,
+    consumer_contracts: Mapping[str, ConsumerContract] | None = None,
 ) -> tuple[ActionInstance, ...]:
     """从所有实际规则和显式卡构建稳定、无重复的实例目录。"""
 
@@ -119,30 +107,54 @@ def build(
             )
             for rule in policy.rules
         )
-    result.extend(
-        ActionInstance(
-            action_id=f"card_{card.id}",
-            kind="action_card",
-            source="mod/decisions/actions.toml",
-            rule_id=card.id,
-            domain=card.domain,
-            consumer_field=(consumer_fields or {}).get(card.consumer, card.consumer),
-            operation="add",
-            value=card.base,
-            condition_facts=tuple(
-                sorted({*card.requires_all, *card.requires_any, *card.blocked_by})
-            ),
-            owner="situated_kernel",
-            vanilla_tail="retain_qualification_cost_random_execution",
-            evidence=tuple(sorted({*card.requires_all, *card.requires_any})),
-            family_id=classify(
-                domain=card.domain,
-                field=f"{card.id}.{card.consumer}",
+    for card in explicit:
+        consumer = (consumer_contracts or {}).get(card.consumer)
+        if consumer is None:
+            raise ValueError(f"显式行动卡缺少 ConsumerContract，拒绝使用隐式 field/tail：{card.id}")
+        field = consumer.field
+        if consumer_fields is not None and consumer_fields.get(card.consumer) != field:
+            raise ValueError(f"显式行动卡消费者字段与 ConsumerContract 不一致：{card.id}")
+        if consumer.operation != "add":
+            raise ValueError(f"显式行动卡当前只支持 add 消费者：{card.id}")
+        result.append(
+            ActionInstance(
+                action_id=f"card_{card.id}",
+                kind="action_card",
                 source="mod/decisions/actions.toml",
-            ),
+                rule_id=card.id,
+                domain=card.domain,
+                consumer_field=field,
+                operation=consumer.operation,
+                value=card.base,
+                condition_facts=tuple(
+                    sorted(
+                        {
+                            *card.requires_all,
+                            *card.requires_any,
+                            *card.blocked_by,
+                            *(term.fact for term in card.rank_terms),
+                        }
+                    )
+                ),
+                owner="situated_kernel",
+                vanilla_tail=consumer.vanilla_tail,
+                evidence=tuple(
+                    sorted(
+                        {
+                            *card.requires_all,
+                            *card.requires_any,
+                            *(term.fact for term in card.rank_terms),
+                        }
+                    )
+                ),
+                family_id=classify(
+                    domain=card.domain,
+                    field=f"{card.id}.{card.consumer}",
+                    source="mod/decisions/actions.toml",
+                ),
+                actor_scope=consumer.scope,
+            )
         )
-        for card in explicit
-    )
     result.sort(key=lambda item: item.action_id)
     ids = [item.action_id for item in result]
     if len(ids) != len(set(ids)):

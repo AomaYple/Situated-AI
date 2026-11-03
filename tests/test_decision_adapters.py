@@ -7,11 +7,12 @@ import math
 import operator
 import re
 import tomllib
-from dataclasses import replace
+from dataclasses import dataclass, replace
+from dataclasses import field as dataclass_field
 from typing import TYPE_CHECKING
 
 import pytest
-from hypothesis import given
+from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
 from pdx import (
@@ -34,25 +35,40 @@ if TYPE_CHECKING:
 @pytest.mark.skipif(
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
-def test_actual_input_pressure_precedes_output_opportunity():
-    """生产投入短缺必须先于同一建筑的产出机会，避免错误扩产。"""
+def test_actual_input_pressure_and_output_use_opposite_joint_groups():
+    """投入和产出都必须进入联合程序，不用优先级屏蔽另一方向。"""
+    from pdx.situated import programs
+
     adapters = decision_adapters.load()
     checked = 0
     for source, policy in adapters.policies:
-        by_field: dict[tuple[str, ...], dict[str, list[int]]] = {}
+        by_field: dict[tuple[str, ...], dict[str, list[str]]] = {}
         for rule in policy.rules:
             if rule.id.startswith(("actual_cost_", "actual_output_")):
                 by_field.setdefault(rule.field, {"cost": [], "output": []})[
                     "cost" if rule.id.startswith("actual_cost_") else "output"
-                ].append(rule.priority)
+                ].append(rule.id)
+        compiled = programs.enable(policy, source=source)
         for field, groups in by_field.items():
             if groups["cost"] and groups["output"]:
                 checked += 1
-                assert min(groups["cost"]) > max(groups["output"]), (source, field)
-    assert checked == 12
+                program = next(p for p in compiled.consumer_programs if p.field == field)
+                positive = {
+                    v.action_id for g in program.groups if g.direction > 0 for v in g.variants
+                }
+                negative = {
+                    v.action_id for g in program.groups if g.direction < 0 for v in g.variants
+                }
+                assert set(groups["cost"]) <= negative
+                assert set(groups["output"]) <= positive
+    # University now has a knowledge-demand consumer, rather than an ordinary
+    # market-output recipe. Eleven remaining recipe consumers have both sides.
+    assert checked == 11
 
 
-def test_one_low_priority_input_rule_cannot_hide_behind_other_input_rules(tmp_path):
+def test_one_low_priority_input_rule_still_enters_joint_program(tmp_path, monkeypatch):
+    from pdx.situated import programs
+
     text = decision_adapters.SOURCE.read_text(encoding="utf-8")
     changed, count = re.subn(
         r'(id = "actual_cost_building_iron_mine_[^\n]+\n(?:[^\n]*\n){3}priority = )\d+',
@@ -63,14 +79,26 @@ def test_one_low_priority_input_rule_cannot_hide_behind_other_input_rules(tmp_pa
     assert count == 1
     source = tmp_path / "adapters.toml"
     source.write_text(changed, encoding="utf-8")
-    with pytest.raises(ValueError, match="输入短缺规则必须优先"):
-        decision_adapters.load(source, strategy=decision_intents.load())
+    monkeypatch.setattr(decision_adapters, "SOURCE", source)
+    adapters = decision_adapters.load(source, strategy=decision_intents.load())
+    policy = dict(adapters.policies)["common/buildings/03_mines.txt"]
+    compiled = programs.enable(policy, source="common/buildings/03_mines.txt")
+    program = next(
+        p for p in compiled.consumer_programs if p.field == ("building_iron_mine", "ai_value")
+    )
+    selected = [v for g in program.groups if g.direction < 0 for v in g.variants if v.priority == 1]
+    assert len(selected) == 1
+    assert selected[0].action_id.startswith("actual_cost_building_iron_mine_")
+    assert selected[0].value == 0.8
 
 
 @pytest.mark.integration
-def test_default_subject_option_respects_both_countries_war_state():
+def test_friendly_overlord_need_retains_relation_and_prices_candidate_war():
+    from pdx.situated import programs
+
     policy = dict(decision_adapters.load().policies)["common/ai_strategies/00_default_strategy.txt"]
-    rule = next(rule for rule in policy.rules if rule.id == "coordinated_subject_debt_option")
+    policy = programs.enable(policy, source="common/ai_strategies/00_default_strategy.txt")
+    rule = next(rule for rule in policy.rules if rule.id == "remaining_friendly_overlord_strong")
     values = {
         reader.key: False if reader.kind == "boolean" else max(0, reader.minimum or 0)
         for reader in policy.readers
@@ -80,18 +108,33 @@ def test_default_subject_option_respects_both_countries_war_state():
         war=False,
         candidate_overlord_war=False,
         prospective_overlord_population=100_000,
+        overlord_relations=80,
     )
-    assert decision_rules.evaluate(policy, values, is_ai=True).get(
-        "ai_strategy_default.become_subject_value"
-    ) == (rule.id, 3)
-    for change in ({"war": True}, {"candidate_overlord_war": True}):
-        result = decision_rules.evaluate(policy, {**values, **change}, is_ai=True)
-        assert result.get("ai_strategy_default.become_subject_value", ("", 0))[0] != rule.id
+    field = "ai_strategy_default.become_subject_value"
+    selected = decision_rules.evaluate(policy, values, is_ai=True)[field]
+    assert selected[0].startswith("program_")
+    assert selected[1] == rule.value == 3
+    assert decision_rules.evaluate(policy, {**values, "war": True}, is_ai=True)[field] == selected
+    assert (
+        decision_rules.evaluate(policy, {**values, "candidate_overlord_war": True}, is_ai=True)[
+            field
+        ][1]
+        == -2
+    )
+    assert (
+        decision_rules.evaluate(policy, {**values, "overlord_relations": None}, is_ai=True).get(
+            field
+        )
+        is None
+    )
 
 
 @pytest.mark.integration
-def test_insolvency_outweighs_friendship_and_route_on_colonial_commitment():
+def test_colonial_financing_and_relationship_costs_join_without_duplicate_friendship():
+    from pdx.situated import programs
+
     policy = dict(decision_adapters.load().policies)["common/ai_strategies/00_default_strategy.txt"]
+    policy = programs.enable(policy, source="common/ai_strategies/00_default_strategy.txt")
     values = {
         reader.key: False if reader.kind == "boolean" else max(0, reader.minimum or 0)
         for reader in policy.readers
@@ -109,14 +152,18 @@ def test_insolvency_outweighs_friendship_and_route_on_colonial_commitment():
         target_alliance=True,
     )
     result = decision_rules.evaluate(policy, values, is_ai=True)
-    assert result[field] == ("coordinated_liquidity_wargoal_scores_colonization_rights", -10)
+    assert result[field][0].startswith("program_")
+    assert result[field][1] == -8  # Short liquidity -4 plus strongest relationship -4.
     recovered = decision_rules.evaluate(policy, {**values, "default": True}, is_ai=True)
-    assert recovered[field] == ("coordinated_colonization_rights_financial_cost", -10)
+    assert recovered[field][1] == -7  # Default -3 replaces the same financing cause.
 
 
 @pytest.mark.integration
-def test_political_crisis_cost_is_not_applied_during_war():
+def test_actual_subject_political_crisis_cost_remains_visible_during_war():
+    from pdx.situated import programs
+
     policy = dict(decision_adapters.load().policies)["common/ai_strategies/00_default_strategy.txt"]
+    policy = programs.enable(policy, source="common/ai_strategies/00_default_strategy.txt")
     values = {
         reader.key: False if reader.kind == "boolean" else max(0, reader.minimum or 0)
         for reader in policy.readers
@@ -127,22 +174,40 @@ def test_political_crisis_cost_is_not_applied_during_war():
         insurrection=True,
         radical_share=0.3,
         prospective_subject_population=100_000,
+        candidate_existing_subject=True,
     )
     field = "ai_strategy_default.wargoal_scores.reduce_autonomy"
-    assert decision_rules.evaluate(policy, values, is_ai=True)[field] == (
-        "coordinated_autonomy_political_cost",
-        -5,
-    )
+    selected = decision_rules.evaluate(policy, values, is_ai=True)[field]
+    assert selected[0].startswith("program_")
+    assert selected[1] == -2
     wartime = decision_rules.evaluate(policy, {**values, "war": True}, is_ai=True)
-    assert wartime.get(field, ("", 0))[0] != "coordinated_autonomy_political_cost"
+    assert wartime[field] == selected
+    unrelated = decision_rules.evaluate(
+        policy, {**values, "candidate_existing_subject": False}, is_ai=True
+    )
+    assert unrelated.get(field) is None
 
 
 @pytest.mark.integration
-def test_critical_diplomatic_rules_match_generated_script(real_generated_branches):
-    policy, blocks = next(
-        (policy, blocks)
-        for policy, blocks in real_generated_branches
-        if any(rule.id == "coordinated_subject_debt_option" for rule in policy.rules)
+def test_critical_diplomatic_rules_match_generated_script():
+    from test_remaining_joint_consumers import _overlay
+    from test_situated_joint_witnesses import _facts
+
+    from pdx.situated import compiler, pdx_eval
+
+    source = "common/ai_strategies/00_default_strategy.txt"
+    adapters = decision_adapters.load()
+    model = compiler.load_model()
+    policy, _ = compiler.compile_policy(dict(adapters.policies)[source], source, model)
+    adapter_subset = replace(
+        adapters,
+        policies=((source, policy),),
+        supply=None,
+        initial_values=tuple(row for row in adapters.initial_values if row.source == source),
+        scalar_values=tuple(row for row in adapters.scalar_values if row[0] == source),
+    )
+    files, _ = decision_adapters.build(
+        adapter_subset, country_policy=country_state.load(), consumer_ir=model.consumer_ir
     )
     base = {
         reader.key: False if reader.kind == "boolean" else max(0, reader.minimum or 0)
@@ -157,8 +222,10 @@ def test_critical_diplomatic_rules_match_generated_script(real_generated_branche
                 "war": False,
                 "candidate_overlord_war": False,
                 "prospective_overlord_population": 100_000,
+                "overlord_relations": 80,
             },
-            "coordinated_subject_debt_option",
+            "add",
+            3,
         ),
         (
             "ai_strategy_default.wargoal_scores.colonization_rights",
@@ -169,22 +236,24 @@ def test_critical_diplomatic_rules_match_generated_script(real_generated_branche
                 "prospective_subject_population": 100_000,
                 "target_truce": True,
             },
-            "coordinated_colonization_rights_financial_cost",
+            "add",
+            -7,
         ),
     ]
-    by_id = {rule.id: rule for rule in policy.rules}
-    for field, values, identifier in cases:
+    for field, values, operation, expected in cases:
         selected = decision_rules.evaluate(policy, values, is_ai=True).get(field)
-        assert selected == (identifier, by_id[identifier].value)
-        actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, values))
-        assert actual == (by_id[identifier].operation, by_id[identifier].value)
+        assert selected is not None
+        assert selected[0].startswith("program_")
+        assert selected[1] == expected
+        actual = pdx_eval.select(_overlay(files[source], field), _facts(policy, values))
+        assert (actual.operation, actual.delta) == (operation, expected)
 
 
 @pytest.mark.integration
 @pytest.mark.skipif(
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
-def test_urban_research_requires_complete_development_capacity():
+def test_urban_research_population_need_is_not_a_development_payment_gate():
     adapters = decision_adapters.load()
     policy = dict(adapters.policies)["common/technology/technologies/30_society.txt"]
     values = {
@@ -196,7 +265,7 @@ def test_urban_research_requires_complete_development_capacity():
         "war": False,
     }
     result = decision_rules.evaluate(policy, values, is_ai=True)
-    assert result["urbanization.ai_weight"] == ("situational_urbanization_research", 1.2)
+    assert result["urbanization.ai_weight"] == ("situational_urbanization_research", 1.1)
     for key, value in (
         ("war", True),
         ("default", True),
@@ -204,8 +273,12 @@ def test_urban_research_requires_complete_development_capacity():
         ("net_surplus", -1),
         ("literacy", None),
     ):
+        assert decision_rules.evaluate(policy, {**values, key: value}, is_ai=True)[
+            "urbanization.ai_weight"
+        ] == ("situational_urbanization_research", 1.1)
+    for population in (None, 1_999_999):
         assert "urbanization.ai_weight" not in decision_rules.evaluate(
-            policy, {**values, key: value}, is_ai=True
+            policy, {**values, "population": population}, is_ai=True
         )
 
 
@@ -602,8 +675,34 @@ def test_event_evidence_cannot_become_a_mutable_consumer(tmp_path):
 def test_declared_sources_have_consumers_and_real_bounded_conditions():
     adapters = decision_adapters.load()
     rules = [rule for _, policy in adapters.policies for rule in policy.rules]
-    assert len(rules) == len(
-        tomllib.loads(decision_adapters.SOURCE.read_text(encoding="utf-8"))["rules"]
+    declared = tomllib.loads(decision_adapters.SOURCE.read_text(encoding="utf-8"))["rules"]
+    actual = {rule.id: rule for rule in rules}
+    # Native company/recipe/equipment/treaty/mobilization derivations add real consumers;
+    # they are not hand-written TOML rows. Keep every authored identity exact,
+    # and admit only the registered derived namespaces checked in their own
+    # complete source/AST contract suites.
+    for row in declared:
+        rule = actual[row["id"]]
+        assert (".".join(rule.field), rule.operation, rule.value) == (
+            row["field"],
+            row["operation"],
+            row["value"],
+        )
+    authored = {row["id"] for row in declared}
+    assert all(
+        rule.id.startswith(
+            (
+                "company_",
+                "building_",
+                "equipment_",
+                "treaty_",
+                "mobilization_",
+                "law_context_",
+                "technology_",
+            )
+        )
+        for rule in rules
+        if rule.id not in authored
     )
     assert len({rule.id for rule in rules}) == len(rules)
     assert {rule.domain for rule in rules} == {
@@ -621,6 +720,14 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
         if "/buildings/" in name:
             assert policy.actor_path == ("owner",)
             assert all(rule.field[-1] == "ai_value" for rule in policy.rules)
+        elif name == "common/mobilization_options/00_mobilization_option.txt":
+            from pdx.mobilization_opportunities import CANDIDATE_IDS
+
+            assert policy.native_root == "military_formation"
+            assert policy.actor_path == ("owner",)
+            assert {rule.field for rule in policy.rules} == {
+                (identity, "ai_weight") for identity in CANDIDATE_IDS
+            }
         else:
             assert policy.actor_path == ()
         if "/laws/" in name:
@@ -633,17 +740,132 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
                         "insurrection",
                         "radical_share",
                     }
+                elif rule.id.startswith("bureaucracy_reform_") and rule.value < 0:
+                    assert (rule.value, rule.contribution_group) == {
+                        **{
+                            f"bureaucracy_reform_appointed_elected_institution_cost_{key}": (
+                                -8,
+                                "bureaucracy_institution_cost",
+                            )
+                            for key in (
+                                "police",
+                                "home_affairs",
+                                "colonial_affairs",
+                                "health",
+                                "schools",
+                                "social_security",
+                                "workplace_safety",
+                            )
+                        },
+                        "bureaucracy_reform_elected_appointed_tax_loss": (
+                            -10,
+                            "bureaucracy_tax_capacity",
+                        ),
+                    }[rule.id]
+                elif rule.id.startswith("health_reform_") and rule.value < 0:
+                    health_costs = {
+                        **{
+                            f"health_reform_{candidate}_new_administrative_pressure": (
+                                -8,
+                                "health_administration",
+                            )
+                            for candidate in ("charity", "private", "public")
+                        },
+                        **{
+                            f"health_reform_{candidate}_new_default_pressure": (
+                                -6,
+                                "health_financing",
+                            )
+                            for candidate in ("charity", "private", "public")
+                        },
+                        "health_reform_public_private_administrative_loss": (
+                            -8,
+                            "health_administration",
+                        ),
+                        "health_reform_public_private_default_pressure": (-6, "health_financing"),
+                        "health_reform_public_charity_administrative_loss": (
+                            -4,
+                            "health_administration",
+                        ),
+                        "health_reform_public_charity_default_pressure": (-6, "health_financing"),
+                        "health_reform_private_charity_food_loss": (
+                            -4,
+                            "health_food_security_loss",
+                        ),
+                        "health_reform_public_charity_food_loss": (-4, "health_food_security_loss"),
+                        "health_reform_private_public_universal_access_loss": (
+                            -8,
+                            "health_universal_access_loss",
+                        ),
+                    }
+                    assert (rule.value, rule.contribution_group) == health_costs[rule.id]
+                elif rule.id.startswith("social_reform_") and rule.value < 0:
+                    # 子女收入损失的最严重已设计档位为-18；其余社会法成本不低于-16。
+                    minimum = (
+                        -18
+                        if rule.id
+                        == "social_reform_compulsory_primary_school_from_child_labor_income_loss_8"
+                        else -16
+                    )
+                    assert minimum <= rule.value < 0
+                    assert rule.contribution_group.startswith(
+                        ("social_reform_", "welfare_", "labor_", "school_", "child_")
+                    )
+                elif rule.id.startswith("law_context_") and rule.value < 0:
+                    if rule.id.endswith("_crisis_cost"):
+                        assert (rule.value, rule.contribution_group) == (
+                            -10,
+                            "law_political_pressure",
+                        )
+                        assert {condition.fact for condition in rule.conditions} == {
+                            "legitimacy",
+                            "insurrection",
+                            "radical_share",
+                        }
+                    elif rule.id.endswith("_administration_transition"):
+                        assert (rule.value, rule.contribution_group) == (
+                            -6,
+                            "law_tax_administration_transition",
+                        )
+                    else:
+                        assert (
+                            rule.id
+                            == "law_context_law_interventionism_population_administration_loss"
+                        )
+                        assert (rule.value, rule.contribution_group) == (
+                            -6,
+                            "law_population_administration",
+                        )
+                elif rule.value < 0:
+                    assert (rule.id, rule.value) in {
+                        ("public_school_administrative_pressure", -8),
+                        ("public_school_default_pressure", -6),
+                    }
+                    assert rule.contribution_group
                 else:
                     assert 0 < rule.value <= 30
         else:
             for rule in policy.rules:
                 if rule.operation == "add":
-                    assert rule.id.startswith(("coordinated_", "comparative_", "structural_"))
+                    assert rule.id.startswith(
+                        (
+                            "coordinated_",
+                            "comparative_",
+                            "structural_",
+                            "lj08_",
+                            "lj12_",
+                            "remaining_",
+                            "target_strategy_",
+                        )
+                    )
                     assert -10 <= rule.value <= 30
                     assert rule.field[0] == "ai_strategy_default"
                 else:
                     assert rule.operation == "multiply"
-                    assert 0.75 <= rule.value <= 1.3
+                    if rule.id == "d6_steelworking_tools_shortage_pressure":
+                        assert rule.value == 1.35
+                    else:
+                        assert 0.75 <= rule.value <= 1.3
     default_name = "common/ai_strategies/00_default_strategy.txt"
     default_policy = dict(adapters.policies)[default_name]
     changed = replace(
@@ -667,10 +889,11 @@ def test_declared_sources_have_consumers_and_real_bounded_conditions():
 def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
     adapters = decision_adapters.load()
     files, contract = decision_adapters.build(adapters, country_policy=country_state.load())
-    assert len(files) == 39
     consumers = contract["consumers"]
     assert isinstance(consumers, list)
-    assert len(consumers) == 38
+    policy_sources = {source for source, _policy in adapters.policies}
+    assert {row["source"] for row in consumers} == policy_sources
+    assert len(consumers) == len(policy_sources)
     scalar_consumers = contract["scalar_consumers"]
     assert isinstance(scalar_consumers, list)
     named_values = {
@@ -678,6 +901,7 @@ def test_all_real_adapter_files_retain_original_entries_and_non_ai_bytes():
         for row in scalar_consumers
         if row["operation"] == "retain_native_constant_in_named_value"
     }
+    assert set(files) == policy_sources | {row["value_source"] for row in named_values.values()}
     for name, text in files.items():
         inline_text = text
         if name == "common/script_values/sitai_adapter_values.txt":
@@ -1007,6 +1231,75 @@ def test_scalar_consumer_rejects_invalid_ambiguous_or_block_values(scalar_buildi
         decision_adapters.build(adapters, texts={name: changed})
 
 
+@dataclass(frozen=True)
+class _GeneratedBranches:
+    # Hypothesis prints fixture arguments in a failing example. Keep the full
+    # fixture for evaluation without serializing thousands of rules and ASTs
+    # into every failure and exhausting the worker during error reporting.
+    branches: tuple = dataclass_field(repr=False)
+    scripts: dict[int, dict[str, str]] = dataclass_field(repr=False)
+    prepared: dict = dataclass_field(default_factory=dict, repr=False)
+
+    def __iter__(self):
+        return iter(self.branches)
+
+    def _repr_pretty_(self, printer, _cycle):
+        # Hypothesis's dataclass printer ignores repr=False. Its custom hook
+        # must also remain bounded when a real all-policy assertion fails.
+        printer.text(f"_GeneratedBranches(policies={len(self.branches)})")
+
+
+def test_generated_branches_have_bounded_hypothesis_failure_diagnostics():
+    from hypothesis.vendor.pretty import pretty
+
+    payload = "large generated rules and ASTs " * 100
+    fixture = _GeneratedBranches(((payload,),), {1: {"field": payload}})
+    assert pretty(fixture) == "_GeneratedBranches(policies=1)"
+    assert repr(fixture) == "_GeneratedBranches()"
+
+
+def _adapter_oracle_script(text):
+    """Label native-neutral exits for the strict oracle without changing their AST.
+
+    Legacy adapters emit unmarked multiply=1 fallback branches. pdx_eval needs
+    an identity on every writing branch; only those exact neutral exits may
+    receive a fixture label. Authored writer identities remain untouched.
+    """
+    lines = text.splitlines()
+    marked_lines = set()
+    for index, line in enumerate(lines):
+        if not re.match(r"\s*# (?:ACTION )?[a-z][a-z0-9_]* \[[a-z][a-z0-9_]*\];", line):
+            continue
+        branch = index + 1
+        while branch < len(lines) and not lines[branch].strip():
+            branch += 1
+        marked_lines.add(branch + 1)
+    original = parse_text(text)
+    assert not original.errors
+    neutral_lines = set()
+
+    def visit(block):
+        for item in block.assignments():
+            if not isinstance(item.value, Block):
+                continue
+            writes = [
+                child for child in item.value.assignments() if child.key in {"add", "multiply"}
+            ]
+            if item.key in {"if", "else_if", "else"} and writes and item.line not in marked_lines:
+                assert len(writes) == 1
+                assert writes[0].key == "multiply"
+                assert isinstance(writes[0].value, Scalar)
+                assert float(writes[0].value.unquoted) == 1
+                neutral_lines.add(item.line)
+            visit(item.value)
+
+    visit(original.root)
+    return "\n".join(
+        ("# ACTION adapter_neutral_fallback [oracle];\n" if index in neutral_lines else "") + line
+        for index, line in enumerate(lines, 1)
+    )
+
+
 @pytest.fixture(scope="module")
 def real_generated_branches():
     if not (config.GAME / "common/laws/readme.md").is_file():
@@ -1021,8 +1314,10 @@ def real_generated_branches():
         if row["operation"] == "retain_native_constant_in_named_value"
     }
     result = []
+    scripts: dict[int, dict[str, str]] = {}
     for source, policy in adapters.policies:
         blocks = {}
+        scripts[id(policy)] = {}
         for field in policy.groups():
             name = ".".join(field)
             match = re.search(
@@ -1034,8 +1329,65 @@ def real_generated_branches():
             parsed = parse_text(match.group(1))
             assert not parsed.errors
             blocks[name] = parsed.root
+            scripts[id(policy)][name] = _adapter_oracle_script(match.group(1))
         result.append((policy, blocks))
-    return result
+    from pdx.situated import pdx_eval
+
+    prepared = {
+        identity: {field: pdx_eval.prepare(script, path=field) for field, script in rows.items()}
+        for identity, rows in scripts.items()
+    }
+    return _GeneratedBranches(tuple(result), scripts, prepared)
+
+
+@pytest.fixture(scope="module")
+def social_reform_joint_branches():
+    """Exercise current production IR, keeping the legacy adapter oracle separate."""
+    from pdx.situated import compiler
+
+    sources = {"common/laws/02_labor_rights.txt", "common/laws/02_welfare.txt"}
+    adapters = decision_adapters.load()
+    model = compiler.load_model()
+    assert model.consumer_ir is not None
+    selected = replace(
+        adapters,
+        policies=tuple(
+            (source, compiler.compile_policy(policy, source, model)[0])
+            for source, policy in adapters.policies
+            if source in sources
+        ),
+        supply=None,
+        initial_values=(),
+        scalar_values=(),
+    )
+    files, _ = decision_adapters.build(
+        selected, country_policy=country_state.load(), consumer_ir=model.consumer_ir
+    )
+    result = []
+    scripts: dict[int, dict[str, str]] = {}
+    for source, policy in selected.policies:
+        blocks = {}
+        scripts[id(policy)] = {}
+        for field in policy.groups():
+            name = ".".join(field)
+            match = re.search(
+                rf"# SITAI BEGIN information:{re.escape(name)}\n(.*?)# SITAI END information:",
+                files[source],
+                re.DOTALL,
+            )
+            assert match is not None
+            parsed = parse_text(match.group(1))
+            assert not parsed.errors
+            blocks[name] = parsed.root
+            scripts[id(policy)][name] = _adapter_oracle_script(match.group(1))
+        result.append((policy, blocks))
+    from pdx.situated import pdx_eval
+
+    prepared = {
+        identity: {field: pdx_eval.prepare(script, path=field) for field, script in rows.items()}
+        for identity, rows in scripts.items()
+    }
+    return _GeneratedBranches(tuple(result), scripts, prepared)
 
 
 def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | None:
@@ -1050,6 +1402,10 @@ def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | No
 
     def condition(assignment, current):
         key, value = assignment.key, assignment.value
+        if key == "always":
+            assert isinstance(value, Scalar)
+            assert value.unquoted in {"yes", "no"}
+            return value.unquoted == "yes"
         if key == "exists":
             assert isinstance(value, Scalar)
             return value.unquoted in (
@@ -1124,37 +1480,90 @@ def _interpret_adjustments(block: Block, scopes: dict) -> tuple[str, float] | No
             return isinstance(other, (int, float)) and operators[assignment.op](actual, other)
         return operators[assignment.op](actual, float(literal))
 
-    matched = False
-    for branch in block.assignments():
-        assert branch.key in {"if", "else_if"}
-        assert isinstance(branch.value, Block)
-        if branch.key == "if":
-            matched = False
-        if matched:
-            continue
-        limit = branch.value.first("limit")
-        assert limit is not None
-        assert isinstance(limit.value, Block)
-        if all(condition(item, {}) for item in limit.value.assignments()):
-            matched = True
-            adjustments = [item for item in branch.value.assignments() if item.key != "limit"]
-            assert len(adjustments) == 1
-            adjustment = adjustments[0]
-            assert isinstance(adjustment.value, Scalar)
-            return adjustment.key, float(adjustment.value.unquoted)
-    return None
+    def execute(statements: Block) -> tuple[str, float] | None:
+        matched = False
+        result = None
+        for statement in statements.assignments():
+            if statement.key == "limit":
+                continue
+            if statement.key in {"if", "else_if", "else"}:
+                assert isinstance(statement.value, Block)
+                if statement.key == "if":
+                    matched = False
+                if matched:
+                    continue
+                limit = statement.value.first("limit")
+                if statement.key != "else":
+                    assert limit is not None
+                    assert isinstance(limit.value, Block)
+                    if not all(condition(item, {}) for item in limit.value.assignments()):
+                        continue
+                else:
+                    assert limit is None
+                matched = True
+                adjustment = execute(statement.value)
+                if adjustment is not None:
+                    assert result is None
+                    result = adjustment
+            else:
+                assert statement.key in {"add", "multiply"}
+                assert isinstance(statement.value, Scalar)
+                assert result is None
+                result = statement.key, float(statement.value.unquoted)
+        return result
+
+    return execute(block)
+
+
+@pytest.mark.parametrize(
+    ("script", "expected"),
+    [
+        (
+            "if = { limit = { always = yes } if = { limit = { always = yes } add = 2 } }",
+            ("add", 2.0),
+        ),
+        (
+            (
+                "if = { limit = { always = yes } "
+                "if = { limit = { always = no } add = 2 } } "
+                "else_if = { limit = { always = yes } add = 3 } "
+                "else = { add = 4 }"
+            ),
+            None,
+        ),
+        (
+            (
+                "if = { limit = { always = no } add = 2 } "
+                "else_if = { limit = { always = yes } "
+                "if = { limit = { always = no } add = 3 } "
+                "else = { multiply = 1.3 } } "
+                "else = { add = 4 }"
+            ),
+            ("multiply", 1.3),
+        ),
+        (
+            (
+                "if = { limit = { always = no } add = 2 } "
+                "else_if = { limit = { always = no } add = 3 } "
+                "else = { add = 4 }"
+            ),
+            ("add", 4.0),
+        ),
+    ],
+)
+def test_adjustment_interpreter_executes_nested_conditional_chains(script, expected):
+    parsed = parse_text(script)
+    assert not parsed.errors
+    assert _interpret_adjustments(parsed.root, {}) == expected
 
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
     "rule_id",
     [
-        "watertube_boiler_ai_weight",
-        "social_organized_labor_law_regulatory_bodies",
-        "social_organized_labor_law_wage_subsidies",
-        "comparative_friendly_subject",
-        "comparative_friendly_overlord",
-        "comparative_embargo_access",
+        "remaining_friendly_subject_strong",
+        "remaining_friendly_overlord_strong",
+        "remaining_embargo_access_naval_capacity",
     ],
 )
 def test_shared_intent_reaches_production_consumers_and_preserves_counterexamples(
@@ -1166,7 +1575,7 @@ def test_shared_intent_reaches_production_consumers_and_preserves_counterexample
         if any(rule.id == rule_id for rule in policy.rules)
     )
     rule = next(rule for rule in policy.rules if rule.id == rule_id)
-    assert rule.intent == "supported_development"
+    assert rule.intent is None
     facts = {
         r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
     }
@@ -1179,8 +1588,8 @@ def test_shared_intent_reaches_production_consumers_and_preserves_counterexample
         union_clout=0.2,
         union_approval=-1,
         radical_share=0.3,
-        target_relations=75,
-        overlord_relations=75,
+        target_relations=80,
+        overlord_relations=80,
         target_embargo=True,
         navy=50,
         own_navy=50,
@@ -1202,12 +1611,16 @@ def test_shared_intent_reaches_production_consumers_and_preserves_counterexample
     ):
         changed = {**facts, **change}
         reference = decision_rules.evaluate(policy, changed, is_ai=True)
-        assert reference.get(field, (None,))[0] != rule_id
+        assert reference[field] == (rule_id, rule.value)
         actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, changed))
-        # 允许其它原版/Mod 候选按已有优先级响应；本积极意图不得继续获奖。
-        assert actual is None or actual != (rule.operation, rule.value)
-    for fact in ("net_surplus", "legitimacy", "debt_ratio"):
-        unknown = decision_rules.evaluate(policy, {**facts, fact: None}, is_ai=True)
+        assert actual == (rule.operation, rule.value)
+    core_fact = {
+        "remaining_friendly_subject_strong": "target_relations",
+        "remaining_friendly_overlord_strong": "overlord_relations",
+        "remaining_embargo_access_naval_capacity": "target_embargo",
+    }[rule_id]
+    for value in (None, False if core_fact == "target_embargo" else 49):
+        unknown = decision_rules.evaluate(policy, {**facts, core_fact: value}, is_ai=True)
         assert field not in unknown
     assert not decision_rules.evaluate(policy, facts, is_ai=False)
     assert not decision_rules.evaluate(policy, facts, is_ai=True, enabled_domains=frozenset())
@@ -1317,7 +1730,223 @@ def test_population_selector_invalid_facts_preserve_vanilla(population_candidate
     assert decision_rules.evaluate(policy, {"peasants": bad}, is_ai=True) == {}
 
 
+def _adapter_collection_observations(seed):
+    """Sample owned objects, never a precomputed existential-query result.
+
+    Keep this RNG separate from scalar Reader sampling so existing seeds still
+    identify the same scalar/parameterized observations in every policy.
+    """
+    import random
+
+    rng = random.Random(f"adapter-owned-observations:{seed}")
+    from technology_query_reference import BUILDING_METHODS
+
+    methods = {
+        **BUILDING_METHODS,
+        "building_art_academy": (
+            "pm_traditional_art",
+            "pm_realist_art",
+            "pm_photographic_art",
+        ),
+        "building_port": ("pm_basic_port", "pm_industrial_port", "pm_modern_port"),
+        "building_railway": ("pm_early_trains", "pm_steam_trains", "pm_electric_trains"),
+        "building_power_plant": ("pm_early_power_plant", "pm_coal-fired_plant"),
+        "building_gold_mine": ("pm_gold_mining",),
+        "building_trade_center": ("pm_trade_center",),
+    }
+    all_methods = tuple(method for group in methods.values() for method in group)
+
+    def building(kind):
+        method = rng.choice(methods[kind])
+        return {
+            "is_building_type": {
+                (("argument", candidate),): candidate == kind for candidate in methods
+            },
+            "has_active_production_method": {
+                (("argument", candidate),): candidate == method for candidate in all_methods
+            },
+            "level": rng.choice([None, 0, 1, 2, 5]),
+            "weekly_profit": rng.choice([None, -1, 0, 1, 100]),
+            "occupancy": rng.choice([None, 0, 0.74, 0.75, 0.89, 0.9, 1]),
+            "cash_reserves_ratio": rng.choice([None, 0, 0.5, 0.6, 1]),
+        }
+
+    def buildings():
+        # Missing and complete empty lists have different three-valued meaning.
+        state = rng.randrange(5)
+        if state == 0:
+            return None
+        if state == 1:
+            return []
+        return [building(kind) for kind in methods if rng.choice([True, False])]
+
+    def states():
+        state = rng.randrange(5)
+        if state == 0:
+            return None
+        return [
+            {
+                "any_scope_building": buildings(),
+                "market_access": rng.choice([None, 0, 0.89, 0.9, 0.99, 1]),
+                "turmoil": rng.choice([None, 0, 0.09999, 0.1, 0.10001, 0.5]),
+                "is_incorporated": rng.choice([None, False, True]),
+                "tax_capacity": rng.choice([None, 0, 5, 10, 20]),
+                "tax_capacity_usage": rng.choice([None, 0, 5, 10, 20]),
+                "infrastructure_delta": rng.choice([None, -20, -1, 0, 10]),
+                "sg:transportation": {
+                    "state_goods_pricier": rng.choice([None, 0, 0.25, 0.26, 0.5, 0.51])
+                },
+                "sg:electricity": {
+                    "state_goods_pricier": rng.choice([None, 0, 0.25, 0.26, 0.5, 0.51])
+                },
+            }
+            for _ in range(state - 1)
+        ]
+
+    def political_members(engine, laws):
+        state = rng.randrange(5)
+        if state == 0:
+            return None
+        return [
+            {
+                engine: {
+                    (("law", f"law_type:{law}"),): rng.choice([None, -1, 0, 1]) for law in laws
+                },
+                "political_movement_support": rng.choice([None, 0, 0.09, 0.1, 0.11, 0.5]),
+            }
+            for _ in range(state - 1)
+        ]
+
+    owned_states = states()
+    # Country and state iterators describe the same owned world; incomplete
+    # state observations cannot become a complete country building list.
+    owned_buildings = (
+        None
+        if owned_states is None
+        or any(state["any_scope_building"] is None for state in owned_states)
+        else [member for state in owned_states for member in state["any_scope_building"]]
+    )
+    return {
+        "any_scope_building": owned_buildings,
+        "any_scope_state": owned_states,
+        "any_political_movement": political_members(
+            "law_enactment_stance", ("law_free_trade", "law_mercantilism")
+        ),
+        "any_interest_group": political_members("law_stance", ("law_anarchy",)),
+    }
+
+
+def _adapter_query_reference(reader, observations, root_facts=None):
+    """Handwritten query semantics over members, independent of render/compiler/PDX."""
+
+    def conjunction(*values):
+        return False if False in values else None if None in values else True
+
+    def existential(members, predicate):
+        if members is None:
+            return None
+        values = [predicate(member) for member in members]
+        return True if True in values else None if None in values else False
+
+    def compare(actual, op, expected):
+        return None if actual is None else op(actual, expected)
+
+    def identity(member, engine, argument):
+        observed = member.get(engine)
+        return None if observed is None else observed.get((("argument", argument),))
+
+    def capacity(member, kind):
+        return conjunction(
+            identity(member, "is_building_type", kind),
+            compare(member["level"], operator.ge, 1),
+        )
+
+    parameters = dict(reader.parameters)
+    if "technology_query" in parameters:
+        from technology_query_reference import evaluate
+
+        return evaluate(reader, observations, root_facts)
+    query = parameters.get("company_query")
+    if reader.engine == "any_scope_building":
+
+        def building(member):
+            if query == "existing_business":
+                strong = parameters["tier"] == "strong"
+                return conjunction(
+                    capacity(member, parameters["building"]),
+                    compare(member["weekly_profit"], operator.gt, 0),
+                    compare(member["occupancy"], operator.ge, 0.9 if strong else 0.75),
+                    compare(member["cash_reserves_ratio"], operator.gt, 0.5) if strong else True,
+                )
+            assert query in {None, "port_method"}
+            return conjunction(
+                capacity(member, parameters.get("building", "building_port")),
+                identity(member, "has_active_production_method", parameters["method"]),
+                compare(member["level"], operator.ge, int(parameters.get("min_level", "1"))),
+            )
+
+        return existential(observations[reader.engine], building)
+    if reader.engine == "any_scope_state":
+
+        def state(member):
+            if parameters.get("state_query") == "turmoil_above":
+                return compare(member["turmoil"], operator.gt, float(parameters["threshold"]))
+            if "threshold" in parameters:
+                return compare(member["market_access"], operator.lt, float(parameters["threshold"]))
+            if parameters == {"state_query": "tax_capacity_shortfall"}:
+                return conjunction(
+                    member["is_incorporated"],
+                    compare(member["tax_capacity"], operator.lt, member["tax_capacity_usage"])
+                    if member["tax_capacity_usage"] is not None
+                    else None,
+                )
+            assert query in {"rail_infrastructure", "power_scarcity"}
+            railway = query == "rail_infrastructure"
+            good = "transportation" if railway else "electricity"
+            return conjunction(
+                existential(
+                    member["any_scope_building"],
+                    lambda candidate: capacity(
+                        candidate, "building_railway" if railway else "building_power_plant"
+                    ),
+                ),
+                compare(member["infrastructure_delta"], operator.lt, 0) if railway else True,
+                compare(
+                    member[f"sg:{good}"]["state_goods_pricier"],
+                    operator.gt,
+                    float(parameters["minimum_price"]),
+                )
+                if "minimum_price" in parameters
+                else True,
+            )
+
+        return existential(observations[reader.engine], state)
+    assert reader.engine in {"any_political_movement", "any_interest_group"}
+
+    def political(member):
+        movement = reader.engine == "any_political_movement"
+        engine = "law_enactment_stance" if movement else "law_stance"
+        return conjunction(
+            compare(
+                member[engine].get((("law", "law_type:" + parameters["law"]),)), operator.gt, 0
+            ),
+            compare(
+                member["political_movement_support"],
+                operator.ge,
+                float(parameters["minimum_support"]),
+            )
+            if movement
+            else True,
+        )
+
+    return existential(observations[reader.engine], political)
+
+
 @pytest.mark.integration
+# This is an all-corpus correctness check with independent PDX parsing, not a
+# 200ms microbenchmark. Keep all 100 examples and the pytest 300-second limit.
+@settings(deadline=None)
+@example(seed=284, is_ai=True, missing_target=False)
 @given(seed=st.integers(0, 1000000), is_ai=st.booleans(), missing_target=st.booleans())
 def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
     real_generated_branches,
@@ -1327,7 +1956,10 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
 ):
     import random
 
+    from pdx import observation_queries
+
     rng = random.Random(seed)
+    collections = _adapter_collection_observations(seed)
     for policy, blocks in real_generated_branches:
         scopes: dict = {
             "ROOT": {},
@@ -1359,18 +1991,38 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
                     )
                 )
             value = sampled[signature]
+            # This reader names the same physical actor already chosen above;
+            # it cannot be an independent random observation of another AI.
+            # Keep the draw so every other historical scalar input is unchanged.
+            if (
+                reader.engine == "is_ai"
+                and reader.scope == "root"
+                and reader.path == policy.actor_path
+            ):
+                value = is_ai
             scope = "ROOT" if reader.scope == "root" else "scope:" + reader.scope
             current = scopes[scope]
             for part in reader.path:
                 current = current.setdefault(part, {})
-            physical_key = (
-                (reader.engine, reader.parameters)
-                if reader.parameters
-                else (reader.engine, reader.argument)
-                if reader.argument is not None
-                else reader.engine
-            )
-            current[physical_key] = value
+            if reader.engine in observation_queries.QUERY_ENGINES:
+                assert reader.scope == "root"
+                assert not reader.path
+                current[reader.engine] = collections[reader.engine]
+                # Resolve aggregate readers after every scalar ROOT observation
+                # exists; research queries refer to laws, goods and prior tech.
+                continue
+            if reader.engine == "is_production_method_active":
+                parameters = dict(reader.parameters)
+                current.setdefault(reader.engine, {}).setdefault(parameters["building_type"], {})[
+                    parameters["production_method"]
+                ] = value
+            elif reader.parameters or reader.argument is not None or reader.value_field is not None:
+                parameters = dict(reader.parameters)
+                if reader.argument is not None:
+                    parameters["argument"] = reader.argument
+                current.setdefault(reader.engine, {})[tuple(sorted(parameters.items()))] = value
+            else:
+                current[reader.engine] = value
             if reader.engine.startswith("sitai_context_"):
                 current["sitai_context_known_" + reader.engine.removeprefix("sitai_context_")] = (
                     True
@@ -1382,6 +2034,9 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
             ):
                 current[f"{reader.argument}_active"] = value
             values[reader.key] = None if missing_target and reader.scope != "root" else value
+        for reader in policy.readers:
+            if reader.engine in observation_queries.QUERY_ENGINES:
+                values[reader.key] = _adapter_query_reference(reader, collections, scopes["ROOT"])
         if missing_target:
             scopes.pop("scope:target_country")
             scopes.pop("scope:target_state")
@@ -1389,8 +2044,11 @@ def test_every_actual_adapter_branch_matches_reference_with_typed_inputs(
             scopes.pop("scope:interest_group")
         reference = decision_rules.evaluate(policy, values, is_ai=is_ai)
         operations = {rule.id: rule.operation for rule in policy.rules}
-        for field, block in blocks.items():
-            actual = _interpret_adjustments(block, scopes)
+        for field in blocks:
+            observed = real_generated_branches.prepared[id(policy)][field].select(scopes)
+            actual = (
+                (observed.operation, observed.delta) if observed.operation is not None else None
+            )
             expected = reference.get(field)
             if expected is None:
                 assert actual in (None, ("multiply", 1.0)), field
@@ -1708,67 +2366,49 @@ def _scopes_for_facts(policy, facts):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize(
-    ("change", "expected"),
-    [
-        ({}, 1.2),
-        ({"state_unemployment": 0.1}, 1.3),
-        ({"state_unemployment": 0.09999}, 1.2),
-        ({"state_unemployment": 0.1, "state_owner_reserves": 0}, 1.2),
-        ({"state_owner_steel_price": 0.25}, 1.0),
-        ({"state_owner_steel_balance": 0}, 1.0),
-        ({"state_owner_coal_price": 0.6, "state_owner_coal_balance": -10}, 0.8),
-        ({"state_market_access": 0.8, "state_infrastructure": -1}, 0.8),
-        ({"state_owner_loans": True}, 1.0),
-        ({"state_owner_default": True}, 1.0),
-    ],
-)
-def test_building_opportunity_tiers_and_input_cost_in_actual_script(
-    real_generated_branches, change, expected
-):
-    policy, blocks = next(
-        (p, b) for p, b in real_generated_branches if "building_steel_mill.ai_value" in b
-    )
+def test_political_crisis_joins_known_safety_need_without_erasing_it(social_reform_joint_branches):
+    from test_situated_joint_witnesses import _facts
+
+    from pdx.situated import pdx_eval
+
+    field = "law_regulatory_bodies.ai_enact_weight_modifier"
+    policy, _ = next((p, b) for p, b in social_reform_joint_branches if field in b)
     facts = {
         r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
     }
     facts.update(
-        pm_active_building_steel_mill_pm_bessemer_process=True,
-        state_owner_steel_price=0.4,
-        state_owner_steel_balance=-10,
-        state_owner_reserves=100,
-        state_market_access=1,
+        legitimacy=60,
+        radical_share=0.3,
+        current_no_workers_rights=True,
+        workplace_safety_present=False,
+        industrial_workforce=0.2,
+        bureaucracy=1,
     )
-    facts.update(change)
-    field = "building_steel_mill.ai_value"
-    reference = decision_rules.evaluate(policy, facts, is_ai=True)
-    assert reference.get(field, ("vanilla", 1.0))[1] == expected
-    actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, facts))
-    assert (actual[1] if actual else 1.0) == expected
-    assert not decision_rules.evaluate(policy, facts, is_ai=False)
-
-
-@pytest.mark.integration
-def test_political_crisis_replaces_stronger_reform_reward(real_generated_branches):
-    field = "law_regulatory_bodies.ai_enact_weight_modifier"
-    policy, blocks = next((p, b) for p, b in real_generated_branches if field in b)
-    facts = {
-        r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
-    }
-    facts.update(legitimacy=60, union_clout=0.2, union_approval=-1, radical_share=0.3)
-    assert _interpret_adjustments(blocks[field], _scopes_for_facts(policy, facts)) == ("add", 30)
     crisis = {**facts, "legitimacy": 24, "insurrection": True}
-    assert _interpret_adjustments(blocks[field], _scopes_for_facts(policy, crisis)) == ("add", -10)
-    # 缺少危机输入时不能把未知当作安全，也不能继续领取改革奖励。
-    unknown = decision_rules.evaluate(policy, {**crisis, "radical_share": None}, is_ai=True)
-    assert field not in unknown
+    # 工业劳力对应的安全收益+12；政治危机-10独立加入。未知只退出该原因。
+    cases = [
+        (facts, 12),
+        (crisis, 2),
+        ({**crisis, "radical_share": None}, 12),
+        ({**crisis, "industrial_workforce": None}, -10),
+        ({**crisis, "bureaucracy": -1}, -6),
+    ]
+    for values, expected in cases:
+        reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
+        assert reference is not None
+        assert reference[1] == pytest.approx(expected)
+        actual = pdx_eval.select(
+            social_reform_joint_branches.scripts[id(policy)][field], _facts(policy, values)
+        )
+        assert actual.operation == "add"
+        assert actual.delta == pytest.approx(expected)
 
 
 @pytest.mark.integration
 def test_same_government_benefit_is_gated_by_interest_group_resistance_in_generated_ast(
     real_generated_branches,
 ):
-    """The generated consumer keeps one benefit while political support changes around it."""
+    """Political resistance downgrades continuity before hard boundaries remove it."""
 
     field = "ai_strategy_default.interest_group_government_weight"
     policy, blocks = next(
@@ -1788,41 +2428,39 @@ def test_same_government_benefit_is_gated_by_interest_group_resistance_in_genera
         candidate_ig_government=True,
     )
     paired = {
-        "supported": facts,
-        "weak_clout": {**facts, "candidate_ig_clout": 0.19},
-        "disapproving": {**facts, "candidate_ig_approval": -1},
-        "outside_government": {**facts, "candidate_ig_government": False},
-        "low_legitimacy": {**facts, "legitimacy": 49},
+        "supported": (facts, ("add", 1.05)),
+        "weak_clout": ({**facts, "candidate_ig_clout": 0.19}, ("add", 0.5)),
+        "below_foundation_clout": ({**facts, "candidate_ig_clout": 0.09999}, None),
+        "disapproving": ({**facts, "candidate_ig_approval": -1}, None),
+        "outside_government": ({**facts, "candidate_ig_government": False}, None),
+        "low_legitimacy": ({**facts, "legitimacy": 49}, ("add", 0.5)),
+        "below_foundation_legitimacy": ({**facts, "legitimacy": 34.99999}, None),
     }
     rule_by_id = {rule.id: rule for rule in policy.rules}
-    for name, values in paired.items():
+    for name, (values, expected) in paired.items():
         actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, values))
         reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
-        expected = None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
-        assert actual == expected, name
-    assert _interpret_adjustments(
-        blocks[field], _scopes_for_facts(policy, paired["supported"])
-    ) == (
-        "add",
-        1.05,
-    )
-    for name in ("weak_clout", "disapproving", "outside_government", "low_legitimacy"):
-        assert (
-            _interpret_adjustments(blocks[field], _scopes_for_facts(policy, paired[name])) is None
+        reference = (
+            None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
         )
+        assert reference == expected, name
+        assert actual == expected, name
 
 
 @pytest.mark.integration
-def test_same_political_resistance_changes_with_fiscal_capacity_in_generated_ast(
+def test_same_political_resistance_uses_observed_political_space_in_generated_ast(
     real_generated_branches,
 ):
-    """The negotiation benefit survives only when the production fiscal gates remain healthy."""
+    """Political unknowns remove only the capacity tier; finance does not erase need."""
+    from test_situated_joint_witnesses import _facts
+
+    from pdx.situated import pdx_eval
 
     field = "ai_strategy_default.negotiation_chance"
-    policy, blocks = next(
+    policy, _blocks = next(
         (policy, blocks)
         for policy, blocks in real_generated_branches
-        if any(rule.id == "structural_organized_negotiation" for rule in policy.rules)
+        if any(rule.id == "remaining_organized_negotiation_need" for rule in policy.rules)
     )
     facts = {
         reader.key: False if reader.kind == "boolean" else max(0.0, reader.minimum or 0.0)
@@ -1843,58 +2481,52 @@ def test_same_political_resistance_changes_with_fiscal_capacity_in_generated_ast
         radical_share=0.3,
     )
     paired = {
-        "funded": facts,
-        "no_surplus": {**facts, "net_surplus": -1},
-        "high_debt": {**facts, "debt_ratio": 0.41},
-        "loan_dependent": {**facts, "loans": True},
+        "funded": (facts, ("multiply", 1.25)),
+        "no_surplus": ({**facts, "net_surplus": -1}, ("multiply", 1.25)),
+        "high_debt": ({**facts, "debt_ratio": 0.41}, ("multiply", 1.25)),
+        "loan_dependent": ({**facts, "loans": True}, ("multiply", 1.25)),
+        "political_space_unknown": ({**facts, "legitimacy": None}, ("multiply", 1.1)),
+        "candidate_unknown": ({**facts, "candidate_ig_clout": None}, None),
     }
     rule_by_id = {rule.id: rule for rule in policy.rules}
-    for name, values in paired.items():
-        actual = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, values))
-        reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
-        expected = None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
-        assert actual == expected, name
-    assert _interpret_adjustments(blocks[field], _scopes_for_facts(policy, paired["funded"])) == (
-        "multiply",
-        1.25,
-    )
-    for name in ("no_surplus", "high_debt", "loan_dependent"):
-        assert (
-            _interpret_adjustments(blocks[field], _scopes_for_facts(policy, paired[name])) is None
+    for name, (values, expected) in paired.items():
+        observed = pdx_eval.select(
+            real_generated_branches.scripts[id(policy)][field], _facts(policy, values, is_ai=True)
         )
+        actual = None if observed.operation is None else (observed.operation, observed.delta)
+        reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
+        reference = (
+            None if reference is None else (rule_by_id[reference[0]].operation, reference[1])
+        )
+        assert reference == expected, name
+        assert actual == expected, name
 
 
 @pytest.mark.parametrize(
-    ("source", "field", "before", "after"),
+    ("source", "field", "before", "after", "expected", "financing_cost"),
     [
-        (
-            "01_education_system.txt",
-            "law_public_schools",
-            {"peasant_share": 0.5},
-            {"peasant_share": 0.6},
-        ),
-        (
-            "01_education_system.txt",
-            "law_public_schools",
-            {"current_private_schools": False},
-            {"current_private_schools": True},
-        ),
         (
             "02_labor_rights.txt",
             "law_regulatory_bodies",
-            {"radical_share": 0.1},
-            {"radical_share": 0.3},
+            {"industrial_workforce": 0.2},
+            {"industrial_workforce": 0.25},
+            (12, 16),
+            0,
         ),
-        ("02_welfare.txt", "law_wage_subsidies", {"radical_share": 0.1}, {"radical_share": 0.3}),
+        ("02_welfare.txt", "law_wage_subsidies", {"sol": 12}, {"sol": 10}, (-3, 13), 6),
     ],
 )
 @pytest.mark.integration
 def test_stronger_social_need_does_not_accidentally_reduce_target_adjustment(
-    real_generated_branches, source, field, before, after
+    social_reform_joint_branches, source, field, before, after, expected, financing_cost
 ):
-    policy, blocks = next(
+    from test_situated_joint_witnesses import _facts
+
+    from pdx.situated import pdx_eval
+
+    policy, _ = next(
         (policy, blocks)
-        for policy, blocks in real_generated_branches
+        for policy, blocks in social_reform_joint_branches
         if any(rule.field[0] == field for rule in policy.rules)
     )
     facts = {
@@ -1908,20 +2540,116 @@ def test_stronger_social_need_does_not_accidentally_reduce_target_adjustment(
         population=2000000,
         industrial_workforce=0.2,
         skilled_workforce=0.1,
-        current_private_schools=True,
+        current_no_workers_rights=True,
+        workplace_safety_present=False,
+        social_security_present=False,
+        bureaucracy=1,
     )
     key = field + ".ai_enact_weight_modifier"
-    low = _interpret_adjustments(blocks[key], _scopes_for_facts(policy, {**facts, **before}))
-    high = _interpret_adjustments(blocks[key], _scopes_for_facts(policy, {**facts, **after}))
-    assert low is not None, source
-    assert high is not None, source
-    assert low[0] == high[0] == "add"
-    assert high[1] >= low[1] >= 15
-    for guard in ({"war": True}, {"default": True}, {"legitimacy": 0}):
-        blocked = _interpret_adjustments(
-            blocks[key], _scopes_for_facts(policy, {**facts, **after, **guard})
+    assert expected[1] > expected[0]
+    cases = [
+        ({**facts, **before}, expected[0]),
+        ({**facts, **after}, expected[1]),
+        ({**facts, **after, "war": True}, expected[1]),
+        ({**facts, **after, "default": True}, expected[1] - financing_cost),
+        ({**facts, **after, "legitimacy": 0}, expected[1]),
+        ({**facts, **after, "bureaucracy": -1}, expected[1] - 8),
+        (
+            {**facts, **after, "legitimacy": 0, "insurrection": True, "radical_share": 0.3},
+            expected[1] - 10,
+        ),
+    ]
+    for values, score in cases:
+        reference = decision_rules.evaluate(policy, values, is_ai=True).get(key)
+        assert reference is not None, source
+        assert reference[1] == pytest.approx(score), source
+        actual = pdx_eval.select(
+            social_reform_joint_branches.scripts[id(policy)][key], _facts(policy, values)
         )
-        assert blocked is None or blocked[1] <= 0
+        assert actual.operation == "add", source
+        assert actual.delta == pytest.approx(score), source
+
+
+@pytest.fixture(scope="module")
+def public_school_joint_generated():
+    from pdx.situated import programs
+
+    source = "common/laws/01_education_system.txt"
+    adapters = decision_adapters.load()
+    policy = programs.enable(dict(adapters.policies)[source], source=source)
+    selected = replace(
+        adapters, policies=((source, policy),), initial_values=(), scalar_values=(), supply=None
+    )
+    files, _ = decision_adapters.build(selected, country_policy=country_state.load())
+    return policy, files[source]
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("before", "after", "expected"),
+    [
+        ({"peasant_share": 0.5}, {"peasant_share": 0.6}, (10, 12)),
+        ({"current_private_schools": False}, {"current_private_schools": True}, (0, 10)),
+    ],
+)
+def test_stronger_public_school_need_joins_exact_administrative_financial_and_political_costs(
+    public_school_joint_generated, before, after, expected
+):
+    from test_situated_joint_witnesses import _facts
+
+    from pdx.situated import pdx_eval
+
+    policy, generated = public_school_joint_generated
+    field = "law_public_schools.ai_enact_weight_modifier"
+    match = re.search(
+        rf"# SITAI BEGIN information:{re.escape(field)}\n(.*?)# SITAI END information:",
+        generated,
+        re.DOTALL,
+    )
+    assert match is not None
+    values: dict[str, object] = {
+        reader.key: False if reader.kind == "boolean" else 0 for reader in policy.readers
+    }
+    values.update(
+        current_private_schools=True,
+        literacy=0.3,
+        peasant_share=0.5,
+        bureaucracy=1,
+        default=False,
+        legitimacy=60,
+        insurrection=False,
+        radical_share=0.1,
+    )
+
+    def adjustment(changes):
+        facts = {**values, **changes}
+        observed = pdx_eval.select(match.group(1), _facts(policy, facts))
+        reference = decision_rules.evaluate(policy, facts, is_ai=True).get(field)
+        actual = observed.delta if observed.operation == "add" else 0
+        assert actual == pytest.approx(reference[1] if reference else 0)
+        return actual
+
+    assert (adjustment(before), adjustment(after)) == expected
+    for costs, delta in (
+        ({"bureaucracy": -1}, -8),
+        ({"default": True}, -6),
+        ({"bureaucracy": -1, "default": True}, -14),
+        ({"legitimacy": 20, "insurrection": True, "radical_share": 0.3}, -10),
+        (
+            {
+                "legitimacy": 20,
+                "insurrection": True,
+                "radical_share": 0.3,
+                "bureaucracy": -1,
+                "default": True,
+            },
+            -24,
+        ),
+        ({"war": True}, 0),
+        ({"loans": True}, 0),
+        ({"legitimacy": 0}, 0),
+    ):
+        assert adjustment({**after, **costs}) == expected[1] + delta
 
 
 @pytest.mark.parametrize("war", [False, True])
@@ -1929,10 +2657,14 @@ def test_stronger_social_need_does_not_accidentally_reduce_target_adjustment(
 def test_liquidity_pressure_is_cross_domain_and_preserves_wartime_defense(
     real_generated_branches, war
 ):
+    from test_situated_writer_pdx_oracle import _facts
+
+    from pdx.situated import pdx_eval
+
     policy, blocks = next(
         (p, b)
         for p, b in real_generated_branches
-        if any(r.id.startswith("coordinated_liquidity_") for r in p.rules)
+        if any(r.id == "target_strategy_goal_annex_country_liquidity" for r in p.rules)
     )
     facts = {
         r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
@@ -1945,30 +2677,35 @@ def test_liquidity_pressure_is_cross_domain_and_preserves_wartime_defense(
         bankruptcy_horizon=10,
         prospective_subject_population=1000000,
         own_army=100,
-        target_army=50,
+        target_army=0,
         own_navy=100,
-        target_navy=10,
+        target_navy=0,
         navy=100,
         legitimacy=60,
         national_gdp=100000000,
         candidate_gdp=1000000,
     )
-    for rule in policy.rules:
-        if not rule.id.startswith("coordinated_liquidity_"):
-            continue
-        value = _interpret_adjustments(
-            blocks[".".join(rule.field)], _scopes_for_facts(policy, facts)
-        )
-        if not war:
-            assert value == (rule.operation, rule.value)
-        else:
-            assert value is None or value[1] >= (1 if value[0] == "multiply" else 0)
+    field = "ai_strategy_default.wargoal_scores.annex_country"
+    # Financing is a local cost of this concrete new commitment in peace and
+    # war; it no longer uses a global liquidity intent to silence other needs.
+    value = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, facts))
+    assert value == ("add", -4)
+    used = {
+        key for rule in policy.rules if ".".join(rule.field) == field for key in rule.input_keys()
+    }
     for key in ("debt_ratio", "bankruptcy_horizon"):
-        values = {**facts, "war": False, key: None}
+        values = {**facts, key: None}
         result = decision_rules.evaluate(policy, values, is_ai=True)
-        assert all(
-            not rule_id.startswith("coordinated_liquidity_") for rule_id, _ in result.values()
+        assert result.get(field, ("", 0))[1] == 0
+        # The complete independent PDX oracle preserves numeric unknown values;
+        # the old adjustment-only helper intentionally accepts known scalars.
+        actual = pdx_eval.select(
+            real_generated_branches.scripts[id(policy)][field],
+            _facts(policy, {key: values[key] for key in used}, is_ai=True),
         )
+        assert actual.operation is None
+        assert actual.fallback == "unknown"
+        assert actual.delta == 0
 
 
 @pytest.mark.parametrize("fact", ["target_truce", "target_alliance", "target_relations"])
@@ -1979,7 +2716,7 @@ def test_actual_diplomatic_commitment_is_a_bounded_cost_and_not_a_forced_action(
     policy, blocks = next(
         (p, b)
         for p, b in real_generated_branches
-        if any(r.id.startswith("comparative_commitment_") for r in p.rules)
+        if any(r.id == "target_strategy_goal_conquer_state_truce" for r in p.rules)
     )
     values = {
         r.key: False if r.kind == "boolean" else max(0.0, r.minimum or 0.0) for r in policy.readers
@@ -1989,9 +2726,9 @@ def test_actual_diplomatic_commitment_is_a_bounded_cost_and_not_a_forced_action(
         national_gdp=100000000,
         candidate_gdp=1000000,
         own_army=100,
-        target_army=50,
+        target_army=0,
         own_navy=50,
-        target_navy=10,
+        target_navy=0,
         net_surplus=100,
         debt_ratio=0.1,
         prospective_subject_population=1000000,
@@ -1999,16 +2736,15 @@ def test_actual_diplomatic_commitment_is_a_bounded_cost_and_not_a_forced_action(
     values[fact] = 75 if fact == "target_relations" else True
     field = "ai_strategy_default.wargoal_scores.conquer_state"
     result = _interpret_adjustments(blocks[field], _scopes_for_facts(policy, values))
-    assert result == ("add", -5)
+    assert result == ("add", -2 if fact == "target_relations" else -4)
+    assert result is not None
     values["war"] = True
     wartime = decision_rules.evaluate(policy, values, is_ai=True)
-    assert not wartime.get(field, ("", 0))[0].startswith(
-        ("comparative_commitment_", "comparative_amicable_")
-    )
+    assert wartime[field][1] == result[1]
     values["war"] = False
     values[fact] = None
     unknown = decision_rules.evaluate(policy, values, is_ai=True)
-    assert field not in unknown
+    assert unknown.get(field, ("", 0))[1] == 0
 
 
 @pytest.mark.parametrize(

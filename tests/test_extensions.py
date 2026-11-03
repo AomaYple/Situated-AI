@@ -10,6 +10,8 @@ from hypothesis import strategies as st
 from pdx import decisions
 from pdx.parser import parse_text
 from pdx.situated import pdx_eval
+from pdx.situated.compiler import load_model, strategy_overlay
+from pdx.situated.schema import Relation
 
 pytestmark = pytest.mark.unit
 
@@ -66,8 +68,8 @@ def test_启用扩展只追加声明字段且原版逐字保留():
     assert "subtract" in support
 
 
-def test_关闭经济模块时改革输出不保留跨模块关系():
-    """模块开关必须隔离行动关系，而不只是删除顶层消费者字段。"""
+def test_经济模块开关不制造已经退役的改革互补():
+    """当前改革没有跨模块互补，启用经济模块不能凭行政健康制造收益。"""
     policy = replace(
         decisions.load_extensions(),
         reform_enabled=True,
@@ -97,8 +99,56 @@ def test_关闭经济模块时改革输出不保留跨模块关系():
     }
     result = pdx_eval.select(reform, facts)
     enabled_result = pdx_eval.select(enabled_reform, facts)
-    assert (result.action_id, result.delta) == ("political_reform", 0.5)
-    assert (enabled_result.action_id, enabled_result.delta) == ("political_reform", 0.75)
+    # The physical consumer is the joint writer; the old card marker is an alias.
+    assert (result.action_id, result.delta) == ("joint_reform_chance", 0.5)
+    assert (enabled_result.action_id, enabled_result.delta) == ("joint_reform_chance", 0.5)
+
+
+def test_关闭消费者时撤回其跨模块关系增量():
+    """合成条件关系仍须经过真实 overlay 的模块隔离门。"""
+    model = load_model()
+    assert model.consumer_ir is not None
+    relation = Relation(
+        "political_reform",
+        "industrial_foundation",
+        "complements",
+        0.1,
+        condition_facts=("stable_legitimacy",),
+    )
+    rows = tuple(
+        replace(row, relations=(relation,)) if row.action_id == relation.source else row
+        for row in model.decision_ir
+    )
+    by_id = {row.action_id: row for row in rows}
+    model = replace(
+        model,
+        decision_ir=rows,
+        consumer_ir=replace(
+            model.consumer_ir,
+            actions=rows,
+            writers=tuple(
+                replace(writer, action=by_id[writer.definition])
+                if writer.kind == "action_card"
+                else writer
+                for writer in model.consumer_ir.writers
+            ),
+        ),
+    )
+    facts = {
+        "is_ai": True,
+        "is_at_war": False,
+        "in_default": False,
+        "any_insurrection_ongoing": False,
+        "legitimacy": 80,
+    }
+    for enabled, expected in (
+        ({"change_law_chance"}, 0.5),
+        ({"change_law_chance", "economic_vs_government_spending_balance"}, 0.6),
+    ):
+        reform = strategy_overlay(model, enabled_consumer_fields=enabled)["change_law_chance"]
+        result = pdx_eval.select(reform, facts)
+        assert result.action_id == "joint_reform_chance"
+        assert result.delta == pytest.approx(expected)
 
 
 @pytest.mark.parametrize("fiscal_enabled", [False, True])

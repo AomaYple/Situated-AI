@@ -21,8 +21,17 @@ law_no_health_system = {
 		}
 
 		# SITAI BEGIN information:law_no_health_system.ai_enact_weight_modifier
-		# political_capacity_law_no_health_system [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_366e72b80bbddb75 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_366e72b80bbddb75_health_political_risk_negative
+			add = { value = 0
+				# political_capacity_law_no_health_system [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 0
+		} }
 		# SITAI END information:law_no_health_system.ai_enact_weight_modifier
 	}
 }
@@ -74,11 +83,32 @@ law_charitable_health_system = {
 		}
 
 		# SITAI BEGIN information:law_charitable_health_system.ai_enact_weight_modifier
-		# political_capacity_law_charitable_health_system [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
-		# law_charitable_health_system_ai_enact_weight_modifier [political]; 在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 22.0 }
+		# ACTION program_e19399bed3189030 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_e19399bed3189030_health_administration_negative
+			add = { value = 0
+				# health_reform_charity_new_administrative_pressure [political]; 建立新医疗制度需行政承载；实际行政缺口作为独立成本，不抹去直接需要
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system bureaucracy < 0 } } add = -8 }
+			}
+			# GROUP program_e19399bed3189030_health_financing_negative
+			add = { value = 0
+				# health_reform_charity_new_default_pressure [political]; 实际违约降低新增制度承诺支持；正常借款及战争本身不等于违约
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system in_default = yes } } add = -6 }
+			}
+			# GROUP program_e19399bed3189030_health_need_positive
+			add = { value = 0
+				# health_reform_charity_new_food_security [political]; 无医保且实际粮食高价短缺时，慈善候选的原版食品保障形成直接需要；不推断当前死亡率
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = 10 }
+			}
+			# GROUP program_e19399bed3189030_health_political_risk_negative
+			add = { value = 0
+				# political_capacity_law_charitable_health_system [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -24
+			max = 10
+		} }
 		# SITAI END information:law_charitable_health_system.ai_enact_weight_modifier
 	}
 }
@@ -114,14 +144,44 @@ law_private_health_insurance = {
 		}
 
 		# SITAI BEGIN information:law_private_health_insurance.ai_enact_weight_modifier
-		# political_capacity_law_private_health_insurance [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
-		# law_private_health_insurance_ai_enact_weight_modifier [political]; 在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 22.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 scaled_debt >= 0 average_sol >= 0 } } } } } multiply = 1.0 }
-		# coordinated_layered_civic_law_private_health_insurance [political]; 可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_stable_capacity = yes sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no average_sol >= 0 average_sol >= 15 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 5.0 }
+		# ACTION program_8223634670ab82f4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_8223634670ab82f4_health_administration_positive
+			add = { value = 0
+				# health_reform_private_public_administrative_saving [political]; 已有公保投资且行政不足时，私保的行政折扣形成节约机会，不当作实际发放资源
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_health_insurance institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } bureaucracy < 0 } } add = 6 }
+				# health_reform_private_charity_administrative_saving [political]; 行政不足且已有医保实际投资时，私保比慈善更大的制度行政折扣提供有限节约倾向
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } bureaucracy < 0 } } add = 4 }
+			}
+			# GROUP program_8223634670ab82f4_health_administration_negative
+			add = { value = 0
+				# health_reform_private_new_administrative_pressure [political]; 建立新医疗制度需行政承载；实际行政缺口作为独立成本，不抹去直接需要
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system bureaucracy < 0 } } add = -8 }
+			}
+			# GROUP program_8223634670ab82f4_health_financing_negative
+			add = { value = 0
+				# health_reform_private_new_default_pressure [political]; 实际违约降低新增制度承诺支持；正常借款及战争本身不等于违约
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system in_default = yes } } add = -6 }
+			}
+			# GROUP program_8223634670ab82f4_health_food_security_loss_negative
+			add = { value = 0
+				# health_reform_private_charity_food_loss [political]; 实际慈善医保正在投资且食品紧张时，退出其食品保障有独立机会成本；投资零或未知不虚构现有效果
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = -4 }
+			}
+			# GROUP program_8223634670ab82f4_health_political_risk_negative
+			add = { value = 0
+				# political_capacity_law_private_health_insurance [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			# GROUP program_8223634670ab82f4_health_universal_access_loss_negative
+			add = { value = 0
+				# health_reform_private_public_universal_access_loss [political]; 已有公保投资且低生活水平时，私保替代会失去普遍生活改善，作为独立社会代价共同权衡
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_health_insurance institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } average_sol >= 0 average_sol < 10 } } add = -8 }
+			}
+			min = -36
+			max = 6
+		} }
 		# SITAI END information:law_private_health_insurance.ai_enact_weight_modifier
 	}
 }
@@ -152,14 +212,49 @@ law_public_health_insurance = {
 		}
 
 		# SITAI BEGIN information:law_public_health_insurance.ai_enact_weight_modifier
-		# political_capacity_law_public_health_insurance [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
-		# law_public_health_insurance_ai_enact_weight_modifier [political]; 在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 average_sol >= 0 average_sol < 12 } } add = 22.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 scaled_debt >= 0 average_sol >= 0 } } } } } multiply = 1.0 }
-		# coordinated_layered_civic_law_public_health_insurance [political]; 可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_stable_capacity = yes sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no average_sol >= 0 average_sol < 12 } } add = 5.0 }
+		# ACTION program_de85f4e587dd38c8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_de85f4e587dd38c8_health_administration_negative
+			add = { value = 0
+				# health_reform_public_private_administrative_loss [political]; 有实际医保投资时，退出私保的制度行政折扣且行政已不足，构成一次独立管理压力
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_health_insurance institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } bureaucracy < 0 } } add = -8 }
+				# health_reform_public_new_administrative_pressure [political]; 建立新医疗制度需行政承载；实际行政缺口作为独立成本，不抹去直接需要
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system bureaucracy < 0 } } add = -8 }
+				# health_reform_public_charity_administrative_loss [political]; 有实际制度投资且行政不足时，退出慈善的20%制度行政成本折扣形成管理成本
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } bureaucracy < 0 } } add = -4 }
+			}
+			# GROUP program_de85f4e587dd38c8_health_financing_negative
+			add = { value = 0
+				# health_reform_public_charity_default_pressure [political]; 已有医保实际投资且违约时，退出慈善折扣有融资压力；与行政原因分开
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } in_default = yes } } add = -6 }
+				# health_reform_public_private_default_pressure [political]; 有实际医保投资且违约时，转出私保折扣的新增承诺有融资机会成本
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_health_insurance institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } in_default = yes } } add = -6 }
+				# health_reform_public_new_default_pressure [political]; 实际违约降低新增制度承诺支持；正常借款及战争本身不等于违约
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system in_default = yes } } add = -6 }
+			}
+			# GROUP program_de85f4e587dd38c8_health_food_security_loss_negative
+			add = { value = 0
+				# health_reform_public_charity_food_loss [political]; 实际慈善医保正在投资且食品紧张时，退出其食品保障有独立机会成本；投资零或未知不虚构现有效果
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } add = -4 }
+			}
+			# GROUP program_de85f4e587dd38c8_health_need_positive
+			add = { value = 0
+				# health_reform_public_private_universal_access [political]; 当前私保效果依赖财富；低生活水平形成转向公保普遍覆盖的需求，不把候选高分当已生效
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_health_insurance average_sol >= 0 average_sol < 10 } } add = 12 }
+				# health_reform_public_new_universal_access [political]; 无医保且生活水平低时，公保的普遍生活与死亡率效果形成直接需要，不先要求财政行政全满足
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_health_system average_sol >= 0 average_sol < 10 } } add = 12 }
+				# health_reform_public_charity_universal_access [political]; 低生活水平时，慈善转公保的普遍生活和更强死亡率效果形成改善需要；不估算实际改善人数
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_charitable_health_system average_sol >= 0 average_sol < 10 } } add = 10 }
+			}
+			# GROUP program_de85f4e587dd38c8_health_political_risk_negative
+			add = { value = 0
+				# political_capacity_law_public_health_insurance [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -28
+			max = 12
+		} }
 		# SITAI END information:law_public_health_insurance.ai_enact_weight_modifier
 	}
 }

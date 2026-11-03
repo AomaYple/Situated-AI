@@ -1,7 +1,23 @@
 sitai_adapter_fleet_supply_weight = { value = 1.0 # SITAI wrapped-scalar:ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply
 
 		# SITAI BEGIN information:ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply
-		# structural_wartime_supply_escort [military]; 战时蒸汽船供给紧张且已有舰队时，在原版次要舰队已允许的护送任务内提高相对保护供给权重
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.25 }
+		# ACTION program_a6ee0c4b315ddfe8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a6ee0c4b315ddfe8_positive
+			add = { value = 0
+				# SITAI CHAIN LJ09/LJ09.structural_wartime_supply_escort writer=rule_action_common_ai_strategies_00_default_strategy_txt_structural_wartime_supply_escort
+				# structural_wartime_supply_escort [military]; 战时蒸汽船供给紧张且已有舰队时，在原版次要舰队已允许的护送任务内提高相对保护供给权重
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } add = 0.25 }
+				# SITAI CHAIN LJ09/LJ09.structural_wartime_supply_price_escort writer=rule_action_common_ai_strategies_00_default_strategy_txt_structural_wartime_supply_price_escort
+				# structural_wartime_supply_price_escort [military]; 战时已有舰队且蒸汽船价格压力已知时，在原版次要舰队已允许的护送任务内提供有限保护倾向
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_pricier > 0.25 } } } } add = 0.1 }
+				# SITAI CHAIN LJ09/LJ09.structural_wartime_supply_balance_escort writer=rule_action_common_ai_strategies_00_default_strategy_txt_structural_wartime_supply_balance_escort
+				# structural_wartime_supply_balance_escort [military]; 战时已有舰队且蒸汽船订单余额压力已知时，在原版次要舰队已允许的护送任务内提供有限保护倾向
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0 } } } } add = 0.1 }
+			}
+			min = 1
+			max = 1.25
+		} }
 		# SITAI END information:ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply
 	}

@@ -13,13 +13,15 @@
 | 工程原则 | [工程原则](principles/工程原则.md) |
 | Mod 原则 | [Mod 开发原则](principles/Mod开发原则.md) |
 | 工具、快照和证据边界 | [工程交付基线](design/exec/工程基线-1.0.md) |
-| 产品目标架构 | [处境决策设计](design/03-处境决策设计.md)、[行动层深化设计](design/05-行动层深化设计.md) |
-| 行动范围与功能验收 | [行动覆盖与验收](design/04-行动覆盖与验收.md) |
+| 产品目标架构、范围与总验收 | [架构主计划](design/架构主计划.md) |
+| 实施分解与逐项出口 | [架构子计划](design/架构子计划.md) |
+| 旧候选设计与范围上下文 | [处境决策设计](design/03-处境决策设计.md)、[行动层深化设计](design/05-行动层深化设计.md)、[行动覆盖与验收](design/04-行动覆盖与验收.md) |
 | 原版 AI 静态索引（生成） | [可执行面](design/02-可执行面.md)、[政治候选面](design/02-政治候选面.md) |
-| 当前计划 | [处境行动决策内核实施计划](design/exec/mod重设计-实施计划.md) |
+| 历史实施计划（仅参考） | [处境行动决策内核实施计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
-| 已交付基线证据 | [3.0.0行动内核收据](design/exec/K6-K13-结果.md)、[分层联动执行结果](design/exec/分层联动-执行结果.md)、[2.0.0行动内核收据](design/exec/处境行动内核-执行结果.md)、[1.5.0分层收据](design/exec/分层联动-执行结果.md) |
-| 创意工坊发布文案（Steam BBCode，全文可直接粘贴） | [创意工坊描述](publishing/创意工坊描述.md) |
+| 当前架构检查与逐项证据 | [架构重设计结果](design/exec/架构重设计-结果.md)、[架构阶段收据](design/exec/架构阶段收据.json)；局部通过不等于阶段完成 |
+| 已交付基线证据 | [版本交付索引](design/exec/版本交付-结果.md)、[3.0.1交付结果](design/exec/3.0.1-交付结果.md)；历史内核与分层收据由执行索引导航 |
+| 创意工坊文案（Steam BBCode，发布前核对固定包） | [中文](publishing/创意工坊描述.md) · [English](publishing/创意工坊描述-en.md) |
 | 工具使用 | [工具手册](../tools/README.md) |
 | Victoria 3 知识库 | [victoria3-modding](victoria3-modding/README.md) |
 

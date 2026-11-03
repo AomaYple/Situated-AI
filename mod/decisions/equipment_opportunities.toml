@@ -1,0 +1,11 @@
+# 舰船改装真实材料的局部机会／代价；不按数量估算实际付款或推断整体可负担。
+schema = 1
+
+[parameters]
+priority_base = 100000
+opportunity_price_threshold = -0.10
+pressure_price_threshold = 0.25
+opportunity_multiplier = 1.08
+scarcity_multiplier = 0.90
+pressure_multiplier = 0.80
+default_multiplier = 0.85

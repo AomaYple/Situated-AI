@@ -1,7 +1,7 @@
 # 贡献与维护规范
 
 本指南统一维护流程、验证命令和交付步骤。产品计划入口为
-[处境行动决策内核实施计划](docs/design/exec/mod重设计-实施计划.md)。任务路由见 [AGENTS.md](AGENTS.md)，持续工程与产品约束见
+[架构主计划](docs/design/架构主计划.md)与[架构子计划](docs/design/架构子计划.md)。任务路由见 [AGENTS.md](AGENTS.md)，持续工程与产品约束见
 [工程原则](docs/principles/工程原则.md)和[Mod 开发原则](docs/principles/Mod开发原则.md)，生成与证据合同见
 [工程交付基线](docs/design/exec/工程基线-1.0.md)。
 
@@ -82,6 +82,12 @@ python tools/ci/run_check.py baseline
 python tools/ci/run_check.py deadcode
 ```
 
+涉及 Python 包布局、构建配置或正式交付时，额外构建 wheel 并核对所有源码模块都在包内：
+
+```text
+python tools/ci/python_package.py
+```
+
 常规反馈或无游戏环境运行 `python tools/ci/run_check.py test-offline`；冻结最终候选运行
 `python tools/ci/run_check.py full-acceptance --quiet`。完整验收已经包含离线用例，不要在同一轮再重复运行 `test-offline`。
 pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录实际 worker、测试选择、跳过项、覆盖率、墙钟和进程 RSS。
@@ -90,13 +96,17 @@ pytest 默认由仓库配置选择 `-n auto --dist loadscope`；报告需记录�
 完整测试会创建 pytest、benchmark 和字节码缓存。测试结束后清理这些可再生目录，再运行 `hygiene` 作为最后的卫生检查；
 不要与测试并行运行 hygiene，否则会把测试正在创建的缓存误报成残留。
 
-`tools/ci/situated_closeout.py` 默认只报告静态工程收口。进入 D14 前使用 `--require-engineering`，核对 D0–D13
-的功能收据、依赖和独立原版范围；最终交付后使用 `--require-plan`，继续核对 D14 的实际交付收据。两种严格门均
-重新读取锁定原版的 D0 独立盘点，未知字段级作用域、解析失败或适用阶段的 pending 均返回非零。未交付的 D14
-不阻塞进入交付阶段，但始终阻止最终完成结论；默认静态检查通过不能代替这两个门。
+`tools/ci/situated_closeout.py` 使用架构 A2 的 S0–S6 合同，唯一阶段源为
+[`架构阶段收据.json`](docs/design/exec/架构阶段收据.json)。默认报告静态工程状态；进入发布前使用
+`--require-engineering` 核对 S0–S5 的功能、依赖、当前源码、实际见证与独立原版范围。完成交付后使用
+`--require-plan`，继续核对 S6 的实际合并、CI、标签、Release、ZIP/SHA 和部署身份。
+未闭合功能、失效证据、活跃控制的未知作用域或解析失败不能通过最终门。未修改原版的保留责任须由完整源、父结构、变量与引用闭包独立证明；
+其接口知识仍可保持未知，不因此获得写入权，也不代签新增功能完成。未发布的 S6 不阻塞进入交付阶段，但始终阻止
+整套计划完成。旧 D 阶段 Markdown 不再参与当前门禁，默认静态通过也不能代替严格阶段门。
 
 当前产品计划同时要求功能完整接入生产、参考语义与生成PDX一致、静态工程验证和标准包合同通过。完整回归是Python工程回归，不启动游戏；文件存在、字段合法或旧测试通过不能代替逐项功能验收。Mod 行为目标和用户实机
 验收边界见 Mod 开发原则。长期游戏运行、数值平衡、游戏内性能和玩家体验由用户自行验收，不作为当前阶段出口。
+旧计划和历史收据只作参考，不是新架构完成门；新架构的出口只能由当前 A2 阶段收据和新鲜证据关闭。
 助手可基于用户提供的版本、包哈希、启用 Mod 集、存档和日志，使用仓库工具辅助定位；结果按工程交付基线标明证据类别，
 不扩展其证明范围。
 

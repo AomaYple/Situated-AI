@@ -1,6 +1,7 @@
 """D6-D8 领域覆盖目录和联合链合同。"""
 
 import pytest
+from _situated_sources import production_policy_sources
 
 from pdx.situated import domain_coverage
 from pdx.situated.compiler import load_model
@@ -9,7 +10,7 @@ from pdx.situated.domain_coverage import CHAINS, contract, load
 pytestmark = pytest.mark.unit
 
 
-def test_十九领域都有真实生产实例和局部未知策略():
+def test_十九领域保留范围且时间域无规则实例时如实待完成():
     coverage = load()
     assert set(coverage) == {
         "fiscal",
@@ -32,7 +33,10 @@ def test_十九领域都有真实生产实例和局部未知策略():
         "geography",
         "temporal",
     }
-    assert all(item.production_instances > 0 for item in coverage.values())
+    assert {key for key, item in coverage.items() if item.production_instances} == set(coverage) - {
+        "temporal"
+    }
+    assert coverage["temporal"].production_instances == 0
     assert all(item.status == "pending" for item in coverage.values())
     assert all(item.unknown_policy == "vanilla" for item in coverage.values())
 
@@ -50,9 +54,15 @@ def test_领域覆盖合同逐实例回查生产行动():
     assert summary["domain_count"] == 19
     assert len(summary["chains"]) == 14
     assert all(
-        row["declared_instances"] == row["actual_instances"] and row["owners"]
-        for row in summary["domains"].values()
+        row["declared_instances"] == row["actual_instances"] for row in summary["domains"].values()
     )
+    assert {key for key, row in summary["domains"].items() if row["owners"]} == set(
+        summary["domains"]
+    ) - {"temporal"}
+    temporal = summary["domains"]["temporal"]
+    assert temporal["declared_status"] == "pending"
+    assert temporal["declared_instances"] == temporal["actual_instances"] == 0
+    assert temporal["targets"] == temporal["explicit_targets"] == []
 
 
 def test_领域覆盖逐目标保留消费者作用域成本和回退责任():
@@ -60,7 +70,10 @@ def test_领域覆盖逐目标保留消费者作用域成本和回退责任():
     model = load_model()
     summary = contract(coverage, model.action_instances)
     targets = [target for row in summary["domains"].values() for target in row["targets"]]
-    assert len(targets) == 1414
+    assert len(targets) == len(production_policy_sources().rules)
+    assert {
+        (target["source"], target["definition"], target["consumer_id"]) for target in targets
+    } == production_policy_sources().rules
     assert len({target["target_id"] for target in targets}) == len(targets)
     assert all(
         target["consumer_id"]

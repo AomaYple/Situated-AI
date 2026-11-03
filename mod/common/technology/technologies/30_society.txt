@@ -17,8 +17,22 @@ urbanization = {
 		value = 3 # Very important in general
 
 		# SITAI BEGIN information:urbanization.ai_weight
-		# situational_urbanization_research [political]; 人口、识字、行政和财政同时支持时，适度提高城市化研究机会
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 bureaucracy > 0 net_total_income > 0 in_default = no is_at_war = no } } multiply = 1.2 }
+		# ACTION program_9bbe3ab00bd4d6a1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_9bbe3ab00bd4d6a1_observed_urban_absorption_positive
+			add = { value = 0
+				# s2_urbanization_observed_absorption [political]; 原版人口基础设施与施工容量在已有劳工基础、行政余额非负及净收入为正时具有额外承接机会；这些是已观察承接代理，不是研究付款条件，缺失任何辅助事实只退出本项
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+			}
+			# GROUP program_9bbe3ab00bd4d6a1_population_urban_capacity_positive
+			add = { value = 0
+				# situational_urbanization_research [political]; 原版人口基础设施与施工容量效果支持人口规模代理的基础研究需求；两百万人阈值是设计选择，不声称已观察真实城市拥堵或容量饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.1800000000000002
+		} }
 		# SITAI END information:urbanization.ai_weight
 	}
 }
@@ -43,8 +57,22 @@ urban_planning = {
 		value = 2 # Important in general
 
 		# SITAI BEGIN information:urban_planning.ai_weight
-		# situational_urban_planning_research [political]; 城市化压力与建设承受力同时存在时，适度提高原版城市规划研究机会
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 bureaucracy > 0 net_total_income > 0 in_default = no is_at_war = no } } multiply = 1.2 }
+		# ACTION program_36bccecef4292ce1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_36bccecef4292ce1_observed_urban_absorption_positive
+			add = { value = 0
+				# s2_urban_planning_observed_absorption [political]; 原版人口基础设施与施工容量在已有劳工基础、行政余额非负及净收入为正时具有额外承接机会；这些是已观察承接代理，不是研究付款条件，缺失任何辅助事实只退出本项
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+			}
+			# GROUP program_36bccecef4292ce1_population_urban_capacity_positive
+			add = { value = 0
+				# situational_urban_planning_research [political]; 原版人口基础设施与施工容量效果支持人口规模代理的基础研究需求；两百万人阈值是设计选择，不声称已观察真实城市拥堵或容量饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.1800000000000002
+		} }
 		# SITAI END information:urban_planning.ai_weight
 	}
 }
@@ -64,8 +92,24 @@ rationalism = {
 		value = 3 # Very important in general
 
 		# SITAI BEGIN information:rationalism.ai_weight
-		# rationalism_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
+		# ACTION program_4dfde5c5bdea4d08 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4dfde5c5bdea4d08_direct_literacy_need_positive
+			add = { value = 0
+				# technology_rationalism_literacy [economy]; 原版直接教育可及性或识字增长修复实际低识字，正常借款、战争或违约不取消知识收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.25 }
+			}
+			# GROUP program_4dfde5c5bdea4d08_education_capacity_use_positive
+			add = { value = 0
+				# technology_rationalism_schools_capacity_pressure [economy]; 已使用更高制度投资层级，升档同一个容量采用机会，不伪称已达到全部原版动态上限
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 3 } } } add = 0.12 }
+				# technology_rationalism_schools_capacity [economy]; 原版直接增加该制度投资上限，国家确实已建立并使用相应制度；不把低生活水平猜成疾病暴发
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.37
+		} }
 		# SITAI END information:rationalism.ai_weight
 	}
 }
@@ -90,8 +134,17 @@ tech_bureaucracy = {
 		value = 3 # Very important in general
 
 		# SITAI BEGIN information:tech_bureaucracy.ai_weight
-		# tech_bureaucracy_ai_weight [fiscal]; 行政不足时提高相关行政知识关注；不直接增加行政力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.25 }
+		# ACTION program_d4b3ba485d37e319 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d4b3ba485d37e319_administration_building_option_positive
+			add = { value = 0
+				# technology_tech_bureaucracy_administration_building [fiscal]; 原版解锁真实产官僚的政府设施，实际全国官僚缺口形成建筑选项；不是科技直接生产官僚
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = 0.12 }
+			}
+			min = 1
+			max = 1.12
+		} }
 		# SITAI END information:tech_bureaucracy.ai_weight
 	}
 }
@@ -116,11 +169,17 @@ currency_standards = {
 		}
 
 		# SITAI BEGIN information:currency_standards.ai_weight
-		# currency_standards_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_currency_standards_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
+		# ACTION program_349e6b37f96e72ee [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_349e6b37f96e72ee_supported_tax_reform_option_positive
+			add = { value = 0
+				# technology_currency_standards_supported_tax_option [political]; 原版解锁人头税法且存在真实支持该法的运动；只表达受支持政策选项，不宣称贷款必然产生净税收
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_per_capita_based_taxation value > neutral } political_movement_support >= 0.1 } NOT = { has_law_or_variant = law_type:law_per_capita_based_taxation } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.08
+		} }
 		# SITAI END information:currency_standards.ai_weight
 	}
 }
@@ -143,6 +202,22 @@ democracy = {
 
 	ai_weight = {
 		value = 3 # Very important in general
+
+		# SITAI BEGIN information:democracy.ai_weight
+		# ACTION program_eebebf991157aff0 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_eebebf991157aff0_social_security_capacity_positive
+			add = { value = 0
+				# s2_next_democracy_social_capacity_pressure [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.12 }
+				# s2_next_democracy_social_capacity_foundation [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:democracy.ai_weight
 	}
 }
 
@@ -164,6 +239,22 @@ romanticism = {
 
 	ai_weight = {
 		value = 3 # Very important in general
+
+		# SITAI BEGIN information:romanticism.ai_weight
+		# ACTION program_f1d2987f45758d6e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f1d2987f45758d6e_fine_art_demand_positive
+			add = { value = 0
+				# s2_remainder_romanticism_art_shortage_price [political]; 艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.12 }
+				# s2_remainder_romanticism_art_shortage [political]; 实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:romanticism.ai_weight
 	}
 }
 
@@ -180,6 +271,22 @@ international_trade = {
 
 	ai_weight = {
 		value = 3 # Very important in general
+
+		# SITAI BEGIN information:international_trade.ai_weight
+		# ACTION program_b112fc63b55565ad [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b112fc63b55565ad_supported_trade_option_positive
+			add = { value = 0
+				# s2_remainder_international_trade_movement_mercantilism [political]; 本国已有政治运动对精确贸易法律表达正向立法立场且支持比例至少百分之十，本国尚未采用该法律，形成科技开放此法律选项的有限需求；不把孤立主义等同必须自由贸易，不声称必能立法或有外国供给
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_mercantilism value > neutral } political_movement_support >= 0.1 } NOT = { has_law_or_variant = law_type:law_mercantilism } } } add = 0.08 }
+				# s2_remainder_international_trade_movement_free_trade [political]; 本国已有政治运动对精确贸易法律表达正向立法立场且支持比例至少百分之十，本国尚未采用该法律，形成科技开放此法律选项的有限需求；不把孤立主义等同必须自由贸易，不声称必能立法或有外国供给
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_political_movement = { law_enactment_stance = { law = law_type:law_free_trade value > neutral } political_movement_support >= 0.1 } NOT = { has_law_or_variant = law_type:law_free_trade } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.08
+		} }
+		# SITAI END information:international_trade.ai_weight
 	}
 }
 
@@ -207,8 +314,22 @@ centralization = {
 		}
 
 		# SITAI BEGIN information:centralization.ai_weight
-		# centralization_ai_weight [fiscal]; 行政不足时提高相关行政知识关注；不直接增加行政力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.25 }
+		# ACTION program_a88501423cbee612 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a88501423cbee612_administration_method_option_positive
+			add = { value = 0
+				# technology_centralization_administration [fiscal]; 锁定真实administration机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes AND = { any_scope_building = { is_building_type = building_government_administration has_active_production_method = pm_simple_organization level >= 1 } } bureaucracy < 0 } } add = 0.08 }
+			}
+			# GROUP program_a88501423cbee612_state_tax_capacity_need_positive
+			add = { value = 0
+				# technology_centralization_tax_capacity [fiscal]; 原版直接州税容量增加，响应本国已合并州同州税容低于用量；不以全国官僚余额代替
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage } } } add = 0.15 }
+			}
+			min = 1
+			max = 1.23
+		} }
 		# SITAI END information:centralization.ai_weight
 	}
 }
@@ -229,6 +350,22 @@ corporate_charters = {
 
 	ai_weight = {
 		value = 3 # very important tech
+
+		# SITAI BEGIN information:corporate_charters.ai_weight
+		# ACTION program_3268042b4f45a7df [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3268042b4f45a7df_company_slot_pressure_positive
+			add = { value = 0
+				# s2_capacity_corporate_charters_company_capacity_reached [political]; 真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 num_companies >= "ROOT.max_num_companies" max_num_companies >= 0 } } add = 0.15 }
+				# s2_capacity_corporate_charters_companies_in_use [political]; 原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:corporate_charters.ai_weight
 	}
 }
 
@@ -251,11 +388,19 @@ banking = {
 		value = 1.5 # Important in general
 
 		# SITAI BEGIN information:banking.ai_weight
-		# banking_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_banking_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
+		# ACTION program_d866ec9841e8a6f8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d866ec9841e8a6f8_borrowing_interest_positive
+			add = { value = 0
+				# technology_banking_borrowing_pressure [fiscal]; 同一借款原因的高债务压力档；不与基础档累加
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.6 } } add = 0.22 }
+				# technology_banking_borrowing [fiscal]; 原版直接降低贷款利率，国家确实正在借款
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } add = 0.15 }
+			}
+			min = 1
+			max = 1.22
+		} }
 		# SITAI END information:banking.ai_weight
 	}
 }
@@ -278,14 +423,17 @@ academia = {
 		value = 1.5 # Important in general
 
 		# SITAI BEGIN information:academia.ai_weight
-		# coordinated_route_education_academia [political]; 教育路线在和平期提高原版社会研究候选权重，促进教育追赶
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_education_active = yes is_at_war = no } } multiply = 1.15 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { sitai_route_education_active = yes } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# academia_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_academia_education [political]; 教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes } } multiply = 1.2 }
+		# ACTION program_e0d6d61995fdfe09 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_e0d6d61995fdfe09_direct_literacy_need_positive
+			add = { value = 0
+				# technology_academia_literacy [economy]; 原版直接教育可及性或识字增长修复实际低识字，正常借款、战争或违约不取消知识收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.25 }
+			}
+			min = 1
+			max = 1.25
+		} }
 		# SITAI END information:academia.ai_weight
 	}
 }
@@ -309,6 +457,22 @@ colonization = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:colonization.ai_weight
+		# ACTION program_f4281cc1364e9d05 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f4281cc1364e9d05_institution_capacity_use_positive
+			add = { value = 0
+				# s2_institution_colonization_investment_3 [political]; 原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 3 } } } add = 0.12 }
+				# s2_institution_colonization_investment_1 [political]; 原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:colonization.ai_weight
 	}
 }
 
@@ -323,6 +487,20 @@ international_relations = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:international_relations.ai_weight
+		# ACTION program_1a29f0136d172df1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1a29f0136d172df1_defensive_diplomacy_option_positive
+			add = { value = 0
+				# s2_remainder_international_relations_diplomatic_play_target [political]; 实际是外交行动目标，原版科技解锁防御协定与联盟等，形成有限防御选项需求代理；不声称存在可签对象、外交自主、关系或利益条件已满足，不保证研究来得及本次危机
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_diplomatic_play_target = yes } } add = 0.08 }
+			}
+			min = 1
+			max = 1.08
+		} }
+		# SITAI END information:international_relations.ai_weight
 	}
 }
 
@@ -343,6 +521,22 @@ law_enforcement = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:law_enforcement.ai_weight
+		# ACTION program_4eb6e154905bc727 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4eb6e154905bc727_institution_capacity_use_positive
+			add = { value = 0
+				# s2_institution_law_enforcement_investment_3 [political]; 原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 3 } } } add = 0.12 }
+				# s2_institution_law_enforcement_investment_1 [political]; 原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_police institution_investment_level = { institution = institution_police value >= 0 } institution_investment_level = { institution = institution_police value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:law_enforcement.ai_weight
 	}
 }
 
@@ -361,6 +555,22 @@ stock_exchange = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:stock_exchange.ai_weight
+		# ACTION program_a7eced261d026d69 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a7eced261d026d69_local_market_exposure_positive
+			add = { value = 0
+				# s2_remainder_stock_exchange_deep_local_market_exposure [political]; 本国任一州市场接入低于零点九支持同一市场暴露原因较高设计档；不声称精确价格改善、飞艇生产或系泊PM已可采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 0.9 } } } add = 0.1 }
+				# s2_remainder_stock_exchange_local_market_exposure [political]; 原版增加市场接入价格影响系数，本国任一州市场接入低于一支持有限价格传导暴露代理；不称提高铁路运输容量、修复基建缺口或实际MAPI饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 1.0 } } } add = 0.06 }
+			}
+			min = 1
+			max = 1.1
+		} }
+		# SITAI END information:stock_exchange.ai_weight
 	}
 }
 
@@ -382,11 +592,19 @@ medical_degrees = {
 		value = 1.5 # Important in general
 
 		# SITAI BEGIN information:medical_degrees.ai_weight
-		# medical_degrees_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_medical_degrees_health [political]; 低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 total_population >= 0 total_population > 0 } } multiply = 1.2 }
+		# ACTION program_2e0e5a9565eb744a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2e0e5a9565eb744a_health_capacity_use_positive
+			add = { value = 0
+				# technology_medical_degrees_health_system_capacity_pressure [economy]; 已使用更高制度投资层级，升档同一个容量采用机会，不伪称已达到全部原版动态上限
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 3 } } } add = 0.12 }
+				# technology_medical_degrees_health_system_capacity [economy]; 原版直接增加该制度投资上限，国家确实已建立并使用相应制度；不把低生活水平猜成疾病暴发
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
 		# SITAI END information:medical_degrees.ai_weight
 	}
 }
@@ -407,6 +625,22 @@ mass_communication = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:mass_communication.ai_weight
+		# ACTION program_39c900909d71c34f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_39c900909d71c34f_authority_capacity_pressure_positive
+			add = { value = 0
+				# s2_capacity_mass_communication_authority_deep_deficit [political]; 原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < -10 } } add = 0.15 }
+				# s2_capacity_mass_communication_authority_deficit [political]; 原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:mass_communication.ai_weight
 	}
 }
 
@@ -432,11 +666,24 @@ empiricism = {
 		value = 1.5 # Important in general
 
 		# SITAI BEGIN information:empiricism.ai_weight
-		# empiricism_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_empiricism_education [political]; 教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes } } multiply = 1.2 }
+		# ACTION program_4ed50fc7a9c13c56 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4ed50fc7a9c13c56_direct_literacy_need_positive
+			add = { value = 0
+				# technology_empiricism_literacy [economy]; 原版直接教育可及性或识字增长修复实际低识字，正常借款、战争或违约不取消知识收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.25 }
+			}
+			# GROUP program_4ed50fc7a9c13c56_education_capacity_use_positive
+			add = { value = 0
+				# technology_empiricism_schools_capacity_pressure [economy]; 已使用更高制度投资层级，升档同一个容量采用机会，不伪称已达到全部原版动态上限
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 3 } } } add = 0.12 }
+				# technology_empiricism_schools_capacity [economy]; 原版直接增加该制度投资上限，国家确实已建立并使用相应制度；不把低生活水平猜成疾病暴发
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.37
+		} }
 		# SITAI END information:empiricism.ai_weight
 	}
 }
@@ -494,6 +741,27 @@ egalitarianism = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:egalitarianism.ai_weight
+		# ACTION program_a25f7b63ade216f8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a25f7b63ade216f8_reform_expectation_negative
+			add = { value = 0
+				# s2_next_egalitarianism_reform_expectation [political]; 原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；该项与具体受益联合，不指定统一政治路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			# GROUP program_a25f7b63ade216f8_social_security_capacity_positive
+			add = { value = 0
+				# s2_next_egalitarianism_social_capacity_pressure [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.12 }
+				# s2_next_egalitarianism_social_capacity_foundation [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.08 }
+			}
+			min = 0.92
+			max = 1.12
+		} }
+		# SITAI END information:egalitarianism.ai_weight
 	}
 }
 
@@ -516,11 +784,19 @@ pharmaceuticals = {
 		value = 1
 
 		# SITAI BEGIN information:pharmaceuticals.ai_weight
-		# pharmaceuticals_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_pharmaceuticals_health [political]; 低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 total_population >= 0 total_population > 0 } } multiply = 1.2 }
+		# ACTION program_ef7a136dee8a7e5f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ef7a136dee8a7e5f_health_capacity_use_positive
+			add = { value = 0
+				# technology_pharmaceuticals_health_system_capacity_pressure [economy]; 已使用更高制度投资层级，升档同一个容量采用机会，不伪称已达到全部原版动态上限
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 3 } } } add = 0.12 }
+				# technology_pharmaceuticals_health_system_capacity [economy]; 原版直接增加该制度投资上限，国家确实已建立并使用相应制度；不把低生活水平猜成疾病暴发
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
 		# SITAI END information:pharmaceuticals.ai_weight
 	}
 }
@@ -547,11 +823,22 @@ modern_sewerage = {
 		value = 1.5 # Important in general
 
 		# SITAI BEGIN information:modern_sewerage.ai_weight
-		# modern_sewerage_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_modern_sewerage_health [political]; 低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 total_population >= 0 total_population > 0 } } multiply = 1.2 }
+		# ACTION program_4c1ee1986328a279 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4c1ee1986328a279_local_infrastructure_need_positive
+			add = { value = 0
+				# technology_modern_sewerage_infrastructure_direct [economy]; 锁定真实infrastructure_direct机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { infrastructure_delta < 0 } } } add = 0.12 }
+			}
+			# GROUP program_4c1ee1986328a279_observed_construction_capacity_positive
+			add = { value = 0
+				# technology_modern_sewerage_construction [economy]; 锁定真实construction机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes AND = { any_scope_building = { is_building_type = building_construction_sector level >= 1 occupancy >= 0.75 } } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.2000000000000002
+		} }
 		# SITAI END information:modern_sewerage.ai_weight
 	}
 }
@@ -598,6 +885,22 @@ quinine = {
 				add = 3
 			}
 		}
+
+		# SITAI BEGIN information:quinine.ai_weight
+		# ACTION program_cf0049ff7dd791cd [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_cf0049ff7dd791cd_health_capacity_positive
+			add = { value = 0
+				# s2_quinine_health_pressure [political]; 原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.15 }
+				# s2_quinine_health_foundation [political]; 原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:quinine.ai_weight
 	}
 }
 
@@ -616,6 +919,22 @@ organized_sports = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:organized_sports.ai_weight
+		# ACTION program_36b9d4333a2b9beb [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_36b9d4333a2b9beb_prestige_scale_positive
+			add = { value = 0
+				# s2_remainder_organized_sports_prestige_100 [political]; 原版提升声望系数百分之十，当前声望规模作为有限受益规模代理；不声称精确新增点数、低声望需求、体育赛事或下一排名缺口，不以未承认国家标签屏蔽
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes prestige >= 0 prestige >= 100 } } add = 0.08 }
+				# s2_remainder_organized_sports_prestige_50 [political]; 原版提升声望系数百分之十，当前声望规模作为有限受益规模代理；不声称精确新增点数、低声望需求、体育赛事或下一排名缺口，不以未承认国家标签屏蔽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes prestige >= 0 prestige >= 50 } } add = 0.04 }
+			}
+			min = 1
+			max = 1.08
+		} }
+		# SITAI END information:organized_sports.ai_weight
 	}
 }
 
@@ -673,8 +992,22 @@ central_archives = {
 		value = 1.5 # Important in general
 
 		# SITAI BEGIN information:central_archives.ai_weight
-		# central_archives_ai_weight [fiscal]; 行政不足时提高相关行政知识关注；不直接增加行政力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.25 }
+		# ACTION program_9730b1fc1374f41a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_9730b1fc1374f41a_administration_method_option_positive
+			add = { value = 0
+				# technology_central_archives_administration [fiscal]; 锁定真实administration机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { any_scope_building = { is_building_type = building_government_administration has_active_production_method = pm_horizontal_drawer_cabinets level >= 1 } } AND = { any_scope_building = { is_building_type = building_government_administration has_active_production_method = pm_simple_organization level >= 1 } } } bureaucracy < 0 } } add = 0.08 }
+			}
+			# GROUP program_9730b1fc1374f41a_state_tax_capacity_need_positive
+			add = { value = 0
+				# technology_central_archives_tax_capacity [fiscal]; 原版直接州税容量增加，响应本国已合并州同州税容低于用量；不以全国官僚余额代替
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage } } } add = 0.15 }
+			}
+			min = 1
+			max = 1.23
+		} }
 		# SITAI END information:central_archives.ai_weight
 	}
 }
@@ -698,11 +1031,19 @@ central_banking = {
 		value = 1
 
 		# SITAI BEGIN information:central_banking.ai_weight
-		# central_banking_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_central_banking_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
+		# ACTION program_04395bd35795856a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_04395bd35795856a_borrowing_interest_positive
+			add = { value = 0
+				# technology_central_banking_borrowing_pressure [fiscal]; 同一借款原因的高债务压力档；不与基础档累加
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.6 } } add = 0.22 }
+				# technology_central_banking_borrowing [fiscal]; 原版直接降低贷款利率，国家确实正在借款
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } add = 0.15 }
+			}
+			min = 1
+			max = 1.22
+		} }
 		# SITAI END information:central_banking.ai_weight
 	}
 }
@@ -724,6 +1065,22 @@ joint_stock_companies = {
 
 	ai_weight = {
 		value = 2 # important tech
+
+		# SITAI BEGIN information:joint_stock_companies.ai_weight
+		# ACTION program_f52341f395201a08 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f52341f395201a08_company_slot_pressure_positive
+			add = { value = 0
+				# s2_capacity_joint_stock_companies_company_capacity_reached [political]; 真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 num_companies >= "ROOT.max_num_companies" max_num_companies >= 0 } } add = 0.15 }
+				# s2_capacity_joint_stock_companies_companies_in_use [political]; 原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:joint_stock_companies.ai_weight
 	}
 }
 
@@ -746,11 +1103,24 @@ dialectics = {
 		value = 1
 
 		# SITAI BEGIN information:dialectics.ai_weight
-		# dialectics_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_dialectics_education [political]; 教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes } } multiply = 1.2 }
+		# ACTION program_3683d4824b307f15 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3683d4824b307f15_education_capacity_use_positive
+			add = { value = 0
+				# technology_dialectics_schools_capacity_pressure [economy]; 已使用更高制度投资层级，升档同一个容量采用机会，不伪称已达到全部原版动态上限
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 3 } } } add = 0.12 }
+				# technology_dialectics_schools_capacity [economy]; 原版直接增加该制度投资上限，国家确实已建立并使用相应制度；不把低生活水平猜成疾病暴发
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } } } add = 0.08 }
+			}
+			# GROUP program_3683d4824b307f15_university_method_option_positive
+			add = { value = 0
+				# technology_dialectics_knowledge [economy]; 锁定真实knowledge机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_scholastic_education level >= 1 } } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.2000000000000002
+		} }
 		# SITAI END information:dialectics.ai_weight
 	}
 }
@@ -773,6 +1143,20 @@ psychiatry = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:psychiatry.ai_weight
+		# ACTION program_5c32c322f80d1382 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5c32c322f80d1382_population_administration_positive
+			add = { value = 0
+				# s2_psychiatry_population_administration [political]; 原版降低人口行政基础成本系数，实际行政余额为负支持修复研究；不把科技名称当作心理健康效果
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = 0.15 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:psychiatry.ai_weight
 	}
 }
 
@@ -792,6 +1176,27 @@ realism = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:realism.ai_weight
+		# ACTION program_0c4b871f17b4fa87 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_0c4b871f17b4fa87_fine_art_demand_positive
+			add = { value = 0
+				# s2_remainder_realism_art_shortage_price [political]; 艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.12 }
+				# s2_remainder_realism_art_shortage [political]; 实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.08 }
+			}
+			# GROUP program_0c4b871f17b4fa87_observed_art_base_positive
+			add = { value = 0
+				# s2_remainder_realism_prior_art_method [political]; 艺术品有缺口且本国至少一级艺术学院实际采用前一阶段艺术生产方式，支持独立有限升级承接；不要求尚受本科技锁定的新PM，不以配方投入作研究付款门
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_art_academy has_active_production_method = pm_traditional_art level >= 1 } exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.1600000000000001
+		} }
+		# SITAI END information:realism.ai_weight
 	}
 }
 
@@ -852,6 +1257,22 @@ nationalism = {
 			}
 			multiply = 4
 		}
+
+		# SITAI BEGIN information:nationalism.ai_weight
+		# ACTION program_bb54f51cdc0af2f4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bb54f51cdc0af2f4_authority_capacity_pressure_positive
+			add = { value = 0
+				# s2_capacity_nationalism_authority_deep_deficit [political]; 原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < -10 } } add = 0.15 }
+				# s2_capacity_nationalism_authority_deficit [political]; 原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:nationalism.ai_weight
 	}
 }
 
@@ -898,6 +1319,30 @@ labor_movement = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:labor_movement.ai_weight
+		# ACTION program_2a1231d34149f960 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2a1231d34149f960_child_education_positive
+			add = { value = 0
+				# s2_labor_movement_child_education [political]; 原版限制童工或义务小学的真实解锁，在现行允许童工且识字不足时形成儿童教育研究受益；不把解锁当作法律已通过
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 } } add = 0.12 }
+			}
+			# GROUP program_2a1231d34149f960_reform_expectation_negative
+			add = { value = 0
+				# s2_labor_movement_reform_expectation [political]; 原版增加识字带来的生活水平预期；在已识字且生活水平偏低时计入独立负向预期压力，不让前面的教育或劳动安全奖励遮蔽
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			# GROUP program_2a1231d34149f960_workplace_protection_positive
+			add = { value = 0
+				# s2_labor_movement_workplace_protection [political]; 原版劳动监管或劳动保护解锁，与实际劳工比例和低生活水平共同构成独立的劳动安全受益代理；不假定已观察事故或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
+			}
+			min = 0.92
+			max = 1.27
+		} }
+		# SITAI END information:labor_movement.ai_weight
 	}
 }
 
@@ -921,6 +1366,22 @@ postal_savings = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:postal_savings.ai_weight
+		# ACTION program_bf4653c91bd233b9 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bf4653c91bd233b9_machinist_savings_positive
+			add = { value = 0
+				# s2_postal_savings_machinist_pressure [political]; 原版明确提高机械师投资池效率，真实机械师比例构成一个受益分支；比例阈值为设计选择，不把农民或劳工冒充机械师，也不声称已观察全部储蓄受益者
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } pop_type_percent_country = { pop_type = machinists percent >= 0.05 } } } add = 0.12 }
+				# s2_postal_savings_machinist_foundation [political]; 原版明确提高机械师投资池效率，真实机械师比例构成一个受益分支；比例阈值为设计选择，不把农民或劳工冒充机械师，也不声称已观察全部储蓄受益者
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = machinists percent >= 0 } pop_type_percent_country = { pop_type = machinists percent <= 1 } pop_type_percent_country = { pop_type = machinists percent >= 0.02 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:postal_savings.ai_weight
 	}
 }
 
@@ -970,6 +1431,25 @@ human_rights = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:human_rights.ai_weight
+		# ACTION program_bb6616ee860c8a01 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bb6616ee860c8a01_child_education_positive
+			add = { value = 0
+				# s2_human_rights_child_education [political]; 原版限制童工或义务小学的真实解锁，在现行允许童工且识字不足时形成儿童教育研究受益；不把解锁当作法律已通过
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.6 } } add = 0.12 }
+			}
+			# GROUP program_bb6616ee860c8a01_workplace_protection_positive
+			add = { value = 0
+				# s2_human_rights_workplace_protection [political]; 原版劳动监管或劳动保护解锁，与实际劳工比例和低生活水平共同构成独立的劳动安全受益代理；不假定已观察事故或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
+			}
+			min = 1
+			max = 1.27
+		} }
+		# SITAI END information:human_rights.ai_weight
 	}
 }
 
@@ -1032,6 +1512,22 @@ feminism = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:feminism.ai_weight
+		# ACTION program_b105a3710b9c2fc4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b105a3710b9c2fc4_social_security_capacity_positive
+			add = { value = 0
+				# s2_next_feminism_social_capacity_pressure [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.12 }
+				# s2_next_feminism_social_capacity_foundation [political]; 原版增加社会保障制度最大投资，低生活水平仅作为福利容量研究需求代理；同因果只取最强已知档，不把科技多解锁一项容量当独立重复收益，不声称观察到法律支持或制度饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:feminism.ai_weight
 	}
 }
 
@@ -1054,6 +1550,25 @@ steel_frame_buildings = {
 
 	ai_weight = {
 		value = 2 # Important in general
+
+		# SITAI BEGIN information:steel_frame_buildings.ai_weight
+		# ACTION program_dfd3a65f5100e04d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_dfd3a65f5100e04d_observed_urban_absorption_positive
+			add = { value = 0
+				# s2_next_steel_frame_buildings_observed_absorption [political]; 已有实际劳工基础、行政余额非负与净收入为正支持人口基建和施工容量的额外承接机会；这是独立承接代理，不是基础研究的全满足门或建造付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+			}
+			# GROUP program_dfd3a65f5100e04d_population_urban_capacity_positive
+			add = { value = 0
+				# s2_next_steel_frame_buildings_population_capacity [political]; 原版人口基础设施与施工容量增量支持人口规模代理的基础研究需求；两百万人为设计阈值，不声称已观察拥堵、施工饱和或实际基建缺口
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.1800000000000002
+		} }
+		# SITAI END information:steel_frame_buildings.ai_weight
 	}
 }
 
@@ -1092,6 +1607,22 @@ civilizing_mission = {
 			}
 			add = 1
 		}
+
+		# SITAI BEGIN information:civilizing_mission.ai_weight
+		# ACTION program_1c80dc94210621ac [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1c80dc94210621ac_institution_capacity_use_positive
+			add = { value = 0
+				# s2_institution_civilizing_mission_investment_3 [political]; 原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 3 } } } add = 0.12 }
+				# s2_institution_civilizing_mission_investment_1 [political]; 原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_colonial_affairs institution_investment_level = { institution = institution_colonial_affairs value >= 0 } institution_investment_level = { institution = institution_colonial_affairs value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:civilizing_mission.ai_weight
 	}
 }
 
@@ -1125,6 +1656,22 @@ anarchism = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:anarchism.ai_weight
+		# ACTION program_5553928ddc052658 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5553928ddc052658_supported_anarchy_option_positive
+			add = { value = 0
+				# s2_final_anarchism_supported_cooperative_option [political]; 同一被支持法律选项需求下，本国已具备law_anarchy实际要求的合作社所有制法律，减少未来采用的一个已证实法律前置缺口；该经济法律可经socialism或corporatism路径先于anarchism存在。与低档同原因取高，不重复累计
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_interest_group = { law_stance = { law = law_type:law_anarchy value > neutral } } NOT = { has_law_or_variant = law_type:law_anarchy } has_law_or_variant = law_type:law_cooperative_ownership } } add = 0.08 }
+				# s2_final_anarchism_supported_option [political]; 本国现有利益集团对精确law_anarchy具有实际正向law_stance，支持研究开放一个被支持的法律选项；贸易工会默认populist立场证明该需求可以研究前存在，不以尚未创建的anarchist运动作循环门
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_interest_group = { law_stance = { law = law_type:law_anarchy value > neutral } } NOT = { has_law_or_variant = law_type:law_anarchy } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.08
+		} }
+		# SITAI END information:anarchism.ai_weight
 	}
 }
 
@@ -1176,6 +1723,25 @@ socialism = {
 			}
 			add = 1
 		}
+
+		# SITAI BEGIN information:socialism.ai_weight
+		# ACTION program_ca72ef8189d9d752 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ca72ef8189d9d752_reform_expectation_negative
+			add = { value = 0
+				# s2_next_socialism_reform_expectation [political]; 原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；该项与具体受益联合，不指定统一政治路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			# GROUP program_ca72ef8189d9d752_workplace_protection_positive
+			add = { value = 0
+				# s2_next_socialism_workplace_protection [political]; 原版工作安全制度容量增加二级，实际劳工比例与低生活水平共同支持劳动保护研究需求代理；不假定法律支持、事故发生、制度投资或实际容量饱和
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } average_sol >= 0 average_sol < 12 } } add = 0.15 }
+			}
+			min = 0.92
+			max = 1.15
+		} }
+		# SITAI END information:socialism.ai_weight
 	}
 }
 
@@ -1283,6 +1849,22 @@ corporatism = {
 			}
 			add = 1.5
 		}
+
+		# SITAI BEGIN information:corporatism.ai_weight
+		# ACTION program_58541201419676b1 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_58541201419676b1_movement_radical_pressure_positive
+			add = { value = 0
+				# s2_corporatism_movement_pressure_upgrade [political]; 激进人口比例更高且已观察叛乱利益集团时采用同因果较强档；叛乱辅助未知只退回已证低档，不指定宗教或国家路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } has_insurrectionary_interest_groups = yes } } add = 0.12 }
+				# s2_corporatism_movement_pressure_foundation [political]; 原版降低来自政治运动的激进化系数，全国激进人口比例仅作为有损压力代理；不假定激进人口确实来自某一运动或指定意识形态
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.15 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:corporatism.ai_weight
 	}
 }
 
@@ -1323,6 +1905,22 @@ pan-nationalism = {
 			}
 			add = 5
 		}
+
+		# SITAI BEGIN information:pan-nationalism.ai_weight
+		# ACTION program_df25247b3376b4ab [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_df25247b3376b4ab_authority_capacity_pressure_positive
+			add = { value = 0
+				# s2_capacity_pan_nationalism_authority_deep_deficit [political]; 原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < -10 } } add = 0.15 }
+				# s2_capacity_pan_nationalism_authority_deficit [political]; 原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:pan-nationalism.ai_weight
 	}
 }
 
@@ -1344,6 +1942,22 @@ mutual_funds = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mutual_funds.ai_weight
+		# ACTION program_f84bbcff529d463d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f84bbcff529d463d_borrowing_interest_positive
+			add = { value = 0
+				# s2_mutual_funds_borrowing_pressure [political]; 实际借贷且债务信用比达到设计阈值时升到同因果较强档；债务比未知保留已证借贷基础档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.6 } } add = 0.22 }
+				# s2_mutual_funds_borrowing_foundation [political]; 原版贷款利率降低，已观察正在借贷支持利息负担基础研究；借贷本身不证明破产或健康
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } add = 0.15 }
+			}
+			min = 1
+			max = 1.22
+		} }
+		# SITAI END information:mutual_funds.ai_weight
 	}
 }
 
@@ -1365,6 +1979,22 @@ investment_banks = {
 
 	ai_weight = {
 		value = 2 # important tech
+
+		# SITAI BEGIN information:investment_banks.ai_weight
+		# ACTION program_fc6ef75885f65005 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_fc6ef75885f65005_company_slot_pressure_positive
+			add = { value = 0
+				# s2_capacity_investment_banks_company_capacity_reached [political]; 真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 num_companies >= "ROOT.max_num_companies" max_num_companies >= 0 } } add = 0.15 }
+				# s2_capacity_investment_banks_companies_in_use [political]; 原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:investment_banks.ai_weight
 	}
 }
 
@@ -1384,6 +2014,27 @@ camera = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:camera.ai_weight
+		# ACTION program_93c7ec520ab4190a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_93c7ec520ab4190a_fine_art_demand_positive
+			add = { value = 0
+				# s2_remainder_camera_art_shortage_price [political]; 艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.12 }
+				# s2_remainder_camera_art_shortage [political]; 实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.08 }
+			}
+			# GROUP program_93c7ec520ab4190a_observed_art_base_positive
+			add = { value = 0
+				# s2_remainder_camera_prior_art_method [political]; 艺术品有缺口且本国至少一级艺术学院实际采用前一阶段艺术生产方式，支持独立有限升级承接；不要求尚受本科技锁定的新PM，不以配方投入作研究付款门
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_art_academy has_active_production_method = pm_realist_art level >= 1 } exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.1600000000000001
+		} }
+		# SITAI END information:camera.ai_weight
 	}
 }
 
@@ -1408,8 +2059,17 @@ philosophical_pragmatism = {
 		value = 1
 
 		# SITAI BEGIN information:philosophical_pragmatism.ai_weight
-		# philosophical_pragmatism_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
+		# ACTION program_fc176564b9018884 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_fc176564b9018884_direct_literacy_need_positive
+			add = { value = 0
+				# technology_philosophical_pragmatism_literacy [economy]; 原版直接教育可及性或识字增长修复实际低识字，正常借款、战争或违约不取消知识收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.25 }
+			}
+			min = 1
+			max = 1.25
+		} }
 		# SITAI END information:philosophical_pragmatism.ai_weight
 	}
 }
@@ -1435,8 +2095,17 @@ identification_documents = {
 		value = 1
 
 		# SITAI BEGIN information:identification_documents.ai_weight
-		# identification_documents_ai_weight [fiscal]; 行政不足时提高相关行政知识关注；不直接增加行政力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } multiply = 1.25 }
+		# ACTION program_3608c9ec13e4d756 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3608c9ec13e4d756_state_tax_capacity_need_positive
+			add = { value = 0
+				# technology_identification_documents_tax_capacity [fiscal]; 原版直接州税容量增加，响应本国已合并州同州税容低于用量；不以全国官僚余额代替
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage } } } add = 0.15 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:identification_documents.ai_weight
 	}
 }
@@ -1461,6 +2130,25 @@ elevator = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:elevator.ai_weight
+		# ACTION program_8bc267ba16e88ca8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8bc267ba16e88ca8_observed_urban_absorption_positive
+			add = { value = 0
+				# s2_next_elevator_observed_absorption [political]; 已有实际劳工基础、行政余额非负与净收入为正支持人口基建和施工容量的额外承接机会；这是独立承接代理，不是基础研究的全满足门或建造付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } bureaucracy >= 0 net_total_income > 0 } } add = 0.08 }
+			}
+			# GROUP program_8bc267ba16e88ca8_population_urban_capacity_positive
+			add = { value = 0
+				# s2_next_elevator_population_capacity [political]; 原版人口基础设施与施工容量增量支持人口规模代理的基础研究需求；两百万人为设计阈值，不声称已观察拥堵、施工饱和或实际基建缺口
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes total_population >= 0 total_population >= 2000000 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.1800000000000002
+		} }
+		# SITAI END information:elevator.ai_weight
 	}
 }
 
@@ -1479,6 +2167,22 @@ zeppelins = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:zeppelins.ai_weight
+		# ACTION program_dcbac5ae0a659178 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_dcbac5ae0a659178_local_market_exposure_positive
+			add = { value = 0
+				# s2_remainder_zeppelins_deep_local_market_exposure [political]; 本国任一州市场接入低于零点九支持同一市场暴露原因较高设计档；不声称精确价格改善、飞艇生产或系泊PM已可采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 0.9 } } } add = 0.1 }
+				# s2_remainder_zeppelins_local_market_exposure [political]; 原版增加市场接入价格影响系数，本国任一州市场接入低于一支持有限价格传导暴露代理；不称提高铁路运输容量、修复基建缺口或实际MAPI饱和
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 1.0 } } } add = 0.06 }
+			}
+			min = 1
+			max = 1.1
+		} }
+		# SITAI END information:zeppelins.ai_weight
 	}
 }
 
@@ -1514,6 +2218,22 @@ malaria_prevention = {
 			}
 			add = 1
 		}
+
+		# SITAI BEGIN information:malaria_prevention.ai_weight
+		# ACTION program_74a5c8018ddb1439 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_74a5c8018ddb1439_health_capacity_positive
+			add = { value = 0
+				# s2_malaria_prevention_health_pressure [political]; 原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 8 } } add = 0.15 }
+				# s2_malaria_prevention_health_foundation [political]; 原版健康制度最大投资增加支持低生活水平代理的卫生研究需求；本项不声称已观察健康制度投资饱和、疟疾目标或实际殖民机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 } } add = 0.1 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:malaria_prevention.ai_weight
 	}
 }
 
@@ -1538,6 +2258,30 @@ central_planning = {
 
 	ai_weight = {
 		value = 1.5 # Important in general
+
+		# SITAI BEGIN information:central_planning.ai_weight
+		# ACTION program_4d7f3b9eb95aa940 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4d7f3b9eb95aa940_administration_method_option_positive
+			add = { value = 0
+				# technology_central_planning_administration [fiscal]; 锁定真实administration机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { any_scope_building = { is_building_type = building_government_administration has_active_production_method = pm_horizontal_drawer_cabinets level >= 1 } } AND = { any_scope_building = { is_building_type = building_government_administration has_active_production_method = pm_simple_organization level >= 1 } } AND = { any_scope_building = { is_building_type = building_government_administration has_active_production_method = pm_vertical_filing_cabinets level >= 1 } } } bureaucracy < 0 } } add = 0.08 }
+			}
+			# GROUP program_4d7f3b9eb95aa940_direct_literacy_need_positive
+			add = { value = 0
+				# technology_central_planning_literacy [economy]; 原版直接教育可及性或识字增长修复实际低识字，正常借款、战争或违约不取消知识收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.25 }
+			}
+			# GROUP program_4d7f3b9eb95aa940_state_tax_capacity_need_positive
+			add = { value = 0
+				# technology_central_planning_tax_capacity [fiscal]; 原版直接州税容量增加，响应本国已合并州同州税容低于用量；不以全国官僚余额代替
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage } } } add = 0.15 }
+			}
+			min = 1
+			max = 1.48
+		} }
+		# SITAI END information:central_planning.ai_weight
 	}
 }
 
@@ -1580,6 +2324,27 @@ political_agitation = {
 			}
 			add = -0.5
 		}
+
+		# SITAI BEGIN information:political_agitation.ai_weight
+		# ACTION program_7f7c3f89a807c483 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_7f7c3f89a807c483_authority_capacity_pressure_positive
+			add = { value = 0
+				# s2_capacity_political_agitation_authority_deep_deficit [political]; 原版权威缺口教程使用低于负十的缺口条件；此处据此设同一权威容量收益的较高设计档，不代表所有短缺必然被科技消除
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < -10 } } add = 0.15 }
+				# s2_capacity_political_agitation_authority_deficit [political]; 原版权威系数增加百分之十，已观察权威余额为负形成有限容量收益；不推导政治参与缺口或指定文化、法律与统一路线
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes authority < 0 } } add = 0.08 }
+			}
+			# GROUP program_7f7c3f89a807c483_reform_expectation_negative
+			add = { value = 0
+				# s2_capacity_political_agitation_reform_expectation [political]; 原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；权威收益未知不消除此成本，成本未知不消除已观察权威收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			min = 0.92
+			max = 1.15
+		} }
+		# SITAI END information:political_agitation.ai_weight
 	}
 }
 
@@ -1601,6 +2366,22 @@ international_exchange_standards = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:international_exchange_standards.ai_weight
+		# ACTION program_77f62bba5e0f640b [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_77f62bba5e0f640b_borrowing_interest_positive
+			add = { value = 0
+				# s2_international_exchange_standards_borrowing_pressure [political]; 实际借贷且债务信用比达到设计阈值时升到同因果较强档；债务比未知保留已证借贷基础档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.6 } } add = 0.22 }
+				# s2_international_exchange_standards_borrowing_foundation [political]; 原版贷款利率降低，已观察正在借贷支持利息负担基础研究；借贷本身不证明破产或健康
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } add = 0.15 }
+			}
+			min = 1
+			max = 1.22
+		} }
+		# SITAI END information:international_exchange_standards.ai_weight
 	}
 }
 
@@ -1620,6 +2401,22 @@ corporate_management = {
 
 	ai_weight = {
 		value = 2 # important tech
+
+		# SITAI BEGIN information:corporate_management.ai_weight
+		# ACTION program_d95d3c312d66995f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d95d3c312d66995f_company_slot_pressure_positive
+			add = { value = 0
+				# s2_capacity_corporate_management_company_capacity_reached [political]; 真实公司数量达到或超过本国当前公司容量，支持同一槽位需求的较高档；保留正公司数条件，不把零公司零容量推成已观察机会；容量未知仍保留已使用公司的低档
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 num_companies >= "ROOT.max_num_companies" max_num_companies >= 0 } } add = 0.15 }
+				# s2_capacity_corporate_management_companies_in_use [political]; 原版增加一个公司槽；已存在公司仅作为既有公司组织活动的有限需求代理，不声称有新公司候选、盈利或特许用尽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:corporate_management.ai_weight
 	}
 }
 
@@ -1642,6 +2439,20 @@ psychoanalysis = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:psychoanalysis.ai_weight
+		# ACTION program_e316fe188768d502 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_e316fe188768d502_population_administration_positive
+			add = { value = 0
+				# s2_psychoanalysis_population_administration [political]; 原版降低人口行政基础成本系数，实际行政余额为负支持修复研究；不把科技名称当作心理健康效果
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = 0.15 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:psychoanalysis.ai_weight
 	}
 }
 
@@ -1661,6 +2472,27 @@ film = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:film.ai_weight
+		# ACTION program_a1930806182e1ee3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a1930806182e1ee3_fine_art_demand_positive
+			add = { value = 0
+				# s2_remainder_film_art_shortage_price [political]; 艺术品实际缺口且价格高于基础百分之二十五，增强同一艺术需求代理；价格未知保留缺口基础档，不推断精确盈利或最终用户消费
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.12 }
+				# s2_remainder_film_art_shortage [political]; 实际本国所属市场艺术品净订单缺口形成艺术生产能力需求代理；本科技真实解锁学院或改良艺术生产方式，但不保证本国生产利润或贸易不能解决，不要求候选PM已采用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.08 }
+			}
+			# GROUP program_a1930806182e1ee3_observed_art_base_positive
+			add = { value = 0
+				# s2_remainder_film_prior_art_method [political]; 艺术品有缺口且本国至少一级艺术学院实际采用前一阶段艺术生产方式，支持独立有限升级承接；不要求尚受本科技锁定的新PM，不以配方投入作研究付款门
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { is_building_type = building_art_academy has_active_production_method = pm_photographic_art level >= 1 } exists = market market = { exists = mg:fine_art mg:fine_art = { market_goods_delta < 0 } } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.1600000000000001
+		} }
+		# SITAI END information:film.ai_weight
 	}
 }
 
@@ -1686,6 +2518,27 @@ multilateral_alliances = {
 			limit = { country_rank >= rank_value:great_power }
 			add = 2
 		}
+
+		# SITAI BEGIN information:multilateral_alliances.ai_weight
+		# ACTION program_2c1016b3d3a97089 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2c1016b3d3a97089_alliance_capacity_use_positive
+			add = { value = 0
+				# s2_remainder_multilateral_alliances_alliances_in_use [political]; 原版允许多个联盟，当前已有联盟仅形成已使用联盟能力的有限容量需求代理；不声称已找到第二盟友、已用尽真实槽位或必然可达成协定
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_alliances >= 0 num_alliances >= 1 } } add = 0.08 }
+			}
+			# GROUP program_2c1016b3d3a97089_diplomatic_play_maneuvers_positive
+			add = { value = 0
+				# s2_remainder_multilateral_alliances_diplomatic_play_initiator [political]; 原版外交行动数加成百分之五十，实际处于外交行动主要发起或目标角色支持有限研究子收益；两角色同原因去重，不把战争泛化为外交行动或保证研究赶得上本次行动
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_diplomatic_play_initiator = yes } } add = 0.08 }
+				# s2_remainder_multilateral_alliances_diplomatic_play_target [political]; 原版外交行动数加成百分之五十，实际处于外交行动主要发起或目标角色支持有限研究子收益；两角色同原因去重，不把战争泛化为外交行动或保证研究赶得上本次行动
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_diplomatic_play_target = yes } } add = 0.08 }
+			}
+			min = 1
+			max = 1.1600000000000001
+		} }
+		# SITAI END information:multilateral_alliances.ai_weight
 	}
 }
 
@@ -1711,6 +2564,22 @@ mass_surveillance = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mass_surveillance.ai_weight
+		# ACTION program_f39ab7477f4c5241 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f39ab7477f4c5241_institution_capacity_use_positive
+			add = { value = 0
+				# s2_institution_mass_surveillance_investment_3 [political]; 原版增加对应制度容量，已存在制度且实际投资至少3级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 3 } } } add = 0.12 }
+				# s2_institution_mass_surveillance_investment_1 [political]; 原版增加对应制度容量，已存在制度且实际投资至少1级形成制度正在使用的有限研究需求；投资3级较高档是设计选择，不声称达到当前上限或有新增投资计划
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_home_affairs institution_investment_level = { institution = institution_home_affairs value >= 0 } institution_investment_level = { institution = institution_home_affairs value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
+		# SITAI END information:mass_surveillance.ai_weight
 	}
 }
 
@@ -1732,11 +2601,19 @@ antibiotics = {
 		value = 1
 
 		# SITAI BEGIN information:antibiotics.ai_weight
-		# antibiotics_ai_weight [political]; 生活水平偏低时有限提高公共健康知识关注，不直接授予民生修正
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no average_sol >= 0 average_sol < 12 } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { average_sol >= 0 NOT = { average_sol < 12 } } } AND = { exists = ROOT ROOT = { average_sol >= 0 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_antibiotics_health [political]; 低生活水平与有效人口依据支持公共健康研究，不把识字不足等同为医疗需求
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes average_sol >= 0 average_sol < 12 total_population >= 0 total_population > 0 } } multiply = 1.2 }
+		# ACTION program_2dafc73fb109e314 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2dafc73fb109e314_health_capacity_use_positive
+			add = { value = 0
+				# technology_antibiotics_health_system_capacity_pressure [economy]; 已使用更高制度投资层级，升档同一个容量采用机会，不伪称已达到全部原版动态上限
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 3 } } } add = 0.12 }
+				# technology_antibiotics_health_system_capacity [economy]; 原版直接增加该制度投资上限，国家确实已建立并使用相应制度；不把低生活水平猜成疾病暴发
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_institution = institution_health_system institution_investment_level = { institution = institution_health_system value >= 0 } institution_investment_level = { institution = institution_health_system value >= 1 } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.12
+		} }
 		# SITAI END information:antibiotics.ai_weight
 	}
 }
@@ -1765,6 +2642,25 @@ mass_propaganda = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mass_propaganda.ai_weight
+		# ACTION program_9b6b4631498e8c38 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_9b6b4631498e8c38_battle_war_support_positive
+			add = { value = 0
+				# s2_next_mass_propaganda_battle_support [political]; 原版增加战斗带来的战争支持收益并减轻战斗造成的战争支持损失，已观察战时形成有限研究受益；不假定已发生战斗或必胜，不把候选当收音机生产
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } add = 0.15 }
+			}
+			# GROUP program_9b6b4631498e8c38_reform_expectation_negative
+			add = { value = 0
+				# s2_next_mass_propaganda_reform_expectation [political]; 原版增加识字带来的生活水平预期，已识字且生活水平偏低时计入独立负向预期压力；该项与具体受益联合，不指定统一政治路线
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 average_sol >= 0 average_sol < 12 } } add = -0.08 }
+			}
+			min = 0.92
+			max = 1.15
+		} }
+		# SITAI END information:mass_propaganda.ai_weight
 	}
 }
 
@@ -1785,11 +2681,19 @@ modern_financial_instruments = {
 		value = 1
 
 		# SITAI BEGIN information:modern_financial_instruments.ai_weight
-		# modern_financial_instruments_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_modern_financial_instruments_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
+		# ACTION program_4948f627bdde207f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4948f627bdde207f_borrowing_interest_positive
+			add = { value = 0
+				# technology_modern_financial_instruments_borrowing_pressure [fiscal]; 同一借款原因的高债务压力档；不与基础档累加
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes scaled_debt >= 0 scaled_debt >= 0.6 } } add = 0.22 }
+				# technology_modern_financial_instruments_borrowing [fiscal]; 原版直接降低贷款利率，国家确实正在借款
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } add = 0.15 }
+			}
+			min = 1
+			max = 1.22
+		} }
 		# SITAI END information:modern_financial_instruments.ai_weight
 	}
 }
@@ -1813,11 +2717,26 @@ macroeconomics = {
 		value = 3 # very important tech
 
 		# SITAI BEGIN information:macroeconomics.ai_weight
-		# macroeconomics_ai_weight [fiscal]; 借款期间关注原版财政知识链；不以研究替代即时偿债
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes taking_loans = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { taking_loans = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_macroeconomics_fiscal [fiscal]; 偿付压力提高财政金融知识的研究机会，研究队列仍有限
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes } } multiply = 1.22 }
+		# ACTION program_2a3c5507b34d6261 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2a3c5507b34d6261_company_slot_pressure_positive
+			add = { value = 0
+				# technology_macroeconomics_company_limit [market]; 实际公司数达到当前公司上限，升档同一个容量原因
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 num_companies >= "ROOT.max_num_companies" max_num_companies >= 0 } } add = 0.15 }
+				# technology_macroeconomics_companies [market]; 已使用公司槽位，原版科技直接增加公司上限
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes num_companies >= 0 num_companies > 0 } } add = 0.08 }
+			}
+			# GROUP program_2a3c5507b34d6261_local_market_exposure_positive
+			add = { value = 0
+				# technology_macroeconomics_market_pressure [market]; 原版直接提升本地价格市场传导，响应本国实际市场接入不足；不推断利息、铸币或财政收入
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 0.9 } } } add = 0.1 }
+				# technology_macroeconomics_market_base [market]; 原版直接提升本地价格市场传导，响应本国实际市场接入不足；不推断利息、铸币或财政收入
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { market_access < 1.0 } } } add = 0.06 }
+			}
+			min = 1
+			max = 1.25
+		} }
 		# SITAI END information:macroeconomics.ai_weight
 	}
 }
@@ -1840,6 +2759,20 @@ behaviorism = {
 
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:behaviorism.ai_weight
+		# ACTION program_3fd4781961b037f5 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3fd4781961b037f5_population_administration_positive
+			add = { value = 0
+				# s2_behaviorism_population_administration [political]; 原版降低人口行政基础成本系数，实际行政余额为负支持修复研究；不把科技名称当作心理健康效果
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = 0.15 }
+			}
+			min = 1
+			max = 1.15
+		} }
+		# SITAI END information:behaviorism.ai_weight
 	}
 }
 
@@ -1860,11 +2793,22 @@ analytical_philosophy = {
 		value = 1
 
 		# SITAI BEGIN information:analytical_philosophy.ai_weight
-		# analytical_philosophy_ai_weight [political]; 识字不足时更关注教育知识链，研究资格和学术能力仍由原版约束
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } multiply = 1.25 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_analytical_philosophy_education [political]; 教育或健康缺口提高社会科技方向的相对机会，不赠送学校和研究点
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes } } multiply = 1.2 }
+		# ACTION program_207e8d977c4bdb06 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_207e8d977c4bdb06_direct_literacy_need_positive
+			add = { value = 0
+				# technology_analytical_philosophy_literacy [economy]; 原版直接教育可及性或识字增长修复实际低识字，正常借款、战争或违约不取消知识收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.25 }
+			}
+			# GROUP program_207e8d977c4bdb06_university_method_option_positive
+			add = { value = 0
+				# technology_analytical_philosophy_knowledge [economy]; 锁定真实knowledge机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_philosophy_department level >= 1 } } AND = { any_scope_building = { is_building_type = building_university has_active_production_method = pm_scholastic_education level >= 1 } } } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.33
+		} }
 		# SITAI END information:analytical_philosophy.ai_weight
 	}
 }
@@ -1885,5 +2829,19 @@ paved_roads = {
 
 	ai_weight = {
 		value = 2 # Important for those nice-looking roads!
+
+		# SITAI BEGIN information:paved_roads.ai_weight
+		# ACTION program_0084f52bc15d2ef5 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_0084f52bc15d2ef5_market_automobile_opportunity_positive
+			add = { value = 0
+				# s2_final_paved_roads_market_automobile_opportunity [political]; 所属市场已存在真实汽车总消费且汽车卖单不低于买单，为未来人口采用汽车并受益于道路消费基建系数提供低强度市场可用性机会代理；正消费排除只有供给却无人使用的情形，非负订单差排除当前市场供给不足，倍率只作有限设计判断
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_consumption >= 0 market_goods_consumption > 0 market_goods_delta >= 0 } } } } add = 0.04 }
+			}
+			min = 1
+			max = 1.04
+		} }
+		# SITAI END information:paved_roads.ai_weight
 	}
 }

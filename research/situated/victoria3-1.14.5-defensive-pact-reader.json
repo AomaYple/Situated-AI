@@ -1,0 +1,432 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.14.5-windows-x64",
+  "exe": {
+    "path": "binaries/victoria3.exe",
+    "sha256": "9b6f133a5dc235de9135d7b57e86ceda8282d1ba6c0e185f3ee19c22f8917f54",
+    "bytes": 97774200,
+    "image_base": "0x140000000"
+  },
+  "script_hashes": {
+    "common/treaty_articles/01_defensive_pact.txt": "caa5603cf92e93bedfef94dbb94d464666772bcf5acadbc6d81991a6409334c2",
+    "common/treaty_articles/00_alliance.txt": "1b43a24840cf27ee0a52a141971ced0272806ae27737f61208783c58f91c0d03",
+    "common/treaty_articles/02_guarantee_independence.txt": "633f57dd7b0f934d66e268d82e95be4e4f820acba1419064d3a80c5e3914ebc3",
+    "common/ai_strategies/00_default_strategy.txt": "fd4b531d39bcd85c3491c703ecb08ea739094f795b13a176765cf559ece3fbee",
+    "common/script_values/ai_script_values.txt": "e30fda467b1baab99e499e79867683e5a2c59e1ca344cbe27e4171349290e3a4",
+    "common/scripted_effects/00_ai_decree_effects.txt": "f099caa25dca1f93db0b216575e00f990757b9897b02dadc811948ca5850d219",
+    "common/scripted_buttons/04_india_buttons.txt": "5cb807e3ee28e28b0c66b2f7ae6a2e71098623a71415fa5976a9c95bc010b8bc",
+    "common/character_interactions/01_additional_interactions.txt": "9f7e23778afa1adc23ece0819e3ec0a694e5a7355cfeaf1cf5acefd6cafc3809",
+    "common/script_values/ep2_japan_values.txt": "fbe8069966e67a2b73a9bb7672a219092b19cea0aba3c857813deade510cca9e",
+    "common/script_values/command_values.txt": "6ed32ab1c6d9d2b8eb7ca86ee30f4363885dae965b65c4eec4d18c364ebf4946"
+  },
+  "reader": {
+    "engine": "num_defensive_pacts",
+    "actor": "country",
+    "scope": "root",
+    "unit": "treaty_article_count",
+    "kind": "number",
+    "minimum": 0,
+    "parameters": [],
+    "argument": null,
+    "consumer": "ai_strategy_default.wanted_army_size"
+  },
+  "rtti": [
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x14471e728",
+        "rva": "0x471e728",
+        "file_offset": "0x471db28",
+        "bytes": "e0dd78420100000080d362400100000080d3624001000000005c63400100000080d662400100000060087742010000003052864101000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144c34178",
+        "rva": "0x4c34178",
+        "file_offset": "0x4c33578",
+        "bytes": "010000000000000000000000b03a7205f807c3047841c304"
+      },
+      "subobject_offset": "0x0",
+      "constructor_displacement": 0,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x145723ab0",
+        "rva": "0x5723ab0",
+        "file_offset": "0x57226b0",
+        "bytes": "40d849440100000000000000000000002e3f4156434e756d446566656e736976"
+      },
+      "type_name": ".?AVCNumDefensivePactsLink@?A0x62627c75@@",
+      "hierarchy_rva": "0x4c307f8"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x144546a80",
+        "rva": "0x4546a80",
+        "file_offset": "0x4545e80",
+        "bytes": "f8abda4001000000f41a7d400100000080d66240010000007072bf4301000000081b7d400100000080d6624001000000c96000001f320000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144a2f890",
+        "rva": "0x4a2f890",
+        "file_offset": "0x4a2ec90",
+        "bytes": "01000000e00b000004000000004024055837990490f8a204"
+      },
+      "subobject_offset": "0xbe0",
+      "constructor_displacement": 4,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x145244000",
+        "rva": "0x5244000",
+        "file_offset": "0x5242c00",
+        "bytes": "40d849440100000000000000000000002e3f4156435472656174794172746963"
+      },
+      "type_name": ".?AVCTreatyArticleType@@",
+      "hierarchy_rva": "0x4993758"
+    },
+    {
+      "vftable": {
+        "label": "vftable",
+        "va": "0x1445c9b20",
+        "rva": "0x45c9b20",
+        "file_offset": "0x45c8f20",
+        "bytes": "a0a6264101000000c0a861410100000050593543010000003057354301000000e05b354301000000505d35430100000090a6264101000000"
+      },
+      "locator": {
+        "label": "RTTICompleteObjectLocator",
+        "va": "0x144ade220",
+        "rva": "0x4ade220",
+        "file_offset": "0x4add620",
+        "bytes": "010000000000000000000000085c5c0590e1ad0420e2ad04"
+      },
+      "subobject_offset": "0x0",
+      "constructor_displacement": 0,
+      "type_descriptor": {
+        "label": "TypeDescriptor",
+        "va": "0x1455c5c08",
+        "rva": "0x55c5c08",
+        "file_offset": "0x55c4808",
+        "bytes": "40d849440100000000000000000000002e3f41563f24434a6f6d696e69536372"
+      },
+      "type_name": ".?AV?$CJominiScriptScopeObject@VCCountry@@@@",
+      "hierarchy_rva": "0x4ade190"
+    }
+  ],
+  "observations": [
+    {
+      "label": "link name",
+      "va": "0x14470d448",
+      "rva": "0x470d448",
+      "file_offset": "0x470c848",
+      "bytes": "6e756d5f646566656e736976655f706163747300"
+    },
+    {
+      "label": "registered link documentation",
+      "va": "0x14470d460",
+      "rva": "0x470d460",
+      "file_offset": "0x470c860",
+      "bytes": "53636f706520746f20746865206e756d626572206f6620646566656e736976652070616374732074617267657420636f756e7472792068617320696e20746f74616c20286578616d706c653a206e756d5f646566656e736976655f7061637473203e3d20322900"
+    },
+    {
+      "label": "global registration name binding and vftable install",
+      "va": "0x1403fe27a",
+      "rva": "0x3fe27a",
+      "file_offset": "0x3fd67a",
+      "bytes": "488d05c7f130044889442430c744243813000000c644243c000fb744243d668944243d0fb644243f8844243f488b0dfb2c60054885c97508e8491e7f03488bc8c5f810442430c5f97f442430488d542430e800167f038bd8488d3d67af6105488bcfe88ff43602488d054004320448890551af6105"
+    },
+    {
+      "label": "global registration insertion",
+      "va": "0x1403fe376",
+      "rva": "0x3fe376",
+      "file_offset": "0x3fd776",
+      "bytes": "66c705cdae61050000488bcfe8a94cf402"
+    },
+    {
+      "label": "Country required tag and lookup",
+      "va": "0x14277086d",
+      "rva": "0x277086d",
+      "file_offset": "0x276fc6d",
+      "bytes": "498b004c8be26683380575058b4808eb05b9ffffffff894c24584533ed488d4c2458418bf5e8294106fe"
+    },
+    {
+      "label": "Country treaty array and length",
+      "va": "0x142770897",
+      "rva": "0x2770897",
+      "file_offset": "0x276fc97",
+      "bytes": "488bb8b8030000486380c40300004c8d3c87493bff747b"
+    },
+    {
+      "label": "CTreaty lookup and article array iteration",
+      "va": "0x1427708c0",
+      "rva": "0x27708c0",
+      "file_offset": "0x276fcc0",
+      "bytes": "8b07488d4c245889442458e8103754fe488b58104863401c4c8d3483493bde7430"
+    },
+    {
+      "label": "CTreatyArticle lookup and exact flag filter",
+      "va": "0x1427708e1",
+      "rva": "0x27708e1",
+      "file_offset": "0x276fce1",
+      "bytes": "8b03488d4c2458894424588beee8fd2e54fe8d7601488b48180fb681d0000000d0e8a8010f44f54883c304493bde75d0"
+    },
+    {
+      "label": "reader numeric return count scale",
+      "va": "0x142770929",
+      "rva": "0x2770929",
+      "file_offset": "0x276fd29",
+      "bytes": "4863c64869c8a086010041c7042401000000498bc449894c240848"
+    },
+    {
+      "label": "reader input signature virtual method",
+      "va": "0x141865230",
+      "rva": "0x1865230",
+      "file_offset": "0x1864630",
+      "bytes": "48c7420800000000488bc248c70210000000c3"
+    },
+    {
+      "label": "reader numeric result signature virtual method",
+      "va": "0x14276c9d0",
+      "rva": "0x276c9d0",
+      "file_offset": "0x276bdd0",
+      "bytes": "48c7420800000000488bc248c70201000000c3"
+    },
+    {
+      "label": "Country independent tag getter",
+      "va": "0x14161a8c0",
+      "rva": "0x161a8c0",
+      "file_offset": "0x1619cc0",
+      "bytes": "b805000000c3"
+    },
+    {
+      "label": "Country lookup type_info name",
+      "va": "0x145244310",
+      "rva": "0x5244310",
+      "file_offset": "0x5242f10",
+      "bytes": "2e3f415643436f756e747279404000"
+    },
+    {
+      "label": "treaty lookup type_info pointer",
+      "va": "0x140cb4002",
+      "rva": "0xcb4002",
+      "file_offset": "0xcb3402",
+      "bytes": "488d0ddf367d04e8f2275803"
+    },
+    {
+      "label": "CTreaty type_info name",
+      "va": "0x1454876f0",
+      "rva": "0x54876f0",
+      "file_offset": "0x54862f0",
+      "bytes": "2e3f4156435472656174794040"
+    },
+    {
+      "label": "article lookup type_info pointer",
+      "va": "0x140cb3812",
+      "rva": "0xcb3812",
+      "file_offset": "0xcb2c12",
+      "bytes": "488d0dd7477b04e8e22f5803"
+    },
+    {
+      "label": "CTreatyArticle type_info name",
+      "va": "0x145467ff8",
+      "rva": "0x5467ff8",
+      "file_offset": "0x5466bf8",
+      "bytes": "2e3f41564354726561747941727469636c654040"
+    },
+    {
+      "label": "article parser adjustor thunk",
+      "va": "0x1407d1b08",
+      "rva": "0x7d1b08",
+      "file_offset": "0x7d0f08",
+      "bytes": "486341fc482bc8e9cc9b5c00"
+    },
+    {
+      "label": "flags parser branch token",
+      "va": "0x140d9b730",
+      "rva": "0xd9b730",
+      "file_offset": "0xd9ab30",
+      "bytes": "4181f8e40600000f8f1a0300000f84d3010000"
+    },
+    {
+      "label": "flags atom and pointer",
+      "va": "0x144790130",
+      "rva": "0x4790130",
+      "file_offset": "0x478f530",
+      "bytes": "e4060000000000008081754401000000"
+    },
+    {
+      "label": "flags name",
+      "va": "0x144758180",
+      "rva": "0x4758180",
+      "file_offset": "0x4757580",
+      "bytes": "666c61677300"
+    },
+    {
+      "label": "flags table and matching defensive pact index1",
+      "va": "0x144546990",
+      "rva": "0x4546990",
+      "file_offset": "0x4545d90",
+      "bytes": "79430000e25900002d5f0000c83700004a550000c9370000ca370000cb370000cd370000ce370000955a0000ef370000ed370000ee370000995e0000f45c0000fd5c0000886300009b620000d45b0000816300007f630000806300000662000005620000dc600000df600000de6000006e610000cf530000d0530000fe610000b5650000"
+    },
+    {
+      "label": "defensive pact flag atom",
+      "va": "0x1447ac880",
+      "rva": "0x47ac880",
+      "file_offset": "0x47abc80",
+      "bytes": "e25900000000000030b5774401000000"
+    },
+    {
+      "label": "defensive pact flag name",
+      "va": "0x14477b530",
+      "rva": "0x477b530",
+      "file_offset": "0x477a930",
+      "bytes": "69735f646566656e736976655f7061637400"
+    },
+    {
+      "label": "flags parsing table address and search",
+      "va": "0x140d9b9bb",
+      "rva": "0xd9b9bb",
+      "file_offset": "0xd9adbb",
+      "bytes": "4c8d2d52b07a034c8d25c7af7a030f1f8000000000448b07498bd5498bcce8623e49034c8bc0493bc574094d2bc449c1f802eb0341b021418bc8ba0100000048"
+    },
+    {
+      "label": "flags parsing index to bit and object write",
+      "va": "0x140d9b9de",
+      "rva": "0xd9b9de",
+      "file_offset": "0xd9adde",
+      "bytes": "4c8bc0493bc574094d2bc449c1f802eb0341b021418bc8ba0100000048d3e2410fb6c048c1e806488b8cc3f0f4ffff4885d17511480bd1488994c3f0f4ffffff83f8f4ffff488d93f0f4ffff488d4d"
+    },
+    {
+      "label": "wanted army Country context and exact member eval",
+      "va": "0x141644256",
+      "rva": "0x1644256",
+      "file_offset": "0x1643656",
+      "bytes": "b80500000066894424308b431848894424384c89bd90000000488d8f20180000488d859000000048894424204533c94c8d442430488bd6e88eb575ff"
+    },
+    {
+      "label": "scope context forwarding to public evaluator",
+      "va": "0x140da84d7",
+      "rva": "0xda84d7",
+      "file_offset": "0xda78d7",
+      "bytes": "498bf9498bd8488bea488bf1498bd0488d4c2450e8e07259029048895c243048895c243848895c2440488d4424504889442448488b84242004000048894424204c8bcf4c8d442430488bd5488bcee8161b0000"
+    }
+  ],
+  "flag_map": {
+    "flags": [
+      "0x4379",
+      "0x59e2",
+      "0x5f2d",
+      "0x37c8",
+      "0x554a",
+      "0x37c9",
+      "0x37ca",
+      "0x37cb",
+      "0x37cd",
+      "0x37ce",
+      "0x5a95",
+      "0x37ef",
+      "0x37ed",
+      "0x37ee",
+      "0x5e99",
+      "0x5cf4",
+      "0x5cfd",
+      "0x6388",
+      "0x629b",
+      "0x5bd4",
+      "0x6381",
+      "0x637f",
+      "0x6380",
+      "0x6206",
+      "0x6205",
+      "0x60dc",
+      "0x60df",
+      "0x60de",
+      "0x616e",
+      "0x53cf",
+      "0x53d0",
+      "0x61fe",
+      "0x65b5"
+    ],
+    "is_defensive_pact_atom": "0x59e2",
+    "is_defensive_pact_index": 1,
+    "parser_subobject_offset": "0xbe0",
+    "parser_flags_signed_offset": "-0xb10",
+    "complete_object_flags_offset": "0xd0"
+  },
+  "limits": [
+    "Current Country-associated Treaty article count; not deduplicated by partner.",
+    "No additional active, draft, suspended or ratification filter is established.",
+    "No fulfilment, military strength, reachability, safety or runtime quality claim.",
+    "Only own Country root; no authorization of arbitrary foreign-country information."
+  ],
+  "provenance": {
+    "probe_sha256": "80369bdb897483d2eea89c4bdd8f5920b0260c831ba615812d253f3a95ce9e59",
+    "raw_result_sha256": "c2f4a0b3156ea86cedf389581f11b481d47fbd9d3184d7b55182158739629a89"
+  },
+  "positive_native_guard": {
+    "readers": [
+      {
+        "engine": "wanted_army_size_script_value",
+        "scope": "root",
+        "kind": "number",
+        "unit": "battalions"
+      },
+      {
+        "engine": "wanted_marines_size_script_value",
+        "scope": "root",
+        "kind": "number",
+        "unit": "battalions"
+      }
+    ],
+    "comparison": "ROOT.wanted_army_size_script_value > ROOT.wanted_marines_size_script_value",
+    "native_consumer": "wanted_army_size_script_value minus wanted_marines_size_script_value",
+    "references": [
+      {
+        "source": "common/script_values/ai_script_values.txt",
+        "lines": [
+          134,
+          326
+        ]
+      },
+      {
+        "source": "common/scripted_effects/00_ai_decree_effects.txt",
+        "lines": [
+          62
+        ]
+      },
+      {
+        "source": "common/scripted_buttons/04_india_buttons.txt",
+        "lines": [
+          774
+        ]
+      },
+      {
+        "source": "common/character_interactions/01_additional_interactions.txt",
+        "lines": [
+          756,
+          994
+        ]
+      },
+      {
+        "source": "common/script_values/ep2_japan_values.txt",
+        "lines": [
+          241,
+          256
+        ]
+      },
+      {
+        "source": "common/script_values/command_values.txt",
+        "lines": [
+          238
+        ]
+      }
+    ],
+    "boundary": "Read original script values only; do not recursively read modified strategy target. Zero and negative native base never enter new discount.",
+    "rhs_grammar_evidence": [
+      "authority >= ROOT.patronize_authority_cost; RHS is an original named scripted value defined in ep2_japan_values.txt",
+      "authority >= ROOT.ostracize_authority_cost; independent original named scripted value RHS",
+      "Quoted dynamic numeric RHS appears in command_values.txt:238; quoted scope:front.num_total_battalions(scope:enemy_country)."
+    ]
+  }
+}

@@ -69,7 +69,7 @@ TAXONOMY = (
     (
         "administrative",
         "行政与国家能力",
-        ("bureaucracy", "infrastructure"),
+        ("bureaucracy", "infrastructure", "tax_shortfall", "institution_investment_level"),
         ("institution_", "ai_weight", "bureaucrat"),
         ("fiscal", "political"),
     ),
@@ -111,7 +111,7 @@ TAXONOMY = (
     (
         "diplomacy",
         "外交与条约",
-        ("relations", "alliance", "truce", "diplomatic", "infamy", "embargo"),
+        ("relations", "alliance", "truce", "diplomatic", "infamy", "embargo", "influence"),
         ("treaty", "secret_goal", "wargoal", "recklessness"),
         ("diplomacy",),
     ),
@@ -125,8 +125,8 @@ TAXONOMY = (
     (
         "military",
         "陆军与动员",
-        ("army", "conscription", "artillery", "small_arms", "ammunition"),
-        ("wanted_army", "combat_unit", "conscript", "fleet"),
+        ("army", "conscription", "artillery", "small_arms", "ammunition", "mobilization"),
+        ("wanted_army", "combat_unit", "conscript", "fleet", "mobilization_option"),
         ("military",),
     ),
     (
@@ -160,7 +160,7 @@ TAXONOMY = (
     (
         "identity",
         "身份、文化与路线",
-        ("culture", "identity", "fervor", "homeland", "subject"),
+        ("culture", "identity", "fervor", "homeland", "subject", "is_ai"),
         ("state_value", "economy", "military_defense"),
         ("identity", "diplomacy"),
     ),
@@ -180,6 +180,7 @@ PROFILE_ROLES = {
     engine: role
     for role, engines in {
         "current_guard": (
+            "is_ai",
             "has_truce_with",
             "in_default",
             "is_in_government",
@@ -199,6 +200,10 @@ PROFILE_ROLES = {
             "market_access",
             "navy_size",
             "total_population",
+            "authority",
+            "influence",
+            "max_num_companies",
+            "institution_investment_level",
         ),
         "pressure": (
             "average_sol",
@@ -224,6 +229,8 @@ PROFILE_ROLES = {
             "is_production_method_active",
             "pop_type_percent_country",
             "primary_cultures_percent_state",
+            "has_institution",
+            "num_companies",
         ),
         "external_opportunity": (
             "has_diplomatic_pact",
@@ -232,7 +239,20 @@ PROFILE_ROLES = {
             "is_isolated_from_market",
             "is_treaty_port",
             "relations:root",
+            "num_defensive_pacts",
+            "num_alliances",
+            "is_diplomatic_play_target",
+            "is_diplomatic_play_initiator",
+            "prestige",
         ),
+        "local_opportunity": (
+            "any_scope_state",
+            "any_scope_building",
+            "any_interest_group",
+            "any_political_movement",
+            "market_goods_consumption",
+        ),
+        "native_demand": ("wanted_army_size_script_value", "wanted_marines_size_script_value"),
         "current_shock": ("has_insurrectionary_interest_groups", "is_at_war", "has_variable"),
     }.items()
     for engine in engines
@@ -280,7 +300,7 @@ def source_metadata() -> dict[str, Any]:
 
     consumers: list[dict[str, object]] = []
     for source, rules in adapters.policies:
-        contract = decision_rules.contract(rules, owner="consumer_adapters")
+        contract = decision_rules.contract(rules, owner="consumer_adapters", source=source)
         contract["source"] = source
         consumers.append(contract)
 
@@ -306,7 +326,9 @@ def source_metadata() -> dict[str, Any]:
     }
     metadata["country_state"] = country_state.contract(country_policy)
     metadata["country_coordination"] = {
-        "runtime_state": "bounded_persistent_routes" if country_policy.enabled else "disabled",
+        "runtime_state": "stateless_consumer_observations"
+        if country_policy.enabled
+        else "disabled",
         "state_contract": metadata["country_state"],
         "behavior_verified": False,
         "evidence": "static_check",
@@ -358,40 +380,11 @@ def _coordination_paths(
     paths = {}
     for fact in facts:
         engine = fact["engine"]
-        route = next(
-            (
-                name
-                for name in policy.data["routes"]
-                if engine == "has_variable" and fact.get("argument") == f"sitai_route_{name}"
-            ),
-            None,
-        )
-        if route is not None:
-            route_node = policy.data["routes"][route]
-            selected_nodes = [
-                {"section": "routes", "name": f"{route}.{phase}", "when": route_node[phase]}
-                for phase in ("enter", "hold")
-            ] + [
-                {"section": "budgets", "name": f"{name}.{level}", "when": tree}
-                for name, cost in route_node["cost"].items()
-                if cost
-                for level, tree in policy.data["budgets"][name].items()
-            ]
-            boundary = "persistent_route_refresh_dependencies; current_signal_may_outlive_facts; "
-            boundary += "other_route_preemption_not_expanded"
-            lifecycle = {
-                "ttl_days": policy.ttl_days,
-                "cooldown_days": policy.cooldown_days,
-                "priority": route_node["priority"],
-                "emergency": route_node["emergency"],
-                "cost": route_node["cost"],
-            }
-        elif not engine.startswith(country_coordination.PREFIX):
+        if not engine.startswith(country_coordination.PREFIX):
             continue
-        else:
-            selected_nodes = []
-            lifecycle = {}
-            boundary = "predicate_dependencies_including_precedence_guards; " + contract["unknown"]
+        selected_nodes = []
+        lifecycle: dict[str, object] = {}
+        boundary = "predicate_dependencies_including_precedence_guards; " + contract["unknown"]
         signal = engine.removeprefix(country_coordination.PREFIX).removeprefix("known_")
         evidence_protocol = contract["evidence_needs"].get(signal)
         if evidence_protocol is not None:
@@ -401,26 +394,24 @@ def _coordination_paths(
                 "raw_signal": country_coordination.PREFIX + signal,
             }
             boundary += "; evidence_false_means_no_positive_evidence_not_known_false_raw_fact"
-        if route is None:
-            if signal.startswith("need_") and signal[5:] in nodes["needs"]:
-                selected = [("needs", signal[5:])]
-            else:
-                # The generated capacity predicates also test recovery. Stable and
-                # foundation layers exclude the higher capacities before selection.
-                capacities = {
-                    "layer_recovery": ("recovery",),
-                    "layer_expansion": ("expansion_capacity", "recovery"),
-                    "layer_stable": ("stable_capacity", "expansion_capacity", "recovery"),
-                    "layer_foundation": (*contract["capacities"], "recovery"),
-                    **{name: (name, "recovery") for name in contract["capacities"]},
-                }
-                if signal not in capacities:
-                    continue
-                selected = [("capacities", name) for name in capacities[signal]]
-            selected_nodes = [
-                {"section": section, "name": name, **nodes[section][name]}
-                for section, name in selected
-            ]
+        if signal.startswith("need_") and signal[5:] in nodes["needs"]:
+            selected = [("needs", signal[5:])]
+        else:
+            # The generated capacity predicates also test recovery. Stable and
+            # foundation layers exclude the higher capacities before selection.
+            capacities = {
+                "layer_recovery": ("recovery",),
+                "layer_expansion": ("expansion_capacity", "recovery"),
+                "layer_stable": ("stable_capacity", "expansion_capacity", "recovery"),
+                "layer_foundation": (*contract["capacities"], "recovery"),
+                **{name: (name, "recovery") for name in contract["capacities"]},
+            }
+            if signal not in capacities:
+                continue
+            selected = [("capacities", name) for name in capacities[signal]]
+        selected_nodes = [
+            {"section": section, "name": name, **nodes[section][name]} for section, name in selected
+        ]
         keys = sorted(
             {
                 predicate["fact"]
@@ -547,8 +538,8 @@ def _taxonomy_rows(
                             for other in field["candidates"]
                             if other["priority"] > candidate["priority"]
                         ],
-                        "arbitration": "first_matching_rule_per_field; "
-                        "higher_priority_unknown_may_block_lower_priority",
+                        "arbitration": "consumer_local_joint_contributions; "
+                        "cause_tiers; local_unknown; final_cap",
                         "unknown": candidate["unknown"],
                         "consumer": candidate["consumer"],
                     }
@@ -681,6 +672,23 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
                 continue
             conditions = _rows(rule.get("conditions"), f"{label}.conditions")
             referenced: set[str] = set()
+            required_known = rule.get("required_known_facts", [])
+            if (
+                not isinstance(required_known, list)
+                or ("required_known_facts" in rule and not required_known)
+                or any(
+                    not isinstance(key, str)
+                    or key not in readers
+                    or readers[key].get("kind") not in {"boolean", "number"}
+                    or str(readers[key].get("engine", "")).startswith("sitai_context_")
+                    or readers[key].get("engine") == "has_variable"
+                    for key in required_known
+                )
+                or len(set(required_known)) != len(required_known)
+            ):
+                issues.append(f"{label} 核心知识声明必须是非空、唯一的实际读取器")
+            else:
+                referenced.update(required_known)
             for condition in conditions:
                 fact = condition.get("fact")
                 if not isinstance(fact, str) or fact not in readers:
@@ -740,7 +748,15 @@ def validate(metadata: Mapping[str, Any]) -> list[str]:
                 for key in row.get("inputs", [])
                 if isinstance(key, str) and key in readers
             }
-            expected_predicates = sum(len(row["conditions"]) for row in candidates)
+            expected_predicates = sum(
+                len(row["conditions"])
+                + (
+                    len(row["required_known_facts"])
+                    if isinstance(row.get("required_known_facts"), list)
+                    else 0
+                )
+                for row in candidates
+            )
             expected_depth = max(
                 (len(readers[key].get("path") or []) for key in input_keys), default=0
             )
@@ -857,7 +873,7 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
         "domain_switch_boundary": "nine_switches_only; subdomain_depth_and_runtime_behavior_not_equivalent",
         "taxonomy": taxonomy,
         "profile": {
-            "kind": "bounded_static_fact_classification_with_runtime_country_state",
+            "kind": "bounded_static_fact_classification_with_on_demand_coordination",
             "dimensions": dict(sorted(role_counts.items())),
             "runtime_state": metadata.get("country_coordination", {}).get(
                 "runtime_state", "unknown"
@@ -877,7 +893,7 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
                 HISTORICAL_SHOCKS_WITHOUT_LOCKED_READER,
                 "unsupported_no_locked_runtime_reader",
             ),
-            "memory": "bounded_mod_owned_country_routes_with_ttl_and_cooldown; vanilla_recent_war_variable_read; other_shocks_recomputed_at_vanilla_consumer_evaluation",
+            "memory": "stateless_consumer_observations; vanilla_recent_war_variable_read; shocks_recomputed_at_vanilla_consumer_evaluation; independent_fiscal_state_not_part_of_this_report",
         },
         "facts": facts,
         "consumer_fields": consumer_fields,

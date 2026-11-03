@@ -105,15 +105,34 @@ def _fixture(
         ]
         for key, choices in candidates.items()
     }
-    order = sorted(domains, key=lambda key: (len(domains[key]), key))
+    # Keys are not independent observations when they name the same physical
+    # scalar. Solve their shared value once, preserving every source predicate.
+    aliases: dict[tuple[object, ...], list[str]] = {}
+    for key, reader in readers.items():
+        identity = (
+            reader.scope,
+            reader.path,
+            reader.engine,
+            reader.argument,
+            reader.parameters,
+            reader.value_field,
+        )
+        aliases.setdefault(identity, []).append(key)
+    groups = {keys[0]: keys for keys in aliases.values()}
+    shared_domains = {
+        first: [value for value in domains[first] if all(value in domains[key] for key in keys)]
+        for first, keys in groups.items()
+    }
+    order = sorted(groups, key=lambda key: (len(shared_domains[key]), key))
     values: dict[str, object] = {}
 
     def solve(index: int) -> bool:
         if index == len(order):
             return True
         key = order[index]
-        for value in domains[key]:
-            values[key] = value
+        for value in shared_domains[key]:
+            for alias in groups[key]:
+                values[alias] = value
             relevant = [
                 condition
                 for condition in rule.conditions
@@ -125,7 +144,8 @@ def _fixture(
             ]
             if all(_satisfies(condition, values) for condition in relevant) and solve(index + 1):
                 return True
-        values.pop(key, None)
+        for alias in groups[key]:
+            values.pop(alias, None)
         return False
 
     if not solve(0):
@@ -247,7 +267,7 @@ def audit_rule(
         "counterexample": rule.counterexample,
         "checks": checks,
         "input_fallbacks": input_fallbacks,
-        "arbitration": "one_matching_adjustment_no_accumulation",
+        "arbitration": "isolated_rule_only; production_uses_consumer_joint_contributions",
         "eligibility_costs_execution": "not modeled; retained_vanilla_by_production_consumer_contract",
     }
 
@@ -298,7 +318,7 @@ def _build_static() -> dict[str, Any]:
         if consumer != "information_rules":
             consumers.add(consumer)
         rules.extend(audit_rule(policy, rule, consumer=consumer) for rule in policy.rules)
-    source_declared = {
+    authored_declared = {
         "information_rules": len(
             tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))["readers"]
         ),
@@ -307,9 +327,12 @@ def _build_static() -> dict[str, Any]:
         ),
     }
     by_module: dict[str, set[str]] = {"information_rules": set(), "consumer_adapters": set()}
+    declared_by_module: dict[str, set[str]] = {name: set() for name in by_module}
     for consumer, policy in policies:
         module = "information_rules" if consumer == "information_rules" else "consumer_adapters"
         by_module[module].update(key for rule in policy.rules for key in rule.input_keys())
+        declared_by_module[module].update(reader.key for reader in policy.readers)
+    source_declared = {name: len(keys) for name, keys in declared_by_module.items()}
     reader_signatures = [
         {
             "signature": json.loads(signature),
@@ -334,6 +357,7 @@ def _build_static() -> dict[str, Any]:
         },
         "reader_usage": {
             "declared": sum(source_declared.values()),
+            "authored_declarations": authored_declared,
             "referenced": sum(len(keys) for keys in by_module.values()),
             "by_module": {
                 name: {"declared": source_declared[name], "referenced": len(by_module[name])}

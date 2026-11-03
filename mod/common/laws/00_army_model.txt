@@ -67,8 +67,17 @@ law_peasant_levies = {
 		}
 
 		# SITAI BEGIN information:law_peasant_levies.ai_enact_weight_modifier
-		# political_capacity_law_peasant_levies [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_495d3297567a31f8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_495d3297567a31f8_negative
+			add = { value = 0
+				# political_capacity_law_peasant_levies [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 0
+		} }
 		# SITAI END information:law_peasant_levies.ai_enact_weight_modifier
 	}
 }
@@ -113,8 +122,17 @@ law_warrior_caste = {
 		value = 0
 
 		# SITAI BEGIN information:law_warrior_caste.ai_enact_weight_modifier
-		# political_capacity_law_warrior_caste [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_efaee648d6fe294a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_efaee648d6fe294a_negative
+			add = { value = 0
+				# political_capacity_law_warrior_caste [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 0
+		} }
 		# SITAI END information:law_warrior_caste.ai_enact_weight_modifier
 	}
 }
@@ -209,11 +227,22 @@ law_professional_army = {
 		}
 
 		# SITAI BEGIN information:law_professional_army.ai_enact_weight_modifier
-		# political_capacity_law_professional_army [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
-		# coordinated_layered_law_security_professional_army [political]; 战时仍按独立财政和行政能力评估专业军制，不要求同时处于和平层级
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_security = yes sitai_context_need_security = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no in_default = no scaled_debt >= 0 scaled_debt <= 0.5 net_total_income >= 0 bureaucracy >= 0 } } add = 6.0 }
+		# ACTION program_2de4356e1faf4210 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_2de4356e1faf4210_positive
+			add = { value = 0
+				# coordinated_layered_law_security_professional_army [political]; 战时仍按独立财政和行政能力评估专业军制，不要求同时处于和平层级
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_security = yes sitai_context_need_security = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no in_default = no scaled_debt >= 0 scaled_debt <= 0.5 net_total_income >= 0 bureaucracy >= 0 } } add = 6 }
+			}
+			# GROUP program_2de4356e1faf4210_negative
+			add = { value = 0
+				# political_capacity_law_professional_army [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 6
+		} }
 		# SITAI END information:law_professional_army.ai_enact_weight_modifier
 	}
 }
@@ -281,8 +310,17 @@ law_national_militia = {
 		}
 
 		# SITAI BEGIN information:law_national_militia.ai_enact_weight_modifier
-		# political_capacity_law_national_militia [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_ce0a304cd7b8252f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_ce0a304cd7b8252f_negative
+			add = { value = 0
+				# political_capacity_law_national_militia [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 0
+		} }
 		# SITAI END information:law_national_militia.ai_enact_weight_modifier
 	}
 }
@@ -371,11 +409,22 @@ law_mass_conscription = {
 		}
 
 		# SITAI BEGIN information:law_mass_conscription.ai_enact_weight_modifier
-		# political_capacity_law_mass_conscription [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
-		# coordinated_layered_law_security_mass_conscription [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_security = yes sitai_context_need_security = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no is_at_war = yes total_population >= 0 total_population >= 2000000 } } add = 6.0 }
+		# ACTION program_885125e1aa5f0f99 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_885125e1aa5f0f99_positive
+			add = { value = 0
+				# coordinated_layered_law_security_mass_conscription [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_security = yes sitai_context_need_security = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no is_at_war = yes total_population >= 0 total_population >= 2000000 } } add = 6 }
+			}
+			# GROUP program_885125e1aa5f0f99_negative
+			add = { value = 0
+				# political_capacity_law_mass_conscription [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 6
+		} }
 		# SITAI END information:law_mass_conscription.ai_enact_weight_modifier
 	}
 }

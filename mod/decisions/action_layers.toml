@@ -66,28 +66,28 @@ domain = "fiscal"
 strategy = "recovery"
 neutral_local = true
 enables = []
-relations = ["wartime_defense"]
+relations = []
 
 [tools.wartime_defense]
 domain = "war"
 strategy = "security"
 neutral_local = true
 enables = []
-relations = ["fiscal_recovery"]
+relations = []
 
 [tools.political_reform]
 domain = "political"
 strategy = "reform"
 neutral_local = true
 enables = []
-relations = ["industrial_foundation"]
+relations = []
 
 [tools.industrial_foundation]
 domain = "industry"
 strategy = "capacity"
 neutral_local = true
 enables = []
-relations = ["political_reform", "education_and_research"]
+relations = ["education_and_research"]
 
 [tools.education_and_research]
 domain = "education"
@@ -101,28 +101,28 @@ domain = "diplomacy"
 strategy = "security"
 neutral_local = true
 enables = []
-relations = ["diplomatic_opening"]
+relations = []
 
 [tools.diplomatic_opening]
 domain = "diplomacy"
 strategy = "diplomacy"
 neutral_local = true
 enables = []
-relations = ["diplomatic_restraint"]
+relations = []
 
 [tools.reform_progressive_window]
 domain = "political"
 strategy = "reform"
 neutral_local = true
 enables = []
-relations = ["reform_conservative_guard"]
+relations = []
 
 [tools.reform_conservative_guard]
 domain = "political"
 strategy = "survival"
 neutral_local = true
 enables = []
-relations = ["reform_progressive_window"]
+relations = []
 
 [tools.diplomatic_boldness_window]
 domain = "diplomacy"

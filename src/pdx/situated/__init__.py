@@ -5,11 +5,11 @@ Python；``compiler`` 会把通过合同检查的行动降低成有限 PDX 条�
 """
 
 from . import audit
-from .arbitration import ArbitrationResult, Candidate, choose
 from .compiler import (
     SituatedModel,
     compile_policy,
     compile_sources,
+    evaluate_actions,
     evaluate_policy,
     load_model,
     strategy_overlay,
@@ -19,8 +19,6 @@ from .signals import CapacitySignal, CommitmentSignal, NeedSignal, OpportunitySi
 
 __all__ = [
     "ActionCard",
-    "ArbitrationResult",
-    "Candidate",
     "CapacitySignal",
     "CommitmentSignal",
     "EvidenceSpec",
@@ -32,9 +30,9 @@ __all__ = [
     "StateVector",
     "TypedState",
     "audit",
-    "choose",
     "compile_policy",
     "compile_sources",
+    "evaluate_actions",
     "evaluate_policy",
     "load_model",
     "strategy_overlay",

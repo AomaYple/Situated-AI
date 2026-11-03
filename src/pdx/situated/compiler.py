@@ -1,22 +1,25 @@
 """统一的处境行动编译器。
 
-处境源只声明能力、压力、机会、承诺和目标；原版信息规则及消费者适配器
-仍是业务谓词的唯一来源。本模块把两者登记到同一个有界合同，并在生成期
-对已有 ``pdx.decision_rules.RuleSet`` 做一次确定性的优先级编译。运行期
-没有 Python 服务、世界扫描或新增的无界状态。
+显式行动通过同一 ConsumerDecisionIR 编译为消费者联合数值程序；独立
+贡献共同参与，只在消费者边界限幅。旧 RuleSet 的精确迁移合同仍单独
+保留，不能据此声称所有旧规则已经转换为联合行动语义。运行期没有
+Python 服务、世界扫描或新增的无界状态。
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import re
 import tomllib
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from .. import decision_adapters, decision_rules  # noqa: TID252
+from .. import config, decision_adapters, decision_interfaces, decision_rules  # noqa: TID252
+from ..model import Block  # noqa: TID252
 from ..parser import parse_text  # noqa: TID252
 from . import (
     action_instances,
@@ -24,12 +27,18 @@ from . import (
     commitment,
     decision_ir,
     domain_coverage,
+    engine_scope,
     families,
     ir,
+    joint_chain_contract,
     layers,
+    migration_baseline,
     opportunity,
+    programs,
     relations,
     state,
+    support_signals,
+    vanilla_inventory,
 )
 from . import actions as action_source
 from . import evidence as evidence_source
@@ -50,6 +59,11 @@ ACTIONS = DECISIONS / "actions.toml"
 LAYERS = DECISIONS / "action_layers.toml"
 BINDINGS = DECISIONS / "action_bindings.toml"
 BASELINE = REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
+_LAW_DOC = REPO / "research/situated/victoria3-1.14.5-law-enact-context.md"
+_LAW_DOC_MANIFEST = REPO / "research/official-docs.manifest.json"
+_LAW_DOC_SHA256 = "706098c2cb35770cbe477c84620940b716e60d8708f30f7ae72d46ed1e2091d8"
+_LAW_MIRROR_SHA256 = "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076"
+_LAW_NATIVE_SHA256 = "2e172974c75e5a544777f0a21099019043ca0164d499927786e10572b8956a0c"
 SUPPORTING_SOURCES = (
     "capacities.toml",
     "pressures.toml",
@@ -57,8 +71,6 @@ SUPPORTING_SOURCES = (
     "commitments.toml",
     "goals.toml",
     "relations.toml",
-    "arbitration.toml",
-    "temporal.toml",
     "consumers.toml",
     "localization.toml",
     "action_families.toml",
@@ -66,6 +78,984 @@ SUPPORTING_SOURCES = (
     "action_bindings.toml",
     "domain_actions.toml",
 )
+
+
+def evaluation_contexts(text: str) -> dict[str, decision_ir.EvaluationContext]:
+    """Observe exact field-local vanilla comments without changing writer IDs."""
+    source = "common/ai_strategies/00_default_strategy.txt"
+    # name, engine type, semantic role, exact documentary statement
+    common = ("root", "country", "actor", "root = country")
+    specs = {
+        "subject_value": (
+            (
+                "root",
+                "country",
+                "actor",
+                "root is the AI doing the evaluation, scope:target_country is prospective subject",
+            ),
+            (
+                "target_country",
+                "country",
+                "target",
+                "root is the AI doing the evaluation, scope:target_country is prospective subject",
+            ),
+        ),
+        "become_subject_value": (
+            (
+                "root",
+                "country",
+                "actor",
+                "root is the AI doing the evaluation, scope:overlord is prospective overlord",
+            ),
+            (
+                "overlord",
+                "country",
+                "target",
+                "root is the AI doing the evaluation, scope:overlord is prospective overlord",
+            ),
+        ),
+        "interest_group_government_weight": (
+            common,
+            ("interest_group", "interest_group", "candidate", "scope:interest_group = IG"),
+        ),
+        "negotiation_chance": (
+            common,
+            (
+                "interest_group",
+                "interest_group",
+                "candidate",
+                "scope:interest_group = IG to negotiate with",
+            ),
+            ("law", "law", "auxiliary", "scope:law = law type being enacted"),
+            (
+                "amenability",
+                "scalar",
+                "auxiliary",
+                "scope:amenability = IG amenability to negotiation divided by MAX_AMENABILITY (ie, if MAX_AMENABILITY is 100 and IG amenability is 50, this value will be 0.5)",
+            ),
+            (
+                "advance_chance",
+                "scalar",
+                "auxiliary",
+                "scope:advance_chance = Chance to advance law enactment",
+            ),
+            (
+                "stall_chance",
+                "scalar",
+                "auxiliary",
+                "scope:stall_chance = Chance for law enactment to stall",
+            ),
+        ),
+        "state_value": (
+            common,
+            ("target_state", "state", "target", "scope:target_state = state"),
+            ("target_country", "country", "auxiliary", "scope:target_country = state owner"),
+        ),
+        "treaty_port_value": (
+            common,
+            ("target_state", "state", "target", "scope:target_state = state"),
+            ("target_country", "country", "auxiliary", "scope:target_country = state owner"),
+        ),
+        "combat_unit_group_weights": (
+            common,
+            (
+                "military_formation",
+                "military_formation",
+                "auxiliary",
+                "scope:military_formation = military formation",
+            ),
+        ),
+        "conscript_battalion_ratio": (
+            common,
+            (
+                "military_formation",
+                "military_formation",
+                "auxiliary",
+                "scope:military_formation = military formation",
+            ),
+        ),
+    }
+    parsed = parse_text(text)
+    if parsed.errors:
+        raise ValueError("求值上下文默认策略底本无法解析")
+    definitions = [item for item in parsed.root.assignments() if item.key == "ai_strategy_default"]
+    if len(definitions) != 1:
+        return {
+            field: decision_ir.EvaluationContext(status="ambiguous" if definitions else "unknown")
+            for field in specs
+        }
+    if (
+        not isinstance(definitions[0].value, Block)
+        or definitions[0].op != "="
+        or definitions[0].prefix is not None
+    ):
+        return {field: decision_ir.EvaluationContext(status="unknown") for field in specs}
+    result = {}
+    lines = text.splitlines()
+    for field, expected in specs.items():
+        fields = [item for item in definitions[0].value.assignments() if item.key == field]
+        if len(fields) != 1:
+            result[field] = decision_ir.EvaluationContext(
+                status="ambiguous" if fields else "unknown"
+            )
+            continue
+        if fields[0].op != "=" or fields[0].prefix is not None:
+            result[field] = decision_ir.EvaluationContext(status="unknown")
+            continue
+        field_line = lines[fields[0].line - 1].strip()
+        if re.match(rf"{re.escape(field)}\s*=", field_line) is None:
+            # A same-line preceding assignment has no reliable field-local
+            # comment boundary; never borrow the previous field's evidence.
+            result[field] = decision_ir.EvaluationContext(status="unknown")
+            continue
+        comments: dict[str, list[int]] = {}
+        for index in range(fields[0].line - 2, definitions[0].line - 1, -1):
+            line = lines[index].strip()
+            if line and not line.startswith("#"):
+                break
+            if line.startswith("#"):
+                comments.setdefault(line[1:].strip(), []).append(index + 1)
+        expected_markers = {marker for *_, marker in expected}
+        contradictory = any(
+            re.search(
+                r"\broot\s*(?:=|is\b)|\bscope\s*:\s*[a-z][a-z0-9_]*\s*(?:=|is\b)",
+                marker,
+                re.IGNORECASE,
+            )
+            and marker not in expected_markers
+            for marker in comments
+        )
+        if contradictory:
+            result[field] = decision_ir.EvaluationContext(status="unknown")
+            continue
+        if any(len(comments.get(marker, ())) != 1 for *_, marker in expected):
+            result[field] = decision_ir.EvaluationContext(status="unknown")
+            continue
+        bindings = tuple(
+            decision_ir.ContextBinding(name, kind, role, source, comments[marker][0])
+            for name, kind, role, marker in expected
+        )
+        result[field] = decision_ir.EvaluationContext(
+            actor_scope=bindings[0],
+            targets=tuple(b for b in bindings[1:] if b.role in {"target", "candidate"}),
+            auxiliary_scopes=tuple(b for b in bindings[1:] if b.role == "auxiliary"),
+            evidence=tuple(sorted({f"{b.source}:{b.line}" for b in bindings})),
+        )
+    # Only this documented map projects its parent's country/formation context
+    # to ordinary, unique numeric child blocks. Other maps remain independent.
+    parent = definitions[0].value.all("combat_unit_group_weights")
+    if len(parent) == 1 and isinstance(parent[0].value, Block):
+        context = result["combat_unit_group_weights"]
+        for child in parent[0].value.assignments():
+            field = f"combat_unit_group_weights.{child.key}"
+            siblings = parent[0].value.all(child.key)
+            result[field] = (
+                decision_ir.EvaluationContext(status="ambiguous")
+                if len(siblings) != 1
+                else context
+                if child.op == "=" and child.prefix is None and isinstance(child.value, Block)
+                else decision_ir.EvaluationContext(status="unknown")
+            )
+    return result
+
+
+def law_evaluation_context(text: str) -> decision_ir.EvaluationContext:
+    """The enact-weight README proves country/law, never ai_will_do or a getter."""
+    lines = text.splitlines()
+    heading = "# Documentation for ai_enact_weight_modifier"
+    statement = "Root scope is AI country, scope:law contains the relevant law for that country"
+    headings = [i for i, line in enumerate(lines) if line.strip() == heading]
+    statements = [i for i, line in enumerate(lines) if line.strip() == statement]
+    example = [i for i, line in enumerate(lines) if line.strip() == "# Example"]
+    if len(headings) != 1 or len(statements) != 1 or len(example) != 1:
+        return decision_ir.EvaluationContext(status="unknown")
+    start, location, end = headings[0], statements[0], example[0]
+    if not start < location < end or any(
+        re.search(r"Root\s+scope|scope\s*:\s*law", line) and line.strip() != statement
+        for line in lines[start + 1 : end]
+    ):
+        return decision_ir.EvaluationContext(status="unknown")
+    source = "common/laws/readme.md"
+    line = location + 1
+    return decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, line),
+        auxiliary_scopes=(decision_ir.ContextBinding("law", "law", "auxiliary", source, line),),
+        evidence=(f"{source}:{line}",),
+    )
+
+
+def _frozen_law_context() -> decision_ir.EvaluationContext:
+    # Only the three documentary context lines are versioned. Blank lines keep
+    # their original positions; the ignored full mirror is never an offline input.
+    raw = _LAW_DOC.read_bytes()
+    manifest = json.loads(_LAW_DOC_MANIFEST.read_text(encoding="utf-8"))
+    entry = manifest["文档"]["game/common/laws/readme.md"]
+    if (
+        hashlib.sha256(raw).hexdigest() != _LAW_DOC_SHA256
+        or entry["镜像sha256"] != _LAW_MIRROR_SHA256
+        or entry["sha256"] != _LAW_NATIVE_SHA256
+    ):
+        raise ValueError("法律 enact weight 冻结文档证据漂移")
+    native = config.GAME / "common/laws/readme.md"
+    if native.is_file() and hashlib.sha256(native.read_bytes()).hexdigest() != _LAW_NATIVE_SHA256:
+        raise ValueError("法律 enact weight 原版文档证据漂移")
+    if native.is_file():
+        lines = native.read_text(encoding="utf-8-sig").splitlines()
+        if any(
+            index >= len(lines) or lines[index] != line
+            for index, line in enumerate(raw.decode("utf-8").splitlines())
+            if line
+        ):
+            raise ValueError("法律 enact weight 摘录行与原版不一致")
+    context = law_evaluation_context(raw.decode("utf-8"))
+    if context.status != "observed":
+        raise ValueError("法律 enact weight 文档没有精确上下文")
+    return context
+
+
+def _frozen_strategy_contexts() -> dict[str, decision_ir.EvaluationContext]:
+    """Use manifest document lines, never pretend they are native script lines.
+
+    This is historical static evidence in both online and offline contracts.
+    Production entry points separately require current scripts and EXE bytes.
+    """
+    raw = engine_scope.strategy_snapshot()
+    text = raw.decode("utf-8")
+    data = json.loads(raw)
+    specs = {
+        "recklessness": (
+            "target_country",
+            "additive_strength_estimate_multiplier",
+            "multiplier",
+            "0x1416452bf",
+        ),
+        "wargoal_maneuvers_fraction": (
+            "enemy_country",
+            "additive_maneuvers_fraction",
+            "fraction",
+            "0x141647b8f",
+        ),
+        "wanted_construction_output": (
+            None,
+            "additive_construction_output_target",
+            "construction_output",
+            "0x141646580",
+        ),
+        "institution_scores": (None, "additive_score", "score", "0x141644a3a"),
+        "min_law_chance_to_pass": (
+            None,
+            "override_pass_chance_threshold",
+            "pass_chance",
+            "0x141646d23",
+        ),
+        "wargoal_scores": ("target_country", "additive_score", "score", "0x1416438ea"),
+        "secret_goal_scores": ("target_country", "additive_score", "score", "0x1416436fd"),
+        "wanted_navy_size": (
+            None,
+            "additive_navy_size_target",
+            "naval_administration_levels",
+            "0x1415ad3b7",
+        ),
+        "ship_construction_output_multiplier": (
+            None,
+            "additive_ship_construction_output_multiplier",
+            "multiplier",
+            "0x1415adadb",
+        ),
+    }
+    specs.update(
+        {
+            "aggression": (
+                "target_country",
+                "additive_aggression",
+                "play_start_tendency",
+                "0x14164546f",
+            ),
+            "nationalization_desire": (
+                None,
+                "additive_nationalization_desire",
+                "desire",
+                "0x141647ecd",
+            ),
+            "max_active_stances": (None, "additive_active_stance_limit", "count", "0x14164805c"),
+            "wanted_marines": (
+                None,
+                "additive_marine_size_target",
+                "barracks_levels",
+                "0x14164441d",
+            ),
+            "economic_vs_government_spending_balance": (
+                None,
+                "additive_spending_balance",
+                "debt_threshold_ratio",
+                "0x14164684d",
+            ),
+            "target_marine_formation_size": (
+                None,
+                "additive_marine_formation_size_target",
+                "units_per_formation",
+                "0x1416445ad",
+            ),
+            "unacceptable_infamy_level": (
+                None,
+                "first_positive_infamy_limit_override",
+                "infamy",
+                "0x1416440fd",
+            ),
+            "undesirable_infamy_level": (
+                None,
+                "first_positive_infamy_limit_override",
+                "infamy",
+                "0x141643f6d",
+            ),
+            "diplomatic_play_neutrality": (
+                None,
+                "additive_positive_active_neutrality",
+                "score",
+                "0x14164783c",
+            ),
+            "diplomatic_play_boldness": (
+                None,
+                "native_randomized_additive_boldness",
+                "score",
+                "0x1416476aa",
+            ),
+        }
+    )
+    specs.update(
+        {
+            "treaty_category_scores": (
+                None,
+                "additive_treaty_category_score",
+                "score",
+                "0x141643aa9",
+            ),
+            "strategic_region_stance_type_scores": (
+                None,
+                "additive_region_stance_score",
+                "score",
+                "0x14164842a",
+            ),
+            "wanted_num_supply_ships": (
+                None,
+                "additive_supply_ship_count_target",
+                "ships",
+                "0x1415ad63f",
+            ),
+            "max_ship_design_complexity": (
+                None,
+                "additive_ship_design_complexity_limit",
+                "modification_levels",
+                "0x1414b716c",
+            ),
+        }
+    )
+    result = {}
+    source = engine_scope.STRATEGY_MANIFEST_ID
+    for field, (target, operation, unit, address) in specs.items():
+        expected = {
+            "actor_scope": "country",
+            "target_scope": (
+                "scope:target_country=country;scope:target_state=state"
+                if field == "wargoal_scores"
+                else f"scope:{target}=country"
+                if target is not None
+                else "definition_only:institution_type"
+                if field == "institution_scores"
+                else "scope:target_region=strategic_region;scope:region_score=scalar"
+                if field == "strategic_region_stance_type_scores"
+                else "scope:law=law"
+                if field == "min_law_chance_to_pass"
+                else "scope:diplomatic_play=diplomatic_play"
+                if field == "diplomatic_play_boldness"
+                else "none"
+            ),
+            "operation": operation,
+            "capability": "direct",
+            "unit": unit,
+            "consumer_va": address,
+        }
+        actual = data.get("consumers", {}).get(field, {})
+        if (
+            actual != expected
+            if field in {"recklessness", "wargoal_maneuvers_fraction"}
+            else any(actual.get(key) != value for key, value in expected.items())
+        ):
+            raise ValueError(f"锁定策略消费者字段合同不一致：{field}")
+        entries = list(
+            re.finditer(
+                rf'^    "{field}"\s*:\s*\{{(?P<body>\s*"actor_scope".*?)^    \}}',
+                text,
+                re.MULTILINE | re.DOTALL,
+            )
+        )
+        if len(entries) != 1:
+            raise ValueError(f"锁定策略消费者缺少独立行级证据：{field}")
+        entry = entries[0]
+        locations = {}
+        for key in ("actor_scope", "target_scope"):
+            members = list(re.finditer(rf'^[ \t]*"{key}"\s*:', entry["body"], re.MULTILINE))
+            if len(members) != 1:
+                raise ValueError(f"锁定策略消费者缺少精确对象证据：{field}/{key}")
+            position = entry.start("body") + members[0].start()
+            locations[key] = text.count("\n", 0, position) + 1
+        actor = decision_ir.ContextBinding(
+            "root", "country", "actor", source, locations["actor_scope"]
+        )
+        target_binding = (
+            decision_ir.ContextBinding(
+                target, "country", "target", source, locations["target_scope"]
+            )
+            if target is not None
+            else None
+        )
+        result[field] = decision_ir.EvaluationContext(
+            actor_scope=actor,
+            targets=(
+                target_binding,
+                decision_ir.ContextBinding(
+                    "target_state", "state", "target", source, locations["target_scope"]
+                ),
+            )
+            if target_binding is not None and field == "wargoal_scores"
+            else (target_binding,)
+            if target_binding is not None
+            else (
+                decision_ir.ContextBinding(
+                    "target_region", "strategic_region", "target", source, locations["target_scope"]
+                ),
+            )
+            if field == "strategic_region_stance_type_scores"
+            else (),
+            auxiliary_scopes=(
+                decision_ir.ContextBinding(
+                    "law", "law", "auxiliary", source, locations["target_scope"]
+                ),
+            )
+            if field == "min_law_chance_to_pass"
+            else (
+                decision_ir.ContextBinding(
+                    "diplomatic_play",
+                    "diplomatic_play",
+                    "auxiliary",
+                    source,
+                    locations["target_scope"],
+                ),
+            )
+            if field == "diplomatic_play_boldness"
+            else (
+                decision_ir.ContextBinding(
+                    "region_score", "scalar", "auxiliary", source, locations["target_scope"]
+                ),
+            )
+            if field == "strategic_region_stance_type_scores"
+            else (),
+            evidence=(
+                f"{source}:{actor.line}",
+                f"{source}:{locations['target_scope']}",
+                f"{source}:sha256={engine_scope.STRATEGY_MANIFEST_SHA256}",
+                f"{source}:consumer={field}:va={address}",
+                f"{source}:evidence=frozen_engine_snapshot",
+                *(
+                    (f"{source}:definition_only:institution_type",)
+                    if field == "institution_scores"
+                    else ()
+                ),
+            ),
+        )
+    return result
+
+
+def _frozen_institution_contexts(
+    context: decision_ir.EvaluationContext,
+) -> dict[str, decision_ir.EvaluationContext]:
+    """Project only exact numeric children of the pinned original ordinary map."""
+    data = json.loads(engine_scope.strategy_snapshot())
+    raw = BASELINE.read_bytes()
+    source = "common/ai_strategies/00_default_strategy.txt"
+    # Repository snapshots omit the native UTF-8 BOM by the text contract.
+    if data["script_hashes"][source] not in {
+        hashlib.sha256(raw).hexdigest(),
+        hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest(),
+    }:
+        raise ValueError("冻结制度策略原件 SHA 与引擎证据不一致")
+    parsed = parse_text(raw.decode("utf-8-sig"))
+    definitions = [item for item in parsed.top_assignments if item.key == "ai_strategy_default"]
+    scores = (
+        vanilla_inventory._institution_score_map(
+            definitions[0], frozenset(data["institution_definitions"])
+        )
+        if not parsed.errors and len(definitions) == 1
+        else None
+    )
+    if scores is None:
+        raise ValueError("制度策略必须有唯一合法制度定义 key 的普通数值子块")
+    return {f"institution_scores.{item.key}": context for item in scores.assignments()}
+
+
+def _frozen_strategy_score_contexts(
+    contexts: dict[str, decision_ir.EvaluationContext],
+) -> dict[str, decision_ir.EvaluationContext]:
+    """Project pinned enum numeric children without authorizing the map or trigger."""
+    data = json.loads(engine_scope.strategy_snapshot())
+    raw = BASELINE.read_bytes()
+    source = "common/ai_strategies/00_default_strategy.txt"
+    if data["script_hashes"][source] not in {
+        hashlib.sha256(raw).hexdigest(),
+        hashlib.sha256(b"\xef\xbb\xbf" + raw).hexdigest(),
+    }:
+        raise ValueError("冻结目标策略原件 SHA 与引擎证据不一致")
+    parsed = parse_text(raw.decode("utf-8-sig"))
+    definitions = [item for item in parsed.top_assignments if item.key == "ai_strategy_default"]
+    result = {}
+    for family in (
+        "wargoal_scores",
+        "secret_goal_scores",
+        "treaty_category_scores",
+        "strategic_region_stance_type_scores",
+    ):
+        scores = (
+            vanilla_inventory._strategy_score_map(
+                definitions[0],
+                family,
+                frozenset(
+                    data["stance_definitions"]
+                    if family == "strategic_region_stance_type_scores"
+                    else data["strategy_score_keys"][family]
+                ),
+            )
+            if not parsed.errors and len(definitions) == 1
+            else None
+        )
+        if scores is None:
+            raise ValueError(f"目标策略必须有唯一合法枚举 key 的普通数值子块：{family}")
+        suffix = ".score" if family == "secret_goal_scores" else ""
+        result.update(
+            {f"{family}.{item.key}{suffix}": contexts[family] for item in scores.assignments()}
+        )
+    return result
+
+
+def _frozen_company_context() -> decision_ir.EvaluationContext:
+    """公司基础评分的国家对象来源，不授权章程、建设目标或新getter。"""
+    raw = engine_scope.company_snapshot()
+    data = json.loads(raw)
+    matches = [row for row in data["contracts"] if row["field"] == "ai_weight"]
+    if len(matches) != 1:
+        raise ValueError("公司基础评分缺少唯一作用域合同")
+    row = matches[0]
+    if any(
+        row[key] != value
+        for key, value in {
+            "actor": "country",
+            "target": "definition_only:company_type",
+            "operation": "base_candidate_score",
+            "capability": "direct",
+            "consumer": "0x14169a3b0",
+            "actual_call": "0x1415c9855",
+            "numeric_member": "0x390",
+            "parser": "0x141698300",
+            "parser_receiver": "0x598",
+            "nonpositive_rejection": "0x141510b30",
+        }.items()
+    ):
+        raise ValueError("公司基础评分作用域合同漂移")
+    text = raw.decode("utf-8")
+    section = text.index('"field": "ai_weight"')
+    line = text.count("\n", 0, text.index('"actor": "country"', section)) + 1
+    source = engine_scope.COMPANY_MANIFEST_ID
+    return decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, line),
+        evidence=(
+            f"{source}:{line}",
+            f"{source}:sha256={engine_scope.COMPANY_MANIFEST_SHA256}",
+            f"{source}:evidence=frozen_engine_snapshot",
+            f"{source}:definition_only:company_type",
+        ),
+    )
+
+
+def _frozen_ship_modification_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Keep the actual named candidate even when material readers use only ROOT."""
+    from .. import equipment_opportunities  # noqa: PLC0415, TID252
+
+    data = equipment_opportunities.load_baseline()
+    raw = equipment_opportunities.BASELINE.read_text(encoding="utf-8")
+    source = equipment_opportunities.BASELINE.relative_to(REPO).as_posix()
+    actor_line = raw.count("\n", 0, raw.index('"actor": "country"')) + 1
+    target_line = (
+        raw.count("\n", 0, raw.index('"target": "scope:ship_modification_type=ship_modification"'))
+        + 1
+    )
+    context = decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, actor_line),
+        targets=(
+            decision_ir.ContextBinding(
+                "ship_modification_type", "ship_modification", "candidate", source, target_line
+            ),
+        ),
+        evidence=(
+            f"{source}:{actor_line}",
+            f"{source}:{target_line}",
+            f"{source}:sha256={equipment_opportunities.BASELINE_SHA256}",
+        ),
+    )
+    return {
+        (row["source"], f"{identity}.ai_weight"): context
+        for identity, row in data["candidates"].items()
+        if row["weight_shape"] == "block" and row["scope_status"] == "direct"
+    }
+
+
+def _frozen_treaty_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """Article identities are static; proposal evaluation exposes country ROOT."""
+    from .. import treaty_opportunities  # noqa: PLC0415, TID252
+
+    data = treaty_opportunities.load_baseline()
+    raw = treaty_opportunities.BASELINE.read_text(encoding="utf-8")
+    source = treaty_opportunities.BASELINE.relative_to(REPO).as_posix()
+    line = raw.count("\n", 0, raw.index('"actor": "country"')) + 1
+    context = decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("root", "country", "actor", source, line),
+        evidence=(
+            f"{source}:{line}",
+            f"{source}:sha256={treaty_opportunities.BASELINE_SHA256}",
+            f"{source}:definition_only:treaty_article",
+        ),
+    )
+    return {
+        (row["source"], f"{identity}.ai.proposal_weight"): context
+        for identity, row in data["candidates"].items()
+        if row["weight_shape"] == "block"
+    }
+
+
+def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
+    """付费动员权重保留编队 ROOT 和实际所属国家；候选来自冻结原文。"""
+    from .. import mobilization_opportunities  # noqa: PLC0415, TID252
+
+    raw = mobilization_opportunities.BASELINE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != mobilization_opportunities.BASELINE_SHA256:
+        raise ValueError("动员冻结资料身份漂移，必须独立复核后重新pin")
+    source = mobilization_opportunities.BASELINE.relative_to(REPO).as_posix()
+    return dict(_mobilization_context_rows(raw, source))
+
+
+@lru_cache(maxsize=1)
+def _mobilization_context_rows(
+    raw: bytes, source: str
+) -> tuple[tuple[tuple[str, str], decision_ir.EvaluationContext], ...]:
+    """只复用同字节、同证据路径的不可变上下文；每次入口仍核对当前 pin。"""
+    from .. import mobilization_opportunities  # noqa: PLC0415, TID252
+
+    data = mobilization_opportunities.load_baseline(raw=raw)
+    text = raw.decode("utf-8")
+    line = text.count("\n", 0, text.index('"native_root": "military_formation"')) + 1
+    context = decision_ir.EvaluationContext(
+        actor_scope=decision_ir.ContextBinding("owner", "country", "actor", source, line),
+        auxiliary_scopes=(
+            decision_ir.ContextBinding("root", "military_formation", "auxiliary", source, line),
+        ),
+        evidence=(
+            f"{source}:{line}",
+            f"{source}:sha256={mobilization_opportunities.BASELINE_SHA256}",
+            f"{source}:definition_only:mobilization_option",
+        ),
+    )
+    return tuple(
+        ((row["source"], row["field"]), context)
+        for row in mobilization_opportunities.candidate_catalog(data).values()
+    )
+
+
+def _mobilization_context_readers(
+    field: str,
+    context: decision_ir.EvaluationContext,
+    readers: dict[str, decision_rules.Reader],
+    predicates: tuple[decision_rules.Predicate, ...],
+    *,
+    actor_path: tuple[str, ...],
+    input_keys: tuple[str, ...],
+    source: str | None,
+    native_root: str | None,
+) -> tuple[tuple[str, str, str, str], ...]:
+    from .. import mobilization_opportunities  # noqa: PLC0415, TID252
+
+    if source is None or context != _frozen_mobilization_contexts().get((source, field)):
+        raise ValueError("动员上下文必须来自已复核的精确冻结候选")
+    if native_root != "military_formation" or actor_path != ("owner",):
+        raise ValueError("医疗动员必须保持编队ROOT与所属国家AI所有者")
+    allowed = mobilization_opportunities.reader_specs(field.removesuffix(".ai_weight"))
+    result: set[tuple[str, str, str, str]] = set()
+    for key in {*input_keys, *(predicate.fact for predicate in predicates)}:
+        reader = readers.get(key)
+        spec = allowed.get(key)
+        if (
+            reader is None
+            or spec is None
+            or reader != decision_rules.Reader(key=key, **{**spec, "path": tuple(spec["path"])})
+        ):
+            raise ValueError(f"医疗动员读取器完整国家/市场/商品签名漂移：{key}")
+        decision_interfaces.reader_scope(reader, actor_path, native_root=native_root)
+        result.add((key, "root", "military_formation", "auxiliary"))
+        result.add((key, "owner", "country", "actor"))
+    if any(isinstance(predicate.value, decision_rules.FactReference) for predicate in predicates):
+        raise ValueError("医疗动员冻结贡献没有跨对象FactReference")
+    return tuple(sorted(result))
+
+
+def validate_context_readers(
+    field: str,
+    context: decision_ir.EvaluationContext,
+    readers: dict[str, decision_rules.Reader],
+    predicates: tuple[decision_rules.Predicate, ...],
+    *,
+    actor_path: tuple[str, ...] = (),
+    input_keys: tuple[str, ...] = (),
+    source: str | None = None,
+    native_root: str | None = None,
+) -> tuple[tuple[str, str, str, str], ...]:
+    """Bind existing observations to evidenced objects, never authorize getters."""
+    if source == "common/mobilization_options/00_mobilization_option.txt" or field.startswith(
+        "mobilization_option_"
+    ):
+        return _mobilization_context_readers(
+            field,
+            context,
+            readers,
+            predicates,
+            actor_path=actor_path,
+            input_keys=input_keys,
+            source=source,
+            native_root=native_root,
+        )
+    if field.startswith("institution_scores."):
+        parts = field.split(".")
+        definitions = json.loads(engine_scope.strategy_snapshot())["institution_definitions"]
+        if len(parts) != 2 or parts[1] not in definitions:
+            raise ValueError(f"消费者 {field} 不是已证明的精确制度数值子块")
+        field = "institution_scores"
+    family = field.split(".")[0]
+    if family in {
+        "wargoal_scores",
+        "secret_goal_scores",
+        "treaty_category_scores",
+        "strategic_region_stance_type_scores",
+    }:
+        parts = field.split(".")
+        score_data = json.loads(engine_scope.strategy_snapshot())
+        keys = (
+            score_data["stance_definitions"]
+            if family == "strategic_region_stance_type_scores"
+            else score_data["strategy_score_keys"][family]
+        )
+        if (
+            len(parts) != (3 if family == "secret_goal_scores" else 2)
+            or parts[1] not in keys
+            or (family == "secret_goal_scores" and parts[2] != "score")
+        ):
+            raise ValueError(f"消费者 {field} 不是已证明的精确枚举数值子块")
+        field = family
+    shapes = {
+        "subject_value": {"root": ("country", "actor"), "target_country": ("country", "target")},
+        "recklessness": {"root": ("country", "actor"), "target_country": ("country", "target")},
+        "wargoal_maneuvers_fraction": {
+            "root": ("country", "actor"),
+            "enemy_country": ("country", "target"),
+        },
+        "become_subject_value": {"root": ("country", "actor"), "overlord": ("country", "target")},
+        "interest_group_government_weight": {
+            "root": ("country", "actor"),
+            "interest_group": ("interest_group", "candidate"),
+        },
+        "negotiation_chance": {
+            "root": ("country", "actor"),
+            "interest_group": ("interest_group", "candidate"),
+            "law": ("law", "auxiliary"),
+        },
+        "state_value": {
+            "root": ("country", "actor"),
+            "target_state": ("state", "target"),
+            "target_country": ("country", "auxiliary"),
+        },
+    }
+    shapes["treaty_port_value"] = shapes["state_value"]
+    shapes["ai_enact_weight_modifier"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
+    shapes["company.ai_weight"] = {"root": ("country", "actor")}
+    shapes["treaty.ai.proposal_weight"] = {"root": ("country", "actor")}
+    shapes["wanted_construction_output"] = {"root": ("country", "actor")}
+    shapes["institution_scores"] = {"root": ("country", "actor")}
+    shapes["min_law_chance_to_pass"] = {"root": ("country", "actor"), "law": ("law", "auxiliary")}
+    shapes["wargoal_scores"] = {
+        "root": ("country", "actor"),
+        "target_country": ("country", "target"),
+        "target_state": ("state", "target"),
+    }
+    shapes["secret_goal_scores"] = {
+        "root": ("country", "actor"),
+        "target_country": ("country", "target"),
+    }
+    shapes["treaty_category_scores"] = {"root": ("country", "actor")}
+    shapes["strategic_region_stance_type_scores"] = {
+        "root": ("country", "actor"),
+        "target_region": ("strategic_region", "target"),
+        "region_score": ("scalar", "auxiliary"),
+    }
+    shapes["ship_modification.ai_weight"] = {
+        "root": ("country", "actor"),
+        "ship_modification_type": ("ship_modification", "candidate"),
+    }
+    shapes["wanted_num_supply_ships"] = {"root": ("country", "actor")}
+    shapes["max_ship_design_complexity"] = {"root": ("country", "actor")}
+    shapes["wanted_navy_size"] = {"root": ("country", "actor")}
+    shapes["ship_construction_output_multiplier"] = {"root": ("country", "actor")}
+    for scalar in (
+        "nationalization_desire",
+        "max_active_stances",
+        "wanted_marines",
+        "economic_vs_government_spending_balance",
+        "target_marine_formation_size",
+        "unacceptable_infamy_level",
+        "undesirable_infamy_level",
+        "diplomatic_play_neutrality",
+    ):
+        shapes[scalar] = {"root": ("country", "actor")}
+    shapes["aggression"] = {
+        "root": ("country", "actor"),
+        "target_country": ("country", "target"),
+    }
+    shapes["diplomatic_play_boldness"] = {
+        "root": ("country", "actor"),
+        "diplomatic_play": ("diplomatic_play", "auxiliary"),
+    }
+    formation_shape = {
+        "root": ("country", "actor"),
+        "military_formation": ("military_formation", "auxiliary"),
+    }
+    shapes["conscript_battalion_ratio"] = formation_shape
+    if field.startswith("combat_unit_group_weights.") and field.count(".") == 1:
+        shapes[field] = formation_shape
+    if field not in shapes or context.status != "observed":
+        return ()
+    # These contracts document a country ROOT. Reaching a country again via
+    # owner cannot preserve that actor's identity after a caller-side offset.
+    if actor_path:
+        raise ValueError(f"消费者 {field} 读取器 actor 路径偏离已证明的国家 ROOT")
+    bindings = {
+        binding.name: binding
+        for binding in (context.actor_scope, *context.targets, *context.auxiliary_scopes)
+        if binding is not None
+    }
+    if (
+        field
+        in {
+            "treaty_category_scores",
+            "strategic_region_stance_type_scores",
+            "wanted_num_supply_ships",
+            "max_ship_design_complexity",
+            "ship_modification.ai_weight",
+            "treaty.ai.proposal_weight",
+            "recklessness",
+            "wargoal_maneuvers_fraction",
+            "wanted_construction_output",
+            "institution_scores",
+            "min_law_chance_to_pass",
+            "wargoal_scores",
+            "secret_goal_scores",
+            "wanted_navy_size",
+            "ship_construction_output_multiplier",
+            "aggression",
+            "nationalization_desire",
+            "max_active_stances",
+            "wanted_marines",
+            "economic_vs_government_spending_balance",
+            "target_marine_formation_size",
+            "unacceptable_infamy_level",
+            "undesirable_infamy_level",
+            "diplomatic_play_neutrality",
+            "diplomatic_play_boldness",
+        }
+        and {name: (binding.kind, binding.role) for name, binding in bindings.items()}
+        != shapes[field]
+    ):
+        raise ValueError(f"消费者 {field} 对象上下文偏离精确冻结证据")
+    result: set[tuple[str, str, str, str]] = set()
+
+    def bind(key: str, scope: str, *, argument_kind: str | None = None) -> None:
+        binding = bindings.get(scope)
+        expected = shapes[field].get(scope)
+        if binding is None or expected is None or (binding.kind, binding.role) != expected:
+            raise ValueError(f"消费者 {field} 读取器 {key} 作用域/类型/角色缺少上下文证据：{scope}")
+        if argument_kind is not None and binding.kind != argument_kind:
+            raise ValueError(
+                f"消费者 {field} 读取器 {key} 参数 {scope} 必须为 {argument_kind}，实际为 {binding.kind}"
+            )
+        result.add((key, binding.name, binding.kind, binding.role))
+
+    def bind_argument(reader: decision_rules.Reader, literal: str, parameter: str = "") -> None:
+        # These are object-argument signatures of existing readers, not a
+        # getter registry. Interpret root only after choosing the signature:
+        # has_variable = root names a variable, not the actor country.
+        country_arguments = {
+            ("is_subject_of", ""),
+            ("has_truce_with", ""),
+            ("is_homeland_of_country_cultures", ""),
+            ("owner", ""),
+            ("has_diplomatic_pact", "who"),
+            ("has_treaty_alliance_with", "TARGET"),
+            ("primary_cultures_percent_state", "target_country"),
+        }
+        if (reader.engine, parameter) not in country_arguments:
+            if literal.startswith("scope:"):
+                raise ValueError(
+                    f"消费者 {field} 读取器 {reader.key} 参数不支持对象作用域：{literal}"
+                )
+            return
+        scope = "root" if literal.lower() == "root" else literal.removeprefix("scope:")
+        if scope == literal and scope != "root":
+            return
+        bind(reader.key, scope, argument_kind="country")
+
+    def check(key: str) -> decision_rules.Reader:
+        reader = readers.get(key)
+        if reader is None:
+            raise ValueError(f"消费者 {field} 缺少真实读取器：{key}")
+        bind(key, reader.scope)
+        if reader.scope not in {
+            "root",
+            "target_country",
+            "overlord",
+            "interest_group",
+            "target_state",
+        }:
+            raise ValueError(
+                f"消费者 {field} 读取器没有已审计的作用域 getter：{key}/{reader.scope}"
+            )
+        # Existing interface signatures keep output kind, unit and every path
+        # conversion authoritative; an observed law is not a new law getter.
+        decision_interfaces.reader_scope(reader, actor_path, native_root=native_root)
+        if reader.argument is not None:
+            bind_argument(reader, reader.argument)
+        for parameter, literal in reader.parameters:
+            bind_argument(reader, literal, parameter)
+        for literal in reader.path:
+            if literal.lower() == "root":
+                bind(key, "root")
+            elif literal.startswith("scope:"):
+                bind(key, literal.removeprefix("scope:"))
+        if reader.engine == "relations:root":
+            bind(key, "root", argument_kind="country")
+        return reader
+
+    for key in input_keys:
+        check(key)
+    for predicate in predicates:
+        check(predicate.fact)
+        if isinstance(predicate.value, decision_rules.FactReference):
+            other = check(predicate.value.key)
+            if predicate.value.expression != other.reference():
+                raise ValueError(f"消费者 {field} FactReference 右侧与读取器不一致：{other.key}")
+    return tuple(sorted(result))
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,14 +1088,30 @@ class SituatedModel:
     binding_rows: tuple[bindings.Binding, ...] = ()
     decision_ir: tuple[decision_ir.ConsumerDecisionIR, ...] = ()
     consumer_ir: ConsumerIRBundle | None = None
+    support_signals: support_signals.SupportSignals | None = None
+    observation_contracts: tuple[tuple[str, str, tuple[object, ...]], ...] = ()
 
     def contract(self) -> dict[str, object]:
         result = contract(self.facts, self.consumers, self.actions, self.relations)
         result["source_fingerprints"] = dict(self.source_sha256)
-        result["production"] = {
-            "rule_count": self.production_rule_count,
-            "consumer_count": len(self.production_consumers),
-            "fields": [
+        owners_by_source_field: dict[tuple[str, str], set[str]] = {}
+        for instance in self.action_instances:
+            if instance.kind != "rule_action":
+                continue
+            key = (instance.source, instance.consumer_field)
+            owners_by_source_field.setdefault(key, set()).add(instance.owner)
+        production_fields = []
+        for item in self.production_consumers:
+            owners = owners_by_source_field.get((item.source, ".".join(item.field)))
+            if not owners:
+                raise ValueError(
+                    f"生产消费者缺少实际 producer owner：{item.source}:{'.'.join(item.field)}"
+                )
+            if len(owners) != 1:
+                raise ValueError(
+                    f"生产消费者存在多个 producer owner：{item.source}:{'.'.join(item.field)}"
+                )
+            production_fields.append(
                 {
                     "id": item.id,
                     "field": ".".join(item.field),
@@ -115,11 +1121,14 @@ class SituatedModel:
                     "rule_count": item.rule_count,
                     "max_delta": item.max_delta,
                     "vanilla_tail": item.vanilla_tail,
-                    "owner": "situated_kernel",
+                    "owner": next(iter(owners)),
                     "write_once": True,
                 }
-                for item in self.production_consumers
-            ],
+            )
+        result["production"] = {
+            "rule_count": self.production_rule_count,
+            "consumer_count": len(self.production_consumers),
+            "fields": production_fields,
             "goal_ranking": dict(self.goals),
             "unknown": "preserve_unknown_and_fallback_vanilla",
             "player_boundary": "is_ai_only; no player writes",
@@ -128,15 +1137,45 @@ class SituatedModel:
             "relationship_depth": 2,
         }
         result["action_instances"] = action_instances.contract(self.action_instances)
+        result["observation_contracts"] = [
+            {"source": source, "fact": key, "signature": signature}
+            for source, key, signature in self.observation_contracts
+        ]
         result["ir"] = ir.contract(self.action_ir)
         result["typed_state"] = state.contract()
         supporting = self.support_sources or {}
-        result["goals"] = goal_source.contract(self.goal_specs)
+        result["goals"] = {
+            **goal_source.contract(self.goal_specs),
+            "activation": "per_action_live_rank_fact_sets_need_tier",
+            "deactivation": "rank_fact_false_or_unknown_restores_neutral_tier",
+            "unknown": "rank_fact_unknown_uses_neutral_tier",
+            "persistent_state": False,
+            "priority_role": "legacy_metadata_not_utility; observed_rank_terms_contribute_amount",
+            "reserved": {
+                key: value["reason"]
+                for key, value in supporting.get("goals.toml", {}).get("goals", {}).items()
+                if value.get("reserved") is True
+            },
+        }
+        if self.support_signals is not None:
+            result["supporting_signals"] = support_signals.contract(self.support_signals)
         result["opportunities"] = opportunity.contract(
-            supporting.get("opportunities.toml", {}).get("opportunities", {})
+            {
+                key: value
+                for key, value in supporting.get("opportunities.toml", {})
+                .get("opportunities", {})
+                .items()
+                if value.get("reserved") is not True
+            }
         )
         result["commitments"] = commitment.contract(
-            supporting.get("commitments.toml", {}).get("commitments", {})
+            {
+                key: value
+                for key, value in supporting.get("commitments.toml", {})
+                .get("commitments", {})
+                .items()
+                if value.get("reserved") is not True
+            }
         )
         result["action_families"] = {
             "schema": 1,
@@ -194,9 +1233,26 @@ class SituatedModel:
                     "exit_when": list(item.exit_when),
                     "base": item.base,
                     "stress": item.stress,
+                    "stress_semantics": "compatibility_metadata_not_utility",
                     "opportunity": item.opportunity,
                     "commitment": item.commitment,
                     "political_cost": item.political_cost,
+                    "variant_group": item.variant_group,
+                    "variant_priority": item.variant_priority,
+                    "cause_group": item.cause_group,
+                    "commitment_cost_id": item.commitment_cost_id,
+                    "political_cost_id": item.political_cost_id,
+                    "rank_terms": [
+                        {
+                            "fact": term.fact,
+                            "goal": term.goal,
+                            "tier": term.tier,
+                            "unit": term.unit,
+                            "amount": term.amount,
+                            "evidence_group": term.evidence_group,
+                        }
+                        for term in item.rank_terms
+                    ],
                     "relations": [
                         {
                             "target": relation.target,
@@ -228,22 +1284,76 @@ def _load_supporting_sources() -> dict[str, dict[str, Any]]:
     return result
 
 
-def _reader_facts(model_facts: tuple[EvidenceSpec, ...]) -> tuple[EvidenceSpec, ...]:
+def _reader_signature(reader: decision_rules.Reader) -> tuple[object, ...]:
+    """Identify the observation, independently of the file reusing it.
+
+    Boolean unit spellings and parameter order have the same engine meaning;
+    every other field participates in identity, including numeric validity.
+    """
+    return (
+        reader.engine,
+        reader.scope,
+        "boolean" if reader.unit in {"flag", "boolean"} else reader.unit,
+        reader.kind,
+        reader.argument,
+        reader.minimum,
+        reader.maximum,
+        reader.path,
+        reader.value_field,
+        tuple(sorted(reader.parameters)),
+    )
+
+
+def _declared_reader_matches(fact: EvidenceSpec, reader: decision_rules.Reader) -> bool:
+    """A direct declaration may reuse a reader, but cannot flatten its meaning."""
+    fact_kind = "number" if fact.kind == "ratio" else fact.kind
+    units_match = fact.unit == reader.unit or {fact.unit, reader.unit} <= {"flag", "boolean"}
+    if (
+        not units_match
+        or fact.scope != reader.scope
+        or fact_kind != reader.kind
+        or fact.minimum != reader.minimum
+        or fact.maximum != reader.maximum
+        or reader.path
+        or reader.parameters
+        or reader.value_field is not None
+    ):
+        return False
+    expected = reader.expression("=", True) if reader.kind == "boolean" else reader.engine
+    return "".join(fact.trigger.split()) == "".join(expected.split())
+
+
+def _reader_facts(
+    model_facts: tuple[EvidenceSpec, ...],
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> tuple[EvidenceSpec, ...]:
     """从 information/adapters 的 readers 补齐事实签名，不复制业务谓词。"""
+    for item in model_facts:
+        if any(op in item.trigger for op in ("=", "<", ">")) and (
+            item.kind != "boolean" or item.unit not in {"flag", "boolean"}
+        ):
+            raise ValueError(f"事实 {item.id} 与 reader 谓词类型不一致：比较结果必须是布尔值")
     by_id = {item.id: item for item in model_facts}
-    information = decision_rules.load()
-    adapters = decision_adapters.load()
+    declared_by_id = dict(by_id)
+    observations: dict[str, tuple[decision_rules.Reader, str]] = {}
+    information = decision_rules.load() if information is None else information
+    adapters = decision_adapters.load() if adapters is None else adapters
     readers: list[tuple[str, Any, str]] = [
         ("information", reader, "mod/decisions/information.toml") for reader in information.readers
     ]
     for source, policy in adapters.policies:
         readers.extend(("adapter", reader, source) for reader in policy.readers)
     for owner, reader, source in readers:
+        prior = observations.get(reader.key)
+        if prior is not None and _reader_signature(prior[0]) != _reader_signature(reader):
+            raise ValueError(f"事实 {reader.key} 的 reader 完整语义不一致：{prior[1]} / {source}")
+        observations[reader.key] = (reader, source)
+        declared = declared_by_id.get(reader.key)
+        if declared is not None and not _declared_reader_matches(declared, reader):
+            raise ValueError(f"事实 {reader.key} 与原版 reader 的完整语义不一致：{source}")
         if reader.key in by_id:
-            item = by_id[reader.key]
-            compatible_units = {item.unit, reader.unit} <= {"flag", "boolean"}
-            if (item.unit != reader.unit and not compatible_units) or item.scope != reader.scope:
-                raise ValueError(f"事实 {reader.key} 与原版 reader 的作用域/单位不一致")
             continue
         trigger = reader.engine
         if reader.argument is not None:
@@ -268,11 +1378,117 @@ def _reader_facts(model_facts: tuple[EvidenceSpec, ...]) -> tuple[EvidenceSpec, 
     return tuple(by_id[key] for key in sorted(by_id))
 
 
-def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[str, str]]:
+def _reader_shapes(
+    declared_facts: tuple[EvidenceSpec, ...] = (),
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> dict[str, tuple[decision_rules.Reader, ...]]:
+    """Expose original reader shape for support-source lowering guards."""
+    information = decision_rules.load() if information is None else information
+    adapters = decision_adapters.load() if adapters is None else adapters
+    result: dict[str, list[decision_rules.Reader]] = {}
+    for reader in information.readers:
+        result.setdefault(reader.key, []).append(reader)
+    for _source, policy in adapters.policies:
+        for reader in policy.readers:
+            result.setdefault(reader.key, []).append(reader)
+    # Direct facts.toml predicates are a separate explicit source, not the
+    # flattened adapter evidence. Admit only one scalar's bounded predicate, and never
+    # overwrite a raw Reader (whose full scope/path must still be checked).
+    for fact in declared_facts:
+        engine = evidence_source.scalar_predicate_engine(fact.trigger)
+        if fact.id not in result and fact.scope == "root" and engine:
+            result[fact.id] = [
+                decision_rules.Reader(
+                    key=fact.id,
+                    engine=engine,
+                    scope="root",
+                    unit=fact.unit,
+                    kind="boolean",
+                )
+            ]
+    return {key: tuple(value) for key, value in result.items()}
+
+
+def _action_context_readers(
+    action: decision_ir.ConsumerDecisionIR,
+    context: decision_ir.EvaluationContext,
+    declared_facts: tuple[EvidenceSpec, ...],
+    signals: support_signals.SupportSignals,
+    original_readers: tuple[decision_rules.Reader, ...],
+) -> tuple[tuple[str, str, str, str], ...]:
+    """Resolve every card input to existing readers, including costs and aliases."""
+    keys = {
+        *action.requires_all,
+        *action.requires_any,
+        *action.blocked_by,
+        *action.exit_when,
+        *action.consumes,
+        *(term.fact for term in action.rank_terms),
+        *(term.fact for term in (*action.commitment_when, *action.political_when)),
+        *(fact for relation in action.relations for fact in relation.condition_facts),
+    }
+    aliases = {item.alias: item.source_fact for item in signals.signals}
+    declared = {item.id: item for item in declared_facts}
+    originals = {reader.key: reader for reader in original_readers}
+    result: set[tuple[str, str, str, str]] = set()
+    for key in sorted(keys):
+        source_key = aliases.get(key, key)
+        reader = originals.get(source_key)
+        if reader is None:
+            fact = declared.get(source_key)
+            engine = evidence_source.scalar_predicate_engine(fact.trigger) if fact else None
+            # A declared one-scalar predicate may reuse that original scalar's
+            # signature; its result being boolean does not change the getter.
+            candidates = {
+                _reader_signature(item): item
+                for item in original_readers
+                if fact is not None
+                and item.engine == engine
+                and item.scope == fact.scope
+                and not item.path
+                and item.argument is None
+                and not item.parameters
+                and item.value_field is None
+            }
+            if (
+                not candidates
+                and fact is not None
+                and re.fullmatch(r"[a-z][a-z0-9_]*\s*=\s*(?:yes|no)", fact.trigger)
+                and fact.kind == "boolean"
+                and fact.unit in {"flag", "boolean"}
+            ):
+                # The declaration is the actual boolean source template. Keep
+                # its engine identity; never borrow a similarly named reader.
+                reader = decision_rules.Reader(
+                    key=source_key,
+                    engine=cast("str", engine),
+                    scope=fact.scope,
+                    unit="boolean",
+                    kind="boolean",
+                )
+                decision_interfaces.reader_scope(reader, ())
+            elif len(candidates) != 1:
+                raise ValueError(f"显式行动 {action.action_id} 缺少唯一真实读取器：{key}")
+            else:
+                reader = next(iter(candidates.values()))
+        reader = replace(reader, key=key)
+        result.update(
+            validate_context_readers(action.field, context, {key: reader}, (), input_keys=(key,))
+        )
+    return tuple(sorted(result))
+
+
+def _production_inventory(
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> tuple[tuple[ProductionConsumer, ...], int, dict[str, str]]:
     consumers: list[ProductionConsumer] = []
     fingerprints: dict[str, str] = {}
     total = 0
-    info = decision_rules.load()
+    info = decision_rules.load() if information is None else information
     fingerprints["information"] = info.source_sha256
     for field, rules in info.groups().items():
         consumers.append(
@@ -288,7 +1504,7 @@ def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[s
             )
         )
         total += len(rules)
-    adapters = decision_adapters.load()
+    adapters = decision_adapters.load() if adapters is None else adapters
     fingerprints["adapters"] = adapters.source_sha256
     for source, policy in adapters.policies:
         for field, rules in policy.groups().items():
@@ -309,7 +1525,16 @@ def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[s
     return tuple(consumers), total, fingerprints
 
 
-def _validate_supporting_sources(sources, consumers, relation_list) -> None:
+def _validate_supporting_sources(
+    sources,
+    consumers,
+    relation_list,
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> None:
+    if set(sources) != set(SUPPORTING_SOURCES):
+        raise ValueError("辅助合同来源必须完整且不能包含已退役或未知来源")
     raw_relations = sources["relations.toml"].get("relations", [])
     if not isinstance(raw_relations, list):
         raise ValueError("relations.toml 的 relations 必须是列表")
@@ -352,30 +1577,28 @@ def _validate_supporting_sources(sources, consumers, relation_list) -> None:
     declared = sources["consumers.toml"].get("consumers", {})
     if declared and {item["field"] for item in declared.values()} != consumer_fields:
         raise ValueError("consumers.toml 与行动卡消费者字段不一致")
-    arbitration = sources["arbitration.toml"]
-    if (
-        arbitration.get("unknown_fallback") != "vanilla"
-        or arbitration.get("max_candidates", 0) > 32
-    ):
-        raise ValueError("仲裁合同必须有原版未知回退和 32 个候选上限")
-    temporal = sources["temporal.toml"]
-    if temporal.get("max_persistent_routes") != 1 or temporal.get("max_reason_codes", 0) > 8:
-        raise ValueError("时间合同必须限制持久路线和解释记录")
     localization = sources["localization.toml"]
     if localization.get("fallback") != "none" or len(localization.get("languages", [])) != 11:
         raise ValueError("本地化合同必须覆盖锁定本体的 11 种语言且不允许回退")
     families.load_contract(DECISIONS / "action_families.toml")
     layers.load(DECISIONS / "action_layers.toml")
-    bindings.load(DECISIONS / "action_bindings.toml")
-    domain_coverage.load(DECISIONS / "domain_actions.toml")
+    bindings.load(DECISIONS / "action_bindings.toml", information=information, adapters=adapters)
+    domain_coverage.load(
+        DECISIONS / "domain_actions.toml", information=information, adapters=adapters
+    )
 
 
 def load_model(
     *, facts_path: Path = FACTS, actions_path: Path = ACTIONS, baseline: str | None = None
 ) -> SituatedModel:
-    facts = _reader_facts(evidence_source.load(facts_path))
+    declared_facts = evidence_source.load(facts_path)
+    # A single invocation owns one policy snapshot. Helpers still load fresh
+    # inputs when called independently; no cross-invocation cache is retained.
+    information = decision_rules.load()
+    adapters = decision_adapters.load()
+    facts = _reader_facts(declared_facts, information=information, adapters=adapters)
     layer_model = layers.load(LAYERS)
-    binding_rows = bindings.load(BINDINGS)
+    binding_rows = bindings.load(BINDINGS, information=information, adapters=adapters)
     consumers, actions = action_source.load(actions_path)
     tool_ids = {item.id for item in layer_model.tools}
     action_ids = {item.id for item in actions}
@@ -385,6 +1608,14 @@ def load_model(
             f"缺失={sorted(action_ids - tool_ids)} 多余={sorted(tool_ids - action_ids)}"
         )
     supporting = _load_supporting_sources()
+    support_model = support_signals.load(
+        supporting,
+        facts,
+        actions,
+        reader_shapes=_reader_shapes(declared_facts, information=information, adapters=adapters),
+    )
+    facts = (*facts, *(item.evidence() for item in support_model.signals))
+    goal_specs = support_signals.load_goals(supporting, actions, consumers)
     relation_list = relations.relations(
         actions,
         supporting["relations.toml"].get("relations", []),
@@ -392,7 +1623,9 @@ def load_model(
     relations.validate(actions, specs=supporting["relations.toml"].get("relations", []))
     layers.validate_links(layer_model, actions, relation_list)
     decision_rows = decision_ir.compile_decisions(actions, consumers, relation_list)
-    _validate_supporting_sources(supporting, consumers, relation_list)
+    _validate_supporting_sources(
+        supporting, consumers, relation_list, information=information, adapters=adapters
+    )
     fact_ids = {item.id for item in facts}
     relation_fact_ids = {fact for relation in relation_list for fact in relation.condition_facts}
     missing_relation_facts = sorted(relation_fact_ids - fact_ids)
@@ -417,15 +1650,142 @@ def load_model(
     missing = [consumer.field for consumer in consumers if consumer.field not in available]
     if baseline is None and missing:
         raise ValueError(f"消费者字段不在默认策略底本：{missing[0]}")
-    information = decision_rules.load()
-    adapters = decision_adapters.load()
-    production, count, production_hashes = _production_inventory()
+    production, count, production_hashes = _production_inventory(
+        information=information, adapters=adapters
+    )
     instances = action_instances.build(
         information,
         adapters,
         actions,
         consumer_fields={item.id: item.field for item in consumers},
+        consumer_contracts={item.id: item for item in consumers},
     )
+    observed_contexts = evaluation_contexts(baseline_text)
+    observed_contexts.update(_frozen_strategy_contexts())
+    observed_contexts.update(_frozen_institution_contexts(observed_contexts["institution_scores"]))
+    observed_contexts.update(_frozen_strategy_score_contexts(observed_contexts))
+    law_context = _frozen_law_context()
+    company_context = _frozen_company_context()
+    ship_modification_contexts = _frozen_ship_modification_contexts()
+    treaty_contexts = _frozen_treaty_contexts()
+    mobilization_contexts = _frozen_mobilization_contexts()
+    context_readers = {}
+    instance_contexts = {}
+    for source, policy in (("mod/decisions/information.toml", information), *adapters.policies):
+        readers = {reader.key: reader for reader in policy.readers}
+        for rule in policy.rules:
+            field = ".".join(rule.field).removeprefix("ai_strategy_default.")
+            if (
+                source
+                in {
+                    "mod/decisions/information.toml",
+                    "common/ai_strategies/00_default_strategy.txt",
+                }
+                and (field == "institution_scores" or field.startswith("institution_scores."))
+                and (field == "institution_scores" or field not in observed_contexts)
+            ):
+                raise ValueError(f"制度策略消费者不是精确普通数值子块：{field}")
+            family = field.split(".")[0]
+            if (
+                source
+                in {
+                    "mod/decisions/information.toml",
+                    "common/ai_strategies/00_default_strategy.txt",
+                }
+                and family
+                in {
+                    "wargoal_scores",
+                    "secret_goal_scores",
+                    "treaty_category_scores",
+                    "strategic_region_stance_type_scores",
+                }
+                and (field == family or field not in observed_contexts)
+            ):
+                raise ValueError(f"目标策略消费者不是精确普通数值子块：{field}")
+            context = (
+                observed_contexts.get(field)
+                if source
+                in {
+                    "mod/decisions/information.toml",
+                    "common/ai_strategies/00_default_strategy.txt",
+                }
+                else law_context
+                if source.startswith("common/laws/")
+                and len(rule.field) == 2
+                and rule.field[-1] == "ai_enact_weight_modifier"
+                else company_context
+                if source.startswith("common/company_types/")
+                and len(rule.field) == 2
+                and rule.field[-1] == "ai_weight"
+                else ship_modification_contexts.get((source, field))
+                or treaty_contexts.get((source, field))
+                or mobilization_contexts.get((source, field))
+            )
+            if context is not None:
+                instance_contexts[(source, rule.id)] = context
+                reader_field = (
+                    "ai_enact_weight_modifier"
+                    if source.startswith("common/laws/")
+                    else "company.ai_weight"
+                    if source.startswith("common/company_types/")
+                    else "ship_modification.ai_weight"
+                    if (source, field) in ship_modification_contexts
+                    else "treaty.ai.proposal_weight"
+                    if (source, field) in treaty_contexts
+                    else field
+                )
+                context_readers[(source, rule.id)] = validate_context_readers(
+                    reader_field,
+                    context,
+                    readers,
+                    rule.conditions,
+                    actor_path=policy.actor_path,
+                    input_keys=tuple(rule.input_keys()),
+                    source=source,
+                    native_root=policy.native_root,
+                )
+    original_readers = (
+        *information.readers,
+        *(reader for _, policy in adapters.policies for reader in policy.readers),
+    )
+    scalar_card_fields = {
+        "wanted_num_supply_ships",
+        "max_ship_design_complexity",
+        "recklessness",
+        "wargoal_maneuvers_fraction",
+        "aggression",
+        "nationalization_desire",
+        "max_active_stances",
+        "wanted_marines",
+        "economic_vs_government_spending_balance",
+        "target_marine_formation_size",
+        "unacceptable_infamy_level",
+        "undesirable_infamy_level",
+        "diplomatic_play_neutrality",
+        "diplomatic_play_boldness",
+    }
+    for decision_row in decision_rows:
+        if decision_row.field not in scalar_card_fields:
+            continue
+        context = observed_contexts[decision_row.field]
+        key = ("mod/decisions/actions.toml", decision_row.action_id)
+        instance_contexts[key] = context
+        context_readers[key] = _action_context_readers(
+            decision_row, context, declared_facts, support_model, original_readers
+        )
+    instances = tuple(
+        replace(
+            instance, evaluation_context=instance_contexts.get((instance.source, instance.rule_id))
+        )
+        for instance in instances
+    )
+    if any(
+        instance.evaluation_context is not None
+        and instance.consumer_field.removeprefix("ai_strategy_default.") in scalar_card_fields
+        and instance.actor_scope != "root"
+        for instance in instances
+    ):
+        raise ValueError("锁定策略消费者的 actor 必须保持国家 ROOT")
     action_ir = ir.from_rules(
         [("mod/decisions/information.toml", item) for item in information.rules]
         + [(source, item) for source, policy in adapters.policies for item in policy.rules]
@@ -439,43 +1799,61 @@ def load_model(
         instances,
         source_hashes=production_hashes,
     )
-    goal_bindings = {
-        "survival": ("fiscal_neutrality", "diplomatic_recklessness"),
-        "recovery": ("economic_balance", "reform_chance"),
-        "capacity": ("economic_balance", "reform_chance"),
-        "structure": ("economic_balance", "reform_chance"),
-    }
-
-    def _goal_names(raw: object, label: str) -> tuple[str, ...]:
-        if raw is None:
-            return ()
-        if not isinstance(raw, list) or any(not isinstance(item, str) or not item for item in raw):
-            raise ValueError(f"goals.toml 的 {label} 必须是非空字符串列表")
-        return tuple(raw)
-
-    goal_specs = tuple(
-        goal_source.Goal(
-            id=key,
-            priority=int(value.get("priority", 0)),
-            horizon=str(value.get("horizon", "medium")),
-            active=True,
-            source_pressures=_goal_names(value.get("pressure"), "pressure"),
-            source_needs=_goal_names(value.get("need"), "need"),
-            consumer_bindings=_goal_names(
-                value.get("consumers", list(goal_bindings.get(key, ()))), "consumers"
-            ),
-            ttl_days=(int(value["ttl_days"]) if type(value.get("ttl_days")) is int else None),
-            unknown_policy=(
-                value.get("unknown", "vanilla")
-                if value.get("unknown", "vanilla") in {"vanilla", "conservative", "lower_tier"}
-                else "vanilla"
+    consumer_bundle = replace(
+        consumer_bundle,
+        writers=tuple(
+            replace(
+                writer,
+                reader_context_bindings=context_readers.get((writer.source, writer.definition), ()),
+            )
+            for writer in consumer_bundle.writers
+        ),
+    )
+    if adapters.supply is not None and any(
+        "market" in policy.enabled_domains for _, policy in adapters.policies
+    ):
+        consumer_bundle = replace(
+            consumer_bundle,
+            writers=(
+                *consumer_bundle.writers,
+                *(
+                    decision_ir.WriterDecisionIR(
+                        writer_id=program.writer_id,
+                        kind="supply_program",
+                        source=program.source,
+                        definition=program.good,
+                        consumer_id=program.consumer_id,
+                        field=program.field,
+                        actor="root",
+                        target="market_goods",
+                        operation="append",
+                        vanilla_tail="preserve",
+                        owner="supply_plan",
+                        supply_program=program,
+                    )
+                    for program in adapters.supply.actions()
+                ),
             ),
         )
-        for key, value in sorted(supporting["goals.toml"].get("goals", {}).items())
-        if isinstance(value, dict) and type(value.get("priority")) is int
+    migration_baseline.validate_bundle(consumer_bundle)
+    consumer_bundle = joint_chain_contract.bind_bundle(
+        consumer_bundle,
+        ((joint_chain_contract.INFO_SOURCE, information), *adapters.policies),
     )
     goals = tuple((item.id, item.priority) for item in goal_specs)
     hashes = {
+        "law_enact_context_document": _LAW_DOC_SHA256,
+        "strategy_context_snapshot": engine_scope.STRATEGY_MANIFEST_SHA256,
+        "company_context_snapshot": engine_scope.COMPANY_MANIFEST_SHA256,
+        "migration_baseline": hashlib.sha256(
+            migration_baseline.DEFAULT_SOURCE.read_bytes()
+        ).hexdigest(),
+        "migration_retirements": hashlib.sha256(
+            migration_baseline.RETIREMENTS_SOURCE.read_bytes()
+        ).hexdigest(),
+        "scripted_predicate_snapshot": hashlib.sha256(
+            decision_interfaces.scripted_trigger_snapshot()
+        ).hexdigest(),
         "facts": hashlib.sha256(facts_path.read_bytes()).hexdigest(),
         "actions": hashlib.sha256(actions_path.read_bytes()).hexdigest(),
         "action_layers": hashlib.sha256(LAYERS.read_bytes()).hexdigest(),
@@ -503,6 +1881,15 @@ def load_model(
         binding_rows,
         decision_rows,
         consumer_bundle,
+        support_model,
+        tuple(
+            (source, reader.key, _reader_signature(reader))
+            for source, policy in (
+                ("mod/decisions/information.toml", information),
+                *adapters.policies,
+            )
+            for reader in policy.readers
+        ),
     )
 
 
@@ -567,7 +1954,11 @@ def _validate_action_costs(action: ActionCard, facts: dict[str, EvidenceSpec]) -
         raise ValueError(f"行动 {action.id} 零成本必须逐卡说明原因")
 
 
-def _cost_state(predicates: tuple[CostPredicate, ...], values: Mapping[str, object]) -> Truth:
+def _cost_state(
+    predicates: tuple[CostPredicate, ...],
+    values: Mapping[str, object],
+    facts: Mapping[str, EvidenceSpec] | None = None,
+) -> Truth:
     states: list[Truth] = []
     for predicate in predicates:
         value = values.get(predicate.fact)
@@ -575,6 +1966,12 @@ def _cost_state(predicates: tuple[CostPredicate, ...], values: Mapping[str, obje
             valid = type(value) is bool and type(predicate.value) is bool
         else:
             valid = type(value) in (int, float) and math.isfinite(cast("float", value))
+        spec = facts.get(predicate.fact) if facts is not None else None
+        if valid and spec is not None and type(value) is not bool:
+            number = cast("float", value)
+            valid = (spec.minimum is None or number >= spec.minimum) and (
+                spec.maximum is None or number <= spec.maximum
+            )
         if not valid:
             states.append(None)
             continue
@@ -595,7 +1992,11 @@ def _row_cost(
     row: decision_ir.ConsumerDecisionIR,
     values: Mapping[str, object],
     states: dict[tuple[CostPredicate, ...], bool] | None = None,
+    model: SituatedModel | None = None,
 ) -> float:
+    if model is not None and model.support_signals is not None:
+        values = model.support_signals.values(values)
+
     def active(predicates: tuple[CostPredicate, ...]) -> bool:
         if not predicates:
             return False
@@ -603,7 +2004,8 @@ def _row_cost(
             states[predicates]
             if states is not None
             # Only a proven absence of pressure permits the cheaper tier.
-            else _cost_state(predicates, values) in (True, None)
+            else _cost_state(predicates, values, {f.id: f for f in model.facts} if model else None)
+            in (True, None)
         )
 
     return (row.commitment if active(row.commitment_when) else 0.0) + (
@@ -611,57 +2013,20 @@ def _row_cost(
     )
 
 
-def _row_magnitude(
-    row: decision_ir.ConsumerDecisionIR,
-    values: Mapping[str, object],
-    states: dict[tuple[CostPredicate, ...], bool] | None = None,
-) -> float:
-    magnitude = abs(row.base + row.opportunity)
-    cost = _row_cost(row, values, states)
-    return max(0.0, magnitude - cost)
-
-
-def _row_order(row, values, states=None):
-    # Compare the benefit that remains after the known/assumed cost first.
-    # Stress only breaks a tied benefit; otherwise a high-stress action
-    # could beat a materially better affordable alternative.
-    return (-_row_magnitude(row, values, states), -row.stress, -row.opportunity, row.action_id)
-
-
 def _row_delta(
     row: decision_ir.ConsumerDecisionIR,
     values: Mapping[str, object],
     *,
     complement: float = 0.0,
+    model: SituatedModel | None = None,
 ) -> float:
+    """Unclamped signed contribution; only the consumer clamps the sum."""
     direction = -1.0 if row.base + row.opportunity < 0 else 1.0
-    magnitude = _row_magnitude(row, values)
-    delta = direction * magnitude + (complement if direction > 0 else min(complement, magnitude))
-    if direction < 0:
-        delta = min(0.0, delta)
-    return max(-row.max_delta, min(row.max_delta, delta))
-
-
-def _row_delta_expression(
-    row: decision_ir.ConsumerDecisionIR,
-    *,
-    max_delta: float | None = None,
-    complement_effects: tuple[str, ...] = (),
-    cost_states: dict[tuple[CostPredicate, ...], bool] | None = None,
-) -> str:
-    """生成与 ``_row_delta`` 同构的有限 PDX value block。"""
-
-    limit = row.max_delta if max_delta is None else min(row.max_delta, max_delta)
-    direction = -1.0 if row.base + row.opportunity < 0 else 1.0
-    base = direction * _row_magnitude(row, {}, cost_states)
-    effects = list(complement_effects)
-    if not effects:
-        delta = max(-limit, min(limit, base))
-        return f"add = {delta:g}"
+    demand = sum(term.amount for term in row.rank_terms if values.get(term.fact) is True)
     return (
-        f"add = {{\n\t\t\t\tvalue = {base:g}"
-        f"{''.join(effects)}"
-        f"\n\t\t\t\tmin = {-limit:g}\n\t\t\t\tmax = {(0 if direction < 0 else limit):g}\n\t\t\t}}"
+        row.base
+        + row.opportunity
+        + direction * (demand + complement - _row_cost(row, values, model=model))
     )
 
 
@@ -674,49 +2039,318 @@ def _cost_trigger(predicates: tuple[CostPredicate, ...], facts: dict[str, Eviden
         else:
             if any(operator in trigger for operator in ("=", "<", ">")):
                 raise ValueError(f"数值成本必须引用原始 reader：{predicate.fact}")
-            terms.append(f"{trigger} {predicate.op} {predicate.value:g}")
+            terms.append(f"{trigger} {predicate.op} {programs.numeric_literal(predicate.value)}")
     return " OR = { " + " ".join(terms) + " }"
 
 
-def _cost_feasibility_trigger(row, facts: dict[str, EvidenceSpec]) -> str:
-    """Return a finite guard for a relation target's affordable status.
-
-    Cost predicates are OR within each cost tier and the tiers are additive.
-    Enumerating the finite tier combinations keeps the target relation guard
-    equivalent to the reference affordability check without introducing a
-    second dynamic selector.
-    """
-
-    groups = tuple(
-        (predicates, amount)
-        for predicates, amount in (
-            (row.commitment_when, row.commitment),
-            (row.political_when, row.political_cost),
-        )
-        if predicates and amount > 0
-    )
-    magnitude = abs(row.base + row.opportunity)
-    impossible = "NOT = { is_ai = yes }"
-    if not groups:
-        return ""
-    if magnitude <= 0:
-        return impossible
-    feasible_terms: list[str] = []
-    for mask in range(1 << len(groups)):
-        total = sum(amount for index, (_, amount) in enumerate(groups) if mask & (1 << index))
-        if magnitude <= total:
+def _cheap_cost_trigger(predicates, facts):
+    bounds = []
+    for predicate in predicates:
+        fact = facts[predicate.fact]
+        if type(predicate.value) is bool:
             continue
-        terms = []
-        for index, (predicates, _) in enumerate(groups):
-            trigger = _cost_trigger(predicates, facts)
-            terms.append(trigger if mask & (1 << index) else f"NOT = {{ {trigger} }}")
-        feasible_terms.append(terms[0] if len(terms) == 1 else "AND = { " + " ".join(terms) + " }")
-    if not feasible_terms:
-        return impossible
-    return (
-        feasible_terms[0]
-        if len(feasible_terms) == 1
-        else "OR = { " + " ".join(feasible_terms) + " }"
+        if fact.minimum is not None:
+            bounds.append(f"{fact.trigger} >= {programs.numeric_literal(fact.minimum)}")
+        if fact.maximum is not None:
+            bounds.append(f"{fact.trigger} <= {programs.numeric_literal(fact.maximum)}")
+    return "AND = { " + " ".join(bounds) + " NOT = { " + _cost_trigger(predicates, facts) + " } }"
+
+
+def _production_action_rows(model: SituatedModel) -> tuple[decision_ir.ConsumerDecisionIR, ...]:
+    """Reject divergent explicit-card identities before any production lowering.
+
+    The compatibility decision rows, canonical bundle rows and writer source map
+    must describe the same actions.  A missing writer cannot leave an anonymous
+    card in the generated output or the reference evaluator.
+    """
+    for binding in model.binding_rows:
+        bindings.validate_disposition(binding)
+    bundle = model.consumer_ir
+    if bundle is None:
+        raise ValueError("显式行动缺少 ConsumerIR bundle")
+    rows = {row.action_id: row for row in model.decision_ir}
+    canonical = {row.action_id: row for row in bundle.actions}
+    if (
+        len(rows) != len(model.decision_ir)
+        or len(canonical) != len(bundle.actions)
+        or rows != canonical
+    ):
+        raise ValueError("显式行动 DecisionIR 与 ConsumerIR 行重复或不一致")
+    if len(set(bundle.writer_ids())) != len(bundle.writers):
+        raise ValueError("ConsumerIR 生产 writer ID 重复")
+    writers = [writer for writer in bundle.writers if writer.kind == "action_card"]
+    by_action = {writer.definition: writer for writer in writers}
+    if len(by_action) != len(writers) or set(by_action) != set(canonical):
+        raise ValueError("显式行动缺少唯一 ConsumerIR writer")
+    consumers = {consumer.id: consumer for consumer in model.consumers}
+    if len(consumers) != len(model.consumers):
+        raise ValueError("显式行动消费者身份重复")
+    facts = {fact.id: fact for fact in model.facts}
+    for action_id, row in canonical.items():
+        if row.operation != "add":
+            raise ValueError("显式联合消费者仅支持已核实的 add 投影；倍率必须使用独立原版适配")
+        writer = by_action[action_id]
+        consumer = consumers.get(row.consumer_id)
+        if consumer is None or (
+            writer.writer_id != f"card_{action_id}"
+            or writer.source != "mod/decisions/actions.toml"
+            or writer.consumer_id != row.consumer_id
+            or writer.field != row.field
+            or writer.operation != row.operation
+            or writer.vanilla_tail != row.vanilla_tail
+            or writer.actor != consumer.scope
+            or writer.target != "none"
+            or writer.owner != consumer.owner
+            or writer.action != row
+            or writer.legacy is not None
+            or writer.predicates
+            or row.field != consumer.field
+            or row.operation != consumer.operation
+            or row.vanilla_tail != consumer.vanilla_tail
+        ):
+            raise ValueError(f"显式行动 ConsumerIR writer 与消费者/行动不一致：{action_id}")
+        goals = {goal.id: goal for goal in model.goal_specs}
+        seen = set()
+        for term in row.rank_terms:
+            fact = facts.get(term.fact)
+            goal = goals.get(term.goal)
+            if (
+                fact is None
+                or fact.kind != "boolean"
+                or fact.scope != "root"
+                or {fact.unit, term.unit} - {"flag", "boolean"}
+                or goal is None
+                or row.consumer_id not in goal.consumer_bindings
+                or term.fact in seen
+            ):
+                raise ValueError(
+                    f"行动 rank 事实/目标/单位/消费者无效或重复：{action_id}:{term.fact}"
+                )
+            seen.add(term.fact)
+    _validate_action_groups(bundle.actions, facts)
+    return bundle.actions
+
+
+def _direction(row: decision_ir.ConsumerDecisionIR) -> float:
+    return -1.0 if row.base + row.opportunity < 0 else 1.0
+
+
+def _validate_action_groups(rows, facts) -> None:
+    """Only declared identities deduplicate; equal predicates never imply identity.
+
+    Variant branches are local numeric chains. Sharing their costs or evidence
+    outside the chain requires a selected-variant runtime value, which this
+    stateless adapter cannot legally provide. Reject that combination explicitly.
+    """
+    groups: dict[tuple[str, str, str], object] = {}
+    priorities: dict[tuple[str, str], set[int]] = {}
+    for row in rows:
+        for label in ("variant_group", "cause_group", "commitment_cost_id", "political_cost_id"):
+            value = getattr(row, label)
+            if not isinstance(value, str) or (
+                value and not re.fullmatch(r"[a-z][a-z0-9_]*", value)
+            ):
+                raise ValueError(f"行动 {row.action_id} 的 {label} ID 无效")
+        if type(row.variant_priority) is not int or (
+            row.variant_priority and not row.variant_group
+        ):
+            raise ValueError("variant_priority 必须是显式 variant_group 的整数优先级")
+        if row.variant_group:
+            if (
+                row.cause_group
+                or row.commitment_cost_id
+                or row.political_cost_id
+                or any(term.evidence_group for term in row.rank_terms)
+            ):
+                raise ValueError("variant 与跨卡 cause/evidence/shared cost 聚合尚无合法无状态投影")
+            priority_key = (row.consumer_id, row.variant_group)
+            used = priorities.setdefault(priority_key, set())
+            if row.variant_priority in used:
+                raise ValueError("同组 variant_priority 必须唯一")
+            used.add(row.variant_priority)
+        for category, name, signature in (
+            ("variant", row.variant_group, _direction(row)),
+            ("cause", row.cause_group, _direction(row)),
+            *(
+                ("evidence", term.evidence_group, (term.goal, term.unit, _direction(row)))
+                for term in row.rank_terms
+            ),
+        ):
+            if name:
+                key = (row.consumer_id, category, name)
+                if key in groups and groups[key] != signature:
+                    raise ValueError(f"行动 {category} 去重组方向/目标/单位不一致：{name}")
+                groups[key] = signature
+        for identity, amount, predicates in (
+            (row.commitment_cost_id, row.commitment, row.commitment_when),
+            (row.political_cost_id, row.political_cost, row.political_when),
+        ):
+            if not identity:
+                continue
+            if amount <= 0 or not predicates:
+                raise ValueError("显式 shared cost 必须包含正成本与谓词")
+            specs = []
+            for predicate in predicates:
+                fact = facts.get(predicate.fact)
+                if fact is None or fact.scope != "root" or fact.unit != predicate.unit:
+                    raise ValueError("shared cost 事实作用域或单位无效")
+                specs.append((predicate, fact))
+            signature = (amount, _direction(row), frozenset(specs))
+            key = (row.consumer_id, "cost", identity)
+            if key in groups and groups[key] != signature:
+                raise ValueError(f"shared cost 身份的金额/方向/谓词/作用域/单位不一致：{identity}")
+            groups[key] = signature
+
+
+@dataclass(frozen=True, slots=True)
+class _ExplicitTerm:
+    row: decision_ir.ConsumerDecisionIR
+    amount: float
+    facts: tuple[str, ...] = ()
+    cost: tuple[CostPredicate, ...] = ()
+    full_variant: bool = False
+
+
+def _explicit_groups(rows, by_id, enabled):
+    """Linear numeric chains: one known applicable member per declared group."""
+    groups: dict[tuple[str, ...], list[_ExplicitTerm]] = {}
+    for row in rows:
+        if row.variant_group:
+            groups.setdefault(("variant", row.variant_group), []).append(
+                _ExplicitTerm(row, 0.0, full_variant=True)
+            )
+            continue
+        cause_key = (
+            ("cause", row.cause_group) if row.cause_group else ("local_cause", row.action_id)
+        )
+        groups.setdefault(cause_key, []).append(_ExplicitTerm(row, row.base + row.opportunity))
+        for index, term in enumerate(row.rank_terms):
+            if term.amount:
+                key = (
+                    ("demand", term.evidence_group)
+                    if term.evidence_group
+                    else ("local_demand", row.action_id, str(index))
+                )
+                groups.setdefault(key, []).append(
+                    _ExplicitTerm(row, _direction(row) * term.amount, (term.fact,))
+                )
+        for label, identity, predicates, amount in (
+            ("commitment", row.commitment_cost_id, row.commitment_when, row.commitment),
+            ("political", row.political_cost_id, row.political_when, row.political_cost),
+        ):
+            if predicates and amount:
+                key = (
+                    ("shared_cost", identity) if identity else ("local_cost", row.action_id, label)
+                )
+                groups.setdefault(key, []).append(
+                    _ExplicitTerm(row, -_direction(row) * amount, cost=predicates)
+                )
+        for index, relation in enumerate(_effective_relations(row, by_id, enabled)):
+            if relation.kind != "enables":
+                amount = (
+                    _direction(row)
+                    * relation.strength
+                    * (-1 if relation.kind in {"substitutes", "conflicts"} else 1)
+                )
+                groups[("relation", row.action_id, str(index))] = [
+                    _ExplicitTerm(row, amount, relation.condition_facts)
+                ]
+    return tuple(
+        tuple(
+            sorted(
+                members,
+                key=lambda term: (
+                    -term.row.variant_priority if term.full_variant else -abs(term.amount),
+                    term.row.action_id,
+                ),
+            )
+        )
+        for _, members in sorted(groups.items())
+    )
+
+
+def _term_links(term, by_id, enabled):
+    links = _effective_relations(term.row, by_id, enabled)
+    if any(relation.kind == "enables" and relation not in links for relation in term.row.relations):
+        return None
+    return links
+
+
+def _variant_effects(row, links, facts):
+    effects = [f"value = {programs.numeric_literal(row.base + row.opportunity)}"]
+    for predicates, amount in (
+        (row.commitment_when, row.commitment),
+        (row.political_when, row.political_cost),
+    ):
+        if predicates and amount:
+            effects.append(
+                "if = { limit = { ROOT ?= { "
+                + _cheap_cost_trigger(predicates, facts)
+                + " } } } else = { add = "
+                + programs.numeric_literal(-_direction(row) * amount)
+                + " }"
+            )
+    effects.extend(
+        "if = { limit = { ROOT ?= { "
+        + facts[term.fact].trigger
+        + " } } add = "
+        + programs.numeric_literal(_direction(row) * term.amount)
+        + " }"
+        for term in row.rank_terms
+    )
+    for relation in links:
+        if relation.kind != "enables":
+            amount = (
+                _direction(row)
+                * relation.strength
+                * (-1 if relation.kind in {"substitutes", "conflicts"} else 1)
+            )
+            effects.append(
+                "if = { limit = { ROOT ?= { "
+                + _condition(facts, relation.condition_facts)
+                + " } } add = "
+                + programs.numeric_literal(amount)
+                + " }"
+            )
+    return " ".join(effects)
+
+
+def _ordered_relations(row: decision_ir.ConsumerDecisionIR) -> tuple[Relation, ...]:
+    """Choose strongest complements first, with stable identities breaking ties."""
+    for relation in row.relations:
+        if (
+            type(relation.strength) not in (int, float)
+            or not math.isfinite(relation.strength)
+            or relation.strength <= 0
+        ):
+            raise ValueError(f"行动关系强度必须为正有限数：{row.action_id}->{relation.target}")
+    return tuple(
+        sorted(
+            row.relations,
+            key=lambda relation: (
+                relation.kind,
+                -relation.strength,
+                relation.target,
+                relation.scope,
+                relation.condition_facts,
+                relation.unknown_policy,
+            ),
+        )
+    )
+
+
+def _effective_relations(row, by_id, enabled_fields):
+    """Only explicit world-fact conditions carry causal relation semantics.
+
+    An eligible target card is an intention, never evidence of completion.
+    Unconditional historical links remain trace metadata until migrated.
+    """
+    return tuple(
+        relation
+        for relation in _ordered_relations(row)
+        if relation.condition_facts
+        and relation.target in by_id
+        and by_id[relation.target].field in enabled_fields
     )
 
 
@@ -725,167 +2359,76 @@ def strategy_overlay(
     *,
     enabled_consumer_fields: set[str] | frozenset[str] | None = None,
 ) -> dict[str, str]:
-    """Lower the overlay while isolating disabled consumer modules.
+    """Emit one additive program per consumer without truth-table expansion.
 
-    Action relations may cross consumer fields.  When a module is disabled,
-    its target action must not leave a complement, alternative, conflict, or
-    enable guard in an enabled consumer's generated branch.  Filtering at the
-    lowering boundary keeps the production output consistent with the module
-    switch instead of filtering only the top-level fields afterwards.
+    Independent action terms share the final clamp. Unknown qualification skips
+    only its term; unknown cost takes its conservative expensive branch.
     """
-    facts = {item.id: item for item in model.facts}
-    # DecisionIR 是 lowering 的唯一行动输入。ActionCard 只在 load_model
-    # 阶段校验和编译成 IR，避免生成器再次从源 TOML 拼出另一套语义。
-    rows_by_consumer: dict[str, list[decision_ir.ConsumerDecisionIR]] = {
-        item.id: [] for item in model.consumers
-    }
-    for row in model.decision_ir:
-        rows_by_consumer[row.consumer_id].append(row)
-    output = {}
-    by_id = {item.action_id: item for item in model.decision_ir}
-    consumer_field_by_action = {
-        item.action_id: next(
-            consumer.field for consumer in model.consumers if consumer.id == item.consumer_id
-        )
-        for item in model.decision_ir
-    }
-    enabled_fields = (
+    rows = _production_action_rows(model)
+    facts = {fact.id: fact for fact in model.facts}
+    by_id = {row.action_id: row for row in rows}
+    enabled = (
         frozenset(consumer.field for consumer in model.consumers)
         if enabled_consumer_fields is None
         else frozenset(enabled_consumer_fields)
     )
+    output = {}
     for consumer in model.consumers:
-        declared = rows_by_consumer[consumer.id]
-        if len(declared) > consumer.budget:
-            raise ValueError(
-                f"消费者 {consumer.id} 的行动数 {len(declared)} 超过预算 {consumer.budget}；"
-                "不能静默丢弃候选"
-            )
-        groups = tuple(
-            dict.fromkeys(
-                predicates
-                for row in declared
-                for predicates, amount in (
-                    (row.commitment_when, row.commitment),
-                    (row.political_when, row.political_cost),
-                )
-                if predicates and amount > 0
-            )
+        if consumer.field not in enabled:
+            continue
+        declared = sorted(
+            (row for row in rows if row.consumer_id == consumer.id),
+            key=lambda row: row.action_id,
         )
-        # Explicit finite cost tiers only: never enumerate factual qualification
-        # combinations or silently prune candidates to meet the runtime budget.
-        if len(groups) > 3:
-            raise ValueError(f"消费者 {consumer.id} 成本分区超过 8 叶预算")
-
-        def leaf(states, declared=declared):
-            chosen = sorted(declared, key=lambda item: _row_order(item, {}, states))
-            chosen_position = {item.action_id: index for index, item in enumerate(chosen)}
-            blocks: list[str] = []
-            for row in chosen:
-                if _row_magnitude(row, {}, states) == 0:
+        if len(declared) > consumer.budget:
+            raise ValueError(f"消费者 {consumer.id} 的行动数超过预算；不能静默丢弃候选")
+        parts = [
+            f"\t\t# ACTION {row.action_id} [{row.domain}]; {row.explanation}\n" for row in declared
+        ]
+        for group in _explicit_groups(declared, by_id, enabled):
+            branches: list[str] = []
+            for term in group:
+                links = _term_links(term, by_id, enabled)
+                if links is None:
                     continue
-                blocks.append(branch(row, chosen_position, states, len(blocks)))
-            return "".join(blocks)
-
-        def branch(row, chosen_position, states, index, consumer=consumer):
-            relation_guards: list[str] = []
-            complement_effects: list[str] = []
-            for relation in row.relations:
-                target_enabled = consumer_field_by_action[relation.target] in enabled_fields
-                if not target_enabled and relation.kind != "enables":
-                    continue
-                target = by_id[relation.target]
-                target_guard = _limit(target, facts)
-                if not target_enabled:
-                    # A disabled target cannot satisfy an enablement relation;
-                    # keep the source action conservative instead of turning
-                    # the missing module into an implicit pass-through.
-                    relation_guards.append("NOT = { is_ai = yes }")
-                    continue
-                feasibility = _cost_feasibility_trigger(target, facts)
-                if feasibility:
-                    target_guard = f" AND = {{ {feasibility} {target_guard} }}"
-                if relation.condition_facts:
-                    relation_guard = _condition(facts, relation.condition_facts)
-                    target_guard = f" AND = {{ {relation_guard} {target_guard} }}"
-                if relation.kind == "enables":
-                    relation_guards.append(target_guard)
-                elif relation.kind in {"substitutes", "conflicts"}:
-                    # Symmetric alternatives are ordered once.  Only the
-                    # lower-ranked branch receives the guard; otherwise two
-                    # active alternatives would mutually disable each other.
-                    if (
-                        relation.target not in chosen_position
-                        or chosen_position[row.action_id] > chosen_position[relation.target]
-                    ):
-                        relation_guards.append(f"NOT = {{ {target_guard} }}")
-                elif relation.kind == "complements":
-                    complement_effects.append(
-                        f"\n\t\t\t\tif = {{ limit = {{ ROOT ?= {{ {target_guard} }} }} add = {relation.strength:g} }}"
+                guards = tuple(
+                    _condition(facts, relation.condition_facts)
+                    for relation in links
+                    if relation.kind == "enables"
+                ) + ((_condition(facts, term.facts),) if term.facts else ())
+                if term.full_variant:
+                    effects = _variant_effects(term.row, links, facts)
+                elif term.cost:
+                    effects = (
+                        "value = 0 if = { limit = { ROOT ?= { "
+                        + _cheap_cost_trigger(term.cost, facts)
+                        + " } } } else = { add = "
+                        + programs.numeric_literal(term.amount)
+                        + " }"
                     )
-            # Clamp the adjustment inside its own script value, so vanilla's
-            # accumulated score is not clamped along with the Mod delta.  The
-            # expression is the lowering of _row_delta, with the same known
-            # commitment facts and optional complement additions.
-            effect = _row_delta_expression(
-                row,
-                max_delta=consumer.max_delta,
-                complement_effects=tuple(complement_effects),
-                cost_states=states,
-            )
-            return (
-                f"\t\t# ACTION {row.action_id} [{row.domain}]; {row.explanation}\n"
-                f"\t\t{'if' if index == 0 else 'else_if'} = {{\n\t\t\tlimit = {{ ROOT ?= {{ {_limit(row, facts, relation_guards=tuple(relation_guards))} }} }}\n\t\t\t{effect}\n\t\t}}\n"
-            )
-
-        def partition(index, states, groups=groups):
-            if index == len(groups):
-                return leaf(states)
-            group = groups[index]
-            low = partition(index + 1, {**states, group: False})
-            high = partition(index + 1, {**states, group: True})
-            guard = _cost_trigger(group, facts)
-            return (
-                f"if = {{ limit = {{ ROOT ?= {{ NOT = {{ {guard} }} }} }}\n{low}}}\n"
-                f"else = {{\n{high}}}\n"
-            )
-
-        output[consumer.field] = partition(0, {})
+                else:
+                    effects = f"value = {programs.numeric_literal(term.amount)}"
+                keyword = "if" if not branches else "else_if"
+                branches.append(
+                    "\t\t"
+                    + keyword
+                    + " = { limit = { ROOT ?= { "
+                    + _limit(term.row, facts, relation_guards=guards)
+                    + " } } add = { "
+                    + effects
+                    + " } }\n"
+                )
+            parts.extend(branches)
+        output[consumer.field] = (
+            f"# ACTION joint_{consumer.id} [{consumer.domain}]; joint consumer contribution\n"
+            "if = { limit = { ROOT ?= { is_ai = yes } }\n"
+            "\tadd = {\n\t\tvalue = 0\n"
+            + "".join(parts)
+            + f"\t\tmin = {programs.numeric_literal(-consumer.max_delta)}\n"
+            + f"\t\tmax = {programs.numeric_literal(consumer.max_delta)}\n"
+            "\t}\n}\n"
+        )
     return output
-
-
-def _action_ranks(model):
-    goals = dict(model.goals)
-    structure_goal = goals.get("structure") or 0
-    domain_goal: dict[str, int] = {
-        "fiscal": goals.get("survival", 0),
-        "military": goals.get("survival", 0),
-        "political": goals.get("recovery", 0),
-        "economy": goals.get("capacity", 0),
-        "education": goals.get("capacity", 0),
-    }
-    strategy_goal = {
-        "survival": goals.get("survival", 0),
-        "recovery": goals.get("recovery", 0),
-        "capacity": goals.get("capacity", 0),
-        "structure": goals.get("structure", 0),
-        "reform": goals.get("recovery", 0),
-        "diplomacy": goals.get("structure", 0),
-        "security": goals.get("survival", 0),
-    }
-    tools = {item.id: item for item in (model.layer_model.tools if model.layer_model else ())}
-    ranks = {}
-    for action in model.actions:
-        domain_value = domain_goal.get(action.domain, structure_goal)
-        tool = tools.get(action.id)
-        strategy_value = strategy_goal.get(tool.strategy_id, 0) if tool and tool.strategy_id else 0
-        ranks[action.id] = max(0, min(2, max(domain_value, strategy_value) // 50))
-    for relation in model.relations:
-        if relation.kind == "complements":
-            ranks[relation.target] = min(2, ranks.get(relation.target, 0) + 1)
-        elif relation.kind in {"substitutes", "conflicts"}:
-            ranks[relation.target] = max(0, ranks.get(relation.target, 0) - 1)
-    return ranks
 
 
 def compile_policy(
@@ -895,10 +2438,10 @@ def compile_policy(
 ):
     """返回 ``(RuleSet, contract)``；谓词沿用原版 RuleSet，字段一次有界写入。"""
     model = config_model or load_model()
+    _production_action_rows(model)
     policy = decision_ir.lower_legacy(
         policy, model.consumer_ir, source=str(source) if source is not None else None
     )
-    action_ranks = _action_ranks(model)
     source_key = str(source) if source is not None else None
     # Rule IDs are only unique inside their source file.  Resolving by the
     # pair is part of the production contract; a same-named adapter rule must
@@ -911,14 +2454,6 @@ def compile_policy(
         if item.kind == "rule_action"
     }
     owner_by_key = {(item.source, item.rule_id): item.owner for item in model.action_instances}
-    action_fields: dict[str, int] = {}
-    for action in model.actions:
-        action_field = next(
-            (item.field for item in model.consumers if item.id == action.consumer), ""
-        )
-        action_fields[action_field] = max(
-            action_fields.get(action_field, 0), action_ranks.get(action.id, 0)
-        )
     compiled_rules = []
     field_contract = []
     for field, rules in policy.groups().items():
@@ -946,6 +2481,44 @@ def compile_policy(
             )
             if ir_item is None or binding is None or writer is None:
                 raise ValueError(f"生产规则缺少 IR/绑定：{rule.id}")
+            actor_path = {"root": (), "owner": ("owner",)}.get(writer.actor)
+            if actor_path is None or policy.actor_path != actor_path:
+                raise ValueError(f"生产 actor 路径与冻结 IR 不一致：{writer.source}:{rule.id}")
+            context = writer.evaluation_context
+            root_binding = (
+                next(
+                    (
+                        binding
+                        for binding in (context.actor_scope, *context.auxiliary_scopes)
+                        if binding is not None and binding.name == "root"
+                    ),
+                    None,
+                )
+                if context is not None
+                else None
+            )
+            expected_root = (
+                root_binding.kind
+                if root_binding is not None
+                else "state"
+                if writer.actor == "owner"
+                else "country"
+            )
+            if policy.native_root != expected_root:
+                raise ValueError(f"生产原生ROOT类型与冻结IR不一致：{writer.source}:{rule.id}")
+            if writer.source == "common/mobilization_options/00_mobilization_option.txt":
+                if context is None:
+                    raise ValueError("医疗动员生产writer缺少编队及owner上下文")
+                validate_context_readers(
+                    writer.field,
+                    context,
+                    {reader.key: reader for reader in policy.readers},
+                    rule.conditions,
+                    actor_path=policy.actor_path,
+                    input_keys=tuple(rule.input_keys()),
+                    source=writer.source,
+                    native_root=policy.native_root,
+                )
             legacy = writer.legacy
             expected_predicates = tuple(
                 (predicate.fact, predicate.op, predicate.value) for predicate in rule.conditions
@@ -980,14 +2553,12 @@ def compile_policy(
                 raise ValueError(f"IR 与生产规则不一致（重复写入或字段漂移）：{rule.id}")
             if source is not None and binding.source != str(source):
                 raise ValueError(f"绑定来源与生产规则不一致：{rule.id}")
-            # Apply the selected action rank to the exact consumer field.  A
-            # missing binding stays at the vanilla priority rather than
-            # inventing a global gate.
-            bump = max(0, min(2, action_fields.get(".".join(rule.field), 0)))
+            # Legacy defaults preserve their actual ordering.  Explicit cards
+            # have their own finite fact/goal rank, not a field-wide constant.
             compiled_rules.append(
                 replace(
                     legacy.to_action_ir(),
-                    priority=legacy.priority * 3 + bump,
+                    priority=legacy.priority,
                     origin_priority=legacy.priority,
                 )
             )
@@ -1000,13 +2571,32 @@ def compile_policy(
                 "unknown_fallback": "vanilla",
                 "player_fallback": "vanilla",
                 "vanilla_tail": "retain_qualification_cost_random_execution",
-                "max_rank_adjustment": 2,
+                "max_rank_adjustment": 0,
             }
         )
     compiled_ir = tuple(sorted(compiled_rules, key=lambda item: item.action_id))
     compiled = replace(
         policy, rules=tuple(item.to_rule() for item in compiled_ir), semantic_ir=compiled_ir
     )
+    program_sources = {item.source for item in compiled_ir}
+    exact_source = source_key or (
+        next(iter(program_sources)) if len(program_sources) == 1 else None
+    )
+    if exact_source is None and compiled_ir:
+        raise ValueError("联合消费者编译需要精确来源，不能跨来源混合字段")
+    observations = {
+        (source, key): signature for source, key, signature in model.observation_contracts
+    }
+    required_readers = {key for rule in compiled.rules for key in rule.input_keys()}
+    readers = {reader.key: reader for reader in compiled.readers}
+    if len(readers) != len(compiled.readers) or required_readers - readers.keys():
+        raise ValueError("生产 reader 身份重复或缺失")
+    for key in sorted(required_readers):
+        if exact_source is None or observations.get((exact_source, key)) != _reader_signature(
+            readers[key]
+        ):
+            raise ValueError(f"生产 reader 完整身份与冻结 IR 不一致：{exact_source}:{key}")
+    compiled = programs.enable(compiled, source=exact_source or "empty")
     compiled_contract = {
         "schema": 2,
         "rule_set": "pdx.decision_rules.RuleSet",
@@ -1033,8 +2623,9 @@ def compile_policy(
         "player": "is_ai_only",
         "runtime_python": False,
         "world_scans": 0,
-        "adjustment_application": "one_matching_rule_per_field; bounded_priority_tiebreak",
-        "ir_to_pdx": "consumer_ir_writer_to_exact_rule_lowering",
+        "adjustment_application": "signed_envelope_concrete_consumer_program; explicit_joint_net",
+        "consumer_programs": programs.contract(compiled),
+        "ir_to_pdx": "consumer_ir_to_bounded_consumer_program",
     }
     return compiled, compiled_contract
 
@@ -1120,99 +2711,76 @@ def _action_status(action: decision_ir.ConsumerDecisionIR, values: Mapping[str, 
     return truth_all((_action_conditions(action, values), exit_state))
 
 
-def _action_feasibility(
-    action: decision_ir.ConsumerDecisionIR, values: Mapping[str, object]
-) -> Truth:
-    """Return whether an action can contribute a non-zero adjustment.
-
-    A malformed or unknown cost fact is conservatively treated as costly for
-    magnitude selection, but relation consumers must preserve the uncertainty
-    instead of claiming that the target is definitely affordable/unaffordable.
-    """
-
-    groups = tuple(
-        (predicates, amount)
-        for predicates, amount in (
-            (action.commitment_when, action.commitment),
-            (action.political_when, action.political_cost),
-        )
-        if predicates and amount > 0
-    )
-    if not groups:
-        return True
-    states = tuple(_cost_state(predicates, values) for predicates, _ in groups)
-    feasible: list[Truth] = []
-    for mask in range(1 << len(groups)):
-        cost = sum(amount for index, (_, amount) in enumerate(groups) if mask & (1 << index))
-        if abs(action.base + action.opportunity) <= cost:
-            continue
-        feasible.append(
-            truth_all(
-                tuple(
-                    state if mask & (1 << index) else truth_not(state)
-                    for index, state in enumerate(states)
-                )
-            )
-        )
-    return truth_any(tuple(feasible)) if feasible else False
-
-
-def _select_action(
-    actions: list[decision_ir.ConsumerDecisionIR],
+def evaluate_actions(
+    model: SituatedModel,
     values: Mapping[str, object],
     *,
-    all_actions: list[decision_ir.ConsumerDecisionIR] | None = None,
-) -> tuple[decision_ir.ConsumerDecisionIR, float] | None:
-    """按生成的候选顺序选择行动；核心条件未知时阻断更低优先级候选。
-
-    与独立 PDX 三值求值器保持相同的短路规则；未知核心条件不能被当成
-    “不匹配”后继续选择低优先级行动。all_actions 提供其他消费者的关系
-    目标资格，不要求目标在其消费者中已被选中或已经执行。
-    """
-
-    visible = actions if all_actions is None else all_actions
-    statuses = {row.action_id: _action_status(row, values) for row in visible}
-    feasible = {row.action_id: _action_feasibility(row, values) for row in visible}
-    ordered = sorted(actions, key=lambda item: _row_order(item, values))
-    position = {row.action_id: index for index, row in enumerate(ordered)}
-    for action in ordered:
-        if _row_magnitude(action, values) == 0:
+    is_ai: bool,
+    enabled_consumer_fields: set[str] | frozenset[str] | None = None,
+) -> dict[str, tuple[str, float]]:
+    """Reference signed action terms, then clamp once per physical consumer."""
+    if type(is_ai) is not bool:
+        raise ValueError("is_ai 必须为明确布尔值")
+    rows = _production_action_rows(model)
+    if not is_ai:
+        return {}
+    if model.support_signals is not None:
+        values = model.support_signals.values(values)
+    by_id = {row.action_id: row for row in rows}
+    enabled = (
+        frozenset(consumer.field for consumer in model.consumers)
+        if enabled_consumer_fields is None
+        else frozenset(enabled_consumer_fields)
+    )
+    result = {}
+    for consumer in model.consumers:
+        if consumer.field not in enabled:
             continue
-        status = statuses[action.action_id]
-        if status is False:
-            continue
-        if status is None:
-            return None
-        blocked = False
-        complement = 0.0
-        for relation in action.relations:
-            target_status = truth_all(
-                (statuses.get(relation.target), feasible.get(relation.target))
-            )
-            relation_state = _relation_conditions(relation, values)
-            if relation.kind == "complements":
-                if relation_state is True and target_status is True:
-                    complement += relation.strength
-                continue
-            relation_guard = truth_all((relation_state, target_status))
-            if relation.kind == "enables" and relation_guard is not True:
-                if relation_guard is None:
-                    return None
-                blocked = True
-            elif relation.kind in {"substitutes", "conflicts"}:
+        candidates = sorted(
+            (row for row in rows if row.consumer_id == consumer.id),
+            key=lambda row: row.action_id,
+        )
+        if len(candidates) > consumer.budget:
+            raise ValueError(f"消费者 {consumer.id} 的行动数超过预算；不能静默丢弃候选")
+        total = 0.0
+        for group in _explicit_groups(candidates, by_id, enabled):
+            for term in group:
+                row = term.row
+                if _action_status(row, values) is not True:
+                    continue
+                links = _term_links(term, by_id, enabled)
                 if (
-                    relation.target in position
-                    and position[action.action_id] < position[relation.target]
+                    links is None
+                    or any(
+                        _relation_conditions(relation, values) is not True
+                        for relation in links
+                        if relation.kind == "enables"
+                    )
+                    or any(values.get(fact) is not True for fact in term.facts)
                 ):
                     continue
-                relation_guard = truth_not(relation_guard)
-                if relation_guard is None:
-                    return None
-                if relation_guard is False:
-                    blocked = True
-        if not blocked:
-            return action, complement
-    return None
+                if term.full_variant:
+                    relation_delta = sum(
+                        relation.strength
+                        * (-1 if relation.kind in {"substitutes", "conflicts"} else 1)
+                        for relation in links
+                        if relation.kind != "enables"
+                        and _relation_conditions(relation, values) is True
+                    )
+                    total += _row_delta(row, values, complement=relation_delta, model=model)
+                elif term.cost:
+                    if (
+                        _cost_state(term.cost, values, {fact.id: fact for fact in model.facts})
+                        is not False
+                    ):
+                        total += term.amount
+                else:
+                    total += term.amount
+                break
+        delta = max(-consumer.max_delta, min(consumer.max_delta, total))
+        if delta != 0:
+            result[consumer.field] = (f"joint_{consumer.id}", delta)
+    return result
 
 
 def evaluate_policy(
@@ -1222,44 +2790,24 @@ def evaluate_policy(
     is_ai: bool,
     config_model: SituatedModel | None = None,
 ) -> dict[str, tuple[str, float]]:
-    """参考求值：原版字段先选一条规则，再应用一次有界处境增量。
+    """Reference the default strategy's disjoint physical consumer owners.
 
-    该函数只用于生成期等价性/反例测试和解释；PDX 产物仍由同一字段的
-    ``if/else_if`` 降低。玩家、未知输入、资格失败均返回原版结果。
+    Explicit consumers replace old field writers even when their current net
+    contribution is neutral. They are not percentage adjustments to old scores.
     """
     if type(is_ai) is not bool:
         raise ValueError("is_ai 必须为明确布尔值")
     model = config_model or load_model()
-    policy = decision_ir.lower_legacy(policy, model.consumer_ir)
+    _production_action_rows(model)
+    if model.support_signals is not None:
+        values = model.support_signals.values(values)
+    policy, _contract = compile_policy(policy, config_model=model)
     baseline = decision_rules.evaluate_ir(policy, values, is_ai=is_ai)
     if not is_ai:
         return baseline
-    by_field = {(item.field,): item for item in model.consumers}
-    consumer_by_id = {item.id: item for item in model.consumers}
-    action_by_field: dict[tuple[str, ...], list[decision_ir.ConsumerDecisionIR]] = {}
-    for row in model.decision_ir:
-        consumer = consumer_by_id[row.consumer_id]
-        action_by_field.setdefault((consumer.field,), []).append(row)
-    result = dict(baseline)
-    for field, (rule_id, raw) in baseline.items():
-        actions = action_by_field.get((field,))
-        if not actions:
-            continue
-        selected = _select_action(actions, values, all_actions=list(model.decision_ir))
-        if selected is None:
-            continue
-        action, complement = selected
-        delta = _row_delta(action, values, complement=complement)
-        contract_item = by_field.get((field,))
-        if contract_item is not None:
-            delta = max(-contract_item.max_delta, min(contract_item.max_delta, delta))
-        if delta == 0:
-            continue
-        selected_rule = next((rule for rule in policy.rules if rule.id == rule_id), None)
-        if selected_rule is None:
-            continue
-        adjusted = raw + delta if selected_rule.operation == "add" else raw * (1.0 + delta / 100.0)
-        result[field] = (rule_id, adjusted)
+    owned_fields = {consumer.field for consumer in model.consumers}
+    result = {field: value for field, value in baseline.items() if field not in owned_fields}
+    result.update(evaluate_actions(model, values, is_ai=True))
     return result
 
 

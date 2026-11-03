@@ -10,8 +10,19 @@ standing_army = {
 		value = 3 # Very important tech in general
 
 		# SITAI BEGIN information:standing_army.ai_weight
-		# standing_army_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_8b6f5717441a7a72 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8b6f5717441a7a72_current_army_option_positive
+			add = { value = 0
+				# technology_standing_army_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_standing_army_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:standing_army.ai_weight
 	}
 }
@@ -28,11 +39,27 @@ navigation = {
 		value = 2 # Important tech in general
 
 		# SITAI BEGIN information:navigation.ai_weight
-		# navigation_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_navigation_overseas [military]; 海外投射需求提高航海与港口研究机会，不改变外交可达性
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes } } multiply = 1.2 }
+		# ACTION program_6a5d12b658e0abff [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_6a5d12b658e0abff_productive_option_need_positive
+			add = { value = 0
+				# technology_navigation_supply_oil_pressure [market]; oil缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_navigation_supply_meat_pressure [market]; meat缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_navigation_supply_clippers_pressure [market]; clippers缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_navigation_supply_oil [market]; 真实新配方或建筑正产出oil，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0 } } } } add = 0.12 }
+				# technology_navigation_supply_meat [market]; 真实新配方或建筑正产出meat，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0 } } } } add = 0.12 }
+				# technology_navigation_supply_clippers [market]; 真实新配方或建筑正产出clippers，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:navigation.ai_weight
 	}
 }
@@ -57,8 +84,19 @@ drydocks = {
 		}
 
 		# SITAI BEGIN information:drydocks.ai_weight
-		# drydocks_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_5a1d36ea8cbebfd0 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5a1d36ea8cbebfd0_current_navy_option_positive
+			add = { value = 0
+				# technology_drydocks_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_drydocks_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:drydocks.ai_weight
 	}
 }
@@ -82,8 +120,19 @@ mandatory_service = {
 		value = 2 # Important tech in general
 
 		# SITAI BEGIN information:mandatory_service.ai_weight
-		# mandatory_service_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_ee88256be69e37af [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ee88256be69e37af_current_army_option_positive
+			add = { value = 0
+				# technology_mandatory_service_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_mandatory_service_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:mandatory_service.ai_weight
 	}
 }
@@ -103,11 +152,19 @@ gunsmithing = {
 		value = 2 # Important tech in general
 
 		# SITAI BEGIN information:gunsmithing.ai_weight
-		# gunsmithing_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:small_arms mg:small_arms = {  } } } } } } } multiply = 1.0 }
-		# gunsmithing_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_76644f53ae0a5bb2 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_76644f53ae0a5bb2_productive_option_need_positive
+			add = { value = 0
+				# technology_gunsmithing_supply_small_arms_pressure [market]; small_arms缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_gunsmithing_supply_small_arms [market]; 真实新配方或建筑正产出small_arms，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:gunsmithing.ai_weight
 	}
 }
@@ -127,11 +184,30 @@ artillery = {
 		value = 2 # Important tech in general
 
 		# SITAI BEGIN information:artillery.ai_weight
-		# artillery_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:artillery mg:artillery = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:artillery mg:artillery = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:artillery mg:artillery = {  } } } } } } } multiply = 1.0 }
-		# artillery_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_f2ab423eb4d00db5 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f2ab423eb4d00db5_current_army_option_positive
+			add = { value = 0
+				# technology_artillery_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_artillery_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_f2ab423eb4d00db5_productive_option_need_positive
+			add = { value = 0
+				# technology_artillery_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_artillery_foundry ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:hardwood = { market_goods_delta >= 0 } } market = { mg:iron = { market_goods_delta >= 0 } } } } } } } add = 0.3 }
+				# technology_artillery_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_artillery_foundry ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } add = 0.25 }
+				# technology_artillery_supply_artillery_pressure [market]; artillery缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_artillery_supply_artillery [market]; 真实新配方或建筑正产出artillery，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.45
+		} }
 		# SITAI END information:artillery.ai_weight
 	}
 }
@@ -153,8 +229,19 @@ military_drill = {
 		value = 1.5 # Important tech in general
 
 		# SITAI BEGIN information:military_drill.ai_weight
-		# military_drill_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_63e62a7f52820c30 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_63e62a7f52820c30_current_army_option_positive
+			add = { value = 0
+				# technology_military_drill_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_military_drill_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:military_drill.ai_weight
 	}
 }
@@ -179,8 +266,19 @@ napoleonic_warfare = {
 		}
 
 		# SITAI BEGIN information:napoleonic_warfare.ai_weight
-		# napoleonic_warfare_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_0594c4cb9b758a58 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_0594c4cb9b758a58_current_army_option_positive
+			add = { value = 0
+				# technology_napoleonic_warfare_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_napoleonic_warfare_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:napoleonic_warfare.ai_weight
 	}
 }
@@ -203,14 +301,19 @@ admiralty = {
 		value = 3 # Very important in general
 
 		# SITAI BEGIN information:admiralty.ai_weight
-		# structural_naval_research [military]; 已有海军且处于战争时有限提高海军组织研究的相对权重，不重复增益战斗数值
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes navy_size >= 0 navy_size > 0 } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = { navy_size >= 0 NOT = { navy_size > 0 } } } AND = { exists = ROOT ROOT = { navy_size >= 0 } } } } } multiply = 1.0 }
-		# admiralty_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_admiralty_overseas [military]; 海外投射需求提高航海与港口研究机会，不改变外交可达性
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes } } multiply = 1.2 }
+		# ACTION program_f609262ad9da02d2 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_f609262ad9da02d2_current_navy_option_positive
+			add = { value = 0
+				# technology_admiralty_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_admiralty_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:admiralty.ai_weight
 	}
 }
@@ -233,8 +336,19 @@ army_reserves = {
 		value = 1
 
 		# SITAI BEGIN information:army_reserves.ai_weight
-		# army_reserves_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_36a2aa82aec8b3d7 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_36a2aa82aec8b3d7_current_army_option_positive
+			add = { value = 0
+				# technology_army_reserves_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_army_reserves_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:army_reserves.ai_weight
 	}
 }
@@ -254,8 +368,19 @@ line_infantry = {
 		value = 2 # Important tech in general
 
 		# SITAI BEGIN information:line_infantry.ai_weight
-		# line_infantry_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_d61ce9fde8b08ebc [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d61ce9fde8b08ebc_current_army_option_positive
+			add = { value = 0
+				# technology_line_infantry_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_line_infantry_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:line_infantry.ai_weight
 	}
 }
@@ -284,8 +409,19 @@ paddle_steamer = {
 		}
 
 		# SITAI BEGIN information:paddle_steamer.ai_weight
-		# paddle_steamer_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_697fd22095219b51 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_697fd22095219b51_current_navy_option_positive
+			add = { value = 0
+				# technology_paddle_steamer_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_paddle_steamer_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:paddle_steamer.ai_weight
 	}
 }
@@ -312,8 +448,26 @@ field_works = {
 		value = 1
 
 		# SITAI BEGIN information:field_works.ai_weight
-		# field_works_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_1d516438f109c7d8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1d516438f109c7d8_current_army_option_positive
+			add = { value = 0
+				# technology_field_works_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_field_works_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_1d516438f109c7d8_observed_labor_saving_positive
+			add = { value = 0
+				# technology_field_works_labor_ready [economy]; 锁定真实labor_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { state_unemployment_rate < 0.02 pop_type_percent_state = { target = pop_type:peasants value < 0.02 } any_scope_building = { level >= 1 occupancy >= 0.9 AND = { is_building_type = building_livestock_ranch has_active_production_method = pm_standard_fences ROOT = { has_technology_researched = enclosure market = { mg:iron = { market_goods_delta >= 0 } } } } } } } } add = 0.18 }
+				# technology_field_works_labor [economy]; 锁定真实labor机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { state_unemployment_rate < 0.02 pop_type_percent_state = { target = pop_type:peasants value < 0.02 } any_scope_building = { level >= 1 occupancy >= 0.9 AND = { is_building_type = building_livestock_ranch has_active_production_method = pm_standard_fences ROOT = { has_technology_researched = enclosure } } } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.3299999999999998
+		} }
 		# SITAI END information:field_works.ai_weight
 	}
 }
@@ -352,8 +506,19 @@ logistics = {
 		}
 
 		# SITAI BEGIN information:logistics.ai_weight
-		# logistics_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_c36f86b1e57a3fcf [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_c36f86b1e57a3fcf_current_army_option_positive
+			add = { value = 0
+				# technology_logistics_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_logistics_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:logistics.ai_weight
 	}
 }
@@ -379,8 +544,19 @@ triage = {
 		}
 
 		# SITAI BEGIN information:triage.ai_weight
-		# triage_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_72b42f4197b55c79 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_72b42f4197b55c79_current_army_option_positive
+			add = { value = 0
+				# technology_triage_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_triage_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:triage.ai_weight
 	}
 }
@@ -399,8 +575,30 @@ shell_gun = {
 		value = 1
 
 		# SITAI BEGIN information:shell_gun.ai_weight
-		# shell_gun_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_d84c08370b619912 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d84c08370b619912_current_navy_option_positive
+			add = { value = 0
+				# technology_shell_gun_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_shell_gun_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_d84c08370b619912_productive_option_need_positive
+			add = { value = 0
+				# technology_shell_gun_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:hardwood = { market_goods_delta >= 0 } } market = { mg:iron = { market_goods_delta >= 0 } } } } } } } add = 0.3 }
+				# technology_shell_gun_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } add = 0.25 }
+				# technology_shell_gun_supply_artillery_pressure [market]; artillery缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_shell_gun_supply_artillery [market]; 真实新配方或建筑正产出artillery，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.45
+		} }
 		# SITAI END information:shell_gun.ai_weight
 	}
 }
@@ -420,8 +618,19 @@ percussion_cap = {
 		value = 2 # Important tech in general
 
 		# SITAI BEGIN information:percussion_cap.ai_weight
-		# percussion_cap_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_4d69ddd4594c34da [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4d69ddd4594c34da_productive_option_need_positive
+			add = { value = 0
+				# technology_percussion_cap_supply_ammunition_pressure [market]; ammunition缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_percussion_cap_supply_ammunition [market]; 真实新配方或建筑正产出ammunition，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.2
+		} }
 		# SITAI END information:percussion_cap.ai_weight
 	}
 }
@@ -447,8 +656,23 @@ rifling = {
 		}
 
 		# SITAI BEGIN information:rifling.ai_weight
-		# rifling_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_89ab7c197238b8d3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_89ab7c197238b8d3_productive_option_need_positive
+			add = { value = 0
+				# technology_rifling_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_arms_industry has_active_production_method = pm_muskets ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } } } } add = 0.3 }
+				# technology_rifling_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_arms_industry has_active_production_method = pm_muskets ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } } } } } } add = 0.25 }
+				# technology_rifling_supply_small_arms_pressure [market]; small_arms缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_rifling_supply_small_arms [market]; 真实新配方或建筑正产出small_arms，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.3
+		} }
 		# SITAI END information:rifling.ai_weight
 	}
 }
@@ -467,11 +691,19 @@ general_staff = {
 		value = 2 # Important tech in general
 
 		# SITAI BEGIN information:general_staff.ai_weight
-		# general_staff_ai_weight_bottleneck [market]; 相关商品价格偏高并供不应求时，优先关注实际能解锁供应能力的科技；仍需原版投资与建设
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_pricier > 0.25 market_goods_delta < 0 } } } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:ammunition mg:ammunition = { NOT = { market_goods_pricier > 0.25 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:ammunition mg:ammunition = { NOT = { market_goods_delta < 0 } } } } } AND = { exists = ROOT ROOT = { exists = market market = { exists = mg:ammunition mg:ammunition = {  } } } } } } } multiply = 1.0 }
-		# general_staff_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_455736da26e8d37a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_455736da26e8d37a_current_army_option_positive
+			add = { value = 0
+				# technology_general_staff_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_general_staff_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:general_staff.ai_weight
 	}
 }
@@ -500,8 +732,23 @@ screw_frigate = {
 		}
 
 		# SITAI BEGIN information:screw_frigate.ai_weight
-		# screw_frigate_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_a3c541325ce70387 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a3c541325ce70387_productive_option_need_positive
+			add = { value = 0
+				# technology_screw_frigate_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_shipyard has_active_production_method = pm_basic_shipbuilding ROOT = { market = { mg:clippers = { market_goods_delta < 0 } } market = { mg:engines = { market_goods_delta >= 0 } } market = { mg:hardwood = { market_goods_delta >= 0 } } } } } } } add = 0.3 }
+				# technology_screw_frigate_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_shipyard has_active_production_method = pm_basic_shipbuilding ROOT = { market = { mg:clippers = { market_goods_delta < 0 } } } } } } } add = 0.25 }
+				# technology_screw_frigate_supply_clippers_pressure [market]; clippers缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_screw_frigate_supply_clippers [market]; 真实新配方或建筑正产出clippers，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.3
+		} }
 		# SITAI END information:screw_frigate.ai_weight
 	}
 }
@@ -525,8 +772,26 @@ power_of_the_purse = {
 		value = 1
 
 		# SITAI BEGIN information:power_of_the_purse.ai_weight
-		# power_of_the_purse_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_764df038985e1421 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_764df038985e1421_current_army_option_positive
+			add = { value = 0
+				# technology_power_of_the_purse_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_power_of_the_purse_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_764df038985e1421_current_navy_option_positive
+			add = { value = 0
+				# technology_power_of_the_purse_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_power_of_the_purse_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.2999999999999998
+		} }
 		# SITAI END information:power_of_the_purse.ai_weight
 	}
 }
@@ -551,8 +816,17 @@ hydraulic_cranes = {
 		}
 
 		# SITAI BEGIN information:hydraulic_cranes.ai_weight
-		# hydraulic_cranes_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_2c9a2ba89306d2d3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2c9a2ba89306d2d3_observed_trade_method_option_positive
+			add = { value = 0
+				# technology_hydraulic_cranes_trade [market]; 锁定真实trade机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { any_scope_building = { is_building_type = building_trade_center has_active_production_method = pm_trade_center_trade_quantity_limited level >= 1 occupancy >= 0.75 weekly_profit > 0 } } AND = { any_scope_building = { is_building_type = building_trade_center has_active_production_method = pm_trade_center_trade_quantity_normal level >= 1 occupancy >= 0.75 weekly_profit > 0 } } } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.08
+		} }
 		# SITAI END information:hydraulic_cranes.ai_weight
 	}
 }
@@ -573,8 +847,19 @@ modern_nursing = {
 		value = 1
 
 		# SITAI BEGIN information:modern_nursing.ai_weight
-		# modern_nursing_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_6266f31d05371bf6 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_6266f31d05371bf6_current_army_option_positive
+			add = { value = 0
+				# technology_modern_nursing_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_modern_nursing_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:modern_nursing.ai_weight
 	}
 }
@@ -604,8 +889,19 @@ enlistment_offices = {
 		}
 
 		# SITAI BEGIN information:enlistment_offices.ai_weight
-		# enlistment_offices_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_a30e9a63f79eac66 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a30e9a63f79eac66_current_army_option_positive
+			add = { value = 0
+				# technology_enlistment_offices_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_enlistment_offices_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:enlistment_offices.ai_weight
 	}
 }
@@ -634,8 +930,19 @@ electric_telegraph = {
 		}
 
 		# SITAI BEGIN information:electric_telegraph.ai_weight
-		# electric_telegraph_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_abcb8e246b7beaa4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_abcb8e246b7beaa4_current_army_option_positive
+			add = { value = 0
+				# technology_electric_telegraph_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_electric_telegraph_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:electric_telegraph.ai_weight
 	}
 }
@@ -659,8 +966,19 @@ military_statistics = {
 		value = 1
 
 		# SITAI BEGIN information:military_statistics.ai_weight
-		# military_statistics_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_b1fa5fb16f3bdae3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b1fa5fb16f3bdae3_current_army_option_positive
+			add = { value = 0
+				# technology_military_statistics_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_military_statistics_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:military_statistics.ai_weight
 	}
 }
@@ -680,8 +998,23 @@ repeaters = {
 		value = 1.5 # Important tech in general
 
 		# SITAI BEGIN information:repeaters.ai_weight
-		# repeaters_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_b6b5e91879e55b5f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b6b5e91879e55b5f_productive_option_need_positive
+			add = { value = 0
+				# technology_repeaters_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_arms_industry has_active_production_method = pm_muskets ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_arms_industry has_active_production_method = pm_rifles ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				# technology_repeaters_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_arms_industry has_active_production_method = pm_muskets ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } } } AND = { is_building_type = building_arms_industry has_active_production_method = pm_rifles ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
+				# technology_repeaters_supply_small_arms_pressure [market]; small_arms缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_repeaters_supply_small_arms [market]; 真实新配方或建筑正产出small_arms，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.3
+		} }
 		# SITAI END information:repeaters.ai_weight
 	}
 }
@@ -710,8 +1043,37 @@ breech_loading_artillery = {
 		}
 
 		# SITAI BEGIN information:breech_loading_artillery.ai_weight
-		# breech_loading_artillery_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_2eb6baf30475f98e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_2eb6baf30475f98e_current_army_option_positive
+			add = { value = 0
+				# technology_breech_loading_artillery_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_breech_loading_artillery_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_2eb6baf30475f98e_current_navy_option_positive
+			add = { value = 0
+				# technology_breech_loading_artillery_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_breech_loading_artillery_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_2eb6baf30475f98e_productive_option_need_positive
+			add = { value = 0
+				# technology_breech_loading_artillery_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				# technology_breech_loading_artillery_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
+				# technology_breech_loading_artillery_supply_artillery_pressure [market]; artillery缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_breech_loading_artillery_supply_artillery [market]; 真实新配方或建筑正产出artillery，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.5
+		} }
 		# SITAI END information:breech_loading_artillery.ai_weight
 	}
 }
@@ -735,8 +1097,19 @@ handcranked_machine_gun = {
 		value = 1
 
 		# SITAI BEGIN information:handcranked_machine_gun.ai_weight
-		# handcranked_machine_gun_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_018d44c02a6504f4 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_018d44c02a6504f4_current_army_option_positive
+			add = { value = 0
+				# technology_handcranked_machine_gun_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_handcranked_machine_gun_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:handcranked_machine_gun.ai_weight
 	}
 }
@@ -755,8 +1128,19 @@ self_propelled_torpedoes = {
 		value = 1
 
 		# SITAI BEGIN information:self_propelled_torpedoes.ai_weight
-		# self_propelled_torpedoes_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_53e98318feacac08 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_53e98318feacac08_current_navy_option_positive
+			add = { value = 0
+				# technology_self_propelled_torpedoes_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_self_propelled_torpedoes_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:self_propelled_torpedoes.ai_weight
 	}
 }
@@ -786,8 +1170,19 @@ monitor_tech = {
 		}
 
 		# SITAI BEGIN information:monitor_tech.ai_weight
-		# monitor_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_fc0cff4d21dc1e49 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_fc0cff4d21dc1e49_current_navy_option_positive
+			add = { value = 0
+				# technology_monitor_tech_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_monitor_tech_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:monitor_tech.ai_weight
 	}
 }
@@ -814,8 +1209,19 @@ ironclad_tech = {
 		}
 
 		# SITAI BEGIN information:ironclad_tech.ai_weight
-		# ironclad_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_3faf0fa73e581c48 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3faf0fa73e581c48_current_navy_option_positive
+			add = { value = 0
+				# technology_ironclad_tech_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_ironclad_tech_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:ironclad_tech.ai_weight
 	}
 }
@@ -839,8 +1245,19 @@ jeune_ecole = {
 		value = 1
 
 		# SITAI BEGIN information:jeune_ecole.ai_weight
-		# jeune_ecole_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_d7cc373116c5dc93 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d7cc373116c5dc93_current_navy_option_positive
+			add = { value = 0
+				# technology_jeune_ecole_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_jeune_ecole_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:jeune_ecole.ai_weight
 	}
 }
@@ -866,8 +1283,17 @@ floating_harbor = {
 		}
 
 		# SITAI BEGIN information:floating_harbor.ai_weight
-		# floating_harbor_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_3d5337ee2e2a8b8f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_3d5337ee2e2a8b8f_observed_trade_method_option_positive
+			add = { value = 0
+				# technology_floating_harbor_trade [market]; 锁定真实trade机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { AND = { any_scope_building = { is_building_type = building_trade_center has_active_production_method = pm_trade_center_trade_quantity_high level >= 1 occupancy >= 0.75 weekly_profit > 0 } } AND = { any_scope_building = { is_building_type = building_trade_center has_active_production_method = pm_trade_center_trade_quantity_limited level >= 1 occupancy >= 0.75 weekly_profit > 0 } } AND = { any_scope_building = { is_building_type = building_trade_center has_active_production_method = pm_trade_center_trade_quantity_normal level >= 1 occupancy >= 0.75 weekly_profit > 0 } } } } } add = 0.08 }
+			}
+			min = 1
+			max = 1.08
+		} }
 		# SITAI END information:floating_harbor.ai_weight
 	}
 }
@@ -897,8 +1323,51 @@ gantry_cranes = {
 		}
 
 		# SITAI BEGIN information:gantry_cranes.ai_weight
-		# gantry_cranes_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_8cc222c11cb2e2a9 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8cc222c11cb2e2a9_current_navy_option_positive
+			add = { value = 0
+				# technology_gantry_cranes_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_gantry_cranes_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_8cc222c11cb2e2a9_local_infrastructure_need_positive
+			add = { value = 0
+				# technology_gantry_cranes_infrastructure [economy]; 锁定真实infrastructure机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { any_scope_state = { infrastructure_delta < 0 any_scope_building = { is_building_type = building_port has_active_production_method = pm_anchorage level >= 1 } } any_scope_state = { infrastructure_delta < 0 any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } } } } } add = 0.12 }
+			}
+			# GROUP program_8cc222c11cb2e2a9_productive_option_need_positive
+			add = { value = 0
+				# technology_gantry_cranes_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_fishing_trawlers ROOT = { market = { mg:fish = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_simple_fishing ROOT = { market = { mg:fish = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_anchorage ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_basic_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:engines = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:clippers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_complex_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:engines = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:clippers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_simple_whaling ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_wooden_whaling_ships ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } market = { mg:coal = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				# technology_gantry_cranes_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_fishing_trawlers ROOT = { market = { mg:fish = { market_goods_delta < 0 } } } } AND = { is_building_type = building_fishing_wharf has_active_production_method = pm_simple_fishing ROOT = { market = { mg:fish = { market_goods_delta < 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_anchorage ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_basic_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } } } AND = { is_building_type = building_shipyard has_active_production_method = pm_complex_shipbuilding ROOT = { market = { mg:steamers = { market_goods_delta < 0 } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_simple_whaling ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } } } AND = { is_building_type = building_whaling_station has_active_production_method = pm_wooden_whaling_ships ROOT = { OR = { market = { mg:meat = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta < 0 } } } } } } } } } add = 0.25 }
+				# technology_gantry_cranes_supply_steamers_pressure [market]; steamers缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_gantry_cranes_supply_oil_pressure [market]; oil缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_gantry_cranes_supply_merchant_marine_pressure [market]; merchant_marine缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_gantry_cranes_supply_meat_pressure [market]; meat缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_gantry_cranes_supply_fish_pressure [market]; fish缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fish mg:fish = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_gantry_cranes_supply_steamers [market]; 真实新配方或建筑正产出steamers，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0 } } } } add = 0.12 }
+				# technology_gantry_cranes_supply_oil [market]; 真实新配方或建筑正产出oil，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0 } } } } add = 0.12 }
+				# technology_gantry_cranes_supply_merchant_marine [market]; 真实新配方或建筑正产出merchant_marine，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0 } } } } add = 0.12 }
+				# technology_gantry_cranes_supply_meat [market]; 真实新配方或建筑正产出meat，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0 } } } } add = 0.12 }
+				# technology_gantry_cranes_supply_fish [market]; 真实新配方或建筑正产出fish，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fish mg:fish = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.5
+		} }
 		# SITAI END information:gantry_cranes.ai_weight
 	}
 }
@@ -922,8 +1391,19 @@ trench_works = {
 		value = 2 # important for everyone
 
 		# SITAI BEGIN information:trench_works.ai_weight
-		# trench_works_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_baf19b83232376ca [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_baf19b83232376ca_current_army_option_positive
+			add = { value = 0
+				# technology_trench_works_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_trench_works_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:trench_works.ai_weight
 	}
 }
@@ -948,8 +1428,19 @@ war_propaganda = {
 		value = 1
 
 		# SITAI BEGIN information:war_propaganda.ai_weight
-		# war_propaganda_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_d0d2dc980faf676e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d0d2dc980faf676e_current_army_option_positive
+			add = { value = 0
+				# technology_war_propaganda_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_war_propaganda_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:war_propaganda.ai_weight
 	}
 }
@@ -974,11 +1465,19 @@ wargaming = {
 		value = 1
 
 		# SITAI BEGIN information:wargaming.ai_weight
-		# coordinated_route_education_military_tradeoff [military]; 教育路线在和平期有限压低军事研究竞争权重，表达研究机会成本
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_route_education_active = yes is_at_war = no } } multiply = 0.9 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { sitai_route_education_active = yes } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# wargaming_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_5ec18777ed3fe3cd [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_5ec18777ed3fe3cd_current_army_option_positive
+			add = { value = 0
+				# technology_wargaming_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_wargaming_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:wargaming.ai_weight
 	}
 }
@@ -1004,8 +1503,19 @@ defense_in_depth = {
 		value = 1
 
 		# SITAI BEGIN information:defense_in_depth.ai_weight
-		# defense_in_depth_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_b82f291c4e7c773f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b82f291c4e7c773f_current_army_option_positive
+			add = { value = 0
+				# technology_defense_in_depth_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_defense_in_depth_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:defense_in_depth.ai_weight
 	}
 }
@@ -1025,8 +1535,23 @@ bolt_action_rifles = {
 		value = 2 # important for everyone
 
 		# SITAI BEGIN information:bolt_action_rifles.ai_weight
-		# bolt_action_rifles_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_4d03813f460e801e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4d03813f460e801e_productive_option_need_positive
+			add = { value = 0
+				# technology_bolt_action_rifles_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_arms_industry has_active_production_method = pm_muskets ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_arms_industry has_active_production_method = pm_repeaters ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_arms_industry has_active_production_method = pm_rifles ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				# technology_bolt_action_rifles_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_arms_industry has_active_production_method = pm_muskets ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } } } AND = { is_building_type = building_arms_industry has_active_production_method = pm_repeaters ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } } } AND = { is_building_type = building_arms_industry has_active_production_method = pm_rifles ROOT = { market = { mg:small_arms = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
+				# technology_bolt_action_rifles_supply_small_arms_pressure [market]; small_arms缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_bolt_action_rifles_supply_small_arms [market]; 真实新配方或建筑正产出small_arms，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.3
+		} }
 		# SITAI END information:bolt_action_rifles.ai_weight
 	}
 }
@@ -1047,8 +1572,30 @@ automatic_machine_guns = {
 		value = 1.5 # important for everyone
 
 		# SITAI BEGIN information:automatic_machine_guns.ai_weight
-		# automatic_machine_guns_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_21a3d65b7754de31 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_21a3d65b7754de31_current_army_option_positive
+			add = { value = 0
+				# technology_automatic_machine_guns_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_automatic_machine_guns_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_21a3d65b7754de31_productive_option_need_positive
+			add = { value = 0
+				# technology_automatic_machine_guns_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_breech_loaders ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steel = { market_goods_delta >= 0 } } market = { mg:tools = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				# technology_automatic_machine_guns_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_breech_loaders ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_cannons ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } AND = { is_building_type = building_artillery_foundry has_active_production_method = pm_smoothbores ROOT = { market = { mg:artillery = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
+				# technology_automatic_machine_guns_supply_artillery_pressure [market]; artillery缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_automatic_machine_guns_supply_artillery [market]; 真实新配方或建筑正产出artillery，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.45
+		} }
 		# SITAI END information:automatic_machine_guns.ai_weight
 	}
 }
@@ -1071,8 +1618,19 @@ submarine = {
 		value = 1
 
 		# SITAI BEGIN information:submarine.ai_weight
-		# submarine_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_46f30358e07e70f0 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_46f30358e07e70f0_current_navy_option_positive
+			add = { value = 0
+				# technology_submarine_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_submarine_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:submarine.ai_weight
 	}
 }
@@ -1091,8 +1649,19 @@ destroyer = {
 		value = 1
 
 		# SITAI BEGIN information:destroyer.ai_weight
-		# destroyer_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_6bf037fabda1d487 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_6bf037fabda1d487_current_navy_option_positive
+			add = { value = 0
+				# technology_destroyer_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_destroyer_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:destroyer.ai_weight
 	}
 }
@@ -1111,8 +1680,19 @@ pre_dreadnought_tech = {
 		value = 1
 
 		# SITAI BEGIN information:pre_dreadnought_tech.ai_weight
-		# pre_dreadnought_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_1e829dc71019e334 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1e829dc71019e334_current_navy_option_positive
+			add = { value = 0
+				# technology_pre_dreadnought_tech_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_pre_dreadnought_tech_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:pre_dreadnought_tech.ai_weight
 	}
 }
@@ -1147,11 +1727,19 @@ dreadnought_tech = {
 		}
 
 		# SITAI BEGIN information:dreadnought_tech.ai_weight
-		# dreadnought_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_dreadnought_tech_fiscal_tradeoff [military]; 和平财政压力降低昂贵远洋舰队科技的机会优先级
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes is_at_war = no } } multiply = 0.85 }
+		# ACTION program_25d918f4d268b8fd [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_25d918f4d268b8fd_current_navy_option_positive
+			add = { value = 0
+				# technology_dreadnought_tech_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_dreadnought_tech_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:dreadnought_tech.ai_weight
 	}
 }
@@ -1175,11 +1763,19 @@ sea_lane_strategies = {
 		value = 1
 
 		# SITAI BEGIN information:sea_lane_strategies.ai_weight
-		# sea_lane_strategies_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_sea_lane_strategies_overseas [military]; 海外投射需求提高航海与港口研究机会，不改变外交可达性
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes } } multiply = 1.2 }
+		# ACTION program_faf9bd7999431be9 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_faf9bd7999431be9_current_navy_option_positive
+			add = { value = 0
+				# technology_sea_lane_strategies_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_sea_lane_strategies_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:sea_lane_strategies.ai_weight
 	}
 }
@@ -1204,8 +1800,19 @@ landing_craft = {
 		}
 
 		# SITAI BEGIN information:landing_craft.ai_weight
-		# landing_craft_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_bf954eca8cc0cf6d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_bf954eca8cc0cf6d_current_army_option_positive
+			add = { value = 0
+				# technology_landing_craft_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_landing_craft_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:landing_craft.ai_weight
 	}
 }
@@ -1239,11 +1846,28 @@ concrete_dockyards = {
 		}
 
 		# SITAI BEGIN information:concrete_dockyards.ai_weight
-		# concrete_dockyards_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_concrete_dockyards_overseas [military]; 海外投射需求提高航海与港口研究机会，不改变外交可达性
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_overseas = yes sitai_context_evidence_need_overseas = yes } } multiply = 1.2 }
+		# ACTION program_4ee411a6dd1da959 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4ee411a6dd1da959_local_infrastructure_need_positive
+			add = { value = 0
+				# technology_concrete_dockyards_infrastructure [economy]; 锁定真实infrastructure机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes OR = { any_scope_state = { infrastructure_delta < 0 any_scope_building = { is_building_type = building_port has_active_production_method = pm_anchorage level >= 1 } } any_scope_state = { infrastructure_delta < 0 any_scope_building = { is_building_type = building_port has_active_production_method = pm_basic_port level >= 1 } } any_scope_state = { infrastructure_delta < 0 any_scope_building = { is_building_type = building_port has_active_production_method = pm_industrial_port level >= 1 } } } } } add = 0.12 }
+			}
+			# GROUP program_4ee411a6dd1da959_productive_option_need_positive
+			add = { value = 0
+				# technology_concrete_dockyards_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_port has_active_production_method = pm_anchorage ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } market = { mg:steamers = { market_goods_delta >= 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_industrial_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } market = { mg:oil = { market_goods_delta >= 0 } } } } } } } } add = 0.3 }
+				# technology_concrete_dockyards_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 OR = { AND = { is_building_type = building_port has_active_production_method = pm_anchorage ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_basic_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } AND = { is_building_type = building_port has_active_production_method = pm_industrial_port ROOT = { market = { mg:merchant_marine = { market_goods_delta < 0 } } } } } } } } add = 0.25 }
+				# technology_concrete_dockyards_supply_merchant_marine_pressure [market]; merchant_marine缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_concrete_dockyards_supply_merchant_marine [market]; 真实新配方或建筑正产出merchant_marine，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:merchant_marine mg:merchant_marine = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.4200000000000002
+		} }
 		# SITAI END information:concrete_dockyards.ai_weight
 	}
 }
@@ -1269,8 +1893,19 @@ nco_training = {
 		value = 2 # Important tech in general
 
 		# SITAI BEGIN information:nco_training.ai_weight
-		# nco_training_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_4d97375eb89e71e3 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4d97375eb89e71e3_current_army_option_positive
+			add = { value = 0
+				# technology_nco_training_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_nco_training_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:nco_training.ai_weight
 	}
 }
@@ -1289,8 +1924,19 @@ chemical_warfare = {
 		value = 1
 
 		# SITAI BEGIN information:chemical_warfare.ai_weight
-		# chemical_warfare_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_8778e213a11237a8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_8778e213a11237a8_current_army_option_positive
+			add = { value = 0
+				# technology_chemical_warfare_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_chemical_warfare_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:chemical_warfare.ai_weight
 	}
 }
@@ -1316,8 +1962,19 @@ stormtroopers = {
 		value = 1
 
 		# SITAI BEGIN information:stormtroopers.ai_weight
-		# stormtroopers_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_591c1d3ff34da89a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_591c1d3ff34da89a_current_army_option_positive
+			add = { value = 0
+				# technology_stormtroopers_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_stormtroopers_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:stormtroopers.ai_weight
 	}
 }
@@ -1342,8 +1999,19 @@ concrete_fortifications = {
 		value = 1
 
 		# SITAI BEGIN information:concrete_fortifications.ai_weight
-		# concrete_fortifications_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_54fa9c12b766491b [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_54fa9c12b766491b_current_army_option_positive
+			add = { value = 0
+				# technology_concrete_fortifications_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_concrete_fortifications_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:concrete_fortifications.ai_weight
 	}
 }
@@ -1364,8 +2032,30 @@ mobile_armor = {
 		value = 1.5 # Important tech in general
 
 		# SITAI BEGIN information:mobile_armor.ai_weight
-		# mobile_armor_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_a84693caa1e46def [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_a84693caa1e46def_current_army_option_positive
+			add = { value = 0
+				# technology_mobile_armor_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_mobile_armor_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_a84693caa1e46def_productive_option_need_positive
+			add = { value = 0
+				# technology_mobile_armor_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_automotive_industry has_active_production_method = pm_no_tank_production ROOT = { has_technology_researched = combustion_engine market = { mg:tanks = { market_goods_delta < 0 } } market = { mg:steel = { market_goods_delta >= 0 } } } } } } } add = 0.3 }
+				# technology_mobile_armor_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_automotive_industry has_active_production_method = pm_no_tank_production ROOT = { has_technology_researched = combustion_engine market = { mg:tanks = { market_goods_delta < 0 } } } } } } } add = 0.25 }
+				# technology_mobile_armor_supply_tanks_pressure [market]; tanks缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tanks mg:tanks = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_mobile_armor_supply_tanks [market]; 真实新配方或建筑正产出tanks，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tanks mg:tanks = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.45
+		} }
 		# SITAI END information:mobile_armor.ai_weight
 	}
 }
@@ -1390,8 +2080,30 @@ military_aviation = {
 		value = 1.5 # Important tech in general
 
 		# SITAI BEGIN information:military_aviation.ai_weight
-		# military_aviation_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_4fa8db59fc31eb37 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4fa8db59fc31eb37_current_army_option_positive
+			add = { value = 0
+				# technology_military_aviation_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_military_aviation_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			# GROUP program_4fa8db59fc31eb37_productive_option_need_positive
+			add = { value = 0
+				# technology_military_aviation_productive_ready [market]; 锁定真实productive_ready机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_automotive_industry has_active_production_method = pm_no_aeroplane_production ROOT = { has_technology_researched = combustion_engine market = { mg:aeroplanes = { market_goods_delta < 0 } } market = { mg:fabric = { market_goods_delta >= 0 } } market = { mg:hardwood = { market_goods_delta >= 0 } } } } } } } add = 0.3 }
+				# technology_military_aviation_productive [market]; 锁定真实productive机会成员与本国实际使用匹配；同州、同建筑、低级PM与目标产出不跨成员拼接，未知局部退出
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_building = { level >= 1 AND = { is_building_type = building_automotive_industry has_active_production_method = pm_no_aeroplane_production ROOT = { has_technology_researched = combustion_engine market = { mg:aeroplanes = { market_goods_delta < 0 } } } } } } } add = 0.25 }
+				# technology_military_aviation_supply_aeroplanes_pressure [market]; aeroplanes缺口与高价升档同一供给原因；不同替代方式或同配方多种产出不累加
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:aeroplanes mg:aeroplanes = { market_goods_delta < 0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# technology_military_aviation_supply_aeroplanes [market]; 真实新配方或建筑正产出aeroplanes，当前市场缺口形成研究供给选项；不是实际已建造或已启用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:aeroplanes mg:aeroplanes = { market_goods_delta < 0 } } } } add = 0.12 }
+			}
+			min = 1
+			max = 1.45
+		} }
 		# SITAI END information:military_aviation.ai_weight
 	}
 }
@@ -1414,8 +2126,19 @@ flamethrowers = {
 		value = 1
 
 		# SITAI BEGIN information:flamethrowers.ai_weight
-		# flamethrowers_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_fd1f0d498061be1e [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_fd1f0d498061be1e_current_army_option_positive
+			add = { value = 0
+				# technology_flamethrowers_army_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_flamethrowers_army_use [military]; 国家实际拥有army，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes army_size >= 0 army_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:flamethrowers.ai_weight
 	}
 }
@@ -1440,11 +2163,19 @@ carrier_tech = {
 		}
 
 		# SITAI BEGIN information:carrier_tech.ai_weight
-		# carrier_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_carrier_tech_fiscal_tradeoff [military]; 和平财政压力降低昂贵远洋舰队科技的机会优先级
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes is_at_war = no } } multiply = 0.85 }
+		# ACTION program_1e57c968a65bf93f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_1e57c968a65bf93f_current_navy_option_positive
+			add = { value = 0
+				# technology_carrier_tech_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_carrier_tech_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:carrier_tech.ai_weight
 	}
 }
@@ -1469,11 +2200,19 @@ battleship_tech = {
 		}
 
 		# SITAI BEGIN information:battleship_tech.ai_weight
-		# battleship_tech_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { NOT = { is_at_war = yes } } } AND = { exists = ROOT ROOT = {  } } } } } multiply = 1.0 }
-		# coordinated_layered_tech_battleship_tech_fiscal_tradeoff [military]; 和平财政压力降低昂贵远洋舰队科技的机会优先级
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_fiscal = yes sitai_context_need_fiscal = yes is_at_war = no } } multiply = 0.85 }
+		# ACTION program_83b9e04d97a70b24 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_83b9e04d97a70b24_current_navy_option_positive
+			add = { value = 0
+				# technology_battleship_tech_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_battleship_tech_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:battleship_tech.ai_weight
 	}
 }
@@ -1498,8 +2237,19 @@ battlefleet_tactics = {
 		value = 1
 
 		# SITAI BEGIN information:battlefleet_tactics.ai_weight
-		# battlefleet_tactics_ai_weight [military]; 战争期间有限提高原版军事研究的相对关注，不创造装备、部队或研究能力
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = yes } } multiply = 1.2 }
+		# ACTION program_9cde8435affc8ae5 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_9cde8435affc8ae5_current_navy_option_positive
+			add = { value = 0
+				# technology_battlefleet_tactics_navy_war [military]; 实际拥有相应军种且正在战争，升档同一军事使用原因；战争标记不推断完整敌情或装备已采用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 is_at_war = yes } } add = 0.15 }
+				# technology_battlefleet_tactics_navy_use [military]; 国家实际拥有navy，原版直接军事增益或具体装备/部队/保障解锁与现有力量相关；研究不即时扩军付费
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes navy_size >= 0 navy_size > 0 } } add = 0.08 }
+			}
+			min = 1
+			max = 1.15
+		} }
 		# SITAI END information:battlefleet_tactics.ai_weight
 	}
 }

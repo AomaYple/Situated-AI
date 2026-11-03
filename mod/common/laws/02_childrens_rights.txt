@@ -34,8 +34,17 @@ law_child_labor_allowed = {
 		}
 
 		# SITAI BEGIN information:law_child_labor_allowed.ai_enact_weight_modifier
-		# political_capacity_law_child_labor_allowed [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
+		# ACTION program_b418539cafe7995a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_b418539cafe7995a_negative
+			add = { value = 0
+				# political_capacity_law_child_labor_allowed [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -10
+			max = 0
+		} }
 		# SITAI END information:law_child_labor_allowed.ai_enact_weight_modifier
 	}
 }
@@ -82,11 +91,63 @@ law_restricted_child_labor = {
 		}
 
 		# SITAI BEGIN information:law_restricted_child_labor.ai_enact_weight_modifier
-		# political_capacity_law_restricted_child_labor [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
-		# coordinated_layered_civic_law_restricted_child_labor [political]; 可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_stable_capacity = yes sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 5.0 }
+		# ACTION program_b148270da2a2b781 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_b148270da2a2b781_child_dependent_income_positive
+			add = { value = 0
+				# social_reform_restricted_child_labor_from_compulsory_income_relief_8 [political]; 相对当前义务教育，限制童工恢复原版dependent wage；低SoL下收入缓解与死亡率/教育容量损失共同权衡
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_compulsory_primary_school average_sol >= 0 average_sol < 8 } } add = 12 }
+				# social_reform_restricted_child_labor_from_compulsory_income_relief_12 [political]; 相对当前义务教育，限制童工恢复原版dependent wage；低SoL下收入缓解与死亡率/教育容量损失共同权衡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_compulsory_primary_school average_sol >= 0 average_sol < 12 } } add = 8 }
+			}
+			# GROUP program_b148270da2a2b781_child_dependent_income_negative
+			add = { value = 0
+				# social_reform_restricted_child_labor_from_child_labor_income_loss_8 [political]; 退出当前童工法降低原版dependent wage；低SoL家庭收入损失独立于死亡率收益，低档与强档取强
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed average_sol >= 0 average_sol < 8 } } add = -12 }
+				# social_reform_restricted_child_labor_from_child_labor_income_loss_12 [political]; 退出当前童工法降低原版dependent wage；低SoL家庭收入损失独立于死亡率收益，低档与强档取强
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed average_sol >= 0 average_sol < 12 } } add = -8 }
+			}
+			# GROUP program_b148270da2a2b781_child_mortality_positive
+			add = { value = 0
+				# social_reform_restricted_child_labor_from_child_labor_peasant_share_mortality_high [political]; 较高已观测劳动者或农民暴露加强同一死亡率惩罚移除档位，两个职业不重复加分
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 14 }
+				# social_reform_restricted_child_labor_from_child_labor_industrial_workforce_mortality_high [political]; 较高已观测劳动者或农民暴露加强同一死亡率惩罚移除档位，两个职业不重复加分
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 14 }
+				# social_reform_restricted_child_labor_from_child_labor_peasant_share_mortality [political]; 移除当前童工法律中实际存在的职业死亡率惩罚；职业份额仅是暴露面，不是儿童数量或观察伤亡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent > 0 } } } add = 10 }
+				# social_reform_restricted_child_labor_from_child_labor_industrial_workforce_mortality [political]; 移除当前童工法律中实际存在的职业死亡率惩罚；职业份额仅是暴露面，不是儿童数量或观察伤亡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent > 0 } } } add = 10 }
+			}
+			# GROUP program_b148270da2a2b781_child_mortality_negative
+			add = { value = 0
+				# social_reform_restricted_child_labor_from_compulsory_mortality_peasant_share_high [political]; 从义务教育倒退到限制童工重新引入原版职业死亡率惩罚；职业暴露仅是代理，同因取强，不伪称观察伤亡
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_compulsory_primary_school pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = -12 }
+				# social_reform_restricted_child_labor_from_compulsory_mortality_industrial_workforce_high [political]; 从义务教育倒退到限制童工重新引入原版职业死亡率惩罚；职业暴露仅是代理，同因取强，不伪称观察伤亡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_compulsory_primary_school pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = -12 }
+				# social_reform_restricted_child_labor_from_compulsory_mortality_peasant_share_base [political]; 从义务教育倒退到限制童工重新引入原版职业死亡率惩罚；职业暴露仅是代理，同因取强，不伪称观察伤亡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_compulsory_primary_school pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent > 0 } } } add = -8 }
+				# social_reform_restricted_child_labor_from_compulsory_mortality_industrial_workforce_base [political]; 从义务教育倒退到限制童工重新引入原版职业死亡率惩罚；职业暴露仅是代理，同因取强，不伪称观察伤亡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_compulsory_primary_school pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent > 0 } } } add = -8 }
+			}
+			# GROUP program_b148270da2a2b781_child_school_capacity_positive
+			add = { value = 0
+				# social_reform_restricted_child_labor_from_child_labor_school_capacity [political]; 已有学校且低识字时，原版学校投资上限增加提供未来容量选项；不是即时教育收益或新增制度财政行政费用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 4 }
+			}
+			# GROUP program_b148270da2a2b781_child_school_capacity_negative
+			add = { value = 0
+				# social_reform_restricted_child_labor_from_compulsory_school_capacity_loss [political]; 已有学校且低识字时，倒退到限制童工缩小原版学校投资上限；仅为容量机会损失，不虚构即时教育支出
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_compulsory_primary_school has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = -4 }
+			}
+			# GROUP program_b148270da2a2b781_social_reform_political_pressure_negative
+			add = { value = 0
+				# political_capacity_law_restricted_child_labor [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -38
+			max = 30
+		} }
 		# SITAI END information:law_restricted_child_labor.ai_enact_weight_modifier
 	}
 }
@@ -120,14 +181,54 @@ law_compulsory_primary_school = {
 		}
 
 		# SITAI BEGIN information:law_compulsory_primary_school.ai_enact_weight_modifier
-		# political_capacity_law_compulsory_primary_school [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
-		if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy < 25 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = yes } } } AND = { exists = ROOT ROOT = { radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } NOT = { radical_fraction = { value >= 0.25 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } } } } } } multiply = 1.0 }
-		# structural_child_education [political]; 有工业就业且识字不足时比较童工与基础教育的长期机会成本
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 has_law_or_variant = law_type:law_child_labor_allowed literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } add = 12.0 }
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes } NOT = { OR = { AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 NOT = { legitimacy >= 50 } } } AND = { exists = ROOT ROOT = { NOT = { has_insurrectionary_interest_groups = no } } } AND = { exists = ROOT ROOT = { NOT = { net_total_income >= 0 } } } AND = { exists = ROOT ROOT = { scaled_debt >= 0 NOT = { scaled_debt <= 0.4 } } } AND = { exists = ROOT ROOT = { NOT = { in_default = no } } } AND = { exists = ROOT ROOT = { NOT = { is_at_war = no } } } AND = { exists = ROOT ROOT = { NOT = { taking_loans = no } } } AND = { exists = ROOT ROOT = { NOT = { bureaucracy >= 0 } } } AND = { exists = ROOT ROOT = { NOT = { has_law_or_variant = law_type:law_child_labor_allowed } } } AND = { exists = ROOT ROOT = { literacy_rate >= 0 literacy_rate <= 1 NOT = { literacy_rate < 0.5 } } } AND = { exists = ROOT ROOT = { pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } NOT = { pop_type_percent_country = { pop_type = laborers percent >= 0.1 } } } } AND = { exists = ROOT ROOT = { legitimacy >= 0 legitimacy <= 100 scaled_debt >= 0 literacy_rate >= 0 literacy_rate <= 1 pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } } } } } } multiply = 1.0 }
-		# coordinated_layered_civic_law_compulsory_primary_school [political]; 可观察社会结构决定具体改革议程，财政行政能力约束制度扩展，原版利益集团支持与法律资格继续决定可执行性
-		else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_stable_capacity = yes sitai_context_stable_capacity = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 has_law_or_variant = law_type:law_child_labor_allowed } } add = 5.0 }
+		# ACTION program_039633bd350c1225 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
+			value = 0
+			# GROUP program_039633bd350c1225_child_dependent_income_negative
+			add = { value = 0
+				# social_reform_compulsory_primary_school_from_child_labor_income_loss_8 [political]; 退出当前童工法降低原版dependent wage；低SoL家庭收入损失独立于死亡率收益，低档与强档取强
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed average_sol >= 0 average_sol < 8 } } add = -18 }
+				# social_reform_compulsory_primary_school_from_child_labor_income_loss_12 [political]; 退出当前童工法降低原版dependent wage；低SoL家庭收入损失独立于死亡率收益，低档与强档取强
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed average_sol >= 0 average_sol < 12 } } add = -14 }
+				# social_reform_compulsory_primary_school_from_restricted_child_labor_income_loss_8 [political]; 退出当前童工法降低原版dependent wage；低SoL家庭收入损失独立于死亡率收益，低档与强档取强
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_restricted_child_labor average_sol >= 0 average_sol < 8 } } add = -12 }
+				# social_reform_compulsory_primary_school_from_restricted_child_labor_income_loss_12 [political]; 退出当前童工法降低原版dependent wage；低SoL家庭收入损失独立于死亡率收益，低档与强档取强
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_restricted_child_labor average_sol >= 0 average_sol < 12 } } add = -8 }
+			}
+			# GROUP program_039633bd350c1225_child_mortality_positive
+			add = { value = 0
+				# social_reform_compulsory_primary_school_from_child_labor_peasant_share_mortality_high [political]; 较高已观测劳动者或农民暴露加强同一死亡率惩罚移除档位，两个职业不重复加分
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 18 }
+				# social_reform_compulsory_primary_school_from_child_labor_industrial_workforce_mortality_high [political]; 较高已观测劳动者或农民暴露加强同一死亡率惩罚移除档位，两个职业不重复加分
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 18 }
+				# social_reform_compulsory_primary_school_from_child_labor_peasant_share_mortality [political]; 移除当前童工法律中实际存在的职业死亡率惩罚；职业份额仅是暴露面，不是儿童数量或观察伤亡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent > 0 } } } add = 14 }
+				# social_reform_compulsory_primary_school_from_child_labor_industrial_workforce_mortality [political]; 移除当前童工法律中实际存在的职业死亡率惩罚；职业份额仅是暴露面，不是儿童数量或观察伤亡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent > 0 } } } add = 14 }
+				# social_reform_compulsory_primary_school_from_restricted_child_labor_peasant_share_mortality_high [political]; 较高已观测劳动者或农民暴露加强同一死亡率惩罚移除档位，两个职业不重复加分
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_restricted_child_labor pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 12 }
+				# social_reform_compulsory_primary_school_from_restricted_child_labor_industrial_workforce_mortality_high [political]; 较高已观测劳动者或农民暴露加强同一死亡率惩罚移除档位，两个职业不重复加分
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_restricted_child_labor pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 12 }
+				# social_reform_compulsory_primary_school_from_restricted_child_labor_peasant_share_mortality [political]; 移除当前童工法律中实际存在的职业死亡率惩罚；职业份额仅是暴露面，不是儿童数量或观察伤亡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_restricted_child_labor pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent > 0 } } } add = 8 }
+				# social_reform_compulsory_primary_school_from_restricted_child_labor_industrial_workforce_mortality [political]; 移除当前童工法律中实际存在的职业死亡率惩罚；职业份额仅是暴露面，不是儿童数量或观察伤亡
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_restricted_child_labor pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent > 0 } } } add = 8 }
+			}
+			# GROUP program_039633bd350c1225_child_school_capacity_positive
+			add = { value = 0
+				# social_reform_compulsory_primary_school_from_child_labor_school_capacity [political]; 已有学校且低识字时，原版学校投资上限增加提供未来容量选项；不是即时教育收益或新增制度财政行政费用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_child_labor_allowed has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 6 }
+				# social_reform_compulsory_primary_school_from_restricted_child_labor_school_capacity [political]; 已有学校且低识字时，原版学校投资上限增加提供未来容量选项；不是即时教育收益或新增制度财政行政费用
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_restricted_child_labor has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 3 }
+			}
+			# GROUP program_039633bd350c1225_social_reform_political_pressure_negative
+			add = { value = 0
+				# political_capacity_law_compulsory_primary_school [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
+			}
+			min = -28
+			max = 24
+		} }
 		# SITAI END information:law_compulsory_primary_school.ai_enact_weight_modifier
 	}
 }

@@ -5,9 +5,10 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable  # noqa: TC003
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from ..model import Block  # noqa: TID252
+from ..model import Assignment, Block, Scalar  # noqa: TID252
 from ..parser import parse_text  # noqa: TID252
 
 if TYPE_CHECKING:
@@ -53,6 +54,53 @@ def _block_text(lines: list[str], start: int) -> str:
     return "\n".join(parts)
 
 
+def _transparent_write(item: Assignment) -> bool:
+    """Recognise only the exact unconditional wrapper emitted by lowering.
+
+    A direct numeric write is valid.  The auxiliary branch may add one
+    transparent ``if`` whose sole limit is ``always = yes``; arbitrary
+    nested conditions and writes inside a limit block must not satisfy
+    the witness, because they can change runtime semantics.
+    """
+
+    if item.op != "=" or item.prefix is not None:
+        return False
+    if item.key in {"add", "multiply"}:
+        value = item.value
+        if isinstance(value, Block):
+            values = value.all("value")
+            value = (
+                values[0].value
+                if len(values) == 1 and values[0].op == "=" and values[0].prefix is None
+                else None
+            )
+        return isinstance(value, Scalar) and bool(
+            re.fullmatch(r"-?[0-9]+(?:\.[0-9]+)?", value.text)
+        )
+    if item.key != "if" or not isinstance(item.value, Block):
+        return False
+    nested = list(item.value.assignments())
+    limits = [child for child in nested if child.key == "limit" and child.is_block]
+    writes = [child for child in nested if child.key in {"add", "multiply"}]
+    if len(limits) != 1 or len(writes) != 1 or len(item.value.items) != 2:
+        return False
+    limit = limits[0].value
+    assert isinstance(limit, Block)
+    limit_items = list(limit.assignments())
+    if (
+        len(limit.items) != 1
+        or len(limit_items) != 1
+        or limit_items[0].key != "always"
+        or limit_items[0].op != "="
+        or limit_items[0].prefix is not None
+        or limits[0].op != "="
+        or limits[0].prefix is not None
+    ):
+        return False
+    always = limit_items[0].value
+    return isinstance(always, Scalar) and always.text == "yes" and _transparent_write(writes[0])
+
+
 def ast_witnesses(texts: dict[str, str]) -> tuple[ASTWitness, ...]:
     """从生成文本 AST 独立检查 action 块的 limit/write 结构。"""
 
@@ -76,7 +124,8 @@ def ast_witnesses(texts: dict[str, str]) -> tuple[ASTWitness, ...]:
                 continue
             assignments = list(root.value.assignments())
             has_limit = any(item.key == "limit" and item.is_block for item in assignments)
-            has_write = any(item.key in {"add", "multiply"} for item in assignments)
+
+            has_write = any(_transparent_write(item) for item in assignments)
             nested = sum(
                 1 for item in assignments if item.key in {"if", "else_if"} and item.is_block
             )
@@ -101,11 +150,26 @@ def witnesses(texts: dict[str, str]) -> tuple[LoweringWitness, ...]:
         if parsed.errors:
             raise ValueError(f"PDX 产物无法解析：{source}")
         lines = text.splitlines()
+        program_operation: str | None = None
         for index, line in enumerate(lines):
+            if "# SITAI END information:" in line:
+                program_operation = None
             marker = _MARKER.match(line)
             if marker is None:
                 continue
             action_id = marker.group(1) or marker.group(2)
+            if action_id.startswith("program_"):
+                body = _block_text(lines, index + 1)
+                root = next(parse_text(body).root.assignments(), None)
+                if root is None or not isinstance(root.value, Block):
+                    raise ValueError(f"消费者程序没有实际数值写入：{source}:{index + 1}")
+                effects = [
+                    item for item in root.value.assignments() if item.key in {"add", "multiply"}
+                ]
+                if len(effects) != 1:
+                    raise ValueError(f"消费者程序写入不唯一：{source}:{index + 1}")
+                program_operation = effects[0].key
+                continue
             next_marker = next(
                 (pos for pos in range(index + 1, len(lines)) if _MARKER.match(lines[pos])),
                 len(lines),
@@ -113,12 +177,21 @@ def witnesses(texts: dict[str, str]) -> tuple[LoweringWitness, ...]:
             write = _WRITE.search("\n".join(lines[index:next_marker]))
             if write is None:
                 continue
+            operation, value = write.group(1), float(write.group(2))
+            if program_operation is not None:
+                if operation != "add":
+                    raise ValueError(f"消费者贡献变体不是局部增量：{source}:{index + 1}")
+                operation = program_operation
+                # Decode the emitted decimal delta exactly. Binary addition
+                # would turn the literal -0.18 + 1 into 0.8200000000000001 and
+                # falsely reject a source multiplier of exactly 0.82.
+                value = float(Decimal(write.group(2)) + (1 if operation == "multiply" else 0))
             result.append(
                 LoweringWitness(
                     action_id=action_id,
                     source=source,
-                    operation=write.group(1),
-                    value=float(write.group(2)),
+                    operation=operation,
+                    value=value,
                     parsed=True,
                 )
             )
@@ -137,7 +210,7 @@ def mismatches(ir: Iterable[ActionIR], texts: dict[str, str]) -> tuple[str, ...]
         wanted = expected.get(item.action_id)
         if wanted is None:
             continue
-        if item.operation != wanted.operation or item.value != wanted.value:
+        if item.operation != wanted.operation or abs(item.value - wanted.value) > 1e-12:
             problems.append(item.action_id)
     return tuple(sorted(problems))
 

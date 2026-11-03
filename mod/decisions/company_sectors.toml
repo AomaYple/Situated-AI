@@ -1,0 +1,16 @@
+# 静态公司筹建机会模板；不声称已知 active PM、失业或公司现金成本。
+schema = 1
+
+[parameters]
+priority_base = 50000
+shortage_balance = 0.0
+output_price_threshold = 0.25
+input_price_threshold = 0.25
+laborers_share_threshold = 0.15
+demand_multiplier = 1.12
+pressure_multiplier = 1.20
+input_multiplier = 0.85
+workforce_multiplier = 1.04
+default_multiplier = 0.80
+outer_lower = 0.60
+outer_upper = 1.40

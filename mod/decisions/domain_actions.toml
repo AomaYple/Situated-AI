@@ -2,115 +2,115 @@
 schema = 1
 
 [domains.fiscal]
-production_instances = 50
+production_instances = 36
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.administrative]
-production_instances = 9
+production_instances = 11
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.industry]
-production_instances = 201
+production_instances = 157
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.resources]
-production_instances = 189
+production_instances = 147
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.market]
-production_instances = 420
+production_instances = 2640
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.research]
-production_instances = 71
+production_instances = 73
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.education]
-production_instances = 28
+production_instances = 54
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.political]
-production_instances = 163
+production_instances = 317
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.population]
-production_instances = 5
-status = "pending"
-unknown_policy = "vanilla"
-evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
-
-[domains.social]
-production_instances = 48
-status = "pending"
-unknown_policy = "vanilla"
-evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
-
-[domains.identity]
-production_instances = 4
-status = "pending"
-unknown_policy = "vanilla"
-evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
-
-[domains.diplomacy]
-production_instances = 70
-status = "pending"
-unknown_policy = "vanilla"
-evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
-
-[domains.subjects]
-production_instances = 22
-status = "pending"
-unknown_policy = "vanilla"
-evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
-
-[domains.army]
-production_instances = 63
-status = "pending"
-unknown_policy = "vanilla"
-evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
-
-[domains.war]
-production_instances = 18
-status = "pending"
-unknown_policy = "vanilla"
-evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
-
-[domains.navy]
-production_instances = 24
-status = "pending"
-unknown_policy = "vanilla"
-evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
-
-[domains.overseas]
-production_instances = 12
-status = "pending"
-unknown_policy = "vanilla"
-evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
-
-[domains.geography]
 production_instances = 9
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
+[domains.social]
+production_instances = 138
+status = "pending"
+unknown_policy = "vanilla"
+evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
+
+[domains.identity]
+production_instances = 3
+status = "pending"
+unknown_policy = "vanilla"
+evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
+
+[domains.diplomacy]
+production_instances = 129
+status = "pending"
+unknown_policy = "vanilla"
+evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
+
+[domains.subjects]
+production_instances = 11
+status = "pending"
+unknown_policy = "vanilla"
+evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
+
+[domains.army]
+production_instances = 102
+status = "pending"
+unknown_policy = "vanilla"
+evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
+
+[domains.war]
+production_instances = 84
+status = "pending"
+unknown_policy = "vanilla"
+evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
+
+[domains.navy]
+production_instances = 1553
+status = "pending"
+unknown_policy = "vanilla"
+evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
+
+[domains.overseas]
+production_instances = 16
+status = "pending"
+unknown_policy = "vanilla"
+evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
+
+[domains.geography]
+production_instances = 5
+status = "pending"
+unknown_policy = "vanilla"
+evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
+
 [domains.temporal]
-production_instances = 8
+production_instances = 0
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"

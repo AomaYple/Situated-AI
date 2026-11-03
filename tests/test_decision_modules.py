@@ -59,10 +59,10 @@ def test_共享支持字段仲裁只写一次且安全取最高理由():
     ) == decisions.SupportArbitration(0, ())
 
 
-def test_未知安全输入不干预且玩家边界静态检查():
+def test_未知安全输入局部退出且玩家边界静态检查():
     assert decisions.merge_diplomatic_play_support(
         market=3, security={"commitment": None}
-    ) == decisions.SupportArbitration(0, ())
+    ) == decisions.SupportArbitration(3, ("market",))
     assert (
         decisions.player_boundary_issues(
             "\t\t# SITAI BEGIN x\n\t\tif = { limit = { is_ai = yes } }\n\t\t# SITAI END x\n"
@@ -104,13 +104,14 @@ def test_正式包启用模块与生命周期契约一致():
     ]
     for name, item in contract.items():
         assert item["save_compatibility"] == policy.package.save_compatibility
-        if name not in {"fiscal", "country_state"}:
+        if name != "fiscal":
             assert item["stateful"] is False
             assert item["direct_read"] is True
             assert item["ttl_or_none"] is None
-    assert contract["country_state"]["stateful"] is True
-    assert contract["country_state"]["direct_read"] is False
-    assert contract["country_state"]["ttl_or_none"] == 100
+    assert contract["country_state"]["stateful"] is False
+    assert contract["country_state"]["direct_read"] is True
+    assert contract["country_state"]["ttl_or_none"] is None
+    assert contract["country_state"]["hooks"] == []
     assert contract["information_rules"]["clear_on_disable"] == "no_persistent_state"
     assert contract["consumer_adapters"]["clear_on_disable"] == (
         "regenerate_without_adapter_files_and_restart"

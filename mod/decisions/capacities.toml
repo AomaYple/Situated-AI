@@ -1,21 +1,32 @@
 schema = 1
 
 [capacities.fiscal]
-unit = "normalized"
-direction = "higher_is_better"
+domain = "fiscal"
+mode = "value"
+source_fact = "net_surplus"
+unit = "currency_per_week"
+scope = "root"
 unknown = "vanilla"
+actions = ["industrial_foundation", "education_and_research"]
 
 [capacities.administrative]
-unit = "normalized"
-direction = "higher_is_better"
+domain = "administrative"
+mode = "value"
+source_fact = "bureaucracy"
+unit = "capacity_balance"
+scope = "root"
 unknown = "vanilla"
+actions = ["industrial_foundation", "education_and_research"]
 
 [capacities.political]
-unit = "normalized"
-direction = "higher_is_better"
+domain = "political"
+mode = "value"
+source_fact = "legitimacy"
+unit = "legitimacy_0_100"
+scope = "root"
 unknown = "vanilla"
+actions = ["political_reform", "education_and_research", "reform_progressive_window"]
 
 [capacities.security]
-unit = "normalized"
-direction = "higher_is_better"
-unknown = "vanilla"
+reserved = true
+reason = "No scalar security capacity is compiled; war remains a separate boolean pressure."

@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "evidence_category": "static_check",
+  "baseline": "victoria3-1.14.5",
+  "sources": {
+    "common/scripted_triggers/00_ai_triggers.txt": "d8b13d23dc922ccaa0c4ce3964c42359999958630169878582433450c10e3741",
+    "common/scripted_triggers/00_building_triggers.txt": "b84c2665d59482cab85db29be51fcc2425d478ec17ddc2ead7c926b5a0b178d2",
+    "common/scripted_triggers/00_civil_war_triggers.txt": "63abb81c1aff36c60d7b629ad2631e7254d4a8c69d3cf2b0da60f4f28c33049d",
+    "common/scripted_triggers/00_clothes_triggers.txt": "a3b7039ffd5e208e72f00d77b58ce0b344a6e0a68437ccf00aeeb05372fe4e8d",
+    "common/scripted_triggers/00_coa_triggers.txt": "424fdc064b8c0bf14b04f48b1ba29d4b10049f34d64525235916e80dfdd3b81a",
+    "common/scripted_triggers/00_debug_triggers.txt": "34c17fcdb23eeca276ebfebb028ef9d8119540143a2a7da03378498c590bcd3d",
+    "common/scripted_triggers/00_diplomacy_triggers.txt": "204ec6716236e2fd725cacf494791a9b362e9f38c0ba1041a3a60971dea6745c",
+    "common/scripted_triggers/00_ep2_victoria_scripted_triggers.txt": "4170ec272e2e4930d36534f9268a5e110e3223a8e94655f4c5a07dcb40e211c3",
+    "common/scripted_triggers/00_geography_triggers.txt": "10677fcdadacc25f6af825275d234d6ad036a4e88a0701334208efe09de0c891",
+    "common/scripted_triggers/00_gfx_buildings_graphics_triggers.txt": "f0a9febb5801af5b90d3015fade81360ca376b557eeb1c96a6248e0c14946623",
+    "common/scripted_triggers/00_gfx_route_graphics_triggers.txt": "0c498f411ba4e4f4f4ec290ac5e9845230beb1932c2eb520fa6beed0626fcf18",
+    "common/scripted_triggers/00_has_dlc_triggers.txt": "986cc52d6f8574fa45fdc19b24104380afb540a87a6944e8ab71803bc2881bae",
+    "common/scripted_triggers/00_ip3_victoria_scripted_triggers.txt": "3030202fd835437ec8549ac4d9d7913e9221b374886f1712ca19e4ca7d560468",
+    "common/scripted_triggers/00_ip4_victoria_scripted_triggers.txt": "bb5c5ad92688562f46e3cdb5284aaf7097c922f7e373324b54aa0feb55621087",
+    "common/scripted_triggers/00_ip4_winspear_scripted_triggers.txt": "5f2a7463e785cbed0e7f3e4454647c52bc28b854d21c20955e4cbcc509bd2efc",
+    "common/scripted_triggers/00_lobby_formation_triggers.txt": "a54a00299eee837d5953c4a4c5b6299e7d93cfb9618d4b6d5d55cbd5b82ed397",
+    "common/scripted_triggers/00_scripted_triggers.txt": "5002f411749a5195dbe80cd849188975e31706a9feedd6387c7bf9ecb296f96d",
+    "common/scripted_triggers/00_ship_name_triggers.txt": "f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5",
+    "common/scripted_triggers/00_spanish_new_world_triggers.txt": "3a4e5caae78d897c6e1ec3fcb02dbc71c61411ff1d713d364174c602e77db38f",
+    "common/scripted_triggers/00_strike_triggers.txt": "66875d1e2ca3457ce447cbe939ec9c60ac0bc8b18a1ef029a6509b0c4c753636",
+    "common/scripted_triggers/00_theme_triggers.txt": "0a8edc0bedb4130664b8fd5a2d93ec4f6b741562a3d18b4930f5d1383ebd34a4",
+    "common/scripted_triggers/00_victoria_scripted_triggers.txt": "a5c2cf23b3629fe9acf81775d5eb79d7e11294240e1d172b9a7638f2c1c17010",
+    "common/scripted_triggers/01_has_dlc_triggers_ip1.txt": "16d2a1c2b60b727d871c8455d99e0246a39e8ca94f07a1a014c9dabc03312763",
+    "common/scripted_triggers/ip4_carlist_war_triggers.txt": "ee37761ca132b73e117ca465fb0cf99de0835d25144518afff74476596067bc4",
+    "common/scripted_triggers/ip4_negotiation_triggers.txt": "22fa827e98a33d16cbf4bdd8748d3a35da7d503a726f2ac1c11debfcbd55ff0a"
+  },
+  "reader": {
+    "engine": "any_insurrection_ongoing",
+    "origin": "scripted_trigger",
+    "scope": "root",
+    "result": "boolean",
+    "unit": "boolean",
+    "source": "common/scripted_triggers/00_scripted_triggers.txt",
+    "line": 1117,
+    "definition": "any_insurrection_ongoing = { any_political_movement = { is_insurrectionary = yes } }"
+  },
+  "limits": [
+    "The scripted trigger is not has_insurrectionary_interest_groups and not a builtin getter.",
+    "Only exact country ROOT without arguments, paths or parameters is authorized.",
+    "Production must verify all source identities and a unique matching AST; offline identity is historical static evidence."
+  ]
+}

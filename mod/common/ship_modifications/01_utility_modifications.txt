@@ -1,0 +1,568 @@
+### Utility Modifications
+### These can be assigned to any utility slot on any ship type
+
+# Patrol Boats
+
+utility_mod_patrol_boats = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/supplies_navy.dds"
+
+	modifier = {
+        ship_blockade_strength_mult = 0.5
+	}
+
+	construction_goods = {
+		goods_input_wood_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+		multiply = ship_mod_coastal_defence_doctrine
+		multiply = ship_mod_merchant_navy_doctrine
+
+		# SITAI BEGIN information:utility_mod_patrol_boats.ai_weight
+		# ACTION program_4e47eb3c9b7f2444 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_4e47eb3c9b7f2444_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_patrol_boats_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_4e47eb3c9b7f2444_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_patrol_boats_wood_opportunity [military]; 候选真实正投入wood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_4e47eb3c9b7f2444_equipment_material_pressure_wood_negative
+			add = { value = 0
+				# equipment_utility_mod_patrol_boats_wood_pressure [military]; 候选真实正投入wood高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_patrol_boats_wood_scarcity [military]; 候选真实正投入wood已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_patrol_boats.ai_weight
+	}
+}
+
+
+# Expanded Sick Bay
+
+utility_mod_extended_sick_bay = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/crew_casualties.dds"
+
+	modifier = {
+		ship_suffered_crew_damage_mult = -0.5
+	}
+
+	construction_goods = {
+		goods_input_fabric_add = 5
+		goods_input_liquor_add = 5
+		goods_input_opium_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+		multiply = ship_mod_power_projection_doctrine
+		multiply = ship_mod_merchant_navy_doctrine
+
+		# SITAI BEGIN information:utility_mod_extended_sick_bay.ai_weight
+		# ACTION program_d41513193a5c2f96 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d41513193a5c2f96_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_extended_sick_bay_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_d41513193a5c2f96_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_extended_sick_bay_opium_opportunity [military]; 候选真实正投入opium已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:opium mg:opium = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_utility_mod_extended_sick_bay_liquor_opportunity [military]; 候选真实正投入liquor已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:liquor mg:liquor = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_utility_mod_extended_sick_bay_fabric_opportunity [military]; 候选真实正投入fabric已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_d41513193a5c2f96_equipment_material_pressure_fabric_negative
+			add = { value = 0
+				# equipment_utility_mod_extended_sick_bay_fabric_pressure [military]; 候选真实正投入fabric高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_extended_sick_bay_fabric_scarcity [military]; 候选真实正投入fabric已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			# GROUP program_d41513193a5c2f96_equipment_material_pressure_liquor_negative
+			add = { value = 0
+				# equipment_utility_mod_extended_sick_bay_liquor_pressure [military]; 候选真实正投入liquor高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:liquor mg:liquor = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_extended_sick_bay_liquor_scarcity [military]; 候选真实正投入liquor已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:liquor mg:liquor = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			# GROUP program_d41513193a5c2f96_equipment_material_pressure_opium_negative
+			add = { value = 0
+				# equipment_utility_mod_extended_sick_bay_opium_pressure [military]; 候选真实正投入opium高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:opium mg:opium = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_extended_sick_bay_opium_scarcity [military]; 候选真实正投入opium已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:opium mg:opium = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.5
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_extended_sick_bay.ai_weight
+	}
+}
+
+
+# Fire Suppression
+
+utility_mod_fire_suppression = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/armor_navy.dds"
+
+	modifier = {
+		ship_suffered_hull_damage_mult = -0.25
+	}
+
+	construction_goods = {
+		goods_input_sulfur_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+		multiply = ship_mod_merchant_navy_doctrine
+
+		# SITAI BEGIN information:utility_mod_fire_suppression.ai_weight
+		# ACTION program_d7bfb09ec65a1acc [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d7bfb09ec65a1acc_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_fire_suppression_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_d7bfb09ec65a1acc_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_fire_suppression_sulfur_opportunity [military]; 候选真实正投入sulfur已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_d7bfb09ec65a1acc_equipment_material_pressure_sulfur_negative
+			add = { value = 0
+				# equipment_utility_mod_fire_suppression_sulfur_pressure [military]; 候选真实正投入sulfur高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_fire_suppression_sulfur_scarcity [military]; 候选真实正投入sulfur已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_fire_suppression.ai_weight
+	}
+}
+
+
+# Landing Skiffs
+
+utility_mod_landing_skiffs = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/marine_capacity.dds"
+
+	modifier = {
+		ship_naval_invasion_efficiency_mult = 0.2
+	}
+
+	construction_goods = {
+		goods_input_wood_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+		multiply = ship_mod_power_projection_doctrine
+
+		# SITAI BEGIN information:utility_mod_landing_skiffs.ai_weight
+		# ACTION program_d3aff93f58de045f [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d3aff93f58de045f_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_landing_skiffs_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_d3aff93f58de045f_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_landing_skiffs_wood_opportunity [military]; 候选真实正投入wood已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_d3aff93f58de045f_equipment_material_pressure_wood_negative
+			add = { value = 0
+				# equipment_utility_mod_landing_skiffs_wood_pressure [military]; 候选真实正投入wood高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_landing_skiffs_wood_scarcity [military]; 候选真实正投入wood已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_landing_skiffs.ai_weight
+	}
+}
+
+
+# Torpedo Nets
+
+utility_mod_torpedo_nets = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/armor_navy.dds"
+
+	modifier = {
+		ship_suffered_crit_chance_mult = -0.5
+		ship_vulnerability_mult = -0.5
+	}
+
+	construction_goods = {
+		goods_input_fabric_add = 5
+	}
+
+	unlocking_technologies = { self_propelled_torpedoes }
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+		multiply = ship_mod_coastal_defence_doctrine
+
+		# SITAI BEGIN information:utility_mod_torpedo_nets.ai_weight
+		# ACTION program_93e59bef638c578a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_93e59bef638c578a_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_torpedo_nets_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_93e59bef638c578a_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_torpedo_nets_fabric_opportunity [military]; 候选真实正投入fabric已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_93e59bef638c578a_equipment_material_pressure_fabric_negative
+			add = { value = 0
+				# equipment_utility_mod_torpedo_nets_fabric_pressure [military]; 候选真实正投入fabric高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_torpedo_nets_fabric_scarcity [military]; 候选真实正投入fabric已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_torpedo_nets.ai_weight
+	}
+}
+
+
+# Large Carronades
+
+utility_mod_large_carronades = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/average_damage_navy.dds"
+
+	modifier = {
+		ship_hull_damage_mult = 0.25
+	}
+
+	construction_goods = {
+		goods_input_artillery_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+
+		# SITAI BEGIN information:utility_mod_large_carronades.ai_weight
+		# ACTION program_e225bfdb8262dd86 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_e225bfdb8262dd86_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_large_carronades_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_e225bfdb8262dd86_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_large_carronades_artillery_opportunity [military]; 候选真实正投入artillery已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_e225bfdb8262dd86_equipment_material_pressure_artillery_negative
+			add = { value = 0
+				# equipment_utility_mod_large_carronades_artillery_pressure [military]; 候选真实正投入artillery高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_large_carronades_artillery_scarcity [military]; 候选真实正投入artillery已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:artillery mg:artillery = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_large_carronades.ai_weight
+	}
+}
+
+
+# Fire-Control System
+
+utility_mod_fire_control_system = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/average_damage_navy.dds"
+
+	modifier = {
+		ship_readiness_gain_mult = 0.1
+		ship_battle_against_ship_type_torpedo_boat_accuracy_mult = 0.2
+		ship_battle_against_ship_type_torpedo_boat_destroyer_accuracy_mult = 0.2
+		ship_battle_against_ship_type_destroyer_accuracy_mult = 0.2
+	}
+
+	construction_goods = {
+		goods_input_radios_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+		multiply = ship_mod_capital_doctrine
+
+		# SITAI BEGIN information:utility_mod_fire_control_system.ai_weight
+		# ACTION program_232c7f739f85ea6a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_232c7f739f85ea6a_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_fire_control_system_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_232c7f739f85ea6a_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_fire_control_system_radios_opportunity [military]; 候选真实正投入radios已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:radios mg:radios = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_232c7f739f85ea6a_equipment_material_pressure_radios_negative
+			add = { value = 0
+				# equipment_utility_mod_fire_control_system_radios_pressure [military]; 候选真实正投入radios高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:radios mg:radios = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_fire_control_system_radios_scarcity [military]; 候选真实正投入radios已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:radios mg:radios = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_fire_control_system.ai_weight
+	}
+}
+
+
+# Range Finder
+
+utility_mod_range_finder = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/accuracy.dds"
+
+	modifier = {
+		ship_accuracy_mult = 0.2
+		ship_screening_mult = 0.2
+	}
+
+	construction_goods = {
+		goods_input_iron_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+		multiply = ship_mod_capital_doctrine
+
+		# SITAI BEGIN information:utility_mod_range_finder.ai_weight
+		# ACTION program_03f0b29db814b39b [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_03f0b29db814b39b_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_range_finder_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_03f0b29db814b39b_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_range_finder_iron_opportunity [military]; 候选真实正投入iron已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_03f0b29db814b39b_equipment_material_pressure_iron_negative
+			add = { value = 0
+				# equipment_utility_mod_range_finder_iron_pressure [military]; 候选真实正投入iron高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_range_finder_iron_scarcity [military]; 候选真实正投入iron已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_range_finder.ai_weight
+	}
+}
+
+
+# Searchlights
+
+utility_mod_searchlights = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/accuracy.dds"
+
+	modifier = {
+		ship_battle_condition_accuracy_penalty_mult = -0.5
+		ship_detection_mult = 0.25
+	}
+
+	construction_goods = {
+		goods_input_iron_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+
+		# SITAI BEGIN information:utility_mod_searchlights.ai_weight
+		# ACTION program_ddc9b3ae0f4ad09b [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_ddc9b3ae0f4ad09b_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_searchlights_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_ddc9b3ae0f4ad09b_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_searchlights_iron_opportunity [military]; 候选真实正投入iron已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_ddc9b3ae0f4ad09b_equipment_material_pressure_iron_negative
+			add = { value = 0
+				# equipment_utility_mod_searchlights_iron_pressure [military]; 候选真实正投入iron高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_searchlights_iron_scarcity [military]; 候选真实正投入iron已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_searchlights.ai_weight
+	}
+}
+
+
+# Advanced Explosives
+
+utility_mod_advanced_explosives = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/accuracy.dds"
+
+	modifier = {
+		ship_critical_hit_chance_mult = 0.5
+		ship_crew_damage_mult = 0.25
+	}
+
+	construction_goods = {
+		goods_input_explosives_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+
+		# SITAI BEGIN information:utility_mod_advanced_explosives.ai_weight
+		# ACTION program_e9cdc6f598eee927 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_e9cdc6f598eee927_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_advanced_explosives_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_e9cdc6f598eee927_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_advanced_explosives_explosives_opportunity [military]; 候选真实正投入explosives已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:explosives mg:explosives = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_e9cdc6f598eee927_equipment_material_pressure_explosives_negative
+			add = { value = 0
+				# equipment_utility_mod_advanced_explosives_explosives_pressure [military]; 候选真实正投入explosives高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:explosives mg:explosives = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_advanced_explosives_explosives_scarcity [military]; 候选真实正投入explosives已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:explosives mg:explosives = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_advanced_explosives.ai_weight
+	}
+}
+
+
+# Camouflage
+
+utility_mod_camouflage = {
+	type = ship_mod_slot_utility_1
+	icon = "gfx/interface/icons/military_icons/navy_icons/accuracy.dds"
+
+	modifier = {
+		ship_suffered_accuracy_mult = -0.15
+		ship_visibility_mult = -0.25
+	}
+
+	construction_goods = {
+		goods_input_oil_add = 5
+		goods_input_dye_add = 5
+	}
+
+	ai_weight = {
+		value = 1
+		multiply = ship_mod_market_multiplier
+		multiply = ship_mod_jeune_ecole_doctrine
+
+		# SITAI BEGIN information:utility_mod_camouflage.ai_weight
+		# ACTION program_d50380dbaa4697db [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_d50380dbaa4697db_equipment_financing_pressure_negative
+			add = { value = 0
+				# equipment_utility_mod_camouflage_default [military]; 国家已实际违约，提高改装融资机会成本；正常借款不惩罚，不代表实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
+			}
+			# GROUP program_d50380dbaa4697db_equipment_material_opportunity_positive
+			add = { value = 0
+				# equipment_utility_mod_camouflage_oil_opportunity [military]; 候选真实正投入oil已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+				# equipment_utility_mod_camouflage_dye_opportunity [military]; 候选真实正投入dye已观察低价且不短缺，仅给有限材料机会；不是已建造或整体可负担
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:dye mg:dye = { market_goods_pricier <= -0.1 market_goods_delta >= 0.0 } } } } add = 0.08 }
+			}
+			# GROUP program_d50380dbaa4697db_equipment_material_pressure_dye_negative
+			add = { value = 0
+				# equipment_utility_mod_camouflage_dye_pressure [military]; 候选真实正投入dye高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:dye mg:dye = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_camouflage_dye_scarcity [military]; 候选真实正投入dye已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:dye mg:dye = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			# GROUP program_d50380dbaa4697db_equipment_material_pressure_oil_negative
+			add = { value = 0
+				# equipment_utility_mod_camouflage_oil_pressure [military]; 候选真实正投入oil高价且短缺，仅升档同一材料压力，不与基础短缺重复
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = -0.2 }
+				# equipment_utility_mod_camouflage_oil_scarcity [military]; 候选真实正投入oil已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } add = -0.1 }
+			}
+			min = 0.5
+			max = 1.08
+		} }
+		# SITAI END information:utility_mod_camouflage.ai_weight
+	}
+}

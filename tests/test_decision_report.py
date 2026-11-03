@@ -34,7 +34,7 @@ def test_decision_report_covers_all_declared_domains(engineering_metadata: dict[
     assert sum(len(field["candidates"]) for field in report["consumer_fields"]) == (
         report["information_rule_count"] + report["consumer_rule_count"]
     )
-    assert report["profile"]["runtime_state"] == "bounded_persistent_routes"
+    assert report["profile"]["runtime_state"] == "stateless_consumer_observations"
     assert report["shocks"]["current_facts"]["active_war"]["rule_count"] > 0
     assert report["shocks"]["current_facts"]["war_defeat"]["rule_count"] > 0
     assert set(report["shocks"]["historical_events"].values()) == {
@@ -101,9 +101,15 @@ def test_phase_four_to_six_static_coverage_is_explicit(
         "ai_strategy_default.become_subject_value",
         "ai_strategy_default.wargoal_scores.conquer_state",
         "ai_strategy_default.fleet_compositions.secondary_fleet.mission_type_weights.protect_supply",
-        "colonial_interest_ratio",
         "state_value",
     } <= fields
+    assert "colonial_interest_ratio" not in fields
+    # Colonization region legality includes terminal zeros; no positive add may
+    # revive them. This consumer is restored in full rather than counted as new AI.
+    assert (
+        "ai_strategy_default.strategic_region_stance_type_scores.stance_colonize_region"
+        not in fields
+    )
     assert {
         "target_relations",
         "target_truce",
@@ -130,7 +136,10 @@ def test_offline_metadata_reuses_the_shared_rule_contract(
 
     assert engineering_metadata["decision_rules"] == decision_rules.contract(information)
     assert engineering_metadata["consumer_adapters"]["consumers"] == [
-        {"source": source, **decision_rules.contract(rules, owner="consumer_adapters")}
+        {
+            "source": source,
+            **decision_rules.contract(rules, owner="consumer_adapters", source=source),
+        }
         for source, rules in adapters.policies
     ]
 
@@ -230,6 +239,50 @@ def test_decision_report_rejects_contract_drift(
 
     with pytest.raises(ValueError, match=issue):
         decision_report.build(broken)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["missing", "untraced_numeric", "duplicate", "null", "undercount"]
+)
+def test_required_knowledge_is_typed_traced_and_counted(engineering_metadata, mutation):
+    broken = json.loads(json.dumps(engineering_metadata))
+    contract, rule = next(
+        (contract, rule)
+        for contract in broken["consumer_adapters"]["consumers"]
+        for rule in contract["rules"]
+        if rule.get("required_known_facts")
+    )
+    if mutation == "missing":
+        rule["required_known_facts"] = ["absent"]
+    elif mutation == "untraced_numeric":
+        rule["required_known_facts"] = ["state_unemployment"]
+    elif mutation == "duplicate":
+        rule["required_known_facts"] *= 2
+    elif mutation == "null":
+        rule["required_known_facts"] = None
+    else:
+        contract["cost_by_field"][rule["field"]]["predicates"] -= 1
+    with pytest.raises(ValueError, match=r"知识|台账|inputs 与实际条件"):
+        decision_report.build(broken)
+
+
+def test_native_target_readers_are_demand_not_actual_force(engineering_metadata):
+    report = decision_report.build(engineering_metadata)
+    roles = {
+        row["engine"]: row["profile_dimension"]
+        for row in report["facts"]
+        if row["engine"]
+        in {
+            "wanted_army_size_script_value",
+            "wanted_marines_size_script_value",
+            "num_defensive_pacts",
+        }
+    }
+    assert roles == {
+        "wanted_army_size_script_value": "native_demand",
+        "wanted_marines_size_script_value": "native_demand",
+        "num_defensive_pacts": "external_opportunity",
+    }
 
 
 def _school_taxonomy(
@@ -335,11 +388,12 @@ def test_real_trade_and_research_consumers_use_their_actual_inputs(
 ) -> None:
     taxonomy = {row["id"]: row for row in decision_report.build(engineering_metadata)["taxonomy"]}
     research = next(
-        edge for edge in taxonomy["technology"]["edges"] if edge["rule"] == "academia_ai_weight"
+        edge
+        for edge in taxonomy["technology"]["edges"]
+        if edge["rule"] == "technology_academia_literacy"
     )
     assert research["source"] == "common/technology/technologies/30_society.txt"
     assert set(research["inputs"]) == {
-        "common/technology/technologies/30_society.txt::consumer_adapters::default",
         "common/technology/technologies/30_society.txt::consumer_adapters::literacy",
     }
     assert research["coordination"] == []
@@ -350,10 +404,12 @@ def test_real_trade_and_research_consumers_use_their_actual_inputs(
         edge
         for edge in taxonomy["market_trade"]["edges"]
         if edge["field"] == "treaty_category_scores.trade"
-        and any(name.endswith("::coord_layer_foundation") for name in edge["coordination"])
+        and edge["rule"] == "remaining_trade_grain_need"
     )
-    assert "mod/decisions/country_state.toml::country_state::income" in trade["inputs"]
-    assert "mod/decisions/country_state.toml::country_state::debt_ratio" in trade["inputs"]
+    assert trade["inputs"] == [
+        decision_report.DEFAULT_SOURCE + "::information_rules::grain_balance"
+    ]
+    assert trade["coordination"] == []
     assert trade["source"] == decision_report.DEFAULT_SOURCE
     assert trade["higher_priority_rules"]
     assert all(rule["priority"] > trade["priority"] for rule in trade["higher_priority_rules"])
@@ -361,26 +417,27 @@ def test_real_trade_and_research_consumers_use_their_actual_inputs(
     assert trade["unknown"] == "preserve_vanilla_and_block_lower_priority_if_not_known_false"
 
 
-def test_route_provenance_keeps_persistent_lifecycle_separate(
+def test_provenance_has_stateless_coordination_and_native_war_memory(
     engineering_metadata: dict[str, Any],
 ) -> None:
-    time = next(
-        row
-        for row in decision_report.build(engineering_metadata)["taxonomy"]
-        if row["id"] == "time_shock"
+    report = decision_report.build(engineering_metadata)
+    assert all(
+        not (fact.get("argument") or "").startswith("sitai_route_") for fact in report["facts"]
     )
-    path = next(
+    paths = [
         path
-        for edge in time["edges"]
+        for row in report["taxonomy"]
+        for edge in row["edges"]
         for path in edge["coordination_paths"]
-        if path["signal"].get("argument") == "sitai_route_industry"
+    ]
+    assert paths
+    assert all(not path["lifecycle"] for path in paths)
+    assert all(
+        node["section"] in {"needs", "capacities"} for path in paths for node in path["nodes"]
     )
-
-    assert path["lifecycle"]["ttl_days"] > 0
-    assert path["lifecycle"]["cooldown_days"] > 0
-    assert {"routes", "budgets"} <= {node["section"] for node in path["nodes"]}
-    assert "current_signal_may_outlive_facts" in path["boundary"]
-    assert "other_route_preemption_not_expanded" in path["boundary"]
+    assert any(fact["key"] == "war_defeat" for fact in report["facts"])
+    assert "vanilla_recent_war_variable_read" in report["shocks"]["memory"]
+    assert "ttl" not in report["shocks"]["memory"]
 
 
 def test_optional_evidence_trace_keeps_no_positive_evidence_distinct_from_known_false() -> None:
@@ -406,7 +463,7 @@ def test_optional_evidence_trace_keeps_no_positive_evidence_distinct_from_known_
     }
 
 
-def test_diplomacy_reports_real_wargoal_layered_facts_without_relations_keyword(
+def test_diplomacy_reports_real_target_reconstruction_without_coordinated_layer(
     engineering_metadata: dict[str, Any],
 ) -> None:
     diplomacy = next(
@@ -416,24 +473,15 @@ def test_diplomacy_reports_real_wargoal_layered_facts_without_relations_keyword(
     )
     edges = {edge["rule"]: edge for edge in diplomacy["edges"]}
 
-    assert "coordinated_layered_conquer_expansion" in edges
-    edge = edges["coordinated_layered_conquer_expansion"]
+    assert "coordinated_layered_conquer_expansion" not in edges
+    edge = edges["target_strategy_goal_conquer_state_reconstruction"]
     assert edge["source"] == "common/ai_strategies/00_default_strategy.txt"
     assert edge["field"] == "ai_strategy_default.wargoal_scores.conquer_state"
-    assert edge["rule_inputs"] == [
-        "common/ai_strategies/00_default_strategy.txt::consumer_adapters::coord_layer_expansion"
-    ]
-    assert edge["coordination"] == edge["rule_inputs"]
-    assert {
-        "mod/decisions/country_state.toml::country_state::default",
-        "mod/decisions/country_state.toml::country_state::debt_ratio",
-        "mod/decisions/country_state.toml::country_state::income",
-    } <= set(edge["inputs"])
-    path = edge["coordination_paths"][0]
-    assert path["signal"]["engine"] == "sitai_context_layer_expansion"
-    assert {node["name"] for node in path["nodes"]} == {"expansion_capacity", "recovery"}
-    assert any(
-        rule["rule"] == "coordinated_layered_conquer_reconstruction"
-        and rule["priority"] > edge["priority"]
-        for rule in edge["higher_priority_rules"]
-    )
+    prefix = "common/ai_strategies/00_default_strategy.txt::consumer_adapters::"
+    assert set(edge["rule_inputs"]) == {
+        prefix + "prospective_subject_population",
+        prefix + "war_defeat",
+    }
+    assert set(edge["inputs"]) == set(edge["rule_inputs"])
+    assert edge["coordination"] == []
+    assert edge["coordination_paths"] == []

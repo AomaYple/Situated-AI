@@ -1,6 +1,9 @@
 """D5 ConsumerDecisionIR 的当前登记合同。"""
 
+from typing import cast
+
 import pytest
+from _situated_sources import production_policy_sources, production_supply_sources
 
 from pdx.situated.compiler import load_model
 from pdx.situated.decision_ir import compile_decisions
@@ -31,13 +34,37 @@ def test_统一生产bundle包含全部legacy和显式writer():
     model = load_model()
     assert model.consumer_ir is not None
     bundle = model.consumer_ir
-    assert len(bundle.writers) == len(model.action_instances)
-    assert sum(item.kind == "rule_action" for item in bundle.writers) == 1414
+    supply = production_supply_sources().rules
+    assert len(bundle.writers) == len(model.action_instances) + len(supply)
+    assert {item.kind for item in bundle.writers} == {
+        "rule_action",
+        "action_card",
+        "supply_program",
+    }
+    assert sum(item.kind == "supply_program" for item in bundle.writers) == len(supply)
+    assert {
+        (item.source, item.definition, item.field)
+        for item in bundle.writers
+        if item.kind == "supply_program"
+    } == supply
+    assert {item.writer_id for item in bundle.writers if item.kind == "supply_program"} == {
+        f"supply_{good}" for _source, good, _field in supply
+    }
+    assert sum(item.kind == "rule_action" for item in bundle.writers) == len(
+        production_policy_sources().rules
+    )
+    assert {
+        (item.source, item.definition, item.field)
+        for item in bundle.writers
+        if item.kind == "rule_action"
+    } == production_policy_sources().rules
     assert sum(item.kind == "action_card" for item in bundle.writers) == len(model.actions)
     payload = bundle.as_dict()
-    assert payload["legacy_writer_count"] == 1414
-    assert payload["legacy_semantic_count"] == 1414
+    assert payload["legacy_writer_count"] == len(production_policy_sources().rules)
+    assert payload["legacy_semantic_count"] == len(production_policy_sources().rules)
     assert payload["action_card_writer_count"] == len(model.actions)
+    assert payload["supply_program_writer_count"] == len(supply)
+    assert payload["support_program_writer_count"] == 0
     assert len(set(bundle.writer_ids())) == len(bundle.writers)
     assert all(item.vanilla_tail for item in bundle.writers)
 
@@ -68,8 +95,14 @@ def test_legacy_writer绑定与owner逐项反查且每个消费者字段只有�
     bindings = {(item.source, item.definition): item for item in model.binding_rows}
     writers = tuple(item for item in bundle.writers if item.kind == "rule_action")
 
-    assert len(instances) == 1414
-    assert len(bindings) == 1414
+    assert len(instances) == len(production_policy_sources().rules)
+    assert len(bindings) == len(production_policy_sources().rules)
+    assert {
+        (item.source, item.rule_id, item.consumer_field) for item in instances.values()
+    } == production_policy_sources().rules
+    assert {
+        (item.source, item.definition, item.field) for item in bindings.values()
+    } == production_policy_sources().rules
     assert {(item.source, item.definition) for item in writers} == set(bindings)
 
     owners: dict[str, str] = {}
@@ -94,7 +127,7 @@ def test_legacy_writer携带完整规则语义而不是只有登记身份():
     model = load_model()
     assert model.consumer_ir is not None
     writers = tuple(item for item in model.consumer_ir.writers if item.kind == "rule_action")
-    assert len(writers) == 1414
+    assert len(writers) == len(production_policy_sources().rules)
     assert all(item.legacy is not None for item in writers)
     for writer in writers:
         assert writer.legacy is not None
@@ -107,3 +140,35 @@ def test_legacy_writer携带完整规则语义而不是只有登记身份():
         assert writer.legacy.target == writer.target
         assert writer.legacy.vanilla_tail == writer.vanilla_tail
         assert writer.legacy.predicates == writer.predicates
+
+
+def test_production_contract_owner_matches_actual_legacy_instances():
+    model = load_model()
+    production = cast("dict[str, object]", model.contract()["production"])
+    fields = cast("list[dict[str, object]]", production["fields"])
+    rows = {(row["source"], row["field"]): row for row in fields}
+    expected = {
+        (item.source, item.consumer_field): item.owner
+        for item in model.action_instances
+        if item.kind == "rule_action"
+    }
+    assert set(rows) == set(expected)
+    assert {key: rows[key]["owner"] for key in expected} == expected
+
+
+def test_action_card_instance_matches_consumer_and_writer_contracts():
+    model = load_model()
+    assert model.consumer_ir is not None
+    consumers = {item.id: item for item in model.consumers}
+    writers = {item.writer_id: item for item in model.consumer_ir.writers}
+    instances = [item for item in model.action_instances if item.kind == "action_card"]
+    assert instances
+    for instance in instances:
+        writer = writers[instance.action_id]
+        action = writer.action
+        assert action is not None
+        consumer = consumers[action.consumer_id]
+        assert instance.consumer_field == consumer.field == writer.field == action.field
+        assert instance.operation == consumer.operation == writer.operation == action.operation
+        assert instance.actor_scope == consumer.scope == writer.actor
+        assert instance.vanilla_tail == consumer.vanilla_tail == writer.vanilla_tail

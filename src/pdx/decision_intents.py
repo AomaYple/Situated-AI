@@ -59,7 +59,7 @@ class Strategy:
             "source_sha256": self.source_sha256,
             "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "composition": "generation_time_and_dag; nonexclusive_current_input_constraints",
-            "priority": "existing_per_field_rule_priority; one_adjustment",
+            "priority": "consumer_local_joint_contributions; cause_tiers; final_cap",
             "graph_budget": dict(GRAPH_BUDGET),
             "intents": [
                 {

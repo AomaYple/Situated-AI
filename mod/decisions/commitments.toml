@@ -2,18 +2,27 @@ schema = 1
 
 [commitments.debt_service]
 domain = "fiscal"
+mode = "value"
 source_fact = "debt_ratio"
 unit = "debt_to_credit_ratio"
+scope = "root"
 unknown = "vanilla"
+actions = ["industrial_foundation", "education_and_research"]
 
 [commitments.military]
 domain = "military"
+mode = "value"
 source_fact = "war"
-unit = "boolean"
+unit = "flag"
+scope = "root"
 unknown = "vanilla"
+actions = ["diplomatic_aggression_guard"]
 
 [commitments.diplomatic]
 domain = "diplomacy"
+mode = "value"
 source_fact = "subject"
-unit = "boolean"
+unit = "flag"
+scope = "root"
 unknown = "vanilla"
+actions = ["diplomatic_opening", "diplomatic_boldness_window"]

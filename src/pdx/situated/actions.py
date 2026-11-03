@@ -7,7 +7,7 @@ import re
 import tomllib
 from typing import TYPE_CHECKING
 
-from .schema import ActionCard, ConsumerContract, CostPredicate
+from .schema import ActionCard, ConsumerContract, CostPredicate, RankTerm
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -45,6 +45,24 @@ def _names(value: object, label: str) -> tuple[str, ...]:
     ):
         raise ValueError(f"{label} 必须是小写 ID 列表")
     return tuple(value)
+
+
+def _rank_terms(value: object, label: str) -> tuple[RankTerm, ...]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} 必须是有限需求档列表")
+    result = []
+    for item in value:
+        if not isinstance(item, dict) or set(item) - {"amount", "evidence_group"} != {
+            "fact",
+            "goal",
+            "tier",
+            "unit",
+        }:
+            raise ValueError(f"{label} RankTerm 字段无效")
+        result.append(RankTerm(**item))
+    if len({term.fact for term in result}) != len(result):
+        raise ValueError(f"{label} 重复 rank 证据")
+    return tuple(result)
 
 
 def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, ...]]:
@@ -102,7 +120,17 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
             "unknown_policy",
             "explanation",
         }
-        optional = {"commitment_when", "political_when", "zero_cost_reason"}
+        optional = {
+            "commitment_when",
+            "political_when",
+            "zero_cost_reason",
+            "rank_terms",
+            "variant_group",
+            "variant_priority",
+            "cause_group",
+            "commitment_cost_id",
+            "political_cost_id",
+        }
         if set(raw) - optional != required:
             raise ValueError(f"行动 {key} 字段必须恰好为：{sorted(required)}")
         numbers = [
@@ -162,6 +190,12 @@ def load(source: Path) -> tuple[tuple[ConsumerContract, ...], tuple[ActionCard, 
                     raw.get("political_when", []), f"{key}.political_when"
                 ),
                 zero_cost_reason=raw.get("zero_cost_reason", ""),
+                rank_terms=_rank_terms(raw.get("rank_terms", []), f"{key}.rank_terms"),
+                variant_group=raw.get("variant_group", ""),
+                variant_priority=raw.get("variant_priority", 0),
+                cause_group=raw.get("cause_group", ""),
+                commitment_cost_id=raw.get("commitment_cost_id", ""),
+                political_cost_id=raw.get("political_cost_id", ""),
             )
         )
     consumer_ids = {item.id for item in consumers}

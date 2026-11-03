@@ -1,0 +1,384 @@
+# Mitsui
+company_mitsui = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/japanese_mitsui.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_light.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_KANTO }
+
+	building_types = {
+		building_textile_mill
+		building_silk_plantation
+		building_dye_plantation
+	}
+
+	extension_building_types = {
+		building_tea_plantation
+		building_food_industry
+		building_glassworks
+		building_coal_mine
+	}
+
+	possible_prestige_goods = {
+		prestige_good_tomioka_silk
+	}
+
+	potential = {
+		has_interest_marker_in_region = sr:region_northeast_asia
+	}
+
+	attainable = {
+		hidden_trigger = { # Hide attainable if it's always fulfilled by possible
+			any_scope_state = {
+				state_region = s:STATE_KANSAI
+			}
+		}
+	}
+
+	possible = {
+		has_technology_researched = cotton_gin
+		any_scope_state = {
+			state_region = s:STATE_KANSAI
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_textile_mill
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		interest_group_ig_industrialists_pol_str_mult = 0.1
+		country_production_tech_research_speed_mult = 0.05
+		state_trade_advantage_mult = 0.05
+	}
+
+	ai_will_do = {
+		has_technology_researched = cotton_gin
+		custom_tooltip = {
+			text = is_meiji_japan
+			has_variable = japan_restoration_complete
+		}
+		any_scope_state = {
+			state_region = s:STATE_KANSAI
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_textile_mill = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_KANSAI
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_mitsui.ai_weight
+		# ACTION program_14ae221f190f8e33 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_14ae221f190f8e33_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_mitsui_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_14ae221f190f8e33_company_mandatory_input_fabric_negative
+			add = { value = 0
+				# company_sector_company_mitsui_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_14ae221f190f8e33_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_mitsui_silk_pressure [market]; silk缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:silk mg:silk = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mitsui_dye_pressure [market]; dye缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:dye mg:dye = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mitsui_clothes_pressure [market]; clothes缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mitsui_silk_need [market]; 主业基础配方可能产出silk；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:silk mg:silk = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_mitsui_dye_need [market]; 主业基础配方可能产出dye；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:dye mg:dye = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_mitsui_clothes_need [market]; 主业基础配方可能产出clothes；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clothes mg:clothes = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_14ae221f190f8e33_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_mitsui_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.65
+			max = 1.24
+		} }
+		# SITAI END information:company_mitsui.ai_weight
+	}
+}
+
+
+# Mitsubishi
+company_mitsubishi = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/japanese_mitsubishi.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_manufacturing_heavy.dds"
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_KANTO }
+
+	building_types = {
+		building_shipyard
+		building_iron_mine
+		building_paper_mill
+	}
+
+	extension_building_types = {
+		building_coal_mine
+		building_steel_mill
+		building_motor_industry
+		building_artillery_foundry
+	}
+
+	possible_prestige_goods = {
+		prestige_good_washi_paper
+	}
+
+	potential = {
+		c:JAP ?= this
+	}
+
+	possible = {
+		has_technology_researched = ironclad_tech
+		custom_tooltip = {
+			text = is_meiji_japan
+			has_variable = japan_restoration_complete
+		}
+		any_scope_state = {
+			state_region = s:STATE_KYUSHU
+			is_incorporated = yes
+			any_scope_building = {
+				is_building_type = building_shipyard
+				level >= 5
+			}
+		}
+	}
+
+	prosperity_modifier = {
+		interest_group_ig_industrialists_pol_str_mult = 0.1
+		building_automotive_industry_throughput_add = 0.1
+	}
+
+	ai_will_do = {
+		has_technology_researched = ironclad_tech
+		custom_tooltip = {
+			text = is_meiji_japan
+			has_variable = japan_restoration_complete
+		}
+		any_scope_state = {
+			state_region = s:STATE_KYUSHU
+			is_incorporated = yes
+		}
+	}
+
+	ai_construction_targets = {
+		building_shipyard = {
+			level = 5
+			state_trigger = {
+				state_region = s:STATE_KYUSHU
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+
+		# SITAI BEGIN information:company_mitsubishi.ai_weight
+		# ACTION program_b27579ffb30e8935 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_b27579ffb30e8935_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_mitsubishi_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_b27579ffb30e8935_company_mandatory_input_tools_negative
+			add = { value = 0
+				# company_sector_company_mitsubishi_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_b27579ffb30e8935_company_mandatory_input_wood_negative
+			add = { value = 0
+				# company_sector_company_mitsubishi_wood_input [market]; 主业某必选基础配方组所有方法共同需要wood；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_b27579ffb30e8935_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_mitsubishi_steamers_pressure [market]; steamers缺口且相对基价高，升档同一主业需求，不能重复奖励
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mitsubishi_paper_pressure [market]; paper缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mitsubishi_iron_pressure [market]; iron缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mitsubishi_clippers_pressure [market]; clippers缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mitsubishi_steamers_need [market]; 主业基础配方可能产出steamers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steamers mg:steamers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_mitsubishi_paper_need [market]; 主业基础配方可能产出paper；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_mitsubishi_iron_need [market]; 主业基础配方可能产出iron；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_mitsubishi_clippers_need [market]; 主业基础配方可能产出clippers；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:clippers mg:clippers = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_b27579ffb30e8935_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_mitsubishi_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_mitsubishi.ai_weight
+	}
+}
+
+# South Manchuria Railway
+company_mantetsu = {
+	icon = "gfx/interface/icons/company_icons/historical_company_icons/japanese_mantetsu.dds"
+	background = "gfx/interface/icons/company_icons/company_backgrounds/comp_illu_railways.dds"
+
+	category = bureaucrat_owned
+
+	flavored_company = yes
+
+	preferred_headquarters = { STATE_SHENGJING }
+
+	building_types = {
+		building_railway
+		building_coal_mine
+		building_glassworks
+	}
+
+	extension_building_types = {
+		building_food_industry
+		building_chemical_plant
+	}
+
+	potential = {
+		c:JAP ?= this
+	}
+
+	possible = {
+		country_or_subject_owns_entire_state_region = STATE_SHENGJING
+		has_technology_researched = railways
+		custom_tooltip = {
+			text = is_meiji_japan
+			has_variable = japan_restoration_complete
+		}
+		any_scope_state = {
+			OR = {
+				region = sr:region_northeast_asia
+				region = sr:region_north_china
+			}
+			any_scope_building = {
+				is_building_type = building_railway
+				level >= 5
+			}
+			count >= 2
+		}
+	}
+
+	prosperity_modifier = {
+		state_non_homeland_colony_growth_speed_mult = 0.1
+		building_wheat_farm_throughput_add = 0.15
+	}
+
+	ai_will_do = {
+		country_or_subject_owns_entire_state_region = STATE_SHENGJING
+		has_technology_researched = railways
+		custom_tooltip = {
+			text = is_meiji_japan
+			has_variable = japan_restoration_complete
+		}
+		any_scope_state = {
+			OR = {
+				region = sr:region_northeast_asia
+				region = sr:region_north_china
+			}
+		}
+	}
+
+	ai_construction_targets = {
+		building_railway = {
+			level = 5
+			state_trigger = {
+				OR = {
+					region = sr:region_northeast_asia
+					region = sr:region_north_china
+				}
+			}
+		}
+	}
+
+	ai_weight = {
+		value = 3 # Higher base value for flavored companies
+		if = {
+			limit = {
+				has_journal_entry = je_colonize_korea
+				NOT = {
+					any_company = {
+						is_company_type = company_type:company_oriental_development_company # Only one needed
+					}
+				}
+			}
+			add = 6
+		}
+
+		# SITAI BEGIN information:company_mantetsu.ai_weight
+		# ACTION program_76f9c29dd897a891 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
+			value = 1
+			# GROUP program_76f9c29dd897a891_company_labor_structure_positive
+			add = { value = 0
+				# company_sector_company_mantetsu_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
+			}
+			# GROUP program_76f9c29dd897a891_company_mandatory_input_engines_negative
+			add = { value = 0
+				# company_sector_company_mantetsu_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_76f9c29dd897a891_company_mandatory_input_tools_negative
+			add = { value = 0
+				# company_sector_company_mantetsu_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_76f9c29dd897a891_company_output_demand_positive
+			add = { value = 0
+				# company_sector_company_mantetsu_building_railway_pressure [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 sg:transportation = { state_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mantetsu_glass_pressure [market]; glass缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:glass mg:glass = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mantetsu_coal_pressure [market]; coal缺口且相对基价高，升档同一主业需求，不能重复奖励
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 market_goods_pricier > 0.25 } } } } add = 0.2 }
+				# company_sector_company_mantetsu_building_railway_need [market]; 本国同一州已有铁路且基础设施不足；本州运输高价只升档同一需求
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes any_scope_state = { any_scope_building = { is_building_type = building_railway level >= 1 } infrastructure_delta < 0 } } } add = 0.12 }
+				# company_sector_company_mantetsu_glass_need [market]; 主业基础配方可能产出glass；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:glass mg:glass = { market_goods_delta < 0.0 } } } } add = 0.12 }
+				# company_sector_company_mantetsu_coal_need [market]; 主业基础配方可能产出coal；国家市场已有买单缺口，形成筹建机会，不假定已启用PM
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_delta < 0.0 } } } } add = 0.12 }
+			}
+			# GROUP program_76f9c29dd897a891_company_solvency_negative
+			add = { value = 0
+				# company_sector_company_mantetsu_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
+			}
+			min = 0.5
+			max = 1.24
+		} }
+		# SITAI END information:company_mantetsu.ai_weight
+	}
+}

@@ -301,6 +301,16 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     assert len(primary) == 6
     assert len(children) == 4
     assert any(row["outcome"] == "failed" for row in children) is subtest_failure
+    failures = [
+        json.loads(line)
+        for line in (out / "failures.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    failed_reports = [row for row in collection["reports"] if row["outcome"] == "failed"]
+    assert [
+        {key: value for key, value in row.items() if key != "longrepr"} for row in failures
+    ] == failed_reports
+    assert all(row["longrepr"] for row in failures)
+    assert all("AssertionError" in row["longrepr"] for row in failures if row["subtest"])
     assert collection["effective"]["numprocesses"] == workers
     assert len(collection["workers"]) == workers
     assert "environment_sha256" in summary
