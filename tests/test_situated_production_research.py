@@ -101,9 +101,17 @@ def _values(policy, changes: Mapping[str, object]) -> dict[str, object]:
 
 
 def _context(policy, values, *, is_ai=True):
-    root: dict[str, Any] = {"is_ai": is_ai}
+    # Complete empty collections prove that no productive/labor-use option
+    # exists in these market-only scenarios; aggregate booleans are not objects.
+    root: dict[str, Any] = {
+        "is_ai": is_ai,
+        "any_scope_state": [],
+        "any_scope_building": [],
+    }
     for reader in policy.readers:
         assert reader.scope == "root"
+        if reader.engine in {"any_scope_state", "any_scope_building"}:
+            continue
         target = root
         for component in reader.path:
             target = target.setdefault(component, {})
@@ -142,20 +150,20 @@ def _overlay(text, technology):
         },
     ],
 )
-def test_industrial_research_does_not_require_fiscal_political_health(production, changes):
+def test_retired_industrial_route_alone_never_invents_concrete_research_demand(production, changes):
     policy, _native, generated = production
     values = _values(policy, changes)
     reference = decision_rules.evaluate(policy, values, is_ai=True)
     for technology in GENERIC:
         field = f"{technology}.ai_weight"
-        assert reference[field][1] == pytest.approx(1.2), technology
+        assert field not in reference, technology
         result = pdx_eval.select(_overlay(generated, technology), _context(policy, values))
         assert result.operation == "multiply"
-        assert result.delta == pytest.approx(1.2), technology
+        assert result.delta == 1, technology
 
 
 @pytest.mark.parametrize("industrial", [False, None])
-def test_unknown_or_absent_industry_mandate_is_not_inferred_from_crisis(production, industrial):
+def test_no_concrete_demand_is_inferred_from_crisis_or_unknown_route(production, industrial):
     policy, _native, generated = production
     values = _values(policy, {"industrial": industrial, "default": True, "war": True})
     reference = decision_rules.evaluate(policy, values, is_ai=True)
@@ -171,6 +179,7 @@ def test_unknown_or_absent_industry_mandate_is_not_inferred_from_crisis(producti
         ("intensive_agriculture", "grain"),
         ("mechanical_tools", "tools"),
         ("shaft_mining", "iron"),
+        ("aniline", "dye"),
     ],
 )
 def test_concrete_shortage_research_survives_default_and_unknown_fiscal_facts(
@@ -178,21 +187,31 @@ def test_concrete_shortage_research_survives_default_and_unknown_fiscal_facts(
 ):
     policy, _native, generated = production
     for default in (True, None):
-        changes = {"default": default, f"{good}_price": 0.5, f"{good}_balance": -1}
+        balance, price = f"country_goods_{good}_balance", f"country_goods_{good}_price"
+        changes = {
+            "default": default,
+            "loans": True,
+            "war": True,
+            "bureaucracy": -100,
+            "literacy": 0,
+            "legitimacy": 0,
+            "insurrection": True,
+            balance: -1,
+            price: 0.5,
+        }
         values = _values(policy, changes)
         reference = decision_rules.evaluate(policy, values, is_ai=True)
         assert reference[f"{technology}.ai_weight"][1] == pytest.approx(1.2)
         actual = pdx_eval.select(_overlay(generated, technology), _context(policy, values))
         assert actual.delta == pytest.approx(1.2)
-        for key in (f"{good}_price", f"{good}_balance"):
+        for key, expected in ((price, 1.12), (balance, 1)):
             unknown = {**values, key: None}
-            assert f"{technology}.ai_weight" not in decision_rules.evaluate(
-                policy, unknown, is_ai=True
+            selection = decision_rules.evaluate(policy, unknown, is_ai=True).get(
+                f"{technology}.ai_weight"
             )
-            assert (
-                pdx_eval.select(_overlay(generated, technology), _context(policy, unknown)).delta
-                == 1
-            )
+            assert (selection[1] if selection else 1) == pytest.approx(expected)
+            actual = pdx_eval.select(_overlay(generated, technology), _context(policy, unknown))
+            assert actual.delta == pytest.approx(expected)
 
 
 def _tree(node):

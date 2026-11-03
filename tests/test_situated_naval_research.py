@@ -1,4 +1,4 @@
-"""War does not erase the opportunity cost of capital-ship research."""
+"""Naval research follows actual fleet use, not payment for future ships."""
 
 from dataclasses import replace
 from typing import Any
@@ -41,21 +41,28 @@ def production():
 
 @pytest.mark.parametrize("technology", TECHNOLOGIES)
 @pytest.mark.parametrize(
-    ("war", "fiscal", "expected"),
+    ("navy", "war", "expected"),
     [
-        (True, True, 1.05),
-        (False, True, 0.85),
-        (None, True, 0.85),
-        (True, None, 1.2),
+        (5, True, 1.15),
+        (5, False, 1.08),
+        (5, None, 1.08),
+        (0, True, 1),
+        (0, None, 1),
+        (None, True, 1),
         (None, None, 1),
+        (-1, True, 1),
+        (True, True, 1),
     ],
 )
-def test_known_demand_cost_and_unknown_contributions_are_local(
-    production, technology, war, fiscal, expected
+@pytest.mark.parametrize("default", [True, None])
+def test_actual_fleet_use_and_unknown_war_have_local_research_effects(
+    production, technology, navy, war, expected, default
 ):
     policy, text = production
     values = {reader.key: False if reader.kind == "boolean" else 0 for reader in policy.readers}
-    values.update(war=war, coord_need_fiscal=fiscal)
+    # Research opens an option; it neither purchases ships nor commits their
+    # materials. Fiscal distress cannot invent an immediate research bill.
+    values.update(own_navy=navy, war=war, default=default, coord_need_fiscal=True)
     root: dict[str, Any] = {"is_ai": True}
     for reader in policy.readers:
         assert reader.scope == "root"

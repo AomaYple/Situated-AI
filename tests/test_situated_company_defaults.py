@@ -50,9 +50,10 @@ def test_missing_base_score_is_one_and_every_native_definition_survives(producti
     assert not after.errors
     expected = {item.field for item in selected.initial_values}
     assert expected == {rule.field for rule in policy.rules}
-    assert len(expected) == 25
-    # Fixed-price gold is not assigned an invented ordinary market opportunity.
-    assert ("company_basic_gold_mining", "ai_weight") not in expected
+    assert len(expected) == 26
+    # Gold uses observed operating mines, never a fictitious market gold price.
+    assert ("company_basic_gold_mining", "ai_weight") in expected
+    assert not any(reader.key.startswith("country_goods_gold_") for reader in policy.readers)
     for field in expected:
         before_definition = before.root.first(field[0])
         after_definition = after.root.first(field[0])
