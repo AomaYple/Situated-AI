@@ -519,5 +519,5 @@ def test_parameters_reject_wrong_direction_or_unbounded_joint_cost(raw, baseline
 
 def test_live_installed_sources_match_frozen_originals_when_available(baseline):
     if not (config.GAME / DOC).is_file():
-        pytest.skip("locked native installation unavailable; offline evidence covered separately")
+        pytest.skip("锁定原版安装不可用；离线证据已单独覆盖")
     assert treaty.verify_game(config.GAME) == baseline

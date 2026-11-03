@@ -503,5 +503,5 @@ def test_source_conflicts_fail_closed(raw, baseline):
 
 def test_live_locked_sources_match_frozen_bytes_when_available(baseline):
     if not (config.GAME / DOC).is_file():
-        pytest.skip("native installation unavailable; offline raw evidence covered")
+        pytest.skip("锁定原版安装不可用；离线原始证据已覆盖")
     assert mobilization.verify_game(config.GAME) == baseline
