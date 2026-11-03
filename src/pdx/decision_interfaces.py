@@ -644,10 +644,16 @@ def _retained_reason(field: str) -> dict[str, str]:
             "州价值、宗属/战争目标和本土/孤立州成本已接通；不替换原版战略地图",
         ),
         (
+            ("goods_stances",),
+            "native_goods_stances",
+            "商品供给适配关闭时完整保留原版商品立场、触发条件与顺序",
+            "适配启用时只按真实商品稀缺追加立场；关闭不新增立场、不改变原版选择",
+        ),
+        (
             ("weight",),
             "native_strategy_selection",
             "保留默认策略本身的选择权重；新增规则不额外争夺策略槽",
-            "在原版消费者内重评估，活跃策略的原有覆盖语义留给F1逐字段确认",
+            "在原版消费者内重评估；活跃策略同名字段的覆盖语义须按具体字段证据判断",
         ),
     )
     for fields, policy, reason, alternative in policies:

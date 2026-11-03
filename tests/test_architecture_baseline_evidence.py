@@ -430,7 +430,27 @@ def test_s0_independent_scope(
         observed,
     )
     native_sources = _actual_sources(inventory)
-    assert len(native_sources) == 1889
+    # Complete achievement and population sources prove reader scopes without
+    # entering consumer discovery or changing its 8,856 declarations.
+    assert len(native_sources) == 1894
+    assert {
+        name: native_sources[name]
+        for name in (
+            "common/achievements/ep1_sphere_of_influence_achievements.txt",
+            "common/achievements/ip4_iberian_twilight_achievements.txt",
+            "common/pop_types/laborers.txt",
+            "common/pop_types/peasants.txt",
+            "common/pop_types/machinists.txt",
+            "common/journal_entries/00_urbanization.txt",
+        )
+    } == {
+        "common/achievements/ep1_sphere_of_influence_achievements.txt": "aa504255aabcf3cfecf6fc6196cf66803a7e87b8b15c2458034c97a95dec82e0",
+        "common/achievements/ip4_iberian_twilight_achievements.txt": "0fb91eda557761442864e4e18a4a5c7be3dace31ac9b423b2581bfab8b986268",
+        "common/pop_types/laborers.txt": "90e109f061ca04c308d3d60cf6ba6d91cbe3769759ff28f0a9a0bd34e169a2d5",
+        "common/pop_types/peasants.txt": "1d544a332f7c628b5f832f2a2033c25fafde6d9ed5e629b829432a57419f0c42",
+        "common/pop_types/machinists.txt": "e0ddad8032fd6be5d0eb77533cf9f711a5baf5fe275d20819bc5ba8e3f6785ee",
+        "common/journal_entries/00_urbanization.txt": "0be06294448f31679d2b14280b4e6c1991f0d2fa34f97ccc0452068c7cdc5ee6",
+    }
     baseline_capture.record(
         requirement,
         request,

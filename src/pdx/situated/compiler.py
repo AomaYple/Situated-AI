@@ -1754,6 +1754,32 @@ def load_model(
             for writer in consumer_bundle.writers
         ),
     )
+    if adapters.supply is not None and any(
+        "market" in policy.enabled_domains for _, policy in adapters.policies
+    ):
+        consumer_bundle = replace(
+            consumer_bundle,
+            writers=(
+                *consumer_bundle.writers,
+                *(
+                    decision_ir.WriterDecisionIR(
+                        writer_id=program.writer_id,
+                        kind="supply_program",
+                        source=program.source,
+                        definition=program.good,
+                        consumer_id=program.consumer_id,
+                        field=program.field,
+                        actor="root",
+                        target="market_goods",
+                        operation="append",
+                        vanilla_tail="preserve",
+                        owner="supply_plan",
+                        supply_program=program,
+                    )
+                    for program in adapters.supply.actions()
+                ),
+            ),
+        )
     migration_baseline.validate_bundle(consumer_bundle)
     consumer_bundle = joint_chain_contract.bind_bundle(
         consumer_bundle,

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .bindings import Binding
     from .ir import ActionIR
     from .schema import ActionCard, ConsumerContract, CostPredicate, RankTerm, Relation
+    from .supply_program import SupplyProgram
     from .support_program import SupportProgram
 
 
@@ -235,6 +236,50 @@ class WriterDecisionIR:
     evaluation_context: EvaluationContext | None = None
     reader_context_bindings: tuple[tuple[str, str, str, str], ...] = ()
     program: SupportProgram | None = None
+    supply_program: SupplyProgram | None = None
+
+    def validate_supply_program(self) -> SupplyProgram:
+        from .supply_program import SupplyProgram  # noqa: PLC0415
+
+        program = self.supply_program
+        if (
+            not isinstance(program, SupplyProgram)
+            or (
+                self.kind,
+                self.writer_id,
+                self.source,
+                self.definition,
+                self.consumer_id,
+                self.field,
+                self.actor,
+                self.target,
+                self.operation,
+                self.owner,
+                self.vanilla_tail,
+            )
+            != (
+                "supply_program",
+                program.writer_id,
+                program.source,
+                program.good,
+                program.consumer_id,
+                program.field,
+                "root",
+                "market_goods",
+                "append",
+                "supply_plan",
+                "preserve",
+            )
+            or self.program is not None
+            or self.action is not None
+            or self.legacy is not None
+            or self.predicates
+            or self.chain_refs
+            or self.evaluation_context is not None
+            or self.reader_context_bindings
+        ):
+            raise ValueError("供给枚举writer与完整语义、身份或作用域不一致")
+        return program
 
 
 @dataclass(frozen=True, slots=True)
@@ -251,6 +296,10 @@ class ConsumerIRBundle:
 
     def as_dict(self) -> dict[str, Any]:
         self.validate_chain_refs()
+        ids = [item.writer_id for item in self.writers]
+        identities = [(item.source, item.definition) for item in self.writers]
+        if len(set(ids)) != len(ids) or len(set(identities)) != len(identities):
+            raise ValueError("统一生产 writer 身份重复")
 
         def predicate_dict(predicate: tuple[str, str, object]) -> list[object]:
             return [predicate[0], predicate[1], _json_value(predicate[2])]
@@ -258,6 +307,19 @@ class ConsumerIRBundle:
         field_owners: dict[str, set[str]] = {}
         source_field_owners: dict[tuple[str, str], set[str]] = {}
         for item in self.writers:
+            if item.kind == "supply_program":
+                item.validate_supply_program()
+                for other in self.writers:
+                    if other is item or other.source != item.source:
+                        continue
+                    if (
+                        other.field == item.field
+                        or other.field.startswith(item.field + ".")
+                        or item.field.startswith(other.field + ".")
+                    ):
+                        raise ValueError("供给枚举消费者父子字段重复写入")
+            elif item.supply_program is not None:
+                raise ValueError("非供给writer不能携带供给程序")
             if item.kind == "support_program":
                 program = item.program
                 if (
@@ -317,6 +379,10 @@ class ConsumerIRBundle:
             "support_program_writer_count": sum(
                 item.kind == "support_program" and item.program is not None for item in self.writers
             ),
+            "supply_program_writer_count": sum(
+                item.kind == "supply_program" and item.supply_program is not None
+                for item in self.writers
+            ),
             "writers": [
                 {
                     "writer_id": item.writer_id,
@@ -342,6 +408,11 @@ class ConsumerIRBundle:
                     "predicates": [predicate_dict(predicate) for predicate in item.predicates],
                     "action_id": item.action.action_id if item.action is not None else None,
                     **({"program": item.program.as_dict()} if item.program is not None else {}),
+                    **(
+                        {"supply_program": item.supply_program.as_dict()}
+                        if item.supply_program is not None
+                        else {}
+                    ),
                     "legacy_action": (
                         {
                             "action_id": item.legacy.action_id,

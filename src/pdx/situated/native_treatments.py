@@ -575,7 +575,10 @@ class _Dependencies:
     ) -> None:
         self.native, self.effective = native, effective
         self.production_complete = production_complete
-        self.native_bytes, self.effective_bytes = native_bytes, effective_bytes
+        # Bytes are immutable; snapshot the mappings so every proof/cache in
+        # this audit instance refers to the same supplied candidate inputs.
+        self.native_bytes, self.effective_bytes = dict(native_bytes), dict(effective_bytes)
+        self.parameter_input_mappings = (native_bytes, effective_bytes)
         self.symbols: dict[str, set[tuple[str, str]]] = defaultdict(set)
         for family, name in {*native.owners, *effective.owners}:
             if family in {"script_values", "scripted_triggers"}:
@@ -589,6 +592,13 @@ class _Dependencies:
         self.reader_parameter_cache: dict[tuple[str, str, str, str], dict[str, Any]] = {}
         self.parameter_adapters: Any = None
         self.parameter_adapters_loaded = False
+        self.parameter_metadata_checked = False
+        self.parameter_metadata: Any = None
+        self.parameter_document: Any = None
+        self.parameter_contracts: dict[str, tuple[Any, Any, str] | None] = {}
+        self.parameter_information_checked = False
+        self.parameter_information_policy: Any = None
+        self.parameter_information_contract: tuple[Any, Any, str] | None = None
         self.parameter_native_inputs: dict[str, tuple[str, str]] = {}
         # With an incomplete definition index, an unrecognized condition name
         # could be a custom trigger rather than a built-in. Do not infer safety
@@ -1179,39 +1189,36 @@ class _Dependencies:
             row["issues"].append("generated_helper_leaf_or_dependency_unproven")
         return proofs, valid
 
-    def parameter_readers(
-        self, source: str, definition: str, field: str, actor_scope: str
-    ) -> dict[str, Any]:
-        """Bind used Reader predicates to this exact consumer and native inputs.
-
-        Policy files are local production contracts. Native inputs must already
-        be in the caller's mappings; no installation discovery is performed.
-        """
+    def _parameter_contract(self, source: str) -> tuple[Any, Any, str] | None:
+        """Validate the full source contract once within these frozen inputs."""
         from .. import (  # noqa: PLC0415, TID252
             decision_adapters,
-            decision_interfaces,
             decision_rules,
-            observation_queries,
             production_inputs,
         )
-        from ..textio import normalized_text  # noqa: PLC0415, TID252
         from . import programs  # noqa: PLC0415
         from .ir import from_rule  # noqa: PLC0415
 
-        identity = (source, definition, field, actor_scope)
-        if identity in self.reader_parameter_cache:
-            return self.reader_parameter_cache[identity]
-        self.reader_parameter_cache[identity] = {}
-        if not self.production_complete or self.source_gaps or self.effective.failures:
-            return {}
-        try:
+        if self.parameter_metadata is not None and (
+            self.parameter_metadata["generator_sha256"]
+            != hashlib.sha256(Path(decision_adapters.__file__).read_bytes()).hexdigest()
+            or self.parameter_metadata["production_inputs_generator_sha256"]
+            != hashlib.sha256(Path(production_inputs.__file__).read_bytes()).hexdigest()
+        ):
+            return None
+        if source in self.parameter_contracts:
+            return self.parameter_contracts[source]
+        # Cache rejection as well as success. A malformed candidate is never
+        # repaired by another consumer or by another source's valid contract.
+        self.parameter_contracts[source] = None
+        if not self.parameter_metadata_checked:
+            self.parameter_metadata_checked = True
             if not self.parameter_adapters_loaded:
                 self.parameter_adapters_loaded = True
                 self.parameter_adapters = decision_adapters.load()
             adapters = self.parameter_adapters
-            metadata = json.loads(self.effective_bytes[".metadata/metadata.json"])[
-                "consumer_adapters"
-            ]
+            document = json.loads(self.effective_bytes[".metadata/metadata.json"])
+            metadata = document["consumer_adapters"]
             if (
                 metadata.get("schema") != 1
                 or metadata.get("source_sha256") != adapters.source_sha256
@@ -1221,49 +1228,220 @@ class _Dependencies:
                 != hashlib.sha256(Path(production_inputs.__file__).read_bytes()).hexdigest()
                 or metadata.get("sources") != dict(adapters.sources)
             ):
-                return {}
-            policies = [policy for name, policy in adapters.policies if name == source]
-            if len(policies) != 1:
-                return {}
-            policy = policies[0]
-            consumer_field = (definition, *field.split("."))
-            groups = policy.groups()
-            if consumer_field not in groups or policy.native_root != actor_scope:
-                return {}
+                return None
+            self.parameter_metadata = metadata
+            self.parameter_document = {
+                key: document.get(key)
+                for key in (
+                    "decision_rules",
+                    "source_fingerprint",
+                    "enabled_modules",
+                    "default_field_owners",
+                )
+            }
+        if self.parameter_metadata is None:
+            return None
+        adapters = self.parameter_adapters
+        policies = [policy for name, policy in adapters.policies if name == source]
+        if len(policies) != 1:
+            return None
+        policy = policies[0]
+        expected = {
+            "source": source,
+            **decision_rules.contract(policy, owner="consumer_adapters", source=source),
+        }
+        consumers = [
+            item for item in self.parameter_metadata["consumers"] if item.get("source") == source
+        ]
+        if len(consumers) == 1 and consumers[0].get("consumer_programs") is not None:
+            # Preserve priorities and every wire-contract field; no metadata
+            # projection or digest-only shortcut grants reader permission.
+            joint = programs.enable(
+                replace(
+                    policy,
+                    semantic_ir=tuple(
+                        replace(from_rule(rule, source=source), origin_priority=rule.priority)
+                        for rule in policy.rules
+                    ),
+                ),
+                source=source,
+            )
             expected = {
                 "source": source,
-                **decision_rules.contract(policy, owner="consumer_adapters", source=source),
+                **decision_rules.contract(joint, owner="consumer_adapters", source=source),
             }
-            consumers = [item for item in metadata["consumers"] if item.get("source") == source]
-            if len(consumers) == 1 and consumers[0].get("consumer_programs") is not None:
-                # Production lowers the same rules to signed-envelope programs.
-                # Rebuild their full deterministic contract, including preserved
-                # legacy priorities; never discard a mismatching metadata field.
-                joint = programs.enable(
-                    replace(
-                        policy,
-                        semantic_ir=tuple(
-                            replace(from_rule(rule, source=source), origin_priority=rule.priority)
-                            for rule in policy.rules
-                        ),
-                    ),
-                    source=source,
-                )
-                expected = {
-                    "source": source,
-                    **decision_rules.contract(joint, owner="consumer_adapters", source=source),
-                }
-                # JSON serializes tuple-valued IR predicates/programs as lists.
-                # Compare the complete wire contract on both sides.
-                expected = json.loads(json.dumps(expected))
-            if consumers != [expected]:
+            expected = json.loads(json.dumps(expected))
+        if consumers != [expected]:
+            return None
+        result = (
+            policy,
+            policy.groups(),
+            hashlib.sha256(json.dumps(expected, sort_keys=True).encode()).hexdigest(),
+        )
+        self.parameter_contracts[source] = result
+        return result
+
+    def _information_parameter_contract(self) -> tuple[Any, Any, str] | None:
+        """Bind the separate information author, never another default adapter."""
+        from .. import decision_rules  # noqa: PLC0415, TID252
+        from . import programs  # noqa: PLC0415
+        from .ir import from_rule  # noqa: PLC0415
+
+        document = self.parameter_document
+        if document is None:
+            return None
+        if self.parameter_information_policy is None:
+            self.parameter_information_policy = decision_rules.load()
+        fingerprint = document["source_fingerprint"]
+        if (
+            fingerprint.get("information_rules_generator_sha256")
+            != hashlib.sha256(Path(decision_rules.__file__).read_bytes()).hexdigest()
+        ):
+            return None
+        if self.parameter_information_checked:
+            return self.parameter_information_contract
+        self.parameter_information_checked = True
+        policy = self.parameter_information_policy
+        source = "mod/decisions/information.toml"
+        joint = programs.enable(
+            replace(
+                policy,
+                semantic_ir=tuple(
+                    replace(from_rule(rule, source=source), origin_priority=rule.priority)
+                    for rule in policy.rules
+                ),
+            ),
+            source=source,
+        )
+        expected = json.loads(json.dumps(decision_rules.contract(joint)))
+        if (
+            document["decision_rules"] != expected
+            or fingerprint.get("information_rules_source_sha256") != policy.source_sha256
+            or document["enabled_modules"].count("information_rules") != 1
+            or any(
+                document["default_field_owners"].get(".".join(field)) != "information_rules"
+                for field in policy.groups()
+            )
+        ):
+            return None
+        self.parameter_information_contract = (
+            policy,
+            policy.groups(),
+            hashlib.sha256(json.dumps(expected, sort_keys=True).encode()).hexdigest(),
+        )
+        return self.parameter_information_contract
+
+    def population_parameter_sources(self, reader: Any) -> dict[str, str]:
+        """Prove the exact country percentage getter and registered pop argument."""
+        from .vanilla_inventory import _PARAMETER_EVIDENCE_HASHES  # noqa: PLC0415
+
+        if (
+            reader.engine != "pop_type_percent_country"
+            or len(reader.parameters) != 1
+            or reader.parameters[0][0] != "pop_type"
+            or reader.kind != "number"
+            or reader.value_field != "percent"
+            or reader.argument is not None
+        ):
+            return {}
+        pop_type = reader.parameters[0][1]
+        # The argument must have independent pinned definition bytes. The
+        # complete consumer contract binds which argument is actually used;
+        # this is not permission for other names or compound getter shapes.
+        definition_source = f"common/pop_types/{pop_type}.txt"
+        if definition_source not in _PARAMETER_EVIDENCE_HASHES:
+            return {}
+        sources = (
+            "common/journal_entries/00_urbanization.txt",
+            definition_source,
+        )
+        for source in sources:
+            raw = self.native_bytes.get(source)
+            if (
+                raw is None
+                or source not in self.native.roots
+                or hashlib.sha256(raw).hexdigest() != _PARAMETER_EVIDENCE_HASHES[source]
+                or self.effective_bytes.get(source) != raw
+            ):
+                return {}
+        example, state = _resolve(
+            self.native.roots[sources[0]],
+            "je_urbanization_events_1",
+            "possible.pop_type_percent_country",
+        )
+        expected = parse_bytes(
+            b"pop_type_percent_country={pop_type=peasants percent>0.6}",
+            path="native-population-percentage-example",
+        ).root.items[0]
+        definition, definition_state = _resolve(self.native.roots[sources[1]], pop_type, "__body__")
+        if (
+            example is None
+            or state != "found"
+            or _digest(example) != _digest(expected)
+            or definition is None
+            or definition_state != "found"
+            or not isinstance(definition.value, Block)
+            or self.native.owners["journal_entries", "je_urbanization_events_1"] != [sources[0]]
+            or self.effective.owners["journal_entries", "je_urbanization_events_1"] != [sources[0]]
+            or self.native.owners["pop_types", pop_type] != [sources[1]]
+            or self.effective.owners["pop_types", pop_type] != [sources[1]]
+        ):
+            return {}
+        return {source: hashlib.sha256(self.native_bytes[source]).hexdigest() for source in sources}
+
+    def parameter_readers(
+        self, source: str, definition: str, field: str, actor_scope: str
+    ) -> dict[str, Any]:
+        """Bind used Reader predicates to this exact consumer and native inputs.
+
+        Policy files are local production contracts. Native inputs must already
+        be in the caller's mappings; no installation discovery is performed.
+        """
+        from .. import (  # noqa: PLC0415, TID252
+            decision_interfaces,
+            decision_rules,
+            observation_queries,
+            production_inputs,
+        )
+        from ..textio import normalized_text  # noqa: PLC0415, TID252
+
+        identity = (source, definition, field, actor_scope)
+        if not self.production_complete or self.source_gaps or self.effective.failures:
+            return {}
+        # Reject reuse after caller-side mapping mutation, including for an
+        # already cached field. New audit instances can validate new inputs.
+        if (
+            self.native_bytes != self.parameter_input_mappings[0]
+            or self.effective_bytes != self.parameter_input_mappings[1]
+        ):
+            return {}
+        try:
+            contract = self._parameter_contract(source)
+            consumer_field = (definition, *field.split("."))
+            if (
+                source == "common/ai_strategies/00_default_strategy.txt"
+                and definition == "ai_strategy_default"
+                and self.parameter_document is not None
+            ):
+                information = self._information_parameter_contract()
+                policy = self.parameter_information_policy
+                if policy is not None and tuple(field.split(".")) in policy.groups():
+                    consumer_field = tuple(field.split("."))
+                    contract = information
+            if contract is None:
+                return {}
+            if identity in self.reader_parameter_cache:
+                return self.reader_parameter_cache[identity]
+            self.reader_parameter_cache[identity] = {}
+            policy, groups, contract_sha256 = contract
+            if consumer_field not in groups or policy.native_root != actor_scope:
                 return {}
             family = _family(source)
             if self.native.owners[family, definition] != [source] or self.effective.owners[
                 family, definition
             ] != [source]:
                 return {}
-            locked = dict(adapters.sources)
+            locked = dict(self.parameter_adapters.sources)
             inputs: dict[str, str] = {}
             hashes: dict[str, str] = {}
 
@@ -1291,12 +1469,25 @@ class _Dependencies:
             clauses: set[tuple[tuple[str, ...], str]] = set()
             bindings = []
             for rule in groups[consumer_field]:
-                for predicate in rule.conditions:
+                used = [(predicate, False) for predicate in rule.conditions]
+                used.extend(
+                    (
+                        decision_rules.Predicate(
+                            key,
+                            "=" if readers[key].kind == "boolean" else ">=",
+                            True if readers[key].kind == "boolean" else 0,
+                        ),
+                        True,
+                    )
+                    for key in rule.required_known_facts
+                )
+                for predicate, knowledge_only in used:
                     reader = readers[predicate.fact]
                     resource = any(part.startswith(("mg:", "sg:")) for part in reader.path)
                     if not (
                         reader.engine in observation_queries.QUERY_ENGINES
-                        or reader.engine == "is_production_method_active"
+                        or reader.engine
+                        in {"is_production_method_active", "pop_type_percent_country"}
                         or resource
                     ):
                         continue
@@ -1349,6 +1540,11 @@ class _Dependencies:
                                 recipe[source_key]
                             ]:
                                 return {}
+                    elif reader.engine == "pop_type_percent_country":
+                        population = self.population_parameter_sources(reader)
+                        if not population:
+                            return {}
+                        hashes.update(population)
                     if resource:
                         for part in reader.path:
                             if not part.startswith(("mg:", "sg:")):
@@ -1358,39 +1554,41 @@ class _Dependencies:
                             if len(owners) != 1 or self.effective.owners["goods", good] != owners:
                                 return {}
                             verify(owners[0])
-                    expression = parse_bytes(
-                        reader.expression(predicate.op, predicate.value).encode(),
-                        path="reader-contract",
-                    )
-                    if expression.errors or len(expression.root.items) != 1:
-                        return {}
-                    clause = expression.root.items[0]
-                    if isinstance(clause, Assignment) and clause.key == "NOT":
-                        if not isinstance(clause.value, Block) or len(clause.value.items) != 1:
+                    statement = reader.expression(predicate.op, predicate.value)
+                    if knowledge_only:
+                        # Required-known guards are the complete registered
+                        # three-valued tautology, not permission for a new >=0
+                        # business predicate using the same getter.
+                        statement = f"OR = {{ {statement} NOT = {{ {statement} }} }}"
+                    for clause_statement in (statement, *decision_rules._reader_bounds(reader)):
+                        expression = parse_bytes(clause_statement.encode(), path="reader-contract")
+                        if expression.errors or len(expression.root.items) != 1:
                             return {}
-                        clause = clause.value.items[0]
-                    if not isinstance(clause, Assignment):
-                        return {}
-                    anchor = "ROOT" if reader.scope == "root" else f"scope:{reader.scope}"
-                    clauses.add(((anchor, *reader.path), _digest(clause)))
-                    bindings.append(
-                        {
-                            "reader": reader.key,
-                            "engine": reader.engine,
-                            "scope": resolved,
-                            "path": [anchor, *reader.path],
-                            "parameters": dict(reader.parameters),
-                            "clause_ast_sha256": _digest(clause),
-                        }
-                    )
+                        clause = expression.root.items[0]
+                        if isinstance(clause, Assignment) and clause.key == "NOT":
+                            if not isinstance(clause.value, Block) or len(clause.value.items) != 1:
+                                return {}
+                            clause = clause.value.items[0]
+                        if not isinstance(clause, Assignment):
+                            return {}
+                        anchor = "ROOT" if reader.scope == "root" else f"scope:{reader.scope}"
+                        clauses.add(((anchor, *reader.path), _digest(clause)))
+                        bindings.append(
+                            {
+                                "reader": reader.key,
+                                "engine": reader.engine,
+                                "scope": resolved,
+                                "path": [anchor, *reader.path],
+                                "parameters": dict(reader.parameters),
+                                "clause_ast_sha256": _digest(clause),
+                            }
+                        )
             proof = {
                 "family": "parameter_readers",
                 "definition": f"{source}:{definition}.{field}",
                 "status": "proven_parameter_reader",
                 "native_sources": hashes,
-                "consumer_contract_sha256": hashlib.sha256(
-                    json.dumps(expected, sort_keys=True).encode()
-                ).hexdigest(),
+                "consumer_contract_sha256": contract_sha256,
                 "bindings": bindings,
                 "clauses": clauses,
                 "meaning": "exact_used_reader_parameters_scope_and_native_identity_only",
@@ -1412,10 +1610,13 @@ class _Dependencies:
         """New finite query/resource occurrences require independent Reader proof."""
         from .. import decision_interfaces, observation_queries  # noqa: PLC0415, TID252
 
-        engines = observation_queries.QUERY_ENGINES | {"is_production_method_active"}
+        engines = observation_queries.QUERY_ENGINES | {
+            "is_production_method_active",
+            "pop_type_percent_country",
+        }
 
-        def occurrences(node: Assignment) -> list[tuple[tuple[str, ...], tuple[str, ...], str]]:
-            found = []
+        def occurrences(node: Assignment) -> list[tuple[Any, ...]]:
+            found: list[tuple[Any, ...]] = []
 
             def walk(
                 block: Block,
@@ -1423,27 +1624,54 @@ class _Dependencies:
                 scope: tuple[str, ...],
                 condition: bool,
                 guarded: bool,
+                envelopes: tuple[tuple[tuple[str, ...], str], ...],
+                native_context: tuple[str, ...],
+                fragment: str,
             ) -> None:
                 counts: Counter[str] = Counter()
                 for item in block.assignments():
                     counts[item.key] += 1
                     part = f"{item.key}:{counts[item.key]}"
+                    if not context:
+                        # Generated top-level branches can precede untouched
+                        # native fragments. Match the entire original fragment
+                        # (guard AND body), never its shifted branch ordinal.
+                        # The occurrence Counter still rejects extra copies.
+                        part = f"{item.key}:fragment={_digest(item)}"
                     if item.key in {"if", "else_if", "else"} and isinstance(item.value, Block):
                         part += ":guards=" + _digest(Block([*item.value.all("limit")]))
                     location = (*context, part)
+                    native_part = item.key
+                    nested_fragment = fragment
+                    if item.key in {"if", "else_if", "else"} and isinstance(item.value, Block):
+                        native_part += ":guards=" + _digest(Block([*item.value.all("limit")]))
+                        nested_fragment = _digest(item)
+                    native_location = (*native_context, native_part)
                     resource = any(part.startswith(("mg:", "sg:")) for part in scope)
                     if condition and (
                         item.key in engines
                         or (resource and item.key in decision_interfaces._INPUTS)
                     ):
                         found.append(
-                            (location, scope if guarded else ("@unguarded", *scope), _digest(item))
+                            (
+                                location,
+                                scope if guarded else ("@unguarded", *scope),
+                                _digest(item),
+                                envelopes,
+                                (native_location, fragment),
+                            )
                         )
                         continue
                     if not isinstance(item.value, Block):
                         continue
                     nested_scope = scope
                     nested_guarded = guarded
+                    nested_envelopes = envelopes
+                    if condition and item.key in {"AND", "OR", "NOT"}:
+                        nested_envelopes = (
+                            *envelopes,
+                            (scope if guarded else ("@unguarded", *scope), _digest(item)),
+                        )
                     if condition and item.key not in {"AND", "OR", "NOT"}:
                         nested_scope = (
                             (item.key,)
@@ -1460,24 +1688,33 @@ class _Dependencies:
                         nested_scope,
                         condition or item.key == "limit",
                         nested_guarded,
+                        nested_envelopes,
+                        native_location,
+                        nested_fragment,
                     )
 
             if isinstance(node.value, Block):
-                walk(node.value, (), (), False, True)
+                walk(node.value, (), (), False, True, (), (), _digest(node))
             return found
 
-        native = Counter(occurrences(before))
+        # Preserve report locations, but match inherited queries by their full
+        # innermost control fragment AND every ancestor guard and scope path.
+        # Registered numeric insertions can change an outer body/ordinal while
+        # an entire native inner fragment remains byte-for-byte structural.
+        native = Counter(occurrence[1:] for occurrence in occurrences(before))
         introduced = []
         for occurrence in occurrences(after):
-            if native[occurrence]:
-                native[occurrence] -= 1
+            if native[occurrence[1:]]:
+                native[occurrence[1:]] -= 1
             else:
                 introduced.append(occurrence)
         if not introduced:
             return {}, True
         proof = self.parameter_readers(source, definition, field, actor_scope)
         valid = bool(proof) and all(
-            (scope, digest) in proof["clauses"] for _, scope, digest in introduced
+            (scope, digest) in proof["clauses"]
+            or any(envelope in proof["clauses"] for envelope in envelopes)
+            for _, scope, digest, envelopes, _ in introduced
         )
         row: dict[str, Any] = (
             {key: value for key, value in proof.items() if key != "clauses"}
@@ -1500,7 +1737,7 @@ class _Dependencies:
         )
         row["actual_occurrences"] = [
             {"context": list(context), "scope": list(scope), "ast_sha256": digest}
-            for context, scope, digest in introduced
+            for context, scope, digest, _, _ in introduced
         ]
         return {(row["family"], row["definition"]): row}, valid
 
@@ -2273,6 +2510,217 @@ def _implicit_numeric_projections(
     return result
 
 
+def _supply_enum_projections(dependencies: _Dependencies) -> dict[str, dict[int, dict[str, Any]]]:
+    """Bind complete optional stance additions without granting numeric control.
+
+    Every original stance remains outside this projection. Only the registered
+    complete enum/trigger blocks may disappear from the source-boundary comparison.
+    """
+    from .. import decision_adapters, decision_interfaces, decision_rules  # noqa: PLC0415, TID252
+    from . import engine_scope, supply_program  # noqa: PLC0415
+    from .vanilla_inventory import _PARAMETER_EVIDENCE_HASHES  # noqa: PLC0415
+
+    source = "common/ai_strategies/00_default_strategy.txt"
+    if (
+        not dependencies.production_complete
+        or source not in dependencies.native.roots
+        or source not in dependencies.effective.roots
+        or ".metadata/metadata.json" not in dependencies.effective_bytes
+        or dependencies.source_gaps
+        or dependencies.effective.failures
+        or dependencies.native_bytes != dependencies.parameter_input_mappings[0]
+        or dependencies.effective_bytes != dependencies.parameter_input_mappings[1]
+    ):
+        return {}
+    try:
+        contract = dependencies._parameter_contract(source)
+        adapters = dependencies.parameter_adapters
+        plan = adapters.supply
+        metadata = dependencies.parameter_metadata
+        if (
+            contract is None
+            or plan is None
+            or plan.source != source
+            or not any("market" in policy.enabled_domains for _, policy in adapters.policies)
+            or metadata is None
+            or metadata.get("supply_program_generator_sha256")
+            != hashlib.sha256(Path(supply_program.__file__).read_bytes()).hexdigest()
+        ):
+            return {}
+        expected_metadata = {
+            "source": source,
+            "field": "ai_strategy_default.goods_stances",
+            "goods": list(plan.goods),
+            "price_threshold": plan.price_threshold,
+            "stance": "wants_high_supply",
+            "conditions": [
+                "is_ai",
+                "existing_market_goods",
+                "price_above_threshold",
+                "negative_market_goods_delta",
+            ],
+            "consumer": "vanilla_production_and_trade_planning",
+            "behavior_verified": False,
+            "limits": "market_aggregate_not_national_import_dependency; active_strategy_overrides_retained; no_forced_trade_or_production_method",
+            "consumer_programs": [program.as_dict() for program in plan.actions()],
+        }
+        if metadata.get("supply_plan") != expected_metadata:
+            return {}
+        writes = decision_adapters.writes(adapters)
+        if (
+            [row for row in writes if row[2] == "supply_plan"]
+            != [
+                (source, ("ai_strategy_default", "goods_stances", good), "supply_plan")
+                for good in sorted(plan.goods)
+            ]
+            or not plan.goods
+            or len(set(plan.goods)) != len(plan.goods)
+        ):
+            return {}
+        strategy = json.loads(engine_scope.strategy_snapshot())
+        pins = {
+            source: strategy["script_hashes"][source],
+            **{
+                name: _PARAMETER_EVIDENCE_HASHES[name]
+                for name in (
+                    "common/goods/00_goods.txt",
+                    "common/alert_types/00_alert_types.txt",
+                    "common/objective_subgoals/00_subgoals_tutorial.txt",
+                )
+            },
+        }
+        for name, sha in pins.items():
+            raw = dependencies.native_bytes.get(name)
+            if raw is None or hashlib.sha256(raw).hexdigest() != sha:
+                return {}
+            if name != source and dependencies.effective_bytes.get(name) != raw:
+                return {}
+        native, effective = dependencies.native, dependencies.effective
+        for roots in (native, effective):
+            if roots.owners["ai_strategies", "ai_strategy_default"] != [source]:
+                return {}
+        before, bstate = _resolve(native.roots[source], "ai_strategy_default", "goods_stances")
+        after, astate = _resolve(effective.roots[source], "ai_strategy_default", "goods_stances")
+        if (
+            before is None
+            or after is None
+            or bstate != "found"
+            or astate != "found"
+            or not isinstance(before.value, Block)
+            or not isinstance(after.value, Block)
+        ):
+            return {}
+        template, state = _resolve(
+            native.roots[source], "ai_strategy_default", "goods_stances.grain"
+        )
+        original_template = parse_bytes(
+            b"grain={stance=wants_high_supply trigger={has_famine=yes}}", path="native-stance"
+        ).root.items[0]
+        if template is None or state != "found" or _ast(template) != _ast(original_template):
+            return {}
+        # Read actual original scoped getter uses, not a bag of recognized words.
+        alert, state = _resolve(
+            native.roots["common/alert_types/00_alert_types.txt"],
+            "expensive_government_goods_alert",
+            "valid.market_goods_pricier",
+        )
+        expected_alert = parse_bytes(b"market_goods_pricier>0.25", path="native-price").root.items[
+            0
+        ]
+        alert_scope, scope_state = _resolve(
+            native.roots["common/alert_types/00_alert_types.txt"],
+            "expensive_government_goods_alert",
+            "script_context",
+        )
+        expected_scope = parse_bytes(
+            b"script_context=player_market_goods", path="native-price-scope"
+        ).root.items[0]
+        tutorial = native.roots["common/objective_subgoals/00_subgoals_tutorial.txt"]
+        balance = parse_bytes(
+            b"market={mg:tools={market_goods_delta>=10}}", path="native-balance"
+        ).root.items[0]
+
+        def contains(value: Assignment | Block | Scalar | None, path: tuple[str, ...] = ()) -> bool:
+            if path == (
+                "sg_change_production_method",
+                "trigger",
+                "any_scope_state",
+                "OR",
+                "AND",
+                "market",
+            ) and _ast(value) == _ast(balance):
+                return True
+            if isinstance(value, Assignment):
+                return contains(value.value, path)
+            return isinstance(value, Block) and any(
+                contains(item, (*path, item.key) if isinstance(item, Assignment) else path)
+                for item in value.items
+            )
+
+        if (
+            alert is None
+            or state != "found"
+            or _ast(alert) != _ast(expected_alert)
+            or alert_scope is None
+            or scope_state != "found"
+            or _ast(alert_scope) != _ast(expected_scope)
+            or not contains(tutorial)
+        ):
+            return {}
+        result = {}
+        for good in plan.goods:
+            goods_source = "common/goods/00_goods.txt"
+            if (
+                before.value.all(good)
+                or native.owners["goods", good] != [goods_source]
+                or effective.owners["goods", good] != [goods_source]
+            ):
+                return {}
+            for engine, unit in (
+                ("market_goods_pricier", "price_above_base_ratio"),
+                ("market_goods_delta", "sell_minus_buy_orders"),
+            ):
+                reader = decision_rules.Reader(
+                    "supply", engine, "root", unit, "number", path=("market", f"mg:{good}")
+                )
+                if (
+                    decision_interfaces.reader_scope(reader, (), native_root="country")
+                    != "market_goods"
+                ):
+                    return {}
+            nodes = after.value.all(good)
+            expected = parse_bytes(
+                (
+                    f"{good}={{stance=wants_high_supply trigger={{is_ai=yes exists=market "
+                    f"market={{exists=mg:{good} mg:{good}={{market_goods_pricier>{plan.price_threshold!r} "
+                    "market_goods_delta<0}}}}"
+                ).encode(),
+                path="registered-supply-stance",
+            )
+            if expected.errors or len(nodes) != 1 or _ast(nodes[0]) != _ast(expected.root.items[0]):
+                return {}
+            result[id(nodes[0])] = {
+                "source": source,
+                "definition": "ai_strategy_default",
+                "field": f"goods_stances.{good}",
+                "kind": "registered_enum_addition",
+                "effective_ast_sha256": _digest(nodes[0]),
+                "native_sources": pins,
+                "contract_sha256": hashlib.sha256(
+                    json.dumps(expected_metadata, sort_keys=True).encode()
+                ).hexdigest(),
+                "interface_authorized": True,
+                "business_complete": False,
+            }
+        if _ast(Block([item for item in after.value.items if id(item) not in result])) != _ast(
+            before.value
+        ):
+            return {}
+        return {source: result}
+    except (KeyError, TypeError, AttributeError, UnicodeError, ValueError):
+        return {}
+
+
 def _responsibility_axes(
     rows: list[dict[str, Any]],
     inventory: VanillaInventory,
@@ -2290,11 +2738,14 @@ def _responsibility_axes(
     and every other reference. No field-only equality can prove this boundary.
     """
     by_source: dict[str, list[tuple[VanillaSurface, dict[str, Any]]]] = defaultdict(list)
+    enum_projections = _supply_enum_projections(dependencies)
     for surface, row in zip(inventory.surfaces, rows, strict=True):
         by_source[surface.source].append((surface, row))
     for source, members in by_source.items():
         before, after = native.roots.get(source), effective.roots.get(source)
         implicit = implicit_projections.get(source, {})
+        enums = enum_projections.get(source, {})
+        additions = {**implicit, **enums}
         masks_before: dict[int, str] = {}
         masks_after: dict[int, str] = {}
         for surface, row in members:
@@ -2309,7 +2760,7 @@ def _responsibility_axes(
         def boundary(
             value: Assignment | Block | Scalar | None,
             masks: Mapping[int, str],
-            additions: Mapping[int, dict[str, Any]] = implicit,
+            additions: Mapping[int, dict[str, Any]] = additions,
         ) -> object:
             if isinstance(value, Assignment):
                 if id(value) in masks:
@@ -2394,6 +2845,7 @@ def _responsibility_axes(
                 "structural_projection": structural_projection,
                 "controlled_numeric_declarations": sorted(masks_before.values()),
                 "implicit_numeric_projections": list(implicit.values()),
+                "implicit_enum_projections": list(enums.values()),
                 "issues": source_issues,
                 "native_source_sha256": hashlib.sha256(
                     dependencies.native_bytes[source]

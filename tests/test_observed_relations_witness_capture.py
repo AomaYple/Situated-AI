@@ -25,10 +25,17 @@ PRODUCTION = [
     "mod/decisions/facts.toml",
     "mod/decisions/fiscal.toml",
     "mod/decisions/capacities.toml",
-    "mod/decisions/needs.toml",
+    "mod/decisions/country_state.toml",
     "src/pdx/situated/compiler.py",
 ]
 CONSUMERS = [{"path": GENERATED, "definition": "ai_strategy_default", "field": FIELD}]
+
+
+def test_witness_sources_bind_existing_current_production():
+    """A retired source must fail ordinary regression before formal capture."""
+    for name in PRODUCTION:
+        assert (ROOT / name).is_file(), f"witness production source unavailable: {name}"
+    assert "mod/decisions/country_state.toml" in PRODUCTION
 
 
 @pytest.fixture(scope="module")

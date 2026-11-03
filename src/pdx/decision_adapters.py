@@ -33,6 +33,8 @@ from . import (
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
 from .model import Block, Scalar
 from .parser import parse_text
+from .situated import supply_program
+from .situated.supply_program import SupplyAction, SupplyProgram
 from .textio import normalized_text
 
 if TYPE_CHECKING:
@@ -71,6 +73,18 @@ class SupplyPlan:
     source: str
     goods: tuple[str, ...]
     price_threshold: float
+
+    def actions(self) -> tuple[SupplyProgram, ...]:
+        if (
+            not isinstance(self.goods, tuple)
+            or not self.goods
+            or len(set(self.goods)) != len(self.goods)
+        ):
+            raise ValueError("商品供给计划商品身份缺失或重复")
+        return tuple(
+            SupplyProgram(SupplyAction(self.source, good, self.price_threshold))
+            for good in self.goods
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -619,17 +633,29 @@ def _externalize_fleet_value(text: str) -> tuple[str, str]:
 
 
 def _supply_patch(
-    text: str, plan: SupplyPlan, inputs: Mapping[str, str], words: frozenset[str]
+    text: str,
+    plan: SupplyPlan,
+    inputs: Mapping[str, str],
+    words: frozenset[str],
+    programs: tuple[SupplyProgram, ...],
 ) -> str:
     """保留已有商品立场与资格，只追加缺省的、按市场稀缺激活的立场。"""
     parsed = parse_text(text)
     if parsed.errors:
         raise ValueError("供给计划原件无法解析")
     strategy = parsed.root.first("ai_strategy_default")
-    if strategy is None or not isinstance(strategy.value, Block):
+    if (
+        len(parsed.root.all("ai_strategy_default")) != 1
+        or strategy is None
+        or not isinstance(strategy.value, Block)
+    ):
         raise ValueError("供给计划缺少默认策略")
     goods_stances = strategy.value.first("goods_stances")
-    if goods_stances is None or not isinstance(goods_stances.value, Block):
+    if (
+        len(strategy.value.all("goods_stances")) != 1
+        or goods_stances is None
+        or not isinstance(goods_stances.value, Block)
+    ):
         raise ValueError("供给计划缺少唯一商品立场表")
     definitions = parse_text(inputs["common/goods/00_goods.txt"])
     if (
@@ -651,18 +677,44 @@ def _supply_patch(
         ("ai_strategy_default", "goods_stances")
     ]
     rows = ["\n\t\t# SITAI BEGIN supply:goods_stances\n"]
-    rows.extend(
-        f"\t\t{good} = {{ stance = wants_high_supply trigger = {{ "
-        f"is_ai = yes exists = market market = {{ exists = mg:{good} mg:{good} = {{ "
-        f"market_goods_pricier > {plan.price_threshold!r} market_goods_delta < 0 "
-        "} } } }\n"
-        for good in plan.goods
-    )
+    rows.extend(program.render() for program in programs)
     rows.append("\t\t# SITAI END supply:goods_stances\n\t")
     result = text[:position] + "".join(rows) + text[position:]
     if parse_text(result).errors:
         raise ValueError("商品供给计划产物无法解析")
     return result
+
+
+def _supply_programs(
+    plan: SupplyPlan | None, bundle: ConsumerIRBundle | None, *, enabled: bool
+) -> tuple[SupplyProgram, ...]:
+    expected = plan.actions() if plan is not None else ()
+    if bundle is None:
+        return expected if enabled else ()
+    bundle.validate_chain_refs()
+    rows = [writer for writer in bundle.writers if writer.kind == "supply_program"]
+    programs = tuple(writer.validate_supply_program() for writer in rows)
+    if any(
+        writer.supply_program is not None and writer.kind != "supply_program"
+        for writer in bundle.writers
+    ):
+        raise ValueError("非供给writer不能携带供给程序")
+    if len({program.good for program in programs}) != len(programs):
+        raise ValueError("供给枚举writer重复")
+    if enabled and {program.good: program for program in programs} != {
+        program.good: program for program in expected
+    }:
+        raise ValueError("供给计划与冻结ConsumerIR完整程序不一致")
+    if not enabled:
+        # A build may narrow an enabled bundle to a disabled domain.  Any
+        # retained configured rows must still be exact; no row is emitted.
+        if programs and {program.good: program for program in programs} != {
+            program.good: program for program in expected
+        }:
+            raise ValueError("关闭的供给计划与冻结ConsumerIR不一致")
+        return ()
+    by_good = {program.good: program for program in programs}
+    return tuple(by_good[program.good] for program in expected)
 
 
 def _initialize(
@@ -890,15 +942,19 @@ def build(
         if enabled_domains is None
         else "market" in enabled_domains
     )
+    supply_programs = _supply_programs(supply, consumer_ir, enabled=supply_enabled)
     if supply is not None and supply_enabled:
         text = files.get(supply.source, (overlays or {}).get(supply.source, inputs[supply.source]))
-        files[supply.source] = _supply_patch(text, supply, inputs, words)
+        files[supply.source] = _supply_patch(text, supply, inputs, words, supply_programs)
     return files, {
         "schema": 1,
         "evidence": "source_locked_generated_consumer_patches",
         "behavior_verified": False,
         "source_sha256": adapters.source_sha256,
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "supply_program_generator_sha256": hashlib.sha256(
+            Path(supply_program.__file__).read_bytes()
+        ).hexdigest(),
         "production_inputs_generator_sha256": hashlib.sha256(
             Path(production_inputs.__file__).read_bytes()
         ).hexdigest(),
@@ -961,6 +1017,7 @@ def build(
             "goods": list(supply.goods),
             "price_threshold": supply.price_threshold,
             "stance": "wants_high_supply",
+            "consumer_programs": [program.as_dict() for program in supply_programs],
             "conditions": [
                 "is_ai",
                 "existing_market_goods",

@@ -22,9 +22,17 @@ import test_observed_relations_witness_capture as witness
 import test_situated_production_guards as guards
 
 from pdx import config, country_state, decision_adapters, decision_rules, decisions, distribution
+from pdx.model import Block, Scalar
 from pdx.parser import parse_text
-from pdx.situated import architecture_receipts, audit, compiler, migration_baseline, relations
-from pdx.situated.native_treatments import _digest
+from pdx.situated import (
+    architecture_receipts,
+    audit,
+    compiler,
+    migration_baseline,
+    pdx_eval,
+    relations,
+)
+from pdx.situated.native_treatments import _digest, _resolve
 from pdx.situated.receipts import digest
 
 if TYPE_CHECKING:
@@ -41,6 +49,43 @@ REQUIREMENTS = (
     ("S5", "native_integration"),
 )
 ROLES = ("positive", "negative", "unknown", "disabled", "player", "native_tail")
+# Independent list of the concrete, nonnumeric supply decisions promised by
+# the existing product, rather than a denominator read from its own metadata.
+SUPPLY_GOODS = (
+    "automobiles",
+    "clothes",
+    "coffee",
+    "explosives",
+    "fabric",
+    "fertilizer",
+    "fine_art",
+    "fish",
+    "fruit",
+    "furniture",
+    "glass",
+    "groceries",
+    "iron",
+    "lead",
+    "liquor",
+    "luxury_clothes",
+    "luxury_furniture",
+    "meat",
+    "merchant_marine",
+    "oil",
+    "opium",
+    "porcelain",
+    "radios",
+    "rubber",
+    "steel",
+    "sugar",
+    "sulfur",
+    "tea",
+    "telephones",
+    "tobacco",
+    "tools",
+    "wine",
+    "wood",
+)
 
 
 @pytest.fixture(scope="module")
@@ -87,6 +132,158 @@ def final_native(final_candidate):
         name: hashlib.sha256(raw).hexdigest() for name, raw in final_candidate["files"].items()
     }
     return report
+
+
+@pytest.fixture(scope="module")
+def final_disabled(final_candidate):
+    return decisions.build(
+        replace(final_candidate["policy"], enabled=False),
+        extensions=replace(
+            final_candidate["extensions"],
+            reform_enabled=False,
+            market_enabled=False,
+            security_enabled=False,
+            economy_enabled=False,
+            diplomacy_enabled=False,
+        ),
+    )
+
+
+@pytest.fixture(scope="module")
+def final_supply(final_candidate, final_disabled):
+    """Parse each frozen source once; never cache across candidate sessions."""
+    candidate = final_candidate
+    bundle = candidate["model"].consumer_ir
+    assert bundle is not None
+    writers = [w for w in bundle.writers if w.kind == "supply_program"]
+    programs = {
+        w.supply_program.good: w.supply_program for w in writers if w.supply_program is not None
+    }
+    assert len(writers) == len(programs) == len(SUPPLY_GOODS)
+    assert set(programs) == set(SUPPLY_GOODS)
+    source = explicit.SOURCE
+    original = parse_text(compiler.BASELINE.read_text(encoding="utf-8")).root
+    current = parse_text(candidate["files"][source].decode("utf-8-sig")).root
+    disabled = parse_text(final_disabled[source]).root
+    original_map, status = _resolve(original, "ai_strategy_default", "goods_stances")
+    assert status == "found"
+    assert original_map is not None
+    assert isinstance(original_map.value, Block)
+    originals = {item.key: _digest(item) for item in original_map.value.assignments()}
+    assert len(originals) == 17
+    actual_map, status = _resolve(current, "ai_strategy_default", "goods_stances")
+    assert status == "found"
+    assert actual_map is not None
+    assert isinstance(actual_map.value, Block)
+    actual_originals = {
+        item.key: _digest(item) for item in actual_map.value.assignments() if item.key in originals
+    }
+    assert {item.key for item in actual_map.value.assignments()} == set(originals) | set(
+        SUPPLY_GOODS
+    )
+    assert actual_originals == originals
+    return {
+        "programs": programs,
+        "current": current,
+        "disabled": disabled,
+        "originals": originals,
+        "actual_originals": actual_originals,
+    }
+
+
+def _supply_rows(context, good):
+    """Compare handwritten enum outcomes with reference and actual PDX trigger."""
+    assert good in SUPPLY_GOODS
+    program = context["programs"][good]
+    source = explicit.SOURCE
+    field = f"goods_stances.{good}"
+    current, disabled = context["current"], context["disabled"]
+    originals, actual_originals = context["originals"], context["actual_originals"]
+    node, status = _resolve(current, "ai_strategy_default", field)
+    assert status == "found"
+    assert node is not None
+    assert isinstance(node.value, Block)
+    stance, trigger = node.value.first("stance"), node.value.first("trigger")
+    assert stance is not None
+    assert isinstance(stance.value, Scalar)
+    assert trigger is not None
+    assert isinstance(trigger.value, Block)
+    assert len(node.value.items) == 2
+    disabled_node, _ = _resolve(disabled, "ai_strategy_default", field)
+    assert disabled_node is None
+    native_hash = digest(originals)
+    observed_native_hash = digest(actual_originals)
+    # All conjuncts here describe this one good's actual scarcity, rather than
+    # nation-wide finance/education/politics prerequisites for all construction.
+    scenarios: tuple[tuple[str, bool, float | None, int, bool, bool, str | None], ...] = (
+        ("positive", True, 0.5, -10, True, True, "wants_high_supply"),
+        ("negative", True, 0.25, -10, True, True, None),
+        ("unknown", True, None, -10, True, True, None),
+        ("disabled", True, 0.5, -10, True, True, None),
+        ("player", False, 0.5, -10, True, True, None),
+        ("native_tail", True, 0.5, 0, True, True, None),
+    )
+    for role, is_ai, price, delta, market_present, good_present, selected in scenarios:
+        enabled = role != "disabled"
+        inputs = {
+            "good": good,
+            "is_ai": is_ai,
+            "price": price,
+            "delta": delta,
+            "market_present": market_present,
+            "good_present": good_present,
+            "enabled": enabled,
+            "native_stances": originals,
+        }
+        observation = {
+            "is_ai": is_ai,
+            "market": {
+                f"mg:{good}": {"market_goods_pricier": price, "market_goods_delta": delta},
+            },
+        }
+        expected = {"selected": selected, "native_stances_sha256": native_hash}
+        reference = {
+            "selected": program.evaluate(
+                is_ai=is_ai,
+                price=price,
+                delta=delta,
+                market_present=market_present,
+                good_present=good_present,
+                enabled=enabled,
+            ),
+            "native_stances_sha256": native_hash,
+        }
+        generated = {
+            "selected": stance.value.unquoted
+            if enabled and pdx_eval.condition(trigger.value, observation) is True
+            else None,
+            "native_stances_sha256": observed_native_hash,
+        }
+        assert expected == reference == generated, (good, role)
+        yield {
+            "case_id": f"supply.{good}.{role}",
+            "role": role,
+            "input": inputs,
+            "expected": expected,
+            "reference": reference,
+            "generated": generated,
+            "production": [
+                "mod/decisions/adapters.toml",
+                "src/pdx/decision_adapters.py",
+                "src/pdx/situated/supply_program.py",
+                "src/pdx/situated/decision_ir.py",
+                "src/pdx/situated/compiler.py",
+            ],
+            "consumers": [
+                {"path": "mod/" + source, "definition": "ai_strategy_default", "field": field}
+            ],
+        }
+
+
+@pytest.mark.parametrize("good", SUPPLY_GOODS)
+def test_each_actual_supply_enum_has_six_roles(final_supply, architecture_witness, good):
+    for case in _supply_rows(final_supply, good):
+        architecture_witness(evidence_ids=["a2.supply.market_trade_company_diplomacy"], **case)
 
 
 def _migration_review(candidate):
@@ -217,7 +414,7 @@ def _native_review(candidate, report, *, integration):
 
 
 @pytest.fixture(scope="module")
-def final_whole_review(final_candidate):
+def final_whole_review(final_candidate, final_disabled, final_supply):
     """Re-execute every consumer against this candidate, never import old captures."""
     candidate = final_candidate
     model = candidate["model"]
@@ -258,17 +455,7 @@ def final_whole_review(final_candidate):
     legacy.test_legacy_module_declares_only_its_actual_denominator(legacy_candidate)
     continuous = audit._production_continuous_bindings(files)
     assert len(continuous) == 1
-    disabled_extensions = replace(
-        candidate["extensions"],
-        reform_enabled=False,
-        market_enabled=False,
-        security_enabled=False,
-        economy_enabled=False,
-        diplomacy_enabled=False,
-    )
-    disabled = decisions.build(
-        replace(candidate["policy"], enabled=False), extensions=disabled_extensions
-    )
+    disabled = final_disabled
     explicit_candidate = {
         "built": files[explicit.SOURCE],
         "model": model,
@@ -283,23 +470,27 @@ def final_whole_review(final_candidate):
         )
     explicit.test_continuous_support_executes_actual_six_role_witnesses(explicit_candidate, record)
     explicit.test_explicit_and_continuous_denominator_is_exact_and_separate(explicit_candidate)
+    for good in SUPPLY_GOODS:
+        for case in _supply_rows(final_supply, good):
+            record(**case)
     assert len(legacy.IDENTITIES) == 923
     assert len(explicit.CARDS) == 11
-    assert len(rows) == (923 + 11 + 1) * len(ROLES)
+    assert len(rows) == (923 + 11 + 1 + 33) * len(ROLES)
     assert len({row["case_id"] for row in rows}) == len(rows)
     consumers = {
         (item["path"], item["definition"], item["field"])
         for row in rows
         for item in row["consumers"]
     }
-    assert len(consumers) == 932
-    assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, 935)
+    assert len(consumers) == 965
+    assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, 968)
     assert digest(architecture_receipts.source_snapshot(config.REPO)) == candidate["snapshot"]
     return {
         "review": {
             "legacy_consumers": 923,
             "explicit_cards": 11,
             "support_programs": 1,
+            "supply_enum_programs": 33,
             "physical_consumers": len(consumers),
             "executed_cases": len(rows),
             "roles": list(ROLES),
@@ -314,7 +505,7 @@ def final_whole_review(final_candidate):
 
 def test_whole_mod_review_reexecutes_the_exact_current_consumer_matrix(final_whole_review):
     """Build-only verification; formal S5 capture occurs in its six role tests."""
-    assert final_whole_review["review"]["executed_cases"] == 5610
+    assert final_whole_review["review"]["executed_cases"] == 5808
 
 
 @pytest.fixture(scope="module")

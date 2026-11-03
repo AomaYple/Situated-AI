@@ -16,6 +16,7 @@ from dataclasses import asdict
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypeGuard
 
+from ..model import Scalar  # noqa: TID252
 from ..parser import parse_bytes  # noqa: TID252
 from .native_treatments import _digest, _resolve
 from .receipts import StageReceipt, digest, validate_receipt
@@ -754,6 +755,58 @@ def _native_scope(
     }
 
 
+def launcher_points_at_deployment(launcher: Path, target: Path) -> bool:
+    """Read the actual enabled JSON pointer or a legacy descriptor's path.
+
+    Canonical directory identity handles native separators and JSON escaping;
+    disabled entries, arbitrary text mentions and nearby paths prove nothing.
+    """
+
+    def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("ambiguous duplicate launcher key")
+            result[key] = value
+        return result
+
+    def matches(value: Any) -> bool:
+        if not isinstance(value, str) or not value or "\x00" in value:
+            return False
+        path = Path(value)
+        try:
+            return path.is_absolute() and path.resolve(strict=True) == target.resolve(strict=True)
+        except (OSError, ValueError, RuntimeError):
+            return False
+
+    try:
+        if not launcher.is_absolute() or not target.is_absolute() or not target.is_dir():
+            return False
+        raw = launcher.read_bytes()
+        if launcher.suffix.casefold() == ".json":
+            data = json.loads(raw.decode("utf-8-sig"), object_pairs_hook=unique_object)
+            if not isinstance(data, dict) or not isinstance(data.get("enabledMods"), list):
+                return False
+            return any(
+                isinstance(item, dict) and matches(item.get("path")) for item in data["enabledMods"]
+            )
+        if launcher.suffix.casefold() == ".mod":
+            parsed = parse_bytes(raw, path=str(launcher))
+            pointers = parsed.root.all("path")
+            return (
+                not parsed.errors
+                and len(pointers) == 1
+                and pointers[0].op == "="
+                and pointers[0].prefix is None
+                and isinstance(pointers[0].value, Scalar)
+                and pointers[0].value.quoted
+                and matches(pointers[0].value.unquoted)
+            )
+    except (OSError, ValueError, UnicodeError, RuntimeError):
+        return False
+    return False
+
+
 def _delivery(root: Path, value: Any, snapshot_hash: str) -> list[str]:
     """Verify local delivery bytes and captured external identities; never publish."""
     try:
@@ -825,9 +878,7 @@ def _delivery(root: Path, value: Any, snapshot_hash: str) -> list[str]:
             launcher_path.read_bytes()
         ).hexdigest() != launcher.get("sha256"):
             raise ValueError("launcher output bytes mismatch")
-        if target.as_posix() not in launcher_path.read_text(encoding="utf-8-sig").replace(
-            "\\", "/"
-        ):
+        if not launcher_points_at_deployment(launcher_path, target):
             raise ValueError("launcher does not point at actual deployment")
         for field in ("workshop_copy", "rollback_instructions", "cleanup_result"):
             _artifact(root, value.get(field))

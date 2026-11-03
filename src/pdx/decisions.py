@@ -1213,6 +1213,25 @@ def build(
     baseline = baseline if baseline is not None else BASELINE.read_text(encoding="utf-8")
     extensions = extensions or load_extensions()
     situated_model = load_situated_model(baseline=baseline)
+    supply_enabled = (
+        consumer_adapters is not None
+        and consumer_adapters.supply is not None
+        and any("market" in adapter.enabled_domains for _, adapter in consumer_adapters.policies)
+    )
+    if not supply_enabled and situated_model.consumer_ir is not None:
+        # The configured model is wider than a caller's actual enabled inputs.
+        # A disabled adapter must not survive as a claimed production writer.
+        situated_model = replace(
+            situated_model,
+            consumer_ir=replace(
+                situated_model.consumer_ir,
+                writers=tuple(
+                    writer
+                    for writer in situated_model.consumer_ir.writers
+                    if writer.kind != "supply_program"
+                ),
+            ),
+        )
     situated_compiled_contract: dict[str, object] | None = None
     # 在统一 IR 编译前保留字段 owner 的早期冲突门。这样篡改/拼接一条
     # 旧适配规则时，调用方仍得到“重复写入”的领域错误，而不是先看到

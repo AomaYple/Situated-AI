@@ -1142,8 +1142,28 @@ def test_shared_constraints_expand_into_real_fields_once(rules):
 @pytest.mark.skipif(
     not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
 )
-def test_release_is_a_real_standard_package(tmp_path):
-    path = distribution.package(tmp_path / f"situated-ai-{distribution.RELEASE_VERSION}.zip")
+def test_release_package_is_deterministic(standard_release_package, tmp_path):
+    original = standard_release_package.read_bytes()
+    regenerated = distribution.package(tmp_path / standard_release_package.name)
+    assert regenerated.read_bytes() == original
+
+
+@pytest.fixture(scope="module")
+def standard_release_package(tmp_path_factory):
+    if not (config.GAME / "common/laws/readme.md").is_file():
+        pytest.skip("需要锁定版本的游戏原件")
+    return distribution.package(
+        tmp_path_factory.mktemp("standard-release")
+        / f"situated-ai-{distribution.RELEASE_VERSION}.zip"
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
+)
+def test_release_sources_and_localization_match_actual_package(standard_release_package):
+    path = standard_release_package
     _, _, engineering_files = distribution.package_inputs(include_engineering_metadata=True)
     assert all(
         not line.endswith((" ", "\t"))
@@ -1152,10 +1172,8 @@ def test_release_is_a_real_standard_package(tmp_path):
         for line in text.splitlines()
     )
     engineering_metadata = json.loads(engineering_files[".metadata/metadata.json"])
-    first = path.read_bytes()
-    distribution.package(path)
-    assert path.read_bytes() == first
-    manifest = distribution.validate_package(path)
+    with zipfile.ZipFile(path) as archive:
+        manifest = json.loads(archive.read(distribution.MANIFEST_NAME))
     contract = manifest["contract"]
     assert isinstance(contract, dict)
     generation = manifest["generation"]
@@ -1223,6 +1241,21 @@ def test_release_is_a_real_standard_package(tmp_path):
                 localization = archive.read(name).decode("utf-8-sig")
                 for key in explanation_keys:
                     assert f" {key}:" in localization, (name, key)
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not (config.GAME / "common/laws/readme.md").is_file(), reason="需要锁定版本的游戏原件"
+)
+def test_release_is_a_real_standard_package(standard_release_package):
+    # Public validation independently rebuilds current inputs and checks every
+    # payload byte. Keep it separate from the source/localization comparison so
+    # neither test hides several full builds inside one 300-second timeout.
+    manifest = distribution.validate_package(standard_release_package)
+    assert manifest["mod_id"] == "situated-ai"
+    contract = manifest["contract"]
+    assert isinstance(contract, dict)
+    assert contract["product_version"] == distribution.RELEASE_VERSION
 
 
 def test_static_matrix_never_claims_execution_contract(tmp_path: Path):
