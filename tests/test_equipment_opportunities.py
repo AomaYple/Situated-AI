@@ -237,7 +237,7 @@ def _joint(raw, baseline, changes, expected, *, candidate="ship_a", is_ai=True, 
                 "country_goods_coal_price": 0.5,
                 "country_goods_coal_balance": -1,
             },
-            0.80,
+            0.60,
         ),
         (
             {"country_goods_steel_price": -0.5, "country_goods_steel_balance": 0, "default": None},
@@ -266,6 +266,52 @@ def test_different_candidate_materials_produce_different_preferences(raw, baseli
     }
     _joint(raw, baseline, changes, 1.08, candidate="ship_a")
     _joint(raw, baseline, changes, 0.80, candidate="ship_b")
+
+
+def test_distinct_material_costs_accumulate_before_the_single_consumer_cap(raw, baseline):
+    # Each material is an independent cost. Its scarcity/price tiers describe
+    # the same cause and must not count twice. Expectations are hand-calculated.
+    _joint(raw, baseline, {"country_goods_steel_balance": -1}, 0.90)
+    _joint(
+        raw,
+        baseline,
+        {"country_goods_steel_balance": -1, "country_goods_coal_balance": -1},
+        0.80,
+    )
+    _joint(
+        raw,
+        baseline,
+        {
+            "country_goods_steel_balance": -1,
+            "country_goods_steel_price": 0.5,
+            "country_goods_coal_balance": -1,
+            "country_goods_coal_price": None,
+        },
+        0.70,
+    )
+    _joint(
+        raw,
+        baseline,
+        {
+            "country_goods_steel_balance": -1,
+            "country_goods_steel_price": 0.5,
+            "country_goods_coal_balance": -1,
+            "country_goods_coal_price": 0.5,
+        },
+        0.60,
+    )
+    _joint(
+        raw,
+        baseline,
+        {
+            "country_goods_steel_balance": -1,
+            "country_goods_steel_price": 0.5,
+            "country_goods_coal_balance": -1,
+            "country_goods_coal_price": 0.5,
+            "default": True,
+        },
+        0.50,
+    )
 
 
 @pytest.mark.parametrize(("is_ai", "enabled"), [(False, True), (True, False), (False, False)])
@@ -339,6 +385,16 @@ def test_exact_material_roles_and_no_missing_or_scalar_initialization(raw, basel
     rows = [row for row in derived["rules"] if row["field"] == "ship_a.ai_weight"]
     assert len(rows) == 7  # two goods, not three construction/materiel occurrences
     assert len({row["id"] for row in rows}) == 7
+    costs = {
+        row["id"]: row["contribution_group"]
+        for row in rows
+        if row["id"].endswith(("_scarcity", "_pressure"))
+    }
+    assert costs == {
+        f"equipment_ship_a_{good}_{tier}": f"equipment_material_pressure_{good}"
+        for good in ("coal", "steel")
+        for tier in ("scarcity", "pressure")
+    }
     assert {row["id"]: row["reason"] for row in derived["uncovered"]} == {
         "ship_empty": "no_ordinary_material_goods",
         "ship_local": "no_ordinary_material_goods",

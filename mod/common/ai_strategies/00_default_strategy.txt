@@ -1424,14 +1424,17 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		# ACTION program_15c035bd1ad270a3 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_15c035bd1ad270a3_negative
+			# GROUP program_15c035bd1ad270a3_colonial_institution_administrative_pressure_negative
 			add = { value = 0
-				# coordinated_institution_colonial_affairs_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；institution_colonial_affairs_financial_cost
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.25 }
-				# coordinated_institution_colonial_affairs_administrative_cost [economy]; 共享约束下比较边际收益与机会成本；institution_colonial_affairs_administrative_cost
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = -0.2 }
+				# coordinated_institution_colonial_affairs_administrative_cost [economy]; 本国负行政余额增加殖民制度扩张的行政机会成本；与独立偿付压力共同参与消费者限幅
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes bureaucracy < 0 } } add = -0.2 }
 			}
-			min = 0.75
+			# GROUP program_15c035bd1ad270a3_colonial_institution_financing_pressure_negative
+			add = { value = 0
+				# coordinated_institution_colonial_affairs_financial_cost [fiscal]; 和平且已实际违约时计入殖民制度的融资机会成本；不覆盖独立行政压力，不以正常借款冒充违约
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.25 }
+			}
+			min = 0.55
 			max = 1
 		} }
 		# SITAI END information:ai_strategy_default.institution_scores.institution_colonial_affairs
@@ -5627,16 +5630,22 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 		# ACTION program_3bf128a6f2cf9d74 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
 			value = 0
-			# GROUP program_3bf128a6f2cf9d74_negative
+			# GROUP program_3bf128a6f2cf9d74_regional_conquest_financing_pressure_negative
 			add = { value = 0
-				# coordinated_strategic_region_stance_type_scores_stance_conquer_region_political_cost [diplomacy]; 共享约束下比较边际收益与机会成本；strategic_region_stance_type_scores_stance_conquer_region_political_cost
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } } add = -5 }
-				# coordinated_strategic_region_stance_type_scores_stance_conquer_region_financial_cost [fiscal]; 共享约束下比较边际收益与机会成本；strategic_region_stance_type_scores_stance_conquer_region_financial_cost
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -5 }
-				# coordinated_layered_conquer_region_tradeoff [diplomacy]; 恢复需求降低再次领土扩张的机会优先级，既有条约、关系和军力约束继续优先
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_reconstruction = yes sitai_context_evidence_need_reconstruction = yes } } add = -4 }
+				# coordinated_strategic_region_stance_type_scores_stance_conquer_region_financial_cost [fiscal]; 和平且已实际违约时降低新增地区征服承诺倾向；与政治阻力及已观察恢复需求分别联合
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -5 }
 			}
-			min = -5
+			# GROUP program_3bf128a6f2cf9d74_regional_conquest_political_pressure_negative
+			add = { value = 0
+				# coordinated_strategic_region_stance_type_scores_stance_conquer_region_political_cost [diplomacy]; 和平时已观察严重合法性、叛乱与激进化危机增加征服的国内政治机会成本；不覆盖独立融资与恢复代价
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } is_at_war = no } } add = -5 }
+			}
+			# GROUP program_3bf128a6f2cf9d74_regional_conquest_recovery_pressure_negative
+			add = { value = 0
+				# coordinated_layered_conquer_region_tradeoff [diplomacy]; 恢复需求降低再次领土扩张的机会优先级，既有条约、关系和军力约束继续优先
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_evidence_need_reconstruction = yes sitai_context_evidence_need_reconstruction = yes } } add = -4 }
+			}
+			min = -14
 			max = 0
 		} }
 		# SITAI END information:ai_strategy_default.strategic_region_stance_type_scores.stance_conquer_region

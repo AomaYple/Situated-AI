@@ -107,8 +107,24 @@ def test_government_paper_cost_is_present_in_the_complete_source_program():
         ({**PAPER_PRESSURE, PM_PREFIX + "pm_horizontal_drawer_cabinets": False}, 1.25),
         (TELEPHONE_PRESSURE, 1.25),
         ({**SWITCH, **TELEPHONE_PRESSURE}, 1.05),
-        ({**SWITCH, **TELEPHONE_PRESSURE, **PAPER_PRESSURE}, 1.05),
+        ({**SWITCH, **TELEPHONE_PRESSURE, **PAPER_PRESSURE}, 0.85),
         ({**SWITCH, **TELEPHONE_PRESSURE, "state_owner_paper_price": None}, 1.05),
+        (
+            {
+                **SWITCH,
+                **TELEPHONE_PRESSURE,
+                **PAPER_PRESSURE,
+                "state_owner_bureaucracy": None,
+            },
+            0.60,
+        ),
+        (
+            {
+                **PAPER_PRESSURE,
+                **{PM_PREFIX + method: True for method in PAPER_METHODS},
+            },
+            1.05,
+        ),
         (
             {
                 **PAPER_PRESSURE,
@@ -168,7 +184,13 @@ def test_actual_government_recipe_effects_and_reader_parameters_remain_exact(pro
         if ".".join(r.field) == FIELD and r.id.startswith("administrative_input_")
     )
     assert len(costs) == 4
-    assert {r.contribution_group for r in costs} == {"administrative_active_inputs"}
+    assert {r.id: r.contribution_group for r in costs} == {
+        **{
+            f"administrative_input_government_{method}_paper": "administrative_active_input_paper"
+            for method in PAPER_METHODS
+        },
+        "administrative_input_government_pm_switch_boards_telephones": "administrative_active_input_telephones",
+    }
     consumer = next(p for p in policy.consumer_programs if ".".join(p.field) == FIELD)
     expected_ids = {r.id for r in source.rules if ".".join(r.field) == FIELD}
     assert len(expected_ids) == 10

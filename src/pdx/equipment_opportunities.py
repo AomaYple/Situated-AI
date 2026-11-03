@@ -550,7 +550,7 @@ def derive(
                 row,
                 f"{good}_scarcity",
                 chosen["scarcity_multiplier"],
-                "equipment_material_pressure",
+                f"equipment_material_pressure_{good}",
                 [scarcity],
                 f"候选真实正投入{good}已观察市场缺口，增加材料压力；量只作追溯，不估算实际账单",
             )
@@ -559,7 +559,7 @@ def derive(
                 row,
                 f"{good}_pressure",
                 chosen["pressure_multiplier"],
-                "equipment_material_pressure",
+                f"equipment_material_pressure_{good}",
                 [scarcity, {"fact": price, "op": ">", "value": chosen["pressure_price_threshold"]}],
                 f"候选真实正投入{good}高价且短缺，仅升档同一材料压力，不与基础短缺重复",
             )

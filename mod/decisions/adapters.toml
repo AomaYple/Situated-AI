@@ -11222,6 +11222,7 @@ counterexample = "保留原版可行性、候选范围、成本、失败和最�
 
 [[rules]]
 id = "coordinated_institution_colonial_affairs_administrative_cost"
+contribution_group = "colonial_institution_administrative_pressure"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_colonial_affairs"
 domain = "economy"
@@ -11231,11 +11232,12 @@ value = 0.8
 conditions = [
   { fact = "bureaucracy", op = "<", value = 0 },
 ]
-why = "共享约束下比较边际收益与机会成本；institution_colonial_affairs_administrative_cost"
+why = "本国负行政余额增加殖民制度扩张的行政机会成本；与独立偿付压力共同参与消费者限幅"
 counterexample = "保留原版资格、关系、资源成本和目标可达性；有限评分不强制行动，不替代原版预测。玩家、缺失作用域或未知输入回退；运行时语义及行为待用户长期行为验收。"
 
 [[rules]]
 id = "coordinated_institution_colonial_affairs_financial_cost"
+contribution_group = "colonial_institution_financing_pressure"
 intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.institution_scores.institution_colonial_affairs"
@@ -11245,7 +11247,7 @@ operation = "multiply"
 value = 0.75
 conditions = [
 ]
-why = "共享约束下比较边际收益与机会成本；institution_colonial_affairs_financial_cost"
+why = "和平且已实际违约时计入殖民制度的融资机会成本；不覆盖独立行政压力，不以正常借款冒充违约"
 counterexample = "保留原版资格、关系、资源成本和目标可达性；有限评分不强制行动，不替代原版预测。玩家、缺失作用域或未知输入回退；运行时语义及行为待用户长期行为验收。"
 contexts = ["peaceful_insolvency"]
 
@@ -11282,6 +11284,7 @@ contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_strategic_region_stance_type_scores_stance_conquer_region_financial_cost"
+contribution_group = "regional_conquest_financing_pressure"
 intent = "fiscal_recovery"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.strategic_region_stance_type_scores.stance_conquer_region"
@@ -11291,12 +11294,13 @@ operation = "add"
 value = -5
 conditions = [
 ]
-why = "共享约束下比较边际收益与机会成本；strategic_region_stance_type_scores_stance_conquer_region_financial_cost"
+why = "和平且已实际违约时降低新增地区征服承诺倾向；与政治阻力及已观察恢复需求分别联合"
 counterexample = "保留原版资格、关系、资源成本和目标可达性；有限评分不强制行动，不替代原版预测。玩家、缺失作用域或未知输入回退；运行时语义及行为待用户长期行为验收。"
 contexts = ["peaceful_insolvency"]
 
 [[rules]]
 id = "coordinated_strategic_region_stance_type_scores_stance_conquer_region_political_cost"
+contribution_group = "regional_conquest_political_pressure"
 intent = "stabilization"
 source = "common/ai_strategies/00_default_strategy.txt"
 field = "ai_strategy_default.strategic_region_stance_type_scores.stance_conquer_region"
@@ -11307,7 +11311,7 @@ value = -5
 conditions = [
   { fact = "war", op = "=", value = false },
 ]
-why = "共享约束下比较边际收益与机会成本；strategic_region_stance_type_scores_stance_conquer_region_political_cost"
+why = "和平时已观察严重合法性、叛乱与激进化危机增加征服的国内政治机会成本；不覆盖独立融资与恢复代价"
 counterexample = "保留原版资格、关系、资源成本和目标可达性；有限评分不强制行动，不替代原版预测。玩家、缺失作用域或未知输入回退；运行时语义及行为待用户长期行为验收。"
 contexts = ["political_capacity_crisis"]
 
@@ -16695,6 +16699,7 @@ counterexample = "只改变原版消费者的有界相对倾向；玩家、未�
 [[rules]]
 source = "common/ai_strategies/00_default_strategy.txt"
 id = "coordinated_layered_conquer_region_tradeoff"
+contribution_group = "regional_conquest_recovery_pressure"
 field = "ai_strategy_default.strategic_region_stance_type_scores.stance_conquer_region"
 domain = "diplomacy"
 priority = 20
@@ -18607,7 +18612,7 @@ source = "common/buildings/07_government.txt"
 id = "administrative_input_government_pm_horizontal_drawer_cabinets_paper"
 field = "building_government_administration.ai_value"
 domain = "economy"
-contribution_group = "administrative_active_inputs"
+contribution_group = "administrative_active_input_paper"
 priority = 45101
 operation = "multiply"
 value = 0.80
@@ -18624,7 +18629,7 @@ source = "common/buildings/07_government.txt"
 id = "administrative_input_government_pm_vertical_filing_cabinets_paper"
 field = "building_government_administration.ai_value"
 domain = "economy"
-contribution_group = "administrative_active_inputs"
+contribution_group = "administrative_active_input_paper"
 priority = 45102
 operation = "multiply"
 value = 0.80
@@ -18641,7 +18646,7 @@ source = "common/buildings/07_government.txt"
 id = "administrative_input_government_pm_switch_boards_paper"
 field = "building_government_administration.ai_value"
 domain = "economy"
-contribution_group = "administrative_active_inputs"
+contribution_group = "administrative_active_input_paper"
 priority = 45103
 operation = "multiply"
 value = 0.80
@@ -18658,7 +18663,7 @@ source = "common/buildings/07_government.txt"
 id = "administrative_input_government_pm_switch_boards_telephones"
 field = "building_government_administration.ai_value"
 domain = "economy"
-contribution_group = "administrative_active_inputs"
+contribution_group = "administrative_active_input_telephones"
 priority = 45104
 operation = "multiply"
 value = 0.80

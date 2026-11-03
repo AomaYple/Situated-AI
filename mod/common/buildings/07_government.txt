@@ -37,16 +37,19 @@ building_government_administration = {
 		# ACTION program_23cf35935032bc42 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_23cf35935032bc42_administrative_active_inputs_negative
+			# GROUP program_23cf35935032bc42_administrative_active_input_paper_negative
 			add = { value = 0
-				# administrative_input_government_pm_switch_boards_telephones [economy]; 政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_switch_boards } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:telephones mg:telephones = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 				# administrative_input_government_pm_switch_boards_paper [economy]; 政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_switch_boards } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_switch_boards } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 				# administrative_input_government_pm_vertical_filing_cabinets_paper [economy]; 政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_vertical_filing_cabinets } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 				# administrative_input_government_pm_horizontal_drawer_cabinets_paper [economy]; 政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_horizontal_drawer_cabinets } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_23cf35935032bc42_administrative_active_input_telephones_negative
+			add = { value = 0
+				# administrative_input_government_pm_switch_boards_telephones [economy]; 政府行政实际启用配方的投入同时昂贵且短缺时计入独立投入代价，与行政修复需求和融资代价共同计算；同一投入压力原因择强
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_government_administration production_method = pm_switch_boards } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:telephones mg:telephones = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_23cf35935032bc42_administrative_capacity_repair_positive
 			add = { value = 0
@@ -66,7 +69,7 @@ building_government_administration = {
 				# fiscal_government_building_loans_downgrade [fiscal]; 州所属国家正在借贷时降低政府行政建筑的新增财政承诺；原版危机处理、资格、成本和执行失败继续优先
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes taking_loans = yes } } } add = -0.25 }
 			}
-			min = 0.55
+			min = 0.5
 			max = 1.25
 		} }
 		# SITAI END information:building_government_administration.ai_value
