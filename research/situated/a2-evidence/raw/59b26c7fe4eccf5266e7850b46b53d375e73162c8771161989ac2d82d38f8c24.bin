@@ -1,0 +1,15 @@
+Looking in indexes: https://mirrors.ustc.edu.cn/pypi/simple
+Processing .\.
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: situated-ai-v3tools
+  Building wheel for situated-ai-v3tools (pyproject.toml): started
+  Building wheel for situated-ai-v3tools (pyproject.toml): finished with status 'done'
+  Created wheel for situated-ai-v3tools: filename=situated_ai_v3tools-0.3.0-py3-none-any.whl size=853973 sha256=204b82d7e3dabd995d569ac77eb7903db8b31c1558ad661d343186c80cf206cf
+  Stored in directory: C:\Users\28905\AppData\Local\Temp\pip-ephem-wheel-cache-pdxnhvu4\wheels\19\5b\67\e6e3aeb0b1ace8b834112a6bc78610f43f02a687892e695f99
+Successfully built situated-ai-v3tools
+[python-package] wheel 包含全部 122 个 Python 源模块

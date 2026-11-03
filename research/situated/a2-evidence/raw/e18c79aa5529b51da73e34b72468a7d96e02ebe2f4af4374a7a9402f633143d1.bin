@@ -1,0 +1,121 @@
+[baseline] 依赖一致性
+No broken requirements found.
+[baseline] 离线断言
+                    离线核验（43 条，快照 release/1.14.5）                     
+┌────┬─────────────────┬─────────────────┬─────────────────┬──────────────────┐
+│    │ ID              │ 断言            │ 快照            │             期望 │
+├────┼─────────────────┼─────────────────┼─────────────────┼──────────────────┤
+│ ✅ │ env.common_dirs │ common 有 138   │ 138             │              138 │
+│    │                 │ 个子目录        │                 │                  │
+│ ✅ │ env.dlc         │ game/dlc 下有   │ 17              │               17 │
+│    │                 │ 17 个 DLC       │                 │                  │
+│ ✅ │ env.md_total    │ 游戏自带 94     │ 94              │               94 │
+│    │                 │ 篇官方 .md      │                 │                  │
+│ ✅ │ docs.total_byt… │ 94 篇官方 .md   │ 236926          │           236926 │
+│    │                 │ 总字节数        │                 │                  │
+│ ✅ │ docs.max_bytes  │ 最大官方 .md    │ 28171           │            28171 │
+│    │                 │ treaty_article… │                 │                  │
+│    │                 │ 的字节数        │                 │                  │
+│ ✅ │ eco.buildings   │ buildings 有    │ 115             │              115 │
+│    │                 │ 115 个          │                 │                  │
+│ ✅ │ eco.pm          │ production_met… │ 436             │              436 │
+│    │                 │ 有 436 个       │                 │                  │
+│ ✅ │ eco.pmg         │ production_met… │ 197             │              197 │
+│    │                 │ 有 197 个       │                 │                  │
+│ ✅ │ eco.bg          │ building_groups │ 69              │               69 │
+│    │                 │ 有 69 个        │                 │                  │
+│ ✅ │ eco.goods       │ goods 有 53 个  │ 53              │               53 │
+│ ✅ │ eco.companies   │ company_types   │ 221             │              221 │
+│    │                 │ 有 221 个       │                 │                  │
+│ ✅ │ pol.laws        │ laws 有 138 个  │ 138             │              138 │
+│ ✅ │ pol.ig          │ interest_groups │ 8               │                8 │
+│    │                 │ 有 8 个         │                 │                  │
+│ ✅ │ pol.ig_traits   │ interest_group… │ 99              │               99 │
+│    │                 │ 有 99 个        │                 │                  │
+│ ✅ │ pol.ideologies  │ ideologies 有   │ 172             │              172 │
+│    │                 │ 172 个          │                 │                  │
+│ ✅ │ pol.gov         │ government_typ… │ 444             │              444 │
+│    │                 │ 有 444 个       │                 │                  │
+│ ✅ │ pol.cultures    │ cultures 有 31… │ 317             │              317 │
+│    │                 │ 个              │                 │                  │
+│ ✅ │ pol.disc        │ discrimination… │ 324             │              324 │
+│    │                 │ 有 324 个       │                 │                  │
+│ ✅ │ pol.amend       │ amendments 有   │ 67              │               67 │
+│    │                 │ 67 个           │                 │                  │
+│ ✅ │ chr.templates   │ character_temp… │ 2011            │             2011 │
+│    │                 │ 有 2011 个      │                 │                  │
+│ ✅ │ chr.traits      │ character_trai… │ 121             │              121 │
+│    │                 │ 有 121 个       │                 │                  │
+│ ✅ │ chr.tech        │ technology 有   │ 184             │              184 │
+│    │                 │ 184 个          │                 │                  │
+│ ✅ │ chr.concepts    │ game_concepts   │ 613             │              613 │
+│    │                 │ 有 613 个       │                 │                  │
+│ ✅ │ dip.actions     │ diplomatic_act… │ 55              │               55 │
+│    │                 │ 有 55 个        │                 │                  │
+│ ✅ │ dip.treaty      │ treaty_articles │ 34              │               34 │
+│    │                 │ 有 34 个        │                 │                  │
+│ ✅ │ dip.wargoal     │ war_goal_types  │ 39              │               39 │
+│    │                 │ 有 39 个        │                 │                  │
+│ ✅ │ dip.state_trai… │ state_traits  … │ 239             │              239 │
+│    │                 │ 239 个          │                 │                  │
+│ ✅ │ dip.strategic   │ strategic_regi… │ 142             │              142 │
+│    │                 │ 有 142 个       │                 │                  │
+│ ✅ │ dip.ships       │ ship_modificat… │ 271             │              271 │
+│    │                 │ 有 271 个       │                 │                  │
+│ ✅ │ def.namespaces  │ defines 共 50   │ 50              │               50 │
+│    │                 │ 个去重命名空间  │                 │                  │
+│ ✅ │ def.param_total │ defines 共 351… │ 3515            │             3515 │
+│    │                 │ 个参数条目      │                 │                  │
+│ ✅ │ def.param_names │ defines 共 350… │ 3508            │             3508 │
+│    │                 │ 个去重参数名    │                 │                  │
+│ ✅ │ def.modtypes    │ modifier_type_… │ 2371            │             2371 │
+│    │                 │ 有 2371 个      │                 │                  │
+│ ✅ │ def.static      │ static_modifie… │ 6128            │             6128 │
+│    │                 │ 有 6128 个      │                 │                  │
+│ ✅ │ scr.on_actions  │ on_actions 有   │ 268             │              268 │
+│    │                 │ 268 个键        │                 │                  │
+│ ✅ │ env.common_dir… │ 直接枚举 commo… │ 138             │              138 │
+│    │                 │ 得到 138        │                 │                  │
+│    │                 │ 个子目录        │                 │                  │
+│ ✅ │ ai.stance_type… │ AI              │ 4               │                4 │
+│    │                 │ 战场立场数（st… │                 │                  │
+│    │                 │ 等 4 个）       │                 │                  │
+│ ✅ │ eco.company_ch… │ company_charte… │ 5               │                5 │
+│    │                 │ 的定义数（单文… │                 │                  │
+│    │                 │ 5 个）          │                 │                  │
+│ ✅ │ eco.dynamic_co… │ dynamic_compan… │ 10              │               10 │
+│    │                 │ 的定义数（单文… │                 │                  │
+│    │                 │ 个）            │                 │                  │
+│ ✅ │ pol.md_total_d… │ 官方 .md        │ 94              │               94 │
+│    │                 │ 的篇数（game +  │                 │                  │
+│    │                 │ jomini +        │                 │                  │
+│    │                 │ clausewitz      │                 │                  │
+│    │                 │ 三个内容根）    │                 │                  │
+│ ✅ │ env.caligula_r… │ caligula_rev    │ 9f8281a37e8563… │ 9f8281a37e85639… │
+│    │                 │ 修订指纹（判断… │                 │                  │
+│ ✅ │ env.caligula_b… │ caligula_branch │ release/1.14.5  │   release/1.14.5 │
+│    │                 │ 分支名          │                 │                  │
+│ ✅ │ env.clausewitz… │ clausewitz_rev  │ fd5e1dbd038c3c… │ fd5e1dbd038c3c4… │
+│    │                 │ 修订指纹        │                 │                  │
+└────┴─────────────────┴─────────────────┴─────────────────┴──────────────────┘
+通过 43 / 43    失败 0    （离线真值覆盖 43/234 条；其余需读游戏本体，本地跑 v3
+verify）
+文档正文与断言表一致
+[baseline] 离线生成表格
+快照里记录的 173 张生成表都与文档一致
+[baseline] 离线 Mod 门禁
+冻结源码/产物、脚本语法与快照接口检查通过
+证据：入库快照（不证明当前游戏内容）
+长期行为、平衡、玩家体验和游戏性能由用户验收。
+[baseline] 情境决策合同
+已写入 tools\out\ci\decision-audit.json  (48,645,440 字节)
+情境决策合同通过：9/9 个域已连接原版消费者，2030 个读取器（信息 44、消费者 
+1986），5485 条规则
+证据：静态生成合同；行为、平衡和长期性能仍由用户实机验收。
+[baseline] 离线 AI 可执行面
+docs/design/02-可执行面.md 与生成结果一致 ✅
+离线模式：原版 AI 面来自入库快照 C:\Users\28905\projects\Situated 
+AI\tools\out\snapshots\release-1.14.5.compact.json（版本 release/1.14.5） —— 
+证明的是「文档与入库快照一致」，不是「与现在的游戏一致」。
+[baseline] 死代码审计
+{"definition_count": 2263, "verdicts": {"仅定义文件内使用": 574, "动态入口或 API": 857, "在用": 832}}

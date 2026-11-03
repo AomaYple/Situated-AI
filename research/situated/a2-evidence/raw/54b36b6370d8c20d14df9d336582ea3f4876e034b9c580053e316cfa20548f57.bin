@@ -1,0 +1,14 @@
+Looking in indexes: https://mirrors.ustc.edu.cn/pypi/simple
+Processing .\.
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: situated-ai-v3tools
+  Building wheel for situated-ai-v3tools (pyproject.toml): started
+  Building wheel for situated-ai-v3tools (pyproject.toml): finished with status 'done'
+  Created wheel for situated-ai-v3tools: filename=situated_ai_v3tools-0.3.0-py3-none-any.whl size=853973 sha256=00f62b9b3164c72f2e98c45271d798f85b155b628f5c3425b2b595f3ee9e07d0
+  Stored in directory: C:\Users\28905\AppData\Local\Temp\pip-ephem-wheel-cache-0kvpels3\wheels\19\5b\67\e6e3aeb0b1ace8b834112a6bc78610f43f02a687892e695f99
+Successfully built situated-ai-v3tools
