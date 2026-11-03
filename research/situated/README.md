@@ -3,6 +3,15 @@
 本目录保存版本固定的原始字节证据。它们属于 `static_check`，不执行游戏，也不证明运行效果、数值平衡或
 完整下游行为。生产入口必须重新核对当前 EXE 和原版来源；离线快照只提供历史证据身份。
 
+## 法律颁布权重文档摘录
+
+[law-enact-context.md](victoria3-1.14.5-law-enact-context.md) 仅保留本体 `common/laws/readme.md`
+第 1、11、13 行的标题、上下文陈述与示例分界，空行保持原行号。摘录 SHA-256 为
+`706098c2cb35770cbe477c84620940b716e60d8708f30f7ae72d46ed1e2091d8`；完整原件与本地规范化镜像的
+哈希仍由 `official-docs.manifest.json` 独立维护。编译器核对摘录字节、原件身份及可用原件中的对应行，
+离线生成不再依赖被忽略的完整本地镜像。本摘录仅证明 `ai_enact_weight_modifier` 的 country ROOT 与 law
+辅助对象，不授权 `ai_will_do`、新 getter 或其他法律接口。
+
 ## 策略作用域修订
 
 | 修订 | 固定文件 | SHA-256 | 用途 |

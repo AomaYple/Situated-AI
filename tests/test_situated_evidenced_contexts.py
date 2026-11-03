@@ -110,6 +110,22 @@ def test_enact_document_proves_country_and_law_with_real_lines(law_document):
     assert "common/laws/readme.md:11" in context.evidence
 
 
+def test_law_context_offline_evidence_is_tracked_and_independent_of_ignored_mirror():
+    import subprocess
+
+    relative = compiler._LAW_DOC.relative_to(config.REPO).as_posix()
+    assert relative == "research/situated/victoria3-1.14.5-law-enact-context.md"
+    # The exact small excerpt is intentionally retained; the full copyrighted
+    # document stays in the ignored local mirror and is not distributed.
+    lines = compiler._LAW_DOC.read_text(encoding="utf-8").splitlines()
+    assert [index + 1 for index, line in enumerate(lines) if line] == [1, 11, 13]
+    assert len(compiler._LAW_DOC.read_bytes()) < 300
+    result = subprocess.run(
+        ["git", "check-ignore", relative], cwd=config.REPO, capture_output=True, check=False
+    )
+    assert result.returncode == 1
+
+
 @pytest.mark.parametrize("damage", ["heading", "wrong_type", "duplicate", "moved", "contradiction"])
 def test_law_document_damage_keeps_context_unproven(law_document, damage):
     statement = "Root scope is AI country, scope:law contains the relevant law for that country"

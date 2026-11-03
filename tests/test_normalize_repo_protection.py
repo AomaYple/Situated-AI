@@ -129,7 +129,9 @@ def _directory_link(link: Path, target: Path) -> None:
     if os.name == "nt":
         import _winapi
 
-        _winapi.CreateJunction(str(target), str(link))
+        # typeshed on non-Windows hosts does not expose this Windows-only API.
+        create_junction = vars(_winapi)["CreateJunction"]
+        create_junction(str(target), str(link))
     else:
         link.symlink_to(target, target_is_directory=True)
 

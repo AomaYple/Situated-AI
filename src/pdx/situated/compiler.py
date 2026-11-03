@@ -58,9 +58,10 @@ ACTIONS = DECISIONS / "actions.toml"
 LAYERS = DECISIONS / "action_layers.toml"
 BINDINGS = DECISIONS / "action_bindings.toml"
 BASELINE = REPO / "research" / "vanilla-ai" / "1.14.5" / "00_default_strategy.txt"
-_LAW_DOC = REPO / "research/official-docs/game/common/laws/readme.md"
+_LAW_DOC = REPO / "research/situated/victoria3-1.14.5-law-enact-context.md"
 _LAW_DOC_MANIFEST = REPO / "research/official-docs.manifest.json"
-_LAW_DOC_SHA256 = "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076"
+_LAW_DOC_SHA256 = "706098c2cb35770cbe477c84620940b716e60d8708f30f7ae72d46ed1e2091d8"
+_LAW_MIRROR_SHA256 = "034ed06d19b2bd6fb8070bfbb95f6e768aaff36a162172147d80f9023f208076"
 _LAW_NATIVE_SHA256 = "2e172974c75e5a544777f0a21099019043ca0164d499927786e10572b8956a0c"
 SUPPORTING_SOURCES = (
     "capacities.toml",
@@ -283,18 +284,28 @@ def law_evaluation_context(text: str) -> decision_ir.EvaluationContext:
 
 
 def _frozen_law_context() -> decision_ir.EvaluationContext:
+    # Only the three documentary context lines are versioned. Blank lines keep
+    # their original positions; the ignored full mirror is never an offline input.
     raw = _LAW_DOC.read_bytes()
     manifest = json.loads(_LAW_DOC_MANIFEST.read_text(encoding="utf-8"))
     entry = manifest["文档"]["game/common/laws/readme.md"]
     if (
         hashlib.sha256(raw).hexdigest() != _LAW_DOC_SHA256
-        or entry["镜像sha256"] != _LAW_DOC_SHA256
+        or entry["镜像sha256"] != _LAW_MIRROR_SHA256
         or entry["sha256"] != _LAW_NATIVE_SHA256
     ):
         raise ValueError("法律 enact weight 冻结文档证据漂移")
     native = config.GAME / "common/laws/readme.md"
     if native.is_file() and hashlib.sha256(native.read_bytes()).hexdigest() != _LAW_NATIVE_SHA256:
         raise ValueError("法律 enact weight 原版文档证据漂移")
+    if native.is_file():
+        lines = native.read_text(encoding="utf-8-sig").splitlines()
+        if any(
+            index >= len(lines) or lines[index] != line
+            for index, line in enumerate(raw.decode("utf-8").splitlines())
+            if line
+        ):
+            raise ValueError("法律 enact weight 摘录行与原版不一致")
     context = law_evaluation_context(raw.decode("utf-8"))
     if context.status != "observed":
         raise ValueError("法律 enact weight 文档没有精确上下文")
