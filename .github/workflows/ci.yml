@@ -73,6 +73,7 @@ jobs:
       - name: pytest —— 不依赖游戏的用例
         run: >-
           python -m pytest -m "not integration and not benchmark"
+          --max-worker-restart=0 -vv --durations=25
           --junitxml=tools/out/ci/test-results.xml
 
       - name: 测试跳过项 —— 分类并拒绝未知原因
@@ -164,4 +165,6 @@ jobs:
         run: v3 lock
 
       - name: pytest —— 在锁定的环境里跑不依赖游戏的用例
-        run: python -m pytest -m "not integration and not benchmark"
+        run: >-
+          python -m pytest -m "not integration and not benchmark"
+          --max-worker-restart=0 -vv --durations=25
