@@ -1,6 +1,7 @@
 """K5：对生成 PDX 行动文本执行独立语义见证。"""
 
 from dataclasses import replace
+from functools import lru_cache
 
 import pytest
 
@@ -12,7 +13,9 @@ from pdx.situated.pdx_eval import UnsupportedPdxError, condition, select
 pytestmark = pytest.mark.unit
 
 
+@lru_cache(maxsize=1)
 def _overlays() -> dict[str, str]:
+    # All callers only select immutable text; mutation tests load their own model.
     return strategy_overlay(load_model())
 
 
@@ -104,13 +107,13 @@ def test_unknown_high_priority_action_does_not_fall_through_to_known_lower_actio
 def test_pdx_evaluator_keeps_local_economy_and_education_paths_reachable() -> None:
     result = select(_overlays()["economic_vs_government_spending_balance"], _facts())
     assert result.action_id == "joint_economic_balance"
-    assert result.delta == pytest.approx(0.025)
+    assert result.delta == pytest.approx(0.05)
 
 
 def test_unknown_core_fact_is_an_explicit_unknown_fallback() -> None:
     result = select(_overlays()["economic_vs_government_spending_balance"], _facts(is_at_war=None))
     assert result.fallback == "selected"
-    assert result.delta == pytest.approx(0.025)
+    assert result.delta == pytest.approx(0.05)
     assert result.action_id == "joint_economic_balance"
 
 
@@ -137,12 +140,17 @@ def test_unknown_complement_falls_back_to_known_base_delta() -> None:
     assert result.delta == pytest.approx(0.05)
 
 
-def test_nested_complement_is_part_of_the_generated_delta() -> None:
+def test_observed_school_complement_is_part_of_the_generated_delta() -> None:
     overlay = _overlays()["economic_vs_government_spending_balance"]
     result = select(overlay, _facts())
-    # With conservative cost: industry .05, education 0, and the explicit
-    # bureaucracy complement adds -.025 to the education direction.
-    assert result.delta == pytest.approx(0.025)
+    # Unknown costs leave industry .05 and education zero. Actual public
+    # schools, institution and low literacy add -.025; bureaucracy alone does not.
+    assert result.delta == pytest.approx(0.05)
+    schools = {
+        "has_law_or_variant": {(("argument", "law_type:law_public_schools"),): True},
+        "has_institution": {(("argument", "institution_schools"),): True},
+    }
+    assert select(overlay, _facts(**schools)).delta == pytest.approx(0.025)
     without_bureaucracy = select(overlay, _facts(bureaucracy=0))
     assert without_bureaucracy.action_id == "joint_economic_balance"
     assert without_bureaucracy.delta == pytest.approx(0.05)

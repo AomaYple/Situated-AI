@@ -14,6 +14,7 @@ import math
 import re
 import tomllib
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -733,10 +734,23 @@ def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.Evaluat
     """付费动员权重保留编队 ROOT 和实际所属国家；候选来自冻结原文。"""
     from .. import mobilization_opportunities  # noqa: PLC0415, TID252
 
-    data = mobilization_opportunities.load_baseline()
-    raw = mobilization_opportunities.BASELINE.read_text(encoding="utf-8")
+    raw = mobilization_opportunities.BASELINE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != mobilization_opportunities.BASELINE_SHA256:
+        raise ValueError("动员冻结资料身份漂移，必须独立复核后重新pin")
     source = mobilization_opportunities.BASELINE.relative_to(REPO).as_posix()
-    line = raw.count("\n", 0, raw.index('"native_root": "military_formation"')) + 1
+    return dict(_mobilization_context_rows(raw, source))
+
+
+@lru_cache(maxsize=1)
+def _mobilization_context_rows(
+    raw: bytes, source: str
+) -> tuple[tuple[tuple[str, str], decision_ir.EvaluationContext], ...]:
+    """只复用同字节、同证据路径的不可变上下文；每次入口仍核对当前 pin。"""
+    from .. import mobilization_opportunities  # noqa: PLC0415, TID252
+
+    data = mobilization_opportunities.load_baseline(raw=raw)
+    text = raw.decode("utf-8")
+    line = text.count("\n", 0, text.index('"native_root": "military_formation"')) + 1
     context = decision_ir.EvaluationContext(
         actor_scope=decision_ir.ContextBinding("owner", "country", "actor", source, line),
         auxiliary_scopes=(
@@ -748,10 +762,10 @@ def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.Evaluat
             f"{source}:definition_only:mobilization_option",
         ),
     )
-    return {
-        (row["source"], row["field"]): context
+    return tuple(
+        ((row["source"], row["field"]), context)
         for row in mobilization_opportunities.candidate_catalog(data).values()
-    }
+    )
 
 
 def _mobilization_context_readers(

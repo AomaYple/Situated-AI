@@ -45,38 +45,40 @@ def _cases() -> list[Scenario]:
 
 # Frozen JSON preserves all original observations. The historical winner
 # expectations are superseded by these handwritten signed-program deltas.
+# Reform is .5 minus the .25 political cost at legitimacy 60. Industrial
+# card availability no longer grants a .1 bonus without an enacted-world cause.
 _DELTAS = (
     0,
     0.25,
     0.05,
     0.25,
     0,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     -4,
     0,
     0,
-    0.025,
+    0.05,
     -4,
     8,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     0.25,
     0,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     0.25,
     0,
     0,
     0,
     0.25,
     8,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     0.25,
     0,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     -4,
 )
 _JOINT_IDS = {
@@ -88,8 +90,7 @@ _JOINT_IDS = {
 
 
 @pytest.mark.parametrize("case", _cases(), ids=lambda item: item["id"])
-def test_handwritten_scenario_matches_independent_generated_pdx(case: Scenario) -> None:
-    overlays = strategy_overlay(load_model())
+def test_handwritten_scenario_matches_independent_generated_pdx(case: Scenario, overlays) -> None:
     facts = dict(_BASE_FACTS)
     facts.update(case["facts"])
     result = select(overlays[case["consumer"]], facts)
@@ -103,3 +104,9 @@ def test_handwritten_scenario_matches_independent_generated_pdx(case: Scenario) 
         assert result.operation == "add"
         assert result.fallback == "selected"
     assert result.delta == pytest.approx(delta)
+
+
+@pytest.fixture(scope="module")
+def overlays():
+    # Read-only strings; per-case observation dictionaries remain isolated.
+    return strategy_overlay(load_model())

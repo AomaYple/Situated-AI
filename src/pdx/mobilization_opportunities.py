@@ -312,8 +312,8 @@ def write_baseline(game: Path) -> Path:
     return BASELINE
 
 
-def load_baseline() -> dict[str, Any]:
-    raw = BASELINE.read_bytes()
+def load_baseline(*, raw: bytes | None = None) -> dict[str, Any]:
+    raw = BASELINE.read_bytes() if raw is None else raw
     if hashlib.sha256(raw).hexdigest() != BASELINE_SHA256:
         raise ValueError("动员冻结资料身份漂移，必须独立复核后重新pin")
     data = json.loads(raw)

@@ -12,6 +12,7 @@ from pdx import config
 from pdx import mobilization_opportunities as mobilization
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
+from pdx.situated import compiler
 from pdx.textio import normalized_text
 
 pytestmark = pytest.mark.unit
@@ -27,6 +28,27 @@ FIELD = "mobilization_option_field_hospitals"
 @pytest.fixture(scope="module")
 def baseline():
     return mobilization.load_baseline()
+
+
+def test_context_reuse_preserves_identity_isolation_and_rechecks_pin(monkeypatch):
+    compiler._mobilization_context_rows.cache_clear()
+    load = mobilization.load_baseline
+    reads = []
+
+    def recorded_load(*, raw=None):
+        reads.append(raw)
+        return load(raw=raw)
+
+    monkeypatch.setattr(mobilization, "load_baseline", recorded_load)
+    first = compiler._frozen_mobilization_contexts()
+    expected = {(row["source"], row["field"]) for row in mobilization.candidate_catalog().values()}
+    assert set(first) == expected
+    first.clear()
+    assert set(compiler._frozen_mobilization_contexts()) == expected
+    assert sum(raw is not None for raw in reads) == 1
+    monkeypatch.setattr(mobilization, "BASELINE_SHA256", "0" * 64)
+    with pytest.raises(ValueError, match="身份漂移"):
+        compiler._frozen_mobilization_contexts()
 
 
 @pytest.fixture
