@@ -1,9 +1,15 @@
-"""Independent source identities for production coverage assertions.
+"""Authored identities and complete policy-input identities for coverage checks.
 
-Read only the two authored TOML files, never compiler models or generated bindings.
-Information rules use their authored-file identity; adapters retain each explicit
+``production_sources`` reads only the two authored TOML files, never compiler
+models or generated bindings. Information rules use their authored-file identity;
+adapters retain each explicit
 native source. Duplicate source/rule keys must fail before set construction can
 hide them, including duplicates that disagree on their field.
+
+``production_policy_sources`` additionally reads the upstream policy inputs to
+check complete downstream propagation, including derived rules. That consistency
+set is not an independent oracle for derivation semantics; the opportunity-domain
+tests retain their handwritten/native-input expectations.
 """
 
 from __future__ import annotations
@@ -56,3 +62,47 @@ def production_sources(
             seen.add(identity)
             identities.add((source, rule_id, field))
     return ProductionSources(frozenset(identities))
+
+
+def production_policy_sources() -> ProductionSources:
+    """Check all policy inputs exactly, retaining the independent authored subset.
+
+    Read neither SituatedModel nor its bindings, inventory, IR, or generated PDX.
+    A derivation omitted by its own loader must still fail its independent domain
+    tests; this helper only detects losses between policy inputs and outputs.
+    """
+    from pdx import decision_adapters, decision_rules
+
+    policies = (
+        (_INFORMATION_SOURCE, decision_rules.load()),
+        *decision_adapters.load().policies,
+    )
+    identities: set[tuple[str, str, str]] = set()
+    seen: set[tuple[str, str]] = set()
+    for source, policy in policies:
+        for rule in policy.rules:
+            identity = (source, rule.id)
+            if identity in seen:
+                raise ValueError(f"duplicate policy source/rule identity {identity}")
+            seen.add(identity)
+            identities.add((source, rule.id, ".".join(rule.field)))
+    missing = production_sources().rules - identities
+    if missing:
+        raise ValueError(f"policy inputs omit authored source identities: {sorted(missing)}")
+    return ProductionSources(frozenset(identities))
+
+
+def production_supply_sources() -> ProductionSources:
+    """Read the independent, authored goods-stance program identities."""
+    with (_ROOT / "mod/decisions/adapters.toml").open("rb") as stream:
+        supply = tomllib.load(stream)["supply"]
+    source, goods = supply["source"], supply["goods"]
+    if not isinstance(source, str) or not source or not isinstance(goods, list) or not goods:
+        raise ValueError("supply must have a source and nonempty goods array")
+    if any(not isinstance(good, str) or not good for good in goods) or len(set(goods)) != len(
+        goods
+    ):
+        raise ValueError("supply goods must have distinct nonempty identities")
+    return ProductionSources(
+        frozenset((source, good, f"ai_strategy_default.goods_stances.{good}") for good in goods)
+    )

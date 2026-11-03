@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from pdx import config, decision_adapters, decisions, distribution
+from pdx import config, decision_adapters, decisions, distribution, equipment_opportunities
 from pdx.model import Block
 from pdx.situated import audit, domain_coverage, vanilla_inventory
 from pdx.situated.decision_ir import (
@@ -82,8 +82,8 @@ def controlled_output():
 
 
 @pytest.mark.integration
-def test_real_build_program_has_an_exact_native_mapping(real_production, native_scope):
-    scope, sources = native_scope
+def test_real_build_program_has_an_exact_native_mapping(real_production, real_native_scope):
+    scope, sources = real_native_scope
     report = domain_coverage.native_coverage(
         scope,
         (),
@@ -94,8 +94,7 @@ def test_real_build_program_has_an_exact_native_mapping(real_production, native_
     assert report["denominator"] == 1
 
 
-@pytest.fixture
-def native_scope():
+def _native_scope(getter: bytes):
     raw = b"\xef\xbb\xbf" + decisions.BASELINE.read_bytes()
     parsed = vanilla_inventory.parse_bytes(raw, path=SOURCE)
     strategy = parsed.root.first("ai_strategy_default")
@@ -121,7 +120,6 @@ def native_scope():
         source_line=support.line,
     )
     getter_source = "common/script_values/01_power_bloc_values.txt"
-    getter = (config.GAME / getter_source).read_bytes()
     sources = {SOURCE: raw, getter_source: getter}
     scope = vanilla_inventory.VanillaInventory(
         "locked-support-fixture",
@@ -133,6 +131,28 @@ def native_scope():
         2,
     )
     return scope, sources
+
+
+@pytest.fixture
+def native_scope(monkeypatch):
+    """Synthetic getter and its pin exercise checks without claiming native evidence."""
+    getter_source = "common/script_values/01_power_bloc_values.txt"
+    # The production binding contract requires the call at line 30. This is a
+    # deliberately synthetic source; only this fixture's proof pin is replaced.
+    getter = b"\n" * 28 + (
+        b'fixture = {\n    multiply = "scope:target.economic_dependence(ROOT)"\n}\n'
+    )
+    baseline = copy.deepcopy(equipment_opportunities.load_baseline())
+    baseline["sources"][getter_source] = hashlib.sha256(getter).hexdigest()
+    monkeypatch.setattr(equipment_opportunities, "load_baseline", lambda: baseline)
+    return _native_scope(getter)
+
+
+@pytest.fixture
+def real_native_scope():
+    """The integration test retains the actual source and unmodified production pin."""
+    getter_source = "common/script_values/01_power_bloc_values.txt"
+    return _native_scope((config.GAME / getter_source).read_bytes())
 
 
 def test_controlled_program_maps_without_fabricating_an_action(controlled_output, native_scope):

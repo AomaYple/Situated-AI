@@ -16,7 +16,7 @@ from pdx.situated import (
     relations,
     support_signals,
 )
-from pdx.situated.schema import RankTerm
+from pdx.situated.schema import RankTerm, Relation
 
 pytestmark = pytest.mark.unit
 
@@ -224,7 +224,7 @@ def test_cards_bind_cost_exit_relation_and_support_alias_inputs(card_inputs):
             "war",
             "default",
         },
-        "diplomatic_restraint": {"war", "peace", "default"},
+        "diplomatic_restraint": {"war", "peace"},
     }
     for name, keys in expected.items():
         bindings = compiler._action_context_readers(rows[name], context, declared, signals, readers)
@@ -246,7 +246,20 @@ def test_card_context_rejects_unproven_actual_inputs(card_inputs, damage):
     elif damage == "rank":
         row = replace(row, rank_terms=(RankTerm("missing", "security", 1, "flag"),))
     elif damage == "relation":
-        row = replace(row, relations=(replace(row.relations[0], condition_facts=("missing",)),))
+        # Production opening has no relation; inject a real relation-shaped
+        # input so this guard still reaches reader validation after migrations.
+        row = replace(
+            row,
+            relations=(
+                Relation(
+                    row.action_id,
+                    "diplomatic_restraint",
+                    "complements",
+                    0.025,
+                    condition_facts=("missing",),
+                ),
+            ),
+        )
     elif damage == "alias":
         signals = replace(
             signals,

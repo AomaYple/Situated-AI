@@ -18,10 +18,10 @@ from test_architecture_all_consumer_witnesses import _json_observation, _units
 from test_situated_action_reference import _COMPLETE, _typed
 
 from pdx import config, decisions
-from pdx.model import Block, Scalar
+from pdx.model import Assignment, Block, ParsedFile, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
-from pdx.situated.native_treatments import _resolve
+from pdx.situated.native_treatments import _digest, _resolve
 from pdx.situated.support_program import SupportObservation
 
 pytest_plugins = ("tools.ci.architecture_witness_capture",)
@@ -39,10 +39,33 @@ REQUIREMENTS = (
 )
 
 
+class _FieldTrees:
+    """Reuse only syntax within one fixture, keyed by the complete actual text."""
+
+    def __init__(self):
+        self._parsed: dict[str, ParsedFile] = {}
+        self._resolved: dict[tuple[str, str, str], tuple[Assignment | None, str]] = {}
+
+    def field(self, text, definition, field):
+        if text not in self._parsed:
+            self._parsed[text] = parse_text(text)
+        parsed = self._parsed[text]
+        assert not parsed.errors
+        key = (text, definition, field)
+        if key not in self._resolved:
+            self._resolved[key] = _resolve(parsed.root, definition, field)
+        node, state = self._resolved[key]
+        assert state == "found"
+        assert node is not None
+        return node
+
+
 @pytest.fixture(scope="module")
 def candidate():
     # Reuse the frozen real release builder, never a modified test-only model.
-    return cast("Any", explicit.candidate).__wrapped__()
+    built = cast("Any", explicit.candidate).__wrapped__()
+    built["field_trees"] = _FieldTrees()
+    return built
 
 
 def _record(witness, requirement, field, role, observations, expected, reference, actual):
@@ -92,12 +115,13 @@ def _inputs(changes=None, *, public_school=False, schools=False):
     return typed, {**engine, "ROOT": engine}
 
 
-def _complete_value(text, field, engine):
-    parsed = parse_text(text)
-    assert not parsed.errors
-    node, state = _resolve(parsed.root, explicit.DEFINITION, field)
-    assert state == "found"
-    assert node is not None
+def _field(candidate, text, field):
+    node = candidate["field_trees"].field(text, explicit.DEFINITION, field)
+    return _digest(node.value)
+
+
+def _complete_value(candidate, text, field, engine):
+    node = candidate["field_trees"].field(text, explicit.DEFINITION, field)
     value = pdx_eval._numeric_value(node, engine)
     assert value is not None
     return value
@@ -125,8 +149,8 @@ def _action_case(
     reference = compiler.evaluate_actions(candidate["model"], typed, is_ai=True).get(field)
     reference_delta = reference[1] if reference else 0
     actual = pdx_eval.select(explicit._overlay(installed, field), engine)
-    assert _complete_value(candidate["baseline"], field, engine) == pytest.approx(native)
-    assert _complete_value(installed, field, engine) == pytest.approx(native + expected)
+    assert _complete_value(candidate, candidate["baseline"], field, engine) == pytest.approx(native)
+    assert _complete_value(candidate, installed, field, engine) == pytest.approx(native + expected)
     expected_output = {
         **_units("add", expected),
         "complete_value_thousandths": round((native + expected) * 1000),
@@ -134,12 +158,15 @@ def _action_case(
     reference_output = {
         **_units("add", reference_delta),
         "complete_value_thousandths": round(
-            (_complete_value(candidate["baseline"], field, engine) + reference_delta) * 1000
+            (_complete_value(candidate, candidate["baseline"], field, engine) + reference_delta)
+            * 1000
         ),
     }
     actual_output = {
         **_units("add", actual.delta),
-        "complete_value_thousandths": round(_complete_value(installed, field, engine) * 1000),
+        "complete_value_thousandths": round(
+            _complete_value(candidate, installed, field, engine) * 1000
+        ),
     }
     assert actual.operation == "add"
     _record(
@@ -187,7 +214,7 @@ def _boundaries(candidate, witness, requirement, field, *, support=False):
         {"contribution": player_reference},
         {"contribution": actual_player.operation is not None},
     )
-    baseline = explicit._field(candidate["baseline"], field)
+    baseline = _field(candidate, candidate["baseline"], field)
     marker = f"# SITAI BEGIN {field}\n"
     _record(
         witness,
@@ -199,7 +226,7 @@ def _boundaries(candidate, witness, requirement, field, *, support=False):
         {"contribution": disabled_reference, "native_ast": baseline},
         {
             "contribution": marker in candidate["disabled"],
-            "native_ast": explicit._field(candidate["disabled"], field),
+            "native_ast": _field(candidate, candidate["disabled"], field),
         },
     )
     _record(
@@ -214,13 +241,13 @@ def _boundaries(candidate, witness, requirement, field, *, support=False):
         },
         {"complete_native_numeric_ast": baseline},
         {
-            "complete_native_numeric_ast": explicit._field(
-                explicit._MARKED.sub("\n", candidate["built"]), field
+            "complete_native_numeric_ast": _field(
+                candidate, explicit._MARKED.sub("\n", candidate["built"]), field
             )
         },
         {
-            "complete_native_numeric_ast": explicit._field(
-                explicit._MARKED.sub("\n", installed), field
+            "complete_native_numeric_ast": _field(
+                candidate, explicit._MARKED.sub("\n", installed), field
             )
         },
     )

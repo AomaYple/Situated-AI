@@ -4,7 +4,7 @@ import hashlib
 from dataclasses import replace
 
 import pytest
-from _situated_sources import production_sources
+from _situated_sources import production_policy_sources
 
 from pdx import decision_adapters, decision_rules
 from pdx.parser import parse_text
@@ -261,10 +261,10 @@ def test_all_current_rules_have_real_complete_consumer_programs():
         consumers.update(
             (source, ".".join(program.field)) for program in migrated.consumer_programs
         )
-    assert variants == len(production_sources().rules)
-    assert program_count == len(production_sources().consumers)
-    assert identities == production_sources().rules
-    assert consumers == production_sources().consumers
+    assert variants == len(production_policy_sources().rules)
+    assert program_count == len(production_policy_sources().consumers)
+    assert identities == production_policy_sources().rules
+    assert consumers == production_policy_sources().consumers
 
 
 def test_native_construction_terminal_zero_is_not_revived():

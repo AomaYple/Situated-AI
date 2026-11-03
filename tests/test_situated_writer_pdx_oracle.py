@@ -998,6 +998,7 @@ def _cases(
                 )
 
 
+@pytest.mark.integration
 def test_every_legacy_writer_has_generated_ast_semantics(generated):
     policies, model, files, info_text, _inputs, _baseline = generated
     assert model.consumer_ir is not None
@@ -1150,6 +1151,7 @@ def _independent_net(rules, values, reader_index, selected):
     return operation, max(lower, min(upper, net))
 
 
+@pytest.mark.integration
 def test_complete_consumer_priority_matches_independent_oracle(generated):
     """Every writer's states exercise the complete bounded consumer program."""
     policies, _model, files, info_text, _inputs, _baseline = generated

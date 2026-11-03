@@ -54,7 +54,7 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     previous = (root / "docs/design/exec/mod重设计-实施计划.md").read_text(encoding="utf-8")
     checklist = (root / "docs/design/当前工作清单.md").read_text(encoding="utf-8")
     assert plan.startswith("# Situated AI 架构主计划\n")
-    assert "已授权执行" in plan
+    assert "已授权实施" in plan
     assert "[架构子计划](架构子计划.md)" in plan
     assert "[架构主计划](架构主计划.md)" in subplans
     assert re.findall(r"^\| (S\d+) ", plan, re.MULTILINE) == [f"S{i}" for i in range(7)]
@@ -97,7 +97,7 @@ def test_current_document_indexes_are_complete() -> None:
     execution = (root / "docs/design/exec/README.md").read_text(encoding="utf-8")
 
     assert "-m pdx.cli package" in tools
-    assert f"Situated AI {distribution.RELEASE_VERSION}" in tools
+    assert "[版本交付索引](../docs/design/exec/版本交付-结果.md)" in tools
     assert "K0–K13" in execution
     assert "[处境行动决策内核实施计划](mod重设计-实施计划.md)" in execution
     assert "分层联动-执行结果.md" in execution
@@ -120,7 +120,16 @@ def test_current_document_indexes_are_complete() -> None:
             or f"[分层联动实施计划]({prefix}mod重设计-实施计划.md)" in content
         ), path
         assert "终极方案 4.0 实施计划" not in content, path
-        assert distribution.RELEASE_VERSION in content or path == "docs/README.md", path
+        version_links = re.findall(r"\[[^\]]*版本交付索引[^\]]*\]\(([^)]+)\)", content)
+        assert version_links, path
+        assert all(
+            ((root / path).parent / link).resolve()
+            == (root / "docs/design/exec/版本交付-结果.md").resolve()
+            for link in version_links
+        ), path
+        for target in re.findall(r"\[[^\]]+\]\(([^)]+\.md)\)", content):
+            if "://" not in target:
+                assert ((root / path).parent / target).is_file(), (path, target)
 
 
 def test_layered_design_tracks_production_contract_and_boundaries() -> None:

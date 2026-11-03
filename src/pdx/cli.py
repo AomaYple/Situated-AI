@@ -2608,6 +2608,8 @@ def modgen_cmd(
     if write and check:
         _fail("--write 与 --check 互斥：先写盘，再另跑一次核对")
     try:
+        if not (config.GAME / "common").is_dir():
+            raise ValueError(f"缺少锁定游戏原件：{config.GAME / 'common'}")
         if write:
             company_sectors.write_baseline(config.GAME)
             distribution.equipment_opportunities.write_baseline(config.GAME)

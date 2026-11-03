@@ -1,7 +1,7 @@
 """K5 独立 IR/PDX 见证合同。"""
 
 import pytest
-from _situated_sources import production_sources
+from _situated_sources import production_policy_sources
 
 from pdx import country_state, decision_adapters, decision_rules, decisions
 from pdx.situated import ir, lowering
@@ -34,11 +34,11 @@ def test_joint_variant_witness_decodes_decimal_neutral_without_binary_rounding()
 
 def test_ir_is_stable_and_complete_for_all_production_rules():
     items = ir.from_rules(_all_rules())
-    assert len(items) == len(production_sources().rules)
-    assert len({item.action_id for item in items}) == len(production_sources().rules)
+    assert len(items) == len(production_policy_sources().rules)
+    assert len({item.action_id for item in items}) == len(production_policy_sources().rules)
     assert {
         (item.source, item.action_id, item.field) for item in items
-    } == production_sources().rules
+    } == production_policy_sources().rules
     assert all(item.vanilla_tail for item in items)
 
 

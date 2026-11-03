@@ -3,8 +3,9 @@
 from dataclasses import replace
 
 import pytest
+from _frozen_reader_words import frozen_reader_words
 
-from pdx import country_state, decision_adapters, decision_interfaces, decision_rules
+from pdx import country_state, decision_rules
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, pdx_eval
@@ -50,15 +51,11 @@ def production():
     model = compiler.load_model()
     compiled = compiler.compile_policy(selected, INFO, model)[0]
     native = compiler.BASELINE.read_text(encoding="utf-8")
-    inputs = decision_adapters.read_inputs(decision_adapters.load())
     generated = decision_rules.patch(
         native,
         compiled,
         baseline=native,
-        reader_words=(
-            frozenset(decision_adapters.reader_evidence(inputs))
-            | decision_interfaces.proven_reader_words()
-        ),
+        reader_words=frozen_reader_words(native),
         country_policy=country_state.load(),
         consumer_ir=model.consumer_ir,
         consumer_source=INFO,

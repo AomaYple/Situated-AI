@@ -3,7 +3,7 @@
 import json
 
 import pytest
-from _situated_sources import production_sources
+from _situated_sources import production_policy_sources
 
 from pdx import config, decisions, distribution
 from pdx.situated import action_instances
@@ -37,13 +37,13 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(monkeypatc
 
     def witness(instances, texts):
         assert len([item for item in instances if item.kind == "rule_action"]) == len(
-            production_sources().rules
+            production_policy_sources().rules
         )
         assert {
             (item.source, item.rule_id, item.consumer_field)
             for item in instances
             if item.kind == "rule_action"
-        } == production_sources().rules
+        } == production_policy_sources().rules
         assert "common/ai_strategies/00_default_strategy.txt" in texts
         assert all(name.endswith(".txt") for name in texts)
         calls.append(texts)
@@ -57,8 +57,8 @@ def test_offline_metadata_serializes_legacy_behavior_witness_contract(monkeypatc
 
 
 def _assert_legacy_contract(witness) -> None:
-    assert witness["expected"] == len(production_sources().rules)
-    assert witness["count"] == len(production_sources().rules)
+    assert witness["expected"] == len(production_policy_sources().rules)
+    assert witness["count"] == len(production_policy_sources().rules)
     assert witness["missing"] == []
     assert witness["mismatches"] == []
     assert witness["duplicate_ids"] == []

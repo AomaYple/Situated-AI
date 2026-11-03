@@ -111,7 +111,8 @@ def test_scripted_reader_keeps_exact_country_boolean_signature(damage):
         )
 
 
-def test_industrial_card_uses_real_scripted_trigger_template_not_ig_getter(monkeypatch):
+def test_explicit_scripted_trigger_template_keeps_native_reader_identity(monkeypatch):
+    """Exercise an explicit template fixture in an independently proven context."""
     declared = evidence.load(compiler.FACTS)
     consumers, cards = actions.load(compiler.ACTIONS)
     sources = compiler._load_supporting_sources()
@@ -127,22 +128,24 @@ def test_industrial_card_uses_real_scripted_trigger_template_not_ig_getter(monke
         for item in decision_ir.compile_decisions(cards, consumers, links)
         if item.action_id == "industrial_foundation"
     )
+    # The production industrial card no longer requires this fact. Keep the
+    # template unit contract explicit without restoring that product gate.
+    row = replace(row, requires_all=(*row.requires_all, "no_insurrection"))
     readers = (
         *decision_rules.load().readers,
         *(reader for _, policy in decision_adapters.load().policies for reader in policy.readers),
     )
     seen = []
     original = decision_interfaces.reader_scope
+    context = compiler._frozen_strategy_contexts()[row.field]
 
-    def capture(reader, actor_path):
+    def capture(reader, actor_path, *, native_root=None):
         if reader.key == "no_insurrection":
             seen.append(reader)
-        return original(reader, actor_path)
+        return original(reader, actor_path, native_root=native_root)
 
     monkeypatch.setattr(decision_interfaces, "reader_scope", capture)
-    bindings = compiler._action_context_readers(
-        row, compiler._frozen_strategy_contexts()[row.field], declared, signals, readers
-    )
+    bindings = compiler._action_context_readers(row, context, declared, signals, readers)
     assert ("no_insurrection", "root", "country", "actor") in bindings
     assert seen
     assert {reader.engine for reader in seen} == {"any_insurrection_ongoing"}
@@ -156,6 +159,4 @@ def test_industrial_card_uses_real_scripted_trigger_template_not_ig_getter(monke
         for item in declared
     )
     with pytest.raises(ValueError, match="读取器"):
-        compiler._action_context_readers(
-            row, compiler._frozen_strategy_contexts()[row.field], damaged, signals, readers
-        )
+        compiler._action_context_readers(row, context, damaged, signals, readers)

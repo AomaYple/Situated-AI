@@ -54,12 +54,18 @@ def _raw_policies():
 
 
 @pytest.fixture(scope="module")
-def production():
+def compiled_policies():
     data, raw_bytes, raw = _raw_policies()
     model = compiler.load_model()
     selected = [
         (source, compiler.compile_policy(policy, source, model)[0]) for source, policy in raw
     ]
+    return data, raw_bytes, model, selected
+
+
+@pytest.fixture(scope="module")
+def production(compiled_policies):
+    data, raw_bytes, model, selected = compiled_policies
     adapter = decision_adapters.AdapterSet(
         tuple(data["sources"].items()), tuple(selected), hashlib.sha256(raw_bytes).hexdigest()
     )
@@ -160,6 +166,7 @@ def test_raw_complete_field_has_independent_need_and_cost(source, changes, expec
 
 
 @pytest.mark.parametrize(("source", "changes", "expected"), CASES)
+@pytest.mark.integration
 def test_complete_choice_matches_hand_value_reference_and_production_pdx(
     production, source, changes, expected
 ):
@@ -173,6 +180,7 @@ def test_complete_choice_matches_hand_value_reference_and_production_pdx(
     ).delta == pytest.approx(expected)
 
 
+@pytest.mark.integration
 def test_full_native_definition_ast_and_player_unknown_disabled_are_preserved(production):
     policies, files, inputs, disabled = production
     for source, field in FIELDS.items():
@@ -195,8 +203,8 @@ def test_full_native_definition_ast_and_player_unknown_disabled_are_preserved(pr
         assert not decision_rules.evaluate(policy, values, is_ai=True, enabled_domains=frozenset())
 
 
-def test_no_common_gate_or_unknown_recipe_or_healthy_expansion_reward(production):
-    policies, _, _, _ = production
+def test_no_common_gate_or_unknown_recipe_or_healthy_expansion_reward(compiled_policies):
+    policies = dict(compiled_policies[3])
     for source, policy in policies.items():
         for rule in policy.rules:
             if rule.value > 1:
@@ -224,6 +232,7 @@ def test_no_common_gate_or_unknown_recipe_or_healthy_expansion_reward(production
         (RAIL, "pm_diesel_trains_principle_transport_3", ("engines", "oil")),
     ],
 )
+@pytest.mark.integration
 def test_every_actual_recipe_preparation_and_each_input_cost_remain_separate(
     production, source, method, goods
 ):
@@ -244,6 +253,7 @@ def test_every_actual_recipe_preparation_and_each_input_cost_remain_separate(
         assert pdx_eval.select(overlay, _facts(policy, values)).delta == pytest.approx(expected)
 
 
+@pytest.mark.integration
 def test_unknown_recipe_never_assumes_coal_power_oil_or_paper_cost(production):
     policies, files, _, _ = production
     for source, policy in policies.items():
@@ -263,6 +273,7 @@ def test_unknown_recipe_never_assumes_coal_power_oil_or_paper_cost(production):
         ).delta == pytest.approx(1.10)
 
 
+@pytest.mark.integration
 def test_electric_railway_does_not_pay_coal_recipe_cost(production):
     policies, files, _, _ = production
     policy = policies[RAIL]

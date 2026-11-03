@@ -37,6 +37,7 @@ def production():
 
 @pytest.mark.parametrize("route", [True, False, None])
 @pytest.mark.parametrize("overseas", [True, False, None])
+@pytest.mark.integration
 def test_known_route_and_capacity_do_not_invent_actual_region_opportunity(
     production, route, overseas
 ):
@@ -58,6 +59,30 @@ def test_known_route_and_capacity_do_not_invent_actual_region_opportunity(
     # capacity fact contains no target-region technology/law/adjacency proof.
     assert _render(after) == _render(before)
     assert not any(".".join(rule.field) == FIELD for rule in policy.rules)
+    assert FIELD not in decision_rules.evaluate(policy, values, is_ai=False)
+    assert FIELD not in decision_rules.evaluate(
+        policy, values, is_ai=True, enabled_domains=frozenset()
+    )
+
+
+@pytest.mark.parametrize("route", [True, False, None])
+@pytest.mark.parametrize("overseas", [True, False, None])
+def test_region_policy_has_no_route_only_grant_without_originals(route, overseas):
+    adapters = decision_adapters.load()
+    policy = programs.enable(dict(adapters.policies)[SOURCE], source=SOURCE)
+    values: dict[str, object] = {reader.key: None for reader in policy.readers}
+    values.update(
+        route_maritime=route,
+        coord_evidence_need_overseas=overseas,
+        coord_layer_expansion=True,
+        war=False,
+        default=False,
+        legitimacy=80,
+        insurrection=False,
+        radical_share=0,
+    )
+    assert not any(".".join(rule.field) == FIELD for rule in policy.rules)
+    assert FIELD not in decision_rules.evaluate(policy, values, is_ai=True)
     assert FIELD not in decision_rules.evaluate(policy, values, is_ai=False)
     assert FIELD not in decision_rules.evaluate(
         policy, values, is_ai=True, enabled_domains=frozenset()

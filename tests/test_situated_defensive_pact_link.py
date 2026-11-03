@@ -4,6 +4,7 @@ import hashlib
 from dataclasses import replace
 
 import pytest
+from _frozen_reader_words import frozen_reader_words
 
 from pdx import country_state, decision_adapters, decision_interfaces, decision_rules
 from pdx.situated import compiler, joint_chain_contract, pdx_eval
@@ -117,19 +118,13 @@ def generated():
     assert model.consumer_ir is not None
     compiled = compiler.compile_policy(policy, INFO, model)[0]
     native = compiler.BASELINE.read_text(encoding="utf-8")
-    adapters = decision_adapters.load()
-    inputs = decision_adapters.read_inputs(adapters)
     text = decision_rules.patch(
         native,
         compiled,
         baseline=native,
         # The three LJ10 readers are proven by the pinned research manifest;
         # adapters intentionally do not own this local evidence source.
-        reader_words=(
-            frozenset(decision_adapters.reader_evidence(inputs))
-            | frozenset(token.value for token in decision_rules.tokenize(native))
-            | decision_interfaces.proven_reader_words()
-        ),
+        reader_words=frozen_reader_words(native),
         country_policy=country_state.load(),
         consumer_ir=model.consumer_ir,
         consumer_source=INFO,

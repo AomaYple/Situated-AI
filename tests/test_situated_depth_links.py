@@ -278,6 +278,7 @@ def test_candidate_selection_never_changes_real_chain_inputs(policies: Any, chai
     )
 
 
+@pytest.mark.integration
 def test_lj03_academia_completion_is_a_parameterized_reader_and_native_qualification(policies):
     reader = next(r for r in policies[GOV].readers if r.key == "state_owner_academia_completed")
     assert (reader.engine, reader.argument, reader.scope, reader.path, reader.kind) == (
@@ -483,6 +484,7 @@ def test_lj01_other_state_and_country_methods_never_repair_this_states_inputs(po
     ("bureaucracy", "expected"),
     [(-0.001, (1250, 9.8, 8)), (0, (1000, 10.8, 10)), (0.001, (1000, 10.8, 10))],
 )
+@pytest.mark.integration
 def test_lj04_signed_capacity_zero_is_distinct_from_unknown_and_deficit(
     policies, generated, bureaucracy, expected
 ):
@@ -505,6 +507,7 @@ def test_lj04_signed_capacity_zero_is_distinct_from_unknown_and_deficit(
         (float("inf"), 1.2),
     ],
 )
+@pytest.mark.integration
 def test_lj03_real_absorption_capacity_has_ratio_and_finite_boundaries(
     policies, generated, literacy, expected
 ):

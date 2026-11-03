@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 
 import pytest
+from _frozen_reader_words import frozen_reader_words
 from test_situated_joint_witnesses import _facts
 from test_situated_social_governance_joint import _overlay
 
-from pdx import country_state, decision_adapters, decision_interfaces, decision_rules
+from pdx import country_state, decision_adapters, decision_rules
 from pdx.situated import compiler, pdx_eval
 
 INFO = "mod/decisions/information.toml"
@@ -18,14 +20,26 @@ INFO = "mod/decisions/information.toml"
 def production():
     source = decision_rules.load()
     model = compiler.load_model()
-    policy, _ = compiler.compile_policy(source, INFO, model)
-    adapters = decision_adapters.load()
-    inputs = decision_adapters.read_inputs(adapters)
-    native = compiler.BASELINE.read_text(encoding="utf-8")
-    words = (
-        frozenset(decision_adapters.reader_evidence(inputs))
-        | decision_interfaces.proven_reader_words()
+    # This witness exercises these two consumers. The complete information
+    # policy is generated separately by the integration writer oracle.
+    rules = tuple(
+        rule
+        for rule in source.rules
+        if rule.field in {("revolution_aversion",), ("wanted_army_size",)}
     )
+    keys = frozenset(key for rule in rules for key in rule.input_keys())
+    selected = replace(
+        source,
+        rules=rules,
+        readers=tuple(reader for reader in source.readers if reader.key in keys),
+        enabled_domains=frozenset(rule.domain for rule in rules),
+        semantic_ir=(),
+        consumer_programs=(),
+    )
+    policy, _ = compiler.compile_policy(selected, INFO, model)
+    adapters = decision_adapters.load()
+    native = compiler.BASELINE.read_text(encoding="utf-8")
+    words = frozen_reader_words(native)
     generated = decision_rules.patch(
         native,
         policy,

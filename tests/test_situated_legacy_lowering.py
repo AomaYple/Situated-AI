@@ -1,7 +1,7 @@
 from dataclasses import replace
 
 import pytest
-from _situated_sources import production_sources
+from _situated_sources import production_policy_sources
 
 from pdx import decision_adapters, decision_rules
 from pdx.situated import compiler, ir, pdx_eval
@@ -84,8 +84,8 @@ def test_all_bindings_lower_from_complete_ir():
             count += 1
         assert decision_rules.evaluate(compiled, {}, is_ai=False) == {}
         assert decision_rules.evaluate(compiled, {}, is_ai=True) == {}
-    assert count == len(production_sources().rules)
-    assert identities == production_sources().rules
+    assert count == len(production_policy_sources().rules)
+    assert identities == production_policy_sources().rules
 
 
 def test_reference_action_selection_blocks_lower_candidate_when_higher_core_is_unknown():
@@ -122,7 +122,14 @@ def test_reference_action_exit_unknown_keeps_vanilla_boundary() -> None:
     assert known[field] == ("joint_fiscal_neutrality", 8.0)
     # The same local unknown must not erase a separately known wartime term.
     wartime = compiler.evaluate_actions(model, {**values, "war": True, "peace": False}, is_ai=True)
-    assert wartime[field] == ("joint_fiscal_neutrality", 5.0)
+    assert wartime[field] == ("joint_fiscal_neutrality", 6.0)
+    # The typed API can receive an unknown exit independently. Actual PDX reads
+    # in_default once, so known default activates fiscal 8 + war 6, clamped to 10.
+    actual = pdx_eval.select(
+        compiler.strategy_overlay(model)[field],
+        {"is_ai": True, "in_default": True, "is_at_war": True},
+    )
+    assert (actual.action_id, actual.delta) == ("joint_fiscal_neutrality", 10.0)
 
 
 @pytest.mark.parametrize(

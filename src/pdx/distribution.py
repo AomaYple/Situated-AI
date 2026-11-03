@@ -569,13 +569,16 @@ def package_inputs(
 ) -> tuple[decisions.Policy, decisions.Extensions, dict[str, str | bytes]]:
     """构建当前版本的生产文件；需要锁定原版，不静默回退冻结产物。"""
     policy, extensions = production_configuration()
-    engine_scope.verify_strategy_game(config.GAME)
-    decision_interfaces.verify_scripted_trigger_game(config.GAME)
-    engine_scope.verify_company_defaults_game(config.GAME)
-    company_sectors.verify_game(config.GAME)
-    equipment_opportunities.verify_game(config.GAME)
-    treaty_opportunities.verify_game(config.GAME)
-    mobilization_opportunities.verify_game(config.GAME)
+    try:
+        engine_scope.verify_strategy_game(config.GAME)
+        decision_interfaces.verify_scripted_trigger_game(config.GAME)
+        engine_scope.verify_company_defaults_game(config.GAME)
+        company_sectors.verify_game(config.GAME)
+        equipment_opportunities.verify_game(config.GAME)
+        treaty_opportunities.verify_game(config.GAME)
+        mobilization_opportunities.verify_game(config.GAME)
+    except FileNotFoundError as exc:
+        raise ValueError(f"缺少锁定游戏原件：{exc.filename}") from exc
     country_policy = country_state.load()
     country_state.validate(country_policy, config.GAME)
     if not country_policy.enabled:

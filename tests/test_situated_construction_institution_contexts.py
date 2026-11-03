@@ -8,8 +8,9 @@ import re
 from dataclasses import replace
 
 import pytest
+from _frozen_reader_words import frozen_reader_words
 
-from pdx import country_state, decision_adapters, decision_interfaces, decision_rules
+from pdx import country_state, decision_rules
 from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_text
 from pdx.situated import compiler, decision_ir, engine_scope, pdx_eval, vanilla_inventory
@@ -396,7 +397,6 @@ def numeric_production():
     model = compiler.load_model()
     compiled, _ = compiler.compile_policy(policy, "mod/decisions/information.toml", model)
     native = compiler.BASELINE.read_text(encoding="utf-8")
-    inputs = decision_adapters.read_inputs(decision_adapters.load())
     generated = decision_rules.patch(
         native,
         compiled,
@@ -404,8 +404,7 @@ def numeric_production():
         country_policy=country_state.load(),
         consumer_ir=model.consumer_ir,
         consumer_source="mod/decisions/information.toml",
-        reader_words=frozenset(decision_adapters.reader_evidence(inputs))
-        | decision_interfaces.proven_reader_words(),
+        reader_words=frozen_reader_words(native),
     )
     return source, compiled, native, generated
 

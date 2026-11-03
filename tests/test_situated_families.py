@@ -3,7 +3,7 @@
 from typing import Any, cast
 
 import pytest
-from _situated_sources import production_sources
+from _situated_sources import production_policy_sources
 
 from pdx import decision_adapters, decision_rules
 from pdx.situated.action_instances import (
@@ -134,10 +134,10 @@ def test_every_production_instance_has_a_family_and_scope() -> None:
     information = decision_rules.load()
     adapters = decision_adapters.load()
     instances = build(information, adapters)
-    assert len(instances) == len(production_sources().rules)
+    assert len(instances) == len(production_policy_sources().rules)
     assert {
         (item.source, item.rule_id, item.consumer_field) for item in instances
-    } == production_sources().rules
+    } == production_policy_sources().rules
     assert all(item.family_id in FAMILIES for item in instances)
     assert all(item.actor_scope and item.target_scope for item in instances)
     families = {item.family_id for item in instances}
@@ -161,8 +161,8 @@ def test_instance_witness_contract_is_complete_for_generated_rules() -> None:
     contract = witness_contract(
         instances, {name: text for name, text in generated.items() if name.endswith(".txt")}
     )
-    assert contract["count"] == len(production_sources().rules)
-    assert contract["witnessed_count"] == len(production_sources().rules)
+    assert contract["count"] == len(production_policy_sources().rules)
+    assert contract["witnessed_count"] == len(production_policy_sources().rules)
     assert contract["missing"] == []
 
 
@@ -182,7 +182,7 @@ def test_behavior_witness_contract_matches_each_generated_legacy_operation_and_v
     contract = behavior_witness_contract(
         instances, {name: text for name, text in generated.items() if name.endswith(".txt")}
     )
-    assert contract["count"] == len(production_sources().rules)
-    assert contract["expected"] == len(production_sources().rules)
+    assert contract["count"] == len(production_policy_sources().rules)
+    assert contract["expected"] == len(production_policy_sources().rules)
     assert contract["missing"] == []
     assert contract["mismatches"] == []
