@@ -6,15 +6,53 @@
     "S2",
     "S3",
     "S4",
-    "S5"
+    "S5",
+    "S6"
   ],
   "delivery": {
-    "status": "in_progress"
+    "checksum": {
+      "path": "research/situated/a2-evidence/raw/6d86c29c87b0e8ba4e413d4323c809e5858456f2eeed4a892fb8c7bc1e652e35/situated-ai-3.1.0.zip.sha256",
+      "sha256": "6d86c29c87b0e8ba4e413d4323c809e5858456f2eeed4a892fb8c7bc1e652e35"
+    },
+    "cleanup_result": {
+      "path": "research/situated/a2-evidence/derived/517f1ad4a8c85f920dc66901ddfd0077e84fb354c7364dc58f94fc6b6e6e6b2d.json.gz",
+      "sha256": "2caa115c7caee8903049bc72044fb809670dd858fff60e5905ef83c9ab489c5d"
+    },
+    "deployment": {
+      "launcher": {
+        "path": "C:\\Users\\28905\\Documents\\Paradox Interactive\\Victoria 3\\content_load.json",
+        "sha256": "e3355f9350370eafff05184da4d891614b3b89195ab08e4de597d49f742608fb"
+      },
+      "root": "C:\\Users\\28905\\Documents\\Paradox Interactive\\Victoria 3\\mod\\Situated AI"
+    },
+    "merge_commit": "189a60be4d5cb3fcf65600cabff2640c8c0139c0",
+    "publication_result": {
+      "path": "research/situated/a2-evidence/derived/e56c93cabdd3cb7f19cb82eb72c1ae411341488c635e6ebb4ba6a158094b9f23.json.gz",
+      "sha256": "f74983497876b62fac3e1bf537c968bf3946ecfb7bfa4b58252c6e3dcdf40f92"
+    },
+    "pull_request_url": "https://github.com/AomaYple/Situated-AI/pull/87",
+    "release_url": "https://github.com/AomaYple/Situated-AI/releases/tag/v3.1.0",
+    "rollback_instructions": {
+      "path": "research/situated/a2-evidence/raw/29cf54547a70cd810e9242532113c074af6d783636186dbbb57d651e44c50c07.md",
+      "sha256": "29cf54547a70cd810e9242532113c074af6d783636186dbbb57d651e44c50c07"
+    },
+    "status": "verified",
+    "tag": "v3.1.0",
+    "tag_commit": "189a60be4d5cb3fcf65600cabff2640c8c0139c0",
+    "workshop_copy": {
+      "path": "research/situated/a2-evidence/raw/7d37e0add5553f3e8880d9833c0c12cd20cfc1c6d70887814c649f42a24b0e7e.md",
+      "sha256": "7d37e0add5553f3e8880d9833c0c12cd20cfc1c6d70887814c649f42a24b0e7e"
+    },
+    "workshop_url": "https://steamcommunity.com/sharedfiles/filedetails/?id=3826910830",
+    "zip": {
+      "path": "research/situated/a2-evidence/raw/4e187e01b64ac7e2e2c54b1d9b937447d954635d4a0de699c1f61c2253dfdce1/situated-ai-3.1.0.zip",
+      "sha256": "4e187e01b64ac7e2e2c54b1d9b937447d954635d4a0de699c1f61c2253dfdce1"
+    }
   },
   "limits": [
     "static evidence does not sign game runtime behavior",
     "native preservation is separate from new functional implementation",
-    "S6 publication and deployment remain in progress"
+    "long-term balance and game performance remain user acceptance"
   ],
   "native_scope": {
     "assignments": [
@@ -110365,50 +110403,213 @@
       "directions": [
         "B8"
       ],
-      "evidence": [],
-      "evidence_ids": [],
+      "evidence": [
+        {
+          "artifacts": [
+            {
+              "path": "research/situated/a2-evidence/raw/4e187e01b64ac7e2e2c54b1d9b937447d954635d4a0de699c1f61c2253dfdce1/situated-ai-3.1.0.zip",
+              "sha256": "4e187e01b64ac7e2e2c54b1d9b937447d954635d4a0de699c1f61c2253dfdce1"
+            },
+            {
+              "path": "research/situated/a2-evidence/raw/6d86c29c87b0e8ba4e413d4323c809e5858456f2eeed4a892fb8c7bc1e652e35/situated-ai-3.1.0.zip.sha256",
+              "sha256": "6d86c29c87b0e8ba4e413d4323c809e5858456f2eeed4a892fb8c7bc1e652e35"
+            },
+            {
+              "path": "research/situated/a2-evidence/raw/29cf54547a70cd810e9242532113c074af6d783636186dbbb57d651e44c50c07.md",
+              "sha256": "29cf54547a70cd810e9242532113c074af6d783636186dbbb57d651e44c50c07"
+            },
+            {
+              "path": "research/situated/a2-evidence/derived/517f1ad4a8c85f920dc66901ddfd0077e84fb354c7364dc58f94fc6b6e6e6b2d.json.gz",
+              "sha256": "2caa115c7caee8903049bc72044fb809670dd858fff60e5905ef83c9ab489c5d"
+            },
+            {
+              "path": "research/situated/a2-evidence/derived/bac0f29f68530e8b05479e63611c1c6c8bc52c199b84684a1f6d8888b67ce8b0.json.gz",
+              "sha256": "b9662df5751392664c7fdafb524899e9142620200b58210a40e5e04d56679930"
+            }
+          ],
+          "direction": "B8",
+          "evidence_id": "a2.s6.deployment_rollback_cleanup",
+          "evidence_kind": "delivery",
+          "oracle": "independent",
+          "requirement_id": "deployment_rollback_cleanup",
+          "result": {
+            "path": "research/situated/a2-evidence/derived/b7f03ce2ed0247931e6854e7c4eb9e7418a7169b464a4674ea6c48bf2eceb676.json.gz",
+            "sha256": "2f0d7cb3469fa61a1fc8e0759e18ee4137efcb58501debefa44ad7a1fbfa4fc7"
+          },
+          "tests": [
+            {
+              "nodeid": "tests/test_architecture_engineering_evidence.py::test_s6_deployment_rollback_cleanup",
+              "sha256": "9b5f680b97322835abc56de53f5cebe79ee597b0bd0f1f049fa53c6a59f1c0ff"
+            }
+          ]
+        },
+        {
+          "artifacts": [
+            {
+              "path": "research/situated/a2-evidence/derived/e56c93cabdd3cb7f19cb82eb72c1ae411341488c635e6ebb4ba6a158094b9f23.json.gz",
+              "sha256": "f74983497876b62fac3e1bf537c968bf3946ecfb7bfa4b58252c6e3dcdf40f92"
+            },
+            {
+              "path": "research/situated/a2-evidence/raw/4e96449f77ef1921b3458d85ae0b7362efa668b2bb4755d54c74f8b5f0ffb719.json.gz",
+              "sha256": "64a822ce2c26f9dd0374b3a08f27171a4d609ae34c1d9715c8b3f2da0013ef12"
+            },
+            {
+              "path": "research/situated/a2-evidence/raw/416b19dfda9c560490efee58d4fbb26f5c5c4ef3240b5f51d8424e2a01296b23.json.gz",
+              "sha256": "3968d3c67c3ddb969fad93bc48b83e7766d69718316db70e053ddef19aa76c6f"
+            },
+            {
+              "path": "research/situated/a2-evidence/derived/bac0f29f68530e8b05479e63611c1c6c8bc52c199b84684a1f6d8888b67ce8b0.json.gz",
+              "sha256": "b9662df5751392664c7fdafb524899e9142620200b58210a40e5e04d56679930"
+            }
+          ],
+          "direction": "B8",
+          "evidence_id": "a2.s6.merged_ci",
+          "evidence_kind": "delivery",
+          "oracle": "independent",
+          "requirement_id": "merged_ci",
+          "result": {
+            "path": "research/situated/a2-evidence/derived/8d05d30975b7b8b59d238351e2971896c807184a134caafa2e1fa44217f64ad5.json.gz",
+            "sha256": "87f58d76a3b8cdfec6a6e8976dd120d5bcafedba25517221f7bd8393da368a24"
+          },
+          "tests": [
+            {
+              "nodeid": "tests/test_architecture_engineering_evidence.py::test_s6_merged_ci",
+              "sha256": "9b5f680b97322835abc56de53f5cebe79ee597b0bd0f1f049fa53c6a59f1c0ff"
+            }
+          ]
+        },
+        {
+          "artifacts": [
+            {
+              "path": "research/situated/a2-evidence/derived/e56c93cabdd3cb7f19cb82eb72c1ae411341488c635e6ebb4ba6a158094b9f23.json.gz",
+              "sha256": "f74983497876b62fac3e1bf537c968bf3946ecfb7bfa4b58252c6e3dcdf40f92"
+            },
+            {
+              "path": "research/situated/a2-evidence/raw/4e187e01b64ac7e2e2c54b1d9b937447d954635d4a0de699c1f61c2253dfdce1/situated-ai-3.1.0.zip",
+              "sha256": "4e187e01b64ac7e2e2c54b1d9b937447d954635d4a0de699c1f61c2253dfdce1"
+            },
+            {
+              "path": "research/situated/a2-evidence/raw/6d86c29c87b0e8ba4e413d4323c809e5858456f2eeed4a892fb8c7bc1e652e35/situated-ai-3.1.0.zip.sha256",
+              "sha256": "6d86c29c87b0e8ba4e413d4323c809e5858456f2eeed4a892fb8c7bc1e652e35"
+            },
+            {
+              "path": "research/situated/a2-evidence/raw/39c554bbfbdc94fd8f443f94a5d42eb4fb5f624e2239620be5a1855e09acb57a.json.gz",
+              "sha256": "e6e50696186c5424ece0cdd4ad68dbd5a3b2d3c194f1db66aefb32aa842437bf"
+            },
+            {
+              "path": "research/situated/a2-evidence/raw/732caf5bbd9117329f6d3e8b7622fdab9b26348dadf1dfdf4570e4eb31eaf456.bin",
+              "sha256": "732caf5bbd9117329f6d3e8b7622fdab9b26348dadf1dfdf4570e4eb31eaf456"
+            },
+            {
+              "path": "research/situated/a2-evidence/derived/bac0f29f68530e8b05479e63611c1c6c8bc52c199b84684a1f6d8888b67ce8b0.json.gz",
+              "sha256": "b9662df5751392664c7fdafb524899e9142620200b58210a40e5e04d56679930"
+            }
+          ],
+          "direction": "B8",
+          "evidence_id": "a2.s6.tag_release_zip_sha",
+          "evidence_kind": "delivery",
+          "oracle": "independent",
+          "requirement_id": "tag_release_zip_sha",
+          "result": {
+            "path": "research/situated/a2-evidence/derived/6fb07386be22511f76a829205c9397d63d22828921c01eb5a6b899662cf03159.json.gz",
+            "sha256": "756ed1a0df62a81491cc0525f123e11472bfed7a80ad47ec4714c3027b9bca41"
+          },
+          "tests": [
+            {
+              "nodeid": "tests/test_architecture_engineering_evidence.py::test_s6_tag_release_zip_sha",
+              "sha256": "9b5f680b97322835abc56de53f5cebe79ee597b0bd0f1f049fa53c6a59f1c0ff"
+            }
+          ]
+        },
+        {
+          "artifacts": [
+            {
+              "path": "research/situated/a2-evidence/derived/e56c93cabdd3cb7f19cb82eb72c1ae411341488c635e6ebb4ba6a158094b9f23.json.gz",
+              "sha256": "f74983497876b62fac3e1bf537c968bf3946ecfb7bfa4b58252c6e3dcdf40f92"
+            },
+            {
+              "path": "research/situated/a2-evidence/raw/7d37e0add5553f3e8880d9833c0c12cd20cfc1c6d70887814c649f42a24b0e7e.md",
+              "sha256": "7d37e0add5553f3e8880d9833c0c12cd20cfc1c6d70887814c649f42a24b0e7e"
+            },
+            {
+              "path": "research/situated/a2-evidence/derived/bac0f29f68530e8b05479e63611c1c6c8bc52c199b84684a1f6d8888b67ce8b0.json.gz",
+              "sha256": "b9662df5751392664c7fdafb524899e9142620200b58210a40e5e04d56679930"
+            }
+          ],
+          "direction": "B8",
+          "evidence_id": "a2.s6.workshop_copy",
+          "evidence_kind": "delivery",
+          "oracle": "independent",
+          "requirement_id": "workshop_copy",
+          "result": {
+            "path": "research/situated/a2-evidence/derived/e0d49a1476342405f50b7989890716f14358349d33eb4232bc4840f92bcd1b2d.json.gz",
+            "sha256": "c8298259ae35bea99c95a9d4b4ae3d45ec8c695b75fc275160ce8dfdaa5d58a1"
+          },
+          "tests": [
+            {
+              "nodeid": "tests/test_architecture_engineering_evidence.py::test_s6_workshop_copy",
+              "sha256": "9b5f680b97322835abc56de53f5cebe79ee597b0bd0f1f049fa53c6a59f1c0ff"
+            }
+          ]
+        }
+      ],
+      "evidence_ids": [
+        "a2.s6.deployment_rollback_cleanup",
+        "a2.s6.merged_ci",
+        "a2.s6.tag_release_zip_sha",
+        "a2.s6.workshop_copy"
+      ],
       "failures": [],
       "input_hashes": {
         "docs/design/架构主计划.md": "1a2af323513c09e1f7ce211090e5840a0b4a6481cfe08bc15d0662a9aa6bba6e",
         "docs/design/架构子计划.md": "64e5b9f0cbfb9dc4eb1735ace69ecd6bf9f86167378b701a59e7419fa093e627",
         "pyproject.toml": "fe51c7822c26fb04893d75b00d385fe8a640b954c3d6aeffbebc8cf0c867b9ba",
-        "requirements.lock": "780e6c39c85ccbb55cf8f76799e1652844aeab54f35d3bfb6e16b82df548128a"
+        "requirements.lock": "780e6c39c85ccbb55cf8f76799e1652844aeab54f35d3bfb6e16b82df548128a",
+        "research/situated/a2-evidence/derived/6fb07386be22511f76a829205c9397d63d22828921c01eb5a6b899662cf03159.json.gz": "756ed1a0df62a81491cc0525f123e11472bfed7a80ad47ec4714c3027b9bca41",
+        "research/situated/a2-evidence/derived/8d05d30975b7b8b59d238351e2971896c807184a134caafa2e1fa44217f64ad5.json.gz": "87f58d76a3b8cdfec6a6e8976dd120d5bcafedba25517221f7bd8393da368a24",
+        "research/situated/a2-evidence/derived/b7f03ce2ed0247931e6854e7c4eb9e7418a7169b464a4674ea6c48bf2eceb676.json.gz": "2f0d7cb3469fa61a1fc8e0759e18ee4137efcb58501debefa44ad7a1fbfa4fc7",
+        "research/situated/a2-evidence/derived/e0d49a1476342405f50b7989890716f14358349d33eb4232bc4840f92bcd1b2d.json.gz": "c8298259ae35bea99c95a9d4b4ae3d45ec8c695b75fc275160ce8dfdaa5d58a1"
       },
       "output_paths": [
-        "research/situated/a2-evidence/raw/535d596035204c8537566116a424202094405a9bc681f9102205ce2459dfce24.json.gz"
+        "research/situated/a2-evidence/derived/6fb07386be22511f76a829205c9397d63d22828921c01eb5a6b899662cf03159.json.gz",
+        "research/situated/a2-evidence/derived/8d05d30975b7b8b59d238351e2971896c807184a134caafa2e1fa44217f64ad5.json.gz",
+        "research/situated/a2-evidence/derived/b7f03ce2ed0247931e6854e7c4eb9e7418a7169b464a4674ea6c48bf2eceb676.json.gz",
+        "research/situated/a2-evidence/derived/e0d49a1476342405f50b7989890716f14358349d33eb4232bc4840f92bcd1b2d.json.gz"
       ],
-      "pending": [
-        "missing_actual_evidence:merged_ci",
-        "missing_actual_evidence:tag_release_zip_sha",
-        "missing_actual_evidence:workshop_copy",
-        "missing_actual_evidence:deployment_rollback_cleanup",
-        "external_delivery_not_performed"
-      ],
+      "pending": [],
       "requirements": [
         {
-          "evidence_ids": [],
+          "evidence_ids": [
+            "a2.s6.merged_ci"
+          ],
           "requirement_id": "merged_ci",
-          "status": "in_progress"
+          "status": "verified"
         },
         {
-          "evidence_ids": [],
+          "evidence_ids": [
+            "a2.s6.tag_release_zip_sha"
+          ],
           "requirement_id": "tag_release_zip_sha",
-          "status": "in_progress"
+          "status": "verified"
         },
         {
-          "evidence_ids": [],
+          "evidence_ids": [
+            "a2.s6.workshop_copy"
+          ],
           "requirement_id": "workshop_copy",
-          "status": "in_progress"
+          "status": "verified"
         },
         {
-          "evidence_ids": [],
+          "evidence_ids": [
+            "a2.s6.deployment_rollback_cleanup"
+          ],
           "requirement_id": "deployment_rollback_cleanup",
-          "status": "in_progress"
+          "status": "verified"
         }
       ],
       "scope_hash": "8890cbc8adb4de3d2320264c109303adbb3344cfb5e0060f84d556283f62c066",
       "stage_id": "S6",
-      "status": "in_progress",
+      "status": "verified",
       "unclassified": []
     }
   ],

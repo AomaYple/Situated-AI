@@ -26,6 +26,8 @@
 *.prof binary
 *.pyisession binary
 research/situated/a2-evidence/raw/*.bin binary
+# Steam 原始页面按抓取字节存证，不参与文本换行或空白规范化。
+research/situated/a2-evidence/raw/*.html binary
 research/situated/a2-evidence/**/*.gz binary
 research/situated/a2-evidence/**/*.zip binary
 research/situated/a2-evidence/**/*.whl binary
