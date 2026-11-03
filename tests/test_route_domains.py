@@ -1,256 +1,159 @@
+"""Retired national routes become observed, independent consumer-local causes."""
+
 from __future__ import annotations
 
-from dataclasses import replace
+import re
 
 import pytest
-from test_country_state import Script, facts
+from test_situated_joint_witnesses import _facts
+from test_situated_social_governance_joint import _overlay
 
-from pdx import (
-    config,
-    country_state,
-    decision_adapters,
-    decision_intents,
-    decision_interfaces,
-    decision_rules,
-)
+from pdx import country_state, decision_adapters, decision_interfaces, decision_rules
+from pdx.situated import compiler, pdx_eval
 
-ROUTES = ("fiscal_recovery", "stability", "defense", "industry", "education", "maritime")
+INFO = "mod/decisions/information.toml"
 
 
 @pytest.fixture(scope="module")
-def adapter_set():
-    return decision_adapters.load(strategy=decision_intents.load())
-
-
-def _route_rows(adapter_set):
-    rows = []
-    for source, policy in adapter_set.policies:
-        for rule in policy.rules:
-            if rule.id.startswith("coordinated_route_"):
-                route = next(route for route in ROUTES if f"coordinated_route_{route}_" in rule.id)
-                rows.append((route, source, policy, rule))
-    return rows
-
-
-def _satisfying(rule):
-    values = {}
-    for condition in rule.conditions:
-        assert not isinstance(condition.value, decision_rules.FactReference)
-        value = condition.value
-        if condition.op == ">":
-            value += 1
-        elif condition.op == "<":
-            value -= 1
-        values[condition.fact] = value
-    return values
-
-
-def test_all_routes_have_real_consumer_fields_and_root_scope(adapter_set):
-    rows = _route_rows(adapter_set)
-    assert {route for route, *_ in rows} == set(ROUTES)
-    assert len(rows) >= 12
-    for _route, source, policy, rule in rows:
-        assert policy.actor_path == ()
-        assert rule.field
-        assert rule.field[0] == "ai_strategy_default" or source.startswith(
-            "common/technology/technologies/"
-        )
-        consumer = decision_interfaces.consumer(rule.field, policy.actor_path)
-        assert consumer["eligibility_costs_and_execution"] == "retained_vanilla"
-
-
-@pytest.mark.skipif(not config.GAME.is_dir(), reason="游戏目录不可用")
-def test_route_readers_are_owned_and_compiled_to_active_guards(adapter_set):
-    expected = {f"sitai_route_{route}" for route in ROUTES}
-    used = set()
-    for _source, policy in adapter_set.policies:
-        for reader in policy.readers:
-            if reader.key.startswith("route_"):
-                used.add(reader.argument)
-                assert reader.engine == "has_variable"
-                assert reader.scope == "root"
-                assert reader.argument in expected
-    assert used == expected
-
-    country = country_state.load()
-    files, _metadata = decision_adapters.build(
-        adapter_set,
-        country_policy=country,
-        owned_variables=set(country_state.owned_variables(country)),
-        owned_triggers=set(country_state.owned_triggers(country)),
+def production():
+    source = decision_rules.load()
+    model = compiler.load_model()
+    policy, _ = compiler.compile_policy(source, INFO, model)
+    adapters = decision_adapters.load()
+    inputs = decision_adapters.read_inputs(adapters)
+    native = compiler.BASELINE.read_text(encoding="utf-8")
+    words = (
+        frozenset(decision_adapters.reader_evidence(inputs))
+        | decision_interfaces.proven_reader_words()
     )
-    for route in ROUTES:
-        token = f"sitai_route_{route}_active = yes"
-        assert any(token in text for text in files.values())
-
-
-@pytest.mark.parametrize("is_ai", [True, False])
-def test_route_rules_preserve_player_boundary_and_disabled_domains(adapter_set, is_ai):
-    for _route, _source, policy, rule in _route_rows(adapter_set):
-        isolated = replace(policy, rules=(rule,), enabled_domains=frozenset({rule.domain}))
-        values = _satisfying(rule)
-        expected = {".".join(rule.field): (rule.id, rule.value)} if is_ai else {}
-        assert decision_rules.evaluate(isolated, values, is_ai=is_ai) == expected
-        assert (
-            decision_rules.evaluate(isolated, values, is_ai=True, enabled_domains=frozenset()) == {}
-        )
-
-
-def test_route_unknown_and_false_inputs_fall_back_to_vanilla(adapter_set):
-    for _route, _source, policy, rule in _route_rows(adapter_set):
-        isolated = replace(policy, rules=(rule,), enabled_domains=frozenset({rule.domain}))
-        values = _satisfying(rule)
-        route_fact = next(
-            condition.fact for condition in rule.conditions if condition.fact.startswith("route_")
-        )
-        assert decision_rules.evaluate(isolated, {**values, route_fact: False}, is_ai=True) == {}
-        assert decision_rules.evaluate(isolated, {**values, route_fact: None}, is_ai=True) == {}
-
-
-def test_route_rules_use_first_match_without_accumulation(adapter_set):
-    for _route, _source, policy, rule in _route_rows(adapter_set):
-        isolated = replace(policy, rules=(rule,), enabled_domains=frozenset({rule.domain}))
-        lower = replace(rule, id=f"{rule.id}_lower", priority=rule.priority - 1)
-        arbitration = replace(isolated, rules=(lower, rule))
-        values = _satisfying(rule)
-        assert decision_rules.evaluate(arbitration, values, is_ai=True) == {
-            ".".join(rule.field): (rule.id, rule.value)
-        }
-
-
-def test_route_direction_is_bounded_and_cross_domain():
-    adapter_set = decision_adapters.load(strategy=decision_intents.load())
-    rows = _route_rows(adapter_set)
-    by_route = {route: [rule for _r, _s, _p, rule in rows if _r == route] for route in ROUTES}
-    assert any(rule.operation == "add" and rule.value < 0 for rule in by_route["fiscal_recovery"])
-    assert any(rule.operation == "multiply" and rule.value > 1 for rule in by_route["defense"])
-    assert any(rule.operation == "multiply" and rule.value > 1 for rule in by_route["education"])
-    assert any(rule.operation == "add" and rule.value > 0 for rule in by_route["maritime"])
-    assert len({rule.field for _route, _source, _policy, rule in rows}) >= 9
-
-
-def _consumer_values(policy, country_values, script):
-    """Complete, healthy consumer inputs; actor aliases use the same country facts."""
-    values = {}
-    for reader in policy.readers:
-        if reader.key.startswith("route_"):
-            route = reader.key.removeprefix("route_")
-            values[reader.key] = script.trigger(
-                script.triggers[f"sitai_route_{route}_active"], country_values
-            )
-        elif reader.scope == "root" and reader.key in country_values:
-            values[reader.key] = country_values[reader.key]
-        elif reader.kind == "boolean":
-            values[reader.key] = False
-        else:
-            values[reader.key] = max(reader.minimum or 0, min(reader.maximum or 100, 1))
-    values.update(
-        {
-            k: v
-            for k, v in {
-                "bankruptcy_horizon": 100,
-                "national_gdp": 10000000,
-                "candidate_gdp": 1000000,
-                "own_army": 100,
-                "own_navy": country_values["navy"],
-                "target_army": 10,
-                "target_navy": 1,
-                "target_relations": 0,
-                "current_infamy": 0,
-                "radical_share": 0.1,
-                "prospective_subject_population": 100000,
-                "prospective_overlord_population": 3000000,
-            }.items()
-            if k in values
-        }
+    generated = decision_rules.patch(
+        native,
+        policy,
+        baseline=native,
+        reader_words=words,
+        country_policy=country_state.load(),
+        consumer_ir=model.consumer_ir,
+        consumer_source=INFO,
     )
-    return values
+    return source, policy, generated, adapters, model
 
 
-@pytest.mark.parametrize(
-    ("route", "overrides"),
-    [
-        ("defense", {"war": True}),
-        ("fiscal_recovery", {"debt_ratio": 0.65}),
-        ("stability", {"insurrection": True}),
-        ("industry", {}),
-        ("education", {"literacy": 0.3}),
-        ("maritime", {"industrial_route": False, "expansion_route": True}),
-    ],
-)
-def test_generated_country_state_reaches_complete_production_rules(adapter_set, route, overrides):
-    country = country_state.load()
-    inputs = facts(**overrides)
-    script = Script(country)
-    assert script.update(inputs, 0) == route
-    assert country_state.advance(country, inputs, None, day=0).route == route
-    policies = [("information", decision_rules.load()), *adapter_set.policies]
-    expected: set[str] = set()
-    matched: set[str] = set()
-    for source, policy in policies:
-        candidates = [
-            rule
-            for rule in policy.rules
-            if rule.id.startswith(
-                f"coordinated_route_{route}_" if source != "information" else f"route_{route}_"
-            )
-        ]
-        if not candidates:
-            continue
-        values = _consumer_values(policy, inputs, script)
-        result = decision_rules.evaluate(policy, values, is_ai=True)
-        for rule in candidates:
-            expected.add(rule.id)
-            if result.get(".".join(rule.field)) == (rule.id, rule.value):
-                matched.add(rule.id)
-    assert expected
-    assert expected == matched, expected - matched
-
-
-@pytest.mark.parametrize(
-    "overrides",
-    [
-        {"default": True},
-        {"net_surplus": -1},
-        {"net_surplus": 0},
-        {"net_surplus": None},
-        {"bureaucracy": -1},
-        {"bureaucracy": 0},
-        {"bureaucracy": None},
-    ],
-)
-def test_emergency_defense_keeps_survival_but_does_not_fund_new_capacity(adapter_set, overrides):
-    country = country_state.load()
-    inputs = facts(war=True, **overrides)
-    script = Script(country)
-    assert script.update(inputs, 0) == "defense"
-    assert country_state.advance(country, inputs, None, day=0).route == "defense"
-    rejected = {
-        "route_defense_army_capacity",
-        "coordinated_route_defense_supply_ships",
-        "coordinated_route_defense_ship_construction",
+def _values(changes):
+    values = {
+        "war": False,
+        "default": False,
+        "loans": False,
+        "debt_ratio": 0.3,
+        "net_surplus": 1,
+        "bureaucracy": 1,
+        "legitimacy": 60,
+        "insurrection": False,
+        "income": 100,
+        "defensive_pact_articles": 0,
+        "native_army_capacity": 100,
+        "native_marine_capacity": 20,
     }
-    matched: set[str] = set()
-    for _source, policy in [("information", decision_rules.load()), *adapter_set.policies]:
-        values = _consumer_values(policy, inputs, script)
-        matched.update(
-            row[0] for row in decision_rules.evaluate(policy, values, is_ai=True).values()
-        )
-    assert not matched & rejected
-    assert "coordinated_route_defense_colonial_commitment" in matched
+    values.update(changes)
+    country = country_state.load()
+    coordination = country_state.derive(
+        country, {k: v for k, v in values.items() if k in country.readers}
+    )["coordination"]
+    values.update({"coord_" + key: value for key, value in coordination.items()})
+    return values
 
 
 @pytest.mark.parametrize(
-    ("navy", "income", "expected"),
-    [(24, 2000, None), (25, 2000, "maritime"), (30, 0, None), (30, None, None)],
+    ("field", "changes", "expected"),
+    [
+        ("revolution_aversion", {}, 1),
+        ("revolution_aversion", {"insurrection": True}, 1.2),
+        ("revolution_aversion", {"legitimacy": 24.999}, 1.2),
+        ("revolution_aversion", {"legitimacy": 25}, 1),
+        ("revolution_aversion", {"legitimacy": 30}, 1),
+        ("revolution_aversion", {"legitimacy": 20, "insurrection": True}, 1.2),
+        ("revolution_aversion", {"war": True, "legitimacy": 20, "insurrection": True}, 1.2),
+        (
+            "revolution_aversion",
+            {"war": True, "legitimacy": 20, "insurrection": True, "default": True},
+            1.25,
+        ),
+        ("revolution_aversion", {"legitimacy": None, "insurrection": True}, 1.2),
+        ("revolution_aversion", {"legitimacy": 20, "insurrection": None}, 1.2),
+        ("revolution_aversion", {"legitimacy": None, "insurrection": None}, 1),
+        ("wanted_army_size", {"war": True}, 1.2),
+        ("wanted_army_size", {"war": True, "bureaucracy": None}, 1.12),
+        ("wanted_army_size", {"war": True, "net_surplus": None}, 1.11),
+        (
+            "wanted_army_size",
+            {"war": True, "net_surplus": None, "bureaucracy": None, "default": None},
+            1.08,
+        ),
+        ("wanted_army_size", {"war": True, "default": True, "bureaucracy": None}, 0.93),
+        ("wanted_army_size", {"war": False, "net_surplus": -1, "defensive_pact_articles": 1}, 0.95),
+        ("wanted_army_size", {"war": True, "net_surplus": -1, "defensive_pact_articles": 1}, 1.11),
+        ("wanted_army_size", {"war": None, "net_surplus": -1, "defensive_pact_articles": 1}, 1),
+    ],
 )
-def test_maritime_requires_proven_projection_and_income(navy, income, expected):
-    country = country_state.load()
-    inputs = facts(industrial_route=False, expansion_route=True, navy=navy, income=income)
-    script = Script(country)
-    assert script.update(inputs, 0) == expected
-    assert country_state.advance(country, inputs, None, day=0).route == expected
-    if expected:
-        weaker = {**inputs, "navy": 24}
-        assert not script.trigger(script.triggers["sitai_route_maritime_active"], weaker)
-        assert country_state.advance(country, weaker, None, day=30).route is None
+def test_local_crisis_war_and_pact_match_hand_values_and_actual_pdx(
+    production, field, changes, expected
+):
+    _source, policy, generated, _adapters, _model = production
+    values = _values(changes)
+    result = decision_rules.evaluate(policy, values, is_ai=True).get(field)
+    assert (1 if result is None else result[1]) == pytest.approx(expected)
+    observed = pdx_eval.select(_overlay(generated, field), _facts(policy, values))
+    assert (1 if observed.operation is None else observed.delta) == pytest.approx(expected)
+
+
+def test_resolved_production_has_no_retired_routes_but_retains_actual_strategy_observations(
+    production,
+):
+    source, _policy, generated, adapters, model = production
+    policies = [source, *(policy for _path, policy in adapters.policies)]
+    for policy in policies:
+        assert not any(
+            reader.engine == "has_variable" and (reader.argument or "").startswith("sitai_route_")
+            for reader in policy.readers
+        )
+        assert not any(
+            rule.id.startswith(("route_", "coordinated_route_")) for rule in policy.rules
+        )
+    assert not any(fact.trigger.startswith("has_variable = sitai_route_") for fact in model.facts)
+    assert "sitai_route_" not in generated
+    assert (
+        next(reader for reader in source.readers if reader.key == "industrial_route").argument
+        == "ai_strategy_industrial_expansion"
+    )
+    assert {rule.id for rule in source.rules if rule.field == ("revolution_aversion",)} == {
+        "political_default_risk",
+        "political_insurrection_aversion",
+        "political_legitimacy_crisis_aversion",
+        "coordinated_layered_information_revolution_recovery",
+    }
+
+
+def test_war_and_domestic_crisis_both_apply_in_one_observation(production):
+    _source, policy, generated, _adapters, _model = production
+    values = _values({"war": True, "insurrection": True})
+    result = decision_rules.evaluate(policy, values, is_ai=True)
+    assert result["wanted_army_size"][1] == pytest.approx(1.2)
+    assert result["revolution_aversion"][1] == pytest.approx(1.2)
+    for field in ("wanted_army_size", "revolution_aversion"):
+        assert pdx_eval.select(
+            _overlay(generated, field), _facts(policy, values)
+        ).delta == pytest.approx(1.2)
+
+
+def test_same_cause_crisis_tiers_do_not_stack_and_player_unknown_remain_native(production):
+    _source, policy, generated, _adapters, _model = production
+    values = _values({"default": True, "insurrection": True, "legitimacy": 20, "war": True})
+    assert decision_rules.evaluate(policy, values, is_ai=True)["revolution_aversion"][
+        1
+    ] == pytest.approx(1.25)
+    assert decision_rules.evaluate(policy, values, is_ai=False) == {}
+    assert decision_rules.evaluate(policy, values, is_ai=True, enabled_domains=frozenset()) == {}
+    for field in ("wanted_army_size", "revolution_aversion"):
+        overlay = _overlay(generated, field)
+        assert pdx_eval.select(overlay, {}).operation is None
+        assert pdx_eval.select(overlay, _facts(policy, values, is_ai=False)).operation is None
+    assert not re.search(r"set_variable|remove_variable", generated)

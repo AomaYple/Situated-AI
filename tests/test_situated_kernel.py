@@ -5,13 +5,11 @@ import re
 from dataclasses import replace
 
 import pytest
-from _situated_sources import production_sources
 
 from pdx import country_state, decision_adapters, decision_intents, decision_rules, decisions
 from pdx.model import Block
 from pdx.parser import parse_text
 from pdx.situated import relations
-from pdx.situated.arbitration import Candidate, choose
 from pdx.situated.audit import report as audit_report
 from pdx.situated.commitment import marginal_cost, overcommitted
 from pdx.situated.compiler import (
@@ -95,7 +93,8 @@ def test_互补关系是软增量而不是全满足硬门槛():
     # World facts annotate each signed contribution. Neither opportunity
     # copies the other action's full qualification or uses peace as a gate.
     assert "literacy_rate >= 0.5" in economy
-    assert "bureaucracy > 0" in economy
+    assert "has_institution = institution_schools" in economy
+    assert "has_law_or_variant = law_type:law_public_schools" in economy
     assert "is_at_war = no" not in economy
     assert "value = -0.1" in economy
     assert "value = 0.15" in economy
@@ -107,8 +106,17 @@ def test_关系条件支持真假未知三值传播():
         for item in load_model().relations
         if item.source == "industrial_foundation" and item.target == "education_and_research"
     )
-    assert _relation_conditions(relation, {"literacy_ready": True}) is True
-    assert _relation_conditions(relation, {"literacy_ready": False}) is False
+    assert _relation_conditions(relation, dict.fromkeys(relation.condition_facts, True)) is True
+    assert (
+        _relation_conditions(
+            relation,
+            {
+                **dict.fromkeys(relation.condition_facts[:-1], True),
+                relation.condition_facts[-1]: False,
+            },
+        )
+        is False
+    )
     assert _relation_conditions(relation, {}) is None
 
 
@@ -139,44 +147,6 @@ def test_未知或非布尔阻断条件不能被当成安全状态(unknown):
     assert _action_conditions(action, values) is False
 
 
-def test_政治成本进入实际候选强度():
-    with_cost = choose(
-        (Candidate("with", capability_gain=1, feasibility=1, political_cost=1),), max_delta=5
-    )
-    without_cost = choose((Candidate("without", capability_gain=1, feasibility=1),), max_delta=5)
-    assert with_cost.delta < without_cost.delta
-
-
-def test_仲裁按固定排序限幅并保留证据():
-    result = choose(
-        (
-            Candidate("slow", capability_gain=2, feasibility=10),
-            Candidate("crisis", crisis_protection=9, capability_gain=1),
-        ),
-        max_delta=5,
-    )
-    assert result.action_id == "crisis"
-    assert result.delta == 5
-    assert "crisis_protection" in result.reason_codes
-
-
-def test_仲裁空候选回退原版():
-    result = choose((), max_delta=5)
-    assert result.action_id is None
-    assert result.delta == 0
-    assert result.fallback == "vanilla"
-
-
-def test_仲裁同分使用升序稳定行动ID且拒绝非有限输入():
-    result = choose(
-        (Candidate("zeta", capability_gain=1), Candidate("alpha", capability_gain=1)),
-        max_delta=5,
-    )
-    assert result.action_id == "alpha"
-    with pytest.raises(ValueError, match="非有限"):
-        choose((Candidate("bad", capability_gain=float("nan")),), max_delta=5)
-
-
 def test_关系对称配对且仅使能关系禁止有向环():
     model = load_model()
     relation = next(
@@ -184,7 +154,11 @@ def test_关系对称配对且仅使能关系禁止有向环():
         for item in model.relations
         if item.source == "industrial_foundation" and item.target == "education_and_research"
     )
-    assert relation.condition_facts == ("literacy_ready",)
+    assert relation.condition_facts == (
+        "current_public_schools",
+        "schools_present",
+        "literacy_ready",
+    )
     assert relation.unknown_policy == "vanilla"
     assert all(
         (item.target, item.source, item.kind)
@@ -202,20 +176,6 @@ def test_关系对称配对且仅使能关系禁止有向环():
         relations.validate(cyclic)
 
 
-def test_成本在非同分场景降低强度而不是只影响排序():
-    cheap = choose(
-        (Candidate("cheap", capability_gain=4, feasibility=8, commitment_cost=0),),
-        max_delta=20,
-    )
-    expensive = choose(
-        (Candidate("expensive", capability_gain=4, feasibility=8, commitment_cost=6),),
-        max_delta=20,
-    )
-    assert expensive.action_id == "expensive"
-    assert expensive.delta < cheap.delta
-    assert "commitment_cost" in expensive.reason_codes
-
-
 def test_生产元数据登记行动合同():
     payload = json.loads(
         decisions.build(extensions=decisions.load_extensions(profile="release"))[
@@ -228,9 +188,15 @@ def test_生产元数据登记行动合同():
     assert payload["source_fingerprint"]["situated_actions_source_sha256"]
     assert (
         payload["situated_actions"]["action_instances"]["count"]
-        == len(production_sources().rules) + contract["candidate_limit"]
+        == load_model().production_rule_count + contract["candidate_limit"]
     )
-    assert payload["situated_actions"]["ir"]["count"] == len(production_sources().rules)
+    assert payload["situated_actions"]["ir"]["count"] == len(
+        {
+            (item.source, item.rule_id, item.consumer_field)
+            for item in load_model().action_instances
+            if item.kind == "rule_action"
+        }
+    )
     ast = payload["situated_actions"]["ast_lowering_witness"]
     assert ast["mismatches"] == []
     assert ast["parsed_count"] == ast["witness_count"]
@@ -252,21 +218,31 @@ def test_覆盖报告只在逐实例生产见证齐全时完成():
 
 def test_统一编译器覆盖信息与适配器的全部生产消费者():
     model = load_model()
-    assert model.production_rule_count == len(production_sources().rules)
-    assert len(model.production_consumers) == len(production_sources().consumers)
+    policies = (
+        ("mod/decisions/information.toml", decision_rules.load()),
+        *decision_adapters.load().policies,
+    )
+    expected_rules = {
+        (source, rule.id, ".".join(rule.field))
+        for source, policy in policies
+        for rule in policy.rules
+    }
+    expected_consumers = {(source, field) for source, _rule, field in expected_rules}
+    assert model.production_rule_count == len(expected_rules)
+    assert len(model.production_consumers) == len(expected_consumers)
     assert {
         (item.source, ".".join(item.field)) for item in model.production_consumers
-    } == production_sources().consumers
+    } == expected_consumers
     assert {
         (item.source, item.rule_id, item.consumer_field)
         for item in model.action_instances
         if item.kind == "rule_action"
-    } == production_sources().rules
+    } == expected_rules
     source = decision_rules.load()
     compiled, report = compile_policy(source, config_model=model)
     assert len(compiled.rules) == len(source.rules)
-    assert report["production_rule_count"] == len(production_sources().rules)
-    assert report["production_consumer_count"] == len(production_sources().consumers)
+    assert report["production_rule_count"] == len(expected_rules)
+    assert report["production_consumer_count"] == len(expected_consumers)
     assert all(
         item["write_once"] and item["unknown_fallback"] == "vanilla" for item in report["fields"]
     )

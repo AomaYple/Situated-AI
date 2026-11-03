@@ -948,7 +948,7 @@ company_basic_oil = {
 				# company_sector_company_basic_oil_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_54620fe38acd5ff4_company_mandatory_input_negative
+			# GROUP program_54620fe38acd5ff4_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_basic_oil_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
@@ -1032,7 +1032,7 @@ company_basic_gold_mining = {
 				# company_sector_company_basic_gold_mining_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_834f5316a9e80047_company_mandatory_input_negative
+			# GROUP program_834f5316a9e80047_company_mandatory_input_tools_negative
 			add = { value = 0
 				# company_sector_company_basic_gold_mining_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
@@ -1124,7 +1124,7 @@ company_basic_metal_mining = {
 				# company_sector_company_basic_metal_mining_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_739de6d7f96ffef0_company_mandatory_input_negative
+			# GROUP program_739de6d7f96ffef0_company_mandatory_input_tools_negative
 			add = { value = 0
 				# company_sector_company_basic_metal_mining_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
@@ -1219,7 +1219,7 @@ company_basic_mineral_mining = {
 				# company_sector_company_basic_mineral_mining_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_1bac71b3ee997cfd_company_mandatory_input_negative
+			# GROUP program_1bac71b3ee997cfd_company_mandatory_input_tools_negative
 			add = { value = 0
 				# company_sector_company_basic_mineral_mining_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
@@ -1322,7 +1322,7 @@ company_basic_food = {
 				# company_sector_company_basic_food_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_c01037a837e57e3c_company_mandatory_input_negative
+			# GROUP program_c01037a837e57e3c_company_mandatory_input_grain_negative
 			add = { value = 0
 				# company_sector_company_basic_food_grain_input [market]; 主业某必选基础配方组所有方法共同需要grain；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:grain mg:grain = { market_goods_pricier > 0.25 } } } } add = -0.15 }
@@ -1418,7 +1418,7 @@ company_basic_paper = {
 				# company_sector_company_basic_paper_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_5d3afeb231c33776_company_mandatory_input_negative
+			# GROUP program_5d3afeb231c33776_company_mandatory_input_wood_negative
 			add = { value = 0
 				# company_sector_company_basic_paper_wood_input [market]; 主业某必选基础配方组所有方法共同需要wood；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_pricier > 0.25 } } } } add = -0.15 }
@@ -1522,12 +1522,15 @@ company_basic_home_goods = {
 				# company_sector_company_basic_home_goods_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_db0c881ca6f3395f_company_mandatory_input_negative
+			# GROUP program_db0c881ca6f3395f_company_mandatory_input_fabric_negative
+			add = { value = 0
+				# company_sector_company_basic_home_goods_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_db0c881ca6f3395f_company_mandatory_input_wood_negative
 			add = { value = 0
 				# company_sector_company_basic_home_goods_wood_input [market]; 主业某必选基础配方组所有方法共同需要wood；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:wood mg:wood = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_home_goods_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_db0c881ca6f3395f_company_output_demand_positive
 			add = { value = 0
@@ -1545,7 +1548,7 @@ company_basic_home_goods = {
 				# company_sector_company_basic_home_goods_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_basic_home_goods.ai_weight
@@ -1625,7 +1628,7 @@ company_basic_textiles = {
 				# company_sector_company_basic_textiles_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_411b989443faecb5_company_mandatory_input_negative
+			# GROUP program_411b989443faecb5_company_mandatory_input_fabric_negative
 			add = { value = 0
 				# company_sector_company_basic_textiles_fabric_input [market]; 主业某必选基础配方组所有方法共同需要fabric；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_pricier > 0.25 } } } } add = -0.15 }
@@ -1722,12 +1725,15 @@ company_basic_steel = {
 				# company_sector_company_basic_steel_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_6a42b188fb9dbb8b_company_mandatory_input_negative
+			# GROUP program_6a42b188fb9dbb8b_company_mandatory_input_coal_negative
+			add = { value = 0
+				# company_sector_company_basic_steel_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_6a42b188fb9dbb8b_company_mandatory_input_iron_negative
 			add = { value = 0
 				# company_sector_company_basic_steel_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_steel_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_6a42b188fb9dbb8b_company_output_demand_positive
 			add = { value = 0
@@ -1741,7 +1747,7 @@ company_basic_steel = {
 				# company_sector_company_basic_steel_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_basic_steel.ai_weight
@@ -2009,14 +2015,20 @@ company_basic_chemicals = {
 				# company_sector_company_basic_chemicals_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_a99a3311a20fe02c_company_mandatory_input_negative
+			# GROUP program_a99a3311a20fe02c_company_mandatory_input_fertilizer_negative
+			add = { value = 0
+				# company_sector_company_basic_chemicals_fertilizer_input [market]; 主业某必选基础配方组所有方法共同需要fertilizer；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_a99a3311a20fe02c_company_mandatory_input_iron_negative
+			add = { value = 0
+				# company_sector_company_basic_chemicals_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_a99a3311a20fe02c_company_mandatory_input_sulfur_negative
 			add = { value = 0
 				# company_sector_company_basic_chemicals_sulfur_input [market]; 主业某必选基础配方组所有方法共同需要sulfur；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_chemicals_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_chemicals_fertilizer_input [market]; 主业某必选基础配方组所有方法共同需要fertilizer；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_a99a3311a20fe02c_company_output_demand_positive
 			add = { value = 0
@@ -2034,7 +2046,7 @@ company_basic_chemicals = {
 				# company_sector_company_basic_chemicals_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_basic_chemicals.ai_weight
@@ -2110,16 +2122,25 @@ company_basic_motors = {
 				# company_sector_company_basic_motors_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_b296ea6374a62890_company_mandatory_input_negative
+			# GROUP program_b296ea6374a62890_company_mandatory_input_engines_negative
+			add = { value = 0
+				# company_sector_company_basic_motors_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_b296ea6374a62890_company_mandatory_input_oil_negative
+			add = { value = 0
+				# company_sector_company_basic_motors_oil_input [market]; 主业某必选基础配方组所有方法共同需要oil；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_b296ea6374a62890_company_mandatory_input_rubber_negative
+			add = { value = 0
+				# company_sector_company_basic_motors_rubber_input [market]; 主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:rubber mg:rubber = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_b296ea6374a62890_company_mandatory_input_steel_negative
 			add = { value = 0
 				# company_sector_company_basic_motors_steel_input [market]; 主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_motors_rubber_input [market]; 主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:rubber mg:rubber = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_motors_oil_input [market]; 主业某必选基础配方组所有方法共同需要oil；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_motors_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_b296ea6374a62890_company_output_demand_positive
 			add = { value = 0
@@ -2137,7 +2158,7 @@ company_basic_motors = {
 				# company_sector_company_basic_motors_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_basic_motors.ai_weight
@@ -2224,16 +2245,25 @@ company_basic_munitions = {
 				# company_sector_company_basic_munitions_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_235fc28e619093f7_company_mandatory_input_negative
+			# GROUP program_235fc28e619093f7_company_mandatory_input_explosives_negative
+			add = { value = 0
+				# company_sector_company_basic_munitions_explosives_input [market]; 主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:explosives mg:explosives = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_235fc28e619093f7_company_mandatory_input_fertilizer_negative
+			add = { value = 0
+				# company_sector_company_basic_munitions_fertilizer_input [market]; 主业某必选基础配方组所有方法共同需要fertilizer；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_235fc28e619093f7_company_mandatory_input_lead_negative
+			add = { value = 0
+				# company_sector_company_basic_munitions_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_235fc28e619093f7_company_mandatory_input_sulfur_negative
 			add = { value = 0
 				# company_sector_company_basic_munitions_sulfur_input [market]; 主业某必选基础配方组所有方法共同需要sulfur；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:sulfur mg:sulfur = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_munitions_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_munitions_fertilizer_input [market]; 主业某必选基础配方组所有方法共同需要fertilizer；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_munitions_explosives_input [market]; 主业某必选基础配方组所有方法共同需要explosives；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:explosives mg:explosives = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_235fc28e619093f7_company_output_demand_positive
 			add = { value = 0
@@ -2251,7 +2281,7 @@ company_basic_munitions = {
 				# company_sector_company_basic_munitions_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_basic_munitions.ai_weight
@@ -2318,16 +2348,25 @@ company_basic_electrics = {
 				# company_sector_company_basic_electrics_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_9db6c5d3b93e207f_company_mandatory_input_negative
+			# GROUP program_9db6c5d3b93e207f_company_mandatory_input_iron_negative
+			add = { value = 0
+				# company_sector_company_basic_electrics_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_9db6c5d3b93e207f_company_mandatory_input_lead_negative
+			add = { value = 0
+				# company_sector_company_basic_electrics_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_9db6c5d3b93e207f_company_mandatory_input_rubber_negative
+			add = { value = 0
+				# company_sector_company_basic_electrics_rubber_input [market]; 主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:rubber mg:rubber = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_9db6c5d3b93e207f_company_mandatory_input_tools_negative
 			add = { value = 0
 				# company_sector_company_basic_electrics_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_electrics_rubber_input [market]; 主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:rubber mg:rubber = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_electrics_lead_input [market]; 主业某必选基础配方组所有方法共同需要lead；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:lead mg:lead = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_basic_electrics_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_9db6c5d3b93e207f_company_output_demand_positive
 			add = { value = 0
@@ -2341,7 +2380,7 @@ company_basic_electrics = {
 				# company_sector_company_basic_electrics_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_basic_electrics.ai_weight
@@ -2429,7 +2468,7 @@ company_basic_weapons = {
 				# company_sector_company_basic_weapons_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_f6a1e5c72e347672_company_mandatory_input_negative
+			# GROUP program_f6a1e5c72e347672_company_mandatory_input_hardwood_negative
 			add = { value = 0
 				# company_sector_company_basic_weapons_hardwood_input [market]; 主业某必选基础配方组所有方法共同需要hardwood；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:hardwood mg:hardwood = { market_goods_pricier > 0.25 } } } } add = -0.15 }
@@ -2523,12 +2562,15 @@ company_construction_power_bloc = {
 				# company_sector_company_construction_power_bloc_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_4a51c3c74c88e93c_company_mandatory_input_negative
+			# GROUP program_4a51c3c74c88e93c_company_mandatory_input_coal_negative
+			add = { value = 0
+				# company_sector_company_construction_power_bloc_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_4a51c3c74c88e93c_company_mandatory_input_iron_negative
 			add = { value = 0
 				# company_sector_company_construction_power_bloc_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_construction_power_bloc_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_4a51c3c74c88e93c_company_output_demand_positive
 			add = { value = 0
@@ -2550,7 +2592,7 @@ company_construction_power_bloc = {
 				# company_sector_company_construction_power_bloc_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_construction_power_bloc.ai_weight

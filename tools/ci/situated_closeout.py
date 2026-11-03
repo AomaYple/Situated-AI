@@ -186,7 +186,9 @@ def plan_gate(root: Path = REPO) -> dict[str, Any]:
             "business_complete": False,
         }
     receipts = architecture_receipts.stage_report(root, inventory)
-    inventory_ready = not (inventory.unknown_scopes or inventory.parse_failures)
+    inventory_ready = not inventory.parse_failures and bool(
+        receipts.get("native_scope", {}).get("closed")
+    )
     scope_matches = all(
         row.get("scope_hash") == inventory.scope_hash for row in receipts["stages"].values()
     )

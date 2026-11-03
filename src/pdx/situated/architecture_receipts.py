@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import ast
+import gzip
 import hashlib
 import json
 import math
 import re
+import subprocess
 import zipfile
+import zlib
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path, PurePosixPath, PureWindowsPath
@@ -151,7 +154,14 @@ def _pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def _json(path: Path) -> dict[str, Any]:
-    value = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_pairs)
+    if path.name.endswith(".json.gz"):
+        try:
+            raw = gzip.decompress(path.read_bytes()).decode("utf-8")
+        except (OSError, EOFError, UnicodeError, zlib.error) as exc:
+            raise ValueError(f"invalid compressed JSON receipt: {path.name}") from exc
+    else:
+        raw = path.read_text(encoding="utf-8")
+    value = json.loads(raw, object_pairs_hook=_pairs)
     if not isinstance(value, dict):
         raise ValueError("JSON receipt must be an object")
     return value
@@ -217,6 +227,7 @@ def _open_issues(value: Any, path: str = "result") -> list[str]:
                 "parse_failures",
                 "unimplemented",
                 "failures",
+                "open_items",
             } and child not in ([], {}, 0):
                 issues.append(where)
             if key == "status" and child not in {
@@ -250,10 +261,24 @@ def _evidence(
             raise ValueError("direction outside fixed stage responsibilities")
         if row.get("oracle") != "independent":
             raise ValueError("independent expected-result source missing")
+        kind = _evidence_kind(stage, requirement)
+        if row.get("evidence_kind", kind) != kind:
+            raise ValueError("evidence kind does not match the strategic requirement")
+        artifact_fields = (
+            ("production", "generated", "consumers") if kind == "pdx" else ("artifacts",)
+        )
+        if kind != "pdx":
+            artifacts = row.get("artifacts")
+            if not isinstance(artifacts, list) or not artifacts:
+                raise ValueError("requirement-specific artifact identities missing")
+            for ref in artifacts:
+                _artifact(root, ref)
         for field, prefixes in (
             ("production", ("src/pdx/", "mod/decisions/", "tools/ci/")),
             ("generated", ("mod/",)),
         ):
+            if kind != "pdx":
+                continue
             refs = row.get(field)
             if not isinstance(refs, list) or not refs:
                 raise ValueError(f"{field} artifact identities missing")
@@ -263,16 +288,23 @@ def _evidence(
                     raise ValueError(f"{field} path outside declared role: {path}")
                 if field == "generated" and path.startswith("mod/decisions/"):
                     raise ValueError("source TOML is not a generated consumer")
-        consumers = row.get("consumers")
-        if not isinstance(consumers, list) or not consumers:
+        consumers = row.get("consumers") if kind == "pdx" else []
+        if not isinstance(consumers, list) or (kind == "pdx" and not consumers):
             raise ValueError("generated field/expression identities missing")
+        # One validation invocation sees one frozen byte identity per generated
+        # file. Reuse its parsed tree across physical fields, never across calls.
+        parsed_consumers = {}
         for consumer in consumers:
             if not isinstance(consumer, dict) or consumer.get("path") not in {
                 ref["path"] for ref in row["generated"]
             }:
                 raise ValueError("consumer is outside bound generated artifacts")
             source = consumer["path"]
-            parsed = parse_bytes(_path(root, source).read_bytes(), path=source)
+            if source not in parsed_consumers:
+                parsed_consumers[source] = parse_bytes(
+                    _path(root, source).read_bytes(), path=source
+                )
+            parsed = parsed_consumers[source]
             if parsed.errors:
                 raise ValueError("generated consumer source does not parse")
             node, state = _resolve(parsed.root, consumer["definition"], consumer["field"])
@@ -301,13 +333,18 @@ def _evidence(
             for key, value in expected.items()
         ):
             raise ValueError("result identity/source/scope/status mismatch")
-        if any(
-            result.get(field) != row[field] for field in ("production", "generated", "consumers")
-        ):
+        if any(result.get(field) != row[field] for field in artifact_fields):
             raise ValueError("result does not bind actual production/generated identities")
+        if result.get("evidence_kind", kind) != kind:
+            raise ValueError("result evidence kind mismatch")
+        if kind == "archive":
+            if result.get("archive_manifest") not in row["artifacts"]:
+                raise ValueError("archive manifest is outside bound artifacts")
+            _archive_identity(root, result["archive_manifest"])
         cases = result.get("cases")
         if not isinstance(cases, list) or not cases:
             raise ValueError("result contains no executed cases")
+        observed = "generated" if kind == "pdx" else "observed"
         if any(
             not isinstance(case, dict)
             or case.get("outcome") != "passed"
@@ -319,9 +356,9 @@ def _evidence(
         if any(
             not isinstance(case.get("input"), dict)
             or not case["input"]
-            or any(field not in case for field in ("expected", "reference", "generated"))
+            or any(field not in case for field in ("expected", "reference", observed))
             or digest(case["expected"]) != digest(case["reference"])
-            or digest(case["expected"]) != digest(case["generated"])
+            or digest(case["expected"]) != digest(case[observed])
             for case in cases
         ):
             raise ValueError(
@@ -332,13 +369,49 @@ def _evidence(
         case_ids = [case.get("case_id") for case in cases]
         if not _strings(case_ids, nonempty=True):
             raise ValueError("missing or duplicate case IDs")
-        if stage in FUNCTIONAL_STAGES and not {case.get("role") for case in cases} >= WITNESS_ROLES:
+        if kind == "pdx" and not {case.get("role") for case in cases} >= WITNESS_ROLES:
             raise ValueError("functional positive/cost/unknown/disable/player/tail roles missing")
-        if stage in FUNCTIONAL_STAGES and len({digest(case["expected"]) for case in cases}) < 2:
+        if kind == "pdx" and len({digest(case["expected"]) for case in cases}) < 2:
             raise ValueError("functional witness shows no actual output distinction")
+        if kind == "pdx":
+            identities = {
+                (consumer["path"], consumer["definition"], consumer["field"])
+                for consumer in consumers
+            }
+            by_consumer: dict[tuple[str, str, str], list[dict[str, Any]]] = {
+                identity: [] for identity in identities
+            }
+            for case in cases:
+                bound = case.get("consumers")
+                if (
+                    not isinstance(bound, list)
+                    or len(bound) != 1
+                    or not isinstance(bound[0], dict)
+                    or set(bound[0]) != {"path", "definition", "field"}
+                    or any(not isinstance(value, str) or not value for value in bound[0].values())
+                ):
+                    raise ValueError("each functional case must bind one exact consumer")
+                identity = (bound[0]["path"], bound[0]["definition"], bound[0]["field"])
+                if identity not in by_consumer:
+                    raise ValueError("case consumer outside bound generated identities")
+                by_consumer[identity].append(case)
+            for identity, witnesses in by_consumer.items():
+                if not {case.get("role") for case in witnesses} >= WITNESS_ROLES:
+                    raise ValueError(f"consumer functional roles missing: {identity}")
+                if len({digest(case["expected"]) for case in witnesses}) < 2:
+                    raise ValueError(f"consumer has no actual output distinction: {identity}")
         if result.get("open_items") != []:
             raise ValueError("result has unclosed functional items")
-        issues.extend(_open_issues(result))
+        # Business observations may contain unknown/disabled values. Execution
+        # metadata still has to close, independently of outcome="passed".
+        issues.extend(_open_issues({key: value for key, value in result.items() if key != "cases"}))
+        for index, case in enumerate(cases):
+            metadata = {
+                key: value
+                for key, value in case.items()
+                if key not in {"input", "expected", "reference", "generated", "observed"}
+            }
+            issues.extend(_open_issues(metadata, f"result.cases[{index}]"))
         if stage == "S5" and requirement == "full_regression_resources":
             full = _json(_artifact(root, result.get("full_acceptance")))
             if (
@@ -359,6 +432,69 @@ def _evidence(
     except (KeyError, OSError, UnicodeError, TypeError, ValueError, AttributeError) as exc:
         issues.append(f"evidence:{exc}")
     return issues
+
+
+def _evidence_kind(stage: str, requirement: str) -> str:
+    if stage in FUNCTIONAL_STAGES or (
+        stage == "S5" and requirement in {"whole_mod_functional_review", "native_integration"}
+    ):
+        return "pdx"
+    return {
+        ("S0", "archive_identity"): "archive",
+        ("S0", "independent_scope"): "scope",
+        ("S0", "known_failures_migration"): "migration",
+        ("S5", "full_regression_resources"): "regression",
+        ("S5", "quality_hygiene_package"): "engineering",
+    }.get((stage, requirement), "delivery")
+
+
+def _archive_bytes(root: Path, commit: str, name: str) -> bytes:
+    """Read the frozen Git object without changing the worktree or refs."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "show", f"{commit}:{name}"],
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ValueError("historical Git object read timed out") from exc
+    if result.returncode:
+        raise ValueError(f"historical Git object unavailable:{commit}:{name}")
+    return result.stdout
+
+
+def _archive_identity(root: Path, ref: Any) -> None:
+    if not isinstance(ref, dict) or ref.get("path") != "docs/design/archive/manifest.json":
+        raise ValueError("archive evidence must bind the authoritative archive manifest")
+    manifest = _json(_artifact(root, ref))
+    files = manifest.get("files")
+    if (
+        manifest.get("schema") != 1
+        or manifest.get("role") != "historical_reference_only"
+        or not isinstance(files, list)
+        or not files
+    ):
+        raise ValueError("archive manifest identity/files missing")
+    identities: set[tuple[str, str]] = set()
+    for item in files:
+        if not isinstance(item, dict):
+            raise ValueError("invalid archive identity")
+        name = _path(root, item.get("path")).relative_to(root).as_posix()
+        commit = item.get("commit")
+        if not isinstance(commit, str) or not re.fullmatch(r"[a-f0-9]{40}", commit):
+            raise ValueError("archive requires a frozen commit identity")
+        identity = commit, name
+        if identity in identities:
+            raise ValueError("duplicate archive identity")
+        identities.add(identity)
+        raw = _archive_bytes(root, commit, name)
+        if (
+            type(item.get("bytes")) is not int
+            or item["bytes"] != len(raw)
+            or item.get("sha256") != hashlib.sha256(raw).hexdigest()
+        ):
+            raise ValueError(f"historical archive bytes mismatch:{name}")
 
 
 def _full_acceptance(full: dict[str, Any]) -> None:
@@ -419,10 +555,79 @@ def _full_acceptance(full: dict[str, Any]) -> None:
         raise ValueError("full-run dual resource evidence is missing")
 
 
+def _fresh_native_report() -> dict[str, Any]:
+    """Reuse the independent production audit, including its complete byte manifest."""
+    from .audit import native_report  # noqa: PLC0415
+
+    return native_report()
+
+
+def _typed_native_report(
+    root: Path, data: Any, inventory: VanillaInventory | None, snapshot_hash: str
+) -> tuple[dict[str, Any], list[str]]:
+    """A stored report is evidence only while a fresh audit reproduces it exactly."""
+    try:
+        if not isinstance(data, dict) or inventory is None:
+            raise ValueError("fresh inventory/report reference unavailable")
+        report = _json(_artifact(root, data.get("typed_report")))
+        expected = {
+            "schema": 1,
+            "plan_version": PLAN_VERSION,
+            "evidence_category": "static_check",
+            "source_snapshot_sha256": snapshot_hash,
+        }
+        if any(
+            type(report.get(k)) is not type(v) or report.get(k) != v for k, v in expected.items()
+        ):
+            raise ValueError("typed report source/schema identity mismatch")
+        fresh = _fresh_native_report()
+        if fresh.get("source_snapshot_sha256") != snapshot_hash:
+            raise ValueError("fresh audit source snapshot mismatch")
+        payload = report.get("native_treatments")
+        if not isinstance(payload, dict) or digest(payload) != digest(
+            fresh.get("native_treatments")
+        ):
+            raise ValueError("typed report differs from fresh production/native audit")
+        expected = {
+            "baseline_id": inventory.baseline_id,
+            "scope_hash": inventory.scope_hash,
+            "denominator": inventory.discovered_count,
+            "source_hashes_verified": {
+                name: sha
+                for name, sha in inventory.source_hashes.items()
+                if not name.startswith("@")
+            },
+            "production_manifest_complete_asserted": True,
+        }
+        if any(
+            type(payload.get(k)) is not type(v) or payload.get(k) != v for k, v in expected.items()
+        ):
+            raise ValueError("typed report baseline/source/manifest identity mismatch")
+        manifest = payload.get("production_hashes")
+        if (
+            not isinstance(manifest, dict)
+            or not manifest
+            or any(
+                not isinstance(sha, str) or not _HASH.fullmatch(sha) for sha in manifest.values()
+            )
+        ):
+            raise ValueError("typed report complete production manifest missing")
+        for name in manifest:
+            _path(root, name)
+        return payload, []
+    except (KeyError, OSError, UnicodeError, TypeError, ValueError, AttributeError) as exc:
+        return {}, [f"native typed report:{exc}"]
+
+
 def _native_scope(
-    data: Any, inventory: VanillaInventory | None, known_evidence: set[str]
+    data: Any,
+    inventory: VanillaInventory | None,
+    known_evidence: set[str],
+    typed_report: dict[str, Any],
+    report_issues: list[str],
+    evidence_consumers: dict[str, set[tuple[str, str, str]]],
 ) -> dict[str, Any]:
-    issues: list[str] = []
+    issues = list(report_issues)
     remaining: list[str] = []
     if inventory is None:
         return {
@@ -453,6 +658,29 @@ def _native_scope(
         assignments = []
         issues.append("native assignments missing")
     surfaces = {surface.declaration_id: surface for surface in inventory.surfaces}
+    report_rows = typed_report.get("rows", [])
+    if not isinstance(report_rows, list):
+        report_rows = []
+    report_ids = [row.get("declaration_id") for row in report_rows if isinstance(row, dict)]
+    if (
+        len(report_ids) != len(report_rows)
+        or any(not isinstance(identity, str) for identity in report_ids)
+        or Counter(report_ids) != Counter(surface.declaration_id for surface in inventory.surfaces)
+    ):
+        issues.append("typed native denominator has missing/duplicate/extra declarations")
+    treatments = {
+        row["declaration_id"]: row
+        for row in report_rows
+        if isinstance(row, dict) and isinstance(row.get("declaration_id"), str)
+    }
+    for identity, surface in surfaces.items():
+        row = treatments.get(identity, {})
+        if (
+            type(row.get("declaration_occurrence")) is not int
+            or row.get("declaration_occurrence") != surface.declaration_occurrence
+            or row.get("context_sha256") != digest(asdict(surface))
+        ):
+            issues.append(f"typed native context/occurrence mismatch:{identity}")
     ids = [item.get("declaration_id") for item in assignments if isinstance(item, dict)]
     if (
         len(ids) != len(assignments)
@@ -463,32 +691,60 @@ def _native_scope(
         issues.append("native assignment denominator has missing/duplicate/extra declarations")
     missing = sorted(set(surfaces) - {item for item in ids if isinstance(item, str)})
     for item in assignments:
-        if not isinstance(item, dict) or item.get("declaration_id") not in surfaces:
+        if (
+            not isinstance(item, dict)
+            or not isinstance(item.get("declaration_id"), str)
+            or item["declaration_id"] not in surfaces
+        ):
             continue
         identity = item["declaration_id"]
         surface = surfaces[identity]
         context = json.loads(json.dumps(asdict(surface)))
-        if digest(item.get("context")) != digest(context):
+        if item.get("context_sha256", digest(item.get("context"))) != digest(context) or (
+            "context" in item and digest(item["context"]) != digest(context)
+        ):
             issues.append(f"native context mismatch:{identity}")
-        if item.get("stage") not in {"S1", "S2", "S3", "S4"}:
+        if item.get("stage") not in ("S1", "S2", "S3", "S4"):
             issues.append(f"native responsibility stage missing:{identity}")
         status = item.get("status")
         if status == "pending":
             remaining.append(identity)
             continue
-        permitted = (
-            (status in {"implemented", "retained_native"} and surface.legal)
-            or (status == "observation" and surface.capability == "observation")
-            or (status == "engine_unexposed" and surface.capability == "unexposed")
+        treatment = treatments.get(identity, {})
+        protection = treatment.get("source_protection", {})
+        protected = (
+            isinstance(protection, dict)
+            and protection.get("proven") is True
+            and protection.get("status") == "retained"
+            and protection.get("dependencies_closed") is True
+            and protection.get("context_closed") is True
+            and protection.get("issues") == []
         )
+        active_unknown = treatment.get("active_unknown_usage") is not False
         refs = item.get("evidence_ids")
+        implementation = (
+            surface.legal
+            and treatment.get("implemented_numeric") is True
+            and _strings(refs, nonempty=True)
+            and any(
+                (f"mod/{surface.source}", surface.definition, surface.field)
+                in evidence_consumers.get(ref, set())
+                for ref in refs
+            )
+        )
+        permitted = not active_unknown and (
+            (status == "implemented" and implementation)
+            or (status == "retained_native" and protected)
+            or (status == "observation" and surface.capability == "observation" and protected)
+            or (status == "engine_unexposed" and surface.capability == "unexposed" and protected)
+        )
         if not permitted or not _strings(refs, nonempty=True) or not set(refs) <= known_evidence:
             issues.append(
                 f"native disposition unproven (legal omissions cannot become unsupported):{identity}"
             )
     return {
         "ready": not issues,
-        "closed": not issues and not remaining and not inventory.unknown_scopes,
+        "closed": not issues and not remaining,
         "issues": issues,
         "remaining": sorted(set(remaining) | set(missing)),
         "missing_declarations": missing,
@@ -659,20 +915,49 @@ def stage_report(root: Path, inventory: VanillaInventory | None) -> dict[str, An
     if not _strings(declared_closed) or set(declared_closed) != set(actual_closed):
         plan_issues.append("closed_stages is not exactly the verified stage set")
     evidence_ids: list[Any] = []
-    for payload in payloads.values():
+    evidence_consumers: dict[str, set[tuple[str, str, str]]] = {}
+    for stage, payload in payloads.items():
         records = payload.get("evidence")
         if not isinstance(records, list):
             plan_issues.append("stage evidence must be a list")
             continue
         evidence_ids.extend(item.get("evidence_id") for item in records if isinstance(item, dict))
+        for item in records:
+            if not isinstance(item, dict) or not isinstance(item.get("evidence_id"), str):
+                continue
+            if (
+                item.get("requirement_id") not in STAGE_REQUIREMENTS[stage]
+                or _evidence_kind(stage, item["requirement_id"]) != "pdx"
+                or _evidence(
+                    root, stage, item, snapshot_hash, inventory.scope_hash if inventory else ""
+                )
+            ):
+                continue
+            consumers = item.get("consumers", [])
+            if not isinstance(consumers, list):
+                continue
+            evidence_consumers[item["evidence_id"]] = {
+                (consumer["path"], consumer["definition"], consumer["field"])
+                for consumer in consumers
+                if isinstance(consumer, dict)
+                and all(
+                    isinstance(consumer.get(key), str) for key in ("path", "definition", "field")
+                )
+            }
     if any(not isinstance(item, str) or not item for item in evidence_ids) or len(
         set(evidence_ids)
     ) != len(evidence_ids):
         plan_issues.append("evidence IDs must be globally unique")
+    typed_report, report_issues = _typed_native_report(
+        root, data.get("native_scope"), inventory, snapshot_hash
+    )
     native = _native_scope(
         data.get("native_scope"),
         inventory,
         {item for item in evidence_ids if isinstance(item, str)},
+        typed_report,
+        report_issues,
+        evidence_consumers,
     )
     stages: dict[str, Any] = {}
     valid_evidence: set[str] = set()
@@ -792,7 +1077,14 @@ def stage_report(root: Path, inventory: VanillaInventory | None) -> dict[str, An
             issues.extend(_delivery(root, data.get("delivery"), snapshot_hash))
         row["ready"] = not issues and not plan_issues
     # Dispositions must refer to valid evidence, not simply a declared ID.
-    native = _native_scope(data.get("native_scope"), inventory, valid_evidence)
+    native = _native_scope(
+        data.get("native_scope"),
+        inventory,
+        valid_evidence,
+        typed_report,
+        report_issues,
+        evidence_consumers,
+    )
     for stage, row in stages.items():
         if not native["ready"] or (stage in {"S4", "S5", "S6"} and not native["closed"]):
             row["ready"] = False

@@ -80,12 +80,13 @@ def test_current_mod_plan_and_quality_gate_are_explicit() -> None:
     assert "全仓库终审和计划闭环" in previous
     assert "标准交付、用户验收包、部署和回滚" in previous
     assert "唯一当前计划" in checklist
-    assert "处境行动决策内核实施计划" in checklist
+    assert "架构主计划 A2" in checklist
     assert "长期行为" in checklist
-    assert "1.5.0" in checklist
-    assert "situated-ai" in checklist
-    assert "标准包" in checklist
-    assert "日志、存档" in checklist
+    assert distribution.RELEASE_VERSION in checklist
+    assert "发布" in checklist
+    assert "部署" in checklist
+    assert "Release/ZIP/SHA" in checklist
+    assert "严格工程门" in checklist
     assert "11 种语言" in previous
 
 
@@ -133,9 +134,9 @@ def test_layered_design_tracks_production_contract_and_boundaries() -> None:
         assert label in design
     for domain in decision_report.DOMAINS:
         assert f"`{domain}`" in design or domain in design
-    policy = country_state.load()
-    assert f"TTL {policy.ttl_days} 日" in design
-    assert f"冷却 {policy.cooldown_days} 日" in design
+    contract = country_state.contract(country_state.load())
+    assert contract["persistent_variables"] == []
+    assert "stateless_consumer_observations" in design
     for boundary in (
         "不新增持久变量",
         "按需求值",

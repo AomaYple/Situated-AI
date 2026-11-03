@@ -75,13 +75,7 @@ def _rule_instance(
         evidence=facts,
         family_id=classify(domain=rule.domain, field=".".join(rule.field), source=source),
         actor_scope=actor_scope,
-        target_scope=(
-            "target_state"
-            if rule.field and rule.field[-1] == "state_value"
-            else "target_or_none"
-            if rule.field and rule.field[-1] == "colonial_interest_ratio"
-            else "none"
-        ),
+        target_scope=("target_state" if rule.field and rule.field[-1] == "state_value" else "none"),
     )
 
 

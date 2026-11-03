@@ -188,7 +188,7 @@ class _ParsedChain:
 @pytest.mark.parametrize(
     ("rule_id", "key", "alias"),
     [
-        ("ai_strategy_default_wanted_num_supply_ships", "navy", "own_navy"),
+        ("institution_supply_supply_need", "navy", "own_navy"),
         ("health_public_low_living_need", "average_sol", "sol"),
         ("lj07_grain_health_social_capacity", "average_sol", "sol"),
     ],
@@ -198,15 +198,21 @@ def test_real_alias_counterfactuals_retain_missing_and_threshold_observations(ru
     rule = next(item for item in policy.rules if item.id == rule_id)
     cases = list(_cases(policy, rule))
     missing = next(values for name, values, _ in cases if name == f"unknown:{key}")
-    assert missing[key] is missing[alias] is None
+    assert missing[key] is None
+    active_alias = alias in {reader.key for reader in policy.readers}
+    if active_alias:
+        assert missing[alias] is None
     assert _truth(rule, missing) is None
     for name, values, _ in cases:
         if name.startswith(f"negative:{key}"):
-            assert values[key] == values[alias]
+            if active_alias:
+                assert values[key] == values[alias]
             assert _truth(rule, values) is False
         if name.startswith(f"threshold:{key}:"):
             boundary = float(name.rsplit(":", 1)[1])
-            assert values[key] == values[alias] == boundary
+            assert values[key] == boundary
+            if active_alias:
+                assert values[alias] == boundary
 
 
 @pytest.mark.parametrize(
@@ -289,9 +295,9 @@ def test_independent_oracle_retains_reader_validity_and_known_false_dominance(wa
     policy = dict(decision_adapters.load().policies)[
         "common/technology/technologies/20_military.txt"
     ]
-    rule = next(item for item in policy.rules if item.id == "structural_naval_research")
+    rule = next(item for item in policy.rules if item.id == "technology_admiralty_navy_war")
     index = _ReaderIndex.build(policy)
-    values = {"war": war, "navy": navy}
+    values = {"war": war, "own_navy": navy}
     assert _truth(rule, values, index) is expected
 
 
@@ -422,12 +428,13 @@ def _truth(
 class _ObservedValues(dict[str, object]):
     """Scalar observations and query results derived from one owned world."""
 
-    def __init__(self, values, collections):
+    def __init__(self, values, collections, root_facts=None):
         super().__init__(values)
         self.collections = collections
+        self.root_facts = {} if root_facts is None else root_facts
 
 
-def _query_reference(reader, collections):
+def _query_reference(reader, collections, root_facts=None):
     """Handwritten member semantics; never use a renderer or PDX for expectations."""
 
     def conjunction(*values):
@@ -443,7 +450,8 @@ def _query_reference(reader, collections):
         return None if value is None or expected is None else op(value, expected)
 
     def identity(member, engine, argument):
-        return member[engine].get((("argument", argument),))
+        observed = member.get(engine)
+        return None if observed is None else observed.get((("argument", argument),))
 
     def capacity(member, building):
         return conjunction(
@@ -452,6 +460,10 @@ def _query_reference(reader, collections):
         )
 
     params = dict(reader.parameters)
+    if "technology_query" in params:
+        from technology_query_reference import evaluate
+
+        return evaluate(reader, collections, root_facts)
     query = params.get("company_query")
     if reader.engine == "any_scope_building":
 
@@ -477,6 +489,8 @@ def _query_reference(reader, collections):
     if reader.engine == "any_scope_state":
 
         def state(member):
+            if params.get("state_query") == "turmoil_above":
+                return compare(member.get("turmoil"), operator.gt, float(params["threshold"]))
             if "threshold" in params:
                 return compare(member.get("market_access"), operator.lt, float(params["threshold"]))
             if params == {"state_query": "tax_capacity_shortfall"}:
@@ -541,7 +555,15 @@ def _observed_values(index, requested):
         "any_political_movement": [],
         "any_interest_group": [],
     }
+    from technology_query_reference import (
+        BUILDING_IDENTITIES,
+        METHOD_IDENTITIES,
+        realize_query_world,
+    )
+
+    root_facts: dict[str, Any] = {}
     types = {
+        *BUILDING_IDENTITIES,
         "building_art_academy",
         "building_port",
         "building_railway",
@@ -549,7 +571,7 @@ def _observed_values(index, requested):
         "building_gold_mine",
         "building_trade_center",
     }
-    methods = {
+    methods = set(METHOD_IDENTITIES) | {
         dict(reader.parameters)["method"]
         for reader in query_readers
         if "method" in dict(reader.parameters)
@@ -571,6 +593,7 @@ def _observed_values(index, requested):
         return {
             "any_scope_building": [],
             "market_access": 1,
+            "turmoil": 0,
             "is_incorporated": False,
             "tax_capacity": 10,
             "tax_capacity_usage": 0,
@@ -597,6 +620,24 @@ def _observed_values(index, requested):
             continue
         params = dict(reader.parameters)
         query = params.get("company_query")
+        if "technology_query" in params:
+            world = realize_query_world(reader)
+            collections["any_scope_state"].extend(world.get("any_scope_state", []))
+            # All aggregate readers observe the same owned world; building
+            # membership is rebuilt from these states below.
+            for key, value in world.items():
+                if key in _COLLECTIONS:
+                    continue
+                if isinstance(value, dict):
+                    target = root_facts.setdefault(key, {})
+                    for identity, observed_value in value.items():
+                        if isinstance(observed_value, dict):
+                            target.setdefault(identity, {}).update(observed_value)
+                        else:
+                            target[identity] = observed_value
+                else:
+                    root_facts[key] = value
+            continue
         if reader.engine == "any_scope_building":
             member = building(
                 params.get("building", "building_port"),
@@ -609,7 +650,9 @@ def _observed_values(index, requested):
             collections["any_scope_state"].append(owned)
         elif reader.engine == "any_scope_state":
             owned = state()
-            if "threshold" in params:
+            if params.get("state_query") == "turmoil_above":
+                owned["turmoil"] = (float(params["threshold"]) + 1) / 2
+            elif "threshold" in params:
                 owned["market_access"] = float(params["threshold"]) / 2
             elif params == {"state_query": "tax_capacity_shortfall"}:
                 owned.update(is_incorporated=True, tax_capacity=0, tax_capacity_usage=1)
@@ -651,9 +694,30 @@ def _observed_values(index, requested):
         ]
     for engine in missing - {"any_scope_state", "any_scope_building"}:
         collections[engine] = None
-    result = _ObservedValues(requested, collections)
+    # Use exactly the physical scalar facts that _facts will present to PDX.
+    # Explicit requested observations override helper-world setup hints.
+    for key, value in requested.items():
+        reader = index.readers[key]
+        if reader.engine in _COLLECTIONS or reader.scope != "root":
+            continue
+        current = root_facts
+        for part in reader.path:
+            current = current.setdefault(part, {})
+        if reader.engine == "is_production_method_active":
+            params = dict(reader.parameters)
+            current.setdefault(reader.engine, {}).setdefault(params["building_type"], {})[
+                params["production_method"]
+            ] = value
+        elif reader.argument is not None or reader.parameters or reader.value_field:
+            params = dict(reader.parameters)
+            if reader.argument is not None:
+                params["argument"] = reader.argument
+            current.setdefault(reader.engine, {})[tuple(sorted(params.items()))] = value
+        else:
+            current[reader.engine] = value
+    result = _ObservedValues(requested, collections, root_facts)
     for reader in query_readers:
-        result[reader.key] = _query_reference(reader, collections)
+        result[reader.key] = _query_reference(reader, collections, root_facts)
     return result
 
 
@@ -812,7 +876,9 @@ def _facts(
     is_ai: bool,
     reader_index: _ReaderIndex | None = None,
 ) -> dict[str, object]:
-    root: dict[str, Any] = dict(values.collections) if isinstance(values, _ObservedValues) else {}
+    root: dict[str, Any] = (
+        {**values.root_facts, **values.collections} if isinstance(values, _ObservedValues) else {}
+    )
     contexts: dict[str, dict[str, Any]] = {}
     readers = (reader_index or _ReaderIndex.build(policy)).readers
     for key, value in values.items():
@@ -1050,9 +1116,10 @@ class _ParsedProgram:
             return pdx_eval.PdxDecision(None, None, 0.0, "vanilla")
         # Actual numeric AST interpreter; no source rule, grouping or production
         # reference selector participates in this evaluation.
-        return pdx_eval.PdxDecision(
-            self.identity, self.effect.key, pdx_eval._numeric_value(self.effect, facts), "selected"
-        )
+        value = pdx_eval._numeric_value(self.effect, facts)
+        if value is None:
+            return pdx_eval.PdxDecision(self.identity, None, 0.0, "unknown")
+        return pdx_eval.PdxDecision(self.identity, self.effect.key, value, "selected")
 
 
 def _independent_net(rules, values, reader_index, selected):

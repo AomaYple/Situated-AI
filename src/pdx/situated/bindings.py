@@ -41,11 +41,7 @@ def _binding_id(source: str, rule_id: str) -> str:
 
 
 def _target(field: tuple[str, ...]) -> str:
-    return (
-        "target_state"
-        if field and field[-1] in {"state_value", "colonial_interest_ratio"}
-        else "none"
-    )
+    return "target_state" if field and field[-1] == "state_value" else "none"
 
 
 def build() -> tuple[Binding, ...]:

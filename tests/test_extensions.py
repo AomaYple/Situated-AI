@@ -97,8 +97,10 @@ def test_关闭经济模块时改革输出不保留跨模块关系():
     }
     result = pdx_eval.select(reform, facts)
     enabled_result = pdx_eval.select(enabled_reform, facts)
-    assert (result.action_id, result.delta) == ("political_reform", 0.5)
-    assert (enabled_result.action_id, enabled_result.delta) == ("political_reform", 0.75)
+    # The physical consumer is the joint writer; the old card marker is an alias.
+    assert (result.action_id, result.delta) == ("joint_reform_chance", 0.5)
+    # actions.toml base 0.5 + relations.toml observed bureaucracy complement 0.1.
+    assert (enabled_result.action_id, enabled_result.delta) == ("joint_reform_chance", 0.6)
 
 
 @pytest.mark.parametrize("fiscal_enabled", [False, True])

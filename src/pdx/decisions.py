@@ -44,8 +44,10 @@ from .situated import action_instances as situated_action_instances
 from .situated import compiler as situated_compiler
 from .situated import lowering as situated_lowering
 from .situated import pdx_eval as situated_pdx_eval
+from .situated import support_program
 from .situated.compiler import load_model as load_situated_model
 from .situated.compiler import strategy_overlay as compile_situated_overlay
+from .situated.decision_ir import ContextBinding, EvaluationContext, WriterDecisionIR
 from .textio import normalized_text
 from .vanilla_index import (
     KEY_DIRS,
@@ -81,6 +83,58 @@ EXTENSION_PROFILE_MODULES = frozenset({"reform", "market", "security", "economy"
 LANGUAGES: dict[str, str] = {language.directory: language.header for language in DEFAULT_LANGUAGES}
 
 _DECISION_LOCALIZATION: dict[str, dict[str, str]] = {
+    "SITAI_RULE_REMAINING_EXTERNAL_STATE_DEFAULT_COST_REASON": {
+        "english": "Default and the financing burden of new territorial commitments",
+        "braz_por": "Inadimplência e custo de financiar novos compromissos territoriais",
+        "french": "Défaut de paiement et charge financière de nouveaux engagements territoriaux",
+        "german": "Zahlungsausfall und Finanzierung neuer territorialer Verpflichtungen",
+        "japanese": "債務不履行と新たな領土に伴う資金調達の負担",
+        "korean": "채무 불이행과 신규 영토에 대한 재정 부담",
+        "polish": "Niewypłacalność i obciążenie finansowe nowych zobowiązań terytorialnych",
+        "russian": "Дефолт и финансовое бремя новых территориальных обязательств",
+        "simp_chinese": "违约与新增领土承诺的融资负担",
+        "spanish": "Impago y carga financiera de nuevos compromisos territoriales",
+        "turkish": "Temerrüt ve yeni toprak taahhütlerinin finansman yükü",
+    },
+    "SITAI_RULE_REMAINING_EXTERNAL_STATE_RECONSTRUCTION_COST_REASON": {
+        "english": "Postwar recovery takes priority over new territorial commitments",
+        "braz_por": "A recuperação pós-guerra tem prioridade sobre novos compromissos territoriais",
+        "french": "La reconstruction après-guerre prime sur de nouveaux engagements territoriaux",
+        "german": "Wiederaufbau hat Vorrang vor neuen territorialen Verpflichtungen",
+        "japanese": "新たな領土への関与に先立つ戦後復興",
+        "korean": "신규 영토 확장보다 우선하는 전후 복구",
+        "polish": "Odbudowa powojenna ma pierwszeństwo przed nowymi zobowiązaniami terytorialnymi",
+        "russian": "Послевоенное восстановление важнее новых территориальных обязательств",
+        "simp_chinese": "战后重建优先于新增领土承诺",
+        "spanish": "La recuperación de posguerra tiene prioridad sobre nuevos compromisos territoriales",
+        "turkish": "Savaş sonrası toparlanma yeni toprak taahhütlerinden önce gelir",
+    },
+    "SITAI_RULE_REMAINING_HOMELAND_FERVOR_REASON": {
+        "english": "National fervor, homeland ties and a connected market",
+        "braz_por": "Fervor nacional, laços com a pátria e conexão com o mercado",
+        "french": "Ferveur nationale, liens avec la patrie et accès au marché",
+        "german": "Nationaler Eifer, Heimatbindungen und Marktanbindung",
+        "japanese": "国家的熱意、故郷との結び付き、市場接続",
+        "korean": "국가적 열의, 본토 유대와 시장 연결",
+        "polish": "Zapał narodowy, więzi z ojczyzną i połączenie z rynkiem",
+        "russian": "Национальный пыл, связи с родиной и доступ к рынку",
+        "simp_chinese": "民族热情、本土联系与市场连接",
+        "spanish": "Fervor nacional, vínculos con la patria y conexión con el mercado",
+        "turkish": "Ulusal coşku, anavatan bağları ve pazar bağlantısı",
+    },
+    "SITAI_SUPPORT_BALANCE_REASON": {
+        "english": "Economic exposure and defensive commitments",
+        "braz_por": "Exposição econômica e compromissos de defesa",
+        "french": "Exposition économique et engagements défensifs",
+        "german": "Wirtschaftliche Abhängigkeit und Verteidigungsverpflichtungen",
+        "japanese": "経済的な依存と防衛上の約束",
+        "korean": "경제적 노출과 방위 공약",
+        "polish": "Zależność gospodarcza i zobowiązania obronne",
+        "russian": "Экономическая зависимость и оборонные обязательства",
+        "simp_chinese": "经济依赖与防御承诺的综合权衡",
+        "spanish": "Exposición económica y compromisos defensivos",
+        "turkish": "Ekonomik maruziyet ve savunma taahhütleri",
+    },
     "SITAI_RULE_LJ14_CONNECTED_HOMELAND_FOUNDATION_REASON": {
         "english": "Homeland ties and market connection",
         "braz_por": "Laços com a pátria e conexão com o mercado",
@@ -280,14 +334,10 @@ _DECISION_LOCALIZATION: dict[str, dict[str, str]] = {
 
 
 def _localized_decision_text(key: str, language: Language) -> str:
-    """返回一个有明确英语回退的生产本地化值。
-
-    当前实验候选先保证本体的全部语言都有同一组键；正式发布前必须把
-    ``fallback_languages`` 中的英语回退替换为经过审校的译文。
-    """
+    """返回生产说明译文；缺键或缺语言显式失败，不以英语冒充完整支持。"""
 
     values = _DECISION_LOCALIZATION[key]
-    return values.get(language.directory, values["english"])
+    return values[language.directory]
 
 
 @dataclass(frozen=True, slots=True)
@@ -353,42 +403,11 @@ def merge_diplomatic_play_support(
     has_sides: bool = True,
     is_ai: bool = True,
 ) -> SupportArbitration:
-    """合并市场/安全对 ``diplomatic_play_support`` 的有限贡献。
-
-    玩家、缺少博弈双方或任何未知安全输入都返回零贡献；市场贡献可以为
-    负值，安全贡献只选一个最高的已知理由。该函数不创建资格、不代表参战。
-    """
-
-    if not is_ai or not has_sides:
+    """共享连续程序的兼容入口；未知辅助项局部退出，最终只限幅一次。"""
+    if is_ai is not True or has_sides is not True:
         return SupportArbitration(0.0, ())
-    value = 0.0
-    reasons: list[str] = []
-    if market is not None:
-        if isinstance(market, bool) or not isinstance(market, (int, float)):
-            raise ValueError("市场支持贡献必须是有限数值或未知")
-        if not math.isfinite(market):
-            raise ValueError("市场支持贡献必须是有限数值或未知")
-        value += float(market)
-        reasons.append("market")
-    if security:
-        candidates: list[tuple[float, str]] = []
-        for reason, amount in security.items():
-            if not isinstance(reason, str) or not reason.strip():
-                raise ValueError("安全理由必须是非空字符串")
-            if amount is None:
-                return SupportArbitration(0.0, ())
-            if isinstance(amount, bool) or not isinstance(amount, (int, float)):
-                raise TypeError("安全支持贡献必须是有限数值")
-            if not math.isfinite(amount):
-                raise ValueError("安全支持贡献必须是有限数值")
-            if amount:
-                candidates.append((float(amount), reason))
-        if candidates:
-            amount, reason = max(candidates, key=lambda item: (item[0], item[1]))
-            value += amount
-            if reason not in reasons:
-                reasons.append(reason)
-    return SupportArbitration(value, tuple(reasons))
+    result = support_program.combine(market, tuple((security or {}).items()))
+    return SupportArbitration(result.value, result.reasons)
 
 
 def player_boundary_issues(strategy: str) -> list[str]:
@@ -507,18 +526,17 @@ def information_contract() -> dict[str, object]:
 def module_lifecycle_contract(
     policy: Policy, _extensions: Extensions, country_policy: CountryPolicy | None = None
 ) -> dict[str, dict[str, object]]:
-    """返回各决策模块的状态、钩子、TTL、关闭清理和存档契约。"""
+    """返回各决策模块的状态、求值时机、关闭和存档契约。"""
 
     contract = deepcopy(MODULE_LIFECYCLE_CONTRACT)
     contract["fiscal"]["ttl_or_none"] = policy.ttl_days if policy.enabled else None
     if country_policy is not None and country_policy.enabled:
         contract["country_state"] = {
-            "stateful": True,
-            "direct_read": False,
-            "hooks": list(_country_state_module().HOOKS),
-            "ttl_or_none": country_policy.ttl_days,
-            "cooldown_days": country_policy.cooldown_days,
-            "clear_on_disable": "stop_refresh_and_expire_ttl",
+            "stateful": False,
+            "direct_read": True,
+            "hooks": [],
+            "ttl_or_none": None,
+            "clear_on_disable": "no_persistent_state",
         }
     for item in contract.values():
         item["save_compatibility"] = policy.package.save_compatibility
@@ -847,84 +865,8 @@ def fiscal_condition(weeks: int) -> str:
 
 
 def diplomatic_play_support_addition(extensions: Extensions) -> str:
-    """为共享的 ``diplomatic_play_support`` 字段生成唯一写入块。
-
-    市场差值与安全理由在同一 AI/双方上下文中评估；安全的承诺/威胁使用
-    ``else_if``，因此同一防御事实最多贡献一次，且按配置权重取最高理由。
-    """
-
-    if not (extensions.market_enabled or extensions.security_enabled):
-        return ""
-    amounts = (extensions.security_commitment_bonus, extensions.security_threat_bonus)
-    if any(
-        isinstance(value, bool)
-        or not isinstance(value, (int, float))
-        or not 0 <= value <= 50
-        or not math.isfinite(value)
-        for value in amounts
-    ):
-        raise ValueError("外部防御权重必须是 0 到 50 的有限数值")
-    lines = [
-        "\t\tif = {\n",
-        "\t\t\tlimit = { ROOT ?= { is_ai = yes } exists = scope:country exists = scope:enemy_country }\n",
-    ]
-    if extensions.market_enabled:
-        lines.extend(
-            [
-                "\t\t\tif = {\n",
-                "\t\t\t\tlimit = { ROOT ?= { exists = scope:country exists = scope:enemy_country } }\n",
-                "\t\t\t\tadd = {\n",
-                '\t\t\t\t\tvalue = "ROOT.economic_dependence(scope:country)"\n',
-                '\t\t\t\t\tsubtract = "ROOT.economic_dependence(scope:enemy_country)"\n',
-                f"\t\t\t\t\tmultiply = {extensions.market_multiplier:g}\n",
-                "\t\t\t\t\tdesc = SITAI_MARKET_DEPENDENCE_SUPPORT_REASON\n",
-                "\t\t\t\t}\n",
-                "\t\t\t}\n",
-            ]
-        )
-    if extensions.security_enabled:
-
-        def side(partner: str, opponent: str, sign: int) -> list[str]:
-            reasons = [
-                (
-                    amounts[0],
-                    f"sitai_defense_commitment = {{ PARTNER = {partner} }}",
-                    "COMMITMENT",
-                ),
-                (
-                    amounts[1],
-                    f"sitai_neighbor_defense = {{ PARTNER = {partner} OPPONENT = {opponent} }}",
-                    "NEIGHBOR",
-                ),
-            ]
-            result: list[str] = []
-            for amount, condition, reason in sorted(reasons, key=lambda row: -row[0]):
-                if amount == 0:
-                    continue
-                branch = "if" if not result else "else_if"
-                result.extend(
-                    [
-                        f"\t\t\t\t{branch} = {{\n",
-                        f"\t\t\t\t\tlimit = {{ ROOT ?= {{ {condition} }} }}\n",
-                        f"\t\t\t\t\tadd = {{ value = {sign * amount:g} desc = SITAI_SECURITY_{reason}_REASON }}\n",
-                        "\t\t\t\t}\n",
-                    ]
-                )
-            return result
-
-        lines.extend(
-            [
-                "\t\t\tif = {\n",
-                "\t\t\t\tlimit = { NOT = { exists = scope:is_initiator } }\n",
-                *side("scope:country", "scope:enemy_country", 1),
-                "\t\t\t}\n",
-                "\t\t\telse = {\n",
-                *side("scope:enemy_country", "scope:country", -1),
-                "\t\t\t}\n",
-            ]
-        )
-    lines.append("\t\t}\n")
-    return "".join(lines)
+    """兼容入口：由同一有类型连续程序生成物理消费者写入。"""
+    return support_program.SupportProgram.from_extensions(extensions).render()
 
 
 def triggers(policy: Policy) -> str:
@@ -1015,7 +957,7 @@ def patch_default(
         additions["change_law_chance"] = (
             "\t\tif = { limit = { ROOT ?= { is_ai = yes } } add = sitai_reform_default_delta }\n"
         )
-    if extensions:
+    if extensions and "diplomatic_play_support" not in suppress_fields:
         support = diplomatic_play_support_addition(extensions)
         if support:
             additions["diplomatic_play_support"] = support
@@ -1093,6 +1035,10 @@ def source_fingerprint(
     if extensions.security_enabled:
         result["security_generator_sha256"] = hashlib.sha256(
             Path(decision_security.__file__).read_bytes()
+        ).hexdigest()
+    if extensions.market_enabled or extensions.security_enabled:
+        result["support_program_generator_sha256"] = hashlib.sha256(
+            Path(support_program.__file__).read_bytes()
         ).hexdigest()
     if extensions.economy_enabled:
         result["economy_source_sha256"] = decision_economy.load().source_sha256
@@ -1225,13 +1171,15 @@ def metadata_payload(
 
 
 def attach_country_metadata(metadata: dict[str, object], country_policy: CountryPolicy) -> None:
-    """Attach the shared persistent state contract without relabeling stateless rules."""
+    """Attach observations evaluated on demand by each vanilla consumer."""
     country_state = _country_state_module()
 
     state_contract = country_state.contract(country_policy)
     metadata["country_state"] = state_contract
     metadata["country_coordination"] = {
-        "runtime_state": "bounded_persistent_routes" if country_policy.enabled else "disabled",
+        "runtime_state": "stateless_consumer_observations"
+        if country_policy.enabled
+        else "disabled",
         "state_contract": state_contract,
         "behavior_verified": False,
         "evidence": "static_check",
@@ -1313,6 +1261,38 @@ def build(
             ),
         )
     enabled_action_fields = {"diplomatic_play_neutrality"} if policy.enabled else set()
+    support = support_program.SupportProgram.from_extensions(extensions)
+    if support.enabled:
+        bundle = situated_model.consumer_ir
+        if bundle is None:
+            raise ValueError("支持程序缺少统一消费者IR")
+        source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
+        support_writer = WriterDecisionIR(
+            writer_id=support.writer_id,
+            kind="support_program",
+            source="mod/decisions/extensions.toml",
+            definition=support.writer_id,
+            consumer_id="diplomatic_play_support",
+            field="diplomatic_play_support",
+            actor="root",
+            target="target_country",
+            operation="add",
+            vanilla_tail="preserve",
+            owner="situated_kernel",
+            program=support,
+            evaluation_context=EvaluationContext(
+                actor_scope=ContextBinding("root", "country", "actor", source, 183),
+                targets=(
+                    ContextBinding("target_country", "country", "target", source, 184),
+                    ContextBinding("enemy_country", "country", "target", source, 185),
+                ),
+                evidence=tuple(f"{source}:{line}" for line in (183, 184, 185)),
+            ),
+        )
+        situated_model = replace(
+            situated_model,
+            consumer_ir=replace(bundle, writers=(*bundle.writers, support_writer)),
+        )
     if extensions.reform_enabled:
         enabled_action_fields.update(
             {"change_law_chance", "max_progressiveness", "max_regressiveness"}
@@ -1329,6 +1309,8 @@ def build(
         ).items()
         if field in enabled_action_fields
     }
+    if support.enabled:
+        action_overlay["diplomatic_play_support"] = support.render()
     # 每个输出只允许一个处境规则作者。旧模块不能在适配规则后继续叠加，
     # 否则同一财政/宗属事实可能被重复计分；历史变体保持原实现。
     field_owners: dict[tuple[str, ...], str] = {}
@@ -1395,11 +1377,6 @@ def build(
     country_state = _country_state_module()
 
     languages = normalize_languages(DEFAULT_LANGUAGES if languages is None else languages)
-    state_owned_variables = (
-        frozenset(country_state.owned_variables(country_policy))
-        if country_policy is not None
-        else None
-    )
     state_owned_triggers = (
         frozenset(country_state.owned_triggers(country_policy))
         if country_policy is not None
@@ -1428,7 +1405,6 @@ def build(
                 else None
             ),
             country_policy=country_policy,
-            owned_variables=state_owned_variables,
             owned_triggers=state_owned_triggers,
             consumer_ir=situated_model.consumer_ir,
             consumer_source="mod/decisions/information.toml",
@@ -1467,6 +1443,8 @@ def build(
         reason_keys: list[str] = []
         if extensions.market_enabled:
             reason_keys.append("SITAI_MARKET_DEPENDENCE_SUPPORT_REASON")
+        if support.enabled:
+            reason_keys.append("SITAI_SUPPORT_BALANCE_REASON")
         if extensions.security_enabled:
             reason_keys.extend(
                 ["SITAI_SECURITY_COMMITMENT_REASON", "SITAI_SECURITY_NEIGHBOR_REASON"]
@@ -1534,10 +1512,11 @@ def build(
         situated_metadata["compiled_sources"] = situated_compiled_contract
     if country_policy is not None:
         attach_country_metadata(metadata, country_policy)
-    if information_rules is not None or consumer_adapters is not None:
+    if information_rules is not None or consumer_adapters is not None or support.enabled:
         metadata["default_field_owners"] = {
             ".".join(field): owner for field, owner in sorted(field_owners.items())
         }
+    if information_rules is not None or consumer_adapters is not None:
         metadata["vanilla_field_coverage"] = decision_interfaces.coverage(baseline, field_owners)
     if information_rules is not None:
         rules_contract = decision_rules.contract(information_rules)
@@ -1567,7 +1546,6 @@ def build(
             overlays=files,
             texts=adapter_inputs,
             country_policy=country_policy,
-            owned_variables=state_owned_variables,
             owned_triggers=state_owned_triggers,
             consumer_ir=situated_model.consumer_ir,
         )

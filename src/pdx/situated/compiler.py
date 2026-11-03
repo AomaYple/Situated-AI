@@ -69,8 +69,6 @@ SUPPORTING_SOURCES = (
     "commitments.toml",
     "goals.toml",
     "relations.toml",
-    "arbitration.toml",
-    "temporal.toml",
     "consumers.toml",
     "localization.toml",
     "action_families.toml",
@@ -78,7 +76,6 @@ SUPPORTING_SOURCES = (
     "action_bindings.toml",
     "domain_actions.toml",
 )
-_RANK_ORDER = ("need_tier", "net_benefit", "stress", "opportunity", "goal_priority", "action_id")
 
 
 def evaluation_contexts(text: str) -> dict[str, decision_ir.EvaluationContext]:
@@ -722,7 +719,7 @@ def _frozen_treaty_contexts() -> dict[tuple[str, str], decision_ir.EvaluationCon
 
 
 def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.EvaluationContext]:
-    """Medical weights expose a formation ROOT and its country owner actor."""
+    """付费动员权重保留编队 ROOT 和实际所属国家；候选来自冻结原文。"""
     from .. import mobilization_opportunities  # noqa: PLC0415, TID252
 
     data = mobilization_opportunities.load_baseline()
@@ -740,7 +737,10 @@ def _frozen_mobilization_contexts() -> dict[tuple[str, str], decision_ir.Evaluat
             f"{source}:definition_only:mobilization_option",
         ),
     )
-    return {(row["source"], row["field"]): context for row in data["candidates"].values()}
+    return {
+        (row["source"], row["field"]): context
+        for row in mobilization_opportunities.candidate_catalog(data).values()
+    }
 
 
 def _mobilization_context_readers(
@@ -757,7 +757,7 @@ def _mobilization_context_readers(
     from .. import mobilization_opportunities  # noqa: PLC0415, TID252
 
     if source is None or context != _frozen_mobilization_contexts().get((source, field)):
-        raise ValueError("医疗动员上下文必须来自两项精确冻结候选")
+        raise ValueError("动员上下文必须来自已复核的精确冻结候选")
     if native_root != "military_formation" or actor_path != ("owner",):
         raise ValueError("医疗动员必须保持编队ROOT与所属国家AI所有者")
     allowed = mobilization_opportunities.reader_specs(field.removesuffix(".ai_weight"))
@@ -1489,6 +1489,8 @@ def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[s
 
 
 def _validate_supporting_sources(sources, consumers, relation_list) -> None:
+    if set(sources) != set(SUPPORTING_SOURCES):
+        raise ValueError("辅助合同来源必须完整且不能包含已退役或未知来源")
     raw_relations = sources["relations.toml"].get("relations", [])
     if not isinstance(raw_relations, list):
         raise ValueError("relations.toml 的 relations 必须是列表")
@@ -1531,16 +1533,6 @@ def _validate_supporting_sources(sources, consumers, relation_list) -> None:
     declared = sources["consumers.toml"].get("consumers", {})
     if declared and {item["field"] for item in declared.values()} != consumer_fields:
         raise ValueError("consumers.toml 与行动卡消费者字段不一致")
-    arbitration = sources["arbitration.toml"]
-    if (
-        arbitration.get("unknown_fallback") != "vanilla"
-        or arbitration.get("max_candidates", 0) > 32
-    ):
-        raise ValueError("仲裁合同必须有原版未知回退和 32 个候选上限")
-    _rank_order(arbitration)
-    temporal = sources["temporal.toml"]
-    if temporal.get("max_persistent_routes") != 1 or temporal.get("max_reason_codes", 0) > 8:
-        raise ValueError("时间合同必须限制持久路线和解释记录")
     localization = sources["localization.toml"]
     if localization.get("fallback") != "none" or len(localization.get("languages", [])) != 11:
         raise ValueError("本地化合同必须覆盖锁定本体的 11 种语言且不允许回退")
@@ -1938,16 +1930,6 @@ def _row_cost(
     return (row.commitment if active(row.commitment_when) else 0.0) + (
         row.political_cost if active(row.political_when) else 0.0
     )
-
-
-def _rank_order(arbitration):
-    raw = arbitration.get("rank", _RANK_ORDER)
-    if not isinstance(raw, (list, tuple)) or any(not isinstance(key, str) for key in raw):
-        raise ValueError("rank 必须是词典序维度列表")
-    order = tuple(raw)
-    if len(order) != len(_RANK_ORDER) or set(order) != set(_RANK_ORDER) or order[-1] != "action_id":
-        raise ValueError("rank 必须完整且唯一，稳定 action_id 必须最后比较")
-    return order
 
 
 def _row_delta(

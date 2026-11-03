@@ -382,18 +382,22 @@ ai_strategy_subject_strengthen_self = {
 		# ACTION program_b0ad0903270e2406 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_b0ad0903270e2406_positive
+			# GROUP program_b0ad0903270e2406_subject_self_administration_positive
 			add = { value = 0
-				# ai_strategy_subject_strengthen_self_weight [subjects]; 属国根据自治诉求与财政能力调整原版合法路线，保留宗主关系、实力与机会约束，不强制独立或服从
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = no taking_loans = no bureaucracy >= 0 } } add = 0.25 }
-				# coordinated_layered_subject_liberty [subjects]; 自治诉求与稳健能力共同提高宗属自强倾向
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 sitai_context_known_layer_stable = yes sitai_context_layer_stable = yes } } add = 0.2 }
-				# SITAI CHAIN LJ12/LJ12.self_strength_administrative_repair writer=rule_action_common_ai_strategies_02_subject_diplomatic_strategies_txt_lj12_self_strength_administrative_repair
-				# lj12_self_strength_administrative_repair [subjects]; 高自治诉求但行政缺口时仍保留较低档自强关注，区别于完整行政能力下的更强倾向，不把行政修复需求当成全面停摆
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 bureaucracy < 0 in_default = no is_at_war = no } } add = 0.05 }
+				# SITAI CHAIN LJ12/LJ12.self_strength_administrative_repair writer=rule_action_common_ai_strategies_02_subject_diplomatic_strategies_txt_target_strategy_subject_self_repair
+				# target_strategy_subject_self_repair [subjects]; 实际属国自身行政缺口形成修复治理能力的独立自强需求；财政未知不抹已证缺口，不等于已建成或已选择策略
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes bureaucracy < 0 } } add = 0.08 }
+			}
+			# GROUP program_b0ad0903270e2406_subject_self_autonomy_positive
+			add = { value = 0
+				# target_strategy_subject_self_strong [subjects]; 本国实际属国且自身高自主愿望形成自强方向；更高愿望同原因升档，不用非借贷或健康当欲求存在条件
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 75 } } add = 0.18 }
+				# SITAI CHAIN LJ12/LJ12.actual_subject_autonomy_need writer=rule_action_common_ai_strategies_02_subject_diplomatic_strategies_txt_target_strategy_subject_self_need
+				# target_strategy_subject_self_need [subjects]; 本国实际属国且自身高自主愿望形成自强方向；更高愿望同原因升档，不用非借贷或健康当欲求存在条件
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 } } add = 0.1 }
 			}
 			min = 1
-			max = 1.25
+			max = 1.26
 		} }
 		# SITAI END information:ai_strategy_subject_strengthen_self.weight
 	}
@@ -516,27 +520,13 @@ ai_strategy_subject_maintain_autonomy = {
 		# ACTION program_2ef88f55f6b9e299 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_2ef88f55f6b9e299_positive
+			# GROUP program_2ef88f55f6b9e299_subject_autonomy_status_quo_positive
 			add = { value = 0
-				# ai_strategy_subject_maintain_autonomy_weight [subjects]; 属国根据自治诉求与财政能力调整原版合法路线，保留宗主关系、实力与机会约束，不强制独立或服从
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 is_at_war = no } } add = 0.25 }
-				# coordinated_layered_subject_autonomy_stable [subjects]; 宗属自治倾向按宗主承受层级分层调整，不强制独立或改变宗属资格
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_stable = yes sitai_context_layer_stable = yes } } add = 0.18 }
-				# coordinated_layered_subject_autonomy_expansion [subjects]; 宗属自治倾向按宗主承受层级分层调整，不强制独立或改变宗属资格
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } add = 0.1 }
-				# coordinated_layered_subject_autonomy_foundation [subjects]; 宗属自治倾向按宗主承受层级分层调整，不强制独立或改变宗属资格
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_foundation = yes sitai_context_layer_foundation = yes } } add = 0.02 }
+				# target_strategy_subject_maintain_need [subjects]; 本国确为属国且自主愿望居中，形成维持现有自主安排的有限方向；高自由愿望不再伪作现状需求，原版100-liberty权重与possible完整保留
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 25 liberty_desire < 50 } } add = 0.1 }
 			}
-			# GROUP program_2ef88f55f6b9e299_negative
-			add = { value = 0
-				# coordinated_layered_subject_autonomy_recovery [subjects]; 宗属自治倾向按宗主承受层级分层调整，不强制独立或改变宗属资格
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes } } add = -0.1 }
-				# SITAI CHAIN LJ12/LJ12.autonomy_insolvency_cost writer=rule_action_common_ai_strategies_02_subject_diplomatic_strategies_txt_lj12_autonomy_insolvency_cost
-				# lj12_autonomy_insolvency_cost [subjects]; 高自治诉求与和平违约并存时，对自治路线计入小幅资源机会成本，而不是无条件沿用完整健康奖励
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire >= 50 in_default = yes is_at_war = no } } add = -0.05 }
-			}
-			min = 0.9
-			max = 1.25
+			min = 1
+			max = 1.1
 		} }
 		# SITAI END information:ai_strategy_subject_maintain_autonomy.weight
 	}
@@ -662,15 +652,15 @@ ai_strategy_subject_overlord_compliance = {
 		# ACTION program_b307327ddc11f2cc [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_b307327ddc11f2cc_positive
+			# GROUP program_b307327ddc11f2cc_subject_cooperation_need_positive
 			add = { value = 0
-				# ai_strategy_subject_overlord_compliance_weight [subjects]; 属国根据自治诉求与财政能力调整原版合法路线，保留宗主关系、实力与机会约束，不强制独立或服从
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 in_default = yes } } add = 0.2 }
-				# coordinated_layered_subject_cooperation_recovery [subjects]; 低自治冲突且处于和平恢复期时提高合作倾向；此策略消费者没有宗主具名作用域，关系资格继续由原版处理
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire < 50 is_at_war = no } } add = 0.12 }
+				# target_strategy_subject_cooperation_relation [subjects]; 同一低自主愿望上已观察本国与实际宗主友好关系加强合作档；未知关系保留基础方向而不猜援助
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 exists = overlord overlord = { relations:root >= -100 relations:root <= 100 relations:root >= 50 } } } add = 0.18 }
+				# target_strategy_subject_cooperation_need [subjects]; 本国实际属国且低自由愿望形成有限合作方向；违约不能证明宗主援助或合作收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes is_subject = yes liberty_desire >= 0 liberty_desire <= 100 liberty_desire <= 25 } } add = 0.1 }
 			}
 			min = 1
-			max = 1.2
+			max = 1.18
 		} }
 		# SITAI END information:ai_strategy_subject_overlord_compliance.weight
 	}

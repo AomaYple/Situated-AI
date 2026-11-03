@@ -1,4 +1,4 @@
-"""Two medical mobilization candidates with native formation ROOT and country owner.
+"""具体付费动员的材料权衡，保留编队 ROOT 与所属国家角色。
 
 Freeze complete original bytes and ASTs, derive ordinary joint-program inputs,
 and retain native utility multiplication, monetary costs, eligibility and effects.
@@ -38,6 +38,43 @@ _BASKETS = {
 _RECOVERY = {
     "mobilization_option_first_aid": "0.20",
     "mobilization_option_field_hospitals": "0.40",
+}
+# 只处理原版有已证非零效用且具有直接投入的可选项。未按编制缩放的
+# 武器加成取决于实际单位组成；没有组成观测时保留原版货币比较，不猜数量。
+_ADDITIONAL_BASKETS = {
+    "extra_supplies": {"groceries": "1.5"},
+    "luxurious_supplies": {"meat": "1.5", "wine": "1.5"},
+    "chocolate": {"sugar": "1"},
+    "tobacco": {"tobacco": "0.5"},
+    "liquor": {"liquor": "0.5"},
+    "opium": {"opium": "0.5"},
+    "truck_transport": {"automobiles": "0.5"},
+    "rail_transport": {"engines": "0.5"},
+    "machinegunners": {"small_arms": "1", "ammunition": "1"},
+    "chemical_weapons": {"fertilizer": "2"},
+    "flamethrowers": {"oil": "1"},
+    "motorized_recon": {"automobiles": "1", "oil": "0.5"},
+    "balloon_recon": {"fabric": "2", "oil": "0.5"},
+}
+_ALL_BASKETS = {
+    **_BASKETS,
+    **{f"mobilization_option_{name}": goods for name, goods in _ADDITIONAL_BASKETS.items()},
+}
+CANDIDATE_IDS = frozenset(_ALL_BASKETS)
+_UTILITY = {
+    "extra_supplies": ("unit_offense_mult", "0.1", "10000"),
+    "luxurious_supplies": ("unit_offense_mult", "0.1", "10000"),
+    "chocolate": ("unit_morale_recovery_mult", "0.1", "5000"),
+    "tobacco": ("unit_morale_recovery_mult", "0.1", "5000"),
+    "liquor": ("unit_morale_recovery_mult", "0.1", "5000"),
+    "opium": ("unit_morale_recovery_mult", "0.1", "5000"),
+    "truck_transport": ("military_formation_army_movement_speed_mult", "0.3", "10000"),
+    "rail_transport": ("military_formation_army_movement_speed_mult", "0.2", "10000"),
+    "machinegunners": ("unit_defense_add", "10", "100"),
+    "chemical_weapons": ("unit_offense_add", "20", "100"),
+    "flamethrowers": ("unit_offense_add", "15", "100"),
+    "motorized_recon": ("military_formation_army_movement_speed_mult", "0.3", "10000"),
+    "balloon_recon": ("military_formation_attrition_risk_mult", "-0.2", "-5000"),
 }
 _CONTRACT = {
     "native_root": "military_formation",
@@ -292,6 +329,50 @@ def verify_game(game: Path) -> dict[str, Any]:
     return frozen
 
 
+def candidate_catalog(baseline: Mapping[str, Any] | None = None) -> dict[str, dict[str, Any]]:
+    """从冻结的完整原文派生新候选，不重写原始医疗证据或扩大读取许可。"""
+    data = load_baseline() if baseline is None else _validate(dict(baseline))
+    native = parse_text(bytes.fromhex(data["originals"][SOURCE]["bytes"]).decode("utf-8-sig"))
+    modifiers = parse_text(bytes.fromhex(data["originals"][_MODIFIER]["bytes"]).decode("utf-8-sig"))
+    if native.errors or modifiers.errors:
+        raise ValueError("动员完整原文或效用原件解析失败")
+    result = {
+        identity: {**row, "utility_evidence": dict(data["utility_evidence"])}
+        for identity, row in data["candidates"].items()
+    }
+    for short, basket in _ADDITIONAL_BASKETS.items():
+        identity = f"mobilization_option_{short}"
+        definition = _node(native.root, identity)
+        upkeep = _node(native.root, identity, "upkeep_modifier")
+        expected = parse_text(
+            "x = { "
+            + " ".join(f"goods_input_{good}_add = {quantity}" for good, quantity in basket.items())
+            + " }"
+        ).root
+        if _ast(upkeep.value) != _ast(_one(expected, "x").value):
+            raise ValueError(f"动员直接材料合同漂移：{identity}")
+        modifier, amount, coefficient = _UTILITY[short]
+        effect = _node(native.root, identity, "unit_modifier", modifier)
+        utility = _node(modifiers.root, modifier, "game_data", "ai_value")
+        for node, text in ((effect, amount), (utility, coefficient)):
+            if not isinstance(node.value, Scalar) or node.value.quoted or node.value.text != text:
+                raise ValueError(f"动员候选非零原版效用证据漂移：{identity}")
+        if float(amount) * float(coefficient) <= 0:
+            raise ValueError("动员候选效用方向必须由原版系数证明")
+        assert isinstance(definition.value, Block)
+        result[identity] = {
+            "source": SOURCE,
+            "field": f"{identity}.ai_weight",
+            "definition": _record(definition),
+            "weight": _record(_node(native.root, identity, "ai_weight")),
+            "goods": dict(basket),
+            "goods_unit": "native_modifier_quantity_coefficient_not_purchase_or_currency",
+            "sections": {item.key: _record(item) for item in definition.value.assignments()},
+            "utility_evidence": {"effect": _record(effect), "ai_value": _record(utility)},
+        }
+    return dict(sorted(result.items()))
+
+
 def _parameters(values: Mapping[str, object]) -> dict[str, float]:
     if set(values) != _PARAMETERS:
         raise ValueError("动员参数键无效")
@@ -341,9 +422,9 @@ def reader_specs(candidate: str | None = None) -> dict[str, dict[str, Any]]:
             "unit": "boolean",
             "path": ["owner"],
         }
-    if candidate is not None and candidate not in _BASKETS:
-        raise ValueError("医疗动员读取器候选身份未冻结")
-    baskets = _BASKETS.values() if candidate is None else (_BASKETS[candidate],)
+    if candidate is not None and candidate not in _ALL_BASKETS:
+        raise ValueError("动员读取器候选身份未冻结")
+    baskets = _ALL_BASKETS.values() if candidate is None else (_ALL_BASKETS[candidate],)
     for good in sorted({good for basket in baskets for good in basket}):
         for tier, engine, unit in (
             ("balance", "market_goods_delta", "sell_minus_buy_orders"),
@@ -367,10 +448,10 @@ def derive(
 ) -> dict[str, Any]:
     """Return source hashes, typed reader specs and ordinary joint contributions.
 
-    Integration must supply native formation context, actor_path=['owner'], and
-    permit numeric required-known facts for the candidate's two core balances.
-    Missing price/war/default exits only that contribution; missing owner/market
-    or either core material balance preserves the entire native candidate.
+    Integration supplies native formation ROOT and actor_path=['owner'].
+    The two original medical contracts retain their numeric core balances.
+    Other candidates require only their owner; missing material data exits the
+    corresponding cost rather than blocking unrelated observed contributions.
     """
     frozen = load_baseline() if baseline is None else _validate(dict(baseline))
     chosen = load_parameters() if parameters is None else _parameters(parameters)
@@ -388,8 +469,11 @@ def derive(
     for key, spec in readers.items():
         if key in adapters["readers"] and adapters["readers"][key] != spec:
             raise ValueError("动员reader完整签名漂移")
-    for identity, row in frozen["candidates"].items():
-        core = ["mobilization_owner_ai", *(f"mobilization_{good}_balance" for good in row["goods"])]
+    candidates = candidate_catalog(frozen)
+    for identity, row in candidates.items():
+        core = ["mobilization_owner_ai"]
+        if identity in _BASKETS:
+            core.extend(f"mobilization_{good}_balance" for good in row["goods"])
 
         def rule(
             suffix: str,
@@ -415,7 +499,7 @@ def derive(
                     "conditions": conditions,
                     "required_known_facts": core,
                     "why": why,
-                    "counterexample": "仅所属国家AI偏好；未知核心局部回退，辅助未知仅退出本项；不推断伤亡、实际采购或货币支出，不改资格/恢复率/真实成本/启停组织士气，不叠加高级医疗收益，不新造冷却或记忆",
+                    "counterexample": "仅所属国家AI偏好；未知核心局部回退，辅助未知仅退出本项；不推断伤亡、编制或实际采购，不改资格/效用/真实成本/启停组织士气；原版负分及零尾保持，不新造冷却或记忆",
                 }
             )
 
@@ -424,14 +508,14 @@ def derive(
             chosen["war_need_multiplier"],
             "mobilization_country_war_need",
             [{"fact": "mobilization_war", "op": "=", "value": True}],
-            "所属国家在战争中，仅作医疗动员需求代理；原版各候选非零恢复效用仍由原生评分保留",
+            "所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较",
         )
         rule(
             "default",
             chosen["default_multiplier"],
             "mobilization_financing_pressure",
             [{"fact": "mobilization_default", "op": "=", "value": True}],
-            "所属国家实际违约，新增医疗承诺有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出",
+            "所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出",
         )
         for good in row["goods"]:
             balance = {"fact": f"mobilization_{good}_balance", "op": "<", "value": 0.0}
@@ -457,7 +541,7 @@ def derive(
                 ],
                 "同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档",
             )
-    for identity in frozen["candidates"]:
+    for identity in candidates:
         selected = [rule for rule in rules if rule["field"] == f"{identity}.ai_weight"]
         if (
             len(selected) > decision_rules.STATIC_BUDGET["candidates_per_field"]
@@ -478,15 +562,15 @@ def derive(
                 "goods": dict(row["goods"]),
                 "disposition": "new_consumer_integration_no_legacy_identity",
             }
-            for identity, row in frozen["candidates"].items()
+            for identity, row in candidates.items()
         ],
         "uncovered": [
             {
                 "id": identity,
                 "source": SOURCE,
-                "reason": "no_reviewed_medical_policy_native_preserved",
+                "reason": "native_only_no_direct_paid_basket_or_proven_nonzero_utility",
             }
             for identity in frozen["native_identities"]
-            if identity not in frozen["candidates"]
+            if identity not in candidates
         ],
     }

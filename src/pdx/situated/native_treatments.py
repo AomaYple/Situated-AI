@@ -3,7 +3,9 @@
 Mappings use canonical game-relative paths and original bytes. A missing override
 means native inheritance only when the caller supplies a complete production
 manifest (``production_complete=True``). That assertion belongs to the caller;
-this module cannot discover omitted installed files. No files are read or written.
+this module cannot discover omitted installed files. Local production policies and
+pinned evidence registries are read; installed game files are never discovered or
+loaded, and this module writes no files.
 
 ``implemented_numeric`` corroborates an existing exact coverage binding against
 an actually changed generated field. It does not establish generated-expression
@@ -17,9 +19,9 @@ import hashlib
 import json
 import re
 from collections import Counter, defaultdict
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from decimal import Decimal
-from pathlib import PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
 from ..model import Assignment, Block, Scalar  # noqa: TID252
@@ -174,6 +176,86 @@ def _resolve(root: Block, definition: str, field: str) -> tuple[Assignment | Non
         if node.prefix is not None or (node.op != "=" and index != len(parts) - 1):
             return None, "ambiguous"
     return node, "found"
+
+
+def _declarations(root: Block, definition: str, field: str) -> list[Assignment]:
+    """Locate physical declarations without choosing engine duplicate semantics."""
+    nodes = root.all(definition)
+    if field != "__body__":
+        for part in field.split("."):
+            nodes = [
+                child
+                for node in nodes
+                if node.op == "=" and node.prefix is None and isinstance(node.value, Block)
+                for child in node.value.all(part)
+            ]
+    return [node for node in nodes if node.prefix is None]
+
+
+def _declaration(root: Block, surface: VanillaSurface) -> Assignment | None:
+    occurrence = surface.declaration_occurrence
+    if type(occurrence) is not int or occurrence < 1:
+        return None
+    nodes = _declarations(root, surface.definition, surface.field)
+    return nodes[occurrence - 1] if occurrence <= len(nodes) else None
+
+
+def _context_digest(surface: VanillaSurface) -> str:
+    raw = json.dumps(asdict(surface), sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _variable_boundary(before: Block, after: Block) -> bool:
+    """Retain lexical declarations and resolve earlier bindings, without evaluation."""
+
+    def inspect(root: Block) -> tuple[list[object], bool]:
+        declarations: list[object] = []
+
+        def scalar_closed(value: Scalar, available: set[str]) -> bool:
+            names = set(re.findall(r"@[A-Za-z_][A-Za-z_0-9]*", value.text))
+            for expression in re.findall(r"@\[([^\]]*)\]", value.text):
+                names.update(
+                    "@" + name for name in re.findall(r"[A-Za-z_][A-Za-z_0-9]*", expression)
+                )
+            return names <= available
+
+        def visit(block: Block, inherited: set[str], path: tuple[str, ...]) -> bool:
+            available = set(inherited)
+            local: set[str] = set()
+            occurrences: Counter[str] = Counter()
+            for item in block.items:
+                if not isinstance(item, Assignment):
+                    if isinstance(item, Scalar) and not scalar_closed(item, available):
+                        return False
+                    continue
+                occurrences[item.full_key] += 1
+                child_path = (*path, f"{item.full_key}:{occurrences[item.full_key]}")
+                if item.is_variable:
+                    if (
+                        item.key in local
+                        or item.op != "="
+                        or item.prefix is not None
+                        or not isinstance(item.value, Scalar)
+                        or not scalar_closed(item.value, available)
+                    ):
+                        return False
+                    declarations.append([path, _ast(item)])
+                    local.add(item.key)
+                    available.add(item.key)
+                elif item.key != "desc":
+                    if isinstance(item.value, Scalar) and not scalar_closed(item.value, available):
+                        return False
+                    if isinstance(item.value, Block) and not visit(
+                        item.value, available, child_path
+                    ):
+                        return False
+            return True
+
+        return declarations, visit(root, set(), ())
+
+    original, before_closed = inspect(before)
+    current, after_closed = inspect(after)
+    return before_closed and after_closed and original == current
 
 
 def _literal(node: Assignment | None, value: str) -> bool:
@@ -457,7 +539,7 @@ class _Sources:
         self.failures: set[str] = set()
         self.owners: dict[tuple[str, str], list[str]] = defaultdict(list)
         for source, raw in sources.items():
-            if not source.endswith(".txt") or not _family(source):
+            if not source.endswith(".txt"):
                 continue
             try:
                 parsed = parse_bytes(raw, path=source)
@@ -488,14 +570,26 @@ class _Dependencies:
         native_bytes: Mapping[str, bytes],
         effective_bytes: Mapping[str, bytes],
         source_hashes: Mapping[str, str],
+        *,
+        production_complete: bool = False,
     ) -> None:
         self.native, self.effective = native, effective
+        self.production_complete = production_complete
         self.native_bytes, self.effective_bytes = native_bytes, effective_bytes
         self.symbols: dict[str, set[tuple[str, str]]] = defaultdict(set)
         for family, name in {*native.owners, *effective.owners}:
             if family in {"script_values", "scripted_triggers"}:
                 self.symbols[name].add((family, name))
         self.cache: dict[tuple[str, str], tuple[dict[tuple[str, str], dict[str, Any]], bool]] = {}
+        self.recursive_inheritance: dict[tuple[str, str], dict[str, Any]] = {}
+        self.country_parameter_proof: dict[str, Any] | None = None
+        self.country_parameter_helpers: set[str] = set()
+        self.country_contract_checked = False
+        self.country_contract_present = False
+        self.reader_parameter_cache: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+        self.parameter_adapters: Any = None
+        self.parameter_adapters_loaded = False
+        self.parameter_native_inputs: dict[str, tuple[str, str]] = {}
         # With an incomplete definition index, an unrecognized condition name
         # could be a custom trigger rather than a built-in. Do not infer safety
         # from a caller supplying only the consumer files.
@@ -546,13 +640,25 @@ class _Dependencies:
             ):
                 found.add(("script_values", value.text))
 
-        def visit(value: Block | Scalar | None, *, numeric_value: bool = False) -> None:
+        def visit(
+            value: Block | Scalar | None,
+            *,
+            numeric_value: bool = False,
+            description: bool = False,
+        ) -> None:
             if isinstance(value, Scalar):
                 scalar(value, numeric_value=numeric_value)
             elif isinstance(value, Block):
                 for item in value.items:
                     if isinstance(item, Assignment):
-                        if item.key in {"desc", "save_temporary_value_as"}:
+                        if item.key in {"desc", "save_temporary_value_as"} or (
+                            description
+                            and item.key == "text"
+                            and item.op == "="
+                            and item.prefix is None
+                            and isinstance(item.value, Scalar)
+                            and item.value.quoted
+                        ):
                             continue
                         found.update(self.symbols.get(item.key, ()))
                         visit(
@@ -572,6 +678,7 @@ class _Dependencies:
                                 "else_if",
                                 "else",
                             },
+                            description=item.key == "custom_description",
                         )
                     elif isinstance(item, Scalar):
                         scalar(item, numeric_value=False)
@@ -580,6 +687,94 @@ class _Dependencies:
 
         visit(node.value, numeric_value=numeric)
         return found
+
+    def opaque_operands(self, node: Assignment, *, numeric: bool) -> dict[str, list[str]]:
+        """Record actual operand occurrences, including their branch/scope context.
+
+        Native opaque expressions are retained syntax, not a registry of valid
+        getters. A name appearing elsewhere cannot authorize a moved or new use.
+        """
+        result: dict[str, list[str]] = defaultdict(list)
+
+        def visit(value: Block | Scalar | None, path: tuple[str, ...], active: bool) -> None:
+            if isinstance(value, Scalar):
+                if (
+                    active
+                    and not _NUMBER.fullmatch(value.text)
+                    and not (value.quoted and _NUMBER.fullmatch(value.unquoted))
+                    and value.text not in {"yes", "no"}
+                    and (value.quoted or value.text not in self.symbols)
+                ):
+                    result[value.text].append("/".join((*path, _digest(value))))
+                return
+            if not isinstance(value, Block):
+                return
+            occurrences: Counter[str] = Counter()
+            for item in value.assignments():
+                if item.key in {"desc", "save_temporary_value_as"}:
+                    continue
+                occurrences[item.key] += 1
+                part = f"{item.full_key}:{item.op}:{occurrences[item.key]}"
+                if item.key in {"if", "else_if", "else"} and isinstance(item.value, Block):
+                    part += ":guards=" + _digest(Block([*item.value.all("limit")]))
+                visit(
+                    item.value,
+                    (*path, part),
+                    active
+                    and item.key
+                    in {
+                        "value",
+                        "base",
+                        "add",
+                        "subtract",
+                        "multiply",
+                        "divide",
+                        "min",
+                        "max",
+                        "if",
+                        "else_if",
+                        "else",
+                    },
+                )
+
+        visit(node.value, (node.full_key,), numeric)
+        return dict(result)
+
+    def opaque_proofs(
+        self,
+        before: Assignment | None,
+        after: Assignment | None,
+        *,
+        numeric: bool,
+        source: str | None = None,
+    ) -> tuple[dict[tuple[str, str], dict[str, Any]], bool]:
+        original = self.opaque_operands(before, numeric=numeric) if before is not None else {}
+        current = self.opaque_operands(after, numeric=numeric) if after is not None else {}
+        rows: dict[tuple[str, str], dict[str, Any]] = {}
+        proven = True
+        for name in sorted(original.keys() | current.keys()):
+            retained = bool(original.get(name)) and original.get(name) == current.get(name)
+            proven = proven and retained
+            rows["script_values", name] = {
+                "family": "script_values",
+                "definition": name,
+                "status": "retained_opaque" if retained else "unproven",
+                "origin": "native_opaque_operand",
+                "native_source": source,
+                "effective_source": source,
+                "native_source_sha256": hashlib.sha256(self.native_bytes[source]).hexdigest()
+                if source is not None and source in self.native_bytes
+                else None,
+                "effective_source_sha256": hashlib.sha256(self.effective_bytes[source]).hexdigest()
+                if source is not None and source in self.effective_bytes
+                else None,
+                "native_ast_sha256": _digest(before),
+                "effective_ast_sha256": _digest(after),
+                "native_occurrences": original.get(name, []),
+                "occurrences": current.get(name, []),
+                "interface_authorized": False,
+            }
+        return rows, proven
 
     @staticmethod
     def definition(
@@ -598,7 +793,10 @@ class _Dependencies:
         trail: frozenset[tuple[str, str]] = frozenset(),
     ) -> tuple[dict[tuple[str, str], dict[str, Any]], bool]:
         if symbol in trail:
-            return {}, False
+            # A finite unchanged SCC proves inherited syntax only. Its callers
+            # still need identical original ASTs in check(); this never grants
+            # a new call, evaluation result or recursive writing permission.
+            return {}, self.retained_recursive_component(symbol)
         if symbol in self.cache:
             return self.cache[symbol]
         family, name = symbol
@@ -608,7 +806,7 @@ class _Dependencies:
             status = "unproven"
         else:
             status = "retained" if _ast(before) == _ast(after) else "changed"
-        row = {
+        row: dict[str, Any] = {
             "family": family,
             "definition": name,
             "status": status,
@@ -627,29 +825,947 @@ class _Dependencies:
         }
         proofs = {symbol: row}
         proven = status == "retained"
+        if before_source is not None and after_source is not None:
+            row["source_variables_retained"] = before_source == after_source and _variable_boundary(
+                self.native.roots[before_source], self.effective.roots[after_source]
+            )
+            proven = proven and row["source_variables_retained"]
+        opaque, opaque_proven = self.opaque_proofs(
+            before, after, numeric=family == "script_values", source=before_source
+        )
+        proofs.update(opaque)
+        proven = proven and opaque_proven
         children: set[tuple[str, str]] = set()
         for node in (before, after):
             if node is not None:
                 children.update(self.references(node, numeric=family == "script_values"))
         for child in sorted(children):
+            if child in opaque:
+                continue
             child_rows, child_proven = self.proof(child, trail | {symbol})
             proofs.update(child_rows)
             proven = proven and child_proven
         if not proven and row["status"] == "retained":
             row["status"] = "dependency_unproven"
+        if proven and symbol in self.recursive_inheritance:
+            row["recursive_inheritance"] = self.recursive_inheritance[symbol]
         # A cycle-dependent result is conservative for every entry point.
         self.cache[symbol] = proofs, proven
         return proofs, proven
 
-    def check(self, *nodes: Assignment, numeric: bool) -> tuple[list[dict[str, Any]], bool]:
-        proofs: dict[tuple[str, str], dict[str, Any]] = {}
-        proven = not self.source_gaps
+    def retained_recursive_component(self, entry: tuple[str, str]) -> bool:
+        """Prove a finite native SCC by source/AST identity, never by its name."""
+        if not self.production_complete or self.source_gaps:
+            return False
+        graph: dict[tuple[str, str], set[tuple[str, str]]] = {}
+        pending = [entry]
+        while pending:
+            symbol = pending.pop()
+            if symbol in graph:
+                continue
+            _, node = self.definition(self.native, *symbol)
+            graph[symbol] = (
+                self.references(node, numeric=symbol[0] == "script_values") if node else set()
+            )
+            pending.extend(graph[symbol] - graph.keys())
+        # Every reachable node is forward-connected to entry. Reverse reachability
+        # selects exactly its strongly connected component, including self-loops.
+        component = {entry}
+        while True:
+            expanded = component | {node for node, edges in graph.items() if edges & component}
+            if expanded == component:
+                break
+            component = expanded
+        identities = []
+        for symbol in sorted(component):
+            before_source, before = self.definition(self.native, *symbol)
+            after_source, after = self.definition(self.effective, *symbol)
+            if (
+                symbol[0] != "scripted_triggers"
+                or before_source is None
+                or before_source != after_source
+                or before is None
+                or after is None
+                or _ast(before) != _ast(after)
+                or _ast(self.native.roots[before_source])
+                != _ast(self.effective.roots[before_source])
+                or not _variable_boundary(
+                    self.native.roots[before_source], self.effective.roots[before_source]
+                )
+            ):
+                return False
+            identities.append(
+                {
+                    "family": symbol[0],
+                    "definition": symbol[1],
+                    "source": before_source,
+                    "native_source_sha256": hashlib.sha256(
+                        self.native_bytes[before_source]
+                    ).hexdigest(),
+                    "effective_source_sha256": hashlib.sha256(
+                        self.effective_bytes[before_source]
+                    ).hexdigest(),
+                    "ast_sha256": _digest(before),
+                    "calls": [list(child) for child in sorted(graph[symbol] & component)],
+                }
+            )
+        evidence = {"members": identities, "meaning": "unchanged_native_syntax_only"}
+        for symbol in component:
+            self.recursive_inheritance[symbol] = evidence
+        return True
+
+    def check(
+        self,
+        *nodes: Assignment,
+        numeric: bool,
+        surface: VanillaSurface | None = None,
+    ) -> tuple[list[dict[str, Any]], bool]:
+        opaque, opaque_proven = self.opaque_proofs(
+            nodes[0] if nodes else None,
+            nodes[-1] if nodes else None,
+            numeric=numeric,
+            source=surface.source if surface is not None else None,
+        )
+        proofs: dict[tuple[str, str], dict[str, Any]] = dict(opaque)
+        proven = not self.source_gaps and opaque_proven
+        if surface is not None and nodes:
+            parameter_rows, parameters_valid = self.parameter_conditions(
+                nodes[0],
+                nodes[-1],
+                surface.source,
+                surface.definition,
+                surface.field,
+                surface.actor_scope,
+            )
+            proofs.update(parameter_rows)
+            proven = proven and parameters_valid
         references = set().union(*(self.references(node, numeric=numeric) for node in nodes))
         for symbol in sorted(references):
+            if symbol in opaque:
+                continue
             rows, valid = self.proof(symbol)
+            if any("recursive_inheritance" in proof for proof in rows.values()) and (
+                surface is not None or not nodes or _ast(nodes[0]) != _ast(nodes[-1])
+            ):
+                valid = False
+            if (
+                not valid
+                and surface is not None
+                and nodes
+                and self.definition(self.native, *symbol)[1] is None
+                and self.generated_call_valid(nodes[-1], symbol, surface)
+            ):
+                rows, valid = self.generated_proof(symbol, surface)
             proofs.update(rows)
             proven = proven and valid
         return [proofs[key] for key in sorted(proofs)] + self.source_gaps, proven
+
+    @staticmethod
+    def registered_country_helper(symbol: tuple[str, str]) -> bool:
+        from .. import country_coordination  # noqa: PLC0415, TID252
+
+        family, name = symbol
+        return family == "scripted_triggers" and name in {
+            *(country_coordination.PREFIX + item for item in country_coordination.NAMES),
+        }
+
+    @staticmethod
+    def generated_call_valid(
+        node: Assignment,
+        symbol: tuple[str, str],
+        surface: VanillaSurface,
+    ) -> bool:
+        if (
+            not surface.legal
+            or surface.ambiguity
+            or surface.actor_scope not in {"country", "state"}
+            or _family(surface.source) not in {"ai_strategies", "laws", "technology", "buildings"}
+            or (_family(surface.source) == "buildings") != (surface.actor_scope == "state")
+            or _kind(surface, node) not in {"dynamic_numeric", "eligibility"}
+        ):
+            return False
+        _, name = symbol
+        calls: list[bool] = []
+
+        def visit(value: Block | Scalar | None, scope: str) -> None:
+            if isinstance(value, Scalar):
+                if name in re.findall(r"[A-Za-z_][A-Za-z_0-9]*", value.text):
+                    calls.append(False)
+                return
+            if not isinstance(value, Block):
+                return
+            for item in value.assignments():
+                if item.key == name:
+                    calls.append(scope == "country" and _literal(item, "yes"))
+                    continue
+                if isinstance(item.value, Block):
+                    same_scope = item.key in {
+                        "value",
+                        "add",
+                        "subtract",
+                        "multiply",
+                        "divide",
+                        "min",
+                        "max",
+                        "if",
+                        "else_if",
+                        "else",
+                        "limit",
+                        "AND",
+                        "OR",
+                        "NOT",
+                    }
+                    next_scope = (
+                        scope
+                        if same_scope
+                        else surface.actor_scope
+                        if item.key == "ROOT"
+                        else "country"
+                        if scope == "state" and item.key == "owner"
+                        else "unknown"
+                    )
+                    visit(item.value, next_scope)
+                else:
+                    visit(item.value, scope)
+
+        visit(node.value, surface.actor_scope)
+        return bool(calls) and all(calls)
+
+    def generated_proof(
+        self,
+        symbol: tuple[str, str],
+        surface: VanillaSurface,
+        trail: frozenset[tuple[str, str]] = frozenset(),
+    ) -> tuple[dict[tuple[str, str], dict[str, Any]], bool]:
+        from .. import decision_interfaces, decision_rules  # noqa: PLC0415, TID252
+
+        source, node = self.definition(self.effective, *symbol)
+        row: dict[str, Any] = {
+            "family": symbol[0],
+            "definition": symbol[1],
+            "status": "unproven",
+            "native_source": None,
+            "native_source_sha256": None,
+            "native_ast_sha256": None,
+            "effective_source": source,
+            "effective_source_sha256": hashlib.sha256(self.effective_bytes[source]).hexdigest()
+            if source is not None
+            else None,
+            "effective_ast_sha256": _digest(node) if node is not None else None,
+            "consumer_context_sha256": _context_digest(surface),
+            "scope": "country",
+            "result": "boolean",
+            "parameters": [],
+            "interface_authorized": False,
+            "issues": [],
+        }
+        proofs = {symbol: row}
+        parameter_contract = self.country_parameters()
+        if (
+            source == "common/scripted_triggers/sitai_country_triggers.txt"
+            and node is not None
+            and symbol[1] in parameter_contract.get("helpers", {})
+            and _digest(node) == parameter_contract["helpers"][symbol[1]]
+        ):
+            row["status"] = "proven_generated"
+            row["interface_authorized"] = True
+            row["parameter_contract"] = parameter_contract
+            return proofs, True
+        if (
+            not self.country_contract_checked
+            or self.country_contract_present
+            or symbol[1] in self.country_parameter_helpers
+        ):
+            row["issues"].append("authoritative_country_program_unproven")
+            return proofs, False
+        if (
+            symbol in trail
+            or not self.registered_country_helper(symbol)
+            or source != "common/scripted_triggers/sitai_country_triggers.txt"
+            or node is None
+            or node.op != "="
+            or node.prefix is not None
+            or not isinstance(node.value, Block)
+            or not any(_literal(item, "yes") for item in node.value.all("is_ai"))
+            or self.source_gaps
+            or not self.production_complete
+        ):
+            row["issues"].append("generated_helper_identity_or_guard_unproven")
+            return proofs, False
+        children: set[tuple[str, str]] = set()
+        leaves: list[dict[str, str]] = []
+
+        def validate(block: Block) -> bool:
+            if not block.items:
+                return False
+            valid = True
+            for item in block.items:
+                if not isinstance(item, Assignment) or item.prefix is not None:
+                    return False
+                if item.key in {"AND", "OR", "NOT"}:
+                    if (
+                        item.op != "="
+                        or not isinstance(item.value, Block)
+                        or not validate(item.value)
+                    ):
+                        valid = False
+                    continue
+                child = ("scripted_triggers", item.key)
+                if self.registered_country_helper(child):
+                    if not _literal(item, "yes"):
+                        valid = False
+                    children.add(child)
+                    continue
+                signature = decision_interfaces._INPUTS.get(item.key)
+                if (
+                    signature is None
+                    or signature[0] != "country"
+                    or item.key in self.symbols
+                    or item.key in {"pop_type_percent_country", "institution_investment_level"}
+                    or not isinstance(item.value, Scalar)
+                    or item.value.quoted
+                ):
+                    valid = False
+                    continue
+                kind = signature[1]
+                if kind == "boolean":
+                    # Parameter/resource/variable readers need a separate source
+                    # and argument proof. Their mere type never grants a name.
+                    if (
+                        item.key
+                        not in {
+                            "is_ai",
+                            "in_default",
+                            "is_at_war",
+                            "taking_loans",
+                            "is_subject",
+                            "has_insurrectionary_interest_groups",
+                            "is_diplomatic_play_target",
+                            "is_diplomatic_play_initiator",
+                        }
+                        or item.op != "="
+                        or item.value.text not in {"yes", "no"}
+                    ):
+                        valid = False
+                        continue
+                    unit = "boolean"
+                else:
+                    if item.op not in {"=", ">", ">=", "<", "<="} or not _NUMBER.fullmatch(
+                        item.value.text
+                    ):
+                        valid = False
+                        continue
+                    unit = decision_interfaces._UNITS.get(item.key, "")
+                reader = decision_rules.Reader(
+                    key=item.key, engine=item.key, scope="root", unit=unit, kind=kind
+                )
+                try:
+                    decision_interfaces.reader_scope(reader, ())
+                except ValueError:
+                    valid = False
+                    continue
+                leaves.append({"engine": item.key, "scope": "country", "kind": kind, "unit": unit})
+            return valid
+
+        valid = validate(node.value)
+        for child in sorted(children):
+            nested, closed = self.generated_proof(child, surface, trail | {symbol})
+            proofs.update(nested)
+            valid = valid and closed
+        row["typed_readers"] = leaves
+        row["status"] = "proven_generated" if valid else "unproven"
+        row["interface_authorized"] = valid
+        if not valid:
+            row["issues"].append("generated_helper_leaf_or_dependency_unproven")
+        return proofs, valid
+
+    def parameter_readers(
+        self, source: str, definition: str, field: str, actor_scope: str
+    ) -> dict[str, Any]:
+        """Bind used Reader predicates to this exact consumer and native inputs.
+
+        Policy files are local production contracts. Native inputs must already
+        be in the caller's mappings; no installation discovery is performed.
+        """
+        from .. import (  # noqa: PLC0415, TID252
+            decision_adapters,
+            decision_interfaces,
+            decision_rules,
+            observation_queries,
+            production_inputs,
+        )
+        from ..textio import normalized_text  # noqa: PLC0415, TID252
+        from . import programs  # noqa: PLC0415
+        from .ir import from_rule  # noqa: PLC0415
+
+        identity = (source, definition, field, actor_scope)
+        if identity in self.reader_parameter_cache:
+            return self.reader_parameter_cache[identity]
+        self.reader_parameter_cache[identity] = {}
+        if not self.production_complete or self.source_gaps or self.effective.failures:
+            return {}
+        try:
+            if not self.parameter_adapters_loaded:
+                self.parameter_adapters_loaded = True
+                self.parameter_adapters = decision_adapters.load()
+            adapters = self.parameter_adapters
+            metadata = json.loads(self.effective_bytes[".metadata/metadata.json"])[
+                "consumer_adapters"
+            ]
+            if (
+                metadata.get("schema") != 1
+                or metadata.get("source_sha256") != adapters.source_sha256
+                or metadata.get("generator_sha256")
+                != hashlib.sha256(Path(decision_adapters.__file__).read_bytes()).hexdigest()
+                or metadata.get("production_inputs_generator_sha256")
+                != hashlib.sha256(Path(production_inputs.__file__).read_bytes()).hexdigest()
+                or metadata.get("sources") != dict(adapters.sources)
+            ):
+                return {}
+            policies = [policy for name, policy in adapters.policies if name == source]
+            if len(policies) != 1:
+                return {}
+            policy = policies[0]
+            consumer_field = (definition, *field.split("."))
+            groups = policy.groups()
+            if consumer_field not in groups or policy.native_root != actor_scope:
+                return {}
+            expected = {
+                "source": source,
+                **decision_rules.contract(policy, owner="consumer_adapters", source=source),
+            }
+            consumers = [item for item in metadata["consumers"] if item.get("source") == source]
+            if len(consumers) == 1 and consumers[0].get("consumer_programs") is not None:
+                # Production lowers the same rules to signed-envelope programs.
+                # Rebuild their full deterministic contract, including preserved
+                # legacy priorities; never discard a mismatching metadata field.
+                joint = programs.enable(
+                    replace(
+                        policy,
+                        semantic_ir=tuple(
+                            replace(from_rule(rule, source=source), origin_priority=rule.priority)
+                            for rule in policy.rules
+                        ),
+                    ),
+                    source=source,
+                )
+                expected = {
+                    "source": source,
+                    **decision_rules.contract(joint, owner="consumer_adapters", source=source),
+                }
+                # JSON serializes tuple-valued IR predicates/programs as lists.
+                # Compare the complete wire contract on both sides.
+                expected = json.loads(json.dumps(expected))
+            if consumers != [expected]:
+                return {}
+            family = _family(source)
+            if self.native.owners[family, definition] != [source] or self.effective.owners[
+                family, definition
+            ] != [source]:
+                return {}
+            locked = dict(adapters.sources)
+            inputs: dict[str, str] = {}
+            hashes: dict[str, str] = {}
+
+            def verify(name: str) -> None:
+                if name in inputs:
+                    return
+                if name in self.parameter_native_inputs:
+                    inputs[name], hashes[name] = self.parameter_native_inputs[name]
+                    return
+                raw = self.native_bytes[name]
+                text = normalized_text(raw.decode("utf-8-sig"))
+                if hashlib.sha256(text.encode()).hexdigest() != locked[name]:
+                    raise ValueError("parameter native source drift")
+                parsed = parse_bytes(raw, path=name)
+                if parsed.errors:
+                    raise ValueError("parameter native source parse failure")
+                inputs[name] = text
+                hashes[name] = hashlib.sha256(raw).hexdigest()
+                self.parameter_native_inputs[name] = inputs[name], hashes[name]
+
+            verify(source)
+            if hashlib.sha256(inputs[source].encode()).hexdigest() != policy.baseline_sha256:
+                return {}
+            readers = {reader.key: reader for reader in policy.readers}
+            clauses: set[tuple[tuple[str, ...], str]] = set()
+            bindings = []
+            for rule in groups[consumer_field]:
+                for predicate in rule.conditions:
+                    reader = readers[predicate.fact]
+                    resource = any(part.startswith(("mg:", "sg:")) for part in reader.path)
+                    if not (
+                        reader.engine in observation_queries.QUERY_ENGINES
+                        or reader.engine == "is_production_method_active"
+                        or resource
+                    ):
+                        continue
+                    resolved = decision_interfaces.reader_scope(
+                        reader, policy.actor_path, native_root=policy.native_root
+                    )
+                    if reader.engine in observation_queries.QUERY_ENGINES:
+                        query = observation_queries.from_reader(
+                            reader.engine, dict(reader.parameters)
+                        )
+                        for name in observation_queries.required_sources(query):
+                            verify(name)
+                            root = self.native.roots.get(name)
+                            native_family = _family(name)
+                            if root is None:
+                                return {}
+                            for item in root.assignments():
+                                if item.is_variable:
+                                    continue
+                                if self.native.owners[native_family, item.key] != [
+                                    name
+                                ] or self.effective.owners[native_family, item.key] != [name]:
+                                    return {}
+                        compiled = observation_queries.compile_query(query, inputs)
+                        if compiled.expression != reader.expression("=", True):
+                            return {}
+                    elif reader.engine == "is_production_method_active":
+                        for name in locked:
+                            if name.endswith(".txt") and _family(name) in {
+                                "buildings",
+                                "production_method_groups",
+                                "production_methods",
+                            }:
+                                verify(name)
+                        parameters = dict(reader.parameters)
+                        recipes = production_inputs.recipes(
+                            inputs, [(parameters["building_type"], parameters["production_method"])]
+                        )
+                        if len(recipes) != 1:
+                            return {}
+                        recipe: dict[str, Any] = dict(recipes[0])
+                        for native_family, key, source_key in (
+                            ("buildings", "building", "building_source"),
+                            ("production_method_groups", "group", "group_source"),
+                            ("production_methods", "method", "method_source"),
+                        ):
+                            if self.native.owners[native_family, recipe[key]] != [
+                                recipe[source_key]
+                            ] or self.effective.owners[native_family, recipe[key]] != [
+                                recipe[source_key]
+                            ]:
+                                return {}
+                    if resource:
+                        for part in reader.path:
+                            if not part.startswith(("mg:", "sg:")):
+                                continue
+                            good = part[3:]
+                            owners = self.native.owners["goods", good]
+                            if len(owners) != 1 or self.effective.owners["goods", good] != owners:
+                                return {}
+                            verify(owners[0])
+                    expression = parse_bytes(
+                        reader.expression(predicate.op, predicate.value).encode(),
+                        path="reader-contract",
+                    )
+                    if expression.errors or len(expression.root.items) != 1:
+                        return {}
+                    clause = expression.root.items[0]
+                    if isinstance(clause, Assignment) and clause.key == "NOT":
+                        if not isinstance(clause.value, Block) or len(clause.value.items) != 1:
+                            return {}
+                        clause = clause.value.items[0]
+                    if not isinstance(clause, Assignment):
+                        return {}
+                    anchor = "ROOT" if reader.scope == "root" else f"scope:{reader.scope}"
+                    clauses.add(((anchor, *reader.path), _digest(clause)))
+                    bindings.append(
+                        {
+                            "reader": reader.key,
+                            "engine": reader.engine,
+                            "scope": resolved,
+                            "path": [anchor, *reader.path],
+                            "parameters": dict(reader.parameters),
+                            "clause_ast_sha256": _digest(clause),
+                        }
+                    )
+            proof = {
+                "family": "parameter_readers",
+                "definition": f"{source}:{definition}.{field}",
+                "status": "proven_parameter_reader",
+                "native_sources": hashes,
+                "consumer_contract_sha256": hashlib.sha256(
+                    json.dumps(expected, sort_keys=True).encode()
+                ).hexdigest(),
+                "bindings": bindings,
+                "clauses": clauses,
+                "meaning": "exact_used_reader_parameters_scope_and_native_identity_only",
+            }
+            self.reader_parameter_cache[identity] = proof
+        except (OSError, KeyError, TypeError, ValueError, AttributeError, UnicodeDecodeError):
+            return {}
+        return self.reader_parameter_cache[identity]
+
+    def parameter_conditions(
+        self,
+        before: Assignment,
+        after: Assignment,
+        source: str,
+        definition: str,
+        field: str,
+        actor_scope: str,
+    ) -> tuple[dict[tuple[str, str], dict[str, Any]], bool]:
+        """New finite query/resource occurrences require independent Reader proof."""
+        from .. import decision_interfaces, observation_queries  # noqa: PLC0415, TID252
+
+        engines = observation_queries.QUERY_ENGINES | {"is_production_method_active"}
+
+        def occurrences(node: Assignment) -> list[tuple[tuple[str, ...], tuple[str, ...], str]]:
+            found = []
+
+            def walk(
+                block: Block,
+                context: tuple[str, ...],
+                scope: tuple[str, ...],
+                condition: bool,
+                guarded: bool,
+            ) -> None:
+                counts: Counter[str] = Counter()
+                for item in block.assignments():
+                    counts[item.key] += 1
+                    part = f"{item.key}:{counts[item.key]}"
+                    if item.key in {"if", "else_if", "else"} and isinstance(item.value, Block):
+                        part += ":guards=" + _digest(Block([*item.value.all("limit")]))
+                    location = (*context, part)
+                    resource = any(part.startswith(("mg:", "sg:")) for part in scope)
+                    if condition and (
+                        item.key in engines
+                        or (resource and item.key in decision_interfaces._INPUTS)
+                    ):
+                        found.append(
+                            (location, scope if guarded else ("@unguarded", *scope), _digest(item))
+                        )
+                        continue
+                    if not isinstance(item.value, Block):
+                        continue
+                    nested_scope = scope
+                    nested_guarded = guarded
+                    if condition and item.key not in {"AND", "OR", "NOT"}:
+                        nested_scope = (
+                            (item.key,)
+                            if item.key == "ROOT" or item.key.startswith("scope:")
+                            else (*scope, item.key)
+                        )
+                        nested_guarded = (
+                            guarded
+                            and sum(_literal(guard, item.key) for guard in block.all("exists")) == 1
+                        )
+                    walk(
+                        item.value,
+                        location,
+                        nested_scope,
+                        condition or item.key == "limit",
+                        nested_guarded,
+                    )
+
+            if isinstance(node.value, Block):
+                walk(node.value, (), (), False, True)
+            return found
+
+        native = Counter(occurrences(before))
+        introduced = []
+        for occurrence in occurrences(after):
+            if native[occurrence]:
+                native[occurrence] -= 1
+            else:
+                introduced.append(occurrence)
+        if not introduced:
+            return {}, True
+        proof = self.parameter_readers(source, definition, field, actor_scope)
+        valid = bool(proof) and all(
+            (scope, digest) in proof["clauses"] for _, scope, digest in introduced
+        )
+        row: dict[str, Any] = (
+            {key: value for key, value in proof.items() if key != "clauses"}
+            if valid
+            else {
+                "family": "parameter_readers",
+                "definition": f"{source}:{definition}.{field}",
+                "status": "unproven_parameter_reader",
+            }
+        )
+        row.update(
+            {
+                "native_source": source,
+                "effective_source": source,
+                "native_ast_sha256": _digest(before),
+                "effective_ast_sha256": _digest(after),
+                "native_source_sha256": hashlib.sha256(self.native_bytes[source]).hexdigest(),
+                "effective_source_sha256": hashlib.sha256(self.effective_bytes[source]).hexdigest(),
+            }
+        )
+        row["actual_occurrences"] = [
+            {"context": list(context), "scope": list(scope), "ast_sha256": digest}
+            for context, scope, digest in introduced
+        ]
+        return {(row["family"], row["definition"]): row}, valid
+
+    def country_parameters(self) -> dict[str, Any]:
+        """Bind the stateless country program and its actual native arguments.
+
+        The pinned evidence registry is a source/position oracle, never a token
+        permission list. Every required native byte and AST occurrence must be
+        supplied by the caller; this method does not read the game installation.
+        """
+        if self.country_parameter_proof is not None:
+            return self.country_parameter_proof
+        self.country_parameter_proof = {}
+        from .. import (  # noqa: PLC0415, TID252
+            country_interfaces,
+            country_state,
+            decision_interfaces,
+            decision_rules,
+        )
+
+        if not self.production_complete or self.source_gaps or self.effective.failures:
+            return {}
+        try:
+            policy = country_state.load()
+            expected_files = country_state.files(policy)
+            canonical = parse_bytes(
+                expected_files["common/scripted_triggers/sitai_country_triggers.txt"].encode(),
+                path="canonical-country-triggers",
+            )
+            if canonical.errors:
+                return {}
+
+            def keys(block: Block) -> set[str]:
+                return {
+                    key
+                    for item in block.assignments()
+                    for key in (
+                        {item.key} | (keys(item.value) if isinstance(item.value, Block) else set())
+                    )
+                }
+
+            uses = {
+                helper.key: keys(helper.value)
+                for helper in canonical.root.assignments()
+                if isinstance(helper.value, Block)
+            }
+            parameter_helpers = {
+                name
+                for name, calls in uses.items()
+                if calls & {"has_strategy", "has_variable", "has_technology_researched"}
+            }
+            while any(
+                name not in parameter_helpers and calls & parameter_helpers
+                for name, calls in uses.items()
+            ):
+                parameter_helpers.update(
+                    name for name, calls in uses.items() if calls & parameter_helpers
+                )
+            self.country_parameter_helpers = parameter_helpers
+            self.country_contract_checked = True
+            metadata = json.loads(self.effective_bytes[".metadata/metadata.json"])
+            self.country_contract_present = "country_state" in metadata
+            fingerprint = metadata["source_fingerprint"]
+            expected_contract = country_state.contract(policy)
+            if (
+                not policy.enabled
+                or metadata.get("country_state") != expected_contract
+                or metadata.get("enabled_modules", []).count("country_state") != 1
+                or fingerprint.get("country_state_source_sha256") != policy.source_sha256
+                or fingerprint.get("country_state_generator_sha256")
+                != hashlib.sha256(Path(country_state.__file__).read_bytes()).hexdigest()
+            ):
+                return {}
+            file_identities = {}
+            helpers = {}
+            if (
+                expected_contract.get("schema") != 2
+                or expected_contract["persistent_variables"] != []
+            ):
+                return {}
+            for source, text in expected_files.items():
+                parsed = parse_bytes(text.encode(), path=source)
+                actual = self.effective.roots.get(source)
+                if parsed.errors or actual is None or _ast(parsed.root) != _ast(actual):
+                    return {}
+                file_identities[source] = hashlib.sha256(self.effective_bytes[source]).hexdigest()
+                if _family(source) == "scripted_triggers":
+                    for helper in actual.assignments():
+                        if self.effective.owners["scripted_triggers", helper.key] != [source]:
+                            return {}
+                        helpers[helper.key] = _digest(helper)
+
+            def writes_memory(value: Block) -> bool:
+                for item in value.assignments():
+                    if item.key in {
+                        "set_variable",
+                        "remove_variable",
+                    } and "recently_lost_war" in re.findall(
+                        r"[A-Za-z_][A-Za-z_0-9]*", repr(_ast(item.value))
+                    ):
+                        return True
+                    if isinstance(item.value, Block) and writes_memory(item.value):
+                        return True
+                return False
+
+            if any(
+                writes_memory(root) and _ast(root) != _ast(self.native.roots.get(source))
+                for source, root in self.effective.roots.items()
+                if source != "common/on_actions/00_code_on_actions.txt"
+            ):
+                return {}
+            evidence = json.loads(country_interfaces.EVIDENCE.read_bytes())
+            if evidence.get("schema") != 1:
+                return {}
+            observed = {}
+            source_identities = {}
+
+            def source_proven(source: str) -> bool:
+                if source in observed:
+                    return True
+                raw = self.native_bytes.get(source)
+                if raw is None or hashlib.sha256(raw).hexdigest() != evidence["sources"].get(
+                    source
+                ):
+                    return False
+                observed[source] = country_interfaces._observations(raw, source)
+                source_identities[source] = hashlib.sha256(raw).hexdigest()
+                return True
+
+            readers = []
+            for key, raw in policy.readers.items():
+                reader = decision_rules.Reader(
+                    key, raw["engine"], "root", raw["unit"], raw["kind"], raw.get("argument")
+                )
+                if decision_interfaces.reader_scope(reader, ()) != "country":
+                    return {}
+                interface = evidence["interfaces"][reader.engine]
+                source = interface["source"]
+                if (
+                    not source_proven(source)
+                    or observed[source][0].get(reader.engine) != interface["line"]
+                ):
+                    return {}
+                argument_source = None
+                if reader.argument is not None:
+                    arguments = [
+                        item
+                        for item in evidence["arguments"]
+                        if (item.get("engine"), item.get("argument"))
+                        == (reader.engine, reader.argument)
+                    ]
+                    if len(arguments) != 1:
+                        return {}
+                    argument = arguments[0]
+                    argument_source = argument["source"]
+                    if (
+                        not source_proven(argument_source)
+                        or observed[argument_source][1].get((reader.engine, reader.argument))
+                        != argument["line"]
+                    ):
+                        return {}
+                    if reader.engine in {"has_strategy", "has_technology_researched"}:
+                        family = (
+                            "ai_strategies" if reader.engine == "has_strategy" else "technology"
+                        )
+                        if self.native.owners[family, reader.argument] != [
+                            argument_source
+                        ] or self.effective.owners[family, reader.argument] != [argument_source]:
+                            return {}
+                    elif (
+                        reader.engine != "has_variable"
+                        or reader.argument != "recently_lost_war"
+                        or not self.native_war_memory(argument_source)
+                    ):
+                        return {}
+                readers.append(
+                    {
+                        "engine": reader.engine,
+                        "argument": reader.argument,
+                        "scope": "country",
+                        "unit": reader.unit,
+                        "kind": reader.kind,
+                        "native_source": source,
+                        "argument_source": argument_source,
+                    }
+                )
+            self.country_parameter_proof = {
+                "helpers": helpers,
+                "native_sources": source_identities,
+                "generated_sources": file_identities,
+                "policy_sha256": policy.source_sha256,
+                "metadata_sha256": hashlib.sha256(
+                    self.effective_bytes[".metadata/metadata.json"]
+                ).hexdigest(),
+                "readers": readers,
+                "meaning": "exact_typed_program_and_native_parameter_identity_only",
+            }
+        except (OSError, KeyError, TypeError, ValueError, AttributeError):
+            return {}
+        return self.country_parameter_proof
+
+    def native_war_memory(self, source: str) -> bool:
+        """Check both original writes, exact expiry and the victim guard."""
+        root = self.native.roots.get(source)
+        current = self.effective.roots.get(source)
+        if (
+            source != "common/on_actions/00_code_on_actions.txt"
+            or root is None
+            or current is None
+            or _ast(root) != _ast(current)
+        ):
+            return False
+        writes: list[tuple[tuple[str, ...], Assignment, tuple[Block, ...]]] = []
+
+        def walk(block: Block, path: tuple[str, ...], guards: tuple[Block, ...]) -> bool:
+            for item in block.assignments():
+                if not isinstance(item.value, Block):
+                    continue
+                context = (*path, item.key)
+                limits = guards
+                if item.key == "if":
+                    found = item.value.all("limit")
+                    if len(found) != 1 or not isinstance(found[0].value, Block):
+                        return False
+                    limits = (*guards, found[0].value)
+                if item.key == "set_variable" and any(
+                    isinstance(name.value, Scalar) and name.value.unquoted == "recently_lost_war"
+                    for name in item.value.all("name")
+                ):
+                    writes.append((context, item, limits))
+                if not walk(item.value, context, limits):
+                    return False
+            return True
+
+        if not walk(root, (), ()) or len(writes) != 2:
+            return False
+        expected_paths = {
+            ("on_capitulation", "effect", "set_variable"),
+            ("on_lost_war", "effect", "if", "set_variable"),
+        }
+        if {path for path, _, _ in writes} != expected_paths:
+            return False
+        for path, item, guards in writes:
+            assert isinstance(item.value, Block)
+            if item.op != "=" or item.prefix is not None or len(item.value.items) != 3:
+                return False
+            if any(
+                len(item.value.all(key)) != 1 or not _literal(item.value.first(key), value)
+                for key, value in {
+                    "name": "recently_lost_war",
+                    "days": "1825",
+                    "value": "yes",
+                }.items()
+            ):
+                return False
+            hooks = root.all(path[0])
+            if len(hooks) != 1 or hooks[0].op != "=" or hooks[0].prefix is not None:
+                return False
+            if path[0] == "on_lost_war" and (
+                len(guards) != 1
+                or len(guards[0].items) != 1
+                or not _literal(guards[0].first("exists"), "scope:victim_of_wargoal")
+            ):
+                return False
+        return True
 
 
 def _contains_value_dependency(value: Block | Scalar | None, names: set[str]) -> bool:
@@ -759,6 +1875,594 @@ def _numeric_binding(surface: VanillaSurface, row: Mapping[str, Any]) -> bool:
     )
 
 
+def _support_program_proof(
+    surface: VanillaSurface,
+    inventory: VanillaInventory,
+    dependencies: _Dependencies,
+    generated_sources: Mapping[str, bytes],
+) -> dict[str, Any]:
+    """License one exact continuous overlay, never its operand/helper vocabulary.
+
+    The production binding validates the complete serialized writer and physical
+    overlay. Native scope/getter evidence is independently reconstructed from
+    supplied pinned bytes. Only after both succeed may dependency checking project
+    this whole overlay back to its proven unchanged native consumer.
+    """
+    if (
+        (surface.source, surface.definition, surface.field)
+        != (
+            "common/ai_strategies/00_default_strategy.txt",
+            "ai_strategy_default",
+            "diplomatic_play_support",
+        )
+        or not dependencies.production_complete
+        or dependencies.source_gaps
+        or dependencies.effective.failures
+    ):
+        return {}
+    from .. import decision_security  # noqa: PLC0415, TID252
+    from . import audit, domain_coverage, support_program  # noqa: PLC0415
+
+    try:
+        bindings = audit._production_continuous_bindings(generated_sources)
+        if len(bindings) != 1:
+            return {}
+        binding = bindings[0]
+        native_proofs = domain_coverage._NativeBindingProofs(
+            inventory, dependencies.native_bytes, {}
+        )
+        problem, native_evidence = domain_coverage._continuous_native_issue(
+            binding, surface, native_proofs
+        )
+        if problem is not None:
+            return {}
+        program = binding.writer.program
+        assert isinstance(program, support_program.SupportProgram)
+        metadata = json.loads(generated_sources[".metadata/metadata.json"])
+        fingerprint = metadata["source_fingerprint"]
+        if (
+            fingerprint.get("support_program_generator_sha256")
+            != hashlib.sha256(Path(support_program.__file__).read_bytes()).hexdigest()
+        ):
+            return {}
+        helper_evidence: dict[str, Any] = {}
+        if program.defense:
+            if (
+                fingerprint.get("security_generator_sha256")
+                != hashlib.sha256(Path(decision_security.__file__).read_bytes()).hexdigest()
+            ):
+                return {}
+            source = "common/scripted_triggers/sitai_security_triggers.txt"
+            actual = dependencies.effective.roots.get(source)
+            expected = parse_bytes(decision_security.triggers().encode(), path=source)
+            if actual is None or expected.errors or _ast(actual) != _ast(expected.root):
+                return {}
+            for helper in actual.assignments():
+                if dependencies.native.owners[
+                    "scripted_triggers", helper.key
+                ] or dependencies.effective.owners["scripted_triggers", helper.key] != [source]:
+                    return {}
+                helper_evidence[helper.key] = _digest(helper)
+            # These exact native subtrees establish the helper's typed leaf
+            # primitives. Boolean composition and finite substitutions are fixed
+            # by the full helper AST and program.render() comparisons above.
+            original = dependencies.native.roots[surface.source]
+            occurrences: dict[str, list[int]] = defaultdict(list)
+
+            def visit(block: Block) -> None:
+                for item in block.assignments():
+                    occurrences[_digest(item)].append(item.line)
+                    if isinstance(item.value, Block):
+                        visit(item.value)
+
+            visit(original)
+            queries = (
+                "any_scope_treaty={binds=scope:country any_scope_article={has_type=alliance}}",
+                "any_scope_treaty={binds=scope:country any_scope_article={has_type=defensive_pact}}",
+                "play_participant_has_war_goal_of_type_against={type=conquer_state target=scope:country}",
+                "play_participant_has_war_goal_of_type_against={type=make_protectorate target=scope:country}",
+                "is_adjacent_to_country=scope:target_country",
+            )
+            query_evidence = []
+            for query in queries:
+                parsed = parse_bytes(query.encode(), path="native-support-query")
+                if parsed.errors or len(parsed.root.items) != 1:
+                    return {}
+                digest = _digest(parsed.root.items[0])
+                if not occurrences[digest]:
+                    return {}
+                query_evidence.append({"ast_sha256": digest, "lines": occurrences[digest]})
+            native_evidence["defense_queries"] = query_evidence
+            helper_evidence = {
+                "source": source,
+                "source_sha256": hashlib.sha256(dependencies.effective_bytes[source]).hexdigest(),
+                "helpers": helper_evidence,
+                "parameters": ["PARTNER=country", "OPPONENT=country"],
+            }
+        native_node, state = _resolve(
+            dependencies.native.roots[surface.source], surface.definition, surface.field
+        )
+        effective_node, effective_state = _resolve(
+            dependencies.effective.roots[surface.source], surface.definition, surface.field
+        )
+        if (
+            native_node is None
+            or effective_node is None
+            or state != "found"
+            or effective_state != "found"
+        ):
+            return {}
+        return {
+            "family": "continuous_program",
+            "definition": binding.writer.writer_id,
+            "status": "proven_generated",
+            "native_source": surface.source,
+            "effective_source": surface.source,
+            "native_source_sha256": hashlib.sha256(
+                dependencies.native_bytes[surface.source]
+            ).hexdigest(),
+            "effective_source_sha256": binding.production_sha256,
+            "native_ast_sha256": _digest(native_node),
+            "effective_ast_sha256": _digest(effective_node),
+            "metadata_sha256": binding.metadata_sha256,
+            "overlay_sha256": binding.overlay_sha256,
+            "native_evidence": native_evidence,
+            "helper_evidence": helper_evidence,
+            "interface_authorized": True,
+            "business_complete": False,
+        }
+    except (KeyError, TypeError, AttributeError, UnicodeError, ValueError):
+        return {}
+
+
+def _native_role(surface: VanillaSurface) -> str:
+    if surface.operation in {"strategy_score_map", "secret_goal_entry", "institution_score_map"}:
+        return "structural_container"
+    if surface.operation == "global_parameter":
+        return "static_parameter"
+    if surface.operation in {"ai_metadata", "acceptance_cap", "stance_capability"}:
+        return "metadata"
+    if surface.operation in {
+        "ai_selection_policy",
+        "building_group_score_multiplier",
+        "significant_demand_flag",
+        "grievance_start_permission",
+        "preferred_government_interest_groups",
+        "avoided_government_interest_groups",
+        "static_subject_type_value_multiplier",
+    }:
+        return "static_policy"
+    if surface.capability == "observation":
+        return "observation"
+    return "control_candidate" if surface.legal else "unknown"
+
+
+def _implicit_conditions_known(
+    node: Assignment,
+    contract: Mapping[str, Any],
+    native: _Sources,
+    parameters: Mapping[str, Any],
+) -> bool:
+    """Validate actual optional-leaf readers with the existing finite type API.
+
+    Parameter/resource queries and generated helpers need an independent exact
+    argument/source contract. The fixture evaluator's generic syntax acceptance
+    is deliberately insufficient for those calls or arbitrary scalar names.
+    """
+    from .. import decision_interfaces, decision_rules  # noqa: PLC0415, TID252
+
+    root_scope = contract["actor_scope"]
+    actor_path = ("owner",) if root_scope == "state" else ()
+
+    def transition(scope: str, key: str) -> str | None:
+        if (scope, key) in {("state", "owner"), ("country", "market")}:
+            return "country" if key == "owner" else "market"
+        for prefix, before, after, family in (
+            ("mg:", "market", "market_goods", "goods"),
+            ("sg:", "state", "state_goods", "goods"),
+            ("ig:", "country", "interest_group", "interest_groups"),
+        ):
+            if scope == before and key.startswith(prefix):
+                return after if len(native.owners[family, key[len(prefix) :]]) == 1 else None
+        return None
+
+    def condition(block: Block, scope: str, path: tuple[str, ...]) -> bool:
+        if not block.items:
+            return False
+        for item in block.items:
+            if not isinstance(item, Assignment) or item.prefix is not None:
+                return False
+            if (("ROOT", *path), _digest(item)) in parameters.get("clauses", set()):
+                continue
+            if (
+                scope == "country"
+                and _Dependencies.registered_country_helper(("scripted_triggers", item.key))
+                and _literal(item, "yes")
+            ):
+                continue
+            if item.key in {"AND", "OR", "NOT"}:
+                if (
+                    item.op != "="
+                    or not isinstance(item.value, Block)
+                    or not condition(item.value, scope, path)
+                ):
+                    return False
+            elif isinstance(item.value, Block):
+                next_scope = root_scope if item.key == "ROOT" else transition(scope, item.key)
+                next_path = () if item.key == "ROOT" else (*path, item.key)
+                if (
+                    item.op != "="
+                    or next_scope is None
+                    or not condition(item.value, next_scope, next_path)
+                ):
+                    return False
+            elif not isinstance(item.value, Scalar) or item.value.quoted:
+                return False
+            elif item.key == "always":
+                if item.op != "=" or item.value.text not in {"yes", "no"}:
+                    return False
+            elif item.key == "exists":
+                if item.op != "=" or (
+                    item.value.text != "ROOT" and transition(scope, item.value.text) is None
+                ):
+                    return False
+            else:
+                signature = decision_interfaces._INPUTS.get(item.key)
+                if signature is None or item.key in pdx_eval._PARAMETER_QUERIES:
+                    return False
+                kind = signature[1]
+                if kind == "boolean":
+                    if item.op != "=" or item.value.text not in {"yes", "no"}:
+                        return False
+                elif item.op not in {"=", ">", ">=", "<", "<="} or not _NUMBER.fullmatch(
+                    item.value.text
+                ):
+                    return False
+                reader = decision_rules.Reader(
+                    key=item.key,
+                    engine=item.key,
+                    scope="root",
+                    path=path,
+                    unit=decision_interfaces._UNITS.get(item.key, "boolean"),
+                    kind=kind,
+                )
+                try:
+                    if (
+                        decision_interfaces.reader_scope(reader, actor_path, native_root=root_scope)
+                        != scope
+                    ):
+                        return False
+                except ValueError:
+                    return False
+        return True
+
+    def visit(value: Block | Scalar | None) -> bool:
+        if not isinstance(value, Block):
+            return True
+        return all(
+            isinstance(item, Assignment)
+            and (
+                isinstance(item.value, Block) and condition(item.value, root_scope, ())
+                if item.key == "limit"
+                else visit(item.value)
+            )
+            for item in value.items
+        )
+
+    return visit(node.value)
+
+
+def _implicit_numeric_projections(
+    inventory: VanillaInventory,
+    coverage: Mapping[str, Any] | None,
+    native: _Sources,
+    effective: _Sources,
+    dependencies: _Dependencies,
+) -> dict[str, dict[int, dict[str, Any]]]:
+    """Project only independently documented, actually validated optional leaves.
+
+    This does not add rows to the native denominator or grant a business exit.
+    The authoritative implicit contract is recomputed from pinned source bytes;
+    receipt scope/action claims alone cannot authorize additions or their AST.
+    """
+    from .domain_coverage import NativeConsumerBinding, _NativeBindingProofs  # noqa: PLC0415
+    from .vanilla_inventory import VanillaSurface  # noqa: PLC0415
+
+    result: dict[str, dict[int, dict[str, Any]]] = defaultdict(dict)
+    if coverage is None or not dependencies.production_complete or dependencies.source_gaps:
+        return result
+    _, issues = _coverage_rows(inventory, coverage)
+    rows = coverage.get("implicit_rows")
+    if issues or not isinstance(rows, list) or inventory.parse_failures:
+        return result
+    identities = [
+        (row.get("source"), row.get("definition"), row.get("field"))
+        for row in rows
+        if isinstance(row, dict)
+    ]
+    if len(identities) != len(rows) or any(
+        not all(isinstance(value, str) for value in identity) for identity in identities
+    ):
+        return result
+    counts = Counter(identities)
+    contracts = _NativeBindingProofs(inventory, dependencies.native_bytes, {})
+    for row, identity in zip(rows, identities, strict=True):
+        source, definition, field = identity
+        assert isinstance(source, str)
+        assert isinstance(definition, str)
+        assert isinstance(field, str)
+        if (
+            counts[identity] != 1
+            or source not in native.roots
+            or source not in effective.roots
+            or native.owners[_family(source), definition] != [source]
+            or effective.owners[_family(source), definition] != [source]
+            or any(_family(failed) == _family(source) for failed in effective.failures)
+        ):
+            continue
+        try:
+            binding = NativeConsumerBinding(source, definition, field)
+            contract = contracts.implicit_building(binding) or contracts.implicit_company(binding)
+        except (KeyError, TypeError, ValueError):
+            continue
+        covered = row.get("covered_actions")
+        matched = row.get("matched_actions")
+        if (
+            contract is None
+            or any(
+                type(row.get(key)) is not type(value) or row.get(key) != value
+                for key, value in contract.items()
+            )
+            or not isinstance(covered, list)
+            or not covered
+            or any(not isinstance(action, str) or not action for action in covered)
+            or len(set(covered)) != len(covered)
+            or not isinstance(matched, list)
+            or any(action not in matched for action in covered)
+            or row.get("binding_issues") != {}
+        ):
+            continue
+        before, before_state = _resolve(native.roots[source], definition, field)
+        after, after_state = _resolve(effective.roots[source], definition, field)
+        if (
+            before is not None
+            or before_state != "missing"
+            or after is None
+            or after_state != "found"
+            or not _numeric_shape(after)
+            or not _implicit_conditions_known(
+                after,
+                contract,
+                native,
+                dependencies.parameter_readers(source, definition, field, contract["actor_scope"]),
+            )
+            or not _variable_boundary(native.roots[source], effective.roots[source])
+        ):
+            continue
+        # There is no native expression at this optional field. Comparing it
+        # to itself would falsely inherit new opaque operands or dependencies.
+        empty = Assignment(after.key, "=", Block([]))
+        implicit_surface = VanillaSurface(
+            surface_id=f"implicit:{source}:{definition}.{field}",
+            source=source,
+            definition=definition,
+            field=field,
+            actor_scope=contract["actor_scope"],
+            target_scope=contract["target_scope"],
+            operation=contract["operation"],
+            capability="direct",
+            status="pending",
+            getter=None,
+            getter_note="independently_bound_optional_numeric_leaf",
+            scope_evidence=tuple(contract["evidence"]),
+            responsibility_step="D0",
+            source_line=after.line,
+        )
+        proofs, closed = dependencies.check(empty, after, numeric=True, surface=implicit_surface)
+        if not closed:
+            continue
+        result[source][id(after)] = {
+            **contract,
+            "covered_actions": list(covered),
+            "effective_ast_sha256": _digest(after),
+            "effective_source_sha256": hashlib.sha256(
+                dependencies.effective_bytes[source]
+            ).hexdigest(),
+            "dependencies": proofs,
+        }
+    return result
+
+
+def _responsibility_axes(
+    rows: list[dict[str, Any]],
+    inventory: VanillaInventory,
+    native: _Sources,
+    effective: _Sources,
+    dependencies: _Dependencies,
+    generated_sources: Mapping[str, bytes],
+    production_complete: bool,
+    implicit_projections: Mapping[str, Mapping[int, dict[str, Any]]],
+) -> None:
+    """Close complete source boundaries independently of interface permission.
+
+    Mixed files may replace only independently corroborated typed numeric leaves.
+    Comparing the rest of the entire AST preserves parents, order, local variables
+    and every other reference. No field-only equality can prove this boundary.
+    """
+    by_source: dict[str, list[tuple[VanillaSurface, dict[str, Any]]]] = defaultdict(list)
+    for surface, row in zip(inventory.surfaces, rows, strict=True):
+        by_source[surface.source].append((surface, row))
+    for source, members in by_source.items():
+        before, after = native.roots.get(source), effective.roots.get(source)
+        implicit = implicit_projections.get(source, {})
+        masks_before: dict[int, str] = {}
+        masks_after: dict[int, str] = {}
+        for surface, row in members:
+            if row["status"] != "implemented_numeric" or before is None or after is None:
+                continue
+            bnode, bstate = _resolve(before, surface.definition, surface.field)
+            anode, astate = _resolve(after, surface.definition, surface.field)
+            if bnode is not None and anode is not None and bstate == astate == "found":
+                masks_before[id(bnode)] = surface.declaration_id
+                masks_after[id(anode)] = surface.declaration_id
+
+        def boundary(
+            value: Assignment | Block | Scalar | None,
+            masks: Mapping[int, str],
+            additions: Mapping[int, dict[str, Any]] = implicit,
+        ) -> object:
+            if isinstance(value, Assignment):
+                if id(value) in masks:
+                    return [
+                        "typed_numeric_change",
+                        value.key,
+                        value.op,
+                        value.prefix,
+                        masks[id(value)],
+                    ]
+                return [
+                    "assignment",
+                    value.key,
+                    value.op,
+                    value.prefix,
+                    boundary(value.value, masks),
+                ]
+            if isinstance(value, Block):
+                return [
+                    "block",
+                    [boundary(item, masks) for item in value.items if id(item) not in additions],
+                ]
+            return _ast(value)
+
+        identical = before is not None and after is not None and _ast(before) == _ast(after)
+        context_closed = (
+            before is not None
+            and after is not None
+            and boundary(before, masks_before) == boundary(after, masks_after)
+        )
+        closed = (
+            not dependencies.source_gaps
+            and before is not None
+            and after is not None
+            and _variable_boundary(before, after)
+        )
+        if before is not None:
+            # Native references outside a changed numeric leaf remain part of
+            # the protected source. New references inside masked leaves have
+            # already passed that leaf's independent dependency check.
+            for node in before.assignments():
+                _, valid = dependencies.check(
+                    node, node, numeric=_family(source) == "script_values"
+                )
+                closed = closed and valid
+        for surface, row in members:
+            bnode = _declaration(before, surface) if before is not None else None
+            anode = _declaration(after, surface) if after is not None else None
+            structural_projection = (
+                row["native_role"] == "structural_container"
+                and row["ast_status"] == "changed"
+                and bnode is not None
+                and anode is not None
+                and boundary(bnode, masks_before) == boundary(anode, masks_after)
+            )
+            source_issues = []
+            if not production_complete:
+                source_issues.append("production_manifest_incomplete")
+            if not context_closed:
+                source_issues.append("source_parent_variable_or_reference_boundary_unproven")
+            if not closed:
+                source_issues.append("source_dependency_closure_unproven")
+            if row["native_ast_sha256"] is None or row["effective_ast_sha256"] is None:
+                source_issues.append("physical_declaration_unresolved")
+            if row["ast_status"] != "retained" and not structural_projection:
+                source_issues.append("native_declaration_changed_or_unresolved")
+            protected = not source_issues
+            row["source_protection"] = {
+                "status": "retained"
+                if protected
+                else "changed"
+                if row["ast_status"] == "changed"
+                else "unproven",
+                "proven": protected,
+                "mode": "whole_source_inherited"
+                if source not in generated_sources
+                else "whole_source_identical"
+                if identical
+                else "mixed_override",
+                "dependencies_closed": closed,
+                "context_closed": context_closed,
+                "structural_projection": structural_projection,
+                "controlled_numeric_declarations": sorted(masks_before.values()),
+                "implicit_numeric_projections": list(implicit.values()),
+                "issues": source_issues,
+                "native_source_sha256": hashlib.sha256(
+                    dependencies.native_bytes[source]
+                ).hexdigest()
+                if source in dependencies.native_bytes
+                else None,
+                "effective_source_sha256": hashlib.sha256(
+                    dependencies.effective_bytes[source]
+                ).hexdigest()
+                if source in dependencies.effective_bytes
+                else None,
+            }
+    for surface, row in zip(inventory.surfaces, rows, strict=True):
+        known = (
+            row["interface_kind"] != "needs_review"
+            and surface.legal
+            and not surface.ambiguity
+            and "duplicate_field_merge_semantics_unknown" not in row["issues"]
+            and surface.surface_id not in inventory.unknown_scopes
+            and not inventory.parse_failures
+        )
+        row["interface"] = {
+            "known": known,
+            "kind": row["interface_kind"],
+            "scope_known": surface.actor_scope != "unknown" and surface.target_scope != "unknown",
+            "control_authorized": (
+                row["status"] == "implemented_numeric"
+                and production_complete
+                and row["source_protection"]["context_closed"]
+                and row["source_protection"]["dependencies_closed"]
+            ),
+        }
+        changed_dependency = any(
+            proof["status"]
+            not in {"retained", "retained_opaque", "proven_generated", "proven_parameter_reader"}
+            and (
+                proof["native_ast_sha256"] != proof["effective_ast_sha256"]
+                or (proof["native_source"] is None and proof["effective_source"] is not None)
+            )
+            for proof in row["dependencies"]
+        )
+        row["active_unknown_usage"] = bool(
+            not (
+                row["source_protection"]["proven"]
+                and row["source_protection"]["structural_projection"]
+            )
+            and (
+                changed_dependency
+                or (
+                    row["ast_status"] == "changed"
+                    and (
+                        not known
+                        or "generated_numeric_shape_unproven" in row["issues"]
+                        or not row["source_protection"]["context_closed"]
+                        or not row["source_protection"]["dependencies_closed"]
+                    )
+                )
+            )
+        )
+        row["business_obligation"] = {
+            "disposition": "control_binding"
+            if row["interface"]["control_authorized"]
+            else "preserve_native"
+            if row["source_protection"]["proven"]
+            else "unresolved",
+            "complete": False,
+        }
+
+
 def native_treatments(
     inventory: VanillaInventory,
     native_sources: Mapping[str, bytes],
@@ -798,7 +2502,12 @@ def native_treatments(
     effective_bytes = {**native_sources, **generated_sources}
     effective = _Sources(effective_bytes)
     dependencies = _Dependencies(
-        native, effective, native_sources, effective_bytes, inventory.source_hashes
+        native,
+        effective,
+        native_sources,
+        effective_bytes,
+        inventory.source_hashes,
+        production_complete=production_complete,
     )
     covered, receipt_issues = _coverage_rows(inventory, coverage)
     unknown_scopes = set(inventory.unknown_scopes)
@@ -806,6 +2515,7 @@ def native_treatments(
     for surface in inventory.surfaces:
         row: dict[str, Any] = {
             "declaration_id": surface.declaration_id,
+            "context_sha256": _context_digest(surface),
             "surface_id": surface.surface_id,
             "source": surface.source,
             "definition": surface.definition,
@@ -820,6 +2530,7 @@ def native_treatments(
             "native_capability": surface.capability,
             "native_inventory_status": surface.status,
             "native_legal": surface.legal,
+            "native_role": _native_role(surface),
             "scope_evidence": list(surface.scope_evidence),
             "interface_kind": "needs_review",
             "status": "missing_evidence",
@@ -848,19 +2559,20 @@ def native_treatments(
                 else "native_bytes_missing"
             )
             continue
-        node, resolution = _resolve(nroot, surface.definition, surface.field)
+        family = _family(surface.source)
+        physical = _declarations(nroot, surface.definition, surface.field)
+        node = _declaration(nroot, surface)
         if node is None:
-            row["ast_status"] = resolution
-            issues.append(f"native_field_{resolution}")
+            row["ast_status"] = "missing"
+            issues.append("native_declaration_occurrence_missing")
             continue
         row["native_ast_sha256"] = _digest(node)
         row["native_terminal"] = _native_terminal(surface, node)
         row["interface_kind"] = _kind(surface, node)
-        family = _family(surface.source)
         if node.line != surface.source_line:
             issues.append("native_source_line_mismatch")
             continue
-        if len(native.owners[family, surface.definition]) != 1:
+        if len(set(native.owners[family, surface.definition])) != 1:
             row["ast_status"] = "ambiguous"
             issues.append("native_definition_ambiguous")
             continue
@@ -875,20 +2587,44 @@ def native_treatments(
             issues.append("production_family_parse_failure")
             continue
         enode, resolution = _resolve(eroot, surface.definition, surface.field)
+        if (len(physical) > 1 and _ast(nroot) == _ast(eroot)) or (
+            family == "defines"
+            and len(physical) == 1
+            and len(_declarations(eroot, surface.definition, surface.field)) == 1
+        ):
+            # This selects a physical occurrence, never first/last-key engine
+            # precedence. Repeated field semantics remain an explicit unknown.
+            enode = _declaration(eroot, surface)
+            resolution = "found" if enode is not None else "missing"
         if enode is None:
             row["ast_status"] = resolution
             issues.append(f"production_field_{resolution}")
             continue
-        if len(effective.owners[family, surface.definition]) != 1:
+        if len(set(effective.owners[family, surface.definition])) != 1:
             row["ast_status"] = "ambiguous"
             issues.append("production_definition_ambiguous")
             continue
         row["effective_ast_sha256"] = _digest(enode)
+        if len(physical) > 1:
+            issues.append("duplicate_field_merge_semantics_unknown")
         same = _ast(node) == _ast(enode)
         row["ast_status"] = "retained" if same else "changed"
         kind = row["interface_kind"]
         effective_consumer = enode
-        if not same and kind == "dynamic_numeric" and not _numeric_shape(enode, node):
+        continuous_proof = {}
+        if not same and kind == "dynamic_numeric":
+            continuous_proof = _support_program_proof(
+                surface, inventory, dependencies, generated_sources
+            )
+        if continuous_proof:
+            # The complete typed program and restored native tail were already
+            # checked as one overlay. Re-run dependency closure on the untouched
+            # native node so generated program operands cannot borrow opaque names.
+            main_proofs, dependencies_proven = dependencies.check(
+                node, node, numeric=True, surface=surface
+            )
+            main_proofs.append(continuous_proof)
+        elif not same and kind == "dynamic_numeric" and not _numeric_shape(enode, node):
             row["resolved_numeric_value"] = _registered_numeric_value(
                 surface, enode, effective, generated_sources
             )
@@ -904,9 +2640,13 @@ def native_treatments(
                 # The new helper name has an exact registered source/consumer
                 # proof above. Its actual body still requires dependency audit.
                 effective_consumer = helper
-        main_proofs, dependencies_proven = dependencies.check(
-            node, effective_consumer, numeric=kind == "dynamic_numeric"
-        )
+        if not continuous_proof:
+            main_proofs, dependencies_proven = dependencies.check(
+                node,
+                effective_consumer,
+                numeric=kind == "dynamic_numeric",
+                surface=surface,
+            )
         dependency_proofs = {(proof["family"], proof["definition"]): proof for proof in main_proofs}
         for field in _companion_fields(surface):
             before, bstate = _resolve(nroot, surface.definition, field)
@@ -915,7 +2655,9 @@ def native_treatments(
                 continue
             companion_same = bstate == astate == "found" and _ast(before) == _ast(after)
             companion_proofs, companion_dependencies_proven = dependencies.check(
-                *(item for item in (before, after) if item is not None), numeric=False
+                *(item for item in (before, after) if item is not None),
+                numeric=False,
+                surface=surface,
             )
             dependencies_proven = dependencies_proven and companion_dependencies_proven
             dependency_proofs.update(
@@ -954,6 +2696,7 @@ def native_treatments(
             or surface.surface_id in unknown_scopes
             or bool(inventory.parse_failures)
             or not dependencies_proven
+            or len(physical) > 1
         )
         if unproven:
             row["status"] = "needs_review"
@@ -970,6 +2713,19 @@ def native_treatments(
             row["numeric_actions"] = list(covered[surface.declaration_id]["covered_actions"])
         else:
             row["status"] = "changed_native"
+    implicit_projections = _implicit_numeric_projections(
+        inventory, coverage, native, effective, dependencies
+    )
+    _responsibility_axes(
+        rows,
+        inventory,
+        native,
+        effective,
+        dependencies,
+        generated_sources,
+        production_complete,
+        implicit_projections,
+    )
     counts = Counter(row["status"] for row in rows)
     return {
         "schema": 1,
@@ -987,6 +2743,12 @@ def native_treatments(
         "production_manifest_complete_asserted": production_complete,
         "counts": {status: counts[status] for status in _STATUSES},
         "interface_counts": dict(sorted(Counter(row["interface_kind"] for row in rows).items())),
+        "responsibility_counts": {
+            "source_protection_proven": sum(row["source_protection"]["proven"] for row in rows),
+            "interface_known": sum(row["interface"]["known"] for row in rows),
+            "active_unknown_usage": sum(row["active_unknown_usage"] for row in rows),
+            "business_complete": 0,
+        },
         "receipt_issues": receipt_issues,
         "rows": rows,
         "business_complete": False,

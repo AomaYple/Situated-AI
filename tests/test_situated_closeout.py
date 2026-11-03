@@ -154,6 +154,46 @@ def _save(candidate):
     return _write(candidate.root, receipts.RECEIPT_PATH.as_posix(), candidate.data)
 
 
+def _bind_native(candidate):
+    """Explicit synthetic producer boundary; the gate still checks all joins."""
+    candidate.native_report = {
+        "schema": 1,
+        "plan_version": "A2",
+        "evidence_category": "static_check",
+        "source_snapshot_sha256": digest(candidate.data["source_snapshot"]),
+        "native_treatments": {
+            "baseline_id": candidate.inventory.baseline_id,
+            "scope_hash": candidate.inventory.scope_hash,
+            "denominator": candidate.inventory.discovered_count,
+            "source_hashes_verified": candidate.inventory.source_hashes,
+            "production_hashes": {
+                "common/fixture.txt": _ref(candidate.root, "mod/common/fixture.txt")["sha256"]
+            },
+            "production_manifest_complete_asserted": True,
+            "rows": [
+                {
+                    "declaration_id": surface.declaration_id,
+                    "declaration_occurrence": surface.declaration_occurrence,
+                    "context_sha256": digest(asdict(surface)),
+                    "source_protection": {
+                        "status": "retained",
+                        "proven": True,
+                        "dependencies_closed": True,
+                        "context_closed": True,
+                        "issues": [],
+                    },
+                    "active_unknown_usage": False,
+                    "implemented_numeric": surface.legal,
+                }
+                for surface in candidate.inventory.surfaces
+            ],
+        },
+    }
+    candidate.data["native_scope"]["typed_report"] = _write(
+        candidate.root, "tools/out/native.json", candidate.native_report
+    )
+
+
 @pytest.fixture
 def architecture_candidate(tmp_path, monkeypatch):
     """Synthetic complete evidence graph; no real A2 completion is asserted."""
@@ -177,7 +217,7 @@ def architecture_candidate(tmp_path, monkeypatch):
             surface_id=f"surface-{capability}",
             source="common/fixture.txt",
             definition="candidate",
-            field=f"weight_{capability}",
+            field="weight" if capability == "direct" else f"weight_{capability}",
             actor_scope="country",
             target_scope="none",
             operation="score",
@@ -239,6 +279,24 @@ def architecture_candidate(tmp_path, monkeypatch):
             "ast_sha256": _digest(field),
         }
     ]
+    archived = b"historical plan\n"
+    archive_manifest = _write(
+        root,
+        "docs/design/archive/manifest.json",
+        {
+            "schema": 1,
+            "role": "historical_reference_only",
+            "files": [
+                {
+                    "path": "docs/design/old.md",
+                    "commit": "a" * 40,
+                    "sha256": hashlib.sha256(archived).hexdigest(),
+                    "bytes": len(archived),
+                }
+            ],
+        },
+    )
+    monkeypatch.setattr(receipts, "_archive_bytes", lambda *_args: archived)
     stage_map: dict[str, Any] = {}
     for stage, dependencies in receipts.STAGE_DEPENDENCIES.items():
         evidence = []
@@ -256,6 +314,9 @@ def architecture_candidate(tmp_path, monkeypatch):
                     "expected": index,
                     "reference": index,
                     "generated": index,
+                    "consumers": [
+                        {key: consumers[0][key] for key in ("path", "definition", "field")}
+                    ],
                 }
                 for index, (role, test) in enumerate(
                     zip(sorted(receipts.WITNESS_ROLES), tests, strict=True)
@@ -277,6 +338,15 @@ def architecture_candidate(tmp_path, monkeypatch):
                 "cases": cases,
                 "open_items": [],
             }
+            kind = receipts._evidence_kind(stage, requirement)
+            artifacts = [archive_manifest] if kind == "archive" else production
+            if kind != "pdx":
+                result["evidence_kind"] = kind
+                result["artifacts"] = artifacts
+                for case in cases:
+                    case["observed"] = case.pop("generated")
+            if kind == "archive":
+                result["archive_manifest"] = archive_manifest
             if requirement == "full_regression_resources":
                 result["full_acceptance"] = _write(
                     root,
@@ -327,6 +397,8 @@ def architecture_candidate(tmp_path, monkeypatch):
                     "requirement_id": requirement,
                     "direction": receipts.REQUIREMENT_DIRECTIONS[stage, requirement],
                     "oracle": "independent",
+                    "evidence_kind": kind,
+                    "artifacts": artifacts,
                     "production": production,
                     "generated": generated,
                     "consumers": consumers,
@@ -424,6 +496,10 @@ def architecture_candidate(tmp_path, monkeypatch):
         "rollback_instructions": _write(root, "tools/out/rollback.json", {"text": "fixture"}),
     }
     candidate = SimpleNamespace(root=root, data=data, stages=stage_map, inventory=inventory)
+    _bind_native(candidate)
+    monkeypatch.setattr(
+        receipts, "_fresh_native_report", lambda: candidate.native_report, raising=False
+    )
     _save(candidate)
     # Standard package schema is tested by distribution; this fixture isolates
     # the new delivery byte/identity checks, not a real distributable package.
@@ -465,6 +541,64 @@ def test_S阶段完整证据图可区分工程和最终交付(architecture_candi
     assert not json.loads(capsys.readouterr().out)["delivery_complete"]
 
 
+@pytest.mark.parametrize("fault", ["missing", "foreign", "multiple", "roles", "constant"])
+def test_每个消费者必须独立闭合六角色和输出差异(architecture_candidate, fault):
+    candidate = architecture_candidate
+    row = candidate.stages["S1"]["evidence"][0]
+    path = candidate.root / row["result"]["path"]
+    result = json.loads(path.read_bytes())
+    if fault == "missing":
+        result["cases"][0].pop("consumers")
+    elif fault == "foreign":
+        result["cases"][0]["consumers"][0]["field"] = "unbound"
+    elif fault == "multiple":
+        result["cases"][0]["consumers"] *= 2
+    else:
+        generated = candidate.root / "mod/common/fixture.txt"
+        generated.write_text(
+            "candidate={weight={value=1} other={value=1}}\n", encoding="utf-8", newline="\n"
+        )
+        parsed = parse_bytes(generated.read_bytes(), path="mod/common/fixture.txt")
+        definition = parsed.root.first("candidate")
+        assert definition is not None
+        assert isinstance(definition.value, Block)
+        node = definition.value.first("other")
+        assert node is not None
+        other = {**row["consumers"][0], "field": "other", "ast_sha256": _digest(node)}
+        row["consumers"].append(other)
+        row["generated"] = [_ref(candidate.root, "mod/common/fixture.txt")]
+        result["consumers"] = row["consumers"]
+        result["generated"] = row["generated"]
+        cases = result["cases"] if fault == "constant" else result["cases"][:1]
+        result["cases"].extend(
+            {
+                **case,
+                "case_id": f"other.{case['case_id']}",
+                "consumers": [{key: other[key] for key in ("path", "definition", "field")}],
+                "expected": 1,
+                "reference": 1,
+                "generated": 1,
+            }
+            for case in list(cases)
+        )
+    row["result"] = _write(candidate.root, row["result"]["path"], result)
+    issues = receipts._evidence(
+        candidate.root,
+        "S1",
+        row,
+        digest(candidate.data["source_snapshot"]),
+        candidate.inventory.scope_hash,
+    )
+    expected = {
+        "missing": "each functional case",
+        "foreign": "case consumer outside",
+        "multiple": "each functional case",
+        "roles": "consumer functional roles missing",
+        "constant": "consumer has no actual output distinction",
+    }[fault]
+    assert any(expected in issue for issue in issues), issues
+
+
 def test_早期阶段可登记未知责任但S4以后不能闭合(architecture_candidate):
     c = architecture_candidate
     surface = replace(c.inventory.surfaces[0], actor_scope="unknown")
@@ -474,6 +608,7 @@ def test_早期阶段可登记未知责任但S4以后不能闭合(architecture_c
     assignment["status"] = "pending"
     assignment["stage"] = "S4"
     assignment["evidence_ids"] = []
+    _bind_native(c)
     _save(c)
     gate = situated_closeout.plan_gate(c.root)
     stages = gate["stage_receipts"]["stages"]
@@ -486,6 +621,166 @@ def test_早期阶段可登记未知责任但S4以后不能闭合(architecture_c
     assert gate["stage"] == "S4-S6"
     assert not gate["engineering_ready"]
     assert not gate["ready"]
+
+
+def test_完整原版保护可关闭未知兼容责任但保留未知计数(architecture_candidate):
+    c = architecture_candidate
+    surface = replace(c.inventory.surfaces[0], actor_scope="unknown", capability="pending")
+    c.inventory = replace(c.inventory, surfaces=(surface, *c.inventory.surfaces[1:]))
+    assignment = c.data["native_scope"]["assignments"][0]
+    assignment.pop("context")
+    assignment["context_sha256"] = digest(asdict(surface))
+    assignment["status"] = "retained_native"
+    _bind_native(c)
+    _save(c)
+    result = receipts.stage_report(c.root, c.inventory)
+    assert result["native_scope"]["closed"]
+    assert result["native_scope"]["unknown_scopes"] == [surface.surface_id]
+    assert result["engineering_ready"]
+    c.stages["S2"]["requirements"][0]["status"] = "pending"
+    _save(c)
+    assert not receipts.stage_report(c.root, c.inventory)["engineering_ready"]
+
+
+@pytest.mark.parametrize("stage", ["S0", "S2"])
+def test_功能见证的预期未知结果不是未完成责任(architecture_candidate, stage):
+    c = architecture_candidate
+    evidence = c.stages[stage]["evidence"][-1 if stage == "S0" else 0]
+    result = json.loads((c.root / evidence["result"]["path"]).read_text(encoding="utf-8"))
+    case = next(case for case in result["cases"] if case["role"] == "unknown")
+    case["input"] = {"status": "unknown", "unknown": True}
+    for field in ("expected", "reference", "generated", "observed"):
+        case[field] = {"status": "unknown", "unknown": True}
+    evidence["result"] = _write(c.root, evidence["result"]["path"], result)
+    assert (
+        receipts._evidence(
+            c.root, stage, evidence, digest(c.data["source_snapshot"]), c.inventory.scope_hash
+        )
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    "evidence_id",
+    [
+        "S0.archive_identity",
+        "S0.independent_scope",
+        "S0.known_failures_migration",
+        "S5.full_regression_resources",
+        "S5.quality_hygiene_package",
+        "S6.merged_ci",
+    ],
+)
+def test_非PDX见证附同消费者也不能代签implemented(architecture_candidate, evidence_id):
+    c = architecture_candidate
+    c.data["native_scope"]["assignments"][0]["evidence_ids"] = [evidence_id]
+    _save(c)
+    report = receipts.stage_report(c.root, c.inventory)
+    assert not report["native_scope"]["closed"]
+    assert not report["engineering_ready"]
+
+
+def test_有效PDX跨阶段见证仍可关联同一声明(architecture_candidate):
+    c = architecture_candidate
+    c.data["native_scope"]["assignments"][0]["evidence_ids"] = ["S1.production_chain"]
+    _save(c)
+    assert receipts.stage_report(c.root, c.inventory)["engineering_ready"]
+
+
+@pytest.mark.parametrize("fault", ["consumer_ast", "failed_case", "wrong_kind"])
+def test_失效PDX见证不能代签implemented(architecture_candidate, fault):
+    c = architecture_candidate
+    evidence = c.stages["S1"]["evidence"][0]
+    c.data["native_scope"]["assignments"][0]["evidence_ids"] = [evidence["evidence_id"]]
+    if fault == "consumer_ast":
+        evidence["consumers"] = [{**evidence["consumers"][0], "ast_sha256": "a" * 64}]
+    elif fault == "wrong_kind":
+        evidence["evidence_kind"] = "archive"
+    else:
+        result = json.loads((c.root / evidence["result"]["path"]).read_text(encoding="utf-8"))
+        result["cases"][0]["outcome"] = "failed"
+        evidence["result"] = _write(c.root, evidence["result"]["path"], result)
+    _save(c)
+    assert not receipts.stage_report(c.root, c.inventory)["native_scope"]["closed"]
+
+
+@pytest.mark.parametrize("stage", ["S0", "S2"])
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("status", "blocked"),
+        ("pending", ["not executed"]),
+        ("blocked", ["not executed"]),
+        ("failures", ["not executed"]),
+        ("open_items", ["not executed"]),
+    ],
+)
+def test_执行case元数据不能由passed掩盖未完成状态(architecture_candidate, stage, field, value):
+    c = architecture_candidate
+    evidence = c.stages[stage]["evidence"][-1 if stage == "S0" else 0]
+    result = json.loads((c.root / evidence["result"]["path"]).read_text(encoding="utf-8"))
+    result["cases"][0][field] = value
+    evidence["result"] = _write(c.root, evidence["result"]["path"], result)
+    assert receipts._evidence(
+        c.root, stage, evidence, digest(c.data["source_snapshot"]), c.inventory.scope_hash
+    )
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "unprotected",
+        "active",
+        "missing",
+        "duplicate",
+        "context",
+        "occurrence",
+        "manifest",
+        "snapshot",
+        "forged",
+        "implementation_without_mapping",
+        "implementation_other_object",
+    ],
+)
+def test_原版保护引用拒绝未证活跃及失效逐项身份(architecture_candidate, fault):
+    c = architecture_candidate
+    if not fault.startswith("implementation_"):
+        c.data["native_scope"]["assignments"][0]["status"] = "retained_native"
+    report = c.native_report
+    row = report["native_treatments"]["rows"][0]
+    if fault == "unprotected":
+        row["source_protection"]["proven"] = False
+    elif fault == "active":
+        row["active_unknown_usage"] = True
+    elif fault == "missing":
+        report["native_treatments"]["rows"].pop()
+    elif fault == "duplicate":
+        report["native_treatments"]["rows"].append(row)
+    elif fault == "context":
+        row["context_sha256"] = "a" * 64
+    elif fault == "occurrence":
+        row["declaration_occurrence"] = 2
+    elif fault == "snapshot":
+        report["source_snapshot_sha256"] = "0" * 64
+    elif fault == "implementation_without_mapping":
+        row["implemented_numeric"] = False
+    elif fault == "implementation_other_object":
+        surface = replace(c.inventory.surfaces[0], definition="different_object")
+        c.inventory = replace(c.inventory, surfaces=(surface, *c.inventory.surfaces[1:]))
+        assignment = c.data["native_scope"]["assignments"][0]
+        assignment["declaration_id"] = surface.declaration_id
+        assignment["context"] = json.loads(json.dumps(asdict(surface)))
+        _bind_native(c)
+        report = c.native_report
+    else:
+        report = json.loads(json.dumps(report))
+        if fault == "manifest":
+            report["native_treatments"]["production_hashes"] = {}
+        else:
+            report["native_treatments"]["rows"][0]["source_protection"]["proven"] = False
+    c.data["native_scope"]["typed_report"] = _write(c.root, "tools/out/native.json", report)
+    _save(c)
+    assert not receipts.stage_report(c.root, c.inventory)["engineering_ready"]
 
 
 @pytest.mark.parametrize(

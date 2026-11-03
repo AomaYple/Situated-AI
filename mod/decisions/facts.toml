@@ -144,3 +144,27 @@ unit = "flag"
 refresh = "consumer"
 unknown = "vanilla"
 trigger = "AND = { literacy_rate >= 0 literacy_rate <= 1 literacy_rate >= 0.5 }"
+
+# 显式行动仍真实消费该无持久状态信号，不再借旧科技writer间接注册。
+[facts.coord_need_education]
+domain = "education"
+source = "mod/decisions/country_state.toml"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+refresh = "consumer"
+unknown = "vanilla"
+quality = "derived"
+trigger = "sitai_context_need_education = yes"
+
+# 显式行动仍真实消费该无持久状态信号，不再借旧科技writer间接注册。
+[facts.coord_evidence_need_industry]
+domain = "economy"
+source = "mod/decisions/country_state.toml"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+refresh = "consumer"
+unknown = "vanilla"
+quality = "derived"
+trigger = "sitai_context_evidence_need_industry = yes"

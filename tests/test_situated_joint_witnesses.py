@@ -232,7 +232,8 @@ def _opposite_value(operator: str, value: object) -> object:
 
 def test_local_links_preserve_each_condition_unknown_and_player_boundary(generated) -> None:
     policies, files, info_text, evidence = generated
-    assert len(evidence) == 34
+    assert len(evidence) == 31
+    assert not any(item.spec.field == "colonial_interest_ratio" for item in evidence)
     assert {item.spec.chain_id for item in evidence} == {
         "LJ01",
         "LJ02",
@@ -397,52 +398,70 @@ REMAINING_CASES: list[tuple[str, str, dict[str, object], str | None, float]] = [
         None,
         1,
     ),
-    (INFO, "wanted_construction_output", {"war_defeat": True}, "war_defeat_reconstruction", 1.2),
+    (
+        INFO,
+        "wanted_construction_output",
+        {"war_defeat": True},
+        "remaining_reconstruction_need",
+        1.12,
+    ),
     (INFO, "wanted_construction_output", {"war_defeat": False}, None, 1),
-    (INFO, "wanted_construction_output", {"war_defeat": True, "war": True}, None, 1),
+    (
+        INFO,
+        "wanted_construction_output",
+        {"war_defeat": True, "war": True},
+        "remaining_reconstruction_need",
+        1.12,
+    ),
     (
         INFO,
         "wanted_construction_output",
         {"war_defeat": True, "default": True},
         "fiscal_construction_guard",
-        0.75,
+        0.87,
     ),
     (
         INFO,
         "wanted_construction_output",
         {"war_defeat": True, "bureaucracy": -1},
-        "administrative_bureaucracy_repair",
-        0.85,
+        "remaining_reconstruction_need",
+        1.12,
     ),
-    (INFO, "wanted_construction_output", {"war_defeat": True, "bureaucracy": None}, None, 1),
+    (
+        INFO,
+        "wanted_construction_output",
+        {"war_defeat": True, "bureaucracy": None},
+        "remaining_reconstruction_need",
+        1.12,
+    ),
     (
         DEFAULT_STRATEGY,
         SHIP,
-        {"route_fiscal_recovery": True},
-        "coordinated_route_fiscal_recovery_ship_construction",
+        {"default": True},
+        "military_capacity_ship_default_cost",
         0.85,
     ),
     (
         DEFAULT_STRATEGY,
         SHIP,
-        {"route_fiscal_recovery": True, "loans": True, "debt_ratio": 0.5, "bankruptcy_horizon": 10},
-        "coordinated_liquidity_ship_construction_output_multiplier",
-        0.8,
+        {"loans": True, "debt_ratio": 0.5, "bankruptcy_horizon": 10},
+        "military_capacity_ship_liquidity_cost",
+        0.9,
     ),
-    (DEFAULT_STRATEGY, SHIP, {"route_fiscal_recovery": True, "war": True}, None, 1),
+    (DEFAULT_STRATEGY, SHIP, {"war": True}, None, 1.10),
     (
         DEFAULT_STRATEGY,
         CONSCRIPT,
-        {"war": True, "small_arms_price": 0.6, "small_arms_balance": -1},
-        "war_supply_conscript_battalion_ratio",
-        0.95,
+        {"war": True, "own_army": 1, "small_arms_price": 0.6, "small_arms_balance": -1},
+        "military_capacity_conscript_need",
+        1.10,
     ),
     (
         DEFAULT_STRATEGY,
         CONSCRIPT,
-        {"war": True, "small_arms_price": 0.6, "small_arms_balance": 0},
+        {"war": True, "own_army": 1, "small_arms_price": 0.6, "small_arms_balance": 0},
         None,
-        1,
+        1.10,
     ),
     (
         DEFAULT_STRATEGY,
@@ -502,11 +521,6 @@ REMAINING_CASES: list[tuple[str, str, dict[str, object], str | None, float]] = [
         "naval_peacetime_budget",
         0.8,
     ),
-    (INFO, "colonial_interest_ratio", {"navy": 0}, "overseas_naval_feasibility", 0.8),
-    (INFO, "colonial_interest_ratio", {"navy": 0, "default": True}, "overseas_affordability", 0.7),
-    (INFO, "colonial_interest_ratio", {"navy": 50}, "overseas_naval_projection", 1.1),
-    (INFO, "colonial_interest_ratio", {"navy": 50, "infamy": 30}, None, 1),
-    (INFO, "colonial_interest_ratio", {"navy": 50, "gdp": None}, None, 1),
 ]
 
 
@@ -545,12 +559,12 @@ def test_war_defeat_chain_uses_original_expiring_memory_not_a_new_permanent_flag
         "root",
         (),
     )
-    links = [item for item in evidence if item.spec.rule_id == "war_defeat_reconstruction"]
+    links = [item for item in evidence if item.spec.rule_id == "remaining_reconstruction_need"]
     assert len(links) == 1
     assert links[0].spec.refresh == "consumer"
     assert (
         links[0].spec.completion_state
-        == "native_recently_lost_war_memory_and_current_recovery_capacity"
+        == "native_recently_lost_war_memory_independent_reconstruction_need"
     )
     assert all(item.spec.max_hops <= 2 for item in evidence)
     vanilla = decision_adapters.read_inputs(decision_adapters.load())[
@@ -700,16 +714,13 @@ def _source_net(policy, field, values):
 _REMAINING_STRICT_WRITERS = {
     "fiscal_construction_guard",
     "liquidity_construction_guard",
-    "coordinated_route_fiscal_recovery_ship_construction",
-    "war_defeat_reconstruction",
-    "war_supply_conscript_battalion_ratio",
+    "military_capacity_ship_default_cost",
+    "remaining_reconstruction_need",
+    "military_capacity_conscript_need",
     "structural_wartime_supply_escort",
     "structural_wartime_supply_price_escort",
     "structural_wartime_supply_balance_escort",
     "navy_existing_capacity",
-    "overseas_affordability",
-    "overseas_naval_feasibility",
-    "overseas_naval_projection",
 }
 
 

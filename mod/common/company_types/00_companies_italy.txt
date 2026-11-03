@@ -84,14 +84,20 @@ company_ilva = {
 				# company_sector_company_ilva_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_ef08c5865fdd5aee_company_mandatory_input_negative
+			# GROUP program_ef08c5865fdd5aee_company_mandatory_input_coal_negative
+			add = { value = 0
+				# company_sector_company_ilva_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_ef08c5865fdd5aee_company_mandatory_input_iron_negative
+			add = { value = 0
+				# company_sector_company_ilva_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_ef08c5865fdd5aee_company_mandatory_input_tools_negative
 			add = { value = 0
 				# company_sector_company_ilva_tools_input [market]; 主业某必选基础配方组所有方法共同需要tools；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_ilva_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_ilva_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_ef08c5865fdd5aee_company_output_demand_positive
 			add = { value = 0
@@ -109,7 +115,7 @@ company_ilva = {
 				# company_sector_company_ilva_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_ilva.ai_weight
@@ -219,12 +225,15 @@ company_ansaldo = {
 				# company_sector_company_ansaldo_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_fc617dc304522f99_company_mandatory_input_negative
+			# GROUP program_fc617dc304522f99_company_mandatory_input_coal_negative
+			add = { value = 0
+				# company_sector_company_ansaldo_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_fc617dc304522f99_company_mandatory_input_iron_negative
 			add = { value = 0
 				# company_sector_company_ansaldo_iron_input [market]; 主业某必选基础配方组所有方法共同需要iron；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_ansaldo_coal_input [market]; 主业某必选基础配方组所有方法共同需要coal；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_fc617dc304522f99_company_output_demand_positive
 			add = { value = 0
@@ -246,7 +255,7 @@ company_ansaldo = {
 				# company_sector_company_ansaldo_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_ansaldo.ai_weight
@@ -323,7 +332,7 @@ company_ricordi = {
 		# ACTION program_95b5a7f45c699245 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } multiply = {
 			value = 1
-			# GROUP program_95b5a7f45c699245_company_mandatory_input_negative
+			# GROUP program_95b5a7f45c699245_company_mandatory_input_paper_negative
 			add = { value = 0
 				# company_sector_company_ricordi_paper_input [market]; 主业某必选基础配方组所有方法共同需要paper；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.25 } } } } add = -0.15 }
@@ -437,16 +446,25 @@ company_fiat = {
 				# company_sector_company_fiat_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_62ff896401cb91a6_company_mandatory_input_negative
+			# GROUP program_62ff896401cb91a6_company_mandatory_input_engines_negative
+			add = { value = 0
+				# company_sector_company_fiat_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_62ff896401cb91a6_company_mandatory_input_oil_negative
+			add = { value = 0
+				# company_sector_company_fiat_oil_input [market]; 主业某必选基础配方组所有方法共同需要oil；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_62ff896401cb91a6_company_mandatory_input_rubber_negative
+			add = { value = 0
+				# company_sector_company_fiat_rubber_input [market]; 主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:rubber mg:rubber = { market_goods_pricier > 0.25 } } } } add = -0.15 }
+			}
+			# GROUP program_62ff896401cb91a6_company_mandatory_input_steel_negative
 			add = { value = 0
 				# company_sector_company_fiat_steel_input [market]; 主业某必选基础配方组所有方法共同需要steel；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:steel mg:steel = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_fiat_rubber_input [market]; 主业某必选基础配方组所有方法共同需要rubber；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:rubber mg:rubber = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_fiat_oil_input [market]; 主业某必选基础配方组所有方法共同需要oil；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:oil mg:oil = { market_goods_pricier > 0.25 } } } } add = -0.15 }
-				# company_sector_company_fiat_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }
 			}
 			# GROUP program_62ff896401cb91a6_company_output_demand_positive
 			add = { value = 0
@@ -464,7 +482,7 @@ company_fiat = {
 				# company_sector_company_fiat_default [market]; 已观察国家违约提高筹建计划机会成本；不是公司成立时实际付款
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.2 }
 			}
-			min = 0.65
+			min = 0.5
 			max = 1.24
 		} }
 		# SITAI END information:company_fiat.ai_weight

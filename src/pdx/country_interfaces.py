@@ -28,18 +28,15 @@ def _digest(value):
     ).hexdigest()
 
 
+# Frozen evidence records actual native lifecycle syntax as well as current readers.
+# Keeping this AST extraction rule does not require or generate Mod lifecycle hooks.
+_NATIVE_HOOKS = frozenset(
+    {"on_monthly_pulse_country", "on_country_default", "on_country_no_longer_default"}
+)
+
+
 def _required(policy):
-    return (
-        {r["engine"] for r in policy.readers.values()}
-        | set(country_state.HOOKS)
-        | {
-            "is_ai",
-            "has_variable",
-            "set_variable",
-            "remove_variable",
-            "on_actions",
-        }
-    )
+    return {r["engine"] for r in policy.readers.values()} | {"is_ai"}
 
 
 def _arguments(policy):
@@ -56,9 +53,7 @@ def _observations(raw, relative):
     def walk(block, *, top=False):
         for assignment in block.assignments():
             key, value = assignment.key, assignment.value
-            if key not in country_state.HOOKS or (
-                top and relative.startswith("common/on_actions/")
-            ):
+            if key not in _NATIVE_HOOKS or (top and relative.startswith("common/on_actions/")):
                 words.setdefault(key, assignment.line)
             if isinstance(value, Scalar) and not value.text.startswith('"'):
                 words.setdefault(value.text, assignment.line)

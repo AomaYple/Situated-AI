@@ -1,5 +1,0 @@
-schema = 1
-rank = ["need_tier", "net_benefit", "stress", "opportunity", "goal_priority", "action_id"]
-max_candidates = 32
-max_delta_per_consumer = 10.0
-unknown_fallback = "vanilla"

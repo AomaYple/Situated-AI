@@ -12,8 +12,9 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from pdx import decision_adapters, decision_rules
-from pdx.model import Assignment, Block
+from pdx.model import Assignment, Block, Scalar
 from pdx.parser import parse_bytes
+from pdx.textio import normalized_text
 
 from . import engine_scope
 from .action_instances import ActionInstance, build
@@ -22,7 +23,7 @@ from .families import FAMILIES
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from .decision_ir import EvaluationContext
+    from .decision_ir import EvaluationContext, WriterDecisionIR
     from .vanilla_inventory import VanillaInventory, VanillaSurface
 
 REPO = Path(__file__).resolve().parents[3]
@@ -122,6 +123,103 @@ class NativeConsumerBinding:
             or any(not part for part in self.field.split("."))
         ):
             raise ValueError("原版消费者必须有精确相对来源、定义与字段")
+
+
+@dataclass(frozen=True, slots=True)
+class ContinuousProgramBinding:
+    """A continuous writer corroborated against one actual production output.
+
+    This is a separate interface binding, never a fabricated rule or card.
+    Output hashes identify the metadata and bytes checked by the caller.
+    """
+
+    writer: WriterDecisionIR
+    native: NativeConsumerBinding
+    unit: str
+    production_source: str
+    production_sha256: str
+    overlay_sha256: str
+    metadata_sha256: str
+
+
+def continuous_writer_issue(binding: ContinuousProgramBinding) -> str | None:
+    """Validate the exact finite writer identity without inventing native evidence."""
+    from .decision_ir import ConsumerIRBundle  # noqa: PLC0415
+    from .support_program import SupportProgram  # noqa: PLC0415
+
+    writer = binding.writer
+    if not isinstance(writer.program, SupportProgram):
+        return "continuous_program_missing"
+    program = writer.program
+    try:
+        ConsumerIRBundle(1, (), (writer,)).as_dict()
+    except ValueError:
+        return "continuous_writer_contract_mismatch"
+    if (
+        writer.kind != "support_program"
+        or writer.writer_id != "diplomatic_play_support_program"
+        or writer.action is not None
+        or writer.legacy is not None
+        or writer.predicates
+        or writer.chain_refs
+        or writer.reader_context_bindings
+        or program.description != "SITAI_SUPPORT_BALANCE_REASON"
+        or (
+            program.market is not None
+            and program.market.description != "SITAI_MARKET_DEPENDENCE_SUPPORT_REASON"
+        )
+        or any(
+            reason.description != f"SITAI_SECURITY_{reason.name.upper()}_REASON"
+            for reason in program.defense
+        )
+        or binding.unit != "score"
+        or binding.production_source != "common/ai_strategies/00_default_strategy.txt"
+        or any(
+            re.fullmatch(r"[0-9a-f]{64}", value) is None
+            for value in (
+                binding.production_sha256,
+                binding.overlay_sha256,
+                binding.metadata_sha256,
+            )
+        )
+        or binding.overlay_sha256 != hashlib.sha256(program.render().encode()).hexdigest()
+    ):
+        return "continuous_writer_contract_mismatch"
+    context = writer.evaluation_context
+    source = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
+    if context is None or context.status != "observed" or context.actor_scope is None:
+        return "evaluation_context_unproven"
+    if asdict(context.actor_scope) != {
+        "name": "root",
+        "kind": "country",
+        "role": "actor",
+        "source": source,
+        "line": 183,
+    }:
+        return "actor_type_mismatch"
+    expected_targets = (
+        {
+            "name": "target_country",
+            "kind": "country",
+            "role": "target",
+            "source": source,
+            "line": 184,
+        },
+        {
+            "name": "enemy_country",
+            "kind": "country",
+            "role": "target",
+            "source": source,
+            "line": 185,
+        },
+    )
+    if (
+        tuple(asdict(row) for row in context.targets) != expected_targets
+        or context.auxiliary_scopes
+        or context.evidence != tuple(f"{source}:{line}" for line in (183, 184, 185))
+    ):
+        return "target_type_mismatch"
+    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -762,6 +860,109 @@ class _NativeBindingProofs:
         )
 
 
+def _continuous_native_issue(
+    binding: ContinuousProgramBinding,
+    surface: VanillaSurface,
+    proofs: _NativeBindingProofs,
+) -> tuple[str | None, dict[str, Any]]:
+    """Only the pinned native support consumer and exact country getter are known."""
+    problem = continuous_writer_issue(binding)
+    if problem is not None:
+        return problem, {}
+    source = "common/ai_strategies/00_default_strategy.txt"
+    identity = (source, "ai_strategy_default", "diplomatic_play_support")
+    if (binding.native.source, binding.native.definition, binding.native.field) != identity or (
+        surface.source,
+        surface.definition,
+        surface.field,
+    ) != identity:
+        return "continuous_native_identity_mismatch", {}
+    if (
+        surface.actor_scope != "country"
+        or surface.target_scope != "scope:country=country;scope:enemy_country=country"
+        or surface.operation != "additive_score"
+        or surface.capability != "direct"
+        or not surface.legal
+        or surface.ambiguity
+    ):
+        return "continuous_native_context_unproven", {}
+    native = json.loads(engine_scope.strategy_snapshot())
+    raw = proofs.sources.get(source)
+    if raw is None or hashlib.sha256(raw).hexdigest() != native["script_hashes"].get(source):
+        return "continuous_native_bytes_unproven", {}
+    root = proofs.root(source)
+    definition = _ordinary(root, "ai_strategy_default") if root is not None else None
+    node = (
+        _ordinary(definition.value, "diplomatic_play_support")
+        if definition is not None and isinstance(definition.value, Block)
+        else None
+    )
+    if (
+        node is None
+        or not isinstance(node.value, Block)
+        or surface.source_line != node.line
+        or surface.scope_evidence != (f"{source}:{node.line}",)
+    ):
+        return "continuous_native_context_unproven", {}
+    evidence: dict[str, Any] = {
+        "native_source_sha256": hashlib.sha256(raw).hexdigest(),
+        "scope_evidence": [f"{source}:{line}" for line in (183, 184, 185, 187, node.line)],
+        "actor": "ROOT=country",
+        "targets": ["scope:country=country", "scope:enemy_country=country"],
+        "operation": "additive_score",
+        "unit": "score",
+    }
+    program = binding.writer.program
+    assert program is not None
+    if program.market is not None:
+        # Reuse a pinned original-file identity, not the equipment capability.
+        # The numeric getter remains an exact country-to-country call and does
+        # not authorize arbitrary quoted functions or derived expressions.
+        from pdx import equipment_opportunities  # noqa: PLC0415
+
+        getter_source = "common/script_values/01_power_bloc_values.txt"
+        getter_raw = proofs.sources.get(getter_source)
+        frozen_hash = equipment_opportunities.load_baseline()["sources"][getter_source]
+        if (
+            getter_raw is None
+            or hashlib.sha256(normalized_text(getter_raw.decode("utf-8-sig")).encode()).hexdigest()
+            != frozen_hash
+        ):
+            return "continuous_getter_bytes_unproven", {}
+        getter_root = proofs.root(getter_source)
+        stack = [getter_root] if getter_root is not None else []
+        lines = []
+        while stack:
+            for item in stack.pop().assignments():
+                if isinstance(item.value, Block):
+                    stack.append(item.value)
+                elif (
+                    item.key == "multiply"
+                    and item.op == "="
+                    and item.prefix is None
+                    and isinstance(item.value, Scalar)
+                    and item.value.quoted
+                    and item.value.unquoted == "scope:target.economic_dependence(ROOT)"
+                ):
+                    lines.append(item.line)
+        if lines != [30]:
+            return "continuous_getter_contract_unproven", {}
+        evidence["numeric_getters"] = {
+            "economic_dependence": {
+                "actor": "country",
+                "argument": "country",
+                "arity": 1,
+                "expressions": [program.market.country_getter, program.market.enemy_getter],
+                "source": getter_source,
+                "line": 30,
+                "normalized_source_sha256": frozen_hash,
+                "raw_source_sha256": hashlib.sha256(getter_raw).hexdigest(),
+                "evidence": "static_native_numeric_country_argument_call",
+            }
+        }
+    return None, evidence
+
+
 def native_coverage(
     inventory: VanillaInventory,
     instances: tuple[ActionInstance, ...],
@@ -769,6 +970,7 @@ def native_coverage(
     explicit_consumers: Mapping[str, NativeConsumerBinding] | None = None,
     native_sources: Mapping[str, bytes] | None = None,
     production_policies: Mapping[str, decision_rules.RuleSet] | None = None,
+    continuous_programs: tuple[ContinuousProgramBinding, ...] = (),
 ) -> dict[str, Any]:
     """Join real production bindings to an independently discovered denominator.
 
@@ -787,6 +989,9 @@ def native_coverage(
     by_id = {item.action_id: item for item in instances}
     if len(by_id) != len(instances):
         raise ValueError("原版覆盖映射的生产行动身份重复")
+    program_ids = [item.writer.writer_id for item in continuous_programs]
+    if len(program_ids) != len(set(program_ids)) or set(program_ids) & set(by_id):
+        raise ValueError("连续程序与生产行动的writer身份重复")
     if set(explicit) - set(by_id) or any(by_id[key].kind != "action_card" for key in explicit):
         raise ValueError("显式消费者映射只能引用实际显式行动卡")
     identities: dict[tuple[str, str, str], list[VanillaSurface]] = {}
@@ -859,6 +1064,39 @@ def native_coverage(
             )
             continue
         matches.setdefault(native_candidates[0].declaration_id, []).append(instance)
+    continuous_matches: dict[str, list[ContinuousProgramBinding]] = {}
+    continuous_records: dict[str, dict[str, Any]] = {}
+    for program_binding in continuous_programs:
+        writer = program_binding.writer
+        binding = program_binding.native
+        program_candidates = identities.get((binding.source, binding.definition, binding.field), [])
+        continuous_records[writer.writer_id] = {
+            "writer_id": writer.writer_id,
+            "kind": "support_program",
+            "native": asdict(binding),
+            "owner": writer.owner,
+            "production_source": program_binding.production_source,
+            "production_sha256": program_binding.production_sha256,
+            "overlay_sha256": program_binding.overlay_sha256,
+            "metadata_sha256": program_binding.metadata_sha256,
+            "program": writer.program.as_dict() if writer.program is not None else None,
+            "binding_status": "unproven",
+            "business_complete": False,
+        }
+        if len(program_candidates) != 1:
+            unmatched.append(
+                {
+                    "action_id": writer.writer_id,
+                    "reason": "native_identity_ambiguous"
+                    if program_candidates
+                    else "native_surface_missing",
+                    "binding": asdict(binding),
+                }
+            )
+        else:
+            continuous_matches.setdefault(program_candidates[0].declaration_id, []).append(
+                program_binding
+            )
     categories: dict[str, list[str]] = {
         name: []
         for name in (
@@ -875,6 +1113,7 @@ def native_coverage(
     binding_issue_count = 0
     for surface in sorted(inventory.surfaces, key=lambda item: item.declaration_id):
         candidates = matches.get(surface.declaration_id, [])
+        continuous = continuous_matches.get(surface.declaration_id, [])
         issues = {
             item.action_id: reason
             for item in candidates
@@ -885,8 +1124,21 @@ def native_coverage(
             )
             is not None
         }
+        for program_binding in continuous:
+            writer_id = program_binding.writer.writer_id
+            reason, evidence = _continuous_native_issue(program_binding, surface, proofs)
+            if reason is not None:
+                issues[writer_id] = reason
+            else:
+                continuous_records[writer_id].update(
+                    binding_status="interface_bound",
+                    native_evidence=evidence,
+                )
         binding_issue_count += len(issues)
-        covered = sorted(item.action_id for item in candidates if item.action_id not in issues)
+        matched_ids = [item.action_id for item in candidates] + [
+            item.writer.writer_id for item in continuous
+        ]
+        covered = sorted(writer_id for writer_id in matched_ids if writer_id not in issues)
         if surface.ambiguity:
             status = "unknown"
         elif surface.capability == "observation":
@@ -907,7 +1159,7 @@ def native_coverage(
                 "legal": surface.legal,
                 "unknown_scope": surface.surface_id in unknown_scopes,
                 "coverage_status": status,
-                "matched_actions": sorted(item.action_id for item in candidates),
+                "matched_actions": sorted(matched_ids),
                 "covered_actions": covered if status == "actual_covered" else [],
                 "binding_issues": issues,
                 "field_projections": {
@@ -946,6 +1198,7 @@ def native_coverage(
             if row["covered_actions"]
         ],
         "implicit_rows": implicit_rows,
+        "continuous_programs": list(continuous_records.values()),
         "implicit_denominator_policy": "documented_optional_consumers_separate_from_discovered_denominator",
         "binding_complete": bool(inventory.surfaces)
         and not (unresolved or unmatched or binding_issue_count or inventory.parse_failures),
@@ -1288,10 +1541,12 @@ def contract(
 __all__ = [
     "CHAINS",
     "DEFAULT_SOURCE",
+    "ContinuousProgramBinding",
     "DomainCoverage",
     "JointChain",
     "NativeConsumerBinding",
     "TargetCoverage",
+    "continuous_writer_issue",
     "contract",
     "load",
     "native_coverage",

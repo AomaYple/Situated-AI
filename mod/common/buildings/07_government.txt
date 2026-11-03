@@ -139,14 +139,7 @@ building_university = {
 		# ACTION program_50f41da1b83f7ffd [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_50f41da1b83f7ffd_negative
-			add = { value = 0
-				# coordinated_layered_building_building_university_recovery [economy]; 恢复层降低新增建筑承诺；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_recovery = yes sitai_context_layer_recovery = yes } } } add = -0.1 }
-				# university_paper_pressure [fiscal]; 纸张投入高价与供给不足时降低新增大学的边际偏好；仍保留原版研究、资格和历史需求
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.05 }
-			}
-			# GROUP program_50f41da1b83f7ffd_building_active_inputs_negative
+			# GROUP program_50f41da1b83f7ffd_building_active_input_paper_negative
 			add = { value = 0
 				# actual_cost_building_university_building_university_pm_analytical_philosophy_department_paper [market]; 实际启用生产组 pmg_base_building_university 的 paper 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_analytical_philosophy_department } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
@@ -155,20 +148,27 @@ building_university = {
 				# actual_cost_building_university_building_university_pm_scholastic_education_paper [market]; 实际启用生产组 pmg_base_building_university 的 paper 投入同时高价且短缺时计入扩建成本
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_scholastic_education } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
+			# GROUP program_50f41da1b83f7ffd_building_fiscal_default_negative
+			add = { value = 0
+				# knowledge_university_observed_default_cost [fiscal]; 所有者实际违约为新增公费大学提供独立偿付成本；不屏蔽低识字需求
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes } } } add = -0.15 }
+			}
 			# GROUP program_50f41da1b83f7ffd_building_output_demand_positive
 			add = { value = 0
-				# coordinated_layered_building_building_university_expansion [economy]; 扩张层提高建筑候选的相对关注；原版投入成本、利润、就业、基础设施、资源上限与资格继续优先
-				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes sitai_context_known_layer_expansion = yes sitai_context_layer_expansion = yes } } } add = 0.18 }
-				# SITAI CHAIN LJ03/LJ03.university_completed_knowledge_foundation writer=rule_action_common_buildings_07_government_txt_lj03_university_completed_knowledge_foundation
-				# lj03_university_completed_knowledge_foundation [political]; 所属国家已完成学术基础且实际识字不足时，有限关注大学知识能力；纸张实际投入成本仍优先
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes has_technology_researched = academia literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 in_default = no taking_loans = no exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier <= 0.25 } } } } } add = 0.15 }
-				# university_funded_knowledge [political]; 国家识字基础不足且财政和纸张条件可承受时关注大学知识与资格供给；不宣称大学直接等价于学校或自动提升识字率
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = no taking_loans = no literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier <= 0.25 } } } } } add = 0.1 }
-				# borrowing_foundation_building_university [economy]; 正常借款不全局禁止直接需求已知的局部基础修复；实际投入成本和已证高档继续优先
-				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = no taking_loans = yes has_technology_researched = academia literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_pricier <= 0.25 market_goods_delta >= 0 } } } } } add = 0.05 }
+				# knowledge_university_prepared_pm_analytical_philosophy_department [political]; 实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字知识能力需求；不把现有大学当新建资格
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_analytical_philosophy_department } exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
+				# knowledge_university_prepared_pm_philosophy_department [political]; 实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字知识能力需求；不把现有大学当新建资格
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_philosophy_department } exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
+				# knowledge_university_prepared_pm_scholastic_education [political]; 实际观察本州大学基础PM且其真实纸张投入供应充足时升档同一低识字知识能力需求；不把现有大学当新建资格
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_university production_method = pm_scholastic_education } exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 exists = market market = { exists = mg:paper mg:paper = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
+				# SITAI CHAIN LJ03/LJ03.university_completed_knowledge_foundation writer=rule_action_common_buildings_07_government_txt_knowledge_university_researched_foundation
+				# knowledge_university_researched_foundation [political]; 低识字且原版学术科技确实完成时升档同一知识能力需求；原版大学科技资格仍由原版保留
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 has_technology_researched = academia } } } add = 0.15 }
+				# knowledge_university_low_literacy_need [political]; 国家实际低识字形成对大学创新和资格供给的有限需求；不把大学等同学校或直接识字增长，不要求该州已经有大学
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } } add = 0.1 }
 			}
-			min = 0.7000000000000001
-			max = 1.18
+			min = 0.65
+			max = 1.2
 		} }
 		# SITAI END information:building_university.ai_value
 	}

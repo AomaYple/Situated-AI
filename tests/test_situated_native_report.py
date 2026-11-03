@@ -98,7 +98,12 @@ def pipeline(tmp_path, monkeypatch):
     }
     model = SimpleNamespace(action_instances=(instance,))
     monkeypatch.setattr(config, "GAME", game)
-    monkeypatch.setattr(distribution, "package_inputs", lambda: (None, None, generated))
+
+    def package_inputs(*, include_engineering_metadata=False):
+        assert include_engineering_metadata is True
+        return None, None, generated
+
+    monkeypatch.setattr(distribution, "package_inputs", package_inputs)
     monkeypatch.setattr(audit, "load_model", lambda: model)
     monkeypatch.setattr(audit.vanilla_inventory, "discover", lambda: scope)
     monkeypatch.setattr(decision_adapters, "load", lambda: SimpleNamespace(policies=()))
@@ -204,7 +209,8 @@ def test_missing_discovered_native_bytes_is_fatal_instead_of_inherited(pipeline)
 def test_upstream_verification_failures_propagate_without_legacy_fallback(
     pipeline, monkeypatch, stage
 ):
-    def fail():
+    def fail(*, include_engineering_metadata=None):
+        assert include_engineering_metadata is (True if stage == "build" else None)
         raise ValueError(f"{stage} failed explicitly")
 
     target, name = {
@@ -238,7 +244,8 @@ def test_cli_native_option_runs_real_pipeline_and_does_not_call_legacy_report(
 def test_cli_native_error_is_nonzero_and_does_not_overwrite_previous_report(
     pipeline, tmp_path, monkeypatch
 ):
-    def fail():
+    def fail(*, include_engineering_metadata=False):
+        assert include_engineering_metadata is True
         raise ValueError("native fingerprint drift")
 
     monkeypatch.setattr(distribution, "package_inputs", fail)

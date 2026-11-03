@@ -23,9 +23,11 @@ from . import (
     decision_intents,
     decision_rules,
     equipment_opportunities,
+    law_opportunities,
     mobilization_opportunities,
     observation_queries,
     production_inputs,
+    technology_opportunities,
     treaty_opportunities,
 )
 from .lexer import ATOM, LBRACE, OP, RBRACE, tokenize
@@ -80,6 +82,8 @@ class AdapterSet:
     supply: SupplyPlan | None = None
     scalar_values: tuple[tuple[str, tuple[str, ...]], ...] = ()
     company_sectors_sha256: str | None = None
+    law_opportunities_sha256: str | None = None
+    technology_opportunities_sha256: str | None = None
 
 
 def writes(
@@ -142,6 +146,8 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
     treaty_fields = None
     mobilization_digest = None
     mobilization_fields = None
+    law_digest = None
+    technology_digest = None
     if source == SOURCE:
         if (
             not isinstance(data["sources"], dict)
@@ -203,6 +209,20 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             + mobilization_opportunities.PARAMETERS.read_bytes()
             + b"\0generator:"
             + Path(mobilization_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        laws = law_opportunities.derive(data)
+        _merge_derivation(data, laws, "具体法律处境机会")
+        law_digest = hashlib.sha256(
+            law_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(law_opportunities.__file__).read_bytes()
+        ).hexdigest()
+        technologies = technology_opportunities.derive(data)
+        _merge_derivation(data, technologies, "具体科技机制机会")
+        technology_digest = hashlib.sha256(
+            technology_opportunities.PARAMETERS.read_bytes()
+            + b"\0generator:"
+            + Path(technology_opportunities.__file__).read_bytes()
         ).hexdigest()
     if not isinstance(data["sources"], dict) or not data["sources"]:
         raise ValueError("消费者适配必须锁定全部原件")
@@ -279,6 +299,12 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
             else b""
         )
         + (b"\0treaty_opportunities:" + treaty_digest.encode("ascii") if treaty_digest else b"")
+        + (b"\0law_opportunities:" + law_digest.encode("ascii") if law_digest else b"")
+        + (
+            b"\0technology_opportunities:" + technology_digest.encode("ascii")
+            if technology_digest
+            else b""
+        )
         + (
             b"\0mobilization_opportunities:" + mobilization_digest.encode("ascii")
             if mobilization_digest
@@ -506,6 +532,8 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
         supply,
         tuple(sorted(scalar_values)),
         sector_digest,
+        law_digest,
+        technology_digest,
     )
     writes(adapters)
     return adapters
@@ -752,7 +780,6 @@ def build(
     enabled_domains: frozenset[str] | None = None,
     overlays: Mapping[str, str] | None = None,
     country_policy: CountryPolicy | None = None,
-    owned_variables: frozenset[str] | set[str] | None = None,
     owned_triggers: frozenset[str] | set[str] | None = None,
     consumer_ir: ConsumerIRBundle | None = None,
 ) -> tuple[dict[str, str], dict[str, object]]:
@@ -764,6 +791,10 @@ def build(
     inputs = read_inputs(adapters, game=game, texts=texts)
     if adapters.company_sectors_sha256 is not None:
         company_sectors.verify_baseline(inputs)
+    if adapters.law_opportunities_sha256 is not None:
+        law_opportunities.verify_inputs(inputs)
+    if adapters.technology_opportunities_sha256 is not None:
+        technology_opportunities.verify_inputs(inputs)
     # 一次词法扫描同时建立校验集合与原件定位，避免逐读取器反复扫描大文件。
     evidence = reader_evidence(inputs)
     words = frozenset(evidence)
@@ -821,7 +852,6 @@ def build(
             default_strategy=False,
             reader_words=words,
             country_policy=country_policy,
-            owned_variables=owned_variables,
             owned_triggers=owned_triggers,
             consumer_ir=consumer_ir,
             consumer_source=name,

@@ -103,7 +103,7 @@ def _fixture():
 def test_strict_build_uses_unique_writer_and_field_level_readers():
     bundle, policies = _fixture()
     rows = contract.build_strict(bundle, policies)
-    assert len(rows) == 34
+    assert len(rows) == 31
     assert {row.spec.chain_id for row in rows} == {
         "LJ01",
         "LJ02",

@@ -866,15 +866,18 @@ def test_wargoal_scores_record_documented_targets_but_keep_missing_actor_pending
         "ai_strategy_active = { wargoal_scores = { conquer_state = { value = 2 } } }\n",
     )
     result = discover(game=game)
-    assert len(result.surfaces) == 2
+    assert len(result.surfaces) == 4
+    assert {row.field for row in result.surfaces} == {
+        "wargoal_scores",
+        "wargoal_scores.conquer_state",
+    }
     for row in result.surfaces:
         assert row.actor_scope == "unknown"
-        assert row.target_scope == (
-            "scope:target_country=country;scope:target_state=state(optional);"
-            "scope:diplomatic_play=diplomatic_play(optional)"
-        )
-        assert row.operation == "additive_score"
-        assert row.scope_evidence
+        # Full map/entry identity and engine context must be proven together;
+        # partial comments cannot license a parent container or numeric child.
+        assert row.target_scope == "unknown"
+        assert row.operation == "declared_field"
+        assert row.scope_evidence == ()
         assert row.capability == "pending"
         assert row.getter is None
         assert not row.legal
@@ -958,4 +961,9 @@ def test_strategy_partial_target_or_override_docs_do_not_invent_actor_scope(tmp_
     assert rows
     assert all(item.actor_scope == "unknown" for item in rows)
     assert all(item.capability == "pending" and not item.legal for item in rows)
-    assert {item.operation for item in rows} >= {"additive_score", "override_value"}
+    assert {item.operation for item in rows} == {"declared_field", "override_value"}
+    assert {row.field for row in rows if row.operation == "declared_field"} == {
+        "secret_goal_scores",
+        "secret_goal_scores.none",
+        "secret_goal_scores.none.score",
+    }

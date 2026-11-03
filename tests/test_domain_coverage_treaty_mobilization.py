@@ -64,18 +64,18 @@ def production():
     return inventory, instances, inputs, policies, model.action_instances
 
 
-def test_33_real_production_bindings_close_only_nine_frozen_native_declarations(production):
+def test_real_bindings_close_only_reviewed_frozen_native_declarations(production):
     inventory, instances, inputs, policies, _ = production
-    assert len(instances) == 33
-    assert len(inventory.surfaces) == 9
+    assert len(instances) == 93
+    assert len(inventory.surfaces) == 22
     report = domain_coverage.native_coverage(
         inventory, instances, native_sources=inputs, production_policies=policies
     )
     assert report["binding_issue_count"] == 0
-    assert report["counts"]["actual_covered"] == 9
-    assert sum(len(row["covered_actions"]) for row in report["rows"]) == 33
-    assert report["denominator"] == 9
-    assert report["inventory_status_counts"] == {"pending": 9}
+    assert report["counts"]["actual_covered"] == 22
+    assert sum(len(row["covered_actions"]) for row in report["rows"]) == 93
+    assert report["denominator"] == 22
+    assert report["inventory_status_counts"] == {"pending": 22}
 
 
 @pytest.mark.parametrize("family", ["medical", "treaty"])
@@ -214,7 +214,7 @@ def test_source_and_policy_proof_are_required_even_with_correct_object_labels(pr
     report = domain_coverage.native_coverage(
         inventory, instances, native_sources=inputs, production_policies=policies
     )
-    expected = 12 if damage == "raw_and_inventory_drift" else 33
+    expected = 72 if damage == "raw_and_inventory_drift" else 93
     assert report["binding_issue_count"] == expected
 
 
@@ -257,10 +257,22 @@ def test_unreviewed_real_candidate_cannot_borrow_neighbor_consumer_permission(pr
 
 def test_six_colonial_pending_numeric_consumers_remain_rejected(production):
     inventory, _, inputs, policies, all_instances = production
-    instances = tuple(
-        item for item in all_instances if item.consumer_field == "colonial_interest_ratio"
+    assert not any(item.consumer_field == "colonial_interest_ratio" for item in all_instances)
+    template = next(
+        item for item in all_instances if item.source == "mod/decisions/information.toml"
     )
-    assert len(instances) == 6
+    # Keep the rejection regression after withdrawing the unsafe production
+    # writers: merely reintroducing six familiar names must not authorize scope.
+    instances = tuple(
+        replace(
+            template,
+            action_id=f"unsafe_colonial_{index}",
+            rule_id=f"unsafe_colonial_{index}",
+            consumer_field="colonial_interest_ratio",
+            target_scope="target_state",
+        )
+        for index in range(6)
+    )
     surface = vanilla_inventory.VanillaSurface(
         surface_id="pending_colonial_interest_ratio",
         source="common/ai_strategies/00_default_strategy.txt",
@@ -305,7 +317,7 @@ def test_common_inventory_uses_exact_pinned_event_corroboration_without_expandin
         inventory, instances, native_sources=inputs, production_policies=policies
     )
     assert report["binding_issue_count"] == 0
-    assert report["denominator"] == 9
+    assert report["denominator"] == 22
     assert event not in report["source_hashes"]
     # There is no exemption for missing common/ witnesses or inventoried events.
     for source in (
@@ -316,7 +328,7 @@ def test_common_inventory_uses_exact_pinned_event_corroboration_without_expandin
         rejected = domain_coverage.native_coverage(
             inventory, instances, native_sources=damaged, production_policies=policies
         )
-        assert rejected["binding_issue_count"] == 12
+        assert rejected["binding_issue_count"] == 72
     event_inventory = replace(
         inventory,
         source_hashes={
@@ -331,4 +343,4 @@ def test_common_inventory_uses_exact_pinned_event_corroboration_without_expandin
     rejected = domain_coverage.native_coverage(
         event_inventory, instances, native_sources=inputs, production_policies=policies
     )
-    assert rejected["binding_issue_count"] == 12
+    assert rejected["binding_issue_count"] == 72

@@ -83,7 +83,23 @@ def _facts(values, *, is_ai=True):
             owner[engine] = values[key]
     if "mobilization_owner_ai" in values and values["mobilization_owner_ai"] is not None:
         owner["is_ai"] = is_ai
-    for good in ("fabric", "liquor", "opium", "tools"):
+    for good in (
+        "fabric",
+        "liquor",
+        "opium",
+        "tools",
+        "groceries",
+        "meat",
+        "wine",
+        "sugar",
+        "tobacco",
+        "automobiles",
+        "engines",
+        "small_arms",
+        "ammunition",
+        "fertilizer",
+        "oil",
+    ):
         entry = {}
         for tier, engine in (("balance", "market_goods_delta"), ("price", "market_goods_pricier")):
             key = f"mobilization_{good}_{tier}"
@@ -98,7 +114,7 @@ def _factor(selection):
     return selection.delta if selection.operation == "multiply" else 1.0
 
 
-def test_two_actual_consumers_keep_explicit_formation_root_owner_context_and_complete_set(
+def test_paid_consumers_keep_explicit_formation_root_owner_context_and_complete_set(
     production,
 ):
     original, compiled, model, _, files, disabled, _ = production
@@ -108,13 +124,15 @@ def test_two_actual_consumers_keep_explicit_formation_root_owner_context_and_com
     policy = dict(compiled.policies)[SOURCE]
     assert policy.native_root == "military_formation"
     assert policy.actor_path == ("owner",)
-    assert len(policy.rules) == 12
-    assert {".".join(program.field) for program in policy.consumer_programs} == {FIRST, FIELD}
-    assert files[SOURCE].count("# SITAI BEGIN information:") == 2
+    assert len(policy.rules) == 72
+    assert {".".join(program.field) for program in policy.consumer_programs} == {
+        f"{identity}.ai_weight" for identity in medical.CANDIDATE_IDS
+    }
+    assert files[SOURCE].count("# SITAI BEGIN information:") == 15
     instances = [item for item in model.action_instances if item.source == SOURCE]
-    assert len(instances) == 12
+    assert len(instances) == 72
     writers = [item for item in model.consumer_ir.writers if item.source == SOURCE]
-    assert len(writers) == 12
+    assert len(writers) == 72
     for item in (*instances, *writers):
         context = item.evaluation_context
         assert context is not None
@@ -315,10 +333,7 @@ def test_whole_18_definition_native_source_keeps_all_qualifications_effects_and_
     for definition in original.root.assignments():
         after = actual.root.first(definition.key)
         assert after is not None
-        if definition.key not in {
-            "mobilization_option_first_aid",
-            "mobilization_option_field_hospitals",
-        }:
+        if definition.key not in medical.CANDIDATE_IDS:
             assert _tree(after) == _tree(definition)
         else:
             assert isinstance(definition.value, Block)
@@ -415,3 +430,70 @@ def test_actual_source_drift_is_rejected_before_adapter_output(production):
             country_policy=country_state.load(),
             consumer_ir=production[2].consumer_ir,
         )
+
+
+@pytest.mark.parametrize(
+    ("candidate", "goods"),
+    [
+        ("extra_supplies", ("groceries",)),
+        ("luxurious_supplies", ("meat", "wine")),
+        ("chocolate", ("sugar",)),
+        ("tobacco", ("tobacco",)),
+        ("liquor", ("liquor",)),
+        ("opium", ("opium",)),
+        ("truck_transport", ("automobiles",)),
+        ("rail_transport", ("engines",)),
+        ("machinegunners", ("small_arms", "ammunition")),
+        ("chemical_weapons", ("fertilizer",)),
+        ("flamethrowers", ("oil",)),
+        ("motorized_recon", ("automobiles", "oil")),
+        ("balloon_recon", ("fabric", "oil")),
+    ],
+)
+def test_every_added_choice_has_independent_need_cost_tiers_unknown_and_exit(
+    production, candidate, goods
+):
+    field = f"mobilization_option_{candidate}.ai_weight"
+    policy, overlay = _selection(production, field)
+    values = _values(
+        {f"mobilization_{good}_{tier}": 0 for good in goods for tier in ("balance", "price")}
+    )
+
+    def check(expected):
+        assert decision_rules.evaluate_ir(policy, values, is_ai=True).get(field, ("native", 1))[
+            1
+        ] == pytest.approx(expected)
+        assert _factor(pdx_eval.select(overlay, _facts(values))) == pytest.approx(expected)
+
+    check(1)
+    values["mobilization_war"] = True
+    check(1.10)
+    values["mobilization_default"] = True
+    check(0.95)
+    first = goods[0]
+    values[f"mobilization_{first}_balance"] = -1
+    check(0.85)
+    values[f"mobilization_{first}_price"] = 0.5
+    check(0.85)
+    values[f"mobilization_{first}_price"] = 0.50001
+    check(0.75)
+    values[f"mobilization_{first}_price"] = None
+    check(0.85)
+    values[f"mobilization_{first}_balance"] = None
+    check(0.95)
+    # 只观察到战争或只观察到成本也有局部结果，不需要健康国家的多重共同门。
+    values["mobilization_default"] = None
+    check(1.10)
+    values["mobilization_war"] = None
+    values["mobilization_default"] = True
+    check(0.85)
+    for good in goods:
+        values[f"mobilization_{good}_balance"] = -1
+        values[f"mobilization_{good}_price"] = 0.75
+    values["mobilization_war"] = True
+    check(0.95 - 0.20 * len(goods))
+    assert decision_rules.evaluate_ir(policy, values, is_ai=False) == {}
+    assert _factor(pdx_eval.select(overlay, _facts(values, is_ai=False))) == 1
+    assert decision_rules.evaluate_ir(policy, values, is_ai=True, enabled_domains=frozenset()) == {}
+    values["mobilization_owner_ai"] = None
+    check(1)

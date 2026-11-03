@@ -521,11 +521,13 @@ def test_multiple_cost_predicates_retain_any_pressure_semantics(debt, need, expe
 def test_production_economy_cost_changes_tool_and_complement_has_visible_bounded_effect():
     model = compiler.load_model()
     # Industry +.15 and education -.10 are independent. Education has .02
-    # political cost and a -.025 observed administration complement.
+    # political cost and a -.025 observed enacted-school/institution complement.
     values = {
         "no_default": True,
         "default": False,
         "literacy_low": True,
+        "current_public_schools": True,
+        "schools_present": True,
         "bureaucracy_positive": True,
         "strong_legitimacy": False,
         "legitimacy": 60,
@@ -537,6 +539,8 @@ def test_production_economy_cost_changes_tool_and_complement_has_visible_bounded
         "is_ai": True,
         "in_default": False,
         "literacy_rate": 0.3,
+        "has_law_or_variant": {(("argument", "law_type:law_public_schools"),): True},
+        "has_institution": {(("argument", "institution_schools"),): True},
         "bureaucracy": 1,
         "legitimacy": 60,
         "scaled_debt": 0.4,
@@ -628,7 +632,7 @@ def test_industrial_foundation_uses_cost_tier_instead_of_global_political_gate(
         },
     )
     assert result.action_id == "joint_economic_balance"
-    assert result.delta == pytest.approx(0.075)
+    assert result.delta == pytest.approx(0.05)
 
 
 def test_default_without_insurrection_keeps_conservative_window_available():

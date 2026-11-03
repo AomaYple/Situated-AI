@@ -5,6 +5,7 @@ from dataclasses import replace
 import pytest
 from _situated_sources import production_sources
 
+from pdx import decision_adapters, decision_rules
 from pdx.situated.bindings import build, check, load, render, validate, write
 
 pytestmark = pytest.mark.unit
@@ -67,10 +68,22 @@ def test_source_expectations_reject_incomplete_or_duplicate_identities(tmp_path,
 
 def test_所有旧规则恰有一个精确绑定():
     bindings = load()
-    assert len(bindings) == len(production_sources().rules)
-    assert {
-        (item.source, item.definition, item.field) for item in bindings
-    } == production_sources().rules
+    # The authored-file oracle remains an independent subset. Production also
+    # derives concrete technology/law/recipe rules, each requiring a binding.
+    policies = (
+        ("mod/decisions/information.toml", decision_rules.load()),
+        *decision_adapters.load().policies,
+    )
+    identities = [
+        (source, rule.id, ".".join(rule.field))
+        for source, policy in policies
+        for rule in policy.rules
+    ]
+    assert len(identities) == len(set(identities))
+    expected = set(identities)
+    assert production_sources().rules <= expected
+    assert len(bindings) == len(identities)
+    assert {(item.source, item.definition, item.field) for item in bindings} == expected
     assert len({item.binding_id for item in bindings}) == len(bindings)
     assert {item.disposition for item in bindings} <= {
         "migrate",
@@ -97,7 +110,7 @@ def test_绑定台账可由唯一生成器稳定重建(tmp_path):
     assert rendered == render(expected)
     assert rendered.endswith("\n")
     assert "lj02_coal_output_transport_foundation" in rendered
-    assert "lj02_coal_transport_railway_support" in rendered
+    assert "infrastructure_railway_prepared_pm_early_trains" in rendered
     assert write(target) == len(expected)
     assert target.read_text(encoding="utf-8") == rendered
     assert load(target) == expected

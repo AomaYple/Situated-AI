@@ -261,7 +261,9 @@ def test_production_intents_coordinate_fiscal_recovery_development_and_cooperati
         net_surplus=10,
         debt_ratio=0.1,
         legitimacy=60,
-        literacy=0.8,
+        literacy=0.4,
+        tools_balance=-1,
+        tools_price=0.6,
         industrial_route=True,
         population=3_000_000,
     )
@@ -282,7 +284,7 @@ def test_production_intents_coordinate_fiscal_recovery_development_and_cooperati
         {"net_surplus": None},
     ):
         result = decision_rules.evaluate(policy, {**values, **change}, is_ai=True)
-        assert all(field not in result for field in fields)
+        assert all(result[field][1] > 1 for field in fields)
     recovering = decision_rules.evaluate(policy, {**values, "default": True}, is_ai=True)
     assert recovering["wanted_construction_output"][1] < 1
     assert recovering["wanted_army_size"][1] < 1

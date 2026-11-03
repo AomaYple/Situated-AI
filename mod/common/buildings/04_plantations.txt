@@ -28,20 +28,26 @@ building_coffee_plantation = {
 		# ACTION program_4e914b50de55d23b [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_4e914b50de55d23b_building_active_inputs_negative
+			# GROUP program_4e914b50de55d23b_building_active_input_engines_negative
+			add = { value = 0
+				# actual_cost_building_coffee_plantation_building_coffee_plantation_coffee_plantation_mechanical_drying_engines [market]; 实际启用生产组 pmg_drying_coffee_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_mechanical_drying } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				# active_building_coffee_plantation_coffee_plantation_wet_process_mechanical_input_engines [market]; 已存在建筑的主要生产方式为 coffee_plantation_wet_process_mechanical，其 engines 投入高价短缺时保留有限的扩建机会成本
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_4e914b50de55d23b_building_active_input_tools_negative
+			add = { value = 0
+				# actual_cost_building_coffee_plantation_building_coffee_plantation_coffee_plantation_mechanical_drying_tools [market]; 实际启用生产组 pmg_drying_coffee_plantation 的 tools 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_mechanical_drying } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				# active_building_coffee_plantation_coffee_plantation_wet_process_mechanical_input_tools [market]; 已存在建筑的主要生产方式为 coffee_plantation_wet_process_mechanical，其 tools 投入高价短缺时保留有限的扩建机会成本
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				# active_building_coffee_plantation_coffee_plantation_wet_process_manual_input_tools [market]; 已存在建筑的主要生产方式为 coffee_plantation_wet_process_manual，其 tools 投入高价短缺时保留有限的扩建机会成本
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_manual } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_4e914b50de55d23b_building_active_input_transportation_negative
 			add = { value = 0
 				# actual_cost_building_coffee_plantation_building_coffee_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_coffee_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_coffee_plantation_building_coffee_plantation_coffee_plantation_mechanical_drying_tools [market]; 实际启用生产组 pmg_drying_coffee_plantation 的 tools 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_mechanical_drying } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_coffee_plantation_building_coffee_plantation_coffee_plantation_mechanical_drying_engines [market]; 实际启用生产组 pmg_drying_coffee_plantation 的 engines 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_mechanical_drying } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# active_building_coffee_plantation_coffee_plantation_wet_process_mechanical_input_tools [market]; 已存在建筑的主要生产方式为 coffee_plantation_wet_process_mechanical，其 tools 投入高价短缺时保留有限的扩建机会成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# active_building_coffee_plantation_coffee_plantation_wet_process_mechanical_input_engines [market]; 已存在建筑的主要生产方式为 coffee_plantation_wet_process_mechanical，其 engines 投入高价短缺时保留有限的扩建机会成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_mechanical } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# active_building_coffee_plantation_coffee_plantation_wet_process_manual_input_tools [market]; 已存在建筑的主要生产方式为 coffee_plantation_wet_process_manual，其 tools 投入高价短缺时保留有限的扩建机会成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_coffee_plantation production_method = coffee_plantation_wet_process_manual } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tools mg:tools = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_4e914b50de55d23b_building_financing_pressure_negative
 			add = { value = 0
@@ -131,12 +137,15 @@ building_cotton_plantation = {
 		# ACTION program_9c4b403c886bbaab [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_9c4b403c886bbaab_building_active_inputs_negative
+			# GROUP program_9c4b403c886bbaab_building_active_input_engines_negative
+			add = { value = 0
+				# actual_cost_building_cotton_plantation_building_cotton_plantation_automatic_irrigation_building_cotton_plantation_engines [market]; 实际启用生产组 pmg_base_building_cotton_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_cotton_plantation production_method = automatic_irrigation_building_cotton_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_9c4b403c886bbaab_building_active_input_transportation_negative
 			add = { value = 0
 				# actual_cost_building_cotton_plantation_building_cotton_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_cotton_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_cotton_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_cotton_plantation_building_cotton_plantation_automatic_irrigation_building_cotton_plantation_engines [market]; 实际启用生产组 pmg_base_building_cotton_plantation 的 engines 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_cotton_plantation production_method = automatic_irrigation_building_cotton_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_9c4b403c886bbaab_building_financing_pressure_negative
 			add = { value = 0
@@ -161,7 +170,7 @@ building_cotton_plantation = {
 				# building_opportunity_building_cotton_plantation_fabric_demand [market]; 必选基础PMG全部方法共同正产出fabric；所有者市场缺口为基础机会，高价只升档同一需求
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
-			min = 0.55
+			min = 0.5
 			max = 1.2
 		} }
 		# SITAI END information:building_cotton_plantation.ai_value
@@ -206,12 +215,15 @@ building_dye_plantation = {
 		# ACTION program_14c8fbc8b5c4b311 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_14c8fbc8b5c4b311_building_active_inputs_negative
+			# GROUP program_14c8fbc8b5c4b311_building_active_input_engines_negative
+			add = { value = 0
+				# actual_cost_building_dye_plantation_building_dye_plantation_automatic_irrigation_building_dye_plantation_engines [market]; 实际启用生产组 pmg_base_building_dye_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_dye_plantation production_method = automatic_irrigation_building_dye_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_14c8fbc8b5c4b311_building_active_input_transportation_negative
 			add = { value = 0
 				# actual_cost_building_dye_plantation_building_dye_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_dye_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_dye_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_dye_plantation_building_dye_plantation_automatic_irrigation_building_dye_plantation_engines [market]; 实际启用生产组 pmg_base_building_dye_plantation 的 engines 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_dye_plantation production_method = automatic_irrigation_building_dye_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_14c8fbc8b5c4b311_building_financing_pressure_negative
 			add = { value = 0
@@ -236,7 +248,7 @@ building_dye_plantation = {
 				# building_opportunity_building_dye_plantation_dye_demand [market]; 必选基础PMG全部方法共同正产出dye；所有者市场缺口为基础机会，高价只升档同一需求
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:dye mg:dye = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
-			min = 0.55
+			min = 0.5
 			max = 1.2
 		} }
 		# SITAI END information:building_dye_plantation.ai_value
@@ -298,12 +310,15 @@ building_opium_plantation = {
 		# ACTION program_1fd11854c608dd27 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_1fd11854c608dd27_building_active_inputs_negative
+			# GROUP program_1fd11854c608dd27_building_active_input_engines_negative
+			add = { value = 0
+				# actual_cost_building_opium_plantation_building_opium_plantation_automatic_irrigation_building_opium_plantation_engines [market]; 实际启用生产组 pmg_base_building_opium_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_opium_plantation production_method = automatic_irrigation_building_opium_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_1fd11854c608dd27_building_active_input_transportation_negative
 			add = { value = 0
 				# actual_cost_building_opium_plantation_building_opium_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_opium_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_opium_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_opium_plantation_building_opium_plantation_automatic_irrigation_building_opium_plantation_engines [market]; 实际启用生产组 pmg_base_building_opium_plantation 的 engines 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_opium_plantation production_method = automatic_irrigation_building_opium_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_1fd11854c608dd27_building_financing_pressure_negative
 			add = { value = 0
@@ -328,7 +343,7 @@ building_opium_plantation = {
 				# building_opportunity_building_opium_plantation_opium_demand [market]; 必选基础PMG全部方法共同正产出opium；所有者市场缺口为基础机会，高价只升档同一需求
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:opium mg:opium = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
-			min = 0.55
+			min = 0.5
 			max = 1.2
 		} }
 		# SITAI END information:building_opium_plantation.ai_value
@@ -384,12 +399,15 @@ building_tea_plantation = {
 		# ACTION program_d54848b2fdc38337 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_d54848b2fdc38337_building_active_inputs_negative
+			# GROUP program_d54848b2fdc38337_building_active_input_engines_negative
+			add = { value = 0
+				# actual_cost_building_tea_plantation_building_tea_plantation_automatic_irrigation_building_tea_plantation_engines [market]; 实际启用生产组 pmg_base_building_tea_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tea_plantation production_method = automatic_irrigation_building_tea_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_d54848b2fdc38337_building_active_input_transportation_negative
 			add = { value = 0
 				# actual_cost_building_tea_plantation_building_tea_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_tea_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tea_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_tea_plantation_building_tea_plantation_automatic_irrigation_building_tea_plantation_engines [market]; 实际启用生产组 pmg_base_building_tea_plantation 的 engines 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tea_plantation production_method = automatic_irrigation_building_tea_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_d54848b2fdc38337_building_financing_pressure_negative
 			add = { value = 0
@@ -414,7 +432,7 @@ building_tea_plantation = {
 				# building_opportunity_building_tea_plantation_tea_demand [market]; 必选基础PMG全部方法共同正产出tea；所有者市场缺口为基础机会，高价只升档同一需求
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tea mg:tea = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
-			min = 0.55
+			min = 0.5
 			max = 1.2
 		} }
 		# SITAI END information:building_tea_plantation.ai_value
@@ -471,20 +489,32 @@ building_tobacco_plantation = {
 		# ACTION program_15b65ac0f6b35b83 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_15b65ac0f6b35b83_building_active_inputs_negative
+			# GROUP program_15b65ac0f6b35b83_building_active_input_electricity_negative
+			add = { value = 0
+				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_electric_rollers_electricity [market]; 实际启用生产组 pmg_manufacture_tobacco 的 electricity 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = electric_rollers } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:electricity mg:electricity = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_15b65ac0f6b35b83_building_active_input_engines_negative
+			add = { value = 0
+				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_automatic_irrigation_building_tobacco_plantation_engines [market]; 实际启用生产组 pmg_base_building_tobacco_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = automatic_irrigation_building_tobacco_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_15b65ac0f6b35b83_building_active_input_iron_negative
+			add = { value = 0
+				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_electric_rollers_iron [market]; 实际启用生产组 pmg_manufacture_tobacco 的 iron 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = electric_rollers } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_molds_iron [market]; 实际启用生产组 pmg_manufacture_tobacco 的 iron 投入同时高价且短缺时计入扩建成本
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = molds } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_15b65ac0f6b35b83_building_active_input_radios_negative
+			add = { value = 0
+				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_radio_stations_tobacco_radios [market]; 实际启用生产组 pmg_working_conditions_tobacco 的 radios 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = radio_stations_tobacco } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:radios mg:radios = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_15b65ac0f6b35b83_building_active_input_transportation_negative
 			add = { value = 0
 				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_tobacco_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_radio_stations_tobacco_radios [market]; 实际启用生产组 pmg_working_conditions_tobacco 的 radios 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = radio_stations_tobacco } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:radios mg:radios = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_electric_rollers_iron [market]; 实际启用生产组 pmg_manufacture_tobacco 的 iron 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = electric_rollers } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_electric_rollers_electricity [market]; 实际启用生产组 pmg_manufacture_tobacco 的 electricity 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = electric_rollers } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:electricity mg:electricity = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_molds_iron [market]; 实际启用生产组 pmg_manufacture_tobacco 的 iron 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = molds } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:iron mg:iron = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_tobacco_plantation_building_tobacco_plantation_automatic_irrigation_building_tobacco_plantation_engines [market]; 实际启用生产组 pmg_base_building_tobacco_plantation 的 engines 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_tobacco_plantation production_method = automatic_irrigation_building_tobacco_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_15b65ac0f6b35b83_building_financing_pressure_negative
 			add = { value = 0
@@ -509,7 +539,7 @@ building_tobacco_plantation = {
 				# building_opportunity_building_tobacco_plantation_tobacco_demand [market]; 必选基础PMG全部方法共同正产出tobacco；所有者市场缺口为基础机会，高价只升档同一需求
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:tobacco mg:tobacco = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
-			min = 0.55
+			min = 0.5
 			max = 1.2
 		} }
 		# SITAI END information:building_tobacco_plantation.ai_value
@@ -544,22 +574,28 @@ building_sugar_plantation = {
 		# ACTION program_e6ad8628d1a592d9 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_e6ad8628d1a592d9_building_active_inputs_negative
+			# GROUP program_e6ad8628d1a592d9_building_active_input_coal_negative
 			add = { value = 0
-				# actual_cost_building_sugar_plantation_building_sugar_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_sugar_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
-				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_sugar_plantation_building_sugar_plantation_centrifugal_machine_sugar_engines [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 engines 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = centrifugal_machine_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 				# actual_cost_building_sugar_plantation_building_sugar_plantation_centrifugal_machine_sugar_coal [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 coal 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = centrifugal_machine_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_sugar_plantation_building_sugar_plantation_steam_powered_evaporation_sugar_engines [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 engines 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = steam_powered_evaporation_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = centrifugal_machine_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 				# actual_cost_building_sugar_plantation_building_sugar_plantation_steam_powered_evaporation_sugar_coal [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 coal 投入同时高价且短缺时计入扩建成本
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = steam_powered_evaporation_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 				# actual_cost_building_sugar_plantation_building_sugar_plantation_vacuum_pan_sugar_coal [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 coal 投入同时高价且短缺时计入扩建成本
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = vacuum_pan_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:coal mg:coal = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_e6ad8628d1a592d9_building_active_input_engines_negative
+			add = { value = 0
+				# actual_cost_building_sugar_plantation_building_sugar_plantation_centrifugal_machine_sugar_engines [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = centrifugal_machine_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+				# actual_cost_building_sugar_plantation_building_sugar_plantation_steam_powered_evaporation_sugar_engines [market]; 实际启用生产组 pmg_refinement_building_sugar_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = steam_powered_evaporation_sugar } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 				# active_building_sugar_plantation_automatic_irrigation_building_sugar_plantation_input_engines [market]; 已存在建筑的主要生产方式为 automatic_irrigation_building_sugar_plantation，其 engines 投入高价短缺时保留有限的扩建机会成本
 				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = automatic_irrigation_building_sugar_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_e6ad8628d1a592d9_building_active_input_transportation_negative
+			add = { value = 0
+				# actual_cost_building_sugar_plantation_building_sugar_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_sugar_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_sugar_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_e6ad8628d1a592d9_building_financing_pressure_negative
 			add = { value = 0
@@ -623,12 +659,15 @@ building_banana_plantation = {
 		# ACTION program_a4c1a61e151cb557 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_a4c1a61e151cb557_building_active_inputs_negative
+			# GROUP program_a4c1a61e151cb557_building_active_input_engines_negative
+			add = { value = 0
+				# active_building_banana_plantation_automatic_irrigation_building_banana_plantation_input_engines [market]; 已存在建筑的主要生产方式为 automatic_irrigation_building_banana_plantation，其 engines 投入高价短缺时保留有限的扩建机会成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_banana_plantation production_method = automatic_irrigation_building_banana_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_a4c1a61e151cb557_building_active_input_transportation_negative
 			add = { value = 0
 				# actual_cost_building_banana_plantation_building_banana_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_banana_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_banana_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# active_building_banana_plantation_automatic_irrigation_building_banana_plantation_input_engines [market]; 已存在建筑的主要生产方式为 automatic_irrigation_building_banana_plantation，其 engines 投入高价短缺时保留有限的扩建机会成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_banana_plantation production_method = automatic_irrigation_building_banana_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_a4c1a61e151cb557_building_financing_pressure_negative
 			add = { value = 0
@@ -703,12 +742,15 @@ building_silk_plantation = {
 		# ACTION program_dd2f4f5112a8b3b5 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
 			value = 1
-			# GROUP program_dd2f4f5112a8b3b5_building_active_inputs_negative
+			# GROUP program_dd2f4f5112a8b3b5_building_active_input_engines_negative
+			add = { value = 0
+				# actual_cost_building_silk_plantation_building_silk_plantation_automatic_irrigation_building_silk_plantation_engines [market]; 实际启用生产组 pmg_base_building_silk_plantation 的 engines 投入同时高价且短缺时计入扩建成本
+				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_silk_plantation production_method = automatic_irrigation_building_silk_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
+			}
+			# GROUP program_dd2f4f5112a8b3b5_building_active_input_transportation_negative
 			add = { value = 0
 				# actual_cost_building_silk_plantation_building_silk_plantation_pm_steam_rail_transport_transportation [market]; 实际启用生产组 pmg_train_automation_building_silk_plantation 的 transportation 投入同时高价且短缺时计入扩建成本
 				if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_silk_plantation production_method = pm_steam_rail_transport } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:transportation mg:transportation = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
-				# actual_cost_building_silk_plantation_building_silk_plantation_automatic_irrigation_building_silk_plantation_engines [market]; 实际启用生产组 pmg_base_building_silk_plantation 的 engines 投入同时高价且短缺时计入扩建成本
-				else_if = { limit = { exists = ROOT ROOT = { is_production_method_active = { building_type = building_silk_plantation production_method = automatic_irrigation_building_silk_plantation } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.5 market_goods_delta < 0 } } } } } add = -0.2 }
 			}
 			# GROUP program_dd2f4f5112a8b3b5_building_financing_pressure_negative
 			add = { value = 0
@@ -733,7 +775,7 @@ building_silk_plantation = {
 				# building_opportunity_building_silk_plantation_silk_demand [market]; 必选基础PMG全部方法共同正产出silk；所有者市场缺口为基础机会，高价只升档同一需求
 				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes exists = market market = { exists = mg:silk mg:silk = { market_goods_delta < 0.0 } } } } } add = 0.08 }
 			}
-			min = 0.55
+			min = 0.5
 			max = 1.2
 		} }
 		# SITAI END information:building_silk_plantation.ai_value

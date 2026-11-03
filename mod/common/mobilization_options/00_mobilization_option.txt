@@ -96,6 +96,32 @@ mobilization_option_extra_supplies = {
 			}
 			add = -1000000
 		}
+
+		# SITAI BEGIN information:mobilization_option_extra_supplies.ai_weight
+		# ACTION program_3b2198ec68d4f5ed [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_3b2198ec68d4f5ed_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_extra_supplies_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_3b2198ec68d4f5ed_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_extra_supplies_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_3b2198ec68d4f5ed_mobilization_material_groceries_pressure_negative
+			add = { value = 0
+				# mobilization_extra_supplies_groceries_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_extra_supplies_groceries_scarcity [military]; 本候选真实投入groceries的卖单减买单为负，表达独立材料机会成本；原始数量系数1.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:groceries mg:groceries = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_extra_supplies.ai_weight
 	}
 
 	group = supplies
@@ -152,6 +178,39 @@ mobilization_option_luxurious_supplies = {
 	}
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mobilization_option_luxurious_supplies.ai_weight
+		# ACTION program_98f2c31d17a7b24d [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_98f2c31d17a7b24d_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_luxurious_supplies_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_98f2c31d17a7b24d_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_luxurious_supplies_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_98f2c31d17a7b24d_mobilization_material_meat_pressure_negative
+			add = { value = 0
+				# mobilization_luxurious_supplies_meat_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_luxurious_supplies_meat_scarcity [military]; 本候选真实投入meat的卖单减买单为负，表达独立材料机会成本；原始数量系数1.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:meat mg:meat = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			# GROUP program_98f2c31d17a7b24d_mobilization_material_wine_pressure_negative
+			add = { value = 0
+				# mobilization_luxurious_supplies_wine_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:wine mg:wine = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_luxurious_supplies_wine_scarcity [military]; 本候选真实投入wine的卖单减买单为负，表达独立材料机会成本；原始数量系数1.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:wine mg:wine = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.5
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_luxurious_supplies.ai_weight
 	}
 
 	group = supplies
@@ -210,6 +269,32 @@ mobilization_option_chocolate = {
 			}
 			add = -1000000
 		}
+
+		# SITAI BEGIN information:mobilization_option_chocolate.ai_weight
+		# ACTION program_de6590da9d7302bd [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_de6590da9d7302bd_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_chocolate_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_de6590da9d7302bd_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_chocolate_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_de6590da9d7302bd_mobilization_material_sugar_pressure_negative
+			add = { value = 0
+				# mobilization_chocolate_sugar_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:sugar mg:sugar = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_chocolate_sugar_scarcity [military]; 本候选真实投入sugar的卖单减买单为负，表达独立材料机会成本；原始数量系数1不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:sugar mg:sugar = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_chocolate.ai_weight
 	}
 
 	group = supplements
@@ -268,6 +353,32 @@ mobilization_option_tobacco = {
 			}
 			add = -1000000
 		}
+
+		# SITAI BEGIN information:mobilization_option_tobacco.ai_weight
+		# ACTION program_b79b6270ecadb1eb [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_b79b6270ecadb1eb_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_tobacco_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_b79b6270ecadb1eb_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_tobacco_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_b79b6270ecadb1eb_mobilization_material_tobacco_pressure_negative
+			add = { value = 0
+				# mobilization_tobacco_tobacco_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:tobacco mg:tobacco = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_tobacco_tobacco_scarcity [military]; 本候选真实投入tobacco的卖单减买单为负，表达独立材料机会成本；原始数量系数0.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:tobacco mg:tobacco = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_tobacco.ai_weight
 	}
 
 	group = supplements
@@ -326,6 +437,32 @@ mobilization_option_liquor = {
 			}
 			add = -1000000
 		}
+
+		# SITAI BEGIN information:mobilization_option_liquor.ai_weight
+		# ACTION program_6760eac6851a0325 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_6760eac6851a0325_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_liquor_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_6760eac6851a0325_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_liquor_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_6760eac6851a0325_mobilization_material_liquor_pressure_negative
+			add = { value = 0
+				# mobilization_liquor_liquor_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:liquor mg:liquor = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_liquor_liquor_scarcity [military]; 本候选真实投入liquor的卖单减买单为负，表达独立材料机会成本；原始数量系数0.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:liquor mg:liquor = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_liquor.ai_weight
 	}
 
 	group = supplements
@@ -384,6 +521,32 @@ mobilization_option_opium = {
 			}
 			add = -1000000
 		}
+
+		# SITAI BEGIN information:mobilization_option_opium.ai_weight
+		# ACTION program_b4ef1f0edcfd90e8 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_b4ef1f0edcfd90e8_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_opium_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_b4ef1f0edcfd90e8_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_opium_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_b4ef1f0edcfd90e8_mobilization_material_opium_pressure_negative
+			add = { value = 0
+				# mobilization_opium_opium_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:opium mg:opium = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_opium_opium_scarcity [military]; 本候选真实投入opium的卖单减买单为负，表达独立材料机会成本；原始数量系数0.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:opium mg:opium = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_opium.ai_weight
 	}
 
 	group = supplements
@@ -492,6 +655,32 @@ mobilization_option_truck_transport = {
 	}
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mobilization_option_truck_transport.ai_weight
+		# ACTION program_32eba41c6258e15a [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_32eba41c6258e15a_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_truck_transport_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_32eba41c6258e15a_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_truck_transport_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_32eba41c6258e15a_mobilization_material_automobiles_pressure_negative
+			add = { value = 0
+				# mobilization_truck_transport_automobiles_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_truck_transport_automobiles_scarcity [military]; 本候选真实投入automobiles的卖单减买单为负，表达独立材料机会成本；原始数量系数0.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_truck_transport.ai_weight
 	}
 
     group = transport
@@ -546,6 +735,32 @@ mobilization_option_rail_transport = {
 	}
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mobilization_option_rail_transport.ai_weight
+		# ACTION program_f781c17dd0a9c63c [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_f781c17dd0a9c63c_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_rail_transport_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_f781c17dd0a9c63c_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_rail_transport_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_f781c17dd0a9c63c_mobilization_material_engines_pressure_negative
+			add = { value = 0
+				# mobilization_rail_transport_engines_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_rail_transport_engines_scarcity [military]; 本候选真实投入engines的卖单减买单为负，表达独立材料机会成本；原始数量系数0.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:engines mg:engines = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_rail_transport.ai_weight
 	}
 
     group = transport
@@ -595,6 +810,39 @@ mobilization_option_machinegunners = {
 	}
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mobilization_option_machinegunners.ai_weight
+		# ACTION program_d63e3f174ffec0b9 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_d63e3f174ffec0b9_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_machinegunners_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_d63e3f174ffec0b9_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_machinegunners_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_d63e3f174ffec0b9_mobilization_material_ammunition_pressure_negative
+			add = { value = 0
+				# mobilization_machinegunners_ammunition_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_machinegunners_ammunition_scarcity [military]; 本候选真实投入ammunition的卖单减买单为负，表达独立材料机会成本；原始数量系数1不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:ammunition mg:ammunition = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			# GROUP program_d63e3f174ffec0b9_mobilization_material_small_arms_pressure_negative
+			add = { value = 0
+				# mobilization_machinegunners_small_arms_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_machinegunners_small_arms_scarcity [military]; 本候选真实投入small_arms的卖单减买单为负，表达独立材料机会成本；原始数量系数1不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:small_arms mg:small_arms = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.5
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_machinegunners.ai_weight
 	}
 
     group = special_weapons
@@ -644,6 +892,32 @@ mobilization_option_chemical_weapons = {
 	}
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mobilization_option_chemical_weapons.ai_weight
+		# ACTION program_7f63066364f6c2bf [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_7f63066364f6c2bf_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_chemical_weapons_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_7f63066364f6c2bf_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_chemical_weapons_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_7f63066364f6c2bf_mobilization_material_fertilizer_pressure_negative
+			add = { value = 0
+				# mobilization_chemical_weapons_fertilizer_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_chemical_weapons_fertilizer_scarcity [military]; 本候选真实投入fertilizer的卖单减买单为负，表达独立材料机会成本；原始数量系数2不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:fertilizer mg:fertilizer = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_chemical_weapons.ai_weight
 	}
 
     group = special_weapons
@@ -693,6 +967,32 @@ mobilization_option_flamethrowers = {
 	}
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mobilization_option_flamethrowers.ai_weight
+		# ACTION program_940538dc930d5428 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_940538dc930d5428_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_flamethrowers_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_940538dc930d5428_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_flamethrowers_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_940538dc930d5428_mobilization_material_oil_pressure_negative
+			add = { value = 0
+				# mobilization_flamethrowers_oil_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_flamethrowers_oil_scarcity [military]; 本候选真实投入oil的卖单减买单为负，表达独立材料机会成本；原始数量系数1不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.65
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_flamethrowers.ai_weight
 	}
 
     group = special_weapons
@@ -764,6 +1064,39 @@ mobilization_option_motorized_recon = {
 	}
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mobilization_option_motorized_recon.ai_weight
+		# ACTION program_a1d48029d0f19c67 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_a1d48029d0f19c67_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_motorized_recon_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_a1d48029d0f19c67_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_motorized_recon_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_a1d48029d0f19c67_mobilization_material_automobiles_pressure_negative
+			add = { value = 0
+				# mobilization_motorized_recon_automobiles_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_motorized_recon_automobiles_scarcity [military]; 本候选真实投入automobiles的卖单减买单为负，表达独立材料机会成本；原始数量系数1不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:automobiles mg:automobiles = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			# GROUP program_a1d48029d0f19c67_mobilization_material_oil_pressure_negative
+			add = { value = 0
+				# mobilization_motorized_recon_oil_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_motorized_recon_oil_scarcity [military]; 本候选真实投入oil的卖单减买单为负，表达独立材料机会成本；原始数量系数0.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.5
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_motorized_recon.ai_weight
 	}
 
     group = reconnaissance
@@ -818,6 +1151,39 @@ mobilization_option_balloon_recon = {
 	}
 	ai_weight = {
 		value = 1
+
+		# SITAI BEGIN information:mobilization_option_balloon_recon.ai_weight
+		# ACTION program_4bd245160b9253e7 [joint]; signed-envelope consumer action
+		if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes } } } multiply = {
+			value = 1
+			# GROUP program_4bd245160b9253e7_mobilization_country_war_need_positive
+			add = { value = 0
+				# mobilization_balloon_recon_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = 0.1 }
+			}
+			# GROUP program_4bd245160b9253e7_mobilization_financing_pressure_negative
+			add = { value = 0
+				# mobilization_balloon_recon_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } } } } add = -0.15 }
+			}
+			# GROUP program_4bd245160b9253e7_mobilization_material_fabric_pressure_negative
+			add = { value = 0
+				# mobilization_balloon_recon_fabric_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_balloon_recon_fabric_scarcity [military]; 本候选真实投入fabric的卖单减买单为负，表达独立材料机会成本；原始数量系数2不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:fabric mg:fabric = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			# GROUP program_4bd245160b9253e7_mobilization_material_oil_pressure_negative
+			add = { value = 0
+				# mobilization_balloon_recon_oil_price_pressure [military]; 同一材料缺口且价格相对基价超过阈值，升档同一原因取强，不重复扣低档
+				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 market_goods_pricier > 0.5 } } } } } add = -0.2 }
+				# mobilization_balloon_recon_oil_scarcity [military]; 本候选真实投入oil的卖单减买单为负，表达独立材料机会成本；原始数量系数0.5不是采购量或货币
+				else_if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:oil mg:oil = { market_goods_delta < 0.0 } } } } } add = -0.1 }
+			}
+			min = 0.5
+			max = 1.1
+		} }
+		# SITAI END information:mobilization_option_balloon_recon.ai_weight
 	}
 
 	group = reconnaissance
@@ -936,12 +1302,12 @@ mobilization_option_first_aid = {
 			value = 1
 			# GROUP program_08a9a60a595bb31d_mobilization_country_war_need_positive
 			add = { value = 0
-				# mobilization_first_aid_war_need [military]; 所属国家在战争中，仅作医疗动员需求代理；原版各候选非零恢复效用仍由原生评分保留
+				# mobilization_first_aid_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
 				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:fabric mg:fabric = { OR = { market_goods_delta >= 0 NOT = { market_goods_delta >= 0 } } } exists = mg:liquor mg:liquor = { OR = { market_goods_delta >= 0 NOT = { market_goods_delta >= 0 } } } } } } } add = 0.1 }
 			}
 			# GROUP program_08a9a60a595bb31d_mobilization_financing_pressure_negative
 			add = { value = 0
-				# mobilization_first_aid_default [military]; 所属国家实际违约，新增医疗承诺有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				# mobilization_first_aid_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
 				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:fabric mg:fabric = { OR = { market_goods_delta >= 0 NOT = { market_goods_delta >= 0 } } } exists = mg:liquor mg:liquor = { OR = { market_goods_delta >= 0 NOT = { market_goods_delta >= 0 } } } } } } } add = -0.15 }
 			}
 			# GROUP program_08a9a60a595bb31d_mobilization_material_fabric_pressure_negative
@@ -1025,12 +1391,12 @@ mobilization_option_field_hospitals = {
 			value = 1
 			# GROUP program_50b25ecce97f43ca_mobilization_country_war_need_positive
 			add = { value = 0
-				# mobilization_field_hospitals_war_need [military]; 所属国家在战争中，仅作医疗动员需求代理；原版各候选非零恢复效用仍由原生评分保留
+				# mobilization_field_hospitals_war_need [military]; 所属国家在战争中，仅作已证有效动员的需求代理；各候选具体效用、负面效果与互斥关系仍由原版比较
 				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes is_at_war = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:opium mg:opium = { OR = { market_goods_delta >= 0 NOT = { market_goods_delta >= 0 } } } exists = mg:tools mg:tools = { OR = { market_goods_delta >= 0 NOT = { market_goods_delta >= 0 } } } } } } } add = 0.1 }
 			}
 			# GROUP program_50b25ecce97f43ca_mobilization_financing_pressure_negative
 			add = { value = 0
-				# mobilization_field_hospitals_default [military]; 所属国家实际违约，新增医疗承诺有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
+				# mobilization_field_hospitals_default [military]; 所属国家实际违约，新增付费动员有独立融资机会成本；正常贷款不扣，不重复扣真实货币支出
 				if = { limit = { exists = ROOT ROOT = { exists = owner owner = { is_ai = yes in_default = yes OR = { is_ai = yes NOT = { is_ai = yes } } exists = market market = { exists = mg:opium mg:opium = { OR = { market_goods_delta >= 0 NOT = { market_goods_delta >= 0 } } } exists = mg:tools mg:tools = { OR = { market_goods_delta >= 0 NOT = { market_goods_delta >= 0 } } } } } } } add = -0.15 }
 			}
 			# GROUP program_50b25ecce97f43ca_mobilization_material_opium_pressure_negative

@@ -61,6 +61,24 @@ _REQUIRED_DIRS = frozenset(
 )
 _OBSERVATION_DIRS = frozenset({"script_values", "scripted_triggers"})
 _INFRASTRUCTURE_DIRS = frozenset({"scripted_effects", "on_actions", "trigger_localization"})
+# Auxiliary 1.14.5 native evidence, independently frozen from installed bytes.
+# These declarations establish goods, unit, law and observation arguments; they
+# never enter consumer discovery merely because a Mod reader uses them.
+_PARAMETER_EVIDENCE_HASHES = {
+    "common/achievements/base_achievements.txt": "dc5a50c8313fffbe50d68f0a6b8c9b9d05f1794f46725d23f2c0e67f7369799f",
+    "common/achievements/ip2_pivot_of_empire_achievements.txt": "9ce0330dab546239369a8b916b5ee8fc85ad6de28d5ec5cc60c47c798d271de8",
+    "common/alert_types/00_alert_types.txt": "14ff4bb983f84c17fc2825d79ce93620bc68cde7284f8d1fa2dbba6845420aea",
+    "common/combat_unit_types/00_land_combat_unit_types.txt": "ad3ed3d68533cbe6ef05ce014cd88b920b58dc4a42b3e566077cdccee072d86c",
+    "common/goods/00_goods.txt": "e5d8ed5e5deaf3d2c7193bc6b749555c63c78631aecaf87784a2e34051ddfa48",
+    "common/ideologies/00_ig_ideologies.txt": "4c8bc020d2d1060795e5a615b850736b731a31193862399363ec2e1829639b05",
+    "common/objective_subgoals/00_subgoals_tutorial.txt": "ca2052a10b208fb311e219b9ec2589875b4b0876cc86d92c5728cabaaba080ed",
+    "common/political_movements/00_ideological_movements.txt": "834a1b97f09c65b9b64eafdaffe4ee68965aaac262066140793a482eefd23a6b",
+    "common/political_movements/05_slave_revolt_movements.txt": "903ca4c58fcbc0a4eded9e0e710ffbf55b27c60fa80ec56d36dca3b4045b0918",
+    "events/french_pretenders_pulse.txt": "3ed2ebf66cef1b0159ae352177cebd0a8d5c6e6de1bbab8732ef6a17e82d94bb",
+    "events/law_events/children_rights_events.txt": "13414a1a5e817c98a2f2e8244c9ae997bf9d89cf96d1d68b3bd9244bcfaf50b8",
+    "events/law_events/state_atheism.txt": "156c7e20ba3326e8aacb0bc3c91acdb9b6bf84988a15d9357467e707ee9e30ec",
+    "events/tech_events/trench_warfare.txt": "d859e625e0843d5d56d515b647e7833a0cb5eb3e5d85b233d4d1be697be1a93e",
+}
 _MAP_FIELDS = frozenset(
     {
         "building_group_weights",
@@ -2636,6 +2654,30 @@ def _references(inputs: dict[str, bytes]) -> tuple[VanillaReference, ...]:
     return tuple(sorted(result, key=lambda item: item.reference_id))
 
 
+def parameter_evidence_hashes(game: Path) -> dict[str, str]:
+    """Retain supplied native evidence without creating controllable surfaces.
+
+    Missing auxiliary files remain absent, so dependent parameter proofs fail
+    closed. This also supports explicit partial fixtures. Any present source
+    must retain the independent version-pinned raw bytes; no adapter claim can
+    replace their identity or grant a getter permission.
+    """
+    hashes = {}
+    for name, expected in _PARAMETER_EVIDENCE_HASHES.items():
+        path = game / name
+        if not path.is_file():
+            continue
+        _contained(game, path)
+        raw = path.read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest != expected:
+            raise ValueError(f"参数原版证据漂移：{name}")
+        if parse_bytes(raw, path=name).errors:
+            raise ValueError(f"参数原版证据解析失败：{name}")
+        hashes[name] = digest
+    return hashes
+
+
 def discover(*, game: Path | None = None) -> VanillaInventory:
     """现读原版完整相关 common 定义；解析不完整或版本漂移均显式失败。"""
     root = game if game is not None else config.GAME
@@ -2647,6 +2689,7 @@ def discover(*, game: Path | None = None) -> VanillaInventory:
         raise ValueError(f"原版版本指纹缺失：{', '.join(missing_version)}")
     inputs, directories, content_roots = _inputs(root)
     hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in inputs.items()}
+    hashes.update(parameter_evidence_hashes(root))
     technology_proof = engine_scope.technology_evidence(root, inputs)
     hashes.update(technology_proof.source_hashes)
     strategy_proof = engine_scope.strategy_evidence(root, inputs)

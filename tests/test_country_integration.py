@@ -40,88 +40,42 @@ def _route_rules() -> tuple[decision_rules.RuleSet, str]:
     return decision_rules.from_data(data, source_sha256="a" * 64), baseline
 
 
-def test_route_reader_requires_explicit_country_policy():
+@pytest.mark.parametrize(
+    "argument",
+    [
+        "sitai_route_industry",
+        "sitai_route_stability",
+        "sitai_route_cooldown",
+        "sitai_route_invented",
+    ],
+)
+@pytest.mark.parametrize("enabled", [True, False])
+def test_retired_route_readers_are_rejected_even_with_country_policy(argument, enabled):
     rules, baseline = _route_rules()
-    with pytest.raises(ValueError, match="country_policy"):
-        decision_rules.patch(baseline, rules, baseline=baseline)
-
-
-def test_route_reader_expands_to_active_guard_and_owned_contract():
-    rules, baseline = _route_rules()
-    policy = country_state.load()
-    rendered = decision_rules.patch(
-        baseline,
-        rules,
-        baseline=baseline,
-        country_policy=policy,
-        reader_evidence="has_variable",
-        owned_variables={"sitai_route_industry"},
-        owned_triggers={"sitai_route_industry_active"},
-    )
-    assert "sitai_route_industry_active = yes" in rendered
-    assert "has_variable = sitai_route_industry" not in rendered
-    assert "is_ai = yes" in rendered
-
-
-def test_decisions_build_with_country_policy_declares_stateful_module():
-    policy = decisions.load()
-    country = country_state.load()
-    files = decisions.build(policy, country_policy=country)
-    metadata = json.loads(files[".metadata/metadata.json"])
-    assert "country_state" in metadata["enabled_modules"]
-    assert metadata["module_contract"]["country_state"]["stateful"] is True
-    assert metadata["module_contract"]["country_state"]["ttl_or_none"] == 100
-    assert any(name.endswith("sitai_country_triggers.txt") for name in files)
-
-
-def test_owned_variables_cannot_approve_unknown_or_cooldown_readers():
-    rules, baseline = _route_rules()
-    for argument in ("sitai_route_invented", "sitai_route_cooldown"):
-        changed = replace(rules, readers=(replace(rules.readers[0], argument=argument),))
-        with pytest.raises(ValueError, match=r"所有权|合同"):
+    changed = replace(rules, readers=(replace(rules.readers[0], argument=argument),))
+    for policy in (None, replace(country_state.load(), enabled=enabled)):
+        with pytest.raises(ValueError, match=r"route|路线|退役"):
             decision_rules.patch(
                 baseline,
                 changed,
                 baseline=baseline,
-                country_policy=country_state.load(),
-                owned_variables={argument},
-                owned_triggers={argument + "_active"},
+                country_policy=policy,
                 reader_evidence="has_variable " + argument,
             )
 
 
-def test_route_false_uses_guard_negation_and_disabled_never_uses_stale_variable():
-    rules, baseline = _route_rules()
-    false_rule = replace(
-        rules.rules[0], conditions=(replace(rules.rules[0].conditions[0], value=False),)
-    )
-    rendered = decision_rules.patch(
-        baseline,
-        replace(rules, rules=(false_rule,)),
-        baseline=baseline,
-        country_policy=country_state.load(),
-        reader_evidence="has_variable",
-    )
-    assert "NOT = { sitai_route_industry_active = yes }" in rendered
-    disabled = replace(country_state.load(), enabled=False)
-    rendered = decision_rules.patch(
-        baseline,
-        rules,
-        baseline=baseline,
-        country_policy=disabled,
-        reader_evidence="has_variable",
-    )
-    assert "always = no" in rendered
-    assert "sitai_route_industry_active = yes" not in rendered
-    rendered = decision_rules.patch(
-        baseline,
-        replace(rules, rules=(false_rule,)),
-        baseline=baseline,
-        country_policy=disabled,
-        reader_evidence="has_variable",
-    )
-    assert "always = no" in rendered
-    assert "sitai_route_industry_active" not in rendered
+def test_decisions_build_declares_stateless_country_module():
+    files = decisions.build(decisions.load(), country_policy=country_state.load())
+    metadata = json.loads(files[".metadata/metadata.json"])
+    assert "country_state" in metadata["enabled_modules"]
+    contract = metadata["module_contract"]["country_state"]
+    assert contract["stateful"] is False
+    assert contract["direct_read"] is True
+    assert contract["ttl_or_none"] is None
+    assert contract["hooks"] == []
+    assert "common/scripted_triggers/sitai_country_triggers.txt" in files
+    assert "common/scripted_effects/sitai_country_effects.txt" not in files
+    assert "common/on_actions/sitai_country_on_actions.txt" not in files
 
 
 def test_state_contract_and_fingerprint_are_shared_by_offline_report():
@@ -133,7 +87,7 @@ def test_state_contract_and_fingerprint_are_shared_by_offline_report():
         metadata["source_fingerprint"]["country_state_source_sha256"] == expected["source_sha256"]
     )
     broken = json.loads(json.dumps(metadata))
-    broken["country_state"]["variable_ttl_days"] += 1
+    broken["country_state"]["persistent_variables"] = ["sitai_route_industry"]
     assert any("country_state" in issue for issue in decision_report.validate(broken))
 
 

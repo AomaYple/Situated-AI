@@ -19,10 +19,12 @@ if TYPE_CHECKING:
 DEFAULT_SOURCE = Path(__file__).resolve().parents[3] / "research/situated/v3.0.1-migration.json"
 RETIREMENTS_SOURCE = DEFAULT_SOURCE.with_name("a2-retirements.json")
 _MANIFEST_SHA256 = "fcce11e045e9933c13644a361da3a448330208c0b712ac3df615eed307aa55e6"
-_RETIREMENTS_SHA256 = "11672a5d20bd20d9d21db36858ba5ded7a9e659462e2a26c3f5470941e8766f1"
+_RETIREMENTS_SHA256 = "ff40ad701d19c16d08b5c246a4b9f34c3b3a21bf2199e0d4ab2e95f972d7c77b"
 _COMMIT = "74492fc05321c0767cb07202a91797a7663e7ee0"
 _FIELDS = ("source", "definition", "field", "actor", "target", "operation")
 _TAIL = "retain_original_qualification_cost_random_execution"
+_DEFAULT_NATIVE_SOURCE = "research/vanilla-ai/1.14.5/00_default_strategy.txt"
+_DEFAULT_NATIVE_SHA256 = "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2"
 
 
 def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -88,11 +90,78 @@ def _validate_test_identity(identity: str) -> None:
         raise ValueError(f"历史规则退役测试函数身份不存在：{identity}")
 
 
+def _validate_native_retention(row: dict[str, Any], writers: tuple[WriterDecisionIR, ...]) -> None:
+    """Restore an exact frozen native field without claiming an implementation.
+
+    A removal is never a replacement decision. The historical identity stays
+    pinned, and no differently named writer may continue changing that physical
+    field. Current generated-byte preservation is checked independently by the
+    native protection audit and production witnesses.
+    """
+    from pdx.model import Block  # noqa: PLC0415
+    from pdx.parser import parse_bytes  # noqa: PLC0415
+
+    from .native_treatments import _digest  # noqa: PLC0415
+
+    evidence = row["native_retention"]
+    adapter_restoration = row["source"] == "common/ai_strategies/00_default_strategy.txt" and row[
+        "field"
+    ] in {
+        "ai_strategy_default.combat_unit_group_weights.combat_unit_group_infantry",
+        "ai_strategy_default.combat_unit_group_weights.combat_unit_group_cavalry",
+        "ai_strategy_default.strategic_region_stance_type_scores.stance_colonize_region",
+    }
+    native_field = (
+        row["field"].removeprefix("ai_strategy_default.") if adapter_restoration else row["field"]
+    )
+    if (
+        not isinstance(evidence, dict)
+        or set(evidence)
+        != {"source", "source_sha256", "definition", "field", "ast_sha256", "business_complete"}
+        or evidence["business_complete"] is not False
+        or row["replacements"] != []
+        or (row["source"] != "mod/decisions/information.toml" and not adapter_restoration)
+        or evidence["source"] != _DEFAULT_NATIVE_SOURCE
+        or evidence["source_sha256"] != _DEFAULT_NATIVE_SHA256
+        or evidence["definition"] != "ai_strategy_default"
+        or evidence["field"] != native_field
+    ):
+        raise ValueError("历史规则退役原版恢复身份、证据或业务边界无效")
+    native = DEFAULT_SOURCE.parents[2] / _DEFAULT_NATIVE_SOURCE
+    raw = native.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _DEFAULT_NATIVE_SHA256:
+        raise ValueError("历史规则退役原版恢复来源字节漂移")
+    parsed = parse_bytes(raw, path=_DEFAULT_NATIVE_SOURCE)
+    definition = parsed.root.all(evidence["definition"])
+    if parsed.errors or len(definition) != 1 or not isinstance(definition[0].value, Block):
+        raise ValueError("历史规则退役原版恢复定义不唯一或无法解析")
+    block = definition[0].value
+    for part in native_field.split("."):
+        matches = block.all(part)
+        if (
+            len(matches) != 1
+            or matches[0].op != "="
+            or matches[0].prefix is not None
+            or not isinstance(matches[0].value, Block)
+        ):
+            raise ValueError("历史规则退役原版恢复字段缺失或不唯一")
+        block = matches[0].value
+    if _digest(block) != evidence["ast_sha256"]:
+        raise ValueError("历史规则退役原版恢复AST漂移")
+    if any(
+        writer.field == prefix or writer.field.startswith(prefix + ".")
+        for writer in writers
+        for prefix in (row["field"], f"ai_strategy_default.{row['field']}")
+    ):
+        raise ValueError("历史规则退役原版恢复字段仍有活跃作者")
+
+
 def _retired_identities(
     historical: dict[str, Any],
     current: dict[tuple[str, str], WriterDecisionIR],
     present: set[tuple[str, str]],
     *,
+    writers: tuple[WriterDecisionIR, ...],
     path: Path,
 ) -> set[tuple[str, str]]:
     try:
@@ -125,7 +194,11 @@ def _retired_identities(
     for row in data["retirements"]:
         if (
             not isinstance(row, dict)
-            or set(row) != {*_FIELDS, "reason", "replacements", "validation"}
+            or set(row)
+            not in (
+                {*_FIELDS, "reason", "replacements", "validation"},
+                {*_FIELDS, "reason", "replacements", "validation", "native_retention"},
+            )
             or any(not isinstance(row[field], str) or not row[field].strip() for field in _FIELDS)
             or not isinstance(row["reason"], str)
             or not row["reason"].strip()
@@ -139,7 +212,12 @@ def _retired_identities(
             raise ValueError(f"历史规则退役不是原历史消费者合同：{identity}")
         if identity in present:
             raise ValueError(f"历史规则退役后仍存在：{identity}")
-        for definition in _string_list(row["replacements"], "replacements"):
+        if "native_retention" in row:
+            _validate_native_retention(row, writers)
+            replacements = []
+        else:
+            replacements = _string_list(row["replacements"], "replacements")
+        for definition in replacements:
             replacement = current.get((row["source"], definition))
             if replacement is None:
                 raise ValueError(f"历史规则退役替代身份缺失：{identity} -> {definition}")
@@ -195,6 +273,7 @@ def _validate_bundle(
         historical,
         current,
         {(writer.source, writer.definition) for writer in bundle.writers},
+        writers=bundle.writers,
         path=retirements_path,
     )
     for row in historical["rules"]:

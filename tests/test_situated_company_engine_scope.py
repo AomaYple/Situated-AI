@@ -46,6 +46,13 @@ def company_proof(tmp_path, monkeypatch):
     monkeypatch.setattr(
         vanilla_inventory, "_inputs", lambda _: (dict(inputs), ("company_types",), ("game",))
     )
+    # This fixture proves explicit company members only. The independent
+    # default-initializer attestation cannot borrow its synthetic parent hash.
+    monkeypatch.setattr(
+        engine_scope,
+        "company_default_evidence",
+        lambda *_: engine_scope.CompanyScopeEvidence(False, ()),
+    )
     return game, exe, source, inputs, data, freeze
 
 

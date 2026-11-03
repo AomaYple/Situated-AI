@@ -86,7 +86,7 @@ company_ingolstadt_electrical_company = {
 				# company_sector_company_ingolstadt_electrical_company_workforce [market]; 真实基础配方含laborers岗位；国家laborers占比只作劳动结构适配代理，不是失业或岗位空缺
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes pop_type_percent_country = { pop_type = laborers percent >= 0 } pop_type_percent_country = { pop_type = laborers percent <= 1 } pop_type_percent_country = { pop_type = laborers percent >= 0.15 } } } add = 0.04 }
 			}
-			# GROUP program_f5f8839a996ff533_company_mandatory_input_negative
+			# GROUP program_f5f8839a996ff533_company_mandatory_input_engines_negative
 			add = { value = 0
 				# company_sector_company_ingolstadt_electrical_company_engines_input [market]; 主业某必选基础配方组所有方法共同需要engines；高价为配方机会成本，不是当前实际账单
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_pricier > 0.25 } } } } add = -0.15 }

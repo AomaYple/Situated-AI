@@ -4,34 +4,12 @@ schema = 1
 
 [signals]
 peace = [{ fact = "war", op = "=", value = false }]
-fiscal_capacity = [{ fact = "default", op = "=", value = false }, { fact = "loans", op = "=", value = false }, { fact = "debt_ratio", op = "<=", value = 0.4 }, { fact = "net_surplus", op = ">=", value = 0 }, { fact = "bureaucracy", op = ">=", value = 0 }]
-political_support = [{ fact = "legitimacy", op = ">=", value = 50 }, { fact = "insurrection", op = "=", value = false }]
-strong_capacity = [{ fact = "legitimacy", op = ">=", value = 75 }, { fact = "debt_ratio", op = "<=", value = 0.2 }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "bureaucracy", op = ">", value = 0 }]
 insolvency = [{ fact = "default", op = "=", value = true }]
-liquidity_pressure = [{ fact = "default", op = "=", value = false }, { fact = "loans", op = "=", value = true }, { fact = "debt_ratio", op = ">=", value = 0.4 }, { fact = "bankruptcy_horizon", op = "<", value = 26 }]
 political_crisis = [{ fact = "legitimacy", op = "<", value = 25 }, { fact = "insurrection", op = "=", value = true }, { fact = "radical_share", op = ">=", value = 0.25 }]
 war = [{ fact = "war", op = "=", value = true }]
 
-# 既有高承受力意图保留财政合同；新增基础发展另由 country_state 分层协调。
-# 此处不是所有发展路径的全局前置，本身不制造候选资格。
-[intents.peaceful_capacity]
-signals = ["peace", "fiscal_capacity"]
-
-[intents.supported_development]
-requires = ["peaceful_capacity"]
-signals = ["political_support"]
-
-# 强机会是普通发展意图的严格子集；同字段优先选择，不与普通档累乘。
-[intents.decisive_development]
-requires = ["supported_development"]
-signals = ["strong_capacity"]
-
-# 恢复约束用于不同领域的新增承诺，战时明确不触发。
 [intents.fiscal_recovery]
 signals = ["peace", "insolvency"]
-
-[intents.liquidity_recovery]
-signals = ["peace", "liquidity_pressure"]
 
 # 稳定与改革由当前输入重算；危机不被推断为某种意识形态或永久禁止改革。
 [intents.stabilization]

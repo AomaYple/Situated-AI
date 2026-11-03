@@ -45,14 +45,14 @@ _SYNTHETIC_READER_EVIDENCE = (
     "bureaucracy taking_loans scaled_debt net_total_income legitimacy "
     "has_insurrectionary_interest_groups has_variable recently_lost_war weeks_until_bankruptcy "
     "literacy_rate army_size average_sol gold_reserves market_access "
-    "market mg:grain grain market_goods_delta market_goods_pricier"
+    "market mg:grain grain mg:tools tools mg:iron iron market_goods_delta market_goods_pricier"
 )
 
 
 @pytest.mark.parametrize("excess", ["candidates", "field_predicates", "rule_predicates"])
 def test_configuration_growth_cannot_bypass_static_runtime_budget(excess):
     data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
-    first = data["rules"][0]
+    first = next(row for row in data["rules"] if row["field"] == "wanted_construction_output")
     count = 33 if excess == "candidates" else 28 if excess == "field_predicates" else 1
     predicates = 17 if excess == "rule_predicates" else 6 if excess == "field_predicates" else 1
     for index in range(count):
@@ -60,9 +60,10 @@ def test_configuration_growth_cannot_bypass_static_runtime_budget(excess):
             {
                 **first,
                 "id": f"budget_{index}",
-                "priority": 1000 + index,
+                "priority": 10000 + index,
                 "conditions": [
-                    {"fact": "income", "op": ">=", "value": value} for value in range(predicates)
+                    {"fact": "net_surplus", "op": ">=", "value": value}
+                    for value in range(predicates)
                 ],
             }
         )
@@ -121,6 +122,10 @@ def _values(**overrides: object) -> dict[str, object]:
         "average_sol": 10,
         "gdp": 100,
         "income": 5000,
+        "tools_balance": 0,
+        "tools_price": 0,
+        "iron_balance": 0,
+        "iron_price": 0,
         "net_surplus": 100,
         "debt_ratio": 0.1,
         "gold_reserves": 0,
@@ -151,12 +156,6 @@ def _values(**overrides: object) -> dict[str, object]:
         # neutral here; its non-neutral/unknown paths have their own witnesses.
         "grain_balance": 0,
         "grain_price": 0,
-        "route_fiscal_recovery": False,
-        "route_stability": False,
-        "route_defense": False,
-        "route_industry": False,
-        "route_education": False,
-        "route_maritime": False,
         **_coordination_values(),
         **overrides,
     }
@@ -301,9 +300,11 @@ def test_priority_and_normal_defense_counterexamples(rules):
     # separately verifies simultaneous known demand and financing cost.
     assert wartime["wanted_army_size"] == ("wartime_army_administrative_capacity", 1.11)
     assert wartime["wanted_navy_size"] == ("wartime_navy_administrative_capacity", 1.09)
-    assert "wanted_construction_output" not in wartime
-    result = decision_rules.evaluate(rules, _values(resource_route=True), is_ai=True)
-    assert result["treaty_category_scores.economy"] == ("identity_resource_cooperation", 1.3)
+    assert wartime["wanted_construction_output"] == ("fiscal_construction_guard", 0.75)
+    result = decision_rules.evaluate(
+        rules, _values(resource_route=True, iron_balance=-1, iron_price=0.6), is_ai=True
+    )
+    assert result["treaty_category_scores.economy"] == ("remaining_economy_resource_price", 1.2)
     assert "wanted_army_size" not in result
     only = decision_rules.evaluate(
         rules, _values(default=True), is_ai=True, enabled_domains=frozenset({"military"})
@@ -318,11 +319,11 @@ def test_priority_and_normal_defense_counterexamples(rules):
 
 def test_vanilla_war_defeat_signal_is_bounded_and_unknown_safe(rules):
     recovering = decision_rules.evaluate(rules, _values(war_defeat=True), is_ai=True)
-    assert recovering["wanted_construction_output"] == ("war_defeat_reconstruction", 1.2)
+    assert recovering["wanted_construction_output"] == ("remaining_reconstruction_need_funded", 1.2)
     assert "change_law_chance" not in recovering
 
     ordinary = decision_rules.evaluate(rules, _values(war_defeat=False), is_ai=True)
-    assert ordinary["wanted_construction_output"] == ("economic_development", 1.15)
+    assert "wanted_construction_output" not in ordinary
     assert "change_law_chance" not in ordinary
 
     # 缺少该原版变量时不能把未知当作“没有战败”，也不能抢跑低优先级建设规则。
@@ -332,9 +333,9 @@ def test_vanilla_war_defeat_signal_is_bounded_and_unknown_safe(rules):
     assert "wanted_construction_output" not in unknown
     assert "change_law_chance" not in unknown
 
-    # 战争中所有建设倾向都回退原版；战争失败变量不绕过当前战争门槛。
+    # 战败需求独立于当前战争，资金高档仍需已证融资。
     wartime = decision_rules.evaluate(rules, _values(war_defeat=True, war=True), is_ai=True)
-    assert "wanted_construction_output" not in wartime
+    assert wartime["wanted_construction_output"] == ("remaining_reconstruction_need_funded", 1.2)
 
 
 def _evaluate_script(block: Block, engine_values: dict[str, object]) -> float:
@@ -353,7 +354,14 @@ def _evaluate_script(block: Block, engine_values: dict[str, object]) -> float:
             if assignment.key == "exists":
                 assert isinstance(assignment.value, Scalar)
                 name = assignment.value.unquoted
-                results.append(name == "ROOT" or engine_values.get(name) is True)
+                results.append(
+                    name in {"ROOT", "market"}
+                    or (
+                        name.startswith("mg:")
+                        and name.removeprefix("mg:") + "_balance" in engine_values
+                    )
+                    or engine_values.get(name) is True
+                )
                 continue
             if isinstance(assignment.value, Block):
                 if assignment.key == "primary_cultures_percent_state":
@@ -370,7 +378,16 @@ def _evaluate_script(block: Block, engine_values: dict[str, object]) -> float:
                         and operations[comparison.op](share, float(comparison.value.text))
                     )
                     continue
-                results.append(condition(assignment.value, assignment.key))
+                if assignment.key.startswith("mg:"):
+                    goods = assignment.key.removeprefix("mg:")
+                    original = dict(engine_values)
+                    engine_values["market_goods_delta"] = engine_values.get(goods + "_balance")
+                    engine_values["market_goods_pricier"] = engine_values.get(goods + "_price")
+                    results.append(condition(assignment.value, assignment.key))
+                    engine_values.clear()
+                    engine_values.update(original)
+                else:
+                    results.append(condition(assignment.value, assignment.key))
                 continue
             assert isinstance(assignment.value, Scalar)
             raw = assignment.value.unquoted
@@ -460,11 +477,17 @@ def test_generated_conditions_equal_reference_on_legal_inputs(
         subject=subject,
     )
     engine = {
-        (
-            reader.engine + ":" + reader.argument if reader.argument is not None else reader.engine
-        ): values.get(reader.key)
-        for reader in rules.readers
+        **{
+            (
+                reader.engine + ":" + reader.argument
+                if reader.argument is not None
+                else reader.engine
+            ): values.get(reader.key)
+            for reader in rules.readers
+        },
+        **{k: v for k, v in values.items() if k.endswith(("_balance", "_price"))},
     }
+    engine.update({k: v for k, v in values.items() if k.endswith(("_balance", "_price"))})
     engine["scope:target_state"] = True
     reference = decision_rules.evaluate(rules, values, is_ai=True)
     for field_name, block in blocks.items():
@@ -472,48 +495,6 @@ def test_generated_conditions_equal_reference_on_legal_inputs(
         assert value == reference.get(field_name, ("vanilla", 1.0))[1]
         assert math.isfinite(value)
         assert 0.5 <= value <= 1.5
-
-
-@pytest.mark.parametrize("navy", [-1, -100])
-@pytest.mark.parametrize("default", [False, True])
-def test_default_cost_precedes_weak_navy_without_guessing_invalid_input(
-    generated_rule_blocks, navy, default
-):
-    rules, blocks = generated_rule_blocks
-    values = _values(default=default, navy=navy)
-    engine = {reader.engine: values.get(reader.key) for reader in rules.readers}
-    reference = decision_rules.evaluate(rules, values, is_ai=True)
-    if default:
-        # 已知违约优先，不被低优先级未知海军遮蔽。
-        assert reference["colonial_interest_ratio"] == ("overseas_affordability", 0.7)
-    else:
-        assert "colonial_interest_ratio" not in reference
-    assert _evaluate_script(blocks["colonial_interest_ratio"], engine) == (0.7 if default else 1)
-
-
-@pytest.mark.parametrize(
-    ("navy", "rule_id", "expected"),
-    [
-        (0, "overseas_naval_feasibility", 0.8),
-        (24, "overseas_naval_feasibility", 0.8),
-        (25, "", 1.0),
-        (49, "", 1.0),
-        (50, "overseas_naval_projection", 1.1),
-        (100, "overseas_naval_projection", 1.1),
-    ],
-)
-def test_overseas_naval_threshold_and_projection(generated_rule_blocks, navy, rule_id, expected):
-    rules, blocks = generated_rule_blocks
-    values = _values(default=False, navy=navy)
-    engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
-        for reader in rules.readers
-    }
-    reference = decision_rules.evaluate(rules, values, is_ai=True).get(
-        "colonial_interest_ratio", ("vanilla", 1.0)
-    )
-    assert reference == ((rule_id, expected) if rule_id else ("vanilla", 1.0))
-    assert _evaluate_script(blocks["colonial_interest_ratio"], engine) == expected
 
 
 @pytest.mark.parametrize(
@@ -535,9 +516,15 @@ def test_market_access_is_local_and_yields_to_specific_state_values(
     rules, blocks = generated_rule_blocks
     values = _values(**change)
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
-        for reader in rules.readers
+        **{
+            reader.engine + (":" + reader.argument if reader.argument else ""): values.get(
+                reader.key
+            )
+            for reader in rules.readers
+        },
+        **{k: v for k, v in values.items() if k.endswith(("_balance", "_price"))},
     }
+    engine.update({k: v for k, v in values.items() if k.endswith(("_balance", "_price"))})
     engine["scope:target_state"] = True
     reference = decision_rules.evaluate(rules, values, is_ai=True).get(
         "state_value", ("vanilla", 1.0)
@@ -553,9 +540,15 @@ def test_port_value_is_scoped_to_target_state_independent_of_national_navy(
     rules, blocks = generated_rule_blocks
     values = _values(default=False, target_port=True, target_isolated=False, navy=navy)
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
-        for reader in rules.readers
+        **{
+            reader.engine + (":" + reader.argument if reader.argument else ""): values.get(
+                reader.key
+            )
+            for reader in rules.readers
+        },
+        **{k: v for k, v in values.items() if k.endswith(("_balance", "_price"))},
     }
+    engine.update({k: v for k, v in values.items() if k.endswith(("_balance", "_price"))})
     engine["scope:target_state"] = True
 
     assert decision_rules.evaluate(rules, values, is_ai=True)["state_value"] == (
@@ -698,9 +691,7 @@ def test_land_adjacency_remains_vanilla_and_is_distinct_from_market_isolation(ru
 
     isolation = next(reader for reader in rules.readers if reader.key == "target_isolated")
     assert (isolation.engine, isolation.scope) == ("is_isolated_from_market", "target_state")
-    isolation_cost = next(
-        rule for rule in rules.rules if rule.id == "geographic_isolation_financial_cost"
-    )
+    isolation_cost = next(rule for rule in rules.rules if rule.id == "lj14_homeland_isolation_cost")
     assert any(predicate.fact == "target_isolated" for predicate in isolation_cost.conditions)
 
 
@@ -791,36 +782,41 @@ def generated_rule_blocks(rules):
     ("change", "expected"),
     [
         ({}, 1.25),
-        ({"legitimacy": 74}, 1.15),
+        ({"legitimacy": 74}, 1.25),
         ({"legitimacy": 75}, 1.25),
         ({"debt_ratio": 0.2}, 1.25),
-        ({"debt_ratio": 0.20001}, 1.15),
-        ({"net_surplus": 0}, 1.15),
-        ({"bureaucracy": 0}, 1.15),
-        ({"war_defeat": True}, 1.2),
+        ({"debt_ratio": 0.20001}, 1.25),
+        ({"net_surplus": 0}, 1.1),
+        ({"bureaucracy": 0}, 1.25),
+        ({"war_defeat": True}, 1.25),
         ({"default": True}, 0.75),
         ({"loans": True, "debt_ratio": 0.4, "bankruptcy_horizon": 25}, 0.85),
-        ({"loans": True, "debt_ratio": 0.4, "bankruptcy_horizon": 26}, 1.0),
-        ({"loans": True, "debt_ratio": 0.39999, "bankruptcy_horizon": 25}, 1.0),
-        ({"loans": True, "debt_ratio": 0.6, "bankruptcy_horizon": None}, 1.0),
-        ({"war": True, "default": True}, 1.0),
-        ({"war": True}, 1.0),
-        ({"legitimacy": None}, 1.0),
-        ({"legitimacy": 49}, 1.0),
-        ({"net_surplus": -1}, 1.0),
-        ({"insurrection": True}, 1.0),
-        ({"industrial_route": False}, 1.0),
-        ({"war_defeat": True, "loans": True}, 1.0),
+        ({"loans": True, "debt_ratio": 0.4, "bankruptcy_horizon": 26}, 1.25),
+        ({"loans": True, "debt_ratio": 0.39999, "bankruptcy_horizon": 25}, 1.25),
+        ({"loans": True, "debt_ratio": 0.6, "bankruptcy_horizon": None}, 1),
+        ({"war": True, "default": True}, 0.75),
+        ({"war": True}, 1.25),
+        ({"legitimacy": None}, 1.25),
+        ({"legitimacy": 49}, 1.25),
+        ({"net_surplus": -1}, 1.1),
+        ({"insurrection": True}, 1.25),
+        ({"industrial_route": False}, 1),
+        ({"war_defeat": True, "loans": True}, 1.25),
     ],
 )
 def test_development_tiers_and_crisis_priority_in_generated_script(
     generated_rule_blocks, change, expected
 ):
     rules, blocks = generated_rule_blocks
-    values = _values(**{"legitimacy": 80, **change})
+    values = _values(**{"legitimacy": 80, "tools_balance": -1, **change})
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
-        for reader in rules.readers
+        **{
+            reader.engine + (":" + reader.argument if reader.argument else ""): values.get(
+                reader.key
+            )
+            for reader in rules.readers
+        },
+        **{k: v for k, v in values.items() if k.endswith(("_balance", "_price"))},
     }
     field = "wanted_construction_output"
     reference = decision_rules.evaluate(rules, values, is_ai=True)
@@ -833,108 +829,81 @@ def test_strong_capacity_coordinates_education_and_cooperation_without_stacking(
     generated_rule_blocks,
 ):
     rules, blocks = generated_rule_blocks
-    for legitimacy, education, trade, economy in [(60, 1.15, 1.2, 1.2), (80, 1.3, 1.25, 1.25)]:
-        values = _values(legitimacy=legitimacy)
-        for field, expected in [
-            ("institution_scores.institution_schools", education),
-            ("treaty_category_scores.trade", trade),
-            ("treaty_category_scores.economy", economy),
-        ]:
-            engine = {
+    for legitimacy in (60, 80, None):
+        values = _values(legitimacy=legitimacy, literacy=0.4, tools_balance=-1, tools_price=0.6)
+        result = decision_rules.evaluate(rules, values, is_ai=True)
+        assert result["institution_scores.institution_schools"][1] == 1.25
+        assert result["treaty_category_scores.trade"][1] == 1.2
+        assert result["treaty_category_scores.economy"][1] == 1.2
+        engine = {
+            **{
                 r.engine + (":" + r.argument if r.argument else ""): values.get(r.key)
                 for r in rules.readers
-            }
-            assert _evaluate_script(blocks[field], engine) == expected
-        resource = decision_rules.evaluate(rules, {**values, "resource_route": True}, is_ai=True)
-        assert resource["treaty_category_scores.economy"] == ("identity_resource_cooperation", 1.3)
-    # 已知普通容量足够，但无法判断强档时，不能猜测普通档优先。
-    unknown = decision_rules.evaluate(rules, _values(legitimacy=None), is_ai=True)
-    assert "institution_scores.institution_schools" not in unknown
+            },
+            **{k: v for k, v in values.items() if k.endswith(("_balance", "_price"))},
+        }
+        engine.update({k: v for k, v in values.items() if k.endswith(("_balance", "_price"))})
+        for field in (
+            "institution_scores.institution_schools",
+            "treaty_category_scores.trade",
+            "treaty_category_scores.economy",
+        ):
+            assert _evaluate_script(blocks[field], engine) == result[field][1]
+    healthy = decision_rules.evaluate(rules, _values(legitimacy=80), is_ai=True)
+    assert "institution_scores.institution_schools" not in healthy
+    assert "treaty_category_scores.trade" not in healthy
+    assert "treaty_category_scores.economy" not in healthy
 
 
 def test_small_low_literacy_countries_can_enter_education_capacity_tiers(rules):
     values = _values(population=1_000_000, literacy=0.3)
     assert decision_rules.evaluate(rules, values, is_ai=True)[
         "institution_scores.institution_schools"
-    ] == ("education_catchup_capacity", 1.25)
+    ] == ("remaining_school_capacity", 1.25)
     strong = decision_rules.evaluate(rules, {**values, "legitimacy": 80}, is_ai=True)
     assert strong["institution_scores.institution_schools"] == (
-        "decisive_school_investment",
-        1.3,
+        "remaining_school_capacity",
+        1.25,
     )
     unknown = decision_rules.evaluate(rules, {**values, "population": None}, is_ai=True)
     assert "institution_scores.institution_schools" not in unknown
 
 
 def test_multifactor_capacity_rules_require_complete_context(generated_rule_blocks):
-    """U13 复合规则必须同时满足处境、能力和路线条件，并保持未知回退。"""
     rules, blocks = generated_rule_blocks
 
     def evaluate(values, field):
         result = decision_rules.evaluate(rules, values, is_ai=True)
         engine = {
-            reader.engine + (":" + reader.argument if reader.argument else ""): values.get(
-                reader.key
-            )
-            for reader in rules.readers
+            **{
+                r.engine + (":" + r.argument if r.argument else ""): values.get(r.key)
+                for r in rules.readers
+            },
+            **{k: v for k, v in values.items() if k.endswith(("_balance", "_price"))},
         }
+        engine.update({k: v for k, v in values.items() if k.endswith(("_balance", "_price"))})
         return result.get(field), _evaluate_script(blocks[field], engine)
 
-    strong = _values(legitimacy=80, expansion_route=True)
+    selected, observed = evaluate(_values(tools_balance=-1), "wanted_construction_output")
+    assert selected == ("remaining_industrial_construction_need_funded", 1.25)
+    assert observed == 1.25
+    selected, observed = evaluate(_values(literacy=0.4), "institution_scores.institution_schools")
+    assert selected == ("remaining_school_capacity", 1.25)
+    assert observed == 1.25
     for field, expected in {
-        "wanted_construction_output": ("coordinated_industrial_capacity", 1.25),
-        "colonial_interest_ratio": ("colonial_projection_capacity", 1.15),
-    }.items():
-        selected, generated = evaluate(strong, field)
-        assert selected == expected
-        assert generated == expected[1]
-
-    low_literacy = _values(legitimacy=60, literacy=0.4)
-    selected, generated = evaluate(low_literacy, "institution_scores.institution_schools")
-    assert selected == ("education_catchup_capacity", 1.25)
-    assert generated == 1.25
-
-    wartime = _values(war=True)
-    for field, expected in {
-        "wanted_army_size": ("wartime_army_capacity", 1.15),
+        "wanted_army_size": ("wartime_army_capacity", 1.20),
         "wanted_navy_size": ("wartime_navy_capacity", 1.12),
     }.items():
-        selected, generated = evaluate(wartime, field)
-        assert selected == expected
-        assert generated == expected[1]
-
-    healthy = _values(legitimacy=60)
-    for field, expected in {
-        "treaty_category_scores.trade": ("trade_capacity_cooperation", 1.2),
-        "treaty_category_scores.economy": ("economic_diplomacy_capacity", 1.2),
-    }.items():
-        selected, generated = evaluate(healthy, field)
-        assert selected == expected
-        assert generated == expected[1]
-
-    resource = decision_rules.evaluate(
-        rules, _values(legitimacy=60, resource_route=True), is_ai=True
-    )
-    assert resource["treaty_category_scores.economy"] == (
-        "identity_resource_cooperation",
-        1.3,
-    )
-
-    constrained = decision_rules.evaluate(rules, _values(legitimacy=60, net_surplus=0), is_ai=True)
-    assert constrained["treaty_category_scores.trade"][0] != "trade_capacity_cooperation"
-    assert constrained["treaty_category_scores.economy"][0] != "economic_diplomacy_capacity"
-    unknown_values = _values(legitimacy=60, net_surplus=None)
-    unknown = decision_rules.evaluate(rules, unknown_values, is_ai=True)
-    assert not {
-        "wanted_construction_output",
-        "institution_scores.institution_schools",
-        "treaty_category_scores.trade",
-        "treaty_category_scores.economy",
-    }.intersection(unknown)
-    assert unknown == {"colonial_interest_ratio": ("overseas_naval_projection", 1.1)}
-    selected, generated = evaluate(unknown_values, "colonial_interest_ratio")
-    assert selected == unknown["colonial_interest_ratio"]
-    assert generated == selected[1]
+        assert evaluate(_values(war=True), field) == (expected, expected[1])
+    for field in ("treaty_category_scores.trade", "treaty_category_scores.economy"):
+        selected, observed = evaluate(_values(tools_balance=-1, tools_price=0.6), field)
+        assert selected[1] == observed == 1.2
+        selected, observed = evaluate(
+            _values(tools_balance=-1, tools_price=None, net_surplus=None), field
+        )
+        assert selected[1] == observed == 1.1
+        assert evaluate(_values(tools_balance=0, tools_price=0.6), field) == (None, 1.0)
+    assert "colonial_interest_ratio" not in blocks
 
 
 @pytest.mark.parametrize(
@@ -948,9 +917,9 @@ def test_multifactor_capacity_rules_require_complete_context(generated_rule_bloc
         ({"target_cultural_share": None}, 1.0),
         ({"target_isolated": True}, 0.9),
         ({"fervor": 10}, 1.05),
-        ({"default": True}, 1.0),
-        ({"war": True}, 1.05),
-        ({"income": 0}, 1.05),
+        ({"default": True}, 0.8),
+        ({"war": True}, 1.2),
+        ({"income": 0}, 1.2),
         ({"expansion_route": False}, 1.05),
         ({"target_homeland": None}, 1.0),
         ({"target_isolated": None}, 1.0),
@@ -977,9 +946,15 @@ def test_identity_high_tier_and_local_foundation_have_distinct_requirements(
         )
     )
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
-        for reader in rules.readers
+        **{
+            reader.engine + (":" + reader.argument if reader.argument else ""): values.get(
+                reader.key
+            )
+            for reader in rules.readers
+        },
+        **{k: v for k, v in values.items() if k.endswith(("_balance", "_price"))},
     }
+    engine.update({k: v for k, v in values.items() if k.endswith(("_balance", "_price"))})
     engine["scope:target_state"] = True
     assert _evaluate_script(blocks["state_value"], engine) == expected
     assert (
@@ -995,13 +970,19 @@ def test_geographic_cost_precedes_reward_and_missing_state_preserves_vanilla(
     rules, blocks = generated_rule_blocks
     values = _values(default=True, target_isolated=True, navy=0, target_port=True)
     engine = {
-        reader.engine + (":" + reader.argument if reader.argument else ""): values.get(reader.key)
-        for reader in rules.readers
+        **{
+            reader.engine + (":" + reader.argument if reader.argument else ""): values.get(
+                reader.key
+            )
+            for reader in rules.readers
+        },
+        **{k: v for k, v in values.items() if k.endswith(("_balance", "_price"))},
     }
+    engine.update({k: v for k, v in values.items() if k.endswith(("_balance", "_price"))})
     engine["scope:target_state"] = True
     assert _evaluate_script(blocks["state_value"], engine) == 0.8
     assert decision_rules.evaluate(rules, values, is_ai=True)["state_value"] == (
-        "geographic_isolation_financial_cost",
+        "remaining_external_state_default_cost",
         0.8,
     )
     engine.pop("scope:target_state")
@@ -1089,7 +1070,7 @@ def test_parent_and_child_fields_cannot_have_separate_authors():
 def test_compound_number_reader_rejects_ambiguous_shapes(overrides):
     data = tomllib.loads(decision_rules.SOURCE.read_text(encoding="utf-8"))
     data = copy.deepcopy(data)
-    data["readers"]["income"].update(overrides)
+    data["readers"]["net_surplus"].update(overrides)
     with pytest.raises(ValueError, match="复合数值"):
         decision_rules.from_data(data, source_sha256="0" * 64, strategy=decision_intents.load())
 
@@ -1202,7 +1183,9 @@ def test_release_is_a_real_standard_package(tmp_path):
         assert b"# SITAI SUBJECTS BEGIN" not in archive.read(
             "common/ai_strategies/00_default_strategy.txt"
         )
-        assert contract["consumer_count"] == 38
+        # The expanded candidate includes all 70 physical adapter sources;
+        # 38 described the earlier, incomplete production set.
+        assert contract["consumer_count"] == 70
         assert "information_rules" in contract["enabled_modules"]
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt")
         assert strategy.startswith(codecs.BOM_UTF8)

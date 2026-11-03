@@ -89,7 +89,6 @@ def _values(**changes):
     return {
         "war": False,
         "default": False,
-        "route_defense": False,
         "net_surplus": -1,
         "defensive_pact_articles": 1,
         "army": 50,
@@ -145,9 +144,7 @@ def _facts(values, *, is_ai=True):
         if reader.key not in values:
             continue
         value = values[reader.key]
-        if reader.argument and reader.argument.startswith("sitai_route_"):
-            root[f"{reader.argument}_active"] = value
-        elif not reader.path and not reader.argument and not reader.parameters:
+        if not reader.path and not reader.argument and not reader.parameters:
             root[reader.engine] = value
     return {"ROOT": root}
 
@@ -171,10 +168,10 @@ CASES = [
     # flow and zero administrative balance: 1 + .08 = 1.08.
     ("wartime_defense", {"war": True}, 1.08),
     ("default_recovery", {"default": True}, 0.85),
-    ("defense_route", {"route_defense": True}, None),
+    ("peace_capacity_has_no_war_demand", {"net_surplus": 1, "bureaucracy": 1}, None),
     (
         "defense_capacity",
-        {"route_defense": True, "net_surplus": 1, "bureaucracy": 1},
+        {"war": True, "net_surplus": 1, "bureaucracy": 1},
         1.2,
     ),
     # Independent opposite directions: 1 + (1.10 - 1) + (0.95 - 1) = 1.05.
@@ -222,7 +219,6 @@ def test_complete_army_chain_reference_and_actual_pdx(generated, case, changes, 
     [
         "war",
         "default",
-        "route_defense",
         "net_surplus",
         "defensive_pact_articles",
         "native_army_capacity",
@@ -279,7 +275,6 @@ def test_lj10_has_exact_production_chain_provenance(generated):
     assert {row.key for row in link.spec.readers} == {
         "war",
         "default",
-        "route_defense",
         "net_surplus",
         "defensive_pact_articles",
         "native_army_capacity",

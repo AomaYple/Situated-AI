@@ -86,32 +86,32 @@ _SC_DELTAS = (
     0.05,
     0.25,
     0,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     -4,
     0,
     0,
-    0.025,
+    0.05,
     -4,
     8,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     0.25,
     0,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     0.25,
     0,
     0,
     0,
     0.25,
     8,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     0.25,
     0,
-    0.35,
-    0.025,
+    0.25,
+    0.05,
     -4,
 )
 _JOINT_IDS = {
@@ -161,8 +161,8 @@ _COMPLETE = {
 _CARD_CASES = [
     ("fiscal_recovery", "diplomatic_play_neutrality", {"in_default": True}, 8.0),
     ("wartime_defense", "diplomatic_play_neutrality", {"is_at_war": True}, 6.0),
-    ("political_reform", "change_law_chance", {}, 0.6),
-    ("industrial_foundation", "economic_vs_government_spending_balance", {}, 0.2),
+    ("political_reform", "change_law_chance", {}, 0.5),
+    ("industrial_foundation", "economic_vs_government_spending_balance", {}, 0.15),
     (
         "education_and_research",
         "economic_vs_government_spending_balance",
@@ -172,7 +172,7 @@ _CARD_CASES = [
     ("diplomatic_restraint", "recklessness", {"is_at_war": True}, -4.0),
     ("diplomatic_opening", "recklessness", {}, 2.0),
     ("reform_progressive_window", "max_progressiveness", {}, 5.0),
-    ("reform_conservative_guard", "max_regressiveness", {"in_default": True}, 4.0),
+    ("reform_conservative_guard", "max_regressiveness", {"in_default": True}, 5.0),
     ("diplomatic_boldness_window", "diplomatic_play_boldness", {}, 8.0),
     ("diplomatic_aggression_guard", "aggression", {}, 0.1),
 ]
@@ -205,7 +205,7 @@ def test_one_observation_evaluates_multiple_real_consumers(production):
         "aggression",
     } == set(result)
     assert result["economic_vs_government_spending_balance"][0] == "joint_economic_balance"
-    assert result["economic_vs_government_spending_balance"][1] == pytest.approx(0.2)
+    assert result["economic_vs_government_spending_balance"][1] == pytest.approx(0.15)
 
 
 @pytest.mark.parametrize("enabled", [frozenset(), frozenset({"recklessness"})])
@@ -221,6 +221,7 @@ def test_actual_module_switch_isolates_reference_and_generated_output(production
 
 
 def test_disabled_optional_cross_consumer_complement_does_not_block_base(production):
+    """The retired political edge cannot leave an unrelated consumer dependency."""
     model, _ = production
     field = "economic_vs_government_spending_balance"
     result = compiler.evaluate_actions(
@@ -229,7 +230,7 @@ def test_disabled_optional_cross_consumer_complement_does_not_block_base(product
     actual = pdx_eval.select(
         compiler.strategy_overlay(model, enabled_consumer_fields={field})[field], _COMPLETE
     )
-    assert result[field] == ("joint_economic_balance", 0.175)
+    assert result[field] == ("joint_economic_balance", 0.15)
     assert (actual.action_id, actual.delta) == result[field]
 
 
@@ -248,7 +249,7 @@ def test_unknown_cost_uses_conservative_tier_without_fabricating_health(producti
     reference = compiler.evaluate_actions(model, _typed(engine), is_ai=True)
     actual = pdx_eval.select(overlays[field], engine)
     assert reference[field][0] == "joint_economic_balance"
-    assert reference[field][1] == pytest.approx(0.1)
+    assert reference[field][1] == pytest.approx(0.05)
     assert actual.action_id == reference[field][0]
     assert actual.delta == pytest.approx(reference[field][1])
 

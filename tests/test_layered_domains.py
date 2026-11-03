@@ -49,28 +49,39 @@ def inputs(policy, country, **local):
 
 
 def test_normal_low_debt_financing_does_not_select_recovery(policies):
-    country = facts(loans=True, debt_ratio=0.1, net_surplus=5, industrial_route=False)
+    country = facts(
+        loans=True, debt_ratio=0.1, net_surplus=5, industrial_route=False, war_defeat=True
+    )
     policy = country_state.load()
     script = Script(policy)
-    assert country_state.advance(policy, country, None, day=0).route != "fiscal_recovery"
-    assert script.update(country, 0) != "fiscal_recovery"
+    assert country_state.derive(policy, country)["coordination"]["layer_recovery"] is False
+    assert not script.trigger(script.triggers["sitai_context_layer_recovery"], country)
     information = dict(policies)["information"]
     result = decision_rules.evaluate(information, inputs(information, country), is_ai=True)
     assert result["wanted_construction_output"][1] > 1
 
 
 @pytest.mark.parametrize("missing", ["legitimacy", "bureaucracy"])
-def test_proven_lower_layer_reaches_actual_subject_consumer(policies, missing):
+def test_actual_subject_moderate_autonomy_does_not_require_global_layer(policies, missing):
+    from pdx.situated import programs
+
     policy = dict(policies)["common/ai_strategies/02_subject_diplomatic_strategies.txt"]
-    values = inputs(policy, facts(**{missing: None}), liberty=20)
+    policy = programs.enable(
+        policy, source="common/ai_strategies/02_subject_diplomatic_strategies.txt"
+    )
+    values = inputs(policy, facts(**{missing: None}), actor_is_subject=True, liberty=30)
     result = decision_rules.evaluate(policy, values, is_ai=True)
     field = "ai_strategy_subject_maintain_autonomy.weight"
-    assert result[field][0].endswith("stable" if missing == "legitimacy" else "foundation")
+    assert result[field][0].startswith("program_")
+    assert result[field][1] == pytest.approx(1.10)
 
 
 def test_recent_defeat_outweighs_expansion_in_actual_wargoals(policies):
+    from pdx.situated import programs
+
     policy = dict(policies)["common/ai_strategies/00_default_strategy.txt"]
-    values = inputs(policy, facts(war_defeat=True))
+    policy = programs.enable(policy, source="common/ai_strategies/00_default_strategy.txt")
+    values = inputs(policy, facts(war_defeat=True), prospective_subject_population=100)
     result = decision_rules.evaluate(policy, values, is_ai=True)
     for goal in (
         "annex_country",
@@ -180,48 +191,46 @@ def test_each_layered_rule_has_a_joint_country_witness(policies):
     assert not failures, "\n".join(str(row) for row in failures)
 
 
-def test_industry_without_positive_evidence_uses_proven_expansion_in_full_chain(policies):
+def test_global_expansion_without_a_specific_research_use_does_not_invent_demand(policies):
     policy = dict(policies)["common/technology/technologies/10_production.txt"]
     country = facts(industrial_route=False, resource_route=False, war_defeat=False)
     result = decision_rules.evaluate(policy, inputs(policy, country), is_ai=True)
 
-    assert result.get("mechanical_tools.ai_weight") == (
-        "coordinated_layered_tech_mechanical_tools_expansion",
-        1.1,
-    )
+    assert "mechanical_tools.ai_weight" not in result
 
 
-def test_proven_industry_need_preempts_expansion_in_full_chain(policies):
+def test_actual_tools_shortage_supports_research_without_a_global_industry_gate(policies):
     policy = dict(policies)["common/technology/technologies/10_production.txt"]
-    country = facts(industrial_route=False, resource_route=True, war_defeat=False)
-    result = decision_rules.evaluate(policy, inputs(policy, country), is_ai=True)
+    country = facts(industrial_route=False, resource_route=False, war_defeat=False)
+    result = decision_rules.evaluate(
+        policy, inputs(policy, country, country_goods_tools_balance=-1), is_ai=True
+    )
 
     assert result["mechanical_tools.ai_weight"] == (
-        "coordinated_layered_tech_mechanical_tools_industry",
-        1.25,
+        "technology_mechanical_tools_supply_tools",
+        1.12,
     )
 
 
-def test_reconstruction_without_positive_evidence_uses_proven_expansion(policies):
+def test_healthy_expansion_layer_does_not_invent_a_conquest_opportunity(policies):
     policy = dict(policies)["common/ai_strategies/00_default_strategy.txt"]
     country = facts(war_defeat=False)
     result = decision_rules.evaluate(policy, inputs(policy, country), is_ai=True)
 
-    assert result.get("ai_strategy_default.wargoal_scores.conquer_state") == (
-        "coordinated_layered_conquer_expansion",
-        3.0,
-    )
+    assert result.get("ai_strategy_default.wargoal_scores.conquer_state") is None
 
 
 def test_no_overseas_evidence_does_not_block_funded_wartime_supply(policies):
+    from pdx.situated import programs
+
     policy = dict(policies)["common/ai_strategies/00_default_strategy.txt"]
+    policy = programs.enable(policy, source="common/ai_strategies/00_default_strategy.txt")
     country = facts(war=True, loans=True, expansion_route=False)
     result = decision_rules.evaluate(policy, inputs(policy, country), is_ai=True)
 
-    assert result["ai_strategy_default.wanted_num_supply_ships"] == (
-        "coordinated_layered_security_supply_war",
-        1.15,
-    )
+    selected = result["ai_strategy_default.wanted_num_supply_ships"]
+    assert selected[0].startswith("program_")
+    assert selected[1] == pytest.approx(1.20)
 
 
 @pytest.mark.parametrize("missing", ["default", "war", "debt_ratio", "income"])
@@ -241,14 +250,14 @@ def test_optional_evidence_does_not_reward_unknown_core_capacity(policies, missi
         (
             "common/technology/technologies/30_society.txt",
             "central_archives.ai_weight",
-            {"bureaucracy": -1},
-            ("central_archives_ai_weight", 1.25),
+            {"bureaucracy": -1, "owned_incorporated_tax_shortfall": True},
+            ("technology_central_archives_tax_capacity", 1.15),
         ),
         (
             "common/technology/technologies/20_military.txt",
             "artillery.ai_weight",
-            {"war": True},
-            ("artillery_ai_weight", 1.2),
+            {"war": True, "own_army": 100},
+            ("technology_artillery_army_war", 1.15),
         ),
         (
             "common/ai_strategies/00_default_strategy.txt",
@@ -256,7 +265,7 @@ def test_optional_evidence_does_not_reward_unknown_core_capacity(policies, missi
             {"bureaucracy": -1},
             ("coordinated_institution_colonial_affairs_administrative_cost", 0.8),
         ),
-        ("information", "wanted_army_size", {"war": True}, ("wartime_army_capacity", 1.15)),
+        ("information", "wanted_army_size", {"war": True}, ("wartime_army_capacity", 1.2)),
     ],
 )
 def test_existing_bounded_results_survive_without_shadowed_duplicates(

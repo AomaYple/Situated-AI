@@ -2,12 +2,194 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import re
+from dataclasses import asdict
+from typing import TYPE_CHECKING
+
 from pdx import config, decision_adapters
+from pdx.model import Block
+from pdx.parser import parse_text
 
 from . import domain_coverage, inventory, native_treatments, vanilla_inventory
 from .compiler import audit, load_model
 from .families import classify
 from .receipts import AuditResult, CoverageRow, ReceiptStatus, StageReceipt, digest, status_for
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+
+def _production_continuous_bindings(
+    generated: Mapping[str, str | bytes],
+) -> tuple[domain_coverage.ContinuousProgramBinding, ...]:
+    """Read continuous semantics from the same actual package output being audited.
+
+    No extension config is loaded and no writer is synthesized from a feature
+    switch. The complete serialized writer must match its sole physical write.
+    """
+    from pdx import decisions  # noqa: PLC0415
+
+    from .decision_ir import (  # noqa: PLC0415
+        ConsumerIRBundle,
+        ContextBinding,
+        EvaluationContext,
+        WriterDecisionIR,
+    )
+    from .support_program import DefenseReason, EconomicDifference, SupportProgram  # noqa: PLC0415
+
+    source = "common/ai_strategies/00_default_strategy.txt"
+    writer_id = "diplomatic_play_support_program"
+    field = "diplomatic_play_support"
+
+    def text(value: str | bytes) -> str:
+        return value.decode("utf-8") if isinstance(value, bytes) else value
+
+    def canonical(value: object) -> str:
+        return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+    def without_lines(value: object) -> object:
+        if isinstance(value, dict):
+            return {key: without_lines(item) for key, item in value.items() if key != "line"}
+        if isinstance(value, list):
+            return [without_lines(item) for item in value]
+        return value
+
+    def support_node(content: str):
+        parsed = parse_text(content)
+        strategies = parsed.root.all("ai_strategy_default")
+        if parsed.errors or len(strategies) != 1 or not isinstance(strategies[0].value, Block):
+            raise ValueError("支持程序生产策略无法精确解析")
+        nodes = strategies[0].value.all(field)
+        if len(nodes) != 1 or not isinstance(nodes[0].value, Block):
+            raise ValueError("支持程序物理消费者不是唯一数值块")
+        return nodes[0]
+
+    try:
+        metadata_text = text(generated.get(".metadata/metadata.json", "{}"))
+        metadata = json.loads(metadata_text)
+        bundle = metadata.get("situated_actions", {}).get("consumer_ir", {})
+        rows = bundle.get("writers", [])
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            raise ValueError("连续程序writer列表无效")
+        support_rows = [
+            row
+            for row in rows
+            if row.get("kind") == "support_program"
+            or row.get("writer_id") == writer_id
+            or row.get("field") in {field, f"ai_strategy_default.{field}"}
+        ]
+        marked_sources = [
+            name
+            for name, value in generated.items()
+            if name.endswith(".txt")
+            and (f"# SITAI BEGIN {field}" in text(value) or f"# ACTION {writer_id}" in text(value))
+        ]
+        if not support_rows:
+            if (
+                marked_sources
+                or bundle.get("support_program_writer_count", 0) != 0
+                or field in bundle.get("field_owners", {})
+            ):
+                raise ValueError("支持程序存在输出或owner却缺少实际writer")
+            return ()
+        if len(support_rows) != 1 or marked_sources != [source]:
+            raise ValueError("支持程序writer或物理来源缺失/重复")
+        row = support_rows[0]
+        raw = row["program"]
+        if not isinstance(raw, dict) or not isinstance(raw["defense"], list):
+            raise ValueError("支持程序完整语义缺失")
+        market = None if raw["market"] is None else EconomicDifference(**raw["market"])
+        program = SupportProgram(
+            market=market,
+            defense=tuple(DefenseReason(**reason) for reason in raw["defense"]),
+            consumer_max_delta=raw["consumer_max_delta"],
+            writer_id=raw["writer_id"],
+            description=raw["description"],
+        )
+        if canonical(program.as_dict()) != canonical(raw):
+            raise ValueError("支持程序序列化语义与有类型合同不一致")
+        context = row["evaluation_context"]
+        evaluation_context = EvaluationContext(
+            actor_scope=ContextBinding(**context["actor_scope"]),
+            targets=tuple(ContextBinding(**target) for target in context["targets"]),
+            auxiliary_scopes=tuple(
+                ContextBinding(**target) for target in context["auxiliary_scopes"]
+            ),
+            evidence=tuple(context["evidence"]),
+            status=context["status"],
+        )
+        writer = WriterDecisionIR(
+            **{
+                name: row[name]
+                for name in (
+                    "writer_id",
+                    "kind",
+                    "source",
+                    "definition",
+                    "consumer_id",
+                    "field",
+                    "actor",
+                    "target",
+                    "operation",
+                    "vanilla_tail",
+                    "owner",
+                )
+            },
+            evaluation_context=evaluation_context,
+            program=program,
+        )
+        expected_writer = ConsumerIRBundle(1, (), (writer,)).as_dict()["writers"][0]
+        if canonical(expected_writer) != canonical(row):
+            raise ValueError("支持程序writer完整字段不一致")
+        ids = [item["writer_id"] for item in rows]
+        if (
+            len(ids) != len(set(ids))
+            or type(bundle["writer_count"]) is not int
+            or bundle["writer_count"] != len(rows)
+            or type(bundle["support_program_writer_count"]) is not int
+            or bundle["support_program_writer_count"] != 1
+            or bundle["field_owners"].get(field) != "situated_kernel"
+            or bundle["source_field_owners"].get(f"mod/decisions/extensions.toml:{field}")
+            != "situated_kernel"
+            or metadata["default_field_owners"].get(field) != "situated_kernel"
+        ):
+            raise ValueError("支持程序数量或物理字段owner不一致")
+        content = text(generated[source])
+        pattern = re.compile(
+            rf"^\t\t# SITAI BEGIN {field}\n(?P<body>.*?)^\t\t# SITAI END {field}\n",
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        blocks = list(pattern.finditer(content))
+        if (
+            len(blocks) != 1
+            or content.count(f"# SITAI BEGIN {field}") != 1
+            or content.count(f"# SITAI END {field}") != 1
+            or content.count(f"# ACTION {writer_id}") != 1
+            or blocks[0].group("body") != program.render()
+        ):
+            raise ValueError("支持程序实际overlay与完整语义不一致或重复")
+        restored = pattern.sub("", content)
+        if without_lines(asdict(support_node(restored))) != without_lines(
+            asdict(support_node(decisions.BASELINE.read_text(encoding="utf-8")))
+        ):
+            raise ValueError("支持程序存在未登记写入或原版尾部漂移")
+        binding = domain_coverage.ContinuousProgramBinding(
+            writer=writer,
+            native=domain_coverage.NativeConsumerBinding(source, "ai_strategy_default", field),
+            unit="score",
+            production_source=source,
+            production_sha256=hashlib.sha256(content.encode()).hexdigest(),
+            overlay_sha256=hashlib.sha256(blocks[0].group("body").encode()).hexdigest(),
+            metadata_sha256=hashlib.sha256(metadata_text.encode()).hexdigest(),
+        )
+        problem = domain_coverage.continuous_writer_issue(binding)
+        if problem is not None:
+            raise ValueError(f"支持连续程序上下文或字段合同不一致：{problem}")
+        return (binding,)
+    except (KeyError, TypeError, AttributeError, UnicodeError, ValueError) as exc:
+        raise ValueError(f"支持连续程序生产证据校验失败：{exc}") from exc
 
 
 def check() -> list[str]:
@@ -31,7 +213,9 @@ def native_report() -> dict[str, object]:
     """
     from pdx import distribution  # noqa: PLC0415
 
-    _policy, _extensions, generated = distribution.package_inputs()
+    from .architecture_receipts import source_snapshot  # noqa: PLC0415
+
+    _policy, _extensions, generated = distribution.package_inputs(include_engineering_metadata=True)
     model = load_model()
     scope = vanilla_inventory.discover()
     sources = {
@@ -53,6 +237,7 @@ def native_report() -> dict[str, object]:
         },
         native_sources=sources,
         production_policies=dict(decision_adapters.load().policies),
+        continuous_programs=_production_continuous_bindings(generated),
     )
     treatments = native_treatments.native_treatments(
         scope,
@@ -68,6 +253,14 @@ def native_report() -> dict[str, object]:
         "schema": 1,
         "plan_version": "A2",
         "evidence_category": "static_check",
+        "production_output_contract": {
+            "mode": "engineering_package_inputs",
+            "include_engineering_metadata": True,
+            "hash_scope": "same_invocation_outputs_including_engineering_metadata",
+            "standard_zip_manifest": False,
+            "standard_package_difference": "metadata_json_is_full_engineering_metadata",
+        },
+        "source_snapshot_sha256": digest(source_snapshot(config.REPO)),
         "scope": scope.as_dict(),
         "native_coverage": coverage,
         "native_treatments": treatments,

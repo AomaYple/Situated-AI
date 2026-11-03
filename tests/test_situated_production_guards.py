@@ -135,6 +135,8 @@ def _economy_values():
         "stable_legitimacy": True,
         "strong_legitimacy": False,
         "literacy_low": True,
+        "current_public_schools": True,
+        "schools_present": True,
         "bureaucracy_positive": True,
         "legitimacy": 60,
         "bureaucracy": 1,
@@ -149,6 +151,8 @@ def _economy_values():
         "legitimacy": 60,
         "bureaucracy": 1,
         "literacy_rate": 0.3,
+        "has_law_or_variant": {(("argument", "law_type:law_public_schools"),): True},
+        "has_institution": {(("argument", "institution_schools"),): True},
         "scaled_debt": 0.4,
         "net_total_income": 1,
     }
@@ -157,12 +161,12 @@ def _economy_values():
 
 @pytest.mark.parametrize(
     ("stronger", "unknown", "expected"),
-    [(False, False, 0.2), (True, False, 0.225), (True, True, 0.175)],
+    [(False, False, 0.175), (True, False, 0.2), (True, True, 0.15)],
 )
 def test_only_one_proven_complement_contributes_to_production_delta(
     production_model, stronger, unknown, expected
 ):
-    """Historical identity: both independent observed complements now contribute."""
+    """The observed school complement has a visible, bounded local contribution."""
     model = production_model
     if stronger:
         model = _rows(
@@ -171,7 +175,9 @@ def test_only_one_proven_complement_contributes_to_production_delta(
                 replace(
                     row,
                     relations=tuple(
-                        replace(rel, strength=0.05) if rel.target == "political_reform" else rel
+                        replace(rel, strength=0.05)
+                        if rel.target == "education_and_research"
+                        else rel
                         for rel in row.relations
                     ),
                 )
@@ -181,13 +187,13 @@ def test_only_one_proven_complement_contributes_to_production_delta(
             ),
         )
     values, facts = _economy_values()
-    # Real completion evidence is strong legitimacy and ready literacy; the
-    # education intention itself is ineligible here, yet its completed fact counts.
+    # The enacted school and current literacy state supply complementary evidence;
+    # the education intention itself is ineligible and does not prove completion.
     values.update(legitimacy=80, strong_legitimacy=True, literacy_ready=True, literacy_low=False)
     facts.update(legitimacy=80, literacy_rate=0.8)
     if unknown:
-        values.update(no_insurrection=None, insurrection=None, ongoing_insurrection=None)
-        facts["any_insurrection_ongoing"] = None
+        values["current_public_schools"] = None
+        facts["has_law_or_variant"] = {(("argument", "law_type:law_public_schools"),): None}
     field = "economic_vs_government_spending_balance"
     actual = compiler.evaluate_actions(model, values, is_ai=True)
     assert actual[field][1] == pytest.approx(expected)
@@ -468,15 +474,12 @@ def test_rank_terms_survive_source_ir_and_instance_dependency_maps(production_mo
     assert any(row.get("rank_terms") for row in exported)
 
 
-@pytest.mark.parametrize("order", [None, 1, ["need_tier"] * 6, ["unknown"]])
-def test_invalid_rank_order_is_rejected_explicitly(production_model, order):
-    # The legacy schema is checked at the source boundary. An already-built
-    # model's retired rank metadata is never a second production utility source.
-    support = {
-        **production_model.support_sources,
-        "arbitration.toml": {**production_model.support_sources["arbitration.toml"], "rank": order},
-    }
-    with pytest.raises(ValueError, match="rank"):
+@pytest.mark.parametrize("name", ["arbitration.toml", "temporal.toml"])
+def test_retired_supporting_sources_cannot_restore_decorative_contracts(production_model, name):
+    assert name not in production_model.support_sources
+    assert name not in compiler.SUPPORTING_SOURCES
+    support = {**production_model.support_sources, name: {"schema": 1}}
+    with pytest.raises(ValueError, match=r"辅助合同|退役"):
         compiler._validate_supporting_sources(
             support, production_model.consumers, production_model.relations
         )
@@ -523,38 +526,18 @@ def test_rank_partition_overflow_rejects_without_pruning_candidates(production_m
     )
 
 
-def test_arbitration_order_is_consumed_by_actual_pdx_rank(production_model):
-    """Retired rank order cannot resurrect the old single-card winner path."""
+def test_actual_joint_program_uses_live_contributions_without_arbitration_source(production_model):
     values, facts = _economy_values()
     values.update(coord_evidence_need_industry=False, coord_need_education=True)
     facts.update(sitai_context_need_education=True, sitai_context_evidence_need_industry=False)
-    support = {
-        **production_model.support_sources,
-        "arbitration.toml": {
-            **production_model.support_sources["arbitration.toml"],
-            "rank": [
-                "net_benefit",
-                "need_tier",
-                "goal_priority",
-                "stress",
-                "opportunity",
-                "action_id",
-            ],
-        },
-    }
+    assert {"arbitration.toml", "temporal.toml"}.isdisjoint(production_model.support_sources)
     field = "economic_vs_government_spending_balance"
-    changed = replace(production_model, support_sources=support)
-    assert (
-        compiler.strategy_overlay(changed)[field]
-        == compiler.strategy_overlay(production_model)[field]
-    )
-    for model in (production_model, changed):
-        assert compiler.evaluate_actions(model, values, is_ai=True)[field][1] == pytest.approx(
-            0.020
-        )
-        assert pdx_eval.select(
-            compiler.strategy_overlay(model)[field], facts
-        ).delta == pytest.approx(0.020)
+    assert compiler.evaluate_actions(production_model, values, is_ai=True)[field][
+        1
+    ] == pytest.approx(0.020)
+    assert pdx_eval.select(
+        compiler.strategy_overlay(production_model)[field], facts
+    ).delta == pytest.approx(0.020)
 
 
 @pytest.mark.parametrize(

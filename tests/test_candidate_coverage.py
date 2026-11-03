@@ -408,7 +408,7 @@ def strategic_inputs(inputs):
         "source_sha256": "e" * 64,
         "generator_sha256": "f" * 64,
         "composition": "generation_time_and_dag; nonexclusive_current_input_constraints",
-        "priority": "existing_per_field_rule_priority; one_adjustment",
+        "priority": "consumer_local_joint_contributions; cause_tiers; final_cap",
         "graph_budget": {"signals": 32, "intents": 32, "depth": 8},
         "intents": [base, development],
     }

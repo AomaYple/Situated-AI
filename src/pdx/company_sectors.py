@@ -86,10 +86,13 @@ def _parameters(values: Mapping[str, object]) -> dict[str, float]:
         raise ValueError("公司部门投入和违约代价必须保持正倍率与负贡献")
     if not 0.5 <= result["outer_lower"] < 1 < result["outer_upper"] <= 1.5:
         raise ValueError("公司部门外限必须包含中性倍率且有界")
-    lower = 1 + (result["input_multiplier"] - 1) + (result["default_multiplier"] - 1)
-    upper = 1 + (result["pressure_multiplier"] - 1) + (result["workforce_multiplier"] - 1)
+    # These source parameters bound individual contribution tiers, not the
+    # aggregate company program. The number of independently required goods is
+    # profile-specific; programs.enable owns its single final [.5, 1.5] clamp.
+    lower = min(result["input_multiplier"], result["default_multiplier"])
+    upper = max(result["pressure_multiplier"], result["workforce_multiplier"])
     if lower < result["outer_lower"] or upper > result["outer_upper"]:
-        raise ValueError("公司部门独立贡献自然包络超出声明外限")
+        raise ValueError("公司部门单项贡献档位超出源参数允许范围")
     return dict(sorted(result.items()))
 
 
@@ -546,7 +549,7 @@ def _rules(profile, parameters):
             for good in inputs:
                 add(
                     f"port_{method}_{good}_input",
-                    "company_mandatory_input",
+                    f"company_mandatory_input_{good}",
                     parameters["input_multiplier"],
                     [
                         active,
@@ -556,10 +559,13 @@ def _rules(profile, parameters):
                     ],
                     f"已观察{method}港口active方式实际需要{good}，国家市场高价为该生产方式的独立机会成本",
                 )
+    # Profiles already deduplicate required goods across all primary recipe
+    # groups. Share the same physical-good cause with active port recipes too:
+    # repeated steamers/sulfur evidence is one cost, distinct goods join.
     for good in profile["common_inputs"]:
         add(
             f"{good}_input",
-            "company_mandatory_input",
+            f"company_mandatory_input_{good}",
             parameters["input_multiplier"],
             [_predicate(f"country_goods_{good}_price", ">", parameters["input_price_threshold"])],
             f"主业某必选基础配方组所有方法共同需要{good}；高价为配方机会成本，不是当前实际账单",

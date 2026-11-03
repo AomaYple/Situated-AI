@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .bindings import Binding
     from .ir import ActionIR
     from .schema import ActionCard, ConsumerContract, CostPredicate, RankTerm, Relation
+    from .support_program import SupportProgram
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,6 +234,7 @@ class WriterDecisionIR:
     chain_refs: tuple[tuple[str, str], ...] = ()
     evaluation_context: EvaluationContext | None = None
     reader_context_bindings: tuple[tuple[str, str, str, str], ...] = ()
+    program: SupportProgram | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -256,6 +258,39 @@ class ConsumerIRBundle:
         field_owners: dict[str, set[str]] = {}
         source_field_owners: dict[tuple[str, str], set[str]] = {}
         for item in self.writers:
+            if item.kind == "support_program":
+                program = item.program
+                if (
+                    program is None
+                    or not program.enabled
+                    or (
+                        item.writer_id,
+                        item.definition,
+                        item.source,
+                        item.consumer_id,
+                        item.field,
+                        item.operation,
+                        item.actor,
+                        item.target,
+                        item.owner,
+                        item.vanilla_tail,
+                    )
+                    != (
+                        program.writer_id,
+                        program.writer_id,
+                        "mod/decisions/extensions.toml",
+                        "diplomatic_play_support",
+                        "diplomatic_play_support",
+                        "add",
+                        "root",
+                        "target_country",
+                        "situated_kernel",
+                        "preserve",
+                    )
+                ):
+                    raise ValueError("支持程序writer与完整语义不一致")
+            elif item.program is not None:
+                raise ValueError("非支持writer不能携带支持程序")
             field_owners.setdefault(item.field, set()).add(item.owner)
             source_field_owners.setdefault((item.source, item.field), set()).add(item.owner)
         conflicting = {
@@ -278,6 +313,9 @@ class ConsumerIRBundle:
             ),
             "action_card_writer_count": sum(
                 item.kind == "action_card" and item.action is not None for item in self.writers
+            ),
+            "support_program_writer_count": sum(
+                item.kind == "support_program" and item.program is not None for item in self.writers
             ),
             "writers": [
                 {
@@ -303,6 +341,7 @@ class ConsumerIRBundle:
                     "chain_refs": [list(reference) for reference in item.chain_refs],
                     "predicates": [predicate_dict(predicate) for predicate in item.predicates],
                     "action_id": item.action.action_id if item.action is not None else None,
+                    **({"program": item.program.as_dict()} if item.program is not None else {}),
                     "legacy_action": (
                         {
                             "action_id": item.legacy.action_id,

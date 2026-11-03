@@ -171,16 +171,17 @@ def test_native_formation_owner_country_and_nonzero_utility_have_independent_wit
     assert contract["target"] == "none"
 
 
-def test_two_new_integrations_have_exact_handwritten_rules_and_no_other_candidates(raw, baseline):
+def test_medical_rules_keep_handwritten_contract_with_additional_material_candidates(raw, baseline):
     derived = mobilization.derive(raw, baseline)
-    assert len(derived["rules"]) == 12
-    assert len(derived["readers"]) == 11
-    assert {row["id"] for row in derived["covered"]} == {FIRST, FIELD}
+    assert len(derived["rules"]) == 72
+    assert len(derived["readers"]) == 33
+    assert {FIRST, FIELD} <= {row["id"] for row in derived["covered"]}
+    assert len(derived["covered"]) == 15
     assert all(
         row["disposition"] == "new_consumer_integration_no_legacy_identity"
         for row in derived["covered"]
     )
-    assert len(derived["uncovered"]) == 16
+    assert len(derived["uncovered"]) == 3
     assert len(baseline["native_identities"]) == 18
     assert derived["actors"] == {SOURCE: ["owner"]}
     assert not {"initial_values", "scalar_values", "contexts"} & derived.keys()
@@ -237,8 +238,24 @@ def test_readers_use_owner_and_complete_country_market_goods_path(raw, baseline)
             assert spec["path"] == ["owner"]
             assert spec["kind"] == "boolean"
         else:
-            _, good, tier = key.split("_")
-            assert good in {"fabric", "liquor", "opium", "tools"}
+            good, tier = key.removeprefix("mobilization_").rsplit("_", 1)
+            assert good in {
+                "fabric",
+                "liquor",
+                "opium",
+                "tools",
+                "groceries",
+                "meat",
+                "wine",
+                "sugar",
+                "tobacco",
+                "automobiles",
+                "engines",
+                "small_arms",
+                "ammunition",
+                "fertilizer",
+                "oil",
+            }
             assert spec == {
                 "engine": "market_goods_delta" if tier == "balance" else "market_goods_pricier",
                 "kind": "number",

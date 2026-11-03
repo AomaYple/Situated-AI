@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
-from . import company_observations
+from . import company_observations, technology_opportunities
 from .model import Assignment, Block, Scalar
 from .parser import parse_text
 from .textio import normalized_text
@@ -28,6 +28,7 @@ _TRADE = "common/laws/01_trade_policy.txt"
 _POWER = "common/laws/00_distribution_of_power.txt"
 _AI = "common/scripted_triggers/00_ai_triggers.txt"
 _PORTUGAL = "common/journal_entries/06_portugal_politics.txt"
+_ACW = "common/journal_entries/00_acw_entries.txt"
 _ART = "common/journal_entries/00_art_jes.txt"
 _BUILDING = "common/buildings/06_urban_center.txt"
 _GOVERNMENT_BUILDING = "common/buildings/07_government.txt"
@@ -43,11 +44,16 @@ MARKET_CONSUMPTION_SOURCES = (_ATHEISM, _GFX, _GOODS)
 # Normalized UTF-8, matching the production adapter input contract. These are
 # source identities, not a claim that normalized strings retain raw BOM bytes.
 SOURCE_HASHES = {
+    "common/laws/01_land_reform.txt": "8576c5bb769ca0bc9c2e3e2d89fb2e2dffcd9b4d479c08b43ca00c639e98e82f",
+    "common/laws/01_taxation.txt": "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae",
+    "common/laws/02_labour_associations.txt": "47ec5d950de0c1fd409203b83aa3a56849a02c6977e69d7e21a4bacc2ca4ce45",
+    "common/laws/02_migration.txt": "1ac367f9983e9542ee68a27c188f35669b0101cc2df6014c7499f1a5365b54a5",
     _ECONOMY: "5622b68492a6f57913ead582011980d2ea5c5f5d41c715261bc228b8b7f9f0e9",
     _TRADE: "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3",
     _POWER: "b16b4f8103ade4f61cf2890af6fd2834f8782856bab8b08c6ec5942522a00855",
     _AI: "d8da988122619e26e16ce17e8ac196337cdb8d1592f357c45ded4f8cb85d3698",
     _PORTUGAL: "3419343456182541870fc8de7c7c52c23bb6c9e7ec1deded06a7744d61e04316",
+    _ACW: "6132f262affcfc038df2549a0d5cb6ae059bc9e7fb90a8a1fe2c14db5263ff3e",
     _ART: "e0e281573697439d31145c5bdbebb0298ce753acb54be894f9ce6c4f8fc230c5",
     _BUILDING: "c41ed5adb63e8f626e6394ce4f2f619bc8f229cafa3d8994271e2a66d1c2b0c5",
     _GOVERNMENT_BUILDING: "01867816e5cf623ebf50927c94b0c2b92b189c8ed31d78fd55fa79ab67976872",
@@ -60,6 +66,38 @@ SOURCE_HASHES = {
     _GFX: "1987790bebbf4de42b443a91e81709335bdac1f3ac473428c7b23f59a157939b",
 }
 LAW_SOURCES = {
+    "law_anti_strike_laws": "common/laws/02_labour_associations.txt",
+    "law_canton_system": "common/laws/01_trade_policy.txt",
+    "law_closed_borders": "common/laws/02_migration.txt",
+    "law_collectivized_agriculture": "common/laws/01_land_reform.txt",
+    "law_combination_acts": "common/laws/02_labour_associations.txt",
+    "law_command_economy": "common/laws/01_economic_system.txt",
+    "law_commercialized_agriculture": "common/laws/01_land_reform.txt",
+    "law_consumption_based_taxation": "common/laws/01_taxation.txt",
+    "law_cooperative_ownership": "common/laws/01_economic_system.txt",
+    "law_corporatized_unions": "common/laws/02_labour_associations.txt",
+    "law_expanded_latifundias": "common/laws/01_land_reform.txt",
+    "law_extraction_economy": "common/laws/01_economic_system.txt",
+    "law_factory_councils": "common/laws/02_labour_associations.txt",
+    "law_graduated_taxation": "common/laws/01_taxation.txt",
+    "law_guild_system": "common/laws/02_labour_associations.txt",
+    "law_homesteading": "common/laws/01_land_reform.txt",
+    "law_industry_banned": "common/laws/01_economic_system.txt",
+    "law_interventionism": "common/laws/01_economic_system.txt",
+    "law_isolationism": "common/laws/01_trade_policy.txt",
+    "law_land_based_taxation": "common/laws/01_taxation.txt",
+    "law_latifundias": "common/laws/01_land_reform.txt",
+    "law_manorialism": "common/laws/01_land_reform.txt",
+    "law_migration_controls": "common/laws/02_migration.txt",
+    "law_no_migration_controls": "common/laws/02_migration.txt",
+    "law_peasant_proprietorship": "common/laws/01_land_reform.txt",
+    "law_per_capita_based_taxation": "common/laws/01_taxation.txt",
+    "law_proportional_taxation": "common/laws/01_taxation.txt",
+    "law_right_to_associate": "common/laws/02_labour_associations.txt",
+    "law_sakoku": "common/laws/01_trade_policy.txt",
+    "law_serfdom": "common/laws/01_land_reform.txt",
+    "law_tenant_farmers": "common/laws/01_land_reform.txt",
+    "law_traditionalism": "common/laws/01_economic_system.txt",
     "law_laissez_faire": _ECONOMY,
     "law_agrarianism": _ECONOMY,
     "law_free_trade": _TRADE,
@@ -102,6 +140,11 @@ class AnyIncorporatedStateTaxCapacityShortfall:
 
 
 @dataclass(frozen=True, slots=True)
+class AnyStateTurmoilAbove:
+    threshold: float = 0.1
+
+
+@dataclass(frozen=True, slots=True)
 class OwnBuildingActiveMethod:
     building_id: str
     method_id: str
@@ -113,8 +156,10 @@ CountryQuery = (
     | LawInterestGroupSupport
     | AnyStateMarketAccessBelow
     | AnyIncorporatedStateTaxCapacityShortfall
+    | AnyStateTurmoilAbove
     | OwnBuildingActiveMethod
     | company_observations.CompanyQuery
+    | technology_opportunities.TechnologyQuery
 )
 
 
@@ -154,6 +199,8 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
         raise ValueError("查询参数必须为完整字符串映射")
     if "company_query" in parameters:
         return company_observations.from_reader(engine, parameters)
+    if "technology_query" in parameters:
+        return technology_opportunities.query_from_reader(engine, parameters)
     if engine == "any_political_movement" and set(parameters) == {"law", "minimum_support"}:
         query: CountryQuery = LawMovementSupport(
             parameters["law"], _decimal(parameters["minimum_support"])
@@ -164,6 +211,12 @@ def from_reader(engine: str, parameters: Mapping[str, str]) -> CountryQuery:
         query = AnyStateMarketAccessBelow(_decimal(parameters["threshold"]))
     elif engine == "any_scope_state" and parameters == {"state_query": "tax_capacity_shortfall"}:
         query = AnyIncorporatedStateTaxCapacityShortfall()
+    elif (
+        engine == "any_scope_state"
+        and set(parameters) == {"state_query", "threshold"}
+        and parameters["state_query"] == "turmoil_above"
+    ):
+        query = AnyStateTurmoilAbove(_decimal(parameters["threshold"]))
     elif engine == "any_scope_building" and set(parameters) == {"building", "method", "min_level"}:
         level = parameters["min_level"]
         if not _INTEGER.fullmatch(level) or len(level) > 4:
@@ -179,6 +232,8 @@ def render(query: CountryQuery) -> str:
     """Pure fixed-template lowering, including type, ID and numeric guards."""
     if isinstance(query, company_observations.CompanyQuery):
         return company_observations.render(query)
+    if isinstance(query, technology_opportunities.TechnologyQuery):
+        return technology_opportunities.render_query(query)
     if type(query) is LawMovementSupport:
         if not isinstance(query.law_id, str) or query.law_id not in LAW_SOURCES:
             raise ValueError("运动查询的法律ID没有已登记的真实定义")
@@ -200,6 +255,8 @@ def render(query: CountryQuery) -> str:
         return f"any_scope_state = {{ market_access < {threshold!r} }}"
     if type(query) is AnyIncorporatedStateTaxCapacityShortfall:
         return "any_scope_state = { is_incorporated = yes tax_capacity < tax_capacity_usage }"
+    if type(query) is AnyStateTurmoilAbove:
+        return f"any_scope_state = {{ turmoil > {_ratio(query.threshold)!r} }}"
     if type(query) is OwnBuildingActiveMethod:
         if query.building_id != "building_art_academy" or query.method_id not in ART_METHODS:
             raise ValueError("建筑/PM组合没有已登记的本国艺术建筑消费者证据")
@@ -216,6 +273,8 @@ def required_sources(query: CountryQuery) -> tuple[str, ...]:
     render(query)
     if isinstance(query, company_observations.CompanyQuery):
         return company_observations.required_sources(query)
+    if isinstance(query, technology_opportunities.TechnologyQuery):
+        return technology_opportunities.required_query_sources(query)
     if isinstance(query, LawMovementSupport):
         return tuple(sorted({_ECONOMY, _AI, LAW_SOURCES[query.law_id]}))
     if isinstance(query, LawInterestGroupSupport):
@@ -224,6 +283,8 @@ def required_sources(query: CountryQuery) -> tuple[str, ...]:
         return (_PORTUGAL,)
     if isinstance(query, AnyIncorporatedStateTaxCapacityShortfall):
         return tuple(sorted({_PORTUGAL, _GOVERNMENT_BUILDING}))
+    if isinstance(query, AnyStateTurmoilAbove):
+        return tuple(sorted({_PORTUGAL, _ACW}))
     return tuple(sorted({_ART, _BUILDING, _GROUP, _METHOD}))
 
 
@@ -353,10 +414,16 @@ def verify_market_consumption_sources(texts: Mapping[str, str]) -> tuple[str, ..
 
 def compile_query(
     query: CountryQuery, texts: Mapping[str, str]
-) -> CompiledQuery | company_observations.CompiledQuery:
+) -> (
+    CompiledQuery
+    | company_observations.CompiledQuery
+    | technology_opportunities.CompiledTechnologyQuery
+):
     """Verify supplied pinned sources and complete consumers, without I/O."""
     if isinstance(query, company_observations.CompanyQuery):
         return company_observations.compile_query(query, texts)
+    if isinstance(query, technology_opportunities.TechnologyQuery):
+        return technology_opportunities.compile_query(query, texts)
     expression = render(query)
     roots, hashes = _verified_sources(required_sources(query), texts)
     references = []
@@ -438,6 +505,36 @@ def compile_query(
         if _shape(_child(building, "should_auto_expand")) != tax_expected:
             raise ValueError("原版税容量观测缺少完整同州比较AST证据")
         references.append(f"{_GOVERNMENT_BUILDING}:{building.all('should_auto_expand')[0].line}")
+        collections = ("owned_states",)
+    elif isinstance(query, AnyStateTurmoilAbove):
+        completion = _child(
+            _child(roots[_PORTUGAL], "je_portugal_regeneration_public_works"), "complete"
+        )
+        line = _find_shape(
+            _child(completion, "NOT"), "any_scope_state", (("market_access", "<", "1"),)
+        )
+        references.append(f"{_PORTUGAL}:{line}")
+        original = _child(_child(_child(roots[_ACW], "je_acw_wild_wild_west"), "complete"), "NOT")
+        line = _find_shape(
+            original,
+            "any_scope_state",
+            (
+                (
+                    "state_region",
+                    "=",
+                    (
+                        (
+                            "OR",
+                            "=",
+                            (("is_homeland", "=", "cu:dixie"), ("is_homeland", "=", "cu:yankee")),
+                        ),
+                    ),
+                ),
+                ("devastation", ">", "0.1"),
+                ("turmoil", ">", "0.1"),
+            ),
+        )
+        references.append(f"{_ACW}:{line}")
         collections = ("owned_states",)
     elif isinstance(query, AnyStateMarketAccessBelow):
         completion = _child(

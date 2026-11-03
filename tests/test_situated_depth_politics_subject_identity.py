@@ -175,7 +175,7 @@ CASES = [
     (
         STRATEGY,
         NEGOTIATION,
-        {"candidate_ig_clout": 0.15, "candidate_ig_approval": -1, "radical_share": 0.2},
+        {"candidate_ig_clout": 0.15, "candidate_ig_approval": -1, "radical_share": 0.25},
         "lj08_negotiation_local_political_capacity",
         "multiply",
         1.10,
@@ -186,7 +186,7 @@ CASES = [
         {
             "candidate_ig_clout": 0.15,
             "candidate_ig_approval": -1,
-            "radical_share": 0.2,
+            "radical_share": 0.25,
             "default": True,
             "war": True,
             "loans": True,
@@ -205,7 +205,7 @@ CASES = [
             "radical_share": 0.3,
             "legitimacy": 60,
         },
-        "structural_organized_negotiation",
+        "lj08_negotiation_local_political_capacity",
         "multiply",
         1.25,
     ),
@@ -215,23 +215,23 @@ CASES = [
         {"candidate_existing_subject": True, "default": True},
         "lj12_existing_subject_insolvency_continuity",
         "add",
-        -4,  # Insolvency continuity +1 and financial cost -5 jointly apply.
+        1,  # Existing relationship persists; default does not invent a uniform cost.
     ),
     (
         STRATEGY,
         SUBJECT,
         {"candidate_existing_subject": False, "default": True},
-        "coordinated_overlord_financial_cost",
+        "remaining_subject_defense_risk",
         "add",
-        -5,
+        0,
     ),
     (
         STRATEGY,
         SUBJECT,
         {"candidate_existing_subject": True},
-        "comparative_retain_existing_subject",
+        "lj12_existing_subject_insolvency_continuity",
         "add",
-        3,
+        1,
     ),
     (
         STRATEGY,
@@ -239,7 +239,7 @@ CASES = [
         {"current_overlord_relation": True, "liberty": 80},
         "lj12_existing_overlord_autonomy_cost",
         "add",
-        0,  # Existing protection +3 offsets the autonomy cost -3.
+        -3,  # No observed friendly protection benefit offsets the autonomy cost.
     ),
     (
         STRATEGY,
@@ -247,47 +247,47 @@ CASES = [
         {"current_overlord_relation": True, "liberty": 80, "default": True},
         "lj12_existing_overlord_autonomy_cost",
         "add",
-        0,  # The debt option +3 offsets the autonomy cost -3.
+        -3,  # Default does not prove aid; known autonomy cost remains.
     ),
     (
         STRATEGY,
         OVERLORD,
         {"current_overlord_relation": False, "liberty": 80, "default": True},
-        "coordinated_subject_debt_option",
+        "remaining_friendly_overlord_need",
         "add",
-        3,
+        0,
     ),
     (
         SUBJECTS,
         AUTONOMY,
-        {"liberty": 60, "default": True},
-        "lj12_autonomy_insolvency_cost",
+        {"actor_is_subject": True, "liberty": 30, "default": True},
+        "target_strategy_subject_maintain_need",
         "multiply",
-        1.20,  # Autonomy +0.25 and insolvency -0.05 jointly apply.
+        1.10,  # Default does not imply aid or erase a moderate autonomy preference.
     ),
     (
         SUBJECTS,
         AUTONOMY,
-        {"liberty": 60},
-        "ai_strategy_subject_maintain_autonomy_weight",
+        {"actor_is_subject": True, "liberty": 60},
+        "target_strategy_subject_maintain_need",
         "multiply",
-        1.25,
+        1,
     ),
     (
         SUBJECTS,
         SELF,
-        {"liberty": 60, "bureaucracy": -1},
-        "lj12_self_strength_administrative_repair",
+        {"actor_is_subject": True, "liberty": 60, "bureaucracy": -1},
+        "target_strategy_subject_self_repair",
         "multiply",
-        1.05,
+        1.18,
     ),
     (
         SUBJECTS,
         SELF,
-        {"liberty": 60, "bureaucracy": 0},
-        "ai_strategy_subject_strengthen_self_weight",
+        {"actor_is_subject": True, "liberty": 60, "bureaucracy": 0},
+        "target_strategy_subject_self_need",
         "multiply",
-        1.25,
+        1.10,
     ),
     (
         INFO,
@@ -342,7 +342,7 @@ CASES = [
             "income": 1,
             "legitimacy": 60,
         },
-        "identity_feasible_homeland",
+        "remaining_homeland_fervor",
         "multiply",
         1.2,
     ),
@@ -392,7 +392,7 @@ def test_complete_field_competition_has_handwritten_outcomes(
         (
             STRATEGY,
             NEGOTIATION,
-            {"candidate_ig_clout": 0.15, "candidate_ig_approval": -1, "radical_share": 0.2},
+            {"candidate_ig_clout": 0.15, "candidate_ig_approval": -1, "radical_share": 0.25},
             "candidate_ig_clout",
             "multiply",
             1,
@@ -403,7 +403,7 @@ def test_complete_field_competition_has_handwritten_outcomes(
             {"candidate_existing_subject": True, "default": True},
             "candidate_existing_subject",
             "add",
-            -5,  # The cost does not depend on observed membership.
+            0,  # Unknown membership and default cannot fabricate a direct cost.
         ),
         (
             STRATEGY,
@@ -419,10 +419,24 @@ def test_complete_field_competition_has_handwritten_outcomes(
             {"current_overlord_relation": True, "liberty": 80, "default": True},
             "current_overlord_relation",
             "add",
-            3,  # The known debt option survives unknown current membership.
+            0,  # No observed aid or relationship benefit may be inferred from default.
         ),
-        (SUBJECTS, AUTONOMY, {"liberty": 60, "default": True}, "liberty", "multiply", 1),
-        (SUBJECTS, SELF, {"liberty": 60, "bureaucracy": -1}, "bureaucracy", "multiply", 1),
+        (
+            SUBJECTS,
+            AUTONOMY,
+            {"actor_is_subject": True, "liberty": 30, "default": True},
+            "liberty",
+            "multiply",
+            1,
+        ),
+        (
+            SUBJECTS,
+            SELF,
+            {"actor_is_subject": True, "liberty": 60, "bureaucracy": -1},
+            "bureaucracy",
+            "multiply",
+            1.10,
+        ),
         (
             INFO,
             STATE,
@@ -511,7 +525,12 @@ def test_named_scope_decoys_cannot_replace_real_group_overlord_or_state(producti
             },
             "scope:interest_group",
         ),
-        (STRATEGY, OVERLORD, {"current_overlord_relation": True, "liberty": 60}, "scope:overlord"),
+        (
+            STRATEGY,
+            OVERLORD,
+            {"current_overlord_relation": True, "liberty": 60, "overlord_relations": 50},
+            "scope:overlord",
+        ),
         (
             INFO,
             STATE,
@@ -553,11 +572,13 @@ def test_political_break_and_identity_cost_exit_do_not_disable_other_domains(pro
         {
             "candidate_ig_clout": 0.15,
             "candidate_ig_approval": -1,
-            "radical_share": 0.2,
+            "radical_share": 0.25,
             "legitimacy": 20,
         },
     )
-    assert NEGOTIATION not in decision_rules.evaluate(politics, values, is_ai=True)
+    assert decision_rules.evaluate(politics, values, is_ai=True)[NEGOTIATION][1] == pytest.approx(
+        1.1
+    )
     identity = policies[INFO]
     common = {"target_homeland": True, "target_cultural_share": 0.3}
     cases: list[tuple[dict[str, object], float]] = [

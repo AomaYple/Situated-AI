@@ -819,7 +819,11 @@ def test_all_declaration_ids_survive_including_existing_observations():
         extra.declaration_id,
     }
     assert sum(report["counts"].values()) == 2
-    assert report["rows"][1]["status"] == "needs_review"
+    # The inventory's second occurrence has no corresponding physical input.
+    # Keep the identity in the denominator, but do not invent source evidence.
+    assert report["rows"][1]["status"] == "missing_evidence"
+    assert "native_declaration_occurrence_missing" in report["rows"][1]["issues"]
+    assert not report["rows"][1]["source_protection"]["proven"]
 
 
 @pytest.mark.parametrize("value", ["0.0", "-0", "+0.000"])

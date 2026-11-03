@@ -20,7 +20,6 @@ def _values(**changes):
         "default": False,
         "net_surplus": 1,
         "bureaucracy": 1,
-        "route_defense": False,
         "army": 100,
         "infamy": 0,
         "gdp": 1,
@@ -102,11 +101,11 @@ def _pdx_factors(policy, generated, values, *, is_ai=True):
 
 
 # These are alternatives within one observed military-demand envelope, not
-# independent rewards to stack: army .08 base + .04 fiscal + .03 administration,
-# navy .06 base + .03 fiscal + .03 administration. A lone capacity observation
-# proves only its intermediate tier; the full tier additionally proves no default.
+# independent rewards to stack: army .08 base, .12 fiscal, .11 administrative,
+# and .20 complete capacity; navy .06/.09/.09/.12. A lone capacity observation
+# proves only its intermediate tier; the complete tier also proves no default.
 CASES = [
-    ("full_capacity", {}, (1.15, 1.12)),
+    ("full_capacity", {}, (1.20, 1.12)),
     ("zero_flow", {"net_surplus": 0}, (1.11, 1.09)),
     ("negative_flow", {"net_surplus": -1}, (1.11, 1.09)),
     ("zero_administration", {"bureaucracy": 0}, (1.12, 1.09)),
@@ -132,13 +131,12 @@ CASES = [
     ("unknown_war_known_default", {"war": None, "default": True}, (0.85, 0.8)),
     ("peace", {"war": False}, (1, 1)),
     ("peace_known_default", {"war": False, "default": True}, (0.85, 0.8)),
-    # Existing route/threat/overseas tiers are correlated demand alternatives.
-    ("defense_route_does_not_stack", {"route_defense": True}, (1.2, 1.12)),
-    ("threat_does_not_stack", {"army": 49, "infamy": 26}, (1.15, 1.12)),
+    # Actual threat/overseas tiers are correlated demand alternatives.
+    ("threat_does_not_stack", {"army": 49, "infamy": 26}, (1.20, 1.12)),
     (
         "overseas_does_not_stack",
         {"coord_evidence_need_overseas": True, "coord_layer_stable": True},
-        (1.15, 1.18),
+        (1.20, 1.18),
     ),
 ]
 
@@ -209,7 +207,8 @@ def _bind_native_values(node, observations):
 @pytest.mark.parametrize(
     ("changes", "army", "marines", "navy", "expected"),
     [
-        ({}, 100, 20, 10, (92, 11.2)),
+        # Complete observed war capacity: (100 - 20) * 1.20, 10 * 1.12.
+        ({}, 100, 20, 10, (96, 11.2)),
         # 80 * (1 + .11 - .15), 10 * (1 + .09 - .20).
         ({"default": True}, 100, 20, 10, (76.8, 8.9)),
         ({"war": False}, 100, 20, 10, (80, 10)),

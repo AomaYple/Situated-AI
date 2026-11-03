@@ -14,6 +14,15 @@ pytestmark = pytest.mark.unit
 _TAIL = "retain_original_qualification_cost_random_execution"
 _PROOF = "tests/test_situated_migration_retirements.py::test_exact_retirement_requires_live_same_consumer_replacement"
 
+_NATIVE_RETENTION = {
+    "source": "research/vanilla-ai/1.14.5/00_default_strategy.txt",
+    "source_sha256": "a817c27fdd1aee4929680338abc07ac8fefd168b24a7617eacf459d923851be2",
+    "definition": "ai_strategy_default",
+    "field": "colonial_interest_ratio",
+    "ast_sha256": "4a4a4342151af33b74989498b00e2bd840da9e60862680b47ecbf17e7a4564ba",
+    "business_complete": False,
+}
+
 
 @pytest.fixture(scope="module")
 def published_bundle():
@@ -286,3 +295,106 @@ def test_default_retirement_bytes_are_pinned(retirement_case, monkeypatch):
     monkeypatch.setattr(migration_baseline, "_RETIREMENTS_SHA256", "0" * 64, raising=False)
     with pytest.raises(ValueError, match=r"退役.*原始字节漂移"):
         migration_baseline.validate_bundle(bundle)
+
+
+@pytest.fixture
+def native_retention_case(tmp_path, published_bundle):
+    retired = tuple(w for w in published_bundle.writers if w.field == "colonial_interest_ratio")
+    assert len(retired) == 5
+    bundle = replace(
+        published_bundle,
+        writers=tuple(w for w in published_bundle.writers if w not in retired),
+    )
+    payload = {
+        "schema": 1,
+        "baseline_tag": "v3.0.1",
+        "retirements": [
+            {
+                **{
+                    key: getattr(w, key)
+                    for key in ("source", "definition", "field", "actor", "target", "operation")
+                },
+                "reason": "撤销没有真实求值上下文证据的覆盖；精确保留原版，不声称该字段新增功能完成",
+                "replacements": [],
+                "native_retention": dict(_NATIVE_RETENTION),
+                "validation": [
+                    "tests/test_situated_migration_retirements.py::test_exact_native_restoration_is_not_business_implementation"
+                ],
+            }
+            for w in retired
+        ],
+    }
+    return bundle, retired[0], None, payload, tmp_path / "native-retention.json"
+
+
+def test_exact_native_restoration_is_not_business_implementation(native_retention_case):
+    validate_case(native_retention_case)
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("source", "../00_default_strategy.txt"),
+        ("source_sha256", "0" * 64),
+        ("definition", "ai_strategy_colonial_expansion"),
+        ("field", "wanted_navy_size"),
+        ("ast_sha256", "0" * 64),
+        ("business_complete", True),
+        ("business_complete", 0),
+    ],
+)
+def test_native_retention_rejects_wrong_source_field_bytes_or_completion(
+    native_retention_case, key, value
+):
+    native_retention_case[3]["retirements"][0]["native_retention"][key] = value
+    with pytest.raises(ValueError, match="退役"):
+        validate_case(native_retention_case)
+
+
+@pytest.mark.parametrize(
+    "source", ["common/ai_strategies/sitai_override.txt", "mod/decisions/another.toml"]
+)
+@pytest.mark.parametrize(
+    "field",
+    [
+        "colonial_interest_ratio",
+        "ai_strategy_default.colonial_interest_ratio",
+        "colonial_interest_ratio.value",
+        "ai_strategy_default.colonial_interest_ratio.if.add",
+    ],
+)
+@pytest.mark.parametrize("kind", ["rule_action", "expression_action"])
+def test_native_restoration_cannot_leave_another_writer_at_the_restored_field(
+    native_retention_case,
+    source,
+    field,
+    kind,
+):
+    bundle, old, _, payload, path = native_retention_case
+    replacement = replace(
+        old,
+        definition="new_unsafe_writer",
+        writer_id="new_unsafe_writer",
+        source=source,
+        field=field,
+        kind=kind,
+    )
+    bundle = replace(bundle, writers=(*bundle.writers, replacement))
+    with pytest.raises(ValueError, match="退役"):
+        validate_case((bundle, old, None, payload, path))
+
+
+@pytest.mark.parametrize(
+    "field", ["ai_strategy_other.colonial_interest_ratio", "colonial_interest_ratio_extra"]
+)
+def test_native_restoration_does_not_confuse_other_physical_fields(native_retention_case, field):
+    bundle, old, _, payload, path = native_retention_case
+    replacement = replace(old, definition="other_field", writer_id="other_field", field=field)
+    bundle = replace(bundle, writers=(*bundle.writers, replacement))
+    validate_case((bundle, old, None, payload, path))
+
+
+def test_native_retention_cannot_mix_with_a_claimed_replacement(native_retention_case):
+    native_retention_case[3]["retirements"][0]["replacements"] = ["fake"]
+    with pytest.raises(ValueError, match="退役"):
+        validate_case(native_retention_case)

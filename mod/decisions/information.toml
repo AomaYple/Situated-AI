@@ -40,12 +40,6 @@ unit = "persons"
 kind = "number"
 minimum = 0
 
-[readers.income]
-engine = "fixed_income"
-scope = "root"
-unit = "currency_per_week"
-kind = "number"
-
 [readers.navy]
 engine = "navy_size"
 scope = "root"
@@ -202,56 +196,8 @@ unit = "weeks"
 kind = "number"
 minimum = 0
 
-[readers.route_fiscal_recovery]
-engine = "has_variable"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-argument = "sitai_route_fiscal_recovery"
-
-[readers.route_stability]
-engine = "has_variable"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-argument = "sitai_route_stability"
-
-[readers.route_defense]
-engine = "has_variable"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-argument = "sitai_route_defense"
-
-[readers.route_industry]
-engine = "has_variable"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-argument = "sitai_route_industry"
-
-[readers.route_education]
-engine = "has_variable"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-argument = "sitai_route_education"
-
-[readers.route_maritime]
-engine = "has_variable"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-argument = "sitai_route_maritime"
-
 [readers.coord_layer_expansion]
 engine = "sitai_context_layer_expansion"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-
-[readers.coord_layer_foundation]
-engine = "sitai_context_layer_foundation"
 scope = "root"
 unit = "boolean"
 kind = "boolean"
@@ -268,38 +214,8 @@ scope = "root"
 unit = "boolean"
 kind = "boolean"
 
-[readers.coord_need_administrative]
-engine = "sitai_context_need_administrative"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-
-[readers.coord_need_education]
-engine = "sitai_context_need_education"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-
-[readers.coord_evidence_need_industry]
-engine = "sitai_context_evidence_need_industry"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-
 [readers.coord_evidence_need_overseas]
 engine = "sitai_context_evidence_need_overseas"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-
-[readers.coord_need_political]
-engine = "sitai_context_need_political"
-scope = "root"
-unit = "boolean"
-kind = "boolean"
-
-[readers.coord_evidence_need_reconstruction]
-engine = "sitai_context_evidence_need_reconstruction"
 scope = "root"
 unit = "boolean"
 kind = "boolean"
@@ -370,16 +286,33 @@ maximum = 1
 
 
 # 31.3 逐领域深化：每条规则只使用一个局部事实组合；未知时由原版消费者回退。
-[[rules]]
-id = "education_literacy_capacity"
-domain = "political"
-field = "institution_scores.institution_schools"
-contribution_group = "school_education_need"
-priority = 40
-value = 1.10
-conditions = [{ fact = "literacy", op = "<", value = 0.35 }]
-why = "识字率极低时提供低强度教育基础倾向；不要求先满足财政或行政能力组合"
-counterexample = "不直接提高识字率、学校等级或财政；原版资格和制度成本仍由原版处理"
+[readers.tools_balance]
+engine = "market_goods_delta"
+scope = "root"
+path = [ "market", "mg:tools" ]
+unit = "sell_minus_buy_orders"
+kind = "number"
+
+[readers.tools_price]
+engine = "market_goods_pricier"
+scope = "root"
+path = [ "market", "mg:tools" ]
+unit = "price_above_base_ratio"
+kind = "number"
+
+[readers.iron_balance]
+engine = "market_goods_delta"
+scope = "root"
+path = [ "market", "mg:iron" ]
+unit = "sell_minus_buy_orders"
+kind = "number"
+
+[readers.iron_price]
+engine = "market_goods_pricier"
+scope = "root"
+path = [ "market", "mg:iron" ]
+unit = "price_above_base_ratio"
+kind = "number"
 
 [[rules]]
 id = "lj04_welfare_zero_administration_foundation"
@@ -469,35 +402,6 @@ why = "粮食短缺与低生活水平、行政和净收入承载同时存在且�
 counterexample = "缺少任一社会、行政、财政或政治事实时不升档；候选制度不等于已实施，不免费修正民生、稳定或财政，原版资格和成本保持"
 
 [[rules]]
-id = "administrative_bureaucracy_repair"
-domain = "economy"
-field = "wanted_construction_output"
-priority = 613
-value = 0.85
-conditions = [
-  { fact = "bureaucracy", op = "<", value = 0 },
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-]
-why = "行政赤字且和平时降低新增建设目标，把有限承载优先留给行政修复"
-counterexample = "不删除已有建设、不创造官僚；战争、违约或任一事实未知时保留原版"
-
-[[rules]]
-id = "population_employment_capacity"
-domain = "economy"
-field = "wanted_construction_output"
-priority = 55
-value = 1.10
-conditions = [
-  { fact = "population", op = ">=", value = 5000000 },
-  { fact = "average_sol", op = "<", value = 9 },
-  { fact = "gdp", op = ">", value = 0 },
-  { fact = "default", op = "=", value = false },
-]
-why = "大人口、低生活水平且有经济能力时提高原版建设目标，缓解就业与供给压力"
-counterexample = "不指定建筑、不创造就业或商品；战争、违约、经济或人口事实未知时不增量"
-
-[[rules]]
 id = "navy_existing_capacity"
 contribution_group = "military_target_demand"
 domain = "military"
@@ -530,106 +434,8 @@ why = "军力偏低、外部代价较高且经济可承受时提高原版常备�
 counterexample = "不直接创建军队或改变战斗数值；财政危机、事实未知或原版军制资格不满足时保留原版"
 
 [[rules]]
-id = "overseas_naval_projection"
-domain = "geography"
-field = "colonial_interest_ratio"
-priority = 75
-value = 1.10
-conditions = [
-  { fact = "navy", op = ">=", value = 50 },
-  { fact = "gdp", op = ">", value = 0 },
-  { fact = "infamy", op = "<", value = 25 },
-  { fact = "default", op = "=", value = false },
-]
-why = "海军投射、经济能力和恶名约束同时满足时提高原版海外利益分配倾向"
-counterexample = "不创造殖民资格、海外州或航线；事实未知、违约或原版资格不满足时回退原版"
-
-[[rules]]
-id = "market_access_state_value"
-domain = "market"
-field = "state_value"
-priority = 45
-value = 1.10
-conditions = [
-  { fact = "target_market_access", op = ">=", value = 0.80 },
-  { fact = "target_isolated", op = "=", value = false },
-  { fact = "target_owned", op = "=", value = false },
-]
-why = "目标州市场接入良好且非孤立时提高原版州价值的有限相对权重"
-counterexample = "不授予市场接入、所有权或战争目标；目标事实未知、孤立或原版资格不满足时保留原版"
-
-[[rules]]
-id = "trade_low_living_standard"
-domain = "market"
-field = "treaty_category_scores.trade"
-priority = 58
-value = 1.10
-conditions = [
-  { fact = "average_sol", op = "<", value = 12 },
-  { fact = "gdp", op = ">", value = 0 },
-  { fact = "war", op = "=", value = false },
-]
-why = "和平且有经济活动、生活水平偏低时提高原版贸易合作类别的相对关注"
-counterexample = "不创建贸易路线、商品或条约资格；战争、未知事实或无可行条约时由原版保留"
-
-[[rules]]
-id = "fiscal_construction_guard"
-intent = "fiscal_recovery"
-domain = "fiscal"
-field = "wanted_construction_output"
-priority = 100
-value = 0.75
-conditions = [
-  { fact = "default", op = "=", value = true },
-  { fact = "war", op = "=", value = false },
-]
-why = "和平且违约时降低新增建设目标；不取消已有施工或创造资金"
-counterexample = "战争时保留原版建设目标；原版零目标保持为零"
-
-[[rules]]
-id = "route_fiscal_recovery_construction"
-domain = "fiscal"
-field = "wanted_construction_output"
-priority = 310
-value = 0.75
-conditions = [ { fact = "route_fiscal_recovery", op = "=", value = true } ]
-why = "财政整固路线占用影子预算时降低新增建设目标，保留原版资格、成本和执行"
-counterexample = "路线变量缺失、未知、玩家或状态模块关闭时不调整；不取消已有施工或创造资金"
-
-[[rules]]
-id = "war_defeat_reconstruction"
-intent = "supported_development"
-domain = "economy"
-field = "wanted_construction_output"
-priority = 75
-value = 1.2
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "war_defeat", op = "=", value = true },
-  { fact = "income", op = ">", value = 0 },
-]
-why = "原版失败记忆有效、和平、未违约且收入为正时提高复原建设目标"
-counterexample = "仅覆盖原版 on_capitulation/on_lost_war 写入且持续1825日的 recently_lost_war；记忆缺失、在战、违约或收入非正/未知时不应用本规则，更高优先级的同字段规则仍优先，不推断所有战败历史"
-
-[[rules]]
-id = "economic_development"
-intent = "supported_development"
-domain = "economy"
-field = "wanted_construction_output"
-priority = 50
-value = 1.15
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "income", op = ">", value = 0 },
-  { fact = "industrial_route", op = "=", value = true },
-]
-why = "有持续收入且沿产业路线时适度提高建设目标"
-counterexample = "财政违约、战争、收入未知或无产业路线不奖励"
-
-[[rules]]
 id = "political_default_risk"
+contribution_group = "political_crisis_aversion"
 domain = "political"
 field = "revolution_aversion"
 priority = 50
@@ -641,30 +447,26 @@ why = "财政违约提高避免革命的原版倾向，不禁止立法"
 counterexample = "非违约国家保持原版；不修改真实法律资格"
 
 [[rules]]
-id = "route_stability_revolution_aversion"
+id = "political_insurrection_aversion"
 domain = "political"
 field = "revolution_aversion"
+contribution_group = "political_crisis_aversion"
 priority = 300
 value = 1.2
-conditions = [ { fact = "route_stability", op = "=", value = true } ]
-why = "政治稳定路线提高原版避免革命的有限倾向"
-counterexample = "不阻止立法、不改变利益集团或革命资格；没有有效路线时保持原版"
+conditions = [ { fact = "insurrection", op = "=", value = true } ]
+why = "当前真实政治危机提高避免革命的有限倾向；战争不屏蔽国内风险"
+counterexample = "局部未知退出本项，不禁止立法、不改变原版资格；不保留旧全国路线25至35迟滞或跨域互斥"
 
 [[rules]]
-id = "social_school_priority"
-intent = "supported_development"
+id = "political_legitimacy_crisis_aversion"
 domain = "political"
-field = "institution_scores.institution_schools"
-contribution_group = "school_education_need"
-priority = 50
-value = 1.15
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "population", op = ">=", value = 2000000 },
-]
-why = "和平且有财政能力的大人口国家稍提高学校制度原版评分"
-counterexample = "既有原版容量和法律约束不变；不直接提高制度等级"
+field = "revolution_aversion"
+contribution_group = "political_crisis_aversion"
+priority = 299
+value = 1.2
+conditions = [ { fact = "legitimacy", op = "<", value = 25 } ]
+why = "当前真实政治危机提高避免革命的有限倾向；战争不屏蔽国内风险"
+counterexample = "局部未知退出本项，不禁止立法、不改变原版资格；不保留旧全国路线25至35迟滞或跨域互斥"
 
 [[rules]]
 id = "administrative_cost_guard"
@@ -680,35 +482,6 @@ conditions = [
 ]
 why = "违约且和平时降低新增社会保障制度的支出倾向"
 counterexample = "不减少实际福利、不修改制度或人口属性"
-
-[[rules]]
-id = "market_trade_peace"
-intent = "supported_development"
-domain = "market"
-field = "treaty_category_scores.trade"
-priority = 50
-value = 1.15
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "income", op = ">", value = 0 },
-]
-why = "和平且有收入时优先搜索原版贸易合作条约"
-counterexample = "不创造贸易路线、商品、关税或条约资格"
-
-[[rules]]
-id = "diplomatic_economic_cooperation"
-intent = "supported_development"
-domain = "diplomacy"
-field = "treaty_category_scores.economy"
-priority = 50
-value = 1.15
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-]
-why = "和平且未违约时提高经济合作类别的相对关注"
-counterexample = "没有可行条约仍由原版返回无候选"
 
 [[rules]]
 id = "subject_defense_cooperation"
@@ -750,22 +523,6 @@ why = "违约使新增常备军目标承担独立财政代价；战争需求仍�
 counterexample = "仅降低新增目标的相对倾向，不删除军队、不改战斗属性或实际军费；违约未知只跳过成本，不假设财政健康，不关闭已证战争需求，原版基值、资格和执行保持"
 
 [[rules]]
-id = "route_defense_army_capacity"
-contribution_group = "military_target_demand"
-domain = "military"
-field = "wanted_army_size"
-priority = 300
-value = 1.2
-conditions = [
-  { fact = "route_defense", op = "=", value = true },
-  { fact = "default", op = "=", value = false },
-  { fact = "net_surplus", op = ">", value = 0 },
-  { fact = "bureaucracy", op = ">", value = 0 },
-]
-why = "防御路线提高原版常备军目标，仍由原版资格和军费约束"
-counterexample = "不创建军队、不改变战斗属性；路线失效或输入未知时回退原版"
-
-[[rules]]
 id = "lj10_defensive_pact_flow_pressure"
 domain = "military"
 field = "wanted_army_size"
@@ -774,7 +531,6 @@ value = 0.95
 conditions = [
   { fact = "war", op = "=", value = false },
   { fact = "default", op = "=", value = false },
-  { fact = "route_defense", op = "=", value = false },
   { fact = "net_surplus", op = "<", value = 0 },
   { fact = "defensive_pact_articles", op = ">=", value = 1 },
   { fact = "native_army_capacity", op = ">", value = { fact = "native_marine_capacity" } },
@@ -825,60 +581,6 @@ why = "已有炮兵科技但和平违约时调整昂贵编制的相对权重"
 counterexample = "未解锁科技时不新增炮兵权重；战争保持原版"
 
 [[rules]]
-id = "overseas_affordability"
-intent = "fiscal_recovery"
-domain = "geography"
-field = "colonial_interest_ratio"
-priority = 70
-value = 0.7
-conditions = [
-  { fact = "default", op = "=", value = true },
-  { fact = "war", op = "=", value = false },
-]
-why = "和平违约时减少海外殖民利益分配倾向"
-counterexample = "零殖民资格不被创造；不直接撤销殖民地"
-
-[[rules]]
-id = "overseas_naval_feasibility"
-domain = "geography"
-field = "colonial_interest_ratio"
-priority = 60
-value = 0.8
-conditions = [
-  { fact = "navy", op = "<", value = 25 },
-]
-why = "海军不足时降低海外利益分配的原版比率"
-counterexample = "原版比率为零时保持零；不代替殖民法律和机构条件"
-
-[[rules]]
-id = "geographic_port_continuity"
-domain = "geography"
-field = "state_value"
-priority = 50
-value = 1.15
-conditions = [
-  { fact = "target_port", op = "=", value = true },
-  { fact = "default", op = "=", value = false },
-]
-why = "保留有财政能力国家对条约港位置的有限原版相对偏好"
-counterexample = "没有目标州不计算；不授予港口或战争目标"
-
-[[rules]]
-id = "identity_resource_cooperation"
-intent = "supported_development"
-domain = "identity"
-field = "treaty_category_scores.economy"
-priority = 70
-value = 1.3
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "resource_route", op = "=", value = true },
-]
-why = "沿原有资源发展路线的国家优先考虑经济合作类别"
-counterexample = "不根据固定国家标签赋予特殊收益；违约和战争不奖励"
-
-[[rules]]
 id = "identity_expansion_defense"
 domain = "identity"
 field = "treaty_category_scores.military_defense"
@@ -892,123 +594,6 @@ conditions = [
 why = "沿原有扩张路线时保留可负担的防御合作关注"
 counterexample = "不提高宣战成功率、兵力或免费外交资格"
 
-
-[[rules]]
-id = "identity_feasible_homeland"
-intent = "supported_development"
-domain = "identity"
-field = "state_value"
-priority = 100
-value = 1.2
-conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_homeland", op = "=", value = true }, { fact = "target_cultural_share", op = ">=", value = 0.25 }, { fact = "target_isolated", op = "=", value = false }, { fact = "fervor", op = ">", value = 10 }, { fact = "default", op = "=", value = false }, { fact = "war", op = "=", value = false }, { fact = "income", op = ">", value = 0 }, { fact = "expansion_route", op = "=", value = true } ]
-why = "本土认同、现有国家路线与可达经济条件一致时，提高候选州的有限战略价值"
-counterexample = "不以国家标签制造历史脚本；己有州、非本土、文化联系弱、孤立、违约、战争或未知输入不奖励；原版资格、军事胜负和外交代价保持，待用户长期行为验收"
-
-[[rules]]
-id = "geographic_isolation_financial_cost"
-intent = "fiscal_recovery"
-domain = "geography"
-field = "state_value"
-priority = 200
-value = 0.8
-conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_isolated", op = "=", value = true }, { fact = "navy", op = "=", value = 0 }, { fact = "default", op = "=", value = true }, { fact = "war", op = "=", value = false } ]
-why = "财政违约且没有海军的和平国家，对孤立的海外/外部州额外计入有界承诺成本"
-counterexample = "不改变已拥有州，不声称所有孤立州都是海外；不读取秘密计划，不制造海军或强制放弃州，保留原版地理和目标价值，待用户长期行为验收"
-
-[[rules]]
-id = "liquidity_construction_guard"
-intent = "liquidity_recovery"
-domain = "fiscal"
-field = "wanted_construction_output"
-priority = 90
-value = 0.85
-conditions = []
-why = "持续借贷、高债务且距破产不足半年时降低新增建设目标，优先于复原和发展奖励"
-counterexample = "不取消施工、不改变成本和战时防御；低债务、远离破产或未知输入不触发，违约另走更高优先级"
-
-[[rules]]
-id = "decisive_industrial_development"
-intent = "decisive_development"
-domain = "economy"
-field = "wanted_construction_output"
-priority = 60
-value = 1.3
-conditions = [
-  { fact = "industrial_route", op = "=", value = true },
-  { fact = "income", op = ">", value = 0 },
-]
-why = "低债务、有结余、行政富余和高合法性与原有工业路线共同成立时提高建设目标"
-counterexample = "仅为原版目标的单项倍率，不与普通发展累乘；不创造建设资金、劳动力或利润"
-
-[[rules]]
-id = "decisive_school_investment"
-intent = "decisive_development"
-domain = "political"
-field = "institution_scores.institution_schools"
-contribution_group = "school_education_need"
-priority = 70
-value = 1.3
-conditions = [
-  { fact = "population", op = ">", value = 0 },
-]
-why = "强财政政治容量且人口非零时更重视教育制度候选，不以人口规模排除小国"
-counterexample = "不提高实际制度等级，不绕过法律、成本或行政资格；未知容量不猜测"
-
-[[rules]]
-id = "decisive_trade_cooperation"
-intent = "decisive_development"
-domain = "market"
-field = "treaty_category_scores.trade"
-priority = 68
-value = 1.25
-conditions = [
-  { fact = "income", op = ">", value = 0 },
-]
-why = "强政治合法性、低债务、财政盈余和行政余量共同支持时，提高贸易合作类别关注"
-counterexample = "仅调整类别权重，不强制签约、不保证贸易利润，不与普通合作规则叠加"
-
-[[rules]]
-id = "decisive_economic_cooperation"
-intent = "decisive_development"
-domain = "diplomacy"
-field = "treaty_category_scores.economy"
-priority = 68
-value = 1.25
-conditions = [
-  { fact = "income", op = ">", value = 0 },
-]
-why = "强政治合法性、低债务、财政盈余和行政余量共同支持时，更主动评估经济合作候选"
-counterexample = "资源路线仍按更高优先级单独仲裁，不累计奖励、不制造合作资格"
-
-[[rules]]
-id = "coordinated_industrial_capacity"
-intent = "decisive_development"
-domain = "economy"
-field = "wanted_construction_output"
-priority = 85
-value = 1.25
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "war_defeat", op = "=", value = false },
-  { fact = "loans", op = "=", value = false },
-  { fact = "debt_ratio", op = "<=", value = 0.4 },
-  { fact = "net_surplus", op = ">", value = 0 },
-  { fact = "bureaucracy", op = ">", value = 0 },
-  { fact = "industrial_route", op = "=", value = true },
-]
-why = "和平、未处于战败恢复、无违约、低债务、有结余且行政能力足够时，把产业路线与国家建设容量一起评估"
-counterexample = "战争、战败恢复、借贷、违约、债务过高、结余或行政能力未知时回退原版；不创造建设资金、劳动力或建筑队列"
-
-[[rules]]
-id = "route_industry_construction"
-domain = "economy"
-field = "wanted_construction_output"
-priority = 300
-value = 1.25
-conditions = [ { fact = "route_industry", op = "=", value = true } ]
-why = "产业路线在状态协调器确认财政、行政和市场条件后提高建设目标"
-counterexample = "不创造建设资金、劳动力或建筑队列；路线缺失、禁用或过期时保持原版"
 
 [[rules]]
 # A single demand envelope chooses the strongest proven tier. Capacity observations
@@ -1062,7 +647,7 @@ auxiliary_facts = ["net_surplus", "bureaucracy"]
 domain = "military"
 field = "wanted_army_size"
 priority = 80
-value = 1.15
+value = 1.20
 conditions = [
   { fact = "war", op = "=", value = true },
   { fact = "default", op = "=", value = false },
@@ -1070,7 +655,7 @@ conditions = [
   { fact = "bureaucracy", op = ">", value = 0 },
 ]
 why = "非违约、净流量与行政正余量共同证明完整承载升档；它是已有战争需求的最高容量档，不再是战争基础需求的总开关"
-counterexample = "单项辅助未知只退到其余已证中档或基础档，不推断健康；与路线和威胁同因果去重，财政代价独立净算，不创建部队或改变原版资格、零基值、军费和执行"
+counterexample = "单项辅助未知只退到其余已证中档或基础档，不推断健康；与其余战争需求档同因果去重，财政代价独立净算，不创建部队或改变原版资格、零基值、军费和执行"
 
 [[rules]]
 id = "wartime_navy_foundation"
@@ -1133,189 +718,8 @@ why = "非违约、净流量与行政正余量共同支持完整海军容量高�
 counterexample = "单项事实未知只取消相关高档，不取消已知战争需求或违约成本；不创造船只、港口、海军资格或实际军费，保留原版零基值及执行"
 
 [[rules]]
-id = "education_catchup_capacity"
-intent = "supported_development"
-domain = "political"
-field = "institution_scores.institution_schools"
-contribution_group = "school_education_need"
-priority = 65
-value = 1.25
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "literacy", op = "<", value = 0.5 },
-  { fact = "population", op = ">", value = 0 },
-  { fact = "net_surplus", op = ">", value = 0 },
-  { fact = "bureaucracy", op = ">", value = 0 },
-]
-why = "和平且财政、行政能力可用的低识字国家优先补足教育能力，不以人口规模排除小国"
-counterexample = "不提高制度等级、不绕过法律或行政容量；战争、违约或未知输入保持原版"
-
-[[rules]]
-id = "route_education_schools"
-domain = "political"
-field = "institution_scores.institution_schools"
-contribution_group = "school_education_need"
-priority = 300
-value = 1.25
-conditions = [ { fact = "route_education", op = "=", value = true } ]
-why = "教育追赶路线提高原版学校制度候选评分"
-counterexample = "不提高制度等级、不绕过法律和行政资格；路线无效时保持原版"
-
-[[rules]]
-id = "trade_capacity_cooperation"
-intent = "supported_development"
-domain = "market"
-field = "treaty_category_scores.trade"
-priority = 65
-value = 1.2
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "debt_ratio", op = "<=", value = 0.4 },
-  { fact = "net_surplus", op = ">", value = 0 },
-  { fact = "bureaucracy", op = ">", value = 0 },
-]
-why = "和平、低债务且财政和行政能力可用时，把贸易合作作为可承受的外部发展选项"
-counterexample = "不创建贸易路线、商品或条约资格；任何不可行候选仍由原版拒绝"
-
-[[rules]]
-id = "economic_diplomacy_capacity"
-intent = "supported_development"
-domain = "diplomacy"
-field = "treaty_category_scores.economy"
-priority = 65
-value = 1.2
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "debt_ratio", op = "<=", value = 0.4 },
-  { fact = "net_surplus", op = ">", value = 0 },
-  { fact = "bureaucracy", op = ">", value = 0 },
-]
-why = "和平、低债务且行政能力可用时提高经济合作类别的相对关注"
-counterexample = "不强制签约、不保证收益；战争、违约或未知输入保持原版"
-
-[[rules]]
-id = "colonial_projection_capacity"
-intent = "decisive_development"
-domain = "geography"
-field = "colonial_interest_ratio"
-priority = 80
-value = 1.15
-conditions = [
-  { fact = "default", op = "=", value = false },
-  { fact = "war", op = "=", value = false },
-  { fact = "navy", op = ">=", value = 25 },
-  { fact = "income", op = ">", value = 0 },
-  { fact = "expansion_route", op = "=", value = true },
-]
-why = "和平、有收入、具备海军投射和既有扩张路线时提高殖民利益的有限原版权重"
-counterexample = "不创建殖民资格、舰队或机构；海军、收入或路线未知时回退原版"
-
-[[rules]]
-id = "route_maritime_projection"
-domain = "geography"
-field = "colonial_interest_ratio"
-priority = 300
-value = 1.2
-conditions = [ { fact = "route_maritime", op = "=", value = true } ]
-why = "商业海洋路线在国家状态确认投射能力后提高原版海外利益权重"
-counterexample = "不创建殖民资格、港口、舰队或机构；路线缺失或原版资格不足时保持原版"
-
-[[rules]]
-id = "coordinated_layered_information_construction_recovery"
-field = "wanted_construction_output"
-domain = "economy"
-priority = 150
-operation = "multiply"
-value = 0.9
-conditions = [{ fact = "coord_layer_recovery", op = "=", value = true }]
-why = "默认建设消费者读取国家承受层级，避免单一全局门槛"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_construction_foundation"
-field = "wanted_construction_output"
-domain = "economy"
-priority = 151
-operation = "multiply"
-value = 1.05
-conditions = [{ fact = "coord_layer_foundation", op = "=", value = true }]
-why = "默认建设消费者读取国家承受层级，避免单一全局门槛"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_construction_stable"
-field = "wanted_construction_output"
-domain = "economy"
-priority = 152
-operation = "multiply"
-value = 1.15
-conditions = [{ fact = "coord_layer_stable", op = "=", value = true }]
-why = "默认建设消费者读取国家承受层级，避免单一全局门槛"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_construction_expansion"
-field = "wanted_construction_output"
-domain = "economy"
-priority = 153
-operation = "multiply"
-value = 1.25
-conditions = [{ fact = "coord_layer_expansion", op = "=", value = true }]
-why = "默认建设消费者读取国家承受层级，避免单一全局门槛"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_reconstruction"
-field = "wanted_construction_output"
-domain = "economy"
-priority = 154
-operation = "multiply"
-value = 1.12
-conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }, { fact = "coord_layer_foundation", op = "=", value = true }]
-why = "战后优先修复基础建设机会"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_education_foundation"
-field = "institution_scores.institution_schools"
-contribution_group = "school_education_need"
-domain = "political"
-priority = 150
-operation = "multiply"
-value = 1.12
-conditions = [{ fact = "coord_need_education", op = "=", value = true }, { fact = "coord_layer_foundation", op = "=", value = true }]
-why = "低识字国家在基础承受力下优先考虑教育制度"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_education_stable"
-field = "institution_scores.institution_schools"
-contribution_group = "school_education_need"
-domain = "political"
-priority = 151
-operation = "multiply"
-value = 1.22
-conditions = [{ fact = "coord_need_education", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
-why = "教育需求与稳健能力共同提高学校制度倾向"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_social_stable"
-field = "institution_scores.institution_social_security"
-contribution_group = "social_security_need"
-domain = "political"
-priority = 20
-operation = "multiply"
-value = 1.15
-conditions = [{ fact = "coord_need_political", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }]
-why = "政治压力在稳健能力下提高社会保障制度倾向"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
 id = "coordinated_layered_information_revolution_recovery"
+contribution_group = "political_crisis_aversion"
 field = "revolution_aversion"
 domain = "political"
 priority = 20
@@ -1360,83 +764,6 @@ why = "海外投射能力提高原版兴趣范围上限的相对倾向"
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
 
 [[rules]]
-id = "coordinated_layered_information_colony_overseas"
-field = "colonial_interest_ratio"
-domain = "diplomacy"
-priority = 20
-operation = "multiply"
-value = 1.12
-conditions = [{ fact = "coord_evidence_need_overseas", op = "=", value = true }]
-why = "海外需求提高殖民兴趣候选，但不改变殖民资格和行政成本"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_state_geography"
-field = "state_value"
-domain = "geography"
-priority = 20
-operation = "multiply"
-value = 0.9
-conditions = [{ fact = "coord_need_administrative", op = "=", value = true }, { fact = "target_owned", op = "=", value = false }, { fact = "war", op = "=", value = false }]
-why = "行政赤字提高新增领土管理机会成本，保留目标所有权与战争约束"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_state_identity"
-field = "state_value"
-domain = "identity"
-priority = 21
-operation = "multiply"
-value = 1.08
-conditions = [{ fact = "coord_layer_stable", op = "=", value = true }, { fact = "target_homeland", op = "=", value = true }, { fact = "target_cultural_share", op = ">=", value = 0.5 }]
-why = "稳健能力、家园身份与文化联系共同提高原版领土候选价值"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_state_recovery"
-field = "state_value"
-domain = "geography"
-priority = 22
-operation = "multiply"
-value = 0.92
-conditions = [{ fact = "coord_evidence_need_reconstruction", op = "=", value = true }, { fact = "target_owned", op = "=", value = false }]
-why = "战后恢复期减少新增外部领土承诺，避免恢复与扩张同时满载"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_trade_foundation"
-field = "treaty_category_scores.trade"
-domain = "market"
-priority = 150
-operation = "multiply"
-value = 1.1
-conditions = [{ fact = "coord_layer_foundation", op = "=", value = true }, { fact = "war", op = "=", value = false }]
-why = "基础承受力优先寻找低成本贸易机会，具体条款仍由原版决定"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_trade_recovery"
-field = "treaty_category_scores.trade"
-domain = "market"
-priority = 151
-operation = "multiply"
-value = 1.06
-conditions = [{ fact = "coord_layer_recovery", op = "=", value = true }, { fact = "war", op = "=", value = false }]
-why = "恢复期保留低成本贸易合作路径，不强制签约"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
-id = "coordinated_layered_information_economy_industry"
-field = "treaty_category_scores.economy"
-domain = "diplomacy"
-priority = 150
-operation = "multiply"
-value = 1.12
-conditions = [{ fact = "coord_evidence_need_industry", op = "=", value = true }, { fact = "coord_layer_stable", op = "=", value = true }, { fact = "war", op = "=", value = false }]
-why = "产业需求与稳健能力提高经济合作候选"
-counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
-
-[[rules]]
 id = "coordinated_layered_information_defense_security"
 field = "treaty_category_scores.military_defense"
 domain = "military"
@@ -1448,58 +775,6 @@ why = "安全需求提高原版防御合作候选，不替代外交可达性"
 counterexample = "只改变原版消费者的有界相对倾向；玩家、未知事实、原版资格、研究前置、成本、政治支持、外交可达性、执行失败、终结零值和限幅仍由原版处理；长期行为由用户验收"
 
 
-[[rules]]
-id = "lj14_connected_homeland_foundation"
-domain = "identity"
-field = "state_value"
-operation = "multiply"
-value = 1.05
-priority = 90
-conditions = [
-  { fact = "target_owned", op = "=", value = false },
-  { fact = "target_homeland", op = "=", value = true },
-  { fact = "target_cultural_share", op = ">=", value = 0.25 },
-  { fact = "target_isolated", op = "=", value = false },
-  { fact = "default", op = "=", value = false },
-]
-why = "对具体目标州的本土与人口文化联系提供低档价值；不要求民族热情、既有扩张路线和收入同时满足，完整承受条件仍可升级"
-counterexample = "只看当前目标州且不制造资格；自有州、非本土、文化联系弱、孤立、违约或未知事实不奖励；保留原版终结零分和州价值限幅"
-
-
-[[rules]]
-id = "lj14_homeland_isolation_cost"
-domain = "geography"
-field = "state_value"
-operation = "multiply"
-value = 0.9
-priority = 150
-conditions = [
-  { fact = "target_owned", op = "=", value = false },
-  { fact = "target_homeland", op = "=", value = true },
-  { fact = "target_isolated", op = "=", value = true },
-  { fact = "war", op = "=", value = false },
-]
-why = "本土联系不能抵消当前目标州的市场隔离；和平时先计入局部可达与整合机会成本，不等到全国破产才识别"
-counterexample = "隔离不等于所有海军或战争不可达，不强制放弃目标，保留原版目标、路径、零分与成本；不读取其他州代替当前州"
-
-
-[[rules]]
-id = "lj14_homeland_administrative_cost"
-domain = "identity"
-field = "state_value"
-operation = "multiply"
-value = 0.92
-priority = 140
-conditions = [
-  { fact = "target_owned", op = "=", value = false },
-  { fact = "target_homeland", op = "=", value = true },
-  { fact = "bureaucracy", op = "<", value = 0 },
-  { fact = "war", op = "=", value = false },
-]
-why = "本土目标也有行政整合负担；实际行政短缺先于文化联系奖励计入有限机会成本，不惩罚国内生产建设"
-counterexample = "不改变玩家、自有州或全国建设权重，不把文化认同当成征服资格，保留原版零分与限幅；行政恢复后立即退出"
-
-# S2 治理：同需求档位择强，财政与行政代价独立加入真实制度消费者。
 [[rules]]
 id = "social_security_direct_living_pressure"
 domain = "political"
@@ -1534,23 +809,342 @@ why = "真实违约在战时和和平都形成社保融资代价；与既有和�
 counterexample = "违约未知只退出该成本；不将战争当免费承诺，也不将正常借款等同违约；实际付款与资格仍由原版执行"
 
 [[rules]]
+id = "remaining_reconstruction_need"
+domain = "economy"
+field = "wanted_construction_output"
+contribution_group = "construction_need"
+priority = 1001
+value = 1.12
+conditions = [ { fact = "war_defeat", op = "=", value = true } ]
+why = "原版限时战败记忆证明有限重建关注，不声称实际建筑损毁"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_reconstruction_need_funded"
+domain = "economy"
+field = "wanted_construction_output"
+contribution_group = "construction_need"
+priority = 1002
+value = 1.2
+conditions = [ { fact = "war_defeat", op = "=", value = true }, { fact = "default", op = "=", value = false }, { fact = "net_surplus", op = ">", value = 0 } ]
+why = "原版限时战败记忆证明有限重建关注，不声称实际建筑损毁；已证非违约与正净流量只升资金档，未知保留基础需求"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "net_surplus" ]
+
+[[rules]]
+id = "remaining_industrial_construction_need"
+domain = "economy"
+field = "wanted_construction_output"
+contribution_group = "construction_need"
+priority = 1003
+value = 1.1
+conditions = [ { fact = "industrial_route", op = "=", value = true }, { fact = "tools_balance", op = "<", value = 0 } ]
+why = "原版工业路线与实际工具订单缺口共同证明有限建设机会，不凭健康重复奖励工业路线"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_industrial_construction_need_funded"
+domain = "economy"
+field = "wanted_construction_output"
+contribution_group = "construction_need"
+priority = 1004
+value = 1.25
+conditions = [ { fact = "industrial_route", op = "=", value = true }, { fact = "tools_balance", op = "<", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "net_surplus", op = ">", value = 0 } ]
+why = "原版工业路线与实际工具订单缺口共同证明有限建设机会，不凭健康重复奖励工业路线；已证非违约与正净流量只升资金档，未知保留基础需求"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "net_surplus" ]
+
+[[rules]]
+id = "fiscal_construction_guard"
+domain = "fiscal"
+field = "wanted_construction_output"
+contribution_group = "construction_financing_pressure"
+priority = 1005
+value = 0.75
+conditions = [ { fact = "default", op = "=", value = true } ]
+why = "已观察违约独立降低新增建设承诺，战争不抹去融资机会成本；不取消已有施工"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "liquidity_construction_guard"
+domain = "fiscal"
+field = "wanted_construction_output"
+contribution_group = "construction_financing_pressure"
+priority = 1006
+value = 0.85
+conditions = [ { fact = "default", op = "=", value = false }, { fact = "loans", op = "=", value = true }, { fact = "debt_ratio", op = ">=", value = 0.4 }, { fact = "bankruptcy_horizon", op = "<", value = 26 } ]
+why = "未违约但正借贷、高债务且26周内破产的实际联合压力降低新建设目标；正常低债贷款不惩罚"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_school_catchup_need"
+domain = "political"
+field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
+priority = 1001
+value = 1.1
+conditions = [ { fact = "literacy", op = "<", value = 0.5 }, { fact = "population", op = ">", value = 0 } ]
+why = "识字率低于一半且有人口证明教育追赶需求；财政与行政不再是需求总门"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_school_fiscal"
+domain = "political"
+field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
+priority = 1002
+value = 1.2
+conditions = [ { fact = "literacy", op = "<", value = 0.5 }, { fact = "population", op = ">", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "net_surplus", op = ">", value = 0 } ]
+why = "识字率低于一半且有人口证明教育追赶需求；财政与行政不再是需求总门；只有本档已观察资金或行政容量可升档，单项未知留其他已证档"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "net_surplus" ]
+
+[[rules]]
+id = "remaining_school_administrative"
+domain = "political"
+field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
+priority = 1003
+value = 1.18
+conditions = [ { fact = "literacy", op = "<", value = 0.5 }, { fact = "population", op = ">", value = 0 }, { fact = "bureaucracy", op = ">", value = 0 } ]
+why = "识字率低于一半且有人口证明教育追赶需求；财政与行政不再是需求总门；只有本档已观察资金或行政容量可升档，单项未知留其他已证档"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "bureaucracy" ]
+
+[[rules]]
+id = "remaining_school_capacity"
+domain = "political"
+field = "institution_scores.institution_schools"
+contribution_group = "school_education_need"
+priority = 1004
+value = 1.25
+conditions = [ { fact = "literacy", op = "<", value = 0.5 }, { fact = "population", op = ">", value = 0 }, { fact = "default", op = "=", value = false }, { fact = "net_surplus", op = ">", value = 0 }, { fact = "bureaucracy", op = ">", value = 0 } ]
+why = "识字率低于一半且有人口证明教育追赶需求；财政与行政不再是需求总门；只有本档已观察资金或行政容量可升档，单项未知留其他已证档"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "net_surplus", "bureaucracy" ]
+
+[[rules]]
+id = "school_default_pressure"
+domain = "political"
+field = "institution_scores.institution_schools"
+contribution_group = "institution_financing_pressure"
+priority = 1005
+value = 0.85
+conditions = [ { fact = "default", op = "=", value = true } ]
+why = "实际违约的制度维护融资机会成本"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
 id = "school_administrative_pressure"
 domain = "political"
 field = "institution_scores.institution_schools"
 contribution_group = "institution_administrative_pressure"
-priority = 45004
-value = 0.90
-conditions = [{ fact = "bureaucracy", op = "<", value = 0 }]
-why = "行政不足独立降低新增学校制度投资关注，不以正行政作低识字基础需求的共同门"
-counterexample = "行政未知只退出本成本，低识字需求保持；不直接改变教育接入、识字率、制度等级和原版成本"
+priority = 1006
+value = 0.9
+conditions = [ { fact = "bureaucracy", op = "<", value = 0 } ]
+why = "实际行政赤字的学校制度投入承载机会成本"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
 
 [[rules]]
-id = "school_default_pressure"
-domain = "fiscal"
-field = "institution_scores.institution_schools"
-contribution_group = "institution_financing_pressure"
-priority = 45005
-value = 0.85
-conditions = [{ fact = "default", op = "=", value = true }]
-why = "违约独立降低学校制度新增承诺关注，与教育需求及行政成本共同计算，不因战争隐藏融资代价"
-counterexample = "正常贷款真假不触发违约扣分；违约未知不伪造健康或危机，原版投资资格、支出和执行仍生效"
+id = "remaining_trade_grain_need"
+domain = "market"
+field = "treaty_category_scores.trade"
+contribution_group = "trade_access_need"
+priority = 1001
+value = 1.1
+conditions = [ { fact = "grain_balance", op = "<", value = 0 } ]
+why = "实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_trade_grain_price"
+domain = "market"
+field = "treaty_category_scores.trade"
+contribution_group = "trade_access_need"
+priority = 1002
+value = 1.2
+conditions = [ { fact = "grain_balance", op = "<", value = 0 }, { fact = "grain_price", op = ">", value = 0.25 } ]
+why = "实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润；已观察高价只升档，价格未知保留缺口基础"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "grain_price" ]
+
+[[rules]]
+id = "remaining_trade_tools_need"
+domain = "market"
+field = "treaty_category_scores.trade"
+contribution_group = "trade_access_need"
+priority = 1003
+value = 1.1
+conditions = [ { fact = "tools_balance", op = "<", value = 0 } ]
+why = "实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_trade_tools_price"
+domain = "market"
+field = "treaty_category_scores.trade"
+contribution_group = "trade_access_need"
+priority = 1004
+value = 1.2
+conditions = [ { fact = "tools_balance", op = "<", value = 0 }, { fact = "tools_price", op = ">", value = 0.25 } ]
+why = "实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润；已观察高价只升档，价格未知保留缺口基础"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "tools_price" ]
+
+[[rules]]
+id = "remaining_trade_iron_need"
+domain = "market"
+field = "treaty_category_scores.trade"
+contribution_group = "trade_access_need"
+priority = 1005
+value = 1.1
+conditions = [ { fact = "iron_balance", op = "<", value = 0 } ]
+why = "实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_trade_iron_price"
+domain = "market"
+field = "treaty_category_scores.trade"
+contribution_group = "trade_access_need"
+priority = 1006
+value = 1.2
+conditions = [ { fact = "iron_balance", op = "<", value = 0 }, { fact = "iron_price", op = ">", value = 0.25 } ]
+why = "实际商品订单缺口引导有限类别搜索；同原因不同商品取最强，不保证进口可行或条约利润；已观察高价只升档，价格未知保留缺口基础"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "iron_price" ]
+
+[[rules]]
+id = "remaining_economy_industrial_need"
+domain = "diplomacy"
+field = "treaty_category_scores.economy"
+contribution_group = "economic_cooperation_need"
+priority = 1001
+value = 1.1
+conditions = [ { fact = "industrial_route", op = "=", value = true }, { fact = "tools_balance", op = "<", value = 0 } ]
+why = "原版工业或资源路线与对应工具或铁缺口共同证明经济合作搜索机会；不把类别当具体付费条款"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_economy_industrial_price"
+domain = "diplomacy"
+field = "treaty_category_scores.economy"
+contribution_group = "economic_cooperation_need"
+priority = 1002
+value = 1.2
+conditions = [ { fact = "industrial_route", op = "=", value = true }, { fact = "tools_balance", op = "<", value = 0 }, { fact = "tools_price", op = ">", value = 0.25 } ]
+why = "原版工业或资源路线与对应工具或铁缺口共同证明经济合作搜索机会；不把类别当具体付费条款；已观察高价只升档，价格未知保留缺口基础"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "tools_price" ]
+
+[[rules]]
+id = "remaining_economy_resource_need"
+domain = "diplomacy"
+field = "treaty_category_scores.economy"
+contribution_group = "economic_cooperation_need"
+priority = 1003
+value = 1.1
+conditions = [ { fact = "resource_route", op = "=", value = true }, { fact = "iron_balance", op = "<", value = 0 } ]
+why = "原版工业或资源路线与对应工具或铁缺口共同证明经济合作搜索机会；不把类别当具体付费条款"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_economy_resource_price"
+domain = "diplomacy"
+field = "treaty_category_scores.economy"
+contribution_group = "economic_cooperation_need"
+priority = 1004
+value = 1.2
+conditions = [ { fact = "resource_route", op = "=", value = true }, { fact = "iron_balance", op = "<", value = 0 }, { fact = "iron_price", op = ">", value = 0.25 } ]
+why = "原版工业或资源路线与对应工具或铁缺口共同证明经济合作搜索机会；不把类别当具体付费条款；已观察高价只升档，价格未知保留缺口基础"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "iron_price" ]
+
+[[rules]]
+id = "lj14_connected_homeland_foundation"
+domain = "identity"
+field = "state_value"
+contribution_group = "external_state_opportunity"
+priority = 1001
+value = 1.05
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_homeland", op = "=", value = true }, { fact = "target_cultural_share", op = ">=", value = 0.25 }, { fact = "target_isolated", op = "=", value = false } ]
+why = "同一非己有目标州的已证身份、文化、地理或港口机会有限调值，同因果最强取档"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_homeland_fervor"
+domain = "identity"
+field = "state_value"
+contribution_group = "external_state_opportunity"
+priority = 1002
+value = 1.2
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_homeland", op = "=", value = true }, { fact = "target_cultural_share", op = ">=", value = 0.25 }, { fact = "target_isolated", op = "=", value = false }, { fact = "fervor", op = ">", value = 10 }, { fact = "expansion_route", op = "=", value = true } ]
+why = "同一非己有目标州的已证身份、文化、地理或港口机会有限调值，同因果最强取档"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+auxiliary_facts = [ "fervor", "expansion_route" ]
+
+[[rules]]
+id = "market_access_state_value"
+domain = "market"
+field = "state_value"
+contribution_group = "external_state_opportunity"
+priority = 1003
+value = 1.1
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_market_access", op = ">=", value = 0.8 }, { fact = "target_isolated", op = "=", value = false } ]
+why = "同一非己有目标州的已证身份、文化、地理或港口机会有限调值，同因果最强取档"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "geographic_port_continuity"
+domain = "geography"
+field = "state_value"
+contribution_group = "external_state_opportunity"
+priority = 1004
+value = 1.15
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_port", op = "=", value = true } ]
+why = "同一非己有目标州的已证身份、文化、地理或港口机会有限调值，同因果最强取档"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_external_state_default_cost"
+domain = "geography"
+field = "state_value"
+contribution_group = "external_state_financing"
+priority = 1005
+value = 0.8
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "default", op = "=", value = true } ]
+why = "已观察违约降低新增外部州承诺的融资机会成本"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "lj14_homeland_administrative_cost"
+domain = "geography"
+field = "state_value"
+contribution_group = "external_state_administration"
+priority = 1006
+value = 0.92
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_homeland", op = "=", value = true }, { fact = "bureaucracy", op = "<", value = 0 } ]
+why = "目标本土州整合面对已观察行政赤字，计入边际行政承载机会成本，不声称直接扣官僚"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "lj14_homeland_isolation_cost"
+domain = "geography"
+field = "state_value"
+contribution_group = "external_state_geography"
+priority = 1007
+value = 0.9
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "target_homeland", op = "=", value = true }, { fact = "target_isolated", op = "=", value = true } ]
+why = "同一非己有本土州市场孤立的地理机会成本，不等同绝对不可达或海外"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"
+
+[[rules]]
+id = "remaining_external_state_reconstruction_cost"
+domain = "geography"
+field = "state_value"
+contribution_group = "external_state_reconstruction"
+priority = 1008
+value = 0.92
+conditions = [ { fact = "target_owned", op = "=", value = false }, { fact = "war_defeat", op = "=", value = true } ]
+why = "原版战败修复记忆使新增外部州让位于重建的机会成本"
+counterexample = "核心或本原因未知只退出本原因，不假定健康；不创造资源或行动，保留原版资格、成本、执行、终结零分及限幅"

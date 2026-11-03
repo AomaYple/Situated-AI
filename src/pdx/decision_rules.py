@@ -350,7 +350,19 @@ def from_data(
         if item["engine"] in {"is_homeland_of_country_cultures", "owner"} and argument != "root":
             raise ValueError("州身份与所有者比较必须明确相对于当前国家")
         if item["engine"] in {"has_truce_with", "relations:root"} and (
-            item["scope"] not in {"target_country", "overlord"}
+            (
+                item["scope"] not in {"target_country", "overlord"}
+                and not (
+                    key == "actual_overlord_relations"
+                    and item["scope"] == "root"
+                    and item.get("path") == ["overlord"]
+                    and item["engine"] == "relations:root"
+                    and item.get("minimum") == -100
+                    and item.get("maximum") == 100
+                    and not parameters
+                    and value_field is None
+                )
+            )
             or (item["engine"] == "has_truce_with" and argument != "root")
             or (item["engine"] == "relations:root" and argument is not None)
         ):
@@ -940,7 +952,6 @@ def patch(
     reader_evidence: str = "",
     reader_words: frozenset[str] | None = None,
     country_policy: CountryPolicy | None = None,
-    owned_variables: frozenset[str] | set[str] | None = None,
     owned_triggers: frozenset[str] | set[str] | None = None,
     consumer_ir: ConsumerIRBundle | None = None,
     consumer_source: str | None = None,
@@ -1006,22 +1017,8 @@ def patch(
         for reader in rules.readers
         if reader.engine.startswith("sitai_context_") and reader.key in selected_reader_keys
     }
-    if route_readers and country_policy is None:
-        raise ValueError("route 读取器必须显式提供 country_policy")
     if route_readers:
-        country_state = _country_state_module()
-        actual_variables = set(country_state.owned_variables(country_policy))
-        actual_triggers = set(country_state.owned_triggers(country_policy))
-        supplied_variables = actual_variables if owned_variables is None else set(owned_variables)
-        supplied_triggers = actual_triggers if owned_triggers is None else set(owned_triggers)
-        if not supplied_variables <= actual_variables or not supplied_triggers <= actual_triggers:
-            raise ValueError("country_policy owned_variables/owned_triggers 与状态合同不一致")
-        for reader in route_readers.values():
-            if (
-                reader.argument not in supplied_variables
-                or f"{reader.argument}_active" not in supplied_triggers
-            ):
-                raise ValueError(f"route 读取器变量不在 country_policy 所有权内：{reader.argument}")
+        raise ValueError("持久 route 读取器已经退役，不能重建全国排他路线")
     if coordination_readers:
         if country_policy is None:
             raise ValueError("协调读取器必须显式提供 country_policy")
@@ -1082,11 +1079,7 @@ def patch(
         if (
             reader.engine not in words
             or not path_proven
-            or (
-                reader.argument is not None
-                and reader.argument not in words
-                and reader.key not in route_readers
-            )
+            or (reader.argument is not None and reader.argument not in words)
             or any(literal not in words for _, literal in reader.parameters)
         ):
             raise ValueError(f"读取器没有锁定原版依据：{reader.key}")
@@ -1107,15 +1100,6 @@ def patch(
                     "always = no"
                     if country_policy is None or not country_policy.enabled
                     else f"{reader.engine} = {'yes' if predicate.value is True else 'no'}"
-                )
-            elif reader.key in route_readers:
-                route_guard = f"{reader.argument}_active = yes"
-                expression = (
-                    "always = no"
-                    if country_policy is None or not country_policy.enabled
-                    else route_guard
-                    if predicate.value is True
-                    else f"NOT = {{ {route_guard} }}"
                 )
             else:
                 expression = reader.expression(predicate.op, predicate.value)

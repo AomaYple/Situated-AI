@@ -1,22 +1,8 @@
 schema = 1
 
-[[relations]]
-source = "political_reform"
-target = "industrial_foundation"
-kind = "complements"
-strength = 0.1
-scope = "root"
-condition_facts = ["bureaucracy_positive"]
-unknown_policy = "vanilla"
-
-[[relations]]
-source = "industrial_foundation"
-target = "political_reform"
-kind = "complements"
-strength = 0.025
-scope = "root"
-condition_facts = ["strong_legitimacy", "no_insurrection"]
-unknown_policy = "vanilla"
+# 关系只消费当下世界事实，不把目标卡资格或预算偏好视为已执行。
+# 以下是已生效公校法、实际制度存在与识字状态的现实互补；
+# 不能据此断言识字由这项法律造成，也不代替制度投资或具体研究消费者。
 
 [[relations]]
 source = "industrial_foundation"
@@ -24,43 +10,9 @@ target = "education_and_research"
 kind = "complements"
 strength = 0.025
 scope = "root"
-condition_facts = ["literacy_ready"]
-unknown_policy = "vanilla"
-
-[[relations]]
-source = "fiscal_recovery"
-target = "wartime_defense"
-kind = "substitutes"
-strength = 1.0
-scope = "root"
-condition_facts = ["war"]
-unknown_policy = "vanilla"
-
-[[relations]]
-source = "wartime_defense"
-target = "fiscal_recovery"
-kind = "substitutes"
-strength = 1.0
-scope = "root"
-condition_facts = ["default"]
-unknown_policy = "vanilla"
-
-[[relations]]
-source = "diplomatic_restraint"
-target = "diplomatic_opening"
-kind = "substitutes"
-strength = 1.0
-scope = "root"
-condition_facts = ["default"]
-unknown_policy = "vanilla"
-
-[[relations]]
-source = "diplomatic_opening"
-target = "diplomatic_restraint"
-kind = "substitutes"
-strength = 1.0
-scope = "root"
-condition_facts = ["war"]
+# 已有公校制度且当前识字达标时，知识基础支持有限生产配置。
+# 同一实际制度在低识字时不会提前获得这项知识基础贡献。
+condition_facts = ["current_public_schools", "schools_present", "literacy_ready"]
 unknown_policy = "vanilla"
 
 [[relations]]
@@ -69,23 +21,8 @@ target = "industrial_foundation"
 kind = "complements"
 strength = 0.025
 scope = "root"
-condition_facts = ["bureaucracy_positive"]
-unknown_policy = "vanilla"
-
-[[relations]]
-source = "reform_conservative_guard"
-target = "reform_progressive_window"
-kind = "substitutes"
-strength = 1.0
-scope = "root"
-condition_facts = ["strong_legitimacy", "no_insurrection"]
-unknown_policy = "vanilla"
-
-[[relations]]
-source = "reform_progressive_window"
-target = "reform_conservative_guard"
-kind = "substitutes"
-strength = 1.0
-scope = "root"
-condition_facts = ["ongoing_insurrection"]
+# 已有公校制度但当前低识字时，存在可投入的教育渠道；
+# 在既有负方向教育项内增加有限政府配置偏好，实际支出仍由原版决定。
+# 识字达标后来源教育项及本贡献退出；未知只撤回本关系增量。
+condition_facts = ["current_public_schools", "schools_present", "literacy_low"]
 unknown_policy = "vanilla"

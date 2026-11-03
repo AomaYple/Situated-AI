@@ -284,7 +284,7 @@ def contract(policy: CountryPolicy):
         },
         "nodes": nodes,
         "unknown": "core_no_intervention; auxiliary_degrade_to_proven_lower_capacity",
-        "stacking": "first_matching_rule_per_field",
+        "stacking": "consumer_local_joint_contributions; cause_tiers; final_cap",
         "evidence": "static_check",
         "behavior_verified": False,
         "typed_state": {

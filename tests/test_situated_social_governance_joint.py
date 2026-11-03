@@ -96,30 +96,30 @@ def _overlay(text, field):
     [
         ({}, (1.0, 0.98)),
         ({"loans": False}, (1.0, 0.98)),
-        ({"bureaucracy": 1}, (1.1, 1.08)),
+        ({"bureaucracy": 1}, (1.18, 1.08)),
         ({"bureaucracy": 0}, (1.1, 1.08)),
-        ({"bureaucracy": 1, "loans": False}, (1.1, 1.08)),
+        ({"bureaucracy": 1, "loans": False}, (1.18, 1.08)),
         ({"default": True}, (0.85, 0.78)),
-        ({"default": True, "bureaucracy": 1}, (0.95, 0.88)),
+        ({"default": True, "bureaucracy": 1}, (1.03, 0.88)),
         ({"default": True, "war": True}, (0.85, 0.83)),
         ({"default": None}, (1.0, 0.98)),
         ({"bureaucracy": None}, (1.1, 1.08)),
         ({"net_surplus": None}, (1.0, 0.98)),
         ({"loans": None}, (1.0, 0.98)),
         ({"average_sol": None}, (1.0, 0.9)),
-        ({"population": None}, (1.0, 0.9)),
+        ({"population": None}, (0.9, 0.9)),
         ({"average_sol": 8}, (1.0, 0.9)),
-        ({"literacy": 0.35}, (0.9, 0.98)),
+        ({"literacy": 0.35}, (1.0, 0.98)),
         ({"literacy": None}, (0.9, 0.98)),
-        ({"average_sol": 12, "literacy": 0.8, "bureaucracy": 1}, (1.0, 1.0)),
-        ({"bureaucracy": 1, "population": 2_000_000}, (1.1, 1.1)),
+        ({"average_sol": 12, "literacy": 0.8, "bureaucracy": 1}, (1, 1.0)),
+        ({"bureaucracy": 1, "population": 2_000_000}, (1.18, 1.1)),
         (
             {"bureaucracy": 1, "net_surplus": 1, "grain_price": 0.6, "grain_balance": -1},
-            (1.1, 1.12),
+            (1.25, 1.12),
         ),
         (
             {"bureaucracy": 1, "net_surplus": 0, "grain_price": 0.6, "grain_balance": -1},
-            (1.1, 1.08),
+            (1.18, 1.08),
         ),
         (
             {
@@ -129,7 +129,7 @@ def _overlay(text, field):
                 "loans": False,
                 "legitimacy": 80,
             },
-            (1.3, 1.08),
+            (1.25, 1.08),
         ),
         (
             {
@@ -139,9 +139,9 @@ def _overlay(text, field):
                 "loans": False,
                 "legitimacy": 20,
             },
-            (1.22, 1.15),
+            (1.25, 1.08),
         ),
-        ({"route_education": True}, (1.15, 0.98)),
+        ({"route_education": True}, (1.0, 0.98)),
         ({"candidate_selected": True, "institution_expanding": True}, (1.0, 0.98)),
     ],
 )
@@ -161,7 +161,7 @@ def test_complete_consumers_match_handwritten_joint_preferences(production, chan
 def test_same_demand_tiers_and_independent_costs_have_explicit_causes(production):
     source, policy, _native, _generated, _disabled, model = production
     assert model.consumer_ir is not None
-    for field, count in ((SCHOOL, 9), (SOCIAL, 10)):
+    for field, count in ((SCHOOL, 6), (SOCIAL, 9)):
         rules = tuple(rule for rule in source.rules if ".".join(rule.field) == field)
         assert len(rules) == count < 32
         assert len({rule.contribution_group for rule in rules if rule.value > 1}) == 1

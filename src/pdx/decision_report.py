@@ -326,7 +326,9 @@ def source_metadata() -> dict[str, Any]:
     }
     metadata["country_state"] = country_state.contract(country_policy)
     metadata["country_coordination"] = {
-        "runtime_state": "bounded_persistent_routes" if country_policy.enabled else "disabled",
+        "runtime_state": "stateless_consumer_observations"
+        if country_policy.enabled
+        else "disabled",
         "state_contract": metadata["country_state"],
         "behavior_verified": False,
         "evidence": "static_check",
@@ -378,40 +380,11 @@ def _coordination_paths(
     paths = {}
     for fact in facts:
         engine = fact["engine"]
-        route = next(
-            (
-                name
-                for name in policy.data["routes"]
-                if engine == "has_variable" and fact.get("argument") == f"sitai_route_{name}"
-            ),
-            None,
-        )
-        if route is not None:
-            route_node = policy.data["routes"][route]
-            selected_nodes = [
-                {"section": "routes", "name": f"{route}.{phase}", "when": route_node[phase]}
-                for phase in ("enter", "hold")
-            ] + [
-                {"section": "budgets", "name": f"{name}.{level}", "when": tree}
-                for name, cost in route_node["cost"].items()
-                if cost
-                for level, tree in policy.data["budgets"][name].items()
-            ]
-            boundary = "persistent_route_refresh_dependencies; current_signal_may_outlive_facts; "
-            boundary += "other_route_preemption_not_expanded"
-            lifecycle = {
-                "ttl_days": policy.ttl_days,
-                "cooldown_days": policy.cooldown_days,
-                "priority": route_node["priority"],
-                "emergency": route_node["emergency"],
-                "cost": route_node["cost"],
-            }
-        elif not engine.startswith(country_coordination.PREFIX):
+        if not engine.startswith(country_coordination.PREFIX):
             continue
-        else:
-            selected_nodes = []
-            lifecycle = {}
-            boundary = "predicate_dependencies_including_precedence_guards; " + contract["unknown"]
+        selected_nodes = []
+        lifecycle: dict[str, object] = {}
+        boundary = "predicate_dependencies_including_precedence_guards; " + contract["unknown"]
         signal = engine.removeprefix(country_coordination.PREFIX).removeprefix("known_")
         evidence_protocol = contract["evidence_needs"].get(signal)
         if evidence_protocol is not None:
@@ -421,26 +394,24 @@ def _coordination_paths(
                 "raw_signal": country_coordination.PREFIX + signal,
             }
             boundary += "; evidence_false_means_no_positive_evidence_not_known_false_raw_fact"
-        if route is None:
-            if signal.startswith("need_") and signal[5:] in nodes["needs"]:
-                selected = [("needs", signal[5:])]
-            else:
-                # The generated capacity predicates also test recovery. Stable and
-                # foundation layers exclude the higher capacities before selection.
-                capacities = {
-                    "layer_recovery": ("recovery",),
-                    "layer_expansion": ("expansion_capacity", "recovery"),
-                    "layer_stable": ("stable_capacity", "expansion_capacity", "recovery"),
-                    "layer_foundation": (*contract["capacities"], "recovery"),
-                    **{name: (name, "recovery") for name in contract["capacities"]},
-                }
-                if signal not in capacities:
-                    continue
-                selected = [("capacities", name) for name in capacities[signal]]
-            selected_nodes = [
-                {"section": section, "name": name, **nodes[section][name]}
-                for section, name in selected
-            ]
+        if signal.startswith("need_") and signal[5:] in nodes["needs"]:
+            selected = [("needs", signal[5:])]
+        else:
+            # The generated capacity predicates also test recovery. Stable and
+            # foundation layers exclude the higher capacities before selection.
+            capacities = {
+                "layer_recovery": ("recovery",),
+                "layer_expansion": ("expansion_capacity", "recovery"),
+                "layer_stable": ("stable_capacity", "expansion_capacity", "recovery"),
+                "layer_foundation": (*contract["capacities"], "recovery"),
+                **{name: (name, "recovery") for name in contract["capacities"]},
+            }
+            if signal not in capacities:
+                continue
+            selected = [("capacities", name) for name in capacities[signal]]
+        selected_nodes = [
+            {"section": section, "name": name, **nodes[section][name]} for section, name in selected
+        ]
         keys = sorted(
             {
                 predicate["fact"]
@@ -567,8 +538,8 @@ def _taxonomy_rows(
                             for other in field["candidates"]
                             if other["priority"] > candidate["priority"]
                         ],
-                        "arbitration": "first_matching_rule_per_field; "
-                        "higher_priority_unknown_may_block_lower_priority",
+                        "arbitration": "consumer_local_joint_contributions; "
+                        "cause_tiers; local_unknown; final_cap",
                         "unknown": candidate["unknown"],
                         "consumer": candidate["consumer"],
                     }
@@ -902,7 +873,7 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
         "domain_switch_boundary": "nine_switches_only; subdomain_depth_and_runtime_behavior_not_equivalent",
         "taxonomy": taxonomy,
         "profile": {
-            "kind": "bounded_static_fact_classification_with_runtime_country_state",
+            "kind": "bounded_static_fact_classification_with_on_demand_coordination",
             "dimensions": dict(sorted(role_counts.items())),
             "runtime_state": metadata.get("country_coordination", {}).get(
                 "runtime_state", "unknown"
@@ -922,7 +893,7 @@ def build(metadata: Mapping[str, Any]) -> dict[str, Any]:
                 HISTORICAL_SHOCKS_WITHOUT_LOCKED_READER,
                 "unsupported_no_locked_runtime_reader",
             ),
-            "memory": "bounded_mod_owned_country_routes_with_ttl_and_cooldown; vanilla_recent_war_variable_read; other_shocks_recomputed_at_vanilla_consumer_evaluation",
+            "memory": "stateless_consumer_observations; vanilla_recent_war_variable_read; shocks_recomputed_at_vanilla_consumer_evaluation; independent_fiscal_state_not_part_of_this_report",
         },
         "facts": facts,
         "consumer_fields": consumer_fields,

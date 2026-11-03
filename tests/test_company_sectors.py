@@ -305,7 +305,7 @@ def test_port_shortage_and_pm_specific_input_cost_join_one_program(
     )
 
 
-def test_independent_special_sectors_share_one_demand_and_one_input_cause(special_inputs):
+def test_independent_special_sectors_share_demand_but_join_distinct_input_costs(special_inputs):
     derived = company_sectors.derive(special_inputs)
     rows = [row for row in derived["rules"] if row["field"] == "combinedco.ai_weight"]
     demand = [row for row in rows if row["contribution_group"] == "company_output_demand"]
@@ -344,10 +344,36 @@ def test_independent_special_sectors_share_one_demand_and_one_input_cause(specia
         derived,
         "combinedco",
         facts,
-        1.05,
+        0.90,  # 1 + .20 demand - .15 engines - .15 clippers
         observations={
             "any_scope_state": [state],
             "any_scope_building": [_observed_building("building_port", "pm_basic_port")],
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({"country_goods_steamers_price": 0.5}, 0.85),
+        ({"country_goods_steamers_price": 0.5, "country_goods_coal_price": 0.5}, 0.70),
+        ({"country_goods_steamers_price": None, "country_goods_coal_price": 0.5}, 0.85),
+    ],
+)
+def test_same_ship_input_across_active_port_methods_is_one_physical_cost(
+    special_inputs, changes, expected
+):
+    derived = company_sectors.derive(special_inputs)
+    _assert_joint(
+        derived,
+        "portco",
+        {"company_port_industrial": True, "company_port_modern": True, **changes},
+        expected,
+        observations={
+            "any_scope_building": [
+                _observed_building("building_port", "pm_industrial_port"),
+                _observed_building("building_port", "pm_modern_port"),
+            ]
         },
     )
 
@@ -461,7 +487,7 @@ def test_handwritten_three_sectors_preserve_actual_recipe_differences(
     )
 
 
-def test_multisector_demand_and_cost_causes_do_not_multiply_by_good_count(inputs):
+def test_multisector_demand_deduplicates_but_distinct_material_costs_join(inputs):
     derived = company_sectors.derive(inputs)
     assert derived["profiles"]["mixed"]["market_outputs"] == ["engines", "iron"]
     assert derived["profiles"]["mixed"]["common_inputs"] == ["steel", "tools"]
@@ -478,7 +504,34 @@ def test_multisector_demand_and_cost_causes_do_not_multiply_by_good_count(inputs
             "industrial_workforce": 0.15,
             "default": True,
         },
-        0.89,
+        0.74,  # 1 + .20 demand + .04 labor - .15 steel - .15 tools - .20 default
+    )
+
+
+def test_source_tier_limits_are_not_a_private_company_aggregate_clamp(inputs):
+    derived = company_sectors.derive(
+        inputs,
+        parameters={**company_sectors.DEFAULTS, "outer_lower": 0.7, "outer_upper": 1.21},
+    )
+    _assert_joint(
+        derived,
+        "mixed",
+        {
+            "country_goods_iron_balance": -1,
+            "country_goods_iron_price": 0.5,
+            "industrial_workforce": 0.15,
+        },
+        1.24,  # Individually allowed .20 and .04 contributions join before the shared cap.
+    )
+    _assert_joint(
+        derived,
+        "mixed",
+        {
+            "country_goods_tools_price": 0.5,
+            "country_goods_steel_price": 0.5,
+            "default": True,
+        },
+        0.50,  # Independent materials and solvency may cross the per-tier lower bound.
     )
 
 
@@ -729,7 +782,7 @@ def test_missing_ambiguous_or_unconditional_recipe_assumptions_fail(inputs, sour
         ("input_multiplier", 0),
         ("default_multiplier", 1.1),
         ("workforce_multiplier", True),
-        ("outer_lower", 0.7),
+        ("outer_lower", 0.9),
         ("outer_upper", 1.1),
         ("input_multiplier", float("nan")),
         ("priority_base", 49999),

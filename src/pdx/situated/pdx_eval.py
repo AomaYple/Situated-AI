@@ -31,6 +31,8 @@ _SCOPES = frozenset(
         "scope:target_country",
         "scope:overlord",
         "scope:interest_group",
+        "scope:country",
+        "scope:enemy_country",
     }
 )
 _GOODS_SCOPE = re.compile(r"(?:mg|sg):[a-z][a-z0-9_]*\Z")
@@ -41,6 +43,7 @@ _PARAMETER_QUERIES = frozenset(
     {
         "has_diplomatic_pact",
         "has_law_or_variant",
+        "has_potential_resource",
         "has_strategy",
         "has_technology_researched",
         "has_treaty_alliance_with",
@@ -51,9 +54,13 @@ _PARAMETER_QUERIES = frozenset(
         "is_production_method_active",
         "is_subject_of",
         "pop_type_percent_country",
+        "pop_type_percent_state",
         "primary_cultures_percent_state",
         "radical_fraction",
         "has_institution",
+        "has_journal_entry",
+        "sitai_defense_commitment",
+        "sitai_neighbor_defense",
         "institution_investment_level",
         "is_building_type",
         "has_active_production_method",
@@ -65,11 +72,14 @@ _PARAMETER_QUERY_BLOCKS: dict[str, tuple[frozenset[str], str | None]] = {
     "has_diplomatic_pact": (frozenset({"who", "type"}), None),
     "has_treaty_alliance_with": (frozenset({"TARGET"}), None),
     "pop_type_percent_country": (frozenset({"pop_type"}), "percent"),
+    "pop_type_percent_state": (frozenset({"target"}), "value"),
     "primary_cultures_percent_state": (frozenset({"target_country"}), "value"),
     "radical_fraction": (frozenset(), "value"),
     "institution_investment_level": (frozenset({"institution"}), "value"),
     "law_enactment_stance": (frozenset({"law"}), "value"),
     "law_stance": (frozenset({"law"}), "value"),
+    "sitai_defense_commitment": (frozenset({"PARTNER"}), None),
+    "sitai_neighbor_defense": (frozenset({"PARTNER", "OPPONENT"}), None),
 }
 
 
@@ -199,6 +209,13 @@ def _parameter_query(assignment: Assignment, facts: Mapping[str, object | None])
         raise UnsupportedPdxError(f"参数化查询 {assignment.key} 参数必须是标量或块")
 
     identity = tuple(sorted(parameters.items()))
+    if assignment.key in {"sitai_defense_commitment", "sitai_neighbor_defense"}:
+        if any(
+            value not in {"scope:country", "scope:enemy_country"} for value in parameters.values()
+        ):
+            raise UnsupportedPdxError("防御helper仅支持已登记的博弈双方参数")
+        if assignment.key == "sitai_neighbor_defense" and len(set(parameters.values())) != 2:
+            raise UnsupportedPdxError("防御helper的双方不能相同")
     result = facts.get(assignment.key)
     if result is None:
         return None
@@ -285,7 +302,15 @@ def _condition(
     # Flat fixtures explicitly describe the initial ROOT context. Bind it once
     # at the entry, so regrouping AND/OR never changes scope resolution. A
     # provided ROOT (including None) always wins over flat decoy facts.
-    anchor = ({"ROOT": facts} if "ROOT" not in facts else facts) if root is None else root
+    anchor = (
+        (
+            {"ROOT": facts, "scope:is_initiator": facts.get("scope:is_initiator")}
+            if "ROOT" not in facts
+            else facts
+        )
+        if root is None
+        else root
+    )
 
     def scope(name: str) -> tuple[bool, Mapping[str, object | None] | None]:
         context = anchor if name == "ROOT" else facts
@@ -355,6 +380,14 @@ def _condition(
             continue
         if item.key == "exists":
             name = _scalar(item, label="exists").unquoted
+            if name == "scope:is_initiator":
+                if item.op != "=":
+                    raise UnsupportedPdxError("is_initiator 存在性必须使用等号")
+                value = anchor.get(name)
+                if value is not None and type(value) is not bool:
+                    raise UnsupportedPdxError("is_initiator 必须是布尔或未知")
+                values.append(value)
+                continue
             if item.op != "=" or (
                 name not in _SCOPES
                 and not _GOODS_SCOPE.fullmatch(name)
@@ -470,7 +503,7 @@ def _validate_numeric(assignment: Assignment) -> None:
     if assignment.op != "=" or assignment.prefix is not None:
         raise UnsupportedPdxError("数值表达式必须使用普通赋值")
     if isinstance(assignment.value, Scalar):
-        _number(assignment)
+        _numeric_scalar(assignment, None)
         return
     if not isinstance(assignment.value, Block):
         raise UnsupportedPdxError("数值表达式必须是标量或块")
@@ -537,7 +570,40 @@ def _number(assignment: Assignment) -> float:
     return float(value)
 
 
-def _numeric_value(assignment: Assignment, facts: Mapping[str, object | None]) -> float:
+def _numeric_scalar(
+    assignment: Assignment, facts: Mapping[str, object | None] | None
+) -> float | None:
+    scalar = _scalar(assignment, label=assignment.key)
+    getters = {
+        "ROOT.economic_dependence(scope:country)": "scope:country",
+        "ROOT.economic_dependence(scope:enemy_country)": "scope:enemy_country",
+    }
+    if scalar.quoted:
+        argument = getters.get(scalar.unquoted)
+        if argument is None:
+            raise UnsupportedPdxError("未登记的quoted数值getter")
+        if facts is None:
+            return None
+        actor = facts.get("ROOT", facts)
+        if actor is None:
+            return None
+        if not isinstance(actor, Mapping):
+            raise UnsupportedPdxError("经济依赖ROOT必须是国家映射")
+        dependence = actor.get("economic_dependence")
+        if dependence is None:
+            return None
+        if not isinstance(dependence, Mapping):
+            raise UnsupportedPdxError("economic_dependence必须是参数映射")
+        value = dependence.get((("argument", argument),))
+        if value is None:
+            return None
+        if type(value) not in (int, float) or not 0 <= value <= 5 or not math.isfinite(value):
+            raise UnsupportedPdxError("economic_dependence必须是0到5的有限数值或未知")
+        return float(value)
+    return _number(assignment)
+
+
+def _numeric_value(assignment: Assignment, facts: Mapping[str, object | None]) -> float | None:
     """Interpret the generated numeric AST independently of the compiler.
 
     PDX script values execute operations in source order. Conditional blocks
@@ -545,14 +611,14 @@ def _numeric_value(assignment: Assignment, facts: Mapping[str, object | None]) -
     separate accumulator. Unknown optional conditions do not prove a branch.
     """
     if isinstance(assignment.value, Scalar):
-        return _number(assignment)
+        return _numeric_scalar(assignment, facts)
     if not isinstance(assignment.value, Block):
         raise UnsupportedPdxError("数值表达式必须是标量或块")
     initial = assignment.value.first("value")
     if initial is None:
         raise UnsupportedPdxError("数值表达式缺少 value 初值")
 
-    def execute(block: Block, value: float) -> float:
+    def execute(block: Block, value: float | None) -> float | None:
         chain_open = False
         selected = False
         for item in block.assignments():
@@ -584,8 +650,15 @@ def _numeric_value(assignment: Assignment, facts: Mapping[str, object | None]) -
             if item.key not in {"value", "add", "subtract", "multiply", "divide", "min", "max"}:
                 raise UnsupportedPdxError(f"不支持的数值操作：{item.key}")
             amount = _numeric_value(item, facts)
+            if amount is None:
+                if item.key == "add":
+                    # An unknown independent contribution exits locally.
+                    continue
+                return None
             if item.key == "value":
                 value = amount
+            elif value is None:
+                return None
             elif item.key == "add":
                 value += amount
             elif item.key == "subtract":
@@ -611,6 +684,8 @@ def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[st
         raise UnsupportedPdxError("一个行动分支必须有且只有一个顶层写入")
     operation = operations[0]
     delta = _numeric_value(operation, facts)
+    if delta is None:
+        raise UnsupportedPdxError("顶层数值写入未知，不能默认为零")
     # Legacy branches can carry an optional conditional addition beside the
     # primary scalar write. Numeric value blocks handle their own conditions.
     for nested in branch.all("if"):
@@ -623,7 +698,9 @@ def _effect_delta(branch: Block, facts: Mapping[str, object | None]) -> tuple[st
             additions = nested.value.all("add")
             if len(additions) != 1:
                 raise UnsupportedPdxError("嵌套 if 必须有一个 add")
-            delta += _numeric_value(additions[0], facts)
+            amount = _numeric_value(additions[0], facts)
+            if amount is not None:
+                delta += amount
     return operation.key, delta
 
 

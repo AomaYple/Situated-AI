@@ -429,7 +429,7 @@ def test_compiler_exports_context_but_keeps_frozen_migration_identity():
         for binding in (context.actor_scope, *context.targets, *context.auxiliary_scopes):
             assert binding.name in baseline_lines[binding.line - 1]
     instance = next(
-        i for i in model.action_instances if i.rule_id == "comparative_friendly_subject"
+        i for i in model.action_instances if i.rule_id == "remaining_friendly_subject_need"
     )
     writer = next(w for w in bundle.writers if w.definition == instance.rule_id)
     assert instance.target_scope == writer.target == "none"

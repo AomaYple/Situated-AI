@@ -132,20 +132,44 @@ law_religious_schools = {
 		# ACTION program_a1e8e1a7a5d70541 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
 			value = 0
-			# GROUP program_a1e8e1a7a5d70541_positive
+			# GROUP program_a1e8e1a7a5d70541_school_access_positive
 			add = { value = 0
-				# law_religious_schools_ai_enact_weight_modifier [political]; 在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 22 }
-				# coordinated_layered_law_education_religious_schools [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 6 }
+				# social_reform_religious_schools_from_private_access_peasant [political]; 普通私校转宗教学校增加固定教育access；低SoL与农民份额仅代理财富教育覆盖不足，不把conversion或IG强化当普遍收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = 14 }
+				# social_reform_religious_schools_new_access [political]; 当前确无学校与制度，低识字形成启用该原版教育机制的直接需要；私校财富机制与宗教普遍access区别保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 12 }
+				# social_reform_religious_schools_from_private_access_low_sol [political]; 普通私校转宗教学校增加固定教育access；低SoL与农民份额仅代理财富教育覆盖不足，不把conversion或IG强化当普遍收益
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 } } add = 10 }
 			}
-			# GROUP program_a1e8e1a7a5d70541_negative
+			# GROUP program_a1e8e1a7a5d70541_school_access_negative
+			add = { value = 0
+				# social_reform_religious_schools_from_public_access_loss [political]; 公校转宗教校固定access从.125降到.10并退出公校识字机制；不把宗教conversion或IG强化无条件算全国收益
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = -6 }
+			}
+			# GROUP program_a1e8e1a7a5d70541_school_administration_positive
+			add = { value = 0
+				# social_reform_religious_schools_from_public_administration_saving [political]; 已投资公校转向原版带制度行政折扣的学校，按40%与20%区别节约机会，独立权衡覆盖损失
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools bureaucracy < 0 } } add = 4 }
+			}
+			# GROUP program_a1e8e1a7a5d70541_school_administration_negative
+			add = { value = 0
+				# social_reform_religious_schools_new_administration [political]; 明确新启学校制度时实际行政缺口是独立承载压力；既有制度切换改按折扣差计算
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } bureaucracy < 0 } } add = -8 }
+				# social_reform_religious_schools_from_private_administration_loss [political]; 已有真实学校投资时，私校转宗教校失去部分原版制度行政折扣（40%到20%）
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_private_schools NOT = { has_law_or_variant = law_type:law_terakoya } institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools bureaucracy < 0 } } add = -4 }
+			}
+			# GROUP program_a1e8e1a7a5d70541_school_financing_negative
+			add = { value = 0
+				# social_reform_religious_schools_new_financing [political]; 新学校制度形成后续投入承诺；实际违约独立降低支持，不换算并不存在的固定货币费用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } in_default = yes } } add = -6 }
+			}
+			# GROUP program_a1e8e1a7a5d70541_social_reform_political_pressure_negative
 			add = { value = 0
 				# political_capacity_law_religious_schools [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 22
+			min = -30
+			max = 18
 		} }
 		# SITAI END information:law_religious_schools.ai_enact_weight_modifier
 	}
@@ -262,20 +286,48 @@ law_private_schools = {
 		# ACTION program_383c2b7f87d62f01 [joint]; signed-envelope consumer action
 		if = { limit = { exists = ROOT ROOT = { is_ai = yes } } add = {
 			value = 0
-			# GROUP program_383c2b7f87d62f01_positive
+			# GROUP program_383c2b7f87d62f01_school_access_positive
 			add = { value = 0
-				# law_private_schools_ai_enact_weight_modifier [political]; 在行政财政可承受且政治稳定时，提高满足教育或民生需要的合格法律候选权重
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 50 has_insurrectionary_interest_groups = no net_total_income >= 0 scaled_debt >= 0 scaled_debt <= 0.4 in_default = no is_at_war = no taking_loans = no bureaucracy >= 0 literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 22 }
-				# coordinated_layered_law_education_private_schools [political]; 领域需求、具体社会结构与最低政治可行性共同决定法律议程；原版改革资格和支持仍不变
-				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes sitai_context_known_need_education = yes sitai_context_need_education = yes legitimacy >= 0 legitimacy <= 100 legitimacy >= 35 has_insurrectionary_interest_groups = no average_sol >= 0 average_sol >= 15 } } add = 6 }
+				# social_reform_private_schools_new_wealth_access [political]; 较高平均SoL支持私校财富教育效果的更强需求档，但不证明所有人口财富分布或可负担性
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol >= 15 } } add = 12 }
+				# social_reform_private_schools_new_access [political]; 当前确无学校与制度，低识字形成启用该原版教育机制的直接需要；私校财富机制与宗教普遍access区别保留
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 } } add = 8 }
 			}
-			# GROUP program_383c2b7f87d62f01_negative
+			# GROUP program_383c2b7f87d62f01_school_access_negative
+			add = { value = 0
+				# social_reform_private_schools_from_public_access_loss_peasant [political]; 退出公校普遍教育access与识字机制转财富教育，低SoL覆盖风险不能被行政折扣奖励屏蔽
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = -16 }
+				# social_reform_private_schools_from_religious_access_loss_peasant [political]; 退出宗教学校固定教育access转财富教育，低SoL下覆盖损失独立于行政折扣节约
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_religious_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 pop_type_percent_country = { pop_type = peasants percent >= 0 } pop_type_percent_country = { pop_type = peasants percent <= 1 } pop_type_percent_country = { pop_type = peasants percent >= 0.6 } } } add = -14 }
+				# social_reform_private_schools_from_public_access_loss_low_sol [political]; 退出公校普遍教育access与识字机制转财富教育，低SoL覆盖风险不能被行政折扣奖励屏蔽
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 } } add = -12 }
+				# social_reform_private_schools_from_religious_access_loss_low_sol [political]; 退出宗教学校固定教育access转财富教育，低SoL下覆盖损失独立于行政折扣节约
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_religious_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools literacy_rate >= 0 literacy_rate <= 1 literacy_rate < 0.5 average_sol >= 0 average_sol < 12 } } add = -10 }
+			}
+			# GROUP program_383c2b7f87d62f01_school_administration_positive
+			add = { value = 0
+				# social_reform_private_schools_from_public_administration_saving [political]; 已投资公校转向原版带制度行政折扣的学校，按40%与20%区别节约机会，独立权衡覆盖损失
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_public_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools bureaucracy < 0 } } add = 8 }
+				# social_reform_private_schools_from_religious_administration_saving [political]; 已投资宗教校转私校增加原版学校制度行政折扣（20%到40%），只在行政短缺时记录节约机会
+				else_if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_religious_schools institution_investment_level = { institution = institution_schools value >= 0 } institution_investment_level = { institution = institution_schools value >= 1 } has_institution = institution_schools bureaucracy < 0 } } add = 4 }
+			}
+			# GROUP program_383c2b7f87d62f01_school_administration_negative
+			add = { value = 0
+				# social_reform_private_schools_new_administration [political]; 明确新启学校制度时实际行政缺口是独立承载压力；既有制度切换改按折扣差计算
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } bureaucracy < 0 } } add = -8 }
+			}
+			# GROUP program_383c2b7f87d62f01_school_financing_negative
+			add = { value = 0
+				# social_reform_private_schools_new_financing [political]; 新学校制度形成后续投入承诺；实际违约独立降低支持，不换算并不存在的固定货币费用
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes has_law_or_variant = law_type:law_no_schools NOT = { has_institution = institution_schools } in_default = yes } } add = -6 }
+			}
+			# GROUP program_383c2b7f87d62f01_social_reform_political_pressure_negative
 			add = { value = 0
 				# political_capacity_law_private_schools [political]; 合法性极低、存在叛乱性利益集团且人口激进化显著时，为额外立法加入有限政治机会成本；不取消改革、不改变通过率、镇压、法律效果或原版政治候选选择
 				if = { limit = { exists = ROOT ROOT = { is_ai = yes legitimacy >= 0 legitimacy <= 100 legitimacy < 25 has_insurrectionary_interest_groups = yes radical_fraction = { value >= 0 } radical_fraction = { value <= 1 } radical_fraction = { value >= 0.25 } } } add = -10 }
 			}
-			min = -10
-			max = 22
+			min = -40
+			max = 20
 		} }
 		# SITAI END information:law_private_schools.ai_enact_weight_modifier
 	}

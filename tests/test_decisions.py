@@ -628,10 +628,10 @@ def test_正式包确定性清单编码与完整生产内容(tmp_path):
             "consumer_adapters",
             "country_state",
         } <= enabled_modules
-        assert manifest["contract"]["country_state"]["variable_ttl_days"] == 100
+        assert manifest["contract"]["country_state"]["persistent_variables"] == []
         assert (
             manifest["contract"]["country_coordination"]["runtime_state"]
-            == "bounded_persistent_routes"
+            == "stateless_consumer_observations"
         )
         strategy = archive.read("common/ai_strategies/00_default_strategy.txt").decode("utf-8-sig")
         assert "# SITAI BEGIN information:" in strategy

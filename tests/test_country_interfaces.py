@@ -64,7 +64,7 @@ def test_tampered_evidence_is_rejected(tmp_path, change):
     elif change == "sources":
         evidence.pop("sources")
     elif change == "interface":
-        evidence["interfaces"].pop("set_variable")
+        evidence["interfaces"].pop("is_at_war")
     elif change == "argument":
         evidence["arguments"] = []
     elif change == "path":

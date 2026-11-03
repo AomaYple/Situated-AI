@@ -98,14 +98,9 @@ def test_numeric_cost_alias_is_real_ir_input_and_preserves_zero_false_and_unknow
     assert debt.unit == "debt_to_credit_ratio"
 
 
-def test_capacity_source_counterfactual_changes_actual_cost(monkeypatch, model):
-    changed = _load_with_sources(
-        monkeypatch,
-        model,
-        lambda sources: sources["capacities.toml"]["capacities"]["fiscal"].update(
-            source_fact="income"
-        ),
-    )
+def test_capacity_source_counterfactual_changes_actual_cost(model):
+    # The retired fixed_income reader cannot be reinstated by a fixture. The
+    # declared fiscal scalar's real observation must change the actual cost.
     field = "economic_vs_government_spending_balance"
     values = {
         "peace": True,
@@ -116,7 +111,6 @@ def test_capacity_source_counterfactual_changes_actual_cost(monkeypatch, model):
         "literacy_ready": True,
         "debt_ratio": 0,
         "net_surplus": 1,
-        "income": -1,
         "bureaucracy": 0,
         "legitimacy": 75,
         "coord_evidence_need_industry": False,
@@ -135,7 +129,6 @@ def test_capacity_source_counterfactual_changes_actual_cost(monkeypatch, model):
             "literacy_rate": 0.8,
             "scaled_debt": 0,
             "net_total_income": 1,
-            "fixed_income": -1,
             "bureaucracy": 0,
             "legitimacy": 75,
             "any_insurrection_ongoing": True,
@@ -143,11 +136,14 @@ def test_capacity_source_counterfactual_changes_actual_cost(monkeypatch, model):
             "sitai_context_need_education": False,
         }
     }
-    for candidate, expected in ((model, 0.175), (changed, 0.075)):
-        selected = pdx_eval.select(compiler.strategy_overlay(candidate)[field], engine)
+    for net_surplus, expected in ((1, 0.15), (-1, 0.05)):
+        observed = {**values, "net_surplus": net_surplus}
+        actual = {"ROOT": {**engine["ROOT"], "net_total_income": net_surplus}}
+        assert model.support_signals.values(observed)["support_fiscal"] == net_surplus
+        selected = pdx_eval.select(compiler.strategy_overlay(model)[field], actual)
         assert selected.action_id == "joint_economic_balance"
         assert selected.delta == pytest.approx(expected)
-        assert _reference(candidate, field, values) == pytest.approx(10 + expected)
+        assert _reference(model, field, observed) == pytest.approx(10 + expected)
 
 
 @pytest.mark.parametrize(

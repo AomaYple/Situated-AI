@@ -1,5 +1,6 @@
 """D9 additional local production links, with explicit observed inputs."""
 
+import re
 from dataclasses import replace
 from typing import Any
 
@@ -19,14 +20,14 @@ RAIL_PM = "pm_active_building_railway_pm_early_trains"
 
 
 @pytest.fixture(scope="module")
-def legacy_policies():
+def source_policies():
     result = {}
     for source, policy in decision_adapters.load().policies:
         if source not in (MINES, RAIL):
             continue
         field = COAL if source == MINES else RAILWAY
-        # This fixture exercises the established LJ02 recipe/logistics slice.
-        # Whole-consumer opportunity envelopes have separate joint witnesses.
+        # Keep the established mine counterexamples; railway now exercises its
+        # complete physical consumer, including every active PM input cost.
         identities = (
             {
                 "borrowing_foundation_building_coal_mine",
@@ -36,16 +37,7 @@ def legacy_policies():
                 "actual_output_building_coal_mine_building_coal_mine_pm_picks_and_shovels_building_coal_mine_coal",
             }
             if source == MINES
-            else {
-                "borrowing_foundation_building_railway",
-                "coordinated_layered_building_building_railway_expansion",
-                "coordinated_layered_building_building_railway_recovery",
-                "lj02_coal_transport_railway_support",
-                "railway_engine_pressure",
-                "railway_logistics_deficit",
-                "actual_cost_building_railway_building_railway_pm_early_trains_coal",
-                "actual_cost_building_railway_building_railway_pm_early_trains_engines",
-            }
+            else {r.id for r in policy.rules if ".".join(r.field) == RAILWAY}
         )
         rules = tuple(r for r in policy.rules if r.id in identities)
         assert {r.id for r in rules} == identities
@@ -62,12 +54,12 @@ def legacy_policies():
 
 
 @pytest.fixture(scope="module")
-def policies(legacy_policies: Any) -> dict[str, Any]:
+def policies(source_policies: Any) -> dict[str, Any]:
     """Compile the production reference once, then render those same policies."""
     model = compiler.load_model()
     return {
         source: compiler.compile_policy(policy, source, model)[0]
-        for source, policy in legacy_policies.items()
+        for source, policy in source_policies.items()
     }
 
 
@@ -84,7 +76,6 @@ def observed(policy: Any, changes: dict[str, Any]) -> dict[str, Any]:
             "state_owner_coal_balance": -1,
             "state_owner_engines_price": 0.2,
             "state_owner_engines_balance": 0,
-            "state_transport_price": 0.2,
             "state_infrastructure": 0,
         }
     )
@@ -112,30 +103,27 @@ def scores(policies: Any, changes: dict[str, Any]) -> tuple[float, ...]:
         (
             {
                 "state_infrastructure": -1,
-                "state_transport_price": 0.6,
                 "state_owner_coal_price": 0.2,
                 "state_owner_coal_balance": 0,
             },
-            # Generic logistics 1.2 is the strongest positive tier; the
-            # active coal-to-rail link's 1.1 is a correlated alternative.
+            # Real local deficit plus the actual early-train inputs selects
+            # one prepared repair tier, without a transportation-price gate.
             (1.0, 1.2),
         ),
         (
             {
                 RAIL_PM: None,
                 "state_infrastructure": -1,
-                "state_transport_price": 0.6,
                 "state_owner_coal_price": 0.2,
                 "state_owner_coal_balance": 0,
             },
-            # Missing the active method skips its local link, while the
-            # generic known infrastructure/transport shortage stays valid.
-            (1.0, 1.2),
+            # Unknown active method loses only the prepared tier; the known
+            # local infrastructure deficit still contributes its foundation.
+            (1.0, 1.1),
         ),
         (
             {
                 "state_infrastructure": -1,
-                "state_transport_price": 0.6,
                 "state_owner_coal_price": 0.2,
                 "state_owner_coal_balance": 0,
                 "candidate_selected": True,
@@ -275,7 +263,6 @@ def _pdx_scores(
 
 RAIL_READY = {
     "state_infrastructure": -1,
-    "state_transport_price": 0.6,
     "state_owner_coal_price": 0.2,
     "state_owner_coal_balance": 0,
 }
@@ -285,16 +272,21 @@ RAIL_READY = {
 @pytest.mark.parametrize(
     ("changes", "expected"),
     [
-        ({COAL_PM: None}, (1.0, 0.8)),
-        (RAIL_READY, (1.0, 1.1)),
-        ({**RAIL_READY, RAIL_PM: None}, (1.0, 1.0)),
+        ({COAL_PM: None}, 1.0),
+        ({COAL_PM: False}, 1.15),
+        ({}, 1.2),
+        (RAIL_READY, 1.0),
     ],
 )
-def test_raw_ruleset_legacy_priority_and_unknown_are_separate_from_production(
-    legacy_policies: Any, changes: dict[str, Any], expected: tuple[float, float]
+def test_raw_mine_first_match_is_separate_from_joint_production(
+    source_policies: Any, changes: dict[str, Any], expected: float
 ) -> None:
-    assert all(not policy.consumer_programs for policy in legacy_policies.values())
-    assert scores(legacy_policies, changes) == pytest.approx(expected)
+    # Preserve the mine compatibility counterexamples explicitly; current
+    # railway choices are accepted through the complete production program.
+    mine = source_policies[MINES]
+    assert not mine.consumer_programs
+    result = decision_rules.evaluate(mine, observed(mine, changes), is_ai=True).get(COAL)
+    assert (result[1] if result else 1) == pytest.approx(expected)
 
 
 @pytest.mark.integration
@@ -305,21 +297,26 @@ def test_raw_ruleset_legacy_priority_and_unknown_are_separate_from_production(
         ({COAL_PM: False}, (1.15, 0.8)),
         # The actual-output recipe observes demand independently of fiscal
         # eligibility; default disables LJ02, while this local +.20 remains.
-        ({"state_owner_default": True}, (1.2, 0.8)),
+        ({"state_owner_default": True}, (1.2, 0.65)),
         # Unknown mine method skips recipe tiers, retaining the independently
         # observed generic coal shortage 1.15; railway coal cost stays -.20.
         ({COAL_PM: None}, (1.15, 0.8)),
         ({"state_owner_coal_price": 0.2, "state_owner_coal_balance": 0}, (1.0, 1.0)),
         ({"candidate_selected": True, "construction_queued": True}, (1.2, 0.8)),
-        # Logistics +.20 supersedes the active local support +.10 tier.
+        # The prepared repair tier is one .20 need, not .10+.20.
         (RAIL_READY, (1.0, 1.2)),
-        ({**RAIL_READY, RAIL_PM: False}, (1.0, 1.2)),
+        ({**RAIL_READY, RAIL_PM: False}, (1.0, 1.1)),
         (
             {**RAIL_READY, "state_owner_engines_price": 0.6, "state_owner_engines_balance": -1},
-            (1.0, 0.8),
+            (1.0, 0.9),
         ),
-        ({**RAIL_READY, RAIL_PM: None}, (1.0, 1.2)),
-        ({**RAIL_READY, "state_transport_price": 0.2}, (1.0, 1.0)),
+        ({**RAIL_READY, RAIL_PM: None}, (1.0, 1.1)),
+        ({**RAIL_READY, "state_infrastructure": 0}, (1.0, 1.0)),
+        ({**RAIL_READY, "state_owner_default": True}, (1.0, 1.05)),
+        ({**RAIL_READY, "state_owner_default": None}, (1.0, 1.2)),
+        ({**RAIL_READY, "state_owner_loans": True}, (1.0, 1.2)),
+        ({**RAIL_READY, "state_owner_coal_balance": None}, (1.0, 1.1)),
+        ({**RAIL_READY, "state_owner_engines_balance": None}, (1.0, 1.1)),
         ({**RAIL_READY, "candidate_selected": True, "construction_queued": True}, (1.0, 1.2)),
     ],
 )
@@ -339,9 +336,11 @@ def test_lj02_real_generated_pdx_scenarios(
     [
         ({"state_owner_coal_price": 0.5}, (1.2, 1.0)),
         ({"state_owner_coal_price": 0.5001}, (1.2, 0.8)),
-        ({**RAIL_READY, "state_transport_price": 0.25}, (1.0, 1.0)),
-        ({**RAIL_READY, "state_transport_price": 0.2501}, (1.0, 1.2)),
-        ({**RAIL_READY, "state_owner_coal_balance": -0.001}, (1.0, 1.2)),
+        ({**RAIL_READY, "state_owner_engines_price": 0.25}, (1.0, 1.2)),
+        ({**RAIL_READY, "state_owner_engines_price": 0.2501}, (1.0, 1.1)),
+        ({**RAIL_READY, "state_owner_coal_balance": -0.001}, (1.0, 1.1)),
+        ({**RAIL_READY, "state_infrastructure": -0.001}, (1.0, 1.2)),
+        ({**RAIL_READY, "state_infrastructure": 0}, (1.0, 1.0)),
         ({**RAIL_READY, "state_owner_coal_balance": 0}, (1.0, 1.2)),
     ],
 )
@@ -377,3 +376,12 @@ def test_lj02_players_disabled_and_native_definitions(
             for item in after.items
             if not isinstance(item, Assignment) or item.key != "ai_value"
         )
+
+    for source, name in ((MINES, "building_coal_mine"), (RAIL, "building_railway")):
+        stripped = re.sub(
+            r"(?m)^\s*# SITAI BEGIN information:[^\n]+\n.*?^\s*# SITAI END information:[^\n]+\n",
+            "\n",
+            files[source],
+            flags=re.DOTALL,
+        )
+        assert _tree(_entry(inputs[source], name)) == _tree(_entry(stripped, name))

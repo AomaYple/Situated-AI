@@ -1,7 +1,4 @@
-schema = 1
-variable_ttl_days = 100
-switch_cooldown_days = 62
-update_days = 30
+schema = 2
 enabled = true
 
 # 承受能力与领域需求分离：低债务借款、负行政或低合法性不再关闭基础发展。
@@ -64,20 +61,6 @@ subject = { engine = "is_subject", kind = "boolean", unit = "boolean" }
 income = { engine = "fixed_income", kind = "number", unit = "currency_per_week" }
 artillery_tech = { engine = "has_technology_researched", kind = "boolean", unit = "boolean", argument = "artillery" }
 
-# 同一档位谓词同时编译到 Python 参考预算和 PDX 路线资格。
-# 零成本不依赖该预算事实；未知值只允许已被证明的最低能力。
-[budgets.fiscal]
-1 = [[{ fact = "debt_ratio", op = "<", value = 0.7 }]]
-2 = [[{ fact = "debt_ratio", op = "<", value = 0.4 }, { fact = "net_surplus", op = ">", value = 0 }]]
-
-[budgets.administrative]
-1 = [[{ fact = "bureaucracy", op = ">=", value = 0 }]]
-2 = [[{ fact = "bureaucracy", op = ">=", value = 100 }]]
-
-[budgets.security]
-1 = [[{ fact = "navy", op = ">", value = 0 }]]
-2 = [[{ fact = "navy", op = ">=", value = 25 }, { fact = "artillery_tech", op = "=", value = true }]]
-
 [dimensions]
 fiscal = { facts = ["debt_ratio", "net_surplus", "default", "loans"] }
 administrative = { facts = ["bureaucracy"] }
@@ -91,127 +74,3 @@ education = { facts = ["literacy", "artillery_tech"] }
 overseas = { facts = ["navy"] }
 identity = { facts = ["subject"] }
 crisis = { facts = ["war", "default", "insurrection", "war_defeat"] }
-
-[routes.fiscal_recovery]
-priority = 100
-emergency = true
-enter = [
-  [{ fact = "default", op = "=", value = true }],
-  [{ fact = "loans", op = "=", value = true }, { fact = "net_surplus", op = "<", value = 0 }, { fact = "debt_ratio", op = ">=", value = 0.4 }],
-  [{ fact = "debt_ratio", op = ">=", value = 0.6 }],
-]
-hold = [
-  [{ fact = "default", op = "=", value = true }],
-  [{ fact = "loans", op = "=", value = true }, { fact = "net_surplus", op = "<", value = 0 }, { fact = "debt_ratio", op = ">=", value = 0.4 }],
-  [{ fact = "debt_ratio", op = ">=", value = 0.4 }],
-]
-cost = { fiscal = 1, administrative = 1, security = 0 }
-
-[routes.stability]
-priority = 90
-emergency = true
-enter = [
-  [{ fact = "insurrection", op = "=", value = true }],
-  [{ fact = "legitimacy", op = "<", value = 25 }],
-]
-hold = [
-  [{ fact = "insurrection", op = "=", value = true }],
-  [{ fact = "legitimacy", op = "<", value = 35 }],
-]
-cost = { fiscal = 0, administrative = 1, security = 1 }
-
-[routes.defense]
-priority = 110
-emergency = true
-enter = [[{ fact = "war", op = "=", value = true }]]
-hold = [[{ fact = "war", op = "=", value = true }]]
-cost = { fiscal = 1, administrative = 1, security = 2 }
-
-[routes.industry]
-priority = 50
-emergency = false
-enter = [
-  [
-    { fact = "war", op = "=", value = false },
-    { fact = "default", op = "=", value = false },
-    { fact = "industrial_route", op = "=", value = true },
-    { fact = "net_surplus", op = ">", value = 0 },
-  ],
-  [
-    { fact = "war", op = "=", value = false },
-    { fact = "default", op = "=", value = false },
-    { fact = "resource_route", op = "=", value = true },
-    { fact = "net_surplus", op = ">", value = 0 },
-  ],
-  [
-    { fact = "war", op = "=", value = false },
-    { fact = "default", op = "=", value = false },
-    { fact = "war_defeat", op = "=", value = true },
-    { fact = "income", op = ">", value = 0 },
-    { fact = "net_surplus", op = ">", value = 0 },
-  ],
-]
-hold = [
-  [
-    { fact = "war", op = "=", value = false },
-    { fact = "default", op = "=", value = false },
-    { fact = "industrial_route", op = "=", value = true },
-    { fact = "net_surplus", op = ">", value = 0 },
-  ],
-  [
-    { fact = "war", op = "=", value = false },
-    { fact = "default", op = "=", value = false },
-    { fact = "resource_route", op = "=", value = true },
-    { fact = "net_surplus", op = ">", value = 0 },
-  ],
-  [
-    { fact = "war", op = "=", value = false },
-    { fact = "default", op = "=", value = false },
-    { fact = "war_defeat", op = "=", value = true },
-    { fact = "income", op = ">", value = 0 },
-    { fact = "net_surplus", op = ">", value = 0 },
-  ],
-]
-cost = { fiscal = 1, administrative = 1, security = 0 }
-
-[routes.education]
-priority = 60
-emergency = false
-enter = [[
-  { fact = "war", op = "=", value = false },
-  { fact = "default", op = "=", value = false },
-  { fact = "literacy", op = "<", value = 0.5 },
-  { fact = "population", op = ">", value = 0 },
-  { fact = "net_surplus", op = ">", value = 0 },
-]]
-hold = [[
-  { fact = "war", op = "=", value = false },
-  { fact = "default", op = "=", value = false },
-  { fact = "literacy", op = "<", value = 0.6 },
-  { fact = "population", op = ">", value = 0 },
-  { fact = "net_surplus", op = ">", value = 0 },
-]]
-cost = { fiscal = 1, administrative = 1, security = 0 }
-
-[routes.maritime]
-priority = 30
-emergency = false
-enter = [[
-  { fact = "war", op = "=", value = false },
-  { fact = "default", op = "=", value = false },
-  { fact = "expansion_route", op = "=", value = true },
-  { fact = "subject", op = "=", value = false },
-  { fact = "navy", op = ">=", value = 25 },
-  { fact = "income", op = ">", value = 0 },
-  { fact = "net_surplus", op = ">", value = 0 },
-]]
-hold = [[
-  { fact = "war", op = "=", value = false },
-  { fact = "default", op = "=", value = false },
-  { fact = "expansion_route", op = "=", value = true },
-  { fact = "subject", op = "=", value = false },
-  { fact = "navy", op = ">=", value = 25 },
-  { fact = "income", op = ">", value = 0 },
-  { fact = "net_surplus", op = ">", value = 0 },
-]]
-cost = { fiscal = 1, administrative = 1, security = 1 }

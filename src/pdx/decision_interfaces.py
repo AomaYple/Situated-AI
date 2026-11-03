@@ -421,6 +421,17 @@ def reader_scope(
             scope = "country"
         elif scope == "country" and part == "market":
             scope = "market"
+        elif (
+            scope == "country"
+            and part == "overlord"
+            and reader.scope == "root"
+            and reader.path == ("overlord",)
+            and reader.engine == "relations:root"
+            and reader.key == "actual_overlord_relations"
+        ):
+            # This is the actor's real relationship, not scope:overlord supplied
+            # by the separate become-subject candidate consumer.
+            scope = "country"
         elif scope == "country" and part in {"ig:ig_trade_unions", "ig:ig_landowners"}:
             scope = "interest_group"
         elif scope == "market" and part.startswith("mg:"):
@@ -438,24 +449,29 @@ def reader_scope(
 
 def validate(rules: RuleSet) -> None:
     """同时核对消费者提供的具名上下文和每步读取类型。"""
+    from .mobilization_opportunities import CANDIDATE_IDS  # noqa: PLC0415
+
     readers = {reader.key: reader for reader in rules.readers}
     for reader in rules.readers:
         reader_scope(reader, rules.actor_path, native_root=rules.native_root)
     for rule in rules.rules:
         field = rule.field[1:] if rule.field[0] == "ai_strategy_default" else rule.field
+        if "actual_overlord_relations" in rule.input_keys() and field != (
+            "ai_strategy_subject_overlord_compliance",
+            "weight",
+        ):
+            raise ValueError("实际宗主关系仅授权已证明的宗属合作策略消费者")
         if (
             rules.native_root == "military_formation" or field[0].startswith("mobilization_option_")
         ) and (
             rules.native_root != "military_formation"
             or rules.actor_path != ("owner",)
-            or field
-            not in {
-                ("mobilization_option_first_aid", "ai_weight"),
-                ("mobilization_option_field_hospitals", "ai_weight"),
-            }
+            or len(field) != 2
+            or field[0] not in CANDIDATE_IDS
+            or field[1] != "ai_weight"
             or rule.operation != "multiply"
         ):
-            raise ValueError("医疗动员只支持精确候选、编队ROOT及owner国家边界")
+            raise ValueError("动员只支持精确候选、编队ROOT及owner国家边界")
         if field == ("wanted_construction_output",) and (
             rule.operation != "multiply" or not math.isfinite(rule.value) or rule.value <= 0
         ):
@@ -503,11 +519,13 @@ def consumer(
             "vanilla_company_base_candidate_weight",
         )
     elif leaf == "ai_weight" and source == "common/mobilization_options/00_mobilization_option.txt":
+        from .mobilization_opportunities import CANDIDATE_IDS  # noqa: PLC0415
+
         if (
             native_root != "military_formation"
             or actor_path != ("owner",)
-            or field[0]
-            not in {"mobilization_option_first_aid", "mobilization_option_field_hospitals"}
+            or len(field) != 2
+            or field[0] not in CANDIDATE_IDS
         ):
             raise ValueError("医疗动员消费者必须保留精确编队ROOT及所属国家角色")
         evidence, role = (
@@ -571,6 +589,12 @@ def _retained_reason(field: str) -> dict[str, str]:
     """保留原版是明确设计选择，既不是新增实现也不是接口不支持。"""
     policies = (
         (("icon",), "presentation", "保留原版策略图标，不把显示资源作为决策输入", "无行为影响"),
+        (
+            ("colonial_interest_ratio",),
+            "native_consumer_context_unknown",
+            "真实求值对象和合并语义尚未证明；撤销无依据覆盖，精确保留原版AST，接口继续unknown",
+            "地区殖民立场、殖民制度、州价值与海军保障各走已证消费者；不是该字段的等价实现",
+        ),
         (
             ("desired_tax_level", "max_tax_level", "min_tax_level"),
             "native_tax_policy",
