@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 from dataclasses import replace
 
 import pytest
@@ -251,7 +252,14 @@ def test_all_actual_goal_and_navy_writer_inputs_bind_exactly_proven_objects():
             "ship_construction_output_multiplier",
         }
     ]
-    assert len(selected) == 107
+    assert Counter(
+        writer.field.removeprefix("ai_strategy_default.").split(".")[0] for writer in selected
+    ) == {
+        "wargoal_scores": 74,
+        "secret_goal_scores": 27,
+        "wanted_navy_size": 7,
+        "ship_construction_output_multiplier": 4,
+    }
     for writer in selected:
         instance = instances[writer.writer_id]
         assert writer.evaluation_context == instance.evaluation_context

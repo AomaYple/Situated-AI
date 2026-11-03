@@ -100,6 +100,8 @@ def test_disabled_program_adds_no_stance(program):
     plan = decision_adapters.SupplyPlan(SOURCE, ("tools",), 0.25)
     bundle = ConsumerIRBundle(1, (), (_writer(program),))
     assert decision_adapters._supply_programs(plan, bundle, enabled=False) == ()
+    # A partial adapter build may omit supply while sharing the complete IR.
+    assert decision_adapters._supply_programs(None, bundle, enabled=False) == ()
     assert (
         decision_adapters._supply_programs(None, ConsumerIRBundle(1, (), ()), enabled=False) == ()
     )
@@ -152,14 +154,17 @@ def test_plan_is_immutable_and_reference_renderer_contract_share_instance(progra
         {"vanilla_tail": "replace"},
     ],
 )
-def test_wrong_writer_identity_or_scope_is_rejected(program, changes):
+@pytest.mark.parametrize("enabled", [False, True])
+def test_wrong_writer_identity_or_scope_is_rejected(program, changes, enabled):
     writer = replace(_writer(program), **changes)
     bundle = ConsumerIRBundle(1, (), (writer,))
     plan = decision_adapters.SupplyPlan(SOURCE, ("tools",), 0.25)
     with pytest.raises(ValueError):
         bundle.as_dict()
     with pytest.raises(ValueError):
-        decision_adapters._supply_programs(plan, bundle, enabled=True)
+        decision_adapters._supply_programs(plan, bundle, enabled=enabled)
+    with pytest.raises(ValueError):
+        decision_adapters._supply_programs(None, bundle, enabled=False)
 
 
 def test_missing_duplicate_or_drifted_programs_cannot_fall_back_to_second_author(program):

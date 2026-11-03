@@ -708,9 +708,12 @@ def _supply_programs(
     if not enabled:
         # A build may narrow an enabled bundle to a disabled domain.  Any
         # retained configured rows must still be exact; no row is emitted.
-        if programs and {program.good: program for program in programs} != {
-            program.good: program for program in expected
-        }:
+        if (
+            plan is not None
+            and programs
+            and {program.good: program for program in programs}
+            != {program.good: program for program in expected}
+        ):
             raise ValueError("关闭的供给计划与冻结ConsumerIR不一致")
         return ()
     by_good = {program.good: program for program in programs}
