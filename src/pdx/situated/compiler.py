@@ -1323,7 +1323,12 @@ def _declared_reader_matches(fact: EvidenceSpec, reader: decision_rules.Reader) 
     return "".join(fact.trigger.split()) == "".join(expected.split())
 
 
-def _reader_facts(model_facts: tuple[EvidenceSpec, ...]) -> tuple[EvidenceSpec, ...]:
+def _reader_facts(
+    model_facts: tuple[EvidenceSpec, ...],
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> tuple[EvidenceSpec, ...]:
     """从 information/adapters 的 readers 补齐事实签名，不复制业务谓词。"""
     for item in model_facts:
         if any(op in item.trigger for op in ("=", "<", ">")) and (
@@ -1333,8 +1338,8 @@ def _reader_facts(model_facts: tuple[EvidenceSpec, ...]) -> tuple[EvidenceSpec, 
     by_id = {item.id: item for item in model_facts}
     declared_by_id = dict(by_id)
     observations: dict[str, tuple[decision_rules.Reader, str]] = {}
-    information = decision_rules.load()
-    adapters = decision_adapters.load()
+    information = decision_rules.load() if information is None else information
+    adapters = decision_adapters.load() if adapters is None else adapters
     readers: list[tuple[str, Any, str]] = [
         ("information", reader, "mod/decisions/information.toml") for reader in information.readers
     ]
@@ -1375,10 +1380,13 @@ def _reader_facts(model_facts: tuple[EvidenceSpec, ...]) -> tuple[EvidenceSpec, 
 
 def _reader_shapes(
     declared_facts: tuple[EvidenceSpec, ...] = (),
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
 ) -> dict[str, tuple[decision_rules.Reader, ...]]:
     """Expose original reader shape for support-source lowering guards."""
-    information = decision_rules.load()
-    adapters = decision_adapters.load()
+    information = decision_rules.load() if information is None else information
+    adapters = decision_adapters.load() if adapters is None else adapters
     result: dict[str, list[decision_rules.Reader]] = {}
     for reader in information.readers:
         result.setdefault(reader.key, []).append(reader)
@@ -1472,11 +1480,15 @@ def _action_context_readers(
     return tuple(sorted(result))
 
 
-def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[str, str]]:
+def _production_inventory(
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> tuple[tuple[ProductionConsumer, ...], int, dict[str, str]]:
     consumers: list[ProductionConsumer] = []
     fingerprints: dict[str, str] = {}
     total = 0
-    info = decision_rules.load()
+    info = decision_rules.load() if information is None else information
     fingerprints["information"] = info.source_sha256
     for field, rules in info.groups().items():
         consumers.append(
@@ -1492,7 +1504,7 @@ def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[s
             )
         )
         total += len(rules)
-    adapters = decision_adapters.load()
+    adapters = decision_adapters.load() if adapters is None else adapters
     fingerprints["adapters"] = adapters.source_sha256
     for source, policy in adapters.policies:
         for field, rules in policy.groups().items():
@@ -1513,7 +1525,14 @@ def _production_inventory() -> tuple[tuple[ProductionConsumer, ...], int, dict[s
     return tuple(consumers), total, fingerprints
 
 
-def _validate_supporting_sources(sources, consumers, relation_list) -> None:
+def _validate_supporting_sources(
+    sources,
+    consumers,
+    relation_list,
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> None:
     if set(sources) != set(SUPPORTING_SOURCES):
         raise ValueError("辅助合同来源必须完整且不能包含已退役或未知来源")
     raw_relations = sources["relations.toml"].get("relations", [])
@@ -1563,17 +1582,23 @@ def _validate_supporting_sources(sources, consumers, relation_list) -> None:
         raise ValueError("本地化合同必须覆盖锁定本体的 11 种语言且不允许回退")
     families.load_contract(DECISIONS / "action_families.toml")
     layers.load(DECISIONS / "action_layers.toml")
-    bindings.load(DECISIONS / "action_bindings.toml")
-    domain_coverage.load(DECISIONS / "domain_actions.toml")
+    bindings.load(DECISIONS / "action_bindings.toml", information=information, adapters=adapters)
+    domain_coverage.load(
+        DECISIONS / "domain_actions.toml", information=information, adapters=adapters
+    )
 
 
 def load_model(
     *, facts_path: Path = FACTS, actions_path: Path = ACTIONS, baseline: str | None = None
 ) -> SituatedModel:
     declared_facts = evidence_source.load(facts_path)
-    facts = _reader_facts(declared_facts)
+    # A single invocation owns one policy snapshot. Helpers still load fresh
+    # inputs when called independently; no cross-invocation cache is retained.
+    information = decision_rules.load()
+    adapters = decision_adapters.load()
+    facts = _reader_facts(declared_facts, information=information, adapters=adapters)
     layer_model = layers.load(LAYERS)
-    binding_rows = bindings.load(BINDINGS)
+    binding_rows = bindings.load(BINDINGS, information=information, adapters=adapters)
     consumers, actions = action_source.load(actions_path)
     tool_ids = {item.id for item in layer_model.tools}
     action_ids = {item.id for item in actions}
@@ -1584,7 +1609,10 @@ def load_model(
         )
     supporting = _load_supporting_sources()
     support_model = support_signals.load(
-        supporting, facts, actions, reader_shapes=_reader_shapes(declared_facts)
+        supporting,
+        facts,
+        actions,
+        reader_shapes=_reader_shapes(declared_facts, information=information, adapters=adapters),
     )
     facts = (*facts, *(item.evidence() for item in support_model.signals))
     goal_specs = support_signals.load_goals(supporting, actions, consumers)
@@ -1595,7 +1623,9 @@ def load_model(
     relations.validate(actions, specs=supporting["relations.toml"].get("relations", []))
     layers.validate_links(layer_model, actions, relation_list)
     decision_rows = decision_ir.compile_decisions(actions, consumers, relation_list)
-    _validate_supporting_sources(supporting, consumers, relation_list)
+    _validate_supporting_sources(
+        supporting, consumers, relation_list, information=information, adapters=adapters
+    )
     fact_ids = {item.id for item in facts}
     relation_fact_ids = {fact for relation in relation_list for fact in relation.condition_facts}
     missing_relation_facts = sorted(relation_fact_ids - fact_ids)
@@ -1620,9 +1650,9 @@ def load_model(
     missing = [consumer.field for consumer in consumers if consumer.field not in available]
     if baseline is None and missing:
         raise ValueError(f"消费者字段不在默认策略底本：{missing[0]}")
-    information = decision_rules.load()
-    adapters = decision_adapters.load()
-    production, count, production_hashes = _production_inventory()
+    production, count, production_hashes = _production_inventory(
+        information=information, adapters=adapters
+    )
     instances = action_instances.build(
         information,
         adapters,

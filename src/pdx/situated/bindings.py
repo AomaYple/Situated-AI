@@ -44,9 +44,13 @@ def _target(field: tuple[str, ...]) -> str:
     return "target_state" if field and field[-1] == "state_value" else "none"
 
 
-def build() -> tuple[Binding, ...]:
+def build(
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> tuple[Binding, ...]:
     result: list[Binding] = []
-    info = decision_rules.load()
+    info = decision_rules.load() if information is None else information
     for rule in info.rules:
         source = "mod/decisions/information.toml"
         result.append(
@@ -62,7 +66,7 @@ def build() -> tuple[Binding, ...]:
                 ".".join(rule.field),
             )
         )
-    adapters = decision_adapters.load()
+    adapters = decision_adapters.load() if adapters is None else adapters
     for source, policy in adapters.policies:
         actor = "owner" if policy.actor_path else "root"
         result.extend(
@@ -84,7 +88,12 @@ def build() -> tuple[Binding, ...]:
     return tuple(result)
 
 
-def load(path: Path = DEFAULT_SOURCE) -> tuple[Binding, ...]:
+def load(
+    path: Path = DEFAULT_SOURCE,
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> tuple[Binding, ...]:
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     if (
         data.get("schema") != 1
@@ -113,7 +122,7 @@ def load(path: Path = DEFAULT_SOURCE) -> tuple[Binding, ...]:
     # 绑定文件是生成式台账；读取时按稳定身份排序，避免文件分段或
     # 新增批次的物理插入位置改变 IR、报告和验收顺序。
     ordered = tuple(sorted(result, key=lambda item: item.binding_id))
-    validate(ordered)
+    validate(ordered, information=information, adapters=adapters)
     return ordered
 
 
@@ -170,7 +179,13 @@ def validate_disposition(item: Binding) -> None:
         )
 
 
-def validate(bindings: tuple[Binding, ...], *, check_complete: bool = True) -> None:
+def validate(
+    bindings: tuple[Binding, ...],
+    *,
+    check_complete: bool = True,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> None:
     if not bindings:
         raise ValueError("绑定目录不能为空")
     ids = [item.binding_id for item in bindings]
@@ -185,7 +200,9 @@ def validate(bindings: tuple[Binding, ...], *, check_complete: bool = True) -> N
         if not item.field or not item.consumer:
             raise ValueError(f"绑定字段为空：{item.binding_id}")
     if check_complete:
-        expected_rows = {item.binding_id: item for item in build()}
+        expected_rows = {
+            item.binding_id: item for item in build(information=information, adapters=adapters)
+        }
         expected = set(expected_rows)
         actual = set(ids)
         if actual != expected:

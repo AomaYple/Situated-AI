@@ -1378,7 +1378,12 @@ def check_counts(path: Path = DEFAULT_SOURCE) -> list[str]:
     return []
 
 
-def load(path: Path = DEFAULT_SOURCE) -> dict[str, DomainCoverage]:
+def load(
+    path: Path = DEFAULT_SOURCE,
+    *,
+    information: decision_rules.RuleSet | None = None,
+    adapters: decision_adapters.AdapterSet | None = None,
+) -> dict[str, DomainCoverage]:
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     if data.get("schema") != 1 or set(data) != {"schema", "domains", "chains"}:
         raise ValueError("domain_actions.toml schema 无效")
@@ -1386,7 +1391,9 @@ def load(path: Path = DEFAULT_SOURCE) -> dict[str, DomainCoverage]:
     if not isinstance(raw_domains, dict) or set(raw_domains) != set(FAMILIES):
         raise ValueError("领域覆盖必须精确覆盖19个行动族")
     counts = dict.fromkeys(FAMILIES, 0)
-    for item in build(decision_rules.load(), decision_adapters.load()):
+    information = decision_rules.load() if information is None else information
+    adapters = decision_adapters.load() if adapters is None else adapters
+    for item in build(information, adapters):
         counts[item.family_id] += 1
     result: dict[str, DomainCoverage] = {}
     for key in FAMILIES:
