@@ -25,5 +25,6 @@
 *.ico binary
 *.prof binary
 *.pyisession binary
+research/situated/a2-evidence/raw/*.bin binary
 research/official-docs/** -diff linguist-vendored
 tests/test_golden/** linguist-generated
