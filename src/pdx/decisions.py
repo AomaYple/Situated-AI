@@ -1013,6 +1013,8 @@ def source_fingerprint(
     extensions: Extensions,
     baseline: str,
     country_policy: CountryPolicy | None = None,
+    *,
+    situated_model: situated_compiler.SituatedModel | None = None,
 ) -> dict[str, str]:
     """返回生成输入指纹，供 metadata 与交付清单共同引用。"""
 
@@ -1022,7 +1024,8 @@ def source_fingerprint(
         "baseline_sha256": hashlib.sha256(normalized_text(baseline).encode()).hexdigest(),
         "generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     }
-    situated_model = load_situated_model(baseline=baseline)
+    if situated_model is None:
+        situated_model = load_situated_model(baseline=baseline)
     result.update(
         {
             f"situated_{name}_source_sha256": digest
@@ -1113,6 +1116,7 @@ def metadata_payload(
     languages: tuple[Language, ...] | None = None,
     complete_localization: bool = False,
     country_policy: CountryPolicy | None = None,
+    situated_model: situated_compiler.SituatedModel | None = None,
 ) -> dict[str, object]:
     policy = policy or load()
     extensions = extensions or load_extensions()
@@ -1165,6 +1169,7 @@ def metadata_payload(
             extensions,
             baseline if baseline is not None else BASELINE.read_text(encoding="utf-8"),
             country_policy,
+            situated_model=situated_model,
         ),
         "game_custom_data": {"multiplayer_synchronized": True},
     }
@@ -1495,6 +1500,7 @@ def build(
         languages=languages,
         complete_localization=complete_localization,
         country_policy=country_policy,
+        situated_model=situated_model,
     )
     action_contract = situated_model.contract()
     action_contract["enabled"] = bool(action_overlay)
