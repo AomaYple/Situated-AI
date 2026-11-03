@@ -475,19 +475,22 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
             record(**case)
     assert len(legacy.IDENTITIES) == 923
     assert len(explicit.CARDS) == 11
-    assert len(rows) == (923 + 11 + 1 + 33) * len(ROLES)
+    # The external fleet script body and its actual strategy reference are
+    # separate physical consumers; both require their own six executed roles.
+    assert len(rows) == (923 + 1 + 11 + 1 + 33) * len(ROLES)
     assert len({row["case_id"] for row in rows}) == len(rows)
     consumers = {
         (item["path"], item["definition"], item["field"])
         for row in rows
         for item in row["consumers"]
     }
-    assert len(consumers) == 965
-    assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, 968)
+    assert len(consumers) == 966
+    assert Counter(row["role"] for row in rows) == dict.fromkeys(ROLES, 969)
     assert digest(architecture_receipts.source_snapshot(config.REPO)) == candidate["snapshot"]
     return {
         "review": {
             "legacy_consumers": 923,
+            "legacy_strategy_links": 1,
             "explicit_cards": 11,
             "support_programs": 1,
             "supply_enum_programs": 33,
@@ -505,7 +508,7 @@ def final_whole_review(final_candidate, final_disabled, final_supply):
 
 def test_whole_mod_review_reexecutes_the_exact_current_consumer_matrix(final_whole_review):
     """Build-only verification; formal S5 capture occurs in its six role tests."""
-    assert final_whole_review["review"]["executed_cases"] == 5808
+    assert final_whole_review["review"]["executed_cases"] == 5814
 
 
 @pytest.fixture(scope="module")
