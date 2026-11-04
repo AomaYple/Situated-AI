@@ -20,7 +20,7 @@
 | 历史实施计划（仅参考） | [处境行动决策内核实施计划](design/exec/mod重设计-实施计划.md) |
 | 当前状态 | [当前工作清单](design/当前工作清单.md) |
 | 历史 A2 架构检查与逐项证据 | [架构重设计结果](design/exec/架构重设计-结果.md)、[架构阶段收据](design/exec/架构阶段收据.json)；局部通过不等于阶段完成 |
-| 已交付基线证据 | [版本交付索引](design/exec/版本交付-结果.md)、[3.0.1交付结果](design/exec/3.0.1-交付结果.md)；历史内核与分层收据由执行索引导航 |
+| 当前交付与历史版本证据 | [版本交付索引](design/exec/版本交付-结果.md)、[3.2.0交付结果](design/exec/3.2.0-交付结果.md)；历史内核与分层收据由执行索引导航 |
 | 创意工坊文案（Steam BBCode，发布前核对固定包） | [全部11种语言](publishing/README.md) |
 | 工具使用 | [工具手册](../tools/README.md) |
 | Victoria 3 知识库 | [victoria3-modding](victoria3-modding/README.md) |
