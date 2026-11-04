@@ -326,3 +326,99 @@ def test_同步镜像会逐字节拷贝(tmp_path: Path, monkeypatch: pytest.Monk
     assert (mirror / "game/common/a.md").read_bytes() == b"\xe7\x94\xb2\n"
     assert (mirror / "jomini/docs/a.md").read_bytes() == b"\xe4\xb9\x99\n"
     assert docs_mirror.diff_mirror() == [], "刚同步完就报不一致"
+
+
+@pytest.mark.parametrize("failure", ["permission", "utf8", "missing"])
+def test_任一已枚举文档不可读时保留完整旧清单(tmp_path, monkeypatch, failure) -> None:
+    fake = _fake_roots(tmp_path)
+    research = tmp_path / "research"
+    research.mkdir()
+    authoritative = research / docs_mirror.MANIFEST_NAME
+    old = b'{"old-authoritative": true}\n'
+    authoritative.write_bytes(old)
+    monkeypatch.setattr(config, "RESEARCH", research)
+    monkeypatch.setattr(
+        docs_mirror, "_ROOTS", (("game", fake / "game"), ("jomini", fake / "jomini"))
+    )
+    # The first document is valid: failure in a later member must not commit
+    # that successful prefix as a new, apparently complete inventory.
+    bad = fake / "jomini/docs/a.md"
+    discovered = docs_mirror.iter_docs()
+    if failure == "utf8":
+        bad.write_bytes(b"\xff")
+    elif failure == "missing":
+        bad.unlink()
+    else:
+        original = type(bad).read_bytes
+
+        def denied(self):
+            if self == bad:
+                raise PermissionError("unreadable member")
+            return original(self)
+
+        monkeypatch.setattr(type(bad), "read_bytes", denied)
+    monkeypatch.setattr(docs_mirror, "iter_docs", lambda: discovered)
+    with pytest.raises((OSError, UnicodeError), match=r"jomini/docs/a\.md"):
+        docs_mirror.write_manifest()
+    assert authoritative.read_bytes() == old
+    assert list(research.iterdir()) == [authoritative]
+
+
+@pytest.mark.parametrize("failure", ["partial_write", "replace"])
+def test_写入或替换失败不破坏旧清单且清理临时文件(tmp_path, monkeypatch, failure) -> None:
+    fake = _fake_roots(tmp_path)
+    research = tmp_path / "research"
+    research.mkdir()
+    authoritative = research / docs_mirror.MANIFEST_NAME
+    old = b'{"old-authoritative": true}\n'
+    authoritative.write_bytes(old)
+    monkeypatch.setattr(config, "RESEARCH", research)
+    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", fake / "game"),))
+    if failure == "partial_write":
+        original = type(authoritative).write_text
+
+        def incomplete(self, text, **kwargs):
+            original(self, text[:7], **kwargs)
+            raise OSError("partial write")
+
+        monkeypatch.setattr(type(authoritative), "write_text", incomplete)
+    else:
+
+        def rejected(self, target):
+            assert self != authoritative
+            assert target == authoritative
+            assert json.loads(self.read_text(encoding="utf-8"))["篇数"] == 1
+            raise PermissionError("replace denied")
+
+        monkeypatch.setattr(type(authoritative), "replace", rejected)
+    with pytest.raises(OSError):
+        docs_mirror.write_manifest()
+    assert authoritative.read_bytes() == old
+    assert list(research.iterdir()) == [authoritative]
+
+
+@pytest.mark.parametrize("available_but_empty", [False, True])
+def test_无可用输入或空目录不能覆盖权威清单(tmp_path, monkeypatch, available_but_empty) -> None:
+    root = tmp_path / "game"
+    if available_but_empty:
+        root.mkdir()
+    research = tmp_path / "research"
+    research.mkdir()
+    authoritative = research / docs_mirror.MANIFEST_NAME
+    authoritative.write_bytes(b"old\n")
+    monkeypatch.setattr(config, "RESEARCH", research)
+    monkeypatch.setattr(docs_mirror, "_ROOTS", (("game", root), ("jomini", tmp_path / "absent")))
+    with pytest.raises(ValueError, match="清单为空"):
+        docs_mirror.write_manifest()
+    assert authoritative.read_bytes() == b"old\n"
+    assert list(research.iterdir()) == [authoritative]
+
+
+def test_可选内容根缺失不阻止有效游戏清单(tmp_path, monkeypatch) -> None:
+    fake = _fake_roots(tmp_path)
+    monkeypatch.setattr(config, "RESEARCH", tmp_path / "research")
+    monkeypatch.setattr(
+        docs_mirror, "_ROOTS", (("game", fake / "game"), ("jomini", fake / "optional-absent"))
+    )
+    path = docs_mirror.write_manifest()
+    assert json.loads(path.read_text(encoding="utf-8"))["篇数"] == 1
