@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 import zipfile
 from dataclasses import asdict, replace
 from types import SimpleNamespace
@@ -21,6 +20,55 @@ from pdx.situated.vanilla_inventory import VanillaInventory, VanillaSurface
 from tools.ci import situated_closeout
 
 pytestmark = pytest.mark.unit
+
+# Historical gate tests own their strategy input. The live repository plan can
+# advance beyond A2; neither that plan nor Git history is a fixture dependency.
+_A2_PLAN = """# A2 合成架构主计划
+
+仅用于阶段门测试，不表示真实项目已完成。B0–B8 是下列阶段的固定战略职责。
+
+| 阶段 | 职责 | 依赖 | 方向 |
+|---|---|---|---|
+| S0 | 归档身份、独立原版范围与已知失败迁移 | 无 | B0 |
+| S1 | 生产决策链、独立收益成本、局部未知、单位与原版尾部 | S0 | B1 |
+| S2 | 经济财政建设、社会教育知识、政治治理身份 | S1 | B2、B3、B4 |
+| S3 | 市场贸易公司外交、军事安全恢复与已观察反馈 | S1 | B5、B6 |
+| S4 | 合法范围处置、旧路径迁移、唯一作者及跨域关系 | S2、S3 | B0、B1、B7 |
+| S5 | 全体功能复核、原版集成、完整回归资源与质量包合同 | S4 | B0、B7、B8 |
+| S6 | 合并CI、标签Release与ZIP/SHA、工坊文案、部署回滚清理 | S5 | B8 |
+"""
+
+_A2_SUBPLAN = """# A2 合成架构子计划
+
+本页只声明测试证据图的战略职责；不复制当前产品计划，不代签真实阶段完成。
+
+## B0 独立范围与历史身份
+锁定原版分母、归档身份与已知失败迁移；保留未知与未闭合责任。
+
+## B1 统一生产决策链
+事实经具体行动、收益成本联合与唯一作者到达原版消费者；核对未知、单位和尾部。
+
+## B2 经济财政与建设
+核对经济财政建设的真实需求、成本、能力和反例。
+
+## B3 社会教育与知识
+核对社会教育知识的生产收益、成本和局部未知。
+
+## B4 政治治理与身份
+核对政治治理身份的具体候选、原版资格和权衡。
+
+## B5 市场贸易公司与外交
+核对真实市场及目标上下文、公司和外交消费者的收益成本。
+
+## B6 军事安全与恢复
+核对军事安全、恢复和已观察反馈；机会成本不替代实际执行。
+
+## B7 迁移与跨域整合
+处置完整原版范围，移除旧旁路，核对唯一作者与跨域关系。
+
+## B8 工程与正式交付
+完整回归、资源、质量和包合同；交付另须合并CI、标签、Release、ZIP/SHA、部署与清理。
+"""
 
 
 def test_生产文件编码合同拒绝BOM_CR和非法UTF8(tmp_path) -> None:
@@ -198,10 +246,13 @@ def _bind_native(candidate):
 def architecture_candidate(tmp_path, monkeypatch):
     """Synthetic complete evidence graph; no real A2 completion is asserted."""
     root = tmp_path
-    for path in (receipts.PLAN_PATH, receipts.SUBPLAN_PATH):
+    for path, text in (
+        (receipts.PLAN_PATH, _A2_PLAN),
+        (receipts.SUBPLAN_PATH, _A2_SUBPLAN),
+    ):
         target = root / path
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(situated_closeout.REPO / path, target)
+        target.write_text(text, encoding="utf-8", newline="\n")
     for name, text in {
         "src/pdx/fixture.py": "def evaluate(value):\n    return value\n",
         "mod/common/fixture.txt": "candidate={weight={value=1}}\n",
@@ -520,6 +571,49 @@ def architecture_candidate(tmp_path, monkeypatch):
         situated_closeout.repo_hygiene, "report", lambda _root: {"violation_count": 0}
     )
     return candidate
+
+
+@pytest.mark.parametrize(
+    ("kind", "text", "missing"),
+    [
+        (
+            "plan",
+            (
+                "# X1 广度深度主计划\n\nA2 收据仅作历史参考，不能关闭 X1。\n\n"
+                "| 阶段 | 职责 | 依赖 |\n|---|---|---|\n"
+                "| X0 | 独立范围与当前失败 | 无 |\n"
+                "| X1 | 地方发展、治理和跨域纵切 | X0 |\n"
+            ),
+            "S0",
+        ),
+        (
+            "subplan",
+            (
+                "# X1 广度深度子计划\n\nA2 职责仅作历史参考，不是当前出口。\n\n"
+                "## D1 地方征税容量与行政建设\n"
+                "同州真实容量不足形成独立机会，原版成本继续联合。\n\n"
+                "## G1 劳动结社的真实转法权衡\n"
+                "比较候选议程与现行法的实际差量。\n"
+            ),
+            "B0",
+        ),
+    ],
+)
+def test_X1计划即使重绑哈希并提及A2历史也不能代签A2(architecture_candidate, kind, text, missing):
+    c = architecture_candidate
+    assert receipts.stage_report(c.root, c.inventory)["ready"]
+    path = c.data[kind]["path"]
+    (c.root / path).write_text(text, encoding="utf-8", newline="\n")
+    # A fresh artifact hash must not turn a different strategy into A2 evidence.
+    c.data[kind] = _ref(c.root, path)
+    _save(c)
+
+    result = receipts.stage_report(c.root, c.inventory)
+
+    assert result["plan_issues"] == [f"{kind} fixed responsibility missing:{missing}"]
+    assert not result["engineering_ready"]
+    assert not result["ready"]
+    assert not any(stage["ready"] for stage in result["stages"].values())
 
 
 def test_S阶段完整证据图可区分工程和最终交付(architecture_candidate, capsys):
