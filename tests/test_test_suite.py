@@ -277,6 +277,15 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
         "            '-p', 'tools.ci.test_suite', '-p', 'tools.ci.mem_baseline', 'collect_probe.py'],\n"
         "            capture_output=True, text=True, encoding='utf-8', check=False)\n"
         "        assert child.returncode == 0, child.stdout + child.stderr\n"
+        f"    if {workers!r}:\n"
+        "        import time\n"
+        "        ready = Path('worker-ready')\n"
+        "        ready.mkdir(exist_ok=True)\n"
+        "        (ready / str(os.getpid())).touch()\n"
+        "        deadline = time.monotonic() + 15\n"
+        "        while not Path('workers-sampled').exists():\n"
+        "            assert time.monotonic() < deadline, 'No simultaneous worker sample'\n"
+        "            time.sleep(0.01)\n"
         "    for child in (1, 2):\n"
         "        with subtests.test(child=child):\n"
         f"            assert not {subtest_failure!r} or child != 2\n",
@@ -285,6 +294,21 @@ def test_real_pytest_records_collection_multiplicity_and_reports(
     monkeypatch.setattr(test_suite, "ROOT", project)
     monkeypatch.setenv("PYTEST_XDIST_WORKER", "gwInherited")
     monkeypatch.setenv("PYTHONPATH", str(Path(__file__).resolve().parents[1]))
+    original_sample = test_suite.mem.TreeSampler.sample_once
+
+    def sample_and_release_workers(sampler):
+        original_sample(sampler)
+        ready = {int(path.name) for path in (project / "worker-ready").glob("*")}
+        if not workers or len(ready) != workers or not sampler.rows:
+            return
+        sampled_at = sampler.rows[-1][0]
+        if all(sampler.procs.get(pid, {}).get("last_t") == sampled_at for pid in ready):
+            # This miniature workload must stay alive until the independent
+            # sampler observes both workers together. Identity evidence alone
+            # cannot establish the peak concurrent count used by the RSS gate.
+            (project / "workers-sampled").touch()
+
+    monkeypatch.setattr(test_suite.mem.TreeSampler, "sample_once", sample_and_release_workers)
     out = test_suite.create_run_dir(tmp_path / "reports")
     summary = test_suite.execute(
         out, Namespace(timeout_s=30, quiet=True, allow_concurrent=True), []
