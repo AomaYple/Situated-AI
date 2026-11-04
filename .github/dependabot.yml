@@ -8,6 +8,11 @@ updates:
     labels:
       - dependencies
       - python
+    groups:
+      pytest-ecosystem:
+        patterns:
+          - "pytest*"
+          - "coverage"
   - package-ecosystem: github-actions
     directory: /
     schedule:
