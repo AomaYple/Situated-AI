@@ -555,3 +555,212 @@ def test_rehashed_broken_gold_minting_inputs_and_trade_service_cannot_authorize_
     )
     with pytest.raises(ValueError):
         queries.compile_query(query, texts)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("strong", [False, True])
+def test_trade_pressure_is_explicit_finite_query_and_keeps_positive_business(strong):
+    query = queries.TradeBusinessPressure(strong)
+    params = {"company_query": "trade_business_pressure", "tier": "strong" if strong else "base"}
+    assert queries.from_reader("any_scope_building", params) == query
+    assert queries.reader_spec(query)["parameters"] == params
+    assert (
+        queries.render(query)
+        == "any_scope_building = { is_building_type = building_trade_center level >= 1 weekly_profit < 0"
+        + (" cash_reserves_ratio < 0.25" if strong else "")
+        + " }"
+    )
+    positive = queries.render(queries.ExistingBusiness("building_trade_center", strong))
+    assert "weekly_profit > 0" in positive
+    assert "occupancy >=" in positive
+    for changes in ({"tier": "high"}, {"country": "foreign"}, {"building": "building_gold_mine"}):
+        with pytest.raises(ValueError):
+            queries.from_reader("any_scope_building", {**params, **changes})
+
+
+def _trade(profit=-1, cash=0.1, level=1):
+    return {
+        "is_building_type": {(("argument", "building_trade_center"),): True},
+        "level": level,
+        "weekly_profit": profit,
+        "cash_reserves_ratio": cash,
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("members", "base", "strong"),
+    [
+        (None, None, None),
+        ([], False, False),
+        ([{}], None, None),
+        ([_trade()], True, True),
+        ([_trade(0)], False, False),
+        ([_trade(1)], False, False),
+        ([_trade(cash=0.25)], True, False),
+        ([_trade(cash=None)], True, None),
+        ([_trade(profit=None)], None, None),
+        ([_trade(level=0)], False, False),
+        ([_trade(cash=0.8), _trade(profit=1)], True, False),
+        ([_trade(cash=0.8), {}], True, None),
+    ],
+)
+def test_trade_pressure_same_member_unknown_and_finite_boundaries(members, base, strong):
+    root = {"any_scope_building": members}
+    assert _evaluate(queries.TradeBusinessPressure(), root) is base
+    assert _evaluate(queries.TradeBusinessPressure(True), root) is strong
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("strong", [False, True])
+def test_trade_pressure_locks_native_numeric_reader_sources_and_actual_chain(native_texts, strong):
+    query = queries.TradeBusinessPressure(strong)
+    result = queries.compile_query(query, native_texts)
+    assert result.local_collections == ("owned_buildings",)
+    assert result.world_scans == 0
+    assert "building:weekly_profit[currency_per_week]<0" in result.scope_chain
+    assert result.unknown_policy == queries.UNKNOWN_POLICY
+    broken = dict(native_texts)
+    source = "common/journal_entries/00_opium.txt"
+    broken[source] += "# drift"
+    with pytest.raises(ValueError, match="漂移"):
+        queries.compile_query(query, broken)
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("company", ["company_panama_company", "company_suez_company"])
+def test_full_trade_company_program_combines_port_and_loss_with_actual_objects(company):
+    from dataclasses import replace
+
+    from pdx import company_sectors, decision_adapters, decision_rules
+    from pdx.situated import programs
+
+    data = company_sectors.load_baseline()
+    profile = data["profiles"][company]
+    original = dict(decision_adapters.load().policies)[profile["source"]]
+    rules = tuple(r for r in original.rules if r.field == (company, "ai_weight"))
+    keys = {key for rule in rules for key in rule.input_keys()}
+    policy = programs.enable(
+        replace(
+            original,
+            rules=rules,
+            readers=tuple(r for r in original.readers if r.key in keys),
+            enabled_domains=frozenset(r.domain for r in rules),
+            semantic_ir=(),
+            consumer_programs=(),
+        ),
+        source=profile["source"],
+    )
+    text = (config.GAME / profile["source"]).read_text(encoding="utf-8-sig")
+    patched = decision_rules.patch(
+        text,
+        policy,
+        baseline=text,
+        default_strategy=False,
+        reader_words=frozenset(
+            {r.engine for r in policy.readers}
+            | {x for r in policy.readers for x in r.path}
+            | {"mg:grain"}
+        ),
+    )
+    overlay = pdx_eval.marked_block(patched, policy.consumer_programs[0].action_id)
+    assert (
+        len([r for r in rules if r.contribution_group == "company_trade_operating_pressure"]) == 2
+    )
+    base = {reader.key: False if reader.kind == "boolean" else 0 for reader in policy.readers}
+    port = {
+        "is_building_type": {
+            (("argument", "building_trade_center"),): False,
+            (("argument", "building_port"),): True,
+        },
+        "level": 1,
+        "has_active_production_method": {
+            (("argument", "pm_basic_port"),): True,
+            (("argument", "pm_industrial_port"),): False,
+            (("argument", "pm_modern_port"),): False,
+        },
+    }
+    for members, loss, low_cash, expected in (
+        ([port], False, False, 1.12),
+        ([port, _trade(cash=0.8)], True, False, 1.07),
+        ([port, _trade()], True, True, 1.02),
+        ([port, _trade(cash=0.8), _trade(profit=1)], True, False, 1.07),
+    ):
+        values = {
+            **base,
+            "company_port_basic": True,
+            "country_goods_merchant_marine_balance": -1,
+            "company_trade_loss": loss,
+            "company_trade_loss_low_cash": low_cash,
+        }
+        assert decision_rules.evaluate_ir(policy, values, is_ai=True)[f"{company}.ai_weight"][
+            1
+        ] == pytest.approx(expected)
+        root = {"is_ai": True, "in_default": False, "any_scope_building": members, "market": {}}
+        # Literal independent market values keep every unrelated input neutral.
+        for good in ("merchant_marine", "clippers", "steamers", "coal", "oil"):
+            root["market"][f"mg:{good}"] = {
+                "market_goods_delta": -1 if good == "merchant_marine" else 0,
+                "market_goods_pricier": 0,
+            }
+        actual = pdx_eval.select(overlay, {"ROOT": root})
+        assert actual.delta == pytest.approx(expected)
+        root["is_ai"] = False
+        assert pdx_eval.select(overlay, {"ROOT": root}).operation is None
+    assert (
+        decision_rules.patch(
+            text, policy, baseline=text, default_strategy=False, enabled_domains=frozenset()
+        )
+        == text
+    )
+    # A healthy operation A may coexist with a loss-making operation B.
+    healthy = {**_trade(profit=1, cash=0.8), "occupancy": 0.95}
+    values = {
+        **base,
+        "company_trade_need": True,
+        "company_trade_pressure": True,
+        "company_trade_loss": True,
+        "company_trade_loss_low_cash": True,
+    }
+    root = {
+        "is_ai": True,
+        "in_default": False,
+        "any_scope_building": [healthy, _trade()],
+        "market": {},
+    }
+    expected = 1.1  # strongest business opportunity .20 minus operating risk .10
+    assert decision_rules.evaluate_ir(policy, values, is_ai=True)[f"{company}.ai_weight"][
+        1
+    ] == pytest.approx(expected)
+    assert pdx_eval.select(overlay, {"ROOT": root}).delta == pytest.approx(expected)
+    # Actual native nonpositive scores remain nonpositive through positive scale.
+    from pdx.model import Assignment, Block, Scalar
+
+    weight = parse_text(patched).root.first(company).value.first("ai_weight")
+    for native in (0, -3, 3):
+        import copy
+
+        numeric = copy.deepcopy(weight.value)
+        numeric.first("value").value = Scalar(str(native))
+        assert pdx_eval._numeric_value(
+            Assignment("multiply", "=", numeric), {"ROOT": root}
+        ) == pytest.approx(native * expected)
+    # Removing only our marker preserves native history/slots/refusal/tails.
+    restored = re.sub(
+        r"^[ \t]*# SITAI BEGIN information:[^\n]+\n.*?^[ \t]*# SITAI END information:[^\n]+\n?",
+        "",
+        patched,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+
+    def tree(node):
+        from pdx.model import Assignment, Scalar
+
+        if isinstance(node, Scalar):
+            return node.text, node.quoted
+        if isinstance(node, Assignment):
+            return node.key, node.op, node.prefix, tree(node.value)
+        assert isinstance(node, Block)
+        return tuple(tree(x) for x in node.items)
+
+    assert tree(parse_text(restored).root) == tree(parse_text(text).root)

@@ -519,6 +519,20 @@ def _rules(profile, parameters):
                 [_predicate(reader, "=", True)],
                 description,
             )
+    if company in {"company_panama_company", "company_suez_company"}:
+        if not {"building_trade_center", "building_port"} <= sectors:
+            raise ValueError("贸易风险作者需要精确贸易中心及港口主业身份")
+        for suffix, key, value in (
+            ("loss", "company_trade_loss", 0.95),
+            ("loss_low_cash", "company_trade_loss_low_cash", 0.9),
+        ):
+            add(
+                f"trade_{suffix}",
+                "company_trade_operating_pressure",
+                value,
+                [_predicate(key, "=", True)],
+                "本国同一已有贸易中心周利润为负形成有限筹建机会成本；同栋现金比率低于.25仅升档同因压力。局部经营风险代理不证明全国贸易亏损或候选公司利润，不能抹去港口独立收益",
+            )
     if "building_port" in sectors:
         need = _predicate(
             "country_goods_merchant_marine_balance", "<", parameters["shortage_balance"]
@@ -614,6 +628,8 @@ def _readers(
         "company_port_modern": company_observations.PortMethod("pm_modern_port"),
         "company_gold_need": company_observations.ExistingBusiness("building_gold_mine"),
         "company_gold_pressure": company_observations.ExistingBusiness("building_gold_mine", True),
+        "company_trade_loss": company_observations.TradeBusinessPressure(),
+        "company_trade_loss_low_cash": company_observations.TradeBusinessPressure(True),
         "company_trade_need": company_observations.ExistingBusiness("building_trade_center"),
         "company_trade_pressure": company_observations.ExistingBusiness(
             "building_trade_center", True
