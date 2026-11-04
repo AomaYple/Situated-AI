@@ -1,6 +1,6 @@
 # Situated AI
 
-当前实施状态见[工作清单](docs/design/当前工作清单.md)和[架构阶段收据](docs/design/exec/架构阶段收据.json)；版本、标准包、发布与部署身份统一见[版本交付索引](docs/design/exec/版本交付-结果.md)。
+当前实施状态见[工作清单](docs/design/当前工作清单.md)和[拓展结果](docs/design/exec/广度深度拓展-结果.md)；版本、标准包、发布与部署身份统一见[版本交付索引](docs/design/exec/版本交付-结果.md)。
 
 当前架构的战略设计见[架构主计划](docs/design/架构主计划.md)；方向拆解见[架构子计划](docs/design/架构子计划.md)。
 旧计划只作迁移参考。当前源码事实、尚未完成的功能与下一动作见[当前工作清单](docs/design/当前工作清单.md)。
