@@ -6349,6 +6349,17 @@ disposition = "migrate"
 consumer = "building_textile_mill.ai_value"
 
 [[bindings]]
+binding_id = "binding_common_buildings_01_industry_txt_textile_local_labor_tightness_cost"
+source = "common/buildings/01_industry.txt"
+definition = "textile_local_labor_tightness_cost"
+field = "building_textile_mill.ai_value"
+actor = "owner"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "building_textile_mill.ai_value"
+
+[[bindings]]
 binding_id = "binding_common_buildings_02_agro_txt_active_building_livestock_ranch_pm_butchering_tools_input_tools"
 source = "common/buildings/02_agro.txt"
 definition = "active_building_livestock_ranch_pm_butchering_tools_input_tools"

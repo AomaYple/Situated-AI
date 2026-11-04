@@ -14,7 +14,7 @@ unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.industry]
-production_instances = 158
+production_instances = 159
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"

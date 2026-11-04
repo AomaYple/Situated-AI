@@ -173,6 +173,25 @@ def _conditional_outputs(
     return result
 
 
+def employment_lower_bound(sector: Mapping[str, Any]) -> float:
+    """Worst independent PMG combination of laborer slots, never actual hiring.
+
+    Include automation, luxury and ownership groups, even when they are not
+    base-output groups. Negative employment deltas are genuine offsets.
+    """
+    return sum(
+        min(
+            sum(
+                m["value"]
+                for m in method["modifiers"]
+                if m["key"] == "building_employment_laborers_add"
+            )
+            for method in group["methods"]
+        )
+        for group in sector["groups"]
+    )
+
+
 def derive(
     adapters: Mapping[str, Any],
     baseline: Mapping[str, Any] | None = None,
@@ -246,6 +265,12 @@ def derive(
         building = field.split(".")[0]
         identity = {"building": building, "source": source, "field": field}
         sector = buildings.get(building)
+        if (
+            building == "building_textile_mill"
+            and sector is not None
+            and employment_lower_bound(sector) <= 0
+        ):
+            raise ValueError("纺织完整PMG组合缺少正劳动就业下界")
         if sector is None:
             uncovered.append(
                 {**identity, "reason": "missing_verified_building_recipe", "goods": []}

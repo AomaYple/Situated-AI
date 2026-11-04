@@ -208,6 +208,7 @@ _INPUTS = {
     "owner": ("state", "boolean"),
     "is_isolated_from_market": ("state", "boolean"),
     "primary_cultures_percent_state": ("state", "number"),
+    "pop_type_percent_state": ("state", "number"),
     "ig_clout": ("interest_group", "number"),
     "ig_approval": ("interest_group", "number"),
     "is_in_government": ("interest_group", "boolean"),
@@ -244,6 +245,7 @@ _UNITS = {
     "relations:root": "relations_minus100_100",
     "country_fervor_primary_culture": "fervor_points",
     "primary_cultures_percent_state": "ratio",
+    "pop_type_percent_state": "ratio",
     "ig_clout": "ratio",
     "ig_approval": "approval_points",
     "infrastructure_delta": "infrastructure_points",
@@ -267,6 +269,17 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.engine == "pop_type_percent_state" and (
+        root != "state"
+        or reader.scope != "root"
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters != (("target", "pop_type:peasants"),)
+        or reader.value_field != "value"
+        or reader.minimum != 0
+        or reader.maximum != 1
+    ):
+        raise ValueError(f"农民比例必须保持候选州ROOT精确peasants参数合同：{reader.key}")
     if reader.engine in {"tax_capacity", "tax_capacity_usage", "is_incorporated"} and (
         root != "state"
         or reader.scope != "root"
