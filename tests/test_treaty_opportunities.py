@@ -39,7 +39,8 @@ def _source(baseline, identity):
 
 
 def _policy(derived, candidate):
-    field = f"{candidate}.ai.proposal_weight"
+    leaf = "evaluation_chance" if candidate in treaty._EVALUATION else "proposal_weight"
+    field = f"{candidate}.ai.{leaf}"
     rules = [rule for rule in derived["rules"] if rule["field"] == field]
     assert rules
     source = rules[0]["source"]
@@ -74,8 +75,9 @@ def _patch(baseline, candidate, policy, *, enabled=True):
 
 
 def _overlay(text, candidate):
-    start = text.index(f"# SITAI BEGIN information:{candidate}.ai.proposal_weight")
-    end = text.index(f"# SITAI END information:{candidate}.ai.proposal_weight", start)
+    leaf = "evaluation_chance" if candidate in treaty._EVALUATION else "proposal_weight"
+    start = text.index(f"# SITAI BEGIN information:{candidate}.ai.{leaf}")
+    end = text.index(f"# SITAI END information:{candidate}.ai.{leaf}", start)
     return "\n".join(text[start:end].splitlines()[1:])
 
 
@@ -99,7 +101,9 @@ def _joint(raw, baseline, changes, expected, *, candidate="alliance", is_ai=True
     values = {reader.key: changes.get(reader.key) for reader in policy.readers}
     domains = frozenset({"diplomacy"}) if enabled else frozenset()
     result = decision_rules.evaluate(policy, values, is_ai=is_ai, enabled_domains=domains)
-    selected = result.get(f"{candidate}.ai.proposal_weight")
+    selected = result.get(
+        f"{candidate}.ai.{'evaluation_chance' if candidate in treaty._EVALUATION else 'proposal_weight'}"
+    )
     assert (selected[1] if selected else 1.0) == pytest.approx(expected)
     text = _patch(baseline, candidate, policy, enabled=enabled)
     if not enabled:
@@ -284,8 +288,8 @@ def test_zero_cost_ship_transfer_and_missing_fields_are_not_initialized(raw, bas
     assert baseline["candidates"]["ship_transfer"]["cost"] == "0"
     assert baseline["candidates"]["ship_transfer"]["weight_shape"] == "block"
     assert sum(row["weight_shape"] == "block" for row in baseline["candidates"].values()) == 8
-    assert len(derived["covered"]) == 7
-    assert len(derived["rules"]) == 21
+    assert len(derived["covered"]) == 10
+    assert len(derived["rules"]) == 27
     assert {row["reason"] for row in derived["uncovered"]} == {
         "no_role_safe_new_contribution",
         "missing_native_proposal_weight",
@@ -521,3 +525,91 @@ def test_live_installed_sources_match_frozen_originals_when_available(baseline):
     if not (config.GAME / DOC).is_file():
         pytest.skip("锁定原版安装不可用；离线证据已单独覆盖")
     assert treaty.verify_game(config.GAME) == baseline
+
+
+@pytest.mark.parametrize(
+    ("candidate", "cost"),
+    [("trade_privilege", 50), ("foreign_investment_rights", 25), ("transit_rights", 50)],
+)
+@pytest.mark.parametrize(
+    ("balance_kind", "expected"),
+    [("healthy", 1.0), ("tight", 0.9), ("negative", 0.8), ("unknown", 1.0)],
+)
+def test_evaluation_probability_has_exact_root_capacity_cost(
+    raw, baseline, candidate, cost, balance_kind, expected
+):
+    balance = {"healthy": cost, "tight": cost - 0.001, "negative": -0.001, "unknown": None}[
+        balance_kind
+    ]
+    _joint(raw, baseline, {"treaty_influence": balance}, expected, candidate=candidate)
+    _joint(raw, baseline, {"treaty_influence": balance}, 1.0, candidate=candidate, is_ai=False)
+    _joint(raw, baseline, {"treaty_influence": balance}, 1.0, candidate=candidate, enabled=False)
+    selected = [
+        r
+        for r in treaty.derive(raw, baseline)["rules"]
+        if r["id"].startswith(f"treaty_{candidate}_")
+    ]
+    assert len(selected) == 2
+    assert {r["field"] for r in selected} == {f"{candidate}.ai.evaluation_chance"}
+    assert {r["contribution_group"] for r in selected} == {"treaty_influence_pressure"}
+
+
+@pytest.mark.parametrize(
+    ("candidate", "native", "expected"),
+    [
+        ("trade_privilege", 0.1, 0.08),
+        ("foreign_investment_rights", 0.3, 0.24),
+        ("transit_rights", 0, 0),
+        ("transit_rights", 1, 0.8),
+    ],
+)
+def test_evaluation_preserves_real_native_rank_add_zero_and_input_tail(
+    raw, baseline, candidate, native, expected
+):
+    policy = _policy(treaty.derive(raw, baseline), candidate)
+    text = _patch(baseline, candidate, policy)
+    restored = re.sub(
+        r"^[ \t]*# SITAI BEGIN information:[^\n]+\n.*?^[ \t]*# SITAI END information:[^\n]+\n?",
+        "",
+        text,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    assert treaty._ast(parse_text(restored).root) == treaty._ast(
+        parse_text(_source(baseline, candidate)).root
+    )
+    definition = parse_text(text).root.first(candidate)
+    weight = definition.value.first("ai").value.first("evaluation_chance")
+    cloned = copy.deepcopy(weight.value)
+    facts = _facts({"treaty_influence": -1})
+    # Observe the native rank/predicate independently, retaining their ordered
+    # add/multiply and native zero before executing the full generated block.
+    if candidate == "foreign_investment_rights":
+        rank = cloned.items[1].value.first("value")
+        assert rank.value.unquoted == "country_rank"
+        rank.value = Scalar("4")
+    if candidate == "transit_rights":
+        branch = cloned.items[1].value
+        limit = branch.first("limit")
+        assert limit.value.first("capital.world_market_access").op == "<="
+        limit.value = parse_text("always = yes" if native else "always = no").root
+    assert pdx_eval._numeric_value(Assignment("multiply", "=", cloned), facts) == pytest.approx(
+        expected
+    )
+
+
+def test_evaluation_contract_contexts_and_documentation_are_independent(raw, baseline):
+    from pdx.situated import compiler
+
+    contexts = compiler._frozen_treaty_contexts()
+    for candidate in treaty._EVALUATION:
+        row = baseline["candidates"][candidate]
+        assert row["evaluation_scope_evidence"] != row["scope_evidence"]
+        context = contexts[(row["source"], f"{candidate}.ai.evaluation_chance")]
+        assert context.actor_scope.kind == "country"
+        assert context.targets == context.auxiliary_scopes == ()
+    inputs = {source: bytes.fromhex(row["bytes"]) for source, row in baseline["originals"].items()}
+    inputs[DOC] = inputs[DOC].replace(
+        b"Only has root scope for the country we're looking at.", b"Unknown root scope."
+    )
+    with pytest.raises(ValueError):
+        treaty._inventory(inputs)

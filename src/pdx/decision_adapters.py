@@ -348,7 +348,7 @@ def load(source: Path = SOURCE, *, strategy: decision_intents.Strategy | None = 
                 (name, rule["field"]) not in treaty_fields
                 or rule["operation"] != "multiply"
                 or len(rule["field"].split(".")) != 3
-                or not rule["field"].endswith(".ai.proposal_weight")
+                or not rule["field"].endswith((".ai.proposal_weight", ".ai.evaluation_chance"))
                 for rule in rules
             ):
                 raise ValueError("条约适配只许可已核实的精确提议倍率块")

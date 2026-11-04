@@ -66,16 +66,16 @@ def production():
 
 def test_real_bindings_close_only_reviewed_frozen_native_declarations(production):
     inventory, instances, inputs, policies, _ = production
-    assert len(instances) == 93
-    assert len(inventory.surfaces) == 22
+    assert len(instances) == 99
+    assert len(inventory.surfaces) == 25
     report = domain_coverage.native_coverage(
         inventory, instances, native_sources=inputs, production_policies=policies
     )
     assert report["binding_issue_count"] == 0
-    assert report["counts"]["actual_covered"] == 22
-    assert sum(len(row["covered_actions"]) for row in report["rows"]) == 93
-    assert report["denominator"] == 22
-    assert report["inventory_status_counts"] == {"pending": 22}
+    assert report["counts"]["actual_covered"] == 25
+    assert sum(len(row["covered_actions"]) for row in report["rows"]) == 99
+    assert report["denominator"] == 25
+    assert report["inventory_status_counts"] == {"pending": 25}
 
 
 @pytest.mark.parametrize("family", ["medical", "treaty"])
@@ -214,7 +214,9 @@ def test_source_and_policy_proof_are_required_even_with_correct_object_labels(pr
     report = domain_coverage.native_coverage(
         inventory, instances, native_sources=inputs, production_policies=policies
     )
-    expected = 72 if damage == "raw_and_inventory_drift" else 93
+    # Fifteen paid mobilization candidates retain 72 actions; seven proposal
+    # articles and three sampling consumers now add 27 treaty actions.
+    expected = 72 if damage == "raw_and_inventory_drift" else 99
     assert report["binding_issue_count"] == expected
 
 
@@ -317,7 +319,7 @@ def test_common_inventory_uses_exact_pinned_event_corroboration_without_expandin
         inventory, instances, native_sources=inputs, production_policies=policies
     )
     assert report["binding_issue_count"] == 0
-    assert report["denominator"] == 22
+    assert report["denominator"] == 25
     assert event not in report["source_hashes"]
     # There is no exemption for missing common/ witnesses or inventoried events.
     for source in (

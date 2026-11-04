@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 BASELINE = config.REPO / "research/situated/treaty-opportunities.json"
-BASELINE_SHA256 = "00bb19ee08f5f10add0a96118741fa4959d94f1d916cb2f61551fbda04f98ba3"
+BASELINE_SHA256 = "705c51d333ddde9f0f84791e885ad5ac67a7d0e21e32f993cccf231bbcc546cc"
 PARAMETERS = config.REPO / "mod/decisions/treaty_opportunities.toml"
 _DOC = "common/treaty_articles/treaty_articles.md"
 _INFLUENCE = "common/diplomatic_actions/01_expel_diplomats.txt"
@@ -42,10 +42,20 @@ _REVIEWED = _MILITARY | {
     "strait_access",
     "no_strait_closure",
 }
+_EVALUATION = frozenset({"trade_privilege", "foreign_investment_rights", "transit_rights"})
 _CONTRACT = {
     "actor": "country",
     "target": "none",
     "field": "ai.proposal_weight",
+    "evaluation_chance": {
+        "actor": "country",
+        "target": "none",
+        "unit": "probability",
+        "writer_unit": "multiplier",
+        "native_operation": "proposal_score",
+        "zero": "never_use",
+        "timing": "before_proposal_inputs",
+    },
     "native_operation": "proposal_score",
     "writer_operation": "multiply",
     "unit": "multiplier",
@@ -173,6 +183,9 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
     if not all(
         marker in doc
         for marker in (
+            "### evaluation_chance (default: 0)",
+            "Gets evaluated before anything else, if 0 the AI will never use it.",
+            "Only has root scope for the country we're looking at.",
             "proposal_weight = { script value }",
             "Multiplier on AI score for including an article in a treaty they are composing, root is composing AI country",
             "## cost (default: 0)",
@@ -238,6 +251,19 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
                 "direct",
             ):
                 raise ValueError("条约proposal_weight国家ROOT证据不完整")
+            evaluation = (
+                _one(ai.value, "evaluation_chance") if ai and isinstance(ai.value, Block) else None
+            )
+            evaluation_proof = vanilla_inventory._treaty_scope(
+                ("ai", "evaluation_chance"), dict(inputs), definition, source
+            )
+            if (
+                evaluation_proof.actor,
+                evaluation_proof.target,
+                evaluation_proof.operation,
+                evaluation_proof.capability,
+            ) != ("country", "none", "proposal_score", "direct"):
+                raise ValueError("条约evaluation_chance国家ROOT证据不完整")
             candidates[definition.key] = {
                 "source": source,
                 "line": definition.line,
@@ -255,6 +281,14 @@ def _inventory(inputs: Mapping[str, bytes]) -> dict[str, Any]:
                 "weight_line": weight.line if weight else 0,
                 "weight_sha256": _digest(_ast(weight)) if weight else None,
                 "scope_evidence": list(proof.evidence),
+                "evaluation_shape": "missing"
+                if evaluation is None
+                else "block"
+                if isinstance(evaluation.value, Block) and evaluation.value.items
+                else "unsupported",
+                "evaluation_line": evaluation.line if evaluation else 0,
+                "evaluation_sha256": _digest(_ast(evaluation)) if evaluation else None,
+                "evaluation_scope_evidence": list(evaluation_proof.evidence),
             }
     if not candidates:
         raise ValueError("条约候选定义缺失")
@@ -418,7 +452,7 @@ def derive(
             {
                 "id": f"treaty_{identity}_{suffix}",
                 "source": row["source"],
-                "field": f"{identity}.ai.proposal_weight",
+                "field": f"{identity}.ai.{'evaluation_chance' if identity in _EVALUATION else 'proposal_weight'}",
                 "domain": "diplomacy",
                 "operation": "multiply",
                 "value": value,
@@ -426,18 +460,19 @@ def derive(
                 "contribution_group": cause,
                 "conditions": conditions,
                 "why": why,
-                "counterexample": "只调节提议倾向，不保证被接受/签署/即时参战；原生value/if/add/零分与执行成本保留。ROOT可为授予方或接受方，不推断船舶、海峡或运输受益角色；未知仅退出本分量，玩家或关闭保持原版",
+                "counterexample": "只调节原版提议权重或抽样概率的正倍率，不保证被接受/签署/即时参战；原生value/if/add/零分与执行成本保留。ROOT可为授予方或接受方，不推断船舶、海峡或运输受益角色；未知仅退出本分量，玩家或关闭保持原版",
             }
         )
 
     for identity, row in frozen["candidates"].items():
+        shape = row["evaluation_shape"] if identity in _EVALUATION else row["weight_shape"]
         reason = (
             "missing_native_proposal_weight"
-            if row["weight_shape"] == "missing"
+            if shape == "missing"
             else "unsupported_scalar_or_empty_weight"
-            if row["weight_shape"] != "block"
+            if shape != "block"
             else "no_reviewed_article_policy"
-            if identity not in _REVIEWED
+            if identity not in _REVIEWED | _EVALUATION
             else "no_role_safe_new_contribution"
             if float(row["cost"]) == 0
             else None
@@ -451,7 +486,7 @@ def derive(
             {
                 "id": identity,
                 "source": row["source"],
-                "field": f"{identity}.ai.proposal_weight",
+                "field": f"{identity}.ai.{'evaluation_chance' if identity in _EVALUATION else 'proposal_weight'}",
                 "cost": row["cost"],
                 "kind": row["kind"],
             }

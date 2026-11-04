@@ -565,7 +565,28 @@ def consumer(
             "research/situated/treaty-opportunities.json",
             "vanilla_treaty_article_proposal_multiplier",
         )
+    elif (
+        leaf == "evaluation_chance"
+        and source is not None
+        and source.startswith("common/treaty_articles/")
+    ):
+        if (
+            actor_path
+            or native_root not in {None, "country"}
+            or len(field) != 3
+            or field[1] != "ai"
+        ):
+            raise ValueError("条约抽样概率只允许被评估国家ROOT，无条款或对方角色")
+        evidence, role = (
+            "research/situated/treaty-opportunities.json",
+            "vanilla_treaty_article_evaluation_probability",
+        )
     return {
+        **(
+            {"native_unit": "probability", "writer_unit": "multiplier"}
+            if role == "vanilla_treaty_article_evaluation_probability"
+            else {}
+        ),
         "role": role,
         "impact": "B",
         "root": native_root if native_root is not None else "state" if actor_path else "country",

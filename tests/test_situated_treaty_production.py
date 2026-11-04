@@ -74,7 +74,7 @@ def _facts(values, *, is_ai=True):
 def test_seven_actual_fields_have_complete_programs_and_strict_root_contexts(production):
     original, adapters, model, _, files, disabled, derived = production
     expected = {(row["source"], row["field"]) for row in derived["covered"]}
-    assert len(expected) == 7
+    assert len(expected) == 10
     assert {source for source, _ in adapters.policies} == {
         source for source, _ in original.policies
     }
@@ -90,7 +90,7 @@ def test_seven_actual_fields_have_complete_programs_and_strict_root_contexts(pro
     instances = [
         item for item in model.action_instances if item.source.startswith("common/treaty_articles/")
     ]
-    assert len(instances) == 21
+    assert len(instances) == 27
     assert {(item.source, item.consumer_field) for item in instances} == expected
     for item in instances:
         context = item.evaluation_context

@@ -61877,6 +61877,72 @@ disposition = "migrate"
 consumer = "guarantee_independence.ai.proposal_weight"
 
 [[bindings]]
+binding_id = "binding_common_treaty_articles_07_foreign_investment_rights_txt_treaty_foreign_investment_rights_capacity"
+source = "common/treaty_articles/07_foreign_investment_rights.txt"
+definition = "treaty_foreign_investment_rights_capacity"
+field = "foreign_investment_rights.ai.evaluation_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "foreign_investment_rights.ai.evaluation_chance"
+
+[[bindings]]
+binding_id = "binding_common_treaty_articles_07_foreign_investment_rights_txt_treaty_foreign_investment_rights_capacity_deficit"
+source = "common/treaty_articles/07_foreign_investment_rights.txt"
+definition = "treaty_foreign_investment_rights_capacity_deficit"
+field = "foreign_investment_rights.ai.evaluation_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "foreign_investment_rights.ai.evaluation_chance"
+
+[[bindings]]
+binding_id = "binding_common_treaty_articles_24_transit_rights_txt_treaty_transit_rights_capacity"
+source = "common/treaty_articles/24_transit_rights.txt"
+definition = "treaty_transit_rights_capacity"
+field = "transit_rights.ai.evaluation_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "transit_rights.ai.evaluation_chance"
+
+[[bindings]]
+binding_id = "binding_common_treaty_articles_24_transit_rights_txt_treaty_transit_rights_capacity_deficit"
+source = "common/treaty_articles/24_transit_rights.txt"
+definition = "treaty_transit_rights_capacity_deficit"
+field = "transit_rights.ai.evaluation_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "transit_rights.ai.evaluation_chance"
+
+[[bindings]]
+binding_id = "binding_common_treaty_articles_25_trade_privilege_txt_treaty_trade_privilege_capacity"
+source = "common/treaty_articles/25_trade_privilege.txt"
+definition = "treaty_trade_privilege_capacity"
+field = "trade_privilege.ai.evaluation_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "trade_privilege.ai.evaluation_chance"
+
+[[bindings]]
+binding_id = "binding_common_treaty_articles_25_trade_privilege_txt_treaty_trade_privilege_capacity_deficit"
+source = "common/treaty_articles/25_trade_privilege.txt"
+definition = "treaty_trade_privilege_capacity_deficit"
+field = "trade_privilege.ai.evaluation_chance"
+actor = "root"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "trade_privilege.ai.evaluation_chance"
+
+[[bindings]]
 binding_id = "binding_common_treaty_articles_31_toll_exemption_txt_treaty_toll_exemption_capacity"
 source = "common/treaty_articles/31_toll_exemption.txt"
 definition = "treaty_toll_exemption_capacity"

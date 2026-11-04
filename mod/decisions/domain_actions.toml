@@ -68,7 +68,7 @@ unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
 
 [domains.diplomacy]
-production_instances = 129
+production_instances = 135
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"

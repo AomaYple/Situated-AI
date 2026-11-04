@@ -561,7 +561,7 @@ class _NativeBindingProofs:
             and surface.field == "ai_weight"
         ) or (
             surface.source.startswith("common/treaty_articles/")
-            and surface.field == "ai.proposal_weight"
+            and surface.field in {"ai.proposal_weight", "ai.evaluation_chance"}
         )
         contract = (
             self._reviewed_numeric_contracts().get(

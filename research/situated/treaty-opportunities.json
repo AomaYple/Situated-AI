@@ -4,6 +4,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "bfa8582fb253480a054690d19cee288ccb9ee688f7102bac2cbffd90ce2d9738",
+      "evaluation_line": 90,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "c000d96df5ed278e9c76208f699cb6a4abb32ba51c2ad55c304296a14c05de67",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -18,6 +24,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "d34e3c0807b79864fb11b30f4bfea645ea9a2a9b24174c3268647f81381a68cb",
+      "evaluation_line": 161,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "4a22fd810d139af588c0e651b485111c2d9e84648bce305e1753a2054ce46dce",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -32,6 +44,12 @@
       "cost": "150",
       "cost_line": 3,
       "definition_sha256": "3742230b862efb653648dd4de5adc455503e90c57c9f1604b7173618560c4482",
+      "evaluation_line": 286,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "264287e6911df56a691f04511ef48ad918c44bb12ae423c65a853a20a1691798",
+      "evaluation_shape": "block",
       "kind": "mutual",
       "line": 1,
       "scope_evidence": [
@@ -46,6 +64,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "511dc774b4bb5bc63076241390c629a29be62b20778b19d7eeed6bacac4308f9",
+      "evaluation_line": 148,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "775949bc5a6e43c9f630c9403483ee5814bfd913e08f6d980ef1254200c96671",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -60,6 +84,12 @@
       "cost": "100",
       "cost_line": 3,
       "definition_sha256": "29564d830b9fd48df35c71f580a3be0ac5386bb0a85f3b4cb899a272e8de2e9b",
+      "evaluation_line": 169,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "6b5185c636f07c1d89f275265a61cfd526838dd2ee937aa1b6ba7c22c31c4106",
+      "evaluation_shape": "block",
       "kind": "mutual",
       "line": 1,
       "scope_evidence": [
@@ -74,6 +104,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "9ea27ebb13b728dc5b9519a8ba978f6e385685317d09e310f30a60166027be5a",
+      "evaluation_line": 135,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "775949bc5a6e43c9f630c9403483ee5814bfd913e08f6d980ef1254200c96671",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -88,6 +124,12 @@
       "cost": "0",
       "cost_line": 3,
       "definition_sha256": "3ad961b7da6d8a396195f504d95905e47bdcb2563f185538bd80a321f9d81dd1",
+      "evaluation_line": 31,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "b21f7a3b47d10aee836a6f5006d3238ba0d4cd0483a4e336df45d97da1dfed94",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -102,6 +144,12 @@
       "cost": "10",
       "cost_line": 3,
       "definition_sha256": "9918f0bfbbb7988b082a0026fe0fc7b4e3428b232cff6af5d2f27abed23d8332",
+      "evaluation_line": 238,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "6d172240698f3f552275185fe83dd380e6473c4656bfdb44c64315089885f85d",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -116,6 +164,12 @@
       "cost": "50",
       "cost_line": 3,
       "definition_sha256": "bd5d73e823fd4f015b2866d07b332804e546269cac611bb9f8dcaec4aac7fbf7",
+      "evaluation_line": 174,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "3eeaf7992a6ac498fddea94a24fea9c67e1f62714c26fac012979873bfbabde4",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -130,6 +184,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "c8ebf916833b695e5c83ad5486e6361f89bd6e9ae462feeb128871094ba47f53",
+      "evaluation_line": 115,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "2507e013b120d2e081d1af5aabf7aac86c4ec3bd1e614c5d76c07c1030ef6882",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -144,6 +204,12 @@
       "cost": "0",
       "cost_line": 3,
       "definition_sha256": "e1d967b834d8ae9b29db35ce9509ac405b873d0f292e2b93d65025eb9bb755f1",
+      "evaluation_line": 71,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "2507e013b120d2e081d1af5aabf7aac86c4ec3bd1e614c5d76c07c1030ef6882",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -158,6 +224,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "d02b9890f4378411c22a20948fffa54e77fac2f23ab9502e1f4c03a0d04a4a46",
+      "evaluation_line": 272,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "541935ded424106a8561d1348d9985f714a4969bcb4712b4a9c0198b12837caf",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -172,6 +244,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "5e436902a826e550517ed2191ca5e6541224ca3a7f83ae8bcc761b33f15ce6f3",
+      "evaluation_line": 77,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "ecc0b6bfe5f8e81b20c865e9b4cc52392769c39c36a6c104bd2c8182ed6cadd5",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -186,6 +264,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "b0dbbb8f659c82136a8bef4b4a4df3ae9818b89d6e7bfd1a67dd711307274130",
+      "evaluation_line": 141,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "775949bc5a6e43c9f630c9403483ee5814bfd913e08f6d980ef1254200c96671",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -200,6 +284,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "1c0fed551af8912fce2f24ce89816bc9d6fdce1336014de422fea1187c863f9f",
+      "evaluation_line": 134,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "7ad1babd979889d681ce31517e34fa51526746ba2ce3182504760f154bc194d9",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -214,6 +304,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "8b064f78d49f1e39d8767fad44b7c4eb583e9f82bf76a5facfc364c75edc46ba",
+      "evaluation_line": 88,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "392e1809d45f6b3e13b0cbebb000cc8e79b55f0cb14d71214a1b73f502615f1f",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -228,6 +324,12 @@
       "cost": "10",
       "cost_line": 3,
       "definition_sha256": "31539d92285ec4463af678953a1e52eefb0ce5bc698afb136df1dde5b5133a32",
+      "evaluation_line": 141,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "775949bc5a6e43c9f630c9403483ee5814bfd913e08f6d980ef1254200c96671",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -242,6 +344,12 @@
       "cost": "10",
       "cost_line": 3,
       "definition_sha256": "1dbb61a46a466fac368803ba3c43f4d801a3da21b5aafc7f2bc46b583e2c70ad",
+      "evaluation_line": 150,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "775949bc5a6e43c9f630c9403483ee5814bfd913e08f6d980ef1254200c96671",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -256,6 +364,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "bab519cb70c419202adb7f5b4239dbec1ae11626ddcbc089361ee4bfad9ed20e",
+      "evaluation_line": 88,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "309a1088f4ec7afa3afb2b6232f42510b973fbafedf65327c3711765a5368f40",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -270,6 +384,12 @@
       "cost": "10",
       "cost_line": 3,
       "definition_sha256": "8f87e5f18d9dcd5a91a8fc03fbfa4f1f5b5c926975b5d5f1b58d8bf2dd5f6e28",
+      "evaluation_line": 116,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "a8a4fe76273945c2dfedb606d42d7bbb0ed31a6ffe4068f2a5f4345cfc533390",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -284,6 +404,12 @@
       "cost": "10",
       "cost_line": 3,
       "definition_sha256": "08e434bb8e3efd9184b2a89153f267c0cbfa60b9946685f42b5531ab31ebfbe1",
+      "evaluation_line": 89,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "9e75081445f73e5f377afdbdafa1918f731d29a33ce7229b0ebfaf8b9076b199",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -298,6 +424,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "ae24eda28269b6b1d8576f392e527e9fdadfdd52dead71753dee36c1734db43c",
+      "evaluation_line": 100,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "5ae789a41df84c0c706f1c3afd4091ae0c887ac44c7f912f4975f02bf0551637",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -312,6 +444,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "cb89dc8a77a55676f20fb71be8e52c655576d1b76269e24416dabf9b9d3edb46",
+      "evaluation_line": 130,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "4a22fd810d139af588c0e651b485111c2d9e84648bce305e1753a2054ce46dce",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -326,6 +464,12 @@
       "cost": "25",
       "cost_line": 3,
       "definition_sha256": "25fa7198700b434a708b682e224018edce858f76d22acc4c0095b88cee3762c4",
+      "evaluation_line": 73,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "850f33a26e02bf81b72e451ed807ecbf0a5aead806fb0f7bb66e7424024b5444",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -340,6 +484,12 @@
       "cost": "0",
       "cost_line": 3,
       "definition_sha256": "5c1a12f1a28eb2608ed5904d3483c5e2bee68de6a6892a3dc2321d935040a229",
+      "evaluation_line": 134,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "39224b08f314bd0ede85e87255d6abda9b110caac4a64a0f1dc4f40cf499a352",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -354,6 +504,12 @@
       "cost": "0",
       "cost_line": 3,
       "definition_sha256": "278f73f5c56dc968da8f99f79d5da27c6ea9b7df29d31a859539c1995470040a",
+      "evaluation_line": 172,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "39224b08f314bd0ede85e87255d6abda9b110caac4a64a0f1dc4f40cf499a352",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -368,6 +524,12 @@
       "cost": "10",
       "cost_line": 3,
       "definition_sha256": "9a8210a4e98ec3ad23658d0f1360d5f63e7114e0f3c9981b3c161128ea02e792",
+      "evaluation_line": 89,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "392e1809d45f6b3e13b0cbebb000cc8e79b55f0cb14d71214a1b73f502615f1f",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -382,6 +544,12 @@
       "cost": "50",
       "cost_line": 3,
       "definition_sha256": "44b581173ea739f6c3f633cf5927f3e7ec584a1f4594d84e09f64a89e00d8dbb",
+      "evaluation_line": 192,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "f297f81f9379afedf8d10d5a788d306a171ba4f00483eac9e7cb4130f72392c9",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -396,6 +564,12 @@
       "cost": "0",
       "cost_line": 3,
       "definition_sha256": "f519ba362879f6fdec23a6b325adf3c2f3edcf0cf3d4b9900a019925cc42ba29",
+      "evaluation_line": 102,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "5ae789a41df84c0c706f1c3afd4091ae0c887ac44c7f912f4975f02bf0551637",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -410,6 +584,12 @@
       "cost": "10",
       "cost_line": 3,
       "definition_sha256": "621f452c331c9aece4078d35805518765d347bffb85be70e802e8baa233376a2",
+      "evaluation_line": 89,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "309a1088f4ec7afa3afb2b6232f42510b973fbafedf65327c3711765a5368f40",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -424,6 +604,12 @@
       "cost": "50",
       "cost_line": 3,
       "definition_sha256": "1af673d01088f9796f93b51a71085dcdb63b281a02a81714099b650cc9c3626c",
+      "evaluation_line": 120,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "39224b08f314bd0ede85e87255d6abda9b110caac4a64a0f1dc4f40cf499a352",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -438,6 +624,12 @@
       "cost": "0",
       "cost_line": 3,
       "definition_sha256": "cc25ec68ee1250ca851ec769744ffff22c7bce3e92606f7b6f8a7060f3572bfd",
+      "evaluation_line": 143,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "39224b08f314bd0ede85e87255d6abda9b110caac4a64a0f1dc4f40cf499a352",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -452,6 +644,12 @@
       "cost": "50",
       "cost_line": 3,
       "definition_sha256": "467f80f34243c09a2a0aa382df02e5069ec135b90f503916d5b1400690c92dae",
+      "evaluation_line": 91,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "7a3b827f49d413b0ab20e10fdc6b06175d865869de82d66a53fa3f7cad1a746e",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -466,6 +664,12 @@
       "cost": "50",
       "cost_line": 3,
       "definition_sha256": "668a24ca6f8f179f2cb15ca7c320b4c94b9efb9ceed96ac2fbd6a675788cb5c3",
+      "evaluation_line": 268,
+      "evaluation_scope_evidence": [
+        "common/treaty_articles/treaty_articles.md:503"
+      ],
+      "evaluation_sha256": "39224b08f314bd0ede85e87255d6abda9b110caac4a64a0f1dc4f40cf499a352",
+      "evaluation_shape": "block",
       "kind": "directed",
       "line": 1,
       "scope_evidence": [
@@ -479,6 +683,15 @@
   },
   "contract": {
     "actor": "country",
+    "evaluation_chance": {
+      "actor": "country",
+      "native_operation": "proposal_score",
+      "target": "none",
+      "timing": "before_proposal_inputs",
+      "unit": "probability",
+      "writer_unit": "multiplier",
+      "zero": "never_use"
+    },
     "evidence": "native_documentation_and_exact_script_not_runtime",
     "field": "ai.proposal_weight",
     "native_operation": "proposal_score",
