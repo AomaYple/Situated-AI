@@ -22,6 +22,8 @@ __pycache__/
 /tools/prof/out/
 /dist/
 /build/
+/pip-install-*/
+/pip-ephem-wheel-cache-*/
 /evidence/
 /v3-parse-cache-*/
 /tools/.benchmarks/
