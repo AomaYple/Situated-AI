@@ -23,6 +23,17 @@ if TYPE_CHECKING:
 
 PARAMETERS = config.REPO / "mod/decisions/law_opportunities.toml"
 
+# Exact modifier values in the complete hash-locked labour source. Omitted
+# modifier keys have zero contribution; guild qualifications are not reused.
+LABOUR_EFFECTS = {
+    "law_guild_system": (0.0, 0.0),
+    "law_combination_acts": (0.25, -0.25),
+    "law_anti_strike_laws": (0.10, -0.10),
+    "law_right_to_associate": (-0.10, 0.10),
+    "law_corporatized_unions": (0.0, 0.0),
+    "law_factory_councils": (0.0, 0.25),
+}
+
 
 def load() -> dict[str, Any]:
     data = tomllib.loads(PARAMETERS.read_text(encoding="utf-8"))
@@ -161,6 +172,18 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 [_condition(fact, "=", True)],
                 "本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益",
             )
+            if law in LABOUR_EFFECTS:
+                # Withdrawal is explicit so an unknown current identity does
+                # not erase an independently observed agenda. Both directions
+                # use the same strongest tier, so known adoption cancels once.
+                add(
+                    law,
+                    f"adopted_agenda_{tier}",
+                    "law_observed_agenda",
+                    -tuning[f"agenda_{tier}"],
+                    [_condition(fact, "=", True), _condition(current(law), "=", True)],
+                    "候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求",
+                )
         add(
             law,
             "crisis_cost",
@@ -173,6 +196,44 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
             ],
             "已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求",
         )
+
+    for law, (radicalization, union_strength) in LABOUR_EFFECTS.items():
+        for origin, (old_radicalization, old_union_strength) in LABOUR_EFFECTS.items():
+            if origin == law:
+                continue
+            transition = [_condition(current(origin), "=", True)]
+            if radicalization != old_radicalization:
+                add(
+                    law,
+                    f"{origin}_movement_radicalization",
+                    "law_observed_agenda"
+                    if radicalization < old_radicalization
+                    else "law_movement_radicalization_loss",
+                    14 if radicalization < old_radicalization else -6,
+                    [
+                        *transition,
+                        _condition(f"law_context_{law}_movement_base", "=", True),
+                        _condition("radical_share", ">=", 0.25),
+                    ],
+                    "比较现行到候选的原版运动激进化修正；真实候选诉求与激进人口仅表明暴露，改善升级同因档，恶化形成独立转换损失",
+                )
+            if union_strength > old_union_strength:
+                for tier, cost in (("base", -6), ("government", -9)):
+                    conditions = [
+                        *transition,
+                        _condition("union_approval", "<", 0),
+                        _condition("union_clout", ">=", 0.2),
+                    ]
+                    if tier == "government":
+                        conditions.append(_condition("union_government", "=", True))
+                    add(
+                        law,
+                        f"{origin}_union_adjustment_{tier}",
+                        "law_union_transition_adjustment",
+                        cost,
+                        conditions,
+                        "实际提高工会政治强度时，仅已知不满且有显著影响力的工会形成有限调整成本；入阁升同因档，不把工会强大普遍当作损失或反叛预测",
+                    )
 
     # Moving away from consumption taxation loses its explicit population
     # administration discount. No wage/dividend/poll/land tax base is invented.
