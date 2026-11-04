@@ -10430,6 +10430,17 @@ disposition = "migrate"
 consumer = "building_government_administration.ai_value"
 
 [[bindings]]
+binding_id = "binding_common_buildings_07_government_txt_administrative_local_tax_capacity_repair"
+source = "common/buildings/07_government.txt"
+definition = "administrative_local_tax_capacity_repair"
+field = "building_government_administration.ai_value"
+actor = "owner"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "building_government_administration.ai_value"
+
+[[bindings]]
 binding_id = "binding_common_buildings_07_government_txt_fiscal_government_building_default_downgrade"
 source = "common/buildings/07_government.txt"
 definition = "fiscal_government_building_default_downgrade"

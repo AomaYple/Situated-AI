@@ -871,6 +871,21 @@ def build(
         if not selected:
             continue
         for reader in policy.readers:
+            if reader.engine in {"tax_capacity", "tax_capacity_usage", "is_incorporated"}:
+                query = observation_queries.from_reader(
+                    "any_scope_state", {"state_query": "tax_capacity_shortfall"}
+                )
+                if query not in query_evidence:
+                    query_evidence[query] = observation_queries.compile_query(query, inputs)
+                # Native auto-expand uses state.tax_capacity on a building;
+                # this consumer already has that exact state as ROOT. Only
+                # grant the unqualified getter after the full AST proof.
+                for engine in ("tax_capacity", "tax_capacity_usage"):
+                    evidence[engine] = {
+                        **evidence[f"state.{engine}"],
+                        "contract": "same_candidate_state_tax_capacity_comparison",
+                    }
+                words |= {"tax_capacity", "tax_capacity_usage"}
             if reader.engine == "market_goods_consumption" and not consumption_evidence:
                 observation_queries.verify_market_consumption_sources(inputs)
                 consumption_evidence = True

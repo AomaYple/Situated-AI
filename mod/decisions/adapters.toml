@@ -23601,3 +23601,38 @@ contribution_group = "subject_self_administration"
 conditions = [ { fact = "actor_is_subject", op = "=", value = true }, { fact = "bureaucracy", op = "<", value = 0 } ]
 why = "实际属国自身行政缺口形成修复治理能力的独立自强需求；财政未知不抹已证缺口，不等于已建成或已选择策略"
 counterexample = "幅度与阈值为有限设计选择，非引擎真实费用/胜率换算；同原因档位取最强，独立原因联合，未知只撤回依赖分量，不当健康或零。每个具名候选与本国观测精确绑定，不以选中/排队当完成；保留玩家、关闭模块、原版资格/具体成本/执行、secret外层trigger、原版限幅与特殊主体终结零分。策略评分不等于建造、立法、援助、自由或战争必然实现"
+
+
+[readers.state_is_incorporated]
+engine = "is_incorporated"
+scope = "root"
+kind = "boolean"
+unit = "boolean"
+
+[readers.state_tax_capacity]
+engine = "tax_capacity"
+scope = "root"
+kind = "number"
+unit = "tax_capacity_points"
+
+[readers.state_tax_capacity_usage]
+engine = "tax_capacity_usage"
+scope = "root"
+kind = "number"
+unit = "tax_capacity_points"
+
+[[rules]]
+id = "administrative_local_tax_capacity_repair"
+source = "common/buildings/07_government.txt"
+field = "building_government_administration.ai_value"
+domain = "fiscal"
+priority = 20600
+contribution_group = "administrative_local_tax_capacity"
+operation = "multiply"
+value = 1.1
+conditions = [
+  { fact = "state_is_incorporated", op = "=", value = true },
+  { fact = "state_tax_capacity", op = "<", value = { fact = "state_tax_capacity_usage" } },
+]
+why = "已整合候选州的征税容量真实低于同州使用量；独立于全国官僚缺口，不要求现有PM或财政健康"
+counterexample = "未整合、容量相等或任一事实未知仅退出地方税收机会；融资与实际纸电话成本继续独立联合，原版资格、玩家和尾部保留；不保证实际税收收益"

@@ -187,12 +187,21 @@ _COUNTRY_NUMBER = frozenset(
         "num_alliances",
     }
 )
-_STATE_NUMBER = frozenset({"infrastructure_delta", "market_access", "state_unemployment_rate"})
+_STATE_NUMBER = frozenset(
+    {
+        "infrastructure_delta",
+        "market_access",
+        "state_unemployment_rate",
+        "tax_capacity",
+        "tax_capacity_usage",
+    }
+)
 _INPUTS = {
     **dict.fromkeys(_COUNTRY_BOOLEAN, ("country", "boolean")),
     **dict.fromkeys(_COUNTRY_NUMBER, ("country", "number")),
     **dict.fromkeys(_STATE_NUMBER, ("state", "number")),
     "is_treaty_port": ("state", "boolean"),
+    "is_incorporated": ("state", "boolean"),
     "is_production_method_active": ("state", "boolean"),
     "is_homeland_of_country_cultures": ("state", "boolean"),
     "owner": ("state", "boolean"),
@@ -239,6 +248,8 @@ _UNITS = {
     "infrastructure_delta": "infrastructure_points",
     "market_access": "ratio",
     "state_unemployment_rate": "ratio",
+    "tax_capacity": "tax_capacity_points",
+    "tax_capacity_usage": "tax_capacity_points",
     "num_defensive_pacts": "treaty_article_count",
     "wanted_army_size_script_value": "battalions",
     "wanted_marines_size_script_value": "battalions",
@@ -254,6 +265,15 @@ def reader_scope(
 ) -> str:
     """解析本生成器明确支持的有限转换，不猜测任意具名词的类型。"""
     root = native_root if native_root is not None else "state" if actor_path else "country"
+    if reader.engine in {"tax_capacity", "tax_capacity_usage", "is_incorporated"} and (
+        root != "state"
+        or reader.scope != "root"
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+    ):
+        raise ValueError(f"地方征税读取器必须保持候选州ROOT无参数合同：{reader.key}")
     if not isinstance(root, str) or (root, actor_path) not in {
         ("country", ()),
         ("state", ("owner",)),

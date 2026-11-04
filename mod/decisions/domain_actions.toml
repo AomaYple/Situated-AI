@@ -2,7 +2,7 @@
 schema = 1
 
 [domains.fiscal]
-production_instances = 36
+production_instances = 37
 status = "pending"
 unknown_policy = "vanilla"
 evidence_contract = "positive_hard_negative_core_auxiliary_cost_player_boundary_counterfactual"
