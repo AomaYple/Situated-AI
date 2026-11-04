@@ -285,6 +285,27 @@ def test_native_target_readers_are_demand_not_actual_force(engineering_metadata)
     }
 
 
+def test_local_tax_labor_and_damage_observations_keep_their_own_dimensions(engineering_metadata):
+    report = decision_report.build(engineering_metadata)
+    expected = {
+        "tax_capacity": "capacity",
+        "tax_capacity_usage": "pressure",
+        "devastation": "pressure",
+        "is_incorporated": "structure",
+        "pop_type_percent_state": "structure",
+    }
+    actual = {
+        row["engine"]: row["profile_dimension"]
+        for row in report["facts"]
+        if row["engine"] in expected
+    }
+    assert actual == expected
+    administrative = next(row for row in report["taxonomy"] if row["id"] == "administrative")
+    assert {"tax_capacity", "tax_capacity_usage", "is_incorporated"} <= {
+        row["engine"] for row in administrative["fact_details"]
+    }
+
+
 def _school_taxonomy(
     fact: dict[str, Any], *, other: dict[str, Any] | None = None
 ) -> dict[str, Any]:

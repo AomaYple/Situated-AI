@@ -181,10 +181,10 @@ def employment_lower_bound(sector: Mapping[str, Any]) -> float:
     Include automation, luxury and ownership groups, even when they are not
     base-output groups. Negative employment deltas are genuine offsets.
     """
-    return sum(
+    return math.fsum(
         min(
-            sum(
-                m["value"]
+            math.fsum(
+                float(m["value"])
                 for m in method["modifiers"]
                 if m["key"] == "building_employment_laborers_add"
             )

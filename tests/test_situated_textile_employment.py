@@ -45,7 +45,7 @@ def production():
 )
 def test_employment_and_local_labor_cost_match_real_pdx(production, changes, expected):
     policy, generated, _, _ = production
-    values = {r.key: None for r in policy.readers}
+    values: dict[str, bool | float | None] = {r.key: None for r in policy.readers}
     values.update(
         state_unemployment=0.12,
         state_owner_clothes_balance=-1,
@@ -60,14 +60,14 @@ def test_employment_and_local_labor_cost_match_real_pdx(production, changes, exp
     values.update(changes)
     reference = decision_rules.evaluate(policy, values, is_ai=True).get(FIELD)
     overlay = _overlay(generated, FIELD)
-    actual = pdx_eval.select(overlay, _facts(policy, values))
+    actual = pdx_eval.select(overlay, _facts(policy, dict(values)))
     assert (reference[1] if reference else 1) == pytest.approx(expected)
     assert actual.delta == pytest.approx(expected)
     assert decision_rules.evaluate(policy, values, is_ai=False) == {}
     assert decision_rules.evaluate(policy, values, is_ai=True, enabled_domains=frozenset()) == {}
-    assert pdx_eval.select(overlay, _facts(policy, values, is_ai=False)).operation is None
+    assert pdx_eval.select(overlay, _facts(policy, dict(values), is_ai=False)).operation is None
     assert 0 * actual.delta == 0
-    facts = _facts(policy, values)
+    facts = _facts(policy, dict(values))
     facts["ROOT"]["owner"]["state_unemployment_rate"] = 0.9
     facts["other_state"] = {"state_unemployment_rate": 0.9}
     assert pdx_eval.select(overlay, facts).delta == pytest.approx(expected)
@@ -115,7 +115,9 @@ def test_prepared_employment_requires_all_real_inputs_and_local_electricity(
     production, method, missing, expected
 ):
     policy, text, _, _ = production
-    values = {r.key: False if r.kind == "boolean" else 0 for r in policy.readers}
+    values: dict[str, bool | float | None] = {
+        r.key: False if r.kind == "boolean" else 0 for r in policy.readers
+    }
     values.update({r.key: 0.2 for r in policy.readers if r.key.endswith("_price")})
     values.update(
         state_unemployment=0.12,
@@ -127,7 +129,7 @@ def test_prepared_employment_requires_all_real_inputs_and_local_electricity(
     values.update(missing)
     result = decision_rules.evaluate(policy, values, is_ai=True)
     assert result[FIELD][1] == pytest.approx(expected)
-    actual = pdx_eval.select(_overlay(text, FIELD), _facts(policy, values))
+    actual = pdx_eval.select(_overlay(text, FIELD), _facts(policy, dict(values)))
     assert actual.delta == pytest.approx(expected)
     # A cheap country-market electricity observation cannot stand in for the
     # absent/expensive state electricity preparation reader.

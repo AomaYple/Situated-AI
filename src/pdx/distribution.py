@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 MOD_ID = config.MOD_ID
-RELEASE_VERSION = "3.1.0"
+RELEASE_VERSION = "3.2.0"
 MANIFEST_NAME = "DISTRIBUTION-MANIFEST.json"
 RELEASE_VARIANT = "release"
 METADATA_NAME = ".metadata/metadata.json"
@@ -56,17 +56,18 @@ DEFAULT_PACKAGE_PATH = Path("dist") / f"situated-ai-{RELEASE_VERSION}.zip"
 
 
 def generation_contract() -> dict[str, object]:
-    """返回生成、部署、测试和发布共用的候选契约。
+    """返回生成、部署、测试和发布共用的正式交付契约。
 
     目录名是用户可见的交付接口；``MOD_ID`` 才是稳定的引擎/元数据身份。
     当前生成链只输出标准 Mod，长期行为验收由用户完成。
     """
     return {
-        "schema": "sitai-distribution-v1",
+        "schema": "sitai-distribution-v2",
         "mod_id": MOD_ID,
         "install_directory": INSTALL_DIRECTORY_NAME,
         "variant": RELEASE_VARIANT,
-        "candidate_kind": "production_candidate",
+        "publication_channel": "stable",
+        "artifact_kind": "production_release",
         "delivery_kind": "standard_mod",
         "with_explanation_probe": False,
         "behavior_quality": "not_evaluated",
@@ -502,7 +503,7 @@ def production_configuration() -> tuple[decisions.Policy, decisions.Extensions]:
         policy,
         enabled=True,
         aggression=0,
-        package=replace(policy.package, product_version=RELEASE_VERSION, status="candidate"),
+        package=replace(policy.package, product_version=RELEASE_VERSION, status="released"),
     )
     return policy, extensions
 

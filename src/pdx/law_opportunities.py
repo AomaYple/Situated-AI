@@ -240,11 +240,11 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
             "已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求",
         )
 
-    for effects in AUTHORITY_EFFECTS.values():
-        for law, authority in effects.items():
+    for authority_effects in AUTHORITY_EFFECTS.values():
+        for law, authority in authority_effects.items():
             if law not in data["candidates"]:
                 continue
-            for origin, old_authority in effects.items():
+            for origin, old_authority in authority_effects.items():
                 delta = authority - old_authority
                 if delta == 0:
                     continue

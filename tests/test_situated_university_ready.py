@@ -41,7 +41,7 @@ def test_actual_research_pdx_knowledge_ready_tiers(production, paper, method, ex
     # Its independent literacy gain survives every paper/method variant.
     if technology == "analytical_philosophy":
         expected += 0.25
-    values = {r.key: None for r in policy.readers}
+    values: dict[str, bool | float | None] = {r.key: None for r in policy.readers}
     values["literacy"] = 0.3
     observed = {
         "is_ai": True,

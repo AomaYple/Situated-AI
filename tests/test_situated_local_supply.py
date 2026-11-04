@@ -79,7 +79,7 @@ def test_real_local_supply_matches_hand_expected(production, building, changes, 
     source = SOURCES[0 if building == "power_plant" else 1]
     policy = policies[source]
     field = f"building_{building}.ai_value"
-    values = {r.key: None for r in policy.readers}
+    values: dict[str, bool | float | None] = {r.key: None for r in policy.readers}
     values.update({r.key: 0.2 for r in policy.readers if r.key.endswith("_price")})
     values.update({r.key: 0 for r in policy.readers if r.key.endswith("_balance")})
     values.update(
@@ -91,13 +91,13 @@ def test_real_local_supply_matches_hand_expected(production, building, changes, 
     values.update(changes)
     reference = decision_rules.evaluate(policy, values, is_ai=True).get(field)
     overlay = _overlay(files[source], field)
-    observed = pdx_eval.select(overlay, _facts(policy, values))
+    observed = pdx_eval.select(overlay, _facts(policy, dict(values)))
     assert (reference[1] if reference else 1) == pytest.approx(expected)
     assert (observed.delta if observed.operation else 1) == pytest.approx(expected)
     assert decision_rules.evaluate(policy, values, is_ai=False) == {}
     assert decision_rules.evaluate(policy, values, is_ai=True, enabled_domains=frozenset()) == {}
-    assert pdx_eval.select(overlay, _facts(policy, values, is_ai=False)).operation is None
-    facts = _facts(policy, values)
+    assert pdx_eval.select(overlay, _facts(policy, dict(values), is_ai=False)).operation is None
+    facts = _facts(policy, dict(values))
     facts["ROOT"]["owner"] = None
     assert pdx_eval.select(overlay, facts).operation is None
     assert 0 * (observed.delta if observed.operation else 1) == 0
@@ -106,8 +106,12 @@ def test_real_local_supply_matches_hand_expected(production, building, changes, 
 def test_local_sources_preserve_first_plant_and_native_eligibility(production):
     _policies, inputs, files = production
     for source, building in zip(SOURCES, ("building_power_plant", "building_railway"), strict=True):
-        before = parse_text(inputs[source]).root.first(building).value
-        after = parse_text(files[source]).root.first(building).value
+        before_assignment = parse_text(inputs[source]).root.first(building)
+        after_assignment = parse_text(files[source]).root.first(building)
+        assert before_assignment is not None
+        assert after_assignment is not None
+        before = before_assignment.value
+        after = after_assignment.value
         assert isinstance(before, Block)
         assert isinstance(after, Block)
         assert tuple(
@@ -115,8 +119,12 @@ def test_local_sources_preserve_first_plant_and_native_eligibility(production):
         ) == tuple(
             _tree(x) for x in after.items if not isinstance(x, Assignment) or x.key != "ai_value"
         )
-        native = before.first("ai_value").value
-        generated = after.first("ai_value").value
+        native_assignment = before.first("ai_value")
+        generated_assignment = after.first("ai_value")
+        assert native_assignment is not None
+        assert generated_assignment is not None
+        native = native_assignment.value
+        generated = generated_assignment.value
         assert isinstance(native, Block)
         assert isinstance(generated, Block)
         assert tuple(_tree(x) for x in generated.items[: len(native.items)]) == tuple(

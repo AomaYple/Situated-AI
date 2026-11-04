@@ -1355,14 +1355,6 @@ def render_counts(path: Path = DEFAULT_SOURCE) -> str:
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
-def write_counts(path: Path = DEFAULT_SOURCE) -> int:
-    """Refresh generated counts while preserving manually maintained contracts."""
-
-    content = render_counts(path)
-    path.write_text(content, encoding="utf-8", newline="\n")
-    return len(FAMILIES)
-
-
 def check_counts(path: Path = DEFAULT_SOURCE) -> list[str]:
     """Return a clear error when checked-in generated counts are stale."""
 

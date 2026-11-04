@@ -1,4 +1,4 @@
-"""决策模块参考模型、生成合同与正式候选交付测试。"""
+"""决策模块参考模型、生成合同与正式交付测试。"""
 
 from __future__ import annotations
 
@@ -135,7 +135,7 @@ def test_generated_route_fallbacks_do_not_emit_empty_boolean_blocks():
 def test_正式候选生成所有脚本和全语言无回退():
     policy, extensions, files = distribution.package_inputs(include_engineering_metadata=True)
     metadata = json.loads(files[".metadata/metadata.json"])
-    assert policy.package.status == "candidate"
+    assert policy.package.status == "released"
     assert set(metadata["enabled_modules"]) == {
         "fiscal",
         "reform",
