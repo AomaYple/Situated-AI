@@ -33,6 +33,24 @@ LABOUR_EFFECTS = {
     "law_corporatized_unions": (0.0, 0.0),
     "law_factory_councils": (0.0, 0.25),
 }
+AUTHORITY_EFFECTS = {
+    "common/laws/00_citizenship.txt": {
+        "law_subjecthood": 100,  # Current origin only: no native score field.
+        "law_ethnostate": 200,
+        "law_national_supremacy": 150,
+        "law_racial_segregation": 100,
+        "law_cultural_exclusion": 50,
+        "law_multicultural": 0,
+    },
+    "common/laws/00_church_and_state.txt": {
+        "law_state_religion": 200,
+        "law_millet_system": 200,
+        "law_people_of_the_book": 200,
+        "law_freedom_of_conscience": 100,
+        "law_total_separation": 0,
+        "law_state_atheism": 200,
+    },
+}
 
 
 def load() -> dict[str, Any]:
@@ -40,7 +58,7 @@ def load() -> dict[str, Any]:
     if (
         set(data) != {"schema", "tuning", "sources", "candidates"}
         or type(data["schema"]) is not int
-        or data["schema"] != 1
+        or data["schema"] != 2
     ):
         raise ValueError("具体法律机会schema无效")
     expected = {
@@ -65,8 +83,12 @@ def load() -> dict[str, Any]:
         and 0 < tuning["administration_change"] <= 10
     ):
         raise ValueError("具体法律机会参数越界")
-    if len(data["sources"]) != 6 or len(data["candidates"]) != 37:
-        raise ValueError("具体法律机会必须保留六族37候选独立分母")
+    if len(data["sources"]) != 8 or len(data["candidates"]) != 48:
+        raise ValueError("具体法律机会必须保留原六族37候选并扩展公民权5及宗教6候选")
+    for source, effects in AUTHORITY_EFFECTS.items():
+        expected_laws = set(effects) - {"law_subjecthood"}
+        if {law for law, name in data["candidates"].items() if name == source} != expected_laws:
+            raise ValueError("身份及宗教法律必须保留精确原版评分消费者分母")
     if set(data["candidates"].values()) != set(data["sources"]):
         raise ValueError("具体法律候选与锁定原版来源不一致")
     if any(not re.fullmatch(r"law_[a-z_]+", law) for law in data["candidates"]):
@@ -172,7 +194,7 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                 [_condition(fact, "=", True)],
                 "本国真实政治运动明确支持这个具体法律候选，按已知支持档回应国内诉求；不将政治诉求冒充税收或国力净收益",
             )
-            if law in LABOUR_EFFECTS:
+            if law in LABOUR_EFFECTS or data["candidates"][law] in AUTHORITY_EFFECTS:
                 # Withdrawal is explicit so an unknown current identity does
                 # not erase an independently observed agenda. Both directions
                 # use the same strongest tier, so known adoption cancels once.
@@ -184,6 +206,10 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
                     [_condition(fact, "=", True), _condition(current(law), "=", True)],
                     "候选已实际生效时撤回相同档的议程偏好；未知当前法不抹去独立已知诉求",
                 )
+        # The newly expanded sources retain their existing named crisis
+        # writers, including immutable published migration identities.
+        if data["candidates"][law] in AUTHORITY_EFFECTS:
+            continue
         add(
             law,
             "crisis_cost",
@@ -196,6 +222,26 @@ def derive(adapters: Mapping[str, Any]) -> dict[str, Any]:
             ],
             "已知低合法性、叛乱性利益集团与高激进化共同形成额外立法议程风险，独立于本候选的已知需求",
         )
+
+    for effects in AUTHORITY_EFFECTS.values():
+        for law, authority in effects.items():
+            if law not in data["candidates"]:
+                continue
+            for origin, old_authority in effects.items():
+                delta = authority - old_authority
+                if delta == 0:
+                    continue
+                add(
+                    law,
+                    f"{origin}_authority_transition",
+                    "law_authority_transition",
+                    -8 if delta < 0 else 6,
+                    [
+                        _condition(current(origin), "=", True),
+                        _condition("authority", "<", -delta if delta < 0 else 0),
+                    ],
+                    "比较现行到候选的原版权威常数差：余额不足覆盖实际损失时计机会成本，反向恢复只响应已知短缺；不推断人口歧视、移民、热情或税收收益",
+                )
 
     for law, (radicalization, union_strength) in LABOUR_EFFECTS.items():
         for origin, (old_radicalization, old_union_strength) in LABOUR_EFFECTS.items():

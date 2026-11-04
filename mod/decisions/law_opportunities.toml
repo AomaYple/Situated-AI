@@ -1,5 +1,5 @@
-# 六个完整原版法律消费者族；政治诉求不等于已证明税收或福利净收益。
-schema = 1
+# 原六族37候选加公民权5/宗教6；政治诉求不等于人口或税收净收益。
+schema = 2
 
 [tuning]
 agenda_base = 6
@@ -10,6 +10,8 @@ trade_strong = 15
 administration_change = 6
 
 [sources]
+"common/laws/00_citizenship.txt" = "c277d2da3028f34381ba6e52a920db446a52e162d320cadb8fc6b256aaa7460f"
+"common/laws/00_church_and_state.txt" = "ab06ce160ed7d49be9ff4694eda2213d777e98d8ca16d921ee94123963e0b174"
 "common/laws/01_taxation.txt" = "1f4b3d25b80277a43eacf7f7640dbcb7f0a24b35e107f7bb3baa5364c5ffdbae"
 "common/laws/01_trade_policy.txt" = "1746b95df101101845abbcfd5b56306ec9646891302ce09b0895e453f4cac5f3"
 "common/laws/02_labour_associations.txt" = "47ec5d950de0c1fd409203b83aa3a56849a02c6977e69d7e21a4bacc2ca4ce45"
@@ -18,6 +20,17 @@ administration_change = 6
 "common/laws/01_economic_system.txt" = "5622b68492a6f57913ead582011980d2ea5c5f5d41c715261bc228b8b7f9f0e9"
 
 [candidates]
+law_ethnostate = "common/laws/00_citizenship.txt"
+law_national_supremacy = "common/laws/00_citizenship.txt"
+law_racial_segregation = "common/laws/00_citizenship.txt"
+law_cultural_exclusion = "common/laws/00_citizenship.txt"
+law_multicultural = "common/laws/00_citizenship.txt"
+law_state_religion = "common/laws/00_church_and_state.txt"
+law_millet_system = "common/laws/00_church_and_state.txt"
+law_people_of_the_book = "common/laws/00_church_and_state.txt"
+law_freedom_of_conscience = "common/laws/00_church_and_state.txt"
+law_total_separation = "common/laws/00_church_and_state.txt"
+law_state_atheism = "common/laws/00_church_and_state.txt"
 law_agrarianism = "common/laws/01_economic_system.txt"
 law_anti_strike_laws = "common/laws/02_labour_associations.txt"
 law_canton_system = "common/laws/01_trade_policy.txt"

@@ -12,12 +12,18 @@ import tomllib
 from dataclasses import replace
 
 import pytest
-from test_law_opportunities import _policy
 from test_remaining_joint_consumers import _overlay
 from test_situated_joint_witnesses import _facts
 
-from pdx import config, decision_interfaces, decision_rules, law_opportunities, observation_queries
-from pdx.situated import pdx_eval
+from pdx import (
+    config,
+    decision_adapters,
+    decision_interfaces,
+    decision_rules,
+    law_opportunities,
+    observation_queries,
+)
+from pdx.situated import pdx_eval, programs
 
 pytestmark = pytest.mark.integration
 LABOUR = "common/laws/02_labour_associations.txt"
@@ -40,10 +46,11 @@ def focused():
                 observation_queries.from_reader(reader["engine"], reader.get("parameters", {})),
                 inputs,
             )
+    actual_policies = dict(decision_adapters.load().policies)
     policies, files = {}, {}
     for source in law_opportunities.load()["sources"]:
         policy = replace(
-            _policy(derived, source),
+            programs.enable(actual_policies[source], source=source),
             baseline_sha256=hashlib.sha256(inputs[source].encode()).hexdigest(),
         )
         policies[source] = policy
@@ -207,3 +214,127 @@ def test_g1_negative_and_unknown_are_local_and_factory_native_refusal_survives(f
 def test_g1_complete_source_drift_is_hard_failure(focused):
     with pytest.raises(ValueError, match="漂移"):
         law_opportunities.verify_inputs({**focused[2], LABOUR: focused[2][LABOUR] + "\n"})
+
+
+MULTICULTURAL = "law_multicultural"
+
+
+@pytest.mark.parametrize(
+    ("origin", "balance", "expected"),
+    [
+        ("law_ethnostate", 0, -2),
+        ("law_ethnostate", 199, -2),
+        ("law_ethnostate", 200, 6),
+        ("law_cultural_exclusion", 49, -2),
+        ("law_cultural_exclusion", 50, 6),
+        ("law_cultural_exclusion", 100, 6),
+        ("law_national_supremacy", 149, -2),
+        ("law_national_supremacy", 150, 6),
+        ("law_racial_segregation", 99, -2),
+        ("law_racial_segregation", 100, 6),
+        ("law_subjecthood", 99, -2),
+        ("law_subjecthood", 100, 6),
+        ("law_ethnostate", None, 6),
+        ("law_multicultural", -1, 0),
+    ],
+)
+def test_g2_actual_authority_loss_uses_current_difference(focused, origin, balance, expected):
+    witness(
+        focused,
+        MULTICULTURAL,
+        {
+            f"law_context_current_{origin}": True,
+            "authority": balance,
+        },
+        expected,
+    )
+
+
+@pytest.mark.parametrize(
+    "law",
+    [
+        "law_ethnostate",
+        "law_national_supremacy",
+        "law_racial_segregation",
+        "law_cultural_exclusion",
+        "law_multicultural",
+        "law_state_religion",
+        "law_millet_system",
+        "law_people_of_the_book",
+        "law_freedom_of_conscience",
+        "law_total_separation",
+        "law_state_atheism",
+    ],
+)
+def test_g2_all_eleven_real_agendas_adoption_unknown_player_and_no_agenda(focused, law):
+    witness(focused, law, {}, 6)
+    witness(focused, law, {}, 10, support=0.25)
+    witness(focused, law, {}, 0, support=None)
+    witness(focused, law, {}, 0, is_ai=False)
+    witness(focused, law, {f"law_context_current_{law}": True}, 0, support=0.25)
+    witness(focused, law, {f"law_context_current_{law}": None}, 6)
+
+
+@pytest.mark.parametrize(
+    ("law", "origin", "balance", "expected"),
+    [
+        ("law_ethnostate", "law_multicultural", -1, 12),
+        ("law_ethnostate", "law_multicultural", 0, 6),
+        ("law_ethnostate", "law_multicultural", None, 6),
+        ("law_total_separation", "law_state_religion", 199, -2),
+        ("law_total_separation", "law_millet_system", 199, -2),
+        ("law_total_separation", "law_people_of_the_book", 200, 6),
+        ("law_total_separation", "law_state_atheism", 199, -2),
+        ("law_freedom_of_conscience", "law_millet_system", 99, -2),
+        ("law_freedom_of_conscience", "law_millet_system", 100, 6),
+        ("law_state_atheism", "law_state_religion", -1, 6),
+        ("law_state_religion", "law_total_separation", -1, 12),
+    ],
+)
+def test_g2_religion_variants_and_reverse_recovery(focused, law, origin, balance, expected):
+    witness(focused, law, {f"law_context_current_{origin}": True, "authority": balance}, expected)
+
+
+def test_g2_unknown_agenda_preserves_authority_cost_and_parent_variants_do_not_double(focused):
+    witness(
+        focused,
+        MULTICULTURAL,
+        {
+            "law_context_current_law_ethnostate": True,
+            "authority": 0,
+            f"law_context_{MULTICULTURAL}_movement_base": None,
+        },
+        -8,
+        support=None,
+    )
+    witness(
+        focused,
+        "law_total_separation",
+        {
+            "law_context_current_law_state_religion": True,
+            "law_context_current_law_millet_system": True,
+            "authority": 199,
+        },
+        -2,
+    )
+    witness(
+        focused,
+        MULTICULTURAL,
+        {
+            "law_context_current_law_ethnostate": True,
+            "authority": 0,
+            "legitimacy": 24,
+            "insurrection": True,
+            "radical_share": 0.3,
+        },
+        -12,
+    )
+    assert "law_subjecthood" not in law_opportunities.load()["candidates"]
+    for source in ("common/laws/00_citizenship.txt", "common/laws/00_church_and_state.txt"):
+        with pytest.raises(ValueError, match="漂移"):
+            observation_queries.compile_query(
+                observation_queries.LawMovementSupport(
+                    "law_multicultural" if "citizenship" in source else "law_total_separation"
+                ),
+                {**focused[2], source: focused[2][source] + "\n"},
+            )
