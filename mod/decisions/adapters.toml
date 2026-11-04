@@ -10379,7 +10379,9 @@ conditions = [
   { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
   { fact = "state_owner_clothes_balance", op = "<", value = 0 },
   { fact = "state_owner_dye_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_dye_balance", op = ">=", value = 0 },
   { fact = "state_owner_fabric_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_fabric_balance", op = ">=", value = 0 },
   { fact = "state_unemployment", op = ">=", value = 0.1 },
 ]
 why = "实际启用配方、衣物需求和投入准备只升同一就业吸纳原因；独立基础不要求储备，旧就业增量已迁移不双计"
@@ -10400,9 +10402,12 @@ conditions = [
   { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
   { fact = "state_owner_clothes_balance", op = "<", value = 0 },
   { fact = "state_owner_dye_price", op = "<=", value = 0.25 },
-  { fact = "state_owner_electricity_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_dye_balance", op = ">=", value = 0 },
+  { fact = "state_local_electricity_price", op = "<=", value = 0.25 },
   { fact = "state_owner_fabric_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_fabric_balance", op = ">=", value = 0 },
   { fact = "state_owner_tools_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_tools_balance", op = ">=", value = 0 },
   { fact = "state_unemployment", op = ">=", value = 0.1 },
 ]
 why = "实际启用配方、衣物需求和投入准备只升同一就业吸纳原因；独立基础不要求储备，旧就业增量已迁移不双计"
@@ -10423,8 +10428,11 @@ conditions = [
   { fact = "state_owner_clothes_price", op = ">", value = 0.25 },
   { fact = "state_owner_clothes_balance", op = "<", value = 0 },
   { fact = "state_owner_dye_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_dye_balance", op = ">=", value = 0 },
   { fact = "state_owner_fabric_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_fabric_balance", op = ">=", value = 0 },
   { fact = "state_owner_tools_price", op = "<=", value = 0.25 },
+  { fact = "state_owner_tools_balance", op = ">=", value = 0 },
   { fact = "state_unemployment", op = ">=", value = 0.1 },
 ]
 why = "实际启用配方、衣物需求和投入准备只升同一就业吸纳原因；独立基础不要求储备，旧就业增量已迁移不双计"

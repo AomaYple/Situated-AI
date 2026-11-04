@@ -1,7 +1,7 @@
 """Basic construction opportunities from the existing verified company recipes.
 
-This module grants no missing consumer and observes no active PM. Within each
-mandatory output group, only an ordinary good shared by every PM is eligible.
+This module grants no missing consumer. Within each mandatory output group,
+only an ordinary good shared by every PM is eligible for market inference.
 The result is a recipe opportunity, never proof of the current local output,
 profitability, resources, technology or vanilla construction eligibility.
 Observed default and local infrastructure deficits add independent preference
@@ -9,6 +9,8 @@ costs. These static adjustments neither pay nor reserve construction resources.
 When mandatory alternatives have different market outputs, an independently
 registered exact active-method reader can identify a low-tier local opportunity;
 the potential output union alone never licenses such a rule.
+Explicitly registered power/rail consumers additionally use same-state local
+goods prices; exact observed PMs and actual inputs only refine readiness/costs.
 """
 
 from __future__ import annotations

@@ -97,3 +97,59 @@ def test_full_pmg_labor_lower_bound_and_invalidated_recipe():
     raw = tomllib.loads((config.REPO / "mod/decisions/adapters.toml").read_text(encoding="utf-8"))
     with pytest.raises(ValueError, match="正劳动就业下界"):
         building_opportunities.derive(raw, baseline)
+
+
+@pytest.mark.parametrize(
+    ("method", "missing", "expected"),
+    [
+        ("pm_dye_workshops", {}, 1.3),
+        ("pm_dye_workshops", {"state_owner_dye_balance": -1}, 1.26),
+        ("pm_sewing_machines", {}, 1.3),
+        ("pm_sewing_machines", {"state_owner_tools_balance": None}, 1.26),
+        ("pm_electric_sewing_machines", {}, 1.3),
+        ("pm_electric_sewing_machines", {"state_local_electricity_price": None}, 1.26),
+        ("pm_electric_sewing_machines", {"state_local_electricity_price": 0.5}, 1.26),
+    ],
+)
+def test_prepared_employment_requires_all_real_inputs_and_local_electricity(
+    production, method, missing, expected
+):
+    policy, text, _, _ = production
+    values = {r.key: False if r.kind == "boolean" else 0 for r in policy.readers}
+    values.update({r.key: 0.2 for r in policy.readers if r.key.endswith("_price")})
+    values.update(
+        state_unemployment=0.12,
+        state_owner_clothes_balance=-1,
+        state_owner_clothes_price=0.3,
+        state_market_access=1,
+    )
+    values[f"pm_active_building_textile_mill_{method}"] = True
+    values.update(missing)
+    result = decision_rules.evaluate(policy, values, is_ai=True)
+    assert result[FIELD][1] == pytest.approx(expected)
+    actual = pdx_eval.select(_overlay(text, FIELD), _facts(policy, values))
+    assert actual.delta == pytest.approx(expected)
+    # A cheap country-market electricity observation cannot stand in for the
+    # absent/expensive state electricity preparation reader.
+    if "state_local_electricity_price" in missing:
+        assert values["state_owner_electricity_price"] == 0.2
+
+
+def test_textile_and_railway_keep_static_budget_with_one_recovery_variant(production):
+    from pdx import decision_adapters
+
+    policy = production[0]
+    candidates = policy.groups()[("building_textile_mill", "ai_value")]
+    assert len(candidates) == 32
+    assert sum(len(r.conditions) + len(r.required_known_facts) for r in candidates) == 148
+    railway = dict(decision_adapters.load().policies)[
+        "common/buildings/11_private_infrastructure.txt"
+    ]
+    rows = railway.groups()[("building_railway", "ai_value")]
+    assert len(rows) <= decision_rules.STATIC_BUDGET["candidates_per_field"]
+    predicates = sum(len(r.conditions) + len(r.required_known_facts) for r in rows)
+    assert predicates <= decision_rules.STATIC_BUDGET["predicates_per_field"]
+    # Before integration, prove space for E4's one bounded recovery variant.
+    if len(rows) == 31:
+        assert len(rows) + 1 == decision_rules.STATIC_BUDGET["candidates_per_field"]
+        assert predicates + 6 <= decision_rules.STATIC_BUDGET["predicates_per_field"]
