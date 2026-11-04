@@ -696,7 +696,12 @@ def test_full_trade_company_program_combines_port_and_loss_with_actual_objects(c
         assert decision_rules.evaluate_ir(policy, values, is_ai=True)[f"{company}.ai_weight"][
             1
         ] == pytest.approx(expected)
-        root = {"is_ai": True, "in_default": False, "any_scope_building": members, "market": {}}
+        root: dict[str, Any] = {
+            "is_ai": True,
+            "in_default": False,
+            "any_scope_building": members,
+            "market": {},
+        }
         # Literal independent market values keep every unrelated input neutral.
         for good in ("merchant_marine", "clippers", "steamers", "coal", "oil"):
             root["market"][f"mg:{good}"] = {
@@ -736,12 +741,19 @@ def test_full_trade_company_program_combines_port_and_loss_with_actual_objects(c
     # Actual native nonpositive scores remain nonpositive through positive scale.
     from pdx.model import Assignment, Block, Scalar
 
-    weight = parse_text(patched).root.first(company).value.first("ai_weight")
+    definition = parse_text(patched).root.first(company)
+    assert definition is not None
+    assert isinstance(definition.value, Block)
+    weight = definition.value.first("ai_weight")
+    assert weight is not None
+    assert isinstance(weight.value, Block)
     for native in (0, -3, 3):
         import copy
 
         numeric = copy.deepcopy(weight.value)
-        numeric.first("value").value = Scalar(str(native))
+        initial = numeric.first("value")
+        assert initial is not None
+        initial.value = Scalar(str(native))
         assert pdx_eval._numeric_value(
             Assignment("multiply", "=", numeric), {"ROOT": root}
         ) == pytest.approx(native * expected)

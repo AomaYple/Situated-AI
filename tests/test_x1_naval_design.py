@@ -65,16 +65,29 @@ def test_native_rank_and_law_execute_before_positive_financing_multiplier(
     design, rank, law, native
 ):
     _, text, _ = design
-    block = parse_text(text).root.first("ai_strategy_default").value.first(FIELD).value
-    cloned = copy.deepcopy(block)
+    definition = parse_text(text).root.first("ai_strategy_default")
+    assert definition is not None
+    assert isinstance(definition.value, Block)
+    weight = definition.value.first(FIELD)
+    assert weight is not None
+    assert isinstance(weight.value, Block)
+    cloned = copy.deepcopy(weight.value)
     addition = cloned.items[1]
-    assert addition.value.first("value").value.unquoted == "country_rank"
-    addition.value.first("value").value = Scalar(str(rank))
+    assert isinstance(addition, Assignment)
+    assert isinstance(addition.value, Block)
+    rank_value = addition.value.first("value")
+    assert rank_value is not None
+    assert isinstance(rank_value.value, Scalar)
+    assert rank_value.value.unquoted == "country_rank"
+    rank_value.value = Scalar(str(rank))
     for branch, name in zip(cloned.items[2:5], ("merchant", "jeune", "professional"), strict=True):
-        assert branch.value.first("limit").value.first("has_law_or_variant") is not None
-        branch.value.first("limit").value = parse_text(
-            "always = yes" if name == law else "always = no"
-        ).root
+        assert isinstance(branch, Assignment)
+        assert isinstance(branch.value, Block)
+        limit = branch.value.first("limit")
+        assert limit is not None
+        assert isinstance(limit.value, Block)
+        assert limit.value.first("has_law_or_variant") is not None
+        limit.value = parse_text("always = yes" if name == law else "always = no").root
     facts = {"ROOT": {"is_ai": True, "in_default": True, "is_at_war": True}}
     assert pdx_eval._numeric_value(Assignment("multiply", "=", cloned), facts) == pytest.approx(
         native * 0.85

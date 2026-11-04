@@ -194,6 +194,7 @@ _STATE_NUMBER = frozenset(
         "state_unemployment_rate",
         "tax_capacity",
         "tax_capacity_usage",
+        "devastation",
     }
 )
 _INPUTS = {
@@ -246,6 +247,7 @@ _UNITS = {
     "ig_clout": "ratio",
     "ig_approval": "approval_points",
     "infrastructure_delta": "infrastructure_points",
+    "devastation": "ratio",
     "market_access": "ratio",
     "state_unemployment_rate": "ratio",
     "tax_capacity": "tax_capacity_points",
@@ -280,6 +282,20 @@ def reader_scope(
         ("military_formation", ("owner",)),
     }:
         raise ValueError("读取器原生ROOT类型与AI所有者路径不一致")
+    if reader.engine == "devastation" and (
+        root != "state"
+        or actor_path != ("owner",)
+        or reader.scope != "root"
+        or reader.path
+        or reader.argument is not None
+        or reader.parameters
+        or reader.value_field is not None
+        or reader.kind != "number"
+        or reader.unit != "ratio"
+        or reader.minimum != 0
+        or reader.maximum != 1
+    ):
+        raise ValueError(f"受创比例必须保持精确候选州ROOT、ratio和[0,1]合同：{reader.key}")
     if reader.engine == "any_insurrection_ongoing":
         scripted_trigger_snapshot()
         if (
@@ -751,3 +767,70 @@ def coverage(baseline: str, owners: dict[tuple[str, ...], str]) -> list[dict[str
     if {field[0] for field in owners} - {row["field"] for row in result}:
         raise ValueError("覆盖台账含不在锁定默认策略中的写入字段")
     return result
+
+
+STATE_DEVASTATION_SOURCE = "common/ideologies/01_character_ideologies.txt"
+STATE_DEVASTATION_SHA256 = "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51"
+
+
+def verify_state_devastation_sources(texts: dict[str, str]) -> tuple[str, ...]:
+    """Pin the native state ratio AST and victim-limited five-year memory.
+
+    The ideology supplies a state getter witness, not a railway effect.
+    The consumer remains the independently proved state building ai_value.
+    """
+    from .textio import normalized_text  # noqa: PLC0415
+
+    sources = {
+        STATE_DEVASTATION_SOURCE: STATE_DEVASTATION_SHA256,
+        "common/on_actions/00_code_on_actions.txt": "76dd09b04059f40ae22e0efd17aee54c6f76556f84c31e91e2bbe79643213f46",
+    }
+    parsed = {}
+    for source, expected in sources.items():
+        text = texts.get(source)
+        if (
+            not isinstance(text, str)
+            or hashlib.sha256(normalized_text(text).encode()).hexdigest() != expected
+        ):
+            raise ValueError(f"州恢复读取器原版来源漂移或缺失：{source}")
+        result = parse_text(text, path=source)
+        if result.errors:
+            raise ValueError(f"州恢复读取器原版AST无法解析：{source}")
+        parsed[source] = result.root
+
+    def shape(node):
+        if isinstance(node, Scalar):
+            return node.text, node.quoted
+        if isinstance(node, Assignment):
+            return node.key, node.op, node.prefix, shape(node.value)
+        if isinstance(node, Block):
+            return tuple(shape(x) for x in node.items)
+        raise ValueError("州恢复原版AST含未知节点")
+
+    ideology = parsed[STATE_DEVASTATION_SOURCE].first("ideology_pacifist")
+    expected = shape(
+        parse_text("owner = { any_scope_state = { is_incorporated = yes devastation > 0.2 } }").root
+    )
+    references = []
+    if ideology is None or not isinstance(ideology.value, Block):
+        raise ValueError("州受创读取器失去精确原版意识形态消费者")
+    for field in ("interest_group_leader_weight", "non_interest_group_leader_weight"):
+        weight = ideology.value.first(field)
+        matches = []
+        if weight is not None and isinstance(weight.value, Block):
+            for branch in weight.value.all("if"):
+                if isinstance(branch.value, Block):
+                    limit = branch.value.first("limit")
+                    if limit is not None and shape(limit.value) == expected:
+                        matches.append(limit.line)
+        if len(matches) != 1:
+            raise ValueError("州受创读取器缺少唯一owner到同州devastation完整原版AST")
+        references.append(f"{STATE_DEVASTATION_SOURCE}:{matches[0]}")
+    memory = parsed["common/on_actions/00_code_on_actions.txt"].first("on_lost_war")
+    expected_memory = parse_text(
+        "effect = { if = { limit = { exists = scope:victim_of_wargoal } set_variable = { name = recently_lost_war days = 1825 value = yes } } }"
+    ).root
+    if memory is None or shape(memory.value) != shape(expected_memory):
+        raise ValueError("州恢复失去原版受害者限定与1825天战败记忆生命周期")
+    references.append(f"common/on_actions/00_code_on_actions.txt:{memory.line}")
+    return tuple(references)

@@ -21,6 +21,7 @@ from . import (
     company_sectors,
     config,
     decision_intents,
+    decision_interfaces,
     decision_rules,
     equipment_opportunities,
     law_opportunities,
@@ -850,6 +851,13 @@ def build(
         law_opportunities.verify_inputs(inputs)
     if adapters.technology_opportunities_sha256 is not None:
         technology_opportunities.verify_inputs(inputs)
+    state_recovery_evidence: tuple[str, ...] = ()
+    if any(
+        reader.engine == "devastation"
+        for _, policy in adapters.policies
+        for reader in policy.readers
+    ):
+        state_recovery_evidence = decision_interfaces.verify_state_devastation_sources(inputs)
     # 一次词法扫描同时建立校验集合与原件定位，避免逐读取器反复扫描大文件。
     evidence = reader_evidence(inputs)
     words = frozenset(evidence)
@@ -995,6 +1003,7 @@ def build(
             for engine in sorted(required_engines)
             if engine.startswith("sitai_context_")
         },
+        "state_recovery_reader_evidence": list(state_recovery_evidence),
         "reader_evidence_limits": "token_locations_only; typed_signatures_are_static_contracts; engine_validity_pending_f1",
         "production_recipes": production_inputs.recipes(inputs, active_methods),
         "initialized_consumers": [

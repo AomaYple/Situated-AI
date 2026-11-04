@@ -11937,6 +11937,17 @@ disposition = "migrate"
 consumer = "building_railway.ai_value"
 
 [[bindings]]
+binding_id = "binding_common_buildings_11_private_infrastructure_txt_infrastructure_railway_observed_postwar_recovery"
+source = "common/buildings/11_private_infrastructure.txt"
+definition = "infrastructure_railway_observed_postwar_recovery"
+field = "building_railway.ai_value"
+actor = "owner"
+target = "none"
+operation = "multiply"
+disposition = "migrate"
+consumer = "building_railway.ai_value"
+
+[[bindings]]
 binding_id = "binding_common_buildings_11_private_infrastructure_txt_infrastructure_railway_prepared_pm_diesel_trains"
 source = "common/buildings/11_private_infrastructure.txt"
 definition = "infrastructure_railway_prepared_pm_diesel_trains"

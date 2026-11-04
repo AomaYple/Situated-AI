@@ -578,19 +578,37 @@ def test_evaluation_preserves_real_native_rank_add_zero_and_input_tail(
         parse_text(_source(baseline, candidate)).root
     )
     definition = parse_text(text).root.first(candidate)
-    weight = definition.value.first("ai").value.first("evaluation_chance")
+    assert definition is not None
+    assert isinstance(definition.value, Block)
+    ai = definition.value.first("ai")
+    assert ai is not None
+    assert isinstance(ai.value, Block)
+    weight = ai.value.first("evaluation_chance")
+    assert weight is not None
+    assert isinstance(weight.value, Block)
     cloned = copy.deepcopy(weight.value)
     facts = _facts({"treaty_influence": -1})
     # Observe the native rank/predicate independently, retaining their ordered
     # add/multiply and native zero before executing the full generated block.
     if candidate == "foreign_investment_rights":
-        rank = cloned.items[1].value.first("value")
+        addition = cloned.items[1]
+        assert isinstance(addition, Assignment)
+        assert isinstance(addition.value, Block)
+        rank = addition.value.first("value")
+        assert rank is not None
+        assert isinstance(rank.value, Scalar)
         assert rank.value.unquoted == "country_rank"
         rank.value = Scalar("4")
     if candidate == "transit_rights":
-        branch = cloned.items[1].value
-        limit = branch.first("limit")
-        assert limit.value.first("capital.world_market_access").op == "<="
+        branch = cloned.items[1]
+        assert isinstance(branch, Assignment)
+        assert isinstance(branch.value, Block)
+        limit = branch.value.first("limit")
+        assert limit is not None
+        assert isinstance(limit.value, Block)
+        access = limit.value.first("capital.world_market_access")
+        assert access is not None
+        assert access.op == "<="
         limit.value = parse_text("always = yes" if native else "always = no").root
     assert pdx_eval._numeric_value(Assignment("multiply", "=", cloned), facts) == pytest.approx(
         expected
@@ -605,6 +623,7 @@ def test_evaluation_contract_contexts_and_documentation_are_independent(raw, bas
         row = baseline["candidates"][candidate]
         assert row["evaluation_scope_evidence"] != row["scope_evidence"]
         context = contexts[(row["source"], f"{candidate}.ai.evaluation_chance")]
+        assert context.actor_scope is not None
         assert context.actor_scope.kind == "country"
         assert context.targets == context.auxiliary_scopes == ()
     inputs = {source: bytes.fromhex(row["bytes"]) for source, row in baseline["originals"].items()}

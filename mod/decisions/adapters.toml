@@ -2,6 +2,7 @@
 schema = 1
 
 [sources]
+"common/ideologies/01_character_ideologies.txt" = "476003c6dc6b089c6bb1633c950c73755df848ecc8759a08c41c81f89cdc4a51"
 "common/journal_entries/00_acw_entries.txt" = "6132f262affcfc038df2549a0d5cb6ae059bc9e7fb90a8a1fe2c14db5263ff3e"
 "events/law_events/children_rights_events.txt" = "1b8a75290df30ea93fcf1948fd09fffc2175ecd932f7faef585b6952e3d068e2"
 "common/achievements/ip2_pivot_of_empire_achievements.txt" = "42a9c8cec20b6add6332b19a1354640d66fb7cfc45e464b95913315e824a4a04"
@@ -23651,3 +23652,44 @@ value = 0.85
 conditions = [{ fact = "state_owner_default", op = "=", value = true }]
 why = "电厂真实违约融资成本独立于同州电价供给需求"
 counterexample = "正常借款不扣；违约未知只退出本项；保留首座电厂引导、资格、费用、玩家与原版终结零分"
+
+[readers.state_devastation]
+engine = "devastation"
+scope = "root"
+kind = "number"
+unit = "ratio"
+minimum = 0
+maximum = 1
+
+[readers.state_owner_war]
+engine = "is_at_war"
+scope = "root"
+path = ["owner"]
+kind = "boolean"
+unit = "boolean"
+
+[readers.state_owner_war_defeat]
+engine = "has_variable"
+scope = "root"
+path = ["owner"]
+kind = "boolean"
+unit = "boolean"
+argument = "recently_lost_war"
+
+[[rules]]
+id = "infrastructure_railway_observed_postwar_recovery"
+source = "common/buildings/11_private_infrastructure.txt"
+field = "building_railway.ai_value"
+domain = "economy"
+priority = 20516
+contribution_group = "building_output_demand"
+operation = "multiply"
+value = 1.25
+conditions = [
+  { fact = "state_infrastructure", op = "<", value = 0 },
+  { fact = "state_devastation", op = ">", value = 0.2 },
+  { fact = "state_owner_war", op = "=", value = false },
+  { fact = "state_owner_war_defeat", op = "=", value = true },
+]
+why = "同一候选州真实受创且基建不足，所属国家和平且仍有原版限时战败记忆时，升级同一铁路基建需求；铁路是缓解基建缺口的候选，不会消除devastation"
+counterexample = "无缺口不因战败加建；损伤/战争/记忆未知或条件消失仅撤恢复升档，原无PM门的基建基础继续；实际煤/引擎/电/油和违约成本独立联合，原版科技、可建资格、工资、资源、零值与执行保留"

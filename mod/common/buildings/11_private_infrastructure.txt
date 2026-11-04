@@ -284,8 +284,10 @@ building_railway = {
 			}
 			# GROUP program_4e3945f519d8b3e6_building_output_demand_positive
 			add = { value = 0
+				# infrastructure_railway_observed_postwar_recovery [economy]; 同一候选州真实受创且基建不足，所属国家和平且仍有原版限时战败记忆时，升级同一铁路基建需求；铁路是缓解基建缺口的候选，不会消除devastation
+				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0 devastation >= 0 devastation <= 1 devastation > 0.2 exists = owner owner = { is_ai = yes is_at_war = no has_variable = recently_lost_war } } } add = 0.25 }
 				# infrastructure_railway_prepared_pm_diesel_trains_principle_transport_3 [economy]; 本州基础设施缺口且实际启用对应铁路基础PM，其所有真实商品投入均供应充足时升档同一修复需求；不套用煤炭到电力或柴油配方
-				if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0 is_production_method_active = { building_type = building_railway production_method = pm_diesel_trains_principle_transport_3 } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
+				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0 is_production_method_active = { building_type = building_railway production_method = pm_diesel_trains_principle_transport_3 } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
 				# infrastructure_railway_prepared_pm_diesel_trains [economy]; 本州基础设施缺口且实际启用对应铁路基础PM，其所有真实商品投入均供应充足时升档同一修复需求；不套用煤炭到电力或柴油配方
 				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0 is_production_method_active = { building_type = building_railway production_method = pm_diesel_trains } exists = owner owner = { is_ai = yes exists = market market = { exists = mg:engines mg:engines = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } exists = mg:oil mg:oil = { market_goods_delta >= 0 market_goods_pricier <= 0.25 } } } } } add = 0.2 }
 				# infrastructure_railway_prepared_pm_electric_trains_principle_transport_3 [economy]; 本州基础设施缺口且实际启用对应铁路基础PM，其所有真实商品投入均供应充足时升档同一修复需求；不套用煤炭到电力或柴油配方
@@ -303,7 +305,7 @@ building_railway = {
 				else_if = { limit = { exists = ROOT ROOT = { infrastructure_delta < 0 exists = owner owner = { is_ai = yes } } } add = 0.1 }
 			}
 			min = 0.5
-			max = 1.4
+			max = 1.45
 		} }
 		# SITAI END information:building_railway.ai_value
 	}
