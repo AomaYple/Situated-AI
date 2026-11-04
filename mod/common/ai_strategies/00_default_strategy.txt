@@ -6333,8 +6333,8 @@ if = { limit = { ROOT ?= { is_ai = yes } }
 			value = 1
 			# GROUP program_6f6cf9173b91daa4_negative
 			add = { value = 0
-				# naval_design_affordability [military]; 和平违约期降低新舰设计复杂度目标
-				if = { limit = { exists = ROOT ROOT = { is_ai = yes is_at_war = no in_default = yes } } add = -0.15 }
+				# naval_design_affordability [military]; 真实违约独立降低新舰设计复杂度目标；和平、战争或战争未知均保留这项新增设计融资机会成本
+				if = { limit = { exists = ROOT ROOT = { is_ai = yes in_default = yes } } add = -0.15 }
 			}
 			min = 0.85
 			max = 1

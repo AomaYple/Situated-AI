@@ -143,7 +143,7 @@
     "mod/decisions/facts.toml": "9ca45c8493b67423f3ab2d471e4c08d34e5c584f308a242d988f417b7578fa0f",
     "mod/decisions/fiscal.toml": "1b18011428b8b88cf78ed7357aa74035c4dc52108ca4f545a6487d3eb3e21aa1",
     "mod/decisions/goals.toml": "a666d9024939a576baa71fa9c0cb6adf35675b1f7996aed33befb5a860fc32f6",
-    "mod/decisions/information.toml": "7058aa4c107ba524ca89797b688c11f6e2654c2c440138b213bf808b6f22a66c",
+    "mod/decisions/information.toml": "c9086f9da9191a8a64f828ab19a732a75613cc2dfed7cd1a4fae9e030d3111d1",
     "mod/decisions/law_opportunities.toml": "e37699c1a4161262f7ae871e3f5701a345ea625cde67a7aacaa10bc1eee7b15c",
     "mod/decisions/localization.toml": "a056f2f2bde2ba356b00457d1d88d298b0ccfea07a4599b7155a4f1be828d94a",
     "mod/decisions/mobilization_opportunities.toml": "fc235ecb86bdcc1f6072962767a580e0b17eda5d6af2b84febcf2995081f3975",
@@ -179,7 +179,7 @@
   },
   "files": {
     ".metadata/metadata.json": "cf58583eafb180d7327c3ec22bf8898579b416e14ec53c8f5610655d2ab2866a",
-    "common/ai_strategies/00_default_strategy.txt": "1875dd50b9f5917b836316664f7f1df7a359c3e24e293612494aad40bdbd529b",
+    "common/ai_strategies/00_default_strategy.txt": "2c5b7e549cc1d2cd31e23f8bd34e797bbb37408f9f21d7c59375f680ad3c3fd8",
     "common/ai_strategies/01_admin_strategies.txt": "57b38934af939ced98217c266c4cdd35371eecfcc0edb99f4b2c211c620a8044",
     "common/ai_strategies/02_subject_diplomatic_strategies.txt": "8717b3a4c5ef618b701fa75219fee5292d3e66c2c254524d32e37163af1d1fcd",
     "common/buildings/01_industry.txt": "2cf04f3175b81842ec0057bd543a36e20b97a81942941a8186015697a653be87",
