@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import subprocess
 
+import pytest
+
 from tools.ci import deadcode_audit as audit
 
 
@@ -117,3 +119,35 @@ def test_新代码未提交时也纳入审计且排除忽略产物(tmp_path, mon
     expected = ["src/pdx/new.py", "src/pdx/tracked.py"]
     assert audit._tracked_paths() == expected
     assert audit._reference_paths() == expected
+
+
+@pytest.mark.parametrize("failure", ["permission", "utf8", "missing"])
+def test_读取失败阻止门禁并报告具体路径(tmp_path, monkeypatch, capsys, failure) -> None:
+    source = "src/pdx/unreadable.py"
+    path = tmp_path / source
+    path.parent.mkdir(parents=True)
+    if failure == "utf8":
+        path.write_bytes(b"\xff")
+    elif failure == "permission":
+        path.write_text("def still_here():\n    return 1\n", encoding="utf-8")
+        original = type(path).read_text
+
+        def denied(self, *args, **kwargs):
+            if self == path:
+                raise PermissionError("denied source")
+            return original(self, *args, **kwargs)
+
+        monkeypatch.setattr(type(path), "read_text", denied)
+    monkeypatch.setattr(audit, "ROOT", tmp_path)
+    monkeypatch.setattr(audit, "_tracked_paths", lambda: [source])
+    monkeypatch.setattr(audit, "_reference_paths", lambda: [source])
+    assert audit.main(["--check"]) == 2
+    assert source in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("missing", ["source.py", "reference.py"])
+def test_显式文本表缺少源码或引用文件不能冒充空扫描(missing) -> None:
+    supplied = {"source.py": "def used():\n    return 1\n", "reference.py": "used()\n"}
+    supplied.pop(missing)
+    with pytest.raises(ValueError, match=missing.replace(".", r"\.")):
+        audit.scan_paths(["source.py"], surface=supplied, reference_paths=["reference.py"])
