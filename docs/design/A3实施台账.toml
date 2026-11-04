@@ -1,0 +1,956 @@
+# A3-0 初始冻结：方向覆盖，不是产品功能完成凭据。
+# source_paths 仅为已存在的调查入口；consumer_investigation 明示仍需定位的真实消费者。
+# implemented/retained/unsupported 必须通过校验器要求的源哈希、实际规则/测试身份与依据。
+# 后续将每方向独立缺口拆为追加工作项；保留初始 *.1，不删除分母或伪标完成。
+schema = 1
+plan = "A3"
+freeze = "2026-11-05 / Victoria 3 1.14.5 / A3-0 initial-direction-freeze"
+
+[[obligations]]
+id = "B01.1.1"
+parent = "B01.1"
+title = "收支与融资"
+status = "pending"
+question = "待调查：收支、债务/信用、利息、当前偿付与危机分别判断；收入不足和投资需要可同时存在"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml"]
+consumer_investigation = "调查快照（非完成证据）：fiscal.toml、country_state.toml、adapters：default/loans/debt_ratio/net_surplus；建筑、建设/军备目标、条约和外部目标成本；仍须定位精确原版来源/字段/规则身份。待深化：A：对尚只有需求的具体行动加独立融资分量；普通借款与违约分开，不能重复财政全局惩罚。"
+existing_state = "fiscal.toml、country_state.toml、adapters：default/loans/debt_ratio/net_surplus；建筑、建设/军备目标、条约和外部目标成本"
+gap = "A：对尚只有需求的具体行动加独立融资分量；普通借款与违约分开，不能重复财政全局惩罚。"
+evidence = []
+
+[[obligations]]
+id = "B01.2.1"
+parent = "B01.2"
+title = "征税与行政"
+status = "pending"
+question = "待调查：同州可达征税缺口、整合状态、全国官僚及实际行政投入分开"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml"]
+consumer_investigation = "调查快照（非完成证据）：州 tax_capacity/usage → 行政建筑 ai_value；owned_incorporated_tax_shortfall → 行政法；制度投资读数 → 官僚制度成本；仍须定位精确原版来源/字段/规则身份。待深化：已有独立地方征税需要，不重做。B：具体州整合/维护与当地运输成本链，先证实整合可写端。"
+existing_state = "州 tax_capacity/usage → 行政建筑 ai_value；owned_incorporated_tax_shortfall → 行政法；制度投资读数 → 官僚制度成本"
+gap = "已有独立地方征税需要，不重做。B：具体州整合/维护与当地运输成本链，先证实整合可写端。"
+evidence = []
+
+[[obligations]]
+id = "B01.3.1"
+parent = "B01.3"
+title = "税制与财政结构"
+status = "pending"
+question = "待调查：已生效税法、可观察税基、政治资格、消费负担与财政需要"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml"]
+consumer_investigation = "调查快照（非完成证据）：law_opportunities.py 52候选中的税制运动议程与贸易/经济相关差异；税法 ai_enact_weight_modifier；仍须定位精确原版来源/字段/规则身份。待深化：B：已观察税基/负担而非收入预测；当前实际税基 reader 未完整建立，不能用低SOL自动偏好任何税法。"
+existing_state = "law_opportunities.py 52候选中的税制运动议程与贸易/经济相关差异；税法 ai_enact_weight_modifier"
+gap = "B：已观察税基/负担而非收入预测；当前实际税基 reader 未完整建立，不能用低SOL自动偏好任何税法。"
+evidence = []
+
+[[obligations]]
+id = "B01.4.1"
+parent = "B01.4"
+title = "公共支出与承诺"
+status = "pending"
+question = "待调查：可观察的制度、军备和建设负担，维护与新增承诺的区别"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml"]
+consumer_investigation = "调查快照（非完成证据）：制度等级、bureaucracy/default、军队/供应舰/征召目标和条约 influence 成本；仍须定位精确原版来源/字段/规则身份。待深化：A：自主目标、尚未接线合作目标上的边际承诺成本；非真实预算分配。"
+existing_state = "制度等级、bureaucracy/default、军队/供应舰/征召目标和条约 influence 成本"
+gap = "A：自主目标、尚未接线合作目标上的边际承诺成本；非真实预算分配。"
+evidence = []
+
+[[obligations]]
+id = "B01.5.1"
+parent = "B01.5"
+title = "危机与恢复"
+status = "pending"
+question = "待调查：偿付、财政迟滞、冲击、恢复状态与真实可观察时间"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml"]
+consumer_investigation = "调查快照（非完成证据）：独立财政更新器迟滞/62日TTL、recently_lost_war → 建设和扩张目标；仍须定位精确原版来源/字段/规则身份。待深化：A：将战败恢复复用到有遗漏的新承诺消费者；无状态足够则不增加统一记忆。"
+existing_state = "独立财政更新器迟滞/62日TTL、recently_lost_war → 建设和扩张目标"
+gap = "A：将战败恢复复用到有遗漏的新承诺消费者；无状态足够则不增加统一记忆。"
+evidence = []
+
+[[obligations]]
+id = "B02.1.1"
+parent = "B02.1"
+title = "农业与基础生计"
+status = "pending"
+question = "待调查：粮食/基础品、就业与自给人口、资源和土地约束的可读状态"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/economy.toml", "mod/decisions/company_sectors.toml"]
+consumer_investigation = "调查快照（非完成证据）：农业/种植/资源建筑 ai_value、当前配方、state_owner价格/余额、同州失业/劳力；仍须定位精确原版来源/字段/规则身份。待深化：A/B：局部就业与生计机会分量，保留土地/资源原版资格；不能用全国劳力替州劳力。"
+existing_state = "农业/种植/资源建筑 ai_value、当前配方、state_owner价格/余额、同州失业/劳力"
+gap = "A/B：局部就业与生计机会分量，保留土地/资源原版资格；不能用全国劳力替州劳力。"
+evidence = []
+
+[[obligations]]
+id = "B02.2.1"
+parent = "B02.2"
+title = "工业链与建设能力"
+status = "pending"
+question = "待调查：上下游投入、工具/材料、当前建设成本、真实生产配方"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/economy.toml", "mod/decisions/company_sectors.toml"]
+consumer_investigation = "调查快照（非完成证据）：building_opportunities.py、adapters 活跃PM投入成本、产出需求；wanted_construction_output；仍须定位精确原版来源/字段/规则身份。待深化：已有真实配方与缺口。A：在已有联合消费者补单独维护/吸纳项，不能要求全链先完成。"
+existing_state = "building_opportunities.py、adapters 活跃PM投入成本、产出需求；wanted_construction_output"
+gap = "已有真实配方与缺口。A：在已有联合消费者补单独维护/吸纳项，不能要求全链先完成。"
+evidence = []
+
+[[obligations]]
+id = "B02.3.1"
+parent = "B02.3"
+title = "生产方式与资质"
+status = "pending"
+question = "待调查：当前及候选 PM、已研究技术、劳动/资质、投入与就业代价"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/economy.toml", "mod/decisions/company_sectors.toml"]
+consumer_investigation = "调查快照（非完成证据）：production_inputs.py 与 equipment/PM实际 ai_weight，技术机会和当前PM query；仍须定位精确原版来源/字段/规则身份。待深化：B：资质压力若缺合法数值 reader 需先取证；候选技术不当已研究，未来PM不当现投入。"
+existing_state = "production_inputs.py 与 equipment/PM实际 ai_weight，技术机会和当前PM query"
+gap = "B：资质压力若缺合法数值 reader 需先取证；候选技术不当已研究，未来PM不当现投入。"
+evidence = []
+
+[[obligations]]
+id = "B02.4.1"
+parent = "B02.4"
+title = "基础设施与能源"
+status = "pending"
+question = "待调查：州级运输、接入、投入和实际能源适用对象"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/economy.toml", "mod/decisions/company_sectors.toml"]
+consumer_investigation = "调查快照（非完成证据）：railway/power_plant/port相关 ai_value、state_market_access及活跃投入；仍须定位精确原版来源/字段/规则身份。待深化：A：同州运输与劳工/实际产出结合；市场余量不作本州能源可达证明。"
+existing_state = "railway/power_plant/port相关 ai_value、state_market_access及活跃投入"
+gap = "A：同州运输与劳工/实际产出结合；市场余量不作本州能源可达证明。"
+evidence = []
+
+[[obligations]]
+id = "B02.5.1"
+parent = "B02.5"
+title = "公司、服务与投资结构"
+status = "pending"
+question = "待调查：可观察公司部门、经营结构、服务供给和公共/私人投资边界"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/economy.toml", "mod/decisions/company_sectors.toml"]
+consumer_investigation = "调查快照（非完成证据）：company_sectors.py、company_sectors.toml及公司 ai_weight；urban_center/相关PM和投资结构；仍须定位精确原版来源/字段/规则身份。待深化：已有部门公司需求；B：实际公司经营/产能阶段和服务供给联动；不直接控制私人队列。"
+existing_state = "company_sectors.py、company_sectors.toml及公司 ai_weight；urban_center/相关PM和投资结构"
+gap = "已有部门公司需求；B：实际公司经营/产能阶段和服务供给联动；不直接控制私人队列。"
+evidence = []
+
+[[obligations]]
+id = "B03.1.1"
+parent = "B03.1"
+title = "供需与价格"
+status = "pending"
+question = "待调查：商品、市场、同州可达性、实际短缺与价格信号"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/economy.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "调查快照（非完成证据）：goods price/balance→建筑、PM、装备、动员、科技/条约分类；仍须定位精确原版来源/字段/规则身份。待深化：A：同一商品同因去重、短缺与输入成本并存；不能把高价再算利润、安全三份奖励。"
+existing_state = "goods price/balance→建筑、PM、装备、动员、科技/条约分类"
+gap = "A：同一商品同因去重、短缺与输入成本并存；不能把高价再算利润、安全三份奖励。"
+evidence = []
+
+[[obligations]]
+id = "B03.2.1"
+parent = "B03.2"
+title = "贸易机会与成本"
+status = "pending"
+question = "待调查：可读取路线、进口/出口条件、运输、关税和法律"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/economy.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "调查快照（非完成证据）：trade law具体候选、treaty_category_scores.trade/economy、trade_privilege等ROOT evaluation机会；仍须定位精确原版来源/字段/规则身份。待深化：B：精确条约输入/接受评分可扩展；当前无已接线直接贸易路线选择器。"
+existing_state = "trade law具体候选、treaty_category_scores.trade/economy、trade_privilege等ROOT evaluation机会"
+gap = "B：精确条约输入/接受评分可扩展；当前无已接线直接贸易路线选择器。"
+evidence = []
+
+[[obligations]]
+id = "B03.3.1"
+parent = "B03.3"
+title = "依赖与韧性"
+status = "pending"
+question = "待调查：实际进口依赖、来源集中度或其可证实代理、替代来源、封锁风险"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/economy.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "调查快照（非完成证据）：蒸汽船短缺+战争→secondary_fleet.protect_supply；贸易品需求、国内替代建设；仍须定位精确原版来源/字段/规则身份。待深化：B：真实来源集中度/进口依赖尚未有完整reader；不能把market balance当进口依赖。"
+existing_state = "蒸汽船短缺+战争→secondary_fleet.protect_supply；贸易品需求、国内替代建设"
+gap = "B：真实来源集中度/进口依赖尚未有完整reader；不能把market balance当进口依赖。"
+evidence = []
+
+[[obligations]]
+id = "B03.4.1"
+parent = "B03.4"
+title = "冲击与重配"
+status = "pending"
+question = "待调查：战争、市场脱离、供应中断及恢复的可观察变化"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/economy.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "调查快照（非完成证据）：war、market_access/isolation、war_defeat及财政恢复；仍须定位精确原版来源/字段/规则身份。待深化：A/B：同一供应冲击在各精确消费者表达恢复，单消费者内同因不重算；市场脱离时间需新证据。"
+existing_state = "war、market_access/isolation、war_defeat及财政恢复"
+gap = "A/B：同一供应冲击在各精确消费者表达恢复，单消费者内同因不重算；市场脱离时间需新证据。"
+evidence = []
+
+[[obligations]]
+id = "B04.1.1"
+parent = "B04.1"
+title = "教育基础"
+status = "pending"
+question = "待调查：已生效法律、实际学校制度、识字和教育能力"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/technology_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：公私宗教学校现法转换、实际学校制度、literacy，school制度/法/大学消费者；仍须定位精确原版来源/字段/规则身份。待深化：已有细分，不计新增。A：把真实已投入反馈继续精确接入，不把教育法当实际学校。"
+existing_state = "公私宗教学校现法转换、实际学校制度、literacy，school制度/法/大学消费者"
+gap = "已有细分，不计新增。A：把真实已投入反馈继续精确接入，不把教育法当实际学校。"
+evidence = []
+
+[[obligations]]
+id = "B04.2.1"
+parent = "B04.2"
+title = "研究能力与承受力"
+status = "pending"
+question = "待调查：大学、合法可读创新能力、当前投入、财政与资质"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/technology_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：university.ai_value、学校/识字/财政/资质相关基础、科技 ai_weight；仍须定位精确原版来源/字段/规则身份。待深化：B：合法创新能力和研究当前投入的精确reader补证；大学数量不假装创新缺口。"
+existing_state = "university.ai_value、学校/识字/财政/资质相关基础、科技 ai_weight"
+gap = "B：合法创新能力和研究当前投入的精确reader补证；大学数量不假装创新缺口。"
+evidence = []
+
+[[obligations]]
+id = "B04.3.1"
+parent = "B04.3"
+title = "具体科技选择"
+status = "pending"
+question = "待调查：候选技术及前置、当前产业、政治改革和安全需要"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/technology_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：technology_opportunities.py及society/production/military实际候选 ai_weight；仍须定位精确原版来源/字段/规则身份。待深化：已有广覆盖。A/B：按候选实际解锁效果补政治/军事/殖民使用需要；保留前置及原版尾部。"
+existing_state = "technology_opportunities.py及society/production/military实际候选 ai_weight"
+gap = "已有广覆盖。A/B：按候选实际解锁效果补政治/军事/殖民使用需要；保留前置及原版尾部。"
+evidence = []
+
+[[obligations]]
+id = "B04.4.1"
+parent = "B04.4"
+title = "知识应用与阶段差异"
+status = "pending"
+question = "待调查：已研究技术、当前 PM、可达投入、成熟产业与新兴机会"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/technology_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：已研究技术、活跃PM、建筑/公司/制度真实投入→科技/生产消费者；仍须定位精确原版来源/字段/规则身份。待深化：A：饱和/阶段退出，已生效和候选严分；不声称研究与PM已执行。"
+existing_state = "已研究技术、活跃PM、建筑/公司/制度真实投入→科技/生产消费者"
+gap = "A：饱和/阶段退出，已生效和候选严分；不声称研究与PM已执行。"
+evidence = []
+
+[[obligations]]
+id = "B05.1.1"
+parent = "B05.1"
+title = "支持、阻力与可行性"
+status = "pending"
+question = "待调查：实际法律、政府/利益集团与可读政治支持、原版转法资格"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/law_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：所有基础法律通用三重危机成本；52候选具体运动议程；union/landowner在政府→转法阈值；仍须定位精确原版来源/字段/规则身份。待深化：B优先：内部安全、分权/选举、自由言论、军制等未加入52候选的具体议程。运动需求独立保留，不能替代IG资格/支持。"
+existing_state = "所有基础法律通用三重危机成本；52候选具体运动议程；union/landowner在政府→转法阈值"
+gap = "B优先：内部安全、分权/选举、自由言论、军制等未加入52候选的具体议程。运动需求独立保留，不能替代IG资格/支持。"
+evidence = []
+
+[[obligations]]
+id = "B05.2.1"
+parent = "B05.2"
+title = "改革路径与顺序"
+status = "pending"
+question = "待调查：法律前置、当前制度、资源与可观察改革窗口"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/law_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：当前法布尔reader、立法前置保留、实际制度投入、转法原版ai_will_do；仍须定位精确原版来源/字段/规则身份。待深化：B优先：内部安全从无制度到有制度、原制度之间的实际效果差/成本；禁止一条“民主总奖励”。"
+existing_state = "当前法布尔reader、立法前置保留、实际制度投入、转法原版ai_will_do"
+gap = "B优先：内部安全从无制度到有制度、原制度之间的实际效果差/成本；禁止一条“民主总奖励”。"
+evidence = []
+
+[[obligations]]
+id = "B05.3.1"
+parent = "B05.3"
+title = "制度投资与维护"
+status = "pending"
+question = "待调查：已实施制度、官僚成本、社会受益与可读执行能力"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/law_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：7制度中学校/社保/治安/内政/卫生有需要+承受；殖民制度只有成本；仍须定位精确原版来源/字段/规则身份。待深化：A/B：内政需要不只insurrection一个代理，殖民补活动需要；法与投入分别消费。"
+existing_state = "7制度中学校/社保/治安/内政/卫生有需要+承受；殖民制度只有成本"
+gap = "A/B：内政需要不只insurrection一个代理，殖民补活动需要；法与投入分别消费。"
+evidence = []
+
+[[obligations]]
+id = "B05.4.1"
+parent = "B05.4"
+title = "稳定与合法性"
+status = "pending"
+question = "待调查：动荡、政府合法性、政治冲击及其真实暴露范围"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/law_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：legitimacy、insurrection、radical_share、owned_state_turmoil →革命规避/法/制度；仍须定位精确原版来源/字段/规则身份。待深化：A/B：实际法律改变政治运动激进/忠诚效果的差异；不由异议推导无条件镇压。"
+existing_state = "legitimacy、insurrection、radical_share、owned_state_turmoil →革命规避/法/制度"
+gap = "A/B：实际法律改变政治运动激进/忠诚效果的差异；不由异议推导无条件镇压。"
+evidence = []
+
+[[obligations]]
+id = "B05.5.1"
+parent = "B05.5"
+title = "选举、运动与国家特有机会"
+status = "pending"
+question = "待调查：可读取政党/运动、选举、决议、日志或事件的 AI 入口"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/law_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：any_political_movement/IG有限查询、法律请愿/JE原版尾部保留；仍须定位精确原版来源/字段/规则身份。待深化：C/B：60决议ai_chance未接线（快照）；必须逐项判断实际价值，国家叙事/纯玩家入口不自动注入。"
+existing_state = "any_political_movement/IG有限查询、法律请愿/JE原版尾部保留"
+gap = "C/B：60决议ai_chance未接线（快照）；必须逐项判断实际价值，国家叙事/纯玩家入口不自动注入。"
+evidence = []
+
+[[obligations]]
+id = "B06.1.1"
+parent = "B06.1"
+title = "就业与劳动力"
+status = "pending"
+question = "待调查：同州劳工、资质、工资、可读失业/自给状态"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：state_unemployment、state labor/peasant/activePM事实，工业/农业/资源建设与PM；仍须定位精确原版来源/字段/规则身份。待深化：A：局部岗位/升级代价；当缺资质reader时不以失业率代替资质。"
+existing_state = "state_unemployment、state labor/peasant/activePM事实，工业/农业/资源建设与PM"
+gap = "A：局部岗位/升级代价；当缺资质reader时不以失业率代替资质。"
+evidence = []
+
+[[obligations]]
+id = "B06.2.1"
+parent = "B06.2"
+title = "生活水平与基本需求"
+status = "pending"
+question = "待调查：实际生活/基础品压力、社会结构和财政成本"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：average_sol、粮食price+balance、社保与各福利法/医疗/教育转换；仍须定位精确原版来源/字段/规则身份。待深化：已有真实广度。A：社会供给/财政投入的重复代理审查；新因果应不同于已有贫困/粮食。"
+existing_state = "average_sol、粮食price+balance、社保与各福利法/医疗/教育转换"
+gap = "已有真实广度。A：社会供给/财政投入的重复代理审查；新因果应不同于已有贫困/粮食。"
+evidence = []
+
+[[obligations]]
+id = "B06.3.1"
+parent = "B06.3"
+title = "健康、人口再生产与公共服务"
+status = "pending"
+question = "待调查：合法可读的卫生、人口变化、制度及服务压力"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：医疗现法差、实际health_investment，粮食健康、field_hospitals动员投入成本；仍须定位精确原版来源/字段/规则身份。待深化：A/B：真实已投入水平饱和与退出；不可读疾病/未来人口不能预测。"
+existing_state = "医疗现法差、实际health_investment，粮食健康、field_hospitals动员投入成本"
+gap = "A/B：真实已投入水平饱和与退出；不可读疾病/未来人口不能预测。"
+evidence = []
+
+[[obligations]]
+id = "B06.4.1"
+parent = "B06.4"
+title = "迁移、城市化与吸纳"
+status = "pending"
+question = "待调查：目标州容量、实际迁移条件、就业、住房/服务的可读信息"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：迁移法已有具体政治议程；州就业、当地市场和服务/城市建设读取；仍须定位精确原版来源/字段/规则身份。待深化：B优先：现有州建设端加入当地可吸纳性，迁移法不是直接迁移目的地执行器；需精确当地迁移事实。"
+existing_state = "迁移法已有具体政治议程；州就业、当地市场和服务/城市建设读取"
+gap = "B优先：现有州建设端加入当地可吸纳性，迁移法不是直接迁移目的地执行器；需精确当地迁移事实。"
+evidence = []
+
+[[obligations]]
+id = "B06.5.1"
+parent = "B06.5"
+title = "文化、宗教与歧视"
+status = "pending"
+question = "待调查：实际接受/歧视、法律和动荡、政治支持"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：公民权/宗教11候选已有运动议程和权威转换；state_value已有homeland/cultural_share/fervor；仍须定位精确原版来源/字段/规则身份。待深化：B：接受/歧视具体人口暴露而非国名路线；当前权威比较没有计算人口歧视收益，不能宣称已做整合。"
+existing_state = "公民权/宗教11候选已有运动议程和权威转换；state_value已有homeland/cultural_share/fervor"
+gap = "B：接受/歧视具体人口暴露而非国名路线；当前权威比较没有计算人口歧视收益，不能宣称已做整合。"
+evidence = []
+
+[[obligations]]
+id = "B07.1.1"
+parent = "B07.1"
+title = "安全需要与军力结构"
+status = "pending"
+question = "待调查：合法可读的自身/目标威胁、实际军力和现有负担"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/equipment_opportunities.toml", "mod/decisions/mobilization_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：army_size/target_army、infamy、war，wanted_army_size、conscript_ratio及目标风险；仍须定位精确原版来源/字段/规则身份。待深化：A：具体新承诺目标引用现有军力风险（自主方向遗漏）；不当战场胜率。"
+existing_state = "army_size/target_army、infamy、war，wanted_army_size、conscript_ratio及目标风险"
+gap = "A：具体新承诺目标引用现有军力风险（自主方向遗漏）；不当战场胜率。"
+evidence = []
+
+[[obligations]]
+id = "B07.2.1"
+parent = "B07.2"
+title = "装备与军工"
+status = "pending"
+question = "待调查：已解锁装备、当前编制、实际军事商品和生产配方"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/equipment_opportunities.toml", "mod/decisions/mobilization_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：equipment_opportunities、actualPM军工building.ai_value、combat_unit/artillery倾向；仍须定位精确原版来源/字段/规则身份。待深化：A/B：已解锁候选和实际供应成本细分；当前配方不代表所有军队同样配方。"
+existing_state = "equipment_opportunities、actualPM军工building.ai_value、combat_unit/artillery倾向"
+gap = "A/B：已解锁候选和实际供应成本细分；当前配方不代表所有军队同样配方。"
+evidence = []
+
+[[obligations]]
+id = "B07.3.1"
+parent = "B07.3"
+title = "动员与战争负担"
+status = "pending"
+question = "待调查：可观察战争、动员选项、财政/劳工/商品成本"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/equipment_opportunities.toml", "mod/decisions/mobilization_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：mobilization_opportunities：military_formation root→owner，战争需要+default+各goods短缺/高价；仍须定位精确原版来源/字段/规则身份。待深化：已有真实逐选项实现；B：劳工/当前动员负担新reader不能用战争布尔代替，也不全选高档。"
+existing_state = "mobilization_opportunities：military_formation root→owner，战争需要+default+各goods短缺/高价"
+gap = "已有真实逐选项实现；B：劳工/当前动员负担新reader不能用战争布尔代替，也不全选高档。"
+evidence = []
+
+[[obligations]]
+id = "B07.4.1"
+parent = "B07.4"
+title = "战后重建与战备"
+status = "pending"
+question = "待调查：原版战败事实、实际损失或可证实代理、恢复状态"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/equipment_opportunities.toml", "mod/decisions/mobilization_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：recently_lost_war→reconstruction、construction、target扩张成本；仍须定位精确原版来源/字段/规则身份。待深化：A：自主/新同盟等新增承诺补战败成本和自动退出；不是永久禁战。"
+existing_state = "recently_lost_war→reconstruction、construction、target扩张成本"
+gap = "A：自主/新同盟等新增承诺补战败成本和自动退出；不是永久禁战。"
+evidence = []
+
+[[obligations]]
+id = "B08.1.1"
+parent = "B08.1"
+title = "舰队能力与代价"
+status = "pending"
+question = "待调查：已有海军、技术、舰船/军需、财政和可用基地"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/equipment_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "调查快照（非完成证据）：wanted_navy、max_design_complexity、ship_category battle_line/carrier成本、equipment ai_weight；仍须定位精确原版来源/字段/规则身份。待深化：A/B：将现有资金/真实供应事实接入未覆盖具体舰队字段，但先查原版目标和已有语义。"
+existing_state = "wanted_navy、max_design_complexity、ship_category battle_line/carrier成本、equipment ai_weight"
+gap = "A/B：将现有资金/真实供应事实接入未覆盖具体舰队字段，但先查原版目标和已有语义。"
+evidence = []
+
+[[obligations]]
+id = "B08.2.1"
+parent = "B08.2"
+title = "运输与贸易保护"
+status = "pending"
+question = "待调查：真实海运、港口、运输需求和战争暴露"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/equipment_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "调查快照（非完成证据）：wanted_num_supply_ships、ship_construction_output、secondary_fleet.protect_supply；仍须定位精确原版来源/字段/规则身份。待深化：B：真实convoy暴露reader优先，蒸汽船短缺只供应代理；不能直接称封锁损失。"
+existing_state = "wanted_num_supply_ships、ship_construction_output、secondary_fleet.protect_supply"
+gap = "B：真实convoy暴露reader优先，蒸汽船短缺只供应代理；不能直接称封锁损失。"
+evidence = []
+
+[[obligations]]
+id = "B08.3.1"
+parent = "B08.3"
+title = "海外承诺与可达性"
+status = "pending"
+question = "待调查：海外对象、地理可达、已有利益/承诺和投射能力"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/equipment_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "调查快照（非完成证据）：navy/target_navy、marines与target_marine_size、state/目标可达资格由原版；仍须定位精确原版来源/字段/规则身份。待深化：A：具体条约和新目标成本；B：殖民target_region须独立作用域合同，不能挪target_country冒充。"
+existing_state = "navy/target_navy、marines与target_marine_size、state/目标可达资格由原版"
+gap = "A：具体条约和新目标成本；B：殖民target_region须独立作用域合同，不能挪target_country冒充。"
+evidence = []
+
+[[obligations]]
+id = "B08.4.1"
+parent = "B08.4"
+title = "封锁冲击与替代"
+status = "pending"
+question = "待调查：已观察中断、供应替代、恢复路径"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/equipment_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "调查快照（非完成证据）：当前战争+供应价格/余额、贸易偏好/国内生产/供给保护；仍须定位精确原版来源/字段/规则身份。待深化：B：当前没有已接线真实封锁/来源分布reader；多方案竞争可做，已观察中断须补证。"
+existing_state = "当前战争+供应价格/余额、贸易偏好/国内生产/供给保护"
+gap = "B：当前没有已接线真实封锁/来源分布reader；多方案竞争可做，已观察中断须补证。"
+evidence = []
+
+[[obligations]]
+id = "B09.1.1"
+parent = "B09.1"
+title = "双边利益与威胁"
+status = "pending"
+question = "待调查：本国/目标国真实关系、力量与已观察利益"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/treaty_opportunities.toml", "mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：relations/truce/alliance/own-target军力→annex/conquer/dominate/antagonize等具体目标；仍须定位精确原版来源/字段/规则身份。待深化：已有真实目标化成本；A/B：protect/reconcile等尚未接线方向补“缓和收益”，先避免重复原版关系评价。"
+existing_state = "relations/truce/alliance/own-target军力→annex/conquer/dominate/antagonize等具体目标"
+gap = "已有真实目标化成本；A/B：protect/reconcile等尚未接线方向补“缓和收益”，先避免重复原版关系评价。"
+evidence = []
+
+[[obligations]]
+id = "B09.2.1"
+parent = "B09.2"
+title = "条约与承诺"
+status = "pending"
+question = "待调查：合法候选条约、已有义务、目标需要与可负担性"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/treaty_opportunities.toml", "mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：treaty_opportunities对ROOT proposal_weight加war/default/influence；保留ordered native score；仍须定位精确原版来源/字段/规则身份。待深化：A：仅ROOT承受因果；B：目标条约收益须到inherent/contextual_accept_score新合同，不能在无候选输入proposal时猜target。"
+existing_state = "treaty_opportunities对ROOT proposal_weight加war/default/influence；保留ordered native score"
+gap = "A：仅ROOT承受因果；B：目标条约收益须到inherent/contextual_accept_score新合同，不能在无候选输入proposal时猜target。"
+evidence = []
+
+[[obligations]]
+id = "B09.3.1"
+parent = "B09.3"
+title = "市场合作与国际组织"
+status = "pending"
+question = "待调查：已有市场关系、集团/合作的可读状态、资格和影响力"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/treaty_opportunities.toml", "mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：treaty_category.economy/trade、相关evaluation、贸易法与现有市场商品；仍须定位精确原版来源/字段/规则身份。待深化：B：join/leave_power_bloc与合作目标精确消费者；集团身份ai_weight当前scope pending，不可直接上。"
+existing_state = "treaty_category.economy/trade、相关evaluation、贸易法与现有市场商品"
+gap = "B：join/leave_power_bloc与合作目标精确消费者；集团身份ai_weight当前scope pending，不可直接上。"
+evidence = []
+
+[[obligations]]
+id = "B09.4.1"
+parent = "B09.4"
+title = "声誉、竞争与危机缓和"
+status = "pending"
+question = "待调查：可读恶名、外交压力、竞争对象和恢复条件"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/treaty_opportunities.toml", "mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：infamy等级和目标reputation costs、关系承诺、diplomatic restraint/opening显式卡；仍须定位精确原版来源/字段/规则身份。待深化：A/B：危机缓和/reconcile方向，不把声誉用作全外交禁令；保留原版attitude/goal资格。"
+existing_state = "infamy等级和目标reputation costs、关系承诺、diplomatic restraint/opening显式卡"
+gap = "A/B：危机缓和/reconcile方向，不把声誉用作全外交禁令；保留原版attitude/goal资格。"
+evidence = []
+
+[[obligations]]
+id = "B10.1.1"
+parent = "B10.1"
+title = "目标价值与可执行性"
+status = "pending"
+question = "待调查：候选对象、实际资格、地理/战略/经济利益和代价"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：10余具体wargoal/secret目标、state_value文化/接入与原版目标收益；仍须定位精确原版来源/字段/规则身份。待深化：A：自主目标缺成本；B：其余合法open_market/contain_threat等需逐项独立价值，而不是复制通用七成本。"
+existing_state = "10余具体wargoal/secret目标、state_value文化/接入与原版目标收益"
+gap = "A：自主目标缺成本；B：其余合法open_market/contain_threat等需逐项独立价值，而不是复制通用七成本。"
+evidence = []
+
+[[obligations]]
+id = "B10.2.1"
+parent = "B10.2"
+title = "承诺与升级风险"
+status = "pending"
+question = "待调查：已有战争、联盟/承诺、力量及可读外部威胁"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：同目标关系、军力、财政/政治/重建成本，条约ROOT承诺；仍须定位精确原版来源/字段/规则身份。待深化：A：复用现有对象化风险；无法读取第三方参战概率则保持未知。"
+existing_state = "同目标关系、军力、财政/政治/重建成本，条约ROOT承诺"
+gap = "A：复用现有对象化风险；无法读取第三方参战概率则保持未知。"
+evidence = []
+
+[[obligations]]
+id = "B10.3.1"
+parent = "B10.3"
+title = "持续战争与和平选择"
+status = "pending"
+question = "待调查：可读战争状态、成本、既有目标和精确和平评估入口"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：原版war_support_values可读casualties/battles/duration/turmoil/devastation等，尚无通用精确和平writer；仍须定位精确原版来源/字段/规则身份。待深化：C：war_support脚本控制真实战争支持机制，不能当和平AI倾向入口；不改支持/define制造“和平AI”。"
+existing_state = "原版war_support_values可读casualties/battles/duration/turmoil/devastation等，尚无通用精确和平writer"
+gap = "C：war_support脚本控制真实战争支持机制，不能当和平AI倾向入口；不改支持/define制造“和平AI”。"
+evidence = []
+
+[[obligations]]
+id = "B10.4.1"
+parent = "B10.4"
+title = "多线压力与恢复"
+status = "pending"
+question = "待调查：多线负担、财政/装备/供应压力及冲击退出"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "调查快照（非完成证据）：war布尔、default/net_surplus、军需商品、war_defeat→多个生产消费者；仍须定位精确原版来源/字段/规则身份。待深化：B：多线数量/具体战争负担需有限集合和scope证据；不能把is_at_war称多线压力已读。"
+existing_state = "war布尔、default/net_surplus、军需商品、war_defeat→多个生产消费者"
+gap = "B：多线数量/具体战争负担需有限集合和scope证据；不能把is_at_war称多线压力已读。"
+evidence = []
+
+[[obligations]]
+id = "B11.1.1"
+parent = "B11.1"
+title = "殖民需要与政治条件"
+status = "pending"
+question = "待调查：原版殖民资格、法律/制度、实际能力和国内约束"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/strategic.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：law_colonial_*已有危机成本、resettlement协调加分；殖民institution仅bureaucracy/default成本；仍须定位精确原版来源/字段/规则身份。待深化：B优先：真实殖民活动need+当前制度投入，先证reader；保留colonization科技、法律、类型和地理资格。"
+existing_state = "law_colonial_*已有危机成本、resettlement协调加分；殖民institution仅bureaucracy/default成本"
+gap = "B优先：真实殖民活动need+当前制度投入，先证reader；保留colonization科技、法律、类型和地理资格。"
+evidence = []
+
+[[obligations]]
+id = "B11.2.1"
+parent = "B11.2"
+title = "地点与资源机会"
+status = "pending"
+question = "待调查：实际可读资源、相邻/可达、气候/地形或相关修正"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/strategic.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：原版stance_colonize_region已检查技术、法律、类型、邻接/海军、目标region潜在州；state_value已有GDP/人口/文化等；仍须定位精确原版来源/字段/规则身份。待深化：B：有证目标资源价值与当地代价，不重复原版空地计数。现有target_state可扩展，target_region不是可随意借用的现成reader。"
+existing_state = "原版stance_colonize_region已检查技术、法律、类型、邻接/海军、目标region潜在州；state_value已有GDP/人口/文化等"
+gap = "B：有证目标资源价值与当地代价，不重复原版空地计数。现有target_state可扩展，target_region不是可随意借用的现成reader。"
+evidence = []
+
+[[obligations]]
+id = "B11.3.1"
+parent = "B11.3"
+title = "整合、维护与当地代价"
+status = "pending"
+question = "待调查：真实控制状态、整合、运输、行政和社会压力"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/strategic.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：行政建筑地方税容、market_access、港口/铁路，state_value外部州行政财政代价；仍须定位精确原版来源/字段/规则身份。待深化：A/B：真实控制/整合与当地社会压力端口；不能拿殖民制度存在当正在殖民或当地行政缺口。"
+existing_state = "行政建筑地方税容、market_access、港口/铁路，state_value外部州行政财政代价"
+gap = "A/B：真实控制/整合与当地社会压力端口；不能拿殖民制度存在当正在殖民或当地行政缺口。"
+evidence = []
+
+[[obligations]]
+id = "B11.4.1"
+parent = "B11.4"
+title = "替代扩张与退出"
+status = "pending"
+question = "待调查：市场合作、宗属、贸易与殖民的可观察替代收益"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/strategic.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "调查快照（非完成证据）：subject_value/become_subject_value、贸易/经济条约分类、征服/殖民目标各自消费者；仍须定位精确原版来源/字段/规则身份。待深化：A/B：同因机会成本和替代关系；不存在中央统一路线锁定执行器。"
+existing_state = "subject_value/become_subject_value、贸易/经济条约分类、征服/殖民目标各自消费者"
+gap = "A/B：同因机会成本和替代关系；不存在中央统一路线锁定执行器。"
+evidence = []
+
+[[obligations]]
+id = "B12.1.1"
+parent = "B12.1"
+title = "依赖与自主能力"
+status = "pending"
+question = "待调查：实际宗属关系、市场/财政/军事依赖、可读自主空间"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml", "mod/decisions/extensions.toml"]
+consumer_investigation = "调查快照（非完成证据）：liberty、actor_is_subject、实际overlord关系 → 三属国策略；independence/increase_autonomy正向档；仍须定位精确原版来源/字段/规则身份。待深化：A优先：自主收益与真实金融/军力/败战风险共同存在；依赖收益不是违约推断。"
+existing_state = "liberty、actor_is_subject、实际overlord关系 → 三属国策略；independence/increase_autonomy正向档"
+gap = "A优先：自主收益与真实金融/军力/败战风险共同存在；依赖收益不是违约推断。"
+evidence = []
+
+[[obligations]]
+id = "B12.2.1"
+parent = "B12.2"
+title = "宗主与附属收益成本"
+status = "pending"
+question = "待调查：双边真实义务、市场互惠、控制收益和承诺负担"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml", "mod/decisions/extensions.toml"]
+consumer_investigation = "调查快照（非完成证据）：subject_value与become_subject_value两个明确视角、population/GDP/关系/目标战争等；仍须定位精确原版来源/字段/规则身份。待深化：A：补未覆盖独立承诺；B：真实market互惠和义务支付，不能把prospective subject与actual overlord混用。"
+existing_state = "subject_value与become_subject_value两个明确视角、population/GDP/关系/目标战争等"
+gap = "A：补未覆盖独立承诺；B：真实market互惠和义务支付，不能把prospective subject与actual overlord混用。"
+evidence = []
+
+[[obligations]]
+id = "B12.3.1"
+parent = "B12.3"
+title = "地位、承认与身份限制"
+status = "pending"
+question = "待调查：实际地位及原版认可/资格条件"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml", "mod/decisions/extensions.toml"]
+consumer_investigation = "调查快照（非完成证据）：原版country_rank、recognized类型资格，具体法律/目标原版门；仍须定位精确原版来源/字段/规则身份。待深化：B：recognize_independence条约接受与身份相关目标可扩展，但不是“授予国际承认”，也不覆盖country_type资格。"
+existing_state = "原版country_rank、recognized类型资格，具体法律/目标原版门"
+gap = "B：recognize_independence条约接受与身份相关目标可扩展，但不是“授予国际承认”，也不覆盖country_type资格。"
+evidence = []
+
+[[obligations]]
+id = "B12.4.1"
+parent = "B12.4"
+title = "独立、整合与关系重组"
+status = "pending"
+question = "待调查：合法候选关系、真实能力/支持/风险和退出条件"
+acceptance = "独立盘点全部相关原版入口；将每个可实现缺口拆项并接入生产；逐项参考/PDX正反见证通过，不能用样例或保留原版计新增。"
+source_paths = ["mod/decisions/diplomatic_goals.toml", "mod/decisions/strategic.toml", "mod/decisions/extensions.toml"]
+consumer_investigation = "调查快照（非完成证据）：原版自主战争目标、subject三策略、subject_value/become_subject_value、精确target主体守卫；仍须定位精确原版来源/字段/规则身份。待深化：A：自主两个目标补风险；B：direct autonomy diplomatic_action评分属合法未实现面，需新adapter；退役实验subject开关不复活。"
+existing_state = "原版自主战争目标、subject三策略、subject_value/become_subject_value、精确target主体守卫"
+gap = "A：自主两个目标补风险；B：direct autonomy diplomatic_action评分属合法未实现面，需新adapter；退役实验subject开关不复活。"
+evidence = []
+
+[[obligations]]
+id = "R01.1"
+parent = "R01"
+title = "财政—行政—有效收入—公共能力（B01、B05）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；地方征税与全国官僚分开；行政扩建有投入和维护成本，偏好增加不算收入已提高"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml", "mod/decisions/law_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "地方征税/行政建筑ai_value、全国官僚与制度投入成本已有生产路径。"
+gap = "待逐边核对整合、运输和维护的精确成本；不能以行政偏好声称有效收入已实现。"
+evidence = []
+
+[[obligations]]
+id = "R02.1"
+parent = "R02"
+title = "教育—资质—研究—生产应用（B02、B04、B06）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；基础建设先可行，已具条件再给高档；研究、识字和 PM 升级不能互相假装已完成"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/economy.toml", "mod/decisions/company_sectors.toml", "mod/decisions/technology_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "relations.toml有两条教育/工业显式互补边；法律/学校投入、科技/PM和大学另有生产判断。"
+gap = "待让教育/资质/研究/生产应用通过同一真实端口接到rule/card；现有scope/unknown字段不能代替非root lowering。"
+evidence = []
+
+[[obligations]]
+id = "R03.1"
+parent = "R03"
+title = "基础供给—就业收入—财政—工业机会（B01、B02、B06）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；生存供给与高附加值投资分别评估，工资/就业代理不重复计益"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/company_sectors.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "农业/工业建设、当前PM、商品供需、同州劳力和财政事实已有分散消费者。"
+gap = "待补地方生计/岗位和后续真实状态反馈；相关工资/失业/贫困代理去重，不能当未来收入预测。"
+evidence = []
+
+[[obligations]]
+id = "R04.1"
+parent = "R04"
+title = "投入—能源运输—生产升级—贸易替代（B02、B03、B08）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；同州可达与市场总量分开，瓶颈带来改善需求和真实成本，不能形成全链全满足锁"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/economy.toml", "mod/decisions/company_sectors.toml", "mod/decisions/diplomatic_goals.toml", "mod/decisions/equipment_opportunities.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "实际PM投入成本与产出需要、铁路/港口/能源建设、市场接入和贸易偏好已存在。"
+gap = "待核对同州可达投入、替代与断边；不能以市场总量或全链前置代替真实瓶颈。"
+evidence = []
+
+[[obligations]]
+id = "R05.1"
+parent = "R05"
+title = "社会压力—政治可行性—法律—实际制度（B01、B05、B06）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；改革需要和政治阻力并存；仅已生效法律/制度影响后续事实，候选评分不提前兑现"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml", "mod/decisions/law_opportunities.toml", "mod/decisions/strategic.toml", "mod/decisions/building_opportunities.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "具体法律运动议程、现法效果差、实际制度投入和危机成本已有广泛生产接线。"
+gap = "内部安全等候选的具体议程/制度转换仍有缺口；改革评分不得成为已生效法律或制度。"
+evidence = []
+
+[[obligations]]
+id = "R06.1"
+parent = "R06"
+title = "人口流动—地方就业—资质服务—社会整合（B02、B04、B06）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；人口与目标州作用域一致；吸引倾向不算真实迁入，不越权控制迁移执行器"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/economy.toml", "mod/decisions/company_sectors.toml", "mod/decisions/technology_opportunities.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "迁移法律已有候选议程，州劳力/失业和当地服务建设可读。"
+gap = "实际迁移压力/吸纳条件仍需精确reader证据；只看失业和服务不证明正在迁入。"
+evidence = []
+
+[[obligations]]
+id = "R07.1"
+parent = "R07"
+title = "安全压力—军备—工业供给—融资（B01、B02、B07）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；同一威胁分档，不重复奖励；战时也保留军需和财政成本，不自动顶格扩军"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/company_sectors.toml", "mod/decisions/equipment_opportunities.toml", "mod/decisions/mobilization_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "军队目标、装备/动员具体选项、实际军需配方和融资成本已有生产覆盖。"
+gap = "待向遗漏的具体承诺补独立成本并去重威胁代理；劳工/当前动员负担不由战争布尔代替。"
+evidence = []
+
+[[obligations]]
+id = "R08.1"
+parent = "R08"
+title = "海运依赖—贸易韧性—舰队/港口—外交缓和（B03、B08、B09）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；海军、国内替代和合作可并存竞争，真实海权不足不等于必须军事扩张"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/economy.toml", "mod/decisions/diplomatic_goals.toml", "mod/decisions/equipment_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/treaty_opportunities.toml", "mod/decisions/strategic.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "战争与蒸汽船短缺接供给保护，已有运输舰、港口、舰队及贸易倾向。"
+gap = "实际convoy暴露/封锁/来源依赖reader未完整接线；多方案竞争不能假称已知中断。"
+evidence = []
+
+[[obligations]]
+id = "R09.1"
+parent = "R09"
+title = "外交承诺—升级风险—战争负担—和平恢复（B01、B07、B09、B10）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；无法观察的参战概率保持未知；不从条约评分推断盟友已承诺执行"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml", "mod/decisions/equipment_opportunities.toml", "mod/decisions/mobilization_opportunities.toml", "mod/decisions/strategic.toml", "mod/decisions/treaty_opportunities.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "对象化扩张风险、条约ROOT财政/影响力成本、战败恢复事实已有接线。"
+gap = "目标条约接受需精确新scope合同；和平消费者未证，不以war_support或条约评分替代执行承诺。"
+evidence = []
+
+[[obligations]]
+id = "R10.1"
+parent = "R10"
+title = "海外机会—殖民能力—当地维护—国际代价（B08、B09、B11）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；资源吸引与投射/治理成本共同参与，目标切换后端口映射不串国串州"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/equipment_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/diplomatic_goals.toml", "mod/decisions/treaty_opportunities.toml", "mod/decisions/strategic.toml", "mod/decisions/law_opportunities.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "殖民资格原版保留，州目标/海外军力与行政/运输成本分别存在。"
+gap = "殖民制度当前成本侧强于活动需要侧；target_region须独立证据，不挪target_country冒充。"
+evidence = []
+
+[[obligations]]
+id = "R11.1"
+parent = "R11"
+title = "宗属依赖—市场收益—安全承诺—自主选择（B03、B09、B12）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；宗主与附属利益分别核对；独立与合作都有处境化收益成本，不预设身份终点"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/economy.toml", "mod/decisions/diplomatic_goals.toml", "mod/decisions/treaty_opportunities.toml", "mod/decisions/strategic.toml", "mod/decisions/extensions.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "自主/独立目标有自由愿望档，宗主/附属价值、市场与安全相关原版/Mod判断存在。"
+gap = "自主目标遗漏独立承诺成本；目标条约/实际外交动作须新合同，宗主附属身份不能颠倒。"
+evidence = []
+
+[[obligations]]
+id = "R12.1"
+parent = "R12"
+title = "战败/供应危机—恢复能力—改革窗口—新承诺（B01、B04、B05、B07、B10）"
+status = "pending"
+question = "待逐边调查实际事实端口、对象映射、合法影响端及因果去重；危机是可观察冲击，恢复后退出；一次战败不等于获得转法或下一场战争资格"
+acceptance = "逐边正反、未知、断边、关闭、重复路径和完整链路见证；所有适用边生产接线，无接口环节保留有证据边界，不宣称整链实现。"
+source_paths = ["mod/decisions/relations.toml", "mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "mod/decisions/economy.toml", "mod/decisions/technology_opportunities.toml", "mod/decisions/building_opportunities.toml", "mod/decisions/law_opportunities.toml", "mod/decisions/strategic.toml", "mod/decisions/equipment_opportunities.toml", "mod/decisions/mobilization_opportunities.toml", "mod/decisions/diplomatic_goals.toml"]
+consumer_investigation = "待调查链中各合法消费者和现有规则身份；现有两条教育/工业关系不代表本链已完成。"
+existing_state = "财政迟滞/62日TTL与recently_lost_war已用于部分重建/建设/扩张消费者。"
+gap = "待向遗漏新承诺接战败成本和恢复退出；改革需要仍受真实政治资格，不伪造失败学习。"
+evidence = []
+
+[[obligations]]
+id = "C1.1"
+parent = "C1"
+title = "覆盖台账与范围冻结"
+status = "pending"
+question = "已建立初始方向分母；待由原版独立盘点补齐每个细分缺口及新发现联动，不能从现有绑定反推全集。"
+acceptance = "范围遗漏、重复ID、死引用、过期证据和伪完成必须失败；方向结论与新增能力分别核对。"
+source_paths = ["src/pdx/situated/vanilla_inventory.py", "src/pdx/situated/inventory.py"]
+consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
+existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
+gap = "已建立初始方向分母；待由原版独立盘点补齐每个细分缺口及新发现联动，不能从现有绑定反推全集。"
+evidence = []
+
+[[obligations]]
+id = "C2.1"
+parent = "C2"
+title = "类型化事实和领域端口"
+status = "pending"
+question = "Signal/Reader已有部分身份字段；待让原始来源闭包、实体映射、单位、有效时机和未知策略真正进入规则/显式卡共用的生产端口。"
+acceptance = "至少一个真实writer贯穿精确Reader与类型端口lowering；拒绝死端口、未声明依赖、错对象/单位和派生环。"
+source_paths = ["src/pdx/situated/signals.py", "src/pdx/situated/schema.py", "src/pdx/situated/decision_ir.py"]
+consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
+existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
+gap = "Signal/Reader已有部分身份字段；待让原始来源闭包、实体映射、单位、有效时机和未知策略真正进入规则/显式卡共用的生产端口。"
+evidence = []
+
+[[obligations]]
+id = "C3.1"
+parent = "C3"
+title = "最小行动及逐项完成凭据"
+status = "pending"
+question = "规则程序与显式卡仍有不同聚合表示；待在既有programs内统一term/资格/成本/关系并消除退役评分旁路。"
+acceptance = "规则与显式卡经过同一生产数值程序；独立手算与生成PDX分别核对，不能仅共享dataclass或比较两个参考器。"
+source_paths = ["mod/decisions/actions.toml", "src/pdx/situated/programs.py", "src/pdx/situated/compiler.py"]
+consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
+existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
+gap = "规则程序与显式卡仍有不同聚合表示；待在既有programs内统一term/资格/成本/关系并消除退役评分旁路。"
+evidence = []
+
+[[obligations]]
+id = "C4.1"
+parent = "C4"
+title = "无全满足陷阱的分层判断"
+status = "pending"
+question = "待逐行动区分原版必要资格与高档辅助条件，核对基础需求在低识字、正常融资和辅助未知下仍可参与。"
+acceptance = "单一基础需求、高档缺一、独立成本和危机恢复正反见证；保留原版真实拒绝，不把所有短板变为共同门。"
+source_paths = ["src/pdx/situated/compiler.py", "mod/decisions/capacities.toml"]
+consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
+existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
+gap = "待逐行动区分原版必要资格与高档辅助条件，核对基础需求在低识字、正常融资和辅助未知下仍可参与。"
+evidence = []
+
+[[obligations]]
+id = "C5.1"
+parent = "C5"
+title = "联合评估、数值与有限资源"
+status = "pending"
+question = "待将统一成本角色、保守未知分支、规范化来源/因果组及共享成本带入规则与显式卡的同一消费者程序。"
+acceptance = "成本未知保守档、收益未知但已知成本保留、同因副本不增益、独立因果联合、极值和末端一次限幅均有数值/PDX见证。"
+source_paths = ["src/pdx/situated/programs.py", "src/pdx/situated/compiler.py", "mod/decisions/commitments.toml"]
+consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
+existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
+gap = "待将统一成本角色、保守未知分支、规范化来源/因果组及共享成本带入规则与显式卡的同一消费者程序。"
+evidence = []
+
+[[obligations]]
+id = "C6.1"
+parent = "C6"
+title = "类型化联动与反馈"
+status = "pending"
+question = "现有关系仅接显式卡；待真实接入精确rule/card writer、原始来源因果身份和实体映射，不能将scope标签当已lowering。"
+acceptance = "现有教育/工业边与实际规则消费者贯穿统一程序；逐边/断边/未知/关闭/重复路径见证，纯派生依赖DAG与跨时间反馈分开。"
+source_paths = ["mod/decisions/relations.toml", "src/pdx/situated/relations.py", "src/pdx/situated/support_signals.py"]
+consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
+existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
+gap = "现有关系仅接显式卡；待真实接入精确rule/card writer、原始来源因果身份和实体映射，不能将scope标签当已lowering。"
+evidence = []
+
+[[obligations]]
+id = "C7.1"
+parent = "C7"
+title = "时间、惯性、冲击与适应"
+status = "pending"
+question = "待核对已有财政迟滞与原版战败观测的真实生命周期；无状态足够则不新增状态，不能将refresh/stale标签当更新器。"
+acceptance = "进入/退出/未知/恢复及下次重读见证；新增持久状态须证明合法writer、刷新、TTL、读档/升级/卸载边界，无时机不生成。"
+source_paths = ["mod/decisions/fiscal.toml", "mod/decisions/country_state.toml", "src/pdx/decisions.py"]
+consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
+existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
+gap = "待核对已有财政迟滞与原版战败观测的真实生命周期；无状态足够则不新增状态，不能将refresh/stale标签当更新器。"
+evidence = []
+
+[[obligations]]
+id = "C8.1"
+parent = "C8"
+title = "静态完成与用户验收"
+status = "pending"
+question = "待建立当前A3逐项生产语义和标准包验收的证据闭包，旧A2/X1收据不能签新目标；用户长期验收不接收实现欠账。"
+acceptance = "源/生成/包身份一致；独立参考/PDX、原版保护和工程检查分别留证，发布与用户行为验收另列实际状态。"
+source_paths = ["src/pdx/distribution.py", "src/pdx/situated/pdx_eval.py", "tools/ci/run_check.py"]
+consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
+existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
+gap = "待建立当前A3逐项生产语义和标准包验收的证据闭包，旧A2/X1收据不能签新目标；用户长期验收不接收实现欠账。"
+evidence = []
+
+[[obligations]]
+id = "C9.1"
+parent = "C9"
+title = "静态资源预算"
+status = "pending"
+question = "待记录当前表达式/候选扫描/关系展开/状态规模与Python生成路径基线，再冻结可执行资源预算；报告成本本身不等于预算通过。"
+acceptance = "预算有指标、输入身份、基线和超限失败；确需扩容提供合法性/资源比较，不能删功能改分母；不以静态预算宣称游戏性能通过。"
+source_paths = ["src/pdx/situated/compiler.py", "src/pdx/situated/programs.py", "tools/ci/mem_baseline.py"]
+consumer_investigation = "待核对该合同的全部生产消费方与现有规则身份；不预先声称已统一或已验收。"
+existing_state = "现有kernel接口与生产路径可复用，具体静态审计依据见 tools/out/a3/kernel-gap-audit.md；不代表公共合同完成。"
+gap = "待记录当前表达式/候选扫描/关系展开/状态规模与Python生成路径基线，再冻结可执行资源预算；报告成本本身不等于预算通过。"
+evidence = []
